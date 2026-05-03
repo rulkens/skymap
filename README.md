@@ -27,22 +27,31 @@ The renderer fetches `/data/sdss.bin` at startup if present, otherwise it falls 
 Go to the [DR18 SQL Search](https://skyserver.sdss.org/dr18/SearchTools/sql) and run:
 
 ```sql
-SELECT
-  s.specObjID AS objID,
-  s.ra,
-  s.dec,
-  s.z,
-  p.modelMag_u, p.modelMag_g, p.modelMag_r, p.modelMag_i, p.modelMag_z
+SELECT TOP 500000
+  p.objID, p.ra, p.dec, s.z,
+  p.modelMag_u, p.modelMag_g, p.modelMag_r, p.modelMag_i, p.modelMag_z,
+  p.expAB_r, p.expPhi_r, p.deVAB_r, p.deVPhi_r, p.fracDeV_r,
+  p.petroR50_r, p.petroR90_r
 FROM SpecObj AS s
-JOIN PhotoObj AS p ON s.bestObjID = p.objID
-WHERE s.class = 'GALAXY'
+JOIN PhotoObjAll AS p ON s.bestObjID = p.objID
+WHERE
+  s.class = 'GALAXY'
   AND s.zWarning = 0
-  AND s.z BETWEEN 0.001 AND 0.8
+  AND s.z BETWEEN 0.001 AND 0.3
 ```
 
-Choose **CSV** as the output format. Without a `survey =` filter, this query returns the **Main, BOSS, and eBOSS** spectroscopic galaxy samples combined — roughly 2–3 M rows reaching out to z ≈ 0.7. The Main sample alone is ~930 k galaxies up to z ≈ 0.3; BOSS adds the deeper LRG sample.
+Choose **CSV** as the output format. The shape columns are:
 
-> Need more than the web form's row limit? Use [CasJobs](https://skyserver.sdss.org/casjobs) instead — same query, no timeout.
+| Column | Used for |
+| --- | --- |
+| `expAB_r`, `expPhi_r` | exponential-profile axis ratio + position angle (disk fits) |
+| `deVAB_r`, `deVPhi_r` | de Vaucouleurs-profile axis ratio + position angle (bulge fits) |
+| `fracDeV_r` | blend weight (0 = pure disk, 1 = pure bulge); used to combine the exp/deV pairs into a single (b/a, PA) |
+| `petroR50_r`, `petroR90_r` | Petrosian half-light + 90%-light radii in arcsec; the parser converts them to physical kpc using the galaxy's redshift |
+
+The orientation columns drive the elliptical billboard mask + 3D disk plane rendering; the size columns drive the per-galaxy diameter estimator.
+
+> Need more than the 500 k row limit? Use [CasJobs](https://skyserver.sdss.org/casjobs) instead — same query, no timeout, larger result quotas.
 
 ### 2. Convert to the binary format
 
