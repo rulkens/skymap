@@ -138,7 +138,27 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // a Gaussian halo rather than a clipped circle.
   let r = length(in.cornerUv - vec2<f32>(0.5, 0.5));
   let mask = 1.0 - smoothstep(0.4, 0.5, r);
-  let alpha = rgba.a * mask;
+
+  // ── BRIGHTNESS-DERIVED ALPHA (sky-subtraction lite) ──────────────────────
+  //
+  // SDSS / DSS cutout JPEGs ship with no alpha channel (rgba.a is always
+  // 1.0), so they used to render their full sky background as an opaque
+  // grey square against the dark dot field — the cosmetic complaint
+  // logged in `project_thumbnail_quality.md`.
+  //
+  // Trick: use the maximum RGB component as alpha.  A pure-black sky
+  // pixel (max ≈ 0.02) becomes nearly transparent; a galaxy body
+  // (max ≈ 0.4–0.9) stays opaque; saturated stars (max = 1.0) stay fully
+  // bright.  `smoothstep` applies a soft threshold so the dimmest sky
+  // pixels vanish entirely instead of leaving a faint grey haze:
+  //   - lum ≤ 0.05 → fully transparent (sky)
+  //   - lum ≥ 0.30 → fully opaque (galaxy / star)
+  // This is the "quick fix" stop-gap; the planned proper sky-subtraction
+  // (`project_thumbnail_quality.md` option B) will sample corner pixels
+  // and subtract a per-cutout sky level.
+  let lum = max(rgba.r, max(rgba.g, rgba.b));
+  let lumAlpha = smoothstep(0.05, 0.30, lum);
+  let alpha = lumAlpha * mask;
   // Premultiplied-alpha output — required by the project's blend
   // configuration (see device.ts `alphaMode: 'premultiplied'`).
   return vec4<f32>(rgba.rgb * alpha, alpha);
