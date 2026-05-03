@@ -52,23 +52,37 @@ import shaderSrc from './shaders/points.wgsl?raw';
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
 /**
- * Number of `f32` values packed per catalog point in the vertex buffer.
+ * Number of 4-byte slots packed per catalog point in the vertex buffer.
  *
  * Layout (matches the `PerVertex` struct in points.wgsl):
- *   [x, y, z,  magnitude,  colorIndex]
- *    ^position^  ^f32^       ^f32^
- *     (3 f32s)
+ *   [x f32, y f32, z f32,  magnitude f32,  colorIndex f32,  globalInstanceIdx u32]
+ *
+ * The first five slots are interpreted as f32 by the shader; the sixth slot
+ * is interpreted as u32. JS-side we treat the buffer as a flat ArrayBuffer
+ * and use Float32Array / Uint32Array views over the same bytes so we can
+ * write each slot in its native type without conversion.
  */
-const FLOATS_PER_POINT = 5;
+const SLOTS_PER_POINT = 6;
 
 /**
  * Byte stride between consecutive per-instance records in the vertex buffer.
  *
- * 5 floats × 4 bytes/float = 20 bytes. The pipeline's `arrayStride` must
- * match this exactly; if they disagree WebGPU will either validate-error or
- * silently read garbage.
+ * 6 slots × 4 bytes = 24 bytes. The pipeline's `arrayStride` must match
+ * this exactly; if it disagrees WebGPU will either validate-error or
+ * silently read garbage.  PickRenderer's pipeline declares the same
+ * 24-byte stride and same fourth attribute, so the two pipelines stay
+ * compatible with this single vertex buffer layout.
  */
-const POINT_STRIDE = FLOATS_PER_POINT * 4; // 20 bytes
+const POINT_STRIDE = SLOTS_PER_POINT * 4; // 24 bytes
+
+/**
+ * Byte offset of the `globalInstanceIdx` slot inside one per-instance record.
+ *
+ * Used by the upload loop to write the u32 global index into the buffer
+ * after the five f32 slots.  Kept as a named constant so the offset stays
+ * single-source-of-truth across upload + the pipeline descriptor below.
+ */
+const GLOBAL_IDX_BYTE_OFFSET = 20;
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.
@@ -95,16 +109,6 @@ const POINT_STRIDE = FLOATS_PER_POINT * 4; // 20 bytes
  *   total: 96 bytes — a multiple of 16 ✓
  */
 const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4; // 96 bytes: mat4 (64) + vec4-slot (16) + u32×4 (16)
-
-/**
- * Byte offset of the `instanceIdOffset` field inside the uniform struct.
- *
- * The per-source draw loop writes a fresh 4-byte u32 here before each draw
- * call. We deliberately keep this small partial write (rather than writing
- * the whole 96-byte struct each draw) because `writeBuffer` cost scales with
- * bytes copied — see the comment in `draw()` for the full rationale.
- */
-const INSTANCE_ID_OFFSET_BYTE_OFFSET = 84;
 
 // ─── Per-source bookkeeping ───────────────────────────────────────────────────
 
@@ -209,6 +213,12 @@ export class PointRenderer {
               { shaderLocation: 1, offset: 12, format: 'float32' },
               // colorIndex (f32) — offset 16 bytes
               { shaderLocation: 2, offset: 16, format: 'float32' },
+              // globalInstanceIdx (u32) — offset 20 bytes
+              {
+                shaderLocation: 3,
+                offset: GLOBAL_IDX_BYTE_OFFSET,
+                format: 'uint32',
+              },
             ],
           },
         ],
@@ -265,9 +275,46 @@ export class PointRenderer {
    * @param cloud   Point cloud to upload (struct-of-arrays SDSS v2 shape).
    */
   upload(source: Source, cloud: PointCloud): void {
-    // Allocate a CPU-side typed array for the interleaved data.
-    // Total size: cloud.count records × 5 floats/record.
-    const interleaved = new Float32Array(cloud.count * FLOATS_PER_POINT);
+    // Allocate a CPU-side ArrayBuffer for the interleaved data and create
+    // both Float32 and Uint32 views over it.  The five photometry/position
+    // slots are written through `f32` and the sixth (globalInstanceIdx) is
+    // written through `u32` — same underlying bytes, two different
+    // interpretations, no conversion at upload time.
+    const arrayBuffer = new ArrayBuffer(cloud.count * POINT_STRIDE);
+    const interleaved = new Float32Array(arrayBuffer);
+    const interleavedU32 = new Uint32Array(arrayBuffer);
+
+    // ── Pre-bake global instance index ──────────────────────────────────────
+    //
+    // Each survey's points need a unique slice of the global ID range so
+    // the picker (and the visual selection check) can identify them
+    // unambiguously.  We compute this source's starting offset by summing
+    // the counts of all *earlier* sources (in canonical `ALL_SOURCES`
+    // order) that are already loaded.
+    //
+    // Why bake into the vertex buffer instead of writing per-draw uniforms?
+    // The uniform-buffer approach hits the WebGPU writeBuffer/submit
+    // ordering rule — every per-source writeBuffer between draws within
+    // one submit completes BEFORE any draw runs, so all draws would read
+    // the last offset written.  Baking sidesteps the race entirely.  The
+    // cost is 4 bytes per instance (~10 MB for SDSS) — acceptable for a
+    // visualisation.
+    //
+    // Edge case: if an *earlier* source (in enum order) is uploaded after
+    // this one, this source's offset would shift forward but the values
+    // already baked here would not.  In practice ALL_SOURCES order is
+    // [Synthetic, SDSS, TwoMRS, Glade] and Synthetic is only loaded as a
+    // fallback when every real survey fails (so it can't load alongside
+    // them).  Real surveys all have offsets that depend only on each
+    // other in stable enum order, so the issue does not arise in current
+    // usage.  If we ever need to support out-of-enum-order uploads, the
+    // fix is to re-upload affected later sources.
+    let priorCount = 0;
+    for (const s of ALL_SOURCES) {
+      if (s === source) break;
+      const entry = this.clouds.get(s);
+      if (entry) priorCount += entry.count;
+    }
 
     // ── Per-survey magnitude normalisation ───────────────────────────────────
     //
@@ -310,7 +357,7 @@ export class PointRenderer {
     const magOffset = SDSS_TARGET_MEAN_MAG - sourceMean;
 
     for (let i = 0; i < cloud.count; i++) {
-      const o = i * FLOATS_PER_POINT;
+      const o = i * SLOTS_PER_POINT;
 
       // Copy the three position components from the SoA positions array.
       interleaved[o + 0] = cloud.positions[i * 3 + 0]!;
@@ -342,6 +389,10 @@ export class PointRenderer {
       // they render at average intensity instead of vanishing.
       interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
       interleaved[o + 4] = Number.isFinite(ug) ? ug : NO_COLOUR_SENTINEL;
+      // Slot 5 (offset 20 bytes) carries the GLOBAL instance index as a u32,
+      // baked once at upload time so the shader doesn't need a per-draw
+      // uniform write.  Read by the selection-halo check and `fsPick`.
+      interleavedU32[o + 5] = priorCount + i;
     }
 
     // Destroy any previous buffer for this source before replacing it.
@@ -353,10 +404,14 @@ export class PointRenderer {
     });
     this.device.queue.writeBuffer(buffer, 0, interleaved);
 
-    // `instanceIdOffset` is set to 0 here as a placeholder — the real value
-    // is derived in `recomputeInstanceIdOffsets()` immediately below, which
-    // sums counts in enum order rather than upload order.
-    this.clouds.set(source, { buffer, count: cloud.count, instanceIdOffset: 0 });
+    // `instanceIdOffset` is set to the priorCount we already computed above
+    // — same value baked into the vertex buffer's globalInstanceIdx slot.
+    // We still call `recomputeInstanceIdOffsets()` afterwards so any later
+    // source's offset stays consistent (it currently only matters as JS-
+    // side bookkeeping for `loadedSources()` consumers; the shader reads
+    // the baked vertex attribute directly and no longer needs a uniform
+    // offset at all).
+    this.clouds.set(source, { buffer, count: cloud.count, instanceIdOffset: priorCount });
     this.recomputeInstanceIdOffsets();
   }
 
@@ -459,13 +514,13 @@ export class PointRenderer {
     // Nothing to draw if no source has been uploaded yet.
     if (this.clouds.size === 0) return;
 
-    // ── Pack and upload the bulk of the uniform buffer ──────────────────────
+    // ── Pack and upload the uniform buffer ──────────────────────────────────
     //
-    // We write everything *except* `instanceIdOffset` here in one 96-byte
-    // upload. The per-source draw loop below patches the 4-byte
-    // `instanceIdOffset` slot (offset 84) before each draw call — that
-    // partial write is the only piece of uniform state that varies between
-    // sources within a single frame.
+    // The uniform layout still reserves the `instanceIdOffset` u32 slot at
+    // byte offset 84 for backward compatibility with the shader struct, but
+    // the visual + pick paths no longer read it — the global instance ID
+    // is now baked per-vertex (see `globalInstanceIdx` in points.wgsl).  We
+    // leave the slot zeroed here.
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
     const u32 = new Uint32Array(buf);
@@ -476,8 +531,9 @@ export class PointRenderer {
     f32[18] = pointSizePx;
     f32[19] = brightness;
     u32[20] = selectedIndex >>> 0; // selectedIndex at byte offset 80
-    // u32[21] (instanceIdOffset) and u32[22..23] (padding) are left as 0
-    // here; the per-source loop below overwrites u32[21] (offset 84) per draw.
+    // u32[21] (instanceIdOffset) and u32[22..23] (padding) are zero — the
+    // shader no longer reads u32[21]; it's preserved only so the WGSL
+    // struct layout stays binary-compatible across this refactor.
 
     this.device.queue.writeBuffer(this.uniformBuffer_internal, 0, buf);
 
@@ -486,18 +542,15 @@ export class PointRenderer {
     // Bind the pipeline + bind group once (these don't change between draws)
     // and then for each loaded source:
     //   1. Skip it if its visibility bit is not set in the mask.
-    //   2. Patch `instanceIdOffset` for this source into the uniform buffer.
-    //      We write *only the 4 bytes* at offset 84 because the cost of
-    //      `writeBuffer` is proportional to the bytes copied — re-uploading
-    //      the whole 96-byte struct per source would multiply the per-frame
-    //      uniform bandwidth by ~24× for no gain.
-    //   3. Set this source's vertex buffer and issue a 6-vertex × N-instance
+    //   2. Set this source's vertex buffer and issue a 6-vertex × N-instance
     //      draw call.
+    //
+    // No more per-source uniform writes — the per-instance vertex attribute
+    // `globalInstanceIdx` already encodes which slice of the global ID
+    // range each source occupies, so the shader doesn't need a per-draw
+    // offset uniform.
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
-
-    // A reusable 4-byte scratch for the per-source partial uniform write.
-    const offsetScratch = new Uint32Array(1);
 
     for (const source of ALL_SOURCES) {
       const entry = this.clouds.get(source);
@@ -506,13 +559,6 @@ export class PointRenderer {
       // Bitmask check: `(mask >> source) & 1`. Equivalent to maskHas() from
       // `data/sources.ts`, inlined here because this is the per-frame hot path.
       if (((visibleSourceMask >> source) & 1) === 0) continue;
-
-      offsetScratch[0] = entry.instanceIdOffset >>> 0;
-      this.device.queue.writeBuffer(
-        this.uniformBuffer_internal,
-        INSTANCE_ID_OFFSET_BYTE_OFFSET,
-        offsetScratch,
-      );
 
       pass.setVertexBuffer(0, entry.buffer);
       pass.draw(6, entry.count);

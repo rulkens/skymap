@@ -164,6 +164,24 @@ struct PerVertex {
   // SDSS g−r colour index. Negative → blue (hot stars / quasars);
   // positive → red (cool stars / old galaxies). Typical range −0.5 to +1.5.
   @location(2) colorIndex: f32,
+
+  // Pre-baked GLOBAL instance index across all loaded surveys.
+  //
+  // Why bake this rather than compute it on the GPU from `instance_index +
+  // u.instanceIdOffset`?  Because `instanceIdOffset` lives in a uniform
+  // buffer the JS side has to overwrite per-source-draw, and WebGPU
+  // sequences `queue.writeBuffer` calls on the queue: every
+  // `writeBuffer(offset_X)` between draws within a single submit completes
+  // BEFORE any draw runs, so all draws read the *last* offset written.
+  // This racing-uniform pattern silently misroutes selection halos and pick
+  // IDs for every source except the last drawn.
+  //
+  // Baking the global index per instance at upload time sidesteps the race
+  // entirely — each vertex carries its own ID, no uniform updates needed
+  // between draws.  It costs 4 bytes per instance (~10 MB for SDSS); the
+  // alternative — separate command-encoder + submit per source — would
+  // multiply per-frame overhead by N for no real cost saving.
+  @location(3) globalInstanceIdx: u32,
 };
 
 // ─── vertex-to-fragment interface ─────────────────────────────────────────────
@@ -304,7 +322,15 @@ fn vs(
   // Determine whether this instance is the user-selected point.
   // `u.selectedIndex` is 0xFFFFFFFFu when nothing is selected (sentinel),
   // so this comparison is only ever true for a real selection.
-  let isSelected = (ii == u.selectedIndex);
+  //
+  // We compare against `p.globalInstanceIdx` (the per-instance baked global
+  // ID) rather than the per-draw `@builtin(instance_index)` because the
+  // selectedIndex coming from the picker is a GLOBAL index across all
+  // surveys.  A naive comparison against the local `ii` would only match
+  // when selectedIndex < SDSS.count — for any 2MRS or GLADE selection it
+  // would either miss entirely OR match the wrong galaxy in the GLADE
+  // draw (whose ii range happens to overlap the global selectedIndex).
+  let isSelected = (p.globalInstanceIdx == u.selectedIndex);
 
   // Scale the billboard ~8× for the selected point so the selection ring
   // is unmistakable — even a faint, magnitude-22 galaxy gets a visible halo.
@@ -409,13 +435,14 @@ fn vs(
   // brighten the entire sky without re-uploading point data.
   out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0) * u.brightness;
 
-  // Propagate the instance index for the pick fragment entry point (fsPick).
+  // Propagate the GLOBAL instance index (already pre-baked across surveys
+  // by pointRenderer.upload) for the pick fragment entry point (fsPick).
   // The visual `fs` entry point ignores this field entirely — WGSL silently
   // allows a fragment shader to declare fewer inputs than the vertex shader
   // outputs, as long as the @location values that *are* declared match.
   //
   // We keep this here so both fragment entry points share the same vertex stage.
-  out.instanceIdx = ii;
+  out.instanceIdx = p.globalInstanceIdx;
 
   // Propagate the selection flag for the visual fragment entry point.
   // 1u = this instance is selected; 0u = normal point.
@@ -571,14 +598,14 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   // without the +1 offset).  The JS readback subtracts 1 to recover the
   // 0-based index, after checking that the raw value is not 0.
   //
-  // We additionally add `u.instanceIdOffset` so the *global* index space is
-  // continuous across surveys: each per-source draw declares its starting
-  // offset (sum of prior surveys' counts) so its `instanceIdx` values map
-  // into a unique slice of the global ID range. Without this, every draw's
-  // first point would collide on instance 0 and the picker could not tell
-  // them apart.
+  // The instanceIdx output here carries the GLOBAL per-instance index
+  // (baked into the vertex buffer at upload time and propagated through
+  // the vertex stage as `out.instanceIdx`), so each surveys's points
+  // already occupy a unique slice of the global ID range without any
+  // per-draw uniform tweaking.  See the `globalInstanceIdx` doc-comment in
+  // the PerVertex struct for why we bake rather than compute on the GPU.
   //
   // The g/b/a channels are unused — we only read the r channel back on the
   // JS side.  Filling them with 0 keeps the output well-defined.
-  return vec4<u32>(in.instanceIdx + 1u + u.instanceIdOffset, 0u, 0u, 0u);
+  return vec4<u32>(in.instanceIdx + 1u, 0u, 0u, 0u);
 }

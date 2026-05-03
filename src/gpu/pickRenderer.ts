@@ -198,18 +198,24 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
       entryPoint: 'vs',
 
       // Vertex buffer layout — must exactly match PointRenderer's layout.
-      // One 20-byte record per *instance* (stepMode:'instance'):
-      //   bytes  0..11  : position vec3<f32>   (shaderLocation 0)
-      //   bytes 12..15  : magnitude f32         (shaderLocation 1)
-      //   bytes 16..19  : colorIndex f32         (shaderLocation 2)
+      // One 24-byte record per *instance* (stepMode:'instance'):
+      //   bytes  0..11  : position vec3<f32>          (shaderLocation 0)
+      //   bytes 12..15  : magnitude f32                (shaderLocation 1)
+      //   bytes 16..19  : colorIndex f32                (shaderLocation 2)
+      //   bytes 20..23  : globalInstanceIdx u32         (shaderLocation 3)
+      //
+      // The fourth attribute is the cross-survey global instance index,
+      // pre-baked at upload time so `fsPick` can write it directly into
+      // the pick texture without needing a per-source uniform offset.
       buffers: [
         {
-          arrayStride: 20, // 5 floats × 4 bytes/float
+          arrayStride: 24, // 6 slots × 4 bytes/slot
           stepMode: 'instance',
           attributes: [
             { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
             { shaderLocation: 1, offset: 12, format: 'float32' }, // magnitude
             { shaderLocation: 2, offset: 16, format: 'float32' }, // colorIndex
+            { shaderLocation: 3, offset: 20, format: 'uint32' }, // globalInstanceIdx
           ],
         },
       ],
@@ -326,6 +332,13 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     // Concurrency guard — see the `inFlight` declaration above for rationale.
     if (inFlight) return -1;
 
+    // Materialise the source iterator once so we can check emptiness up front
+    // and iterate it again for the draw loop without re-walking the engine's
+    // generator (which is one-shot).  Bail before allocating any GPU
+    // resources if no surveys are visible — saves a pointless texture clear.
+    const sourceList = Array.from(sources);
+    if (sourceList.length === 0) return -1;
+
     const [vpW, vpH] = viewportPx;
 
     // Recreate textures if the viewport changed.
@@ -343,15 +356,6 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     // be a validation error).
     const px = Math.max(0, Math.min(vpW - 1, Math.floor(pickXPx)));
     const py = Math.max(0, Math.min(vpH - 1, Math.floor(pickYPx)));
-
-    // ── Build and submit the pick command ─────────────────────────────────
-    //
-    // We create our own encoder here rather than accepting one from the caller.
-    // This is cleaner because:
-    //   1. We need to submit and then await mapAsync — mixing that with the
-    //      caller's visual encoder would require complex synchronisation.
-    //   2. The pick pass is a separate, self-contained GPU operation.
-    const encoder = device.createCommandEncoder();
 
     // ── Suppress the selection halo for the pick pass ─────────────────────
     //
@@ -371,24 +375,25 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     // need to restore anything afterward.
     //
     // Layout: mat4 viewProj (64) + viewport (8) + pointSizePx (4) +
-    // brightness (4) → selectedIndex sits at byte offset 80. Adding the new
-    // `instanceIdOffset` field after `selectedIndex` (offsets 84..) does NOT
-    // shift this byte offset — the picker still pokes selectedIndex at 80.
+    // brightness (4) → selectedIndex sits at byte offset 80.
     const SELECTED_INDEX_OFFSET = 80;
-    const INSTANCE_ID_OFFSET_OFFSET = 84;
     const NONE_SENTINEL = new Uint32Array([0xffffffff]);
     device.queue.writeBuffer(sharedUniformBuffer, SELECTED_INDEX_OFFSET, NONE_SENTINEL);
 
-    // ── Render pass ────────────────────────────────────────────────────────
+    // ── Single-encoder, single-submit pick pass ───────────────────────────
     //
-    // clearValue { r:0 } clears every texel to 0 — the sentinel that means
-    // "no hit" after the pass completes.
-    // The depth attachment clears to 1.0 (maximum depth), so the first fragment
-    // at any pixel always wins the initial depth test.
+    // One encoder, one render pass, multiple per-source draw calls — the
+    // standard WebGPU pattern.  Cross-survey identification works because
+    // each per-instance vertex carries its own globalInstanceIdx (baked at
+    // upload time in pointRenderer.upload), so `fsPick` writes globally-
+    // unique IDs without needing per-draw uniform updates.  No
+    // writeBuffer race to manage; no per-source submits needed.
+    const encoder = device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
           view: pt.createView(),
+          // Cleared to 0 (the "no hit" sentinel after subtracting 1).
           clearValue: { r: 0, g: 0, b: 0, a: 0 },
           loadOp: 'clear',
           storeOp: 'store',
@@ -420,19 +425,7 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
 
-    // ── Per-source draw loop ────────────────────────────────────────────────
-    //
-    // Mirror the visual `PointRenderer.draw` loop: for every visible source
-    // we patch `instanceIdOffset` into the uniform buffer (4-byte partial
-    // write at offset 84), bind that source's vertex buffer, and issue one
-    // 6-vertex × N-instance draw. The shader's `fsPick` adds the offset to
-    // each per-instance index so the value written into the pick texture
-    // is globally unique across surveys, which lets the readback decode
-    // straight to the merged-array index without a per-source range check.
-    const offsetScratch = new Uint32Array(1);
-    for (const src of sources) {
-      offsetScratch[0] = src.instanceIdOffset >>> 0;
-      device.queue.writeBuffer(sharedUniformBuffer, INSTANCE_ID_OFFSET_OFFSET, offsetScratch);
+    for (const src of sourceList) {
       pass.setVertexBuffer(0, src.vertexBuffer);
       pass.draw(6, src.count);
     }
