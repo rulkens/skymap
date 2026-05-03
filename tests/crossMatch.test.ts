@@ -40,6 +40,13 @@ function rec(source: Source, ra: number, dec: number, z: number, objID = 0n): Pa
     // so leaving them as null exercises the merger with realistic input.
     axisRatio: null,
     positionAngleDeg: null,
+    // diameterKpc is null here for the same reason axisRatio/positionAngleDeg
+    // are null: the build pipeline (not the parser) is responsible for
+    // materialising the DEFAULT_GALAXY_DIAMETER_KPC = 30 fallback, so at the
+    // parser→pipeline boundary the field is legitimately absent.
+    // The cross-match logic doesn't read this field, so null exercises the
+    // merger with realistic input.
+    diameterKpc: null,
   };
 }
 

@@ -70,6 +70,9 @@ function makeCloud(count: number): PointCloud {
     // zero-filled arrays of the right length are sufficient.
     axisRatio: new Float32Array(count),
     positionAngleDeg: new Float32Array(count),
+    // v4 diameter field — fill with 30 kpc (the project-wide default) so
+    // any future test that reads apparent-size logic won't divide by zero.
+    diameterKpc: new Float32Array(count).fill(30),
   };
 }
 

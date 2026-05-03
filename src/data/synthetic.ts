@@ -184,6 +184,15 @@ export function generateSyntheticCloud(count: number, seed = 42): PointCloud {
   const axisRatio = new Float32Array(count).fill(NaN);
   const positionAngleDeg = new Float32Array(count).fill(NaN);
 
+  // Diameter: synthetic galaxies have no real photometric measurement, so
+  // we fill with the project-wide DEFAULT_GALAXY_DIAMETER_KPC = 30. We do
+  // NOT NaN-fill here (unlike axisRatio) because the renderer divides by
+  // diameterKpc every frame to compute apparent angular size — a NaN would
+  // propagate through the apparent-size math and black out every billboard.
+  // 30 kpc is a plausible L* galaxy diameter and matches the same fallback
+  // the build pipeline applies when a real catalog record has no size measurement.
+  const diameterKpc = new Float32Array(count).fill(30);
+
   return {
     count,
     objIDs,
@@ -195,5 +204,6 @@ export function generateSyntheticCloud(count: number, seed = 42): PointCloud {
     magZ,
     axisRatio,
     positionAngleDeg,
+    diameterKpc,
   };
 }

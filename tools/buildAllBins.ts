@@ -44,6 +44,7 @@ import { crossMatch } from './crossMatch.js';
 import { encodePointCloud } from '../src/data/pointCloudFormat.js';
 import { raDecZToCartesian } from '../src/utils/math/index.js';
 import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
+import { DEFAULT_GALAXY_DIAMETER_KPC } from '../src/utils/math/galaxyDiameterKpc.js';
 import { Source } from '../src/data/sources.js';
 import type { PointCloud } from '../src/@types/index.js';
 
@@ -75,6 +76,7 @@ function recordsToCloud(records: ParsedRecord[]): PointCloud {
     magZ: new Float32Array(count),
     axisRatio: new Float32Array(count),
     positionAngleDeg: new Float32Array(count),
+    diameterKpc: new Float32Array(count),
   };
   for (let i = 0; i < count; i++) {
     // `records[i]` is `ParsedRecord | undefined` under noUncheckedIndexedAccess.
@@ -105,6 +107,22 @@ function recordsToCloud(records: ParsedRecord[]): PointCloud {
       cloud.axisRatio[i] = fb.axisRatio;
       cloud.positionAngleDeg[i] = fb.positionAngleDeg;
     }
+    // Diameter: prefer the parser-supplied real measurement (2MRS Riso,
+    // GLADE Tully(Bmag), SDSS petroR50_r).  When the parser couldn't
+    // extract a real value, fall back to DEFAULT_GALAXY_DIAMETER_KPC = 30
+    // so the encoded cloud always carries a finite, positive diameter.
+    //
+    // Why apply the fallback here rather than inside each parser?  Three
+    // reasons: (1) a single source-of-truth for the default value, (2)
+    // future Phase-2 plans (HyperLEDA logd25) can swap the fallback to a
+    // pgc-keyed lookup without touching every parser, and (3) the
+    // null/finite distinction at the parser boundary doubles as the
+    // provenance signal for the InfoCard's "real / Tully / fallback"
+    // chip in Task 14.
+    cloud.diameterKpc[i] =
+      r.diameterKpc !== null && r.diameterKpc > 0
+        ? r.diameterKpc
+        : DEFAULT_GALAXY_DIAMETER_KPC;
   }
   return cloud;
 }
