@@ -86,6 +86,50 @@ function maxAbsCoord(cloud: PointCloud): number {
   return m;
 }
 
+/**
+ * Round `x` down to the nearest "nice" number from the {1, 2, 5} × 10^k family.
+ *
+ * This is the same rounding scheme used by axis tickers in plotting libraries
+ * (matplotlib's MaxNLocator, d3's ticks(), etc.). Given any positive real, it
+ * returns the largest "round" value ≤ x where round means the mantissa is one
+ * of 1, 2, or 5. Examples:
+ *
+ *     niceRound(  3.7) →   2     (3.7 → mantissa 3.7 → rounds down to 2)
+ *     niceRound( 47)   →  20     (47 → 4.7 × 10¹ → 2 × 10¹)
+ *     niceRound(800)   → 500     (800 → 8 × 10² → 5 × 10²)
+ *     niceRound(  0.07)→   0.05  (0.07 → 7 × 10⁻² → 5 × 10⁻²)
+ *
+ * Why floor (not nearest)? For a scale bar we want the *bar to fit inside* the
+ * desired pixel target, never overflow it. Rounding down to the nice value
+ * below the target guarantees the rendered bar is ≤ targetPx.
+ */
+function niceRound(x: number): number {
+  if (x <= 0) return 0;
+  const exp = Math.floor(Math.log10(x));
+  const power = Math.pow(10, exp);
+  const mantissa = x / power;          // ∈ [1, 10)
+  const niceMantissa =
+    mantissa >= 5 ? 5 :
+    mantissa >= 2 ? 2 :
+    1;
+  return niceMantissa * power;
+}
+
+/**
+ * Format a distance in Mpc, switching units up/down for readability:
+ *   < 1 Mpc       → kpc (kiloparsec)
+ *   < 1000 Mpc    → Mpc (megaparsec)  — most SDSS galaxies fall here
+ *   ≥ 1000 Mpc    → Gpc (gigaparsec)  — high-z quasars
+ *
+ * The number is rendered with toLocaleString for thousands separators so big
+ * values like "2,000 Mpc" stay readable.
+ */
+function formatDistance(mpc: number): string {
+  if (mpc < 1)    return `${(mpc * 1000).toLocaleString()} kpc`;
+  if (mpc >= 1000) return `${(mpc / 1000).toLocaleString()} Gpc`;
+  return `${mpc.toLocaleString()} Mpc`;
+}
+
 /** Discriminated source tag returned by `loadCloud`. */
 type CloudSource = 'sdss.bin' | 'synthetic';
 
@@ -127,6 +171,10 @@ const fieldZ         = document.getElementById('field-z')!;
 const fieldDistance  = document.getElementById('field-distance')!;
 const fieldMagnitude = document.getElementById('field-magnitude')!;
 const fieldColor     = document.getElementById('field-color')!;
+
+// ── Scale-bar DOM refs ─────────────────────────────────────────────────────────
+const scaleLabel = document.getElementById('scale-label')!;
+const scaleLine  = document.getElementById('scale-line')!;
 
 async function main() {
   // Size the backing store to match the display before handing the canvas to
@@ -400,6 +448,45 @@ async function main() {
   status.textContent =
     `WebGPU OK · ${cloud.count.toLocaleString()} points (${sourceLabel}) · drag to orbit, wheel to zoom`;
 
+  // ── Scale-bar update ────────────────────────────────────────────────────────
+  //
+  // Compute "pixels-per-Mpc at the camera target" and pick a nice round Mpc
+  // value (1 / 2 / 5 × 10^k) such that the bar spans roughly 150 px.
+  //
+  // Math: with a perspective camera, the visible *vertical* world height at a
+  // distance `d` from the camera is  2·d·tan(fovY/2). One world unit therefore
+  // takes up  viewportHeightPx / (2·d·tan(fovY/2))  pixels at distance d.
+  // We measure at the focal point (camera target) — close enough for a heuristic
+  // legend, and matches what the user perceives at the centre of the screen.
+  //
+  // We don't need to recompute on every frame, but it's cheap (a handful of
+  // multiplies + 3 DOM writes) and keeping it in the render loop guarantees the
+  // bar stays in sync with zoom/resize without extra wiring.
+  const SCALE_TARGET_PX = 150;
+  let lastScaleSig = '';
+
+  function updateScaleBar(): void {
+    // Use CSS pixels (clientHeight), not the backing-store size, so the bar's
+    // physical width on screen matches the legend reading regardless of DPR.
+    const viewportCssHeight = canvas.clientHeight;
+    if (viewportCssHeight === 0) return;
+
+    const pxPerMpc = viewportCssHeight / (2 * cam.distance * Math.tan(cam.fovYRad / 2));
+    if (!isFinite(pxPerMpc) || pxPerMpc <= 0) return;
+
+    const desiredMpc = SCALE_TARGET_PX / pxPerMpc;
+    const niceMpc    = niceRound(desiredMpc);
+    const widthPx    = niceMpc * pxPerMpc;
+
+    // Avoid redundant DOM writes when nothing changed (zoom unchanged etc).
+    const sig = `${niceMpc}:${widthPx.toFixed(0)}`;
+    if (sig === lastScaleSig) return;
+    lastScaleSig = sig;
+
+    scaleLine.style.width = `${widthPx.toFixed(0)}px`;
+    scaleLabel.textContent = formatDistance(niceMpc);
+  }
+
   // ── Render loop ─────────────────────────────────────────────────────────────
 
   function frame() {
@@ -412,6 +499,10 @@ async function main() {
       cam.aspect = canvas.width / canvas.height;
       updatePosition(cam);
     }
+
+    // Refresh the scale-bar legend. The function early-returns when nothing
+    // changed, so this costs ~zero on frames where zoom and viewport are stable.
+    updateScaleBar();
 
     // Snapshot the current camera state into a combined view-projection matrix.
     // This read happens *after* any input-driven mutations applied by the orbit
