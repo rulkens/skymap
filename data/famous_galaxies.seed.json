@@ -1,0 +1,202 @@
+[
+  {
+    "id": "m31",
+    "names": ["M31", "NGC 224", "Andromeda Galaxy"],
+    "ra": 10.6847,
+    "dec": 41.2687,
+    "distanceMpc": 0.778,
+    "diameterKpc": 67.5,
+    "type": "SA(s)b",
+    "description": "The nearest large spiral galaxy, M31 (Andromeda) sits 778 kpc away and spans about 220,000 light-years — roughly twice the Milky Way's diameter.  Visible to the naked eye as a faint smudge, it is on a collision course with our own galaxy."
+  },
+  {
+    "id": "m33",
+    "names": ["M33", "NGC 598", "Triangulum Galaxy"],
+    "ra": 23.4621,
+    "dec": 30.6602,
+    "distanceMpc": 0.84,
+    "diameterKpc": 18.5,
+    "type": "SA(s)cd",
+    "description": "The third-largest member of the Local Group, M33 is a flocculent spiral about half the size of the Milky Way.  Its distance has been used as a key calibrator on the cosmic distance ladder."
+  },
+  {
+    "id": "m51",
+    "names": ["M51", "NGC 5194", "Whirlpool Galaxy"],
+    "ra": 202.4696,
+    "dec": 47.1952,
+    "distanceMpc": 7.22,
+    "diameterKpc": 23.6,
+    "type": "SA(s)bc pec",
+    "description": "M51 is the canonical face-on grand-design spiral, currently interacting with the dwarf companion NGC 5195.  Hubble's most-photographed galaxy after M31."
+  },
+  {
+    "id": "m58",
+    "names": ["M58", "NGC 4579"],
+    "ra": 189.4313,
+    "dec": 11.8181,
+    "distanceMpc": 19.3,
+    "diameterKpc": 33.7,
+    "type": "SAB(rs)b",
+    "description": "A barred spiral in the Virgo cluster, M58 hosts a low-luminosity active galactic nucleus and is one of the brightest galaxies in the cluster's central concentration."
+  },
+  {
+    "id": "m59",
+    "names": ["M59", "NGC 4621"],
+    "ra": 190.5093,
+    "dec": 11.6469,
+    "distanceMpc": 16.5,
+    "diameterKpc": 24.3,
+    "type": "E5",
+    "description": "M59 is an elliptical galaxy in Virgo containing one of the most massive black holes known in the local universe (≈ 5 billion solar masses)."
+  },
+  {
+    "id": "m61",
+    "names": ["M61", "NGC 4303"],
+    "ra": 185.4790,
+    "dec": 4.4737,
+    "distanceMpc": 16.0,
+    "diameterKpc": 31.0,
+    "type": "SAB(rs)bc",
+    "description": "A starburst spiral and one of the largest galaxies in the Virgo cluster, M61 has hosted six observed supernovae since 1926 — an unusually high rate."
+  },
+  {
+    "id": "m64",
+    "names": ["M64", "NGC 4826", "Black Eye Galaxy"],
+    "ra": 194.1818,
+    "dec": 21.6822,
+    "distanceMpc": 5.2,
+    "diameterKpc": 16.5,
+    "type": "(R)SA(rs)ab",
+    "description": "Named for the prominent dust band absorbing light in front of its bright nucleus, M64's gas in the outer disk rotates in the opposite direction to the inner disk — evidence of a past minor merger."
+  },
+  {
+    "id": "m77",
+    "names": ["M77", "NGC 1068", "Cetus A"],
+    "ra": 40.6696,
+    "dec": -0.0133,
+    "distanceMpc": 14.4,
+    "diameterKpc": 36.4,
+    "type": "(R)SA(rs)b",
+    "description": "M77 is the closest type-2 Seyfert galaxy and one of the brightest active galactic nuclei in the local universe — a textbook case of an obscured supermassive black hole."
+  },
+  {
+    "id": "m81",
+    "names": ["M81", "NGC 3031", "Bode's Galaxy"],
+    "ra": 148.8882,
+    "dec": 69.0653,
+    "distanceMpc": 3.66,
+    "diameterKpc": 29.0,
+    "type": "SA(s)ab",
+    "description": "A grand-design spiral 3.7 Mpc away, M81 is the largest member of its eponymous galaxy group and a popular target for amateur astronomers in the spring sky."
+  },
+  {
+    "id": "m82",
+    "names": ["M82", "NGC 3034", "Cigar Galaxy"],
+    "ra": 148.9697,
+    "dec": 69.6798,
+    "distanceMpc": 3.53,
+    "diameterKpc": 11.5,
+    "type": "I0",
+    "description": "An edge-on starburst galaxy in the M81 group, M82 is being gravitationally disturbed by M81 — driving an enormous nuclear starburst with hot gas streaming kiloparsecs above the disk."
+  },
+  {
+    "id": "m83",
+    "names": ["M83", "NGC 5236", "Southern Pinwheel"],
+    "ra": 204.2538,
+    "dec": -29.8654,
+    "distanceMpc": 4.66,
+    "diameterKpc": 16.3,
+    "type": "SAB(s)c",
+    "description": "A face-on barred spiral with a prominent star-forming bar, M83 has hosted six supernovae and is one of the closest barred spirals to us."
+  },
+  {
+    "id": "m84",
+    "names": ["M84", "NGC 4374"],
+    "ra": 186.2654,
+    "dec": 12.8870,
+    "distanceMpc": 18.4,
+    "diameterKpc": 26.4,
+    "type": "E1",
+    "description": "A giant elliptical near the heart of the Virgo cluster, M84 displays radio jets emerging from a central supermassive black hole."
+  },
+  {
+    "id": "m86",
+    "names": ["M86", "NGC 4406"],
+    "ra": 186.5494,
+    "dec": 12.9462,
+    "distanceMpc": 16.9,
+    "diameterKpc": 41.0,
+    "type": "S0",
+    "description": "A lenticular giant in the Virgo cluster, M86 has the highest blueshift of any Messier object — it's plunging toward us at over 400 km/s as it falls through the cluster core."
+  },
+  {
+    "id": "m87",
+    "names": ["M87", "NGC 4486", "Virgo A"],
+    "ra": 187.7059,
+    "dec": 12.3911,
+    "distanceMpc": 16.4,
+    "diameterKpc": 40.5,
+    "type": "E0-1",
+    "description": "The supergiant elliptical at the heart of the Virgo cluster, M87 hosts the first black hole ever directly imaged (Event Horizon Telescope, 2019).  Its relativistic jet is visible from optical to radio wavelengths."
+  },
+  {
+    "id": "m88",
+    "names": ["M88", "NGC 4501"],
+    "ra": 187.9966,
+    "dec": 14.4203,
+    "distanceMpc": 16.5,
+    "diameterKpc": 33.6,
+    "type": "SA(rs)b",
+    "description": "A multi-armed spiral in the Virgo cluster, M88 is one of the cluster's brightest spirals and shows clear signs of ram-pressure stripping by intracluster gas."
+  },
+  {
+    "id": "m90",
+    "names": ["M90", "NGC 4569"],
+    "ra": 188.5938,
+    "dec": 13.1626,
+    "distanceMpc": 16.5,
+    "diameterKpc": 39.7,
+    "type": "SAB(rs)ab",
+    "description": "A blueshifted Virgo spiral whose gas is being progressively stripped by the cluster — leaving behind an anaemic disk with truncated star formation."
+  },
+  {
+    "id": "m99",
+    "names": ["M99", "NGC 4254", "Virgo Cluster Pinwheel"],
+    "ra": 184.7065,
+    "dec": 14.4163,
+    "distanceMpc": 16.2,
+    "diameterKpc": 25.4,
+    "type": "SA(s)c",
+    "description": "An asymmetric grand-design spiral on the outskirts of the Virgo cluster.  Its lopsided structure is thought to result from a recent high-speed encounter with the cluster's hot gas."
+  },
+  {
+    "id": "m100",
+    "names": ["M100", "NGC 4321"],
+    "ra": 185.7287,
+    "dec": 15.8224,
+    "distanceMpc": 16.4,
+    "diameterKpc": 33.4,
+    "type": "SAB(s)bc",
+    "description": "A face-on grand-design spiral in Virgo and one of the brightest galaxies in its cluster, M100 was used by Hubble's Cepheid distance ladder to anchor the local distance scale."
+  },
+  {
+    "id": "m101",
+    "names": ["M101", "NGC 5457", "Pinwheel Galaxy"],
+    "ra": 210.8023,
+    "dec": 54.3486,
+    "distanceMpc": 6.86,
+    "diameterKpc": 52.6,
+    "type": "SAB(rs)cd",
+    "description": "M101 is one of the largest and most luminous spirals in the local universe — a grand-design spiral nearly 70% larger than the Milky Way, with a famously asymmetric arm pattern from a past encounter with NGC 5474."
+  },
+  {
+    "id": "m104",
+    "names": ["M104", "NGC 4594", "Sombrero Galaxy"],
+    "ra": 189.9976,
+    "dec": -11.6231,
+    "distanceMpc": 9.55,
+    "diameterKpc": 15.0,
+    "type": "SA(s)a",
+    "description": "Famous for its bright nucleus and prominent dust lane, M104 is a near edge-on spiral with an unusually large central bulge.  Hosts a billion-solar-mass black hole."
+  }
+]
