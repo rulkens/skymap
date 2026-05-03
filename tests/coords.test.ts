@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { redshiftToDistanceMpc, raDecZToCartesian } from '../src/data/coords';
+import { redshiftToDistanceMpc, raDecZToCartesian, cartesianToRaDecZ } from '../src/data/coords';
 
 const close = (a: number, b: number, eps = 1e-3) => Math.abs(a - b) < eps;
 
@@ -34,5 +34,39 @@ describe('raDecZToCartesian', () => {
   it('returns origin at z=0', () => {
     const [x, y, z] = raDecZToCartesian(45, 30, 0);
     expect([x, y, z]).toEqual([0, 0, 0]);
+  });
+});
+
+describe('cartesianToRaDecZ', () => {
+  it('returns origin sentinels at (0, 0, 0)', () => {
+    expect(cartesianToRaDecZ(0, 0, 0)).toEqual([0, 0, 0]);
+  });
+
+  it('inverts the forward conversion (round-trip)', () => {
+    const cases: Array<[number, number, number]> = [
+      [10, 20, 0.05],
+      [180, 30, 0.1],
+      [350, -45, 0.2],
+      [0, 0, 0.5],
+      [90, 0, 0.3],
+      [123.456, 78.9, 0.07],
+    ];
+    for (const [raIn, decIn, zIn] of cases) {
+      const [x, y, zc] = raDecZToCartesian(raIn, decIn, zIn);
+      const [raOut, decOut, zOut] = cartesianToRaDecZ(x, y, zc);
+      expect(close(raOut, raIn, 1e-3)).toBe(true);
+      expect(close(decOut, decIn, 1e-3)).toBe(true);
+      expect(close(zOut, zIn, 1e-6)).toBe(true);
+    }
+  });
+
+  it('normalises RA into [0, 360)', () => {
+    // (RA = 350, Dec = 0, z = 0.1) lies in the -y half-space, atan2 gives -10°.
+    // Function must wrap to 350°, not return -10.
+    const [x, y, z] = raDecZToCartesian(350, 0, 0.1);
+    const [ra, , ] = cartesianToRaDecZ(x, y, z);
+    expect(ra).toBeGreaterThanOrEqual(0);
+    expect(ra).toBeLessThan(360);
+    expect(close(ra, 350, 1e-3)).toBe(true);
   });
 });
