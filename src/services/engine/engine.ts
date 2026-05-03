@@ -441,6 +441,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       let frameCounter = 0;
       const bitmapReady = new Set<string>();
 
+      // ── Failed-fetch memo ────────────────────────────────────────────────
+      //
+      // Without this, every frame the per-galaxy loop sees `!bitmapReady`
+      // and re-enqueues the same key — even though we already tried and
+      // it failed (404 from SDSS, CORS or network error from DSS, decode
+      // error, etc).  Result: a tight retry loop hammering the cutout
+      // services dozens of times per second per failed galaxy, the
+      // browser console flooded with error logs, and no progress made.
+      //
+      // We treat any failure as a permanent (per-session) "do not try
+      // again".  If the user reloads the page we'll try again — that's
+      // the right cadence: persistent failures (galaxy outside both
+      // SDSS and DSS coverage, malformed RA/Dec) should NOT consume
+      // network bandwidth all session.
+      const bitmapFailed = new Set<string>();
+
       // Signal loading state immediately so the user knows something is
       // happening before the (potentially multi-second) fetch completes.
       cb.onStatusChange({ kind: 'loading' });
@@ -914,6 +930,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               // screen.
               const slot = atlas.allocate(key, frameCounter);
 
+              // If we've already failed to fetch this galaxy (404 / CORS /
+              // decode error), don't try again this session.  Without this
+              // gate we'd re-enqueue the same dead key every frame — see
+              // the `bitmapFailed` declaration above for the full rationale.
+              if (bitmapFailed.has(key)) continue;
+
               // If we don't have a bitmap yet, kick off a fetch.  The queue
               // dedupes by key — re-enqueuing only refreshes the priority
               // (priority = apparent-size px, so big galaxies load first).
@@ -923,7 +945,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
                   priority: px,
                   fetcher: () => fetchGalaxyBitmap({ ra, dec }),
                   onResult: (bitmap) => {
-                    if (!bitmap) return;
+                    if (!bitmap) {
+                      // Both SDSS and DSS failed (or the decode threw).
+                      // Memoise the failure so the per-frame loop stops
+                      // re-enqueueing this key.
+                      bitmapFailed.add(key);
+                      return;
+                    }
                     // Slot may have been reassigned by LRU between enqueue
                     // and fetch resolution.  `lastSeenFrame` returns
                     // undefined for keys not currently in the atlas (i.e.
