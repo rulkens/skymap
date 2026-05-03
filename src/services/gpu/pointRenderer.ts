@@ -83,18 +83,18 @@ import shaderSrc from './shaders/points.wgsl?raw';
  * are forwarded through the vertex stage but the fragment stage still uses
  * the round `dot(uv, uv)` cutoff, so the visual is unchanged.
  */
-const SLOTS_PER_POINT = 9;
+const SLOTS_PER_POINT = 10;
 
 /**
  * Byte stride between consecutive per-instance records in the vertex buffer.
  *
- * 9 slots × 4 bytes = 36 bytes. The pipeline's `arrayStride` must match
+ * 10 slots × 4 bytes = 40 bytes. The pipeline's `arrayStride` must match
  * this exactly; if it disagrees WebGPU will either validate-error or
  * silently read garbage.  PickRenderer's pipeline declares the same
- * 36-byte stride and the same attribute table, so the two pipelines stay
+ * 40-byte stride and the same attribute table, so the two pipelines stay
  * compatible with this single vertex buffer layout.
  */
-const POINT_STRIDE = SLOTS_PER_POINT * 4; // 36 bytes
+const POINT_STRIDE = SLOTS_PER_POINT * 4; // 40 bytes
 
 /**
  * Byte offset of the `globalInstanceIdx` slot inside one per-instance record.
@@ -130,11 +130,23 @@ const AXIS_RATIO_BYTE_OFFSET = 28;
  * Byte offset of the `positionAngleDeg` slot — the east-of-north position
  * angle of the galaxy disk's major axis, in degrees [0, 180).
  *
- * Sits at slot index 8 (offset 32).  Last slot before the 36-byte stride
- * boundary.  The fragment shader will rotate the squashed ellipse around
- * the billboard centre by this angle.
+ * Sits at slot index 8 (offset 32).  The fragment shader rotates the
+ * squashed ellipse around the billboard centre by this angle.
  */
 const POSITION_ANGLE_BYTE_OFFSET = 32;
+
+/**
+ * Byte offset of the `diameterKpc` slot — the per-galaxy physical disk
+ * diameter in kiloparsecs.
+ *
+ * Sits at slot index 9 (offset 36) — the new 10th slot of the v4-aligned
+ * vertex format.  The vertex shader uses it to compute each billboard's
+ * apparent angular radius from `(diameterKpc / 1000 / 2) / distance_Mpc`,
+ * replacing the prior project-wide `GALAXY_RADIUS_MPC = 0.06` constant
+ * so dwarfs render small and giants render large.  4 extra bytes per
+ * instance is ~14 MB at 3.5 M points — comfortably within VRAM budget.
+ */
+const DIAMETER_KPC_BYTE_OFFSET = 36;
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.
@@ -302,6 +314,11 @@ export class PointRenderer {
               // Read by the fragment shader (Task 11) to rotate the
               // squashed ellipse around the billboard centre.
               { shaderLocation: 6, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
+              // diameterKpc (f32) — offset 36 bytes.  Per-galaxy physical
+              // diameter in kiloparsecs.  Vertex shader uses it to size the
+              // billboard's apparent radius (replacing the prior project-wide
+              // GALAXY_RADIUS_MPC = 0.06 constant).
+              { shaderLocation: 7, offset: DIAMETER_KPC_BYTE_OFFSET, format: 'float32' },
             ],
           },
         ],
@@ -545,6 +562,12 @@ export class PointRenderer {
       // we just copy them through.
       interleaved[o + 7] = cloud.axisRatio[i]!;
       interleaved[o + 8] = cloud.positionAngleDeg[i]!;
+      // Slot 9 (offset 36): per-galaxy physical diameter in kpc. The build
+      // pipeline guarantees a finite, positive value (real catalog
+      // measurement when available, else DEFAULT_GALAXY_DIAMETER_KPC = 30),
+      // so we copy through with the same `!` non-null assertion as the
+      // sibling SoA fields above.
+      interleaved[o + 9] = cloud.diameterKpc[i]!;
     }
 
     // Destroy any previous buffer for this source before replacing it.
