@@ -56,33 +56,43 @@ import shaderSrc from './shaders/points.wgsl?raw';
  * Number of 4-byte slots packed per catalog point in the vertex buffer.
  *
  * Layout (matches the `PerVertex` struct in points.wgsl):
- *   [x f32, y f32, z f32,  magnitude f32,  colorIndex f32,  globalInstanceIdx u32,  kPerZ f32]
+ *   [x f32, y f32, z f32,
+ *    magnitude f32, colorIndex f32,
+ *    globalInstanceIdx u32, kPerZ f32,
+ *    axisRatio f32, positionAngleDeg f32]
  *
  * The first five slots are interpreted as f32 by the shader; slot 5 is
- * interpreted as u32; slot 6 is interpreted as f32 again.  JS-side we
- * treat the buffer as a flat ArrayBuffer and use Float32Array /
+ * interpreted as u32; slots 6, 7 and 8 are interpreted as f32 again.  JS-side
+ * we treat the buffer as a flat ArrayBuffer and use Float32Array /
  * Uint32Array views over the same bytes so we can write each slot in its
  * native type without conversion.
  *
- * The new slot 6 (`kPerZ`) carries a per-row K-correction coefficient.
- * Different surveys use different colour pairs (SDSS u−g, GLADE B−J,
- * 2MRS J−K) and each pair has its own redshift dependence, so the K
- * coefficient varies per *row* — not per draw call.  Baking it into the
- * vertex buffer lets the shader read it for free, replacing the previous
- * hard-coded `K_UG_PER_Z` shader constant once Task 5 lands.
+ * Slot 6 (`kPerZ`) carries a per-row K-correction coefficient.  Different
+ * surveys use different colour pairs (SDSS u−g, GLADE B−J, 2MRS J−K) and
+ * each pair has its own redshift dependence, so the K coefficient varies
+ * per *row* — not per draw call.  Baking it into the vertex buffer lets the
+ * shader read it for free.
+ *
+ * Slots 7 and 8 (`axisRatio`, `positionAngleDeg`) carry the galaxy's disk
+ * orientation: minor/major axis ratio b/a in (0, 1] and the position angle
+ * (east-of-north) in degrees, [0, 180).  Task 11 will use them to squash
+ * and rotate the billboard's UV-space mask so face-on disks render as
+ * circles and edge-on disks as thin streaks.  Until that lands the values
+ * are forwarded through the vertex stage but the fragment stage still uses
+ * the round `dot(uv, uv)` cutoff, so the visual is unchanged.
  */
-const SLOTS_PER_POINT = 7;
+const SLOTS_PER_POINT = 9;
 
 /**
  * Byte stride between consecutive per-instance records in the vertex buffer.
  *
- * 7 slots × 4 bytes = 28 bytes. The pipeline's `arrayStride` must match
+ * 9 slots × 4 bytes = 36 bytes. The pipeline's `arrayStride` must match
  * this exactly; if it disagrees WebGPU will either validate-error or
  * silently read garbage.  PickRenderer's pipeline declares the same
- * 28-byte stride and same fourth attribute, so the two pipelines stay
+ * 36-byte stride and the same attribute table, so the two pipelines stay
  * compatible with this single vertex buffer layout.
  */
-const POINT_STRIDE = SLOTS_PER_POINT * 4; // 28 bytes
+const POINT_STRIDE = SLOTS_PER_POINT * 4; // 36 bytes
 
 /**
  * Byte offset of the `globalInstanceIdx` slot inside one per-instance record.
@@ -100,9 +110,29 @@ const GLOBAL_IDX_BYTE_OFFSET = 20;
  * Mirrors the `GLOBAL_IDX_BYTE_OFFSET` style so both the upload loop and
  * the pipeline-descriptor attribute table can refer to a single named
  * value.  The shader reads this as a per-instance f32 to scale the
- * K-correction by redshift on a per-row basis (Task 5).
+ * K-correction by redshift on a per-row basis.
  */
 const K_PER_Z_BYTE_OFFSET = 24;
+
+/**
+ * Byte offset of the `axisRatio` slot — the b/a ratio of the galaxy disk.
+ *
+ * Sits at slot index 7 (offset 28).  The fragment shader will use it to
+ * squash the unit-circle UV mask into an ellipse before the radial cutoff;
+ * the pipeline-descriptor below names this offset so the vertex-attribute
+ * table stays in sync with the upload loop.
+ */
+const AXIS_RATIO_BYTE_OFFSET = 28;
+
+/**
+ * Byte offset of the `positionAngleDeg` slot — the east-of-north position
+ * angle of the galaxy disk's major axis, in degrees [0, 180).
+ *
+ * Sits at slot index 8 (offset 32).  Last slot before the 36-byte stride
+ * boundary.  The fragment shader will rotate the squashed ellipse around
+ * the billboard centre by this angle.
+ */
+const POSITION_ANGLE_BYTE_OFFSET = 32;
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.
@@ -251,6 +281,17 @@ export class PointRenderer {
               // the redshift range we care about.  The shader multiplies
               // this coefficient by `z` to obtain the per-point K shift.
               { shaderLocation: 4, offset: K_PER_Z_BYTE_OFFSET, format: 'float32' }, // kPerZ
+              // axisRatio (f32) — offset 28 bytes.  Galaxy disk b/a in
+              // (0, 1].  Read by the fragment shader (Task 11) to squash
+              // the unit-circle UV mask into an ellipse before the radial
+              // cutoff — face-on (b/a = 1) renders round, edge-on (b/a ≈
+              // 0.2) renders as a thin streak.
+              { shaderLocation: 5, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
+              // positionAngleDeg (f32) — offset 32 bytes.  East-of-north
+              // position angle of the major axis in degrees, [0, 180).
+              // Read by the fragment shader (Task 11) to rotate the
+              // squashed ellipse around the billboard centre.
+              { shaderLocation: 6, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
             ],
           },
         ],
@@ -454,6 +495,13 @@ export class PointRenderer {
       // K-shift this row should receive.  See `pickColourIndex` for the
       // per-source values.
       interleaved[o + 6] = colour ? colour.kPerZ : 0;
+      // Slots 7 and 8 (offsets 28 and 32 bytes): galaxy orientation. The
+      // shader reads these as f32; NaN at decode time would propagate into
+      // the ellipse mask and produce a black billboard, but the build
+      // pipeline guarantees both fields are finite (real or fallback) so
+      // we just copy them through.
+      interleaved[o + 7] = cloud.axisRatio[i]!;
+      interleaved[o + 8] = cloud.positionAngleDeg[i]!;
     }
 
     // Destroy any previous buffer for this source before replacing it.

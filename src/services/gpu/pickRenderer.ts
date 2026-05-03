@@ -198,30 +198,32 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
       entryPoint: 'vs',
 
       // Vertex buffer layout — must exactly match PointRenderer's layout.
-      // One 28-byte record per *instance* (stepMode:'instance'):
+      // One 36-byte record per *instance* (stepMode:'instance'):
       //   bytes  0..11  : position vec3<f32>          (shaderLocation 0)
       //   bytes 12..15  : magnitude f32                (shaderLocation 1)
       //   bytes 16..19  : colorIndex f32                (shaderLocation 2)
       //   bytes 20..23  : globalInstanceIdx u32         (shaderLocation 3)
       //   bytes 24..27  : kPerZ f32                     (shaderLocation 4)
+      //   bytes 28..31  : axisRatio f32                 (shaderLocation 5)
+      //   bytes 32..35  : positionAngleDeg f32          (shaderLocation 6)
       //
       // The fourth attribute is the cross-survey global instance index,
       // pre-baked at upload time so `fsPick` can write it directly into
       // the pick texture without needing a per-source uniform offset.
       //
-      // The fifth attribute (kPerZ) is the per-source colour-index
-      // coefficient, used by the visual `vs`/`fs` to tint each billboard.
-      // `fsPick` never reads it — picking only cares about which point a
-      // pixel belongs to, not what colour it is. We declare it here anyway
-      // because WebGPU validation requires that any pipeline binding the
-      // shared per-instance vertex buffer declare a layout that matches the
-      // buffer's stride and every attribute the visual pipeline declares.
-      // Omitting kPerZ here would leave the pick pipeline with a 24-byte
-      // stride against a 28-byte buffer — a hard validation error the
-      // moment we issue a draw call.
+      // The remaining attributes (kPerZ, axisRatio, positionAngleDeg) are
+      // per-source / per-galaxy values used only by the visual `vs`/`fs`
+      // path — `fsPick` never reads them, since picking only cares about
+      // which point a pixel belongs to, not how it looks. We declare them
+      // here anyway because WebGPU validation requires that any pipeline
+      // binding the shared per-instance vertex buffer declare a layout
+      // that matches the buffer's stride and every attribute the visual
+      // pipeline declares. Omitting any of them would leave the pick
+      // pipeline with a smaller stride than the buffer's actual record
+      // size — a hard validation error the moment we issue a draw call.
       buffers: [
         {
-          arrayStride: 28, // 7 slots × 4 bytes/slot — must match pointRenderer.POINT_STRIDE
+          arrayStride: 36, // 9 slots × 4 bytes/slot — must match pointRenderer.POINT_STRIDE
           stepMode: 'instance',
           attributes: [
             { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
@@ -229,6 +231,8 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
             { shaderLocation: 2, offset: 16, format: 'float32' }, // colorIndex
             { shaderLocation: 3, offset: 20, format: 'uint32' }, // globalInstanceIdx
             { shaderLocation: 4, offset: 24, format: 'float32' }, // kPerZ — read by visual `vs`, ignored by `fsPick`
+            { shaderLocation: 5, offset: 28, format: 'float32' }, // axisRatio — Task 11 ellipse mask, ignored by `fsPick`
+            { shaderLocation: 6, offset: 32, format: 'float32' }, // positionAngleDeg — Task 11 ellipse mask, ignored by `fsPick`
           ],
         },
       ],

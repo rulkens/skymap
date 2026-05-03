@@ -222,6 +222,16 @@ struct PerVertex {
   // rows whose source-specific colour pair isn't measurable, so the
   // sentinel branch in `vs` doesn't need to special-case kPerZ.
   @location(4) kPerZ: f32,
+
+  // Galaxy minor/major axis ratio b/a in (0, 1]. Used by the fragment
+  // shader to squash the unit-circle UV mask into an ellipse before the
+  // radial cutoff — a face-on disk (b/a = 1) renders as the original
+  // round point, an edge-on disk (b/a = 0.2) renders as a thin streak.
+  @location(5) axisRatio: f32,
+  // Position angle in degrees, [0, 180). Rotates the squashed ellipse
+  // around the billboard centre. East-of-north convention; we negate
+  // before applying because UV-space y points down on the screen.
+  @location(6) positionAngleDeg: f32,
 };
 
 // ─── vertex-to-fragment interface ─────────────────────────────────────────────
@@ -265,6 +275,19 @@ struct VSOut {
   // boolean that must not be interpolated across the triangle.
   // Used by the visual `fs` to apply the ring/halo selection highlight.
   @location(4) @interpolate(flat) selected: u32,
+
+  // Galaxy disk axis ratio b/a in (0, 1], forwarded from the per-instance
+  // attribute. All 6 vertices of one billboard share the same value, so the
+  // default linear interpolation is harmless — but Task 11 will read this in
+  // the fragment shader to squash the UV-space mask. Kept as a regular
+  // (non-flat) f32 because future tasks may want to interpolate it for
+  // smooth-edge effects, and even the current "constant per instance" use
+  // works fine without an explicit @interpolate.
+  @location(5) axisRatio: f32,
+
+  // Position angle (east-of-north) in degrees, [0, 180), forwarded from the
+  // per-instance attribute. Same per-instance constancy as axisRatio.
+  @location(6) positionAngleDeg: f32,
 };
 
 // ─── colour ramp ──────────────────────────────────────────────────────────────
@@ -552,6 +575,13 @@ fn vs(
   // Propagate the selection flag for the visual fragment entry point.
   // 1u = this instance is selected; 0u = normal point.
   out.selected = select(0u, 1u, isSelected);
+
+  // Forward the orientation attributes through to the fragment stage.
+  // The visual `fs` doesn't use them yet — Task 11 will introduce the
+  // ellipse mask — but plumbing them now means the fragment shader can be
+  // updated in isolation without touching the vertex stage again.
+  out.axisRatio = p.axisRatio;
+  out.positionAngleDeg = p.positionAngleDeg;
 
   return out;
 }
