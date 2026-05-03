@@ -191,3 +191,33 @@ Personal project; no license declared. Ask before reuse.
 
 Tweens are interrupted by mouse drag or wheel — manual orbit controls always
 take precedence over an in-progress focus.
+
+### SpaceMouse 6DOF input (optional)
+
+If you have a 3Dconnexion SpaceMouse (Compact, Wireless, Pro, Enterprise, or
+the older Logitech-branded SpaceNavigator), Skymap can read its 6 axes directly
+via [WebHID](https://wicg.github.io/webhid/) for a much smoother free-flight
+feel than mouse drag.
+
+- Open the **Settings panel** (bottom-left) and click **Connect SpaceMouse**.
+  The browser prompts you to pick the device; pick yours and grant access.
+- Once paired, the permission persists across reloads — Skymap will silently
+  re-acquire the device on every subsequent visit (no second prompt).
+- Adjust the **Sensitivity** slider to taste. The response curve is cubic, so
+  small puck deflections give very fine motion and full deflections give
+  fast camera moves regardless of slider position.
+
+Axis mapping:
+
+| Puck motion | Camera effect |
+|---|---|
+| Push left / right | Pan target sideways |
+| Push forward / back | Pan target up / down |
+| Pull up / push down | Zoom (exponential, scale-invariant) |
+| Tilt forward / back | Pitch |
+| Turn left / right | Yaw |
+| Twist | Ignored (orbit camera has no roll) |
+
+**Browser support:** Chromium-only (Chrome, Edge, Brave, Opera). Firefox and
+Safari don't implement WebHID and the entire SpaceMouse section of the settings
+panel is hidden on those browsers — the rest of the app works exactly as before.
