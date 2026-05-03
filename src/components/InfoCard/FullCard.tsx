@@ -122,18 +122,70 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
         )}
       </div>
 
-      {/* ── SDSS designation ──────────────────────────────────────────────── */}
-      <div className={styles.cardHeadline}>{info.iauName}</div>
+      {/* ── Headline ──────────────────────────────────────────────────────── */}
+      {/*
+        Famous-atlas rows show their primary curated name as the headline
+        (e.g. "M31") instead of the coordinate-derived IAU designation.
+        Survey rows fall back to `info.iauName` so SDSS galaxies still
+        display their `SDSS J123456.78+012345.6`-style label.
+      */}
+      <div className={styles.cardHeadline}>
+        {info.famous ? info.famous.names[0] : info.iauName}
+      </div>
 
       {/* ── Source attribution badge ──────────────────────────────────────── */}
-      {/*
-        Tiny uppercase badge tagging which survey this row came from (SDSS,
-        2MRS, GLADE, Synthetic).  Sits just below the SDSS-style headline
-        because the headline name is a coordinate-derived convention used
-        across surveys, not a guarantee of SDSS provenance — the badge is
-        what tells the user where the actual measurements came from.
-      */}
       <div className={styles.sourceBadge}>{info.sourceLabel}</div>
+
+      {/* ── Famous-atlas detail block ─────────────────────────────────────── */}
+      {info.famous && (
+        <div className={styles.cardSection}>
+          {/*
+            "Also known as" — every name beyond the headline, comma-
+            separated.  Many famous galaxies have an NGC number AND a
+            common name (e.g. M31 / NGC 224 / Andromeda Galaxy); listing
+            all aliases makes the InfoCard recognisable to users coming
+            from any naming convention.
+          */}
+          {info.famous.names.length > 1 && (
+            <div className={styles.cardRow}>
+              <span className={styles.cardLabel}>Also known as</span>
+              <span className={styles.cardValue}>
+                {info.famous.names.slice(1).join(' · ')}
+              </span>
+            </div>
+          )}
+          {/*
+            Curated description — the most editorial part of the card.
+            Two or three sentences chosen at seed-write time to give the
+            user something more colourful than "Sb-type spiral".
+          */}
+          <div className={styles.cardRow}>
+            <span className={styles.cardValue} style={{ fontStyle: 'italic' }}>
+              {info.famous.description}
+            </span>
+          </div>
+          {/*
+            Cross-match link — when the build-time matcher found a nearby
+            survey row, surface the catalog name + offset so power users
+            can see their famous click is consistent with the underlying
+            data, and (eventually) jump to that row's view.  No click
+            handler yet — Task 11 wires the navigation.  For now the
+            label and offset alone are useful provenance.
+          */}
+          {info.famous.xref && (
+            <div className={styles.cardRow}>
+              <span className={styles.cardLabel}>Also catalogued as</span>
+              <span className={styles.cardValue}>
+                {info.famous.xref.source} row #{info.famous.xref.localIdx}
+                {' · '}
+                <span style={{ opacity: 0.7, fontSize: '0.85em' }}>
+                  {info.famous.xref.distanceArcsec.toFixed(1)}″ from curated position
+                </span>
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Thumbnail + cosmology summary ─────────────────────────────────── */}
       <div className={`${styles.cardSection} ${styles.cardTopRow}`}>
