@@ -19,5 +19,6 @@ export * from './absoluteMagnitude';
 export * from './earthEraForLookback';
 export * from './galaxyTypeFromColor';
 export * from './easeOutCubic';
+export * from './lerp';
 export * from './sdssExplorerUrl';
 export * from './sdssThumbnailUrl';
