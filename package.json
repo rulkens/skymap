@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit && vite build",
+    "build-all": "tsx tools/buildAllBins.ts --sdss \"data/Skyserver_SQL5_3_2026 10_23_35 AM.csv\" --twomrs data/raw/2mrs_table3.dat --glade data/raw/glade2.3.dat --out-dir public/data",
     "csv-to-bin": "tsx tools/csvToBin.ts",
     "dev": "vite",
     "format": "prettier --write .",

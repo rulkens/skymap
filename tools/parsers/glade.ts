@@ -146,6 +146,77 @@ function parseFloatOrNaN(s: string): number {
 }
 
 /**
+ * Parse a single GLADE line into a record, or return `null` to indicate the
+ * row should be counted as skipped. Exposed so that streaming consumers
+ * (e.g. `tools/buildAllBins.ts` reading the 800 MB GLADE file line-by-line
+ * because Node refuses to allocate a >512 MB string) can apply the same
+ * row-level filter logic without going through the all-at-once `parseGlade`
+ * entry point.
+ *
+ * The whole-file `parseGlade` below is now a thin wrapper around this
+ * function; the row-filter rules and byte offsets live in exactly one place.
+ */
+export function parseGladeLine(line: string): ParsedRecord | null {
+  if (line.length < MIN_LINE_LEN) {
+    // Truncated row — can't safely slice the trailing flag bytes.
+    return null;
+  }
+
+  // Flag1 lives at byte 104 (0-based 103). Test it before parsing the
+  // numeric fields so quasars/globulars don't waste a `parseFloat`.
+  const flag1 = line.charAt(103);
+  if (flag1 !== 'G') return null;
+
+  // Flag2 lives at byte 254 (0-based 253). '0' means "no measured z or
+  // distance" — GLADE's own admission that this row is unplaceable.
+  const flag2 = line.charAt(253);
+  if (flag2 === '0') return null;
+
+  // RA: bytes 106-123. F18.14 means up to 14 fractional digits in 18
+  // chars; we just trim and `parseFloat`. RA is always populated, so
+  // a NaN here signals a corrupted download, not a missing field.
+  const ra = parseFloat(line.slice(105, 123).trim());
+  // Dec: bytes 125-144 (F20.15).
+  const dec = parseFloat(line.slice(124, 144).trim());
+  if (!Number.isFinite(ra) || !Number.isFinite(dec)) return null;
+
+  // z: bytes 174-191 (E18.15). Sentinel `---` is common when only a
+  // distance was measured photometrically — `parseFloatOrNaN` collapses
+  // those to NaN so the `isFinite` check below catches them uniformly.
+  // We also drop z <= 0: GLADE excludes local-group blueshifts by
+  // construction (unlike 2MRS), so a non-positive z is junk here.
+  const z = parseFloatOrNaN(line.slice(173, 191));
+  if (!Number.isFinite(z) || z <= 0) return null;
+
+  // Photometry. All four fields use the dash-sentinel convention; any
+  // missing band collapses to NaN and propagates correctly through the
+  // renderer's colour computation. We deliberately do *not* skip the
+  // row when a band is missing — partial photometry is still useful
+  // for sorting by apparent brightness in one of the other bands.
+  const bmag = parseFloatOrNaN(line.slice(192, 198)); // bytes 193-198
+  const jmag = parseFloatOrNaN(line.slice(214, 220)); // bytes 215-220
+  const hmag = parseFloatOrNaN(line.slice(227, 233)); // bytes 228-233
+  const kmag = parseFloatOrNaN(line.slice(240, 246)); // bytes 241-246
+
+  return {
+    source: Source.Glade,
+    // GLADE has no usable SDSS objID. The 0n sentinel signals to the
+    // merger's dedup pass that this row has no SDSS anchor and must
+    // be matched by position+z instead.
+    objID: 0n,
+    ra,
+    dec,
+    z,
+    // Heterogeneous-photometry mapping — see module docstring.
+    magU: NaN,
+    magG: bmag,
+    magR: jmag,
+    magI: hmag,
+    magZ: kmag,
+  };
+}
+
+/**
  * Parse a GLADE v2.3 catalog blob (`data/raw/glade2.3.dat`) into canonical
  * records. See the module docstring for byte layout, mapping rationale,
  * and skip rules.
@@ -171,76 +242,12 @@ export function parseGlade(rawText: string): GladeResult {
   let skipped = 0;
 
   for (const line of lines) {
-    if (line.length < MIN_LINE_LEN) {
-      // Truncated row — can't safely slice the trailing flag bytes.
+    const rec = parseGladeLine(line);
+    if (rec === null) {
       skipped++;
-      continue;
+    } else {
+      records.push(rec);
     }
-
-    // Flag1 lives at byte 104 (0-based 103). Test it before parsing the
-    // numeric fields so quasars/globulars don't waste a `parseFloat`.
-    const flag1 = line.charAt(103);
-    if (flag1 !== 'G') {
-      skipped++;
-      continue;
-    }
-
-    // Flag2 lives at byte 254 (0-based 253). '0' means "no measured z or
-    // distance" — GLADE's own admission that this row is unplaceable.
-    const flag2 = line.charAt(253);
-    if (flag2 === '0') {
-      skipped++;
-      continue;
-    }
-
-    // RA: bytes 106-123. F18.14 means up to 14 fractional digits in 18
-    // chars; we just trim and `parseFloat`. RA is always populated, so
-    // a NaN here signals a corrupted download, not a missing field.
-    const ra = parseFloat(line.slice(105, 123).trim());
-    // Dec: bytes 125-144 (F20.15).
-    const dec = parseFloat(line.slice(124, 144).trim());
-    if (!Number.isFinite(ra) || !Number.isFinite(dec)) {
-      skipped++;
-      continue;
-    }
-
-    // z: bytes 174-191 (E18.15). Sentinel `---` is common when only a
-    // distance was measured photometrically — `parseFloatOrNaN` collapses
-    // those to NaN so the `isFinite` check below catches them uniformly.
-    // We also drop z <= 0: GLADE excludes local-group blueshifts by
-    // construction (unlike 2MRS), so a non-positive z is junk here.
-    const z = parseFloatOrNaN(line.slice(173, 191));
-    if (!Number.isFinite(z) || z <= 0) {
-      skipped++;
-      continue;
-    }
-
-    // Photometry. All four fields use the dash-sentinel convention; any
-    // missing band collapses to NaN and propagates correctly through the
-    // renderer's colour computation. We deliberately do *not* skip the
-    // row when a band is missing — partial photometry is still useful
-    // for sorting by apparent brightness in one of the other bands.
-    const bmag = parseFloatOrNaN(line.slice(192, 198)); // bytes 193-198
-    const jmag = parseFloatOrNaN(line.slice(214, 220)); // bytes 215-220
-    const hmag = parseFloatOrNaN(line.slice(227, 233)); // bytes 228-233
-    const kmag = parseFloatOrNaN(line.slice(240, 246)); // bytes 241-246
-
-    records.push({
-      source: Source.Glade,
-      // GLADE has no usable SDSS objID. The 0n sentinel signals to the
-      // merger's dedup pass that this row has no SDSS anchor and must
-      // be matched by position+z instead.
-      objID: 0n,
-      ra,
-      dec,
-      z,
-      // Heterogeneous-photometry mapping — see module docstring.
-      magU: NaN,
-      magG: bmag,
-      magR: jmag,
-      magI: hmag,
-      magZ: kmag,
-    });
   }
 
   return { records, skipped };

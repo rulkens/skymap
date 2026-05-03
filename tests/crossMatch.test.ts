@@ -1,0 +1,93 @@
+import { describe, it, expect } from 'vitest';
+
+// Note: we import from `tools/crossMatch` rather than the documented
+// `tools/buildAllBins` path because the latter pulls in `node:fs`/`node:url`,
+// and the main `tsconfig.json` (which governs the test build) excludes
+// `tools/` and does not register `@types/node`. `buildAllBins.ts` re-exports
+// `crossMatch` from this same module, so the symbol is identical either way.
+import { crossMatch } from '../tools/crossMatch';
+import { Source } from '../src/data/sources';
+import type { ParsedRecord } from '../tools/parsers/common';
+
+/**
+ * Helper that builds a ParsedRecord with sensible defaults.
+ *
+ * Why a helper? Each test below cares about only three fields — source, sky
+ * position, redshift — but the canonical `ParsedRecord` shape carries five
+ * photometric magnitudes too. Hard-coding the irrelevant fields once here
+ * keeps each test focused on the cross-match behaviour under examination.
+ *
+ * NaN for the four bands the synthetic record doesn't pretend to carry is
+ * the same sentinel the real parsers emit when a survey lacks that band
+ * (see common.ts), so the merger is exercised with realistic input.
+ */
+function rec(source: Source, ra: number, dec: number, z: number, objID = 0n): ParsedRecord {
+  return {
+    source,
+    objID,
+    ra,
+    dec,
+    z,
+    magU: NaN,
+    magG: 18,
+    magR: NaN,
+    magI: NaN,
+    magZ: NaN,
+  };
+}
+
+describe('crossMatch', () => {
+  // The dedup criterion is "<5 arcsec on the sky AND <1% relative redshift".
+  // Both must match for a record to be considered a duplicate; the two tests
+  // below pin down each half of that AND.
+  it('rejects positional duplicates within 5 arcsec and Δz/(1+z) < 1%', () => {
+    const out = crossMatch({
+      sdss: [rec(Source.SDSS, 180, 0, 0.1)],
+      // ~0.36 arcsec offset and ~0.05% relative redshift difference — well
+      // within both tolerances, so this should be detected as a duplicate
+      // and dropped in favour of the higher-priority SDSS record.
+      twoMrs: [rec(Source.TwoMRS, 180.0001, 0, 0.10005)],
+      glade: [],
+    });
+    expect(out).toHaveLength(1);
+    expect(out[0]!.source).toBe(Source.SDSS);
+  });
+
+  it('keeps records that differ in z even at the same position', () => {
+    // A foreground galaxy at z=0.1 and a background galaxy at z=0.5
+    // happen to project onto the same line of sight. They are two real,
+    // distinct objects in 3D — the redshift gate is precisely what stops
+    // the dedup pass from collapsing them into one.
+    const out = crossMatch({
+      sdss: [rec(Source.SDSS, 180, 0, 0.1)],
+      twoMrs: [],
+      glade: [rec(Source.Glade, 180, 0, 0.5)],
+    });
+    expect(out).toHaveLength(2);
+  });
+
+  it('preserves SDSS > 2MRS > GLADE priority on positional dedup', () => {
+    // No SDSS record this time. The 2MRS row should win over the GLADE
+    // duplicate because the merger concatenates sources in priority order
+    // and "first one through wins" — 2MRS is processed before GLADE.
+    const out = crossMatch({
+      sdss: [],
+      twoMrs: [rec(Source.TwoMRS, 180, 0, 0.05)],
+      glade: [rec(Source.Glade, 180.0001, 0, 0.05005)],
+    });
+    expect(out).toHaveLength(1);
+    expect(out[0]!.source).toBe(Source.TwoMRS);
+  });
+
+  it('keeps galaxies that appear only in GLADE', () => {
+    // GLADE-only galaxies are the bulk of the all-sky low-z sample. The
+    // merger must not silently drop them just because no SDSS or 2MRS
+    // counterpart exists.
+    const out = crossMatch({
+      sdss: [],
+      twoMrs: [],
+      glade: [rec(Source.Glade, 30, -25, 0.001), rec(Source.Glade, 200, -43, 0.001)],
+    });
+    expect(out).toHaveLength(2);
+  });
+});
