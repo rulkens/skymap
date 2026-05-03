@@ -79,9 +79,15 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let corner = CORNERS[vid];
 
   // Project the world-space center first.  We then offset the corner in
-  // clip space by a fixed pixel half-extent — same screen-aligned
-  // billboard scheme as points.wgsl.  Always face-the-camera regardless
-  // of the camera's orientation.
+  // clip space by a fixed pixel half-extent.  Historically this was done
+  // along the screen-X / screen-Y axes (camera-locked billboards), but
+  // that decoupled the texture's "north-up" content from celestial
+  // north — the moment the user rolled the camera the thumbnails stayed
+  // stuck to the screen while the points-pass elliptical mask (which
+  // rotates by the sky position-angle) drifted away from the texture's
+  // dust-lane / disk orientation.  We now build the billboard basis from
+  // the projected celestial-north direction at each galaxy's screen
+  // position so the texture's north tracks the world's celestial north.
   let centerClip = u.viewProj * vec4<f32>(instance.posSize.xyz, 1.0);
 
   // ── ANGULAR-SIZE → PIXEL HALF-EXTENT ─────────────────────────────────────
@@ -107,15 +113,68 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let halfWorld   = instance.posSize.w * 0.5;
   let halfPixels  = (halfWorld / distanceMpc) * u.pxPerRad;
 
+  // ── WORLD-ORIENTED BILLBOARD BASIS ───────────────────────────────────────
+  //
+  // Build the local +Y axis of the billboard from the projected celestial
+  // north direction at this galaxy's screen position.  Why?  In skymap's
+  // world convention `raDecZToCartesian`, +Z is the celestial north pole
+  // (Dec = +90°), so projecting `pos + EPS · (0,0,1)` and subtracting the
+  // projected center gives the screen-space direction "toward sky north"
+  // at the galaxy.  Using that as the billboard's local +Y means:
+  //
+  //   - The texture's content (which is north-up by SDSS / DSS source
+  //     convention) stays aligned with sky north as the camera rolls.
+  //   - The points-pass elliptical mask (which rotates by `-PA`, with PA
+  //     measured east-of-north) ends up consistent with the texture's
+  //     apparent orientation — both are anchored to projected north.
+  //
+  // We work in *pixel* space (not raw NDC) so the basis is orthonormal in
+  // the units we actually paint with — NDC distances are aspect-ratio
+  // distorted, which would let the basis become non-perpendicular at
+  // non-square viewports and slightly shear the texture.
+  //
+  // Edge case: at the celestial poles the world +Z direction projects to
+  // (or very near) the same screen point as the galaxy center, so
+  // `upPx ≈ 0` and `normalize` would blow up.  We fall back to the
+  // original screen-axis basis in that degenerate case.  This is the only
+  // place the old behaviour leaks through — and only for galaxies whose
+  // line of sight is essentially parallel to the celestial north axis.
+  let NORTH_WORLD = vec3<f32>(0.0, 0.0, 1.0);
+  let EPS = 0.001;
+  let upClip = u.viewProj * vec4<f32>(instance.posSize.xyz + NORTH_WORLD * EPS, 1.0);
+  let centerNdc = centerClip.xy / centerClip.w;
+  let upNdc = upClip.xy / upClip.w;
+  let upNdcDelta = upNdc - centerNdc;
+  let upPx = vec2<f32>(upNdcDelta.x * u.viewport.x * 0.5, upNdcDelta.y * u.viewport.y * 0.5);
+
+  // Pole-degenerate fallback: when the projected-north delta vanishes,
+  // use screen-X / screen-Y so the quad still renders (just unoriented).
+  let upPxLen = length(upPx);
+  let useFallback = upPxLen < 1e-6;
+  let upPxNorm = select(upPx / upPxLen, vec2<f32>(0.0, 1.0), useFallback);
+  // +X (right) is a +90° rotation of +Y (up) in screen space.  Image-space
+  // y points down on screen, so the in-image right-of-north direction is
+  // (upY, -upX) — same handedness as the points-pass UV convention so the
+  // `-PA` rotation in points.wgsl agrees with the quad's local +Y meaning
+  // "celestial north".
+  let rightPxNorm = vec2<f32>(upPxNorm.y, -upPxNorm.x);
+
+  // Apply the corner offset along the celestial-north basis instead of
+  // screen X / Y.
+  let offsetPx = corner.x * halfPixels * rightPxNorm + corner.y * halfPixels * upPxNorm;
+
   // Convert pixels to clip-space half-extent.  As in points.wgsl, we
   // multiply by `centerClip.w` to cancel the perspective divide so the
   // billboard ends up exactly `halfPixels` on screen regardless of
   // depth.
-  let pxToClip = vec2<f32>(2.0 / u.viewport.x, 2.0 / u.viewport.y);
+  let offsetClip = vec2<f32>(
+    offsetPx.x * 2.0 / u.viewport.x,
+    offsetPx.y * 2.0 / u.viewport.y,
+  ) * centerClip.w;
 
   var out: VsOut;
   out.clipPos = vec4<f32>(
-    centerClip.xy + corner * halfPixels * pxToClip * centerClip.w,
+    centerClip.xy + offsetClip,
     centerClip.z,
     centerClip.w,
   );
