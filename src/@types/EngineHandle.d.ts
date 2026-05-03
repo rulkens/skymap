@@ -111,6 +111,19 @@ export type EngineHandle = {
   focusOnHome: () => void;
 
   /**
+   * Select (pin) the famous-atlas galaxy with the given id, then run
+   * the same focus tween `focusOn` would.  No-op if the id is not in
+   * the loaded famous catalog (e.g. someone hot-reloaded the build
+   * artefacts and the entry vanished).
+   *
+   * Used by the command palette.  Routing through the engine rather
+   * than letting App.tsx call `focusOn` + `setSelected` directly keeps
+   * the selection bookkeeping in one place — selection, hover, and
+   * the engine's per-frame highlight uniform all stay consistent.
+   */
+  selectFamous: (id: string) => void;
+
+  /**
    * Set the level-of-detail rendering mode.
    *
    * In `'auto'` mode the engine recomputes the visible-source mask each frame

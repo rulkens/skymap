@@ -72,8 +72,10 @@ import { StatusBar } from './components/StatusBar/StatusBar';
 import { InfoCard } from './components/InfoCard/InfoCard';
 import { ScaleBar } from './components/ScaleBar/ScaleBar';
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
+import { CommandPalette } from './components/CommandPalette/CommandPalette';
 import { ALL_VISIBLE_MASK } from './data/sources';
 import { isWebHIDSupported } from './services/input/spaceMouse';
+import { loadFamousSidecars, type FamousMetaEntry } from './services/engine/famousMetaLoader';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -177,6 +179,15 @@ export function App(): React.ReactElement {
   const [spaceMouseConnected, setSpaceMouseConnected] = useState<boolean>(false);
   const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(1.0);
 
+  // ── Command palette state ─────────────────────────────────────────────────
+  //
+  // `paletteOpen` controls the overlay visibility; `famousMeta` holds the
+  // loaded famous-galaxy entries.  The meta is fetched once at mount (the
+  // same data the engine loaded at startup) so the palette can filter and
+  // display names without a second round-trip.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [famousMeta, setFamousMeta] = useState<FamousMetaEntry[]>([]);
+
   // ── Engine startup effect ──────────────────────────────────────────────────
 
   useEffect(() => {
@@ -243,6 +254,16 @@ export function App(): React.ReactElement {
     };
   }, []); // Empty array: run once on mount, clean up on unmount.
 
+  // ── Famous-galaxy meta loader ──────────────────────────────────────────────
+  //
+  // Load the famous sidecars once at mount so the CommandPalette has names +
+  // descriptions to filter against.  The engine loads the same file internally,
+  // but exposing it here avoids reaching into the engine's internal state.
+  // Double-loading is cheap (the browser caches the JSON fetch).
+  useEffect(() => {
+    loadFamousSidecars().then((sc) => setFamousMeta(sc.meta));
+  }, []);
+
   // ── Keyboard shortcuts effect ──────────────────────────────────────────────
   //
   // Three shortcuts: Esc clears selection, `f` focuses on the pinned galaxy,
@@ -260,6 +281,18 @@ export function App(): React.ReactElement {
       const target = e.target as Element | null;
       const tag = target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || (target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+
+      // ── Cmd+K / Ctrl+K / `/` opens the command palette ───────────────────
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(true);
+        return;
+      }
+      if (e.key === '/' && !paletteOpen) {
+        e.preventDefault();
+        setPaletteOpen(true);
         return;
       }
 
@@ -292,7 +325,7 @@ export function App(): React.ReactElement {
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [selected]); // re-bind when pin changes so `f` reads the latest selection
+  }, [selected, paletteOpen]); // re-bind when pin or palette state changes
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -402,6 +435,19 @@ export function App(): React.ReactElement {
           setSpaceMouseSensitivity(v);
           handleRef.current?.setSpaceMouseSensitivity?.(v);
         }}
+      />
+      {/*
+        Command palette — full-screen overlay for fuzzy-searching the
+        famous-galaxy catalog.  Opened by Cmd+K / Ctrl+K / `/`; closed by
+        Esc or clicking outside.  Selecting an entry calls
+        `handle.selectFamous(id)`, which pins the galaxy and tweens the
+        camera, exactly as if the user had clicked it directly on-screen.
+      */}
+      <CommandPalette
+        entries={famousMeta}
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onSelect={(id) => handleRef.current?.selectFamous?.(id)}
       />
     </>
   );

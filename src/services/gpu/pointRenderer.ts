@@ -730,6 +730,16 @@ export class PointRenderer {
     }
   }
 
+  /**
+   * Return the cross-survey global ID offset for `source`, or 0 when the
+   * source isn't loaded.  Used by the engine's `selectFamous` to
+   * convert a local catalog index to the global index format the
+   * renderer's per-vertex `globalInstanceIdx` carries.
+   */
+  instanceIdOffset(source: Source): number {
+    return this.clouds.get(source)?.instanceIdOffset ?? 0;
+  }
+
   // ─── Draw ────────────────────────────────────────────────────────────────────
 
   /**

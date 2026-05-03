@@ -1439,6 +1439,49 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       };
     },
 
+    selectFamous(id) {
+      // Guard: famous catalog may not be loaded yet (sidecars arrive async,
+      // slightly after the point cloud).  Early return is safe — the user
+      // would have to invoke the palette in the ~500 ms window before the
+      // sidecar fetch resolves, which is cosmetically acceptable.
+      const cloud = clouds.get(Source.Famous);
+      if (!cloud) return;
+      const localIdx = famousMeta.findIndex((m) => m.id === id);
+      if (localIdx < 0) return;
+
+      // Build the same PointInfo the picker would, using the live sidecars
+      // so the famous block (name, description, thumbnail) populates.
+      const info = buildPointInfo(cloud, localIdx, Source.Famous, famousMeta, famousXrefs);
+      if (!info) return;
+
+      // The engine's selectedIndex is GLOBAL — not per-source local — so
+      // we have to compute the global index.  The renderer keeps each
+      // source's instanceIdOffset; sum the famous source's offset with
+      // the local idx to reconstruct the same value the picker would write.
+      const offset = renderer?.instanceIdOffset(Source.Famous) ?? 0;
+      const globalIdx = offset + localIdx;
+      setSelected(globalIdx);
+
+      // Tween the camera onto the galaxy — same tween as `focusOn`.
+      // We inline the tween-creation here rather than calling `handle.focusOn`
+      // because we're inside the object literal and `this` would be unreliable
+      // at call time (depending on how App.tsx invokes the handle method).
+      // Copying the tween-setup block keeps the behaviour identical.
+      if (!cam) return;
+      currentTween = {
+        startMs: performance.now(),
+        durationMs: FOCUS_TWEEN_MS,
+        fromTarget: vec3.clone(cam.target as vec3),
+        toTarget: vec3.fromValues(info.x, info.y, info.z),
+        fromDistance: cam.distance,
+        toDistance: focusDistanceMpc(info.diameterKpc),
+        fromYaw: cam.yaw,
+        toYaw: cam.yaw,
+        fromPitch: cam.pitch,
+        toPitch: cam.pitch,
+      };
+    },
+
     focusOnHome() {
       // Camera or initial snapshot may not be ready yet — same pattern as
       // resetCamera.  Both must exist for a meaningful tween.
