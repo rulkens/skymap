@@ -64,7 +64,18 @@ try {
 
 // Split into non-empty lines. We normalise Windows-style CRLF → LF first so
 // that headers and cells don't end up with a trailing `\r`.
-const lines = rawText.replace(/\r\n/g, '\n').split('\n').filter(l => l.trim() !== '');
+//
+// SkyServer CSV exports include a leading metadata line like `#Table1` *above*
+// the column header. Other tools sometimes prepend SQL comments (`-- query: …`)
+// or BOM-prefixed banner lines. We skip both to be permissive — a row that
+// begins with `#`, `--`, or is blank is treated as a comment, not data.
+const lines = rawText
+  .replace(/\r\n/g, '\n')
+  .split('\n')
+  .filter(l => {
+    const t = l.trim();
+    return t !== '' && !t.startsWith('#') && !t.startsWith('--');
+  });
 
 if (lines.length < 2) {
   process.stderr.write('error: CSV has no data rows (need at least a header + one data row)\n');
