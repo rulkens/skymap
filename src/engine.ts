@@ -42,8 +42,8 @@ import { createOrbitCamera, computeViewProj, updatePosition } from './camera/orb
 import { attachOrbitControls } from './camera/orbitControls';
 import { generateSyntheticCloud } from './data/synthetic';
 import { decodePointCloud } from './data/pointCloudFormat';
-import { cartesianToRaDecZ } from './utils/math/coords';
 import {
+  cartesianToRaDecZ,
   formatRaSexagesimal,
   formatDecSexagesimal,
   sdssName,
@@ -54,7 +54,7 @@ import {
   galaxyTypeFromColor,
   sdssExplorerUrl,
   sdssThumbnailUrl,
-} from './utils/math/physics';
+} from './utils/math';
 import { formatDistance } from './utils/format/distance';
 import type { PointCloud } from './types';
 
