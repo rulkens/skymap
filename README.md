@@ -120,6 +120,42 @@ poisoning the ramp with NaN.
 | GLADE     | B−J    | 0.5 .. 3.5    | 1.0          | Optical–NIR pair; B redshifts out of band slowly.                |
 | 2MRS      | J−K    | 0.7 .. 1.1    | 0.0          | NIR colours are nearly redshift-invariant in 2MRS's z ≲ 0.1 box. |
 
+## Famous galaxies (curated atlas)
+
+A separate small catalog of well-known galaxies (Messier + NGC greatest-hits)
+ships alongside the survey data. Entries appear with their curated names
+in the InfoCard and are searchable via the **Cmd+K / Ctrl+K** command
+palette. Their thumbnails are pre-processed transparent WebPs hand-fetched
+from the DESI Legacy Imaging service, so famous galaxies always render at
+high quality — even for nearby objects (M31, M33) that survey catalogs
+filter out as too close.
+
+Run order:
+
+1. `npm run build-all`              — produces `2mrs.bin` + `glade.bin`,
+                                      which the famous build needs for cross-match.
+2. `npm run fetch-famous-images`    — downloads + processes 20 thumbnails (~30 s).
+                                      Idempotent; pass `--force` to re-fetch.
+3. `npm run build-famous`           — produces `famous.bin` + `famous_meta.json`
+                                      + `famous_xrefs.json`.
+
+### Adding more galaxies
+
+The seed file is `data/famous_galaxies.seed.json`. Each entry needs:
+
+| Field         | Type     | Notes                                                   |
+| ------------- | -------- | ------------------------------------------------------- |
+| `id`          | string   | URL-safe lower-case identifier (e.g. `m31`, `ngc-5128`) |
+| `names`       | string[] | One or more names; first is the headline                |
+| `ra`          | number   | Right Ascension in degrees, [0, 360)                    |
+| `dec`         | number   | Declination in degrees, [-90, 90]                       |
+| `distanceMpc` | number   | Curated distance in megaparsecs                         |
+| `diameterKpc` | number   | Physical isophotal diameter in kpc                      |
+| `type`        | string   | Hubble morphological type (free-form)                   |
+| `description` | string   | 1-3 sentence editorial blurb                            |
+
+After adding an entry, re-run `npm run fetch-famous-images && npm run build-famous`.
+
 ## Galaxy thumbnails
 
 When you zoom in close to a galaxy, the renderer fetches its real image and
