@@ -40,13 +40,39 @@ export class GalaxyImageQueue {
   private drainResolvers: Array<() => void> = [];
 
   enqueue(entry: QueueEntry): void {
-    // Dedupe by key — re-enqueue replaces priority + fetcher.  If the entry
-    // is already in-flight, we let the running fetch complete (its result
-    // still fires) and queue the new one for after.
-    this.pending.set(entry.key, entry);
-    if (!this.inFlight.has(entry.key)) {
-      this.tryStart();
+    // Idempotent: if the same key is already in flight, do nothing — the
+    // running fetch's `onResult` will fire when it finishes and the
+    // engine's per-frame gate (bitmapReady / bitmapFailed) decides whether
+    // to enqueue again.
+    //
+    // The earlier implementation `pending.set(entry.key, entry)` here had
+    // a subtle bug: while a fetch was in flight, the engine's per-frame
+    // loop saw neither bitmapReady nor bitmapFailed (those only get set
+    // *after* the fetch resolves) and called enqueue every frame.  Each
+    // call wrote to `pending`, so when the in-flight fetch completed, the
+    // `.finally` block's `tryStart` call popped the pending entry and
+    // executed the fetch a SECOND time.  And while that second fetch ran,
+    // the engine kept enqueuing, which queued a third execution, etc.
+    // For galaxies where both SDSS and DSS fail, every retry produced a
+    // visible 404 in the console — three or more per galaxy.
+    //
+    // The fix is to refuse to add the key to pending while it's in flight.
+    // Priority bumps for already-running fetches are nice-to-have, not
+    // necessary; if the engine wants to re-run, it'll get a chance once
+    // the current attempt resolves and the per-frame gate clears.
+    if (this.inFlight.has(entry.key)) return;
+
+    // Already pending?  Update priority + fetcher (latest enqueue wins on
+    // priority; e.g., as a galaxy gets bigger on screen the engine bumps
+    // its priority each frame).  Don't tryStart — the existing pending
+    // entry will be picked up by the next slot release.
+    if (this.pending.has(entry.key)) {
+      this.pending.set(entry.key, entry);
+      return;
     }
+
+    this.pending.set(entry.key, entry);
+    this.tryStart();
   }
 
   /**
