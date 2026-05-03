@@ -108,6 +108,21 @@ export type ParsedRecord = {
    * source data permits.
    */
   positionAngleDeg: number | null;
+  /**
+   * Physical diameter in kiloparsecs derived from this row's catalog.
+   *
+   *   - 2MRS  → 2 · 10^Riso · arcsecToKpc(1, distance_Mpc)  (real isophotal)
+   *   - GLADE → Tully(1988) on absolute B mag derived from Bmag + distance
+   *   - SDSS  → 3 · petroR50_r · arcsecToKpc(1, distance_Mpc)  (Petrosian)
+   *
+   * `null` means the parser couldn't extract a real measurement — the
+   * build pipeline applies `DEFAULT_GALAXY_DIAMETER_KPC = 30` before
+   * encoding, so the renderer always sees a finite value.  `null` over
+   * NaN keeps the "we have a measurement vs we don't" decision a true
+   * binary at the parser→pipeline boundary, mirroring how the orientation
+   * fields handle the same kind of "real or fallback" distinction.
+   */
+  diameterKpc: number | null;
 };
 
 /**

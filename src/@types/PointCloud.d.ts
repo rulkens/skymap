@@ -117,4 +117,21 @@ export type PointCloud = {
    * NaN means "no measurement available" — same semantics as `axisRatio`.
    */
   positionAngleDeg: Float32Array;
+
+  /**
+   * Per-galaxy physical diameter in kiloparsecs — length === count.
+   *
+   * Drives the renderer's apparent-size math, the thumbnail quad's
+   * world-space footprint, the 3D disk plane's geometry, and the focus
+   * tween distance.  The build pipeline guarantees every entry is a
+   * finite, positive value: real catalog measurement when the parser
+   * supplied one, otherwise DEFAULT_GALAXY_DIAMETER_KPC = 30.
+   *
+   * Unlike `axisRatio`/`positionAngleDeg`, NaN is never a legitimate
+   * decoded value here — the renderer multiplies and divides by this
+   * field every frame and a NaN would turn the entire billboard black.
+   * The encoder still preserves NaN bit-for-bit (it's a pure function
+   * of the input cloud), but the pipeline never produces a NaN entry.
+   */
+  diameterKpc: Float32Array;
 };
