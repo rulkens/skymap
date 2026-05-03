@@ -1,6 +1,6 @@
 # skymap
 
-A WebGPU 3D renderer for **Sloan Digital Sky Survey (SDSS)** point-cloud data, built in TypeScript with React for the UI. Hover or click any galaxy to see its sky coordinates, redshift, lookback time, and SDSS metadata; pin one to compare against another; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
+A WebGPU 3D renderer for galaxy catalogs, built in TypeScript with React for the UI. Hover or click any galaxy to see its sky coordinates, redshift, lookback time, and catalog metadata; pin one to compare against another; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
 
 This is a personal learning project — the code is documented didactically throughout. If you're looking to learn WebGPU, GPU picking, or the basics of cosmological coordinate math, the source is meant to be read.
 
@@ -16,13 +16,33 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — drag to orbit, scroll to zoom. Without a real SDSS data file present you'll see 100,000 synthetic galaxies distributed in a sphere. Enough to verify the renderer works end-to-end and to play with hover/select before you commit to a multi-megabyte download.
+Open http://localhost:5173 — drag to orbit, scroll to zoom. Without real data files present you'll see 100,000 synthetic galaxies distributed in a sphere. Enough to verify the renderer works end-to-end and to play with hover/select before you commit to a multi-megabyte download.
 
-## Loading real SDSS data
+## What surveys do I actually need?
 
-The renderer fetches `/data/sdss.bin` at startup if present, otherwise it falls back to synthetic. To produce that file:
+The renderer can ingest up to three galaxy catalogs in parallel. Each is just a list of galaxies with positions and brightnesses, but they cover the sky differently:
 
-### 1. Get a CSV from SDSS SkyServer
+- **SDSS** (Sloan Digital Sky Survey) — a deep, half-sky photographic + spectroscopic survey from a single 2.5 m telescope in New Mexico. Best deep northern coverage; we use a slice of ~500 k galaxies.
+- **2MRS** (2MASS Redshift Survey) — a smaller (~45 k), all-sky local-universe redshift survey. Useful for galaxies close to us in any direction.
+- **GLADE** — a million-galaxy mega-catalog cross-matched from several surveys. Fills in everywhere SDSS and 2MRS don't reach.
+
+You can run with any one, any two, or all three. The renderer falls back to synthetic data if no `.bin` files are present.
+
+## Loading real data
+
+The renderer fetches `/data/sdss.bin`, `/data/2mrs.bin`, and `/data/glade.bin` at startup, using whichever are present. The pipeline below produces those files from raw catalog downloads.
+
+### 1. Download the catalogs
+
+| Survey | Source | File / Notes |
+| ------ | ------ | -------------- |
+| SDSS   | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql) | Run the query below; export as CSV. |
+| 2MRS   | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. Drop into `data/raw/2mrs_table3.dat`. |
+| GLADE  | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281) | `glade2.3.dat`, 256-byte fixed-width, 3.26 M rows, ~838 MB. Drop into `data/raw/glade2.3.dat`. |
+
+GLADE alone subsumes 2MPZ and 6dFGS — the GLADE team has already cross-matched and deduplicated 2MPZ + 2MASS XSC + HyperLEDA + GWGC + SDSS-DR12Q, so a single download replaces what would otherwise be three.
+
+#### SDSS query
 
 Go to the [DR18 SQL Search](https://skyserver.sdss.org/dr18/SearchTools/sql) and run:
 
@@ -40,46 +60,15 @@ WHERE
   AND s.z BETWEEN 0.001 AND 0.3
 ```
 
-Choose **CSV** as the output format. The shape columns are:
+Choose **CSV** as the output format. The columns break down into three groups:
 
-| Column | Used for |
-| --- | --- |
-| `expAB_r`, `expPhi_r` | exponential-profile axis ratio + position angle (disk fits) |
-| `deVAB_r`, `deVPhi_r` | de Vaucouleurs-profile axis ratio + position angle (bulge fits) |
-| `fracDeV_r` | blend weight (0 = pure disk, 1 = pure bulge); used to combine the exp/deV pairs into a single (b/a, PA) |
-| `petroR50_r`, `petroR90_r` | Petrosian half-light + 90%-light radii in arcsec; the parser converts them to physical kpc using the galaxy's redshift |
-
-The orientation columns drive the elliptical billboard mask + 3D disk plane rendering; the size columns drive the per-galaxy diameter estimator.
+- **Photometry** (`modelMag_u/g/r/i/z`) — brightness in five colour bands; drives the per-galaxy colour ramp.
+- **Shape / orientation** (`expAB_r`, `expPhi_r`, `deVAB_r`, `deVPhi_r`, `fracDeV_r`) — axis ratio and position angle from two profile fits, blended by `fracDeV_r`. Drives the elliptical billboard mask and 3D disk plane.
+- **Size** (`petroR50_r`, `petroR90_r`) — half-light and 90%-light radii in arcsec; the parser converts them to physical kpc using each galaxy's redshift.
 
 > Need more than the 500 k row limit? Use [CasJobs](https://skyserver.sdss.org/casjobs) instead — same query, no timeout, larger result quotas.
 
-### 2. Convert to the binary format
-
-```bash
-npm run csv-to-bin -- path/to/your-query.csv public/data/sdss.bin
-```
-
-The tool will report how many points it wrote and how many rows it skipped (rows with bad redshifts or missing photometry). Vite serves anything in `public/` at the URL root, so the browser can fetch `/data/sdss.bin` automatically.
-
-### 3. Reload the page
-
-The status bar will switch from `(synthetic)` to `(sdss.bin)` and you'll see the characteristic SDSS galaxy wedge — anisotropic and richly clustered.
-
-## Loading multi-survey data
-
-To render galaxies from all three surveys (SDSS Main+BOSS+eBOSS, 2MRS, GLADE) loaded in parallel:
-
-### 1. Download the catalogues
-
-| Survey | Source | File / Notes |
-| ------ | ------ | -------------- |
-| SDSS   | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql) | Use the wider Main+BOSS+eBOSS query above. |
-| 2MRS   | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. Drop into `data/raw/2mrs_table3.dat`. |
-| GLADE  | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281) | `glade2.3.dat`, 256-byte fixed-width, 3.26 M rows, ~838 MB. Drop into `data/raw/glade2.3.dat`. |
-
-GLADE alone subsumes 2MPZ and 6dFGS — the GLADE team has already cross-matched and deduplicated 2MPZ + 2MASS XSC + HyperLEDA + GWGC + SDSS-DR12Q, so a single download replaces what would otherwise be three.
-
-### 2. Build the per-source binary files
+### 2. Build the binary files
 
 ```bash
 npm run build-all -- \
@@ -89,17 +78,31 @@ npm run build-all -- \
   --out-dir public/data
 ```
 
-The tool parses each catalogue, runs cross-match dedup using priority **SDSS > 2MRS > GLADE**, then writes three v2 binary files: `public/data/sdss.bin`, `2mrs.bin`, `glade.bin`. Sample run on the full inputs: 500 k SDSS / 41 k 2MRS / 2.1 M GLADE galaxies after dedup, ≈ 23 + 1.9 + 96 MB on disk.
+Omit any `--xxx` flag you don't have — the merger treats missing inputs as empty and skips writing that output file. So `--sdss only` is a fine single-survey workflow.
 
-### 3. Reload
+The tool parses each catalog, runs cross-match dedup using priority **SDSS > 2MRS > GLADE**, then writes v4 binary files to `public/data/sdss.bin`, `2mrs.bin`, `glade.bin`. Sample run on the full inputs: 500 k SDSS / 41 k 2MRS / 2.1 M GLADE galaxies after dedup, ≈ 32 + 2.6 + 130 MB on disk.
 
-The browser fetches all three files in parallel at startup. Surveys arrive progressively. The settings panel bottom-left has per-survey checkboxes plus an **Auto LOD** toggle that picks visible surveys based on camera distance:
+### 3. (Optional) Enrich with real galaxy orientations
+
+2MRS and GLADE don't ship with shape/orientation columns, so by default those galaxies render with deterministic-but-fake orientations (random per galaxy, stable across reloads). You can fetch real orientation data from external services:
+
+```bash
+npm run fetch-2mass-xsc    # ~5 minutes; adds PA + axis-ratio for 2MRS galaxies
+npm run fetch-hyperleda    # MANY HOURS; adds PA + axis-ratio for GLADE galaxies
+```
+
+- `fetch-2mass-xsc` queries the 2MASS Extended Source Catalog and writes `data/raw/2mass_xsc_pa.csv`. Quick — runs in roughly five minutes.
+- `fetch-hyperleda` queries HyperLEDA at 4 concurrent requests across ~1.5 M PGCs and writes `data/raw/hyperleda_pa.csv`. This can take **many hours**. The script is resumable — interrupt and restart safely. Most users skip this entirely or run it overnight.
+
+Both files are picked up automatically by the next `npm run build-all`. Both commands are entirely optional; the renderer works without them.
+
+### 4. Reload
+
+The browser fetches all available files in parallel at startup. Surveys arrive progressively. The settings panel (bottom-left) has per-survey checkboxes plus an **Auto LOD** toggle that picks visible surveys based on camera distance:
 
 - `< 200 Mpc` → 2MRS + GLADE (local universe; SDSS too sparse for nearby zooms)
 - `200 – 800 Mpc` → all sources
 - `> 800 Mpc` → SDSS only (the only survey reaching that depth)
-
-> Want only some surveys? Omit the corresponding `--xxx` flag — the merger treats missing inputs as empty arrays and skips writing the empty output file.
 
 ### Per-survey colour indices
 
@@ -125,20 +128,16 @@ pass runs after the existing point pass, so the dot stays visible behind the
 quad as a soft glow.
 
 **How it decides which galaxies get textured:** the engine computes each
-galaxy's on-screen apparent size from a placeholder 30 kpc diameter and the
-current camera distance, and only galaxies whose apparent size exceeds
-24 pixels get a thumbnail fetched. Below the threshold the dot is all you
-get — keeps network traffic bounded to the small handful of galaxies that
-are actually large on screen.
+galaxy's on-screen apparent size from its real catalog-derived diameter (with
+a 30 kpc fallback for galaxies whose source catalog doesn't carry size data),
+and only galaxies whose apparent size exceeds 24 pixels get a thumbnail
+fetched. Below the threshold the dot is all you get — keeps network traffic
+bounded to the small handful of galaxies that are actually large on screen.
 
 **Image sources:**
 
-- **SDSS DR18 ImgCutout** (`skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg`)
-  is the primary source — high-resolution colour JPEGs covering ~1/3 of the
-  sky (mostly northern).
-- **DSS POSS-II red** (`archive.eso.org/dss/dss/image`) is the all-sky
-  fallback for galaxies outside the SDSS footprint or where SDSS returns no
-  image. Lower resolution, monochrome, but covers the entire celestial sphere.
+- **SDSS DR18 ImgCutout** is the primary source — high-resolution colour JPEGs covering ~1/3 of the sky (mostly northern).
+- **CDS hips2fits** is the all-sky fallback for 2MRS/GLADE galaxies outside the SDSS footprint. Lower resolution, monochrome (DSS POSS-II red), but covers the entire celestial sphere and is CORS-safe.
 
 **Cache:** thumbnails live in a single 2048×2048 RGBA8 GPU texture atlas with
 256 slots of 128×128 pixels each. When the atlas is full, the slot whose
@@ -162,7 +161,7 @@ We use a right-handed equatorial Cartesian frame with distances in megaparsecs (
 - `+y` → (RA = 90°, Dec = 0°)
 - `+z` → Dec = +90° — celestial north pole
 
-Distance from redshift uses Hubble's law: `d = cz/H₀` with `H₀ = 70 km/s/Mpc`. This is the linear approximation — only accurate for `z ≪ 1` but fine to a few percent for the SDSS spectroscopic galaxy sample (most `z < 0.3`). A proper comoving-distance integration is on the roadmap, deferred.
+Distance from redshift uses Hubble's law: `d = cz/H₀` with `H₀ = 70 km/s/Mpc`. This is the linear approximation — only accurate for `z ≪ 1` but fine to a few percent for the SDSS spectroscopic galaxy sample (most `z < 0.3`).
 
 ## Tests
 
@@ -170,60 +169,53 @@ Distance from redshift uses Hubble's law: `d = cz/H₀` with `H₀ = 70 km/s/Mpc
 npm test
 ```
 
-Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
+Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
 
 ## Architecture
 
 ```
 src/
-  main.tsx                   React entry; mounts <App />
-  App.tsx                    Top-level component; owns canvas ref + UI state
-  engine.ts                  Imperative WebGPU/camera/picking core; emits
-                             callbacks to the React layer
-  components/
-    StatusBar.tsx            Top-left load/ready indicator
-    InfoCard.tsx             Top-right hover/select details panel
-    ScaleBar.tsx             Bottom-right distance legend
-  gpu/
-    device.ts                WebGPU adapter/device/context init
-    pointRenderer.ts         Visual instanced billboard pipeline
-    pickRenderer.ts          GPU pick pipeline (r32uint texture + readback)
-    shaders/points.wgsl      Shared vertex stage; two fragment entries
-                             (visual + pick)
-  camera/
-    orbitCamera.ts           Pure state → view/projection matrices
-    orbitControls.ts         DOM events → camera mutations + click detection
-  data/
-    coords.ts                RA/Dec/redshift ↔ Cartesian Mpc
-    physics.ts               Lookback time, abs magnitude, sexagesimal,
-                             SDSS naming, external URLs
-    pointCloudFormat.ts      Binary `.bin` codec (SKMP v2)
-    synthetic.ts             Deterministic synthetic galaxy cloud
-  types.ts                   Shared `PointCloud` shape
+  @types/             Top-level type declarations (PointCloud, EngineHandle, …)
+  components/         React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
+  data/               Static data definitions: sources enum, colour-index spec,
+                      binary point-cloud format
+  services/
+    camera/           OrbitCamera, OrbitControls, focus tweens
+    engine/           Top-level engine orchestrator, autoLod, cloud loader
+    gpu/              Renderers, texture atlas, image queue/fetcher, WGSL shaders
+    input/            SpaceMouse + raw input → camera deltas
+  utils/              Pure helpers (math, format, random) — heavily tested
 
 tools/
-  csvToBin.ts                SDSS CSV → binary converter (Node CLI)
+  buildAllBins.ts     Pipeline: parse raw catalogs → cross-match → write .bin
+  parsers/            SDSS CSV, 2MRS fixed-width, GLADE fixed-width parsers
+  crossMatch.ts       Dedup logic across surveys
+  fetch2massXsc.ts    Optional 2MASS XSC orientation enrichment
+  fetchHyperLeda.ts   Optional HyperLEDA orientation enrichment
 
-docs/superpowers/plans/
-  2026-05-03-sdss-webgpu-renderer.md   Original implementation plan
+data/raw/             Catalog source files + their VizieR ReadMes
+tests/                Vitest suite, mirrors src/ tree
 ```
 
-The split between `engine.ts` and the React tree is the core architectural choice: WebGPU and the per-frame loop are inherently imperative, so they live in a long-running engine that the React UI subscribes to via callbacks. React owns the DOM and the UI-relevant state slices (status, hovered, selected, scale); the engine owns everything that updates 60× per second.
+The split between the engine (in `services/engine/`) and the React tree is the core architectural choice: WebGPU and the per-frame loop are inherently imperative, so they live in a long-running engine that the React UI subscribes to via callbacks. React owns the DOM and the UI-relevant state slices (status, hovered, selected, scale); the engine owns everything that updates 60× per second.
 
-## Browser binary format (SKMP v2)
+## Browser binary format (SKMP v4)
 
-Little-endian, 16-byte header (`magic = "SKMP"`, `version = 2`, `count`, `reserved`) followed by `count × 48` bytes:
+Little-endian, 16-byte header (`magic = "SKMP"`, `version = 4`, `count`, `reserved`) followed by `count × 64` bytes per point:
 
 ```
 offset  size  field
 ──────  ────  ─────
-0       8     objID (uint64)
-8       12    xyz   (3 × float32, Mpc)
-20      20    magU/G/R/I/Z (5 × float32)
-40      8     padding (for 16-byte alignment)
+0       8     objID            (uint64)
+8       12    xyz              (3 × float32, Mpc)
+20      20    magU/G/R/I/Z     (5 × float32)
+40      4     axisRatio        (float32, b/a in [0,1] or NaN)
+44      4     positionAngleDeg (float32, PA in [0,180) or NaN)
+48      4     diameterKpc      (float32, physical diameter or NaN)
+52      12    padding          (zeroed; keeps records 16-byte aligned)
 ```
 
-Old v1 files are no longer accepted — re-run `npm run csv-to-bin` to upgrade.
+Old v1/v2/v3 files are no longer accepted — re-run `npm run build-all` to upgrade.
 
 ## Out of scope (roadmap)
 
@@ -242,7 +234,7 @@ Personal project; no license declared. Ask before reuse.
 ### Camera focus
 
 - **Focus button** on a pinned galaxy's InfoCard pivots the camera onto that
-  galaxy with a 600 ms ease-out tween.  Yaw and pitch are preserved so you
+  galaxy with a 600 ms ease-out tween. Yaw and pitch are preserved so you
   don't lose your orientation.
 - **Home button** (bottom-left, next to the Settings panel) returns the camera
   to its initial framing — origin target, default distance and pitch.
