@@ -260,6 +260,13 @@ struct PerVertex {
   // around the billboard centre. East-of-north convention; we negate
   // before applying because UV-space y points down on the screen.
   @location(6) positionAngleDeg: f32,
+  // Per-galaxy physical diameter in kiloparsecs.  Drives the apparent-size
+  // billboard radius below — a 100-kpc giant elliptical at 50 Mpc subtends
+  // ~6× the angular footprint of a 30-kpc default disk, and the renderer
+  // now reflects that.  v4 binary format guarantees a finite positive
+  // value (real measurement or DEFAULT_GALAXY_DIAMETER_KPC = 30 fallback)
+  // in every row.
+  @location(7) diameterKpc: f32,
 };
 
 // ─── vertex-to-fragment interface ─────────────────────────────────────────────
@@ -485,7 +492,20 @@ fn vs(
   // and 3D disk plane will use the smaller physical body within this
   // billboard — same disk shape, just rendered with real photometric
   // texture rather than the soft glow.
-  let GALAXY_RADIUS_MPC: f32 = 0.06;  // 30 kpc diameter × 4 padding / 2 / 1000
+  // Per-galaxy radius in Mpc, derived from the per-instance diameterKpc
+  // attribute.  The 4× padding factor matches QuadRenderer's
+  // `sizeWorld = (diameterKpc / 1000) * 4`, so the soft glowing dot and
+  // the textured thumbnail occupy the same world-space footprint and
+  // the load-fade transition is seamless.  Algebra:
+  //
+  //   radius_Mpc = (diameterKpc / 2) * 4 / 1000 = diameterKpc * 2 / 1000
+  //
+  // The `select` clamps pathological zero/NaN diameters back to the
+  // project-wide default — the build pipeline already guarantees a
+  // finite positive value, but a corrupted .bin shouldn't black-hole
+  // the whole sky.
+  let safeDiameterKpc = select(30.0, p.diameterKpc, p.diameterKpc > 0.0);
+  let GALAXY_RADIUS_MPC = safeDiameterKpc * 2.0 / 1000.0;
   let toGalaxy = p.position - u.camPosWorld;
   let distanceMpc = length(toGalaxy);
   // Guard distanceMpc against 0 so we don't divide-by-zero when the camera
