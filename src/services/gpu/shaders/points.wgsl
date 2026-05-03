@@ -619,11 +619,20 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     cs * in.uv.x - sn * in.uv.y,
     sn * in.uv.x + cs * in.uv.y,
   );
-  // axisRatio is guaranteed > 0 by the build pipeline (fallback floor 0.3).
-  // Even so, clamp here as a defence against a hypothetical 0 leaking
-  // through — division by zero would produce a NaN distance and never
-  // discard, painting a full screen-aligned square.
-  let safeAB = max(in.axisRatio, 0.05);
+  // axisRatio is guaranteed > 0 by the build pipeline (fallback floor 0.3),
+  // BUT the synthetic-fallback cloud (loaded when every real .bin file fails
+  // to decode) ships its axisRatio array filled with NaN — that's the
+  // honest sentinel for "synthetic data has no orientation".  In that
+  // situation we want every billboard to render as a circle, identical to
+  // pre-orientation behaviour.
+  //
+  // Trick: `NaN > 0.0` is false in WGSL, so the same comparison catches
+  // both NaN and the (shouldn't-happen) zero/negative case.  When invalid,
+  // we use safeAB = 1.0 → elliptic.y = rotated.y → circular r2 = original
+  // dot(uv, uv).  When valid, we clamp at 0.05 against a hypothetical
+  // pathological tiny value that would divide-blow up the y component.
+  let abIsValid = in.axisRatio > 0.0;
+  let safeAB = select(1.0, max(in.axisRatio, 0.05), abIsValid);
   let elliptic = vec2<f32>(rotated.x, rotated.y / safeAB);
   let r2 = dot(elliptic, elliptic);
   // ────────────────────────────────────────────────────────────────────────
