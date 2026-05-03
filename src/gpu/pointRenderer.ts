@@ -269,6 +269,46 @@ export class PointRenderer {
     // Total size: cloud.count records × 5 floats/record.
     const interleaved = new Float32Array(cloud.count * FLOATS_PER_POINT);
 
+    // ── Per-survey magnitude normalisation ───────────────────────────────────
+    //
+    // The shader's intensity formula `clamp((22 - mag) / 8, 0.05, 1.0)` is
+    // tuned for SDSS-g where the typical apparent magnitude range is 14–22.
+    // But our PointCloud stores `magG` from whichever band the source parser
+    // put there:
+    //
+    //   - SDSS  → real g-band  (range ~14–22)
+    //   - 2MRS  → J-band       (range ~4–15)   — much brighter numbers
+    //   - GLADE → B-band       (range ~7–20)
+    //
+    // Without normalisation, 2MRS J=5 maps to (22-5)/8 = 2.1 → clamps to 1.0,
+    // and most 2MRS galaxies render at maximum intensity with zero contrast
+    // — which is why filaments are invisible in non-SDSS surveys: every
+    // point looks equally bright, so density variation produces no visual
+    // brightness variation, so the cosmic-web structure flattens out.
+    //
+    // Fix: shift each survey's magG distribution so its mean lands on the
+    // SDSS-g median (≈ 18).  Each cloud retains its internal contrast (we
+    // only translate, not stretch); after the shift the shader's existing
+    // 14–22 ramp gives sensible bright→dim mapping for every survey.
+    //
+    // We use the mean (not median) because it's O(N) without sorting, and
+    // for galaxy magnitude distributions the mean and median agree to
+    // within a fraction of a magnitude — fine for this kind of cosmetic
+    // remap.  NaN values are skipped in the mean calculation and replaced
+    // with the post-shift target on the second pass.
+    const SDSS_TARGET_MEAN_MAG = 18;
+    let magSum = 0;
+    let magCount = 0;
+    for (let i = 0; i < cloud.count; i++) {
+      const m = cloud.magG[i]!;
+      if (Number.isFinite(m)) {
+        magSum += m;
+        magCount++;
+      }
+    }
+    const sourceMean = magCount > 0 ? magSum / magCount : SDSS_TARGET_MEAN_MAG;
+    const magOffset = SDSS_TARGET_MEAN_MAG - sourceMean;
+
     for (let i = 0; i < cloud.count; i++) {
       const o = i * FLOATS_PER_POINT;
 
@@ -277,27 +317,25 @@ export class PointRenderer {
       interleaved[o + 1] = cloud.positions[i * 3 + 1]!;
       interleaved[o + 2] = cloud.positions[i * 3 + 2]!;
 
-      // Derive shader-side magnitude (g-band) and colour index (u−g) from
-      // the v2 five-band photometry. See the v1→v2 history in the previous
-      // revision of this method for the rationale; this is one-shot work
-      // done at load time, not per frame.
+      // Derive shader-side magnitude (g-band, normalised) and colour index
+      // (u−g) from the v2 five-band photometry.  This is one-shot work done
+      // at load time, not per frame.
       //
-      // Non-SDSS surveys (2MRS, GLADE, Synthetic) don't measure u-band, so
-      // `u - g` is NaN.  WGSL has no native NaN guards on the colour-ramp
-      // lookup — NaN propagates through the K-correction subtraction and the
-      // ramp clamps it to the bluest end, painting every 2MRS/GLADE galaxy
-      // sky-blue (a confusing visual lie: those catalogues are dominated by
-      // red ellipticals/spirals, not star-forming dwarfs).
-      //
-      // Fallback: substitute the median observed u−g of an SDSS galaxy
-      // (~1.2 mag) for any non-finite computation.  Renders these galaxies
-      // at the centre of the colour ramp — visually neutral, explicitly
-      // noting we don't know the real colour rather than faking blue.
+      // Non-SDSS surveys don't measure u-band, so `u - g` is NaN.  WGSL has
+      // no native NaN guards on the colour-ramp lookup — NaN propagates
+      // through the K-correction subtraction and clamps to the bluest end,
+      // painting every 2MRS/GLADE galaxy sky-blue.  Substitute the median
+      // observed u−g of an SDSS galaxy (~1.2 mag) for any non-finite
+      // computation: visually neutral, explicitly "we don't know" rather
+      // than fake-blue.
       const NEUTRAL_U_MINUS_G = 1.2;
       const g = cloud.magG[i]!;
       const u = cloud.magU[i]!;
       const ug = u - g;
-      interleaved[o + 3] = g;
+      // Apply the per-survey mag offset.  NaN-G galaxies (rare; mostly GLADE
+      // rows missing a B-band measurement) snap to the post-shift target so
+      // they render at average intensity instead of vanishing.
+      interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
       interleaved[o + 4] = Number.isFinite(ug) ? ug : NEUTRAL_U_MINUS_G;
     }
 
