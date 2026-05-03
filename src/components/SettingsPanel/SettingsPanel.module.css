@@ -64,6 +64,34 @@
 }
 
 /*
+ * Density-correction mode dropdown.  The native <select> control on macOS /
+ * Windows defaults to a chunky, light-themed widget that clashes with the
+ * glassmorphic panel — restyling it here pulls it into the dark palette
+ * shared with the buttons + range sliders.  We accept the OS-native popup
+ * menu for the option list itself (cross-browser custom dropdowns are a
+ * rabbit hole); just the closed-state appearance is themed.
+ */
+.modeSelect {
+  flex-shrink: 0;
+  padding: 3px 6px;
+  border: 1px solid rgba(160, 200, 255, 0.25);
+  border-radius: 4px;
+  background: rgba(40, 60, 100, 0.35);
+  color: #e8eeff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.modeSelect:hover {
+  border-color: rgba(180, 220, 255, 0.4);
+}
+
+.modeSelect:focus {
+  outline: none;
+  border-color: rgba(180, 220, 255, 0.6);
+}
+
+/*
  * Per-survey object count appended to the toggle label.  Muted relative to
  * the survey name so the eye reads "SDSS · 220,453" as one phrase, with the
  * name leading.  Tabular-nums keeps the digits aligned across the four rows

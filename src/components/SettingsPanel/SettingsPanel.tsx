@@ -39,6 +39,7 @@
 import type { ReactNode } from 'react';
 import type { LodMode } from '../../@types/LodMode';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
+import { BiasMode } from '../../data/biasMode';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
@@ -128,6 +129,40 @@ type Props = {
   /** Called when the user toggles the Auto-LOD checkbox. */
   onSetLodMode?: (mode: LodMode) => void;
 
+  // ── Density correction (Malmquist bias) ───────────────────────────────────
+  //
+  // Both props are optional so older call sites (and the Vitest snapshot
+  // suite) continue to typecheck unchanged.  The whole section is gated on
+  // *both* the value and the callback being present — the same idiom the
+  // surveys + LOD sections use.
+
+  /**
+   * Currently-selected density-correction mode.  See `data/biasMode.ts` for
+   * the full astronomy explanation; in short, `None` shows the raw catalog,
+   * `VolumeLimited` discards faint galaxies in the back of the volume so
+   * what's left is a "complete" sub-sample, and the two future modes
+   * (`VMax`, `Schechter`) reweight by inverse-V_max or by the predicted
+   * Schechter luminosity function.  Tasks 3 + 4 in the bias-correction plan
+   * implement those — for now they appear as disabled options so the UI
+   * shape doesn't shift when they land.
+   */
+  biasMode?: BiasMode;
+  /** Called when the user picks a different density-correction mode. */
+  onBiasModeChange?: (mode: BiasMode) => void;
+  /**
+   * Faintest absolute magnitude (M_lim) kept under `BiasMode.VolumeLimited`.
+   * Larger / more-positive numbers mean a fainter cut-off (more galaxies
+   * survive); −24 mag is roughly the brightest cD-galaxy regime, −15 mag
+   * dips well into dwarf territory.  Default −19 mag is a sensible threshold
+   * for SDSS spec samples (~M*+1).  Only displayed when `biasMode` is
+   * `VolumeLimited` because the future modes don't use a hard threshold —
+   * 1/V_max weights every galaxy individually, and Schechter reweights by
+   * an analytic luminosity function (see plan Task 3 + 4 sketches).
+   */
+  absMagLimit?: number;
+  /** Called when the user drags the M_lim slider. */
+  onAbsMagLimitChange?: (absMag: number) => void;
+
   // ── SpaceMouse 6DOF input (optional, WebHID-only) ─────────────────────────
   //
   // All four props are optional so the original call sites continue to
@@ -191,6 +226,10 @@ export function SettingsPanel({
   onConnectSpaceMouse,
   spaceMouseSensitivity,
   onSpaceMouseSensitivityChange,
+  biasMode,
+  onBiasModeChange,
+  absMagLimit,
+  onAbsMagLimitChange,
 }: Props): ReactNode {
   // Guard: only render the survey-toggle section when the parent has wired
   // *both* the current mask and the toggle callback. Either alone would be
@@ -210,6 +249,18 @@ export function SettingsPanel({
     onHighlightFallbackChange !== undefined &&
     realOnlyMode !== undefined &&
     onRealOnlyModeChange !== undefined;
+
+  // Density-correction section: rendered only when both the current mode and
+  // both change-callbacks are wired by the parent.  We require all four
+  // density props (mode + mode-callback + magnitude + magnitude-callback)
+  // so that, when the user flips into VolumeLimited mode, the slider works
+  // immediately rather than half-rendering.  Older call sites that pass
+  // none of them still see no Density-correction section at all.
+  const showBiasControls =
+    biasMode !== undefined &&
+    onBiasModeChange !== undefined &&
+    absMagLimit !== undefined &&
+    onAbsMagLimitChange !== undefined;
 
   return (
     <div className={styles.settingsPanel} aria-label="Renderer settings">
@@ -249,6 +300,67 @@ export function SettingsPanel({
               </div>
             );
           })}
+          <div className={styles.panelDivider} role="separator" />
+        </>
+      )}
+
+      {/* ── Density correction (Malmquist bias) ──────────────────────────── */}
+      {/*
+        Sits just below Surveys because density correction is a high-level
+        decision about *what sub-sample of the catalog to render* — closer in
+        spirit to a survey toggle than to a per-pixel slider.  Only the first
+        two modes do anything visible today (Tasks 3 + 4 add the 1/V_max and
+        Schechter implementations); the future modes are kept in the dropdown
+        but `disabled`, both as a roadmap signal and so the menu's vertical
+        layout doesn't shift when those tasks land.
+
+        The M_lim slider is conditionally rendered only in VolumeLimited mode
+        because the other modes don't use a hard absolute-magnitude threshold:
+        1/V_max weights every galaxy individually, and Schechter reweights by
+        the analytic luminosity function (see plan Task 3 + 4 sketches).
+        Hiding the control rather than disabling it keeps the panel compact
+        and removes a UI element that would just look broken.
+      */}
+      {showBiasControls && (
+        <>
+          <div className={styles.panelSubtitle}>Density correction</div>
+          <div className={styles.panelRow}>
+            <label htmlFor="bias-mode">Mode</label>
+            <select
+              id="bias-mode"
+              className={styles.modeSelect}
+              value={biasMode}
+              onChange={(e) => onBiasModeChange(Number(e.target.value) as BiasMode)}
+            >
+              <option value={BiasMode.None}>None — raw catalogue</option>
+              <option value={BiasMode.VolumeLimited}>Volume-limited</option>
+              <option value={BiasMode.VMax} disabled>
+                1/V_max (coming soon)
+              </option>
+              <option value={BiasMode.Schechter} disabled>
+                Schechter LF (coming soon)
+              </option>
+            </select>
+          </div>
+          {biasMode === BiasMode.VolumeLimited && (
+            <>
+              <div className={styles.panelRow}>
+                <label htmlFor="abs-mag-limit">M_lim</label>
+                <span className={styles.panelValue}>{absMagLimit.toFixed(1)}</span>
+              </div>
+              <div className={styles.panelRow}>
+                <input
+                  id="abs-mag-limit"
+                  type="range"
+                  min={-24}
+                  max={-15}
+                  step={0.1}
+                  value={absMagLimit}
+                  onChange={(e) => onAbsMagLimitChange(parseFloat(e.target.value))}
+                />
+              </div>
+            </>
+          )}
           <div className={styles.panelDivider} role="separator" />
         </>
       )}

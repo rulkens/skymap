@@ -74,6 +74,7 @@ import { ScaleBar } from './components/ScaleBar/ScaleBar';
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
 import { CommandPalette } from './components/CommandPalette/CommandPalette';
 import { ALL_VISIBLE_MASK, Source } from './data/sources';
+import { BiasMode } from './data/biasMode';
 import { isWebHIDSupported } from './services/input/spaceMouse';
 import { loadFamousSidecars, type FamousMetaEntry } from './services/engine/famousMetaLoader';
 
@@ -186,6 +187,19 @@ export function App(): React.ReactElement {
   const [spaceMouseConnected, setSpaceMouseConnected] = useState<boolean>(false);
   const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(1.0);
 
+  // ── Density-correction state (Malmquist bias, Tasks 1–5) ─────────────────
+  //
+  // `biasMode` mirrors the engine's current correction strategy; `None` is
+  // the safe default so first-time visitors see the raw catalog (and the
+  // engine's init value matches, avoiding a flicker on first paint).
+  // `absMagLimit` is the M_lim threshold used when `biasMode` is
+  // `VolumeLimited`; default −19 mag is a conventional SDSS spec-sample
+  // boundary (~M*+1).  Both are echoed by the engine's `onBiasModeChange` /
+  // `onAbsMagLimitChange` callbacks so React state stays in sync if the
+  // engine ever changes them on its own (e.g. a future preset loader).
+  const [biasMode, setBiasMode] = useState<BiasMode>(BiasMode.None);
+  const [absMagLimit, setAbsMagLimit] = useState<number>(-19);
+
   // ── Command palette state ─────────────────────────────────────────────────
   //
   // `paletteOpen` controls the overlay visibility; `famousMeta` holds the
@@ -247,6 +261,12 @@ export function App(): React.ReactElement {
       // multiple parallel arrivals don't clobber each other.
       onCloudReady: (source, count) =>
         setSourceCounts((prev) => ({ ...prev, [source]: count })),
+      // Density-correction echoes (Malmquist bias).  Engine fires these at
+      // startup with its own defaults *and* every time `setBiasMode` /
+      // `setAbsMagLimit` mutates them, so React's SettingsPanel always
+      // reflects engine truth without optimistic local updates.
+      onBiasModeChange: setBiasMode,
+      onAbsMagLimitChange: setAbsMagLimit,
       // SpaceMouse pairing state: `connect()`'s promise gives us the initial
       // success/failure, but only this callback covers spontaneous disconnects
       // (USB unplug, permission revocation).  Without it React's "Connected"
@@ -448,6 +468,19 @@ export function App(): React.ReactElement {
           setSpaceMouseSensitivity(v);
           handleRef.current?.setSpaceMouseSensitivity?.(v);
         }}
+        // ── Density correction (Malmquist bias) ──────────────────────────
+        //
+        // Forward straight to the engine handle.  The engine fires its echo
+        // callbacks (`onBiasModeChange` / `onAbsMagLimitChange`) synchronously
+        // inside the setter, which calls `setBiasMode` / `setAbsMagLimit`
+        // here — so we don't need optimistic local updates.  `?.` on the
+        // handle methods covers the (unlikely) case where the engine build
+        // predates Task 2 and lacks them; the EngineHandle type marks both
+        // as optional for the same reason.
+        biasMode={biasMode}
+        onBiasModeChange={(m) => handleRef.current?.setBiasMode?.(m)}
+        absMagLimit={absMagLimit}
+        onAbsMagLimitChange={(M) => handleRef.current?.setAbsMagLimit?.(M)}
       />
       {/*
         Command palette — full-screen overlay for fuzzy-searching the
