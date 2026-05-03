@@ -21,9 +21,9 @@
 
 **Renderer changes (CURRENT vertex layout: 6 slots / 24 bytes — position×3 f32, magnitude f32, colorIndex f32, globalInstanceIdx u32):**
 
-- `src/gpu/pointRenderer.ts` — extend the per-instance vertex buffer from 6 slots (24 bytes) to 7 slots (28 bytes) by appending a `kPerZ` f32 slot at byte offset 24 / shaderLocation 4. `upload()` calls `pickColourIndex(...)` per row, writes the normalised value into the existing `colorIndex` slot (replaces the old `u - g` write), and writes the source's K coefficient into the new slot. `SLOTS_PER_POINT` 6→7 and `POINT_STRIDE` 24→28; the pipeline descriptor adds the 5th attribute. The `NO_COLOUR_SENTINEL` (999) path stays — it now triggers when `pickColourIndex` returns null, with `kPerZ = 0` so the shader's existing sentinel branch behaves identically.
-- `src/gpu/pickRenderer.ts` — pipeline's vertex layout updates to match (`arrayStride: 28`, fifth attribute at offset 24 format `float32`). `fsPick` does not read the new attribute, but the pick pipeline must agree with the visual one on the buffer layout or WebGPU validation rejects it.
-- `src/gpu/shaders/points.wgsl` — `PerVertex.kPerZ: f32` at `@location(4)` (location 3 is already `globalInstanceIdx`). The existing `K_UG_PER_Z = 3.0` constant is replaced with `p.kPerZ`. The `out.tint = ramp(restColorIndex)` line is unchanged because the JS-side normalisation puts every source's colour into 0..2 already.
+- `src/services/gpu/pointRenderer.ts` — extend the per-instance vertex buffer from 6 slots (24 bytes) to 7 slots (28 bytes) by appending a `kPerZ` f32 slot at byte offset 24 / shaderLocation 4. `upload()` calls `pickColourIndex(...)` per row, writes the normalised value into the existing `colorIndex` slot (replaces the old `u - g` write), and writes the source's K coefficient into the new slot. `SLOTS_PER_POINT` 6→7 and `POINT_STRIDE` 24→28; the pipeline descriptor adds the 5th attribute. The `NO_COLOUR_SENTINEL` (999) path stays — it now triggers when `pickColourIndex` returns null, with `kPerZ = 0` so the shader's existing sentinel branch behaves identically.
+- `src/services/gpu/pickRenderer.ts` — pipeline's vertex layout updates to match (`arrayStride: 28`, fifth attribute at offset 24 format `float32`). `fsPick` does not read the new attribute, but the pick pipeline must agree with the visual one on the buffer layout or WebGPU validation rejects it.
+- `src/services/gpu/shaders/points.wgsl` — `PerVertex.kPerZ: f32` at `@location(4)` (location 3 is already `globalInstanceIdx`). The existing `K_UG_PER_Z = 3.0` constant is replaced with `p.kPerZ`. The `out.tint = ramp(restColorIndex)` line is unchanged because the JS-side normalisation puts every source's colour into 0..2 already.
 - `src/data/pointCloudFormat.ts` — no schema change (the `.bin` file format is unchanged; the per-instance interleaved buffer is rebuilt on upload from the existing five-band photometry).
 
 **Engine integration:**
@@ -421,7 +421,7 @@ git commit -m "feat: add per-source galaxy-type classifiers (B−J, J−K)"
 
 **Files:**
 
-- Modify: `src/gpu/pointRenderer.ts`
+- Modify: `src/services/gpu/pointRenderer.ts`
 
 **Context:** The current vertex layout is 6 slots / 24 bytes:
 - offset 0: position vec3<f32>
@@ -434,7 +434,7 @@ stride to 28 bytes.
 
 - [ ] **Step 1: Update the layout constants and pipeline descriptor**
 
-In `src/gpu/pointRenderer.ts`, change `SLOTS_PER_POINT` from 6 to 7 (the
+In `src/services/gpu/pointRenderer.ts`, change `SLOTS_PER_POINT` from 6 to 7 (the
 constant lives near the top of the file alongside `POINT_STRIDE`). The
 `POINT_STRIDE = SLOTS_PER_POINT * 4` derivation already cascades the
 24→28 byte change.
@@ -500,7 +500,7 @@ been told to use `p.kPerZ`. That happens in Task 5.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/gpu/pointRenderer.ts
+git add src/services/gpu/pointRenderer.ts
 git commit -m "feat: bake per-source normalised colour index + K coefficient into vertex buffer"
 ```
 
@@ -510,13 +510,13 @@ git commit -m "feat: bake per-source normalised colour index + K coefficient int
 
 **Files:**
 
-- Modify: `src/gpu/pickRenderer.ts`
+- Modify: `src/services/gpu/pickRenderer.ts`
 
 The pick pipeline must declare the same vertex layout as the visual one or WebGPU rejects the pipeline at draw time.
 
 - [ ] **Step 1: Update the pick pipeline's arrayStride and append the kPerZ attribute**
 
-In `src/gpu/pickRenderer.ts`, find the `vertex.buffers[0]` block. The current arrayStride is 24 with 4 attributes (position, magnitude, colorIndex, globalInstanceIdx as u32). Bump arrayStride to 28 and append the fifth attribute at offset 24:
+In `src/services/gpu/pickRenderer.ts`, find the `vertex.buffers[0]` block. The current arrayStride is 24 with 4 attributes (position, magnitude, colorIndex, globalInstanceIdx as u32). Bump arrayStride to 28 and append the fifth attribute at offset 24:
 
 ```ts
 buffers: [
@@ -541,7 +541,7 @@ Open the browser console; reload `localhost:5173`. Check there are no "vertex bu
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/gpu/pickRenderer.ts
+git add src/services/gpu/pickRenderer.ts
 git commit -m "feat: align pickRenderer vertex layout with new kPerZ attribute"
 ```
 
@@ -551,11 +551,11 @@ git commit -m "feat: align pickRenderer vertex layout with new kPerZ attribute"
 
 **Files:**
 
-- Modify: `src/gpu/shaders/points.wgsl`
+- Modify: `src/services/gpu/shaders/points.wgsl`
 
 - [ ] **Step 1: Add kPerZ to the PerVertex struct and use it in the K-correction**
 
-In `src/gpu/shaders/points.wgsl`:
+In `src/services/gpu/shaders/points.wgsl`:
 
 Add `@location(4) kPerZ: f32` to the `PerVertex` struct definition (location 3 is already `globalInstanceIdx: u32`):
 
@@ -604,7 +604,7 @@ With the dev server running, reload `localhost:5173`. Toggle through SDSS / 2MRS
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/gpu/shaders/points.wgsl
+git add src/services/gpu/shaders/points.wgsl
 git commit -m "feat: use per-row kPerZ for K-correction so non-SDSS surveys keep visible colour"
 ```
 
