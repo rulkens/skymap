@@ -14,7 +14,7 @@
   min-width: 180px;
 
   /* Glassmorphism — same family as FullCard, slightly less opaque */
-  background: rgba(8, 12, 28, 0.60);
+  background: rgba(8, 12, 28, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 
@@ -25,7 +25,11 @@
     0 0 0 1px rgba(160, 200, 255, 0.06) inset;
 
   color: #cfd8ff;
-  font: 12px / 1.45 ui-monospace, "SF Mono", Menlo, monospace;
+  font:
+    12px / 1.45 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
 }
 
 /* Subtle starlight-blue gradient accent line along the top edge */
@@ -78,13 +82,13 @@
 
 /* Earth-era sub-line */
 .cardLookbackEra {
-  color: rgba(200, 220, 255, 0.70);
+  color: rgba(200, 220, 255, 0.7);
   font-size: 11px;
   margin-bottom: 4px;
 }
 
 /* Distance · galaxy-type line */
 .cardDistLine {
-  color: rgba(200, 220, 255, 0.80);
+  color: rgba(200, 220, 255, 0.8);
   font-size: 11px;
 }

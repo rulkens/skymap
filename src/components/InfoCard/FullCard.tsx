@@ -88,16 +88,10 @@ function CardRow({ label, value }: CardRowProps): ReactNode {
 export function FullCard({ info, pinned = false }: FullCardProps): ReactNode {
   // Compose the outer class: always infoCardFull, plus pinned variant when needed.
   // CSS modules scope both classes so we just combine them with a space.
-  const outerClass = pinned
-    ? `${styles.infoCardFull} ${styles.pinned}`
-    : styles.infoCardFull;
+  const outerClass = pinned ? `${styles.infoCardFull} ${styles.pinned}` : styles.infoCardFull;
 
   return (
-    <div
-      className={outerClass}
-      role="status"
-      aria-live="polite"
-    >
+    <div className={outerClass} role="status" aria-live="polite">
       {/* ── Title row ─────────────────────────────────────────────────────── */}
       <div className={styles.cardTitle}>
         <span>Object</span>
@@ -143,7 +137,7 @@ export function FullCard({ info, pinned = false }: FullCardProps): ReactNode {
             </>
           }
         />
-        <CardRow label="Redshift z"       value={info.redshift.toFixed(4)} />
+        <CardRow label="Redshift z" value={info.redshift.toFixed(4)} />
         <CardRow label="Apparent mag (g)" value={info.magG.toFixed(2)} />
       </div>
 
@@ -167,18 +161,14 @@ export function FullCard({ info, pinned = false }: FullCardProps): ReactNode {
         <div className={styles.cardSection}>
           <CardRow
             label="Absolute mag (g)"
-            value={
-              Number.isNaN(info.absoluteMagG)
-                ? 'N/A'
-                : info.absoluteMagG.toFixed(2)
-            }
+            value={Number.isNaN(info.absoluteMagG) ? 'N/A' : info.absoluteMagG.toFixed(2)}
           />
           <div className={styles.cardRow}>
             <span className={styles.cardLabel}>Colour</span>
             <span className={styles.cardValue}>
-              u&minus;g&nbsp;{(info.magU - info.magG).toFixed(2)}&nbsp;&nbsp;
-              g&minus;r&nbsp;{(info.magG - info.magR).toFixed(2)}&nbsp;&nbsp;
-              r&minus;i&nbsp;{(info.magR - info.magI).toFixed(2)}
+              u&minus;g&nbsp;{(info.magU - info.magG).toFixed(2)}&nbsp;&nbsp; g&minus;r&nbsp;
+              {(info.magG - info.magR).toFixed(2)}&nbsp;&nbsp; r&minus;i&nbsp;
+              {(info.magR - info.magI).toFixed(2)}
             </span>
           </div>
           <div className={styles.cardRow}>
@@ -202,12 +192,7 @@ export function FullCard({ info, pinned = false }: FullCardProps): ReactNode {
         header, but that's not needed here since skyserver.sdss.org is a trusted
         public resource.
       */}
-      <a
-        className={styles.externalLink}
-        href={info.explorerUrl}
-        target="_blank"
-        rel="noopener"
-      >
+      <a className={styles.externalLink} href={info.explorerUrl} target="_blank" rel="noopener">
         View in SDSS Explorer &rarr;
       </a>
     </div>

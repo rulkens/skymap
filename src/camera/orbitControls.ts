@@ -136,8 +136,8 @@ export function attachOrbitControls(
   // Track drag state with module-level (closure) variables so the three
   // pointer handlers can share it without a wrapper object allocation.
   let dragging = false;
-  let lastX = 0;   // client-space X of the previous pointermove event
-  let lastY = 0;   // client-space Y of the previous pointermove event
+  let lastX = 0; // client-space X of the previous pointermove event
+  let lastY = 0; // client-space Y of the previous pointermove event
 
   // ── Click detection ────────────────────────────────────────────────────────
   //
@@ -149,8 +149,8 @@ export function attachOrbitControls(
   // WHY SQUARED DISTANCE? Comparing dx²+dy² against 16 avoids calling
   // Math.sqrt — the magnitude check becomes a single multiply-add-compare,
   // which is cheaper and numerically identical in result.
-  let downX = 0;   // client-space X at pointerdown
-  let downY = 0;   // client-space Y at pointerdown
+  let downX = 0; // client-space X at pointerdown
+  let downY = 0; // client-space Y at pointerdown
 
   /** Squared pixel distance between pointerdown and pointerup. */
   const CLICK_THRESHOLD_SQ = 4 * 4; // 4 px radius → 16 when squared
@@ -247,10 +247,7 @@ export function attachOrbitControls(
     //
     // We clamp the result to ±PITCH_LIMIT to prevent the gimbal-lock
     // singularity at ±π/2 (see PITCH_LIMIT comment above).
-    cam.pitch = Math.max(
-      -PITCH_LIMIT,
-      Math.min(PITCH_LIMIT, cam.pitch + dy * 0.005),
-    );
+    cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, cam.pitch + dy * 0.005));
 
     // Recalculate cam.position from the updated yaw/pitch/distance.
     // The render loop reads cam.position (via computeViewProj) on the next

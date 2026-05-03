@@ -48,9 +48,5 @@ export function raDecZToCartesian(
   const ra = (raDeg * Math.PI) / 180;
   const dec = (decDeg * Math.PI) / 180;
   const cosDec = Math.cos(dec);
-  return [
-    d * cosDec * Math.cos(ra),
-    d * cosDec * Math.sin(ra),
-    d * Math.sin(dec),
-  ];
+  return [d * cosDec * Math.cos(ra), d * cosDec * Math.sin(ra), d * Math.sin(dec)];
 }

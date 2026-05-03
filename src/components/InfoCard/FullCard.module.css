@@ -43,7 +43,11 @@
     0 0 0 1px rgba(160, 200, 255, 0.06) inset;
 
   color: #cfd8ff;
-  font: 12px / 1.45 ui-monospace, "SF Mono", Menlo, monospace;
+  font:
+    12px / 1.45 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
 }
 
 /*
@@ -124,7 +128,7 @@
 .cardSection {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(160, 200, 255, 0.10);
+  border-top: 1px solid rgba(160, 200, 255, 0.1);
 }
 
 /* Thumbnail + cosmology summary side-by-side */
@@ -148,21 +152,21 @@
 
 /* Earth-era sub-line; slightly muted */
 .cardLookbackEra {
-  color: rgba(200, 220, 255, 0.70);
+  color: rgba(200, 220, 255, 0.7);
   font-size: 11px;
   margin-bottom: 4px;
 }
 
 /* Distance · speed line */
 .cardDistLine {
-  color: rgba(200, 220, 255, 0.80);
+  color: rgba(200, 220, 255, 0.8);
   font-size: 11px;
   margin-bottom: 3px;
 }
 
 /* Galaxy type line */
 .cardTypeLine {
-  color: rgba(200, 220, 255, 0.80);
+  color: rgba(200, 220, 255, 0.8);
   font-size: 11px;
 }
 
@@ -193,7 +197,7 @@
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
   /* <code> resets font family — restore our monospace stack */
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
   word-break: break-all;
 }
 
@@ -209,11 +213,17 @@
   outline: none;
 }
 /* WebKit/Blink hide the default marker differently */
-.detailsSummary::-webkit-details-marker { display: none; }
+.detailsSummary::-webkit-details-marker {
+  display: none;
+}
 
 /* Add a disclosure arrow via ::before */
-details[open] > .detailsSummary::before { content: '▾ '; }
-details:not([open]) > .detailsSummary::before { content: '▸ '; }
+details[open] > .detailsSummary::before {
+  content: '▾ ';
+}
+details:not([open]) > .detailsSummary::before {
+  content: '▸ ';
+}
 
 /* ── External link ────────────────────────────────────────────────────────── */
 

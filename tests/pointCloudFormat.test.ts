@@ -12,13 +12,13 @@ import type { PointCloud } from '../src/types';
 function makeCloud(): PointCloud {
   return {
     count: 2,
-    objIDs:    new BigUint64Array([1234567890123456789n, 2n]),
+    objIDs: new BigUint64Array([1234567890123456789n, 2n]),
     positions: new Float32Array([1, 2, 3, 4, 5, 6]),
-    magU:      new Float32Array([19.2, 17.8]),
-    magG:      new Float32Array([18.5, 17.1]),
-    magR:      new Float32Array([17.9, 16.6]),
-    magI:      new Float32Array([17.6, 16.3]),
-    magZ:      new Float32Array([17.4, 16.1]),
+    magU: new Float32Array([19.2, 17.8]),
+    magG: new Float32Array([18.5, 17.1]),
+    magR: new Float32Array([17.9, 16.6]),
+    magI: new Float32Array([17.6, 16.3]),
+    magZ: new Float32Array([17.4, 16.1]),
   };
 }
 

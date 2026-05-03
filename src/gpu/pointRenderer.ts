@@ -475,8 +475,8 @@ export class PointRenderer {
     // Both views share the same underlying memory (the ArrayBuffer), so writes
     // through one are immediately visible through the other — no extra copy.
     const buf = new ArrayBuffer(UNIFORM_BYTES); // 96 bytes
-    const f32 = new Float32Array(buf);           // float view: indices 0..23
-    const u32 = new Uint32Array(buf);            // uint32 view: indices 0..23
+    const f32 = new Float32Array(buf); // float view: indices 0..23
+    const u32 = new Uint32Array(buf); // uint32 view: indices 0..23
 
     // `mat4` from gl-matrix is a Float32Array of 16 values in column-major
     // order. `set()` copies all 16 floats starting at index 0.

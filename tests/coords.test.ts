@@ -64,7 +64,7 @@ describe('cartesianToRaDecZ', () => {
     // (RA = 350, Dec = 0, z = 0.1) lies in the -y half-space, atan2 gives -10°.
     // Function must wrap to 350°, not return -10.
     const [x, y, z] = raDecZToCartesian(350, 0, 0.1);
-    const [ra, , ] = cartesianToRaDecZ(x, y, z);
+    const [ra, ,] = cartesianToRaDecZ(x, y, z);
     expect(ra).toBeGreaterThanOrEqual(0);
     expect(ra).toBeLessThan(360);
     expect(close(ra, 350, 1e-3)).toBe(true);

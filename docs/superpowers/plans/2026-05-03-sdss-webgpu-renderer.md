@@ -7,6 +7,7 @@
 **Architecture:** A Vite-bundled single-page app initializes a WebGPU device on a canvas, uploads a static point cloud (synthetic data first, then SDSS-derived xyz+attributes from a preprocessed `.bin` file) to a single vertex buffer, and renders it as instanced billboards with a custom WGSL shader. An orbit camera provides view/projection matrices via uniform buffer. Coordinate conversion (RA/Dec/redshift → Cartesian Mpc) and the binary file format live in pure TS modules with unit tests.
 
 **Tech Stack:**
+
 - TypeScript 5.x, Vite 5.x
 - WebGPU (via `@webgpu/types`)
 - `gl-matrix` for camera math
@@ -55,6 +56,7 @@ Files this plan will create:
 ```
 
 **File responsibilities (one each):**
+
 - `gpu/device.ts` — adapter/device acquisition only
 - `gpu/pointRenderer.ts` — pipeline state, vertex buffer upload, draw — knows nothing about camera math
 - `camera/orbitCamera.ts` — pure state → matrices, no DOM
@@ -68,6 +70,7 @@ Files this plan will create:
 ## Task 1: Project scaffold
 
 **Files:**
+
 - Create: `package.json`, `tsconfig.json`, `vite.config.ts`, `vitest.config.ts`, `.gitignore`, `index.html`, `src/main.ts`, `README.md`
 
 - [ ] **Step 1: Initialize git and create `.gitignore`**
@@ -172,10 +175,27 @@ export default defineConfig({
     <meta charset="UTF-8" />
     <title>Skymap — SDSS WebGPU</title>
     <style>
-      html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
-      #c { display: block; width: 100vw; height: 100vh; }
-      #status { position: fixed; top: 8px; left: 8px; color: #ccc;
-        font: 12px/1.4 ui-monospace, monospace; }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+      }
+      #c {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      #status {
+        position: fixed;
+        top: 8px;
+        left: 8px;
+        color: #ccc;
+        font:
+          12px/1.4 ui-monospace,
+          monospace;
+      }
     </style>
   </head>
   <body>
@@ -215,6 +235,7 @@ git commit -m "chore: scaffold vite + typescript + webgpu types"
 ## Task 2: Shared types
 
 **Files:**
+
 - Create: `src/types.ts`
 
 - [ ] **Step 1: Create `src/types.ts`**
@@ -255,6 +276,7 @@ git commit -m "feat: add PointCloud type"
 Convert SDSS sky coordinates (RA in degrees, Dec in degrees, redshift z) to Cartesian Mpc using simple Hubble's law: `d = c * z / H0` with `H0 = 70 km/s/Mpc`, `c = 299792.458 km/s` ⇒ `d_Mpc ≈ 4282.75 * z`. Galactic-axis convention here is right-handed: x toward (RA=0, Dec=0), y toward (RA=90°, Dec=0), z toward Dec=+90°.
 
 **Files:**
+
 - Create: `src/data/coords.ts`, `tests/coords.test.ts`
 
 - [ ] **Step 1: Write failing tests**
@@ -324,7 +346,7 @@ export function redshiftToDistanceMpc(z: number): number {
 export function raDecZToCartesian(
   raDeg: number,
   decDeg: number,
-  z: number
+  z: number,
 ): [number, number, number] {
   const d = redshiftToDistanceMpc(z);
   const ra = (raDeg * Math.PI) / 180;
@@ -356,6 +378,7 @@ git commit -m "feat: add RA/Dec/redshift → Cartesian Mpc conversion"
 A simple little-endian binary format: 16-byte header (`magic: 4 bytes "SKMP"`, `version: u32 = 1`, `count: u32`, `reserved: u32 = 0`), followed by `count * 5` Float32 values (x, y, z, magnitude, colorIndex), interleaved per point.
 
 **Files:**
+
 - Create: `src/data/pointCloudFormat.ts`, `tests/pointCloudFormat.test.ts`
 
 - [ ] **Step 1: Write failing tests**
@@ -494,6 +517,7 @@ git commit -m "feat: add binary point cloud format encode/decode"
 100k points distributed inside a sphere of radius 1000 Mpc, with random magnitudes/colors. Used as a stand-in until real SDSS data is loaded.
 
 **Files:**
+
 - Create: `src/data/synthetic.ts`
 
 - [ ] **Step 1: Implement `src/data/synthetic.ts`**
@@ -533,7 +557,7 @@ export function generateSyntheticCloud(count: number, seed = 42): PointCloud {
     positions[i * 3 + 1] = y * radius;
     positions[i * 3 + 2] = z * radius;
     magnitudes[i] = 14 + rand() * 8; // ~14..22
-    colorIndex[i] = rand() * 2;       // ~0..2 (u-g-ish)
+    colorIndex[i] = rand() * 2; // ~0..2 (u-g-ish)
   }
   return { count, positions, magnitudes, colorIndex };
 }
@@ -559,6 +583,7 @@ git commit -m "feat: add synthetic point cloud generator"
 ## Task 6: WebGPU device initialization
 
 **Files:**
+
 - Create: `src/gpu/device.ts`
 
 - [ ] **Step 1: Implement `src/gpu/device.ts`**
@@ -660,6 +685,7 @@ git commit -m "feat: initialize WebGPU device with clear pass"
 Pure state → matrices. Inputs: target (vec3), distance, yaw, pitch, fov, aspect, near, far. Output: viewProj mat4. We test by checking the projected position of known points.
 
 **Files:**
+
 - Create: `src/camera/orbitCamera.ts`, `tests/orbitCamera.test.ts`
 
 - [ ] **Step 1: Write failing tests**
@@ -674,8 +700,14 @@ import { createOrbitCamera, computeViewProj } from '../src/camera/orbitCamera';
 describe('orbit camera', () => {
   it('places the camera at +z when yaw=0 pitch=0', () => {
     const cam = createOrbitCamera({
-      target: [0, 0, 0], distance: 10, yaw: 0, pitch: 0,
-      fovYRad: Math.PI / 4, aspect: 1, near: 0.1, far: 100,
+      target: [0, 0, 0],
+      distance: 10,
+      yaw: 0,
+      pitch: 0,
+      fovYRad: Math.PI / 4,
+      aspect: 1,
+      near: 0.1,
+      far: 100,
     });
     expect(cam.position[2]).toBeCloseTo(10, 5);
     expect(cam.position[0]).toBeCloseTo(0, 5);
@@ -684,8 +716,14 @@ describe('orbit camera', () => {
 
   it('projects target near clip-space origin', () => {
     const cam = createOrbitCamera({
-      target: [0, 0, 0], distance: 10, yaw: 0, pitch: 0,
-      fovYRad: Math.PI / 4, aspect: 1, near: 0.1, far: 100,
+      target: [0, 0, 0],
+      distance: 10,
+      yaw: 0,
+      pitch: 0,
+      fovYRad: Math.PI / 4,
+      aspect: 1,
+      near: 0.1,
+      far: 100,
     });
     const vp = computeViewProj(cam);
     const p = vec4.fromValues(0, 0, 0, 1);
@@ -713,7 +751,7 @@ import { mat4, vec3 } from 'gl-matrix';
 export interface OrbitCameraInit {
   target: [number, number, number];
   distance: number;
-  yaw: number;   // radians, around world +Z
+  yaw: number; // radians, around world +Z
   pitch: number; // radians, clamped to (-π/2 + ε, π/2 - ε)
   fovYRad: number;
   aspect: number;
@@ -776,6 +814,7 @@ git commit -m "feat: add orbit camera with view/projection matrices"
 Maps DOM input events to mutations of an `OrbitCamera`. No tests — DOM-event-driven; verified visually in the next task.
 
 **Files:**
+
 - Create: `src/camera/orbitControls.ts`
 
 - [ ] **Step 1: Implement `src/camera/orbitControls.ts`**
@@ -785,10 +824,7 @@ import { OrbitCamera, updatePosition } from './orbitCamera';
 
 const PITCH_LIMIT = Math.PI / 2 - 0.01;
 
-export function attachOrbitControls(
-  canvas: HTMLCanvasElement,
-  cam: OrbitCamera,
-): () => void {
+export function attachOrbitControls(canvas: HTMLCanvasElement, cam: OrbitCamera): () => void {
   let dragging = false;
   let lastX = 0;
   let lastY = 0;
@@ -856,6 +892,7 @@ git commit -m "feat: add mouse/wheel orbit controls"
 Each point is drawn as a 2-triangle quad (6 vertices, instance per point). Vertex shader places the quad in clip space at the point's projected position with a fixed pixel size; fragment shader applies a soft circular falloff and color from a simple blue→yellow→red ramp on `colorIndex`.
 
 **Files:**
+
 - Create: `src/gpu/shaders/points.wgsl`
 
 - [ ] **Step 1: Implement `src/gpu/shaders/points.wgsl`**
@@ -935,6 +972,7 @@ git commit -m "feat: add point billboard WGSL shader"
 Owns the render pipeline, uniform buffer, and vertex buffer; exposes `upload(cloud)` and `draw(viewProj, viewport)`.
 
 **Files:**
+
 - Create: `src/gpu/pointRenderer.ts`
 
 - [ ] **Step 1: Implement `src/gpu/pointRenderer.ts`**
@@ -971,9 +1009,9 @@ export class PointRenderer {
             arrayStride: POINT_STRIDE,
             stepMode: 'instance',
             attributes: [
-              { shaderLocation: 0, offset: 0,  format: 'float32x3' }, // position
-              { shaderLocation: 1, offset: 12, format: 'float32'   }, // magnitude
-              { shaderLocation: 2, offset: 16, format: 'float32'   }, // colorIndex
+              { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
+              { shaderLocation: 1, offset: 12, format: 'float32' }, // magnitude
+              { shaderLocation: 2, offset: 16, format: 'float32' }, // colorIndex
             ],
           },
         ],
@@ -1068,6 +1106,7 @@ git commit -m "feat: add point renderer with instanced billboards"
 ## Task 11: Wire it all together — synthetic cloud rendered with orbit camera
 
 **Files:**
+
 - Modify: `src/main.ts` (full replacement)
 
 - [ ] **Step 1: Replace `src/main.ts`**
@@ -1143,6 +1182,7 @@ npm run dev
 ```
 
 Open http://localhost:5173. Expected:
+
 - A dense cloud of small bright dots resembling a sphere, colored from blue through yellowish to red
 - Drag to orbit → cloud rotates smoothly
 - Mouse wheel → zoom in/out
@@ -1165,6 +1205,7 @@ git commit -m "feat: render 100k synthetic points with orbit camera"
 A Node script that reads a CSV with columns `ra,dec,z,modelMag_g,modelMag_u` (typical SkyServer SQL output) and writes a `.bin` file using our format. Skips rows where `z <= 0` or `z` is missing.
 
 **Files:**
+
 - Create: `tools/csvToBin.ts`
 - Modify: `package.json` (add script)
 
@@ -1178,7 +1219,11 @@ import { encodePointCloud } from '../src/data/pointCloudFormat';
 import type { PointCloud } from '../src/types';
 
 interface Row {
-  ra: number; dec: number; z: number; magG: number; magU: number;
+  ra: number;
+  dec: number;
+  z: number;
+  magG: number;
+  magU: number;
 }
 
 function parseCsv(text: string): Row[] {
@@ -1190,8 +1235,11 @@ function parseCsv(text: string): Row[] {
     if (i < 0) throw new Error(`missing column: ${name}`);
     return i;
   };
-  const iRa = idx('ra'), iDec = idx('dec'), iZ = idx('z');
-  const iG = idx('modelmag_g'), iU = idx('modelmag_u');
+  const iRa = idx('ra'),
+    iDec = idx('dec'),
+    iZ = idx('z');
+  const iG = idx('modelmag_g'),
+    iU = idx('modelmag_u');
   const out: Row[] = [];
   for (let i = 1; i < lines.length; i++) {
     const cells = lines[i]!.split(',');
@@ -1235,7 +1283,9 @@ function main() {
   const cloud = buildCloud(rows);
   const buf = encodePointCloud(cloud);
   writeFileSync(outPath, Buffer.from(buf));
-  console.log(`wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength} bytes)`);
+  console.log(
+    `wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength} bytes)`,
+  );
 }
 
 main();
@@ -1280,6 +1330,7 @@ git commit -m "feat: add SDSS csv → bin conversion tool"
 ## Task 13: Load `.bin` at runtime, fall back to synthetic
 
 **Files:**
+
 - Modify: `src/main.ts`
 
 - [ ] **Step 1: Update `src/main.ts` to fetch `data/sdss.bin` on startup**
@@ -1349,6 +1400,7 @@ git commit -m "feat: load SDSS .bin at runtime with synthetic fallback"
 ## Task 14: README with quickstart and SDSS data instructions
 
 **Files:**
+
 - Modify: `README.md`
 
 - [ ] **Step 1: Write `README.md`**
@@ -1431,4 +1483,7 @@ These are intentionally not in v1. Listed so future-you knows what was deliberat
 - Spec coverage: scaffold ✓, WebGPU init ✓, camera ✓, controls ✓, point rendering ✓, coord conversion ✓, binary format ✓, real data loading ✓, tooling ✓, docs ✓.
 - Type consistency: `PointCloud` shape used identically in `synthetic.ts`, `pointCloudFormat.ts`, `pointRenderer.ts`, `csvToBin.ts`. Camera function names (`createOrbitCamera`, `updatePosition`, `computeViewProj`) are consistent across `orbitCamera.ts`, `orbitControls.ts`, `main.ts`.
 - No placeholders. Every code step shows the actual code. Every test step shows the actual assertions.
-````
+
+```
+
+```

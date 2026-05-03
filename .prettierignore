@@ -1,0 +1,7 @@
+node_modules
+dist
+.vite
+public/data
+*.bin
+*.csv
+package-lock.json

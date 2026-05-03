@@ -185,9 +185,9 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
           arrayStride: 20, // 5 floats × 4 bytes/float
           stepMode: 'instance',
           attributes: [
-            { shaderLocation: 0, offset: 0,  format: 'float32x3' }, // position
-            { shaderLocation: 1, offset: 12, format: 'float32'   }, // magnitude
-            { shaderLocation: 2, offset: 16, format: 'float32'   }, // colorIndex
+            { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
+            { shaderLocation: 1, offset: 12, format: 'float32' }, // magnitude
+            { shaderLocation: 2, offset: 16, format: 'float32' }, // colorIndex
           ],
         },
       ],
@@ -353,9 +353,7 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     // brightness (4) → selectedIndex sits at byte offset 80.
     const SELECTED_INDEX_OFFSET = 80;
     const NONE_SENTINEL = new Uint32Array([0xffffffff]);
-    device.queue.writeBuffer(
-      sharedUniformBuffer, SELECTED_INDEX_OFFSET, NONE_SENTINEL,
-    );
+    device.queue.writeBuffer(sharedUniformBuffer, SELECTED_INDEX_OFFSET, NONE_SENTINEL);
 
     // ── Render pass ────────────────────────────────────────────────────────
     //

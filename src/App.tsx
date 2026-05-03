@@ -124,7 +124,7 @@ export function App(): React.ReactElement {
   // always reflects the engine's current state — not the other way around.
   // The user's interactions flow: slider → callback → handleRef.setXxx → engine
   // closure variable updated → callback fired → setState → React re-render.
-  const [pointSize,  setPointSize]  = useState<number>(2.5);
+  const [pointSize, setPointSize] = useState<number>(2.5);
   const [brightness, setBrightness] = useState<number>(1.0);
   const [autoRotate, setAutoRotate] = useState<boolean>(false);
 
@@ -146,14 +146,14 @@ export function App(): React.ReactElement {
       // Because the engine deduplicates (only calls these when values change),
       // we can pass `setState` functions directly — no extra memoisation needed.
       onStatusChange: setStatus,
-      onHoverChange:  setHovered,
+      onHoverChange: setHovered,
       onSelectChange: setSelected,
-      onScaleChange:  setScale,
+      onScaleChange: setScale,
 
       // Settings-panel callbacks: engine fires these when a setting changes
       // (including the initial seed at startup). React state stays in sync
       // automatically, so the panel always reflects the engine's truth.
-      onPointSizeChange:  setPointSize,
+      onPointSizeChange: setPointSize,
       onBrightnessChange: setBrightness,
       onAutoRotateChange: setAutoRotate,
     });

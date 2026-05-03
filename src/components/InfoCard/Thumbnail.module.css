@@ -10,7 +10,7 @@
   width: 80px;
   height: 80px;
   border-radius: 6px;
-  border: 1px solid rgba(160, 200, 255, 0.20);
+  border: 1px solid rgba(160, 200, 255, 0.2);
   flex-shrink: 0;
   object-fit: cover;
   display: block;

@@ -47,9 +47,9 @@ export function mulberry32(seed: number): () => number {
     // destroying autocorrelation. `Math.imul` performs true 32-bit
     // multiplication (no 64-bit intermediate), which is what we need here.
     let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);      // mix high bits down
+    t = Math.imul(t ^ (t >>> 15), t | 1); // mix high bits down
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61); // mix again with different shift
-    t = (t ^ (t >>> 14)) >>> 0;                // final avalanche; `>>> 0` → uint32
+    t = (t ^ (t >>> 14)) >>> 0; // final avalanche; `>>> 0` → uint32
 
     // Divide by 2³² to map the uint32 onto [0, 1).
     // We never quite reach 1.0 because t ≤ 2³² − 1 → t/2³² ≤ 1 − 2⁻³².

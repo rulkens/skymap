@@ -335,10 +335,7 @@ function niceRound(x: number): number {
   const exp = Math.floor(Math.log10(x));
   const power = Math.pow(10, exp);
   const mantissa = x / power; // ∈ [1, 10)
-  const niceMantissa =
-    mantissa >= 5 ? 5 :
-    mantissa >= 2 ? 2 :
-    1;
+  const niceMantissa = mantissa >= 5 ? 5 : mantissa >= 2 ? 2 : 1;
   return niceMantissa * power;
 }
 
@@ -404,21 +401,21 @@ function buildPointInfo(cloud: PointCloud, idx: number): PointInfo {
   const uMinusR = magU - magR;
 
   return {
-    index:   idx,
-    objID:   cloud.objIDs[idx]!,
+    index: idx,
+    objID: cloud.objIDs[idx]!,
 
     // Sky coordinates — both decimal and pre-formatted sexagesimal strings.
     ra,
     dec,
-    raSexagesimal:  formatRaSexagesimal(ra),
+    raSexagesimal: formatRaSexagesimal(ra),
     decSexagesimal: formatDecSexagesimal(dec),
 
     // Cosmology derived from the recovered redshift and distance.
     redshift,
     distanceMpc,
     hubbleVelocityKmS: hubbleVelocityKmS(redshift),
-    lookbackGyr:       lookbackTimeGyr(redshift),
-    earthEra:          earthEraForLookback(lookbackTimeGyr(redshift)),
+    lookbackGyr: lookbackTimeGyr(redshift),
+    earthEra: earthEraForLookback(lookbackTimeGyr(redshift)),
 
     // Five-band photometry — raw values, let the UI format them.
     magU,
@@ -429,11 +426,11 @@ function buildPointInfo(cloud: PointCloud, idx: number): PointInfo {
 
     // Derived quantities.
     absoluteMagG: absoluteMagnitude(magG, distanceMpc),
-    galaxyType:   galaxyTypeFromColor(uMinusR),
-    sdssName:     sdssName(ra, dec),
+    galaxyType: galaxyTypeFromColor(uMinusR),
+    sdssName: sdssName(ra, dec),
 
     // External URLs — always constructed, regardless of real vs. synthetic data.
-    explorerUrl:  sdssExplorerUrl(cloud.objIDs[idx]!),
+    explorerUrl: sdssExplorerUrl(cloud.objIDs[idx]!),
     thumbnailUrl: sdssThumbnailUrl(ra, dec, 200),
   };
 }
@@ -458,10 +455,7 @@ function buildPointInfo(cloud: PointCloud, idx: number): PointInfo {
  *
  * @throws Never — errors are reported via `onStatusChange({ kind: 'error' })`.
  */
-export function createEngine(
-  canvas: HTMLCanvasElement,
-  cb: EngineCallbacks,
-): EngineHandle {
+export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────
   //
   // Everything lives as closure variables rather than a class because the
@@ -471,10 +465,10 @@ export function createEngine(
 
   type MousePos = { x: number; y: number };
 
-  let latestMouseCss:     MousePos | null = null;
+  let latestMouseCss: MousePos | null = null;
   let lastPickedMouseCss: MousePos | null = null;
   let pickInFlight = false;
-  let hoveredIndex:  number | null = null;
+  let hoveredIndex: number | null = null;
   let selectedIndex: number | null = null;
   let pointerDown = false;
 
@@ -484,8 +478,8 @@ export function createEngine(
   // Settings Panel. They are mutated by the public handle setters below and
   // consumed in the render loop (renderer.draw) and frame tick (autoRotate).
   let pointSizePx = 2.5;
-  let brightness  = 1.0;
-  let autoRotate  = false;
+  let brightness = 1.0;
+  let autoRotate = false;
 
   // ── Initial camera snapshot ───────────────────────────────────────────────
   //
@@ -494,13 +488,13 @@ export function createEngine(
   // IIFE) so the public handle's closure can reach it without hoisting the
   // entire async block.
   type InitialCam = {
-    target:   [number, number, number];
+    target: [number, number, number];
     distance: number;
-    yaw:      number;
-    pitch:    number;
-    fovYRad:  number;
-    near:     number;
-    far:      number;
+    yaw: number;
+    pitch: number;
+    fovYRad: number;
+    near: number;
+    far: number;
   };
   let initialCamRef: InitialCam | null = null;
 
@@ -530,10 +524,7 @@ export function createEngine(
     windowListeners.push([type, handler as EventListener]);
   }
 
-  function addCanvasListener(
-    type: string,
-    handler: EventListener,
-  ): void {
+  function addCanvasListener(type: string, handler: EventListener): void {
     canvas.addEventListener(type, handler);
     canvasListeners.push([type, handler]);
   }
@@ -605,15 +596,15 @@ export function createEngine(
     if (!isFinite(pxPerMpc) || pxPerMpc <= 0) return;
 
     const desiredMpc = SCALE_TARGET_PX / pxPerMpc;
-    const niceMpc    = niceRound(desiredMpc);
-    const widthPx    = niceMpc * pxPerMpc;
+    const niceMpc = niceRound(desiredMpc);
+    const widthPx = niceMpc * pxPerMpc;
 
     const sig = `${niceMpc}:${widthPx.toFixed(0)}`;
     if (sig === lastScaleSig) return;
     lastScaleSig = sig;
 
     cb.onScaleChange({
-      label:   formatDistance(niceMpc),
+      label: formatDistance(niceMpc),
       widthPx: Math.round(widthPx),
     });
   }
@@ -667,14 +658,14 @@ export function createEngine(
       const camFar = bbox * 4;
 
       cam = createOrbitCamera({
-        target:   [0, 0, 0],
+        target: [0, 0, 0],
         distance: camDistance,
-        yaw:      0,
-        pitch:    0.3,
-        fovYRad:  (Math.PI / 180) * 60,
-        aspect:   canvas.width / canvas.height,
-        near:     1,
-        far:      camFar,
+        yaw: 0,
+        pitch: 0.3,
+        fovYRad: (Math.PI / 180) * 60,
+        aspect: canvas.width / canvas.height,
+        near: 1,
+        far: camFar,
       });
 
       // ── Initial camera snapshot for resetCamera() ────────────────────────
@@ -689,13 +680,13 @@ export function createEngine(
       // Assigned to the outer `initialCamRef` so the public `resetCamera()` handle
       // method can read it after this async block completes.
       initialCamRef = {
-        target:   [0, 0, 0],
-        distance: camDistance,   // bbox * 2.5
-        yaw:      0,
-        pitch:    0.3,
-        fovYRad:  cam.fovYRad,
-        near:     cam.near,
-        far:      cam.far,
+        target: [0, 0, 0],
+        distance: camDistance, // bbox * 2.5
+        yaw: 0,
+        pitch: 0.3,
+        fovYRad: cam.fovYRad,
+        near: cam.near,
+        far: cam.far,
       };
 
       // ── Pointer event listeners ──────────────────────────────────────────
@@ -837,8 +828,8 @@ export function createEngine(
             {
               view: context.getCurrentTexture().createView(),
               clearValue: { r: 0, g: 0, b: 0, a: 1 },
-              loadOp: 'clear',   // wipe to clearValue at pass start
-              storeOp: 'store',  // write results to the swap-chain texture
+              loadOp: 'clear', // wipe to clearValue at pass start
+              storeOp: 'store', // write results to the swap-chain texture
             },
           ],
         });
@@ -853,7 +844,11 @@ export function createEngine(
         // selectedIndex: 0xffffffff is the sentinel for "nothing selected" —
         // the max u32 value, which can never match a real point index.
         renderer.draw(
-          pass, vp, [canvas.width, canvas.height], pointSizePx, brightness,
+          pass,
+          vp,
+          [canvas.width, canvas.height],
+          pointSizePx,
+          brightness,
           selectedIndex !== null ? selectedIndex : 0xffffffff >>> 0,
         );
 
@@ -887,7 +882,7 @@ export function createEngine(
           latestMouseCss !== null &&
           latestMouseCss !== lastPickedMouseCss &&
           !pickInFlight &&
-          !pointerDown    // skip hover picks while a drag is in progress
+          !pointerDown // skip hover picks while a drag is in progress
         ) {
           // Snapshot the position at the moment we kick off the pick.
           const pos = latestMouseCss;
@@ -917,7 +912,6 @@ export function createEngine(
       }
 
       rafId = requestAnimationFrame(frame);
-
     } catch (err) {
       // Surface initialisation failures via the status callback so the UI
       // shows a readable message rather than a blank canvas.
@@ -1005,9 +999,9 @@ export function createEngine(
       cam.target[0] = initialCamRef.target[0];
       cam.target[1] = initialCamRef.target[1];
       cam.target[2] = initialCamRef.target[2];
-      cam.distance  = initialCamRef.distance;
-      cam.yaw       = initialCamRef.yaw;
-      cam.pitch     = initialCamRef.pitch;
+      cam.distance = initialCamRef.distance;
+      cam.yaw = initialCamRef.yaw;
+      cam.pitch = initialCamRef.pitch;
       updatePosition(cam);
     },
   };

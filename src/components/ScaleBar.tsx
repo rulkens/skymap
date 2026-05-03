@@ -49,10 +49,7 @@ export function ScaleBar({ scale }: ScaleBarProps): ReactNode {
 
         The bracket appearance comes from the CSS borders on .scaleLine.
       */}
-      <span
-        className={styles.scaleLine}
-        style={{ width: scale.widthPx + 'px' }}
-      />
+      <span className={styles.scaleLine} style={{ width: scale.widthPx + 'px' }} />
     </div>
   );
 }

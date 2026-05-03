@@ -29,11 +29,7 @@
  * @param sizePx  Width and height of the cutout in pixels. Default 160.
  *                Clamped to [32, 2048].
  */
-export function sdssThumbnailUrl(
-  raDeg: number,
-  decDeg: number,
-  sizePx = 160,
-): string {
+export function sdssThumbnailUrl(raDeg: number, decDeg: number, sizePx = 160): string {
   // Clamp to the service-documented pixel limits.
   const size = Math.max(32, Math.min(2048, sizePx));
   return (

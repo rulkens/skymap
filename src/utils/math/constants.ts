@@ -39,6 +39,5 @@ export const HUBBLE_DISTANCE_MPC = C_KM_S / H0_KM_S_MPC;
  * The seconds-per-year factor uses the Julian year (365.25 days).
  */
 export const HUBBLE_TIME_GYR =
-  (1 / H0_KM_S_MPC) *
-  3.0857e19 /           // 1 Mpc in km
+  ((1 / H0_KM_S_MPC) * 3.0857e19) / // 1 Mpc in km
   (60 * 60 * 24 * 365.25 * 1e9); // seconds in one gigayear (Julian)

@@ -43,7 +43,7 @@ export function sdssName(raDeg: number, decDeg: number): string {
   // the only lossy step. For most SDSS coordinates the result is within 0.5
   // of the true integer, so Math.trunc gives the correct truncated digit.
   // Compare: wrappedRa/15 × 3600 × 100 suffers two lossy operations before trunc.
-  const raTotalCentisec = Math.trunc(wrappedRa * 3600 * 100 / 15);
+  const raTotalCentisec = Math.trunc((wrappedRa * 3600 * 100) / 15);
 
   // Decompose with integer division — no further floating-point arithmetic.
   const raH = Math.floor(raTotalCentisec / (60 * 60 * 100));

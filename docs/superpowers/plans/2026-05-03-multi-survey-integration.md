@@ -62,10 +62,10 @@ README.md                       MODIFY  download instructions for all 4 surveys
 ```ts
 export enum Source {
   Synthetic = 0,
-  SDSS      = 1,
-  TwoMRS    = 2,
-  TwoMPZ    = 3,
-  SixDFGS   = 4,
+  SDSS = 1,
+  TwoMRS = 2,
+  TwoMPZ = 3,
+  SixDFGS = 4,
 }
 ```
 
@@ -76,6 +76,7 @@ Bit position in `visibleSourceMask: u32` matches the enum value. `0xFFFFFFFF` me
 ## Task 1: Source enum + metadata module
 
 **Files:**
+
 - Create: `src/data/sources.ts`
 - Create: `tests/sources.test.ts`
 
@@ -166,35 +167,35 @@ Expected: FAIL — module `../src/data/sources` not found.
  */
 export enum Source {
   Synthetic = 0,
-  SDSS      = 1,
-  TwoMRS    = 2,
-  TwoMPZ    = 3,
-  SixDFGS   = 4,
+  SDSS = 1,
+  TwoMRS = 2,
+  TwoMPZ = 3,
+  SixDFGS = 4,
 }
 
 const LABELS: Record<Source, string> = {
   [Source.Synthetic]: 'Synthetic',
-  [Source.SDSS]:      'SDSS',
-  [Source.TwoMRS]:    '2MRS',
-  [Source.TwoMPZ]:    '2MPZ',
-  [Source.SixDFGS]:   '6dFGS',
+  [Source.SDSS]: 'SDSS',
+  [Source.TwoMRS]: '2MRS',
+  [Source.TwoMPZ]: '2MPZ',
+  [Source.SixDFGS]: '6dFGS',
 };
 
 const ALL_SKY: Record<Source, boolean> = {
-  [Source.Synthetic]: true,   // synthetic data is generated uniformly
-  [Source.SDSS]:      false,  // ~1/3 of sky, mostly NGC + stripes
-  [Source.TwoMRS]:    true,
-  [Source.TwoMPZ]:    true,
-  [Source.SixDFGS]:   false,  // dec < 0
+  [Source.Synthetic]: true, // synthetic data is generated uniformly
+  [Source.SDSS]: false, // ~1/3 of sky, mostly NGC + stripes
+  [Source.TwoMRS]: true,
+  [Source.TwoMPZ]: true,
+  [Source.SixDFGS]: false, // dec < 0
 };
 
 /** Approximate maximum comoving distance (Mpc) covered by each survey. */
 const MAX_DIST_MPC: Record<Source, number> = {
   [Source.Synthetic]: 1000,
-  [Source.SDSS]:      3000,
-  [Source.TwoMRS]:    250,
-  [Source.TwoMPZ]:    600,
-  [Source.SixDFGS]:   700,
+  [Source.SDSS]: 3000,
+  [Source.TwoMRS]: 250,
+  [Source.TwoMPZ]: 600,
+  [Source.SixDFGS]: 700,
 };
 
 /** Human-readable label for the UI. */
@@ -215,9 +216,9 @@ export function sourceMaxDistanceMpc(s: Source): number {
 /** A mask with every defined source bit set. */
 export const ALL_VISIBLE_MASK =
   (1 << Source.Synthetic) |
-  (1 << Source.SDSS)      |
-  (1 << Source.TwoMRS)    |
-  (1 << Source.TwoMPZ)    |
+  (1 << Source.SDSS) |
+  (1 << Source.TwoMRS) |
+  (1 << Source.TwoMPZ) |
   (1 << Source.SixDFGS);
 
 export function maskHas(mask: number, s: Source): boolean {
@@ -250,6 +251,7 @@ git commit -m "feat: add Source enum + per-survey metadata + mask helpers"
 ## Task 2: PointCloud v3 binary format
 
 **Files:**
+
 - Modify: `src/types.ts`
 - Modify: `src/data/pointCloudFormat.ts`
 - Modify: `tests/pointCloudFormat.test.ts`
@@ -288,7 +290,7 @@ import type { PointCloud } from '../src/types';
 function makeCloud(): PointCloud {
   return {
     count: 3,
-    objIDs:    new BigUint64Array([1234567890123456789n, 0n, 42n]),
+    objIDs: new BigUint64Array([1234567890123456789n, 0n, 42n]),
     positions: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]),
     magU: new Float32Array([NaN, NaN, 19.2]),
     magG: new Float32Array([18.5, 16.0, 18.5]),
@@ -307,7 +309,9 @@ describe('point cloud binary format v3', () => {
     expect(decoded.count).toBe(3);
     expect(Array.from(decoded.sourceIDs)).toEqual([Source.SDSS, Source.TwoMPZ, Source.SDSS]);
     expect(Array.from(decoded.objIDs).map((b) => b.toString())).toEqual([
-      '1234567890123456789', '0', '42',
+      '1234567890123456789',
+      '0',
+      '42',
     ]);
     expect(Array.from(decoded.positions)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     // Float32 precision check on the well-rounded values:
@@ -384,6 +388,7 @@ git commit -m "feat: bump .bin format to v3 (per-point sourceID byte)"
 ## Task 3: Synthetic generator emits sourceIDs
 
 **Files:**
+
 - Modify: `src/data/synthetic.ts`
 
 - [ ] **Step 1: Update `generateSyntheticCloud` to populate `sourceIDs`**
@@ -416,6 +421,7 @@ git commit -m "feat: synthetic generator tags points with Source.Synthetic"
 ## Task 4: GPU per-instance sourceID + visibleSourceMask uniform
 
 **Files:**
+
 - Modify: `src/gpu/shaders/points.wgsl`
 - Modify: `src/gpu/pointRenderer.ts`
 
@@ -546,16 +552,17 @@ git commit -m "feat: per-instance sourceID attribute + visibleSourceMask uniform
 ## Task 5: Auto-LOD heuristic
 
 **Files:**
+
 - Create: `tests/autoLod.test.ts`
 - Modify: `src/engine.ts` (add the heuristic + wiring)
 
 The heuristic is a pure function of camera distance. Three depth bands:
 
-| Distance (Mpc)    | Visible sources                                  |
-|-------------------|--------------------------------------------------|
-| < 200             | Synthetic, 2MRS, 2MPZ                            |
-| 200 – 800         | Synthetic, SDSS, 2MRS, 2MPZ, 6dFGS (all)         |
-| > 800             | Synthetic, SDSS                                  |
+| Distance (Mpc) | Visible sources                          |
+| -------------- | ---------------------------------------- |
+| < 200          | Synthetic, 2MRS, 2MPZ                    |
+| 200 – 800      | Synthetic, SDSS, 2MRS, 2MPZ, 6dFGS (all) |
+| > 800          | Synthetic, SDSS                          |
 
 - [ ] **Step 1: Write the failing test**
 
@@ -653,6 +660,7 @@ git commit -m "feat: add autoLodMask heuristic (distance → visible source mask
 ## Task 6: Engine LOD mode + setSourceMask API
 
 **Files:**
+
 - Modify: `src/engine.ts`
 
 The engine grows a `lodMode: 'auto' | 'manual'` state. In auto, the per-frame logic computes a fresh mask via `autoLodMask(cam.distance)` and overwrites `visibleSourceMask`. In manual, an external setter (called from React) overrides; the auto computation is skipped.
@@ -721,8 +729,12 @@ Then expose the setters in the returned handle:
 
 ```ts
 return {
-  clearSelection() { /* ... existing ... */ },
-  destroy() { /* ... existing ... */ },
+  clearSelection() {
+    /* ... existing ... */
+  },
+  destroy() {
+    /* ... existing ... */
+  },
   setLodMode(mode) {
     if (mode === lodMode) return;
     lodMode = mode;
@@ -770,6 +782,7 @@ git commit -m "feat: engine LOD mode (auto/manual) + setSourceMask API"
 ## Task 7: Settings panel React component
 
 **Files:**
+
 - Create: `src/components/SettingsPanel.tsx`
 - Modify: `index.html` (add CSS)
 
@@ -793,7 +806,11 @@ Inside the existing `<style>` block, add:
   border-radius: 8px;
 
   color: #cfd8ff;
-  font: 11px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+  font:
+    11px/1.4 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
   user-select: none;
   min-width: 180px;
 }
@@ -813,7 +830,7 @@ Inside the existing `<style>` block, add:
   padding: 2px 0;
 }
 
-#settings-panel input[type="checkbox"] {
+#settings-panel input[type='checkbox'] {
   accent-color: rgba(180, 220, 255, 0.85);
   cursor: pointer;
 }
@@ -834,9 +851,7 @@ Inside the existing `<style>` block, add:
 
 ```tsx
 import type { ReactNode } from 'react';
-import {
-  Source, sourceLabel, maskHas, maskWith, maskWithout,
-} from '../data/sources';
+import { Source, sourceLabel, maskHas, maskWith, maskWithout } from '../data/sources';
 import type { LodMode } from '../engine';
 
 type Props = {
@@ -853,7 +868,10 @@ type Props = {
 /** Sources the user can toggle from the panel. Synthetic is hidden — it's
  *  controlled by the data-loading fallback, not the user. */
 const TOGGLEABLE: readonly Source[] = [
-  Source.SDSS, Source.TwoMRS, Source.TwoMPZ, Source.SixDFGS,
+  Source.SDSS,
+  Source.TwoMRS,
+  Source.TwoMPZ,
+  Source.SixDFGS,
 ] as const;
 
 export function SettingsPanel({ mask, mode, onToggleSource, onSetMode }: Props): ReactNode {
@@ -908,6 +926,7 @@ git commit -m "feat: SettingsPanel React component (per-source toggles + auto-LO
 ## Task 8: Wire SettingsPanel into App + engine
 
 **Files:**
+
 - Modify: `src/App.tsx`
 
 - [ ] **Step 1: Add state, callbacks, and component mount in `App.tsx`**
@@ -924,19 +943,19 @@ Add state hooks:
 
 ```tsx
 const [sourceMask, setSourceMask] = useState<number>(ALL_VISIBLE_MASK);
-const [lodMode,    setLodMode]    = useState<LodMode>('auto');
+const [lodMode, setLodMode] = useState<LodMode>('auto');
 ```
 
 Wire the engine callbacks (extend the existing `createEngine` call):
 
 ```tsx
 const handle = createEngine(canvas, {
-  onStatusChange:    setStatus,
-  onHoverChange:     setHovered,
-  onSelectChange:    setSelected,
-  onScaleChange:     setScale,
+  onStatusChange: setStatus,
+  onHoverChange: setHovered,
+  onSelectChange: setSelected,
+  onScaleChange: setScale,
   onSourceMaskChange: setSourceMask,
-  onLodModeChange:    setLodMode,
+  onLodModeChange: setLodMode,
 });
 ```
 
@@ -977,6 +996,7 @@ git commit -m "feat: wire SettingsPanel to engine source-mask + LOD mode"
 ## Task 9: Refactor SDSS CSV parser into reusable module
 
 **Files:**
+
 - Create: `tools/parsers/common.ts`
 - Create: `tools/parsers/sdssCsv.ts`
 - Modify: `tools/csvToBin.ts`
@@ -1002,9 +1022,9 @@ export type ParsedRecord = {
   /** Numeric SDSS objID when known (SDSS or 2MPZ rows that include an SDSS_OBJID
    *  cross-ID); 0n otherwise. Used for dedup against SDSS. */
   objID: bigint;
-  ra: number;        // degrees
-  dec: number;       // degrees
-  z: number;         // redshift
+  ra: number; // degrees
+  dec: number; // degrees
+  z: number; // redshift
   /** Five-band magnitudes in SDSS frame; NaN where unavailable. */
   magU: number;
   magG: number;
@@ -1050,7 +1070,7 @@ const { records, skipped } = parseSdssCsv(rawText);
 const count = records.length;
 const cloud: PointCloud = {
   count,
-  objIDs:    new BigUint64Array(count),
+  objIDs: new BigUint64Array(count),
   positions: new Float32Array(count * 3),
   magU: new Float32Array(count),
   magG: new Float32Array(count),
@@ -1093,6 +1113,7 @@ git commit -m "refactor: extract SDSS CSV parser to reusable parsers/sdssCsv mod
 ## Task 10: 2MRS parser
 
 **Files:**
+
 - Create: `tools/parsers/twoMrs.ts`
 - Create: `tests/parsers/twoMrs.test.ts`
 
@@ -1113,6 +1134,7 @@ cz         (137–144)      heliocentric velocity, km/s
 `z = cz / 299792.458`. Skip rows where `cz <= 0` (unmeasured), or any of J/H/K is blank.
 
 We map 2MASS bands to our 5-band slots:
+
 - magG ← J
 - magR ← H
 - magI ← K
@@ -1193,17 +1215,21 @@ export function parseTwoMrs(rawText: string): { records: ParsedRecord[]; skipped
   for (const line of lines) {
     // Slice by fixed widths (1-based positions inclusive in the README, so
     // `line.slice(N-1, M)` extracts characters N..M).
-    const ra   = parseFloat(line.slice(18, 28).trim());
-    const dec  = parseFloat(line.slice(29, 39).trim());
-    const j    = parseFloat(line.slice(40, 46).trim());
-    const h    = parseFloat(line.slice(47, 53).trim());
-    const k    = parseFloat(line.slice(54, 60).trim());
-    const cz   = parseFloat(line.slice(136, 144).trim());
+    const ra = parseFloat(line.slice(18, 28).trim());
+    const dec = parseFloat(line.slice(29, 39).trim());
+    const j = parseFloat(line.slice(40, 46).trim());
+    const h = parseFloat(line.slice(47, 53).trim());
+    const k = parseFloat(line.slice(54, 60).trim());
+    const cz = parseFloat(line.slice(136, 144).trim());
 
     if (
-      !Number.isFinite(ra)  || !Number.isFinite(dec) ||
-      !Number.isFinite(j)   || !Number.isFinite(h)   || !Number.isFinite(k) ||
-      !Number.isFinite(cz)  || cz <= 0
+      !Number.isFinite(ra) ||
+      !Number.isFinite(dec) ||
+      !Number.isFinite(j) ||
+      !Number.isFinite(h) ||
+      !Number.isFinite(k) ||
+      !Number.isFinite(cz) ||
+      cz <= 0
     ) {
       skipped++;
       continue;
@@ -1212,7 +1238,8 @@ export function parseTwoMrs(rawText: string): { records: ParsedRecord[]; skipped
     records.push({
       source: Source.TwoMRS,
       objID: 0n,
-      ra, dec,
+      ra,
+      dec,
       z: cz / C_KM_S,
       magU: NaN,
       magG: j,
@@ -1243,22 +1270,23 @@ git commit -m "feat: add 2MRS catalogue parser"
 ## Task 11: 2MPZ parser
 
 **Files:**
+
 - Create: `tools/parsers/twoMpz.ts`
 - Create: `tests/parsers/twoMpz.test.ts`
 
 The 2MPZ catalog (VizieR VII/281) is whitespace-separated ASCII with ~17 columns. Relevant ones (1-based column index after splitting on whitespace):
 
-| Col | Field      | Notes                                   |
-|-----|------------|-----------------------------------------|
-| 2   | RA         | decimal degrees                         |
-| 3   | Dec        | decimal degrees                         |
-| 4   | J          | 2MASS J magnitude                       |
-| 5   | H          | 2MASS H magnitude                       |
-| 6   | K          | 2MASS K_s magnitude                     |
-| 13  | ZPHOTO     | photometric redshift                    |
-| 14  | ZPHOTO_ERR | error on ZPHOTO                         |
+| Col | Field      | Notes                                       |
+| --- | ---------- | ------------------------------------------- |
+| 2   | RA         | decimal degrees                             |
+| 3   | Dec        | decimal degrees                             |
+| 4   | J          | 2MASS J magnitude                           |
+| 5   | H          | 2MASS H magnitude                           |
+| 6   | K          | 2MASS K_s magnitude                         |
+| 13  | ZPHOTO     | photometric redshift                        |
+| 14  | ZPHOTO_ERR | error on ZPHOTO                             |
 | 15  | ZSPEC      | spectroscopic z (when available; -1 if not) |
-| 17  | SDSS_OBJID | numeric, 0 if no SDSS match             |
+| 17  | SDSS_OBJID | numeric, 0 if no SDSS match                 |
 
 Use `ZSPEC` if `ZSPEC > 0`, else `ZPHOTO`. Skip if both are non-positive. Magnitude mapping is the same as 2MRS: magG = J, magR = H, magI = K, magU/magZ NaN.
 
@@ -1327,26 +1355,38 @@ export function parseTwoMpz(rawText: string): { records: ParsedRecord[]; skipped
 
   for (const line of lines) {
     const tok = line.trim().split(/\s+/);
-    if (tok.length < 17) { skipped++; continue; }
+    if (tok.length < 17) {
+      skipped++;
+      continue;
+    }
 
-    const ra      = parseFloat(tok[1]!);
-    const dec     = parseFloat(tok[2]!);
-    const j       = parseFloat(tok[3]!);
-    const h       = parseFloat(tok[4]!);
-    const k       = parseFloat(tok[5]!);
-    const zphoto  = parseFloat(tok[12]!);
-    const zspec   = parseFloat(tok[14]!);
-    const objStr  = tok[16]!;
+    const ra = parseFloat(tok[1]!);
+    const dec = parseFloat(tok[2]!);
+    const j = parseFloat(tok[3]!);
+    const h = parseFloat(tok[4]!);
+    const k = parseFloat(tok[5]!);
+    const zphoto = parseFloat(tok[12]!);
+    const zspec = parseFloat(tok[14]!);
+    const objStr = tok[16]!;
 
     let z: number;
     if (Number.isFinite(zspec) && zspec > 0) z = zspec;
     else if (Number.isFinite(zphoto) && zphoto > 0) z = zphoto;
-    else { skipped++; continue; }
+    else {
+      skipped++;
+      continue;
+    }
 
     if (
-      !Number.isFinite(ra)  || !Number.isFinite(dec) ||
-      !Number.isFinite(j)   || !Number.isFinite(h)   || !Number.isFinite(k)
-    ) { skipped++; continue; }
+      !Number.isFinite(ra) ||
+      !Number.isFinite(dec) ||
+      !Number.isFinite(j) ||
+      !Number.isFinite(h) ||
+      !Number.isFinite(k)
+    ) {
+      skipped++;
+      continue;
+    }
 
     let objID = 0n;
     try {
@@ -1359,7 +1399,9 @@ export function parseTwoMpz(rawText: string): { records: ParsedRecord[]; skipped
     records.push({
       source: Source.TwoMPZ,
       objID,
-      ra, dec, z,
+      ra,
+      dec,
+      z,
       magU: NaN,
       magG: j,
       magR: h,
@@ -1389,18 +1431,19 @@ git commit -m "feat: add 2MPZ catalogue parser"
 ## Task 12: 6dFGS parser
 
 **Files:**
+
 - Create: `tools/parsers/sixDfgs.ts`
 - Create: `tests/parsers/sixDfgs.test.ts`
 
 The 6dFGS catalog (VizieR VII/259) is whitespace-separated ASCII. Relevant columns (1-based by token):
 
-| Col | Field   | Notes                                  |
-|-----|---------|----------------------------------------|
-| 2   | RA      | decimal degrees                        |
-| 3   | Dec     | decimal degrees                        |
-| 4   | z       | spectroscopic redshift                 |
-| 5   | q       | quality flag (1–6; we keep `q == 4`)   |
-| 7   | Kmag    | 2MASS K magnitude                      |
+| Col | Field | Notes                                |
+| --- | ----- | ------------------------------------ |
+| 2   | RA    | decimal degrees                      |
+| 3   | Dec   | decimal degrees                      |
+| 4   | z     | spectroscopic redshift               |
+| 5   | q     | quality flag (1–6; we keep `q == 4`) |
+| 7   | Kmag  | 2MASS K magnitude                    |
 
 Mapping into our 5-band slots: magI = K, all others NaN. (6dFGS doesn't publish optical photometry.)
 
@@ -1464,25 +1507,35 @@ export function parseSixDfgs(rawText: string): { records: ParsedRecord[]; skippe
 
   for (const line of lines) {
     const tok = line.trim().split(/\s+/);
-    if (tok.length < 7) { skipped++; continue; }
+    if (tok.length < 7) {
+      skipped++;
+      continue;
+    }
 
-    const ra   = parseFloat(tok[1]!);
-    const dec  = parseFloat(tok[2]!);
-    const z    = parseFloat(tok[3]!);
-    const q    = parseInt(tok[4]!, 10);
-    const k    = parseFloat(tok[6]!);
+    const ra = parseFloat(tok[1]!);
+    const dec = parseFloat(tok[2]!);
+    const z = parseFloat(tok[3]!);
+    const q = parseInt(tok[4]!, 10);
+    const k = parseFloat(tok[6]!);
 
     if (
-      !Number.isFinite(ra) || !Number.isFinite(dec) ||
-      !Number.isFinite(z)  || z <= 0 ||
-      !Number.isFinite(k)  ||
+      !Number.isFinite(ra) ||
+      !Number.isFinite(dec) ||
+      !Number.isFinite(z) ||
+      z <= 0 ||
+      !Number.isFinite(k) ||
       q !== 4
-    ) { skipped++; continue; }
+    ) {
+      skipped++;
+      continue;
+    }
 
     records.push({
       source: Source.SixDFGS,
       objID: 0n,
-      ra, dec, z,
+      ra,
+      dec,
+      z,
       magU: NaN,
       magG: NaN,
       magR: NaN,
@@ -1512,6 +1565,7 @@ git commit -m "feat: add 6dFGS catalogue parser"
 ## Task 13: Cross-match merger and master-bin builder
 
 **Files:**
+
 - Create: `tests/crossMatch.test.ts`
 - Create: `tools/buildMasterBin.ts`
 - Modify: `package.json` (add `build-master` script)
@@ -1536,18 +1590,26 @@ import type { ParsedRecord } from '../tools/parsers/common';
 
 function rec(source: Source, ra: number, dec: number, z: number, objID = 0n): ParsedRecord {
   return {
-    source, objID, ra, dec, z,
-    magU: NaN, magG: 18, magR: NaN, magI: NaN, magZ: NaN,
+    source,
+    objID,
+    ra,
+    dec,
+    z,
+    magU: NaN,
+    magG: 18,
+    magR: NaN,
+    magI: NaN,
+    magZ: NaN,
   };
 }
 
 describe('crossMatch', () => {
   it('keeps SDSS over 2MPZ when they share an objID', () => {
     const out = crossMatch({
-      sdss:    [rec(Source.SDSS, 180, 0, 0.1, 100n)],
-      twoMrs:  [],
+      sdss: [rec(Source.SDSS, 180, 0, 0.1, 100n)],
+      twoMrs: [],
       sixDfgs: [],
-      twoMpz:  [rec(Source.TwoMPZ, 180.001, 0.001, 0.1, 100n)],
+      twoMpz: [rec(Source.TwoMPZ, 180.001, 0.001, 0.1, 100n)],
     });
     expect(out).toHaveLength(1);
     expect(out[0]!.source).toBe(Source.SDSS);
@@ -1555,10 +1617,10 @@ describe('crossMatch', () => {
 
   it('rejects positional duplicates within 5 arcsec and Δz/(1+z) < 1%', () => {
     const out = crossMatch({
-      sdss:    [rec(Source.SDSS, 180, 0, 0.1, 100n)],
-      twoMrs:  [rec(Source.TwoMRS, 180.0001, 0, 0.10005)], // 0.36 arcsec away, same z
+      sdss: [rec(Source.SDSS, 180, 0, 0.1, 100n)],
+      twoMrs: [rec(Source.TwoMRS, 180.0001, 0, 0.10005)], // 0.36 arcsec away, same z
       sixDfgs: [],
-      twoMpz:  [],
+      twoMpz: [],
     });
     expect(out).toHaveLength(1);
     expect(out[0]!.source).toBe(Source.SDSS);
@@ -1566,20 +1628,20 @@ describe('crossMatch', () => {
 
   it('keeps records that differ in z even at the same position', () => {
     const out = crossMatch({
-      sdss:    [rec(Source.SDSS, 180, 0, 0.1, 100n)],
-      twoMrs:  [],
+      sdss: [rec(Source.SDSS, 180, 0, 0.1, 100n)],
+      twoMrs: [],
       sixDfgs: [],
-      twoMpz:  [rec(Source.TwoMPZ, 180, 0, 0.5)], // background galaxy along same LoS
+      twoMpz: [rec(Source.TwoMPZ, 180, 0, 0.5)], // background galaxy along same LoS
     });
     expect(out).toHaveLength(2);
   });
 
   it('preserves SDSS, 2MRS, 6dFGS, 2MPZ priority on objID-matched dedup', () => {
     const out = crossMatch({
-      sdss:    [],
-      twoMrs:  [rec(Source.TwoMRS, 180, 0, 0.05)],
+      sdss: [],
+      twoMrs: [rec(Source.TwoMRS, 180, 0, 0.05)],
       sixDfgs: [rec(Source.SixDFGS, 180.0001, 0, 0.05005)],
-      twoMpz:  [rec(Source.TwoMPZ, 180.0002, 0.0001, 0.0501)],
+      twoMpz: [rec(Source.TwoMPZ, 180.0002, 0.0001, 0.0501)],
     });
     expect(out).toHaveLength(1);
     expect(out[0]!.source).toBe(Source.TwoMRS);
@@ -1619,10 +1681,10 @@ Expected: FAIL — `tools/buildMasterBin` not found.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { parseSdssCsv }  from './parsers/sdssCsv';
-import { parseTwoMrs }   from './parsers/twoMrs';
-import { parseTwoMpz }   from './parsers/twoMpz';
-import { parseSixDfgs }  from './parsers/sixDfgs';
+import { parseSdssCsv } from './parsers/sdssCsv';
+import { parseTwoMrs } from './parsers/twoMrs';
+import { parseTwoMpz } from './parsers/twoMpz';
+import { parseSixDfgs } from './parsers/sixDfgs';
 import type { ParsedRecord } from './parsers/common';
 
 import { encodePointCloud } from '../src/data/pointCloudFormat';
@@ -1633,7 +1695,7 @@ import type { PointCloud } from '../src/types';
 // ─── Cross-match ──────────────────────────────────────────────────────────────
 
 const ARC_SEC_IN_DEG = 1 / 3600;
-const POSITION_TOL_DEG  = 5 * ARC_SEC_IN_DEG;
+const POSITION_TOL_DEG = 5 * ARC_SEC_IN_DEG;
 const REDSHIFT_TOL_REL = 0.01;
 
 type Inputs = {
@@ -1662,7 +1724,7 @@ export function crossMatch(inputs: Inputs): ParsedRecord[] {
   function angularSepDeg(ra1: number, dec1: number, ra2: number, dec2: number): number {
     // Small-angle approximation — adequate for our 5-arcsec threshold and
     // dec away from the poles. cos(dec) compresses the RA delta.
-    const dRa = (ra1 - ra2) * Math.cos((dec1 + dec2) * 0.5 * Math.PI / 180);
+    const dRa = (ra1 - ra2) * Math.cos(((dec1 + dec2) * 0.5 * Math.PI) / 180);
     const dDec = dec1 - dec2;
     return Math.sqrt(dRa * dRa + dDec * dDec);
   }
@@ -1700,7 +1762,10 @@ export function crossMatch(inputs: Inputs): ParsedRecord[] {
     if (r.objID > 0n) acceptedObjIDs.add(r.objID);
     const k = cellKey(r.ra, r.dec);
     let cell = grid.get(k);
-    if (!cell) { cell = []; grid.set(k, cell); }
+    if (!cell) {
+      cell = [];
+      grid.set(k, cell);
+    }
     cell.push(r);
   }
 
@@ -1713,7 +1778,7 @@ function recordsToCloud(records: ParsedRecord[]): PointCloud {
   const count = records.length;
   const cloud: PointCloud = {
     count,
-    objIDs:    new BigUint64Array(count),
+    objIDs: new BigUint64Array(count),
     positions: new Float32Array(count * 3),
     magU: new Float32Array(count),
     magG: new Float32Array(count),
@@ -1762,20 +1827,25 @@ if (!args.out) {
   process.exit(1);
 }
 
-function loadOrEmpty(path: string | undefined, parser: (raw: string) => { records: ParsedRecord[]; skipped: number }): ParsedRecord[] {
+function loadOrEmpty(
+  path: string | undefined,
+  parser: (raw: string) => { records: ParsedRecord[]; skipped: number },
+): ParsedRecord[] {
   if (!path) return [];
   const text = readFileSync(resolve(path), 'utf8');
   const { records, skipped } = parser(text);
-  process.stderr.write(`  loaded ${records.length.toLocaleString()} records (skipped ${skipped.toLocaleString()})\n`);
+  process.stderr.write(
+    `  loaded ${records.length.toLocaleString()} records (skipped ${skipped.toLocaleString()})\n`,
+  );
   return records;
 }
 
 process.stderr.write('parsing SDSS…\n');
-const sdss    = loadOrEmpty(args.sdss,    parseSdssCsv);
+const sdss = loadOrEmpty(args.sdss, parseSdssCsv);
 process.stderr.write('parsing 2MRS…\n');
-const twoMrs  = loadOrEmpty(args.twomrs,  parseTwoMrs);
+const twoMrs = loadOrEmpty(args.twomrs, parseTwoMrs);
 process.stderr.write('parsing 2MPZ…\n');
-const twoMpz  = loadOrEmpty(args.twompz,  parseTwoMpz);
+const twoMpz = loadOrEmpty(args.twompz, parseTwoMpz);
 process.stderr.write('parsing 6dFGS…\n');
 const sixDfgs = loadOrEmpty(args.sixdfgs, parseSixDfgs);
 
@@ -1786,7 +1856,9 @@ process.stderr.write(`  ${merged.length.toLocaleString()} records survived dedup
 const cloud = recordsToCloud(merged);
 const buf = encodePointCloud(cloud);
 writeFileSync(resolve(args.out), Buffer.from(buf));
-process.stderr.write(`wrote ${cloud.count.toLocaleString()} points to ${args.out} (${buf.byteLength.toLocaleString()} bytes)\n`);
+process.stderr.write(
+  `wrote ${cloud.count.toLocaleString()} points to ${args.out} (${buf.byteLength.toLocaleString()} bytes)\n`,
+);
 ```
 
 - [ ] **Step 4: Add npm script**
@@ -1816,6 +1888,7 @@ git commit -m "feat: add cross-match merger + build-master CLI"
 ## Task 14: InfoCard source attribution + DSS image fallback
 
 **Files:**
+
 - Modify: `src/data/physics.ts`
 - Modify: `src/engine.ts`
 - Modify: `src/components/InfoCard.tsx`
@@ -1845,8 +1918,10 @@ Add the function, JSDoc, and tests:
  * roughly comparable to the 200 px @ 0.4 arcsec/px SDSS thumbnail).
  */
 export function dssThumbnailUrl(raDeg: number, decDeg: number, arcMin = 2): string {
-  return `https://archive.eso.org/dss/dss/image?ra=${raDeg}&dec=${decDeg}` +
-    `&x=${arcMin}&y=${arcMin}&Sky-Survey=DSS2-red&mime-type=image/jpeg`;
+  return (
+    `https://archive.eso.org/dss/dss/image?ra=${raDeg}&dec=${decDeg}` +
+    `&x=${arcMin}&y=${arcMin}&Sky-Survey=DSS2-red&mime-type=image/jpeg`
+  );
 }
 ```
 
@@ -1858,7 +1933,7 @@ import { dssThumbnailUrl } from '../src/data/physics';
 describe('dssThumbnailUrl', () => {
   it('builds the ESO DSS endpoint with default 2-arcmin field', () => {
     expect(dssThumbnailUrl(180, 0)).toBe(
-      'https://archive.eso.org/dss/dss/image?ra=180&dec=0&x=2&y=2&Sky-Survey=DSS2-red&mime-type=image/jpeg'
+      'https://archive.eso.org/dss/dss/image?ra=180&dec=0&x=2&y=2&Sky-Survey=DSS2-red&mime-type=image/jpeg',
     );
   });
 });
@@ -1877,7 +1952,7 @@ Extend `PointInfo`:
 export type PointInfo = {
   // … existing fields …
   source: Source;
-  sourceLabel: string;        // pre-formatted from sourceLabel(source)
+  sourceLabel: string; // pre-formatted from sourceLabel(source)
   // explorerUrl now optional — non-SDSS rows have no Explorer page.
   explorerUrl: string | null;
   // thumbnailUrl picks SDSS or DSS based on source.
@@ -1893,12 +1968,9 @@ import { dssThumbnailUrl, sdssThumbnailUrl, sdssExplorerUrl } from './data/physi
 
 const source = cloud.sourceIDs[index]! as Source;
 const isSdss = source === Source.SDSS;
-const explorerUrl = isSdss && cloud.objIDs[index]! > 0n
-  ? sdssExplorerUrl(cloud.objIDs[index]!)
-  : null;
-const thumbnailUrl = isSdss
-  ? sdssThumbnailUrl(ra, dec, 200)
-  : dssThumbnailUrl(ra, dec, 2);
+const explorerUrl =
+  isSdss && cloud.objIDs[index]! > 0n ? sdssExplorerUrl(cloud.objIDs[index]!) : null;
+const thumbnailUrl = isSdss ? sdssThumbnailUrl(ra, dec, 200) : dssThumbnailUrl(ra, dec, 2);
 
 const info: PointInfo = {
   // …
@@ -1918,21 +1990,20 @@ In `FullCard`:
 
 ```tsx
 // Above the card rows, just under the SDSS J... headline:
-<div className="card-source-badge">{info.sourceLabel}</div>
+<div className="card-source-badge">{info.sourceLabel}</div>;
 
 // Replace the existing Explorer link block:
-{info.explorerUrl ? (
-  <a className="external-link"
-     href={info.explorerUrl}
-     target="_blank"
-     rel="noopener noreferrer">
-    View in SDSS Explorer →
-  </a>
-) : (
-  <div className="external-link external-link-disabled">
-    No catalogue page for {info.sourceLabel}
-  </div>
-)}
+{
+  info.explorerUrl ? (
+    <a className="external-link" href={info.explorerUrl} target="_blank" rel="noopener noreferrer">
+      View in SDSS Explorer →
+    </a>
+  ) : (
+    <div className="external-link external-link-disabled">
+      No catalogue page for {info.sourceLabel}
+    </div>
+  );
+}
 ```
 
 In `CompactCard`, also add the badge near the top (below the name).
@@ -1976,6 +2047,7 @@ git commit -m "feat: source attribution badge + DSS image fallback for non-SDSS 
 ## Task 15: README updates
 
 **Files:**
+
 - Modify: `README.md`
 
 - [ ] **Step 1: Add a "Multi-survey master file" section**
@@ -1989,12 +2061,12 @@ To render galaxies from all four surveys (SDSS + 2MRS + 2MPZ + 6dFGS) in one clo
 
 ### 1. Download the catalogues
 
-| Survey | Source                                           | Notes                                  |
-|--------|--------------------------------------------------|----------------------------------------|
-| SDSS   | [SkyServer SQL](http://skyserver.sdss.org/dr18/SearchTools/sql) | Use the query from the section above. |
-| 2MRS   | [VizieR VII/265](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/265) | ASCII fixed-width, ~5 MB.              |
-| 2MPZ   | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281) | ASCII whitespace-separated, ~50 MB.    |
-| 6dFGS  | [VizieR VII/259](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/259) | ASCII, ~10 MB.                         |
+| Survey | Source                                                                         | Notes                                 |
+| ------ | ------------------------------------------------------------------------------ | ------------------------------------- |
+| SDSS   | [SkyServer SQL](http://skyserver.sdss.org/dr18/SearchTools/sql)                | Use the query from the section above. |
+| 2MRS   | [VizieR VII/265](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/265) | ASCII fixed-width, ~5 MB.             |
+| 2MPZ   | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281) | ASCII whitespace-separated, ~50 MB.   |
+| 6dFGS  | [VizieR VII/259](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/259) | ASCII, ~10 MB.                        |
 
 Save them anywhere — pass paths in the next step.
 
@@ -2040,7 +2112,7 @@ git commit -m "docs: README — multi-survey master.bin workflow + VizieR source
 - **Photometric mass / luminosity estimates** from the cross-band photometry. Adds a stellar-population-synthesis pipeline; defer.
 - **Galactic-plane region** highlighting. The 2MPZ/2MRS data sparsens through `|b| < 5°`; visualising this gap is its own UX exercise.
 - **Settings panel keyboard shortcuts** (e.g. `1`/`2`/`3`/`4` to toggle surveys, `a` for auto-LOD).
-- **Per-survey colour tinting** in the renderer — the user explicitly opted *out* (option 4B). If they ever change their mind: add a `tintBySource: bool` uniform and a 4-vec3 colour table.
+- **Per-survey colour tinting** in the renderer — the user explicitly opted _out_ (option 4B). If they ever change their mind: add a `tintBySource: bool` uniform and a 4-vec3 colour table.
 
 ---
 

@@ -78,7 +78,7 @@ const BYTES_PER_POINT = 48;
  */
 export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
   const { count, objIDs, positions, magU, magG, magR, magI, magZ } = cloud;
-  if (objIDs.length !== count)     throw new Error('objIDs length mismatch');
+  if (objIDs.length !== count) throw new Error('objIDs length mismatch');
   if (positions.length !== count * 3) throw new Error('positions length mismatch');
   if (magU.length !== count) throw new Error('magU length mismatch');
   if (magG.length !== count) throw new Error('magG length mismatch');
@@ -161,13 +161,13 @@ export function decodePointCloud(buf: ArrayBuffer): PointCloud {
   const count = dv.getUint32(8, true);
 
   // Allocate destination typed arrays once, fill them in the loop, return.
-  const objIDs    = new BigUint64Array(count);
+  const objIDs = new BigUint64Array(count);
   const positions = new Float32Array(count * 3);
-  const magU      = new Float32Array(count);
-  const magG      = new Float32Array(count);
-  const magR      = new Float32Array(count);
-  const magI      = new Float32Array(count);
-  const magZ      = new Float32Array(count);
+  const magU = new Float32Array(count);
+  const magG = new Float32Array(count);
+  const magR = new Float32Array(count);
+  const magI = new Float32Array(count);
+  const magZ = new Float32Array(count);
 
   // Same Float32Array-view trick as the encoder: read floats cheaply by index.
   const floatView = new Float32Array(buf);

@@ -22,7 +22,11 @@
   border-radius: 8px;
 
   color: #cfd8ff;
-  font: 11px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+  font:
+    11px/1.4 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
   user-select: none;
   min-width: 200px;
 }
@@ -60,14 +64,14 @@
 }
 
 /* Range sliders span the full panel width so they're easy to drag */
-.panelRow input[type="range"] {
+.panelRow input[type='range'] {
   width: 100%;
   accent-color: rgba(180, 220, 255, 0.85);
   cursor: pointer;
 }
 
 /* Checkbox alignment */
-.panelRow input[type="checkbox"] {
+.panelRow input[type='checkbox'] {
   accent-color: rgba(180, 220, 255, 0.85);
   cursor: pointer;
   /* Prevent the checkbox from shrinking under flex */

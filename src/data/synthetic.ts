@@ -104,13 +104,13 @@ export function generateSyntheticCloud(count: number, seed = 42): PointCloud {
 
   // Allocate all typed arrays up front. Typed arrays are cheap to allocate
   // but expensive to grow, so size them exactly once rather than push()-ing.
-  const objIDs    = new BigUint64Array(count);       // sequential IDs 0..N−1
-  const positions = new Float32Array(count * 3);    // (x, y, z) per point, Mpc
-  const magG      = new Float32Array(count);        // g-band, ~[14, 22]
-  const magU      = new Float32Array(count);        // u-band, ~[14.5, 24]
-  const magR      = new Float32Array(count);        // r-band, ~[12.7, 21.7]
-  const magI      = new Float32Array(count);        // i-band
-  const magZ      = new Float32Array(count);        // z-band
+  const objIDs = new BigUint64Array(count); // sequential IDs 0..N−1
+  const positions = new Float32Array(count * 3); // (x, y, z) per point, Mpc
+  const magG = new Float32Array(count); // g-band, ~[14, 22]
+  const magU = new Float32Array(count); // u-band, ~[14.5, 24]
+  const magR = new Float32Array(count); // r-band, ~[12.7, 21.7]
+  const magI = new Float32Array(count); // i-band
+  const magZ = new Float32Array(count); // z-band
 
   // Sphere radius in Mpc. 1000 Mpc corresponds to a redshift of roughly
   // z ≈ 0.23 under Hubble's law (c·z/H₀, H₀=70), which is well inside the

@@ -11,5 +11,7 @@
   top: 8px;
   left: 8px;
   color: #ccc;
-  font: 12px/1.4 ui-monospace, monospace;
+  font:
+    12px/1.4 ui-monospace,
+    monospace;
 }

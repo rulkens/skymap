@@ -22,7 +22,7 @@
  * @param mpc  Distance in megaparsecs. Must be non-negative.
  */
 export function formatDistance(mpc: number): string {
-  if (mpc < 1)     return `${(mpc * 1000).toLocaleString()} kpc`;
+  if (mpc < 1) return `${(mpc * 1000).toLocaleString()} kpc`;
   if (mpc >= 1000) return `${(mpc / 1000).toLocaleString()} Gpc`;
   return `${mpc.toLocaleString()} Mpc`;
 }

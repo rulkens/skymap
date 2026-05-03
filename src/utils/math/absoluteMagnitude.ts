@@ -34,10 +34,7 @@
  * @param apparentMag  Observed (apparent) magnitude.
  * @param distanceMpc  Luminosity distance in megaparsecs. Must be > 0.
  */
-export function absoluteMagnitude(
-  apparentMag: number,
-  distanceMpc: number,
-): number {
+export function absoluteMagnitude(apparentMag: number, distanceMpc: number): number {
   if (distanceMpc <= 0) return NaN;
   return apparentMag - 5 * Math.log10(distanceMpc) - 25;
 }

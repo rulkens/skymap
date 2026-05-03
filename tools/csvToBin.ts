@@ -39,9 +39,7 @@ import type { PointCloud } from '../src/types.js';
 
 const args = process.argv.slice(2);
 if (args.length !== 2) {
-  process.stderr.write(
-    'usage: npm run csv-to-bin -- <input.csv> <output.bin>\n',
-  );
+  process.stderr.write('usage: npm run csv-to-bin -- <input.csv> <output.bin>\n');
   process.exit(1);
 }
 
@@ -74,7 +72,7 @@ try {
 const lines = rawText
   .replace(/\r\n/g, '\n')
   .split('\n')
-  .filter(l => {
+  .filter((l) => {
     const t = l.trim();
     return t !== '' && !t.startsWith('#') && !t.startsWith('--');
   });
@@ -89,7 +87,7 @@ if (lines.length < 2) {
 // The first line is always the header. Trim whitespace from each column name
 // and normalise to lowercase so the lookup below is case-insensitive.
 const headerLine = lines[0]!;
-const headers = headerLine.split(',').map(h => h.trim().toLowerCase());
+const headers = headerLine.split(',').map((h) => h.trim().toLowerCase());
 
 /**
  * Find the 0-based column index for a required column name.
@@ -106,15 +104,15 @@ function requireColumn(name: string): number {
   return idx;
 }
 
-const COL_OBJID  = requireColumn('objID');
-const COL_RA     = requireColumn('ra');
-const COL_DEC    = requireColumn('dec');
-const COL_Z      = requireColumn('z');
-const COL_MAG_U  = requireColumn('modelMag_u');
-const COL_MAG_G  = requireColumn('modelMag_g');
-const COL_MAG_R  = requireColumn('modelMag_r');
-const COL_MAG_I  = requireColumn('modelMag_i');
-const COL_MAG_Z  = requireColumn('modelMag_z');
+const COL_OBJID = requireColumn('objID');
+const COL_RA = requireColumn('ra');
+const COL_DEC = requireColumn('dec');
+const COL_Z = requireColumn('z');
+const COL_MAG_U = requireColumn('modelMag_u');
+const COL_MAG_G = requireColumn('modelMag_g');
+const COL_MAG_R = requireColumn('modelMag_r');
+const COL_MAG_I = requireColumn('modelMag_i');
+const COL_MAG_Z = requireColumn('modelMag_z');
 
 // ─── Row parsing ──────────────────────────────────────────────────────────────
 
@@ -124,14 +122,14 @@ const COL_MAG_Z  = requireColumn('modelMag_z');
  */
 type ParsedRow = {
   objID: bigint;
-  ra:    number;
-  dec:   number;
-  z:     number;
-  magU:  number;
-  magG:  number;
-  magR:  number;
-  magI:  number;
-  magZ:  number;
+  ra: number;
+  dec: number;
+  z: number;
+  magU: number;
+  magG: number;
+  magR: number;
+  magI: number;
+  magZ: number;
 };
 
 const rows: ParsedRow[] = [];
@@ -140,14 +138,14 @@ let skipped = 0;
 // `lines[0]` is the header; data starts at index 1.
 for (let lineIdx = 1; lineIdx < lines.length; lineIdx++) {
   const line = lines[lineIdx]!;
-  const cells = line.split(',').map(c => c.trim());
+  const cells = line.split(',').map((c) => c.trim());
 
   // Pull out the numeric fields. With `noUncheckedIndexedAccess` each
   // `cells[idx]` is `string | undefined`; we coerce undefined → '' before
   // passing to parseFloat — parseFloat('') → NaN, which the filter catches.
-  const ra   = parseFloat(cells[COL_RA]    ?? '');
-  const dec  = parseFloat(cells[COL_DEC]   ?? '');
-  const z    = parseFloat(cells[COL_Z]     ?? '');
+  const ra = parseFloat(cells[COL_RA] ?? '');
+  const dec = parseFloat(cells[COL_DEC] ?? '');
+  const z = parseFloat(cells[COL_Z] ?? '');
   const magU = parseFloat(cells[COL_MAG_U] ?? '');
   const magG = parseFloat(cells[COL_MAG_G] ?? '');
   const magR = parseFloat(cells[COL_MAG_R] ?? '');
@@ -158,8 +156,14 @@ for (let lineIdx = 1; lineIdx < lines.length; lineIdx++) {
   // z=0, or a catalogue error) and any numeric field that failed to parse.
   if (
     z <= 0 ||
-    isNaN(ra) || isNaN(dec) || isNaN(z) ||
-    isNaN(magU) || isNaN(magG) || isNaN(magR) || isNaN(magI) || isNaN(magZ)
+    isNaN(ra) ||
+    isNaN(dec) ||
+    isNaN(z) ||
+    isNaN(magU) ||
+    isNaN(magG) ||
+    isNaN(magR) ||
+    isNaN(magI) ||
+    isNaN(magZ)
   ) {
     skipped++;
     continue;
@@ -172,9 +176,15 @@ for (let lineIdx = 1; lineIdx < lines.length; lineIdx++) {
   let objID: bigint;
   try {
     const raw = cells[COL_OBJID] ?? '';
-    if (raw === '') { skipped++; continue; }
+    if (raw === '') {
+      skipped++;
+      continue;
+    }
     objID = BigInt(raw);
-    if (objID === 0n) { skipped++; continue; }
+    if (objID === 0n) {
+      skipped++;
+      continue;
+    }
   } catch {
     skipped++;
     continue;
@@ -194,13 +204,13 @@ const count = rows.length;
 
 // Allocate the SoA arrays exactly once. No push() — typed arrays have fixed
 // capacity, and pre-sizing avoids any hidden reallocation.
-const objIDs    = new BigUint64Array(count);       // SDSS object identifiers
-const positions = new Float32Array(count * 3);    // (x, y, z) in Mpc per point
-const magU      = new Float32Array(count);        // u-band apparent magnitude
-const magG      = new Float32Array(count);        // g-band apparent magnitude
-const magR      = new Float32Array(count);        // r-band apparent magnitude
-const magI      = new Float32Array(count);        // i-band apparent magnitude
-const magZ      = new Float32Array(count);        // z-band apparent magnitude
+const objIDs = new BigUint64Array(count); // SDSS object identifiers
+const positions = new Float32Array(count * 3); // (x, y, z) in Mpc per point
+const magU = new Float32Array(count); // u-band apparent magnitude
+const magG = new Float32Array(count); // g-band apparent magnitude
+const magR = new Float32Array(count); // r-band apparent magnitude
+const magI = new Float32Array(count); // i-band apparent magnitude
+const magZ = new Float32Array(count); // z-band apparent magnitude
 
 for (let i = 0; i < count; i++) {
   // `rows[i]` is `ParsedRow | undefined` under noUncheckedIndexedAccess.

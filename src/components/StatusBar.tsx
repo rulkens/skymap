@@ -37,11 +37,7 @@ type StatusBarProps = {
  * <StatusBar status={status} />
  */
 export function StatusBar({ status }: StatusBarProps): ReactNode {
-  return (
-    <div className={styles.status}>
-      {statusText(status)}
-    </div>
-  );
+  return <div className={styles.status}>{statusText(status)}</div>;
 }
 
 /**
@@ -63,12 +59,8 @@ function statusText(status: EngineStatus): string {
       // Show the actual source so the user can immediately tell whether real
       // SDSS galaxies or the synthetic fallback are being rendered.
       const sourceLabel =
-        status.source === 'sdss.bin'
-          ? 'sdss.bin'
-          : 'synthetic — sdss.bin not found';
-      return (
-        `WebGPU OK · ${status.count.toLocaleString()} points (${sourceLabel}) · drag to orbit, wheel to zoom`
-      );
+        status.source === 'sdss.bin' ? 'sdss.bin' : 'synthetic — sdss.bin not found';
+      return `WebGPU OK · ${status.count.toLocaleString()} points (${sourceLabel}) · drag to orbit, wheel to zoom`;
     }
 
     case 'error':

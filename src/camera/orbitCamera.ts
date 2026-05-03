@@ -182,10 +182,10 @@ export function createOrbitCamera(init: OrbitCameraInit): OrbitCamera {
  * @param cam  The camera to update in-place.
  */
 export function updatePosition(cam: OrbitCamera): void {
-  const cp = Math.cos(cam.pitch);   // horizontal-plane scale factor
-  const sp = Math.sin(cam.pitch);   // vertical (Y) component
-  const cy = Math.cos(cam.yaw);     // Z component (at pitch=0, yaw=0 → Z=1)
-  const sy = Math.sin(cam.yaw);     // X component (at pitch=0, yaw=π/2 → X=1)
+  const cp = Math.cos(cam.pitch); // horizontal-plane scale factor
+  const sp = Math.sin(cam.pitch); // vertical (Y) component
+  const cy = Math.cos(cam.yaw); // Z component (at pitch=0, yaw=0 → Z=1)
+  const sy = Math.sin(cam.yaw); // X component (at pitch=0, yaw=π/2 → X=1)
 
   // Unit direction vector from target toward camera in world space.
   // Follows the spherical-to-Cartesian formula described above.
@@ -255,9 +255,9 @@ export function computeViewProj(cam: OrbitCamera): mat4 {
   const view = mat4.create();
   mat4.lookAt(
     view,
-    cam.position,           // eye: where the camera is
-    cam.target as vec3,     // center: what the camera looks at
-    [0, 1, 0],              // up: world +Y is "up"
+    cam.position, // eye: where the camera is
+    cam.target as vec3, // center: what the camera looks at
+    [0, 1, 0], // up: world +Y is "up"
     // ⚠ If pitch = ±π/2, `position` is directly above/below `target` and
     // the up vector is parallel to the view direction.  lookAt produces a
     // degenerate matrix in that case.  The controls module (Task 8) prevents
