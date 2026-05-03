@@ -1,108 +1,147 @@
 /**
- * Application entry point.
+ * Application entry point — wires all subsystems into a live render loop.
  *
- * This module bootstraps WebGPU and drives the render loop. Its only job
- * right now is to clear the canvas to a dark-navy colour every frame —
- * the visual equivalent of "hello, WebGPU". Subsequent tasks will add a
- * camera, a point renderer, and real SDSS data.
+ * Responsibility: build the GPU pipeline, populate it with a synthetic galaxy
+ * cloud, set up an orbit camera, and drive the per-frame update cycle.
  *
- * ### Frame structure
+ * ### Frame structure (camera → encoder → pass → renderer.draw → submit)
  *
- * Every WebGPU frame follows the same three-step pattern:
+ *   1. **Camera update** — if the canvas was resized, `cam.aspect` is patched
+ *      and `updatePosition` is called to keep the view-projection matrix
+ *      consistent with the new viewport shape. Otherwise this step is free
+ *      (just two integer comparisons inside `resizeCanvasToDisplay`).
  *
- *   1. **Encoder** — `device.createCommandEncoder()` creates an object that
- *      records GPU commands into a command buffer. No work runs yet; we are
- *      just describing what we want the GPU to do.
+ *   2. **Encoder** — `device.createCommandEncoder()` opens a command recorder.
+ *      No GPU work starts yet; we are building a description of what to run.
  *
- *   2. **Render pass** — `encoder.beginRenderPass(...)` opens a block of
- *      draw calls that target one or more textures (colour attachments, depth,
- *      etc.). The pass descriptor declares what to do at the *start* (`loadOp`)
- *      and *end* (`storeOp`) of the pass:
+ *   3. **Render pass** — `encoder.beginRenderPass(...)` starts a block of draw
+ *      calls targeting the current swap-chain texture. `loadOp: 'clear'` wipes
+ *      the attachment to `clearValue` before any drawing; `storeOp: 'store'`
+ *      writes the result back to the texture so it appears on screen.
  *
- *        - `loadOp: 'clear'`  — fill the attachment with `clearValue` before
- *          any draw calls. The alternative, `'load'`, keeps whatever was in
- *          the texture from the previous frame — useful for multi-pass effects,
- *          but we always want a clean slate here.
+ *   4. **renderer.draw** — uploads the per-frame uniforms (viewProj, viewport)
+ *      and issues the single instanced draw call: 6 vertices × 100 k instances.
+ *      The WGSL vertex shader expands each instance into a billboard quad.
  *
- *        - `storeOp: 'store'` — write the pass results back to the texture
- *          after the pass ends. The alternative, `'discard'`, throws the
- *          results away (handy for intermediate depth buffers that only exist
- *          to drive early-Z rejection, not to be displayed).
- *
- *   3. **Submit** — `encoder.finish()` seals the command buffer;
- *      `device.queue.submit([...])` sends it to the GPU for execution.
- *      The GPU executes asynchronously; the JS thread is free immediately.
+ *   5. **Submit** — `encoder.finish()` seals the command buffer;
+ *      `device.queue.submit([...])` dispatches it to the GPU asynchronously.
+ *      The JS thread is free immediately after.
  *
  * Because this file has `import` statements at the top, TypeScript (and the
- * browser) already treat it as an ES module — no `export {}` shim is needed
- * to prevent `window` namespace pollution.
+ * browser) already treat it as an ES module — no `export {}` shim is needed to
+ * prevent `window` namespace pollution.
  */
 
 import { initGpu, resizeCanvasToDisplay } from './gpu/device';
+import { PointRenderer } from './gpu/pointRenderer';
+import { createOrbitCamera, computeViewProj, updatePosition } from './camera/orbitCamera';
+import { attachOrbitControls } from './camera/orbitControls';
+import { generateSyntheticCloud } from './data/synthetic';
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const status = document.getElementById('status')!;
 
 async function main() {
-  // Size the backing store to match the display before we hand the canvas to
-  // WebGPU. If we skip this, `getCurrentTexture()` might return a 300×150
-  // default-sized texture (the HTML canvas default) regardless of how large
-  // the element is on screen.
+  // Size the backing store to match the display before handing the canvas to
+  // WebGPU. Without this, `getCurrentTexture()` might return a 300×150 default
+  // texture regardless of how large the element is on screen.
   resizeCanvasToDisplay(canvas);
 
   const { device, context, format } = await initGpu(canvas);
 
-  // Show the detected swap-chain format so it's easy to confirm during
-  // development that the browser chose what we expect.
-  status.textContent = `WebGPU OK · ${format}`;
+  // Build the GPU pipeline and generate 100 k fictitious galaxy positions.
+  const renderer = new PointRenderer(device, format);
+  const cloud = generateSyntheticCloud(100_000);
+  renderer.upload(cloud);
+
+  // ── Camera setup ────────────────────────────────────────────────────────────
+  //
+  // `distance: 2500` Mpc — the synthetic sphere has radius 1000 Mpc, so placing
+  // the camera at 2.5 × the sphere radius gives a comfortable framing: the
+  // entire cloud is visible with a little breathing room on all sides.
+  //
+  // `pitch: 0.3` rad (~17°) — a slight downward tilt so we don't view the cloud
+  // edge-on at the equator. Even a shallow pitch reveals the full spherical
+  // extent and makes the cloud look more three-dimensional.
+  const cam = createOrbitCamera({
+    target: [0, 0, 0],
+    distance: 2500,
+    yaw: 0,
+    pitch: 0.3,
+    fovYRad: (Math.PI / 180) * 60,
+    aspect: canvas.width / canvas.height,
+    near: 1,
+    far: 20000,
+  });
+
+  // Wire pointer and wheel events so the user can orbit and zoom.
+  attachOrbitControls(canvas, cam);
+
+  status.textContent =
+    `WebGPU OK · ${cloud.count.toLocaleString()} synthetic points · drag to orbit, wheel to zoom`;
+
+  // ── Render loop ─────────────────────────────────────────────────────────────
 
   function frame() {
-    // Resize every frame so the swap-chain tracks browser window resize
-    // events and CSS layout changes (e.g. the user drags the window wider).
-    // `resizeCanvasToDisplay` is cheap when nothing changed (just two integer
-    // comparisons), so calling it unconditionally is fine.
-    resizeCanvasToDisplay(canvas);
+    // Resize the swap-chain if the canvas element changed size (e.g. the user
+    // resized the browser window). `resizeCanvasToDisplay` returns `true` only
+    // when the pixel dimensions actually changed, so we patch `cam.aspect` and
+    // call `updatePosition` only in that branch — avoiding a redundant matrix
+    // recompute on the 99 % of frames where nothing changed.
+    if (resizeCanvasToDisplay(canvas)) {
+      cam.aspect = canvas.width / canvas.height;
+      updatePosition(cam);
+    }
 
-    // Step 1 — Open a command encoder.
+    // Snapshot the current camera state into a combined view-projection matrix.
+    // This read happens *after* any input-driven mutations applied by the orbit
+    // controls on the previous event tick, so the matrix is always up to date.
+    const vp = computeViewProj(cam);
+
+    // ── Command recording ─────────────────────────────────────────────────────
+
     const encoder = device.createCommandEncoder();
 
-    // Step 2 — Begin a render pass that clears to dark navy.
+    // Clear colour is pure black (r:0, g:0, b:0).
     //
-    // `context.getCurrentTexture()` returns the next available swap-chain
-    // texture. Calling `.createView()` on it gives us a `GPUTextureView`,
-    // which is what the render-pass descriptor actually references.
-    //
-    // The clear colour (r:0.02, g:0.02, b:0.05, a:1.0) is a near-black navy
-    // that reads as "outer space" without being pure black, which helps
-    // faint points pop visually.
+    // We switched from the earlier dark-navy clear because the point renderer
+    // uses *additive* blending: each fragment's RGB is added to whatever is
+    // already in the framebuffer. Starting from pure black (0, 0, 0) gives the
+    // maximum dynamic range — even faint points contribute visible light, and
+    // dense overlap regions (galaxy clusters) naturally bloom bright. Any
+    // non-zero clear value would raise the noise floor and make sparse regions
+    // look grey rather than dark.
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
           view: context.getCurrentTexture().createView(),
-          clearValue: { r: 0.02, g: 0.02, b: 0.05, a: 1 },
+          clearValue: { r: 0, g: 0, b: 0, a: 1 },
           loadOp: 'clear',   // wipe to clearValue at pass start
           storeOp: 'store',  // write results to the swap-chain texture
         },
       ],
     });
 
-    // No draw calls yet — this is just the clear pass. Future tasks will
-    // call `pass.setPipeline(...)` and `pass.draw(...)` here.
+    // Upload per-frame uniforms (viewProj, viewport) and issue the instanced
+    // draw call. Physical pixel dimensions are passed so the shader can convert
+    // the fixed point-size-in-pixels to clip-space offsets correctly.
+    renderer.draw(pass, vp, [canvas.width, canvas.height]);
+
     pass.end();
 
-    // Step 3 — Seal the buffer and dispatch it to the GPU.
+    // Seal the command buffer and send it to the GPU.
     device.queue.submit([encoder.finish()]);
 
     // Schedule the next frame. `requestAnimationFrame` syncs to the display
-    // refresh rate (typically 60 or 120 Hz) and pauses automatically when
-    // the tab is hidden, saving battery and GPU time.
+    // refresh rate (typically 60 or 120 Hz) and pauses automatically when the
+    // tab is hidden, saving battery and GPU time.
     requestAnimationFrame(frame);
   }
 
   requestAnimationFrame(frame);
 }
 
-main().catch((err: Error) => {
+main().catch((err) => {
   // Surface initialisation failures in the status bar so the user sees a
   // readable message rather than a blank canvas with no explanation.
   status.textContent = `ERROR: ${err.message}`;
