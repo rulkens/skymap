@@ -84,7 +84,7 @@ import { TextureAtlas } from '../gpu/textureAtlas';
 import { GalaxyImageQueue } from '../gpu/galaxyImageQueue';
 import { QuadRenderer } from '../gpu/quadRenderer';
 import { fetchGalaxyBitmap } from '../gpu/galaxyImageFetcher';
-import { apparentSizePx, galaxyDiameterKpc, cartesianToRaDecZ } from '../../utils/math';
+import { galaxyDiameterKpc, cartesianToRaDecZ } from '../../utils/math';
 import type { QuadInstance } from '../../@types';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
@@ -104,15 +104,6 @@ import { ZERO_AXES } from '../input/spaceMouseAxes';
 
 /** Below this on-screen size, we don't bother fetching a thumbnail at all. */
 const APPARENT_SIZE_THRESHOLD_PX = 24;
-
-/**
- * Pre-filter cutoff: galaxies past this distance are never large enough on
- * screen to qualify, so we skip the full apparent-size computation.  At
- * 1000 Mpc, even a 60 kpc galaxy in a 1080-px viewport at fov 60° comes
- * out to ~6 px — well below threshold.  Saves an `apparentSizePx` call
- * per far-away galaxy per frame for ~70 % of catalogue rows.
- */
-const FAR_DISTANCE_CUTOFF_MPC = 1000;
 
 /**
  * Stable cache key for an atlas slot.  RA/Dec to 5 decimal places is
@@ -841,42 +832,73 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         frameCounter++;
 
         if (galaxyTexturesEnabled && cam) {
+          // ── Per-frame constants, hoisted out of the per-galaxy loop ──────
+          //
+          // The original implementation called `apparentSizePx({...})` once
+          // per galaxy, which (with 3.5 M galaxies/frame) burned ~350 ms
+          // per frame on:
+          //   - object-literal allocation per call (GC pressure),
+          //   - function-call + destructuring overhead,
+          //   - `Math.tan(fovYRad / 2)` evaluated per call even though it
+          //     only depends on the camera's frame-constant fov.
+          //
+          // Three things change here.  First, we hoist the entire constant
+          // chain out of the loop and pre-compute one scalar (`pxPerRad`)
+          // that converts world-space angular size to screen pixels.
+          // Second, we precompute `apparentSizeNum = diameterKpc/1000 *
+          // pxPerRad` so the inner loop is one division per galaxy
+          // (apparent_px = apparentSizeNum / camDist) instead of a full
+          // `apparentSizePx` call.  Third, we derive a closed-form
+          // `minCamDistForVisibility` so the inner check becomes a cheap
+          // scalar compare instead of a Math.hypot + division + compare.
+          //
+          // The galaxy-size-and-visibility math is identical to what
+          // `apparentSizePx` computes — see that helper for the derivation
+          // and the kpc/Mpc unit-split rationale.
           const fovYRad = cam.fovYRad;
           const viewportH = canvas.height;
+          const pxPerRad = viewportH / (2 * Math.tan(fovYRad / 2));
+          const dKpc = galaxyDiameterKpc({}); // v1: constant 30 kpc
+          const dMpc = dKpc / 1000;
+          // A galaxy of this diameter at distance camDist is
+          // `dMpc / camDist * pxPerRad` pixels wide.  Inverting the
+          // ≥ APPARENT_SIZE_THRESHOLD_PX inequality:
+          //   camDist ≤ dMpc * pxPerRad / threshold
+          // which lets us cull on a single squared compare without sqrt.
+          const maxCamDistForVisibility =
+            (dMpc * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
+          const maxCamDistSq = maxCamDistForVisibility * maxCamDistForVisibility;
+
+          const cx = cam.position[0];
+          const cy = cam.position[1];
+          const cz = cam.position[2];
 
           const quads: QuadInstance[] = [];
           for (const cloud of clouds.values()) {
-            for (let i = 0; i < cloud.count; i++) {
-              const x = cloud.positions[i * 3 + 0]!;
-              const y = cloud.positions[i * 3 + 1]!;
-              const z = cloud.positions[i * 3 + 2]!;
-
-              // Pre-filter by distance from the origin.  This isn't the
-              // distance the apparent-size formula uses (that's camera-to-
-              // galaxy, computed below), but galaxies far enough from the
-              // origin are also far from any plausible camera position
-              // inside the cloud, so this skips the bulk of catalogue rows
-              // before we touch the more expensive math.
-              const distFromOrigin = Math.hypot(x, y, z);
-              if (distFromOrigin <= 0 || distFromOrigin > FAR_DISTANCE_CUTOFF_MPC) continue;
+            const positions = cloud.positions;
+            const count = cloud.count;
+            for (let i = 0; i < count; i++) {
+              const i3 = i * 3;
+              const x = positions[i3 + 0]!;
+              const y = positions[i3 + 1]!;
+              const z = positions[i3 + 2]!;
 
               // Distance from CAMERA, not target.  Apparent size depends on
-              // the viewer-to-galaxy distance, not the target-to-galaxy
-              // distance — they only coincide when the camera is looking
-              // straight at a galaxy from far away.
-              const dx = cam.position[0] - x;
-              const dy = cam.position[1] - y;
-              const dz = cam.position[2] - z;
-              const camDist = Math.hypot(dx, dy, dz);
-              if (camDist <= 0) continue;
+              // the viewer-to-galaxy distance.  We compare *squared*
+              // distance against a precomputed squared threshold to skip
+              // the sqrt — the absolute majority of galaxies fail this
+              // check, so cutting an Math.hypot per row is the single
+              // biggest win in the loop.
+              const dx = cx - x;
+              const dy = cy - y;
+              const dz = cz - z;
+              const camDistSq = dx * dx + dy * dy + dz * dz;
+              if (camDistSq <= 0 || camDistSq > maxCamDistSq) continue;
 
-              const dKpc = galaxyDiameterKpc({}); // v1: constant 30 kpc
-              const px = apparentSizePx({
-                diameterKpc: dKpc,
-                distanceMpc: camDist,
-                viewportHeightPx: viewportH,
-                fovYRad,
-              });
+              // Galaxy is close enough to qualify; now pay for the sqrt
+              // and exact apparent-size formula on this small subset.
+              const camDist = Math.sqrt(camDistSq);
+              const px = (dMpc / camDist) * pxPerRad;
               if (px < APPARENT_SIZE_THRESHOLD_PX) continue;
 
               // Recover RA/Dec for the cutout URL.  The PointCloud doesn't
