@@ -4,7 +4,7 @@
 
 **Goal:** Give 2MRS and GLADE galaxies real galaxy-type colour variation by computing per-source colour indices from each survey's *own* photometry (`B−J` for GLADE, `J−K` for 2MRS) instead of forcing every row through SDSS-style `u−g` (which non-SDSS surveys don't measure). Currently every non-SDSS galaxy renders with the same fixed sentinel colour because `u−g` is `NaN`; after this plan, 2MRS shows the narrow J/K colour spread and GLADE shows the wide B/J spread, so spirals/ellipticals are distinguishable in both.
 
-**Architecture:** Colour-index choice and remapping is a *load-time* concern, not a render-time concern. We do the per-source pick (which bands), normalise to a common 0..2 scale (so the existing WGSL ramp doesn't need per-source branches), and pre-bake the result into the per-instance vertex attribute that `colorIndex` reads. The K-correction coefficient — which ALSO varies by colour pair — moves from a hard-coded shader constant to a per-vertex attribute (4 bytes per instance, packed alongside the existing colour index). The visual fragment is unchanged. The InfoCard's qualitative galaxy-type classifier (currently `galaxyTypeFromColor(u−r)`) gains per-source variants so "Red, quiescent" is judged against the actual colour pair rather than against SDSS thresholds.
+**Architecture:** Colour-index choice and remapping is a *load-time* concern, not a render-time concern. We do the per-source pick (which bands), normalise to a common 0..2 scale (so the existing WGSL ramp doesn't need per-source branches), and pre-bake the result into the per-instance vertex attribute that `colorIndex` reads. The K-correction coefficient — which ALSO varies by colour pair — moves from a hard-coded shader constant to a NEW per-vertex attribute, appended after the existing 6-slot layout (position×3, magnitude, colorIndex, globalInstanceIdx). After this plan, the per-instance vertex stride goes from 24 bytes (6 slots) to 28 bytes (7 slots), with kPerZ at byte offset 24 / shaderLocation 4. The visual fragment is unchanged. The InfoCard's qualitative galaxy-type classifier (currently `galaxyTypeFromColor(u−r)`) gains per-source variants so "Red, quiescent" is judged against the actual colour pair rather than against SDSS thresholds.
 
 **Tech Stack:** TypeScript 6, WebGPU + WGSL, Vitest 4. Project conventions: `type` not `interface`, didactic comments, single quotes, 100-char lines, trailing commas.
 
@@ -19,11 +19,11 @@
 - `src/utils/math/galaxyTypeFromJminusK.ts` — qualitative classifier for 2MRS using J−K. Narrower thresholds (J−K spans ~0.7–1.1 across galaxy types) but still a real signal.
 - `src/utils/math/galaxyType.ts` — single `galaxyType(source, mags)` entry-point that dispatches to the right per-source classifier. Keeps `pointInfoBuilder.ts` from acquiring a switch.
 
-**Renderer changes:**
+**Renderer changes (CURRENT vertex layout: 6 slots / 24 bytes — position×3 f32, magnitude f32, colorIndex f32, globalInstanceIdx u32):**
 
-- `src/gpu/pointRenderer.ts` — extend the per-instance vertex buffer from 5 floats (20 bytes) to 6 floats (24 bytes) by adding a `kPerZ` slot at offset 20. `upload()` calls `pickColourIndex(...)` per row, writes the (possibly remapped) value into the existing `colorIndex` slot, and writes the source's K coefficient into the new slot. The pipeline descriptor and `arrayStride`/`POINT_STRIDE` constants update accordingly. The `NO_COLOUR_SENTINEL` (999) path stays — it now triggers when `pickColourIndex` returns null, with `kPerZ = 0` so the shader's existing sentinel branch behaves identically.
-- `src/gpu/pickRenderer.ts` — pipeline's vertex layout updates to match (`arrayStride: 24`, fourth attribute at offset 20 format `float32`). `fsPick` does not read the new attribute, but the pick pipeline must agree with the visual one on the buffer layout or WebGPU validation rejects it.
-- `src/gpu/shaders/points.wgsl` — `PerVertex.kPerZ: f32` at `@location(3)`. The existing `K_UG_PER_Z = 3.0` constant is replaced with `p.kPerZ`. The `out.tint = ramp(restColorIndex)` line is unchanged because the JS-side normalisation puts every source's colour into 0..2 already.
+- `src/gpu/pointRenderer.ts` — extend the per-instance vertex buffer from 6 slots (24 bytes) to 7 slots (28 bytes) by appending a `kPerZ` f32 slot at byte offset 24 / shaderLocation 4. `upload()` calls `pickColourIndex(...)` per row, writes the normalised value into the existing `colorIndex` slot (replaces the old `u - g` write), and writes the source's K coefficient into the new slot. `SLOTS_PER_POINT` 6→7 and `POINT_STRIDE` 24→28; the pipeline descriptor adds the 5th attribute. The `NO_COLOUR_SENTINEL` (999) path stays — it now triggers when `pickColourIndex` returns null, with `kPerZ = 0` so the shader's existing sentinel branch behaves identically.
+- `src/gpu/pickRenderer.ts` — pipeline's vertex layout updates to match (`arrayStride: 28`, fifth attribute at offset 24 format `float32`). `fsPick` does not read the new attribute, but the pick pipeline must agree with the visual one on the buffer layout or WebGPU validation rejects it.
+- `src/gpu/shaders/points.wgsl` — `PerVertex.kPerZ: f32` at `@location(4)` (location 3 is already `globalInstanceIdx`). The existing `K_UG_PER_Z = 3.0` constant is replaced with `p.kPerZ`. The `out.tint = ramp(restColorIndex)` line is unchanged because the JS-side normalisation puts every source's colour into 0..2 already.
 - `src/data/pointCloudFormat.ts` — no schema change (the `.bin` file format is unchanged; the per-instance interleaved buffer is rebuilt on upload from the existing five-band photometry).
 
 **Engine integration:**
@@ -423,63 +423,79 @@ git commit -m "feat: add per-source galaxy-type classifiers (B−J, J−K)"
 
 - Modify: `src/gpu/pointRenderer.ts`
 
+**Context:** The current vertex layout is 6 slots / 24 bytes:
+- offset 0: position vec3<f32>
+- offset 12: magnitude f32
+- offset 16: colorIndex f32 (currently raw `u - g` or 999 sentinel)
+- offset 20: globalInstanceIdx u32 (added in the picker fix)
+
+This task appends a 7th slot for `kPerZ` (f32) at offset 24, growing the
+stride to 28 bytes.
+
 - [ ] **Step 1: Update the layout constants and pipeline descriptor**
 
-In `src/gpu/pointRenderer.ts`, change `FLOATS_PER_POINT` from 5 to 6 and add the new attribute. The vertex layout becomes:
+In `src/gpu/pointRenderer.ts`, change `SLOTS_PER_POINT` from 6 to 7 (the
+constant lives near the top of the file alongside `POINT_STRIDE`). The
+`POINT_STRIDE = SLOTS_PER_POINT * 4` derivation already cascades the
+24→28 byte change.
 
-```ts
-const FLOATS_PER_POINT = 6;
-const POINT_STRIDE = FLOATS_PER_POINT * 4; // 24 bytes
-```
-
-In the constructor's `vertex.buffers[0]` descriptor, add a fourth attribute at offset 20:
+In the constructor's `vertex.buffers[0]` descriptor, append a fifth
+attribute at offset 24, shaderLocation 4 (do NOT collide with the existing
+shaderLocation 3 = globalInstanceIdx):
 
 ```ts
 attributes: [
   { shaderLocation: 0, offset: 0, format: 'float32x3' },  // position
   { shaderLocation: 1, offset: 12, format: 'float32' },   // magnitude
-  { shaderLocation: 2, offset: 16, format: 'float32' },   // colorIndex (now normalised)
-  { shaderLocation: 3, offset: 20, format: 'float32' },   // kPerZ — new
+  { shaderLocation: 2, offset: 16, format: 'float32' },   // colorIndex (normalised after this task)
+  { shaderLocation: 3, offset: 20, format: 'uint32' },    // globalInstanceIdx (existing)
+  { shaderLocation: 4, offset: 24, format: 'float32' },   // kPerZ — new
 ],
 ```
 
 - [ ] **Step 2: Update upload() to call pickColourIndex**
 
-Replace the per-point body of the upload loop (`for (let i = 0; i < cloud.count; i++) { ... }`) so that it calls `pickColourIndex` and writes the normalised colour index plus the K coefficient into the new vertex attribute. The full replacement (showing only the changed block):
+Inside `upload()`, the loop body currently writes 6 slots per instance
+using the `interleaved` (Float32Array) and `interleavedU32` (Uint32Array)
+views over the same ArrayBuffer. Add the kPerZ write at slot 6 and
+replace the raw `u - g` colorIndex write with `pickColourIndex`'s
+normalised value:
 
 ```ts
 import { pickColourIndex } from '../data/colourIndex';
 
-// ...
+// ... (inside the upload loop, replacing the existing slot 4 / 5 writes)
 
 const NO_COLOUR_SENTINEL = 999;
-for (let i = 0; i < cloud.count; i++) {
-  const o = i * FLOATS_PER_POINT;
+const colour = pickColourIndex(
+  source,
+  cloud.magU[i]!,
+  cloud.magG[i]!,
+  cloud.magR[i]!,
+  cloud.magI[i]!,
+  cloud.magZ[i]!,
+);
 
-  interleaved[o + 0] = cloud.positions[i * 3 + 0]!;
-  interleaved[o + 1] = cloud.positions[i * 3 + 1]!;
-  interleaved[o + 2] = cloud.positions[i * 3 + 2]!;
-
-  const g = cloud.magG[i]!;
-  const colour = pickColourIndex(
-    source,
-    cloud.magU[i]!,
-    cloud.magG[i]!,
-    cloud.magR[i]!,
-    cloud.magI[i]!,
-    cloud.magZ[i]!,
-  );
-
-  interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
-  interleaved[o + 4] = colour ? colour.colourIndex : NO_COLOUR_SENTINEL;
-  interleaved[o + 5] = colour ? colour.kPerZ : 0;
-}
+interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
+interleaved[o + 4] = colour ? colour.colourIndex : NO_COLOUR_SENTINEL;
+// slot 5 stays as `interleavedU32[o + 5] = priorCount + i;` (globalInstanceIdx, unchanged)
+interleaved[o + 6] = colour ? colour.kPerZ : 0;
 ```
 
-- [ ] **Step 3: Verify type-check**
+The existing `u - g` and NaN-substitution logic for `colorIndex` is no
+longer needed — `pickColourIndex` returns `null` when the row's bands
+are missing, which is exactly the sentinel path's trigger condition.
+
+- [ ] **Step 3: Verify type-check + visual reload**
 
 Run: `npx tsc --noEmit`
 Expected: clean.
+
+Reload the browser. SDSS galaxies should look identical (same u−g math
+as before, just with normalisation applied — the natural range matches
+the existing 0..2 ramp). 2MRS and GLADE should still render with the
+sentinel orange-white tint at this point because the shader hasn't yet
+been told to use `p.kPerZ`. That happens in Task 5.
 
 - [ ] **Step 4: Commit**
 
@@ -498,20 +514,21 @@ git commit -m "feat: bake per-source normalised colour index + K coefficient int
 
 The pick pipeline must declare the same vertex layout as the visual one or WebGPU rejects the pipeline at draw time.
 
-- [ ] **Step 1: Update the pick pipeline's arrayStride and add the kPerZ attribute**
+- [ ] **Step 1: Update the pick pipeline's arrayStride and append the kPerZ attribute**
 
-In `src/gpu/pickRenderer.ts`, find the `vertex.buffers[0]` block and change `arrayStride: 20` to `arrayStride: 24`, and append a fourth attribute matching the visual pipeline's:
+In `src/gpu/pickRenderer.ts`, find the `vertex.buffers[0]` block. The current arrayStride is 24 with 4 attributes (position, magnitude, colorIndex, globalInstanceIdx as u32). Bump arrayStride to 28 and append the fifth attribute at offset 24:
 
 ```ts
 buffers: [
   {
-    arrayStride: 24,
+    arrayStride: 28,
     stepMode: 'instance',
     attributes: [
-      { shaderLocation: 0, offset: 0, format: 'float32x3' },
-      { shaderLocation: 1, offset: 12, format: 'float32' },
-      { shaderLocation: 2, offset: 16, format: 'float32' },
-      { shaderLocation: 3, offset: 20, format: 'float32' },
+      { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
+      { shaderLocation: 1, offset: 12, format: 'float32' }, // magnitude
+      { shaderLocation: 2, offset: 16, format: 'float32' }, // colorIndex
+      { shaderLocation: 3, offset: 20, format: 'uint32' },  // globalInstanceIdx
+      { shaderLocation: 4, offset: 24, format: 'float32' }, // kPerZ — new
     ],
   },
 ],
@@ -540,7 +557,17 @@ git commit -m "feat: align pickRenderer vertex layout with new kPerZ attribute"
 
 In `src/gpu/shaders/points.wgsl`:
 
-Add `@location(3) kPerZ: f32` to the `PerVertex` struct definition.
+Add `@location(4) kPerZ: f32` to the `PerVertex` struct definition (location 3 is already `globalInstanceIdx: u32`):
+
+```wgsl
+struct PerVertex {
+  @location(0) position: vec3<f32>,
+  @location(1) magnitude: f32,
+  @location(2) colorIndex: f32,
+  @location(3) globalInstanceIdx: u32,  // existing
+  @location(4) kPerZ: f32,               // new
+};
+```
 
 Replace the hard-coded `K_UG_PER_Z` constant block:
 
