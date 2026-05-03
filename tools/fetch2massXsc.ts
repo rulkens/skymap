@@ -9,12 +9,23 @@
  * runs read the cache; only `npm run fetch-2mass-xsc` re-pulls.
  *
  * Vizier TAP endpoint:
- *   POST https://vizier.cds.unistra.fr/viz-bin/TAP/sync
+ *   POST https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync
  *   form: REQUEST=doQuery&LANG=ADQL&FORMAT=csv&QUERY=...
  *
  * We chunk the IN(...) clause by ~500 IDs per request — TAP rejects
  * gigantic single-query strings. ~45 k 2MRS rows → ~90 chunks × ~3 s
  * each = ~5 minutes wall clock.
+ *
+ * Catalog VII/233/xsc is the 2MASS Extended Source Catalog (galaxies +
+ * other resolved sources). Note: II/246/out is the *Point* Source Catalog
+ * and contains no shape info — easy to confuse, hours to debug.
+ *
+ * Column choice: `Spa` (super-coadd PA, deg, can be negative) and `Sb/a`
+ * (super-coadd minor/major axis ratio) come from a fit on the combined
+ * J+H+K 20-mag isophote, the most robust shape estimator the XSC
+ * publishes for galaxies fainter than the per-band fit floor. We rename
+ * them on the way out to `sup_phi` / `sup_ba` to match the existing
+ * downstream consumer in `tools/parsers/twoMrs.ts` (parseXscShapeCsv).
  */
 
 import {
@@ -29,7 +40,7 @@ import { resolve, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
-const TAP_URL = 'https://vizier.cds.unistra.fr/viz-bin/TAP/sync';
+const TAP_URL = 'https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync';
 const CHUNK_SIZE = 500;
 
 /**
@@ -56,8 +67,16 @@ function readExistingIds(path: string): Set<string> {
 }
 
 async function fetchChunk(ids: string[]): Promise<Map<string, { sup_phi: number; sup_ba: number }>> {
-  const inList = ids.map((s) => `'${s}'`).join(',');
-  const adql = `SELECT "2MASX", sup_phi, sup_ba FROM "II/246/out" WHERE "2MASX" IN (${inList})`;
+  // The XSC stores the 2MASS designation with a trailing space inside the
+  // string ("12345678+1234567 "). 2MRS publishes it without the trailing
+  // space.  We add it back when building the IN-list so the equality test
+  // matches the Vizier-side string exactly; we strip it again on the way
+  // back out so the cache key stays in 2MRS's canonical form.
+  const inList = ids.map((s) => `'${s} '`).join(',');
+  // `Sb/a` and `Spa` need quoted identifiers because of the slash and the
+  // mixed case — most other columns work without quotes but these don't.
+  const adql =
+    `SELECT "2MASX", "Spa", "Sb/a" FROM "VII/233/xsc" WHERE "2MASX" IN (${inList})`;
   const body = new URLSearchParams({
     REQUEST: 'doQuery',
     LANG: 'ADQL',
@@ -73,14 +92,17 @@ async function fetchChunk(ids: string[]): Promise<Map<string, { sup_phi: number;
   const text = await res.text();
   const out = new Map<string, { sup_phi: number; sup_ba: number }>();
   const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
-  // First line is header.
+  // First line is header: 2MASX,Spa,Sb/a
   for (let i = 1; i < lines.length; i++) {
     const [id, sup_phi, sup_ba] = lines[i]!.split(',');
     if (!id) continue;
     const phi = parseFloat(sup_phi ?? '');
     const ba = parseFloat(sup_ba ?? '');
     if (Number.isFinite(phi) && Number.isFinite(ba)) {
-      out.set(id.replace(/^"|"$/g, ''), { sup_phi: phi, sup_ba: ba });
+      // Strip surrounding quotes, then trim the trailing pad-space the
+      // XSC stores inside the literal.
+      const cleanId = id.replace(/^"|"$/g, '').trim();
+      out.set(cleanId, { sup_phi: phi, sup_ba: ba });
     }
   }
   return out;
