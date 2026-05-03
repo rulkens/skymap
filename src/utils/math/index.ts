@@ -31,3 +31,6 @@ export * from './lerpAngleShortest';
 export * from './sdssExplorerUrl';
 export * from './sdssThumbnailUrl';
 export * from './dssThumbnailUrl';
+export * from './distanceModulus';
+export * from './schechterDensity';
+export * from './vMaxWeight';
