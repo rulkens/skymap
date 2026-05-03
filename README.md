@@ -133,3 +133,18 @@ These are deliberately not in this version:
 ## License
 
 Personal project; no license declared. Ask before reuse.
+
+### Camera focus
+
+- **Focus button** on a pinned galaxy's InfoCard pivots the camera onto that
+  galaxy with a 600 ms ease-out tween.  Yaw and pitch are preserved so you
+  don't lose your orientation.
+- **Home button** (bottom-left, next to the Settings panel) returns the camera
+  to its initial framing — origin target, default distance and pitch.
+- **Keyboard shortcuts:**
+  - `f` — focus on the currently-pinned galaxy (no-op if nothing is pinned).
+  - `h` — return to the home / Earth view.
+  - `Esc` — clear the pinned selection.
+
+Tweens are interrupted by mouse drag or wheel — manual orbit controls always
+take precedence over an in-progress focus.
