@@ -204,7 +204,28 @@ const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4; // 128 bytes
 type LoadedSource = {
   buffer: GPUBuffer;
   count: number;
+  /**
+   * Current authoritative offset, recomputed after every upload/unload by
+   * `recomputeInstanceIdOffsets`.  This is the running sum of `count`
+   * across earlier-enum-order loaded sources.
+   */
   instanceIdOffset: number;
+  /**
+   * The `priorCount` that was actually baked into this source's vertex
+   * buffer's `globalInstanceIdx` slot at upload time.  Compared against
+   * `instanceIdOffset` to detect when the baked values are stale (because
+   * an *earlier*-enum-order source was uploaded later — happens whenever
+   * parallel fetches resolve out of enum order).  When stale, the upload
+   * caller re-runs `upload(source, cloud)` so the bake catches up.
+   */
+  bakedPriorCount: number;
+  /**
+   * Reference to the original cloud passed to `upload()`.  Held so we can
+   * re-bake the vertex buffer on demand (see `bakedPriorCount` above).
+   * Same object the engine already holds in its `clouds` map — no
+   * duplication, just a pointer.
+   */
+  cloud: PointCloud;
 };
 
 // ─── PointRenderer ────────────────────────────────────────────────────────────
@@ -586,8 +607,54 @@ export class PointRenderer {
     // side bookkeeping for `loadedSources()` consumers; the shader reads
     // the baked vertex attribute directly and no longer needs a uniform
     // offset at all).
-    this.clouds.set(source, { buffer, count: cloud.count, instanceIdOffset: priorCount });
+    this.clouds.set(source, {
+      buffer,
+      count: cloud.count,
+      instanceIdOffset: priorCount,
+      bakedPriorCount: priorCount,
+      cloud,
+    });
     this.recomputeInstanceIdOffsets();
+    this.rebakeStaleSources();
+  }
+
+  /**
+   * Re-upload any source whose `bakedPriorCount` diverged from its current
+   * `instanceIdOffset`.
+   *
+   * Why this is needed: parallel fetches resolve in unpredictable order, so
+   * a later-enum-order source (e.g. 2MRS) can upload BEFORE an earlier one
+   * (SDSS).  The first upload bakes the wrong `priorCount` into its
+   * vertex buffer's `globalInstanceIdx` slot — when SDSS arrives later
+   * and `recomputeInstanceIdOffsets` shifts 2MRS's authoritative offset,
+   * the baked vertex data stays unchanged and the picker resolves
+   * 2MRS-clicks to the wrong source slice.
+   *
+   * The fix: after every recompute, walk loaded sources and re-call
+   * `upload()` for any whose baked offset is now stale.  The recursion
+   * guard prevents infinite loops — after one rebake pass every source
+   * is consistent (since `recomputeInstanceIdOffsets` is idempotent and
+   * the rebake itself doesn't change any other source's offset).
+   */
+  private rebaking = false;
+  private rebakeStaleSources(): void {
+    if (this.rebaking) return;
+    this.rebaking = true;
+    try {
+      for (const s of ALL_SOURCES) {
+        const entry = this.clouds.get(s);
+        if (!entry) continue;
+        if (entry.bakedPriorCount !== entry.instanceIdOffset) {
+          // Re-upload with the correct priorCount.  upload() destroys the
+          // old buffer, allocates a new one, and updates the LoadedSource
+          // entry — the caller's local snapshot of `entry` is dead after
+          // this returns, but we don't keep a reference past the call.
+          this.upload(s, entry.cloud);
+        }
+      }
+    } finally {
+      this.rebaking = false;
+    }
   }
 
   /**
