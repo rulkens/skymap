@@ -1,7 +1,59 @@
 import { describe, it, expect } from 'vitest';
 
-import { parseTwoMrs } from '../../tools/parsers/twoMrs';
+import {
+  parseTwoMrs,
+  parseXscShapeCsv,
+  type XscShapeMap,
+} from '../../tools/parsers/twoMrs';
 import { Source } from '../../src/data/sources';
+
+/**
+ * Helper for the XSC-application tests below. Builds a 233-character 2MRS
+ * fixed-width line by overwriting specific (1-based, inclusive) byte
+ * ranges of an all-spaces buffer.
+ *
+ * We construct lines programmatically rather than typing them out for two
+ * reasons: (1) the byte offsets are notoriously easy to mis-count in a
+ * raw string literal; (2) by sharing the same builder between the
+ * "XSC-hit" and "XSC-miss" tests, we guarantee the only behavioural
+ * difference between them is the map's contents — exactly what we want
+ * the assertions to be sensitive to.
+ *
+ * The slot logic (`val.padEnd(slot).slice(0, slot)`) intentionally
+ * truncates over-long values rather than throwing: the test author is
+ * trusted to size each field correctly, and a silent truncation produces
+ * a parse failure that's easy to debug, whereas an exception here would
+ * mask the underlying intent of the test.
+ */
+function buildTwoMrsRow(
+  fields: ReadonlyArray<readonly [number, number, string]>,
+): string {
+  const buf = ' '.repeat(233).split('');
+  for (const [start, end, val] of fields) {
+    const slot = end - start + 1;
+    const padded = val.padEnd(slot).slice(0, slot);
+    for (let i = 0; i < slot; i++) buf[start - 1 + i] = padded[i]!;
+  }
+  return buf.join('');
+}
+
+/**
+ * Minimum-required fixture fields for a 2MRS row to *not* be skipped by
+ * the parser: ID (used as the XSC lookup key), RA, Dec, Kcmag, Hcmag,
+ * Jcmag, and cz. Everything else is left as spaces — the parser only
+ * inspects these byte ranges, so leaving the rest blank exercises the
+ * "minimum viable line" path that real-world short rows might exercise.
+ */
+const FIXTURE_ID = '12345678+0123456'; // 16 chars exactly
+const FIXTURE_FIELDS: ReadonlyArray<readonly [number, number, string]> = [
+  [1, 16, FIXTURE_ID],
+  [18, 26, '180.00000'], // RA, F9.5
+  [28, 36, '+00.00000'], // Dec, F9.5
+  [58, 63, '11.500'], // Kcmag, F6.3
+  [65, 70, '12.000'], // Hcmag, F6.3
+  [72, 77, '12.500'], // Jcmag, F6.3
+  [174, 178, ' 1000'], // cz, I5 right-aligned
+];
 
 /**
  * Real first three rows of `data/raw/2mrs_table3.dat`, copied verbatim.
@@ -91,5 +143,54 @@ describe('parseTwoMrs', () => {
     const { records, skipped } = parseTwoMrs(blankCzRow);
     expect(records).toHaveLength(0);
     expect(skipped).toBe(1);
+  });
+
+  it('applies XSC sup_ba (axisRatio) and sup_phi (positionAngleDeg) from cache', () => {
+    // The map is keyed by the trimmed 2MASS designation; on a hit, the
+    // parser must propagate sup_ba straight into axisRatio and sup_phi
+    // straight into positionAngleDeg with no transformation. Using
+    // `toBe` (rather than `toBeCloseTo`) here is intentional: any
+    // arithmetic on these values would be a bug, since both fields are
+    // already in the units the renderer expects.
+    const line = buildTwoMrsRow(FIXTURE_FIELDS);
+    const xsc: XscShapeMap = new Map([
+      [FIXTURE_ID, { sup_phi: 45, sup_ba: 0.6 }],
+    ]);
+    const { records } = parseTwoMrs(line, xsc);
+    expect(records).toHaveLength(1);
+    expect(records[0]!.axisRatio).toBe(0.6);
+    expect(records[0]!.positionAngleDeg).toBe(45);
+  });
+
+  it('returns null axisRatio + positionAngleDeg when 2MASS ID not in XSC cache', () => {
+    // Same fixture, no map: this is the "deterministic-fallback"
+    // pathway. We use the single-arg form deliberately to also assert
+    // that the default-empty-map signature stays valid (Task 9 hasn't
+    // wired the real cache through `buildAllBins.ts` yet, so the rest
+    // of the pipeline still calls `parseTwoMrs(rawText)`).
+    const line = buildTwoMrsRow(FIXTURE_FIELDS);
+    const { records } = parseTwoMrs(line);
+    expect(records).toHaveLength(1);
+    expect(records[0]!.axisRatio).toBeNull();
+    expect(records[0]!.positionAngleDeg).toBeNull();
+  });
+});
+
+describe('parseXscShapeCsv', () => {
+  it('parses XSC cache CSV including empty queried-but-no-match rows', () => {
+    // The cache stores one row per *queried* 2MASS ID, including IDs
+    // VizieR had no XSC entry for. Those misses appear as rows with
+    // empty `sup_phi`/`sup_ba` cells and must be excluded from the
+    // returned map so callers can use `xsc.has(id)` as the single
+    // authoritative "do we have shape data?" check.
+    const csv = [
+      '2massID,sup_phi,sup_ba',
+      '12345678+0123456,45,0.6',
+      '99999999+9999999,,', // queried but no XSC match
+    ].join('\n');
+    const xsc = parseXscShapeCsv(csv);
+    expect(xsc.size).toBe(1);
+    expect(xsc.get('12345678+0123456')).toEqual({ sup_phi: 45, sup_ba: 0.6 });
+    expect(xsc.has('99999999+9999999')).toBe(false);
   });
 });

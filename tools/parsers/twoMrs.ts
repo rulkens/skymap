@@ -108,11 +108,76 @@ export type TwoMrsResult = {
 };
 
 /**
+ * Map from 2MASS designation (the 16-char string in bytes 1-16 of every
+ * 2MRS fixed-width line) to the 2MASS XSC's `sup_phi` (super-coadd PA in
+ * degrees) and `sup_ba` (super-coadd b/a axis ratio).
+ *
+ * The 2MRS catalog itself ships with neither a position angle nor a true
+ * axis ratio; both have to come from the underlying 2MASS XSC, which we
+ * pre-fetch into `data/raw/2mass_xsc_pa.csv` (see `tools/fetch2massXsc.ts`).
+ * Using a `Map` rather than, say, an `Object`/`Record<string, ...>` keeps
+ * lookup O(1) for ~44k 2MRS rows × tens of thousands of XSC entries, and
+ * sidesteps the prototype-pollution traps you get with key strings that
+ * happen to look like `__proto__`.
+ *
+ * Exposing this as a *type alias* is deliberate: the build pipeline lives
+ * in `buildAllBins.ts`, and we want `parseTwoMrs` to stay IO-free (and
+ * therefore unit-testable) by having the caller construct the map and
+ * pass it in. That keeps the parser's contract honest — given the same
+ * input text and the same map, you always get the same records.
+ */
+export type XscShapeMap = Map<string, { sup_phi: number; sup_ba: number }>;
+
+/**
+ * Parse the cached 2MASS XSC shape CSV produced by `tools/fetch2massXsc.ts`
+ * into the lookup map consumed by `parseTwoMrs`.
+ *
+ * The cache stores one row per 2MASS ID we *queried* — including IDs that
+ * VizieR ultimately had no XSC entry for. Those misses appear as rows
+ * with empty `sup_phi` / `sup_ba` cells, and we intentionally skip them
+ * here (so `xsc.has(id)` correctly distinguishes "we have shape data" from
+ * "we asked but came up empty"). The build pipeline's deterministic
+ * fallback orientation handles the misses; storing them as a separate
+ * "queried but empty" sentinel would only complicate the lookup site.
+ *
+ * Header row (`2massID,sup_phi,sup_ba`) is dropped via the `i = 1` start.
+ * We don't validate the header column names — if `fetch2massXsc.ts`
+ * changes its output schema, the resulting map will simply be empty and
+ * Task 9's logging in `buildAllBins.ts` will catch it.
+ */
+export function parseXscShapeCsv(rawText: string): XscShapeMap {
+  const out: XscShapeMap = new Map();
+  const lines = rawText.split(/\r?\n/).filter((l) => l.length > 0);
+  for (let i = 1; i < lines.length; i++) {
+    const [id, sup_phi, sup_ba] = lines[i]!.split(',');
+    if (!id) continue;
+    const phi = parseFloat(sup_phi ?? '');
+    const ba = parseFloat(sup_ba ?? '');
+    // Both fields must be finite to count as a hit; a single missing cell
+    // from the CSV (rare, but possible if the upstream XSC row was
+    // partially populated) is treated the same as "no match" so callers
+    // get the deterministic-fallback orientation rather than a NaN PA.
+    if (Number.isFinite(phi) && Number.isFinite(ba)) {
+      out.set(id.trim(), { sup_phi: phi, sup_ba: ba });
+    }
+  }
+  return out;
+}
+
+/**
  * Parse a 2MRS table-3 blob (`data/raw/2mrs_table3.dat`) into canonical
  * records. See the module docstring for the byte layout, mapping rationale,
  * and skip rules.
+ *
+ * The optional `xsc` map carries per-2MASS-ID shape data (PA + b/a) from
+ * the 2MASS XSC. Every 2MRS row's 16-byte 2MASS designation is looked up
+ * in the map; on a hit we populate `axisRatio` + `positionAngleDeg`
+ * directly, and on a miss we leave both as `null` so the renderer's
+ * deterministic-fallback orientation kicks in. Defaulting to an empty map
+ * keeps the single-arg call form valid for tests and for the period
+ * before Task 9 wires the real cache through `buildAllBins.ts`.
  */
-export function parseTwoMrs(rawText: string): TwoMrsResult {
+export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoMrsResult {
   // `nonCommentLines` is overkill for a fixed-width binary-ish file
   // (the real 2MRS table has no comment lines at all) but using the
   // shared helper keeps the parser uniform with sdssCsv and gives us
@@ -133,6 +198,15 @@ export function parseTwoMrs(rawText: string): TwoMrsResult {
     // All field offsets are 1-based inclusive in the ReadMe; `slice(N-1, M)`
     // converts to JS's 0-based half-open form. Trim each cell because the
     // numeric fields are space-padded on the left in the source file.
+    //
+    // The 2MASS designation occupies bytes 1-16; we pull it eagerly so the
+    // XSC lookup at the bottom of the loop can use it. Trimming makes the
+    // map key match what `parseXscShapeCsv` stored (also trimmed), which
+    // is important because the 2MRS file pads its ID column with spaces
+    // for the rare rows where the designation is shorter than 16 chars.
+    const massId = line.slice(0, 16).trim();
+    const xscEntry = xsc.get(massId);
+
     const ra = parseFloat(line.slice(17, 26).trim());
     const dec = parseFloat(line.slice(27, 36).trim());
     const kc = parseFloat(line.slice(57, 63).trim());
@@ -175,13 +249,14 @@ export function parseTwoMrs(rawText: string): TwoMrsResult {
       magR: hc,
       magI: kc,
       magZ: NaN,
-      // TODO Task 6 (galaxy-orientation-disks): cross-match the 2MASS
-      // designation in bytes 1-16 against the 2MASS XSC `sup_phi` + `sup_ba`
-      // shape catalog (fetched offline into data/raw/2mass_xsc_pa.csv) to
-      // populate real axisRatio + PA. Until that cache is wired in, every
-      // 2MRS row routes through fallbackOrientation.
-      axisRatio: null,
-      positionAngleDeg: null,
+      // axisRatio + positionAngleDeg come from the 2MASS XSC, not 2MRS
+      // itself. On a hit we copy the XSC's super-coadd values directly; on
+      // a miss (no entry, or this parser was called single-arg without a
+      // map) both stay null and the renderer applies its deterministic
+      // pseudorandom fallback orientation, keyed off objID/RA/Dec, so the
+      // disk still has *some* tilt rather than facing the camera flat.
+      axisRatio: xscEntry ? xscEntry.sup_ba : null,
+      positionAngleDeg: xscEntry ? xscEntry.sup_phi : null,
     });
   }
 
