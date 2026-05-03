@@ -696,6 +696,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           const nextMask = autoLodMask(cam.distance);
           if (nextMask !== visibleSourceMask) {
             visibleSourceMask = nextMask;
+            cb.onSourceMaskChange?.(nextMask);
           }
         }
 
@@ -966,6 +967,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         : maskWithout(visibleSourceMask, source);
       if (next === visibleSourceMask) return;
       visibleSourceMask = next;
+      cb.onSourceMaskChange?.(next);
     },
 
     // ── SpaceMouse 6DOF input setters ─────────────────────────────────────

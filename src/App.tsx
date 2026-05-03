@@ -72,7 +72,7 @@ import { StatusBar } from './components/StatusBar/StatusBar';
 import { InfoCard } from './components/InfoCard/InfoCard';
 import { ScaleBar } from './components/ScaleBar/ScaleBar';
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
-import { ALL_VISIBLE_MASK, maskWith, maskWithout } from './data/sources';
+import { ALL_VISIBLE_MASK } from './data/sources';
 import { isWebHIDSupported } from './input/spaceMouse';
 
 // ── Default / initial state ────────────────────────────────────────────────────
@@ -193,11 +193,15 @@ export function App(): React.ReactElement {
       onPointSizeChange: setPointSize,
       onBrightnessChange: setBrightness,
       onAutoRotateChange: setAutoRotate,
-      // LOD mode is also seeded by the engine at init, then echoed back any
-      // time `setLodMode` runs (or `setSourceVisible` flips us to manual).
-      // No matching `onSourceMaskChange` exists yet — see the state-decl
-      // comment above for why that's OK for v1.
+      // LOD mode is seeded by the engine at init, then echoed back any time
+      // `setLodMode` runs (or `setSourceVisible` flips us to manual).
       onLodModeChange: setLodMode,
+      // Mirror the engine's source mask back into React.  Critical for fixing
+      // the "first toggle is a no-op" bug: auto-LOD recomputes the engine mask
+      // continuously, and without this echo React's checkbox state would drift
+      // away from engine truth, making the first user toggle silently agree
+      // with engine state instead of flipping it.
+      onSourceMaskChange: setVisibleSourceMask,
     });
 
     // Store the handle so the Esc effect (below) can call clearSelection().
@@ -310,14 +314,10 @@ export function App(): React.ReactElement {
         // though the engine echoes it back via `onLodModeChange` shortly.
         visibleSourceMask={visibleSourceMask}
         onToggleSource={(s, visible) => {
-          // Update local mirror so the checkbox flips on this very render —
-          // we don't get an `onSourceMaskChange` callback to do it for us.
-          setVisibleSourceMask(
-            visible ? maskWith(visibleSourceMask, s) : maskWithout(visibleSourceMask, s),
-          );
-          // Tell the engine. Per `setSourceVisible` spec, this also flips
-          // the engine into manual mode — `onLodModeChange` will then echo
-          // the new mode back into our `lodMode` state.
+          // No optimistic local update — the engine fires `onSourceMaskChange`
+          // synchronously inside `setSourceVisible`, which updates React state
+          // before this handler returns.  Optimistic updates would race against
+          // auto-LOD's mask, sometimes forcing the user to click twice.
           handleRef.current?.setSourceVisible?.(s, visible);
         }}
         lodMode={lodMode}

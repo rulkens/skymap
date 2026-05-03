@@ -52,6 +52,19 @@ export type EngineCallbacks = {
    */
   onLodModeChange?: (mode: LodMode) => void;
   /**
+   * Fired when the visible-source bitmask changes — either because auto-LOD
+   * recomputed it after the camera distance crossed a band threshold, or
+   * because `setSourceVisible` flipped a bit.
+   *
+   * Without this callback the React-side checkboxes can drift out of sync with
+   * the engine's actual mask: at startup React initialises to `ALL_VISIBLE_MASK`,
+   * but auto-LOD almost immediately reduces the engine mask based on the
+   * initial camera distance.  The first user toggle then operates on a stale
+   * React state and produces a visible no-op (the toggled bit was already in
+   * the requested state on the engine side), forcing a second click.
+   */
+  onSourceMaskChange?: (mask: number) => void;
+  /**
    * Fired each time a per-survey `.bin` file finishes loading and the cloud
    * has been uploaded to the renderer.  Surfaces progressive load state to
    * the React layer so the status bar can show e.g. "loaded 2/3 surveys".
