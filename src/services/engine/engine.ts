@@ -598,6 +598,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cb.onPointSizeChange?.(pointSizePx);
       cb.onBrightnessChange?.(brightness);
       cb.onAutoRotateChange?.(autoRotate);
+      // LOD mode + visible-mask seeds — engine and React both default to
+      // 'auto' / ALL_VISIBLE_MASK respectively, but firing the echo here
+      // protects against future default drift and keeps the contract uniform
+      // (every engine-owned setting React mirrors must be seeded at init).
+      cb.onLodModeChange?.(lodMode);
+      cb.onSourceMaskChange?.(visibleSourceMask);
 
       // ── Render loop ──────────────────────────────────────────────────────
 
@@ -986,6 +992,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // exceed display refresh) instead of the frame loop.
           onAxes: (axes) => {
             latestSpaceMouseAxes = axes;
+          },
+          // Forward connection-state transitions to the engine's callback so
+          // React's "Connected" indicator drops back to false if the puck is
+          // physically unplugged or browser permission is revoked.  The
+          // SpaceMouseInput class already listens for the HID `disconnect`
+          // event; we just relay it.
+          onConnectionChange: (connected) => {
+            cb.onSpaceMouseConnectedChange?.(connected);
+            // Wipe the cached axes on disconnect so the per-frame loop stops
+            // applying the last reading received before we lost the device.
+            if (!connected) latestSpaceMouseAxes = { ...ZERO_AXES };
           },
         });
       }

@@ -202,6 +202,11 @@ export function App(): React.ReactElement {
       // away from engine truth, making the first user toggle silently agree
       // with engine state instead of flipping it.
       onSourceMaskChange: setVisibleSourceMask,
+      // SpaceMouse pairing state: `connect()`'s promise gives us the initial
+      // success/failure, but only this callback covers spontaneous disconnects
+      // (USB unplug, permission revocation).  Without it React's "Connected"
+      // indicator could persist after the puck is gone.
+      onSpaceMouseConnectedChange: setSpaceMouseConnected,
     });
 
     // Store the handle so the Esc effect (below) can call clearSelection().

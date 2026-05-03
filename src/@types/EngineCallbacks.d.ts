@@ -52,6 +52,17 @@ export type EngineCallbacks = {
    */
   onLodModeChange?: (mode: LodMode) => void;
   /**
+   * Fired when the SpaceMouse connection state changes — either because the
+   * user successfully paired (`connect()` returned true), explicitly clicked
+   * disconnect, or because the underlying HID device emitted its own
+   * `disconnect` event (USB unplugged, browser permission revoked).
+   *
+   * Without this callback the React-side "Connected" indicator can persist
+   * after the puck is physically gone — confusing because the slider stays
+   * visible but no axes ever move the camera.
+   */
+  onSpaceMouseConnectedChange?: (connected: boolean) => void;
+  /**
    * Fired when the visible-source bitmask changes — either because auto-LOD
    * recomputed it after the camera distance crossed a band threshold, or
    * because `setSourceVisible` flipped a bit.
