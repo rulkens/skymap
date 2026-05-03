@@ -29,9 +29,15 @@
  *
  * This one-way data flow keeps the panel a pure function of its inputs, which
  * makes it easy to test and reason about.
+ *
+ * ### CSS
+ *
+ * Layout rules live in SettingsPanel.module.css alongside this file, replacing
+ * the former #settings-panel block in index.html.
  */
 
 import type { ReactNode } from 'react';
+import styles from './SettingsPanel.module.css';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -87,9 +93,9 @@ export function SettingsPanel({
   onResetCamera,
 }: Props): ReactNode {
   return (
-    <div id="settings-panel" aria-label="Renderer settings">
+    <div className={styles.settingsPanel} aria-label="Renderer settings">
       {/* ── Title ────────────────────────────────────────────────────────── */}
-      <div className="panel-title">Settings</div>
+      <div className={styles.panelTitle}>Settings</div>
 
       {/* ── Point size ───────────────────────────────────────────────────── */}
       {/*
@@ -97,11 +103,11 @@ export function SettingsPanel({
         This "stacked" arrangement gives the slider its full panel width so it
         stays easy to drag, while the label and value stay readable together.
       */}
-      <div className="panel-row">
+      <div className={styles.panelRow}>
         <label htmlFor="slider-point-size">Point size</label>
-        <span className="panel-value">{pointSize.toFixed(1)} px</span>
+        <span className={styles.panelValue}>{pointSize.toFixed(1)} px</span>
       </div>
-      <div className="panel-row">
+      <div className={styles.panelRow}>
         <input
           id="slider-point-size"
           type="range"
@@ -114,11 +120,11 @@ export function SettingsPanel({
       </div>
 
       {/* ── Brightness ───────────────────────────────────────────────────── */}
-      <div className="panel-row">
+      <div className={styles.panelRow}>
         <label htmlFor="slider-brightness">Brightness</label>
-        <span className="panel-value">{brightness.toFixed(2)}×</span>
+        <span className={styles.panelValue}>{brightness.toFixed(2)}×</span>
       </div>
-      <div className="panel-row">
+      <div className={styles.panelRow}>
         <input
           id="slider-brightness"
           type="range"
@@ -135,7 +141,7 @@ export function SettingsPanel({
         Checkbox + label on a single row. The label wraps the text only (not
         the input) so the flex layout keeps them spaced to the panel width.
       */}
-      <div className="panel-row">
+      <div className={styles.panelRow}>
         <label htmlFor="toggle-auto-rotate">Auto-rotate</label>
         <input
           id="toggle-auto-rotate"
@@ -147,7 +153,7 @@ export function SettingsPanel({
       </div>
 
       {/* ── Divider ──────────────────────────────────────────────────────── */}
-      <div className="panel-divider" role="separator" />
+      <div className={styles.panelDivider} role="separator" />
 
       {/* ── Reset camera ─────────────────────────────────────────────────── */}
       <button type="button" onClick={onResetCamera}>

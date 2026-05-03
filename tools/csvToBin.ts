@@ -31,7 +31,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { raDecZToCartesian } from '../src/data/coords.js';
+import { raDecZToCartesian } from '../src/utils/math/coords.js';
 import { encodePointCloud } from '../src/data/pointCloudFormat.js';
 import type { PointCloud } from '../src/types.js';
 

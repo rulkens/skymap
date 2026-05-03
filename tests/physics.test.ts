@@ -19,7 +19,7 @@ import {
   galaxyTypeFromColor,
   sdssExplorerUrl,
   sdssThumbnailUrl,
-} from '../src/data/physics';
+} from '../src/utils/math/physics';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 

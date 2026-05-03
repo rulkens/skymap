@@ -13,15 +13,15 @@
  * inline style because it changes every frame on zoom. The label is a block
  * above the bar so they stack naturally.
  *
- * ### CSS dependency
+ * ### CSS
  *
- * Uses `id="scale-bar"`, `id="scale-label"`, and `id="scale-line"` as declared
- * in `index.html`. The outer div's position (fixed, bottom-right) and the bar's
- * border styling all come from the existing stylesheet.
+ * Layout rules live in ScaleBar.module.css alongside this file, replacing the
+ * former #scale-bar / #scale-label / #scale-line rules in index.html.
  */
 
 import type { ReactNode } from 'react';
 import type { ScaleInfo } from '../engine';
+import styles from './ScaleBar.module.css';
 
 /** Props for ScaleBar. */
 type ScaleBarProps = {
@@ -38,19 +38,19 @@ type ScaleBarProps = {
  */
 export function ScaleBar({ scale }: ScaleBarProps): ReactNode {
   return (
-    <div id="scale-bar" aria-label="Scale reference">
+    <div className={styles.scaleBar} aria-label="Scale reference">
       {/* Label: pre-formatted string like "500 Mpc" or "2 Gpc" */}
-      <span id="scale-label">{scale.label}</span>
+      <span className={styles.scaleLabel}>{scale.label}</span>
 
       {/*
         Bar line: width is set inline because it changes dynamically.
         `scale.widthPx` is already rounded to an integer by the engine,
         so `+ 'px'` is safe. We use a string to match the CSS `px` unit.
 
-        The bracket appearance comes from the CSS borders on #scale-line.
+        The bracket appearance comes from the CSS borders on .scaleLine.
       */}
       <span
-        id="scale-line"
+        className={styles.scaleLine}
         style={{ width: scale.widthPx + 'px' }}
       />
     </div>

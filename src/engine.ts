@@ -42,7 +42,7 @@ import { createOrbitCamera, computeViewProj, updatePosition } from './camera/orb
 import { attachOrbitControls } from './camera/orbitControls';
 import { generateSyntheticCloud } from './data/synthetic';
 import { decodePointCloud } from './data/pointCloudFormat';
-import { cartesianToRaDecZ } from './data/coords';
+import { cartesianToRaDecZ } from './utils/math/coords';
 import {
   formatRaSexagesimal,
   formatDecSexagesimal,
@@ -54,7 +54,8 @@ import {
   galaxyTypeFromColor,
   sdssExplorerUrl,
   sdssThumbnailUrl,
-} from './data/physics';
+} from './utils/math/physics';
+import { formatDistance } from './utils/format/distance';
 import type { PointCloud } from './types';
 
 // ── Public types ───────────────────────────────────────────────────────────────
@@ -339,21 +340,6 @@ function niceRound(x: number): number {
     mantissa >= 2 ? 2 :
     1;
   return niceMantissa * power;
-}
-
-/**
- * Format a distance in Mpc, switching units up/down for readability:
- *   < 1 Mpc       → kpc (kiloparsec)
- *   < 1000 Mpc    → Mpc (megaparsec)  — most SDSS galaxies fall here
- *   ≥ 1000 Mpc    → Gpc (gigaparsec)  — high-z quasars
- *
- * The number is rendered with toLocaleString for thousands separators so big
- * values like "2,000 Mpc" stay readable.
- */
-function formatDistance(mpc: number): string {
-  if (mpc < 1) return `${(mpc * 1000).toLocaleString()} kpc`;
-  if (mpc >= 1000) return `${(mpc / 1000).toLocaleString()} Gpc`;
-  return `${mpc.toLocaleString()} Mpc`;
 }
 
 /** Discriminated source tag returned by `loadCloud`. */

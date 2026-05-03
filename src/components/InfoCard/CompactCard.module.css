@@ -1,0 +1,90 @@
+/*
+ * CompactCard.module.css — slimmer hover-preview card.
+ *
+ * Migrated from the .info-card-compact rule and its shared glass-panel base
+ * in index.html.  Visual weight is deliberately lower than FullCard — slightly
+ * reduced padding and a slightly lower background opacity signal "secondary".
+ */
+
+/* Outer glass panel — same base as FullCard but more compact */
+.infoCardCompact {
+  position: relative; /* for the ::before accent line */
+
+  padding: 8px 12px;
+  min-width: 180px;
+
+  /* Glassmorphism — same family as FullCard, slightly less opaque */
+  background: rgba(8, 12, 28, 0.60);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  border: 1px solid rgba(160, 200, 255, 0.18);
+  border-radius: 10px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(160, 200, 255, 0.06) inset;
+
+  color: #cfd8ff;
+  font: 12px / 1.45 ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* Subtle starlight-blue gradient accent line along the top edge */
+.infoCardCompact::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(120, 180, 255, 0.45) 30%,
+    rgba(180, 220, 255, 0.7) 50%,
+    rgba(120, 180, 255, 0.45) 70%,
+    transparent 100%
+  );
+}
+
+/* "HOVER" title row */
+.cardTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: rgba(160, 180, 230, 0.45);
+  text-transform: uppercase;
+}
+
+/* SDSS name headline */
+.cardHeadline {
+  font-size: 13px;
+  color: #e8eeff;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+  word-break: break-all;
+}
+
+/* Lookback time line */
+.cardLookbackLine {
+  color: #e8eeff;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+/* Earth-era sub-line */
+.cardLookbackEra {
+  color: rgba(200, 220, 255, 0.70);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+/* Distance · galaxy-type line */
+.cardDistLine {
+  color: rgba(200, 220, 255, 0.80);
+  font-size: 11px;
+}

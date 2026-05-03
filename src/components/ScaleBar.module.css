@@ -1,0 +1,51 @@
+/*
+ * ScaleBar.module.css — bottom-right distance legend for the current zoom level.
+ *
+ * Migrated from the #scale-bar, #scale-label, and #scale-line rules in
+ * index.html.  ID selectors become local class names; the component references
+ * them via styles.scaleBar, styles.scaleLabel, styles.scaleLine.
+ */
+
+/* Outer container: glassmorphic panel fixed to the bottom-right corner */
+.scaleBar {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 10;
+  padding: 8px 12px 10px;
+
+  background: rgba(8, 12, 28, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(160, 200, 255, 0.14);
+  border-radius: 8px;
+
+  color: #cfd8ff;
+  font: 11px/1.3 ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: none;
+  pointer-events: none; /* never intercepts canvas drags */
+}
+
+/* Pre-formatted distance label, e.g. "500 Mpc" */
+.scaleLabel {
+  display: block;
+  margin-bottom: 4px;
+  letter-spacing: 0.06em;
+  color: rgba(200, 220, 255, 0.85);
+}
+
+/*
+ * The bar itself: two short vertical "ticks" connected by a thin horizontal
+ * rule.  Width is set inline by the ScaleBar component — only the border
+ * styling lives here.
+ */
+.scaleLine {
+  display: inline-block;
+  height: 7px;
+  border-left:  1px solid rgba(220, 230, 255, 0.85);
+  border-right: 1px solid rgba(220, 230, 255, 0.85);
+  border-bottom: 1px solid rgba(220, 230, 255, 0.85);
+  box-sizing: border-box;
+}

@@ -1,0 +1,103 @@
+/*
+ * SettingsPanel.module.css — glassmorphic control panel fixed to the
+ * bottom-left corner.
+ *
+ * Migrated from the #settings-panel block and its nested selectors in
+ * index.html.  All selectors become local class names referenced via
+ * styles.* in SettingsPanel.tsx.
+ */
+
+/* Outer container */
+.settingsPanel {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 10;
+  padding: 12px 14px;
+
+  background: rgba(8, 12, 28, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(160, 200, 255, 0.16);
+  border-radius: 8px;
+
+  color: #cfd8ff;
+  font: 11px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+  user-select: none;
+  min-width: 200px;
+}
+
+/* "SETTINGS" heading */
+.panelTitle {
+  margin-bottom: 8px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(160, 180, 230, 0.5);
+}
+
+/* A single label + control row */
+.panelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+/* Label inside a panelRow */
+.panelRow label {
+  flex: 1;
+  color: rgba(200, 220, 255, 0.85);
+}
+
+/* Numeric readout alongside a slider */
+.panelValue {
+  font-variant-numeric: tabular-nums;
+  color: #e8eeff;
+  min-width: 44px;
+  text-align: right;
+}
+
+/* Range sliders span the full panel width so they're easy to drag */
+.panelRow input[type="range"] {
+  width: 100%;
+  accent-color: rgba(180, 220, 255, 0.85);
+  cursor: pointer;
+}
+
+/* Checkbox alignment */
+.panelRow input[type="checkbox"] {
+  accent-color: rgba(180, 220, 255, 0.85);
+  cursor: pointer;
+  /* Prevent the checkbox from shrinking under flex */
+  flex-shrink: 0;
+}
+
+/* Horizontal rule between the sliders and the reset button */
+.panelDivider {
+  margin: 8px 0 6px;
+  border-top: 1px solid rgba(160, 200, 255, 0.12);
+}
+
+/* "Reset camera" button */
+.settingsPanel button {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid rgba(160, 200, 255, 0.25);
+  border-radius: 4px;
+  background: rgba(40, 60, 100, 0.35);
+  color: #e8eeff;
+  font: inherit;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+
+.settingsPanel button:hover {
+  background: rgba(60, 90, 140, 0.5);
+  border-color: rgba(180, 220, 255, 0.4);
+}
+
+.settingsPanel button:active {
+  background: rgba(80, 120, 180, 0.55);
+}

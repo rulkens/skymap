@@ -1,0 +1,32 @@
+/*
+ * Thumbnail.module.css — 80×80 px SDSS image cutout and its broken-image
+ * fallback placeholder.
+ *
+ * Migrated from the .thumb-img and .thumb-placeholder rules in index.html.
+ */
+
+/* Thumbnail image — 80×80 px rounded square */
+.thumbImg {
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  border: 1px solid rgba(160, 200, 255, 0.20);
+  flex-shrink: 0;
+  object-fit: cover;
+  display: block;
+}
+
+/* Placeholder shown when the thumbnail fails to load — same dimensions */
+.thumbPlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  border: 1px dashed rgba(160, 200, 255, 0.25);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(160, 180, 230, 0.35);
+  font-size: 10px;
+  text-align: center;
+}

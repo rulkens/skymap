@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { redshiftToDistanceMpc, raDecZToCartesian, cartesianToRaDecZ } from '../src/data/coords';
+import { redshiftToDistanceMpc, raDecZToCartesian, cartesianToRaDecZ } from '../src/utils/math/coords';
 
 const close = (a: number, b: number, eps = 1e-3) => Math.abs(a - b) < eps;
 

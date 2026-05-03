@@ -13,14 +13,15 @@
  * tree. In practice the tree is small and this doesn't matter much, but it's a
  * good habit that scales when the tree grows.
  *
- * ### CSS dependency
+ * ### CSS
  *
- * The outer `<div>` uses `id="status"` to pick up the fixed-position style
- * declared in `index.html`. Same class name as the original imperative code.
+ * Layout rules live in StatusBar.module.css alongside this file. The outer div
+ * uses `styles.status` instead of `id="status"`.
  */
 
 import type { ReactNode } from 'react';
 import type { EngineStatus } from '../engine';
+import styles from './StatusBar.module.css';
 
 /** Props for StatusBar. */
 type StatusBarProps = {
@@ -37,7 +38,7 @@ type StatusBarProps = {
  */
 export function StatusBar({ status }: StatusBarProps): ReactNode {
   return (
-    <div id="status">
+    <div className={styles.status}>
       {statusText(status)}
     </div>
   );

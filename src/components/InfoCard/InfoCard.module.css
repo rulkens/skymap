@@ -1,0 +1,25 @@
+/*
+ * InfoCard.module.css — the outer stack wrapper used when both pinned and
+ * hover cards are visible simultaneously.
+ *
+ * When only a single card is rendered InfoCard returns <FullCard> directly,
+ * so this module's only rule is the stack container itself.  The individual
+ * card styles live in FullCard.module.css and CompactCard.module.css.
+ *
+ * Migrated from the .info-card-stack rule in index.html.
+ */
+
+/*
+ * Vertical stack wrapper — positions the whole pair at the top-right corner.
+ * Child cards (FullCard, CompactCard) are normal flow inside the flex column,
+ * so the stack height grows naturally as content changes.
+ */
+.infoCardStack {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

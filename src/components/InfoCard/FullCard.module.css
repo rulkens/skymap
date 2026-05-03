@@ -1,0 +1,233 @@
+/*
+ * FullCard.module.css — rich galaxy info card layout.
+ *
+ * Migrated from the .info-card-full block and all .card-* rules in index.html.
+ *
+ * CSS-modules note:
+ *   The `pinned` variant is applied via an additional class on the root element:
+ *     <div className={`${styles.infoCardFull} ${styles.pinned}`}>
+ *   The .pinnedBadge span is always in the DOM; the CSS selector
+ *     .infoCardFull.pinned .pinnedBadge { display: inline; }
+ *   controls its visibility.  This replaces the old data-pinned attribute +
+ *   ID-selector approach, which did not compose cleanly with CSS modules.
+ */
+
+/* ── Shared glass-panel base (shared by .infoCardFull and CompactCard) ──────── */
+
+/*
+ * Full card — stands alone (fixed corner) OR participates in a stack.
+ * When inside .infoCardStack the stack overrides position via the rule below.
+ */
+.infoCardFull {
+  position: relative; /* for the ::before accent line */
+
+  /* When standalone fix directly to corner */
+  display: block;
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 10;
+
+  padding: 14px 18px;
+  min-width: 240px;
+
+  /* Glassmorphism: dark translucent background with blur */
+  background: rgba(8, 12, 28, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px); /* Safari */
+
+  border: 1px solid rgba(160, 200, 255, 0.18);
+  border-radius: 10px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(160, 200, 255, 0.06) inset;
+
+  color: #cfd8ff;
+  font: 12px / 1.45 ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/*
+ * When FullCard is a child of the InfoCard stack wrapper, override the fixed
+ * positioning so it flows inside the flex column.  The parent stack handles
+ * the corner placement.
+ *
+ * This uses a :global selector to reference the stack class from another
+ * module.  An alternative is to use a data attribute on the stack wrapper,
+ * but this keeps the CSS co-located with the component that is affected.
+ */
+:global(.infoCardStack) .infoCardFull {
+  position: relative;
+  top: auto;
+  right: auto;
+  z-index: auto;
+}
+
+/* Subtle starlight-blue gradient accent line along the top edge */
+.infoCardFull::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  border-radius: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(120, 180, 255, 0.45) 30%,
+    rgba(180, 220, 255, 0.7) 50%,
+    rgba(120, 180, 255, 0.45) 70%,
+    transparent 100%
+  );
+}
+
+/* ── Title row ────────────────────────────────────────────────────────────── */
+
+.cardTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: rgba(160, 180, 230, 0.45);
+  text-transform: uppercase;
+}
+
+/* PINNED badge — hidden by default; shown via .pinned modifier on root */
+.pinnedBadge {
+  display: none;
+  color: #ffd97a;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* Show the badge when the root element carries the .pinned modifier */
+.infoCardFull.pinned .pinnedBadge {
+  display: inline;
+}
+
+/* ── SDSS designation headline ────────────────────────────────────────────── */
+
+.cardHeadline {
+  font-size: 13px;
+  color: #e8eeff;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+  word-break: break-all; /* long names like "SDSS J..." don't overflow the card */
+}
+
+/* ── Section separators ───────────────────────────────────────────────────── */
+
+.cardSection {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(160, 200, 255, 0.10);
+}
+
+/* Thumbnail + cosmology summary side-by-side */
+.cardTopRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.cardSummary {
+  flex: 1;
+  min-width: 0; /* allow text truncation inside flex child */
+}
+
+/* "Light left X.X Gyr ago" */
+.cardLookbackLine {
+  color: #e8eeff;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+/* Earth-era sub-line; slightly muted */
+.cardLookbackEra {
+  color: rgba(200, 220, 255, 0.70);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+/* Distance · speed line */
+.cardDistLine {
+  color: rgba(200, 220, 255, 0.80);
+  font-size: 11px;
+  margin-bottom: 3px;
+}
+
+/* Galaxy type line */
+.cardTypeLine {
+  color: rgba(200, 220, 255, 0.80);
+  font-size: 11px;
+}
+
+/* ── Data rows ────────────────────────────────────────────────────────────── */
+
+.cardRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.cardLabel {
+  color: rgba(160, 180, 230, 0.55);
+  flex-shrink: 0;
+}
+
+.cardValue {
+  color: #e8eeff;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ObjID: 19 digits — smaller font + tabular nums prevents overflow */
+.cardObjid {
+  font-size: 10px;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  /* <code> resets font family — restore our monospace stack */
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  word-break: break-all;
+}
+
+/* ── Expandable details ───────────────────────────────────────────────────── */
+
+.detailsSummary {
+  cursor: pointer;
+  list-style: none; /* hide the default triangle on some browsers */
+  color: rgba(160, 180, 230, 0.55);
+  font-size: 11px;
+  padding: 4px 0 2px;
+  user-select: none;
+  outline: none;
+}
+/* WebKit/Blink hide the default marker differently */
+.detailsSummary::-webkit-details-marker { display: none; }
+
+/* Add a disclosure arrow via ::before */
+details[open] > .detailsSummary::before { content: '▾ '; }
+details:not([open]) > .detailsSummary::before { content: '▸ '; }
+
+/* ── External link ────────────────────────────────────────────────────────── */
+
+.externalLink {
+  display: block;
+  margin-top: 10px;
+  text-align: right;
+  font-size: 11px;
+  color: rgba(160, 200, 255, 0.65);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  transition: color 0.15s ease;
+}
+.externalLink:hover {
+  color: #a8d0ff;
+  text-shadow: 0 0 8px rgba(120, 180, 255, 0.4);
+}

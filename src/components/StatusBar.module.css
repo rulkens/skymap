@@ -1,0 +1,15 @@
+/*
+ * StatusBar.module.css — fixed top-left HUD text for engine status.
+ *
+ * Migrated from the #status rule in index.html.  The component uses
+ * `styles.status` for the outer div, which Vite/CSS-modules resolves to a
+ * scoped class name at build time.
+ */
+
+.status {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  color: #ccc;
+  font: 12px/1.4 ui-monospace, monospace;
+}
