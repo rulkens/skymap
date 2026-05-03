@@ -1108,6 +1108,37 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             }
           }
 
+          // ── Back-to-front sort for correct alpha compositing ────────────
+          //
+          // Both QuadRenderer and DiskRenderer use premultiplied "over"
+          // blending, which is order-dependent: a far galaxy drawn AFTER a
+          // near one composites on top of it, breaking the painter's
+          // expectation. We sort each instance list by descending
+          // camera-distance² so far galaxies emit first and near ones
+          // overlay them correctly.
+          //
+          // O(N log N) per frame with N ≤ 256 (atlas slot cap), so the
+          // sort cost is well under a millisecond even on mobile GPUs;
+          // way cheaper than the alternative of a depth-sorted GPU pass.
+          //
+          // Comparator recomputes squared distance from the camera —
+          // duplicate work vs. caching during the build loop, but trivial
+          // at this N and avoids carrying a parallel index array.
+          const cmpFar = (
+            a: { x: number; y: number; z: number },
+            b: { x: number; y: number; z: number },
+          ): number => {
+            const dax = a.x - drawCamPos[0];
+            const day = a.y - drawCamPos[1];
+            const daz = a.z - drawCamPos[2];
+            const dbx = b.x - drawCamPos[0];
+            const dby = b.y - drawCamPos[1];
+            const dbz = b.z - drawCamPos[2];
+            return dbx * dbx + dby * dby + dbz * dbz - (dax * dax + day * day + daz * daz);
+          };
+          quads.sort(cmpFar);
+          disks.sort(cmpFar);
+
           if (quads.length > 0) {
             quadRenderer.draw(
               pass,
