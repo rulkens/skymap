@@ -76,16 +76,17 @@ import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 // Pulled in here so the per-frame loop can drive the atlas, the priority
 // queue, and the textured-quad pass.  The math helpers come from utils/math:
 // `apparentSizePx` decides whether a galaxy is big enough on screen to be
-// worth a thumbnail, `galaxyDiameterKpc` is the physical-size estimator
-// (constant 30 kpc in v1), and `cartesianToRaDecZ` recovers sky coordinates
-// from the Cartesian positions stored in the PointCloud (we need RA/Dec to
-// build the cutout URL).
+// worth a thumbnail, and `cartesianToRaDecZ` recovers sky coordinates from
+// the Cartesian positions stored in the PointCloud (we need RA/Dec to build
+// the cutout URL).  Per-galaxy physical diameters now live on the cloud
+// itself (`cloud.diameterKpc[i]`, populated by the build pipeline), so the
+// loop reads them directly rather than calling a constant estimator.
 import { TextureAtlas } from '../gpu/textureAtlas';
 import { GalaxyImageQueue } from '../gpu/galaxyImageQueue';
 import { QuadRenderer } from '../gpu/quadRenderer';
 import { DiskRenderer, type DiskInstance } from '../gpu/diskRenderer';
 import { fetchGalaxyBitmap } from '../gpu/galaxyImageFetcher';
-import { galaxyDiameterKpc, cartesianToRaDecZ } from '../../utils/math';
+import { cartesianToRaDecZ } from '../../utils/math';
 import type { QuadInstance } from '../../@types';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
@@ -929,16 +930,29 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           const fovYRad = cam.fovYRad;
           const viewportH = canvas.height;
           const pxPerRad = viewportH / (2 * Math.tan(fovYRad / 2));
-          const dKpc = galaxyDiameterKpc({}); // v1: constant 30 kpc
-          const dMpc = dKpc / 1000;
-          // A galaxy of this diameter at distance camDist is
-          // `dMpc / camDist * pxPerRad` pixels wide.  Inverting the
-          // ≥ APPARENT_SIZE_THRESHOLD_PX inequality:
-          //   camDist ≤ dMpc * pxPerRad / threshold
-          // which lets us cull on a single squared compare without sqrt.
-          const maxCamDistForVisibility =
-            (dMpc * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
-          const maxCamDistSq = maxCamDistForVisibility * maxCamDistForVisibility;
+
+          // ── Per-galaxy diameters now live on the cloud ───────────────
+          //
+          // Earlier versions of this loop hoisted a single 30 kpc
+          // constant and pre-computed one `maxCamDistSq` from it.  Now
+          // we use per-galaxy `cloud.diameterKpc[i]`, which means the
+          // visibility threshold varies per row — a 100-kpc giant stays
+          // visible 3× farther than a 30-kpc disk.
+          //
+          // We pre-compute an UPPER BOUND `maxCamDistSqUpper` from the
+          // largest plausible diameter so the cheap squared-distance
+          // early-out still culls the absolute majority of far-away
+          // rows; the precise per-galaxy threshold is re-checked after
+          // the sqrt.  Pulling the per-row diameter read forward into
+          // the cull would defeat the cache-friendly tight loop, so we
+          // accept a slightly looser outer cull in exchange for keeping
+          // the squared-compare path identical to before.
+          const MAX_PLAUSIBLE_DIAMETER_KPC = 200; // covers giant ellipticals
+          const dMpcMax = MAX_PLAUSIBLE_DIAMETER_KPC / 1000;
+          const maxCamDistForVisibilityUpper =
+            (dMpcMax * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
+          const maxCamDistSqUpper =
+            maxCamDistForVisibilityUpper * maxCamDistForVisibilityUpper;
 
           const cx = cam.position[0];
           const cy = cam.position[1];
@@ -968,12 +982,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               const dy = cy - y;
               const dz = cz - z;
               const camDistSq = dx * dx + dy * dy + dz * dz;
-              if (camDistSq <= 0 || camDistSq > maxCamDistSq) continue;
+              if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
 
-              // Galaxy is close enough to qualify; now pay for the sqrt
-              // and exact apparent-size formula on this small subset.
+              // Survived the cheap cull; pay for the per-galaxy diameter
+              // read + sqrt + exact apparent-size compare.
+              const dKpcRow = cloud.diameterKpc[i]!;
+              const dMpcRow = dKpcRow / 1000;
               const camDist = Math.sqrt(camDistSq);
-              const px = (dMpc / camDist) * pxPerRad;
+              const px = (dMpcRow / camDist) * pxPerRad;
               if (px < APPARENT_SIZE_THRESHOLD_PX) continue;
 
               // Recover RA/Dec for the cutout URL.  The PointCloud doesn't
@@ -1029,12 +1045,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
                 continue; // no quad this frame — wait for the bitmap to land
               }
 
-              // Pack the QuadInstance.  4× the physical diameter gives the
-              // quad visual presence without dwarfing the surrounding dot
-              // field — the texture's body fills the central ~25% of the
-              // quad, with the rest fading to transparent via the alpha
-              // channel of the cutout JPEG.
-              const sizeWorldMpc = (dKpc / 1000) * 4;
+              // Pack the QuadInstance.  4× the per-galaxy diameter gives
+              // the quad visual presence without dwarfing the surrounding
+              // dot field — the texture's body fills the central ~25% of
+              // the quad, with the rest fading to transparent via the
+              // alpha channel of the cutout JPEG.  Same multiplier as the
+              // GALAXY_RADIUS_MPC formula in points.wgsl, so the soft-glow
+              // dot and the textured thumbnail occupy identical screen
+              // real-estate at the texture-load fade-in moment.
+              const sizeWorldMpc = (dKpcRow / 1000) * 4;
               const [u0, v0, u1, v1] = atlas.slotUv(slot);
 
               // ── Fade-in multipliers ──────────────────────────────────
