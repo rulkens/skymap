@@ -24,8 +24,16 @@ struct InstanceIn {
 };
 
 struct VsOut {
-  @builtin(position) clipPos: vec4<f32>,
-  @location(0)       uv:      vec2<f32>,
+  @builtin(position) clipPos:   vec4<f32>,
+  // UV inside the atlas — used to sample the bitmap.  Maps the slot's
+  // sub-rectangle of the 2048×2048 atlas.
+  @location(0)       atlasUv:   vec2<f32>,
+  // UV inside the corner-local [0, 1]² unit square — used to compute
+  // the radial alpha mask in `fs`.  Independent of atlasUv because the
+  // atlas slot might not occupy the full corner range when slot UV
+  // rectangles get clamped or padded.  Threading both lets us decouple
+  // "which texel to sample" from "where am I in the quad shape".
+  @location(1)       cornerUv:  vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> u:        Uniforms;
@@ -82,16 +90,29 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // atlas.
   let cornerUv = (corner + vec2<f32>(1.0, 1.0)) * 0.5;
   let uvLocal = vec2<f32>(cornerUv.x, 1.0 - cornerUv.y);
-  out.uv = mix(instance.uvRect.xy, instance.uvRect.zw, uvLocal);
+  out.atlasUv = mix(instance.uvRect.xy, instance.uvRect.zw, uvLocal);
+  // Forward the corner-local UV to the FS so it can compute the
+  // radial mask without re-deriving it from clip-space coords.
+  out.cornerUv = cornerUv;
   return out;
 }
 
 @fragment
 fn fs(in: VsOut) -> @location(0) vec4<f32> {
-  let rgba = textureSample(atlasTex, atlasSmp, in.uv);
-  // Premultiplied-alpha output: lets quads blend correctly under the
-  // additive points layer above without darkening the background.
-  // Task 11 adds a radial alpha falloff so the JPEG-square outline
-  // softens into the dot field; for v1 we accept the hard edge.
-  return vec4<f32>(rgba.rgb * rgba.a, rgba.a);
+  let rgba = textureSample(atlasTex, atlasSmp, in.atlasUv);
+
+  // Radial mask centred on the slot middle (cornerUv = 0.5, 0.5).
+  // Fades from 1.0 inside r=0.4 to 0.0 at r≥0.5 via smoothstep.
+  // Why this shape?  A galaxy thumbnail is mostly bulge in the center
+  // and dim sky / image-edge artefacts at the corners — the corners
+  // are exactly the part we want to hide so the quad blends into the
+  // surrounding dot field instead of showing a hard JPEG square.
+  // 0.4 → 0.5 gives a ~10% transition band, soft enough to look like
+  // a Gaussian halo rather than a clipped circle.
+  let r = length(in.cornerUv - vec2<f32>(0.5, 0.5));
+  let mask = 1.0 - smoothstep(0.4, 0.5, r);
+  let alpha = rgba.a * mask;
+  // Premultiplied-alpha output — required by the project's blend
+  // configuration (see device.ts `alphaMode: 'premultiplied'`).
+  return vec4<f32>(rgba.rgb * alpha, alpha);
 }
