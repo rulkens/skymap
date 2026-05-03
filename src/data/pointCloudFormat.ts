@@ -1,69 +1,55 @@
 /**
- * Binary on-disk format for a `PointCloud` — version 3.
+ * Binary on-disk format for a `PointCloud` — version 4.
  *
- * Why a custom binary format instead of JSON or CSV?
+ * What changed in v4?  We added an `f32 diameterKpc` slot at offset 48 of
+ * each per-point record, growing the per-point footprint from 56 bytes to
+ * 64 bytes.  The trailing padding shrinks from 8 bytes (v3) to 12 bytes
+ * (v4) — wait, that grew, because we added 4 bytes of payload but bumped
+ * the record size by a full 16-byte alignment quantum to keep the per-point
+ * record on a 16-byte boundary (so the buffer remains usable as a WebGPU
+ * uniform/storage-buffer payload without restructuring).
  *
- *   - SDSS subsets quickly hit millions of points. JSON for 1M points is
- *     ~40 MB of text; the same data as packed binary parses instantly with
- *     no string→number conversion and no GC churn.
- *   - The decoded layout (Float32Arrays of positions/magnitudes, BigUint64Array
- *     of objIDs) is what we upload to the GPU — zero conversion cost.
+ * Why a per-galaxy diameter at all?  Earlier versions used a project-wide
+ * 30 kpc constant for every renderer footprint computation.  That made
+ * dwarf galaxies look implausibly large and giants look implausibly small;
+ * worse, it dragged the apparent-size threshold for thumbnail loading away
+ * from the actual galaxy boundary, so the visible disk and the JPEG
+ * texture were misaligned.  The diameter now drives:
+ *   - point-billboard apparent radius (points.wgsl GALAXY_RADIUS_MPC)
+ *   - thumbnail quad world-space size (engine.ts sizeWorldMpc)
+ *   - 3D disk plane world-space size
+ *   - focusDistanceMpc tween destination
  *
- * What changed in v3?
+ * Why preserve NaN round-trip if the renderer can't tolerate NaN?  The
+ * encoder/decoder remain pure functions (easy to unit-test in isolation
+ * and independent of the build pipeline).  The pipeline guarantees a
+ * finite value upstream; if a corrupted .bin ever delivered NaN, that's a
+ * logged warning, not a malformed format.
  *
- *   v3 adds per-galaxy orientation: `axisRatio` (b/a in [0, 1]) and
- *   `positionAngleDeg` (PA in [0, 180), measured east of north). These drive
- *   the projected disk shapes introduced in the galaxy-orientation-disks plan.
- *
- *   We deliberately preserve NaN as a legitimate decoded value: NaN means
- *   "no measurement / no fallback applied yet". In practice the build pipeline
- *   always fills these in (real value when a cross-match succeeds, deterministic
- *   fallback otherwise), but the encoder/decoder must round-trip NaN without
- *   substitution so they remain pure functions — easy to unit-test in isolation
- *   and independent of however callers populate the cloud upstream.
- *
- *   The trailing per-record padding shrinks from 8 bytes (v2) to 8 bytes
- *   (v3) — wait, that's the same. The math: we added two new f32 fields
- *   (8 bytes), so to keep the record size on a 16-byte boundary we needed to
- *   add at least 8 bytes of payload, which we did. Total grows 48 → 56 B/point.
- *
- * Layout (little-endian — x86/ARM both default to LE and WebGPU does too):
+ * Layout (little-endian):
  *
  *     ── HEADER (16 bytes) ──────────────────────────────────────────────────
- *     offset  size  field
- *     ──────  ────  ─────
  *     0       4     magic    = "SKMP" (0x504d4b53)
- *     4       4     version  = 3 (uint32)
+ *     4       4     version  = 4 (uint32)
  *     8       4     count    = number of points (uint32)
- *     12      4     reserved = 0 (room for future flags without bumping version)
+ *     12      4     reserved = 0
  *
- *     ── PER-POINT RECORD (56 bytes each) ───────────────────────────────────
- *     offset  size  field
- *     ──────  ────  ─────
- *     0       8     objID            (uint64) — SDSS object identifier
- *     8       4     x                (float32) — Mpc
+ *     ── PER-POINT RECORD (64 bytes) ────────────────────────────────────────
+ *     0       8     objID            (uint64)
+ *     8       4     x                (float32, Mpc)
  *     12      4     y                (float32)
  *     16      4     z                (float32)
- *     20      4     magU             (float32) — modelMag_u
- *     24      4     magG             (float32) — modelMag_g
- *     28      4     magR             (float32) — modelMag_r
- *     32      4     magI             (float32) — modelMag_i
- *     36      4     magZ             (float32) — modelMag_z
+ *     20      4     magU             (float32)
+ *     24      4     magG             (float32)
+ *     28      4     magR             (float32)
+ *     32      4     magI             (float32)
+ *     36      4     magZ             (float32)
  *     40      4     axisRatio        (float32) — b/a in [0,1] or NaN
  *     44      4     positionAngleDeg (float32) — PA in [0,180) or NaN
- *     48      8     padding          (zeroed)
+ *     48      4     diameterKpc      (float32) — physical diameter in kpc (NEW in v4)
+ *     52      12    padding          (zeroed)
  *
- * The 8-byte tail padding keeps the per-point record on a 16-byte boundary,
- * so the buffer remains usable as a WebGPU uniform/storage-buffer payload
- * without any restructuring if we ever need per-point GPU access beyond
- * vertex attributes.
- *
- * Total file size: 16 + count × 56.
- *
- * The `magic` lets us reject random files quickly. The `version` lets us
- * evolve the format — both v1 and v2 files are now rejected with a clear
- * message instructing the user to regenerate via `npm run build-all`
- * (the modern entrypoint that supersedes the old `csv-to-bin`).
+ * Total file size: 16 + count × 64.
  */
 
 import type { PointCloud } from '../@types';
@@ -76,7 +62,7 @@ import type { PointCloud } from '../@types';
 const MAGIC = 0x504d4b53;
 
 /** Bump this when the layout changes incompatibly. */
-const VERSION = 3;
+const VERSION = 4;
 
 /** Header size in bytes (4 × uint32). Body starts here. */
 const HEADER_BYTES = 16;
@@ -85,10 +71,11 @@ const HEADER_BYTES = 16;
  * Per-point payload in bytes.
  *
  * Breakdown: 8 (objID) + 4×3 (xyz) + 4×5 (5 photometric bands)
- *          + 4×2 (axisRatio + positionAngleDeg) + 8 (tail padding) = 56.
- * 56 is a multiple of 16, satisfying the GPU-alignment note above.
+ *          + 4×2 (axisRatio + positionAngleDeg) + 4 (diameterKpc)
+ *          + 12 (tail padding) = 64.
+ * 64 is a multiple of 16, satisfying the GPU-alignment note above.
  */
-const BYTES_PER_POINT = 56;
+const BYTES_PER_POINT = 64;
 
 /**
  * Encode a `PointCloud` to an `ArrayBuffer` ready to write to disk
@@ -110,6 +97,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
     magZ,
     axisRatio,
     positionAngleDeg,
+    diameterKpc,
   } = cloud;
   if (objIDs.length !== count) throw new Error('objIDs length mismatch');
   if (positions.length !== count * 3) throw new Error('positions length mismatch');
@@ -121,6 +109,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
   if (axisRatio.length !== count) throw new Error('axisRatio length mismatch');
   if (positionAngleDeg.length !== count)
     throw new Error('positionAngleDeg length mismatch');
+  if (diameterKpc.length !== count) throw new Error('diameterKpc length mismatch');
 
   // Allocate exactly the bytes we need: header + per-point records.
   const buf = new ArrayBuffer(HEADER_BYTES + count * BYTES_PER_POINT);
@@ -141,8 +130,8 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
   // into it by converting the per-record byte offset to a float element index.
   // Note: HEADER_BYTES (16) is a multiple of 4, so the view is correctly aligned.
   //
-  // Subtle but important for v3: writing NaN through a Float32Array preserves
-  // the IEEE-754 NaN bit pattern losslessly, so NaN sentinels round-trip.
+  // Writing NaN through a Float32Array preserves the IEEE-754 NaN bit pattern
+  // losslessly, so NaN sentinels (used for "no measurement") round-trip cleanly.
   const floatView = new Float32Array(buf);
 
   for (let i = 0; i < count; i++) {
@@ -154,7 +143,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
 
     // Float fields: index into the Float32Array view using the byte offset
     // divided by 4 (Float32 = 4 bytes). byteBase is always a multiple of 8
-    // (HEADER_BYTES=16, BYTES_PER_POINT=56, both multiples of 8), so
+    // (HEADER_BYTES=16, BYTES_PER_POINT=64, both multiples of 8), so
     // (byteBase + 8) is always a multiple of 4 — the Float32Array is aligned.
     const f = (byteBase + 8) / 4; // float index for the first float field (x)
     floatView[f + 0] = positions[i * 3 + 0]!;
@@ -167,8 +156,9 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
     floatView[f + 7] = magZ[i]!;
     floatView[f + 8] = axisRatio[i]!;
     floatView[f + 9] = positionAngleDeg[i]!;
-    // The 8 bytes of tail padding (floatView[f+10] and [f+11]) remain zero
-    // because `new ArrayBuffer` zero-initialises its memory. No write needed.
+    floatView[f + 10] = diameterKpc[i]!;
+    // The 12 bytes of tail padding (floatView[f+11], [f+12], [f+13]) remain
+    // zero because `new ArrayBuffer` zero-initialises its memory. No write needed.
   }
   return buf;
 }
@@ -177,7 +167,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
  * Decode an `ArrayBuffer` (e.g. from `await fetch(...).arrayBuffer()`) back
  * into a `PointCloud`. Pure — no I/O.
  *
- * Validates magic and version. Rejects v1 and v2 files with a message
+ * Validates magic and version. Rejects v1, v2, and v3 files with a message
  * instructing the user to regenerate. Throws on other malformed input rather
  * than silently returning garbage.
  *
@@ -191,9 +181,9 @@ export function decodePointCloud(buf: ArrayBuffer): PointCloud {
 
   const version = dv.getUint32(4, true);
   if (version !== VERSION) {
-    // Single error path covers v1, v2, and any other foreign version. The
+    // Single error path covers v1, v2, v3, and any other foreign version. The
     // regenerate hint points at the modern build entrypoint (`build-all`),
-    // which now also writes the v3 orientation fields.
+    // which now also writes the v4 diameterKpc field.
     throw new Error(
       `unsupported version: ${version} — please regenerate the .bin via "npm run build-all"`,
     );
@@ -211,6 +201,7 @@ export function decodePointCloud(buf: ArrayBuffer): PointCloud {
   const magZ = new Float32Array(count);
   const axisRatio = new Float32Array(count);
   const positionAngleDeg = new Float32Array(count);
+  const diameterKpc = new Float32Array(count);
 
   // Same Float32Array-view trick as the encoder: read floats cheaply by index.
   // NaN bit patterns survive this view-read just like they do on write.
@@ -234,7 +225,8 @@ export function decodePointCloud(buf: ArrayBuffer): PointCloud {
     magZ[i] = floatView[f + 7]!;
     axisRatio[i] = floatView[f + 8]!;
     positionAngleDeg[i] = floatView[f + 9]!;
-    // Padding bytes (f+10, f+11) are ignored on decode.
+    diameterKpc[i] = floatView[f + 10]!;
+    // Padding bytes (f+11, f+12, f+13) are ignored on decode.
   }
 
   return {
@@ -248,5 +240,6 @@ export function decodePointCloud(buf: ArrayBuffer): PointCloud {
     magZ,
     axisRatio,
     positionAngleDeg,
+    diameterKpc,
   };
 }

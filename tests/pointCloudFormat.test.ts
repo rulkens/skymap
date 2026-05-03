@@ -3,7 +3,7 @@ import { encodePointCloud, decodePointCloud } from '../src/data/pointCloudFormat
 import type { PointCloud } from '../src/@types';
 
 /**
- * Build a minimal 2-point v3 PointCloud for use across multiple tests.
+ * Build a minimal 2-point v4 PointCloud for use across multiple tests.
  *
  * The two objIDs are chosen to exercise 64-bit precision: 1234567890123456789n
  * exceeds Number.MAX_SAFE_INTEGER (2^53 − 1 ≈ 9 × 10^15) so any accidental
@@ -21,6 +21,7 @@ function makeCloud(): PointCloud {
     magZ: new Float32Array([17.4, 16.1]),
     axisRatio: new Float32Array([0.42, 0.91]),
     positionAngleDeg: new Float32Array([13.5, 142.25]),
+    diameterKpc: new Float32Array([30, 30]),
   };
 }
 
@@ -72,10 +73,10 @@ describe('point cloud binary format', () => {
     expect(() => decodePointCloud(buf)).toThrow(/build-all/);
   });
 
-  it('encoded byte length matches 16 + count * 56', () => {
+  it('encoded byte length matches 16 + count * 64', () => {
     const buf = encodePointCloud(makeCloud());
-    // v3: HEADER_BYTES=16, BYTES_PER_POINT=56, count=2 → 16 + 2*56 = 128.
-    expect(buf.byteLength).toBe(16 + 2 * 56);
+    // v4: HEADER_BYTES=16, BYTES_PER_POINT=64, count=2 → 16 + 2*64 = 144.
+    expect(buf.byteLength).toBe(16 + 2 * 64);
   });
 });
 
@@ -104,10 +105,12 @@ function makeOrientCloud(count: number, fillNaN = false): PointCloud {
     magZ: new Float32Array(count),
     axisRatio: ar,
     positionAngleDeg: pa,
+    // diameterKpc zero-filled: these tests check axisRatio/PA round-trip only.
+    diameterKpc: new Float32Array(count),
   };
 }
 
-describe('pointCloudFormat v3', () => {
+describe('pointCloudFormat v4 (orientation round-trip)', () => {
   it('round-trips finite axisRatio and positionAngleDeg', () => {
     const cloud = makeOrientCloud(4, false);
     const decoded = decodePointCloud(encodePointCloud(cloud));
@@ -148,5 +151,94 @@ describe('pointCloudFormat v3', () => {
     dv.setUint32(4, 1, true);
     dv.setUint32(8, 0, true);
     expect(() => decodePointCloud(buf)).toThrow(/regenerate/);
+  });
+});
+
+/**
+ * v4-specific tests: diameterKpc field — finite values, NaN sentinel,
+ * byte-length verification, cross-version rejection (v1/v2/v3 all rejected),
+ * and length-mismatch guard on encode.
+ */
+describe('pointCloudFormat v4', () => {
+  it('round-trips diameterKpc finite values', () => {
+    const cloud: PointCloud = {
+      count: 2,
+      objIDs: new BigUint64Array([1n, 2n]),
+      positions: new Float32Array([1, 2, 3, 4, 5, 6]),
+      magU: new Float32Array([14, 15]),
+      magG: new Float32Array([14.5, 15.5]),
+      magR: new Float32Array([14.7, 15.7]),
+      magI: new Float32Array([14.8, 15.8]),
+      magZ: new Float32Array([14.9, 15.9]),
+      axisRatio: new Float32Array([0.5, 0.8]),
+      positionAngleDeg: new Float32Array([45, 90]),
+      diameterKpc: new Float32Array([30, 12.5]),
+    };
+    const decoded = decodePointCloud(encodePointCloud(cloud));
+    expect(Array.from(decoded.diameterKpc)).toEqual([30, 12.5]);
+  });
+
+  it('round-trips NaN sentinel in diameterKpc', () => {
+    const cloud: PointCloud = {
+      count: 1,
+      objIDs: new BigUint64Array([1n]),
+      positions: new Float32Array([1, 2, 3]),
+      magU: new Float32Array([14]),
+      magG: new Float32Array([14.5]),
+      magR: new Float32Array([14.7]),
+      magI: new Float32Array([14.8]),
+      magZ: new Float32Array([14.9]),
+      axisRatio: new Float32Array([0.5]),
+      positionAngleDeg: new Float32Array([45]),
+      diameterKpc: new Float32Array([NaN]),
+    };
+    const decoded = decodePointCloud(encodePointCloud(cloud));
+    expect(Number.isNaN(decoded.diameterKpc[0])).toBe(true);
+  });
+
+  it('produces a 64-byte-per-point file (header 16 + 1 point × 64 = 80)', () => {
+    const cloud: PointCloud = {
+      count: 1,
+      objIDs: new BigUint64Array([1n]),
+      positions: new Float32Array([1, 2, 3]),
+      magU: new Float32Array([14]),
+      magG: new Float32Array([14.5]),
+      magR: new Float32Array([14.7]),
+      magI: new Float32Array([14.8]),
+      magZ: new Float32Array([14.9]),
+      axisRatio: new Float32Array([0.5]),
+      positionAngleDeg: new Float32Array([45]),
+      diameterKpc: new Float32Array([30]),
+    };
+    expect(encodePointCloud(cloud).byteLength).toBe(80);
+  });
+
+  it('rejects v1, v2, AND v3 with the same regenerate message', () => {
+    for (const version of [1, 2, 3]) {
+      const buf = new ArrayBuffer(16);
+      const dv = new DataView(buf);
+      dv.setUint32(0, 0x504d4b53, true);
+      dv.setUint32(4, version, true);
+      dv.setUint32(8, 0, true);
+      dv.setUint32(12, 0, true);
+      expect(() => decodePointCloud(buf)).toThrow(/regenerate/i);
+    }
+  });
+
+  it('throws when diameterKpc length mismatches count', () => {
+    const cloud: PointCloud = {
+      count: 2,
+      objIDs: new BigUint64Array([1n, 2n]),
+      positions: new Float32Array([1, 2, 3, 4, 5, 6]),
+      magU: new Float32Array([14, 15]),
+      magG: new Float32Array([14.5, 15.5]),
+      magR: new Float32Array([14.7, 15.7]),
+      magI: new Float32Array([14.8, 15.8]),
+      magZ: new Float32Array([14.9, 15.9]),
+      axisRatio: new Float32Array([0.5, 0.8]),
+      positionAngleDeg: new Float32Array([45, 90]),
+      diameterKpc: new Float32Array([30]),
+    };
+    expect(() => encodePointCloud(cloud)).toThrow(/diameterKpc length mismatch/);
   });
 });
