@@ -42,7 +42,7 @@ import type { PointCloud } from '../../@types';
  * `Source`) because it specifically describes "what file did we load?",
  * which is a strict subset of the per-point `Source` enum.
  */
-export type CloudSource = 'sdss.bin' | '2mrs.bin' | 'glade.bin' | 'synthetic';
+export type CloudSource = 'sdss.bin' | '2mrs.bin' | 'glade.bin' | 'famous.bin' | 'synthetic';
 
 /** One real survey .bin to attempt to fetch. */
 type SurveyFile = {
@@ -62,6 +62,9 @@ const SURVEY_FILES: readonly SurveyFile[] = [
   { source: Source.SDSS, url: '/data/sdss.bin', cloudSource: 'sdss.bin' },
   { source: Source.TwoMRS, url: '/data/2mrs.bin', cloudSource: '2mrs.bin' },
   { source: Source.Glade, url: '/data/glade.bin', cloudSource: 'glade.bin' },
+  // Curated atlas — small (~1 KB for 20 entries, ~10 KB for 150).
+  // Loaded last so its result lands instantly even on slow connections.
+  { source: Source.Famous, url: '/data/famous.bin', cloudSource: 'famous.bin' },
 ];
 
 /** Per-survey load result the engine consumes. */
