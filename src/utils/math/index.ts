@@ -7,6 +7,7 @@
  */
 
 export * from './constants';
+export * from './apparentSizePx';
 export * from './redshiftToDistanceMpc';
 export * from './raDecZToCartesian';
 export * from './cartesianToRaDecZ';
