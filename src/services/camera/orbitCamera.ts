@@ -43,12 +43,19 @@ import type { OrbitCameraInit, OrbitCamera } from '../../@types';
 /**
  * Minimum allowed `cam.distance` in Mpc.
  *
- * Closer than 0.5 Mpc and the camera is effectively inside the Local Group:
- * 2MRS has galaxies at 0.7 Mpc (M31), and below that we'd be looking out from
- * inside the Milky Way's neighbourhood, which the renderer is not built for
- * (no proper-motion star catalogue, no Local Group overlays).  Hard floor.
+ * 0.05 Mpc = 50 kpc — below the focus-on tween's end distance (0.12 Mpc,
+ * see focusTween.ts `focusDistanceMpc()`) so that focus snaps the camera
+ * to its target framing without `clampDistance` ratcheting it back out
+ * the next time the user wheel-zooms.  At this distance the camera is
+ * sitting inside the Local-Group footprint of a typical galaxy — close
+ * enough that the disk's 30-kpc-diameter texture fills a substantial
+ * fraction of the screen but not so close we're inside the disk plane
+ * itself (which would expose perspective artefacts the billboard
+ * approximation isn't built for).  Hard floor; the orbit-camera near
+ * plane (engine.ts: 0.01 Mpc) handles the much-closer case where the
+ * tween briefly puts the camera right on top of the galaxy mid-flight.
  */
-export const MIN_DISTANCE_MPC = 0.5;
+export const MIN_DISTANCE_MPC = 0.05;
 
 /**
  * Maximum allowed `cam.distance` in Mpc.
