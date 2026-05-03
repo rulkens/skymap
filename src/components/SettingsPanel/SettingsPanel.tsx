@@ -83,6 +83,10 @@ type Props = {
   onBrightnessChange: (v: number) => void;
   /** Called when the user toggles auto-rotate. */
   onAutoRotateChange: (v: boolean) => void;
+  /** Whether galaxy texture thumbnails are rendered close-up on visible galaxies. */
+  galaxyTexturesEnabled: boolean;
+  /** Fired when the user toggles the galaxy-thumbnails checkbox. */
+  onGalaxyTexturesChange: (enabled: boolean) => void;
   /** Called when the user clicks "Reset camera". */
   onResetCamera: () => void;
   /**
@@ -143,6 +147,8 @@ export function SettingsPanel({
   onPointSizeChange,
   onBrightnessChange,
   onAutoRotateChange,
+  galaxyTexturesEnabled,
+  onGalaxyTexturesChange,
   onResetCamera,
   visibleSourceMask,
   onToggleSource,
@@ -274,6 +280,24 @@ export function SettingsPanel({
           checked={autoRotate}
           // `e.target.checked` is a boolean — pass it directly to the callback.
           onChange={(e) => onAutoRotateChange(e.target.checked)}
+        />
+      </div>
+
+      {/* ── Galaxy thumbnails ────────────────────────────────────────────── */}
+      {/*
+        Gates the entire close-up galaxy-texture quad pass. Default-on (the
+        engine seeds `true` at init), so first-time visitors see the feature
+        without having to opt in. Toggling off cuts the whole pass — no quads
+        are submitted to the GPU — which is cheaper than fading them out per
+        instance and matches the engine's coarse-grained handle API.
+      */}
+      <div className={styles.panelRow}>
+        <label htmlFor="toggle-galaxy-textures">Galaxy thumbnails</label>
+        <input
+          id="toggle-galaxy-textures"
+          type="checkbox"
+          checked={galaxyTexturesEnabled}
+          onChange={(e) => onGalaxyTexturesChange(e.target.checked)}
         />
       </div>
 

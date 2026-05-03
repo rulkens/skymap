@@ -130,6 +130,12 @@ export function App(): React.ReactElement {
   const [pointSize, setPointSize] = useState<number>(2.5);
   const [brightness, setBrightness] = useState<number>(1.0);
   const [autoRotate, setAutoRotate] = useState<boolean>(false);
+  // Galaxy-texture quad pass: default `true` matches the engine's init value,
+  // so the first paint and React's first render agree without flicker. The
+  // engine echoes its own value through `onGalaxyTexturesEnabledChange` at
+  // startup, which would correct any mismatch — but seeding the same default
+  // here keeps the very first frame of the checkbox visually correct.
+  const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(true);
 
   // ── Multi-survey + LOD state (rev-2) ─────────────────────────────────────
   //
@@ -193,6 +199,12 @@ export function App(): React.ReactElement {
       onPointSizeChange: setPointSize,
       onBrightnessChange: setBrightness,
       onAutoRotateChange: setAutoRotate,
+      // Engine echoes its galaxy-thumbnail flag here at startup *and* on every
+      // `setGalaxyTexturesEnabled`. Wiring this echo (rather than relying on
+      // local-only optimistic updates) keeps React's view of "are thumbnails
+      // on?" identical to the engine's source-of-truth value, even if the
+      // engine ever flips it for non-UI reasons (e.g. perf-driven auto-disable).
+      onGalaxyTexturesEnabledChange: setGalaxyTexturesEnabled,
       // LOD mode is seeded by the engine at init, then echoed back any time
       // `setLodMode` runs (or `setSourceVisible` flips us to manual).
       onLodModeChange: setLodMode,
@@ -307,6 +319,16 @@ export function App(): React.ReactElement {
         onPointSizeChange={(v) => handleRef.current?.setPointSize(v)}
         onBrightnessChange={(v) => handleRef.current?.setBrightness(v)}
         onAutoRotateChange={(v) => handleRef.current?.setAutoRotate(v)}
+        // Galaxy-thumbnail toggle: forward straight to the engine handle. The
+        // engine fires `onGalaxyTexturesEnabledChange` synchronously, which
+        // updates `galaxyTexturesEnabled` — so we don't need an optimistic
+        // local `setGalaxyTexturesEnabled(v)` here. The `?.` on the setter
+        // covers the (unlikely) case where the handle is missing the method;
+        // the EngineHandle type marks `setGalaxyTexturesEnabled` as optional.
+        galaxyTexturesEnabled={galaxyTexturesEnabled}
+        onGalaxyTexturesChange={(enabled) => {
+          handleRef.current?.setGalaxyTexturesEnabled?.(enabled);
+        }}
         onResetCamera={() => handleRef.current?.focusOnHome()}
         // ── Multi-survey toggles + Auto-LOD master (rev-2) ──────────────
         //
