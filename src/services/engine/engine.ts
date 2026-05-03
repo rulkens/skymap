@@ -20,6 +20,20 @@
  * the React side can call `setState` directly without worrying about spurious
  * re-renders.
  *
+ * ### Module layout
+ *
+ * The pure / leaf concerns live in sibling modules so this file can stay
+ * focused on the imperative orchestration:
+ *
+ *   - `autoLod.ts`           — LOD heuristic (also re-exported as public API)
+ *   - `focusTween.ts`        — focus camera tween constants + distance helper
+ *   - `pointInfoBuilder.ts`  — buildPointInfo / maxAbsCoord / niceRound
+ *   - `cloudLoader.ts`       — `/data/sdss.bin` fetch + synthetic fallback
+ *
+ * The pointer / wheel / pick / hover-select handling stays inline below
+ * because all of it shares closure state (renderer, cloud, cam, indices,
+ * masks) — extracting it would force every helper to take ~10 parameters.
+ *
  * ### Usage
  *
  * ```ts
@@ -35,292 +49,21 @@
  * ```
  */
 
-import { initGpu, resizeCanvasToDisplay } from './gpu/device';
-import { PointRenderer } from './gpu/pointRenderer';
-import { createPickRenderer } from './gpu/pickRenderer';
-import { createOrbitCamera, computeViewProj, updatePosition } from './camera/orbitCamera';
-import { attachOrbitControls } from './camera/orbitControls';
-import { generateSyntheticCloud } from './data/synthetic';
-import { decodePointCloud } from './data/pointCloudFormat';
-import {
-  cartesianToRaDecZ,
-  formatRaSexagesimal,
-  formatDecSexagesimal,
-  sdssName,
-  lookbackTimeGyr,
-  hubbleVelocityKmS,
-  absoluteMagnitude,
-  earthEraForLookback,
-  galaxyTypeFromColor,
-  sdssExplorerUrl,
-  sdssThumbnailUrl,
-} from './utils/math';
-import { formatDistance } from './utils/format/distance';
-import { ALL_VISIBLE_MASK, Source, maskWith } from './data/sources';
-import type { PointCloud } from './@types';
-import type { PointInfo, ScaleInfo, EngineStatus, EngineCallbacks, EngineHandle } from './@types';
-import { advanceCameraTween, type CameraTween } from './camera/cameraTween';
+import { initGpu, resizeCanvasToDisplay } from '../../gpu/device';
+import { PointRenderer } from '../../gpu/pointRenderer';
+import { createPickRenderer } from '../../gpu/pickRenderer';
+import { createOrbitCamera, computeViewProj, updatePosition } from '../../camera/orbitCamera';
+import { attachOrbitControls } from '../../camera/orbitControls';
+import { formatDistance } from '../../utils/format/distance';
+import { ALL_VISIBLE_MASK, Source } from '../../data/sources';
+import type { PointCloud } from '../../@types';
+import type { EngineCallbacks, EngineHandle } from '../../@types';
+import { advanceCameraTween, type CameraTween } from '../../camera/cameraTween';
 import { vec3 } from 'gl-matrix';
 
-// ─── Focus tween constants ──────────────────────────────────────────────────────
-
-/**
- * Tween duration for focus / home camera moves, in milliseconds.
- *
- * 600 ms is the sweet spot the UI explored: long enough that the user reads it
- * as motion (not a teleport) and gets oriented in the new frame, short enough
- * that it never feels sluggish during rapid clicking through the InfoCard list.
- */
-const FOCUS_TWEEN_MS = 600;
-
-/**
- * Diameter of a "typical" galaxy, in kiloparsecs.
- *
- * A sibling plan is landing a `galaxyDiameterKpc(point)` helper that derives
- * a per-galaxy diameter from photometry; until that lands we use a constant.
- * 30 kpc is roughly the diameter of the Milky Way's stellar disc — a sane
- * placeholder that puts the camera at a "naked-eye" distance from any galaxy.
- */
-const FOCUS_GALAXY_DIAMETER_KPC = 30;
-
-/**
- * Convert kpc → Mpc (1 Mpc = 1000 kpc) so the focus distance lives in the
- * same units as `cam.distance`.  This factor is used once below; we name it
- * to keep the math in `focusDistanceMpc` self-documenting.
- */
-const KPC_PER_MPC = 1000;
-
-/**
- * Focus distance multiplier — how many galaxy diameters away from the target
- * we want to sit.  4× a 30 kpc disc is 120 kpc = 0.12 Mpc, which is a good
- * "see the whole galaxy with a little space around it" framing.
- */
-const FOCUS_DIAMETER_MULTIPLIER = 4;
-
-/**
- * Compute the focus camera distance for a galaxy.
- *
- * Currently a constant (4 × 30 kpc = 120 kpc = 0.12 Mpc) but factored as a
- * function so the upcoming per-galaxy diameter helper can drop in cleanly.
- */
-function focusDistanceMpc(): number {
-  return (FOCUS_DIAMETER_MULTIPLIER * FOCUS_GALAXY_DIAMETER_KPC) / KPC_PER_MPC;
-}
-
-// ─── Auto-LOD heuristic ─────────────────────────────────────────────────────────
-
-/**
- * Pick which surveys should be visible at a given camera distance from the
- * origin, returning a `Source` bitmask.
- *
- * The renderer evaluates per-point visibility on the GPU via a single
- * `mask & (1 << source)` test (see `data/sources.ts`), so the work this
- * function does — choosing the *right* mask for the current zoom level —
- * is essentially free at draw time.
- *
- * ### Why three bands instead of a smooth blend?
- *
- * Each survey has a real, physical effective depth (see `MAX_DIST_MPC` in
- * `data/sources.ts`). There's no value in showing 2MRS at 5000 Mpc — its
- * deepest galaxies sit around 250 Mpc, so beyond that it contributes
- * nothing but a tiny wedge of dots near the centre. Conversely SDSS is
- * sparse at < 200 Mpc — it's a *deep* survey, not a *nearby* one, and
- * showing it up close just adds noise to the local-universe view.
- *
- * Three discrete bands map the camera's zoom intent to surveys whose
- * coverage is actually relevant:
- *
- * - **< 200 Mpc — local view.**  2MRS (~250 Mpc effective depth) and GLADE
- *   are the nearby all-sky catalogs; they dominate the local universe
- *   (GLADE's parent merge of 2MPZ + 6dFGS + HyperLEDA fills in 2MRS's
- *   thin near regions). SDSS is hidden because it contributes almost
- *   nothing this close in.
- * - **200–800 Mpc — mid range.**  This is the overlap zone where every
- *   catalog has meaningful coverage, so we render all of them
- *   (`ALL_VISIBLE_MASK`) for the richest possible view.
- * - **> 800 Mpc — deep view.**  Only SDSS reaches this far (effective
- *   depth ~3000 Mpc); the others would be reduced to a barely-visible
- *   speck at the centre, so we drop them.
- *
- * **Synthetic is always included.**  When the real `.bin` file is missing
- * the engine falls back to a procedurally-generated cloud (see
- * `loadCloud`). If we ever masked Synthetic out in any band, the fallback
- * would silently disappear from view and the canvas would look empty —
- * exactly when the user most needs *something* visible. Keeping it on at
- * every distance costs nothing for real-data renders (the bit is set but
- * no points carry `Source.Synthetic`) and keeps the fallback robust.
- *
- * @param distanceMpc — current camera distance from the origin, in Mpc.
- * @returns a `Source` bitmask suitable for the GPU visibility uniform.
- */
-export function autoLodMask(distanceMpc: number): number {
-  // Always start from a mask that includes Synthetic — see docstring for why.
-  const synthetic = maskWith(0, Source.Synthetic);
-
-  if (distanceMpc < 200) {
-    // Local view: only the nearby all-sky surveys contribute meaningfully.
-    // We keep GLADE in the close-up band even though its effective depth is
-    // much greater (~1.5 Gpc) — its low-redshift end overlaps 2MRS and helps
-    // fill in regions where 2MRS's K_s flux limit leaves the volume sparse.
-    return maskWith(maskWith(synthetic, Source.TwoMRS), Source.Glade);
-  }
-
-  if (distanceMpc <= 800) {
-    // Mid range: every survey overlaps this zone, so show everything.
-    // ALL_VISIBLE_MASK already includes Synthetic, so no explicit OR needed.
-    return ALL_VISIBLE_MASK;
-  }
-
-  // Deep view: only SDSS reaches out this far.
-  return maskWith(synthetic, Source.SDSS);
-}
-
-// ── Internal helpers ───────────────────────────────────────────────────────────
-
-/**
- * Return the maximum absolute value of any coordinate component in the cloud's
- * positions array.
- *
- * We use *max abs of any component* rather than computing a true bounding
- * radius (which would require a sqrt per point). For camera-distance purposes
- * this is a heuristic — slightly over-estimating is harmless — and avoiding
- * sqrt keeps this O(N) scan as cheap as possible.
- *
- * The result is used to auto-frame the camera so any cloud (real SDSS or
- * synthetic sphere) is comfortably visible regardless of its spatial extent.
- */
-function maxAbsCoord(cloud: PointCloud): number {
-  let m = 0;
-  for (let i = 0; i < cloud.positions.length; i++) {
-    const v = Math.abs(cloud.positions[i]!);
-    if (v > m) m = v;
-  }
-  return m;
-}
-
-/**
- * Round `x` down to the nearest "nice" number from the {1, 2, 5} × 10^k family.
- *
- * This is the same rounding scheme used by axis tickers in plotting libraries
- * (matplotlib's MaxNLocator, d3's ticks(), etc.). Given any positive real, it
- * returns the largest "round" value ≤ x where round means the mantissa is one
- * of 1, 2, or 5. Examples:
- *
- *     niceRound(  3.7) →   2     (3.7 → mantissa 3.7 → rounds down to 2)
- *     niceRound( 47)   →  20     (47 → 4.7 × 10¹ → 2 × 10¹)
- *     niceRound(800)   → 500     (800 → 8 × 10² → 5 × 10²)
- *     niceRound(  0.07)→   0.05  (0.07 → 7 × 10⁻² → 5 × 10⁻²)
- *
- * Why floor (not nearest)? For a scale bar we want the *bar to fit inside* the
- * desired pixel target, never overflow it. Rounding down to the nice value
- * below the target guarantees the rendered bar is ≤ targetPx.
- */
-function niceRound(x: number): number {
-  if (x <= 0) return 0;
-  const exp = Math.floor(Math.log10(x));
-  const power = Math.pow(10, exp);
-  const mantissa = x / power; // ∈ [1, 10)
-  const niceMantissa = mantissa >= 5 ? 5 : mantissa >= 2 ? 2 : 1;
-  return niceMantissa * power;
-}
-
-/** Discriminated source tag returned by `loadCloud`. */
-type CloudSource = 'sdss.bin' | 'synthetic';
-
-/**
- * Attempt to load the pre-built SDSS binary at `/data/sdss.bin`.
- *
- * If the fetch succeeds and the file decodes cleanly, returns the real galaxy
- * cloud with `source: 'sdss.bin'`. On any failure (404, network error, bad
- * magic bytes, etc.) logs a warning and falls back to a 100k synthetic cloud
- * so the app remains functional without the data file.
- */
-async function loadCloud(): Promise<{ cloud: PointCloud; source: CloudSource }> {
-  try {
-    const res = await fetch('/data/sdss.bin');
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const buf = await res.arrayBuffer();
-    const cloud = decodePointCloud(buf);
-    return { cloud, source: 'sdss.bin' };
-  } catch (err) {
-    console.warn('SDSS bin not available; using synthetic fallback.', err);
-    return { cloud: generateSyntheticCloud(100_000), source: 'synthetic' };
-  }
-}
-
-/**
- * Build a `PointInfo` value from raw cloud arrays for the given index.
- *
- * This is the only place in the engine that touches `cartesianToRaDecZ` and
- * the physics helpers — the React components receive the computed result and
- * never import data modules directly.  The computation is intentionally
- * concentrated here so the data→display path is easy to trace and test.
- *
- * The function is called at most once per hover/select event (not per frame),
- * so the modest cost of the trig + physics math is not on the hot path.
- */
-function buildPointInfo(cloud: PointCloud, idx: number): PointInfo {
-  const px = cloud.positions[idx * 3 + 0]!;
-  const py = cloud.positions[idx * 3 + 1]!;
-  const pz = cloud.positions[idx * 3 + 2]!;
-
-  // Recover sky coordinates from the Cartesian position stored in the cloud.
-  // cartesianToRaDecZ inverts the Hubble-law conversion used at import time.
-  const [ra, dec, redshift] = cartesianToRaDecZ(px, py, pz);
-
-  // Euclidean distance in Mpc — same as the comoving distance under Hubble's law.
-  const distanceMpc = Math.sqrt(px * px + py * py + pz * pz);
-
-  // Pull all five photometric bands.  The `!` non-null assertions are safe here
-  // because all mag arrays are guaranteed to have `count` elements (enforced by
-  // the decoder and generator), and idx is always a valid pick result in [0, count).
-  const magU = cloud.magU[idx]!;
-  const magG = cloud.magG[idx]!;
-  const magR = cloud.magR[idx]!;
-  const magI = cloud.magI[idx]!;
-  const magZ = cloud.magZ[idx]!;
-
-  // u−r colour index is the standard SDSS discriminator for the red-sequence /
-  // blue-cloud bimodality (Strateva et al. 2001). We pass it to galaxyTypeFromColor
-  // rather than the u−g we feed the shader — u−r gives a cleaner separation.
-  const uMinusR = magU - magR;
-
-  return {
-    index: idx,
-    objID: cloud.objIDs[idx]!,
-
-    // Sky coordinates — both decimal and pre-formatted sexagesimal strings.
-    ra,
-    dec,
-    raSexagesimal: formatRaSexagesimal(ra),
-    decSexagesimal: formatDecSexagesimal(dec),
-
-    // Cosmology derived from the recovered redshift and distance.
-    redshift,
-    distanceMpc,
-    hubbleVelocityKmS: hubbleVelocityKmS(redshift),
-    lookbackGyr: lookbackTimeGyr(redshift),
-    earthEra: earthEraForLookback(lookbackTimeGyr(redshift)),
-
-    // Five-band photometry — raw values, let the UI format them.
-    magU,
-    magG,
-    magR,
-    magI,
-    magZ,
-
-    // Derived quantities.
-    absoluteMagG: absoluteMagnitude(magG, distanceMpc),
-    galaxyType: galaxyTypeFromColor(uMinusR),
-    sdssName: sdssName(ra, dec),
-
-    // External URLs — always constructed, regardless of real vs. synthetic data.
-    explorerUrl: sdssExplorerUrl(cloud.objIDs[idx]!),
-    thumbnailUrl: sdssThumbnailUrl(ra, dec, 200),
-  };
-}
-
-// ── createEngine ───────────────────────────────────────────────────────────────
+import { buildPointInfo, maxAbsCoord, niceRound } from './pointInfoBuilder';
+import { loadCloud, type CloudSource } from './cloudLoader';
+import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -929,16 +672,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     resetCamera() {
       // `cam` may be null if the engine is destroyed or the cloud hasn't
-      // loaded yet. `initialCam` is captured inside the async IIFE and
-      // therefore not in scope here — we rely on the closure reference to
-      // the outer `cam` variable plus the saved initial values stored in the
-      // IIFE-local `initialCam` constant. Because this method closes over the
-      // outer `cam` ref, we read it at call time (which is correct: we want
-      // to mutate the live camera object, not a stale snapshot).
-      //
-      // The `initialCam` object is not accessible here because it is declared
-      // inside the async IIFE. To work around this scoping, we store it in a
-      // closure variable declared alongside the other mutable state above.
+      // loaded yet.  We keep `initialCamRef` declared in the outer closure
+      // (rather than scoped to the async IIFE) so that this handle method
+      // can read it after the IIFE completes.  Reading `cam` at call time
+      // (via the closure ref) gives us the live camera object to mutate, not
+      // a stale snapshot.
       if (!cam || !initialCamRef) return;
       cam.target[0] = initialCamRef.target[0];
       cam.target[1] = initialCamRef.target[1];

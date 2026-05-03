@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { autoLodMask } from '../src/engine';
+import { autoLodMask } from '../src/services/engine';
 import { Source, maskHas } from '../src/data/sources';
 
 describe('autoLodMask', () => {
