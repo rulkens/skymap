@@ -171,27 +171,53 @@ export function App(): React.ReactElement {
     };
   }, []); // Empty array: run once on mount, clean up on unmount.
 
-  // ── Esc key effect ─────────────────────────────────────────────────────────
-
+  // ── Keyboard shortcuts effect ──────────────────────────────────────────────
+  //
+  // Three shortcuts: Esc clears selection, `f` focuses on the pinned galaxy,
+  // `h` returns the camera to the home view.  Re-runs when `selected` changes
+  // so the `f` handler always reads the current pin (without a re-bind it
+  // would close over the initial null forever).
   useEffect(() => {
-    // Add a window-level keydown listener that clears the selection on Escape.
-    // We use `handleRef.current` (not a captured `handle` variable) so the
-    // listener always sees the latest handle — it's written by the engine
-    // effect which may run slightly after this effect on the first mount.
     const onKeyDown = (e: KeyboardEvent) => {
+      // ── Ignore keystrokes typed into form fields ────────────────────────────
+      //
+      // If the user is editing an <input> or <textarea>, we shouldn't hijack
+      // their `f` and `h` keystrokes.  `e.target` could be any Element, so we
+      // narrow with a tag check before reading its name.  This guards against
+      // future text inputs (search box, label rename, etc.).
+      const target = e.target as Element | null;
+      const tag = target?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+
+      // ── Esc: clear pinned selection ────────────────────────────────────────
       if (e.key === 'Escape') {
         // `?.` safe-calls: no-op if the engine hasn't started yet or was destroyed.
         handleRef.current?.clearSelection();
+        return;
+      }
+
+      // ── f: focus on currently-selected galaxy (no-op if nothing pinned) ────
+      if (e.key === 'f' || e.key === 'F') {
+        if (selected) {
+          handleRef.current?.focusOn([selected.x, selected.y, selected.z]);
+        }
+        return;
+      }
+
+      // ── h: return to the home / Earth view ─────────────────────────────────
+      if (e.key === 'h' || e.key === 'H') {
+        handleRef.current?.focusOnHome();
+        return;
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
-
-    // Cleanup: remove the listener when the component unmounts.
     return () => {
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, []); // Empty array: add once, remove on unmount.
+  }, [selected]); // re-bind when pin changes so `f` reads the latest selection
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
