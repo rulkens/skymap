@@ -30,10 +30,20 @@
 //
 // WGSL → JS CONNECTION
 // --------------------
-// This shader is loaded by the PointRenderer class (Task 10), which:
+// This shader is loaded by both PointRenderer (Task 10) and PickRenderer (Task 16),
+// which each select a different fragment entry point from this same module:
+//   - PointRenderer uses `vs` + `fs`   → visual additive-blended render
+//   - PickRenderer  uses `vs` + `fsPick` → offscreen r32uint picking pass
+//
+// Both pipelines share the same vertex stage (`vs`) and the same shader module.
+// Having two fragment entry points in one file avoids duplicating the vertex
+// stage logic (billboard math, magnitude→intensity, colour ramp) while allowing
+// each pass to write to its own render-target format.
+//
+// The class:
 //   1. Calls `device.createShaderModule({ code: wgslSource })` with this text.
-//   2. Creates a `GPURenderPipeline` that references the `vs` and `fs` entry
-//      points defined below.
+//   2. Creates a `GPURenderPipeline` that references the `vs` and `fs` (or
+//      `fsPick`) entry points defined below.
 //   3. Uploads a `Uniforms` struct (viewProj, viewport, pointSizePx, brightness)
 //      into a uniform buffer and binds it to @group(0) @binding(0).
 //   4. Uploads per-point data (position, magnitude, colorIndex) into a vertex
@@ -134,6 +144,21 @@ struct VSOut {
 
   // Combined brightness: magnitude-based intensity × global brightness knob.
   @location(2) intensity: f32,
+
+  // The 0-based index of the catalog point (galaxy) this quad belongs to.
+  //
+  // Used by `fsPick` (the picking fragment entry point) to write the instance
+  // ID into the r32uint pick texture. The visual `fs` entry point does NOT use
+  // this field — WGSL permits unused fragment inputs without error.
+  //
+  // WHY @interpolate(flat)?
+  // Integer attributes (u32) MUST be declared with @interpolate(flat) in WGSL.
+  // Floating-point attributes interpolate across the triangle by default;
+  // integers cannot be meaningfully interpolated (they'd need to be cast to
+  // float, interpolated, then cast back — losing precision). `flat` tells the
+  // rasteriser to use the "provoking vertex" value unchanged for every fragment,
+  // which is correct here: all 6 vertices of one instance share the same index.
+  @location(3) @interpolate(flat) instanceIdx: u32,
 };
 
 // ─── colour ramp ──────────────────────────────────────────────────────────────
@@ -202,8 +227,9 @@ const QUAD = array<vec2<f32>, 6>(
 // ─── vertex stage ─────────────────────────────────────────────────────────────
 
 // The vertex shader runs once per (instance, vertex) pair.
-//   @builtin(vertex_index)  cycles 0..5 within each instance (per-vertex)
-//   p: PerVertex            carries the per-instance data (position/mag/ci)
+//   @builtin(vertex_index)    cycles 0..5 within each instance (per-vertex)
+//   @builtin(instance_index)  the 0-based index of this catalog point (per-instance)
+//   p: PerVertex              carries the per-instance data (position/mag/ci)
 //
 // The two "step modes" are set on the JS side:
 //   - The position/magnitude/colorIndex buffer uses stepMode:'instance' so
@@ -211,7 +237,11 @@ const QUAD = array<vec2<f32>, 6>(
 //   - @builtin(vertex_index) is always per-vertex, cycling through the QUAD array.
 
 @vertex
-fn vs(@builtin(vertex_index) vi: u32, p: PerVertex) -> VSOut {
+fn vs(
+  @builtin(vertex_index) vi: u32,
+  @builtin(instance_index) ii: u32,
+  p: PerVertex,
+) -> VSOut {
   // Project the point's 3-D world position to clip space.
   // clip = viewProj * [x, y, z, 1]
   // After this, clip.xyz/clip.w gives the NDC position (in [-1,+1]³ for x,y;
@@ -274,6 +304,14 @@ fn vs(@builtin(vertex_index) vi: u32, p: PerVertex) -> VSOut {
   // brighten the entire sky without re-uploading point data.
   out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0) * u.brightness;
 
+  // Propagate the instance index for the pick fragment entry point (fsPick).
+  // The visual `fs` entry point ignores this field entirely — WGSL silently
+  // allows a fragment shader to declare fewer inputs than the vertex shader
+  // outputs, as long as the @location values that *are* declared match.
+  //
+  // We keep this here so both fragment entry points share the same vertex stage.
+  out.instanceIdx = ii;
+
   return out;
 }
 
@@ -324,4 +362,50 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // The additive blend mode itself is configured in the pipeline descriptor on
   // the JS side (Task 10) — specifically in the `targets[0].blend` descriptor.
   return vec4<f32>(rgb * alpha, alpha);
+}
+
+// ─── pick fragment stage ──────────────────────────────────────────────────────
+
+// `fsPick` is the second fragment entry point in this file.  A single WGSL
+// shader module can contain multiple entry points of the same stage; each
+// `GPURenderPipeline` selects one via its `fragment.entryPoint` field.
+//
+// The pick pass renders into an `r32uint` offscreen texture (not the visible
+// swap-chain texture).  Each fragment writes the *1-based* instance index of the
+// catalog point whose billboard covers that pixel.  The JS side reads a single
+// pixel from this texture under the cursor and converts it back to a 0-based
+// point index.
+//
+// WHY OFFSET BY 1?
+// The texture is cleared to 0 before the pass.  If we wrote `instanceIdx`
+// directly, instance 0 would be indistinguishable from the cleared background.
+// Instead we write `instanceIdx + 1`, so 0 always means "no hit" and any
+// value ≥ 1 decodes to a valid point by subtracting 1.
+//
+// WHY A LARGER RADIUS (2.25 vs 1.0)?
+// A forgiveness radius of 1.5× lets the user pick a point without needing to
+// land exactly on its visual disk.  The visual `fs` discards fragments where
+// r² > 1.0 (unit disk); `fsPick` discards fragments where r² > 2.25 (= 1.5²),
+// effectively making each pick billboard 1.5× larger than the visible one.
+//
+// NOTE: `fsPick` writes `vec4<u32>` to @location(0), which maps to an `r32uint`
+// render target.  The pipeline descriptor on the JS side declares the target
+// format as 'r32uint' and no blend state (integers cannot be blended).
+
+@fragment
+fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
+  // r2 = squared distance from the billboard centre in [-1, +1]² UV space.
+  // The visual fs discards at r2 > 1.0 (unit disk, radius 1.0).
+  // We discard at r2 > 2.25 (= 1.5²), giving a 1.5× bigger pick target.
+  let r2 = dot(in.uv, in.uv);
+  if (r2 > 2.25) { discard; }
+
+  // Write instanceIdx + 1 so that background pixels (cleared to 0) are
+  // distinguishable from the point at index 0 (which would also write 0
+  // without the +1 offset).  The JS readback subtracts 1 to recover the
+  // 0-based index, after checking that the raw value is not 0.
+  //
+  // The g/b/a channels are unused — we only read the r channel back on the
+  // JS side.  Filling them with 0 keeps the output well-defined.
+  return vec4<u32>(in.instanceIdx + 1u, 0u, 0u, 0u);
 }

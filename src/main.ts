@@ -34,6 +34,7 @@
 
 import { initGpu, resizeCanvasToDisplay } from './gpu/device';
 import { PointRenderer } from './gpu/pointRenderer';
+import { createPickRenderer } from './gpu/pickRenderer';
 import { createOrbitCamera, computeViewProj, updatePosition } from './camera/orbitCamera';
 import { attachOrbitControls } from './camera/orbitControls';
 import { generateSyntheticCloud } from './data/synthetic';
@@ -53,6 +54,10 @@ async function main() {
   const renderer = new PointRenderer(device, format);
   const cloud = generateSyntheticCloud(100_000);
   renderer.upload(cloud);
+
+  // Build the pick renderer. It shares the same shader module and vertex/uniform
+  // buffers as the visual renderer — no extra GPU memory for point data.
+  const pickRenderer = createPickRenderer(device);
 
   // ── Camera setup ────────────────────────────────────────────────────────────
   //
@@ -76,6 +81,46 @@ async function main() {
 
   // Wire pointer and wheel events so the user can orbit and zoom.
   attachOrbitControls(canvas, cam);
+
+  // ── Hover state ─────────────────────────────────────────────────────────────
+  //
+  // Track the latest pointer position in *CSS pixels* (clientX/clientY).
+  // These are converted to texture-space pixels (by multiplying by DPR, capped
+  // at 2) when calling pick().  We store CSS pixels here rather than texture
+  // pixels so that if the DPR cap changes in a future update, only one place
+  // needs to change.
+  let mouseXCss = 0;
+  let mouseYCss = 0;
+
+  canvas.addEventListener('pointermove', (e) => {
+    mouseXCss = e.clientX;
+    mouseYCss = e.clientY;
+  });
+
+  // ── Dev pick hook ────────────────────────────────────────────────────────────
+  //
+  // Exposed on `window` so developers can test GPU picking from the browser
+  // console: `await pickAt(x, y)` where x, y are CSS pixel coordinates.
+  // The DPR conversion matches `resizeCanvasToDisplay` in device.ts (cap at 2).
+  //
+  // Task 17 will wire this to the actual UI hover/info-card flow.
+  (window as unknown as Record<string, unknown>)['pickAt'] = async (xCss: number, yCss: number) => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const result = await pickRenderer.pick(
+      [canvas.width, canvas.height],
+      xCss * dpr,
+      yCss * dpr,
+      // Access the vertex buffer and count via the renderer's public API.
+      // PointRenderer exposes these in the next step; for now we use the
+      // private-field workaround with a cast so we don't need to modify
+      // PointRenderer's public surface for this temporary dev hook.
+      (renderer as unknown as { vertexBuffer: GPUBuffer }).vertexBuffer,
+      cloud.count,
+      (renderer as unknown as { uniformBuffer: GPUBuffer }).uniformBuffer,
+    );
+    console.log(`pickAt(${xCss}, ${yCss}) →`, result === -1 ? 'no hit' : `point #${result}`);
+    return result;
+  };
 
   status.textContent =
     `WebGPU OK · ${cloud.count.toLocaleString()} synthetic points · drag to orbit, wheel to zoom`;
