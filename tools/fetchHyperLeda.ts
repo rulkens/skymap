@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 /**
- * fetchHyperLeda — pull `pa` (deg) and `logr25` (log10 of major/minor axis
- * ratio) from HyperLEDA for every PGC referenced in GLADE v2.3.
+ * fetchHyperLeda — pull `pa` (deg), `logr25` (log10 of major/minor axis
+ * ratio), `logd25` (log10 of D25 isophotal diameter in 0.1 arcmin), and
+ * `e_logd25` (uncertainty) from HyperLEDA for every PGC referenced in
+ * GLADE v2.3.
+ *
+ * We grab logd25/e_logd25 alongside the orientation columns even though
+ * the current build pipeline doesn't read them yet — it's the same
+ * upstream request, the same multi-hour fetch, and a future Phase-2 plan
+ * (real GLADE diameters from HyperLEDA, not Tully size-luminosity) would
+ * otherwise force a full re-fetch. Caching them now is essentially free.
  *
  * HyperLEDA's modern API:
  *
@@ -68,7 +76,18 @@ function readExistingPgcs(path: string): Set<string> {
   return done;
 }
 
-async function fetchOne(pgc: string): Promise<{ pa: number; logr25: number } | null> {
+type HyperLedaRow = {
+  pa: number;
+  logr25: number;
+  // logd25 / e_logd25 may be NaN even when pa/logr25 are present — HyperLEDA
+  // sometimes has shape but no isophotal-diameter measurement, especially
+  // for fainter or photographic-only galaxies. We propagate NaN through to
+  // the cache file as an empty cell so the consumer can detect it.
+  logd25: number;
+  e_logd25: number;
+};
+
+async function fetchOne(pgc: string): Promise<HyperLedaRow | null> {
   const url = `http://atlas.obs-hp.fr/hyperleda/fG.cgi?n=meandata&a=csv&sql=pgc%3D${pgc}`;
   const res = await fetch(url);
   if (!res.ok) return null;
@@ -77,7 +96,7 @@ async function fetchOne(pgc: string): Promise<{ pa: number; logr25: number } | n
 
   // Header line begins with `$objname` and lists column names in
   // double-quotes separated by spaces. Example:
-  //   $objname "pgc" "objtype" ... "logr25" "e_logr25" "pa" ...
+  //   $objname "pgc" "objtype" ... "logd25" "e_logd25" "logr25" "e_logr25" "pa" ...
   // The `$objname` token has no quotes; everything else does. We strip
   // quotes and lowercase to make the indexOf lookup robust against any
   // future case-flip.
@@ -88,6 +107,10 @@ async function fetchOne(pgc: string): Promise<{ pa: number; logr25: number } | n
     .map((s) => s.replace(/^"|"$/g, '').toLowerCase());
   const paIdx = headerTokens.indexOf('pa');
   const lrIdx = headerTokens.indexOf('logr25');
+  const ldIdx = headerTokens.indexOf('logd25');
+  const eldIdx = headerTokens.indexOf('e_logd25');
+  // pa + logr25 are required (the row is useless without orientation);
+  // logd25 / e_logd25 are nice-to-have, NaN if missing in the response.
   if (paIdx === -1 || lrIdx === -1) return null;
 
   // Data line: tab-separated, no leading `#`, contains the actual values.
@@ -100,7 +123,11 @@ async function fetchOne(pgc: string): Promise<{ pa: number; logr25: number } | n
     const cells = line.split('\t');
     const pa = parseFloat(cells[paIdx] ?? '');
     const lr = parseFloat(cells[lrIdx] ?? '');
-    if (Number.isFinite(pa) && Number.isFinite(lr)) return { pa, logr25: lr };
+    const ld = ldIdx === -1 ? NaN : parseFloat(cells[ldIdx] ?? '');
+    const eld = eldIdx === -1 ? NaN : parseFloat(cells[eldIdx] ?? '');
+    if (Number.isFinite(pa) && Number.isFinite(lr)) {
+      return { pa, logr25: lr, logd25: ld, e_logd25: eld };
+    }
     // If a data row exists but PA/logr25 are blank, that's a real "queried,
     // but no shape measurement" outcome — return null so the caller writes
     // an empty cache row that still skips on resume.
@@ -135,9 +162,27 @@ async function main(): Promise<void> {
   // Resume support: read existing cache; skip every PGC we've already queried.
   // First run: file doesn't exist, set is empty, write the header. Subsequent
   // runs: append to the existing file (header already in place).
+  // The cache header is the schema marker — if the existing file has
+  // the old 3-column shape, the new run would interleave 3-col and
+  // 5-col rows, which the consumer can't disambiguate. Refuse to mix
+  // and tell the user to delete the file. (On a fresh run there's no
+  // file at all, so the check is skipped.)
+  const expectedHeader = 'pgc,pa,logr25,logd25,e_logd25';
+  if (existsSync(outPath)) {
+    const firstLine = readFileSync(outPath, 'utf8').split(/\r?\n/, 1)[0] ?? '';
+    if (firstLine.trim() !== expectedHeader && firstLine.trim() !== '') {
+      throw new Error(
+        `cache header mismatch: ${outPath}\n` +
+          `  expected: ${expectedHeader}\n` +
+          `  found:    ${firstLine.trim()}\n` +
+          `delete the file and re-run to start a fresh fetch.`,
+      );
+    }
+  }
+
   const alreadyDone = readExistingPgcs(outPath);
   if (alreadyDone.size === 0) {
-    writeFileSync(outPath, 'pgc,pa,logr25\n');
+    writeFileSync(outPath, expectedHeader + '\n');
   } else {
     process.stderr.write(`  resume: ${alreadyDone.size.toLocaleString()} PGCs already cached\n`);
   }
@@ -157,10 +202,18 @@ async function main(): Promise<void> {
       try {
         const r = await fetchOne(pgc);
         // Always write a row — matched or not — so the next resume sees the
-        // PGC in the cache and skips it. Unmatched rows look like `pgc,,`
-        // (empty pa, empty logr25). Parsers must handle the empty-cell case.
-        if (r) appendFileSync(outPath, `${pgc},${r.pa},${r.logr25}\n`);
-        else appendFileSync(outPath, `${pgc},,\n`);
+        // PGC in the cache and skips it. Unmatched rows look like `pgc,,,,`
+        // (empty pa, logr25, logd25, e_logd25). Per-cell NaN→"" so the
+        // consumer can use parseFloat("") → NaN as the missing-value signal.
+        const cell = (n: number): string => (Number.isFinite(n) ? String(n) : '');
+        if (r) {
+          appendFileSync(
+            outPath,
+            `${pgc},${r.pa},${r.logr25},${cell(r.logd25)},${cell(r.e_logd25)}\n`,
+          );
+        } else {
+          appendFileSync(outPath, `${pgc},,,,\n`);
+        }
       } catch (e) {
         // Network blip / TLS failure — DO NOT write a cache row; resume will
         // retry next run. We do count + log failures here, because the
