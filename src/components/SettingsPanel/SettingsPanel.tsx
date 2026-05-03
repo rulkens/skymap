@@ -37,14 +37,38 @@
  */
 
 import type { ReactNode } from 'react';
+import type { LodMode } from '../../@types/LodMode';
+import { Source, sourceLabel, maskHas } from '../../data/sources';
 import styles from './SettingsPanel.module.css';
+
+// ── Module-level constants ─────────────────────────────────────────────────────
+
+/**
+ * The set of survey sources we expose as user-controllable toggles.
+ *
+ * Note that `Source.Synthetic` is **intentionally omitted** — the synthetic
+ * cloud is a procedurally-generated *fallback* used when no real survey data
+ * has loaded yet (e.g. on first paint before binaries arrive, or in offline
+ * dev runs). Letting users toggle it would invite confusing states like
+ * "no real surveys + synthetic off = empty sky" with no clear way back.
+ * Keeping it always-on but invisible-in-the-UI means the renderer always has
+ * *something* to draw while the user freely toggles the real catalogs.
+ */
+const TOGGLEABLE_SOURCES: readonly Source[] = [Source.SDSS, Source.TwoMRS, Source.Glade];
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 /**
  * Props for SettingsPanel.
  *
- * All callbacks are required — App.tsx always wires them to the engine handle.
+ * The original four controls (point size / brightness / auto-rotate / reset
+ * camera) are all required — App.tsx always wires them to the engine handle.
+ *
+ * The newer rev-2 controls (survey toggles + Auto-LOD) are **optional**.
+ * That's deliberate: this component is being updated ahead of the App.tsx
+ * wiring (task #37 in the multi-survey plan). Keeping the new props optional
+ * lets the existing call site in App.tsx keep typechecking unchanged, and
+ * the new sections render only when the parent opts-in by passing them.
  */
 type Props = {
   /** Current point size in pixels. */
@@ -61,6 +85,17 @@ type Props = {
   onAutoRotateChange: (v: boolean) => void;
   /** Called when the user clicks "Reset camera". */
   onResetCamera: () => void;
+  /**
+   * Bitmask of currently-visible sources (see `data/sources.ts`).
+   * Optional until App.tsx is wired to the multi-survey engine.
+   */
+  visibleSourceMask?: number;
+  /** Called when the user toggles a single survey on/off. */
+  onToggleSource?: (source: Source, visible: boolean) => void;
+  /** Current LOD mode — `'auto'` (by zoom) or `'manual'` (user override). */
+  lodMode?: LodMode;
+  /** Called when the user toggles the Auto-LOD checkbox. */
+  onSetLodMode?: (mode: LodMode) => void;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
@@ -91,11 +126,78 @@ export function SettingsPanel({
   onBrightnessChange,
   onAutoRotateChange,
   onResetCamera,
+  visibleSourceMask,
+  onToggleSource,
+  lodMode,
+  onSetLodMode,
 }: Props): ReactNode {
+  // Guard: only render the survey-toggle section when the parent has wired
+  // *both* the current mask and the toggle callback. Either alone would be
+  // a half-broken UI (toggles that don't reflect state, or state with no
+  // way to change it), so we treat them as a single feature flag.
+  const showSurveyToggles = visibleSourceMask !== undefined && onToggleSource !== undefined;
+
+  // Same pattern for the LOD section: rendered only when both pieces are
+  // present. `lodMode` may legitimately be the string `'auto'`, so compare
+  // against `undefined` explicitly rather than relying on truthiness.
+  const showLodControls = lodMode !== undefined && onSetLodMode !== undefined;
+
   return (
     <div className={styles.settingsPanel} aria-label="Renderer settings">
       {/* ── Title ────────────────────────────────────────────────────────── */}
       <div className={styles.panelTitle}>Settings</div>
+
+      {/* ── Surveys (rev-2 multi-survey toggles) ─────────────────────────── */}
+      {/*
+        Rendered above the rendering controls because survey visibility is a
+        higher-level decision than a slider tweak — the user picks *what* to
+        look at first, then fine-tunes *how* it's drawn.
+      */}
+      {showSurveyToggles && (
+        <>
+          <div className={styles.panelSubtitle}>Surveys</div>
+          {TOGGLEABLE_SOURCES.map((s) => (
+            <div className={styles.panelRow} key={s}>
+              <label htmlFor={`toggle-source-${s}`}>{sourceLabel(s)}</label>
+              <input
+                id={`toggle-source-${s}`}
+                type="checkbox"
+                // `maskHas` keeps us from leaking the bitmask shape into the JSX —
+                // we ask "is bit s set?" and trust `data/sources.ts` to know how.
+                checked={maskHas(visibleSourceMask, s)}
+                onChange={(e) => onToggleSource(s, e.target.checked)}
+              />
+            </div>
+          ))}
+          <div className={styles.panelDivider} role="separator" />
+        </>
+      )}
+
+      {/* ── Auto-LOD master switch (rev-2) ───────────────────────────────── */}
+      {/*
+        A single boolean checkbox is enough because the engine itself has only
+        two modes: pick LOD from camera distance, or honour an explicit caller
+        override. The mode-indicator line below the checkbox echoes the
+        current state so the wording stays unambiguous even when the user
+        isn't sure what "Auto LOD off" implies.
+      */}
+      {showLodControls && (
+        <>
+          <div className={styles.panelRow}>
+            <label htmlFor="toggle-auto-lod">Auto LOD</label>
+            <input
+              id="toggle-auto-lod"
+              type="checkbox"
+              checked={lodMode === 'auto'}
+              onChange={(e) => onSetLodMode(e.target.checked ? 'auto' : 'manual')}
+            />
+          </div>
+          <div className={styles.panelMode}>
+            mode: {lodMode === 'auto' ? 'auto (by zoom)' : 'manual override'}
+          </div>
+          <div className={styles.panelDivider} role="separator" />
+        </>
+      )}
 
       {/* ── Point size ───────────────────────────────────────────────────── */}
       {/*

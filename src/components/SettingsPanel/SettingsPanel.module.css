@@ -84,6 +84,34 @@
   border-top: 1px solid rgba(160, 200, 255, 0.12);
 }
 
+/*
+ * Sub-section heading — visually distinct from `.panelTitle` only by being
+ * smaller-margin'd (it sits between sections, not at the top of the panel).
+ *
+ * Why a separate class? Reusing `.panelTitle` would inherit its top-of-panel
+ * margins; we want section headings to hug the divider above them.
+ */
+.panelSubtitle {
+  margin: 4px 0 4px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(160, 180, 230, 0.5);
+}
+
+/*
+ * LOD mode indicator — a tiny status line under the Auto-LOD checkbox that
+ * tells the user whether the engine is in "auto (by zoom)" or
+ * "manual override" mode. Sub-sized + dimmed because it's informational,
+ * not a control.
+ */
+.panelMode {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: rgba(160, 200, 255, 0.6);
+  margin-top: 4px;
+}
+
 /* "Reset camera" button */
 .settingsPanel button {
   width: 100%;
