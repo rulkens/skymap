@@ -44,6 +44,26 @@ export type OrbitCameraInit = {
   pitch: number;
 
   /**
+   * Camera-roll angle in radians around the view direction (the line
+   * from `target` to `position`).  Rotates the up-vector that
+   * `mat4.lookAt` uses to orient the image plane.
+   *
+   * roll = 0 → world +Y stays "up" on screen (default; matches every
+   *           pre-roll rendering the project produced).
+   * roll > 0 → image rotates counter-clockwise (the world tilts CW).
+   *
+   * Why expose roll on an orbit camera at all?  In a cosmological
+   * scene there is no preferred up direction, so allowing the user
+   * to roll is physically meaningful and not just a cosmetic.
+   * SpaceMouse's `ry` (tilt-left-right) maps to this naturally;
+   * before this field existed `ry` was ignored entirely.
+   *
+   * Optional with a default of 0 to keep every existing call site
+   * (synthetic clouds, focus tween, controls) working unchanged.
+   */
+  roll?: number;
+
+  /**
    * Vertical field of view in **radians**.
    *
    * π/4 (45°) is a natural-looking default. Wider values (large fovYRad)

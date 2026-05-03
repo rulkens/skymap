@@ -18,7 +18,7 @@
  *   ty = +1  →  puck pushed UP (away from user, in the plane of the desk)
  *   tz = +1  →  puck pulled UP (out of the desk; lift)
  *   rx = +1  →  puck tilted FORWARD (top edge toward user)
- *   ry = +1  →  puck twisted CCW (looking down)
+ *   ry = +1  →  puck top edge tilted RIGHT (rolls toward right)
  *   rz = +1  →  puck rotated about its base, top-CW (right-hand turn)
  *
  * These conventions match 3Dconnexion's "Object Mode" defaults and are what
@@ -40,7 +40,7 @@ export type SpaceMouseAxes = {
   tz: number;
   /** Rotation around the x axis (tilt forward/back), normalised to [-1, 1]. */
   rx: number;
-  /** Rotation around the y axis (twist), normalised to [-1, 1]. */
+  /** Rotation around the y axis (tilt left/right), normalised to [-1, 1]. */
   ry: number;
   /** Rotation around the z axis (turn left/right), normalised to [-1, 1]. */
   rz: number;

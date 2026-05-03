@@ -8,32 +8,38 @@
  * and applies the corresponding incremental change to an orbit camera in
  * place.
  *
- * ### Axis → camera-channel mapping
+ * ### Axis → camera-channel mapping (3Dconnexion "Target Camera Mode")
  *
  *   tx (puck push left/right) → pan target sideways (perpendicular to view)
- *   ty (puck push fore/aft)   → pan target vertically (world up/down)
- *   tz (puck lift)            → zoom (multiply distance, exponential)
+ *   ty (puck push fore/aft)   → zoom (multiply distance, exponential)
+ *   tz (puck lift/push down)  → pan target vertically (world up/down)
  *   rx (puck tilt fore/aft)   → pitch (tilt camera up/down)
- *   ry (puck twist)           → IGNORED — orbit camera has no roll channel
+ *   ry (puck tilt left/right) → roll (rotate camera up-vector around view)
  *   rz (puck turn left/right) → yaw (orbit camera around target)
  *
- * The orbit camera has only 4 degrees of freedom (yaw, pitch, distance,
- * target), so we surface 5 of the 6 SpaceMouse axes. `ry` is dropped —
- * binding it to FOV felt unnatural in playtests, and there's no roll for it
- * to drive.
+ * This follows 3Dconnexion's canonical "Target Camera Mode" convention used
+ * by Blender, Fusion 360, Maya, and SolidWorks.  Previous mapping had
+ * tz=zoom and ty=vertical-pan, which caused an unintended coupling: natural
+ * twist gestures (pressing down while rotating) bled into the zoom channel
+ * because the puck's downward force activates tz simultaneously with rz.
+ * Restoring ty=zoom decouples them — the thumbs-down press that accompanies
+ * a twist now goes to tz (vertical pan) instead of zoom.
+ *
+ * `ry` was previously ignored because the orbit camera had no roll channel.
+ * Now that `OrbitCamera.roll` exists, ry drives it, completing all 6 DOF.
  *
  * ### Why exponential zoom?
  *
- * Linear zoom (`distance += k * tz * dt`) feels wrong because the same
+ * Linear zoom (`distance += k * ty * dt`) feels wrong because the same
  * "amount of pull" should mean roughly the same *fractional* change in
  * scale whether you're inspecting a galaxy from 1 Mpc or framing the whole
- * cosmic web from 5000 Mpc. Exponential zoom (`distance *= exp(k * tz * dt)`)
+ * cosmic web from 5000 Mpc. Exponential zoom (`distance *= exp(k * ty * dt)`)
  * gives that scale-invariant feel: the puck always feels the same.
  *
- * The minus convention: pushing the puck DOWN (tz < 0 in our convention,
- * since +tz is "lift") zooms IN. We achieve this by NOT negating tz here
- * and letting positive tz expand distance — but the spec says "negative tz
- * zooms in", so we mirror tz before plugging into exp(). See ZOOM_RATE_PER_MS.
+ * The minus convention: pushing the puck FORWARD (ty > 0 in our convention)
+ * should zoom IN (distance shrinks).  We negate ty before plugging into exp():
+ * distance *= exp(−ty * dt * rate).  Check: ty = +1, dt = 16 ms →
+ * exp(−0.032) ≈ 0.969 → distance shrinks → zoom in. ✓
  *
  * ### Why dt-scaled?
  *
@@ -68,11 +74,17 @@ const YAW_RATE_RAD_PER_MS = 0.0012;
 const PITCH_RATE_RAD_PER_MS = 0.0009;
 
 /**
- * Exponential zoom rate. At full deflection (tz = 1) and dt = 16.6ms (60fps),
- * distance multiplies by exp(0.002 * 1 * 16.6) ≈ 1.034 — a 3.4% increase per
+ * Exponential zoom rate. At full deflection (ty = 1) and dt = 16.6ms (60fps),
+ * distance multiplies by exp(0.002 * 1 * 16.6) ≈ 1.034 — a 3.4% change per
  * frame, or roughly 2× per second. Comfortable for navigation.
+ *
+ * Note: ty is negated at the call site so pushing forward (ty > 0) zooms IN
+ * (distance shrinks) rather than out.
  */
 const ZOOM_RATE_PER_MS = 0.002;
+
+/** Roll rate at full deflection (ry = 1): about 0.9 rad/sec — same feel as pitch. */
+const ROLL_RATE_RAD_PER_MS = 0.0009;
 
 /**
  * Pan rate as a fraction of the camera's current distance from target.
@@ -129,19 +141,16 @@ export function applyAxesToCamera(
   if (cam.pitch > PITCH_LIMIT) cam.pitch = PITCH_LIMIT;
   if (cam.pitch < -PITCH_LIMIT) cam.pitch = -PITCH_LIMIT;
 
-  // ── Zoom (tz: lift/push down) ────────────────────────────────────────────
+  // ── Zoom (ty: push fore/aft) ─────────────────────────────────────────────
   //
-  // Spec says: negative tz zooms in (puck pushed DOWN → closer view).
-  // exp(positive) > 1 expands distance, exp(negative) < 1 shrinks it. So
-  // we want distance *= exp(tz * dt * rate) with no negation: positive tz
-  // (puck lifted) → exp > 1 → zoom OUT; negative tz (pushed down) → exp < 1
-  // → zoom IN. This matches the spec's "negative tz zooms in" sign rule.
-  // Clamp to the global distance envelope (orbitCamera.MIN/MAX_DISTANCE_MPC) —
-  // the puck's continuous force input would otherwise sail past the limits in
-  // a few ms once held at full deflection.
-  cam.distance = clampDistance(cam.distance * Math.exp(axes.tz * dtMs * ZOOM_RATE_PER_MS));
+  // 3Dconnexion's Target Camera Mode: push FORWARD (ty > 0) zooms IN.
+  // We negate ty so that positive ty → exp(negative) < 1 → distance shrinks.
+  // Check: ty = +1, dt = 16 ms → exp(−0.032) ≈ 0.969 → 3.1% closer per
+  // frame → comfortable navigation at all scales. Clamp to the global
+  // distance envelope so the puck can't sail past the limits.
+  cam.distance = clampDistance(cam.distance * Math.exp(-axes.ty * dtMs * ZOOM_RATE_PER_MS));
 
-  // ── Pan target (tx: sideways, ty: up/down) ───────────────────────────────
+  // ── Pan target (tx: sideways, tz: up/down) ───────────────────────────────
   //
   // We need world-space "right" and "up" vectors that are consistent with
   // the camera's current orientation. From the orbit camera math:
@@ -179,11 +188,29 @@ export function applyAxesToCamera(
   // zoom logic above).
   const panScale = cam.distance * PAN_RATE_PER_MS * dtMs;
 
-  // tx pans along right; ty pans along up. Sign convention: pushing the puck
-  // RIGHT (tx > 0) drags the target right (world appears to drift left).
-  cam.target[0] += (rightX * axes.tx + upX * axes.ty) * panScale;
-  cam.target[1] += (rightY * axes.tx + upY * axes.ty) * panScale;
-  cam.target[2] += (rightZ * axes.tx + upZ * axes.ty) * panScale;
+  // tx pans along right; tz pans along up (3Dconnexion Target Camera Mode).
+  // Sign convention: pushing RIGHT (tx > 0) drags the target right (world
+  // drifts left); lifting the puck (tz > 0) drags the target up (world
+  // drifts down, revealing objects above).
+  cam.target[0] += (rightX * axes.tx + upX * axes.tz) * panScale;
+  cam.target[1] += (rightY * axes.tx + upY * axes.tz) * panScale;
+  cam.target[2] += (rightZ * axes.tx + upZ * axes.tz) * panScale;
+
+  // ── Roll (ry: tilt left/right) ───────────────────────────────────────────
+  //
+  // Rotates the camera around its forward axis without changing yaw,
+  // pitch, distance, or target — purely a re-orientation of the image plane.
+  // In skymap this is physically defensible: the cosmological scene has no
+  // preferred up direction, so roll is meaningful navigation rather than
+  // just cosmetic.
+  //
+  // Sign: tilting the puck top-edge to the RIGHT (ry > 0) rolls the camera
+  // CW from the user's POV (the world tilts CCW on screen).  We negate ry
+  // so positive ry → negative roll → the image plane rotates CW, matching
+  // the intuitive "the puck leans right, the view leans right" feel.
+  // (Without negation a rightward tilt would roll the world clockwise —
+  // the opposite of what the user's hand gesture suggests.)
+  cam.roll = (cam.roll ?? 0) - axes.ry * dtMs * ROLL_RATE_RAD_PER_MS;
 }
 
 /**

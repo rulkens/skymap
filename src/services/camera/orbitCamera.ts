@@ -201,16 +201,64 @@ export function updatePosition(cam: OrbitCamera): void {
  */
 export function computeViewProj(cam: OrbitCamera): mat4 {
   // ── View matrix ──────────────────────────────────────────────────────────
+  //
+  // We need an "up" vector for `lookAt`.  By default this is world +Y, which
+  // works for any camera position that isn't exactly on the +Y or −Y pole
+  // (hence the pitch-clamp in the controls module).
+  //
+  // When `cam.roll` is non-zero we rotate that up-vector around the view
+  // direction (target − position) using Rodrigues' rotation formula:
+  //
+  //   v_rot = v·cosθ  +  (k×v)·sinθ  +  k·(k·v)·(1−cosθ)
+  //
+  // where k is the *unit* view-direction axis and θ is the roll angle.
+  //
+  // For roll = 0 the formula collapses to v_rot = v (cosθ = 1, sinθ = 0,
+  // last term = 0), so the no-roll path is algebraically identical — we use
+  // an early-exit for performance and clarity.
+  //
+  // With v = (0, 1, 0):
+  //   k · v = ky           (dot product)
+  //   k × v = (kz, 0, −kx) (cross product — note the zero middle component)
+  //
+  // This expansion is inlined to stay dependency-free (no additional
+  // gl-matrix imports beyond what was already present).
+  const roll = cam.roll ?? 0;
+  let upX = 0;
+  let upY = 1;
+  let upZ = 0;
+  if (Number.isFinite(roll) && roll !== 0) {
+    // k = unit vector from position toward target (the view direction axis)
+    const tgt = cam.target as readonly [number, number, number];
+    let kx = tgt[0] - cam.position[0];
+    let ky = tgt[1] - cam.position[1];
+    let kz = tgt[2] - cam.position[2];
+    const klen = Math.hypot(kx, ky, kz) || 1;
+    kx /= klen;
+    ky /= klen;
+    kz /= klen;
+    const c = Math.cos(roll);
+    const s = Math.sin(roll);
+    // v = (0, 1, 0); k · v = ky; k × v = (kz, 0, −kx)
+    const dot = ky;
+    const crossX = kz;
+    const crossY = 0;
+    const crossZ = -kx;
+    upX = 0 * c + crossX * s + kx * dot * (1 - c);
+    upY = 1 * c + crossY * s + ky * dot * (1 - c);
+    upZ = 0 * c + crossZ * s + kz * dot * (1 - c);
+  }
+
   const view = mat4.create();
   mat4.lookAt(
     view,
     cam.position, // eye: where the camera is
     cam.target as vec3, // center: what the camera looks at
-    [0, 1, 0], // up: world +Y is "up"
+    [upX, upY, upZ], // up: world +Y by default; rotated by roll when non-zero
     // ⚠ If pitch = ±π/2, `position` is directly above/below `target` and
-    // the up vector is parallel to the view direction.  lookAt produces a
-    // degenerate matrix in that case.  The controls module (Task 8) prevents
-    // this by clamping pitch to ±(π/2 − ε).
+    // the default up vector is parallel to the view direction.  lookAt
+    // produces a degenerate matrix in that case.  The controls module
+    // (Task 8) prevents this by clamping pitch to ±(π/2 − ε).
   );
 
   // ── Projection matrix ────────────────────────────────────────────────────
