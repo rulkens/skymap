@@ -28,7 +28,7 @@ import {
   hubbleVelocityKmS,
   absoluteMagnitude,
   earthEraForLookback,
-  galaxyTypeFromColor,
+  galaxyType,
   sdssExplorerUrl,
   sdssThumbnailUrl,
   dssThumbnailUrl,
@@ -120,10 +120,12 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
   const magI = cloud.magI[idx]!;
   const magZ = cloud.magZ[idx]!;
 
-  // u−r colour index is the standard SDSS discriminator for the red-sequence /
-  // blue-cloud bimodality (Strateva et al. 2001). We pass it to galaxyTypeFromColor
-  // rather than the u−g we feed the shader — u−r gives a cleaner separation.
-  const uMinusR = magU - magR;
+  // Galaxy-type classification dispatches by source: SDSS / Synthetic still
+  // use the canonical u−r red-sequence / blue-cloud split (Strateva et al.
+  // 2001), GLADE switches to B−J, and 2MRS uses J−K.  Each survey's
+  // classifier returns the same GalaxyTypeInfo shape so the InfoCard
+  // renders "Red, quiescent" / "Blue, star-forming" / etc. uniformly
+  // regardless of which colour pair fed the decision.
 
   // ── Band labels + colour pairs ─────────────────────────────────────────────
   //
@@ -206,7 +208,7 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
 
     // Derived quantities.
     absoluteMagG: absoluteMagnitude(magG, distanceMpc),
-    galaxyType: galaxyTypeFromColor(uMinusR),
+    galaxyType: galaxyType(source, { magU, magG, magR, magI, magZ }),
     iauName: iauName(source, ra, dec),
 
     // Per-slot band names + pre-computed adjacent-slot colour pairs.
