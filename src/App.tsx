@@ -67,10 +67,10 @@
 import { useRef, useEffect, useState } from 'react';
 import { createEngine } from './engine';
 import type { EngineHandle, EngineStatus, PointInfo, ScaleInfo } from './@types';
-import { StatusBar } from './components/StatusBar';
-import { InfoCard } from './components/InfoCard';
-import { ScaleBar } from './components/ScaleBar';
-import { SettingsPanel } from './components/SettingsPanel';
+import { StatusBar } from './components/StatusBar/StatusBar';
+import { InfoCard } from './components/InfoCard/InfoCard';
+import { ScaleBar } from './components/ScaleBar/ScaleBar';
+import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
