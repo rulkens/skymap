@@ -18,5 +18,6 @@ export * from './hubbleVelocityKmS';
 export * from './absoluteMagnitude';
 export * from './earthEraForLookback';
 export * from './galaxyTypeFromColor';
+export * from './easeOutCubic';
 export * from './sdssExplorerUrl';
 export * from './sdssThumbnailUrl';
