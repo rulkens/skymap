@@ -17,3 +17,4 @@ export type * from './GpuContext';
 export type * from './OrbitCameraInit';
 export type * from './OrbitCamera';
 export type * from './GalaxyTypeInfo';
+export type * from './QuadInstance';
