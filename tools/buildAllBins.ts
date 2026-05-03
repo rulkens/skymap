@@ -142,7 +142,10 @@ function loadOrEmpty(path: string | undefined, parser: ParserFn): ParsedRecord[]
  * SDSS and 2MRS comfortably fit under the string cap (~45 MB and ~10 MB
  * respectively), so they keep the simpler `readFileSync` path.
  */
-async function loadGladeStream(path: string | undefined): Promise<ParsedRecord[]> {
+async function loadGladeStream(
+  path: string | undefined,
+  options: { specZOnly?: boolean } = {},
+): Promise<ParsedRecord[]> {
   if (!path) return [];
 
   const records: ParsedRecord[] = [];
@@ -158,7 +161,7 @@ async function loadGladeStream(path: string | undefined): Promise<ParsedRecord[]
 
   for await (const line of rl) {
     if (line.length === 0) continue;
-    const rec = parseGladeLine(line);
+    const rec = parseGladeLine(line, options);
     if (rec === null) {
       skipped++;
     } else {
@@ -181,8 +184,20 @@ async function loadGladeStream(path: string | undefined): Promise<ParsedRecord[]
 async function runCli(): Promise<void> {
   const args = readArgs();
   if (!args['out-dir']) {
-    process.stderr.write('usage: build-all --sdss FILE --twomrs FILE --glade FILE --out-dir DIR\n');
+    process.stderr.write(
+      'usage: build-all --sdss FILE --twomrs FILE --glade FILE --out-dir DIR [--glade-spec-only]\n',
+    );
     process.exit(1);
+  }
+
+  // `--glade-spec-only` is a value-less boolean flag; readArgs() consumed the
+  // next argv entry into its value, but the presence of the key is what we
+  // care about.  Treat any non-empty key occurrence as opt-in.
+  const gladeSpecOnly = 'glade-spec-only' in args;
+  if (gladeSpecOnly) {
+    process.stderr.write(
+      'GLADE filter: spec-z only (drops 2MPZ photo-z entries to reveal filaments)\n',
+    );
   }
 
   process.stderr.write('parsing SDSS…\n');
@@ -190,7 +205,7 @@ async function runCli(): Promise<void> {
   process.stderr.write('parsing 2MRS…\n');
   const twoMrs = loadOrEmpty(args.twomrs, parseTwoMrs);
   process.stderr.write('parsing GLADE (streaming)…\n');
-  const glade = await loadGladeStream(args.glade);
+  const glade = await loadGladeStream(args.glade, { specZOnly: gladeSpecOnly });
 
   // Capture per-source input counts up front so the summary can report
   // the dedup drop rate per survey, not just the merged total.

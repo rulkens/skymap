@@ -146,6 +146,43 @@ function parseFloatOrNaN(s: string): number {
 }
 
 /**
+ * Options controlling row-level filtering of GLADE rows.
+ *
+ * `specZOnly`: when true, drop rows where the redshift is a 2MPZ photometric
+ * estimate.  GLADE's `Flag2` byte alone can't tell us spec vs photo for
+ * `Flag2 = '1'` (its dominant value) — that flag just says "the redshift was
+ * the input from which distance was computed", regardless of whether the
+ * redshift itself was measured by spectroscopy or by colour-fitting.
+ *
+ * Heuristic: a row is treated as spec-z when ANY of the following hold:
+ *   - `Flag2 == '2'`: distance was directly measured (Tully-Fisher,
+ *     Cepheid, etc.) — there's no photo-z error in the radial coordinate.
+ *   - `Flag2 == '3'`: GLADE explicitly replaced an earlier photo-z with a
+ *     spec-z that arrived later.  Definite spec-z.
+ *   - `Flag2 == '1'` AND a name from a spec-z-dominated parent catalog is
+ *     populated — GWGC, HyperLEDA, or SDSS-DR12.  Those compendia carry
+ *     spec-z entries; rows with only the 2MASS name set are 2MPZ
+ *     photo-z entries (~935 k of GLADE's 2.1 M usable rows).
+ *
+ * Why the spec-z option matters for the renderer: 2MPZ's σ_z ≈ 0.015
+ * smears galaxy radial positions by ~60 Mpc at z = 0.1, washing out the
+ * cosmic-web filaments that are physically only ~5 Mpc thick.  Filtering
+ * to spec-z keeps fewer galaxies (~200-500 k instead of 2.1 M) but each
+ * one is placed accurately in 3 D, so the filament structure becomes
+ * visible.
+ */
+export type GladeParseOptions = {
+  specZOnly?: boolean;
+};
+
+/** Index of a column field that holds an "is non-empty" check for a name. */
+function nameIsPopulated(line: string, startByte0Based: number, endByte0Based: number): boolean {
+  const slice = line.slice(startByte0Based, endByte0Based).trim();
+  // GLADE marks an unset name field with `---` (or longer dash run).
+  return slice.length > 0 && !/^-+$/.test(slice);
+}
+
+/**
  * Parse a single GLADE line into a record, or return `null` to indicate the
  * row should be counted as skipped. Exposed so that streaming consumers
  * (e.g. `tools/buildAllBins.ts` reading the 800 MB GLADE file line-by-line
@@ -156,7 +193,7 @@ function parseFloatOrNaN(s: string): number {
  * The whole-file `parseGlade` below is now a thin wrapper around this
  * function; the row-filter rules and byte offsets live in exactly one place.
  */
-export function parseGladeLine(line: string): ParsedRecord | null {
+export function parseGladeLine(line: string, options: GladeParseOptions = {}): ParsedRecord | null {
   if (line.length < MIN_LINE_LEN) {
     // Truncated row — can't safely slice the trailing flag bytes.
     return null;
@@ -171,6 +208,26 @@ export function parseGladeLine(line: string): ParsedRecord | null {
   // distance" — GLADE's own admission that this row is unplaceable.
   const flag2 = line.charAt(253);
   if (flag2 === '0') return null;
+
+  // ── Spec-z filter (opt-in) ──────────────────────────────────────────────
+  //
+  // When the caller asks for spec-z only, drop rows that are likely 2MPZ
+  // photo-z entries.  See the GladeParseOptions docstring for the rationale.
+  if (options.specZOnly) {
+    if (flag2 === '1') {
+      // Flag2 = '1' is ambiguous; trust the row only if at least one of the
+      // spec-z-dominated parent catalogs (GWGC, HyperLEDA, SDSS-DR12) names
+      // is populated.  GWGC bytes 9-36, HyperLEDA bytes 38-66, SDSS-DR12
+      // bytes 85-102 (1-based; 0-based half-open: 8-36, 37-66, 84-102).
+      const hasSpecZSourceName =
+        nameIsPopulated(line, 8, 36) ||
+        nameIsPopulated(line, 37, 66) ||
+        nameIsPopulated(line, 84, 102);
+      if (!hasSpecZSourceName) return null;
+    }
+    // Flag2 ∈ {'2', '3'} → keep regardless (those rows have crisp distance
+    // or a confirmed spec-z replacement; no parent-catalog check needed).
+  }
 
   // RA: bytes 106-123. F18.14 means up to 14 fractional digits in 18
   // chars; we just trim and `parseFloat`. RA is always populated, so
@@ -229,7 +286,7 @@ export function parseGladeLine(line: string): ParsedRecord | null {
  * to a `---`-leading string and would be silently dropped. Splitting
  * lines locally with no comment filter avoids that misclassification.
  */
-export function parseGlade(rawText: string): GladeResult {
+export function parseGlade(rawText: string, options: GladeParseOptions = {}): GladeResult {
   // Local line split: just normalise CRLF and break on '\n', then drop
   // empty lines. We deliberately *don't* strip `#` or `--` comment
   // prefixes here — see the docstring above.
@@ -242,7 +299,7 @@ export function parseGlade(rawText: string): GladeResult {
   let skipped = 0;
 
   for (const line of lines) {
-    const rec = parseGladeLine(line);
+    const rec = parseGladeLine(line, options);
     if (rec === null) {
       skipped++;
     } else {
