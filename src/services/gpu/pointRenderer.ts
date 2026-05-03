@@ -40,6 +40,7 @@
 
 import { mat4 } from 'gl-matrix';
 import type { PointCloud } from '../../@types';
+import { pickColourIndex } from '../../data/colourIndex';
 import { ALL_SOURCES, Source } from '../../data/sources';
 
 // `?raw` is a Vite-specific import suffix. It tells the bundler to import the
@@ -55,25 +56,33 @@ import shaderSrc from './shaders/points.wgsl?raw';
  * Number of 4-byte slots packed per catalog point in the vertex buffer.
  *
  * Layout (matches the `PerVertex` struct in points.wgsl):
- *   [x f32, y f32, z f32,  magnitude f32,  colorIndex f32,  globalInstanceIdx u32]
+ *   [x f32, y f32, z f32,  magnitude f32,  colorIndex f32,  globalInstanceIdx u32,  kPerZ f32]
  *
- * The first five slots are interpreted as f32 by the shader; the sixth slot
- * is interpreted as u32. JS-side we treat the buffer as a flat ArrayBuffer
- * and use Float32Array / Uint32Array views over the same bytes so we can
- * write each slot in its native type without conversion.
+ * The first five slots are interpreted as f32 by the shader; slot 5 is
+ * interpreted as u32; slot 6 is interpreted as f32 again.  JS-side we
+ * treat the buffer as a flat ArrayBuffer and use Float32Array /
+ * Uint32Array views over the same bytes so we can write each slot in its
+ * native type without conversion.
+ *
+ * The new slot 6 (`kPerZ`) carries a per-row K-correction coefficient.
+ * Different surveys use different colour pairs (SDSS u−g, GLADE B−J,
+ * 2MRS J−K) and each pair has its own redshift dependence, so the K
+ * coefficient varies per *row* — not per draw call.  Baking it into the
+ * vertex buffer lets the shader read it for free, replacing the previous
+ * hard-coded `K_UG_PER_Z` shader constant once Task 5 lands.
  */
-const SLOTS_PER_POINT = 6;
+const SLOTS_PER_POINT = 7;
 
 /**
  * Byte stride between consecutive per-instance records in the vertex buffer.
  *
- * 6 slots × 4 bytes = 24 bytes. The pipeline's `arrayStride` must match
+ * 7 slots × 4 bytes = 28 bytes. The pipeline's `arrayStride` must match
  * this exactly; if it disagrees WebGPU will either validate-error or
  * silently read garbage.  PickRenderer's pipeline declares the same
- * 24-byte stride and same fourth attribute, so the two pipelines stay
+ * 28-byte stride and same fourth attribute, so the two pipelines stay
  * compatible with this single vertex buffer layout.
  */
-const POINT_STRIDE = SLOTS_PER_POINT * 4; // 24 bytes
+const POINT_STRIDE = SLOTS_PER_POINT * 4; // 28 bytes
 
 /**
  * Byte offset of the `globalInstanceIdx` slot inside one per-instance record.
@@ -83,6 +92,17 @@ const POINT_STRIDE = SLOTS_PER_POINT * 4; // 24 bytes
  * single-source-of-truth across upload + the pipeline descriptor below.
  */
 const GLOBAL_IDX_BYTE_OFFSET = 20;
+
+/**
+ * Byte offset of the `kPerZ` slot inside one per-instance record.
+ *
+ * Sits immediately after the u32 globalInstanceIdx, at slot index 6.
+ * Mirrors the `GLOBAL_IDX_BYTE_OFFSET` style so both the upload loop and
+ * the pipeline-descriptor attribute table can refer to a single named
+ * value.  The shader reads this as a per-instance f32 to scale the
+ * K-correction by redshift on a per-row basis (Task 5).
+ */
+const K_PER_Z_BYTE_OFFSET = 24;
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.
@@ -219,6 +239,14 @@ export class PointRenderer {
                 offset: GLOBAL_IDX_BYTE_OFFSET,
                 format: 'uint32',
               },
+              // kPerZ (f32) — offset 24 bytes.  Per-row K-correction
+              // coefficient (see colourIndex.ts).  Different bands react
+              // differently to redshift: SDSS u−g uses ~3.0/z (UV is highly
+              // K-sensitive), GLADE B−J uses ~1.0/z, and 2MRS J−K uses 0.0/z
+              // because near-infrared galaxy SEDs are nearly z-invariant in
+              // the redshift range we care about.  The shader multiplies
+              // this coefficient by `z` to obtain the per-point K shift.
+              { shaderLocation: 4, offset: K_PER_Z_BYTE_OFFSET, format: 'float32' }, // kPerZ
             ],
           },
         ],
@@ -364,35 +392,64 @@ export class PointRenderer {
       interleaved[o + 1] = cloud.positions[i * 3 + 1]!;
       interleaved[o + 2] = cloud.positions[i * 3 + 2]!;
 
-      // Derive shader-side magnitude (g-band, normalised) and colour index
-      // (u−g) from the v2 five-band photometry.  This is one-shot work done
-      // at load time, not per frame.
+      // Derive shader-side magnitude (g-band, normalised), colour index
+      // (per-source colour pair, normalised to 0..2), and the per-row
+      // K-correction coefficient from the v2 five-band photometry.  This is
+      // one-shot work done at load time, not per frame.
       //
-      // Non-SDSS surveys don't measure u-band, so `u - g` is NaN.  WGSL has
-      // no native NaN guards on the colour-ramp lookup — NaN propagates
-      // through the K-correction subtraction and clamps to the bluest end,
-      // painting every 2MRS/GLADE galaxy sky-blue.
+      // Why delegate band selection to `pickColourIndex`?  Each survey has
+      // its own preferred informative band pair:
       //
-      // Substitution scheme: when the observed u−g is unknown, write a
-      // sentinel value > 100 into the colorIndex slot.  The shader detects
-      // values outside the physical u−g range [-2, +5] and treats them as
-      // "no measurement": no K-correction (we have no observed colour to
-      // correct), and a fixed mid-ramp tint (≈ orange-white) regardless of
-      // distance.  Real galaxies can never legitimately have colorIndex
-      // ≥ 100, so the sentinel is unambiguous.
+      //   - SDSS  → u − g  (UV-blue contrast, sensitive to recent star formation)
+      //   - GLADE → B − J  (visible-NIR baseline; B-J ≈ stellar-population age)
+      //   - 2MRS  → J − K  (near-IR colour; almost flat in redshift)
+      //
+      // Picking the right pair per row keeps the colour-ramp meaningful
+      // across surveys; doing it inside the renderer would couple the GPU
+      // code to band-availability rules.  We therefore keep that logic in
+      // `data/colourIndex.ts` and just consume its output here.
+      //
+      // `pickColourIndex` is NaN-tolerant: pass every band as-is (NaN or
+      // real) and let the helper choose what to use.  When the row lacks
+      // any usable colour pair it returns null — we map that case to the
+      // existing `NO_COLOUR_SENTINEL = 999`, the magic value the shader
+      // recognises as "no measurement".  The shader's existing missing-band
+      // branch (no K-correction, fixed mid-ramp tint) keeps working
+      // unchanged.
+      //
+      // The K coefficient is now per-row rather than a single shader
+      // constant: SDSS u−g uses 3.0/z (UV K-shift is steep), GLADE B−J uses
+      // 1.0/z (visible-NIR baseline is gentler), and 2MRS J−K uses 0.0/z
+      // (the near-IR band pair is nearly z-invariant for the galaxy SEDs
+      // and redshift range we care about).  When the colour is unknown we
+      // write 0 — the sentinel branch already skips K-correction in the
+      // shader, so 0 is the conservative default.
       const NO_COLOUR_SENTINEL = 999;
       const g = cloud.magG[i]!;
-      const u = cloud.magU[i]!;
-      const ug = u - g;
+
+      const colour = pickColourIndex(
+        source,
+        cloud.magU[i]!,
+        cloud.magG[i]!,
+        cloud.magR[i]!,
+        cloud.magI[i]!,
+        cloud.magZ[i]!,
+      );
+
       // Apply the per-survey mag offset.  NaN-G galaxies (rare; mostly GLADE
       // rows missing a B-band measurement) snap to the post-shift target so
       // they render at average intensity instead of vanishing.
       interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
-      interleaved[o + 4] = Number.isFinite(ug) ? ug : NO_COLOUR_SENTINEL;
+      interleaved[o + 4] = colour ? colour.colourIndex : NO_COLOUR_SENTINEL;
       // Slot 5 (offset 20 bytes) carries the GLOBAL instance index as a u32,
       // baked once at upload time so the shader doesn't need a per-draw
       // uniform write.  Read by the selection-halo check and `fsPick`.
       interleavedU32[o + 5] = priorCount + i;
+      // Slot 6 (offset 24 bytes) carries the per-row K-correction
+      // coefficient.  Multiplied by redshift in the shader to obtain the
+      // K-shift this row should receive.  See `pickColourIndex` for the
+      // per-source values.
+      interleaved[o + 6] = colour ? colour.kPerZ : 0;
     }
 
     // Destroy any previous buffer for this source before replacing it.
