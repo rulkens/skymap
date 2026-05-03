@@ -27,11 +27,15 @@ struct Uniforms {
   pxPerRad: f32,
 };
 
-// Per-instance attributes.  Two vec4s — first packs (xyz, sizeWorld),
-// second is the uv rect.  Both naturally 16-byte aligned.
+// Per-instance attributes.  Three vec4s — first packs (xyz, sizeWorld),
+// second is the uv rect, third carries the per-frame `fadeAlpha`
+// multiplier produced by the engine (distance fade × load fade).  All
+// naturally 16-byte aligned.  The remaining three components of
+// `extras` are reserved padding for future per-instance flags.
 struct InstanceIn {
   @location(0) posSize: vec4<f32>,
   @location(1) uvRect:  vec4<f32>,
+  @location(2) extras:  vec4<f32>,
 };
 
 struct VsOut {
@@ -45,6 +49,12 @@ struct VsOut {
   // rectangles get clamped or padded.  Threading both lets us decouple
   // "which texel to sample" from "where am I in the quad shape".
   @location(1)       cornerUv:  vec2<f32>,
+  // Per-instance fade multiplier in [0, 1].  Constant across all six
+  // vertices of one instance, so flat interpolation would be cheaper
+  // — but a single forwarded float costs nothing either way and we
+  // can re-use the smooth interpolation slot for the load fade if it
+  // ever needs to vary across the quad.
+  @location(2)       fadeAlpha: f32,
 };
 
 @group(0) @binding(0) var<uniform> u:        Uniforms;
@@ -121,6 +131,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // Forward the corner-local UV to the FS so it can compute the
   // radial mask without re-deriving it from clip-space coords.
   out.cornerUv = cornerUv;
+  out.fadeAlpha = instance.extras.x;
   return out;
 }
 
@@ -158,7 +169,11 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // and subtract a per-cutout sky level.
   let lum = max(rgba.r, max(rgba.g, rgba.b));
   let lumAlpha = smoothstep(0.05, 0.30, lum);
-  let alpha = lumAlpha * mask;
+  // `fadeAlpha` is the engine's per-frame fade multiplier — combines
+  // distance fade (galaxies smoothly grow in as they cross the
+  // apparent-size threshold) and load fade (~400 ms ramp from
+  // bitmap-arrival).  Final alpha is the product of all three.
+  let alpha = lumAlpha * mask * in.fadeAlpha;
   // Premultiplied-alpha output — required by the project's blend
   // configuration (see device.ts `alphaMode: 'premultiplied'`).
   return vec4<f32>(rgba.rgb * alpha, alpha);

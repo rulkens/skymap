@@ -71,13 +71,17 @@ struct Uniforms {
 struct InstanceIn {
   @location(0) posSize: vec4<f32>,
   @location(1) uvRect:  vec4<f32>,
-  @location(2) orient:  vec4<f32>,  // x: axisRatio, y: positionAngleDeg
+  // x: axisRatio, y: positionAngleDeg, z: fadeAlpha (per-frame distance ×
+  // load fade multiplier from the engine), w: reserved padding.
+  @location(2) orient:  vec4<f32>,
 };
 
 struct VsOut {
-  @builtin(position) clipPos:  vec4<f32>,
-  @location(0)       atlasUv:  vec2<f32>,
-  @location(1)       cornerUv: vec2<f32>,
+  @builtin(position) clipPos:   vec4<f32>,
+  @location(0)       atlasUv:   vec2<f32>,
+  @location(1)       cornerUv:  vec2<f32>,
+  // Per-instance fade multiplier in [0, 1].
+  @location(2)       fadeAlpha: f32,
 };
 
 @group(0) @binding(0) var<uniform> u:        Uniforms;
@@ -173,6 +177,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let uvLocal = vec2<f32>(cornerUv.x, 1.0 - cornerUv.y);
   out.atlasUv = mix(instance.uvRect.xy, instance.uvRect.zw, uvLocal);
   out.cornerUv = cornerUv;
+  out.fadeAlpha = instance.orient.z;
   return out;
 }
 
@@ -188,6 +193,6 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // sky in the cutout JPEG bleed transparent against the dot field.
   let lum = max(rgba.r, max(rgba.g, rgba.b));
   let lumAlpha = smoothstep(0.05, 0.30, lum);
-  let alpha = lumAlpha * mask;
+  let alpha = lumAlpha * mask * in.fadeAlpha;
   return vec4<f32>(rgba.rgb * alpha, alpha);
 }

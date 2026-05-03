@@ -187,7 +187,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //   - 'manual' → the user (or a programmatic call to `setSourceVisible`)
   //                owns the mask; auto-LOD is paused.
   let visibleSourceMask = ALL_VISIBLE_MASK;
-  let lodMode: LodMode = 'auto';
+  // Default LOD mode = 'manual' (every loaded survey rendered, no auto-cull)
+  // per user request. With 'manual' the engine renders whatever
+  // `visibleSourceMask` says — initialized to ALL_VISIBLE_MASK above, so
+  // every survey is visible at startup. Auto-LOD remains available; the
+  // user can flip the mode to 'auto' from the settings panel to dynamically
+  // cull faint sources at large camera distances.
+  let lodMode: LodMode = 'manual';
 
   // ── Initial camera snapshot ───────────────────────────────────────────────
   //
@@ -452,6 +458,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const queue = new GalaxyImageQueue();
       let frameCounter = 0;
       const bitmapReady = new Set<string>();
+      // Timestamp (performance.now()) at which each ready bitmap finished
+      // landing in the atlas. Used by the per-frame loop to compute a
+      // "load fade" — the freshly-uploaded thumbnail ramps from alpha 0
+      // to 1 over `LOAD_FADE_MS` so it doesn't pop in. Same key as
+      // `bitmapReady`; the value is set once on bitmap arrival and
+      // never updated.
+      const bitmapReadyTime = new Map<string, number>();
 
       // ── Failed-fetch memo ────────────────────────────────────────────────
       //
@@ -1009,6 +1022,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
                     }
                     atlas.uploadBitmap(slot, bitmap);
                     bitmapReady.add(key);
+                    bitmapReadyTime.set(key, performance.now());
                     bitmap.close();
                   },
                 });
@@ -1022,6 +1036,38 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               // channel of the cutout JPEG.
               const sizeWorldMpc = (dKpc / 1000) * 4;
               const [u0, v0, u1, v1] = atlas.slotUv(slot);
+
+              // ── Fade-in multipliers ──────────────────────────────────
+              //
+              // Two fades combine to keep thumbnails from popping in:
+              //
+              //  1. Distance fade — smoothstep across an 8 px band above
+              //     the apparent-size threshold so a galaxy that just
+              //     crossed the threshold (apparent size ≈ 24 px) emerges
+              //     gradually as the camera zooms in further (~32 px).
+              //  2. Load fade — once a bitmap finishes landing in the
+              //     atlas, we ramp from 0 to 1 over LOAD_FADE_MS so the
+              //     freshly-uploaded thumbnail doesn't replace the soft
+              //     point glow with a hard JPEG square in one frame.
+              //
+              // Multiplied together so a galaxy that crosses the
+              // distance threshold AND has just landed its bitmap fades
+              // in twice (once from each axis); galaxies that have been
+              // ready for a while only see the distance fade.
+              const FADE_BAND_PX = 8;
+              const distT = Math.min(
+                1,
+                Math.max(0, (px - APPARENT_SIZE_THRESHOLD_PX) / FADE_BAND_PX),
+              );
+              // Smoothstep cubic — same shape WGSL's smoothstep uses.
+              const distFade = distT * distT * (3 - 2 * distT);
+              const LOAD_FADE_MS = 400;
+              const tReady = bitmapReadyTime.get(key);
+              const loadFade =
+                tReady === undefined
+                  ? 0
+                  : Math.min(1, (performance.now() - tReady) / LOAD_FADE_MS);
+              const fadeAlpha = distFade * loadFade;
 
               const ar = cloud.axisRatio[i]!;
               const pa = cloud.positionAngleDeg[i]!;
@@ -1044,9 +1090,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
                   v1,
                   axisRatio: ar,
                   positionAngleDeg: pa,
+                  fadeAlpha,
                 });
               } else {
-                quads.push({ x, y, z, sizeWorld: sizeWorldMpc, u0, v0, u1, v1 });
+                quads.push({
+                  x,
+                  y,
+                  z,
+                  sizeWorld: sizeWorldMpc,
+                  u0,
+                  v0,
+                  u1,
+                  v1,
+                  fadeAlpha,
+                });
               }
             }
           }

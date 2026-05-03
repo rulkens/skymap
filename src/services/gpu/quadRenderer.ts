@@ -17,7 +17,21 @@ import type { mat4 } from 'gl-matrix';
 import type { GpuContext, QuadInstance } from '../../@types';
 import quadsWgsl from './shaders/quads.wgsl?raw';
 
-const FLOATS_PER_INSTANCE = 8;
+/**
+ * Per-instance vertex attributes packed as 12 floats / 48 bytes:
+ *
+ *   posSize: vec4<f32>  (xyz, sizeWorld)
+ *   uvRect:  vec4<f32>  (u0, v0, u1, v1)
+ *   extras:  vec4<f32>  (fadeAlpha, _, _, _)
+ *
+ * The third vec4 carries the per-frame fade multiplier produced by the
+ * engine — a combination of distance fade (smoothstep across the
+ * apparent-size threshold band) and load fade (a ~400 ms ramp once a
+ * fresh bitmap lands in the atlas).  Three-of-four channels in `extras`
+ * are reserved padding for future per-instance flags (e.g. selected,
+ * highlighted) without growing the stride further.
+ */
+const FLOATS_PER_INSTANCE = 12;
 const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
 
 /**
@@ -83,6 +97,7 @@ export class QuadRenderer {
             attributes: [
               { shaderLocation: 0, offset: 0, format: 'float32x4' }, // posSize
               { shaderLocation: 1, offset: 16, format: 'float32x4' }, // uvRect
+              { shaderLocation: 2, offset: 32, format: 'float32x4' }, // extras (fadeAlpha + padding)
             ],
           },
         ],
@@ -187,6 +202,8 @@ export class QuadRenderer {
       data[base + 5] = ins.v0;
       data[base + 6] = ins.u1;
       data[base + 7] = ins.v1;
+      data[base + 8] = ins.fadeAlpha;
+      // data[base + 9..11] reserved (left zero by Float32Array init)
     }
     this.device.queue.writeBuffer(this.instanceBuffer, 0, data);
 

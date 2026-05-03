@@ -166,7 +166,7 @@ export function App(): React.ReactElement {
   // `onSourceMaskChange` callback later, we can wire it here without changing
   // any other code.
   const [visibleSourceMask, setVisibleSourceMask] = useState<number>(ALL_VISIBLE_MASK);
-  const [lodMode, setLodMode] = useState<LodMode>('auto');
+  const [lodMode, setLodMode] = useState<LodMode>('manual');
 
   // ── SpaceMouse state (optional, WebHID-only) ─────────────────────────────
   //

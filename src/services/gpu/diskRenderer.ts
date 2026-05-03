@@ -41,6 +41,12 @@ export type DiskInstance = {
   v1: number;
   axisRatio: number;
   positionAngleDeg: number;
+  /**
+   * Per-frame fade multiplier in [0, 1].  Distance fade × load fade,
+   * computed CPU-side by the engine and folded into the shader's final
+   * alpha output.  See QuadInstance.d.ts for the underlying logic.
+   */
+  fadeAlpha: number;
 };
 
 const FLOATS_PER_INSTANCE = 12;
@@ -211,7 +217,7 @@ export class DiskRenderer {
       data[base + 7] = ins.v1;
       data[base + 8] = ins.axisRatio;
       data[base + 9] = ins.positionAngleDeg;
-      data[base + 10] = 0;
+      data[base + 10] = ins.fadeAlpha;
       data[base + 11] = 0;
     }
     this.device.queue.writeBuffer(this.instanceBuffer, 0, data);
