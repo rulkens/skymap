@@ -35,6 +35,7 @@ import { fileURLToPath } from 'node:url';
 import { parseFamousSeed, type FamousEntry } from './parsers/famousSeed.js';
 import { encodePointCloud, decodePointCloud } from '../src/data/pointCloudFormat.js';
 import { Source } from '../src/data/sources.js';
+import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
 import type { PointCloud } from '../src/@types/index.js';
 
 /** Threshold (arcsec) within which a 2MRS/GLADE point is treated as the same galaxy. */
@@ -176,15 +177,35 @@ async function main(): Promise<void> {
     // photometry, or any subset.  Absent fields stay at NaN (the array's
     // `.fill(NaN)` initial value), which the renderer/colour-index code
     // treats as "no measurement, fall back to defaults".
-    if (e.axisRatio !== undefined) cloud.axisRatio[i] = e.axisRatio;
-    if (e.positionAngleDeg !== undefined) cloud.positionAngleDeg[i] = e.positionAngleDeg;
+    // Orientation: bake real values when both axisRatio AND positionAngleDeg
+    // are present; otherwise emit the deterministic fallback for THIS row.
+    //
+    // We must bake fallback values rather than leaving NaN, because the
+    // pointRenderer detects fallback rows by EXACT equality with what
+    // `fallbackOrientation()` produces (via `Float32Array` round-tripped
+    // floats).  NaN never equals anything, so a NaN slot would slip past
+    // the detection AND then propagate NaN into the vertex attributes,
+    // making the orientation-disk shader render an axis-aligned square.
+    //
+    // Partial measurements (axisRatio without PA, or vice versa) get the
+    // full fallback pair — mixing one real number with one hashed number
+    // would be a worst-of-both-worlds stable orientation that's still
+    // arbitrary.  Keep the renderer's "real vs fallback" check binary.
+    if (e.axisRatio != null && e.positionAngleDeg != null) {
+      cloud.axisRatio[i] = e.axisRatio;
+      cloud.positionAngleDeg[i] = e.positionAngleDeg;
+    } else {
+      const fb = fallbackOrientation(cloud.objIDs[i]!, e.ra, e.dec);
+      cloud.axisRatio[i] = fb.axisRatio;
+      cloud.positionAngleDeg[i] = fb.positionAngleDeg;
+    }
     // Photometric mapping: HyperLEDA gives B/V/K, the PointCloud arrays
     // are SDSS-shaped (u/g/r/i/z).  Same shoehorn convention as GLADE:
     // map B→G, V→R, K→I.  magU/magZ stay NaN — HyperLEDA doesn't carry
     // them and we'd rather have honest "missing" than fabricated values.
-    if (e.magB !== undefined) cloud.magG[i] = e.magB;
-    if (e.magV !== undefined) cloud.magR[i] = e.magV;
-    if (e.magK !== undefined) cloud.magI[i] = e.magK;
+    if (e.magB != null) cloud.magG[i] = e.magB;
+    if (e.magV != null) cloud.magR[i] = e.magV;
+    if (e.magK != null) cloud.magI[i] = e.magK;
 
     // Cross-match against 2MRS first (denser at the famous-galaxy scale),
     // then GLADE for entries 2MRS missed.

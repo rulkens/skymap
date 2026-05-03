@@ -113,11 +113,16 @@ export type HyperLedaMeandataRow = {
  */
 function parseHeader(headerLine: string): Map<string, number> {
   const idx = new Map<string, number>();
-  // Tab-separated.  $objname has no quotes; everything else is "quoted".
-  const cells = headerLine.split('\t');
-  for (let i = 0; i < cells.length; i++) {
-    const raw = cells[i] ?? '';
-    const name = raw.trim().replace(/^"|"$/g, '');
+  // HyperLEDA emits the header as `$objname "pgc" "objtype" ...` — the
+  // first token is bare, the rest are double-quoted, and they're delimited
+  // by spaces (NOT tabs, even though the data rows below use tabs).  We
+  // extract column names with a regex that grabs either `$objname` or any
+  // quoted token, in order.  This is robust to whatever whitespace the
+  // server happens to emit between columns and matches data-row column
+  // index 0 = first matched token, 1 = second, etc.
+  const tokens = headerLine.match(/\$objname|"[^"]+"/g) ?? [];
+  for (let i = 0; i < tokens.length; i++) {
+    const name = tokens[i]!.replace(/^"|"$/g, '');
     if (name.length > 0) idx.set(name, i);
   }
   return idx;
