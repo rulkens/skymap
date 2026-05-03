@@ -56,11 +56,14 @@ function statusText(status: EngineStatus): string {
       return 'loading SDSS data…';
 
     case 'ready': {
-      // Show the actual source so the user can immediately tell whether real
-      // SDSS galaxies or the synthetic fallback are being rendered.
-      const sourceLabel =
-        status.source === 'sdss.bin' ? 'sdss.bin' : 'synthetic — sdss.bin not found';
-      return `WebGPU OK · ${status.count.toLocaleString()} points (${sourceLabel}) · drag to orbit, wheel to zoom`;
+      // `count` is the running total across every loaded survey; `source` is the
+      // first-arrived cloud (engine sets it once, stays put — subsequent arrivals
+      // bump the count via `onCloudReady`).  We only flag the synthetic fallback
+      // explicitly because it implies all three real fetches failed.  Real data
+      // (SDSS, 2MRS, GLADE, or any combination) renders without a tag — the
+      // count itself is the proof.
+      const suffix = status.source === 'synthetic' ? ' (synthetic fallback)' : '';
+      return `WebGPU OK · ${status.count.toLocaleString()} points${suffix} · drag to orbit, wheel to zoom`;
     }
 
     case 'error':
