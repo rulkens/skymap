@@ -36,8 +36,16 @@
  */
 
 /**
- * The shape we extract from a Wikipedia summary response.  Both fields
- * are guaranteed to be strings — empty when missing or invalid.
+ * The shape we extract from a Wikipedia summary response.  String fields
+ * are guaranteed to be strings (empty when missing or invalid); the image
+ * fields are `undefined` when the article has no thumbnail.
+ *
+ * Why surface both `originalimage` and `thumbnail`?  The famous-galaxy
+ * thumbnail pipeline prefers full-resolution `originalimage.source` for
+ * the best downscale quality, but Wikipedia sometimes only has a
+ * `thumbnail` (e.g. when the image is from a non-Commons source or has
+ * been culled for size).  Falling back from one to the other in the
+ * caller keeps the "always emit something if we have anything" rule.
  */
 export type WikipediaSummary = {
   /** The 1-3 sentence article extract.  Empty string when unusable. */
@@ -48,6 +56,18 @@ export type WikipediaSummary = {
    * actually landed on after the REST API resolved redirects.
    */
   title: string;
+  /**
+   * `"standard"` for a normal article, `"disambiguation"` for a "may
+   * refer to" page.  Surfaced so callers downstream of the parser can
+   * skip disambiguation pages even when they happen to carry an image
+   * (rare, but seen in the wild on overloaded titles like `Andromeda`).
+   * Empty string when the field is missing.
+   */
+  type: string;
+  /** Highest-resolution image URL for the article, when present. */
+  originalImageUrl?: string;
+  /** Smaller thumbnail URL — used when `originalImageUrl` is absent. */
+  thumbnailUrl?: string;
 };
 
 /**
@@ -66,19 +86,35 @@ export function parseWikipediaSummary(text: string): WikipediaSummary {
     type?: string;
     title?: string;
     extract?: string;
+    thumbnail?: { source?: unknown };
+    originalimage?: { source?: unknown };
   };
   const title = typeof json.title === 'string' ? json.title : '';
+  const type = typeof json.type === 'string' ? json.type : '';
   const rawExtract = typeof json.extract === 'string' ? json.extract : '';
+
+  // Image URLs.  Both nested objects and their `source` fields are
+  // optional — Wikipedia omits `thumbnail`/`originalimage` entirely for
+  // articles without images, and we tolerate either shape.  Defensive
+  // typeof checks keep us safe against API drift (shouldn't happen, but
+  // this is a personal project; failing loud later is worse than a
+  // belt-and-braces guard here).
+  const originalImageUrl =
+    typeof json.originalimage?.source === 'string' ? json.originalimage.source : undefined;
+  const thumbnailUrl =
+    typeof json.thumbnail?.source === 'string' ? json.thumbnail.source : undefined;
 
   // Disambiguation page: type field is the authoritative signal, but
   // we also catch the prose pattern as a belt-and-braces.  Either way,
   // we return an empty extract so the caller falls back uniformly.
+  // Image URLs are still surfaced — the caller may want to log them or
+  // skip the page based on type, not just the empty extract.
   const isDisambiguation =
     json.type === 'disambiguation' || /^may refer to[:\s]/i.test(rawExtract.trim());
   if (isDisambiguation) {
-    return { extract: '', title };
+    return { extract: '', title, type, originalImageUrl, thumbnailUrl };
   }
-  return { extract: rawExtract, title };
+  return { extract: rawExtract, title, type, originalImageUrl, thumbnailUrl };
 }
 
 /**

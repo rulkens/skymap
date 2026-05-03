@@ -14,6 +14,35 @@ describe('parseWikipediaSummary', () => {
     const out = parseWikipediaSummary(json);
     expect(out.title).toBe('Andromeda Galaxy');
     expect(out.extract).toBe('The Andromeda Galaxy is a barred spiral galaxy.');
+    expect(out.type).toBe('standard');
+  });
+
+  it('extracts originalimage and thumbnail URLs when present', () => {
+    const json = JSON.stringify({
+      type: 'standard',
+      title: 'Andromeda Galaxy',
+      extract: 'A galaxy.',
+      thumbnail: {
+        source: 'https://example.test/thumb.jpg',
+        width: 320,
+        height: 200,
+      },
+      originalimage: {
+        source: 'https://example.test/full.jpg',
+        width: 4000,
+        height: 2500,
+      },
+    });
+    const out = parseWikipediaSummary(json);
+    expect(out.originalImageUrl).toBe('https://example.test/full.jpg');
+    expect(out.thumbnailUrl).toBe('https://example.test/thumb.jpg');
+  });
+
+  it('leaves image URLs undefined when absent', () => {
+    const json = JSON.stringify({ type: 'standard', title: 'Foo', extract: 'x' });
+    const out = parseWikipediaSummary(json);
+    expect(out.originalImageUrl).toBeUndefined();
+    expect(out.thumbnailUrl).toBeUndefined();
   });
 
   it('returns empty extract for disambiguation pages (type field)', () => {

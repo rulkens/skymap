@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   sampleCornerColor,
   applyTransparency,
+  applyRadialFade,
   type RGBA,
 } from '../tools/famousImageProcessor';
 
@@ -95,15 +96,83 @@ describe('applyTransparency', () => {
       buf[i + 2] = 200;
       buf[i + 3] = 255;
     }
-    applyTransparency(buf, width, height, { r: 0, g: 0, b: 0, a: 255 }, {
-      skyTolerance: 0,
-      fadeOuterFraction: 0.5,
-    });
+    applyTransparency(
+      buf,
+      width,
+      height,
+      { r: 0, g: 0, b: 0, a: 255 },
+      {
+        skyTolerance: 0,
+        fadeOuterFraction: 0.5,
+      },
+    );
     // Centre pixel alpha unchanged
     const centreIdx = (3 * width + 3) * 4 + 3;
     expect(buf[centreIdx]).toBeGreaterThan(200);
     // Edge pixel alpha reduced
     const edgeIdx = (0 * width + 0) * 4 + 3;
     expect(buf[edgeIdx]).toBeLessThan(200);
+  });
+});
+
+describe('applyRadialFade', () => {
+  /**
+   * Helper: fill an 8x8 buffer with opaque white pixels.  Used as the
+   * neutral starting state so the fade is the only thing acting on alpha.
+   */
+  function makeOpaqueFixture(width: number, height: number): Uint8ClampedArray {
+    const buf = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < buf.length; i += 4) {
+      buf[i + 0] = 200;
+      buf[i + 1] = 200;
+      buf[i + 2] = 200;
+      buf[i + 3] = 255;
+    }
+    return buf;
+  }
+
+  it('fades the outer ring without touching pixel colour values', () => {
+    // The whole point of the Wikipedia path: NO sky-cut, only alpha
+    // tapering.  RGB channels must be untouched after the call so the
+    // pre-curated colour grading from the original astrophotograph survives.
+    const width = 8;
+    const height = 8;
+    const buf = makeOpaqueFixture(width, height);
+    applyRadialFade(buf, width, height, 0.5);
+    // Sample several pixels and check RGB unchanged.
+    for (const [x, y] of [
+      [0, 0],
+      [3, 3],
+      [7, 7],
+      [4, 0],
+    ] as const) {
+      const i = (y * width + x) * 4;
+      expect(buf[i + 0]).toBe(200);
+      expect(buf[i + 1]).toBe(200);
+      expect(buf[i + 2]).toBe(200);
+    }
+  });
+
+  it('reduces alpha at the corners and preserves it in the centre', () => {
+    const width = 8;
+    const height = 8;
+    const buf = makeOpaqueFixture(width, height);
+    applyRadialFade(buf, width, height, 0.5);
+    // Centre pixel alpha unchanged (within fadeInnerR).
+    const centreIdx = (3 * width + 3) * 4 + 3;
+    expect(buf[centreIdx]).toBe(255);
+    // Corner pixel alpha fully zero (smoothstep at t=1 → fade=0).
+    const cornerIdx = (0 * width + 0) * 4 + 3;
+    expect(buf[cornerIdx]).toBe(0);
+  });
+
+  it('is a no-op when fadeOuterFraction is 0', () => {
+    const width = 4;
+    const height = 4;
+    const buf = makeOpaqueFixture(width, height);
+    applyRadialFade(buf, width, height, 0);
+    for (let i = 3; i < buf.length; i += 4) {
+      expect(buf[i]).toBe(255);
+    }
   });
 });

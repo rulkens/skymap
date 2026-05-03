@@ -1,181 +1,391 @@
 #!/usr/bin/env node
 /**
  * fetchFamousImages — for every entry in `data/famous_galaxies.seed.json`,
- * download an imaging cutout sized to 1.3× the galaxy's diameter, run it
- * through the transparency processor, and write a 256×256 WebP at
- * `public/images/famous/<id>.webp`.
+ * obtain a 256×256 WebP thumbnail at `public/images/famous/<id>.webp`.
  *
- * Idempotent by default: skips entries whose WebP already exists.  Pass
- * `--force` to re-fetch every entry.
+ * ── Why Wikipedia is the *primary* source (and DESI is the fallback) ────
  *
- * ── Cutout endpoint + layer fallback chain ─────────────────────────────
+ * The previous implementation walked a chain of survey-imaging layers
+ * (DESI Legacy DR10 → SDSS → unWISE) and ran the result through a corner-
+ * colour sky-cut.  That worked well *when* the survey actually had clean
+ * imagery for the target — which fails for the most famous, nearby objects
+ * (M31, M33, M101) where the field of view contains hundreds of resolved
+ * field stars and the survey cutouts crop tightly to a small fraction of
+ * the galaxy's angular size.  Visually, the auto-fetched thumbnails were
+ * the worst for the galaxies users care about most.
  *
- * All requests go to the DESI Legacy Survey viewer's cutout endpoint:
+ * Wikipedia article hero images solve all four issues at once:
  *
- *   https://www.legacysurvey.org/viewer/cutout.jpg
- *     ?ra=<deg>&dec=<deg>&layer=<name>&pixscale=<arcsec/px>&size=<px>
+ *  - **Pre-curated framing.** A hand-picked composite hero image (Hubble,
+ *    ESO, JWST, APOD, amateur deep-sky) is centred on the galaxy and
+ *    cropped at a sensible angular radius.  No "the galaxy is in the
+ *    bottom-left corner" glitches.
+ *  - **Clean black backgrounds.** Press-kit images are aggressively
+ *    masked / sky-subtracted upstream of Wikipedia.  We don't need
+ *    `applyTransparency`'s corner-sample sky-cut; just a soft radial
+ *    fade to soften the rectangular frame against the renderer's stars.
+ *  - **Brightness/contrast normalised.** Whatever colour grading the
+ *    image hosts decided to apply is what professionals chose for that
+ *    galaxy — far more aesthetically consistent than what we'd derive
+ *    from a single survey's raw pixels.
+ *  - **All-sky coverage.** Wikipedia has an article (with image) for
+ *    every Messier and almost every Caldwell — coverage no one survey
+ *    matches.
  *
- * The endpoint serves multiple imaging surveys behind a single API by
- * varying the `layer` parameter.  We try, in order:
+ * The trade-off is licensing: Wikipedia images carry a mix of CC-BY-SA,
+ * PD-NASA, PD-self, and ESO-attribution licences.  Skymap is a personal
+ * project so this is fine, but a hypothetical commercial fork would need
+ * to audit per-image attribution.  The cache JSON we write at
+ * `data/raw/wikipedia_famous_cache.json` carries the source URL for each
+ * image, which is enough to reconstruct attribution.
  *
- *   1. `ls-dr10`  — DESI Legacy Imaging DR10.  Highest-quality optical
- *                   data we have access to, but coverage is roughly the
- *                   southern + equatorial sky (~1/3 of the whole sphere).
- *                   Northern objects like M31 (dec=+41°) and M33
- *                   (dec=+30°) come back as a "no data" tile that
- *                   decodes to a uniformly-black JPEG.
+ * ── Title-chain fallback (broadened from the expansion agent) ──────────
  *
- *   2. `sdss`     — Sloan Digital Sky Survey imaging.  Covers most of
- *                   the northern sky DESI Legacy doesn't, including
- *                   M31/M33.  Slightly lower resolution and shallower
- *                   than DR10 but visually comparable for thumbnails.
+ * Wikipedia titles for the same galaxy can take many forms.  A previous
+ * narrow heuristic missed valid pages (e.g. NGC 5128 / Centaurus A — the
+ * page lives at `NGC_5128`, not `Centaurus_A`).  We now walk:
  *
- *   3. `dss2`     — Digitized Sky Survey 2.  All-sky photographic plate
- *                   scans; the historical fallback.  Lower resolution
- *                   and dynamic range than the modern surveys, but it
- *                   has data *everywhere*, so it's the safety net for
- *                   the rare tile both DR10 and SDSS miss.
+ *   1. `Messier_<N>`  — for any seed id starting with `m<digits>`.
+ *   2. `M_<N>`        — Wikipedia sometimes stores the form with the
+ *                       underscore (e.g. `M_87` is a redirect; usually).
+ *   3. `NGC_<NNNN>`   — leading zeros stripped (NOT `NGC_0224`!).  The
+ *                       seed entry's `names` array is parsed to extract
+ *                       the NGC number; HyperLEDA stores it zero-padded
+ *                       as `NGC0224`, but Wikipedia's article slug is
+ *                       always the unpadded form.
+ *   4. `IC_<NNNN>`    — same for IC catalog members.
+ *   5. Common name    — any non-catalog entries in `e.names` with spaces
+ *                       replaced by underscores (e.g. `Andromeda_Galaxy`,
+ *                       `Sombrero_Galaxy`, `Whirlpool_Galaxy`).
  *
- * ── Why post-process alpha is the blank signal ─────────────────────────
+ * The first candidate that returns a usable, non-disambiguation page
+ * with at least one of `originalimage.source` or `thumbnail.source` wins.
  *
- * Different layers signal "no coverage" in different ways: DESI Legacy
- * returns a uniformly-black JPEG, SDSS sometimes returns mid-grey
- * noise, etc.  Rather than try to detect each layer's specific failure
- * mode by inspecting the raw JPEG, we run the cutout through the
- * standard transparency pipeline and then check the result: if
- * `applyTransparency` cut more than ~97% of the image to alpha 0
- * (mean alpha < 8 on the 0..255 scale), there was effectively nothing
- * to see — the corner-sky-cut consumed the whole frame.  That's the
- * actual signal we care about, and it's robust to whatever "blank" form
- * a given layer ends up producing.
+ * ── Image processing pipeline (Wikipedia path) ─────────────────────────
  *
- * ── Sizing formula (unchanged across layers) ───────────────────────────
+ *   1. Fetch the URL into a Buffer (sharp handles JPEG / PNG / SVG —
+ *      Wikipedia images come in all three).
+ *   2. Resize to 512×512 with `fit: 'inside'` to preserve aspect ratio
+ *      WITHOUT cropping (the previous DESI path used `cover`, which is
+ *      fine for survey square cutouts but would chop off non-square
+ *      Wikipedia hero images).  Composite onto a 512×512 transparent
+ *      canvas centred so non-square images are padded with alpha.
+ *   3. Decode RGBA → Uint8ClampedArray.
+ *   4. `applyRadialFade(buf, 512, 512, 0.1)`  (NO sky-cut!)
+ *   5. Re-encode with sharp.webp({ quality: 82, alphaQuality: 90 }) at
+ *      256×256 (with the same `fit: 'inside'` + transparent extend).
  *
- *   angular_diameter_arcsec = (diameterKpc / distanceMpc) / pi * 180 * 3600 / 1000
- *                           = diameterKpc / distanceMpc * 206.265
- *   target_arcsec = angular_diameter_arcsec * 1.3
- *   size_px = 512  (high-res input, downsampled to 256 after processing)
- *   pixscale = target_arcsec / size_px   (clamped at MAX_PIXSCALE)
+ * ── Falling back to DESI ───────────────────────────────────────────────
  *
- * We fetch at 512 px and downsample to 256 in WebP encoding so the
- * background-cut + alpha fade have more pixels to work with.  The
- * MAX_PIXSCALE clamp applies to every layer — the rationale is the same
- * regardless of which survey supplies the pixels (see comment on the
- * constant below).
+ * If none of the title candidates yields a page with an image, OR if
+ * the user passes `--source-preference desi`, we fall back to the
+ * original DESI/SDSS/unWISE layer chain.  This is the only way to get
+ * imagery for the rare galaxy with no Wikipedia article (none exist in
+ * the current seed, but a future expansion might pull in obscure
+ * surveys-only objects).
  *
- * Concurrency capped at 2 (× ~1 req/s per worker via REQUEST_DELAY_MS)
- * to stay polite with the cutout service.  Per-entry failures log
- * loudly but don't abort the run — the user gets every image they can.
+ * ── Flags ──────────────────────────────────────────────────────────────
+ *
+ *   --force                       Re-fetch every entry, ignoring the
+ *                                 idempotent skip-if-cached check.
+ *   --source-preference wikipedia (default) Try Wikipedia first, DESI fall.
+ *   --source-preference desi      Skip Wikipedia entirely, only try DESI.
+ *
+ * ── Polite rate limit ──────────────────────────────────────────────────
+ *
+ * Wikipedia's REST API is documented at ~200 req/s but explicitly asks
+ * for "no more than 1 req/s sequential" for non-cached content.  Image
+ * downloads from upload.wikimedia.org are served from CDN and don't
+ * carry the same limit, but we apply the same 1 s gap to be safe.
+ *
+ * Concurrency is fixed at 1 worker for the Wikipedia path — the polite
+ * sequential model — versus the original 2 for DESI.
  */
+
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { parseFamousSeed, type FamousEntry } from './parsers/famousSeed.js';
 import {
-  sampleCornerColor,
+  parseWikipediaSummary,
+  wikipediaSummaryUrl,
+  type WikipediaSummary,
+} from './parsers/wikipediaSummary.js';
+import {
+  applyRadialFade,
   applyTransparency,
+  sampleCornerColor,
   type RGBA,
 } from './famousImageProcessor.js';
 
-const CONCURRENCY = 2;
-const FETCH_PX = 512; // input resolution (cutout)
-const OUT_PX = 256;   // output WebP resolution
+// ──────────────────────────────────────────────────────────────────────
+// Constants — Wikipedia path
+
+/** Output WebP resolution (square).  Matches the runtime atlas slot size. */
+const OUT_PX = 256;
 /**
- * Milliseconds to wait between each request per worker.  The cutout
- * service enforces a rate limit; 1 s per worker (× 2 workers = ~2 req/s)
- * keeps us comfortably below the threshold without making the full run
- * take more than ~60 s for 20 galaxies.  Note that with the layer
- * fallback chain a single entry may issue up to 3 requests, so a worst-
- * case M31-style entry sleeps ~3 s; that's still well within budget.
+ * Working buffer resolution.  Twice the output gives the radial fade
+ * smoother gradients and the WebP encoder a richer signal to compress.
+ * Resizing the encoded WebP to 256 happens in the final encoder step,
+ * NOT in the working buffer — so radial-fade math operates on 512².
  */
-const REQUEST_DELAY_MS = 1000;
-/**
- * Max retry attempts on HTTP 429 (rate-limited) responses before giving
- * up on a *single* layer attempt.  Each retry doubles the delay starting
- * from REQUEST_DELAY_MS.  A 429-exhausted layer still falls through to
- * the next layer in the chain — getting any image is better than none.
- */
-const MAX_RETRIES = 3;
-/**
- * Pixel colour-distance threshold for the sky-cut.  16 is permissive
- * enough that slightly-noisy backgrounds get fully cut, but tight
- * enough that dim galaxy halos survive.  Tune per-entry only if a
- * galaxy looks wrong in the dev server.
- */
-const SKY_TOLERANCE = 16;
-/**
- * Outer radial fade fraction.  10% means the outermost 10% of the
- * image fades smoothly to transparent, hiding any sky pixels the
- * colour cut missed.
- */
+const WORK_PX = 512;
+/** Outer fraction of the image radius to fade out; matches the legacy DESI fade. */
 const FADE_OUTER_FRACTION = 0.1;
+/** Polite Wikipedia sequential rate-limit (REST API + image CDN). */
+const WIKIPEDIA_DELAY_MS = 1000;
+
+// ──────────────────────────────────────────────────────────────────────
+// Constants — DESI fallback path (unchanged from the previous version)
+
+const DESI_FETCH_PX = 512;
+const DESI_REQUEST_DELAY_MS = 1000;
+const DESI_MAX_RETRIES = 3;
+const DESI_SKY_TOLERANCE = 16;
+const DESI_FADE_OUTER_FRACTION = 0.1;
+const DESI_MAX_PIXSCALE = 3.0;
+const DESI_BLANK_MEAN_ALPHA_THRESHOLD = 8;
+const DESI_LAYER_CHAIN: ReadonlyArray<string> = ['ls-dr10', 'sdss', 'unwise-neo7'];
+
+// ──────────────────────────────────────────────────────────────────────
+// Cache type — shared with expandFamousFromCatalogs
 
 /**
- * Maximum arcsec/pixel scale we'll request.  Above this (e.g. M31 at
- * ~45 arcsec/px) the cutout service returns a very low-resolution
- * mosaic where the sky-cut cannot distinguish galaxy from background —
- * the entire image becomes washed out.  3.0 arcsec/px gives a 512px
- * cutout that spans ~25 arcmin, enough to show even the largest nearby
- * spirals nicely (M31's core is still visible; only the very extended
- * outer disk is cropped, which is fine for an icon).
+ * On-disk Wikipedia cache.  Key is the page title (e.g. `"Messier_31"`),
+ * value is the raw response body (so we can re-parse if the schema we
+ * extract changes).  Shared with `expandFamousFromCatalogs.ts`.
+ */
+type WikipediaCache = Record<string, string>;
+
+// ──────────────────────────────────────────────────────────────────────
+// Pure helpers (testable surface)
+
+/**
+ * Build the Wikipedia title fallback chain for a seed entry.  Returns
+ * an ordered, deduplicated list of candidate titles.  Pure function:
+ * no I/O, no side effects.  See module header for rationale.
+ */
+export function buildWikipediaTitleChain(e: FamousEntry): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const add = (t: string): void => {
+    const norm = t.trim().replace(/\s+/g, '_');
+    if (norm.length === 0) return;
+    if (seen.has(norm)) return;
+    seen.add(norm);
+    out.push(norm);
+  };
+
+  // 1 + 2: Messier-style ids (e.g. seed id `m31` → `Messier_31`, `M_31`).
+  // The seed id is the canonical key from `expandFamousFromCatalogs.ts`,
+  // so it's reliably lower-case `m<digits>` for Messier entries.
+  const messierMatch = /^m(\d+)$/i.exec(e.id);
+  if (messierMatch) {
+    add(`Messier_${messierMatch[1]}`);
+    add(`M_${messierMatch[1]}`);
+  }
+
+  // 1.5: Caldwell-style ids — handy when the entry's only NGC name is a
+  // dim object that has no Wikipedia page of its own.  Caldwell pages
+  // exist for most southern entries.
+  const caldwellMatch = /^c(\d+)$/i.exec(e.id);
+  if (caldwellMatch) {
+    add(`Caldwell_${caldwellMatch[1]}`);
+  }
+
+  // 3 + 4: NGC / IC titles, ZERO-PADDING STRIPPED.  Walk e.names looking
+  // for any "NGC <digits>" / "IC <digits>" entry.  Wikipedia's slug is
+  // always the unpadded form, so `NGC 0224` → `NGC_224`, not `NGC_0224`.
+  for (const name of e.names) {
+    const ngc = /^(NGC|IC)\s*0*(\d+)\s*$/i.exec(name);
+    if (ngc) {
+      const prefix = ngc[1]!.toUpperCase();
+      const num = ngc[2]!;
+      add(`${prefix}_${num}`);
+    }
+  }
+
+  // 5: Common names — any name that ISN'T a catalog id.  These tend to
+  // be the most distinctive titles (e.g. `Andromeda_Galaxy`,
+  // `Sombrero_Galaxy`) that uniquely identify the article.
+  for (const name of e.names) {
+    if (/^(M|NGC|IC|C)\s*\d+/i.test(name)) continue;
+    if (/^[mc]\d+$/i.test(name)) continue;
+    add(name);
+  }
+
+  return out;
+}
+
+/**
+ * Choose the best image URL from a parsed Wikipedia summary, or
+ * `undefined` if the article has no usable image.  Disambiguation pages
+ * always return undefined regardless of whether the API attached an
+ * image — those are never the article we want.
  *
- * Applies to every layer: the resolution-vs-detail trade-off is
- * intrinsic to the angular size of the target, not the survey.
+ * Preference: `originalimage` (full resolution) > `thumbnail` (~320px).
+ * The 320px thumbnails are usable but downscaling to 256 from a higher-
+ * resolution source preserves more detail.
  */
-const MAX_PIXSCALE = 3.0;
+export function chooseWikipediaImageUrl(s: WikipediaSummary): string | undefined {
+  if (s.type === 'disambiguation') return undefined;
+  if (s.originalImageUrl !== undefined) return s.originalImageUrl;
+  if (s.thumbnailUrl !== undefined) return s.thumbnailUrl;
+  return undefined;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Wikipedia summary lookup (DI-friendly)
 
 /**
- * Mean alpha (0..255) below which we treat a processed cutout as
- * "blank" and try the next layer.  After `applyTransparency`, a tile
- * with no real signal — e.g. DESI's uniformly-black no-coverage
- * response — has had its corner-sky colour matched everywhere and the
- * whole frame cut to alpha 0.  Setting the threshold at 8 means we
- * declare blank when more than ~97% of pixels are fully transparent
- * (255 × 0.03 ≈ 7.65), which leaves headroom for genuinely sparse
- * tiles (faint dwarfs, edge-on disks against busy fields) where a
- * fraction of pixels do survive the cut.
+ * Pure interface for fetching a Wikipedia summary response body for a
+ * given title.  Returns `null` when the page does not exist (HTTP 404)
+ * so the caller can fall through to the next title.  Throws on network
+ * failure / unexpected non-OK responses — those are bugs, not "page
+ * doesn't exist", and shouldn't be silently swallowed.
  */
-const BLANK_MEAN_ALPHA_THRESHOLD = 8;
+export type WikipediaBodyFetcher = (title: string) => Promise<string | null>;
 
 /**
- * Layer chain in order of preference.  See module header for rationale.
- * Adding a fourth layer is as simple as appending to this array, as
- * long as the new layer name is supported by the legacysurvey.org
- * viewer's cutout endpoint.
+ * Pure interface for fetching a binary image body from a URL.  Returns
+ * a Buffer.  Throws on network failure or non-OK response.  Tests inject
+ * a stub returning a known-shape PNG/JPEG buffer.
  */
-const LAYER_CHAIN: ReadonlyArray<string> = ['ls-dr10', 'sdss', 'dss2'];
+export type ImageBytesFetcher = (url: string) => Promise<Buffer>;
 
 /**
- * Compute the cutout URL for a given famous entry on a given layer.
+ * Resolve a Wikipedia image URL by walking the title chain.  Returns
+ * `{ title, url, summary }` for the first candidate that returns an
+ * article with an image, or `null` if none match.  Pure function over
+ * the injected fetcher — no real network calls, no on-disk I/O.
  *
- * Layer is parameterised so the fallback chain can issue the same
- * geometric query against successive surveys without any other change.
+ * Public for testing.
+ */
+export async function resolveWikipediaImage(
+  candidates: readonly string[],
+  fetchBody: WikipediaBodyFetcher,
+): Promise<{ title: string; url: string; summary: WikipediaSummary } | null> {
+  for (const title of candidates) {
+    const body = await fetchBody(title);
+    if (body === null) continue;
+    let summary: WikipediaSummary;
+    try {
+      summary = parseWikipediaSummary(body);
+    } catch {
+      // Garbage response — skip and try next title.  Not a hard error
+      // because a transient HTML 503 from Wikipedia's CDN shouldn't
+      // poison the whole entry; the next title may resolve cleanly.
+      continue;
+    }
+    const url = chooseWikipediaImageUrl(summary);
+    if (url !== undefined) {
+      return { title, url, summary };
+    }
+  }
+  return null;
+}
+
+/**
+ * Process a Wikipedia image bytes buffer into a 256×256 WebP.  Pure
+ * over the buffer — no I/O.  Public for testing.
+ *
+ * Steps (see module header for rationale):
+ *
+ *  1. Decode the input bytes with sharp (handles JPG/PNG/SVG).  Resize
+ *     to fit *inside* WORK_PX × WORK_PX while preserving aspect ratio,
+ *     then `extend` with transparent padding so the working buffer is
+ *     exactly square (the radial-fade math assumes square geometry).
+ *  2. Read out raw RGBA, apply the radial fade only — no sky-cut.
+ *  3. Re-encode at OUT_PX × OUT_PX with quality 82 / alphaQuality 90,
+ *     same settings the DESI path used.
+ */
+export async function processWikipediaImageBuffer(input: Buffer): Promise<Buffer> {
+  // Step 1: decode + scale-to-fit.  `fit: 'inside'` preserves aspect
+  // ratio without cropping, so a 4000×2500 hero image becomes a
+  // WORK_PX-wide rectangle (320 tall) rather than a square crop that
+  // chops off the top + bottom of M31's disk.  We deliberately do NOT
+  // call `flatten` — PNGs with native transparency keep their alpha.
+  const { data: scaledData, info: scaledInfo } = await sharp(input)
+    .resize(WORK_PX, WORK_PX, { fit: 'inside' })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  // Letterbox onto a square WORK_PX × WORK_PX canvas with transparent
+  // padding.  The radial-fade math assumes a square buffer (it uses
+  // `Math.hypot(cx, cy)` for the max radius), so non-square images get
+  // padded with alpha 0 rather than stretched.  Centring math: split
+  // the leftover pixels evenly, with any odd remainder on the
+  // right/bottom edge.
+  const w = scaledInfo.width;
+  const h = scaledInfo.height;
+  let squareData: Buffer;
+  let squareInfo: sharp.OutputInfo;
+  if (w === WORK_PX && h === WORK_PX) {
+    squareData = scaledData;
+    squareInfo = scaledInfo;
+  } else {
+    const padX = Math.floor((WORK_PX - w) / 2);
+    const padY = Math.floor((WORK_PX - h) / 2);
+    const padR = WORK_PX - w - padX;
+    const padB = WORK_PX - h - padY;
+    const out = await sharp(scaledData, { raw: { width: w, height: h, channels: 4 } })
+      .extend({
+        top: padY,
+        bottom: padB,
+        left: padX,
+        right: padR,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    squareData = out.data;
+    squareInfo = out.info;
+  }
+
+  // Step 2: radial fade.  No sky-cut — see module header.  This mutates
+  // the buffer in place.
+  const rgba = new Uint8ClampedArray(
+    squareData.buffer,
+    squareData.byteOffset,
+    squareData.byteLength,
+  );
+  applyRadialFade(rgba, squareInfo.width, squareInfo.height, FADE_OUTER_FRACTION);
+
+  // Step 3: re-encode at output resolution.  We resize 'fit: inside'
+  // again as a defensive measure (squareInfo should already be WORK_PX,
+  // but if a future change tweaks the geometry, the encoder won't crash).
+  const webp = await sharp(Buffer.from(rgba), {
+    raw: { width: squareInfo.width, height: squareInfo.height, channels: 4 },
+  })
+    .resize(OUT_PX, OUT_PX, { fit: 'inside' })
+    .webp({ quality: 82, alphaQuality: 90 })
+    .toBuffer();
+  return webp;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// DESI fallback (preserved from the previous version, slightly factored)
+
+/**
+ * Build the DESI Legacy cutout URL for a galaxy on a given layer.  See
+ * the original module header for the maths and rationale.
  */
 function buildCutoutUrl(e: FamousEntry, layer: string): string {
   const arcsecDiameter = (e.diameterKpc / e.distanceMpc) * 206.265;
   const targetArcsec = arcsecDiameter * 1.3;
-  // Clamp pixscale so extremely nearby/large galaxies (e.g. M31) don't
-  // produce a tiny-pixscale URL that returns a uniform blank mosaic.
-  const pixscale = Math.min(targetArcsec / FETCH_PX, MAX_PIXSCALE);
+  const pixscale = Math.min(targetArcsec / DESI_FETCH_PX, DESI_MAX_PIXSCALE);
   const params = new URLSearchParams({
     ra: e.ra.toString(),
     dec: e.dec.toString(),
     layer,
     pixscale: pixscale.toFixed(4),
-    size: FETCH_PX.toString(),
+    size: DESI_FETCH_PX.toString(),
   });
   return `https://www.legacysurvey.org/viewer/cutout.jpg?${params.toString()}`;
 }
 
-/**
- * Compute the mean alpha (0..255) of a processed RGBA buffer.
- *
- * Used as the post-processing "is this blank?" signal.  Iterating every
- * pixel is fine: 512×512 = 262 144 pixels × ~20 entries = 5M ops total
- * on a one-shot CLI.  Keeping it as a simple loop avoids a sharp
- * round-trip for stats we already have in memory.
- */
 function meanAlpha(buf: Uint8ClampedArray, width: number, height: number): number {
   const n = width * height;
   let sum = 0;
@@ -185,29 +395,18 @@ function meanAlpha(buf: Uint8ClampedArray, width: number, height: number): numbe
   return sum / n;
 }
 
-/**
- * Result of a single layer attempt.  Either we have a non-blank
- * processed buffer ready to encode, or we know we should try the next
- * layer (with a reason for the log).
- */
-type LayerAttempt =
+type DesiLayerAttempt =
   | { kind: 'ok'; rgba: Uint8ClampedArray; width: number; height: number }
   | { kind: 'blank' }
   | { kind: 'error'; reason: string };
 
-/**
- * Fetch + decode + process a single layer for a single entry.  Honours
- * the 429 retry/back-off loop on this layer only — a 429-exhausted
- * layer falls through to `error`, and the caller continues to the next
- * layer in the chain.
- */
-async function tryLayer(e: FamousEntry, layer: string): Promise<LayerAttempt> {
+async function tryDesiLayer(e: FamousEntry, layer: string): Promise<DesiLayerAttempt> {
   const url = buildCutoutUrl(e, layer);
   let res: Response | undefined;
   let attempt = 0;
-  while (attempt <= MAX_RETRIES) {
+  while (attempt <= DESI_MAX_RETRIES) {
     if (attempt > 0) {
-      const delay = REQUEST_DELAY_MS * Math.pow(2, attempt - 1);
+      const delay = DESI_REQUEST_DELAY_MS * Math.pow(2, attempt - 1);
       await new Promise((r) => setTimeout(r, delay));
     }
     try {
@@ -217,7 +416,9 @@ async function tryLayer(e: FamousEntry, layer: string): Promise<LayerAttempt> {
     }
     if (res.status === 429) {
       attempt++;
-      process.stderr.write(`  rate-limited ${e.id}/${layer} (attempt ${attempt}/${MAX_RETRIES})…\n`);
+      process.stderr.write(
+        `  rate-limited ${e.id}/${layer} (attempt ${attempt}/${DESI_MAX_RETRIES})…\n`,
+      );
       continue;
     }
     break;
@@ -225,17 +426,14 @@ async function tryLayer(e: FamousEntry, layer: string): Promise<LayerAttempt> {
   if (!res || !res.ok) {
     return { kind: 'error', reason: `HTTP ${res?.status ?? 'unknown'}` };
   }
-  // Throttle politely between requests, even on success.
-  await new Promise((r) => setTimeout(r, REQUEST_DELAY_MS));
+  await new Promise((r) => setTimeout(r, DESI_REQUEST_DELAY_MS));
 
   const jpegBuf = Buffer.from(await res.arrayBuffer());
-  // Decode JPEG → raw RGBA via sharp.  Resize to FETCH_PX up front in
-  // case the service returned a different size (it sometimes clamps small).
   let data: Buffer;
   let info: sharp.OutputInfo;
   try {
     const out = await sharp(jpegBuf)
-      .resize(FETCH_PX, FETCH_PX, { fit: 'cover' })
+      .resize(DESI_FETCH_PX, DESI_FETCH_PX, { fit: 'cover' })
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
@@ -247,36 +445,26 @@ async function tryLayer(e: FamousEntry, layer: string): Promise<LayerAttempt> {
   const rgba = new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength);
   const sky: RGBA = sampleCornerColor(rgba, info.width, info.height);
   applyTransparency(rgba, info.width, info.height, sky, {
-    skyTolerance: SKY_TOLERANCE,
-    fadeOuterFraction: FADE_OUTER_FRACTION,
+    skyTolerance: DESI_SKY_TOLERANCE,
+    fadeOuterFraction: DESI_FADE_OUTER_FRACTION,
   });
-  // Blank check: did the colour-cut just consume the whole frame?
-  if (meanAlpha(rgba, info.width, info.height) < BLANK_MEAN_ALPHA_THRESHOLD) {
+  if (meanAlpha(rgba, info.width, info.height) < DESI_BLANK_MEAN_ALPHA_THRESHOLD) {
     return { kind: 'blank' };
   }
   return { kind: 'ok', rgba, width: info.width, height: info.height };
 }
 
 /**
- * Fetch one entry, walking the layer chain until a non-blank cutout is
- * obtained, then encode + write the WebP.  Returns true on success,
- * false on any failure (logged to stderr).
+ * Walk the DESI layer chain.  Returns the encoded WebP bytes plus the
+ * landing layer name for logging, or null if every layer was blank.
  */
-async function fetchOne(e: FamousEntry, force: boolean): Promise<boolean> {
-  const outDir = resolve('public/images/famous');
-  if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
-  const outPath = resolve(outDir, `${e.id}.webp`);
-  if (existsSync(outPath) && !force) {
-    process.stderr.write(`  skip ${e.id} (cached)\n`);
-    return true;
-  }
-
-  // Walk the layer chain.  Track the "trail" of layers tried so the
-  // success log can show e.g. `ls-dr10 → blank, sdss` for fallbacks.
+async function fetchDesiFallback(e: FamousEntry): Promise<{ webp: Buffer; landed: string } | null> {
   const trail: string[] = [];
-  let success: { layer: string; rgba: Uint8ClampedArray; width: number; height: number } | undefined;
-  for (const layer of LAYER_CHAIN) {
-    const result = await tryLayer(e, layer);
+  let success:
+    | { layer: string; rgba: Uint8ClampedArray; width: number; height: number }
+    | undefined;
+  for (const layer of DESI_LAYER_CHAIN) {
+    const result = await tryDesiLayer(e, layer);
     if (result.kind === 'ok') {
       success = { layer, rgba: result.rgba, width: result.width, height: result.height };
       break;
@@ -285,56 +473,185 @@ async function fetchOne(e: FamousEntry, force: boolean): Promise<boolean> {
       trail.push(`${layer} → blank`);
       continue;
     }
-    // 'error': log loudly but continue to the next layer.  A transient
-    // network/HTTP failure on one layer shouldn't block fallback.
     process.stderr.write(`  warn ${e.id}/${layer}: ${result.reason}\n`);
     trail.push(`${layer} → ${result.reason}`);
   }
-
   if (!success) {
-    process.stderr.write(`  fail ${e.id}: all layers blank (${trail.join('; ')})\n`);
-    return false;
+    process.stderr.write(`  fail ${e.id}: all DESI layers blank (${trail.join('; ')})\n`);
+    return null;
   }
-
-  // Re-encode RGBA → WebP at OUT_PX, with quality tuned for ~10-20 KB.
   const webp = await sharp(Buffer.from(success.rgba), {
     raw: { width: success.width, height: success.height, channels: 4 },
   })
     .resize(OUT_PX, OUT_PX, { fit: 'cover' })
     .webp({ quality: 82, alphaQuality: 90 })
     .toBuffer();
-  writeFileSync(outPath, webp);
-
-  // Format the success log: trail of failed layers (if any) + the
-  // landing layer.  Single-attempt success looks like `ls-dr10 17.3 KB`;
-  // a fallback looks like `ls-dr10 → blank, sdss 17.3 KB`.
   const landed = trail.length > 0 ? `${trail.join(', ')}, ${success.layer}` : success.layer;
-  process.stderr.write(
-    `  ok   ${e.id}  ${landed}  ${(webp.byteLength / 1024).toFixed(1)} KB\n`,
-  );
-  return true;
+  return { webp, landed };
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// CLI runtime
+
+type CliFlags = {
+  force: boolean;
+  /**
+   * Source preference.  `wikipedia` (default) tries Wikipedia first
+   * with DESI as fallback; `desi` skips Wikipedia entirely and only
+   * uses the DESI layer chain.  Useful for users who want consistent
+   * survey imagery (no licensing variance) at the cost of quality.
+   */
+  sourcePreference: 'wikipedia' | 'desi';
+};
+
+function parseFlags(argv: readonly string[]): CliFlags {
+  const force = argv.includes('--force');
+  let sourcePreference: 'wikipedia' | 'desi' = 'wikipedia';
+  const idx = argv.indexOf('--source-preference');
+  if (idx >= 0 && idx + 1 < argv.length) {
+    const v = argv[idx + 1];
+    if (v === 'wikipedia' || v === 'desi') {
+      sourcePreference = v;
+    } else {
+      throw new Error(`--source-preference must be "wikipedia" or "desi" (got "${v}")`);
+    }
+  }
+  return { force, sourcePreference };
+}
+
+function loadWikipediaCache(path: string): WikipediaCache {
+  if (!existsSync(path)) return {};
+  const text = readFileSync(path, 'utf8');
+  try {
+    return JSON.parse(text) as WikipediaCache;
+  } catch {
+    process.stderr.write(`warn: Wikipedia cache at ${path} malformed, ignoring\n`);
+    return {};
+  }
+}
+
+function saveWikipediaCache(path: string, cache: WikipediaCache): void {
+  if (!existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, JSON.stringify(cache, null, 2));
 }
 
 async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
-  const force = argv.includes('--force');
+  const flags = parseFlags(process.argv.slice(2));
   const seedPath = resolve('data/famous_galaxies.seed.json');
-  const entries = parseFamousSeed(readFileSync(seedPath, 'utf8'));
-  process.stderr.write(`fetching ${entries.length} famous galaxy thumbnails…\n`);
+  const wikipediaCachePath = resolve('data/raw/wikipedia_famous_cache.json');
+  const outDir = resolve('public/images/famous');
+  if (!existsSync(outDir)) mkdirSync(outDir, { recursive: true });
 
-  // Simple promise-pool: keep CONCURRENCY in flight at once.
-  let i = 0;
+  const entries = parseFamousSeed(readFileSync(seedPath, 'utf8'));
+  process.stderr.write(
+    `fetching ${entries.length} famous galaxy thumbnails ` +
+      `(source preference: ${flags.sourcePreference})…\n`,
+  );
+
+  const wikipediaCache = loadWikipediaCache(wikipediaCachePath);
+  process.stderr.write(`Wikipedia cache: ${Object.keys(wikipediaCache).length} entries\n`);
+
+  // Body fetcher with on-disk caching + 1 req/s sequential throttle.
+  // We deliberately track the last-call timestamp at module scope here
+  // because workers are sequential — if we ever bump concurrency we'd
+  // need a real semaphore, but for now keep it simple.
+  let lastWikipediaCallMs = 0;
+  const fetchBody: WikipediaBodyFetcher = async (title) => {
+    if (wikipediaCache[title] !== undefined) return wikipediaCache[title]!;
+    const sinceLast = Date.now() - lastWikipediaCallMs;
+    if (sinceLast < WIKIPEDIA_DELAY_MS) {
+      await new Promise((r) => setTimeout(r, WIKIPEDIA_DELAY_MS - sinceLast));
+    }
+    let res: Response;
+    try {
+      res = await fetch(wikipediaSummaryUrl(title));
+    } catch (err) {
+      process.stderr.write(`  warn wiki ${title}: network ${(err as Error).message}\n`);
+      lastWikipediaCallMs = Date.now();
+      return null;
+    }
+    lastWikipediaCallMs = Date.now();
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      process.stderr.write(`  warn wiki ${title}: HTTP ${res.status}\n`);
+      return null;
+    }
+    const body = await res.text();
+    wikipediaCache[title] = body;
+    saveWikipediaCache(wikipediaCachePath, wikipediaCache);
+    return body;
+  };
+
+  const fetchImage: ImageBytesFetcher = async (url) => {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} for ${url}`);
+    }
+    return Buffer.from(await res.arrayBuffer());
+  };
+
   let ok = 0;
   let fail = 0;
-  async function worker(): Promise<void> {
-    while (i < entries.length) {
-      const e = entries[i++]!;
-      const success = await fetchOne(e, force);
-      if (success) ok++;
-      else fail++;
+  // Sequential worker — Wikipedia path needs polite rate-limiting; the
+  // DESI fallback will naturally inherit it (we don't bother running
+  // DESI in parallel because the typical run won't hit it for many
+  // entries).
+  for (const e of entries) {
+    const outPath = resolve(outDir, `${e.id}.webp`);
+    if (existsSync(outPath) && !flags.force) {
+      process.stderr.write(`  skip ${e.id} (cached)\n`);
+      ok++;
+      continue;
+    }
+
+    let success = false;
+
+    // ── Wikipedia path ──────────────────────────────────────────────
+    if (flags.sourcePreference === 'wikipedia') {
+      const candidates = buildWikipediaTitleChain(e);
+      const resolved = await resolveWikipediaImage(candidates, fetchBody);
+      if (resolved !== null) {
+        try {
+          const imgBytes = await fetchImage(resolved.url);
+          const webp = await processWikipediaImageBuffer(imgBytes);
+          writeFileSync(outPath, webp);
+          process.stderr.write(
+            `  ok   ${e.id}  wikipedia (${resolved.title})  ${(webp.byteLength / 1024).toFixed(1)} KB\n`,
+          );
+          ok++;
+          success = true;
+        } catch (err) {
+          process.stderr.write(
+            `  warn ${e.id}: wikipedia image fetch failed (${(err as Error).message}); falling back\n`,
+          );
+        }
+      } else {
+        process.stderr.write(
+          `  warn ${e.id}: no wikipedia image (tried ${candidates.length} titles); falling back\n`,
+        );
+      }
+    }
+
+    if (success) continue;
+
+    // ── DESI fallback ───────────────────────────────────────────────
+    const desi = await fetchDesiFallback(e);
+    if (desi !== null) {
+      writeFileSync(outPath, desi.webp);
+      process.stderr.write(
+        `  ok   ${e.id}  desi/${desi.landed}  ${(desi.webp.byteLength / 1024).toFixed(1)} KB\n`,
+      );
+      ok++;
+    } else {
+      process.stderr.write(`  fail ${e.id}: no image source\n`);
+      fail++;
     }
   }
-  await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
+
+  // Save cache once more at the end (we save after every fetch already,
+  // but a final save covers any race where a write was queued mid-run).
+  saveWikipediaCache(wikipediaCachePath, wikipediaCache);
+
   process.stderr.write(`done; ${ok} ok, ${fail} failed\n`);
   if (fail > 0) process.exitCode = 1;
 }

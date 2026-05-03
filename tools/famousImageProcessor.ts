@@ -34,11 +34,7 @@ export type RGBA = { r: number; g: number; b: number; a: number };
  * average colour.  Used to establish the "sky" colour for the
  * transparency pass below.
  */
-export function sampleCornerColor(
-  buf: Uint8ClampedArray,
-  width: number,
-  height: number,
-): RGBA {
+export function sampleCornerColor(buf: Uint8ClampedArray, width: number, height: number): RGBA {
   const corners: ReadonlyArray<readonly [number, number]> = [
     [0, 0],
     [width - 1, 0],
@@ -85,6 +81,57 @@ export type TransparencyOptions = {
    */
   fadeOuterFraction: number;
 };
+
+/**
+ * Apply ONLY the soft radial alpha fade — no sky-colour cut.
+ *
+ * Wikipedia article hero images (Hubble / ESO / APOD / amateur deep-sky
+ * photos) are pre-curated astrophotographs with a clean dark background
+ * that is *already* close to alpha-friendly when composited onto the
+ * renderer's particle field.  Running them through `applyTransparency`'s
+ * corner-colour sky-cut would do the *wrong* thing here:
+ *
+ *  - The four corner pixels of a Wikipedia thumbnail are often part of
+ *    a press-kit border, watermark, or letterboxed black margin — not
+ *    the actual sky background.  Sampling them produces a "sky" colour
+ *    that bears no relation to the image content.
+ *  - Even when corners do hit black sky, Wikipedia images are aggressively
+ *    contrast-stretched.  A 16-unit colour tolerance applied to a stretched
+ *    image takes out faint outer-arm structure that the original DESI cut
+ *    would have kept.
+ *
+ * So for the Wikipedia path we keep colour intact and rely solely on a
+ * smooth radial alpha fade in the outer ring to soften the rectangular
+ * frame edge against the renderer's starfield.  The maths matches the
+ * radial portion of `applyTransparency` (smoothstep cubic on alpha)
+ * so the visual feel is consistent across image sources.
+ */
+export function applyRadialFade(
+  buf: Uint8ClampedArray,
+  width: number,
+  height: number,
+  fadeOuterFraction: number,
+): void {
+  if (fadeOuterFraction <= 0) return;
+  const cx = (width - 1) / 2;
+  const cy = (height - 1) / 2;
+  const maxR = Math.hypot(cx, cy);
+  const fadeInnerR = maxR * (1 - fadeOuterFraction);
+  const fadeBand = Math.max(1, maxR - fadeInnerR);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
+      const r = Math.hypot(x - cx, y - cy);
+      if (r <= fadeInnerR) continue;
+      const t = Math.min(1, (r - fadeInnerR) / fadeBand);
+      // Smoothstep cubic — same shape WGSL's smoothstep uses.  Multiplying
+      // existing alpha (rather than overwriting) preserves any pre-existing
+      // transparency from the source PNG.
+      const fade = 1 - t * t * (3 - 2 * t);
+      buf[i + 3] = Math.round(buf[i + 3]! * fade);
+    }
+  }
+}
 
 /**
  * Mutate `buf` in place: set alpha=0 for sky-colour pixels and apply
