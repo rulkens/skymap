@@ -80,3 +80,35 @@ describe('parseSdssCsv', () => {
     expect(distFromZero).toBeLessThan(0.5);
   });
 });
+
+describe('parseSdssCsv diameterKpc', () => {
+  it('extracts diameterKpc from petroR50_r when the column is present', () => {
+    const csv = [
+      'objID,ra,dec,z,modelMag_u,modelMag_g,modelMag_r,modelMag_i,modelMag_z,expAB_r,expPhi_r,deVAB_r,deVPhi_r,fracDeV_r,petroR50_r,petroR90_r',
+      '1,150.0,30.0,0.05,18,18,18,18,18,0.5,30,0.6,40,0.3,5.0,12.0',
+    ].join('\n');
+    const { records } = parseSdssCsv(csv);
+    expect(records).toHaveLength(1);
+    expect(records[0]!.diameterKpc).toBeCloseTo(31.18, 1);
+  });
+
+  it('returns null diameterKpc when petroR50_r column is absent', () => {
+    const csv = [
+      'objID,ra,dec,z,modelMag_u,modelMag_g,modelMag_r,modelMag_i,modelMag_z,expAB_r,expPhi_r,deVAB_r,deVPhi_r,fracDeV_r',
+      '1,150.0,30.0,0.05,18,18,18,18,18,0.5,30,0.6,40,0.3',
+    ].join('\n');
+    const { records } = parseSdssCsv(csv);
+    expect(records).toHaveLength(1);
+    expect(records[0]!.diameterKpc).toBeNull();
+  });
+
+  it('returns null diameterKpc when petroR50_r cell is empty', () => {
+    const csv = [
+      'objID,ra,dec,z,modelMag_u,modelMag_g,modelMag_r,modelMag_i,modelMag_z,expAB_r,expPhi_r,deVAB_r,deVPhi_r,fracDeV_r,petroR50_r,petroR90_r',
+      '1,150.0,30.0,0.05,18,18,18,18,18,0.5,30,0.6,40,0.3,,',
+    ].join('\n');
+    const { records } = parseSdssCsv(csv);
+    expect(records).toHaveLength(1);
+    expect(records[0]!.diameterKpc).toBeNull();
+  });
+});

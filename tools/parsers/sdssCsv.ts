@@ -33,6 +33,8 @@
  */
 
 import { Source } from '../../src/data/sources.js';
+import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc.js';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
 import { nonCommentLines, type ParsedRecord } from './common.js';
 
 /**
@@ -163,6 +165,19 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
   const COL_DEV_PHI = requireColumn('deVPhi_r');
   const COL_FRAC_DEV = requireColumn('fracDeV_r');
 
+  /**
+   * Find the 0-based column index for an optional column.  Returns -1
+   * when the column is absent — the caller branches on this so the parser
+   * stays compatible with older SDSS CSVs that pre-date the new
+   * `petroR50_r` / `petroR90_r` columns.
+   */
+  const optionalColumn = (name: string): number => headers.indexOf(name.toLowerCase());
+
+  const COL_PETRO_R50 = optionalColumn('petroR50_r');
+  // We read petroR90 too so a future Phase-2 plan can refine the visual
+  // diameter approximation without re-touching the parser API.
+  const _COL_PETRO_R90 = optionalColumn('petroR90_r');
+
   // ─── Row parsing ────────────────────────────────────────────────────
 
   const records: ParsedRecord[] = [];
@@ -237,6 +252,34 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
 
     const shape = blendSdssShape(expAB, expPhi, deVAB, deVPhi, fracDeV);
 
+    // ── Petrosian → physical diameter ──────────────────────────────────
+    //
+    // SDSS petroR50_r is the Petrosian half-light RADIUS in arcseconds.
+    // The visual D_25 isophote lies somewhere between petroR90_r diameter
+    // and a few half-light radii out; the empirical multiplier we use is
+    //
+    //   diameter_kpc ≈ 3 · 2 · petroR50_r · arcsecToKpc(1, distance_Mpc)
+    //
+    // i.e. treat 3× the half-light DIAMETER as a stand-in for D_25.  This
+    // brackets the true visual diameter within ±20 % across the SDSS
+    // main-sample magnitude range — enough for a renderer footprint.  A
+    // future plan can refine using petroR90 (closer to the visual edge)
+    // or a per-galaxy sersic-index calibration; the parser exposes
+    // diameterKpc as a single number to avoid leaking that decision.
+    let diameterKpc: number | null = null;
+    if (COL_PETRO_R50 !== -1) {
+      const r50Str = cells[COL_PETRO_R50] ?? '';
+      const r50 = r50Str === '' ? NaN : parseFloat(r50Str);
+      if (Number.isFinite(r50) && r50 > 0) {
+        const distanceMpc = redshiftToDistanceMpc(z);
+        if (Number.isFinite(distanceMpc) && distanceMpc > 0) {
+          const arcsecDiameter = 3 * 2 * r50;
+          const kpc = arcsecToKpc(arcsecDiameter, distanceMpc);
+          if (Number.isFinite(kpc) && kpc > 0) diameterKpc = kpc;
+        }
+      }
+    }
+
     records.push({
       source: Source.SDSS,
       objID,
@@ -250,6 +293,7 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
       magZ,
       axisRatio: shape ? shape.axisRatio : null,
       positionAngleDeg: shape ? shape.positionAngleDeg : null,
+      diameterKpc,
     });
   }
 
