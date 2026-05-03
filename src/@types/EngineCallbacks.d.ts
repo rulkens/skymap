@@ -47,6 +47,14 @@ export type EngineCallbacks = {
    */
   onAutoRotateChange?: (enabled: boolean) => void;
   /**
+   * Fired when the galaxy-thumbnail render pass is toggled on/off (either
+   * from `setGalaxyTexturesEnabled` or at engine init to seed React's
+   * initial state).  The pass itself is gated by this flag inside the
+   * per-frame loop, so flipping it stops new fetches and quad emissions
+   * immediately on the next frame.
+   */
+  onGalaxyTexturesEnabledChange?: (enabled: boolean) => void;
+  /**
    * Fired when the level-of-detail mode changes (either from a `setLodMode`
    * call or at engine init to seed React's initial state).
    */

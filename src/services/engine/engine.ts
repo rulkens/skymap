@@ -71,6 +71,22 @@ import { buildPointInfo, maxAbsCoord, niceRound } from './pointInfoBuilder';
 import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 
+// ── Galaxy thumbnail subsystem imports ────────────────────────────────────
+//
+// Pulled in here so the per-frame loop can drive the atlas, the priority
+// queue, and the textured-quad pass.  The math helpers come from utils/math:
+// `apparentSizePx` decides whether a galaxy is big enough on screen to be
+// worth a thumbnail, `galaxyDiameterKpc` is the physical-size estimator
+// (constant 30 kpc in v1), and `cartesianToRaDecZ` recovers sky coordinates
+// from the Cartesian positions stored in the PointCloud (we need RA/Dec to
+// build the cutout URL).
+import { TextureAtlas } from '../gpu/textureAtlas';
+import { GalaxyImageQueue } from '../gpu/galaxyImageQueue';
+import { QuadRenderer } from '../gpu/quadRenderer';
+import { fetchGalaxyBitmap } from '../gpu/galaxyImageFetcher';
+import { apparentSizePx, galaxyDiameterKpc, cartesianToRaDecZ } from '../../utils/math';
+import type { QuadInstance } from '../../@types';
+
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
 // These imports are unconditionally pulled in because tree-shaking a few
@@ -83,6 +99,30 @@ import { applyCurve } from '../input/spaceMouseSensitivity';
 import { applyAxesToCamera, hasAnyAxis } from '../input/spaceMouseToCamera';
 import type { SpaceMouseAxes } from '../input/spaceMouseAxes';
 import { ZERO_AXES } from '../input/spaceMouseAxes';
+
+// ── Galaxy thumbnail constants ──────────────────────────────────────────────
+
+/** Below this on-screen size, we don't bother fetching a thumbnail at all. */
+const APPARENT_SIZE_THRESHOLD_PX = 24;
+
+/**
+ * Pre-filter cutoff: galaxies past this distance are never large enough on
+ * screen to qualify, so we skip the full apparent-size computation.  At
+ * 1000 Mpc, even a 60 kpc galaxy in a 1080-px viewport at fov 60° comes
+ * out to ~6 px — well below threshold.  Saves an `apparentSizePx` call
+ * per far-away galaxy per frame for ~70 % of catalogue rows.
+ */
+const FAR_DISTANCE_CUTOFF_MPC = 1000;
+
+/**
+ * Stable cache key for an atlas slot.  RA/Dec to 5 decimal places is
+ * unique within ~0.1 arcsec — much finer than the SDSS pixel scale,
+ * so two galaxies will never collide unless they're literally on top
+ * of each other (in which case sharing a thumbnail is fine).
+ */
+function galaxyCacheKey(ra: number, dec: number): string {
+  return `${ra.toFixed(5)}_${dec.toFixed(5)}`;
+}
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -121,12 +161,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Settings panel state ─────────────────────────────────────────────────
   //
-  // These are the source of truth for the three visual settings exposed by the
+  // These are the source of truth for the visual settings exposed by the
   // Settings Panel. They are mutated by the public handle setters below and
   // consumed in the render loop (renderer.draw) and frame tick (autoRotate).
   let pointSizePx = 2.5;
   let brightness = 1.0;
   let autoRotate = false;
+  // Galaxy-thumbnail master toggle.  Hoisted to the outer createEngine
+  // closure (rather than the inner async IIFE) so the public handle's
+  // `setGalaxyTexturesEnabled` setter can read and mutate it after the
+  // IIFE completes — same lifetime trick we use for `cam` and
+  // `initialCamRef` further down.
+  let galaxyTexturesEnabled = true;
 
   // ── Source visibility bitmask + LOD mode ────────────────────────────────
   //
@@ -369,6 +415,41 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Build the GPU pipeline; cloud data is loaded below.
       renderer = new PointRenderer(device, format);
 
+      // ── Galaxy thumbnail subsystem ─────────────────────────────────────
+      //
+      // Three collaborators wired together here:
+      //
+      //   - atlas:        owns the GPU texture and slot bookkeeping.
+      //   - queue:        priority/concurrency-limited bitmap fetcher.
+      //   - quadRenderer: textured-quad render pass running after the
+      //                   point pass each frame.
+      //
+      // `galaxyTexturesEnabled` is mutated by the SettingsPanel toggle
+      // wired in Task 10.  `frameCounter` ticks once per frame and feeds
+      // the atlas's LRU clock (allocate / lastSeenFrame).  `bitmapReady`
+      // tracks which keys have a usable bitmap loaded — we don't emit a
+      // QuadInstance for a slot until its bitmap has arrived (otherwise
+      // we'd be sampling whichever galaxy used to occupy that slot, OR
+      // a blank cleared region of the atlas).
+      //
+      // The QuadRenderer constructor wants a GpuContext; we have the
+      // four constituents in scope, so we build one inline rather than
+      // restructuring initGpu's return signature.
+      //
+      // Known v1 limitation: when LRU evicts a key from the atlas,
+      // `bitmapReady` doesn't get cleaned up, so a re-allocated key
+      // would skip its re-fetch and briefly render whatever bitmap was
+      // last uploaded to that slot.  Acceptable for v1 — at most one
+      // frame of stale-slot sampling per re-allocation.  A follow-up
+      // can add an `onEvict` hook on the atlas to plug this.
+      const atlas = new TextureAtlas(device);
+      atlas.initTexture();
+      const quadRenderer = new QuadRenderer({ device, context, format, canvas });
+      quadRenderer.bindAtlas(atlas.getTextureView());
+      const queue = new GalaxyImageQueue();
+      let frameCounter = 0;
+      const bitmapReady = new Set<string>();
+
       // Signal loading state immediately so the user knows something is
       // happening before the (potentially multi-second) fetch completes.
       cb.onStatusChange({ kind: 'loading' });
@@ -598,6 +679,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cb.onPointSizeChange?.(pointSizePx);
       cb.onBrightnessChange?.(brightness);
       cb.onAutoRotateChange?.(autoRotate);
+      cb.onGalaxyTexturesEnabledChange?.(galaxyTexturesEnabled);
       // LOD mode + visible-mask seeds — engine and React both default to
       // 'auto' / ALL_VISIBLE_MASK respectively, but firing the echo here
       // protects against future default drift and keeps the contract uniform
@@ -743,6 +825,116 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           visibleSourceMask,
         );
 
+        // ── Galaxy thumbnail pass ─────────────────────────────────────────
+        //
+        // Walk every loaded cloud and select galaxies that pass the apparent-
+        // size threshold.  For each surviving galaxy: allocate (or refresh) an
+        // atlas slot, kick off a fetch if no bitmap has landed yet, and emit
+        // a QuadInstance once the bitmap is ready.  The QuadRenderer issues
+        // its draw call in the same render pass so the quads composite over
+        // the dot field with the existing premultiplied-alpha blend.
+        //
+        // `frameCounter` is incremented unconditionally — even when the
+        // toggle is off — so when the user re-enables thumbnails the LRU
+        // clock isn't frozen at the moment they last toggled.  (Cheap: one
+        // increment per frame.)
+        frameCounter++;
+
+        if (galaxyTexturesEnabled && cam) {
+          const fovYRad = cam.fovYRad;
+          const viewportH = canvas.height;
+
+          const quads: QuadInstance[] = [];
+          for (const cloud of clouds.values()) {
+            for (let i = 0; i < cloud.count; i++) {
+              const x = cloud.positions[i * 3 + 0]!;
+              const y = cloud.positions[i * 3 + 1]!;
+              const z = cloud.positions[i * 3 + 2]!;
+
+              // Pre-filter by distance from the origin.  This isn't the
+              // distance the apparent-size formula uses (that's camera-to-
+              // galaxy, computed below), but galaxies far enough from the
+              // origin are also far from any plausible camera position
+              // inside the cloud, so this skips the bulk of catalogue rows
+              // before we touch the more expensive math.
+              const distFromOrigin = Math.hypot(x, y, z);
+              if (distFromOrigin <= 0 || distFromOrigin > FAR_DISTANCE_CUTOFF_MPC) continue;
+
+              // Distance from CAMERA, not target.  Apparent size depends on
+              // the viewer-to-galaxy distance, not the target-to-galaxy
+              // distance — they only coincide when the camera is looking
+              // straight at a galaxy from far away.
+              const dx = cam.position[0] - x;
+              const dy = cam.position[1] - y;
+              const dz = cam.position[2] - z;
+              const camDist = Math.hypot(dx, dy, dz);
+              if (camDist <= 0) continue;
+
+              const dKpc = galaxyDiameterKpc({}); // v1: constant 30 kpc
+              const px = apparentSizePx({
+                diameterKpc: dKpc,
+                distanceMpc: camDist,
+                viewportHeightPx: viewportH,
+                fovYRad,
+              });
+              if (px < APPARENT_SIZE_THRESHOLD_PX) continue;
+
+              // Recover RA/Dec for the cutout URL.  The PointCloud doesn't
+              // store sky coords — only Cartesian Mpc — so we invert the
+              // Hubble-law conversion that was applied at import time.
+              // Returns [ra, dec, redshift] but we only need the first two.
+              const [ra, dec] = cartesianToRaDecZ(x, y, z);
+              const key = galaxyCacheKey(ra, dec);
+
+              // Allocate (or refresh) an atlas slot.  Idempotent for repeat
+              // frames — same key returns the same slot index and just bumps
+              // the LRU clock so the entry isn't evicted while still on
+              // screen.
+              const slot = atlas.allocate(key, frameCounter);
+
+              // If we don't have a bitmap yet, kick off a fetch.  The queue
+              // dedupes by key — re-enqueuing only refreshes the priority
+              // (priority = apparent-size px, so big galaxies load first).
+              if (!bitmapReady.has(key)) {
+                queue.enqueue({
+                  key,
+                  priority: px,
+                  fetcher: () => fetchGalaxyBitmap({ ra, dec }),
+                  onResult: (bitmap) => {
+                    if (!bitmap) return;
+                    // Slot may have been reassigned by LRU between enqueue
+                    // and fetch resolution.  `lastSeenFrame` returns
+                    // undefined for keys not currently in the atlas (i.e.
+                    // evicted before our async fetch resolved); in that
+                    // case we just drop the bitmap.
+                    if (atlas.lastSeenFrame(key) === undefined) {
+                      bitmap.close();
+                      return;
+                    }
+                    atlas.uploadBitmap(slot, bitmap);
+                    bitmapReady.add(key);
+                    bitmap.close();
+                  },
+                });
+                continue; // no quad this frame — wait for the bitmap to land
+              }
+
+              // Pack the QuadInstance.  4× the physical diameter gives the
+              // quad visual presence without dwarfing the surrounding dot
+              // field — the texture's body fills the central ~25% of the
+              // quad, with the rest fading to transparent via the alpha
+              // channel of the cutout JPEG.
+              const sizeWorldMpc = (dKpc / 1000) * 4;
+              const [u0, v0, u1, v1] = atlas.slotUv(slot);
+              quads.push({ x, y, z, sizeWorld: sizeWorldMpc, u0, v0, u1, v1 });
+            }
+          }
+
+          if (quads.length > 0) {
+            quadRenderer.draw(pass, vp, [canvas.width, canvas.height], quads);
+          }
+        }
+
         pass.end();
 
         // Seal the command buffer and send it to the GPU.
@@ -880,6 +1072,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     setAutoRotate(enabled) {
       autoRotate = enabled;
       cb.onAutoRotateChange?.(enabled);
+    },
+
+    setGalaxyTexturesEnabled(enabled) {
+      // The per-frame loop reads `galaxyTexturesEnabled` directly, so the
+      // toggle takes effect on the very next rendered frame — no extra
+      // signalling needed.  We still echo via the optional callback so any
+      // subscribed React state mirrors the engine truth (same pattern as
+      // the other settings setters above).
+      galaxyTexturesEnabled = enabled;
+      cb.onGalaxyTexturesEnabledChange?.(enabled);
     },
 
     resetCamera() {

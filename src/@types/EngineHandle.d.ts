@@ -60,6 +60,19 @@ export type EngineHandle = {
   setAutoRotate: (enabled: boolean) => void;
 
   /**
+   * Toggle the galaxy-thumbnail render pass on/off.
+   *
+   * When disabled, the per-frame loop skips the entire selection +
+   * fetch + draw block — no atlas allocations, no cutout fetches, no
+   * extra draw call.  The point pass keeps running.  Also fires
+   * `onGalaxyTexturesEnabledChange` so subscribed React state stays
+   * in sync.
+   *
+   * @param enabled  True to enable thumbnails, false to disable.
+   */
+  setGalaxyTexturesEnabled?: (enabled: boolean) => void;
+
+  /**
    * Snap the camera back to the initial framing computed at startup.
    *
    * Restores: target = origin, distance = bbox × 2.5, yaw = 0, pitch = 0.3.
