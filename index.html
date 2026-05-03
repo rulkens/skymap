@@ -10,13 +10,35 @@
         font: 12px/1.4 ui-monospace, monospace; }
 
       /* ── Space-themed galaxy info card ─────────────────────────────────── */
+      /*
+       * Card positioning:
+       *   - .info-card-stack is the outermost positioned element when both
+       *     pinned and hover cards are visible simultaneously.  It sits at the
+       *     same top-right corner as a lone card, and the two child cards stack
+       *     vertically inside it with an 8 px gap.
+       *   - .info-card-full and .info-card-compact are normal flow inside the
+       *     stack (no absolute positioning of their own), so the stack height
+       *     grows naturally.
+       *   - When only one card is rendered (no stack), .info-card-full is the
+       *     outermost element and is fixed to the corner directly.
+       */
 
-      #info-card {
-        display: block; /* React mounts/unmounts the element; no display:none needed */
+      /* Vertical stack wrapper — positions the whole pair at the top-right corner */
+      .info-card-stack {
         position: fixed;
         top: 16px;
         right: 16px;
         z-index: 10;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        /* Allow internal cards to be normal flow — no extra width constraint */
+      }
+
+      /* Shared glass-panel base style, reused by both card variants */
+      .info-card-full,
+      .info-card-compact {
+        position: relative; /* for the ::before accent line */
 
         /* Glassmorphism: dark translucent background with blur */
         background: rgba(8, 12, 28, 0.72);
@@ -29,15 +51,44 @@
           0 8px 32px rgba(0, 0, 0, 0.6),
           0 0 0 1px rgba(160, 200, 255, 0.06) inset;
 
-        padding: 14px 18px;
-        min-width: 240px;
-
         color: #cfd8ff;
         font: 12px / 1.45 ui-monospace, "SF Mono", Menlo, monospace;
       }
 
-      /* Subtle starlight-blue gradient accent line along the top edge */
-      #info-card::before {
+      /* Full card — sits fixed in the corner when no stack wrapper is present */
+      .info-card-full {
+        /* When standalone (not inside .info-card-stack) fix directly to corner */
+        display: block;
+
+        /* Only applied when NOT inside a stack — the stack overrides position */
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 10;
+
+        padding: 14px 18px;
+        min-width: 240px;
+      }
+
+      /* When inside a stack, override the fixed positioning so it flows normally */
+      .info-card-stack .info-card-full {
+        position: relative;
+        top: auto;
+        right: auto;
+        z-index: auto;
+      }
+
+      /* Compact card — slimmer padding and slightly lower opacity for less visual weight */
+      .info-card-compact {
+        padding: 8px 12px;
+        min-width: 180px;
+        /* Lower opacity than full card signals "secondary / hover preview" */
+        background: rgba(8, 12, 28, 0.60);
+      }
+
+      /* Subtle starlight-blue gradient accent line along the top edge of both card types */
+      .info-card-full::before,
+      .info-card-compact::before {
         content: '';
         display: block;
         position: absolute;
@@ -56,7 +107,7 @@
         );
       }
 
-      /* Title row: "OBJECT" label on the left, optional "PINNED" badge on the right */
+      /* Title row: "OBJECT" / "HOVER" label on the left, optional "PINNED" badge right */
       .card-title {
         display: flex;
         justify-content: space-between;
@@ -68,7 +119,7 @@
         text-transform: uppercase;
       }
 
-      /* PINNED badge — hidden until data-pinned attribute is set on the card */
+      /* PINNED badge — hidden by default; shown when `.info-card-full[data-pinned]` */
       #pinned-badge {
         display: none;
         color: #ffd97a;
@@ -77,9 +128,90 @@
         text-transform: uppercase;
       }
 
-      /* Show the badge when the card has data-pinned */
-      #info-card[data-pinned] #pinned-badge {
+      /* Show the badge when the full card carries the data-pinned attribute */
+      .info-card-full[data-pinned] #pinned-badge {
         display: inline;
+      }
+
+      /* SDSS name headline — slightly prominent text above the body rows */
+      .card-headline {
+        font-size: 13px;
+        color: #e8eeff;
+        margin-bottom: 8px;
+        letter-spacing: 0.02em;
+        word-break: break-all; /* long names like SDSS J... don't overflow the card */
+      }
+
+      /* Major section separator — adds vertical breathing room between groups */
+      .card-section {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(160, 200, 255, 0.10);
+      }
+
+      /* Thumbnail + cosmology summary side-by-side */
+      .card-top-row {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+
+      .card-summary {
+        flex: 1;
+        min-width: 0; /* allow text truncation inside flex child */
+      }
+
+      /* "Light left X.X Gyr ago" — the single most memorable fact */
+      .card-lookback-line {
+        color: #e8eeff;
+        font-size: 12px;
+        margin-bottom: 2px;
+      }
+
+      /* Earth-era sub-line below the lookback line; slightly muted */
+      .card-lookback-era {
+        color: rgba(200, 220, 255, 0.70);
+        font-size: 11px;
+        margin-bottom: 4px;
+      }
+
+      /* Distance · speed line */
+      .card-dist-line {
+        color: rgba(200, 220, 255, 0.80);
+        font-size: 11px;
+        margin-bottom: 3px;
+      }
+
+      /* Galaxy type line ("Red, quiescent galaxy") */
+      .card-type-line {
+        color: rgba(200, 220, 255, 0.80);
+        font-size: 11px;
+      }
+
+      /* Thumbnail image — 80×80 px rounded square */
+      .thumb-img {
+        width: 80px;
+        height: 80px;
+        border-radius: 6px;
+        border: 1px solid rgba(160, 200, 255, 0.20);
+        flex-shrink: 0;
+        object-fit: cover;
+        display: block;
+      }
+
+      /* Placeholder shown when the thumbnail fails to load — same dimensions */
+      .thumb-placeholder {
+        width: 80px;
+        height: 80px;
+        border-radius: 6px;
+        border: 1px dashed rgba(160, 200, 255, 0.25);
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgba(160, 180, 230, 0.35);
+        font-size: 10px;
+        text-align: center;
       }
 
       /* Each data field: label on the left, value on the right */
@@ -100,6 +232,49 @@
         color: #e8eeff;
         text-align: right;
         font-variant-numeric: tabular-nums;
+      }
+
+      /* ObjID value — 19 digits; smaller font + tabular nums prevents overflow */
+      .card-objid {
+        font-size: 10px;
+        letter-spacing: 0;
+        font-variant-numeric: tabular-nums;
+        /* <code> resets font family — restore our monospace stack */
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        word-break: break-all;
+      }
+
+      /* ▾ More details summary toggle */
+      .details-summary {
+        cursor: pointer;
+        list-style: none; /* hide the default triangle on some browsers */
+        color: rgba(160, 180, 230, 0.55);
+        font-size: 11px;
+        padding: 4px 0 2px;
+        user-select: none;
+        outline: none;
+      }
+      /* WebKit/Blink hide the default marker differently */
+      .details-summary::-webkit-details-marker { display: none; }
+
+      /* Add a disclosure arrow via ::before so we can style it consistently */
+      details[open] > .details-summary::before { content: '▾ '; }
+      details:not([open]) > .details-summary::before { content: '▸ '; }
+
+      /* SDSS Explorer link — right-aligned, "→" suffix, hover glow */
+      .external-link {
+        display: block;
+        margin-top: 10px;
+        text-align: right;
+        font-size: 11px;
+        color: rgba(160, 200, 255, 0.65);
+        text-decoration: none;
+        letter-spacing: 0.04em;
+        transition: color 0.15s ease;
+      }
+      .external-link:hover {
+        color: #a8d0ff;
+        text-shadow: 0 0 8px rgba(120, 180, 255, 0.4);
       }
 
       /* ── Scale bar (bottom-right reference) ────────────────────────────── */

@@ -43,33 +43,116 @@ import { attachOrbitControls } from './camera/orbitControls';
 import { generateSyntheticCloud } from './data/synthetic';
 import { decodePointCloud } from './data/pointCloudFormat';
 import { cartesianToRaDecZ } from './data/coords';
+import {
+  formatRaSexagesimal,
+  formatDecSexagesimal,
+  sdssName,
+  lookbackTimeGyr,
+  hubbleVelocityKmS,
+  absoluteMagnitude,
+  earthEraForLookback,
+  galaxyTypeFromColor,
+  sdssExplorerUrl,
+  sdssThumbnailUrl,
+} from './data/physics';
 import type { PointCloud } from './types';
 
 // ── Public types ───────────────────────────────────────────────────────────────
 
 /**
  * Display data for a single galaxy point, computed on-demand from the raw
- * cloud arrays via `cartesianToRaDecZ`.
+ * cloud arrays.
  *
- * React components receive this value and render it — they never import
- * data modules directly. Keeping the computation here means the data path
- * (cloud arrays → PointInfo) lives alongside the engine that owns the arrays.
+ * All derived quantities (sexagesimal coords, lookback time, galaxy type, etc.)
+ * are pre-computed here in the engine so React components receive ready-to-render
+ * values and never import data or physics modules directly.  The computation is
+ * on-demand (triggered by hover/select events) so it costs nothing for the 99.9%
+ * of points that are never hovered.
+ *
+ * Fields are grouped into four logical sections below.
  */
 export type PointInfo = {
   /** 0-based point index in the loaded cloud. */
   index: number;
-  /** Right ascension in degrees, [0, 360). */
+
+  /**
+   * SDSS 64-bit object identifier.
+   *
+   * Stored as `bigint` because SDSS objIDs are 18–19 digit numbers that exceed
+   * the safe integer range of JS `number` (2⁵³).  Used to build the Explorer
+   * and thumbnail URLs below.
+   */
+  objID: bigint;
+
+  /** @group Sky coordinates */
+
+  /** Right Ascension in decimal degrees, [0, 360). */
   ra: number;
-  /** Declination in degrees, [-90, +90]. */
+  /** Declination in decimal degrees, [-90, +90]. */
   dec: number;
+  /** RA formatted as HHhMMmSS.sss (pre-computed via physics.formatRaSexagesimal). */
+  raSexagesimal: string;
+  /** Dec formatted as ±DD°MM'SS.s" (pre-computed via physics.formatDecSexagesimal). */
+  decSexagesimal: string;
+
+  /** @group Cosmology */
+
   /** Spectroscopic redshift z (dimensionless). */
   redshift: number;
-  /** Comoving distance in Mpc, computed as sqrt(x²+y²+z²). */
+  /** Comoving distance in Mpc, computed as √(x²+y²+z²). */
   distanceMpc: number;
-  /** Apparent magnitude (logarithmic, inverted: smaller = brighter). */
-  magnitude: number;
-  /** Colour index (e.g. SDSS u−g): bluer objects → smaller value. */
-  colorIndex: number;
+  /** Recession velocity in km/s via Hubble's law: v = c·z. */
+  hubbleVelocityKmS: number;
+  /** Light-travel time in Gyr (how long ago the light we see left the source). */
+  lookbackGyr: number;
+  /** Human-readable Earth-history anchor for the lookback time, e.g. "during Earth's Mesoproterozoic". */
+  earthEra: string;
+
+  /** @group Five-band photometry */
+
+  /** SDSS u-band apparent magnitude. */
+  magU: number;
+  /** SDSS g-band apparent magnitude — the primary brightness proxy shown in the UI. */
+  magG: number;
+  /** SDSS r-band apparent magnitude. */
+  magR: number;
+  /** SDSS i-band apparent magnitude. */
+  magI: number;
+  /** SDSS z-band apparent magnitude. */
+  magZ: number;
+
+  /** @group Derived quantities */
+
+  /** Absolute magnitude in the g-band, corrected for distance. */
+  absoluteMagG: number;
+  /**
+   * Coarse galaxy classification inferred from the u−r colour index.
+   *
+   * `category` is intended for UI tinting; `description` is the human-readable
+   * string shown in the info card (e.g. "Red, quiescent galaxy").
+   */
+  galaxyType: { category: 'red' | 'blue' | 'unknown'; description: string };
+  /** IAU-style SDSS designation, e.g. "SDSS J123456.75+012345.5". */
+  sdssName: string;
+
+  /** @group External URLs */
+
+  /**
+   * SDSS DR18 Quick Look page for this object (opens in a new tab).
+   *
+   * For synthetic data the objID is sequential (0, 1, 2…) so the URL won't
+   * resolve to a real page — but the field is always populated so the render
+   * path is uniform.
+   */
+  explorerUrl: string;
+  /**
+   * SDSS image cutout URL — a 200×200 px JPEG centred on the object's sky position.
+   *
+   * The cutout service is coordinate-based (RA/Dec), not objID-based, so it
+   * works for both real SDSS data and synthetic points whose positions have
+   * plausible sky coordinates.
+   */
+  thumbnailUrl: string;
 };
 
 /**
@@ -241,28 +324,72 @@ async function loadCloud(): Promise<{ cloud: PointCloud; source: CloudSource }> 
 /**
  * Build a `PointInfo` value from raw cloud arrays for the given index.
  *
- * This is the only place in the engine that touches `cartesianToRaDecZ` — the
- * React components receive the computed result and never import data modules.
+ * This is the only place in the engine that touches `cartesianToRaDecZ` and
+ * the physics helpers — the React components receive the computed result and
+ * never import data modules directly.  The computation is intentionally
+ * concentrated here so the data→display path is easy to trace and test.
+ *
+ * The function is called at most once per hover/select event (not per frame),
+ * so the modest cost of the trig + physics math is not on the hot path.
  */
 function buildPointInfo(cloud: PointCloud, idx: number): PointInfo {
   const px = cloud.positions[idx * 3 + 0]!;
   const py = cloud.positions[idx * 3 + 1]!;
   const pz = cloud.positions[idx * 3 + 2]!;
 
-  // cartesianToRaDecZ inverts the Hubble-law conversion to recover sky coords.
+  // Recover sky coordinates from the Cartesian position stored in the cloud.
+  // cartesianToRaDecZ inverts the Hubble-law conversion used at import time.
   const [ra, dec, redshift] = cartesianToRaDecZ(px, py, pz);
 
-  // Distance in Mpc is the Euclidean norm of the Cartesian position.
+  // Euclidean distance in Mpc — same as the comoving distance under Hubble's law.
   const distanceMpc = Math.sqrt(px * px + py * py + pz * pz);
 
+  // Pull all five photometric bands.  The `!` non-null assertions are safe here
+  // because all mag arrays are guaranteed to have `count` elements (enforced by
+  // the decoder and generator), and idx is always a valid pick result in [0, count).
+  const magU = cloud.magU[idx]!;
+  const magG = cloud.magG[idx]!;
+  const magR = cloud.magR[idx]!;
+  const magI = cloud.magI[idx]!;
+  const magZ = cloud.magZ[idx]!;
+
+  // u−r colour index is the standard SDSS discriminator for the red-sequence /
+  // blue-cloud bimodality (Strateva et al. 2001). We pass it to galaxyTypeFromColor
+  // rather than the u−g we feed the shader — u−r gives a cleaner separation.
+  const uMinusR = magU - magR;
+
   return {
-    index:       idx,
+    index:   idx,
+    objID:   cloud.objIDs[idx]!,
+
+    // Sky coordinates — both decimal and pre-formatted sexagesimal strings.
     ra,
     dec,
+    raSexagesimal:  formatRaSexagesimal(ra),
+    decSexagesimal: formatDecSexagesimal(dec),
+
+    // Cosmology derived from the recovered redshift and distance.
     redshift,
     distanceMpc,
-    magnitude:   cloud.magnitudes[idx]!,
-    colorIndex:  cloud.colorIndex[idx]!,
+    hubbleVelocityKmS: hubbleVelocityKmS(redshift),
+    lookbackGyr:       lookbackTimeGyr(redshift),
+    earthEra:          earthEraForLookback(lookbackTimeGyr(redshift)),
+
+    // Five-band photometry — raw values, let the UI format them.
+    magU,
+    magG,
+    magR,
+    magI,
+    magZ,
+
+    // Derived quantities.
+    absoluteMagG: absoluteMagnitude(magG, distanceMpc),
+    galaxyType:   galaxyTypeFromColor(uMinusR),
+    sdssName:     sdssName(ra, dec),
+
+    // External URLs — always constructed, regardless of real vs. synthetic data.
+    explorerUrl:  sdssExplorerUrl(cloud.objIDs[idx]!),
+    thumbnailUrl: sdssThumbnailUrl(ra, dec, 200),
   };
 }
 

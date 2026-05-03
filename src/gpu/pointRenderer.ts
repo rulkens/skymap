@@ -368,9 +368,21 @@ export class PointRenderer {
       interleaved[o + 1] = cloud.positions[i * 3 + 1]!;
       interleaved[o + 2] = cloud.positions[i * 3 + 2]!;
 
-      // Copy scalar attributes — each array is indexed directly by point index.
-      interleaved[o + 3] = cloud.magnitudes[i]!;
-      interleaved[o + 4] = cloud.colorIndex[i]!;
+      // Derive the two scalar attributes from the v2 five-band photometry.
+      //
+      // The shader (points.wgsl) expects:
+      //   slot 3 → magnitude   (we feed g-band, the primary brightness proxy)
+      //   slot 4 → colorIndex  (we feed u−g, the bluestar / redgalaxy discriminator)
+      //
+      // The old v1 format pre-baked a single `magnitude` and `colorIndex` into
+      // the file.  The new v2 format keeps all five bands separately, so we
+      // derive both values here at upload time.  This is one-shot work done
+      // once per data load (not per frame), and it matches the band the shader
+      // was always tuned against.
+      const g = cloud.magG[i]!;
+      const u = cloud.magU[i]!;
+      interleaved[o + 3] = g;
+      interleaved[o + 4] = u - g; // u−g color index: blue star-forming galaxies → low; red quiescent → high
     }
 
     // Destroy the previous vertex buffer (if any) before allocating a new one.
