@@ -71,7 +71,6 @@ import { StatusBar } from './components/StatusBar/StatusBar';
 import { InfoCard } from './components/InfoCard/InfoCard';
 import { ScaleBar } from './components/ScaleBar/ScaleBar';
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
-import { HomeButton } from './components/HomeButton/HomeButton';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -257,9 +256,8 @@ export function App(): React.ReactElement {
         onPointSizeChange={(v) => handleRef.current?.setPointSize(v)}
         onBrightnessChange={(v) => handleRef.current?.setBrightness(v)}
         onAutoRotateChange={(v) => handleRef.current?.setAutoRotate(v)}
-        onResetCamera={() => handleRef.current?.resetCamera()}
+        onResetCamera={() => handleRef.current?.focusOnHome()}
       />
-      <HomeButton onClick={() => handleRef.current?.focusOnHome()} />
     </>
   );
 }
