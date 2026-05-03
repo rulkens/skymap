@@ -335,8 +335,40 @@ fn vs(
   // compute distance from the billboard centre.
   out.uv = corner;
 
-  // Look up the colour for this point's g−r index.
-  out.tint = ramp(p.colorIndex);
+  // ── K-CORRECTION (observed → rest-frame colour) ──────────────────────────
+  //
+  // The colorIndex attribute is the *observed* u−g — the colour we actually
+  // measure on Earth. But cosmic expansion redshifts every photon: a galaxy
+  // with rest-frame u−g = 1.5 at z = 0.3 has observed u−g closer to 2.5,
+  // because what was the u-band at the source is now in the optical and
+  // what was the g-band has shifted into the red. Without correction, *every*
+  // distant galaxy would render red regardless of its intrinsic colour —
+  // which is exactly the artifact the eye notices in the wedge view.
+  //
+  // The proper correction (the "K-correction" in astronomy) depends on each
+  // galaxy's spectral type and is normally computed via SED template fits.
+  // We use a simple linear approximation suitable for visualisation:
+  //
+  //   (u−g)_rest ≈ (u−g)_obs − K_UG · z
+  //
+  // where K_UG ≈ 3.0 is a typical coefficient averaged across galaxy types
+  // for SDSS u−g at z < 0.5 (the SDSS spec sample range). This captures the
+  // dominant trend; over- or under-corrects individual galaxies by ~0.3 mag
+  // depending on their type, which is acceptable for a colour ramp.
+  //
+  // We derive z from the position vector via Hubble's law: |xyz| = c·z/H₀,
+  // so z = |xyz| / HUBBLE_DISTANCE_MPC. This matches how the CPU-side
+  // raDecZToCartesian generated these positions, so the inversion is exact
+  // for our linear-cosmology assumption.
+  let HUBBLE_DISTANCE_MPC = 4282.749;  // c / H₀ for H₀ = 70 km/s/Mpc
+  let K_UG_PER_Z = 3.0;
+  let zRedshift = length(p.position) / HUBBLE_DISTANCE_MPC;
+  let restColorIndex = p.colorIndex - K_UG_PER_Z * zRedshift;
+
+  // Look up the colour for this point's *rest-frame* u−g index. Galaxies
+  // that were intrinsically blue stay blue regardless of distance; only
+  // genuinely red (passive) galaxies render red.
+  out.tint = ramp(restColorIndex);
 
   // ── MAGNITUDE → INTENSITY ────────────────────────────────────────────────
   //
