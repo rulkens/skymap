@@ -257,6 +257,27 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
               </>
             }
           />
+          {/*
+            Diameter row — shows the per-galaxy physical size driving the
+            renderer's apparent-size, focus-tween, and quad-size code. The
+            small-font provenance tag distinguishes "we measured this"
+            (catalog isophotal/Petrosian radius) from "we estimated it"
+            (Tully size–luminosity from B-mag) from "no real signal"
+            (project-wide 30 kpc default).  Helps explain why two galaxies
+            of similar magnitude render at very different on-screen sizes.
+          */}
+          <CardRow
+            label="Diameter"
+            value={
+              <>
+                {info.diameterKpc.toFixed(1)}&nbsp;kpc
+                <br />
+                <span style={{ opacity: 0.7, fontSize: '0.85em' }}>
+                  {info.diameterProvenance}
+                </span>
+              </>
+            }
+          />
           <div className={styles.cardRow}>
             <span className={styles.cardLabel}>ObjID</span>
             {/*
