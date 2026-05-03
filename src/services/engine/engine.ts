@@ -83,6 +83,7 @@ import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 import { TextureAtlas } from '../gpu/textureAtlas';
 import { GalaxyImageQueue } from '../gpu/galaxyImageQueue';
 import { QuadRenderer } from '../gpu/quadRenderer';
+import { DiskRenderer, type DiskInstance } from '../gpu/diskRenderer';
 import { fetchGalaxyBitmap } from '../gpu/galaxyImageFetcher';
 import { galaxyDiameterKpc, cartesianToRaDecZ } from '../../utils/math';
 import type { QuadInstance } from '../../@types';
@@ -437,6 +438,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       atlas.initTexture();
       const quadRenderer = new QuadRenderer({ device, context, format, canvas });
       quadRenderer.bindAtlas(atlas.getTextureView());
+      // DiskRenderer shares the same atlas as QuadRenderer — both pull from
+      // the same 2048×2048 thumbnail texture.  The engine routes each
+      // galaxy to one renderer or the other per frame based on apparent
+      // size and orientation-data availability (see the per-frame loop).
+      const diskRenderer = new DiskRenderer({ device, context, format, canvas });
+      diskRenderer.bindAtlas(atlas.getTextureView());
       const queue = new GalaxyImageQueue();
       let frameCounter = 0;
       const bitmapReady = new Set<string>();
@@ -916,6 +923,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           const cz = cam.position[2];
 
           const quads: QuadInstance[] = [];
+          // Disks accumulate alongside quads.  We sort each galaxy into
+          // exactly one bucket — see the branch at the tail of the loop
+          // body — so the two arrays never double-count an instance.
+          const disks: DiskInstance[] = [];
           for (const cloud of clouds.values()) {
             const positions = cloud.positions;
             const count = cloud.count;
@@ -1002,7 +1013,32 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               // channel of the cutout JPEG.
               const sizeWorldMpc = (dKpc / 1000) * 4;
               const [u0, v0, u1, v1] = atlas.slotUv(slot);
-              quads.push({ x, y, z, sizeWorld: sizeWorldMpc, u0, v0, u1, v1 });
+
+              const ar = cloud.axisRatio[i]!;
+              const pa = cloud.positionAngleDeg[i]!;
+              // 3D disk path: only when (a) the apparent size is large
+              // enough that the inclination ellipse is perceptually
+              // distinguishable from a circle, and (b) the orientation
+              // values are finite (defensive — the build pipeline
+              // guarantees this, but a corrupted cache could flip them
+              // to NaN, in which case we fall back to a flat quad rather
+              // than render a NaN-projected mess).
+              if (px > 4 && Number.isFinite(ar) && Number.isFinite(pa)) {
+                disks.push({
+                  x,
+                  y,
+                  z,
+                  sizeWorld: sizeWorldMpc,
+                  u0,
+                  v0,
+                  u1,
+                  v1,
+                  axisRatio: ar,
+                  positionAngleDeg: pa,
+                });
+              } else {
+                quads.push({ x, y, z, sizeWorld: sizeWorldMpc, u0, v0, u1, v1 });
+              }
             }
           }
 
@@ -1014,6 +1050,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               quads,
               drawCamPos,
               drawPxPerRad,
+            );
+          }
+          if (disks.length > 0) {
+            diskRenderer.draw(
+              pass,
+              vp,
+              [canvas.width, canvas.height],
+              drawCamPos,
+              disks,
             );
           }
         }
