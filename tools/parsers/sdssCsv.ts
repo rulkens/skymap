@@ -48,6 +48,57 @@ export type SdssCsvResult = {
 };
 
 /**
+ * Blend SDSS exponential and de Vaucouleurs profile fits into a single
+ * (axisRatio, PA) pair.
+ *
+ * SDSS reports two parallel fits per band — exp (disc-like) and deV
+ * (bulge-like) — plus `fracDeV_r ∈ [0, 1]` saying how much of the light is
+ * actually deV-shaped. Blending by fracDeV gives the PSF-realistic shape
+ * the user perceives:
+ *
+ *   axisRatio = (1 − f) · expAB + f · deVAB
+ *
+ * Position-angle blending is harder because PA is *circular* on [0, 180):
+ * if expPhi = 5° and deVPhi = 175° they're actually 10° apart (across the
+ * 0/180 wrap), not 170°. We project to the unit circle on the doubled
+ * angle (so wrap is at 360°), blend the unit vectors weighted by their
+ * shapes, then atan2 back. This is the standard circular mean.
+ *
+ * Returns `null` if any of the five inputs is non-finite — the row's PA/AB
+ * is then handed off to the deterministic fallback in the build pipeline.
+ */
+function blendSdssShape(
+  expAB: number,
+  expPhi: number,
+  deVAB: number,
+  deVPhi: number,
+  fracDeV: number,
+): { axisRatio: number; positionAngleDeg: number } | null {
+  if (
+    !Number.isFinite(expAB) ||
+    !Number.isFinite(expPhi) ||
+    !Number.isFinite(deVAB) ||
+    !Number.isFinite(deVPhi) ||
+    !Number.isFinite(fracDeV)
+  ) {
+    return null;
+  }
+  const f = Math.max(0, Math.min(1, fracDeV));
+  const axisRatio = (1 - f) * expAB + f * deVAB;
+
+  const e2 = (expPhi * 2 * Math.PI) / 180;
+  const d2 = (deVPhi * 2 * Math.PI) / 180;
+  const sx = (1 - f) * Math.cos(e2) + f * Math.cos(d2);
+  const sy = (1 - f) * Math.sin(e2) + f * Math.sin(d2);
+  let pa2 = Math.atan2(sy, sx);
+  if (pa2 < 0) pa2 += 2 * Math.PI;
+  let positionAngleDeg = (pa2 * 180) / (2 * Math.PI);
+  if (positionAngleDeg >= 180) positionAngleDeg -= 180;
+
+  return { axisRatio, positionAngleDeg };
+}
+
+/**
  * Parse an SDSS SkyServer CSV blob into canonical records.
  *
  * A row is *skipped* (counted in `result.skipped`) when:
@@ -106,6 +157,11 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
   const COL_MAG_R = requireColumn('modelMag_r');
   const COL_MAG_I = requireColumn('modelMag_i');
   const COL_MAG_Z = requireColumn('modelMag_z');
+  const COL_EXP_AB = requireColumn('expAB_r');
+  const COL_EXP_PHI = requireColumn('expPhi_r');
+  const COL_DEV_AB = requireColumn('deVAB_r');
+  const COL_DEV_PHI = requireColumn('deVPhi_r');
+  const COL_FRAC_DEV = requireColumn('fracDeV_r');
 
   // ─── Row parsing ────────────────────────────────────────────────────
 
@@ -167,6 +223,20 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
       continue;
     }
 
+    // Pull the five orientation columns and blend them via the helper above.
+    // We parse-then-validate inside `blendSdssShape` (rather than NaN-checking
+    // here and skipping the row) because a missing orientation is not fatal —
+    // the build pipeline has a deterministic fallback that fills in PA/AB from
+    // the objID hash. Photometry rows with valid z + mags but missing shape
+    // columns should still make it into the cloud.
+    const expAB = parseFloat(cells[COL_EXP_AB] ?? '');
+    const expPhi = parseFloat(cells[COL_EXP_PHI] ?? '');
+    const deVAB = parseFloat(cells[COL_DEV_AB] ?? '');
+    const deVPhi = parseFloat(cells[COL_DEV_PHI] ?? '');
+    const fracDeV = parseFloat(cells[COL_FRAC_DEV] ?? '');
+
+    const shape = blendSdssShape(expAB, expPhi, deVAB, deVPhi, fracDeV);
+
     records.push({
       source: Source.SDSS,
       objID,
@@ -178,14 +248,8 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
       magR,
       magI,
       magZ,
-      // TODO Task 4 (galaxy-orientation-disks): blend SDSS PhotoObj's
-      // expAB_r / deVAB_r and expPhi_r / deVPhi_r columns into a single
-      // axisRatio + positionAngleDeg (weighted by fracDeV_r). The current
-      // SkyServer query in data/raw/ doesn't yet select those columns, so
-      // we emit `null` and the build pipeline routes every SDSS row through
-      // fallbackOrientation in the meantime.
-      axisRatio: null,
-      positionAngleDeg: null,
+      axisRatio: shape ? shape.axisRatio : null,
+      positionAngleDeg: shape ? shape.positionAngleDeg : null,
     });
   }
 
