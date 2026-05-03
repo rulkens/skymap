@@ -79,6 +79,15 @@ export enum Source {
    * baseline so we don't have to re-merge those parent catalogs ourselves.
    */
   Glade = 3,
+  /**
+   * Curated atlas of well-known galaxies (Messier + NGC greatest-hits).
+   * Distinct from the survey-derived sources because entries are
+   * hand-picked + carry curated descriptions and high-quality processed
+   * thumbnails.  Many entries (M31, M33, M81, NGC 253) sit too close to
+   * us to survive 2MRS/GLADE's small-z filtering, so they need their own
+   * positions rather than just tagging existing rows.
+   */
+  Famous = 4,
 }
 
 // ─── Per-survey metadata tables ─────────────────────────────────────────────
@@ -106,6 +115,7 @@ const LABELS: Record<Source, string> = {
   [Source.SDSS]: 'SDSS',
   [Source.TwoMRS]: '2MRS',
   [Source.Glade]: 'GLADE',
+  [Source.Famous]: 'Famous',
 };
 
 /**
@@ -129,6 +139,7 @@ const ALL_SKY: Record<Source, boolean> = {
   [Source.SDSS]: false,
   [Source.TwoMRS]: true,
   [Source.Glade]: true,
+  [Source.Famous]: true, // hand-picked entries from across the sky
 };
 
 /**
@@ -156,6 +167,7 @@ const MAX_DIST_MPC: Record<Source, number> = {
   [Source.SDSS]: 3000,
   [Source.TwoMRS]: 250,
   [Source.Glade]: 1500,
+  [Source.Famous]: 200, // covers the curated set: M31 → NGC 4889
 };
 
 /**
@@ -181,6 +193,12 @@ const BAND_LABELS: Record<Source, BandLabels> = {
   [Source.SDSS]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
   [Source.TwoMRS]: { u: '—', g: 'J', r: 'H', i: 'K', z: '—' },
   [Source.Glade]: { u: '—', g: 'B', r: 'J', i: 'H', z: 'K' },
+  // Famous entries don't carry per-row photometry (we don't repeat what
+  // the source survey already measured).  Mirror the SDSS labels purely
+  // so the InfoCard markup renders generic "(g)" tags without a new
+  // branch — the actual mag values stored on the cloud are NaN, which
+  // FullCard already gracefully renders as "N/A".
+  [Source.Famous]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
 };
 
 /**
@@ -247,13 +265,14 @@ export const ALL_SOURCES: readonly Source[] = [
   Source.SDSS,
   Source.TwoMRS,
   Source.Glade,
+  Source.Famous,
 ];
 
 /**
  * Bitmask with a `1` in every defined source's bit position — i.e. "show
  * everything". This is the renderer's default visibility mask on startup.
  *
- * Computed as `(1<<0) | (1<<1) | (1<<2) | (1<<3) = 0b1111 = 15`.
+ * Computed as `(1<<0) | (1<<1) | (1<<2) | (1<<3) | (1<<4) = 0b11111 = 31`.
  *
  * Note we use `<<` (not `**`) because it's an integer operation and runs
  * the same way in JS, WGSL, and TS. JS bitwise ops coerce to 32-bit
