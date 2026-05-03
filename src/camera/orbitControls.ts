@@ -40,7 +40,7 @@
  */
 
 import type { OrbitCamera } from '../@types';
-import { updatePosition } from './orbitCamera';
+import { updatePosition, clampDistance } from './orbitCamera';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -283,11 +283,12 @@ export function attachOrbitControls(
     //   • Scroll down (positive deltaY) → factor > 1 → distance grows (zoom out).
     //   • Scroll up   (negative deltaY) → factor < 1 → distance shrinks (zoom in).
     //
-    // `Math.max(0.01, …)` prevents distance from reaching zero or going
-    // negative, which would flip the camera through the target and produce
-    // an inverted scene.
+    // `clampDistance` enforces the global zoom envelope (see orbitCamera.ts):
+    // a hard floor prevents the camera from flipping through the target into
+    // an inverted scene; a hard ceiling prevents drifting off into the void
+    // beyond the deepest survey, where the cloud collapses to a dot.
     const factor = Math.exp(e.deltaY * 0.001);
-    cam.distance = Math.max(0.01, cam.distance * factor);
+    cam.distance = clampDistance(cam.distance * factor);
     updatePosition(cam);
   };
 

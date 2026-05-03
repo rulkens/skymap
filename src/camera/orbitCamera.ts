@@ -38,6 +38,41 @@
 import { mat4, vec3 } from 'gl-matrix';
 import type { OrbitCameraInit, OrbitCamera } from '../@types';
 
+// ─── Distance limits ──────────────────────────────────────────────────────────
+
+/**
+ * Minimum allowed `cam.distance` in Mpc.
+ *
+ * Closer than 0.5 Mpc and the camera is effectively inside the Local Group:
+ * 2MRS has galaxies at 0.7 Mpc (M31), and below that we'd be looking out from
+ * inside the Milky Way's neighbourhood, which the renderer is not built for
+ * (no proper-motion star catalogue, no Local Group overlays).  Hard floor.
+ */
+export const MIN_DISTANCE_MPC = 0.5;
+
+/**
+ * Maximum allowed `cam.distance` in Mpc.
+ *
+ * 5 Gpc is well past the deepest BOSS spectroscopic galaxy (z ≈ 0.7
+ * → ~3 Gpc under Hubble's law) and roughly the entire observable universe
+ * along any single line of sight.  Beyond this the cloud is a single dot
+ * and the user has lost all spatial intuition, so we stop the wheel here
+ * rather than letting the camera drift into the lonely abyss.
+ */
+export const MAX_DISTANCE_MPC = 5000;
+
+/**
+ * Clamp a candidate distance to `[MIN_DISTANCE_MPC, MAX_DISTANCE_MPC]`.
+ *
+ * Centralised so wheel zoom, SpaceMouse zoom, focus tweens and initial
+ * framing all share the same policy — drift here would be hard to debug.
+ */
+export function clampDistance(d: number): number {
+  if (d < MIN_DISTANCE_MPC) return MIN_DISTANCE_MPC;
+  if (d > MAX_DISTANCE_MPC) return MAX_DISTANCE_MPC;
+  return d;
+}
+
 // ─── Construction ─────────────────────────────────────────────────────────────
 
 /**

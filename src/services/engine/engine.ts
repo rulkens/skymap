@@ -52,7 +52,12 @@
 import { initGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { PointRenderer } from '../../gpu/pointRenderer';
 import { createPickRenderer } from '../../gpu/pickRenderer';
-import { createOrbitCamera, computeViewProj, updatePosition } from '../../camera/orbitCamera';
+import {
+  createOrbitCamera,
+  computeViewProj,
+  updatePosition,
+  clampDistance,
+} from '../../camera/orbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { formatDistance } from '../../utils/format/distance';
 import { ALL_VISIBLE_MASK, Source, maskWith, maskWithout } from '../../data/sources';
@@ -436,18 +441,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the auto-LOD kicking surveys in/out as the user zooms.
       //
       // `bbox` = max abs of any coordinate component (cheap; no sqrt).
-      // `distance` = bbox × 2.5 — 2.5× the half-extent frames the cloud with a
-      //   comfortable margin similar to the old synthetic framing.
+      // `distance` = bbox × INITIAL_FRAME_FACTOR — frames the cloud with a
+      //   comfortable margin.  Lowered from 2.5 to 1.6 so first-time visitors
+      //   land already inside the cluster structure rather than far above it.
       // `far`      = bbox × 4 — ensures the most distant points aren't clipped.
       // We deliberately use the LARGEST bbox seen so far across loaded
       // clouds so the far plane covers every survey's outermost galaxy —
       // otherwise SDSS's deep galaxies would clip when 2MRS framed first.
+      const INITIAL_FRAME_FACTOR = 1.6;
       let bbox = maxAbsCoord(firstResult.cloud);
       for (const c of clouds.values()) {
         const cb2 = maxAbsCoord(c);
         if (cb2 > bbox) bbox = cb2;
       }
-      const camDistance = bbox * 2.5;
+      // Clamp to the global zoom envelope so an oversized SDSS bbox can't
+      // start the user above MAX_DISTANCE_MPC (the wheel would then be locked).
+      const camDistance = clampDistance(bbox * INITIAL_FRAME_FACTOR);
       const camFar = bbox * 4;
       const source: CloudSource = firstResult.cloudSource;
 

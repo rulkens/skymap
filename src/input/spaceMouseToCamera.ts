@@ -52,6 +52,7 @@
  */
 
 import type { OrbitCamera } from '../@types';
+import { clampDistance } from '../camera/orbitCamera';
 import type { SpaceMouseAxes } from './spaceMouseAxes';
 
 // ─── Tuning constants ─────────────────────────────────────────────────────────
@@ -135,7 +136,10 @@ export function applyAxesToCamera(
   // we want distance *= exp(tz * dt * rate) with no negation: positive tz
   // (puck lifted) → exp > 1 → zoom OUT; negative tz (pushed down) → exp < 1
   // → zoom IN. This matches the spec's "negative tz zooms in" sign rule.
-  cam.distance *= Math.exp(axes.tz * dtMs * ZOOM_RATE_PER_MS);
+  // Clamp to the global distance envelope (orbitCamera.MIN/MAX_DISTANCE_MPC) —
+  // the puck's continuous force input would otherwise sail past the limits in
+  // a few ms once held at full deflection.
+  cam.distance = clampDistance(cam.distance * Math.exp(axes.tz * dtMs * ZOOM_RATE_PER_MS));
 
   // ── Pan target (tx: sideways, ty: up/down) ───────────────────────────────
   //
