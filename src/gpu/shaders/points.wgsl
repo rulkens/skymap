@@ -295,13 +295,13 @@ fn vs(
   // so this comparison is only ever true for a real selection.
   let isSelected = (ii == u.selectedIndex);
 
-  // Scale the billboard 3× for the selected point so the selection ring
-  // extends visibly beyond the normal point disk. Non-selected points keep
-  // the original pointSizePx radius.
+  // Scale the billboard ~8× for the selected point so the selection ring
+  // is unmistakable — even a faint, magnitude-22 galaxy gets a visible halo.
+  // Non-selected points keep the original pointSizePx radius.
   //
   // We use `select(normalSize, selectedSize, isSelected)` — WGSL's ternary.
   // Recall the argument order: select(falseValue, trueValue, condition).
-  let sizeScale = select(1.0, 3.0, isSelected);
+  let sizeScale = select(1.0, 8.0, isSelected);
 
   // ── PIXEL-SIZE-IN-CLIP-SPACE CONVERSION ──────────────────────────────────
   //
@@ -398,20 +398,24 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     if (r2 > 1.0) { discard; }
 
     // Inside the ring's inner edge — discard to create the hollow centre.
-    // The threshold 0.4 was chosen so the ring band (√0.4 ≈ 0.63 to 1.0)
-    // is visually distinct without being too thin. At 3× billboard scale this
-    // maps to a ring that clearly surrounds the normal point disk.
-    if (r2 < 0.4) { discard; }
+    // The threshold 0.72 means the ring band runs from √0.72 ≈ 0.85 out to 1.0,
+    // a reasonably thin annulus. Combined with the 8× billboard scale, this
+    // gives a visibly large ring surrounding the original point.
+    if (r2 < 0.72) { discard; }
 
-    // Ring falloff: fade toward the outer edge for a softer glow.
-    // exp(-r2 * 2.5) keeps the ring fairly bright across its width.
-    let alpha = exp(-r2 * 2.5);
+    // Smooth alpha across the ring band, peaking in the middle.
+    // We map r² ∈ [0.72, 1.0] to a 0→1→0 hump: distance from the band centre
+    // (0.86) drives a small Gaussian, so the ring fades softly on both edges
+    // rather than appearing hard-clipped.
+    let bandCentre = 0.86;
+    let bandDist   = abs(r2 - bandCentre);
+    let alpha      = exp(-bandDist * bandDist * 80.0);
 
     // Brighten the selection ring relative to the normal point colour.
-    // Multiplying by 1.8 ensures the ring is visually salient even for
-    // faint points. Clamping is handled implicitly by additive blending's
-    // natural saturation toward white in the bright limit.
-    let rgb = in.tint * in.intensity * 1.8;
+    // 2.5× plus a constant white floor (0.7) keeps the ring bright enough
+    // to be salient even when the underlying point is dim. Additive blending
+    // saturates naturally so this can't blow past white.
+    let rgb = in.tint * (in.intensity * 2.5 + 0.7);
 
     return vec4<f32>(rgb * alpha, alpha);
   }
