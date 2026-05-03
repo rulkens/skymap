@@ -594,9 +594,39 @@ fn vs(
 
 @fragment
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
-  // `dot(v, v)` = v.x² + v.y² = r² (squared distance from billboard centre).
-  // Because our UV space is [-1, +1], the unit disk is exactly r² ≤ 1.
-  let r2 = dot(in.uv, in.uv);
+  // ── Elliptical-mask transform ────────────────────────────────────────────
+  //
+  // The vertex shader hands us a UV in [-1, +1]² centred on the billboard.
+  // We want to discard fragments outside an ELLIPSE oriented at PA with
+  // semi-axes 1.0 (major) and axisRatio (minor). The cheapest way is to
+  // rotate the UV by -PA (so PA-aligned axis becomes screen-x), then divide
+  // y by axisRatio (so the unit-circle test in the rotated frame is the
+  // ellipse test in the original frame), then apply the existing radial
+  // cutoff.
+  //
+  // We negate the PA rotation because:
+  //   1. Astronomical PA is measured east of north (counter-clockwise on
+  //      sky), but our UV-y points down on screen — a sign flip.
+  //   2. Rotating the UV is the inverse of rotating the ellipse, so the
+  //      target rotation `+PA` becomes a UV rotation of `-PA`.
+  //
+  // Cost: 2 trig + 4 mul + 1 div per fragment — negligible against the 6
+  // fragments per billboard at typical point sizes.
+  let paRad = -in.positionAngleDeg * 3.14159265 / 180.0;
+  let cs = cos(paRad);
+  let sn = sin(paRad);
+  let rotated = vec2<f32>(
+    cs * in.uv.x - sn * in.uv.y,
+    sn * in.uv.x + cs * in.uv.y,
+  );
+  // axisRatio is guaranteed > 0 by the build pipeline (fallback floor 0.3).
+  // Even so, clamp here as a defence against a hypothetical 0 leaking
+  // through — division by zero would produce a NaN distance and never
+  // discard, painting a full screen-aligned square.
+  let safeAB = max(in.axisRatio, 0.05);
+  let elliptic = vec2<f32>(rotated.x, rotated.y / safeAB);
+  let r2 = dot(elliptic, elliptic);
+  // ────────────────────────────────────────────────────────────────────────
 
   // ── SELECTION RING vs NORMAL DISK ─────────────────────────────────────────
   //
@@ -609,8 +639,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   //
   // For normal (non-selected) points we keep the original solid-disk logic.
   if (in.selected == 1u) {
+    // Selection halo stays circular for a clean ring regardless of disk
+    // orientation. Recompute r2 with the round dot(uv, uv) so an edge-on
+    // ellipse doesn't disappear into a discarded slot when selected — a
+    // very thin galaxy would otherwise have most of its halo's pixels
+    // rejected by the elliptical r2 above and the ring would look broken.
+    let r2_circ = dot(in.uv, in.uv);
+
     // Outside the outer edge of the scaled billboard — discard.
-    if (r2 > 1.0) { discard; }
+    if (r2_circ > 1.0) { discard; }
 
     // ── Inner disk (the point itself) ──────────────────────────────────────
     //
@@ -624,8 +661,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     // remapped: at r² = 1/64, we want the same `exp(-4)` falloff the
     // unscaled point would have, so we multiply r² by 64 (= 8²) before
     // applying the original ×4 coefficient → 256.
-    if (r2 < 0.0156) {
-      let alpha = exp(-r2 * 256.0);
+    if (r2_circ < 0.0156) {
+      let alpha = exp(-r2_circ * 256.0);
       let rgb   = in.tint * in.intensity;
       return vec4<f32>(rgb * alpha, alpha);
     }
@@ -635,9 +672,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     // The ring band runs from √0.72 ≈ 0.85 of the billboard radius out to 1.0.
     // We map r² ∈ [0.72, 1.0] to a soft hump centred at 0.86 so the band
     // fades on both edges rather than appearing hard-clipped.
-    if (r2 > 0.72) {
+    if (r2_circ > 0.72) {
       let bandCentre = 0.86;
-      let bandDist   = abs(r2 - bandCentre);
+      let bandDist   = abs(r2_circ - bandCentre);
       let alpha      = exp(-bandDist * bandDist * 80.0);
 
       // Brighten the ring relative to the natural point colour. 2.5× plus a
@@ -653,12 +690,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     discard;
   }
 
-  // ── NORMAL POINT — solid disk with Gaussian falloff ───────────────────────
+  // ── NORMAL POINT — solid disk with Gaussian falloff (now ELLIPTICAL) ──────
 
-  // Discard the four corners of the rectangular quad that fall outside the
-  // unit disk. Without this, each point would render as a square, not a circle.
-  // `discard` terminates the fragment shader and writes nothing to the render
-  // target — equivalent to a transparency of 0 but without the blend cost.
+  // Discard fragments outside the oriented ellipse defined by axisRatio + PA.
+  // `r2` was computed from the rotated/squashed UV above, so this single
+  // unit-radius test covers the elliptical mask without needing a separate
+  // shape-specific check.
   if (r2 > 1.0) { discard; }
 
   // Gaussian-like falloff: bright at centre (r²=0 → e⁰=1), fading to e⁻⁴≈0.018
