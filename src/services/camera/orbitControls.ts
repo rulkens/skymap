@@ -41,6 +41,7 @@
 
 import type { OrbitCamera } from '../../@types';
 import { updatePosition, clampDistance } from './orbitCamera';
+import { vec3 } from 'gl-matrix';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,7 +137,11 @@ export function attachOrbitControls(
 ): () => void {
   // Track drag state with module-level (closure) variables so the three
   // pointer handlers can share it without a wrapper object allocation.
-  let dragging = false;
+  //
+  // `dragMode` distinguishes a left-button orbit from a right-button (or
+  // middle-button) pan.  `null` means no drag in progress.
+  type DragMode = 'orbit' | 'pan';
+  let dragMode: DragMode | null = null;
   let lastX = 0; // client-space X of the previous pointermove event
   let lastY = 0; // client-space Y of the previous pointermove event
 
@@ -159,7 +164,19 @@ export function attachOrbitControls(
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
   const onDown = (e: PointerEvent) => {
-    dragging = true;
+    // Decide drag mode by mouse button:
+    //   - button 0 (primary / left)         → orbit (rotate around target)
+    //   - buttons 1 (middle) or 2 (right)   → pan   (slide target in screen plane)
+    //
+    // Pen and touch always orbit (no right-click on those input types — touch
+    // long-press menu is suppressed elsewhere if needed).  PointerEvent's
+    // `button` property reports the button that caused the event, mirroring
+    // MouseEvent's convention.
+    if (e.pointerType === 'mouse' && (e.button === 1 || e.button === 2)) {
+      dragMode = 'pan';
+    } else {
+      dragMode = 'orbit';
+    }
     lastX = e.clientX;
     lastY = e.clientY;
 
@@ -185,7 +202,10 @@ export function attachOrbitControls(
   // ── Pointer up — end drag (or click) ──────────────────────────────────────
 
   const onUp = (e: PointerEvent) => {
-    dragging = false;
+    // Snapshot the mode before clearing it — needed for the click-vs-pan
+    // gate below, otherwise the check sees null and would mis-classify.
+    const endedMode = dragMode;
+    dragMode = null;
 
     // Release capture so the pointer is no longer "owned" by this canvas.
     // The browser automatically releases capture on pointerup in most cases,
@@ -195,11 +215,12 @@ export function attachOrbitControls(
     // ── Click detection ────────────────────────────────────────────────────
     //
     // If the pointer barely moved between down and up, treat this as a click
-    // rather than a drag. We check squared distance to avoid sqrt.
-    //
-    // This fires only when `options.onClick` is provided — no cost for callers
-    // that don't need click detection.
-    if (options?.onClick) {
+    // rather than a drag.  We only fire onClick for ORBIT-mode releases
+    // (typically a left-button up): right/middle button taps are part of the
+    // pan gesture family and shouldn't act as picks even if they didn't move
+    // far enough to qualify as a drag.  Without this gate, a flicker of the
+    // right mouse would clear the user's selection.
+    if (options?.onClick && endedMode === 'orbit') {
       const dx = e.clientX - downX;
       const dy = e.clientY - downY;
       if (dx * dx + dy * dy < CLICK_THRESHOLD_SQ) {
@@ -210,8 +231,20 @@ export function attachOrbitControls(
 
   // ── Pointer move — update orbit ────────────────────────────────────────────
 
+  // ── Reusable scratch vectors for the pan path ────────────────────────────
+  //
+  // Allocated once at attach time and reused on every pointermove so the
+  // hot-path doesn't allocate.  vec3.cross / vec3.normalize / vec3.scale all
+  // accept an `out` first arg; we pass these scratches in to keep GC pressure
+  // at zero during a continuous drag.
+  const forwardScratch = vec3.create();
+  const rightScratch = vec3.create();
+  const upScratch = vec3.create();
+  const panDeltaScratch = vec3.create();
+  const WORLD_UP: vec3 = [0, 1, 0];
+
   const onMove = (e: PointerEvent) => {
-    if (!dragging) return;
+    if (dragMode === null) return;
 
     // Delta in CSS pixels from the last recorded position.
     // We use client coordinates (viewport-relative) rather than offset
@@ -223,12 +256,69 @@ export function attachOrbitControls(
     lastX = e.clientX;
     lastY = e.clientY;
 
-    // ── Yaw (left / right) ───────────────────────────────────────────────
+    if (dragMode === 'pan') {
+      // ── Pan (right / middle button drag) ────────────────────────────────
+      //
+      // Goal: the world point under the cursor should appear to follow the
+      // cursor as the user drags.  We do NOT reproject the picked-pixel into
+      // world space (which would be the most accurate but requires the
+      // depth buffer); instead we approximate by translating the camera
+      // target along the camera's right + up axes by a screen-aligned
+      // amount.
+      //
+      // Step 1: derive camera basis vectors.  `forward` is the unit vector
+      // from camera position toward the target — that's the negative of
+      // (position − target).  `right = forward × world_up` (the side-axis
+      // of the camera's screen plane).  `cam_up = right × forward` (the
+      // screen-up axis, recomputed orthogonal to forward + right rather
+      // than blindly using world_up; this is what handles tilt cases
+      // correctly when pitch is non-zero).
+      vec3.subtract(forwardScratch, cam.target as vec3, cam.position as vec3);
+      vec3.normalize(forwardScratch, forwardScratch);
+      vec3.cross(rightScratch, forwardScratch, WORLD_UP);
+      vec3.normalize(rightScratch, rightScratch);
+      vec3.cross(upScratch, rightScratch, forwardScratch);
+      // upScratch is already unit length (cross of two perpendicular unit
+      // vectors), but normalising defensively guards against floating-point
+      // drift on long drags.
+      vec3.normalize(upScratch, upScratch);
+
+      // Step 2: convert pixel delta → world delta at the camera's focal
+      // distance.  At the target depth, one CSS pixel maps to
+      //   2 · cam.distance · tan(fovY/2) / canvasHeight
+      // world units along screen-up; the same factor applies to screen-right
+      // because pixels are square.  Using clientHeight (CSS pixels) rather
+      // than canvas.height (backing-store pixels) keeps the gesture's
+      // physical-feel consistent regardless of devicePixelRatio.
+      const cssHeight = canvas.clientHeight || 1;
+      const pxToWorld = (2 * cam.distance * Math.tan(cam.fovYRad / 2)) / cssHeight;
+
+      // Step 3: build the world-space translation.
+      //   - dragging RIGHT  (+dx CSS) → world point should slide RIGHT  →
+      //     camera target slides LEFT  (along -right):    -dx · right
+      //   - dragging DOWN   (+dy CSS) → world point should slide DOWN   →
+      //     camera target slides UP    (along +cam_up):   +dy · cam_up
+      // (CSS y grows downward; cam_up points toward +screen-up, which is
+      // the OPPOSITE of CSS y, so the +dy → +cam_up sign falls out
+      // naturally without an extra flip.)
+      vec3.scale(panDeltaScratch, rightScratch, -dx * pxToWorld);
+      vec3.scaleAndAdd(panDeltaScratch, panDeltaScratch, upScratch, dy * pxToWorld);
+
+      // Step 4: shift the target.  Camera.position is recomputed from
+      // target + dir(yaw, pitch) · distance inside updatePosition, so we
+      // only mutate target — the orbit framing stays intact.
+      vec3.add(cam.target as vec3, cam.target as vec3, panDeltaScratch);
+      updatePosition(cam);
+      return;
+    }
+
+    // ── Orbit (left button drag) ──────────────────────────────────────────
     //
-    // We *subtract* dx so that dragging right (positive dx) decreases yaw,
-    // rotating the camera to the left around the scene — equivalent to
-    // "grabbing the world and pulling it right". This matches the intuitive
-    // globe-drag metaphor:  your hand moves right, the world rotates right.
+    // Yaw (left / right): we *subtract* dx so that dragging right (positive
+    // dx) decreases yaw, rotating the camera to the left around the scene —
+    // equivalent to "grabbing the world and pulling it right". This matches
+    // the intuitive globe-drag metaphor:  your hand moves right, the world
+    // rotates right.
     //
     // If we added dx instead, drag-right would swing the camera rightward,
     // which feels like an FPS look — counter-intuitive for an orbiting view.
@@ -241,12 +331,9 @@ export function attachOrbitControls(
     // consistent regardless of resolution or zoom level.
     cam.yaw -= dx * 0.005;
 
-    // ── Pitch (up / down) ────────────────────────────────────────────────
-    //
-    // Dragging down (positive dy, because CSS Y grows downward) should tilt
-    // the camera upward toward the +Y pole — so we *add* dy to pitch.
-    //
-    // We clamp the result to ±PITCH_LIMIT to prevent the gimbal-lock
+    // Pitch (up / down): dragging down (positive dy, because CSS Y grows
+    // downward) should tilt the camera upward toward the +Y pole — so we
+    // *add* dy to pitch.  Clamp to ±PITCH_LIMIT to prevent the gimbal-lock
     // singularity at ±π/2 (see PITCH_LIMIT comment above).
     cam.pitch = Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, cam.pitch + dy * 0.005));
 
@@ -298,6 +385,15 @@ export function attachOrbitControls(
   canvas.addEventListener('pointerup', onUp);
   canvas.addEventListener('pointermove', onMove);
 
+  // ── Suppress the right-click context menu on the canvas ──────────────────
+  //
+  // The pan gesture uses the right mouse button (and middle), so a normal
+  // right-click would otherwise trigger the browser's context menu and cancel
+  // the drag.  We listen on the canvas only so the user can still right-click
+  // anywhere ELSE on the page (settings panel, info card link, etc.).
+  const onContextMenu = (e: Event) => e.preventDefault();
+  canvas.addEventListener('contextmenu', onContextMenu);
+
   // `{ passive: false }` is required for wheel events in modern browsers.
   //
   // Background: browsers optimise scrolling by treating wheel listeners as
@@ -325,6 +421,7 @@ export function attachOrbitControls(
     canvas.removeEventListener('pointerdown', onDown);
     canvas.removeEventListener('pointerup', onUp);
     canvas.removeEventListener('pointermove', onMove);
+    canvas.removeEventListener('contextmenu', onContextMenu);
     canvas.removeEventListener('wheel', onWheel);
   };
 }
