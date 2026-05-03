@@ -110,6 +110,8 @@ async function main(): Promise<void> {
 
   let i = 0;
   let done = 0;
+  let failed = 0;
+  let firstError: string | undefined;
 
   async function worker(): Promise<void> {
     while (i < pgcs.length) {
@@ -122,17 +124,39 @@ async function main(): Promise<void> {
         // (empty pa, empty logr25). Parsers must handle the empty-cell case.
         if (r) appendFileSync(outPath, `${pgc},${r.pa},${r.logr25}\n`);
         else appendFileSync(outPath, `${pgc},,\n`);
-      } catch {
-        // Network blip — DO NOT write anything; the PGC will be retried on
-        // the next run. Resume will see it as "not in the cache".
+      } catch (e) {
+        // Network blip / TLS failure — DO NOT write a cache row; resume will
+        // retry next run. We do count + log failures here, because the
+        // previous "silent catch" hid an expired-cert outage that wiped out
+        // an entire run with no visible error.
+        failed++;
+        const msg = (e as Error).message;
+        const cause = (e as { cause?: { code?: string; message?: string } }).cause;
+        if (firstError === undefined) {
+          firstError = `${msg}${cause ? ` (cause: ${cause.code ?? ''} ${cause.message ?? ''})` : ''}`;
+          process.stderr.write(`  WARN first fetch failure for PGC ${pgc}: ${firstError}\n`);
+        }
       }
       done++;
-      if (done % 1000 === 0) process.stderr.write(`  ${done}/${pgcs.length}\n`);
+      if (done % 1000 === 0) {
+        process.stderr.write(`  ${done}/${pgcs.length} (${failed} failed)\n`);
+      }
     }
   }
 
   await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
-  process.stderr.write(`done; total cached: ${(alreadyDone.size + done).toLocaleString()}\n`);
+  process.stderr.write(
+    `done; total cached: ${(alreadyDone.size + done - failed).toLocaleString()}` +
+      (failed > 0 ? `; ${failed.toLocaleString()} fetches failed and were NOT cached\n` : '\n'),
+  );
+  if (failed > 0 && failed === done) {
+    process.stderr.write(
+      `\nWARNING: every fetch failed. The cache file holds no new data.\n` +
+        `Common causes: expired upstream TLS cert, API URL changed.\n` +
+        `First error was: ${firstError ?? '(none captured)'}\n`,
+    );
+    process.exitCode = 1;
+  }
 }
 
 const invokedDirectly = process.argv[1] === fileURLToPath(import.meta.url);
