@@ -1,10 +1,19 @@
 /**
  * Application entry point — wires all subsystems into a live render loop.
  *
- * Responsibility: build the GPU pipeline, populate it with a synthetic galaxy
- * cloud, set up an orbit camera, and drive the per-frame update cycle. Also
- * owns all hover/select UX: throttled GPU picking, the info card DOM, and
+ * Responsibility: build the GPU pipeline, populate it with a real or synthetic
+ * galaxy cloud, set up an orbit camera, and drive the per-frame update cycle.
+ * Also owns all hover/select UX: throttled GPU picking, the info card DOM, and
  * click-to-pin / Esc-to-clear selection behaviour.
+ *
+ * ### Data loading strategy
+ *
+ * On startup we attempt to fetch `/data/sdss.bin` — a binary PointCloud file
+ * produced by `tools/csvToBin.ts` from a real SDSS galaxy export. If the fetch
+ * succeeds we decode it with `decodePointCloud`; if it fails (file missing,
+ * HTTP error, network timeout) we fall back to a 100k synthetic cloud so the
+ * app remains usable without the data file. The status bar reflects which
+ * source is active.
  *
  * ### Frame structure (camera → encoder → pass → renderer.draw → submit)
  *
@@ -23,7 +32,7 @@
  *
  *   4. **renderer.draw** — uploads the per-frame uniforms (viewProj, viewport,
  *      selectedIndex) and issues the single instanced draw call: 6 vertices ×
- *      100 k instances. The WGSL vertex shader expands each instance into a
+ *      N instances. The WGSL vertex shader expands each instance into a
  *      billboard quad; the selected point gets a 3× larger ring/halo.
  *
  *   5. **Submit** — `encoder.finish()` seals the command buffer;
@@ -47,10 +56,63 @@ import { createPickRenderer } from './gpu/pickRenderer';
 import { createOrbitCamera, computeViewProj, updatePosition } from './camera/orbitCamera';
 import { attachOrbitControls } from './camera/orbitControls';
 import { generateSyntheticCloud } from './data/synthetic';
+import { decodePointCloud } from './data/pointCloudFormat';
 import { cartesianToRaDecZ } from './data/coords';
+import type { PointCloud } from './types';
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const status = document.getElementById('status')!;
+
+// ── Cloud helpers ──────────────────────────────────────────────────────────────
+
+/**
+ * Return the maximum absolute value of any coordinate component in the cloud's
+ * positions array.
+ *
+ * We use *max abs of any component* rather than computing a true bounding
+ * radius (which would require a sqrt per point). For camera-distance purposes
+ * this is a heuristic anyway — slightly over-estimating is harmless — and
+ * avoiding sqrt keeps this O(N) scan as cheap as possible.
+ *
+ * The result is used to auto-frame the camera so any cloud (real SDSS or
+ * synthetic sphere) is comfortably visible regardless of its spatial extent.
+ */
+function maxAbsCoord(cloud: PointCloud): number {
+  let m = 0;
+  for (let i = 0; i < cloud.positions.length; i++) {
+    const v = Math.abs(cloud.positions[i]!);
+    if (v > m) m = v;
+  }
+  return m;
+}
+
+/** Discriminated source tag returned by `loadCloud`. */
+type CloudSource = 'sdss.bin' | 'synthetic';
+
+/**
+ * Attempt to load the pre-built SDSS binary at `/data/sdss.bin`.
+ *
+ * If the fetch succeeds and the file decodes cleanly, returns the real galaxy
+ * cloud with `source: 'sdss.bin'`. On any failure (404, network error, bad
+ * magic bytes, etc.) logs a warning and falls back to a 100k synthetic cloud
+ * so the app remains functional without the data file.
+ *
+ * The static import of `decodePointCloud` is intentional — Vite tree-shakes
+ * correctly without dynamic import, and a static import is simpler and loads
+ * faster (no extra chunk round-trip).
+ */
+async function loadCloud(): Promise<{ cloud: PointCloud; source: CloudSource }> {
+  try {
+    const res = await fetch('/data/sdss.bin');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = await res.arrayBuffer();
+    const cloud = decodePointCloud(buf);
+    return { cloud, source: 'sdss.bin' };
+  } catch (err) {
+    console.warn('SDSS bin not available; using synthetic fallback.', err);
+    return { cloud: generateSyntheticCloud(100_000), source: 'synthetic' };
+  }
+}
 
 // ── Info card DOM refs ─────────────────────────────────────────────────────────
 //
@@ -74,33 +136,48 @@ async function main() {
 
   const { device, context, format } = await initGpu(canvas);
 
-  // Build the GPU pipeline and generate 100 k fictitious galaxy positions.
+  // Build the GPU pipeline; cloud data is loaded below.
   const renderer = new PointRenderer(device, format);
-  const cloud = generateSyntheticCloud(100_000);
+
+  // Signal loading state immediately so the user knows something is happening
+  // before the (potentially multi-second) fetch completes.
+  status.textContent = 'loading SDSS data…';
+
+  // Fetch /data/sdss.bin; fall back to synthetic on any error.
+  const { cloud, source } = await loadCloud();
   renderer.upload(cloud);
 
   // Build the pick renderer. It shares the same vertex/uniform buffers as the
   // visual renderer — no extra GPU memory for point data.
   const pickRenderer = createPickRenderer(device);
 
-  // ── Camera setup ────────────────────────────────────────────────────────────
+  // ── Camera auto-framing ──────────────────────────────────────────────────────
   //
-  // `distance: 2500` Mpc — the synthetic sphere has radius 1000 Mpc, so placing
-  // the camera at 2.5 × the sphere radius gives a comfortable framing: the
-  // entire cloud is visible with a little breathing room on all sides.
+  // Rather than hardcoding `distance: 2500` (which was tuned for the synthetic
+  // 1000 Mpc-radius sphere), we measure the actual spatial extent of the loaded
+  // cloud. Real SDSS galaxies mostly live at z ≈ 0.1–0.7 → ~430–3000 Mpc, so
+  // the bounding box varies depending on the sample.
+  //
+  // `bbox` = max abs of any coordinate component (cheap; no sqrt).
+  // `distance` = bbox × 2.5 — 2.5× the half-extent frames the cloud with a
+  //   comfortable margin similar to the old synthetic framing.
+  // `far`      = bbox × 4 — ensures the most distant points aren't clipped.
   //
   // `pitch: 0.3` rad (~17°) — a slight downward tilt so we don't view the cloud
-  // edge-on at the equator. Even a shallow pitch reveals the full spherical
-  // extent and makes the cloud look more three-dimensional.
+  // edge-on at the equator. Even a shallow pitch reveals the full 3-D extent.
+  const bbox = maxAbsCoord(cloud);
+  const camDistance = bbox * 2.5;
+  const camFar = bbox * 4;
+
   const cam = createOrbitCamera({
     target: [0, 0, 0],
-    distance: 2500,
+    distance: camDistance,
     yaw: 0,
     pitch: 0.3,
     fovYRad: (Math.PI / 180) * 60,
     aspect: canvas.width / canvas.height,
     near: 1,
-    far: 20000,
+    far: camFar,
   });
 
   // ── Hover / selection state ────────────────────────────────────────────────
@@ -311,9 +388,17 @@ async function main() {
   });
 
   // ── Status bar ─────────────────────────────────────────────────────────────
+  //
+  // The label reflects the actual data source so the user can immediately tell
+  // whether real SDSS galaxies or the synthetic fallback are being rendered.
+
+  const sourceLabel =
+    source === 'sdss.bin'
+      ? 'sdss.bin'
+      : 'synthetic — sdss.bin not found';
 
   status.textContent =
-    `WebGPU OK · ${cloud.count.toLocaleString()} synthetic points · drag to orbit, wheel to zoom`;
+    `WebGPU OK · ${cloud.count.toLocaleString()} points (${sourceLabel}) · drag to orbit, wheel to zoom`;
 
   // ── Render loop ─────────────────────────────────────────────────────────────
 
