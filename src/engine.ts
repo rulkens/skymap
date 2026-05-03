@@ -59,6 +59,53 @@ import { formatDistance } from './utils/format/distance';
 import { ALL_VISIBLE_MASK, Source, maskWith } from './data/sources';
 import type { PointCloud } from './@types';
 import type { PointInfo, ScaleInfo, EngineStatus, EngineCallbacks, EngineHandle } from './@types';
+import { advanceCameraTween, type CameraTween } from './camera/cameraTween';
+import { vec3 } from 'gl-matrix';
+
+// ─── Focus tween constants ──────────────────────────────────────────────────────
+
+/**
+ * Tween duration for focus / home camera moves, in milliseconds.
+ *
+ * 600 ms is the sweet spot the UI explored: long enough that the user reads it
+ * as motion (not a teleport) and gets oriented in the new frame, short enough
+ * that it never feels sluggish during rapid clicking through the InfoCard list.
+ */
+const FOCUS_TWEEN_MS = 600;
+
+/**
+ * Diameter of a "typical" galaxy, in kiloparsecs.
+ *
+ * A sibling plan is landing a `galaxyDiameterKpc(point)` helper that derives
+ * a per-galaxy diameter from photometry; until that lands we use a constant.
+ * 30 kpc is roughly the diameter of the Milky Way's stellar disc — a sane
+ * placeholder that puts the camera at a "naked-eye" distance from any galaxy.
+ */
+const FOCUS_GALAXY_DIAMETER_KPC = 30;
+
+/**
+ * Convert kpc → Mpc (1 Mpc = 1000 kpc) so the focus distance lives in the
+ * same units as `cam.distance`.  This factor is used once below; we name it
+ * to keep the math in `focusDistanceMpc` self-documenting.
+ */
+const KPC_PER_MPC = 1000;
+
+/**
+ * Focus distance multiplier — how many galaxy diameters away from the target
+ * we want to sit.  4× a 30 kpc disc is 120 kpc = 0.12 Mpc, which is a good
+ * "see the whole galaxy with a little space around it" framing.
+ */
+const FOCUS_DIAMETER_MULTIPLIER = 4;
+
+/**
+ * Compute the focus camera distance for a galaxy.
+ *
+ * Currently a constant (4 × 30 kpc = 120 kpc = 0.12 Mpc) but factored as a
+ * function so the upcoming per-galaxy diameter helper can drop in cleanly.
+ */
+function focusDistanceMpc(): number {
+  return (FOCUS_DIAMETER_MULTIPLIER * FOCUS_GALAXY_DIAMETER_KPC) / KPC_PER_MPC;
+}
 
 // ─── Auto-LOD heuristic ─────────────────────────────────────────────────────────
 
@@ -345,6 +392,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   };
   let initialCamRef: InitialCam | null = null;
 
+  // ── In-flight focus / home tween ────────────────────────────────────────
+  //
+  // At most one tween at a time.  Starting a new focus or home cancels the
+  // running one (we replace this reference; the old tween descriptor is just
+  // GC'd).  Set to null when no tween is active.  Mutated by:
+  //   - the public handle's `focusOn` / `focusOnHome` (start a tween)
+  //   - the `pointerdown` handler           (cancel on user grab)
+  //   - the per-frame `frame()` loop         (clear when finished)
+  let currentTween: CameraTween | null = null;
+
   // RAF handle — stored so `destroy()` can cancel the loop cleanly.
   let rafId = 0;
 
@@ -567,6 +624,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // On pointerdown we also clear the current hover so the card immediately
       // reflects "nothing hovered" instead of lagging until the drag ends.
       addCanvasListener('pointerdown', () => {
+        // Manual orbit controls always win — cancel any running focus tween
+        // the moment the user grabs the mouse.  Otherwise the tween's
+        // updatePosition would fight the orbit-controls' updatePosition for
+        // the same camera each frame, producing a juddery jump.
+        currentTween = null;
         pointerDown = true;
         setHovered(null);
       });
@@ -654,6 +716,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // Refresh the scale-bar legend. Early-returns when nothing changed,
         // so this costs ~zero on stable frames.
         updateScaleBar();
+
+        // ── Focus / home tween ────────────────────────────────────────────
+        //
+        // If a tween is in flight, advance it.  `advanceCameraTween` mutates
+        // the camera state and calls updatePosition internally, so by the time
+        // we hit the auto-rotate block below the camera is already at the
+        // eased intermediate frame.  When the tween reports finished we clear
+        // the reference so subsequent frames skip this branch entirely.
+        if (currentTween && cam) {
+          const finished = advanceCameraTween(cam, currentTween, performance.now());
+          if (finished) currentTween = null;
+        }
 
         // ── Auto-rotate yaw ───────────────────────────────────────────────
         //
@@ -873,6 +947,52 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cam.yaw = initialCamRef.yaw;
       cam.pitch = initialCamRef.pitch;
       updatePosition(cam);
+    },
+
+    focusOn(worldXYZ) {
+      // Camera may not be ready yet (cloud still loading); drop the call.
+      // Same defensive pattern as resetCamera() above.
+      if (!cam) return;
+
+      // Snapshot the CURRENT camera state — not the original startup state —
+      // so an in-progress tween hands off smoothly to the new one.  vec3.clone
+      // copies the target tuple so future mutation of cam.target doesn't
+      // corrupt the from-snapshot.
+      currentTween = {
+        startMs: performance.now(),
+        durationMs: FOCUS_TWEEN_MS,
+        fromTarget: vec3.clone(cam.target as vec3),
+        toTarget: vec3.fromValues(worldXYZ[0], worldXYZ[1], worldXYZ[2]),
+        fromDistance: cam.distance,
+        toDistance: focusDistanceMpc(),
+        fromYaw: cam.yaw,
+        toYaw: cam.yaw, // preserve yaw — user keeps their orientation
+        fromPitch: cam.pitch,
+        toPitch: cam.pitch, // preserve pitch
+      };
+    },
+
+    focusOnHome() {
+      // Camera or initial snapshot may not be ready yet — same pattern as
+      // resetCamera.  Both must exist for a meaningful tween.
+      if (!cam || !initialCamRef) return;
+
+      currentTween = {
+        startMs: performance.now(),
+        durationMs: FOCUS_TWEEN_MS,
+        fromTarget: vec3.clone(cam.target as vec3),
+        toTarget: vec3.fromValues(
+          initialCamRef.target[0],
+          initialCamRef.target[1],
+          initialCamRef.target[2],
+        ),
+        fromDistance: cam.distance,
+        toDistance: initialCamRef.distance,
+        fromYaw: cam.yaw,
+        toYaw: initialCamRef.yaw,
+        fromPitch: cam.pitch,
+        toPitch: initialCamRef.pitch,
+      };
     },
   };
 

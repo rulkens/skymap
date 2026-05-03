@@ -67,6 +67,31 @@ export type EngineHandle = {
   resetCamera: () => void;
 
   /**
+   * Smoothly tween the camera so that `worldXYZ` becomes the new orbit target.
+   *
+   * The current yaw and pitch are preserved (the user keeps their orientation);
+   * only `target` and `distance` change.  Distance tweens to a sensible viewing
+   * range — for now a fixed multiple of the synthetic 30 kpc galaxy diameter
+   * (a future task replaces the constant with the real `galaxyDiameterKpc`).
+   *
+   * Calling this while another tween is running cancels the previous tween and
+   * starts a new one from the current camera state, so motion stays continuous.
+   * If the world position is the origin and the camera is already there, the
+   * call is a no-op.  Tween duration: 600 ms.
+   */
+  focusOn: (worldXYZ: [number, number, number]) => void;
+
+  /**
+   * Smoothly tween the camera back to the initial framing captured at engine
+   * startup (target=origin, distance=bbox×2.5, yaw=0, pitch=0.3).
+   *
+   * Symmetric to `focusOn`: starts from the current state, eases over 600 ms,
+   * cancels any running tween.  Always allowed — calling at home produces a
+   * tiny no-op tween, never an error.
+   */
+  focusOnHome: () => void;
+
+  /**
    * Set the level-of-detail rendering mode.
    *
    * Also fires `onLodModeChange` so subscribed React state stays in sync.
