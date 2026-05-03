@@ -210,6 +210,29 @@ function parseFloatOrNaN(s: string): number {
  */
 export type GladeParseOptions = {
   specZOnly?: boolean;
+  /**
+   * Drop rows whose only parent catalogue is SDSS-DR12.
+   *
+   * SDSS-DR12 covers only ~1/3 of the sky but reaches z > 0.5; beyond
+   * ~600 Mpc those rows dominate GLADE inside the SDSS footprint and
+   * leave a gap outside it.  In 3D space this looks like radial
+   * "jets" of galaxies extending from origin only in the SDSS
+   * direction — a visually striking but artefactual structure.
+   *
+   * Filtering keeps rows that appear in any all-sky parent catalogue
+   * (HyperLEDA, GWGC, 2MASS XSC, 2MPZ).  These remaining rows have
+   * approximately uniform angular completeness — the deep pencil-beam
+   * structure disappears, at the cost of dropping 30–50 % of the high-
+   * redshift GLADE galaxies (which are the SDSS-only ones).
+   *
+   * Independent of `specZOnly` — caller can enable either, both, or
+   * neither.  This is a build-time flag (rebuild `glade.bin` with
+   * `--glade-isotropic`) rather than a runtime toggle, because the
+   * alternative — baking parent-catalogue provenance into the `.bin`
+   * schema — is a much bigger change for what's effectively a
+   * permanent decision the user makes once for their dataset.
+   */
+  isotropic?: boolean;
 };
 
 /** Index of a column field that holds an "is non-empty" check for a name. */
@@ -268,6 +291,30 @@ export function parseGladeLine(
     }
     // Flag2 ∈ {'2', '3'} → keep regardless (those rows have crisp distance
     // or a confirmed spec-z replacement; no parent-catalog check needed).
+  }
+
+  // ── Angular-isotropy filter (opt-in) ────────────────────────────────────
+  //
+  // Drop rows whose ONLY populated parent name is SDSS-DR12.  See the
+  // GladeParseOptions docstring for the rationale.  We don't check 6dFGS
+  // here even though it's also footprint-restricted (southern hemisphere
+  // only) because 6dFGS contributes uniformly within its footprint and
+  // covers a hemisphere — that's coverage we want, not pencil-beam noise.
+  //
+  // Byte ranges (0-based half-open, verified against real catalog rows):
+  //   GWGC      8-36   (1-based 9-36 in the ReadMe)
+  //   HyperLEDA 37-66  (1-based 38-66)
+  //   2MASS XSC 67-84  (1-based 68-84) — note: plan quoted 68-84 (0-based)
+  //                     but the field actually starts at byte 67 in the
+  //                     fixed-width layout, e.g. NGC 253's `00473313-…`.
+  //   SDSS-DR12 84-102 (1-based 85-102)
+  if (options.isotropic) {
+    const inSdssOnly =
+      nameIsPopulated(line, 84, 102) && // SDSS-DR12 populated
+      !nameIsPopulated(line, 8, 36) && // GWGC empty
+      !nameIsPopulated(line, 37, 66) && // HyperLEDA empty
+      !nameIsPopulated(line, 67, 84); // 2MASS XSC empty
+    if (inSdssOnly) return null;
   }
 
   // RA: bytes 106-123. F18.14 means up to 14 fractional digits in 18

@@ -167,6 +167,104 @@ describe('parseGlade', () => {
   });
 });
 
+/**
+ * Build a 256-byte synthetic GLADE row with selective parent-catalogue
+ * names populated.  Used by the isotropic-filter tests below to exercise
+ * the truth table {SDSS-only, SDSS+HyperLEDA, HyperLEDA-only} without
+ * shipping additional real-row fixtures (which would shift every byte
+ * offset on a single keystroke and silently break the parser).
+ *
+ * Byte layout (0-based half-open, must match parseGladeLine):
+ *   0-7    PGC (we leave this empty — orientation lookup is irrelevant)
+ *   8-36   GWGC name
+ *   37-66  HyperLEDA name
+ *   67-84  2MASS XSC name
+ *   84-102 SDSS-DR12 name
+ *   103    Flag1 ('G' = galaxy)
+ *   105-123 RA (decimal degrees)
+ *   124-144 Dec
+ *   173-191 z
+ *   192-198 Bmag
+ *   253    Flag2 ('1' = z-derived distance, kept by default)
+ *
+ * The name fields use a placeholder string ('NAME') when populated and the
+ * GLADE sentinel `---` when not, which is exactly what the live parser's
+ * `nameIsPopulated` helper distinguishes.
+ */
+function makeFixture(opts: {
+  sdssOnly?: boolean;
+  sdssAndHyperleda?: boolean;
+  hyperledaOnly?: boolean;
+}): string {
+  const NAME = 'NAME';
+  const DASH = '---';
+  const gwgc = DASH;
+  // For sdssOnly + sdssAndHyperleda: SDSS populated; otherwise sentinel.
+  const sdss = opts.sdssOnly || opts.sdssAndHyperleda ? NAME : DASH;
+  // For sdssAndHyperleda + hyperledaOnly: HyperLEDA populated.
+  const hyperleda = opts.sdssAndHyperleda || opts.hyperledaOnly ? NAME : DASH;
+  // 2MASS XSC stays empty for all three cases (we want a clean dash there
+  // so the SDSS-only filter is exercised by the SDSS column alone).
+  const twomass = DASH;
+
+  // Build the row by writing into a 256-char buffer using the verified
+  // byte ranges.  Pre-fill with spaces; overlay each populated field.
+  let buf = ' '.repeat(256);
+  const put = (s: string, start: number, end: number): void => {
+    // Truncate or pad to fit the slot exactly (`padEnd` handles short names).
+    const padded = s.padEnd(end - start, ' ').slice(0, end - start);
+    buf = buf.slice(0, start) + padded + buf.slice(end);
+  };
+  put(gwgc, 8, 36);
+  put(hyperleda, 37, 66);
+  put(twomass, 67, 84);
+  put(sdss, 84, 102);
+  // Flag1 = 'G' so the row passes the galaxy filter.
+  buf = buf.slice(0, 103) + 'G' + buf.slice(104);
+  // RA = 150.0 (bytes 105-123, F18.14).
+  put('150.00000000000000', 105, 123);
+  // Dec = 30.0 (bytes 124-144, F20.15 — note this overlaps slot width).
+  put('  30.000000000000000', 124, 144);
+  // z = 0.05 (bytes 173-191, E18.15).
+  put('5.000000000000E-02', 173, 191);
+  // Bmag = 14.0 (bytes 192-198, F6.2).
+  put('14.000', 192, 198);
+  // Flag2 = '1' (byte 253). Any value other than '0' passes the no-distance
+  // skip; we pick '1' so the row would also survive specZOnly's catalog-name
+  // check (irrelevant here, we leave specZOnly off).
+  buf = buf.slice(0, 253) + '1' + buf.slice(254);
+  return buf;
+}
+
+describe('GLADE isotropic filter', () => {
+  it('drops a row whose only parent is SDSS-DR12', () => {
+    // SDSS-DR12 column populated, GWGC + HyperLEDA + 2MASS XSC all sentinel.
+    // The pencil-beam-jet row — should be filtered out.
+    const line = makeFixture({ sdssOnly: true });
+    expect(parseGladeLine(line, { isotropic: true })).toBeNull();
+  });
+
+  it('keeps a row that has both SDSS-DR12 and HyperLEDA names', () => {
+    // SDSS populated AND HyperLEDA populated → kept (HyperLEDA is all-sky,
+    // so the row contributes uniformly regardless of where SDSS pointed).
+    const line = makeFixture({ sdssAndHyperleda: true });
+    expect(parseGladeLine(line, { isotropic: true })).not.toBeNull();
+  });
+
+  it('keeps a row whose only parent is HyperLEDA', () => {
+    // The most common GLADE row shape — kept unchanged by the filter.
+    const line = makeFixture({ hyperledaOnly: true });
+    expect(parseGladeLine(line, { isotropic: true })).not.toBeNull();
+  });
+
+  it('default (isotropic: false) keeps SDSS-only rows', () => {
+    // The filter is opt-in; without the flag, an SDSS-only row must pass
+    // through unchanged (otherwise existing builds would silently shrink).
+    const line = makeFixture({ sdssOnly: true });
+    expect(parseGladeLine(line, {})).not.toBeNull();
+  });
+});
+
 describe('parseGladeLine diameterKpc', () => {
   it('derives diameterKpc from Bmag via Tully size-luminosity', () => {
     const pad = (s: string, w: number, left = false): string =>

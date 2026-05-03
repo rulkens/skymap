@@ -220,7 +220,7 @@ function loadOrEmpty(path: string | undefined, parser: ParserFn): ParsedRecord[]
  */
 async function loadGladeStream(
   path: string | undefined,
-  options: { specZOnly?: boolean } = {},
+  options: { specZOnly?: boolean; isotropic?: boolean } = {},
   hyperLeda: HyperLedaShapeMap = new Map(),
 ): Promise<ParsedRecord[]> {
   if (!path) return [];
@@ -298,6 +298,20 @@ async function runCli(): Promise<void> {
     );
   }
 
+  // `--glade-isotropic`: drop rows whose only parent catalogue is SDSS-DR12,
+  // which covers ~1/3 of the sky and otherwise creates pencil-beam radial
+  // "jets" beyond ~600 Mpc.  Independent of `--glade-spec-only`; user can
+  // enable either, both, or neither.  We use `process.argv.includes` here
+  // rather than `'glade-isotropic' in args` because the previous-flag
+  // treatment is itself a quirk of `readArgs` consuming the next argv slot,
+  // and the argv-includes check is the more direct "is the flag set?" test.
+  const gladeIsotropic = process.argv.includes('--glade-isotropic');
+  if (gladeIsotropic) {
+    process.stderr.write(
+      'GLADE filter: isotropic (drops SDSS-DR12-only rows to remove pencil-beam jets)\n',
+    );
+  }
+
   // Load the optional orientation caches before any parsing kicks off.
   // Both files are produced by separate `tools/fetch*.ts` scripts and may
   // not yet exist on a fresh checkout — that's intentional. A missing cache
@@ -331,7 +345,11 @@ async function runCli(): Promise<void> {
   process.stderr.write('parsing 2MRS…\n');
   const twoMrs = loadOrEmpty(args.twomrs, (raw) => parseTwoMrs(raw, xsc));
   process.stderr.write('parsing GLADE (streaming)…\n');
-  const glade = await loadGladeStream(args.glade, { specZOnly: gladeSpecOnly }, leda);
+  const glade = await loadGladeStream(
+    args.glade,
+    { specZOnly: gladeSpecOnly, isotropic: gladeIsotropic },
+    leda,
+  );
 
   // Capture per-source input counts up front so the summary can report
   // the dedup drop rate per survey, not just the merged total.
