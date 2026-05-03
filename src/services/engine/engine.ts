@@ -66,6 +66,19 @@ import { buildPointInfo, maxAbsCoord, niceRound } from './pointInfoBuilder';
 import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 
+// ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
+//
+// These imports are unconditionally pulled in because tree-shaking a few
+// hundred bytes of pure helpers isn't worth the conditional-import
+// complexity. The actual WebHID call (and the hardware coupling) only fires
+// when the user hits the "Connect SpaceMouse" button — see `SpaceMouseInput`
+// further down in the engine state block.
+import { SpaceMouseInput } from '../../input/spaceMouse';
+import { applyCurve } from '../../input/spaceMouseSensitivity';
+import { applyAxesToCamera, hasAnyAxis } from '../../input/spaceMouseToCamera';
+import type { SpaceMouseAxes } from '../../input/spaceMouseAxes';
+import { ZERO_AXES } from '../../input/spaceMouseAxes';
+
 /**
  * Start the WebGPU engine on `canvas`.
  *
@@ -154,6 +167,29 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //   - the `pointerdown` handler           (cancel on user grab)
   //   - the per-frame `frame()` loop         (clear when finished)
   let currentTween: CameraTween | null = null;
+
+  // ── SpaceMouse state ────────────────────────────────────────────────────
+  //
+  // `latestSpaceMouseAxes` holds the most recent reading from the WebHID
+  // listener. The render loop reads it every frame; if any axis is non-zero
+  // we apply it to the camera (and cancel any active tween, same precedence
+  // rule as a mouse drag).
+  //
+  // `spaceMouseSensitivity` is the user-controlled global scalar from the
+  // settings panel (default 1.0). It's applied AFTER the cube curve so the
+  // curve shape stays constant.
+  //
+  // `lastSpaceMouseFrameMs` lets us scale the per-frame application by the
+  // wall-clock delta — display refresh rates vary (60 / 120 / 144 Hz) and
+  // we want consistent motion across them. Initialised lazily on first use.
+  let latestSpaceMouseAxes: SpaceMouseAxes = { ...ZERO_AXES };
+  let spaceMouseSensitivity = 1.0;
+  let lastSpaceMouseFrameMs: number | null = null;
+  // The SpaceMouseInput instance is created lazily on the first call to
+  // connectSpaceMouse(); on construction it also tries to silently
+  // re-acquire any previously-paired device. Keeping it lazy means the
+  // WebHID API is never touched on browsers that don't support it.
+  let spaceMouseInput: SpaceMouseInput | null = null;
 
   // RAF handle — stored so `destroy()` can cancel the loop cleanly.
   let rafId = 0;
@@ -581,6 +617,39 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           if (finished) currentTween = null;
         }
 
+        // ── SpaceMouse per-frame application ──────────────────────────────
+        //
+        // We apply the puck's latest axes every frame the puck is deflected.
+        // Same precedence rule as mouse drag: any non-zero axis cancels a
+        // running tween, otherwise the tween's updatePosition would fight
+        // ours for the same camera state and the user would see judder.
+        //
+        // dt is computed against the previous SpaceMouse-active frame —
+        // *not* the previous render frame — so a long stretch of zero
+        // input (puck at rest) doesn't produce a giant catch-up jump on
+        // the first frame the user touches it again.
+        if (cam && hasAnyAxis(latestSpaceMouseAxes)) {
+          const now = performance.now();
+          // Clamp dt so a tab-foreground regain (after long sleep) doesn't
+          // produce a multi-second jump. 50ms ≈ 3 frames at 60Hz — long
+          // enough to be useful, short enough to feel snappy.
+          const dt =
+            lastSpaceMouseFrameMs === null
+              ? 16
+              : Math.min(now - lastSpaceMouseFrameMs, 50);
+          lastSpaceMouseFrameMs = now;
+
+          currentTween = null;
+          const shaped = applyCurve(latestSpaceMouseAxes, spaceMouseSensitivity);
+          applyAxesToCamera(cam, shaped, dt);
+          updatePosition(cam);
+        } else {
+          // Reset the dt baseline whenever the puck is at rest, so when the
+          // user re-grabs it we start a fresh dt instead of integrating
+          // against a stale timestamp.
+          lastSpaceMouseFrameMs = null;
+        }
+
         // ── Auto-rotate yaw ───────────────────────────────────────────────
         //
         // When autoRotate is on, advance yaw by a small amount every frame.
@@ -888,6 +957,43 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         : maskWithout(visibleSourceMask, source);
       if (next === visibleSourceMask) return;
       visibleSourceMask = next;
+    },
+
+    // ── SpaceMouse 6DOF input setters ─────────────────────────────────────
+    //
+    // Lazy construction: `SpaceMouseInput` is only instantiated on the first
+    // `connectSpaceMouse()` call. Constructor side-effects include a call to
+    // `navigator.hid.getDevices()` (silent re-acquire), which is harmless on
+    // unsupported browsers thanks to the feature check inside the class.
+
+    async connectSpaceMouse() {
+      if (!spaceMouseInput) {
+        spaceMouseInput = new SpaceMouseInput({
+          // Just stash the latest reading — the engine's own per-frame loop
+          // will pick it up. We don't apply axes here because that would tie
+          // the rate of camera updates to the device's report rate (which can
+          // exceed display refresh) instead of the frame loop.
+          onAxes: (axes) => {
+            latestSpaceMouseAxes = axes;
+          },
+        });
+      }
+      return spaceMouseInput.connect();
+    },
+
+    disconnectSpaceMouse() {
+      spaceMouseInput?.disconnect();
+      // Reset the cached axes so the next frame doesn't continue applying
+      // the last reading received before disconnect.
+      latestSpaceMouseAxes = { ...ZERO_AXES };
+    },
+
+    isSpaceMouseConnected() {
+      return spaceMouseInput?.isConnected() ?? false;
+    },
+
+    setSpaceMouseSensitivity(value) {
+      spaceMouseSensitivity = value;
     },
   };
 

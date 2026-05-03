@@ -120,4 +120,36 @@ export type EngineHandle = {
    * No-op if `visible` already matches the current mask state for this source.
    */
   setSourceVisible?: (source: Source, visible: boolean) => void;
+
+  /**
+   * Prompt the WebHID device picker and open a paired SpaceMouse for input.
+   *
+   * Must be called from a user gesture (button click) — Chromium rejects
+   * `requestDevice` outside one. Returns true if a device was successfully
+   * opened, false on cancel / no device / error.
+   *
+   * No-op when the browser has no WebHID support — feature-detection happens
+   * inside the input layer, so callers can invoke this without checking.
+   */
+  connectSpaceMouse?: () => Promise<boolean>;
+
+  /**
+   * Close the currently-open SpaceMouse, if any. Idempotent.
+   *
+   * Doesn't unpair the device — the user keeps their grant and a future
+   * call to `connectSpaceMouse` will silently re-acquire without prompting.
+   */
+  disconnectSpaceMouse?: () => void;
+
+  /** Whether a SpaceMouse is currently open and feeding input reports. */
+  isSpaceMouseConnected?: () => boolean;
+
+  /**
+   * Set the SpaceMouse global sensitivity multiplier.
+   *
+   * Applied AFTER the cube response curve, so the curve shape doesn't
+   * change — this just scales the whole motion budget. Default 1.0;
+   * recommended range 0.1 – 3.0.
+   */
+  setSpaceMouseSensitivity?: (value: number) => void;
 };
