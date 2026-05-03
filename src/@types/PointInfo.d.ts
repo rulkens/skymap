@@ -161,6 +161,30 @@ export type PointInfo = {
    * broken link.
    */
   explorerUrl: string | null;
+
+  /** @group Orientation */
+
+  /**
+   * Orientation provenance + values for the InfoCard "Orientation" row.
+   *
+   * `axisRatio` and `positionAngleDeg` mirror the cloud's per-galaxy
+   * fields (always finite — fallback-filled at build time). `provenance`
+   * is a human-readable tag derived at info-card-build time by comparing
+   * the cloud value to what `fallbackOrientation` would produce for this
+   * row's (objID, ra, dec):
+   *
+   *   - exact match → 'deterministic fallback'
+   *   - SDSS row, mismatch → 'SDSS exp+deV blend'
+   *   - 2MRS row, mismatch → '2MASS XSC sup_phi'
+   *   - GLADE row, mismatch → 'HyperLEDA PGC'
+   *   - Synthetic row → 'deterministic fallback' (synthetic skips real-data fetch)
+   */
+  orientation: {
+    axisRatio: number;
+    positionAngleDeg: number;
+    provenance: string;
+  };
+
   /**
    * Image cutout URL for this galaxy's thumbnail.
    *

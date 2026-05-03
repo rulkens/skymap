@@ -19,6 +19,7 @@
 
 import type { PointCloud, PointInfo } from '../../@types';
 import { Source, sourceLabel, bandLabels } from '../../data/sources';
+import { fallbackOrientation } from '../../utils/random/fallbackOrientation';
 import {
   cartesianToRaDecZ,
   formatRaSexagesimal,
@@ -176,6 +177,41 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
   const explorerUrl = isSdss && objID > 0n ? sdssExplorerUrl(objID) : null;
   const thumbnailUrl = isSdss ? sdssThumbnailUrl(ra, dec, 200) : dssThumbnailUrl(ra, dec, 2);
 
+  // ── Orientation provenance recovery ────────────────────────────────────────
+  //
+  // Detect orientation provenance by replaying the deterministic fallback
+  // for this row and comparing to the stored value. If they match exactly
+  // (down to the float bits — the build pipeline writes the same f32 that
+  // we re-compute here), the row is a fallback; otherwise it's real.
+  //
+  // Why a runtime replay instead of an explicit per-row provenance flag in
+  // the binary? Storing a one-byte source tag per galaxy would inflate every
+  // .bin and force a format-version bump for what is purely UI metadata.
+  // The fallback is deterministic and cheap, so we re-derive provenance only
+  // when the user actually opens an InfoCard (hover / click), not per frame.
+  //
+  // Float32 round-trip: the bin stores f32, but `fallbackOrientation` returns
+  // f64 numbers. Encoding through `Float32Array` truncates to the same bit
+  // pattern the build pipeline wrote, so `===` is the right comparison.
+  const ar = cloud.axisRatio[idx]!;
+  const pa = cloud.positionAngleDeg[idx]!;
+  const fb = fallbackOrientation(cloud.objIDs[idx]!, ra, dec);
+  const fbAr = new Float32Array([fb.axisRatio])[0]!;
+  const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
+  const isFallback = ar === fbAr && pa === fbPa;
+  let provenance: string;
+  if (isFallback) {
+    provenance = 'deterministic fallback';
+  } else if (source === Source.SDSS) {
+    provenance = 'SDSS exp+deV blend';
+  } else if (source === Source.TwoMRS) {
+    provenance = '2MASS XSC sup_phi';
+  } else if (source === Source.Glade) {
+    provenance = 'HyperLEDA PGC';
+  } else {
+    provenance = 'deterministic fallback';
+  }
+
   return {
     index: idx,
     objID: cloud.objIDs[idx]!,
@@ -222,5 +258,12 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
     // External URLs — null/SDSS-vs-DSS chosen above based on `source`.
     explorerUrl,
     thumbnailUrl,
+
+    // Orientation provenance — fed to the InfoCard's <details> orientation row.
+    orientation: {
+      axisRatio: ar,
+      positionAngleDeg: pa,
+      provenance,
+    },
   };
 }

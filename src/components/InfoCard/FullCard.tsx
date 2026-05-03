@@ -233,6 +233,30 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
               </span>
             </div>
           )}
+          {/*
+            Orientation row — shows the per-galaxy ellipse shape (b/a) and
+            position angle (PA) plus a small-font provenance tag underneath
+            so the user can tell at a glance whether THIS galaxy's billboard
+            orientation came from a real survey measurement or from the
+            deterministic fallback PRNG.
+
+            We render inside <details> because most users don't need to see
+            it, but those who care about validating cross-match coverage
+            (e.g. after running `npm run fetch-2mass-xsc`) can pop it open.
+          */}
+          <CardRow
+            label="Orientation"
+            value={
+              <>
+                b/a&nbsp;{info.orientation.axisRatio.toFixed(2)}
+                &nbsp;&nbsp;PA&nbsp;{info.orientation.positionAngleDeg.toFixed(0)}&deg;
+                <br />
+                <span style={{ opacity: 0.7, fontSize: '0.85em' }}>
+                  {info.orientation.provenance}
+                </span>
+              </>
+            }
+          />
           <div className={styles.cardRow}>
             <span className={styles.cardLabel}>ObjID</span>
             {/*
