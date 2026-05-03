@@ -108,6 +108,43 @@ poisoning the ramp with NaN.
 | GLADE     | B−J    | 0.5 .. 3.5    | 1.0          | Optical–NIR pair; B redshifts out of band slowly.                |
 | 2MRS      | J−K    | 0.7 .. 1.1    | 0.0          | NIR colours are nearly redshift-invariant in 2MRS's z ≲ 0.1 box. |
 
+## Galaxy thumbnails
+
+When you zoom in close to a galaxy, the renderer fetches its real image and
+draws it as a textured billboard instead of the usual dot. The textured-quad
+pass runs after the existing point pass, so the dot stays visible behind the
+quad as a soft glow.
+
+**How it decides which galaxies get textured:** the engine computes each
+galaxy's on-screen apparent size from a placeholder 30 kpc diameter and the
+current camera distance, and only galaxies whose apparent size exceeds
+24 pixels get a thumbnail fetched. Below the threshold the dot is all you
+get — keeps network traffic bounded to the small handful of galaxies that
+are actually large on screen.
+
+**Image sources:**
+
+- **SDSS DR18 ImgCutout** (`skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg`)
+  is the primary source — high-resolution colour JPEGs covering ~1/3 of the
+  sky (mostly northern).
+- **DSS POSS-II red** (`archive.eso.org/dss/dss/image`) is the all-sky
+  fallback for galaxies outside the SDSS footprint or where SDSS returns no
+  image. Lower resolution, monochrome, but covers the entire celestial sphere.
+
+**Cache:** thumbnails live in a single 2048×2048 RGBA8 GPU texture atlas with
+256 slots of 128×128 pixels each. When the atlas is full, the slot whose
+galaxy was least recently visible is evicted (LRU). A priority fetch queue
+runs at most 4 concurrent downloads, picking the largest-on-screen pending
+galaxies first so the most visually important thumbnails arrive first.
+
+**Visual polish:** each quad uses a radial alpha falloff so the JPEG-square
+outline fades into a soft galaxy-like blob rather than showing as a hard
+rectangle against dark space.
+
+**Toggle:** the Settings panel has a "Galaxy thumbnails" checkbox (default
+on). Switch it off if you'd rather see the raw point cloud without network
+traffic, or to compare the dot field with and without textures.
+
 ## Coordinate system
 
 We use a right-handed equatorial Cartesian frame with distances in megaparsecs (Mpc):
