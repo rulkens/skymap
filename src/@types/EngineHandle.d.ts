@@ -5,6 +5,7 @@
  */
 
 import type { LodMode } from './LodMode';
+import type { Source } from '../data/sources';
 
 /**
  * Handle returned by `createEngine`. Allows the React layer to drive the
@@ -94,9 +95,29 @@ export type EngineHandle = {
   /**
    * Set the level-of-detail rendering mode.
    *
+   * In `'auto'` mode the engine recomputes the visible-source mask each frame
+   * from `autoLodMask(camera.distance)`, so as the user zooms the surveys
+   * fade in and out by themselves.  In `'manual'` mode the engine leaves the
+   * mask alone, so whatever was last set by `setSourceVisible` (or the auto
+   * mask at the moment of switch) stays put — this is the mode the survey
+   * toggle UI uses.
+   *
    * Also fires `onLodModeChange` so subscribed React state stays in sync.
    *
    * @param mode  'auto' lets the engine choose; 'manual' gives the caller control.
    */
   setLodMode?: (mode: LodMode) => void;
+
+  /**
+   * Toggle the visibility of a single survey.
+   *
+   * Implicitly switches the engine into `'manual'` LOD mode — the user
+   * flicking a per-survey toggle is the clearest possible signal that they
+   * want explicit control, so we don't make them call `setLodMode('manual')`
+   * separately.  The change takes effect on the next rendered frame; the
+   * renderer's per-source draw loop simply skips buffers whose bit is clear.
+   *
+   * No-op if `visible` already matches the current mask state for this source.
+   */
+  setSourceVisible?: (source: Source, visible: boolean) => void;
 };

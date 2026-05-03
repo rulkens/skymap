@@ -8,6 +8,7 @@ import type { EngineStatus } from './EngineStatus';
 import type { PointInfo } from './PointInfo';
 import type { ScaleInfo } from './ScaleInfo';
 import type { LodMode } from './LodMode';
+import type { Source } from '../data/sources';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -50,4 +51,21 @@ export type EngineCallbacks = {
    * call or at engine init to seed React's initial state).
    */
   onLodModeChange?: (mode: LodMode) => void;
+  /**
+   * Fired each time a per-survey `.bin` file finishes loading and the cloud
+   * has been uploaded to the renderer.  Surfaces progressive load state to
+   * the React layer so the status bar can show e.g. "loaded 2/3 surveys".
+   *
+   * Why a granular per-source callback (rather than one final "all done"
+   * event)?  The three .bin files run as parallel `fetch`es with very
+   * different sizes (2MRS ~2 MB, SDSS ~23 MB, GLADE ~96 MB), so they land
+   * minutes apart on slow connections.  Showing each one as it arrives lets
+   * the user see and explore data progressively instead of staring at a
+   * blank canvas until the largest survey finishes.
+   *
+   * Fires for the synthetic fallback too (when all three real fetches fail),
+   * with `source = Source.Synthetic`, so subscribers don't need a separate
+   * code path for the no-data case.
+   */
+  onCloudReady?: (source: Source, count: number) => void;
 };

@@ -18,5 +18,5 @@
 export type EngineStatus =
   | { kind: 'initializing' }
   | { kind: 'loading' }
-  | { kind: 'ready'; count: number; source: 'sdss.bin' | 'synthetic' }
+  | { kind: 'ready'; count: number; source: 'sdss.bin' | '2mrs.bin' | 'glade.bin' | 'synthetic' }
   | { kind: 'error'; message: string };

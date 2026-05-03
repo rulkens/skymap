@@ -28,7 +28,7 @@
  *   - `autoLod.ts`           — LOD heuristic (also re-exported as public API)
  *   - `focusTween.ts`        — focus camera tween constants + distance helper
  *   - `pointInfoBuilder.ts`  — buildPointInfo / maxAbsCoord / niceRound
- *   - `cloudLoader.ts`       — `/data/sdss.bin` fetch + synthetic fallback
+ *   - `cloudLoader.ts`       — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
  *
  * The pointer / wheel / pick / hover-select handling stays inline below
  * because all of it shares closure state (renderer, cloud, cam, indices,
@@ -55,14 +55,15 @@ import { createPickRenderer } from '../../gpu/pickRenderer';
 import { createOrbitCamera, computeViewProj, updatePosition } from '../../camera/orbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { formatDistance } from '../../utils/format/distance';
-import { ALL_VISIBLE_MASK, Source } from '../../data/sources';
-import type { PointCloud } from '../../@types';
+import { ALL_VISIBLE_MASK, Source, maskWith, maskWithout } from '../../data/sources';
+import type { LodMode, PointCloud } from '../../@types';
 import type { EngineCallbacks, EngineHandle } from '../../@types';
 import { advanceCameraTween, type CameraTween } from '../../camera/cameraTween';
 import { vec3 } from 'gl-matrix';
 
+import { autoLodMask } from './autoLod';
 import { buildPointInfo, maxAbsCoord, niceRound } from './pointInfoBuilder';
-import { loadCloud, type CloudSource } from './cloudLoader';
+import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 
 /**
@@ -109,14 +110,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   let brightness = 1.0;
   let autoRotate = false;
 
-  // ── Source visibility bitmask ───────────────────────────────────────────
+  // ── Source visibility bitmask + LOD mode ────────────────────────────────
   //
   // 32-bit bitmask gating which surveys are drawn each frame; one bit per
   // `Source` enum value. The renderer iterates its `loadedSources()` and
   // skips any whose bit is clear. Default = `ALL_VISIBLE_MASK` so we
-  // preserve the existing "draw everything that is loaded" behaviour until
-  // a UI control or auto-LOD logic (Task 5) takes over.
+  // preserve "draw everything that is loaded" behaviour until either the
+  // auto-LOD heuristic recomputes it from the camera distance, or a user
+  // toggle in the settings panel forces a manual choice.
+  //
+  // `lodMode` decides which path "owns" the mask:
+  //   - 'auto'   → the render-loop tick recomputes the mask each frame from
+  //                `autoLodMask(cam.distance)`.  Manual overrides do not
+  //                stick — they get clobbered on the next frame.
+  //   - 'manual' → the user (or a programmatic call to `setSourceVisible`)
+  //                owns the mask; auto-LOD is paused.
   let visibleSourceMask = ALL_VISIBLE_MASK;
+  let lodMode: LodMode = 'auto';
 
   // ── Initial camera snapshot ───────────────────────────────────────────────
   //
@@ -148,8 +158,53 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // RAF handle — stored so `destroy()` can cancel the loop cleanly.
   let rafId = 0;
 
-  // Cloud is null until async load completes; pick/hover paths guard against null.
-  let cloud: PointCloud | null = null;
+  // ── Loaded clouds (one per uploaded survey) ─────────────────────────────
+  //
+  // Multi-survey picking needs the original `PointCloud` for whichever
+  // source the picker hits, so `buildPointInfo` can pull positions and
+  // photometry by *local* index.  We mirror the renderer's per-source
+  // bookkeeping in JS land here: the renderer owns the GPU buffers, this
+  // map owns the CPU-side struct-of-arrays.
+  //
+  // Empty until the first parallel fetch resolves; pick/hover paths guard
+  // against that empty state.
+  const clouds = new Map<Source, PointCloud>();
+
+  /**
+   * Resolve a global instance ID coming back from the picker into the
+   * (source, local index) pair that lets us look the point up in `clouds`.
+   *
+   * Walks the renderer's loaded sources in `Source`-enum order, subtracting
+   * each survey's count from the running global ID until the remainder
+   * falls inside the current source's range.  This is the inverse of the
+   * renderer's `instanceIdOffset` calculation in `pointRenderer.ts`.
+   *
+   * Returns `null` when the global ID lies past the end of every loaded
+   * source (defensive — should not happen if the picker only returns
+   * indices it actually drew).
+   */
+  function resolveGlobalIdx(
+    globalIdx: number,
+  ): { source: Source; localIdx: number } | null {
+    if (!renderer) return null;
+    let remaining = globalIdx;
+    for (const entry of renderer.loadedSources()) {
+      if (remaining < entry.count) {
+        return { source: entry.source, localIdx: remaining };
+      }
+      remaining -= entry.count;
+    }
+    return null;
+  }
+
+  /** Build a PointInfo from a global picker index, or null if unresolvable. */
+  function pointInfoFromGlobal(globalIdx: number) {
+    const resolved = resolveGlobalIdx(globalIdx);
+    if (!resolved) return null;
+    const c = clouds.get(resolved.source);
+    if (!c) return null;
+    return buildPointInfo(c, resolved.localIdx);
+  }
 
   // Renderer and pickRenderer are null until GPU init completes.
   let renderer: PointRenderer | null = null;
@@ -206,7 +261,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function setHovered(idx: number | null): void {
     if (idx === hoveredIndex) return;
     hoveredIndex = idx;
-    cb.onHoverChange(idx !== null && cloud ? buildPointInfo(cloud, idx) : null);
+    cb.onHoverChange(idx !== null ? pointInfoFromGlobal(idx) : null);
   }
 
   /**
@@ -215,7 +270,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function setSelected(idx: number | null): void {
     if (idx === selectedIndex) return;
     selectedIndex = idx;
-    cb.onSelectChange(idx !== null && cloud ? buildPointInfo(cloud, idx) : null);
+    cb.onSelectChange(idx !== null ? pointInfoFromGlobal(idx) : null);
   }
 
   // ── Scale bar computation ────────────────────────────────────────────────
@@ -277,21 +332,60 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // happening before the (potentially multi-second) fetch completes.
       cb.onStatusChange({ kind: 'loading' });
 
-      // Fetch /data/sdss.bin; fall back to synthetic on any error.
-      // loadCloud catches its own fetch/decode errors and always resolves —
-      // no outer try/catch needed here.
-      const result = await loadCloud();
-      cloud = result.cloud;
-      const source: CloudSource = result.source;
+      // ── Parallel multi-survey load ───────────────────────────────────────
+      //
+      // Kick all three real-survey fetches off at once.  Each one streams
+      // its decoded cloud back through the `onResult` callback the moment
+      // it lands, so we can:
+      //   - upload it to the renderer (the user sees points appear)
+      //   - record it in the local `clouds` map (so picking can resolve it)
+      //   - fire the optional `onCloudReady` so the UI can show progress
+      //
+      // The first cloud to arrive *also* owns the camera auto-framing.  We
+      // do this on first arrival rather than waiting for everything to
+      // settle: 2MRS at 2 MB lands far sooner than GLADE at ~96 MB on a
+      // typical connection, and we want the camera to snap to a sensible
+      // framing immediately rather than staring at default-zoom blackness.
+      // Subsequent clouds inherit the framing — they all share the same
+      // origin coordinate system, so re-framing on every arrival would
+      // just yank the camera around without benefit.
+      let firstResult: { source: Source; cloud: PointCloud; cloudSource: CloudSource } | null =
+        null;
 
-      // Until the multi-survey loader (Task 6) splits the .bin file into
-      // per-source clouds, we upload the whole cloud under whichever Source
-      // matches the file we got: real SDSS data → Source.SDSS, synthetic
-      // fallback → Source.Synthetic. The renderer's per-source bookkeeping
-      // is identical regardless — this just labels the buffer correctly so
-      // future task wiring (visibility mask, picker decoding) stays consistent.
-      const initialSource = result.source === 'sdss.bin' ? Source.SDSS : Source.Synthetic;
-      renderer.upload(initialSource, cloud);
+      const { loadedCount } = await loadAllClouds((result) => {
+        // Renderer might have been destroyed mid-load (StrictMode unmount,
+        // hot-reload).  Drop the result silently in that case.
+        if (!renderer) return;
+
+        renderer.upload(result.source, result.cloud);
+        clouds.set(result.source, result.cloud);
+        cb.onCloudReady?.(result.source, result.cloud.count);
+
+        if (firstResult === null) {
+          firstResult = result;
+        }
+      });
+
+      // ── Synthetic fallback ──────────────────────────────────────────────
+      //
+      // If every real fetch failed (offline, no .bin files built, decode
+      // error), the user still deserves *something* on screen.  Generate
+      // the procedural cloud and route it through the same path so the
+      // renderer, the clouds map, and the React status all line up with
+      // the real-data case.
+      if (loadedCount === 0) {
+        const fallback = buildSyntheticFallback();
+        if (renderer) {
+          renderer.upload(fallback.source, fallback.cloud);
+          clouds.set(fallback.source, fallback.cloud);
+          cb.onCloudReady?.(fallback.source, fallback.cloud.count);
+        }
+        firstResult = fallback;
+      }
+
+      // If we somehow have no first result *and* no fallback (e.g. the
+      // engine was destroyed mid-load), bail before touching the camera.
+      if (firstResult === null) return;
 
       // Build the pick renderer. It shares the same vertex/uniform buffers as
       // the visual renderer — no extra GPU memory for point data.
@@ -299,17 +393,27 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // ── Camera auto-framing ──────────────────────────────────────────────
       //
-      // Rather than hardcoding `distance: 2500`, we measure the actual spatial
-      // extent of the loaded cloud. Real SDSS galaxies mostly live at z ≈ 0.1–0.7
-      // → ~430–3000 Mpc, so the bounding box varies depending on the sample.
+      // Frame to whichever cloud arrived first (see comment above).  Each
+      // survey has a very different effective depth — 2MRS ~250 Mpc, GLADE
+      // ~1.5 Gpc, SDSS ~3 Gpc — and using the first arrival's bbox tends
+      // to give the closest "natural" view to start exploring from, with
+      // the auto-LOD kicking surveys in/out as the user zooms.
       //
       // `bbox` = max abs of any coordinate component (cheap; no sqrt).
       // `distance` = bbox × 2.5 — 2.5× the half-extent frames the cloud with a
       //   comfortable margin similar to the old synthetic framing.
       // `far`      = bbox × 4 — ensures the most distant points aren't clipped.
-      const bbox = maxAbsCoord(cloud);
+      // We deliberately use the LARGEST bbox seen so far across loaded
+      // clouds so the far plane covers every survey's outermost galaxy —
+      // otherwise SDSS's deep galaxies would clip when 2MRS framed first.
+      let bbox = maxAbsCoord(firstResult.cloud);
+      for (const c of clouds.values()) {
+        const cb2 = maxAbsCoord(c);
+        if (cb2 > bbox) bbox = cb2;
+      }
       const camDistance = bbox * 2.5;
       const camFar = bbox * 4;
+      const source: CloudSource = firstResult.cloudSource;
 
       cam = createOrbitCamera({
         target: [0, 0, 0],
@@ -394,7 +498,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // Run a one-shot pick at the click position.
           // We don't use the throttle guard here — clicks are infrequent and
           // we want an immediate, synchronous-feeling response.
-          if (!renderer || !cloud || !pickRendererHandle) return;
+          if (!renderer || clouds.size === 0 || !pickRendererHandle) return;
 
           // Snapshot the renderer's per-source draw records and filter by
           // the current visibility mask so the pick pass sees the same
@@ -431,7 +535,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // ── Status: ready ────────────────────────────────────────────────────
 
-      cb.onStatusChange({ kind: 'ready', count: cloud.count, source });
+      // `count` here is the total number of points across every loaded
+      // survey at the moment we transition to "ready".  Surveys that finish
+      // loading after this point are reflected via `onCloudReady`, not via
+      // an additional `onStatusChange` — the status bar's job is "we're up",
+      // not "live counter".
+      cb.onStatusChange({ kind: 'ready', count: renderer.totalCount(), source });
 
       // ── Seed settings callbacks ───────────────────────────────────────────
       //
@@ -492,6 +601,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         if (!vp || !renderer) {
           rafId = requestAnimationFrame(frame);
           return;
+        }
+
+        // ── Auto-LOD mask refresh ────────────────────────────────────────
+        //
+        // In auto mode, recompute which surveys are visible from the
+        // camera's current distance every frame.  The work is essentially
+        // free — `autoLodMask` is a few branches against constants — and
+        // we only fire `onSourceMaskChange` when the mask actually flips
+        // bands so React's setState isn't called every frame.
+        //
+        // In manual mode we leave `visibleSourceMask` alone so a user
+        // toggle in the settings panel sticks until they explicitly
+        // re-enter auto mode.
+        if (cam && lodMode === 'auto') {
+          const nextMask = autoLodMask(cam.distance);
+          if (nextMask !== visibleSourceMask) {
+            visibleSourceMask = nextMask;
+          }
         }
 
         // ── Command recording ─────────────────────────────────────────────
@@ -555,7 +682,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // visual frame's uniform buffer has already been written with the latest
         // viewProj. The pick renderer reads the same uniform buffer.
         if (
-          cloud &&
+          clouds.size > 0 &&
           latestMouseCss !== null &&
           latestMouseCss !== lastPickedMouseCss &&
           !pickInFlight &&
@@ -645,7 +772,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // 6. Drop references to aid GC.
       renderer = null;
-      cloud = null;
+      clouds.clear();
       cam = null;
     },
 
@@ -731,6 +858,36 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         fromPitch: cam.pitch,
         toPitch: initialCamRef.pitch,
       };
+    },
+
+    // ── LOD + per-source visibility setters ────────────────────────────────
+    //
+    // These two methods are the public seam for the survey-toggle UI
+    // (Task #37 / settings panel).  They are kept tiny on purpose: the
+    // engine is the source of truth for `lodMode` and `visibleSourceMask`,
+    // React just mirrors them via the optional callbacks.
+
+    setLodMode(mode) {
+      if (mode === lodMode) return;
+      lodMode = mode;
+      cb.onLodModeChange?.(mode);
+    },
+
+    setSourceVisible(source, visible) {
+      // A user explicitly toggling one survey is the strongest possible
+      // signal that they want manual control.  Auto-LOD would clobber the
+      // mask on the very next frame, so we proactively flip into manual
+      // mode here rather than making the caller orchestrate two calls.
+      if (lodMode !== 'manual') {
+        lodMode = 'manual';
+        cb.onLodModeChange?.('manual');
+      }
+
+      const next = visible
+        ? maskWith(visibleSourceMask, source)
+        : maskWithout(visibleSourceMask, source);
+      if (next === visibleSourceMask) return;
+      visibleSourceMask = next;
     },
   };
 
