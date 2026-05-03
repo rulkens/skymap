@@ -20,7 +20,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { EngineStatus } from '../@types';
+import type { EngineStatus } from '../../@types';
 import styles from './StatusBar.module.css';
 
 /** Props for StatusBar. */
@@ -65,5 +65,12 @@ function statusText(status: EngineStatus): string {
 
     case 'error':
       return `ERROR: ${status.message}`;
+
+    default: {
+      // Exhaustiveness check: TypeScript will error here if a new `kind` is
+      // added to EngineStatus without a matching case above.
+      const _exhaustive: never = status;
+      return String(_exhaustive);
+    }
   }
 }
