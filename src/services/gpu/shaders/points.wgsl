@@ -182,6 +182,20 @@ struct PerVertex {
   // alternative — separate command-encoder + submit per source — would
   // multiply per-frame overhead by N for no real cost saving.
   @location(3) globalInstanceIdx: u32,
+
+  // Per-row K-correction coefficient (units: per unit redshift z).
+  //
+  // Used by `vs` to convert observed colour to rest-frame: each survey
+  // measures a different colour pair with a different sensitivity to z,
+  // so the K-correction strength varies per row rather than being a
+  // global shader constant:
+  //   - SDSS u−g    →  k ≈ 3.0/z (steep optical bandpass shift)
+  //   - GLADE B−J   →  k ≈ 1.0/z (modest, B straddles a Balmer break)
+  //   - 2MRS  J−K   →  k ≈ 0.0/z (NIR is nearly redshift-invariant at z<0.1)
+  // and the JS-side upload writes 0 alongside the colorIndex sentinel for
+  // rows whose source-specific colour pair isn't measurable, so the
+  // sentinel branch in `vs` doesn't need to special-case kPerZ.
+  @location(4) kPerZ: f32,
 };
 
 // ─── vertex-to-fragment interface ─────────────────────────────────────────────
@@ -374,43 +388,61 @@ fn vs(
 
   // ── K-CORRECTION (observed → rest-frame colour) ──────────────────────────
   //
-  // The colorIndex attribute is the *observed* u−g — the colour we actually
-  // measure on Earth. But cosmic expansion redshifts every photon: a galaxy
-  // with rest-frame u−g = 1.5 at z = 0.3 has observed u−g closer to 2.5,
-  // because what was the u-band at the source is now in the optical and
-  // what was the g-band has shifted into the red. Without correction, *every*
-  // distant galaxy would render red regardless of its intrinsic colour —
-  // which is exactly the artifact the eye notices in the wedge view.
+  // The colorIndex attribute is the *observed* colour — the difference of
+  // two-band magnitudes as measured on Earth.  But cosmic expansion redshifts
+  // every photon: a galaxy with rest-frame u−g = 1.5 at z = 0.3 has observed
+  // u−g closer to 2.5, because what was the u-band at the source has shifted
+  // into the optical and what was the g-band has shifted into the red.
+  // Without correction, *every* distant galaxy would render red regardless
+  // of its intrinsic colour — exactly the artifact the eye notices in a
+  // wedge-style view.
   //
   // The proper correction (the "K-correction" in astronomy) depends on each
   // galaxy's spectral type and is normally computed via SED template fits.
   // We use a simple linear approximation suitable for visualisation:
   //
-  //   (u−g)_rest ≈ (u−g)_obs − K_UG · z
+  //   colour_rest ≈ colour_obs − k · z
   //
-  // where K_UG ≈ 3.0 is a typical coefficient averaged across galaxy types
-  // for SDSS u−g at z < 0.5 (the SDSS spec sample range). This captures the
-  // dominant trend; over- or under-corrects individual galaxies by ~0.3 mag
-  // depending on their type, which is acceptable for a colour ramp.
+  // …where the coefficient `k` is *not* a single shader-wide constant.  Each
+  // survey we render uses a different colour pair, and each pair has its own
+  // sensitivity to bandpass shift, so `k` lives in the per-instance vertex
+  // attribute `p.kPerZ` (baked at upload time per-source on the JS side):
+  //
+  //   - SDSS u−g    →  k ≈ 3.0   (steep — u and g straddle the 4000 Å break)
+  //   - GLADE B−J   →  k ≈ 1.0   (modest — B touches a Balmer break, J is NIR)
+  //   - 2MRS  J−K   →  k ≈ 0.0   (NIR is nearly z-invariant at z < 0.1)
+  //
+  // Why a per-vertex attribute and not a uniform?  Same race that bit
+  // `instanceIdOffset` (see the long comment on Uniforms.instanceIdOffset
+  // above): WebGPU sequences `queue.writeBuffer` calls so that *all* writes
+  // before a `submit` complete before any draw runs — meaning every draw
+  // would read whichever value was written last, not the per-source value
+  // the JS code intended for that draw.  Baking `k` into the instance buffer
+  // sidesteps the race entirely; each vertex carries its own coefficient and
+  // no uniform tweaking happens between per-source draws.  The cost is 4
+  // bytes per instance (≈10 MB for SDSS) — well worth it for correct colour.
+  //
+  // The approximation is good to ~0.3 mag scatter per galaxy depending on
+  // spectral type, which is acceptable for a colour ramp.
   //
   // We derive z from the position vector via Hubble's law: |xyz| = c·z/H₀,
   // so z = |xyz| / HUBBLE_DISTANCE_MPC. This matches how the CPU-side
   // raDecZToCartesian generated these positions, so the inversion is exact
   // for our linear-cosmology assumption.
   let HUBBLE_DISTANCE_MPC = 4282.749;  // c / H₀ for H₀ = 70 km/s/Mpc
-  let K_UG_PER_Z = 3.0;
   let zRedshift = length(p.position) / HUBBLE_DISTANCE_MPC;
 
   // Sentinel detection: the JS upload path writes colorIndex >= 100 to mark
-  // "no observed u−g" (non-SDSS surveys without u-band measurements).  We
-  // skip K-correction for those — there's no observed colour to correct
-  // back to rest-frame — and substitute a fixed mid-ramp colour that gives
-  // GLADE/2MRS galaxies a stable visually-neutral tint regardless of z.
-  // 1.05 was picked because it matches what an SDSS galaxy at z ≈ 0.05 with
-  // u−g = 1.2 would land at after K-correction — pale orange-white, the
-  // "average galaxy" colour your eye expects.
+  // "no observed colour for this survey's preferred band pair".  We skip
+  // K-correction for those — there's no observed colour to correct back to
+  // rest-frame — and substitute a fixed mid-ramp colour that gives sentinel
+  // galaxies a stable visually-neutral tint regardless of z.  1.05 was
+  // picked because it matches what an SDSS galaxy at z ≈ 0.05 with u−g = 1.2
+  // would land at after K-correction — pale orange-white, the "average
+  // galaxy" colour your eye expects.  See JS-side comments for the exact
+  // sentinel value (currently 999).
   let isUnknownColour = p.colorIndex > 100.0;
-  let restColorIndex = select(p.colorIndex - K_UG_PER_Z * zRedshift, 1.05, isUnknownColour);
+  let restColorIndex = select(p.colorIndex - p.kPerZ * zRedshift, 1.05, isUnknownColour);
 
   // Look up the colour for this point's *rest-frame* u−g index. Galaxies
   // that were intrinsically blue stay blue regardless of distance; only
