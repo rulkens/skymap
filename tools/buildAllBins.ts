@@ -34,13 +34,16 @@ import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 import { parseSdssCsv } from './parsers/sdssCsv.js';
-import { parseTwoMrs } from './parsers/twoMrs.js';
-import { parseGladeLine } from './parsers/glade.js';
+import { parseTwoMrs, parseXscShapeCsv } from './parsers/twoMrs.js';
+import type { XscShapeMap } from './parsers/twoMrs.js';
+import { parseGladeLine, parseHyperLedaCsv } from './parsers/glade.js';
+import type { HyperLedaShapeMap } from './parsers/glade.js';
 import type { ParsedRecord } from './parsers/common.js';
 import { crossMatch } from './crossMatch.js';
 
 import { encodePointCloud } from '../src/data/pointCloudFormat.js';
 import { raDecZToCartesian } from '../src/utils/math/index.js';
+import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
 import { Source } from '../src/data/sources.js';
 import type { PointCloud } from '../src/@types/index.js';
 
@@ -61,11 +64,6 @@ export type { CrossMatchInputs } from './crossMatch.js';
  */
 function recordsToCloud(records: ParsedRecord[]): PointCloud {
   const count = records.length;
-  // TODO Task 4+ (galaxy-orientation-disks): populate axisRatio and
-  // positionAngleDeg from the survey-specific cross-match results
-  // (HyperLEDA for GLADE, 2MASS XSC for 2MRS, SDSS PhotoObj for SDSS).
-  // For now we initialise both arrays to NaN — a legitimate "no measurement"
-  // sentinel that preserves the v3 round-trip property end-to-end.
   const cloud: PointCloud = {
     count,
     objIDs: new BigUint64Array(count),
@@ -75,8 +73,8 @@ function recordsToCloud(records: ParsedRecord[]): PointCloud {
     magR: new Float32Array(count),
     magI: new Float32Array(count),
     magZ: new Float32Array(count),
-    axisRatio: new Float32Array(count).fill(NaN),
-    positionAngleDeg: new Float32Array(count).fill(NaN),
+    axisRatio: new Float32Array(count),
+    positionAngleDeg: new Float32Array(count),
   };
   for (let i = 0; i < count; i++) {
     // `records[i]` is `ParsedRecord | undefined` under noUncheckedIndexedAccess.
@@ -92,6 +90,21 @@ function recordsToCloud(records: ParsedRecord[]): PointCloud {
     cloud.magR[i] = r.magR;
     cloud.magI[i] = r.magI;
     cloud.magZ[i] = r.magZ;
+    // Orientation: prefer the parser-supplied real value (SDSS PhotoObj for
+    // SDSS, 2MASS XSC for 2MRS, HyperLEDA for GLADE). When the parser
+    // emitted `null` for either field — meaning the survey simply doesn't
+    // have a measurement for that galaxy — fall back to the deterministic
+    // hash-based orientation so every encoded point has a finite (axisRatio,
+    // PA) pair. The hash uses (objID, ra, dec) so reload yields the same
+    // tilt every time.
+    if (r.axisRatio !== null && r.positionAngleDeg !== null) {
+      cloud.axisRatio[i] = r.axisRatio;
+      cloud.positionAngleDeg[i] = r.positionAngleDeg;
+    } else {
+      const fb = fallbackOrientation(r.objID, r.ra, r.dec);
+      cloud.axisRatio[i] = fb.axisRatio;
+      cloud.positionAngleDeg[i] = fb.positionAngleDeg;
+    }
   }
   return cloud;
 }
@@ -152,6 +165,7 @@ function loadOrEmpty(path: string | undefined, parser: ParserFn): ParsedRecord[]
 async function loadGladeStream(
   path: string | undefined,
   options: { specZOnly?: boolean } = {},
+  hyperLeda: HyperLedaShapeMap = new Map(),
 ): Promise<ParsedRecord[]> {
   if (!path) return [];
 
@@ -168,7 +182,7 @@ async function loadGladeStream(
 
   for await (const line of rl) {
     if (line.length === 0) continue;
-    const rec = parseGladeLine(line, options);
+    const rec = parseGladeLine(line, options, hyperLeda);
     if (rec === null) {
       skipped++;
     } else {
@@ -207,12 +221,40 @@ async function runCli(): Promise<void> {
     );
   }
 
+  // Load the optional orientation caches before any parsing kicks off.
+  // Both files are produced by separate `tools/fetch*.ts` scripts and may
+  // not yet exist on a fresh checkout — that's intentional. A missing cache
+  // simply means every 2MRS / GLADE row in this build will fall through to
+  // the deterministic `fallbackOrientation` in `recordsToCloud` below; the
+  // pipeline keeps working, just with hash-derived disk tilts instead of
+  // measured ones. We log loud warnings rather than silently substituting,
+  // so the operator sees exactly what they're getting.
+  const xscPath = resolve('data/raw/2mass_xsc_pa.csv');
+  let xsc: XscShapeMap = new Map();
+  try {
+    xsc = parseXscShapeCsv(readFileSync(xscPath, 'utf8'));
+    process.stderr.write(`loaded ${xsc.size.toLocaleString()} 2MASS XSC orientations\n`);
+  } catch {
+    process.stderr.write(`warning: ${xscPath} not present — 2MRS orientation = fallback only\n`);
+  }
+
+  const ledaPath = resolve('data/raw/hyperleda_pa.csv');
+  let leda: HyperLedaShapeMap = new Map();
+  try {
+    leda = parseHyperLedaCsv(readFileSync(ledaPath, 'utf8'));
+    process.stderr.write(`loaded ${leda.size.toLocaleString()} HyperLEDA orientations\n`);
+  } catch {
+    process.stderr.write(
+      `warning: ${ledaPath} not present — GLADE orientation = fallback only\n`,
+    );
+  }
+
   process.stderr.write('parsing SDSS…\n');
   const sdss = loadOrEmpty(args.sdss, parseSdssCsv);
   process.stderr.write('parsing 2MRS…\n');
-  const twoMrs = loadOrEmpty(args.twomrs, parseTwoMrs);
+  const twoMrs = loadOrEmpty(args.twomrs, (raw) => parseTwoMrs(raw, xsc));
   process.stderr.write('parsing GLADE (streaming)…\n');
-  const glade = await loadGladeStream(args.glade, { specZOnly: gladeSpecOnly });
+  const glade = await loadGladeStream(args.glade, { specZOnly: gladeSpecOnly }, leda);
 
   // Capture per-source input counts up front so the summary can report
   // the dedup drop rate per survey, not just the merged total.

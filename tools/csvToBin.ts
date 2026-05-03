@@ -28,6 +28,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { raDecZToCartesian } from '../src/utils/math/index.js';
+import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
 import { encodePointCloud } from '../src/data/pointCloudFormat.js';
 import type { PointCloud } from '../src/@types/index.js';
 import { parseSdssCsv } from './parsers/sdssCsv.js';
@@ -88,10 +89,12 @@ const count = records.length;
 
 // Allocate the SoA arrays exactly once. Typed arrays have fixed capacity, so
 // pre-sizing avoids any hidden reallocation as we fill them in below.
-// TODO Task 4+ (galaxy-orientation-disks): wire SDSS PhotoObj's b/a + phi
-// columns through `parseSdssCsv` and into axisRatio + positionAngleDeg
-// here. Initialised to NaN for now so the v3 encoder gets a fully-shaped
-// PointCloud and the "no measurement" sentinel propagates end-to-end.
+// As of Task 9 (galaxy-orientation-disks), `parseSdssCsv` emits the
+// PhotoObj-derived `axisRatio` + `positionAngleDeg` directly on each
+// record. We populate the typed arrays from those values when they are
+// finite, and otherwise fall through to the deterministic
+// `fallbackOrientation` so every encoded point ships with finite, stable
+// orientation data — no NaN sentinels remain in the binary.
 const cloud: PointCloud = {
   count,
   objIDs: new BigUint64Array(count), // SDSS object identifiers
@@ -101,8 +104,8 @@ const cloud: PointCloud = {
   magR: new Float32Array(count), // r-band apparent magnitude
   magI: new Float32Array(count), // i-band apparent magnitude
   magZ: new Float32Array(count), // z-band apparent magnitude
-  axisRatio: new Float32Array(count).fill(NaN), // b/a — TODO Task 4+
-  positionAngleDeg: new Float32Array(count).fill(NaN), // PA in deg — TODO Task 4+
+  axisRatio: new Float32Array(count), // b/a from PhotoObj or fallback
+  positionAngleDeg: new Float32Array(count), // PA in deg from PhotoObj or fallback
 };
 
 for (let i = 0; i < count; i++) {
@@ -126,6 +129,20 @@ for (let i = 0; i < count; i++) {
   cloud.magR[i] = r.magR;
   cloud.magI[i] = r.magI;
   cloud.magZ[i] = r.magZ;
+
+  // Orientation: `parseSdssCsv` populates these from the PhotoObj `expAB_r`,
+  // `deVAB_r`, `expPhi_r`, `deVPhi_r`, and `fracDeV_r` columns when the CSV
+  // exposes them. When either field is `null` (older CSV without those
+  // columns, or per-row NaNs from the SDSS pipeline), the deterministic
+  // fallback derives a stable hash-based orientation from (objID, ra, dec).
+  if (r.axisRatio !== null && r.positionAngleDeg !== null) {
+    cloud.axisRatio[i] = r.axisRatio;
+    cloud.positionAngleDeg[i] = r.positionAngleDeg;
+  } else {
+    const fb = fallbackOrientation(r.objID, r.ra, r.dec);
+    cloud.axisRatio[i] = fb.axisRatio;
+    cloud.positionAngleDeg[i] = fb.positionAngleDeg;
+  }
 }
 
 // ─── Encode & write ───────────────────────────────────────────────────────────
