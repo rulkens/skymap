@@ -55,6 +55,16 @@ export type EngineCallbacks = {
    */
   onGalaxyTexturesEnabledChange?: (enabled: boolean) => void;
   /**
+   * Optional echo of the highlight-fallback toggle state so the
+   * SettingsPanel can stay in sync if the engine ever flips it
+   * programmatically (e.g. via a future keyboard shortcut).
+   */
+  onHighlightFallbackChange?: (enabled: boolean) => void;
+  /**
+   * Optional echo of the show-only-real-orientations toggle state.
+   */
+  onRealOnlyModeChange?: (enabled: boolean) => void;
+  /**
    * Fired when the level-of-detail mode changes (either from a `setLodMode`
    * call or at engine init to seed React's initial state).
    */

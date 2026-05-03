@@ -72,6 +72,11 @@ export type EngineHandle = {
    */
   setGalaxyTexturesEnabled?: (enabled: boolean) => void;
 
+  /** Toggle the magenta tint on galaxies whose orientation is fallback. */
+  setHighlightFallback?: (enabled: boolean) => void;
+  /** Toggle "show only galaxies with real photometric orientation" — fallback rows are discarded. */
+  setRealOnlyMode?: (enabled: boolean) => void;
+
   /**
    * Snap the camera back to the initial framing computed at startup.
    *

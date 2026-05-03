@@ -42,6 +42,8 @@ import { mat4 } from 'gl-matrix';
 import type { PointCloud } from '../../@types';
 import { pickColourIndex } from '../../data/colourIndex';
 import { ALL_SOURCES, Source } from '../../data/sources';
+import { fallbackOrientation } from '../../utils/random/fallbackOrientation';
+import { cartesianToRaDecZ } from '../../utils/math';
 
 // `?raw` is a Vite-specific import suffix. It tells the bundler to import the
 // file's content as a plain string rather than attempting to execute it as
@@ -148,8 +150,11 @@ const POSITION_ANGLE_BYTE_OFFSET = 32;
  *   bytes 88..95  : _pad0/_pad1      u32×2        (written as 0)     ← alignment for the next vec3 slot
  *   bytes 96..107 : camPosWorld      vec3<f32>    (3 floats)         } 16 bytes (one vec4 slot)
  *   bytes 108..111: pxPerRad         f32          (1 float)          }
+ *   bytes 112..115: highlightFallback u32                            }
+ *   bytes 116..119: realOnlyMode      u32                            } 16 bytes (one vec4 slot)
+ *   bytes 120..127: _pad3/_pad4       u32×2        (written as 0)    }
  *
- * Total: 112 bytes — a multiple of 16 ✓
+ * Total: 128 bytes — a multiple of 16 ✓
  *
  * WGSL uniform buffers follow rules similar to std140 (see WGSL spec §13,
  * "Memory Layout"). Each member must be aligned to its alignment value:
@@ -161,8 +166,13 @@ const POSITION_ANGLE_BYTE_OFFSET = 32;
  * The picker (`pickRenderer.ts`) writes only `selectedIndex` at offset 80;
  * the new tail fields are read-only from its perspective and are populated
  * by every visual `draw()` call before the pick pass runs.
+ *
+ * Task 15 added the trailing 16-byte slot for the orientation-visibility
+ * toggles (`highlightFallback`, `realOnlyMode`).  The two trailing u32
+ * padding words round the struct out to a 16-byte boundary so a future
+ * vec3/vec4 append doesn't fall into mis-alignment.
  */
-const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4; // 112 bytes
+const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4; // 128 bytes
 
 // ─── Per-source bookkeeping ───────────────────────────────────────────────────
 
@@ -429,6 +439,32 @@ export class PointRenderer {
     const sourceMean = magCount > 0 ? magSum / magCount : SDSS_TARGET_MEAN_MAG;
     const magOffset = SDSS_TARGET_MEAN_MAG - sourceMean;
 
+    // Pre-compute the "is this galaxy's orientation a fallback?" flag for
+    // every row. Done once at upload time (not per-frame); cost is the same
+    // hash + Float32 round-trip we'd pay anyway in the InfoCard.
+    //
+    // Detection: replay `fallbackOrientation(objID, ra, dec)` and compare
+    // against the stored cloud values. The build pipeline stamped the
+    // SAME f32 we recompute here whenever a galaxy lacks real orientation,
+    // so equality is exact (no epsilon needed). Match → fallback.
+    //
+    // We recover RA/Dec from the Cartesian position via cartesianToRaDecZ —
+    // the same conversion the build pipeline used in reverse to place the
+    // galaxy in world space.
+    const isFallbackArr = new Uint8Array(cloud.count);
+    for (let i = 0; i < cloud.count; i++) {
+      const x = cloud.positions[i * 3 + 0]!;
+      const y = cloud.positions[i * 3 + 1]!;
+      const z = cloud.positions[i * 3 + 2]!;
+      const [ra, dec] = cartesianToRaDecZ(x, y, z);
+      const fb = fallbackOrientation(cloud.objIDs[i]!, ra, dec);
+      const fbAr = new Float32Array([fb.axisRatio])[0]!;
+      const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
+      if (cloud.axisRatio[i] === fbAr && cloud.positionAngleDeg[i] === fbPa) {
+        isFallbackArr[i] = 1;
+      }
+    }
+
     for (let i = 0; i < cloud.count; i++) {
       const o = i * SLOTS_PER_POINT;
 
@@ -489,7 +525,14 @@ export class PointRenderer {
       // Slot 5 (offset 20 bytes) carries the GLOBAL instance index as a u32,
       // baked once at upload time so the shader doesn't need a per-draw
       // uniform write.  Read by the selection-halo check and `fsPick`.
-      interleavedU32[o + 5] = priorCount + i;
+      //
+      // High bit of globalInstanceIdx flags fallback orientations (Task 15).
+      // The vertex shader masks bit 31 off before exposing the canonical
+      // 0..N-1 index for selection / pick lookups.  31 usable bits = 2 B
+      // points, comfortably beyond any catalog we'll load.
+      const idx = priorCount + i;
+      const flag = isFallbackArr[i] === 1 ? 0x80000000 : 0;
+      interleavedU32[o + 5] = (idx | flag) >>> 0;
       // Slot 6 (offset 24 bytes) carries the per-row K-correction
       // coefficient.  Multiplied by redshift in the shader to obtain the
       // K-shift this row should receive.  See `pickColourIndex` for the
@@ -624,6 +667,14 @@ export class PointRenderer {
    *                           Engine pre-computes this once per frame and
    *                           hands it down so we don't repeat the `tan`
    *                           call inside the per-vertex shader.
+   * @param highlightFallback  When true, fragments belonging to fallback-
+   *                           orientation rows are tinted magenta in the
+   *                           visual fragment shader.  Selection /
+   *                           pick paths are unaffected.
+   * @param realOnlyMode       When true, fragments belonging to fallback
+   *                           rows are `discard`ed entirely.  Lets the
+   *                           user see ONLY galaxies for which we have
+   *                           measured (b/a, PA) photometric orientation.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -635,6 +686,8 @@ export class PointRenderer {
     visibleSourceMask: number,
     camPosWorld: Readonly<[number, number, number]>,
     pxPerRad: number,
+    highlightFallback: boolean,
+    realOnlyMode: boolean,
   ): void {
     // Nothing to draw if no source has been uploaded yet.
     if (this.clouds.size === 0) return;
@@ -668,6 +721,11 @@ export class PointRenderer {
     f32[25] = camPosWorld[1]; // bytes 100..103
     f32[26] = camPosWorld[2]; // bytes 104..107
     f32[27] = pxPerRad;       // bytes 108..111
+    // Task 15 — orientation-visibility toggles.  Two u32 booleans + 2 u32
+    // padding rounding the struct to 128 bytes.  See UNIFORM_BYTES doc above.
+    u32[28] = highlightFallback ? 1 : 0; // bytes 112..115
+    u32[29] = realOnlyMode      ? 1 : 0; // bytes 116..119
+    // u32[30] / u32[31] (_pad3 / _pad4) stay zero.
 
     this.device.queue.writeBuffer(this.uniformBuffer_internal, 0, buf);
 

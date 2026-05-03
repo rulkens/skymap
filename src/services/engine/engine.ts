@@ -165,6 +165,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // IIFE completes — same lifetime trick we use for `cam` and
   // `initialCamRef` further down.
   let galaxyTexturesEnabled = true;
+  // Task 15 — orientation-visibility toggles, mirrored into the per-frame
+  // uniform buffer.  Both default off so existing visual is unchanged
+  // until the user opts in via the SettingsPanel.
+  let highlightFallback = false;
+  let realOnlyMode = false;
 
   // ── Source visibility bitmask + LOD mode ────────────────────────────────
   //
@@ -702,6 +707,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cb.onBrightnessChange?.(brightness);
       cb.onAutoRotateChange?.(autoRotate);
       cb.onGalaxyTexturesEnabledChange?.(galaxyTexturesEnabled);
+      cb.onHighlightFallbackChange?.(highlightFallback);
+      cb.onRealOnlyModeChange?.(realOnlyMode);
       // LOD mode + visible-mask seeds — engine and React both default to
       // 'auto' / ALL_VISIBLE_MASK respectively, but firing the echo here
       // protects against future default drift and keeps the contract uniform
@@ -863,6 +870,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           visibleSourceMask,
           drawCamPos,
           drawPxPerRad,
+          highlightFallback,
+          realOnlyMode,
         );
 
         // ── Galaxy thumbnail pass ─────────────────────────────────────────
@@ -1210,6 +1219,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the other settings setters above).
       galaxyTexturesEnabled = enabled;
       cb.onGalaxyTexturesEnabledChange?.(enabled);
+    },
+
+    setHighlightFallback(enabled) {
+      // Tints fallback-orientation rows magenta (see fragment shader).
+      // Read by the per-frame draw call, so flipping it takes effect on
+      // the very next rendered frame.
+      highlightFallback = enabled;
+      cb.onHighlightFallbackChange?.(enabled);
+    },
+
+    setRealOnlyMode(enabled) {
+      // `discard`s fragments belonging to fallback rows so the user sees
+      // only galaxies with measured (b/a, PA).  Same per-frame uniform
+      // path as the highlight toggle.
+      realOnlyMode = enabled;
+      cb.onRealOnlyModeChange?.(enabled);
     },
 
     resetCamera() {

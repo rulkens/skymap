@@ -154,6 +154,27 @@ struct Uniforms {
   // vertex because `tan` is one of the more expensive intrinsics on mobile
   // GPUs and the result is frame-constant.
   pxPerRad: f32,
+
+  // ── Task 15: orientation-visibility toggles ────────────────────────────
+  //
+  // u32 booleans (0 / 1) controlling how the fragment shader treats
+  // galaxies whose orientation came from the deterministic fallback rather
+  // than a real photometric measurement. The fallback flag itself is baked
+  // per-vertex into the high bit of `globalInstanceIdx` (see PerVertex doc).
+  //
+  // - `highlightFallback`: when 1, multiply the tint of fallback rows by
+  //   magenta `(1.0, 0.3, 1.0)` — a quick visual scan of which surveys
+  //   have real orientation coverage.
+  // - `realOnlyMode`: when 1, `discard` fallback fragments entirely so the
+  //   user can see only galaxies with measured (b/a, PA). Useful for
+  //   verifying the cross-match coverage as `npm run fetch-2mass-xsc` and
+  //   `npm run fetch-hyperleda` populate their caches.
+  //
+  // Two trailing u32s round the struct to a 16-byte boundary (vec4 slot).
+  highlightFallback: u32,
+  realOnlyMode: u32,
+  _pad3: u32,
+  _pad4: u32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -207,6 +228,13 @@ struct PerVertex {
   // between draws.  It costs 4 bytes per instance (~10 MB for SDSS); the
   // alternative — separate command-encoder + submit per source — would
   // multiply per-frame overhead by N for no real cost saving.
+  //
+  // Task 15 reuses the high bit (0x80000000) as a fallback-orientation
+  // flag — set at upload time when the row's (b/a, PA) values match the
+  // deterministic `fallbackOrientation` output.  The vertex stage strips
+  // that bit before exposing the canonical 0..N-1 index downstream, so
+  // ~31 bits remain for the index proper (≈ 2 B points — comfortably
+  // beyond any catalog we'll load).
   @location(3) globalInstanceIdx: u32,
 
   // Per-row K-correction coefficient (units: per unit redshift z).
@@ -288,6 +316,13 @@ struct VSOut {
   // Position angle (east-of-north) in degrees, [0, 180), forwarded from the
   // per-instance attribute. Same per-instance constancy as axisRatio.
   @location(6) positionAngleDeg: f32,
+
+  // 1u when this row's orientation came from the deterministic fallback
+  // (high bit of globalInstanceIdx was set at upload time); 0u for real
+  // measurements. Used by the fragment shader for the highlight + hide
+  // toggles. Flat-interpolated for the same reason as the other u32
+  // attributes — integers can't be linearly interpolated.
+  @location(7) @interpolate(flat) isFallback: u32,
 };
 
 // ─── colour ramp ──────────────────────────────────────────────────────────────
@@ -393,7 +428,14 @@ fn vs(
   // when selectedIndex < SDSS.count — for any 2MRS or GLADE selection it
   // would either miss entirely OR match the wrong galaxy in the GLADE
   // draw (whose ii range happens to overlap the global selectedIndex).
-  let isSelected = (p.globalInstanceIdx == u.selectedIndex);
+  //
+  // High bit of globalInstanceIdx flags a fallback orientation; mask it off
+  // so the canonical 0..N-1 index is what selection/picker logic compares
+  // against (the picker writes plain instance indices into selectedIndex,
+  // never the masked value).
+  let realIdx = p.globalInstanceIdx & 0x7fffffffu;
+  let isFallbackFlag = select(0u, 1u, (p.globalInstanceIdx & 0x80000000u) != 0u);
+  let isSelected = (realIdx == u.selectedIndex);
 
   // Scale the billboard ~8× for the selected point so the selection ring
   // is unmistakable — even a faint, magnitude-22 galaxy gets a visible halo.
@@ -570,11 +612,17 @@ fn vs(
   // outputs, as long as the @location values that *are* declared match.
   //
   // We keep this here so both fragment entry points share the same vertex stage.
-  out.instanceIdx = p.globalInstanceIdx;
+  //
+  // Strip the fallback flag bit so downstream consumers (fsPick) see the
+  // canonical index; the fallback flag goes through `out.isFallback`.
+  out.instanceIdx = realIdx;
 
   // Propagate the selection flag for the visual fragment entry point.
   // 1u = this instance is selected; 0u = normal point.
   out.selected = select(0u, 1u, isSelected);
+
+  // Forward the fallback flag for the highlight + hide toggles in `fs`.
+  out.isFallback = isFallbackFlag;
 
   // Forward the orientation attributes through to the fragment stage.
   // The visual `fs` doesn't use them yet — Task 11 will introduce the
@@ -636,6 +684,13 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let elliptic = vec2<f32>(rotated.x, rotated.y / safeAB);
   let r2 = dot(elliptic, elliptic);
   // ────────────────────────────────────────────────────────────────────────
+
+  // Real-only mode: discard fallback fragments entirely. The user enabled
+  // this to see ONLY galaxies for which we have measured photometric
+  // orientation. Selection ring is also suppressed (a discarded fragment
+  // can't render a halo) — that's fine; selection of fallback rows still
+  // works at the data level.
+  if (u.realOnlyMode == 1u && in.isFallback == 1u) { discard; }
 
   // ── SELECTION RING vs NORMAL DISK ─────────────────────────────────────────
   //
@@ -712,8 +767,14 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // concentrated; larger values give a sharper, more star-like point.
   let alpha = exp(-r2 * 4.0);
 
+  // Highlight fallback rows in magenta when the toggle is on. The 0.3 in
+  // the green channel keeps fallback galaxies recognisable as "data-y"
+  // rather than turning them into pure UI accents — they still render at
+  // their colour-ramp brightness, just shifted toward magenta.
+  let highlightActive = (u.highlightFallback == 1u) && (in.isFallback == 1u);
+  let tintFinal = select(in.tint, in.tint * vec3<f32>(1.0, 0.3, 1.0), highlightActive);
   // Scale the colour by the per-point intensity.
-  let rgb = in.tint * in.intensity;
+  let rgb = tintFinal * in.intensity;
 
   // ── PREMULTIPLIED ALPHA ──────────────────────────────────────────────────
   //

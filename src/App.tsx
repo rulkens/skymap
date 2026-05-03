@@ -136,6 +136,12 @@ export function App(): React.ReactElement {
   // startup, which would correct any mismatch — but seeding the same default
   // here keeps the very first frame of the checkbox visually correct.
   const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(true);
+  // Task 15 — orientation-visibility toggles.  Both default off to match
+  // the engine's init values, so the first paint and React's first render
+  // agree without flicker.  The engine echoes via the optional callbacks
+  // below so any future engine-side flip stays mirrored.
+  const [highlightFallback, setHighlightFallback] = useState<boolean>(false);
+  const [realOnlyMode, setRealOnlyMode] = useState<boolean>(false);
 
   // ── Multi-survey + LOD state (rev-2) ─────────────────────────────────────
   //
@@ -205,6 +211,10 @@ export function App(): React.ReactElement {
       // on?" identical to the engine's source-of-truth value, even if the
       // engine ever flips it for non-UI reasons (e.g. perf-driven auto-disable).
       onGalaxyTexturesEnabledChange: setGalaxyTexturesEnabled,
+      // Task 15 — orientation toggles echo back from the engine so React
+      // state stays in sync if the engine ever flips them programmatically.
+      onHighlightFallbackChange: setHighlightFallback,
+      onRealOnlyModeChange: setRealOnlyMode,
       // LOD mode is seeded by the engine at init, then echoed back any time
       // `setLodMode` runs (or `setSourceVisible` flips us to manual).
       onLodModeChange: setLodMode,
@@ -328,6 +338,18 @@ export function App(): React.ReactElement {
         galaxyTexturesEnabled={galaxyTexturesEnabled}
         onGalaxyTexturesChange={(enabled) => {
           handleRef.current?.setGalaxyTexturesEnabled?.(enabled);
+        }}
+        // Task 15 — orientation-visibility toggles. Same forward-only flow
+        // as galaxyTexturesEnabled: engine fires the echo callback
+        // synchronously inside the setter, so React state mirrors engine
+        // truth without an optimistic local update here.
+        highlightFallback={highlightFallback}
+        onHighlightFallbackChange={(enabled) => {
+          handleRef.current?.setHighlightFallback?.(enabled);
+        }}
+        realOnlyMode={realOnlyMode}
+        onRealOnlyModeChange={(enabled) => {
+          handleRef.current?.setRealOnlyMode?.(enabled);
         }}
         onResetCamera={() => handleRef.current?.focusOnHome()}
         // ── Multi-survey toggles + Auto-LOD master (rev-2) ──────────────

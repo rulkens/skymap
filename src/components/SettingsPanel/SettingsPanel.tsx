@@ -87,6 +87,22 @@ type Props = {
   galaxyTexturesEnabled: boolean;
   /** Fired when the user toggles the galaxy-thumbnails checkbox. */
   onGalaxyTexturesChange: (enabled: boolean) => void;
+  /**
+   * Whether fallback-orientation galaxies should be tinted magenta in the
+   * fragment shader.  Lets the user scan which surveys have real
+   * photometric orientation coverage.  Optional — older call-sites without
+   * this prop see no orientation toggle in the panel.
+   */
+  highlightFallback?: boolean;
+  /** Fired when the user toggles the "Highlight fallback" checkbox. */
+  onHighlightFallbackChange?: (enabled: boolean) => void;
+  /**
+   * Whether to discard fallback-orientation galaxies entirely (showing only
+   * galaxies with measured b/a + PA).
+   */
+  realOnlyMode?: boolean;
+  /** Fired when the user toggles the "Show only real" checkbox. */
+  onRealOnlyModeChange?: (enabled: boolean) => void;
   /** Called when the user clicks "Reset camera". */
   onResetCamera: () => void;
   /**
@@ -149,6 +165,10 @@ export function SettingsPanel({
   onAutoRotateChange,
   galaxyTexturesEnabled,
   onGalaxyTexturesChange,
+  highlightFallback,
+  onHighlightFallbackChange,
+  realOnlyMode,
+  onRealOnlyModeChange,
   onResetCamera,
   visibleSourceMask,
   onToggleSource,
@@ -170,6 +190,14 @@ export function SettingsPanel({
   // present. `lodMode` may legitimately be the string `'auto'`, so compare
   // against `undefined` explicitly rather than relying on truthiness.
   const showLodControls = lodMode !== undefined && onSetLodMode !== undefined;
+
+  // Orientation-visibility section: rendered only when both toggle pieces are
+  // wired by the parent.  Same gating pattern as the survey + LOD sections.
+  const showOrientationToggles =
+    highlightFallback !== undefined &&
+    onHighlightFallbackChange !== undefined &&
+    realOnlyMode !== undefined &&
+    onRealOnlyModeChange !== undefined;
 
   return (
     <div className={styles.settingsPanel} aria-label="Renderer settings">
@@ -348,6 +376,39 @@ export function SettingsPanel({
                 </div>
               </>
             )}
+        </>
+      )}
+
+      {/* ── Orientation visibility (Task 15) ─────────────────────────────── */}
+      {/*
+        Two toggles that share the same per-galaxy fallback flag (high bit of
+        globalInstanceIdx, baked at upload time).  "Highlight" tints fallback
+        rows magenta in the fragment shader; "Show only real" discards
+        fallback fragments entirely.  Both default off so existing visual
+        behaviour is unchanged until the user opts in.
+      */}
+      {showOrientationToggles && (
+        <>
+          <div className={styles.panelDivider} role="separator" />
+          <div className={styles.panelSubtitle}>Orientation</div>
+          <div className={styles.panelRow}>
+            <label htmlFor="toggle-highlight-fallback">Highlight fallback</label>
+            <input
+              id="toggle-highlight-fallback"
+              type="checkbox"
+              checked={highlightFallback}
+              onChange={(e) => onHighlightFallbackChange(e.target.checked)}
+            />
+          </div>
+          <div className={styles.panelRow}>
+            <label htmlFor="toggle-real-only">Show only real</label>
+            <input
+              id="toggle-real-only"
+              type="checkbox"
+              checked={realOnlyMode}
+              onChange={(e) => onRealOnlyModeChange(e.target.checked)}
+            />
+          </div>
         </>
       )}
 
