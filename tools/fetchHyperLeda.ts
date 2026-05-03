@@ -3,9 +3,26 @@
  * fetchHyperLeda — pull `pa` (deg) and `logr25` (log10 of major/minor axis
  * ratio) from HyperLEDA for every PGC referenced in GLADE v2.3.
  *
- * HyperLEDA exposes a CGI endpoint that returns CSV when requested:
+ * HyperLEDA's modern API:
  *
- *   https://leda.univ-lyon1.fr/G.cgi?n=meandata&c=o&o=pgc&a=csv&z=t&p=pgc%3Dxxxx
+ *   http://atlas.obs-hp.fr/hyperleda/fG.cgi?n=meandata&a=csv&sql=pgc%3D<N>
+ *
+ * Notes about why this URL is what it is:
+ *
+ *  - The `leda.univ-lyon1.fr` host that older docs mention is now just a
+ *    302 redirector to `atlas.obs-hp.fr`, AND its TLS cert is expired —
+ *    Node's `fetch` throws on the handshake, so we hit `atlas` directly
+ *    over plain HTTP.
+ *  - The filter param is `sql=`, not `p=`. The old `p=pgc%3D…` form is
+ *    interpreted by the modern API as "object name = pgc, position = N"
+ *    (a sky-position cone-search) instead of a column filter, and
+ *    silently returns no rows.
+ *  - `o=pgc` must NOT be passed — it gets parsed as object-name = "pgc"
+ *    and overrides the SQL filter. Drop it entirely.
+ *  - The response is *not* CSV in spite of `a=csv`; it's tab-separated
+ *    with a header line beginning with `$objname` listing the column
+ *    names in double-quotes, lots of `#`-prefixed comment lines, and
+ *    one tab-separated data row per match.
  *
  * The endpoint is happiest with one PGC per request, so we ratelimit to 4
  * concurrent fetches and stream results to disk. ~3.2M GLADE rows but
@@ -52,22 +69,42 @@ function readExistingPgcs(path: string): Set<string> {
 }
 
 async function fetchOne(pgc: string): Promise<{ pa: number; logr25: number } | null> {
-  const url = `https://leda.univ-lyon1.fr/G.cgi?n=meandata&c=o&o=pgc&a=csv&z=t&p=pgc%3D${pgc}`;
+  const url = `http://atlas.obs-hp.fr/hyperleda/fG.cgi?n=meandata&a=csv&sql=pgc%3D${pgc}`;
   const res = await fetch(url);
   if (!res.ok) return null;
   const text = await res.text();
-  // Find header row mentioning 'pa' and 'logr25', then the row below.
-  const lines = text.split(/\r?\n/).filter((l) => l.includes(','));
-  if (lines.length < 2) return null;
-  const header = lines[0]!.split(',').map((s) => s.trim().toLowerCase());
-  const paIdx = header.indexOf('pa');
-  const lrIdx = header.indexOf('logr25');
+  const lines = text.split(/\r?\n/);
+
+  // Header line begins with `$objname` and lists column names in
+  // double-quotes separated by spaces. Example:
+  //   $objname "pgc" "objtype" ... "logr25" "e_logr25" "pa" ...
+  // The `$objname` token has no quotes; everything else does. We strip
+  // quotes and lowercase to make the indexOf lookup robust against any
+  // future case-flip.
+  const headerLine = lines.find((l) => l.startsWith('$objname'));
+  if (!headerLine) return null;
+  const headerTokens = headerLine
+    .split(/\s+/)
+    .map((s) => s.replace(/^"|"$/g, '').toLowerCase());
+  const paIdx = headerTokens.indexOf('pa');
+  const lrIdx = headerTokens.indexOf('logr25');
   if (paIdx === -1 || lrIdx === -1) return null;
-  for (let i = 1; i < lines.length; i++) {
-    const cells = lines[i]!.split(',');
+
+  // Data line: tab-separated, no leading `#`, contains the actual values.
+  // We look for the first such line; HyperLEDA emits at most one match per
+  // pgc since pgc is a unique key in `meandata`.
+  for (const line of lines) {
+    if (line.startsWith('#') || line.startsWith('$') || !line.includes('\t')) {
+      continue;
+    }
+    const cells = line.split('\t');
     const pa = parseFloat(cells[paIdx] ?? '');
     const lr = parseFloat(cells[lrIdx] ?? '');
     if (Number.isFinite(pa) && Number.isFinite(lr)) return { pa, logr25: lr };
+    // If a data row exists but PA/logr25 are blank, that's a real "queried,
+    // but no shape measurement" outcome — return null so the caller writes
+    // an empty cache row that still skips on resume.
+    return null;
   }
   return null;
 }
