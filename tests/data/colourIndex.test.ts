@@ -5,6 +5,9 @@ import { Source } from '../../src/data/sources';
 describe('pickColourIndex', () => {
   it('SDSS uses u−g and SDSS K coefficient', () => {
     // u=18.5, g=17.5 → u−g = 1.0 → normalised to (1.0-0.5)/(2.0-0.5)*2 ≈ 0.667
+    // kPerZ passes through from the SPEC table unchanged — see the docstring
+    // on ColourIndexSpec for why we use the empirical normalised-units
+    // value rather than rescaling the literature mag/z value.
     const result = pickColourIndex(Source.SDSS, 18.5, 17.5, NaN, NaN, NaN);
     expect(result).not.toBeNull();
     expect(result!.colourIndex).toBeCloseTo(0.667, 2);

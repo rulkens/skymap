@@ -22,7 +22,27 @@ export type ColourIndexSpec = {
   /** Natural range of (magA − magB) across galaxy types for this colour pair. */
   rangeMin: number;
   rangeMax: number;
-  /** K-correction coefficient applied per unit redshift in the shader. */
+  /**
+   * K-correction coefficient applied per unit redshift, in **normalised
+   * ramp-position units**.
+   *
+   * Empirically tuned rather than derived from the literature value: the
+   * literal mag/z values from the K-correction literature (3.0 for u−g
+   * etc.) over-correct in the normalised 0..2 ramp space because the
+   * normalisation expands the dynamic range (the OLD raw-u−g shader
+   * mostly used the t=[0.3, 1.3] middle of the ramp; the new normalised
+   * shader uses the full t=[0, 2] range).  Mathematically rescaling by
+   * `2 / (rangeMax − rangeMin)` over-pulls — distant galaxies clamp to
+   * the blue end.  Leaving the value unscaled under-corrects in some
+   * areas but never produces the catastrophic blue-clamp artefact, so
+   * we keep the SPEC value as-is and let the shader apply it directly.
+   *
+   * If you tweak this for visual taste:
+   *   - higher = more aggressive de-reddening of distant galaxies (risk
+   *     of blue-clamp at the high-z end)
+   *   - lower  = distant galaxies trend redder (the old undercorrected
+   *     look)
+   */
   kPerZ: number;
 };
 
@@ -52,11 +72,20 @@ export function pickColourIndex(
   const b = slotMap[spec.slotB];
   if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
 
-  // Normalise to 0..2 to match the shader's existing ramp() input range.
-  // Clamp at both ends so outlier galaxies don't fall off the ramp colour.
+  // ── Normalise raw colour to the 0..2 ramp range ─────────────────────────
+  //
+  // The WGSL ramp expects its input in [0, 2].  We pre-bake the linear
+  // remap here so the shader doesn't need to know any per-source range
+  // numbers — it just reads a single f32 and indexes the ramp.
+  //
+  // kPerZ is passed through unchanged: it's already specified in
+  // normalised ramp-position units (see the SPEC type's docstring for
+  // why the literature mag/z values aren't used directly).
   const raw = a - b;
-  const normalised = ((raw - spec.rangeMin) / (spec.rangeMax - spec.rangeMin)) * 2.0;
-  const colourIndex = Math.max(0, Math.min(2, normalised));
+  const colourIndex = Math.max(
+    0,
+    Math.min(2, ((raw - spec.rangeMin) / (spec.rangeMax - spec.rangeMin)) * 2.0),
+  );
   return { colourIndex, kPerZ: spec.kPerZ };
 }
 
