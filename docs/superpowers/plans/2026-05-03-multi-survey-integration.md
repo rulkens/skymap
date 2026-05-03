@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Render galaxies from four redshift surveys (SDSS, 2MRS, 2MPZ, 6dFGS) in one merged dataset, with deduplication across overlap, auto-LOD that picks which surveys are visible based on camera distance, and a UI panel for manual per-survey toggles.
+**Goal:** Render galaxies from four redshift surveys (SDSS, 2MRS, 2MPZ, 6dFGS) with parallel per-source loading and progressive rendering as each survey arrives, deduplication across overlap, auto-LOD that picks which surveys are visible based on camera distance, and a UI panel for manual per-survey toggles.
 
-**Architecture:** A Node CLI cross-matches catalogues from VizieR + SDSS SkyServer into one master `.bin` (format v3, adds a 1-byte `sourceID` per point in the existing v2 padding). The renderer adds a per-instance `sourceID` vertex attribute and a `visibleSourceMask: u32` uniform; the WGSL vertex stage emits a degenerate triangle for points whose source bit is unset, so toggling is a single uniform write — no GPU re-upload. React state owns the source mask; an auto-LOD heuristic in the engine recomputes it from camera distance unless the user has overridden it.
+**Architecture:** A Node CLI cross-matches catalogues from VizieR + SDSS SkyServer and writes **four separate `.bin` files** (one per source), all in the existing v2 format. The runtime fetches all four in parallel and uploads each to its own GPU vertex buffer (`Map<Source, GPUBuffer>`). The renderer issues one draw call per source; toggling a source skips its entire draw call — no shader change needed, no per-vertex filtering. React state owns the source mask; an auto-LOD heuristic in the engine recomputes it from camera distance unless the user has overridden it. The binary format does NOT change — each file is standard v2.
 
-**Tech Stack:** TypeScript 5, Node 20+, Vite 5, React 19, WebGPU, vitest, gl-matrix.
+**Tech Stack:** TypeScript 6, Node 20+, Vite 8, React 19, plugin-react 6, WebGPU, Vitest 4, gl-matrix.
 
 **Source priority** (best record wins on duplicates): SDSS spec > 2MRS spec > 6dFGS spec > 2MPZ photo.
 
@@ -20,14 +20,21 @@ Files this plan creates or modifies:
 src/
   data/
     sources.ts                  CREATE  Source enum + per-survey metadata + URL builders
-    pointCloudFormat.ts         MODIFY  bump to v3 (add sourceID byte at offset 40)
+    pointCloudFormat.ts         (no change — format stays at v2)
     physics.ts                  MODIFY  add DSS image-cutout URL fallback
-    synthetic.ts                MODIFY  emit sourceIDs (all = Synthetic)
-  types.ts                      MODIFY  add `sourceIDs: Uint8Array` to PointCloud
-  engine.ts                     MODIFY  setSourceMask, auto-LOD heuristic, lodMode
+    synthetic.ts                (no change — plain v2 PointCloud, no sourceIDs field)
+  types.ts                      (no change — PointCloud stays as-is, no sourceIDs field)
+  engine.ts                     MODIFY  parallel loader (Promise.allSettled per source),
+                                        Map<Source, PointCloud>, fires onCloudReady per arrival;
+                                        setSourceMask drives renderer per-source skip;
+                                        auto-LOD heuristic unchanged
   gpu/
-    pointRenderer.ts            MODIFY  add sourceID vertex attribute + visibleSourceMask uniform
-    shaders/points.wgsl         MODIFY  source-mask filter in vertex stage
+    pointRenderer.ts            MODIFY  becomes multi-cloud — Map<Source, GPUBuffer>,
+                                        one draw call per source, mask gates skipping;
+                                        pick draws also iterate, with instanceIdOffset
+                                        uniform per draw to keep IDs globally unique
+    shaders/points.wgsl         MODIFY  drop source-mask filter from vertex stage;
+                                        add instanceIdOffset: u32 uniform used by pick fsPick
   components/
     InfoCard.tsx                MODIFY  source badge, per-source link logic, DSS image fallback
     SettingsPanel.tsx           CREATE  per-source toggles + auto-LOD master
@@ -41,18 +48,18 @@ tools/
     twoMrs.ts                   CREATE  parse 2MRS ASCII catalogue
     twoMpz.ts                   CREATE  parse 2MPZ ASCII catalogue
     sixDfgs.ts                  CREATE  parse 6dFGS ASCII catalogue
-  buildMasterBin.ts             CREATE  CLI: cross-match + merge + write master.bin
+  buildAllBins.ts               CREATE  CLI: cross-match + write four .bin files (one per source)
   csvToBin.ts                   MODIFY  thin shim around parsers/sdssCsv.ts
 
 tests/
   sources.test.ts               CREATE  enum + URL builder tests
-  pointCloudFormat.test.ts      MODIFY  v3 round-trip, sourceID preservation
+  pointCloudFormat.test.ts      (no change — format isn't changing)
   parsers/
     twoMrs.test.ts              CREATE  fixture-based parse test
     twoMpz.test.ts              CREATE  fixture-based parse test
     sixDfgs.test.ts             CREATE  fixture-based parse test
   crossMatch.test.ts            CREATE  dedup priority + position+z matching
-  autoLod.test.ts               CREATE  distance → mask heuristic
+  autoLod.test.ts               CREATE  distance → mask heuristic (extend for multi-cloud)
 
 README.md                       MODIFY  download instructions for all 4 surveys
 ```
@@ -158,12 +165,13 @@ Expected: FAIL — module `../src/data/sources` not found.
 /**
  * Source survey enum and per-survey metadata.
  *
- * Each point in our master `.bin` carries a `sourceID: u8` identifying which
- * sky survey produced it. The numeric values below MUST stay stable — they
- * are written into binary files and into the GPU vertex buffer.
+ * Each `.bin` file on disk is a standard v2 binary for a single source.
+ * The engine tags each loaded PointCloud with its Source at registration time.
+ * The numeric values below MUST stay stable — they are stored in the
+ * `Map<Source, GPUBuffer>` key and used in the visibleSourceMask bitmask.
  *
- * The `visibleSourceMask: u32` we pass to the shader uses bit position N for
- * source N, so e.g. `mask & (1 << Source.SDSS)` selects SDSS points.
+ * The `visibleSourceMask: u32` drives per-source draw-call skipping:
+ * bit N set means source N's buffer is drawn.
  */
 export enum Source {
   Synthetic = 0,
@@ -248,190 +256,113 @@ git commit -m "feat: add Source enum + per-survey metadata + mask helpers"
 
 ---
 
-## Task 2: PointCloud v3 binary format
+## Task 2 — removed in revision
+
+> Task 2 removed in revision: per-source files mean the format stays at v2 — each survey's output is a standard v2 binary, no per-point sourceID byte needed.
+
+---
+
+## Task 3 — removed in revision
+
+> Task 3 removed in revision: with multi-cloud loading, the engine tags clouds with their `Source` at registration time. The synthetic generator's output is plain v2 PointCloud.
+
+---
+
+## Task 4: Multi-cloud renderer architecture
 
 **Files:**
 
-- Modify: `src/types.ts`
-- Modify: `src/data/pointCloudFormat.ts`
-- Modify: `tests/pointCloudFormat.test.ts`
+- Modify: `src/gpu/pointRenderer.ts`
+- Modify: `src/gpu/shaders/points.wgsl` (only for pick offset)
 
-The v3 format reuses v2's 48-byte per-point record, repurposing the first byte of the existing 8-byte trailing padding as `sourceID`. The remaining 7 bytes stay as zeroed reserved padding.
-
-- [ ] **Step 1: Update `src/types.ts` to add `sourceIDs`**
-
-Replace the existing `PointCloud` definition with:
+The PointRenderer now manages multiple vertex buffers, one per Source. Public API:
 
 ```ts
-export type PointCloud = {
-  count: number;
-  objIDs: BigUint64Array;
-  positions: Float32Array;
-  magU: Float32Array;
-  magG: Float32Array;
-  magR: Float32Array;
-  magI: Float32Array;
-  magZ: Float32Array;
-  /** Source survey ID per point — values are members of the `Source` enum. */
-  sourceIDs: Uint8Array;
-};
+class PointRenderer {
+  /** Upload a cloud, replacing any existing buffer for the given source. */
+  upload(source: Source, cloud: PointCloud): void;
+
+  /** Remove a source's buffer (e.g. on hot-swap). */
+  unload(source: Source): void;
+
+  /** Draw all loaded sources whose bit is set in `visibleSourceMask`. */
+  draw(
+    pass: GPURenderPassEncoder,
+    viewProj: mat4,
+    viewportPx: [number, number],
+    pointSizePx: number,
+    brightness: number,
+    selectedIndex: number,
+    visibleSourceMask: number,
+  ): void;
+
+  /** Total instance count across all loaded sources, for status display. */
+  totalCount(): number;
+
+  /** Iterate loaded sources with their instance offsets — for the pick path. */
+  loadedSources(): Iterable<{
+    source: Source;
+    vertexBuffer: GPUBuffer;
+    count: number;
+    instanceIdOffset: number;
+  }>;
+}
 ```
 
-- [ ] **Step 2: Update tests in `tests/pointCloudFormat.test.ts`**
+Implementation:
 
-Replace the existing tests with:
+- Internal: `Map<Source, { buffer: GPUBuffer; count: number; instanceIdOffset: number }>`.
+- `instanceIdOffset` is recomputed when the map changes — sources are stored in enum order, each gets `sum(prior counts)` as its offset.
+- `draw()` iterates sources in enum order, skips entries whose source bit isn't set in `visibleSourceMask`, issues one instanced draw per remaining source. Each draw writes the per-source `instanceIdOffset` into the uniform buffer before drawing (use `device.queue.writeBuffer` for the 4-byte slot, _not_ the whole uniform — cheaper than re-uploading viewProj per draw).
+
+For the WGSL shader: add `instanceIdOffset: u32` to the Uniforms struct (4 more bytes; adjust trailing padding so total stays 16-byte aligned). The visual `fs` doesn't use it. The pick `fsPick` writes `instanceIdx + 1u + u.instanceIdOffset` instead of `instanceIdx + 1u`.
+
+- [ ] **Step 1: Write the failing test for `totalCount()`**
 
 ```ts
+// tests/pointRenderer.test.ts (new)
 import { describe, it, expect } from 'vitest';
-import { encodePointCloud, decodePointCloud } from '../src/data/pointCloudFormat';
-import { Source } from '../src/data/sources';
-import type { PointCloud } from '../src/types';
+// ... import PointRenderer, Source, makeMinimalCloud helper ...
 
-function makeCloud(): PointCloud {
-  return {
-    count: 3,
-    objIDs: new BigUint64Array([1234567890123456789n, 0n, 42n]),
-    positions: new Float32Array([1, 2, 3, 4, 5, 6, 7, 8, 9]),
-    magU: new Float32Array([NaN, NaN, 19.2]),
-    magG: new Float32Array([18.5, 16.0, 18.5]),
-    magR: new Float32Array([17.9, 15.5, 17.9]),
-    magI: new Float32Array([17.6, 15.2, 17.6]),
-    magZ: new Float32Array([NaN, NaN, 17.4]),
-    sourceIDs: new Uint8Array([Source.SDSS, Source.TwoMPZ, Source.SDSS]),
-  };
-}
-
-describe('point cloud binary format v3', () => {
-  it('round-trips a cloud preserving sourceID per point', () => {
-    const original = makeCloud();
-    const buf = encodePointCloud(original);
-    const decoded = decodePointCloud(buf);
-    expect(decoded.count).toBe(3);
-    expect(Array.from(decoded.sourceIDs)).toEqual([Source.SDSS, Source.TwoMPZ, Source.SDSS]);
-    expect(Array.from(decoded.objIDs).map((b) => b.toString())).toEqual([
-      '1234567890123456789',
-      '0',
-      '42',
-    ]);
-    expect(Array.from(decoded.positions)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    // Float32 precision check on the well-rounded values:
-    expect(decoded.magG[0]).toBeCloseTo(18.5, 5);
-    // NaN preservation:
-    expect(Number.isNaN(decoded.magU[0]!)).toBe(true);
-    expect(Number.isNaN(decoded.magZ[1]!)).toBe(true);
+describe('PointRenderer.totalCount', () => {
+  it('returns 0 with no buffers', () => {
+    /* ... */
   });
-
-  it('rejects v2 files with a clear error', () => {
-    const buf = encodePointCloud(makeCloud());
-    new DataView(buf).setUint32(4, 2, true); // pretend it's v2
-    expect(() => decodePointCloud(buf)).toThrow(/version/);
+  it('sums counts across all loaded sources', () => {
+    /* ... */
   });
-
-  it('rejects wrong magic', () => {
-    const buf = new ArrayBuffer(16);
-    expect(() => decodePointCloud(buf)).toThrow(/magic/);
-  });
-
-  it('encoded byte length stays at header + 48 × count', () => {
-    expect(encodePointCloud(makeCloud()).byteLength).toBe(16 + 3 * 48);
+  it('updates after unload', () => {
+    /* ... */
   });
 });
 ```
 
-- [ ] **Step 3: Run tests to verify failure**
+Run: `npm test -- pointRenderer`
+Expected: FAIL.
 
-Run: `npm test -- pointCloudFormat`
-Expected: FAIL — encoder/decoder don't know about `sourceIDs`.
+- [ ] **Step 2: Implement `Map<Source, ...>` internals in `src/gpu/pointRenderer.ts`**
 
-- [ ] **Step 4: Update `src/data/pointCloudFormat.ts`**
-
-Bump version constant to `3`, write `sourceID` at byte offset 40 of each record, read it back. Keep the 7-byte reserved padding zeroed.
-
-In the encoder loop add:
+Replace the single `vertexBuffer / count` fields with:
 
 ```ts
-// Source ID lives in the first byte of what was v2's padding region.
-// The remaining 7 bytes stay zero (the ArrayBuffer is zero-initialised).
-new Uint8Array(buf, byteBase + 40, 1)[0] = cloud.sourceIDs[i]!;
+private readonly clouds = new Map<Source, { buffer: GPUBuffer; count: number; instanceIdOffset: number }>();
 ```
 
-In the decoder, allocate `sourceIDs = new Uint8Array(count)` and read each byte:
+Implement `upload`, `unload`, `totalCount`, `loadedSources`. After any mutation recompute `instanceIdOffset` for all entries by iterating in `Source` enum order.
 
-```ts
-sourceIDs[i] = new Uint8Array(buf, byteBase + 40, 1)[0]!;
-```
+- [ ] **Step 3: Update `draw()` for multi-cloud**
 
-Update the `VERSION` constant from 2 to 3 and update the v2 rejection message to mention v3:
+The method iterates `this.clouds` in enum order. For each entry:
 
-```ts
-throw new Error(
-  `unsupported version: ${version} — please regenerate the .bin via "npm run build-master" or "npm run csv-to-bin"`,
-);
-```
+1. Check `(visibleSourceMask >> source) & 1` — skip if zero.
+2. Write `entry.instanceIdOffset` to the uniform slot via `device.queue.writeBuffer`.
+3. Set the vertex buffer and issue `pass.drawIndexed(6, entry.count, 0, 0, 0)` (or `draw` depending on current quad path).
 
-Update the file's top-of-file comment to describe v3 layout (sourceID at offset 40, 7 bytes reserved).
+- [ ] **Step 4: Update `src/gpu/shaders/points.wgsl`**
 
-- [ ] **Step 5: Run tests to verify they pass**
+Remove the source-mask filter from the vertex stage entirely (that logic moves to the draw-call level).
 
-Run: `npm test -- pointCloudFormat`
-Expected: PASS — all 4 tests green.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add src/types.ts src/data/pointCloudFormat.ts tests/pointCloudFormat.test.ts
-git commit -m "feat: bump .bin format to v3 (per-point sourceID byte)"
-```
-
----
-
-## Task 3: Synthetic generator emits sourceIDs
-
-**Files:**
-
-- Modify: `src/data/synthetic.ts`
-
-- [ ] **Step 1: Update `generateSyntheticCloud` to populate `sourceIDs`**
-
-Add the import: `import { Source } from './sources';`
-
-Inside `generateSyntheticCloud`, allocate `sourceIDs = new Uint8Array(count).fill(Source.Synthetic)` and include it in the returned object.
-
-Document with a comment that synthetic points are tagged Source.Synthetic so they can be toggled separately from real surveys in the UI, and so the auto-LOD heuristic can ignore them in distance calculations.
-
-- [ ] **Step 2: Run typecheck**
-
-Run: `npm run typecheck`
-Expected: PASS — the synthetic generator now matches the v3 PointCloud shape.
-
-- [ ] **Step 3: Run tests**
-
-Run: `npm test`
-Expected: PASS — all existing tests still green.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add src/data/synthetic.ts
-git commit -m "feat: synthetic generator tags points with Source.Synthetic"
-```
-
----
-
-## Task 4: GPU per-instance sourceID + visibleSourceMask uniform
-
-**Files:**
-
-- Modify: `src/gpu/shaders/points.wgsl`
-- Modify: `src/gpu/pointRenderer.ts`
-
-The vertex buffer grows from 5 floats to 6 floats per instance — the 6th carries `sourceID` as a `f32` we bit-cast to `u32` in the shader. (Adding a separate vertex buffer for one byte per instance is simpler in the abstract but more complex in the WebGPU API; one extended buffer keeps the upload code linear.)
-
-The `Uniforms` struct grows by 4 bytes for `visibleSourceMask: u32`. Pad to 16-byte boundary as before.
-
-- [ ] **Step 1: Modify `src/gpu/shaders/points.wgsl`**
-
-Add to `Uniforms`:
+Add `instanceIdOffset: u32` to the Uniforms struct with appropriate padding:
 
 ```wgsl
 struct Uniforms {
@@ -440,82 +371,16 @@ struct Uniforms {
   pointSizePx: f32,
   brightness: f32,
   selectedIndex: u32,
-  /** Bitmask of visible Source enum values. Bit N visible iff (1u << N). */
-  visibleSourceMask: u32,
-  _pad0: u32, _pad1: u32, _pad2: u32, // align to 16-byte boundary
+  instanceIdOffset: u32,
+  _pad0: u32, _pad1: u32, // align to 16-byte boundary
 };
 ```
 
-Add to `PerVertex`:
+In `fsPick`, replace `instanceIdx + 1u` with `instanceIdx + 1u + u.instanceIdOffset`.
 
-```wgsl
-struct PerVertex {
-  @location(0) position: vec3<f32>,
-  @location(1) magnitude: f32,
-  @location(2) colorIndex: f32,
-  @location(3) sourceIDFloat: f32,
-};
-```
+- [ ] **Step 5: Update `src/engine.ts` to pass the mask through**
 
-In `vs`, very early — before any other math:
-
-```wgsl
-let sourceID = u32(p.sourceIDFloat);
-let sourceBit = 1u << sourceID;
-if ((u.visibleSourceMask & sourceBit) == 0u) {
-  // This source is currently hidden. Emit a degenerate vertex outside the
-  // canonical clip-space cube so the GPU clips the whole triangle without
-  // drawing anything. Cheaper than a runtime branch for every fragment.
-  var out: VSOut;
-  out.clip = vec4<f32>(0.0, 0.0, 2.0, 1.0); // z=2 → clipped past the far plane
-  out.uv = vec2<f32>(0.0);
-  out.tint = vec3<f32>(0.0);
-  out.intensity = 0.0;
-  out.instanceIdx = ii;
-  out.selected = 0u;
-  return out;
-}
-```
-
-Update the existing struct/uniform offset comment block to reflect the new size (was 96 bytes, now 112 with the visibleSourceMask + padding).
-
-- [ ] **Step 2: Modify `src/gpu/pointRenderer.ts`**
-
-Bump `FLOATS_PER_POINT` from 5 to 6 and `POINT_STRIDE` to `24`.
-
-Bump `UNIFORM_BYTES` from 96 to 112 (add 4 bytes for the mask + 12 padding to next 16-byte boundary).
-
-In the vertex buffer attribute layout, append a 4th attribute:
-
-```ts
-{ shaderLocation: 3, offset: 20, format: 'float32' }, // sourceID (as float)
-```
-
-In `upload`, when packing the interleaved Float32Array, store `cloud.sourceIDs[i]` as the 6th float per record:
-
-```ts
-interleaved[o + 5] = cloud.sourceIDs[i]!; // u8 fits in float32 exactly
-```
-
-Update the `draw` signature to accept the mask:
-
-```ts
-draw(
-  pass: GPURenderPassEncoder,
-  viewProj: mat4,
-  viewportPx: [number, number],
-  pointSizePx: number,
-  brightness: number,
-  selectedIndex: number,
-  visibleSourceMask: number,
-): void
-```
-
-Write the mask into the uniform buffer at the appropriate offset (use a `Uint32Array` view over the same buffer for the integer fields). Document why we use a typed-view trick (Float32Array can't hold a u32 exactly above 2^24).
-
-- [ ] **Step 3: Update `src/engine.ts` to pass the mask through**
-
-Find the `renderer.draw(...)` call. Replace with:
+Find the `renderer.draw(...)` call and pass `visibleSourceMask`:
 
 ```ts
 renderer.draw(
@@ -525,26 +390,26 @@ renderer.draw(
   2.5,
   1.0,
   selectedIndex !== null ? selectedIndex : 0xffffffff >>> 0,
-  visibleSourceMask, // new — sourced from engine state, defaults to ALL_VISIBLE_MASK
+  visibleSourceMask, // sourced from engine state, defaults to ALL_VISIBLE_MASK
 );
 ```
 
-Add a state variable in the engine: `let visibleSourceMask = ALL_VISIBLE_MASK;` (import `ALL_VISIBLE_MASK` from `./data/sources`).
+Add state: `let visibleSourceMask = ALL_VISIBLE_MASK;` (import `ALL_VISIBLE_MASK` from `./data/sources`).
 
-- [ ] **Step 4: Run typecheck and build**
+- [ ] **Step 6: Run typecheck and build**
 
 Run: `npm run typecheck && npm run build`
 Expected: PASS.
 
-- [ ] **Step 5: Visual verification (page reload)**
+- [ ] **Step 7: Visual verification (page reload)**
 
-The dev server should hot-reload. The user reloads `http://localhost:5173/` and confirms the cloud still renders normally — the new mask defaults to `ALL_VISIBLE_MASK` so behaviour is unchanged.
+Dev server hot-reloads. User confirms cloud renders normally — mask defaults to `ALL_VISIBLE_MASK`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/gpu/shaders/points.wgsl src/gpu/pointRenderer.ts src/engine.ts
-git commit -m "feat: per-instance sourceID attribute + visibleSourceMask uniform"
+git add src/gpu/shaders/points.wgsl src/gpu/pointRenderer.ts src/engine.ts tests/pointRenderer.test.ts
+git commit -m "feat: multi-cloud renderer — Map<Source, GPUBuffer> + per-source draw calls"
 ```
 
 ---
@@ -657,13 +522,52 @@ git commit -m "feat: add autoLodMask heuristic (distance → visible source mask
 
 ---
 
-## Task 6: Engine LOD mode + setSourceMask API
+## Task 6: Engine multi-cloud orchestration + LOD
 
 **Files:**
 
 - Modify: `src/engine.ts`
+- Modify: `tests/autoLod.test.ts` (extend for multi-cloud)
 
-The engine grows a `lodMode: 'auto' | 'manual'` state. In auto, the per-frame logic computes a fresh mask via `autoLodMask(cam.distance)` and overwrites `visibleSourceMask`. In manual, an external setter (called from React) overrides; the auto computation is skipped.
+The engine fires N parallel fetches when starting up. As each resolves, it tags the cloud with the source it came from and uploads to the renderer. The status bar reports loading progress (e.g. "loaded 2/4 surveys").
+
+```ts
+type CloudFile = { source: Source; url: string };
+
+const FILES: CloudFile[] = [
+  { source: Source.SDSS, url: '/data/sdss.bin' },
+  { source: Source.TwoMRS, url: '/data/2mrs.bin' },
+  { source: Source.TwoMPZ, url: '/data/2mpz.bin' },
+  { source: Source.SixDFGS, url: '/data/6dfgs.bin' },
+];
+
+async function loadAll(): Promise<void> {
+  const results = await Promise.allSettled(
+    FILES.map(({ source, url }) =>
+      fetch(url)
+        .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(`HTTP ${r.status}`))))
+        .then((buf) => ({ source, cloud: decodePointCloud(buf) })),
+    ),
+  );
+  for (const r of results) {
+    if (r.status === 'fulfilled') {
+      renderer.upload(r.value.source, r.value.cloud);
+      clouds.set(r.value.source, r.value.cloud);
+      cb.onCloudReady?.(r.value.source, r.value.cloud.count);
+    } else {
+      console.warn('survey load failed', r.reason);
+    }
+  }
+}
+```
+
+If ALL fetches fail, fall back to synthetic (`Source.Synthetic`).
+
+Add a new callback `onCloudReady?: (source: Source, count: number) => void` to `EngineCallbacks` so the React UI can show progressive load status.
+
+The `setSourceMask` and `setLodMode` setters stay the same as in the original plan. The auto-LOD heuristic in `autoLodMask(distanceMpc)` stays unchanged. The mask is now interpreted by the renderer's `draw()` as "skip these sources' buffers" — no shader change.
+
+For multi-cloud picking: the engine reads back a global instance ID from the pick texture. It then walks the renderer's `loadedSources()` to map global ID → (source, local index). Update `buildPointInfo` to take a `(source, localIndex)` pair instead of a single global index.
 
 - [ ] **Step 1: Extend `EngineCallbacks` and `EngineHandle` types**
 
@@ -678,9 +582,11 @@ export type EngineCallbacks = {
   onSelectChange: (info: PointInfo | null) => void;
   onScaleChange: (info: ScaleInfo) => void;
   /** Fires when the visible-source mask changes (auto-LOD or user toggle). */
-  onSourceMaskChange: (mask: number) => void;
+  onSourceMaskChange?: (mask: number) => void;
   /** Fires when the LOD mode flips between 'auto' and 'manual'. */
-  onLodModeChange: (mode: LodMode) => void;
+  onLodModeChange?: (mode: LodMode) => void;
+  /** Fires each time a survey file finishes loading — enables progressive UI. */
+  onCloudReady?: (source: Source, count: number) => void;
 };
 
 export type EngineHandle = {
@@ -694,87 +600,80 @@ export type EngineHandle = {
 };
 ```
 
-- [ ] **Step 2: Implement state + setters inside `createEngine`**
+- [ ] **Step 2: Implement parallel loader + per-arrival upload in `createEngine`**
 
-Add closure variables:
+Replace the single `fetch('/data/sdss.bin')` call with `loadAll()` as shown above. Add closure state:
 
 ```ts
+const clouds = new Map<Source, PointCloud>();
 let visibleSourceMask = ALL_VISIBLE_MASK;
 let lodMode: LodMode = 'auto';
-
-function emitSourceMask(): void {
-  cb.onSourceMaskChange(visibleSourceMask);
-}
-
-function emitLodMode(): void {
-  cb.onLodModeChange(lodMode);
-}
 ```
+
+After any cloud arrives, call `renderer.upload(source, cloud)` so the next render frame includes it.
+
+If `clouds.size === 0` after all settle, fall back to `generateSyntheticCloud()` tagged as `Source.Synthetic`.
+
+- [ ] **Step 3: Auto-LOD render loop integration**
 
 Inside the render loop, before the `renderer.draw(...)` call:
 
 ```ts
 if (lodMode === 'auto') {
-  // Use camera distance to the target (orbit camera's `distance` field) as the
-  // LOD trigger. cam.position - cam.target would also work; distance is simpler.
   const m = autoLodMask(cam.distance);
   if (m !== visibleSourceMask) {
     visibleSourceMask = m;
-    emitSourceMask();
+    cb.onSourceMaskChange?.(visibleSourceMask);
   }
 }
 ```
 
-Then expose the setters in the returned handle:
+Expose setters in the returned handle:
 
 ```ts
-return {
-  clearSelection() {
-    /* ... existing ... */
-  },
-  destroy() {
-    /* ... existing ... */
-  },
-  setLodMode(mode) {
-    if (mode === lodMode) return;
-    lodMode = mode;
-    emitLodMode();
-  },
-  setSourceMask(mask) {
-    visibleSourceMask = mask;
-    if (lodMode !== 'manual') {
-      lodMode = 'manual';
-      emitLodMode();
-    }
-    emitSourceMask();
-  },
-};
+setLodMode(mode) {
+  if (mode === lodMode) return;
+  lodMode = mode;
+  cb.onLodModeChange?.(lodMode);
+},
+setSourceMask(mask) {
+  visibleSourceMask = mask;
+  if (lodMode !== 'manual') {
+    lodMode = 'manual';
+    cb.onLodModeChange?.(lodMode);
+  }
+  cb.onSourceMaskChange?.(visibleSourceMask);
+},
 ```
 
 Emit initial values once after engine construction so React's first render gets them.
 
-- [ ] **Step 3: Run typecheck**
+- [ ] **Step 4: Update pick path for global → (source, local) mapping**
 
-Run: `npm run typecheck`
-Expected: FAIL — `App.tsx` doesn't pass the new callbacks. We fix that in Task 8 — for now allow it to fail intentionally and continue.
-
-Actually: provide default no-op callbacks at the engine entry to keep typecheck green during this transitional task. Update `EngineCallbacks` so the new fields are optional:
+After the pick readback returns a global ID `g` (1-based, 0 = miss):
 
 ```ts
-onSourceMaskChange?: (mask: number) => void;
-onLodModeChange?: (mode: LodMode) => void;
+let remaining = g - 1;
+for (const { source, count } of renderer.loadedSources()) {
+  if (remaining < count) {
+    const info = buildPointInfo(clouds.get(source)!, source, remaining);
+    // ... dispatch to hover/select callbacks
+    break;
+  }
+  remaining -= count;
+}
 ```
 
-And in the emit functions, guard with `cb.onSourceMaskChange?.(...)`. Now typecheck stays green.
+- [ ] **Step 5: Run typecheck**
 
 Run: `npm run typecheck`
-Expected: PASS.
+Expected: PASS — `onCloudReady` is optional, no callers break.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/engine.ts
-git commit -m "feat: engine LOD mode (auto/manual) + setSourceMask API"
+git add src/engine.ts tests/autoLod.test.ts
+git commit -m "feat: parallel multi-cloud loader + engine LOD mode + setSourceMask API"
 ```
 
 ---
@@ -1001,7 +900,7 @@ git commit -m "feat: wire SettingsPanel to engine source-mask + LOD mode"
 - Create: `tools/parsers/sdssCsv.ts`
 - Modify: `tools/csvToBin.ts`
 
-We extract the per-row parsing logic from `csvToBin.ts` into a reusable module so the new master-bin tool (Task 13) can share it with the other parsers.
+We extract the per-row parsing logic from `csvToBin.ts` into a reusable module so the new `buildAllBins` tool (Task 13) can share it with the other parsers.
 
 - [ ] **Step 1: Create `tools/parsers/common.ts`**
 
@@ -1011,8 +910,8 @@ We extract the per-row parsing logic from `csvToBin.ts` into a reusable module s
  * `ParsedRecord` — the canonical pre-merge representation.
  *
  * Fields not provided by a given survey are NaN (numeric) or 0n (bigint).
- * The merge step (buildMasterBin.ts) decides which records make it into the
- * final master file based on source priority and cross-match dedup.
+ * The merge step (buildAllBins.ts) decides which records make it into each
+ * per-source output file based on cross-match dedup and source priority.
  */
 
 import { Source } from '../../src/data/sources';
@@ -1062,11 +961,11 @@ The CLI keeps its current usage. Internally:
 ```ts
 import { parseSdssCsv } from './parsers/sdssCsv';
 import { encodePointCloud } from '../src/data/pointCloudFormat';
-import { Source } from '../src/data/sources';
 
 const { records, skipped } = parseSdssCsv(rawText);
 
-// Build PointCloud from records. Source for every row is SDSS.
+// Build PointCloud from records. Format is v2 — no per-point sourceID field.
+// The engine knows this is SDSS data from the filename/URL it loaded.
 const count = records.length;
 const cloud: PointCloud = {
   count,
@@ -1077,7 +976,6 @@ const cloud: PointCloud = {
   magR: new Float32Array(count),
   magI: new Float32Array(count),
   magZ: new Float32Array(count),
-  sourceIDs: new Uint8Array(count),
 };
 
 for (let i = 0; i < count; i++) {
@@ -1092,7 +990,6 @@ for (let i = 0; i < count; i++) {
   cloud.magR[i] = r.magR;
   cloud.magI[i] = r.magI;
   cloud.magZ[i] = r.magZ;
-  cloud.sourceIDs[i] = Source.SDSS;
 }
 ```
 
@@ -1562,13 +1459,13 @@ git commit -m "feat: add 6dFGS catalogue parser"
 
 ---
 
-## Task 13: Cross-match merger and master-bin builder
+## Task 13: Cross-match merger and per-source bin writer
 
 **Files:**
 
 - Create: `tests/crossMatch.test.ts`
-- Create: `tools/buildMasterBin.ts`
-- Modify: `package.json` (add `build-master` script)
+- Create: `tools/buildAllBins.ts`
+- Modify: `package.json` (add `build-all` script)
 
 Cross-match strategy:
 
@@ -1584,7 +1481,7 @@ Tasks 9–12 already produced `ParsedRecord[]` arrays; this task wires them toge
 ```ts
 // tests/crossMatch.test.ts
 import { describe, it, expect } from 'vitest';
-import { crossMatch } from '../tools/buildMasterBin';
+import { crossMatch } from '../tools/buildAllBins';
 import { Source } from '../src/data/sources';
 import type { ParsedRecord } from '../tools/parsers/common';
 
@@ -1652,22 +1549,24 @@ describe('crossMatch', () => {
 - [ ] **Step 2: Run test to verify failure**
 
 Run: `npm test -- crossMatch`
-Expected: FAIL — `tools/buildMasterBin` not found.
+Expected: FAIL — `tools/buildAllBins` not found.
 
-- [ ] **Step 3: Implement `tools/buildMasterBin.ts`**
+- [ ] **Step 3: Implement `tools/buildAllBins.ts`**
 
 ```ts
 #!/usr/bin/env node
 /**
- * buildMasterBin — combine four parsed catalogues into one master `.bin`.
+ * buildAllBins — cross-match four catalogues and write one v2 .bin per source.
  *
  * Usage:
- *   npm run build-master -- \
+ *   npm run build-all -- \
  *     --sdss     path/to/sdss.csv \
  *     --twomrs   path/to/2mrs.txt \
  *     --twompz   path/to/2mpz.txt \
  *     --sixdfgs  path/to/6dfgs.txt \
- *     --out      public/data/master.bin
+ *     --out-dir  public/data
+ *
+ * Output files: sdss.bin, 2mrs.bin, 2mpz.bin, 6dfgs.bin (one per source).
  *
  * Cross-match dedup priority: SDSS > 2MRS > 6dFGS > 2MPZ.
  *
@@ -1785,7 +1684,7 @@ function recordsToCloud(records: ParsedRecord[]): PointCloud {
     magR: new Float32Array(count),
     magI: new Float32Array(count),
     magZ: new Float32Array(count),
-    sourceIDs: new Uint8Array(count),
+    // No sourceIDs — each file IS the source; the engine tags at load time.
   };
   for (let i = 0; i < count; i++) {
     const r = records[i]!;
@@ -1799,7 +1698,6 @@ function recordsToCloud(records: ParsedRecord[]): PointCloud {
     cloud.magR[i] = r.magR;
     cloud.magI[i] = r.magI;
     cloud.magZ[i] = r.magZ;
-    cloud.sourceIDs[i] = r.source;
   }
   return cloud;
 }
@@ -1820,9 +1718,9 @@ function readArgs(): Record<string, string> {
 }
 
 const args = readArgs();
-if (!args.out) {
+if (!args['out-dir']) {
   process.stderr.write(
-    'usage: build-master --sdss FILE --twomrs FILE --twompz FILE --sixdfgs FILE --out OUT\n',
+    'usage: build-all --sdss FILE --twomrs FILE --twompz FILE --sixdfgs FILE --out-dir DIR\n',
   );
   process.exit(1);
 }
@@ -1853,23 +1751,45 @@ process.stderr.write('cross-matching…\n');
 const merged = crossMatch({ sdss, twoMrs, sixDfgs, twoMpz });
 process.stderr.write(`  ${merged.length.toLocaleString()} records survived dedup\n`);
 
-const cloud = recordsToCloud(merged);
-const buf = encodePointCloud(cloud);
-writeFileSync(resolve(args.out), Buffer.from(buf));
-process.stderr.write(
-  `wrote ${cloud.count.toLocaleString()} points to ${args.out} (${buf.byteLength.toLocaleString()} bytes)\n`,
-);
+// Group by source and write one file per source.
+const bySource = new Map<Source, ParsedRecord[]>();
+for (const r of merged) {
+  let arr = bySource.get(r.source);
+  if (!arr) {
+    arr = [];
+    bySource.set(r.source, arr);
+  }
+  arr.push(r);
+}
+
+const OUT_NAMES: Partial<Record<Source, string>> = {
+  [Source.SDSS]: 'sdss.bin',
+  [Source.TwoMRS]: '2mrs.bin',
+  [Source.TwoMPZ]: '2mpz.bin',
+  [Source.SixDFGS]: '6dfgs.bin',
+};
+
+const outDir = args['out-dir']!;
+for (const [source, records] of bySource) {
+  const filename = OUT_NAMES[source];
+  if (!filename) continue;
+  const cloud = recordsToCloud(records);
+  const buf = encodePointCloud(cloud);
+  const outPath = resolve(outDir, filename);
+  writeFileSync(outPath, Buffer.from(buf));
+  process.stderr.write(
+    `wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength.toLocaleString()} bytes)\n`,
+  );
+}
 ```
 
 - [ ] **Step 4: Add npm script**
 
-In `package.json`, add to the `scripts` block:
+In `package.json`, add to the `scripts` block (alphabetically between `build` and `csv-to-bin`):
 
 ```json
-"build-master": "tsx tools/buildMasterBin.ts"
+"build-all": "tsx tools/buildAllBins.ts"
 ```
-
-Place it alphabetically between `build` and `csv-to-bin`.
 
 - [ ] **Step 5: Run test to verify pass**
 
@@ -1879,8 +1799,8 @@ Expected: PASS — 4 tests green.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add tools/buildMasterBin.ts tests/crossMatch.test.ts package.json
-git commit -m "feat: add cross-match merger + build-master CLI"
+git add tools/buildAllBins.ts tests/crossMatch.test.ts package.json
+git commit -m "feat: add cross-match merger + build-all CLI (four per-source .bin files)"
 ```
 
 ---
@@ -1960,13 +1880,14 @@ export type PointInfo = {
 };
 ```
 
-In `buildPointInfo` (or wherever the object is constructed):
+In `buildPointInfo` — note that `source` is now passed in by the engine (derived from which cloud the pick hit, not from a per-point byte):
 
 ```ts
 import { Source, sourceLabel as sourceLabelFn } from './data/sources';
 import { dssThumbnailUrl, sdssThumbnailUrl, sdssExplorerUrl } from './data/physics';
 
-const source = cloud.sourceIDs[index]! as Source;
+// `source` comes from the engine's global-ID → (source, localIndex) mapping
+// (see Task 6 pick path), not from a per-point field in the PointCloud.
 const isSdss = source === Source.SDSS;
 const explorerUrl =
   isSdss && cloud.objIDs[index]! > 0n ? sdssExplorerUrl(cloud.objIDs[index]!) : null;
@@ -2050,14 +1971,14 @@ git commit -m "feat: source attribution badge + DSS image fallback for non-SDSS 
 
 - Modify: `README.md`
 
-- [ ] **Step 1: Add a "Multi-survey master file" section**
+- [ ] **Step 1: Add a "Multi-survey download" section**
 
 Insert after the existing "Loading real SDSS data" section:
 
 ````markdown
 ## Loading multi-survey data
 
-To render galaxies from all four surveys (SDSS + 2MRS + 2MPZ + 6dFGS) in one cloud:
+To render galaxies from all four surveys (SDSS + 2MRS + 2MPZ + 6dFGS) loaded in parallel:
 
 ### 1. Download the catalogues
 
@@ -2070,37 +1991,35 @@ To render galaxies from all four surveys (SDSS + 2MRS + 2MPZ + 6dFGS) in one clo
 
 Save them anywhere — pass paths in the next step.
 
-### 2. Build the master file
+### 2. Build the per-source binary files
 
 ```bash
-npm run build-master -- \
+npm run build-all -- \
   --sdss     data/sdss-query.csv \
   --twomrs   data/2mrs.dat \
   --twompz   data/2mpz.dat \
   --sixdfgs  data/6dfgs.dat \
-  --out      public/data/master.bin
+  --out-dir  public/data
 ```
 
-The tool parses each file, cross-matches by SDSS objID and by sky position + redshift (5 arcsec / 1% Δz tolerance), and writes a single `master.bin` in v3 format. Per-row priority: SDSS spec > 2MRS spec > 6dFGS spec > 2MPZ photo.
+The tool parses each catalogue, cross-matches by SDSS objID and by sky position + redshift (5 arcsec / 1% Δz tolerance), then writes four separate files: `public/data/sdss.bin`, `2mrs.bin`, `2mpz.bin`, `6dfgs.bin`. Each file is standard v2 format. Per-row priority: SDSS spec > 2MRS spec > 6dFGS spec > 2MPZ photo.
 
 ### 3. Reload
 
-The browser will load `master.bin` if present (looking up `/data/master.bin` first, falling back to `/data/sdss.bin`, then synthetic). The settings panel bottom-left gives you per-survey checkboxes plus an Auto LOD toggle that picks visible surveys based on camera distance.
+The browser fetches all four files in parallel at startup. Surveys arrive progressively — the status bar reports "loaded N/4 surveys". The settings panel bottom-left gives you per-survey checkboxes plus an Auto LOD toggle that picks visible surveys based on camera distance.
 
-> Want only some surveys? Just omit the corresponding `--xxx` flag — the merger treats missing inputs as empty arrays.
+> Want only some surveys? Just omit the corresponding `--xxx` flag — the merger treats missing inputs as empty arrays and skips writing the empty output file.
 ````
 
 - [ ] **Step 2: Update the runtime loader description**
 
-Find the "Loading real SDSS data" section's note about the renderer fetching `/data/sdss.bin` and update it to mention the master.bin fallback chain. The engine should try `master.bin` first (this is a small change in `src/engine.ts`'s `loadCloud` — actually, this isn't yet implemented; defer to Task 16 if needed, but for v3-format files, both work since both are .bin format).
-
-For now, document that you can rename your `master.bin` to `sdss.bin` (or vice versa) — the loader's `/data/sdss.bin` fetch path is unchanged. A follow-up cleanup task can rename the loader path.
+Find the "Loading real SDSS data" section and update it to note that placing `sdss.bin` in `public/data/` is still sufficient for SDSS-only usage. The engine will attempt all four URLs in parallel; any that 404 are silently skipped (survey just won't appear until the file is present).
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add README.md
-git commit -m "docs: README — multi-survey master.bin workflow + VizieR sources"
+git commit -m "docs: README — multi-survey parallel download workflow + VizieR sources"
 ```
 
 ---
@@ -2108,17 +2027,17 @@ git commit -m "docs: README — multi-survey master.bin workflow + VizieR source
 ## Out of scope (deferred)
 
 - **FITS file support** — VizieR also offers FITS downloads. Easier to parse than ASCII for some catalogues but adds a dependency (e.g. `astrojs/fits` or hand-rolled). Stick with ASCII for v1.
-- **Spatial chunking / frustum culling** for ≥10M points. The four-survey merged cloud is ~1.5M points which the existing single-vertex-buffer renderer handles at 60 fps. The 100M-photometric-scale problem is its own plan.
+- **Spatial chunking / frustum culling** for ≥10M points. The four-survey combined point count is ~1.5M which the multi-buffer renderer handles at 60 fps. The 100M-photometric-scale problem is its own plan.
 - **Photometric mass / luminosity estimates** from the cross-band photometry. Adds a stellar-population-synthesis pipeline; defer.
 - **Galactic-plane region** highlighting. The 2MPZ/2MRS data sparsens through `|b| < 5°`; visualising this gap is its own UX exercise.
 - **Settings panel keyboard shortcuts** (e.g. `1`/`2`/`3`/`4` to toggle surveys, `a` for auto-LOD).
-- **Per-survey colour tinting** in the renderer — the user explicitly opted _out_ (option 4B). If they ever change their mind: add a `tintBySource: bool` uniform and a 4-vec3 colour table.
 
 ---
 
 ## Self-review notes
 
-- **Spec coverage:** 4 surveys ingested (Tasks 9–12), pre-merged single bin with cross-match (Task 13), auto-LOD by camera distance + manual override (Tasks 5–8), source as metadata only — no visual differentiation (the WGSL change in Task 4 only filters; it doesn't tint). All four user choices implemented.
-- **Type consistency:** `PointCloud.sourceIDs` named consistently in Tasks 2, 3, 4, 9, 13. `Source` enum values fixed in Task 1 and used identically everywhere. `visibleSourceMask` named consistently in shader, renderer, engine, App.
+- **Spec coverage:** 4 surveys ingested (Tasks 9–12), cross-matched and written as four separate v2 `.bin` files (Task 13), parallel runtime loading with progressive rendering (Task 6), auto-LOD by camera distance + manual override (Tasks 5–8), multi-cloud renderer with per-source draw calls (Task 4). All four user choices implemented.
+- **Format unchanged:** Binary format stays at v2. No `sourceIDs` field in PointCloud. Each cloud's source identity is known from which file it was loaded, stored in `Map<Source, PointCloud>` in the engine.
+- **Type consistency:** `Source` enum values fixed in Task 1 and used identically everywhere. `visibleSourceMask` named consistently in renderer, engine, and App. `instanceIdOffset` named consistently in renderer and shader.
 - **No placeholders.** Each task contains the full code or a complete code template plus the location it goes. No "TBD" / "implement later" / "similar to Task N".
 - **Open assumption:** the exact column offsets for 2MRS / 2MPZ / 6dFGS may differ slightly from the README values used in the parser tasks. Each parser task notes that the implementer should validate against the actual file's README. The fixture-based tests will catch obvious off-by-one errors during implementation.
