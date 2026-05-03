@@ -281,10 +281,24 @@ export class PointRenderer {
       // the v2 five-band photometry. See the v1→v2 history in the previous
       // revision of this method for the rationale; this is one-shot work
       // done at load time, not per frame.
+      //
+      // Non-SDSS surveys (2MRS, GLADE, Synthetic) don't measure u-band, so
+      // `u - g` is NaN.  WGSL has no native NaN guards on the colour-ramp
+      // lookup — NaN propagates through the K-correction subtraction and the
+      // ramp clamps it to the bluest end, painting every 2MRS/GLADE galaxy
+      // sky-blue (a confusing visual lie: those catalogues are dominated by
+      // red ellipticals/spirals, not star-forming dwarfs).
+      //
+      // Fallback: substitute the median observed u−g of an SDSS galaxy
+      // (~1.2 mag) for any non-finite computation.  Renders these galaxies
+      // at the centre of the colour ramp — visually neutral, explicitly
+      // noting we don't know the real colour rather than faking blue.
+      const NEUTRAL_U_MINUS_G = 1.2;
       const g = cloud.magG[i]!;
       const u = cloud.magU[i]!;
+      const ug = u - g;
       interleaved[o + 3] = g;
-      interleaved[o + 4] = u - g; // u−g colour index
+      interleaved[o + 4] = Number.isFinite(ug) ? ug : NEUTRAL_U_MINUS_G;
     }
 
     // Destroy any previous buffer for this source before replacing it.
