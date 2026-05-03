@@ -175,6 +175,13 @@ export function parseTwoMrs(rawText: string): TwoMrsResult {
       magR: hc,
       magI: kc,
       magZ: NaN,
+      // TODO Task 6 (galaxy-orientation-disks): cross-match the 2MASS
+      // designation in bytes 1-16 against the 2MASS XSC `sup_phi` + `sup_ba`
+      // shape catalog (fetched offline into data/raw/2mass_xsc_pa.csv) to
+      // populate real axisRatio + PA. Until that cache is wired in, every
+      // 2MRS row routes through fallbackOrientation.
+      axisRatio: null,
+      positionAngleDeg: null,
     });
   }
 

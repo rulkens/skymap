@@ -33,6 +33,13 @@ function rec(source: Source, ra: number, dec: number, z: number, objID = 0n): Pa
     magR: NaN,
     magI: NaN,
     magZ: NaN,
+    // Orientation fields are part of the canonical `ParsedRecord` shape from
+    // the galaxy-orientation-disks plan. `null` mirrors what every parser
+    // emits today (the build pipeline fills in a deterministic fallback
+    // before the cloud is encoded); the merger doesn't read these fields,
+    // so leaving them as null exercises the merger with realistic input.
+    axisRatio: null,
+    positionAngleDeg: null,
   };
 }
 

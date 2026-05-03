@@ -270,6 +270,13 @@ export function parseGladeLine(line: string, options: GladeParseOptions = {}): P
     magR: jmag,
     magI: hmag,
     magZ: kmag,
+    // TODO Task 8 (galaxy-orientation-disks): cross-match the PGC number
+    // in bytes 1-7 against the HyperLEDA `pa` + `logr25` cache (built
+    // offline into data/raw/hyperleda_pa.csv) to populate real axisRatio
+    // (= 10^(-logr25)) and PA. Until the cache is wired in, every GLADE
+    // row routes through fallbackOrientation.
+    axisRatio: null,
+    positionAngleDeg: null,
   };
 }
 

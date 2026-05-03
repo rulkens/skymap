@@ -178,6 +178,14 @@ export function parseSdssCsv(rawText: string): SdssCsvResult {
       magR,
       magI,
       magZ,
+      // TODO Task 4 (galaxy-orientation-disks): blend SDSS PhotoObj's
+      // expAB_r / deVAB_r and expPhi_r / deVPhi_r columns into a single
+      // axisRatio + positionAngleDeg (weighted by fracDeV_r). The current
+      // SkyServer query in data/raw/ doesn't yet select those columns, so
+      // we emit `null` and the build pipeline routes every SDSS row through
+      // fallbackOrientation in the meantime.
+      axisRatio: null,
+      positionAngleDeg: null,
     });
   }
 

@@ -169,11 +169,18 @@ export function generateSyntheticCloud(count: number, seed = 42): PointCloud {
     magZ[i] = iMag - rand() * 0.4;
   }
 
-  // TODO Task 2 (galaxy-orientation-disks): synthesise plausible
-  // axisRatio (b/a in [0,1]) and positionAngleDeg (PA in [0,180)) values
-  // from the seeded RNG so synthetic clouds exercise the orientation path.
-  // For now we ship NaN-filled arrays so the v3 PointCloud type is satisfied
-  // and downstream consumers can detect "no measurement" via Number.isNaN.
+  // Orientation: synthetic clouds ship NaN for both fields. NaN is the
+  // honest "no measurement" sentinel — synthetic galaxies aren't built
+  // through the offline pipeline (which is where fallbackOrientation
+  // would normally fill in deterministic values), so anything else would
+  // be a lie. The renderer treats NaN as "draw as a round point" via
+  // the same code path that handles missing-photometry NaNs; downstream
+  // consumers can detect the absence with Number.isNaN.
+  //
+  // (A future enhancement could plumb the seeded RNG through here to
+  // synthesise plausible b/a and PA distributions for visual testing of
+  // the disk-rendering path, but that's a separate decision from the
+  // catalog-pipeline work in the galaxy-orientation-disks plan.)
   const axisRatio = new Float32Array(count).fill(NaN);
   const positionAngleDeg = new Float32Array(count).fill(NaN);
 

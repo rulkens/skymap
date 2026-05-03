@@ -78,6 +78,36 @@ export type ParsedRecord = {
   magR: number;
   magI: number;
   magZ: number;
+  /**
+   * Galaxy minor/major axis ratio b/a, in (0, 1]. `null` means the parser
+   * couldn't extract a real measurement from this row — the build pipeline
+   * will fill in a deterministic fallback (see fallbackOrientation.ts) before
+   * encoding the cloud, and stamp the provenance flag accordingly.
+   *
+   * Why `number | null` rather than `number` with a NaN sentinel? Unlike the
+   * five-band magnitudes — which fan out into many "missing band" code paths
+   * across surveys and benefit from NaN-arithmetic propagation — orientation
+   * has exactly two states: "real measurement" or "needs fallback". An
+   * explicit `null` makes the build pipeline's branch (`if (r.axisRatio !==
+   * null)`) read as a true binary decision instead of a NaN-sniffing test,
+   * and TypeScript's narrowing forces every call site to handle the absent
+   * case before assigning to the renderer's Float32Array slot.
+   */
+  axisRatio: number | null;
+  /**
+   * Galaxy position angle in degrees, [0, 180). PA is measured east of north
+   * (standard astronomical convention). `null` follows the same "no real
+   * measurement" semantics as axisRatio above.
+   *
+   * The two fields always travel together: a record either has both or
+   * neither. They're typed independently rather than as a single
+   * `orientation: { axisRatio; pa } | null` because the per-survey parsers
+   * occasionally have to re-merge them from different upstream tables (e.g.
+   * GLADE's HyperLEDA join supplies PA and logr25 separately), and keeping
+   * them as flat fields lets each parser fill them in whichever order its
+   * source data permits.
+   */
+  positionAngleDeg: number | null;
 };
 
 /**
