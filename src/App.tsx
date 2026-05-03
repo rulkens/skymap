@@ -71,6 +71,7 @@ import { StatusBar } from './components/StatusBar/StatusBar';
 import { InfoCard } from './components/InfoCard/InfoCard';
 import { ScaleBar } from './components/ScaleBar/ScaleBar';
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
+import { HomeButton } from './components/HomeButton/HomeButton';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -232,6 +233,7 @@ export function App(): React.ReactElement {
         onAutoRotateChange={(v) => handleRef.current?.setAutoRotate(v)}
         onResetCamera={() => handleRef.current?.resetCamera()}
       />
+      <HomeButton onClick={() => handleRef.current?.focusOnHome()} />
     </>
   );
 }
