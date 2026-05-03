@@ -31,12 +31,40 @@ export type FetchGalaxyBitmapInput = {
   dec: number;
   /** Optional AbortSignal to cancel an in-flight fetch. */
   signal?: AbortSignal;
+  /**
+   * When set, load `/images/famous/<famousId>.webp` directly and skip the
+   * SDSS → DSS chain entirely.  Curated WebPs live in `public/images/famous/`
+   * and are committed to the repo, so a missing file is a build error, not a
+   * runtime fallback situation — there is no DSS fallback for famous galaxies.
+   */
+  famousId?: string;
 };
 
 export async function fetchGalaxyBitmap(
   input: FetchGalaxyBitmapInput,
 ): Promise<ImageBitmap | null> {
-  const { ra, dec, signal } = input;
+  const { ra, dec, signal, famousId } = input;
+
+  // ── Famous shortcut ──────────────────────────────────────────────────────
+  //
+  // Curated famous-galaxy WebPs live at /images/famous/<id>.webp and are
+  // committed to the repo alongside the other static assets.  When a famousId
+  // is supplied we skip the SDSS → DSS chain entirely: the curated image is
+  // higher quality and guaranteed present (a missing file is a build error
+  // caught before deploy, not a silent runtime 404 we should fall back from).
+  if (famousId) {
+    const url = `/images/famous/${famousId}.webp`;
+    const blob = await tryFetch(url, signal);
+    if (!blob) return null;
+    try {
+      return await createImageBitmap(blob, {
+        resizeWidth: SLOT_SIDE,
+        resizeHeight: SLOT_SIDE,
+      });
+    } catch {
+      return null;
+    }
+  }
 
   // Try SDSS first.  ~70% of galaxies in the visible cloud will be in the
   // SDSS footprint when SDSS is the loaded source; for non-SDSS surveys

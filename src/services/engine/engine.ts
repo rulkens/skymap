@@ -70,6 +70,7 @@ import { autoLodMask } from './autoLod';
 import { buildPointInfo, maxAbsCoord, niceRound } from './pointInfoBuilder';
 import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
+import { loadFamousSidecars, type FamousMetaEntry, type FamousXrefMap } from './famousMetaLoader';
 
 // ── Galaxy thumbnail subsystem imports ────────────────────────────────────
 //
@@ -261,6 +262,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // against that empty state.
   const clouds = new Map<Source, PointCloud>();
 
+  // ── Famous-galaxy sidecars ───────────────────────────────────────────────
+  //
+  // Loaded asynchronously after the cloud fetch kicks off.  Both arrays
+  // start empty; `pointInfoBuilder` checks for `famousMeta[idx]` being
+  // defined before using them, so a hover that fires before the sidecars
+  // land just renders the generic InfoCard layout — graceful degradation.
+  let famousMeta: FamousMetaEntry[] = [];
+  let famousXrefs: FamousXrefMap = {};
+
   /**
    * Resolve a global instance ID coming back from the picker into the
    * (source, local index) pair that lets us look the point up in `clouds`.
@@ -294,7 +304,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     if (!resolved) return null;
     const c = clouds.get(resolved.source);
     if (!c) return null;
-    return buildPointInfo(c, resolved.localIdx, resolved.source);
+    return buildPointInfo(c, resolved.localIdx, resolved.source, famousMeta, famousXrefs);
   }
 
   // Renderer and pickRenderer are null until GPU init completes.
@@ -520,6 +530,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           firstResult = result;
         }
       });
+
+      // ── Famous sidecars — fire-and-forget ─────────────────────────────────
+      //
+      // Kicked off after `loadAllClouds` resolves so we don't compete with
+      // the much-larger survey fetches for bandwidth.  The sidecars are tiny
+      // (well under 100 KB combined) so they land almost instantly on any
+      // connection.  Failures are swallowed: absent sidecars don't break the
+      // engine — famous galaxies just render without the enriched InfoCard
+      // block until the user reloads.
+      loadFamousSidecars()
+        .then((sc) => {
+          famousMeta = sc.meta;
+          famousXrefs = sc.xrefs;
+        })
+        .catch((err) => {
+          console.warn('[engine] famous sidecars failed to load:', err);
+        });
 
       // ── Synthetic fallback ──────────────────────────────────────────────
       //
@@ -963,7 +990,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // exactly one bucket — see the branch at the tail of the loop
           // body — so the two arrays never double-count an instance.
           const disks: DiskInstance[] = [];
-          for (const cloud of clouds.values()) {
+          // We iterate with `.entries()` instead of `.values()` so that
+          // `cloudSource` (the Source enum tag) is in scope inside the loop.
+          // This lets us special-case `Source.Famous` for:
+          //   (a) bypassing the apparent-size threshold — famous landmarks
+          //       should always show their curated thumbnail regardless of
+          //       angular size (they were added precisely because they're
+          //       noteworthy at every zoom level).
+          //   (b) forwarding the famous id to the image fetcher so it loads
+          //       the curated /images/famous/<id>.webp instead of SDSS/DSS.
+          for (const [cloudSource, cloud] of clouds.entries()) {
             const positions = cloud.positions;
             const count = cloud.count;
             for (let i = 0; i < count; i++) {
@@ -990,7 +1026,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               const dMpcRow = dKpcRow / 1000;
               const camDist = Math.sqrt(camDistSq);
               const px = (dMpcRow / camDist) * pxPerRad;
-              if (px < APPARENT_SIZE_THRESHOLD_PX) continue;
+              // Famous-atlas rows always show their thumbnail — they're
+              // landmarks the user expects visible regardless of angular size.
+              // Survey rows still gate on the threshold so we don't load
+              // 3.5 M cutouts at maximum zoom-out.
+              if (cloudSource !== Source.Famous && px < APPARENT_SIZE_THRESHOLD_PX) continue;
 
               // Recover RA/Dec for the cutout URL.  The PointCloud doesn't
               // store sky coords — only Cartesian Mpc — so we invert the
@@ -1018,7 +1058,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
                 queue.enqueue({
                   key,
                   priority: px,
-                  fetcher: () => fetchGalaxyBitmap({ ra, dec }),
+                  fetcher: () => {
+                    // Famous galaxies use a curated local WebP rather than the
+                    // SDSS/DSS chain.  We capture `cloudSource` and `i` from
+                    // the enclosing loop — both are stable for the lifetime of
+                    // this closure because the `queue.enqueue` dedupes by key
+                    // and only calls the fetcher once per key.
+                    const fId =
+                      cloudSource === Source.Famous ? famousMeta[i]?.id : undefined;
+                    return fetchGalaxyBitmap({ ra, dec, famousId: fId });
+                  },
                   onResult: (bitmap) => {
                     if (!bitmap) {
                       // Both SDSS and DSS failed (or the decode threw).

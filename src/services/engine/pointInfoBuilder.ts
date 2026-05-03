@@ -19,6 +19,7 @@
 
 import type { PointCloud, PointInfo } from '../../@types';
 import { Source, sourceLabel, bandLabels } from '../../data/sources';
+import type { FamousMetaEntry, FamousXrefMap } from './famousMetaLoader';
 import { fallbackOrientation } from '../../utils/random/fallbackOrientation';
 import {
   cartesianToRaDecZ,
@@ -100,8 +101,22 @@ export function niceRound(x: number): number {
  * so storing it per-point would be wasteful).  We pipe it through here so we
  * can decide which thumbnail service to use and whether an SDSS Explorer
  * link makes sense.
+ *
+ * The optional `famousMeta` / `famousXrefs` arguments are the sidecars loaded
+ * at engine startup by `famousMetaLoader.loadFamousSidecars()`.  They are
+ * only consulted when `source === Source.Famous`, so passing them for SDSS /
+ * 2MRS / GLADE rows is harmless.  If the sidecars haven't arrived yet (fetch
+ * still in flight when the user first hovers a famous galaxy), both args will
+ * be empty / undefined and we silently omit the `famous` block — the InfoCard
+ * falls back to its generic layout until the next hover triggers a rebuild.
  */
-export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): PointInfo {
+export function buildPointInfo(
+  cloud: PointCloud,
+  idx: number,
+  source: Source,
+  famousMeta?: FamousMetaEntry[],
+  famousXrefs?: FamousXrefMap,
+): PointInfo {
   const px = cloud.positions[idx * 3 + 0]!;
   const py = cloud.positions[idx * 3 + 1]!;
   const pz = cloud.positions[idx * 3 + 2]!;
@@ -238,6 +253,30 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
     diameterProvenance = 'fallback (30 kpc)';
   }
 
+  // ── Famous-galaxy enrichment ───────────────────────────────────────────────
+  //
+  // Look up the curated sidecar metadata only for Famous rows.  For every other
+  // source this block is a no-op: we never index into `famousMeta` and the
+  // returned `PointInfo` carries no `famous` key, which is exactly what the
+  // InfoCard expects for a plain survey row.
+  //
+  // Graceful degradation: if the sidecar fetch hasn't resolved yet (empty
+  // arrays / undefined), `famousMeta[idx]` is undefined and we skip the block
+  // entirely — the InfoCard renders the generic layout on that hover, and the
+  // next hover (after sidecars land) will produce the full block.
+  let famous: PointInfo['famous'];
+  if (source === Source.Famous && famousMeta && famousMeta[idx]) {
+    const meta = famousMeta[idx]!;
+    const xref = (famousXrefs && famousXrefs[meta.id]) ?? null;
+    famous = {
+      id: meta.id,
+      names: meta.names,
+      description: meta.description,
+      type: meta.type,
+      xref,
+    };
+  }
+
   return {
     index: idx,
     objID: cloud.objIDs[idx]!,
@@ -296,5 +335,10 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
       positionAngleDeg: pa,
       provenance,
     },
+
+    // Famous enrichment — present only for Source.Famous rows.  `undefined`
+    // for all survey rows so the InfoCard's `info.famous &&` guard works
+    // without an explicit `?? null` at each consumer.
+    famous,
   };
 }
