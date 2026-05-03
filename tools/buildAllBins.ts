@@ -28,8 +28,8 @@
  *   This module re-exports `crossMatch` so callers (and the test) can
  *   keep importing it from the `buildAllBins` path the plan specifies.
  */
-import { createReadStream, readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { createReadStream, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
@@ -132,6 +132,44 @@ function recordsToCloud(records: ParsedRecord[]): PointCloud {
 type ParserFn = (raw: string) => { records: ParsedRecord[]; skipped: number };
 
 /**
+ * Find the most recently modified `Skyserver_*.csv` in the given directory.
+ *
+ * SkyServer's web export names every download with a timestamped filename
+ * (e.g. `Skyserver_CrossID5_3_2026 7_59_27 PM.csv`), so when the user
+ * downloads a new pull the previous one stays on disk under a different
+ * name.  Hard-coding any single filename in `package.json`'s `build-all`
+ * script meant new downloads were silently ignored unless someone updated
+ * the script — exactly the regression that put 30 kpc fallbacks on every
+ * SDSS row even though `petroR50_r` was right there.
+ *
+ * Strategy: glob `Skyserver_*.csv`, sort by mtime descending, return the
+ * first entry's path.  Returns undefined when the directory has no match,
+ * letting the caller print a clear "missing input" error.
+ *
+ * Why mtime rather than parsing the filename?  The SkyServer naming
+ * scheme has shifted twice already (CrossID vs SQL prefixes, locale-
+ * dependent AM/PM markers); mtime is the one signal that's portable
+ * across all of them.
+ */
+function findLatestSdssCsv(dir: string): string | undefined {
+  let entries: string[];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return undefined;
+  }
+  const matches = entries
+    .filter((name) => name.startsWith('Skyserver_') && name.endsWith('.csv'))
+    .map((name) => {
+      const full = join(dir, name);
+      const mtime = statSync(full).mtimeMs;
+      return { full, mtime };
+    })
+    .sort((a, b) => b.mtime - a.mtime);
+  return matches[0]?.full;
+}
+
+/**
  * Parse `--key value` pairs into a flat record. Order is irrelevant; missing
  * flags surface as `undefined` keys at the call site rather than throwing
  * here, so the caller can decide which flags are required.
@@ -222,12 +260,33 @@ async function loadGladeStream(
  */
 async function runCli(): Promise<void> {
   const args = readArgs();
-  if (!args['out-dir']) {
+
+  // Reasonable defaults so `npm run build-all` works with no flags after
+  // the user drops fresh catalog files into the canonical paths:
+  //   - SDSS: newest `data/Skyserver_*.csv` by mtime (auto-picked)
+  //   - 2MRS: `data/raw/2mrs_table3.dat` (filename is stable on Vizier)
+  //   - GLADE: `data/raw/glade2.3.dat` (likewise)
+  //   - out-dir: `public/data` (Vite serves this at /data/* in the browser)
+  // Each can be overridden with the matching --key flag.
+  const sdssArg = args.sdss || findLatestSdssCsv(resolve('data')) || '';
+  const twomrsArg = args.twomrs || 'data/raw/2mrs_table3.dat';
+  const gladeArg = args.glade || 'data/raw/glade2.3.dat';
+  const outDirArg = args['out-dir'] || 'public/data';
+
+  if (sdssArg) {
+    process.stderr.write(`SDSS source: ${sdssArg}${args.sdss ? '' : '  (auto-detected, latest by mtime)'}\n`);
+  } else {
     process.stderr.write(
-      'usage: build-all --sdss FILE --twomrs FILE --glade FILE --out-dir DIR [--glade-spec-only]\n',
+      'warning: no SDSS CSV supplied AND no Skyserver_*.csv found in data/ — SDSS bin will be empty\n',
     );
-    process.exit(1);
   }
+
+  // Re-bind the args record so the rest of the function (which still reads
+  // args.sdss, args.twomrs, etc.) sees the resolved paths uniformly.
+  args.sdss = sdssArg;
+  args.twomrs = twomrsArg;
+  args.glade = gladeArg;
+  args['out-dir'] = outDirArg;
 
   // `--glade-spec-only` is a value-less boolean flag; readArgs() consumed the
   // next argv entry into its value, but the presence of the key is what we
