@@ -1,0 +1,80 @@
+/* CommandPalette — modal overlay, centred at the top of the viewport. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+}
+
+.panel {
+  width: min(560px, 90vw);
+  max-height: 70vh;
+  background: #15151d;
+  color: #e8e8ea;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.input {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 16px 20px;
+  outline: none;
+  font-size: 16px;
+  border-bottom: 1px solid #2a2a32;
+}
+
+.results {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+}
+
+.result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.resultActive {
+  background: rgba(80, 110, 255, 0.18);
+}
+
+.thumb {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: #1f1f27;
+  object-fit: cover;
+}
+
+.primary {
+  font-weight: 600;
+}
+
+.secondary {
+  margin-left: 8px;
+  opacity: 0.6;
+  font-size: 0.85em;
+}
+
+.empty {
+  padding: 24px;
+  text-align: center;
+  opacity: 0.6;
+}
