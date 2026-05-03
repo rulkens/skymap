@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(git init *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(git -C /Users/rulkens/Development/js/skymap add -A)",
+      "Bash(git -C /Users/rulkens/Development/js/skymap commit -m \"chore: scaffold vite + typescript + webgpu types\")"
+    ]
+  }
+}
