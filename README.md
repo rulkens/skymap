@@ -92,6 +92,22 @@ The browser fetches all three files in parallel at startup. Surveys arrive progr
 
 > Want only some surveys? Omit the corresponding `--xxx` flag — the merger treats missing inputs as empty arrays and skips writing the empty output file.
 
+### Per-survey colour indices
+
+Each survey is coloured by its own most-informative photometric pair, since the
+five magnitude slots in the binary format carry different bands depending on
+the source. The raw colour difference is normalised to the shader's
+blue → white → red ramp at upload time, and a per-row K-correction coefficient
+compensates for redshift band-shifting before the ramp is sampled. Rows whose
+preferred bands aren't measured render with a fixed mid-ramp tint instead of
+poisoning the ramp with NaN.
+
+| Survey    | Colour | Natural range | K per unit z | Why this k                                                       |
+| --------- | ------ | ------------- | ------------ | ---------------------------------------------------------------- |
+| SDSS      | u−g    | 0.5 .. 2.0    | 3.0          | Calibrated against the SDSS spectroscopic sample.                |
+| GLADE     | B−J    | 0.5 .. 3.5    | 1.0          | Optical–NIR pair; B redshifts out of band slowly.                |
+| 2MRS      | J−K    | 0.7 .. 1.1    | 0.0          | NIR colours are nearly redshift-invariant in 2MRS's z ≲ 0.1 box. |
+
 ## Coordinate system
 
 We use a right-handed equatorial Cartesian frame with distances in megaparsecs (Mpc):
