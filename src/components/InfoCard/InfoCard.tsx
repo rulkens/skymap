@@ -13,11 +13,25 @@
  *     below.  This lets the user keep a reference point pinned while scanning
  *     other galaxies.
  *
+ * ### Why we always render the same outer wrapper
+ *
+ * The wrapping `<div className={styles.infoCardStack}>` is rendered the same
+ * way in both single-card and stacked-pair states.  Earlier this component
+ * conditionally unwrapped the FullCard out of the stack div in the single-
+ * card case — but that meant React saw a different top-level element type
+ * across the single↔pair transition, which forced a full unmount/remount of
+ * the FullCard.  The most user-visible consequence: the native `<details>`
+ * "More details" disclosure inside FullCard lost its `open` state every
+ * time the user moved the cursor onto a second galaxy.
+ *
+ * Keeping the wrapper stable across all renders preserves the FullCard's
+ * DOM identity, so the browser's `<details>` element retains its open/
+ * closed state without us needing to lift it into React state.
+ *
  * ### Architecture
  *
  * This file contains only the routing component.  The three display variants
  * live in sibling files: FullCard.tsx, CompactCard.tsx, Thumbnail.tsx.
- * An index.ts re-exports this component as the public surface of the module.
  *
  * All components are pure functions of their props — no local state is needed
  * because the engine drives all changes via callbacks up to App.tsx.
@@ -64,26 +78,34 @@ export function InfoCard({ hovered, selected, onFocus }: InfoCardProps): ReactNo
   // Nothing to show — stay entirely out of the DOM.
   if (!hovered && !selected) return null;
 
-  // When BOTH hovered and selected are set AND they point to different points,
-  // render a stacked pair: full pinned card on top, compact hover card below.
-  if (hovered && selected && hovered.index !== selected.index) {
-    // Apply both the module-scoped class (for layout) and a global marker class
-    // (infoCardStack) so that FullCard.module.css can override the fixed
-    // positioning of child FullCard elements via:
-    //   :global(.infoCardStack) .infoCardFull { position: relative; … }
-    return (
-      <div className={`${styles.infoCardStack} infoCardStack`}>
-        <FullCard info={selected} pinned={true} onFocus={onFocus} />
-        <CompactCard info={hovered} />
-      </div>
-    );
-  }
+  // ── Routing: which info goes into the FullCard, and is there a CompactCard? ──
+  //
+  // Two cases:
+  //   1. Both hovered AND selected, and they're different points → the
+  //      FullCard shows the pinned (selected) galaxy and a CompactCard
+  //      below it shows the hover preview.
+  //   2. Otherwise → only the FullCard, fed by hovered ?? selected.  The
+  //      "pinned" badge appears when the FullCard is showing the selection
+  //      (i.e. the cursor has moved off-canvas or onto the same galaxy).
+  //
+  // Crucially we ALWAYS render the same outer wrapper structure regardless
+  // of which case we're in.  An earlier version returned the FullCard
+  // unwrapped in the single-card case; that meant React saw a different
+  // top-level element type when the user moved the cursor onto a second
+  // galaxy, which forced a full unmount/remount of the FullCard and lost
+  // the native `<details>` "More details" open state every time.
+  const isStacked = hovered != null && selected != null && hovered.index !== selected.index;
+  const fullCardInfo = isStacked ? selected! : (hovered ?? selected!);
+  const fullCardPinned = isStacked ? true : !hovered;
 
-  // Single-card case: hovered takes precedence (live preview); fall back to
-  // selected when the cursor has moved off canvas.
-  const info = hovered ?? selected!;
-  const pinned = !hovered; // only show PINNED badge when falling back to selection
-  // Forward onFocus only when we're showing the pinned card — the hover preview
-  // never gets a Focus button regardless of whether the prop is supplied.
-  return <FullCard info={info} pinned={pinned} onFocus={pinned ? onFocus : undefined} />;
+  return (
+    <div className={`${styles.infoCardStack} infoCardStack`}>
+      <FullCard
+        info={fullCardInfo}
+        pinned={fullCardPinned}
+        onFocus={fullCardPinned ? onFocus : undefined}
+      />
+      {isStacked && <CompactCard info={hovered!} />}
+    </div>
+  );
 }
