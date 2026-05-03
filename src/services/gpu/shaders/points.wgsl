@@ -405,7 +405,22 @@ fn vs(
   // letting nearby galaxies grow into proper discs.  Tasks 11 (ellipse
   // mask) and 12 (3D disk planes) hook into this same disk to give the
   // billboard its inclination + PA appearance.
-  let GALAXY_RADIUS_MPC: f32 = 0.015;  // 30 kpc diameter / 2 / 1000
+  //
+  // Why 0.06 Mpc (= 60 kpc radius) rather than the physical 15 kpc radius?
+  // Match the QuadRenderer's footprint.  The thumbnail quad uses
+  // `sizeWorld = diameter_kpc * 4 / 1000 = 0.12 Mpc` total = 0.06 Mpc
+  // half-extent, with the visible galaxy body filling its central ~25%
+  // and a soft alpha-fade in the surrounding tail (the cutout JPEG fades
+  // to transparent away from the galaxy).  Sizing the point billboard
+  // identically means a galaxy doesn't visibly grow or shrink the
+  // moment its thumbnail finishes loading — the soft glowing dot you
+  // saw a frame earlier seamlessly becomes the textured galaxy.  Both
+  // share the same Gaussian-ish falloff shape, so the transition is
+  // visually continuous.  When Tasks 11-12 land, the elliptical mask
+  // and 3D disk plane will use the smaller physical body within this
+  // billboard — same disk shape, just rendered with real photometric
+  // texture rather than the soft glow.
+  let GALAXY_RADIUS_MPC: f32 = 0.06;  // 30 kpc diameter × 4 padding / 2 / 1000
   let toGalaxy = p.position - u.camPosWorld;
   let distanceMpc = length(toGalaxy);
   // Guard distanceMpc against 0 so we don't divide-by-zero when the camera
