@@ -96,6 +96,24 @@ type Props = {
   lodMode?: LodMode;
   /** Called when the user toggles the Auto-LOD checkbox. */
   onSetLodMode?: (mode: LodMode) => void;
+
+  // ── SpaceMouse 6DOF input (optional, WebHID-only) ─────────────────────────
+  //
+  // All four props are optional so the original call sites continue to
+  // typecheck unchanged. The section is rendered only when `spaceMouseSupported`
+  // is true — App.tsx passes the result of `isWebHIDSupported()` so users on
+  // Firefox/Safari see no UI for an inaccessible feature.
+
+  /** Feature gate — only render the SpaceMouse section when true. */
+  spaceMouseSupported?: boolean;
+  /** Whether a SpaceMouse is currently paired and feeding input. */
+  spaceMouseConnected?: boolean;
+  /** Called when the user clicks the "Connect SpaceMouse" button. */
+  onConnectSpaceMouse?: () => void;
+  /** Current SpaceMouse global sensitivity multiplier. */
+  spaceMouseSensitivity?: number;
+  /** Called when the user moves the sensitivity slider. */
+  onSpaceMouseSensitivityChange?: (value: number) => void;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
@@ -130,6 +148,11 @@ export function SettingsPanel({
   onToggleSource,
   lodMode,
   onSetLodMode,
+  spaceMouseSupported,
+  spaceMouseConnected,
+  onConnectSpaceMouse,
+  spaceMouseSensitivity,
+  onSpaceMouseSensitivityChange,
 }: Props): ReactNode {
   // Guard: only render the survey-toggle section when the parent has wired
   // *both* the current mask and the toggle callback. Either alone would be
@@ -253,6 +276,56 @@ export function SettingsPanel({
           onChange={(e) => onAutoRotateChange(e.target.checked)}
         />
       </div>
+
+      {/* ── SpaceMouse (rev-3 6DOF input) ────────────────────────────────── */}
+      {/*
+        Rendered only when WebHID is available (Chromium-only). On Firefox
+        and Safari the parent passes `spaceMouseSupported={false}` and this
+        whole section is hidden — users see no broken UI for an inaccessible
+        feature. Within the section, the Connect button shows up only when
+        no device is paired, and the sensitivity slider only after pairing.
+      */}
+      {spaceMouseSupported && (
+        <>
+          <div className={styles.panelDivider} role="separator" />
+          <div className={styles.panelSubtitle}>SpaceMouse</div>
+          <div className={styles.panelMode}>
+            {spaceMouseConnected ? 'connected' : 'not connected'}
+          </div>
+          {!spaceMouseConnected && onConnectSpaceMouse && (
+            <div className={styles.panelRow}>
+              <button type="button" onClick={onConnectSpaceMouse}>
+                Connect SpaceMouse
+              </button>
+            </div>
+          )}
+          {spaceMouseConnected &&
+            spaceMouseSensitivity !== undefined &&
+            onSpaceMouseSensitivityChange && (
+              <>
+                <div className={styles.panelRow}>
+                  <label htmlFor="slider-spacemouse-sensitivity">Sensitivity</label>
+                  <span className={styles.panelValue}>
+                    {spaceMouseSensitivity.toFixed(2)}×
+                  </span>
+                </div>
+                <div className={styles.panelRow}>
+                  <input
+                    id="slider-spacemouse-sensitivity"
+                    type="range"
+                    min={0.1}
+                    max={3.0}
+                    step={0.05}
+                    value={spaceMouseSensitivity}
+                    onChange={(e) =>
+                      onSpaceMouseSensitivityChange(parseFloat(e.target.value))
+                    }
+                  />
+                </div>
+              </>
+            )}
+        </>
+      )}
 
       {/* ── Divider ──────────────────────────────────────────────────────── */}
       <div className={styles.panelDivider} role="separator" />

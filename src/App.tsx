@@ -71,6 +71,7 @@ import { StatusBar } from './components/StatusBar/StatusBar';
 import { InfoCard } from './components/InfoCard/InfoCard';
 import { ScaleBar } from './components/ScaleBar/ScaleBar';
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
+import { isWebHIDSupported } from './input/spaceMouse';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -127,6 +128,15 @@ export function App(): React.ReactElement {
   const [pointSize, setPointSize] = useState<number>(2.5);
   const [brightness, setBrightness] = useState<number>(1.0);
   const [autoRotate, setAutoRotate] = useState<boolean>(false);
+
+  // ── SpaceMouse state (optional, WebHID-only) ─────────────────────────────
+  //
+  // `spaceMouseConnected` mirrors the engine's view of pairing — flipped to
+  // true only when `connectSpaceMouse()` resolves with `ok = true`, and back
+  // to false on disconnect. `spaceMouseSensitivity` is the slider value;
+  // 1.0 is the factory default and matches what the engine uses internally.
+  const [spaceMouseConnected, setSpaceMouseConnected] = useState<boolean>(false);
+  const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(1.0);
 
   // ── Engine startup effect ──────────────────────────────────────────────────
 
@@ -257,6 +267,24 @@ export function App(): React.ReactElement {
         onBrightnessChange={(v) => handleRef.current?.setBrightness(v)}
         onAutoRotateChange={(v) => handleRef.current?.setAutoRotate(v)}
         onResetCamera={() => handleRef.current?.focusOnHome()}
+        // ── SpaceMouse 6DOF input wiring (optional, WebHID-only) ─────────
+        //
+        // `isWebHIDSupported()` is a pure feature check (one property
+        // lookup); calling it on every render is harmless. The Connect
+        // button delegates to the engine handle, which lazy-instantiates
+        // the WebHID glue — so on Firefox/Safari the import never executes
+        // any HID code (the `isWebHIDSupported` check inside short-circuits).
+        spaceMouseSupported={isWebHIDSupported()}
+        spaceMouseConnected={spaceMouseConnected}
+        onConnectSpaceMouse={async () => {
+          const ok = await handleRef.current?.connectSpaceMouse?.();
+          setSpaceMouseConnected(!!ok);
+        }}
+        spaceMouseSensitivity={spaceMouseSensitivity}
+        onSpaceMouseSensitivityChange={(v) => {
+          setSpaceMouseSensitivity(v);
+          handleRef.current?.setSpaceMouseSensitivity?.(v);
+        }}
       />
     </>
   );
