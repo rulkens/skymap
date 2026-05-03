@@ -32,9 +32,28 @@
  * is unthinkable inside a render loop and isn't even possible inside a
  * WGSL shader.
  *
- * 32 bits gives us 32 possible sources — vastly more than the five we
+ * 32 bits gives us 32 possible sources — vastly more than the four we
  * currently track, with comfortable headroom for future catalogs (DESI,
  * Euclid, LSST...).
+ *
+ * ---
+ * ### rev-2 transition note (2026-05-03)
+ *
+ * Earlier drafts of this module enumerated **2MPZ** (slot 3) and **6dFGS**
+ * (slot 4) as separate sources. Both were dropped in favour of **GLADE**
+ * (Galaxy List for the Advanced Detector Era, v2.3) because GLADE already
+ * pre-merges them along with HyperLEDA, GWGC, 2MASS XSC, and SDSS-DR12Q,
+ * with cross-match deduplication done by the GLADE team. Loading those
+ * catalogs separately would mean re-doing the dedup work ourselves and
+ * carrying double-counted galaxies until we did. Collapsing to a single
+ * all-sky GLADE source keeps the rendering architecture simpler and the
+ * data more correct out of the box.
+ *
+ * Note that we did **not** recycle integer codes 3 and 4 from the dropped
+ * surveys: GLADE took slot 3, and slot 4 is reserved for the next survey.
+ * No production `.bin` files were ever shipped with the old codes, so the
+ * renumber is safe — but the rule "never recycle a code" still applies
+ * for any future change.
  */
 
 // ─── The enum itself ────────────────────────────────────────────────────────
@@ -53,10 +72,13 @@ export enum Source {
   SDSS = 1,
   /** 2MASS Redshift Survey — near-IR all-sky redshift catalog. */
   TwoMRS = 2,
-  /** 2MASS Photometric Redshift Catalogue — photo-z all-sky catalog. */
-  TwoMPZ = 3,
-  /** 6dF Galaxy Survey — southern-hemisphere redshift survey. */
-  SixDFGS = 4,
+  /**
+   * Galaxy List for the Advanced Detector Era (GLADE v2.3) — an all-sky
+   * compilation that pre-merges HyperLEDA, GWGC, 2MASS XSC, 2MPZ, 6dFGS,
+   * and SDSS-DR12Q with cross-match dedup. Acts as our "deep all-sky"
+   * baseline so we don't have to re-merge those parent catalogs ourselves.
+   */
+  Glade = 3,
 }
 
 // ─── Per-survey metadata tables ─────────────────────────────────────────────
@@ -76,26 +98,28 @@ export enum Source {
  *
  * These strings appear in the UI legend and tooltips. They follow the
  * conventions used by the survey teams themselves: `2MRS` (no space),
- * `6dFGS` (lowercase `d`), etc. — match these in any new UI strings.
+ * `GLADE` (uppercase, matching the published catalog name), etc. — match
+ * these conventions in any new UI strings.
  */
 const LABELS: Record<Source, string> = {
   [Source.Synthetic]: 'Synthetic',
   [Source.SDSS]: 'SDSS',
   [Source.TwoMRS]: '2MRS',
-  [Source.TwoMPZ]: '2MPZ',
-  [Source.SixDFGS]: '6dFGS',
+  [Source.Glade]: 'GLADE',
 };
 
 /**
  * Whether a survey covers (approximately) the *entire* celestial sphere,
  * versus only a wedge or hemisphere of it.
  *
- * - **2MRS / 2MPZ** are deliberately all-sky: their parent 2MASS imaging
- *   survey scanned the whole sky from two telescopes (one per hemisphere).
+ * - **2MRS** is deliberately all-sky: its parent 2MASS imaging survey
+ *   scanned the whole sky from two telescopes (one per hemisphere).
+ * - **GLADE** is full-sky by construction — it merges several all-sky
+ *   parent catalogs (HyperLEDA, 2MASS XSC, GWGC, 2MPZ, 6dFGS, SDSS-DR12Q),
+ *   so any gaps in one are filled by another.
  * - **SDSS** focuses on the northern Galactic cap plus three southern
  *   stripes — about a third of the sky. Rendering it as "all-sky" would
  *   misrepresent the data.
- * - **6dFGS** is southern-hemisphere only (declination ≲ 0°).
  *
  * The renderer uses this flag to decide whether to draw a coverage mask
  * overlay or skip it.
@@ -104,8 +128,7 @@ const ALL_SKY: Record<Source, boolean> = {
   [Source.Synthetic]: true, // synthetic cloud is uniform-in-sphere by construction
   [Source.SDSS]: false,
   [Source.TwoMRS]: true,
-  [Source.TwoMPZ]: true,
-  [Source.SixDFGS]: false,
+  [Source.Glade]: true,
 };
 
 /**
@@ -120,8 +143,9 @@ const ALL_SKY: Record<Source, boolean> = {
  * Sources for the numbers (rough, redshift → distance via Hubble's law,
  * H₀ ≈ 70 km/s/Mpc):
  * - **2MRS** ≈ 250 Mpc — flux-limited at K_s ≈ 11.75; effective z ≲ 0.06.
- * - **2MPZ** ≈ 600 Mpc — photo-z catalog, deeper than 2MRS; z ≲ 0.15.
- * - **6dFGS** ≈ 700 Mpc — z ≲ 0.17 spectroscopic depth.
+ * - **GLADE** ≈ 1500 Mpc — covers most of the GLADE distance distribution;
+ *                          GLADE has a long sparse tail past 1 Gpc that we
+ *                          deliberately clip out of the default framing.
  * - **SDSS**  ≈ 3000 Mpc — main galaxy sample reaches z ~ 0.7+ for
  *                          luminous red galaxies; we round up generously.
  * - **Synthetic** = 1000 Mpc — matches the radius hard-coded in
@@ -131,8 +155,7 @@ const MAX_DIST_MPC: Record<Source, number> = {
   [Source.Synthetic]: 1000,
   [Source.SDSS]: 3000,
   [Source.TwoMRS]: 250,
-  [Source.TwoMPZ]: 600,
-  [Source.SixDFGS]: 700,
+  [Source.Glade]: 1500,
 };
 
 // ─── Public lookup functions ────────────────────────────────────────────────
@@ -142,7 +165,7 @@ const MAX_DIST_MPC: Record<Source, number> = {
 // metadata from a config file or compute it dynamically, we can change the
 // implementation without breaking imports.
 
-/** Display name (e.g. `'2MRS'`, `'6dFGS'`) for a given source. */
+/** Display name (e.g. `'2MRS'`, `'GLADE'`) for a given source. */
 export function sourceLabel(source: Source): string {
   return LABELS[source];
 }
@@ -173,15 +196,14 @@ export const ALL_SOURCES: readonly Source[] = [
   Source.Synthetic,
   Source.SDSS,
   Source.TwoMRS,
-  Source.TwoMPZ,
-  Source.SixDFGS,
+  Source.Glade,
 ];
 
 /**
  * Bitmask with a `1` in every defined source's bit position — i.e. "show
  * everything". This is the renderer's default visibility mask on startup.
  *
- * Computed as `(1<<0) | (1<<1) | (1<<2) | (1<<3) | (1<<4) = 0b11111 = 31`.
+ * Computed as `(1<<0) | (1<<1) | (1<<2) | (1<<3) = 0b1111 = 15`.
  *
  * Note we use `<<` (not `**`) because it's an integer operation and runs
  * the same way in JS, WGSL, and TS. JS bitwise ops coerce to 32-bit

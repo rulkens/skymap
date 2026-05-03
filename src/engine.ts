@@ -83,9 +83,10 @@ import type { PointInfo, ScaleInfo, EngineStatus, EngineCallbacks, EngineHandle 
  * Three discrete bands map the camera's zoom intent to surveys whose
  * coverage is actually relevant:
  *
- * - **< 200 Mpc — local view.**  2MRS (~250 Mpc effective depth) and 2MPZ
- *   (~600 Mpc) are the nearby all-sky catalogs; they dominate the local
- *   universe. SDSS and 6dFGS are hidden because they contribute almost
+ * - **< 200 Mpc — local view.**  2MRS (~250 Mpc effective depth) and GLADE
+ *   are the nearby all-sky catalogs; they dominate the local universe
+ *   (GLADE's parent merge of 2MPZ + 6dFGS + HyperLEDA fills in 2MRS's
+ *   thin near regions). SDSS is hidden because it contributes almost
  *   nothing this close in.
  * - **200–800 Mpc — mid range.**  This is the overlap zone where every
  *   catalog has meaningful coverage, so we render all of them
@@ -111,7 +112,10 @@ export function autoLodMask(distanceMpc: number): number {
 
   if (distanceMpc < 200) {
     // Local view: only the nearby all-sky surveys contribute meaningfully.
-    return maskWith(maskWith(synthetic, Source.TwoMRS), Source.TwoMPZ);
+    // We keep GLADE in the close-up band even though its effective depth is
+    // much greater (~1.5 Gpc) — its low-redshift end overlaps 2MRS and helps
+    // fill in regions where 2MRS's K_s flux limit leaves the volume sparse.
+    return maskWith(maskWith(synthetic, Source.TwoMRS), Source.Glade);
   }
 
   if (distanceMpc <= 800) {

@@ -114,7 +114,7 @@ describe('PointRenderer.totalCount', () => {
     const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
     renderer.upload(Source.SDSS, makeCloud(100));
     renderer.upload(Source.TwoMRS, makeCloud(50));
-    renderer.upload(Source.TwoMPZ, makeCloud(25));
+    renderer.upload(Source.Glade, makeCloud(25));
     expect(renderer.totalCount()).toBe(175);
   });
 
@@ -152,13 +152,13 @@ describe('PointRenderer.loadedSources', () => {
     const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
     renderer.upload(Source.SDSS, makeCloud(100));
     renderer.upload(Source.TwoMRS, makeCloud(50));
-    renderer.upload(Source.TwoMPZ, makeCloud(25));
+    renderer.upload(Source.Glade, makeCloud(25));
 
     renderer.unload(Source.SDSS);
 
     const entries = Array.from(renderer.loadedSources());
-    expect(entries.map((e) => e.source)).toEqual([Source.TwoMRS, Source.TwoMPZ]);
-    // With SDSS gone, TwoMRS is now first (offset 0) and TwoMPZ follows at 50.
+    expect(entries.map((e) => e.source)).toEqual([Source.TwoMRS, Source.Glade]);
+    // With SDSS gone, TwoMRS is now first (offset 0) and Glade follows at 50.
     expect(entries[0]!.instanceIdOffset).toBe(0);
     expect(entries[1]!.instanceIdOffset).toBe(50);
   });
