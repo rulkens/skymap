@@ -176,6 +176,65 @@ describe('parseTwoMrs', () => {
   });
 });
 
+describe('parseTwoMrs diameterKpc', () => {
+  it('extracts diameterKpc from Riso for a finite cz row', () => {
+    const pad = (s: string, w: number, left = false): string =>
+      left ? s.padStart(w, ' ') : s.padEnd(w, ' ');
+
+    let line = '';
+    line += pad('00000000+0000000', 16);
+    line += ' ';
+    line += pad('150.00000', 9, true);
+    line += ' ';
+    line += pad(' 30.00000', 9, true);
+    line += ' '.repeat(57 - line.length);
+    line += pad('10.000', 6, true);
+    line += ' ';
+    line += pad('10.500', 6, true);
+    line += ' ';
+    line += pad('11.000', 6, true);
+    line += ' '.repeat(141 - line.length);
+    line += pad('1.176', 5);
+    line += ' ';
+    line += pad('1.200', 5);
+    line += ' '.repeat(173 - line.length);
+    line += pad(' 7000', 5, true);
+    expect(line.length).toBeGreaterThanOrEqual(178);
+
+    const { records } = parseTwoMrs(line);
+    expect(records).toHaveLength(1);
+    // 7000 km/s / 70 km/s/Mpc = 100 Mpc → 30" → 14.54 kpc.
+    expect(records[0]!.diameterKpc).toBeCloseTo(14.54, 1);
+  });
+
+  it('returns null diameterKpc when Riso is blank', () => {
+    const pad = (s: string, w: number, left = false): string =>
+      left ? s.padStart(w, ' ') : s.padEnd(w, ' ');
+    let line = '';
+    line += pad('00000000+0000000', 16);
+    line += ' ';
+    line += pad('150.00000', 9, true);
+    line += ' ';
+    line += pad(' 30.00000', 9, true);
+    line += ' '.repeat(57 - line.length);
+    line += pad('10.000', 6, true);
+    line += ' ';
+    line += pad('10.500', 6, true);
+    line += ' ';
+    line += pad('11.000', 6, true);
+    line += ' '.repeat(141 - line.length);
+    line += '     ';
+    line += ' ';
+    line += '     ';
+    line += ' '.repeat(173 - line.length);
+    line += pad(' 7000', 5, true);
+
+    const { records } = parseTwoMrs(line);
+    expect(records).toHaveLength(1);
+    expect(records[0]!.diameterKpc).toBeNull();
+  });
+});
+
 describe('parseXscShapeCsv', () => {
   it('parses XSC cache CSV including empty queried-but-no-match rows', () => {
     // The cache stores one row per *queried* 2MASS ID, including IDs

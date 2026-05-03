@@ -70,6 +70,7 @@
 
 import { Source } from '../../src/data/sources.js';
 import { nonCommentLines, type ParsedRecord } from './common.js';
+import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc.js';
 
 /**
  * Speed of light in km/s, used to convert heliocentric velocity cz into
@@ -94,6 +95,15 @@ const J_MISSING_SENTINEL = 99.999;
  * up front turns that silent failure into a loud, counted skip.
  */
 const MIN_LINE_LEN = 178;
+
+/**
+ * Hubble constant in km/s/Mpc used to convert 2MRS heliocentric velocity
+ * (cz, km/s) into a comoving distance (Mpc) for the diameter calculation.
+ * 70 is the project-wide convention — same value used by the renderer's
+ * raDecZToCartesian helper, so the diameter math agrees with the world
+ * positions out of the box.
+ */
+const H0_KM_S_PER_MPC = 70;
 
 /**
  * Result of parsing a 2MRS catalog blob: the validated records plus a
@@ -238,6 +248,30 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
     // the record came from.
     const jc = jcRaw === J_MISSING_SENTINEL ? NaN : jcRaw;
 
+    // Riso (log10 of isophotal RADIUS in arcsec, K=20 mag/arcsec² isophote)
+    // sits at bytes 142-146 (1-based inclusive, half-open 141..146).  About
+    // 80 % of 2MRS rows carry it; the rest (mostly faint galaxies near the
+    // K=11.75 sample limit where the isophote fits poorly) have it blank.
+    // We treat blank/non-finite as "no measurement" and emit null — the
+    // build pipeline applies DEFAULT_GALAXY_DIAMETER_KPC = 30 in that case.
+    const risoStr = line.slice(141, 146).trim();
+    const riso = risoStr === '' ? NaN : parseFloat(risoStr);
+    let diameterKpc: number | null = null;
+    if (Number.isFinite(riso)) {
+      const arcsecRadius = Math.pow(10, riso);
+      const arcsecDiameter = 2 * arcsecRadius;
+      const distanceMpc = cz / H0_KM_S_PER_MPC;
+      // Local Group galaxies have negative cz — the resulting "negative
+      // distance" is unphysical and would produce a nonsense diameter.
+      // For those rows fall through to null and let the pipeline use the
+      // 30 kpc default; the LG members M31/M33/etc are special-cased
+      // enough that a real-distance lookup belongs in a future pass.
+      if (distanceMpc > 0) {
+        const kpc = arcsecToKpc(arcsecDiameter, distanceMpc);
+        if (Number.isFinite(kpc) && kpc > 0) diameterKpc = kpc;
+      }
+    }
+
     records.push({
       source: Source.TwoMRS,
       objID: 0n,
@@ -257,6 +291,7 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
       // disk still has *some* tilt rather than facing the camera flat.
       axisRatio: xscEntry ? xscEntry.sup_ba : null,
       positionAngleDeg: xscEntry ? xscEntry.sup_phi : null,
+      diameterKpc,
     });
   }
 
