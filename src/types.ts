@@ -11,17 +11,38 @@
  * an array of objects.
  *
  * Why SoA? Two reasons:
- *   1. Float32Array maps directly onto a GPU buffer with `device.queue.writeBuffer`,
- *      no per-point object allocation, no per-point copy work.
+ *   1. Float32Array (and BigUint64Array) map directly onto GPU buffers via
+ *      `device.queue.writeBuffer`, no per-point object allocation or copy work.
  *   2. CPUs and GPUs both prefer contiguous typed memory; a million `{x,y,z}`
  *      JS objects would blow up the heap and stall on garbage collection.
+ *
+ * Why separate arrays per magnitude band rather than a single 2D array?
+ *   Typed-array views are the cheapest path to the GPU: we can pass each
+ *   band's Float32Array straight to `writeBuffer` without any per-frame
+ *   restructuring. A 2D array or interleaved layout would require a copy (or
+ *   a non-trivial strided upload) every time we change which band to display.
  *
  * All distance units are megaparsecs (Mpc) — the natural unit at SDSS scales.
  * 1 Mpc ≈ 3.26 million light-years.
  */
 export type PointCloud = {
-  /** Number of points. The three Float32Arrays below derive their length from this. */
+  /** Number of points. All typed arrays below derive their length from this. */
   count: number;
+
+  /**
+   * SDSS object identifiers — length === count.
+   *
+   * SDSS objIDs are 64-bit unsigned integers that encode the sky tile,
+   * run/rerun/camcol/field, and object number. They are used to construct
+   * image-cutout and Explorer URLs. We store them as `BigUint64Array` because
+   * JavaScript's `number` type is a 64-bit float and can only represent
+   * integers exactly up to 2^53 — SDSS objIDs regularly exceed that.
+   *
+   * For synthetic data `objIDs[i] = BigInt(i)` (sequential 0..N-1); those
+   * values won't resolve to real SDSS images, but the field is always present
+   * so the renderer code path is uniform.
+   */
+  objIDs: BigUint64Array;
 
   /**
    * Interleaved xyz coordinates in Mpc — length === count * 3.
@@ -30,20 +51,44 @@ export type PointCloud = {
   positions: Float32Array;
 
   /**
-   * Apparent magnitude per point — length === count.
+   * SDSS u-band (ultraviolet) model magnitude per point — length === count.
    *
    * Astronomical magnitude is a logarithmic, *inverted* brightness scale:
-   * smaller numbers = brighter objects. Sun ≈ -26, Vega ≈ 0, faintest SDSS
-   * galaxies ≈ 22. The shader maps this to point intensity.
+   * smaller numbers = brighter objects. Combined with magG, the u−g color
+   * index indicates star-forming (blue, low u−g) vs. quiescent (red, high u−g)
+   * galaxies.
    */
-  magnitudes: Float32Array;
+  magU: Float32Array;
 
   /**
-   * Color index (e.g. SDSS u−g) per point — length === count.
+   * SDSS g-band (green) model magnitude per point — length === count.
    *
-   * "Color index" in astronomy is the magnitude difference between two
-   * filters. Bluer/hotter objects have smaller u−g; redder/cooler have larger.
-   * The shader maps this to a blue→white→red color ramp.
+   * The g-band is the primary brightness indicator used by the renderer.
+   * Range in the SDSS main sample is roughly 14 (brightest) to 22 (faintest).
    */
-  colorIndex: Float32Array;
+  magG: Float32Array;
+
+  /**
+   * SDSS r-band (red) model magnitude per point — length === count.
+   *
+   * Typically ≈0.3–1.3 mag fainter than g (i.e. numerically smaller than g
+   * since magnitudes are inverted). Used for future multi-band color analysis.
+   */
+  magR: Float32Array;
+
+  /**
+   * SDSS i-band (near-infrared) model magnitude per point — length === count.
+   *
+   * Typically ≈0.0–0.6 mag fainter than r. Useful for stellar population
+   * diagnostics at low redshift.
+   */
+  magI: Float32Array;
+
+  /**
+   * SDSS z-band (far near-infrared) model magnitude per point — length === count.
+   *
+   * Typically ≈0.0–0.4 mag fainter than i. The reddest of the five standard
+   * SDSS photometric bands.
+   */
+  magZ: Float32Array;
 };

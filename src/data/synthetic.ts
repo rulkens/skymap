@@ -5,7 +5,7 @@
  * render so the GPU pipeline can be built and debugged in isolation. This
  * module generates 100k fictitious galaxies distributed uniformly inside a
  * sphere of radius 1000 Mpc — roughly the depth of the SDSS main galaxy
- * sample — with plausible magnitude and color-index values.
+ * sample — with plausible 5-band photometry.
  *
  * Two design decisions worth knowing:
  *
@@ -19,6 +19,12 @@
  *   2. REJECTION SAMPLING for uniform-in-sphere positions. Distributing
  *      points correctly inside a 3-D ball is subtler than it looks; see the
  *      `generateSyntheticCloud` docs below.
+ *
+ * The synthetic `objIDs` are sequential (0, 1, 2, …). Real SDSS objIDs are
+ * 19-digit numbers encoding tile/run/field/object; sequential 0..N−1 is fine
+ * here since the synthetic dataset won't match any real SDSS object. Image
+ * cutouts (if the renderer tries them) are RA/Dec-based, not objID-based, so
+ * the cutout URL still works for synthetic data.
  */
 
 import type { PointCloud } from '../types';
@@ -112,18 +118,28 @@ function mulberry32(seed: number): () => number {
  * triples on average — acceptable for a one-time initialisation.
  *
  * ---
- * ### Magnitude and color-index ranges
+ * ### Five-band photometry ranges
  *
- * `magnitudes[i]` is drawn uniformly from [14, 22].
- *   - 14 is about the brightest SDSS main-sample galaxy (roughly L* galaxies
- *     at z ≈ 0.01).
- *   - 22 is near the faint limit of the SDSS spectroscopic survey.
- *   - Recall that magnitude is *inverted*: 14 is ~250× brighter than 22.
+ * The band-difference ranges below are not random noise — they reflect typical
+ * observed galaxy colors in the SDSS photometric system:
  *
- * `colorIndex[i]` (proxy for SDSS u−g) is drawn uniformly from [0, 2].
- *   - u−g ≈ 0.8–1.2 for star-forming ("blue cloud") galaxies.
- *   - u−g ≈ 1.6–2.2 for quiescent ("red sequence") ellipticals.
- *   - The [0, 2] range covers both populations with a little headroom.
+ * - `magG` ∈ [14, 22]: the g-band is the primary brightness proxy.
+ *     14 ≈ brightest main-sample galaxy (roughly L* at z ≈ 0.01),
+ *     22 ≈ faint limit of the SDSS spectroscopic survey.
+ *
+ * - `u − g` ∈ [0.5, 2.5]: blue star-forming galaxies cluster around 0.8–1.2;
+ *     red quiescent ellipticals around 1.6–2.2. Our range [0.5, 2.5] spans
+ *     both populations with a little headroom.
+ *
+ * - `g − r` ∈ [0.3, 1.3]: r is typically brighter than g (lower magnitude
+ *     number). Star-forming galaxies sit at the blue end (≈0.3–0.5); red
+ *     sequence at the red end (≈0.6–0.9).
+ *
+ * - `r − i` ∈ [0.0, 0.6]: i-band is close to r-band in brightness;
+ *     smaller differences than the bluer bands.
+ *
+ * - `i − z` ∈ [0.0, 0.4]: the two reddest bands are nearly equal for most
+ *     galaxies; range tapers further.
  *
  * @param count  Number of points to generate. 100_000 is the default for the
  *               stand-in cloud; reduce during development if you need faster
@@ -134,11 +150,15 @@ function mulberry32(seed: number): () => number {
 export function generateSyntheticCloud(count: number, seed = 42): PointCloud {
   const rand = mulberry32(seed);
 
-  // Allocate all three arrays up front. Typed arrays are cheap to allocate
+  // Allocate all typed arrays up front. Typed arrays are cheap to allocate
   // but expensive to grow, so size them exactly once rather than push()-ing.
-  const positions = new Float32Array(count * 3);  // (x, y, z) per point, Mpc
-  const magnitudes = new Float32Array(count);     // apparent magnitude, ~[14, 22]
-  const colorIndex = new Float32Array(count);     // u−g proxy, ~[0, 2]
+  const objIDs    = new BigUint64Array(count);       // sequential IDs 0..N−1
+  const positions = new Float32Array(count * 3);    // (x, y, z) per point, Mpc
+  const magG      = new Float32Array(count);        // g-band, ~[14, 22]
+  const magU      = new Float32Array(count);        // u-band, ~[14.5, 24]
+  const magR      = new Float32Array(count);        // r-band, ~[12.7, 21.7]
+  const magI      = new Float32Array(count);        // i-band
+  const magZ      = new Float32Array(count);        // z-band
 
   // Sphere radius in Mpc. 1000 Mpc corresponds to a redshift of roughly
   // z ≈ 0.23 under Hubble's law (c·z/H₀, H₀=70), which is well inside the
@@ -146,6 +166,12 @@ export function generateSyntheticCloud(count: number, seed = 42): PointCloud {
   const radius = 1000; // Mpc
 
   for (let i = 0; i < count; i++) {
+    // ── Sequential objID ──────────────────────────────────────────────────
+    // BigInt(i) is fine for synthetic data: real SDSS objIDs are 19-digit
+    // numbers, but sequential 0..N−1 keeps the field populated without
+    // requiring a real catalog. Image URLs based on these IDs won't resolve.
+    objIDs[i] = BigInt(i);
+
     // ── Rejection-sample a uniform-in-sphere position ──────────────────────
     let x: number, y: number, z: number, r2: number;
 
@@ -166,17 +192,30 @@ export function generateSyntheticCloud(count: number, seed = 42): PointCloud {
     positions[i * 3 + 1] = y * radius;
     positions[i * 3 + 2] = z * radius;
 
-    // ── Apparent magnitude in [14, 22] ─────────────────────────────────────
-    // 14 + rand()*8 spans [14, 22). A finer model would correlate magnitude
-    // with distance (closer = brighter), but uniform is fine for a stand-in.
-    magnitudes[i] = 14 + rand() * 8;
+    // ── Five-band photometry ───────────────────────────────────────────────
+    // We generate the bands via sequential color differences so the simulated
+    // galaxies span realistic parts of the SDSS color-color diagrams. See the
+    // jsdoc above for the rationale behind each range.
 
-    // ── Color index (u−g proxy) in [0, 2] ──────────────────────────────────
-    // rand()*2 spans [0, 2). This deliberately mixes blue-cloud and red-
-    // sequence galaxies without any spatial clustering — again, fine for
-    // testing the shader color ramp before real data arrives.
-    colorIndex[i] = rand() * 2;
+    // g-band: the primary brightness proxy. Range [14, 22).
+    const g = 14 + rand() * 8;
+    magG[i] = g;
+
+    // u-band: u − g ∈ [0.5, 2.5), so u = g + 0.5 + rand*2.0.
+    magU[i] = g + 0.5 + rand() * 2.0;
+
+    // r-band: g − r ∈ [0.3, 1.3), so r = g − 0.3 − rand*1.0.
+    // r is numerically *smaller* (brighter) than g for most galaxies.
+    const r = g - 0.3 - rand() * 1.0;
+    magR[i] = r;
+
+    // i-band: r − i ∈ [0.0, 0.6), so i = r − rand*0.6.
+    const iMag = r - rand() * 0.6;
+    magI[i] = iMag;
+
+    // z-band: i − z ∈ [0.0, 0.4), so z = i − rand*0.4.
+    magZ[i] = iMag - rand() * 0.4;
   }
 
-  return { count, positions, magnitudes, colorIndex };
+  return { count, objIDs, positions, magU, magG, magR, magI, magZ };
 }

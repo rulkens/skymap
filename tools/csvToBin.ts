@@ -3,18 +3,20 @@
  *
  * Converts a CSV downloaded from the SDSS SkyServer
  * (https://skyserver.sdss.org/dr18/SearchTools/sql) into the project's binary
- * point-cloud format (`SKMP` v1, see `src/data/pointCloudFormat.ts`).
+ * point-cloud format (`SKMP` v2, see `src/data/pointCloudFormat.ts`).
  *
  * Usage:
  *   npm run csv-to-bin -- <input.csv> <output.bin>
  *
  * The CSV must have a header row with (at minimum) these columns, in any order,
- * case-insensitive: `ra`, `dec`, `z`, `modelMag_g`, `modelMag_u`.
+ * case-insensitive:
+ *   objID, ra, dec, z, modelMag_u, modelMag_g, modelMag_r, modelMag_i, modelMag_z
  * Any extra columns are silently ignored.
  *
  * Rows are skipped when:
  *   - `z <= 0`  (stars or objects with bad/missing redshift measurements)
- *   - Any required field is empty or parses as NaN.
+ *   - Any of the 5 magnitude columns is empty or parses as NaN.
+ *   - `objID` is missing, empty, or fails to parse as a non-zero bigint.
  *
  * Why Node + tsx rather than a browser bundle?
  *   SDSS exports can be hundreds of megabytes. Doing the conversion once on the
@@ -104,24 +106,32 @@ function requireColumn(name: string): number {
   return idx;
 }
 
-const COL_RA = requireColumn('ra');
-const COL_DEC = requireColumn('dec');
-const COL_Z = requireColumn('z');
-const COL_MAG_G = requireColumn('modelMag_g');
-const COL_MAG_U = requireColumn('modelMag_u');
+const COL_OBJID  = requireColumn('objID');
+const COL_RA     = requireColumn('ra');
+const COL_DEC    = requireColumn('dec');
+const COL_Z      = requireColumn('z');
+const COL_MAG_U  = requireColumn('modelMag_u');
+const COL_MAG_G  = requireColumn('modelMag_g');
+const COL_MAG_R  = requireColumn('modelMag_r');
+const COL_MAG_I  = requireColumn('modelMag_i');
+const COL_MAG_Z  = requireColumn('modelMag_z');
 
 // ─── Row parsing ──────────────────────────────────────────────────────────────
 
 /**
- * One parsed galaxy row — holds the five values we actually use downstream.
+ * One parsed galaxy row — holds the nine values we actually use downstream.
  * Using a `type` alias rather than an `interface` per project conventions.
  */
 type ParsedRow = {
-  ra: number;
-  dec: number;
-  z: number;
-  magG: number;
-  magU: number;
+  objID: bigint;
+  ra:    number;
+  dec:   number;
+  z:     number;
+  magU:  number;
+  magG:  number;
+  magR:  number;
+  magI:  number;
+  magZ:  number;
 };
 
 const rows: ParsedRow[] = [];
@@ -132,23 +142,45 @@ for (let lineIdx = 1; lineIdx < lines.length; lineIdx++) {
   const line = lines[lineIdx]!;
   const cells = line.split(',').map(c => c.trim());
 
-  // Pull out the five required fields. With `noUncheckedIndexedAccess` each
-  // `cells[idx]` is `string | undefined`, so we coerce undefined → '' before
-  // passing to parseFloat — parseFloat('') → NaN, which the filter below catches.
-  const ra   = parseFloat(cells[COL_RA]   ?? '');
-  const dec  = parseFloat(cells[COL_DEC]  ?? '');
-  const z    = parseFloat(cells[COL_Z]    ?? '');
-  const magG = parseFloat(cells[COL_MAG_G] ?? '');
+  // Pull out the numeric fields. With `noUncheckedIndexedAccess` each
+  // `cells[idx]` is `string | undefined`; we coerce undefined → '' before
+  // passing to parseFloat — parseFloat('') → NaN, which the filter catches.
+  const ra   = parseFloat(cells[COL_RA]    ?? '');
+  const dec  = parseFloat(cells[COL_DEC]   ?? '');
+  const z    = parseFloat(cells[COL_Z]     ?? '');
   const magU = parseFloat(cells[COL_MAG_U] ?? '');
+  const magG = parseFloat(cells[COL_MAG_G] ?? '');
+  const magR = parseFloat(cells[COL_MAG_R] ?? '');
+  const magI = parseFloat(cells[COL_MAG_I] ?? '');
+  const magZ = parseFloat(cells[COL_MAG_Z] ?? '');
 
   // Skip bad rows: non-physical redshifts (z ≤ 0 means a star, a QSO at
-  // z=0, or a catalogue error) and any field that failed to parse.
-  if (z <= 0 || isNaN(ra) || isNaN(dec) || isNaN(z) || isNaN(magG) || isNaN(magU)) {
+  // z=0, or a catalogue error) and any numeric field that failed to parse.
+  if (
+    z <= 0 ||
+    isNaN(ra) || isNaN(dec) || isNaN(z) ||
+    isNaN(magU) || isNaN(magG) || isNaN(magR) || isNaN(magI) || isNaN(magZ)
+  ) {
     skipped++;
     continue;
   }
 
-  rows.push({ ra, dec, z, magG, magU });
+  // Parse objID as a 64-bit unsigned bigint. `BigInt(s)` throws for empty
+  // strings, non-numeric strings, floats (e.g. "1.5"), etc. We catch any
+  // parse error and treat the row as bad data. A zero objID is also rejected:
+  // SDSS uses 0 as a sentinel for "no object", so it's never a valid ID.
+  let objID: bigint;
+  try {
+    const raw = cells[COL_OBJID] ?? '';
+    if (raw === '') { skipped++; continue; }
+    objID = BigInt(raw);
+    if (objID === 0n) { skipped++; continue; }
+  } catch {
+    skipped++;
+    continue;
+  }
+
+  rows.push({ objID, ra, dec, z, magU, magG, magR, magI, magZ });
 }
 
 if (rows.length === 0) {
@@ -160,34 +192,40 @@ if (rows.length === 0) {
 
 const count = rows.length;
 
-// Allocate the three SoA arrays exactly once. No push() — typed arrays have
-// fixed capacity, and pre-sizing avoids any hidden reallocation.
-const positions  = new Float32Array(count * 3); // (x, y, z) in Mpc per point
-const magnitudes = new Float32Array(count);      // g-band apparent magnitude
-const colorIndex = new Float32Array(count);      // u−g color index
+// Allocate the SoA arrays exactly once. No push() — typed arrays have fixed
+// capacity, and pre-sizing avoids any hidden reallocation.
+const objIDs    = new BigUint64Array(count);       // SDSS object identifiers
+const positions = new Float32Array(count * 3);    // (x, y, z) in Mpc per point
+const magU      = new Float32Array(count);        // u-band apparent magnitude
+const magG      = new Float32Array(count);        // g-band apparent magnitude
+const magR      = new Float32Array(count);        // r-band apparent magnitude
+const magI      = new Float32Array(count);        // i-band apparent magnitude
+const magZ      = new Float32Array(count);        // z-band apparent magnitude
 
 for (let i = 0; i < count; i++) {
   // `rows[i]` is `ParsedRow | undefined` under noUncheckedIndexedAccess.
   // We know it's defined because i < count === rows.length, so `!` is safe.
-  const { ra, dec, z, magG, magU } = rows[i]!;
+  const row = rows[i]!;
+
+  objIDs[i] = row.objID;
 
   // Convert sky position + redshift to 3D Cartesian coordinates in Mpc.
   // raDecZToCartesian returns a three-tuple [x, y, z_cart].
-  const [x, y, zCart] = raDecZToCartesian(ra, dec, z);
+  const [x, y, zCart] = raDecZToCartesian(row.ra, row.dec, row.z);
   positions[i * 3 + 0] = x;
   positions[i * 3 + 1] = y;
   positions[i * 3 + 2] = zCart;
 
-  // g-band magnitude maps directly to point brightness in the shader.
-  magnitudes[i] = magG;
-
-  // u−g: the difference between the u-band and g-band magnitudes.
-  // Bluer star-forming galaxies have lower u−g (≈0.8–1.2);
-  // redder quiescent ellipticals have higher u−g (≈1.6–2.2).
-  colorIndex[i] = magU - magG;
+  // Store each photometric band directly — the renderer will derive color
+  // indices (e.g. u−g) from magU and magG at upload time, not here.
+  magU[i] = row.magU;
+  magG[i] = row.magG;
+  magR[i] = row.magR;
+  magI[i] = row.magI;
+  magZ[i] = row.magZ;
 }
 
-const cloud: PointCloud = { count, positions, magnitudes, colorIndex };
+const cloud: PointCloud = { count, objIDs, positions, magU, magG, magR, magI, magZ };
 
 // ─── Encode & write ───────────────────────────────────────────────────────────
 
