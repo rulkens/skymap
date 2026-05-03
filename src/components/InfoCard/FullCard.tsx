@@ -171,7 +171,16 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
           }
         />
         <CardRow label="Redshift z" value={info.redshift.toFixed(4)} />
-        <CardRow label="Apparent mag (g)" value={info.magG.toFixed(2)} />
+        {/*
+          The g-slot label is source-aware: SDSS reports actual g-band, but
+          2MRS puts J in this slot and GLADE puts B in this slot.  Showing the
+          real band name (info.bands.g) keeps the row honest for non-SDSS
+          galaxies where "(g)" would have been a quiet lie.
+        */}
+        <CardRow
+          label={`Apparent mag (${info.bands.g})`}
+          value={Number.isNaN(info.magG) ? 'N/A' : info.magG.toFixed(2)}
+        />
       </div>
 
       {/* ── Expandable detail section ──────────────────────────────────────── */}
@@ -192,18 +201,38 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
         <summary className={styles.detailsSummary}>More details</summary>
 
         <div className={styles.cardSection}>
+          {/*
+            Same source-aware band label as the apparent-mag row above: the
+            absolute magnitude is computed from whichever band sits in the
+            g-slot, so the label has to follow.
+          */}
           <CardRow
-            label="Absolute mag (g)"
+            label={`Absolute mag (${info.bands.g})`}
             value={Number.isNaN(info.absoluteMagG) ? 'N/A' : info.absoluteMagG.toFixed(2)}
           />
-          <div className={styles.cardRow}>
-            <span className={styles.cardLabel}>Colour</span>
-            <span className={styles.cardValue}>
-              u&minus;g&nbsp;{(info.magU - info.magG).toFixed(2)}&nbsp;&nbsp; g&minus;r&nbsp;
-              {(info.magG - info.magR).toFixed(2)}&nbsp;&nbsp; r&minus;i&nbsp;
-              {(info.magR - info.magI).toFixed(2)}
-            </span>
-          </div>
+          {/*
+            Colour row uses the pre-computed `info.colours` array instead of
+            hardcoding u−g/g−r/r−i. This is the only place the Card cares
+            about which bands a survey actually carries — pointInfoBuilder
+            decides which adjacent-slot pairs to include based on which
+            bands are present, so SDSS gets three colours, 2MRS two, GLADE
+            three (B−J/J−H/H−K), Synthetic three.  If a row has no usable
+            colours (all NaN), we hide the row entirely rather than render
+            an empty value.
+          */}
+          {info.colours.length > 0 && (
+            <div className={styles.cardRow}>
+              <span className={styles.cardLabel}>Colour</span>
+              <span className={styles.cardValue}>
+                {info.colours.map((c, idx) => (
+                  <span key={c.label}>
+                    {idx > 0 && <>&nbsp;&nbsp;</>}
+                    {c.label}&nbsp;{c.value.toFixed(2)}
+                  </span>
+                ))}
+              </span>
+            </div>
+          )}
           <div className={styles.cardRow}>
             <span className={styles.cardLabel}>ObjID</span>
             {/*

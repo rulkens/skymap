@@ -5,7 +5,7 @@
  */
 
 import type { GalaxyTypeInfo } from './GalaxyTypeInfo';
-import { Source } from '../data/sources';
+import { Source, type BandLabels } from '../data/sources';
 
 /**
  * Display data for a single galaxy point, computed on-demand from the raw
@@ -71,16 +71,48 @@ export type PointInfo = {
 
   /** @group Five-band photometry */
 
-  /** SDSS u-band apparent magnitude. */
+  /** Apparent magnitude in the u-slot — actual band is source-dependent (see `bands.u`). */
   magU: number;
-  /** SDSS g-band apparent magnitude — the primary brightness proxy shown in the UI. */
+  /** Apparent magnitude in the g-slot — primary brightness proxy. Actual band is source-dependent (see `bands.g`). */
   magG: number;
-  /** SDSS r-band apparent magnitude. */
+  /** Apparent magnitude in the r-slot — see `bands.r` for the actual band. */
   magR: number;
-  /** SDSS i-band apparent magnitude. */
+  /** Apparent magnitude in the i-slot — see `bands.i` for the actual band. */
   magI: number;
-  /** SDSS z-band apparent magnitude. */
+  /** Apparent magnitude in the z-slot — see `bands.z` for the actual band. */
   magZ: number;
+
+  /**
+   * Names of the actual photometric bands carried in the five mag slots above.
+   *
+   * Catalog parsers shoehorn whichever bands the source provides into the
+   * SDSS-style 5-slot layout, but the bands are NOT universally u/g/r/i/z.
+   * Use these labels in the UI so non-SDSS rows aren't mis-labelled.
+   *
+   * Examples:
+   *   - SDSS:  { u:'u', g:'g', r:'r', i:'i', z:'z' }
+   *   - 2MRS:  { u:'—', g:'J', r:'H', i:'K', z:'—' }
+   *   - GLADE: { u:'—', g:'B', r:'J', i:'H', z:'K' }
+   *
+   * `'—'` (em-dash) marks an empty slot (no measurement for that source).
+   */
+  bands: BandLabels;
+
+  /**
+   * Pre-computed colour pairs to display in the InfoCard's "Colour" row.
+   *
+   * Colour indices (band − band differences) are the standard galaxy-type
+   * discriminator in astronomy.  Which pairs make sense depends on which
+   * bands the source actually measured:
+   *   - SDSS  → u−g, g−r, r−i  (the canonical SDSS triplet)
+   *   - 2MRS  → J−H, H−K       (no optical, NIR triplet only gives 2 colours)
+   *   - GLADE → B−J, J−H, H−K  (B + 2MASS NIR)
+   *
+   * Pre-computing here keeps the React layer presentational — FullCard just
+   * maps over the array — and means the band-pairing logic lives next to the
+   * other data-derivation code in `pointInfoBuilder.ts`.
+   */
+  colours: Array<{ label: string; value: number }>;
 
   /** @group Derived quantities */
 

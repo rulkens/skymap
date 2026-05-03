@@ -158,6 +158,44 @@ const MAX_DIST_MPC: Record<Source, number> = {
   [Source.Glade]: 1500,
 };
 
+/**
+ * The actual photometric bands stored in each per-cloud `magU/G/R/I/Z` slot,
+ * keyed by the slot name.  Catalog parsers shoehorn whichever bands the source
+ * provides into the SDSS-style 5-slot layout, but the data is *not* always
+ * SDSS u/g/r/i/z — labelling rows "(g)" in the InfoCard would be misleading
+ * for non-SDSS sources.
+ *
+ * Slot ↔ band mapping per source (see parsers/twoMrs.ts and parsers/glade.ts):
+ *
+ *   SDSS:       u → u, g → g,  r → r, i → i, z → z          (real SDSS bands)
+ *   2MRS:       u → —, g → J,  r → H, i → K, z → —          (2MASS NIR triplet)
+ *   GLADE:      u → —, g → B,  r → J, i → H, z → K          (B + 2MASS JHK)
+ *   Synthetic:  u → u, g → g,  r → r, i → i, z → z          (modelled on SDSS)
+ *
+ * `'—'` (em-dash) is used for empty slots so the InfoCard can detect absent
+ * bands without resorting to special string values like 'N/A' or empty
+ * strings — and so the display falls back gracefully if accidentally rendered.
+ */
+const BAND_LABELS: Record<Source, BandLabels> = {
+  [Source.Synthetic]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
+  [Source.SDSS]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
+  [Source.TwoMRS]: { u: '—', g: 'J', r: 'H', i: 'K', z: '—' },
+  [Source.Glade]: { u: '—', g: 'B', r: 'J', i: 'H', z: 'K' },
+};
+
+/**
+ * The band-label record returned by `bandLabels()`.  Kept as a named export
+ * so InfoCard prop types can refer to it directly without needing to spell
+ * out the structure at every call site.
+ */
+export type BandLabels = {
+  u: string;
+  g: string;
+  r: string;
+  i: string;
+  z: string;
+};
+
 // ─── Public lookup functions ────────────────────────────────────────────────
 //
 // These thin wrappers exist so that callers depend on a *function signature*
@@ -178,6 +216,18 @@ export function sourceIsAllSky(source: Source): boolean {
 /** Approximate effective max distance in megaparsecs. See `MAX_DIST_MPC`. */
 export function sourceMaxDistanceMpc(source: Source): number {
   return MAX_DIST_MPC[source];
+}
+
+/**
+ * Photometric band labels for the five `magU/G/R/I/Z` slots on this source's
+ * `PointCloud`.  Returns the actual band name carried in each slot (e.g.
+ * `'B'` for GLADE's g-slot) so the InfoCard can label rows accurately
+ * instead of always saying "(g)".  Slots without a measurement carry `'—'`.
+ *
+ * See the `BAND_LABELS` table above for the per-source mapping rationale.
+ */
+export function bandLabels(source: Source): BandLabels {
+  return BAND_LABELS[source];
 }
 
 // ─── Visibility bitmask ─────────────────────────────────────────────────────

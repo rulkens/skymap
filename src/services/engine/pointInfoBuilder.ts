@@ -18,7 +18,7 @@
  */
 
 import type { PointCloud, PointInfo } from '../../@types';
-import { Source, sourceLabel } from '../../data/sources';
+import { Source, sourceLabel, bandLabels } from '../../data/sources';
 import {
   cartesianToRaDecZ,
   formatRaSexagesimal,
@@ -125,6 +125,38 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
   // rather than the u−g we feed the shader — u−r gives a cleaner separation.
   const uMinusR = magU - magR;
 
+  // ── Band labels + colour pairs ─────────────────────────────────────────────
+  //
+  // Look up which actual photometric bands occupy each mag slot for this
+  // source, then build the list of colour indices that make sense given
+  // those bands.  Non-SDSS surveys don't carry u-band, so the canonical
+  // u−g colour is replaced with whatever bluest-band colour they DO have
+  // (e.g. B−J for GLADE).  Slots marked '—' are skipped.
+  //
+  // The `colours` array is what the InfoCard renders in its "Colour" row;
+  // pre-computing it here keeps the React layer presentational and avoids
+  // sprinkling per-source band-pair logic throughout the components.
+  const bands = bandLabels(source);
+
+  // Available pairs in adjacent-slot order: each entry pairs the label and
+  // value only if BOTH constituent bands are real (not '—') AND the
+  // computed difference is finite.  Adjacent-slot pairs (u−g, g−r, r−i, i−z)
+  // are the standard convention because adjacent SED bands give the most
+  // information per colour — non-adjacent pairs (u−r etc.) are less common
+  // and not needed to characterise galaxy type.
+  const candidatePairs: Array<[keyof typeof bands, keyof typeof bands, number]> = [
+    ['u', 'g', magU - magG],
+    ['g', 'r', magG - magR],
+    ['r', 'i', magR - magI],
+    ['i', 'z', magI - magZ],
+  ];
+  const colours: Array<{ label: string; value: number }> = [];
+  for (const [a, b, value] of candidatePairs) {
+    if (bands[a] === '—' || bands[b] === '—') continue;
+    if (!Number.isFinite(value)) continue;
+    colours.push({ label: `${bands[a]}−${bands[b]}`, value });
+  }
+
   // ── Per-source link / thumbnail wiring ─────────────────────────────────────
   //
   // SDSS galaxies get the proper SDSS DR18 ImgCutout (sharper, deeper, and the
@@ -176,6 +208,10 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
     absoluteMagG: absoluteMagnitude(magG, distanceMpc),
     galaxyType: galaxyTypeFromColor(uMinusR),
     iauName: iauName(source, ra, dec),
+
+    // Per-slot band names + pre-computed adjacent-slot colour pairs.
+    bands,
+    colours,
 
     // Source attribution — fed through to the InfoCard's badge + link logic.
     source,
