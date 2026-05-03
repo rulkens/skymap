@@ -121,13 +121,39 @@ struct Uniforms {
   // change.
   instanceIdOffset: u32,
 
-  // Two u32 padding words to round the struct from 88 to 96 bytes, which is
-  // a multiple of 16 (the struct's own alignment, inherited from mat4x4).
-  // Without this tail padding, WebGPU would reject the binding with a
-  // size-alignment validation error. The values are ignored by the shader;
-  // PointRenderer writes them as 0.
+  // Two u32 padding words to keep `selectedIndex` (offset 80) and
+  // `instanceIdOffset` (offset 84) on the same 16-byte vec4 slot as the
+  // _pad0/_pad1 below.  Required because the next member (`camPosWorld`,
+  // a vec3<f32>) has alignment 16, so the struct would otherwise insert
+  // implicit padding here anyway — naming the bytes makes the JS-side
+  // upload obvious.
   _pad0: u32,
   _pad1: u32,
+
+  // ── APPARENT-SIZE BILLBOARD SIZING (added Task: galaxy disc sizing) ──────
+  //
+  // World-space camera position in Mpc.  Used by the vertex stage to compute
+  // the per-galaxy distance, which feeds the apparent-pixel-size calculation
+  // below.  WGSL gives `vec3<f32>` an alignment of 16 — so this field starts
+  // at offset 96 (the previous _pad0/_pad1 brought us to a 16-byte boundary)
+  // and consumes 12 bytes of payload + 4 bytes of trailing padding before
+  // `pxPerRad`.
+  //
+  // Why a uniform and not a per-vertex attribute?  The camera position is the
+  // same for every instance in a frame.  Per-vertex storage would burn ~10 MB
+  // for SDSS to redundantly record one vec3 per galaxy — a uniform is the
+  // right tool for "per-frame, all-instances" data.
+  camPosWorld: vec3<f32>,
+
+  // Pixels-per-radian for the current viewport + camera FOV combination,
+  // pre-computed CPU-side as `viewport.y / (2 · tan(fovY / 2))`.  Multiplying
+  // an angular size (radians) by this scalar yields screen pixels — the
+  // standard pinhole-camera relation, just packaged for cheap shader use.
+  //
+  // We pass it pre-divided rather than passing fovY and recomputing per
+  // vertex because `tan` is one of the more expensive intrinsics on mobile
+  // GPUs and the result is frame-constant.
+  pxPerRad: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -348,16 +374,50 @@ fn vs(
 
   // Scale the billboard ~8× for the selected point so the selection ring
   // is unmistakable — even a faint, magnitude-22 galaxy gets a visible halo.
-  // Non-selected points keep the original pointSizePx radius.
+  // Non-selected points keep the apparent-size radius.
   //
   // We use `select(normalSize, selectedSize, isSelected)` — WGSL's ternary.
   // Recall the argument order: select(falseValue, trueValue, condition).
   let sizeScale = select(1.0, 8.0, isSelected);
 
+  // ── APPARENT-SIZE BILLBOARD RADIUS ───────────────────────────────────────
+  //
+  // We want each galaxy's billboard to occupy its real angular footprint on
+  // screen — a galaxy 5 Mpc away gets a much bigger disk than one 500 Mpc
+  // away — but never to vanish below `u.pointSizePx`, which acts as the
+  // far-field "still detectable as a glowing dot" floor.
+  //
+  // A galaxy approximated as a 30-kpc-diameter disk (the project's current
+  // single-diameter assumption — see galaxyDiameterKpc.ts; later tasks may
+  // upgrade this to a per-galaxy value) has angular radius
+  //
+  //     θ ≈ (radius_kpc / 1000) / distance_Mpc      [radians]
+  //       = radius_Mpc / distance_Mpc
+  //
+  // for the small-angle range we care about (galaxies subtend at most a
+  // few degrees even when very close).  Multiplying by `u.pxPerRad`
+  // converts radians to screen pixels.
+  //
+  // Why max(floor, apparent) rather than just apparent?  In the far field
+  // (most galaxies in any frame), the apparent radius drops well below 1 px
+  // and the galaxy would either alias into a single pixel or vanish.  The
+  // floor preserves the "field of stars" look at large distances while
+  // letting nearby galaxies grow into proper discs.  Tasks 11 (ellipse
+  // mask) and 12 (3D disk planes) hook into this same disk to give the
+  // billboard its inclination + PA appearance.
+  let GALAXY_RADIUS_MPC: f32 = 0.015;  // 30 kpc diameter / 2 / 1000
+  let toGalaxy = p.position - u.camPosWorld;
+  let distanceMpc = length(toGalaxy);
+  // Guard distanceMpc against 0 so we don't divide-by-zero when the camera
+  // is parked exactly on a galaxy (test fixture path; not a real scenario).
+  let safeDist = max(distanceMpc, 0.001);
+  let apparentPxRadius = (GALAXY_RADIUS_MPC / safeDist) * u.pxPerRad;
+  let sizePx = max(u.pointSizePx, apparentPxRadius);
+
   // ── PIXEL-SIZE-IN-CLIP-SPACE CONVERSION ──────────────────────────────────
   //
-  // We want the billboard to be `pointSizePx` pixels in radius on screen,
-  // regardless of the point's depth.
+  // We want the billboard to be `sizePx` pixels in radius on screen,
+  // regardless of the point's clip-space depth.
   //
   // Clip space spans [-1, +1] in X and Y — a range of 2.0 in each direction.
   // To move 1 pixel right in clip space, we shift by 2/viewportWidth.
@@ -366,15 +426,13 @@ fn vs(
   // BUT clip space hasn't been perspective-divided yet. The GPU divides xyz by
   // w to get NDC. If we add a raw clip-space offset, it gets divided by w too,
   // making the apparent size shrink with distance (points farther away look
-  // smaller) — the opposite of what we want.
-  //
-  // Fix: multiply the offset by center.w. This cancels the divide-by-w step:
-  //   NDC offset = (corner * pointSizePx * pxToClip * center.w) / center.w
-  //              = corner * pointSizePx * pxToClip
-  //
-  // Result: the billboard stays exactly `pointSizePx` pixels regardless of depth.
+  // smaller).  This is exactly *wrong* for fixed-pixel billboards (we'd want
+  // them constant on screen), so we cancel the divide by multiplying by w.
+  // For our distance-dependent `sizePx`, the same cancellation still applies:
+  // the math gives "this many screen pixels regardless of clip-space depth"
+  // and the size variation comes from sizePx itself, not from perspective.
   let pxToClip = vec2<f32>(2.0 / u.viewport.x, 2.0 / u.viewport.y);
-  let offset   = corner * u.pointSizePx * sizeScale * pxToClip * center.w;
+  let offset   = corner * sizePx * sizeScale * pxToClip * center.w;
 
   var out: VSOut;
 

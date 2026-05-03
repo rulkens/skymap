@@ -813,15 +813,31 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           ],
         });
 
-        // Upload per-frame uniforms (viewProj, viewport, selectedIndex) and
-        // issue the instanced draw call.
+        // Upload per-frame uniforms (viewProj, viewport, selectedIndex,
+        // camera position, pxPerRad) and issue the instanced draw call.
         //
         // `pointSizePx` and `brightness` come from the settings-panel closure
         // variables; they start at 2.5 and 1.0 and are updated by the handle
-        // setters `setPointSize` / `setBrightness` below.
+        // setters `setPointSize` / `setBrightness` below.  `pointSizePx` now
+        // acts as a *floor*: galaxies whose apparent angular radius exceeds
+        // it grow to that real disc size; far galaxies stay at the floor so
+        // they remain visible as faint dots.  See points.wgsl for the math.
         //
         // selectedIndex: 0xffffffff is the sentinel for "nothing selected" —
         // the max u32 value, which can never match a real point index.
+        //
+        // pxPerRad = viewport.height / (2 · tan(fovY/2)) — the standard
+        // pinhole conversion from radians to screen pixels.  Pre-computed on
+        // the CPU because `tan` is one of the more expensive shader
+        // intrinsics on mobile GPUs and the value is frame-constant.
+        const drawPxPerRad =
+          cam !== null
+            ? canvas.height / (2 * Math.tan(cam.fovYRad / 2))
+            : 1;
+        const drawCamPos: Readonly<[number, number, number]> =
+          cam !== null
+            ? [cam.position[0], cam.position[1], cam.position[2]]
+            : [0, 0, 0];
         renderer.draw(
           pass,
           vp,
@@ -830,6 +846,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           brightness,
           selectedIndex !== null ? selectedIndex : 0xffffffff >>> 0,
           visibleSourceMask,
+          drawCamPos,
+          drawPxPerRad,
         );
 
         // ── Galaxy thumbnail pass ─────────────────────────────────────────

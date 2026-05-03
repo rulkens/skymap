@@ -107,28 +107,32 @@ const K_PER_Z_BYTE_OFFSET = 24;
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.
  *
- * The struct contains:
- *   - `viewProj`         : mat4x4<f32>  = 16 floats = 64 bytes
- *   - `viewport`         : vec2<f32>    = 2 floats  }
- *   - `pointSizePx`      : f32          = 1 float   } = 16 bytes (one vec4 slot)
- *   - `brightness`       : f32          = 1 float   }
- *   - `selectedIndex`    : u32          = 4 bytes   }
- *   - `instanceIdOffset` : u32          = 4 bytes   } = 16 bytes (one vec4 slot for alignment)
- *   - `_pad0`            : u32          = 4 bytes   }
- *   - `_pad1`            : u32          = 4 bytes   }
+ * The struct contains (offsets are byte offsets from the start of the buffer):
+ *
+ *   bytes  0..63  : viewProj         mat4x4<f32>  (16 floats = 64 bytes)
+ *   bytes 64..71  : viewport         vec2<f32>    (2 floats)         }
+ *   bytes 72..75  : pointSizePx      f32          (1 float)          } 16 bytes (one vec4 slot)
+ *   bytes 76..79  : brightness       f32          (1 float)          }
+ *   bytes 80..83  : selectedIndex    u32                             ← picker writes here
+ *   bytes 84..87  : instanceIdOffset u32                             ← per-source offset (legacy; baked per-vertex now)
+ *   bytes 88..95  : _pad0/_pad1      u32×2        (written as 0)     ← alignment for the next vec3 slot
+ *   bytes 96..107 : camPosWorld      vec3<f32>    (3 floats)         } 16 bytes (one vec4 slot)
+ *   bytes 108..111: pxPerRad         f32          (1 float)          }
+ *
+ * Total: 112 bytes — a multiple of 16 ✓
  *
  * WGSL uniform buffers follow rules similar to std140 (see WGSL spec §13,
- * "Memory Layout"). Each member must be aligned to its "alignment" value.
+ * "Memory Layout"). Each member must be aligned to its alignment value:
+ * `vec3<f32>` requires 16-byte alignment, which is why the `_pad0/_pad1`
+ * pair sits between `instanceIdOffset` and `camPosWorld` — without those
+ * eight bytes, `camPosWorld` would land at offset 88, breaking alignment
+ * and silently corrupting the camera position.
  *
- * Layout summary (the picker depends on `selectedIndex` staying at offset 80):
- *   bytes  0..63  : viewProj mat4x4<f32>        (16 floats)
- *   bytes 64..79  : viewport.xy + pointSizePx + brightness  (4 floats)
- *   bytes 80..83  : selectedIndex u32                       ← picker writes here
- *   bytes 84..87  : instanceIdOffset u32                    ← per-source draw writes here
- *   bytes 88..95  : _pad0/_pad1  (written as 0)
- *   total: 96 bytes — a multiple of 16 ✓
+ * The picker (`pickRenderer.ts`) writes only `selectedIndex` at offset 80;
+ * the new tail fields are read-only from its perspective and are populated
+ * by every visual `draw()` call before the pick pass runs.
  */
-const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4; // 96 bytes: mat4 (64) + vec4-slot (16) + u32×4 (16)
+const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4; // 112 bytes
 
 // ─── Per-source bookkeeping ───────────────────────────────────────────────────
 
@@ -554,10 +558,24 @@ export class PointRenderer {
    * @param pass               Active render pass encoder.
    * @param viewProj           Column-major 4×4 view-projection matrix.
    * @param viewportPx         Physical canvas size [w, h] in pixels.
-   * @param pointSizePx        Billboard radius in pixels.
+   * @param pointSizePx        Far-field billboard floor radius in pixels.
+   *                           Galaxies whose apparent angular radius is
+   *                           smaller than this stay rendered at this size
+   *                           so they remain visible as faint dots; nearby
+   *                           galaxies grow past it to their real disc size.
    * @param brightness         Global brightness multiplier in [0, 1].
    * @param selectedIndex      Selected point's *global* index, or `0xFFFFFFFF` for none.
    * @param visibleSourceMask  Bitmask of `Source` values to draw (see `data/sources.ts`).
+   * @param camPosWorld        Camera position in world Mpc (from
+   *                           `orbitCamera.position`). Used by the vertex
+   *                           shader to compute per-galaxy distance for
+   *                           apparent-size sizing.
+   * @param pxPerRad           Pixels-per-radian for the current viewport +
+   *                           camera FOV, computed CPU-side as
+   *                           `viewportPx[1] / (2 * tan(fovYRad / 2))`.
+   *                           Engine pre-computes this once per frame and
+   *                           hands it down so we don't repeat the `tan`
+   *                           call inside the per-vertex shader.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -567,6 +585,8 @@ export class PointRenderer {
     brightness: number,
     selectedIndex: number,
     visibleSourceMask: number,
+    camPosWorld: Readonly<[number, number, number]>,
+    pxPerRad: number,
   ): void {
     // Nothing to draw if no source has been uploaded yet.
     if (this.clouds.size === 0) return;
@@ -578,6 +598,11 @@ export class PointRenderer {
     // the visual + pick paths no longer read it — the global instance ID
     // is now baked per-vertex (see `globalInstanceIdx` in points.wgsl).  We
     // leave the slot zeroed here.
+    //
+    // The new tail fields (`camPosWorld` and `pxPerRad`) feed apparent-size
+    // billboard sizing in the vertex shader. See the `UNIFORM_BYTES` doc
+    // above for the exact byte layout — note the eight-byte gap between
+    // `instanceIdOffset` and `camPosWorld` required by vec3 alignment.
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
     const u32 = new Uint32Array(buf);
@@ -591,6 +616,10 @@ export class PointRenderer {
     // u32[21] (instanceIdOffset) and u32[22..23] (padding) are zero — the
     // shader no longer reads u32[21]; it's preserved only so the WGSL
     // struct layout stays binary-compatible across this refactor.
+    f32[24] = camPosWorld[0]; // bytes 96..99
+    f32[25] = camPosWorld[1]; // bytes 100..103
+    f32[26] = camPosWorld[2]; // bytes 104..107
+    f32[27] = pxPerRad;       // bytes 108..111
 
     this.device.queue.writeBuffer(this.uniformBuffer_internal, 0, buf);
 
