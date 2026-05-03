@@ -137,6 +137,14 @@ async function main() {
   let hoveredIndex:  number | null = null;
   let selectedIndex: number | null = null;
 
+  // True while a pointer (mouse button / finger / pen tip) is pressed on the
+  // canvas. The orbit-controls module already tracks its own drag flag for
+  // camera math, but it doesn't expose it. We mirror the bit here so the
+  // hover-pick scheduler can suppress picks during a drag — otherwise the
+  // info card would flicker through every point the cursor passes over while
+  // the user is rotating the camera.
+  let pointerDown = false;
+
   // ── GPU pick helper ────────────────────────────────────────────────────────
   //
   // DPR cap matches `resizeCanvasToDisplay` in device.ts (≤ 2). We precompute
@@ -230,6 +238,31 @@ async function main() {
     latestMouseCss = null;
     hoveredIndex = null;
     refreshCard();
+  });
+
+  // ── Drag detection (suppress hover picks during camera rotation) ───────────
+  //
+  // We listen on `window` (not the canvas) for pointerup so we still see the
+  // release even when `setPointerCapture` has routed events back to the canvas
+  // via the orbit-controls module. The capture means the canvas receives
+  // pointerup, but `window` sees it too via bubbling.
+  //
+  // On pointerdown we also clear the current hover so the card immediately
+  // reflects "nothing hovered" instead of lagging until the drag ends.
+  canvas.addEventListener('pointerdown', () => {
+    pointerDown = true;
+    if (hoveredIndex !== null) {
+      hoveredIndex = null;
+      refreshCard();
+    }
+  });
+  window.addEventListener('pointerup', () => {
+    pointerDown = false;
+  });
+  // Defensive: if the OS cancels the gesture (e.g. context-menu interrupt),
+  // we still want to release the suppression flag.
+  window.addEventListener('pointercancel', () => {
+    pointerDown = false;
   });
 
   // ── Click handling ─────────────────────────────────────────────────────────
@@ -362,7 +395,8 @@ async function main() {
       vb &&
       latestMouseCss !== null &&
       latestMouseCss !== lastPickedMouseCss &&
-      !pickInFlight
+      !pickInFlight &&
+      !pointerDown    // ← skip hover picks while a drag is in progress
     ) {
       // Snapshot the position at the moment we kick off the pick.
       // By the time the promise resolves, latestMouseCss may have moved on —

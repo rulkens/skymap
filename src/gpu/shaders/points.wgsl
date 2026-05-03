@@ -394,30 +394,48 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   //
   // For normal (non-selected) points we keep the original solid-disk logic.
   if (in.selected == 1u) {
-    // Outside the ring's outer edge — discard.
+    // Outside the outer edge of the scaled billboard — discard.
     if (r2 > 1.0) { discard; }
 
-    // Inside the ring's inner edge — discard to create the hollow centre.
-    // The threshold 0.72 means the ring band runs from √0.72 ≈ 0.85 out to 1.0,
-    // a reasonably thin annulus. Combined with the 8× billboard scale, this
-    // gives a visibly large ring surrounding the original point.
-    if (r2 < 0.72) { discard; }
+    // ── Inner disk (the point itself) ──────────────────────────────────────
+    //
+    // We scaled the billboard 8× in `vs`, so the original point's footprint
+    // occupies the inner 1/8 in linear distance — i.e. r² ≤ (1/8)² = 1/64
+    // ≈ 0.0156 in this scaled UV space. Inside that radius we render the
+    // *normal* point disk so the user can still see the selected galaxy's
+    // own brightness, not just the highlight ring around it.
+    //
+    // The alpha factor `exp(-r2 * 256)` is the original `exp(-r2 * 4)`
+    // remapped: at r² = 1/64, we want the same `exp(-4)` falloff the
+    // unscaled point would have, so we multiply r² by 64 (= 8²) before
+    // applying the original ×4 coefficient → 256.
+    if (r2 < 0.0156) {
+      let alpha = exp(-r2 * 256.0);
+      let rgb   = in.tint * in.intensity;
+      return vec4<f32>(rgb * alpha, alpha);
+    }
 
-    // Smooth alpha across the ring band, peaking in the middle.
-    // We map r² ∈ [0.72, 1.0] to a 0→1→0 hump: distance from the band centre
-    // (0.86) drives a small Gaussian, so the ring fades softly on both edges
-    // rather than appearing hard-clipped.
-    let bandCentre = 0.86;
-    let bandDist   = abs(r2 - bandCentre);
-    let alpha      = exp(-bandDist * bandDist * 80.0);
+    // ── Selection ring annulus ─────────────────────────────────────────────
+    //
+    // The ring band runs from √0.72 ≈ 0.85 of the billboard radius out to 1.0.
+    // We map r² ∈ [0.72, 1.0] to a soft hump centred at 0.86 so the band
+    // fades on both edges rather than appearing hard-clipped.
+    if (r2 > 0.72) {
+      let bandCentre = 0.86;
+      let bandDist   = abs(r2 - bandCentre);
+      let alpha      = exp(-bandDist * bandDist * 80.0);
 
-    // Brighten the selection ring relative to the normal point colour.
-    // 2.5× plus a constant white floor (0.7) keeps the ring bright enough
-    // to be salient even when the underlying point is dim. Additive blending
-    // saturates naturally so this can't blow past white.
-    let rgb = in.tint * (in.intensity * 2.5 + 0.7);
+      // Brighten the ring relative to the natural point colour. 2.5× plus a
+      // constant white floor (0.7) keeps it salient even when the underlying
+      // galaxy is dim. Additive blending saturates naturally toward white.
+      let rgb = in.tint * (in.intensity * 2.5 + 0.7);
 
-    return vec4<f32>(rgb * alpha, alpha);
+      return vec4<f32>(rgb * alpha, alpha);
+    }
+
+    // Gap between the inner point and the ring — fully transparent so the
+    // selection is visually a "point + halo" pair rather than a giant disk.
+    discard;
   }
 
   // ── NORMAL POINT — solid disk with Gaussian falloff ───────────────────────
