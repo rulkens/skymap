@@ -20,5 +20,6 @@ export * from './earthEraForLookback';
 export * from './galaxyTypeFromColor';
 export * from './easeOutCubic';
 export * from './lerp';
+export * from './lerpAngleShortest';
 export * from './sdssExplorerUrl';
 export * from './sdssThumbnailUrl';
