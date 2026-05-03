@@ -469,12 +469,12 @@ export function galaxyTypeFromColor(uMinusR: number): GalaxyTypeInfo {
  * silently truncate the last few digits and retrieve the wrong object.
  *
  * URL template (DR18):
- *   http://skyserver.sdss.org/dr18/VisualTools/quickobj?objId={objId}
+ *   https://skyserver.sdss.org/dr18/VisualTools/quickobj?objId={objId}
  *
  * @param objId  The SDSS 64-bit object identifier as a bigint.
  */
 export function sdssExplorerUrl(objId: bigint): string {
-  return `http://skyserver.sdss.org/dr18/VisualTools/quickobj?objId=${objId}`;
+  return `https://skyserver.sdss.org/dr18/VisualTools/quickobj?objId=${objId}`;
 }
 
 /**
@@ -489,7 +489,7 @@ export function sdssExplorerUrl(objId: bigint): string {
  * The default of 160 gives a comfortable thumbnail without a large download.
  *
  * URL template (DR18):
- *   http://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg
+ *   https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg
  *     ?ra={ra}&dec={dec}&scale=0.4&width={size}&height={size}
  *
  * @param raDeg   Right Ascension of the centre, in decimal degrees.
@@ -505,7 +505,7 @@ export function sdssThumbnailUrl(
   // Clamp to the service-documented pixel limits.
   const size = Math.max(32, Math.min(2048, sizePx));
   return (
-    `http://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg` +
+    `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg` +
     `?ra=${raDeg}&dec=${decDeg}&scale=0.4&width=${size}&height=${size}`
   );
 }

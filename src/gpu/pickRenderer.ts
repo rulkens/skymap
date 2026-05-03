@@ -332,6 +332,31 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     //   2. The pick pass is a separate, self-contained GPU operation.
     const encoder = device.createCommandEncoder();
 
+    // ── Suppress the selection halo for the pick pass ─────────────────────
+    //
+    // The shared uniform buffer carries `selectedIndex`, which the visual
+    // shader uses to enlarge the selected billboard 8× and render it as a
+    // ring. We re-use the same buffer here so viewProj / viewport stay in
+    // sync, but if we *also* let the pick pass see the real selectedIndex
+    // it would inherit the 8× scaling — combined with the pick fragment's
+    // `r² < 2.25` forgiveness radius this gives the selected point a pick
+    // area roughly 12× larger than every other point, swallowing clicks
+    // around its halo.
+    //
+    // Fix: write the "no selection" sentinel (0xFFFFFFFF, the same value
+    // used when nothing is pinned) into the uniform buffer's selectedIndex
+    // slot for the duration of the pick render pass. The visual pass on the
+    // next frame overwrites this with the real selectedIndex, so we don't
+    // need to restore anything afterward.
+    //
+    // Layout: mat4 viewProj (64) + viewport (8) + pointSizePx (4) +
+    // brightness (4) → selectedIndex sits at byte offset 80.
+    const SELECTED_INDEX_OFFSET = 80;
+    const NONE_SENTINEL = new Uint32Array([0xffffffff]);
+    device.queue.writeBuffer(
+      sharedUniformBuffer, SELECTED_INDEX_OFFSET, NONE_SENTINEL,
+    );
+
     // ── Render pass ────────────────────────────────────────────────────────
     //
     // clearValue { r:0 } clears every texel to 0 — the sentinel that means

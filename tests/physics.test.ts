@@ -272,7 +272,7 @@ describe('sdssExplorerUrl', () => {
   it('builds the correct DR18 Quick Look URL for a given objId', () => {
     const url = sdssExplorerUrl(1237651738291011584n);
     expect(url).toBe(
-      'http://skyserver.sdss.org/dr18/VisualTools/quickobj?objId=1237651738291011584',
+      'https://skyserver.sdss.org/dr18/VisualTools/quickobj?objId=1237651738291011584',
     );
   });
 });

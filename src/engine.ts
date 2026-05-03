@@ -581,13 +581,8 @@ export function createEngine(
    */
   function setHovered(idx: number | null): void {
     if (idx === hoveredIndex) return;
-    const prev = hoveredIndex;
     hoveredIndex = idx;
-
-    // Only fire the callback when the value actually changed.
-    if (prev !== idx) {
-      cb.onHoverChange(idx !== null && cloud ? buildPointInfo(cloud, idx) : null);
-    }
+    cb.onHoverChange(idx !== null && cloud ? buildPointInfo(cloud, idx) : null);
   }
 
   /**
@@ -659,21 +654,11 @@ export function createEngine(
       cb.onStatusChange({ kind: 'loading' });
 
       // Fetch /data/sdss.bin; fall back to synthetic on any error.
-      let source: CloudSource;
-      let loadErr: unknown = null;
-      try {
-        const result = await loadCloud();
-        cloud = result.cloud;
-        source = result.source;
-      } catch (err) {
-        // loadCloud already logs the warning and falls back to synthetic, but
-        // a thrown error here means loadCloud itself threw (shouldn't happen
-        // with the current implementation). Treat it as a synthetic fallback.
-        console.warn('Unexpected error in loadCloud; using synthetic cloud.', err);
-        cloud = generateSyntheticCloud(100_000);
-        source = 'synthetic';
-        loadErr = err;
-      }
+      // loadCloud catches its own fetch/decode errors and always resolves —
+      // no outer try/catch needed here.
+      const result = await loadCloud();
+      cloud = result.cloud;
+      const source: CloudSource = result.source;
 
       renderer.upload(cloud);
 
@@ -802,12 +787,6 @@ export function createEngine(
       });
 
       // ── Status: ready ────────────────────────────────────────────────────
-
-      if (loadErr) {
-        // A hard error occurred during loading (not the expected sdss.bin 404);
-        // still show ready with synthetic data.
-        console.warn('Engine running with synthetic data due to load error.', loadErr);
-      }
 
       cb.onStatusChange({ kind: 'ready', count: cloud.count, source });
 
