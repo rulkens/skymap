@@ -8,11 +8,142 @@
       #c { display: block; width: 100vw; height: 100vh; }
       #status { position: fixed; top: 8px; left: 8px; color: #ccc;
         font: 12px/1.4 ui-monospace, monospace; }
+
+      /* ── Space-themed galaxy info card ─────────────────────────────────── */
+
+      #info-card {
+        display: none; /* shown by JS when a point is hovered or pinned */
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        z-index: 10;
+
+        /* Glassmorphism: dark translucent background with blur */
+        background: rgba(8, 12, 28, 0.72);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px); /* Safari */
+
+        border: 1px solid rgba(160, 200, 255, 0.18);
+        border-radius: 10px;
+        box-shadow:
+          0 8px 32px rgba(0, 0, 0, 0.6),
+          0 0 0 1px rgba(160, 200, 255, 0.06) inset;
+
+        padding: 14px 18px;
+        min-width: 240px;
+
+        color: #cfd8ff;
+        font: 12px / 1.45 ui-monospace, "SF Mono", Menlo, monospace;
+      }
+
+      /* Subtle starlight-blue gradient accent line along the top edge */
+      #info-card::before {
+        content: '';
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 12px;
+        right: 12px;
+        height: 1px;
+        border-radius: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(120, 180, 255, 0.45) 30%,
+          rgba(180, 220, 255, 0.7) 50%,
+          rgba(120, 180, 255, 0.45) 70%,
+          transparent 100%
+        );
+      }
+
+      /* Title row: "OBJECT" label on the left, optional "PINNED" badge on the right */
+      .card-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        color: rgba(160, 180, 230, 0.45);
+        text-transform: uppercase;
+      }
+
+      /* PINNED badge — hidden until data-pinned attribute is set on the card */
+      #pinned-badge {
+        display: none;
+        color: #ffd97a;
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      /* Show the badge when the card has data-pinned */
+      #info-card[data-pinned] #pinned-badge {
+        display: inline;
+      }
+
+      /* Each data field: label on the left, value on the right */
+      .card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+        padding: 2px 0;
+      }
+
+      .card-label {
+        color: rgba(160, 180, 230, 0.55);
+        flex-shrink: 0;
+      }
+
+      .card-value {
+        color: #e8eeff;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
     </style>
   </head>
   <body>
     <canvas id="c"></canvas>
     <div id="status">initializing…</div>
+
+    <!-- Galaxy info card — hidden until hover or selection -->
+    <div id="info-card" role="status" aria-live="polite">
+      <div class="card-title">
+        <span>Object</span>
+        <span id="pinned-badge">Pinned</span>
+      </div>
+
+      <div class="card-row">
+        <span class="card-label">Index</span>
+        <span class="card-value" id="field-index">—</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">RA</span>
+        <span class="card-value"><span id="field-ra">—</span>&deg;</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">Dec</span>
+        <span class="card-value"><span id="field-dec">—</span>&deg;</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">Redshift z</span>
+        <span class="card-value" id="field-z">—</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">Distance</span>
+        <span class="card-value"><span id="field-distance">—</span> Mpc</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">Magnitude</span>
+        <span class="card-value" id="field-magnitude">—</span>
+      </div>
+      <div class="card-row">
+        <span class="card-label">Color (u&minus;g)</span>
+        <span class="card-value" id="field-color">—</span>
+      </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

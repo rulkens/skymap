@@ -66,27 +66,36 @@ const POINT_STRIDE = FLOATS_PER_POINT * 4; // 20 bytes
  * Byte size of the `Uniforms` struct as seen by the GPU.
  *
  * The struct contains:
- *   - `viewProj`    : mat4x4<f32>  = 16 floats = 64 bytes
- *   - `viewport`    : vec2<f32>    = 2 floats  }
- *   - `pointSizePx` : f32          = 1 float   } = 4 floats = 16 bytes (one vec4 slot)
- *   - `brightness`  : f32          = 1 float   }
+ *   - `viewProj`      : mat4x4<f32>  = 16 floats = 64 bytes
+ *   - `viewport`      : vec2<f32>    = 2 floats  }
+ *   - `pointSizePx`   : f32          = 1 float   } = 16 bytes (one vec4 slot)
+ *   - `brightness`    : f32          = 1 float   }
+ *   - `selectedIndex` : u32          = 4 bytes   }
+ *   - `_pad0`         : u32          = 4 bytes   } = 16 bytes (one vec4 slot for alignment)
+ *   - `_pad1`         : u32          = 4 bytes   }
+ *   - `_pad2`         : u32          = 4 bytes   }
  *
  * WGSL uniform buffers follow rules similar to std140 (see WGSL spec §13,
  * "Memory Layout"). Each member must be aligned to its "alignment" value:
  *   - mat4x4<f32> alignment = 16 bytes  (starts at offset 0 ✓)
  *   - vec2<f32>   alignment = 8 bytes   (starts at offset 64 ✓)
  *   - f32         alignment = 4 bytes   (starts at offsets 72, 76 ✓)
+ *   - u32         alignment = 4 bytes   (starts at offsets 80, 84, 88, 92 ✓)
  *
- * The total is 80 bytes — but we round up to the next multiple of 16 for the
- * "tail" vec4 slot, giving 64 + 16 = 80 bytes. No padding gaps appear here
- * because the mat4 naturally ends on a 16-byte boundary and the remaining
- * fields (vec2 + f32 + f32 = 16 bytes) fill exactly one vec4-aligned slot.
+ * NOTE: We use four separate u32 fields rather than u32 + vec3<u32> because
+ * vec3<u32> has 16-byte alignment in WGSL (like vec3<f32>), which would force
+ * an invisible 8-byte gap between selectedIndex (offset 80) and the vec3 (which
+ * would have to start at offset 96) — bloating the struct to 112 bytes. Four
+ * scalar u32s pack contiguously at offsets 80, 84, 88, 92 for a clean 96 bytes.
  *
- * We represent the 4-float tail as a single Float32Array region at offset 16
- * in our JS uniform array (indices 16..19), which maps cleanly to the GPU
- * layout without manual padding arithmetic.
+ * Layout summary:
+ *   bytes  0..63  : viewProj mat4x4<f32>        (16 floats)
+ *   bytes 64..79  : viewport.xy + pointSizePx + brightness  (4 floats)
+ *   bytes 80..83  : selectedIndex u32
+ *   bytes 84..95  : _pad0/_pad1/_pad2 u32 × 3  (written as 0)
+ *   total: 96 bytes — a multiple of 16 ✓
  */
-const UNIFORM_BYTES = 16 * 4 + 4 * 4; // 80 bytes: mat4 (64) + vec4-slot (16)
+const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4; // 96 bytes: mat4 (64) + vec4-slot (16) + u32×4 (16)
 
 // ─── PointRenderer ────────────────────────────────────────────────────────────
 
@@ -104,7 +113,7 @@ export class PointRenderer {
    * We do NOT need `COPY_SRC` (we never read back from it to the CPU) or
    * `VERTEX`/`INDEX` (it's a uniform, not geometry data).
    */
-  private uniformBuffer: GPUBuffer;
+  private uniformBuffer_internal: GPUBuffer;
 
   /**
    * The bind group that wires the uniform buffer into `@group(0) @binding(0)`.
@@ -122,10 +131,37 @@ export class PointRenderer {
    * `null` until `upload()` is called. Recreated on each `upload()` because
    * the point count may change between loads (see `upload()` for rationale).
    */
-  private vertexBuffer: GPUBuffer | null = null;
+  private _vertexBuffer: GPUBuffer | null = null;
 
   /** Number of catalog points currently loaded on the GPU. */
   private count = 0;
+
+  // ─── Public accessors ────────────────────────────────────────────────────────
+
+  /**
+   * The GPU buffer holding per-instance point data (position, magnitude, colorIndex).
+   *
+   * `null` until `upload()` has been called at least once. The pick renderer
+   * shares this buffer — it must not be destroyed while a pick is in flight.
+   *
+   * Exposed as a read-only getter so `PickRenderer` (and `main.ts`) can access
+   * it without resorting to `as unknown as { vertexBuffer: GPUBuffer }` casts.
+   */
+  get vertexBuffer(): GPUBuffer | null {
+    return this._vertexBuffer;
+  }
+
+  /**
+   * The GPU buffer holding per-frame uniform data (viewProj, viewport, etc.).
+   *
+   * Written every frame by `draw()`. The pick renderer reads the same buffer
+   * so it sees the same camera state as the visual pass — no extra uploads needed.
+   *
+   * Exposed as a read-only getter for the same reason as `vertexBuffer` above.
+   */
+  get uniformBuffer(): GPUBuffer {
+    return this.uniformBuffer_internal;
+  }
 
   // ─── Constructor ────────────────────────────────────────────────────────────
 
@@ -271,7 +307,7 @@ export class PointRenderer {
     // We do NOT set COPY_SRC (no read-back needed) or MAP_READ / MAP_WRITE
     // (those are for buffers you want to map into CPU address space, which is
     // incompatible with UNIFORM on most platforms).
-    this.uniformBuffer = device.createBuffer({
+    this.uniformBuffer_internal = device.createBuffer({
       size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -290,7 +326,7 @@ export class PointRenderer {
     // `@group(0) @binding(0) var<uniform> u: Uniforms` in points.wgsl.
     this.bindGroup = device.createBindGroup({
       layout: this.pipeline.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
+      entries: [{ binding: 0, resource: { buffer: this.uniformBuffer_internal } }],
     });
   }
 
@@ -339,7 +375,7 @@ export class PointRenderer {
 
     // Destroy the previous vertex buffer (if any) before allocating a new one.
     // See method doc-comment above for the size-change rationale.
-    this.vertexBuffer?.destroy();
+    this._vertexBuffer?.destroy();
 
     // Allocate and upload the new vertex buffer.
     //
@@ -347,7 +383,7 @@ export class PointRenderer {
     //   vertex data via `setVertexBuffer`.
     // `GPUBufferUsage.COPY_DST` — we write into it immediately below with
     //   `writeBuffer`. Without this flag the write would fail validation.
-    this.vertexBuffer = this.device.createBuffer({
+    this._vertexBuffer = this.device.createBuffer({
       size: interleaved.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
@@ -355,7 +391,7 @@ export class PointRenderer {
     // Write the packed data to the GPU. `writeBuffer` schedules a copy from
     // the CPU ArrayBuffer into the GPU buffer; it completes before any
     // subsequent draw call submitted to the same queue.
-    this.device.queue.writeBuffer(this.vertexBuffer, 0, interleaved);
+    this.device.queue.writeBuffer(this._vertexBuffer, 0, interleaved);
 
     this.count = cloud.count;
   }
@@ -384,11 +420,16 @@ export class PointRenderer {
    *                     (after DPR scaling from `resizeCanvasToDisplay`).
    *                     The shader divides by these to convert pixel offsets
    *                     to clip-space offsets for the billboard size calculation.
-   * @param pointSizePx  Radius of each point sprite in pixels. Defaults to 2.5.
-   *                     Larger values produce bigger, softer halos.
-   * @param brightness   Global brightness multiplier in [0, 1]. Defaults to 1.
-   *                     Lets the UI fade the entire star field without
-   *                     re-uploading the vertex buffer.
+   * @param pointSizePx    Radius of each point sprite in pixels. Defaults to 2.5.
+   *                       Larger values produce bigger, softer halos.
+   * @param brightness     Global brightness multiplier in [0, 1]. Defaults to 1.
+   *                       Lets the UI fade the entire star field without
+   *                       re-uploading the vertex buffer.
+   * @param selectedIndex  0-based index of the selected point, or `0xFFFFFFFF`
+   *                       (= `0xFFFFFFFF >>> 0`) when nothing is selected.
+   *                       The sentinel `0xFFFFFFFF` is the maximum u32 value —
+   *                       far beyond any real catalog size — so it never
+   *                       accidentally matches a real point.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -396,39 +437,59 @@ export class PointRenderer {
     viewportPx: [number, number],
     pointSizePx = 2.5,
     brightness = 1.0,
+    selectedIndex = 0xffffffff >>> 0,
   ): void {
     // Guard: nothing to draw if the vertex buffer hasn't been populated yet.
-    if (!this.vertexBuffer || this.count === 0) return;
+    if (!this._vertexBuffer || this.count === 0) return;
 
     // ── Pack and upload uniforms ────────────────────────────────────────────
     //
-    // We build a flat Float32Array that mirrors the WGSL `Uniforms` struct:
+    // The WGSL `Uniforms` struct layout (96 bytes total):
     //
-    //   offset  0..15  : viewProj mat4x4<f32>   (16 floats, 64 bytes)
-    //   offset 16      : viewport.x             (1 float)
-    //   offset 17      : viewport.y             (1 float)
-    //   offset 18      : pointSizePx            (1 float)
-    //   offset 19      : brightness             (1 float)
+    //   bytes  0..63  : viewProj mat4x4<f32>    (16 floats)
+    //   bytes 64..79  : viewport.xy + pointSizePx + brightness  (4 floats)
+    //   bytes 80..83  : selectedIndex u32
+    //   bytes 84..95  : _pad vec3<u32> (must be zero-filled for defined behaviour)
     //
-    // The four-float "tail" (offsets 16..19) maps to the GPU layout's natural
-    // 16-byte-aligned slot at byte offset 64 — no manual padding needed because
-    // a mat4x4<f32> is exactly 64 bytes, leaving the tail perfectly aligned.
-    // (WGSL spec §13 guarantees this for the concrete types used here.)
-    const uniformData = new Float32Array(UNIFORM_BYTES / 4); // 20 floats
+    // We use a single ArrayBuffer with *two typed views* over it:
+    //   - Float32Array for the first 20 floats (bytes 0..79)
+    //   - Uint32Array  for the trailing 4 u32s  (bytes 80..95)
+    //
+    // Why two views? A u32 value cannot be correctly written via Float32Array
+    // — Float32Array would reinterpret the bit-pattern as an IEEE 754 float,
+    // which is incorrect for an integer. Uint32Array writes the raw binary
+    // representation of the u32, which is exactly what the WGSL uniform expects.
+    //
+    // Both views share the same underlying memory (the ArrayBuffer), so writes
+    // through one are immediately visible through the other — no extra copy.
+    const buf = new ArrayBuffer(UNIFORM_BYTES); // 96 bytes
+    const f32 = new Float32Array(buf);           // float view: indices 0..23
+    const u32 = new Uint32Array(buf);            // uint32 view: indices 0..23
 
     // `mat4` from gl-matrix is a Float32Array of 16 values in column-major
     // order. `set()` copies all 16 floats starting at index 0.
-    uniformData.set(viewProj, 0);
+    f32.set(viewProj, 0);
 
-    // Pack viewport dimensions, point size, and brightness into the tail.
-    uniformData[16] = viewportPx[0];
-    uniformData[17] = viewportPx[1];
-    uniformData[18] = pointSizePx;
-    uniformData[19] = brightness;
+    // Pack viewport dimensions, point size, and brightness into the second slot.
+    f32[16] = viewportPx[0];
+    f32[17] = viewportPx[1];
+    f32[18] = pointSizePx;
+    f32[19] = brightness;
+
+    // Write selectedIndex as a raw u32 at byte offset 80 (= u32 index 20).
+    // `>>> 0` coerces to an unsigned 32-bit integer, ensuring that the JS number
+    // is in the valid u32 range [0, 2³²) before writing. Without `>>> 0`, a
+    // negative number or the sentinel 0xFFFFFFFF (which is 4294967295 — within
+    // the safe integer range but coerced to signed -1 by TypeScript) would be
+    // written as the correct bit pattern, but this makes the intent explicit.
+    u32[20] = selectedIndex >>> 0;
+
+    // Padding u32s at indices 21, 22, 23 — already zero because new ArrayBuffer
+    // zero-initialises. No explicit write needed.
 
     // Push the uniform data to the GPU. `writeBuffer(buffer, offset, data)`
     // schedules a DMA copy; it completes before this frame's draw call executes.
-    this.device.queue.writeBuffer(this.uniformBuffer, 0, uniformData);
+    this.device.queue.writeBuffer(this.uniformBuffer_internal, 0, buf);
 
     // ── Issue the draw call ─────────────────────────────────────────────────
 
@@ -442,7 +503,7 @@ export class PointRenderer {
     // Bind the per-instance vertex buffer to slot 0. The pipeline's
     // `stepMode: 'instance'` means one record is consumed per instance,
     // not per vertex.
-    pass.setVertexBuffer(0, this.vertexBuffer);
+    pass.setVertexBuffer(0, this._vertexBuffer);
 
     // Fire the draw.
     //
@@ -450,8 +511,8 @@ export class PointRenderer {
     //   vertexCount   = 6: six vertices per billboard quad (two triangles)
     //   instanceCount = this.count: one instance per catalog point
     //
-    // ⚠ The argument order is easy to swap by mistake. If you see every point
-    //   rendered 6 times and only 1 point total, you've swapped them.
+    // The argument order is easy to swap by mistake. If you see every point
+    // rendered 6 times and only 1 point total, the arguments are swapped.
     //
     // Total vertex shader invocations: 6 × this.count.
     pass.draw(6, this.count);

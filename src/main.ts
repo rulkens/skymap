@@ -2,7 +2,9 @@
  * Application entry point — wires all subsystems into a live render loop.
  *
  * Responsibility: build the GPU pipeline, populate it with a synthetic galaxy
- * cloud, set up an orbit camera, and drive the per-frame update cycle.
+ * cloud, set up an orbit camera, and drive the per-frame update cycle. Also
+ * owns all hover/select UX: throttled GPU picking, the info card DOM, and
+ * click-to-pin / Esc-to-clear selection behaviour.
  *
  * ### Frame structure (camera → encoder → pass → renderer.draw → submit)
  *
@@ -19,13 +21,20 @@
  *      the attachment to `clearValue` before any drawing; `storeOp: 'store'`
  *      writes the result back to the texture so it appears on screen.
  *
- *   4. **renderer.draw** — uploads the per-frame uniforms (viewProj, viewport)
- *      and issues the single instanced draw call: 6 vertices × 100 k instances.
- *      The WGSL vertex shader expands each instance into a billboard quad.
+ *   4. **renderer.draw** — uploads the per-frame uniforms (viewProj, viewport,
+ *      selectedIndex) and issues the single instanced draw call: 6 vertices ×
+ *      100 k instances. The WGSL vertex shader expands each instance into a
+ *      billboard quad; the selected point gets a 3× larger ring/halo.
  *
  *   5. **Submit** — `encoder.finish()` seals the command buffer;
  *      `device.queue.submit([...])` dispatches it to the GPU asynchronously.
  *      The JS thread is free immediately after.
+ *
+ *   6. **Hover pick** — once per frame, if the mouse has moved since the last
+ *      pick and no pick is already in flight, we fire a `pickRenderer.pick()`
+ *      call as a fire-and-forget promise. When it resolves it updates
+ *      `hoveredIndex` and refreshes the card. We do NOT await it inside the
+ *      render loop — awaiting would block the frame.
  *
  * Because this file has `import` statements at the top, TypeScript (and the
  * browser) already treat it as an ES module — no `export {}` shim is needed to
@@ -38,9 +47,24 @@ import { createPickRenderer } from './gpu/pickRenderer';
 import { createOrbitCamera, computeViewProj, updatePosition } from './camera/orbitCamera';
 import { attachOrbitControls } from './camera/orbitControls';
 import { generateSyntheticCloud } from './data/synthetic';
+import { cartesianToRaDecZ } from './data/coords';
 
 const canvas = document.getElementById('c') as HTMLCanvasElement;
 const status = document.getElementById('status')!;
+
+// ── Info card DOM refs ─────────────────────────────────────────────────────────
+//
+// We grab all the card elements once at startup and update them by direct
+// `textContent` assignment — faster and safer than innerHTML, and avoids any
+// XSS risk from the formatted number strings.
+const infoCard       = document.getElementById('info-card')!;
+const fieldIndex     = document.getElementById('field-index')!;
+const fieldRa        = document.getElementById('field-ra')!;
+const fieldDec       = document.getElementById('field-dec')!;
+const fieldZ         = document.getElementById('field-z')!;
+const fieldDistance  = document.getElementById('field-distance')!;
+const fieldMagnitude = document.getElementById('field-magnitude')!;
+const fieldColor     = document.getElementById('field-color')!;
 
 async function main() {
   // Size the backing store to match the display before handing the canvas to
@@ -55,8 +79,8 @@ async function main() {
   const cloud = generateSyntheticCloud(100_000);
   renderer.upload(cloud);
 
-  // Build the pick renderer. It shares the same shader module and vertex/uniform
-  // buffers as the visual renderer — no extra GPU memory for point data.
+  // Build the pick renderer. It shares the same vertex/uniform buffers as the
+  // visual renderer — no extra GPU memory for point data.
   const pickRenderer = createPickRenderer(device);
 
   // ── Camera setup ────────────────────────────────────────────────────────────
@@ -79,48 +103,181 @@ async function main() {
     far: 20000,
   });
 
-  // Wire pointer and wheel events so the user can orbit and zoom.
-  attachOrbitControls(canvas, cam);
-
-  // ── Hover state ─────────────────────────────────────────────────────────────
+  // ── Hover / selection state ────────────────────────────────────────────────
   //
-  // Track the latest pointer position in *CSS pixels* (clientX/clientY).
-  // These are converted to texture-space pixels (by multiplying by DPR, capped
-  // at 2) when calling pick().  We store CSS pixels here rather than texture
-  // pixels so that if the DPR cap changes in a future update, only one place
-  // needs to change.
-  let mouseXCss = 0;
-  let mouseYCss = 0;
+  // We track three kinds of state:
+  //
+  //   latestMouseCss      — the most recent pointer position in CSS pixels,
+  //                         updated on every pointermove. `null` when the
+  //                         pointer is outside the canvas.
+  //
+  //   lastPickedMouseCss  — the position we issued the last pick for. We compare
+  //                         this to latestMouseCss to decide if a new pick is
+  //                         needed. Updated when a pick is kicked off.
+  //
+  //   pickInFlight        — true while a pick promise is outstanding. Guards
+  //                         against launching a second concurrent pick (which
+  //                         would cause a mapAsync conflict).
+  //
+  //   hoveredIndex        — the 0-based index of the point currently under the
+  //                         cursor, or null if the cursor is over empty space.
+  //                         Updated when a pick resolves.
+  //
+  //   selectedIndex       — the 0-based index of the "pinned" point, or null if
+  //                         nothing is selected. Set by click; cleared by
+  //                         clicking empty space or pressing Esc.
+  //
+  // State is stored as closure variables (not a class) to keep the code flat.
 
+  type MousePos = { x: number; y: number };
+
+  let latestMouseCss:     MousePos | null = null;
+  let lastPickedMouseCss: MousePos | null = null;
+  let pickInFlight = false;
+  let hoveredIndex:  number | null = null;
+  let selectedIndex: number | null = null;
+
+  // ── GPU pick helper ────────────────────────────────────────────────────────
+  //
+  // DPR cap matches `resizeCanvasToDisplay` in device.ts (≤ 2). We precompute
+  // it here and reuse it in both the hover pick and the click pick paths.
+  // If the DPR changes (unusual) the next pick will use the stale cap; this
+  // is acceptable — a refresh resolves it.
+
+  /**
+   * Convert a CSS pixel coordinate to a texture-space pixel coordinate.
+   *
+   * `resizeCanvasToDisplay` caps DPR at 2 to avoid allocating enormous textures
+   * on 3× or 4× HiDPI screens. We mirror that cap here so our pick coordinates
+   * land in the correct texel.
+   */
+  function cssToTexPx(cssPx: number): number {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    return cssPx * dpr;
+  }
+
+  // ── Info card DOM update ───────────────────────────────────────────────────
+
+  /**
+   * Populate and show (or hide) the info card based on current hover/selection.
+   *
+   * Display rule:
+   *   - If a point is hovered → show that point's data (live hover, not pinned).
+   *   - Else if a point is selected → show that point's data with PINNED badge.
+   *   - Else → hide the card.
+   *
+   * Data is read from `cloud` (closure scope) and `cartesianToRaDecZ` is used
+   * to recover RA/Dec/redshift from the stored Cartesian positions.
+   */
+  function refreshCard(): void {
+    // Hover wins over selection for display; isPinned is true only when we fall
+    // back to the selected point with no active hover.
+    const idx = hoveredIndex ?? selectedIndex;
+    if (idx === null) {
+      infoCard.style.display = 'none';
+      infoCard.removeAttribute('data-pinned');
+      return;
+    }
+
+    const isPinned = hoveredIndex === null && selectedIndex !== null;
+
+    // Show the card and toggle the PINNED badge via a data attribute.
+    // CSS rule `#info-card[data-pinned] #pinned-badge { display: inline; }`
+    // handles the visual toggling — no extra inline style manipulation needed.
+    infoCard.style.display = 'block';
+    if (isPinned) {
+      infoCard.setAttribute('data-pinned', '');
+    } else {
+      infoCard.removeAttribute('data-pinned');
+    }
+
+    // Read position from the SoA positions array (layout: [x0,y0,z0, x1,y1,z1, …]).
+    const px = cloud.positions[idx * 3 + 0]!;
+    const py = cloud.positions[idx * 3 + 1]!;
+    const pz = cloud.positions[idx * 3 + 2]!;
+
+    // Recover sky coordinates from the Cartesian position.
+    // cartesianToRaDecZ returns [raDeg, decDeg, zRedshift].
+    const [raDeg, decDeg, zRedshift] = cartesianToRaDecZ(px, py, pz);
+
+    // Distance in Mpc = sqrt(x²+y²+z²). We already have the components.
+    const distanceMpc = Math.sqrt(px * px + py * py + pz * pz);
+
+    // Populate each field. `toFixed` gives consistent decimal places:
+    //   RA / Dec: 4 dp (e.g. "123.4567°")
+    //   Redshift: 4 dp (e.g. "0.1234")
+    //   Distance: 1 dp  (e.g. "542.3 Mpc") — Mpc precision doesn't need more
+    //   Magnitude / colorIndex: 2 and 3 dp respectively
+    fieldIndex.textContent     = String(idx);
+    fieldRa.textContent        = raDeg.toFixed(4);
+    fieldDec.textContent       = decDeg.toFixed(4);
+    fieldZ.textContent         = zRedshift.toFixed(4);
+    fieldDistance.textContent  = distanceMpc.toFixed(1);
+    fieldMagnitude.textContent = cloud.magnitudes[idx]!.toFixed(2);
+    fieldColor.textContent     = cloud.colorIndex[idx]!.toFixed(3);
+  }
+
+  // ── Pointer event listeners ────────────────────────────────────────────────
+
+  // Track latest mouse position for the per-frame throttled hover pick.
   canvas.addEventListener('pointermove', (e) => {
-    mouseXCss = e.clientX;
-    mouseYCss = e.clientY;
+    latestMouseCss = { x: e.clientX, y: e.clientY };
   });
 
-  // ── Dev pick hook ────────────────────────────────────────────────────────────
+  // When the pointer leaves the canvas, clear hover state and update the card.
+  // If a point is selected the card will remain visible (showing the pinned point).
+  canvas.addEventListener('pointerleave', () => {
+    latestMouseCss = null;
+    hoveredIndex = null;
+    refreshCard();
+  });
+
+  // ── Click handling ─────────────────────────────────────────────────────────
   //
-  // Exposed on `window` so developers can test GPU picking from the browser
-  // console: `await pickAt(x, y)` where x, y are CSS pixel coordinates.
-  // The DPR conversion matches `resizeCanvasToDisplay` in device.ts (cap at 2).
-  //
-  // Task 17 will wire this to the actual UI hover/info-card flow.
-  (window as unknown as Record<string, unknown>)['pickAt'] = async (xCss: number, yCss: number) => {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const result = await pickRenderer.pick(
-      [canvas.width, canvas.height],
-      xCss * dpr,
-      yCss * dpr,
-      // Access the vertex buffer and count via the renderer's public API.
-      // PointRenderer exposes these in the next step; for now we use the
-      // private-field workaround with a cast so we don't need to modify
-      // PointRenderer's public surface for this temporary dev hook.
-      (renderer as unknown as { vertexBuffer: GPUBuffer }).vertexBuffer,
-      cloud.count,
-      (renderer as unknown as { uniformBuffer: GPUBuffer }).uniformBuffer,
-    );
-    console.log(`pickAt(${xCss}, ${yCss}) →`, result === -1 ? 'no hit' : `point #${result}`);
-    return result;
-  };
+  // Click detection is delegated to `attachOrbitControls` via the `onClick`
+  // option. A "click" fires only when pointerup is within 4 CSS pixels of
+  // pointerdown — pure drags (orbit gestures) are suppressed.
+
+  attachOrbitControls(canvas, cam, {
+    onClick: (xCss, yCss) => {
+      // Run a one-shot pick at the click position.
+      // We don't use the throttle guard here — clicks are infrequent and
+      // we want an immediate, synchronous-feeling response.
+      const vb = renderer.vertexBuffer;
+      if (!vb) return; // no data uploaded yet
+
+      pickRenderer
+        .pick(
+          [canvas.width, canvas.height],
+          cssToTexPx(xCss),
+          cssToTexPx(yCss),
+          vb,
+          cloud.count,
+          renderer.uniformBuffer,
+        )
+        .then((idx) => {
+          if (idx === -1) {
+            // Click on empty space → clear selection.
+            selectedIndex = null;
+          } else {
+            // Click on a point → pin it.
+            selectedIndex = idx;
+          }
+          refreshCard();
+        });
+    },
+  });
+
+  // ── Esc → clear selection ──────────────────────────────────────────────────
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      selectedIndex = null;
+      refreshCard();
+    }
+  });
+
+  // ── Status bar ─────────────────────────────────────────────────────────────
 
   status.textContent =
     `WebGPU OK · ${cloud.count.toLocaleString()} synthetic points · drag to orbit, wheel to zoom`;
@@ -149,13 +306,10 @@ async function main() {
 
     // Clear colour is pure black (r:0, g:0, b:0).
     //
-    // We switched from the earlier dark-navy clear because the point renderer
-    // uses *additive* blending: each fragment's RGB is added to whatever is
+    // We use *additive* blending: each fragment's RGB is added to whatever is
     // already in the framebuffer. Starting from pure black (0, 0, 0) gives the
     // maximum dynamic range — even faint points contribute visible light, and
-    // dense overlap regions (galaxy clusters) naturally bloom bright. Any
-    // non-zero clear value would raise the noise floor and make sparse regions
-    // look grey rather than dark.
+    // dense overlap regions (galaxy clusters) naturally bloom bright.
     const pass = encoder.beginRenderPass({
       colorAttachments: [
         {
@@ -167,15 +321,73 @@ async function main() {
       ],
     });
 
-    // Upload per-frame uniforms (viewProj, viewport) and issue the instanced
-    // draw call. Physical pixel dimensions are passed so the shader can convert
-    // the fixed point-size-in-pixels to clip-space offsets correctly.
-    renderer.draw(pass, vp, [canvas.width, canvas.height]);
+    // Upload per-frame uniforms (viewProj, viewport, selectedIndex) and issue
+    // the instanced draw call. Physical pixel dimensions are passed so the
+    // shader can convert the fixed point-size-in-pixels to clip-space offsets.
+    //
+    // selectedIndex drives the WGSL selection highlight: the shader enlarges
+    // that billboard and renders it as a hollow ring. `0xffffffff >>> 0` is the
+    // sentinel for "nothing selected" — the max u32 value, which can never
+    // match a real point index.
+    renderer.draw(pass, vp, [canvas.width, canvas.height], 2.5, 1.0,
+      selectedIndex !== null ? selectedIndex : 0xffffffff >>> 0);
 
     pass.end();
 
     // Seal the command buffer and send it to the GPU.
     device.queue.submit([encoder.finish()]);
+
+    // ── Throttled hover pick ──────────────────────────────────────────────────
+    //
+    // Strategy: pointermove updates `latestMouseCss`; here (once per frame) we
+    // check whether the mouse has moved since the last pick. If it has AND no
+    // pick is already in flight, we kick off a new one.
+    //
+    // We compare object references rather than coordinates — a new position
+    // object was created by the pointermove handler, so reference inequality
+    // means the mouse actually moved. When `latestMouseCss === lastPickedMouseCss`
+    // the mouse hasn't moved; no pick needed.
+    //
+    // The pick is fire-and-forget: we do NOT await it here. Awaiting inside
+    // requestAnimationFrame would block the frame loop. Instead the `.then`
+    // callback updates state when the GPU readback completes (typically 1-2
+    // frames later) and the next frame's card refresh shows the new data.
+    //
+    // IMPORTANT: pick() is called *after* device.queue.submit([encoder.finish()])
+    // above, so the visual frame's uniform buffer has already been written with
+    // the latest viewProj. The pick renderer reads the same uniform buffer and
+    // therefore sees the correct camera state for this frame.
+    const vb = renderer.vertexBuffer;
+    if (
+      vb &&
+      latestMouseCss !== null &&
+      latestMouseCss !== lastPickedMouseCss &&
+      !pickInFlight
+    ) {
+      // Snapshot the position at the moment we kick off the pick.
+      // By the time the promise resolves, latestMouseCss may have moved on —
+      // but the pick result is still valid for the position we captured here.
+      const pos = latestMouseCss;
+      lastPickedMouseCss = pos;
+      pickInFlight = true;
+
+      pickRenderer
+        .pick(
+          [canvas.width, canvas.height],
+          cssToTexPx(pos.x),
+          cssToTexPx(pos.y),
+          vb,
+          cloud.count,
+          renderer.uniformBuffer,
+        )
+        .then((idx) => {
+          hoveredIndex = idx === -1 ? null : idx;
+          refreshCard();
+        })
+        .finally(() => {
+          pickInFlight = false;
+        });
+    }
 
     // Schedule the next frame. `requestAnimationFrame` syncs to the display
     // refresh rate (typically 60 or 120 Hz) and pauses automatically when the

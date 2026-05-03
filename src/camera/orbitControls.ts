@@ -41,6 +41,32 @@
 
 import { OrbitCamera, updatePosition } from './orbitCamera';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+/**
+ * Optional configuration for `attachOrbitControls`.
+ *
+ * All fields are optional — omitting the object entirely gives the same
+ * behaviour as the original single-argument overload (orbit only, no click).
+ */
+export type OrbitControlsOptions = {
+  /**
+   * Called when the user clicks (as opposed to drags) on the canvas.
+   *
+   * A "click" is defined as a pointerup that occurred within 4 CSS pixels of
+   * the corresponding pointerdown. This threshold distinguishes intentional
+   * taps from the tiny pointer jitter that always precedes a drag start.
+   *
+   * Coordinates are in CSS pixels (matching `e.clientX` / `e.clientY`), so
+   * the caller can pass them directly to pick-coordinate conversion without
+   * any additional scaling.
+   *
+   * @param xCss  Horizontal CSS pixel position of the click.
+   * @param yCss  Vertical CSS pixel position of the click.
+   */
+  onClick?: (xCss: number, yCss: number) => void;
+};
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 /**
@@ -94,15 +120,18 @@ const PITCH_LIMIT = Math.PI / 2 - 0.01;
  * Callers that never need cleanup (e.g. a single-page app that lives for the
  * full document lifetime) can ignore the return value.
  *
- * @param canvas  The `<canvas>` element to listen on. Pointer events are
- *                registered here so the hit-test area matches the viewport.
- * @param cam     The orbit camera to mutate. The caller owns this object;
- *                `attachOrbitControls` only reads and writes its fields.
+ * @param canvas   The `<canvas>` element to listen on. Pointer events are
+ *                 registered here so the hit-test area matches the viewport.
+ * @param cam      The orbit camera to mutate. The caller owns this object;
+ *                 `attachOrbitControls` only reads and writes its fields.
+ * @param options  Optional configuration. Currently supports `onClick`, a
+ *                 callback fired when the user taps without dragging.
  * @returns A teardown function — call it to remove all event listeners.
  */
 export function attachOrbitControls(
   canvas: HTMLCanvasElement,
   cam: OrbitCamera,
+  options?: OrbitControlsOptions,
 ): () => void {
   // Track drag state with module-level (closure) variables so the three
   // pointer handlers can share it without a wrapper object allocation.
@@ -110,12 +139,32 @@ export function attachOrbitControls(
   let lastX = 0;   // client-space X of the previous pointermove event
   let lastY = 0;   // client-space Y of the previous pointermove event
 
+  // ── Click detection ────────────────────────────────────────────────────────
+  //
+  // We record the pointer-down position and compare it against pointer-up.
+  // The threshold is 4 CSS pixels (squared: 16) — small enough to ignore
+  // micro-jitter from a resting hand, large enough to never fire during
+  // an intentional drag.
+  //
+  // WHY SQUARED DISTANCE? Comparing dx²+dy² against 16 avoids calling
+  // Math.sqrt — the magnitude check becomes a single multiply-add-compare,
+  // which is cheaper and numerically identical in result.
+  let downX = 0;   // client-space X at pointerdown
+  let downY = 0;   // client-space Y at pointerdown
+
+  /** Squared pixel distance between pointerdown and pointerup. */
+  const CLICK_THRESHOLD_SQ = 4 * 4; // 4 px radius → 16 when squared
+
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
   const onDown = (e: PointerEvent) => {
     dragging = true;
     lastX = e.clientX;
     lastY = e.clientY;
+
+    // Record the exact down position for click detection.
+    downX = e.clientX;
+    downY = e.clientY;
 
     // `setPointerCapture` tells the browser to route all future pointer events
     // for this pointer ID to `canvas`, even when the cursor strays outside its
@@ -132,7 +181,7 @@ export function attachOrbitControls(
     canvas.setPointerCapture(e.pointerId);
   };
 
-  // ── Pointer up — end drag ──────────────────────────────────────────────────
+  // ── Pointer up — end drag (or click) ──────────────────────────────────────
 
   const onUp = (e: PointerEvent) => {
     dragging = false;
@@ -141,6 +190,21 @@ export function attachOrbitControls(
     // The browser automatically releases capture on pointerup in most cases,
     // but calling it explicitly is defensive and makes intent clear.
     canvas.releasePointerCapture(e.pointerId);
+
+    // ── Click detection ────────────────────────────────────────────────────
+    //
+    // If the pointer barely moved between down and up, treat this as a click
+    // rather than a drag. We check squared distance to avoid sqrt.
+    //
+    // This fires only when `options.onClick` is provided — no cost for callers
+    // that don't need click detection.
+    if (options?.onClick) {
+      const dx = e.clientX - downX;
+      const dy = e.clientY - downY;
+      if (dx * dx + dy * dy < CLICK_THRESHOLD_SQ) {
+        options.onClick(e.clientX, e.clientY);
+      }
+    }
   };
 
   // ── Pointer move — update orbit ────────────────────────────────────────────

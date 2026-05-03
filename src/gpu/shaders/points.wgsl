@@ -86,6 +86,37 @@ struct Uniforms {
   // (The vec2 above took 8 bytes, so offset so far is 64+8+4+4 = 80 — still
   // within a single 256-byte uniform block and no padding gaps needed here.)
   brightness: f32,
+
+  // The 0-based index of the currently selected point, or 0xFFFFFFFFu when
+  // nothing is selected. When a vertex's instance index matches this value,
+  // the billboard is rendered larger (3× scale) with a ring/halo effect.
+  //
+  // SENTINEL DESIGN: Using 0xFFFFFFFFu (max u32) as "nothing selected" means
+  // the selection check never accidentally matches a real point.  Point
+  // indices start at 0, so we would need 4 billion points before this
+  // sentinel could collide — far beyond any real catalog.
+  //
+  // STD140 ALIGNMENT NOTE: The four preceding fields (vec2 + f32 + f32 = 16 bytes)
+  // bring the running offset to 80 bytes.  A u32 has 4-byte alignment, so it
+  // fits at offset 80 without padding.  The *struct itself* must be padded to
+  // a multiple of 16 bytes (the struct's own alignment in WGSL, which equals
+  // the largest member alignment — here 16 bytes from mat4x4).  So after this
+  // u32 (offset 80, size 4) we add 3 padding u32s to bring the total to 96.
+  // Without this tail padding, WebGPU would reject the uniform buffer binding
+  // with a size-alignment validation error.
+  selectedIndex: u32,
+
+  // Three u32 padding words to round the struct size from 84 to 96 bytes,
+  // satisfying the 16-byte alignment requirement for WGSL uniform structs.
+  // We use three separate u32 fields (not vec3<u32>) because vec3<u32> has a
+  // 16-byte alignment requirement of its own, which would force an 8-byte gap
+  // between selectedIndex (at offset 80) and the vec3 (which would have to
+  // start at offset 96), bloating the struct unnecessarily. Three scalar u32s
+  // have 4-byte alignment and pack contiguously at offsets 84, 88, 92.
+  // Their values are ignored by the shader; PointRenderer writes them as 0.
+  _pad0: u32,
+  _pad1: u32,
+  _pad2: u32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -159,6 +190,12 @@ struct VSOut {
   // rasteriser to use the "provoking vertex" value unchanged for every fragment,
   // which is correct here: all 6 vertices of one instance share the same index.
   @location(3) @interpolate(flat) instanceIdx: u32,
+
+  // 1u when this instance is the selected point; 0u otherwise.
+  // Flat-interpolated for the same reason as instanceIdx — it is a per-instance
+  // boolean that must not be interpolated across the triangle.
+  // Used by the visual `fs` to apply the ring/halo selection highlight.
+  @location(4) @interpolate(flat) selected: u32,
 };
 
 // ─── colour ramp ──────────────────────────────────────────────────────────────
@@ -251,6 +288,21 @@ fn vs(
   // Fetch the quad corner for this vertex (in [-1,+1]²).
   let corner = QUAD[vi];
 
+  // ── SELECTION CHECK ───────────────────────────────────────────────────────
+  //
+  // Determine whether this instance is the user-selected point.
+  // `u.selectedIndex` is 0xFFFFFFFFu when nothing is selected (sentinel),
+  // so this comparison is only ever true for a real selection.
+  let isSelected = (ii == u.selectedIndex);
+
+  // Scale the billboard 3× for the selected point so the selection ring
+  // extends visibly beyond the normal point disk. Non-selected points keep
+  // the original pointSizePx radius.
+  //
+  // We use `select(normalSize, selectedSize, isSelected)` — WGSL's ternary.
+  // Recall the argument order: select(falseValue, trueValue, condition).
+  let sizeScale = select(1.0, 3.0, isSelected);
+
   // ── PIXEL-SIZE-IN-CLIP-SPACE CONVERSION ──────────────────────────────────
   //
   // We want the billboard to be `pointSizePx` pixels in radius on screen,
@@ -271,7 +323,7 @@ fn vs(
   //
   // Result: the billboard stays exactly `pointSizePx` pixels regardless of depth.
   let pxToClip = vec2<f32>(2.0 / u.viewport.x, 2.0 / u.viewport.y);
-  let offset   = corner * u.pointSizePx * pxToClip * center.w;
+  let offset   = corner * u.pointSizePx * sizeScale * pxToClip * center.w;
 
   var out: VSOut;
 
@@ -312,6 +364,10 @@ fn vs(
   // We keep this here so both fragment entry points share the same vertex stage.
   out.instanceIdx = ii;
 
+  // Propagate the selection flag for the visual fragment entry point.
+  // 1u = this instance is selected; 0u = normal point.
+  out.selected = select(0u, 1u, isSelected);
+
   return out;
 }
 
@@ -326,6 +382,41 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // `dot(v, v)` = v.x² + v.y² = r² (squared distance from billboard centre).
   // Because our UV space is [-1, +1], the unit disk is exactly r² ≤ 1.
   let r2 = dot(in.uv, in.uv);
+
+  // ── SELECTION RING vs NORMAL DISK ─────────────────────────────────────────
+  //
+  // For the selected point we rendered a 3× larger billboard in `vs`, so the
+  // UV space still spans [-1,+1]² but represents a physically bigger area.
+  // We draw a hollow ring by:
+  //   1. Discarding the outer region (r² > 1.0) → circular boundary.
+  //   2. Discarding the inner region (r² < 0.4) → hollow centre.
+  //   3. Applying a brighter colour on the ring band.
+  //
+  // For normal (non-selected) points we keep the original solid-disk logic.
+  if (in.selected == 1u) {
+    // Outside the ring's outer edge — discard.
+    if (r2 > 1.0) { discard; }
+
+    // Inside the ring's inner edge — discard to create the hollow centre.
+    // The threshold 0.4 was chosen so the ring band (√0.4 ≈ 0.63 to 1.0)
+    // is visually distinct without being too thin. At 3× billboard scale this
+    // maps to a ring that clearly surrounds the normal point disk.
+    if (r2 < 0.4) { discard; }
+
+    // Ring falloff: fade toward the outer edge for a softer glow.
+    // exp(-r2 * 2.5) keeps the ring fairly bright across its width.
+    let alpha = exp(-r2 * 2.5);
+
+    // Brighten the selection ring relative to the normal point colour.
+    // Multiplying by 1.8 ensures the ring is visually salient even for
+    // faint points. Clamping is handled implicitly by additive blending's
+    // natural saturation toward white in the bright limit.
+    let rgb = in.tint * in.intensity * 1.8;
+
+    return vec4<f32>(rgb * alpha, alpha);
+  }
+
+  // ── NORMAL POINT — solid disk with Gaussian falloff ───────────────────────
 
   // Discard the four corners of the rectangular quad that fall outside the
   // unit disk. Without this, each point would render as a square, not a circle.
