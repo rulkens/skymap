@@ -34,7 +34,7 @@
  * a single `GpuContext` keeps call-sites tidy and makes it easy to swap in a
  * test double (e.g. an `offscreenCanvas`-based context) later.
  */
-export interface GpuContext {
+export type GpuContext = {
   /** The logical GPU device — create buffers, pipelines, and encoders from here. */
   device: GPUDevice;
 
@@ -53,7 +53,7 @@ export interface GpuContext {
 
   /** The HTML canvas element — needed by `resizeCanvasToDisplay` and for layout reads. */
   canvas: HTMLCanvasElement;
-}
+};
 
 // ─── Initialisation ───────────────────────────────────────────────────────────
 

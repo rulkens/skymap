@@ -45,7 +45,7 @@ import { mat4, vec3 } from 'gl-matrix';
  * Separating init from state lets us pass a plain object literal to
  * `createOrbitCamera` and derive the rest (e.g. `position`) from it.
  */
-export interface OrbitCameraInit {
+export type OrbitCameraInit = {
   /** World-space point the camera orbits around and looks at. */
   target: [number, number, number];
 
@@ -110,7 +110,7 @@ export interface OrbitCameraInit {
    * scene allows (same reasoning as `near`).
    */
   far: number;
-}
+};
 
 /**
  * A live orbit camera: all init parameters plus the derived `position`.
@@ -123,13 +123,13 @@ export interface OrbitCameraInit {
  *   2. `updatePosition` is explicit — callers know exactly when the geometry
  *      changes, which helps reason about update order.
  */
-export interface OrbitCamera extends OrbitCameraInit {
+export type OrbitCamera = OrbitCameraInit & {
   /**
    * World-space camera position, derived from target + distance + yaw + pitch.
    * Do NOT write this directly — call `updatePosition(cam)` instead.
    */
   position: vec3;
-}
+};
 
 // ─── Construction ─────────────────────────────────────────────────────────────
 

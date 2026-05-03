@@ -19,7 +19,7 @@
  * All distance units are megaparsecs (Mpc) — the natural unit at SDSS scales.
  * 1 Mpc ≈ 3.26 million light-years.
  */
-export interface PointCloud {
+export type PointCloud = {
   /** Number of points. The three Float32Arrays below derive their length from this. */
   count: number;
 
@@ -46,4 +46,4 @@ export interface PointCloud {
    * The shader maps this to a blue→white→red color ramp.
    */
   colorIndex: Float32Array;
-}
+};
