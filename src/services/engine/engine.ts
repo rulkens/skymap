@@ -61,6 +61,7 @@ import {
 import { attachOrbitControls } from '../camera/orbitControls';
 import { formatDistance } from '../../utils/format/distance';
 import { ALL_VISIBLE_MASK, Source, maskWith, maskWithout } from '../../data/sources';
+import { BiasMode } from '../../data/biasMode';
 import type { LodMode, PointCloud } from '../../@types';
 import type { EngineCallbacks, EngineHandle } from '../../@types';
 import { advanceCameraTween, type CameraTween } from '../camera/cameraTween';
@@ -172,6 +173,28 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // until the user opts in via the SettingsPanel.
   let highlightFallback = false;
   let realOnlyMode = false;
+
+  // ── Malmquist-bias correction state (Task 2 of malmquist-bias plan) ─────
+  //
+  // `biasMode` chooses which correction the renderer applies in its vertex
+  // stage; `absMagLimit` is the threshold for `BiasMode.VolumeLimited`.
+  // Both default off / sensible-SDSS so the UI seeded by the echo callback
+  // at init looks correct even before the user opens the settings panel.
+  // The other Task-3/4 thresholds also live as closure state here so a
+  // single uniform update path stays at the bottom of the frame loop.
+  //
+  // Why -19 as the volume-limited default?  It's roughly the absolute
+  // magnitude where the SDSS spectroscopic main sample is volume-complete
+  // out to the survey's flux limit — bright enough that almost every
+  // catalog galaxy meeting it has a measured spectrum, dim enough that
+  // we still see plenty of structure.
+  let biasMode: BiasMode = BiasMode.None;
+  let absMagLimit = -19.0;
+  // Reserved-for-future fields; Tasks 3 + 4 will populate them.  Until then
+  // the renderer reads them but the shader's mode-2/3 branches stay inert.
+  let apparentMagLimit = 0;
+  let schechterMStar = 0;
+  let schechterAlpha = 0;
 
   // ── Source visibility bitmask + LOD mode ────────────────────────────────
   //
@@ -750,6 +773,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cb.onGalaxyTexturesEnabledChange?.(galaxyTexturesEnabled);
       cb.onHighlightFallbackChange?.(highlightFallback);
       cb.onRealOnlyModeChange?.(realOnlyMode);
+      // Malmquist-bias seeds — Task 2 of the bias-correction plan.  Fired
+      // here (even though both default values match the SettingsPanel's
+      // own initial state) so subscribers don't have to duplicate the
+      // defaults: the engine is the single source of truth.
+      cb.onBiasModeChange?.(biasMode);
+      cb.onAbsMagLimitChange?.(absMagLimit);
       // LOD mode + visible-mask seeds — engine and React both default to
       // 'auto' / ALL_VISIBLE_MASK respectively, but firing the echo here
       // protects against future default drift and keeps the contract uniform
@@ -913,6 +942,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           drawPxPerRad,
           highlightFallback,
           realOnlyMode,
+          biasMode,
+          absMagLimit,
+          apparentMagLimit,
+          schechterMStar,
+          schechterAlpha,
         );
 
         // ── Galaxy thumbnail pass ─────────────────────────────────────────
@@ -1397,6 +1431,30 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // path as the highlight toggle.
       realOnlyMode = enabled;
       cb.onRealOnlyModeChange?.(enabled);
+    },
+
+    setBiasMode(mode) {
+      // Forwarded into the per-frame uniform on the next draw.  The shader
+      // branches on the integer value (0 = none, 1 = volume-limited, …)
+      // so flipping this from devtools or the future SettingsPanel takes
+      // effect on the next rendered frame without any pipeline rebuild.
+      //
+      // We always fire the echo callback — even when `mode === biasMode`
+      // — so the UI seeds correctly on first call.  The plan calls this
+      // out explicitly because `setBiasMode(BiasMode.None)` is a legitimate
+      // first-frame state that must reach the SettingsPanel.
+      biasMode = mode;
+      cb.onBiasModeChange?.(mode);
+    },
+
+    setAbsMagLimit(absMag) {
+      // Threshold used by `BiasMode.VolumeLimited`.  Galaxies with absolute
+      // magnitude *fainter* than this (M > absMag, since fainter = larger
+      // M) are discarded in the vertex stage.  Seeded at engine init from
+      // the closure default (-19, the SDSS spec sample limit); subsequent
+      // calls overwrite that.
+      absMagLimit = absMag;
+      cb.onAbsMagLimitChange?.(absMag);
     },
 
     resetCamera() {

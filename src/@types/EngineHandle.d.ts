@@ -6,6 +6,7 @@
 
 import type { LodMode } from './LodMode';
 import type { Source } from '../data/sources';
+import type { BiasMode } from '../data/biasMode';
 
 /**
  * Handle returned by `createEngine`. Allows the React layer to drive the
@@ -76,6 +77,32 @@ export type EngineHandle = {
   setHighlightFallback?: (enabled: boolean) => void;
   /** Toggle "show only galaxies with real photometric orientation" — fallback rows are discarded. */
   setRealOnlyMode?: (enabled: boolean) => void;
+
+  /**
+   * Set the Malmquist-bias correction mode.  Forwarded into the per-frame
+   * uniform buffer; the WGSL vertex stage branches on the integer value to
+   * choose its discard / weighting strategy.  See `data/biasMode.ts` for
+   * the legal values and `points.wgsl` for the per-mode behaviour.
+   *
+   * Fires `onBiasModeChange` so subscribed React state mirrors the engine
+   * truth.  No-op for the rendered result if the mode hasn't actually
+   * changed (the uniform write is still issued, but the GPU will compute
+   * an identical frame).
+   */
+  setBiasMode?: (mode: BiasMode) => void;
+
+  /**
+   * Set the absolute-magnitude threshold used by the volume-limited mode
+   * (`BiasMode.VolumeLimited`).  Galaxies whose computed absolute magnitude
+   * is fainter than this value (i.e. M > absMag, since fainter = larger M)
+   * are dropped in the vertex stage.
+   *
+   * Recommended SDSS-spectroscopic-sample value: −19.0.  Brighter limits
+   * (more negative, e.g. −20.5) yield smaller, more uniform samples; fainter
+   * limits (less negative, e.g. −18.0) include more dwarfs but reintroduce
+   * some bias.
+   */
+  setAbsMagLimit?: (absMag: number) => void;
 
   /**
    * Snap the camera back to the initial framing computed at startup.

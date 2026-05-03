@@ -175,6 +175,43 @@ struct Uniforms {
   realOnlyMode: u32,
   _pad3: u32,
   _pad4: u32,
+
+  // ── Malmquist-bias correction state (Task 2 of malmquist-bias plan) ─────
+  //
+  // `biasMode` chooses which correction the vertex stage applies:
+  //   0 = none         — render every galaxy unchanged.
+  //   1 = volume-limit — discard galaxies whose absolute magnitude is
+  //                      fainter (numerically larger) than `absMagLimit`.
+  //   2 = 1/V_max      — Task 3: weight by inverse maximum-detection
+  //                      volume; needs `apparentMagLimit` and per-row
+  //                      flux-limit data.
+  //   3 = Schechter    — Task 4: reweight by the expected Schechter
+  //                      luminosity function `phi(M; M*, alpha)`.
+  //
+  // Modes 2 + 3 are reserved here so we don't have to grow the uniform
+  // buffer again when Tasks 3 + 4 land — the shader fields are inert for
+  // now (the JS side writes 0 / sentinel values), but their presence keeps
+  // the byte layout stable across the three-task arc.
+  //
+  // Byte offsets (from the start of the uniform buffer):
+  //   biasMode          → 128
+  //   absMagLimit       → 132
+  //   apparentMagLimit  → 136
+  //   schechterMStar    → 140
+  //   schechterAlpha    → 144
+  //   _pad5/_pad6/_pad7 → 148, 152, 156   (round struct to 160 = 10 × 16)
+  //
+  // The pad triple is required because we add 5 × 4 = 20 bytes of payload
+  // and WGSL uniform structs must be 16-byte aligned at their tail — so
+  // we round up to the next 16-byte boundary (32 bytes added in total).
+  biasMode: u32,
+  absMagLimit: f32,
+  apparentMagLimit: f32,
+  schechterMStar: f32,
+  schechterAlpha: f32,
+  _pad5: u32,
+  _pad6: u32,
+  _pad7: u32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -421,6 +458,62 @@ fn vs(
 
   // Fetch the quad corner for this vertex (in [-1,+1]²).
   let corner = QUAD[vi];
+
+  // ── Malmquist-bias gating (volume-limited mode) ──────────────────────────
+  //
+  // Compute the galaxy's *absolute* magnitude from its observed apparent
+  // magnitude + cosmological distance from origin (the camera's true
+  // distance is irrelevant — the absolute magnitude is an intrinsic
+  // property of the galaxy):
+  //
+  //     M = m  -  5 · log10(d_Mpc)  -  25
+  //
+  // The `+25` term comes from the unit choice: distance modulus textbooks
+  // write `M = m - 5·log10(d / 10pc) = m - 5·log10(d_pc) + 5`, and
+  // log10(1 Mpc / 10 pc) = log10(1e5) = 5, so converting the distance unit
+  // from parsecs to megaparsecs adds 5·5 = 25 to the additive constant.
+  // Mirror of `absoluteFromApparent` in src/utils/math/distanceModulus.ts.
+  //
+  // WGSL has no `log10` intrinsic — only the natural log — so we divide
+  // by ln(10) ≈ 2.302585093.
+  //
+  // ── Why a degenerate clip-space output instead of `discard`? ─────────────
+  //
+  // `discard` is a *fragment-stage* keyword — it tells the rasteriser to
+  // throw away the current pixel.  The vertex stage has no equivalent
+  // statement; it must always return a clip-space position.  The accepted
+  // workaround is to emit a clip-space coordinate that lies outside the
+  // unit cube ([-1, +1]³), so the GPU's clip+cull stage drops every
+  // primitive that touches the vertex.  Setting `xyz = (2, 2, 2)` with
+  // `w = 1` puts the post-divide NDC at (2, 2, 2) — well outside the unit
+  // cube — and crucially does the same for *all 6 vertices* of the
+  // billboard quad (because `p.biasMode`, `p.absMagLimit`, and `dMpc` all
+  // depend only on per-instance state, every vertex of the quad makes the
+  // same decision).  No fragment shader invocations get scheduled for the
+  // discarded galaxy, so we save roughly the same work as a fragment-stage
+  // `discard` would have.  The only wasted work is the six vertex
+  // invocations themselves, which are cheap.
+  //
+  // We gate this on `u.biasMode == 1u` (the VolumeLimited literal in
+  // src/data/biasMode.ts) so the default mode (`None == 0u`) is a single
+  // u32 compare per vertex — effectively free.
+  let dMpc = length(p.position);
+  let LOG10 = 2.302585092994046;
+  let absMag = p.magnitude - 5.0 * (log(dMpc) / LOG10) - 25.0;
+
+  if (u.biasMode == 1u && absMag > u.absMagLimit) {
+    var earlyOut: VSOut;
+    earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
+    earlyOut.uv = corner;
+    earlyOut.tint = vec3<f32>(0.0);
+    earlyOut.intensity = 0.0;
+    earlyOut.instanceIdx = p.globalInstanceIdx & 0x7fffffffu;
+    earlyOut.selected = 0u;
+    earlyOut.axisRatio = 1.0;
+    earlyOut.positionAngleDeg = 0.0;
+    earlyOut.isFallback = 0u;
+    return earlyOut;
+  }
 
   // ── SELECTION CHECK ───────────────────────────────────────────────────────
   //

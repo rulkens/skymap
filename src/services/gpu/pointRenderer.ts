@@ -153,20 +153,26 @@ const DIAMETER_KPC_BYTE_OFFSET = 36;
  *
  * The struct contains (offsets are byte offsets from the start of the buffer):
  *
- *   bytes  0..63  : viewProj         mat4x4<f32>  (16 floats = 64 bytes)
- *   bytes 64..71  : viewport         vec2<f32>    (2 floats)         }
- *   bytes 72..75  : pointSizePx      f32          (1 float)          } 16 bytes (one vec4 slot)
- *   bytes 76..79  : brightness       f32          (1 float)          }
- *   bytes 80..83  : selectedIndex    u32                             ← picker writes here
- *   bytes 84..87  : instanceIdOffset u32                             ← per-source offset (legacy; baked per-vertex now)
- *   bytes 88..95  : _pad0/_pad1      u32×2        (written as 0)     ← alignment for the next vec3 slot
- *   bytes 96..107 : camPosWorld      vec3<f32>    (3 floats)         } 16 bytes (one vec4 slot)
- *   bytes 108..111: pxPerRad         f32          (1 float)          }
+ *   bytes  0..63  : viewProj          mat4x4<f32>  (16 floats = 64 bytes)
+ *   bytes 64..71  : viewport          vec2<f32>    (2 floats)        }
+ *   bytes 72..75  : pointSizePx       f32          (1 float)         } 16 bytes (one vec4 slot)
+ *   bytes 76..79  : brightness        f32          (1 float)         }
+ *   bytes 80..83  : selectedIndex     u32                             ← picker writes here
+ *   bytes 84..87  : instanceIdOffset  u32                             ← per-source offset (legacy; baked per-vertex now)
+ *   bytes 88..95  : _pad0/_pad1       u32×2        (written as 0)     ← alignment for the next vec3 slot
+ *   bytes 96..107 : camPosWorld       vec3<f32>    (3 floats)        } 16 bytes (one vec4 slot)
+ *   bytes 108..111: pxPerRad          f32          (1 float)         }
  *   bytes 112..115: highlightFallback u32                            }
  *   bytes 116..119: realOnlyMode      u32                            } 16 bytes (one vec4 slot)
  *   bytes 120..127: _pad3/_pad4       u32×2        (written as 0)    }
+ *   bytes 128..131: biasMode          u32          (Malmquist mode)  }
+ *   bytes 132..135: absMagLimit       f32          (volume-limit M)  }
+ *   bytes 136..139: apparentMagLimit  f32          (Task 3, reserved)} 32 bytes
+ *   bytes 140..143: schechterMStar    f32          (Task 4, reserved)}  (two vec4 slots)
+ *   bytes 144..147: schechterAlpha   f32          (Task 4, reserved) }
+ *   bytes 148..159: _pad5/_pad6/_pad7 u32×3        (written as 0)    }
  *
- * Total: 128 bytes — a multiple of 16 ✓
+ * Total: 160 bytes — a multiple of 16 ✓
  *
  * WGSL uniform buffers follow rules similar to std140 (see WGSL spec §13,
  * "Memory Layout"). Each member must be aligned to its alignment value:
@@ -183,8 +189,16 @@ const DIAMETER_KPC_BYTE_OFFSET = 36;
  * toggles (`highlightFallback`, `realOnlyMode`).  The two trailing u32
  * padding words round the struct out to a 16-byte boundary so a future
  * vec3/vec4 append doesn't fall into mis-alignment.
+ *
+ * The Malmquist-bias plan adds 5 × 4 = 20 bytes of payload (one u32 mode
+ * selector + four f32 thresholds for Tasks 2-4).  Rounded up to a 16-byte
+ * boundary that's 32 bytes added → 160 bytes total.  Tasks 3 + 4 will
+ * populate `apparentMagLimit` / `schechterMStar` / `schechterAlpha`; Task 2
+ * uses only `biasMode` and `absMagLimit`, but reserving the slots now
+ * means we don't grow the buffer (and re-compile the pipeline) again
+ * mid-plan.
  */
-const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4; // 128 bytes
+const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4; // 160 bytes
 
 // ─── Per-source bookkeeping ───────────────────────────────────────────────────
 
@@ -775,6 +789,25 @@ export class PointRenderer {
    *                           rows are `discard`ed entirely.  Lets the
    *                           user see ONLY galaxies for which we have
    *                           measured (b/a, PA) photometric orientation.
+   * @param biasMode           Malmquist-bias correction selector.  Numeric
+   *                           values come from `data/biasMode.ts` and must
+   *                           match the WGSL literals (`1u` = volume-limit,
+   *                           `2u` = 1/V_max, `3u` = Schechter).  When 0
+   *                           (the default), the shader applies no
+   *                           correction and the next four fields are
+   *                           ignored.
+   * @param absMagLimit        Threshold for `biasMode == 1` (volume-limit):
+   *                           galaxies with absolute magnitude *fainter*
+   *                           than this (numerically larger M) are
+   *                           discarded in the vertex stage by emitting a
+   *                           degenerate clip-space position.
+   * @param apparentMagLimit   Reserved for Task 3 (1/V_max weighting).
+   *                           Pass 0 until that task lands; the shader
+   *                           ignores it while `biasMode != 2u`.
+   * @param schechterMStar     Reserved for Task 4 (Schechter reweighting).
+   *                           Pass 0 until that task lands; the shader
+   *                           ignores it while `biasMode != 3u`.
+   * @param schechterAlpha     Reserved for Task 4.  Pass 0 until ready.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -788,6 +821,11 @@ export class PointRenderer {
     pxPerRad: number,
     highlightFallback: boolean,
     realOnlyMode: boolean,
+    biasMode: number,
+    absMagLimit: number,
+    apparentMagLimit: number,
+    schechterMStar: number,
+    schechterAlpha: number,
   ): void {
     // Nothing to draw if no source has been uploaded yet.
     if (this.clouds.size === 0) return;
@@ -826,6 +864,23 @@ export class PointRenderer {
     u32[28] = highlightFallback ? 1 : 0; // bytes 112..115
     u32[29] = realOnlyMode      ? 1 : 0; // bytes 116..119
     // u32[30] / u32[31] (_pad3 / _pad4) stay zero.
+
+    // Malmquist-bias correction state (Task 2 of the malmquist-bias plan).
+    // Slots 32-39 cover bytes 128..159 — see UNIFORM_BYTES doc above for the
+    // detailed offsets.  We write the integer mode through the u32 view and
+    // the four f32 thresholds through the f32 view; both views point at the
+    // same underlying ArrayBuffer so the writes don't collide.  `biasMode`
+    // is masked with `>>> 0` to coerce the JS number to an unsigned 32-bit
+    // value (defensive — `BiasMode` only has 0..3 but a future caller might
+    // pass something via `setBiasMode`).
+    u32[32] = biasMode >>> 0;       // bytes 128..131  biasMode
+    f32[33] = absMagLimit;          // bytes 132..135  absMagLimit
+    f32[34] = apparentMagLimit;     // bytes 136..139  apparentMagLimit (Task 3)
+    f32[35] = schechterMStar;       // bytes 140..143  schechterMStar   (Task 4)
+    f32[36] = schechterAlpha;       // bytes 144..147  schechterAlpha   (Task 4)
+    // u32[37..39] (_pad5/_pad6/_pad7) stay zero — they round the struct
+    // out to a 16-byte boundary so a future vec3/vec4 append doesn't
+    // silently break alignment.
 
     this.device.queue.writeBuffer(this.uniformBuffer_internal, 0, buf);
 

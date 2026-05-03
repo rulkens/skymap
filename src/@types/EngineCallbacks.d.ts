@@ -9,6 +9,7 @@ import type { PointInfo } from './PointInfo';
 import type { ScaleInfo } from './ScaleInfo';
 import type { LodMode } from './LodMode';
 import type { Source } from '../data/sources';
+import type { BiasMode } from '../data/biasMode';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -64,6 +65,20 @@ export type EngineCallbacks = {
    * Optional echo of the show-only-real-orientations toggle state.
    */
   onRealOnlyModeChange?: (enabled: boolean) => void;
+  /**
+   * Optional echo of the Malmquist-bias mode selector — fired both when
+   * the engine seeds its initial value at startup and when a future
+   * `setBiasMode` call mutates it.  Subscribed React state should mirror
+   * the engine truth so the SettingsPanel renders the right radio button
+   * (Task 5 of the malmquist-bias plan adds the UI).
+   */
+  onBiasModeChange?: (mode: BiasMode) => void;
+  /**
+   * Optional echo of the volume-limited absolute-magnitude threshold.
+   * Same lifecycle as `onBiasModeChange` — seeded at startup, fired by
+   * `setAbsMagLimit`.
+   */
+  onAbsMagLimitChange?: (absMag: number) => void;
   /**
    * Fired when the level-of-detail mode changes (either from a `setLodMode`
    * call or at engine init to seed React's initial state).
