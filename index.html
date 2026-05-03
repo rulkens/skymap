@@ -12,7 +12,7 @@
       /* ── Space-themed galaxy info card ─────────────────────────────────── */
 
       #info-card {
-        display: none; /* shown by JS when a point is hovered or pinned */
+        display: block; /* React mounts/unmounts the element; no display:none needed */
         position: fixed;
         top: 16px;
         right: 16px;
@@ -104,8 +104,7 @@
 
       /* ── Scale bar (bottom-right reference) ────────────────────────────── */
       /* A non-interactive distance legend. The label and bar width are
-         updated by JS each frame: pick a "nice" round Mpc value such that
-         it spans roughly 150 px on screen at the current zoom level. */
+         updated by the React ScaleBar component each render. */
 
       #scale-bar {
         position: fixed;
@@ -136,7 +135,7 @@
       }
 
       /* The bar itself: two short vertical "ticks" connected by a thin
-         horizontal rule. Width is set inline by JS each frame. */
+         horizontal rule. Width is set inline by the ScaleBar component. */
       #scale-line {
         display: inline-block;
         height: 7px;
@@ -148,52 +147,12 @@
     </style>
   </head>
   <body>
-    <canvas id="c"></canvas>
-    <div id="status">initializing…</div>
-
-    <!-- Galaxy info card — hidden until hover or selection -->
-    <div id="info-card" role="status" aria-live="polite">
-      <div class="card-title">
-        <span>Object</span>
-        <span id="pinned-badge">Pinned</span>
-      </div>
-
-      <div class="card-row">
-        <span class="card-label">Index</span>
-        <span class="card-value" id="field-index">—</span>
-      </div>
-      <div class="card-row">
-        <span class="card-label">RA</span>
-        <span class="card-value"><span id="field-ra">—</span>&deg;</span>
-      </div>
-      <div class="card-row">
-        <span class="card-label">Dec</span>
-        <span class="card-value"><span id="field-dec">—</span>&deg;</span>
-      </div>
-      <div class="card-row">
-        <span class="card-label">Redshift z</span>
-        <span class="card-value" id="field-z">—</span>
-      </div>
-      <div class="card-row">
-        <span class="card-label">Distance</span>
-        <span class="card-value"><span id="field-distance">—</span> Mpc</span>
-      </div>
-      <div class="card-row">
-        <span class="card-label">Magnitude</span>
-        <span class="card-value" id="field-magnitude">—</span>
-      </div>
-      <div class="card-row">
-        <span class="card-label">Color (u&minus;g)</span>
-        <span class="card-value" id="field-color">—</span>
-      </div>
-    </div>
-
-    <!-- Scale bar — distance legend, updated by JS each frame -->
-    <div id="scale-bar" aria-label="Scale reference">
-      <span id="scale-label">— Mpc</span>
-      <span id="scale-line" style="width: 100px"></span>
-    </div>
-
-    <script type="module" src="/src/main.ts"></script>
+    <!--
+      React mounts the entire app — canvas, status bar, info card, scale bar —
+      into this single div. The old imperative markup (canvas, #status, #info-card,
+      #scale-bar) has moved into the React component tree in src/App.tsx.
+    -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
