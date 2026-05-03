@@ -61,6 +61,11 @@ export type { CrossMatchInputs } from './crossMatch.js';
  */
 function recordsToCloud(records: ParsedRecord[]): PointCloud {
   const count = records.length;
+  // TODO Task 4+ (galaxy-orientation-disks): populate axisRatio and
+  // positionAngleDeg from the survey-specific cross-match results
+  // (HyperLEDA for GLADE, 2MASS XSC for 2MRS, SDSS PhotoObj for SDSS).
+  // For now we initialise both arrays to NaN — a legitimate "no measurement"
+  // sentinel that preserves the v3 round-trip property end-to-end.
   const cloud: PointCloud = {
     count,
     objIDs: new BigUint64Array(count),
@@ -70,6 +75,8 @@ function recordsToCloud(records: ParsedRecord[]): PointCloud {
     magR: new Float32Array(count),
     magI: new Float32Array(count),
     magZ: new Float32Array(count),
+    axisRatio: new Float32Array(count).fill(NaN),
+    positionAngleDeg: new Float32Array(count).fill(NaN),
   };
   for (let i = 0; i < count; i++) {
     // `records[i]` is `ParsedRecord | undefined` under noUncheckedIndexedAccess.

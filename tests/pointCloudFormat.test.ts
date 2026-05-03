@@ -3,7 +3,7 @@ import { encodePointCloud, decodePointCloud } from '../src/data/pointCloudFormat
 import type { PointCloud } from '../src/@types';
 
 /**
- * Build a minimal 2-point v2 PointCloud for use across multiple tests.
+ * Build a minimal 2-point v3 PointCloud for use across multiple tests.
  *
  * The two objIDs are chosen to exercise 64-bit precision: 1234567890123456789n
  * exceeds Number.MAX_SAFE_INTEGER (2^53 − 1 ≈ 9 × 10^15) so any accidental
@@ -19,11 +19,13 @@ function makeCloud(): PointCloud {
     magR: new Float32Array([17.9, 16.6]),
     magI: new Float32Array([17.6, 16.3]),
     magZ: new Float32Array([17.4, 16.1]),
+    axisRatio: new Float32Array([0.42, 0.91]),
+    positionAngleDeg: new Float32Array([13.5, 142.25]),
   };
 }
 
 describe('point cloud binary format', () => {
-  it('round-trips a small cloud with all v2 fields', () => {
+  it('round-trips a small cloud with all v3 fields', () => {
     const original = makeCloud();
     const buf = encodePointCloud(original);
     const decoded = decodePointCloud(buf);
@@ -44,6 +46,12 @@ describe('point cloud binary format', () => {
     expect(Array.from(decoded.magR)).toEqual(Array.from(original.magR));
     expect(Array.from(decoded.magI)).toEqual(Array.from(original.magI));
     expect(Array.from(decoded.magZ)).toEqual(Array.from(original.magZ));
+
+    // v3 orientation fields.
+    expect(Array.from(decoded.axisRatio)).toEqual(Array.from(original.axisRatio));
+    expect(Array.from(decoded.positionAngleDeg)).toEqual(
+      Array.from(original.positionAngleDeg),
+    );
   });
 
   it('rejects wrong magic', () => {
@@ -58,13 +66,87 @@ describe('point cloud binary format', () => {
     // Overwrite the version field (offset 4) with an arbitrary bad value.
     new DataView(buf).setUint32(4, 99, true);
     expect(() => decodePointCloud(buf)).toThrow(/version/);
-    // Also check the regeneration hint is present.
-    expect(() => decodePointCloud(buf)).toThrow(/csv-to-bin/);
+    // The message must point users at the modern build pipeline so they know
+    // exactly which command will produce a v3-compatible bin.
+    expect(() => decodePointCloud(buf)).toThrow(/regenerate/);
+    expect(() => decodePointCloud(buf)).toThrow(/build-all/);
   });
 
-  it('encoded byte length matches 16 + count * 48', () => {
+  it('encoded byte length matches 16 + count * 56', () => {
     const buf = encodePointCloud(makeCloud());
-    // v2: HEADER_BYTES=16, BYTES_PER_POINT=48, count=2 → 16 + 2*48 = 112.
-    expect(buf.byteLength).toBe(16 + 2 * 48);
+    // v3: HEADER_BYTES=16, BYTES_PER_POINT=56, count=2 → 16 + 2*56 = 128.
+    expect(buf.byteLength).toBe(16 + 2 * 56);
+  });
+});
+
+/**
+ * v3-specific tests: orientation round-trip (finite + NaN sentinel) and
+ * cross-version rejection. Kept in a separate `describe` so the original
+ * round-trip suite stays focused on the existing fields.
+ */
+function makeOrientCloud(count: number, fillNaN = false): PointCloud {
+  const ar = new Float32Array(count);
+  const pa = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    // Fill with deterministic but distinct values so accidental swaps between
+    // axisRatio and positionAngleDeg show up as test failures.
+    ar[i] = fillNaN ? NaN : 0.6 + 0.01 * i;
+    pa[i] = fillNaN ? NaN : 30 + i;
+  }
+  return {
+    count,
+    objIDs: BigUint64Array.from({ length: count }, (_, i) => BigInt(i + 1)),
+    positions: new Float32Array(count * 3),
+    magU: new Float32Array(count),
+    magG: new Float32Array(count),
+    magR: new Float32Array(count),
+    magI: new Float32Array(count),
+    magZ: new Float32Array(count),
+    axisRatio: ar,
+    positionAngleDeg: pa,
+  };
+}
+
+describe('pointCloudFormat v3', () => {
+  it('round-trips finite axisRatio and positionAngleDeg', () => {
+    const cloud = makeOrientCloud(4, false);
+    const decoded = decodePointCloud(encodePointCloud(cloud));
+    expect(Array.from(decoded.axisRatio)).toEqual(Array.from(cloud.axisRatio));
+    expect(Array.from(decoded.positionAngleDeg)).toEqual(
+      Array.from(cloud.positionAngleDeg),
+    );
+  });
+
+  it('round-trips NaN sentinel', () => {
+    // NaN is a legitimate "no measurement" marker. The encoder must preserve
+    // it bit-for-bit through the Float32Array view; toEqual won't help us
+    // here because NaN !== NaN, so we test via Number.isNaN on each slot.
+    const cloud = makeOrientCloud(2, true);
+    const decoded = decodePointCloud(encodePointCloud(cloud));
+    expect(Number.isNaN(decoded.axisRatio[0])).toBe(true);
+    expect(Number.isNaN(decoded.axisRatio[1])).toBe(true);
+    expect(Number.isNaN(decoded.positionAngleDeg[0])).toBe(true);
+    expect(Number.isNaN(decoded.positionAngleDeg[1])).toBe(true);
+  });
+
+  it('rejects v2 with regenerate message', () => {
+    // Forge a v2 header with count=0. We don't need any record bytes since
+    // the version check fires before the per-point loop runs.
+    const buf = new ArrayBuffer(16);
+    const dv = new DataView(buf);
+    dv.setUint32(0, 0x504d4b53, true);
+    dv.setUint32(4, 2, true);
+    dv.setUint32(8, 0, true);
+    expect(() => decodePointCloud(buf)).toThrow(/regenerate/);
+  });
+
+  it('rejects v1 with regenerate message', () => {
+    // Same story for v1 — single error path covers all foreign versions.
+    const buf = new ArrayBuffer(16);
+    const dv = new DataView(buf);
+    dv.setUint32(0, 0x504d4b53, true);
+    dv.setUint32(4, 1, true);
+    dv.setUint32(8, 0, true);
+    expect(() => decodePointCloud(buf)).toThrow(/regenerate/);
   });
 });

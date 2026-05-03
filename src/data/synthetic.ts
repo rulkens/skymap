@@ -169,5 +169,24 @@ export function generateSyntheticCloud(count: number, seed = 42): PointCloud {
     magZ[i] = iMag - rand() * 0.4;
   }
 
-  return { count, objIDs, positions, magU, magG, magR, magI, magZ };
+  // TODO Task 2 (galaxy-orientation-disks): synthesise plausible
+  // axisRatio (b/a in [0,1]) and positionAngleDeg (PA in [0,180)) values
+  // from the seeded RNG so synthetic clouds exercise the orientation path.
+  // For now we ship NaN-filled arrays so the v3 PointCloud type is satisfied
+  // and downstream consumers can detect "no measurement" via Number.isNaN.
+  const axisRatio = new Float32Array(count).fill(NaN);
+  const positionAngleDeg = new Float32Array(count).fill(NaN);
+
+  return {
+    count,
+    objIDs,
+    positions,
+    magU,
+    magG,
+    magR,
+    magI,
+    magZ,
+    axisRatio,
+    positionAngleDeg,
+  };
 }

@@ -89,4 +89,32 @@ export type PointCloud = {
    * SDSS photometric bands.
    */
   magZ: Float32Array;
+
+  /**
+   * Per-galaxy axis ratio b/a — length === count.
+   *
+   * The minor-to-major axis ratio of the galaxy's elliptical isophote on the
+   * sky, in [0, 1]. A value near 1 means a face-on disk or round elliptical;
+   * a value near 0 means an edge-on disk seen as a thin sliver. Combined with
+   * `positionAngleDeg`, this drives the on-screen orientation of the disk
+   * billboards introduced in the galaxy-orientation-disks plan.
+   *
+   * NaN is a legitimate sentinel meaning "no measurement available". The
+   * build pipeline normally fills every entry — either with a real
+   * cross-matched value, or with a deterministic fallback — but the binary
+   * format itself preserves NaN faithfully so the encoder/decoder remain
+   * pure and unit-testable independent of how the cloud was populated.
+   */
+  axisRatio: Float32Array;
+
+  /**
+   * Per-galaxy position angle in degrees — length === count.
+   *
+   * Astronomical convention: measured east of north on the sky, in the range
+   * [0, 180). This is the orientation of the major axis of the galaxy's
+   * isophote. Pairs with `axisRatio` to define the projected disk shape.
+   *
+   * NaN means "no measurement available" — same semantics as `axisRatio`.
+   */
+  positionAngleDeg: Float32Array;
 };

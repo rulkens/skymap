@@ -88,6 +88,10 @@ const count = records.length;
 
 // Allocate the SoA arrays exactly once. Typed arrays have fixed capacity, so
 // pre-sizing avoids any hidden reallocation as we fill them in below.
+// TODO Task 4+ (galaxy-orientation-disks): wire SDSS PhotoObj's b/a + phi
+// columns through `parseSdssCsv` and into axisRatio + positionAngleDeg
+// here. Initialised to NaN for now so the v3 encoder gets a fully-shaped
+// PointCloud and the "no measurement" sentinel propagates end-to-end.
 const cloud: PointCloud = {
   count,
   objIDs: new BigUint64Array(count), // SDSS object identifiers
@@ -97,6 +101,8 @@ const cloud: PointCloud = {
   magR: new Float32Array(count), // r-band apparent magnitude
   magI: new Float32Array(count), // i-band apparent magnitude
   magZ: new Float32Array(count), // z-band apparent magnitude
+  axisRatio: new Float32Array(count).fill(NaN), // b/a — TODO Task 4+
+  positionAngleDeg: new Float32Array(count).fill(NaN), // PA in deg — TODO Task 4+
 };
 
 for (let i = 0; i < count; i++) {

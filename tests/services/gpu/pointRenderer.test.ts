@@ -65,6 +65,11 @@ function makeCloud(count: number): PointCloud {
     magR: new Float32Array(count),
     magI: new Float32Array(count),
     magZ: new Float32Array(count),
+    // v3 orientation fields — the renderer's bookkeeping path doesn't inspect
+    // their values yet (later tasks in galaxy-orientation-disks will), so
+    // zero-filled arrays of the right length are sufficient.
+    axisRatio: new Float32Array(count),
+    positionAngleDeg: new Float32Array(count),
   };
 }
 
