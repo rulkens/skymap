@@ -54,7 +54,12 @@ import styles from './SettingsPanel.module.css';
  * Keeping it always-on but invisible-in-the-UI means the renderer always has
  * *something* to draw while the user freely toggles the real catalogs.
  */
-const TOGGLEABLE_SOURCES: readonly Source[] = [Source.SDSS, Source.TwoMRS, Source.Glade];
+const TOGGLEABLE_SOURCES: readonly Source[] = [
+  Source.SDSS,
+  Source.TwoMRS,
+  Source.Glade,
+  Source.Famous,
+];
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -112,6 +117,12 @@ type Props = {
   visibleSourceMask?: number;
   /** Called when the user toggles a single survey on/off. */
   onToggleSource?: (source: Source, visible: boolean) => void;
+  /**
+   * Per-source point counts indexed by Source enum value.  Surveys whose
+   * .bin hasn't loaded yet are simply absent from the map — the row in the
+   * UI then renders the toggle without a count rather than a misleading "0".
+   */
+  sourceCounts?: Partial<Record<Source, number>>;
   /** Current LOD mode — `'auto'` (by zoom) or `'manual'` (user override). */
   lodMode?: LodMode;
   /** Called when the user toggles the Auto-LOD checkbox. */
@@ -172,6 +183,7 @@ export function SettingsPanel({
   onResetCamera,
   visibleSourceMask,
   onToggleSource,
+  sourceCounts,
   lodMode,
   onSetLodMode,
   spaceMouseSupported,
@@ -213,19 +225,30 @@ export function SettingsPanel({
       {showSurveyToggles && (
         <>
           <div className={styles.panelSubtitle}>Surveys</div>
-          {TOGGLEABLE_SOURCES.map((s) => (
-            <div className={styles.panelRow} key={s}>
-              <label htmlFor={`toggle-source-${s}`}>{sourceLabel(s)}</label>
-              <input
-                id={`toggle-source-${s}`}
-                type="checkbox"
-                // `maskHas` keeps us from leaking the bitmask shape into the JSX —
-                // we ask "is bit s set?" and trust `data/sources.ts` to know how.
-                checked={maskHas(visibleSourceMask, s)}
-                onChange={(e) => onToggleSource(s, e.target.checked)}
-              />
-            </div>
-          ))}
+          {TOGGLEABLE_SOURCES.map((s) => {
+            // `count` is undefined until the .bin lands; we render an empty
+            // string in that case rather than "0" (which would imply the
+            // survey is empty rather than still loading).
+            const count = sourceCounts?.[s];
+            return (
+              <div className={styles.panelRow} key={s}>
+                <label htmlFor={`toggle-source-${s}`}>
+                  {sourceLabel(s)}
+                  {count !== undefined && (
+                    <span className={styles.sourceCount}>{count.toLocaleString()}</span>
+                  )}
+                </label>
+                <input
+                  id={`toggle-source-${s}`}
+                  type="checkbox"
+                  // `maskHas` keeps us from leaking the bitmask shape into the JSX —
+                  // we ask "is bit s set?" and trust `data/sources.ts` to know how.
+                  checked={maskHas(visibleSourceMask, s)}
+                  onChange={(e) => onToggleSource(s, e.target.checked)}
+                />
+              </div>
+            );
+          })}
           <div className={styles.panelDivider} role="separator" />
         </>
       )}

@@ -1000,6 +1000,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           //   (b) forwarding the famous id to the image fetcher so it loads
           //       the curated /images/famous/<id>.webp instead of SDSS/DSS.
           for (const [cloudSource, cloud] of clouds.entries()) {
+            // Honour the user's visibility-mask: if a survey is toggled off
+            // we shouldn't be enqueueing thumbnails for galaxies the points
+            // pass will skip (the pointRenderer + picker already filter on
+            // this same mask). Without this, a hidden survey's quads would
+            // continue to fill the texture atlas and ghost across the scene.
+            if (((visibleSourceMask >> cloudSource) & 1) === 0) continue;
             const positions = cloud.positions;
             const count = cloud.count;
             for (let i = 0; i < count; i++) {

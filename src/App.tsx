@@ -73,7 +73,7 @@ import { InfoCard } from './components/InfoCard/InfoCard';
 import { ScaleBar } from './components/ScaleBar/ScaleBar';
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
 import { CommandPalette } from './components/CommandPalette/CommandPalette';
-import { ALL_VISIBLE_MASK } from './data/sources';
+import { ALL_VISIBLE_MASK, Source } from './data/sources';
 import { isWebHIDSupported } from './services/input/spaceMouse';
 import { loadFamousSidecars, type FamousMetaEntry } from './services/engine/famousMetaLoader';
 
@@ -170,6 +170,13 @@ export function App(): React.ReactElement {
   const [visibleSourceMask, setVisibleSourceMask] = useState<number>(ALL_VISIBLE_MASK);
   const [lodMode, setLodMode] = useState<LodMode>('manual');
 
+  // Per-source point counts, indexed by Source enum value. Populated as each
+  // .bin file finishes loading via the engine's `onCloudReady` callback.
+  // Surfaced in SettingsPanel so users see how many points each survey
+  // contributes — a 220 k SDSS slice carries different visual weight than a
+  // 5 M GLADE one, and the count makes that legible at a glance.
+  const [sourceCounts, setSourceCounts] = useState<Partial<Record<Source, number>>>({});
+
   // ── SpaceMouse state (optional, WebHID-only) ─────────────────────────────
   //
   // `spaceMouseConnected` mirrors the engine's view of pairing — flipped to
@@ -235,6 +242,11 @@ export function App(): React.ReactElement {
       // away from engine truth, making the first user toggle silently agree
       // with engine state instead of flipping it.
       onSourceMaskChange: setVisibleSourceMask,
+      // Each .bin lands at its own pace; record the count so the SettingsPanel
+      // can show "SDSS  220,453" alongside the toggle. Functional update so
+      // multiple parallel arrivals don't clobber each other.
+      onCloudReady: (source, count) =>
+        setSourceCounts((prev) => ({ ...prev, [source]: count })),
       // SpaceMouse pairing state: `connect()`'s promise gives us the initial
       // success/failure, but only this callback covers spontaneous disconnects
       // (USB unplug, permission revocation).  Without it React's "Connected"
@@ -400,6 +412,7 @@ export function App(): React.ReactElement {
         // the checkbox row stays consistent on the very next render, even
         // though the engine echoes it back via `onLodModeChange` shortly.
         visibleSourceMask={visibleSourceMask}
+        sourceCounts={sourceCounts}
         onToggleSource={(s, visible) => {
           // No optimistic local update — the engine fires `onSourceMaskChange`
           // synchronously inside `setSourceVisible`, which updates React state

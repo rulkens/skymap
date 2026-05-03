@@ -63,6 +63,20 @@
   text-align: right;
 }
 
+/*
+ * Per-survey object count appended to the toggle label.  Muted relative to
+ * the survey name so the eye reads "SDSS · 220,453" as one phrase, with the
+ * name leading.  Tabular-nums keeps the digits aligned across the four rows
+ * even though their counts span four orders of magnitude (Famous ~20 vs
+ * GLADE ~2.4 M).
+ */
+.sourceCount {
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(160, 180, 230, 0.45);
+  font-size: 11px;
+}
+
 /* Range sliders span the full panel width so they're easy to drag */
 .panelRow input[type='range'] {
   width: 100%;

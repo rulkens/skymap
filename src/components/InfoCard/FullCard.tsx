@@ -184,6 +184,38 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
               </span>
             </div>
           )}
+          {/*
+            External catalog links.  The headline name (info.famous.names[0])
+            is what we send to NED and Wikipedia — both resolvers accept M/NGC/
+            common-name aliases, so a single URL pattern works across the whole
+            atlas.  NED is the gold-standard extragalactic reference (redshift,
+            distance estimates, every published photometry measurement, image
+            cutouts, references — all in one page).  Wikipedia complements it
+            with a non-technical writeup for users who want context rather than
+            data.  We URL-encode the name to handle entries like "NGC 5128".
+          */}
+          <div className={styles.cardRow}>
+            <span className={styles.cardLabel}>Catalogues</span>
+            <span className={styles.cardValue}>
+              <a
+                className={styles.externalInline}
+                href={`https://ned.ipac.caltech.edu/byname?objname=${encodeURIComponent(info.famous.names[0]!)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                NED
+              </a>
+              {' · '}
+              <a
+                className={styles.externalInline}
+                href={`https://en.wikipedia.org/wiki/${encodeURIComponent(info.famous.names[0]!.replace(/ /g, '_'))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Wikipedia
+              </a>
+            </span>
+          </div>
         </div>
       )}
 
