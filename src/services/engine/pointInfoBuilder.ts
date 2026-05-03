@@ -33,6 +33,7 @@ import {
   sdssExplorerUrl,
   sdssThumbnailUrl,
   dssThumbnailUrl,
+  DEFAULT_GALAXY_DIAMETER_KPC,
 } from '../../utils/math';
 
 /**
@@ -212,6 +213,31 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
     provenance = 'deterministic fallback';
   }
 
+  // ── Diameter provenance ────────────────────────────────────────────────────
+  //
+  // The cloud's diameterKpc is always finite (build pipeline guarantee), but
+  // we can't recover *which* parser produced it from the float alone. The
+  // best we can do without a per-row provenance flag in the binary format is
+  // a per-source hint: when the value equals exactly DEFAULT_GALAXY_DIAMETER_KPC
+  // it's certainly the build-pipeline fallback; otherwise we credit the source
+  // catalog's known size column.  This isn't perfect (a 2MRS row whose Riso
+  // happens to round to exactly 30 kpc would be miscredited as fallback), but
+  // it's good enough for an InfoCard chip that's primarily a "real or
+  // estimated?" hint.
+  const dKpc = cloud.diameterKpc[idx]!;
+  let diameterProvenance: string;
+  if (dKpc === DEFAULT_GALAXY_DIAMETER_KPC) {
+    diameterProvenance = 'fallback (30 kpc)';
+  } else if (source === Source.SDSS) {
+    diameterProvenance = 'SDSS petroR50_r';
+  } else if (source === Source.TwoMRS) {
+    diameterProvenance = '2MRS Riso';
+  } else if (source === Source.Glade) {
+    diameterProvenance = 'GLADE Tully';
+  } else {
+    diameterProvenance = 'fallback (30 kpc)';
+  }
+
   return {
     index: idx,
     objID: cloud.objIDs[idx]!,
@@ -258,6 +284,11 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
     // External URLs — null/SDSS-vs-DSS chosen above based on `source`.
     explorerUrl,
     thumbnailUrl,
+
+    // Physical size — drives the focus-tween framing distance and the
+    // diameter row in the InfoCard.
+    diameterKpc: dKpc,
+    diameterProvenance,
 
     // Orientation provenance — fed to the InfoCard's <details> orientation row.
     orientation: {

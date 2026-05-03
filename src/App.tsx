@@ -273,7 +273,10 @@ export function App(): React.ReactElement {
       // ── f: focus on currently-selected galaxy (no-op if nothing pinned) ────
       if (e.key === 'f' || e.key === 'F') {
         if (selected) {
-          handleRef.current?.focusOn([selected.x, selected.y, selected.z]);
+          handleRef.current?.focusOn(
+            [selected.x, selected.y, selected.z],
+            selected.diameterKpc,
+          );
         }
         return;
       }
@@ -313,7 +316,9 @@ export function App(): React.ReactElement {
       <InfoCard
         hovered={hovered}
         selected={selected}
-        onFocus={(info) => handleRef.current?.focusOn([info.x, info.y, info.z])}
+        onFocus={(info) =>
+          handleRef.current?.focusOn([info.x, info.y, info.z], info.diameterKpc)
+        }
       />
       <ScaleBar scale={scale} />
       {/*

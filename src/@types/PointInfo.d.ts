@@ -162,6 +162,35 @@ export type PointInfo = {
    */
   explorerUrl: string | null;
 
+  /** @group Physical size */
+
+  /**
+   * Per-galaxy physical diameter in kiloparsecs.
+   *
+   * Mirrors `cloud.diameterKpc[idx]` (always finite — fallback-filled at
+   * build time).  Drives the focus-tween framing distance in the engine
+   * and the diameter row in the InfoCard.  When the parser supplied a
+   * real catalog measurement, the value reflects it; otherwise it's
+   * `DEFAULT_GALAXY_DIAMETER_KPC = 30`.  See `provenance` below for
+   * which is which.
+   */
+  diameterKpc: number;
+
+  /**
+   * Provenance tag describing how `diameterKpc` was derived for this row,
+   * mirroring the orientation provenance pattern:
+   *
+   *   - 'SDSS petroR50_r' — Petrosian half-light radius × 3 → physical kpc
+   *   - '2MRS Riso'       — log10 isophotal radius → diameter → physical kpc
+   *   - 'GLADE Tully'     — Tully (1988) size–luminosity from absolute B mag
+   *   - 'fallback (30 kpc)' — no parser-supplied measurement; built-in default
+   *
+   * Computed at info-card-build time by comparing `cloud.diameterKpc[idx]`
+   * to the project-wide DEFAULT_GALAXY_DIAMETER_KPC and (where applicable)
+   * the source catalog.
+   */
+  diameterProvenance: string;
+
   /** @group Orientation */
 
   /**

@@ -1361,7 +1361,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       updatePosition(cam);
     },
 
-    focusOn(worldXYZ) {
+    focusOn(worldXYZ, diameterKpc) {
       // Camera may not be ready yet (cloud still loading); drop the call.
       // Same defensive pattern as resetCamera() above.
       if (!cam) return;
@@ -1370,13 +1370,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // so an in-progress tween hands off smoothly to the new one.  vec3.clone
       // copies the target tuple so future mutation of cam.target doesn't
       // corrupt the from-snapshot.
+      //
+      // `diameterKpc` is optional — when undefined, focusDistanceMpc()
+      // falls back to its built-in 30 kpc placeholder, matching the
+      // pre-v4 framing exactly.  When present, the camera ends up
+      // 4× the galaxy's diameter away (close-but-not-inside framing
+      // that scales naturally with size).
       currentTween = {
         startMs: performance.now(),
         durationMs: FOCUS_TWEEN_MS,
         fromTarget: vec3.clone(cam.target as vec3),
         toTarget: vec3.fromValues(worldXYZ[0], worldXYZ[1], worldXYZ[2]),
         fromDistance: cam.distance,
-        toDistance: focusDistanceMpc(),
+        toDistance: focusDistanceMpc(diameterKpc),
         fromYaw: cam.yaw,
         toYaw: cam.yaw, // preserve yaw — user keeps their orientation
         fromPitch: cam.pitch,

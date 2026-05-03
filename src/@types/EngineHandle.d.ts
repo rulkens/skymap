@@ -98,7 +98,7 @@ export type EngineHandle = {
    * If the world position is the origin and the camera is already there, the
    * call is a no-op.  Tween duration: 600 ms.
    */
-  focusOn: (worldXYZ: [number, number, number]) => void;
+  focusOn: (worldXYZ: [number, number, number], diameterKpc?: number) => void;
 
   /**
    * Smoothly tween the camera back to the initial framing captured at engine
