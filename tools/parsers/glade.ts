@@ -97,6 +97,40 @@ import { Source } from '../../src/data/sources.js';
 import { type ParsedRecord } from './common.js';
 
 /**
+ * Map from PGC string (no padding, no leading zeros stripped) to HyperLEDA's
+ * `pa` (PA in degrees) and derived `axisRatio = 10^(-logr25)`.
+ *
+ * The GLADE ReadMe says PGC sits in bytes 1-7 (0-based: 0-7). HyperLEDA
+ * stores the same identifier as a plain integer; we trim the GLADE field
+ * to its non-space content to match.
+ */
+export type HyperLedaShapeMap = Map<string, { pa: number; axisRatio: number }>;
+
+/**
+ * Parse the cached HyperLEDA CSV produced by `tools/fetchHyperLeda.ts`.
+ *
+ * Cache rows with empty `pa` / `logr25` mean "we asked HyperLEDA, no match"
+ * — those rows are intentionally absent from the returned map (the build
+ * pipeline falls through to the deterministic fallback for them).
+ */
+export function parseHyperLedaCsv(rawText: string): HyperLedaShapeMap {
+  const out: HyperLedaShapeMap = new Map();
+  const lines = rawText.split(/\r?\n/).filter((l) => l.length > 0);
+  // Start at index 1 to skip the header row (`pgc,pa,logr25`).
+  for (let i = 1; i < lines.length; i++) {
+    const [pgc, pa, logr25] = lines[i]!.split(',');
+    if (!pgc) continue;
+    const paN = parseFloat(pa ?? '');
+    const lr = parseFloat(logr25 ?? '');
+    if (Number.isFinite(paN) && Number.isFinite(lr)) {
+      // logr25 = log10(major/minor); axisRatio = minor/major = 10^(-logr25)
+      out.set(pgc.trim(), { pa: paN, axisRatio: Math.pow(10, -lr) });
+    }
+  }
+  return out;
+}
+
+/**
  * Result of parsing the GLADE catalog: validated records plus a count of
  * dropped rows. Surfacing `skipped` lets the build CLI report it as a
  * sanity check — for VII/281 a healthy run drops a few percent of rows
@@ -193,7 +227,11 @@ function nameIsPopulated(line: string, startByte0Based: number, endByte0Based: n
  * The whole-file `parseGlade` below is now a thin wrapper around this
  * function; the row-filter rules and byte offsets live in exactly one place.
  */
-export function parseGladeLine(line: string, options: GladeParseOptions = {}): ParsedRecord | null {
+export function parseGladeLine(
+  line: string,
+  options: GladeParseOptions = {},
+  hyperLeda: HyperLedaShapeMap = new Map(),
+): ParsedRecord | null {
   if (line.length < MIN_LINE_LEN) {
     // Truncated row — can't safely slice the trailing flag bytes.
     return null;
@@ -255,6 +293,13 @@ export function parseGladeLine(line: string, options: GladeParseOptions = {}): P
   const hmag = parseFloatOrNaN(line.slice(227, 233)); // bytes 228-233
   const kmag = parseFloatOrNaN(line.slice(240, 246)); // bytes 241-246
 
+  // PGC sits in bytes 1-7 (0-based: 0-7). Empty/sentinel rows (`---`, `0`) are
+  // common — those rows just won't find a match in the cache and will fall
+  // through to the deterministic fallback at build time.
+  const pgcRaw = line.slice(0, 7).trim();
+  const pgcKey = pgcRaw === '' || /^-+$/.test(pgcRaw) || pgcRaw === '0' ? null : pgcRaw;
+  const ledaEntry = pgcKey ? hyperLeda.get(pgcKey) : undefined;
+
   return {
     source: Source.Glade,
     // GLADE has no usable SDSS objID. The 0n sentinel signals to the
@@ -270,13 +315,12 @@ export function parseGladeLine(line: string, options: GladeParseOptions = {}): P
     magR: jmag,
     magI: hmag,
     magZ: kmag,
-    // TODO Task 8 (galaxy-orientation-disks): cross-match the PGC number
-    // in bytes 1-7 against the HyperLEDA `pa` + `logr25` cache (built
-    // offline into data/raw/hyperleda_pa.csv) to populate real axisRatio
-    // (= 10^(-logr25)) and PA. Until the cache is wired in, every GLADE
-    // row routes through fallbackOrientation.
-    axisRatio: null,
-    positionAngleDeg: null,
+    // Orientation: when HyperLEDA has a row for this PGC, use its measured
+    // PA + axisRatio. Otherwise leave both null and let the build pipeline
+    // route the row through the deterministic fallback (so every galaxy
+    // ends up with *some* orientation, just not necessarily a real one).
+    axisRatio: ledaEntry ? ledaEntry.axisRatio : null,
+    positionAngleDeg: ledaEntry ? ledaEntry.pa : null,
   };
 }
 
@@ -293,7 +337,11 @@ export function parseGladeLine(line: string, options: GladeParseOptions = {}): P
  * to a `---`-leading string and would be silently dropped. Splitting
  * lines locally with no comment filter avoids that misclassification.
  */
-export function parseGlade(rawText: string, options: GladeParseOptions = {}): GladeResult {
+export function parseGlade(
+  rawText: string,
+  options: GladeParseOptions = {},
+  hyperLeda: HyperLedaShapeMap = new Map(),
+): GladeResult {
   // Local line split: just normalise CRLF and break on '\n', then drop
   // empty lines. We deliberately *don't* strip `#` or `--` comment
   // prefixes here — see the docstring above.
@@ -306,7 +354,7 @@ export function parseGlade(rawText: string, options: GladeParseOptions = {}): Gl
   let skipped = 0;
 
   for (const line of lines) {
-    const rec = parseGladeLine(line, options);
+    const rec = parseGladeLine(line, options, hyperLeda);
     if (rec === null) {
       skipped++;
     } else {

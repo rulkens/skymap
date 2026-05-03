@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { parseGlade } from '../../tools/parsers/glade';
+import { parseGlade, parseHyperLedaCsv } from '../../tools/parsers/glade';
 import { Source } from '../../src/data/sources';
 
 /**
@@ -106,6 +106,51 @@ describe('parseGlade', () => {
     const { records, skipped } = parseGlade(sample);
     expect(records).toHaveLength(0);
     expect(skipped).toBe(2);
+  });
+
+  it('parseHyperLedaCsv parses pa + logr25 and converts to axisRatio = 10^(-logr25)', () => {
+    // logr25 = log10(major/minor) in HyperLEDA; we want axisRatio = minor/major
+    // = 10^(-logr25). For logr25 = 0.3: 10^-0.3 ≈ 0.501. Pinning that exact
+    // conversion locks in the sign of the exponent — flipping it would silently
+    // produce axisRatio > 1 (impossible for a real galaxy) and the renderer
+    // would draw absurdly elongated disks pointing the wrong way.
+    const csv = [
+      'pgc,pa,logr25',
+      '12345,30.5,0.3', // axisRatio = 10^-0.3 ≈ 0.501
+      '67890,,', // queried but no match — must be absent from the map
+    ].join('\n');
+    const map = parseHyperLedaCsv(csv);
+    expect(map.size).toBe(1);
+    expect(map.get('12345')?.pa).toBe(30.5);
+    expect(map.get('12345')?.axisRatio).toBeCloseTo(0.501, 3);
+    expect(map.has('67890')).toBe(false);
+  });
+
+  it('applies HyperLEDA orientation to GLADE rows with matching PGC', () => {
+    // The first SAMPLE row has PGC 2789 (NGC 253). Build a HyperLEDA cache
+    // keyed by that PGC and verify the parsed record carries the looked-up
+    // pa + axisRatio rather than null. logr25 = 0.2 → axisRatio ≈ 0.631.
+    const hyperLeda = parseHyperLedaCsv(
+      ['pgc,pa,logr25', '2789,55.0,0.2'].join('\n'),
+    );
+    const { records } = parseGlade(NGC253, {}, hyperLeda);
+    expect(records).toHaveLength(1);
+    expect(records[0]!.positionAngleDeg).toBe(55.0);
+    expect(records[0]!.axisRatio).toBeCloseTo(0.631, 3);
+  });
+
+  it('returns null orientation when GLADE PGC is empty/dashes (no cross-match possible)', () => {
+    // The third SAMPLE row has PGC `---` (sentinel for "no PGC assigned").
+    // Even with a non-empty HyperLEDA cache, that row should not pick up an
+    // orientation — the sentinel branch in parseGladeLine prevents the lookup.
+    const dashRow = SAMPLE.split('\n')[2]!;
+    const hyperLeda = parseHyperLedaCsv(
+      ['pgc,pa,logr25', '2789,55.0,0.2'].join('\n'),
+    );
+    const { records } = parseGlade(dashRow, {}, hyperLeda);
+    expect(records).toHaveLength(1);
+    expect(records[0]!.positionAngleDeg).toBeNull();
+    expect(records[0]!.axisRatio).toBeNull();
   });
 
   it('skips Flag2=0 (no measured z or distance)', () => {
