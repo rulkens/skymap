@@ -1,0 +1,247 @@
+/**
+ * GLADE v2.3 parser — VizieR catalog VII/281 (Dálya et al. 2018,
+ * MNRAS 479, 2374).
+ *
+ * GLADE ("Galaxy List for the Advanced Detector Era") is a value-added
+ * all-sky compilation cross-matched and pre-merged from five parent
+ * catalogs:
+ *
+ *   - GWGC      Gravitational Wave Galaxy Catalogue (White+ 2011)
+ *   - HyperLEDA spectroscopic / photometric galaxy database (Makarov+ 2014)
+ *   - 2MASS XSC 2MASS Extended Source Catalogue
+ *   - 2MPZ      2MASS Photometric Redshift Catalogue (Bilicki+ 2014)
+ *   - SDSS-DR12 Quasar catalogue
+ *
+ * Why GLADE replaces the rev-1 standalone 2MPZ + 6dFGS sources: cross-match
+ * dedup is *already done* by the GLADE team. If we ingested 2MPZ and 6dFGS
+ * as separate sources we'd be carrying double-counted galaxies until we
+ * re-implemented their dedup logic ourselves. By treating GLADE as a single
+ * "deep all-sky baseline" source we get the science right out of the box,
+ * and the renderer's UI shrinks from five toggles to three.
+ *
+ * We do still need to dedup GLADE rows against SDSS Main + BOSS at the
+ * merge step — but that uses position+z tolerance, not numeric objID
+ * matching, because GLADE's SDSS-DR12 column is a *name string* (e.g.
+ * `J123456.78+901234.5`), not a numeric SDSS objID. That's why this parser
+ * always emits `objID = 0n` (the merger's "no SDSS anchor" sentinel).
+ *
+ * ---
+ * ### Format: 256-byte fixed-width ASCII, 3,262,881 records.
+ *
+ * The byte ranges below are 1-based inclusive (as published in the ReadMe);
+ * we slice them with `line.slice(N-1, M)` to convert into JS's 0-based
+ * half-open indexing. Only the fields the renderer actually consumes are
+ * extracted — the ID columns (PGC, GWGC, HyperLEDA, 2MASS, SDSS-DR12)
+ * are intentionally ignored because GLADE has no SDSS objID, and the
+ * other names aren't yet used downstream.
+ *
+ *   bytes 104     Flag1   object type — `Q`=quasar, `C`=globular, `G`=galaxy
+ *   bytes 106-123 RAdeg   decimal degrees, J2000
+ *   bytes 125-144 DEdeg   decimal degrees, J2000
+ *   bytes 174-191 z       redshift (sentinel `---` if absent)
+ *   bytes 193-198 Bmag    apparent B mag (→ magG)
+ *   bytes 215-220 Jmag    2MASS J (→ magR)
+ *   bytes 228-233 Hmag    2MASS H (→ magI)
+ *   bytes 241-246 Kmag    2MASS K (→ magZ)
+ *   bytes 254     Flag2   distance source — `0` = neither z nor distance
+ *
+ * ---
+ * ### Photometric mapping (heterogeneous → SDSS *ugriz* slots)
+ *
+ * GLADE's photometry is a patchwork: B is from various optical surveys
+ * (often photographic plates via HyperLEDA), JHK are from 2MASS. The
+ * canonical `ParsedRecord` carries five SDSS slots (u, g, r, i, z), so
+ * fitting GLADE into that shape is procrustean. The mapping below puts
+ * the bluest available band (B) into the bluest occupied slot (g) and
+ * fills the longer-wavelength slots in order:
+ *
+ *   magU = NaN   (no u-band in GLADE)
+ *   magG = Bmag  (apparent B, ~0.44 µm)
+ *   magR = Jmag  (2MASS J, ~1.25 µm)
+ *   magI = Hmag  (2MASS H, ~1.65 µm)
+ *   magZ = Kmag  (2MASS K, ~2.16 µm)
+ *
+ * The resulting "colour indices" are not SDSS u-r or g-r; they're optical-B
+ * vs near-IR-JHK masquerading in those slots. That sounds dangerous, but
+ * the renderer's K-correction shader keys off redshift only, and the
+ * point-cloud colour ramp is driven by the source-tag — so GLADE galaxies
+ * get their own visual style and the magnitudes are useful for flux-limit
+ * histograms and apparent-brightness sorting even if "colour" is loose.
+ *
+ * ---
+ * ### Skip rules (rev-2)
+ *
+ * - **Flag1 != 'G' → skip.** Drops quasars (`Q`, point-like AGN) and
+ *   globular clusters (`C`, bound stellar systems inside galaxies). The
+ *   renderer's audience is "extragalactic galaxies", so non-galaxy rows
+ *   would be misleading even though their photometry is valid.
+ *
+ * - **Flag2 == '0' → skip.** GLADE's own quality flag for "no measured z
+ *   or distance attached to this row". Without z we can't place the row
+ *   in 3D space; rendering it would put a phantom galaxy at distance 0.
+ *
+ * - **z parse fails or z ≤ 0 → skip.** Unlike 2MRS, GLADE deliberately
+ *   excludes the local-group blueshift regime — its parent catalogs are
+ *   cosmological-distance galaxy compilations (HyperLEDA's own dwarfs are
+ *   the only edge case, and they tend to have z >= 0 anyway). The
+ *   sentinel for "no redshift available" in this column is the dash
+ *   string `---` (or `--`, or `-`), which `parseFloatOrNaN` handles.
+ *
+ * - **RA / Dec parse fails → skip.** Defensive — every real GLADE row
+ *   has populated RA/Dec, but a corrupt download could short-line a row.
+ *
+ * objID is always `0n` — see the cross-match note above.
+ */
+
+import { Source } from '../../src/data/sources.js';
+import { type ParsedRecord } from './common.js';
+
+/**
+ * Result of parsing the GLADE catalog: validated records plus a count of
+ * dropped rows. Surfacing `skipped` lets the build CLI report it as a
+ * sanity check — for VII/281 a healthy run drops a few percent of rows
+ * (mostly Flag1 != 'G' and Flag2 == '0'); a much larger number means
+ * we're parsing the wrong file or the byte offsets have drifted.
+ */
+export type GladeResult = {
+  records: ParsedRecord[];
+  skipped: number;
+};
+
+/**
+ * Minimum line length required for a row to be usable. Flag3 sits at byte
+ * 256 (the very end of the record), and slicing past the end of a JS
+ * string silently returns `''` which then quietly parses as NaN. Bailing
+ * out up front turns that silent failure into a counted skip.
+ */
+const MIN_LINE_LEN = 256;
+
+/**
+ * Tolerant float parser that recognises GLADE's "missing value" sentinels.
+ *
+ * The VII/281 ReadMe documents the sentinel as `?=-`, but actual rows in
+ * the data file use a *run* of dashes that fills the column width — so a
+ * 6-byte field is `---   ` and a 4-byte one is `--`. Treating any
+ * dash-only string (any length) as "missing" is therefore the correct
+ * tolerant rule, matching what the catalog actually emits rather than
+ * what the ReadMe literally says.
+ *
+ * Empty strings (the field was all spaces) are also missing. Any other
+ * unparseable content collapses to NaN, which is the canonical
+ * "missing-value" sentinel for downstream `ParsedRecord` magnitudes.
+ *
+ * This helper is *not* used for RA/Dec — those are guaranteed populated
+ * by the catalog construction process, and treating a malformed RA as
+ * NaN would mask a corrupted download with a quiet skip. RA/Dec use a
+ * plain `parseFloat` + `Number.isFinite` check instead.
+ */
+function parseFloatOrNaN(s: string): number {
+  const trimmed = s.trim();
+  // Empty cell or any run of dashes (`-`, `--`, `---`, ...) is a sentinel.
+  // The `^-+$` regex requires the *entire* trimmed string be dashes,
+  // so a real negative number like `-0.001` is *not* matched.
+  if (trimmed === '' || /^-+$/.test(trimmed)) return NaN;
+  const v = parseFloat(trimmed);
+  return Number.isFinite(v) ? v : NaN;
+}
+
+/**
+ * Parse a GLADE v2.3 catalog blob (`data/raw/glade2.3.dat`) into canonical
+ * records. See the module docstring for byte layout, mapping rationale,
+ * and skip rules.
+ *
+ * Why this parser does *not* use the shared `nonCommentLines` helper:
+ * `nonCommentLines` discards any line whose trimmed form starts with
+ * `--`, treating it as a SQL-style comment. That rule is right for
+ * SDSS CSVs but *wrong* for GLADE — a real catalog row whose PGC and
+ * name columns are all sentinel `---` (about 1 row in 5 in v2.3) trims
+ * to a `---`-leading string and would be silently dropped. Splitting
+ * lines locally with no comment filter avoids that misclassification.
+ */
+export function parseGlade(rawText: string): GladeResult {
+  // Local line split: just normalise CRLF and break on '\n', then drop
+  // empty lines. We deliberately *don't* strip `#` or `--` comment
+  // prefixes here — see the docstring above.
+  const lines = rawText
+    .replace(/\r\n/g, '\n')
+    .split('\n')
+    .filter((l) => l.length > 0);
+
+  const records: ParsedRecord[] = [];
+  let skipped = 0;
+
+  for (const line of lines) {
+    if (line.length < MIN_LINE_LEN) {
+      // Truncated row — can't safely slice the trailing flag bytes.
+      skipped++;
+      continue;
+    }
+
+    // Flag1 lives at byte 104 (0-based 103). Test it before parsing the
+    // numeric fields so quasars/globulars don't waste a `parseFloat`.
+    const flag1 = line.charAt(103);
+    if (flag1 !== 'G') {
+      skipped++;
+      continue;
+    }
+
+    // Flag2 lives at byte 254 (0-based 253). '0' means "no measured z or
+    // distance" — GLADE's own admission that this row is unplaceable.
+    const flag2 = line.charAt(253);
+    if (flag2 === '0') {
+      skipped++;
+      continue;
+    }
+
+    // RA: bytes 106-123. F18.14 means up to 14 fractional digits in 18
+    // chars; we just trim and `parseFloat`. RA is always populated, so
+    // a NaN here signals a corrupted download, not a missing field.
+    const ra = parseFloat(line.slice(105, 123).trim());
+    // Dec: bytes 125-144 (F20.15).
+    const dec = parseFloat(line.slice(124, 144).trim());
+    if (!Number.isFinite(ra) || !Number.isFinite(dec)) {
+      skipped++;
+      continue;
+    }
+
+    // z: bytes 174-191 (E18.15). Sentinel `---` is common when only a
+    // distance was measured photometrically — `parseFloatOrNaN` collapses
+    // those to NaN so the `isFinite` check below catches them uniformly.
+    // We also drop z <= 0: GLADE excludes local-group blueshifts by
+    // construction (unlike 2MRS), so a non-positive z is junk here.
+    const z = parseFloatOrNaN(line.slice(173, 191));
+    if (!Number.isFinite(z) || z <= 0) {
+      skipped++;
+      continue;
+    }
+
+    // Photometry. All four fields use the dash-sentinel convention; any
+    // missing band collapses to NaN and propagates correctly through the
+    // renderer's colour computation. We deliberately do *not* skip the
+    // row when a band is missing — partial photometry is still useful
+    // for sorting by apparent brightness in one of the other bands.
+    const bmag = parseFloatOrNaN(line.slice(192, 198)); // bytes 193-198
+    const jmag = parseFloatOrNaN(line.slice(214, 220)); // bytes 215-220
+    const hmag = parseFloatOrNaN(line.slice(227, 233)); // bytes 228-233
+    const kmag = parseFloatOrNaN(line.slice(240, 246)); // bytes 241-246
+
+    records.push({
+      source: Source.Glade,
+      // GLADE has no usable SDSS objID. The 0n sentinel signals to the
+      // merger's dedup pass that this row has no SDSS anchor and must
+      // be matched by position+z instead.
+      objID: 0n,
+      ra,
+      dec,
+      z,
+      // Heterogeneous-photometry mapping — see module docstring.
+      magU: NaN,
+      magG: bmag,
+      magR: jmag,
+      magI: hmag,
+      magZ: kmag,
+    });
+  }
+
+  return { records, skipped };
+}
