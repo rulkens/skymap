@@ -120,6 +120,12 @@ export function buildPointInfo(cloud: PointCloud, idx: number): PointInfo {
     index: idx,
     objID: cloud.objIDs[idx]!,
 
+    // World-space coordinates — copied so the React layer can pass them
+    // straight into engine.focusOn() without redoing the trig.
+    x: px,
+    y: py,
+    z: pz,
+
     // Sky coordinates — both decimal and pre-formatted sexagesimal strings.
     ra,
     dec,

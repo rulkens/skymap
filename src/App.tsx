@@ -211,7 +211,11 @@ export function App(): React.ReactElement {
         `selected` changes, only `InfoCard` re-renders. And so on.
       */}
       <StatusBar status={status} />
-      <InfoCard hovered={hovered} selected={selected} />
+      <InfoCard
+        hovered={hovered}
+        selected={selected}
+        onFocus={(info) => handleRef.current?.focusOn([info.x, info.y, info.z])}
+      />
       <ScaleBar scale={scale} />
       {/*
         Settings panel — bottom-left overlay with four renderer controls.

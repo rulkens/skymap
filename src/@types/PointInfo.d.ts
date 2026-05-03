@@ -31,6 +31,19 @@ export type PointInfo = {
    */
   objID: bigint;
 
+  /** @group World-space position */
+
+  /**
+   * World-space X coordinate in Mpc. Same value as `cloud.positions[idx*3+0]`.
+   * Carried on `PointInfo` so consumers like the camera-focus button can pivot
+   * the orbit camera onto this galaxy without re-deriving xyz from RA/Dec.
+   */
+  x: number;
+  /** World-space Y coordinate in Mpc. */
+  y: number;
+  /** World-space Z coordinate in Mpc. */
+  z: number;
+
   /** @group Sky coordinates */
 
   /** Right Ascension in decimal degrees, [0, 360). */

@@ -41,6 +41,11 @@ export type InfoCardProps = {
   hovered: PointInfo | null;
   /** The pinned/selected point, or null when nothing is pinned. */
   selected: PointInfo | null;
+  /**
+   * Optional callback fired when the user clicks "Focus" on the pinned card.
+   * Forwarded to FullCard; ignored on the compact hover card.
+   */
+  onFocus?: (info: PointInfo) => void;
 };
 
 // ── InfoCard ───────────────────────────────────────────────────────────────────
@@ -55,7 +60,7 @@ export type InfoCardProps = {
  * // In App.tsx:
  * <InfoCard hovered={hovered} selected={selected} />
  */
-export function InfoCard({ hovered, selected }: InfoCardProps): ReactNode {
+export function InfoCard({ hovered, selected, onFocus }: InfoCardProps): ReactNode {
   // Nothing to show — stay entirely out of the DOM.
   if (!hovered && !selected) return null;
 
@@ -68,7 +73,7 @@ export function InfoCard({ hovered, selected }: InfoCardProps): ReactNode {
     //   :global(.infoCardStack) .infoCardFull { position: relative; … }
     return (
       <div className={`${styles.infoCardStack} infoCardStack`}>
-        <FullCard info={selected} pinned={true} />
+        <FullCard info={selected} pinned={true} onFocus={onFocus} />
         <CompactCard info={hovered} />
       </div>
     );
@@ -78,5 +83,7 @@ export function InfoCard({ hovered, selected }: InfoCardProps): ReactNode {
   // selected when the cursor has moved off canvas.
   const info = hovered ?? selected!;
   const pinned = !hovered; // only show PINNED badge when falling back to selection
-  return <FullCard info={info} pinned={pinned} />;
+  // Forward onFocus only when we're showing the pinned card — the hover preview
+  // never gets a Focus button regardless of whether the prop is supplied.
+  return <FullCard info={info} pinned={pinned} onFocus={pinned ? onFocus : undefined} />;
 }

@@ -241,3 +241,33 @@ details:not([open]) > .detailsSummary::before {
   color: #a8d0ff;
   text-shadow: 0 0 8px rgba(120, 180, 255, 0.4);
 }
+
+/* ── Focus button (only visible when the card is pinned) ──────────────────────
+ *
+ * Sits inline with the title row to the right of the PINNED badge.  Same
+ * glassmorphic vibe as the SettingsPanel buttons so it feels like part of the
+ * same control surface.  Compact size — a full-width button would dominate the
+ * already tight overlay.
+ */
+.focusButton {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border: 1px solid rgba(160, 200, 255, 0.25);
+  border-radius: 4px;
+  background: rgba(40, 60, 100, 0.35);
+  color: #e8eeff;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.focusButton:hover {
+  background: rgba(60, 90, 140, 0.5);
+  border-color: rgba(180, 220, 255, 0.4);
+}
+
+.focusButton:active {
+  background: rgba(80, 120, 180, 0.55);
+}

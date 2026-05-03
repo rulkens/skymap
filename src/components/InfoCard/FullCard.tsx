@@ -34,6 +34,14 @@ export type FullCardProps = {
   info: PointInfo;
   /** When true, show the PINNED badge and apply the pinned styling variant. */
   pinned?: boolean;
+  /**
+   * Optional callback fired when the user clicks the Focus button.
+   *
+   * Only rendered when `pinned` is true — the button only makes sense for the
+   * persistent (selected) galaxy, not for the transient hover preview.  When
+   * omitted, the button is not rendered.
+   */
+  onFocus?: (info: PointInfo) => void;
 };
 
 // ── CardRow ────────────────────────────────────────────────────────────────────
@@ -85,7 +93,7 @@ function CardRow({ label, value }: CardRowProps): ReactNode {
  *     ObjID  1237651738291...
  *   View in SDSS Explorer →
  */
-export function FullCard({ info, pinned = false }: FullCardProps): ReactNode {
+export function FullCard({ info, pinned = false, onFocus }: FullCardProps): ReactNode {
   // Compose the outer class: always infoCardFull, plus pinned variant when needed.
   // CSS modules scope both classes so we just combine them with a space.
   const outerClass = pinned ? `${styles.infoCardFull} ${styles.pinned}` : styles.infoCardFull;
@@ -97,6 +105,21 @@ export function FullCard({ info, pinned = false }: FullCardProps): ReactNode {
         <span>Object</span>
         {/* The PINNED badge is always in the DOM; CSS shows/hides via .pinned */}
         <span className={styles.pinnedBadge}>Pinned</span>
+        {/*
+          Focus button — only rendered when the card is pinned AND a callback
+          was supplied.  We pass the full PointInfo so the parent can pull the
+          world coordinates (for the camera tween) without re-doing the lookup.
+        */}
+        {pinned && onFocus && (
+          <button
+            type="button"
+            className={styles.focusButton}
+            onClick={() => onFocus(info)}
+            aria-label={`Focus camera on ${info.sdssName}`}
+          >
+            Focus
+          </button>
+        )}
       </div>
 
       {/* ── SDSS designation ──────────────────────────────────────────────── */}
