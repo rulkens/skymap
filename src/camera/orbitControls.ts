@@ -39,7 +39,8 @@
  *   DOM events → (this module) → OrbitCamera state → orbitCamera.ts → mat4
  */
 
-import { OrbitCamera, updatePosition } from './orbitCamera';
+import type { OrbitCamera } from '../@types';
+import { updatePosition } from './orbitCamera';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

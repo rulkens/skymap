@@ -24,7 +24,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { PointInfo } from '../../engine';
+import type { PointInfo } from '../../@types';
 import { FullCard } from './FullCard';
 import { CompactCard } from './CompactCard';
 import styles from './InfoCard.module.css';

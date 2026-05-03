@@ -22,7 +22,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { PointInfo } from '../../engine';
+import type { PointInfo } from '../../@types';
 import { formatDistance } from '../../utils/format/distance';
 import { Thumbnail } from './Thumbnail';
 import styles from './FullCard.module.css';

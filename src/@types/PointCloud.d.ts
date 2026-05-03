@@ -1,9 +1,7 @@
 /**
- * Shared types for the renderer.
- *
- * The whole pipeline (synthetic generator, .bin loader, GPU uploader) speaks
- * one shape: `PointCloud`. Picking a single representation early avoids
- * conversions in hot paths and keeps the GPU upload code simple.
+ * PointCloud — the single renderer-ready data shape shared by the synthetic
+ * generator, the .bin loader, and the GPU upload path. Uses a struct-of-arrays
+ * layout so each typed array can be passed straight to `writeBuffer`.
  */
 
 /**

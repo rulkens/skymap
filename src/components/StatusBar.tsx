@@ -20,7 +20,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { EngineStatus } from '../engine';
+import type { EngineStatus } from '../@types';
 import styles from './StatusBar.module.css';
 
 /** Props for StatusBar. */

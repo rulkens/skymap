@@ -33,7 +33,7 @@ import { resolve } from 'node:path';
 
 import { raDecZToCartesian } from '../src/utils/math/index.js';
 import { encodePointCloud } from '../src/data/pointCloudFormat.js';
-import type { PointCloud } from '../src/types.js';
+import type { PointCloud } from '../src/@types/index.js';
 
 // ─── CLI argument parsing ─────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { encodePointCloud, decodePointCloud } from '../src/data/pointCloudFormat';
-import type { PointCloud } from '../src/types';
+import type { PointCloud } from '../src/@types';
 
 /**
  * Build a minimal 2-point v2 PointCloud for use across multiple tests.

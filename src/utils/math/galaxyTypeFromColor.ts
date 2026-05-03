@@ -12,18 +12,7 @@
  *   Baldry et al. 2004, ApJ 600, 681.
  */
 
-/**
- * Coarse galaxy classification inferred from the u−r colour index.
- *
- * `category` is intended for UI tinting; `description` is human-readable
- * text suitable for display in an info card.
- */
-export type GalaxyTypeInfo = {
-  /** Coarse classification — for UI tinting. */
-  category: 'red' | 'blue' | 'unknown';
-  /** Human-readable description, e.g. "Red, quiescent galaxy". */
-  description: string;
-};
+import type { GalaxyTypeInfo } from '../../@types';
 
 /**
  * Heuristic galaxy classification from the u−r colour index.

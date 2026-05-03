@@ -45,7 +45,7 @@
  * the user to regenerate via `npm run csv-to-bin`.
  */
 
-import type { PointCloud } from '../types';
+import type { PointCloud } from '../@types';
 
 /**
  * "SKMP" as a little-endian uint32. Reading 4 bytes at offset 0 with

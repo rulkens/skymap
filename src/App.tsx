@@ -66,7 +66,7 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { createEngine } from './engine';
-import type { EngineHandle, EngineStatus, PointInfo, ScaleInfo } from './engine';
+import type { EngineHandle, EngineStatus, PointInfo, ScaleInfo } from './@types';
 import { StatusBar } from './components/StatusBar';
 import { InfoCard } from './components/InfoCard';
 import { ScaleBar } from './components/ScaleBar';
