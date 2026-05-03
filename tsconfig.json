@@ -12,7 +12,7 @@
     "resolveJsonModule": true,
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["@webgpu/types", "vite/client"]
+    "types": ["node", "@webgpu/types", "vite/client"]
   },
   "include": ["src", "tests"],
   "exclude": ["tools"]
