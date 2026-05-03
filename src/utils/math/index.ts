@@ -9,6 +9,7 @@
 export * from './constants';
 export * from './apparentSizePx';
 export * from './galaxyDiameterKpc';
+export * from './arcsecToKpc';
 export * from './redshiftToDistanceMpc';
 export * from './raDecZToCartesian';
 export * from './cartesianToRaDecZ';
