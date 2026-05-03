@@ -36,11 +36,11 @@
  */
 
 import { vec3 } from 'gl-matrix';
-import type { OrbitCamera } from '../@types';
+import type { OrbitCamera } from '../../@types';
 import { updatePosition } from './orbitCamera';
-import { easeOutCubic } from '../utils/math/easeOutCubic';
-import { lerp } from '../utils/math/lerp';
-import { lerpAngleShortest } from '../utils/math/lerpAngleShortest';
+import { easeOutCubic } from '../../utils/math/easeOutCubic';
+import { lerp } from '../../utils/math/lerp';
+import { lerpAngleShortest } from '../../utils/math/lerpAngleShortest';
 
 /**
  * A single in-flight camera tween — a frozen "from → to" plan that the

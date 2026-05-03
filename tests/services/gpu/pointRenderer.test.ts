@@ -23,9 +23,9 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { PointRenderer } from '../src/gpu/pointRenderer';
-import { Source } from '../src/data/sources';
-import type { PointCloud } from '../src/@types';
+import { PointRenderer } from '../../../src/services/gpu/pointRenderer';
+import { Source } from '../../../src/data/sources';
+import type { PointCloud } from '../../../src/@types';
 
 // `GPUBufferUsage` is a browser-global enum exposed by the WebGPU runtime;
 // Node has no idea what it is. Vitest runs in Node, so referencing

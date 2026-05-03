@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { vec3 } from 'gl-matrix';
-import { createOrbitCamera } from '../../src/camera/orbitCamera';
-import { advanceCameraTween, type CameraTween } from '../../src/camera/cameraTween';
+import { createOrbitCamera } from '../../../src/services/camera/orbitCamera';
+import { advanceCameraTween, type CameraTween } from '../../../src/services/camera/cameraTween';
 
 function makeCam() {
   return createOrbitCamera({

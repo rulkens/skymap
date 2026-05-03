@@ -51,7 +51,7 @@
  */
 
 import shaderSrc from './shaders/points.wgsl?raw';
-import type { Source } from '../data/sources';
+import type { Source } from '../../data/sources';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

@@ -3,7 +3,7 @@ import {
   parseTranslationReport,
   parseRotationReport,
   parseCombinedReport,
-} from '../../src/input/spaceMouseReport';
+} from '../../../src/services/input/spaceMouseReport';
 
 /**
  * Helper: build a DataView from a list of int16 little-endian values.

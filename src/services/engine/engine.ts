@@ -49,21 +49,21 @@
  * ```
  */
 
-import { initGpu, resizeCanvasToDisplay } from '../../gpu/device';
-import { PointRenderer } from '../../gpu/pointRenderer';
-import { createPickRenderer } from '../../gpu/pickRenderer';
+import { initGpu, resizeCanvasToDisplay } from '../gpu/device';
+import { PointRenderer } from '../gpu/pointRenderer';
+import { createPickRenderer } from '../gpu/pickRenderer';
 import {
   createOrbitCamera,
   computeViewProj,
   updatePosition,
   clampDistance,
-} from '../../camera/orbitCamera';
-import { attachOrbitControls } from '../../camera/orbitControls';
+} from '../camera/orbitCamera';
+import { attachOrbitControls } from '../camera/orbitControls';
 import { formatDistance } from '../../utils/format/distance';
 import { ALL_VISIBLE_MASK, Source, maskWith, maskWithout } from '../../data/sources';
 import type { LodMode, PointCloud } from '../../@types';
 import type { EngineCallbacks, EngineHandle } from '../../@types';
-import { advanceCameraTween, type CameraTween } from '../../camera/cameraTween';
+import { advanceCameraTween, type CameraTween } from '../camera/cameraTween';
 import { vec3 } from 'gl-matrix';
 
 import { autoLodMask } from './autoLod';
@@ -78,11 +78,11 @@ import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 // complexity. The actual WebHID call (and the hardware coupling) only fires
 // when the user hits the "Connect SpaceMouse" button — see `SpaceMouseInput`
 // further down in the engine state block.
-import { SpaceMouseInput } from '../../input/spaceMouse';
-import { applyCurve } from '../../input/spaceMouseSensitivity';
-import { applyAxesToCamera, hasAnyAxis } from '../../input/spaceMouseToCamera';
-import type { SpaceMouseAxes } from '../../input/spaceMouseAxes';
-import { ZERO_AXES } from '../../input/spaceMouseAxes';
+import { SpaceMouseInput } from '../input/spaceMouse';
+import { applyCurve } from '../input/spaceMouseSensitivity';
+import { applyAxesToCamera, hasAnyAxis } from '../input/spaceMouseToCamera';
+import type { SpaceMouseAxes } from '../input/spaceMouseAxes';
+import { ZERO_AXES } from '../input/spaceMouseAxes';
 
 /**
  * Start the WebGPU engine on `canvas`.

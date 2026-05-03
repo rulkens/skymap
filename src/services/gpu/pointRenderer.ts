@@ -39,8 +39,8 @@
  */
 
 import { mat4 } from 'gl-matrix';
-import type { PointCloud } from '../@types';
-import { ALL_SOURCES, Source } from '../data/sources';
+import type { PointCloud } from '../../@types';
+import { ALL_SOURCES, Source } from '../../data/sources';
 
 // `?raw` is a Vite-specific import suffix. It tells the bundler to import the
 // file's content as a plain string rather than attempting to execute it as

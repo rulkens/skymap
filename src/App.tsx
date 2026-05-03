@@ -73,7 +73,7 @@ import { InfoCard } from './components/InfoCard/InfoCard';
 import { ScaleBar } from './components/ScaleBar/ScaleBar';
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
 import { ALL_VISIBLE_MASK } from './data/sources';
-import { isWebHIDSupported } from './input/spaceMouse';
+import { isWebHIDSupported } from './services/input/spaceMouse';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
