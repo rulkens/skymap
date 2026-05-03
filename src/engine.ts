@@ -196,6 +196,10 @@ export type EngineStatus =
  * All callbacks are called synchronously from the engine's internal code,
  * except where noted. They are called only when the value actually changes,
  * so React's `setState` can be passed in directly.
+ *
+ * The three optional settings callbacks (`onPointSizeChange`, `onBrightnessChange`,
+ * `onAutoRotateChange`) are optional so existing call-sites that don't need
+ * settings panel integration continue to typecheck without changes.
  */
 export type EngineCallbacks = {
   /** Fired whenever the engine status advances (initializing → loading → ready). */
@@ -206,6 +210,22 @@ export type EngineCallbacks = {
   onSelectChange: (info: PointInfo | null) => void;
   /** Fired when the scale bar label or width changes (zoom or resize). */
   onScaleChange: (info: ScaleInfo) => void;
+
+  /**
+   * Fired when the point size changes (either from a `setPointSize` call or at
+   * engine init so React's initial state matches the engine's default).
+   */
+  onPointSizeChange?: (sizePx: number) => void;
+  /**
+   * Fired when the global brightness multiplier changes (either from a
+   * `setBrightness` call or at engine init to seed React's initial state).
+   */
+  onBrightnessChange?: (value: number) => void;
+  /**
+   * Fired when auto-rotate is toggled (either from `setAutoRotate` or at
+   * engine init so React knows the initial off state).
+   */
+  onAutoRotateChange?: (enabled: boolean) => void;
 };
 
 /**
@@ -228,6 +248,45 @@ export type EngineHandle = {
    * StrictMode double-mounts don't leave orphaned RAF loops or GPU objects.
    */
   destroy: () => void;
+
+  /**
+   * Set the billboard pixel radius for all rendered points.
+   *
+   * Takes effect on the next rendered frame. Also fires `onPointSizeChange`
+   * so any subscribed React state stays in sync.
+   *
+   * @param sizePx  Point size in pixels. Recommended range: 1.0 – 8.0.
+   */
+  setPointSize: (sizePx: number) => void;
+
+  /**
+   * Set the global brightness multiplier applied to every star.
+   *
+   * A value of 1.0 is the neutral default. Values > 1 brighten the cloud;
+   * values < 1 dim it. Also fires `onBrightnessChange`.
+   *
+   * @param value  Brightness multiplier. Recommended range: 0.2 – 3.0.
+   */
+  setBrightness: (value: number) => void;
+
+  /**
+   * Enable or disable the slow automatic camera yaw.
+   *
+   * When enabled, the camera yaws at ~3°/second each frame, creating a
+   * gentle orbit effect. The user can still drag while auto-rotate is on —
+   * both yaw contributions simply add together. Also fires `onAutoRotateChange`.
+   *
+   * @param enabled  True to start rotating, false to stop.
+   */
+  setAutoRotate: (enabled: boolean) => void;
+
+  /**
+   * Snap the camera back to the initial framing computed at startup.
+   *
+   * Restores: target = origin, distance = bbox × 2.5, yaw = 0, pitch = 0.3.
+   * The reset takes effect on the next rendered frame.
+   */
+  resetCamera: () => void;
 };
 
 // ── Internal helpers ───────────────────────────────────────────────────────────
@@ -433,6 +492,32 @@ export function createEngine(
   let selectedIndex: number | null = null;
   let pointerDown = false;
 
+  // ── Settings panel state ─────────────────────────────────────────────────
+  //
+  // These are the source of truth for the three visual settings exposed by the
+  // Settings Panel. They are mutated by the public handle setters below and
+  // consumed in the render loop (renderer.draw) and frame tick (autoRotate).
+  let pointSizePx = 2.5;
+  let brightness  = 1.0;
+  let autoRotate  = false;
+
+  // ── Initial camera snapshot ───────────────────────────────────────────────
+  //
+  // Written once by the async IIFE after the cloud loads and bbox is known.
+  // Read by `resetCamera()` in the public handle. Declared here (outside the
+  // IIFE) so the public handle's closure can reach it without hoisting the
+  // entire async block.
+  type InitialCam = {
+    target:   [number, number, number];
+    distance: number;
+    yaw:      number;
+    pitch:    number;
+    fovYRad:  number;
+    near:     number;
+    far:      number;
+  };
+  let initialCamRef: InitialCam | null = null;
+
   // RAF handle — stored so `destroy()` can cancel the loop cleanly.
   let rafId = 0;
 
@@ -621,6 +706,27 @@ export function createEngine(
         far:      camFar,
       });
 
+      // ── Initial camera snapshot for resetCamera() ────────────────────────
+      //
+      // We capture the initial framing values now, after the cloud is loaded and
+      // bbox is known, so `resetCamera()` can restore them at any later time.
+      // fovYRad / near / far are copied from `cam` so a future reconfigure of
+      // the camera (e.g. new data file) would naturally be reflected here.
+      // `aspect` is NOT stored here — reset should use the *current* canvas
+      // aspect ratio so the projection is correct after a window resize.
+      //
+      // Assigned to the outer `initialCamRef` so the public `resetCamera()` handle
+      // method can read it after this async block completes.
+      initialCamRef = {
+        target:   [0, 0, 0],
+        distance: camDistance,   // bbox * 2.5
+        yaw:      0,
+        pitch:    0.3,
+        fovYRad:  cam.fovYRad,
+        near:     cam.near,
+        far:      cam.far,
+      };
+
       // ── Pointer event listeners ──────────────────────────────────────────
 
       // Track latest mouse position for the per-frame throttled hover pick.
@@ -705,6 +811,18 @@ export function createEngine(
 
       cb.onStatusChange({ kind: 'ready', count: cloud.count, source });
 
+      // ── Seed settings callbacks ───────────────────────────────────────────
+      //
+      // Fire each optional settings callback once with the default value so
+      // React's initial state matches the engine's defaults (pointSizePx=2.5,
+      // brightness=1.0, autoRotate=false). Without this, the React state
+      // initialised in App.tsx would only update on the first explicit user
+      // interaction, which could leave the UI showing stale values if the
+      // defaults ever change.
+      cb.onPointSizeChange?.(pointSizePx);
+      cb.onBrightnessChange?.(brightness);
+      cb.onAutoRotateChange?.(autoRotate);
+
       // ── Render loop ──────────────────────────────────────────────────────
 
       function frame() {
@@ -719,6 +837,21 @@ export function createEngine(
         // Refresh the scale-bar legend. Early-returns when nothing changed,
         // so this costs ~zero on stable frames.
         updateScaleBar();
+
+        // ── Auto-rotate yaw ───────────────────────────────────────────────
+        //
+        // When autoRotate is on, advance yaw by a small amount every frame.
+        // ~3°/sec at 60 Hz:  3° / 60 frames = 0.05° / frame
+        //                    0.05° × (π/180) ≈ 0.000873 radians / frame.
+        //
+        // Note: this uses a fixed per-frame delta rather than tracking elapsed
+        // wall-clock time.  At high refresh rates (120 Hz) the rotation is
+        // smoother but twice as fast.  For a gentle ambient effect this is
+        // an acceptable trade-off — no timer bookkeeping needed.
+        if (autoRotate && cam) {
+          cam.yaw += 0.000873;
+          updatePosition(cam);
+        }
 
         // Snapshot the current camera state into a combined view-projection matrix.
         const vp = cam ? computeViewProj(cam) : null;
@@ -748,10 +881,14 @@ export function createEngine(
         // Upload per-frame uniforms (viewProj, viewport, selectedIndex) and
         // issue the instanced draw call.
         //
+        // `pointSizePx` and `brightness` come from the settings-panel closure
+        // variables; they start at 2.5 and 1.0 and are updated by the handle
+        // setters `setPointSize` / `setBrightness` below.
+        //
         // selectedIndex: 0xffffffff is the sentinel for "nothing selected" —
         // the max u32 value, which can never match a real point index.
         renderer.draw(
-          pass, vp, [canvas.width, canvas.height], 2.5, 1.0,
+          pass, vp, [canvas.width, canvas.height], pointSizePx, brightness,
           selectedIndex !== null ? selectedIndex : 0xffffffff >>> 0,
         );
 
@@ -864,6 +1001,49 @@ export function createEngine(
       renderer = null;
       cloud = null;
       cam = null;
+    },
+
+    // ── Settings panel setters ─────────────────────────────────────────────
+    //
+    // Each setter mutates the corresponding closure variable and fires the
+    // optional callback so subscribed React state stays in sync. The new
+    // value takes effect on the very next rendered frame.
+
+    setPointSize(sizePx) {
+      pointSizePx = sizePx;
+      cb.onPointSizeChange?.(sizePx);
+    },
+
+    setBrightness(value) {
+      brightness = value;
+      cb.onBrightnessChange?.(value);
+    },
+
+    setAutoRotate(enabled) {
+      autoRotate = enabled;
+      cb.onAutoRotateChange?.(enabled);
+    },
+
+    resetCamera() {
+      // `cam` may be null if the engine is destroyed or the cloud hasn't
+      // loaded yet. `initialCam` is captured inside the async IIFE and
+      // therefore not in scope here — we rely on the closure reference to
+      // the outer `cam` variable plus the saved initial values stored in the
+      // IIFE-local `initialCam` constant. Because this method closes over the
+      // outer `cam` ref, we read it at call time (which is correct: we want
+      // to mutate the live camera object, not a stale snapshot).
+      //
+      // The `initialCam` object is not accessible here because it is declared
+      // inside the async IIFE. To work around this scoping, we store it in a
+      // closure variable declared alongside the other mutable state above.
+      if (!cam || !initialCamRef) return;
+      cam.target[0] = initialCamRef.target[0];
+      cam.target[1] = initialCamRef.target[1];
+      cam.target[2] = initialCamRef.target[2];
+      cam.distance  = initialCamRef.distance;
+      cam.yaw       = initialCamRef.yaw;
+      cam.pitch     = initialCamRef.pitch;
+      updatePosition(cam);
     },
   };
 

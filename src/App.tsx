@@ -70,6 +70,7 @@ import type { EngineHandle, EngineStatus, PointInfo, ScaleInfo } from './engine'
 import { StatusBar } from './components/StatusBar';
 import { InfoCard } from './components/InfoCard';
 import { ScaleBar } from './components/ScaleBar';
+import { SettingsPanel } from './components/SettingsPanel';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -115,6 +116,18 @@ export function App(): React.ReactElement {
   const [selected, setSelected] = useState<PointInfo | null>(null);
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
 
+  // ── Settings panel state ─────────────────────────────────────────────────
+  //
+  // These mirror the engine's internal settings values. They are seeded by the
+  // engine's `onPointSizeChange`, `onBrightnessChange`, `onAutoRotateChange`
+  // callbacks (including the initial seed fired at startup), so the panel
+  // always reflects the engine's current state — not the other way around.
+  // The user's interactions flow: slider → callback → handleRef.setXxx → engine
+  // closure variable updated → callback fired → setState → React re-render.
+  const [pointSize,  setPointSize]  = useState<number>(2.5);
+  const [brightness, setBrightness] = useState<number>(1.0);
+  const [autoRotate, setAutoRotate] = useState<boolean>(false);
+
   // ── Engine startup effect ──────────────────────────────────────────────────
 
   useEffect(() => {
@@ -136,6 +149,13 @@ export function App(): React.ReactElement {
       onHoverChange:  setHovered,
       onSelectChange: setSelected,
       onScaleChange:  setScale,
+
+      // Settings-panel callbacks: engine fires these when a setting changes
+      // (including the initial seed at startup). React state stays in sync
+      // automatically, so the panel always reflects the engine's truth.
+      onPointSizeChange:  setPointSize,
+      onBrightnessChange: setBrightness,
+      onAutoRotateChange: setAutoRotate,
     });
 
     // Store the handle so the Esc effect (below) can call clearSelection().
@@ -193,6 +213,21 @@ export function App(): React.ReactElement {
       <StatusBar status={status} />
       <InfoCard hovered={hovered} selected={selected} />
       <ScaleBar scale={scale} />
+      {/*
+        Settings panel — bottom-left overlay with four renderer controls.
+        All state lives here in App; the panel is purely presentational.
+        Interactions funnel through handleRef to avoid stale-closure issues
+        (same pattern as the Esc key handler above).
+      */}
+      <SettingsPanel
+        pointSize={pointSize}
+        brightness={brightness}
+        autoRotate={autoRotate}
+        onPointSizeChange={(v) => handleRef.current?.setPointSize(v)}
+        onBrightnessChange={(v) => handleRef.current?.setBrightness(v)}
+        onAutoRotateChange={(v) => handleRef.current?.setAutoRotate(v)}
+        onResetCamera={() => handleRef.current?.resetCamera()}
+      />
     </>
   );
 }
