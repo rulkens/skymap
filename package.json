@@ -9,6 +9,7 @@
     "csv-to-bin": "tsx tools/csvToBin.ts",
     "dev": "vite",
     "fetch-2mass-xsc": "tsx tools/fetch2massXsc.ts",
+    "fetch-hyperleda": "tsx tools/fetchHyperLeda.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "preview": "vite preview",

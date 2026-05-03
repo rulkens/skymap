@@ -64,6 +64,7 @@ pnpm-debug.log*
 # covered by `/data/` above, but listed explicitly so future readers see it
 # alongside the other catalog artefacts. ~1 MB of tabular data; rebuildable.
 data/raw/2mass_xsc_pa.csv
+data/raw/hyperleda_pa.csv
 
 # ── Claude Code per-developer state ───────────────────────────────────────────
 # `settings.local.json` accumulates this developer's locally-granted tool
