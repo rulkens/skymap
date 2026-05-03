@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { parseGlade, parseHyperLedaCsv } from '../../tools/parsers/glade';
+import { parseGlade, parseHyperLedaCsv, parseGladeLine } from '../../tools/parsers/glade';
 import { Source } from '../../src/data/sources';
 
 /**
@@ -164,5 +164,57 @@ describe('parseGlade', () => {
     const { records, skipped } = parseGlade(noDist);
     expect(records).toHaveLength(0);
     expect(skipped).toBe(1);
+  });
+});
+
+describe('parseGladeLine diameterKpc', () => {
+  it('derives diameterKpc from Bmag via Tully size-luminosity', () => {
+    const pad = (s: string, w: number, left = false): string =>
+      left ? s.padStart(w, ' ') : s.padEnd(w, ' ');
+    let line = '';
+    line += pad('1', 7);
+    line += ' '.repeat(103 - line.length);
+    line = line.slice(0, 103) + 'G';
+    line += ' ';
+    line += pad('150.00000000000000', 18, true);
+    line += ' ';
+    line += pad('  30.000000000000000', 20, true);
+    line += ' '.repeat(173 - line.length);
+    line += pad('5.000000000000E-02', 18, true);
+    line += ' ';
+    line += pad('14.000', 6, true);
+    line += ' '.repeat(253 - line.length);
+    line += '1';
+    line += ' '.repeat(256 - line.length);
+    expect(line.length).toBe(256);
+
+    const rec = parseGladeLine(line);
+    expect(rec).not.toBeNull();
+    // Tolerance ±5 kpc — small numerical differences in distance/magnitude chain.
+    expect(rec!.diameterKpc).toBeCloseTo(120, -1);
+  });
+
+  it('returns null diameterKpc when Bmag is the dash sentinel', () => {
+    const pad = (s: string, w: number, left = false): string =>
+      left ? s.padStart(w, ' ') : s.padEnd(w, ' ');
+    let line = '';
+    line += pad('1', 7);
+    line += ' '.repeat(103 - line.length);
+    line = line.slice(0, 103) + 'G';
+    line += ' ';
+    line += pad('150.00000000000000', 18, true);
+    line += ' ';
+    line += pad('  30.000000000000000', 20, true);
+    line += ' '.repeat(173 - line.length);
+    line += pad('5.000000000000E-02', 18, true);
+    line += ' ';
+    line += '------';
+    line += ' '.repeat(253 - line.length);
+    line += '1';
+    line += ' '.repeat(256 - line.length);
+
+    const rec = parseGladeLine(line);
+    expect(rec).not.toBeNull();
+    expect(rec!.diameterKpc).toBeNull();
   });
 });

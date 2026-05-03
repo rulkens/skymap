@@ -95,6 +95,9 @@
 
 import { Source } from '../../src/data/sources.js';
 import { type ParsedRecord } from './common.js';
+import { galaxyDiameterKpc, DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
+import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude.js';
+import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
 
 /**
  * Map from PGC string (no padding, no leading zeros stripped) to HyperLEDA's
@@ -300,6 +303,31 @@ export function parseGladeLine(
   const pgcKey = pgcRaw === '' || /^-+$/.test(pgcRaw) || pgcRaw === '0' ? null : pgcRaw;
   const ledaEntry = pgcKey ? hyperLeda.get(pgcKey) : undefined;
 
+  // GLADE doesn't carry a measured galaxy radius; instead we route the
+  // apparent B magnitude through the Tully (1988) size–luminosity relation
+  // to derive a sensible diameter.  We first convert z to a comoving distance
+  // (Hubble's law, H0 = 70) so we can compute the absolute B magnitude, then
+  // feed that into galaxyDiameterKpc.
+  //
+  // When Bmag is missing (dash sentinel → NaN), we emit null and let the
+  // build pipeline apply DEFAULT_GALAXY_DIAMETER_KPC.  Routing through
+  // `null` rather than the constant default here keeps the "real measurement
+  // vs fallback" provenance visible at the parser boundary, mirroring how
+  // axisRatio + positionAngleDeg are handled.
+  let diameterKpc: number | null = null;
+  if (Number.isFinite(bmag) && Number.isFinite(z) && z > 0) {
+    const distanceMpc = redshiftToDistanceMpc(z);
+    const absB = absoluteMagnitude(bmag, distanceMpc);
+    if (Number.isFinite(absB)) {
+      const d = galaxyDiameterKpc({ absMagBmag: absB });
+      // galaxyDiameterKpc returns DEFAULT_GALAXY_DIAMETER_KPC when its input
+      // is bad — we detect that case and emit null instead, so the pipeline's
+      // default-application path runs uniformly for ALL "no measurement"
+      // rows regardless of which parser produced them.
+      if (d !== DEFAULT_GALAXY_DIAMETER_KPC) diameterKpc = d;
+    }
+  }
+
   return {
     source: Source.Glade,
     // GLADE has no usable SDSS objID. The 0n sentinel signals to the
@@ -321,6 +349,7 @@ export function parseGladeLine(
     // ends up with *some* orientation, just not necessarily a real one).
     axisRatio: ledaEntry ? ledaEntry.axisRatio : null,
     positionAngleDeg: ledaEntry ? ledaEntry.pa : null,
+    diameterKpc,
   };
 }
 
