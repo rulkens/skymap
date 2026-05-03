@@ -555,7 +555,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         pitch: 0.3,
         fovYRad: (Math.PI / 180) * 60,
         aspect: canvas.width / canvas.height,
-        near: 1,
+        // 0.01 Mpc = 10 kpc — chosen so the focus-on-galaxy tween (which
+        // ends at ~0.12 Mpc from a galaxy, see focusTween.ts
+        // `focusDistanceMpc`) doesn't push the target through the near
+        // plane and clip the whole galaxy out of the frame.  The visual
+        // pass uses additive blending without a depth test, so depth
+        // precision isn't a concern here; the pick pass uses depth32float,
+        // whose ~24-bit mantissa easily handles the 0.01 : (bbox × 4)
+        // ratio at scale.
+        near: 0.01,
         far: camFar,
       });
 
