@@ -315,6 +315,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   let brightness = 1.0;
   let autoRotate = false;
 
+  // ── Source visibility bitmask ───────────────────────────────────────────
+  //
+  // 32-bit bitmask gating which surveys are drawn each frame; one bit per
+  // `Source` enum value. The renderer iterates its `loadedSources()` and
+  // skips any whose bit is clear. Default = `ALL_VISIBLE_MASK` so we
+  // preserve the existing "draw everything that is loaded" behaviour until
+  // a UI control or auto-LOD logic (Task 5) takes over.
+  let visibleSourceMask = ALL_VISIBLE_MASK;
+
   // ── Initial camera snapshot ───────────────────────────────────────────────
   //
   // Written once by the async IIFE after the cloud loads and bbox is known.
@@ -471,7 +480,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cloud = result.cloud;
       const source: CloudSource = result.source;
 
-      renderer.upload(cloud);
+      // Until the multi-survey loader (Task 6) splits the .bin file into
+      // per-source clouds, we upload the whole cloud under whichever Source
+      // matches the file we got: real SDSS data → Source.SDSS, synthetic
+      // fallback → Source.Synthetic. The renderer's per-source bookkeeping
+      // is identical regardless — this just labels the buffer correctly so
+      // future task wiring (visibility mask, picker decoding) stays consistent.
+      const initialSource = result.source === 'sdss.bin' ? Source.SDSS : Source.Synthetic;
+      renderer.upload(initialSource, cloud);
 
       // Build the pick renderer. It shares the same vertex/uniform buffers as
       // the visual renderer — no extra GPU memory for point data.
@@ -569,17 +585,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // Run a one-shot pick at the click position.
           // We don't use the throttle guard here — clicks are infrequent and
           // we want an immediate, synchronous-feeling response.
-          const vb = renderer?.vertexBuffer;
-          if (!vb || !cloud || !pickRendererHandle) return;
+          if (!renderer || !cloud || !pickRendererHandle) return;
+
+          // Snapshot the renderer's per-source draw records and filter by
+          // the current visibility mask so the pick pass sees the same
+          // surveys the visual pass just rendered. We materialise to an
+          // array so the iterator survives the async pick promise.
+          const visibleSources = Array.from(renderer.loadedSources()).filter(
+            (s) => ((visibleSourceMask >> s.source) & 1) !== 0,
+          );
+          if (visibleSources.length === 0) return;
 
           pickRendererHandle
             .pick(
               [canvas.width, canvas.height],
               cssToTexPx(xCss),
               cssToTexPx(yCss),
-              vb,
-              cloud.count,
-              renderer!.uniformBuffer,
+              visibleSources,
+              renderer.uniformBuffer,
             )
             .then((idx) => {
               // Click on empty space → clear selection; click on point → pin it.
@@ -684,6 +707,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           pointSizePx,
           brightness,
           selectedIndex !== null ? selectedIndex : 0xffffffff >>> 0,
+          visibleSourceMask,
         );
 
         pass.end();
@@ -709,15 +733,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // IMPORTANT: pick() is called *after* device.queue.submit(), so the
         // visual frame's uniform buffer has already been written with the latest
         // viewProj. The pick renderer reads the same uniform buffer.
-        const vb = renderer.vertexBuffer;
         if (
-          vb &&
           cloud &&
           latestMouseCss !== null &&
           latestMouseCss !== lastPickedMouseCss &&
           !pickInFlight &&
           !pointerDown // skip hover picks while a drag is in progress
         ) {
+          // Snapshot the renderer's currently-visible per-source draw
+          // records.  Same filter rule as the click handler — only sources
+          // whose visibility bit is set are eligible to claim hover.
+          const visibleSources = Array.from(renderer.loadedSources()).filter(
+            (s) => ((visibleSourceMask >> s.source) & 1) !== 0,
+          );
+          if (visibleSources.length === 0) {
+            rafId = requestAnimationFrame(frame);
+            return;
+          }
+
           // Snapshot the position at the moment we kick off the pick.
           const pos = latestMouseCss;
           lastPickedMouseCss = pos;
@@ -728,8 +761,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               [canvas.width, canvas.height],
               cssToTexPx(pos.x),
               cssToTexPx(pos.y),
-              vb,
-              cloud.count,
+              visibleSources,
               renderer.uniformBuffer,
             )
             .then((idx) => {

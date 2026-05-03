@@ -51,8 +51,29 @@
  */
 
 import shaderSrc from './shaders/points.wgsl?raw';
+import type { Source } from '../data/sources';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+/**
+ * One per-source draw record passed to `pick()`.
+ *
+ * Multi-survey rendering issues one instanced draw per loaded survey; the
+ * picker mirrors that so its global instance-ID space lines up with the
+ * visual pass. `instanceIdOffset` is the global index of this source's
+ * first point — `fsPick` adds it to each fragment's per-instance index so
+ * the value written into the pick texture is unique across all surveys.
+ *
+ * The `source` field is included so the caller can filter by visibility
+ * mask before handing the iterable to `pick()`; the picker itself does not
+ * read `source` for any other purpose.
+ */
+export type PickSourceDraw = {
+  source: Source;
+  vertexBuffer: GPUBuffer;
+  count: number;
+  instanceIdOffset: number;
+};
 
 /**
  * The public interface of the pick renderer.
@@ -106,18 +127,19 @@ export type PickRenderer = {
    *                         pixels (post-DPR, as in `canvas.width`/`canvas.height`).
    * @param pickXPx          X coordinate in texture-space pixels (clientX × DPR).
    * @param pickYPx          Y coordinate in texture-space pixels (clientY × DPR).
-   * @param vertexBuffer     The same `GPUBuffer` used by the visual pass (stepMode:'instance').
-   * @param count            Number of catalog points (= number of instances to draw).
+   * @param sources          Per-source draw records, one per visible survey, in
+   *                         the same enum order as `PointRenderer.loadedSources()`.
+   *                         The caller is responsible for filtering by visibility
+   *                         mask — the picker draws every record it receives.
    * @param sharedUniformBuffer  The uniform buffer shared with `PointRenderer`.
-   * @returns 0-based index of the front-most point under the cursor, or -1 if
-   *          the cursor is over background or a pick is already in flight.
+   * @returns 0-based *global* index of the front-most point under the cursor,
+   *          or -1 if the cursor is over background or a pick is already in flight.
    */
   pick(
     viewportPx: [number, number],
     pickXPx: number,
     pickYPx: number,
-    vertexBuffer: GPUBuffer,
-    count: number,
+    sources: Iterable<PickSourceDraw>,
     sharedUniformBuffer: GPUBuffer,
   ): Promise<number>;
 
@@ -298,8 +320,7 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     viewportPx: [number, number],
     pickXPx: number,
     pickYPx: number,
-    vertexBuffer: GPUBuffer,
-    count: number,
+    sources: Iterable<PickSourceDraw>,
     sharedUniformBuffer: GPUBuffer,
   ): Promise<number> {
     // Concurrency guard — see the `inFlight` declaration above for rationale.
@@ -350,8 +371,11 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     // need to restore anything afterward.
     //
     // Layout: mat4 viewProj (64) + viewport (8) + pointSizePx (4) +
-    // brightness (4) → selectedIndex sits at byte offset 80.
+    // brightness (4) → selectedIndex sits at byte offset 80. Adding the new
+    // `instanceIdOffset` field after `selectedIndex` (offsets 84..) does NOT
+    // shift this byte offset — the picker still pokes selectedIndex at 80.
     const SELECTED_INDEX_OFFSET = 80;
+    const INSTANCE_ID_OFFSET_OFFSET = 84;
     const NONE_SENTINEL = new Uint32Array([0xffffffff]);
     device.queue.writeBuffer(sharedUniformBuffer, SELECTED_INDEX_OFFSET, NONE_SENTINEL);
 
@@ -395,11 +419,23 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
-    pass.setVertexBuffer(0, vertexBuffer);
 
-    // Draw 6 vertices × count instances — identical to the visual draw call.
-    // `draw(vertexCount, instanceCount)` — don't swap these!
-    pass.draw(6, count);
+    // ── Per-source draw loop ────────────────────────────────────────────────
+    //
+    // Mirror the visual `PointRenderer.draw` loop: for every visible source
+    // we patch `instanceIdOffset` into the uniform buffer (4-byte partial
+    // write at offset 84), bind that source's vertex buffer, and issue one
+    // 6-vertex × N-instance draw. The shader's `fsPick` adds the offset to
+    // each per-instance index so the value written into the pick texture
+    // is globally unique across surveys, which lets the readback decode
+    // straight to the merged-array index without a per-source range check.
+    const offsetScratch = new Uint32Array(1);
+    for (const src of sources) {
+      offsetScratch[0] = src.instanceIdOffset >>> 0;
+      device.queue.writeBuffer(sharedUniformBuffer, INSTANCE_ID_OFFSET_OFFSET, offsetScratch);
+      pass.setVertexBuffer(0, src.vertexBuffer);
+      pass.draw(6, src.count);
+    }
     pass.end();
 
     // ── Texture → staging buffer copy ─────────────────────────────────────

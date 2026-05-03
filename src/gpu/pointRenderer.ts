@@ -15,24 +15,32 @@
  *     position, magnitude, and colour index — read once per *point*, not once
  *     per vertex.
  *
- * This class is responsible for:
- *   1. Compiling the shader and building the `GPURenderPipeline`.
- *   2. Allocating a `GPUBuffer` for the `Uniforms` struct (viewProj, viewport,
- *      pointSizePx, brightness) and binding it to @group(0) @binding(0).
- *   3. Packing catalog data into a tightly-interleaved `GPUBuffer` configured
- *      with `stepMode: 'instance'`.
- *   4. Writing uniforms and issuing the draw call each frame.
+ * ### Multi-source rendering (Task 4)
+ *
+ * Earlier revisions of this class held a single vertex buffer, so the
+ * renderer could only ever display one point cloud at a time. The
+ * multi-survey integration plan (Task 4) replaces that with a
+ * `Map<Source, GPUBuffer>`: each loaded survey gets its own buffer and its
+ * own draw call. A 32-bit visibility bitmask, supplied by the engine each
+ * frame, decides which sources are drawn — the renderer simply skips the
+ * draw call for any source whose bit is clear.
+ *
+ * Per-source draw calls also let the picker keep a *global* per-point index
+ * across surveys: each draw passes its `instanceIdOffset` (sum of prior
+ * sources' counts) to the shader via the uniform buffer, and `fsPick` adds
+ * that offset to the per-instance index it writes into the pick texture.
  *
  * ### Relationship to other modules
  *
- *   PointCloud  →  upload()  →  GPU vertex buffer  (set once per data load)
- *   OrbitCamera →  computeViewProj()  →  draw()  →  uniform buffer  (every frame)
+ *   PointCloud  →  upload(source, …)    →  GPU vertex buffer per source
+ *   OrbitCamera →  computeViewProj()    →  draw()  →  uniform buffer  (every frame)
  *
  * @module
  */
 
 import { mat4 } from 'gl-matrix';
 import type { PointCloud } from '../@types';
+import { ALL_SOURCES, Source } from '../data/sources';
 
 // `?raw` is a Vite-specific import suffix. It tells the bundler to import the
 // file's content as a plain string rather than attempting to execute it as
@@ -66,36 +74,58 @@ const POINT_STRIDE = FLOATS_PER_POINT * 4; // 20 bytes
  * Byte size of the `Uniforms` struct as seen by the GPU.
  *
  * The struct contains:
- *   - `viewProj`      : mat4x4<f32>  = 16 floats = 64 bytes
- *   - `viewport`      : vec2<f32>    = 2 floats  }
- *   - `pointSizePx`   : f32          = 1 float   } = 16 bytes (one vec4 slot)
- *   - `brightness`    : f32          = 1 float   }
- *   - `selectedIndex` : u32          = 4 bytes   }
- *   - `_pad0`         : u32          = 4 bytes   } = 16 bytes (one vec4 slot for alignment)
- *   - `_pad1`         : u32          = 4 bytes   }
- *   - `_pad2`         : u32          = 4 bytes   }
+ *   - `viewProj`         : mat4x4<f32>  = 16 floats = 64 bytes
+ *   - `viewport`         : vec2<f32>    = 2 floats  }
+ *   - `pointSizePx`      : f32          = 1 float   } = 16 bytes (one vec4 slot)
+ *   - `brightness`       : f32          = 1 float   }
+ *   - `selectedIndex`    : u32          = 4 bytes   }
+ *   - `instanceIdOffset` : u32          = 4 bytes   } = 16 bytes (one vec4 slot for alignment)
+ *   - `_pad0`            : u32          = 4 bytes   }
+ *   - `_pad1`            : u32          = 4 bytes   }
  *
  * WGSL uniform buffers follow rules similar to std140 (see WGSL spec §13,
- * "Memory Layout"). Each member must be aligned to its "alignment" value:
- *   - mat4x4<f32> alignment = 16 bytes  (starts at offset 0 ✓)
- *   - vec2<f32>   alignment = 8 bytes   (starts at offset 64 ✓)
- *   - f32         alignment = 4 bytes   (starts at offsets 72, 76 ✓)
- *   - u32         alignment = 4 bytes   (starts at offsets 80, 84, 88, 92 ✓)
+ * "Memory Layout"). Each member must be aligned to its "alignment" value.
  *
- * NOTE: We use four separate u32 fields rather than u32 + vec3<u32> because
- * vec3<u32> has 16-byte alignment in WGSL (like vec3<f32>), which would force
- * an invisible 8-byte gap between selectedIndex (offset 80) and the vec3 (which
- * would have to start at offset 96) — bloating the struct to 112 bytes. Four
- * scalar u32s pack contiguously at offsets 80, 84, 88, 92 for a clean 96 bytes.
- *
- * Layout summary:
+ * Layout summary (the picker depends on `selectedIndex` staying at offset 80):
  *   bytes  0..63  : viewProj mat4x4<f32>        (16 floats)
  *   bytes 64..79  : viewport.xy + pointSizePx + brightness  (4 floats)
- *   bytes 80..83  : selectedIndex u32
- *   bytes 84..95  : _pad0/_pad1/_pad2 u32 × 3  (written as 0)
+ *   bytes 80..83  : selectedIndex u32                       ← picker writes here
+ *   bytes 84..87  : instanceIdOffset u32                    ← per-source draw writes here
+ *   bytes 88..95  : _pad0/_pad1  (written as 0)
  *   total: 96 bytes — a multiple of 16 ✓
  */
 const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4; // 96 bytes: mat4 (64) + vec4-slot (16) + u32×4 (16)
+
+/**
+ * Byte offset of the `instanceIdOffset` field inside the uniform struct.
+ *
+ * The per-source draw loop writes a fresh 4-byte u32 here before each draw
+ * call. We deliberately keep this small partial write (rather than writing
+ * the whole 96-byte struct each draw) because `writeBuffer` cost scales with
+ * bytes copied — see the comment in `draw()` for the full rationale.
+ */
+const INSTANCE_ID_OFFSET_BYTE_OFFSET = 84;
+
+// ─── Per-source bookkeeping ───────────────────────────────────────────────────
+
+/**
+ * Internal record describing one source's GPU vertex buffer.
+ *
+ * `instanceIdOffset` is the global index of this source's first point — the
+ * sum of `count` across all *prior* sources in `Source` enum order. The
+ * picker uses it (via the uniform) to translate each instance's local index
+ * into a globally-unique ID, so JS can index into a merged point array.
+ *
+ * We recompute every offset after each upload/unload because the *order* of
+ * sources is fixed (enum order) but which surveys are loaded varies. Doing
+ * this on every change is O(numSources) — at most 32 entries — so it is not
+ * a hot path.
+ */
+type LoadedSource = {
+  buffer: GPUBuffer;
+  count: number;
+  instanceIdOffset: number;
+};
 
 // ─── PointRenderer ────────────────────────────────────────────────────────────
 
@@ -109,9 +139,6 @@ export class PointRenderer {
    * Allocated once in the constructor with `UNIFORM | COPY_DST`:
    *   - `UNIFORM` means the shader can read it via `var<uniform>`.
    *   - `COPY_DST` means we can write into it with `device.queue.writeBuffer`.
-   *
-   * We do NOT need `COPY_SRC` (we never read back from it to the CPU) or
-   * `VERTEX`/`INDEX` (it's a uniform, not geometry data).
    */
   private uniformBuffer_internal: GPUBuffer;
 
@@ -119,45 +146,32 @@ export class PointRenderer {
    * The bind group that wires the uniform buffer into `@group(0) @binding(0)`.
    *
    * Bind groups are immutable after creation — the buffer reference is baked
-   * in. We create one here and reuse it every frame. When we need a different
-   * buffer we'd create a new bind group, but since our uniform buffer is
-   * permanent that never happens.
+   * in. We create one here and reuse it every frame.
    */
   private bindGroup: GPUBindGroup;
 
   /**
-   * GPU-side vertex buffer holding the per-point interleaved data.
+   * One GPU vertex buffer per loaded survey.
    *
-   * `null` until `upload()` is called. Recreated on each `upload()` because
-   * the point count may change between loads (see `upload()` for rationale).
+   * The map is keyed by `Source` (a numeric enum) and contains exactly the
+   * surveys currently present on the GPU. `upload` adds or replaces an entry,
+   * `unload` removes one, and after either operation we call
+   * `recomputeInstanceIdOffsets` to re-derive the per-source offset values
+   * in the canonical enum order.
+   *
+   * Why a `Map` (not a plain object)? `Map` preserves insertion order, has a
+   * straightforward `delete`/`has` API, and avoids the prototype-chain
+   * ambiguity of indexing a numeric-keyed object literal.
    */
-  private _vertexBuffer: GPUBuffer | null = null;
-
-  /** Number of catalog points currently loaded on the GPU. */
-  private count = 0;
+  private readonly clouds = new Map<Source, LoadedSource>();
 
   // ─── Public accessors ────────────────────────────────────────────────────────
-
-  /**
-   * The GPU buffer holding per-instance point data (position, magnitude, colorIndex).
-   *
-   * `null` until `upload()` has been called at least once. The pick renderer
-   * shares this buffer — it must not be destroyed while a pick is in flight.
-   *
-   * Exposed as a read-only getter so `PickRenderer` (and `main.ts`) can access
-   * it without resorting to `as unknown as { vertexBuffer: GPUBuffer }` casts.
-   */
-  get vertexBuffer(): GPUBuffer | null {
-    return this._vertexBuffer;
-  }
 
   /**
    * The GPU buffer holding per-frame uniform data (viewProj, viewport, etc.).
    *
    * Written every frame by `draw()`. The pick renderer reads the same buffer
    * so it sees the same camera state as the visual pass — no extra uploads needed.
-   *
-   * Exposed as a read-only getter for the same reason as `vertexBuffer` above.
    */
   get uniformBuffer(): GPUBuffer {
     return this.uniformBuffer_internal;
@@ -167,85 +181,33 @@ export class PointRenderer {
 
   /**
    * Build the render pipeline, allocate the uniform buffer, and create the
-   * bind group. This is the only method that touches pipeline creation — all
-   * subsequent work just uploads data and issues draw calls.
+   * bind group.
    *
-   * @param device  The WebGPU logical device. Owned by the caller; this class
-   *                holds a reference but does not destroy it.
+   * @param device  The WebGPU logical device. Owned by the caller.
    * @param format  The swap-chain texture format (e.g. `'bgra8unorm'`).
-   *                Must match the format passed to `context.configure()` in
-   *                `device.ts`; if they disagree the pipeline will be invalid.
    */
   constructor(
     private device: GPUDevice,
     format: GPUTextureFormat,
   ) {
-    // Compile the WGSL shader source into a `GPUShaderModule`. This step
-    // validates the WGSL syntax and translates it to the platform's native
-    // shader language (MSL on macOS, HLSL/SPIR-V elsewhere) asynchronously
-    // inside the driver. Any compilation errors surface as pipeline creation
-    // errors below.
     const module = device.createShaderModule({ code: shaderSrc });
 
-    // ── Build the render pipeline ──────────────────────────────────────────
-    //
-    // A `GPURenderPipeline` is a fully compiled, immutable description of one
-    // rendering operation. It bakes in the shader code, vertex buffer layout,
-    // blend state, primitive topology, and render-target format. Changing any
-    // of these requires creating a new pipeline.
     this.pipeline = device.createRenderPipeline({
-      // `layout: 'auto'` asks the pipeline to *reflect* the bind group layout
-      // directly from the shader's `@group` and `@binding` declarations.
-      // The alternative is to declare a `GPUBindGroupLayout` manually (with
-      // explicit `visibility`, `type`, etc.) — useful when multiple pipelines
-      // share the same bind group layout, because you can create one layout
-      // and reuse it. For our single-pipeline case, `'auto'` is simpler.
       layout: 'auto',
 
       vertex: {
         module,
-        entryPoint: 'vs', // must match the `@vertex fn vs(...)` in points.wgsl
-
-        // Vertex buffer layout — one buffer, one record per instance.
+        entryPoint: 'vs',
         buffers: [
           {
-            // How many bytes to advance the buffer pointer per step.
-            // 5 floats × 4 bytes = 20 bytes per point.
             arrayStride: POINT_STRIDE,
-
-            // ── stepMode: 'instance' vs. 'vertex' ─────────────────────────
-            //
-            // `'vertex'` (the default): the buffer pointer advances once per
-            //   vertex invocation. For a 6-vertex draw, you'd need 6 records.
-            //   This is the normal mode for geometry data (mesh vertices).
-            //
-            // `'instance'`: the buffer pointer advances once per *instance*.
-            //   For our `draw(6, N)` call the GPU runs 6 vertex invocations
-            //   per instance — all six share the same `PerVertex` record while
-            //   `@builtin(vertex_index)` cycles 0..5 to pick quad corners.
-            //   This is exactly how we want it: one catalog entry → one quad.
             stepMode: 'instance',
-
             attributes: [
-              // position (vec3<f32>) — offset 0 bytes from record start.
-              // `float32x3` = three consecutive f32 values, 12 bytes total.
-              // shaderLocation 0 must match `@location(0) position` in the shader.
+              // position (vec3<f32>) — offset 0 bytes
               { shaderLocation: 0, offset: 0, format: 'float32x3' },
-
-              // magnitude (f32) — offset 12 bytes (right after the 3-float position).
-              // `float32` = one f32 value, 4 bytes.
-              // shaderLocation 1 must match `@location(1) magnitude` in the shader.
+              // magnitude (f32) — offset 12 bytes
               { shaderLocation: 1, offset: 12, format: 'float32' },
-
-              // colorIndex (f32) — offset 16 bytes (after position + magnitude).
-              // shaderLocation 2 must match `@location(2) colorIndex` in the shader.
-              //
-              // Byte map of one record (20 bytes total):
-              //   [0..3]   x       float32
-              //   [4..7]   y       float32
-              //   [8..11]  z       float32      ← float32x3 covers bytes 0..11
-              //   [12..15] mag     float32      ← offset 12
-              //   [16..19] ci      float32      ← offset 16
+              // colorIndex (f32) — offset 16 bytes
               { shaderLocation: 2, offset: 16, format: 'float32' },
             ],
           },
@@ -254,35 +216,13 @@ export class PointRenderer {
 
       fragment: {
         module,
-        entryPoint: 'fs', // must match the `@fragment fn fs(...)` in points.wgsl
-
+        entryPoint: 'fs',
         targets: [
           {
-            // Must match the swap-chain format we received from `context.configure()`.
             format,
-
-            // ── Additive blend state ────────────────────────────────────────
-            //
-            // Standard alpha blending (srcFactor:'src-alpha', dstFactor:'one-minus-src-alpha')
-            // would make points *occlude* each other: the brighter one in front
-            // would hide everything behind it. That's correct for opaque surfaces
-            // but wrong for a star field — overlapping galaxy halos should
-            // *add* together, making dense regions visibly brighter, just as a
-            // long-exposure photograph accumulates light.
-            //
-            // Additive blending:
-            //   dst.rgb = src.rgb * srcFactor + dst.rgb * dstFactor
-            //           = src.rgb * one      + dst.rgb * one
-            //           = src.rgb            + dst.rgb
-            //
-            // Both `color` and `alpha` channels use the same additive equation.
-            // This pairs correctly with the premultiplied-alpha convention in
-            // `device.ts` (`alphaMode: 'premultiplied'`) and the shader's
-            // `return vec4(rgb * alpha, alpha)` output.
-            //
-            // The net effect: overlapping point sprites brighten each other
-            // (simulating photon accumulation), while isolated points simply
-            // draw their own Gaussian glow onto the black background.
+            // Additive blend: dst.rgb = src.rgb + dst.rgb. Required for the
+            // long-exposure-style brightening of overlapping galaxy halos
+            // (see device.ts and the @module comment in points.wgsl).
             blend: {
               color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
               alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
@@ -291,39 +231,14 @@ export class PointRenderer {
         ],
       },
 
-      // We draw a plain triangle list: every three vertices form one triangle.
-      // Each billboard quad = two triangles = 6 vertices, as described in the
-      // shader's QUAD constant. No index buffer needed.
       primitive: { topology: 'triangle-list' },
     });
 
-    // ── Allocate the uniform buffer ────────────────────────────────────────
-    //
-    // `GPUBufferUsage.UNIFORM` — the shader can read this as a uniform block.
-    // `GPUBufferUsage.COPY_DST` — we can push CPU data into it via
-    //   `device.queue.writeBuffer`. Without this flag that call would fail
-    //   with a validation error.
-    //
-    // We do NOT set COPY_SRC (no read-back needed) or MAP_READ / MAP_WRITE
-    // (those are for buffers you want to map into CPU address space, which is
-    // incompatible with UNIFORM on most platforms).
     this.uniformBuffer_internal = device.createBuffer({
       size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    // ── Create the bind group ──────────────────────────────────────────────
-    //
-    // A bind group pairs a `GPUBindGroupLayout` (what the pipeline expects)
-    // with actual resources (the buffer we just created).
-    //
-    // `pipeline.getBindGroupLayout(0)` retrieves the auto-reflected layout for
-    // @group(0) from the shader. If we had declared the layout manually we
-    // would pass it here directly; with `layout: 'auto'` this reflection call
-    // is the only way to get it.
-    //
-    // The single entry wires `binding: 0` to our uniform buffer — matching
-    // `@group(0) @binding(0) var<uniform> u: Uniforms` in points.wgsl.
     this.bindGroup = device.createBindGroup({
       layout: this.pipeline.getBindGroupLayout(0),
       entries: [{ binding: 0, resource: { buffer: this.uniformBuffer_internal } }],
@@ -333,200 +248,217 @@ export class PointRenderer {
   // ─── Data upload ────────────────────────────────────────────────────────────
 
   /**
-   * Pack catalog data into an interleaved GPU vertex buffer and upload it.
+   * Pack a `PointCloud` into an interleaved GPU vertex buffer for the given
+   * source. Replaces any previous buffer for that source.
    *
-   * The CPU-side `PointCloud` uses a "struct of arrays" layout (separate
-   * typed arrays for positions, magnitudes, colourIndex). The GPU vertex
-   * pipeline needs an "array of structs" (interleaved) layout so that all
-   * attributes for one instance sit in one contiguous 20-byte record. This
-   * method performs that transposition.
+   * After the upload we recompute every loaded source's `instanceIdOffset` so
+   * the picker's global ID space stays contiguous in `Source` enum order.
    *
-   * ### Why we destroy the old buffer first
+   * ### Why we destroy the old buffer for this source first
    *
-   * Each `upload()` call may bring in a different number of points (e.g. the
-   * user loads a new data file). A GPU buffer is fixed-size after creation —
-   * there is no `realloc`. If the new cloud is larger than the old buffer we
-   * would have to create a new one anyway; if smaller we could reuse but
-   * would waste GPU memory. The simpler policy is always to destroy and
-   * recreate. `GPUBuffer.destroy()` immediately frees the GPU memory (the JS
-   * object may linger until GC collects it, but the VRAM is reclaimed now).
+   * GPU buffers are fixed-size — there is no `realloc`. If the user loads a
+   * different file for an already-present source, the new cloud may have a
+   * different point count, so we throw away the old buffer and allocate a
+   * new one. `GPUBuffer.destroy()` releases the VRAM immediately.
    *
-   * @param cloud  The point cloud to upload. May be called multiple times;
-   *               each call replaces the previous vertex buffer entirely.
+   * @param source  Which survey the cloud belongs to.
+   * @param cloud   Point cloud to upload (struct-of-arrays SDSS v2 shape).
    */
-  upload(cloud: PointCloud): void {
+  upload(source: Source, cloud: PointCloud): void {
     // Allocate a CPU-side typed array for the interleaved data.
     // Total size: cloud.count records × 5 floats/record.
     const interleaved = new Float32Array(cloud.count * FLOATS_PER_POINT);
 
     for (let i = 0; i < cloud.count; i++) {
-      const o = i * FLOATS_PER_POINT; // byte offset in units of floats
+      const o = i * FLOATS_PER_POINT;
 
       // Copy the three position components from the SoA positions array.
-      // positions[i*3 + 0..2] = [x, y, z] for point i.
       interleaved[o + 0] = cloud.positions[i * 3 + 0]!;
       interleaved[o + 1] = cloud.positions[i * 3 + 1]!;
       interleaved[o + 2] = cloud.positions[i * 3 + 2]!;
 
-      // Derive the two scalar attributes from the v2 five-band photometry.
-      //
-      // The shader (points.wgsl) expects:
-      //   slot 3 → magnitude   (we feed g-band, the primary brightness proxy)
-      //   slot 4 → colorIndex  (we feed u−g, the bluestar / redgalaxy discriminator)
-      //
-      // The old v1 format pre-baked a single `magnitude` and `colorIndex` into
-      // the file.  The new v2 format keeps all five bands separately, so we
-      // derive both values here at upload time.  This is one-shot work done
-      // once per data load (not per frame), and it matches the band the shader
-      // was always tuned against.
+      // Derive shader-side magnitude (g-band) and colour index (u−g) from
+      // the v2 five-band photometry. See the v1→v2 history in the previous
+      // revision of this method for the rationale; this is one-shot work
+      // done at load time, not per frame.
       const g = cloud.magG[i]!;
       const u = cloud.magU[i]!;
       interleaved[o + 3] = g;
-      interleaved[o + 4] = u - g; // u−g color index: blue star-forming galaxies → low; red quiescent → high
+      interleaved[o + 4] = u - g; // u−g colour index
     }
 
-    // Destroy the previous vertex buffer (if any) before allocating a new one.
-    // See method doc-comment above for the size-change rationale.
-    this._vertexBuffer?.destroy();
+    // Destroy any previous buffer for this source before replacing it.
+    this.clouds.get(source)?.buffer.destroy();
 
-    // Allocate and upload the new vertex buffer.
-    //
-    // `GPUBufferUsage.VERTEX` — the pipeline can read this as per-instance
-    //   vertex data via `setVertexBuffer`.
-    // `GPUBufferUsage.COPY_DST` — we write into it immediately below with
-    //   `writeBuffer`. Without this flag the write would fail validation.
-    this._vertexBuffer = this.device.createBuffer({
+    const buffer = this.device.createBuffer({
       size: interleaved.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
+    this.device.queue.writeBuffer(buffer, 0, interleaved);
 
-    // Write the packed data to the GPU. `writeBuffer` schedules a copy from
-    // the CPU ArrayBuffer into the GPU buffer; it completes before any
-    // subsequent draw call submitted to the same queue.
-    this.device.queue.writeBuffer(this._vertexBuffer, 0, interleaved);
+    // `instanceIdOffset` is set to 0 here as a placeholder — the real value
+    // is derived in `recomputeInstanceIdOffsets()` immediately below, which
+    // sums counts in enum order rather than upload order.
+    this.clouds.set(source, { buffer, count: cloud.count, instanceIdOffset: 0 });
+    this.recomputeInstanceIdOffsets();
+  }
 
-    this.count = cloud.count;
+  /**
+   * Remove a source's GPU vertex buffer and reclaim its VRAM.
+   *
+   * No-op if the source was never uploaded — callers shouldn't have to track
+   * which surveys are currently loaded.
+   */
+  unload(source: Source): void {
+    const entry = this.clouds.get(source);
+    if (!entry) return;
+    entry.buffer.destroy();
+    this.clouds.delete(source);
+    this.recomputeInstanceIdOffsets();
+  }
+
+  /**
+   * Walk every loaded source in `Source`-enum order and recompute its
+   * `instanceIdOffset` as the running sum of prior counts.
+   *
+   * The order of iteration matters: the picker decodes a global instance ID
+   * by checking which source's `[offset, offset+count)` slice it falls into,
+   * which only works if the slices are contiguous and ordered identically on
+   * the JS side. Using `ALL_SOURCES` (the canonical iteration order from
+   * `data/sources.ts`) guarantees that.
+   */
+  private recomputeInstanceIdOffsets(): void {
+    let runningOffset = 0;
+    for (const source of ALL_SOURCES) {
+      const entry = this.clouds.get(source);
+      if (!entry) continue;
+      entry.instanceIdOffset = runningOffset;
+      runningOffset += entry.count;
+    }
+  }
+
+  // ─── Public API for the engine + picker ─────────────────────────────────────
+
+  /**
+   * Total number of points across every loaded source. Used by the engine to
+   * report cloud size in the status bar.
+   */
+  totalCount(): number {
+    let total = 0;
+    for (const entry of this.clouds.values()) total += entry.count;
+    return total;
+  }
+
+  /**
+   * Iterate over every loaded source's GPU buffer + bookkeeping in `Source`
+   * enum order. Used by the picker to issue its own per-source draw calls
+   * with matching `instanceIdOffset` values.
+   *
+   * The iterable is generated fresh on each call so the caller may call
+   * `unload()` between iterations without affecting the snapshot — but they
+   * must not assume the iteration order beyond "stable for this call".
+   */
+  *loadedSources(): IterableIterator<{
+    source: Source;
+    vertexBuffer: GPUBuffer;
+    count: number;
+    instanceIdOffset: number;
+  }> {
+    for (const source of ALL_SOURCES) {
+      const entry = this.clouds.get(source);
+      if (!entry) continue;
+      yield {
+        source,
+        vertexBuffer: entry.buffer,
+        count: entry.count,
+        instanceIdOffset: entry.instanceIdOffset,
+      };
+    }
   }
 
   // ─── Draw ────────────────────────────────────────────────────────────────────
 
   /**
-   * Write per-frame uniforms and issue the instanced draw call.
+   * Write the per-frame uniforms (viewProj, viewport, …) once, then issue one
+   * instanced draw call per visible source.
    *
-   * Call this once per frame inside an active `GPURenderPassEncoder`, after
-   * `beginRenderPass` and before `endPass`. The method is a no-op if no data
-   * has been uploaded yet.
-   *
-   * ### Why uniforms are written every frame
-   *
-   * The view-projection matrix changes every time the camera moves. Tracking
-   * "dirty" state (only writing when the camera changes) is possible but adds
-   * complexity for negligible gain: `writeBuffer` of 80 bytes costs roughly
-   * the same as a dirty-flag check plus a branch. Writing unconditionally
-   * every frame keeps the code simple and correct.
-   *
-   * @param pass         An active render pass encoder to record commands into.
-   * @param viewProj     The 4×4 view-projection matrix from `computeViewProj`.
-   *                     Must be in column-major order (gl-matrix default).
-   * @param viewportPx   Physical canvas dimensions [width, height] in pixels
-   *                     (after DPR scaling from `resizeCanvasToDisplay`).
-   *                     The shader divides by these to convert pixel offsets
-   *                     to clip-space offsets for the billboard size calculation.
-   * @param pointSizePx    Radius of each point sprite in pixels. Defaults to 2.5.
-   *                       Larger values produce bigger, softer halos.
-   * @param brightness     Global brightness multiplier in [0, 1]. Defaults to 1.
-   *                       Lets the UI fade the entire star field without
-   *                       re-uploading the vertex buffer.
-   * @param selectedIndex  0-based index of the selected point, or `0xFFFFFFFF`
-   *                       (= `0xFFFFFFFF >>> 0`) when nothing is selected.
-   *                       The sentinel `0xFFFFFFFF` is the maximum u32 value —
-   *                       far beyond any real catalog size — so it never
-   *                       accidentally matches a real point.
+   * @param pass               Active render pass encoder.
+   * @param viewProj           Column-major 4×4 view-projection matrix.
+   * @param viewportPx         Physical canvas size [w, h] in pixels.
+   * @param pointSizePx        Billboard radius in pixels.
+   * @param brightness         Global brightness multiplier in [0, 1].
+   * @param selectedIndex      Selected point's *global* index, or `0xFFFFFFFF` for none.
+   * @param visibleSourceMask  Bitmask of `Source` values to draw (see `data/sources.ts`).
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
-    pointSizePx = 2.5,
-    brightness = 1.0,
-    selectedIndex = 0xffffffff >>> 0,
+    pointSizePx: number,
+    brightness: number,
+    selectedIndex: number,
+    visibleSourceMask: number,
   ): void {
-    // Guard: nothing to draw if the vertex buffer hasn't been populated yet.
-    if (!this._vertexBuffer || this.count === 0) return;
+    // Nothing to draw if no source has been uploaded yet.
+    if (this.clouds.size === 0) return;
 
-    // ── Pack and upload uniforms ────────────────────────────────────────────
+    // ── Pack and upload the bulk of the uniform buffer ──────────────────────
     //
-    // The WGSL `Uniforms` struct layout (96 bytes total):
-    //
-    //   bytes  0..63  : viewProj mat4x4<f32>    (16 floats)
-    //   bytes 64..79  : viewport.xy + pointSizePx + brightness  (4 floats)
-    //   bytes 80..83  : selectedIndex u32
-    //   bytes 84..95  : _pad vec3<u32> (must be zero-filled for defined behaviour)
-    //
-    // We use a single ArrayBuffer with *two typed views* over it:
-    //   - Float32Array for the first 20 floats (bytes 0..79)
-    //   - Uint32Array  for the trailing 4 u32s  (bytes 80..95)
-    //
-    // Why two views? A u32 value cannot be correctly written via Float32Array
-    // — Float32Array would reinterpret the bit-pattern as an IEEE 754 float,
-    // which is incorrect for an integer. Uint32Array writes the raw binary
-    // representation of the u32, which is exactly what the WGSL uniform expects.
-    //
-    // Both views share the same underlying memory (the ArrayBuffer), so writes
-    // through one are immediately visible through the other — no extra copy.
-    const buf = new ArrayBuffer(UNIFORM_BYTES); // 96 bytes
-    const f32 = new Float32Array(buf); // float view: indices 0..23
-    const u32 = new Uint32Array(buf); // uint32 view: indices 0..23
+    // We write everything *except* `instanceIdOffset` here in one 96-byte
+    // upload. The per-source draw loop below patches the 4-byte
+    // `instanceIdOffset` slot (offset 84) before each draw call — that
+    // partial write is the only piece of uniform state that varies between
+    // sources within a single frame.
+    const buf = new ArrayBuffer(UNIFORM_BYTES);
+    const f32 = new Float32Array(buf);
+    const u32 = new Uint32Array(buf);
 
-    // `mat4` from gl-matrix is a Float32Array of 16 values in column-major
-    // order. `set()` copies all 16 floats starting at index 0.
     f32.set(viewProj, 0);
-
-    // Pack viewport dimensions, point size, and brightness into the second slot.
     f32[16] = viewportPx[0];
     f32[17] = viewportPx[1];
     f32[18] = pointSizePx;
     f32[19] = brightness;
+    u32[20] = selectedIndex >>> 0; // selectedIndex at byte offset 80
+    // u32[21] (instanceIdOffset) and u32[22..23] (padding) are left as 0
+    // here; the per-source loop below overwrites u32[21] (offset 84) per draw.
 
-    // Write selectedIndex as a raw u32 at byte offset 80 (= u32 index 20).
-    // `>>> 0` coerces to an unsigned 32-bit integer, ensuring that the JS number
-    // is in the valid u32 range [0, 2³²) before writing. Without `>>> 0`, a
-    // negative number or the sentinel 0xFFFFFFFF (which is 4294967295 — within
-    // the safe integer range but coerced to signed -1 by TypeScript) would be
-    // written as the correct bit pattern, but this makes the intent explicit.
-    u32[20] = selectedIndex >>> 0;
-
-    // Padding u32s at indices 21, 22, 23 — already zero because new ArrayBuffer
-    // zero-initialises. No explicit write needed.
-
-    // Push the uniform data to the GPU. `writeBuffer(buffer, offset, data)`
-    // schedules a DMA copy; it completes before this frame's draw call executes.
     this.device.queue.writeBuffer(this.uniformBuffer_internal, 0, buf);
 
-    // ── Issue the draw call ─────────────────────────────────────────────────
-
-    // Bind the pipeline (shaders + blend state + vertex layout).
+    // ── Per-source draw loop ────────────────────────────────────────────────
+    //
+    // Bind the pipeline + bind group once (these don't change between draws)
+    // and then for each loaded source:
+    //   1. Skip it if its visibility bit is not set in the mask.
+    //   2. Patch `instanceIdOffset` for this source into the uniform buffer.
+    //      We write *only the 4 bytes* at offset 84 because the cost of
+    //      `writeBuffer` is proportional to the bytes copied — re-uploading
+    //      the whole 96-byte struct per source would multiply the per-frame
+    //      uniform bandwidth by ~24× for no gain.
+    //   3. Set this source's vertex buffer and issue a 6-vertex × N-instance
+    //      draw call.
     pass.setPipeline(this.pipeline);
-
-    // Bind the uniform buffer to slot 0. The shader reads it as
-    // `@group(0) @binding(0) var<uniform> u: Uniforms`.
     pass.setBindGroup(0, this.bindGroup);
 
-    // Bind the per-instance vertex buffer to slot 0. The pipeline's
-    // `stepMode: 'instance'` means one record is consumed per instance,
-    // not per vertex.
-    pass.setVertexBuffer(0, this._vertexBuffer);
+    // A reusable 4-byte scratch for the per-source partial uniform write.
+    const offsetScratch = new Uint32Array(1);
 
-    // Fire the draw.
-    //
-    // `draw(vertexCount, instanceCount)`
-    //   vertexCount   = 6: six vertices per billboard quad (two triangles)
-    //   instanceCount = this.count: one instance per catalog point
-    //
-    // The argument order is easy to swap by mistake. If you see every point
-    // rendered 6 times and only 1 point total, the arguments are swapped.
-    //
-    // Total vertex shader invocations: 6 × this.count.
-    pass.draw(6, this.count);
+    for (const source of ALL_SOURCES) {
+      const entry = this.clouds.get(source);
+      if (!entry) continue;
+
+      // Bitmask check: `(mask >> source) & 1`. Equivalent to maskHas() from
+      // `data/sources.ts`, inlined here because this is the per-frame hot path.
+      if (((visibleSourceMask >> source) & 1) === 0) continue;
+
+      offsetScratch[0] = entry.instanceIdOffset >>> 0;
+      this.device.queue.writeBuffer(
+        this.uniformBuffer_internal,
+        INSTANCE_ID_OFFSET_BYTE_OFFSET,
+        offsetScratch,
+      );
+
+      pass.setVertexBuffer(0, entry.buffer);
+      pass.draw(6, entry.count);
+    }
   }
 }

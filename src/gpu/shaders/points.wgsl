@@ -96,27 +96,38 @@ struct Uniforms {
   // indices start at 0, so we would need 4 billion points before this
   // sentinel could collide — far beyond any real catalog.
   //
-  // STD140 ALIGNMENT NOTE: The four preceding fields (vec2 + f32 + f32 = 16 bytes)
-  // bring the running offset to 80 bytes.  A u32 has 4-byte alignment, so it
-  // fits at offset 80 without padding.  The *struct itself* must be padded to
-  // a multiple of 16 bytes (the struct's own alignment in WGSL, which equals
-  // the largest member alignment — here 16 bytes from mat4x4).  So after this
-  // u32 (offset 80, size 4) we add 3 padding u32s to bring the total to 96.
-  // Without this tail padding, WebGPU would reject the uniform buffer binding
-  // with a size-alignment validation error.
+  // OFFSET STABILITY: The four preceding fields (vec2 + f32 + f32 = 16 bytes)
+  // bring the running offset to 80 bytes, and `selectedIndex` sits there.
+  // The picker (`pickRenderer.ts`) writes `selectedIndex` directly using a
+  // hard-coded byte offset of 80 — adding fields *after* `selectedIndex`
+  // (like `instanceIdOffset` below) is therefore safe; adding any field
+  // *before* it would silently break the picker.
   selectedIndex: u32,
 
-  // Three u32 padding words to round the struct size from 84 to 96 bytes,
-  // satisfying the 16-byte alignment requirement for WGSL uniform structs.
-  // We use three separate u32 fields (not vec3<u32>) because vec3<u32> has a
-  // 16-byte alignment requirement of its own, which would force an 8-byte gap
-  // between selectedIndex (at offset 80) and the vec3 (which would have to
-  // start at offset 96), bloating the struct unnecessarily. Three scalar u32s
-  // have 4-byte alignment and pack contiguously at offsets 84, 88, 92.
-  // Their values are ignored by the shader; PointRenderer writes them as 0.
+  // Per-source instance-ID offset, written by `PointRenderer.draw` once per
+  // source-specific draw call. Multi-source rendering issues N draws (one per
+  // loaded survey), each producing instance indices that start at 0 inside
+  // its own draw. The pick texture, however, identifies points by a *global*
+  // index that runs continuously across all surveys (so JS can use the value
+  // as an index into the merged point arrays). `fsPick` therefore writes
+  // `instanceIdx + 1u + instanceIdOffset` instead of `instanceIdx + 1u`,
+  // shifting each survey's IDs into a unique slice of the global index space.
+  //
+  // Why update only this 4-byte slot per draw call (rather than the whole
+  // struct)? `device.queue.writeBuffer` schedules a CPU→GPU copy whose cost
+  // scales with the bytes written. We only need to change 4 bytes between
+  // draws (everything else — viewProj, viewport, etc. — is identical), so
+  // writing 96 bytes would waste ~95% of the bandwidth on data that did not
+  // change.
+  instanceIdOffset: u32,
+
+  // Two u32 padding words to round the struct from 88 to 96 bytes, which is
+  // a multiple of 16 (the struct's own alignment, inherited from mat4x4).
+  // Without this tail padding, WebGPU would reject the binding with a
+  // size-alignment validation error. The values are ignored by the shader;
+  // PointRenderer writes them as 0.
   _pad0: u32,
   _pad1: u32,
-  _pad2: u32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -550,7 +561,14 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   // without the +1 offset).  The JS readback subtracts 1 to recover the
   // 0-based index, after checking that the raw value is not 0.
   //
+  // We additionally add `u.instanceIdOffset` so the *global* index space is
+  // continuous across surveys: each per-source draw declares its starting
+  // offset (sum of prior surveys' counts) so its `instanceIdx` values map
+  // into a unique slice of the global ID range. Without this, every draw's
+  // first point would collide on instance 0 and the picker could not tell
+  // them apart.
+  //
   // The g/b/a channels are unused — we only read the r channel back on the
   // JS side.  Filling them with 0 keeps the output well-defined.
-  return vec4<u32>(in.instanceIdx + 1u, 0u, 0u, 0u);
+  return vec4<u32>(in.instanceIdx + 1u + u.instanceIdOffset, 0u, 0u, 0u);
 }
