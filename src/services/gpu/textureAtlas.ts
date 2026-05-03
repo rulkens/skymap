@@ -45,6 +45,87 @@ export class TextureAtlas {
     this.device = device;
   }
 
+  // ── GPU resource lifecycle ──────────────────────────────────────────────
+  //
+  // The atlas's slot bookkeeping (above) works without a GPU.  These three
+  // methods are the GPU side: a single 2048×2048 RGBA8 texture, plus
+  // per-slot copyExternalImageToTexture calls when bitmaps land, plus a
+  // view-getter for the quad pipeline's bind group.
+  //
+  // `initTexture` is separate from the constructor so unit tests can
+  // construct the class without a real GPU device — see Task 4's tests.
+  // In production code the engine calls initTexture exactly once after
+  // constructing the atlas.
+
+  private texture: GPUTexture | undefined;
+
+  /**
+   * Create the underlying 2048×2048 RGBA8 texture.  Must be called once
+   * after construction, before uploadBitmap or getTextureView.  Separate
+   * from the constructor so unit tests can construct without a GPU device
+   * and exercise the slot state machine.
+   *
+   * Idempotent: a second call is a no-op.  Useful if the engine ever
+   * recreates its render pipeline without recreating the atlas.
+   */
+  initTexture(): void {
+    if (this.texture) return;
+    this.texture = this.device.createTexture({
+      label: 'galaxy-atlas',
+      size: [ATLAS_SIDE, ATLAS_SIDE, 1],
+      format: 'rgba8unorm',
+      // TEXTURE_BINDING — the quad pass samples this texture in fs.
+      // COPY_DST       — uploadBitmap writes new slots in.
+      // RENDER_ATTACHMENT — lets us clear / re-render the atlas if we ever
+      //                    add a "loading…" placeholder pass.  Optional now,
+      //                    cheap to keep so we don't have to recreate the
+      //                    texture later if we add that feature.
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+  }
+
+  /**
+   * Upload an ImageBitmap into the given slot.  The bitmap must be exactly
+   * SLOT_SIDE × SLOT_SIDE (128×128) — the fetcher is responsible for
+   * resizing during decode via
+   * `createImageBitmap(blob, { resizeWidth: SLOT_SIDE, resizeHeight: SLOT_SIDE })`.
+   *
+   * Why `copyExternalImageToTexture` rather than `writeTexture`?  The
+   * former takes an ImageBitmap directly without us having to read the
+   * pixel data into a CPU buffer first.  The browser's GPU integration
+   * does the bitmap→texture copy on its own, often without a round-trip
+   * through main memory.
+   *
+   * `flipY: false` because our quad shader's UVs already follow the
+   * convention that v=0 is the top of the atlas, which matches the
+   * ImageBitmap's natural orientation.  Flipping would put galaxies
+   * upside-down on screen.
+   */
+  uploadBitmap(slotIdx: number, bitmap: ImageBitmap): void {
+    if (!this.texture) throw new Error('TextureAtlas: call initTexture() first.');
+    const col = slotIdx % SLOTS_PER_ROW;
+    const row = Math.floor(slotIdx / SLOTS_PER_ROW);
+    this.device.queue.copyExternalImageToTexture(
+      { source: bitmap, flipY: false },
+      { texture: this.texture, origin: [col * SLOT_SIDE, row * SLOT_SIDE, 0] },
+      [SLOT_SIDE, SLOT_SIDE, 1],
+    );
+  }
+
+  /**
+   * Returns the texture view for binding into the quad pass pipeline.
+   * The view is recreated on each call (cheap; just a small wrapper
+   * struct), which means the caller doesn't have to track lifetime —
+   * each frame's bind group can fetch a fresh view.
+   */
+  getTextureView(): GPUTextureView {
+    if (!this.texture) throw new Error('TextureAtlas: call initTexture() first.');
+    return this.texture.createView({ label: 'galaxy-atlas-view' });
+  }
+
   /**
    * Get the slot for `key`, allocating one if needed. Sets `lastSeenFrame`.
    * If the atlas is full and `key` is new, evicts the LRU slot.
