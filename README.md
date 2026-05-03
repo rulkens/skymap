@@ -24,18 +24,25 @@ The renderer fetches `/data/sdss.bin` at startup if present, otherwise it falls 
 
 ### 1. Get a CSV from SDSS SkyServer
 
-Go to the [DR18 SQL Search](http://skyserver.sdss.org/dr18/SearchTools/sql) and run:
+Go to the [DR18 SQL Search](https://skyserver.sdss.org/dr18/SearchTools/sql) and run:
 
 ```sql
-SELECT TOP 500000 objID, ra, dec, z,
-       modelMag_u, modelMag_g, modelMag_r, modelMag_i, modelMag_z
-FROM SpecPhoto
-WHERE z > 0 AND zWarning = 0 AND class = 'GALAXY'
+SELECT
+  s.specObjID AS objID,
+  s.ra,
+  s.dec,
+  s.z,
+  p.modelMag_u, p.modelMag_g, p.modelMag_r, p.modelMag_i, p.modelMag_z
+FROM SpecObj AS s
+JOIN PhotoObj AS p ON s.bestObjID = p.objID
+WHERE s.class = 'GALAXY'
+  AND s.zWarning = 0
+  AND s.z BETWEEN 0.001 AND 0.8
 ```
 
-Choose **CSV** as the output format. You'll get a ~30 MB file with ~500k rows of spectroscopically confirmed, redshift-validated galaxies.
+Choose **CSV** as the output format. Without a `survey =` filter, this query returns the **Main, BOSS, and eBOSS** spectroscopic galaxy samples combined — roughly 2–3 M rows reaching out to z ≈ 0.7. The Main sample alone is ~930 k galaxies up to z ≈ 0.3; BOSS adds the deeper LRG sample.
 
-> Need more than the web form's row limit? Use [CasJobs](http://skyserver.sdss.org/casjobs) instead — same query, no timeout.
+> Need more than the web form's row limit? Use [CasJobs](https://skyserver.sdss.org/casjobs) instead — same query, no timeout.
 
 ### 2. Convert to the binary format
 
@@ -48,6 +55,42 @@ The tool will report how many points it wrote and how many rows it skipped (rows
 ### 3. Reload the page
 
 The status bar will switch from `(synthetic)` to `(sdss.bin)` and you'll see the characteristic SDSS galaxy wedge — anisotropic and richly clustered.
+
+## Loading multi-survey data
+
+To render galaxies from all three surveys (SDSS Main+BOSS+eBOSS, 2MRS, GLADE) loaded in parallel:
+
+### 1. Download the catalogues
+
+| Survey | Source | File / Notes |
+| ------ | ------ | -------------- |
+| SDSS   | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql) | Use the wider Main+BOSS+eBOSS query above. |
+| 2MRS   | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. Drop into `data/raw/2mrs_table3.dat`. |
+| GLADE  | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281) | `glade2.3.dat`, 256-byte fixed-width, 3.26 M rows, ~838 MB. Drop into `data/raw/glade2.3.dat`. |
+
+GLADE alone subsumes 2MPZ and 6dFGS — the GLADE team has already cross-matched and deduplicated 2MPZ + 2MASS XSC + HyperLEDA + GWGC + SDSS-DR12Q, so a single download replaces what would otherwise be three.
+
+### 2. Build the per-source binary files
+
+```bash
+npm run build-all -- \
+  --sdss    "data/Skyserver_SQL.csv" \
+  --twomrs  data/raw/2mrs_table3.dat \
+  --glade   data/raw/glade2.3.dat \
+  --out-dir public/data
+```
+
+The tool parses each catalogue, runs cross-match dedup using priority **SDSS > 2MRS > GLADE**, then writes three v2 binary files: `public/data/sdss.bin`, `2mrs.bin`, `glade.bin`. Sample run on the full inputs: 500 k SDSS / 41 k 2MRS / 2.1 M GLADE galaxies after dedup, ≈ 23 + 1.9 + 96 MB on disk.
+
+### 3. Reload
+
+The browser fetches all three files in parallel at startup. Surveys arrive progressively. The settings panel bottom-left has per-survey checkboxes plus an **Auto LOD** toggle that picks visible surveys based on camera distance:
+
+- `< 200 Mpc` → 2MRS + GLADE (local universe; SDSS too sparse for nearby zooms)
+- `200 – 800 Mpc` → all sources
+- `> 800 Mpc` → SDSS only (the only survey reaching that depth)
+
+> Want only some surveys? Omit the corresponding `--xxx` flag — the merger treats missing inputs as empty arrays and skips writing the empty output file.
 
 ## Coordinate system
 
