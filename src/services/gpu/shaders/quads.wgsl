@@ -6,14 +6,25 @@
 // the atlas texture + sampler in group(0) so the engine can swap the
 // bind group cheaply when more thumbnails arrive.
 
-// Camera + viewport.  We share the same struct shape as the existing
-// points pass for consistency, even though we don't need brightness /
-// selectedIndex / etc here.
+// Camera + viewport.  Shape mirrors the points-pass uniforms enough to
+// share the same conceptual binding even though several points-only
+// fields (brightness / selectedIndex / etc) aren't carried here.
+//
+// `camPosWorld` + `pxPerRad` were added when the original
+// "project-a-unit-X-offset" billboard sizing turned out to depend on
+// camera orientation (orbiting a galaxy made the quad visibly shrink
+// or grow as the world-X axis rotated relative to the view direction).
+// The replacement computes each quad's apparent angular radius from
+// `length(instance.posSize.xyz - camPosWorld)` and converts to screen
+// pixels via `pxPerRad = viewport.y / (2 · tan(fovY / 2))`.  Identical
+// approach to points.wgsl — see that file for the derivation.
 struct Uniforms {
   viewProj: mat4x4<f32>,
   viewport: vec2<f32>,
   _pad0: f32,
   _pad1: f32,
+  camPosWorld: vec3<f32>,
+  pxPerRad: f32,
 };
 
 // Per-instance attributes.  Two vec4s — first packs (xyz, sizeWorld),
@@ -58,27 +69,43 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let corner = CORNERS[vid];
 
   // Project the world-space center first.  We then offset the corner in
-  // clip space by half the quad's projected size, which keeps the quad
-  // axis-aligned to the screen (a billboard) regardless of camera
-  // orientation.  This is the cheapest billboarding scheme and works
-  // because we're sampling a sky-plane projection (a 2D image), not
-  // rendering a 3D galaxy.
+  // clip space by a fixed pixel half-extent — same screen-aligned
+  // billboard scheme as points.wgsl.  Always face-the-camera regardless
+  // of the camera's orientation.
   let centerClip = u.viewProj * vec4<f32>(instance.posSize.xyz, 1.0);
 
-  // To get the on-screen size of 1 Mpc at this depth, project a point
-  // 1 Mpc to the right of center and measure the clip-space delta.
-  // Multiply by sizeWorld/2 to get the half-extent of the quad.
-  let rightWorld = instance.posSize.xyz + vec3<f32>(1.0, 0.0, 0.0);
-  let rightClip  = u.viewProj * vec4<f32>(rightWorld, 1.0);
-  let halfSizeClip =
-    (rightClip.xy / rightClip.w - centerClip.xy / centerClip.w) * (instance.posSize.w * 0.5);
-  // Use the magnitude as a uniform scale so the quad stays square even
-  // if the projection skews (e.g. wide field of view).
-  let half = length(halfSizeClip);
+  // ── ANGULAR-SIZE → PIXEL HALF-EXTENT ─────────────────────────────────────
+  //
+  // The previous implementation tried to size the quad by projecting a
+  // 1-Mpc-along-world-X offset point and measuring the clip-space delta —
+  // which is correct only when world-X is roughly perpendicular to the
+  // view direction.  As the camera orbited a galaxy, world-X rotated
+  // toward / away from the view axis and the projected length expanded
+  // and contracted, making the quad apparently shrink and grow.  Bug
+  // fixed by computing the on-screen radius directly from the world-space
+  // distance and the camera's pixel-per-radian factor (independent of
+  // camera orientation).
+  //
+  //   distanceMpc       = ‖ instance.xyz − camPosWorld ‖
+  //   angularRadius_rad = (sizeWorldMpc * 0.5) / distanceMpc
+  //   halfPixels        = angularRadius_rad · pxPerRad
+  //
+  // We guard distanceMpc against 0 (camera parked exactly on a galaxy
+  // center, possible during focus-tween) so we don't divide-by-zero.
+  let toGalaxy   = instance.posSize.xyz - u.camPosWorld;
+  let distanceMpc = max(length(toGalaxy), 0.001);
+  let halfWorld   = instance.posSize.w * 0.5;
+  let halfPixels  = (halfWorld / distanceMpc) * u.pxPerRad;
+
+  // Convert pixels to clip-space half-extent.  As in points.wgsl, we
+  // multiply by `centerClip.w` to cancel the perspective divide so the
+  // billboard ends up exactly `halfPixels` on screen regardless of
+  // depth.
+  let pxToClip = vec2<f32>(2.0 / u.viewport.x, 2.0 / u.viewport.y);
 
   var out: VsOut;
   out.clipPos = vec4<f32>(
-    centerClip.xy + corner * half * centerClip.w,
+    centerClip.xy + corner * halfPixels * pxToClip * centerClip.w,
     centerClip.z,
     centerClip.w,
   );

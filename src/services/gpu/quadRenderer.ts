@@ -21,11 +21,27 @@ const FLOATS_PER_INSTANCE = 8;
 const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
 
 /**
- * 80-byte uniform layout: mat4 viewProj (64) + vec2 viewport (8) +
- * 2x f32 padding (8) so the struct rounds up to a multiple of 16
- * (WGSL uniform-block alignment requirement).
+ * 96-byte uniform layout (matches the WGSL `Uniforms` struct in quads.wgsl):
+ *
+ *   bytes  0..63 : viewProj    mat4x4<f32>  (16 floats = 64 B)
+ *   bytes 64..71 : viewport    vec2<f32>    (2 floats = 8 B)
+ *   bytes 72..79 : _pad0/_pad1 f32 × 2      (8 B; padding so the next vec3 lands on a 16-B boundary)
+ *   bytes 80..91 : camPosWorld vec3<f32>    (3 floats = 12 B; vec3 needs 16-B alignment)
+ *   bytes 92..95 : pxPerRad    f32          (1 float = 4 B; fits the trailing slot of camPosWorld's 16-B vec4 quantum)
+ *
+ * Total: 96 bytes — multiple of 16 ✓.
+ *
+ * `camPosWorld` and `pxPerRad` are used by the vertex stage to compute
+ * each quad's apparent angular radius from its world-space distance to
+ * the camera, then convert to screen pixels via the pinhole relation
+ * `pxRadius = (radius_Mpc / distance_Mpc) * pxPerRad`.  This replaces an
+ * earlier "project a unit-X offset and measure the projected length"
+ * scheme that varied with camera orientation: as the camera orbited a
+ * galaxy, the world-X axis rotated relative to the view direction and the
+ * projected length expanded/contracted accordingly, making the quad
+ * apparently shrink/grow during orbit.
  */
-const UNIFORM_BYTES = 80;
+const UNIFORM_BYTES = 96;
 
 export class QuadRenderer {
   private readonly device: GPUDevice;
@@ -137,15 +153,22 @@ export class QuadRenderer {
     viewProj: mat4,
     viewportPx: [number, number],
     instances: ReadonlyArray<QuadInstance>,
+    camPosWorld: Readonly<[number, number, number]>,
+    pxPerRad: number,
   ): void {
     if (!this.bindGroup) return; // atlas not yet bound — skip silently
     if (instances.length === 0) return;
 
-    // Pack uniforms (viewProj 16 floats + viewport 2 floats + 2 pad).
+    // Pack uniforms — see UNIFORM_BYTES doc-comment for the layout.
     const uni = new Float32Array(UNIFORM_BYTES / 4);
     uni.set(viewProj as Float32Array, 0);
     uni[16] = viewportPx[0];
     uni[17] = viewportPx[1];
+    // uni[18], uni[19] are the _pad0/_pad1 zero slots (left zero by Float32Array init).
+    uni[20] = camPosWorld[0]; // camPosWorld.x at byte offset 80
+    uni[21] = camPosWorld[1];
+    uni[22] = camPosWorld[2];
+    uni[23] = pxPerRad;       // pxPerRad at byte offset 92
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uni);
 
     // Pack instances.  We allocate a fresh Float32Array each frame; for

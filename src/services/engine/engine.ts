@@ -1007,7 +1007,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           }
 
           if (quads.length > 0) {
-            quadRenderer.draw(pass, vp, [canvas.width, canvas.height], quads);
+            quadRenderer.draw(
+              pass,
+              vp,
+              [canvas.width, canvas.height],
+              quads,
+              drawCamPos,
+              drawPxPerRad,
+            );
           }
         }
 
