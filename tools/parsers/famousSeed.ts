@@ -54,6 +54,36 @@ export type FamousEntry = {
   type: string;
   /** 1-3 sentence curated blurb shown in the InfoCard. */
   description: string;
+  /**
+   * Optional minor/major axis ratio b/a in (0.05, 1].  Populated by the
+   * HyperLEDA enrichment script (`expandFamousFromCatalogs.ts`) from
+   * `logr25` (b/a = 10^(-logr25)).  Absence is fine — buildFamous keeps
+   * the slot at NaN, and the renderer treats it as "round / unknown".
+   *
+   * The lower bound (0.05) is a sanity guard: HyperLEDA occasionally
+   * carries pathological logr25 values for nearly edge-on highly
+   * inclined disks where the photometric fit blew up.  Anything below
+   * 0.05 (b/a < 5%) means the source data is suspect.
+   */
+  axisRatio?: number;
+  /**
+   * Optional position angle in degrees, [0, 180), measured east of
+   * north — the standard astronomical convention.  Populated by the
+   * HyperLEDA enrichment script from the `pa` column.
+   */
+  positionAngleDeg?: number;
+  /**
+   * Optional B-band total apparent magnitude.  Sourced from HyperLEDA
+   * `bt`.  When present, buildFamous maps magB → magG (the renderer's
+   * SDSS-style g-slot) — same shoehorn convention GLADE uses for its
+   * heterogeneous photometric inputs.  Range [-30, 30] (galaxies span
+   * roughly -25 to +25; the wider bound keeps malformed entries loud).
+   */
+  magB?: number;
+  /** Optional V-band total apparent mag (HyperLEDA `vt`).  Maps to magR. */
+  magV?: number;
+  /** Optional K-band total apparent mag (HyperLEDA `kt`).  Maps to magI. */
+  magK?: number;
 };
 
 /**
@@ -86,6 +116,36 @@ export function validateFamousEntry(e: FamousEntry): FamousEntry {
   }
   if (typeof e.description !== 'string') {
     throw new Error(`famous seed: ${e.id} missing description`);
+  }
+  // Optional enrichment fields.  Each is independently validated:
+  // present + finite + in-range, OR absent.  We deliberately do NOT
+  // require all four to travel together — HyperLEDA may have orientation
+  // but not photometry for a given galaxy, or vice versa.
+  if (e.axisRatio !== undefined) {
+    if (!Number.isFinite(e.axisRatio) || e.axisRatio <= 0.05 || e.axisRatio > 1) {
+      throw new Error(
+        `famous seed: ${e.id} has out-of-range axisRatio ${e.axisRatio} (expected (0.05, 1])`,
+      );
+    }
+  }
+  if (e.positionAngleDeg !== undefined) {
+    if (
+      !Number.isFinite(e.positionAngleDeg) ||
+      e.positionAngleDeg < 0 ||
+      e.positionAngleDeg >= 180
+    ) {
+      throw new Error(
+        `famous seed: ${e.id} has out-of-range positionAngleDeg ${e.positionAngleDeg} (expected [0, 180))`,
+      );
+    }
+  }
+  for (const band of ['magB', 'magV', 'magK'] as const) {
+    const v = e[band];
+    if (v !== undefined) {
+      if (!Number.isFinite(v) || v < -30 || v > 30) {
+        throw new Error(`famous seed: ${e.id} has out-of-range ${band} ${v} (expected [-30, 30])`);
+      }
+    }
   }
   return e;
 }

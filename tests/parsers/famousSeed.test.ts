@@ -23,8 +23,26 @@ describe('parseFamousSeed', () => {
 
   it('rejects entries with duplicate ids', () => {
     const dup = [
-      { id: 'm31', names: ['M31'], ra: 10, dec: 41, distanceMpc: 0.778, diameterKpc: 67, type: 'Sb', description: 'a' },
-      { id: 'm31', names: ['M31 alt'], ra: 11, dec: 42, distanceMpc: 0.8, diameterKpc: 68, type: 'Sb', description: 'b' },
+      {
+        id: 'm31',
+        names: ['M31'],
+        ra: 10,
+        dec: 41,
+        distanceMpc: 0.778,
+        diameterKpc: 67,
+        type: 'Sb',
+        description: 'a',
+      },
+      {
+        id: 'm31',
+        names: ['M31 alt'],
+        ra: 11,
+        dec: 42,
+        distanceMpc: 0.8,
+        diameterKpc: 68,
+        type: 'Sb',
+        description: 'b',
+      },
     ];
     expect(() => parseFamousSeed(JSON.stringify(dup))).toThrow(/duplicate id/i);
   });
@@ -99,6 +117,93 @@ describe('parseFamousSeed', () => {
         description: 'x',
       } as never),
     ).toThrow(/names/);
+  });
+
+  it('accepts entries with valid optional enrichment fields', () => {
+    const entries = parseFamousSeed(
+      JSON.stringify([
+        {
+          id: 'm31',
+          names: ['M31'],
+          ra: 10.68,
+          dec: 41.27,
+          distanceMpc: 0.778,
+          diameterKpc: 67.5,
+          type: 'Sb',
+          description: 'A galaxy.',
+          axisRatio: 0.39,
+          positionAngleDeg: 35,
+          magB: 4.3,
+          magV: 3.4,
+          magK: 0.99,
+        },
+      ]),
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.axisRatio).toBeCloseTo(0.39);
+    expect(entries[0]!.positionAngleDeg).toBe(35);
+    expect(entries[0]!.magB).toBeCloseTo(4.3);
+  });
+
+  it('rejects out-of-range axisRatio', () => {
+    expect(() =>
+      validateFamousEntry({
+        id: 'x',
+        names: ['x'],
+        ra: 0,
+        dec: 0,
+        distanceMpc: 1,
+        diameterKpc: 10,
+        type: 'E',
+        description: 'x',
+        axisRatio: 0.0,
+      } as never),
+    ).toThrow(/axisRatio/);
+    expect(() =>
+      validateFamousEntry({
+        id: 'x',
+        names: ['x'],
+        ra: 0,
+        dec: 0,
+        distanceMpc: 1,
+        diameterKpc: 10,
+        type: 'E',
+        description: 'x',
+        axisRatio: 1.5,
+      } as never),
+    ).toThrow(/axisRatio/);
+  });
+
+  it('rejects out-of-range positionAngleDeg', () => {
+    expect(() =>
+      validateFamousEntry({
+        id: 'x',
+        names: ['x'],
+        ra: 0,
+        dec: 0,
+        distanceMpc: 1,
+        diameterKpc: 10,
+        type: 'E',
+        description: 'x',
+        positionAngleDeg: 180,
+      } as never),
+    ).toThrow(/positionAngleDeg/);
+  });
+
+  it('rejects out-of-range magnitudes', () => {
+    expect(() =>
+      validateFamousEntry({
+        id: 'x',
+        names: ['x'],
+        ra: 0,
+        dec: 0,
+        distanceMpc: 1,
+        diameterKpc: 10,
+        type: 'E',
+        description: 'x',
+        magB: 100,
+      } as never),
+    ).toThrow(/magB/);
   });
 
   it('parses the real seed file we ship', async () => {

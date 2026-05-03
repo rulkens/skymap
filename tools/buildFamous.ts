@@ -171,6 +171,20 @@ async function main(): Promise<void> {
     cloud.positions[i * 3 + 1] = xyz[1];
     cloud.positions[i * 3 + 2] = xyz[2];
     cloud.diameterKpc[i] = e.diameterKpc;
+    // Optional enrichment fields (populated by `expandFamousFromCatalogs`).
+    // Each is independent — a seed entry may carry orientation without
+    // photometry, or any subset.  Absent fields stay at NaN (the array's
+    // `.fill(NaN)` initial value), which the renderer/colour-index code
+    // treats as "no measurement, fall back to defaults".
+    if (e.axisRatio !== undefined) cloud.axisRatio[i] = e.axisRatio;
+    if (e.positionAngleDeg !== undefined) cloud.positionAngleDeg[i] = e.positionAngleDeg;
+    // Photometric mapping: HyperLEDA gives B/V/K, the PointCloud arrays
+    // are SDSS-shaped (u/g/r/i/z).  Same shoehorn convention as GLADE:
+    // map B→G, V→R, K→I.  magU/magZ stay NaN — HyperLEDA doesn't carry
+    // them and we'd rather have honest "missing" than fabricated values.
+    if (e.magB !== undefined) cloud.magG[i] = e.magB;
+    if (e.magV !== undefined) cloud.magR[i] = e.magV;
+    if (e.magK !== undefined) cloud.magI[i] = e.magK;
 
     // Cross-match against 2MRS first (denser at the famous-galaxy scale),
     // then GLADE for entries 2MRS missed.
