@@ -113,6 +113,27 @@
   display: inline;
 }
 
+/* ── Source attribution badge ─────────────────────────────────────────────── */
+
+/*
+ * Small uppercase chip rendered just under the SDSS-name headline.  Its job
+ * is to tell the user *which survey* the data in this card actually came from
+ * (SDSS, 2MRS, GLADE, Synthetic) — the headline name itself is a coordinate-
+ * derived label used across all surveys and doesn't carry that information.
+ */
+.sourceBadge {
+  display: inline-block;
+  padding: 1px 6px;
+  margin: 4px 0 6px 0;
+  border-radius: 3px;
+  background: rgba(160, 200, 255, 0.12);
+  border: 1px solid rgba(160, 200, 255, 0.25);
+  color: rgba(220, 230, 255, 0.85);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 /* ── SDSS designation headline ────────────────────────────────────────────── */
 
 .cardHeadline {
@@ -240,6 +261,19 @@ details:not([open]) > .detailsSummary::before {
 .externalLink:hover {
   color: #a8d0ff;
   text-shadow: 0 0 8px rgba(120, 180, 255, 0.4);
+}
+
+/*
+ * Disabled-looking variant of the external link, used when the active row
+ * has no per-object catalogue page (i.e. non-SDSS sources).  We deliberately
+ * reuse `.externalLink` for spacing/alignment so the visual rhythm of the
+ * card stays identical between the link and the placeholder — only the
+ * styling shifts to "muted, italic, not clickable".
+ */
+.externalLinkDisabled {
+  opacity: 0.45;
+  font-style: italic;
+  text-decoration: none;
 }
 
 /* ── Focus button (only visible when the card is pinned) ──────────────────────

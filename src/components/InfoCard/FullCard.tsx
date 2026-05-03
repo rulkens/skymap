@@ -125,6 +125,16 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
       {/* ── SDSS designation ──────────────────────────────────────────────── */}
       <div className={styles.cardHeadline}>{info.sdssName}</div>
 
+      {/* ── Source attribution badge ──────────────────────────────────────── */}
+      {/*
+        Tiny uppercase badge tagging which survey this row came from (SDSS,
+        2MRS, GLADE, Synthetic).  Sits just below the SDSS-style headline
+        because the headline name is a coordinate-derived convention used
+        across surveys, not a guarantee of SDSS provenance — the badge is
+        what tells the user where the actual measurements came from.
+      */}
+      <div className={styles.sourceBadge}>{info.sourceLabel}</div>
+
       {/* ── Thumbnail + cosmology summary ─────────────────────────────────── */}
       <div className={`${styles.cardSection} ${styles.cardTopRow}`}>
         <Thumbnail ra={info.ra} dec={info.dec} url={info.thumbnailUrl} />
@@ -214,10 +224,20 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
         opener to a phishing URL.  `noreferrer` would also suppress the Referer
         header, but that's not needed here since skyserver.sdss.org is a trusted
         public resource.
+
+        Only SDSS-sourced galaxies have a useful Explorer page; for 2MRS/GLADE
+        rows we render a disabled-looking note instead of a link that would
+        404 against an unrelated SDSS objID.
       */}
-      <a className={styles.externalLink} href={info.explorerUrl} target="_blank" rel="noopener">
-        View in SDSS Explorer &rarr;
-      </a>
+      {info.explorerUrl ? (
+        <a className={styles.externalLink} href={info.explorerUrl} target="_blank" rel="noopener">
+          View in SDSS Explorer &rarr;
+        </a>
+      ) : (
+        <div className={`${styles.externalLink} ${styles.externalLinkDisabled}`}>
+          No catalogue page for {info.sourceLabel}
+        </div>
+      )}
     </div>
   );
 }

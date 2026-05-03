@@ -39,6 +39,12 @@ export function CompactCard({ info }: CompactCardProps): ReactNode {
         <span>Hover</span>
       </div>
       <div className={styles.cardHeadline}>{info.sdssName}</div>
+      {/*
+        Smaller variant of the FullCard source badge so the user knows where
+        the hovered row's data came from without taking up much room in the
+        already-compact preview.
+      */}
+      <div className={styles.sourceBadge}>{info.sourceLabel}</div>
       <div className={styles.cardLookbackLine}>
         Light left {info.lookbackGyr.toFixed(1)} Gyr ago
       </div>

@@ -18,6 +18,7 @@
  */
 
 import type { PointCloud, PointInfo } from '../../@types';
+import { Source, sourceLabel } from '../../data/sources';
 import {
   cartesianToRaDecZ,
   formatRaSexagesimal,
@@ -30,6 +31,7 @@ import {
   galaxyTypeFromColor,
   sdssExplorerUrl,
   sdssThumbnailUrl,
+  dssThumbnailUrl,
 } from '../../utils/math';
 
 /**
@@ -89,8 +91,15 @@ export function niceRound(x: number): number {
  *
  * The function is called at most once per hover/select event (not per frame),
  * so the modest cost of the trig + physics math is not on the hot path.
+ *
+ * The `source` parameter is required because the picker resolves a global
+ * instance ID into a (source, localIdx) pair *before* calling us — the cloud
+ * itself doesn't carry its own source tag (every point in a cloud shares it,
+ * so storing it per-point would be wasteful).  We pipe it through here so we
+ * can decide which thumbnail service to use and whether an SDSS Explorer
+ * link makes sense.
  */
-export function buildPointInfo(cloud: PointCloud, idx: number): PointInfo {
+export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): PointInfo {
   const px = cloud.positions[idx * 3 + 0]!;
   const py = cloud.positions[idx * 3 + 1]!;
   const pz = cloud.positions[idx * 3 + 2]!;
@@ -115,6 +124,23 @@ export function buildPointInfo(cloud: PointCloud, idx: number): PointInfo {
   // blue-cloud bimodality (Strateva et al. 2001). We pass it to galaxyTypeFromColor
   // rather than the u−g we feed the shader — u−r gives a cleaner separation.
   const uMinusR = magU - magR;
+
+  // ── Per-source link / thumbnail wiring ─────────────────────────────────────
+  //
+  // SDSS galaxies get the proper SDSS DR18 ImgCutout (sharper, deeper, and the
+  // same data the SDSS Explorer page itself uses).  Everything else (2MRS,
+  // GLADE, Synthetic) falls back to the all-sky DSS service so we never
+  // request blank frames from regions SDSS didn't observe.
+  //
+  // explorerUrl is intentionally null for non-SDSS rows: 2MRS and GLADE have
+  // no equivalent per-object catalogue page, so a disabled UI affordance is
+  // more honest than a link that 404s.  We also guard the SDSS branch on
+  // objIDs[idx] > 0n because synthetic-style sequential IDs (0, 1, 2…) won't
+  // resolve either.
+  const isSdss = source === Source.SDSS;
+  const objID = cloud.objIDs[idx]!;
+  const explorerUrl = isSdss && objID > 0n ? sdssExplorerUrl(objID) : null;
+  const thumbnailUrl = isSdss ? sdssThumbnailUrl(ra, dec, 200) : dssThumbnailUrl(ra, dec, 2);
 
   return {
     index: idx,
@@ -151,8 +177,12 @@ export function buildPointInfo(cloud: PointCloud, idx: number): PointInfo {
     galaxyType: galaxyTypeFromColor(uMinusR),
     sdssName: sdssName(ra, dec),
 
-    // External URLs — always constructed, regardless of real vs. synthetic data.
-    explorerUrl: sdssExplorerUrl(cloud.objIDs[idx]!),
-    thumbnailUrl: sdssThumbnailUrl(ra, dec, 200),
+    // Source attribution — fed through to the InfoCard's badge + link logic.
+    source,
+    sourceLabel: sourceLabel(source),
+
+    // External URLs — null/SDSS-vs-DSS chosen above based on `source`.
+    explorerUrl,
+    thumbnailUrl,
   };
 }

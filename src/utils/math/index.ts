@@ -23,3 +23,4 @@ export * from './lerp';
 export * from './lerpAngleShortest';
 export * from './sdssExplorerUrl';
 export * from './sdssThumbnailUrl';
+export * from './dssThumbnailUrl';

@@ -5,6 +5,7 @@
  */
 
 import type { GalaxyTypeInfo } from './GalaxyTypeInfo';
+import { Source } from '../data/sources';
 
 /**
  * Display data for a single galaxy point, computed on-demand from the raw
@@ -95,22 +96,41 @@ export type PointInfo = {
   /** IAU-style SDSS designation, e.g. "SDSS J123456.75+012345.5". */
   sdssName: string;
 
+  /** @group Source attribution */
+
+  /**
+   * Which survey this galaxy came from.  Drives the per-source UI badge and
+   * decides whether SDSS-specific affordances (Explorer link, SDSS image
+   * cutout) are shown for this point.
+   */
+  source: Source;
+
+  /**
+   * Display label for the source (e.g. "SDSS", "2MRS", "GLADE").  Pre-resolved
+   * from `sourceLabel(source)` in the engine so the React layer never has to
+   * import the survey-metadata table.
+   */
+  sourceLabel: string;
+
   /** @group External URLs */
 
   /**
    * SDSS DR18 Quick Look page for this object (opens in a new tab).
    *
-   * For synthetic data the objID is sequential (0, 1, 2…) so the URL won't
-   * resolve to a real page — but the field is always populated so the render
-   * path is uniform.
+   * Only populated for SDSS-sourced galaxies — non-SDSS surveys (2MRS, GLADE,
+   * Synthetic) have no equivalent per-object catalogue page, so this field is
+   * `null` for them and the UI renders a disabled placeholder instead of a
+   * broken link.
    */
-  explorerUrl: string;
+  explorerUrl: string | null;
   /**
-   * SDSS image cutout URL — a 200×200 px JPEG centred on the object's sky position.
+   * Image cutout URL for this galaxy's thumbnail.
    *
-   * The cutout service is coordinate-based (RA/Dec), not objID-based, so it
-   * works for both real SDSS data and synthetic points whose positions have
-   * plausible sky coordinates.
+   * For SDSS-sourced galaxies this is the SDSS DR18 ImgCutout JPEG (200 px,
+   * 0.4 arcsec/pixel).  For non-SDSS surveys (2MRS, GLADE, Synthetic) this
+   * falls back to the all-sky DSS cutout service via `dssThumbnailUrl` —
+   * SDSS only covers ~1/3 of the sky, so its cutout would return blank
+   * frames for many of those positions.
    */
   thumbnailUrl: string;
 };

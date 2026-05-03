@@ -239,7 +239,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     if (!resolved) return null;
     const c = clouds.get(resolved.source);
     if (!c) return null;
-    return buildPointInfo(c, resolved.localIdx);
+    return buildPointInfo(c, resolved.localIdx, resolved.source);
   }
 
   // Renderer and pickRenderer are null until GPU init completes.

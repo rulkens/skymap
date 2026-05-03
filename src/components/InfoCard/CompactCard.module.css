@@ -68,9 +68,26 @@
 .cardHeadline {
   font-size: 13px;
   color: #e8eeff;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   letter-spacing: 0.02em;
   word-break: break-all;
+}
+
+/*
+ * Compact variant of the FullCard source badge.  Slightly tighter padding
+ * and a smaller bottom margin to fit the slim preview format.
+ */
+.sourceBadge {
+  display: inline-block;
+  padding: 0 5px;
+  margin: 0 0 6px 0;
+  border-radius: 3px;
+  background: rgba(160, 200, 255, 0.12);
+  border: 1px solid rgba(160, 200, 255, 0.25);
+  color: rgba(220, 230, 255, 0.85);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 /* Lookback time line */
