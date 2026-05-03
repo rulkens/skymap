@@ -23,7 +23,7 @@ import {
   cartesianToRaDecZ,
   formatRaSexagesimal,
   formatDecSexagesimal,
-  sdssName,
+  iauName,
   lookbackTimeGyr,
   hubbleVelocityKmS,
   absoluteMagnitude,
@@ -175,7 +175,7 @@ export function buildPointInfo(cloud: PointCloud, idx: number, source: Source): 
     // Derived quantities.
     absoluteMagG: absoluteMagnitude(magG, distanceMpc),
     galaxyType: galaxyTypeFromColor(uMinusR),
-    sdssName: sdssName(ra, dec),
+    iauName: iauName(source, ra, dec),
 
     // Source attribution — fed through to the InfoCard's badge + link logic.
     source,

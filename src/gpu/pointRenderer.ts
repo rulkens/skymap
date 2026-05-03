@@ -324,11 +324,16 @@ export class PointRenderer {
       // Non-SDSS surveys don't measure u-band, so `u - g` is NaN.  WGSL has
       // no native NaN guards on the colour-ramp lookup — NaN propagates
       // through the K-correction subtraction and clamps to the bluest end,
-      // painting every 2MRS/GLADE galaxy sky-blue.  Substitute the median
-      // observed u−g of an SDSS galaxy (~1.2 mag) for any non-finite
-      // computation: visually neutral, explicitly "we don't know" rather
-      // than fake-blue.
-      const NEUTRAL_U_MINUS_G = 1.2;
+      // painting every 2MRS/GLADE galaxy sky-blue.
+      //
+      // Substitution scheme: when the observed u−g is unknown, write a
+      // sentinel value > 100 into the colorIndex slot.  The shader detects
+      // values outside the physical u−g range [-2, +5] and treats them as
+      // "no measurement": no K-correction (we have no observed colour to
+      // correct), and a fixed mid-ramp tint (≈ orange-white) regardless of
+      // distance.  Real galaxies can never legitimately have colorIndex
+      // ≥ 100, so the sentinel is unambiguous.
+      const NO_COLOUR_SENTINEL = 999;
       const g = cloud.magG[i]!;
       const u = cloud.magU[i]!;
       const ug = u - g;
@@ -336,7 +341,7 @@ export class PointRenderer {
       // rows missing a B-band measurement) snap to the post-shift target so
       // they render at average intensity instead of vanishing.
       interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
-      interleaved[o + 4] = Number.isFinite(ug) ? ug : NEUTRAL_U_MINUS_G;
+      interleaved[o + 4] = Number.isFinite(ug) ? ug : NO_COLOUR_SENTINEL;
     }
 
     // Destroy any previous buffer for this source before replacing it.

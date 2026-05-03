@@ -374,7 +374,17 @@ fn vs(
   let HUBBLE_DISTANCE_MPC = 4282.749;  // c / H₀ for H₀ = 70 km/s/Mpc
   let K_UG_PER_Z = 3.0;
   let zRedshift = length(p.position) / HUBBLE_DISTANCE_MPC;
-  let restColorIndex = p.colorIndex - K_UG_PER_Z * zRedshift;
+
+  // Sentinel detection: the JS upload path writes colorIndex >= 100 to mark
+  // "no observed u−g" (non-SDSS surveys without u-band measurements).  We
+  // skip K-correction for those — there's no observed colour to correct
+  // back to rest-frame — and substitute a fixed mid-ramp colour that gives
+  // GLADE/2MRS galaxies a stable visually-neutral tint regardless of z.
+  // 1.05 was picked because it matches what an SDSS galaxy at z ≈ 0.05 with
+  // u−g = 1.2 would land at after K-correction — pale orange-white, the
+  // "average galaxy" colour your eye expects.
+  let isUnknownColour = p.colorIndex > 100.0;
+  let restColorIndex = select(p.colorIndex - K_UG_PER_Z * zRedshift, 1.05, isUnknownColour);
 
   // Look up the colour for this point's *rest-frame* u−g index. Galaxies
   // that were intrinsically blue stay blue regardless of distance; only

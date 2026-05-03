@@ -38,7 +38,7 @@ export function CompactCard({ info }: CompactCardProps): ReactNode {
       <div className={styles.cardTitle}>
         <span>Hover</span>
       </div>
-      <div className={styles.cardHeadline}>{info.sdssName}</div>
+      <div className={styles.cardHeadline}>{info.iauName}</div>
       {/*
         Smaller variant of the FullCard source badge so the user knows where
         the hovered row's data came from without taking up much room in the

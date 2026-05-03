@@ -93,8 +93,14 @@ export type PointInfo = {
    * string shown in the info card (e.g. "Red, quiescent galaxy").
    */
   galaxyType: GalaxyTypeInfo;
-  /** IAU-style SDSS designation, e.g. "SDSS J123456.75+012345.5". */
-  sdssName: string;
+  /**
+   * Survey-aware IAU designation, e.g. "SDSS J123456.75+012345.5",
+   * "GLADE J234500.00-104500.5", "2MASX J...".  Built from RA/Dec via
+   * `iauName(source, ra, dec)` so the prefix matches the row's actual
+   * catalog and the user isn't lied to by an SDSS-shaped name on a
+   * GLADE galaxy.
+   */
+  iauName: string;
 
   /** @group Source attribution */
 

@@ -115,7 +115,7 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
             type="button"
             className={styles.focusButton}
             onClick={() => onFocus(info)}
-            aria-label={`Focus camera on ${info.sdssName}`}
+            aria-label={`Focus camera on ${info.iauName}`}
           >
             Focus
           </button>
@@ -123,7 +123,7 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
       </div>
 
       {/* ── SDSS designation ──────────────────────────────────────────────── */}
-      <div className={styles.cardHeadline}>{info.sdssName}</div>
+      <div className={styles.cardHeadline}>{info.iauName}</div>
 
       {/* ── Source attribution badge ──────────────────────────────────────── */}
       {/*
