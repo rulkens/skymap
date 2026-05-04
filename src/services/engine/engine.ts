@@ -880,6 +880,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // SettingsPanel needs the engine's default to render the right
       // option as selected on first paint.
       cb.onToneMapCurveChange?.(toneMapCurve);
+      // Exposure seed — same lifecycle as toneMapCurve.  React's
+      // SettingsPanel slider needs the engine's default (1.0) to
+      // render the thumb in the right position on first paint, and
+      // we keep the contract uniform: every engine-owned setting
+      // React mirrors gets seeded once at init.
+      cb.onExposureChange?.(exposure);
       // LOD mode + visible-mask seeds — engine and React both default to
       // 'auto' / ALL_VISIBLE_MASK respectively, but firing the echo here
       // protects against future default drift and keeps the contract uniform
@@ -1657,6 +1663,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // from.  0.05 keeps a faint signal visible; 16 is well past
       // any realistic peak (~5-10 in the densest cluster cores).
       exposure = Math.max(0.05, Math.min(16, value));
+      // Echo the *clamped* value back to the UI so the slider's
+      // displayed number agrees with what the shader actually uses.
+      // Mirrors the setToneMapCurve / setBiasMode pattern: always
+      // fire (even on no-op identical values) so the first call
+      // seeds React state correctly without a separate code path.
+      cb.onExposureChange?.(exposure);
     },
 
     setToneMapCurve(curve) {

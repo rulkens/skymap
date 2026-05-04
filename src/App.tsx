@@ -209,6 +209,13 @@ export function App(): React.ReactElement {
   // engine echoes via `onToneMapCurveChange` at startup *and* on every
   // setToneMapCurve call, so React stays in sync.
   const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurve>(ToneMapCurve.Reinhard);
+  // `exposure` mirrors the engine's HDR pre-tone-map multiplier.  Default
+  // 1.0 matches the engine's init value so the slider thumb starts in the
+  // middle of its 0.1..4.0 range without flicker.  Echoed by the engine
+  // via `onExposureChange` at startup *and* on every clamped setExposure
+  // call, so the displayed value is always the effective one — even if a
+  // devtools call passes a wild number that the engine clamps to 16.
+  const [exposure, setExposure] = useState<number>(1.0);
 
   // ── Command palette state ─────────────────────────────────────────────────
   //
@@ -280,6 +287,11 @@ export function App(): React.ReactElement {
       // HDR tone-map echo — mirrors the bias-mode pattern.  Engine seeds
       // its default at init (Reinhard) and fires on every setToneMapCurve.
       onToneMapCurveChange: setToneMapCurve,
+      // Exposure echo — same lifecycle as the tone-curve echo above.  The
+      // engine seeds its default (1.0) at init and re-fires on every
+      // clamped setExposure, so React's slider position always reflects
+      // the effective value the shader is using.
+      onExposureChange: setExposure,
       // SpaceMouse pairing state: `connect()`'s promise gives us the initial
       // success/failure, but only this callback covers spontaneous disconnects
       // (USB unplug, permission revocation).  Without it React's "Connected"
@@ -498,6 +510,19 @@ export function App(): React.ReactElement {
         // needed.
         toneMapCurve={toneMapCurve}
         onToneMapCurveChange={(c) => handleRef.current?.setToneMapCurve?.(c)}
+        // Exposure slider — drag pushes the value through the engine
+        // handle, the engine clamps to [0.05, 16] and echoes the
+        // clamped result back via `onExposureChange` (above), which
+        // updates `exposure` state so the displayed number always
+        // matches the shader's effective value.  Optimistic local
+        // setExposure(value) is unnecessary because the engine echoes
+        // synchronously inside its setter — same pattern as
+        // tone-curve, brightness, and the bias-mode controls.
+        exposure={exposure}
+        onExposureChange={(value) => {
+          setExposure(value);
+          handleRef.current?.setExposure?.(value);
+        }}
       />
       {/*
         Command palette — full-screen overlay for fuzzy-searching the

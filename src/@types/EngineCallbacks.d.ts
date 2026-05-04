@@ -83,11 +83,27 @@ export type EngineCallbacks = {
   /**
    * Echoed by the engine on init *and* after every `setToneMapCurve`
    * call so React's SettingsPanel state stays in sync with engine
-   * truth.  Same pattern as `onBiasModeChange`.  No `onExposureChange`
-   * yet because the SettingsPanel doesn't surface an exposure slider —
-   * add one when that UI lands.
+   * truth.  Same pattern as `onBiasModeChange`.
    */
   onToneMapCurveChange?: (curve: ToneMapCurve) => void;
+  /**
+   * Echoed by the engine on init *and* after every `setExposure` call
+   * so React's SettingsPanel exposure slider stays in sync with engine
+   * truth.  Same lifecycle as `onToneMapCurveChange` — seed at startup
+   * (so the slider shows the engine default — currently 1.0 — on first
+   * paint without React having to duplicate that default), then fire on
+   * every clamped mutation so a runaway value (e.g. devtools setting
+   * 1e9) is reflected back as the actual clamped result rather than the
+   * caller's input.
+   *
+   * Why echo at all (rather than letting React own the value
+   * optimistically)?  Same reason as the rest of the settings echoes —
+   * the engine clamps and is the single source of truth.  If the slider
+   * pushes 100 but the engine clamps to 16, React must reflect the
+   * clamped value or the displayed number drifts away from what the
+   * shader is using.
+   */
+  onExposureChange?: (value: number) => void;
   /**
    * Fired when the level-of-detail mode changes (either from a `setLodMode`
    * call or at engine init to seed React's initial state).

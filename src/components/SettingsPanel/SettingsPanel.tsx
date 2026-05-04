@@ -179,6 +179,18 @@ type Props = {
   toneMapCurve?: ToneMapCurve;
   /** Called when the user picks a different tone-map curve. */
   onToneMapCurveChange?: (curve: ToneMapCurve) => void;
+  /**
+   * Current HDR exposure multiplier — applied to the HDR signal *before*
+   * the tone-map curve runs, so a low exposure (~0.3) brings cluster
+   * cores out of saturation while a high one (~2.5) lifts the cosmic
+   * web in dim regions.  Optional so call sites that don't care about
+   * exposure (e.g. older fixtures) keep typechecking unchanged; the
+   * slider section is gated on both this and the change callback being
+   * present.
+   */
+  exposure?: number;
+  /** Called when the user drags the exposure slider. */
+  onExposureChange?: (value: number) => void;
 
   // ── SpaceMouse 6DOF input (optional, WebHID-only) ─────────────────────────
   //
@@ -249,6 +261,8 @@ export function SettingsPanel({
   onAbsMagLimitChange,
   toneMapCurve,
   onToneMapCurveChange,
+  exposure,
+  onExposureChange,
 }: Props): ReactNode {
   // Guard: only render the survey-toggle section when the parent has wired
   // *both* the current mask and the toggle callback. Either alone would be
@@ -287,6 +301,13 @@ export function SettingsPanel({
   // unlike the biasMode dropdown's roadmap entries).
   const showToneCurveControls =
     toneMapCurve !== undefined && onToneMapCurveChange !== undefined;
+
+  // Exposure slider gate — independent of the tone-curve dropdown so a
+  // caller can wire one without the other (mostly defensive: in practice
+  // App.tsx wires both together).  Same idiom as every other optional
+  // section in this panel.
+  const showExposureControl =
+    exposure !== undefined && onExposureChange !== undefined;
 
   return (
     <div className={styles.settingsPanel} aria-label="Renderer settings">
@@ -421,6 +442,36 @@ export function SettingsPanel({
               ))}
             </select>
           </div>
+          {/* ── Exposure ──────────────────────────────────────────────────────
+            Stacked label-on-top / slider-below layout matching the point-size
+            and brightness sliders below.  Exposure multiplies the HDR signal
+            *before* the tone-map curve runs, so dragging it left dims cluster
+            cores back below saturation and dragging it right lifts the cosmic
+            web out of the noise floor.  The engine clamps to [0.05, 16]; we
+            cap the slider at 4.0 because anything past ~3 already over-bakes
+            the brightest cores under Reinhard / ACES.  Tucked into the same
+            Tone-curve subsection (rather than a separate one) because the
+            two controls work together: curve choice sets the shape, exposure
+            sets where on that shape the per-pixel signal lands. */}
+          {showExposureControl && (
+            <>
+              <div className={styles.panelRow}>
+                <label htmlFor="slider-exposure">Exposure</label>
+                <span className={styles.panelValue}>{exposure.toFixed(2)}×</span>
+              </div>
+              <div className={styles.panelRow}>
+                <input
+                  id="slider-exposure"
+                  type="range"
+                  min={0.1}
+                  max={4.0}
+                  step={0.05}
+                  value={exposure}
+                  onChange={(e) => onExposureChange(parseFloat(e.target.value))}
+                />
+              </div>
+            </>
+          )}
           <div className={styles.panelDivider} role="separator" />
         </>
       )}
