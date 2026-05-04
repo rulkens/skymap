@@ -5,8 +5,12 @@
  * Pipeline:
  *
  *   1. Read public/data/{sdss,2mrs,glade}.bin → merged xyz positions
- *   2. Write data/raw/galaxies_merged.tsv (one line per galaxy: "x y z")
- *   3. Run DisPerSE: mse + skelconv (default 5σ persistence, 2 smoothing passes)
+ *   2. Write data/raw/galaxies_merged.tsv (DisPerSE ASCII-survey format,
+ *      header `px py pz` followed by one line per galaxy: `x y z`)
+ *   3. Run DisPerSE: delaunay_3D → mse → skelconv (default 5σ
+ *      persistence, 2 smoothing passes).  delaunay_3D is required because
+ *      mse cannot operate on a raw point cloud — it needs the Delaunay
+ *      simplicial complex + DTFE density field that delaunay_3D produces.
  *   4. Parse the resulting .NDskl, convert to FilamentCloud, encode FILA v1
  *   5. Write public/data/filaments.bin
  *
@@ -18,9 +22,10 @@
  * raw-catalogue path.
  *
  * External requirements:
- *   - DisPerSE installed (`mse` and `skelconv` on PATH).  See README for
- *     build instructions; this script throws a friendly error if either
- *     binary is missing.
+ *   - DisPerSE installed (`delaunay_3D`, `mse`, and `skelconv` on PATH).
+ *     See README for build instructions; this script throws a friendly
+ *     error if any binary is missing.  Note delaunay_3D is only built if
+ *     CGAL was available at DisPerSE configure time.
  *   - ~16 GB RAM during the `mse` step (DisPerSE peaks high).
  *   - 6-12 hours wall time on a workstation for the merged catalogue.
  *
@@ -35,7 +40,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { decodePointCloud } from '../src/data/pointCloudFormat.js';
@@ -80,12 +85,28 @@ function parseArgs(): { cut: number; smooth: number } {
  * loudly with a pointer to the README so the operator knows what to fix.
  */
 function checkDisperse(): void {
-  for (const bin of ['mse', 'skelconv'] as const) {
-    const r = spawnSync(bin, ['--help'], { encoding: 'utf8' });
+  // delaunay_3D, mse and skelconv all participate in the pipeline, so we
+  // probe each one up front.  delaunay_3D in particular is *optional* in
+  // the DisPerSE build (it requires CGAL); a CGAL-less install will have
+  // mse/skelconv but not delaunay_3D, and the failure mode without an
+  // up-front check is a confusing "command not found" buried under the
+  // multi-second startup of the first stage.
+  //
+  // delaunay_3D (unlike the other two) prints usage and exits with status
+  // 0 when called with no arguments, so we probe it that way; passing
+  // `--help` would still work but is not what the binary documents.
+  const probes: Array<readonly [string, string[]]> = [
+    ['delaunay_3D', []],
+    ['mse', ['--help']],
+    ['skelconv', ['--help']],
+  ];
+  for (const [bin, args] of probes) {
+    const r = spawnSync(bin, args, { encoding: 'utf8' });
     if (r.error || r.status !== 0) {
       process.stderr.write(
-        `error: DisPerSE \`${bin}\` binary not found on PATH.\n` +
-          'Install: see README "Filament skeleton" section.\n',
+        `error: DisPerSE \`${bin}\` binary not found on PATH (or returned non-zero).\n` +
+          'Install: see README "Filament skeleton" section.\n' +
+          '         delaunay_3D requires CGAL at DisPerSE build time.\n',
       );
       process.exit(1);
     }
@@ -136,6 +157,15 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
  * Materialise the per-galaxy positions as a TSV file DisPerSE can read.
  * One line per galaxy, three space-separated floats: `x y z` in Mpc.
  *
+ * The leading `px py pz` header is *not optional* — it is what makes
+ * DisPerSE's `isAsciiSurvey()` (see `src/C/asciiSurvey.c`) classify the
+ * file as an ASCII point survey rather than fall through to the generic
+ * `NDfield` / FITS detectors and ultimately fail with the unhelpful
+ * "ERROR in sampledDataInput: could not read file." message.  Without
+ * the header, `delaunay_3D` rejects the file before reading a single
+ * point.  Other column names DisPerSE understands are documented in
+ * `asciiSurvey.c`: `id, vx/vy/vz, ra/dec, dist, z, mass`.
+ *
  * We build the line array first, then `writeFileSync` once.  An earlier
  * version streamed line-by-line via `fs.appendFile` and was ~30× slower
  * for ~3 M galaxies thanks to per-line syscall overhead.  3 M short
@@ -143,7 +173,7 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
  * is fine here.
  */
 function writeTsvInput(path: string, positions: Float32Array, count: number): void {
-  const lines: string[] = [];
+  const lines: string[] = ['px py pz'];
   for (let i = 0; i < count; i++) {
     lines.push(
       `${positions[i * 3 + 0]!} ${positions[i * 3 + 1]!} ${positions[i * 3 + 2]!}`,
@@ -157,24 +187,117 @@ function writeTsvInput(path: string, positions: Float32Array, count: number): vo
 }
 
 /**
- * Run DisPerSE in two stages and return the path of the ASCII NDskl
- * file the parser will consume.
+ * Run `delaunay_3D` to build a Delaunay tessellation of the point set
+ * and return the path to the resulting `.NDnet` file.
  *
- *   1. `mse` extracts the Morse-Smale complex from the point set and
- *      writes a binary `.NDskl` next to the input.  `--upSkl` asks for
- *      the up-skeleton (filaments along ascending density gradient);
- *      `--forceLoops` keeps closed loops in the cosmic web; `--nsig N`
- *      sets the persistence cut in σ.
+ * Why this stage exists at all
+ * ----------------------------
+ * `mse` does not consume raw point clouds — it expects an N-d simplicial
+ * complex (a "network" in DisPerSE-speak, the `.NDnet` format) annotated
+ * with a per-vertex scalar field.  For an unstructured galaxy point set
+ * the natural complex is the Delaunay tessellation, and the natural
+ * scalar field is the Delaunay Tessellation Field Estimator (DTFE)
+ * density at each vertex.  Both are produced by `delaunay_3D` (which
+ * links against CGAL for the tessellation itself); the resulting
+ * `.NDnet` carries DTFE values in its `field_value` field, which `mse`
+ * then treats as the function whose Morse-Smale complex defines the
+ * cosmic-web filaments.
+ *
+ * Why we got this wrong before
+ * ----------------------------
+ * The previous `runDisperse` skipped this stage and handed the raw TSV
+ * directly to `mse`.  `mse` accepts a TSV/ASCII-survey only when it can
+ * find a per-vertex scalar field already declared in the file (e.g. from
+ * a FITS image or pre-built NDnet); on a plain `px py pz` survey it
+ * silently produces no output and exits, which is what made `skelconv`
+ * (the next stage) fall over with a `null` exit status.  The DisPerSE
+ * README documents this as a three-step pipeline (delaunay → mse →
+ * skelconv) but the older two-step recipe at the top of the README is
+ * for *image* inputs (FITS), not point sets.
+ *
+ * Output filename gotcha
+ * ----------------------
+ * `delaunay_3D` writes the NDnet using the *basename* of the input
+ * (directory stripped) into the current working directory — not next to
+ * the input file.  Verified empirically with a 200-point test: input
+ * `/path/to/test_pts.tsv` produces `<cwd>/test_pts.tsv.NDnet`.  We work
+ * around this by setting `cwd` to the input's directory, so the NDnet
+ * lands where the rest of the pipeline expects.
+ */
+function runDelaunay3D(tsvPath: string): string {
+  const inputDir = dirname(tsvPath);
+  const inputBase = basename(tsvPath);
+  const ndnetPath = resolve(inputDir, `${inputBase}.NDnet`);
+
+  // Resume: if a previous run already built the Delaunay tessellation,
+  // skip this stage.  delaunay_3D is deterministic (the tessellation of a
+  // fixed point set is unique up to floating-point ties broken by CGAL's
+  // exact predicates), so the cached file is always valid for the same
+  // input.  The TSV writer above is fast (~3 s for 2.5 M galaxies); the
+  // tessellation itself is ~14 s, also cheap, but the output is ~1 GB
+  // and re-writing it on every run is wasteful when the next stage may
+  // be the one that crashed.  See the resume rationale on `runDisperse`
+  // below for the wider story.
+  if (existsSync(ndnetPath)) {
+    process.stderr.write(
+      `  found existing Delaunay tessellation at ${ndnetPath} — skipping delaunay_3D\n`,
+    );
+    return ndnetPath;
+  }
+
+  process.stderr.write(`running delaunay_3D on ${tsvPath}…\n`);
+  const r = spawnSync('delaunay_3D', [tsvPath], {
+    stdio: 'inherit',
+    cwd: inputDir,
+  });
+  if (r.status !== 0) {
+    throw new Error(`delaunay_3D failed with exit code ${r.status}`);
+  }
+  if (!existsSync(ndnetPath)) {
+    throw new Error(
+      `delaunay_3D exited 0 but expected output ${ndnetPath} is missing`,
+    );
+  }
+  return ndnetPath;
+}
+
+/**
+ * Run `mse` and `skelconv` on the Delaunay tessellation produced upstream
+ * and return the path of the ASCII NDskl file the parser will consume.
+ *
+ *   1. `mse` extracts the Morse-Smale complex from the NDnet and writes
+ *      a binary up-skeleton next to it.  `-upSkl` asks for the up-
+ *      skeleton (filaments along ascending density gradient);
+ *      `-forceLoops` keeps closed loops in the cosmic web;
+ *      `-robustness` computes the per-arc robustness measure (without
+ *      it, skelconv's `-trimBelow robustness` aborts with a missing-
+ *      field error); `-nsig N` sets the persistence cut in σ.
  *
  *   2. `skelconv` smooths the skeleton, trims segments below the
  *      robustness threshold, and converts the binary to ASCII so the
  *      JS parser doesn't have to decode the proprietary binary form.
  *
- * The output filename pattern is `<input>.NDskl.S<cut>.NDskl_ascii` —
- * skelconv composes it deterministically from the cut value, which is
- * why we pass `cut` as both the persistence threshold and the trim
- * level.
+ * Output filename gotchas
+ * -----------------------
+ * Verified empirically against DisPerSE 0.9.25:
+ *   - mse writes `<cwd>/<basename(NDnet)>_s<nsig>.up.NDskl`.  Note the
+ *     directory of the input is stripped (same gotcha as delaunay_3D)
+ *     and the suffix is `_s<N>` not `.s<N>`.
+ *   - skelconv with `-smooth N -trimBelow robustness X -to NDskl_ascii`
+ *     writes `<input>.S<smooth-zero-padded-3>.TRIM.a.NDskl`.  The "S"
+ *     suffix tracks the *smoothing* count, not the cut value (an earlier
+ *     version of this script assumed `S<cut>`).  TRIM is appended only
+ *     when `-trimBelow` was supplied; "a" marks the ASCII output.
  *
+ * Note on flag syntax
+ * -------------------
+ * mse uses single-dash flags (`-upSkl`, not `--upSkl`).  Passing
+ * double-dash forms causes mse to print "What is --upSkl ???" to
+ * stdout, exit 0, and produce no output — exactly the silent failure
+ * that previously cascaded into a NULL-status skelconv crash.
+ *
+ * Argv style
+ * ----------
  * We use `spawnSync` with the array argv form rather than `execSync`
  * with template-string interpolation: the array form bypasses the shell
  * entirely, so paths with spaces (the project's SDSS CSV already lives
@@ -183,17 +306,92 @@ function writeTsvInput(path: string, positions: Float32Array, count: number): vo
  * checks the exit code and throws with the binary name + status so the
  * outer error handler can report something actionable.
  */
-function runDisperse(tsvPath: string, cut: number, smooth: number): string {
-  process.stderr.write(`running mse on ${tsvPath} (this can take hours)…\n`);
-  const mseResult = spawnSync(
-    'mse',
-    [tsvPath, '--upSkl', '--forceLoops', '--nsig', String(cut)],
-    { stdio: 'inherit' },
-  );
-  if (mseResult.status !== 0) {
-    throw new Error(`mse failed with exit code ${mseResult.status}`);
+function runDisperse(ndnetPath: string, cut: number, smooth: number): string {
+  const inputDir = dirname(ndnetPath);
+  const ndnetBase = basename(ndnetPath);
+  const mscPath = resolve(inputDir, `${ndnetBase}.MSC`);
+  const skelRaw = resolve(inputDir, `${ndnetBase}_s${cut}.up.NDskl`);
+
+  // ── Resume policy ───────────────────────────────────────────────────────
+  //
+  // The mse stage runs in two halves: build the Morse-Smale complex
+  // (~22 min wall-clock for 2.5 M galaxies; writes `<ndnet>.MSC`) and
+  // then compute persistence pairs + emit the up-skeleton (`.up.NDskl`).
+  // The MSC half is the expensive one — 132 kCPU-seconds across threads
+  // in the production run.  If a run is interrupted *between* the two
+  // halves (e.g. an agent's wall-clock timeout SIGKILL'd the wrapper
+  // after MSC was on disk but before the skeleton was), restarting from
+  // scratch redoes the expensive half for no reason.
+  //
+  // mse's `-loadMSC <fname>` flag exists exactly for this case: skip the
+  // gradient + complex-construction passes, jump straight to persistence
+  // pairs against the cached MSC.  We branch into three paths:
+  //
+  //   1. `.up.NDskl` already exists → skip mse entirely.  An ascii-skel
+  //      pass might still need to run if the user changed `--smooth`,
+  //      but the binary skeleton is reusable across smoothing values.
+  //   2. `.MSC` exists but `.up.NDskl` doesn't → run mse with
+  //      `-loadMSC <mscPath>` so the heavy compute is reused.  Same
+  //      `-nsig`, `-upSkl`, `-forceLoops`, `-robustness` flags as the
+  //      from-scratch path: these control the persistence-pair phase
+  //      and the skeleton output, not the MSC build, so they're still
+  //      load-bearing here.
+  //   3. Neither exists → from-scratch run.
+  //
+  // Note: changing `--cut` *between* runs flows through `-nsig` to the
+  // persistence-pair phase, which is downstream of the MSC; the cached
+  // MSC is still valid.  So `-loadMSC` is safe across cut sweeps too.
+  // (Re-tessellating with delaunay_3D is the only stage that depends on
+  // input geometry, and that stage is also cached upstream.)
+  if (existsSync(skelRaw)) {
+    process.stderr.write(
+      `  found existing up-skeleton at ${skelRaw} — skipping mse\n`,
+    );
+  } else if (existsSync(mscPath)) {
+    process.stderr.write(
+      `  found existing MSC at ${mscPath} — resuming mse with -loadMSC\n`,
+    );
+    const mseResult = spawnSync(
+      'mse',
+      [
+        ndnetPath,
+        '-loadMSC',
+        mscPath,
+        '-upSkl',
+        '-forceLoops',
+        '-robustness',
+        '-nsig',
+        String(cut),
+      ],
+      { stdio: 'inherit', cwd: inputDir },
+    );
+    if (mseResult.status !== 0) {
+      throw new Error(`mse (loadMSC) failed with exit code ${mseResult.status}`);
+    }
+    if (!existsSync(skelRaw)) {
+      throw new Error(
+        `mse -loadMSC exited 0 but expected output ${skelRaw} is missing — ` +
+          'the cached MSC may be stale relative to the .NDnet input; ' +
+          `delete ${mscPath} and re-run to rebuild from scratch.`,
+      );
+    }
+  } else {
+    process.stderr.write(`running mse on ${ndnetPath} (this can take hours)…\n`);
+    const mseResult = spawnSync(
+      'mse',
+      [ndnetPath, '-upSkl', '-forceLoops', '-robustness', '-nsig', String(cut)],
+      { stdio: 'inherit', cwd: inputDir },
+    );
+    if (mseResult.status !== 0) {
+      throw new Error(`mse failed with exit code ${mseResult.status}`);
+    }
+    if (!existsSync(skelRaw)) {
+      throw new Error(
+        `mse exited 0 but expected output ${skelRaw} is missing — ` +
+          'check stderr for "What is ... ???" (flag spelling) or a quietly skipped pass.',
+      );
+    }
   }
-  const skelRaw = `${tsvPath}.NDskl`;
 
   process.stderr.write(`running skelconv (smooth=${smooth})…\n`);
   const skelResult = spawnSync(
@@ -208,12 +406,20 @@ function runDisperse(tsvPath: string, cut: number, smooth: number): string {
       '-to',
       'NDskl_ascii',
     ],
-    { stdio: 'inherit' },
+    { stdio: 'inherit', cwd: inputDir },
   );
   if (skelResult.status !== 0) {
     throw new Error(`skelconv failed with exit code ${skelResult.status}`);
   }
-  return `${skelRaw}.S${cut}.NDskl_ascii`;
+  // skelconv zero-pads the smoothing count to width 3 ("S002" not "S2").
+  const smoothTag = String(smooth).padStart(3, '0');
+  const asciiPath = `${skelRaw}.S${smoothTag}.TRIM.a.NDskl`;
+  if (!existsSync(asciiPath)) {
+    throw new Error(
+      `skelconv exited 0 but expected output ${asciiPath} is missing`,
+    );
+  }
+  return asciiPath;
 }
 
 async function main(): Promise<void> {
@@ -229,7 +435,13 @@ async function main(): Promise<void> {
   writeTsvInput(tsvPath, positions, count);
   process.stderr.write(`  wrote ${tsvPath}\n`);
 
-  const ndsklPath = runDisperse(tsvPath, cut, smooth);
+  // Three-stage DisPerSE pipeline: build the Delaunay tessellation +
+  // DTFE field, then extract the persistent skeleton, then convert to
+  // ASCII.  See the per-function headers for filename gotchas.
+  const ndnetPath = runDelaunay3D(tsvPath);
+  process.stderr.write(`  built Delaunay tessellation at ${ndnetPath}\n`);
+
+  const ndsklPath = runDisperse(ndnetPath, cut, smooth);
   process.stderr.write(`  parsed skeleton at ${ndsklPath}\n`);
 
   const skel = parseNDskl(readFileSync(ndsklPath, 'utf8'));
