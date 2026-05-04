@@ -443,34 +443,26 @@ export function App(): React.ReactElement {
           // auto-LOD's mask, sometimes forcing the user to click twice.
           handleRef.current?.setSourceVisible?.(s, visible);
         }}
-        lodMode={lodMode}
-        onSetLodMode={(mode) => {
-          // No optimistic local update needed — the engine will fire
-          // `onLodModeChange(mode)` synchronously, which calls `setLodMode`.
-          // But we set it here too for snappier feel and so a future
-          // refactor that drops the synchronous echo doesn't silently
-          // break the UI.
-          setLodMode(mode);
-          handleRef.current?.setLodMode?.(mode);
-        }}
-        // ── SpaceMouse 6DOF input wiring (optional, WebHID-only) ─────────
+        // Auto-LOD UI is intentionally hidden — the toggle never improved
+        // the user experience enough to justify the panel real estate, and
+        // explaining "manual override" to anyone who clicks it costs more
+        // than the feature is worth.  The engine itself still runs auto-LOD
+        // internally (it drives the survey-mask gating at low zoom), so we
+        // simply omit the `lodMode` / `onSetLodMode` props — SettingsPanel
+        // gates the whole section on both being defined and elides it
+        // automatically.  Re-expose by re-adding the two props here if the
+        // user override is ever needed again.
+        // ── SpaceMouse 6DOF input wiring (hidden) ────────────────────────
         //
-        // `isWebHIDSupported()` is a pure feature check (one property
-        // lookup); calling it on every render is harmless. The Connect
-        // button delegates to the engine handle, which lazy-instantiates
-        // the WebHID glue — so on Firefox/Safari the import never executes
-        // any HID code (the `isWebHIDSupported` check inside short-circuits).
-        spaceMouseSupported={isWebHIDSupported()}
-        spaceMouseConnected={spaceMouseConnected}
-        onConnectSpaceMouse={async () => {
-          const ok = await handleRef.current?.connectSpaceMouse?.();
-          setSpaceMouseConnected(!!ok);
-        }}
-        spaceMouseSensitivity={spaceMouseSensitivity}
-        onSpaceMouseSensitivityChange={(v) => {
-          setSpaceMouseSensitivity(v);
-          handleRef.current?.setSpaceMouseSensitivity?.(v);
-        }}
+        // The SpaceMouse panel is intentionally suppressed for now — the
+        // feature still works at the engine layer (the WebHID glue lives
+        // in services/input/ and stays callable), but the UI control was
+        // confusing for the ~99 % of users without a 3DConnexion device.
+        // SettingsPanel gates the whole section on `spaceMouseSupported`,
+        // so passing `false` (regardless of the actual feature check) hides
+        // it cleanly.  Re-expose by replacing this with `isWebHIDSupported()`
+        // and re-adding the connected/sensitivity props alongside.
+        spaceMouseSupported={false}
         // ── Density correction (Malmquist bias) ──────────────────────────
         //
         // Forward straight to the engine handle.  The engine fires its echo
