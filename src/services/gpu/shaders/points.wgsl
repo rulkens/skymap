@@ -1296,8 +1296,28 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // every frame (8 px below 14 px in the current settings), so the
   // division is well-defined as long as the engine never sets
   // start == end.
+  // `in.sizePx` is the BILLBOARD radius in pixels (max of `u.pointSizePx`
+  // floor and `apparentPxRadius`).  Important: `apparentPxRadius` is 2×
+  // the galaxy's actual diameter in screen pixels — `GALAXY_RADIUS_MPC`
+  // is `diameterKpc * 2 / 1000`, deliberately oversized to give the
+  // points pass a soft halo.  So `sizePx` is 2× the JS-side `px =
+  // (dMpcRow / camDist) * pxPerRad` that the procedural-disk emission
+  // gate compares against in `thumbnailSubsystem.ts`.
+  //
+  // To make the point's fade-OUT align with the disk's fade-IN on the
+  // same screen-pixel scale, we divide by 2 here.  Without this factor
+  // the point fades out at JS px ≈ 4..7 while the disk only starts to
+  // emit at JS px > 8, leaving a band (JS px ∈ ~7..8) where NEITHER
+  // pass renders — a visible "gap" in the crossfade when zooming
+  // through the band.
+  //
+  // For very small galaxies where `sizePx` is clamped to
+  // `u.pointSizePx` (typically ~2.5), `apparentDiameterPx` is below
+  // any reasonable fade-band lower bound, so `clamp(0, 1)` keeps fadeT
+  // at 0 and the fade is inactive — correct behaviour.
+  let apparentDiameterPx = in.sizePx * 0.5;
   let fadeT = clamp(
-    (in.sizePx - u.pxFadeStart) / (u.pxFadeEnd - u.pxFadeStart),
+    (apparentDiameterPx - u.pxFadeStart) / (u.pxFadeEnd - u.pxFadeStart),
     0.0, 1.0,
   );
   let pointAlphaMult = 1.0 - fadeT * fadeT * (3.0 - 2.0 * fadeT);
