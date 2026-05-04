@@ -43,9 +43,9 @@ Open http://localhost:5173 — drag to orbit, scroll to zoom. Without real data 
 
 The renderer can ingest up to three galaxy catalogs in parallel. Each is just a list of galaxies with positions and brightnesses, but they cover the sky differently:
 
-- **SDSS** (Sloan Digital Sky Survey) — a deep, half-sky photographic + spectroscopic survey from a single 2.5 m telescope in New Mexico. Best deep northern coverage; we use a slice of ~500 k galaxies.
-- **2MRS** (2MASS Redshift Survey) — a smaller (~45 k), all-sky local-universe redshift survey. Useful for galaxies close to us in any direction.
-- **GLADE** — a million-galaxy mega-catalog cross-matched from several surveys. Fills in everywhere SDSS and 2MRS don't reach.
+- **SDSS** (Sloan Digital Sky Survey) — a deep photographic + spectroscopic survey from a single 2.5 m telescope in New Mexico, covering roughly the northern third of the sky. Best dense coverage in its footprint; we use a slice of ~500 k galaxies.
+- **2MRS** (2MASS Redshift Survey) — a smaller (~45 k), all-sky redshift survey concentrated on the local volume around the Milky Way. Useful for nearby galaxies in any direction.
+- **GLADE** — a million-galaxy all-sky mega-catalog cross-matched from several surveys. Reaches roughly the same radial depth as SDSS, but covers the full sky — so its main contribution is filling in the celestial regions outside SDSS's northern footprint, while also extending well beyond 2MRS's local volume.
 
 You can run with any one, any two, or all three. The renderer falls back to synthetic data if no `.bin` files are present.
 
