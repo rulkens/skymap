@@ -130,6 +130,7 @@ import {
 } from './spaceMouseSubsystem';
 import { createClickResolver, type ClickResolver } from './clickHandler';
 import { attachEngineInputs, type InputBindings } from './inputBindings';
+import { renderFrame } from './renderFrame';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -984,11 +985,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
         // Snapshot the current camera state into a combined view-projection matrix.
         const vp = cam ? computeViewProj(cam) : null;
-        if (!vp || !renderer) {
+        if (!vp || !renderer || !cam || !thumbnails) {
           // Camera/renderer not ready yet — try again next frame.
           // (This branch only fires during the brief window between
           // engine startup and the first cloud landing; once both are
           // present it's never taken.)
+          //
+          // We additionally guard on `thumbnails` being non-null so the
+          // renderFrame() dispatch below can take the subsystem
+          // unconditionally.  The subsystem is allocated alongside the
+          // GPU device in the startup IIFE, so by the time this branch
+          // is reachable both are present together.  The `cam` guard
+          // is redundant with the `vp` check (vp is null when cam is)
+          // but kept explicit so the type narrowing flows cleanly into
+          // the renderFrame call.
           scheduler.requestRender();
           return;
         }
@@ -1012,136 +1022,50 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           }
         }
 
-        // ── Command recording ─────────────────────────────────────────────
-
-        const encoder = device.createCommandEncoder();
-
-        // Clear colour is pure black (r:0, g:0, b:0).
-        // We use *additive* blending: starting from black (0,0,0) gives the
-        // maximum dynamic range — dense overlap regions bloom bright.
+        // ── GPU dispatch ──────────────────────────────────────────────────
         //
-        // The colour attachment is the HDR rgba16float offscreen target,
-        // NOT the swap chain.  Every visible pass below (points, quads,
-        // disks) accumulates into this float buffer; the swap chain is
-        // written exactly once at the end of the frame by the tone-map
-        // pass, which compresses the HDR signal into [0, 1].  This is the
-        // critical fix for cluster cores blowing out to flat white at
-        // bgra8unorm — without it, additive overlap >1.0 just clips.
-        const pass = encoder.beginRenderPass({
-          colorAttachments: [
-            {
-              view: hdrTarget.view,
-              clearValue: { r: 0, g: 0, b: 0, a: 1 },
-              loadOp: 'clear', // wipe to clearValue at pass start
-              storeOp: 'store', // write results to the HDR target
-            },
-          ],
-        });
-
-        // Upload per-frame uniforms (viewProj, viewport, selectedIndex,
-        // camera position, pxPerRad) and issue the instanced draw call.
-        //
-        // `pointSizePx` and `brightness` come from the settings-panel closure
-        // variables; they start at 2.5 and 1.0 and are updated by the handle
-        // setters `setPointSize` / `setBrightness` below.  `pointSizePx` now
-        // acts as a *floor*: galaxies whose apparent angular radius exceeds
-        // it grow to that real disc size; far galaxies stay at the floor so
-        // they remain visible as faint dots.  See points.wgsl for the math.
-        //
-        // selectedIndex: 0xffffffff is the sentinel for "nothing selected" —
-        // the max u32 value, which can never match a real point index.
-        //
-        // pxPerRad = viewport.height / (2 · tan(fovY/2)) — the standard
-        // pinhole conversion from radians to screen pixels.  Pre-computed on
-        // the CPU because `tan` is one of the more expensive shader
-        // intrinsics on mobile GPUs and the value is frame-constant.
-        const drawPxPerRad =
-          cam !== null
-            ? canvas.height / (2 * Math.tan(cam.fovYRad / 2))
-            : 1;
-        const drawCamPos: Readonly<[number, number, number]> =
-          cam !== null
-            ? [cam.position[0], cam.position[1], cam.position[2]]
-            : [0, 0, 0];
-        renderer.draw(
-          pass,
-          vp,
-          [canvas.width, canvas.height],
-          pointSizePx,
-          brightness,
-          selectedIndex !== null ? selectedIndex : 0xffffffff >>> 0,
-          visibleSourceMask,
-          drawCamPos,
-          drawPxPerRad,
-          highlightFallback,
-          realOnlyMode,
-          biasMode,
-          absMagLimit,
-          apparentMagLimit,
-          schechterMStar,
-          schechterAlpha,
-          depthFadeEnabled,
-        );
-
-        // ── Galaxy thumbnail pass ─────────────────────────────────────────
-        //
-        // The whole pipeline (atlas slot allocation, priority-queued
-        // bitmap fetch, retry-storm protection, back-to-front sort, and
-        // the QuadRenderer + DiskRenderer draws) is encapsulated in
-        // `thumbnailSubsystem.ts`.  Engine-side we just hand it the
-        // per-frame inputs the loop reads — every closure variable the
-        // old inline body touched is now an explicit field on
-        // `ThumbnailFrameInput`.
-        //
-        // We gate the call on `galaxyTexturesEnabled` so users who
-        // disable thumbnails pay nothing per frame.  Side effect: the
-        // subsystem's LRU clock pauses with the toggle, which is fine
-        // because nothing else reads it while the toggle is off.
-        if (galaxyTexturesEnabled && cam && thumbnails) {
-          thumbnails.runFrame({
-            cam,
-            clouds,
+        // The whole encoder lifecycle (createCommandEncoder, beginRenderPass
+        // against the HDR target, pointRenderer.draw, thumbnails.runFrame,
+        // pass.end, toneMapPass.draw, queue.submit) lives in `renderFrame.ts`.
+        // Every closure variable that block read is forwarded as an explicit
+        // field on `RenderFrameInput` so this site stays free of GPU
+        // bookkeeping.  See that module's docstring for the in-order
+        // pass description and the rationale for keeping pick + auto-LOD
+        // out here in `frame()`.
+        renderFrame({
+          cam,
+          canvasWidth: canvas.width,
+          canvasHeight: canvas.height,
+          viewProj: vp,
+          device,
+          context,
+          hdrTargetView: hdrTarget.view,
+          pointRenderer: renderer,
+          toneMapPass,
+          thumbnails,
+          quadRenderer,
+          diskRenderer,
+          settings: {
+            pointSizePx,
+            brightness,
+            selectedIndex,
             visibleSourceMask,
-            canvasSize: { width: canvas.width, height: canvas.height },
-            pass,
-            viewProj: vp,
-            pxPerRad: drawPxPerRad,
-            camPos: drawCamPos,
-            quadRenderer,
-            diskRenderer,
-            famousMeta,
-            famousXrefs,
-          });
-        }
-
-        pass.end();
-
-        // ── HDR → swap-chain tone-map ──────────────────────────────────────
-        //
-        // After every additive contribution has been accumulated into the
-        // HDR target, run the fullscreen tone-map post-process to
-        // compress the linear-light values into the swap chain's
-        // displayable range.  Both the HDR pass above and this tone-map
-        // pass are encoded into the same `encoder` — they get submitted
-        // together below, in order, so the GPU sees:
-        //
-        //   1. clear+draw into hdrTarget (points/quads/disks)
-        //   2. fullscreen blit hdrTarget → swap chain (tone-map)
-        //
-        // Switching `toneMapCurve` between Linear / Reinhard / Asinh /
-        // Gamma 2 / ACES is a single 4-byte uniform write inside the
-        // pass — no pipeline rebuild, instant visual A/B.  See
-        // `services/gpu/toneMapPass.ts` for the full curve descriptions.
-        toneMapPass.draw(
-          encoder,
-          context.getCurrentTexture().createView(),
-          hdrTarget.view,
-          exposure,
-          toneMapCurve,
-        );
-
-        // Seal the command buffer and send it to the GPU.
-        device.queue.submit([encoder.finish()]);
+            highlightFallback,
+            realOnlyMode,
+            biasMode,
+            absMagLimit,
+            apparentMagLimit,
+            schechterMStar,
+            schechterAlpha,
+            depthFadeEnabled,
+            exposure,
+            toneMapCurve,
+            galaxyTexturesEnabled,
+          },
+          famousMeta,
+          famousXrefs,
+          clouds,
+        });
 
         // ── Throttled hover pick ──────────────────────────────────────────
         //
