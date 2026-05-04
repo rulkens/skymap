@@ -29,6 +29,27 @@ export const SLOT_COUNT = SLOTS_PER_ROW * SLOTS_PER_ROW; // 256
 
 type SlotEntry = { key: string; lastSeenFrame: number };
 
+/**
+ * Callback fired when LRU eviction kicks an old key out of the atlas.
+ *
+ * Why this exists: callers outside the atlas (notably the engine's
+ * thumbnail subsystem) maintain parallel maps keyed by the same string —
+ * `bitmapReady`, `bitmapFailed`, `bitmapReadyTime`.  Without an eviction
+ * notification, those maps grow without bound while the atlas's actual
+ * SlotEntry array stays capped at SLOT_COUNT — a small but real memory
+ * leak, AND a correctness issue: a key that was evicted, then later
+ * re-allocated to a different slot, would still be flagged as
+ * `bitmapReady` (so the engine would emit a QuadInstance reading from a
+ * slot that doesn't yet contain its bitmap, briefly displaying whichever
+ * galaxy now occupies that slot).
+ *
+ * The handler runs synchronously inside `allocate()` immediately before
+ * the slot's previous occupant is overwritten; callers can safely
+ * `.delete(key)` from their own maps without racing against another
+ * `allocate()` call.
+ */
+export type AtlasEvictHandler = (key: string) => void;
+
 export class TextureAtlas {
   // The GPU device is needed only by uploadBitmap (Task 5). Slot management
   // works without it, which is what the unit tests exercise.
@@ -41,8 +62,28 @@ export class TextureAtlas {
   // key without scanning the slots array.
   private readonly keyToSlot = new Map<string, number>();
 
+  // Optional eviction callback — see AtlasEvictHandler.  Stored as a single
+  // function (not an array) because the atlas has exactly one consumer at
+  // present (the thumbnail subsystem).  If we ever grow a second consumer,
+  // promoting this to an array of handlers is a one-line change.
+  private onEvict: AtlasEvictHandler | undefined;
+
   constructor(device: GPUDevice) {
     this.device = device;
+  }
+
+  /**
+   * Register a callback fired when LRU eviction overwrites an existing
+   * slot's contents.  See `AtlasEvictHandler` for the rationale; the
+   * thumbnail subsystem uses this to keep its `bitmapReady` /
+   * `bitmapFailed` maps in sync with the atlas's actual contents.
+   *
+   * Pass `undefined` to clear.  Calling more than once replaces the
+   * previous handler — the last writer wins, intentionally, because we
+   * want a clean tear-down path on engine destroy.
+   */
+  setEvictHandler(handler: AtlasEvictHandler | undefined): void {
+    this.onEvict = handler;
   }
 
   // ── GPU resource lifecycle ──────────────────────────────────────────────
@@ -157,6 +198,17 @@ export class TextureAtlas {
     }
     const evictedKey = this.slots[lruIdx]!.key;
     this.keyToSlot.delete(evictedKey);
+    // Fire the eviction handler BEFORE we overwrite the slot, so the
+    // handler can read any state keyed on `evictedKey` and safely clear
+    // its own bookkeeping.  Wrapped in try/catch because a thrown
+    // handler must not corrupt the atlas's invariants — log and proceed.
+    if (this.onEvict) {
+      try {
+        this.onEvict(evictedKey);
+      } catch (err) {
+        console.error('[TextureAtlas] onEvict handler threw:', err);
+      }
+    }
     this.slots[lruIdx] = { key, lastSeenFrame: frame };
     this.keyToSlot.set(key, lruIdx);
     return lruIdx;

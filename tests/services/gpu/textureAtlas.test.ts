@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   TextureAtlas,
   ATLAS_SIDE,
@@ -57,6 +57,62 @@ describe('TextureAtlas slot state machine', () => {
     a.release('obj-z');
     expect(a.lastSeenFrame('obj-z')).toBeUndefined();
     expect(a.allocate('obj-w', 2)).toBe(slot); // reuses freed slot
+  });
+
+  describe('onEvict handler', () => {
+    it('fires onEvict with the evicted key when LRU kicks an old slot', () => {
+      const a = newAtlas();
+      const onEvict = vi.fn();
+      a.setEvictHandler(onEvict);
+      // Fill the atlas with distinct lastSeenFrame values; obj-0 will be LRU.
+      for (let i = 0; i < SLOT_COUNT; i++) {
+        a.allocate(`obj-${i}`, i);
+      }
+      expect(onEvict).not.toHaveBeenCalled();
+      // Allocating a new key forces eviction of obj-0.
+      a.allocate('obj-new', 9999);
+      expect(onEvict).toHaveBeenCalledTimes(1);
+      expect(onEvict).toHaveBeenCalledWith('obj-0');
+    });
+
+    it('does NOT fire onEvict on free-slot allocation or refresh', () => {
+      const a = newAtlas();
+      const onEvict = vi.fn();
+      a.setEvictHandler(onEvict);
+      // Allocations into free slots — no eviction.
+      a.allocate('obj-1', 1);
+      a.allocate('obj-2', 1);
+      // Re-allocate same key — idempotent, no eviction.
+      a.allocate('obj-1', 5);
+      expect(onEvict).not.toHaveBeenCalled();
+    });
+
+    it('a thrown handler does not break atlas invariants', () => {
+      const a = newAtlas();
+      a.setEvictHandler(() => {
+        throw new Error('handler boom');
+      });
+      // Suppress the expected console.error from the catch block so the
+      // test output stays clean.
+      const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      for (let i = 0; i < SLOT_COUNT; i++) a.allocate(`obj-${i}`, i);
+      // Eviction must still complete — the new key replaces the LRU slot.
+      const slot = a.allocate('obj-new', 9999);
+      expect(slot).toBe(0);
+      expect(a.lastSeenFrame('obj-0')).toBeUndefined();
+      expect(a.lastSeenFrame('obj-new')).toBe(9999);
+      errSpy.mockRestore();
+    });
+
+    it('setEvictHandler(undefined) clears the handler', () => {
+      const a = newAtlas();
+      const onEvict = vi.fn();
+      a.setEvictHandler(onEvict);
+      a.setEvictHandler(undefined);
+      for (let i = 0; i < SLOT_COUNT; i++) a.allocate(`obj-${i}`, i);
+      a.allocate('obj-new', 9999);
+      expect(onEvict).not.toHaveBeenCalled();
+    });
   });
 
   it('slotUv returns the [u0,v0,u1,v1] rectangle for a slot in [0,1] coords', () => {
