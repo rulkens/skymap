@@ -77,7 +77,9 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // conventions for sky-east vs world-X.
   let pos = instance.posSize.xyz;
   let halfWorld = instance.posSize.w;
-  let axisRatio = instance.orientation.x;
+  // Floor at 0.05 to avoid degenerate-edge-on disks collapsing the quad to a
+  // 1D line in the vertex stage; matches the disks.wgsl convention.
+  let axisRatio = max(instance.orientation.x, 0.05);
   let paRad = instance.orientation.y * 3.14159265 / 180.0;
 
   // Line of sight (camera → galaxy).
@@ -161,11 +163,11 @@ const BULGE_TINT = vec3<f32>(1.0, 0.6, 0.4);   // warm shift
 const DISK_TINT  = vec3<f32>(0.7, 0.85, 1.0);  // cool shift
 const TINT_MIX   = 0.3;
 
-// Same colour ramp the points pass uses — re-implementing here keeps
-// the two passes visually consistent.  See points.wgsl for the
+// Same colour ramp the points pass uses (kept under the same name for
+// greppable cross-shader consistency).  See points.wgsl for the
 // derivation; copying instead of factoring out because WGSL lacks an
 // import mechanism short of a proper preprocessor.
-fn colourRamp(t: f32) -> vec3<f32> {
+fn ramp(t: f32) -> vec3<f32> {
   // t ∈ [0, 2]: 0 = bluest, 1 = midpoint, 2 = reddest.
   let s = clamp(t * 0.5, 0.0, 1.0); // remap to [0, 1]
   let blue   = vec3<f32>(0.55, 0.75, 1.00);
@@ -188,7 +190,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   let intensity = bulge * BULGE_WEIGHT + disk * DISK_WEIGHT;
 
   // Colour: ramp base hue, then bias by which component dominates here.
-  let base = colourRamp(in.colourIndex);
+  let base = ramp(in.colourIndex);
   // Each component contributes a fraction of the tint shift in
   // proportion to its share of the total brightness.
   let bulgeShare = bulge * BULGE_WEIGHT / max(intensity, 1e-4);
