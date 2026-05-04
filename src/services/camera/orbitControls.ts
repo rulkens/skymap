@@ -67,6 +67,20 @@ export type OrbitControlsOptions = {
    * @param yCss  Vertical CSS pixel position of the click.
    */
   onClick?: (xCss: number, yCss: number) => void;
+  /**
+   * Called every time the camera state has been mutated by this module
+   * (any pointer drag, pan, or wheel zoom).  The engine routes this
+   * into its render scheduler so a single user gesture wakes the
+   * render loop for one frame.
+   *
+   * Optional for backwards compatibility with callers that don't yet
+   * use render-on-demand — those will simply not get the callback and
+   * the loop will need to be ticking via some other mechanism.
+   *
+   * Fired AFTER `updatePosition(cam)` so the camera state is fully
+   * settled before the engine reads it for the next frame.
+   */
+  onCameraChange?: () => void;
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -197,6 +211,10 @@ export function attachOrbitControls(
     // browser per active contact point (finger, pen tip, or mouse button).
     // Passing it back in `releasePointerCapture` targets the exact same contact.
     canvas.setPointerCapture(e.pointerId);
+    // Notify the engine so it can wake the render loop — any
+    // subsequent pointermove will fire the same callback.  Calling
+    // here too means the click→hover-clear path also gets a frame.
+    options?.onCameraChange?.();
   };
 
   // ── Pointer up — end drag (or click) ──────────────────────────────────────
@@ -309,6 +327,7 @@ export function attachOrbitControls(
       // only mutate target — the orbit framing stays intact.
       vec3.add(cam.target as vec3, cam.target as vec3, panDeltaScratch);
       updatePosition(cam);
+      options?.onCameraChange?.();
       return;
     }
 
@@ -341,6 +360,7 @@ export function attachOrbitControls(
     // The render loop reads cam.position (via computeViewProj) on the next
     // requestAnimationFrame tick, so this mutation is effectively immediate.
     updatePosition(cam);
+    options?.onCameraChange?.();
   };
 
   // ── Wheel — zoom ───────────────────────────────────────────────────────────
@@ -377,6 +397,7 @@ export function attachOrbitControls(
     const factor = Math.exp(e.deltaY * 0.001);
     cam.distance = clampDistance(cam.distance * factor);
     updatePosition(cam);
+    options?.onCameraChange?.();
   };
 
   // ── Register listeners ─────────────────────────────────────────────────────

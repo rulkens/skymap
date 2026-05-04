@@ -784,6 +784,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       addCanvasListener('pointermove', (e) => {
         const pe = e as PointerEvent;
         latestMouseCss = { x: pe.clientX, y: pe.clientY };
+        // Wake the loop so the next frame can issue a hover pick.
+        // The pick itself is async (1-2 frames later) but its .then
+        // also calls requestRender (Task 5) so the selection halo
+        // updates as soon as the readback lands.
+        scheduler.requestRender();
       });
 
       // When the pointer leaves the canvas, clear hover state.
@@ -791,6 +796,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       addCanvasListener('pointerleave', () => {
         latestMouseCss = null;
         setHovered(null);
+        // Render once so the selection halo (if any) is recomputed
+        // for the cleared hover state.
+        scheduler.requestRender();
       });
 
       // ── Drag detection (suppress hover picks during camera rotation) ─────
@@ -809,6 +817,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         currentTween = null;
         pointerDown = true;
         setHovered(null);
+        scheduler.requestRender();
       });
       addWindowListener('pointerup', () => {
         pointerDown = false;
@@ -825,6 +834,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // pointerdown — pure drags (orbit gestures) are suppressed.
 
       detachControls = attachOrbitControls(canvas, cam, {
+        onCameraChange: () => {
+          // Camera moved — wake the render loop for one frame.
+          // Auto-LOD recompute, scale-bar refresh, and pick gate all
+          // run inside the next frame body.
+          scheduler.requestRender();
+        },
         onClick: (xCss, yCss) => {
           // Run a one-shot pick at the click position.
           // We don't use the throttle guard here — clicks are infrequent and
@@ -861,7 +876,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // `App.tsx` also has a `useEffect` that forwards Esc through the engine
       // handle's `clearSelection()` method — same result, both paths are fine.
       addWindowListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Escape') setSelected(null);
+        if (e.key === 'Escape') {
+          setSelected(null);
+          // Selection halo cleared; re-render with the new highlight
+          // index uniform.
+          scheduler.requestRender();
+        }
+      });
+
+      // Window resize: schedule one render so resizeCanvasToDisplay()
+      // (which runs at the top of the next frame body) sees the new
+      // size and recreates the HDR target.  Without this wake-up the
+      // canvas would stay at its old backing-store resolution until
+      // some other event happened to schedule a frame.
+      addWindowListener('resize', () => {
+        scheduler.requestRender();
       });
 
       // ── Status: ready ────────────────────────────────────────────────────
