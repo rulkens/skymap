@@ -211,6 +211,11 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     schechterMStar: -20.83,
     schechterAlpha: -1.2,
     depthFadeEnabled: true,
+    // Task 8 of procedural-disk-impostor: points-pass crossfade-OUT
+    // band thresholds.  Match the runtime defaults exported from
+    // `thumbnailSubsystem.ts` so the test fixture mirrors production.
+    pxFadeStartPoints: 8,
+    pxFadeEndPoints: 14,
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
     galaxyTexturesEnabled: true,

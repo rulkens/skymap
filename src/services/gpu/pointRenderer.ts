@@ -321,8 +321,12 @@ const ANGULAR_WEIGHT_BYTE_OFFSET = 48;
  *   bytes 148..151: schechterMLim     f32          (Task 4 — per-source) }
  *   bytes 152..155: schechterNRef     f32          (Task 4 — per-source) }
  *   bytes 156..159: _pad5             u32          (written as 0)        }
+ *   bytes 160..163: pxFadeStart       f32   (Task 8 procedural-disk band low)  }
+ *   bytes 164..167: pxFadeEnd         f32   (Task 8 procedural-disk band high) } 16 bytes
+ *   bytes 168..171: _padFade0         f32          (written as 0)               }
+ *   bytes 172..175: _padFade1         f32          (written as 0)               }
  *
- * Total: 160 bytes — a multiple of 16 ✓
+ * Total: 176 bytes — a multiple of 16 ✓
  *
  * WGSL uniform buffers follow rules similar to std140 (see WGSL spec §13,
  * "Memory Layout"). Each member must be aligned to its alignment value:
@@ -351,7 +355,19 @@ const ANGULAR_WEIGHT_BYTE_OFFSET = 48;
  *
  * BYTE-OFFSET CONSTANTS for the per-source partial uniform write below.
  */
-const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4; // 160 bytes
+// Task 8 of the procedural-disk-impostor plan appended a 16-byte block
+// for the points-pass crossfade-OUT thresholds (`pxFadeStart`,
+// `pxFadeEnd`, plus two pads to round up to the next 16-byte boundary):
+//
+//   bytes 160..163: pxFadeStart  f32   (procedural-disk crossfade band low)
+//   bytes 164..167: pxFadeEnd    f32   (procedural-disk crossfade band high)
+//   bytes 168..171: _padFade0    f32   (alignment pad)
+//   bytes 172..175: _padFade1    f32   (alignment pad)
+//
+// Total: 176 bytes — still a multiple of 16 ✓.  See the WGSL Uniforms
+// struct in `points.wgsl` for the rationale (single source of truth
+// for the fade band, alpha=0 instead of clip-space cull).
+const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; // 176 bytes
 
 /**
  * Production path for the off-thread bake.  Spawns a fresh
@@ -1590,6 +1606,24 @@ export class PointRenderer {
     schechterMStar: number,
     schechterAlpha: number,
     depthFadeEnabled: boolean,
+    /**
+     * Procedural-disk crossfade-OUT thresholds (Task 8 of the
+     * procedural-disk-impostor plan).  The points-pass fragment shader
+     * fades alpha to zero across the apparent-pixel-size band
+     * `[pxFadeStart, pxFadeEnd]` so the procedural-disk pass — which
+     * fades IN over the same band — can take over without a "double-
+     * bright donut" of overlapping passes.  Both ends are pixel
+     * thresholds in the same units as the vertex stage's `sizePx`
+     * (the apparent angular radius of the galaxy projected to screen).
+     *
+     * The engine should pass `PROCEDURAL_DISK_FADE_START_PX` and
+     * `PROCEDURAL_DISK_FADE_END_PX` from `./engine/thumbnailSubsystem`
+     * so both passes share a single source of truth — drift between
+     * them would re-introduce the double-bright donut on one side and
+     * a hard gap on the other.
+     */
+    pxFadeStart: number,
+    pxFadeEnd: number,
   ): void {
     // Nothing to draw if no source has been uploaded yet.
     if (this.clouds.size === 0) return;
@@ -1646,6 +1680,18 @@ export class PointRenderer {
     // u32[37..39] (_pad5/_pad6/_pad7) stay zero — they round the struct
     // out to a 16-byte boundary so a future vec3/vec4 append doesn't
     // silently break alignment.
+
+    // ── Procedural-disk crossfade-OUT thresholds (Task 8) ───────────────────
+    //
+    // Slots 40 + 41 (byte offsets 160 + 164) carry the apparent-pixel-
+    // size band the fragment shader fades alpha across.  Slots 42 + 43
+    // are reserved pads — they round the appended block out to a
+    // 16-byte boundary, matching the WGSL struct's `_padFade0/1` fields.
+    // The pads stay zero (Float32Array starts zero-initialised; we
+    // don't write them, so they're already 0.0).
+    f32[40] = pxFadeStart;          // bytes 160..163  pxFadeStart
+    f32[41] = pxFadeEnd;            // bytes 164..167  pxFadeEnd
+    // f32[42] / f32[43] (_padFade0 / _padFade1) stay zero.
 
     this.device.queue.writeBuffer(this.uniformBuffer_internal, 0, buf);
 

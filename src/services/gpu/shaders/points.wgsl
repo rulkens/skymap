@@ -226,6 +226,45 @@ struct Uniforms {
   schechterMLim: f32,
   schechterNRef: f32,
   _pad5: u32,
+
+  // ── Procedural-disk crossfade-OUT band (Task 8 of procedural-disk-impostor) ─
+  //
+  // The thumbnail subsystem's procedural-disk pass fades IN across an
+  // apparent-pixel-size band [pxFadeStart, pxFadeEnd] (= [8, 14] px in
+  // current settings) — below the start it's fully invisible, above the
+  // end it's fully opaque, and inside the band it ramps up via a
+  // smoothstep.  Without a complementary fade-OUT on the points pass,
+  // both passes would be fully present inside the band and the user
+  // would see a "double-bright donut" — same galaxy drawn twice with
+  // additive accumulation.
+  //
+  // We therefore feed the same two thresholds into this shader and
+  // multiply the per-fragment alpha by `1 - smoothstep(start, end, sizePx)`
+  // before output.  Outside [start, end] the multiplier is exactly 1.0
+  // (below start) or 0.0 (above end), so far-field rendering is byte-
+  // for-byte identical to before this task and only galaxies actively
+  // in the crossfade band feel the change.
+  //
+  // Why alpha=0 instead of vertex-stage `discard` / clip-space cull?
+  // The pick fragment entry point (`fsPick`) shares the vertex stage with
+  // `fs`; if we collapsed the billboard to off-screen-clip when sizePx
+  // exceeds end, the user would lose the ability to *click* a galaxy
+  // whose visual representation has handed off to the procedural-disk
+  // pass.  Selection rings and click hit-testing both still want the
+  // points-pass primitive to rasterise.  Multiplying alpha by zero in
+  // `fs` keeps the vertex stage and pick stage untouched while making
+  // the visual contribution invisible.
+  //
+  // pxFadeStart / pxFadeEnd are populated by `pointRenderer.draw` from
+  // engine-side constants imported from `./thumbnailSubsystem` so the
+  // two passes can never drift out of sync (a single source of truth).
+  // The two trailing pads round the appended payload up to a 16-byte
+  // boundary — without them the next vec3/vec4 a future task adds would
+  // silently mis-align.
+  pxFadeStart: f32,
+  pxFadeEnd: f32,
+  _padFade0: f32,
+  _padFade1: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -515,6 +554,32 @@ struct VSOut {
   // physically care about depth — but the alternative is a saturated
   // depth column through Earth that erases all visible structure).
   @location(12) @interpolate(flat) depthFade: f32,
+
+  // Per-instance billboard radius in screen-space pixels (Task 8 of the
+  // procedural-disk-impostor plan).  This is exactly the `sizePx` the
+  // vertex stage already computes for the apparent-size billboard math
+  // (`max(u.pointSizePx, apparentPxRadius)`).  We forward it through
+  // VSOut so the fragment stage can fade the points-pass alpha across
+  // the same [pxFadeStart, pxFadeEnd] band the procedural-disk pass
+  // fades IN over — see the `pxFadeStart` / `pxFadeEnd` doc-comment on
+  // Uniforms for the rationale and the chosen alpha-zero strategy.
+  //
+  // Why @interpolate(flat)?  All 6 vertices of a single billboard share
+  // the same `sizePx` (it's a function of per-instance state — galaxy
+  // distance, diameter, the floor `u.pointSizePx`, and a per-instance
+  // selection scale).  Linear interpolation across the quad would be a
+  // wasted multiply per fragment and would produce floating-point
+  // wobble in the crossfade boundary that flat-interp avoids.  The
+  // rasteriser writes the value once per primitive and every fragment
+  // reads the identical scalar — exactly what the smoothstep gate
+  // wants.
+  //
+  // Note: this field is initialised to 0.0 along the volume-limit
+  // early-out path (see the `earlyOut` initialiser in `vs`).  Those
+  // primitives never rasterise (clip-space (2,2,2,1) is outside the
+  // unit cube), so the value is purely a WGSL-spec requirement that
+  // every VSOut field be initialised on every return path.
+  @location(13) @interpolate(flat) sizePx: f32,
 };
 
 // ─── Schechter LF correction (Task 4 of malmquist-bias plan) ────────────────
@@ -686,6 +751,10 @@ fn vs(
     earlyOut.angularDensityWeight = 1.0;
     earlyOut.camDistMpc = 0.0;
     earlyOut.depthFade = 1.0;
+    // sizePx is plumbed for the procedural-disk crossfade-OUT in `fs`
+    // (Task 8); the early-out primitive never rasterises but WGSL
+    // requires every VSOut field be initialised on every return path.
+    earlyOut.sizePx = 0.0;
     return earlyOut;
   }
 
@@ -993,6 +1062,13 @@ fn vs(
   let depthFadeRaw = 1.0 / (1.0 + camDistRel * camDistRel);
   out.depthFade = select(1.0, depthFadeRaw, u.depthFadeEnabled == 1u);
 
+  // Forward the per-instance billboard radius in screen-pixels so the
+  // fragment stage can fade points-pass alpha across the procedural-
+  // disk crossfade band.  See the `sizePx` doc-comment on VSOut and the
+  // `pxFadeStart` / `pxFadeEnd` doc-comment on Uniforms.  No extra cost
+  // here — `sizePx` was already computed above for the billboard offset.
+  out.sizePx = sizePx;
+
   return out;
 }
 
@@ -1198,6 +1274,34 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // every frame — erases all structure inside ~half the catalog volume.
   // Deliberate cosmetic compromise.
   alpha = alpha * in.depthFade;
+
+  // ── Procedural-disk crossfade-OUT (Task 8 of procedural-disk-impostor) ──
+  //
+  // The thumbnail subsystem's procedural-disk pass fades IN across the
+  // [u.pxFadeStart, u.pxFadeEnd] band using `t * t * (3 - 2 * t)` (the
+  // smoothstep cubic).  We fade the points-pass OUT with the
+  // *complementary* curve `1 - t * t * (3 - 2 * t)` — fully visible
+  // below pxFadeStart, fully invisible above pxFadeEnd, and a smooth
+  // C¹-continuous handoff inside the band.  Sum of the two curves is
+  // identically 1.0 across the band, so the additive HDR contribution
+  // stays constant per galaxy through the transition rather than
+  // double-counting (which is what happens with no fade-out — the
+  // "double-bright donut" the user reported).
+  //
+  // `clamp` on the fadeT computation keeps the smoothstep input in
+  // [0, 1] outside the band, which the cubic implicitly assumes; the
+  // explicit clamp also avoids extrapolation when sizePx exceeds the
+  // band end (cubic outside [0, 1] over-/undershoots — clamp keeps it
+  // saturated).  The (end - start) divisor is a positive constant
+  // every frame (8 px below 14 px in the current settings), so the
+  // division is well-defined as long as the engine never sets
+  // start == end.
+  let fadeT = clamp(
+    (in.sizePx - u.pxFadeStart) / (u.pxFadeEnd - u.pxFadeStart),
+    0.0, 1.0,
+  );
+  let pointAlphaMult = 1.0 - fadeT * fadeT * (3.0 - 2.0 * fadeT);
+  alpha = alpha * pointAlphaMult;
 
   // Highlight fallback rows in magenta when the toggle is on. The 0.3 in
   // the green channel keeps fallback galaxies recognisable as "data-y"

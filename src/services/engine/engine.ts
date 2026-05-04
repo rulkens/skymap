@@ -112,7 +112,11 @@ import { loadFamousSidecars, remapGladeXrefs } from './famousMetaLoader';
 import { QuadRenderer } from '../gpu/quadRenderer';
 import { DiskRenderer } from '../gpu/diskRenderer';
 import { ProceduralDiskRenderer } from '../gpu/proceduralDiskRenderer';
-import { createThumbnailSubsystem } from './thumbnailSubsystem';
+import {
+  createThumbnailSubsystem,
+  PROCEDURAL_DISK_FADE_START_PX,
+  PROCEDURAL_DISK_FADE_END_PX,
+} from './thumbnailSubsystem';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -1135,6 +1139,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             schechterMStar: state.bias.schechterMStar,
             schechterAlpha: state.bias.schechterAlpha,
             depthFadeEnabled: state.settings.depthFadeEnabled,
+            // Task 8 of procedural-disk-impostor: feed the points-pass
+            // fragment shader the same crossfade band the procedural-
+            // disk pass fades IN over, so the two passes blend cleanly
+            // without a double-bright donut.  Constants live in
+            // `thumbnailSubsystem.ts` as a single source of truth.
+            pxFadeStartPoints: PROCEDURAL_DISK_FADE_START_PX,
+            pxFadeEndPoints: PROCEDURAL_DISK_FADE_END_PX,
             exposure: state.settings.exposure,
             toneMapCurve: state.settings.toneMapCurve,
             galaxyTexturesEnabled: state.settings.galaxyTexturesEnabled,

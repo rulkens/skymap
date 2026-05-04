@@ -115,6 +115,20 @@ export type RenderFrameSettings = {
   schechterMStar: number;
   schechterAlpha: number;
   depthFadeEnabled: boolean;
+  /**
+   * Procedural-disk crossfade-OUT thresholds for the points-pass
+   * fragment shader (Task 8 of the procedural-disk-impostor plan).
+   * Below `pxFadeStartPoints` the points pass renders at full alpha;
+   * above `pxFadeEndPoints` it renders at zero alpha (handing off to
+   * the procedural-disk pass entirely); inside the band a smoothstep
+   * complementary to the disk pass's fade-IN does a continuous
+   * crossfade.  Engine should source both from
+   * `PROCEDURAL_DISK_FADE_START_PX` / `_END_PX` in
+   * `./thumbnailSubsystem` so the two passes share a single source
+   * of truth.
+   */
+  pxFadeStartPoints: number;
+  pxFadeEndPoints: number;
   exposure: number;
   toneMapCurve: ToneMapCurve;
   /**
@@ -267,6 +281,14 @@ export function renderFrame(input: RenderFrameInput): void {
     settings.schechterMStar,
     settings.schechterAlpha,
     settings.depthFadeEnabled,
+    // Task 8 (procedural-disk-impostor): the points-pass fragment
+    // fades alpha to zero across this same apparent-pixel-size band
+    // that the procedural-disk pass fades IN over.  Both thresholds
+    // come from `./thumbnailSubsystem`'s exported constants — single
+    // source of truth shared between the two passes so they can never
+    // drift apart and re-introduce the double-bright donut artefact.
+    settings.pxFadeStartPoints,
+    settings.pxFadeEndPoints,
   );
 
   // ── Galaxy thumbnail pass ──────────────────────────────────────────
