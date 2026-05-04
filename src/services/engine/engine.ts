@@ -90,23 +90,20 @@ import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloud
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 import { loadFamousSidecars, type FamousMetaEntry, type FamousXrefMap } from './famousMetaLoader';
 
-// ── Galaxy thumbnail subsystem imports ────────────────────────────────────
+// ── Galaxy thumbnail subsystem ────────────────────────────────────────────
 //
-// Pulled in here so the per-frame loop can drive the atlas, the priority
-// queue, and the textured-quad pass.  The math helpers come from utils/math:
-// `apparentSizePx` decides whether a galaxy is big enough on screen to be
-// worth a thumbnail, and `cartesianToRaDecZ` recovers sky coordinates from
-// the Cartesian positions stored in the PointCloud (we need RA/Dec to build
-// the cutout URL).  Per-galaxy physical diameters now live on the cloud
-// itself (`cloud.diameterKpc[i]`, populated by the build pipeline), so the
-// loop reads them directly rather than calling a constant estimator.
-import { TextureAtlas } from '../gpu/textureAtlas';
-import { GalaxyImageQueue } from '../gpu/galaxyImageQueue';
+// The whole pipeline (atlas + priority queue + per-frame loop + sorting
+// + back-to-front draw) lives in `thumbnailSubsystem.ts`.  Engine-side
+// we just instantiate it, hand it the QuadRenderer + DiskRenderer
+// references, and call `runFrame()` once per tick (gated on the
+// galaxyTexturesEnabled toggle).  See that module's docstring for the
+// rationale on why-a-subsystem and the retry-storm contract.
 import { QuadRenderer } from '../gpu/quadRenderer';
-import { DiskRenderer, type DiskInstance } from '../gpu/diskRenderer';
-import { fetchGalaxyBitmap } from '../gpu/galaxyImageFetcher';
-import { cartesianToRaDecZ } from '../../utils/math';
-import type { QuadInstance } from '../../@types';
+import { DiskRenderer } from '../gpu/diskRenderer';
+import {
+  createThumbnailSubsystem,
+  type ThumbnailSubsystem,
+} from './thumbnailSubsystem';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -120,21 +117,6 @@ import { applyCurve } from '../input/spaceMouseSensitivity';
 import { applyAxesToCamera, hasAnyAxis } from '../input/spaceMouseToCamera';
 import type { SpaceMouseAxes } from '../input/spaceMouseAxes';
 import { ZERO_AXES } from '../input/spaceMouseAxes';
-
-// ── Galaxy thumbnail constants ──────────────────────────────────────────────
-
-/** Below this on-screen size, we don't bother fetching a thumbnail at all. */
-const APPARENT_SIZE_THRESHOLD_PX = 24;
-
-/**
- * Stable cache key for an atlas slot.  RA/Dec to 5 decimal places is
- * unique within ~0.1 arcsec — much finer than the SDSS pixel scale,
- * so two galaxies will never collide unless they're literally on top
- * of each other (in which case sharing a thumbnail is fine).
- */
-function galaxyCacheKey(ra: number, dec: number): string {
-  return `${ra.toFixed(5)}_${dec.toFixed(5)}`;
-}
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -368,6 +350,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   let hdrTargetHandle: ReturnType<typeof createHdrTarget> | null = null;
   let toneMapPassHandle: ReturnType<typeof createToneMapPass> | null = null;
 
+  // Galaxy-thumbnail subsystem — built inside the IIFE once the GPU device
+  // exists.  The render-on-demand predicate at the bottom of `frame()`
+  // calls `thumbnails.hasInFlightFetches()` so the loop keeps ticking
+  // while bitmaps are still landing.  `destroy()` calls `.destroy()` to
+  // tear down the eviction handler and clear bookkeeping sets.
+  let thumbnails: ThumbnailSubsystem | null = null;
+
   // Cleanup function returned by `attachOrbitControls`.
   let detachControls: (() => void) | null = null;
 
@@ -520,31 +509,27 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       //
       // Three collaborators wired together here:
       //
-      //   - atlas:        owns the GPU texture and slot bookkeeping.
-      //   - queue:        priority/concurrency-limited bitmap fetcher.
+      //   - thumbnails:   owns the atlas (GPU texture + slot LRU), the
+      //                   priority queue, and the per-frame loop that
+      //                   allocates slots, kicks off fetches, and emits
+      //                   sorted Quad/Disk instances.  See
+      //                   `thumbnailSubsystem.ts` for the why-and-how.
       //   - quadRenderer: textured-quad render pass running after the
-      //                   point pass each frame.
+      //                   point pass each frame.  Engine owns it
+      //                   directly (rather than the subsystem) because
+      //                   future passes (selection halo) may share it.
+      //   - diskRenderer: 3D-oriented disk variant for large galaxies.
+      //                   Same ownership story as quadRenderer.
       //
-      // `galaxyTexturesEnabled` is mutated by the SettingsPanel toggle
-      // wired in Task 10.  `frameCounter` ticks once per frame and feeds
-      // the atlas's LRU clock (allocate / lastSeenFrame).  `bitmapReady`
-      // tracks which keys have a usable bitmap loaded — we don't emit a
-      // QuadInstance for a slot until its bitmap has arrived (otherwise
-      // we'd be sampling whichever galaxy used to occupy that slot, OR
-      // a blank cleared region of the atlas).
+      // `galaxyTexturesEnabled` is mutated by the SettingsPanel toggle.
+      // The engine simply skips `thumbnails.runFrame()` when the toggle
+      // is off — the LRU clock pauses with it, which is fine because
+      // nothing else reads it while the toggle is off.
       //
-      // The QuadRenderer constructor wants a GpuContext; we have the
-      // four constituents in scope, so we build one inline rather than
+      // The QuadRenderer/DiskRenderer constructors want a GpuContext;
+      // we build them with the four constituents in scope rather than
       // restructuring initGpu's return signature.
-      //
-      // Known v1 limitation: when LRU evicts a key from the atlas,
-      // `bitmapReady` doesn't get cleaned up, so a re-allocated key
-      // would skip its re-fetch and briefly render whatever bitmap was
-      // last uploaded to that slot.  Acceptable for v1 — at most one
-      // frame of stale-slot sampling per re-allocation.  A follow-up
-      // can add an `onEvict` hook on the atlas to plug this.
-      const atlas = new TextureAtlas(device);
-      atlas.initTexture();
+
       // QuadRenderer targets the HDR offscreen texture (see the rationale
       // at PointRenderer construction above) — it composites galaxy
       // thumbnails into the same accumulated linear-light buffer the
@@ -555,48 +540,25 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         format: 'rgba16float',
         canvas,
       });
-      quadRenderer.bindAtlas(atlas.getTextureView());
       // DiskRenderer shares the same atlas as QuadRenderer — both pull from
       // the same 2048×2048 thumbnail texture.  The engine routes each
       // galaxy to one renderer or the other per frame based on apparent
       // size and orientation-data availability (see the per-frame loop).
-      // DiskRenderer targets the HDR offscreen texture for the same
-      // reason — large galaxies get a 3D-oriented thumbnail that has to
-      // composite into the same linear-light buffer as the points and
-      // flat-quad passes before tone-mapping.
       const diskRenderer = new DiskRenderer({
         device,
         context,
         format: 'rgba16float',
         canvas,
       });
-      diskRenderer.bindAtlas(atlas.getTextureView());
-      const queue = new GalaxyImageQueue();
-      let frameCounter = 0;
-      const bitmapReady = new Set<string>();
-      // Timestamp (performance.now()) at which each ready bitmap finished
-      // landing in the atlas. Used by the per-frame loop to compute a
-      // "load fade" — the freshly-uploaded thumbnail ramps from alpha 0
-      // to 1 over `LOAD_FADE_MS` so it doesn't pop in. Same key as
-      // `bitmapReady`; the value is set once on bitmap arrival and
-      // never updated.
-      const bitmapReadyTime = new Map<string, number>();
-
-      // ── Failed-fetch memo ────────────────────────────────────────────────
-      //
-      // Without this, every frame the per-galaxy loop sees `!bitmapReady`
-      // and re-enqueues the same key — even though we already tried and
-      // it failed (404 from SDSS, CORS or network error from DSS, decode
-      // error, etc).  Result: a tight retry loop hammering the cutout
-      // services dozens of times per second per failed galaxy, the
-      // browser console flooded with error logs, and no progress made.
-      //
-      // We treat any failure as a permanent (per-session) "do not try
-      // again".  If the user reloads the page we'll try again — that's
-      // the right cadence: persistent failures (galaxy outside both
-      // SDSS and DSS coverage, malformed RA/Dec) should NOT consume
-      // network bandwidth all session.
-      const bitmapFailed = new Set<string>();
+      // Build the subsystem and hand it the renderer references for
+      // atlas-view binding.  The subsystem's `bindToRenderers` is split
+      // out from its constructor because the renderers need to exist
+      // first; building them here keeps the construction order linear.
+      thumbnails = createThumbnailSubsystem({
+        device,
+        requestRender: () => scheduler.requestRender(),
+      });
+      thumbnails.bindToRenderers(quadRenderer, diskRenderer);
 
       // Signal loading state immediately so the user knows something is
       // happening before the (potentially multi-second) fetch completes.
@@ -1111,335 +1073,33 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
         // ── Galaxy thumbnail pass ─────────────────────────────────────────
         //
-        // Walk every loaded cloud and select galaxies that pass the apparent-
-        // size threshold.  For each surviving galaxy: allocate (or refresh) an
-        // atlas slot, kick off a fetch if no bitmap has landed yet, and emit
-        // a QuadInstance once the bitmap is ready.  The QuadRenderer issues
-        // its draw call in the same render pass so the quads composite over
-        // the dot field with the existing premultiplied-alpha blend.
+        // The whole pipeline (atlas slot allocation, priority-queued
+        // bitmap fetch, retry-storm protection, back-to-front sort, and
+        // the QuadRenderer + DiskRenderer draws) is encapsulated in
+        // `thumbnailSubsystem.ts`.  Engine-side we just hand it the
+        // per-frame inputs the loop reads — every closure variable the
+        // old inline body touched is now an explicit field on
+        // `ThumbnailFrameInput`.
         //
-        // `frameCounter` is incremented unconditionally — even when the
-        // toggle is off — so when the user re-enables thumbnails the LRU
-        // clock isn't frozen at the moment they last toggled.  (Cheap: one
-        // increment per frame.)
-        frameCounter++;
-
-        if (galaxyTexturesEnabled && cam) {
-          // ── Per-frame constants, hoisted out of the per-galaxy loop ──────
-          //
-          // The original implementation called `apparentSizePx({...})` once
-          // per galaxy, which (with 3.5 M galaxies/frame) burned ~350 ms
-          // per frame on:
-          //   - object-literal allocation per call (GC pressure),
-          //   - function-call + destructuring overhead,
-          //   - `Math.tan(fovYRad / 2)` evaluated per call even though it
-          //     only depends on the camera's frame-constant fov.
-          //
-          // Three things change here.  First, we hoist the entire constant
-          // chain out of the loop and pre-compute one scalar (`pxPerRad`)
-          // that converts world-space angular size to screen pixels.
-          // Second, we precompute `apparentSizeNum = diameterKpc/1000 *
-          // pxPerRad` so the inner loop is one division per galaxy
-          // (apparent_px = apparentSizeNum / camDist) instead of a full
-          // `apparentSizePx` call.  Third, we derive a closed-form
-          // `minCamDistForVisibility` so the inner check becomes a cheap
-          // scalar compare instead of a Math.hypot + division + compare.
-          //
-          // The galaxy-size-and-visibility math is identical to what
-          // `apparentSizePx` computes — see that helper for the derivation
-          // and the kpc/Mpc unit-split rationale.
-          const fovYRad = cam.fovYRad;
-          const viewportH = canvas.height;
-          const pxPerRad = viewportH / (2 * Math.tan(fovYRad / 2));
-
-          // ── Per-galaxy diameters now live on the cloud ───────────────
-          //
-          // Earlier versions of this loop hoisted a single 30 kpc
-          // constant and pre-computed one `maxCamDistSq` from it.  Now
-          // we use per-galaxy `cloud.diameterKpc[i]`, which means the
-          // visibility threshold varies per row — a 100-kpc giant stays
-          // visible 3× farther than a 30-kpc disk.
-          //
-          // We pre-compute an UPPER BOUND `maxCamDistSqUpper` from the
-          // largest plausible diameter so the cheap squared-distance
-          // early-out still culls the absolute majority of far-away
-          // rows; the precise per-galaxy threshold is re-checked after
-          // the sqrt.  Pulling the per-row diameter read forward into
-          // the cull would defeat the cache-friendly tight loop, so we
-          // accept a slightly looser outer cull in exchange for keeping
-          // the squared-compare path identical to before.
-          const MAX_PLAUSIBLE_DIAMETER_KPC = 200; // covers giant ellipticals
-          const dMpcMax = MAX_PLAUSIBLE_DIAMETER_KPC / 1000;
-          const maxCamDistForVisibilityUpper =
-            (dMpcMax * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
-          const maxCamDistSqUpper =
-            maxCamDistForVisibilityUpper * maxCamDistForVisibilityUpper;
-
-          const cx = cam.position[0];
-          const cy = cam.position[1];
-          const cz = cam.position[2];
-
-          const quads: QuadInstance[] = [];
-          // Disks accumulate alongside quads.  We sort each galaxy into
-          // exactly one bucket — see the branch at the tail of the loop
-          // body — so the two arrays never double-count an instance.
-          const disks: DiskInstance[] = [];
-          // We iterate with `.entries()` instead of `.values()` so that
-          // `cloudSource` (the Source enum tag) is in scope inside the loop.
-          // This lets us special-case `Source.Famous` for:
-          //   (a) bypassing the apparent-size threshold — famous landmarks
-          //       should always show their curated thumbnail regardless of
-          //       angular size (they were added precisely because they're
-          //       noteworthy at every zoom level).
-          //   (b) forwarding the famous id to the image fetcher so it loads
-          //       the curated /images/famous/<id>.webp instead of SDSS/DSS.
-          for (const [cloudSource, cloud] of clouds.entries()) {
-            // Honour the user's visibility-mask: if a survey is toggled off
-            // we shouldn't be enqueueing thumbnails for galaxies the points
-            // pass will skip (the pointRenderer + picker already filter on
-            // this same mask). Without this, a hidden survey's quads would
-            // continue to fill the texture atlas and ghost across the scene.
-            if (((visibleSourceMask >> cloudSource) & 1) === 0) continue;
-            const positions = cloud.positions;
-            const count = cloud.count;
-            for (let i = 0; i < count; i++) {
-              const i3 = i * 3;
-              const x = positions[i3 + 0]!;
-              const y = positions[i3 + 1]!;
-              const z = positions[i3 + 2]!;
-
-              // Distance from CAMERA, not target.  Apparent size depends on
-              // the viewer-to-galaxy distance.  We compare *squared*
-              // distance against a precomputed squared threshold to skip
-              // the sqrt — the absolute majority of galaxies fail this
-              // check, so cutting an Math.hypot per row is the single
-              // biggest win in the loop.
-              const dx = cx - x;
-              const dy = cy - y;
-              const dz = cz - z;
-              const camDistSq = dx * dx + dy * dy + dz * dz;
-              if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
-
-              // Survived the cheap cull; pay for the per-galaxy diameter
-              // read + sqrt + exact apparent-size compare.
-              const dKpcRow = cloud.diameterKpc[i]!;
-              const dMpcRow = dKpcRow / 1000;
-              const camDist = Math.sqrt(camDistSq);
-              const px = (dMpcRow / camDist) * pxPerRad;
-              // Famous-atlas rows always show their thumbnail — they're
-              // landmarks the user expects visible regardless of angular size.
-              // Survey rows still gate on the threshold so we don't load
-              // 3.5 M cutouts at maximum zoom-out.
-              if (cloudSource !== Source.Famous && px < APPARENT_SIZE_THRESHOLD_PX) continue;
-
-              // Recover RA/Dec for the cutout URL.  The PointCloud doesn't
-              // store sky coords — only Cartesian Mpc — so we invert the
-              // Hubble-law conversion that was applied at import time.
-              // Returns [ra, dec, redshift] but we only need the first two.
-              const [ra, dec] = cartesianToRaDecZ(x, y, z);
-              const key = galaxyCacheKey(ra, dec);
-
-              // Allocate (or refresh) an atlas slot.  Idempotent for repeat
-              // frames — same key returns the same slot index and just bumps
-              // the LRU clock so the entry isn't evicted while still on
-              // screen.
-              const slot = atlas.allocate(key, frameCounter);
-
-              // If we've already failed to fetch this galaxy (404 / CORS /
-              // decode error), don't try again this session.  Without this
-              // gate we'd re-enqueue the same dead key every frame — see
-              // the `bitmapFailed` declaration above for the full rationale.
-              if (bitmapFailed.has(key)) continue;
-
-              // If we don't have a bitmap yet, kick off a fetch.  The queue
-              // dedupes by key — re-enqueuing only refreshes the priority
-              // (priority = apparent-size px, so big galaxies load first).
-              if (!bitmapReady.has(key)) {
-                queue.enqueue({
-                  key,
-                  priority: px,
-                  fetcher: () => {
-                    // Famous galaxies use a curated local WebP rather than the
-                    // SDSS/DSS chain.  We capture `cloudSource` and `i` from
-                    // the enclosing loop — both are stable for the lifetime of
-                    // this closure because the `queue.enqueue` dedupes by key
-                    // and only calls the fetcher once per key.
-                    const fId =
-                      cloudSource === Source.Famous ? famousMeta[i]?.id : undefined;
-                    return fetchGalaxyBitmap({ ra, dec, famousId: fId });
-                  },
-                  onResult: (bitmap) => {
-                    if (!bitmap) {
-                      // Both SDSS and DSS failed (or the decode threw).
-                      // Memoise the failure so the per-frame loop stops
-                      // re-enqueueing this key.
-                      bitmapFailed.add(key);
-                      // Wake one frame so the still-animating predicate
-                      // re-checks queue.inFlightCount() and the loop
-                      // can sleep if this was the last in-flight fetch.
-                      scheduler.requestRender();
-                      return;
-                    }
-                    // Slot may have been reassigned by LRU between enqueue
-                    // and fetch resolution.  `lastSeenFrame` returns
-                    // undefined for keys not currently in the atlas (i.e.
-                    // evicted before our async fetch resolved); in that
-                    // case we just drop the bitmap.
-                    if (atlas.lastSeenFrame(key) === undefined) {
-                      bitmap.close();
-                      scheduler.requestRender();
-                      return;
-                    }
-                    atlas.uploadBitmap(slot, bitmap);
-                    bitmapReady.add(key);
-                    bitmapReadyTime.set(key, performance.now());
-                    bitmap.close();
-                    // Wake the loop so the freshly-uploaded thumbnail
-                    // appears on the next frame.  The load-fade lerp
-                    // (LOAD_FADE_MS = 400 ms) needs the loop ticking
-                    // for the duration of the fade — handled by the
-                    // still-animating predicate's queue.inFlightCount
-                    // path (which keeps ticking while any fetch is
-                    // pending) plus the recent-fade branch in the
-                    // predicate (see frame() tail).
-                    scheduler.requestRender();
-                  },
-                });
-                continue; // no quad this frame — wait for the bitmap to land
-              }
-
-              // Pack the QuadInstance.  4× the per-galaxy diameter gives
-              // the quad visual presence without dwarfing the surrounding
-              // dot field — the texture's body fills the central ~25% of
-              // the quad, with the rest fading to transparent via the
-              // alpha channel of the cutout JPEG.  Same multiplier as the
-              // GALAXY_RADIUS_MPC formula in points.wgsl, so the soft-glow
-              // dot and the textured thumbnail occupy identical screen
-              // real-estate at the texture-load fade-in moment.
-              const sizeWorldMpc = (dKpcRow / 1000) * 4;
-              const [u0, v0, u1, v1] = atlas.slotUv(slot);
-
-              // ── Fade-in multipliers ──────────────────────────────────
-              //
-              // Two fades combine to keep thumbnails from popping in:
-              //
-              //  1. Distance fade — smoothstep across an 8 px band above
-              //     the apparent-size threshold so a galaxy that just
-              //     crossed the threshold (apparent size ≈ 24 px) emerges
-              //     gradually as the camera zooms in further (~32 px).
-              //  2. Load fade — once a bitmap finishes landing in the
-              //     atlas, we ramp from 0 to 1 over LOAD_FADE_MS so the
-              //     freshly-uploaded thumbnail doesn't replace the soft
-              //     point glow with a hard JPEG square in one frame.
-              //
-              // Multiplied together so a galaxy that crosses the
-              // distance threshold AND has just landed its bitmap fades
-              // in twice (once from each axis); galaxies that have been
-              // ready for a while only see the distance fade.
-              const FADE_BAND_PX = 8;
-              const distT = Math.min(
-                1,
-                Math.max(0, (px - APPARENT_SIZE_THRESHOLD_PX) / FADE_BAND_PX),
-              );
-              // Smoothstep cubic — same shape WGSL's smoothstep uses.
-              const distFade = distT * distT * (3 - 2 * distT);
-              const LOAD_FADE_MS = 400;
-              const tReady = bitmapReadyTime.get(key);
-              const loadFade =
-                tReady === undefined
-                  ? 0
-                  : Math.min(1, (performance.now() - tReady) / LOAD_FADE_MS);
-              const fadeAlpha = distFade * loadFade;
-
-              const ar = cloud.axisRatio[i]!;
-              const pa = cloud.positionAngleDeg[i]!;
-              // 3D disk path: only when (a) the apparent size is large
-              // enough that the inclination ellipse is perceptually
-              // distinguishable from a circle, and (b) the orientation
-              // values are finite (defensive — the build pipeline
-              // guarantees this, but a corrupted cache could flip them
-              // to NaN, in which case we fall back to a flat quad rather
-              // than render a NaN-projected mess).
-              if (px > 4 && Number.isFinite(ar) && Number.isFinite(pa)) {
-                disks.push({
-                  x,
-                  y,
-                  z,
-                  sizeWorld: sizeWorldMpc,
-                  u0,
-                  v0,
-                  u1,
-                  v1,
-                  axisRatio: ar,
-                  positionAngleDeg: pa,
-                  fadeAlpha,
-                });
-              } else {
-                quads.push({
-                  x,
-                  y,
-                  z,
-                  sizeWorld: sizeWorldMpc,
-                  u0,
-                  v0,
-                  u1,
-                  v1,
-                  fadeAlpha,
-                });
-              }
-            }
-          }
-
-          // ── Back-to-front sort for correct alpha compositing ────────────
-          //
-          // Both QuadRenderer and DiskRenderer use premultiplied "over"
-          // blending, which is order-dependent: a far galaxy drawn AFTER a
-          // near one composites on top of it, breaking the painter's
-          // expectation. We sort each instance list by descending
-          // camera-distance² so far galaxies emit first and near ones
-          // overlay them correctly.
-          //
-          // O(N log N) per frame with N ≤ 256 (atlas slot cap), so the
-          // sort cost is well under a millisecond even on mobile GPUs;
-          // way cheaper than the alternative of a depth-sorted GPU pass.
-          //
-          // Comparator recomputes squared distance from the camera —
-          // duplicate work vs. caching during the build loop, but trivial
-          // at this N and avoids carrying a parallel index array.
-          const cmpFar = (
-            a: { x: number; y: number; z: number },
-            b: { x: number; y: number; z: number },
-          ): number => {
-            const dax = a.x - drawCamPos[0];
-            const day = a.y - drawCamPos[1];
-            const daz = a.z - drawCamPos[2];
-            const dbx = b.x - drawCamPos[0];
-            const dby = b.y - drawCamPos[1];
-            const dbz = b.z - drawCamPos[2];
-            return dbx * dbx + dby * dby + dbz * dbz - (dax * dax + day * day + daz * daz);
-          };
-          quads.sort(cmpFar);
-          disks.sort(cmpFar);
-
-          if (quads.length > 0) {
-            quadRenderer.draw(
-              pass,
-              vp,
-              [canvas.width, canvas.height],
-              quads,
-              drawCamPos,
-              drawPxPerRad,
-            );
-          }
-          if (disks.length > 0) {
-            diskRenderer.draw(
-              pass,
-              vp,
-              [canvas.width, canvas.height],
-              drawCamPos,
-              disks,
-            );
-          }
+        // We gate the call on `galaxyTexturesEnabled` so users who
+        // disable thumbnails pay nothing per frame.  Side effect: the
+        // subsystem's LRU clock pauses with the toggle, which is fine
+        // because nothing else reads it while the toggle is off.
+        if (galaxyTexturesEnabled && cam && thumbnails) {
+          thumbnails.runFrame({
+            cam,
+            clouds,
+            visibleSourceMask,
+            canvasSize: { width: canvas.width, height: canvas.height },
+            pass,
+            viewProj: vp,
+            pxPerRad: drawPxPerRad,
+            camPos: drawCamPos,
+            quadRenderer,
+            diskRenderer,
+            famousMeta,
+            famousXrefs,
+          });
         }
 
         pass.end();
@@ -1548,28 +1208,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         //     advanceCameraTween reports finished and clears the ref.
         //   - hasAnyAxis(latestSpaceMouseAxes): puck deflected; render
         //     every frame to apply the per-frame velocity.
-        //   - queue.inFlightCount(): a thumbnail fetch is racing the
-        //     network; when it lands the onResult uploads to the atlas
-        //     and (via Task 5) calls requestRender() — but we keep one
-        //     frame queued anyway so the load-fade lerp ramps smoothly.
-        // Recently-loaded thumbnails fade in over LOAD_FADE_MS (400 ms);
-        // keep the loop ticking while any fade is still in progress so
-        // the alpha lerp ramps smoothly without the user having to
-        // nudge the mouse.  bitmapReadyTime caps at the atlas slot
-        // count (~256), so the .values() spread is bounded and only
-        // runs when at least one thumbnail has loaded recently.
-        const FADE_DURATION_MS = 400;
-        const fadeInProgress =
-          bitmapReadyTime.size > 0 &&
-          [...bitmapReadyTime.values()].some(
-            (t) => performance.now() - t < FADE_DURATION_MS,
-          );
+        //   - thumbnails.hasInFlightFetches(): a thumbnail fetch is
+        //     racing the network OR a recently-landed bitmap is still
+        //     in its 400 ms load-fade window.  The subsystem owns both
+        //     bookkeeping paths; we just OR its single boolean in.
+        //     When it lands, the onResult uploads to the atlas and
+        //     calls requestRender() — but we keep one frame queued
+        //     anyway so the load-fade lerp ramps smoothly.
         const stillAnimating =
           autoRotate ||
           currentTween !== null ||
           hasAnyAxis(latestSpaceMouseAxes) ||
-          queue.inFlightCount() > 0 ||
-          fadeInProgress;
+          (thumbnails !== null && thumbnails.hasInFlightFetches());
         if (stillAnimating) scheduler.requestRender();
       }
 
@@ -1629,6 +1279,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       hdrTargetHandle = null;
       toneMapPassHandle?.destroy();
       toneMapPassHandle = null;
+      // Tear down the thumbnail subsystem (clears the atlas's evict
+      // handler and aborts in-flight fetches' write-back).  The atlas's
+      // GPU texture itself is released when the device is dropped —
+      // the subsystem doesn't expose a destroy on it directly.
+      thumbnails?.destroy();
+      thumbnails = null;
 
       // 6. Drop references to aid GC.
       renderer = null;
