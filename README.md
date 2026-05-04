@@ -43,9 +43,9 @@ Open http://localhost:5173 — drag to orbit, scroll to zoom. Without real data 
 
 The renderer can ingest up to three galaxy catalogs in parallel. Each is just a list of galaxies with positions and brightnesses, but they cover the sky differently:
 
-- **SDSS** (Sloan Digital Sky Survey) — a deep, half-sky photographic + spectroscopic survey from a single 2.5 m telescope in New Mexico. Best deep northern coverage; we use a slice of ~500 k galaxies.
-- **2MRS** (2MASS Redshift Survey) — a smaller (~45 k), all-sky local-universe redshift survey. Useful for galaxies close to us in any direction.
-- **GLADE** — a million-galaxy mega-catalog cross-matched from several surveys. Fills in everywhere SDSS and 2MRS don't reach.
+- **SDSS** (Sloan Digital Sky Survey) — a deep photographic + spectroscopic survey from a single 2.5 m telescope in New Mexico, covering roughly the northern third of the sky. Best dense coverage in its footprint; we use a slice of ~500 k galaxies.
+- **2MRS** (2MASS Redshift Survey) — a smaller (~45 k), all-sky redshift survey concentrated on the local volume around the Milky Way. Useful for nearby galaxies in any direction.
+- **GLADE** — a million-galaxy all-sky mega-catalog cross-matched from several surveys. Reaches roughly the same radial depth as SDSS, but covers the full sky — so its main contribution is filling in the celestial regions outside SDSS's northern footprint, while also extending well beyond 2MRS's local volume.
 
 You can run with any one, any two, or all three. The renderer falls back to synthetic data if no `.bin` files are present.
 
@@ -109,21 +109,17 @@ The tool parses each catalog, runs cross-match dedup using priority **SDSS > 2MR
 
 ```bash
 npm run fetch-2mass-xsc    # ~5 minutes; adds PA + axis-ratio for 2MRS galaxies
-npm run fetch-hyperleda    # MANY HOURS; adds PA + axis-ratio for GLADE galaxies
+npm run fetch-hyperleda    # ~1 hour; adds PA + axis-ratio for GLADE galaxies
 ```
 
 - `fetch-2mass-xsc` queries the 2MASS Extended Source Catalog and writes `data/raw/2mass_xsc_pa.csv`. Quick — runs in roughly five minutes.
-- `fetch-hyperleda` queries HyperLEDA at 4 concurrent requests across ~1.5 M PGCs and writes `data/raw/hyperleda_pa.csv`. This can take **many hours**. The script is resumable — interrupt and restart safely. Most users skip this entirely or run it overnight.
+- `fetch-hyperleda` queries HyperLEDA at 4 concurrent requests across ~1.5 M PGCs and writes `data/raw/hyperleda_pa.csv`. Takes roughly **1 hour** end-to-end. The script is resumable — interrupt and restart safely.
 
 Both files are picked up automatically by the next `npm run build-all`. Both commands are entirely optional; the renderer works without them.
 
 ### 4. Reload
 
-The browser fetches all available files in parallel at startup. Surveys arrive progressively. The settings panel (bottom-left) has per-survey checkboxes plus an **Auto LOD** toggle that picks visible surveys based on camera distance:
-
-- `< 200 Mpc` → 2MRS + GLADE (local universe; SDSS too sparse for nearby zooms)
-- `200 – 800 Mpc` → all sources
-- `> 800 Mpc` → SDSS only (the only survey reaching that depth)
+The browser fetches all available files in parallel at startup. Surveys arrive progressively. The settings panel (bottom-left) has per-survey checkboxes for toggling sources on and off.
 
 ### Per-survey colour indices
 
@@ -216,6 +212,47 @@ rectangle against dark space.
 on). Switch it off if you'd rather see the raw point cloud without network
 traffic, or to compare the dot field with and without textures.
 
+## Brightness controls
+
+Real catalogue galaxies span ~10 magnitudes of apparent brightness — the
+brightest entries are roughly 10⁴× brighter than the faintest — so drawing
+every galaxy as an identical dot would throw away most of the visual
+information.  Three controls in the renderer decide how that range is
+displayed on screen:
+
+- **Catalogue magnitude → per-galaxy alpha** *(automatic, vertex stage)* —
+  every galaxy's apparent magnitude is mapped to an intensity in
+  `[0.05, 1.0]` via `clamp((22 − magnitude) / 8, 0.05, 1.0)`
+  (`points.wgsl`).  A magnitude-14 nearby spiral therefore renders with
+  ~20× the alpha of a magnitude-22 background galaxy.  The 0.05 floor
+  keeps the faintest detections barely visible rather than fully
+  transparent — a hard zero would leave confusing gaps where survey rows
+  are sparse.
+- **Global brightness slider** *(0.2 – 3.0, default 1.0)* — uniform
+  per-galaxy intensity multiplier, exposed in the settings panel.  Lets
+  you scale the whole sky up or down without re-uploading point data.
+- **Camera-distance depth fade** *(toggle, default on)* — fragment-stage
+  alpha gate that multiplies by `1 / (1 + (camDist / FALLOFF_HALF)²)`,
+  taming the additive-overlap glow at the geometric origin where every
+  sightline through Earth stacks hundreds of billboards on top of each
+  other.
+
+### Not the same thing as density correction
+
+The next section ("Density correction (Malmquist bias)") describes a
+*conceptually separate* concern: compensating for the fact that
+flux-limited surveys systematically over-represent nearby galaxies
+(faint ones are only detectable when close).  Density-correction modes
+do multiply into the same final per-pixel alpha as the brightness
+controls above, but the *purpose* is to correct what the **catalogue**
+under- or over-samples, not to tweak how an individual galaxy *looks*.
+Treat them as orthogonal: the brightness slider is a display preference;
+density correction is a scientific correction for selection bias.
+
+Tone-mapping (covered in [Render pipeline](#render-pipeline) below) is a
+third orthogonal concern again — it operates on the *accumulated HDR
+output* of the entire frame, not on individual galaxies.
+
 ## Density correction (Malmquist bias)
 
 Flux-limited surveys over-represent nearby galaxies because faint ones
@@ -274,7 +311,7 @@ Distance from redshift uses Hubble's law: `d = cz/H₀` with `H₀ = 70 km/s/Mpc
 npm test
 ```
 
-Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
+Currently **594 tests across 76 files**.  Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
 
 ## Render pipeline
 
