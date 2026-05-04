@@ -99,6 +99,15 @@ type Props = {
   /** Fired when the user toggles the galaxy-thumbnails checkbox. */
   onGalaxyTexturesChange: (enabled: boolean) => void;
   /**
+   * Whether the procedural Milky Way impostor at world origin is
+   * rendered.  Optional — older call sites without this prop see no
+   * Milky Way row in the panel.  See
+   * `services/gpu/milkyWayRenderer.ts` for what the impostor is.
+   */
+  milkyWayEnabled?: boolean;
+  /** Fired when the user toggles the "Show Milky Way" checkbox. */
+  onMilkyWayEnabledChange?: (enabled: boolean) => void;
+  /**
    * Whether fallback-orientation galaxies should be tinted magenta in the
    * fragment shader.  Lets the user scan which surveys have real
    * photometric orientation coverage.  Optional — older call-sites without
@@ -248,6 +257,8 @@ export function SettingsPanel({
   onAutoRotateChange,
   galaxyTexturesEnabled,
   onGalaxyTexturesChange,
+  milkyWayEnabled,
+  onMilkyWayEnabledChange,
   highlightFallback,
   onHighlightFallbackChange,
   realOnlyMode,
@@ -292,6 +303,12 @@ export function SettingsPanel({
     onHighlightFallbackChange !== undefined &&
     realOnlyMode !== undefined &&
     onRealOnlyModeChange !== undefined;
+
+  // Milky Way checkbox: rendered only when both the value and the
+  // change-callback are wired by the parent.  Same opt-in idiom as
+  // every other optional section in this panel.
+  const showMilkyWayToggle =
+    milkyWayEnabled !== undefined && onMilkyWayEnabledChange !== undefined;
 
   // Density-correction section: rendered only when both the current mode and
   // both change-callbacks are wired by the parent.  We require all four
@@ -634,6 +651,18 @@ export function SettingsPanel({
           onChange={(e) => onGalaxyTexturesChange(e.target.checked)}
         />
       </div>
+
+      {showMilkyWayToggle && (
+        <div className={styles.panelRow}>
+          <label htmlFor="toggle-milky-way">Show Milky Way</label>
+          <input
+            id="toggle-milky-way"
+            type="checkbox"
+            checked={milkyWayEnabled}
+            onChange={(e) => onMilkyWayEnabledChange(e.target.checked)}
+          />
+        </div>
+      )}
 
       {/* ── SpaceMouse (rev-3 6DOF input) ────────────────────────────────── */}
       {/*
