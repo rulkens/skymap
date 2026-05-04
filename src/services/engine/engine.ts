@@ -66,10 +66,9 @@ import { PointRenderer } from '../gpu/pointRenderer';
 import { createPickRenderer } from '../gpu/pickRenderer';
 import { createHdrTarget } from '../gpu/hdrTarget';
 import { createToneMapPass } from '../gpu/toneMapPass';
-import { ToneMapCurve } from '../../data/toneMapCurve';
 import { createOrbitCamera, computeViewProj, updatePosition } from '../camera/orbitCamera';
 import { attachOrbitControls } from '../camera/orbitControls';
-import { ALL_VISIBLE_MASK, Source, maskWith, maskWithout } from '../../data/sources';
+import { Source, maskWith, maskWithout } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -92,14 +91,15 @@ import { vec3 } from 'gl-matrix';
 
 import { autoLodMask } from './autoLod';
 import { createTweenManager } from './tweenManager';
-import { createRenderScheduler, type RenderScheduler } from './renderScheduler';
+import { createRenderScheduler } from './renderScheduler';
 import { buildPointInfo, maxAbsCoord } from './pointInfoBuilder';
-import { computeInitialCamera, type InitialCam } from './cameraFraming';
+import { computeInitialCamera } from './cameraFraming';
 import { seedSettingsCallbacks } from './seedSettingsCallbacks';
 import { computeScaleInfo } from './scaleBar';
 import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
-import { loadFamousSidecars, type FamousMetaEntry, type FamousXrefMap } from './famousMetaLoader';
+import { loadFamousSidecars } from './famousMetaLoader';
+import type { EngineState } from './engineState';
 
 // ── Galaxy thumbnail subsystem ────────────────────────────────────────────
 //
@@ -111,10 +111,7 @@ import { loadFamousSidecars, type FamousMetaEntry, type FamousXrefMap } from './
 // rationale on why-a-subsystem and the retry-storm contract.
 import { QuadRenderer } from '../gpu/quadRenderer';
 import { DiskRenderer } from '../gpu/diskRenderer';
-import {
-  createThumbnailSubsystem,
-  type ThumbnailSubsystem,
-} from './thumbnailSubsystem';
+import { createThumbnailSubsystem } from './thumbnailSubsystem';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -124,12 +121,9 @@ import {
 // pass it `cancelTween` / `onAxes` / `onConnectionChange` callbacks,
 // and call `applyToCamera()` from `frame()`.  The handle's
 // connect/disconnect/sensitivity setters forward straight through.
-import {
-  createSpaceMouseSubsystem,
-  type SpaceMouseSubsystem,
-} from './spaceMouseSubsystem';
-import { createClickResolver, type ClickResolver } from './clickHandler';
-import { attachEngineInputs, type InputBindings } from './inputBindings';
+import { createSpaceMouseSubsystem } from './spaceMouseSubsystem';
+import { createClickResolver } from './clickHandler';
+import { attachEngineInputs } from './inputBindings';
 import { renderFrame } from './renderFrame';
 
 /**
@@ -158,178 +152,158 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // Closure variables are slightly simpler to reason about than `this.*` and
   // they keep the internal state completely inaccessible from outside.
 
-  type MousePos = { x: number; y: number };
-
-  let latestMouseCss: MousePos | null = null;
-  let lastPickedMouseCss: MousePos | null = null;
-  let pickInFlight = false;
-  let hoveredIndex: number | null = null;
-  let selectedIndex: number | null = null;
-  let pointerDown = false;
-
-  // ── Settings panel state ─────────────────────────────────────────────────
+  // The whole engine state — see `engineState.ts` for the type-level
+  // map of every field, with per-bag rationale.  Sub-bag groupings:
   //
-  // These are the source of truth for the visual settings exposed by the
-  // Settings Panel. They are mutated by the public handle setters below and
-  // consumed in the render loop (renderer.draw) and frame tick (autoRotate).
-  // Initial values seeded from `data/defaults.ts` — single source of
-  // truth shared with App.tsx so the SettingsPanel doesn't briefly flash
-  // a stale value before the engine's first echo callback fires.  See
-  // that module's docstring for the full rationale + per-default
-  // commentary.
-  let pointSizePx = DEFAULT_POINT_SIZE_PX;
-  let brightness = DEFAULT_BRIGHTNESS;
-  let autoRotate = DEFAULT_AUTO_ROTATE;
-  let galaxyTexturesEnabled = DEFAULT_GALAXY_TEXTURES_ENABLED;
-  let highlightFallback = DEFAULT_HIGHLIGHT_FALLBACK;
-  let realOnlyMode = DEFAULT_REAL_ONLY_MODE;
-  let depthFadeEnabled = DEFAULT_DEPTH_FADE_ENABLED;
-
-  // ── Malmquist-bias correction state (Task 2 of malmquist-bias plan) ─────
+  //   - `settings`   → SettingsPanel-surfaced knobs (initial values
+  //                    seeded from `data/defaults.ts`, the single
+  //                    source of truth shared with App.tsx so the
+  //                    panel doesn't flash a stale value before the
+  //                    first echo callback fires).
+  //   - `bias`       → Malmquist-bias correction tuning (mode + four
+  //                    threshold/Schechter parameters; the latter
+  //                    three stay 0 until the shader's mode-2/3/4
+  //                    branches activate via the `setBiasMode` lazy
+  //                    bake at `applySchechterMode` /
+  //                    `applyAngularReweightMode`).
+  //   - `sources`    → loaded `PointCloud`s + visibility bitmask +
+  //                    LOD mode + the optional famous-galaxy sidecars.
+  //   - `picking`    → hover / click / drag mutables (latest CSS-pixel
+  //                    mouse position, in-flight pick guard, drag flag).
+  //   - `gpu`        → renderer / pickRenderer / HDR target /
+  //                    tone-map pass — all null until the async IIFE
+  //                    finishes `initGpu`.
+  //   - `subsystems` → owned long-lived helpers; `tweens`/`spaceMouse`
+  //                    construct up-front, the rest land later.
+  //   - `cam` / `initialCamRef` → orbit camera + framing snapshot,
+  //                                both null until the first cloud
+  //                                loads.
   //
-  // `biasMode` chooses which correction the renderer applies in its vertex
-  // stage; `absMagLimit` is the threshold for `BiasMode.VolumeLimited`.
-  // Both default off / sensible-SDSS so the UI seeded by the echo callback
-  // at init looks correct even before the user opens the settings panel.
-  // The other Task-3/4 thresholds also live as closure state here so a
-  // single uniform update path stays at the bottom of the frame loop.
-  //
-  // Why -19 as the volume-limited default?  It's roughly the absolute
-  // magnitude where the SDSS spectroscopic main sample is volume-complete
-  // out to the survey's flux limit — bright enough that almost every
-  // catalog galaxy meeting it has a measured spectrum, dim enough that
-  // we still see plenty of structure.
-  let biasMode: BiasMode = DEFAULT_BIAS_MODE;
-  let absMagLimit = DEFAULT_ABS_MAG_LIMIT;
-
-  // ── HDR + tone-map state ─────────────────────────────────────────────────
-  //
-  // `exposure` multiplies the HDR signal *before* the tone-map curve
-  // compresses it.  `toneMapCurve` selects which curve runs — see
-  // `data/toneMapCurve.ts` for the five options.  Both are forwarded into
-  // the tone-map pass uniform once per frame; switching at runtime is a
-  // single 4-byte uniform write — no pipeline rebuild.
-  //
-  let exposure = DEFAULT_EXPOSURE;
-  let toneMapCurve: ToneMapCurve = DEFAULT_TONE_MAP_CURVE;
-  // Reserved-for-future fields; Tasks 3 + 4 will populate them.  Until then
-  // the renderer reads them but the shader's mode-2/3 branches stay inert.
-  let apparentMagLimit = 0;
-  let schechterMStar = 0;
-  let schechterAlpha = 0;
-
-  // ── Source visibility bitmask + LOD mode ────────────────────────────────
-  //
-  // 32-bit bitmask gating which surveys are drawn each frame; one bit per
-  // `Source` enum value. The renderer iterates its `loadedSources()` and
-  // skips any whose bit is clear. Default = `ALL_VISIBLE_MASK` so we
-  // preserve "draw everything that is loaded" behaviour until either the
-  // auto-LOD heuristic recomputes it from the camera distance, or a user
-  // toggle in the settings panel forces a manual choice.
-  //
-  // `lodMode` decides which path "owns" the mask:
-  //   - 'auto'   → the render-loop tick recomputes the mask each frame from
-  //                `autoLodMask(cam.distance)`.  Manual overrides do not
-  //                stick — they get clobbered on the next frame.
-  //   - 'manual' → the user (or a programmatic call to `setSourceVisible`)
-  //                owns the mask; auto-LOD is paused.
-  let visibleSourceMask = DEFAULT_VISIBLE_SOURCE_MASK;
-  let lodMode: LodMode = DEFAULT_LOD_MODE;
-
-  // ── Initial camera snapshot ───────────────────────────────────────────────
-  //
-  // Written once by the async IIFE after the cloud loads and bbox is known.
-  // Read by `resetCamera()` in the public handle. Declared here (outside the
-  // IIFE) so the public handle's closure can reach it without hoisting the
-  // entire async block.  The `InitialCam` shape itself lives in
-  // `cameraFraming.ts` alongside the pure helper that produces it.
-  let initialCamRef: InitialCam | null = null;
-
-  // ── In-flight focus / home tween ────────────────────────────────────────
-  //
-  // At most one tween at a time.  The manager owns the single mutable
-  // `currentTween` reference internally; the engine just calls `start`,
-  // `cancel`, `isActive`, and `advance`.  See `tweenManager.ts` for the
-  // rationale on why the lone closure variable became a tiny facade.
-  //
-  // Sites that mutate the manager:
-  //   - the public handle's `focusOn` / `focusOnHome` / `selectFamous`
-  //     (start a tween — auto-replaces any running one),
-  //   - the `pointerdown` handler                  (cancel on user grab),
-  //   - the SpaceMouse per-frame block             (cancel on puck deflect),
-  //   - the per-frame `frame()` loop               (advance + auto-clear).
-  const tweens = createTweenManager();
-
-  // ── SpaceMouse subsystem ───────────────────────────────────────────────
-  //
-  // All puck state — latest axes, dt baseline, sensitivity scalar, the
-  // lazily-allocated WebHID device handle — is owned internally by the
-  // subsystem.  We hand it three callbacks at construction:
-  //
-  //   - `cancelTween`     : called from `applyToCamera()` whenever an
-  //                          axis is non-zero, so the focus tween yields
-  //                          to user input (same precedence as mouse drag).
-  //   - `onConnectionChange` : forwarded to the engine's UI callback so
-  //                            React's "Connected" indicator drops back to
-  //                            false when the puck is unplugged.
-  //   - `onAxes`          : called from the WebHID inputreport listener
-  //                          (outside the rAF loop) so the next frame
-  //                          sees the new axes.
-  //
-  // The `applyToCamera()` method does NOT need to wake the scheduler —
-  // it runs inside `frame()` and the still-animating predicate at the
-  // bottom of the frame body keeps the loop ticking via `hasAxes()`.
-  const spaceMouse: SpaceMouseSubsystem = createSpaceMouseSubsystem({
-    cancelTween: () => tweens.cancel(),
-    onConnectionChange: (connected) => {
-      cb.onSpaceMouseConnectedChange?.(connected);
-      // Wake one frame so the still-animating predicate sees the
-      // freshly-zeroed axes (the subsystem clears them on disconnect)
-      // and lets the loop sleep cleanly.
-      scheduler.requestRender();
+  // The outer `state` binding is `const` because the closure never
+  // reassigns it — only the inner fields mutate.  Mutation in place
+  // matches how the subsystem facades already manage their own state
+  // and avoids per-frame allocations on the hot path.
+  const state: EngineState = {
+    settings: {
+      pointSizePx: DEFAULT_POINT_SIZE_PX,
+      brightness: DEFAULT_BRIGHTNESS,
+      autoRotate: DEFAULT_AUTO_ROTATE,
+      galaxyTexturesEnabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
+      highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
+      realOnlyMode: DEFAULT_REAL_ONLY_MODE,
+      depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
+      exposure: DEFAULT_EXPOSURE,
+      toneMapCurve: DEFAULT_TONE_MAP_CURVE,
     },
-    onAxes: () => scheduler.requestRender(),
-  });
+    bias: {
+      // Why -19 as the volume-limited default?  It's roughly the
+      // absolute magnitude where the SDSS spectroscopic main sample
+      // is volume-complete out to the survey's flux limit — bright
+      // enough that almost every catalog galaxy meeting it has a
+      // measured spectrum, dim enough that we still see plenty of
+      // structure.
+      mode: DEFAULT_BIAS_MODE,
+      absMagLimit: DEFAULT_ABS_MAG_LIMIT,
+      // Sentinels overwritten before the shader's mode-2/3/4 branches
+      // are reachable; see `setBiasMode` for the lazy worker bake.
+      apparentMagLimit: 0,
+      schechterMStar: 0,
+      schechterAlpha: 0,
+    },
+    sources: {
+      // 32-bit bitmask, one bit per `Source` enum value.  The
+      // renderer iterates `loadedSources()` and skips any whose bit
+      // is clear.  Default = ALL_VISIBLE_MASK so "draw everything
+      // that is loaded" holds until either the auto-LOD heuristic
+      // recomputes it from the camera distance, or the user toggles
+      // a single source in the settings panel.
+      visibleMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      // 'auto'   → per-frame `autoLodMask(cam.distance)` rewrite.
+      // 'manual' → user owns the mask; auto-LOD paused.
+      lodMode: DEFAULT_LOD_MODE,
+      // Mirrors the renderer's per-source GPU buffers in CPU memory
+      // so picking can resolve `(source, localIdx)` into a PointInfo
+      // without a GPU readback for every hover.  Empty until the
+      // first parallel fetch resolves.
+      clouds: new Map<Source, PointCloud>(),
+      // Optional sidecars — `pointInfoBuilder` null-checks both, so a
+      // hover firing before they land just renders the generic
+      // InfoCard layout.
+      famousMeta: [],
+      famousXrefs: {},
+    },
+    picking: {
+      hoveredIndex: null,
+      selectedIndex: null,
+      latestMouseCss: null,
+      lastPickedMouseCss: null,
+      pickInFlight: false,
+      pointerDown: false,
+    },
+    gpu: {
+      // All four GPU handles populate during the async IIFE below
+      // and release in `destroy()`.  See engineState.ts for the
+      // null-until-init lifecycle rationale.
+      renderer: null,
+      pickRenderer: null,
+      hdrTarget: null,
+      toneMapPass: null,
+    },
+    subsystems: {
+      // ── Tween manager ──────────────────────────────────────────
+      // At most one camera tween at a time.  Sites that mutate it:
+      //   - public handle's focusOn / focusOnHome / selectFamous
+      //     (start a tween — auto-replaces any running one),
+      //   - pointerdown handler                (cancel on user grab),
+      //   - SpaceMouse per-frame block         (cancel on puck deflect),
+      //   - per-frame frame() loop             (advance + auto-clear).
+      tweens: createTweenManager(),
 
-  // Render scheduler — owns the single rAF token and the dirty flag.
-  // Built inside the async IIFE because `frame` is defined there; the
-  // scheduler instance is hoisted into the outer closure so `destroy()`
-  // can call its `cancelRender()` from the public handle below.
-  //
-  // Initialised to a no-op shim so the type stays non-nullable; the
-  // real scheduler replaces this once the IIFE finishes setup.
-  let scheduler: RenderScheduler = {
-    requestRender(): void {
-      /* not yet wired */
+      // ── SpaceMouse subsystem ──────────────────────────────────
+      // All puck state (axes cache, dt baseline, sensitivity, lazy
+      // WebHID handle) lives inside the subsystem.  We hand it three
+      // callbacks: cancelTween (yields the focus tween to user
+      // input), onConnectionChange (UI indicator), onAxes (wakes the
+      // render loop so the next frame applies the new axes).
+      spaceMouse: createSpaceMouseSubsystem({
+        cancelTween: () => state.subsystems.tweens.cancel(),
+        onConnectionChange: (connected) => {
+          cb.onSpaceMouseConnectedChange?.(connected);
+          // Wake one frame so the still-animating predicate sees
+          // the freshly-zeroed axes (the subsystem clears them on
+          // disconnect) and lets the loop sleep cleanly.
+          state.subsystems.scheduler.requestRender();
+        },
+        onAxes: () => state.subsystems.scheduler.requestRender(),
+      }),
+
+      // ── Render scheduler — bootstrapped to a no-op shim ────────
+      // The real scheduler can't be built until `frame` is defined
+      // (inside the async IIFE).  We seed a no-op now so the type
+      // stays non-nullable and any setter that fires before the
+      // IIFE finishes (currently impossible — but defensive) is
+      // simply a no-op rather than a crash.
+      scheduler: {
+        requestRender(): void {
+          /* not yet wired */
+        },
+        cancelRender(): void {
+          /* not yet wired */
+        },
+        isScheduled(): boolean {
+          return false;
+        },
+      },
+
+      // The remaining three subsystems land later in the IIFE once
+      // their dependencies (GPU device, pickRenderer, scheduler) exist.
+      thumbnails: null,
+      clickResolver: null,
+      inputBindings: null,
     },
-    cancelRender(): void {
-      /* not yet wired */
-    },
-    isScheduled(): boolean {
-      return false;
-    },
+    cam: null,
+    initialCamRef: null,
   };
-
-  // ── Loaded clouds (one per uploaded survey) ─────────────────────────────
-  //
-  // Multi-survey picking needs the original `PointCloud` for whichever
-  // source the picker hits, so `buildPointInfo` can pull positions and
-  // photometry by *local* index.  We mirror the renderer's per-source
-  // bookkeeping in JS land here: the renderer owns the GPU buffers, this
-  // map owns the CPU-side struct-of-arrays.
-  //
-  // Empty until the first parallel fetch resolves; pick/hover paths guard
-  // against that empty state.
-  const clouds = new Map<Source, PointCloud>();
-
-  // ── Famous-galaxy sidecars ───────────────────────────────────────────────
-  //
-  // Loaded asynchronously after the cloud fetch kicks off.  Both arrays
-  // start empty; `pointInfoBuilder` checks for `famousMeta[idx]` being
-  // defined before using them, so a hover that fires before the sidecars
-  // land just renders the generic InfoCard layout — graceful degradation.
-  let famousMeta: FamousMetaEntry[] = [];
-  let famousXrefs: FamousXrefMap = {};
 
   /**
    * Resolve a global instance ID coming back from the picker into the
@@ -344,12 +318,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
    * source (defensive — should not happen if the picker only returns
    * indices it actually drew).
    */
-  function resolveGlobalIdx(
-    globalIdx: number,
-  ): { source: Source; localIdx: number } | null {
-    if (!renderer) return null;
+  function resolveGlobalIdx(globalIdx: number): { source: Source; localIdx: number } | null {
+    if (!state.gpu.renderer) return null;
     let remaining = globalIdx;
-    for (const entry of renderer.loadedSources()) {
+    for (const entry of state.gpu.renderer.loadedSources()) {
       if (remaining < entry.count) {
         return { source: entry.source, localIdx: remaining };
       }
@@ -362,52 +334,33 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function pointInfoFromGlobal(globalIdx: number) {
     const resolved = resolveGlobalIdx(globalIdx);
     if (!resolved) return null;
-    const c = clouds.get(resolved.source);
+    const c = state.sources.clouds.get(resolved.source);
     if (!c) return null;
-    return buildPointInfo(c, resolved.localIdx, resolved.source, famousMeta, famousXrefs);
+    return buildPointInfo(
+      c,
+      resolved.localIdx,
+      resolved.source,
+      state.sources.famousMeta,
+      state.sources.famousXrefs,
+    );
   }
 
-  // Renderer and pickRenderer are null until GPU init completes.
-  let renderer: PointRenderer | null = null;
-  let pickRendererHandle: ReturnType<typeof createPickRenderer> | null = null;
-  // ClickResolver wraps the picker + the (globalIdx → PointInfo) walk.
-  // Built inside the IIFE once `pickRendererHandle` exists; null until
-  // then.  See `clickHandler.ts` for the full state-machine commentary.
-  let clickResolver: ClickResolver | null = null;
-  // HDR + tone-map handles share the same null-until-init lifecycle as the
-  // pick renderer above — the IIFE writes into these once the GPU device is
-  // available, and `destroy()` reads them to release the texture and the
-  // tone-map uniform buffer.
-  let hdrTargetHandle: ReturnType<typeof createHdrTarget> | null = null;
-  let toneMapPassHandle: ReturnType<typeof createToneMapPass> | null = null;
-
-  // Galaxy-thumbnail subsystem — built inside the IIFE once the GPU device
-  // exists.  The render-on-demand predicate at the bottom of `frame()`
-  // calls `thumbnails.hasInFlightFetches()` so the loop keeps ticking
-  // while bitmaps are still landing.  `destroy()` calls `.destroy()` to
-  // tear down the eviction handler and clear bookkeeping sets.
-  let thumbnails: ThumbnailSubsystem | null = null;
-
-  // Cleanup function returned by `attachOrbitControls`.  Orbit-controls
-  // attachment lives outside the inputBindings module because it needs
-  // a fully-constructed `OrbitCamera`, which doesn't exist at engine()
-  // time — see `inputBindings.ts`'s docstring for the rationale.
+  // ── Cleanup function returned by `attachOrbitControls` ─────────────────
+  // Orbit-controls attachment lives outside `inputBindings` because it
+  // needs a fully-constructed OrbitCamera which doesn't exist at
+  // engine() time — see inputBindings.ts's docstring.  This handle is
+  // a transient local rather than engine state because it's a single
+  // teardown function with no other consumers.
   let detachControls: (() => void) | null = null;
-
-  // Bag of pointer/keyboard/resize listeners.  See `inputBindings.ts`
-  // for the full list of events and the listener-bookkeeping pattern
-  // it owns.  `destroy()` calls `inputBindings.detach()` to remove
-  // every listener in one shot.
-  let inputBindings: InputBindings | null = null;
 
   // ── Scale-bar deduplication ──────────────────────────────────────────────
   //
   // We only fire `onScaleChange` when the formatted label or rounded pixel
-  // width actually changes. A string signature (`"${niceMpc}:${widthPx}"`)
-  // is the cheapest dedup — one string comparison per frame.
+  // width actually changes.  A string signature (`"${niceMpc}:${widthPx}"`)
+  // is the cheapest dedup — one string comparison per frame.  Both
+  // bindings stay local because they're scoped to `updateScaleBar()`.
   const SCALE_TARGET_PX = 150;
   let lastScaleSig = '';
-  let cam: ReturnType<typeof createOrbitCamera> | null = null;
 
   // ── CSS → texture-space pixel conversion ────────────────────────────────
   //
@@ -428,8 +381,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
    * re-render on every frame when nothing changed.
    */
   function setHovered(idx: number | null): void {
-    if (idx === hoveredIndex) return;
-    hoveredIndex = idx;
+    if (idx === state.picking.hoveredIndex) return;
+    state.picking.hoveredIndex = idx;
     cb.onHoverChange(idx !== null ? pointInfoFromGlobal(idx) : null);
   }
 
@@ -437,8 +390,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
    * Notify the UI if the selected point changed.
    */
   function setSelected(idx: number | null): void {
-    if (idx === selectedIndex) return;
-    selectedIndex = idx;
+    if (idx === state.picking.selectedIndex) return;
+    state.picking.selectedIndex = idx;
     cb.onSelectChange(idx !== null ? pointInfoFromGlobal(idx) : null);
   }
 
@@ -459,10 +412,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
    *     setState only fires when the user-visible value actually changed.
    */
   function updateScaleBar(): void {
-    if (!cam) return;
+    if (!state.cam) return;
 
     const info = computeScaleInfo({
-      cam,
+      cam: state.cam,
       canvasSize: { width: canvas.clientWidth, height: canvas.clientHeight },
       targetPx: SCALE_TARGET_PX,
     });
@@ -515,17 +468,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         height: canvas.height,
       });
       const toneMapPass = createToneMapPass(device, format);
-      // Mirror into the outer-scoped refs so `destroy()` (defined on the
+      // Mirror into the engine state so `destroy()` (defined on the
       // public handle, outside this IIFE) can release the GPU resources.
-      hdrTargetHandle = hdrTarget;
-      toneMapPassHandle = toneMapPass;
+      state.gpu.hdrTarget = hdrTarget;
+      state.gpu.toneMapPass = toneMapPass;
 
       // Build the GPU pipeline; cloud data is loaded below.
       // PointRenderer (and QuadRenderer/DiskRenderer further down) target
       // the HDR rgba16float texture instead of the swap-chain `format`.
       // Their pipelines bake this into a fixed colour-target descriptor at
       // construction time, so the format choice has to land here.
-      renderer = new PointRenderer(device, 'rgba16float');
+      const renderer = new PointRenderer(device, 'rgba16float');
+      state.gpu.renderer = renderer;
 
       // ── Galaxy thumbnail subsystem ─────────────────────────────────────
       //
@@ -576,11 +530,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // atlas-view binding.  The subsystem's `bindToRenderers` is split
       // out from its constructor because the renderers need to exist
       // first; building them here keeps the construction order linear.
-      thumbnails = createThumbnailSubsystem({
+      const thumbnails = createThumbnailSubsystem({
         device,
-        requestRender: () => scheduler.requestRender(),
+        requestRender: () => state.subsystems.scheduler.requestRender(),
       });
       thumbnails.bindToRenderers(quadRenderer, diskRenderer);
+      state.subsystems.thumbnails = thumbnails;
 
       // Signal loading state immediately so the user knows something is
       // happening before the (potentially multi-second) fetch completes.
@@ -609,7 +564,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const { loadedCount } = await loadAllClouds((result) => {
         // Renderer might have been destroyed mid-load (StrictMode unmount,
         // hot-reload).  Drop the result silently in that case.
-        if (!renderer) return;
+        if (!state.gpu.renderer) return;
 
         // `renderer.upload()` is now async — the per-galaxy bake runs in a
         // Web Worker so the main thread stays responsive while ~3.5 M
@@ -623,25 +578,25 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // Errors from the worker are caught + logged; an upload failure
         // shouldn't crash the entire engine since other surveys may still
         // be loading.
-        renderer
+        state.gpu.renderer
           .upload(result.source, result.cloud)
           .then(() => {
             // GPU buffer is now ready — render so the new points appear
             // (the per-frame draw skips sources whose buffer isn't ready
             // yet, so without this call the cloud would stay invisible
             // until some other event woke the loop).
-            scheduler.requestRender();
+            state.subsystems.scheduler.requestRender();
           })
           .catch((err) => {
             console.error(`[engine] point bake failed for source ${result.source}:`, err);
           });
-        clouds.set(result.source, result.cloud);
+        state.sources.clouds.set(result.source, result.cloud);
         cb.onCloudReady?.(result.source, result.cloud.count);
         // Wake immediately too — `clouds.set` enables hover/pick on the
         // (still-baking) cloud's CPU-side metadata.  Harmless even if
         // the GPU buffer isn't quite ready: the per-frame draw skips
         // not-yet-uploaded sources by design.
-        scheduler.requestRender();
+        state.subsystems.scheduler.requestRender();
 
         if (firstResult === null) {
           firstResult = result;
@@ -658,14 +613,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // block until the user reloads.
       loadFamousSidecars()
         .then((sc) => {
-          famousMeta = sc.meta;
-          famousXrefs = sc.xrefs;
+          state.sources.famousMeta = sc.meta;
+          state.sources.famousXrefs = sc.xrefs;
           // No direct render-state change — the sidecars only feed
           // hover-card text — but the famous-galaxy thumbnails
           // referenced by these entries will now be enqueueable from
           // the per-frame loop.  Wake one frame so the user sees the
           // famous overlays without having to nudge the camera.
-          scheduler.requestRender();
+          state.subsystems.scheduler.requestRender();
         })
         .catch((err) => {
           console.warn('[engine] famous sidecars failed to load:', err);
@@ -680,20 +635,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the real-data case.
       if (loadedCount === 0) {
         const fallback = buildSyntheticFallback();
-        if (renderer) {
+        if (state.gpu.renderer) {
           // Same fire-and-forget pattern as the real-data path above —
           // the synthetic cloud is small (<10k points) so the worker
           // finishes nearly instantly, but we keep the error path
           // explicit so a future regression doesn't silently swallow it.
-          renderer
+          state.gpu.renderer
             .upload(fallback.source, fallback.cloud)
             .then(() => {
-              scheduler.requestRender();
+              state.subsystems.scheduler.requestRender();
             })
             .catch((err) => {
               console.error('[engine] synthetic-fallback bake failed:', err);
             });
-          clouds.set(fallback.source, fallback.cloud);
+          state.sources.clouds.set(fallback.source, fallback.cloud);
           cb.onCloudReady?.(fallback.source, fallback.cloud.count);
         }
         firstResult = fallback;
@@ -705,24 +660,25 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // Build the pick renderer. It shares the same vertex/uniform buffers as
       // the visual renderer — no extra GPU memory for point data.
-      pickRendererHandle = createPickRenderer(device);
+      const pickRenderer = createPickRenderer(device);
+      state.gpu.pickRenderer = pickRenderer;
       // The resolver adapts the engine's existing per-global-idx
       // helpers (see `resolveGlobalIdx` and `pointInfoFromGlobal`
       // higher up) into the (cloud, localIdx, source) shape the
       // resolver wants.  The `cloud` lookup goes through the live
-      // `clouds` map so a cloud loaded after engine init still picks
-      // up correctly.
-      clickResolver = createClickResolver({
-        pickRenderer: pickRendererHandle,
+      // `state.sources.clouds` map so a cloud loaded after engine
+      // init still picks up correctly.
+      state.subsystems.clickResolver = createClickResolver({
+        pickRenderer,
         resolveGlobalIdx: (globalIdx) => {
           const r = resolveGlobalIdx(globalIdx);
           if (!r) return null;
-          const cloud = clouds.get(r.source);
+          const cloud = state.sources.clouds.get(r.source);
           if (!cloud) return null;
           return { source: r.source, localIdx: r.localIdx, cloud };
         },
         buildPointInfo: (cloud, localIdx, src) =>
-          buildPointInfo(cloud, localIdx, src, famousMeta, famousXrefs),
+          buildPointInfo(cloud, localIdx, src, state.sources.famousMeta, state.sources.famousXrefs),
       });
 
       // ── Camera auto-framing ──────────────────────────────────────────────
@@ -742,7 +698,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // into a target/distance/yaw/pitch/near/far snapshot, including the
       // global zoom-envelope clamp and the empirical INITIAL_FRAME_FACTOR.
       let bbox = maxAbsCoord(firstResult.cloud);
-      for (const c of clouds.values()) {
+      for (const c of state.sources.clouds.values()) {
         const cb2 = maxAbsCoord(c);
         if (cb2 > bbox) bbox = cb2;
       }
@@ -750,7 +706,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const initialCam = computeInitialCamera({ bbox, fovYRad });
       const source: CloudSource = firstResult.cloudSource;
 
-      cam = createOrbitCamera({
+      const cam = createOrbitCamera({
         target: initialCam.target,
         distance: initialCam.distance,
         yaw: initialCam.yaw,
@@ -760,6 +716,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         near: initialCam.near,
         far: initialCam.far,
       });
+      state.cam = cam;
 
       // ── Initial camera snapshot for resetCamera() ────────────────────────
       //
@@ -770,7 +727,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // accidentally drift the reset target.  `aspect` is intentionally not
       // captured — reset uses the *current* canvas aspect so the projection
       // stays correct after a window resize.
-      initialCamRef = initialCam;
+      state.initialCamRef = initialCam;
 
       // ── Pointer / keyboard / resize listeners ────────────────────────────
       //
@@ -780,21 +737,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // already converts `e.clientX/Y` to a CSS-pixel record and
       // calls `scheduler.requestRender()` after every event so we
       // don't repeat that wake-up at every site.
-      inputBindings = attachEngineInputs({
+      state.subsystems.inputBindings = attachEngineInputs({
         canvas,
-        scheduler,
+        scheduler: state.subsystems.scheduler,
         // Track latest mouse position for the per-frame throttled
         // hover pick.  The pick itself is async (1-2 frames later)
         // but its .then also calls requestRender so the selection
         // halo updates as soon as the readback lands.
         onPointerMove: (cssPx) => {
-          latestMouseCss = cssPx;
+          state.picking.latestMouseCss = cssPx;
         },
         // Pointer left the canvas → clear hover state.  If a point
         // is selected the card stays visible (showing the pinned
         // point) — selection state is unaffected.
         onPointerLeave: () => {
-          latestMouseCss = null;
+          state.picking.latestMouseCss = null;
           setHovered(null);
         },
         // Manual orbit controls always win — cancel any running focus
@@ -805,12 +762,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // reflects "nothing hovered" instead of lagging until the
         // drag ends.
         onPointerDown: () => {
-          tweens.cancel();
-          pointerDown = true;
+          state.subsystems.tweens.cancel();
+          state.picking.pointerDown = true;
           setHovered(null);
         },
         onPointerUp: () => {
-          pointerDown = false;
+          state.picking.pointerDown = false;
         },
         // Esc clears selection.  App.tsx also has a useEffect that
         // forwards Esc through the engine handle's `clearSelection()`
@@ -837,48 +794,48 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // Camera moved — wake the render loop for one frame.
           // Auto-LOD recompute, scale-bar refresh, and pick gate all
           // run inside the next frame body.
-          scheduler.requestRender();
+          state.subsystems.scheduler.requestRender();
         },
         onClick: (xCss, yCss) => {
           // Run a one-shot pick at the click position.  We don't use
           // the throttle guard here — clicks are infrequent and we
           // want an immediate, synchronous-feeling response.
-          if (!renderer || clouds.size === 0 || !clickResolver) return;
+          const r = state.gpu.renderer;
+          const cr = state.subsystems.clickResolver;
+          if (!r || state.sources.clouds.size === 0 || !cr) return;
 
           // Snapshot the renderer's per-source draw records and
           // filter by the current visibility mask so the pick pass
           // sees the same surveys the visual pass just rendered.  We
           // materialise to an array so the iterator survives the
           // async pick promise.
-          const visibleSources = Array.from(renderer.loadedSources()).filter(
-            (s) => ((visibleSourceMask >> s.source) & 1) !== 0,
+          const visibleSources = Array.from(r.loadedSources()).filter(
+            (s) => ((state.sources.visibleMask >> s.source) & 1) !== 0,
           );
           if (visibleSources.length === 0) return;
 
-          clickResolver
-            .resolveClick({
-              pickXPx: cssToTexPx(xCss),
-              pickYPx: cssToTexPx(yCss),
-              viewportPx: [canvas.width, canvas.height],
-              visibleSources,
-              uniformBuffer: renderer.uniformBuffer,
-            })
-            .then((result) => {
-              // Click on empty space → clear; click on point → pin it.
-              // Either path selects (or clears) by global index — the
-              // resolved PointInfo is currently unused at the call
-              // site, but keeping it on the result lets a future
-              // "auto-focus on click" feature reuse the resolution
-              // without a second pick.
-              if (result.kind === 'clear') {
-                setSelected(null);
-              } else {
-                setSelected(result.globalIdx);
-              }
-              // Selection changed — render so the highlight halo
-              // updates on the next frame.
-              scheduler.requestRender();
-            });
+          cr.resolveClick({
+            pickXPx: cssToTexPx(xCss),
+            pickYPx: cssToTexPx(yCss),
+            viewportPx: [canvas.width, canvas.height],
+            visibleSources,
+            uniformBuffer: r.uniformBuffer,
+          }).then((result) => {
+            // Click on empty space → clear; click on point → pin it.
+            // Either path selects (or clears) by global index — the
+            // resolved PointInfo is currently unused at the call
+            // site, but keeping it on the result lets a future
+            // "auto-focus on click" feature reuse the resolution
+            // without a second pick.
+            if (result.kind === 'clear') {
+              setSelected(null);
+            } else {
+              setSelected(result.globalIdx);
+            }
+            // Selection changed — render so the highlight halo
+            // updates on the next frame.
+            state.subsystems.scheduler.requestRender();
+          });
         },
       });
 
@@ -904,24 +861,32 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the rationale on why every engine-owned setting React mirrors goes
       // through the same single audited code path.
       seedSettingsCallbacks(cb, {
-        pointSize: pointSizePx,
-        brightness,
-        autoRotate,
-        galaxyTexturesEnabled,
-        highlightFallback,
-        realOnlyMode,
-        depthFadeEnabled,
-        biasMode,
-        absMagLimit,
-        toneMapCurve,
-        exposure,
-        lodMode,
-        visibleSourceMask,
+        pointSize: state.settings.pointSizePx,
+        brightness: state.settings.brightness,
+        autoRotate: state.settings.autoRotate,
+        galaxyTexturesEnabled: state.settings.galaxyTexturesEnabled,
+        highlightFallback: state.settings.highlightFallback,
+        realOnlyMode: state.settings.realOnlyMode,
+        depthFadeEnabled: state.settings.depthFadeEnabled,
+        biasMode: state.bias.mode,
+        absMagLimit: state.bias.absMagLimit,
+        toneMapCurve: state.settings.toneMapCurve,
+        exposure: state.settings.exposure,
+        lodMode: state.sources.lodMode,
+        visibleSourceMask: state.sources.visibleMask,
       });
 
       // ── Render loop ──────────────────────────────────────────────────────
 
       function frame() {
+        // Snapshot the live state references once at the top of the
+        // frame body for readability.  Each is either a live mutable
+        // value (cam) or a slot that becomes null only on `destroy()`
+        // (renderer, thumbnails) — so reading through the snapshots
+        // for the duration of one frame is identical to reading
+        // `state.*` everywhere.
+        const camRef = state.cam;
+
         // Resize the swap-chain if the canvas element changed size.
         // `resizeCanvasToDisplay` returns `true` only when dimensions changed,
         // so we patch `cam.aspect` and `updatePosition` only in that branch.
@@ -932,10 +897,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // either smear pixels or render off-canvas.  The tone-map pass
         // recreates its bind group every frame, so the new view is picked
         // up automatically on the next call.
-        if (cam && resizeCanvasToDisplay(canvas)) {
-          cam.aspect = canvas.width / canvas.height;
-          updatePosition(cam);
-          hdrTarget.resize({ width: canvas.width, height: canvas.height });
+        if (camRef && resizeCanvasToDisplay(canvas)) {
+          camRef.aspect = canvas.width / canvas.height;
+          updatePosition(camRef);
+          state.gpu.hdrTarget?.resize({ width: canvas.width, height: canvas.height });
         }
 
         // Refresh the scale-bar legend. Early-returns when nothing changed,
@@ -951,8 +916,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // auto-clears its internal reference when the tween finishes,
         // so subsequent frames skip this branch via `isActive()` returning
         // false.
-        if (cam) {
-          tweens.advance(cam, performance.now());
+        if (camRef) {
+          state.subsystems.tweens.advance(camRef, performance.now());
         }
 
         // ── SpaceMouse per-frame application ──────────────────────────────
@@ -964,8 +929,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // wired up at construction).  Calling unconditionally is fine:
         // on a resting puck it's a single hasAnyAxis read + a null
         // assignment to the dt baseline.
-        if (cam) {
-          spaceMouse.applyToCamera(cam, performance.now());
+        if (camRef) {
+          state.subsystems.spaceMouse.applyToCamera(camRef, performance.now());
         }
 
         // ── Auto-rotate yaw ───────────────────────────────────────────────
@@ -978,14 +943,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // wall-clock time.  At high refresh rates (120 Hz) the rotation is
         // smoother but twice as fast.  For a gentle ambient effect this is
         // an acceptable trade-off — no timer bookkeeping needed.
-        if (autoRotate && cam) {
-          cam.yaw += 0.000873;
-          updatePosition(cam);
+        if (state.settings.autoRotate && camRef) {
+          camRef.yaw += 0.000873;
+          updatePosition(camRef);
         }
 
         // Snapshot the current camera state into a combined view-projection matrix.
-        const vp = cam ? computeViewProj(cam) : null;
-        if (!vp || !renderer || !cam || !thumbnails) {
+        const vp = camRef ? computeViewProj(camRef) : null;
+        const rendererRef = state.gpu.renderer;
+        const thumbnailsRef = state.subsystems.thumbnails;
+        const hdrTargetRef = state.gpu.hdrTarget;
+        const toneMapPassRef = state.gpu.toneMapPass;
+        if (!vp || !rendererRef || !camRef || !thumbnailsRef || !hdrTargetRef || !toneMapPassRef) {
           // Camera/renderer not ready yet — try again next frame.
           // (This branch only fires during the brief window between
           // engine startup and the first cloud landing; once both are
@@ -999,7 +968,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // is redundant with the `vp` check (vp is null when cam is)
           // but kept explicit so the type narrowing flows cleanly into
           // the renderFrame call.
-          scheduler.requestRender();
+          state.subsystems.scheduler.requestRender();
           return;
         }
 
@@ -1011,13 +980,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // we only fire `onSourceMaskChange` when the mask actually flips
         // bands so React's setState isn't called every frame.
         //
-        // In manual mode we leave `visibleSourceMask` alone so a user
-        // toggle in the settings panel sticks until they explicitly
-        // re-enter auto mode.
-        if (cam && lodMode === 'auto') {
-          const nextMask = autoLodMask(cam.distance);
-          if (nextMask !== visibleSourceMask) {
-            visibleSourceMask = nextMask;
+        // In manual mode we leave `visibleMask` alone so a user toggle
+        // in the settings panel sticks until they explicitly re-enter
+        // auto mode.
+        if (state.sources.lodMode === 'auto') {
+          const nextMask = autoLodMask(camRef.distance);
+          if (nextMask !== state.sources.visibleMask) {
+            state.sources.visibleMask = nextMask;
             cb.onSourceMaskChange?.(nextMask);
           }
         }
@@ -1033,45 +1002,46 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // pass description and the rationale for keeping pick + auto-LOD
         // out here in `frame()`.
         renderFrame({
-          cam,
+          cam: camRef,
           canvasWidth: canvas.width,
           canvasHeight: canvas.height,
           viewProj: vp,
           device,
           context,
-          hdrTargetView: hdrTarget.view,
-          pointRenderer: renderer,
-          toneMapPass,
-          thumbnails,
+          hdrTargetView: hdrTargetRef.view,
+          pointRenderer: rendererRef,
+          toneMapPass: toneMapPassRef,
+          thumbnails: thumbnailsRef,
           quadRenderer,
           diskRenderer,
           settings: {
-            pointSizePx,
-            brightness,
-            selectedIndex,
-            visibleSourceMask,
-            highlightFallback,
-            realOnlyMode,
-            biasMode,
-            absMagLimit,
-            apparentMagLimit,
-            schechterMStar,
-            schechterAlpha,
-            depthFadeEnabled,
-            exposure,
-            toneMapCurve,
-            galaxyTexturesEnabled,
+            pointSizePx: state.settings.pointSizePx,
+            brightness: state.settings.brightness,
+            selectedIndex: state.picking.selectedIndex,
+            visibleSourceMask: state.sources.visibleMask,
+            highlightFallback: state.settings.highlightFallback,
+            realOnlyMode: state.settings.realOnlyMode,
+            biasMode: state.bias.mode,
+            absMagLimit: state.bias.absMagLimit,
+            apparentMagLimit: state.bias.apparentMagLimit,
+            schechterMStar: state.bias.schechterMStar,
+            schechterAlpha: state.bias.schechterAlpha,
+            depthFadeEnabled: state.settings.depthFadeEnabled,
+            exposure: state.settings.exposure,
+            toneMapCurve: state.settings.toneMapCurve,
+            galaxyTexturesEnabled: state.settings.galaxyTexturesEnabled,
           },
-          famousMeta,
-          famousXrefs,
-          clouds,
+          famousMeta: state.sources.famousMeta,
+          famousXrefs: state.sources.famousXrefs,
+          clouds: state.sources.clouds,
         });
 
         // ── Throttled hover pick ──────────────────────────────────────────
         //
-        // Strategy: pointermove updates `latestMouseCss`; here (once per frame)
-        // we check whether the mouse has moved since the last pick. If it has
-        // AND no pick is already in flight, we kick off a new one.
+        // Strategy: pointermove updates `state.picking.latestMouseCss`; here
+        // (once per frame) we check whether the mouse has moved since the
+        // last pick. If it has AND no pick is already in flight, we kick
+        // off a new one.
         //
         // We compare object references rather than coordinates — a new position
         // object was created by the pointermove handler, so reference inequality
@@ -1086,17 +1056,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // visual frame's uniform buffer has already been written with the latest
         // viewProj. The pick renderer reads the same uniform buffer.
         if (
-          clouds.size > 0 &&
-          latestMouseCss !== null &&
-          latestMouseCss !== lastPickedMouseCss &&
-          !pickInFlight &&
-          !pointerDown // skip hover picks while a drag is in progress
+          state.sources.clouds.size > 0 &&
+          state.picking.latestMouseCss !== null &&
+          state.picking.latestMouseCss !== state.picking.lastPickedMouseCss &&
+          !state.picking.pickInFlight &&
+          !state.picking.pointerDown // skip hover picks while a drag is in progress
         ) {
           // Snapshot the renderer's currently-visible per-source draw
           // records.  Same filter rule as the click handler — only sources
           // whose visibility bit is set are eligible to claim hover.
-          const visibleSources = Array.from(renderer.loadedSources()).filter(
-            (s) => ((visibleSourceMask >> s.source) & 1) !== 0,
+          const visibleSources = Array.from(rendererRef.loadedSources()).filter(
+            (s) => ((state.sources.visibleMask >> s.source) & 1) !== 0,
           );
           if (visibleSources.length === 0) {
             // No surveys are visible right now (user toggled them all
@@ -1106,17 +1076,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           }
 
           // Snapshot the position at the moment we kick off the pick.
-          const pos = latestMouseCss;
-          lastPickedMouseCss = pos;
-          pickInFlight = true;
+          const pos = state.picking.latestMouseCss;
+          state.picking.lastPickedMouseCss = pos;
+          state.picking.pickInFlight = true;
 
-          pickRendererHandle!
-            .pick(
+          state.gpu
+            .pickRenderer!.pick(
               [canvas.width, canvas.height],
               cssToTexPx(pos.x),
               cssToTexPx(pos.y),
               visibleSources,
-              renderer.uniformBuffer,
+              rendererRef.uniformBuffer,
             )
             .then((idx) => {
               setHovered(idx === -1 ? null : idx);
@@ -1129,7 +1099,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               // hover halo, add scheduler.requestRender() here.
             })
             .finally(() => {
-              pickInFlight = false;
+              state.picking.pickInFlight = false;
             });
         }
 
@@ -1152,18 +1122,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         //     calls requestRender() — but we keep one frame queued
         //     anyway so the load-fade lerp ramps smoothly.
         const stillAnimating =
-          autoRotate ||
-          tweens.isActive() ||
-          spaceMouse.hasAxes() ||
-          (thumbnails !== null && thumbnails.hasInFlightFetches());
-        if (stillAnimating) scheduler.requestRender();
+          state.settings.autoRotate ||
+          state.subsystems.tweens.isActive() ||
+          state.subsystems.spaceMouse.hasAxes() ||
+          (state.subsystems.thumbnails !== null &&
+            state.subsystems.thumbnails.hasInFlightFetches());
+        if (stillAnimating) state.subsystems.scheduler.requestRender();
       }
 
       // Build the scheduler now that `frame` is defined, then kick off
       // the first render.  After that one frame, the loop sleeps until
       // an event handler or a setter calls scheduler.requestRender().
-      scheduler = createRenderScheduler({ onFrame: frame });
-      scheduler.requestRender();
+      state.subsystems.scheduler = createRenderScheduler({ onFrame: frame });
+      state.subsystems.scheduler.requestRender();
     } catch (err) {
       // Surface initialisation failures via the status callback so the UI
       // shows a readable message rather than a blank canvas.
@@ -1179,105 +1150,105 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     clearSelection() {
       // Only fire the callback when something was actually selected.
       // This lets the Esc handler in App.tsx call this unconditionally.
-      if (selectedIndex !== null) {
+      if (state.picking.selectedIndex !== null) {
         setSelected(null);
-        scheduler.requestRender();
+        state.subsystems.scheduler.requestRender();
       }
     },
 
     destroy() {
       // 1. Cancel any in-flight frame so we don't tick after teardown.
-      scheduler.cancelRender();
+      state.subsystems.scheduler.cancelRender();
 
       // 2. Detach every pointer/keyboard/resize listener attached via
       //    inputBindings (the module owns the bookkeeping internally).
-      inputBindings?.detach();
-      inputBindings = null;
+      state.subsystems.inputBindings?.detach();
+      state.subsystems.inputBindings = null;
 
       // 3. Detach orbit controls (removes its own four listeners).
       detachControls?.();
       detachControls = null;
 
       // 5. Release GPU resources.
-      pickRendererHandle?.destroy();
-      pickRendererHandle = null;
+      state.gpu.pickRenderer?.destroy();
+      state.gpu.pickRenderer = null;
       // Tone-map pass owns a 16-byte uniform buffer; HDR target owns the
       // rgba16float texture.  Both must be released so a hot-reload /
       // remount doesn't leak a per-mount texture (~16 MB at 2× DPR 1080p).
-      hdrTargetHandle?.destroy();
-      hdrTargetHandle = null;
-      toneMapPassHandle?.destroy();
-      toneMapPassHandle = null;
+      state.gpu.hdrTarget?.destroy();
+      state.gpu.hdrTarget = null;
+      state.gpu.toneMapPass?.destroy();
+      state.gpu.toneMapPass = null;
       // Tear down the thumbnail subsystem (clears the atlas's evict
       // handler and aborts in-flight fetches' write-back).  The atlas's
       // GPU texture itself is released when the device is dropped —
       // the subsystem doesn't expose a destroy on it directly.
-      thumbnails?.destroy();
-      thumbnails = null;
+      state.subsystems.thumbnails?.destroy();
+      state.subsystems.thumbnails = null;
       // Release the WebHID device (no-op if never connected).
-      spaceMouse.destroy();
+      state.subsystems.spaceMouse.destroy();
 
       // 6. Drop references to aid GC.
-      renderer = null;
-      clouds.clear();
-      cam = null;
+      state.gpu.renderer = null;
+      state.sources.clouds.clear();
+      state.cam = null;
     },
 
     // ── Settings panel setters ─────────────────────────────────────────────
     //
-    // Each setter mutates the corresponding closure variable and fires the
-    // optional callback so subscribed React state stays in sync. The new
+    // Each setter mutates the corresponding `state.*` field and fires the
+    // optional callback so subscribed React state stays in sync.  The new
     // value takes effect on the very next rendered frame.
 
     setPointSize(sizePx) {
-      pointSizePx = sizePx;
+      state.settings.pointSizePx = sizePx;
       cb.onPointSizeChange?.(sizePx);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     setBrightness(value) {
-      brightness = value;
+      state.settings.brightness = value;
       cb.onBrightnessChange?.(value);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     setAutoRotate(enabled) {
-      autoRotate = enabled;
+      state.settings.autoRotate = enabled;
       cb.onAutoRotateChange?.(enabled);
       // Wake the loop — if previously idle, the new autoRotate=true
       // keeps it ticking via the still-animating predicate; if
       // toggling off, this single render lets the next frame body
       // observe `autoRotate=false` and let the loop sleep.
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     setGalaxyTexturesEnabled(enabled) {
-      // The per-frame loop reads `galaxyTexturesEnabled` directly, so the
-      // toggle takes effect on the very next rendered frame — no extra
-      // signalling needed.  We still echo via the optional callback so any
-      // subscribed React state mirrors the engine truth (same pattern as
-      // the other settings setters above).
-      galaxyTexturesEnabled = enabled;
+      // The per-frame loop reads `state.settings.galaxyTexturesEnabled`
+      // directly, so the toggle takes effect on the very next rendered
+      // frame — no extra signalling needed.  We still echo via the
+      // optional callback so any subscribed React state mirrors the
+      // engine truth (same pattern as the other settings setters above).
+      state.settings.galaxyTexturesEnabled = enabled;
       cb.onGalaxyTexturesEnabledChange?.(enabled);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     setHighlightFallback(enabled) {
       // Tints fallback-orientation rows magenta (see fragment shader).
       // Read by the per-frame draw call, so flipping it takes effect on
       // the very next rendered frame.
-      highlightFallback = enabled;
+      state.settings.highlightFallback = enabled;
       cb.onHighlightFallbackChange?.(enabled);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     setRealOnlyMode(enabled) {
       // `discard`s fragments belonging to fallback rows so the user sees
       // only galaxies with measured (b/a, PA).  Same per-frame uniform
       // path as the highlight toggle.
-      realOnlyMode = enabled;
+      state.settings.realOnlyMode = enabled;
       cb.onRealOnlyModeChange?.(enabled);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     setDepthFadeEnabled(enabled) {
@@ -1287,9 +1258,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // origin contribute less, breaking up the depth-column saturation
       // at the centre of the catalog.  Same per-frame uniform path as
       // the other UI booleans.
-      depthFadeEnabled = enabled;
+      state.settings.depthFadeEnabled = enabled;
       cb.onDepthFadeEnabledChange?.(enabled);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     setBiasMode(mode) {
@@ -1298,15 +1269,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // so flipping this from devtools or the future SettingsPanel takes
       // effect on the next rendered frame without any pipeline rebuild.
       //
-      // We always fire the echo callback — even when `mode === biasMode`
+      // We always fire the echo callback — even when `mode === state.bias.mode`
       // — so the UI seeds correctly on first call.  The plan calls this
       // out explicitly because `setBiasMode(BiasMode.None)` is a legitimate
       // first-frame state that must reach the SettingsPanel.
-      const wasSchechter = biasMode === BiasMode.Schechter;
+      const wasSchechter = state.bias.mode === BiasMode.Schechter;
       const isSchechter = mode === BiasMode.Schechter;
-      const wasAngular = biasMode === BiasMode.AngularReweight;
+      const wasAngular = state.bias.mode === BiasMode.AngularReweight;
       const isAngular = mode === BiasMode.AngularReweight;
-      biasMode = mode;
+      state.bias.mode = mode;
       cb.onBiasModeChange?.(mode);
 
       // ── Lazy Schechter-ratio bake (perf) ──────────────────────────────
@@ -1322,13 +1293,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // `select(1.0, schechterRatio, biasMode == 3u)` gate already ignores
       // slot 11 in modes 0/1/2, so leaving the values in the GPU buffer is
       // both correct and cheaper than re-uploading 1.0s.
-      if (!wasSchechter && isSchechter && renderer) {
-        renderer
+      if (!wasSchechter && isSchechter && state.gpu.renderer) {
+        state.gpu.renderer
           .applySchechterMode()
           .then(() => {
             // Weights are now in the GPU buffer; the next frame will
             // pick them up.
-            scheduler.requestRender();
+            state.subsystems.scheduler.requestRender();
           })
           .catch((err) => {
             console.error('[engine] Schechter ratio bake failed:', err);
@@ -1350,11 +1321,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the baked weights in the GPU buffer is correct AND keeps the
       // next mode-4 toggle instant (the cache hit fires off a single
       // re-upload, no worker spawn).
-      if (!wasAngular && isAngular && renderer) {
-        renderer
+      if (!wasAngular && isAngular && state.gpu.renderer) {
+        state.gpu.renderer
           .applyAngularReweightMode()
           .then(() => {
-            scheduler.requestRender();
+            state.subsystems.scheduler.requestRender();
           })
           .catch((err) => {
             console.error('[engine] Angular re-weight bake failed:', err);
@@ -1365,7 +1336,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // next rendered frame.  Schechter / angular bakes (above) also
       // call requestRender from their resolve handlers in Task 5 to
       // trigger a second render once the GPU buffers are ready.
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     setAbsMagLimit(absMag) {
@@ -1374,9 +1345,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // M) are discarded in the vertex stage.  Seeded at engine init from
       // the closure default (-19, the SDSS spec sample limit); subsequent
       // calls overwrite that.
-      absMagLimit = absMag;
+      state.bias.absMagLimit = absMag;
       cb.onAbsMagLimitChange?.(absMag);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     setExposure(value) {
@@ -1386,14 +1357,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // by zero and produce a black frame the user can't recover
       // from.  0.05 keeps a faint signal visible; 16 is well past
       // any realistic peak (~5-10 in the densest cluster cores).
-      exposure = Math.max(0.05, Math.min(16, value));
+      state.settings.exposure = Math.max(0.05, Math.min(16, value));
       // Echo the *clamped* value back to the UI so the slider's
       // displayed number agrees with what the shader actually uses.
       // Mirrors the setToneMapCurve / setBiasMode pattern: always
       // fire (even on no-op identical values) so the first call
       // seeds React state correctly without a separate code path.
-      cb.onExposureChange?.(exposure);
-      scheduler.requestRender();
+      cb.onExposureChange?.(state.settings.exposure);
+      state.subsystems.scheduler.requestRender();
     },
 
     setToneMapCurve(curve) {
@@ -1403,21 +1374,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the SettingsPanel takes effect on the next rendered frame
       // without any pipeline rebuild.
       //
-      // Always fire the echo callback — even when `curve === toneMapCurve`
+      // Always fire the echo callback — even when `curve === state.settings.toneMapCurve`
       // — so the UI seeds correctly on first call (mirrors the
       // setBiasMode pattern).
-      toneMapCurve = curve;
+      state.settings.toneMapCurve = curve;
       cb.onToneMapCurveChange?.(curve);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     resetCamera() {
-      // `cam` may be null if the engine is destroyed or the cloud hasn't
-      // loaded yet.  We keep `initialCamRef` declared in the outer closure
-      // (rather than scoped to the async IIFE) so that this handle method
-      // can read it after the IIFE completes.  Reading `cam` at call time
-      // (via the closure ref) gives us the live camera object to mutate, not
-      // a stale snapshot.
+      // `state.cam` may be null if the engine is destroyed or the cloud
+      // hasn't loaded yet.  We keep `state.initialCamRef` declared in the
+      // outer state bag (rather than scoped to the async IIFE) so that
+      // this handle method can read it after the IIFE completes.
+      // Reading `state.cam` at call time gives us the live camera object
+      // to mutate, not a stale snapshot.
+      const cam = state.cam;
+      const initialCamRef = state.initialCamRef;
       if (!cam || !initialCamRef) return;
       cam.target[0] = initialCamRef.target[0];
       cam.target[1] = initialCamRef.target[1];
@@ -1426,12 +1399,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cam.yaw = initialCamRef.yaw;
       cam.pitch = initialCamRef.pitch;
       updatePosition(cam);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     focusOn(worldXYZ, diameterKpc) {
       // Camera may not be ready yet (cloud still loading); drop the call.
       // Same defensive pattern as resetCamera() above.
+      const cam = state.cam;
       if (!cam) return;
 
       // Snapshot the CURRENT camera state — not the original startup state —
@@ -1444,7 +1418,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // pre-v4 framing exactly.  When present, the camera ends up
       // 4× the galaxy's diameter away (close-but-not-inside framing
       // that scales naturally with size).
-      tweens.start({
+      state.subsystems.tweens.start({
         startMs: performance.now(),
         durationMs: FOCUS_TWEEN_MS,
         fromTarget: vec3.clone(cam.target as vec3),
@@ -1459,7 +1433,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Kick the loop into motion — the tween's per-frame advance will
       // keep it ticking via the still-animating predicate until the
       // tween completes.
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     selectFamous(id) {
@@ -1467,21 +1441,27 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // slightly after the point cloud).  Early return is safe — the user
       // would have to invoke the palette in the ~500 ms window before the
       // sidecar fetch resolves, which is cosmetically acceptable.
-      const cloud = clouds.get(Source.Famous);
+      const cloud = state.sources.clouds.get(Source.Famous);
       if (!cloud) return;
-      const localIdx = famousMeta.findIndex((m) => m.id === id);
+      const localIdx = state.sources.famousMeta.findIndex((m) => m.id === id);
       if (localIdx < 0) return;
 
       // Build the same PointInfo the picker would, using the live sidecars
       // so the famous block (name, description, thumbnail) populates.
-      const info = buildPointInfo(cloud, localIdx, Source.Famous, famousMeta, famousXrefs);
+      const info = buildPointInfo(
+        cloud,
+        localIdx,
+        Source.Famous,
+        state.sources.famousMeta,
+        state.sources.famousXrefs,
+      );
       if (!info) return;
 
       // The engine's selectedIndex is GLOBAL — not per-source local — so
       // we have to compute the global index.  The renderer keeps each
       // source's instanceIdOffset; sum the famous source's offset with
       // the local idx to reconstruct the same value the picker would write.
-      const offset = renderer?.instanceIdOffset(Source.Famous) ?? 0;
+      const offset = state.gpu.renderer?.instanceIdOffset(Source.Famous) ?? 0;
       const globalIdx = offset + localIdx;
       setSelected(globalIdx);
 
@@ -1490,8 +1470,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // because we're inside the object literal and `this` would be unreliable
       // at call time (depending on how App.tsx invokes the handle method).
       // Copying the tween-setup block keeps the behaviour identical.
+      const cam = state.cam;
       if (!cam) return;
-      tweens.start({
+      state.subsystems.tweens.start({
         startMs: performance.now(),
         durationMs: FOCUS_TWEEN_MS,
         fromTarget: vec3.clone(cam.target as vec3),
@@ -1503,15 +1484,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         fromPitch: cam.pitch,
         toPitch: cam.pitch,
       });
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     focusOnHome() {
       // Camera or initial snapshot may not be ready yet — same pattern as
       // resetCamera.  Both must exist for a meaningful tween.
+      const cam = state.cam;
+      const initialCamRef = state.initialCamRef;
       if (!cam || !initialCamRef) return;
 
-      tweens.start({
+      state.subsystems.tweens.start({
         startMs: performance.now(),
         durationMs: FOCUS_TWEEN_MS,
         fromTarget: vec3.clone(cam.target as vec3),
@@ -1527,21 +1510,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         fromPitch: cam.pitch,
         toPitch: initialCamRef.pitch,
       });
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     // ── LOD + per-source visibility setters ────────────────────────────────
     //
     // These two methods are the public seam for the survey-toggle UI
     // (Task #37 / settings panel).  They are kept tiny on purpose: the
-    // engine is the source of truth for `lodMode` and `visibleSourceMask`,
-    // React just mirrors them via the optional callbacks.
+    // engine is the source of truth for `state.sources.lodMode` and
+    // `state.sources.visibleMask`, React just mirrors them via the
+    // optional callbacks.
 
     setLodMode(mode) {
-      if (mode === lodMode) return;
-      lodMode = mode;
+      if (mode === state.sources.lodMode) return;
+      state.sources.lodMode = mode;
       cb.onLodModeChange?.(mode);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     setSourceVisible(source, visible) {
@@ -1549,18 +1533,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // signal that they want manual control.  Auto-LOD would clobber the
       // mask on the very next frame, so we proactively flip into manual
       // mode here rather than making the caller orchestrate two calls.
-      if (lodMode !== 'manual') {
-        lodMode = 'manual';
+      if (state.sources.lodMode !== 'manual') {
+        state.sources.lodMode = 'manual';
         cb.onLodModeChange?.('manual');
       }
 
       const next = visible
-        ? maskWith(visibleSourceMask, source)
-        : maskWithout(visibleSourceMask, source);
-      if (next === visibleSourceMask) return;
-      visibleSourceMask = next;
+        ? maskWith(state.sources.visibleMask, source)
+        : maskWithout(state.sources.visibleMask, source);
+      if (next === state.sources.visibleMask) return;
+      state.sources.visibleMask = next;
       cb.onSourceMaskChange?.(next);
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     // ── SpaceMouse 6DOF input setters ─────────────────────────────────────
@@ -1571,23 +1555,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // EngineHandle type unchanged (Promise<boolean>).
 
     async connectSpaceMouse() {
-      const result = await spaceMouse.connect();
+      const result = await state.subsystems.spaceMouse.connect();
       return result.ok;
     },
 
     disconnectSpaceMouse() {
-      spaceMouse.disconnect();
+      state.subsystems.spaceMouse.disconnect();
       // Wake one frame so the still-animating predicate sees the
       // freshly-zeroed axes and lets the loop sleep cleanly.
-      scheduler.requestRender();
+      state.subsystems.scheduler.requestRender();
     },
 
     isSpaceMouseConnected() {
-      return spaceMouse.isConnected();
+      return state.subsystems.spaceMouse.isConnected();
     },
 
     setSpaceMouseSensitivity(value) {
-      spaceMouse.setSensitivity(value);
+      state.subsystems.spaceMouse.setSensitivity(value);
     },
   };
 
