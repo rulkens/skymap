@@ -357,6 +357,15 @@ These are deliberately not in this version:
 - **Picking on the photometric scale** — same blocker as above.
 - **Mobile / Safari / Firefox support** — limited by partial WebGPU implementations.
 
+## A note on AI-assisted development
+
+[`CLAUDE.md`](CLAUDE.md) at the repo root is onboarding guidance for AI
+coding assistants (Claude Code in particular).  It's not load-bearing
+for the build or runtime — humans don't need to read it, and removing
+it wouldn't change anything that ships.  It's there because parts of
+this project were developed with AI assistance and that context is
+useful for future AI-assisted edits.
+
 ## How to cite
 
 If you use Skymap in a publication, talk, or derived work, please cite it
