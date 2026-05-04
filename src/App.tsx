@@ -84,6 +84,7 @@ import {
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
+  DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_LOD_MODE,
   DEFAULT_POINT_SIZE_PX,
@@ -156,6 +157,8 @@ export function App(): React.ReactElement {
   const [autoRotate, setAutoRotate] = useState<boolean>(DEFAULT_AUTO_ROTATE);
   const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] =
     useState<boolean>(DEFAULT_GALAXY_TEXTURES_ENABLED);
+  const [milkyWayEnabled, setMilkyWayEnabled] =
+    useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
   const [highlightFallback, setHighlightFallback] =
     useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
   const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
@@ -288,6 +291,7 @@ export function App(): React.ReactElement {
       // on?" identical to the engine's source-of-truth value, even if the
       // engine ever flips it for non-UI reasons (e.g. perf-driven auto-disable).
       onGalaxyTexturesEnabledChange: setGalaxyTexturesEnabled,
+      onMilkyWayEnabledChange: setMilkyWayEnabled,
       // Task 15 — orientation toggles echo back from the engine so React
       // state stays in sync if the engine ever flips them programmatically.
       onHighlightFallbackChange: setHighlightFallback,
@@ -469,6 +473,10 @@ export function App(): React.ReactElement {
         galaxyTexturesEnabled={galaxyTexturesEnabled}
         onGalaxyTexturesChange={(enabled) => {
           handleRef.current?.setGalaxyTexturesEnabled?.(enabled);
+        }}
+        milkyWayEnabled={milkyWayEnabled}
+        onMilkyWayEnabledChange={(enabled) => {
+          handleRef.current?.setMilkyWayEnabled?.(enabled);
         }}
         // Task 15 — orientation-visibility toggles. Same forward-only flow
         // as galaxyTexturesEnabled: engine fires the echo callback
