@@ -22,17 +22,29 @@
  *
  * ### Module layout
  *
- * The pure / leaf concerns live in sibling modules so this file can stay
- * focused on the imperative orchestration:
+ * The pure / leaf concerns and the cohesive subsystems live in sibling
+ * modules so this file can stay focused on the imperative orchestration:
  *
- *   - `autoLod.ts`           — LOD heuristic (also re-exported as public API)
- *   - `focusTween.ts`        — focus camera tween constants + distance helper
- *   - `pointInfoBuilder.ts`  — buildPointInfo / maxAbsCoord / niceRound
- *   - `cloudLoader.ts`       — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
+ *   Pure helpers:
+ *   - `autoLod.ts`             — LOD heuristic (also re-exported as public API)
+ *   - `focusTween.ts`          — focus camera tween constants + distance helper
+ *   - `pointInfoBuilder.ts`    — buildPointInfo / maxAbsCoord / niceRound
+ *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
+ *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot
+ *   - `seedSettingsCallbacks.ts` — fan-out of default settings to optional cb hooks
+ *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting
  *
- * The pointer / wheel / pick / hover-select handling stays inline below
- * because all of it shares closure state (renderer, cloud, cam, indices,
- * masks) — extracting it would force every helper to take ~10 parameters.
+ *   Subsystems (closure-returning factories with internal state):
+ *   - `tweenManager.ts`        — at-most-one in-flight CameraTween facade
+ *   - `spaceMouseSubsystem.ts` — 6DOF puck device + per-frame camera mutation
+ *   - `clickHandler.ts`        — pick → globalIdx → PointInfo resolver
+ *   - `inputBindings.ts`       — pointer/keyboard/resize listener bag
+ *   - `thumbnailSubsystem.ts`  — atlas + queue + per-frame thumbnail draw
+ *
+ * Hover state, selection state, the renderer/picker/HDR handles, and the
+ * orbit-controls attachment stay inline here because they share closure
+ * with React-callback boundaries (setHovered/setSelected) or require
+ * `cam` (which doesn't exist until the async IIFE runs).
  *
  * ### Usage
  *
