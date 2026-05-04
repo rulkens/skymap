@@ -34,3 +34,4 @@ export * from './dssThumbnailUrl';
 export * from './distanceModulus';
 export * from './schechterDensity';
 export * from './vMaxWeight';
+export * from './galaxyProfile';
