@@ -185,6 +185,56 @@ fn galacticToShader(g: vec3<f32>) -> vec3<f32> {
   return vec3<f32>(g.x, g.z, g.y);
 }
 
+// ── Volumetric raymarch tunables (bulge + disc halo) ────────────────
+//
+// Both extra contributions in `renderGalaxy` (the central spherical
+// bulge and the thin-disc halo that fills in the inter-arm regions)
+// are short ray-marches of an analytical density profile.  Pulling
+// the parameters into module-scope constants matches the convention
+// used by `proceduralDisks.wgsl` and makes the visual knobs easy to
+// tweak without diving into the loop body.
+//
+// Sampling cost is fixed: BULGE_STEPS + DISC_HALO_STEPS exp() calls
+// per fragment (32 with current values).  The impostor is one quad,
+// so total per-frame cost stays in the low-millisecond range even
+// at 4K.
+
+// Bulge — Gaussian density centred at the world origin.
+// SIGMA² is the variance of the Gaussian; INTEGRATION_RADIUS is the
+// bounding sphere used for ray entry/exit (set to ~1.6× the visible
+// bulge radius so the Gaussian's tail past the nominal silhouette is
+// still captured — past 1.6×, ρ ≈ 0.6%, visually invisible).
+// OPACITY scales the integrated optical depth before the
+// Beer-Lambert exp; BRIGHTNESS scales the final output colour.
+const BULGE_RADIUS: f32              = 0.125;
+const BULGE_INTEGRATION_RADIUS: f32  = 0.20;
+const BULGE_SIGMA_SQ: f32            = 0.0078125;  // 0.5 · BULGE_RADIUS²
+const BULGE_STEPS: i32               = 16;
+const BULGE_OPACITY: f32             = 6.0;
+const BULGE_BRIGHTNESS: f32          = 1.7;
+
+// Disc halo — anisotropic Gaussian.  Two independent sigmas: a wide
+// in-plane sigma (so the halo extends out across the full disk
+// extent) and a *very* narrow disk-normal sigma (so the halo reads
+// as a "razor-thin haze in the disk plane" rather than a puffy cloud).
+// Without this halo the inter-arm regions are pure black between
+// arms and the spiral fades to nothing at the edges; with it, there
+// is a soft warm baseline that keeps the arms visually anchored.
+//
+// SIGMA_R and SIGMA_Y are the standard deviations in shader units;
+// the squared values are pre-computed because the integrand uses
+// them in the exp() denominator on every step.
+const DISC_HALO_INTEGRATION_RADIUS: f32 = 1.0;
+const DISC_HALO_SIGMA_R_SQ: f32         = 0.25;     // (0.5)²  — in-plane radial scale
+const DISC_HALO_SIGMA_Y_SQ: f32         = 0.0025;   // (0.05)² — disk-normal thickness
+const DISC_HALO_STEPS: i32              = 16;
+const DISC_HALO_OPACITY: f32            = 4.0;
+const DISC_HALO_BRIGHTNESS: f32         = 0.45;
+// Slightly cooler than COL_DUST so the halo reads as an underlying
+// stellar haze, not as more dust.  Inspired by the warm-yellow
+// colour of an old-disk stellar population.
+const COL_DISC_HALO = vec3<f32>(0.95, 0.92, 0.88);
+
 @vertex
 fn vs(@builtin(vertex_index) vid: u32) -> VsOut {
   let c = CORNERS[vid];
@@ -511,117 +561,110 @@ fn renderGalaxy(ro: vec3<f32>, rd: vec3<f32>, tm: f32) -> vec3<f32> {
     col = shadeGalaxyDisk(p.xz, ro, rd, dgalaxy, tm);
   }
 
-  // ── Bulge dust integral ─────────────────────────────────────────
+  // ── Ray-marched soft bulge ───────────────────────────────────────
   //
-  // The ShaderToy original truncated the bulge chord by the disk
-  // plane:
+  // The ShaderToy original used `1.7 * (1 - exp(-chord))` where
+  // `chord` is the geometric chord length through a uniform-density
+  // sphere.  That has TWO problems for a world-anchored impostor:
   //
-  //   if (dgalaxy > 0 && cgalaxy.x > 0) {
-  //     t = min(dgalaxy - cgalaxy.x, cgalaxy.y - cgalaxy.x);
-  //   } else if (cgalaxy.x < cgalaxy.y) {
-  //     t = cgalaxy.y - cgalaxy.x;
-  //   }
+  //   1. Asymmetric truncation — the original `min(t0, t1)` clipped
+  //      the chord to "above the disk plane" so the bulge looked
+  //      like a crescent.  Fine for the ShaderToy's hard-coded
+  //      vantage, broken when the user can orbit and would see one
+  //      side vanish.
   //
-  // That min() takes the SHORTER of (entry-to-disk-plane chord,
-  // full-bulge chord), which truncates the bulge dust to the
-  // "above-disk-plane hemisphere only" for a camera above the disk.
-  // For the original ShaderToy's hard-coded above-the-disk vantage
-  // that produced a distinctive crescent-shaped bulge with the dust
-  // on the upper half — visually pleasing in the static framing.
+  //   2. Hard silhouette — uniform density inside, zero outside.
+  //      Chord goes to zero at the geometric edge with INFINITE
+  //      slope (`chord = 2·sqrt(r² - b²)` near impact-parameter b
+  //      = r), so the rendered brightness has a sharp circular cut.
   //
-  // For a world-anchored impostor where the user navigates AROUND
-  // the galaxy, this truncation makes the bulge appear to "disappear
-  // on one side" when looking head-on at the disk: as the camera
-  // tilts even slightly off perpendicular, one side of the projected
-  // bulge crescent is missing because t0 collapses asymmetrically
-  // around the disk plane intersection.
-  //
-  // Fix: always use the full bulge chord (cgalaxy.y - cgalaxy.x).
-  // The bulge then renders as a complete spherical glow from every
-  // viewing angle, which is what physical galactic bulges actually
-  // look like.
-  let cgalaxy = raySphere(ro, rd, vec3<f32>(0.0), 0.125);
+  // Fix #1: drop the disk-plane truncation, use the full chord.
+  // Fix #2: replace the uniform-density assumption entirely with a
+  // GAUSSIAN density profile, ray-marched in a small loop.  Because
+  // the density itself approaches zero before the integration sphere
+  // boundary, the silhouette is naturally soft — there is no hard
+  // density-to-zero transition, only a smooth Gaussian tail.  No 2D
+  // screen-space hack required.
+  let bulgeHits = raySphere(ro, rd, vec3<f32>(0.0), BULGE_INTEGRATION_RADIUS);
 
-  var t: f32 = 0.0;
-  if (cgalaxy.x < cgalaxy.y) {
-    t = cgalaxy.y - cgalaxy.x;
+  var bulgeOpticalDepth: f32 = 0.0;
+  if (bulgeHits.x < bulgeHits.y) {
+    // Clamp the entry t to 0 — when the camera is INSIDE the
+    // integration sphere we start the march at the camera position,
+    // not behind it.  Without this, viewing from very close in
+    // would accumulate spurious flux from negative-s samples.
+    let bulgeEntryT = max(bulgeHits.x, 0.0);
+    let bulgeChordLen = max(0.0, bulgeHits.y - bulgeEntryT);
+    let bulgeStep = bulgeChordLen / f32(BULGE_STEPS);
+    for (var i: i32 = 0; i < BULGE_STEPS; i = i + 1) {
+      // Midpoint rule — sample at the centre of each sub-interval.
+      let sampleT = bulgeEntryT + (f32(i) + 0.5) * bulgeStep;
+      let samplePos = ro + sampleT * rd;
+      let densityHere = exp(-dot(samplePos, samplePos) / BULGE_SIGMA_SQ);
+      bulgeOpticalDepth = bulgeOpticalDepth + densityHere * bulgeStep;
+    }
   }
 
-  // ── Silhouette softening ─────────────────────────────────────────
-  //
-  // The chord-based dust integral `1 - exp(-t)` saturates inside the
-  // sphere but goes to zero at the silhouette where the chord goes
-  // to zero with INFINITE slope (`t = 2·sqrt(r² - b²)` where `b` is
-  // the impact parameter, so dt/db diverges as b → r).  That gives
-  // the bulge a sharp circular edge — visible as a "clear edge" in
-  // the rendered image when the bulge is large on screen.
-  //
-  // Three coordinated softening terms:
-  //
-  //   1. `chordSoft` — smoothstep on chord length.  Ramps the chord
-  //      dust down gracefully in the last ~20% of the chord where
-  //      `1 - exp(-t)` would have an infinite-slope tail.
-  //
-  //   2. `halo` — Gaussian on the IMPACT PARAMETER (perpendicular
-  //      distance from the ray to the bulge centre).  Extends a soft
-  //      glow PAST the geometric sphere silhouette so there's no
-  //      hard chord/no-chord transition; outside the sphere where
-  //      the chord term is zero, the halo carries the rendered
-  //      brightness on its own.
-  //
-  //   3. `outerFade` — squared-input smoothstep envelope that goes
-  //      to ZERO at impact = 1.6·r.  Multiplies BOTH halo and chord
-  //      contributions, so past the cutoff the bulge is guaranteed
-  //      100% transparent — no Gaussian tails leaking past.  Without
-  //      this, the halo's exp(-x²) tail keeps a faint glow visible
-  //      at large impact and the user sees the bulge "never quite
-  //      ending"; with it, the bulge has a clean, fully-transparent
-  //      edge in screen space (modulo additive blending into the HDR
-  //      target — `outerFade=0` contributes nothing, by construction).
-  //
-  // Impact parameter formula (origin at world centre, so |ro - C| =
-  // |ro|): with rd a unit vector, the closest-approach distance is
-  // sqrt(|ro|² − (ro·rd)²).  The `max(0, ...)` guards against tiny
-  // negative values from FP rounding.
-  let bulgeR: f32 = 0.125;
-  let proj = dot(ro, rd);
-  let impactSq = max(0.0, dot(ro, ro) - proj * proj);
+  // Beer-Lambert on the integrated optical depth.  BULGE_OPACITY
+  // multiplies the integrated density before the exp() — tuning knob
+  // for central brightness without affecting the soft edge.
+  col = col + BULGE_BRIGHTNESS * COL_DUST
+            * (1.0 - exp(-bulgeOpticalDepth * BULGE_OPACITY));
 
-  // Outer cutoff envelope (squared inputs to skip the sqrt).  Starts
-  // fading at impact = 0.7·r (well inside the sphere, so the bulge
-  // CORE keeps full intensity) and reaches zero at impact = 1.6·r.
-  // Keeping the cutoff start INSIDE the geometric sphere lets the
-  // outer envelope take over from the bulge-chord term smoothly
-  // before the chord-zero silhouette ever hits.
-  let outerInnerSq = (bulgeR * 0.7) * (bulgeR * 0.7);
-  let outerEdgeSq = (bulgeR * 1.6) * (bulgeR * 1.6);
-  let outerFade = 1.0 - smoothstep(outerInnerSq, outerEdgeSq, impactSq);
+  // ── Ray-marched thin-disc halo ───────────────────────────────────
+  //
+  // Even with the spiral-arm structure rendered by `shadeGalaxyDisk`,
+  // the inter-arm regions and the disk's outer edges go to nearly
+  // black against the HDR target.  Adding a *very thin*, in-plane
+  // Gaussian "haze" gives the disk a soft baseline glow so the arms
+  // never completely disappear into the background — a stand-in for
+  // the smooth-old-disk stellar population that real galaxies have
+  // underneath their visible spiral structure.
+  //
+  // Anisotropic Gaussian: WIDE in-plane (σ_r ~ half the disk
+  // extent), NARROW in the disk-normal direction (σ_y is ~5% of σ_r,
+  // so the halo reads as a thin razor of haze in the disk plane
+  // rather than a puffy spheroid).  Density:
+  //
+  //     ρ(p) = exp(-(p.x² + p.z²) / σ_r²)  ·  exp(-p.y² / σ_y²)
+  //
+  // (The shader's coordinate convention has y as the disk normal —
+  // see `galacticToShader` above.)
+  let discHits = raySphere(ro, rd, vec3<f32>(0.0), DISC_HALO_INTEGRATION_RADIUS);
 
-  // Gaussian halo: sigma² = 0.6·r², so 1/e radius ≈ 0.77·r — halo
-  // peaks at the centre and is mostly faded by the geometric sphere
-  // silhouette.  The outer envelope above kills the rest.
-  let halo = exp(-impactSq / (bulgeR * bulgeR * 0.6));
+  var discOpticalDepth: f32 = 0.0;
+  if (discHits.x < discHits.y) {
+    let discEntryT = max(discHits.x, 0.0);
+    let discChordLen = max(0.0, discHits.y - discEntryT);
+    let discStep = discChordLen / f32(DISC_HALO_STEPS);
+    for (var i: i32 = 0; i < DISC_HALO_STEPS; i = i + 1) {
+      let sampleT = discEntryT + (f32(i) + 0.5) * discStep;
+      let samplePos = ro + sampleT * rd;
+      let inPlaneRsq = samplePos.x * samplePos.x + samplePos.z * samplePos.z;
+      let normalSq = samplePos.y * samplePos.y;
+      let densityHere = exp(-inPlaneRsq / DISC_HALO_SIGMA_R_SQ)
+                      * exp(-normalSq / DISC_HALO_SIGMA_Y_SQ);
+      discOpticalDepth = discOpticalDepth + densityHere * discStep;
+    }
+  }
 
-  // Edge ramp on chord length — the harshest part of the silhouette
-  // is the last ~20% of the chord, so smoothstep up to t = 0.05.
-  let chordSoft = smoothstep(0.0, 0.05, t);
-
-  col = col + outerFade * (
-              1.7 * COL_DUST * chordSoft * (1.0 - exp(-1.0 * t))
-            + 0.55 * COL_DUST * halo
-          );
+  col = col + DISC_HALO_BRIGHTNESS * COL_DISC_HALO
+            * (1.0 - exp(-discOpticalDepth * DISC_HALO_OPACITY));
 
   return col;
 }
 
 @fragment
 fn fs(in: VsOut) -> @location(0) vec4<f32> {
-  // Match the ShaderToy's `TIME` macro: the inner code uses
-  // `tm = iTime * 0.1`.  CPU has already pre-multiplied `iTime` by the
-  // outer animation-speed factor of 0.25 (see milkyWayRenderer.ts), so
-  // by the time we get here a uniform `iTime` of 1.0 corresponds to
-  // 4 seconds of wall-clock time and `tm` becomes 0.1 (slow but alive).
-  let tm = u.iTime * 0.1;
+  // Animation disabled — `tm` was the ShaderToy's TIME macro, fed into
+  // `rot(p, 0.5*tm)` for arm rotation and into `sin(... + tm * ...)`
+  // phase modulation in the noise/star samplers.  Locking it to a
+  // constant freezes the spiral pattern.  Cosmic timescales make even
+  // the original "slow but alive" animation physically nonsensical
+  // (galaxy rotation periods are ~250 Myr); a static impostor reads
+  // as a real photographic backdrop instead of a procedural toy.
+  // The `iTime` uniform is retained for ABI symmetry but unread.
+  let tm: f32 = 0.0;
 
   // Original mainImage: q = fragCoord/RESOLUTION; p = -1 + 2*q; p.x *= aspect.
   // Our vertex stage already emits uv in [-1.05, 1.05]² so we use it
