@@ -199,19 +199,28 @@ struct Uniforms {
   //   apparentMagLimit  → 136
   //   schechterMStar    → 140
   //   schechterAlpha    → 144
-  //   _pad5/_pad6/_pad7 → 148, 152, 156   (round struct to 160 = 10 × 16)
+  //   schechterMLim     → 148   (Task 4: per-source apparent-mag flux limit)
+  //   schechterNRef     → 152   (Task 4: per-source central-density normaliser)
+  //   _pad5             → 156   (round struct to 160 = 10 × 16)
   //
-  // The pad triple is required because we add 5 × 4 = 20 bytes of payload
-  // and WGSL uniform structs must be 16-byte aligned at their tail — so
-  // we round up to the next 16-byte boundary (32 bytes added in total).
+  // The single u32 pad is required because we add 7 × 4 = 28 bytes of
+  // payload and WGSL uniform structs must be 16-byte aligned at their
+  // tail — so we round up to the next 16-byte boundary (32 bytes added
+  // in total).
+  //
+  // Task 4 (Schechter density correction): the four `schechter*` fields
+  // are written PER SOURCE between draw calls — each survey has its own
+  // M*, α, m_lim, and pre-computed central-density normaliser N_ref.  The
+  // φ* normalisation drops out of the ratio `N_ref / n(d)`, so it doesn't
+  // need a uniform slot.
   biasMode: u32,
   absMagLimit: f32,
   apparentMagLimit: f32,
   schechterMStar: f32,
   schechterAlpha: f32,
+  schechterMLim: f32,
+  schechterNRef: f32,
   _pad5: u32,
-  _pad6: u32,
-  _pad7: u32,
 };
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -383,7 +392,64 @@ struct VSOut {
   // toggles. Flat-interpolated for the same reason as the other u32
   // attributes — integers can't be linearly interpolated.
   @location(7) @interpolate(flat) isFallback: u32,
+
+  // Origin-relative distance in Mpc, forwarded from the vertex stage
+  // (`length(p.position)`).  Used by the fragment stage's mode-3 Schechter
+  // density correction to compute the per-distance detection horizon
+  // M_lim_abs(d).  Flat-interpolated because all 6 vertices of a billboard
+  // share the same value — interpolating a constant scalar is wasted
+  // bandwidth, and the flat hint lets the GPU skip per-fragment
+  // interpolation math.
+  @location(8) @interpolate(flat) dMpc: f32,
 };
+
+// ─── Schechter LF integral (Task 4 of malmquist-bias plan) ──────────────────
+//
+// Compute the expected number density of detectable galaxies at the absolute
+// magnitude horizon `mLimAbs` (the M at which the survey's apparent flux
+// limit lands at this distance).  Same algorithm as the JS-side helper in
+// `src/utils/math/schechterDensity.ts`: trapezoidal integration of the
+// Schechter LF
+//
+//     φ(M) dM = 0.4·ln(10) · [10^(0.4·(M*−M))]^(α+1) · exp(−10^(0.4·(M*−M))) dM
+//
+// over `M ∈ [M_BRIGHT, mLimAbs]`.
+//
+// Why 200 steps?  The same step count as the JS reference; gives ~1%
+// accuracy across realistic Schechter parameters.  The cost is ~200
+// `pow + exp` per fragment — a few hundred ns on a desktop GPU, negligible
+// against the rest of the fragment shader's work.
+//
+// Why drop φ*?  We only ever consume the integral as a RATIO `N_ref / n(d)`,
+// and φ* is a constant prefactor that appears identically in numerator and
+// denominator.  Dropping it from both sides keeps the uniform footprint
+// smaller and eliminates a needless multiply per fragment.
+//
+// Why M_BRIGHT = -30?  Schechter density at M = -30 is exponentially
+// negligible (the brightest known galaxies sit around M ≈ -24); pushing
+// the cut deeper just wastes integration steps in a region where φ ≈ 0.
+fn schechterIntegral(mStar: f32, alpha: f32, mLimAbs: f32) -> f32 {
+  let M_BRIGHT = -30.0;
+  let N = 200.0;
+  let dM = (mLimAbs - M_BRIGHT) / N;
+  // Guard against the degenerate case where the survey can't see anything
+  // at this distance — the JS helper returns 0 for the same condition.
+  if (dM <= 0.0) { return 0.0; }
+  let LN10 = 2.302585092994046;
+  var sum = 0.0;
+  for (var i: i32 = 0; i <= 200; i = i + 1) {
+    let M = M_BRIGHT + f32(i) * dM;
+    let x = pow(10.0, 0.4 * (mStar - M));
+    let phi = 0.4 * LN10 * pow(x, alpha + 1.0) * exp(-x);
+    // Trapezoidal weights: half-weight at endpoints (i==0 and i==N), full
+    // weight in the interior.  WGSL's `select(a, b, cond)` returns `b`
+    // when cond is true, so this picks 0.5 for the endpoints and 1.0
+    // otherwise.
+    let w = select(1.0, 0.5, i == 0 || i == 200);
+    sum = sum + phi * w;
+  }
+  return sum * dM;
+}
 
 // ─── colour ramp ──────────────────────────────────────────────────────────────
 
@@ -528,6 +594,7 @@ fn vs(
     earlyOut.axisRatio = 1.0;
     earlyOut.positionAngleDeg = 0.0;
     earlyOut.isFallback = 0u;
+    earlyOut.dMpc = dMpc;
     return earlyOut;
   }
 
@@ -788,6 +855,11 @@ fn vs(
   out.axisRatio = p.axisRatio;
   out.positionAngleDeg = p.positionAngleDeg;
 
+  // Forward origin-relative distance for Task 4's Schechter mode.  Computed
+  // already as `dMpc = length(p.position)` above for the volume-limited
+  // gating; reusing the value avoids a second `length()` call.
+  out.dMpc = dMpc;
+
   return out;
 }
 
@@ -928,7 +1000,52 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Gaussian-like falloff: bright at centre (r²=0 → e⁰=1), fading to e⁻⁴≈0.018
   // at the edge (r²=1). The factor 4.0 controls how tightly the glow is
   // concentrated; larger values give a sharper, more star-like point.
-  let alpha = exp(-r2 * 4.0);
+  var alpha = exp(-r2 * 4.0);
+
+  // ── Schechter density correction (Task 4 of malmquist-bias plan) ────────
+  //
+  // Mode 3: modulate alpha by `N_ref / n(d)` so the over-dense local
+  // universe (the Local Group / Virgo concentration) doesn't visually
+  // blow out, while sparse far-field regions don't fade to nothing.
+  //
+  // We compute the absolute-magnitude detection horizon at this fragment's
+  // origin-relative distance from the survey's apparent flux limit:
+  //
+  //     M_lim_abs(d) = m_lim − 5·log10(d_Mpc) − 25
+  //
+  // and integrate the Schechter LF from M = -30 up to that horizon to get
+  // n(d) — the expected detectable number density at this distance for
+  // the source's selection function.  The ratio against the pre-computed
+  // central reference `N_ref` (evaluated at d = 10 Mpc on the JS side at
+  // upload) gives the per-fragment scale factor.
+  //
+  // `in.dMpc` is forwarded flat from the vertex stage (one `length()` call
+  // per instance, computed once and shared with the volume-limited gating
+  // path above).  We do the integration here in `fs` rather than `vs`
+  // because the result feeds alpha (a fragment-stage quantity) and the
+  // 200-step loop runs at the same cost regardless of stage — putting it
+  // in `fs` means `discard`ed fragments (outside the elliptical mask)
+  // never pay for the integration.
+  //
+  // The clamp on the ratio prevents far galaxies from blowing up: at
+  // d = 500 Mpc with SDSS the Schechter integral can drop by a factor of
+  // 100+ from the d = 10 reference, and unbounded amplification creates
+  // visual saturation.  Capping at 10× keeps the brightening cosmetic
+  // rather than runaway.  If the user reports the brightening is still
+  // too aggressive, the plan's tuning note is to switch the multiplier to
+  // `pow(ratio, 0.5)` for a softer compression curve.
+  if (u.biasMode == 3u) {
+    let dMpc = in.dMpc;
+    let LOG10 = 2.302585092994046;
+    let mLimAbs = u.schechterMLim - 5.0 * (log(dMpc) / LOG10) - 25.0;
+    let nHere = schechterIntegral(u.schechterMStar, u.schechterAlpha, mLimAbs);
+    // Guard nHere > 0 — at extreme distances the integration window
+    // collapses (mLimAbs <= -30) and `schechterIntegral` returns 0.  In
+    // that regime there's nothing detectable anyway, so leave alpha
+    // unchanged rather than dividing by zero and producing NaN.
+    let ratio = select(1.0, clamp(u.schechterNRef / nHere, 0.0, 10.0), nHere > 0.0);
+    alpha = alpha * ratio;
+  }
 
   // Highlight fallback rows in magenta when the toggle is on. The 0.3 in
   // the green channel keeps fallback galaxies recognisable as "data-y"

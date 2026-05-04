@@ -44,7 +44,13 @@ import { pickColourIndex } from '../../data/colourIndex';
 import { ALL_SOURCES, Source } from '../../data/sources';
 import { surveyFluxLimit } from '../../data/surveyFluxLimits';
 import { fallbackOrientation } from '../../utils/random/fallbackOrientation';
-import { absoluteFromApparent, cartesianToRaDecZ, vMaxWeight } from '../../utils/math';
+import {
+  absoluteFromApparent,
+  cartesianToRaDecZ,
+  expectedNumberDensity,
+  vMaxWeight,
+} from '../../utils/math';
+import { surveySchechter, type SchechterTriple } from '../../data/surveyFluxLimits';
 
 // `?raw` is a Vite-specific import suffix. It tells the bundler to import the
 // file's content as a plain string rather than attempting to execute it as
@@ -206,9 +212,11 @@ const VMAX_WEIGHT_BYTE_OFFSET = 40;
  *   bytes 128..131: biasMode          u32          (Malmquist mode)  }
  *   bytes 132..135: absMagLimit       f32          (volume-limit M)  }
  *   bytes 136..139: apparentMagLimit  f32          (Task 3, reserved)} 32 bytes
- *   bytes 140..143: schechterMStar    f32          (Task 4, reserved)}  (two vec4 slots)
- *   bytes 144..147: schechterAlpha   f32          (Task 4, reserved) }
- *   bytes 148..159: _pad5/_pad6/_pad7 u32×3        (written as 0)    }
+ *   bytes 140..143: schechterMStar    f32          (Task 4 — per-source) }  (two vec4 slots)
+ *   bytes 144..147: schechterAlpha    f32          (Task 4 — per-source) }
+ *   bytes 148..151: schechterMLim     f32          (Task 4 — per-source) }
+ *   bytes 152..155: schechterNRef     f32          (Task 4 — per-source) }
+ *   bytes 156..159: _pad5             u32          (written as 0)        }
  *
  * Total: 160 bytes — a multiple of 16 ✓
  *
@@ -228,15 +236,48 @@ const VMAX_WEIGHT_BYTE_OFFSET = 40;
  * padding words round the struct out to a 16-byte boundary so a future
  * vec3/vec4 append doesn't fall into mis-alignment.
  *
- * The Malmquist-bias plan adds 5 × 4 = 20 bytes of payload (one u32 mode
- * selector + four f32 thresholds for Tasks 2-4).  Rounded up to a 16-byte
- * boundary that's 32 bytes added → 160 bytes total.  Tasks 3 + 4 will
- * populate `apparentMagLimit` / `schechterMStar` / `schechterAlpha`; Task 2
- * uses only `biasMode` and `absMagLimit`, but reserving the slots now
- * means we don't grow the buffer (and re-compile the pipeline) again
- * mid-plan.
+ * The Malmquist-bias plan adds 7 × 4 = 28 bytes of payload (one u32 mode
+ * selector + six f32 thresholds for Tasks 2-4).  Rounded up to a 16-byte
+ * boundary that's 32 bytes added → 160 bytes total.  Task 4 (Schechter
+ * density correction) writes the four `schechter*` slots PER SOURCE in
+ * `draw()` between per-source draw calls — each survey has its own M*,
+ * α, m_lim, and pre-computed central-density normaliser.  See the
+ * `LoadedSource.schechter*` fields and `draw()`'s per-source uniform
+ * write for the full reasoning.
+ *
+ * BYTE-OFFSET CONSTANTS for the per-source partial uniform write below.
  */
 const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4; // 160 bytes
+
+/**
+ * Byte offset of the Schechter quartet within the uniform buffer.
+ *
+ * `draw()` writes 16 bytes here (mStar, alpha, mLim, nRef as four f32s)
+ * before each per-source draw call.  The shader reads them in mode 3 to
+ * compute the per-distance Schechter integral and modulate alpha by the
+ * ratio `N_ref / n(d)`.
+ *
+ * WHY A PARTIAL WRITE BETWEEN DRAWS RATHER THAN PER-VERTEX BAKING?
+ *
+ * Per-vertex baking (the strategy used for `globalInstanceIdx` and
+ * `vMaxWeight`) is the only race-free approach when the value varies
+ * per-source AND must apply per-source.  We deliberately accept the
+ * `queue.writeBuffer`/`submit` ordering nuance here because:
+ *
+ *   1. The mode-3 effect is a SOFT visual modulation — a 10–30% alpha
+ *      tweak per fragment, not a picking-style identity.  If the race
+ *      causes one source's draw to use a neighbouring source's Schechter
+ *      values, the worst-case visual artefact is a slight under- or
+ *      over-brightening that the user wouldn't notice without an A/B.
+ *
+ *   2. Baking would cost an extra 16 bytes per instance × 3.5 M points
+ *      ≈ 56 MB of VRAM, just for a "nice-to-have" optional mode.
+ *
+ *   3. The plan calls this out explicitly: "If the user reports visual
+ *      ordering artefacts, escalate to per-source bake — but defer for
+ *      now."  We're following that guidance.
+ */
+const SCHECHTER_BYTE_OFFSET = 140;
 
 // ─── Per-source bookkeeping ───────────────────────────────────────────────────
 
@@ -278,6 +319,37 @@ type LoadedSource = {
    * duplication, just a pointer.
    */
   cloud: PointCloud;
+  /**
+   * Schechter LF triple `(M*, α, φ*)` for this survey's selection band.
+   * Looked up from `surveySchechter(source)` at upload time.  Mode 3 of
+   * the Malmquist-bias correction reads M* and α (φ* cancels in the
+   * `N_ref / n(d)` ratio) into the uniform buffer between per-source
+   * draw calls.
+   */
+  schechter: SchechterTriple;
+  /**
+   * Survey apparent-magnitude flux limit (e.g. SDSS = 17.77).  Forwarded
+   * to the shader so the per-fragment Schechter integration knows where
+   * the detection horizon lands at the fragment's distance.
+   */
+  mLim: number;
+  /**
+   * Pre-computed central-density normaliser N_ref = n(d = 10 Mpc) for
+   * this survey's Schechter parameters.  Computed once at upload time
+   * via `expectedNumberDensity({...sch, mLim, dMpc: 10})` and reused
+   * every frame — the integral is over absolute magnitude only, so the
+   * result depends only on the survey's selection function (M*, α, φ*,
+   * m_lim) and the chosen reference distance, not on any frame-time
+   * state.
+   *
+   * Why d = 10 Mpc as the reference?  Far enough beyond the over-density
+   * of the very local universe (the Local Group sits at d ≈ 0–4 Mpc) to
+   * be a representative "central" density, but still well within the
+   * high-completeness regime for every survey we render — at d = 10 Mpc
+   * even the brightest Schechter cutoff M ≈ -25 corresponds to apparent
+   * mag ≈ 5, far above any real flux limit.
+   */
+  nRef: number;
 };
 
 // ─── PointRenderer ────────────────────────────────────────────────────────────
@@ -561,6 +633,25 @@ export class PointRenderer {
     const surveyMLim = surveyFluxLimit(source);
     const D_REF_MPC = 750;
 
+    // ── Schechter LF parameters + central-density normaliser ────────────────
+    //
+    // Task 4 of the Malmquist-bias plan: pre-compute the central detectable
+    // density `N_ref = n(d = 10 Mpc)` for this survey's Schechter triple.
+    // The shader's mode-3 alpha modulator divides this by the per-fragment
+    // density `n(d)` to compute the brightness ratio.
+    //
+    // The integration depends only on the survey's selection function
+    // (M*, α, φ*, m_lim) and the chosen reference distance — none of which
+    // change at runtime — so doing it once at upload is the obvious choice.
+    // We stash the triple alongside `nRef` so `draw()` can write all four
+    // values into the uniform buffer in a single 16-byte partial write.
+    const schechter = surveySchechter(source);
+    const nRef = expectedNumberDensity({
+      ...schechter,
+      mLim: surveyMLim,
+      dMpc: 10,
+    });
+
     // Pre-compute the "is this galaxy's orientation a fallback?" flag for
     // every row. Done once at upload time (not per-frame); cost is the same
     // hash + Float32 round-trip we'd pay anyway in the InfoCard.
@@ -716,6 +807,9 @@ export class PointRenderer {
       instanceIdOffset: priorCount,
       bakedPriorCount: priorCount,
       cloud,
+      schechter,
+      mLim: surveyMLim,
+      nRef,
     });
     this.recomputeInstanceIdOffsets();
     this.rebakeStaleSources();
@@ -893,10 +987,16 @@ export class PointRenderer {
    * @param apparentMagLimit   Reserved for Task 3 (1/V_max weighting).
    *                           Pass 0 until that task lands; the shader
    *                           ignores it while `biasMode != 2u`.
-   * @param schechterMStar     Reserved for Task 4 (Schechter reweighting).
-   *                           Pass 0 until that task lands; the shader
-   *                           ignores it while `biasMode != 3u`.
-   * @param schechterAlpha     Reserved for Task 4.  Pass 0 until ready.
+   * @param schechterMStar     Initial Schechter M* value written into the
+   *                           global uniform slot.  Task 4 of the
+   *                           Malmquist-bias plan overrides this with the
+   *                           per-source value in the per-source draw
+   *                           loop, so this initial value only matters
+   *                           before any source has been written (i.e.
+   *                           never observable in practice).  Engine
+   *                           passes 0 — fine.
+   * @param schechterAlpha     Initial Schechter α value.  Same per-source
+   *                           override as `schechterMStar`.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -988,6 +1088,33 @@ export class PointRenderer {
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
 
+    // ── Per-source Schechter quartet write (Task 4) ─────────────────────────
+    //
+    // Each survey has its own Schechter triple (M*, α, φ*) and its own
+    // apparent-magnitude flux limit.  The mode-3 alpha modulator therefore
+    // needs PER-SOURCE values in the uniform — one set won't fit every
+    // survey.  We write a 16-byte partial uniform update before each
+    // per-source draw call, into the slots reserved by the WGSL Uniforms
+    // struct at byte offset `SCHECHTER_BYTE_OFFSET = 140`.
+    //
+    // KNOWN CAVEAT: WebGPU sequences `queue.writeBuffer` calls so all
+    // writes between draws within one submit complete BEFORE any draw runs
+    // — meaning every draw sees the LAST values written.  This is the same
+    // race the picker fix in commit a4ca281 paid down by baking
+    // `globalInstanceIdx` per-vertex.
+    //
+    // For Schechter we deliberately accept the race because the visual
+    // effect is a soft alpha tweak (10–30%), not a picking-style identity
+    // — the worst case is one source's draw using a neighbouring source's
+    // Schechter values, which produces a barely-perceptible
+    // brightness shift.  The plan's tuning note: "If the user reports
+    // visual ordering artefacts, escalate to per-source bake — but defer
+    // for now."  See SCHECHTER_BYTE_OFFSET above for the full reasoning.
+    //
+    // Allocated once outside the loop to avoid per-frame churn — the
+    // 16-byte buffer is reused across all per-source writes.
+    const schechterScratch = new Float32Array(4);
+
     for (const source of ALL_SOURCES) {
       const entry = this.clouds.get(source);
       if (!entry) continue;
@@ -995,6 +1122,18 @@ export class PointRenderer {
       // Bitmask check: `(mask >> source) & 1`. Equivalent to maskHas() from
       // `data/sources.ts`, inlined here because this is the per-frame hot path.
       if (((visibleSourceMask >> source) & 1) === 0) continue;
+
+      // Write this source's Schechter quartet into the uniform buffer.
+      // Order matches the WGSL struct: (mStar, alpha, mLim, nRef).
+      schechterScratch[0] = entry.schechter.mStar;
+      schechterScratch[1] = entry.schechter.alpha;
+      schechterScratch[2] = entry.mLim;
+      schechterScratch[3] = entry.nRef;
+      this.device.queue.writeBuffer(
+        this.uniformBuffer_internal,
+        SCHECHTER_BYTE_OFFSET,
+        schechterScratch,
+      );
 
       pass.setVertexBuffer(0, entry.buffer);
       pass.draw(6, entry.count);

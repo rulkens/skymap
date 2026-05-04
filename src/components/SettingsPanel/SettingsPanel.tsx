@@ -335,9 +335,7 @@ export function SettingsPanel({
               <option value={BiasMode.None}>None — raw catalogue</option>
               <option value={BiasMode.VolumeLimited}>Volume-limited</option>
               <option value={BiasMode.VMax}>1/V_max</option>
-              <option value={BiasMode.Schechter} disabled>
-                Schechter LF (coming soon)
-              </option>
+              <option value={BiasMode.Schechter}>Schechter LF</option>
             </select>
           </div>
           {biasMode === BiasMode.VolumeLimited && (
