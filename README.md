@@ -1,10 +1,11 @@
 # skymap
 
+**Live demo:** [skymap.rulkens.com](https://skymap.rulkens.com) — open in Chrome or Edge 113+ for WebGPU.
+
 <!--
-  screenshot/GIF placeholder — paste an embedded hero GIF here
-  (e.g. ![skymap demo](docs/screenshots/hero.gif)) and a one-line
-  "Live demo: https://skymap.rulkens.com" link directly above or below
-  it.  See docs/screenshots/README.md for the capture checklist.
+  GIF placeholder — paste an embedded hero GIF here, e.g.
+  ![skymap demo](docs/screenshots/hero.gif).  See
+  docs/screenshots/README.md for the capture checklist.
 -->
 
 An interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs, built in TypeScript with React for the UI. Hover or click any galaxy to see its sky coordinates, redshift, lookback time, and catalog metadata; pin one to compare against another; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
