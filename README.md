@@ -135,6 +135,12 @@ poisoning the ramp with NaN.
 
 ## Famous galaxies (curated atlas)
 
+> **Optional.** The renderer works fine without the famous-galaxies bin —
+> survey galaxies still render and the InfoCard still works.  Skip this
+> section entirely if you only want the catalog data.  Build it when you
+> want curated names + hand-fetched high-quality thumbnails for the
+> Messier / NGC greatest-hits.
+
 A separate small catalog of well-known galaxies (Messier + NGC greatest-hits)
 ships alongside the survey data. Entries appear with their curated names
 in the InfoCard and are searchable via the **Cmd+K / Ctrl+K** command
@@ -143,7 +149,7 @@ from the DESI Legacy Imaging service, so famous galaxies always render at
 high quality — even for nearby objects (M31, M33) that survey catalogs
 filter out as too close.
 
-Run order:
+Run order (only if you want the famous-galaxies atlas):
 
 1. `npm run build-all`              — produces `2mrs.bin` + `glade.bin`,
                                       which the famous build needs for cross-match.
