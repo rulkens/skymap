@@ -812,12 +812,16 @@ describe('skeletonToFilamentCloud', () => {
     expect(cloud.stripCount).toBe(2);
     expect(cloud.vertexCount).toBe(5);
     expect(Array.from(cloud.stripOffsets)).toEqual([0, 2, 5]);
+    // Density values are normalised to [0, 1] across ALL surviving vertices
+    // (see the `normalises density` test below).  With raw inputs
+    // [0.9, 0.8, 0.7, 0.6, 0.5] (min=0.5, max=0.9), the normalised slot
+    // values are (d - 0.5) / 0.4 = [1.0, 0.75, 0.5, 0.25, 0].
     expect(Array.from(cloud.vertices)).toEqual([
-      10, 20, 30, 0.9,
-      11, 21, 31, 0.8,
-      40, 50, 60, 0.7,
-      41, 51, 61, 0.6,
-      42, 52, 62, 0.5,
+      10, 20, 30, 1.0,
+      11, 21, 31, 0.75,
+      40, 50, 60, 0.5,
+      41, 51, 61, 0.25,
+      42, 52, 62, 0,
     ]);
   });
 
