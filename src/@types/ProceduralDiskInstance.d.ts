@@ -28,8 +28,14 @@
  *     multiplies the final RGBA by this so the disk fades in as the
  *     point fades out.
  *
- * Layout: 8 floats = 32 bytes per instance.  Vertex buffer stride is
- * therefore 32 bytes; the renderer's pipeline descriptor declares
+ * Layout: 12 floats = 48 bytes per instance; the orientation / extras
+ * vec4 each have 2 trailing padding f32 to keep WGSL's 16-byte alignment
+ * for instance attributes.  WGSL `@location` attributes step in vec4
+ * quanta even when the underlying record uses fewer fields, so packing
+ * the eight semantic floats above into three `float32x4` slots costs
+ * four padding floats but lets us declare the vertex layout cleanly as
+ * `[float32x4, float32x4, float32x4]`.  Vertex buffer stride is
+ * therefore 48 bytes; the renderer's pipeline descriptor declares
  * `stepMode: 'instance'` so each draw-call vertex sees the same record
  * for all six corner vertices.
  */
