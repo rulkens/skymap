@@ -116,6 +116,7 @@ import {
   createSpaceMouseSubsystem,
   type SpaceMouseSubsystem,
 } from './spaceMouseSubsystem';
+import { createClickResolver, type ClickResolver } from './clickHandler';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -355,6 +356,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // Renderer and pickRenderer are null until GPU init completes.
   let renderer: PointRenderer | null = null;
   let pickRendererHandle: ReturnType<typeof createPickRenderer> | null = null;
+  // ClickResolver wraps the picker + the (globalIdx → PointInfo) walk.
+  // Built inside the IIFE once `pickRendererHandle` exists; null until
+  // then.  See `clickHandler.ts` for the full state-machine commentary.
+  let clickResolver: ClickResolver | null = null;
   // HDR + tone-map handles share the same null-until-init lifecycle as the
   // pick renderer above — the IIFE writes into these once the GPU device is
   // available, and `destroy()` reads them to release the texture and the
@@ -696,6 +701,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Build the pick renderer. It shares the same vertex/uniform buffers as
       // the visual renderer — no extra GPU memory for point data.
       pickRendererHandle = createPickRenderer(device);
+      // The resolver adapts the engine's existing per-global-idx
+      // helpers (see `resolveGlobalIdx` and `pointInfoFromGlobal`
+      // higher up) into the (cloud, localIdx, source) shape the
+      // resolver wants.  The `cloud` lookup goes through the live
+      // `clouds` map so a cloud loaded after engine init still picks
+      // up correctly.
+      clickResolver = createClickResolver({
+        pickRenderer: pickRendererHandle,
+        resolveGlobalIdx: (globalIdx) => {
+          const r = resolveGlobalIdx(globalIdx);
+          if (!r) return null;
+          const cloud = clouds.get(r.source);
+          if (!cloud) return null;
+          return { source: r.source, localIdx: r.localIdx, cloud };
+        },
+        buildPointInfo: (cloud, localIdx, src) =>
+          buildPointInfo(cloud, localIdx, src, famousMeta, famousXrefs),
+      });
 
       // ── Camera auto-framing ──────────────────────────────────────────────
       //
@@ -807,31 +830,41 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           scheduler.requestRender();
         },
         onClick: (xCss, yCss) => {
-          // Run a one-shot pick at the click position.
-          // We don't use the throttle guard here — clicks are infrequent and
-          // we want an immediate, synchronous-feeling response.
-          if (!renderer || clouds.size === 0 || !pickRendererHandle) return;
+          // Run a one-shot pick at the click position.  We don't use
+          // the throttle guard here — clicks are infrequent and we
+          // want an immediate, synchronous-feeling response.
+          if (!renderer || clouds.size === 0 || !clickResolver) return;
 
-          // Snapshot the renderer's per-source draw records and filter by
-          // the current visibility mask so the pick pass sees the same
-          // surveys the visual pass just rendered. We materialise to an
-          // array so the iterator survives the async pick promise.
+          // Snapshot the renderer's per-source draw records and
+          // filter by the current visibility mask so the pick pass
+          // sees the same surveys the visual pass just rendered.  We
+          // materialise to an array so the iterator survives the
+          // async pick promise.
           const visibleSources = Array.from(renderer.loadedSources()).filter(
             (s) => ((visibleSourceMask >> s.source) & 1) !== 0,
           );
           if (visibleSources.length === 0) return;
 
-          pickRendererHandle
-            .pick(
-              [canvas.width, canvas.height],
-              cssToTexPx(xCss),
-              cssToTexPx(yCss),
+          clickResolver
+            .resolveClick({
+              pickXPx: cssToTexPx(xCss),
+              pickYPx: cssToTexPx(yCss),
+              viewportPx: [canvas.width, canvas.height],
               visibleSources,
-              renderer.uniformBuffer,
-            )
-            .then((idx) => {
-              // Click on empty space → clear selection; click on point → pin it.
-              setSelected(idx === -1 ? null : idx);
+              uniformBuffer: renderer.uniformBuffer,
+            })
+            .then((result) => {
+              // Click on empty space → clear; click on point → pin it.
+              // Either path selects (or clears) by global index — the
+              // resolved PointInfo is currently unused at the call
+              // site, but keeping it on the result lets a future
+              // "auto-focus on click" feature reuse the resolution
+              // without a second pick.
+              if (result.kind === 'clear') {
+                setSelected(null);
+              } else {
+                setSelected(result.globalIdx);
+              }
               // Selection changed — render so the highlight halo
               // updates on the next frame.
               scheduler.requestRender();
