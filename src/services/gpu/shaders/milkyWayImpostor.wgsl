@@ -1,7 +1,9 @@
 // License CC0: Spiral galaxy
-// Ported to WGSL from the original ShaderToy GLSL (CC0).  See plan
-// docs/superpowers/plans/2026-05-04-milky-way-impostor.md Task 0 for
-// the verbatim original source and the WGSL-port deltas.
+// Ported to WGSL from the original ShaderToy GLSL (CC0) by mrange:
+//   https://www.shadertoy.com/view/wsBBWD
+//   Author profile: https://www.shadertoy.com/user/mrange
+// See plan docs/superpowers/plans/2026-05-04-milky-way-impostor.md
+// Task 0 for the verbatim original source and the WGSL-port deltas.
 //
 // ─────────────────────────────────────────────────────────────────────
 //
@@ -509,19 +511,105 @@ fn renderGalaxy(ro: vec3<f32>, rd: vec3<f32>, tm: f32) -> vec3<f32> {
     col = shadeGalaxyDisk(p.xz, ro, rd, dgalaxy, tm);
   }
 
+  // ── Bulge dust integral ─────────────────────────────────────────
+  //
+  // The ShaderToy original truncated the bulge chord by the disk
+  // plane:
+  //
+  //   if (dgalaxy > 0 && cgalaxy.x > 0) {
+  //     t = min(dgalaxy - cgalaxy.x, cgalaxy.y - cgalaxy.x);
+  //   } else if (cgalaxy.x < cgalaxy.y) {
+  //     t = cgalaxy.y - cgalaxy.x;
+  //   }
+  //
+  // That min() takes the SHORTER of (entry-to-disk-plane chord,
+  // full-bulge chord), which truncates the bulge dust to the
+  // "above-disk-plane hemisphere only" for a camera above the disk.
+  // For the original ShaderToy's hard-coded above-the-disk vantage
+  // that produced a distinctive crescent-shaped bulge with the dust
+  // on the upper half — visually pleasing in the static framing.
+  //
+  // For a world-anchored impostor where the user navigates AROUND
+  // the galaxy, this truncation makes the bulge appear to "disappear
+  // on one side" when looking head-on at the disk: as the camera
+  // tilts even slightly off perpendicular, one side of the projected
+  // bulge crescent is missing because t0 collapses asymmetrically
+  // around the disk plane intersection.
+  //
+  // Fix: always use the full bulge chord (cgalaxy.y - cgalaxy.x).
+  // The bulge then renders as a complete spherical glow from every
+  // viewing angle, which is what physical galactic bulges actually
+  // look like.
   let cgalaxy = raySphere(ro, rd, vec3<f32>(0.0), 0.125);
 
   var t: f32 = 0.0;
-
-  if (dgalaxy > 0.0 && cgalaxy.x > 0.0) {
-    let t0 = max(dgalaxy - cgalaxy.x, 0.0);
-    let t1 = cgalaxy.y - cgalaxy.x;
-    t = min(t0, t1);
-  } else if (cgalaxy.x < cgalaxy.y) {
+  if (cgalaxy.x < cgalaxy.y) {
     t = cgalaxy.y - cgalaxy.x;
   }
 
-  col = col + 1.7 * COL_DUST * (1.0 - exp(-1.0 * t));
+  // ── Silhouette softening ─────────────────────────────────────────
+  //
+  // The chord-based dust integral `1 - exp(-t)` saturates inside the
+  // sphere but goes to zero at the silhouette where the chord goes
+  // to zero with INFINITE slope (`t = 2·sqrt(r² - b²)` where `b` is
+  // the impact parameter, so dt/db diverges as b → r).  That gives
+  // the bulge a sharp circular edge — visible as a "clear edge" in
+  // the rendered image when the bulge is large on screen.
+  //
+  // Three coordinated softening terms:
+  //
+  //   1. `chordSoft` — smoothstep on chord length.  Ramps the chord
+  //      dust down gracefully in the last ~20% of the chord where
+  //      `1 - exp(-t)` would have an infinite-slope tail.
+  //
+  //   2. `halo` — Gaussian on the IMPACT PARAMETER (perpendicular
+  //      distance from the ray to the bulge centre).  Extends a soft
+  //      glow PAST the geometric sphere silhouette so there's no
+  //      hard chord/no-chord transition; outside the sphere where
+  //      the chord term is zero, the halo carries the rendered
+  //      brightness on its own.
+  //
+  //   3. `outerFade` — squared-input smoothstep envelope that goes
+  //      to ZERO at impact = 1.6·r.  Multiplies BOTH halo and chord
+  //      contributions, so past the cutoff the bulge is guaranteed
+  //      100% transparent — no Gaussian tails leaking past.  Without
+  //      this, the halo's exp(-x²) tail keeps a faint glow visible
+  //      at large impact and the user sees the bulge "never quite
+  //      ending"; with it, the bulge has a clean, fully-transparent
+  //      edge in screen space (modulo additive blending into the HDR
+  //      target — `outerFade=0` contributes nothing, by construction).
+  //
+  // Impact parameter formula (origin at world centre, so |ro - C| =
+  // |ro|): with rd a unit vector, the closest-approach distance is
+  // sqrt(|ro|² − (ro·rd)²).  The `max(0, ...)` guards against tiny
+  // negative values from FP rounding.
+  let bulgeR: f32 = 0.125;
+  let proj = dot(ro, rd);
+  let impactSq = max(0.0, dot(ro, ro) - proj * proj);
+
+  // Outer cutoff envelope (squared inputs to skip the sqrt).  Starts
+  // fading at impact = 0.7·r (well inside the sphere, so the bulge
+  // CORE keeps full intensity) and reaches zero at impact = 1.6·r.
+  // Keeping the cutoff start INSIDE the geometric sphere lets the
+  // outer envelope take over from the bulge-chord term smoothly
+  // before the chord-zero silhouette ever hits.
+  let outerInnerSq = (bulgeR * 0.7) * (bulgeR * 0.7);
+  let outerEdgeSq = (bulgeR * 1.6) * (bulgeR * 1.6);
+  let outerFade = 1.0 - smoothstep(outerInnerSq, outerEdgeSq, impactSq);
+
+  // Gaussian halo: sigma² = 0.6·r², so 1/e radius ≈ 0.77·r — halo
+  // peaks at the centre and is mostly faded by the geometric sphere
+  // silhouette.  The outer envelope above kills the rest.
+  let halo = exp(-impactSq / (bulgeR * bulgeR * 0.6));
+
+  // Edge ramp on chord length — the harshest part of the silhouette
+  // is the last ~20% of the chord, so smoothstep up to t = 0.05.
+  let chordSoft = smoothstep(0.0, 0.05, t);
+
+  col = col + outerFade * (
+              1.7 * COL_DUST * chordSoft * (1.0 - exp(-1.0 * t))
+            + 0.55 * COL_DUST * halo
+          );
 
   return col;
 }

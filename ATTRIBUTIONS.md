@@ -112,6 +112,29 @@ two sources:
   to the Wikipedia article is recorded in
   `data/raw/wikipedia_famous_cache.json`.
 
+## Shaders
+
+### Milky Way impostor — "Spiral galaxy" by mrange
+
+The volumetric raymarched fragment shader at the heart of
+`src/services/gpu/shaders/milkyWayImpostor.wgsl` is a port of the
+"Spiral galaxy" ShaderToy by **mrange**.
+
+- **Original:** https://www.shadertoy.com/view/wsBBWD
+- **Author profile:** https://www.shadertoy.com/user/mrange
+- **Licence:** CC0 (public domain dedication, declared in the original
+  source's leading `// License CC0: Spiral galaxy` comment).
+- **Use:** WGSL port serves as the procedural Milky Way at the world
+  origin so the user has a meaningful "here" to anchor on.  The vertex
+  stage was rewritten from the ground up to use a world-anchored view-
+  aligned billboard driven by the engine's real camera; the fragment
+  stage's raymarched render logic (bulge sphere, exponential disk,
+  star-cell sampling, dust integral) is structurally a line-by-line
+  port with WGSL-syntax adjustments and skymap-specific output
+  sanitisation (NaN masking, disk-extent envelope).  Display-space
+  post-processing (gamma, contrast, vignette) was deleted so the
+  engine's HDR tone-map pass can run on a clean linear-light input.
+
 ## External services / APIs
 
 These services are queried at build-time or read-only at runtime; no data
