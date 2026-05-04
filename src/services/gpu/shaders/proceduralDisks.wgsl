@@ -78,7 +78,15 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // file for the full step-by-step derivation including the sign
   // conventions for sky-east vs world-X.
   let pos = instance.posSize.xyz;
-  let halfWorld = instance.posSize.w;
+  // Half the full-extent value in posSize.w to match disks.wgsl line 104.
+  // `posSize.w` is the FULL quad extent in Mpc (set at the emission site
+  // in thumbnailSubsystem.ts to `(diameterKpc/1000) * 4`, the same
+  // multiplier the points pass uses for GALAXY_RADIUS_MPC).  Each
+  // corner sits at ±halfWorld * basis, so the rendered quad spans
+  // 2*halfWorld = posSize.w world units total — agreeing with both the
+  // textured-thumbnail disk (which uses identical posSize.w) and the
+  // points-pass billboard (which uses the same multiplier directly).
+  let halfWorld = instance.posSize.w * 0.5;
   // Floor at 0.05 to avoid degenerate-edge-on disks collapsing the quad to a
   // 1D line in the vertex stage; matches the disks.wgsl convention.
   let axisRatio = max(instance.orientation.x, 0.05);

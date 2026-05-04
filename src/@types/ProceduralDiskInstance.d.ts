@@ -9,10 +9,13 @@
  *
  *   - `(x, y, z)` is the galaxy's world-space centre in Mpc, identical
  *     to the position used by the points pass and the textured-disk pass.
- *   - `sizeWorldMpc` is the half-extent of the impostor quad in Mpc
- *     (one half-major-axis on the disk's plane).  The vertex shader
- *     scales the quad corners by this — it's the same value the
- *     existing diskRenderer uses, derived from `diameterKpc`.
+ *   - `sizeWorldMpc` is the FULL extent of the impostor quad in Mpc (i.e.
+ *     the diameter of the rendered quad along its major axis).  This
+ *     matches `DiskInstance.sizeWorld` for the textured-thumbnail pass —
+ *     the emission site sets the same value for both renderers, and each
+ *     shader halves it internally to place the corner vertices.  The
+ *     value is `(diameterKpc/1000) * 4` per the convention shared with
+ *     `points.wgsl`'s `GALAXY_RADIUS_MPC` formula.
  *   - `axisRatio` is `b/a` ∈ (0.05, 1].  The vertex shader uses it to
  *     foreshorten one of the in-plane axes so the projected disk
  *     appears at the catalogued inclination.
