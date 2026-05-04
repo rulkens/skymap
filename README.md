@@ -341,7 +341,7 @@ offset  size  field
 
 Old v1/v2/v3 files are no longer accepted — re-run `npm run build-all` to upgrade.
 
-## Out of scope (roadmap)
+## Roadmap
 
 These are deliberately not in this version:
 
