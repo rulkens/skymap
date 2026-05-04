@@ -7,6 +7,7 @@
 import type { LodMode } from './LodMode';
 import type { Source } from '../data/sources';
 import type { BiasMode } from '../data/biasMode';
+import type { ToneMapCurve } from '../data/toneMapCurve';
 
 /**
  * Handle returned by `createEngine`. Allows the React layer to drive the
@@ -103,6 +104,31 @@ export type EngineHandle = {
    * some bias.
    */
   setAbsMagLimit?: (absMag: number) => void;
+
+  /**
+   * Set the tone-map exposure multiplier.  Higher values brighten the
+   * HDR signal *before* the curve compresses it; the default of 1.0
+   * preserves the existing brightness.  Useful range is roughly
+   * [0.25, 4.0] — values are clamped internally to [0.05, 16] so a
+   * runaway slider can't blow out the buffer.  Forwarded into the
+   * tone-map pass uniform on the next rendered frame; no pipeline
+   * rebuild.
+   *
+   * No echo callback is wired today — the SettingsPanel doesn't yet
+   * surface a slider for this.  The setter ships ahead of UI so a
+   * future panel addition is one prop wiring.
+   */
+  setExposure?: (value: number) => void;
+
+  /**
+   * Switch the HDR tone-mapping curve at runtime.  Values come from
+   * `data/toneMapCurve.ts` (Linear=0, Reinhard=1, Asinh=2, Gamma2=3,
+   * Aces=4).  The change takes effect on the very next frame via the
+   * tone-map pass uniform — no pipeline rebuild, no shader recompile,
+   * no flicker.  Fires `onToneMapCurveChange` so subscribed React
+   * state mirrors engine truth.
+   */
+  setToneMapCurve?: (curve: ToneMapCurve) => void;
 
   /**
    * Snap the camera back to the initial framing computed at startup.

@@ -75,6 +75,7 @@ import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
 import { CommandPalette } from './components/CommandPalette/CommandPalette';
 import { ALL_VISIBLE_MASK, Source } from './data/sources';
 import { BiasMode } from './data/biasMode';
+import { ToneMapCurve } from './data/toneMapCurve';
 import { isWebHIDSupported } from './services/input/spaceMouse';
 import { loadFamousSidecars, type FamousMetaEntry } from './services/engine/famousMetaLoader';
 
@@ -200,6 +201,15 @@ export function App(): React.ReactElement {
   const [biasMode, setBiasMode] = useState<BiasMode>(BiasMode.None);
   const [absMagLimit, setAbsMagLimit] = useState<number>(-19);
 
+  // ── HDR tone-map state ────────────────────────────────────────────────────
+  //
+  // `toneMapCurve` mirrors the engine's current HDR tone-map curve.  Default
+  // matches the engine's init value (Reinhard) so the first paint of the
+  // dropdown matches what the user sees on the canvas — no flicker.  The
+  // engine echoes via `onToneMapCurveChange` at startup *and* on every
+  // setToneMapCurve call, so React stays in sync.
+  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurve>(ToneMapCurve.Reinhard);
+
   // ── Command palette state ─────────────────────────────────────────────────
   //
   // `paletteOpen` controls the overlay visibility; `famousMeta` holds the
@@ -267,6 +277,9 @@ export function App(): React.ReactElement {
       // reflects engine truth without optimistic local updates.
       onBiasModeChange: setBiasMode,
       onAbsMagLimitChange: setAbsMagLimit,
+      // HDR tone-map echo — mirrors the bias-mode pattern.  Engine seeds
+      // its default at init (Reinhard) and fires on every setToneMapCurve.
+      onToneMapCurveChange: setToneMapCurve,
       // SpaceMouse pairing state: `connect()`'s promise gives us the initial
       // success/failure, but only this callback covers spontaneous disconnects
       // (USB unplug, permission revocation).  Without it React's "Connected"
@@ -476,6 +489,15 @@ export function App(): React.ReactElement {
         onBiasModeChange={(m) => handleRef.current?.setBiasMode?.(m)}
         absMagLimit={absMagLimit}
         onAbsMagLimitChange={(M) => handleRef.current?.setAbsMagLimit?.(M)}
+        // ── HDR tone-map curve ───────────────────────────────────────────
+        //
+        // Same forward-to-handle pattern as the bias controls above — the
+        // engine fires its `onToneMapCurveChange` echo synchronously inside
+        // `setToneMapCurve`, which lands here as `setToneMapCurve` (above
+        // in the createEngine callbacks block).  No optimistic updates
+        // needed.
+        toneMapCurve={toneMapCurve}
+        onToneMapCurveChange={(c) => handleRef.current?.setToneMapCurve?.(c)}
       />
       {/*
         Command palette — full-screen overlay for fuzzy-searching the

@@ -876,6 +876,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // defaults: the engine is the single source of truth.
       cb.onBiasModeChange?.(biasMode);
       cb.onAbsMagLimitChange?.(absMagLimit);
+      // Tone-map curve seed — same pattern as biasMode/absMagLimit above.
+      // SettingsPanel needs the engine's default to render the right
+      // option as selected on first paint.
+      cb.onToneMapCurveChange?.(toneMapCurve);
       // LOD mode + visible-mask seeds — engine and React both default to
       // 'auto' / ALL_VISIBLE_MASK respectively, but firing the echo here
       // protects against future default drift and keeps the contract uniform
@@ -1643,6 +1647,30 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // calls overwrite that.
       absMagLimit = absMag;
       cb.onAbsMagLimitChange?.(absMag);
+    },
+
+    setExposure(value) {
+      // Clamp into a sane range so a runaway slider or a debug
+      // console call (e.g. `setExposure(1e9)`) can't blow out the
+      // float buffer or, on the lower end, multiply the HDR signal
+      // by zero and produce a black frame the user can't recover
+      // from.  0.05 keeps a faint signal visible; 16 is well past
+      // any realistic peak (~5-10 in the densest cluster cores).
+      exposure = Math.max(0.05, Math.min(16, value));
+    },
+
+    setToneMapCurve(curve) {
+      // Forwarded into the per-frame uniform on the next draw.  The
+      // shader branches on the integer value (0=Linear, 1=Reinhard,
+      // 2=Asinh, 3=Gamma2, 4=Aces) so flipping this from devtools or
+      // the SettingsPanel takes effect on the next rendered frame
+      // without any pipeline rebuild.
+      //
+      // Always fire the echo callback — even when `curve === toneMapCurve`
+      // — so the UI seeds correctly on first call (mirrors the
+      // setBiasMode pattern).
+      toneMapCurve = curve;
+      cb.onToneMapCurveChange?.(curve);
     },
 
     resetCamera() {

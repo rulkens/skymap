@@ -10,6 +10,7 @@ import type { ScaleInfo } from './ScaleInfo';
 import type { LodMode } from './LodMode';
 import type { Source } from '../data/sources';
 import type { BiasMode } from '../data/biasMode';
+import type { ToneMapCurve } from '../data/toneMapCurve';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -79,6 +80,14 @@ export type EngineCallbacks = {
    * `setAbsMagLimit`.
    */
   onAbsMagLimitChange?: (absMag: number) => void;
+  /**
+   * Echoed by the engine on init *and* after every `setToneMapCurve`
+   * call so React's SettingsPanel state stays in sync with engine
+   * truth.  Same pattern as `onBiasModeChange`.  No `onExposureChange`
+   * yet because the SettingsPanel doesn't surface an exposure slider —
+   * add one when that UI lands.
+   */
+  onToneMapCurveChange?: (curve: ToneMapCurve) => void;
   /**
    * Fired when the level-of-detail mode changes (either from a `setLodMode`
    * call or at engine init to seed React's initial state).

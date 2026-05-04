@@ -40,6 +40,11 @@ import type { ReactNode } from 'react';
 import type { LodMode } from '../../@types/LodMode';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
+import {
+  ToneMapCurve,
+  ALL_TONE_MAP_CURVES,
+  toneMapCurveLabel,
+} from '../../data/toneMapCurve';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
@@ -163,6 +168,18 @@ type Props = {
   /** Called when the user drags the M_lim slider. */
   onAbsMagLimitChange?: (absMag: number) => void;
 
+  // ── HDR tone-map curve selector ─────────────────────────────────────────
+  //
+  // Both props optional so older call sites continue to typecheck.  The
+  // section is gated on both being present — same idiom as the bias-mode
+  // section above.  The dropdown switches between five curves at runtime
+  // via a single 4-byte uniform write, no pipeline rebuild.
+
+  /** Currently-selected tone-mapping curve.  See `data/toneMapCurve.ts`. */
+  toneMapCurve?: ToneMapCurve;
+  /** Called when the user picks a different tone-map curve. */
+  onToneMapCurveChange?: (curve: ToneMapCurve) => void;
+
   // ── SpaceMouse 6DOF input (optional, WebHID-only) ─────────────────────────
   //
   // All four props are optional so the original call sites continue to
@@ -230,6 +247,8 @@ export function SettingsPanel({
   onBiasModeChange,
   absMagLimit,
   onAbsMagLimitChange,
+  toneMapCurve,
+  onToneMapCurveChange,
 }: Props): ReactNode {
   // Guard: only render the survey-toggle section when the parent has wired
   // *both* the current mask and the toggle callback. Either alone would be
@@ -261,6 +280,13 @@ export function SettingsPanel({
     onBiasModeChange !== undefined &&
     absMagLimit !== undefined &&
     onAbsMagLimitChange !== undefined;
+
+  // Tone-curve selector: same opt-in idiom — both props must be wired or
+  // we hide the whole row.  No `disabled` fallback because every curve
+  // option ships functional today (no future placeholders to gray out,
+  // unlike the biasMode dropdown's roadmap entries).
+  const showToneCurveControls =
+    toneMapCurve !== undefined && onToneMapCurveChange !== undefined;
 
   return (
     <div className={styles.settingsPanel} aria-label="Renderer settings">
@@ -358,6 +384,43 @@ export function SettingsPanel({
               </div>
             </>
           )}
+          <div className={styles.panelDivider} role="separator" />
+        </>
+      )}
+
+      {/* ── HDR tone-map curve selector ─────────────────────────────────── */}
+      {/*
+        Sits right below density correction because both are pixel-shape
+        controls (vs. the survey toggles above, which choose *what* to
+        render).  Switching curves is a single 4-byte uniform write per
+        frame — no pipeline rebuild — so the user sees an instant A/B
+        across Linear / Reinhard / Asinh / Gamma 2 / ACES.
+
+        Linear is the pre-HDR baseline (cluster cores blow out to white)
+        and Reinhard the cinematic default; Asinh is what SDSS's image
+        pipeline uses to make filamentary structure legible.  See
+        `data/toneMapCurve.ts` for the full curve descriptions.
+      */}
+      {showToneCurveControls && (
+        <>
+          <div className={styles.panelSubtitle}>Tone curve</div>
+          <div className={styles.panelRow}>
+            <label htmlFor="tonemap-curve">Curve</label>
+            <select
+              id="tonemap-curve"
+              className={styles.modeSelect}
+              value={toneMapCurve}
+              onChange={(e) =>
+                onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurve)
+              }
+            >
+              {ALL_TONE_MAP_CURVES.map((c) => (
+                <option key={c} value={c}>
+                  {toneMapCurveLabel(c)}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className={styles.panelDivider} role="separator" />
         </>
       )}
