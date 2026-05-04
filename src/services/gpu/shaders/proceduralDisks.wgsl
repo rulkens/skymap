@@ -224,7 +224,27 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   let base = ramp(in.colourIndex);
   let tinted = base;
 
-  let alpha = intensity * in.crossfadeAlpha;
+  // Soft edge fade.  We're outputting LINEAR colour into an rgba16float
+  // HDR target; the tone-map pass converts to sRGB later (see
+  // toneMap.wgsl).  The disk's exponential decay leaves a residual
+  // `exp(-2) ≈ 0.135` at r = 1.0 in LINEAR space, which the gamma curve
+  // brightens to ~42% display brightness — that's the hard edge the
+  // user sees right before the discard.
+  //
+  // Apply a smoothstep edge fade from r = 0.6 (full disk) to r = 1.0
+  // (zero alpha), and SQUARE it to compensate for the ~2.2-power gamma:
+  // a value `x` in linear space becomes `x^(1/2.2) ≈ x^0.45` in display.
+  // To get display brightness that fades roughly linearly with r, the
+  // linear intensity must fade as `(1-r')^2.2 ≈ (1-r')^2` (where r' is
+  // the smoothstep parameter).  Squaring `edgeFade` yields exactly that
+  // `(smoothed)^2` shape — perceptually smooth in display space.
+  //
+  // We multiply the alpha (not the rgb separately) because we use
+  // premultiplied alpha additive blending; alpha is the brightness
+  // gate, and fading it to 0 at r = 1.0 is what removes the hard edge.
+  let edgeFade = smoothstep(1.0, 0.6, r);
+  let edgeFadeLinear = edgeFade * edgeFade;
+  let alpha = intensity * in.crossfadeAlpha * edgeFadeLinear;
   // Premultiplied alpha — matches the project's blend mode (see
   // device.ts `alphaMode: 'premultiplied'`).
   return vec4<f32>(tinted * alpha, alpha);
