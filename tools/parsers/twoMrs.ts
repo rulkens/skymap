@@ -243,27 +243,35 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
       continue;
     }
 
-    // ── Skip the (0, 0, 0) sentinel row ──────────────────────────────────
+    // ── Skip the cz=0 sentinel row ───────────────────────────────────────
     //
-    // 2MRS contains a bookkeeping entry whose 2MASX designation is the
-    // all-zeros string `J000000.00+000000.0` (RA = 00:00:00.00,
-    // Dec = +00:00:00.0, cz = 0).  All three coordinates being literal
-    // zero is wildly improbable for any real galaxy — there's no
-    // observation at the celestial equator's intersection with the
-    // J2000.0 meridian sitting at zero recession velocity.  The row
-    // collapses through `raDecZToCartesian(0, 0, 0)` to the world
-    // origin, which is the camera's home position — so it appears
-    // dead-centre on the map and pretends to be the Milky Way.
+    // 2MRS contains a bookkeeping entry whose recession velocity is
+    // literally `0` km/s.  Distance is `cz / H0`, so cz = 0 puts the
+    // galaxy at distance = 0 — i.e. directly at the camera's home
+    // position (the world origin).  RA/Dec don't matter when distance
+    // is zero: the spherical-to-cartesian transform collapses to
+    // (0, 0, 0) for any angular coordinate.  In practice this row was
+    // appearing dead-centre on the map under the synthesised
+    // designation `2MASX J000000.00+000000.0` (the runtime IAU-name
+    // formatter sees the inverse-transform-from-origin output of
+    // ra = 0, dec = 0 and emits the all-zero string), where it could
+    // be mistaken for the Milky Way (which 2MRS does not — and could
+    // not — catalogue).
+    //
+    // Why exact `=== 0` rather than `Math.abs(cz) < 1`:  every real
+    // galaxy has *some* peculiar motion plus Hubble-flow recession
+    // velocity, so a measured cz of exactly 0 is unphysical and almost
+    // certainly a placeholder.  Negative cz IS real — Local Group
+    // members like M31 have cz ≈ -300 km/s and we explicitly preserve
+    // them (see the rev-2 skip-rules block in the module docstring).
+    // The `cz === 0` predicate sits between those two cases and
+    // catches the sentinel cleanly without dropping legitimate near-
+    // zero-cz Local Group entries.
     //
     // The blank-cz path above doesn't catch this because the column
-    // contains the literal string "0.0" (or similar), which `parseFloat`
-    // happily turns into a finite zero.  We need an explicit check.
-    //
-    // We require all three to be exactly zero because using a tolerance
-    // (e.g. `|cz| < 1`) would also drop legitimate Local Group entries
-    // with very small peculiar velocities.  The exact-zero predicate
-    // is unique to this sentinel and safe.
-    if (ra === 0 && dec === 0 && cz === 0) {
+    // contains the literal string "    0", which `parseFloat` happily
+    // turns into a finite zero.
+    if (cz === 0) {
       skipped++;
       continue;
     }

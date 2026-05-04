@@ -145,17 +145,20 @@ describe('parseTwoMrs', () => {
     expect(skipped).toBe(1);
   });
 
-  it('skips the all-zero sentinel row (RA=0, Dec=0, cz=0)', () => {
-    // 2MRS contains a bookkeeping row whose 2MASX designation is the
-    // all-zero string `J000000.00+000000.0` — RA=0, Dec=0, cz=0 — and
-    // it collapses through `raDecZToCartesian` to the world origin,
-    // appearing dead-centre on the map and pretending to be the Milky
-    // Way.  Confirm the parser catches it and counts it as skipped
-    // rather than emitting a record.
+  it('skips rows with cz=0 (the sentinel that maps to world origin)', () => {
+    // A 2MRS row with cz=0 km/s has distance = cz / H0 = 0, which
+    // collapses through `raDecZToCartesian` to the world origin
+    // regardless of RA/Dec.  The renderer's runtime IAU-name formatter
+    // then synthesises the displayed designation as
+    // `2MASX J000000.00+000000.0` (because the inverse-transform-from-
+    // origin returns ra=dec=0), which made this row look like a real
+    // galaxy at the camera's home position.  Real 2MRS rows have cz
+    // either positive (Hubble flow) or negative (Local Group); exact
+    // zero is unphysical and indicates a placeholder.
     const sentinelRow = buildTwoMrsRow([
-      [1, 16, '00000000+0000000'],
-      [18, 26, '  0.00000'],
-      [28, 36, ' +0.00000'],
+      [1, 16, '12345678+0123456'],
+      [18, 26, '184.17549'], // arbitrary non-zero RA — what matters is cz
+      [28, 36, '+69.46257'],
       [58, 63, '11.500'],
       [65, 70, '12.000'],
       [72, 77, '12.500'],
@@ -168,10 +171,12 @@ describe('parseTwoMrs', () => {
     expect(skipped).toBe(1);
   });
 
-  it('keeps rows with cz=0 if RA/Dec are non-zero (real edge cases)', () => {
-    // The (0,0,0) skip rule must not over-fire — a galaxy whose cz
-    // happens to round to 0 km/s but whose RA/Dec are real coordinates
-    // is still a legitimate near-zero-redshift entry and must be kept.
+  it('keeps rows with negative cz (Local Group blueshifts are real)', () => {
+    // The cz=0 skip rule must not over-fire — Local Group galaxies have
+    // peculiar velocities of order ±300 km/s and the rev-2 parser
+    // explicitly preserves them.  Confirm a small negative cz row is
+    // kept (M31's actual case is covered by the SAMPLE block above;
+    // this is a synthetic regression guard).
     const row = buildTwoMrsRow([
       [1, 16, '12345678+0123456'],
       [18, 26, '180.00000'],
@@ -179,7 +184,7 @@ describe('parseTwoMrs', () => {
       [58, 63, '11.500'],
       [65, 70, '12.000'],
       [72, 77, '12.500'],
-      [174, 178, '    0'],
+      [174, 178, ' -100'],
     ]);
     expect(row.length).toBe(233);
 
