@@ -109,11 +109,11 @@ The tool parses each catalog, runs cross-match dedup using priority **SDSS > 2MR
 
 ```bash
 npm run fetch-2mass-xsc    # ~5 minutes; adds PA + axis-ratio for 2MRS galaxies
-npm run fetch-hyperleda    # MANY HOURS; adds PA + axis-ratio for GLADE galaxies
+npm run fetch-hyperleda    # ~1 hour; adds PA + axis-ratio for GLADE galaxies
 ```
 
 - `fetch-2mass-xsc` queries the 2MASS Extended Source Catalog and writes `data/raw/2mass_xsc_pa.csv`. Quick — runs in roughly five minutes.
-- `fetch-hyperleda` queries HyperLEDA at 4 concurrent requests across ~1.5 M PGCs and writes `data/raw/hyperleda_pa.csv`. This can take **many hours**. The script is resumable — interrupt and restart safely. Most users skip this entirely or run it overnight.
+- `fetch-hyperleda` queries HyperLEDA at 4 concurrent requests across ~1.5 M PGCs and writes `data/raw/hyperleda_pa.csv`. Takes roughly **1 hour** end-to-end. The script is resumable — interrupt and restart safely.
 
 Both files are picked up automatically by the next `npm run build-all`. Both commands are entirely optional; the renderer works without them.
 
