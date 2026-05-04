@@ -127,6 +127,21 @@ function makeMockDiskRenderer() {
   } as any;
 }
 
+/**
+ * Mock ProceduralDiskRenderer.  Unlike Quad/DiskRenderer it doesn't
+ * sample the atlas, so no `bindAtlas` — only `draw`.  The subsystem's
+ * `bindToRenderers` stash-step writes the reference into a closure
+ * variable rather than calling any method on it, so even an empty
+ * object would work for tests that don't assert on draws; we keep
+ * `draw` as a vi.fn() so future tests can assert per-frame emission
+ * without needing a fresh mock factory.
+ */
+function makeMockProceduralDiskRenderer() {
+  return {
+    draw: vi.fn(),
+  } as any;
+}
+
 /** Fake ImageBitmap — only need `close()` and `width/height` properties. */
 function makeFakeBitmap(): ImageBitmap {
   return { width: 128, height: 128, close: () => {} } as unknown as ImageBitmap;
@@ -175,7 +190,8 @@ describe('createThumbnailSubsystem', () => {
     });
     const quad = makeMockQuadRenderer();
     const disk = makeMockDiskRenderer();
-    sys.bindToRenderers(quad, disk);
+    const procDisk = makeMockProceduralDiskRenderer();
+    sys.bindToRenderers(quad, disk, procDisk);
     expect(quad.bindAtlas).toHaveBeenCalledTimes(1);
     expect(disk.bindAtlas).toHaveBeenCalledTimes(1);
   });
@@ -203,7 +219,7 @@ describe('createThumbnailSubsystem', () => {
       requestRender: () => {},
       fetcher,
     });
-    sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer());
+    sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
     const cam = makeCam();
     // Two clouds; only Source.SDSS bit is set in the mask.
     const clouds = new Map([
@@ -225,7 +241,7 @@ describe('createThumbnailSubsystem', () => {
         requestRender: () => {},
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer());
+      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
 
@@ -256,7 +272,7 @@ describe('createThumbnailSubsystem', () => {
         requestRender: () => {},
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer());
+      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
 
@@ -282,7 +298,7 @@ describe('createThumbnailSubsystem', () => {
         },
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer());
+      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
 
@@ -315,7 +331,7 @@ describe('createThumbnailSubsystem', () => {
         requestRender: () => {},
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer());
+      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
       const cam = makeCam();
       // 257 galaxies — the 257th will evict the LRU slot.
       const cloud = makeCloud(257, 50);
@@ -350,7 +366,7 @@ describe('createThumbnailSubsystem', () => {
         requestRender: () => {},
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer());
+      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
 
@@ -377,7 +393,7 @@ describe('createThumbnailSubsystem', () => {
         requestRender: () => {},
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer());
+      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
       sys.runFrame(makeFrameInput(cam, clouds));

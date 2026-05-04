@@ -111,6 +111,7 @@ import { loadFamousSidecars, remapGladeXrefs } from './famousMetaLoader';
 // rationale on why-a-subsystem and the retry-storm contract.
 import { QuadRenderer } from '../gpu/quadRenderer';
 import { DiskRenderer } from '../gpu/diskRenderer';
+import { ProceduralDiskRenderer } from '../gpu/proceduralDiskRenderer';
 import { createThumbnailSubsystem } from './thumbnailSubsystem';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
@@ -125,38 +126,6 @@ import { createSpaceMouseSubsystem } from './spaceMouseSubsystem';
 import { createClickResolver } from './clickHandler';
 import { attachEngineInputs } from './inputBindings';
 import { renderFrame } from './renderFrame';
-
-/**
- * Procedural-disk crossfade band, in apparent-pixels.
- *
- *   - Below `PROCEDURAL_DISK_FADE_START_PX` (8): only the screen-aligned
- *     point billboard renders.  Distant galaxies look like soft glows.
- *   - Inside the band [8, 14): both passes render simultaneously with
- *     complementary alphas (smoothstep crossfade).
- *   - Above `PROCEDURAL_DISK_FADE_END_PX` (14): only the procedural
- *     disk renders.  The point pass has fully faded out.
- *
- * Picking these specific values:
- *
- *   - The band's lower edge (8) is roughly where a screen-aligned point
- *     starts to look pixelated rather than a clean glow — bigger than
- *     that, the eye expects to see structure.
- *   - The band width (6 px) is wide enough that the crossfade is
- *     visually smooth at typical zoom rates and narrow enough that
- *     there's a clean "all disk" regime.
- *   - The upper edge (14) is well below the existing
- *     APPARENT_SIZE_THRESHOLD_PX = 24 (the threshold for the textured
- *     disk pass, declared in `thumbnailSubsystem.ts`), so the procedural
- *     impostor takes over long before the textured one would have
- *     engaged — exactly the visibility gap this feature exists to fill.
- *
- * Not exported: only the engine's per-frame instance-emission code in
- * this same file (Task 7) and the points-shader fade hookup (Task 8)
- * read these.  Keeping them module-local prevents accidental drift
- * with the textured-disk threshold in `thumbnailSubsystem.ts`.
- */
-const PROCEDURAL_DISK_FADE_START_PX = 8;
-const PROCEDURAL_DISK_FADE_END_PX = 14;
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -607,6 +576,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         format: 'rgba16float',
         canvas,
       });
+      // ProceduralDiskRenderer fills the visibility gap between the
+      // screen-aligned point glow (which goes pixelated above ~8 px) and
+      // the textured-disk pass (which only kicks in at 24 px).  In the
+      // 8-14 px band both the points pass and this renderer are active,
+      // crossfading via complementary smoothstep alphas (see
+      // PROCEDURAL_DISK_FADE_START_PX / _END_PX in thumbnailSubsystem.ts).
+      // Same HDR target as the other thumbnail-pass renderers so the
+      // procedural disk composites into the same linear-light buffer.
+      const proceduralDiskRenderer = new ProceduralDiskRenderer({
+        device,
+        context,
+        format: 'rgba16float',
+        canvas,
+      });
       // Build the subsystem and hand it the renderer references for
       // atlas-view binding.  The subsystem's `bindToRenderers` is split
       // out from its constructor because the renderers need to exist
@@ -615,7 +598,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         device,
         requestRender: () => state.subsystems.scheduler.requestRender(),
       });
-      thumbnails.bindToRenderers(quadRenderer, diskRenderer);
+      thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralDiskRenderer);
       state.subsystems.thumbnails = thumbnails;
 
       // Signal loading state immediately so the user knows something is

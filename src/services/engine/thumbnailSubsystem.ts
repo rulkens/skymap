@@ -73,6 +73,8 @@ import { TextureAtlas } from '../gpu/textureAtlas';
 import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import type { QuadRenderer } from '../gpu/quadRenderer';
 import { DiskRenderer, type DiskInstance } from '../gpu/diskRenderer';
+import { ProceduralDiskRenderer } from '../gpu/proceduralDiskRenderer';
+import type { ProceduralDiskInstance } from '../../@types/ProceduralDiskInstance';
 import { fetchGalaxyBitmap } from '../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDecZ } from '../../utils/math';
 import type { FamousMetaEntry, FamousXrefMap } from './famousMetaLoader';
@@ -82,6 +84,40 @@ import type { mat4 } from 'gl-matrix';
 
 /** Below this on-screen size, we don't bother fetching a thumbnail at all. */
 const APPARENT_SIZE_THRESHOLD_PX = 24;
+
+/**
+ * Procedural-disk crossfade band, in apparent-pixels.
+ *
+ *   - Below `PROCEDURAL_DISK_FADE_START_PX` (8): only the screen-aligned
+ *     point billboard renders.  Distant galaxies look like soft glows.
+ *   - Inside the band [8, 14): both passes render simultaneously with
+ *     complementary alphas (smoothstep crossfade).
+ *   - Above `PROCEDURAL_DISK_FADE_END_PX` (14): only the procedural
+ *     disk renders.  The point pass has fully faded out.
+ *
+ * Picking these specific values:
+ *
+ *   - The band's lower edge (8) is roughly where a screen-aligned point
+ *     starts to look pixelated rather than a clean glow — bigger than
+ *     that, the eye expects to see structure.
+ *   - The band width (6 px) is wide enough that the crossfade is
+ *     visually smooth at typical zoom rates and narrow enough that
+ *     there's a clean "all disk" regime.
+ *   - The upper edge (14) is well below the existing
+ *     APPARENT_SIZE_THRESHOLD_PX = 24 (the textured-disk threshold,
+ *     declared just above), so the procedural impostor takes over long
+ *     before the textured one would have engaged — exactly the
+ *     visibility gap this feature exists to fill.
+ *
+ * Exported because two consumers read them: this module's per-frame
+ * emission code (Task 7) gates the procedural-disk instance push and
+ * computes `crossfadeAlpha`; the engine's point-pass uniform setup
+ * (Task 8) hands them to the points shader so the soft-glow fade-out
+ * stays exactly complementary to this fade-in.  Keeping them in one
+ * module prevents accidental drift between the two passes.
+ */
+export const PROCEDURAL_DISK_FADE_START_PX = 8;
+export const PROCEDURAL_DISK_FADE_END_PX = 14;
 
 /**
  * Distance fade band — width (in px) above the apparent-size threshold
@@ -195,14 +231,22 @@ export type ThumbnailFrameInput = {
 
 export type ThumbnailSubsystem = {
   /**
-   * Bind the atlas's GPU view to both renderers.  Called once after
-   * the atlas's `initTexture()` completes (i.e. immediately after
-   * createThumbnailSubsystem returns, but BEFORE the first
-   * `runFrame`).  We don't fold this into the constructor because
-   * the QuadRenderer/DiskRenderer don't exist yet at construction
-   * time — they're built alongside it in engine.ts.
+   * Bind the atlas's GPU view to both texture-sampling renderers, and
+   * stash the procedural-disk renderer for use by `runFrame` (it does
+   * not sample the atlas, so no bindAtlas call for it — but we still
+   * need a stable reference because the procedural-disk pass is issued
+   * alongside quads/disks once per frame).  Called once after the
+   * atlas's `initTexture()` completes (i.e. immediately after
+   * createThumbnailSubsystem returns, but BEFORE the first `runFrame`).
+   * We don't fold this into the constructor because the renderers
+   * don't exist yet at construction time — they're built alongside it
+   * in engine.ts.
    */
-  bindToRenderers(quadRenderer: QuadRenderer, diskRenderer: DiskRenderer): void;
+  bindToRenderers(
+    quadRenderer: QuadRenderer,
+    diskRenderer: DiskRenderer,
+    proceduralDiskRenderer: ProceduralDiskRenderer,
+  ): void;
   /**
    * Run the per-frame thumbnail-priority loop and emit QuadInstances
    * + DiskInstances to the renderers.  Increments the LRU clock,
@@ -287,16 +331,30 @@ export function createThumbnailSubsystem(
   let destroyed = false;
 
   // The renderer-binding step is split out so the construction order in
-  // engine.ts can remain "atlas first, renderers second"; both renderers
-  // need the atlas's texture view, which only exists after initTexture().
+  // engine.ts can remain "atlas first, renderers second"; both texture-
+  // sampling renderers need the atlas's texture view, which only exists
+  // after initTexture().
+  //
+  // The procedural-disk renderer doesn't sample the atlas (it's
+  // synthesised in the fragment shader from `colourIndex` +
+  // `crossfadeAlpha`), so no bindAtlas call for it.  We stash it as a
+  // module-private `let` here so `runFrame` can issue its draw alongside
+  // the quad/disk passes without widening the per-frame
+  // `ThumbnailFrameInput` type.  The two existing renderers stay on
+  // `ThumbnailFrameInput` for backward-compat with the pre-extraction
+  // call sites in renderFrame.ts; the procedural-disk renderer is new,
+  // so the simpler closure-stash pattern is fine.
   let bound = false;
+  let proceduralDiskRendererRef: ProceduralDiskRenderer | null = null;
 
   function bindToRenderers(
     quadRenderer: QuadRenderer,
     diskRenderer: DiskRenderer,
+    proceduralDiskRenderer: ProceduralDiskRenderer,
   ): void {
     quadRenderer.bindAtlas(atlas.getTextureView());
     diskRenderer.bindAtlas(atlas.getTextureView());
+    proceduralDiskRendererRef = proceduralDiskRenderer;
     bound = true;
   }
 
@@ -351,6 +409,18 @@ export function createThumbnailSubsystem(
     // one bucket (see the branch at the tail of the loop body) so the two
     // arrays never double-count an instance.
     const disks: DiskInstance[] = [];
+    // ProceduralDiskInstances accumulate independently — unlike the
+    // quad/disk dichotomy (which is mutually exclusive per galaxy), a
+    // single galaxy in the 8-14 px crossfade band emits BOTH a point
+    // sprite (with fading-out alpha) and a procedural disk (with
+    // fading-in alpha).  Above 24 px the textured disk takes over, but
+    // the procedural disk continues to render too — its `crossfadeAlpha`
+    // saturates at 1.0 for px > 14, so it draws underneath the
+    // higher-fidelity textured pass.  The procedural pass is intended
+    // as a fallback for the visibility gap between the point and the
+    // texture, so a small amount of overdraw at very large sizes is
+    // acceptable.
+    const proceduralDisks: ProceduralDiskInstance[] = [];
 
     const nowMs = performance.now();
 
@@ -391,170 +461,251 @@ export function createThumbnailSubsystem(
 
         // Famous-atlas rows always show their thumbnail — landmarks the
         // user expects visible regardless of angular size.  Survey rows
-        // gate on the threshold so we don't load 3.5 M cutouts at maximum
-        // zoom-out.
-        if (cloudSource !== Source.Famous && px < APPARENT_SIZE_THRESHOLD_PX) continue;
+        // gate on the LOWER of the textured-thumbnail threshold (24 px)
+        // and the procedural-disk fade-in start (8 px), because the
+        // procedural-disk pass needs to enter the loop body for any
+        // galaxy above 8 px to emit a crossfade instance.  The
+        // bitmap-fetch + Quad/Disk push code below is then re-gated on
+        // the unchanged 24 px threshold so we don't swamp the priority
+        // queue with fetch requests for barely-visible galaxies.
+        const minPxForLoopEntry = Math.min(
+          APPARENT_SIZE_THRESHOLD_PX,
+          PROCEDURAL_DISK_FADE_START_PX,
+        );
+        if (cloudSource !== Source.Famous && px < minPxForLoopEntry) continue;
 
-        // Recover RA/Dec for the cutout URL.  PointCloud only stores
-        // Cartesian Mpc — invert the Hubble-law conversion that was
-        // applied at import time.
-        const [ra, dec] = cartesianToRaDecZ(x, y, z);
-        const key = galaxyCacheKey(ra, dec);
-
-        // Allocate (or refresh) an atlas slot.  Idempotent for repeat
-        // frames — same key returns the same slot index and bumps the
-        // LRU clock so the entry isn't evicted while still on screen.
-        // If the atlas is full, this triggers an LRU eviction which
-        // fires `onEvict` (cleaning bitmapReady/Failed/Time for the
-        // ousted key — see the setEvictHandler call above).
-        const slot = atlas.allocate(key, frameCounter);
-
-        // ── Retry-storm guard ──
+        // Bind orientation + size up-front: both the textured-disk path
+        // (gated on px ≥ 24) and the procedural-disk emission (gated on
+        // px > 8) need them.  Reading a Float32Array element is cheap;
+        // we'd be paying for it inside both branches anyway, so hoist.
         //
-        // If we've already failed to fetch this galaxy (404 / CORS /
-        // decode error), don't try again this session.  Without this
-        // gate we'd re-enqueue the same dead key every frame.  Survives
-        // the extraction unchanged — one of the project's known
-        // footguns (CLAUDE.md "things that have bitten us").
-        if (bitmapFailed.has(key)) continue;
-
-        // If we don't have a bitmap yet, kick off a fetch.  The queue
-        // dedupes on in-flight keys (see PriorityQueue.enqueue
-        // docstring); re-enqueuing only refreshes priority for a still-
-        // pending entry.  Priority = apparent-size px so big galaxies
-        // load first.
-        if (!bitmapReady.has(key)) {
-          // Capture stable copies of the closure bindings the fetcher
-          // and onResult will use.  `cloudSource` and `i` are stable
-          // because the queue calls each fetcher exactly once per key.
-          const sourceForFetch = cloudSource;
-          const idxForFetch = i;
-          queue.enqueue({
-            key,
-            priority: px,
-            fetcher: () => {
-              // Famous galaxies use a curated local WebP rather than
-              // the SDSS/DSS chain.
-              const fId =
-                sourceForFetch === Source.Famous
-                  ? famousMeta[idxForFetch]?.id
-                  : undefined;
-              return fetcher({ ra, dec, famousId: fId });
-            },
-            onResult: (bitmap) => {
-              // Engine destroyed mid-fetch — drop the result.
-              if (destroyed) {
-                bitmap?.close();
-                return;
-              }
-              if (!bitmap) {
-                // Both SDSS and DSS failed (or the decode threw).
-                // Memoise the failure so the per-frame loop stops
-                // re-enqueueing this key.
-                bitmapFailed.add(key);
-                // Wake one frame so the still-animating predicate
-                // re-checks queue.inFlightCount() and the loop can
-                // sleep if this was the last in-flight fetch.
-                requestRender();
-                return;
-              }
-              // Slot may have been reassigned by LRU between enqueue
-              // and fetch resolution.  `lastSeenFrame` returns
-              // undefined for keys not currently in the atlas (i.e.
-              // evicted before our async fetch resolved); in that case
-              // we drop the bitmap.
-              if (atlas.lastSeenFrame(key) === undefined) {
-                bitmap.close();
-                requestRender();
-                return;
-              }
-              atlas.uploadBitmap(slot, bitmap);
-              bitmapReady.add(key);
-              bitmapReadyTime.set(key, performance.now());
-              bitmap.close();
-              // Wake the loop so the freshly-uploaded thumbnail
-              // appears on the next frame.  The load-fade lerp needs
-              // the loop ticking for the duration of the fade —
-              // handled by the still-animating predicate.
-              requestRender();
-            },
-          });
-          continue; // no quad this frame — wait for the bitmap to land
-        }
-
-        // ── Pack the QuadInstance / DiskInstance ───────────────────────
-        //
-        // 4× the per-galaxy diameter gives the quad visual presence
-        // without dwarfing the surrounding dot field — same multiplier
-        // as the GALAXY_RADIUS_MPC formula in points.wgsl, so the soft-
-        // glow dot and the textured thumbnail occupy identical screen
+        // 4× the per-galaxy diameter gives the rendered impostor visual
+        // presence without dwarfing the surrounding dot field — same
+        // multiplier as the GALAXY_RADIUS_MPC formula in points.wgsl, so
+        // the soft-glow dot and the impostor occupy identical screen
         // real-estate at the texture-load fade-in moment.
         const sizeWorldMpc = (dKpcRow / 1000) * 4;
-        const [u0, v0, u1, v1] = atlas.slotUv(slot);
-
-        // ── Fade-in multipliers ──
-        //
-        // Two fades combine to keep thumbnails from popping in:
-        //
-        //  1. Distance fade — smoothstep across an 8 px band above the
-        //     apparent-size threshold so a galaxy that just crossed the
-        //     threshold (≈ 24 px) emerges gradually as the camera zooms
-        //     further in (~32 px).
-        //  2. Load fade — once a bitmap finishes landing in the atlas,
-        //     ramp from 0 to 1 over LOAD_FADE_MS so freshly-uploaded
-        //     thumbnails don't replace the soft point glow with a hard
-        //     JPEG square in one frame.
-        //
-        // Multiplied together so a galaxy that crosses the distance
-        // threshold AND has just landed its bitmap fades twice (once
-        // from each axis); galaxies that have been ready for a while
-        // only see the distance fade.
-        const distT = Math.min(
-          1,
-          Math.max(0, (px - APPARENT_SIZE_THRESHOLD_PX) / FADE_BAND_PX),
-        );
-        // Smoothstep cubic — matches WGSL's smoothstep shape.
-        const distFade = distT * distT * (3 - 2 * distT);
-        const tReady = bitmapReadyTime.get(key);
-        const loadFade =
-          tReady === undefined
-            ? 0
-            : Math.min(1, (nowMs - tReady) / LOAD_FADE_MS);
-        const fadeAlpha = distFade * loadFade;
-
         const ar = cloud.axisRatio[i]!;
         const pa = cloud.positionAngleDeg[i]!;
-        // 3D disk path: only when (a) the apparent size is large enough
-        // that the inclination ellipse is perceptually distinguishable
-        // from a circle, and (b) the orientation values are finite
-        // (defensive — the build pipeline guarantees this, but a
-        // corrupted cache could flip them to NaN, in which case we fall
-        // back to a flat quad rather than render a NaN-projected mess).
-        if (px > DISK_THRESHOLD_PX && Number.isFinite(ar) && Number.isFinite(pa)) {
-          disks.push({
+
+        // ── Bitmap-fetch + textured-quad/disk push ────────────────────
+        //
+        // Re-gate on the original 24 px threshold so the priority queue
+        // doesn't get flooded with fetch requests for barely-visible
+        // galaxies.  Below 24 px, only the procedural-disk path below
+        // can fire.
+        if (px >= APPARENT_SIZE_THRESHOLD_PX || cloudSource === Source.Famous) {
+          // Recover RA/Dec for the cutout URL.  PointCloud only stores
+          // Cartesian Mpc — invert the Hubble-law conversion that was
+          // applied at import time.
+          const [ra, dec] = cartesianToRaDecZ(x, y, z);
+          const key = galaxyCacheKey(ra, dec);
+
+          // Allocate (or refresh) an atlas slot.  Idempotent for repeat
+          // frames — same key returns the same slot index and bumps the
+          // LRU clock so the entry isn't evicted while still on screen.
+          // If the atlas is full, this triggers an LRU eviction which
+          // fires `onEvict` (cleaning bitmapReady/Failed/Time for the
+          // ousted key — see the setEvictHandler call above).
+          const slot = atlas.allocate(key, frameCounter);
+
+          // ── Retry-storm guard ──
+          //
+          // If we've already failed to fetch this galaxy (404 / CORS /
+          // decode error), don't try again this session.  Without this
+          // gate we'd re-enqueue the same dead key every frame.  Note:
+          // we use a labelled-style early skip — instead of `continue`
+          // (which would also skip the procedural-disk emission below),
+          // we wrap the bitmap path in another `if`.  This preserves
+          // the retry-storm protection while still allowing the
+          // procedural disk to render for galaxies whose bitmap fetch
+          // permanently failed.
+          if (!bitmapFailed.has(key)) {
+            // If we don't have a bitmap yet, kick off a fetch.  The
+            // queue dedupes on in-flight keys (see PriorityQueue.enqueue
+            // docstring); re-enqueuing only refreshes priority for a
+            // still-pending entry.  Priority = apparent-size px so big
+            // galaxies load first.
+            if (!bitmapReady.has(key)) {
+              // Capture stable copies of the closure bindings the
+              // fetcher and onResult will use.  `cloudSource` and `i`
+              // are stable because the queue calls each fetcher exactly
+              // once per key.
+              const sourceForFetch = cloudSource;
+              const idxForFetch = i;
+              queue.enqueue({
+                key,
+                priority: px,
+                fetcher: () => {
+                  // Famous galaxies use a curated local WebP rather
+                  // than the SDSS/DSS chain.
+                  const fId =
+                    sourceForFetch === Source.Famous
+                      ? famousMeta[idxForFetch]?.id
+                      : undefined;
+                  return fetcher({ ra, dec, famousId: fId });
+                },
+                onResult: (bitmap) => {
+                  // Engine destroyed mid-fetch — drop the result.
+                  if (destroyed) {
+                    bitmap?.close();
+                    return;
+                  }
+                  if (!bitmap) {
+                    // Both SDSS and DSS failed (or the decode threw).
+                    // Memoise the failure so the per-frame loop stops
+                    // re-enqueueing this key.
+                    bitmapFailed.add(key);
+                    // Wake one frame so the still-animating predicate
+                    // re-checks queue.inFlightCount() and the loop
+                    // can sleep if this was the last in-flight fetch.
+                    requestRender();
+                    return;
+                  }
+                  // Slot may have been reassigned by LRU between
+                  // enqueue and fetch resolution.  `lastSeenFrame`
+                  // returns undefined for keys not currently in the
+                  // atlas (i.e. evicted before our async fetch
+                  // resolved); in that case we drop the bitmap.
+                  if (atlas.lastSeenFrame(key) === undefined) {
+                    bitmap.close();
+                    requestRender();
+                    return;
+                  }
+                  atlas.uploadBitmap(slot, bitmap);
+                  bitmapReady.add(key);
+                  bitmapReadyTime.set(key, performance.now());
+                  bitmap.close();
+                  // Wake the loop so the freshly-uploaded thumbnail
+                  // appears on the next frame.  The load-fade lerp
+                  // needs the loop ticking for the duration of the
+                  // fade — handled by the still-animating predicate.
+                  requestRender();
+                },
+              });
+              // Bitmap not ready yet — no quad/disk this frame.  Fall
+              // through to the procedural-disk emission below so the
+              // user still sees something while the fetch is in
+              // flight.
+            } else {
+              // ── Pack the QuadInstance / DiskInstance ─────────────
+              const [u0, v0, u1, v1] = atlas.slotUv(slot);
+
+              // ── Fade-in multipliers ──
+              //
+              // Two fades combine to keep thumbnails from popping in:
+              //
+              //  1. Distance fade — smoothstep across an 8 px band
+              //     above the apparent-size threshold so a galaxy
+              //     that just crossed the threshold (≈ 24 px) emerges
+              //     gradually as the camera zooms further in (~32 px).
+              //  2. Load fade — once a bitmap finishes landing in the
+              //     atlas, ramp from 0 to 1 over LOAD_FADE_MS so
+              //     freshly-uploaded thumbnails don't replace the
+              //     soft point glow with a hard JPEG square in one
+              //     frame.
+              //
+              // Multiplied together so a galaxy that crosses the
+              // distance threshold AND has just landed its bitmap
+              // fades twice (once from each axis); galaxies that have
+              // been ready for a while only see the distance fade.
+              const distT = Math.min(
+                1,
+                Math.max(0, (px - APPARENT_SIZE_THRESHOLD_PX) / FADE_BAND_PX),
+              );
+              // Smoothstep cubic — matches WGSL's smoothstep shape.
+              const distFade = distT * distT * (3 - 2 * distT);
+              const tReady = bitmapReadyTime.get(key);
+              const loadFade =
+                tReady === undefined
+                  ? 0
+                  : Math.min(1, (nowMs - tReady) / LOAD_FADE_MS);
+              const fadeAlpha = distFade * loadFade;
+
+              // 3D disk path: only when (a) the apparent size is
+              // large enough that the inclination ellipse is
+              // perceptually distinguishable from a circle, and
+              // (b) the orientation values are finite (defensive —
+              // the build pipeline guarantees this, but a corrupted
+              // cache could flip them to NaN, in which case we fall
+              // back to a flat quad rather than render a
+              // NaN-projected mess).
+              if (px > DISK_THRESHOLD_PX && Number.isFinite(ar) && Number.isFinite(pa)) {
+                disks.push({
+                  x,
+                  y,
+                  z,
+                  sizeWorld: sizeWorldMpc,
+                  u0,
+                  v0,
+                  u1,
+                  v1,
+                  axisRatio: ar,
+                  positionAngleDeg: pa,
+                  fadeAlpha,
+                });
+              } else {
+                quads.push({
+                  x,
+                  y,
+                  z,
+                  sizeWorld: sizeWorldMpc,
+                  u0,
+                  v0,
+                  u1,
+                  v1,
+                  fadeAlpha,
+                });
+              }
+            }
+          }
+        }
+
+        // ── Procedural-disk emission ─────────────────────────────────
+        //
+        // Above PROCEDURAL_DISK_FADE_START_PX (8 px), emit a procedural-
+        // disk instance with a smoothstep crossfade alpha that ramps
+        // 0 → 1 across the [8, 14] band.  The points pass uses the
+        // *same* smoothstep shape on the same px values to fade out (see
+        // points.wgsl, hooked up in Task 8), so the two passes
+        // crossfade exactly.  Above 14 px the procedural disk renders at
+        // full alpha; the textured-disk pass (24+ px) overlays it with
+        // higher fidelity.
+        //
+        // We use a fallback `colourIndex = 1.0` (mid-band) until per-
+        // galaxy colour can be plumbed through.  PointCloud's colour-
+        // index isn't a stored field — it's derived from magG/magR/etc.
+        // inside the points shader.  Computing it here per-frame for
+        // every visible galaxy would burn CPU; the points shader's
+        // existing per-vertex computation is the right home.  When that
+        // gets refactored to be readable from CPU we can plumb it in
+        // (the type field already exists on ProceduralDiskInstance).
+        if (
+          px > PROCEDURAL_DISK_FADE_START_PX &&
+          Number.isFinite(ar) &&
+          Number.isFinite(pa)
+        ) {
+          const t = Math.min(
+            1,
+            Math.max(
+              0,
+              (px - PROCEDURAL_DISK_FADE_START_PX) /
+                (PROCEDURAL_DISK_FADE_END_PX - PROCEDURAL_DISK_FADE_START_PX),
+            ),
+          );
+          // Smoothstep — same shape as WGSL's smoothstep so the points-
+          // pass fade-out (which uses smoothstep on the same px values)
+          // and this fade-in stay perfectly complementary.
+          const crossfadeAlpha = t * t * (3 - 2 * t);
+          proceduralDisks.push({
             x,
             y,
             z,
-            sizeWorld: sizeWorldMpc,
-            u0,
-            v0,
-            u1,
-            v1,
+            sizeWorldMpc,
             axisRatio: ar,
             positionAngleDeg: pa,
-            fadeAlpha,
-          });
-        } else {
-          quads.push({
-            x,
-            y,
-            z,
-            sizeWorld: sizeWorldMpc,
-            u0,
-            v0,
-            u1,
-            v1,
-            fadeAlpha,
+            colourIndex: 1.0,
+            crossfadeAlpha,
           });
         }
       }
@@ -585,6 +736,7 @@ export function createThumbnailSubsystem(
     };
     quads.sort(cmpFar);
     disks.sort(cmpFar);
+    proceduralDisks.sort(cmpFar);
 
     if (quads.length > 0) {
       quadRenderer.draw(
@@ -603,6 +755,31 @@ export function createThumbnailSubsystem(
         [canvasSize.width, canvasSize.height],
         camPos,
         disks,
+      );
+    }
+    // Procedural-disk pass.  In the steady-state crossfade band [8, 14]
+    // px the textured passes don't fire at all (their gate is 24 px),
+    // so the procedural disk is the only impostor on screen and the
+    // ordering relative to quads/disks only matters in the >24 px
+    // regime where a textured bitmap has loaded.  The procedural disk's
+    // `crossfadeAlpha` saturates at 1.0 above 14 px, so above 24 px
+    // both impostors render — Task 11 (visual verification) will
+    // confirm whether further tapering of `crossfadeAlpha` past 24 px
+    // is needed; if so, that's a small change in the crossfade ramp
+    // above, not a structural one here.
+    if (proceduralDisks.length > 0 && proceduralDiskRendererRef !== null) {
+      // mat4 from gl-matrix is a Float32Array at runtime, but TS sees a
+      // distinct branded type — cast through `Float32Array` so the
+      // renderer's parameter type matches without changing its public
+      // signature (other call-sites in the repo pass Float32Array
+      // directly).
+      proceduralDiskRendererRef.draw(
+        pass,
+        viewProj as Float32Array,
+        [canvasSize.width, canvasSize.height],
+        [camPos[0], camPos[1], camPos[2]],
+        pxPerRad,
+        proceduralDisks,
       );
     }
   }
