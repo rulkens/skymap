@@ -651,11 +651,25 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // Errors from the worker are caught + logged; an upload failure
         // shouldn't crash the entire engine since other surveys may still
         // be loading.
-        renderer.upload(result.source, result.cloud).catch((err) => {
-          console.error(`[engine] point bake failed for source ${result.source}:`, err);
-        });
+        renderer
+          .upload(result.source, result.cloud)
+          .then(() => {
+            // GPU buffer is now ready — render so the new points appear
+            // (the per-frame draw skips sources whose buffer isn't ready
+            // yet, so without this call the cloud would stay invisible
+            // until some other event woke the loop).
+            scheduler.requestRender();
+          })
+          .catch((err) => {
+            console.error(`[engine] point bake failed for source ${result.source}:`, err);
+          });
         clouds.set(result.source, result.cloud);
         cb.onCloudReady?.(result.source, result.cloud.count);
+        // Wake immediately too — `clouds.set` enables hover/pick on the
+        // (still-baking) cloud's CPU-side metadata.  Harmless even if
+        // the GPU buffer isn't quite ready: the per-frame draw skips
+        // not-yet-uploaded sources by design.
+        scheduler.requestRender();
 
         if (firstResult === null) {
           firstResult = result;
@@ -674,6 +688,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         .then((sc) => {
           famousMeta = sc.meta;
           famousXrefs = sc.xrefs;
+          // No direct render-state change — the sidecars only feed
+          // hover-card text — but the famous-galaxy thumbnails
+          // referenced by these entries will now be enqueueable from
+          // the per-frame loop.  Wake one frame so the user sees the
+          // famous overlays without having to nudge the camera.
+          scheduler.requestRender();
         })
         .catch((err) => {
           console.warn('[engine] famous sidecars failed to load:', err);
@@ -693,9 +713,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // the synthetic cloud is small (<10k points) so the worker
           // finishes nearly instantly, but we keep the error path
           // explicit so a future regression doesn't silently swallow it.
-          renderer.upload(fallback.source, fallback.cloud).catch((err) => {
-            console.error('[engine] synthetic-fallback bake failed:', err);
-          });
+          renderer
+            .upload(fallback.source, fallback.cloud)
+            .then(() => {
+              scheduler.requestRender();
+            })
+            .catch((err) => {
+              console.error('[engine] synthetic-fallback bake failed:', err);
+            });
           clouds.set(fallback.source, fallback.cloud);
           cb.onCloudReady?.(fallback.source, fallback.cloud.count);
         }
@@ -866,6 +891,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             .then((idx) => {
               // Click on empty space → clear selection; click on point → pin it.
               setSelected(idx === -1 ? null : idx);
+              // Selection changed — render so the highlight halo
+              // updates on the next frame.
+              scheduler.requestRender();
             });
         },
       });
@@ -1287,6 +1315,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
                       // Memoise the failure so the per-frame loop stops
                       // re-enqueueing this key.
                       bitmapFailed.add(key);
+                      // Wake one frame so the still-animating predicate
+                      // re-checks queue.inFlightCount() and the loop
+                      // can sleep if this was the last in-flight fetch.
+                      scheduler.requestRender();
                       return;
                     }
                     // Slot may have been reassigned by LRU between enqueue
@@ -1296,12 +1328,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
                     // case we just drop the bitmap.
                     if (atlas.lastSeenFrame(key) === undefined) {
                       bitmap.close();
+                      scheduler.requestRender();
                       return;
                     }
                     atlas.uploadBitmap(slot, bitmap);
                     bitmapReady.add(key);
                     bitmapReadyTime.set(key, performance.now());
                     bitmap.close();
+                    // Wake the loop so the freshly-uploaded thumbnail
+                    // appears on the next frame.  The load-fade lerp
+                    // (LOAD_FADE_MS = 400 ms) needs the loop ticking
+                    // for the duration of the fade — handled by the
+                    // still-animating predicate's queue.inFlightCount
+                    // path (which keeps ticking while any fetch is
+                    // pending) plus the recent-fade branch in the
+                    // predicate (see frame() tail).
+                    scheduler.requestRender();
                   },
                 });
                 continue; // no quad this frame — wait for the bitmap to land
@@ -1523,6 +1565,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             )
             .then((idx) => {
               setHovered(idx === -1 ? null : idx);
+              // No scheduler.requestRender() here intentionally.
+              // The hover state only feeds the React InfoCard text —
+              // there is no hover halo in the rendered scene today,
+              // so a hover change does NOT require a re-render.
+              // Skipping the wake keeps idle CPU at zero on
+              // mouse-over without click.  If a future task adds a
+              // hover halo, add scheduler.requestRender() here.
             })
             .finally(() => {
               pickInFlight = false;
@@ -1544,11 +1593,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         //     network; when it lands the onResult uploads to the atlas
         //     and (via Task 5) calls requestRender() — but we keep one
         //     frame queued anyway so the load-fade lerp ramps smoothly.
+        // Recently-loaded thumbnails fade in over LOAD_FADE_MS (400 ms);
+        // keep the loop ticking while any fade is still in progress so
+        // the alpha lerp ramps smoothly without the user having to
+        // nudge the mouse.  bitmapReadyTime caps at the atlas slot
+        // count (~256), so the .values() spread is bounded and only
+        // runs when at least one thumbnail has loaded recently.
+        const FADE_DURATION_MS = 400;
+        const fadeInProgress =
+          bitmapReadyTime.size > 0 &&
+          [...bitmapReadyTime.values()].some(
+            (t) => performance.now() - t < FADE_DURATION_MS,
+          );
         const stillAnimating =
           autoRotate ||
           currentTween !== null ||
           hasAnyAxis(latestSpaceMouseAxes) ||
-          queue.inFlightCount() > 0;
+          queue.inFlightCount() > 0 ||
+          fadeInProgress;
         if (stillAnimating) scheduler.requestRender();
       }
 
@@ -1703,9 +1765,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // slot 11 in modes 0/1/2, so leaving the values in the GPU buffer is
       // both correct and cheaper than re-uploading 1.0s.
       if (!wasSchechter && isSchechter && renderer) {
-        renderer.applySchechterMode().catch((err) => {
-          console.error('[engine] Schechter ratio bake failed:', err);
-        });
+        renderer
+          .applySchechterMode()
+          .then(() => {
+            // Weights are now in the GPU buffer; the next frame will
+            // pick them up.
+            scheduler.requestRender();
+          })
+          .catch((err) => {
+            console.error('[engine] Schechter ratio bake failed:', err);
+          });
       }
 
       // ── Lazy HEALPix angular re-weight bake ────────────────────────────
@@ -1724,9 +1793,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // next mode-4 toggle instant (the cache hit fires off a single
       // re-upload, no worker spawn).
       if (!wasAngular && isAngular && renderer) {
-        renderer.applyAngularReweightMode().catch((err) => {
-          console.error('[engine] Angular re-weight bake failed:', err);
-        });
+        renderer
+          .applyAngularReweightMode()
+          .then(() => {
+            scheduler.requestRender();
+          })
+          .catch((err) => {
+            console.error('[engine] Angular re-weight bake failed:', err);
+          });
       }
 
       // Wake the loop so the new biasMode uniform takes effect on the
