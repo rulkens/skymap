@@ -41,11 +41,11 @@ describe('computeSchechterRatios', () => {
     expect(ratios.length).toBe(5);
   });
 
-  it('clamps every value to [1, 3] (soft-capped boost)', () => {
-    // Spread galaxies across distances 100..1000 Mpc; the helper should
-    // produce ratios in [1, 1 + SOFT_CAP] = [1, 3] for every row, since
-    // every distance > 10 Mpc has r = nRef/n(d) ≥ 1 (boost direction) and
-    // the Reinhard soft cap asymptotes at 1 + SOFT_CAP.
+  it('clamps every value to [0.3, 1.2] (symmetric rebalance)', () => {
+    // Symmetric rebalancing centres ratios on 1.0: galaxies in higher-than-
+    // median density dim, lower-than-median boost, with an asymmetric clamp
+    // that reflects additive-blending tolerance (dimming is cheap, boosting
+    // saturates).
     const cloud = makeCloud(10);
     for (let i = 0; i < 10; i++) {
       cloud.positions[i * 3 + 0] = (i + 1) * 100; // 100, 200, …, 1000
@@ -53,39 +53,40 @@ describe('computeSchechterRatios', () => {
     const ratios = computeSchechterRatios({ cloud, source: Source.SDSS });
     for (let i = 0; i < 10; i++) {
       expect(Number.isFinite(ratios[i]!)).toBe(true);
-      expect(ratios[i]!).toBeGreaterThanOrEqual(1);
-      expect(ratios[i]!).toBeLessThanOrEqual(3);
+      // Bounds use a tiny f32-rounding slack — `Math.min(1.2, …)` stored as
+      // a Float32 can come back as 1.2000000476837158.
+      expect(ratios[i]!).toBeGreaterThanOrEqual(0.3 - 1e-6);
+      expect(ratios[i]!).toBeLessThanOrEqual(1.2 + 1e-6);
     }
   });
 
   it('produces ratios that monotonically increase with distance', () => {
-    // Physical intuition: nRef = n(d=10 Mpc) is the density ceiling
-    // (faintest galaxies still inside the integration window).  As d
-    // grows past 10 Mpc, μ(d) = 5·log(d/10) grows, the M_lim − μ cutoff
-    // moves brighter, the integration window narrows, n(d) drops, and
-    // r = nRef/n(d) climbs.  The Reinhard soft cap maps r=1 → 1 (no
-    // boost) and r→∞ → 3 (max boost), so ratios should monotonically
-    // INCREASE with distance over the survey range.
+    // Across a survey, n(d) drops monotonically with distance (the
+    // integration window narrows as the apparent-mag flux limit translates
+    // to a brighter absolute-mag cutoff).  Since `ratio = sqrt(n_mid/n(d))`,
+    // a falling n(d) produces a rising ratio — far-field above 1, near-
+    // field below 1, with the median pivot in between.
     const cloud = makeCloud(3);
     cloud.positions.set([20, 0, 0, 100, 0, 0, 500, 0, 0]); // 20, 100, 500 Mpc
     const ratios = computeSchechterRatios({ cloud, source: Source.SDSS });
     expect(ratios[0]!).toBeLessThanOrEqual(ratios[1]!);
     expect(ratios[1]!).toBeLessThanOrEqual(ratios[2]!);
-    // Far-field row should be visibly boosted above 1 (a galaxy at 500 Mpc
-    // represents many invisible faint companions).
+    // The near-field row should land below 1 (dimmed) and the far-field
+    // above 1 (boosted), demonstrating the symmetric rebalance.
+    expect(ratios[0]!).toBeLessThan(1);
     expect(ratios[2]!).toBeGreaterThan(1);
   });
 
   it('writes 1 for galaxies at degenerate distances (n(d) ≤ 0)', () => {
     // Place a galaxy at extreme distance where the integration window
     // collapses — n(d) goes to 0 and the helper should fall back to
-    // ratio = 1 (no boost), avoiding the infinity that bare division
+    // ratio = 1 (no change), avoiding the infinity that bare division
     // would produce.  Visually those rows render at natural alpha.
     const cloud = makeCloud(1);
     cloud.positions.set([1e9, 0, 0]); // absurd distance
     const ratios = computeSchechterRatios({ cloud, source: Source.SDSS });
     expect(Number.isFinite(ratios[0]!)).toBe(true);
-    expect(ratios[0]!).toBeGreaterThanOrEqual(1);
-    expect(ratios[0]!).toBeLessThanOrEqual(3);
+    expect(ratios[0]!).toBeGreaterThanOrEqual(0.3);
+    expect(ratios[0]!).toBeLessThanOrEqual(1.2);
   });
 });

@@ -155,13 +155,13 @@ describe('buildPointInterleavedBuffer', () => {
     }
   });
 
-  it('mode: with-schechter writes the per-row soft-capped boost ratios in slot 11', () => {
-    // Place rows across distances spanning the survey range so we can
-    // verify the boost direction: rows past ~10 Mpc should get ratios >1
-    // (we boost sparse far-field rows to compensate for Malmquist), and
-    // every value lands in [1, 1+SOFT_CAP] = [1, 3] thanks to the Reinhard
-    // soft cap.  See `computeSchechterRatios.test.ts` for the full
-    // physical intuition.
+  it('mode: with-schechter writes the per-row symmetric-rebalance ratios in slot 11', () => {
+    // Symmetric rebalance centers ratios on 1.0 (median pivot): far-field
+    // boosts modestly (capped at 1.2×), near-field dims more aggressively
+    // (down to 0.3×).  We assert at least one row off 1.0 — this catches
+    // a regression where the bake silently degrades to fast-mode (which
+    // writes 1.0 into slot 11 unconditionally).  See
+    // `computeSchechterRatios.test.ts` for the full physical intuition.
     const cloud = makeCloud(5);
     cloud.positions.set([20, 0, 0, 50, 0, 0, 100, 0, 0, 200, 0, 0, 500, 0, 0]);
     cloud.magG.set([16, 17, 18, 19, 20]);
@@ -171,17 +171,15 @@ describe('buildPointInterleavedBuffer', () => {
       priorCount: 0,
       mode: 'with-schechter',
     });
-    let sawBoost = false;
+    let sawNonUnity = false;
     for (let i = 0; i < 5; i++) {
       const r = interleaved[i * SLOTS + 11]!;
       expect(Number.isFinite(r)).toBe(true);
-      expect(r).toBeGreaterThanOrEqual(1);
-      expect(r).toBeLessThanOrEqual(3);
-      if (r > 1) sawBoost = true;
+      expect(r).toBeGreaterThanOrEqual(0.3 - 1e-6);
+      expect(r).toBeLessThanOrEqual(1.2 + 1e-6);
+      if (r !== 1) sawNonUnity = true;
     }
-    // The far-field rows should produce ratios > 1 — otherwise the bake
-    // silently degraded to fast-mode (which writes 1.0 into slot 11).
-    expect(sawBoost).toBe(true);
+    expect(sawNonUnity).toBe(true);
   });
 
   it('shifts the per-survey magG mean toward the SDSS target (≈18)', () => {
