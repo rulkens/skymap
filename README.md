@@ -212,45 +212,46 @@ rectangle against dark space.
 on). Switch it off if you'd rather see the raw point cloud without network
 traffic, or to compare the dot field with and without textures.
 
-## Brightness pipeline
+## Brightness controls
 
-Real galaxies span ~10 magnitudes of apparent brightness — the brightest
-catalogue entries are roughly 10⁴× brighter than the faintest, so drawing
+Real catalogue galaxies span ~10 magnitudes of apparent brightness — the
+brightest entries are roughly 10⁴× brighter than the faintest — so drawing
 every galaxy as an identical dot would throw away most of the visual
-information.  Skymap layers several distinct brightness-compensation
-stages on top of each other; each fixes a different artefact.
+information.  Three controls in the renderer decide how that range is
+displayed on screen:
 
-1. **Catalogue magnitude → per-galaxy intensity** *(automatic)* — the
-   vertex stage maps each galaxy's apparent magnitude (from whichever
-   photometric band the parser stored in the binary format) to a
-   per-instance alpha intensity.  A magnitude-14 nearby spiral renders
-   several × brighter than a magnitude-22 background galaxy without any
-   user input.
-2. **Global brightness slider** *(0.2 – 3.0, default 1.0)* — multiplies
-   every galaxy's intensity uniformly.  Useful when a particular catalogue
-   looks too faint in dense regions or too saturated in sparse ones.  Lives
-   in the settings panel.
-3. **Camera-distance depth fade** *(toggle, default on)* — multiplies
-   per-galaxy alpha by `1 / (1 + (camDist / FALLOFF_HALF)²)`, taming the
-   additive-overlap glow at the geometric origin where every sightline
-   through Earth stacks hundreds of billboards on top of each other.
-4. **K-correction** *(per-row, automatic)* — compensates the colour ramp
-   for redshift band-shifting before the ramp is sampled.  Per-survey
-   coefficients are documented in the [colour-index table](#per-survey-colour-indices)
-   above.
-5. **Density correction modes** *(see next section)* — fix the *catalogue's*
-   selection bias toward intrinsically faint galaxies in the nearby volume.
-6. **HDR exposure × tone-map curve** *(see [Render pipeline](#render-pipeline))*
-   — every visible pass writes into an `rgba16float` HDR offscreen target;
-   a fullscreen tone-map pass at end-of-frame compresses the accumulated
-   linear-light values into the swap chain's [0, 1] display range.  An
-   exposure slider scales the HDR signal *before* the tone-map curve runs,
-   and five curves are runtime-selectable.
+- **Catalogue magnitude → per-galaxy alpha** *(automatic, vertex stage)* —
+  every galaxy's apparent magnitude is mapped to an intensity in
+  `[0.05, 1.0]` via `clamp((22 − magnitude) / 8, 0.05, 1.0)`
+  (`points.wgsl`).  A magnitude-14 nearby spiral therefore renders with
+  ~20× the alpha of a magnitude-22 background galaxy.  The 0.05 floor
+  keeps the faintest detections barely visible rather than fully
+  transparent — a hard zero would leave confusing gaps where survey rows
+  are sparse.
+- **Global brightness slider** *(0.2 – 3.0, default 1.0)* — uniform
+  per-galaxy intensity multiplier, exposed in the settings panel.  Lets
+  you scale the whole sky up or down without re-uploading point data.
+- **Camera-distance depth fade** *(toggle, default on)* — fragment-stage
+  alpha gate that multiplies by `1 / (1 + (camDist / FALLOFF_HALF)²)`,
+  taming the additive-overlap glow at the geometric origin where every
+  sightline through Earth stacks hundreds of billboards on top of each
+  other.
 
-The six stages compose because they act at different points in the pipeline
-— per-galaxy encoding, post-vertex weighting, post-rasterisation
-accumulation, and final display compression — so adjusting one knob doesn't
-fight another.
+### Not the same thing as density correction
+
+The next section ("Density correction (Malmquist bias)") describes a
+*conceptually separate* concern: compensating for the fact that
+flux-limited surveys systematically over-represent nearby galaxies
+(faint ones are only detectable when close).  Density-correction modes
+do multiply into the same final per-pixel alpha as the brightness
+controls above, but the *purpose* is to correct what the **catalogue**
+under- or over-samples, not to tweak how an individual galaxy *looks*.
+Treat them as orthogonal: the brightness slider is a display preference;
+density correction is a scientific correction for selection bias.
+
+Tone-mapping (covered in [Render pipeline](#render-pipeline) below) is a
+third orthogonal concern again — it operates on the *accumulated HDR
+output* of the entire frame, not on individual galaxies.
 
 ## Density correction (Malmquist bias)
 
@@ -310,7 +311,7 @@ Distance from redshift uses Hubble's law: `d = cz/H₀` with `H₀ = 70 km/s/Mpc
 npm test
 ```
 
-Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
+Currently **594 tests across 76 files** (one test in `tests/parsers/famousSeed.test.ts` is currently broken on machines other than the project author's because of a hard-coded absolute path — out of scope for this README).  Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
 
 ## Render pipeline
 

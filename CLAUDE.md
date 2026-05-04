@@ -50,7 +50,7 @@ npm run build-all   # regenerate public/data/*.bin from raw catalogs
 npm run format      # prettier
 ```
 
-Currently 155+ tests passing. Keep it green.
+Currently 590+ tests passing across 76 files. Keep it green.
 
 ## Data pipeline (mental model)
 
