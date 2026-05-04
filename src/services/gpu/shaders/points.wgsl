@@ -329,6 +329,37 @@ struct PerVertex {
   // which would reintroduce the writeBuffer race we already paid down
   // for `globalInstanceIdx`.  Baking is the only no-race option.
   @location(8) vMaxWeight: f32,
+
+  // Per-galaxy Schechter density-correction ratio = `clamp(N_ref / n(d), 0, 10)`,
+  // baked at upload time (originally introduced in commit 7a6d810 as a
+  // per-fragment 200-step trapezoidal integral; that loop is gone now).
+  //
+  // ── Why per-vertex is correct here ──────────────────────────────────────
+  //
+  // Each galaxy's distance from origin is fixed at upload time (the catalog
+  // parser baked the linear-cosmology Cartesian position into the .bin).
+  // The Schechter integral at that distance — `n(d)` — depends only on the
+  // survey's selection function (M*, α, m_lim) and that fixed distance, so
+  // its value is also fixed at upload time.  The CPU computes it once per
+  // galaxy and writes the resulting ratio here, mirroring exactly the
+  // pattern Task 3 used for `vMaxWeight`.
+  //
+  // ── Why baking is *much* faster ─────────────────────────────────────────
+  //
+  // The original implementation ran the 200-step trapezoidal loop in the
+  // FRAGMENT stage, costing ~3.5 M galaxies × ~6 fragments per billboard ×
+  // 200 iterations ≈ 4 billion `pow + exp` evaluations per frame.  With the
+  // ratio baked, mode 3 collapses to a single `f32` lookup and a multiply —
+  // identical cost to mode 2's `vMaxWeight` path.
+  //
+  // ── Numeric stability ───────────────────────────────────────────────────
+  //
+  // The CPU bake mirrors the shader's old clamp `clamp(ratio, 0, 10)` and
+  // also handles the degenerate-distance case (`nHere == 0` or NaN) by
+  // baking 0 — so far galaxies with no detectable density disappear in
+  // mode 3 instead of going infinite/NaN.  Visual output is unchanged from
+  // the pre-bake implementation.
+  @location(9) schechterRatio: f32,
 };
 
 // ─── vertex-to-fragment interface ─────────────────────────────────────────────
@@ -394,62 +425,40 @@ struct VSOut {
   @location(7) @interpolate(flat) isFallback: u32,
 
   // Origin-relative distance in Mpc, forwarded from the vertex stage
-  // (`length(p.position)`).  Used by the fragment stage's mode-3 Schechter
-  // density correction to compute the per-distance detection horizon
-  // M_lim_abs(d).  Flat-interpolated because all 6 vertices of a billboard
+  // (`length(p.position)`).  Originally introduced for the Schechter mode 3
+  // fragment-stage integral; the integral has since moved to upload-time
+  // bake (see PerVertex.schechterRatio), so this field is no longer read by
+  // any fragment entry point.  Kept as a plumbing field so we can resurrect
+  // distance-dependent fragment effects later without re-plumbing the
+  // vertex stage.  Flat-interpolated because all 6 vertices of a billboard
   // share the same value — interpolating a constant scalar is wasted
   // bandwidth, and the flat hint lets the GPU skip per-fragment
   // interpolation math.
   @location(8) @interpolate(flat) dMpc: f32,
+
+  // Per-galaxy Schechter density-correction ratio, forwarded from the
+  // per-instance attribute.  Read in `fs` only when `u.biasMode == 3u`
+  // (the Schechter literal).  Flat-interpolated for the same per-instance
+  // constancy as the other flat u32/f32 attributes — every fragment of a
+  // given billboard reads exactly the same ratio.
+  @location(9) @interpolate(flat) schechterRatio: f32,
 };
 
-// ─── Schechter LF integral (Task 4 of malmquist-bias plan) ──────────────────
+// ─── Schechter LF correction (Task 4 of malmquist-bias plan) ────────────────
 //
-// Compute the expected number density of detectable galaxies at the absolute
-// magnitude horizon `mLimAbs` (the M at which the survey's apparent flux
-// limit lands at this distance).  Same algorithm as the JS-side helper in
-// `src/utils/math/schechterDensity.ts`: trapezoidal integration of the
-// Schechter LF
+// Originally implemented as a per-fragment 200-step trapezoidal integral
+// (commit 7a6d810).  That cost ~3.5 M × 6 × 200 ≈ 4 billion `pow + exp`
+// evaluations per frame — the slowest path in the fragment shader by an
+// order of magnitude.  The integral now lives at upload time on the CPU
+// (see `expectedNumberDensity` in `src/utils/math/schechterDensity.ts`),
+// with the resulting ratio baked into the per-vertex `schechterRatio`
+// attribute — identical algorithm, identical numeric output, but
+// evaluated once per galaxy at load instead of millions of times per
+// frame.  See the `schechterRatio` doc-comment in the PerVertex struct
+// above for the full per-vertex/per-fragment trade-off discussion.
 //
-//     φ(M) dM = 0.4·ln(10) · [10^(0.4·(M*−M))]^(α+1) · exp(−10^(0.4·(M*−M))) dM
-//
-// over `M ∈ [M_BRIGHT, mLimAbs]`.
-//
-// Why 200 steps?  The same step count as the JS reference; gives ~1%
-// accuracy across realistic Schechter parameters.  The cost is ~200
-// `pow + exp` per fragment — a few hundred ns on a desktop GPU, negligible
-// against the rest of the fragment shader's work.
-//
-// Why drop φ*?  We only ever consume the integral as a RATIO `N_ref / n(d)`,
-// and φ* is a constant prefactor that appears identically in numerator and
-// denominator.  Dropping it from both sides keeps the uniform footprint
-// smaller and eliminates a needless multiply per fragment.
-//
-// Why M_BRIGHT = -30?  Schechter density at M = -30 is exponentially
-// negligible (the brightest known galaxies sit around M ≈ -24); pushing
-// the cut deeper just wastes integration steps in a region where φ ≈ 0.
-fn schechterIntegral(mStar: f32, alpha: f32, mLimAbs: f32) -> f32 {
-  let M_BRIGHT = -30.0;
-  let N = 200.0;
-  let dM = (mLimAbs - M_BRIGHT) / N;
-  // Guard against the degenerate case where the survey can't see anything
-  // at this distance — the JS helper returns 0 for the same condition.
-  if (dM <= 0.0) { return 0.0; }
-  let LN10 = 2.302585092994046;
-  var sum = 0.0;
-  for (var i: i32 = 0; i <= 200; i = i + 1) {
-    let M = M_BRIGHT + f32(i) * dM;
-    let x = pow(10.0, 0.4 * (mStar - M));
-    let phi = 0.4 * LN10 * pow(x, alpha + 1.0) * exp(-x);
-    // Trapezoidal weights: half-weight at endpoints (i==0 and i==N), full
-    // weight in the interior.  WGSL's `select(a, b, cond)` returns `b`
-    // when cond is true, so this picks 0.5 for the endpoints and 1.0
-    // otherwise.
-    let w = select(1.0, 0.5, i == 0 || i == 200);
-    sum = sum + phi * w;
-  }
-  return sum * dM;
-}
+// (Helper function removed — the fragment shader now reads
+// `p.schechterRatio` directly.)
 
 // ─── colour ramp ──────────────────────────────────────────────────────────────
 
@@ -595,6 +604,7 @@ fn vs(
     earlyOut.positionAngleDeg = 0.0;
     earlyOut.isFallback = 0u;
     earlyOut.dMpc = dMpc;
+    earlyOut.schechterRatio = 0.0;
     return earlyOut;
   }
 
@@ -855,10 +865,19 @@ fn vs(
   out.axisRatio = p.axisRatio;
   out.positionAngleDeg = p.positionAngleDeg;
 
-  // Forward origin-relative distance for Task 4's Schechter mode.  Computed
-  // already as `dMpc = length(p.position)` above for the volume-limited
-  // gating; reusing the value avoids a second `length()` call.
+  // Forward origin-relative distance.  Originally consumed by the Schechter
+  // mode-3 fragment integral; that integral has moved to per-vertex bake,
+  // so `dMpc` is currently unused in the fragment stage but kept as a
+  // plumbed field for future distance-dependent fragment effects.
   out.dMpc = dMpc;
+
+  // Forward the per-galaxy Schechter density ratio (baked at upload time).
+  // The vertex stage above already folded it into `out.intensity` for
+  // mode 3 — forwarding it through VSOut keeps the attribute available to
+  // the fragment stage in case future tweaks (e.g. tint modulation) want
+  // to read it.  Costs nothing: with @interpolate(flat) the GPU writes
+  // the value once per primitive, not per fragment.
+  out.schechterRatio = p.schechterRatio;
 
   return out;
 }
@@ -1004,48 +1023,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // ── Schechter density correction (Task 4 of malmquist-bias plan) ────────
   //
-  // Mode 3: modulate alpha by `N_ref / n(d)` so the over-dense local
-  // universe (the Local Group / Virgo concentration) doesn't visually
-  // blow out, while sparse far-field regions don't fade to nothing.
-  //
-  // We compute the absolute-magnitude detection horizon at this fragment's
-  // origin-relative distance from the survey's apparent flux limit:
-  //
-  //     M_lim_abs(d) = m_lim − 5·log10(d_Mpc) − 25
-  //
-  // and integrate the Schechter LF from M = -30 up to that horizon to get
-  // n(d) — the expected detectable number density at this distance for
-  // the source's selection function.  The ratio against the pre-computed
-  // central reference `N_ref` (evaluated at d = 10 Mpc on the JS side at
-  // upload) gives the per-fragment scale factor.
-  //
-  // `in.dMpc` is forwarded flat from the vertex stage (one `length()` call
-  // per instance, computed once and shared with the volume-limited gating
-  // path above).  We do the integration here in `fs` rather than `vs`
-  // because the result feeds alpha (a fragment-stage quantity) and the
-  // 200-step loop runs at the same cost regardless of stage — putting it
-  // in `fs` means `discard`ed fragments (outside the elliptical mask)
-  // never pay for the integration.
-  //
-  // The clamp on the ratio prevents far galaxies from blowing up: at
-  // d = 500 Mpc with SDSS the Schechter integral can drop by a factor of
-  // 100+ from the d = 10 reference, and unbounded amplification creates
-  // visual saturation.  Capping at 10× keeps the brightening cosmetic
-  // rather than runaway.  If the user reports the brightening is still
-  // too aggressive, the plan's tuning note is to switch the multiplier to
-  // `pow(ratio, 0.5)` for a softer compression curve.
-  if (u.biasMode == 3u) {
-    let dMpc = in.dMpc;
-    let LOG10 = 2.302585092994046;
-    let mLimAbs = u.schechterMLim - 5.0 * (log(dMpc) / LOG10) - 25.0;
-    let nHere = schechterIntegral(u.schechterMStar, u.schechterAlpha, mLimAbs);
-    // Guard nHere > 0 — at extreme distances the integration window
-    // collapses (mLimAbs <= -30) and `schechterIntegral` returns 0.  In
-    // that regime there's nothing detectable anyway, so leave alpha
-    // unchanged rather than dividing by zero and producing NaN.
-    let ratio = select(1.0, clamp(u.schechterNRef / nHere, 0.0, 10.0), nHere > 0.0);
-    alpha = alpha * ratio;
-  }
+  // Mode 3: modulate alpha by the per-galaxy ratio `clamp(N_ref / n(d), 0, 10)`
+  // baked at upload time into `in.schechterRatio`.  Originally implemented as
+  // a 200-step trapezoidal integral evaluated PER FRAGMENT (commit 7a6d810);
+  // that loop is gone and the cost dropped from ~4 billion `pow + exp` per
+  // frame to a single multiply.  See the `schechterRatio` doc-comment in
+  // the PerVertex struct for the bake-time clamp + degenerate-distance
+  // handling — the ratio is already finite, already in [0, 10], and already
+  // 0 when the survey can't see anything at this distance.  No fragment-side
+  // guard needed.
+  let schechterAlpha_ = select(1.0, in.schechterRatio, u.biasMode == 3u);
+  alpha = alpha * schechterAlpha_;
 
   // Highlight fallback rows in magenta when the toggle is on. The 0.3 in
   // the green channel keeps fallback galaxies recognisable as "data-y"

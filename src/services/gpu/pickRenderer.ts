@@ -198,7 +198,7 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
       entryPoint: 'vs',
 
       // Vertex buffer layout — must exactly match PointRenderer's layout.
-      // One 44-byte record per *instance* (stepMode:'instance'):
+      // One 48-byte record per *instance* (stepMode:'instance'):
       //   bytes  0..11  : position vec3<f32>          (shaderLocation 0)
       //   bytes 12..15  : magnitude f32                (shaderLocation 1)
       //   bytes 16..19  : colorIndex f32                (shaderLocation 2)
@@ -208,25 +208,26 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
       //   bytes 32..35  : positionAngleDeg f32          (shaderLocation 6)
       //   bytes 36..39  : diameterKpc f32               (shaderLocation 7)
       //   bytes 40..43  : vMaxWeight f32                (shaderLocation 8)
+      //   bytes 44..47  : schechterRatio f32            (shaderLocation 9)
       //
       // The fourth attribute is the cross-survey global instance index,
       // pre-baked at upload time so `fsPick` can write it directly into
       // the pick texture without needing a per-source uniform offset.
       //
       // The remaining attributes (kPerZ, axisRatio, positionAngleDeg,
-      // diameterKpc, vMaxWeight) are per-source / per-galaxy values used
-      // only by the visual `vs`/`fs` path — `fsPick` never reads them,
-      // since picking only cares about which point a pixel belongs to,
-      // not how it looks.  We declare them here anyway because WebGPU
-      // validation requires that any pipeline binding the shared
-      // per-instance vertex buffer declare a layout that matches the
-      // buffer's stride and every attribute the visual pipeline declares.
-      // Omitting any of them would leave the pick pipeline with a smaller
-      // stride than the buffer's actual record size — a hard validation
-      // error the moment we issue a draw call.
+      // diameterKpc, vMaxWeight, schechterRatio) are per-source /
+      // per-galaxy values used only by the visual `vs`/`fs` path — `fsPick`
+      // never reads them, since picking only cares about which point a
+      // pixel belongs to, not how it looks.  We declare them here anyway
+      // because WebGPU validation requires that any pipeline binding the
+      // shared per-instance vertex buffer declare a layout that matches
+      // the buffer's stride and every attribute the visual pipeline
+      // declares.  Omitting any of them would leave the pick pipeline
+      // with a smaller stride than the buffer's actual record size — a
+      // hard validation error the moment we issue a draw call.
       buffers: [
         {
-          arrayStride: 44, // 11 slots × 4 bytes/slot — must match pointRenderer.POINT_STRIDE
+          arrayStride: 48, // 12 slots × 4 bytes/slot — must match pointRenderer.POINT_STRIDE
           stepMode: 'instance',
           attributes: [
             { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
@@ -238,6 +239,7 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
             { shaderLocation: 6, offset: 32, format: 'float32' }, // positionAngleDeg — ellipse mask, ignored by `fsPick`
             { shaderLocation: 7, offset: 36, format: 'float32' }, // diameterKpc — apparent-size sizing, ignored by `fsPick`
             { shaderLocation: 8, offset: 40, format: 'float32' }, // vMaxWeight — Malmquist 1/V_max alpha, ignored by `fsPick`
+            { shaderLocation: 9, offset: 44, format: 'float32' }, // schechterRatio — Malmquist Schechter alpha, ignored by `fsPick`
           ],
         },
       ],

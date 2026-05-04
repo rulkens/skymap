@@ -69,7 +69,8 @@ import shaderSrc from './shaders/points.wgsl?raw';
  *    magnitude f32, colorIndex f32,
  *    globalInstanceIdx u32, kPerZ f32,
  *    axisRatio f32, positionAngleDeg f32,
- *    diameterKpc f32, vMaxWeight f32]
+ *    diameterKpc f32, vMaxWeight f32,
+ *    schechterRatio f32]
  *
  * The first five slots are interpreted as f32 by the shader; slot 5 is
  * interpreted as u32; slots 6..10 are interpreted as f32 again.  JS-side
@@ -109,18 +110,18 @@ import shaderSrc from './shaders/points.wgsl?raw';
  * would read the last `mLim` written.  Baking sidesteps the race entirely
  * at a cost of 4 bytes per instance (~14 MB at 3.5 M points).
  */
-const SLOTS_PER_POINT = 11;
+const SLOTS_PER_POINT = 12;
 
 /**
  * Byte stride between consecutive per-instance records in the vertex buffer.
  *
- * 11 slots × 4 bytes = 44 bytes. The pipeline's `arrayStride` must match
+ * 12 slots × 4 bytes = 48 bytes. The pipeline's `arrayStride` must match
  * this exactly; if it disagrees WebGPU will either validate-error or
  * silently read garbage.  PickRenderer's pipeline declares the same
- * 44-byte stride and the same attribute table, so the two pipelines stay
+ * 48-byte stride and the same attribute table, so the two pipelines stay
  * compatible with this single vertex buffer layout.
  */
-const POINT_STRIDE = SLOTS_PER_POINT * 4; // 44 bytes
+const POINT_STRIDE = SLOTS_PER_POINT * 4; // 48 bytes
 
 /**
  * Byte offset of the `globalInstanceIdx` slot inside one per-instance record.
@@ -193,6 +194,45 @@ const DIAMETER_KPC_BYTE_OFFSET = 36;
 const VMAX_WEIGHT_BYTE_OFFSET = 40;
 
 /**
+ * Byte offset of the `schechterRatio` slot — the per-galaxy Schechter
+ * density-correction ratio used by the Malmquist-bias correction's mode 3.
+ *
+ * Sits at slot index 11 (offset 44) — the new 12th slot.  Baked at upload
+ * time as `clamp(N_ref / n(d), 0, 10)` from each galaxy's Cartesian
+ * distance, the survey's apparent flux limit, and the Schechter triple.
+ * Read by the fragment shader's mode-3 alpha modulation, replacing the
+ * per-fragment 200-step trapezoidal integral that the original Task 4
+ * implementation ran inline (commit 7a6d810).
+ *
+ * ### Why per-vertex is correct
+ *
+ * Each galaxy's distance from origin is fixed at upload time (the catalog
+ * parser baked the linear-cosmology Cartesian position into the .bin), so
+ * the Schechter integral at that distance is also fixed.  Mirrors exactly
+ * the pattern Task 3 used for `vMaxWeight`: per-galaxy invariance →
+ * one-shot bake at upload.
+ *
+ * ### Why baking is *much* faster
+ *
+ * The pre-bake fragment-stage loop ran ~3.5 M galaxies × ~6 fragments/
+ * billboard × 200 iterations ≈ 4 billion `pow + exp` evaluations per
+ * frame.  Baking collapses that to a single `f32` multiply — the same
+ * cost as mode 2's `vMaxWeight` lookup.  4 extra bytes per instance is
+ * ~14 MB at 3.5 M points, comfortably within VRAM budget.
+ *
+ * ### Numeric stability
+ *
+ * The CPU bake mirrors the shader's old clamp `clamp(ratio, 0, 10)` and
+ * also handles the degenerate-distance case (`nHere == 0` or NaN, which
+ * happens at extreme distances where the integration window collapses)
+ * by writing 0 — so far galaxies with no detectable density disappear in
+ * mode 3 instead of going infinite/NaN.  Visual output is bit-for-bit
+ * equivalent to the pre-bake implementation modulo the integration
+ * step-count rounding (both CPU and GPU used 200 steps).
+ */
+const SCHECHTER_RATIO_BYTE_OFFSET = 44;
+
+/**
  * Byte size of the `Uniforms` struct as seen by the GPU.
  *
  * The struct contains (offsets are byte offsets from the start of the buffer):
@@ -249,35 +289,18 @@ const VMAX_WEIGHT_BYTE_OFFSET = 40;
  */
 const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4; // 160 bytes
 
-/**
- * Byte offset of the Schechter quartet within the uniform buffer.
- *
- * `draw()` writes 16 bytes here (mStar, alpha, mLim, nRef as four f32s)
- * before each per-source draw call.  The shader reads them in mode 3 to
- * compute the per-distance Schechter integral and modulate alpha by the
- * ratio `N_ref / n(d)`.
- *
- * WHY A PARTIAL WRITE BETWEEN DRAWS RATHER THAN PER-VERTEX BAKING?
- *
- * Per-vertex baking (the strategy used for `globalInstanceIdx` and
- * `vMaxWeight`) is the only race-free approach when the value varies
- * per-source AND must apply per-source.  We deliberately accept the
- * `queue.writeBuffer`/`submit` ordering nuance here because:
- *
- *   1. The mode-3 effect is a SOFT visual modulation — a 10–30% alpha
- *      tweak per fragment, not a picking-style identity.  If the race
- *      causes one source's draw to use a neighbouring source's Schechter
- *      values, the worst-case visual artefact is a slight under- or
- *      over-brightening that the user wouldn't notice without an A/B.
- *
- *   2. Baking would cost an extra 16 bytes per instance × 3.5 M points
- *      ≈ 56 MB of VRAM, just for a "nice-to-have" optional mode.
- *
- *   3. The plan calls this out explicitly: "If the user reports visual
- *      ordering artefacts, escalate to per-source bake — but defer for
- *      now."  We're following that guidance.
- */
-const SCHECHTER_BYTE_OFFSET = 140;
+// Note: the `schechter*` uniform slots at byte offsets 140..155 are now
+// dead-but-reserved.  Originally `draw()` wrote 16 bytes per source here
+// (mStar, alpha, mLim, nRef) so the fragment shader's 200-step trapezoidal
+// integral (commit 7a6d810) could read the survey's selection function.
+// That integral has moved to upload-time bake (see the per-vertex
+// `schechterRatio` attribute), so neither fragment entry point reads
+// these slots anymore.  We keep them in the WGSL `Uniforms` struct for
+// binary compatibility — removing them would shift every subsequent
+// member's offset and risk silently corrupting reads — and stop writing
+// from JS.  Future work that reuses these reserved bytes (e.g. a
+// different per-source uniform for a new bias mode) can target byte
+// offset 140 without growing the buffer.
 
 // ─── Per-source bookkeeping ───────────────────────────────────────────────────
 
@@ -472,6 +495,15 @@ export class PointRenderer {
               // unaffected.  See VMAX_WEIGHT_BYTE_OFFSET for the design
               // notes on why we bake instead of computing per-frame.
               { shaderLocation: 8, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
+              // schechterRatio (f32) — offset 44 bytes.  Per-galaxy
+              // Schechter density-correction ratio baked at upload time
+              // (replaces the per-fragment 200-step trapezoidal integral
+              // from commit 7a6d810).  Read by the fragment shader's
+              // intensity computation, gated on `u.biasMode == 3u` via a
+              // `select(1.0, schechterRatio, …)` so the other three modes
+              // are unaffected.  See SCHECHTER_RATIO_BYTE_OFFSET above for
+              // the full design notes on the per-vertex bake.
+              { shaderLocation: 9, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
             ],
           },
         ],
@@ -783,6 +815,35 @@ export class PointRenderer {
         mLim: surveyMLim,
         dRefMpc: D_REF_MPC,
       });
+
+      // Slot 11 (offset 44): per-galaxy Schechter density-correction ratio.
+      //
+      // Originally implemented as a per-fragment 200-step trapezoidal integral
+      // in `points.wgsl` (commit 7a6d810, Task 4).  At ~3.5 M galaxies × ~6
+      // fragments/billboard × 200 iterations the per-frame cost was a few
+      // billion `pow + exp` evaluations — the slowest path in the fragment
+      // shader by an order of magnitude.
+      //
+      // This bake mirrors Task 3's `vMaxWeight` pattern: each galaxy's distance
+      // from origin is fixed at upload time, the Schechter integral at that
+      // distance depends only on the survey's selection function (M*, α, m_lim)
+      // and that fixed distance, so the value is also fixed at upload time.
+      // We compute it here once and the fragment shader reads a single f32.
+      //
+      // Numeric stability: `expectedNumberDensity` already returns finite
+      // values, but at extreme distances the integration window collapses to
+      // empty and it returns 0.  Mirror the shader's old guard `nHere > 0`
+      // by baking 0 for that case (galaxy disappears in mode 3 — same
+      // behaviour as before).  The clamp at 10 matches the shader's old
+      // `clamp(ratio, 0, 10)` exactly so the visual output is preserved.
+      const nHere = expectedNumberDensity({
+        ...schechter,
+        mLim: surveyMLim,
+        dMpc,
+      });
+      const schechterRatio =
+        nHere > 0 && Number.isFinite(nHere) ? Math.min(10, nRef / nHere) : 0;
+      interleaved[o + 11] = schechterRatio;
     }
 
     // Destroy any previous buffer for this source before replacing it.
@@ -1088,33 +1149,16 @@ export class PointRenderer {
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
 
-    // ── Per-source Schechter quartet write (Task 4) ─────────────────────────
+    // ── Per-source draw loop (post-Schechter-bake refactor) ─────────────────
     //
-    // Each survey has its own Schechter triple (M*, α, φ*) and its own
-    // apparent-magnitude flux limit.  The mode-3 alpha modulator therefore
-    // needs PER-SOURCE values in the uniform — one set won't fit every
-    // survey.  We write a 16-byte partial uniform update before each
-    // per-source draw call, into the slots reserved by the WGSL Uniforms
-    // struct at byte offset `SCHECHTER_BYTE_OFFSET = 140`.
-    //
-    // KNOWN CAVEAT: WebGPU sequences `queue.writeBuffer` calls so all
-    // writes between draws within one submit complete BEFORE any draw runs
-    // — meaning every draw sees the LAST values written.  This is the same
-    // race the picker fix in commit a4ca281 paid down by baking
-    // `globalInstanceIdx` per-vertex.
-    //
-    // For Schechter we deliberately accept the race because the visual
-    // effect is a soft alpha tweak (10–30%), not a picking-style identity
-    // — the worst case is one source's draw using a neighbouring source's
-    // Schechter values, which produces a barely-perceptible
-    // brightness shift.  The plan's tuning note: "If the user reports
-    // visual ordering artefacts, escalate to per-source bake — but defer
-    // for now."  See SCHECHTER_BYTE_OFFSET above for the full reasoning.
-    //
-    // Allocated once outside the loop to avoid per-frame churn — the
-    // 16-byte buffer is reused across all per-source writes.
-    const schechterScratch = new Float32Array(4);
-
+    // The previous revision wrote a per-source 16-byte Schechter quartet
+    // (M*, α, m_lim, N_ref) into the uniform buffer between draws to feed
+    // the fragment shader's mode-3 integral.  That integral has moved to
+    // upload-time bake (see the per-galaxy `schechterRatio` slot in the
+    // vertex buffer), so the per-source uniform write is gone.  The
+    // uniform-struct slots at byte offsets 140..155 are now dead-but-
+    // reserved — leaving the WGSL struct layout intact avoids re-aligning
+    // every other field in the buffer.
     for (const source of ALL_SOURCES) {
       const entry = this.clouds.get(source);
       if (!entry) continue;
@@ -1122,18 +1166,6 @@ export class PointRenderer {
       // Bitmask check: `(mask >> source) & 1`. Equivalent to maskHas() from
       // `data/sources.ts`, inlined here because this is the per-frame hot path.
       if (((visibleSourceMask >> source) & 1) === 0) continue;
-
-      // Write this source's Schechter quartet into the uniform buffer.
-      // Order matches the WGSL struct: (mStar, alpha, mLim, nRef).
-      schechterScratch[0] = entry.schechter.mStar;
-      schechterScratch[1] = entry.schechter.alpha;
-      schechterScratch[2] = entry.mLim;
-      schechterScratch[3] = entry.nRef;
-      this.device.queue.writeBuffer(
-        this.uniformBuffer_internal,
-        SCHECHTER_BYTE_OFFSET,
-        schechterScratch,
-      );
 
       pass.setVertexBuffer(0, entry.buffer);
       pass.draw(6, entry.count);
