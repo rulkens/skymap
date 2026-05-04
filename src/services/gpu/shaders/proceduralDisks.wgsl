@@ -118,7 +118,14 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
     vec3<f32>(0.0, 1.0, 0.0),
     northLen < 1e-4,
   );
-  let eastTangent = cross(los, northTangent);
+  // East-on-sky tangent.  Argument order MATCHES disks.wgsl's
+  // `east_proj = cross(north_proj, losDir)` so the (north, east, los)
+  // frame is right-handed in the same sense and PA convention agrees
+  // with the textured-thumbnail pass.  Reversing the cross flips the
+  // sign of the resulting major-axis rotation for any non-zero PA,
+  // which would visibly disagree with the thumbnail at the crossfade
+  // boundary — that bug just got fixed; don't reintroduce it.
+  let eastTangent = cross(northTangent, los);
 
   // Major axis on sky: rotate sky-north by PA toward sky-east.
   let majorSky = northTangent * cos(paRad) + eastTangent * sin(paRad);
@@ -159,18 +166,18 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
 // ── Fragment stage ─────────────────────────────────────────────────────
 //
 // Reads the disk-local uv (in [-1,1]² where r=1 is the impostor's
-// apparent edge) and shades a two-component galaxy profile:
+// apparent edge) and shades a two-component galaxy brightness profile:
 //
-//   - Gaussian bulge (σ = 0.4): warm-tinted (R-shifted) inner core.
-//   - Exponential disk (scale = 0.5): cool-tinted (B-shifted) halo.
+//   - Gaussian bulge (σ = 0.4): bright inner core.
+//   - Exponential disk (scale = 0.5): softer halo.
 //
-// Both components share the colour-index ramp's hue (so SDSS u-g, GLADE
-// B-J etc. continue to colour the galaxy), but the bulge mixes ~30%
-// toward (1, 0.6, 0.4) [warm yellow-red, simulating older redder bulge
-// stars] and the disk mixes ~30% toward (0.7, 0.85, 1.0) [cooler blue-
-// white, simulating younger disk stars].  The mix amounts are fixed
-// in v1; later iterations could drive them from per-row stellar-
-// population proxies.
+// Hue comes entirely from the per-galaxy colour-index ramp — the same
+// ramp the points pass uses, so a galaxy's procedural-disk colour
+// matches its companion point exactly.  Earlier versions added warm-
+// bulge / cool-disk tint shifts on top of the ramp colour; that made
+// the procedural disk visibly diverge from the points pass (warmer at
+// the centre, cooler at the rim) so it's been removed.  Only the
+// brightness profile remains.
 //
 // Final alpha is the combined brightness × crossfadeAlpha so the
 // impostor fades in cleanly across the 8-14 px transition band.
@@ -179,25 +186,18 @@ const BULGE_SIGMA = 0.4;
 const DISK_SCALE = 0.5;
 const BULGE_WEIGHT = 0.6;
 const DISK_WEIGHT = 0.4;
-const BULGE_TINT = vec3<f32>(1.0, 0.6, 0.4);   // warm shift
-const DISK_TINT  = vec3<f32>(0.7, 0.85, 1.0);  // cool shift
-const TINT_MIX   = 0.3;
 
-// Same colour ramp the points pass uses (kept under the same name for
-// greppable cross-shader consistency).  See points.wgsl for the
-// derivation; copying instead of factoring out because WGSL lacks an
-// import mechanism short of a proper preprocessor.
+// Mirror of points.wgsl's `ramp(t)`.  Kept under the same name so a
+// grep for `ramp` finds both copies; kept in this file (rather than
+// shared via WGSL include — there is no include mechanism) so the
+// procedural-disk pass renders exactly the same colour as the
+// points pass for any given colour-index value.  See
+// points.wgsl:601-633 for the full derivation.
 fn ramp(t: f32) -> vec3<f32> {
-  // t ∈ [0, 2]: 0 = bluest, 1 = midpoint, 2 = reddest.
-  let s = clamp(t * 0.5, 0.0, 1.0); // remap to [0, 1]
-  let blue   = vec3<f32>(0.55, 0.75, 1.00);
-  let yellow = vec3<f32>(1.00, 0.95, 0.75);
-  let red    = vec3<f32>(1.00, 0.55, 0.40);
-  // Two-stage piecewise linear: blue → yellow → red.
-  if (s < 0.5) {
-    return mix(blue, yellow, s * 2.0);
-  }
-  return mix(yellow, red, (s - 0.5) * 2.0);
+  let s = clamp(t * 0.5, 0.0, 1.0);
+  let blueWhite = mix(vec3<f32>(0.4, 0.6, 1.0), vec3<f32>(1.0, 0.95, 0.8), s);
+  let whiteRed  = mix(vec3<f32>(1.0, 0.95, 0.8), vec3<f32>(1.0, 0.5, 0.3), s);
+  return select(blueWhite, whiteRed, t > 1.0);
 }
 
 @fragment
@@ -209,15 +209,12 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   let disk  = exp(-r / DISK_SCALE);
   let intensity = bulge * BULGE_WEIGHT + disk * DISK_WEIGHT;
 
-  // Colour: ramp base hue, then bias by which component dominates here.
+  // Colour: ramp hue only, no per-component tint shifts.  See the
+  // fragment-stage header comment above for why the warm-bulge / cool-
+  // disk tints were removed (they made this pass visibly diverge from
+  // the points pass at the crossfade boundary).
   let base = ramp(in.colourIndex);
-  // Each component contributes a fraction of the tint shift in
-  // proportion to its share of the total brightness.
-  let bulgeShare = bulge * BULGE_WEIGHT / max(intensity, 1e-4);
-  let diskShare  = disk  * DISK_WEIGHT  / max(intensity, 1e-4);
-  let tinted = base
-    * mix(vec3<f32>(1.0), BULGE_TINT, bulgeShare * TINT_MIX)
-    * mix(vec3<f32>(1.0), DISK_TINT,  diskShare * TINT_MIX);
+  let tinted = base;
 
   let alpha = intensity * in.crossfadeAlpha;
   // Premultiplied alpha — matches the project's blend mode (see

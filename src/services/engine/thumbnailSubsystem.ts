@@ -67,6 +67,7 @@
  */
 
 import { Source } from '../../data/sources';
+import { pickColourIndex } from '../../data/colourIndex';
 import type { PointCloud, QuadInstance } from '../../@types';
 import type { OrbitCamera } from '../../@types';
 import { TextureAtlas } from '../gpu/textureAtlas';
@@ -672,14 +673,18 @@ export function createThumbnailSubsystem(
         // full alpha; the textured-disk pass (24+ px) overlays it with
         // higher fidelity.
         //
-        // We use a fallback `colourIndex = 1.0` (mid-band) until per-
-        // galaxy colour can be plumbed through.  PointCloud's colour-
-        // index isn't a stored field — it's derived from magG/magR/etc.
-        // inside the points shader.  Computing it here per-frame for
-        // every visible galaxy would burn CPU; the points shader's
-        // existing per-vertex computation is the right home.  When that
-        // gets refactored to be readable from CPU we can plumb it in
-        // (the type field already exists on ProceduralDiskInstance).
+        // Per-galaxy colour-index plumbing.  Earlier this branch used a
+        // fixed 1.0 mid-ramp fallback because PointCloud has no
+        // `colourIndex` array — but `pickColourIndex(source, magU/G/R/I/Z)`
+        // (used by the points-pass bake) returns the same [0, 2]-
+        // normalised ramp coordinate the procedural-disk shader expects,
+        // so we call it here too.  Result: the procedural disk's hue
+        // matches its companion point's hue exactly.
+        //
+        // K-correction (kPerZ × redshift) is deliberately omitted: the
+        // procedural disk only renders for galaxies above 8 px apparent
+        // size, which by construction means very nearby (z ≈ 0) galaxies
+        // where the K-correction is negligible.
         if (
           px > PROCEDURAL_DISK_FADE_START_PX &&
           Number.isFinite(ar) &&
@@ -697,6 +702,15 @@ export function createThumbnailSubsystem(
           // pass fade-out (which uses smoothstep on the same px values)
           // and this fade-in stay perfectly complementary.
           const crossfadeAlpha = t * t * (3 - 2 * t);
+          const ci = pickColourIndex(
+            cloudSource,
+            cloud.magU[i] ?? NaN,
+            cloud.magG[i] ?? NaN,
+            cloud.magR[i] ?? NaN,
+            cloud.magI[i] ?? NaN,
+            cloud.magZ[i] ?? NaN,
+          );
+          const colourIndex = ci !== null ? ci.colourIndex : 1.0; // 1.0 = mid-ramp fallback
           proceduralDisks.push({
             x,
             y,
@@ -704,7 +718,7 @@ export function createThumbnailSubsystem(
             sizeWorldMpc,
             axisRatio: ar,
             positionAngleDeg: pa,
-            colourIndex: 1.0,
+            colourIndex,
             crossfadeAlpha,
           });
         }
