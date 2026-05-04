@@ -123,13 +123,41 @@ export function parseNDskl(text: string): ParsedSkeleton {
     // line per declared field name, then the value rows begin.  We read the
     // count and skip count field-name lines.
     let dataCursor = dataHdr + 1;
-    const fieldCount = Number(lines[dataCursor++]?.trim() ?? '0');
-    if (Number.isFinite(fieldCount) && fieldCount > 0) {
+    const fieldCountLine = lines[dataCursor++];
+    if (fieldCountLine === undefined) {
+      throw new Error(
+        'parseNDskl: [FILAMENTS DATA] header found but field count line is missing',
+      );
+    }
+    const fieldCount = Number(fieldCountLine.trim());
+    if (!Number.isFinite(fieldCount) || fieldCount < 0) {
+      throw new Error(
+        `parseNDskl: bad [FILAMENTS DATA] field count "${fieldCountLine}"`,
+      );
+    }
+    if (fieldCount === 0) {
+      // Header present but zero declared fields → genuinely no per-vertex
+      // data.  Strips are already initialised with NaN density; nothing to do.
+    } else {
       dataCursor += fieldCount; // skip the field-name lines
-      for (const strip of strips) {
+      // Per-vertex value rows follow, in the same strip-then-vertex order
+      // [FILAMENTS] emitted them.  We track stripIdx (rather than iterating
+      // by reference) so that a truncation error can name *which* strip ran
+      // out — matches the "throw loudly with context" policy stated in the
+      // module header.
+      for (let stripIdx = 0; stripIdx < strips.length; stripIdx++) {
+        const strip = strips[stripIdx]!;
         for (let i = 0; i < strip.vertices.length; i++) {
           const v = lines[dataCursor++];
-          if (v === undefined) break;
+          // Treat both undefined (ran past end) and empty/whitespace-only
+          // (file ends with a trailing newline → split() yields a final '')
+          // as truncation — either way we're missing a declared per-vertex
+          // value and should surface that loudly per the module's policy.
+          if (v === undefined || v.trim() === '') {
+            throw new Error(
+              `parseNDskl: [FILAMENTS DATA] truncated at strip ${stripIdx} vertex ${i}; declared count exceeds available lines`,
+            );
+          }
           const n = Number(v.trim());
           if (Number.isFinite(n)) strip.density[i] = n;
         }

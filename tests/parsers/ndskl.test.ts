@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseNDskl } from '../tools/parseNDskl';
+import { parseNDskl } from '../../tools/parsers/ndskl';
 
 const FIXTURE = `ANDSKEL
 3
@@ -73,5 +73,45 @@ describe('parseNDskl', () => {
 10 10 10
 `;
     expect(() => parseNDskl(truncated)).toThrow(/incomplete/i);
+  });
+
+  it('throws on a malformed sample line with fewer than 3 numbers', () => {
+    const fixture = `ANDSKEL
+3
+[FILAMENTS]
+1
+0 1 2
+10 10 10
+20 20
+`;
+    expect(() => parseNDskl(fixture)).toThrow(/bad sample/i);
+  });
+
+  it('throws on a non-numeric filament count', () => {
+    const fixture = `ANDSKEL
+3
+[FILAMENTS]
+not-a-number
+`;
+    expect(() => parseNDskl(fixture)).toThrow(/bad filament count/i);
+  });
+
+  it('throws when [FILAMENTS DATA] declares more values than the [FILAMENTS] block has vertices', () => {
+    // [FILAMENTS] declares one filament with 2 vertices, but we then truncate
+    // [FILAMENTS DATA] to only provide one value, leaving the second vertex
+    // hanging.  Should throw the new "truncated at strip X vertex Y" error.
+    const fixture = `ANDSKEL
+3
+[FILAMENTS]
+1
+0 1 2
+10 10 10
+20 20 20
+[FILAMENTS DATA]
+1
+field_value
+0.9
+`;
+    expect(() => parseNDskl(fixture)).toThrow(/truncated/i);
   });
 });
