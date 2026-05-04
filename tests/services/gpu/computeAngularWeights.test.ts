@@ -3,7 +3,10 @@
  *
  * Verifies the HEALPix angular re-weighting bake produces sensible
  * down-weights for over-dense angular regions and up-weights for sparse
- * regions, with the result clamped to [0.1, 10] for numeric stability.
+ * regions, with the result clamped to [0.3, 1.2] for numeric stability +
+ * additive-blending tolerance (asymmetric — dimming is cheap, boosting
+ * compounds; see `computeAngularWeights.ts` `WEIGHT_MIN`/`WEIGHT_MAX`
+ * docstring for the full rationale).
  *
  * Worker plumbing isn't exercised — Vitest runs in Node without a Worker
  * constructor; the worker is a thin wrapper that just delegates.
@@ -53,7 +56,7 @@ describe('computeAngularWeights', () => {
     expect(w.length).toBe(10);
   });
 
-  it('every weight is finite and inside [0.1, 10]', () => {
+  it('every weight is finite and inside [0.3, 1.2]', () => {
     const cloud = emptyCloud(50);
     // Random-but-deterministic spread.  Use a simple LCG so the test isn't
     // flaky between Node versions (Math.random would be).
@@ -71,8 +74,10 @@ describe('computeAngularWeights', () => {
     const w = computeAngularWeights({ cloud, source: Source.Glade });
     for (let i = 0; i < 50; i++) {
       expect(Number.isFinite(w[i]!)).toBe(true);
-      expect(w[i]!).toBeGreaterThanOrEqual(0.1);
-      expect(w[i]!).toBeLessThanOrEqual(10);
+      // f32 rounding slack — `Math.min(1.2, …)` stored as Float32 can
+      // come back as 1.2000000476837158.
+      expect(w[i]!).toBeGreaterThanOrEqual(0.3 - 1e-6);
+      expect(w[i]!).toBeLessThanOrEqual(1.2 + 1e-6);
     }
   });
 

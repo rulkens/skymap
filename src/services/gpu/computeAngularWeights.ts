@@ -63,9 +63,36 @@ const N_CELLS = 12 * NSIDE * NSIDE; // = 12288
 /** Number of log-spaced distance shells per cloud. */
 const N_SHELLS = 10;
 
-/** Per-galaxy weight clamp bounds.  See module docstring. */
-const WEIGHT_MIN = 0.1;
-const WEIGHT_MAX = 10;
+/**
+ * Per-galaxy weight clamp bounds — asymmetric, dim-heavy.
+ *
+ * The original `[0.1, 10]` was symmetric in log-space and produced a "thick
+ * bright shell" at the outer edge of the data: in the deepest shells (last
+ * 1-2 of 10) only a small fraction of cells are populated, and those have
+ * low counts (1-5 galaxies each).  The per-shell median across populated
+ * cells is therefore also small (~3), so a cell with count 1 gets
+ * `weight = 3/1 = 3` — boosted 3× toward the cap.  Outer-rim galaxies
+ * lit up brighter than they should because additive blending compounded
+ * the per-cell boost.
+ *
+ * The asymmetric `[0.3, 1.2]` mirrors the shape we landed for the Schechter
+ * rebalance (commit `d7f1627`).  Same logic: additive-blending tolerance is
+ * not symmetric — dimming is cheap, boosting compounds and saturates.
+ * Capping the boost at 1.2× lets the angular re-weighting still tame
+ * pencil-beam jets across the sky (the original design goal) without
+ * over-amplifying the legitimately-sparse outer-shell cells (the side
+ * effect we're fixing).
+ *
+ * Note that the algorithm has a conceptual mismatch the clamp can't fully
+ * resolve: HEALPix re-weighting was designed for the angular dimension
+ * (sparse cell = under-represented → boost correct), but it incidentally
+ * normalises the radial dimension too (sparse cell at deep shell = edge of
+ * data → boost wrong).  The asymmetric clamp is the practical workaround;
+ * a proper fix would be to skip per-galaxy correction in shells with
+ * fewer than e.g. 1000 populated cells (Option B in the design notes).
+ */
+const WEIGHT_MIN = 0.3;
+const WEIGHT_MAX = 1.2;
 
 export type ComputeAngularWeightsInput = {
   /** Point cloud whose galaxies need per-row angular re-weight values. */
