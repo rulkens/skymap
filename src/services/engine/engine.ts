@@ -117,6 +117,7 @@ import {
   type SpaceMouseSubsystem,
 } from './spaceMouseSubsystem';
 import { createClickResolver, type ClickResolver } from './clickHandler';
+import { attachEngineInputs, type InputBindings } from './inputBindings';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -374,26 +375,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // tear down the eviction handler and clear bookkeeping sets.
   let thumbnails: ThumbnailSubsystem | null = null;
 
-  // Cleanup function returned by `attachOrbitControls`.
+  // Cleanup function returned by `attachOrbitControls`.  Orbit-controls
+  // attachment lives outside the inputBindings module because it needs
+  // a fully-constructed `OrbitCamera`, which doesn't exist at engine()
+  // time — see `inputBindings.ts`'s docstring for the rationale.
   let detachControls: (() => void) | null = null;
 
-  // Listeners attached to window/canvas — collected here so `destroy()` can
-  // remove them all in one place.
-  const windowListeners: Array<[keyof WindowEventMap, EventListener]> = [];
-  const canvasListeners: Array<[string, EventListener]> = [];
-
-  function addWindowListener<K extends keyof WindowEventMap>(
-    type: K,
-    handler: (e: WindowEventMap[K]) => void,
-  ): void {
-    window.addEventListener(type, handler as EventListener);
-    windowListeners.push([type, handler as EventListener]);
-  }
-
-  function addCanvasListener(type: string, handler: EventListener): void {
-    canvas.addEventListener(type, handler);
-    canvasListeners.push([type, handler]);
-  }
+  // Bag of pointer/keyboard/resize listeners.  See `inputBindings.ts`
+  // for the full list of events and the listener-bookkeeping pattern
+  // it owns.  `destroy()` calls `inputBindings.detach()` to remove
+  // every listener in one shot.
+  let inputBindings: InputBindings | null = null;
 
   // ── Scale-bar deduplication ──────────────────────────────────────────────
   //
@@ -767,53 +759,58 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // stays correct after a window resize.
       initialCamRef = initialCam;
 
-      // ── Pointer event listeners ──────────────────────────────────────────
-
-      // Track latest mouse position for the per-frame throttled hover pick.
-      addCanvasListener('pointermove', (e) => {
-        const pe = e as PointerEvent;
-        latestMouseCss = { x: pe.clientX, y: pe.clientY };
-        // Wake the loop so the next frame can issue a hover pick.
-        // The pick itself is async (1-2 frames later) but its .then
-        // also calls requestRender (Task 5) so the selection halo
-        // updates as soon as the readback lands.
-        scheduler.requestRender();
-      });
-
-      // When the pointer leaves the canvas, clear hover state.
-      // If a point is selected the card will remain visible (showing pinned point).
-      addCanvasListener('pointerleave', () => {
-        latestMouseCss = null;
-        setHovered(null);
-        // Render once so the selection halo (if any) is recomputed
-        // for the cleared hover state.
-        scheduler.requestRender();
-      });
-
-      // ── Drag detection (suppress hover picks during camera rotation) ─────
+      // ── Pointer / keyboard / resize listeners ────────────────────────────
       //
-      // We listen on `window` for pointerup so we still see the release even
-      // when `setPointerCapture` has routed events back to the canvas via the
-      // orbit-controls module.
-      //
-      // On pointerdown we also clear the current hover so the card immediately
-      // reflects "nothing hovered" instead of lagging until the drag ends.
-      addCanvasListener('pointerdown', () => {
-        // Manual orbit controls always win — cancel any running focus tween
-        // the moment the user grabs the mouse.  Otherwise the tween's
-        // updatePosition would fight the orbit-controls' updatePosition for
-        // the same camera each frame, producing a juddery jump.
-        tweens.cancel();
-        pointerDown = true;
-        setHovered(null);
-        scheduler.requestRender();
-      });
-      addWindowListener('pointerup', () => {
-        pointerDown = false;
-      });
-      // Defensive: if the OS cancels the gesture, release the suppression flag.
-      addWindowListener('pointercancel', () => {
-        pointerDown = false;
+      // Centralised in `inputBindings.ts` so every DOM listener the
+      // engine cares about lives in one module.  Each callback below
+      // is the *semantic* engine action — the inputBindings module
+      // already converts `e.clientX/Y` to a CSS-pixel record and
+      // calls `scheduler.requestRender()` after every event so we
+      // don't repeat that wake-up at every site.
+      inputBindings = attachEngineInputs({
+        canvas,
+        scheduler,
+        // Track latest mouse position for the per-frame throttled
+        // hover pick.  The pick itself is async (1-2 frames later)
+        // but its .then also calls requestRender so the selection
+        // halo updates as soon as the readback lands.
+        onPointerMove: (cssPx) => {
+          latestMouseCss = cssPx;
+        },
+        // Pointer left the canvas → clear hover state.  If a point
+        // is selected the card stays visible (showing the pinned
+        // point) — selection state is unaffected.
+        onPointerLeave: () => {
+          latestMouseCss = null;
+          setHovered(null);
+        },
+        // Manual orbit controls always win — cancel any running focus
+        // tween the moment the user grabs the mouse.  Otherwise the
+        // tween's updatePosition would fight the orbit-controls'
+        // updatePosition for the same camera each frame, producing a
+        // juddery jump.  Also clear hover so the card immediately
+        // reflects "nothing hovered" instead of lagging until the
+        // drag ends.
+        onPointerDown: () => {
+          tweens.cancel();
+          pointerDown = true;
+          setHovered(null);
+        },
+        onPointerUp: () => {
+          pointerDown = false;
+        },
+        // Esc clears selection.  App.tsx also has a useEffect that
+        // forwards Esc through the engine handle's `clearSelection()`
+        // — same result, both paths are fine.
+        onEscape: () => {
+          setSelected(null);
+        },
+        // resize: the next frame's resizeCanvasToDisplay() picks up
+        // the new dimensions and recreates the HDR target.  All we
+        // need to do is wake the loop, which inputBindings already
+        // does via `scheduler.requestRender()` — so this callback is
+        // a no-op.
+        onResize: () => {},
       });
 
       // ── Click handling ───────────────────────────────────────────────────
@@ -870,29 +867,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               scheduler.requestRender();
             });
         },
-      });
-
-      // ── Esc → clear selection ────────────────────────────────────────────
-      //
-      // The engine owns this because Esc acts on engine state (`selectedIndex`).
-      // `App.tsx` also has a `useEffect` that forwards Esc through the engine
-      // handle's `clearSelection()` method — same result, both paths are fine.
-      addWindowListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          setSelected(null);
-          // Selection halo cleared; re-render with the new highlight
-          // index uniform.
-          scheduler.requestRender();
-        }
-      });
-
-      // Window resize: schedule one render so resizeCanvasToDisplay()
-      // (which runs at the top of the next frame body) sees the new
-      // size and recreates the HDR target.  Without this wake-up the
-      // canvas would stay at its old backing-store resolution until
-      // some other event happened to schedule a frame.
-      addWindowListener('resize', () => {
-        scheduler.requestRender();
       });
 
       // ── Status: ready ────────────────────────────────────────────────────
@@ -1279,19 +1253,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // 1. Cancel any in-flight frame so we don't tick after teardown.
       scheduler.cancelRender();
 
-      // 2. Remove all canvas event listeners we registered.
-      for (const [type, handler] of canvasListeners) {
-        canvas.removeEventListener(type, handler);
-      }
-      canvasListeners.length = 0;
+      // 2. Detach every pointer/keyboard/resize listener attached via
+      //    inputBindings (the module owns the bookkeeping internally).
+      inputBindings?.detach();
+      inputBindings = null;
 
-      // 3. Remove all window event listeners we registered.
-      for (const [type, handler] of windowListeners) {
-        window.removeEventListener(type, handler as EventListener);
-      }
-      windowListeners.length = 0;
-
-      // 4. Detach orbit controls (removes its own four listeners).
+      // 3. Detach orbit controls (removes its own four listeners).
       detachControls?.();
       detachControls = null;
 
