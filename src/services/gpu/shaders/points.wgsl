@@ -443,9 +443,19 @@ struct VSOut {
   // works fine without an explicit @interpolate.
   @location(5) axisRatio: f32,
 
-  // Position angle (east-of-north) in degrees, [0, 180), forwarded from the
-  // per-instance attribute. Same per-instance constancy as axisRatio.
-  @location(6) positionAngleDeg: f32,
+  // Pre-computed cosine and sine of the position-angle rotation used by the
+  // fragment-stage elliptical mask.  These were previously computed per
+  // fragment from `positionAngleDeg`, which meant 2 trig calls per pixel
+  // for every billboard — at default 2.5 px point size and ~3.5 M points
+  // that's tens of millions of trig calls per frame.  Since `paRad` is
+  // per-instance constant, the cos/sin are too, and the rasteriser can
+  // flat-interpolate them at zero per-fragment cost (one write per
+  // primitive, not per pixel).  The value carried is `cos(-paRad)` /
+  // `sin(-paRad)` because the fragment rotates the UV by `-PA` (rotating
+  // the UV is the inverse of rotating the ellipse) — see the doc-comment
+  // at the top of `fs` for why we negate.
+  @location(6) @interpolate(flat) paCs: f32,
+  @location(15) @interpolate(flat) paSn: f32,
 
   // 1u when this row's orientation came from the deterministic fallback
   // (high bit of globalInstanceIdx was set at upload time); 0u for real
@@ -493,6 +503,18 @@ struct VSOut {
   // tone-map curve.  This is a deliberate cosmetic compromise; the user
   // can disable it by setting the falloff half-distance large.
   @location(11) @interpolate(flat) camDistMpc: f32,
+
+  // Pre-computed depth-fade multiplier `1 / (1 + (camDist/FALLOFF_HALF)²)`,
+  // gated by `u.depthFadeEnabled` (passes through 1.0 when the toggle is
+  // off).  Previously computed per fragment from `camDistMpc`, but the
+  // value is per-instance constant so we bake it once per vertex and
+  // flat-interpolate.  Same motivation as `paCs` / `paSn`: one mul + one
+  // add + one div + one select per fragment over millions of fragments
+  // becomes one of each per primitive.  Cosmetic depth-attenuation curve;
+  // see `fs` for why this exists at all (additive emission shouldn't
+  // physically care about depth — but the alternative is a saturated
+  // depth column through Earth that erases all visible structure).
+  @location(12) @interpolate(flat) depthFade: f32,
 };
 
 // ─── Schechter LF correction (Task 4 of malmquist-bias plan) ────────────────
@@ -652,12 +674,18 @@ fn vs(
     earlyOut.instanceIdx = p.globalInstanceIdx & 0x7fffffffu;
     earlyOut.selected = 0u;
     earlyOut.axisRatio = 1.0;
-    earlyOut.positionAngleDeg = 0.0;
+    // PA cs/sn for an off-screen primitive don't matter (no fragments
+    // rasterise), but WGSL requires every VSOut field be initialised
+    // along every return path.  Use the identity (cs=1, sn=0) so any
+    // unexpected fragment would just see an unrotated UV.
+    earlyOut.paCs = 1.0;
+    earlyOut.paSn = 0.0;
     earlyOut.isFallback = 0u;
     earlyOut.dMpc = dMpc;
     earlyOut.schechterRatio = 0.0;
     earlyOut.angularDensityWeight = 1.0;
     earlyOut.camDistMpc = 0.0;
+    earlyOut.depthFade = 1.0;
     return earlyOut;
   }
 
@@ -916,7 +944,17 @@ fn vs(
   // ellipse mask — but plumbing them now means the fragment shader can be
   // updated in isolation without touching the vertex stage again.
   out.axisRatio = p.axisRatio;
-  out.positionAngleDeg = p.positionAngleDeg;
+
+  // Pre-compute cos/sin of the position-angle rotation so the fragment
+  // stage can skip the trig and just read these flat-interpolated values.
+  // We negate the rotation here (matching the fragment-stage convention
+  // where rotating the UV is the inverse of rotating the ellipse, with an
+  // extra sign flip because astronomical PA is east-of-north — CCW on
+  // sky — but our UV-y points down on screen).  See the doc-comment at
+  // the top of `fs` for the full reasoning.
+  let paRad = -p.positionAngleDeg * 3.14159265 / 180.0;
+  out.paCs = cos(paRad);
+  out.paSn = sin(paRad);
 
   // Forward origin-relative distance.  Originally consumed by the Schechter
   // mode-3 fragment integral; that integral has moved to per-vertex bake,
@@ -942,6 +980,18 @@ fn vs(
   // apparent-pixel-size calculation above; we just forward it here so the
   // fragment doesn't need access to `u.camPosWorld` and another `length()`.
   out.camDistMpc = distanceMpc;
+
+  // Pre-compute the depth-fade multiplier here so the fragment doesn't
+  // re-derive it for every pixel of every billboard.  Curve:
+  // `1 / (1 + (camDist / FALLOFF_HALF)²)`.  The 1000 Mpc half-distance
+  // matches the fragment-stage version this replaced — see the
+  // depth-fade doc-comment in `fs` for why this constant and why the
+  // effect is cosmetic (additive emission shouldn't physically depth-
+  // attenuate, but unbroken depth columns wash out the visible volume).
+  let FALLOFF_HALF_MPC = 1000.0;
+  let camDistRel = distanceMpc / FALLOFF_HALF_MPC;
+  let depthFadeRaw = 1.0 / (1.0 + camDistRel * camDistRel);
+  out.depthFade = select(1.0, depthFadeRaw, u.depthFadeEnabled == 1u);
 
   return out;
 }
@@ -970,11 +1020,13 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   //   2. Rotating the UV is the inverse of rotating the ellipse, so the
   //      target rotation `+PA` becomes a UV rotation of `-PA`.
   //
-  // Cost: 2 trig + 4 mul + 1 div per fragment — negligible against the 6
-  // fragments per billboard at typical point sizes.
-  let paRad = -in.positionAngleDeg * 3.14159265 / 180.0;
-  let cs = cos(paRad);
-  let sn = sin(paRad);
+  // The cs/sn pair is now pre-computed in the vertex stage and flat-
+  // interpolated.  See the `paCs` / `paSn` doc-comment on VSOut for why:
+  // `paRad` is per-instance constant, so doing the trig once per primitive
+  // (and reading it here) is much cheaper than the same trig per fragment
+  // across millions of billboards.
+  let cs = in.paCs;
+  let sn = in.paSn;
   let rotated = vec2<f32>(
     cs * in.uv.x - sn * in.uv.y,
     sn * in.uv.x + cs * in.uv.y,
@@ -1135,23 +1187,17 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // alpha — visible enough to keep cosmic structure legible, dim enough to
   // stop the depth-column saturation that motivated this fix.
   //
-  // Why per-fragment rather than per-vertex bake: camera distance changes
-  // every frame as the user orbits.  Baking at upload time and updating
-  // the buffer per camera move would be a heavy GPU sync.  The fragment
-  // already has `in.camDistMpc` flat-interpolated — one mul + one add +
-  // one div is dirt cheap on modern GPUs.
+  // The depth-fade multiplier is now pre-computed in the vertex stage and
+  // flat-interpolated as `in.depthFade`.  See the `depthFade` doc-comment
+  // on VSOut: per-instance constant, so once per primitive instead of
+  // once per fragment.  The vertex stage already handles the
+  // `u.depthFadeEnabled` gate, so this is unconditionally a multiply.
   //
-  // Not physically correct (additive emission shouldn't care about depth),
-  // but the alternative — letting the depth-column saturate — erases all
-  // structure inside ~half the catalog volume.  Deliberate cosmetic
-  // compromise.
-  let FALLOFF_HALF_MPC = 1000.0;
-  let camDistRel = in.camDistMpc / FALLOFF_HALF_MPC;
-  let depthFadeRaw = 1.0 / (1.0 + camDistRel * camDistRel);
-  // Gate on the uniform — `select(1.0, depthFadeRaw, depthFadeEnabled == 1u)`
-  // makes the toggle a single u32 compare per fragment, free.
-  let depthFade = select(1.0, depthFadeRaw, u.depthFadeEnabled == 1u);
-  alpha = alpha * depthFade;
+  // Not physically correct (additive emission shouldn't care about
+  // depth), but the alternative — letting the depth-column saturate
+  // every frame — erases all structure inside ~half the catalog volume.
+  // Deliberate cosmetic compromise.
+  alpha = alpha * in.depthFade;
 
   // Highlight fallback rows in magenta when the toggle is on. The 0.3 in
   // the green channel keeps fallback galaxies recognisable as "data-y"
