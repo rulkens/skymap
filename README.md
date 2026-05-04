@@ -249,6 +249,20 @@ npm test
 
 Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
 
+## Render pipeline
+
+Visible draw passes (points, quads, disks) render into a `rgba16float`
+HDR offscreen target instead of straight to the swap chain.  At the end
+of every frame, a fullscreen tone-map pass compresses the accumulated
+linear-light values into the swap chain's displayable range.  Five
+curves are runtime-selectable from the SettingsPanel (Linear baseline,
+Reinhard-extended, Asinh / Lupton stretch, Gamma 2.0, ACES filmic);
+switching is a single 4-byte uniform write per frame, no pipeline
+rebuild.  The pick renderer is on a separate `r32uint` integer target
+and is not tone-mapped.  See
+`docs/superpowers/plans/2026-05-04-hdr-tonemap.md` for the full
+rationale and curve descriptions.
+
 ## Architecture
 
 ```
