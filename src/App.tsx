@@ -146,6 +146,9 @@ export function App(): React.ReactElement {
   // below so any future engine-side flip stays mirrored.
   const [highlightFallback, setHighlightFallback] = useState<boolean>(false);
   const [realOnlyMode, setRealOnlyMode] = useState<boolean>(false);
+  // Default ON — matches the engine's seed.  Tames the centre-of-volume
+  // saturation that motivated the per-galaxy alpha attenuation.
+  const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(true);
 
   // ── Multi-survey + LOD state (rev-2) ─────────────────────────────────────
   //
@@ -215,7 +218,9 @@ export function App(): React.ReactElement {
   // via `onExposureChange` at startup *and* on every clamped setExposure
   // call, so the displayed value is always the effective one — even if a
   // devtools call passes a wild number that the engine clamps to 16.
-  const [exposure, setExposure] = useState<number>(1.0);
+  // Default 1.5 to match the engine's seed — see engine.ts comment for
+  // why the bump (depth fade dims overall brightness; this compensates).
+  const [exposure, setExposure] = useState<number>(1.5);
 
   // ── Command palette state ─────────────────────────────────────────────────
   //
@@ -264,6 +269,7 @@ export function App(): React.ReactElement {
       // state stays in sync if the engine ever flips them programmatically.
       onHighlightFallbackChange: setHighlightFallback,
       onRealOnlyModeChange: setRealOnlyMode,
+      onDepthFadeEnabledChange: setDepthFadeEnabled,
       // LOD mode is seeded by the engine at init, then echoed back any time
       // `setLodMode` runs (or `setSourceVisible` flips us to manual).
       onLodModeChange: setLodMode,
@@ -448,6 +454,10 @@ export function App(): React.ReactElement {
         realOnlyMode={realOnlyMode}
         onRealOnlyModeChange={(enabled) => {
           handleRef.current?.setRealOnlyMode?.(enabled);
+        }}
+        depthFadeEnabled={depthFadeEnabled}
+        onDepthFadeEnabledChange={(enabled) => {
+          handleRef.current?.setDepthFadeEnabled?.(enabled);
         }}
         onResetCamera={() => handleRef.current?.focusOnHome()}
         // ── Multi-survey toggles + Auto-LOD master (rev-2) ──────────────

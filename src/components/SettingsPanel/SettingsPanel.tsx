@@ -114,6 +114,14 @@ type Props = {
   realOnlyMode?: boolean;
   /** Fired when the user toggles the "Show only real" checkbox. */
   onRealOnlyModeChange?: (enabled: boolean) => void;
+  /**
+   * Whether the camera-distance depth fade is on (multiplies per-galaxy
+   * alpha by `1 / (1 + (camDist / 1000Mpc)²)`).  Fights the cumulative-
+   * overlap glow at the centre of the catalog volume.  Default ON.
+   */
+  depthFadeEnabled?: boolean;
+  /** Fired when the user toggles the "Depth fade" checkbox. */
+  onDepthFadeEnabledChange?: (enabled: boolean) => void;
   /** Called when the user clicks "Reset camera". */
   onResetCamera: () => void;
   /**
@@ -244,6 +252,8 @@ export function SettingsPanel({
   onHighlightFallbackChange,
   realOnlyMode,
   onRealOnlyModeChange,
+  depthFadeEnabled,
+  onDepthFadeEnabledChange,
   onResetCamera,
   visibleSourceMask,
   onToggleSource,
@@ -656,6 +666,25 @@ export function SettingsPanel({
             />
           </div>
         </>
+      )}
+
+      {/*
+        Depth-fade toggle.  Independent of the orientation block — the
+        depth fade is a camera-distance attenuation gating the centre-of-
+        volume saturation, completely orthogonal to fallback-orientation
+        questions.  Gated on its own pair of props so a panel without the
+        depth-fade callback wired up still works.
+      */}
+      {depthFadeEnabled !== undefined && onDepthFadeEnabledChange !== undefined && (
+        <div className={styles.panelRow}>
+          <label htmlFor="toggle-depth-fade">Depth fade</label>
+          <input
+            id="toggle-depth-fade"
+            type="checkbox"
+            checked={depthFadeEnabled}
+            onChange={(e) => onDepthFadeEnabledChange(e.target.checked)}
+          />
+        </div>
       )}
 
       {/* ── Divider ──────────────────────────────────────────────────────── */}

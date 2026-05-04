@@ -178,6 +178,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   let highlightFallback = false;
   let realOnlyMode = false;
 
+  // Camera-distance depth-fade toggle.  When true, the fragment shader
+  // multiplies per-galaxy alpha by `1 / (1 + (camDist / 1000Mpc)²)` so
+  // galaxies far from the camera contribute less — tames the cumulative-
+  // overlap glow at the geometric origin where additive billboards stack.
+  // Default ON because the artefact it fixes is significant; user can
+  // turn off via the SettingsPanel checkbox to compare.
+  let depthFadeEnabled = true;
+
   // ── Malmquist-bias correction state (Task 2 of malmquist-bias plan) ─────
   //
   // `biasMode` chooses which correction the renderer applies in its vertex
@@ -207,7 +215,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // baseline used for comparison; on first paint we want the user
   // looking at the smooth Reinhard roll-off, which preserves the HDR
   // signal without saturating cluster cores.
-  let exposure = 1.0;
+  // Default 1.5 (not 1.0) because depth fade — a per-galaxy alpha
+  // attenuation that's also default ON — measurably dims the rendered
+  // brightness.  Bumping the exposure here compensates so the first
+  // frame's average luminance matches what the user expected before the
+  // fade landed.  Slider still ranges [0.1, 4.0] so the user can dial
+  // either way; this is just a more useful starting point.
+  let exposure = 1.5;
   let toneMapCurve: ToneMapCurve = ToneMapCurve.Reinhard;
   // Reserved-for-future fields; Tasks 3 + 4 will populate them.  Until then
   // the renderer reads them but the shader's mode-2/3 branches stay inert.
@@ -944,6 +958,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cb.onGalaxyTexturesEnabledChange?.(galaxyTexturesEnabled);
       cb.onHighlightFallbackChange?.(highlightFallback);
       cb.onRealOnlyModeChange?.(realOnlyMode);
+      cb.onDepthFadeEnabledChange?.(depthFadeEnabled);
       // Malmquist-bias seeds — Task 2 of the bias-correction plan.  Fired
       // here (even though both default values match the SettingsPanel's
       // own initial state) so subscribers don't have to duplicate the
@@ -1148,6 +1163,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           apparentMagLimit,
           schechterMStar,
           schechterAlpha,
+          depthFadeEnabled,
         );
 
         // ── Galaxy thumbnail pass ─────────────────────────────────────────
@@ -1731,6 +1747,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // path as the highlight toggle.
       realOnlyMode = enabled;
       cb.onRealOnlyModeChange?.(enabled);
+      scheduler.requestRender();
+    },
+
+    setDepthFadeEnabled(enabled) {
+      // Toggles the per-galaxy camera-distance alpha fade — when on,
+      // the fragment shader multiplies alpha by
+      // `1 / (1 + (camDist / 1000Mpc)²)` so galaxies far behind the
+      // origin contribute less, breaking up the depth-column saturation
+      // at the centre of the catalog.  Same per-frame uniform path as
+      // the other UI booleans.
+      depthFadeEnabled = enabled;
+      cb.onDepthFadeEnabledChange?.(enabled);
       scheduler.requestRender();
     },
 

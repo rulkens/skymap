@@ -67,6 +67,13 @@ export type EngineCallbacks = {
    */
   onRealOnlyModeChange?: (enabled: boolean) => void;
   /**
+   * Optional echo of the depth-fade toggle state.  Mirrors the per-galaxy
+   * camera-distance alpha attenuation that fights the centre-of-volume
+   * over-saturation; the engine seeds it at init and fires this whenever
+   * `setDepthFadeEnabled` is called.
+   */
+  onDepthFadeEnabledChange?: (enabled: boolean) => void;
+  /**
    * Optional echo of the Malmquist-bias mode selector — fired both when
    * the engine seeds its initial value at startup and when a future
    * `setBiasMode` call mutates it.  Subscribed React state should mirror

@@ -311,6 +311,7 @@ const ANGULAR_WEIGHT_BYTE_OFFSET = 48;
  *   bytes 108..111: pxPerRad          f32          (1 float)         }
  *   bytes 112..115: highlightFallback u32                            }
  *   bytes 116..119: realOnlyMode      u32                            } 16 bytes (one vec4 slot)
+ *   bytes 120..123: depthFadeEnabled  u32   (formerly _pad3, now a UI toggle)
  *   bytes 120..127: _pad3/_pad4       u32×2        (written as 0)    }
  *   bytes 128..131: biasMode          u32          (Malmquist mode)  }
  *   bytes 132..135: absMagLimit       f32          (volume-limit M)  }
@@ -1588,6 +1589,7 @@ export class PointRenderer {
     apparentMagLimit: number,
     schechterMStar: number,
     schechterAlpha: number,
+    depthFadeEnabled: boolean,
   ): void {
     // Nothing to draw if no source has been uploaded yet.
     if (this.clouds.size === 0) return;
@@ -1625,7 +1627,8 @@ export class PointRenderer {
     // padding rounding the struct to 128 bytes.  See UNIFORM_BYTES doc above.
     u32[28] = highlightFallback ? 1 : 0; // bytes 112..115
     u32[29] = realOnlyMode      ? 1 : 0; // bytes 116..119
-    // u32[30] / u32[31] (_pad3 / _pad4) stay zero.
+    u32[30] = depthFadeEnabled  ? 1 : 0; // bytes 120..123  depthFadeEnabled (formerly _pad3)
+    // u32[31] (_pad4) stays zero.
 
     // Malmquist-bias correction state (Task 2 of the malmquist-bias plan).
     // Slots 32-39 cover bytes 128..159 — see UNIFORM_BYTES doc above for the

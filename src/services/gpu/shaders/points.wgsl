@@ -173,7 +173,12 @@ struct Uniforms {
   // Two trailing u32s round the struct to a 16-byte boundary (vec4 slot).
   highlightFallback: u32,
   realOnlyMode: u32,
-  _pad3: u32,
+  // Per-galaxy camera-distance depth fade gate.  When 1, the fragment stage
+  // multiplies alpha by `1 / (1 + (camDist / FALLOFF_HALF)²)`; when 0 the
+  // multiplication is skipped (equivalent to weight 1 everywhere).
+  // Repurposed from a former `_pad3` slot — sits with the other UI
+  // boolean toggles so the byte layout reads sensibly.
+  depthFadeEnabled: u32,
   _pad4: u32,
 
   // ── Malmquist-bias correction state (Task 2 of malmquist-bias plan) ─────
@@ -474,6 +479,20 @@ struct VSOut {
   // for the same per-instance constancy as schechterRatio — every fragment
   // of a given billboard reads exactly the same weight.
   @location(10) @interpolate(flat) angularDensityWeight: f32,
+
+  // Distance from the camera to this galaxy in Mpc.  Computed once in the
+  // vertex stage (`length(p.position - u.camPosWorld)`) and forwarded so the
+  // fragment stage can apply a per-galaxy depth fade — galaxies far behind
+  // the origin (camera-relative far side) contribute less alpha, which
+  // tames the cumulative-overlap glow at the geometric origin where every
+  // line through Earth accumulates hundreds of additive billboards.
+  //
+  // Not physically correct (additive emission shouldn't care about depth),
+  // but the alternative — letting the depth-column saturate every frame —
+  // erases all structure inside ~half the catalog volume regardless of
+  // tone-map curve.  This is a deliberate cosmetic compromise; the user
+  // can disable it by setting the falloff half-distance large.
+  @location(11) @interpolate(flat) camDistMpc: f32,
 };
 
 // ─── Schechter LF correction (Task 4 of malmquist-bias plan) ────────────────
@@ -638,6 +657,7 @@ fn vs(
     earlyOut.dMpc = dMpc;
     earlyOut.schechterRatio = 0.0;
     earlyOut.angularDensityWeight = 1.0;
+    earlyOut.camDistMpc = 0.0;
     return earlyOut;
   }
 
@@ -917,6 +937,12 @@ fn vs(
   // flat-interpolated through VSOut for per-instance constancy.
   out.angularDensityWeight = p.angularDensityWeight;
 
+  // Forward camera-relative distance for the depth-fade in the fragment
+  // stage.  The vertex stage already computed `distanceMpc` for the
+  // apparent-pixel-size calculation above; we just forward it here so the
+  // fragment doesn't need access to `u.camPosWorld` and another `length()`.
+  out.camDistMpc = distanceMpc;
+
   return out;
 }
 
@@ -1090,6 +1116,42 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // "use this weight when biasMode == 4u".
   let angWeight = select(1.0, in.angularDensityWeight, u.biasMode == 4u);
   alpha = alpha * angWeight;
+
+  // ── Camera-distance depth fade ───────────────────────────────────────────
+  //
+  // Every line through the catalog origin under additive billboards
+  // accumulates hundreds of overlapping galaxies in a single screen pixel.
+  // HDR + tone-mapping helps, but at a typical zoom level the depth-column
+  // through Earth still saturates because cumulative alpha exceeds the
+  // tone-map curve's roll-off knee.  We attenuate per-galaxy alpha by
+  // distance from the camera so the back half of the volume contributes
+  // less, breaking up the saturation stack.
+  //
+  // Curve: `weight = 1 / (1 + (camDist / FALLOFF_HALF)²)`.  Smooth, finite
+  // at d=0 (no divide-by-zero), monotonically decreasing.  At
+  // camDist = FALLOFF_HALF the weight is exactly 0.5 (so the half-distance
+  // marks the half-power point).  Constant chosen so a galaxy 1 Gpc from
+  // the camera (typical "back wall" of GLADE) contributes ~10 % of full
+  // alpha — visible enough to keep cosmic structure legible, dim enough to
+  // stop the depth-column saturation that motivated this fix.
+  //
+  // Why per-fragment rather than per-vertex bake: camera distance changes
+  // every frame as the user orbits.  Baking at upload time and updating
+  // the buffer per camera move would be a heavy GPU sync.  The fragment
+  // already has `in.camDistMpc` flat-interpolated — one mul + one add +
+  // one div is dirt cheap on modern GPUs.
+  //
+  // Not physically correct (additive emission shouldn't care about depth),
+  // but the alternative — letting the depth-column saturate — erases all
+  // structure inside ~half the catalog volume.  Deliberate cosmetic
+  // compromise.
+  let FALLOFF_HALF_MPC = 1000.0;
+  let camDistRel = in.camDistMpc / FALLOFF_HALF_MPC;
+  let depthFadeRaw = 1.0 / (1.0 + camDistRel * camDistRel);
+  // Gate on the uniform — `select(1.0, depthFadeRaw, depthFadeEnabled == 1u)`
+  // makes the toggle a single u32 compare per fragment, free.
+  let depthFade = select(1.0, depthFadeRaw, u.depthFadeEnabled == 1u);
+  alpha = alpha * depthFade;
 
   // Highlight fallback rows in magenta when the toggle is on. The 0.3 in
   // the green channel keeps fallback galaxies recognisable as "data-y"

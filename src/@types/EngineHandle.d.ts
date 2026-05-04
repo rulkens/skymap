@@ -80,6 +80,16 @@ export type EngineHandle = {
   setRealOnlyMode?: (enabled: boolean) => void;
 
   /**
+   * Toggle the per-galaxy camera-distance depth fade.  When on, the
+   * fragment shader multiplies alpha by `1 / (1 + (camDist / 1000Mpc)²)`
+   * so galaxies far from the camera contribute less — breaks up the
+   * cumulative-overlap glow at the geometric origin of the catalog where
+   * additive billboards stack hundreds of galaxies into one screen pixel.
+   * Default ON; toggle off to compare with the un-faded look.
+   */
+  setDepthFadeEnabled?: (enabled: boolean) => void;
+
+  /**
    * Set the Malmquist-bias correction mode.  Forwarded into the per-frame
    * uniform buffer; the WGSL vertex stage branches on the integer value to
    * choose its discard / weighting strategy.  See `data/biasMode.ts` for
