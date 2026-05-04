@@ -277,18 +277,40 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         onAxes: () => state.subsystems.scheduler.requestRender(),
       }),
 
-      // ── Render scheduler — bootstrapped to a no-op shim ────────
+      // ── Render scheduler — bootstrapped to a *loud* shim ────────
       // The real scheduler can't be built until `frame` is defined
-      // (inside the async IIFE).  We seed a no-op now so the type
-      // stays non-nullable and any setter that fires before the
-      // IIFE finishes (currently impossible — but defensive) is
-      // simply a no-op rather than a crash.
+      // (inside the async IIFE).  We seed a placeholder now so the
+      // type stays non-nullable.
+      //
+      // **Why loud, not silent.** We previously used a quiet
+      // `/* not yet wired */` no-op here.  That seemed defensive but
+      // hid a real bug: any consumer that *captures* this object by
+      // reference (rather than reading `state.subsystems.scheduler`
+      // through the live property at call time) silently keeps the
+      // shim forever, even after line 1136's `state.subsystems.scheduler =
+      // createRenderScheduler(...)` swap.  That broke hover-pick
+      // wakeups for an entire refactor cycle (Phase 2b regression,
+      // diagnosed in Phase 5).  Logging from the shim turns the
+      // wiring bug into a console flood the moment it manifests —
+      // any future "I captured the shim" mistake screams at the
+      // developer immediately.
       scheduler: {
         requestRender(): void {
-          /* not yet wired */
+          // Synchronous setters call this during the IIFE bootstrap
+          // window — those are legitimate no-ops.  But if the call
+          // arrives after `state.subsystems.scheduler` has been
+          // replaced with the real scheduler, someone's holding a
+          // stale reference.  We can't tell the difference here,
+          // so we log unconditionally and trust the developer to
+          // ignore IIFE-time noise.  Cheap signal-to-noise wins.
+          console.warn(
+            '[engine] scheduler shim invoked — if this fires AFTER engine init, a consumer captured the shim by reference instead of reading state.subsystems.scheduler at call time.',
+          );
         },
         cancelRender(): void {
-          /* not yet wired */
+          console.warn(
+            '[engine] scheduler shim cancelRender invoked — see requestRender note.',
+          );
         },
         isScheduled(): boolean {
           return false;
@@ -739,7 +761,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // don't repeat that wake-up at every site.
       state.subsystems.inputBindings = attachEngineInputs({
         canvas,
-        scheduler: state.subsystems.scheduler,
+        // Delegating proxy — we cannot pass `state.subsystems.scheduler`
+        // by reference here because at this point in the IIFE it's still
+        // the bootstrap shim; the real scheduler isn't created until
+        // ~400 lines further down (`createRenderScheduler({ onFrame: frame })`).
+        // The proxy reads `state.subsystems.scheduler` lazily at call
+        // time, so each `requestRender()` from a DOM listener hits
+        // whichever scheduler is currently in `state.subsystems`.
+        // Mirrors the lazy-read pattern already used by the SpaceMouse
+        // subsystem's `onAxes` callback.  See the loud shim's comment
+        // at the top of the file for the regression history.
+        scheduler: {
+          requestRender: () => state.subsystems.scheduler.requestRender(),
+          cancelRender: () => state.subsystems.scheduler.cancelRender(),
+          isScheduled: () => state.subsystems.scheduler.isScheduled(),
+        },
         // Track latest mouse position for the per-frame throttled
         // hover pick.  The pick itself is async (1-2 frames later)
         // but its .then also calls requestRender so the selection
