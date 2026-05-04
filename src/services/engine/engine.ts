@@ -183,6 +183,41 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // reassigns it — only the inner fields mutate.  Mutation in place
   // matches how the subsystem facades already manage their own state
   // and avoids per-frame allocations on the hot path.
+
+  // ── Frame-function forward declaration ────────────────────────────────────
+  //
+  // The render loop's `frame()` body lives further down inside the async
+  // IIFE, because it reads GPU resources (device, context, quadRenderer,
+  // diskRenderer) that initGpu() returns asynchronously.  But the
+  // `RenderScheduler` we wire into `state.subsystems.scheduler` needs an
+  // `onFrame` callback at construction time — which is *here*, in the
+  // synchronous state literal below.
+  //
+  // We resolve the chicken-and-egg by forward-declaring `frame` as a
+  // `let` initialised to a no-op stub.  The state literal's scheduler
+  // captures the local `frame` *binding* (via the `() => frame()`
+  // closure) rather than the current value, so when the IIFE later
+  // assigns `frame = () => { /* real body */ }`, every subsequent rAF
+  // invocation runs the real body.
+  //
+  // Why this is the architectural fix to the previous "shim captured by
+  // reference" bug: with this pattern, `state.subsystems.scheduler`
+  // is the *real* `RenderScheduler` from the moment `state` is
+  // constructed.  Anyone who captures it by reference — including
+  // `attachEngineInputs` — gets the live scheduler immediately.  No
+  // shim, no proxy, no post-init reassignment.  The only thing
+  // deferred is the *frame body*, and that's deferred safely via a
+  // closure that reads the latest binding lazily.
+  //
+  // The stub is silently a no-op rather than a logging warning
+  // because its only invocation window is "rAF fires before the IIFE
+  // finishes wiring `frame`" — vanishingly rare (the user would have
+  // to interact with the canvas in the first ~milliseconds of
+  // startup), and harmless even if it does fire.
+  let frame: () => void = () => {
+    /* stub until IIFE assigns the real body — see comment above */
+  };
+
   const state: EngineState = {
     settings: {
       pointSizePx: DEFAULT_POINT_SIZE_PX,
@@ -277,45 +312,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         onAxes: () => state.subsystems.scheduler.requestRender(),
       }),
 
-      // ── Render scheduler — bootstrapped to a *loud* shim ────────
-      // The real scheduler can't be built until `frame` is defined
-      // (inside the async IIFE).  We seed a placeholder now so the
-      // type stays non-nullable.
+      // ── Render scheduler — eager, capture-safe ────────────────────
       //
-      // **Why loud, not silent.** We previously used a quiet
-      // `/* not yet wired */` no-op here.  That seemed defensive but
-      // hid a real bug: any consumer that *captures* this object by
-      // reference (rather than reading `state.subsystems.scheduler`
-      // through the live property at call time) silently keeps the
-      // shim forever, even after line 1136's `state.subsystems.scheduler =
-      // createRenderScheduler(...)` swap.  That broke hover-pick
-      // wakeups for an entire refactor cycle (Phase 2b regression,
-      // diagnosed in Phase 5).  Logging from the shim turns the
-      // wiring bug into a console flood the moment it manifests —
-      // any future "I captured the shim" mistake screams at the
-      // developer immediately.
-      scheduler: {
-        requestRender(): void {
-          // Synchronous setters call this during the IIFE bootstrap
-          // window — those are legitimate no-ops.  But if the call
-          // arrives after `state.subsystems.scheduler` has been
-          // replaced with the real scheduler, someone's holding a
-          // stale reference.  We can't tell the difference here,
-          // so we log unconditionally and trust the developer to
-          // ignore IIFE-time noise.  Cheap signal-to-noise wins.
-          console.warn(
-            '[engine] scheduler shim invoked — if this fires AFTER engine init, a consumer captured the shim by reference instead of reading state.subsystems.scheduler at call time.',
-          );
-        },
-        cancelRender(): void {
-          console.warn(
-            '[engine] scheduler shim cancelRender invoked — see requestRender note.',
-          );
-        },
-        isScheduled(): boolean {
-          return false;
-        },
-      },
+      // The real scheduler is created right here in the state literal,
+      // *not* via a deferred shim swap.  Its `onFrame` callback closes
+      // over the forward-declared `frame` binding above; the IIFE
+      // assigns the real frame body before any rAF can fire.  See the
+      // forward declaration's docstring for the full rationale.
+      //
+      // Anyone who captures `state.subsystems.scheduler` from this
+      // moment onward gets the live scheduler — no shim, no proxy,
+      // no post-init reassignment.  This is the architectural fix to
+      // the Phase 2b "captured the shim by reference" regression that
+      // broke hover-pick for one refactor cycle.
+      scheduler: createRenderScheduler({ onFrame: () => frame() }),
 
       // The remaining three subsystems land later in the IIFE once
       // their dependencies (GPU device, pickRenderer, scheduler) exist.
@@ -761,21 +771,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // don't repeat that wake-up at every site.
       state.subsystems.inputBindings = attachEngineInputs({
         canvas,
-        // Delegating proxy — we cannot pass `state.subsystems.scheduler`
-        // by reference here because at this point in the IIFE it's still
-        // the bootstrap shim; the real scheduler isn't created until
-        // ~400 lines further down (`createRenderScheduler({ onFrame: frame })`).
-        // The proxy reads `state.subsystems.scheduler` lazily at call
-        // time, so each `requestRender()` from a DOM listener hits
-        // whichever scheduler is currently in `state.subsystems`.
-        // Mirrors the lazy-read pattern already used by the SpaceMouse
-        // subsystem's `onAxes` callback.  See the loud shim's comment
-        // at the top of the file for the regression history.
-        scheduler: {
-          requestRender: () => state.subsystems.scheduler.requestRender(),
-          cancelRender: () => state.subsystems.scheduler.cancelRender(),
-          isScheduled: () => state.subsystems.scheduler.isScheduled(),
-        },
+        // Pass the scheduler by reference — safe because it was created
+        // eagerly in the state literal above (the forward-declared
+        // `frame` binding handles the chicken-and-egg between scheduler
+        // construction and frame-body availability).
+        scheduler: state.subsystems.scheduler,
         // Track latest mouse position for the per-frame throttled
         // hover pick.  The pick itself is async (1-2 frames later)
         // but its .then also calls requestRender so the selection
@@ -914,7 +914,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // ── Render loop ──────────────────────────────────────────────────────
 
-      function frame() {
+      // Assign the real frame body to the forward-declared `frame`
+      // variable.  The scheduler in `state.subsystems.scheduler` was
+      // wired with `onFrame: () => frame()` — that closure reads the
+      // current value of `frame` lazily, so this assignment makes
+      // every subsequent rAF tick run the body below.
+      frame = () => {
         // Snapshot the live state references once at the top of the
         // frame body for readability.  Each is either a live mutable
         // value (cam) or a slot that becomes null only on `destroy()`
@@ -1164,12 +1169,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           (state.subsystems.thumbnails !== null &&
             state.subsystems.thumbnails.hasInFlightFetches());
         if (stillAnimating) state.subsystems.scheduler.requestRender();
-      }
+      };
 
-      // Build the scheduler now that `frame` is defined, then kick off
-      // the first render.  After that one frame, the loop sleeps until
-      // an event handler or a setter calls scheduler.requestRender().
-      state.subsystems.scheduler = createRenderScheduler({ onFrame: frame });
+      // Kick off the first render.  The scheduler was already created
+      // synchronously in the state literal — this just tells it to
+      // queue one rAF.  The `onFrame: () => frame()` closure picks up
+      // the just-assigned real frame body.  After that single frame,
+      // the loop sleeps until an event handler or a setter calls
+      // scheduler.requestRender().
       state.subsystems.scheduler.requestRender();
     } catch (err) {
       // Surface initialisation failures via the status callback so the UI
