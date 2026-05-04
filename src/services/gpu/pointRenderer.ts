@@ -841,8 +841,19 @@ export class PointRenderer {
         mLim: surveyMLim,
         dMpc,
       });
-      const schechterRatio =
-        nHere > 0 && Number.isFinite(nHere) ? Math.min(10, nRef / nHere) : 0;
+      // Schechter ratio: ideally nRef/nHere, but applied as a multiplicative
+      // alpha boost across millions of additively-blended overlapping
+      // galaxies, the literal ratio over-exposes (Local-Group flattens, far
+      // field blooms to peak white).  Two softeners stacked, both flagged
+      // as "if it saturates" tuning notes in the original plan (Task 4
+      // Step 3): square-root the ratio (Anscombe-like variance-stabilising
+      // transform — knocks the dynamic range from [0, 10] to [0, ~3.2])
+      // AND tighten the upper clamp from 10× to 3×.  The visual still
+      // achieves the goal (nearby super-clusters lose their over-density
+      // dominance) without flooding the canvas.
+      const ratioRaw =
+        nHere > 0 && Number.isFinite(nHere) ? nRef / nHere : 0;
+      const schechterRatio = Math.min(3, Math.sqrt(ratioRaw));
       interleaved[o + 11] = schechterRatio;
     }
 
