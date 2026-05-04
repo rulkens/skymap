@@ -145,6 +145,49 @@ describe('parseTwoMrs', () => {
     expect(skipped).toBe(1);
   });
 
+  it('skips the all-zero sentinel row (RA=0, Dec=0, cz=0)', () => {
+    // 2MRS contains a bookkeeping row whose 2MASX designation is the
+    // all-zero string `J000000.00+000000.0` — RA=0, Dec=0, cz=0 — and
+    // it collapses through `raDecZToCartesian` to the world origin,
+    // appearing dead-centre on the map and pretending to be the Milky
+    // Way.  Confirm the parser catches it and counts it as skipped
+    // rather than emitting a record.
+    const sentinelRow = buildTwoMrsRow([
+      [1, 16, '00000000+0000000'],
+      [18, 26, '  0.00000'],
+      [28, 36, ' +0.00000'],
+      [58, 63, '11.500'],
+      [65, 70, '12.000'],
+      [72, 77, '12.500'],
+      [174, 178, '    0'],
+    ]);
+    expect(sentinelRow.length).toBe(233);
+
+    const { records, skipped } = parseTwoMrs(sentinelRow);
+    expect(records).toHaveLength(0);
+    expect(skipped).toBe(1);
+  });
+
+  it('keeps rows with cz=0 if RA/Dec are non-zero (real edge cases)', () => {
+    // The (0,0,0) skip rule must not over-fire — a galaxy whose cz
+    // happens to round to 0 km/s but whose RA/Dec are real coordinates
+    // is still a legitimate near-zero-redshift entry and must be kept.
+    const row = buildTwoMrsRow([
+      [1, 16, '12345678+0123456'],
+      [18, 26, '180.00000'],
+      [28, 36, '+30.00000'],
+      [58, 63, '11.500'],
+      [65, 70, '12.000'],
+      [72, 77, '12.500'],
+      [174, 178, '    0'],
+    ]);
+    expect(row.length).toBe(233);
+
+    const { records, skipped } = parseTwoMrs(row);
+    expect(records).toHaveLength(1);
+    expect(skipped).toBe(0);
+  });
+
   it('applies XSC sup_ba (axisRatio) and sup_phi (positionAngleDeg) from cache', () => {
     // The map is keyed by the trimmed 2MASS designation; on a hit, the
     // parser must propagate sup_ba straight into axisRatio and sup_phi

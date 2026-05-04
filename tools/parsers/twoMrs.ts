@@ -243,6 +243,31 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
       continue;
     }
 
+    // ── Skip the (0, 0, 0) sentinel row ──────────────────────────────────
+    //
+    // 2MRS contains a bookkeeping entry whose 2MASX designation is the
+    // all-zeros string `J000000.00+000000.0` (RA = 00:00:00.00,
+    // Dec = +00:00:00.0, cz = 0).  All three coordinates being literal
+    // zero is wildly improbable for any real galaxy — there's no
+    // observation at the celestial equator's intersection with the
+    // J2000.0 meridian sitting at zero recession velocity.  The row
+    // collapses through `raDecZToCartesian(0, 0, 0)` to the world
+    // origin, which is the camera's home position — so it appears
+    // dead-centre on the map and pretends to be the Milky Way.
+    //
+    // The blank-cz path above doesn't catch this because the column
+    // contains the literal string "0.0" (or similar), which `parseFloat`
+    // happily turns into a finite zero.  We need an explicit check.
+    //
+    // We require all three to be exactly zero because using a tolerance
+    // (e.g. `|cz| < 1`) would also drop legitimate Local Group entries
+    // with very small peculiar velocities.  The exact-zero predicate
+    // is unique to this sentinel and safe.
+    if (ra === 0 && dec === 0 && cz === 0) {
+      skipped++;
+      continue;
+    }
+
     // Translate Jcmag's published sentinel to NaN so downstream consumers
     // can use the same "missing band" idiom regardless of which survey
     // the record came from.
