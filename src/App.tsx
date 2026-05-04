@@ -73,9 +73,25 @@ import { InfoCard } from './components/InfoCard/InfoCard';
 import { ScaleBar } from './components/ScaleBar/ScaleBar';
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
 import { CommandPalette } from './components/CommandPalette/CommandPalette';
-import { ALL_VISIBLE_MASK, Source } from './data/sources';
+import { Source } from './data/sources';
 import { BiasMode } from './data/biasMode';
 import { ToneMapCurve } from './data/toneMapCurve';
+import {
+  DEFAULT_ABS_MAG_LIMIT,
+  DEFAULT_AUTO_ROTATE,
+  DEFAULT_BIAS_MODE,
+  DEFAULT_BRIGHTNESS,
+  DEFAULT_DEPTH_FADE_ENABLED,
+  DEFAULT_EXPOSURE,
+  DEFAULT_GALAXY_TEXTURES_ENABLED,
+  DEFAULT_HIGHLIGHT_FALLBACK,
+  DEFAULT_LOD_MODE,
+  DEFAULT_POINT_SIZE_PX,
+  DEFAULT_REAL_ONLY_MODE,
+  DEFAULT_SPACE_MOUSE_SENSITIVITY,
+  DEFAULT_TONE_MAP_CURVE,
+  DEFAULT_VISIBLE_SOURCE_MASK,
+} from './data/defaults';
 import { isWebHIDSupported } from './services/input/spaceMouse';
 import { loadFamousSidecars, type FamousMetaEntry } from './services/engine/famousMetaLoader';
 
@@ -131,24 +147,20 @@ export function App(): React.ReactElement {
   // always reflects the engine's current state — not the other way around.
   // The user's interactions flow: slider → callback → handleRef.setXxx → engine
   // closure variable updated → callback fired → setState → React re-render.
-  const [pointSize, setPointSize] = useState<number>(2.5);
-  const [brightness, setBrightness] = useState<number>(1.0);
-  const [autoRotate, setAutoRotate] = useState<boolean>(false);
-  // Galaxy-texture quad pass: default `true` matches the engine's init value,
-  // so the first paint and React's first render agree without flicker. The
-  // engine echoes its own value through `onGalaxyTexturesEnabledChange` at
-  // startup, which would correct any mismatch — but seeding the same default
-  // here keeps the very first frame of the checkbox visually correct.
-  const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(true);
-  // Task 15 — orientation-visibility toggles.  Both default off to match
-  // the engine's init values, so the first paint and React's first render
-  // agree without flicker.  The engine echoes via the optional callbacks
-  // below so any future engine-side flip stays mirrored.
-  const [highlightFallback, setHighlightFallback] = useState<boolean>(false);
-  const [realOnlyMode, setRealOnlyMode] = useState<boolean>(false);
-  // Default ON — matches the engine's seed.  Tames the centre-of-volume
-  // saturation that motivated the per-galaxy alpha attenuation.
-  const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(true);
+  // Initial values seeded from `data/defaults.ts` — single source of
+  // truth shared with the engine so the SettingsPanel doesn't briefly
+  // flash a stale value before the engine's first echo callback fires.
+  // See `data/defaults.ts` for per-default rationale.
+  const [pointSize, setPointSize] = useState<number>(DEFAULT_POINT_SIZE_PX);
+  const [brightness, setBrightness] = useState<number>(DEFAULT_BRIGHTNESS);
+  const [autoRotate, setAutoRotate] = useState<boolean>(DEFAULT_AUTO_ROTATE);
+  const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] =
+    useState<boolean>(DEFAULT_GALAXY_TEXTURES_ENABLED);
+  const [highlightFallback, setHighlightFallback] =
+    useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
+  const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
+  const [depthFadeEnabled, setDepthFadeEnabled] =
+    useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
 
   // ── Multi-survey + LOD state (rev-2) ─────────────────────────────────────
   //
@@ -172,8 +184,9 @@ export function App(): React.ReactElement {
   // manual via `setSourceVisible`'s spec). When the engine grows an
   // `onSourceMaskChange` callback later, we can wire it here without changing
   // any other code.
-  const [visibleSourceMask, setVisibleSourceMask] = useState<number>(ALL_VISIBLE_MASK);
-  const [lodMode, setLodMode] = useState<LodMode>('manual');
+  const [visibleSourceMask, setVisibleSourceMask] =
+    useState<number>(DEFAULT_VISIBLE_SOURCE_MASK);
+  const [lodMode, setLodMode] = useState<LodMode>(DEFAULT_LOD_MODE);
 
   // Per-source point counts, indexed by Source enum value. Populated as each
   // .bin file finishes loading via the engine's `onCloudReady` callback.
@@ -189,7 +202,9 @@ export function App(): React.ReactElement {
   // to false on disconnect. `spaceMouseSensitivity` is the slider value;
   // 1.0 is the factory default and matches what the engine uses internally.
   const [spaceMouseConnected, setSpaceMouseConnected] = useState<boolean>(false);
-  const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(1.0);
+  const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(
+    DEFAULT_SPACE_MOUSE_SENSITIVITY,
+  );
 
   // ── Density-correction state (Malmquist bias, Tasks 1–5) ─────────────────
   //
@@ -201,8 +216,8 @@ export function App(): React.ReactElement {
   // boundary (~M*+1).  Both are echoed by the engine's `onBiasModeChange` /
   // `onAbsMagLimitChange` callbacks so React state stays in sync if the
   // engine ever changes them on its own (e.g. a future preset loader).
-  const [biasMode, setBiasMode] = useState<BiasMode>(BiasMode.None);
-  const [absMagLimit, setAbsMagLimit] = useState<number>(-19);
+  const [biasMode, setBiasMode] = useState<BiasMode>(DEFAULT_BIAS_MODE);
+  const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
 
   // ── HDR tone-map state ────────────────────────────────────────────────────
   //
@@ -211,16 +226,14 @@ export function App(): React.ReactElement {
   // dropdown matches what the user sees on the canvas — no flicker.  The
   // engine echoes via `onToneMapCurveChange` at startup *and* on every
   // setToneMapCurve call, so React stays in sync.
-  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurve>(ToneMapCurve.Reinhard);
+  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurve>(DEFAULT_TONE_MAP_CURVE);
   // `exposure` mirrors the engine's HDR pre-tone-map multiplier.  Default
   // 1.0 matches the engine's init value so the slider thumb starts in the
   // middle of its 0.1..4.0 range without flicker.  Echoed by the engine
   // via `onExposureChange` at startup *and* on every clamped setExposure
   // call, so the displayed value is always the effective one — even if a
   // devtools call passes a wild number that the engine clamps to 16.
-  // Default 1.5 to match the engine's seed — see engine.ts comment for
-  // why the bump (depth fade dims overall brightness; this compensates).
-  const [exposure, setExposure] = useState<number>(1.5);
+  const [exposure, setExposure] = useState<number>(DEFAULT_EXPOSURE);
 
   // ── Command palette state ─────────────────────────────────────────────────
   //

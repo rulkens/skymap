@@ -65,6 +65,22 @@ import { attachOrbitControls } from '../camera/orbitControls';
 import { formatDistance } from '../../utils/format/distance';
 import { ALL_VISIBLE_MASK, Source, maskWith, maskWithout } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
+import {
+  DEFAULT_ABS_MAG_LIMIT,
+  DEFAULT_AUTO_ROTATE,
+  DEFAULT_BIAS_MODE,
+  DEFAULT_BRIGHTNESS,
+  DEFAULT_DEPTH_FADE_ENABLED,
+  DEFAULT_EXPOSURE,
+  DEFAULT_GALAXY_TEXTURES_ENABLED,
+  DEFAULT_HIGHLIGHT_FALLBACK,
+  DEFAULT_LOD_MODE,
+  DEFAULT_POINT_SIZE_PX,
+  DEFAULT_REAL_ONLY_MODE,
+  DEFAULT_SPACE_MOUSE_SENSITIVITY,
+  DEFAULT_TONE_MAP_CURVE,
+  DEFAULT_VISIBLE_SOURCE_MASK,
+} from '../../data/defaults';
 import type { LodMode, PointCloud } from '../../@types';
 import type { EngineCallbacks, EngineHandle } from '../../@types';
 import { advanceCameraTween, type CameraTween } from '../camera/cameraTween';
@@ -163,28 +179,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // These are the source of truth for the visual settings exposed by the
   // Settings Panel. They are mutated by the public handle setters below and
   // consumed in the render loop (renderer.draw) and frame tick (autoRotate).
-  let pointSizePx = 2.5;
-  let brightness = 1.0;
-  let autoRotate = false;
-  // Galaxy-thumbnail master toggle.  Hoisted to the outer createEngine
-  // closure (rather than the inner async IIFE) so the public handle's
-  // `setGalaxyTexturesEnabled` setter can read and mutate it after the
-  // IIFE completes — same lifetime trick we use for `cam` and
-  // `initialCamRef` further down.
-  let galaxyTexturesEnabled = true;
-  // Task 15 — orientation-visibility toggles, mirrored into the per-frame
-  // uniform buffer.  Both default off so existing visual is unchanged
-  // until the user opts in via the SettingsPanel.
-  let highlightFallback = false;
-  let realOnlyMode = false;
-
-  // Camera-distance depth-fade toggle.  When true, the fragment shader
-  // multiplies per-galaxy alpha by `1 / (1 + (camDist / 1000Mpc)²)` so
-  // galaxies far from the camera contribute less — tames the cumulative-
-  // overlap glow at the geometric origin where additive billboards stack.
-  // Default ON because the artefact it fixes is significant; user can
-  // turn off via the SettingsPanel checkbox to compare.
-  let depthFadeEnabled = true;
+  // Initial values seeded from `data/defaults.ts` — single source of
+  // truth shared with App.tsx so the SettingsPanel doesn't briefly flash
+  // a stale value before the engine's first echo callback fires.  See
+  // that module's docstring for the full rationale + per-default
+  // commentary.
+  let pointSizePx = DEFAULT_POINT_SIZE_PX;
+  let brightness = DEFAULT_BRIGHTNESS;
+  let autoRotate = DEFAULT_AUTO_ROTATE;
+  let galaxyTexturesEnabled = DEFAULT_GALAXY_TEXTURES_ENABLED;
+  let highlightFallback = DEFAULT_HIGHLIGHT_FALLBACK;
+  let realOnlyMode = DEFAULT_REAL_ONLY_MODE;
+  let depthFadeEnabled = DEFAULT_DEPTH_FADE_ENABLED;
 
   // ── Malmquist-bias correction state (Task 2 of malmquist-bias plan) ─────
   //
@@ -200,8 +206,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // out to the survey's flux limit — bright enough that almost every
   // catalog galaxy meeting it has a measured spectrum, dim enough that
   // we still see plenty of structure.
-  let biasMode: BiasMode = BiasMode.None;
-  let absMagLimit = -19.0;
+  let biasMode: BiasMode = DEFAULT_BIAS_MODE;
+  let absMagLimit = DEFAULT_ABS_MAG_LIMIT;
 
   // ── HDR + tone-map state ─────────────────────────────────────────────────
   //
@@ -211,18 +217,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // the tone-map pass uniform once per frame; switching at runtime is a
   // single 4-byte uniform write — no pipeline rebuild.
   //
-  // Default to Reinhard (not Linear).  Linear is the "no tone-map"
-  // baseline used for comparison; on first paint we want the user
-  // looking at the smooth Reinhard roll-off, which preserves the HDR
-  // signal without saturating cluster cores.
-  // Default 1.5 (not 1.0) because depth fade — a per-galaxy alpha
-  // attenuation that's also default ON — measurably dims the rendered
-  // brightness.  Bumping the exposure here compensates so the first
-  // frame's average luminance matches what the user expected before the
-  // fade landed.  Slider still ranges [0.1, 4.0] so the user can dial
-  // either way; this is just a more useful starting point.
-  let exposure = 1.5;
-  let toneMapCurve: ToneMapCurve = ToneMapCurve.Reinhard;
+  let exposure = DEFAULT_EXPOSURE;
+  let toneMapCurve: ToneMapCurve = DEFAULT_TONE_MAP_CURVE;
   // Reserved-for-future fields; Tasks 3 + 4 will populate them.  Until then
   // the renderer reads them but the shader's mode-2/3 branches stay inert.
   let apparentMagLimit = 0;
@@ -244,14 +240,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //                stick — they get clobbered on the next frame.
   //   - 'manual' → the user (or a programmatic call to `setSourceVisible`)
   //                owns the mask; auto-LOD is paused.
-  let visibleSourceMask = ALL_VISIBLE_MASK;
-  // Default LOD mode = 'manual' (every loaded survey rendered, no auto-cull)
-  // per user request. With 'manual' the engine renders whatever
-  // `visibleSourceMask` says — initialized to ALL_VISIBLE_MASK above, so
-  // every survey is visible at startup. Auto-LOD remains available; the
-  // user can flip the mode to 'auto' from the settings panel to dynamically
-  // cull faint sources at large camera distances.
-  let lodMode: LodMode = 'manual';
+  let visibleSourceMask = DEFAULT_VISIBLE_SOURCE_MASK;
+  let lodMode: LodMode = DEFAULT_LOD_MODE;
 
   // ── Initial camera snapshot ───────────────────────────────────────────────
   //
@@ -295,7 +285,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // wall-clock delta — display refresh rates vary (60 / 120 / 144 Hz) and
   // we want consistent motion across them. Initialised lazily on first use.
   let latestSpaceMouseAxes: SpaceMouseAxes = { ...ZERO_AXES };
-  let spaceMouseSensitivity = 1.0;
+  let spaceMouseSensitivity = DEFAULT_SPACE_MOUSE_SENSITIVITY;
   let lastSpaceMouseFrameMs: number | null = null;
   // The SpaceMouseInput instance is created lazily on the first call to
   // connectSpaceMouse(); on construction it also tries to silently
