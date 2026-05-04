@@ -625,48 +625,19 @@ fn vs(
   // the math gives "this many screen pixels regardless of clip-space depth"
   // and the size variation comes from sizePx itself, not from perspective.
   //
-  // ── WORLD-ORIENTED BILLBOARD BASIS ───────────────────────────────────────
+  // ── SCREEN-ALIGNED BILLBOARD BASIS ──────────────────────────────────────
   //
-  // Historically we shifted `corner` along screen-X / screen-Y — a
-  // camera-locked basis.  That made the elliptical mask in the fragment
-  // shader (which rotates the UV by `-PA`, with PA measured east-of-
-  // north) gradually disagree with the textured-quad pass as the camera
-  // rolled: the quad's texture is north-up by source convention, the
-  // ellipse mask was rotated by sky-PA, but both passes were drawn in a
-  // screen-axis frame so neither tracked the actual sky north.  Now we
-  // build the billboard's local +Y axis from the projected celestial-
-  // north direction at this galaxy's screen position (skymap's +Z world
-  // axis is the celestial north pole — see raDecZToCartesian.ts).  With
-  // both passes anchored to projected sky north, the points-pass ellipse
-  // mask and the quads-pass texture stay visually aligned across all
-  // camera angles, and rolling the camera now rotates galaxies *with*
-  // the world rather than leaving them screen-locked.
-  //
-  // Edge case: at the celestial poles the projected-north direction
-  // collapses (`upPx ≈ 0`); we fall back to the original screen-axis
-  // basis there to avoid `normalize` blowing up.
+  // We considered orienting each point billboard's +Y to projected
+  // celestial-north (matches the quads pass's world-oriented basis), but
+  // points are dots — only a few pixels wide — so any rotation as the
+  // camera moves reads as visual jitter rather than a meaningful "the
+  // sky rotated" cue.  The textured quads (much larger) keep the
+  // world-oriented basis where the rotation is information-carrying.
+  // For the bare points we therefore keep the original screen-X/+Y
+  // basis: stable through camera motion, and the ellipse mask uses
+  // sky-PA without any screen-vs-sky reconciliation.
   let pxToClip = vec2<f32>(2.0 / u.viewport.x, 2.0 / u.viewport.y);
-
-  let NORTH_WORLD = vec3<f32>(0.0, 0.0, 1.0);
-  let NORTH_EPS = 0.001;
-  let upClip = u.viewProj * vec4<f32>(p.position + NORTH_WORLD * NORTH_EPS, 1.0);
-  let centerNdc = center.xy / center.w;
-  let upNdc = upClip.xy / upClip.w;
-  let upNdcDelta = upNdc - centerNdc;
-  let upPx = vec2<f32>(upNdcDelta.x * u.viewport.x * 0.5, upNdcDelta.y * u.viewport.y * 0.5);
-
-  let upPxLen = length(upPx);
-  let usePoleFallback = upPxLen < 1e-6;
-  let upPxNorm = select(upPx / upPxLen, vec2<f32>(0.0, 1.0), usePoleFallback);
-  // Right is a +90° rotation of up in screen-space.  UV-y points down on
-  // screen (the fragment shader negates `positionAngleDeg` to compensate
-  // for the same sign flip), so the in-image right-of-north direction is
-  // (upY, -upX).
-  let rightPxNorm = vec2<f32>(upPxNorm.y, -upPxNorm.x);
-
-  let halfPx = sizePx * sizeScale;
-  let offsetPx = corner.x * halfPx * rightPxNorm + corner.y * halfPx * upPxNorm;
-  let offset   = offsetPx * pxToClip * center.w;
+  let offset   = corner * sizePx * sizeScale * pxToClip * center.w;
 
   var out: VSOut;
 
