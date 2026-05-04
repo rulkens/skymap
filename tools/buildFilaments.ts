@@ -33,7 +33,7 @@
  * subprocess boundary is the only practical interface from Node.  We
  * trade one-shot wall time for zero install pain on the JS side.
  */
-import { execSync, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -70,20 +70,25 @@ function parseArgs(): { cut: number; smooth: number } {
 }
 
 /**
- * Probe the PATH for the DisPerSE `mse` binary.  We invoke `mse --help`
- * because it exits 0 quickly and is portable across DisPerSE versions
- * (older builds don't honour `--version`).  A missing binary or any
- * non-zero exit is treated as "not installed" and we fail loudly with
- * a pointer to the README so the operator knows what to install.
+ * Probe the PATH for the DisPerSE binaries we need.  We invoke each with
+ * `--help` because it exits 0 quickly and is portable across DisPerSE
+ * versions (older builds don't honour `--version`).  We check BOTH `mse`
+ * and `skelconv` up front: a partially-built install (e.g. mse linked
+ * but skelconv's CFITSIO link failed) would otherwise sit through the
+ * multi-hour mse run before crashing on the missing skelconv.  A missing
+ * binary or any non-zero exit is treated as "not installed" and we fail
+ * loudly with a pointer to the README so the operator knows what to fix.
  */
 function checkDisperse(): void {
-  const r = spawnSync('mse', ['--help'], { encoding: 'utf8' });
-  if (r.error || r.status !== 0) {
-    process.stderr.write(
-      'error: DisPerSE `mse` binary not found on PATH.\n' +
-        'Install: see README "Filament skeleton" section.\n',
-    );
-    process.exit(1);
+  for (const bin of ['mse', 'skelconv'] as const) {
+    const r = spawnSync(bin, ['--help'], { encoding: 'utf8' });
+    if (r.error || r.status !== 0) {
+      process.stderr.write(
+        `error: DisPerSE \`${bin}\` binary not found on PATH.\n` +
+          'Install: see README "Filament skeleton" section.\n',
+      );
+      process.exit(1);
+    }
   }
 }
 
@@ -144,7 +149,10 @@ function writeTsvInput(path: string, positions: Float32Array, count: number): vo
       `${positions[i * 3 + 0]!} ${positions[i * 3 + 1]!} ${positions[i * 3 + 2]!}`,
     );
   }
-  if (!existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true });
+  // Unconditional mkdirSync with `recursive: true` is a no-op when the
+  // directory already exists, and avoids a TOCTOU window between the
+  // existsSync probe and the mkdir call.
+  mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, lines.join('\n') + '\n');
 }
 
@@ -166,19 +174,45 @@ function writeTsvInput(path: string, positions: Float32Array, count: number): vo
  * skelconv composes it deterministically from the cut value, which is
  * why we pass `cut` as both the persistence threshold and the trim
  * level.
+ *
+ * We use `spawnSync` with the array argv form rather than `execSync`
+ * with template-string interpolation: the array form bypasses the shell
+ * entirely, so paths with spaces (the project's SDSS CSV already lives
+ * at `Skyserver_SQL5_3_2026 6_09_20 PM.csv`) or shell metacharacters in
+ * the input path don't break the invocation.  Each step explicitly
+ * checks the exit code and throws with the binary name + status so the
+ * outer error handler can report something actionable.
  */
 function runDisperse(tsvPath: string, cut: number, smooth: number): string {
   process.stderr.write(`running mse on ${tsvPath} (this can take hours)…\n`);
-  execSync(`mse ${tsvPath} --upSkl --forceLoops --nsig ${cut}`, {
-    stdio: 'inherit',
-  });
+  const mseResult = spawnSync(
+    'mse',
+    [tsvPath, '--upSkl', '--forceLoops', '--nsig', String(cut)],
+    { stdio: 'inherit' },
+  );
+  if (mseResult.status !== 0) {
+    throw new Error(`mse failed with exit code ${mseResult.status}`);
+  }
   const skelRaw = `${tsvPath}.NDskl`;
 
   process.stderr.write(`running skelconv (smooth=${smooth})…\n`);
-  execSync(
-    `skelconv ${skelRaw} -smooth ${smooth} -trimBelow robustness ${cut} -to NDskl_ascii`,
+  const skelResult = spawnSync(
+    'skelconv',
+    [
+      skelRaw,
+      '-smooth',
+      String(smooth),
+      '-trimBelow',
+      'robustness',
+      String(cut),
+      '-to',
+      'NDskl_ascii',
+    ],
     { stdio: 'inherit' },
   );
+  if (skelResult.status !== 0) {
+    throw new Error(`skelconv failed with exit code ${skelResult.status}`);
+  }
   return `${skelRaw}.S${cut}.NDskl_ascii`;
 }
 
