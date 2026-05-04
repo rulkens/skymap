@@ -77,10 +77,10 @@ import {
 } from '../../data/defaults';
 import type { LodMode, PointCloud } from '../../@types';
 import type { EngineCallbacks, EngineHandle } from '../../@types';
-import { advanceCameraTween, type CameraTween } from '../camera/cameraTween';
 import { vec3 } from 'gl-matrix';
 
 import { autoLodMask } from './autoLod';
+import { createTweenManager } from './tweenManager';
 import { createRenderScheduler, type RenderScheduler } from './renderScheduler';
 import { buildPointInfo, maxAbsCoord } from './pointInfoBuilder';
 import { computeInitialCamera, type InitialCam } from './cameraFraming';
@@ -233,13 +233,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── In-flight focus / home tween ────────────────────────────────────────
   //
-  // At most one tween at a time.  Starting a new focus or home cancels the
-  // running one (we replace this reference; the old tween descriptor is just
-  // GC'd).  Set to null when no tween is active.  Mutated by:
-  //   - the public handle's `focusOn` / `focusOnHome` (start a tween)
-  //   - the `pointerdown` handler           (cancel on user grab)
-  //   - the per-frame `frame()` loop         (clear when finished)
-  let currentTween: CameraTween | null = null;
+  // At most one tween at a time.  The manager owns the single mutable
+  // `currentTween` reference internally; the engine just calls `start`,
+  // `cancel`, `isActive`, and `advance`.  See `tweenManager.ts` for the
+  // rationale on why the lone closure variable became a tiny facade.
+  //
+  // Sites that mutate the manager:
+  //   - the public handle's `focusOn` / `focusOnHome` / `selectFamous`
+  //     (start a tween — auto-replaces any running one),
+  //   - the `pointerdown` handler                  (cancel on user grab),
+  //   - the SpaceMouse per-frame block             (cancel on puck deflect),
+  //   - the per-frame `frame()` loop               (advance + auto-clear).
+  const tweens = createTweenManager();
 
   // ── SpaceMouse state ────────────────────────────────────────────────────
   //
@@ -768,7 +773,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // the moment the user grabs the mouse.  Otherwise the tween's
         // updatePosition would fight the orbit-controls' updatePosition for
         // the same camera each frame, producing a juddery jump.
-        currentTween = null;
+        tweens.cancel();
         pointerDown = true;
         setHovered(null);
         scheduler.requestRender();
@@ -912,14 +917,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
         // ── Focus / home tween ────────────────────────────────────────────
         //
-        // If a tween is in flight, advance it.  `advanceCameraTween` mutates
-        // the camera state and calls updatePosition internally, so by the time
-        // we hit the auto-rotate block below the camera is already at the
-        // eased intermediate frame.  When the tween reports finished we clear
-        // the reference so subsequent frames skip this branch entirely.
-        if (currentTween && cam) {
-          const finished = advanceCameraTween(cam, currentTween, performance.now());
-          if (finished) currentTween = null;
+        // If a tween is in flight the manager advances it.  `advance`
+        // mutates the camera state and calls updatePosition internally,
+        // so by the time we hit the auto-rotate block below the camera
+        // is already at the eased intermediate frame.  The manager
+        // auto-clears its internal reference when the tween finishes,
+        // so subsequent frames skip this branch via `isActive()` returning
+        // false.
+        if (cam) {
+          tweens.advance(cam, performance.now());
         }
 
         // ── SpaceMouse per-frame application ──────────────────────────────
@@ -944,7 +950,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               : Math.min(now - lastSpaceMouseFrameMs, 50);
           lastSpaceMouseFrameMs = now;
 
-          currentTween = null;
+          tweens.cancel();
           const shaped = applyCurve(latestSpaceMouseAxes, spaceMouseSensitivity);
           applyAxesToCamera(cam, shaped, dt);
           updatePosition(cam);
@@ -1217,7 +1223,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         //     anyway so the load-fade lerp ramps smoothly.
         const stillAnimating =
           autoRotate ||
-          currentTween !== null ||
+          tweens.isActive() ||
           hasAnyAxis(latestSpaceMouseAxes) ||
           (thumbnails !== null && thumbnails.hasInFlightFetches());
         if (stillAnimating) scheduler.requestRender();
@@ -1513,7 +1519,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // pre-v4 framing exactly.  When present, the camera ends up
       // 4× the galaxy's diameter away (close-but-not-inside framing
       // that scales naturally with size).
-      currentTween = {
+      tweens.start({
         startMs: performance.now(),
         durationMs: FOCUS_TWEEN_MS,
         fromTarget: vec3.clone(cam.target as vec3),
@@ -1524,7 +1530,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         toYaw: cam.yaw, // preserve yaw — user keeps their orientation
         fromPitch: cam.pitch,
         toPitch: cam.pitch, // preserve pitch
-      };
+      });
       // Kick the loop into motion — the tween's per-frame advance will
       // keep it ticking via the still-animating predicate until the
       // tween completes.
@@ -1560,7 +1566,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // at call time (depending on how App.tsx invokes the handle method).
       // Copying the tween-setup block keeps the behaviour identical.
       if (!cam) return;
-      currentTween = {
+      tweens.start({
         startMs: performance.now(),
         durationMs: FOCUS_TWEEN_MS,
         fromTarget: vec3.clone(cam.target as vec3),
@@ -1571,7 +1577,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         toYaw: cam.yaw,
         fromPitch: cam.pitch,
         toPitch: cam.pitch,
-      };
+      });
       scheduler.requestRender();
     },
 
@@ -1580,7 +1586,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // resetCamera.  Both must exist for a meaningful tween.
       if (!cam || !initialCamRef) return;
 
-      currentTween = {
+      tweens.start({
         startMs: performance.now(),
         durationMs: FOCUS_TWEEN_MS,
         fromTarget: vec3.clone(cam.target as vec3),
@@ -1595,7 +1601,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         toYaw: initialCamRef.yaw,
         fromPitch: cam.pitch,
         toPitch: initialCamRef.pitch,
-      };
+      });
       scheduler.requestRender();
     },
 
