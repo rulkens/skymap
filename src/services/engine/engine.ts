@@ -71,7 +71,6 @@ import {
   DEFAULT_LOD_MODE,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
-  DEFAULT_SPACE_MOUSE_SENSITIVITY,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
 } from '../../data/defaults';
@@ -107,16 +106,16 @@ import {
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
-// These imports are unconditionally pulled in because tree-shaking a few
-// hundred bytes of pure helpers isn't worth the conditional-import
-// complexity. The actual WebHID call (and the hardware coupling) only fires
-// when the user hits the "Connect SpaceMouse" button — see `SpaceMouseInput`
-// further down in the engine state block.
-import { SpaceMouseInput } from '../input/spaceMouse';
-import { applyCurve } from '../input/spaceMouseSensitivity';
-import { applyAxesToCamera, hasAnyAxis } from '../input/spaceMouseToCamera';
-import type { SpaceMouseAxes } from '../input/spaceMouseAxes';
-import { ZERO_AXES } from '../input/spaceMouseAxes';
+// The whole subsystem (WebHID device handle, axes-cache, dt-baseline,
+// sensitivity scalar, per-frame camera mutation) lives in
+// `spaceMouseSubsystem.ts`.  Engine-side we just instantiate it once,
+// pass it `cancelTween` / `onAxes` / `onConnectionChange` callbacks,
+// and call `applyToCamera()` from `frame()`.  The handle's
+// connect/disconnect/sensitivity setters forward straight through.
+import {
+  createSpaceMouseSubsystem,
+  type SpaceMouseSubsystem,
+} from './spaceMouseSubsystem';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -246,28 +245,36 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //   - the per-frame `frame()` loop               (advance + auto-clear).
   const tweens = createTweenManager();
 
-  // ── SpaceMouse state ────────────────────────────────────────────────────
+  // ── SpaceMouse subsystem ───────────────────────────────────────────────
   //
-  // `latestSpaceMouseAxes` holds the most recent reading from the WebHID
-  // listener. The render loop reads it every frame; if any axis is non-zero
-  // we apply it to the camera (and cancel any active tween, same precedence
-  // rule as a mouse drag).
+  // All puck state — latest axes, dt baseline, sensitivity scalar, the
+  // lazily-allocated WebHID device handle — is owned internally by the
+  // subsystem.  We hand it three callbacks at construction:
   //
-  // `spaceMouseSensitivity` is the user-controlled global scalar from the
-  // settings panel (default 1.0). It's applied AFTER the cube curve so the
-  // curve shape stays constant.
+  //   - `cancelTween`     : called from `applyToCamera()` whenever an
+  //                          axis is non-zero, so the focus tween yields
+  //                          to user input (same precedence as mouse drag).
+  //   - `onConnectionChange` : forwarded to the engine's UI callback so
+  //                            React's "Connected" indicator drops back to
+  //                            false when the puck is unplugged.
+  //   - `onAxes`          : called from the WebHID inputreport listener
+  //                          (outside the rAF loop) so the next frame
+  //                          sees the new axes.
   //
-  // `lastSpaceMouseFrameMs` lets us scale the per-frame application by the
-  // wall-clock delta — display refresh rates vary (60 / 120 / 144 Hz) and
-  // we want consistent motion across them. Initialised lazily on first use.
-  let latestSpaceMouseAxes: SpaceMouseAxes = { ...ZERO_AXES };
-  let spaceMouseSensitivity = DEFAULT_SPACE_MOUSE_SENSITIVITY;
-  let lastSpaceMouseFrameMs: number | null = null;
-  // The SpaceMouseInput instance is created lazily on the first call to
-  // connectSpaceMouse(); on construction it also tries to silently
-  // re-acquire any previously-paired device. Keeping it lazy means the
-  // WebHID API is never touched on browsers that don't support it.
-  let spaceMouseInput: SpaceMouseInput | null = null;
+  // The `applyToCamera()` method does NOT need to wake the scheduler —
+  // it runs inside `frame()` and the still-animating predicate at the
+  // bottom of the frame body keeps the loop ticking via `hasAxes()`.
+  const spaceMouse: SpaceMouseSubsystem = createSpaceMouseSubsystem({
+    cancelTween: () => tweens.cancel(),
+    onConnectionChange: (connected) => {
+      cb.onSpaceMouseConnectedChange?.(connected);
+      // Wake one frame so the still-animating predicate sees the
+      // freshly-zeroed axes (the subsystem clears them on disconnect)
+      // and lets the loop sleep cleanly.
+      scheduler.requestRender();
+    },
+    onAxes: () => scheduler.requestRender(),
+  });
 
   // Render scheduler — owns the single rAF token and the dirty flag.
   // Built inside the async IIFE because `frame` is defined there; the
@@ -930,35 +937,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
         // ── SpaceMouse per-frame application ──────────────────────────────
         //
-        // We apply the puck's latest axes every frame the puck is deflected.
-        // Same precedence rule as mouse drag: any non-zero axis cancels a
-        // running tween, otherwise the tween's updatePosition would fight
-        // ours for the same camera state and the user would see judder.
-        //
-        // dt is computed against the previous SpaceMouse-active frame —
-        // *not* the previous render frame — so a long stretch of zero
-        // input (puck at rest) doesn't produce a giant catch-up jump on
-        // the first frame the user touches it again.
-        if (cam && hasAnyAxis(latestSpaceMouseAxes)) {
-          const now = performance.now();
-          // Clamp dt so a tab-foreground regain (after long sleep) doesn't
-          // produce a multi-second jump. 50ms ≈ 3 frames at 60Hz — long
-          // enough to be useful, short enough to feel snappy.
-          const dt =
-            lastSpaceMouseFrameMs === null
-              ? 16
-              : Math.min(now - lastSpaceMouseFrameMs, 50);
-          lastSpaceMouseFrameMs = now;
-
-          tweens.cancel();
-          const shaped = applyCurve(latestSpaceMouseAxes, spaceMouseSensitivity);
-          applyAxesToCamera(cam, shaped, dt);
-          updatePosition(cam);
-        } else {
-          // Reset the dt baseline whenever the puck is at rest, so when the
-          // user re-grabs it we start a fresh dt instead of integrating
-          // against a stale timestamp.
-          lastSpaceMouseFrameMs = null;
+        // The subsystem owns the whole "if puck deflected, apply axes
+        // scaled by wall-clock dt, otherwise reset the dt baseline"
+        // dance — including the `tweens.cancel()` precedence rule (it
+        // calls back into the engine via the `cancelTween` callback we
+        // wired up at construction).  Calling unconditionally is fine:
+        // on a resting puck it's a single hasAnyAxis read + a null
+        // assignment to the dt baseline.
+        if (cam) {
+          spaceMouse.applyToCamera(cam, performance.now());
         }
 
         // ── Auto-rotate yaw ───────────────────────────────────────────────
@@ -1224,7 +1211,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         const stillAnimating =
           autoRotate ||
           tweens.isActive() ||
-          hasAnyAxis(latestSpaceMouseAxes) ||
+          spaceMouse.hasAxes() ||
           (thumbnails !== null && thumbnails.hasInFlightFetches());
         if (stillAnimating) scheduler.requestRender();
       }
@@ -1291,6 +1278,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the subsystem doesn't expose a destroy on it directly.
       thumbnails?.destroy();
       thumbnails = null;
+      // Release the WebHID device (no-op if never connected).
+      spaceMouse.destroy();
 
       // 6. Drop references to aid GC.
       renderer = null;
@@ -1640,61 +1629,29 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // ── SpaceMouse 6DOF input setters ─────────────────────────────────────
     //
-    // Lazy construction: `SpaceMouseInput` is only instantiated on the first
-    // `connectSpaceMouse()` call. Constructor side-effects include a call to
-    // `navigator.hid.getDevices()` (silent re-acquire), which is harmless on
-    // unsupported browsers thanks to the feature check inside the class.
+    // Thin pass-throughs to the subsystem.  The lazy-construction and
+    // axes-cache management both live inside `spaceMouseSubsystem.ts`;
+    // here we just unwrap the `{ ok }` envelope to keep the public
+    // EngineHandle type unchanged (Promise<boolean>).
 
     async connectSpaceMouse() {
-      if (!spaceMouseInput) {
-        spaceMouseInput = new SpaceMouseInput({
-          // Just stash the latest reading — the engine's own per-frame loop
-          // will pick it up. We don't apply axes here because that would tie
-          // the rate of camera updates to the device's report rate (which can
-          // exceed display refresh) instead of the frame loop.
-          onAxes: (axes) => {
-            latestSpaceMouseAxes = axes;
-            // Wake the loop. If the puck is deflected, the next
-            // frame's still-animating predicate will keep ticking
-            // (hasAnyAxis returns true).  When the user releases the
-            // puck back to neutral the predicate flips to false on
-            // the next frame and the loop sleeps.  The scheduler
-            // coalesces multiple HID reports per frame into one rAF.
-            scheduler.requestRender();
-          },
-          // Forward connection-state transitions to the engine's callback so
-          // React's "Connected" indicator drops back to false if the puck is
-          // physically unplugged or browser permission is revoked.  The
-          // SpaceMouseInput class already listens for the HID `disconnect`
-          // event; we just relay it.
-          onConnectionChange: (connected) => {
-            cb.onSpaceMouseConnectedChange?.(connected);
-            // Wipe the cached axes on disconnect so the per-frame loop stops
-            // applying the last reading received before we lost the device.
-            if (!connected) latestSpaceMouseAxes = { ...ZERO_AXES };
-            // Wake one frame so the still-animating predicate sees
-            // the zeroed axes and lets the loop sleep cleanly.
-            scheduler.requestRender();
-          },
-        });
-      }
-      return spaceMouseInput.connect();
+      const result = await spaceMouse.connect();
+      return result.ok;
     },
 
     disconnectSpaceMouse() {
-      spaceMouseInput?.disconnect();
-      // Reset the cached axes so the next frame doesn't continue applying
-      // the last reading received before disconnect.
-      latestSpaceMouseAxes = { ...ZERO_AXES };
+      spaceMouse.disconnect();
+      // Wake one frame so the still-animating predicate sees the
+      // freshly-zeroed axes and lets the loop sleep cleanly.
       scheduler.requestRender();
     },
 
     isSpaceMouseConnected() {
-      return spaceMouseInput?.isConnected() ?? false;
+      return spaceMouse.isConnected();
     },
 
     setSpaceMouseSensitivity(value) {
-      spaceMouseSensitivity = value;
+      spaceMouse.setSensitivity(value);
     },
   };
 
