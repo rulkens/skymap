@@ -22,6 +22,7 @@
  */
 
 import type { ReactNode } from 'react';
+import { useState } from 'react';
 import type { PointInfo } from '../../@types';
 import { formatDistance } from '../../utils/format/distance';
 import { Thumbnail } from './Thumbnail';
@@ -98,6 +99,13 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
   // CSS modules scope both classes so we just combine them with a space.
   const outerClass = pinned ? `${styles.infoCardFull} ${styles.pinned}` : styles.infoCardFull;
 
+  // Curated descriptions can run multiple paragraphs (especially for nearby
+  // famous galaxies whose Wikipedia summaries are long).  Default to a 5-line
+  // clamp + "show more" toggle so the card's structured-data rows stay
+  // visible without scrolling.  State resets per component instance, so
+  // selecting a different galaxy starts fresh in the collapsed state.
+  const [descExpanded, setDescExpanded] = useState(false);
+
   return (
     <div className={outerClass} role="status" aria-live="polite">
       {/* ── Title row ─────────────────────────────────────────────────────── */}
@@ -156,14 +164,31 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
           )}
           {/*
             Curated description — the most editorial part of the card.
-            Two or three sentences chosen at seed-write time to give the
-            user something more colourful than "Sb-type spiral".
+            Wikipedia auto-extracts can run several paragraphs, so we
+            line-clamp to 5 lines by default and reveal the full text when
+            the user clicks "show more".  Empty descriptions render
+            nothing — neither the clamp nor the toggle.
           */}
-          <div className={styles.cardRow}>
-            <span className={styles.cardValue} style={{ fontStyle: 'italic' }}>
-              {info.famous.description}
-            </span>
-          </div>
+          {info.famous.description && (
+            <div className={styles.cardRow}>
+              <span
+                className={`${styles.cardValue} ${
+                  descExpanded ? styles.descExpanded : styles.descCollapsed
+                }`}
+                style={{ fontStyle: 'italic' }}
+              >
+                {info.famous.description}
+              </span>
+              <button
+                type="button"
+                className={styles.descToggle}
+                onClick={() => setDescExpanded((v) => !v)}
+                aria-expanded={descExpanded}
+              >
+                {descExpanded ? 'show less' : 'show more'}
+              </button>
+            </div>
+          )}
           {/*
             Cross-match link — when the build-time matcher found a nearby
             survey row, surface the catalog name + offset so power users

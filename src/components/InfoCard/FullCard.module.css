@@ -285,6 +285,51 @@ details:not([open]) > .detailsSummary::before {
 }
 
 /*
+ * Description-clamp helpers.  Wikipedia summaries can be paragraphs long
+ * and would push the structured-data rows below the fold of even a
+ * 1080p viewport.  We default to a 5-line clamp and reveal the full
+ * text via the show-more toggle.
+ *
+ * `-webkit-line-clamp` requires `display: -webkit-box` and
+ * `-webkit-box-orient: vertical`; despite the `-webkit` prefix this is
+ * supported in every browser we target (Chrome / Safari / Firefox 68+ /
+ * Edge 88+).
+ */
+.descCollapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.descExpanded {
+  display: block;
+}
+
+/*
+ * Plain-text "show more / show less" affordance.  Looks like a tiny link
+ * rather than a button so it doesn't distract from the description text
+ * itself; the click target is generous (full-width row baseline) thanks
+ * to the cardRow layout.
+ */
+.descToggle {
+  margin-top: 4px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: rgba(160, 200, 255, 0.65);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.descToggle:hover {
+  color: #a8d0ff;
+}
+
+/*
  * Inline catalogue links inside the famous-atlas block.  Sit on the right of
  * the row alongside the value text rather than as a standalone block link —
  * the famous block already has its own visual rhythm and a full-width link
