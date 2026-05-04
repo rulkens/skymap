@@ -340,7 +340,11 @@ These are deliberately not in this version:
 
 ## License
 
-Personal project; no license declared. Ask before reuse.
+Skymap's source code is released under the MIT License — see [LICENSE](LICENSE)
+for the full text.  Catalog data, imagery, and external service usage carry
+their own citation and licensing requirements (CC-BY-SA, public-domain,
+publication-citation, etc.) — see [ATTRIBUTIONS.md](ATTRIBUTIONS.md) for the
+full enumeration.
 
 ### Camera focus
 
