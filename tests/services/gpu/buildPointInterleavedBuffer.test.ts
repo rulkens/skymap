@@ -155,14 +155,15 @@ describe('buildPointInterleavedBuffer', () => {
     }
   });
 
-  it('mode: with-schechter writes the per-row dim-only-clamped ratios in slot 11', () => {
-    // Place rows at distances < 10 Mpc and > 10 Mpc so we can verify
-    // both regimes: nearby rows produce sub-unity ratios (the LF window
-    // is wider close in), distant rows clamp to 1 (the Schechter density
-    // n(d) drops as d grows past the reference, so nRef/n(d) ≥ 1).
-    // See `computeSchechterRatios.test.ts` for the full math intuition.
+  it('mode: with-schechter writes the per-row soft-capped boost ratios in slot 11', () => {
+    // Place rows across distances spanning the survey range so we can
+    // verify the boost direction: rows past ~10 Mpc should get ratios >1
+    // (we boost sparse far-field rows to compensate for Malmquist), and
+    // every value lands in [1, 1+SOFT_CAP] = [1, 3] thanks to the Reinhard
+    // soft cap.  See `computeSchechterRatios.test.ts` for the full
+    // physical intuition.
     const cloud = makeCloud(5);
-    cloud.positions.set([1, 0, 0, 2, 0, 0, 5, 0, 0, 50, 0, 0, 500, 0, 0]);
+    cloud.positions.set([20, 0, 0, 50, 0, 0, 100, 0, 0, 200, 0, 0, 500, 0, 0]);
     cloud.magG.set([16, 17, 18, 19, 20]);
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
@@ -170,17 +171,17 @@ describe('buildPointInterleavedBuffer', () => {
       priorCount: 0,
       mode: 'with-schechter',
     });
-    let sawSubUnity = false;
+    let sawBoost = false;
     for (let i = 0; i < 5; i++) {
       const r = interleaved[i * SLOTS + 11]!;
       expect(Number.isFinite(r)).toBe(true);
-      expect(r).toBeGreaterThanOrEqual(0);
-      expect(r).toBeLessThanOrEqual(1);
-      if (r < 1) sawSubUnity = true;
+      expect(r).toBeGreaterThanOrEqual(1);
+      expect(r).toBeLessThanOrEqual(3);
+      if (r > 1) sawBoost = true;
     }
-    // At least the d=1 / d=2 / d=5 Mpc galaxies should produce real
-    // ratios < 1 — otherwise the bake silently degraded to fast-mode.
-    expect(sawSubUnity).toBe(true);
+    // The far-field rows should produce ratios > 1 — otherwise the bake
+    // silently degraded to fast-mode (which writes 1.0 into slot 11).
+    expect(sawBoost).toBe(true);
   });
 
   it('shifts the per-survey magG mean toward the SDSS target (≈18)', () => {

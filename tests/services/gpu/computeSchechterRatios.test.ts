@@ -41,9 +41,11 @@ describe('computeSchechterRatios', () => {
     expect(ratios.length).toBe(5);
   });
 
-  it('clamps every value to (0, 1] (dim-only clamp)', () => {
-    // Spread galaxies across distances 1..1000 Mpc; the helper should
-    // produce ratios in [0, 1] for every row.
+  it('clamps every value to [1, 3] (soft-capped boost)', () => {
+    // Spread galaxies across distances 100..1000 Mpc; the helper should
+    // produce ratios in [1, 1 + SOFT_CAP] = [1, 3] for every row, since
+    // every distance > 10 Mpc has r = nRef/n(d) ≥ 1 (boost direction) and
+    // the Reinhard soft cap asymptotes at 1 + SOFT_CAP.
     const cloud = makeCloud(10);
     for (let i = 0; i < 10; i++) {
       cloud.positions[i * 3 + 0] = (i + 1) * 100; // 100, 200, …, 1000
@@ -51,45 +53,39 @@ describe('computeSchechterRatios', () => {
     const ratios = computeSchechterRatios({ cloud, source: Source.SDSS });
     for (let i = 0; i < 10; i++) {
       expect(Number.isFinite(ratios[i]!)).toBe(true);
-      expect(ratios[i]!).toBeGreaterThanOrEqual(0);
-      expect(ratios[i]!).toBeLessThanOrEqual(1);
+      expect(ratios[i]!).toBeGreaterThanOrEqual(1);
+      expect(ratios[i]!).toBeLessThanOrEqual(3);
     }
   });
 
-  it('produces ratios that monotonically decrease with distance', () => {
-    // Physical intuition for the clamped-sqrt-of-(nRef/n(d)) formula:
-    // n(d) integrates the Schechter LF from M_bright to M_lim − μ(d).
-    // As d grows, μ(d) grows, so M_lim − μ(d) DROPS — the integration
-    // window narrows and n(d) DECREASES.  Wait: dist modulus μ = 5·log(d/10)
-    // is positive for d > 10 (so faintest detectable absMag = mLim − μ
-    // gets BRIGHTER, narrower window) → n(d) decreases.  So nRef/n(d)
-    // grows for d > 10 and the clamped sqrt sticks to 1.  For d < 10
-    // the ratio drops below 1.
-    //
-    // Net effect we verify: ratios monotonically NON-INCREASING as d
-    // decreases (i.e. far field stays at the clamped 1, near field
-    // dims).
+  it('produces ratios that monotonically increase with distance', () => {
+    // Physical intuition: nRef = n(d=10 Mpc) is the density ceiling
+    // (faintest galaxies still inside the integration window).  As d
+    // grows past 10 Mpc, μ(d) = 5·log(d/10) grows, the M_lim − μ cutoff
+    // moves brighter, the integration window narrows, n(d) drops, and
+    // r = nRef/n(d) climbs.  The Reinhard soft cap maps r=1 → 1 (no
+    // boost) and r→∞ → 3 (max boost), so ratios should monotonically
+    // INCREASE with distance over the survey range.
     const cloud = makeCloud(3);
-    cloud.positions.set([1, 0, 0, 5, 0, 0, 50, 0, 0]); // 1, 5, 50 Mpc
+    cloud.positions.set([20, 0, 0, 100, 0, 0, 500, 0, 0]); // 20, 100, 500 Mpc
     const ratios = computeSchechterRatios({ cloud, source: Source.SDSS });
-    // Ratios are in (0, 1]; the closer-in galaxy has the smaller value.
     expect(ratios[0]!).toBeLessThanOrEqual(ratios[1]!);
     expect(ratios[1]!).toBeLessThanOrEqual(ratios[2]!);
-    // The far-field galaxy (well past 10 Mpc reference) sticks at 1 (clamped).
-    expect(ratios[2]!).toBe(1);
+    // Far-field row should be visibly boosted above 1 (a galaxy at 500 Mpc
+    // represents many invisible faint companions).
+    expect(ratios[2]!).toBeGreaterThan(1);
   });
 
-  it('writes 0 for galaxies at degenerate distances (n(d) ≤ 0)', () => {
+  it('writes 1 for galaxies at degenerate distances (n(d) ≤ 0)', () => {
     // Place a galaxy at extreme distance where the integration window
-    // collapses — n(d) goes to 0 and the helper should write 0 (avoiding
-    // the infinity that bare division would produce).
+    // collapses — n(d) goes to 0 and the helper should fall back to
+    // ratio = 1 (no boost), avoiding the infinity that bare division
+    // would produce.  Visually those rows render at natural alpha.
     const cloud = makeCloud(1);
     cloud.positions.set([1e9, 0, 0]); // absurd distance
     const ratios = computeSchechterRatios({ cloud, source: Source.SDSS });
-    // The spec is "0 for degenerate"; depending on the exact integral
-    // convergence, we just assert the result is finite and in [0, 1].
     expect(Number.isFinite(ratios[0]!)).toBe(true);
-    expect(ratios[0]!).toBeGreaterThanOrEqual(0);
-    expect(ratios[0]!).toBeLessThanOrEqual(1);
+    expect(ratios[0]!).toBeGreaterThanOrEqual(1);
+    expect(ratios[0]!).toBeLessThanOrEqual(3);
   });
 });
