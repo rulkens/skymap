@@ -83,6 +83,7 @@ ReadMes for the upstream catalogs live in `data/raw/` (`J_ApJS_199_26_ReadMe`, `
 - **`galaxyImageQueue.ts`**: priority queue + concurrency limiter (max 4) for thumbnail fetches. Idempotent enqueue (don't re-add in-flight keys — see the long comment for the bug history).
 - **`galaxyImageFetcher.ts`**: SDSS DR18 ImgCutout (CORS-safe) for SDSS galaxies; CDS hips2fits (CORS-safe DSS proxy) for 2MRS/GLADE.
 - **`engine.ts`**: per-frame loop. Per-galaxy `apparentSizePx` gates thumbnail enqueue — but the inner loop hoists `Math.tan` and pre-computes `maxCamDistForVisibility` to avoid 3.5M trig calls per frame.
+- **`renderScheduler.ts` + `engine.ts` frame tail**: render-on-demand. `requestRender()` from event handlers wakes the loop; the frame body re-schedules only while `autoRotate || currentTween || hasAnyAxis || queue.inFlightCount > 0 || recent-fade` is true.
 
 ## When the user asks you to…
 

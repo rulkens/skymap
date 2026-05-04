@@ -291,6 +291,25 @@ tests/                Vitest suite, mirrors src/ tree
 
 The split between the engine (in `services/engine/`) and the React tree is the core architectural choice: WebGPU and the per-frame loop are inherently imperative, so they live in a long-running engine that the React UI subscribes to via callbacks. React owns the DOM and the UI-relevant state slices (status, hovered, selected, scale); the engine owns everything that updates 60× per second.
 
+### Render scheduling: render-on-demand
+
+The engine doesn't run a continuous render loop — `frame()` fires
+only when something has changed. Every event handler that mutates
+render-affecting state (mouse drag, wheel zoom, settings change,
+camera tween, image-queue completion, …) calls
+`scheduler.requestRender()`, which schedules exactly one rAF. Inside
+the frame body, after the GPU work is submitted, the tail re-schedules
+*only* when motion is in flight: `autoRotate`, an active camera
+tween, deflected SpaceMouse axes, pending thumbnail fetches, or
+recent thumbnail load-fade. Otherwise the loop pauses.
+
+Idle CPU is effectively zero — no GPU encoding, no per-galaxy
+thumbnail-priority loop, no uniform writes.
+
+The scheduler abstraction lives in
+`src/services/engine/renderScheduler.ts` and is unit-tested
+independently of WebGPU.
+
 ## Browser binary format (SKMP v4)
 
 Little-endian, 16-byte header (`magic = "SKMP"`, `version = 4`, `count`, `reserved`) followed by `count × 64` bytes per point:
