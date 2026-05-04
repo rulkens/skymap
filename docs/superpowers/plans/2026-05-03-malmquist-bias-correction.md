@@ -1002,7 +1002,7 @@ if (options.isotropic) {
     nameIsPopulated(line, 84, 102) &&  // SDSS-DR12 populated
     !nameIsPopulated(line, 8, 36) &&   // GWGC empty
     !nameIsPopulated(line, 37, 66) &&  // HyperLEDA empty
-    !nameIsPopulated(line, 68, 84);    // 2MASS XSC empty
+    !nameIsPopulated(line, 67, 84);    // 2MASS XSC empty (verified against live parser)
   if (inSdssOnly) return null;
 }
 ```
