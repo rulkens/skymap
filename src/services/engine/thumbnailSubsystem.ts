@@ -165,6 +165,86 @@ export function galaxyCacheKey(ra: number, dec: number): string {
   return `${ra.toFixed(5)}_${dec.toFixed(5)}`;
 }
 
+/**
+ * Decide whether (and how) to emit a per-frame ProceduralDiskInstance for
+ * a single galaxy.  Returns the populated instance, or `null` when the
+ * galaxy fails any of the gates: too small on screen, or missing the
+ * orientation data the procedural-disk shader needs.
+ *
+ * ### Why a pure helper rather than inline branching
+ *
+ * The runtime call lives deep inside `runFrame`'s per-galaxy loop, which
+ * isn't directly reachable from a unit test (it requires a full WebGPU
+ * device, an engine bootstrap, and a pre-loaded cloud).  Lifting the
+ * decision into a pure function lets the test suite exercise the branch
+ * boundaries — the `px > fadeStart` gate, the `Number.isFinite`
+ * orientation guard, the smoothstep crossfade math — without standing
+ * up the whole engine.  The runtime path then calls this same helper
+ * inside the loop, so anything proved by the test holds for the live
+ * frame too.
+ *
+ * ### Why the smoothstep shape matches WGSL `smoothstep`
+ *
+ * The points-pass fragment shader (Task 8 of the procedural-disk plan)
+ * fades the screen-aligned billboard out across the same `[fadeStart,
+ * fadeEnd]` band using WGSL's built-in `smoothstep(start, end, x)` —
+ * which is exactly `t * t * (3 - 2 * t)` for `t = clamp((x - start) /
+ * (end - start), 0, 1)`.  We reproduce that cubic bit-for-bit here so
+ * the procedural-disk fade-IN and the points-pass fade-OUT sum to
+ * identically 1.0 across the band.  The user's earlier "double-bright
+ * donut" / "gap in the crossfade" reports were both caused by the two
+ * curves disagreeing on the band's px scale; keeping the smoothstep
+ * shape symmetric closes the loop.
+ *
+ * ### Position / size are passed as scalars, not a vec3 + length
+ *
+ * The caller already has `x`, `y`, `z` in cartesian world units (and
+ * `sizeWorldMpc`) decomposed for its own bookkeeping; rebuilding a
+ * vec3 here just to destructure it again into the returned struct
+ * would be needless allocation in the hot loop.  Tests pass them as
+ * literals.
+ */
+export function maybeEmitProceduralDisk(
+  px: number,
+  ar: number,
+  pa: number,
+  x: number,
+  y: number,
+  z: number,
+  sizeWorldMpc: number,
+  colourIndex: number,
+  fadeStartPx: number,
+  fadeEndPx: number,
+): ProceduralDiskInstance | null {
+  // Apparent-size gate.  Strictly `>` so the band lower edge is exclusive,
+  // matching the original inline check; tests pin this with `8.0001` vs.
+  // `8.0` to catch a future flip to `>=`.
+  if (px <= fadeStartPx) return null;
+  // Orientation guard.  PointCloud columns can carry NaN sentinels for
+  // sources without orientation data (synthetic, partial 2MRS rows); we
+  // can't render an oriented disk without both, so skip rather than
+  // emitting a shader-NaN.
+  if (!Number.isFinite(ar) || !Number.isFinite(pa)) return null;
+
+  // Smoothstep over the [fadeStartPx, fadeEndPx] band — see the
+  // doc-comment above for why this exact cubic.
+  const t = Math.min(
+    1,
+    Math.max(0, (px - fadeStartPx) / (fadeEndPx - fadeStartPx)),
+  );
+  const crossfadeAlpha = t * t * (3 - 2 * t);
+  return {
+    x,
+    y,
+    z,
+    sizeWorldMpc,
+    axisRatio: ar,
+    positionAngleDeg: pa,
+    colourIndex,
+    crossfadeAlpha,
+  };
+}
+
 // ── Public types ────────────────────────────────────────────────────────────
 
 /**
@@ -685,23 +765,16 @@ export function createThumbnailSubsystem(
         // procedural disk only renders for galaxies above 8 px apparent
         // size, which by construction means very nearby (z ≈ 0) galaxies
         // where the K-correction is negligible.
-        if (
-          px > PROCEDURAL_DISK_FADE_START_PX &&
-          Number.isFinite(ar) &&
-          Number.isFinite(pa)
-        ) {
-          const t = Math.min(
-            1,
-            Math.max(
-              0,
-              (px - PROCEDURAL_DISK_FADE_START_PX) /
-                (PROCEDURAL_DISK_FADE_END_PX - PROCEDURAL_DISK_FADE_START_PX),
-            ),
-          );
-          // Smoothstep — same shape as WGSL's smoothstep so the points-
-          // pass fade-out (which uses smoothstep on the same px values)
-          // and this fade-in stay perfectly complementary.
-          const crossfadeAlpha = t * t * (3 - 2 * t);
+        // Cheap pre-gate to short-circuit the colour-index lookup for the
+        // ~all-but-a-handful galaxies that fail the apparent-size threshold.
+        // The helper repeats this check authoritatively, but doing it here
+        // first keeps `pickColourIndex` (a 5-mag-channel switch) out of the
+        // hot path for the bulk of the catalog.  Per-galaxy colour-index
+        // lookup lives at the call-site (not inside the helper) because the
+        // magU/G/R/I/Z columns are typed-array views — keeping the helper
+        // signature scalar-only makes it directly callable from the test
+        // suite without fixturing a whole PointCloud.
+        if (px > PROCEDURAL_DISK_FADE_START_PX) {
           const ci = pickColourIndex(
             cloudSource,
             cloud.magU[i] ?? NaN,
@@ -711,16 +784,17 @@ export function createThumbnailSubsystem(
             cloud.magZ[i] ?? NaN,
           );
           const colourIndex = ci !== null ? ci.colourIndex : 1.0; // 1.0 = mid-ramp fallback
-          proceduralDisks.push({
-            x,
-            y,
-            z,
+          const emitted = maybeEmitProceduralDisk(
+            px,
+            ar,
+            pa,
+            x, y, z,
             sizeWorldMpc,
-            axisRatio: ar,
-            positionAngleDeg: pa,
             colourIndex,
-            crossfadeAlpha,
-          });
+            PROCEDURAL_DISK_FADE_START_PX,
+            PROCEDURAL_DISK_FADE_END_PX,
+          );
+          if (emitted) proceduralDisks.push(emitted);
         }
       }
     }

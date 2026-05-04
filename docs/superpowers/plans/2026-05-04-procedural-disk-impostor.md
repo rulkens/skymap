@@ -1,6 +1,6 @@
 # Procedural Disk Impostor Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Render every galaxy with apparent size > 12 px as a 3D-oriented procedural galaxy impostor (bulge + disk profile) that takes over from the screen-aligned point billboard. No texture dependency, no fetch latency. Fully world-oriented so camera roll/orbit reveals real 3D shape — flying around an inclined galaxy genuinely opens it up to face-on.
 
@@ -57,19 +57,19 @@
 
 **Files:** none.
 
-- [ ] **Step 1: Confirm working tree is clean (or only carries unrelated WIP)**
+- [x] **Step 1: Confirm working tree is clean (or only carries unrelated WIP)**
 
 Run: `git -C /Users/rulkens/Development/js/skymap status`
 
 Expected: any pending changes are clearly unrelated to disks/renderers. If anything in `src/services/gpu/` or `src/services/engine/engine.ts` is uncommitted, commit or stash before starting — those are the surfaces this plan will touch heavily.
 
-- [ ] **Step 2: Confirm tests are green**
+- [x] **Step 2: Confirm tests are green**
 
 Run: `npm test`
 
 Expected: 343/343 pass. If anything is red, fix before starting.
 
-- [ ] **Step 3: Confirm the dev server is running and the renderer is functional**
+- [x] **Step 3: Confirm the dev server is running and the renderer is functional**
 
 Per `CLAUDE.md`, `npm run dev` is left running. Open the canvas in a browser; a galaxy field should be visible. This is the baseline you're going to compare against in Task 10.
 
@@ -84,7 +84,7 @@ Per `CLAUDE.md`, `npm run dev` is left running. Open the canvas in a browser; a 
 
 The two-component brightness model — testable in isolation, then ported verbatim into the fragment shader in Task 5.
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `tests/utils/math/galaxyProfile.test.ts`:
 
@@ -144,13 +144,13 @@ describe('galaxyProfile', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to confirm they fail**
+- [x] **Step 2: Run tests to confirm they fail**
 
 Run: `npx vitest run tests/utils/math/galaxyProfile.test.ts`
 
 Expected: FAIL with "Cannot find module '../../../src/utils/math/galaxyProfile'".
 
-- [ ] **Step 3: Implement the module**
+- [x] **Step 3: Implement the module**
 
 Create `src/utils/math/galaxyProfile.ts`:
 
@@ -239,13 +239,13 @@ export function combinedBrightness(
 }
 ```
 
-- [ ] **Step 4: Run tests to confirm they pass**
+- [x] **Step 4: Run tests to confirm they pass**
 
 Run: `npx vitest run tests/utils/math/galaxyProfile.test.ts`
 
 Expected: 3 + 3 + 3 = 9 tests pass.
 
-- [ ] **Step 5: Add to barrel + commit**
+- [x] **Step 5: Add to barrel + commit**
 
 Append to `src/utils/math/index.ts`:
 
@@ -276,7 +276,7 @@ git commit -m "feat(math): galaxyProfile helpers (bulge + disk Sérsic-like brig
 
 The vertex-buffer record passed to the new renderer.  Mirrors the existing `DiskInstance` type but **without** the texture UV rect (no atlas sampling).
 
-- [ ] **Step 1: Create the type definition**
+- [x] **Step 1: Create the type definition**
 
 Create `src/@types/ProceduralDiskInstance.d.ts`:
 
@@ -328,7 +328,7 @@ export type ProceduralDiskInstance = {
 };
 ```
 
-- [ ] **Step 2: Define the band constants in a co-located place**
+- [x] **Step 2: Define the band constants in a co-located place**
 
 The constants live where the engine emits instances — `src/services/engine/engine.ts`.  At module top, near the existing `APPARENT_SIZE_THRESHOLD_PX = 24`, add:
 
@@ -361,13 +361,13 @@ const PROCEDURAL_DISK_FADE_START_PX = 8;
 const PROCEDURAL_DISK_FADE_END_PX = 14;
 ```
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `npx tsc --noEmit`
 
 Expected: clean.  Nothing imports the new type yet — this just confirms the declaration parses.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/@types/ProceduralDiskInstance.d.ts src/services/engine/engine.ts
@@ -384,11 +384,11 @@ git commit -m "feat(types): ProceduralDiskInstance + crossfade band constants"
 
 The vertex stage is structurally identical to the existing `disks.wgsl` — same orientation math.  Differs only in: no atlas binding, no UV outputs, includes a varying for `colourIndex` and `crossfadeAlpha`.
 
-- [ ] **Step 1: Read the existing diskRenderer vertex stage as reference**
+- [x] **Step 1: Read the existing diskRenderer vertex stage as reference**
 
 Read `src/services/gpu/shaders/disks.wgsl` lines 1–180 (vertex stage + shared structs).  The geometry math (constructing the disk-plane basis from `axisRatio` and `positionAngleDeg`, then projecting corners through `viewProj`) is what we reuse verbatim.
 
-- [ ] **Step 2: Write the new shader**
+- [x] **Step 2: Write the new shader**
 
 Create `src/services/gpu/shaders/proceduralDisks.wgsl`:
 
@@ -532,11 +532,11 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
 
 (Fragment stage written in Task 5.)
 
-- [ ] **Step 3: Typecheck (no-op for WGSL)**
+- [x] **Step 3: Typecheck (no-op for WGSL)**
 
 The shader is loaded as a string at runtime; there's no compile-time check yet.  Skip; we'll validate when the renderer is wired up in Task 6.
 
-- [ ] **Step 4: Commit (vertex-only stub — fragment fills in later)**
+- [x] **Step 4: Commit (vertex-only stub — fragment fills in later)**
 
 Don't commit yet — we'll write the fragment stage next and commit them together as one logical unit.
 
@@ -556,7 +556,7 @@ Don't commit yet — we'll write the fragment stage next and commit them togethe
 
 The procedural shading.  Reads `in.uv` (disk-local in [-1,1]²), computes radial distance, applies the two-component profile, modulates by colour index, multiplies by crossfade alpha, returns RGBA.
 
-- [ ] **Step 1: Append the fragment stage**
+- [x] **Step 1: Append the fragment stage**
 
 Append to `src/services/gpu/shaders/proceduralDisks.wgsl` (after the vertex stage):
 
@@ -640,7 +640,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
 > shorter `tinted` form.  Delete the `let tintedRgb = …` block before
 > committing — it's there only to make the math obvious to a reader.
 
-- [ ] **Step 2: Commit (vertex + fragment together)**
+- [x] **Step 2: Commit (vertex + fragment together)**
 
 ```bash
 git add src/services/gpu/shaders/proceduralDisks.wgsl
@@ -658,7 +658,7 @@ git commit -m "feat(gpu): proceduralDisks.wgsl — 3D-oriented bulge+disk impost
 
 Wraps the shader in a render pipeline.  Closely mirrors `diskRenderer.ts` minus the texture-binding plumbing; the shader's `Uniforms` struct matches what the engine already passes to the disks pass, so we can reuse the same buffer.
 
-- [ ] **Step 1: Read diskRenderer.ts as reference**
+- [x] **Step 1: Read diskRenderer.ts as reference**
 
 Open `src/services/gpu/diskRenderer.ts`.  Note:
 
@@ -667,7 +667,7 @@ Open `src/services/gpu/diskRenderer.ts`.  Note:
 - `draw(passEncoder, viewProj, viewport, camPos, instances)` writes uniforms, packs the per-instance vertex buffer, and issues `setVertexBuffer` + `draw(6, instances.length)`.
 - It uses `'src-alpha-saturated'`-style additive blending (see the colorTargets descriptor — copy that for our pipeline).
 
-- [ ] **Step 2: Write the renderer class**
+- [x] **Step 2: Write the renderer class**
 
 Create `src/services/gpu/proceduralDiskRenderer.ts`:
 
@@ -861,7 +861,7 @@ export class ProceduralDiskRenderer {
 }
 ```
 
-- [ ] **Step 3: Smoke test (renderer constructs without error)**
+- [x] **Step 3: Smoke test (renderer constructs without error)**
 
 Create `tests/services/gpu/proceduralDiskRenderer.test.ts`:
 
@@ -882,7 +882,7 @@ describe('ProceduralDiskRenderer', () => {
 });
 ```
 
-- [ ] **Step 4: Run typecheck + tests**
+- [x] **Step 4: Run typecheck + tests**
 
 Run:
 ```
@@ -892,7 +892,7 @@ npx vitest run tests/services/gpu/proceduralDiskRenderer.test.ts
 
 Expected: typecheck clean; 1 test passes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/services/gpu/proceduralDiskRenderer.ts tests/services/gpu/proceduralDiskRenderer.test.ts
@@ -939,7 +939,7 @@ const proceduralDiskRenderer = new ProceduralDiskRenderer({ device, context, for
 thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralDiskRenderer);
 ```
 
-- [ ] **Step 1: Construct the renderer in engine.ts next to diskRenderer**
+- [x] **Step 1: Construct the renderer in engine.ts next to diskRenderer**
 
 Find the existing diskRenderer construction in `engine.ts` (around line 572) and add immediately below:
 
@@ -956,7 +956,7 @@ Update the `thumbnails.bindToRenderers(...)` call (around line 586) to pass the 
 thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralDiskRenderer);
 ```
 
-- [ ] **Step 2: Extend `bindToRenderers` in thumbnailSubsystem.ts**
+- [x] **Step 2: Extend `bindToRenderers` in thumbnailSubsystem.ts**
 
 Update the type signature on the `ThumbnailSubsystem` interface (around line 205) and the implementation (around line 294):
 
@@ -970,7 +970,7 @@ bindToRenderers(
 
 Stash the new renderer in the same closure pattern the existing renderers use (a module-private `let` set inside `bindToRenderers` and read inside `runFrame`).  Add the import for `ProceduralDiskRenderer` from `../gpu/proceduralDiskRenderer` at the top of the file.
 
-- [ ] **Step 3: Add the `proceduralDisks` instance bucket inside `runFrame`**
+- [x] **Step 3: Add the `proceduralDisks` instance bucket inside `runFrame`**
 
 In `thumbnailSubsystem.ts`'s `runFrame()` function (around line 349-353), alongside the existing `quads` and `disks` arrays, declare a third bucket:
 
@@ -982,7 +982,7 @@ const disks: DiskInstance[] = [];
 const proceduralDisks: ProceduralDiskInstance[] = [];
 ```
 
-- [ ] **Step 4: Lower the outer apparent-size gate**
+- [x] **Step 4: Lower the outer apparent-size gate**
 
 The per-cloud loop currently bails out at `px < APPARENT_SIZE_THRESHOLD_PX` (24).  We need to enter the loop body for any galaxy above 8 px so we can emit a procedural-disk instance even when the textured-disk path won't fire.  Find the early-`continue` on apparent size inside `runFrame` and change:
 
@@ -1006,7 +1006,7 @@ if (px >= APPARENT_SIZE_THRESHOLD_PX) {
 }
 ```
 
-- [ ] **Step 5: Emit a procedural-disk instance whenever px > PROCEDURAL_DISK_FADE_START_PX**
+- [x] **Step 5: Emit a procedural-disk instance whenever px > PROCEDURAL_DISK_FADE_START_PX**
 
 After the bitmap-and-quad/disk branch above, add the procedural-disk emission:
 
@@ -1034,7 +1034,7 @@ if (px > PROCEDURAL_DISK_FADE_START_PX && Number.isFinite(ar) && Number.isFinite
 }
 ```
 
-- [ ] **Step 6: Sort + issue the draw call alongside disks/quads**
+- [x] **Step 6: Sort + issue the draw call alongside disks/quads**
 
 The existing back-to-front sort and the two `.draw()` calls live around lines 586-607 of `thumbnailSubsystem.ts`.  Add the third pass alongside them:
 
@@ -1063,7 +1063,7 @@ if (proceduralDisks.length > 0) {
 
 (The exact draw-call arg list depends on `ProceduralDiskRenderer.draw`'s signature defined in Task 6 — match it.)
 
-- [ ] **Step 7: Typecheck + tests**
+- [x] **Step 7: Typecheck + tests**
 
 Run:
 ```
@@ -1073,13 +1073,13 @@ npm test -- --run
 
 Expected: typecheck clean; all tests pass.
 
-- [ ] **Step 8: Manual visual verification**
+- [x] **Step 8: Manual visual verification**
 
 The dev server has HMR, so a save should suffice — but a hard reload is safer for shader changes.  Find a galaxy that's a small dot (~10 px) and zoom in.  As it grows past 8 px the procedural disk should fade in; past 14 px the point billboard should be invisible.  Most spirals should look 3D-tilted.
 
 If everything's broken (black screen, error in devtools console), most likely cause: WGSL compile error.  Check the dev tools console for the WebGPU validation message and grep for the offending line.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/services/engine/engine.ts src/services/engine/thumbnailSubsystem.ts
@@ -1098,7 +1098,7 @@ git commit -m "feat(engine): emit procedural-disk instances in 8-14 px crossfade
 
 So the point billboard fades out from 8 → 14 px, complementary to the disk's fade-in.
 
-- [ ] **Step 1: Extend the points uniform struct**
+- [x] **Step 1: Extend the points uniform struct**
 
 In `src/services/gpu/shaders/points.wgsl`, find the existing `struct Uniforms` and add at the end (before the closing brace).  The struct currently ends with the Schechter / Malmquist block whose final field is `_pad5: u32` at byte offset 156, total size 160.  Append the new fade-band fields right after:
 
@@ -1121,7 +1121,7 @@ In `src/services/gpu/shaders/points.wgsl`, find the existing `struct Uniforms` a
 
 The struct grows from 160 → 176 bytes (4 × f32 = 16 bytes appended at offsets 160..176).  Update the struct alignment comment at the top of the WGSL file accordingly, and grow `UNIFORM_BYTES` in `pointRenderer.ts` (currently `160`) to `176`.
 
-- [ ] **Step 2: Wire the new fields into the JS-side uniform packing**
+- [x] **Step 2: Wire the new fields into the JS-side uniform packing**
 
 In `pointRenderer.ts`, find the existing uniform packing (`const UNIFORM_BYTES = 160`).  Bump it:
 
@@ -1148,11 +1148,11 @@ draw(
 ): void {
 ```
 
-- [ ] **Step 3: Pass the constants from engine.ts**
+- [x] **Step 3: Pass the constants from engine.ts**
 
 In the engine's points-renderer.draw call, pass `PROCEDURAL_DISK_FADE_START_PX` and `PROCEDURAL_DISK_FADE_END_PX`.
 
-- [ ] **Step 4: Apply the fade-out in the fragment shader**
+- [x] **Step 4: Apply the fade-out in the fragment shader**
 
 In points.wgsl's `fs` (the visual fragment, not `fsPick`), the alpha computation now flows through several stages — the original `let alpha = exp(-r2 * 4.0)` followed by `alpha = alpha * schechterAlpha_`, `alpha = alpha * angWeight`, and `alpha = alpha * in.depthFade`, before the final `return vec4<f32>(rgb * alpha, alpha)`.  We multiply one more factor in at the end:
 
@@ -1175,7 +1175,7 @@ alpha = alpha * pointAlphaMult;
 
 Apply this immediately before the existing `return vec4<f32>(rgb * alpha, alpha);` at the end of the normal-disk path.  The fade chains in after the Schechter / angular / depth-fade multiplications, which is the correct ordering — depth fade and Schechter modulate the point's intrinsic brightness; the procedural-disk crossfade modulates whether we're rendering the point pass at all in this px band.
 
-- [ ] **Step 5: Forward `sizePx` from the vertex shader**
+- [x] **Step 5: Forward `sizePx` from the vertex shader**
 
 `sizePx` is **already computed** in the vertex stage at points.wgsl ~line 782 (`let sizePx = max(u.pointSizePx, apparentPxRadius);`).  We just need to forward it through VSOut.
 
@@ -1197,7 +1197,7 @@ out.sizePx = sizePx;
 
 Also assign `earlyOut.sizePx = 0.0;` along the volume-limit / decimation early-out paths in `vs` (WGSL requires every VSOut field be initialised on every return path).
 
-- [ ] **Step 6: Typecheck + run dev**
+- [x] **Step 6: Typecheck + run dev**
 
 ```
 npx tsc --noEmit
@@ -1206,7 +1206,7 @@ npm test
 
 Reload the dev server and verify the crossfade is smooth — no double-bright "donut" effect at the band edges, no flicker.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/services/gpu/shaders/points.wgsl src/services/gpu/pointRenderer.ts src/services/engine/engine.ts
@@ -1223,7 +1223,7 @@ git commit -m "feat(points): smoothstep alpha fade-out across procedural-disk ba
 
 A focused unit test: given a fixture cloud + fake camera, the per-frame loop emits the expected list of `ProceduralDiskInstance` objects.  The trick: the per-frame loop in `thumbnailSubsystem.ts` is deeply embedded in the subsystem factory and not directly testable.  We don't unit-test the whole subsystem; we extract the per-galaxy emission logic into a pure helper that lives at module scope and call it both from the runtime path and the test.
 
-- [ ] **Step 1: Extract the emission logic to a pure helper**
+- [x] **Step 1: Extract the emission logic to a pure helper**
 
 In `src/services/engine/thumbnailSubsystem.ts` (the same file the runtime call lives in — keeps the helper next to its only caller; promote to a util later if it grows another consumer), lift the per-galaxy procedural-disk push out of the loop into a top-of-module pure function:
 
@@ -1248,7 +1248,7 @@ export function maybeEmitProceduralDisk(
 
 Replace the inline block in the per-frame loop with a call to this helper.
 
-- [ ] **Step 2: Unit-test the helper**
+- [x] **Step 2: Unit-test the helper**
 
 Create `tests/services/engine/proceduralDiskEmission.test.ts`:
 
@@ -1297,7 +1297,7 @@ describe('maybeEmitProceduralDisk', () => {
 });
 ```
 
-- [ ] **Step 3: Run the new tests**
+- [x] **Step 3: Run the new tests**
 
 ```
 npx vitest run tests/services/engine/proceduralDiskEmission.test.ts
@@ -1305,7 +1305,7 @@ npx vitest run tests/services/engine/proceduralDiskEmission.test.ts
 
 Expected: 5 tests pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/services/engine/engine.ts tests/services/engine/proceduralDiskEmission.test.ts
@@ -1318,7 +1318,7 @@ git commit -m "test(engine): unit-test the procedural-disk emission helper"
 
 **Files:** none — manual smoke test only.
 
-- [ ] **Step 1: Hard reload dev server + walk through each survey**
+- [x] **Step 1: Hard reload dev server + walk through each survey**
 
 Verify visually:
 
@@ -1330,7 +1330,7 @@ Verify visually:
 6. **Edge-on galaxies.** Find an axisRatio < 0.3 case (Sombrero is a prominent famous example at 0.58, edge-on spirals like NGC 4565 are < 0.2).  At face-on viewing the disk should look like a thin streak; orbiting around it (using the camera) should reveal the disk plane gradually opening up.
 7. **Pole-degeneracy.** Look near the celestial poles (Dec=±90°).  No disk should look broken — the shader's pole-fallback uses world +Y as the in-plane reference.
 
-- [ ] **Step 2: Tune knobs if needed**
+- [x] **Step 2: Tune knobs if needed**
 
 If the bulge looks too tight or the disk too dim, adjust the constants at the top of `proceduralDisks.wgsl`:
 
@@ -1341,7 +1341,7 @@ If the bulge looks too tight or the disk too dim, adjust the constants at the to
 
 Change in the shader, hard-reload, eyeball, repeat.
 
-- [ ] **Step 3: Commit any tuning**
+- [x] **Step 3: Commit any tuning**
 
 ```bash
 git add src/services/gpu/shaders/proceduralDisks.wgsl
@@ -1356,7 +1356,7 @@ git commit -m "tune(gpu): procedural-disk profile constants for v1 ship"
 
 - Modify: `README.md`
 
-- [ ] **Step 1: Add a subsection under the renderer overview**
+- [x] **Step 1: Add a subsection under the renderer overview**
 
 In `README.md`, find the "Galaxy thumbnails" section (or whichever covers the renderer passes).  Add immediately after:
 
@@ -1385,7 +1385,7 @@ Implementation: `src/services/gpu/proceduralDiskRenderer.ts` +
 `docs/superpowers/plans/2026-05-04-procedural-disk-impostor.md`.
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add README.md

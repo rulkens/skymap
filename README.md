@@ -212,6 +212,54 @@ rectangle against dark space.
 on). Switch it off if you'd rather see the raw point cloud without network
 traffic, or to compare the dot field with and without textures.
 
+## Procedural galaxy disks
+
+Between the dot field (small, screen-aligned billboard) and the real
+thumbnail (large, downloaded JPEG), there's a middle band where a galaxy
+is visibly large enough that the dot looks too sparse but the
+thumbnail-fetch network round-trip would feel laggy. The renderer fills
+that band with a third pass: a **procedural 3D-oriented disk impostor**
+that runs entirely on the GPU, no network, no atlas.
+
+**How it looks:** a soft elliptical disk with a brighter Gaussian bulge
+in the middle and an exponential falloff outward. Hue comes from the
+same colour-index ramp the points pass uses, so a galaxy's procedural
+disk matches its companion point's colour exactly.
+
+**Geometry:** each disk is a 3D quad fixed in world space, oriented by
+the galaxy's catalog axis ratio (b/a → inclination via cos i) and
+position angle (east of north). Foreshortening falls out of the
+perspective projection naturally — orbit the camera and the projected
+ellipse shape changes accordingly. See `disks.wgsl` for the basis-
+construction derivation; the procedural pass reuses that math
+verbatim so the textured-thumbnail pass and the procedural pass agree
+at the crossfade boundary.
+
+**Crossfade band:** apparent size 8 → 14 px. Below 8 px the dot is
+fully bright and no disk renders. Inside the band a `t² (3 − 2t)`
+smoothstep ramps the disk in while the dot fades out by the
+complementary curve `1 − t² (3 − 2t)`; the two curves sum to exactly
+1.0 across the band so the per-galaxy HDR contribution stays constant
+through the transition (no double-bright donut). Above 14 px the
+procedural disk is at full alpha; above 24 px the textured thumbnail
+overlays it with higher fidelity.
+
+**Why three passes (point + procedural + textured) rather than two:**
+fetching a thumbnail for every galaxy that grows past a few pixels
+would slam the SDSS/CDS endpoints and the atlas LRU. The procedural
+pass lets the renderer present "this is a galaxy with a bulge and a
+tilt" all the way down to ~8 px without touching the network. The
+textured pass kicks in only for the relatively small set of galaxies
+that the user has zoomed close enough on to make pixel-level texture
+detail worthwhile.
+
+**Performance:** one extra draw call per frame, with instances
+emitted only for galaxies inside the band (see
+`maybeEmitProceduralDisk` in `thumbnailSubsystem.ts`). The shader is
+~50 lines of WGSL: two `exp` per fragment plus the colour-ramp
+lookup. The fragment cost is dominated by the radial brightness
+profile, not by anything per-galaxy.
+
 ## Brightness controls
 
 Real catalogue galaxies span ~10 magnitudes of apparent brightness — the
