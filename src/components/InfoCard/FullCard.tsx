@@ -231,9 +231,22 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
                 NED
               </a>
               {' · '}
+              {/*
+                Wikipedia link uses names[1] (the NGC/IC catalogue id) when
+                present, falling back to names[0] (the short Messier/Caldwell
+                id) only when there is no second name.
+
+                Why: short ids like "M51" / "C3" almost always resolve to a
+                Wikipedia *disambiguation* page — "M51" lists motorways,
+                rifles, and chess openings before mentioning the galaxy, and
+                "M109" redirects outright to the M109 howitzer.  The NGC/IC
+                slug ("NGC_5194", "IC_342") reliably hits the actual galaxy
+                article.  We URL-encode and replace spaces with underscores
+                the same way Wikipedia's title canonicalisation does.
+              */}
               <a
                 className={styles.externalInline}
-                href={`https://en.wikipedia.org/wiki/${encodeURIComponent(info.famous.names[0]!.replace(/ /g, '_'))}`}
+                href={`https://en.wikipedia.org/wiki/${encodeURIComponent((info.famous.names[1] ?? info.famous.names[0]!).replace(/ /g, '_'))}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
