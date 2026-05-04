@@ -311,7 +311,7 @@ Distance from redshift uses Hubble's law: `d = cz/H₀` with `H₀ = 70 km/s/Mpc
 npm test
 ```
 
-Currently **594 tests across 76 files** (one test in `tests/parsers/famousSeed.test.ts` is currently broken on machines other than the project author's because of a hard-coded absolute path — out of scope for this README).  Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
+Currently **594 tests across 76 files**.  Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
 
 ## Render pipeline
 

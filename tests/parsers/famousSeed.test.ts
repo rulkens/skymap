@@ -208,8 +208,13 @@ describe('parseFamousSeed', () => {
 
   it('parses the real seed file we ship', async () => {
     const fs = await import('node:fs');
-    const path = '/Users/rulkens/Development/js/skymap/data/famous_galaxies.seed.json';
-    const raw = fs.readFileSync(path, 'utf8');
+    const path = await import('node:path');
+    // Resolve relative to the repo root so this test passes anywhere
+    // (CI, fresh clones, contributors' machines), not just on the
+    // project author's laptop.  vitest sets process.cwd() to the
+    // package root by default.
+    const seedPath = path.join(process.cwd(), 'data', 'famous_galaxies.seed.json');
+    const raw = fs.readFileSync(seedPath, 'utf8');
     const entries = parseFamousSeed(raw);
     // Sanity: at least 20 Messier seeds; every entry has a name and an RA.
     expect(entries.length).toBeGreaterThanOrEqual(20);
