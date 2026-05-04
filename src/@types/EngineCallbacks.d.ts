@@ -57,6 +57,12 @@ export type EngineCallbacks = {
    */
   onGalaxyTexturesEnabledChange?: (enabled: boolean) => void;
   /**
+   * Fired when the engine's `setMilkyWayEnabled` updates the flag.
+   * The React shell uses this to drive the SettingsPanel checkbox so
+   * the UI reflects the engine's authoritative state.
+   */
+  onMilkyWayEnabledChange?: (enabled: boolean) => void;
+  /**
    * Optional echo of the highlight-fallback toggle state so the
    * SettingsPanel can stay in sync if the engine ever flips it
    * programmatically (e.g. via a future keyboard shortcut).

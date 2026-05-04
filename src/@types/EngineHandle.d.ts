@@ -74,6 +74,14 @@ export type EngineHandle = {
    */
   setGalaxyTexturesEnabled?: (enabled: boolean) => void;
 
+  /**
+   * Toggle the procedural Milky Way impostor at world origin.  Default
+   * ON (see `data/defaults.ts:DEFAULT_MILKY_WAY_ENABLED`).  Off is a
+   * pure GPU-time saver and a "I want to see the cosmic web without
+   * cartoon foreground" escape hatch.
+   */
+  setMilkyWayEnabled?: (enabled: boolean) => void;
+
   /** Toggle the magenta tint on galaxies whose orientation is fallback. */
   setHighlightFallback?: (enabled: boolean) => void;
   /** Toggle "show only galaxies with real photometric orientation" — fallback rows are discarded. */

@@ -41,6 +41,7 @@ export type EngineSettingsState = {
   brightness: number;
   autoRotate: boolean;
   galaxyTexturesEnabled: boolean;
+  milkyWayEnabled: boolean;
   highlightFallback: boolean;
   realOnlyMode: boolean;
   depthFadeEnabled: boolean;
