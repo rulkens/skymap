@@ -84,8 +84,10 @@ import type { PointRenderer } from '../gpu/pointRenderer';
 import type { ToneMapPass } from '../gpu/toneMapPass';
 import type { QuadRenderer } from '../gpu/quadRenderer';
 import type { DiskRenderer } from '../gpu/diskRenderer';
+import type { MilkyWayRenderer } from '../gpu/milkyWayRenderer';
 import type { ThumbnailSubsystem } from './thumbnailSubsystem';
 import type { FamousMetaEntry, FamousXrefMap } from './famousMetaLoader';
+import { milkyWayFadeAlpha } from '../../utils/math/milkyWayFade';
 
 /**
  * Settings consumed by `pointRenderer.draw` and `toneMapPass.draw`.
@@ -138,6 +140,13 @@ export type RenderFrameSettings = {
    * mid-session shouldn't tear down the subsystem.
    */
   galaxyTexturesEnabled: boolean;
+  /**
+   * Whether to render the procedural Milky Way impostor at the world
+   * origin.  See `services/gpu/milkyWayRenderer.ts` for the rationale.
+   * When false, the pass is skipped entirely (zero GPU cost beyond a
+   * branch in the host CPU code).
+   */
+  milkyWayEnabled: boolean;
 };
 
 /**
@@ -151,12 +160,19 @@ export type RenderFrameInput = {
   canvasWidth: number;
   canvasHeight: number;
   viewProj: mat4;
+  /**
+   * Animation time in seconds for the Milky Way impostor, already
+   * scaled by the engine's chosen "slow but alive" factor (0.25× wall
+   * clock).  See `engine.ts` for the epoch-relative calculation.
+   */
+  milkyWayITimeSec: number;
 
   // ── GPU handles ───────────────────────────────────────────────────────
   device: GPUDevice;
   context: GPUCanvasContext;
   hdrTargetView: GPUTextureView;
   pointRenderer: PointRenderer;
+  milkyWayRenderer: MilkyWayRenderer;
   toneMapPass: ToneMapPass;
   thumbnails: ThumbnailSubsystem;
   /**
@@ -195,10 +211,12 @@ export function renderFrame(input: RenderFrameInput): void {
     canvasWidth,
     canvasHeight,
     viewProj,
+    milkyWayITimeSec,
     device,
     context,
     hdrTargetView,
     pointRenderer,
+    milkyWayRenderer,
     toneMapPass,
     thumbnails,
     quadRenderer,
@@ -255,6 +273,36 @@ export function renderFrame(input: RenderFrameInput): void {
       },
     ],
   });
+
+  // ── Milky Way impostor (procedural backdrop at world origin) ──────
+  //
+  // Drawn before the points pass so per-galaxy point billboards
+  // overdraw the impostor where they overlap (an SDSS row at the
+  // dead centre would compete; in practice there isn't one, but the
+  // ordering is the principled choice regardless).  The pass is
+  // skipped entirely when:
+  //
+  //   - the user has toggled "Show Milky Way" off, or
+  //   - the camera is far enough from the world origin that the
+  //     distance fade has fully attenuated alpha to zero.
+  //
+  // Both are CPU branches; neither costs GPU time when the gate is
+  // closed.  See `utils/math/milkyWayFade.ts` for the band.
+  if (settings.milkyWayEnabled) {
+    const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
+    const fadeAlpha = milkyWayFadeAlpha(camDistMpc);
+    if (fadeAlpha > 0) {
+      milkyWayRenderer.draw(
+        pass,
+        // viewProj is uploaded for ABI symmetry only; the impostor's
+        // vertex stage emits clip-space directly without sampling it.
+        viewProj as Float32Array,
+        [canvasWidth, canvasHeight],
+        fadeAlpha,
+        milkyWayITimeSec,
+      );
+    }
+  }
 
   // ── Point sprites (instanced billboards) ───────────────────────────
   //

@@ -118,6 +118,15 @@ function makeMockPointRenderer(callLog: CallLog) {
   } as any;
 }
 
+function makeMockMilkyWayRenderer(callLog: CallLog) {
+  return {
+    draw: vi.fn(() => {
+      callLog.push('milkyWayRenderer.draw');
+    }),
+    destroy: vi.fn(),
+  } as any;
+}
+
 function makeMockToneMapPass(callLog: CallLog) {
   return {
     draw: vi.fn(() => {
@@ -191,6 +200,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
   const context = makeFakeContext(swapView, callLog);
   const hdrTargetView = makeFakeHdrView();
   const pointRenderer = makeMockPointRenderer(callLog);
+  const milkyWayRenderer = makeMockMilkyWayRenderer(callLog);
   const toneMapPass = makeMockToneMapPass(callLog);
   const thumbnails = makeMockThumbnails(callLog);
   const quadRenderer = makeMockQuadRenderer();
@@ -219,6 +229,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     exposure: 1.0,
     toneMapCurve: ToneMapCurve.Reinhard,
     galaxyTexturesEnabled: true,
+    milkyWayEnabled: true,
     ...(overrides.settings ?? {}),
   };
 
@@ -230,6 +241,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     swapView,
     hdrTargetView,
     pointRenderer,
+    milkyWayRenderer,
     toneMapPass,
     thumbnails,
     quadRenderer,
@@ -241,10 +253,12 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       canvasWidth: 1280,
       canvasHeight: 720,
       viewProj: new Float32Array(16) as unknown as mat4,
+      milkyWayITimeSec: 0,
       device,
       context,
       hdrTargetView,
       pointRenderer,
+      milkyWayRenderer,
       toneMapPass,
       thumbnails,
       quadRenderer,

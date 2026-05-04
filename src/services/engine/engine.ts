@@ -78,6 +78,7 @@ import {
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
+  DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_LOD_MODE,
   DEFAULT_POINT_SIZE_PX,
@@ -112,6 +113,7 @@ import { loadFamousSidecars, remapGladeXrefs } from './famousMetaLoader';
 import { QuadRenderer } from '../gpu/quadRenderer';
 import { DiskRenderer } from '../gpu/diskRenderer';
 import { ProceduralDiskRenderer } from '../gpu/proceduralDiskRenderer';
+import { MilkyWayRenderer } from '../gpu/milkyWayRenderer';
 import {
   createThumbnailSubsystem,
   PROCEDURAL_DISK_FADE_START_PX,
@@ -240,12 +242,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   const fpsCounter = createFpsCounter(60);
   let lastReportedFps: number | null = null;
 
+  /**
+   * Wall-clock epoch (ms, from `performance.now`) snapshot taken at
+   * engine construction.  Per-frame the Milky Way impostor's iTime
+   * is computed as `(performance.now() - milkyWayITimeEpochMs) * 0.001 *
+   * 0.25` — outer factor `0.25` is the slow-but-alive animation scale
+   * decided in the plan.  See `shaders/milkyWayImpostor.wgsl` line
+   * tagged `Match the ShaderToy's TIME macro` for the inner `* 0.1`
+   * factor that runs on top of this.
+   */
+  const milkyWayITimeEpochMs = performance.now();
+
   const state: EngineState = {
     settings: {
       pointSizePx: DEFAULT_POINT_SIZE_PX,
       brightness: DEFAULT_BRIGHTNESS,
       autoRotate: DEFAULT_AUTO_ROTATE,
       galaxyTexturesEnabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
+      milkyWayEnabled: DEFAULT_MILKY_WAY_ENABLED,
       highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
       realOnlyMode: DEFAULT_REAL_ONLY_MODE,
       depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
@@ -593,6 +607,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         context,
         format: 'rgba16float',
         canvas,
+      });
+      // Procedural Milky Way impostor at world origin.  See
+      // `services/gpu/milkyWayRenderer.ts` for the rationale on why this
+      // is a sibling renderer rather than tucked into the per-galaxy
+      // procedural-disk pass, and `utils/math/milkyWayFade.ts` for the
+      // distance-fade band.
+      const milkyWayRenderer = new MilkyWayRenderer({
+        device,
+        format: 'rgba16float',
       });
       // Build the subsystem and hand it the renderer references for
       // atlas-view binding.  The subsystem's `bindToRenderers` is split
@@ -1122,10 +1145,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           context,
           hdrTargetView: hdrTargetRef.view,
           pointRenderer: rendererRef,
+          milkyWayRenderer,
           toneMapPass: toneMapPassRef,
           thumbnails: thumbnailsRef,
           quadRenderer,
           diskRenderer,
+          milkyWayITimeSec: (performance.now() - milkyWayITimeEpochMs) * 0.001 * 0.25,
           settings: {
             pointSizePx: state.settings.pointSizePx,
             brightness: state.settings.brightness,
@@ -1149,6 +1174,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             exposure: state.settings.exposure,
             toneMapCurve: state.settings.toneMapCurve,
             galaxyTexturesEnabled: state.settings.galaxyTexturesEnabled,
+            milkyWayEnabled: state.settings.milkyWayEnabled,
           },
           famousMeta: state.sources.famousMeta,
           famousXrefs: state.sources.famousXrefs,
@@ -1351,6 +1377,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // engine truth (same pattern as the other settings setters above).
       state.settings.galaxyTexturesEnabled = enabled;
       cb.onGalaxyTexturesEnabledChange?.(enabled);
+      state.subsystems.scheduler.requestRender();
+    },
+
+    setMilkyWayEnabled(enabled) {
+      // Mirror of `setGalaxyTexturesEnabled`: mutate the per-frame
+      // setting bag in place (the render-on-demand scheduler will
+      // notice the next tick) and fire the echo callback so React's
+      // SettingsPanel state stays in sync with the engine truth.
+      state.settings.milkyWayEnabled = enabled;
+      cb.onMilkyWayEnabledChange?.(enabled);
       state.subsystems.scheduler.requestRender();
     },
 
