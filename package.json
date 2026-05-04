@@ -2,11 +2,31 @@
   "name": "skymap",
   "version": "0.1.0",
   "private": true,
+  "description": "Interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs.",
   "license": "MIT",
   "author": "Alexander Rulkens <rulkens@gmail.com>",
+  "homepage": "https://skymap.rulkens.com",
   "repository": {
     "type": "git",
     "url": "https://github.com/rulkens/skymap.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rulkens/skymap/issues"
+  },
+  "keywords": [
+    "webgpu",
+    "astronomy",
+    "galaxies",
+    "sdss",
+    "glade",
+    "2mrs",
+    "cosmology",
+    "visualization",
+    "react",
+    "typescript"
+  ],
+  "engines": {
+    "node": ">=20"
   },
   "type": "module",
   "scripts": {

@@ -1,0 +1,46 @@
+name: CI
+
+# Runs on every push to main and every pull request targeting main.
+# The README's CONTRIBUTING.md asks contributors to keep the test suite
+# green; this workflow enforces it.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: typecheck · test · format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # tsc --noEmit on both src and tools tsconfigs.
+      - name: Typecheck
+        run: npm run typecheck
+
+      # vitest run, single pass.
+      # NOTE: tests/parsers/famousSeed.test.ts currently hard-codes an
+      # absolute path that only resolves on the project author's machine
+      # (/Users/rulkens/...).  Until that's made portable, this step will
+      # fail on CI — fix the test (or skip it) before merging.
+      - name: Tests
+        run: npm test
+
+      # Prettier check (no write).  Mirrors `npm run format:check` from
+      # package.json so the same command works locally and in CI.
+      - name: Format check
+        run: npm run format:check
