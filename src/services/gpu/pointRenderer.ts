@@ -301,9 +301,8 @@ const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4; // 160 byt
 
 /**
  * Production path for the off-thread bake.  Spawns a fresh
- * `BuildPointBufferWorker`, ships the input via structured clone (no
- * Transferable list — `BigUint64Array` isn't transferable; see the worker
- * file's doc), waits for the message back, and terminates the worker.
+ * `BuildPointBufferWorker`, ships a *copied* `PointCloud` via `postMessage`'s
+ * Transferable list, waits for the message back, and terminates the worker.
  *
  * Why one worker per call?  Parallel survey fetches resolve in unpredictable
  * order, so SDSS can finish baking while 2MRS is mid-bake.  A long-lived
@@ -314,6 +313,49 @@ const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4; // 160 byt
  * The worker transfers the result's `interleaved` and `isFallbackArr`
  * ArrayBuffers back so we don't pay the 14 + 3.5 MB structured-clone copy
  * for the by-far-largest payloads.
+ *
+ * ### Why we slice-then-transfer the cloud's buffers
+ *
+ * The first revision of this off-thread refactor passed the input cloud via
+ * plain structured clone (`worker.postMessage(input)` with no transfer list).
+ * For a fully-loaded SDSS + GLADE deck (~3.5 M galaxies, 100+ MB of typed-
+ * array bytes) that synchronous structured clone froze the main thread for
+ * **5–10 seconds** before `postMessage` returned, which delayed
+ * `onCloudReady` from firing — the status bar showed only "75 points"
+ * (Famous catalog) for several seconds before the surveys appeared, even
+ * though their `.bin` had already finished decoding.
+ *
+ * The fix: transfer each typed-array's underlying `ArrayBuffer` via the
+ * second argument of `postMessage` (the `Transferable[]` list).  Transfer
+ * is zero-copy in microseconds.  Catch: transferring an ArrayBuffer
+ * *detaches* it on the sender side — every typed-array view over that
+ * buffer becomes a 0-length husk.  But the engine's picker / InfoCard
+ * still reads the original cloud's `objIDs`, `magG`, `axisRatio`, etc.
+ * after the upload kicks off, so we can't detach those buffers in place.
+ *
+ * Solution: `slice(0)` each typed array first.  `Float32Array.prototype.
+ * slice` (and `BigUint64Array.prototype.slice`) returns a fresh typed
+ * array backed by a *new* owned `ArrayBuffer` with the same contents —
+ * a one-shot main-thread memcpy of ~50 ms for 100 MB (cheap compared to
+ * the 5+ s structured clone we paid before).  We then transfer the
+ * cloned buffers, leaving the original cloud completely intact for the
+ * picker / InfoCard.
+ *
+ * The trade-off: copy + transfer is strictly more work than transfer
+ * alone (~50 ms vs ~0 ms), but strictly less than structured clone (~50
+ * ms vs ~5 s).  We can't transfer the original buffers because the
+ * engine retains the cloud — see `cloudLoader.ts` and the picker's
+ * `cloud.magG[i]` reads in `engine.ts`'s hover/click handlers.
+ *
+ * Alternative considered (and rejected for now): split `PointCloud`
+ * into a "core" (positions, magG, axisRatio, PA, diameterKpc — what
+ * the bake needs) and "pickerOnly" (objIDs + the other photometry
+ * bands), keeping the picker-only arrays out of the worker entirely.
+ * That would skip the slice cost on the picker-only arrays, but every
+ * call site that reads the cloud would need to know which slice to
+ * touch.  Cleaner copy-then-transfer is good enough for now (50 ms is
+ * imperceptible) — revisit if profiling shows the memcpy itself
+ * blocking the UI.
  */
 function defaultWorkerRunner(
   input: BuildPointInterleavedBufferInput,
@@ -328,10 +370,47 @@ function defaultWorkerRunner(
       worker.terminate();
       reject(event.error ?? new Error(event.message ?? 'point-bake worker error'));
     };
-    // Structured clone — no transfer list.  `cloud.objIDs` is a
-    // BigUint64Array which is NOT on the Transferable allowlist.  Passing
-    // the cloud through `transfer` would throw at runtime.
-    worker.postMessage(input);
+
+    // Slice every typed array's underlying buffer so we own a fresh,
+    // detachable copy.  `.slice(0)` on a typed array returns a NEW typed
+    // array whose `.buffer` is a fresh ArrayBuffer — distinct from the
+    // engine-owned cloud's buffers.  We can therefore transfer these
+    // safely without detaching anything the rest of the app reads.
+    //
+    // Note on BigUint64Array: even though BigUint64Array itself is NOT on
+    // the Transferable allowlist, its underlying `.buffer` (a plain
+    // ArrayBuffer) IS — and the worker reconstructs a BigUint64Array
+    // view over the received buffer via the structured-clone roundtrip
+    // of the typed-array wrapper.  Structured clone correctly serialises
+    // typed-array views over transferred buffers (HTML spec §StructuredSerialize
+    // step "If value has [[ArrayBufferData]]…").
+    const c = input.cloud;
+    const cloudCopy: PointCloud = {
+      count: c.count,
+      objIDs: new BigUint64Array(c.objIDs.buffer.slice(0)),
+      positions: new Float32Array(c.positions.buffer.slice(0)),
+      magU: new Float32Array(c.magU.buffer.slice(0)),
+      magG: new Float32Array(c.magG.buffer.slice(0)),
+      magR: new Float32Array(c.magR.buffer.slice(0)),
+      magI: new Float32Array(c.magI.buffer.slice(0)),
+      magZ: new Float32Array(c.magZ.buffer.slice(0)),
+      axisRatio: new Float32Array(c.axisRatio.buffer.slice(0)),
+      positionAngleDeg: new Float32Array(c.positionAngleDeg.buffer.slice(0)),
+      diameterKpc: new Float32Array(c.diameterKpc.buffer.slice(0)),
+    };
+    const transfer: Transferable[] = [
+      cloudCopy.objIDs.buffer,
+      cloudCopy.positions.buffer,
+      cloudCopy.magU.buffer,
+      cloudCopy.magG.buffer,
+      cloudCopy.magR.buffer,
+      cloudCopy.magI.buffer,
+      cloudCopy.magZ.buffer,
+      cloudCopy.axisRatio.buffer,
+      cloudCopy.positionAngleDeg.buffer,
+      cloudCopy.diameterKpc.buffer,
+    ];
+    worker.postMessage({ ...input, cloud: cloudCopy }, transfer);
   });
 }
 

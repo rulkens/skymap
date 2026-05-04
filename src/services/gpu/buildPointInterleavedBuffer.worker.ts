@@ -14,15 +14,27 @@
  * `postMessage` carries inputs and outputs via structured clone (with an
  * optional Transferable list to avoid the copy).
  *
- * ### Why structured clone for inputs, Transferable for outputs
+ * ### Why Transferable for both directions (post-2026-05-04 fix)
  *
- * `PointCloud` carries a `BigUint64Array` of object IDs.  That type isn't
- * on the Transferable allowlist — only ArrayBuffer + ImageBitmap + a few
- * others.  Passing the cloud as the second `transfer` argument throws.
- * Solution: omit the transfer list on the way in (structured clone copies
- * the typed arrays — fast in modern engines because they back into a single
- * underlying byte buffer), and only transfer the result's plain
- * `Float32Array.buffer` on the way back.
+ * Originally we shipped the cloud via plain structured clone, on the
+ * mistaken assumption that the cloud's `BigUint64Array` of object IDs
+ * couldn't be transferred (BigInt typed arrays themselves are not on the
+ * Transferable allowlist).  That assumption was wrong: the typed-array
+ * *wrapper* doesn't need to be transferable — only its underlying
+ * `ArrayBuffer` does, and ArrayBuffer IS on the allowlist.  Structured
+ * clone correctly serialises typed-array views over transferred buffers
+ * (HTML spec §StructuredSerialize step "If value has [[ArrayBufferData]]…").
+ *
+ * The structured-clone-without-transfer path froze the main thread for
+ * ~5 s on a 100 MB SDSS+GLADE upload, blocking `onCloudReady` from
+ * firing.  The caller (`pointRenderer.defaultWorkerRunner`) now slices
+ * each typed array's buffer to produce an owned copy and transfers
+ * those slices via the `postMessage` transfer list — a one-shot ~50 ms
+ * memcpy instead of a multi-second structured clone.
+ *
+ * On the way back the result's `interleaved` and `isFallbackArr`
+ * ArrayBuffers are transferred — the worker has no further use for
+ * them and the renderer treats the received bytes as authoritative.
  *
  * ### Lifecycle
  *
