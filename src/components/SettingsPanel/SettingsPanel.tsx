@@ -36,7 +36,7 @@
  * the former #settings-panel block in index.html.
  */
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { LodMode } from '../../@types/LodMode';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
@@ -319,10 +319,60 @@ export function SettingsPanel({
   const showExposureControl =
     exposure !== undefined && onExposureChange !== undefined;
 
+  // ── Collapse state ─────────────────────────────────────────────────────
+  //
+  // Local UI-only state — no engine implications, no echo callback needed.
+  // Default OPEN because the panel is the primary interaction surface;
+  // users discover its existence on first paint.  Once they know it's
+  // there, they can fold it away to reclaim the bottom-left corner.
+  // Session-only by design: a user reload starts open again so the panel
+  // doesn't appear "missing" on a fresh visit.  localStorage persistence
+  // is a separate concern (matches the engine's own treatment of bias
+  // mode, exposure, etc. — none of those persist across reloads either).
+  const [collapsed, setCollapsed] = useState<boolean>(false);
+
   return (
     <div className={styles.settingsPanel} aria-label="Renderer settings">
-      {/* ── Title ────────────────────────────────────────────────────────── */}
-      <div className={styles.panelTitle}>Settings</div>
+      {/* ── Title + collapse toggle ──────────────────────────────────────── */}
+      {/*
+        Title doubles as the click target for collapse/expand.  Using a real
+        <button> rather than the styled-div approach keeps keyboard focus +
+        Enter/Space activation working without a custom onKeyDown handler,
+        and `aria-expanded` lets screen readers announce the current state.
+        The button styles itself to look like the existing title — no visual
+        change when not interacting — but stretches across the panel width
+        so the entire title row is clickable.
+      */}
+      <button
+        type="button"
+        className={styles.panelTitleButton}
+        onClick={() => setCollapsed((v) => !v)}
+        aria-expanded={!collapsed}
+        aria-controls="settings-panel-body"
+      >
+        {/*
+          Chevron sits LEFT of the heading, styled like a list-marker /
+          tree-twirl rather than a right-side dropdown affordance.  This
+          reads visually as "a header with a fold indicator" rather than
+          "a button I should press" — the user's complaint earlier.
+          The whole row stays clickable (cursor: pointer on hover) so
+          discoverability is unchanged.
+        */}
+        <span className={styles.panelTitleChevron} aria-hidden>
+          {collapsed ? '▸' : '▾'}
+        </span>
+        <span className={styles.panelTitle}>Settings</span>
+      </button>
+
+      {/*
+        Body — everything below the title is hidden when collapsed.  We
+        wrap in an `id`-bearing div so `aria-controls` on the title button
+        points at a real element.  Conditional render rather than a CSS
+        `display: none` so React doesn't pay for the off-screen DOM
+        tree — the panel is large.
+      */}
+      {!collapsed && (
+      <div id="settings-panel-body" className={styles.panelContent}>
 
       {/* ── Surveys (rev-2 multi-survey toggles) ─────────────────────────── */}
       {/*
@@ -694,6 +744,8 @@ export function SettingsPanel({
       <button type="button" onClick={onResetCamera}>
         Reset camera
       </button>
+      </div>
+      )}
     </div>
   );
 }

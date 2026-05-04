@@ -13,7 +13,6 @@
   bottom: 16px;
   left: 16px;
   z-index: 10;
-  padding: 12px 14px;
 
   background: rgba(8, 12, 28, 0.65);
   backdrop-filter: blur(10px);
@@ -28,16 +27,84 @@
     Menlo,
     monospace;
   user-select: none;
-  min-width: 200px;
+  /*
+   * Fixed width so the panel doesn't reflow as sections expand / collapse
+   * (e.g., the conditional Schechter slider, the volume-limit absMag
+   * slider, or the density-correction dropdown opening).  260 px fits the
+   * widest survey row ("SDSS · 220,453") plus the toggle, with margin to
+   * spare for narrower controls.  Bump if a future label exceeds it.
+   */
+  width: 300px;
 }
 
 /* "SETTINGS" heading */
 .panelTitle {
-  margin-bottom: 8px;
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(160, 180, 230, 0.5);
+}
+
+/*
+ * Title bar — full-width button wrapping the heading.  We strip *all*
+ * default <button> chrome (background, border, padding, font) so the
+ * row reads as a plain heading.  The chevron sits inside as a list-
+ * marker; nothing here looks like a clickable button until the cursor
+ * lands on it (browser default `cursor: pointer` on a <button>).
+ *
+ * Why a <button> at all: keyboard focus + Enter/Space activation +
+ * `aria-expanded` for screen readers come for free.  A styled <div>
+ * with onClick would need an explicit role, tabIndex, keydown handler.
+ * The CSS reset gives us the heading look without sacrificing semantics.
+ */
+/*
+ * Title row reads as a true section header now: zero outer margin, full-
+ * panel-width border on the bottom only.  We use negative horizontal
+ * margins to break out of the panel container's `padding: 12px 14px` so
+ * the border-bottom spans edge-to-edge inside the rounded panel, and we
+ * re-add the equivalent padding inside so the text isn't flush against
+ * the panel's left/right edges.  The negative top-margin lifts the
+ * header up against the panel's top edge so it sits on the rounded
+ * corner — same trick.
+ */
+.panelTitleButton {
+  display: flex;
+  align-items: baseline;
+  padding: 10px 14px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(160, 200, 255, 0.16);
+  /* Match the panel's rounded top corners so the header doesn't square
+   * off the top edge of the glassmorphic container. */
+  border-radius: 8px 8px 0 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+.panelTitleButton:focus-visible {
+  outline: 1px solid rgba(160, 200, 255, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/*
+ * Chevron sits to the LEFT of the heading like a tree-twirl / list-
+ * marker — visually a punctuation glyph attached to the heading, not a
+ * right-side dropdown indicator.  Dim and small so it doesn't compete
+ * with the heading text for attention.
+ */
+.panelTitleChevron {
+  font-size: 8px;
+  color: rgba(160, 180, 230, 0.4);
+  margin-right: 6px;
+  /* Nudge up slightly for visual balance with the uppercase heading. */
+  position: relative;
+  top: -1px;
+}
+
+.panelContent {
+  padding: 12px 14px;
 }
 
 /* A single label + control row */
