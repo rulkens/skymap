@@ -51,6 +51,11 @@ const SPEC: Record<Source, ColourIndexSpec> = {
   [Source.TwoMRS]: { slotA: 'g', slotB: 'i', rangeMin: 0.7, rangeMax: 1.1, kPerZ: 0.0 },
   [Source.Glade]: { slotA: 'g', slotB: 'r', rangeMin: 0.5, rangeMax: 3.5, kPerZ: 1.0 },
   [Source.Synthetic]: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
+  // Famous entries carry curated optical photometry in SDSS-style slots
+  // (see BAND_LABELS in sources.ts).  Mirror the SDSS spec so the colour
+  // ramp maps g−r cleanly; kPerZ = 0 since these are all very nearby
+  // (z < 0.05) and need no K-correction.
+  [Source.Famous]: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 0.0 },
 };
 
 /**

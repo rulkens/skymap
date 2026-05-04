@@ -92,5 +92,11 @@ export function iauName(source: Source, raDeg: number, decDeg: number): string {
       return `GLADE ${coords}`;
     case Source.Synthetic:
       return `Synth ${coords}`;
+    case Source.Famous:
+      // Famous entries have proper catalogue names (e.g. "M31") stored in
+      // the metadata sidecar.  The IAU designation is used as a fallback
+      // when no curated name is available (e.g. for a new entry pending
+      // metadata enrichment).  "Famous" matches the Source label.
+      return `Famous ${coords}`;
   }
 }

@@ -56,5 +56,13 @@ export function galaxyType(source: Source, mags: GalaxyTypeMags): GalaxyTypeInfo
       const jk = mags.magG - mags.magI;
       return Number.isFinite(jk) ? galaxyTypeFromJminusK(jk) : UNKNOWN;
     }
+    case Source.Famous: {
+      // Famous entries use SDSS-style optical slots (see BAND_LABELS in
+      // sources.ts).  Fall back to u−r like SDSS; most curated entries
+      // won't carry photometry so UNKNOWN is the usual outcome — that's
+      // fine, the InfoCard shows a neutral colour swatch.
+      const ur = mags.magU - mags.magR;
+      return Number.isFinite(ur) ? galaxyTypeFromColor(ur) : UNKNOWN;
+    }
   }
 }
