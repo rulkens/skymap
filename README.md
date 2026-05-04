@@ -351,6 +351,19 @@ These are deliberately not in this version:
 - **Picking on the photometric scale** — same blocker as above.
 - **Mobile / Safari / Firefox support** — limited by partial WebGPU implementations.
 
+## How to cite
+
+If you use Skymap in a publication, talk, or derived work, please cite it
+via the metadata in [`CITATION.cff`](CITATION.cff) — GitHub renders a
+"Cite this repository" button in the sidebar that exposes both BibTeX and
+APA forms automatically.  Once a tagged release is minted on Zenodo, the
+DOI in `CITATION.cff` will resolve to a versioned archive.
+
+The catalog data shown by the renderer (SDSS, 2MRS, GLADE, HyperLEDA,
+2MASS XSC, Wikipedia, DESI Legacy) carries its own citation requirements —
+see [ATTRIBUTIONS.md](ATTRIBUTIONS.md) for the full list of papers each
+catalog asks be cited.
+
 ## License
 
 Skymap's source code is released under the MIT License — see [LICENSE](LICENSE)
