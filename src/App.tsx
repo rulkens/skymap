@@ -377,7 +377,10 @@ export function App(): React.ReactElement {
         When `status` changes, only `StatusBar` re-renders. When `hovered` or
         `selected` changes, only `InfoCard` re-renders. And so on.
       */}
-      <StatusBar status={status} />
+      <StatusBar
+        status={status}
+        liveCount={Object.values(sourceCounts).reduce((a, b) => a + (b ?? 0), 0)}
+      />
       <InfoCard
         hovered={hovered}
         selected={selected}

@@ -27,6 +27,22 @@ import styles from './StatusBar.module.css';
 type StatusBarProps = {
   /** The current engine status, driven by `createEngine`'s `onStatusChange` callback. */
   status: EngineStatus;
+  /**
+   * Live total point count, summed from `onCloudReady` callbacks in App.tsx.
+   *
+   * Why this exists separately from `status.count`: the engine fires
+   * `onStatusChange({ kind: 'ready', count })` exactly once, snapshotted at the
+   * moment the render loop starts.  But `pointRenderer.upload()` is async (the
+   * per-galaxy bake runs in a Web Worker), so when `ready` fires, only the
+   * surveys whose bakes have finished are reflected in `renderer.totalCount()`.
+   * The smaller surveys (2MRS, Famous) typically finish first; SDSS and GLADE
+   * — by far the largest — show up seconds later via `onCloudReady`.
+   *
+   * Passing the live App-side sum here ensures the status bar reflects the
+   * actual on-screen total as each survey lands, rather than freezing at
+   * whatever subset had baked when `ready` fired.
+   */
+  liveCount?: number;
 };
 
 /**
@@ -34,10 +50,10 @@ type StatusBarProps = {
  *
  * @example
  * // In App.tsx:
- * <StatusBar status={status} />
+ * <StatusBar status={status} liveCount={liveCount} />
  */
-export function StatusBar({ status }: StatusBarProps): ReactNode {
-  return <div className={styles.status}>{statusText(status)}</div>;
+export function StatusBar({ status, liveCount }: StatusBarProps): ReactNode {
+  return <div className={styles.status}>{statusText(status, liveCount)}</div>;
 }
 
 /**
@@ -47,7 +63,7 @@ export function StatusBar({ status }: StatusBarProps): ReactNode {
  * easy to extend. TypeScript exhaustiveness checking will warn if a new
  * `kind` variant is added to `EngineStatus` but not handled here.
  */
-function statusText(status: EngineStatus): string {
+function statusText(status: EngineStatus, liveCount?: number): string {
   switch (status.kind) {
     case 'initializing':
       return 'initializing…';
@@ -56,14 +72,20 @@ function statusText(status: EngineStatus): string {
       return 'loading SDSS data…';
 
     case 'ready': {
-      // `count` is the running total across every loaded survey; `source` is the
-      // first-arrived cloud (engine sets it once, stays put — subsequent arrivals
-      // bump the count via `onCloudReady`).  We only flag the synthetic fallback
-      // explicitly because it implies all three real fetches failed.  Real data
-      // (SDSS, 2MRS, GLADE, or any combination) renders without a tag — the
-      // count itself is the proof.
+      // `liveCount` (driven by App.tsx's `onCloudReady` accumulator) is preferred
+      // when present because it grows as each survey's async upload bake finishes
+      // — see the `liveCount` prop docstring for the full rationale.  We fall
+      // back to `status.count` (the engine's snapshot at render-loop start) only
+      // if the live count hasn't been wired up, so the status bar still works
+      // for tests / consumers that haven't supplied `liveCount`.
+      //
+      // `source` is the first-arrived cloud (engine sets it once, stays put).
+      // We only flag the synthetic fallback explicitly because it implies all
+      // three real fetches failed.  Real data (SDSS, 2MRS, GLADE, or any
+      // combination) renders without a tag — the count itself is the proof.
+      const count = liveCount ?? status.count;
       const suffix = status.source === 'synthetic' ? ' (synthetic fallback)' : '';
-      return `WebGPU OK · ${status.count.toLocaleString()} points${suffix} · drag to orbit, wheel to zoom`;
+      return `WebGPU OK · ${count.toLocaleString()} points${suffix} · drag to orbit, wheel to zoom`;
     }
 
     case 'error':
