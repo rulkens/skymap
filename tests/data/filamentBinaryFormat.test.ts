@@ -31,6 +31,25 @@ describe('filament binary format (FILA v1)', () => {
     expect(Array.from(decoded.vertices)).toEqual(Array.from(original.vertices));
   });
 
+  it('round-trips an empty cloud', () => {
+    // Edge case: a catalog filtered down to zero filaments must still
+    // serialise cleanly.  The offset table degenerates to a single [0]
+    // entry (the exclusive-scan invariant: offsets[stripCount] === vertexCount,
+    // and both are zero).  An accidental "off by one" in encode/decode would
+    // surface here as a length mismatch that bypasses every other test.
+    const original: FilamentCloud = {
+      stripCount: 0,
+      vertexCount: 0,
+      stripOffsets: new Uint32Array([0]),
+      vertices: new Float32Array(0),
+    };
+    const decoded = decodeFilaments(encodeFilaments(original));
+    expect(decoded.stripCount).toBe(0);
+    expect(decoded.vertexCount).toBe(0);
+    expect(Array.from(decoded.stripOffsets)).toEqual([0]);
+    expect(decoded.vertices.length).toBe(0);
+  });
+
   it('produces the expected byte length', () => {
     // header 16 + (stripCount+1)*4 + vertexCount*16 = 16 + 12 + 80 = 108
     const buf = encodeFilaments(makeFixture());
