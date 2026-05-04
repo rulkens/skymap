@@ -71,6 +71,7 @@ import { advanceCameraTween, type CameraTween } from '../camera/cameraTween';
 import { vec3 } from 'gl-matrix';
 
 import { autoLodMask } from './autoLod';
+import { createRenderScheduler, type RenderScheduler } from './renderScheduler';
 import { buildPointInfo, maxAbsCoord, niceRound } from './pointInfoBuilder';
 import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
@@ -288,8 +289,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // WebHID API is never touched on browsers that don't support it.
   let spaceMouseInput: SpaceMouseInput | null = null;
 
-  // RAF handle — stored so `destroy()` can cancel the loop cleanly.
-  let rafId = 0;
+  // Render scheduler — owns the single rAF token and the dirty flag.
+  // Built inside the async IIFE because `frame` is defined there; the
+  // scheduler instance is hoisted into the outer closure so `destroy()`
+  // can call its `cancelRender()` from the public handle below.
+  //
+  // Initialised to a no-op shim so the type stays non-nullable; the
+  // real scheduler replaces this once the IIFE finishes setup.
+  let scheduler: RenderScheduler = {
+    requestRender(): void {
+      /* not yet wired */
+    },
+    cancelRender(): void {
+      /* not yet wired */
+    },
+    isScheduled(): boolean {
+      return false;
+    },
+  };
 
   // ── Loaded clouds (one per uploaded survey) ─────────────────────────────
   //
@@ -979,7 +996,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // Snapshot the current camera state into a combined view-projection matrix.
         const vp = cam ? computeViewProj(cam) : null;
         if (!vp || !renderer) {
-          rafId = requestAnimationFrame(frame);
+          // Camera/renderer not ready yet — try again next frame.
+          // (This branch only fires during the brief window between
+          // engine startup and the first cloud landing; once both are
+          // present it's never taken.)
+          scheduler.requestRender();
           return;
         }
 
@@ -1452,7 +1473,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             (s) => ((visibleSourceMask >> s.source) & 1) !== 0,
           );
           if (visibleSources.length === 0) {
-            rafId = requestAnimationFrame(frame);
+            // No surveys are visible right now (user toggled them all
+            // off).  Let the loop sleep — the next setSourceVisible
+            // call will wake it.
             return;
           }
 
@@ -1477,12 +1500,34 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             });
         }
 
-        // Schedule the next frame. `requestAnimationFrame` syncs to the display
-        // refresh rate and pauses automatically when the tab is hidden.
-        rafId = requestAnimationFrame(frame);
+        // ── Render-on-demand: continue ticking ONLY if motion or async
+        // work is in flight.  Otherwise the loop sleeps; event handlers
+        // and engine handle setters call scheduler.requestRender() to
+        // wake it for one frame each.
+        //
+        // Predicate breakdown:
+        //   - autoRotate: continuous yaw advancement; render every frame.
+        //   - currentTween: easeOutCubic interpolation; render until
+        //     advanceCameraTween reports finished and clears the ref.
+        //   - hasAnyAxis(latestSpaceMouseAxes): puck deflected; render
+        //     every frame to apply the per-frame velocity.
+        //   - queue.inFlightCount(): a thumbnail fetch is racing the
+        //     network; when it lands the onResult uploads to the atlas
+        //     and (via Task 5) calls requestRender() — but we keep one
+        //     frame queued anyway so the load-fade lerp ramps smoothly.
+        const stillAnimating =
+          autoRotate ||
+          currentTween !== null ||
+          hasAnyAxis(latestSpaceMouseAxes) ||
+          queue.inFlightCount() > 0;
+        if (stillAnimating) scheduler.requestRender();
       }
 
-      rafId = requestAnimationFrame(frame);
+      // Build the scheduler now that `frame` is defined, then kick off
+      // the first render.  After that one frame, the loop sleeps until
+      // an event handler or a setter calls scheduler.requestRender().
+      scheduler = createRenderScheduler({ onFrame: frame });
+      scheduler.requestRender();
     } catch (err) {
       // Surface initialisation failures via the status callback so the UI
       // shows a readable message rather than a blank canvas.
@@ -1504,8 +1549,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
 
     destroy() {
-      // 1. Cancel the render loop so no more frames are submitted.
-      cancelAnimationFrame(rafId);
+      // 1. Cancel any in-flight frame so we don't tick after teardown.
+      scheduler.cancelRender();
 
       // 2. Remove all canvas event listeners we registered.
       for (const [type, handler] of canvasListeners) {

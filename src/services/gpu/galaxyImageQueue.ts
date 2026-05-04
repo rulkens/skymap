@@ -86,6 +86,21 @@ export class GalaxyImageQueue {
     return new Promise<void>((resolve) => this.drainResolvers.push(resolve));
   }
 
+  /**
+   * Number of fetches currently running (not including pending ones).
+   * Used by the engine's render-on-demand loop to decide whether to
+   * keep ticking — a pending fetch's onResult will dirty the atlas
+   * the moment it lands, so we keep one frame queued while at least
+   * one is live.
+   *
+   * Exposing the count rather than a boolean keeps the API honest:
+   * a future caller might want to throttle differently when 1 fetch
+   * is in flight vs. 4.
+   */
+  inFlightCount(): number {
+    return this.inFlight.size;
+  }
+
   private tryStart(): void {
     while (this.inFlight.size < MAX_CONCURRENT_FETCHES && this.pending.size > 0) {
       const entry = this.popHighestPriority();
