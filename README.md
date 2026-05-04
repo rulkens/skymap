@@ -1,8 +1,29 @@
 # skymap
 
-A WebGPU 3D renderer for galaxy catalogs, built in TypeScript with React for the UI. Hover or click any galaxy to see its sky coordinates, redshift, lookback time, and catalog metadata; pin one to compare against another; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
+**Live demo:** [skymap.rulkens.com](https://skymap.rulkens.com) — open in Chrome or Edge 113+ for WebGPU.
 
-This is a personal learning project — the code is documented didactically throughout. If you're looking to learn WebGPU, GPU picking, or the basics of cosmological coordinate math, the source is meant to be read.
+<!--
+  GIF placeholder — paste an embedded hero GIF here, e.g.
+  ![skymap demo](docs/screenshots/hero.gif).  See
+  docs/screenshots/README.md for the capture checklist.
+-->
+
+An interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs, built in TypeScript with React for the UI. Hover or click any galaxy to see its sky coordinates, redshift, lookback time, and catalog metadata; pin one to compare against another; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
+
+The code is documented didactically throughout — if you're also looking to learn WebGPU, GPU picking, or the basics of cosmological coordinate math, the source is meant to be read.
+
+## Use cases
+
+- **Gravitational-wave host-galaxy candidate exploration** — overlay a GW
+  localisation region on the GLADE-derived nearby-universe catalog to scan the
+  3D volume for plausible electromagnetic-counterpart hosts.
+- **Teaching cosmic large-scale structure** — fly through the SDSS wedge and
+  see filaments, voids, and the Sloan Great Wall directly, without needing to
+  spin up a Jupyter notebook or a desktop visualisation suite.
+- **Public outreach and general curiosity** — a browser-based way to
+  experience the geometry of the local universe: how galaxies cluster, how
+  far apart they really are, and how the Milky Way sits inside the cosmic
+  web.
 
 ## Requirements
 
@@ -122,6 +143,12 @@ poisoning the ramp with NaN.
 
 ## Famous galaxies (curated atlas)
 
+> **Optional.** The renderer works fine without the famous-galaxies bin —
+> survey galaxies still render and the InfoCard still works.  Skip this
+> section entirely if you only want the catalog data.  Build it when you
+> want curated names + hand-fetched high-quality thumbnails for the
+> Messier / NGC greatest-hits.
+
 A separate small catalog of well-known galaxies (Messier + NGC greatest-hits)
 ships alongside the survey data. Entries appear with their curated names
 in the InfoCard and are searchable via the **Cmd+K / Ctrl+K** command
@@ -130,7 +157,7 @@ from the DESI Legacy Imaging service, so famous galaxies always render at
 high quality — even for nearby objects (M31, M33) that survey catalogs
 filter out as too close.
 
-Run order:
+Run order (only if you want the famous-galaxies atlas):
 
 1. `npm run build-all`              — produces `2mrs.bin` + `glade.bin`,
                                       which the famous build needs for cross-match.
@@ -328,7 +355,7 @@ offset  size  field
 
 Old v1/v2/v3 files are no longer accepted — re-run `npm run build-all` to upgrade.
 
-## Out of scope (roadmap)
+## Roadmap
 
 These are deliberately not in this version:
 
@@ -338,9 +365,35 @@ These are deliberately not in this version:
 - **Picking on the photometric scale** — same blocker as above.
 - **Mobile / Safari / Firefox support** — limited by partial WebGPU implementations.
 
+## A note on AI-assisted development
+
+[`CLAUDE.md`](CLAUDE.md) at the repo root is onboarding guidance for AI
+coding assistants (Claude Code in particular).  It's not load-bearing
+for the build or runtime — humans don't need to read it, and removing
+it wouldn't change anything that ships.  It's there because parts of
+this project were developed with AI assistance and that context is
+useful for future AI-assisted edits.
+
+## How to cite
+
+If you use Skymap in a publication, talk, or derived work, please cite it
+via the metadata in [`CITATION.cff`](CITATION.cff) — GitHub renders a
+"Cite this repository" button in the sidebar that exposes both BibTeX and
+APA forms automatically.  Once a tagged release is minted on Zenodo, the
+DOI in `CITATION.cff` will resolve to a versioned archive.
+
+The catalog data shown by the renderer (SDSS, 2MRS, GLADE, HyperLEDA,
+2MASS XSC, Wikipedia, DESI Legacy) carries its own citation requirements —
+see [ATTRIBUTIONS.md](ATTRIBUTIONS.md) for the full list of papers each
+catalog asks be cited.
+
 ## License
 
-Personal project; no license declared. Ask before reuse.
+Skymap's source code is released under the MIT License — see [LICENSE](LICENSE)
+for the full text.  Catalog data, imagery, and external service usage carry
+their own citation and licensing requirements (CC-BY-SA, public-domain,
+publication-citation, etc.) — see [ATTRIBUTIONS.md](ATTRIBUTIONS.md) for the
+full enumeration.
 
 ### Camera focus
 

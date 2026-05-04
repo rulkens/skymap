@@ -1,0 +1,15 @@
+# Citation File Format — see https://citation-file-format.github.io
+cff-version: 1.2.0
+message: "If you use Skymap in a publication, talk, or derived work, please cite it using the metadata below."
+title: "skymap: Interactive WebGPU explorer for galaxy catalogs"
+type: software
+authors:
+  - family-names: Rulkens
+    given-names: Alexander
+    alias: rulkens
+license: MIT
+url: "https://github.com/rulkens/skymap"
+repository-code: "https://github.com/rulkens/skymap"
+# Once a Zenodo DOI is minted for a release, fill it in here and uncomment.
+# Example: doi: 10.5281/zenodo.0000000
+# doi: TODO-ZENODO-DOI
