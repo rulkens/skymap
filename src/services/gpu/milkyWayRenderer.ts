@@ -18,22 +18,36 @@
  * uniform layout so future refactors that share a uniform-pack helper
  * across passes don't have to special-case this one:
  *
- *   offset 0  | mat4x4<f32> viewProj    — UNUSED (kept for ABI symmetry)
- *   offset 64 | vec2<f32>   viewport    — UNUSED (kept for ABI symmetry)
- *   offset 72 | f32         fadeAlpha   — distance-based alpha, [0..1]
- *   offset 76 | f32         iTime       — animation time (sec * 0.25)
- *   offset 80 | (16 bytes padding for std140-ish 96-byte total)
+ *   offset 0  | mat4x4<f32> viewProj       — vertex stage projects the
+ *                                              world-anchored billboard
+ *   offset 64 | vec2<f32>   viewport       — UNUSED (ABI symmetry)
+ *   offset 72 | f32         fadeAlpha      — distance-based alpha, [0..1]
+ *   offset 76 | f32         iTime          — animation time (sec * 0.25)
+ *   offset 80 | vec3<f32>   cameraPosWorld — drives both the vertex
+ *                                              stage's view-aligned
+ *                                              billboard basis and the
+ *                                              fragment stage's
+ *                                              synthetic-camera ray
+ *                                              origin
+ *   offset 92 | f32         _pad           — alignment padding to 96 B
  *
- * The two UNUSED slots are intentional:
- *   - viewProj: the impostor is emitted directly in clip-space, so the
- *     vertex stage doesn't need a view matrix.  But every other pass in
- *     this engine uploads viewProj in slot 0; mirroring it here lets a
- *     future "renderFrame uniform-pack helper" stay pass-agnostic.
- *   - viewport: same rationale — every other pass uses it for
- *     pxPerRad-style derivations.  This pass doesn't need pixel
- *     coordinates because the fragment shader works in [-1.05, 1.05]
- *     uv space directly, but uploading it costs effectively nothing
- *     and preserves ABI symmetry.
+ * **viewProj is now load-bearing.** Earlier this pass emitted directly
+ * in clip-space (slot 0 was kept "for ABI symmetry") and the impostor
+ * was always full-screen regardless of camera distance.  The
+ * world-anchored billboard fixes that — the vertex stage projects each
+ * corner via viewProj so the quad's apparent angular size on screen
+ * scales as `2 * atan(milkyWayHalfExtent / cameraDistance)`.
+ *
+ * **cameraPosWorld is also load-bearing.** Earlier the fragment stage
+ * hard-coded `ro = vec3(0, 0.7, 2) * 0.75` for its synthetic camera
+ * (the user reported "the galaxy is not moving around when the camera
+ * is moving" because of this).  We now pass the real camera position
+ * and the fragment stage transforms it into the galactic frame to
+ * drive the raymarched render — orbiting reveals different aspects of
+ * the spiral.
+ *
+ * viewport stays unused: the fragment shader works in the impostor's
+ * local UV directly, never in pixel coordinates.
  *
  * ### Why no instance vertex buffer?
  *
@@ -107,19 +121,53 @@ export class MilkyWayRenderer {
         targets: [
           {
             format,
-            // Premultiplied additive — same blend mode as the procedural
-            // disk pass and the points pass, so the impostor composites
-            // correctly with downstream additive contributions when
-            // both are drawing the same pixels.
+            // Pure additive — the Milky Way impostor is *pure
+            // emission* (it adds light to the scene where the spiral is
+            // bright; nothing happens where it isn't).  An earlier
+            // revision used the same premultiplied-OVER blend that the
+            // points / disk passes use:
+            //
+            //   srcFactor: 'one', dstFactor: 'one-minus-src-alpha'
+            //
+            // That's right for textured-thumbnail quads (which COVER
+            // the underlying point billboard with the photographed
+            // galaxy), but wrong for an emissive impostor.  With OVER,
+            // even tiny noise-floor alpha leaking into "dark" corners
+            // — from `pow(0, near_zero)` corner cases in the height
+            // function, or the star-cell sampler returning near-zero
+            // distances at random fragment positions — produces a
+            // faint square outline at the quad boundary because those
+            // fragments end up with a small but non-zero `1 -
+            // src_alpha` term subtracting from the destination.
+            //
+            // Pure additive (`dstFactor: 'one'`) sidesteps the alpha
+            // reasoning entirely: each pixel contributes `col × alpha`
+            // (the premultiplied src colour) ON TOP of whatever was
+            // there before.  Dark fragments contribute zero.  No
+            // square outline.  No mask-shape artefacts.  The user's
+            // earlier report — "the black quad is still there" /
+            // "outside the unit circle is black" — was specifically
+            // this OVER-blend leakage; switching to additive makes
+            // those bugs go away by construction.
+            //
+            // Why this differs from the procedural-disk pass: those
+            // disks render a shaped silhouette (an elliptical disk
+            // with sharp edge) whose brightness *should* darken the
+            // catalog points behind it (because the procedural disk is
+            // representing the galaxy's body, not just emitted light).
+            // The Milky Way impostor isn't shaped like that — it's a
+            // raymarched volumetric glow whose extent is defined by
+            // its own brightness falloff.  Pure additive is the
+            // physically right choice here.
             blend: {
               color: {
                 srcFactor: 'one',
-                dstFactor: 'one-minus-src-alpha',
+                dstFactor: 'one',
                 operation: 'add',
               },
               alpha: {
                 srcFactor: 'one',
-                dstFactor: 'one-minus-src-alpha',
+                dstFactor: 'one',
                 operation: 'add',
               },
             },
@@ -144,6 +192,7 @@ export class MilkyWayRenderer {
     viewport: [number, number],
     fadeAlpha: number,
     iTimeSec: number,
+    cameraPosWorld: [number, number, number],
   ): void {
     // Pack uniforms into a 96-byte ArrayBuffer matching the WGSL
     // `Uniforms` struct layout.  See the class doc-comment for the
@@ -159,7 +208,14 @@ export class MilkyWayRenderer {
     f32[18] = fadeAlpha;
     // iTime (offset 76 / float 19)
     f32[19] = iTimeSec;
-    // floats 20..23 are padding — already zero from ArrayBuffer init.
+    // cameraPosWorld (offsets 80..91 / floats 20..22).  vec3 alignment
+    // is 16 bytes in the WGSL std140-ish layout, so the field starts
+    // at offset 80 (the next multiple of 16 after 76+4=80).  Float 23
+    // is the trailing pad and stays zero — the ArrayBuffer init takes
+    // care of it.
+    f32[20] = cameraPosWorld[0];
+    f32[21] = cameraPosWorld[1];
+    f32[22] = cameraPosWorld[2];
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniforms);
 
     pass.setPipeline(this.pipeline);

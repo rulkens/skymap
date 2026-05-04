@@ -294,12 +294,16 @@ export function renderFrame(input: RenderFrameInput): void {
     if (fadeAlpha > 0) {
       milkyWayRenderer.draw(
         pass,
-        // viewProj is uploaded for ABI symmetry only; the impostor's
-        // vertex stage emits clip-space directly without sampling it.
         viewProj as Float32Array,
         [canvasWidth, canvasHeight],
         fadeAlpha,
         milkyWayITimeSec,
+        // World-space camera position drives both the impostor's
+        // view-aligned billboard basis (vertex stage) and the
+        // fragment stage's synthetic-camera ray origin — the
+        // raymarched spiral now follows the user's orbit instead of
+        // showing the same hard-coded vantage every frame.
+        [drawCamPos[0], drawCamPos[1], drawCamPos[2]],
       );
     }
   }
