@@ -119,11 +119,7 @@ Both files are picked up automatically by the next `npm run build-all`. Both com
 
 ### 4. Reload
 
-The browser fetches all available files in parallel at startup. Surveys arrive progressively. The settings panel (bottom-left) has per-survey checkboxes plus an **Auto LOD** toggle that picks visible surveys based on camera distance:
-
-- `< 200 Mpc` → 2MRS + GLADE (local universe; SDSS too sparse for nearby zooms)
-- `200 – 800 Mpc` → all sources
-- `> 800 Mpc` → SDSS only (the only survey reaching that depth)
+The browser fetches all available files in parallel at startup. Surveys arrive progressively. The settings panel (bottom-left) has per-survey checkboxes for toggling sources on and off.
 
 ### Per-survey colour indices
 
