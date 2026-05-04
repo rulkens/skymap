@@ -1574,6 +1574,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // This lets the Esc handler in App.tsx call this unconditionally.
       if (selectedIndex !== null) {
         setSelected(null);
+        scheduler.requestRender();
       }
     },
 
@@ -1623,16 +1624,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     setPointSize(sizePx) {
       pointSizePx = sizePx;
       cb.onPointSizeChange?.(sizePx);
+      scheduler.requestRender();
     },
 
     setBrightness(value) {
       brightness = value;
       cb.onBrightnessChange?.(value);
+      scheduler.requestRender();
     },
 
     setAutoRotate(enabled) {
       autoRotate = enabled;
       cb.onAutoRotateChange?.(enabled);
+      // Wake the loop — if previously idle, the new autoRotate=true
+      // keeps it ticking via the still-animating predicate; if
+      // toggling off, this single render lets the next frame body
+      // observe `autoRotate=false` and let the loop sleep.
+      scheduler.requestRender();
     },
 
     setGalaxyTexturesEnabled(enabled) {
@@ -1643,6 +1651,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the other settings setters above).
       galaxyTexturesEnabled = enabled;
       cb.onGalaxyTexturesEnabledChange?.(enabled);
+      scheduler.requestRender();
     },
 
     setHighlightFallback(enabled) {
@@ -1651,6 +1660,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the very next rendered frame.
       highlightFallback = enabled;
       cb.onHighlightFallbackChange?.(enabled);
+      scheduler.requestRender();
     },
 
     setRealOnlyMode(enabled) {
@@ -1659,6 +1669,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // path as the highlight toggle.
       realOnlyMode = enabled;
       cb.onRealOnlyModeChange?.(enabled);
+      scheduler.requestRender();
     },
 
     setBiasMode(mode) {
@@ -1717,6 +1728,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           console.error('[engine] Angular re-weight bake failed:', err);
         });
       }
+
+      // Wake the loop so the new biasMode uniform takes effect on the
+      // next rendered frame.  Schechter / angular bakes (above) also
+      // call requestRender from their resolve handlers in Task 5 to
+      // trigger a second render once the GPU buffers are ready.
+      scheduler.requestRender();
     },
 
     setAbsMagLimit(absMag) {
@@ -1727,6 +1744,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // calls overwrite that.
       absMagLimit = absMag;
       cb.onAbsMagLimitChange?.(absMag);
+      scheduler.requestRender();
     },
 
     setExposure(value) {
@@ -1743,6 +1761,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // fire (even on no-op identical values) so the first call
       // seeds React state correctly without a separate code path.
       cb.onExposureChange?.(exposure);
+      scheduler.requestRender();
     },
 
     setToneMapCurve(curve) {
@@ -1757,6 +1776,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // setBiasMode pattern).
       toneMapCurve = curve;
       cb.onToneMapCurveChange?.(curve);
+      scheduler.requestRender();
     },
 
     resetCamera() {
@@ -1774,6 +1794,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cam.yaw = initialCamRef.yaw;
       cam.pitch = initialCamRef.pitch;
       updatePosition(cam);
+      scheduler.requestRender();
     },
 
     focusOn(worldXYZ, diameterKpc) {
@@ -1803,6 +1824,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         fromPitch: cam.pitch,
         toPitch: cam.pitch, // preserve pitch
       };
+      // Kick the loop into motion — the tween's per-frame advance will
+      // keep it ticking via the still-animating predicate until the
+      // tween completes.
+      scheduler.requestRender();
     },
 
     selectFamous(id) {
@@ -1846,6 +1871,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         fromPitch: cam.pitch,
         toPitch: cam.pitch,
       };
+      scheduler.requestRender();
     },
 
     focusOnHome() {
@@ -1869,6 +1895,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         fromPitch: cam.pitch,
         toPitch: initialCamRef.pitch,
       };
+      scheduler.requestRender();
     },
 
     // ── LOD + per-source visibility setters ────────────────────────────────
@@ -1882,6 +1909,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (mode === lodMode) return;
       lodMode = mode;
       cb.onLodModeChange?.(mode);
+      scheduler.requestRender();
     },
 
     setSourceVisible(source, visible) {
@@ -1900,6 +1928,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (next === visibleSourceMask) return;
       visibleSourceMask = next;
       cb.onSourceMaskChange?.(next);
+      scheduler.requestRender();
     },
 
     // ── SpaceMouse 6DOF input setters ─────────────────────────────────────
@@ -1918,6 +1947,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // exceed display refresh) instead of the frame loop.
           onAxes: (axes) => {
             latestSpaceMouseAxes = axes;
+            // Wake the loop. If the puck is deflected, the next
+            // frame's still-animating predicate will keep ticking
+            // (hasAnyAxis returns true).  When the user releases the
+            // puck back to neutral the predicate flips to false on
+            // the next frame and the loop sleeps.  The scheduler
+            // coalesces multiple HID reports per frame into one rAF.
+            scheduler.requestRender();
           },
           // Forward connection-state transitions to the engine's callback so
           // React's "Connected" indicator drops back to false if the puck is
@@ -1929,6 +1965,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             // Wipe the cached axes on disconnect so the per-frame loop stops
             // applying the last reading received before we lost the device.
             if (!connected) latestSpaceMouseAxes = { ...ZERO_AXES };
+            // Wake one frame so the still-animating predicate sees
+            // the zeroed axes and lets the loop sleep cleanly.
+            scheduler.requestRender();
           },
         });
       }
@@ -1940,6 +1979,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Reset the cached axes so the next frame doesn't continue applying
       // the last reading received before disconnect.
       latestSpaceMouseAxes = { ...ZERO_AXES };
+      scheduler.requestRender();
     },
 
     isSpaceMouseConnected() {
