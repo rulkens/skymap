@@ -55,12 +55,7 @@ import { createPickRenderer } from '../gpu/pickRenderer';
 import { createHdrTarget } from '../gpu/hdrTarget';
 import { createToneMapPass } from '../gpu/toneMapPass';
 import { ToneMapCurve } from '../../data/toneMapCurve';
-import {
-  createOrbitCamera,
-  computeViewProj,
-  updatePosition,
-  clampDistance,
-} from '../camera/orbitCamera';
+import { createOrbitCamera, computeViewProj, updatePosition } from '../camera/orbitCamera';
 import { attachOrbitControls } from '../camera/orbitControls';
 import { formatDistance } from '../../utils/format/distance';
 import { ALL_VISIBLE_MASK, Source, maskWith, maskWithout } from '../../data/sources';
@@ -89,6 +84,7 @@ import { vec3 } from 'gl-matrix';
 import { autoLodMask } from './autoLod';
 import { createRenderScheduler, type RenderScheduler } from './renderScheduler';
 import { buildPointInfo, maxAbsCoord, niceRound } from './pointInfoBuilder';
+import { computeInitialCamera, type InitialCam } from './cameraFraming';
 import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 import { loadFamousSidecars, type FamousMetaEntry, type FamousXrefMap } from './famousMetaLoader';
@@ -248,16 +244,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // Written once by the async IIFE after the cloud loads and bbox is known.
   // Read by `resetCamera()` in the public handle. Declared here (outside the
   // IIFE) so the public handle's closure can reach it without hoisting the
-  // entire async block.
-  type InitialCam = {
-    target: [number, number, number];
-    distance: number;
-    yaw: number;
-    pitch: number;
-    fovYRad: number;
-    near: number;
-    far: number;
-  };
+  // entire async block.  The `InitialCam` shape itself lives in
+  // `cameraFraming.ts` alongside the pure helper that produces it.
   let initialCamRef: InitialCam | null = null;
 
   // ── In-flight focus / home tween ────────────────────────────────────────
@@ -747,65 +735,44 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // to give the closest "natural" view to start exploring from, with
       // the auto-LOD kicking surveys in/out as the user zooms.
       //
-      // `bbox` = max abs of any coordinate component (cheap; no sqrt).
-      // `distance` = bbox × INITIAL_FRAME_FACTOR — frames the cloud with a
-      //   comfortable margin.  Lowered from 2.5 to 1.6 so first-time visitors
-      //   land already inside the cluster structure rather than far above it.
-      // `far`      = bbox × 4 — ensures the most distant points aren't clipped.
-      // We deliberately use the LARGEST bbox seen so far across loaded
-      // clouds so the far plane covers every survey's outermost galaxy —
-      // otherwise SDSS's deep galaxies would clip when 2MRS framed first.
-      const INITIAL_FRAME_FACTOR = 1.6;
+      // `bbox` = max abs of any coordinate component across every cloud
+      // loaded so far (cheap; no sqrt).  We deliberately use the LARGEST
+      // bbox seen so the far plane covers every survey's outermost galaxy
+      // — otherwise SDSS's deep galaxies would clip when 2MRS framed first.
+      //
+      // `computeInitialCamera` (cameraFraming.ts) turns the bbox + FOV
+      // into a target/distance/yaw/pitch/near/far snapshot, including the
+      // global zoom-envelope clamp and the empirical INITIAL_FRAME_FACTOR.
       let bbox = maxAbsCoord(firstResult.cloud);
       for (const c of clouds.values()) {
         const cb2 = maxAbsCoord(c);
         if (cb2 > bbox) bbox = cb2;
       }
-      // Clamp to the global zoom envelope so an oversized SDSS bbox can't
-      // start the user above MAX_DISTANCE_MPC (the wheel would then be locked).
-      const camDistance = clampDistance(bbox * INITIAL_FRAME_FACTOR);
-      const camFar = bbox * 4;
+      const fovYRad = (Math.PI / 180) * 60;
+      const initialCam = computeInitialCamera({ bbox, fovYRad });
       const source: CloudSource = firstResult.cloudSource;
 
       cam = createOrbitCamera({
-        target: [0, 0, 0],
-        distance: camDistance,
-        yaw: 0,
-        pitch: 0.3,
-        fovYRad: (Math.PI / 180) * 60,
+        target: initialCam.target,
+        distance: initialCam.distance,
+        yaw: initialCam.yaw,
+        pitch: initialCam.pitch,
+        fovYRad: initialCam.fovYRad,
         aspect: canvas.width / canvas.height,
-        // 0.01 Mpc = 10 kpc — chosen so the focus-on-galaxy tween (which
-        // ends at ~0.12 Mpc from a galaxy, see focusTween.ts
-        // `focusDistanceMpc`) doesn't push the target through the near
-        // plane and clip the whole galaxy out of the frame.  The visual
-        // pass uses additive blending without a depth test, so depth
-        // precision isn't a concern here; the pick pass uses depth32float,
-        // whose ~24-bit mantissa easily handles the 0.01 : (bbox × 4)
-        // ratio at scale.
-        near: 0.01,
-        far: camFar,
+        near: initialCam.near,
+        far: initialCam.far,
       });
 
       // ── Initial camera snapshot for resetCamera() ────────────────────────
       //
-      // We capture the initial framing values now, after the cloud is loaded and
-      // bbox is known, so `resetCamera()` can restore them at any later time.
-      // fovYRad / near / far are copied from `cam` so a future reconfigure of
-      // the camera (e.g. new data file) would naturally be reflected here.
-      // `aspect` is NOT stored here — reset should use the *current* canvas
-      // aspect ratio so the projection is correct after a window resize.
-      //
-      // Assigned to the outer `initialCamRef` so the public `resetCamera()` handle
-      // method can read it after this async block completes.
-      initialCamRef = {
-        target: [0, 0, 0],
-        distance: camDistance, // bbox * 2.5
-        yaw: 0,
-        pitch: 0.3,
-        fovYRad: cam.fovYRad,
-        near: cam.near,
-        far: cam.far,
-      };
+      // Capture the framing values now, after the cloud bbox is known, so
+      // `resetCamera()` can restore them at any later time.  We mirror the
+      // helper's output rather than re-reading from `cam` so future
+      // reconfigures of the camera (e.g. user-driven FOV changes) don't
+      // accidentally drift the reset target.  `aspect` is intentionally not
+      // captured — reset uses the *current* canvas aspect so the projection
+      // stays correct after a window resize.
+      initialCamRef = initialCam;
 
       // ── Pointer event listeners ──────────────────────────────────────────
 
