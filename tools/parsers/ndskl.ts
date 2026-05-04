@@ -176,13 +176,15 @@ export function parseNDskl(text: string): ParsedSkeleton {
  *
  * Two transforms happen here:
  *
- *   1. Strips with zero vertices are silently dropped.  DisPerSE has
- *      been observed to emit empty filaments at the very edges of
+ *   1. Strips with fewer than 2 vertices are silently dropped.  DisPerSE
+ *      has been observed to emit empty filaments at the very edges of
  *      under-resolved volumes (saddle-to-saddle pairings with no
  *      sample points between them).  Including them would produce
  *      stripOffsets[i] === stripOffsets[i+1] which the renderer would
  *      issue a zero-instance draw for — wasted but harmless.  We drop
- *      them to keep the offset table tight.
+ *      them to keep the offset table tight.  1-vertex strips are dropped
+ *      for the same reason: a polyline needs at least 2 endpoints, so a
+ *      single isolated point cannot form an edge.
  *
  *   2. Density is normalised to [0, 1] across all surviving vertices.
  *      DisPerSE's [FILAMENTS DATA] field_value is the absolute density

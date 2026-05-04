@@ -151,7 +151,10 @@ describe('skeletonToFilamentCloud', () => {
     ]);
   });
 
-  it('drops zero-vertex strips defensively', () => {
+  it('drops strips with fewer than 2 vertices', () => {
+    // 1-vertex strips are also dropped because a polyline needs at least
+    // 2 endpoints to form an edge — a single isolated point can never
+    // become a line segment.
     const cloud = skeletonToFilamentCloud({
       strips: [
         { vertices: [], density: [] },
@@ -161,6 +164,27 @@ describe('skeletonToFilamentCloud', () => {
             [4, 5, 6],
           ],
           density: [0.5, 0.5],
+        },
+      ],
+    });
+    expect(cloud.stripCount).toBe(1);
+    expect(cloud.vertexCount).toBe(2);
+  });
+
+  it('drops strips with one vertex (polyline degenerate)', () => {
+    const cloud = skeletonToFilamentCloud({
+      strips: [
+        // A single isolated vertex is degenerate — DisPerSE has been
+        // observed to emit these at the very edges of under-resolved
+        // volumes.  No edge can connect a single point to itself, so
+        // it cannot become a polyline; drop it.
+        { vertices: [[1, 2, 3]], density: [0.5] },
+        {
+          vertices: [
+            [4, 5, 6],
+            [7, 8, 9],
+          ],
+          density: [0.4, 0.6],
         },
       ],
     });
