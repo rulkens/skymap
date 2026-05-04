@@ -52,6 +52,9 @@
 import { initGpu, resizeCanvasToDisplay } from '../gpu/device';
 import { PointRenderer } from '../gpu/pointRenderer';
 import { createPickRenderer } from '../gpu/pickRenderer';
+import { createHdrTarget } from '../gpu/hdrTarget';
+import { createToneMapPass } from '../gpu/toneMapPass';
+import { ToneMapCurve } from '../../data/toneMapCurve';
 import {
   createOrbitCamera,
   computeViewProj,
@@ -190,6 +193,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // we still see plenty of structure.
   let biasMode: BiasMode = BiasMode.None;
   let absMagLimit = -19.0;
+
+  // ── HDR + tone-map state ─────────────────────────────────────────────────
+  //
+  // `exposure` multiplies the HDR signal *before* the tone-map curve
+  // compresses it.  `toneMapCurve` selects which curve runs — see
+  // `data/toneMapCurve.ts` for the five options.  Both are forwarded into
+  // the tone-map pass uniform once per frame; switching at runtime is a
+  // single 4-byte uniform write — no pipeline rebuild.
+  //
+  // Default to Reinhard (not Linear).  Linear is the "no tone-map"
+  // baseline used for comparison; on first paint we want the user
+  // looking at the smooth Reinhard roll-off, which preserves the HDR
+  // signal without saturating cluster cores.
+  let exposure = 1.0;
+  let toneMapCurve: ToneMapCurve = ToneMapCurve.Reinhard;
   // Reserved-for-future fields; Tasks 3 + 4 will populate them.  Until then
   // the renderer reads them but the shader's mode-2/3 branches stay inert.
   let apparentMagLimit = 0;
@@ -333,6 +351,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // Renderer and pickRenderer are null until GPU init completes.
   let renderer: PointRenderer | null = null;
   let pickRendererHandle: ReturnType<typeof createPickRenderer> | null = null;
+  // HDR + tone-map handles share the same null-until-init lifecycle as the
+  // pick renderer above — the IIFE writes into these once the GPU device is
+  // available, and `destroy()` reads them to release the texture and the
+  // tone-map uniform buffer.
+  let hdrTargetHandle: ReturnType<typeof createHdrTarget> | null = null;
+  let toneMapPassHandle: ReturnType<typeof createToneMapPass> | null = null;
 
   // Cleanup function returned by `attachOrbitControls`.
   let detachControls: (() => void) | null = null;
@@ -449,8 +473,43 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       const { device, context, format } = await initGpu(canvas);
 
+      // ── HDR offscreen target + tone-map post-process ──────────────────
+      //
+      // Every visible draw pass (points, quads, disks) writes into a
+      // viewport-sized rgba16float texture instead of the swap chain.  At
+      // the end of the frame, the tone-map pass samples the HDR target
+      // and writes tone-mapped, compressed-into-[0,1] values into the
+      // swap chain.  This eliminates the saturated-white "blown-out"
+      // cluster cores that pure additive blending into bgra8unorm
+      // suffers from, and gives the user a runtime curve selector so
+      // they can compare Linear / Reinhard / Asinh / Gamma 2 / ACES
+      // (see `data/toneMapCurve.ts`).
+      //
+      // The HDR target is recreated on resize (further down in the
+      // frame loop's resize branch) so it always tracks the swap chain
+      // size 1:1 — that's also why the tone-map sampler uses 'nearest'
+      // filtering (each fragment samples a single texel).
+      //
+      // Pick renderer is unaffected — its r32uint integer target is
+      // separate and never wants tone-mapping.  See
+      // `docs/superpowers/plans/2026-05-04-hdr-tonemap.md` for the full
+      // rationale.
+      const hdrTarget = createHdrTarget(device, {
+        width: canvas.width,
+        height: canvas.height,
+      });
+      const toneMapPass = createToneMapPass(device, format);
+      // Mirror into the outer-scoped refs so `destroy()` (defined on the
+      // public handle, outside this IIFE) can release the GPU resources.
+      hdrTargetHandle = hdrTarget;
+      toneMapPassHandle = toneMapPass;
+
       // Build the GPU pipeline; cloud data is loaded below.
-      renderer = new PointRenderer(device, format);
+      // PointRenderer (and QuadRenderer/DiskRenderer further down) target
+      // the HDR rgba16float texture instead of the swap-chain `format`.
+      // Their pipelines bake this into a fixed colour-target descriptor at
+      // construction time, so the format choice has to land here.
+      renderer = new PointRenderer(device, 'rgba16float');
 
       // ── Galaxy thumbnail subsystem ─────────────────────────────────────
       //
@@ -481,13 +540,31 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // can add an `onEvict` hook on the atlas to plug this.
       const atlas = new TextureAtlas(device);
       atlas.initTexture();
-      const quadRenderer = new QuadRenderer({ device, context, format, canvas });
+      // QuadRenderer targets the HDR offscreen texture (see the rationale
+      // at PointRenderer construction above) — it composites galaxy
+      // thumbnails into the same accumulated linear-light buffer the
+      // points pass writes into.
+      const quadRenderer = new QuadRenderer({
+        device,
+        context,
+        format: 'rgba16float',
+        canvas,
+      });
       quadRenderer.bindAtlas(atlas.getTextureView());
       // DiskRenderer shares the same atlas as QuadRenderer — both pull from
       // the same 2048×2048 thumbnail texture.  The engine routes each
       // galaxy to one renderer or the other per frame based on apparent
       // size and orientation-data availability (see the per-frame loop).
-      const diskRenderer = new DiskRenderer({ device, context, format, canvas });
+      // DiskRenderer targets the HDR offscreen texture for the same
+      // reason — large galaxies get a 3D-oriented thumbnail that has to
+      // composite into the same linear-light buffer as the points and
+      // flat-quad passes before tone-mapping.
+      const diskRenderer = new DiskRenderer({
+        device,
+        context,
+        format: 'rgba16float',
+        canvas,
+      });
       diskRenderer.bindAtlas(atlas.getTextureView());
       const queue = new GalaxyImageQueue();
       let frameCounter = 0;
@@ -812,9 +889,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // Resize the swap-chain if the canvas element changed size.
         // `resizeCanvasToDisplay` returns `true` only when dimensions changed,
         // so we patch `cam.aspect` and `updatePosition` only in that branch.
+        //
+        // We also recreate the HDR target at the new viewport size in the
+        // same branch.  The HDR texture is sized 1:1 with the swap chain,
+        // so a stale (smaller / larger) HDR target after a resize would
+        // either smear pixels or render off-canvas.  The tone-map pass
+        // recreates its bind group every frame, so the new view is picked
+        // up automatically on the next call.
         if (cam && resizeCanvasToDisplay(canvas)) {
           cam.aspect = canvas.width / canvas.height;
           updatePosition(cam);
+          hdrTarget.resize({ width: canvas.width, height: canvas.height });
         }
 
         // Refresh the scale-bar legend. Early-returns when nothing changed,
@@ -914,13 +999,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // Clear colour is pure black (r:0, g:0, b:0).
         // We use *additive* blending: starting from black (0,0,0) gives the
         // maximum dynamic range — dense overlap regions bloom bright.
+        //
+        // The colour attachment is the HDR rgba16float offscreen target,
+        // NOT the swap chain.  Every visible pass below (points, quads,
+        // disks) accumulates into this float buffer; the swap chain is
+        // written exactly once at the end of the frame by the tone-map
+        // pass, which compresses the HDR signal into [0, 1].  This is the
+        // critical fix for cluster cores blowing out to flat white at
+        // bgra8unorm — without it, additive overlap >1.0 just clips.
         const pass = encoder.beginRenderPass({
           colorAttachments: [
             {
-              view: context.getCurrentTexture().createView(),
+              view: hdrTarget.view,
               clearValue: { r: 0, g: 0, b: 0, a: 1 },
               loadOp: 'clear', // wipe to clearValue at pass start
-              storeOp: 'store', // write results to the swap-chain texture
+              storeOp: 'store', // write results to the HDR target
             },
           ],
         });
@@ -1290,6 +1383,30 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
         pass.end();
 
+        // ── HDR → swap-chain tone-map ──────────────────────────────────────
+        //
+        // After every additive contribution has been accumulated into the
+        // HDR target, run the fullscreen tone-map post-process to
+        // compress the linear-light values into the swap chain's
+        // displayable range.  Both the HDR pass above and this tone-map
+        // pass are encoded into the same `encoder` — they get submitted
+        // together below, in order, so the GPU sees:
+        //
+        //   1. clear+draw into hdrTarget (points/quads/disks)
+        //   2. fullscreen blit hdrTarget → swap chain (tone-map)
+        //
+        // Switching `toneMapCurve` between Linear / Reinhard / Asinh /
+        // Gamma 2 / ACES is a single 4-byte uniform write inside the
+        // pass — no pipeline rebuild, instant visual A/B.  See
+        // `services/gpu/toneMapPass.ts` for the full curve descriptions.
+        toneMapPass.draw(
+          encoder,
+          context.getCurrentTexture().createView(),
+          hdrTarget.view,
+          exposure,
+          toneMapCurve,
+        );
+
         // Seal the command buffer and send it to the GPU.
         device.queue.submit([encoder.finish()]);
 
@@ -1399,6 +1516,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // 5. Release GPU resources.
       pickRendererHandle?.destroy();
       pickRendererHandle = null;
+      // Tone-map pass owns a 16-byte uniform buffer; HDR target owns the
+      // rgba16float texture.  Both must be released so a hot-reload /
+      // remount doesn't leak a per-mount texture (~16 MB at 2× DPR 1080p).
+      hdrTargetHandle?.destroy();
+      hdrTargetHandle = null;
+      toneMapPassHandle?.destroy();
+      toneMapPassHandle = null;
 
       // 6. Drop references to aid GC.
       renderer = null;
