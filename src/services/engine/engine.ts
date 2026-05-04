@@ -183,7 +183,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //                    finishes `initGpu`.
   //   - `subsystems` → owned long-lived helpers; `tweens`/`spaceMouse`
   //                    construct up-front, the rest land later.
-  //   - `cam` / `initialCamRef` → orbit camera + framing snapshot,
+  //   - `cam` / `initialCamSnapshot` → orbit camera + framing snapshot,
   //                                both null until the first cloud
   //                                loads.
   //
@@ -370,7 +370,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       inputBindings: null,
     },
     cam: null,
-    initialCamRef: null,
+    initialCamSnapshot: null,
   };
 
   /**
@@ -659,6 +659,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // wrong galaxies after the cloudLoader's far-galaxy decimation.
       let gladeIdxRemap: Int32Array | undefined;
 
+      // Promise chain that serialises every `renderer.upload()` call.
+      // See the long doc-comment in the `onResult` body below for *why* —
+      // short version: concurrent `upload()` calls race on the
+      // `priorCount + i` bake of `globalInstanceIdx`, leaving stale GPU
+      // buffers that the shader's selection test then matches in
+      // multiple draws (the user-reported "two selection rings" / "wrong
+      // galaxy in InfoCard" bugs).  Initialising to `Promise.resolve()`
+      // so the first `.then(() => upload(...))` fires immediately.
+      let uploadChain: Promise<void> = Promise.resolve();
+
       const { loadedCount } = await loadAllClouds((result) => {
         // Renderer might have been destroyed mid-load (StrictMode unmount,
         // hot-reload).  Drop the result silently in that case.
@@ -673,11 +683,46 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // `draw()` simply skips any source whose buffer isn't ready yet —
         // it pops in on the first frame after the worker resolves.
         //
-        // Errors from the worker are caught + logged; an upload failure
-        // shouldn't crash the entire engine since other surveys may still
-        // be loading.
-        state.gpu.renderer
-          .upload(result.source, result.cloud)
+        // **Why we serialise uploads via `uploadChain`** (not just fire
+        // them all in parallel):
+        //
+        // The vertex buffer's per-instance `globalInstanceIdx` is baked
+        // as `priorCount + i` at upload time.  When concurrent uploads
+        // race, each computes its `priorCount` from a snapshot taken
+        // before this source's `clouds.set(...)` lands — so two
+        // concurrent uploads may both see "no prior surveys loaded yet"
+        // and both bake `priorCount = 0`.  `recomputeInstanceIdOffsets`
+        // then shifts the canonical-order-later source's
+        // `instanceIdOffset` away from its (now stale) `bakedPriorCount`,
+        // and `rebakeStaleSources` is supposed to catch the divergence
+        // and re-upload — but that function gates re-entry on a single
+        // `this.rebaking` flag, so when SDSS's upload tries to rebake
+        // *during* 2MRS's already-running rebake, the guard returns
+        // early and the rebake-intent is silently dropped.  Result:
+        // stale `globalInstanceIdx` baked into the GPU buffer; the
+        // shader's `realIdx == u.selectedIndex` test matches BOTH the
+        // stale source and a correctly-baked source whose canonical
+        // global-index range overlaps the stale value — drawing two
+        // selection halos and resolving InfoCard data to the wrong
+        // galaxy.  Same root cause for clicks AND for `selectFamous`,
+        // which uses the live `instanceIdOffset` against stale baked
+        // indices.
+        //
+        // Chaining uploads through `uploadChain` makes them strictly
+        // serial: each upload sees a fully-settled `clouds` map before
+        // computing its `priorCount`, so `bakedPriorCount` always
+        // equals the canonical `instanceIdOffset` and
+        // `rebakeStaleSources` only runs on a never-stale baseline.
+        // Trade-off: surveys finish baking one-at-a-time instead of in
+        // parallel — but each bake is in a worker (off the main
+        // thread), the user-perceived "popped in" latency on the first
+        // cloud is unchanged, and the catalogs arrive over the network
+        // mostly serially anyway.  Errors from the worker are caught +
+        // logged; an upload failure must NOT break the chain, so each
+        // `.catch` returns to a settled promise to keep the chain
+        // alive.
+        uploadChain = uploadChain
+          .then(() => state.gpu.renderer?.upload(result.source, result.cloud))
           .then(() => {
             // GPU buffer is now ready — render so the new points appear
             // (the per-frame draw skips sources whose buffer isn't ready
@@ -838,7 +883,29 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // accidentally drift the reset target.  `aspect` is intentionally not
       // captured — reset uses the *current* canvas aspect so the projection
       // stays correct after a window resize.
-      state.initialCamRef = initialCam;
+      //
+      // **Why we clone `target` into a fresh tuple:**
+      //
+      // `createOrbitCamera` does `{ ...init, position: vec3.create() }` —
+      // a shallow spread.  That makes `cam.target` and `initialCam.target`
+      // alias the SAME array object.  Every subsequent `focusOn()` /
+      // tween-advance / orbit-pan call mutates `cam.target` in place via
+      // vec3 ops, which also mutates `initialCam.target`.  By the time
+      // `resetCamera()` later reads `state.initialCamSnapshot.target[0..2]`,
+      // it's reading the most recently-focused galaxy's position back
+      // into itself — i.e. the camera "resets" to whatever it was last
+      // looking at, not to the catalog origin (the user-visible bug:
+      // "reset camera resets the zoom level, but stays focussed on the
+      // currently selected galaxy").
+      //
+      // Fixing it at the spread site (cloning inside `createOrbitCamera`)
+      // would be the architecturally cleaner cure but ripples through the
+      // OrbitCamera type contract; cloning *here* is a one-line fix that
+      // restores the invariant `state.initialCamSnapshot` is meant to uphold.
+      state.initialCamSnapshot = {
+        ...initialCam,
+        target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
+      };
 
       // ── Pointer / keyboard / resize listeners ────────────────────────────
       //
@@ -1078,7 +1145,25 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // wall-clock time.  At high refresh rates (120 Hz) the rotation is
         // smoother but twice as fast.  For a gentle ambient effect this is
         // an acceptable trade-off — no timer bookkeeping needed.
-        if (state.settings.autoRotate && camRef) {
+        //
+        // **Why we skip auto-rotate while a tween is active:**
+        //
+        // The focus / focusOnHome tweens drive `cam.yaw` toward a target
+        // value over ~600 ms.  The `tweens.advance()` call earlier in
+        // this frame already mutated `cam.yaw` to its eased intermediate;
+        // if we then add 0.000873 rad on top *every frame* the tween
+        // runs, yaw lands ~36 frames × 0.000873 rad ≈ 1.8° past the
+        // target by the time the tween completes — and continues
+        // drifting forever after.  The user reports this as
+        // "Reset Camera doesn't actually reset to the centre".  Gating
+        // auto-rotate on `!tweens.isActive()` lets the home tween land
+        // exactly on the target yaw; auto-rotate resumes from that
+        // landing point on the next frame.
+        if (
+          state.settings.autoRotate &&
+          camRef &&
+          !state.subsystems.tweens.isActive()
+        ) {
           camRef.yaw += 0.000873;
           updatePosition(camRef);
         }
@@ -1541,20 +1626,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     resetCamera() {
       // `state.cam` may be null if the engine is destroyed or the cloud
-      // hasn't loaded yet.  We keep `state.initialCamRef` declared in the
+      // hasn't loaded yet.  We keep `state.initialCamSnapshot` declared in the
       // outer state bag (rather than scoped to the async IIFE) so that
       // this handle method can read it after the IIFE completes.
       // Reading `state.cam` at call time gives us the live camera object
       // to mutate, not a stale snapshot.
       const cam = state.cam;
-      const initialCamRef = state.initialCamRef;
-      if (!cam || !initialCamRef) return;
-      cam.target[0] = initialCamRef.target[0];
-      cam.target[1] = initialCamRef.target[1];
-      cam.target[2] = initialCamRef.target[2];
-      cam.distance = initialCamRef.distance;
-      cam.yaw = initialCamRef.yaw;
-      cam.pitch = initialCamRef.pitch;
+      const initialCamSnapshot = state.initialCamSnapshot;
+      if (!cam || !initialCamSnapshot) return;
+      cam.target[0] = initialCamSnapshot.target[0];
+      cam.target[1] = initialCamSnapshot.target[1];
+      cam.target[2] = initialCamSnapshot.target[2];
+      cam.distance = initialCamSnapshot.distance;
+      cam.yaw = initialCamSnapshot.yaw;
+      cam.pitch = initialCamSnapshot.pitch;
       updatePosition(cam);
       state.subsystems.scheduler.requestRender();
     },
@@ -1648,24 +1733,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Camera or initial snapshot may not be ready yet — same pattern as
       // resetCamera.  Both must exist for a meaningful tween.
       const cam = state.cam;
-      const initialCamRef = state.initialCamRef;
-      if (!cam || !initialCamRef) return;
+      const initialCamSnapshot = state.initialCamSnapshot;
+      if (!cam || !initialCamSnapshot) return;
 
       state.subsystems.tweens.start({
         startMs: performance.now(),
         durationMs: FOCUS_TWEEN_MS,
         fromTarget: vec3.clone(cam.target as vec3),
         toTarget: vec3.fromValues(
-          initialCamRef.target[0],
-          initialCamRef.target[1],
-          initialCamRef.target[2],
+          initialCamSnapshot.target[0],
+          initialCamSnapshot.target[1],
+          initialCamSnapshot.target[2],
         ),
         fromDistance: cam.distance,
-        toDistance: initialCamRef.distance,
+        toDistance: initialCamSnapshot.distance,
         fromYaw: cam.yaw,
-        toYaw: initialCamRef.yaw,
+        toYaw: initialCamSnapshot.yaw,
         fromPitch: cam.pitch,
-        toPitch: initialCamRef.pitch,
+        toPitch: initialCamSnapshot.pitch,
       });
       state.subsystems.scheduler.requestRender();
     },

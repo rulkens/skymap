@@ -120,7 +120,7 @@ describe('EngineState type', () => {
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
       },
       cam: null,
-      initialCamRef: null,
+      initialCamSnapshot: null,
     };
 
     expect(state.settings.pointSizePx).toBe(2.5);
@@ -223,7 +223,7 @@ describe('EngineState type', () => {
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
       },
       cam: null,
-      initialCamRef: null,
+      initialCamSnapshot: null,
     };
 
     state.settings.brightness = 2.5;

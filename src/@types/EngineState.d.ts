@@ -31,7 +31,7 @@
  *   - `state.gpu`        — pipelines / textures allocated lazily.
  *   - `state.subsystems` — owned long-lived helpers.
  *   - `state.cam`        — the orbit camera (null until first cloud).
- *   - `state.initialCamRef` — framing snapshot for resetCamera().
+ *   - `state.initialCamSnapshot` — framing snapshot for resetCamera().
  *
  * ### Why a single `const` instead of a class?
  *
@@ -90,5 +90,5 @@ export type EngineState = {
   gpu: EngineGpuHandles;
   subsystems: EngineSubsystemHandles;
   cam: ReturnType<typeof createOrbitCamera> | null;
-  initialCamRef: InitialCam | null;
+  initialCamSnapshot: InitialCam | null;
 };
