@@ -1,8 +1,21 @@
 # skymap
 
-A WebGPU 3D renderer for galaxy catalogs, built in TypeScript with React for the UI. Hover or click any galaxy to see its sky coordinates, redshift, lookback time, and catalog metadata; pin one to compare against another; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
+An interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs, built in TypeScript with React for the UI. Hover or click any galaxy to see its sky coordinates, redshift, lookback time, and catalog metadata; pin one to compare against another; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
 
-This is a personal learning project — the code is documented didactically throughout. If you're looking to learn WebGPU, GPU picking, or the basics of cosmological coordinate math, the source is meant to be read.
+The code is documented didactically throughout — if you're also looking to learn WebGPU, GPU picking, or the basics of cosmological coordinate math, the source is meant to be read.
+
+## Use cases
+
+- **Gravitational-wave host-galaxy candidate exploration** — overlay a GW
+  localisation region on the GLADE-derived nearby-universe catalog to scan the
+  3D volume for plausible electromagnetic-counterpart hosts.
+- **Teaching cosmic large-scale structure** — fly through the SDSS wedge and
+  see filaments, voids, and the Sloan Great Wall directly, without needing to
+  spin up a Jupyter notebook or a desktop visualisation suite.
+- **Public outreach and general curiosity** — a browser-based way to
+  experience the geometry of the local universe: how galaxies cluster, how
+  far apart they really are, and how the Milky Way sits inside the cosmic
+  web.
 
 ## Requirements
 
