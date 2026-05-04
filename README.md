@@ -189,6 +189,48 @@ rectangle against dark space.
 on). Switch it off if you'd rather see the raw point cloud without network
 traffic, or to compare the dot field with and without textures.
 
+## Density correction (Malmquist bias)
+
+Flux-limited surveys over-represent nearby galaxies because faint ones
+are only detectable when close.  Skymap offers four user-selectable
+correction modes via the settings panel:
+
+- **None** — raw catalogue, apparent over-density visible near origin.
+- **Volume-limited** *(recommended)* — show only galaxies brighter than
+  a tunable absolute-magnitude threshold M_lim.  Default M_lim = −19,
+  matching SDSS's spectroscopic completeness near 750 Mpc.  Honest:
+  shows uniformly-detectable subsample.
+- **1/V_max alpha** — keep all data, but dim each galaxy by its
+  inverse maximum-detection volume.  Schmidt 1968 weighting, applied
+  as alpha rather than discard.
+- **Schechter LF** — modulate per-distance alpha by the inverse of the
+  expected number density predicted by each survey's Schechter
+  luminosity function.  Most aggressive correction; visually flattens
+  the local cluster into the cosmic web.
+
+A separate **angular-isotropy** axis (orthogonal to the four modes
+above) addresses GLADE's deep pencil-beam artefacts:
+
+- **GLADE isotropic build** — when `tools/buildAllBins.ts` is run with
+  `--glade-isotropic`, the parser drops GLADE rows whose only parent
+  catalogue is SDSS-DR12 (which is footprint-restricted, ~1/3 of sky).
+  Removes the radial "jet" structures that come from deep SDSS-only
+  entries dominating outside their footprint.
+- **HEALPix angular re-weighting** *(optional, runtime toggle)* — bin
+  the sky into HEALPix cells and modulate per-galaxy alpha by the
+  ratio of median angular density to local angular density.  Visually
+  uniform direction-by-direction independent of which surveys
+  contributed.
+
+The flux-limit table (`src/data/surveyFluxLimits.ts`) hard-codes
+`m_lim` and `(M*, α, φ*)` per survey based on:
+
+- SDSS: Blanton et al. 2003 r-band LF; m_r ≤ 17.77 spec completeness.
+- 2MRS: Huchra et al. 2012 catalogue; K_s ≤ 11.75; Kochanek et al. 2001
+  K-band LF.
+- GLADE: B-band parent samples (HyperLEDA, GWGC); Norberg et al. 2002
+  b_J Schechter as the closest proxy.
+
 ## Coordinate system
 
 We use a right-handed equatorial Cartesian frame with distances in megaparsecs (Mpc):
