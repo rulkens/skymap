@@ -42,8 +42,9 @@ import { mat4 } from 'gl-matrix';
 import type { PointCloud } from '../../@types';
 import { pickColourIndex } from '../../data/colourIndex';
 import { ALL_SOURCES, Source } from '../../data/sources';
+import { surveyFluxLimit } from '../../data/surveyFluxLimits';
 import { fallbackOrientation } from '../../utils/random/fallbackOrientation';
-import { cartesianToRaDecZ } from '../../utils/math';
+import { absoluteFromApparent, cartesianToRaDecZ, vMaxWeight } from '../../utils/math';
 
 // `?raw` is a Vite-specific import suffix. It tells the bundler to import the
 // file's content as a plain string rather than attempting to execute it as
@@ -61,10 +62,11 @@ import shaderSrc from './shaders/points.wgsl?raw';
  *   [x f32, y f32, z f32,
  *    magnitude f32, colorIndex f32,
  *    globalInstanceIdx u32, kPerZ f32,
- *    axisRatio f32, positionAngleDeg f32]
+ *    axisRatio f32, positionAngleDeg f32,
+ *    diameterKpc f32, vMaxWeight f32]
  *
  * The first five slots are interpreted as f32 by the shader; slot 5 is
- * interpreted as u32; slots 6, 7 and 8 are interpreted as f32 again.  JS-side
+ * interpreted as u32; slots 6..10 are interpreted as f32 again.  JS-side
  * we treat the buffer as a flat ArrayBuffer and use Float32Array /
  * Uint32Array views over the same bytes so we can write each slot in its
  * native type without conversion.
@@ -82,19 +84,37 @@ import shaderSrc from './shaders/points.wgsl?raw';
  * circles and edge-on disks as thin streaks.  Until that lands the values
  * are forwarded through the vertex stage but the fragment stage still uses
  * the round `dot(uv, uv)` cutoff, so the visual is unchanged.
+ *
+ * Slot 10 (`vMaxWeight`) is the Malmquist 1/V_max alpha-modulation factor
+ * baked at upload time (Task 3 of the malmquist-bias plan).  Each galaxy's
+ * weight is `clamp((dRef / dMax(M, mLim))³, 0, 1)` — a per-galaxy quantity
+ * that depends on its absolute magnitude and the survey's flux limit.
+ *
+ * ### Why bake at upload time rather than compute per-frame?
+ *
+ * Two reasons.  First, the inputs (apparent magnitude, distance,
+ * surveyFluxLimit(source)) never change after upload — recomputing per
+ * frame would burn ~3.5 M `pow(10, …) / Math.hypot()` evaluations every
+ * draw.  Second, an alternative approach — passing the survey's `mLim`
+ * via the uniform and computing the weight in WGSL — would reintroduce
+ * the `queue.writeBuffer` race we already paid down for `globalInstanceIdx`
+ * (see the long comment on slot 5): every per-source `writeBuffer` between
+ * draws within one submit completes BEFORE any draw runs, so all draws
+ * would read the last `mLim` written.  Baking sidesteps the race entirely
+ * at a cost of 4 bytes per instance (~14 MB at 3.5 M points).
  */
-const SLOTS_PER_POINT = 10;
+const SLOTS_PER_POINT = 11;
 
 /**
  * Byte stride between consecutive per-instance records in the vertex buffer.
  *
- * 10 slots × 4 bytes = 40 bytes. The pipeline's `arrayStride` must match
+ * 11 slots × 4 bytes = 44 bytes. The pipeline's `arrayStride` must match
  * this exactly; if it disagrees WebGPU will either validate-error or
  * silently read garbage.  PickRenderer's pipeline declares the same
- * 40-byte stride and the same attribute table, so the two pipelines stay
+ * 44-byte stride and the same attribute table, so the two pipelines stay
  * compatible with this single vertex buffer layout.
  */
-const POINT_STRIDE = SLOTS_PER_POINT * 4; // 40 bytes
+const POINT_STRIDE = SLOTS_PER_POINT * 4; // 44 bytes
 
 /**
  * Byte offset of the `globalInstanceIdx` slot inside one per-instance record.
@@ -147,6 +167,24 @@ const POSITION_ANGLE_BYTE_OFFSET = 32;
  * instance is ~14 MB at 3.5 M points — comfortably within VRAM budget.
  */
 const DIAMETER_KPC_BYTE_OFFSET = 36;
+
+/**
+ * Byte offset of the `vMaxWeight` slot — the per-galaxy 1/V_max alpha
+ * multiplier used by the Malmquist-bias correction's mode 2.
+ *
+ * Sits at slot index 10 (offset 40) — the new 11th slot.  Baked at
+ * upload time from each galaxy's apparent magnitude, Cartesian distance
+ * and the survey's flux limit.  The fragment shader multiplies the
+ * intensity by this value when `biasMode == 2u` and otherwise ignores
+ * it (via a `select`), so modes 0/1/3 see no change.
+ *
+ * Why a fresh slot rather than re-using one?  None of the existing
+ * slots carry "absolute magnitude" or "max detectable distance", and
+ * computing the weight on the GPU would either cost a `pow(10, ...)`
+ * per vertex or a per-source uniform write that races with the draw
+ * loop (see the SLOTS_PER_POINT comment for the full reasoning).
+ */
+const VMAX_WEIGHT_BYTE_OFFSET = 40;
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.
@@ -354,6 +392,14 @@ export class PointRenderer {
               // billboard's apparent radius (replacing the prior project-wide
               // GALAXY_RADIUS_MPC = 0.06 constant).
               { shaderLocation: 7, offset: DIAMETER_KPC_BYTE_OFFSET, format: 'float32' },
+              // vMaxWeight (f32) — offset 40 bytes.  Per-galaxy 1/V_max
+              // alpha multiplier baked at upload time (Task 3 of the
+              // malmquist-bias plan).  Read by the fragment shader's
+              // intensity computation, gated on `u.biasMode == 2u` via a
+              // `select(1.0, vMaxWeight, …)` so the other three modes are
+              // unaffected.  See VMAX_WEIGHT_BYTE_OFFSET for the design
+              // notes on why we bake instead of computing per-frame.
+              { shaderLocation: 8, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
             ],
           },
         ],
@@ -491,6 +537,30 @@ export class PointRenderer {
     const sourceMean = magCount > 0 ? magSum / magCount : SDSS_TARGET_MEAN_MAG;
     const magOffset = SDSS_TARGET_MEAN_MAG - sourceMean;
 
+    // ── Malmquist 1/V_max weight inputs ──────────────────────────────────────
+    //
+    // Pull the survey's apparent-magnitude flux limit once (m_lim) and pick
+    // a reference distance for the per-galaxy weight normalisation.  Both
+    // are constants over the whole upload, so we hoist them out of the
+    // per-galaxy loop.
+    //
+    // D_REF_MPC = 750 was the plan's tuned default — roughly the midpoint
+    // of typical SDSS camera framing.  An intrinsically-bright galaxy with
+    // dMax ≫ dRef gets a small weight (rendered dimmer because it
+    // represents only a sliver of the comoving volume), while a faint
+    // galaxy with dMax < dRef gets clamped to 1 (it's already representative
+    // of its slice — no extra dimming or boosting).
+    //
+    // We derive each galaxy's absolute magnitude from its observed apparent
+    // magnitude + Cartesian distance from origin (the linear-cosmology
+    // distance the catalog parser baked in).  The shader's existing
+    // distance-modulus calc (used for the volume-limited mode) does the
+    // same thing GPU-side, but for the weight we need the result CPU-side
+    // anyway because we're baking — and `absoluteFromApparent` is the
+    // canonical helper for the equation.
+    const surveyMLim = surveyFluxLimit(source);
+    const D_REF_MPC = 750;
+
     // Pre-compute the "is this galaxy's orientation a fallback?" flag for
     // every row. Done once at upload time (not per-frame); cost is the same
     // hash + Float32 round-trip we'd pay anyway in the InfoCard.
@@ -603,6 +673,25 @@ export class PointRenderer {
       // so we copy through with the same `!` non-null assertion as the
       // sibling SoA fields above.
       interleaved[o + 9] = cloud.diameterKpc[i]!;
+
+      // Slot 10 (offset 40): per-galaxy 1/V_max weight.  Computed from the
+      // *raw* apparent magnitude (NOT `g + magOffset` — the per-survey
+      // brightness-normalisation shift is a visualisation cosmetic, not a
+      // physical change to the photometry) plus the Cartesian distance
+      // from origin.  vMaxWeight() handles NaN inputs by returning 0 — so
+      // galaxies with missing photometry contribute nothing to the
+      // 1/V_max-modulated render, which is exactly the right behaviour
+      // (we don't know their dMax, so we can't trust their weight).
+      const dx = cloud.positions[i * 3 + 0]!;
+      const dy = cloud.positions[i * 3 + 1]!;
+      const dz = cloud.positions[i * 3 + 2]!;
+      const dMpc = Math.hypot(dx, dy, dz);
+      const absMag = absoluteFromApparent(g, dMpc);
+      interleaved[o + 10] = vMaxWeight({
+        absMag,
+        mLim: surveyMLim,
+        dRefMpc: D_REF_MPC,
+      });
     }
 
     // Destroy any previous buffer for this source before replacing it.

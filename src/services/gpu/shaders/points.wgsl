@@ -304,6 +304,22 @@ struct PerVertex {
   // value (real measurement or DEFAULT_GALAXY_DIAMETER_KPC = 30 fallback)
   // in every row.
   @location(7) diameterKpc: f32,
+  // Per-galaxy 1/V_max weight for Malmquist-bias correction.  Baked at
+  // upload time as `clamp((dRef / dMax(M, m_lim))³, 0, 1)` — see
+  // pointRenderer.upload's slot-10 comment for the derivation.  Read by
+  // the fragment shader's intensity computation, but ONLY when
+  // `u.biasMode == 2u` (the 1/V_max literal in src/data/biasMode.ts);
+  // every other mode multiplies by 1.0 via `select`, so the four bias
+  // modes stay independent and a/b-comparable from the SettingsPanel.
+  //
+  // Why per-vertex (not a uniform)?  Each galaxy has a different M and
+  // therefore a different weight.  A uniform would force one weight
+  // value across the whole survey — a strict information loss.  And we
+  // can't compute the weight in WGSL cheaply: it needs a `pow(10, …)`
+  // and the survey's flux limit (different per source), the latter of
+  // which would reintroduce the writeBuffer race we already paid down
+  // for `globalInstanceIdx`.  Baking is the only no-race option.
+  @location(8) vMaxWeight: f32,
 };
 
 // ─── vertex-to-fragment interface ─────────────────────────────────────────────
@@ -728,7 +744,23 @@ fn vs(
   //
   // Finally we multiply by the global brightness knob so the UI can dim/
   // brighten the entire sky without re-uploading point data.
-  out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0) * u.brightness;
+  //
+  // ── 1/V_max alpha modulation (Task 3 of malmquist-bias plan) ─────────────
+  //
+  // When `u.biasMode == 2u` (the `BiasMode.VMax` literal), multiply the
+  // intensity by the per-vertex `vMaxWeight` baked at upload time.  This
+  // dims intrinsically-bright galaxies whose detectability volume V_max
+  // greatly exceeds the reference volume V_ref — they're visible across
+  // a much larger slice of space than their faint companions, so without
+  // the down-weighting they'd over-represent themselves visually.
+  //
+  // The `select(1.0, p.vMaxWeight, …)` keeps the OTHER three modes
+  // (None, VolumeLimited, Schechter) unchanged: each multiplies by 1.0,
+  // so the volume-limited gating from above and the no-correction default
+  // both render exactly as they did before this task.  This is what makes
+  // the SettingsPanel's mode switch a clean A/B/C/D comparison.
+  let vMaxAlpha = select(1.0, p.vMaxWeight, u.biasMode == 2u);
+  out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0) * u.brightness * vMaxAlpha;
 
   // Propagate the GLOBAL instance index (already pre-baked across surveys
   // by pointRenderer.upload) for the pick fragment entry point (fsPick).
