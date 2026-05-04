@@ -50,7 +50,7 @@
  *      regardless of bitmap state).
  *   2. If `bitmapFailed.has(key)` → continue.  Permanent skip.
  *   3. If `bitmapReady.has(key)` → emit instance.  Else enqueue +
- *      continue.  GalaxyImageQueue.enqueue is idempotent on in-flight
+ *      continue.  PriorityQueue.enqueue is idempotent on in-flight
  *      keys (see its own docstring), so we don't need to track
  *      "in-flight" ourselves.
  *
@@ -70,10 +70,10 @@ import { Source } from '../../data/sources';
 import type { PointCloud, QuadInstance } from '../../@types';
 import type { OrbitCamera } from '../../@types';
 import { TextureAtlas } from '../gpu/textureAtlas';
-import { GalaxyImageQueue } from '../gpu/galaxyImageQueue';
+import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import type { QuadRenderer } from '../gpu/quadRenderer';
 import { DiskRenderer, type DiskInstance } from '../gpu/diskRenderer';
-import { fetchGalaxyBitmap } from '../gpu/galaxyImageFetcher';
+import { fetchGalaxyBitmap } from '../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDecZ } from '../../utils/math';
 import type { FamousMetaEntry, FamousXrefMap } from './famousMetaLoader';
 import type { mat4 } from 'gl-matrix';
@@ -246,7 +246,7 @@ export function createThumbnailSubsystem(
   const atlas = new TextureAtlas(device);
   atlas.initTexture();
 
-  const queue = new GalaxyImageQueue();
+  const queue = new PriorityQueue();
 
   // ── Bookkeeping sets ─────────────────────────────────────────────────────
   //
@@ -419,7 +419,7 @@ export function createThumbnailSubsystem(
         if (bitmapFailed.has(key)) continue;
 
         // If we don't have a bitmap yet, kick off a fetch.  The queue
-        // dedupes on in-flight keys (see GalaxyImageQueue.enqueue
+        // dedupes on in-flight keys (see PriorityQueue.enqueue
         // docstring); re-enqueuing only refreshes priority for a still-
         // pending entry.  Priority = apparent-size px so big galaxies
         // load first.

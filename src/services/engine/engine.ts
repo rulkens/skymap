@@ -86,7 +86,7 @@ import {
   DEFAULT_VISIBLE_SOURCE_MASK,
 } from '../../data/defaults';
 import type { LodMode, PointCloud } from '../../@types';
-import type { EngineCallbacks, EngineHandle } from '../../@types';
+import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
 import { vec3 } from 'gl-matrix';
 
 import { autoLodMask } from './autoLod';
@@ -99,7 +99,6 @@ import { computeScaleInfo } from './scaleBar';
 import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 import { loadFamousSidecars } from './famousMetaLoader';
-import type { EngineState } from './engineState';
 
 // ── Galaxy thumbnail subsystem ────────────────────────────────────────────
 //
@@ -152,8 +151,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // Closure variables are slightly simpler to reason about than `this.*` and
   // they keep the internal state completely inaccessible from outside.
 
-  // The whole engine state — see `engineState.ts` for the type-level
-  // map of every field, with per-bag rationale.  Sub-bag groupings:
+  // The whole engine state — see `@types/EngineState.d.ts` (and the
+  // per-sub-bag `.d.ts` siblings) for the type-level map of every field,
+  // with per-bag rationale.  Sub-bag groupings:
   //
   //   - `settings`   → SettingsPanel-surfaced knobs (initial values
   //                    seeded from `data/defaults.ts`, the single
@@ -242,8 +242,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     gpu: {
       // All four GPU handles populate during the async IIFE below
-      // and release in `destroy()`.  See engineState.ts for the
-      // null-until-init lifecycle rationale.
+      // and release in `destroy()`.  See `@types/EngineGpuHandles.d.ts`
+      // for the null-until-init lifecycle rationale.
       renderer: null,
       pickRenderer: null,
       hdrTarget: null,

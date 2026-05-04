@@ -47,7 +47,7 @@ import {
   type BuildPointInterleavedBufferInput,
   type BuildPointInterleavedBufferMode,
   type BuildPointInterleavedBufferResult,
-} from './buildPointInterleavedBuffer';
+} from '../engine/buildPointInterleavedBuffer';
 
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler to
 // emit `buildPointInterleavedBuffer.worker.ts` as a separate worker chunk
@@ -60,15 +60,15 @@ import {
 // In Node-only test environments the `?worker` suffix isn't resolvable;
 // tests inject a synchronous fallback via `setBuildBufferFactory` instead
 // of importing this module.  See the `BuildBufferFactory` type below.
-import BuildPointBufferWorker from './buildPointInterleavedBuffer.worker?worker';
+import BuildPointBufferWorker from '../engine/buildPointInterleavedBuffer.worker?worker';
 
 // Lazy-Schechter worker import — same `?worker` Vite suffix as the main
 // vertex bake, but for the much smaller (single Float32Array) Schechter
 // integral.  Spawned by `applySchechterMode()` the first time the user
 // selects `BiasMode.Schechter`; subsequent toggles reuse the cached
 // `Float32Array` per source for instant re-toggle.
-import ComputeSchechterRatiosWorker from './computeSchechterRatios.worker?worker';
-import { type ComputeSchechterRatiosInput } from './computeSchechterRatios';
+import ComputeSchechterRatiosWorker from '../engine/computeSchechterRatios.worker?worker';
+import { type ComputeSchechterRatiosInput } from '../engine/computeSchechterRatios';
 
 // Lazy-angular-reweight worker import — same `?worker` Vite suffix.  The
 // HEALPix bake is much cheaper than the Schechter integral (~100-300 ms for
@@ -77,8 +77,8 @@ import { type ComputeSchechterRatiosInput } from './computeSchechterRatios';
 // `applyAngularReweightMode()` the first time the user picks
 // `BiasMode.AngularReweight`; subsequent toggles reuse `cachedAngularWeights`
 // for instant re-toggle.
-import ComputeAngularWeightsWorker from './computeAngularWeights.worker?worker';
-import { type ComputeAngularWeightsInput } from './computeAngularWeights';
+import ComputeAngularWeightsWorker from '../engine/computeAngularWeights.worker?worker';
+import { type ComputeAngularWeightsInput } from '../engine/computeAngularWeights';
 
 // `?raw` is a Vite-specific import suffix. It tells the bundler to import the
 // file's content as a plain string rather than attempting to execute it as

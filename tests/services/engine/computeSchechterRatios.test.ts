@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeSchechterRatios } from '../../../src/services/gpu/computeSchechterRatios';
+import { computeSchechterRatios } from '../../../src/services/engine/computeSchechterRatios';
 import { Source } from '../../../src/data/sources';
 import type { PointCloud } from '../../../src/@types';
 

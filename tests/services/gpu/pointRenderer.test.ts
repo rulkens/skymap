@@ -24,7 +24,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PointRenderer } from '../../../src/services/gpu/pointRenderer';
-import { buildPointInterleavedBuffer } from '../../../src/services/gpu/buildPointInterleavedBuffer';
+import { buildPointInterleavedBuffer } from '../../../src/services/engine/buildPointInterleavedBuffer';
 import { Source } from '../../../src/data/sources';
 import type { PointCloud } from '../../../src/@types';
 

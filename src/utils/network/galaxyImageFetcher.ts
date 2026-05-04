@@ -23,8 +23,8 @@
  * compensate per galaxy.
  */
 
-import { sdssThumbnailUrl, dssThumbnailUrl } from '../../utils/math';
-import { SLOT_SIDE } from './textureAtlas';
+import { sdssThumbnailUrl, dssThumbnailUrl } from '../math';
+import { SLOT_SIDE } from '../../services/gpu/textureAtlas';
 
 export type FetchGalaxyBitmapInput = {
   ra: number;

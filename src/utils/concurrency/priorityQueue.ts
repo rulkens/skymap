@@ -1,20 +1,35 @@
 /**
- * Priority queue + concurrency limiter for galaxy image fetches.
+ * Priority queue + concurrency limiter — a generic helper for "run at
+ * most N async tasks at a time, in priority order, deduplicated by key".
  *
- * Why hand-rolled instead of e.g. p-limit? Two needs are linked: priority
- * (largest-on-screen-first) AND limit.  p-limit is FIFO.  We also want to
- * dedupe by key, drop stale entries on re-enqueue, and report per-task
- * results — easier to write 60 lines than to wire up three libraries.
+ * ### Why this lives in `utils/concurrency/`
  *
- * Behaviour:
- *   - At most MAX_CONCURRENT_FETCHES fetchers run at once.  Browsers cap
+ * Originally written as `GalaxyImageQueue` under `services/gpu/` to
+ * throttle galaxy thumbnail fetches.  Nothing about the data structure
+ * is GPU-specific or galaxy-specific though — it's a vanilla bounded
+ * priority queue with key-dedup and an in-flight set.  Moving it to
+ * `utils/concurrency/` and renaming makes the reuse case obvious:
+ * future fetch-orchestration code (catalog .bin downloads, sidecar
+ * loaders, anything else with a "load this when there's a slot" need)
+ * can grab the same primitive without depending on the GPU layer.
+ *
+ * ### Why hand-rolled instead of e.g. p-limit?
+ *
+ * Two needs are linked: priority (largest-on-screen-first) AND limit.
+ * `p-limit` is FIFO.  We also want to dedupe by key, drop stale entries
+ * on re-enqueue, and report per-task results — easier to write 60 lines
+ * than to wire up three libraries.
+ *
+ * ### Behaviour
+ *
+ *   - At most `MAX_CONCURRENT_FETCHES` tasks run at once.  Browsers cap
  *     HTTP/1.1 at ~6 connections per origin; 4 leaves room for other
  *     resources (the .bin downloads, fonts, etc) without bottlenecking
  *     them when the user zooms in suddenly and we want a flurry of
  *     thumbnails.
  *   - When a slot frees, we pick the pending entry with the highest
- *     priority — the engine sets priority to the galaxy's apparent on-
- *     screen pixel size, so big galaxies in the foreground load first.
+ *     priority — the engine sets priority to the galaxy's apparent
+ *     on-screen pixel size, so big galaxies in the foreground load first.
  *   - Re-enqueueing the same `key` while the entry is still pending
  *     REPLACES the old entry (priority + fetcher updated).  This lets
  *     the engine bump priority each frame for galaxies that are getting
@@ -23,27 +38,33 @@
  *     result still fires the callback), and queue the new entry as
  *     usual.  Cancelling an in-flight fetch is more complexity than
  *     payoff — bandwidth waste is tiny per-frame.
+ *
+ * ### Generic over the task result type
+ *
+ * Default `T = ImageBitmap | null` keeps the existing thumbnail call
+ * sites short.  Specialising for other workloads is just
+ * `new PriorityQueue<MyResult>()`.
  */
 
 export const MAX_CONCURRENT_FETCHES = 4;
 
-export type QueueEntry = {
+export type QueueEntry<T = ImageBitmap | null> = {
   key: string;
   priority: number;
-  fetcher: () => Promise<ImageBitmap | null>;
-  onResult: (bitmap: ImageBitmap | null) => void;
+  fetcher: () => Promise<T>;
+  onResult: (result: T) => void;
 };
 
-export class GalaxyImageQueue {
-  private pending = new Map<string, QueueEntry>();
+export class PriorityQueue<T = ImageBitmap | null> {
+  private pending = new Map<string, QueueEntry<T>>();
   private inFlight = new Set<string>();
   private drainResolvers: Array<() => void> = [];
 
-  enqueue(entry: QueueEntry): void {
+  enqueue(entry: QueueEntry<T>): void {
     // Idempotent: if the same key is already in flight, do nothing — the
     // running fetch's `onResult` will fire when it finishes and the
-    // engine's per-frame gate (bitmapReady / bitmapFailed) decides whether
-    // to enqueue again.
+    // caller's per-frame gate (e.g. bitmapReady / bitmapFailed in the
+    // engine) decides whether to enqueue again.
     //
     // The earlier implementation `pending.set(entry.key, entry)` here had
     // a subtle bug: while a fetch was in flight, the engine's per-frame
@@ -58,7 +79,7 @@ export class GalaxyImageQueue {
     //
     // The fix is to refuse to add the key to pending while it's in flight.
     // Priority bumps for already-running fetches are nice-to-have, not
-    // necessary; if the engine wants to re-run, it'll get a chance once
+    // necessary; if the caller wants to re-run, it'll get a chance once
     // the current attempt resolves and the per-frame gate clears.
     if (this.inFlight.has(entry.key)) return;
 
@@ -108,12 +129,14 @@ export class GalaxyImageQueue {
       this.inFlight.add(entry.key);
       // Fire-and-forget; the .then handles re-scheduling.  We catch
       // rejected promises so a network error doesn't bubble up as an
-      // unhandled rejection — the caller gets `null` instead.
+      // unhandled rejection — the caller gets the rejection-fallback
+      // value (cast `null as T`, which is sound because every existing
+      // call site uses a result type that includes null).
       entry
         .fetcher()
         .then(
-          (bitmap) => entry.onResult(bitmap),
-          () => entry.onResult(null),
+          (result) => entry.onResult(result),
+          () => entry.onResult(null as T),
         )
         .finally(() => {
           this.inFlight.delete(entry.key);
@@ -134,7 +157,7 @@ export class GalaxyImageQueue {
    * size).  A heap would be faster asymptotically but adds dependency or
    * 80 LOC for negligible real-world benefit.
    */
-  private popHighestPriority(): QueueEntry | undefined {
+  private popHighestPriority(): QueueEntry<T> | undefined {
     let bestKey: string | undefined;
     let bestPriority = -Infinity;
     for (const [key, entry] of this.pending) {

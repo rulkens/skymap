@@ -27,7 +27,7 @@ import type {
   EngineBiasState,
   EngineSourceState,
   EnginePickingState,
-} from '../../../src/services/engine/engineState';
+} from '../../src/@types';
 
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -43,10 +43,10 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
-} from '../../../src/data/defaults';
-import { createTweenManager } from '../../../src/services/engine/tweenManager';
-import { createSpaceMouseSubsystem } from '../../../src/services/engine/spaceMouseSubsystem';
-import { createRenderScheduler } from '../../../src/services/engine/renderScheduler';
+} from '../../src/data/defaults';
+import { createTweenManager } from '../../src/services/engine/tweenManager';
+import { createSpaceMouseSubsystem } from '../../src/services/engine/spaceMouseSubsystem';
+import { createRenderScheduler } from '../../src/services/engine/renderScheduler';
 
 // Inject a no-op rAF/cAF pair so the scheduler factory doesn't reach
 // for `window.requestAnimationFrame` in the Vitest node environment.

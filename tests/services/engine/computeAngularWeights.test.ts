@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeAngularWeights } from '../../../src/services/gpu/computeAngularWeights';
+import { computeAngularWeights } from '../../../src/services/engine/computeAngularWeights';
 import { Source } from '../../../src/data/sources';
 import { raDecZToCartesian } from '../../../src/utils/math';
 import type { PointCloud } from '../../../src/@types';

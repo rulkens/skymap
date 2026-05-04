@@ -17,7 +17,7 @@ import { describe, it, expect } from 'vitest';
 import {
   buildPointInterleavedBuffer,
   computePriorCount,
-} from '../../../src/services/gpu/buildPointInterleavedBuffer';
+} from '../../../src/services/engine/buildPointInterleavedBuffer';
 import { Source } from '../../../src/data/sources';
 import type { PointCloud } from '../../../src/@types';
 

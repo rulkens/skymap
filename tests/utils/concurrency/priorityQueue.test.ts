@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
-  GalaxyImageQueue,
+  PriorityQueue,
   MAX_CONCURRENT_FETCHES,
-} from '../../../src/services/gpu/galaxyImageQueue';
+} from '../../../src/utils/concurrency/priorityQueue';
 
-describe('GalaxyImageQueue', () => {
+describe('PriorityQueue', () => {
   it('exposes a sane concurrency cap (4)', () => {
     expect(MAX_CONCURRENT_FETCHES).toBe(4);
   });
@@ -13,7 +13,7 @@ describe('GalaxyImageQueue', () => {
     let inFlight = 0;
     let maxInFlight = 0;
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const queue = new GalaxyImageQueue();
+    const queue = new PriorityQueue();
 
     for (let i = 0; i < 12; i++) {
       queue.enqueue({
@@ -36,7 +36,7 @@ describe('GalaxyImageQueue', () => {
   });
 
   it('processes higher-priority entries first', async () => {
-    const queue = new GalaxyImageQueue();
+    const queue = new PriorityQueue();
     const order: string[] = [];
     // Saturate ALL slots with blockers so subsequent enqueues sit pending
     // until we release them one-by-one.  This avoids the timing trap where
@@ -87,7 +87,7 @@ describe('GalaxyImageQueue', () => {
   });
 
   it('calls onResult with the fetcher result', async () => {
-    const queue = new GalaxyImageQueue();
+    const queue = new PriorityQueue();
     const cb = vi.fn();
     const fakeBitmap = { close: () => {} } as unknown as ImageBitmap;
     queue.enqueue({
@@ -101,7 +101,7 @@ describe('GalaxyImageQueue', () => {
   });
 
   it('inFlightCount reports the number of running fetches', async () => {
-    const queue = new GalaxyImageQueue();
+    const queue = new PriorityQueue();
     expect(queue.inFlightCount()).toBe(0);
 
     // Build a fetcher that we can resolve manually.
