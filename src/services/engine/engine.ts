@@ -57,7 +57,6 @@ import { createToneMapPass } from '../gpu/toneMapPass';
 import { ToneMapCurve } from '../../data/toneMapCurve';
 import { createOrbitCamera, computeViewProj, updatePosition } from '../camera/orbitCamera';
 import { attachOrbitControls } from '../camera/orbitControls';
-import { formatDistance } from '../../utils/format/distance';
 import { ALL_VISIBLE_MASK, Source, maskWith, maskWithout } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import {
@@ -83,9 +82,10 @@ import { vec3 } from 'gl-matrix';
 
 import { autoLodMask } from './autoLod';
 import { createRenderScheduler, type RenderScheduler } from './renderScheduler';
-import { buildPointInfo, maxAbsCoord, niceRound } from './pointInfoBuilder';
+import { buildPointInfo, maxAbsCoord } from './pointInfoBuilder';
 import { computeInitialCamera, type InitialCam } from './cameraFraming';
 import { seedSettingsCallbacks } from './seedSettingsCallbacks';
+import { computeScaleInfo } from './scaleBar';
 import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 import { loadFamousSidecars, type FamousMetaEntry, type FamousXrefMap } from './famousMetaLoader';
@@ -434,39 +434,34 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // ── Scale bar computation ────────────────────────────────────────────────
 
   /**
-   * Compute the scale bar's label and pixel width from the current camera state,
-   * then fire `onScaleChange` if either value changed.
+   * Compute the scale bar's label and pixel width from the current camera
+   * state, then fire `onScaleChange` if either value changed.
    *
-   * Math: with a perspective camera, the visible vertical world height at a
-   * distance `d` from the camera is 2·d·tan(fovY/2). One world unit therefore
-   * takes up  viewportHeightPx / (2·d·tan(fovY/2))  pixels at distance d.
-   * We measure at the focal point (camera target) — close enough for a heuristic
-   * legend, and matches what the user perceives at the centre of the screen.
+   * The pure math (perspective-projection → pxPerMpc → niceRound → label)
+   * lives in `scaleBar.ts:computeScaleInfo`.  This wrapper owns the engine-
+   * frame-local concerns:
    *
-   * We use CSS pixels (clientHeight), not the backing-store size, so the bar's
-   * physical width on screen matches the legend reading regardless of DPR.
+   *   - Reading the live `cam` reference (initialised post-async).
+   *   - Reading `canvas.clientHeight` (CSS pixels, not backing-store) so
+   *     the bar's physical screen width is DPR-independent.
+   *   - Deduplicating identical results via `lastScaleSig` so React's
+   *     setState only fires when the user-visible value actually changed.
    */
   function updateScaleBar(): void {
     if (!cam) return;
 
-    const viewportCssHeight = canvas.clientHeight;
-    if (viewportCssHeight === 0) return;
+    const info = computeScaleInfo({
+      cam,
+      canvasSize: { width: canvas.clientWidth, height: canvas.clientHeight },
+      targetPx: SCALE_TARGET_PX,
+    });
+    if (info === null) return;
 
-    const pxPerMpc = viewportCssHeight / (2 * cam.distance * Math.tan(cam.fovYRad / 2));
-    if (!isFinite(pxPerMpc) || pxPerMpc <= 0) return;
-
-    const desiredMpc = SCALE_TARGET_PX / pxPerMpc;
-    const niceMpc = niceRound(desiredMpc);
-    const widthPx = niceMpc * pxPerMpc;
-
-    const sig = `${niceMpc}:${widthPx.toFixed(0)}`;
+    const sig = `${info.label}:${info.widthPx}`;
     if (sig === lastScaleSig) return;
     lastScaleSig = sig;
 
-    cb.onScaleChange({
-      label: formatDistance(niceMpc),
-      widthPx: Math.round(widthPx),
-    });
+    cb.onScaleChange(info);
   }
 
   // ── Async startup ────────────────────────────────────────────────────────
