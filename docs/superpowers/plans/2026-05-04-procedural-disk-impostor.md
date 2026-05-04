@@ -33,7 +33,8 @@
 
 **Modify:**
 - `src/services/gpu/shaders/points.wgsl` — fragment-stage alpha fade-out across 8–14 px so the screen-aligned billboard crossfades into the procedural disk.
-- `src/services/engine/engine.ts` — per-frame loop emits procedural-disk instances; passes crossfade alpha to point pass via the existing per-frame uniform path.
+- `src/services/engine/thumbnailSubsystem.ts` — per-frame loop emits procedural-disk instances alongside the existing `quads` / `disks` arrays; the post-refactor per-frame quad/disk collection lives here, not in `engine.ts`.
+- `src/services/engine/engine.ts` — constructs the new `ProceduralDiskRenderer` next to the existing `DiskRenderer` and hands it into `thumbnails.bindToRenderers(...)`; passes crossfade-band constants to the points pass via the existing per-frame uniform path.
 - `src/services/engine/engine.ts` — pixel-size threshold lowered for ALL galaxies (not just famous + already-thumbnail-fetched) so the disk pass sees them. Currently the outer gate is `APPARENT_SIZE_THRESHOLD_PX = 24`; we add a second gate at 8 specific to the procedural-disk path.
 - `src/services/gpu/pointRenderer.ts` — extend Uniforms struct with two new f32 fields (`pxFadeStart`, `pxFadeEnd`) used by the points fragment shader. Pad to 16 bytes.
 - `README.md` — short subsection documenting the new pass.
@@ -904,36 +905,89 @@ git commit -m "feat(gpu): ProceduralDiskRenderer pipeline + draw method"
 
 **Files:**
 
-- Modify: `src/services/engine/engine.ts`
+- Modify: `src/services/engine/engine.ts` (construct the renderer; bind it into the thumbnail subsystem)
+- Modify: `src/services/engine/thumbnailSubsystem.ts` (per-frame instance emission, sort, draw)
 
-Hook the new renderer into the per-frame loop.  Construct it alongside the existing diskRenderer; emit instances inside the apparent-size loop; pass them to draw at the same time as the textured-disk + flat-quad lists.
+### Architectural note (post-refactor)
 
-- [ ] **Step 1: Construct the renderer next to diskRenderer**
+After the engine refactor (Phases 1–5), the per-frame quad/disk collection
+loop no longer lives in `engine.ts` — it moved into
+`thumbnailSubsystem.runFrame()`.  That's where the existing `quads` and
+`disks` arrays are populated, sorted by camera distance, and passed to
+the per-renderer `draw()` calls.  The procedural-disk integration must
+slot in alongside those, NOT in `engine.ts`'s own per-frame body.
 
-Find the line `const diskRenderer = new DiskRenderer({ device, context, format, canvas });` and add immediately below:
+`engine.ts` still owns renderer **construction** (it's where the GPU
+device lives) and calls `thumbnails.bindToRenderers(quadRenderer,
+diskRenderer)` to hand the renderers into the subsystem.  We extend
+`bindToRenderers` to accept the new renderer the same way.
+
+The existing pattern in `engine.ts` (around line 572-586):
+
+```ts
+const diskRenderer = new DiskRenderer({ device, context, format, canvas });
+// ...
+thumbnails.bindToRenderers(quadRenderer, diskRenderer);
+```
+
+becomes:
+
+```ts
+const diskRenderer = new DiskRenderer({ device, context, format, canvas });
+const proceduralDiskRenderer = new ProceduralDiskRenderer({ device, context, format, canvas });
+// ...
+thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralDiskRenderer);
+```
+
+- [ ] **Step 1: Construct the renderer in engine.ts next to diskRenderer**
+
+Find the existing diskRenderer construction in `engine.ts` (around line 572) and add immediately below:
 
 ```ts
 import { ProceduralDiskRenderer } from '../gpu/proceduralDiskRenderer';
 // ...
+const diskRenderer = new DiskRenderer({ device, context, format, canvas });
 const proceduralDiskRenderer = new ProceduralDiskRenderer({ device, context, format, canvas });
 ```
 
-- [ ] **Step 2: Add a new instance bucket to the per-frame collection**
+Update the `thumbnails.bindToRenderers(...)` call (around line 586) to pass the new renderer:
 
-Inside the per-frame quad-pass loop, alongside the existing `quads` and `disks` arrays, declare:
+```ts
+thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralDiskRenderer);
+```
+
+- [ ] **Step 2: Extend `bindToRenderers` in thumbnailSubsystem.ts**
+
+Update the type signature on the `ThumbnailSubsystem` interface (around line 205) and the implementation (around line 294):
+
+```ts
+bindToRenderers(
+  quadRenderer: QuadRenderer,
+  diskRenderer: DiskRenderer,
+  proceduralDiskRenderer: ProceduralDiskRenderer,
+): void;
+```
+
+Stash the new renderer in the same closure pattern the existing renderers use (a module-private `let` set inside `bindToRenderers` and read inside `runFrame`).  Add the import for `ProceduralDiskRenderer` from `../gpu/proceduralDiskRenderer` at the top of the file.
+
+- [ ] **Step 3: Add the `proceduralDisks` instance bucket inside `runFrame`**
+
+In `thumbnailSubsystem.ts`'s `runFrame()` function (around line 349-353), alongside the existing `quads` and `disks` arrays, declare a third bucket:
 
 ```ts
 import type { ProceduralDiskInstance } from '../../@types/ProceduralDiskInstance';
 // ...
+const quads: QuadInstance[] = [];
+const disks: DiskInstance[] = [];
 const proceduralDisks: ProceduralDiskInstance[] = [];
 ```
 
-- [ ] **Step 3: Lower the outer apparent-size gate to PROCEDURAL_DISK_FADE_START_PX (8)**
+- [ ] **Step 4: Lower the outer apparent-size gate**
 
-Currently the loop bails out at `px < APPARENT_SIZE_THRESHOLD_PX` (24).  We need to enter the loop body for any galaxy above 8 px so we can emit a procedural-disk instance, even if the textured-disk path won't fire.  Change the gate:
+The per-cloud loop currently bails out at `px < APPARENT_SIZE_THRESHOLD_PX` (24).  We need to enter the loop body for any galaxy above 8 px so we can emit a procedural-disk instance even when the textured-disk path won't fire.  Find the early-`continue` on apparent size inside `runFrame` and change:
 
 ```ts
-// Old:
+// Old (the existing px gate inside the per-cloud loop):
 if (cloudSource !== Source.Famous && px < APPARENT_SIZE_THRESHOLD_PX) continue;
 
 // New:
@@ -944,17 +998,17 @@ const minPxForLoopEntry = Math.min(
 if (cloudSource !== Source.Famous && px < minPxForLoopEntry) continue;
 ```
 
-But: the bitmap-fetch enqueue (the long block starting at line ~1097) should STILL gate on `APPARENT_SIZE_THRESHOLD_PX = 24`, otherwise we'd swamp the queue with fetch requests for every barely-visible galaxy.  Wrap the bitmap section in:
+The bitmap-fetch enqueue block — and the `quads.push(...)` / `disks.push(...)` calls that depend on a real bitmap — should STILL gate on `APPARENT_SIZE_THRESHOLD_PX = 24`, otherwise we'd swamp the priority queue with fetch requests for every barely-visible galaxy.  Wrap the bitmap-and-quad/disk-push section in:
 
 ```ts
 if (px >= APPARENT_SIZE_THRESHOLD_PX) {
-  // existing bitmap-enqueue + textured-disk-push code here
+  // existing bitmap-enqueue + quads.push / disks.push code here
 }
 ```
 
-- [ ] **Step 4: Emit a procedural-disk instance whenever px > PROCEDURAL_DISK_FADE_START_PX**
+- [ ] **Step 5: Emit a procedural-disk instance whenever px > PROCEDURAL_DISK_FADE_START_PX**
 
-After the bitmap branch, add:
+After the bitmap-and-quad/disk branch above, add the procedural-disk emission:
 
 ```ts
 // Procedural impostor: every galaxy in the band emits a procedural-disk
@@ -980,45 +1034,55 @@ if (px > PROCEDURAL_DISK_FADE_START_PX && Number.isFinite(ar) && Number.isFinite
 }
 ```
 
-- [ ] **Step 5: Issue the draw call alongside disks/quads**
+- [ ] **Step 6: Sort + issue the draw call alongside disks/quads**
 
-After the `disks.sort(cmpFar)` line, add:
+The existing back-to-front sort and the two `.draw()` calls live around lines 586-607 of `thumbnailSubsystem.ts`.  Add the third pass alongside them:
 
 ```ts
+quads.sort(cmpFar);
+disks.sort(cmpFar);
 proceduralDisks.sort(cmpFar);
-// ...
+
+if (quads.length > 0) {
+  quadRenderer.draw(/* ...existing args... */);
+}
+if (disks.length > 0) {
+  diskRenderer.draw(/* ...existing args... */);
+}
 if (proceduralDisks.length > 0) {
   proceduralDiskRenderer.draw(
     pass,
-    vp,
-    [canvas.width, canvas.height],
-    drawCamPos,
-    drawPxPerRad,
+    viewProj,
+    [canvasSize.width, canvasSize.height],
+    camPos,
+    pxPerRad,
     proceduralDisks,
   );
 }
 ```
 
-- [ ] **Step 6: Typecheck + tests**
+(The exact draw-call arg list depends on `ProceduralDiskRenderer.draw`'s signature defined in Task 6 — match it.)
+
+- [ ] **Step 7: Typecheck + tests**
 
 Run:
 ```
-npx tsc --noEmit
-npm test
+npm run typecheck
+npm test -- --run
 ```
 
-Expected: typecheck clean; all 343+ tests pass (no engine unit tests cover this).
+Expected: typecheck clean; all tests pass.
 
-- [ ] **Step 7: Manual visual verification**
+- [ ] **Step 8: Manual visual verification**
 
-Reload the dev server.  Find a galaxy that's a small dot (~10 px) and zoom in.  As it grows past 8 px the procedural disk should fade in; past 14 px the point billboard should be invisible.  Most spirals should look 3D-tilted.
+The dev server has HMR, so a save should suffice — but a hard reload is safer for shader changes.  Find a galaxy that's a small dot (~10 px) and zoom in.  As it grows past 8 px the procedural disk should fade in; past 14 px the point billboard should be invisible.  Most spirals should look 3D-tilted.
 
 If everything's broken (black screen, error in devtools console), most likely cause: WGSL compile error.  Check the dev tools console for the WebGPU validation message and grep for the offending line.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add src/services/engine/engine.ts
+git add src/services/engine/engine.ts src/services/engine/thumbnailSubsystem.ts
 git commit -m "feat(engine): emit procedural-disk instances in 8-14 px crossfade band"
 ```
 
@@ -1036,7 +1100,7 @@ So the point billboard fades out from 8 → 14 px, complementary to the disk's f
 
 - [ ] **Step 1: Extend the points uniform struct**
 
-In `src/services/gpu/shaders/points.wgsl`, find the existing `struct Uniforms` and add at the end (before the closing brace):
+In `src/services/gpu/shaders/points.wgsl`, find the existing `struct Uniforms` and add at the end (before the closing brace).  The struct currently ends with the Schechter / Malmquist block whose final field is `_pad5: u32` at byte offset 156, total size 160.  Append the new fade-band fields right after:
 
 ```wgsl
   // Procedural-disk crossfade band, in apparent-pixels.  When a
@@ -1055,22 +1119,23 @@ In `src/services/gpu/shaders/points.wgsl`, find the existing `struct Uniforms` a
   _padFade1: f32,
 ```
 
-UNIFORM_BYTES grows by 16.  Update the struct alignment comment at the top of the WGSL file accordingly, and grow `UNIFORM_BYTES` in `pointRenderer.ts` (currently 160) to 176.
+The struct grows from 160 → 176 bytes (4 × f32 = 16 bytes appended at offsets 160..176).  Update the struct alignment comment at the top of the WGSL file accordingly, and grow `UNIFORM_BYTES` in `pointRenderer.ts` (currently `160`) to `176`.
 
 - [ ] **Step 2: Wire the new fields into the JS-side uniform packing**
 
-In `pointRenderer.ts`, find the existing uniform packing (somewhere with `const UNIFORM_BYTES = 160`).  Bump it:
+In `pointRenderer.ts`, find the existing uniform packing (`const UNIFORM_BYTES = 160`).  Bump it:
 
 ```ts
 const UNIFORM_BYTES = 176;
 // ...
-// In draw(): pack the two new fields after the bias-correction block.
+// In draw(): pack the two new fields immediately after the existing
+// 160-byte block.  Offsets 160..163 → f32[40], 164..167 → f32[41].
+// f32[42] / f32[43] are padding and stay zero.
 f32[40] = pxFadeStart;
 f32[41] = pxFadeEnd;
-// f32[42] and f32[43] stay zero (padding).
 ```
 
-(Adjust indices to reflect the actual byte layout — re-derive after Task 2 of the Malmquist plan grew the struct to 160.)
+**Verify before writing**: re-derive the f32-index from the byte offset using the actual current uniform layout in `pointRenderer.ts` — the layout has shifted across feature work and the source is the source of truth.  The byte offsets 160 / 164 are correct for the post-Malmquist 160-byte layout; if anything has changed in between, recompute.
 
 Add the two parameters to `draw()`'s signature:
 
@@ -1089,35 +1154,48 @@ In the engine's points-renderer.draw call, pass `PROCEDURAL_DISK_FADE_START_PX` 
 
 - [ ] **Step 4: Apply the fade-out in the fragment shader**
 
-In points.wgsl's `fs` (the visual fragment, not `fsPick`), find the final `return vec4<f32>(rgb * alpha, alpha);` line at the end of the normal-disk path.  Compute the fade factor before it:
+In points.wgsl's `fs` (the visual fragment, not `fsPick`), the alpha computation now flows through several stages — the original `let alpha = exp(-r2 * 4.0)` followed by `alpha = alpha * schechterAlpha_`, `alpha = alpha * angWeight`, and `alpha = alpha * in.depthFade`, before the final `return vec4<f32>(rgb * alpha, alpha)`.  We multiply one more factor in at the end:
 
 ```wgsl
-// Fade out as the procedural-disk pass takes over.  We need the
-// galaxy's apparent size in pixels here — recompute it from the
-// per-vertex `sizePx` (already in pixels) which the vertex shader
-// computed from distance + diameterKpc.  Forward sizePx as a varying
-// from the vertex shader (add @location(7) sizePx: f32 to VSOut).
+// Fade out as the procedural-disk pass takes over.  Smoothstep over
+// the band [pxFadeStart, pxFadeEnd] — complementary to the disk's
+// fade-in.  Per-vertex flat-interpolated sizePx (added to VSOut in
+// Step 5 below) carries the value we need; the value is already
+// computed in the vertex stage as
+//   `let sizePx = max(u.pointSizePx, apparentPxRadius);`
+// at points.wgsl ~line 782, so Step 5 is just forwarding it through
+// VSOut, NOT a new computation.
 let fadeT = clamp(
   (in.sizePx - u.pxFadeStart) / (u.pxFadeEnd - u.pxFadeStart),
   0.0, 1.0,
 );
 let pointAlphaMult = 1.0 - fadeT * fadeT * (3.0 - 2.0 * fadeT);
-let alpha = exp(-r2 * 4.0) * pointAlphaMult;
+alpha = alpha * pointAlphaMult;
 ```
+
+Apply this immediately before the existing `return vec4<f32>(rgb * alpha, alpha);` at the end of the normal-disk path.  The fade chains in after the Schechter / angular / depth-fade multiplications, which is the correct ordering — depth fade and Schechter modulate the point's intrinsic brightness; the procedural-disk crossfade modulates whether we're rendering the point pass at all in this px band.
 
 - [ ] **Step 5: Forward `sizePx` from the vertex shader**
 
-In points.wgsl's `vs`, find where `sizePx` is computed and add to VsOut:
+`sizePx` is **already computed** in the vertex stage at points.wgsl ~line 782 (`let sizePx = max(u.pointSizePx, apparentPxRadius);`).  We just need to forward it through VSOut.
+
+VSOut location numbering note: locations 0–12 + 15 are currently in use after recent changes (the per-vertex bake of paCs/paSn/depthFade put paSn at @location(15) for ABI continuity).  Use **`@location(13)`** for `sizePx` — that's the next free slot.
 
 ```wgsl
 struct VSOut {
   // ... existing fields ...
-  @location(7) @interpolate(flat) sizePx: f32,
+  // Apparent on-screen radius in pixels for this billboard.  Forwarded
+  // (not recomputed) from the vertex stage so the fragment can apply
+  // the procedural-disk crossfade.  Flat-interpolated for the same
+  // per-instance constancy as the other flat scalars.
+  @location(13) @interpolate(flat) sizePx: f32,
 };
 
-// In vs:
-out.sizePx = sizePx; // the apparent-pixel size already computed above
+// In vs, after the existing `let sizePx = ...` computation:
+out.sizePx = sizePx;
 ```
+
+Also assign `earlyOut.sizePx = 0.0;` along the volume-limit / decimation early-out paths in `vs` (WGSL requires every VSOut field be initialised on every return path).
 
 - [ ] **Step 6: Typecheck + run dev**
 
@@ -1143,11 +1221,11 @@ git commit -m "feat(points): smoothstep alpha fade-out across procedural-disk ba
 
 - Create: `tests/services/engine/proceduralDiskEmission.test.ts`
 
-A focused unit test: given a fixture cloud + fake camera, the engine emits the expected list of `ProceduralDiskInstance` objects.  The trick: the engine's per-frame loop is deeply embedded in the engine factory.  We don't unit-test the whole engine; we extract the per-galaxy emission logic into a pure helper.
+A focused unit test: given a fixture cloud + fake camera, the per-frame loop emits the expected list of `ProceduralDiskInstance` objects.  The trick: the per-frame loop in `thumbnailSubsystem.ts` is deeply embedded in the subsystem factory and not directly testable.  We don't unit-test the whole subsystem; we extract the per-galaxy emission logic into a pure helper that lives at module scope and call it both from the runtime path and the test.
 
 - [ ] **Step 1: Extract the emission logic to a pure helper**
 
-In `src/services/engine/engine.ts`, lift the per-galaxy procedural-disk push out of the loop into a top-of-module pure function:
+In `src/services/engine/thumbnailSubsystem.ts` (the same file the runtime call lives in — keeps the helper next to its only caller; promote to a util later if it grows another consumer), lift the per-galaxy procedural-disk push out of the loop into a top-of-module pure function:
 
 ```ts
 export function maybeEmitProceduralDisk(
