@@ -1463,8 +1463,29 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // — so the UI seeds correctly on first call.  The plan calls this
       // out explicitly because `setBiasMode(BiasMode.None)` is a legitimate
       // first-frame state that must reach the SettingsPanel.
+      const wasSchechter = biasMode === BiasMode.Schechter;
+      const isSchechter = mode === BiasMode.Schechter;
       biasMode = mode;
       cb.onBiasModeChange?.(mode);
+
+      // ── Lazy Schechter-ratio bake (perf) ──────────────────────────────
+      //
+      // The per-galaxy Schechter integral is ~700 M math ops at full deck
+      // (3.5 M galaxies × 200-step trapezoidal integral) — wasted work if
+      // the user never picks mode 3.  We defer it until the first transition
+      // TO Schechter mode, then cache the result on the renderer for instant
+      // re-toggle.  See `pointRenderer.applySchechterMode()` for the full
+      // mirror-array re-upload trick that keeps this fire-and-forget.
+      //
+      // Going AWAY from Schechter is intentionally a no-op: the shader's
+      // `select(1.0, schechterRatio, biasMode == 3u)` gate already ignores
+      // slot 11 in modes 0/1/2, so leaving the values in the GPU buffer is
+      // both correct and cheaper than re-uploading 1.0s.
+      if (!wasSchechter && isSchechter && renderer) {
+        renderer.applySchechterMode().catch((err) => {
+          console.error('[engine] Schechter ratio bake failed:', err);
+        });
+      }
     },
 
     setAbsMagLimit(absMag) {

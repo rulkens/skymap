@@ -43,9 +43,9 @@ import type { PointCloud } from '../../@types';
 import { ALL_SOURCES, Source } from '../../data/sources';
 import { type SchechterTriple } from '../../data/surveyFluxLimits';
 import {
-  buildPointInterleavedBuffer,
   computePriorCount,
   type BuildPointInterleavedBufferInput,
+  type BuildPointInterleavedBufferMode,
   type BuildPointInterleavedBufferResult,
 } from './buildPointInterleavedBuffer';
 
@@ -61,6 +61,14 @@ import {
 // tests inject a synchronous fallback via `setBuildBufferFactory` instead
 // of importing this module.  See the `BuildBufferFactory` type below.
 import BuildPointBufferWorker from './buildPointInterleavedBuffer.worker?worker';
+
+// Lazy-Schechter worker import — same `?worker` Vite suffix as the main
+// vertex bake, but for the much smaller (single Float32Array) Schechter
+// integral.  Spawned by `applySchechterMode()` the first time the user
+// selects `BiasMode.Schechter`; subsequent toggles reuse the cached
+// `Float32Array` per source for instant re-toggle.
+import ComputeSchechterRatiosWorker from './computeSchechterRatios.worker?worker';
+import { type ComputeSchechterRatiosInput } from './computeSchechterRatios';
 
 // `?raw` is a Vite-specific import suffix. It tells the bundler to import the
 // file's content as a plain string rather than attempting to execute it as
@@ -414,6 +422,75 @@ function defaultWorkerRunner(
   });
 }
 
+/**
+ * Production path for the lazy Schechter-ratio bake.  Spawns a fresh
+ * `ComputeSchechterRatiosWorker`, ships a *copied* `PointCloud` (slice-then-
+ * transfer pattern, same as the main vertex bake — see
+ * `defaultWorkerRunner`'s long comment for why), waits for the resulting
+ * `Float32Array`, and terminates the worker.
+ *
+ * Why copy-then-transfer?  Same reason as the vertex-bake worker: the
+ * picker / InfoCard still reads the engine's authoritative `cloud` after
+ * we kick off the bake, so we can't detach those buffers in place.
+ * `slice(0)` mints owned copies that are safe to transfer without
+ * detaching anything else.
+ *
+ * Cost: ~50 ms memcpy for a 100 MB SDSS+GLADE deck (much cheaper than the
+ * 5+ s structured clone the original revision paid before adding the
+ * Transferable list).  The worker itself takes 1–2 s to chew through the
+ * Schechter integral; the slice cost is in the noise.
+ */
+function defaultSchechterWorkerRunner(
+  input: ComputeSchechterRatiosInput,
+): Promise<Float32Array> {
+  return new Promise((resolve, reject) => {
+    const worker = new ComputeSchechterRatiosWorker();
+    worker.onmessage = (event: MessageEvent<Float32Array>) => {
+      worker.terminate();
+      resolve(event.data);
+    };
+    worker.onerror = (event: ErrorEvent) => {
+      worker.terminate();
+      reject(
+        event.error ??
+          new Error(event.message ?? 'schechter-ratio worker error'),
+      );
+    };
+
+    // Slice-then-transfer the typed-array buffers (see the long comment
+    // on `defaultWorkerRunner` above for the full rationale — same
+    // ownership concern applies here, since the engine retains the
+    // original cloud for picker/InfoCard reads).
+    const c = input.cloud;
+    const cloudCopy: PointCloud = {
+      count: c.count,
+      objIDs: new BigUint64Array(c.objIDs.buffer.slice(0)),
+      positions: new Float32Array(c.positions.buffer.slice(0)),
+      magU: new Float32Array(c.magU.buffer.slice(0)),
+      magG: new Float32Array(c.magG.buffer.slice(0)),
+      magR: new Float32Array(c.magR.buffer.slice(0)),
+      magI: new Float32Array(c.magI.buffer.slice(0)),
+      magZ: new Float32Array(c.magZ.buffer.slice(0)),
+      axisRatio: new Float32Array(c.axisRatio.buffer.slice(0)),
+      positionAngleDeg: new Float32Array(c.positionAngleDeg.buffer.slice(0)),
+      diameterKpc: new Float32Array(c.diameterKpc.buffer.slice(0)),
+    };
+    const transfer: Transferable[] = [
+      cloudCopy.objIDs.buffer,
+      cloudCopy.positions.buffer,
+      cloudCopy.magU.buffer,
+      cloudCopy.magG.buffer,
+      cloudCopy.magR.buffer,
+      cloudCopy.magI.buffer,
+      cloudCopy.magZ.buffer,
+      cloudCopy.axisRatio.buffer,
+      cloudCopy.positionAngleDeg.buffer,
+      cloudCopy.diameterKpc.buffer,
+    ];
+    worker.postMessage({ ...input, cloud: cloudCopy }, transfer);
+  });
+}
+
 // Note: the `schechter*` uniform slots at byte offsets 140..155 are now
 // dead-but-reserved.  Originally `draw()` wrote 16 bytes per source here
 // (mStar, alpha, mLim, nRef) so the fragment shader's 200-step trapezoidal
@@ -445,6 +522,28 @@ function defaultWorkerRunner(
 type LoadedSource = {
   buffer: GPUBuffer;
   count: number;
+  /**
+   * Mirror of the interleaved Float32Array baked into `buffer` at upload
+   * time.  Held on the JS side so `applySchechterMode()` can splice fresh
+   * Schechter ratios into slot 11 of every row and re-upload the whole
+   * buffer with one `device.queue.writeBuffer` call — see that method's
+   * doc for why this is faster than N sparse writes.
+   *
+   * Memory cost: ~14 MB per fully-loaded SDSS deck.  Dwarfed by the
+   * cloud's own struct-of-arrays (~100 MB), so this isn't a budget
+   * concern.  The mirror is freed when the source unloads.
+   */
+  interleaved: Float32Array;
+  /**
+   * Cached per-galaxy Schechter ratios, populated lazily the first time
+   * the user selects `BiasMode.Schechter`.  Once populated, subsequent
+   * toggles reuse this array — re-toggling Schechter mode is then
+   * instant (no worker spawn, just a single writeBuffer call).
+   *
+   * `null` until the first `applySchechterMode()` call resolves for
+   * this source.  Callers must check before using.
+   */
+  cachedSchechterRatios: Float32Array | null;
   /**
    * Current authoritative offset, recomputed after every upload/unload by
    * `recomputeInstanceIdOffsets`.  This is the running sum of `count`
@@ -537,6 +636,47 @@ export class PointRenderer {
    * ambiguity of indexing a numeric-keyed object literal.
    */
   private readonly clouds = new Map<Source, LoadedSource>();
+
+  /**
+   * Whether the engine has currently selected `BiasMode.Schechter`.  Drives
+   * two things:
+   *
+   *   1. New uploads while this is `true` bake the Schechter ratios
+   *      eagerly (so a survey that arrives mid-Schechter renders correctly
+   *      from frame 1).
+   *   2. `applySchechterMode()` and `clearSchechterRatios()` flip this flag
+   *      so the renderer's view of "is Schechter active?" stays
+   *      authoritative — the engine's `setBiasMode` call site doesn't
+   *      forward the mode itself, just the on/off intent.
+   *
+   * Default `false`: a fresh renderer assumes the default bias mode (None),
+   * matching `engine.ts`'s initial `let biasMode: BiasMode = BiasMode.None`.
+   */
+  private schechterModeActive = false;
+
+  /**
+   * Static factory for the lazy Schechter-ratio worker.  Production path
+   * spawns a Vite `?worker` chunk; Node tests can override with a
+   * synchronous in-process runner via
+   * `PointRenderer.setSchechterRatioRunner(...)`.  Same pattern as
+   * `setBuildBufferRunner` for the main bake.
+   */
+  private static schechterRunner: (
+    input: ComputeSchechterRatiosInput,
+  ) => Promise<Float32Array> = defaultSchechterWorkerRunner;
+
+  /**
+   * Override the Schechter-ratio runner — used by tests that can't load the
+   * Vite `?worker` import.  Pass a synchronous function that runs the pure
+   * `computeSchechterRatios` directly, or `null` to restore the default.
+   */
+  static setSchechterRatioRunner(
+    runner:
+      | ((input: ComputeSchechterRatiosInput) => Promise<Float32Array>)
+      | null,
+  ): void {
+    PointRenderer.schechterRunner = runner ?? defaultSchechterWorkerRunner;
+  }
 
   // ─── Public accessors ────────────────────────────────────────────────────────
 
@@ -738,7 +878,20 @@ export class PointRenderer {
     // override).  Either way we await a `BuildPointInterleavedBufferResult`.
     // Each upload uses its own worker instance: parallel surveys can bake
     // simultaneously, and there's no shared-state cleanup between calls.
-    const result = await PointRenderer.runBuild({ cloud, source, priorCount });
+    //
+    // Mode = 'fast' unless Schechter is currently the active bias mode.  We
+    // never want to do the per-galaxy integral at upload unless the user
+    // is actively viewing mode 3, since the shader's `select(1.0, …, mode==3)`
+    // gate makes the slot irrelevant in modes 0/1/2.  See the
+    // `BuildPointInterleavedBufferMode` doc for the trade-off.
+    const mode: BuildPointInterleavedBufferMode =
+      this.schechterModeActive ? 'with-schechter' : 'fast';
+    const result = await PointRenderer.runBuild({
+      cloud,
+      source,
+      priorCount,
+      mode,
+    });
     const { interleaved, schechter, mLim, nRef } = result;
 
     // ── Write to GPU ────────────────────────────────────────────────────────
@@ -761,6 +914,18 @@ export class PointRenderer {
     // side bookkeeping for `loadedSources()` consumers; the shader reads
     // the baked vertex attribute directly and no longer needs a uniform
     // offset at all).
+    // If the upload was 'with-schechter', extract the per-row ratios from
+    // slot 11 of the freshly-baked interleaved array and cache them — this
+    // way a subsequent toggle Schechter→other→Schechter doesn't need to
+    // re-spawn the worker.
+    let cachedSchechterRatios: Float32Array | null = null;
+    if (mode === 'with-schechter') {
+      cachedSchechterRatios = new Float32Array(cloud.count);
+      for (let i = 0; i < cloud.count; i++) {
+        cachedSchechterRatios[i] = interleaved[i * SLOTS_PER_POINT + 11]!;
+      }
+    }
+
     this.clouds.set(source, {
       buffer,
       count: cloud.count,
@@ -770,6 +935,8 @@ export class PointRenderer {
       schechter,
       mLim,
       nRef,
+      interleaved,
+      cachedSchechterRatios,
     });
     this.recomputeInstanceIdOffsets();
     await this.rebakeStaleSources();
@@ -868,6 +1035,134 @@ export class PointRenderer {
     entry.buffer.destroy();
     this.clouds.delete(source);
     this.recomputeInstanceIdOffsets();
+  }
+
+  // ─── Lazy Schechter-ratio bake ──────────────────────────────────────────────
+
+  /**
+   * Compute and upload per-galaxy Schechter ratios for every loaded source.
+   *
+   * Called by the engine when the user transitions TO `BiasMode.Schechter`.
+   * The work is potentially expensive (~700 M math ops for a fully-loaded
+   * deck), so we run it off-thread in a per-source worker — the renderer's
+   * per-frame `draw()` keeps using the current (1.0) slot value until the
+   * worker resolves, at which point the buffer flips to the real ratios.
+   *
+   * ### Why a full-buffer re-upload, not sparse writes
+   *
+   * WebGPU has no scatter-write primitive.  We could issue one
+   * `device.queue.writeBuffer` per galaxy (3.5 M calls at 4 bytes each) but
+   * that's measurably slower than a single full-buffer write — every
+   * `writeBuffer` carries syscall overhead.  Strided writes also don't
+   * help: WebGPU's `writeBuffer` only takes a contiguous source range.
+   *
+   * The right approach is to keep a JS-side mirror of the interleaved
+   * vertex bytes (already populated at upload time), splice fresh ratios
+   * into slot 11 of every row, and re-upload the whole thing in one call.
+   * Cost: ~50 ms PCIe transfer for 17 MB SDSS — imperceptible against
+   * the user's "I picked Schechter mode" click latency budget.
+   *
+   * ### Caching
+   *
+   * The first call per source spawns a worker; subsequent calls reuse the
+   * `cachedSchechterRatios` Float32Array on the LoadedSource entry.  This
+   * makes Schechter→other→Schechter toggles instant — only the initial
+   * "first time the user picks Schechter" pays the integral cost.
+   *
+   * ### Concurrency
+   *
+   * Workers for different sources spawn in parallel; we await all of them
+   * with `Promise.all`.  If a new source loads mid-bake the renderer's
+   * `upload()` will see `schechterModeActive === true` and bake the new
+   * source eagerly with mode = 'with-schechter', so no second pass is
+   * needed for that source.
+   *
+   * Fire-and-forget from the engine side: the per-frame draw loop
+   * continues uninterrupted while ratios compute.  Errors are surfaced
+   * via the returned promise's rejection.
+   */
+  async applySchechterMode(): Promise<void> {
+    this.schechterModeActive = true;
+
+    // Collect the work items first so we don't iterate `this.clouds` while
+    // any async path could mutate it (an `unload` between sources would
+    // skip the rest, but at least we won't crash).
+    const sources: { source: Source; entry: LoadedSource }[] = [];
+    for (const source of ALL_SOURCES) {
+      const entry = this.clouds.get(source);
+      if (!entry) continue;
+      sources.push({ source, entry });
+    }
+
+    await Promise.all(
+      sources.map(async ({ source, entry }) => {
+        // Cache hit: reuse the previously-computed ratios.  Still need to
+        // splice them into the mirror + re-upload because the buffer might
+        // currently hold the all-1.0 values from a `clearSchechterRatios`
+        // round trip.
+        let ratios = entry.cachedSchechterRatios;
+        if (!ratios) {
+          ratios = await PointRenderer.schechterRunner({
+            cloud: entry.cloud,
+            source,
+          });
+          // Re-fetch the entry — `unload()` could have removed the source
+          // while the worker was running; in that case we drop the result.
+          const live = this.clouds.get(source);
+          if (!live || live !== entry) return;
+          entry.cachedSchechterRatios = ratios;
+        }
+
+        this.spliceSchechterIntoMirror(entry, ratios);
+        this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+      }),
+    );
+  }
+
+  /**
+   * Reset slot 11 of every loaded source's vertex buffer to the
+   * multiplicative identity (1.0).
+   *
+   * Cheap because the shader's `select(1.0, schechterRatio, biasMode == 3u)`
+   * gate already ignores slot 11 in modes 0/1/2 — strictly speaking we
+   * don't NEED to clear the buffer.  We expose this method anyway for
+   * symmetry and so a future debug overlay can verify the slot's contents
+   * without surprises.
+   *
+   * Engine's `setBiasMode` typically does NOT call this on transition AWAY
+   * from Schechter — leaving the values in the buffer is harmless and
+   * keeps the next Schechter toggle even faster (no writeBuffer cost).
+   */
+  clearSchechterRatios(): void {
+    this.schechterModeActive = false;
+    for (const entry of this.clouds.values()) {
+      // Splice all-1.0 into slot 11 of the mirror, re-upload.  We don't
+      // build a separate "ones" Float32Array — a simple loop is fine
+      // since this is invoked at most a few times per session.
+      for (let i = 0; i < entry.count; i++) {
+        entry.interleaved[i * SLOTS_PER_POINT + 11] = 1.0;
+      }
+      this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+    }
+  }
+
+  /**
+   * Splice a tightly-packed Float32Array of per-row ratios (length =
+   * entry.count) into slot 11 of every row of the entry's interleaved
+   * mirror.  Pure function over the mirror buffer — no GPU calls.
+   *
+   * Extracted as a private helper so `applySchechterMode` (cache-hit and
+   * worker-resolve paths) can share the same loop without duplicating the
+   * stride math.  The caller is responsible for the subsequent
+   * `writeBuffer` upload to the GPU.
+   */
+  private spliceSchechterIntoMirror(
+    entry: LoadedSource,
+    ratios: Float32Array,
+  ): void {
+    for (let i = 0; i < entry.count; i++) {
+      entry.interleaved[i * SLOTS_PER_POINT + 11] = ratios[i]!;
+    }
   }
 
   /**

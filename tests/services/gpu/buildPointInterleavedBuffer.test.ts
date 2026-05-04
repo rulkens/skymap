@@ -112,7 +112,7 @@ describe('buildPointInterleavedBuffer', () => {
     expect(result.nRef).toBeGreaterThan(0);
   });
 
-  it('writes vMaxWeight in slot 10 and schechterRatio in slot 11', () => {
+  it('writes vMaxWeight in slot 10; default fast mode leaves slot 11 at 1.0', () => {
     const cloud = makeCloud(1);
     // Place the galaxy at d = 100 Mpc with a typical SDSS-like apparent
     // magnitude.  The exact weight value depends on vMaxWeight()'s formula
@@ -129,9 +129,58 @@ describe('buildPointInterleavedBuffer', () => {
     expect(Number.isFinite(vMax)).toBe(true);
     expect(vMax).toBeGreaterThanOrEqual(0);
     expect(vMax).toBeLessThanOrEqual(1);
-    expect(Number.isFinite(sch)).toBe(true);
-    expect(sch).toBeGreaterThanOrEqual(0);
-    expect(sch).toBeLessThanOrEqual(1);
+    // Default mode is 'fast' → slot 11 is the multiplicative identity.
+    // The shader's `select(1.0, schechterRatio, biasMode == 3u)` ignores
+    // this slot in modes 0/1/2, so the visual is unchanged.
+    expect(sch).toBe(1);
+  });
+
+  it('mode: fast writes 1.0 to schechterRatio (slot 11) for every row', () => {
+    // Build a multi-row cloud spread across distances and assert every
+    // row's slot 11 is exactly 1.0 — the multiplicative identity that
+    // makes the shader's mode-3 multiplication a no-op.
+    const cloud = makeCloud(5);
+    for (let i = 0; i < 5; i++) {
+      cloud.positions[i * 3 + 0] = (i + 1) * 100;
+    }
+    cloud.magG.set([16, 17, 18, 19, 20]);
+    const { interleaved } = buildPointInterleavedBuffer({
+      cloud,
+      source: Source.SDSS,
+      priorCount: 0,
+      mode: 'fast',
+    });
+    for (let i = 0; i < 5; i++) {
+      expect(interleaved[i * SLOTS + 11]).toBe(1);
+    }
+  });
+
+  it('mode: with-schechter writes the per-row dim-only-clamped ratios in slot 11', () => {
+    // Place rows at distances < 10 Mpc and > 10 Mpc so we can verify
+    // both regimes: nearby rows produce sub-unity ratios (the LF window
+    // is wider close in), distant rows clamp to 1 (the Schechter density
+    // n(d) drops as d grows past the reference, so nRef/n(d) ≥ 1).
+    // See `computeSchechterRatios.test.ts` for the full math intuition.
+    const cloud = makeCloud(5);
+    cloud.positions.set([1, 0, 0, 2, 0, 0, 5, 0, 0, 50, 0, 0, 500, 0, 0]);
+    cloud.magG.set([16, 17, 18, 19, 20]);
+    const { interleaved } = buildPointInterleavedBuffer({
+      cloud,
+      source: Source.SDSS,
+      priorCount: 0,
+      mode: 'with-schechter',
+    });
+    let sawSubUnity = false;
+    for (let i = 0; i < 5; i++) {
+      const r = interleaved[i * SLOTS + 11]!;
+      expect(Number.isFinite(r)).toBe(true);
+      expect(r).toBeGreaterThanOrEqual(0);
+      expect(r).toBeLessThanOrEqual(1);
+      if (r < 1) sawSubUnity = true;
+    }
+    // At least the d=1 / d=2 / d=5 Mpc galaxies should produce real
+    // ratios < 1 — otherwise the bake silently degraded to fast-mode.
+    expect(sawSubUnity).toBe(true);
   });
 
   it('shifts the per-survey magG mean toward the SDSS target (≈18)', () => {

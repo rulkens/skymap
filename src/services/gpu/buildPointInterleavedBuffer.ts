@@ -62,6 +62,7 @@ import {
   expectedNumberDensity,
   vMaxWeight,
 } from '../../utils/math';
+import { computeSchechterRatios } from './computeSchechterRatios';
 
 /**
  * Number of f32 slots packed per point.  Mirrors `SLOTS_PER_POINT` in
@@ -91,6 +92,32 @@ const NO_COLOUR_SENTINEL = 999;
  * a tight integer sum over a `Map`, easier to do on the renderer side and
  * pass in as a single number.
  */
+/**
+ * Two-mode flag selecting whether the bake computes per-galaxy Schechter
+ * ratios eagerly (~700 M math ops at full deck) or leaves slot 11 at the
+ * multiplicative identity (1.0).
+ *
+ *   - `'fast'`            — slot 11 = 1.0 for every row.  The shader's
+ *                           `select(1.0, schechterRatio, biasMode == 3u)`
+ *                           gate ignores the slot when bias mode isn't 3,
+ *                           so this is correct AS LONG AS the user hasn't
+ *                           picked Schechter LF.  This is the default at
+ *                           upload time — the .bin lands fast (~2 s saved
+ *                           on a fully-loaded deck).
+ *   - `'with-schechter'`  — slot 11 holds the real `min(1, sqrt(nRef/n(d)))`
+ *                           ratio, computed via `computeSchechterRatios`.
+ *                           Used either when an upload happens *while*
+ *                           Schechter mode is already active, or as part
+ *                           of the lazy `applySchechterMode` re-bake.
+ *
+ * Why a flag rather than always doing the work?  The integral is the single
+ * largest cost in the upload bake — collapsing it to "fill with 1.0" cuts
+ * the bake's main-thread time by roughly two-thirds when the user is on the
+ * default bias mode.  See the per-vertex `schechterRatio` doc in
+ * `pointRenderer.ts` for the full design notes.
+ */
+export type BuildPointInterleavedBufferMode = 'fast' | 'with-schechter';
+
 export type BuildPointInterleavedBufferInput = {
   /** The point cloud to bake.  Travels by structured clone (see module doc). */
   cloud: PointCloud;
@@ -104,6 +131,13 @@ export type BuildPointInterleavedBufferInput = {
    * forced the per-vertex bake.
    */
   priorCount: number;
+  /**
+   * Whether to compute the per-galaxy Schechter ratios as part of this bake.
+   * Defaults to `'fast'` (slot 11 = 1.0).  See `BuildPointInterleavedBufferMode`
+   * for the trade-off.  Optional so existing callers (and the worker
+   * structured-clone roundtrip) keep working without recompilation.
+   */
+  mode?: BuildPointInterleavedBufferMode;
 };
 
 /**
@@ -144,6 +178,11 @@ export function buildPointInterleavedBuffer(
   input: BuildPointInterleavedBufferInput,
 ): BuildPointInterleavedBufferResult {
   const { cloud, source, priorCount } = input;
+  // Default to fast mode — the upload path almost always wants this, and the
+  // worker's structured-clone roundtrip serialises `undefined` to `undefined`
+  // so the explicit fallback keeps the behaviour predictable across both
+  // call paths.  See `BuildPointInterleavedBufferMode` for the trade-off.
+  const mode: BuildPointInterleavedBufferMode = input.mode ?? 'fast';
 
   // Allocate a CPU-side ArrayBuffer for the interleaved data and create
   // both Float32 and Uint32 views over it.  The five photometry/position
@@ -194,12 +233,31 @@ export function buildPointInterleavedBuffer(
   // divides this by the per-fragment density `n(d)` to compute the
   // brightness ratio — but in this post-bake refactor the division now
   // happens per-row right here.
+  //
+  // We always compute the triple + nRef so the result still carries them
+  // back to the renderer (the bookkeeping needs them for cache key purposes
+  // even in fast mode).  The expensive step — the per-row N(d) integral —
+  // is what we actually skip below.
   const schechter = surveySchechter(source);
   const nRef = expectedNumberDensity({
     ...schechter,
     mLim: surveyMLim,
     dMpc: 10,
   });
+
+  // ── Lazy Schechter ratios (mode = 'with-schechter' only) ────────────────
+  //
+  // When the upload happens while bias mode is already 3, we compute the
+  // ratios up-front via the shared helper and splice them into slot 11 of
+  // each row below.  Otherwise (the common case) every row gets 1.0.
+  //
+  // Calling the helper here — rather than open-coding the integral — keeps
+  // the math single-source-of-truth between this path and the lazy
+  // `applySchechterMode` re-bake path.  The shared helper traverses the
+  // cloud once with the same hoisted constants (mLim, schechter triple),
+  // so there's no measurable overhead vs the inline version.
+  const schechterRatios: Float32Array | null =
+    mode === 'with-schechter' ? computeSchechterRatios({ cloud, source }) : null;
 
   // ── Pre-compute "is this row a fallback orientation?" flag ─────────────
   //
@@ -278,18 +336,17 @@ export function buildPointInterleavedBuffer(
       dRefMpc: D_REF_MPC,
     });
 
-    // Slot 11 — per-galaxy Schechter density-correction ratio.  Dim-only
-    // clamp matches the inline-version visual: bright nearby clusters
-    // dim toward the far-field's natural alpha; far-field stays unboosted.
-    const nHere = expectedNumberDensity({
-      ...schechter,
-      mLim: surveyMLim,
-      dMpc,
-    });
-    const ratioRaw =
-      nHere > 0 && Number.isFinite(nHere) ? nRef / nHere : 0;
-    const schechterRatio = Math.min(1, Math.sqrt(ratioRaw));
-    interleaved[o + 11] = schechterRatio;
+    // Slot 11 — per-galaxy Schechter density-correction ratio.  In fast
+    // mode we leave it at the multiplicative identity (1.0); the shader's
+    // `select(1.0, schechterRatio, biasMode == 3u)` ignores the slot for
+    // modes 0/1/2 anyway, so this matches the rendered output bit-for-bit
+    // unless the user actually picks Schechter LF.
+    //
+    // When mode === 'with-schechter' the ratios were computed up-front by
+    // `computeSchechterRatios` (above); we just splice each row in here.
+    // Same dim-only-clamp value the original inline path produced — see
+    // the helper for the math.
+    interleaved[o + 11] = schechterRatios !== null ? schechterRatios[i]! : 1.0;
   }
 
   return {
