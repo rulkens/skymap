@@ -85,6 +85,7 @@ import { autoLodMask } from './autoLod';
 import { createRenderScheduler, type RenderScheduler } from './renderScheduler';
 import { buildPointInfo, maxAbsCoord, niceRound } from './pointInfoBuilder';
 import { computeInitialCamera, type InitialCam } from './cameraFraming';
+import { seedSettingsCallbacks } from './seedSettingsCallbacks';
 import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 import { loadFamousSidecars, type FamousMetaEntry, type FamousXrefMap } from './famousMetaLoader';
@@ -903,41 +904,31 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // ── Seed settings callbacks ───────────────────────────────────────────
       //
-      // Fire each optional settings callback once with the default value so
-      // React's initial state matches the engine's defaults (pointSizePx=2.5,
-      // brightness=1.0, autoRotate=false). Without this, the React state
-      // initialised in App.tsx would only update on the first explicit user
-      // interaction, which could leave the UI showing stale values if the
-      // defaults ever change.
-      cb.onPointSizeChange?.(pointSizePx);
-      cb.onBrightnessChange?.(brightness);
-      cb.onAutoRotateChange?.(autoRotate);
-      cb.onGalaxyTexturesEnabledChange?.(galaxyTexturesEnabled);
-      cb.onHighlightFallbackChange?.(highlightFallback);
-      cb.onRealOnlyModeChange?.(realOnlyMode);
-      cb.onDepthFadeEnabledChange?.(depthFadeEnabled);
-      // Malmquist-bias seeds — Task 2 of the bias-correction plan.  Fired
-      // here (even though both default values match the SettingsPanel's
-      // own initial state) so subscribers don't have to duplicate the
-      // defaults: the engine is the single source of truth.
-      cb.onBiasModeChange?.(biasMode);
-      cb.onAbsMagLimitChange?.(absMagLimit);
-      // Tone-map curve seed — same pattern as biasMode/absMagLimit above.
-      // SettingsPanel needs the engine's default to render the right
-      // option as selected on first paint.
-      cb.onToneMapCurveChange?.(toneMapCurve);
-      // Exposure seed — same lifecycle as toneMapCurve.  React's
-      // SettingsPanel slider needs the engine's default (1.0) to
-      // render the thumb in the right position on first paint, and
-      // we keep the contract uniform: every engine-owned setting
-      // React mirrors gets seeded once at init.
-      cb.onExposureChange?.(exposure);
-      // LOD mode + visible-mask seeds — engine and React both default to
-      // 'auto' / ALL_VISIBLE_MASK respectively, but firing the echo here
-      // protects against future default drift and keeps the contract uniform
-      // (every engine-owned setting React mirrors must be seeded at init).
-      cb.onLodModeChange?.(lodMode);
-      cb.onSourceMaskChange?.(visibleSourceMask);
+      // Fire each optional settings callback once with the engine's default
+      // value so React's initial state matches the engine truth (pointSizePx
+      // = 2.5, brightness = 1.0, autoRotate = false, …).  Without this seed,
+      // App.tsx's React state would only update on the first explicit user
+      // interaction — leaving the UI showing stale values if any default
+      // ever drifts between engine and component.
+      //
+      // The fan-out lives in `seedSettingsCallbacks.ts`; see that module for
+      // the rationale on why every engine-owned setting React mirrors goes
+      // through the same single audited code path.
+      seedSettingsCallbacks(cb, {
+        pointSize: pointSizePx,
+        brightness,
+        autoRotate,
+        galaxyTexturesEnabled,
+        highlightFallback,
+        realOnlyMode,
+        depthFadeEnabled,
+        biasMode,
+        absMagLimit,
+        toneMapCurve,
+        exposure,
+        lodMode,
+        visibleSourceMask,
+      });
 
       // ── Render loop ──────────────────────────────────────────────────────
 
