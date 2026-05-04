@@ -545,7 +545,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // hot-reload).  Drop the result silently in that case.
         if (!renderer) return;
 
-        renderer.upload(result.source, result.cloud);
+        // `renderer.upload()` is now async — the per-galaxy bake runs in a
+        // Web Worker so the main thread stays responsive while ~3.5 M
+        // galaxies are processed.  We deliberately DON'T await here:
+        // firing `onCloudReady` immediately lets the UI show "SDSS loaded"
+        // the moment the .bin decode finishes, even though the GPU buffer
+        // takes another second or two to bake.  The renderer's per-frame
+        // `draw()` simply skips any source whose buffer isn't ready yet —
+        // it pops in on the first frame after the worker resolves.
+        //
+        // Errors from the worker are caught + logged; an upload failure
+        // shouldn't crash the entire engine since other surveys may still
+        // be loading.
+        renderer.upload(result.source, result.cloud).catch((err) => {
+          console.error(`[engine] point bake failed for source ${result.source}:`, err);
+        });
         clouds.set(result.source, result.cloud);
         cb.onCloudReady?.(result.source, result.cloud.count);
 
@@ -581,7 +595,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (loadedCount === 0) {
         const fallback = buildSyntheticFallback();
         if (renderer) {
-          renderer.upload(fallback.source, fallback.cloud);
+          // Same fire-and-forget pattern as the real-data path above —
+          // the synthetic cloud is small (<10k points) so the worker
+          // finishes nearly instantly, but we keep the error path
+          // explicit so a future regression doesn't silently swallow it.
+          renderer.upload(fallback.source, fallback.cloud).catch((err) => {
+            console.error('[engine] synthetic-fallback bake failed:', err);
+          });
           clouds.set(fallback.source, fallback.cloud);
           cb.onCloudReady?.(fallback.source, fallback.cloud.count);
         }

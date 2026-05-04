@@ -40,17 +40,27 @@
 
 import { mat4 } from 'gl-matrix';
 import type { PointCloud } from '../../@types';
-import { pickColourIndex } from '../../data/colourIndex';
 import { ALL_SOURCES, Source } from '../../data/sources';
-import { surveyFluxLimit } from '../../data/surveyFluxLimits';
-import { fallbackOrientation } from '../../utils/random/fallbackOrientation';
+import { type SchechterTriple } from '../../data/surveyFluxLimits';
 import {
-  absoluteFromApparent,
-  cartesianToRaDecZ,
-  expectedNumberDensity,
-  vMaxWeight,
-} from '../../utils/math';
-import { surveySchechter, type SchechterTriple } from '../../data/surveyFluxLimits';
+  buildPointInterleavedBuffer,
+  computePriorCount,
+  type BuildPointInterleavedBufferInput,
+  type BuildPointInterleavedBufferResult,
+} from './buildPointInterleavedBuffer';
+
+// `?worker` is a Vite-specific import suffix.  It instructs the bundler to
+// emit `buildPointInterleavedBuffer.worker.ts` as a separate worker chunk
+// and hand us back a default-exported class whose `new`-instantiation
+// spawns a Worker running that bundle.  The worker bundle pulls in the
+// pure-function module on its own — see that file's doc for why the bake
+// runs off-thread (10-second main-thread freeze when survey .bin files
+// arrive).
+//
+// In Node-only test environments the `?worker` suffix isn't resolvable;
+// tests inject a synchronous fallback via `setBuildBufferFactory` instead
+// of importing this module.  See the `BuildBufferFactory` type below.
+import BuildPointBufferWorker from './buildPointInterleavedBuffer.worker?worker';
 
 // `?raw` is a Vite-specific import suffix. It tells the bundler to import the
 // file's content as a plain string rather than attempting to execute it as
@@ -288,6 +298,42 @@ const SCHECHTER_RATIO_BYTE_OFFSET = 44;
  * BYTE-OFFSET CONSTANTS for the per-source partial uniform write below.
  */
 const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4; // 160 bytes
+
+/**
+ * Production path for the off-thread bake.  Spawns a fresh
+ * `BuildPointBufferWorker`, ships the input via structured clone (no
+ * Transferable list — `BigUint64Array` isn't transferable; see the worker
+ * file's doc), waits for the message back, and terminates the worker.
+ *
+ * Why one worker per call?  Parallel survey fetches resolve in unpredictable
+ * order, so SDSS can finish baking while 2MRS is mid-bake.  A long-lived
+ * worker would have to queue requests internally; a per-call worker has zero
+ * shared state and the OS-level concurrency happens automatically.  Worker
+ * spawn is cheap (a few ms) compared to the 1–4 s bake itself.
+ *
+ * The worker transfers the result's `interleaved` and `isFallbackArr`
+ * ArrayBuffers back so we don't pay the 14 + 3.5 MB structured-clone copy
+ * for the by-far-largest payloads.
+ */
+function defaultWorkerRunner(
+  input: BuildPointInterleavedBufferInput,
+): Promise<BuildPointInterleavedBufferResult> {
+  return new Promise((resolve, reject) => {
+    const worker = new BuildPointBufferWorker();
+    worker.onmessage = (event: MessageEvent<BuildPointInterleavedBufferResult>) => {
+      worker.terminate();
+      resolve(event.data);
+    };
+    worker.onerror = (event: ErrorEvent) => {
+      worker.terminate();
+      reject(event.error ?? new Error(event.message ?? 'point-bake worker error'));
+    };
+    // Structured clone — no transfer list.  `cloud.objIDs` is a
+    // BigUint64Array which is NOT on the Transferable allowlist.  Passing
+    // the cloud through `transfer` would throw at runtime.
+    worker.postMessage(input);
+  });
+}
 
 // Note: the `schechter*` uniform slots at byte offsets 140..155 are now
 // dead-but-reserved.  Originally `draw()` wrote 16 bytes per source here
@@ -544,328 +590,83 @@ export class PointRenderer {
 
   /**
    * Pack a `PointCloud` into an interleaved GPU vertex buffer for the given
-   * source. Replaces any previous buffer for that source.
+   * source.  Replaces any previous buffer for that source.
    *
-   * After the upload we recompute every loaded source's `instanceIdOffset` so
-   * the picker's global ID space stays contiguous in `Source` enum order.
+   * ### Why this is async
+   *
+   * The per-galaxy bake (per-survey magG mean, fallback-orientation hash,
+   * Schechter integral, 1/V_max weight, K-correction lookup) used to run on
+   * the main thread inside this method.  For a fully-loaded SDSS + 2MRS +
+   * GLADE deck (~3.5 M galaxies) the loop took ~10 seconds — and it
+   * happened right when the user expected the UI to come alive.  The fix
+   * was structural: move the bake off-thread.  See
+   * `buildPointInterleavedBuffer.ts` and its `.worker.ts` sibling for the
+   * full rationale (structured-clone vs Transferable, per-call worker
+   * lifecycle, etc.).
+   *
+   * The upload now: spawns a fresh worker, ships the cloud + source +
+   * priorCount via structured clone, awaits the result, then writes the
+   * returned `interleaved` buffer to GPU memory and updates bookkeeping.
+   * The worker's transferred ArrayBuffer becomes invalid on the worker
+   * side after the message — fine because the worker terminates anyway.
    *
    * ### Why we destroy the old buffer for this source first
    *
-   * GPU buffers are fixed-size — there is no `realloc`. If the user loads a
-   * different file for an already-present source, the new cloud may have a
-   * different point count, so we throw away the old buffer and allocate a
-   * new one. `GPUBuffer.destroy()` releases the VRAM immediately.
+   * GPU buffers are fixed-size — there is no `realloc`.  If the user loads
+   * a different file for an already-present source, the new cloud may have
+   * a different point count, so we throw away the old buffer and allocate
+   * a new one.  `GPUBuffer.destroy()` releases the VRAM immediately.
+   *
+   * ### Race-condition behaviour
+   *
+   * If `upload(source, cloudA)` is in flight (worker baking) and a second
+   * `upload(source, cloudB)` fires for the same source, both spawn their
+   * own workers.  Whichever completes LAST wins — its `clouds.set` call
+   * overwrites the first's entry, and the loser's GPU buffer (already
+   * allocated by then) is leaked until the next upload destroys it.  This
+   * is the simplest correct semantics for "user reloaded a survey while
+   * the previous version was still uploading".  In practice we only see
+   * one upload per source per session, so the leak is theoretical.
    *
    * @param source  Which survey the cloud belongs to.
    * @param cloud   Point cloud to upload (struct-of-arrays SDSS v2 shape).
    */
-  upload(source: Source, cloud: PointCloud): void {
-    // Allocate a CPU-side ArrayBuffer for the interleaved data and create
-    // both Float32 and Uint32 views over it.  The five photometry/position
-    // slots are written through `f32` and the sixth (globalInstanceIdx) is
-    // written through `u32` — same underlying bytes, two different
-    // interpretations, no conversion at upload time.
-    const arrayBuffer = new ArrayBuffer(cloud.count * POINT_STRIDE);
-    const interleaved = new Float32Array(arrayBuffer);
-    const interleavedU32 = new Uint32Array(arrayBuffer);
-
-    // ── Pre-bake global instance index ──────────────────────────────────────
+  async upload(source: Source, cloud: PointCloud): Promise<void> {
+    // ── Compute the source's prior-count BEFORE the worker spawns ───────────
     //
-    // Each survey's points need a unique slice of the global ID range so
-    // the picker (and the visual selection check) can identify them
-    // unambiguously.  We compute this source's starting offset by summing
-    // the counts of all *earlier* sources (in canonical `ALL_SOURCES`
-    // order) that are already loaded.
+    // The worker can't reach back into `this.clouds` to compute the priorCount
+    // itself — Map<Source, LoadedSource> isn't structured-cloneable (it
+    // contains GPUBuffer references which are not clonable), and even if it
+    // were the worker would lock in a snapshot at message time anyway.  We
+    // therefore compute the integer here on the main thread and ship it to
+    // the worker as a single number.
     //
-    // Why bake into the vertex buffer instead of writing per-draw uniforms?
-    // The uniform-buffer approach hits the WebGPU writeBuffer/submit
-    // ordering rule — every per-source writeBuffer between draws within
-    // one submit completes BEFORE any draw runs, so all draws would read
-    // the last offset written.  Baking sidesteps the race entirely.  The
-    // cost is 4 bytes per instance (~10 MB for SDSS) — acceptable for a
-    // visualisation.
-    //
-    // Edge case: if an *earlier* source (in enum order) is uploaded after
-    // this one, this source's offset would shift forward but the values
-    // already baked here would not.  In practice ALL_SOURCES order is
-    // [Synthetic, SDSS, TwoMRS, Glade] and Synthetic is only loaded as a
-    // fallback when every real survey fails (so it can't load alongside
-    // them).  Real surveys all have offsets that depend only on each
-    // other in stable enum order, so the issue does not arise in current
-    // usage.  If we ever need to support out-of-enum-order uploads, the
-    // fix is to re-upload affected later sources.
-    let priorCount = 0;
-    for (const s of ALL_SOURCES) {
-      if (s === source) break;
-      const entry = this.clouds.get(s);
-      if (entry) priorCount += entry.count;
+    // Edge case unchanged from the inline-version: if an *earlier* source (in
+    // enum order) is uploaded after this one, this source's offset shifts
+    // forward but the values already baked here do not.  The
+    // `rebakeStaleSources` pass below catches the divergence and re-uploads
+    // the affected sources with the corrected priorCount.
+    const countsBySource = new Map<Source, number>();
+    for (const [src, entry] of this.clouds) {
+      countsBySource.set(src, entry.count);
     }
+    const priorCount = computePriorCount(source, countsBySource);
 
-    // ── Per-survey magnitude normalisation ───────────────────────────────────
+    // ── Run the bake off-thread ─────────────────────────────────────────────
     //
-    // The shader's intensity formula `clamp((22 - mag) / 8, 0.05, 1.0)` is
-    // tuned for SDSS-g where the typical apparent magnitude range is 14–22.
-    // But our PointCloud stores `magG` from whichever band the source parser
-    // put there:
-    //
-    //   - SDSS  → real g-band  (range ~14–22)
-    //   - 2MRS  → J-band       (range ~4–15)   — much brighter numbers
-    //   - GLADE → B-band       (range ~7–20)
-    //
-    // Without normalisation, 2MRS J=5 maps to (22-5)/8 = 2.1 → clamps to 1.0,
-    // and most 2MRS galaxies render at maximum intensity with zero contrast
-    // — which is why filaments are invisible in non-SDSS surveys: every
-    // point looks equally bright, so density variation produces no visual
-    // brightness variation, so the cosmic-web structure flattens out.
-    //
-    // Fix: shift each survey's magG distribution so its mean lands on the
-    // SDSS-g median (≈ 18).  Each cloud retains its internal contrast (we
-    // only translate, not stretch); after the shift the shader's existing
-    // 14–22 ramp gives sensible bright→dim mapping for every survey.
-    //
-    // We use the mean (not median) because it's O(N) without sorting, and
-    // for galaxy magnitude distributions the mean and median agree to
-    // within a fraction of a magnitude — fine for this kind of cosmetic
-    // remap.  NaN values are skipped in the mean calculation and replaced
-    // with the post-shift target on the second pass.
-    const SDSS_TARGET_MEAN_MAG = 18;
-    let magSum = 0;
-    let magCount = 0;
-    for (let i = 0; i < cloud.count; i++) {
-      const m = cloud.magG[i]!;
-      if (Number.isFinite(m)) {
-        magSum += m;
-        magCount++;
-      }
-    }
-    const sourceMean = magCount > 0 ? magSum / magCount : SDSS_TARGET_MEAN_MAG;
-    const magOffset = SDSS_TARGET_MEAN_MAG - sourceMean;
+    // `runBuild` either spawns a fresh Web Worker (production path) or runs
+    // the pure function inline (Node test path — see the static factory
+    // override).  Either way we await a `BuildPointInterleavedBufferResult`.
+    // Each upload uses its own worker instance: parallel surveys can bake
+    // simultaneously, and there's no shared-state cleanup between calls.
+    const result = await PointRenderer.runBuild({ cloud, source, priorCount });
+    const { interleaved, schechter, mLim, nRef } = result;
 
-    // ── Malmquist 1/V_max weight inputs ──────────────────────────────────────
+    // ── Write to GPU ────────────────────────────────────────────────────────
     //
-    // Pull the survey's apparent-magnitude flux limit once (m_lim) and pick
-    // a reference distance for the per-galaxy weight normalisation.  Both
-    // are constants over the whole upload, so we hoist them out of the
-    // per-galaxy loop.
-    //
-    // D_REF_MPC = 750 was the plan's tuned default — roughly the midpoint
-    // of typical SDSS camera framing.  An intrinsically-bright galaxy with
-    // dMax ≫ dRef gets a small weight (rendered dimmer because it
-    // represents only a sliver of the comoving volume), while a faint
-    // galaxy with dMax < dRef gets clamped to 1 (it's already representative
-    // of its slice — no extra dimming or boosting).
-    //
-    // We derive each galaxy's absolute magnitude from its observed apparent
-    // magnitude + Cartesian distance from origin (the linear-cosmology
-    // distance the catalog parser baked in).  The shader's existing
-    // distance-modulus calc (used for the volume-limited mode) does the
-    // same thing GPU-side, but for the weight we need the result CPU-side
-    // anyway because we're baking — and `absoluteFromApparent` is the
-    // canonical helper for the equation.
-    const surveyMLim = surveyFluxLimit(source);
-    const D_REF_MPC = 750;
-
-    // ── Schechter LF parameters + central-density normaliser ────────────────
-    //
-    // Task 4 of the Malmquist-bias plan: pre-compute the central detectable
-    // density `N_ref = n(d = 10 Mpc)` for this survey's Schechter triple.
-    // The shader's mode-3 alpha modulator divides this by the per-fragment
-    // density `n(d)` to compute the brightness ratio.
-    //
-    // The integration depends only on the survey's selection function
-    // (M*, α, φ*, m_lim) and the chosen reference distance — none of which
-    // change at runtime — so doing it once at upload is the obvious choice.
-    // We stash the triple alongside `nRef` so `draw()` can write all four
-    // values into the uniform buffer in a single 16-byte partial write.
-    const schechter = surveySchechter(source);
-    const nRef = expectedNumberDensity({
-      ...schechter,
-      mLim: surveyMLim,
-      dMpc: 10,
-    });
-
-    // Pre-compute the "is this galaxy's orientation a fallback?" flag for
-    // every row. Done once at upload time (not per-frame); cost is the same
-    // hash + Float32 round-trip we'd pay anyway in the InfoCard.
-    //
-    // Detection: replay `fallbackOrientation(objID, ra, dec)` and compare
-    // against the stored cloud values. The build pipeline stamped the
-    // SAME f32 we recompute here whenever a galaxy lacks real orientation,
-    // so equality is exact (no epsilon needed). Match → fallback.
-    //
-    // We recover RA/Dec from the Cartesian position via cartesianToRaDecZ —
-    // the same conversion the build pipeline used in reverse to place the
-    // galaxy in world space.
-    const isFallbackArr = new Uint8Array(cloud.count);
-    for (let i = 0; i < cloud.count; i++) {
-      const x = cloud.positions[i * 3 + 0]!;
-      const y = cloud.positions[i * 3 + 1]!;
-      const z = cloud.positions[i * 3 + 2]!;
-      const [ra, dec] = cartesianToRaDecZ(x, y, z);
-      const fb = fallbackOrientation(cloud.objIDs[i]!, ra, dec);
-      const fbAr = new Float32Array([fb.axisRatio])[0]!;
-      const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
-      if (cloud.axisRatio[i] === fbAr && cloud.positionAngleDeg[i] === fbPa) {
-        isFallbackArr[i] = 1;
-      }
-    }
-
-    for (let i = 0; i < cloud.count; i++) {
-      const o = i * SLOTS_PER_POINT;
-
-      // Copy the three position components from the SoA positions array.
-      interleaved[o + 0] = cloud.positions[i * 3 + 0]!;
-      interleaved[o + 1] = cloud.positions[i * 3 + 1]!;
-      interleaved[o + 2] = cloud.positions[i * 3 + 2]!;
-
-      // Derive shader-side magnitude (g-band, normalised), colour index
-      // (per-source colour pair, normalised to 0..2), and the per-row
-      // K-correction coefficient from the v2 five-band photometry.  This is
-      // one-shot work done at load time, not per frame.
-      //
-      // Why delegate band selection to `pickColourIndex`?  Each survey has
-      // its own preferred informative band pair:
-      //
-      //   - SDSS  → u − g  (UV-blue contrast, sensitive to recent star formation)
-      //   - GLADE → B − J  (visible-NIR baseline; B-J ≈ stellar-population age)
-      //   - 2MRS  → J − K  (near-IR colour; almost flat in redshift)
-      //
-      // Picking the right pair per row keeps the colour-ramp meaningful
-      // across surveys; doing it inside the renderer would couple the GPU
-      // code to band-availability rules.  We therefore keep that logic in
-      // `data/colourIndex.ts` and just consume its output here.
-      //
-      // `pickColourIndex` is NaN-tolerant: pass every band as-is (NaN or
-      // real) and let the helper choose what to use.  When the row lacks
-      // any usable colour pair it returns null — we map that case to the
-      // existing `NO_COLOUR_SENTINEL = 999`, the magic value the shader
-      // recognises as "no measurement".  The shader's existing missing-band
-      // branch (no K-correction, fixed mid-ramp tint) keeps working
-      // unchanged.
-      //
-      // The K coefficient is now per-row rather than a single shader
-      // constant: SDSS u−g uses 3.0/z (UV K-shift is steep), GLADE B−J uses
-      // 1.0/z (visible-NIR baseline is gentler), and 2MRS J−K uses 0.0/z
-      // (the near-IR band pair is nearly z-invariant for the galaxy SEDs
-      // and redshift range we care about).  When the colour is unknown we
-      // write 0 — the sentinel branch already skips K-correction in the
-      // shader, so 0 is the conservative default.
-      const NO_COLOUR_SENTINEL = 999;
-      const g = cloud.magG[i]!;
-
-      const colour = pickColourIndex(
-        source,
-        cloud.magU[i]!,
-        cloud.magG[i]!,
-        cloud.magR[i]!,
-        cloud.magI[i]!,
-        cloud.magZ[i]!,
-      );
-
-      // Apply the per-survey mag offset.  NaN-G galaxies (rare; mostly GLADE
-      // rows missing a B-band measurement) snap to the post-shift target so
-      // they render at average intensity instead of vanishing.
-      interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
-      interleaved[o + 4] = colour ? colour.colourIndex : NO_COLOUR_SENTINEL;
-      // Slot 5 (offset 20 bytes) carries the GLOBAL instance index as a u32,
-      // baked once at upload time so the shader doesn't need a per-draw
-      // uniform write.  Read by the selection-halo check and `fsPick`.
-      //
-      // High bit of globalInstanceIdx flags fallback orientations (Task 15).
-      // The vertex shader masks bit 31 off before exposing the canonical
-      // 0..N-1 index for selection / pick lookups.  31 usable bits = 2 B
-      // points, comfortably beyond any catalog we'll load.
-      const idx = priorCount + i;
-      const flag = isFallbackArr[i] === 1 ? 0x80000000 : 0;
-      interleavedU32[o + 5] = (idx | flag) >>> 0;
-      // Slot 6 (offset 24 bytes) carries the per-row K-correction
-      // coefficient.  Multiplied by redshift in the shader to obtain the
-      // K-shift this row should receive.  See `pickColourIndex` for the
-      // per-source values.
-      interleaved[o + 6] = colour ? colour.kPerZ : 0;
-      // Slots 7 and 8 (offsets 28 and 32 bytes): galaxy orientation. The
-      // shader reads these as f32; NaN at decode time would propagate into
-      // the ellipse mask and produce a black billboard, but the build
-      // pipeline guarantees both fields are finite (real or fallback) so
-      // we just copy them through.
-      interleaved[o + 7] = cloud.axisRatio[i]!;
-      interleaved[o + 8] = cloud.positionAngleDeg[i]!;
-      // Slot 9 (offset 36): per-galaxy physical diameter in kpc. The build
-      // pipeline guarantees a finite, positive value (real catalog
-      // measurement when available, else DEFAULT_GALAXY_DIAMETER_KPC = 30),
-      // so we copy through with the same `!` non-null assertion as the
-      // sibling SoA fields above.
-      interleaved[o + 9] = cloud.diameterKpc[i]!;
-
-      // Slot 10 (offset 40): per-galaxy 1/V_max weight.  Computed from the
-      // *raw* apparent magnitude (NOT `g + magOffset` — the per-survey
-      // brightness-normalisation shift is a visualisation cosmetic, not a
-      // physical change to the photometry) plus the Cartesian distance
-      // from origin.  vMaxWeight() handles NaN inputs by returning 0 — so
-      // galaxies with missing photometry contribute nothing to the
-      // 1/V_max-modulated render, which is exactly the right behaviour
-      // (we don't know their dMax, so we can't trust their weight).
-      const dx = cloud.positions[i * 3 + 0]!;
-      const dy = cloud.positions[i * 3 + 1]!;
-      const dz = cloud.positions[i * 3 + 2]!;
-      const dMpc = Math.hypot(dx, dy, dz);
-      const absMag = absoluteFromApparent(g, dMpc);
-      interleaved[o + 10] = vMaxWeight({
-        absMag,
-        mLim: surveyMLim,
-        dRefMpc: D_REF_MPC,
-      });
-
-      // Slot 11 (offset 44): per-galaxy Schechter density-correction ratio.
-      //
-      // Originally implemented as a per-fragment 200-step trapezoidal integral
-      // in `points.wgsl` (commit 7a6d810, Task 4).  At ~3.5 M galaxies × ~6
-      // fragments/billboard × 200 iterations the per-frame cost was a few
-      // billion `pow + exp` evaluations — the slowest path in the fragment
-      // shader by an order of magnitude.
-      //
-      // This bake mirrors Task 3's `vMaxWeight` pattern: each galaxy's distance
-      // from origin is fixed at upload time, the Schechter integral at that
-      // distance depends only on the survey's selection function (M*, α, m_lim)
-      // and that fixed distance, so the value is also fixed at upload time.
-      // We compute it here once and the fragment shader reads a single f32.
-      //
-      // Numeric stability: `expectedNumberDensity` already returns finite
-      // values, but at extreme distances the integration window collapses to
-      // empty and it returns 0.  Mirror the shader's old guard `nHere > 0`
-      // by baking 0 for that case (galaxy disappears in mode 3 — same
-      // behaviour as before).  The clamp at 10 matches the shader's old
-      // `clamp(ratio, 0, 10)` exactly so the visual output is preserved.
-      const nHere = expectedNumberDensity({
-        ...schechter,
-        mLim: surveyMLim,
-        dMpc,
-      });
-      // Schechter ratio: in theory we want nRef/nHere so the brighter the
-      // local density the more the alpha boost — flattening the apparent
-      // over-density toward something uniform.  In practice, additive
-      // blending across millions of overlapping galaxy billboards turns
-      // any multiplier > 1 into a bloom: even sqrt(ratio) clamped at 3
-      // washed the canvas to peak white.
-      //
-      // For visualisation we therefore apply the correction as DIM-ONLY
-      // — clamp the multiplier to [0, 1] so the mode can darken the
-      // dense-and-overdrawn nearby cluster without ever boosting the
-      // sparse far field.  The resulting visual still achieves the
-      // intent ("Local Group looks like every other supercluster")
-      // because the over-bright nearby concentration shrinks while
-      // distant galaxies stay at their natural alpha.  The math is no
-      // longer the literal Schechter inversion, but the visual cue is
-      // honest: dense regions in the catalog look less dense in the
-      // render.  See Task 4 Step 3 of the Malmquist-bias plan for the
-      // softer-correction tuning note that motivated this.
-      const ratioRaw =
-        nHere > 0 && Number.isFinite(nHere) ? nRef / nHere : 0;
-      const schechterRatio = Math.min(1, Math.sqrt(ratioRaw));
-      interleaved[o + 11] = schechterRatio;
-    }
-
-    // Destroy any previous buffer for this source before replacing it.
+    // Destroy any previous buffer for this source before replacing it (GPU
+    // buffers can't be realloc'd; allocating a fresh one of the new size and
+    // letting the old one's VRAM go is the only path).
     this.clouds.get(source)?.buffer.destroy();
 
     const buffer = this.device.createBuffer({
@@ -888,11 +689,47 @@ export class PointRenderer {
       bakedPriorCount: priorCount,
       cloud,
       schechter,
-      mLim: surveyMLim,
+      mLim,
       nRef,
     });
     this.recomputeInstanceIdOffsets();
-    this.rebakeStaleSources();
+    await this.rebakeStaleSources();
+  }
+
+  /**
+   * Static factory for the off-thread bake.  Production path spawns a Vite
+   * `?worker` chunk; Node tests can override with a synchronous in-process
+   * runner via `PointRenderer.setBuildBufferRunner(...)`.
+   *
+   * Defined as a static field rather than an instance method so the worker
+   * import lives at module scope (Vite's `?worker` plugin can statically
+   * resolve it that way) and so a single override flips the behaviour for
+   * every renderer in the test suite.
+   */
+  private static buildRunner: (
+    input: BuildPointInterleavedBufferInput,
+  ) => Promise<BuildPointInterleavedBufferResult> = defaultWorkerRunner;
+
+  /**
+   * Override the bake runner — used by tests that can't load the Vite
+   * `?worker` import (the Node-side vitest environment doesn't have a
+   * Worker constructor).  Pass a synchronous function that runs the pure
+   * `buildPointInterleavedBuffer` directly, or `null` to restore the
+   * worker-based default.
+   */
+  static setBuildBufferRunner(
+    runner:
+      | ((input: BuildPointInterleavedBufferInput) => Promise<BuildPointInterleavedBufferResult>)
+      | null,
+  ): void {
+    PointRenderer.buildRunner = runner ?? defaultWorkerRunner;
+  }
+
+  /** Convenience wrapper used by `upload()` and `rebakeStaleSources`. */
+  private static runBuild(
+    input: BuildPointInterleavedBufferInput,
+  ): Promise<BuildPointInterleavedBufferResult> {
+    return PointRenderer.buildRunner(input);
   }
 
   /**
@@ -914,7 +751,7 @@ export class PointRenderer {
    * the rebake itself doesn't change any other source's offset).
    */
   private rebaking = false;
-  private rebakeStaleSources(): void {
+  private async rebakeStaleSources(): Promise<void> {
     if (this.rebaking) return;
     this.rebaking = true;
     try {
@@ -926,7 +763,13 @@ export class PointRenderer {
           // old buffer, allocates a new one, and updates the LoadedSource
           // entry — the caller's local snapshot of `entry` is dead after
           // this returns, but we don't keep a reference past the call.
-          this.upload(s, entry.cloud);
+          //
+          // We `await` so each rebake completes before the next iteration —
+          // otherwise a second source's rebake could see the in-flight
+          // first source's stale `instanceIdOffset` and trigger an
+          // unnecessary cascade.  In practice this loop visits at most one
+          // stale source per call, so the serialisation costs nothing.
+          await this.upload(s, entry.cloud);
         }
       }
     } finally {

@@ -1,0 +1,61 @@
+/**
+ * Web-worker entry point for the point-cloud bake.
+ *
+ * ### Why this file exists
+ *
+ * `pointRenderer.upload()` used to bake a 12-slot interleaved vertex buffer
+ * for every loaded survey on the main thread.  With three real catalogs
+ * loaded (~3.5 M galaxies total) the bake took roughly 10 seconds — and it
+ * happened right when the user expected the UI to come alive.  The freeze
+ * was *the* worst-felt latency in the app.
+ *
+ * The fix is structural: ship the same code off-thread.  Vite's `?worker`
+ * import suffix produces a class whose instances run a fresh JS context;
+ * `postMessage` carries inputs and outputs via structured clone (with an
+ * optional Transferable list to avoid the copy).
+ *
+ * ### Why structured clone for inputs, Transferable for outputs
+ *
+ * `PointCloud` carries a `BigUint64Array` of object IDs.  That type isn't
+ * on the Transferable allowlist — only ArrayBuffer + ImageBitmap + a few
+ * others.  Passing the cloud as the second `transfer` argument throws.
+ * Solution: omit the transfer list on the way in (structured clone copies
+ * the typed arrays — fast in modern engines because they back into a single
+ * underlying byte buffer), and only transfer the result's plain
+ * `Float32Array.buffer` on the way back.
+ *
+ * ### Lifecycle
+ *
+ * One message in, one message out, then the caller calls `worker.terminate()`
+ * to free the JS context.  No long-running state here — every upload spawns
+ * a fresh worker.  See `pointRenderer.upload()` for why.
+ *
+ * @module
+ */
+
+import {
+  buildPointInterleavedBuffer,
+  type BuildPointInterleavedBufferInput,
+  type BuildPointInterleavedBufferResult,
+} from './buildPointInterleavedBuffer';
+
+// `self` inside a worker is the WorkerGlobalScope; we type-narrow via
+// `as Worker`-style cast at the call site for `postMessage`.  The
+// `onmessage` setter on the global scope itself is fine to type as
+// `MessageEvent<T>` — TypeScript's lib.webworker.d.ts gives us the
+// structural type when this file is bundled with the worker target.
+self.onmessage = (event: MessageEvent<BuildPointInterleavedBufferInput>) => {
+  const result: BuildPointInterleavedBufferResult = buildPointInterleavedBuffer(
+    event.data,
+  );
+
+  // Transfer the two large ArrayBuffers back to the caller — avoids a
+  // copy of the per-vertex bytes (~14 MB at 3.5 M points × 48 B) and the
+  // fallback-flag array (~3.5 MB).  The Schechter triple, mLim and nRef
+  // are scalars; they ride along by structured clone.
+  const transfer: Transferable[] = [
+    result.interleaved.buffer,
+    result.isFallbackArr.buffer,
+  ];
+  (self as unknown as Worker).postMessage(result, transfer);
+};

@@ -22,8 +22,9 @@
  * wrong tool for that.
  */
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PointRenderer } from '../../../src/services/gpu/pointRenderer';
+import { buildPointInterleavedBuffer } from '../../../src/services/gpu/buildPointInterleavedBuffer';
 import { Source } from '../../../src/data/sources';
 import type { PointCloud } from '../../../src/@types';
 
@@ -46,6 +47,17 @@ beforeAll(() => {
     INDIRECT: 0x0100,
     QUERY_RESOLVE: 0x0200,
   };
+
+  // The production `upload()` spawns a Vite `?worker` chunk to run the bake
+  // off-thread.  Vitest loads modules in Node, where `Worker` doesn't exist
+  // — instead of trying to polyfill the whole worker harness we just route
+  // the bake through the same pure function the worker would call.  Tests
+  // get bit-identical behaviour without any structured-clone round-trip.
+  PointRenderer.setBuildBufferRunner(async (input) => buildPointInterleavedBuffer(input));
+});
+
+afterAll(() => {
+  PointRenderer.setBuildBufferRunner(null);
 });
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
@@ -118,18 +130,18 @@ describe('PointRenderer.totalCount', () => {
     expect(renderer.totalCount()).toBe(0);
   });
 
-  it('sums counts across multiple sources', () => {
+  it('sums counts across multiple sources', async () => {
     const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
-    renderer.upload(Source.SDSS, makeCloud(100));
-    renderer.upload(Source.TwoMRS, makeCloud(50));
-    renderer.upload(Source.Glade, makeCloud(25));
+    await renderer.upload(Source.SDSS, makeCloud(100));
+    await renderer.upload(Source.TwoMRS, makeCloud(50));
+    await renderer.upload(Source.Glade, makeCloud(25));
     expect(renderer.totalCount()).toBe(175);
   });
 
-  it('updates after a source is unloaded', () => {
+  it('updates after a source is unloaded', async () => {
     const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
-    renderer.upload(Source.SDSS, makeCloud(100));
-    renderer.upload(Source.TwoMRS, makeCloud(50));
+    await renderer.upload(Source.SDSS, makeCloud(100));
+    await renderer.upload(Source.TwoMRS, makeCloud(50));
     expect(renderer.totalCount()).toBe(150);
 
     renderer.unload(Source.SDSS);
@@ -138,11 +150,11 @@ describe('PointRenderer.totalCount', () => {
 });
 
 describe('PointRenderer.loadedSources', () => {
-  it('iterates clouds in `Source` enum order with correct instanceIdOffsets', () => {
+  it('iterates clouds in `Source` enum order with correct instanceIdOffsets', async () => {
     const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
     // Upload in non-enum order on purpose — the renderer must re-sort.
-    renderer.upload(Source.TwoMRS, makeCloud(50)); // enum value 2
-    renderer.upload(Source.SDSS, makeCloud(100)); // enum value 1
+    await renderer.upload(Source.TwoMRS, makeCloud(50)); // enum value 2
+    await renderer.upload(Source.SDSS, makeCloud(100)); // enum value 1
 
     const entries = Array.from(renderer.loadedSources());
 
@@ -156,11 +168,11 @@ describe('PointRenderer.loadedSources', () => {
     expect(entries[1]!.count).toBe(50);
   });
 
-  it('recomputes instanceIdOffset after unload', () => {
+  it('recomputes instanceIdOffset after unload', async () => {
     const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
-    renderer.upload(Source.SDSS, makeCloud(100));
-    renderer.upload(Source.TwoMRS, makeCloud(50));
-    renderer.upload(Source.Glade, makeCloud(25));
+    await renderer.upload(Source.SDSS, makeCloud(100));
+    await renderer.upload(Source.TwoMRS, makeCloud(50));
+    await renderer.upload(Source.Glade, makeCloud(25));
 
     renderer.unload(Source.SDSS);
 
