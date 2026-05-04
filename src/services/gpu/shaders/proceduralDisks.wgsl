@@ -20,6 +20,8 @@ struct Uniforms {
   viewport: vec2<f32>,
   _pad0: f32,
   _pad1: f32,
+  // (unused in this shader; preserved for ABI continuity with the disk
+  // pass — see disks.wgsl line 62-69 for the same pattern.)
   camPosWorld: vec3<f32>,
   pxPerRad: f32,
 };
@@ -82,8 +84,22 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let axisRatio = max(instance.orientation.x, 0.05);
   let paRad = instance.orientation.y * 3.14159265 / 180.0;
 
-  // Line of sight (camera → galaxy).
-  let los = normalize(pos - u.camPosWorld);
+  // ── Line of sight (Earth → galaxy) ───────────────────────────────────
+  //
+  // Earth sits at the world origin in this coordinate system; `losDir`
+  // is therefore the Earth-to-galaxy direction.  WORLD-FIXED: the disk's
+  // orientation is an intrinsic property of the galaxy in 3D space and
+  // must not depend on where the camera currently sits, otherwise
+  // orbiting would visibly rotate the disk plane with the camera (the
+  // exact bug `disks.wgsl` was rewritten to fix; see its header).
+  //
+  // Earth (origin) → galaxy direction.  WORLD-FIXED, independent of camera
+  // position, so orbiting reveals the true 3D inclination foreshortening
+  // rather than rotating the disk with the camera.  This mirrors
+  // `disks.wgsl`'s `losDir = normalize(center)` derivation; see the long
+  // header comment in that file for the full reasoning on why this is
+  // emphatically NOT `pos - camPosWorld` (the bug fixed there).
+  let los = normalize(pos);
 
   // Local sky-north and sky-east at the galaxy.  We Gram-Schmidt
   // celestial-north (+Z world) against `los` to get the sky-north
@@ -109,9 +125,13 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // Perpendicular-to-major in the sky-tangent plane.
   let perpMajorSky = cross(los, majorSky);
 
-  // Disk normal: line-of-sight tilted by (90° - inclination) toward
-  // perpMajorSky.  At axisRatio=1 (face-on) the normal is exactly los;
-  // at axisRatio→0 (edge-on) the normal lies in the sky-tangent plane.
+  // Disk normal: world-fixed line-of-sight (Earth→galaxy) tilted by
+  // (90° - inclination) toward perpMajorSky.  At axisRatio=1 (face-on)
+  // the normal is exactly the Earth-to-galaxy direction; at
+  // axisRatio→0 (edge-on) the normal lies in the sky-tangent plane.
+  // Because `los` is world-fixed (not camera-relative), this normal
+  // is an intrinsic property of the galaxy — orbiting the camera
+  // does not rotate it.
   let cosI = axisRatio;
   let sinI = sqrt(max(0.0, 1.0 - cosI * cosI));
   let diskNormal = normalize(los * cosI + perpMajorSky * sinI);
