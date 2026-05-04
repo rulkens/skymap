@@ -30,7 +30,7 @@
 **Pre-existing dependencies:**
 - The merged SDSS + 2MRS + GLADE `.bin` files at `public/data/{sdss,2mrs,glade}.bin` (produced by `npm run build-all`).
 - The v4 PointCloud format (we read it for galaxy positions, not write it).
-- Existing per-frame draw orchestration in `src/services/engine/engine.ts:render()`.
+- Existing per-frame draw orchestration in `src/services/engine/renderFrame.ts` (post-refactor: `engine.ts` constructs renderers; `renderFrame.ts` owns the HDR-pass + tone-map dispatch).
 
 ---
 
@@ -38,18 +38,19 @@
 
 ### New files
 
-- **`tools/parseNDskl.ts`** — pure TypeScript parser for DisPerSE's ASCII `.NDskl` format. Pure-function, fully testable without DisPerSE installed.
-- **`tools/filamentBinaryFormat.ts`** — encoder + decoder for the runtime `filaments.bin` format. Mirrors `src/data/pointCloudFormat.ts` style.
+- **`tools/parsers/ndskl.ts`** — pure TypeScript parser for DisPerSE's ASCII `.NDskl` format. Lives alongside the other catalog parsers (`glade.ts`, `twoMrs.ts`, `sdssCsv.ts`); pure-function, fully testable without DisPerSE installed.
+- **`src/data/filamentBinaryFormat.ts`** — encoder + decoder for the runtime `filaments.bin` format. Mirrors `src/data/pointCloudFormat.ts` style and lives next to it so the runtime can import it without crossing the `src/`↔`tools/` boundary.
 - **`tools/buildFilaments.ts`** — CLI orchestrator: reads the survey `.bin` files, builds the merged TSV input for DisPerSE, shells out to `mse` + `skelconv`, calls the parser, calls the binary encoder, writes `public/data/filaments.bin`.
 - **`src/services/gpu/filamentRenderer.ts`** — GPU pipeline owner. Loads `filaments.bin`, builds vertex + instance buffers, exposes `draw(pass, viewProj, ...)`.
 - **`src/services/gpu/shaders/filaments.wgsl`** — vertex + fragment shaders for the filament pass.
 - **`src/@types/FilamentCloud.d.ts`** — runtime decoded shape (parallel to `PointCloud.d.ts`).
-- **Tests**: `tests/parseNDskl.test.ts`, `tests/filamentBinaryFormat.test.ts`, `tests/services/gpu/filamentRenderer.test.ts`.
+- **Tests**: `tests/parsers/ndskl.test.ts`, `tests/data/filamentBinaryFormat.test.ts`, `tests/services/gpu/filamentRenderer.test.ts`. Tests mirror the source tree exactly.
 
 ### Modified files
 
 - **`src/services/engine/cloudLoader.ts`** — append a `loadFilaments()` helper (separate from the survey-bin path because the schema is different).
-- **`src/services/engine/engine.ts`** — instantiate `FilamentRenderer`, fetch the binary, call `filamentRenderer.draw()` per frame, expose `setFilamentsEnabled(boolean)`.
+- **`src/services/engine/engine.ts`** — instantiate `FilamentRenderer`, fetch the binary, expose `setFilamentsEnabled(boolean)`. Engine no longer owns the per-frame loop directly (post-refactor) — it constructs renderers and threads them into `renderFrame()`.
+- **`src/services/engine/renderFrame.ts`** — add the filament draw call to the HDR pass after `pointRenderer.draw` and `thumbnails.runFrame`, before `pass.end()`.
 - **`src/@types/EngineHandle.d.ts`** — add `setFilamentsEnabled?: (enabled: boolean) => void`.
 - **`src/components/SettingsPanel/SettingsPanel.tsx`** — add a "Filaments" checkbox.
 - **`src/App.tsx`** — wire the checkbox through `handleRef.current?.setFilamentsEnabled`.
@@ -114,6 +115,12 @@ We draw with `pass.draw(6, instanceCount)` — six quad-vertex indices, one inst
 
 ---
 
+## Plan revision history
+
+**2026-05-04 — convention audit (post Task 1 review).** A code review of the Task 1 implementation surfaced three issues that were inherited from the plan rather than introduced by the implementer: (1) parser file placement diverged from the `tools/parsers/` convention every sibling parser uses; (2) example code did `if (v === undefined) break` on truncated `[FILAMENTS DATA]` blocks, contradicting the project's "throw loudly on malformed input" stance; (3) `Number(... ?? '0')` swallowed malformed field counts as zero. Because this plan dispatches future implementers verbatim, leaving those patterns in the plan would silently re-introduce them. The audit walked every task and aligned file placement (`tools/parsers/ndskl.ts`, `src/data/filamentBinaryFormat.ts`, `tests/parsers/`, `tests/data/`), tightened error handling to throw on declared-count mismatches and malformed numerics, retargeted the engine integration onto the post-refactor `renderFrame.ts` (engine.ts no longer owns the per-frame loop), and switched the renderer's colour-attachment format to `'rgba16float'` so filaments accumulate into the HDR target the rest of the renderer uses. See individual task changes for specifics; the architectural decisions (binary format v1, two-component shader model, single render pass) are unchanged.
+
+---
+
 ## Task 0: Pre-flight — confirm baseline + DisPerSE availability
 
 **Files:** none
@@ -170,8 +177,8 @@ Record from Step 1's output: number of tests passing, lines of code (e.g. `find 
 ## Task 1: Pure NDskl parser
 
 **Files:**
-- Create: `tools/parseNDskl.ts`
-- Create: `tests/parseNDskl.test.ts`
+- Create: `tools/parsers/ndskl.ts` (mirrors the existing `tools/parsers/{glade,twoMrs,sdssCsv}.ts` layout — every catalog parser lives here)
+- Create: `tests/parsers/ndskl.test.ts` (tests mirror the source tree exactly)
 
 DisPerSE's `.NDskl` ASCII format documented at <https://www2.iap.fr/users/sousbier/web4/?page_id=14> (see "Output Files"). The relevant subset for our needs is the `[CRITICAL POINTS]` block (we ignore — we only want skeleton arcs) and the `[FILAMENTS]` block (we want all of it).
 
@@ -211,11 +218,11 @@ Parser job: scan to `[FILAMENTS]`, read the count, then for each filament read `
 
 - [ ] **Step 1: Add a failing test for the parser**
 
-Create `/Users/rulkens/Development/js/skymap/tests/parseNDskl.test.ts`:
+Create `/Users/rulkens/Development/js/skymap/tests/parsers/ndskl.test.ts`:
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { parseNDskl } from '../tools/parseNDskl';
+import { parseNDskl } from '../../tools/parsers/ndskl';
 
 const FIXTURE = `ANDSKEL
 3
@@ -298,14 +305,14 @@ describe('parseNDskl', () => {
 Run:
 
 ```
-npx vitest run tests/parseNDskl.test.ts
+npx vitest run tests/parsers/ndskl.test.ts
 ```
 
-Expected: every test fails with `Cannot find module '../tools/parseNDskl'`.
+Expected: every test fails with `Cannot find module '../../tools/parsers/ndskl'`.
 
 - [ ] **Step 3: Implement the parser**
 
-Create `/Users/rulkens/Development/js/skymap/tools/parseNDskl.ts`:
+Create `/Users/rulkens/Development/js/skymap/tools/parsers/ndskl.ts`:
 
 ```ts
 /**
@@ -426,22 +433,46 @@ export function parseNDskl(text: string): ParsedSkeleton {
   // across *every* filament in the same order the [FILAMENTS] block emitted
   // them.  So we re-walk our strips array and consume one density value
   // per vertex.
+  //
+  // Throw-loudly philosophy: the BLOCK itself is optional (not every
+  // DisPerSE invocation tracks per-skeleton fields).  But once the
+  // [FILAMENTS DATA] header is present, its DECLARED counts must match the
+  // filament geometry exactly — any discrepancy is a real upstream bug
+  // we want surfaced now rather than silently rendered as zeros.
   const dataHdr = lines.findIndex((l) => l.trim() === '[FILAMENTS DATA]');
   if (dataHdr >= 0) {
-    // Skip header + field-count + field-name lines (e.g. "1\nfield_value\n").
-    // The format puts the count on the line after [FILAMENTS DATA], then one
-    // line per declared field name, then the value rows begin.  We read the
-    // count and skip count field-name lines.
+    // The format puts the field-count on the line after [FILAMENTS DATA],
+    // then one line per declared field name, then the value rows begin.
     let dataCursor = dataHdr + 1;
-    const fieldCount = Number(lines[dataCursor++]?.trim() ?? '0');
-    if (Number.isFinite(fieldCount) && fieldCount > 0) {
+    const fieldCountLine = lines[dataCursor++];
+    if (fieldCountLine === undefined) {
+      throw new Error('parseNDskl: [FILAMENTS DATA] missing field-count line');
+    }
+    const fieldCount = Number(fieldCountLine.trim());
+    if (!Number.isFinite(fieldCount) || fieldCount < 0) {
+      throw new Error(
+        `parseNDskl: [FILAMENTS DATA] bad field count "${fieldCountLine}"`,
+      );
+    }
+    if (fieldCount > 0) {
       dataCursor += fieldCount; // skip the field-name lines
-      for (const strip of strips) {
+      for (let si = 0; si < strips.length; si++) {
+        const strip = strips[si]!;
         for (let i = 0; i < strip.vertices.length; i++) {
           const v = lines[dataCursor++];
-          if (v === undefined) break;
+          if (v === undefined) {
+            throw new Error(
+              `parseNDskl: [FILAMENTS DATA] truncated at strip ${si} vertex ${i} ` +
+                `(line ${dataCursor}); declared geometry expects more values`,
+            );
+          }
           const n = Number(v.trim());
-          if (Number.isFinite(n)) strip.density[i] = n;
+          if (!Number.isFinite(n)) {
+            throw new Error(
+              `parseNDskl: [FILAMENTS DATA] non-numeric value "${v}" at strip ${si} vertex ${i}`,
+            );
+          }
+          strip.density[i] = n;
         }
       }
     }
@@ -456,7 +487,7 @@ export function parseNDskl(text: string): ParsedSkeleton {
 Run:
 
 ```
-npx vitest run tests/parseNDskl.test.ts
+npx vitest run tests/parsers/ndskl.test.ts
 ```
 
 Expected: 5 tests pass.
@@ -464,7 +495,7 @@ Expected: 5 tests pass.
 - [ ] **Step 5: Commit**
 
 ```
-cd /Users/rulkens/Development/js/skymap && git add tools/parseNDskl.ts tests/parseNDskl.test.ts && git commit -m "feat(filaments): pure NDskl parser"
+cd /Users/rulkens/Development/js/skymap && git add tools/parsers/ndskl.ts tests/parsers/ndskl.test.ts && git commit -m "feat(filaments): pure NDskl parser"
 ```
 
 ---
@@ -472,10 +503,9 @@ cd /Users/rulkens/Development/js/skymap && git add tools/parseNDskl.ts tests/par
 ## Task 2: Filament binary format (encoder + decoder)
 
 **Files:**
-- Create: `tools/filamentBinaryFormat.ts` (used by both build-time encoder and runtime decoder)
-- Create: `src/services/gpu/filamentBinaryFormat.ts` (re-export wrapper for runtime; or just import directly)
+- Create: `src/data/filamentBinaryFormat.ts` (lives next to `pointCloudFormat.ts`; consumed by both the build-time encoder in `tools/buildFilaments.ts` and the runtime decoder in `cloudLoader.ts` — putting it under `src/data/` lets the runtime import it without crossing the `src/`↔`tools/` boundary)
 - Create: `src/@types/FilamentCloud.d.ts`
-- Create: `tests/filamentBinaryFormat.test.ts`
+- Create: `tests/data/filamentBinaryFormat.test.ts` (mirrors `src/data/`)
 
 **Format spec is at the top of this plan ("Binary format (FILA v1)").**
 
@@ -520,15 +550,15 @@ export type FilamentCloud = {
 
 - [ ] **Step 2: Add a failing roundtrip test**
 
-Create `/Users/rulkens/Development/js/skymap/tests/filamentBinaryFormat.test.ts`:
+Create `/Users/rulkens/Development/js/skymap/tests/data/filamentBinaryFormat.test.ts`:
 
 ```ts
 import { describe, it, expect } from 'vitest';
 import {
   encodeFilaments,
   decodeFilaments,
-} from '../tools/filamentBinaryFormat';
-import type { FilamentCloud } from '../src/@types/FilamentCloud';
+} from '../../src/data/filamentBinaryFormat';
+import type { FilamentCloud } from '../../src/@types/FilamentCloud';
 
 function makeFixture(): FilamentCloud {
   // Two strips: A has 3 vertices, B has 2.  Total 5 vertices.
@@ -592,14 +622,14 @@ describe('filament binary format (FILA v1)', () => {
 Run:
 
 ```
-npx vitest run tests/filamentBinaryFormat.test.ts
+npx vitest run tests/data/filamentBinaryFormat.test.ts
 ```
 
-Expected: every test fails with `Cannot find module '../tools/filamentBinaryFormat'`.
+Expected: every test fails with `Cannot find module '../../src/data/filamentBinaryFormat'`.
 
 - [ ] **Step 4: Implement the format**
 
-Create `/Users/rulkens/Development/js/skymap/tools/filamentBinaryFormat.ts`:
+Create `/Users/rulkens/Development/js/skymap/src/data/filamentBinaryFormat.ts`:
 
 ```ts
 /**
@@ -631,7 +661,7 @@ Create `/Users/rulkens/Development/js/skymap/tools/filamentBinaryFormat.ts`:
  * AND simpler to render with `pass.draw(6, instanceCount)`.
  */
 
-import type { FilamentCloud } from '../src/@types/FilamentCloud';
+import type { FilamentCloud } from '../@types/FilamentCloud';
 
 const MAGIC = 0x414c4946; // "FILA" little-endian
 const VERSION = 1;
@@ -725,7 +755,7 @@ export function decodeFilaments(buf: ArrayBuffer): FilamentCloud {
 Run:
 
 ```
-npx vitest run tests/filamentBinaryFormat.test.ts
+npx vitest run tests/data/filamentBinaryFormat.test.ts
 ```
 
 Expected: 5 tests pass.
@@ -733,7 +763,7 @@ Expected: 5 tests pass.
 - [ ] **Step 6: Commit**
 
 ```
-cd /Users/rulkens/Development/js/skymap && git add tools/filamentBinaryFormat.ts src/@types/FilamentCloud.d.ts tests/filamentBinaryFormat.test.ts && git commit -m "feat(filaments): FILA v1 binary format with encode/decode + tests"
+cd /Users/rulkens/Development/js/skymap && git add src/data/filamentBinaryFormat.ts src/@types/FilamentCloud.d.ts tests/data/filamentBinaryFormat.test.ts && git commit -m "feat(filaments): FILA v1 binary format with encode/decode + tests"
 ```
 
 ---
@@ -741,17 +771,17 @@ cd /Users/rulkens/Development/js/skymap && git add tools/filamentBinaryFormat.ts
 ## Task 3: NDskl → FilamentCloud converter
 
 **Files:**
-- Modify: `tools/parseNDskl.ts` (add a converter helper)
-- Modify: `tests/parseNDskl.test.ts` (add tests for the converter)
+- Modify: `tools/parsers/ndskl.ts` (add a converter helper)
+- Modify: `tests/parsers/ndskl.test.ts` (add tests for the converter)
 
 The parser from Task 1 returns a `ParsedSkeleton` with arrays-of-tuples-of-arrays. The renderer wants a flat SoA `FilamentCloud`. This task adds the conversion.
 
 - [ ] **Step 1: Add a failing test for the converter**
 
-Append to `/Users/rulkens/Development/js/skymap/tests/parseNDskl.test.ts`:
+Append to `/Users/rulkens/Development/js/skymap/tests/parsers/ndskl.test.ts`:
 
 ```ts
-import { skeletonToFilamentCloud } from '../tools/parseNDskl';
+import { skeletonToFilamentCloud } from '../../tools/parsers/ndskl';
 
 describe('skeletonToFilamentCloud', () => {
   it('flattens strips into the SoA FilamentCloud shape', () => {
@@ -826,17 +856,17 @@ describe('skeletonToFilamentCloud', () => {
 Run:
 
 ```
-npx vitest run tests/parseNDskl.test.ts
+npx vitest run tests/parsers/ndskl.test.ts
 ```
 
 Expected: 3 new tests fail with `skeletonToFilamentCloud` not exported.
 
 - [ ] **Step 3: Implement the converter**
 
-Append to `/Users/rulkens/Development/js/skymap/tools/parseNDskl.ts`:
+Append to `/Users/rulkens/Development/js/skymap/tools/parsers/ndskl.ts`:
 
 ```ts
-import type { FilamentCloud } from '../src/@types/FilamentCloud';
+import type { FilamentCloud } from '../../src/@types/FilamentCloud';
 
 /**
  * Convert a parsed `.NDskl` skeleton to the SoA `FilamentCloud` shape
@@ -916,7 +946,7 @@ export function skeletonToFilamentCloud(sk: ParsedSkeleton): FilamentCloud {
 Run:
 
 ```
-npx vitest run tests/parseNDskl.test.ts
+npx vitest run tests/parsers/ndskl.test.ts
 ```
 
 Expected: all (5 + 3) = 8 tests pass.
@@ -924,7 +954,7 @@ Expected: all (5 + 3) = 8 tests pass.
 - [ ] **Step 5: Commit**
 
 ```
-cd /Users/rulkens/Development/js/skymap && git add tools/parseNDskl.ts tests/parseNDskl.test.ts && git commit -m "feat(filaments): NDskl → FilamentCloud converter"
+cd /Users/rulkens/Development/js/skymap && git add tools/parsers/ndskl.ts tests/parsers/ndskl.test.ts && git commit -m "feat(filaments): NDskl → FilamentCloud converter"
 ```
 
 ---
@@ -980,8 +1010,8 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { decodePointCloud } from '../src/data/pointCloudFormat.js';
-import { parseNDskl, skeletonToFilamentCloud } from './parseNDskl.js';
-import { encodeFilaments } from './filamentBinaryFormat.js';
+import { parseNDskl, skeletonToFilamentCloud } from './parsers/ndskl.js';
+import { encodeFilaments } from '../src/data/filamentBinaryFormat.js';
 
 /** Default persistence cut in σ.  2025 SDSS DR18 paper used 5σ + 2 smoothing. */
 const DEFAULT_PERSISTENCE_CUT = 5;
@@ -1139,7 +1169,7 @@ The existing `loadAllClouds()` is hard-wired to the v4 PointCloud schema. Filame
 Append to `/Users/rulkens/Development/js/skymap/src/services/engine/cloudLoader.ts`:
 
 ```ts
-import { decodeFilaments } from '../../../tools/filamentBinaryFormat';
+import { decodeFilaments } from '../../data/filamentBinaryFormat';
 import type { FilamentCloud } from '../../@types/FilamentCloud';
 
 /**
@@ -1165,7 +1195,7 @@ export async function loadFilaments(): Promise<FilamentCloud | null> {
 }
 ```
 
-Note: importing from `../../../tools/` is unusual but matches the existing pattern where `tools/parsers/famousSeed.ts` is consumed by both build-time and runtime. If the project has a tsconfig path-restriction that blocks this, **move `tools/filamentBinaryFormat.ts` to `src/data/filamentBinaryFormat.ts`** and update Tasks 2-4 imports. Verify by running typecheck after the change.
+Note: the format module lives at `src/data/filamentBinaryFormat.ts` (Task 2) — same directory as `pointCloudFormat.ts` — so the runtime imports it via a normal in-tree relative path with no `src/`↔`tools/` boundary crossing.
 
 - [ ] **Step 2: Run typecheck**
 
@@ -1175,7 +1205,7 @@ Run:
 cd /Users/rulkens/Development/js/skymap && npm run typecheck && npm test
 ```
 
-Expected: clean. If the tsconfig forbids the `../../../tools/` import, follow the note above and move the format module under `src/data/`.
+Expected: clean.
 
 - [ ] **Step 3: Commit**
 
@@ -1421,7 +1451,15 @@ import type { FilamentCloud } from '../../@types/FilamentCloud';
 import type { mat4 } from 'gl-matrix';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
-const UNIFORM_BYTES = 32;
+
+// Uniform block layout (std140-ish, WGSL host-shareable):
+//   viewProj    mat4   = 64 bytes
+//   viewport    vec2   =  8 bytes
+//   halfWidthPx f32    =  4 bytes
+//   _pad        f32    =  4 bytes  (round to 16-byte alignment)
+// Total: 80 bytes.  WebGPU rounds uniform-buffer sizes up to a multiple
+// of 16, so 80 is already aligned — no extra padding needed.
+const UNIFORM_BYTES = 80;
 
 /**
  * Build a flat per-segment instance array from a `FilamentCloud`.  One
@@ -1473,7 +1511,17 @@ export class FilamentRenderer {
 
   constructor(
     private readonly device: GPUDevice,
-    presentationFormat: GPUTextureFormat,
+    /**
+     * The colour-attachment format the pipeline writes into.  In skymap
+     * this is the HDR offscreen target (`rgba16float`) — see
+     * `src/services/gpu/hdrTarget.ts` and the rationale in
+     * `renderFrame.ts`.  Filaments accumulate additively into the same
+     * float buffer the points/quads/disks write, then the tone-map pass
+     * compresses everything onto the swap chain.  Drawing direct to the
+     * swap chain would clip on overlap — exactly the visual cosmic-web
+     * scenes need to NOT do.
+     */
+    hdrFormat: GPUTextureFormat,
   ) {
     const module = device.createShaderModule({ code: shaderSource });
 
@@ -1543,7 +1591,7 @@ export class FilamentRenderer {
         entryPoint: 'fs',
         targets: [
           {
-            format: presentationFormat,
+            format: hdrFormat,
             // Additive blending — filaments glow over the existing scene
             // without occluding the point cloud below them.
             blend: {
@@ -1554,11 +1602,11 @@ export class FilamentRenderer {
         ],
       },
       primitive: { topology: 'triangle-list' },
-      depthStencil: {
-        format: 'depth32float',
-        depthWriteEnabled: false, // additive layer doesn't write depth
-        depthCompare: 'less-equal',
-      },
+      // Note: the HDR pass in `renderFrame.ts` does NOT attach a depth
+      // texture — points/quads/disks all skip depth.  Filaments follow
+      // the same convention; if a future plan adds a depth attachment
+      // to the HDR pass, mirror the points-pipeline's depthStencil
+      // block here.
     });
   }
 
@@ -1594,15 +1642,18 @@ export class FilamentRenderer {
   ): void {
     if (this.segmentCount === 0 || !this.instanceBuffer) return;
 
-    // Pack uniforms.  Layout: viewProj (mat4 = 16 floats) + viewport (vec2)
-    // + halfWidthPx (f32) + 1 padding f32 = 32 bytes.
+    // Pack uniforms.  See UNIFORM_BYTES comment above for the byte layout.
+    //   f32[0..15]   viewProj (mat4)
+    //   f32[16..17]  viewport (vec2)
+    //   f32[18]      halfWidthPx
+    //   f32[19]      padding (zero)
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
     f32.set(viewProj as Float32Array, 0);
-    // Hmm — viewProj is mat4 (16 floats = 64 bytes) but UNIFORM_BYTES is 32.
-    // The layout I've described is wrong; the uniform is actually 64 + 16 =
-    // 80 bytes, padded to 96 for std140.  Adjust here:
-    // (Actually, fix this: replace the 32 above with 96 and re-allocate.)
+    f32[16] = viewportPx[0];
+    f32[17] = viewportPx[1];
+    f32[18] = halfWidthPx;
+    f32[19] = 0;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, buf);
 
     pass.setPipeline(this.pipeline);
@@ -1621,14 +1672,6 @@ export class FilamentRenderer {
   }
 }
 ```
-
-**WAIT — bug in the Step 3 code I just pasted.** The uniform buffer is 32 bytes but the layout actually needs 64 (mat4 viewProj) + 8 (vec2 viewport) + 4 (halfWidthPx) + 4 (pad) = 80 bytes, rounded up to 96 for std140 alignment. Update both the constant and the uniform-buffer creation:
-
-```ts
-const UNIFORM_BYTES = 96;
-```
-
-Re-run typecheck after fixing. The `f32.set(viewProj as Float32Array, 0)` part is correct (writes 16 floats starting at index 0); the issue was the buffer size. The implementer should also write `viewportPx[0]` at f32[16], `viewportPx[1]` at f32[17], `halfWidthPx` at f32[18], and leave f32[19..23] as zero padding. Update the WGSL `Uniforms` struct comments accordingly to match.
 
 - [ ] **Step 4: Run the test, verify it passes**
 
@@ -1652,9 +1695,12 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/gpu/filamentRend
 
 **Files:**
 - Modify: `src/services/engine/engine.ts`
+- Modify: `src/services/engine/renderFrame.ts`
 - Modify: `src/@types/EngineHandle.d.ts`
 
-Wire `FilamentRenderer` into the per-frame draw path. New private state, instantiation in the GPU init, fetch the binary at startup, draw call after `disks` and before final compositing.
+Wire `FilamentRenderer` into the per-frame draw path.
+
+Architecture note: post-refactor, the per-frame loop lives in `renderFrame.ts` (see its docstring — points → thumbnails → tone-map). Engine.ts owns *construction* of the renderers and threads them into `renderFrame()` via the `RenderFrameInput` bag. So this task touches both files: engine.ts for instantiation + the public `setFilamentsEnabled` toggle, renderFrame.ts for the actual draw call inside the HDR pass.
 
 - [ ] **Step 1: Extend `EngineHandle`**
 
@@ -1675,9 +1721,9 @@ In `/Users/rulkens/Development/js/skymap/src/@types/EngineHandle.d.ts`, add the 
   setFilamentsEnabled?: (enabled: boolean) => void;
 ```
 
-- [ ] **Step 2: Wire the renderer into the engine**
+- [ ] **Step 2: Construct the renderer + load the binary in engine.ts**
 
-In `/Users/rulkens/Development/js/skymap/src/services/engine/engine.ts`, add the import + state + draw call. Find the existing point-renderer instantiation pattern (search for `new PointRenderer`) and follow it:
+In `/Users/rulkens/Development/js/skymap/src/services/engine/engine.ts`, follow the `new PointRenderer(device, 'rgba16float')` pattern (search the file for it) — filaments draw into the same HDR target.
 
 1. Imports near the top:
    ```ts
@@ -1685,48 +1731,83 @@ In `/Users/rulkens/Development/js/skymap/src/services/engine/engine.ts`, add the
    import { loadFilaments } from './cloudLoader';
    ```
 
-2. Closure state, near the other renderer references:
+2. Closure state, alongside the other renderer references:
    ```ts
    let filamentRenderer: FilamentRenderer | null = null;
    let filamentsEnabled = false;
    ```
 
-3. Inside the GPU-init block (where pointRenderer / quadRenderer get instantiated), add:
+3. Inside the GPU-init block (next to where `PointRenderer` / `QuadRenderer` get constructed), add:
    ```ts
-   filamentRenderer = new FilamentRenderer(device, presentationFormat);
+   filamentRenderer = new FilamentRenderer(device, 'rgba16float');
    loadFilaments().then((cloud) => {
      if (cloud && filamentRenderer) {
        filamentRenderer.upload(cloud);
-       process.stderr?.write?.(
-         `[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts\n`,
+       console.log(
+         `[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts`,
        );
+       scheduler.requestRender(); // wake the render-on-demand loop so the
+                                   // skeleton appears as soon as it loads
      }
    });
    ```
-   (Skip the `process.stderr` line if it's not how the engine logs; use `console.log` to match.)
 
-4. Inside the per-frame `render()` function, AFTER `diskRenderer.draw(...)` and BEFORE the pass ends, add:
+4. In the public-API object the engine returns, add:
    ```ts
-   if (filamentsEnabled && filamentRenderer) {
+   setFilamentsEnabled(enabled) {
+     filamentsEnabled = enabled;
+     scheduler.requestRender(); // toggling visibility is an event; force a redraw
+   },
+   ```
+
+5. In `destroy()`, add `filamentRenderer?.destroy();`.
+
+6. Wherever `renderFrame()` is invoked, thread the new fields through `RenderFrameInput` (added in Step 3 below):
+   ```ts
+   renderFrame({
+     // …existing fields…
+     filamentRenderer,
+     filamentsEnabled,
+   });
+   ```
+
+- [ ] **Step 3: Add the draw call to renderFrame.ts**
+
+In `/Users/rulkens/Development/js/skymap/src/services/engine/renderFrame.ts`, extend `RenderFrameInput` with the new dependencies and emit the draw call inside the existing HDR `pass`, AFTER `thumbnails.runFrame(...)` and BEFORE `pass.end()`:
+
+1. In the `RenderFrameInput` type (alongside `pointRenderer`, `thumbnails`, etc.), add:
+   ```ts
+   filamentRenderer: FilamentRenderer | null;
+   ```
+   And in the `RenderFrameSettings` type, add:
+   ```ts
+   filamentsEnabled: boolean;
+   ```
+
+2. Import the type at the top of the file:
+   ```ts
+   import type { FilamentRenderer } from '../gpu/filamentRenderer';
+   ```
+
+3. Just before `pass.end()` (inside the HDR pass, after `thumbnails.runFrame`), add:
+   ```ts
+   // ── Filament-skeleton overlay ──────────────────────────────────────
+   //
+   // Draws into the SAME HDR pass as points/thumbnails so the additive
+   // contribution accumulates in float-precision before tone mapping.
+   // No depth attachment in this pass (mirrors the point/quad/disk
+   // convention).  Cheap to skip when toggled off — a single null check.
+   if (settings.filamentsEnabled && filamentRenderer) {
      filamentRenderer.draw(
        pass,
        viewProj,
-       [canvas.width, canvas.height],
+       [canvasWidth, canvasHeight],
        1.5, // half-width in pixels — empirically pleasant for cosmic-web look
      );
    }
    ```
 
-5. In the public-API object the engine returns, add:
-   ```ts
-   setFilamentsEnabled(enabled) {
-     filamentsEnabled = enabled;
-   },
-   ```
-
-6. In `destroy()`, add `filamentRenderer?.destroy();`.
-
-- [ ] **Step 3: Run typecheck + tests**
+- [ ] **Step 4: Run typecheck + tests**
 
 Run:
 
@@ -1736,10 +1817,10 @@ cd /Users/rulkens/Development/js/skymap && npm run typecheck && npm test
 
 Expected: clean.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```
-cd /Users/rulkens/Development/js/skymap && git add src/services/engine/engine.ts src/@types/EngineHandle.d.ts && git commit -m "feat(engine): wire FilamentRenderer into the per-frame loop"
+cd /Users/rulkens/Development/js/skymap && git add src/services/engine/engine.ts src/services/engine/renderFrame.ts src/@types/EngineHandle.d.ts && git commit -m "feat(engine): wire FilamentRenderer into the HDR pass"
 ```
 
 ---
@@ -1897,7 +1978,7 @@ Visually verify:
 
 - [ ] **Step 4: Note any issues**
 
-If filaments look too thick or too thin, adjust `halfWidthPx` in `engine.ts:render()` (currently 1.5).
+If filaments look too thick or too thin, adjust the `halfWidthPx` argument to `filamentRenderer.draw(...)` in `renderFrame.ts` (currently 1.5).
 If the colour is wrong, edit the `tint` constant in `filaments.wgsl`.
 If the FPS drops noticeably, reduce the persistence cut (re-run with `--cut 7`) for a sparser skeleton.
 
@@ -1920,7 +2001,7 @@ If the FPS drops noticeably, reduce the persistence cut (re-run with `--cut 7`) 
 
 All in-scope items mapped. Out-of-scope items (per-segment density modulation in shader; persistence slider; SDSS footprint mask; Local-Group filtering; filament picking) are explicitly listed in the Scope section and deferred to future plans.
 
-**Placeholder scan:** No "TBD"/"TODO"/"implement later"/"similar to Task N". Every code block is complete. The Task 7 Step 3 code does call out the bug-and-fix for `UNIFORM_BYTES = 32 → 96`; that's a deliberate "watch for this" rather than an unfinished placeholder, but to be safe a re-read of T7 Step 3 should produce the corrected `UNIFORM_BYTES = 96` and the f32[16..18] writes.
+**Placeholder scan:** No "TBD"/"TODO"/"implement later"/"similar to Task N". Every code block is complete and self-contained — including Task 7's `UNIFORM_BYTES = 80` constant + matching f32[16..19] uniform packing (the post-audit revision dropped the earlier "WAIT — fix this" call-out in favour of correct code from the start).
 
 **Type consistency:**
 - `FilamentCloud` defined T2, consumed T3, T5, T7, T8.
