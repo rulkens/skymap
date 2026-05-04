@@ -2,6 +2,12 @@
   "name": "skymap",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "author": "Alexander Rulkens <rulkens@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rulkens/skymap.git"
+  },
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit && vite build",
