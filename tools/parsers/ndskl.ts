@@ -25,6 +25,8 @@
  * surface them if we ever want to render cluster nodes as dots.
  */
 
+import type { FilamentCloud } from '../../src/@types/FilamentCloud';
+
 /** A single filament polyline. */
 export type FilamentStrip = {
   /** Sequence of (x, y, z) sample points in input-file units (Mpc for us). */
@@ -166,4 +168,76 @@ export function parseNDskl(text: string): ParsedSkeleton {
   }
 
   return { strips };
+}
+
+/**
+ * Convert a parsed `.NDskl` skeleton to the SoA `FilamentCloud` shape
+ * the renderer + binary format expect.
+ *
+ * Two transforms happen here:
+ *
+ *   1. Strips with zero vertices are silently dropped.  DisPerSE has
+ *      been observed to emit empty filaments at the very edges of
+ *      under-resolved volumes (saddle-to-saddle pairings with no
+ *      sample points between them).  Including them would produce
+ *      stripOffsets[i] === stripOffsets[i+1] which the renderer would
+ *      issue a zero-instance draw for — wasted but harmless.  We drop
+ *      them to keep the offset table tight.
+ *
+ *   2. Density is normalised to [0, 1] across all surviving vertices.
+ *      DisPerSE's [FILAMENTS DATA] field_value is the absolute density
+ *      at each skeleton sample, in arbitrary units depending on the
+ *      DTFE input.  The shader wants a 0..1 alpha multiplier; rescaling
+ *      at encode time means we don't have to thread a per-frame uniform
+ *      with min/max bounds.  NaN values (when [FILAMENTS DATA] is
+ *      absent) are kept as 0 — Phase 1 ignores density anyway, so this
+ *      is harmless.
+ */
+export function skeletonToFilamentCloud(sk: ParsedSkeleton): FilamentCloud {
+  // Drop empty strips.
+  const live = sk.strips.filter((s) => s.vertices.length >= 2);
+
+  const stripCount = live.length;
+  const vertexCount = live.reduce((acc, s) => acc + s.vertices.length, 0);
+
+  const stripOffsets = new Uint32Array(stripCount + 1);
+  const vertices = new Float32Array(vertexCount * 4);
+
+  // First pass: compute offsets + collect raw density for normalisation.
+  let off = 0;
+  let dMin = Infinity;
+  let dMax = -Infinity;
+  for (let i = 0; i < live.length; i++) {
+    stripOffsets[i] = off;
+    const strip = live[i]!;
+    for (const d of strip.density) {
+      if (Number.isFinite(d)) {
+        if (d < dMin) dMin = d;
+        if (d > dMax) dMax = d;
+      }
+    }
+    off += strip.vertices.length;
+  }
+  stripOffsets[stripCount] = vertexCount;
+
+  // Compute the normalisation scale.  Degenerate cases (all-NaN, single
+  // value, etc.) collapse to zero output density — fine for Phase 1.
+  const haveRange = Number.isFinite(dMin) && Number.isFinite(dMax) && dMax > dMin;
+  const scale = haveRange ? 1 / (dMax - dMin) : 0;
+
+  // Second pass: write the interleaved vertex array.
+  let v = 0;
+  for (const strip of live) {
+    for (let s = 0; s < strip.vertices.length; s++) {
+      const [x, y, z] = strip.vertices[s]!;
+      const d = strip.density[s]!;
+      vertices[v * 4 + 0] = x;
+      vertices[v * 4 + 1] = y;
+      vertices[v * 4 + 2] = z;
+      vertices[v * 4 + 3] = haveRange && Number.isFinite(d) ? (d - dMin) * scale : 0;
+      v++;
+    }
+  }
+
+  return { stripCount, vertexCount, stripOffsets, vertices };
 }

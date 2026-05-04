@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseNDskl } from '../../tools/parsers/ndskl';
+import { parseNDskl, skeletonToFilamentCloud } from '../../tools/parsers/ndskl';
 
 const FIXTURE = `ANDSKEL
 3
@@ -113,5 +113,74 @@ field_value
 0.9
 `;
     expect(() => parseNDskl(fixture)).toThrow(/truncated/i);
+  });
+});
+
+describe('skeletonToFilamentCloud', () => {
+  it('flattens strips into the SoA FilamentCloud shape', () => {
+    const cloud = skeletonToFilamentCloud({
+      strips: [
+        {
+          vertices: [
+            [10, 20, 30],
+            [11, 21, 31],
+          ],
+          density: [0.9, 0.8],
+        },
+        {
+          vertices: [
+            [40, 50, 60],
+            [41, 51, 61],
+            [42, 52, 62],
+          ],
+          density: [0.7, 0.6, 0.5],
+        },
+      ],
+    });
+    expect(cloud.stripCount).toBe(2);
+    expect(cloud.vertexCount).toBe(5);
+    expect(Array.from(cloud.stripOffsets)).toEqual([0, 2, 5]);
+    // Densities are normalised across all surviving vertices: input range
+    // is [0.5, 0.9], so 0.5→0, 0.6→0.25, 0.7→0.5, 0.8→0.75, 0.9→1.
+    expect(Array.from(cloud.vertices)).toEqual([
+      10, 20, 30, 1,
+      11, 21, 31, 0.75,
+      40, 50, 60, 0.5,
+      41, 51, 61, 0.25,
+      42, 52, 62, 0,
+    ]);
+  });
+
+  it('drops zero-vertex strips defensively', () => {
+    const cloud = skeletonToFilamentCloud({
+      strips: [
+        { vertices: [], density: [] },
+        {
+          vertices: [
+            [1, 2, 3],
+            [4, 5, 6],
+          ],
+          density: [0.5, 0.5],
+        },
+      ],
+    });
+    expect(cloud.stripCount).toBe(1);
+    expect(cloud.vertexCount).toBe(2);
+  });
+
+  it('normalises density to [0, 1] across all strips', () => {
+    const cloud = skeletonToFilamentCloud({
+      strips: [
+        {
+          vertices: [
+            [0, 0, 0],
+            [1, 1, 1],
+          ],
+          density: [0, 100], // pre-normalisation: min=0, max=100
+        },
+      ],
+    });
+    expect(cloud.vertices[3]).toBe(0); // first vertex's density slot, normalised
+    expect(cloud.vertices[7]).toBe(1); // second vertex's density slot, normalised
   });
 });
