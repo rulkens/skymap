@@ -1132,6 +1132,32 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // works at the data level.
   if (u.realOnlyMode == 1u && in.isFallback == 1u) { discard; }
 
+  // ── Procedural-disk crossfade-OUT (applies to BOTH selected & normal) ────
+  //
+  // Hoisted out of the normal-point branch below so the selection-ring
+  // path also fades.  Without this, selecting a galaxy and then zooming
+  // through the [pxFadeStart, pxFadeEnd] band leaves the selection's
+  // 8× billboard rendered on top of the procedural-disk impostor — the
+  // user reported "the point screen-aligned blob shows when the galaxy
+  // is selected (not when unselected, which is the right behaviour)".
+  //
+  // The fade trigger is the UNSCALED `in.sizePx` (vertex stage line 1070
+  // forwards `sizePx` BEFORE applying the 8× `sizeScale`), so the fade
+  // band aligns with the procedural-disk emission band on the underlying
+  // galaxy footprint — not the inflated halo radius.  Selecting a galaxy
+  // does NOT change when its point fades; only what shape it draws below
+  // the band.
+  //
+  // See the long fade-band doc-comment further down (now reached only by
+  // normal points) for the px-scaling rationale (`sizePx * 0.5`) and the
+  // smoothstep choice.
+  let apparentDiameterPx = in.sizePx * 0.5;
+  let fadeT = clamp(
+    (apparentDiameterPx - u.pxFadeStart) / (u.pxFadeEnd - u.pxFadeStart),
+    0.0, 1.0,
+  );
+  let pointAlphaMult = 1.0 - fadeT * fadeT * (3.0 - 2.0 * fadeT);
+
   // ── SELECTION RING vs NORMAL DISK ─────────────────────────────────────────
   //
   // For the selected point we rendered a 3× larger billboard in `vs`, so the
@@ -1172,20 +1198,57 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     // unscaled point would have, so we multiply r² by 64 (= 8²) before
     // applying the original ×4 coefficient → 256.
     if (r2 < 0.0156) {
-      let alpha = exp(-r2 * 256.0);
+      let alpha = exp(-r2 * 256.0) * pointAlphaMult;
       let rgb   = in.tint * in.intensity;
       return vec4<f32>(rgb * alpha, alpha);
     }
 
     // ── Selection ring annulus ─────────────────────────────────────────────
     //
-    // The ring band runs from √0.72 ≈ 0.85 of the billboard radius out to 1.0.
-    // We map r² ∈ [0.72, 1.0] to a soft hump centred at 0.86 so the band
-    // fades on both edges rather than appearing hard-clipped.
-    if (r2_circ > 0.72) {
-      let bandCentre = 0.86;
-      let bandDist   = abs(r2_circ - bandCentre);
-      let alpha      = exp(-bandDist * bandDist * 80.0);
+    // The ring is a UI element marking the user's selection: it must stay
+    // visible at every zoom level (NOT fade through the procedural-disk
+    // crossfade band — the user reported "the selection circle also fades
+    // out, probably should have its own branch") AND must keep a roughly
+    // constant on-screen stroke width so the band doesn't bloat into a
+    // wide bright disc when zoomed in close ("max pixel thickness, it's
+    // now very thick when close up").
+    //
+    // ── Constant-pixel stroke width ────────────────────────────────────────
+    //
+    // The earlier formulation used `r²_circ ∈ [0.72, 1.0]` — a band that's
+    // ~15 % of the billboard radius regardless of pixel size.  When the
+    // billboard is 200 px (close zoom on a big galaxy with the 8× selection
+    // scale), 15 % is 30 px — a fat doughnut.  We instead pick a target
+    // stroke width in pixels and convert that into a fraction of the
+    // billboard radius using `in.sizePx * 8.0` (the actual on-screen halo
+    // radius — in.sizePx is the unscaled value, sizeScale = 8 is applied
+    // in vs).
+    //
+    // `min(0.15, …)` caps the band fraction at the original 15 % so faint/
+    // far galaxies (where 8 × sizePx is small) don't end up with a stroke
+    // wider than the billboard itself.
+    let HALO_RADIUS_PX = in.sizePx * 8.0;
+    let TARGET_STROKE_PX = 4.0;
+    let bandFraction = min(0.15, TARGET_STROKE_PX / max(HALO_RADIUS_PX, 1.0));
+
+    let r_circ = sqrt(r2_circ);
+    let innerR = 1.0 - bandFraction;
+    if (r_circ > innerR) {
+      // Soft-edge anti-aliasing on both sides of the band.  The fade
+      // window is a tenth of the band width on each side so we keep most
+      // of the stroke at full intensity (the ring should look crisp) but
+      // avoid the hard pixelated edge a binary test would produce.
+      //
+      // We deliberately do NOT multiply by `pointAlphaMult` here — the
+      // ring is UI and stays at full intensity through the procedural-
+      // disk crossfade band.  The inner-disk case above (the galaxy's
+      // own dot inside the 8× billboard) DOES fade because the
+      // procedural disk takes over rendering the galaxy itself in that
+      // band; the ring has no equivalent replacement.
+      let edgeFade = bandFraction * 0.1;
+      let inEdge   = smoothstep(innerR, innerR + edgeFade, r_circ);
+      let outEdge  = 1.0 - smoothstep(1.0 - edgeFade, 1.0, r_circ);
+      let alpha    = inEdge * outEdge;
 
       // Brighten the ring relative to the natural point colour. 2.5× plus a
       // constant white floor (0.7) keeps it salient even when the underlying
@@ -1288,39 +1351,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // double-counting (which is what happens with no fade-out — the
   // "double-bright donut" the user reported).
   //
-  // `clamp` on the fadeT computation keeps the smoothstep input in
-  // [0, 1] outside the band, which the cubic implicitly assumes; the
-  // explicit clamp also avoids extrapolation when sizePx exceeds the
-  // band end (cubic outside [0, 1] over-/undershoots — clamp keeps it
-  // saturated).  The (end - start) divisor is a positive constant
-  // every frame (8 px below 14 px in the current settings), so the
-  // division is well-defined as long as the engine never sets
-  // start == end.
-  // `in.sizePx` is the BILLBOARD radius in pixels (max of `u.pointSizePx`
-  // floor and `apparentPxRadius`).  Important: `apparentPxRadius` is 2×
-  // the galaxy's actual diameter in screen pixels — `GALAXY_RADIUS_MPC`
-  // is `diameterKpc * 2 / 1000`, deliberately oversized to give the
-  // points pass a soft halo.  So `sizePx` is 2× the JS-side `px =
-  // (dMpcRow / camDist) * pxPerRad` that the procedural-disk emission
-  // gate compares against in `thumbnailSubsystem.ts`.
-  //
-  // To make the point's fade-OUT align with the disk's fade-IN on the
-  // same screen-pixel scale, we divide by 2 here.  Without this factor
-  // the point fades out at JS px ≈ 4..7 while the disk only starts to
-  // emit at JS px > 8, leaving a band (JS px ∈ ~7..8) where NEITHER
-  // pass renders — a visible "gap" in the crossfade when zooming
-  // through the band.
-  //
-  // For very small galaxies where `sizePx` is clamped to
-  // `u.pointSizePx` (typically ~2.5), `apparentDiameterPx` is below
-  // any reasonable fade-band lower bound, so `clamp(0, 1)` keeps fadeT
-  // at 0 and the fade is inactive — correct behaviour.
-  let apparentDiameterPx = in.sizePx * 0.5;
-  let fadeT = clamp(
-    (apparentDiameterPx - u.pxFadeStart) / (u.pxFadeEnd - u.pxFadeStart),
-    0.0, 1.0,
-  );
-  let pointAlphaMult = 1.0 - fadeT * fadeT * (3.0 - 2.0 * fadeT);
+  // `pointAlphaMult` is computed up at the top of `fs` so the
+  // selection-ring branch can apply the same fade — see the comment
+  // there for the px-scaling rationale (`sizePx * 0.5`) and why the
+  // selection halo also has to fade out (otherwise selecting a galaxy
+  // and zooming in would leave the 8× selection halo rendered on top
+  // of the procedural-disk impostor).
   alpha = alpha * pointAlphaMult;
 
   // Highlight fallback rows in magenta when the toggle is on. The 0.3 in

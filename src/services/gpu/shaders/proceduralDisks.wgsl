@@ -137,26 +137,33 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
 
   // Major axis on sky: rotate sky-north by PA toward sky-east.
   let majorSky = northTangent * cos(paRad) + eastTangent * sin(paRad);
-  // Perpendicular-to-major in the sky-tangent plane.
+  // Perpendicular-to-major in the sky-tangent plane.  This matches
+  // `disks.wgsl`'s `minor_in_sky = cross(losDir, major)` exactly — the
+  // two passes MUST share basis math, otherwise their on-screen
+  // ellipses disagree at the crossfade boundary.
   let perpMajorSky = cross(los, majorSky);
 
-  // Disk normal: world-fixed line-of-sight (Earth→galaxy) tilted by
-  // (90° - inclination) toward perpMajorSky.  At axisRatio=1 (face-on)
-  // the normal is exactly the Earth-to-galaxy direction; at
-  // axisRatio→0 (edge-on) the normal lies in the sky-tangent plane.
-  // Because `los` is world-fixed (not camera-relative), this normal
-  // is an intrinsic property of the galaxy — orbiting the camera
-  // does not rotate it.
+  // ── Tilt the minor axis out of the sky plane by inclination ──────────
+  //
+  // Inclination i with cos(i) = axisRatio.  Face-on (axisRatio = 1,
+  // sinI = 0) → minor lies entirely in the sky plane → projects as a
+  // circle.  Edge-on (axisRatio → 0, sinI → 1) → minor ≈ losDir → disk
+  // is parallel to the line of sight and projects as a thin streak.
+  //
+  // This formula is identical to disks.wgsl line 166:
+  //   minor_3d = minor_in_sky * cosI + losDir * sinI
+  // and that identity is load-bearing — an earlier revision built a
+  // disk normal first, then took `cross(normal, major)` to recover the
+  // minor axis.  That route flips the sign of the `sinI * los` term
+  // (because `cross(perpMajorSky, major) = -los` in this right-handed
+  // frame), tilting the disk in the OPPOSITE direction from the
+  // textured-thumbnail pass.  At axisRatio ≈ 0.87 (i ≈ 30°) the visible
+  // mismatch is a ~30° rotation against one axis vs. the thumbnail —
+  // exactly the bug we just fixed; don't reintroduce it.
   let cosI = axisRatio;
   let sinI = sqrt(max(0.0, 1.0 - cosI * cosI));
-  let diskNormal = normalize(los * cosI + perpMajorSky * sinI);
-
-  // In-plane axes: major lies in the sky-tangent plane (face-on it's
-  // along the sky major axis; edge-on it's the same direction since
-  // both axes still lie in the sky plane).  Minor is the cross-product
-  // major × normal — guaranteed in-plane.
   let majorAxis = majorSky;
-  let minorAxis = normalize(cross(diskNormal, majorAxis));
+  let minorAxis = perpMajorSky * cosI + los * sinI;
 
   // Quad corners in world space: centre + corner.x · major + corner.y · minor,
   // each scaled by the half-extent.
