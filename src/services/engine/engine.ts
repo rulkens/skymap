@@ -127,6 +127,38 @@ import { attachEngineInputs } from './inputBindings';
 import { renderFrame } from './renderFrame';
 
 /**
+ * Procedural-disk crossfade band, in apparent-pixels.
+ *
+ *   - Below `PROCEDURAL_DISK_FADE_START_PX` (8): only the screen-aligned
+ *     point billboard renders.  Distant galaxies look like soft glows.
+ *   - Inside the band [8, 14): both passes render simultaneously with
+ *     complementary alphas (smoothstep crossfade).
+ *   - Above `PROCEDURAL_DISK_FADE_END_PX` (14): only the procedural
+ *     disk renders.  The point pass has fully faded out.
+ *
+ * Picking these specific values:
+ *
+ *   - The band's lower edge (8) is roughly where a screen-aligned point
+ *     starts to look pixelated rather than a clean glow — bigger than
+ *     that, the eye expects to see structure.
+ *   - The band width (6 px) is wide enough that the crossfade is
+ *     visually smooth at typical zoom rates and narrow enough that
+ *     there's a clean "all disk" regime.
+ *   - The upper edge (14) is well below the existing
+ *     APPARENT_SIZE_THRESHOLD_PX = 24 (the threshold for the textured
+ *     disk pass, declared in `thumbnailSubsystem.ts`), so the procedural
+ *     impostor takes over long before the textured one would have
+ *     engaged — exactly the visibility gap this feature exists to fill.
+ *
+ * Not exported: only the engine's per-frame instance-emission code in
+ * this same file (Task 7) and the points-shader fade hookup (Task 8)
+ * read these.  Keeping them module-local prevents accidental drift
+ * with the textured-disk threshold in `thumbnailSubsystem.ts`.
+ */
+const PROCEDURAL_DISK_FADE_START_PX = 8;
+const PROCEDURAL_DISK_FADE_END_PX = 14;
+
+/**
  * Start the WebGPU engine on `canvas`.
  *
  * Returns a handle synchronously; async setup (GPU init, data loading)
