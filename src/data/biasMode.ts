@@ -27,6 +27,17 @@
  *   - `Schechter` (3):      reweight by the expected Schechter luminosity
  *                           function so the rendered density tracks the
  *                           predicted galaxy density.  Reserved for Task 4.
+ *   - `AngularReweight` (4): per-survey HEALPix angular re-weighting.
+ *                           Bins each cloud's galaxies into (HEALPix cell,
+ *                           log-distance shell) pairs and modulates alpha
+ *                           by the ratio of median-cell density to local
+ *                           density — flattens the pencil-beam-like
+ *                           "jets" GLADE shows from non-uniform parent-
+ *                           catalogue coverage.  Per-cloud, never global,
+ *                           so SDSS's footprint can't contaminate GLADE's
+ *                           correction.  Implemented in Task 8 of the
+ *                           malmquist-bias plan as a per-vertex baked
+ *                           weight (lazy, mirrors the Schechter pattern).
  *
  * ---
  * ### Why a numeric `as const` object instead of a TS `enum`?
@@ -58,6 +69,7 @@ export const BiasMode = {
   VolumeLimited: 1,
   VMax: 2,
   Schechter: 3,
+  AngularReweight: 4,
 } as const;
 
 export type BiasMode = (typeof BiasMode)[keyof typeof BiasMode];

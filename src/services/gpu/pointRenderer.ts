@@ -70,6 +70,16 @@ import BuildPointBufferWorker from './buildPointInterleavedBuffer.worker?worker'
 import ComputeSchechterRatiosWorker from './computeSchechterRatios.worker?worker';
 import { type ComputeSchechterRatiosInput } from './computeSchechterRatios';
 
+// Lazy-angular-reweight worker import — same `?worker` Vite suffix.  The
+// HEALPix bake is much cheaper than the Schechter integral (~100-300 ms for
+// a full deck vs 1-2 s) but still long enough to drop a frame, so we
+// off-thread it for parity with the other lazy bakes.  Spawned by
+// `applyAngularReweightMode()` the first time the user picks
+// `BiasMode.AngularReweight`; subsequent toggles reuse `cachedAngularWeights`
+// for instant re-toggle.
+import ComputeAngularWeightsWorker from './computeAngularWeights.worker?worker';
+import { type ComputeAngularWeightsInput } from './computeAngularWeights';
+
 // `?raw` is a Vite-specific import suffix. It tells the bundler to import the
 // file's content as a plain string rather than attempting to execute it as
 // JavaScript. The WGSL source text ends up inlined in the JS bundle; at
@@ -88,7 +98,7 @@ import shaderSrc from './shaders/points.wgsl?raw';
  *    globalInstanceIdx u32, kPerZ f32,
  *    axisRatio f32, positionAngleDeg f32,
  *    diameterKpc f32, vMaxWeight f32,
- *    schechterRatio f32]
+ *    schechterRatio f32, angularDensityWeight f32]
  *
  * The first five slots are interpreted as f32 by the shader; slot 5 is
  * interpreted as u32; slots 6..10 are interpreted as f32 again.  JS-side
@@ -128,18 +138,18 @@ import shaderSrc from './shaders/points.wgsl?raw';
  * would read the last `mLim` written.  Baking sidesteps the race entirely
  * at a cost of 4 bytes per instance (~14 MB at 3.5 M points).
  */
-const SLOTS_PER_POINT = 12;
+const SLOTS_PER_POINT = 13;
 
 /**
  * Byte stride between consecutive per-instance records in the vertex buffer.
  *
- * 12 slots × 4 bytes = 48 bytes. The pipeline's `arrayStride` must match
+ * 13 slots × 4 bytes = 52 bytes. The pipeline's `arrayStride` must match
  * this exactly; if it disagrees WebGPU will either validate-error or
  * silently read garbage.  PickRenderer's pipeline declares the same
- * 48-byte stride and the same attribute table, so the two pipelines stay
+ * 52-byte stride and the same attribute table, so the two pipelines stay
  * compatible with this single vertex buffer layout.
  */
-const POINT_STRIDE = SLOTS_PER_POINT * 4; // 48 bytes
+const POINT_STRIDE = SLOTS_PER_POINT * 4; // 52 bytes
 
 /**
  * Byte offset of the `globalInstanceIdx` slot inside one per-instance record.
@@ -249,6 +259,41 @@ const VMAX_WEIGHT_BYTE_OFFSET = 40;
  * step-count rounding (both CPU and GPU used 200 steps).
  */
 const SCHECHTER_RATIO_BYTE_OFFSET = 44;
+
+/**
+ * Byte offset of the `angularDensityWeight` slot — the per-galaxy HEALPix
+ * angular re-weight used by the Malmquist-bias correction's mode 4.
+ *
+ * Sits at slot index 12 (offset 48) — the new 13th slot.  Default-baked
+ * to 1.0 (multiplicative identity) at upload time so modes 0/1/2/3 see
+ * no change.  Real per-galaxy values are spliced in lazily by
+ * `applyAngularReweightMode()` the first time the user picks mode 4 in
+ * the SettingsPanel, mirroring the lazy-Schechter pattern (see
+ * SCHECHTER_RATIO_BYTE_OFFSET above for the same trade-off discussion).
+ *
+ * ### Why per-vertex
+ *
+ * The angular weight depends on each galaxy's HEALPix cell + log-distance
+ * shell, which in turn depend on the entire cloud's distribution — a
+ * uniform can't carry per-galaxy information.  The bake is also
+ * deterministic given the cloud (the binning/median pass is pure), so the
+ * value is fixed at upload time and a one-shot CPU computation is correct.
+ *
+ * ### Why baking is fast enough
+ *
+ * The HEALPix bake is three linear passes over the cloud (geometry derive,
+ * count accumulate, weight write) plus one O(N_CELLS · N_SHELLS · log) sort
+ * for the per-shell median.  At full GLADE (~2.5 M galaxies) that's
+ * ~150 ms total — too slow for the .bin-arrival path (we want that as
+ * fast as possible) but fine for a user-initiated mode toggle, especially
+ * when shipped to a worker.  The eager-bake path during upload is
+ * intentionally NOT supported (see `buildPointInterleavedBuffer.ts`); if
+ * the user toggles mode 4 ON, then loads a new survey, the renderer's
+ * `applyAngularReweightMode` will spawn the worker for the new source and
+ * splice in real weights when it resolves — same lazy semantics as
+ * Schechter.
+ */
+const ANGULAR_WEIGHT_BYTE_OFFSET = 48;
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.
@@ -491,6 +536,69 @@ function defaultSchechterWorkerRunner(
   });
 }
 
+/**
+ * Production path for the lazy HEALPix angular re-weight bake.  Spawns a
+ * fresh `ComputeAngularWeightsWorker`, ships a copied `PointCloud` (slice-
+ * then-transfer pattern, mirror of `defaultSchechterWorkerRunner`), waits
+ * for the resulting `Float32Array`, and terminates the worker.
+ *
+ * The bake itself is three linear passes through the cloud's positions plus
+ * a per-shell median sort; ~100-300 ms at full deck.  Worker spawn
+ * (~few ms) is the right trade-off — even though the bake isn't as
+ * dramatically expensive as the Schechter integral, dropping a frame on
+ * mode toggle would feel sluggish.
+ */
+function defaultAngularWeightsWorkerRunner(
+  input: ComputeAngularWeightsInput,
+): Promise<Float32Array> {
+  return new Promise((resolve, reject) => {
+    const worker = new ComputeAngularWeightsWorker();
+    worker.onmessage = (event: MessageEvent<Float32Array>) => {
+      worker.terminate();
+      resolve(event.data);
+    };
+    worker.onerror = (event: ErrorEvent) => {
+      worker.terminate();
+      reject(
+        event.error ??
+          new Error(event.message ?? 'angular-weights worker error'),
+      );
+    };
+
+    // Slice-then-transfer the typed-array buffers (see the long comment on
+    // `defaultWorkerRunner` above for the rationale — the engine retains
+    // the original cloud for picker / InfoCard reads, so we can't detach
+    // those buffers in place).
+    const c = input.cloud;
+    const cloudCopy: PointCloud = {
+      count: c.count,
+      objIDs: new BigUint64Array(c.objIDs.buffer.slice(0)),
+      positions: new Float32Array(c.positions.buffer.slice(0)),
+      magU: new Float32Array(c.magU.buffer.slice(0)),
+      magG: new Float32Array(c.magG.buffer.slice(0)),
+      magR: new Float32Array(c.magR.buffer.slice(0)),
+      magI: new Float32Array(c.magI.buffer.slice(0)),
+      magZ: new Float32Array(c.magZ.buffer.slice(0)),
+      axisRatio: new Float32Array(c.axisRatio.buffer.slice(0)),
+      positionAngleDeg: new Float32Array(c.positionAngleDeg.buffer.slice(0)),
+      diameterKpc: new Float32Array(c.diameterKpc.buffer.slice(0)),
+    };
+    const transfer: Transferable[] = [
+      cloudCopy.objIDs.buffer,
+      cloudCopy.positions.buffer,
+      cloudCopy.magU.buffer,
+      cloudCopy.magG.buffer,
+      cloudCopy.magR.buffer,
+      cloudCopy.magI.buffer,
+      cloudCopy.magZ.buffer,
+      cloudCopy.axisRatio.buffer,
+      cloudCopy.positionAngleDeg.buffer,
+      cloudCopy.diameterKpc.buffer,
+    ];
+    worker.postMessage({ ...input, cloud: cloudCopy }, transfer);
+  });
+}
+
 // Note: the `schechter*` uniform slots at byte offsets 140..155 are now
 // dead-but-reserved.  Originally `draw()` wrote 16 bytes per source here
 // (mStar, alpha, mLim, nRef) so the fragment shader's 200-step trapezoidal
@@ -544,6 +652,18 @@ type LoadedSource = {
    * this source.  Callers must check before using.
    */
   cachedSchechterRatios: Float32Array | null;
+  /**
+   * Cached per-galaxy HEALPix angular re-weights, populated lazily the
+   * first time the user selects `BiasMode.AngularReweight` (mode 4).
+   * Mirrors `cachedSchechterRatios` exactly: once populated, subsequent
+   * mode-4 toggles reuse this array for an instant flip (single
+   * writeBuffer call), so the user pays the bake cost once per session
+   * per source.
+   *
+   * `null` until the first `applyAngularReweightMode()` call resolves
+   * for this source.  Callers must check before using.
+   */
+  cachedAngularWeights: Float32Array | null;
   /**
    * Current authoritative offset, recomputed after every upload/unload by
    * `recomputeInstanceIdOffsets`.  This is the running sum of `count`
@@ -655,6 +775,17 @@ export class PointRenderer {
   private schechterModeActive = false;
 
   /**
+   * Whether the engine has currently selected `BiasMode.AngularReweight`.
+   * Mirrors `schechterModeActive` exactly — flipped by
+   * `applyAngularReweightMode()` and `clearAngularWeights()` so a new
+   * upload arriving while mode 4 is active can know to bake the weights
+   * eagerly (currently we don't — see `buildPointInterleavedBuffer.ts`'s
+   * slot-12 comment — but the flag is here for symmetry and so the same
+   * triggering pattern stays familiar across modes).
+   */
+  private angularReweightModeActive = false;
+
+  /**
    * Static factory for the lazy Schechter-ratio worker.  Production path
    * spawns a Vite `?worker` chunk; Node tests can override with a
    * synchronous in-process runner via
@@ -676,6 +807,29 @@ export class PointRenderer {
       | null,
   ): void {
     PointRenderer.schechterRunner = runner ?? defaultSchechterWorkerRunner;
+  }
+
+  /**
+   * Static factory for the lazy HEALPix angular-reweight worker.  Production
+   * path spawns a Vite `?worker` chunk; Node tests can override with a
+   * synchronous in-process runner via `setAngularWeightRunner(...)`.  Same
+   * pattern as `setSchechterRatioRunner`.
+   */
+  private static angularRunner: (
+    input: ComputeAngularWeightsInput,
+  ) => Promise<Float32Array> = defaultAngularWeightsWorkerRunner;
+
+  /**
+   * Override the angular-reweight runner — used by tests that can't load
+   * the Vite `?worker` import.  Pass a synchronous function that runs the
+   * pure `computeAngularWeights` directly, or `null` to restore the default.
+   */
+  static setAngularWeightRunner(
+    runner:
+      | ((input: ComputeAngularWeightsInput) => Promise<Float32Array>)
+      | null,
+  ): void {
+    PointRenderer.angularRunner = runner ?? defaultAngularWeightsWorkerRunner;
   }
 
   // ─── Public accessors ────────────────────────────────────────────────────────
@@ -769,6 +923,16 @@ export class PointRenderer {
               // are unaffected.  See SCHECHTER_RATIO_BYTE_OFFSET above for
               // the full design notes on the per-vertex bake.
               { shaderLocation: 9, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
+              // angularDensityWeight (f32) — offset 48 bytes.  Per-galaxy
+              // HEALPix angular re-weight baked at upload time as 1.0 (the
+              // multiplicative identity), then lazily replaced with real
+              // per-galaxy values when the user toggles
+              // `BiasMode.AngularReweight`.  Read by the fragment shader's
+              // alpha computation, gated on `u.biasMode == 4u` via a
+              // `select(1.0, angularDensityWeight, …)` so the other four
+              // modes are unaffected.  See ANGULAR_WEIGHT_BYTE_OFFSET above
+              // for the design notes.
+              { shaderLocation: 10, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
             ],
           },
         ],
@@ -937,6 +1101,10 @@ export class PointRenderer {
       nRef,
       interleaved,
       cachedSchechterRatios,
+      // Angular weights are never eagerly baked (see slot-12 comment in
+      // buildPointInterleavedBuffer.ts); the upload always writes 1.0 and
+      // the cache stays empty until `applyAngularReweightMode()` runs.
+      cachedAngularWeights: null,
     });
     this.recomputeInstanceIdOffsets();
     await this.rebakeStaleSources();
@@ -1162,6 +1330,114 @@ export class PointRenderer {
   ): void {
     for (let i = 0; i < entry.count; i++) {
       entry.interleaved[i * SLOTS_PER_POINT + 11] = ratios[i]!;
+    }
+  }
+
+  // ─── Lazy HEALPix angular re-weight bake ────────────────────────────────────
+
+  /**
+   * Compute and upload per-galaxy HEALPix angular re-weights for every
+   * loaded source.  Mirrors `applySchechterMode()` exactly — same lazy
+   * pattern, same per-source caching, same single-buffer-rewrite upload.
+   *
+   * Called by the engine when the user transitions TO
+   * `BiasMode.AngularReweight`.  The work is moderate (~100-300 ms at
+   * full deck), so we run it off-thread in a per-source worker — the
+   * renderer's per-frame `draw()` keeps using the current 1.0 default
+   * until the worker resolves, at which point the buffer flips to the
+   * real per-galaxy weights.
+   *
+   * ### Why per-survey LUTs (and never a global one)
+   *
+   * Each cloud is binned independently.  Combining surveys would let
+   * SDSS's footprint contaminate GLADE's correction (and vice versa),
+   * defeating the whole point of mode 4: GLADE's pencil-beam-jet artefact
+   * is specifically GLADE's, and re-weighting GLADE against SDSS-density-
+   * landscape would do almost nothing because SDSS is already
+   * (relatively) uniform within its footprint.
+   *
+   * ### Caching
+   *
+   * Same as Schechter: the first call per source spawns a worker;
+   * subsequent calls reuse the `cachedAngularWeights` Float32Array on the
+   * LoadedSource entry.  Mode 4→other→mode 4 toggles are then instant.
+   *
+   * ### Concurrency
+   *
+   * Workers for different sources spawn in parallel via `Promise.all`.
+   * Fire-and-forget from the engine side: the per-frame draw loop
+   * continues uninterrupted while weights compute.  Errors surface via
+   * the returned promise's rejection.
+   */
+  async applyAngularReweightMode(): Promise<void> {
+    this.angularReweightModeActive = true;
+
+    // Snapshot the work items so an async unload mid-bake can't crash us
+    // (it'll just skip the ones it should — see the live-entry check below).
+    const sources: { source: Source; entry: LoadedSource }[] = [];
+    for (const source of ALL_SOURCES) {
+      const entry = this.clouds.get(source);
+      if (!entry) continue;
+      sources.push({ source, entry });
+    }
+
+    await Promise.all(
+      sources.map(async ({ source, entry }) => {
+        // Cache hit: reuse the previously-computed weights.  Still need to
+        // splice them into the mirror + re-upload because the buffer might
+        // currently hold the all-1.0 values from a `clearAngularWeights`
+        // round trip.
+        let weights = entry.cachedAngularWeights;
+        if (!weights) {
+          weights = await PointRenderer.angularRunner({
+            cloud: entry.cloud,
+            source,
+          });
+          // Re-fetch — `unload()` might have removed the source while the
+          // worker was running; in that case we drop the result.
+          const live = this.clouds.get(source);
+          if (!live || live !== entry) return;
+          entry.cachedAngularWeights = weights;
+        }
+
+        this.spliceAngularIntoMirror(entry, weights);
+        this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+      }),
+    );
+  }
+
+  /**
+   * Reset slot 12 of every loaded source's vertex buffer to the
+   * multiplicative identity (1.0).
+   *
+   * Cheap because the shader's `select(1.0, angularDensityWeight, biasMode == 4u)`
+   * gate already ignores slot 12 in modes 0/1/2/3 — strictly speaking we
+   * don't NEED to clear the buffer.  Mirrors `clearSchechterRatios()`
+   * exactly: the engine's `setBiasMode` typically does NOT call this on
+   * transition AWAY from mode 4, since leaving the values in place keeps
+   * the next mode-4 toggle even faster (no writeBuffer cost).
+   */
+  clearAngularWeights(): void {
+    this.angularReweightModeActive = false;
+    for (const entry of this.clouds.values()) {
+      for (let i = 0; i < entry.count; i++) {
+        entry.interleaved[i * SLOTS_PER_POINT + 12] = 1.0;
+      }
+      this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+    }
+  }
+
+  /**
+   * Splice a tightly-packed Float32Array of per-row angular weights
+   * (length = entry.count) into slot 12 of every row of the entry's
+   * interleaved mirror.  Mirror of `spliceSchechterIntoMirror`.
+   */
+  private spliceAngularIntoMirror(
+    entry: LoadedSource,
+    weights: Float32Array,
+  ): void {
+    for (let i = 0; i < entry.count; i++) {
+      entry.interleaved[i * SLOTS_PER_POINT + 12] = weights[i]!;
     }
   }
 

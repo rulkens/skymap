@@ -38,7 +38,7 @@ function makeCloud(count: number): PointCloud {
   };
 }
 
-const SLOTS = 12;
+const SLOTS = 13;
 
 describe('buildPointInterleavedBuffer', () => {
   it('produces an interleaved Float32Array of the expected length', () => {

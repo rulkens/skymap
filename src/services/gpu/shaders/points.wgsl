@@ -360,6 +360,31 @@ struct PerVertex {
   // mode 3 instead of going infinite/NaN.  Visual output is unchanged from
   // the pre-bake implementation.
   @location(9) schechterRatio: f32,
+
+  // Per-galaxy HEALPix angular re-weight = `clamp(medianCount / localCount,
+  // 0.1, 10)` baked at upload time by `computeAngularWeights` (lazy, only
+  // when the user picks `BiasMode.AngularReweight`; default is 1.0).
+  //
+  // ── Why per-vertex ──────────────────────────────────────────────────────
+  //
+  // The angular weight depends on each galaxy's HEALPix cell + log-distance
+  // shell, both of which are derived from the cloud's positions and require
+  // an O(N) cross-cloud aggregation to compute the per-shell median.  A
+  // uniform can't carry per-galaxy information, and computing the median
+  // on the GPU would need a multi-pass reduction we'd rather avoid.  Bake
+  // once per cloud at mode-toggle time, read with a single multiply per
+  // fragment.
+  //
+  // ── Why mode 4 instead of multiplicative composition ────────────────────
+  //
+  // Modes 1/2/3 each address a different bias (volume completeness, V_max
+  // weighting, Schechter LF density); composing them with mode 4 would
+  // double-count the angular footprint problem since modes 2 and 3 already
+  // assume isotropic angular completeness.  Mode 4 is therefore an
+  // *alternative*, not a multiplicative add-on — selecting it bypasses the
+  // other modes' alpha modulation via the shader's
+  // `select(1.0, …, biasMode == 4u)` gate.
+  @location(10) angularDensityWeight: f32,
 };
 
 // ─── vertex-to-fragment interface ─────────────────────────────────────────────
@@ -442,6 +467,13 @@ struct VSOut {
   // constancy as the other flat u32/f32 attributes — every fragment of a
   // given billboard reads exactly the same ratio.
   @location(9) @interpolate(flat) schechterRatio: f32,
+
+  // Per-galaxy HEALPix angular re-weight, forwarded from the per-instance
+  // attribute.  Read in `fs` only when `u.biasMode == 4u` (the
+  // AngularReweight literal in src/data/biasMode.ts).  Flat-interpolated
+  // for the same per-instance constancy as schechterRatio — every fragment
+  // of a given billboard reads exactly the same weight.
+  @location(10) @interpolate(flat) angularDensityWeight: f32,
 };
 
 // ─── Schechter LF correction (Task 4 of malmquist-bias plan) ────────────────
@@ -605,6 +637,7 @@ fn vs(
     earlyOut.isFallback = 0u;
     earlyOut.dMpc = dMpc;
     earlyOut.schechterRatio = 0.0;
+    earlyOut.angularDensityWeight = 1.0;
     return earlyOut;
   }
 
@@ -879,6 +912,11 @@ fn vs(
   // the value once per primitive, not per fragment.
   out.schechterRatio = p.schechterRatio;
 
+  // Forward the per-galaxy HEALPix angular re-weight (baked at mode-4
+  // toggle time, default 1.0).  Read in `fs` only when `u.biasMode == 4u`;
+  // flat-interpolated through VSOut for per-instance constancy.
+  out.angularDensityWeight = p.angularDensityWeight;
+
   return out;
 }
 
@@ -1034,6 +1072,24 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // guard needed.
   let schechterAlpha_ = select(1.0, in.schechterRatio, u.biasMode == 3u);
   alpha = alpha * schechterAlpha_;
+
+  // ── HEALPix angular re-weight (Task 8 of malmquist-bias plan) ────────────
+  //
+  // Mode 4: modulate alpha by the per-galaxy ratio
+  // `clamp(medianCellCount / localCellCount, 0.1, 10)` baked at toggle time
+  // into `in.angularDensityWeight`.  Down-weights galaxies in over-dense
+  // angular cells (e.g., GLADE's SDSS-DR12 footprint at high z) and
+  // up-weights galaxies in sparse cells (the rest of the sky at the same
+  // shell), flattening the radial pencil-beam-jet artefacts the user
+  // reported.  See `computeAngularWeights.ts` for the per-shell median
+  // pass that produces these weights.
+  //
+  // The bake is per-survey, never global, so SDSS's footprint can't
+  // contaminate GLADE's correction.  Each `select` reads its own cloud's
+  // weight via the per-vertex slot; the only thing the shader knows is
+  // "use this weight when biasMode == 4u".
+  let angWeight = select(1.0, in.angularDensityWeight, u.biasMode == 4u);
+  alpha = alpha * angWeight;
 
   // Highlight fallback rows in magenta when the toggle is on. The 0.3 in
   // the green channel keeps fallback galaxies recognisable as "data-y"

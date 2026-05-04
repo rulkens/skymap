@@ -1465,6 +1465,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // first-frame state that must reach the SettingsPanel.
       const wasSchechter = biasMode === BiasMode.Schechter;
       const isSchechter = mode === BiasMode.Schechter;
+      const wasAngular = biasMode === BiasMode.AngularReweight;
+      const isAngular = mode === BiasMode.AngularReweight;
       biasMode = mode;
       cb.onBiasModeChange?.(mode);
 
@@ -1484,6 +1486,27 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (!wasSchechter && isSchechter && renderer) {
         renderer.applySchechterMode().catch((err) => {
           console.error('[engine] Schechter ratio bake failed:', err);
+        });
+      }
+
+      // ── Lazy HEALPix angular re-weight bake ────────────────────────────
+      //
+      // Mirror of the Schechter transition above.  The HEALPix bake is
+      // cheaper (~100-300 ms at full deck — three linear passes plus a
+      // per-shell median sort) but still long enough to drop a frame, so
+      // we ship it to a worker via `applyAngularReweightMode()`.  Per-
+      // survey, never global: each cloud bins itself, so SDSS's footprint
+      // can't contaminate GLADE's correction.
+      //
+      // Going AWAY from mode 4 is a no-op for the same reason as Schechter:
+      // the shader's `select(1.0, angularDensityWeight, biasMode == 4u)`
+      // gate already ignores slot 12 in the other four modes, so leaving
+      // the baked weights in the GPU buffer is correct AND keeps the
+      // next mode-4 toggle instant (the cache hit fires off a single
+      // re-upload, no worker spawn).
+      if (!wasAngular && isAngular && renderer) {
+        renderer.applyAngularReweightMode().catch((err) => {
+          console.error('[engine] Angular re-weight bake failed:', err);
         });
       }
     },

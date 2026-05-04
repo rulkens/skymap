@@ -67,11 +67,19 @@ import { computeSchechterRatios } from './computeSchechterRatios';
 /**
  * Number of f32 slots packed per point.  Mirrors `SLOTS_PER_POINT` in
  * `pointRenderer.ts`; the renderer's vertex pipeline declares the matching
- * 48-byte arrayStride.  Kept duplicated rather than imported to avoid
+ * 52-byte arrayStride.  Kept duplicated rather than imported to avoid
  * `pointRenderer.ts` (which pulls in WebGPU globals via `?raw` shaders) from
  * landing in the worker bundle — the worker should only need pure math.
+ *
+ * Slot 12 (`angularDensityWeight`) is left at 1.0 (multiplicative identity)
+ * by every default upload.  Mode 4 of the Malmquist-bias correction —
+ * HEALPix angular re-weighting — replaces these defaults via the lazy
+ * `applyAngularReweightMode()` flow (mirror of Schechter).  Skipping the
+ * eager bake here keeps the .bin-arrival latency low: the per-cloud
+ * HEALPix pass costs ~100 ms even at full deck, and the user only pays it
+ * if they actually pick mode 4.
  */
-const SLOTS_PER_POINT = 12;
+const SLOTS_PER_POINT = 13;
 
 /** Reference distance used to normalise the per-galaxy 1/V_max weight. */
 const D_REF_MPC = 750;
@@ -347,6 +355,19 @@ export function buildPointInterleavedBuffer(
     // Same dim-only-clamp value the original inline path produced — see
     // the helper for the math.
     interleaved[o + 11] = schechterRatios !== null ? schechterRatios[i]! : 1.0;
+
+    // Slot 12 — per-galaxy HEALPix angular re-weight (BiasMode.AngularReweight,
+    // mode 4 of the Malmquist-bias correction).  Default-write 1.0 (the
+    // multiplicative identity) so the shader's
+    // `select(1.0, angularDensityWeight, biasMode == 4u)` produces no change
+    // in the other four modes.  The lazy bake path
+    // (`pointRenderer.applyAngularReweightMode`) splices real per-galaxy
+    // weights into this slot and re-uploads when the user toggles into
+    // mode 4.  We don't add an eager `'with-angular'` mode here because the
+    // toggle isn't expected to be the default; if a survey arrives mid-mode-4
+    // the renderer's `applyAngularReweightMode` re-runs the worker bake for
+    // the new source, picking up the now-stale 1.0s.
+    interleaved[o + 12] = 1.0;
   }
 
   return {

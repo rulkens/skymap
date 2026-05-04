@@ -336,6 +336,7 @@ export function SettingsPanel({
               <option value={BiasMode.VolumeLimited}>Volume-limited</option>
               <option value={BiasMode.VMax}>1/V_max</option>
               <option value={BiasMode.Schechter}>Schechter LF</option>
+              <option value={BiasMode.AngularReweight}>Angular re-weight (HEALPix)</option>
             </select>
           </div>
           {biasMode === BiasMode.VolumeLimited && (
