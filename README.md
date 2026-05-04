@@ -212,6 +212,46 @@ rectangle against dark space.
 on). Switch it off if you'd rather see the raw point cloud without network
 traffic, or to compare the dot field with and without textures.
 
+## Brightness pipeline
+
+Real galaxies span ~10 magnitudes of apparent brightness — the brightest
+catalogue entries are roughly 10⁴× brighter than the faintest, so drawing
+every galaxy as an identical dot would throw away most of the visual
+information.  Skymap layers several distinct brightness-compensation
+stages on top of each other; each fixes a different artefact.
+
+1. **Catalogue magnitude → per-galaxy intensity** *(automatic)* — the
+   vertex stage maps each galaxy's apparent magnitude (from whichever
+   photometric band the parser stored in the binary format) to a
+   per-instance alpha intensity.  A magnitude-14 nearby spiral renders
+   several × brighter than a magnitude-22 background galaxy without any
+   user input.
+2. **Global brightness slider** *(0.2 – 3.0, default 1.0)* — multiplies
+   every galaxy's intensity uniformly.  Useful when a particular catalogue
+   looks too faint in dense regions or too saturated in sparse ones.  Lives
+   in the settings panel.
+3. **Camera-distance depth fade** *(toggle, default on)* — multiplies
+   per-galaxy alpha by `1 / (1 + (camDist / FALLOFF_HALF)²)`, taming the
+   additive-overlap glow at the geometric origin where every sightline
+   through Earth stacks hundreds of billboards on top of each other.
+4. **K-correction** *(per-row, automatic)* — compensates the colour ramp
+   for redshift band-shifting before the ramp is sampled.  Per-survey
+   coefficients are documented in the [colour-index table](#per-survey-colour-indices)
+   above.
+5. **Density correction modes** *(see next section)* — fix the *catalogue's*
+   selection bias toward intrinsically faint galaxies in the nearby volume.
+6. **HDR exposure × tone-map curve** *(see [Render pipeline](#render-pipeline))*
+   — every visible pass writes into an `rgba16float` HDR offscreen target;
+   a fullscreen tone-map pass at end-of-frame compresses the accumulated
+   linear-light values into the swap chain's [0, 1] display range.  An
+   exposure slider scales the HDR signal *before* the tone-map curve runs,
+   and five curves are runtime-selectable.
+
+The six stages compose because they act at different points in the pipeline
+— per-galaxy encoding, post-vertex weighting, post-rasterisation
+accumulation, and final display compression — so adjusting one knob doesn't
+fight another.
+
 ## Density correction (Malmquist bias)
 
 Flux-limited surveys over-represent nearby galaxies because faint ones
