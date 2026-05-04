@@ -73,3 +73,9 @@ data/raw/hyperleda_pa.csv
 # `settings.local.json` accumulates this developer's locally-granted tool
 # permissions; the shared `settings.json` (when it exists) stays tracked.
 .claude/settings.local.json
+
+# ── Firebase CLI per-developer cache ─────────────────────────────────────────
+# `.firebase/hosting.*.cache` records the previously-deployed file hashes so
+# `firebase deploy` can skip files whose content hasn't changed.  The cache
+# is regenerated on every deploy and is per-developer state, not shared.
+.firebase/
