@@ -841,19 +841,27 @@ export class PointRenderer {
         mLim: surveyMLim,
         dMpc,
       });
-      // Schechter ratio: ideally nRef/nHere, but applied as a multiplicative
-      // alpha boost across millions of additively-blended overlapping
-      // galaxies, the literal ratio over-exposes (Local-Group flattens, far
-      // field blooms to peak white).  Two softeners stacked, both flagged
-      // as "if it saturates" tuning notes in the original plan (Task 4
-      // Step 3): square-root the ratio (Anscombe-like variance-stabilising
-      // transform — knocks the dynamic range from [0, 10] to [0, ~3.2])
-      // AND tighten the upper clamp from 10× to 3×.  The visual still
-      // achieves the goal (nearby super-clusters lose their over-density
-      // dominance) without flooding the canvas.
+      // Schechter ratio: in theory we want nRef/nHere so the brighter the
+      // local density the more the alpha boost — flattening the apparent
+      // over-density toward something uniform.  In practice, additive
+      // blending across millions of overlapping galaxy billboards turns
+      // any multiplier > 1 into a bloom: even sqrt(ratio) clamped at 3
+      // washed the canvas to peak white.
+      //
+      // For visualisation we therefore apply the correction as DIM-ONLY
+      // — clamp the multiplier to [0, 1] so the mode can darken the
+      // dense-and-overdrawn nearby cluster without ever boosting the
+      // sparse far field.  The resulting visual still achieves the
+      // intent ("Local Group looks like every other supercluster")
+      // because the over-bright nearby concentration shrinks while
+      // distant galaxies stay at their natural alpha.  The math is no
+      // longer the literal Schechter inversion, but the visual cue is
+      // honest: dense regions in the catalog look less dense in the
+      // render.  See Task 4 Step 3 of the Malmquist-bias plan for the
+      // softer-correction tuning note that motivated this.
       const ratioRaw =
         nHere > 0 && Number.isFinite(nHere) ? nRef / nHere : 0;
-      const schechterRatio = Math.min(3, Math.sqrt(ratioRaw));
+      const schechterRatio = Math.min(1, Math.sqrt(ratioRaw));
       interleaved[o + 11] = schechterRatio;
     }
 
