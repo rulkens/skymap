@@ -188,6 +188,16 @@ export function App(): React.ReactElement {
     useState<number>(DEFAULT_VISIBLE_SOURCE_MASK);
   const [lodMode, setLodMode] = useState<LodMode>(DEFAULT_LOD_MODE);
 
+  // ── Rolling FPS readout ──────────────────────────────────────────────────
+  //
+  // Driven by the engine's `onFpsChange` callback, which fires only when
+  // the rounded integer FPS value changes (see EngineCallbacks).  A 0
+  // initial value is correct: the engine produces no readout until at
+  // least 2 frames have elapsed, and a 0 in the status bar during that
+  // sub-100 ms window is fine — by the time the user can read it, the
+  // first real value has already overwritten it.
+  const [fps, setFps] = useState<number>(0);
+
   // Per-source point counts, indexed by Source enum value. Populated as each
   // .bin file finishes loading via the engine's `onCloudReady` callback.
   // Surfaced in SettingsPanel so users see how many points each survey
@@ -297,6 +307,9 @@ export function App(): React.ReactElement {
       // multiple parallel arrivals don't clobber each other.
       onCloudReady: (source, count) =>
         setSourceCounts((prev) => ({ ...prev, [source]: count })),
+      // Rolling FPS — engine throttles to integer-change events so this is a
+      // cheap direct setState (no debounce / no useMemo needed).
+      onFpsChange: setFps,
       // Density-correction echoes (Malmquist bias).  Engine fires these at
       // startup with its own defaults *and* every time `setBiasMode` /
       // `setAbsMagLimit` mutates them, so React's SettingsPanel always
@@ -424,6 +437,7 @@ export function App(): React.ReactElement {
       <StatusBar
         status={status}
         liveCount={Object.values(sourceCounts).reduce((a, b) => a + (b ?? 0), 0)}
+        fps={fps}
       />
       <InfoCard
         hovered={hovered}

@@ -141,6 +141,22 @@ export type EngineCallbacks = {
    */
   onSourceMaskChange?: (mask: number) => void;
   /**
+   * Fired when the rolling-window FPS estimate changes (integer Hz).
+   *
+   * The engine measures inter-frame deltas inside its `requestAnimationFrame`
+   * loop and averages over the last ~60 frames to smooth out the per-frame
+   * jitter that an instantaneous `1/dt` would produce (a steady visual 60 fps
+   * has individual deltas swinging between 12 and 24 ms — a status-bar number
+   * driven by raw deltas would be unreadable).  This callback fires only when
+   * the *integer* fps value changes (e.g. 59 → 60), so React's setState is a
+   * safe direct wire-up — no spurious renders on noise.
+   *
+   * Optional because most engine consumers (tests, headless renders) don't
+   * care; the perf-investigation HUD in the status bar is the only subscriber
+   * today.
+   */
+  onFpsChange?: (fps: number) => void;
+  /**
    * Fired each time a per-survey `.bin` file finishes loading and the cloud
    * has been uploaded to the renderer.  Surfaces progressive load state to
    * the React layer so the status bar can show e.g. "loaded 2/3 surveys".

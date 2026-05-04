@@ -92,6 +92,7 @@ import { vec3 } from 'gl-matrix';
 import { autoLodMask } from './autoLod';
 import { createTweenManager } from './tweenManager';
 import { createRenderScheduler } from './renderScheduler';
+import { createFpsCounter } from './fpsCounter';
 import { buildPointInfo, maxAbsCoord } from './pointInfoBuilder';
 import { computeInitialCamera } from './cameraFraming';
 import { seedSettingsCallbacks } from './seedSettingsCallbacks';
@@ -217,6 +218,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   let frame: () => void = () => {
     /* stub until IIFE assigns the real body — see comment above */
   };
+
+  // ── Rolling FPS counter ────────────────────────────────────────────────────
+  //
+  // Lives at engine scope so the same instance accumulates samples across
+  // every frame() invocation (a counter inside frame() would reset on each
+  // call).  The counter itself is a thin closure over a 60-frame ring buffer
+  // — see fpsCounter.ts for the why-rolling-window rationale.
+  //
+  // We track `lastReportedFps` here too so we can throttle the callback
+  // fan-out: integer fps values change at most once per ~16 ms in the worst
+  // case (60 → 59 → 60 oscillation under noise), but in practice a steady
+  // framerate produces just one initial fire and then silence — far cheaper
+  // than every-N-frames polling, which would burn React renders even when
+  // the number was unchanged.  Per-change is the lighter option.
+  const fpsCounter = createFpsCounter(60);
+  let lastReportedFps: number | null = null;
 
   const state: EngineState = {
     settings: {
@@ -920,6 +937,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // current value of `frame` lazily, so this assignment makes
       // every subsequent rAF tick run the body below.
       frame = () => {
+        // ── FPS measurement ───────────────────────────────────────────────
+        //
+        // Sample BEFORE any frame work so the recorded timestamp is the
+        // gap between successive rAF dispatches — that's what the user
+        // perceives as "framerate", not the gap between when the frame
+        // body finishes.  The counter handles its own < 2-samples
+        // bootstrap (returns null) and rolls over a 60-frame window;
+        // we just throttle the callback to integer-value changes so
+        // React doesn't re-render on noise.
+        const fpsNow = fpsCounter.sample(performance.now());
+        if (fpsNow !== null && fpsNow !== lastReportedFps) {
+          lastReportedFps = fpsNow;
+          cb.onFpsChange?.(fpsNow);
+        }
+
         // Snapshot the live state references once at the top of the
         // frame body for readability.  Each is either a live mutable
         // value (cam) or a slot that becomes null only on `destroy()`

@@ -43,6 +43,15 @@ type StatusBarProps = {
    * whatever subset had baked when `ready` fired.
    */
   liveCount?: number;
+  /**
+   * Rolling-window FPS estimate (integer Hz), driven by the engine's
+   * `onFpsChange` callback in App.tsx.  Optional so existing test call-sites
+   * that render StatusBar in isolation don't break — when omitted (or 0,
+   * which the engine never reports — its first valid sample requires two
+   * frames) the segment is suppressed.  This keeps the bar readable during
+   * the sub-100 ms window between mount and the first FPS value.
+   */
+  fps?: number;
 };
 
 /**
@@ -52,8 +61,8 @@ type StatusBarProps = {
  * // In App.tsx:
  * <StatusBar status={status} liveCount={liveCount} />
  */
-export function StatusBar({ status, liveCount }: StatusBarProps): ReactNode {
-  return <div className={styles.status}>{statusText(status, liveCount)}</div>;
+export function StatusBar({ status, liveCount, fps }: StatusBarProps): ReactNode {
+  return <div className={styles.status}>{statusText(status, liveCount, fps)}</div>;
 }
 
 /**
@@ -63,7 +72,7 @@ export function StatusBar({ status, liveCount }: StatusBarProps): ReactNode {
  * easy to extend. TypeScript exhaustiveness checking will warn if a new
  * `kind` variant is added to `EngineStatus` but not handled here.
  */
-function statusText(status: EngineStatus, liveCount?: number): string {
+function statusText(status: EngineStatus, liveCount?: number, fps?: number): string {
   switch (status.kind) {
     case 'initializing':
       return 'initializing…';
@@ -85,7 +94,13 @@ function statusText(status: EngineStatus, liveCount?: number): string {
       // combination) renders without a tag — the count itself is the proof.
       const count = liveCount ?? status.count;
       const suffix = status.source === 'synthetic' ? ' (synthetic fallback)' : '';
-      return `WebGPU OK · ${count.toLocaleString()} points${suffix} · drag to orbit, wheel to zoom`;
+      // Insert the FPS segment between point count and synthetic-fallback /
+      // hint suffix.  Suppressed entirely until the engine reports a non-zero
+      // value (the engine never reports 0 — its rolling window needs ≥ 2
+      // samples), so the bar stays clean during the brief window between
+      // engine ready and the first FPS sample.
+      const fpsSegment = fps && fps > 0 ? ` · ${fps} fps` : '';
+      return `WebGPU OK · ${count.toLocaleString()} points${fpsSegment}${suffix} · drag to orbit, wheel to zoom`;
     }
 
     case 'error':
