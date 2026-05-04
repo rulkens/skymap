@@ -159,8 +159,8 @@ Build instructions (record in your shell history; not part of any commit):
 
 ```
 brew install cgal gsl cmake
-git clone https://github.com/thierry-sousbie/DisPerSE.git ~/src/disperse
-cd ~/src/disperse
+git clone https://github.com/thierry-sousbie/DisPerSE.git ~/Development/vendor/cpp/DisPerSE
+cd ~/Development/vendor/cpp/DisPerSE
 mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/.local
 make -j 4
@@ -1917,8 +1917,8 @@ a C++ Morse-theory-based topological extractor.  Install:
 
 ```bash
 brew install cgal gsl cmake
-git clone https://github.com/thierry-sousbie/DisPerSE.git ~/src/disperse
-cd ~/src/disperse
+git clone https://github.com/thierry-sousbie/DisPerSE.git ~/Development/vendor/cpp/DisPerSE
+cd ~/Development/vendor/cpp/DisPerSE
 mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/.local && make -j 4 && make install
 ```
