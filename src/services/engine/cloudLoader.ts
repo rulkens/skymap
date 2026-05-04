@@ -32,9 +32,11 @@
  */
 
 import { decodePointCloud } from '../../data/pointCloudFormat';
+import { decodeFilaments } from '../../data/filamentBinaryFormat';
 import { generateSyntheticCloud } from '../../data/synthetic';
 import { Source } from '../../data/sources';
 import type { PointCloud } from '../../@types';
+import type { FilamentCloud } from '../../@types/FilamentCloud';
 
 /**
  * Discriminated source tag returned to callers that care about which load
@@ -270,4 +272,26 @@ export function buildSyntheticFallback(): CloudLoadResult {
     cloudSource: 'synthetic',
     cloud: generateSyntheticCloud(100_000),
   };
+}
+
+/**
+ * Fetch and decode the optional `filaments.bin`.  Returns null when the
+ * file is missing — filaments are an optional decorative layer; the
+ * renderer must work without them, so we silently fall back rather than
+ * throwing.  Network errors and decode errors both collapse to null.
+ *
+ * The famous-galaxies sidecar pattern (see famousMetaLoader.ts) is the
+ * direct precedent here — small auxiliary asset, fail-safe to "feature
+ * disabled" rather than aborting startup.
+ */
+export async function loadFilaments(): Promise<FilamentCloud | null> {
+  try {
+    const res = await fetch('/data/filaments.bin');
+    if (!res.ok) return null;
+    const buf = await res.arrayBuffer();
+    return decodeFilaments(buf);
+  } catch (err) {
+    console.warn('[cloudLoader] filaments.bin failed:', err);
+    return null;
+  }
 }
