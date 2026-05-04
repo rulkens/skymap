@@ -158,15 +158,20 @@ Expected: full paths if DisPerSE is installed. If "not found" for either binary,
 Build instructions (record in your shell history; not part of any commit):
 
 ```
-git clone https://gitlab.com/florent.sousbie/disperse.git /tmp/disperse
-cd /tmp/disperse
+brew install cgal gsl cmake
+git clone https://github.com/thierry-sousbie/DisPerSE.git ~/src/disperse
+cd ~/src/disperse
 mkdir build && cd build
-cmake ..
+cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/.local
 make -j 4
-sudo make install
+make install
 ```
 
-Build deps: CGAL (Homebrew: `brew install cgal`), boost (`brew install boost`), CMake. Total time ~15 minutes on a modern Mac.
+Then add `~/.local/bin` to PATH (or pass `-DCMAKE_INSTALL_PREFIX=/usr/local` and use `sudo make install` if you prefer system-wide).
+
+Build deps: **CGAL** + **GSL** + **CMake** (the README's override list is QT/GSL/SDL/MATHGL/CGAL — but QT/SDL/MATHGL are only needed for the optional `pdview` GUI and the `delaunay_2D/3D` tessellators, which we don't use; `mse` and `skelconv` only need CGAL + GSL).  Total time ~15 minutes on a modern Mac.
+
+The build produces five executables in `~/.local/bin/`; we use `mse` (the main pipeline) and `skelconv` (skeleton-format converter that emits `.NDskl`).
 
 - [ ] **Step 4: Note current baseline metrics**
 
@@ -1911,13 +1916,14 @@ The skeleton is computed offline by **DisPerSE** (Sousbie 2011),
 a C++ Morse-theory-based topological extractor.  Install:
 
 ```bash
-git clone https://gitlab.com/florent.sousbie/disperse.git /tmp/disperse
-cd /tmp/disperse
+brew install cgal gsl cmake
+git clone https://github.com/thierry-sousbie/DisPerSE.git ~/src/disperse
+cd ~/src/disperse
 mkdir build && cd build
-cmake .. && make -j 4 && sudo make install
+cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/.local && make -j 4 && make install
 ```
 
-Build deps: CGAL (`brew install cgal`), boost, CMake.  Build time: ~15 min.
+Build deps: CGAL + GSL + CMake (homebrew).  Build time: ~15 min.  See Task 0 for full notes.
 
 Run order (after `npm run build-all`):
 
