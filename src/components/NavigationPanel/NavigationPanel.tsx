@@ -52,9 +52,17 @@ const ROWS: ReadonlyArray<{ key: string; action: string }> = [
   { key: '⌘K / Ctrl+K / /', action: 'search galaxies' },
 ];
 
-export function NavigationPanel(): ReactNode {
+/**
+ * `defaultOpen` is forwarded to the shared `Panel` chrome so the parent
+ * (App.tsx) can collapse this panel by default on mobile viewports.
+ * Defaults to `true` (open) on the desktop path, matching the previous
+ * always-open behaviour.
+ */
+export type NavigationPanelProps = { defaultOpen?: boolean };
+
+export function NavigationPanel({ defaultOpen }: NavigationPanelProps = {}): ReactNode {
   return (
-    <Panel title="NAVIGATION" ariaLabel="Navigation cheatsheet">
+    <Panel title="NAVIGATION" ariaLabel="Navigation cheatsheet" defaultOpen={defaultOpen}>
       {ROWS.map((row) => (
         <div className={styles.row} key={row.key}>
           <span className={styles.key}>{row.key}</span>

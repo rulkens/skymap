@@ -255,6 +255,14 @@ type Props = {
   spaceMouseSensitivity?: number;
   /** Called when the user moves the sensitivity slider. */
   onSpaceMouseSensitivityChange?: (value: number) => void;
+
+  /**
+   * Forwarded to the shared `Panel` chrome.  App.tsx passes `false` on
+   * mobile viewports so the long Settings panel doesn't dominate the
+   * first-paint screen on a phone; desktop keeps the previous always-
+   * open behaviour.  Users can still tap the title row to expand.
+   */
+  defaultOpen?: boolean;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
@@ -319,6 +327,7 @@ export function SettingsPanel({
   onToneMapCurveChange,
   exposure,
   onExposureChange,
+  defaultOpen,
 }: Props): ReactNode {
   // Tier selector: rendered only when both pieces wired by the parent.  Same
   // opt-in idiom as every other optional section in this panel.  The selector
@@ -398,7 +407,7 @@ export function SettingsPanel({
   // open so first-time visitors see the panel as the primary interaction
   // surface.  This module just supplies the section content.
   return (
-    <Panel title="Settings" ariaLabel="Renderer settings">
+    <Panel title="Settings" ariaLabel="Renderer settings" defaultOpen={defaultOpen}>
       {/*
         ── Section grouping ──────────────────────────────────────────────
         The panel grew to ~80 controls in seven loose categories.  Wrapping

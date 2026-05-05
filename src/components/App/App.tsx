@@ -237,6 +237,21 @@ export function App(): React.ReactElement {
     typeof window !== 'undefined' ? initialTierFromViewport(window.innerWidth) : 'medium',
   );
 
+  // ── Initial mobile signal (drives panel-collapse on first paint) ─────────
+  //
+  // Same 768-px breakpoint as `initialTierFromViewport` — small viewports
+  // get the small data tier AND get the Navigation / Stats / Settings panels
+  // collapsed by default so the canvas isn't covered on first paint.  One-
+  // shot: read once at mount, no resize listener.  Re-orienting a phone in
+  // the middle of a session shouldn't yank the user's expanded panels back
+  // closed under them.
+  //
+  // SSR-safe: in unit tests where `window` is undefined we fall back to the
+  // desktop default (panels open).
+  const initialMobile =
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const initialPanelsOpen = !initialMobile;
+
   // ── Rolling FPS readout ──────────────────────────────────────────────────
   //
   // Driven by the engine's `onFpsChange` callback, which fires only when
@@ -562,7 +577,7 @@ export function App(): React.ReactElement {
         the visual anchor between them.
       */}
       <div className={appStyles.leftStack}>
-        <NavigationPanel />
+        <NavigationPanel defaultOpen={initialPanelsOpen} />
         {/*
           Settings panel — middle of the left stack.  All state lives here in
           App; the panel is purely presentational.  Interactions funnel through
@@ -570,6 +585,7 @@ export function App(): React.ReactElement {
           handler above).
         */}
         <SettingsPanel
+        defaultOpen={initialPanelsOpen}
         pointSize={pointSize}
         brightness={brightness}
         autoRotate={autoRotate}
@@ -717,6 +733,7 @@ export function App(): React.ReactElement {
           essentially free.
         */}
         <StatsPanel
+          defaultOpen={initialPanelsOpen}
           fps={fps}
           sourceCounts={sourceCounts}
           visibleSourceMask={visibleSourceMask}

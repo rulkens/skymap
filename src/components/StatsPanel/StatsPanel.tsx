@@ -86,6 +86,13 @@ export type StatsPanelProps = {
    * non-null.
    */
   filamentCounts: { stripCount: number; vertexCount: number } | null;
+  /**
+   * Forwarded to the shared `Panel` chrome.  App.tsx passes `false` on
+   * mobile viewports so the FPS / counts panel doesn't eat half the
+   * screen on first paint; desktop keeps the previous always-open
+   * default.
+   */
+  defaultOpen?: boolean;
 };
 
 export function StatsPanel({
@@ -94,6 +101,7 @@ export function StatsPanel({
   visibleSourceMask,
   filamentsEnabled,
   filamentCounts,
+  defaultOpen,
 }: StatsPanelProps): ReactNode {
   // The em-dash placeholder is centralised here so the logic is obvious
   // in one place rather than scattered through the JSX.
@@ -111,7 +119,7 @@ export function StatsPanel({
   }, 0);
 
   return (
-    <Panel title="STATS" ariaLabel="Render statistics">
+    <Panel title="STATS" ariaLabel="Render statistics" defaultOpen={defaultOpen}>
       <div className={styles.row}>
         <span className={styles.label}>FPS</span>
         <span className={styles.value}>{fpsText}</span>
