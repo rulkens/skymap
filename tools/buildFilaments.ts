@@ -81,10 +81,55 @@ const DEFAULT_PERSISTENCE_CUT = 5;
 const DEFAULT_SMOOTHING_PASSES = 2;
 
 /**
+ * Canonical CLI strings for the three surveys we accept as input.  These
+ * are LOWERCASE shortnames (matching the ALL_SOURCE_FILES `key` field
+ * below).  Kept as a tuple-typed const so TypeScript can infer the
+ * `SourceKey` union exactly without a duplicate type declaration.
+ */
+const VALID_SOURCE_KEYS = ['sdss', '2mrs', 'glade'] as const;
+export type SourceKey = (typeof VALID_SOURCE_KEYS)[number];
+
+export type ParsedBuildFilamentsArgs = {
+  cut: number;
+  smooth: number;
+  /**
+   * Selected surveys, normalised to the alphabetical-sorted order from
+   * `VALID_SOURCE_KEYS` ordering.  Sorted up front so the derived
+   * `cachePrefix` is invariant under user argv ordering — see
+   * `cachePrefix` doc below.
+   */
+  sources: SourceKey[];
+  /**
+   * Output `.bin` path (relative to repo root or absolute).  Defaults to
+   * `public/data/filaments.bin` so the canonical merged build is a
+   * zero-flag invocation.
+   */
+  outputPath: string;
+  /**
+   * Stable basename for cache files (TSV input + DisPerSE NDnet) derived
+   * from the sorted `sources`.  Two builds with the same source set hit
+   * the same cache regardless of argv ordering — `--sources sdss,2mrs`
+   * and `--sources 2mrs,sdss` both produce `2mrs+sdss`.  Two builds with
+   * DIFFERENT source sets get different prefixes so they never collide
+   * on disk (the diagnostic SDSS-only build keeps its own ~1 GB NDnet
+   * cache separate from the merged build's).
+   */
+  cachePrefix: string;
+};
+
+/**
  * Tiny argv parser.  We don't pull in a flags library because there are
- * exactly two flags and the cost of a dependency outweighs the benefit
- * of a 5-line hand-rolled loop.  `--cut` and `--smooth` each consume the
- * next argv slot as their numeric value; anything else is ignored.
+ * a handful of flags and the cost of a dependency outweighs the benefit
+ * of a hand-rolled loop.  Each `--flag` consumes the next argv slot as
+ * its value; anything else is ignored.
+ *
+ * Flags:
+ *   --cut N       persistence cut in σ (default 5)
+ *   --smooth N    skelconv smoothing passes (default 2)
+ *   --sources csv comma-separated subset of {sdss, 2mrs, glade}
+ *                 (default: 2mrs,glade — preserves the canonical
+ *                 SDSS-excluding merged build, see module header)
+ *   --output path output `.bin` path (default public/data/filaments.bin)
  *
  * Why does this take `argv` as a parameter (instead of reading
  * `process.argv` directly)?  Tests construct argv arrays inline and call
@@ -92,18 +137,76 @@ const DEFAULT_SMOOTHING_PASSES = 2;
  * argument.  The default (`process.argv.slice(2)`) preserves the
  * production invocation path: `main()` calls `parseArgs()` with no
  * arguments and gets the CLI flags exactly as before.
+ *
+ * Validation strategy: invalid `--sources` tokens throw with a message
+ * naming both the offending token and the legal choices.  Empty/missing
+ * `--sources` values also throw — they are almost certainly a shell-
+ * quoting mistake and silently falling back to the default merge would
+ * mask that.
  */
 export function parseArgs(
   argv: string[] = process.argv.slice(2),
-): { cut: number; smooth: number } {
+): ParsedBuildFilamentsArgs {
   let cut = DEFAULT_PERSISTENCE_CUT;
   let smooth = DEFAULT_SMOOTHING_PASSES;
+  // `undefined` lets us distinguish "user did not pass --sources" (use
+  // the canonical merged default) from "user passed --sources <something>"
+  // (validate strictly, no implicit fallback).
+  let rawSources: string | undefined;
+  let outputPath = 'public/data/filaments.bin';
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--cut') cut = Number(argv[++i] ?? cut);
     else if (a === '--smooth') smooth = Number(argv[++i] ?? smooth);
+    else if (a === '--sources') {
+      // Capture the raw token even if it's missing/empty — the validator
+      // below produces the friendly error.  Note `argv[++i]` advances
+      // past the value slot regardless, so the next iteration sees the
+      // following flag and not the (consumed) value.
+      rawSources = argv[++i];
+    } else if (a === '--output') outputPath = argv[++i] ?? outputPath;
   }
-  return { cut, smooth };
+
+  // Default: 2MRS + GLADE merged build (SDSS deliberately excluded —
+  // see module-header doc for the wedge-pollution rationale).  We
+  // distinguish "flag never appeared" from "flag appeared with missing
+  // value": the second case throws (almost certainly a shell-quoting
+  // typo) rather than silently falling back to the default merge.
+  const sawSourcesFlag = argv.includes('--sources');
+  let sources: SourceKey[];
+  if (!sawSourcesFlag) {
+    sources = ['2mrs', 'glade'];
+  } else {
+    if (rawSources === undefined || rawSources === '') {
+      throw new Error(
+        '--sources requires a comma-separated list of source names ' +
+          `(valid: ${VALID_SOURCE_KEYS.join(', ')}); got ${rawSources === undefined ? 'no value' : 'empty string'}.`,
+      );
+    }
+    const tokens = rawSources.split(',').map((s) => s.trim());
+    const validated: SourceKey[] = [];
+    for (const tok of tokens) {
+      if (!(VALID_SOURCE_KEYS as readonly string[]).includes(tok)) {
+        throw new Error(
+          `Unknown source token "${tok}" in --sources. ` +
+            `Valid choices: ${VALID_SOURCE_KEYS.join(', ')}.`,
+        );
+      }
+      validated.push(tok as SourceKey);
+    }
+    sources = validated;
+  }
+
+  // Sort + dedupe.  Sorting alphabetically (rather than by some other
+  // canonical order) gives a deterministic cache filename without
+  // privileging any survey: the prefix `2mrs+glade+sdss` reads the same
+  // regardless of which survey the operator typed first.  Dedupe is
+  // defensive — `--sources sdss,sdss` would otherwise double-count in
+  // the prefix.
+  const dedupedSorted = Array.from(new Set(sources)).sort();
+  const cachePrefix = dedupedSorted.join('+');
+
+  return { cut, smooth, sources: dedupedSorted, outputPath, cachePrefix };
 }
 
 /**
