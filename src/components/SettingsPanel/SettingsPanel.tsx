@@ -38,11 +38,13 @@
 
 import { type ReactNode } from 'react';
 import type { LodMode } from '../../@types/LodMode';
+import type { Tier } from '../../@types/Tier';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
+import { TierSelector } from './TierSelector';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
@@ -150,6 +152,16 @@ type Props = {
   onDepthFadeEnabledChange?: (enabled: boolean) => void;
   /** Called when the user clicks "Reset camera". */
   onResetCamera: () => void;
+  /**
+   * Currently-active data tier ('small' | 'medium' | 'large').  Drives
+   * which segmented-control button renders as `aria-pressed=true`.
+   * Optional like every other rev-2+ control on this panel — call sites
+   * that don't wire `tier` + `onTierChange` simply see no TierSelector
+   * row at the top of the body.
+   */
+  tier?: Tier;
+  /** Called with the new tier when the user clicks a tier button. */
+  onTierChange?: (tier: Tier) => void;
   /**
    * Bitmask of currently-visible sources (see `data/sources.ts`).
    * Optional until App.tsx is wired to the multi-survey engine.
@@ -287,6 +299,8 @@ export function SettingsPanel({
   depthFadeEnabled,
   onDepthFadeEnabledChange,
   onResetCamera,
+  tier,
+  onTierChange,
   visibleSourceMask,
   onToggleSource,
   sourceCounts,
@@ -306,6 +320,13 @@ export function SettingsPanel({
   exposure,
   onExposureChange,
 }: Props): ReactNode {
+  // Tier selector: rendered only when both pieces wired by the parent.  Same
+  // opt-in idiom as every other optional section in this panel.  The selector
+  // sits at the top of the body (before any CollapsibleSection) because the
+  // tier choice has the highest blast radius — it triggers a network re-fetch
+  // and full GPU re-upload of every tiered source.
+  const showTierSelector = tier !== undefined && onTierChange !== undefined;
+
   // Guard: only render the survey-toggle section when the parent has wired
   // *both* the current mask and the toggle callback. Either alone would be
   // a half-broken UI (toggles that don't reflect state, or state with no
@@ -392,6 +413,22 @@ export function SettingsPanel({
         then orientation visibility (debug-ish), then input (rare).
         Camera reset stays outside any section as a footer.
       */}
+
+          {/* ── Data tier (small / medium / large) ──────────────────────────── */}
+          {/*
+        Top-of-body placement (before any CollapsibleSection) is intentional:
+        the tier choice is the highest-blast-radius control on the panel —
+        each click triggers a network re-fetch + GPU re-upload of every
+        tiered source.  Putting it at the top makes it both discoverable
+        and unambiguous which decision came first.
+
+        Always visible (no CollapsibleSection wrapper) for the same reason:
+        the user should never have to "find" the tier control before
+        understanding why their device is hot.
+      */}
+          {showTierSelector && (
+            <TierSelector tier={tier!} onTierChange={onTierChange!} />
+          )}
 
           {/* ── Surveys ──────────────────────────────────────────────────────── */}
           {/*

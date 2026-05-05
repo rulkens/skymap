@@ -68,6 +68,8 @@ import { useRef, useEffect, useState } from 'react';
 import { createEngine } from '../../services/engine';
 import type { EngineHandle, EngineStatus, PointInfo, ScaleInfo } from '../../@types';
 import type { LodMode } from '../../@types/LodMode';
+import type { Tier } from '../../@types/Tier';
+import { initialTierFromViewport } from '../../utils/initialTierFromViewport';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { InfoCard } from '../InfoCard/InfoCard';
 import { ScaleBar } from '../ScaleBar/ScaleBar';
@@ -215,6 +217,23 @@ export function App(): React.ReactElement {
   // any other code.
   const [visibleSourceMask, setVisibleSourceMask] = useState<number>(DEFAULT_VISIBLE_SOURCE_MASK);
   const [lodMode, setLodMode] = useState<LodMode>(DEFAULT_LOD_MODE);
+
+  // ── Data tier (small / medium / large) ─────────────────────────────────
+  //
+  // Seeded from the viewport width at mount via `initialTierFromViewport`:
+  //   < 768px → 'small'  (mobile)
+  //   ≥ 768px → 'medium' (default)
+  // 'large' is never auto-selected — opt-in only via the panel.
+  //
+  // Echoed by the engine via `onTierChange` so React mirrors engine truth
+  // (same lifecycle pattern as `lodMode` and `visibleSourceMask`).
+  // Lazy-init: `window` is only safe to read inside the initializer
+  // callback, since SSR hosts (in unit tests) might not have it.  We do
+  // NOT subscribe to resize events — the tier is a one-shot mount-time
+  // decision; the user changes it explicitly via the segmented control.
+  const [currentTier, setCurrentTier] = useState<Tier>(() =>
+    typeof window !== 'undefined' ? initialTierFromViewport(window.innerWidth) : 'medium',
+  );
 
   // ── Rolling FPS readout ──────────────────────────────────────────────────
   //
@@ -365,6 +384,16 @@ export function App(): React.ReactElement {
       // (USB unplug, permission revocation).  Without it React's "Connected"
       // indicator could persist after the puck is gone.
       onSpaceMouseConnectedChange: setSpaceMouseConnected,
+      // ── Data-tier wiring (Phase 3) ───────────────────────────────────────
+      //
+      // `initialTier` lets the engine pick the right `<source>-<tier>.bin`
+      // files on first load; we read the viewport-derived value from the
+      // React state (lazy-initialised above) so the engine and React agree
+      // on the seed without a separate code path.  `onTierChange` echoes
+      // back any tier mutation (including the engine's own seed) so React
+      // state mirrors engine truth — same lifecycle as onLodModeChange.
+      initialTier: currentTier,
+      onTierChange: setCurrentTier,
     });
 
     // Store the handle so the Esc effect (below) can call clearSelection().
@@ -555,6 +584,18 @@ export function App(): React.ReactElement {
           handleRef.current?.setDepthFadeEnabled?.(enabled);
         }}
         onResetCamera={() => handleRef.current?.focusOnHome()}
+        // ── Data tier (small / medium / large) ──────────────────────────
+        //
+        // `currentTier` is the React mirror; the engine echoes its truth
+        // through `onTierChange` (in the createEngine callbacks block
+        // above).  Forwarding through `handleRef.current?.setTier` keeps
+        // the tier swap inside the engine — it cancels in-flight loads,
+        // re-fetches the new tier-suffixed bins, and re-uploads, then
+        // fires the echo once `state.sources.tier` has mutated.  The
+        // `?.` chain on setTier covers the unlikely case where the engine
+        // build predates Phase 2 and lacks the method.
+        tier={currentTier}
+        onTierChange={(t) => handleRef.current?.setTier?.(t)}
         // ── Multi-survey toggles + Auto-LOD master (rev-2) ──────────────
         //
         // These mirror what the engine knows. The engine accepts a single
