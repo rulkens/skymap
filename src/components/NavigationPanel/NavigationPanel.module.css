@@ -4,6 +4,7 @@
  * The glassmorphic card + clickable header + collapse affordance live
  * in `components/common/Panel/Panel.module.css`; this file only styles
  * the cheatsheet's two-column rows that render inside Panel's body.
+ * All atoms reference tokens from `src/styles/global.css`.
  */
 
 /*
@@ -14,8 +15,8 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  padding: 4px 0;
+  gap: var(--space-5);
+  padding: var(--space-2) 0;
 }
 
 /*
@@ -29,10 +30,10 @@
 
 /*
  * The action label cell.  Right-aligned via the parent's space-between;
- * the slightly-brighter color (matching SettingsPanel's `.panelRow label`)
- * gives it the visual weight of "this is what the key does".
+ * uses the same body-text colour as panel labels so the cheatsheet rhythm
+ * matches the rest of the left-stack typography.
  */
 .action {
-  color: rgba(200, 220, 255, 0.85);
+  color: var(--color-fg-muted);
   text-align: right;
 }

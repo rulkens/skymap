@@ -1,9 +1,19 @@
-/* CommandPalette — modal overlay, centred at the top of the viewport. */
+/*
+ * CommandPalette — modal overlay, centred at the top of the viewport.
+ *
+ * Note: this is the only chrome in skymap that intentionally departs
+ * from the cosmic-blue glass aesthetic — it's a foreground modal, not
+ * a HUD overlay, and reads as a search affordance like Spotlight or
+ * Cmd-K palettes from VS Code / Linear.  The deviating tokens
+ * (`--surface-modal`, `--border-modal`, etc.) live in
+ * `src/styles/global.css` so future components in the same family
+ * (settings dialog, toast) can share the look.
+ */
 
 .backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--surface-scrim);
   z-index: 50;
   display: flex;
   align-items: flex-start;
@@ -14,10 +24,10 @@
 .panel {
   width: min(560px, 90vw);
   max-height: 70vh;
-  background: #15151d;
+  background: var(--surface-modal);
   color: #e8e8ea;
-  border-radius: 8px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-modal);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -28,38 +38,38 @@
   border: none;
   color: inherit;
   font: inherit;
-  padding: 16px 20px;
+  padding: var(--space-8) var(--space-10);
   outline: none;
-  font-size: 16px;
-  border-bottom: 1px solid #2a2a32;
+  font-size: var(--font-size-input);
+  border-bottom: 1px solid var(--border-modal);
 }
 
 .results {
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: var(--space-2) 0;
   overflow-y: auto;
 }
 
 .result {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-8);
   cursor: pointer;
   user-select: none;
 }
 
 .resultActive {
-  background: rgba(80, 110, 255, 0.18);
+  background: var(--surface-modal-active);
 }
 
 .thumb {
   width: 32px;
   height: 32px;
   flex-shrink: 0;
-  border-radius: 4px;
-  background: #1f1f27;
+  border-radius: var(--radius-md);
+  background: var(--surface-modal-thumb);
   object-fit: cover;
 }
 
@@ -68,13 +78,13 @@
 }
 
 .secondary {
-  margin-left: 8px;
+  margin-left: var(--space-4);
   opacity: 0.6;
   font-size: 0.85em;
 }
 
 .empty {
-  padding: 24px;
+  padding: var(--space-12);
   text-align: center;
   opacity: 0.6;
 }

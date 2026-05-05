@@ -38,6 +38,10 @@
 
 import { createRoot } from 'react-dom/client';
 import { App } from './components/App/App';
+// Side-effect import — defines the design-token custom properties on
+// `:root` and the page-level reset.  Loaded once at app boot so every
+// CSS module can reference the variables via `var(--token-name)`.
+import './styles/global.css';
 
 // Mount the React app into the `#root` div declared in index.html.
 createRoot(document.getElementById('root')!).render(<App />);

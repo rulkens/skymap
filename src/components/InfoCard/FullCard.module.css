@@ -1,15 +1,16 @@
 /*
  * FullCard.module.css — rich galaxy info card layout.
  *
- * Migrated from the .info-card-full block and all .card-* rules in index.html.
+ * The FullCard is the "loud" half of the InfoCard pair: more padding,
+ * more opaque glass, and a starlight gradient line along the top edge.
+ * All atoms reference tokens from `src/styles/global.css`.
  *
  * CSS-modules note:
- *   The `pinned` variant is applied via an additional class on the root element:
+ *   The `pinned` variant is applied via an additional class on the root:
  *     <div className={`${styles.infoCardFull} ${styles.pinned}`}>
  *   The .pinnedBadge span is always in the DOM; the CSS selector
  *     .infoCardFull.pinned .pinnedBadge { display: inline; }
- *   controls its visibility.  This replaces the old data-pinned attribute +
- *   ID-selector approach, which did not compose cleanly with CSS modules.
+ *   controls its visibility.
  */
 
 /* ── Shared glass-panel base (shared by .infoCardFull and CompactCard) ──────── */
@@ -21,51 +22,45 @@
 .infoCardFull {
   position: relative; /* for the ::before accent line */
 
-  /* When standalone fix directly to corner */
+  /* When standalone, fix directly to the corner */
   display: block;
   position: fixed;
-  top: 16px;
-  right: 16px;
+  top: var(--corner-offset);
+  right: var(--corner-offset);
   z-index: 10;
 
-  padding: 14px 18px;
-  min-width: 240px;
+  padding: var(--space-7) var(--space-9);
+  min-width: var(--card-min-width);
   /*
-   * Cap the card width so curated prose (the famous-galaxy description) wraps
-   * onto multiple lines instead of stretching the card across half the screen.
-   * 320px is a comfortable reading measure (~50 monospace chars at 12px) and
-   * still leaves room for the cosmology summary + thumbnail row at the top.
+   * Cap the card width so curated prose (the famous-galaxy description)
+   * wraps onto multiple lines instead of stretching the card across half
+   * the screen.  --card-max-width is a comfortable reading measure
+   * (~50 monospace chars at 12 px) and still leaves room for the
+   * cosmology summary + thumbnail row at the top.
    */
-  max-width: 320px;
+  max-width: var(--card-max-width);
   overflow-wrap: break-word;
 
-  /* Glassmorphism: dark translucent background with blur */
-  background: rgba(8, 12, 28, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px); /* Safari */
+  /* Glassmorphism — strong variant for the "loud" card */
+  background: var(--surface-card-strong);
+  backdrop-filter: blur(var(--blur-card));
+  -webkit-backdrop-filter: blur(var(--blur-card));
 
-  border: 1px solid rgba(160, 200, 255, 0.18);
-  border-radius: 10px;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(160, 200, 255, 0.06) inset;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
 
-  color: #cfd8ff;
-  font:
-    12px / 1.45 ui-monospace,
-    'SF Mono',
-    Menlo,
-    monospace;
+  color: var(--color-fg-base);
+  font: var(--font-size-lg) / var(--line-height-relaxed) var(--font-family-mono);
 }
 
 /*
- * When FullCard is a child of the InfoCard stack wrapper, override the fixed
- * positioning so it flows inside the flex column.  The parent stack handles
- * the corner placement.
+ * When FullCard is a child of the InfoCard stack wrapper, override the
+ * fixed positioning so it flows inside the flex column.  The parent stack
+ * handles the corner placement.
  *
- * This uses a :global selector to reference the stack class from another
- * module.  An alternative is to use a data attribute on the stack wrapper,
- * but this keeps the CSS co-located with the component that is affected.
+ * `:global` references the stack class from another module — keeps the CSS
+ * co-located with the affected component rather than splitting the rule.
  */
 :global(.infoCardStack) .infoCardFull {
   position: relative;
@@ -80,16 +75,16 @@
   display: block;
   position: absolute;
   top: 0;
-  left: 12px;
-  right: 12px;
+  left: var(--space-6);
+  right: var(--space-6);
   height: 1px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(120, 180, 255, 0.45) 30%,
-    rgba(180, 220, 255, 0.7) 50%,
-    rgba(120, 180, 255, 0.45) 70%,
+    var(--color-accent-gradient-edge) 30%,
+    var(--color-accent-gradient-mid) 50%,
+    var(--color-accent-gradient-edge) 70%,
     transparent 100%
   );
 }
@@ -100,19 +95,25 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: rgba(160, 180, 230, 0.45);
+  margin-bottom: var(--space-5);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-widest);
+  color: var(--color-fg-faint);
   text-transform: uppercase;
 }
 
 /* PINNED badge — hidden by default; shown via .pinned modifier on root */
 .pinnedBadge {
   display: none;
+  /*
+   * Warm gold — the only non-blue accent in the entire UI, used here
+   * to signal "this is the user's selected pin" against the cosmic-blue
+   * palette.  Promoting to a token would mislead future readers into
+   * treating it as reusable; kept inline.
+   */
   color: #ffd97a;
-  font-size: 10px;
-  letter-spacing: 0.15em;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-max);
   text-transform: uppercase;
 }
 
@@ -124,46 +125,46 @@
 /* ── Source attribution badge ─────────────────────────────────────────────── */
 
 /*
- * Small uppercase chip rendered just under the SDSS-name headline.  Its job
- * is to tell the user *which survey* the data in this card actually came from
- * (SDSS, 2MRS, GLADE, Synthetic) — the headline name itself is a coordinate-
- * derived label used across all surveys and doesn't carry that information.
+ * Small uppercase chip rendered just under the SDSS-name headline.  Its
+ * job is to tell the user *which survey* the data in this card came from
+ * (SDSS, 2MRS, GLADE, Synthetic) — the headline name itself is a
+ * coordinate-derived label used across all surveys.
  */
 .sourceBadge {
   display: inline-block;
-  padding: 1px 6px;
-  margin: 4px 0 6px 0;
-  border-radius: 3px;
-  background: rgba(160, 200, 255, 0.12);
-  border: 1px solid rgba(160, 200, 255, 0.25);
-  color: rgba(220, 230, 255, 0.85);
-  font-size: 9px;
-  letter-spacing: 0.1em;
+  padding: 1px var(--space-3);
+  margin: var(--space-2) 0 var(--space-3) 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-badge);
+  border: 1px solid var(--border-control);
+  color: var(--color-accent-bright);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wider);
   text-transform: uppercase;
 }
 
 /* ── SDSS designation headline ────────────────────────────────────────────── */
 
 .cardHeadline {
-  font-size: 13px;
-  color: #e8eeff;
-  margin-bottom: 8px;
-  letter-spacing: 0.02em;
+  font-size: var(--font-size-xl);
+  color: var(--color-fg);
+  margin-bottom: var(--space-4);
+  letter-spacing: var(--letter-spacing-tight);
   word-break: break-all; /* long names like "SDSS J..." don't overflow the card */
 }
 
 /* ── Section separators ───────────────────────────────────────────────────── */
 
 .cardSection {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(160, 200, 255, 0.1);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-section);
 }
 
 /* Thumbnail + cosmology summary side-by-side */
 .cardTopRow {
   display: flex;
-  gap: 10px;
+  gap: var(--space-5);
   align-items: flex-start;
 }
 
@@ -174,29 +175,29 @@
 
 /* "Light left X.X Gyr ago" */
 .cardLookbackLine {
-  color: #e8eeff;
-  font-size: 12px;
-  margin-bottom: 2px;
+  color: var(--color-fg);
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-1);
 }
 
 /* Earth-era sub-line; slightly muted */
 .cardLookbackEra {
-  color: rgba(200, 220, 255, 0.7);
-  font-size: 11px;
-  margin-bottom: 4px;
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-md);
+  margin-bottom: var(--space-2);
 }
 
 /* Distance · speed line */
 .cardDistLine {
-  color: rgba(200, 220, 255, 0.8);
-  font-size: 11px;
+  color: var(--color-fg-subtle);
+  font-size: var(--font-size-md);
   margin-bottom: 3px;
 }
 
 /* Galaxy type line */
 .cardTypeLine {
-  color: rgba(200, 220, 255, 0.8);
-  font-size: 11px;
+  color: var(--color-fg-subtle);
+  font-size: var(--font-size-md);
 }
 
 /* ── Data rows ────────────────────────────────────────────────────────────── */
@@ -205,28 +206,28 @@
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 8px;
-  padding: 2px 0;
+  gap: var(--space-4);
+  padding: var(--space-1) 0;
 }
 
 .cardLabel {
-  color: rgba(160, 180, 230, 0.55);
+  color: var(--color-fg-label);
   flex-shrink: 0;
 }
 
 .cardValue {
-  color: #e8eeff;
+  color: var(--color-fg);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
 /* ObjID: 19 digits — smaller font + tabular nums prevents overflow */
 .cardObjid {
-  font-size: 10px;
-  letter-spacing: 0;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-zero);
   font-variant-numeric: tabular-nums;
   /* <code> resets font family — restore our monospace stack */
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-family: var(--font-family-mono);
   word-break: break-all;
 }
 
@@ -235,9 +236,9 @@
 .detailsSummary {
   cursor: pointer;
   list-style: none; /* hide the default triangle on some browsers */
-  color: rgba(160, 180, 230, 0.55);
-  font-size: 11px;
-  padding: 4px 0 2px;
+  color: var(--color-fg-label);
+  font-size: var(--font-size-md);
+  padding: var(--space-2) 0 var(--space-1);
   user-select: none;
   outline: none;
 }
@@ -258,16 +259,21 @@ details:not([open]) > .detailsSummary::before {
 
 .externalLink {
   display: block;
-  margin-top: 10px;
+  margin-top: var(--space-5);
   text-align: right;
-  font-size: 11px;
-  color: rgba(160, 200, 255, 0.65);
+  font-size: var(--font-size-md);
+  color: var(--color-accent-link);
   text-decoration: none;
-  letter-spacing: 0.04em;
-  transition: color 0.15s ease;
+  letter-spacing: var(--letter-spacing-mid);
+  transition: var(--transition-color);
 }
 .externalLink:hover {
-  color: #a8d0ff;
+  color: var(--color-accent);
+  /*
+   * Soft cosmic-blue glow on hover — only place in the UI that uses a
+   * text-shadow.  Kept inline because it's a unique signature for the
+   * "this is a hyperlink to an external catalogue" affordance.
+   */
   text-shadow: 0 0 8px rgba(120, 180, 255, 0.4);
 }
 
@@ -312,66 +318,66 @@ details:not([open]) > .detailsSummary::before {
  * to the cardRow layout.
  */
 .descToggle {
-  margin-top: 4px;
+  margin-top: var(--space-2);
   padding: 0;
   border: none;
   background: transparent;
-  color: rgba(160, 200, 255, 0.65);
+  color: var(--color-accent-link);
   font: inherit;
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-mid);
   cursor: pointer;
   text-align: left;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 .descToggle:hover {
-  color: #a8d0ff;
+  color: var(--color-accent);
 }
 
 /*
- * Inline catalogue links inside the famous-atlas block.  Sit on the right of
- * the row alongside the value text rather than as a standalone block link —
- * the famous block already has its own visual rhythm and a full-width link
+ * Inline catalogue links inside the famous-atlas block.  Sit on the right
+ * of the row alongside the value text rather than as a standalone block
+ * link — the famous block has its own visual rhythm and a full-width link
  * row would push the curated description further from the cross-match.
  */
 .externalInline {
-  color: rgba(160, 200, 255, 0.7);
+  color: var(--color-accent-link-strong);
   text-decoration: none;
-  letter-spacing: 0.02em;
-  transition: color 0.15s ease;
+  letter-spacing: var(--letter-spacing-tight);
+  transition: var(--transition-color);
 }
 .externalInline:hover {
-  color: #a8d0ff;
+  color: var(--color-accent);
   text-decoration: underline;
 }
 
-/* ── Focus button (only visible when the card is pinned) ──────────────────────
- *
+/* ── Focus button (only visible when the card is pinned) ──────────────────── */
+/*
  * Sits inline with the title row to the right of the PINNED badge.  Same
- * glassmorphic vibe as the SettingsPanel buttons so it feels like part of the
- * same control surface.  Compact size — a full-width button would dominate the
- * already tight overlay.
+ * glassmorphic vibe as the SettingsPanel buttons so it feels like part of
+ * the same control surface.  Compact size — a full-width button would
+ * dominate the already tight overlay.
  */
 .focusButton {
-  margin-left: 8px;
-  padding: 2px 8px;
-  border: 1px solid rgba(160, 200, 255, 0.25);
-  border-radius: 4px;
-  background: rgba(40, 60, 100, 0.35);
-  color: #e8eeff;
+  margin-left: var(--space-4);
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  background: var(--surface-control);
+  color: var(--color-fg);
   font: inherit;
-  font-size: 10px;
-  letter-spacing: 0.04em;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-mid);
   cursor: pointer;
   text-transform: uppercase;
 }
 
 .focusButton:hover {
-  background: rgba(60, 90, 140, 0.5);
-  border-color: rgba(180, 220, 255, 0.4);
+  background: var(--surface-control-hover);
+  border-color: var(--border-hover);
 }
 
 .focusButton:active {
-  background: rgba(80, 120, 180, 0.55);
+  background: var(--surface-control-active);
 }

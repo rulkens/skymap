@@ -1,31 +1,35 @@
 /*
- * ScaleBar.module.css — bottom-right distance legend for the current zoom level.
+ * ScaleBar.module.css — bottom-right distance legend for the current zoom.
  *
- * Migrated from the #scale-bar, #scale-label, and #scale-line rules in
- * index.html.  ID selectors become local class names; the component references
- * them via styles.scaleBar, styles.scaleLabel, styles.scaleLine.
+ * Glassmorphic mini-panel; deliberately uses the softest surface tint
+ * (`--surface-soft`) so it reads as ambient telemetry rather than an
+ * interactive control.  All atoms reference tokens from
+ * `src/styles/global.css`.
  */
 
 /* Outer container: glassmorphic panel fixed to the bottom-right corner */
 .scaleBar {
   position: fixed;
-  bottom: 16px;
-  right: 16px;
+  bottom: var(--corner-offset);
+  right: var(--corner-offset);
   z-index: 10;
-  padding: 8px 12px 10px;
+  padding: var(--space-4) var(--space-6) var(--space-5);
 
-  background: rgba(8, 12, 28, 0.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--surface-soft);
+  backdrop-filter: blur(var(--blur-panel));
+  -webkit-backdrop-filter: blur(var(--blur-panel));
+  /*
+   * Border opacity is one notch lower than the canonical panel border
+   * (`--border-default` is 0.16; here we use a custom 0.14 because the
+   * softer surface tint pulls the perceived border up — matching opacity
+   * would make it feel "louder" than panels).  Kept inline rather than
+   * promoted to a token because it's the only consumer.
+   */
   border: 1px solid rgba(160, 200, 255, 0.14);
-  border-radius: 8px;
+  border-radius: var(--radius-xl);
 
-  color: #cfd8ff;
-  font:
-    11px/1.3 ui-monospace,
-    'SF Mono',
-    Menlo,
-    monospace;
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / var(--line-height-tight) var(--font-family-mono);
   font-variant-numeric: tabular-nums;
   text-align: right;
   user-select: none;
@@ -35,9 +39,9 @@
 /* Pre-formatted distance label, e.g. "500 Mpc" */
 .scaleLabel {
   display: block;
-  margin-bottom: 4px;
-  letter-spacing: 0.06em;
-  color: rgba(200, 220, 255, 0.85);
+  margin-bottom: var(--space-2);
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-fg-muted);
 }
 
 /*
@@ -48,8 +52,8 @@
 .scaleLine {
   display: inline-block;
   height: 7px;
-  border-left: 1px solid rgba(220, 230, 255, 0.85);
-  border-right: 1px solid rgba(220, 230, 255, 0.85);
-  border-bottom: 1px solid rgba(220, 230, 255, 0.85);
+  border-left: 1px solid var(--color-accent-bright);
+  border-right: 1px solid var(--color-accent-bright);
+  border-bottom: 1px solid var(--color-accent-bright);
   box-sizing: border-box;
 }

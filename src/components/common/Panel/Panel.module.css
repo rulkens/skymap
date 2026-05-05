@@ -1,49 +1,39 @@
 /*
  * Panel.module.css — shared glassmorphic card chrome.
  *
- * The HUD has a small family of left-stack overlays (Navigation, Settings,
- * Stats) that all wear the same blue-tinted glass card with a clickable
- * uppercase title row that folds the body away.  This stylesheet is the
- * single source of truth for that look — Panel.tsx renders the markup,
- * the consuming panels supply only their per-row styling.
+ * Every visual atom referenced here lives in `src/styles/global.css` as a
+ * CSS custom property; this stylesheet only composes them.  The HUD's
+ * left-stack overlays (Navigation, Settings, Stats) all wear this chrome,
+ * so a tweak to the glass look (border opacity, blur strength, header
+ * spacing) lands here and propagates everywhere.
  *
- * ### What lives here vs. in the consuming panel
- *
+ * What lives here vs. in the consuming panel:
  *   - Outer card (background, blur, border, font, width)              ← here
  *   - Title row (button reset, chevron, uppercase header text)        ← here
  *   - Body padding container                                          ← here
  *   - Per-row label/value/key/action cells                            ← consumer
  *   - Sliders, dropdowns, checkboxes, dividers, sub-section headings  ← consumer
- *
- * Layout responsibility: the panel does NOT position itself.  The
- * `.leftStack` flex column in App.module.css stacks all overlays — Panel
- * renders the card and the parent decides where it sits.
  */
 
 .panel {
-  background: rgba(8, 12, 28, 0.65);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(160, 200, 255, 0.16);
-  border-radius: 8px;
+  background: var(--surface-panel);
+  backdrop-filter: blur(var(--blur-panel));
+  -webkit-backdrop-filter: blur(var(--blur-panel));
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
 
-  color: #cfd8ff;
-  font:
-    11px/1.4 ui-monospace,
-    'SF Mono',
-    Menlo,
-    monospace;
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / var(--line-height-base) var(--font-family-mono);
   user-select: none;
   /* Uniform width across the left-stack panels so they read as a single
-   * visual column.  Bump if a future control row outgrows it. */
-  width: 300px;
+   * visual column.  Bump the token if a future control row outgrows it. */
+  width: var(--panel-width);
 }
 
 /*
  * Title row — full-width <button> wrapping the chevron + uppercase title.
- * We strip every default <button> chrome rule (background, border, padding,
- * font) so the row reads as a plain heading; only the cursor and focus
- * ring announce its interactivity.
+ * We strip every default <button> chrome rule so the row reads as a plain
+ * heading; only the cursor and focus ring announce its interactivity.
  *
  * Why a real <button> rather than a styled <div>: keyboard focus +
  * Enter/Space activation + `aria-expanded` come for free, no custom
@@ -53,13 +43,13 @@
   display: flex;
   align-items: baseline;
   width: 100%;
-  padding: 10px 14px;
+  padding: var(--space-5) var(--space-7);
   background: transparent;
   border: 0;
-  border-bottom: 1px solid rgba(160, 200, 255, 0.16);
+  border-bottom: 1px solid var(--border-default);
   /* Match the panel's rounded top corners so the header doesn't square
    * off the top edge of the glassmorphic container. */
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -67,9 +57,9 @@
 }
 
 .titleButton:focus-visible {
-  outline: 1px solid rgba(160, 200, 255, 0.5);
+  outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
 }
 
 /*
@@ -79,18 +69,18 @@
  */
 .titleButton:only-child {
   border-bottom: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-xl);
 }
 
 /*
- * Chevron sits LEFT of the heading like a tree-twirl / list-marker —
- * a punctuation glyph attached to the heading, not a right-side dropdown
+ * Chevron sits LEFT of the heading like a tree-twirl / list-marker — a
+ * punctuation glyph attached to the heading, not a right-side dropdown
  * indicator.  Dim and small so it doesn't compete with the heading text.
  */
 .chevron {
-  font-size: 8px;
-  color: rgba(160, 180, 230, 0.4);
-  margin-right: 6px;
+  font-size: var(--font-size-xxs);
+  color: var(--color-fg-ghost);
+  margin-right: var(--space-3);
   /* Nudge up slightly for visual balance with the uppercase heading. */
   position: relative;
   top: -1px;
@@ -98,14 +88,14 @@
 
 /*
  * Heading text.  Uppercase + letter-spaced + dim — visually a section
- * header, not a clickable label.  The interactivity affordance comes
- * from the cursor + focus-visible outline on the parent <button>.
+ * header, not a clickable label.  Interactivity affordance comes from
+ * the cursor + focus-visible outline on the parent <button>.
  */
 .title {
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-widest);
   text-transform: uppercase;
-  color: rgba(160, 180, 230, 0.5);
+  color: var(--color-fg-dim);
 }
 
 /*
@@ -118,5 +108,5 @@
  * collapse is rarer and the unmount cost is negligible.
  */
 .content {
-  padding: 12px 14px;
+  padding: var(--space-6) var(--space-7);
 }

@@ -1,17 +1,22 @@
 /*
  * StatusBar.module.css — fixed top-left HUD text for engine status.
  *
- * Migrated from the #status rule in index.html.  The component uses
- * `styles.status` for the outer div, which Vite/CSS-modules resolves to a
- * scoped class name at build time.
+ * No glass surface here — just unobtrusive status text floating over the
+ * canvas in the corner.  All atoms reference tokens from
+ * `src/styles/global.css`.
  */
 
 .status {
   position: fixed;
-  top: 8px;
-  left: 8px;
+  top: var(--space-4);
+  left: var(--space-4);
+  /*
+   * Greyed-out neutral rather than the blue palette — status text is
+   * deliberately separate from the panel hierarchy so it reads as engine
+   * lifecycle ("initializing", "loading X of Y", "ready", "error: ...")
+   * rather than user controls.  Kept inline (not tokenised) so the
+   * deviation is visible at the point of use.
+   */
   color: #ccc;
-  font:
-    12px/1.4 ui-monospace,
-    monospace;
+  font: var(--font-size-lg) / var(--line-height-base) var(--font-family-mono);
 }

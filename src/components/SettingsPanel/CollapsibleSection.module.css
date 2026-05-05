@@ -11,58 +11,35 @@
  *
  * ### Design family
  *
- * The look-and-feel intentionally MIRRORS the panel's existing top-level
- * collapse (`panelTitleButton` + `panelTitleChevron` in
- * SettingsPanel.module.css).  Same uppercase letterspacing, same dim
- * colour, same chevron glyph.  The difference is *position*:
+ * The look-and-feel intentionally MIRRORS the parent Panel's header
+ * (`Panel.module.css`'s `.titleButton` / `.chevron` / `.title`).  Same
+ * uppercase letterspacing, same dim colour, same chevron glyph.  The
+ * difference is *position*: section headers sit inline within the panel
+ * body (no border, no bleed) so they read as list-markers for a row of
+ * controls rather than a top-level heading.
  *
- *   - Top-level collapse: full-width header bar with bottom border, sits
- *     ON the panel's outer frame (negative margins, rounded corners).
- *   - Section collapse: inline within the body, no border, no bleed —
- *     reads as a list-marker for a row of controls.
- *
- * Visually the two form a hierarchy: panel title is "louder" because of
- * the bar; section titles are "quieter" because they sit inside the
- * scrollable content.
+ * All atoms reference tokens from `src/styles/global.css`.
  */
 
 .section {
   /*
    * No outer margin — adjacent sections sit flush; the body's own
-   * top/bottom padding gives the breathing room.  This means stacking
-   * two sections doesn't double-space; collapsing one doesn't leave a
-   * ghost gap.
+   * top/bottom padding gives the breathing room.  Stacking two sections
+   * doesn't double-space; collapsing one doesn't leave a ghost gap.
    */
 }
 
 /*
  * Section header — a real <button> for keyboard focus + Enter/Space
  * activation + free `aria-expanded` semantics.  We strip ALL default
- * <button> chrome (background, border, padding, font) so the row reads
- * as a plain heading; only the cursor changes on hover.
- *
- * This mirrors `panelTitleButton` in SettingsPanel.module.css — same
- * approach, less padding (it sits inside the panel body, not on the
- * frame).
- */
-/*
- * `button.header` rather than plain `.header` so we tie with the panel's
- * `.settingsPanel button` rule (specificity 0,1,1) — and then the cascade
- * order resolves in our favour because CSS modules import the
- * CollapsibleSection sheet *after* SettingsPanel reads it (Vite preserves
- * import order).  Without this lift, `.settingsPanel button`'s background
- * + border + padding + width would override our resets.
- *
- * Limitation: this means CollapsibleSection's header MUST be a <button>
- * element.  That's true today and aligned with the ARIA semantics
- * (`aria-expanded` belongs on a button), but worth noting if anyone
- * later considers swapping to a div with onClick.
+ * <button> chrome so the row reads as a plain heading; only the cursor
+ * changes on hover.
  */
 button.header {
   display: flex;
   align-items: baseline;
   width: 100%;
-  padding: 6px 0 4px;
+  padding: var(--space-3) 0 var(--space-2);
   background: transparent;
   border: 0;
   font: inherit;
@@ -72,15 +49,15 @@ button.header {
 }
 
 .header:focus-visible {
-  outline: 1px solid rgba(160, 200, 255, 0.5);
+  outline: 1px solid var(--focus-ring);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
 }
 
 /*
  * Chevron — sits LEFT of the title like a tree-twirl / disclosure marker.
- * Same dim treatment as the panel's top-level chevron so the two read
- * as the same affordance at different scales.
+ * Same dim treatment as the parent Panel's chevron so the two read as the
+ * same affordance at different scales.
  *
  * The animated rotation (▸ → ▾) is done by rotating the same triangle
  * glyph 90° rather than swapping characters.  Two reasons:
@@ -91,20 +68,14 @@ button.header {
  */
 .chevron {
   display: inline-block;
-  font-size: 8px;
-  color: rgba(160, 180, 230, 0.4);
-  margin-right: 6px;
+  font-size: var(--font-size-xxs);
+  color: var(--color-fg-ghost);
+  margin-right: var(--space-3);
   /* Nudge up slightly for visual balance with the uppercase heading,
-   * matching `.panelTitleChevron`. */
+   * matching the parent Panel's chevron. */
   position: relative;
   top: -1px;
-  /*
-   * Rotating ▸ by 90° clockwise points it down — the same shape as ▾
-   * without character swapping.  The transition gives a tactile feel
-   * when the user clicks; 120 ms is short enough not to delay the
-   * actual reveal of the body below.
-   */
-  transition: transform 120ms ease-out;
+  transition: var(--transition-chevron);
   transform: rotate(0deg);
 }
 
@@ -115,38 +86,27 @@ button.header {
 /*
  * Optional master toggle — sits between the chevron and the title.
  *
- * Why a margin-right rather than `gap` on the header: the existing
- * header is a flexbox with `align-items: baseline` and no `gap`, so
- * spacing comes from per-child margins on the chevron + this element.
- * Using `margin-right` here keeps the spacing rule local to the
- * checkbox — if a future variant of CollapsibleSection drops the
- * checkbox, the title's left edge stays aligned with the chevron the
- * way it has been historically.
- *
- * The base `.settingsPanel input[type='checkbox']` rule sets size +
- * accent-color globally; we don't restyle the box itself, just its
- * position in the row.  `align-self: center` reads more cleanly than
- * the default baseline alignment because checkboxes have no text
- * baseline of their own — the browser fakes one and the result is
- * usually a few pixels too high relative to uppercase headings.
+ * Why a margin-right rather than `gap` on the header: the existing header
+ * is a flexbox with `align-items: baseline` and no `gap`, so spacing comes
+ * from per-child margins on the chevron + this element.  `align-self:
+ * center` reads more cleanly than the default baseline alignment because
+ * checkboxes have no text baseline of their own.
  */
 .headerToggle {
-  margin: 0 8px 0 0;
+  margin: 0 var(--space-4) 0 0;
   align-self: center;
   cursor: pointer;
 }
 
 /*
- * Section title — uppercase + spaced like `.panelSubtitle` did before
- * (which it replaces).  Keeping this rule independent of `.panelSubtitle`
- * lets the SettingsPanel keep using `panelSubtitle` for any rare flat-
- * label use that doesn't need a collapse, without coupling the two.
+ * Section title — uppercase + spaced, matching the parent Panel's title
+ * style at a smaller scale.
  */
 .title {
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-widest);
   text-transform: uppercase;
-  color: rgba(160, 180, 230, 0.5);
+  color: var(--color-fg-dim);
 }
 
 /*
@@ -158,24 +118,20 @@ button.header {
  * fixes that natively but isn't yet on Safari.  The grid trick is the
  * widely-supported escape hatch:
  *
- *   - The wrapper is a single-row CSS Grid.  Its row template is
- *     `0fr` when closed (the row collapses to zero height), `1fr`
- *     when open (the row grows to fit its child's intrinsic height).
+ *   - The wrapper is a single-row CSS Grid.  Its row template is `0fr`
+ *     when closed (row collapses to zero), `1fr` when open (row grows
+ *     to fit its child's intrinsic height).
  *   - The body child has `min-height: 0` (so the grid actually CAN
- *     collapse it — without this, grid items default to a min-height
- *     of `auto` which means "at least my content height", defeating
- *     the trick) and `overflow: hidden` (so the content visibly
- *     clips during the transition; without it the children would
- *     spill out as the row shrinks).
- *   - Browsers interpolate `grid-template-rows` between `0fr` and
- *     `1fr` smoothly — what was impossible with `height` becomes a
- *     pure CSS transition.
+ *     collapse it — without this, grid items default to a min-height of
+ *     `auto`, defeating the trick) and `overflow: hidden` (so content
+ *     visibly clips during the transition).
+ *   - Browsers interpolate `grid-template-rows` between `0fr` and `1fr`
+ *     smoothly — what was impossible with `height` becomes a pure CSS
+ *     transition.
  *
- * Opacity is tracked in parallel for a subtle fade-in: visible
- * content shouldn't pop into existence at full opacity from a
- * zero-height container — the eye reads that as a flicker.  Easing
- * `cubic-bezier(0.4, 0, 0.2, 1)` is Material's "standard easing"
- * (fast-start, slow-end), which feels native on modern UIs.
+ * Opacity is tracked in parallel for a subtle fade-in: visible content
+ * shouldn't pop into existence at full opacity from a zero-height
+ * container — the eye reads that as a flicker.
  *
  * `prefers-reduced-motion` skips the transitions entirely for users
  * who've opted out at the OS level.  WCAG 2.1 SC 2.3.3 best practice.
@@ -183,7 +139,7 @@ button.header {
 .bodyWrapper {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition-collapse);
 }
 
 .bodyWrapper[data-open='true'] {
@@ -193,9 +149,9 @@ button.header {
 .body {
   min-height: 0;
   overflow: hidden;
-  padding-bottom: 6px;
+  padding-bottom: var(--space-3);
   opacity: 0;
-  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition-fade);
 }
 
 .bodyWrapper[data-open='true'] .body {

@@ -6,7 +6,7 @@
  * so this module's only rule is the stack container itself.  The individual
  * card styles live in FullCard.module.css and CompactCard.module.css.
  *
- * Migrated from the .info-card-stack rule in index.html.
+ * All atoms reference tokens from `src/styles/global.css`.
  */
 
 /*
@@ -16,10 +16,10 @@
  */
 .infoCardStack {
   position: fixed;
-  top: 16px;
-  right: 16px;
+  top: var(--corner-offset);
+  right: var(--corner-offset);
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-4);
 }

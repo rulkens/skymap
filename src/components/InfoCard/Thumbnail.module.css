@@ -2,14 +2,20 @@
  * Thumbnail.module.css — 80×80 px SDSS image cutout and its broken-image
  * fallback placeholder.
  *
- * Migrated from the .thumb-img and .thumb-placeholder rules in index.html.
+ * All atoms reference tokens from `src/styles/global.css`.
  */
 
 /* Thumbnail image — 80×80 px rounded square */
 .thumbImg {
   width: 80px;
   height: 80px;
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
+  /*
+   * Slightly more visible border than the panel default — thumbnail images
+   * are mid-tone (galaxy backgrounds) and a fainter rim would disappear
+   * against them.  0.20 puts the border a notch above `--border-default`'s
+   * 0.16 without going as bright as `--border-control`'s 0.25.
+   */
   border: 1px solid rgba(160, 200, 255, 0.2);
   flex-shrink: 0;
   object-fit: cover;
@@ -20,13 +26,19 @@
 .thumbPlaceholder {
   width: 80px;
   height: 80px;
-  border-radius: 6px;
-  border: 1px dashed rgba(160, 200, 255, 0.25);
+  border-radius: var(--radius-lg);
+  /* Dashed variant signals "absence" vs. the solid border on a real image */
+  border: 1px dashed var(--border-control);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  /*
+   * Even fainter than `--color-fg-ghost` — placeholder text shouldn't
+   * compete with the surrounding card content.  Inline because it's the
+   * only consumer of this opacity level.
+   */
   color: rgba(160, 180, 230, 0.35);
-  font-size: 10px;
+  font-size: var(--font-size-sm);
   text-align: center;
 }

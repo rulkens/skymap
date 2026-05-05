@@ -5,7 +5,8 @@
  * The glassmorphic card chrome + clickable uppercase title row + body
  * collapse affordance live in `components/common/Panel/Panel.module.css`;
  * this file only styles the rows, sliders, dropdowns, and divider that
- * render inside Panel's body.
+ * render inside Panel's body.  All atoms reference tokens from
+ * `src/styles/global.css`.
  */
 
 /* A single label + control row */
@@ -13,27 +14,27 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 4px 0;
+  gap: var(--space-5);
+  padding: var(--space-2) 0;
 }
 
 /* Label inside a panelRow */
 .panelRow label {
   flex: 1;
-  color: rgba(200, 220, 255, 0.85);
+  color: var(--color-fg-muted);
 }
 
 /* Numeric readout alongside a slider */
 .panelValue {
   font-variant-numeric: tabular-nums;
-  color: #e8eeff;
+  color: var(--color-fg);
   min-width: 44px;
   text-align: right;
 }
 
 /*
- * Density-correction mode dropdown.  The native <select> control on macOS /
- * Windows defaults to a chunky, light-themed widget that clashes with the
+ * Density-correction mode dropdown.  The native <select> on macOS / Windows
+ * defaults to a chunky, light-themed widget that clashes with the
  * glassmorphic panel — restyling it here pulls it into the dark palette
  * shared with the buttons + range sliders.  We accept the OS-native popup
  * menu for the option list itself (cross-browser custom dropdowns are a
@@ -41,17 +42,17 @@
  */
 .modeSelect {
   flex-shrink: 0;
-  padding: 3px 6px;
-  border: 1px solid rgba(160, 200, 255, 0.25);
-  border-radius: 4px;
-  background: rgba(40, 60, 100, 0.35);
-  color: #e8eeff;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  background: var(--surface-control);
+  color: var(--color-fg);
   font: inherit;
   cursor: pointer;
 }
 
 .modeSelect:hover {
-  border-color: rgba(180, 220, 255, 0.4);
+  border-color: var(--border-hover);
 }
 
 .modeSelect:focus {
@@ -66,22 +67,22 @@
  * span four orders of magnitude (Famous ~20 vs GLADE ~2.4 M).
  */
 .sourceCount {
-  margin-left: 8px;
+  margin-left: var(--space-4);
   font-variant-numeric: tabular-nums;
-  color: rgba(160, 180, 230, 0.45);
-  font-size: 11px;
+  color: var(--color-fg-faint);
+  font-size: var(--font-size-md);
 }
 
 /* Range sliders span the full panel width so they're easy to drag */
 .panelRow input[type='range'] {
   width: 100%;
-  accent-color: rgba(180, 220, 255, 0.85);
+  accent-color: var(--color-accent-control);
   cursor: pointer;
 }
 
 /* Checkbox alignment */
 .panelRow input[type='checkbox'] {
-  accent-color: rgba(180, 220, 255, 0.85);
+  accent-color: var(--color-accent-control);
   cursor: pointer;
   /* Prevent the checkbox from shrinking under flex */
   flex-shrink: 0;
@@ -89,23 +90,20 @@
 
 /* Horizontal rule between the sliders and the reset button */
 .panelDivider {
-  margin: 8px 0 6px;
-  border-top: 1px solid rgba(160, 200, 255, 0.12);
+  margin: var(--space-4) 0 var(--space-3);
+  border-top: 1px solid var(--border-divider);
 }
 
 /*
- * Sub-section heading — visually distinct from `.panelTitle` only by being
- * smaller-margin'd (it sits between sections, not at the top of the panel).
- *
- * Why a separate class? Reusing `.panelTitle` would inherit its top-of-panel
- * margins; we want section headings to hug the divider above them.
+ * Sub-section heading — visually distinct from the panel header only by
+ * being smaller-margin'd (it sits between sections, not at the top).
  */
 .panelSubtitle {
-  margin: 4px 0 4px;
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  margin: var(--space-2) 0;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-widest);
   text-transform: uppercase;
-  color: rgba(160, 180, 230, 0.5);
+  color: var(--color-fg-dim);
 }
 
 /*
@@ -115,39 +113,35 @@
  * control.
  */
 .panelMode {
-  font-size: 10px;
-  letter-spacing: 0.04em;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-mid);
   color: rgba(160, 200, 255, 0.6);
-  margin-top: 4px;
+  margin-top: var(--space-2);
 }
 
 /*
  * Action buttons rendered inside the panel body — currently "Reset camera"
  * (footer) and the SpaceMouse connect button.  Both share the legacy
- * `.settingsPanel button` look from before the Panel chrome refactor; we
- * apply this class explicitly now rather than via a structural selector,
- * because the previous `.settingsPanel button` rule also bled into the
- * title button + CollapsibleSection headers (a side effect of CSS Modules
- * compound selectors that shipped, but wasn't intended).  Explicit class
- * is clearer and keeps the chrome rules in Panel.module.css authoritative.
+ * `.settingsPanel button` look from before the Panel chrome refactor;
+ * we apply this class explicitly now rather than via a structural selector.
  */
 .button {
   width: 100%;
-  padding: 6px 10px;
-  border: 1px solid rgba(160, 200, 255, 0.25);
-  border-radius: 4px;
-  background: rgba(40, 60, 100, 0.35);
-  color: #e8eeff;
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-md);
+  background: var(--surface-control);
+  color: var(--color-fg);
   font: inherit;
   cursor: pointer;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-mid);
 }
 
 .button:hover {
-  background: rgba(60, 90, 140, 0.5);
-  border-color: rgba(180, 220, 255, 0.4);
+  background: var(--surface-control-hover);
+  border-color: var(--border-hover);
 }
 
 .button:active {
-  background: rgba(80, 120, 180, 0.55);
+  background: var(--surface-control-active);
 }

@@ -3,7 +3,8 @@
  *
  * The glassmorphic card + clickable header + collapse affordance live
  * in `components/common/Panel/Panel.module.css`; this file only styles
- * the label/value rows that render inside Panel's body.
+ * the label/value rows that render inside Panel's body.  All atoms
+ * reference tokens from `src/styles/global.css`.
  */
 
 /*
@@ -15,27 +16,27 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  padding: 4px 0;
+  gap: var(--space-5);
+  padding: var(--space-2) 0;
 }
 
 /*
- * Label cell on the left.  Matches SettingsPanel's `.panelRow label`
- * brightness so the eye reads "FPS · 60" / "Galaxies · 220,453" with the
- * label as primary content and the number as supporting metadata.
+ * Label cell on the left.  Body text colour so "FPS · 60" / "Galaxies · 220,453"
+ * reads with the label as primary content and the number as supporting
+ * metadata.
  */
 .label {
-  color: rgba(200, 220, 255, 0.85);
+  color: var(--color-fg-muted);
   flex-shrink: 0;
 }
 
 /*
- * Value cell on the right.  Tabular-nums keeps digits aligned across
- * rows whose magnitudes vary by orders of magnitude (Famous ~20 →
- * GLADE ~2.4 M).  Right-aligned via the parent's space-between flex.
+ * Value cell on the right.  Tabular-nums keeps digits aligned across rows
+ * whose magnitudes vary by orders of magnitude (Famous ~20 → GLADE ~2.4 M).
+ * Right-aligned via the parent's space-between flex.
  */
 .value {
   font-variant-numeric: tabular-nums;
-  color: #e8eeff;
+  color: var(--color-fg);
   text-align: right;
 }

@@ -1,0 +1,353 @@
+/*
+ * global.css — skymap design tokens + page reset.
+ *
+ * Loaded once from `src/main.tsx` so every CSS module can reference these
+ * variables via `var(--token-name)` without further imports.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * ## Why a token system at all
+ *
+ * Skymap's UI is small (a dozen overlay components) but its aesthetic is
+ * deliberate: dark glassmorphic blue-tinted panels floating over a black
+ * starfield, monospace UI typography, restrained motion.  Without tokens
+ * that aesthetic was duplicated across thirteen `.module.css` files —
+ * eight near-identical copies of the panel surface colour, four copies
+ * of the focus-ring rgba, the Material-standard easing curve typed out
+ * three times.  Tweaking the palette meant tweaking thirteen files,
+ * which in practice meant the palette didn't get tweaked.
+ *
+ * Centralising the values into custom properties means:
+ *   - One source of truth for the look.
+ *   - A future "high-contrast" or "light theme" mode is a `:root` override
+ *     away (replace this whole block in a media query, change nothing
+ *     else).
+ *   - The CSS modules become smaller and read as composition over
+ *     specification — the rule says "use the panel surface colour", not
+ *     "use rgba(8, 12, 28, 0.65)".
+ *
+ * ## Naming convention
+ *
+ * Tokens are SEMANTIC where possible (`--color-fg`, `--surface-panel`)
+ * and SCALAR where the value is on a discrete progression (`--space-4` =
+ * 8 px, `--radius-lg` = 8 px).  Raw rgba/hex values appear here exactly
+ * once; everywhere else, the rule references the semantic name.
+ *
+ * Component-specific overrides (e.g. `.scaleBar` has 0.55-opacity
+ * surface, slightly less than the panel default) are kept inline in the
+ * component's stylesheet so the deviation is visible at the point of
+ * use — that's intentional, not a token failure.
+ *
+ * ## What's NOT in here
+ *
+ *   - Component-specific layout (panel widths beyond the canonical 300 px,
+ *     thumbnail sizes, command-palette modal dimensions).  Those live with
+ *     their consumers.
+ *   - Engine / GPU shader colours (vertex tints, atlas dimensions).  Those
+ *     are not user-facing chrome and have no relationship to this palette.
+ *   - The pinned-badge gold (`#ffd97a`) — used in exactly one place to
+ *     contrast with the blue palette.  Promoting it to a token would
+ *     mislead future readers into thinking it's a reusable accent.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+
+:root {
+  /* ── Color palette ──────────────────────────────────────────────────────
+   *
+   * Foreground hierarchy descends from bright (#e8eeff, primary readout
+   * text) through muted body text down to dim/faint heading colours.
+   * Every level still reads as "blue-tinted off-white" — the palette is
+   * intentionally narrow so the eye doesn't pick up colour drift between
+   * adjacent rows.
+   */
+
+  /** Page background (the starfield canvas paints on top of this). */
+  --color-bg: #000;
+
+  /** Brightest text — primary readouts, values, headlines. */
+  --color-fg: #e8eeff;
+
+  /** Glass-panel default text colour (one notch dimmer than --color-fg). */
+  --color-fg-base: #cfd8ff;
+
+  /** Body / label text on panels — recedes against headings. */
+  --color-fg-muted: rgba(200, 220, 255, 0.85);
+
+  /** Slightly dimmer secondary text (sub-rows, em-dash placeholders). */
+  --color-fg-subtle: rgba(200, 220, 255, 0.8);
+
+  /** Tertiary text — sub-line labels under primary readouts. */
+  --color-fg-tertiary: rgba(200, 220, 255, 0.7);
+
+  /** Heading text (section titles, panel labels) — dim by design. */
+  --color-fg-dim: rgba(160, 180, 230, 0.5);
+
+  /** "Card title" / count metadata — fainter still. */
+  --color-fg-faint: rgba(160, 180, 230, 0.45);
+
+  /** Chevron / decorative glyphs — barely visible until you look. */
+  --color-fg-ghost: rgba(160, 180, 230, 0.4);
+
+  /** "Card label" / inline data labels. */
+  --color-fg-label: rgba(160, 180, 230, 0.55);
+
+  /* ── Accent (interactive highlights) ─────────────────────────────────── */
+
+  /** Strong link / hover colour — bright cosmic-blue. */
+  --color-accent: #a8d0ff;
+
+  /** Slider / checkbox fill colour. */
+  --color-accent-control: rgba(180, 220, 255, 0.85);
+
+  /** Resting external-link / inline-link colour. */
+  --color-accent-link: rgba(160, 200, 255, 0.65);
+
+  /** Inline catalogue-link variant — a touch brighter. */
+  --color-accent-link-strong: rgba(160, 200, 255, 0.7);
+
+  /** Bright element strokes (scale-bar ticks, source-badge text). */
+  --color-accent-bright: rgba(220, 230, 255, 0.85);
+
+  /* ── Surfaces (glassmorphic panel + card backgrounds) ────────────────── */
+
+  /** Default panel glass — used by Panel.module.css. */
+  --surface-panel: rgba(8, 12, 28, 0.65);
+
+  /** Slightly more opaque variant for the selected/pinned info card. */
+  --surface-card-strong: rgba(8, 12, 28, 0.72);
+
+  /** Slightly less opaque variant for the hover/preview card. */
+  --surface-card-soft: rgba(8, 12, 28, 0.6);
+
+  /** Even softer glass for tertiary chrome (scale bar). */
+  --surface-soft: rgba(8, 12, 28, 0.55);
+
+  /** Button / dropdown rest fill (sits on top of panel glass). */
+  --surface-control: rgba(40, 60, 100, 0.35);
+
+  /** Button / dropdown hover fill. */
+  --surface-control-hover: rgba(60, 90, 140, 0.5);
+
+  /** Button active (pressed) fill. */
+  --surface-control-active: rgba(80, 120, 180, 0.55);
+
+  /** Source-badge tint inside info cards. */
+  --surface-badge: rgba(160, 200, 255, 0.12);
+
+  /** Modal-backdrop scrim (CommandPalette). */
+  --surface-scrim: rgba(0, 0, 0, 0.5);
+
+  /** CommandPalette modal body — solid (not glass) on purpose. */
+  --surface-modal: #15151d;
+
+  /** CommandPalette result-row hover fill. */
+  --surface-modal-active: rgba(80, 110, 255, 0.18);
+
+  /** CommandPalette thumbnail placeholder. */
+  --surface-modal-thumb: #1f1f27;
+
+  /* ── Borders & strokes ──────────────────────────────────────────────── */
+
+  /** Default panel / card border. */
+  --border-default: rgba(160, 200, 255, 0.16);
+
+  /** Slightly stronger card border (FullCard / CompactCard). */
+  --border-card: rgba(160, 200, 255, 0.18);
+
+  /** Control / chip / dropdown border (slightly stronger). */
+  --border-control: rgba(160, 200, 255, 0.25);
+
+  /** Faint divider rule (between panel sections). */
+  --border-divider: rgba(160, 200, 255, 0.12);
+
+  /** In-card section separators (between info-card blocks). */
+  --border-section: rgba(160, 200, 255, 0.1);
+
+  /** Hover border accent (control hover state). */
+  --border-hover: rgba(180, 220, 255, 0.4);
+
+  /** CommandPalette input bottom-rule (different module aesthetic). */
+  --border-modal: #2a2a32;
+
+  /* ── Focus + shadow ─────────────────────────────────────────────────── */
+
+  /** Focus ring colour (keyboard-only via :focus-visible). */
+  --focus-ring: rgba(160, 200, 255, 0.5);
+
+  /** Outer shadow used by glass cards. */
+  --shadow-card-outer: rgba(0, 0, 0, 0.6);
+
+  /** Inset highlight along glass-card top edge. */
+  --shadow-card-inset: rgba(160, 200, 255, 0.06);
+
+  /* ── Decorative gradient stops ──────────────────────────────────────── */
+  /*
+   * The thin "starlight" line on the top edge of FullCard / CompactCard
+   * uses a three-stop gradient.  Promoting them to tokens lets future
+   * variants of the card share the gradient identity (and lets a future
+   * theme retint just the accent without re-typing both hex values).
+   */
+  --color-accent-gradient-mid: rgba(180, 220, 255, 0.7);
+  --color-accent-gradient-edge: rgba(120, 180, 255, 0.45);
+
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  /*
+   * Single mono stack across the entire UI.  System monospaced first
+   * (`ui-monospace` resolves to SF Mono on macOS, Cascadia Mono on
+   * Windows, the Mono / Sans variant on Linux), then explicit Apple
+   * fallbacks, then the generic family.  Picking system mono over a
+   * webfont saves a network round-trip and the system fonts are very
+   * good — this is a tool, not a magazine.
+   */
+  --font-family-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Discrete font-size scale.  The names are t-shirt-style so future
+   * additions don't require renaming everything; the values are the
+   * concrete pixel sizes already in use across the codebase. */
+  --font-size-xxs: 8px; /* chevrons */
+  --font-size-xs: 9px; /* badges, tiny chips */
+  --font-size-sm: 10px; /* panel section titles, data labels */
+  --font-size-md: 11px; /* default body text in panels */
+  --font-size-lg: 12px; /* info-card body, status bar */
+  --font-size-xl: 13px; /* info-card headline */
+  --font-size-input: 16px; /* form input text (CommandPalette) */
+
+  /* Letter-spacing scale.  Wide tracking is reserved for uppercase
+   * eyebrows / titles — body text gets either zero or near-zero. */
+  --letter-spacing-zero: 0;
+  --letter-spacing-tight: 0.02em;
+  --letter-spacing-mid: 0.04em;
+  --letter-spacing-wide: 0.06em;
+  --letter-spacing-wider: 0.1em;
+  --letter-spacing-widest: 0.12em; /* uppercase headings */
+  --letter-spacing-max: 0.15em; /* PINNED badge — most stretched */
+
+  /* Line-height — three rungs.  Tight for stacked numeric readouts where
+   * vertical real estate matters; relaxed for prose summaries inside
+   * info cards. */
+  --line-height-tight: 1.3;
+  --line-height-base: 1.4;
+  --line-height-relaxed: 1.45;
+
+  /* ── Spacing scale ──────────────────────────────────────────────────── */
+  /*
+   * Even-numbered progression in pixels — each step matches an actual
+   * value in use somewhere in the codebase.  Using numbers (1..8) rather
+   * than t-shirt names because the consumer often wants to *count up
+   * by 2*, not pick a semantic role; numeric names compose well in
+   * code review ("bumped from --space-4 to --space-5").
+   */
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 10px;
+  --space-6: 12px;
+  --space-7: 14px;
+  --space-8: 16px;
+  --space-9: 18px;
+  --space-10: 20px;
+  --space-12: 24px;
+
+  /* ── Radii ──────────────────────────────────────────────────────────── */
+  /*
+   * Six rungs to match the existing hierarchy: 1 px decorative pinprick
+   * → 10 px info card.  Panels are deliberately one radius below cards
+   * so the eye reads cards as the "louder" floating element.
+   */
+  --radius-xs: 1px; /* the gradient accent line's rounded tip */
+  --radius-sm: 3px; /* source badges */
+  --radius-md: 4px; /* small buttons, dropdowns, focus rings */
+  --radius-lg: 6px; /* thumbnails */
+  --radius-xl: 8px; /* panels */
+  --radius-2xl: 10px; /* info cards */
+
+  /* ── Layout primitives ──────────────────────────────────────────────── */
+
+  /** Canonical width of the left-stack overlay panels. */
+  --panel-width: 300px;
+
+  /** Min/max width of the right-side info cards. */
+  --card-min-width: 240px;
+  --card-max-width: 320px;
+
+  /** Distance from the viewport edge for fixed corner overlays. */
+  --corner-offset: 16px;
+
+  /* ── Glass blur ─────────────────────────────────────────────────────── */
+  /*
+   * Two blur strengths.  Panels use 10 px (a touch lighter so the
+   * starfield stays visible behind the controls); info cards use 12 px
+   * (heavier to make the card content read clearly even when crossing
+   * a bright galaxy cluster on screen).
+   */
+  --blur-panel: 10px;
+  --blur-card: 12px;
+
+  /* ── Motion ─────────────────────────────────────────────────────────── */
+  /*
+   * One easing curve, three durations.  The curve is Material's
+   * "standard easing" (fast-start, slow-end) — feels native on modern
+   * UIs.  Durations:
+   *   - fast: tactile micro-interactions (chevron rotate)
+   *   - base: collapse animations, opacity transitions
+   *   - color: hover-state colour changes
+   *
+   * `prefers-reduced-motion` is honoured at the consumer level; this
+   * file only specifies the magnitudes.
+   */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-color: 150ms;
+
+  /** Pre-composed transitions for the most common cases. */
+  --transition-color: color var(--duration-color) ease;
+  --transition-collapse: grid-template-rows var(--duration-base) var(--ease-standard);
+  --transition-fade: opacity var(--duration-base) var(--ease-standard);
+  --transition-chevron: transform var(--duration-fast) ease-out;
+
+  /* ── Composite shadows ──────────────────────────────────────────────── */
+  /*
+   * The card shadow is two stops: a soft outer drop + a 1 px inset
+   * highlight that catches the simulated rim-light along the glass top.
+   * Promoting it here means a future card variant gets the same
+   * "floating sheet of cosmic glass" identity for free.
+   */
+  --shadow-card:
+    0 8px 32px var(--shadow-card-outer), 0 0 0 1px var(--shadow-card-inset) inset;
+
+  /** CommandPalette modal — different module aesthetic, plain drop. */
+  --shadow-modal: 0 10px 40px var(--shadow-card-outer);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * Page reset.  Migrated from index.html's inline <style> block.  The reset
+ * is intentionally tiny: skymap takes over the full viewport with a single
+ * canvas + React overlay tree, so most "reset every margin in HTML5" rules
+ * would be mass to maintain for elements we never render.
+ * ─────────────────────────────────────────────────────────────────────── */
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--color-bg);
+  /*
+   * `overflow: hidden` keeps the canvas full-bleed on high-DPI iPad-Safari
+   * which would otherwise produce a 1 px elastic-scroll gutter.  Keep it.
+   */
+  overflow: hidden;
+}
+
+/*
+ * Single canvas owned by the WebGPU engine.  The id was `c` historically
+ * (terse, set in index.html); React's `<canvas ref>` now controls
+ * everything inside, but the global rule keeps the canvas full-viewport
+ * even before React mounts (so the page doesn't briefly show a smaller
+ * default-sized canvas during boot).
+ */
+#c {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}

@@ -1,43 +1,37 @@
 /*
  * CompactCard.module.css — slimmer hover-preview card.
  *
- * Migrated from the .info-card-compact rule and its shared glass-panel base
- * in index.html.  Visual weight is deliberately lower than FullCard — slightly
- * reduced padding and a slightly lower background opacity signal "secondary".
+ * Visual weight is deliberately lower than FullCard: same glass family,
+ * tighter padding, slightly less opaque background.  All atoms reference
+ * tokens from `src/styles/global.css`.
  */
 
 /* Outer glass panel — same base as FullCard but more compact */
 .infoCardCompact {
   position: relative; /* for the ::before accent line */
 
-  padding: 8px 12px;
+  padding: var(--space-4) var(--space-6);
   /*
    * Match the FullCard's width envelope so the panel doesn't visually
    * jump when the user transitions from hover (CompactCard) to selected
    * (FullCard) — the only intentional difference between the two should
    * be vertical content / padding, not horizontal real-estate.
    */
-  min-width: 240px;
-  max-width: 320px;
+  min-width: var(--card-min-width);
+  max-width: var(--card-max-width);
   overflow-wrap: break-word;
 
-  /* Glassmorphism — same family as FullCard, slightly less opaque */
-  background: rgba(8, 12, 28, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  /* Glassmorphism — soft variant, slightly less opaque than FullCard */
+  background: var(--surface-card-soft);
+  backdrop-filter: blur(var(--blur-card));
+  -webkit-backdrop-filter: blur(var(--blur-card));
 
-  border: 1px solid rgba(160, 200, 255, 0.18);
-  border-radius: 10px;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(160, 200, 255, 0.06) inset;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
 
-  color: #cfd8ff;
-  font:
-    12px / 1.45 ui-monospace,
-    'SF Mono',
-    Menlo,
-    monospace;
+  color: var(--color-fg-base);
+  font: var(--font-size-lg) / var(--line-height-relaxed) var(--font-family-mono);
 }
 
 /* Subtle starlight-blue gradient accent line along the top edge */
@@ -46,16 +40,16 @@
   display: block;
   position: absolute;
   top: 0;
-  left: 12px;
-  right: 12px;
+  left: var(--space-6);
+  right: var(--space-6);
   height: 1px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(120, 180, 255, 0.45) 30%,
-    rgba(180, 220, 255, 0.7) 50%,
-    rgba(120, 180, 255, 0.45) 70%,
+    var(--color-accent-gradient-edge) 30%,
+    var(--color-accent-gradient-mid) 50%,
+    var(--color-accent-gradient-edge) 70%,
     transparent 100%
   );
 }
@@ -65,19 +59,19 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  color: rgba(160, 180, 230, 0.45);
+  margin-bottom: var(--space-5);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-widest);
+  color: var(--color-fg-faint);
   text-transform: uppercase;
 }
 
 /* SDSS name headline */
 .cardHeadline {
-  font-size: 13px;
-  color: #e8eeff;
-  margin-bottom: 4px;
-  letter-spacing: 0.02em;
+  font-size: var(--font-size-xl);
+  color: var(--color-fg);
+  margin-bottom: var(--space-2);
+  letter-spacing: var(--letter-spacing-tight);
   word-break: break-all;
 }
 
@@ -88,32 +82,32 @@
 .sourceBadge {
   display: inline-block;
   padding: 0 5px;
-  margin: 0 0 6px 0;
-  border-radius: 3px;
-  background: rgba(160, 200, 255, 0.12);
-  border: 1px solid rgba(160, 200, 255, 0.25);
-  color: rgba(220, 230, 255, 0.85);
-  font-size: 9px;
-  letter-spacing: 0.1em;
+  margin: 0 0 var(--space-3) 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-badge);
+  border: 1px solid var(--border-control);
+  color: var(--color-accent-bright);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wider);
   text-transform: uppercase;
 }
 
 /* Lookback time line */
 .cardLookbackLine {
-  color: #e8eeff;
-  font-size: 12px;
-  margin-bottom: 2px;
+  color: var(--color-fg);
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-1);
 }
 
 /* Earth-era sub-line */
 .cardLookbackEra {
-  color: rgba(200, 220, 255, 0.7);
-  font-size: 11px;
-  margin-bottom: 4px;
+  color: var(--color-fg-tertiary);
+  font-size: var(--font-size-md);
+  margin-bottom: var(--space-2);
 }
 
 /* Distance · galaxy-type line */
 .cardDistLine {
-  color: rgba(200, 220, 255, 0.8);
-  font-size: 11px;
+  color: var(--color-fg-subtle);
+  font-size: var(--font-size-md);
 }
