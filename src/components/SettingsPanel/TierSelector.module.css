@@ -1,0 +1,56 @@
+/*
+ * TierSelector layout — three equal-width buttons sharing one row at the top
+ * of the Settings panel body.  The styling pulls from the global design
+ * tokens (src/styles/global.css) so the segmented control inherits the same
+ * glassmorphic chrome (surface-control* surfaces, border-control border,
+ * panel typography) as the rest of the panel.
+ *
+ * Active state communicates "this is the live tier" via three signals at
+ * once: a brighter surface (--surface-control-active), full-strength text
+ * colour (--color-fg, vs muted), and aria-pressed=true on the button itself
+ * (set in the .tsx).  Keeping the visual + a11u signals coupled means a
+ * screen-reader user and a sighted user converge on the same mental model.
+ */
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+/*
+ * .button and .buttonActive share most rules — kept as separate selectors
+ * (not a single block + an "is-active" modifier) because CSS-Modules-style
+ * locally-scoped classnames make a multi-class string at the call site
+ * verbose, and the duplication here is small.
+ */
+.button,
+.buttonActive {
+  appearance: none;
+  border: 1px solid var(--border-control);
+  background: var(--surface-control);
+  color: var(--color-fg-muted);
+  padding: var(--space-3) var(--space-5);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  letter-spacing: var(--letter-spacing-mid);
+  text-transform: uppercase;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.button:hover {
+  background: var(--surface-control-hover);
+  color: var(--color-fg);
+}
+
+.buttonActive {
+  background: var(--surface-control-active);
+  color: var(--color-fg);
+}
