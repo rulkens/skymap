@@ -4,19 +4,41 @@
  *
  * Pipeline:
  *
- *   1. Read public/data/{2mrs,glade}.bin → merged xyz positions, filtered
- *      to D < 200 Mpc.  SDSS is intentionally excluded — its wedge
+ *   1. Read the user-selected subset of public/data/{sdss,2mrs,glade}.bin
+ *      → merged xyz positions, filtered to D < MAX_DISTANCE_MPC.  By
+ *      default we read 2MRS + GLADE only and exclude SDSS — its wedge
  *      footprint dominates the density field at the survey edges and
  *      DisPerSE locks onto those boundaries instead of the cosmic web.
- *      See `readMergedPositions` for the full rationale.
- *   2. Write data/raw/galaxies_merged.tsv (DisPerSE ASCII-survey format,
- *      header `px py pz` followed by one line per galaxy: `x y z`)
+ *      The `--sources` flag overrides this default for diagnostic
+ *      builds: e.g. `--sources sdss` produces an SDSS-only skeleton
+ *      whose ridges should trace the wedge boundary, empirically
+ *      confirming the wedge-pollution hypothesis before we commit more
+ *      time to refinements of the merged pipeline.
+ *      See `readMergedPositions` for the per-source filtering details.
+ *   2. Write data/raw/<cachePrefix>.tsv (DisPerSE ASCII-survey format,
+ *      header `px py pz` followed by one line per galaxy: `x y z`).
+ *      The basename varies with `--sources` (e.g. `galaxies_2mrs+glade.tsv`
+ *      vs `galaxies_sdss.tsv`) so per-build caches don't collide.
  *   3. Run DisPerSE: delaunay_3D → mse → skelconv (default 5σ
  *      persistence, 2 smoothing passes).  delaunay_3D is required because
  *      mse cannot operate on a raw point cloud — it needs the Delaunay
  *      simplicial complex + DTFE density field that delaunay_3D produces.
  *   4. Parse the resulting .NDskl, convert to FilamentCloud, encode FILA v1
- *   5. Write public/data/filaments.bin
+ *   5. Write the configured `--output` path (default
+ *      public/data/filaments.bin).
+ *
+ * CLI flags:
+ *   --cut N        persistence cut in σ (default 5)
+ *   --smooth N     skelconv smoothing passes (default 2)
+ *   --sources csv  subset of {sdss, 2mrs, glade}, comma-separated
+ *                  (default: 2mrs,glade — see SDSS-exclusion rationale
+ *                  above; the default produces the canonical merged
+ *                  cosmic-web skeleton).
+ *   --output path  destination `.bin` path (default
+ *                  public/data/filaments.bin).  Use a non-default path
+ *                  for diagnostic builds so the canonical filaments.bin
+ *                  isn't clobbered, e.g.:
+ *                    --sources sdss --output public/data/filaments-sdss.bin
  *
  * Run order: must be after `npm run build-all` so the survey .bin files
  * exist on disk in `public/data/`.  The orchestrator reads those instead
@@ -472,16 +494,45 @@ type TaggedPositions = {
 };
 
 /**
- * Read each catalogue's `.bin`, merge into a single Float32Array of xyz
- * triples, filter to `MAX_DISTANCE_MPC`.
+ * Master list of survey `.bin` files this orchestrator knows how to
+ * read.  Each entry pairs the on-disk filename with the `Source` enum
+ * value used downstream (for HEALPix angular weights and surveyFluxLimit
+ * lookups) and the lowercase canonical CLI key the `--sources` flag
+ * accepts.  Adding a fourth survey would mean appending one row here
+ * plus extending `VALID_SOURCE_KEYS` and `SourceKey`.
  *
- * **SDSS is intentionally excluded.** The wedge footprint (~9000 deg²
- * out of 41253) is the dominant artefact source: DisPerSE locks onto
- * the wedge boundaries because the density field has a sharp step at
- * the survey edge.  2MRS (all-sky, K < 11.75) and GLADE (all-sky-ish
- * union of 2MASS, HyperLEDA, GWGC, SDSS) give a much cleaner all-sky
- * density field for the cosmic-web skeleton task even though SDSS
- * dominates the catalogue by raw count.
+ * Why an "ALL" list with runtime filtering rather than separate
+ * functions per build?  The non-source-dependent stages (HEALPix
+ * binning, distance filter, V_max correction, TSV write) are identical
+ * across builds — only the input set differs.  Centralising the source
+ * registry here keeps the per-source diagnostic build a one-line
+ * filter rather than a parallel code path.
+ */
+const ALL_SOURCE_FILES = [
+  { name: 'sdss.bin', source: Source.SDSS, key: 'sdss' as const },
+  { name: '2mrs.bin', source: Source.TwoMRS, key: '2mrs' as const },
+  { name: 'glade.bin', source: Source.Glade, key: 'glade' as const },
+] as const;
+
+/**
+ * Read each catalogue's `.bin` selected by `activeSources`, merge into a
+ * single Float32Array of xyz triples, filter to `MAX_DISTANCE_MPC`.
+ *
+ * **The default merged build excludes SDSS.** The SDSS wedge footprint
+ * (~9000 deg² out of 41253) is the dominant artefact source for the
+ * default build: DisPerSE locks onto the wedge boundaries because the
+ * density field has a sharp step at the survey edge.  2MRS (all-sky,
+ * K < 11.75) and GLADE (all-sky-ish union of 2MASS, HyperLEDA, GWGC,
+ * SDSS) give a much cleaner all-sky density field for the cosmic-web
+ * skeleton task even though SDSS dominates the catalogue by raw count.
+ *
+ * `activeSources` lets the operator override that default for
+ * **diagnostic** builds.  In particular `--sources sdss` produces an
+ * SDSS-only skeleton whose ridges are expected to trace the wedge
+ * boundary — empirical confirmation of the wedge-pollution hypothesis
+ * before we invest more time in mitigations.  Such builds are NOT for
+ * runtime; they exist to be inspected by the human reviewing the
+ * filament-generation pipeline.
  *
  * Distance gating is *euclidean* against the world origin (Earth/Sun
  * position in skymap world coords).  Galaxies are stored in cz/H0
@@ -490,12 +541,13 @@ type TaggedPositions = {
  * distance is unnecessary at this scale (cz < 14000 km/s for the
  * 200 Mpc cut).
  */
-function readMergedPositions(): TaggedPositions {
+function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPositions {
   // Per-source: which `.bin` to read, and which Source enum value to
   // tag every surviving galaxy with.  The tag drives the right
   // surveyFluxLimit() lookup in the Malmquist pass — m_lim is in the
-  // K_s band for 2MRS (11.75) and the B band for GLADE (18.0), and
-  // mixing them up would silently mis-amplify entire surveys.
+  // K_s band for 2MRS (11.75), B band for GLADE (18.0), r band for
+  // SDSS (17.77).  Mixing them up would silently mis-amplify entire
+  // surveys.
   //
   // CLAUDE.md note on the 2MRS J/K mismatch: the parser puts J → magG
   // even though surveyFluxLimit(2MRS) is documented as the K-band
@@ -503,10 +555,7 @@ function readMergedPositions(): TaggedPositions {
   // (render-time vMaxWeight inherits the same convention).  We don't
   // fix it here — matching the existing convention keeps build-time
   // and render-time Malmquist treatments consistent.
-  const sourceFiles = [
-    { name: '2mrs.bin', source: Source.TwoMRS },
-    { name: 'glade.bin', source: Source.Glade },
-  ] as const;
+  const sourceFiles = ALL_SOURCE_FILES.filter((s) => activeSources.has(s.key));
 
   type LoadedCloud = { cloud: PointCloud; source: Source; angular: Float32Array };
   const loaded: LoadedCloud[] = [];
@@ -1039,12 +1088,19 @@ function runDisperse(ndnetPath: string, cut: number, smooth: number): string {
 }
 
 async function main(): Promise<void> {
-  const { cut, smooth } = parseArgs();
-  process.stderr.write(`buildFilaments — cut=${cut}σ smooth=${smooth}\n`);
+  const { cut, smooth, sources, outputPath, cachePrefix } = parseArgs();
+  process.stderr.write(
+    `buildFilaments — cut=${cut}σ smooth=${smooth} sources=[${sources.join(',')}] ` +
+      `output=${outputPath}\n`,
+  );
 
   checkDisperse();
 
-  const tagged = readMergedPositions();
+  // Set lookup is a few-element membership test in `readMergedPositions`,
+  // so we materialise the Set once here rather than threading the array
+  // and forcing the callee to re-construct it on every iteration.
+  const activeSources = new Set<SourceKey>(sources);
+  const tagged = readMergedPositions(activeSources);
   process.stderr.write(`  merged ${tagged.count.toLocaleString()} galaxy positions\n`);
 
   // Build-time Malmquist V_max + HEALPix angular re-weight correction:
@@ -1060,7 +1116,14 @@ async function main(): Promise<void> {
   const weightedPositions = applyMalmquistDuplication(tagged);
   const weightedCount = weightedPositions.length / 3;
 
-  const tsvPath = resolve('data/raw/galaxies_merged.tsv');
+  // TSV input + DisPerSE NDnet cache filename derive from `cachePrefix`
+  // (sorted source keys joined by `+`, e.g. `2mrs+glade` or `sdss`).
+  // This guarantees per-build cache isolation: a `--sources sdss` build
+  // and a `--sources 2mrs,glade` build coexist on disk without
+  // overwriting each other's ~1 GB Delaunay tessellations.  Re-running
+  // the SAME source set with a different `--cut` reuses the cached
+  // NDnet (delaunay_3D output is cut-independent).
+  const tsvPath = resolve(`data/raw/galaxies_${cachePrefix}.tsv`);
   writeTsvInput(tsvPath, weightedPositions, weightedCount);
   process.stderr.write(`  wrote ${tsvPath}\n`);
 
@@ -1080,10 +1143,12 @@ async function main(): Promise<void> {
       `${cloud.vertexCount.toLocaleString()} vertices\n`,
   );
 
-  const outPath = resolve('public/data/filaments.bin');
+  const outPath = resolve(outputPath);
   const buf = encodeFilaments(cloud);
   writeFileSync(outPath, Buffer.from(buf));
-  process.stderr.write(`wrote filaments.bin (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB)\n`);
+  process.stderr.write(
+    `wrote ${outputPath} (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB)\n`,
+  );
 }
 
 // Only run when this file is invoked directly (e.g. via `tsx`).  This
