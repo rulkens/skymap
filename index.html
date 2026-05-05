@@ -12,7 +12,74 @@
       device pixels and stops the awkward double-tap-to-zoom behaviour.
     -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Skymap — SDSS WebGPU</title>
+    <title>Skymap — Interactive 3D Galaxy Catalog Explorer (WebGPU)</title>
+
+    <!--
+      ── Discovery & indexing metadata ──────────────────────────────────────
+      Three audiences read what's below:
+        • search engines (Google, Bing, DuckDuckGo) → snippet + sitelinks
+        • social-share previewers (Twitter / Bluesky / Discord / Slack)
+            → og:image card on link paste
+        • LLM crawlers (GPTBot, ClaudeBot, PerplexityBot)
+            → context for "what is skymap" answers in chat UIs
+      Description / og / twitter / JSON-LD are all minor variations of the
+      same elevator pitch; keeping them in sync by hand is fine while the
+      copy is short, but if the pitch changes substantially, edit all five.
+    -->
+    <meta name="description" content="Interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs. Fly through millions of galaxies in your browser — hover, click, and pin galaxies to inspect; explore the cosmic-web wedge in 3D." />
+    <meta name="keywords" content="WebGPU, galaxy, SDSS, GLADE, 2MRS, cosmology, astronomy, visualization, cosmic web, redshift, large-scale structure, gravitational waves, host galaxy" />
+    <meta name="author" content="Alexander Rulkens" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#000000" />
+    <link rel="canonical" href="https://skymap.rulkens.com/" />
+
+    <!-- OpenGraph (Facebook, LinkedIn, Discord, Bluesky, generic crawlers) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Skymap — Interactive 3D Galaxy Catalog Explorer" />
+    <meta property="og:description" content="Fly through millions of galaxies in your browser. WebGPU 3D explorer for SDSS, GLADE, and 2MRS galaxy catalogs with cosmic-web filaments and DESI Legacy thumbnails." />
+    <meta property="og:url" content="https://skymap.rulkens.com/" />
+    <meta property="og:image" content="https://skymap.rulkens.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="685" />
+    <meta property="og:image:alt" content="Skymap — supercluster-scale view of thousands of galaxies clustering into a dense core with filaments radiating into surrounding voids." />
+    <meta property="og:site_name" content="Skymap" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card (Twitter / X-specific renderer) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Skymap — Interactive 3D Galaxy Catalog Explorer" />
+    <meta name="twitter:description" content="WebGPU 3D explorer for SDSS, GLADE, and 2MRS galaxy catalogs. Fly through millions of galaxies; explore the cosmic web in your browser." />
+    <meta name="twitter:image" content="https://skymap.rulkens.com/og-image.png" />
+    <meta name="twitter:image:alt" content="Skymap supercluster view" />
+
+    <!--
+      JSON-LD structured data.  Schema.org's `SoftwareApplication` type is
+      what Google's rich-results crawler looks for; LLMs that consume
+      structured data (Perplexity, You.com, ChatGPT search) treat it as a
+      higher-fidelity source than the surrounding HTML body.  We pin the
+      DOI as `identifier` so any AI summarising the project links to the
+      Zenodo archive rather than guessing a citation format.
+    -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Skymap",
+        "url": "https://skymap.rulkens.com/",
+        "applicationCategory": "ScienceApplication",
+        "applicationSubCategory": "Astronomy / Cosmology Visualization",
+        "operatingSystem": "Web Browser (WebGPU-capable)",
+        "description": "Interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs. Renders millions of galaxies as instanced billboards with selective per-galaxy thumbnail quads on close approach.",
+        "author": { "@type": "Person", "name": "Alexander Rulkens" },
+        "license": "https://opensource.org/licenses/MIT",
+        "softwareRequirements": "WebGPU-capable browser (Chrome 113+, Edge 113+, Firefox 141+, Safari 26+)",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "identifier": "https://doi.org/10.5281/zenodo.20037028",
+        "image": "https://skymap.rulkens.com/og-image.png",
+        "keywords": "WebGPU, galaxy, SDSS, GLADE, 2MRS, cosmology, astronomy, visualization, cosmic web"
+      }
+    </script>
+
     <!--
       Design tokens + page reset live in src/styles/global.css.  We import
       them from main.tsx (side-effect import) rather than linking from this

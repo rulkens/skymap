@@ -26,16 +26,19 @@
 import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { NavigationPanel } from '../../../src/components/NavigationPanel/NavigationPanel';
+import {
+  NavigationPanel,
+  type NavigationPanelProps,
+} from '../../../src/components/NavigationPanel/NavigationPanel';
 
 describe('NavigationPanel', () => {
   it('renders the NAVIGATION header', () => {
-    const html = renderToStaticMarkup(createElement(NavigationPanel));
+    const html = renderToStaticMarkup(createElement(NavigationPanel, {}));
     expect(html).toContain('NAVIGATION');
   });
 
   it('renders every gesture/key on the left column', () => {
-    const html = renderToStaticMarkup(createElement(NavigationPanel));
+    const html = renderToStaticMarkup(createElement(NavigationPanel, {}));
     expect(html).toContain('Drag');
     expect(html).toContain('Wheel');
     expect(html).toContain('H');
@@ -47,7 +50,7 @@ describe('NavigationPanel', () => {
   });
 
   it('renders every action label on the right column', () => {
-    const html = renderToStaticMarkup(createElement(NavigationPanel));
+    const html = renderToStaticMarkup(createElement(NavigationPanel, {}));
     expect(html).toContain('orbit camera');
     expect(html).toContain('zoom');
     expect(html).toContain('home view');
@@ -57,14 +60,19 @@ describe('NavigationPanel', () => {
   });
 
   it('mounts open by default (aria-expanded="true" + body visible)', () => {
-    const html = renderToStaticMarkup(createElement(NavigationPanel));
+    const html = renderToStaticMarkup(createElement(NavigationPanel, {}));
     expect(html).toContain('aria-expanded="true"');
     // Body content present — pick a row that's load-bearing for "open".
     expect(html).toContain('orbit camera');
   });
 
   it('shows touch gestures and hides keyboard shortcuts when isMobile=true', () => {
-    const html = renderToStaticMarkup(createElement(NavigationPanel, { isMobile: true }));
+    // Typed variable rather than inline object literal: TS's
+    // React.createElement overloads sometimes resolve to the no-props
+    // signature when the component has destructured-with-default props,
+    // which makes inline `{ isMobile: true }` look like a stray Attribute.
+    const props: NavigationPanelProps = { isMobile: true };
+    const html = renderToStaticMarkup(createElement(NavigationPanel, props));
     // Mobile-relevant rows appear:
     expect(html).toContain('One-finger drag');
     expect(html).toContain('Two-finger pinch');

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Skymap is a single-page web app, so the sitemap has exactly one URL.
+  It exists primarily so the robots.txt `Sitemap:` directive points at
+  a real file (some crawlers warn / soft-skip when it's missing) and
+  so the lastmod hint nudges crawlers to re-fetch promptly after a
+  significant content change.  Bump <lastmod> when the user-facing
+  README / live-demo features shift; it doesn't need to track every
+  push to main.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://skymap.rulkens.com/</loc>
+    <lastmod>2026-05-05</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

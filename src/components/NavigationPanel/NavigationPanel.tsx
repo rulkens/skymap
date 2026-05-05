@@ -81,10 +81,15 @@ export type NavigationPanelProps = {
   isMobile?: boolean;
 };
 
-export function NavigationPanel({
-  defaultOpen,
-  isMobile = false,
-}: NavigationPanelProps = {}): ReactNode {
+export function NavigationPanel(props: NavigationPanelProps): ReactNode {
+  // Non-optional `props` parameter (no `= {}` default) so React's
+  // createElement TS overloads match the function-component signature
+  // and thread `NavigationPanelProps` through.  With a defaulted
+  // parameter, TS picks the no-args overload and rejects callers that
+  // try to pass `{ isMobile: true }` with a confusing
+  // "Type 'X' has no properties in common with type 'Attributes'".
+  // Callers that don't need any prop pass an explicit empty `{}`.
+  const { defaultOpen, isMobile = false } = props;
   const rows = isMobile ? MOBILE_ROWS : DESKTOP_ROWS;
   return (
     <Panel title="NAVIGATION" ariaLabel="Navigation cheatsheet" defaultOpen={defaultOpen}>

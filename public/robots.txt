@@ -1,0 +1,34 @@
+# Skymap is open source and discoverability is a project goal.
+# All well-behaved crawlers — search engines and LLM training/retrieval
+# bots — are explicitly welcome here.  No proprietary content is hosted
+# on the static-asset domain; the catalog .bin files are served from a
+# separate R2 bucket (data.skymap.rulkens.com) which sets its own headers.
+
+User-agent: *
+Allow: /
+
+# Listing major LLM crawlers explicitly so anyone auditing for AI-policy
+# compliance can see at a glance that the site opts in.  (Wildcard above
+# already covers them — these blocks are documentation, not policy.)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+Sitemap: https://skymap.rulkens.com/sitemap.xml

@@ -1,0 +1,28 @@
+# Skymap
+
+> Interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs. Fly through millions of galaxies in your browser; hover, click, and pin to inspect; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
+
+Skymap renders ~3.5 million galaxies as GPU-instanced point billboards with selective per-galaxy thumbnail quads on close approach.  The static shell is hosted on Cloudflare Workers Assets at https://skymap.rulkens.com/; the catalog binaries (~280 MB across all tiers) are served from Cloudflare R2 with zero egress.  Source code is MIT-licensed; the project has a Zenodo DOI (10.5281/zenodo.20037028) for citation in academic work.
+
+The data pipeline parses three real catalogs at build time — SDSS DR18 (spectroscopic, ~500k galaxies, northern footprint), 2MRS (Huchra 2012, ~45k local-volume all-sky), and GLADE v2.3 (~2.1M cross-matched all-sky) — into a custom 64-byte-per-point binary format.  The runtime decodes the binaries into GPU vertex buffers and draws them through WGSL shaders.
+
+Three dataset tiers (small / medium / large) hot-swap at runtime: small (~300k) is the mobile default, medium (~600k) is the laptop default, large (~3.5M) is opt-in for desktop GPUs.  Tier choice is driven by viewport width on first paint.
+
+## Live demo
+- [skymap.rulkens.com](https://skymap.rulkens.com/): the running explorer
+
+## Source code & citation
+- [GitHub repository](https://github.com/rulkens/skymap): full source, MIT-licensed
+- [README.md](https://github.com/rulkens/skymap/blob/main/README.md): complete feature list, build instructions, and use cases
+- [CITATION.cff](https://github.com/rulkens/skymap/blob/main/CITATION.cff): how to cite (BibTeX + APA)
+- [DOI: 10.5281/zenodo.20037028](https://doi.org/10.5281/zenodo.20037028): versioned Zenodo archive
+- [ATTRIBUTIONS.md](https://github.com/rulkens/skymap/blob/main/ATTRIBUTIONS.md): catalog citation requirements (each survey has its own paper to cite)
+
+## Use cases
+- Gravitational-wave host-galaxy candidate exploration: overlay a GW localisation region on the GLADE-derived nearby-universe catalog to scan the 3D volume for plausible electromagnetic-counterpart hosts.
+- Teaching cosmic large-scale structure: fly through the SDSS wedge and see filaments, voids, and the Sloan Great Wall directly without needing a Jupyter notebook or desktop visualisation suite.
+- Public outreach and general curiosity: a browser-based way to experience the geometry of the local universe.
+
+## Optional
+- [CLAUDE.md](https://github.com/rulkens/skymap/blob/main/CLAUDE.md): onboarding for AI coding assistants — code conventions, gotchas, deploy workflow
+- [docs/superpowers/plans/](https://github.com/rulkens/skymap/tree/main/docs/superpowers/plans): implementation plans (TDD task lists) for completed and in-progress features
