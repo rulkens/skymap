@@ -41,3 +41,24 @@ export const HUBBLE_DISTANCE_MPC = C_KM_S / H0_KM_S_MPC;
 export const HUBBLE_TIME_GYR =
   ((1 / H0_KM_S_MPC) * 3.0857e19) / // 1 Mpc in km
   (60 * 60 * 24 * 365.25 * 1e9); // seconds in one gigayear (Julian)
+
+/**
+ * Parsec → light-year conversion factor.
+ *
+ *   1 pc = 3.26156 ly
+ *
+ * Why surface this as a constant?  The renderer's distance-formatting
+ * helpers ship every parsec value alongside its light-year equivalent
+ * for readers unfamiliar with parsecs.  A single source of truth here
+ * means the scale bar, the InfoCard distance line, and the InfoCard
+ * diameter line all derive the same conversion — no risk of one site
+ * using 3.26 and another using 3.262 and producing visibly different
+ * round-offs at the same zoom level.
+ *
+ * The exact value depends on the IAU's 2015 redefinition of the
+ * astronomical unit; 3.26156 is the textbook short form (the full
+ * value is ~3.261563777…).  Five significant figures is more than
+ * enough — the renderer's distances themselves carry at most 3-4
+ * meaningful digits.
+ */
+export const PC_TO_LY = 3.26156;

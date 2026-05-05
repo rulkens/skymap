@@ -25,7 +25,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import type { PointInfo } from '../../@types';
 import { Source } from '../../data/sources';
-import { formatDistance } from '../../utils/format/distance';
+import { formatDistance, formatDiameterKpc } from '../../utils/format/distance';
 import { Thumbnail } from './Thumbnail';
 import styles from './FullCard.module.css';
 
@@ -414,7 +414,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
             label="Diameter"
             value={
               <>
-                {info.diameterKpc.toFixed(1)}&nbsp;kpc
+                {formatDiameterKpc(info.diameterKpc)}
                 <br />
                 <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{info.diameterProvenance}</span>
               </>
