@@ -79,6 +79,7 @@ import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
 import { NavigationPanel } from '../NavigationPanel/NavigationPanel';
 import { StatsPanel } from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
+import { SearchTrigger } from '../SearchTrigger/SearchTrigger';
 import appStyles from './App.module.css';
 import { Source } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
@@ -821,6 +822,14 @@ export function App(): React.ReactElement {
         `handle.selectFamous(id)`, which pins the galaxy and tweens the
         camera, exactly as if the user had clicked it directly on-screen.
       */}
+      {/*
+        Search-trigger pill — anchored top-center.  Always visible (the
+        Cmd+K shortcut still works on top of it for power users).  Fades
+        out via the `hidden` prop while the palette is open so the two
+        don't visually fight; the open transition feels like the pill
+        expanding into the palette.
+      */}
+      <SearchTrigger onClick={() => setPaletteOpen(true)} hidden={paletteOpen} />
       <CommandPalette
         entries={famousMeta}
         aliasIndex={aliasIndex ?? undefined}

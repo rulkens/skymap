@@ -26,6 +26,12 @@
    * the way to the top edge.
    */
   padding-top: 12vh;
+  /*
+   * Backdrop fades in as the palette mounts — same 180 ms timing as
+   * the SearchTrigger's fade-out so the two transitions overlap and
+   * read as one continuous expand.
+   */
+  animation: paletteBackdropIn 0.18s ease-out;
 }
 
 .panel {
@@ -45,6 +51,36 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  /*
+   * Open animation — small upward translate + slight scale, anchored
+   * at the top-center so the palette appears to "grow downward" from
+   * the SearchTrigger's anchor point.  Without an explicit origin the
+   * default would be the panel center and the scale would feel like a
+   * pop-in rather than an expansion.
+   */
+  animation: palettePanelIn 0.22s ease-out;
+  transform-origin: top center;
+}
+
+@keyframes paletteBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes palettePanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /*
