@@ -51,6 +51,9 @@ import { decodePointCloud } from '../src/data/pointCloudFormat.js';
 import { parseNDskl, skeletonToFilamentCloud } from './parsers/ndskl.js';
 import { encodeFilaments } from '../src/data/filamentBinaryFormat.js';
 import type { PointCloud } from '../src/@types/index.js';
+import { Source } from '../src/data/sources.js';
+import { surveyFluxLimit } from '../src/data/surveyFluxLimits.js';
+import { absoluteFromApparent, dMaxFromAbsolute } from '../src/utils/math/distanceModulus.js';
 
 /**
  * Default persistence cut in σ.  Lower = more filaments accepted as
@@ -177,6 +180,164 @@ const MAX_DISTANCE_MPC = 200;
 const MIN_DISTANCE_MPC = 5;
 
 /**
+ * ── Malmquist V_max correction parameters ──────────────────────────────
+ *
+ * Why correction at all?
+ * ----------------------
+ * The 2MRS + GLADE input we feed to DisPerSE is *flux-limited*, not
+ * volume-limited.  At 200 Mpc we only see the brightest galaxies; at
+ * 5 Mpc we see all the way down to the dwarf end of the luminosity
+ * function.  DisPerSE estimates density via DTFE on the raw point set,
+ * so an un-weighted input produces a density field that falls off
+ * radially purely as a selection effect — DisPerSE then locks onto
+ * those radial gradients and emits filaments aligned with the Earth-
+ * to-galaxy line-of-sight (visible as "radial stripe" artifacts in the
+ * skeleton).
+ *
+ * Why duplicate points instead of pass weights to DisPerSE?
+ * ---------------------------------------------------------
+ * DTFE has no concept of per-point weight: it estimates density from
+ * the volume of Delaunay tetrahedra around each vertex.  The honest
+ * way to amplify a vertex's contribution is to insert more vertices
+ * representing the population that vertex stands in for.  This is
+ * Schmidt's 1968 1/V_max correction applied at sample-construction
+ * time rather than at analysis time.
+ *
+ * Per-galaxy weight formula (uncapped) — for a galaxy detected at
+ * (apparent magG, distance D) in a survey with flux limit m_lim:
+ *
+ *     M           = absoluteFromApparent(magG, D)
+ *     d_max       = dMaxFromAbsolute(M, m_lim)
+ *     weight_raw  = (D_REF / d_max)^3
+ *     weight      = clamp(weight_raw, 1.0, WEIGHT_CAP)
+ *
+ * D_REF = MAX_DISTANCE_MPC = 200 — the volume we're actually
+ * building over.  Galaxies whose d_max ≥ D_REF (intrinsically bright,
+ * detectable everywhere we care about) get weight = 1: they need no
+ * amplification.  Galaxies with d_max ≪ D_REF (intrinsically faint,
+ * only detectable nearby) get amplified to represent the missing
+ * population we'd see in the inner volume but can't detect at the
+ * outer volume.
+ *
+ * WEIGHT_CAP — without a cap, raw weights blow up to hundreds for the
+ * faintest galaxies (a dwarf detectable to 20 Mpc has raw weight =
+ * (200/20)^3 = 1000).  Capping at 15 keeps the duplication factor
+ * ≲ 15× while still amplifying the genuinely-faint population.  The
+ * cap is empirical: 5–10 leaves residual radial bias visible; 30+
+ * blows up the Delaunay runtime past the practical budget.  15 is
+ * the sweet spot from internal experiments on the 2MRS+GLADE merge.
+ *
+ * NOT used: vMaxWeight from src/utils/math/vMaxWeight.ts.  That helper
+ * is intentionally clipped to [0, 1] for visualisation (it only ever
+ * dims a galaxy, never amplifies).  Here we need the inverse-volume
+ * sense (amplifies faint galaxies), uncapped except by WEIGHT_CAP.
+ */
+const D_REF_MPC = MAX_DISTANCE_MPC;
+const WEIGHT_CAP = 15;
+
+/**
+ * Gaussian position jitter (Mpc, 1σ) applied to each duplicated copy
+ * after the original.  Two competing constraints:
+ *
+ *   - Floor: must be » floating-point precision so duplicate points
+ *     don't collapse onto a single Delaunay vertex.  CGAL's exact
+ *     predicates handle ties, but a true zero-volume tetrahedron is a
+ *     degenerate input that can crash delaunay_3D or produce numerical
+ *     artifacts in the DTFE field.
+ *   - Ceiling: must be « cosmic-web filament thickness (~5–10 Mpc) so
+ *     the jitter doesn't smear out the topology we're trying to detect.
+ *
+ * 0.5 Mpc sits comfortably in the middle: ~0.5% of the build's outer
+ * radius, ~10× the average inter-galaxy spacing in dense regions, and
+ * ~10× smaller than typical filament thickness.  Empirically this is
+ * the value that produced clean DisPerSE skeletons on a small-N test.
+ *
+ * The ORIGINAL galaxy is emitted at (x, y, z) with no jitter — only
+ * copies 2..N receive a Gaussian offset.  Otherwise even the
+ * non-amplified case (weight ≈ 1) would drift the entire input cloud
+ * by ~0.5 Mpc per build, which would make filaments unstable across
+ * re-runs of the same input.
+ */
+const JITTER_SIGMA_MPC = 0.5;
+
+/**
+ * Seed for the duplication+jitter PRNG.  We use a seeded generator
+ * (Mulberry32, see `makeMulberry32` below) so two runs over the same
+ * input produce byte-identical output — important for reproducibility
+ * (caching the Delaunay tessellation across `--cut` sweeps assumes the
+ * same TSV) and for debugging (a flaky filament can be re-investigated
+ * deterministically).  Seeding from `Math.random()` or `Date.now()`
+ * would make every build a fresh dataset and break those invariants.
+ */
+const JITTER_SEED = 1234;
+
+/**
+ * Mulberry32 — a tiny single-state PRNG with period 2^32 and decent
+ * statistical properties for a build-time tool.  We don't need
+ * cryptographic-grade randomness; we need (a) seedability and
+ * (b) cheap per-call cost so the duplication loop doesn't dominate
+ * the build wall-clock.  Mulberry32 is ~2× faster than splitmix32
+ * here and well-documented in the JS PRNG community (see Tommy
+ * Ettinger's gist).
+ *
+ * Returns a function that yields the next uniform-[0,1) double on
+ * each call.  Closure-captured state means the caller doesn't need
+ * to thread an int through every site.
+ */
+function makeMulberry32(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Draw one Gaussian sample (mean 0, stddev 1) using the Box-Muller
+ * transform.  We discard the second sample Box-Muller produces "for
+ * free" rather than caching it across calls — the per-galaxy duplicate
+ * count is variable, so a cached sample would cross galaxy boundaries
+ * and tangle the seeded determinism.  At ~3M points × ≤15 copies × 3
+ * axes the wasted call is negligible compared to the file I/O and
+ * Delaunay stages downstream.
+ */
+function gaussian(rng: () => number): number {
+  // Avoid Math.log(0) by floor-clamping u₁ to the smallest positive
+  // double Mulberry32 can emit (≈ 2^-32).  rng() returns [0, 1) so
+  // the zero case is theoretically reachable.
+  const u1 = Math.max(rng(), Number.MIN_VALUE);
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+/**
+ * Source-tagged positions: one entry per surviving input galaxy after
+ * the distance filter.  We carry magG and the source tag so the
+ * downstream Malmquist pass can look up the right per-survey flux
+ * limit (m_lim varies by band: K_s = 11.75 for 2MRS, B = 18.0 for
+ * GLADE).  Distance is recomputed from xyz on demand by the consumer
+ * to avoid storing a redundant scalar.
+ *
+ * Why a single struct-of-arrays rather than two separate arrays?
+ * The Malmquist pass walks all galaxies in lockstep regardless of
+ * source — interleaving doesn't help cache locality at this scale
+ * (~3M floats fit comfortably in modern L3) and a single shared array
+ * keeps the code linear instead of branching per source.
+ */
+type TaggedPositions = {
+  count: number;
+  /** Interleaved xyz triples: positions[i*3 + {0,1,2}] in Mpc. */
+  positions: Float32Array;
+  /** Apparent magnitude in the survey's flux-limit band. */
+  magG: Float32Array;
+  /** Per-galaxy source tag (one of Source.TwoMRS, Source.Glade). */
+  sources: Uint8Array;
+};
+
+/**
  * Read each catalogue's `.bin`, merge into a single Float32Array of xyz
  * triples, filter to `MAX_DISTANCE_MPC`.
  *
@@ -195,10 +356,27 @@ const MIN_DISTANCE_MPC = 5;
  * distance is unnecessary at this scale (cz < 14000 km/s for the
  * 200 Mpc cut).
  */
-function readMergedPositions(): { count: number; positions: Float32Array } {
-  const sources = ['2mrs.bin', 'glade.bin'] as const;
-  const clouds: PointCloud[] = [];
-  for (const name of sources) {
+function readMergedPositions(): TaggedPositions {
+  // Per-source: which `.bin` to read, and which Source enum value to
+  // tag every surviving galaxy with.  The tag drives the right
+  // surveyFluxLimit() lookup in the Malmquist pass — m_lim is in the
+  // K_s band for 2MRS (11.75) and the B band for GLADE (18.0), and
+  // mixing them up would silently mis-amplify entire surveys.
+  //
+  // CLAUDE.md note on the 2MRS J/K mismatch: the parser puts J → magG
+  // even though surveyFluxLimit(2MRS) is documented as the K-band
+  // limit.  This is a pre-existing inconsistency in the project
+  // (render-time vMaxWeight inherits the same convention).  We don't
+  // fix it here — matching the existing convention keeps build-time
+  // and render-time Malmquist treatments consistent.
+  const sourceFiles = [
+    { name: '2mrs.bin', source: Source.TwoMRS },
+    { name: 'glade.bin', source: Source.Glade },
+  ] as const;
+
+  type LoadedCloud = { cloud: PointCloud; source: Source };
+  const loaded: LoadedCloud[] = [];
+  for (const { name, source } of sourceFiles) {
     const path = resolve('public/data', name);
     if (!existsSync(path)) {
       process.stderr.write(`warning: ${path} not found — skipping\n`);
@@ -209,28 +387,33 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
     // file length, sidestepping the pooled-Buffer offset gotcha noted
     // above.
     const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-    clouds.push(decodePointCloud(ab));
+    loaded.push({ cloud: decodePointCloud(ab), source });
   }
 
-  // First pass: count survivors of the inner+outer distance filter.
-  // We build the filtered output buffer to its final size in one
-  // allocation (cheaper than push + concat) since the worst-case bound
-  // is the unfiltered total count.
+  // First pass: allocate to the worst-case bound (unfiltered total)
+  // and fill with the inner+outer distance-filter survivors.  Slicing
+  // at the end trims the trailing unused slots — DisPerSE would
+  // otherwise treat a zero-padded (0, 0, 0) tail as legitimate
+  // origin-clustered points.
   const distSqMin = MIN_DISTANCE_MPC * MIN_DISTANCE_MPC;
   const distSqMax = MAX_DISTANCE_MPC * MAX_DISTANCE_MPC;
-  const totalRaw = clouds.reduce((acc, c) => acc + c.count, 0);
+  const totalRaw = loaded.reduce((acc, l) => acc + l.cloud.count, 0);
   const positions = new Float32Array(totalRaw * 3);
+  const magG = new Float32Array(totalRaw);
+  const sources = new Uint8Array(totalRaw);
   let kept = 0;
-  for (const c of clouds) {
-    for (let i = 0; i < c.count; i++) {
-      const x = c.positions[i * 3 + 0]!;
-      const y = c.positions[i * 3 + 1]!;
-      const z = c.positions[i * 3 + 2]!;
+  for (const { cloud, source } of loaded) {
+    for (let i = 0; i < cloud.count; i++) {
+      const x = cloud.positions[i * 3 + 0]!;
+      const y = cloud.positions[i * 3 + 1]!;
+      const z = cloud.positions[i * 3 + 2]!;
       const r2 = x * x + y * y + z * z;
       if (r2 < distSqMin || r2 > distSqMax) continue;
       positions[kept * 3 + 0] = x;
       positions[kept * 3 + 1] = y;
       positions[kept * 3 + 2] = z;
+      magG[kept] = cloud.magG[i]!;
+      sources[kept] = source;
       kept += 1;
     }
   }
@@ -238,10 +421,142 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
     `  filtered ${totalRaw.toLocaleString()} → ${kept.toLocaleString()} ` +
       `(${MIN_DISTANCE_MPC} Mpc < D < ${MAX_DISTANCE_MPC} Mpc)\n`,
   );
-  // Trim trailing unused slots so downstream consumers see the exact
-  // count rather than zero-padded entries that DisPerSE would treat as
-  // legitimate (0,0,0) points clustering at the origin.
-  return { count: kept, positions: positions.slice(0, kept * 3) };
+  return {
+    count: kept,
+    positions: positions.slice(0, kept * 3),
+    magG: magG.slice(0, kept),
+    sources: sources.slice(0, kept),
+  };
+}
+
+/**
+ * Apply the Malmquist V_max correction by duplicating each galaxy
+ * floor(weight) times (plus a stochastic fractional copy) and
+ * scattering each duplicate by a Gaussian jitter of σ = 0.5 Mpc.
+ *
+ * Algorithm per galaxy:
+ *   1. Recompute distance D from xyz (we discarded D after filtering).
+ *   2. M       = absoluteFromApparent(magG, D)
+ *      d_max   = dMaxFromAbsolute(M, m_lim_for_source)
+ *      raw_w   = (D_REF / d_max)^3
+ *      weight  = clamp(raw_w, 1.0, WEIGHT_CAP)
+ *      Bail-out: if d_max is non-finite or non-positive (e.g. magG is
+ *      NaN), set weight = 1 — the galaxy still contributes itself.
+ *   3. integer_copies = floor(weight)
+ *      fractional     = weight - integer_copies
+ *      if rng() < fractional: integer_copies += 1
+ *      → over many galaxies the long-run mean matches the continuous
+ *        weight (1.3 → averages 1.3 copies, not floor(1.3) = 1).
+ *   4. Emit copy 1 at the original (x, y, z) with NO jitter — keeps
+ *      the un-amplified case (weight ≈ 1) byte-identical to the
+ *      pre-correction build for that galaxy.  Emit copies 2..N with
+ *      Gaussian (σ = JITTER_SIGMA_MPC) offsets per axis.
+ *
+ * Out of scope (deferred to Phase 2):
+ *   - HEALPix angular re-weight to correct for per-pixel survey
+ *     completeness on the sky (see DisPerSE plan).  V_max alone
+ *     handles the radial selection function but assumes the angular
+ *     selection is uniform; it isn't (2MRS Galactic-plane zone of
+ *     avoidance, GLADE per-pixel completeness map).
+ *   - Schechter density correction (different mechanic — corrects
+ *     for the LF integral below the flux limit, not the population
+ *     above it that V_max amplifies).
+ */
+// TODO: HEALPix angular re-weight (Phase 2, see DisPerSE plan)
+function applyMalmquistDuplication(input: TaggedPositions): Float32Array {
+  const rng = makeMulberry32(JITTER_SEED);
+
+  // Two-pass approach.  Pass 1 computes per-galaxy weights and
+  // accumulates the integer + stochastic copy count, sizing the output
+  // buffer exactly.  Pass 2 fills the output in a separate loop using
+  // the same RNG state continuation — this keeps the seeded
+  // determinism intact (Mulberry32 advances are total-order across the
+  // whole pass) and avoids growing a Float32Array dynamically.  For
+  // ~3M galaxies the per-galaxy cost is one log/pow/cube/clamp +
+  // bounded Box-Muller calls, all negligible compared to disk I/O.
+  //
+  // Why not allocate worst-case (count × WEIGHT_CAP × 3) and slice?
+  // count ≈ 2M, WEIGHT_CAP = 15: that's a 360 MB peak allocation
+  // before slicing back to ~50 MB.  V8 won't refuse it but the spike
+  // is wasteful when a deterministic two-pass count gets the exact
+  // size in microseconds.
+  let totalCopies = 0;
+  const perGalaxyWeight = new Float32Array(input.count);
+  for (let i = 0; i < input.count; i++) {
+    const x = input.positions[i * 3 + 0]!;
+    const y = input.positions[i * 3 + 1]!;
+    const z = input.positions[i * 3 + 2]!;
+    const D = Math.sqrt(x * x + y * y + z * z);
+    const magG = input.magG[i]!;
+    const mLim = surveyFluxLimit(input.sources[i]! as Source);
+
+    // Compute the uncapped V_max weight, bailing safely if any input
+    // is NaN/inf (e.g. a galaxy with missing photometry) — the galaxy
+    // still contributes itself with weight = 1.
+    let weight = 1;
+    const absMag = absoluteFromApparent(magG, D);
+    if (Number.isFinite(absMag)) {
+      const dMax = dMaxFromAbsolute(absMag, mLim);
+      if (Number.isFinite(dMax) && dMax > 0) {
+        const raw = (D_REF_MPC / dMax) ** 3;
+        weight = Math.min(WEIGHT_CAP, Math.max(1, raw));
+      }
+    }
+    perGalaxyWeight[i] = weight;
+  }
+
+  // Pass 1b: stochastic round each weight to an integer copy count.
+  // We do this in a separate loop so the RNG draws are total-ordered
+  // (and thus reproducible) before we start emitting positions in
+  // pass 2 with Box-Muller draws.  Storing the decision in
+  // `copiesPerGalaxy` means pass 2 doesn't re-roll the fractional
+  // bit — the two passes stay perfectly aligned.
+  const copiesPerGalaxy = new Uint8Array(input.count);
+  for (let i = 0; i < input.count; i++) {
+    const w = perGalaxyWeight[i]!;
+    const intCopies = Math.floor(w);
+    const frac = w - intCopies;
+    const copies = intCopies + (rng() < frac ? 1 : 0);
+    copiesPerGalaxy[i] = copies;
+    totalCopies += copies;
+  }
+
+  // Pass 2: emit positions.  Copy 1 is the un-jittered original;
+  // copies 2..N each receive a fresh Gaussian (σ = JITTER_SIGMA_MPC)
+  // offset on each of the three axes.
+  const out = new Float32Array(totalCopies * 3);
+  let outIdx = 0;
+  for (let i = 0; i < input.count; i++) {
+    const x = input.positions[i * 3 + 0]!;
+    const y = input.positions[i * 3 + 1]!;
+    const z = input.positions[i * 3 + 2]!;
+    const copies = copiesPerGalaxy[i]!;
+    if (copies === 0) continue;
+    // Copy 1: exact position, no jitter.
+    out[outIdx * 3 + 0] = x;
+    out[outIdx * 3 + 1] = y;
+    out[outIdx * 3 + 2] = z;
+    outIdx += 1;
+    // Copies 2..N: Gaussian jitter per axis.
+    for (let k = 1; k < copies; k++) {
+      const jx = gaussian(rng) * JITTER_SIGMA_MPC;
+      const jy = gaussian(rng) * JITTER_SIGMA_MPC;
+      const jz = gaussian(rng) * JITTER_SIGMA_MPC;
+      out[outIdx * 3 + 0] = x + jx;
+      out[outIdx * 3 + 1] = y + jy;
+      out[outIdx * 3 + 2] = z + jz;
+      outIdx += 1;
+    }
+  }
+
+  const meanWeight = totalCopies / Math.max(1, input.count);
+  process.stderr.write(
+    `  Malmquist correction: ${input.count.toLocaleString()} unique → ` +
+      `${totalCopies.toLocaleString()} weighted ` +
+      `(×${meanWeight.toFixed(2)} mean, cap=${WEIGHT_CAP}, ` +
+      `σ_jitter=${JITTER_SIGMA_MPC} Mpc)\n`,
+  );
+  return out;
 }
 
 /**
@@ -266,9 +581,7 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
 function writeTsvInput(path: string, positions: Float32Array, count: number): void {
   const lines: string[] = ['px py pz'];
   for (let i = 0; i < count; i++) {
-    lines.push(
-      `${positions[i * 3 + 0]!} ${positions[i * 3 + 1]!} ${positions[i * 3 + 2]!}`,
-    );
+    lines.push(`${positions[i * 3 + 0]!} ${positions[i * 3 + 1]!} ${positions[i * 3 + 2]!}`);
   }
   // Unconditional mkdirSync with `recursive: true` is a no-op when the
   // directory already exists, and avoids a TOCTOU window between the
@@ -345,9 +658,7 @@ function runDelaunay3D(tsvPath: string): string {
     throw new Error(`delaunay_3D failed with exit code ${r.status}`);
   }
   if (!existsSync(ndnetPath)) {
-    throw new Error(
-      `delaunay_3D exited 0 but expected output ${ndnetPath} is missing`,
-    );
+    throw new Error(`delaunay_3D exited 0 but expected output ${ndnetPath} is missing`);
   }
   return ndnetPath;
 }
@@ -435,13 +746,9 @@ function runDisperse(ndnetPath: string, cut: number, smooth: number): string {
   // (Re-tessellating with delaunay_3D is the only stage that depends on
   // input geometry, and that stage is also cached upstream.)
   if (existsSync(skelRaw)) {
-    process.stderr.write(
-      `  found existing up-skeleton at ${skelRaw} — skipping mse\n`,
-    );
+    process.stderr.write(`  found existing up-skeleton at ${skelRaw} — skipping mse\n`);
   } else if (existsSync(mscPath)) {
-    process.stderr.write(
-      `  found existing MSC at ${mscPath} — resuming mse with -loadMSC\n`,
-    );
+    process.stderr.write(`  found existing MSC at ${mscPath} — resuming mse with -loadMSC\n`);
     const mseResult = spawnSync(
       'mse',
       [
@@ -506,9 +813,7 @@ function runDisperse(ndnetPath: string, cut: number, smooth: number): string {
   const smoothTag = String(smooth).padStart(3, '0');
   const asciiPath = `${skelRaw}.S${smoothTag}.TRIM.a.NDskl`;
   if (!existsSync(asciiPath)) {
-    throw new Error(
-      `skelconv exited 0 but expected output ${asciiPath} is missing`,
-    );
+    throw new Error(`skelconv exited 0 but expected output ${asciiPath} is missing`);
   }
   return asciiPath;
 }
@@ -519,11 +824,22 @@ async function main(): Promise<void> {
 
   checkDisperse();
 
-  const { count, positions } = readMergedPositions();
-  process.stderr.write(`  merged ${count.toLocaleString()} galaxy positions\n`);
+  const tagged = readMergedPositions();
+  process.stderr.write(`  merged ${tagged.count.toLocaleString()} galaxy positions\n`);
+
+  // Build-time Malmquist V_max correction: amplify intrinsically-faint
+  // galaxies (small d_max → large weight) by emitting weight-many
+  // jittered copies into the TSV.  This makes the density field
+  // DisPerSE sees approximately volume-limited rather than flux-
+  // limited, killing the radial-stripe artifacts caused by the survey
+  // selection function dropping galaxies past their detection horizon.
+  // See `applyMalmquistDuplication` for the per-galaxy formula and
+  // the parameter rationale at the top of this file.
+  const weightedPositions = applyMalmquistDuplication(tagged);
+  const weightedCount = weightedPositions.length / 3;
 
   const tsvPath = resolve('data/raw/galaxies_merged.tsv');
-  writeTsvInput(tsvPath, positions, count);
+  writeTsvInput(tsvPath, weightedPositions, weightedCount);
   process.stderr.write(`  wrote ${tsvPath}\n`);
 
   // Three-stage DisPerSE pipeline: build the Delaunay tessellation +
@@ -545,9 +861,7 @@ async function main(): Promise<void> {
   const outPath = resolve('public/data/filaments.bin');
   const buf = encodeFilaments(cloud);
   writeFileSync(outPath, Buffer.from(buf));
-  process.stderr.write(
-    `wrote filaments.bin (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB)\n`,
-  );
+  process.stderr.write(`wrote filaments.bin (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB)\n`);
 }
 
 // Only run when this file is invoked directly (e.g. via `tsx`).  This
@@ -556,9 +870,7 @@ async function main(): Promise<void> {
 const invokedDirectly = process.argv[1] === fileURLToPath(import.meta.url);
 if (invokedDirectly) {
   main().catch((err) => {
-    process.stderr.write(
-      `error: ${(err as Error).stack ?? (err as Error).message}\n`,
-    );
+    process.stderr.write(`error: ${(err as Error).stack ?? (err as Error).message}\n`);
     process.exit(1);
   });
 }
