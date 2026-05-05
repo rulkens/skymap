@@ -1,0 +1,195 @@
+/*
+ * InfoTip.module.css — styling for the inline hover-tooltip atom.
+ *
+ * Visual vocabulary borrows directly from the InfoCard family
+ * (`--surface-card-strong`, `--blur-card`, `--border-card`, …) so a
+ * tip popping out of a card reads as the same surface, not a
+ * separate UI layer.
+ *
+ * ── Show/hide model ───────────────────────────────────────────────
+ *
+ * The `:hover`/`:focus-within` selectors on `.wrapper` flip the tip
+ * between hidden (`display: none`, `opacity: 0`) and visible.  The
+ * trick that makes the fade work despite `display: none` is the
+ * combination of:
+ *
+ *   1. `@starting-style` — defines what the *first* frame looks like
+ *      when the element transitions from non-rendered to rendered.
+ *   2. `transition-behavior: allow-discrete` — opts the discrete
+ *      `display` property into the transition so the browser keeps
+ *      the element in the layout for the whole fade duration before
+ *      popping it back to `display: none`.
+ *
+ * Both are Baseline since mid-2024 (Chrome 117+, Firefox 129+,
+ * Safari 17.5+) so the project doesn't need a JS fallback.
+ *
+ * ── Positioning model ─────────────────────────────────────────────
+ *
+ * The tip uses CSS anchor positioning.  The trigger element gets a
+ * per-instance `anchor-name` (set inline by InfoTip.tsx) and the tip
+ * resolves it via `position-anchor`.  `position-area: top span-all`
+ * places the panel above the trigger, centered on the trigger's
+ * inline axis.  `position-try-fallbacks: flip-block, flip-inline`
+ * tells the browser to flip below the trigger if there's no room
+ * above, and to flip horizontally if the panel would overflow the
+ * viewport's left or right edge.  Native, no JS observers.
+ *
+ * For browsers that predate anchor positioning (Safari 18.1 and
+ * earlier as of writing), the `@supports not` block falls back to
+ * `position: absolute; bottom: 100%; left: 50%` — the tip still
+ * shows, just won't auto-flip at viewport edges.
+ */
+
+.wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/*
+ * The trigger wears a dotted underline so users learn that hovering
+ * "the underlined value" reveals more info.  Dotted (rather than
+ * solid) is the long-standing browser convention for `<abbr>` and
+ * `[title]` — a subtle "there's a definition here" cue that doesn't
+ * fight the reading rhythm of dense numeric rows.
+ */
+.trigger {
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+  /*
+   * `text-underline-offset` on the dotted bottom-border isn't a thing,
+   * but a tiny amount of vertical breathing room visually approximates
+   * the same effect — the dotted line sits just below the text rather
+   * than touching it.
+   */
+  padding-bottom: 1px;
+  /*
+   * Outline only on focus, not hover — hover already has the visual
+   * underline, and a focus ring during pointer interaction would be
+   * noise.  `:focus-visible` matches keyboard-driven focus, leaving
+   * mouse-click focus unstyled.
+   */
+  outline: none;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--color-accent, #6aa2ff);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.tip {
+  /*
+   * Pre-anchor-positioning fallback geometry.  Modern browsers will
+   * override these via the @supports block below.
+   */
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+
+  /* Box shape and surface */
+  display: none;
+  z-index: 100;
+  width: max-content;
+  max-width: 320px;
+  padding: 10px 12px;
+
+  background: var(--surface-card-strong);
+  backdrop-filter: blur(var(--blur-card));
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-card);
+
+  color: var(--color-fg-base);
+  font: var(--font-size-sm) / var(--line-height-relaxed) var(--font-family-mono);
+
+  /* Wait until visible to enable pointer events; stops the tip from
+     stealing hover from the underlying canvas while it's hidden. */
+  pointer-events: none;
+
+  /* Fade-in/out transitions.  See module header for the @starting-style
+     + allow-discrete machinery. */
+  opacity: 0;
+  scale: 0.96;
+  transition:
+    opacity 140ms ease,
+    scale 140ms ease,
+    display 140ms allow-discrete;
+}
+
+.wrapper:hover .tip,
+.wrapper:focus-within .tip {
+  display: block;
+  opacity: 1;
+  scale: 1;
+  pointer-events: auto;
+
+  /*
+   * @starting-style supplies the "frame zero" snapshot the browser
+   * uses to know what to transition *from* on the very first paint of
+   * the now-visible element.  Without this block, the tip would just
+   * appear at full opacity with no fade.
+   */
+  @starting-style {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+/* Modern anchor positioning for browsers that support it. */
+@supports (anchor-name: --x) {
+  .tip {
+    /* Reset the fallback inset/transform; anchor positioning takes over. */
+    bottom: auto;
+    left: auto;
+    transform: none;
+    margin-bottom: 8px;
+
+    /*
+     * `position-area: top span-all` places the tip above the trigger,
+     * stretching across the full inline axis (centered on the
+     * trigger's inline midpoint).  `position-try-fallbacks: flip-
+     * block, flip-inline` tells the browser to flip the placement
+     * if the chosen position would overflow the viewport edge.
+     */
+    position-area: top span-all;
+    position-try-fallbacks: flip-block, flip-inline;
+  }
+}
+
+.tipTitle {
+  display: block;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  /*
+   * Subtle separator between title and body.  Margin-bottom rather
+   * than border-bottom keeps the divider colour the same as the body
+   * text, which feels more refined than a hard rule.
+   */
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-card);
+  color: var(--color-fg-strong, currentColor);
+}
+
+.tipBody {
+  display: block;
+  color: var(--color-fg-muted, currentColor);
+  opacity: 0.92;
+}
+
+/* Reduced-motion accessibility — skip the fade for users who request it. */
+@media (prefers-reduced-motion: reduce) {
+  .tip {
+    transition-duration: 0ms;
+    scale: 1;
+  }
+  .wrapper:hover .tip,
+  .wrapper:focus-within .tip {
+    @starting-style {
+      opacity: 1;
+      scale: 1;
+    }
+  }
+}
