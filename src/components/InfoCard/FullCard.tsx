@@ -27,6 +27,8 @@ import type { PointInfo } from '../../@types';
 import { Source } from '../../data/sources';
 import { formatDistance, formatDiameterKpc } from '../../utils/format/distance';
 import { Thumbnail } from './Thumbnail';
+import { InfoTip } from '../InfoTip/InfoTip';
+import { TIPS } from './tooltips';
 import styles from './FullCard.module.css';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -58,8 +60,12 @@ export type FullCardProps = {
 
 /** Props for a single label/value row. */
 type CardRowProps = {
-  /** The field label (left side). */
-  label: string;
+  /**
+   * The field label (left side).  Accepts plain strings for simple
+   * rows and JSX so callers can wrap the label in an InfoTip without
+   * sprouting a parallel CardRow component.
+   */
+  label: ReactNode;
   /** The field value — plain string or JSX with inline elements (°, units, etc.). */
   value: ReactNode;
 };
@@ -285,12 +291,18 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
         <div className={styles.cardSummary}>
           {/* Friendly lookback line — the most memorable single fact about this galaxy. */}
           <div className={styles.cardLookbackLine}>
-            Light left {info.lookbackGyr.toFixed(1)} Gyr ago
+            <InfoTip {...TIPS.lookback!}>Light left</InfoTip>{' '}
+            {info.lookbackGyr.toFixed(1)} Gyr ago
           </div>
-          <div className={styles.cardLookbackEra}>— {info.earthEra}</div>
+          <div className={styles.cardLookbackEra}>
+            — <InfoTip {...TIPS.earthEra!}>{info.earthEra}</InfoTip>
+          </div>
           <div className={styles.cardDistLine}>
-            {formatDistance(info.distanceMpc)} &middot;{' '}
-            {Math.round(info.hubbleVelocityKmS).toLocaleString()} km/s away
+            <InfoTip {...TIPS.distance!}>{formatDistance(info.distanceMpc)}</InfoTip>{' '}
+            &middot;{' '}
+            <InfoTip {...TIPS.hubbleVelocity!}>
+              {Math.round(info.hubbleVelocityKmS).toLocaleString()} km/s away
+            </InfoTip>
           </div>
           <div className={styles.cardTypeLine}>{info.galaxyType.description}</div>
         </div>
@@ -299,7 +311,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
       {/* ── Coordinate rows ───────────────────────────────────────────────── */}
       <div className={styles.cardSection}>
         <CardRow
-          label="RA"
+          label={<InfoTip {...TIPS.ra!}>RA</InfoTip>}
           value={
             <>
               {info.raSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{info.ra.toFixed(4)}&deg;
@@ -307,14 +319,17 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
           }
         />
         <CardRow
-          label="Dec"
+          label={<InfoTip {...TIPS.dec!}>Dec</InfoTip>}
           value={
             <>
               {info.decSexagesimal}&nbsp;&nbsp;/&nbsp;&nbsp;{info.dec.toFixed(4)}&deg;
             </>
           }
         />
-        <CardRow label="Redshift z" value={info.redshift.toFixed(4)} />
+        <CardRow
+          label={<InfoTip {...TIPS.redshift!}>Redshift z</InfoTip>}
+          value={info.redshift.toFixed(4)}
+        />
         {/*
           The g-slot label is source-aware: SDSS reports actual g-band, but
           2MRS puts J in this slot and GLADE puts B in this slot.  Showing the
@@ -322,7 +337,9 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
           galaxies where "(g)" would have been a quiet lie.
         */}
         <CardRow
-          label={`Apparent mag (${info.bands.g})`}
+          label={
+            <InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>
+          }
           value={Number.isNaN(info.magG) ? 'N/A' : info.magG.toFixed(2)}
         />
       </div>
@@ -351,7 +368,9 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
             g-slot, so the label has to follow.
           */}
           <CardRow
-            label={`Absolute mag (${info.bands.g})`}
+            label={
+              <InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${info.bands.g})`}</InfoTip>
+            }
             value={Number.isNaN(info.absoluteMagG) ? 'N/A' : info.absoluteMagG.toFixed(2)}
           />
           {/*
@@ -366,7 +385,9 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
           */}
           {info.colours.length > 0 && (
             <div className={styles.cardRow}>
-              <span className={styles.cardLabel}>Colour</span>
+              <span className={styles.cardLabel}>
+                <InfoTip {...TIPS.colour!}>Colour</InfoTip>
+              </span>
               <span className={styles.cardValue}>
                 {info.colours.map((c, idx) => (
                   <span key={c.label}>
@@ -389,7 +410,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
             (e.g. after running `npm run fetch-2mass-xsc`) can pop it open.
           */}
           <CardRow
-            label="Orientation"
+            label={<InfoTip {...TIPS.orientation!}>Orientation</InfoTip>}
             value={
               <>
                 b/a&nbsp;{info.orientation.axisRatio.toFixed(2)}
@@ -411,7 +432,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
             of similar magnitude render at very different on-screen sizes.
           */}
           <CardRow
-            label="Diameter"
+            label={<InfoTip {...TIPS.diameter!}>Diameter</InfoTip>}
             value={
               <>
                 {formatDiameterKpc(info.diameterKpc)}
