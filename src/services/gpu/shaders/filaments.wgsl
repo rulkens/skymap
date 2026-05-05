@@ -33,6 +33,17 @@ struct Uniforms {
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
 
+// Per-cloud fade-in (CloudFade — see src/services/gpu/cloudFade.ts).  One
+// f32 opacity, written each frame from the JS side; multiplied into the
+// fragment alpha so a freshly-uploaded skeleton glides in over ~600 ms.
+struct CloudUniforms {
+  opacity : f32,
+  _pad0 : f32,
+  _pad1 : f32,
+  _pad2 : f32,
+};
+@group(1) @binding(0) var<uniform> cloud : CloudUniforms;
+
 struct PerVertex {
   @location(0) uv : vec2<f32>,           // (0..1, 0..1) — quad-corner UV
   @location(1) startPos : vec3<f32>,     // segment start in world Mpc
@@ -136,6 +147,6 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
   let hotTint  = vec3<f32>(0.85, 0.75, 1.0);  // bright, near-white-violet spine
   let tint = mix(baseTint, hotTint, in.density);
 
-  let alpha = edgeFade * 0.6 * densityBoost * u.intensityScale;
+  let alpha = edgeFade * 0.6 * densityBoost * u.intensityScale * cloud.opacity;
   return vec4<f32>(tint * alpha, alpha);  // pre-multiplied alpha
 }
