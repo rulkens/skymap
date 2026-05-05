@@ -308,6 +308,11 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
     records.push({
       source: Source.TwoMRS,
       objID: 0n,
+      // Retain the 2MASS XSC designation transiently so the build
+      // pipeline's PGC cross-match can patch a HyperLEDA PGC into the
+      // objID slot above.  See ParsedRecord.massId for the full
+      // motivation; this field is dropped before the cloud is encoded.
+      massId,
       ra,
       dec,
       z: cz / C_KM_S,

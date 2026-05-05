@@ -78,26 +78,6 @@ function iauCoordPart(raDeg: number, decDeg: number): string {
 }
 
 /**
- * Compact-form 2MASX designation, suitable for NED's `byname` lookup.
- *
- * NED's name resolver accepts the 2MASX prefix only in the *compact*
- * coordinate form — the same digits as the IAU long form but with the
- * decimal points stripped from both the RA seconds and the Dec seconds
- * fields.  Long form (`2MASX J012606.73-132512.2`) returns "object not
- * recognised"; compact form (`2MASX J01260673-1325122`) resolves to the
- * canonical NED page.
- *
- * We keep the long form for display purposes (it matches the IAU
- * recommendation and parses more easily for humans) and use this
- * compact form only when constructing the byname URL for 2MRS rows.
- *
- * Verified empirically against NED's resolver in 2026.
- */
-export function iauName2MasxCompact(raDeg: number, decDeg: number): string {
-  return `2MASX ${iauCoordPart(raDeg, decDeg).replace(/\./g, '')}`;
-}
-
-/**
  * Survey-aware IAU designation.  Returns "<prefix> J<RA><Dec>" where the
  * prefix matches the source's canonical short name.
  */

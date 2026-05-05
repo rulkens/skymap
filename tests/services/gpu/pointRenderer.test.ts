@@ -150,37 +150,43 @@ describe('PointRenderer.totalCount', () => {
 });
 
 describe('PointRenderer.loadedSources', () => {
-  it('iterates clouds in `Source` enum order with correct instanceIdOffsets', async () => {
+  it('iterates clouds in `ALL_SOURCES` order with correct instanceIdOffsets', async () => {
     const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
-    // Upload in non-enum order on purpose — the renderer must re-sort.
-    await renderer.upload(Source.TwoMRS, makeCloud(50)); // enum value 2
-    await renderer.upload(Source.SDSS, makeCloud(100)); // enum value 1
+    // Upload in non-iteration order on purpose — the renderer must re-sort.
+    // ALL_SOURCES is ordered smallest-catalogue → largest:
+    //   [Synthetic, Famous, TwoMRS, SDSS, Glade]
+    // so TwoMRS comes before SDSS.
+    await renderer.upload(Source.SDSS, makeCloud(100));
+    await renderer.upload(Source.TwoMRS, makeCloud(50));
 
     const entries = Array.from(renderer.loadedSources());
 
-    // SDSS (enum=1) comes before TwoMRS (enum=2) regardless of upload order.
-    expect(entries.map((e) => e.source)).toEqual([Source.SDSS, Source.TwoMRS]);
+    // TwoMRS comes before SDSS regardless of upload order, because the
+    // renderer recomputes offsets via `ALL_SOURCES` iteration.
+    expect(entries.map((e) => e.source)).toEqual([Source.TwoMRS, Source.SDSS]);
 
-    // Offsets are running sums in enum order: SDSS at 0, TwoMRS after SDSS's 100.
+    // Offsets are running sums in ALL_SOURCES order: TwoMRS at 0, SDSS
+    // after TwoMRS's 50.
     expect(entries[0]!.instanceIdOffset).toBe(0);
-    expect(entries[0]!.count).toBe(100);
-    expect(entries[1]!.instanceIdOffset).toBe(100);
-    expect(entries[1]!.count).toBe(50);
+    expect(entries[0]!.count).toBe(50);
+    expect(entries[1]!.instanceIdOffset).toBe(50);
+    expect(entries[1]!.count).toBe(100);
   });
 
   it('recomputes instanceIdOffset after unload', async () => {
     const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
-    await renderer.upload(Source.SDSS, makeCloud(100));
+    // ALL_SOURCES order is [Synthetic, Famous, TwoMRS, SDSS, Glade]
     await renderer.upload(Source.TwoMRS, makeCloud(50));
+    await renderer.upload(Source.SDSS, makeCloud(100));
     await renderer.upload(Source.Glade, makeCloud(25));
 
-    renderer.unload(Source.SDSS);
+    renderer.unload(Source.TwoMRS);
 
     const entries = Array.from(renderer.loadedSources());
-    expect(entries.map((e) => e.source)).toEqual([Source.TwoMRS, Source.Glade]);
-    // With SDSS gone, TwoMRS is now first (offset 0) and Glade follows at 50.
+    expect(entries.map((e) => e.source)).toEqual([Source.SDSS, Source.Glade]);
+    // With TwoMRS gone, SDSS is now first (offset 0) and Glade follows at 100.
     expect(entries[0]!.instanceIdOffset).toBe(0);
-    expect(entries[1]!.instanceIdOffset).toBe(50);
+    expect(entries[1]!.instanceIdOffset).toBe(100);
   });
 });
 

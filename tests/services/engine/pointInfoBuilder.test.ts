@@ -254,18 +254,13 @@ describe('buildPointInfo — TwoMRS source', () => {
     expect(info.sourceLabel).toBe('2MRS');
     expect(info.iauName.startsWith('2MASX J')).toBe(true);
 
-    // 2MRS rows link to NED via the runtime-formatted 2MASX designation
-    // in COMPACT form (no decimal points).  NED's resolver only accepts
-    // the compact form for the 2MASX prefix.
+    // 2MRS rows resolve via NED's near-position search rather than a
+    // 2MASX byname lookup — NED's name index has coverage gaps for
+    // 2MASX even when the underlying object is present in NED under a
+    // different catalogue name.  See pointInfoBuilder.ts for why.
     expect(info.catalogUrl).not.toBeNull();
-    expect(info.catalogUrl).toContain('ned.ipac.caltech.edu/byname');
-    expect(info.catalogUrl).toContain('2MASX');
-    // The compact form has digits-only after `J` up to the sign in Dec.
-    // Asserting the URL doesn't contain `.` between J and the sign rules
-    // out a regression to the long form (which NED rejects).
-    const match = info.catalogUrl!.match(/2MASX\+J([^+\-]*)/);
-    expect(match).not.toBeNull();
-    expect(match![1]).not.toContain('.');
+    expect(info.catalogUrl).toContain('ned.ipac.caltech.edu');
+    expect(info.catalogUrl).toContain('Near+Position+Search');
 
     // Thumbnail comes from the CDS hips2fits DSS proxy, not SDSS ImgCutout.
     expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
@@ -280,6 +275,31 @@ describe('buildPointInfo — TwoMRS source', () => {
     // Orientation provenance for non-fallback values resolves to the
     // 2MRS-specific tag.
     expect(info.orientation.provenance).toBe('2MASS XSC sup_phi');
+  });
+
+  it('uses `PGC <n>` as displayName when the row has a real PGC', () => {
+    // The build-time GLADE→2MRS cross-match populates objID with the
+    // matching PGC for ~30 % of 2MRS rows.  When present, the headline
+    // should prefer `PGC <n>` over the coord-based 2MASX designation
+    // because PGC numbers are NED-indexed and shorter to read.
+    const cloud = makeCloud(1);
+    cloud.objIDs[0] = 2789n; // NGC 253's PGC
+    setPosition(cloud, 0, 50, 50, 0);
+    const info = buildPointInfo(cloud, 0, Source.TwoMRS);
+    expect(info.displayName).toBe('PGC 2789');
+    // The IAU name still comes through unchanged for callers that need
+    // the coord-based form (it's not the headline anymore but other
+    // code paths may consume it).
+    expect(info.iauName.startsWith('2MASX J')).toBe(true);
+  });
+
+  it('falls back to iauName as displayName when objID is 0n (no cross-match)', () => {
+    const cloud = makeCloud(1);
+    cloud.objIDs[0] = 0n;
+    setPosition(cloud, 0, 50, 50, 0);
+    const info = buildPointInfo(cloud, 0, Source.TwoMRS);
+    expect(info.displayName).toBe(info.iauName);
+    expect(info.displayName.startsWith('2MASX J')).toBe(true);
   });
 });
 

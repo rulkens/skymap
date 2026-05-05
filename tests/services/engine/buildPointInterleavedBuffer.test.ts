@@ -227,15 +227,17 @@ describe('computePriorCount', () => {
     expect(computePriorCount(Source.SDSS, counts)).toBe(0);
   });
 
-  it('sums earlier-enum-order sources only', () => {
-    // ALL_SOURCES is [Synthetic, SDSS, TwoMRS, Glade, Famous].
-    // For TwoMRS (enum=2), priorCount should include Synthetic + SDSS.
+  it('sums earlier-iteration-order sources only', () => {
+    // ALL_SOURCES is [Synthetic, Famous, TwoMRS, SDSS, Glade] (ordered
+    // by catalogue size — see data/sources.ts).  For SDSS (position 3),
+    // priorCount should include Synthetic + Famous + TwoMRS.
     const counts = new Map<Source, number>([
       [Source.Synthetic, 10],
-      [Source.SDSS, 100],
-      [Source.TwoMRS, 50], // ignored — same source
-      [Source.Glade, 25], // ignored — later in enum order
+      [Source.Famous, 5],
+      [Source.TwoMRS, 50],
+      [Source.SDSS, 100], // ignored — same source
+      [Source.Glade, 25], // ignored — later in iteration order
     ]);
-    expect(computePriorCount(Source.TwoMRS, counts)).toBe(110);
+    expect(computePriorCount(Source.SDSS, counts)).toBe(65);
   });
 });

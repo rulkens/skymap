@@ -123,6 +123,23 @@ export type ParsedRecord = {
    * fields handle the same kind of "real or fallback" distinction.
    */
   diameterKpc: number | null;
+  /**
+   * 2MASS XSC designation, e.g. `00473313-2517196` (16 chars, no `2MASX J`
+   * prefix — both 2MRS and GLADE spell it the same way at this layer).
+   *
+   * Populated only by the 2MRS parser today.  The build pipeline uses it
+   * to join against a `2MASX → PGC` map harvested from GLADE's source
+   * rows, so 2MRS records that lack a native PGC can still be routed
+   * through NED's `?objname=PGC+<n>` direct-hit URL instead of a fuzzy
+   * near-position search.
+   *
+   * Marked optional + transient: it's not part of the runtime
+   * `PointCloud` binary format, and parsers that have no use for it
+   * (SDSS, GLADE) simply don't set the field.  The build pipeline reads
+   * it once during the 2MRS post-processing pass, then drops it on the
+   * floor when it materialises records into the SoA cloud.
+   */
+  massId?: string;
 };
 
 /**

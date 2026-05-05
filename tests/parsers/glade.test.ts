@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
-import { parseGlade, parseHyperLedaCsv, parseGladeLine } from '../../tools/parsers/glade';
+import {
+  parseGlade,
+  parseHyperLedaCsv,
+  parseGladeLine,
+  parseGlade2masxPgcLine,
+} from '../../tools/parsers/glade';
 import { Source } from '../../src/data/sources';
 
 /**
@@ -236,6 +241,48 @@ function makeFixture(opts: {
   buf = buf.slice(0, 253) + '1' + buf.slice(254);
   return buf;
 }
+
+describe('parseGlade2masxPgcLine', () => {
+  // The build pipeline (tools/buildAllBins.ts) runs this extractor in
+  // parallel with parseGladeLine over every GLADE row, then uses the
+  // resulting 2MASX→PGC map to patch PGCs into 2MRS records' objID
+  // slot.  These tests pin both the byte offsets and the sentinel
+  // handling so a future edit to either side stays caught at unit-
+  // test time rather than silently dropping cross-match coverage in
+  // production.
+
+  it('extracts (2MASX, PGC) when both fields are populated', () => {
+    // Row 0 of SAMPLE is NGC 253: PGC = 2789, 2MASX name =
+    // `00473313-2517196` (verified against the catalog ReadMe).
+    // Pinning the literal string here also guards against an
+    // accidental ±1 byte shift in the slice range.
+    const line = SAMPLE.split('\n')[0]!;
+    const result = parseGlade2masxPgcLine(line);
+    expect(result).not.toBeNull();
+    expect(result!.pgc).toBe(2789n);
+    expect(result!.massId).toBe('00473313-2517196');
+  });
+
+  it('returns null when PGC is the sentinel `---`', () => {
+    // Row 2 of SAMPLE is the no-name source: PGC = `---`, 2MASX is
+    // populated.  Even with a real 2MASX name, a sentinel PGC means
+    // we have no useful pair to emit — the cross-match would set
+    // objID = 0n, the same value 2MRS already has.
+    const line = SAMPLE.split('\n')[2]!;
+    expect(parseGlade2masxPgcLine(line)).toBeNull();
+  });
+
+  it('returns null when 2MASX name is the sentinel `---`', () => {
+    // Construct a line where PGC is real (NGC 253's 2789) but the
+    // 2MASX name slot is overwritten with 16 dashes.  Both halves of
+    // the pair must be valid — without a 2MASX name there's nothing
+    // for the 2MRS-side lookup to key off, so the row contributes
+    // nothing to the map and we return null.
+    const base = SAMPLE.split('\n')[0]!;
+    const dashed = base.slice(0, 67) + '----------------' + base.slice(83);
+    expect(parseGlade2masxPgcLine(dashed)).toBeNull();
+  });
+});
 
 describe('GLADE isotropic filter', () => {
   it('drops a row whose only parent is SDSS-DR12', () => {

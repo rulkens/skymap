@@ -132,7 +132,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
             type="button"
             className={styles.focusButton}
             onClick={() => onFocus(info)}
-            aria-label={`Focus camera on ${info.iauName}`}
+            aria-label={`Focus camera on ${info.displayName}`}
           >
             Focus
           </button>
@@ -158,12 +158,12 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
 
       {/* ── Headline ──────────────────────────────────────────────────────── */}
       {/*
-        Famous-atlas rows show their primary curated name as the headline
-        (e.g. "M31") instead of the coordinate-derived IAU designation.
-        Survey rows fall back to `info.iauName` so SDSS galaxies still
-        display their `SDSS J123456.78+012345.6`-style label.
+        `info.displayName` carries the priority-resolved best human-readable
+        name for the row: curated primary name for Famous, `PGC <n>` for
+        2MRS rows with a real PGC, IAU coord designation otherwise.  See
+        `pointInfoBuilder.ts` for the ladder.
       */}
-      <div className={styles.cardHeadline}>{info.famous ? info.famous.names[0] : info.iauName}</div>
+      <div className={styles.cardHeadline}>{info.displayName}</div>
 
       {/* ── Source attribution badge ──────────────────────────────────────── */}
       <div className={styles.sourceBadge}>{info.sourceLabel}</div>

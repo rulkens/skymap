@@ -26,7 +26,6 @@ import {
   formatRaSexagesimal,
   formatDecSexagesimal,
   iauName,
-  iauName2MasxCompact,
   lookbackTimeGyr,
   hubbleVelocityKmS,
   absoluteMagnitude,
@@ -222,11 +221,17 @@ export function buildPointInfo(
   if (isSdss && objID > 0n) {
     catalogUrl = sdssExplorerUrl(objID);
   } else if (source === Source.TwoMRS) {
-    // 2MRS rows resolve on NED via the compact 2MASX designation
-    // (no decimal points in the seconds fields).  See
-    // `iauName2MasxCompact` for why the display iauName uses a different
-    // format and we need a dedicated builder here.
-    catalogUrl = nedByNameUrl(iauName2MasxCompact(ra, dec));
+    // 2MRS rows are routed through NED's near-position search rather
+    // than a 2MASX byname lookup.  Reason: NED's name index has
+    // coverage gaps for the 2MASX prefix — verified empirically against
+    // NED's `srs/ObjectLookup` JSON endpoint, where many real 2MRS
+    // rows return `ResultCode: 2 — Unknown name` even though the
+    // underlying object is present in NED under a different catalogue
+    // name (PGC, MCG, IRAS, …).  A position search finds the object
+    // regardless of which name NED indexes it under; the one-extra-
+    // click on the results page is preferable to a "not recognized"
+    // dead-end.
+    catalogUrl = nedNearPositionUrl(ra, dec);
   } else if (source === Source.Glade) {
     catalogUrl = objID > 0n ? nedByNameUrl(`PGC ${objID}`) : nedNearPositionUrl(ra, dec);
   } else if (source === Source.Famous && famousMeta && famousMeta[idx]) {
@@ -359,6 +364,24 @@ export function buildPointInfo(
     absoluteMagG: absoluteMagnitude(magG, distanceMpc),
     galaxyType: galaxyType(source, { magU, magG, magR, magI, magZ }),
     iauName: iauName(source, ra, dec),
+
+    // Best human-readable headline for this row.  Priority ladder:
+    //   1. Famous → curated primary name (set in the famous block above)
+    //   2. Survey row with a real PGC in objID → `PGC <n>`.  Applies
+    //      to BOTH 2MRS (PGC populated by the build-time GLADE→2MRS
+    //      cross-match) and GLADE (PGC inherited directly from the
+    //      source line).  PGC is widely indexed by NED / SIMBAD,
+    //      shorter than a coord-based name, and especially valuable
+    //      for GLADE rows where the iauName ("GLADE J…") is a
+    //      synthetic prefix we generate ourselves and isn't a real
+    //      catalogue identifier anywhere.
+    //   3. Otherwise → IAU coord-based name (`SDSS J…`, `2MASX J…`,
+    //      `GLADE J…`).
+    displayName:
+      famous?.names[0] ??
+      ((source === Source.TwoMRS || source === Source.Glade) && cloud.objIDs[idx]! > 0n
+        ? `PGC ${cloud.objIDs[idx]!}`
+        : iauName(source, ra, dec)),
 
     // Per-slot band names + pre-computed adjacent-slot colour pairs.
     bands,

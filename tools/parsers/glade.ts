@@ -416,6 +416,67 @@ export function parseGladeLine(
 }
 
 /**
+ * Extract just the (2MASX-name → PGC-number) pair from a single GLADE line,
+ * or null when either field is unset.
+ *
+ * Used by the build pipeline to cross-pollinate PGC numbers into 2MRS
+ * records: 2MRS itself has no PGC column, so its records carry
+ * `objID = 0n` and the InfoCard's NED link falls back to a near-position
+ * search (which can land on the wrong row in dense fields).  GLADE was
+ * designed to ingest 2MASS XSC + HyperLEDA, so its source rows already
+ * carry both the matching 2MASX-name and the canonical PGC; this
+ * extractor harvests that pair so the buildAllBins streaming loop can
+ * patch PGCs into 2MRS records via a single in-memory map lookup keyed
+ * by the 16-char 2MASX designation (which both catalogs spell
+ * identically — see the build pipeline's twoMrs.massId join).
+ *
+ * Why a parallel single-purpose extractor rather than refactoring
+ * parseGladeLine to return (record, pair)?  Two reasons:
+ *
+ *   1. Symmetry of skip rules.  parseGladeLine drops rows on Flag1!='G'
+ *      and Flag2='0', but those rules are about whether the row is
+ *      *renderable* — not whether its 2MASX→PGC mapping is valid.  A
+ *      GLADE quasar (Flag1='Q') or a no-distance row (Flag2='0') still
+ *      carries a perfectly good PGC and 2MASX name pair if those columns
+ *      are populated, and a 2MRS row that happens to share the 2MASX
+ *      name (different object class on the upstream side, same XSC
+ *      cross-ID) can legitimately benefit from the link.  Filtering
+ *      those rows out of the map would silently drop coverage.
+ *
+ *   2. Single-responsibility.  Each extractor stays small and obviously
+ *      correct in isolation; the streaming loop calls both per row and
+ *      gets independent yes/no answers for "include this row in records"
+ *      and "include this mapping in the map".
+ *
+ * Returning a structurally-tiny tuple-like object keeps allocations
+ * minimal during the streaming parse of GLADE's ~2.4 M rows.  We use
+ * BigInt for the PGC because the rest of the pipeline carries `objID`
+ * as `bigint` end-to-end — converting at the parser boundary keeps the
+ * downstream patch-into-2MRS loop fully bigint-typed without coercion.
+ */
+export function parseGlade2masxPgcLine(line: string): { massId: string; pgc: bigint } | null {
+  if (line.length < MIN_LINE_LEN) return null;
+
+  // PGC: bytes 1-7 (1-based inclusive) → slice(0, 7).  Sentinel rules
+  // mirror parseGladeLine's pgcKey logic exactly: empty cell, any run
+  // of dashes, or the literal `0` (GLADE uses 0 to mean "no PGC", same
+  // as SDSS uses 0 for objID) all collapse to "no PGC available".
+  const pgcRaw = line.slice(0, 7).trim();
+  if (pgcRaw === '' || /^-+$/.test(pgcRaw) || pgcRaw === '0') return null;
+
+  // 2MASX name: bytes 68-83 (1-based inclusive) → slice(67, 83).  Per
+  // the VII/281 ReadMe (`68- 83  A16   ---     2MASS`).  GLADE marks
+  // unset name fields with a run of dashes (`---`) — same convention
+  // as every other ID column — so we apply the same dash-only filter
+  // as nameIsPopulated above.  We trim() before checking length so a
+  // field that's all spaces (no dashes, no name) also collapses to "".
+  const massId = line.slice(67, 83).trim();
+  if (massId === '' || /^-+$/.test(massId)) return null;
+
+  return { massId, pgc: BigInt(pgcRaw) };
+}
+
+/**
  * Parse a GLADE v2.3 catalog blob (`data/raw/glade2.3.dat`) into canonical
  * records. See the module docstring for byte layout, mapping rationale,
  * and skip rules.
