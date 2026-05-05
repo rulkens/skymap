@@ -40,6 +40,17 @@
  * doesn't briefly flash a misleading "0 fps" reading.  The engine never
  * reports 0 in practice, so this branch is purely about that startup window.
  *
+ * ### Collapse affordance
+ *
+ * The header is a clickable <button> that folds the body away — same chevron
+ * + uppercase title pattern as SettingsPanel's outer collapse and
+ * NavigationPanel.  State is persisted to `localStorage` under
+ * `skymap.stats.open` so a user's choice survives a reload (independent
+ * of the analogous keys for the SettingsPanel and NavigationPanel).
+ * Default OPEN so a first-time visitor sees the perf telemetry without
+ * having to discover it; once they know it's there they can fold it away
+ * to reclaim screen real estate.
+ *
  * ### Style duplication with SettingsPanel
  *
  * Same rationale as NavigationPanel — the glassmorphic look (background,
@@ -49,7 +60,7 @@
  * duplication wins on clarity.
  */
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ALL_SOURCES, Source, sourceLabel } from '../../data/sources';
 import styles from './StatsPanel.module.css';
 
@@ -85,6 +96,62 @@ export type StatsPanelProps = {
 };
 
 /**
+ * localStorage key for this panel's open/closed state.
+ *
+ * The `skymap.` prefix namespaces the key so it doesn't collide with anything
+ * else the page (or a future host page) might write.  The middle segment
+ * names the panel; the trailing `.open` is a per-feature suffix so the
+ * panel could grow other persisted bits (`.position`, `.something-else`)
+ * without rewriting existing keys.
+ */
+const STORAGE_KEY = 'skymap.stats.open';
+
+/**
+ * Read the persisted open/closed state.
+ *
+ * Mirrors `readSectionOpen` in `CollapsibleSection.tsx` but inlined here
+ * because the helper is short and there are only two consumers (this panel
+ * and NavigationPanel).  See CLAUDE.md guidance — < 30 lines = inline; only
+ * factor out when the third consumer arrives.
+ *
+ * Why each branch:
+ *   - `typeof window === 'undefined'`: SSR safety.  We don't server-render
+ *     today, but the guard keeps the function usable in an SSR context —
+ *     and prevents Vitest's node-env tests from crashing when no shim is
+ *     installed.
+ *   - try/catch around getItem: Safari private mode (and a few corporate
+ *     environments) throw on `localStorage` access.  We swallow the error
+ *     and fall back to `defaultOpen` rather than break the UI.
+ *   - `v === '1'`: persisted format is the smallest possible — a single
+ *     character.  Any unrecognised value falls through to false (closed),
+ *     which is the safer default for "I don't know what this means".
+ */
+function readPanelOpen(defaultOpen: boolean): boolean {
+  if (typeof window === 'undefined') return defaultOpen;
+  try {
+    const v = window.localStorage.getItem(STORAGE_KEY);
+    return v === null ? defaultOpen : v === '1';
+  } catch {
+    return defaultOpen;
+  }
+}
+
+/**
+ * Write the open/closed state.  Swallows errors silently — Safari private
+ * mode (and a few corporate environments) throw `QuotaExceededError` from
+ * `setItem` even when reading is allowed.  The panel still works; the
+ * choice just doesn't survive a reload.
+ */
+function writePanelOpen(open: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, open ? '1' : '0');
+  } catch {
+    // Intentionally empty — see docblock.
+  }
+}
+
+/**
  * Renders the stats panel.
  *
  * @example
@@ -106,54 +173,105 @@ export function StatsPanel({
   // logic is obvious in one place rather than scattered through the JSX.
   const fpsText = fps > 0 ? String(fps) : '—';
 
+  // Lazy initializer — read localStorage exactly once at mount, not on
+  // every re-render (this panel re-renders on every FPS sample, so the
+  // guard matters more here than in NavigationPanel).  Default OPEN so a
+  // first-time visitor sees the telemetry without discovering the
+  // affordance.
+  const [open, setOpen] = useState<boolean>(() => readPanelOpen(true));
+
+  // Persist on every change.  Splitting writes into an effect (rather
+  // than calling `writePanelOpen` inline in the click handler) means
+  // any external `setOpen` would also persist — robust to future
+  // refactors that toggle from elsewhere.
+  useEffect(() => {
+    writePanelOpen(open);
+  }, [open]);
+
   return (
-    <div className={styles.statsPanel}>
-      <div className={styles.panelTitle}>STATS</div>
-      <div className={styles.panelContent}>
-        <div className={styles.row}>
-          <span className={styles.label}>FPS</span>
-          <span className={styles.value}>{fpsText}</span>
-        </div>
-
+    <div className={styles.statsPanel} aria-label="Render statistics">
+      {/*
+        Title doubles as the click target for collapse/expand — same pattern
+        as SettingsPanel's outer collapse and NavigationPanel.  Using a real
+        <button> rather than a styled <div> gives us keyboard focus +
+        Enter/Space activation + `aria-expanded` for screen readers without
+        a custom onKeyDown.  The CSS strips default <button> chrome so the
+        row reads as a plain heading; only the cursor + focus ring announce
+        its interactivity.
+      */}
+      <button
+        type="button"
+        className={styles.panelTitleButton}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="stats-panel-body"
+      >
         {/*
-          Per-survey rows.  We iterate ALL_SOURCES (rather than
-          Object.keys(sourceCounts)) so the rendering order is stable —
-          relying on object-key order would mean rows shuffle as different
-          .bin files land at different times.  ALL_SOURCES is hard-ordered
-          in src/data/sources.ts.
-
-          We skip Source.Synthetic explicitly because its row would only
-          appear in the (rare) all-fetch-failed fallback, where surfacing
-          a "Synthetic · N" row would be more confusing than helpful — the
-          StatusBar already flags the synthetic-fallback condition.
+          Chevron sits LEFT of the heading like a tree-twirl / list-marker.
+          Two glyphs (▸ closed, ▾ open) instead of a CSS rotation because
+          the parent panel doesn't yet have rotation animation — keeping
+          the markup minimal and matching SettingsPanel's outer collapse.
         */}
-        {ALL_SOURCES.filter((s) => s !== Source.Synthetic).map((source) => {
-          const count = sourceCounts[source];
-          if (count === undefined) return null;
-          return (
-            <div className={styles.row} key={source}>
-              <span className={styles.label}>{sourceLabel(source)}</span>
-              <span className={styles.value}>{count.toLocaleString()}</span>
-            </div>
-          );
-        })}
+        <span className={styles.panelTitleChevron} aria-hidden>
+          {open ? '▾' : '▸'}
+        </span>
+        <span className={styles.panelTitle}>STATS</span>
+      </button>
 
-        {/*
-          Filament row — gated on BOTH the user-facing toggle AND the
-          presence of loaded counts.  Either being false hides the row.
-          See the module header for the "what's rendered" vs "what's
-          loaded" distinction.
-        */}
-        {filamentsEnabled && filamentCounts !== null && (
+      {/*
+        Body — conditionally rendered rather than CSS-hidden, matching
+        SettingsPanel's outer collapse.  The row count grows with loaded
+        surveys (up to ~5 rows), so removing the body when collapsed
+        avoids paying for the off-screen DOM tree.  The `id` lets
+        `aria-controls` on the title button point at a real element.
+      */}
+      {open && (
+        <div id="stats-panel-body" className={styles.panelContent}>
           <div className={styles.row}>
-            <span className={styles.label}>Filaments</span>
-            <span className={styles.value}>
-              {filamentCounts.stripCount.toLocaleString()} strips,{' '}
-              {filamentCounts.vertexCount.toLocaleString()} verts
-            </span>
+            <span className={styles.label}>FPS</span>
+            <span className={styles.value}>{fpsText}</span>
           </div>
-        )}
-      </div>
+
+          {/*
+            Per-survey rows.  We iterate ALL_SOURCES (rather than
+            Object.keys(sourceCounts)) so the rendering order is stable —
+            relying on object-key order would mean rows shuffle as different
+            .bin files land at different times.  ALL_SOURCES is hard-ordered
+            in src/data/sources.ts.
+
+            We skip Source.Synthetic explicitly because its row would only
+            appear in the (rare) all-fetch-failed fallback, where surfacing
+            a "Synthetic · N" row would be more confusing than helpful — the
+            StatusBar already flags the synthetic-fallback condition.
+          */}
+          {ALL_SOURCES.filter((s) => s !== Source.Synthetic).map((source) => {
+            const count = sourceCounts[source];
+            if (count === undefined) return null;
+            return (
+              <div className={styles.row} key={source}>
+                <span className={styles.label}>{sourceLabel(source)}</span>
+                <span className={styles.value}>{count.toLocaleString()}</span>
+              </div>
+            );
+          })}
+
+          {/*
+            Filament row — gated on BOTH the user-facing toggle AND the
+            presence of loaded counts.  Either being false hides the row.
+            See the module header for the "what's rendered" vs "what's
+            loaded" distinction.
+          */}
+          {filamentsEnabled && filamentCounts !== null && (
+            <div className={styles.row}>
+              <span className={styles.label}>Filaments</span>
+              <span className={styles.value}>
+                {filamentCounts.stripCount.toLocaleString()} strips,{' '}
+                {filamentCounts.vertexCount.toLocaleString()} verts
+              </span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

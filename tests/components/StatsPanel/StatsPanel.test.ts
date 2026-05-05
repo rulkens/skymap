@@ -10,8 +10,8 @@
  *
  * ### What we cover
  *
- * StatsPanel is a pure function of its props — no state, no effects.  We
- * exercise each branch:
+ * StatsPanel is a pure function of its props — no callbacks, only local UI
+ * state for the recently-added top-level collapse.  We exercise each branch:
  *
  *   1. fps=0 → renders the em-dash placeholder (engine hasn't reported yet)
  *   2. fps>0 → renders the integer
@@ -19,13 +19,54 @@
  *   4. filamentsEnabled=false + counts non-null → row HIDDEN
  *   5. filamentsEnabled=true + counts present → row visible, comma-formatted
  *   6. sourceCounts is empty → no per-source rows render
+ *   7. Default mount is OPEN (aria-expanded="true" + body content visible).
+ *   8. localStorage["skymap.stats.open"]="0" mounts closed.
+ *   9. localStorage["skymap.stats.open"]="1" mounts open.
  */
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StatsPanel } from '../../../src/components/StatsPanel/StatsPanel';
 import { Source } from '../../../src/data/sources';
+
+// ── Minimal localStorage shim ────────────────────────────────────────────────
+//
+// Same pattern used in tests/components/SettingsPanel/CollapsibleSection.test.ts
+// — Vitest's default `node` env has no `window` and no `localStorage`, so we
+// install a Map-backed stub for the duration of each test.
+
+type StorageShim = {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+  _store: Map<string, string>;
+};
+
+function makeStorageShim(): StorageShim {
+  const store = new Map<string, string>();
+  return {
+    _store: store,
+    getItem: (k) => (store.has(k) ? (store.get(k) as string) : null),
+    setItem: (k, v) => {
+      store.set(k, v);
+    },
+    removeItem: (k) => {
+      store.delete(k);
+    },
+  };
+}
+
+let storage: StorageShim;
+
+beforeEach(() => {
+  storage = makeStorageShim();
+  (globalThis as any).window = { localStorage: storage };
+});
+
+afterEach(() => {
+  delete (globalThis as any).window;
+});
 
 describe('StatsPanel', () => {
   it('renders the STATS header', () => {
@@ -137,5 +178,52 @@ describe('StatsPanel', () => {
     expect(html).toContain('27,410');
     expect(html).toContain('strips');
     expect(html).toContain('verts');
+  });
+
+  // ── Collapse affordance ────────────────────────────────────────────────────
+
+  it('mounts open by default (aria-expanded="true" + body visible)', () => {
+    const html = renderToStaticMarkup(
+      createElement(StatsPanel, {
+        fps: 60,
+        sourceCounts: { [Source.SDSS]: 220453 },
+        filamentsEnabled: false,
+        filamentCounts: null,
+      }),
+    );
+    expect(html).toContain('aria-expanded="true"');
+    // FPS row content present — load-bearing for "open".
+    expect(html).toContain('FPS');
+    expect(html).toContain('220,453');
+  });
+
+  it('mounts closed when localStorage["skymap.stats.open"] is "0"', () => {
+    storage.setItem('skymap.stats.open', '0');
+    const html = renderToStaticMarkup(
+      createElement(StatsPanel, {
+        fps: 60,
+        sourceCounts: { [Source.SDSS]: 220453 },
+        filamentsEnabled: false,
+        filamentCounts: null,
+      }),
+    );
+    expect(html).toContain('aria-expanded="false"');
+    // We use conditional rendering for the body, so when collapsed the
+    // FPS readout and per-source rows are absent from the markup.
+    expect(html).not.toContain('220,453');
+  });
+
+  it('mounts open when localStorage["skymap.stats.open"] is "1"', () => {
+    storage.setItem('skymap.stats.open', '1');
+    const html = renderToStaticMarkup(
+      createElement(StatsPanel, {
+        fps: 60,
+        sourceCounts: { [Source.SDSS]: 220453 },
+        filamentsEnabled: false,
+        filamentCounts: null,
+      }),
+    );
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('220,453');
   });
 });
