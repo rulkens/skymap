@@ -33,7 +33,7 @@
  * the awkward "is `0/0` a finished state or a pre-start state?" ambiguity.
  */
 
-import type { Source } from '../../data/sources';
+import type { LoadEventSource } from './cloudLoader';
 import type { LoadProgressState } from '../../@types/EngineCallbacks';
 
 /** Per-source progress entry held in the aggregator's internal Map. */
@@ -60,18 +60,18 @@ export type LoadProgressAggregator = {
    * Content-Length is unknown).  Idempotent — calling twice for the same
    * source overwrites the prior `total`.
    */
-  start(source: Source, total: number): void;
+  start(source: LoadEventSource, total: number): void;
   /**
    * Update a source's running byte count.  Idempotent — chunk events fire
    * many times per source per fetch and that's fine.  No-op if the source
    * isn't currently registered (e.g. a delayed event after `finish`).
    */
-  update(source: Source, loaded: number, total: number): void;
+  update(source: LoadEventSource, loaded: number, total: number): void;
   /**
    * Mark a source as no longer in-flight (success, abort, or error all
    * end up here).  No-op if the source wasn't registered.
    */
-  finish(source: Source): void;
+  finish(source: LoadEventSource): void;
   /**
    * Test-only: return the current snapshot without firing the emitter.
    * `null` when nothing is in flight, matching what `emit` forwards.
@@ -90,7 +90,7 @@ export type LoadProgressAggregator = {
 export function createLoadProgressAggregator(
   emit: (state: LoadProgressState | null) => void,
 ): LoadProgressAggregator {
-  const entries = new Map<Source, Entry>();
+  const entries = new Map<LoadEventSource, Entry>();
 
   /**
    * Recompute the aggregate snapshot from `entries`.  Returns null when

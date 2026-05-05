@@ -654,12 +654,38 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // contribution accumulates in float-precision before tone mapping.
       const filamentRenderer = new FilamentRenderer(device, 'rgba16float');
       state.gpu.filamentRenderer = filamentRenderer;
+
+      // Per-engine aggregator for the loading bar — hoisted to here
+      // (rather than its previous location just above the
+      // `loadAllClouds` call) so the filament fetch right below can
+      // also stream its bytes through the same aggregator.  Filaments
+      // are a non-trivial download (~24 MB on the merged build), so
+      // the user wants to see them in the loading bar alongside the
+      // galaxy `.bin`s.  See `LoadEventSource` for the union that lets
+      // 'filaments' coexist with `Source` enum values as keys.
+      const loadProgress = createLoadProgressAggregator((snapshot) => {
+        cb.onLoadProgress?.(snapshot);
+      });
+      state.subsystems.loadProgress = loadProgress;
+
+      // Dispatcher that maps a tagged LoadEvent onto the aggregator's
+      // three lifecycle methods.  Used by `loadFilaments` here, the
+      // initial `loadAllClouds` below, and every `reloadSource` call
+      // inside `setTier` — so all three load paths converge on the
+      // same aggregator and the bar reflects everything that's in
+      // flight.
+      const dispatchLoadEvent = (e: LoadEvent) => {
+        if (e.type === 'start') loadProgress.start(e.source, e.total);
+        else if (e.type === 'progress') loadProgress.update(e.source, e.loaded, e.total);
+        else loadProgress.finish(e.source);
+      };
+
       // Fire-and-forget the fetch.  When (and if) it lands, upload to
       // the renderer and wake the render-on-demand loop so the user
       // sees the skeleton appear without having to nudge the camera.
       // Errors are already swallowed inside `loadFilaments` (returns
       // null on any failure) — we don't need a `.catch` here.
-      loadFilaments().then((cloud) => {
+      loadFilaments(dispatchLoadEvent).then((cloud) => {
         if (cloud) {
           filamentRenderer.upload(cloud);
           console.log(`[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts`);
@@ -714,27 +740,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // galaxy in InfoCard" bugs).  Initialising to `Promise.resolve()`
       // so the first `.then(() => upload(...))` fires immediately.
       let uploadChain: Promise<void> = Promise.resolve();
-
-      // Per-engine aggregator so the loading-bar UI can show combined
-      // download progress across both the initial parallel load and
-      // every subsequent tier swap through the same callback.  Hoisted
-      // out of the local scope (assigned to `state.subsystems.loadProgress`
-      // below) so `setTier` can reuse the same instance.
-      const loadProgress = createLoadProgressAggregator((snapshot) => {
-        cb.onLoadProgress?.(snapshot);
-      });
-      state.subsystems.loadProgress = loadProgress;
-
-      // Dispatcher that maps a tagged LoadEvent (the cloud loader's
-      // public progress shape) onto the aggregator's three lifecycle
-      // methods.  Re-used by both `loadAllClouds` here and `setTier`'s
-      // per-source `reloadSource` calls so progress aggregation is
-      // identical between initial load and hot-swap.
-      const dispatchLoadEvent = (e: LoadEvent) => {
-        if (e.type === 'start') loadProgress.start(e.source, e.total);
-        else if (e.type === 'progress') loadProgress.update(e.source, e.loaded, e.total);
-        else loadProgress.finish(e.source);
-      };
 
       const { loadedCount } = await loadAllClouds(state.sources.tier, (result) => {
         // Renderer might have been destroyed mid-load (StrictMode unmount,

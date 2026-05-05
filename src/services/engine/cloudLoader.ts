@@ -113,10 +113,22 @@ export type CloudLoadResult = {
  * API surface narrow — every entry point that takes progress takes one
  * `LoadEventCallback` and forwards every phase through it.
  */
+/**
+ * Identifier for one in-flight fetch in the loading-bar aggregator.
+ *
+ * Galaxy `.bin` fetches use the `Source` enum value; the optional
+ * `filaments.bin` fetch uses the literal `'filaments'`.  Broadening
+ * the key beyond `Source` keeps the loading-bar UI honest about all
+ * the fetches happening on first paint — filaments are a non-trivial
+ * download (~24 MB on the canonical merged build) that the user
+ * should see represented in the progress fill.
+ */
+export type LoadEventSource = Source | 'filaments';
+
 export type LoadEvent =
-  | { type: 'start'; source: Source; total: number }
-  | { type: 'progress'; source: Source; loaded: number; total: number }
-  | { type: 'finish'; source: Source };
+  | { type: 'start'; source: LoadEventSource; total: number }
+  | { type: 'progress'; source: LoadEventSource; loaded: number; total: number }
+  | { type: 'finish'; source: LoadEventSource };
 
 export type LoadEventCallback = (event: LoadEvent) => void;
 
@@ -146,7 +158,7 @@ export type LoadEventCallback = (event: LoadEvent) => void;
  */
 async function fetchWithProgress(
   url: string,
-  source: Source,
+  source: LoadEventSource,
   signal: AbortSignal,
   onEvent?: LoadEventCallback,
 ): Promise<ArrayBuffer> {
@@ -446,13 +458,26 @@ export function buildSyntheticFallback(): CloudLoadResult {
  * direct precedent here — small auxiliary asset, fail-safe to "feature
  * disabled" rather than aborting startup.
  */
-export async function loadFilaments(): Promise<FilamentCloud | null> {
+export async function loadFilaments(onEvent?: LoadEventCallback): Promise<FilamentCloud | null> {
+  // Fresh AbortController so the streaming-fetch helper has a signal to
+  // honour.  We never abort filament loads (they're fire-and-forget at
+  // engine boot — small enough that "let it finish" is fine), but the
+  // helper's signature requires one.
+  const controller = new AbortController();
   try {
-    const res = await fetch('/data/filaments.bin');
-    if (!res.ok) return null;
-    const buf = await res.arrayBuffer();
+    const buf = await fetchWithProgress(
+      '/data/filaments.bin',
+      'filaments',
+      controller.signal,
+      onEvent,
+    );
     return decodeFilaments(buf);
   } catch (err) {
+    // 404 (no filaments built locally) and decode errors both collapse
+    // to null — filaments are an optional layer; the renderer must work
+    // without them.  The fetchWithProgress helper still fires its
+    // `finish` event from the catch path, so the aggregator clears
+    // its entry even when the load fails.
     console.warn('[cloudLoader] filaments.bin failed:', err);
     return null;
   }
