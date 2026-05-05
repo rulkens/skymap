@@ -133,17 +133,44 @@ const CORNERS = array<vec2<f32>, 6>(
 
 // ── Physical scale ──────────────────────────────────────────────────
 //
-// Milky Way disk diameter ≈ 30 kpc.  We use a generous half-extent of
-// 25 kpc = 0.025 Mpc for the impostor billboard so the disk's outer
-// exponential falloff (`exp(-5.5*l*l)` in the fragment stage) and the
-// surrounding diffuse dust have visible breathing room before the
-// quad's edge cuts them off.  The shader's internal "1 unit" — the
-// scale at which the bulge raySphere has radius 0.125 (≈ 3 kpc) and
-// the disk's brightness vanishes at l ≈ 0.7 — matches a galaxy radius
-// of approximately 15 kpc, so we divide world-space lengths by
-// MILKY_WAY_RADIUS_MPC = 0.015 to convert into shader units.
-const MILKY_WAY_RADIUS_MPC: f32 = 0.015;
-const MILKY_WAY_HALFEXTENT_MPC: f32 = 0.025;
+// Milky Way disk D_25 ≈ 30 kpc.  Two related constants control how
+// big the impostor renders:
+//
+// * MILKY_WAY_RADIUS_MPC is the world↔shader-unit ratio.  Inside the
+//   shader, the disk's exponential brightness falls off around
+//   l ≈ 0.7 (shader units) and the bulge ray-sphere has radius
+//   0.125.  Multiplying those by this constant gives the world-space
+//   extent of those features.
+// * MILKY_WAY_HALFEXTENT_MPC is half the side length of the impostor
+//   billboard quad — it bounds where any of the disk's emission can
+//   appear before being clipped by the quad edge.
+//
+// History: an earlier version used 0.015 / 0.025.  That made the
+// visible disk fade at ~10 kpc radius (l=0.7 × 15 kpc) — much smaller
+// than D_25, and visibly tiny next to peer spirals like M31 (whose
+// procedural-disk pass renders its body at ~D_25 ≈ 46 kpc).
+//
+// Current values:
+//
+//   MILKY_WAY_RADIUS_MPC    = 0.030   ⇒  visible disk fades around
+//                                       l=0.7 × 30 kpc = 21 kpc
+//                                       radius (42 kpc diameter,
+//                                       matching the apparent body
+//                                       of M31 in the procedural
+//                                       pass).
+//   MILKY_WAY_HALFEXTENT_MPC = 0.120  ⇒  240 kpc total quad span,
+//                                       matching the 4× padding
+//                                       convention used by every
+//                                       other galaxy
+//                                       (`sizeWorld = diameterKpc *
+//                                       4 / 1000` — see
+//                                       `points.wgsl:864`).
+//
+// Together these scale the whole rendered Milky Way uniformly to ~2×
+// the previous size, putting it on equal visual footing with the
+// procedural-disk galaxies at the same viewing distance.
+const MILKY_WAY_RADIUS_MPC: f32 = 0.030;
+const MILKY_WAY_HALFEXTENT_MPC: f32 = 0.120;
 
 // ── Equatorial → galactic rotation matrix (J2000) ───────────────────
 //
