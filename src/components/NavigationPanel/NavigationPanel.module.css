@@ -31,14 +31,72 @@
 }
 
 /*
- * "NAVIGATION" heading — same uppercase letter-spaced treatment as
- * SettingsPanel's `.panelTitle`, but rendered as a plain header (no
- * collapse, no chevron — the cheatsheet has nothing to hide).
+ * Title row reads as a true section header: a full-width <button> wrapping
+ * the chevron + uppercase title.  Same visual treatment as SettingsPanel's
+ * outer collapse — the rules are duplicated here rather than cross-imported
+ * because CSS Modules `composes:` from a different file is awkward and the
+ * scope can leak.  See the matching docblock in NavigationPanel.tsx.
+ *
+ * Why a <button> rather than a styled <div>: keyboard focus + Enter/Space
+ * activation + `aria-expanded` come for free, no extra onKeyDown handler.
+ * The CSS reset strips default chrome so the row still reads as a plain
+ * heading until the cursor lands on it.
+ */
+.panelTitleButton {
+  display: flex;
+  align-items: baseline;
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(160, 200, 255, 0.16);
+  /* Match the panel's rounded top corners so the header doesn't square
+   * off the top edge of the glassmorphic container. */
+  border-radius: 8px 8px 0 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  /* When the body is collapsed the button is the only child of the panel,
+   * so we drop the bottom border so the panel doesn't look "amputated"
+   * with a stray underline below the heading.  Implemented via :only-child
+   * matching how SettingsPanel handles the same case in practice. */
+}
+.panelTitleButton:focus-visible {
+  outline: 1px solid rgba(160, 200, 255, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/*
+ * When the title button is the only child (i.e. the panel is collapsed),
+ * drop its bottom border so the panel reads as a single rounded card
+ * rather than a header with an empty body underneath it.
+ */
+.panelTitleButton:only-child {
+  border-bottom: 0;
+  border-radius: 8px;
+}
+
+/*
+ * Chevron sits to the LEFT of the heading like a tree-twirl / list-marker —
+ * a punctuation glyph attached to the heading, not a right-side dropdown
+ * indicator.  Dim and small so it doesn't compete with the heading text.
+ */
+.panelTitleChevron {
+  font-size: 8px;
+  color: rgba(160, 180, 230, 0.4);
+  margin-right: 6px;
+  /* Nudge up slightly for visual balance with the uppercase heading. */
+  position: relative;
+  top: -1px;
+}
+
+/*
+ * "NAVIGATION" heading text — same uppercase letter-spaced treatment as
+ * SettingsPanel's `.panelTitle`.  Lives inside the title <button>; the
+ * button itself handles padding/border, this rule is just typography.
  */
 .panelTitle {
-  padding: 10px 14px;
-  border-bottom: 1px solid rgba(160, 200, 255, 0.16);
-  border-radius: 8px 8px 0 0;
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
