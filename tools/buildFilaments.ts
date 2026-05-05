@@ -4,10 +4,14 @@
  *
  * Pipeline:
  *
- *   1. Read public/data/{sdss,2mrs,glade}.bin → merged xyz positions
+ *   1. Read public/data/{2mrs,glade}.bin → merged xyz positions, filtered
+ *      to D < 200 Mpc.  SDSS is intentionally excluded — its wedge
+ *      footprint dominates the density field at the survey edges and
+ *      DisPerSE locks onto those boundaries instead of the cosmic web.
+ *      See `readMergedPositions` for the full rationale.
  *   2. Write data/raw/galaxies_merged.tsv (DisPerSE ASCII-survey format,
  *      header `px py pz` followed by one line per galaxy: `x y z`)
- *   3. Run DisPerSE: delaunay_3D → mse → skelconv (default 5σ
+ *   3. Run DisPerSE: delaunay_3D → mse → skelconv (default 3σ
  *      persistence, 2 smoothing passes).  delaunay_3D is required because
  *      mse cannot operate on a raw point cloud — it needs the Delaunay
  *      simplicial complex + DTFE density field that delaunay_3D produces.
@@ -49,11 +53,22 @@ import { encodeFilaments } from '../src/data/filamentBinaryFormat.js';
 import type { PointCloud } from '../src/@types/index.js';
 
 /**
- * Default persistence cut in σ.  The 2025 SDSS DR18 filament paper used
- * 5σ + 2 smoothing passes as the production setting; we mirror that so
- * out-of-the-box runs reproduce a published result.
+ * Default persistence cut in σ.  Lower = more filaments accepted as
+ * persistent ridges; higher = sparser, more conservative skeleton.
+ *
+ * 5σ (Sousbie 2011 original) is the canonical "robust spine" — visually
+ * the cosmic web with its leaves stripped off, only the most persistent
+ * ridges survive.  3σ is the typical cosmology-paper choice (Tempel+
+ * 2014, etc.) and gives ~3–5× more filaments without crossing into
+ * shot-noise territory; this is what we default to.  2σ is dense, may
+ * include Poisson-noise ridges, but visually rich for outreach renders.
+ *
+ * Override with `--cut N` on the CLI.  The slow Delaunay-tessellation
+ * stage (`.NDnet`) is cached on disk and shared across cuts, so
+ * iterating on this knob only re-runs `mse + skelconv` (minutes, not
+ * hours).
  */
-const DEFAULT_PERSISTENCE_CUT = 5;
+const DEFAULT_PERSISTENCE_CUT = 3;
 const DEFAULT_SMOOTHING_PASSES = 2;
 
 /**
@@ -126,8 +141,40 @@ function checkDisperse(): void {
  * We slice out a clean owned ArrayBuffer covering exactly this Buffer's
  * bytes before decoding.
  */
+/**
+ * Maximum distance (Mpc) from the world origin for a galaxy to be
+ * eligible as DisPerSE input.  200 Mpc captures the Local Supercluster
+ * (Virgo + the Great Attractor direction) and the leading edge of the
+ * Sloan Great Wall sheet without dragging in SDSS-pencil-beam volumes
+ * where survey selection effects dominate the density field.  Past
+ * ~250 Mpc, 2MRS's K-magnitude completeness drops below the level
+ * needed for honest density estimation, so DisPerSE's persistent
+ * ridges out there reflect the survey's drop-off rather than real
+ * cosmic structure.
+ */
+const MAX_DISTANCE_MPC = 200;
+
+/**
+ * Read each catalogue's `.bin`, merge into a single Float32Array of xyz
+ * triples, filter to `MAX_DISTANCE_MPC`.
+ *
+ * **SDSS is intentionally excluded.** The wedge footprint (~9000 deg²
+ * out of 41253) is the dominant artefact source: DisPerSE locks onto
+ * the wedge boundaries because the density field has a sharp step at
+ * the survey edge.  2MRS (all-sky, K < 11.75) and GLADE (all-sky-ish
+ * union of 2MASS, HyperLEDA, GWGC, SDSS) give a much cleaner all-sky
+ * density field for the cosmic-web skeleton task even though SDSS
+ * dominates the catalogue by raw count.
+ *
+ * Distance gating is *euclidean* against the world origin (Earth/Sun
+ * position in skymap world coords).  Galaxies are stored in cz/H0
+ * comoving Mpc which is a fine approximation to true distance at
+ * redshifts ≪ 1; refining to a luminosity / angular-diameter
+ * distance is unnecessary at this scale (cz < 14000 km/s for the
+ * 200 Mpc cut).
+ */
 function readMergedPositions(): { count: number; positions: Float32Array } {
-  const sources = ['sdss.bin', '2mrs.bin', 'glade.bin'] as const;
+  const sources = ['2mrs.bin', 'glade.bin'] as const;
   const clouds: PointCloud[] = [];
   for (const name of sources) {
     const path = resolve('public/data', name);
@@ -143,14 +190,34 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
     clouds.push(decodePointCloud(ab));
   }
 
-  const total = clouds.reduce((acc, c) => acc + c.count, 0);
-  const positions = new Float32Array(total * 3);
-  let off = 0;
+  // First pass: count survivors of the distance filter.  We build the
+  // filtered output buffer to its final size in one allocation (cheaper
+  // than push + concat) since the worst-case bound is the unfiltered
+  // total count.
+  const distSqLimit = MAX_DISTANCE_MPC * MAX_DISTANCE_MPC;
+  const totalRaw = clouds.reduce((acc, c) => acc + c.count, 0);
+  const positions = new Float32Array(totalRaw * 3);
+  let kept = 0;
   for (const c of clouds) {
-    positions.set(c.positions, off);
-    off += c.positions.length;
+    for (let i = 0; i < c.count; i++) {
+      const x = c.positions[i * 3 + 0]!;
+      const y = c.positions[i * 3 + 1]!;
+      const z = c.positions[i * 3 + 2]!;
+      if (x * x + y * y + z * z > distSqLimit) continue;
+      positions[kept * 3 + 0] = x;
+      positions[kept * 3 + 1] = y;
+      positions[kept * 3 + 2] = z;
+      kept += 1;
+    }
   }
-  return { count: total, positions };
+  process.stderr.write(
+    `  filtered ${totalRaw.toLocaleString()} → ${kept.toLocaleString()} ` +
+      `(D < ${MAX_DISTANCE_MPC} Mpc)\n`,
+  );
+  // Trim trailing unused slots so downstream consumers see the exact
+  // count rather than zero-padded entries that DisPerSE would treat as
+  // legitimate (0,0,0) points clustering at the origin.
+  return { count: kept, positions: positions.slice(0, kept * 3) };
 }
 
 /**
