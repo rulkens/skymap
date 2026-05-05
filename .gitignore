@@ -14,10 +14,14 @@ coverage/
 .vitest-cache/
 
 # ── Environment files ─────────────────────────────────────────────────────────
-# Anything ending in `.local` is per-developer and should never be checked in.
+# All `.env*` files stay out of git.  `VITE_DATA_BASE_URL` (the only env var
+# the build currently cares about) is set as a build-time variable in the
+# Cloudflare Workers project dashboard — that's where the source of truth
+# lives now, not in a tracked `.env.production` file.  Keeping this rule
+# broad means a developer can drop a local `.env.production` to test prod
+# builds without accidentally committing infrastructure URLs.
 .env
-.env.local
-.env.*.local
+.env.*
 
 # ── OS clutter ────────────────────────────────────────────────────────────────
 .DS_Store
