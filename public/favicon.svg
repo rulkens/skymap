@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Skymap favicon. SVG so it scales cleanly from a 16x16 tab icon to a
+  Retina-resolution apple-touch-icon and back.  Aesthetic mirrors the
+  live app: pure-black background, bright central element with a soft
+  blue halo, and a few smaller companion points so the icon reads as
+  "a galaxy with neighbours" rather than just a dot.
+
+  Modern browsers (Chrome 80, Firefox 41, Safari 9, Edge 79 and newer)
+  render this directly via the SVG favicon link tag.  Legacy browsers
+  fall back to the favicon.ico convention; we do not ship one because
+  every WebGPU-capable browser also supports SVG icons, so an ICO
+  would be dead weight.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Pure black background. -->
+  <rect width="32" height="32" fill="#000000"/>
+
+  <!-- Soft accent halo around the central galaxy.  Blur via opacity-stacked
+       circles rather than a filter primitive: filters render unevenly across
+       browsers' favicon caches, while plain alpha-blended circles always
+       composite the same way. -->
+  <circle cx="16" cy="16" r="8" fill="#a8d0ff" opacity="0.10"/>
+  <circle cx="16" cy="16" r="5" fill="#a8d0ff" opacity="0.22"/>
+
+  <!-- Central bright galaxy. -->
+  <circle cx="16" cy="16" r="2.6" fill="#ffffff"/>
+
+  <!-- Scattered companion galaxies — mix of pure white and tinted blue
+       so the icon reads as colour-varied at any size.  Positions chosen
+       to stay clear of the bright central halo and avoid clumping along
+       a single axis. -->
+  <circle cx="5"  cy="7"  r="1.0" fill="#ffffff" opacity="0.85"/>
+  <circle cx="26" cy="9"  r="1.2" fill="#a8d0ff" opacity="0.80"/>
+  <circle cx="9"  cy="25" r="0.9" fill="#ffffff" opacity="0.70"/>
+  <circle cx="24" cy="26" r="1.0" fill="#a8d0ff" opacity="0.75"/>
+  <circle cx="29" cy="20" r="0.8" fill="#ffffff" opacity="0.60"/>
+  <circle cx="3"  cy="19" r="0.7" fill="#ffffff" opacity="0.55"/>
+</svg>
