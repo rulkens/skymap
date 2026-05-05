@@ -41,6 +41,26 @@ import type { FilamentCloud } from '../../@types/FilamentCloud';
 import type { Tier } from '../../@types/Tier';
 
 /**
+ * Build a runtime URL for a `.bin` (or other static-data) asset.
+ *
+ * In dev, `VITE_DATA_BASE_URL` is empty — Vite serves `public/data/*` at the
+ * relative path `/data/<file>`, so we return that directly and the browser
+ * fetches same-origin against the dev server.
+ *
+ * In production, `VITE_DATA_BASE_URL` is set (e.g. `https://data.skymap.rulkens.com`)
+ * to point at the R2 bucket's custom domain.  R2 object keys live under the
+ * `data/` prefix so the URL pattern is identical across environments — only
+ * the host changes.
+ *
+ * Trailing slashes on the base are tolerated so a `.env` file's
+ * `VITE_DATA_BASE_URL=https://data.skymap.rulkens.com/` doesn't double up.
+ */
+export function dataUrl(filename: string): string {
+  const base = (import.meta.env.VITE_DATA_BASE_URL ?? '').replace(/\/$/, '');
+  return `${base}/data/${filename}`;
+}
+
+/**
  * Discriminated source tag returned to callers that care about which load
  * path actually produced data.  Kept as a string union (rather than reusing
  * `Source`) because it specifically describes "what file did we load?",
@@ -79,7 +99,7 @@ function surveyFilesForTier(tier: Tier): readonly SurveyFile[] {
     if (TIER_TARGETS[tier][c.source] === 0) continue;
     out.push({
       source: c.source,
-      url: `/data/${tierFilenameForSource(c.source, tier)}`,
+      url: dataUrl(tierFilenameForSource(c.source, tier)),
       cloudSource: c.cloudSource,
     });
   }
@@ -389,7 +409,7 @@ export async function reloadSource(
   const controller = new AbortController();
   inflightControllers.set(source, controller);
 
-  const url = `/data/${tierFilenameForSource(source, tier)}`;
+  const url = dataUrl(tierFilenameForSource(source, tier));
   try {
     const buf = await fetchWithProgress(url, source, controller.signal, onEvent);
     // If a newer call has already aborted this controller, drop the result.
@@ -466,7 +486,7 @@ export async function loadFilaments(onEvent?: LoadEventCallback): Promise<Filame
   const controller = new AbortController();
   try {
     const buf = await fetchWithProgress(
-      '/data/filaments.bin',
+      dataUrl('filaments.bin'),
       'filaments',
       controller.signal,
       onEvent,
