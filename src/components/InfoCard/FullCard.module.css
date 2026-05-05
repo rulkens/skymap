@@ -381,3 +381,45 @@ details:not([open]) > .detailsSummary::before {
 .focusButton:active {
   background: var(--surface-control-active);
 }
+
+/* ── Close button (only visible when the card is pinned) ──────────────────── */
+/*
+ * Subtle "×" glyph that clears the selection — same affordance as the Esc
+ * key, but discoverable on touch devices where there's no Esc.  Sits to the
+ * right of the Focus button in the title row.
+ *
+ * Visually quieter than Focus on purpose: no background fill at rest, just
+ * a muted glyph that hints "click me" via hover.  We don't want it to
+ * compete with Focus, which is the *primary* action — Close is recovery
+ * from an accidental pin.  Square shape (1.6 × 1.6 em) reads as an icon
+ * button, distinguishing it from the rectangular Focus pill.
+ */
+.closeButton {
+  margin-left: var(--space-2);
+  width: 1.6em;
+  height: 1.6em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-fg-muted);
+  font: inherit;
+  font-size: var(--font-size-md);
+  line-height: 1;
+  cursor: pointer;
+  /* The × glyph is wider than tall; nudge up half a pixel for optical
+     alignment with the uppercase letters of Focus. */
+  padding-bottom: 1px;
+}
+
+.closeButton:hover {
+  background: var(--surface-control);
+  border-color: var(--border-control);
+  color: var(--color-fg);
+}
+
+.closeButton:active {
+  background: var(--surface-control-active);
+}

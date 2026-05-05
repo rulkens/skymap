@@ -60,6 +60,12 @@ export type InfoCardProps = {
    * Forwarded to FullCard; ignored on the compact hover card.
    */
   onFocus?: (info: PointInfo) => void;
+  /**
+   * Optional callback fired when the user clicks the Close (×) button on the
+   * pinned card.  Same effect as pressing Esc — clears the selection.
+   * Forwarded to FullCard; ignored on the compact hover card.
+   */
+  onClose?: () => void;
 };
 
 // ── InfoCard ───────────────────────────────────────────────────────────────────
@@ -74,7 +80,7 @@ export type InfoCardProps = {
  * // In App.tsx:
  * <InfoCard hovered={hovered} selected={selected} />
  */
-export function InfoCard({ hovered, selected, onFocus }: InfoCardProps): ReactNode {
+export function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): ReactNode {
   // Nothing to show — stay entirely out of the DOM.
   if (!hovered && !selected) return null;
 
@@ -104,6 +110,7 @@ export function InfoCard({ hovered, selected, onFocus }: InfoCardProps): ReactNo
         info={fullCardInfo}
         pinned={fullCardPinned}
         onFocus={fullCardPinned ? onFocus : undefined}
+        onClose={fullCardPinned ? onClose : undefined}
       />
       {isStacked && <CompactCard info={hovered!} />}
     </div>

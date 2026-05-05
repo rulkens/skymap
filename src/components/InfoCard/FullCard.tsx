@@ -43,6 +43,14 @@ export type FullCardProps = {
    * omitted, the button is not rendered.
    */
   onFocus?: (info: PointInfo) => void;
+  /**
+   * Optional callback fired when the user clicks the Close (×) button.
+   * Same effect as pressing Esc on desktop — clears the pinned selection.
+   * Only rendered when `pinned` is true (clearing the transient hover preview
+   * makes no sense; it'll clear itself the moment the cursor moves).  When
+   * omitted, the button is not rendered.
+   */
+  onClose?: () => void;
 };
 
 // ── CardRow ────────────────────────────────────────────────────────────────────
@@ -94,7 +102,7 @@ function CardRow({ label, value }: CardRowProps): ReactNode {
  *     ObjID  1237651738291...
  *   View in SDSS Explorer →
  */
-export function FullCard({ info, pinned = false, onFocus }: FullCardProps): ReactNode {
+export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardProps): ReactNode {
   // Compose the outer class: always infoCardFull, plus pinned variant when needed.
   // CSS modules scope both classes so we just combine them with a space.
   const outerClass = pinned ? `${styles.infoCardFull} ${styles.pinned}` : styles.infoCardFull;
@@ -126,6 +134,23 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
             aria-label={`Focus camera on ${info.iauName}`}
           >
             Focus
+          </button>
+        )}
+        {/*
+          Close button — same affordance as Esc, but visible.  Especially
+          useful on touch devices where there's no Esc key.  Uses a real
+          × glyph (U+00D7 MULTIPLICATION SIGN) rather than the ASCII letter
+          'x' for consistent rendering across fonts.
+        */}
+        {pinned && onClose && (
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="Clear selection"
+            title="Clear selection (Esc)"
+          >
+            ×
           </button>
         )}
       </div>

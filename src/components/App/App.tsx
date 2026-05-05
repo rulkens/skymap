@@ -556,6 +556,7 @@ export function App(): React.ReactElement {
         hovered={hovered}
         selected={selected}
         onFocus={(info) => handleRef.current?.focusOn([info.x, info.y, info.z], info.diameterKpc)}
+        onClose={() => handleRef.current?.clearSelection()}
       />
       <ScaleBar scale={scale} />
       {/*
