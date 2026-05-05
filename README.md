@@ -1,8 +1,12 @@
 # skymap
 
+[![CI](https://github.com/rulkens/skymap/actions/workflows/ci.yml/badge.svg)](https://github.com/rulkens/skymap/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/github/license/rulkens/skymap)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20037028.svg)](https://doi.org/10.5281/zenodo.20037028)
 
-**Live demo:** [skymap.rulkens.com](https://skymap.rulkens.com) — open in Chrome or Edge 113+ for WebGPU.
+**Live demo:** [skymap.rulkens.com](https://skymap.rulkens.com) — open in any modern browser (Chrome / Edge 113+, Firefox 141+, Safari 26+). WebGPU [reached Baseline in January 2026](https://web.dev/blog/webgpu-supported-major-browsers), so a recent stable browser is all you need.
 
 ![skymap — orbit, command palette, focus tween, info card](docs/screenshots/hero.gif)
 
@@ -56,7 +60,13 @@ _Five density-correction modes selectable at runtime (None / Volume-limited / 1/
 ## Requirements
 
 - **Node 20+**
-- A **WebGPU-capable browser**: Chrome 113+ or Edge 113+ on desktop. Safari and Firefox have partial WebGPU support and are out of scope.
+- A **WebGPU-capable browser**. WebGPU has been a [Baseline web platform feature since January 2026](https://web.dev/blog/webgpu-supported-major-browsers); in practice that means:
+  - **Chrome / Edge 113+** — desktop (since 2023) and Android 12+ on Qualcomm/ARM GPUs.
+  - **Firefox 141+** — Windows (since July 2025).
+  - **Firefox 145+** — macOS on Apple Silicon (Tahoe 26+); Linux & Android still in progress through 2026.
+  - **Safari 26+** — macOS Tahoe 26, iOS 26, iPadOS 26, visionOS 26.
+
+  Touch UX on phones / tablets is not yet polished — controls assume a mouse — but the WebGPU pipeline itself runs everywhere in the list.
 
 ## Quickstart (synthetic data)
 
@@ -543,7 +553,8 @@ These are deliberately not in this version:
 - **Spatial chunking + LOD** for ≥10M points. The current architecture maxes out around 1–5M points before frame rate degrades. SDSS's full photometric catalog (~1B objects) needs an octree-based renderer.
 - **Galactic-coordinate orientation** (currently equatorial-aligned).
 - **Picking on the photometric scale** — same blocker as above.
-- **Mobile / Safari / Firefox support** — limited by partial WebGPU implementations.
+- **Touch / mobile UX** — WebGPU itself now runs in Safari 26+ (iOS 26 / iPadOS 26) and Chrome on Android 12+, but the orbit / pan / zoom controls are designed for a mouse and wheel. A proper touch-gesture layer (pinch-zoom, two-finger orbit) hasn't been built yet.
+- **Firefox on Linux** — still tracking through 2026; works in Nightly behind `dom.webgpu.enabled` in the meantime.
 
 ## A note on AI-assisted development
 
