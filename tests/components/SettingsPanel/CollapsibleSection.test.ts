@@ -185,7 +185,13 @@ describe('CollapsibleSection initial render', () => {
       }),
     );
     expect(html).toContain('aria-expanded="false"');
-    expect(html).not.toContain('CHILD');
+    // Children stay in the DOM when closed — collapse is a CSS-only
+    // transition (grid-template-rows 0fr → 1fr) so the body never
+    // unmounts.  Verify the closed state via the markers that DO
+    // change: aria-expanded on the button, data-open on the wrapper,
+    // aria-hidden on the wrapper.
+    expect(html).toContain('data-open="false"');
+    expect(html).toContain('aria-hidden="true"');
   });
 
   it('mounts closed when localStorage holds 0', () => {
@@ -199,7 +205,7 @@ describe('CollapsibleSection initial render', () => {
       }),
     );
     expect(html).toContain('aria-expanded="false"');
-    expect(html).not.toContain('CHILD');
+    expect(html).toContain('data-open="false"');
   });
 
   it('mounts open when localStorage holds 1, even with defaultOpen=false', () => {
@@ -235,10 +241,13 @@ describe('CollapsibleSection initial render', () => {
       }),
     );
 
+    // aria-expanded + data-open are the closed markers; children stay
+    // in DOM (CSS-only collapse — see the matching note above).
     expect(aHtml).toContain('aria-expanded="false"');
-    expect(aHtml).not.toContain('A_CHILD');
+    expect(aHtml).toContain('data-open="false"');
 
     expect(bHtml).toContain('aria-expanded="true"');
+    expect(bHtml).toContain('data-open="true"');
     expect(bHtml).toContain('B_CHILD');
   });
 });

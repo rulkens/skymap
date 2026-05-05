@@ -140,7 +140,29 @@ export function CollapsibleSection({
         </span>
         <span className={styles.title}>{title}</span>
       </button>
-      {open && <div className={styles.body}>{children}</div>}
+      {/*
+        The body always renders into the DOM — only its grid track
+        height + opacity change between states.  This is what enables
+        the height-from-0 animation: `display: none` / conditional
+        rendering can't be transitioned, but a child of a CSS Grid
+        whose row-template moves between `0fr` and `1fr` interpolates
+        smoothly.  See the .bodyWrapper rule in the stylesheet for the
+        animation mechanism + the modern-CSS rationale.
+
+        `aria-hidden` mirrors the visual state for screen readers when
+        closed.  `inert` would also make the contents non-focusable,
+        but is React-19+ as a DOM prop; using inline `tabIndex` on
+        children is impractical, so we accept that focus can technically
+        land in a closed section via Tab key.  Not a big deal in
+        practice — closed sections are typically opened then explored.
+      */}
+      <div
+        className={styles.bodyWrapper}
+        data-open={open}
+        aria-hidden={!open}
+      >
+        <div className={styles.body}>{children}</div>
+      </div>
     </div>
   );
 }

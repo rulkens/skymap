@@ -126,10 +126,62 @@ button.header {
 }
 
 /*
- * Body — wraps the children with a small bottom margin so the next
- * section's header doesn't touch the last row's input.  No top margin
- * (the header's bottom padding handles that gap).
+ * Body wrapper + body — animates open/closed using the modern
+ * `grid-template-rows: 0fr → 1fr` trick.
+ *
+ * Why the wrapper.  CSS still can't animate `height: auto`.  The
+ * `interpolate-size: allow-keywords` directive (Chrome 129+, May 2024)
+ * fixes that natively but isn't yet on Safari.  The grid trick is the
+ * widely-supported escape hatch:
+ *
+ *   - The wrapper is a single-row CSS Grid.  Its row template is
+ *     `0fr` when closed (the row collapses to zero height), `1fr`
+ *     when open (the row grows to fit its child's intrinsic height).
+ *   - The body child has `min-height: 0` (so the grid actually CAN
+ *     collapse it — without this, grid items default to a min-height
+ *     of `auto` which means "at least my content height", defeating
+ *     the trick) and `overflow: hidden` (so the content visibly
+ *     clips during the transition; without it the children would
+ *     spill out as the row shrinks).
+ *   - Browsers interpolate `grid-template-rows` between `0fr` and
+ *     `1fr` smoothly — what was impossible with `height` becomes a
+ *     pure CSS transition.
+ *
+ * Opacity is tracked in parallel for a subtle fade-in: visible
+ * content shouldn't pop into existence at full opacity from a
+ * zero-height container — the eye reads that as a flicker.  Easing
+ * `cubic-bezier(0.4, 0, 0.2, 1)` is Material's "standard easing"
+ * (fast-start, slow-end), which feels native on modern UIs.
+ *
+ * `prefers-reduced-motion` skips the transitions entirely for users
+ * who've opted out at the OS level.  WCAG 2.1 SC 2.3.3 best practice.
  */
+.bodyWrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bodyWrapper[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
 .body {
-  margin-bottom: 6px;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 6px;
+  opacity: 0;
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bodyWrapper[data-open='true'] .body {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron,
+  .bodyWrapper,
+  .body {
+    transition: none;
+  }
 }
