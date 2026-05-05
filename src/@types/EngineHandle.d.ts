@@ -82,6 +82,19 @@ export type EngineHandle = {
    */
   setMilkyWayEnabled?: (enabled: boolean) => void;
 
+  /**
+   * Toggle the cosmic-web filament-skeleton overlay on or off.
+   *
+   * No-op if `filaments.bin` failed to load (the file is optional —
+   * present only after `npm run build-filaments` has been run).  When
+   * the overlay is enabled but the binary is missing, the call still
+   * succeeds; nothing renders, no error.
+   *
+   * Defaults to false at engine startup so the user opts in via the
+   * Settings panel.
+   */
+  setFilamentsEnabled?: (enabled: boolean) => void;
+
   /** Toggle the magenta tint on galaxies whose orientation is fallback. */
   setHighlightFallback?: (enabled: boolean) => void;
   /** Toggle "show only galaxies with real photometric orientation" — fallback rows are discarded. */

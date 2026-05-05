@@ -42,6 +42,15 @@ export type EngineSettingsState = {
   autoRotate: boolean;
   galaxyTexturesEnabled: boolean;
   milkyWayEnabled: boolean;
+  /**
+   * Whether the cosmic-web filament-skeleton overlay is rendered.  The
+   * underlying `filaments.bin` is an optional asset (built by the
+   * DisPerSE pipeline via `npm run build-filaments`); when missing,
+   * the renderer never receives an upload and toggling this flag is a
+   * silent no-op.  Default OFF — see `DEFAULT_FILAMENTS_ENABLED` in
+   * `data/defaults.ts` for the rationale.
+   */
+  filamentsEnabled: boolean;
   highlightFallback: boolean;
   realOnlyMode: boolean;
   depthFadeEnabled: boolean;

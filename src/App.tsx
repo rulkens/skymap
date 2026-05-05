@@ -83,6 +83,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
+  DEFAULT_FILAMENTS_ENABLED,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
@@ -159,6 +160,15 @@ export function App(): React.ReactElement {
     useState<boolean>(DEFAULT_GALAXY_TEXTURES_ENABLED);
   const [milkyWayEnabled, setMilkyWayEnabled] =
     useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
+  // Cosmic-web filament-skeleton overlay toggle.  Defaults OFF
+  // (`DEFAULT_FILAMENTS_ENABLED`) because the underlying `filaments.bin`
+  // is an optional asset built by `npm run build-filaments` — fresh
+  // clones won't have it and an on-by-default toggle would silently
+  // do nothing.  Unlike `galaxyTexturesEnabled`/`milkyWayEnabled`, the
+  // engine does NOT fire an echo callback for this field, so we update
+  // React state optimistically inside the change handler below.
+  const [filamentsEnabled, setFilamentsEnabled] =
+    useState<boolean>(DEFAULT_FILAMENTS_ENABLED);
   const [highlightFallback, setHighlightFallback] =
     useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
   const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
@@ -477,6 +487,18 @@ export function App(): React.ReactElement {
         milkyWayEnabled={milkyWayEnabled}
         onMilkyWayEnabledChange={(enabled) => {
           handleRef.current?.setMilkyWayEnabled?.(enabled);
+        }}
+        // Filaments toggle.  Unlike the milky-way / galaxy-thumbnails
+        // toggles above, the engine does NOT fire an echo callback for
+        // this field — App.tsx owns the React state directly.  So the
+        // change handler updates state optimistically AND forwards to
+        // the engine handle.  The `?.` chain on the setter covers the
+        // case where the handle isn't constructed yet (early frames
+        // before the async GPU init resolves).
+        filamentsEnabled={filamentsEnabled}
+        onFilamentsChange={(enabled) => {
+          setFilamentsEnabled(enabled);
+          handleRef.current?.setFilamentsEnabled?.(enabled);
         }}
         // Task 15 — orientation-visibility toggles. Same forward-only flow
         // as galaxyTexturesEnabled: engine fires the echo callback

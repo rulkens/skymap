@@ -77,6 +77,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
+  DEFAULT_FILAMENTS_ENABLED,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
@@ -98,7 +99,7 @@ import { buildPointInfo, maxAbsCoord } from './pointInfoBuilder';
 import { computeInitialCamera } from './cameraFraming';
 import { seedSettingsCallbacks } from './seedSettingsCallbacks';
 import { computeScaleInfo } from './scaleBar';
-import { loadAllClouds, buildSyntheticFallback, type CloudSource } from './cloudLoader';
+import { loadAllClouds, buildSyntheticFallback, loadFilaments, type CloudSource } from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 import { loadFamousSidecars, remapGladeXrefs } from './famousMetaLoader';
 
@@ -114,6 +115,7 @@ import { QuadRenderer } from '../gpu/quadRenderer';
 import { DiskRenderer } from '../gpu/diskRenderer';
 import { ProceduralDiskRenderer } from '../gpu/proceduralDiskRenderer';
 import { MilkyWayRenderer } from '../gpu/milkyWayRenderer';
+import { FilamentRenderer } from '../gpu/filamentRenderer';
 import {
   createThumbnailSubsystem,
   PROCEDURAL_DISK_FADE_START_PX,
@@ -260,6 +262,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       autoRotate: DEFAULT_AUTO_ROTATE,
       galaxyTexturesEnabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
       milkyWayEnabled: DEFAULT_MILKY_WAY_ENABLED,
+      filamentsEnabled: DEFAULT_FILAMENTS_ENABLED,
       highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
       realOnlyMode: DEFAULT_REAL_ONLY_MODE,
       depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
@@ -319,6 +322,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pickRenderer: null,
       hdrTarget: null,
       toneMapPass: null,
+      filamentRenderer: null,
     },
     subsystems: {
       // ── Tween manager ──────────────────────────────────────────
@@ -616,6 +620,33 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const milkyWayRenderer = new MilkyWayRenderer({
         device,
         format: 'rgba16float',
+      });
+      // ── Cosmic-web filament-skeleton renderer ─────────────────────────
+      //
+      // Built unconditionally (the pipeline / quad VBO / uniform buffer
+      // are cheap), but the per-instance buffer is populated only after
+      // `loadFilaments()` resolves with a non-null cloud — i.e. when the
+      // optional `filaments.bin` exists.  When the binary is absent
+      // (fresh clone before `npm run build-filaments`), `upload` is
+      // simply never called and `draw` returns early on `segmentCount=0`.
+      //
+      // Same HDR target as every other overlay so the additive
+      // contribution accumulates in float-precision before tone mapping.
+      const filamentRenderer = new FilamentRenderer(device, 'rgba16float');
+      state.gpu.filamentRenderer = filamentRenderer;
+      // Fire-and-forget the fetch.  When (and if) it lands, upload to
+      // the renderer and wake the render-on-demand loop so the user
+      // sees the skeleton appear without having to nudge the camera.
+      // Errors are already swallowed inside `loadFilaments` (returns
+      // null on any failure) — we don't need a `.catch` here.
+      loadFilaments().then((cloud) => {
+        if (cloud) {
+          filamentRenderer.upload(cloud);
+          console.log(
+            `[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts`,
+          );
+          state.subsystems.scheduler.requestRender();
+        }
       });
       // Build the subsystem and hand it the renderer references for
       // atlas-view binding.  The subsystem's `bindToRenderers` is split
@@ -1231,6 +1262,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           hdrTargetView: hdrTargetRef.view,
           pointRenderer: rendererRef,
           milkyWayRenderer,
+          filamentRenderer,
           toneMapPass: toneMapPassRef,
           thumbnails: thumbnailsRef,
           quadRenderer,
@@ -1260,6 +1292,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             toneMapCurve: state.settings.toneMapCurve,
             galaxyTexturesEnabled: state.settings.galaxyTexturesEnabled,
             milkyWayEnabled: state.settings.milkyWayEnabled,
+            filamentsEnabled: state.settings.filamentsEnabled,
           },
           famousMeta: state.sources.famousMeta,
           famousXrefs: state.sources.famousXrefs,
@@ -1411,6 +1444,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.gpu.hdrTarget = null;
       state.gpu.toneMapPass?.destroy();
       state.gpu.toneMapPass = null;
+      // Filament renderer owns three GPU buffers (uniform + index + quad
+      // VBO) plus an optional per-segment instance buffer.  Release them
+      // explicitly so HMR / StrictMode remounts don't leak the instance
+      // buffer (proportional to filament-skeleton segment count, ~MB).
+      state.gpu.filamentRenderer?.destroy();
+      state.gpu.filamentRenderer = null;
       // Tear down the thumbnail subsystem (clears the atlas's evict
       // handler and aborts in-flight fetches' write-back).  The atlas's
       // GPU texture itself is released when the device is dropped —
@@ -1472,6 +1511,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // SettingsPanel state stays in sync with the engine truth.
       state.settings.milkyWayEnabled = enabled;
       cb.onMilkyWayEnabledChange?.(enabled);
+      state.subsystems.scheduler.requestRender();
+    },
+
+    setFilamentsEnabled(enabled) {
+      // Toggle the cosmic-web filament-skeleton overlay.  Mirrors the
+      // `setMilkyWayEnabled` setter shape (mutate the settings bag,
+      // request render) but DOES NOT fire an echo callback — App.tsx
+      // owns the boolean state for this toggle and updates it
+      // optimistically alongside calling this setter (see App.tsx's
+      // `onFilamentsChange`), so an engine echo would be redundant.
+      // The asymmetry vs. galaxyTextures/milkyWay is deliberate: the
+      // older toggles pre-date that pattern and would need a full
+      // App.tsx rewire to switch, which isn't this task's scope.
+      state.settings.filamentsEnabled = enabled;
       state.subsystems.scheduler.requestRender();
     },
 

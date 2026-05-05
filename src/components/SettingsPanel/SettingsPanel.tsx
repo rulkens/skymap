@@ -108,6 +108,16 @@ type Props = {
   /** Fired when the user toggles the "Show Milky Way" checkbox. */
   onMilkyWayEnabledChange?: (enabled: boolean) => void;
   /**
+   * Whether the cosmic-web filament-skeleton overlay is rendered.  The
+   * underlying `filaments.bin` is an *optional* asset built by the
+   * DisPerSE pipeline (`npm run build-filaments`); on a fresh clone
+   * without it, toggling this on is a silent no-op.  Optional in the
+   * panel — older callers without the prop pair see no Filaments row.
+   */
+  filamentsEnabled?: boolean;
+  /** Fired when the user toggles the "Filaments" checkbox. */
+  onFilamentsChange?: (enabled: boolean) => void;
+  /**
    * Whether fallback-orientation galaxies should be tinted magenta in the
    * fragment shader.  Lets the user scan which surveys have real
    * photometric orientation coverage.  Optional — older call-sites without
@@ -259,6 +269,8 @@ export function SettingsPanel({
   onGalaxyTexturesChange,
   milkyWayEnabled,
   onMilkyWayEnabledChange,
+  filamentsEnabled,
+  onFilamentsChange,
   highlightFallback,
   onHighlightFallbackChange,
   realOnlyMode,
@@ -309,6 +321,16 @@ export function SettingsPanel({
   // every other optional section in this panel.
   const showMilkyWayToggle =
     milkyWayEnabled !== undefined && onMilkyWayEnabledChange !== undefined;
+
+  // Filaments checkbox: same opt-in idiom — both pieces or neither.
+  // On a fresh clone the underlying `filaments.bin` won't exist; the
+  // panel still renders the row (so the user can discover the
+  // feature), but toggling it on is a silent no-op until they run
+  // `npm run build-filaments`.  We deliberately do NOT gate visibility
+  // on whether the binary loaded — discoverability of the feature
+  // beats hiding rows whose backing data may show up later.
+  const showFilamentsToggle =
+    filamentsEnabled !== undefined && onFilamentsChange !== undefined;
 
   // Density-correction section: rendered only when both the current mode and
   // both change-callbacks are wired by the parent.  We require all four
@@ -660,6 +682,30 @@ export function SettingsPanel({
             type="checkbox"
             checked={milkyWayEnabled}
             onChange={(e) => onMilkyWayEnabledChange(e.target.checked)}
+          />
+        </div>
+      )}
+
+      {/* ── Cosmic-web filament skeleton ─────────────────────────────────── */}
+      {/*
+        Optional opt-in overlay.  The underlying `filaments.bin` only
+        exists after `npm run build-filaments` (which depends on the
+        DisPerSE binary the user installs themselves), so we default
+        the toggle OFF and the engine treats the missing file as a
+        silent no-op.  Showing the row regardless of whether the
+        binary loaded is a deliberate discoverability choice — the
+        user sees the affordance, runs the build pipeline, comes back
+        and toggles it on without us having to wire a "is it loaded?"
+        flag through the panel.
+      */}
+      {showFilamentsToggle && (
+        <div className={styles.panelRow}>
+          <label htmlFor="toggle-filaments">Filaments (cosmic web)</label>
+          <input
+            id="toggle-filaments"
+            type="checkbox"
+            checked={filamentsEnabled}
+            onChange={(e) => onFilamentsChange(e.target.checked)}
           />
         </div>
       )}

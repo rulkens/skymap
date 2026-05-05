@@ -235,6 +235,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     toneMapCurve: ToneMapCurve.Reinhard,
     galaxyTexturesEnabled: true,
     milkyWayEnabled: true,
+    filamentsEnabled: false,
     ...(overrides.settings ?? {}),
   };
 
@@ -264,6 +265,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       hdrTargetView,
       pointRenderer,
       milkyWayRenderer,
+      filamentRenderer: null,
       toneMapPass,
       thumbnails,
       quadRenderer,

@@ -37,10 +37,20 @@ import type { PointRenderer } from '../services/gpu/pointRenderer';
 import type { HdrTarget } from '../services/gpu/hdrTarget';
 import type { ToneMapPass } from '../services/gpu/toneMapPass';
 import type { createPickRenderer } from '../services/gpu/pickRenderer';
+import type { FilamentRenderer } from '../services/gpu/filamentRenderer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
   pickRenderer: ReturnType<typeof createPickRenderer> | null;
   hdrTarget: HdrTarget | null;
   toneMapPass: ToneMapPass | null;
+  /**
+   * Cosmic-web filament-skeleton renderer.  Constructed unconditionally
+   * during GPU init (the pipeline is cheap), stays empty-segment until
+   * the optional `loadFilaments()` resolves with a non-null cloud.
+   * Stored on the GPU bag so `destroy()` can release the per-instance
+   * buffer + uniform buffer + quad VBO without needing the construction-
+   * time closure to outlive the public handle.
+   */
+  filamentRenderer: FilamentRenderer | null;
 };

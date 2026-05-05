@@ -43,6 +43,14 @@
  *     - pointRenderer.draw  (instanced billboards, additive)
  *     - thumbnails.runFrame (quad + disk passes, additive; gated on
  *       galaxyTexturesEnabled inside the subsystem caller)
+ *     - filamentRenderer.draw (cosmic-web skeleton overlay, additive;
+ *       gated on the user's "Filaments" toggle AND the renderer being
+ *       non-null — `filaments.bin` is an optional asset).  Drawn AFTER
+ *       thumbnails so the skeleton sits on top of the per-galaxy
+ *       overlays it threads between, and BEFORE the Milky Way so the
+ *       bright impostor at the world origin still feels like the
+ *       dominant local backdrop instead of an underlay punched through
+ *       by glowing lines.
  *     - milkyWayRenderer.draw (procedural impostor, additive; gated
  *       on the user's "Show Milky Way" toggle and the distance-fade
  *       threshold).  Drawn LAST so the deterministic crossfade between
@@ -89,6 +97,7 @@ import type { ToneMapPass } from '../gpu/toneMapPass';
 import type { QuadRenderer } from '../gpu/quadRenderer';
 import type { DiskRenderer } from '../gpu/diskRenderer';
 import type { MilkyWayRenderer } from '../gpu/milkyWayRenderer';
+import type { FilamentRenderer } from '../gpu/filamentRenderer';
 import type { ThumbnailSubsystem } from './thumbnailSubsystem';
 import type { FamousMetaEntry, FamousXrefMap } from './famousMetaLoader';
 import { milkyWayFadeAlpha } from '../../utils/math/milkyWayFade';
@@ -151,6 +160,15 @@ export type RenderFrameSettings = {
    * branch in the host CPU code).
    */
   milkyWayEnabled: boolean;
+  /**
+   * Whether to draw the cosmic-web filament-skeleton overlay (output of
+   * the optional `npm run build-filaments` pipeline; see
+   * `services/gpu/filamentRenderer.ts`).  Default OFF — opt-in feature
+   * since the binary is not always present.  When true but the
+   * renderer has no instance buffer (binary missing or still loading),
+   * the call is a cheap no-op.
+   */
+  filamentsEnabled: boolean;
 };
 
 /**
@@ -177,6 +195,14 @@ export type RenderFrameInput = {
   hdrTargetView: GPUTextureView;
   pointRenderer: PointRenderer;
   milkyWayRenderer: MilkyWayRenderer;
+  /**
+   * Optional cosmic-web filament-skeleton renderer.  Null when the
+   * GPU init flow hasn't created it yet, or — by design — when the
+   * deployment doesn't ship a `filaments.bin`.  The HDR-pass draw site
+   * gates on both this being non-null AND `settings.filamentsEnabled`,
+   * so a missing renderer is silently a no-op.
+   */
+  filamentRenderer: FilamentRenderer | null;
   toneMapPass: ToneMapPass;
   thumbnails: ThumbnailSubsystem;
   /**
@@ -221,6 +247,7 @@ export function renderFrame(input: RenderFrameInput): void {
     hdrTargetView,
     pointRenderer,
     milkyWayRenderer,
+    filamentRenderer,
     toneMapPass,
     thumbnails,
     quadRenderer,
@@ -345,6 +372,40 @@ export function renderFrame(input: RenderFrameInput): void {
       famousMeta,
       famousXrefs,
     });
+  }
+
+  // ── Filament-skeleton overlay (cosmic-web cartography) ────────────
+  //
+  // Draws into the SAME HDR pass as points/thumbnails so the additive
+  // contribution accumulates in float-precision before tone mapping.
+  // No depth attachment in this pass (mirrors the point/quad/disk
+  // convention; commit d69ab75 removed the experimental depth target
+  // since every HDR pipeline now uses pure additive blend).  Cheap to
+  // skip when toggled off — a single null check + boolean test.
+  //
+  // ### Why between thumbnails and Milky Way?
+  //
+  // The plan called for "after thumbnails, before milky way" and that
+  // ordering was preserved here.  The rationale: the filament skeleton
+  // is a *local-universe overlay* threaded between the galaxies it was
+  // computed from, so it belongs visually on top of the per-galaxy
+  // billboards + thumbnails.  But the Milky Way impostor at the world
+  // origin is a *bright foreground feature* — drawing it last keeps
+  // its bulge from being veiled by overlapping filament strands when
+  // the camera sits inside the local supercluster.  Additive blending
+  // makes per-fragment colour mathematically order-independent, so
+  // this ordering is purely a "deterministic encoder record" decision
+  // (HMR-stable, easy to reason about), not a correctness one.
+  if (settings.filamentsEnabled && filamentRenderer) {
+    filamentRenderer.draw(
+      pass,
+      viewProj,
+      [canvasWidth, canvasHeight],
+      // 1.5 → 3-px-thick lines at the screen-space halfwidth the
+      // shader expands.  Empirically pleasant — fine enough to feel
+      // like a wireframe, thick enough to read against dense fields.
+      1.5,
+    );
   }
 
   // ── Milky Way impostor (procedural backdrop at world origin) ──────
