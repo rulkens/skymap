@@ -88,7 +88,7 @@ import {
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
 } from '../../data/defaults';
-import type { LodMode, PointCloud } from '../../@types';
+import type { LodMode, PointCloud, PointInfo } from '../../@types';
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
 import { vec3 } from 'gl-matrix';
 
@@ -1041,6 +1041,52 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // option. A "click" fires only when pointerup is within 4 CSS pixels of
       // pointerdown — pure drags (orbit gestures) are suppressed.
 
+      // Cache of the most-recent successful click pick.  The
+      // double-click handler reads from this rather than running a
+      // second pick: two readbacks racing on shared GPU resources
+      // produced flaky results (the dblclick readback would resolve
+      // first and return `clear` while the click's resolved later
+      // with the real hit).  By reusing the click's PointInfo we
+      // also save one readback per double-click.
+      //
+      // Stored as the full PointInfo so we can pull `x/y/z` and
+      // `diameterKpc` straight into `handle.focusOn` without a
+      // second cloud-lookup.  Cleared on every empty-space click so
+      // a dblclick on empty space doesn't trigger a stale focus.
+      let lastClickedInfo: PointInfo | null = null;
+
+      // Shared pick body — used by single-click only now (dblclick
+      // reuses the cached PointInfo).  Returns the click resolver's
+      // result so the caller can decide what to do with it.  Inline
+      // rather than module-level because it closes over `state`,
+      // `canvas`, and the cssToTexPx helper from the surrounding
+      // scope.
+      const runPickAtCss = (
+        xCss: number,
+        yCss: number,
+      ): ReturnType<NonNullable<typeof state.subsystems.clickResolver>['resolveClick']> | null => {
+        const r = state.gpu.renderer;
+        const cr = state.subsystems.clickResolver;
+        if (!r || state.sources.clouds.size === 0 || !cr) return null;
+
+        // Snapshot the renderer's per-source draw records and filter
+        // by the current visibility mask so the pick pass sees the
+        // same surveys the visual pass just rendered.  We materialise
+        // to an array so the iterator survives the async pick promise.
+        const visibleSources = Array.from(r.loadedSources()).filter(
+          (s) => ((state.sources.visibleMask >> s.source) & 1) !== 0,
+        );
+        if (visibleSources.length === 0) return null;
+
+        return cr.resolveClick({
+          pickXPx: cssToTexPx(xCss),
+          pickYPx: cssToTexPx(yCss),
+          viewportPx: [canvas.width, canvas.height],
+          visibleSources,
+          uniformBuffer: r.uniformBuffer,
+        });
+      };
+
       detachControls = attachOrbitControls(canvas, cam, {
         onCameraChange: () => {
           // Camera moved — wake the render loop for one frame.
@@ -1052,42 +1098,47 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // Run a one-shot pick at the click position.  We don't use
           // the throttle guard here — clicks are infrequent and we
           // want an immediate, synchronous-feeling response.
-          const r = state.gpu.renderer;
-          const cr = state.subsystems.clickResolver;
-          if (!r || state.sources.clouds.size === 0 || !cr) return;
-
-          // Snapshot the renderer's per-source draw records and
-          // filter by the current visibility mask so the pick pass
-          // sees the same surveys the visual pass just rendered.  We
-          // materialise to an array so the iterator survives the
-          // async pick promise.
-          const visibleSources = Array.from(r.loadedSources()).filter(
-            (s) => ((state.sources.visibleMask >> s.source) & 1) !== 0,
-          );
-          if (visibleSources.length === 0) return;
-
-          cr.resolveClick({
-            pickXPx: cssToTexPx(xCss),
-            pickYPx: cssToTexPx(yCss),
-            viewportPx: [canvas.width, canvas.height],
-            visibleSources,
-            uniformBuffer: r.uniformBuffer,
-          }).then((result) => {
+          const pick = runPickAtCss(xCss, yCss);
+          if (!pick) return;
+          pick.then((result) => {
             // Click on empty space → clear; click on point → pin it.
-            // Either path selects (or clears) by global index — the
-            // resolved PointInfo is currently unused at the call
-            // site, but keeping it on the result lets a future
-            // "auto-focus on click" feature reuse the resolution
-            // without a second pick.
+            // The PointInfo on `result` is also cached for the
+            // dblclick handler — see `lastClickedInfo` above for the
+            // race-condition rationale.
             if (result.kind === 'clear') {
               setSelected(null);
+              lastClickedInfo = null;
             } else {
               setSelected(result.globalIdx);
+              lastClickedInfo = result.info;
             }
             // Selection changed — render so the highlight halo
             // updates on the next frame.
             state.subsystems.scheduler.requestRender();
           });
+        },
+        onDoubleClick: () => {
+          // Native dblclick fires AFTER the two preceding click
+          // events.  Both have already routed through `onClick` and
+          // populated `lastClickedInfo` with the hit galaxy's
+          // PointInfo.  We deliberately do NOT run a second pick
+          // here: two readbacks racing on the same pickRenderer
+          // resources resolved out of order in practice — the
+          // dblclick read returned `clear` while the click read
+          // resolved later with the real hit.  Reusing the cached
+          // info is correct (same coordinates + camera state, since
+          // dblclick fires before any frame can shift the scene)
+          // and saves a redundant readback.
+          //
+          // No-op when the user double-clicked empty space —
+          // `lastClickedInfo` would have been cleared by the
+          // single-click handler in that case, and we don't want a
+          // stale focus tween toward whatever was last clicked.
+          if (!lastClickedInfo) return;
+          handle.focusOn(
+            [lastClickedInfo.x, lastClickedInfo.y, lastClickedInfo.z],
+            lastClickedInfo.diameterKpc,
+          );
         },
       });
 

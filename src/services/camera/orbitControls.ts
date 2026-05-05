@@ -68,6 +68,22 @@ export type OrbitControlsOptions = {
    */
   onClick?: (xCss: number, yCss: number) => void;
   /**
+   * Called when the user double-clicks (or double-taps) the canvas.
+   *
+   * We delegate the "two clicks within the OS-defined time + distance
+   * threshold" detection to the browser's native `dblclick` event rather
+   * than rolling our own timer.  The browser already follows the user's
+   * accessibility/sensitivity preferences, and on touch screens the same
+   * event fires for a quick double-tap — no extra branching here.
+   *
+   * Note: native `dblclick` fires AFTER both `click` events, so any
+   * `onClick` handler will have already run twice.  That's intentional —
+   * the engine wires single-click to "select" and double-click to
+   * "focus", and a double-click cleanly upgrades a selection into a
+   * focus tween without missing either step.
+   */
+  onDoubleClick?: (xCss: number, yCss: number) => void;
+  /**
    * Called every time the camera state has been mutated by this module
    * (any pointer drag, pan, or wheel zoom).  The engine routes this
    * into its render scheduler so a single user gesture wakes the
@@ -504,6 +520,17 @@ export function attachOrbitControls(
   // reflect a real tap intent.
   canvas.addEventListener('pointercancel', onUp);
 
+  // ── Double-click — delegate to the browser's `dblclick` event ────────────
+  //
+  // We don't track timing ourselves: the browser already implements the OS
+  // double-click threshold (typically 300–500 ms, configurable in the user's
+  // accessibility settings).  On touch screens the same event also fires for
+  // a quick double-tap, so this single listener covers desktop + mobile.
+  const onDblClick = (e: MouseEvent) => {
+    options?.onDoubleClick?.(e.clientX, e.clientY);
+  };
+  canvas.addEventListener('dblclick', onDblClick);
+
   // ── Suppress the right-click context menu on the canvas ──────────────────
   //
   // The pan gesture uses the right mouse button (and middle), so a normal
@@ -540,6 +567,8 @@ export function attachOrbitControls(
     canvas.removeEventListener('pointerdown', onDown);
     canvas.removeEventListener('pointerup', onUp);
     canvas.removeEventListener('pointermove', onMove);
+    canvas.removeEventListener('pointercancel', onUp);
+    canvas.removeEventListener('dblclick', onDblClick);
     canvas.removeEventListener('contextmenu', onContextMenu);
     canvas.removeEventListener('wheel', onWheel);
   };
