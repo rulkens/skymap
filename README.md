@@ -2,15 +2,29 @@
 
 **Live demo:** [skymap.rulkens.com](https://skymap.rulkens.com) — open in Chrome or Edge 113+ for WebGPU.
 
-<!--
-  GIF placeholder — paste an embedded hero GIF here, e.g.
-  ![skymap demo](docs/screenshots/hero.gif).  See
-  docs/screenshots/README.md for the capture checklist.
--->
+![skymap — orbit, command palette, focus tween, info card](docs/screenshots/hero.gif)
 
 An interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs, built in TypeScript with React for the UI. Hover or click any galaxy to see its sky coordinates, redshift, lookback time, and catalog metadata; pin one to compare against another; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
 
 The code is documented didactically throughout — if you're also looking to learn WebGPU, GPU picking, or the basics of cosmological coordinate math, the source is meant to be read.
+
+## Screenshots
+
+![Full HUD with all surveys loaded](docs/screenshots/ui-overview.png)
+
+_The full overlay surface — left stack (Navigation cheatsheet, Settings panel, FPS / counts) and the InfoCard pinned to a selected galaxy on the right, with the cosmic-web filament skeleton drawn over the point field._
+
+![Local Volume close-up](docs/screenshots/local-group.png)
+
+_Local Volume, roughly 10–20 Mpc across. Bright textured quads are Famous-catalog galaxies with hand-curated DESI Legacy thumbnails; the faint blue lattice is the DisPerSE filament overlay._
+
+![Supercluster-scale view](docs/screenshots/wide-field.png)
+
+_Supercluster-scale view, roughly 200–400 Mpc across — thousands of galaxies clustering into a dense core with filaments radiating into surrounding voids._
+
+![Close-up zoom](docs/screenshots/zoomed.gif)
+
+_Zooming in: the dot dissolves into a procedural disk impostor (Gaussian bulge + exponential profile, 3D-oriented from catalog axis-ratio + position angle) and then into a real DESI thumbnail once the apparent size crosses the fetch threshold._
 
 ## Use cases
 
