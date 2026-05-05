@@ -34,6 +34,7 @@
     "build-all": "tsx tools/buildAllBins.ts",
     "build-famous": "tsx tools/buildFamous.ts",
     "build-filaments": "tsx tools/buildFilaments.ts",
+    "build-filaments-sdss": "tsx tools/buildFilaments.ts --sources sdss --output public/data/filaments-sdss.bin",
     "deploy": "npm run build && firebase deploy --only hosting --project skymap-b8e3e",
     "expand-famous": "tsx tools/expandFamousFromCatalogs.ts",
     "csv-to-bin": "tsx tools/csvToBin.ts",
