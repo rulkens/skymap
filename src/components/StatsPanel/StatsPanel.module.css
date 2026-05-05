@@ -1,0 +1,83 @@
+/*
+ * StatsPanel.module.css — glassmorphic FPS / counts panel.
+ *
+ * Visual treatment matches SettingsPanel + NavigationPanel: same background,
+ * blur, border, monospace font, 300px width.  Rules duplicated rather than
+ * cross-imported via CSS Modules `composes:` — see the StatsPanel.tsx
+ * module header for the rationale.
+ *
+ * Layout responsibility: this stylesheet does NOT position the panel.  The
+ * parent `.leftStack` (in App.module.css) flex-stacks the three left-column
+ * panels; we only render the card itself here.
+ */
+
+.statsPanel {
+  background: rgba(8, 12, 28, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(160, 200, 255, 0.16);
+  border-radius: 8px;
+
+  color: #cfd8ff;
+  font:
+    11px/1.4 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
+  user-select: none;
+  /* Match SettingsPanel + NavigationPanel for a uniform left-stack width. */
+  width: 300px;
+}
+
+/*
+ * "STATS" heading — same uppercase letter-spaced treatment as the other
+ * left-stack panels.  Plain header, no collapse/chevron — the stats row
+ * count is small enough that hiding it would be over-engineering.
+ */
+.panelTitle {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(160, 200, 255, 0.16);
+  border-radius: 8px 8px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(160, 180, 230, 0.5);
+}
+
+.panelContent {
+  padding: 12px 14px;
+}
+
+/*
+ * One label/value pair.  Two-column layout via flex with space-between.
+ * Matches NavigationPanel's `.row` — same visual rhythm so the user reads
+ * all three left-stack panels as a single typographic system.
+ */
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+/*
+ * Label cell on the left.  Matches SettingsPanel's `.panelRow label`
+ * brightness so the eye reads "FPS · 60" / "SDSS · 220,453" with the
+ * label as primary content and the number as supporting metadata.
+ */
+.label {
+  color: rgba(200, 220, 255, 0.85);
+  flex-shrink: 0;
+}
+
+/*
+ * Value cell on the right.  Tabular-nums keeps digits aligned across
+ * rows whose magnitudes vary by orders of magnitude (Famous ~20 →
+ * GLADE ~2.4 M).  Right-aligned via the parent's space-between flex.
+ */
+.value {
+  font-variant-numeric: tabular-nums;
+  color: #e8eeff;
+  text-align: right;
+}
