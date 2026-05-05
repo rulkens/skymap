@@ -650,6 +650,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         if (cloud) {
           filamentRenderer.upload(cloud);
           console.log(`[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts`);
+          // Push the parsed counts up to the UI layer.  See
+          // `EngineCallbacks.onFilamentsReady` for the lifecycle rationale —
+          // one-shot, fires only when the optional binary actually loaded.
+          cb.onFilamentsReady?.(cloud.stripCount, cloud.vertexCount);
           state.subsystems.scheduler.requestRender();
         }
       });

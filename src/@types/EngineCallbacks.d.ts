@@ -163,6 +163,27 @@ export type EngineCallbacks = {
    */
   onFpsChange?: (fps: number) => void;
   /**
+   * Fired exactly once, after the optional cosmic-web `filaments.bin` lands
+   * and is uploaded to the renderer.  Reports the strip and vertex counts so
+   * the UI can show e.g. "Filaments · 3,845 strips, 27,410 verts" alongside
+   * the per-survey counts.
+   *
+   * Why a one-shot callback (rather than an echo on every `setFilamentsEnabled`
+   * toggle)?  The counts are properties of the underlying file, not of the
+   * runtime visibility flag — toggling the overlay off doesn't change how
+   * many strips were parsed, and re-firing on every toggle would just spam
+   * React with identical numbers.  The alternative (exposing a getter on the
+   * `EngineHandle`) would force the UI to poll, which is awkward for state
+   * that arrives asynchronously over the network.
+   *
+   * Optional, and only fires when `loadFilaments()` returns a non-null cloud
+   * — i.e. when the binary actually exists on disk.  Fresh clones (before
+   * `npm run build-filaments` has run) silently skip this callback; the
+   * StatsPanel hides the filament row whenever `filamentCounts` stays null,
+   * which keeps the absent-file case visually clean.
+   */
+  onFilamentsReady?: (stripCount: number, vertexCount: number) => void;
+  /**
    * Fired each time a per-survey `.bin` file finishes loading and the cloud
    * has been uploaded to the renderer.  Surfaces progressive load state to
    * the React layer so the status bar can show e.g. "loaded 2/3 surveys".
