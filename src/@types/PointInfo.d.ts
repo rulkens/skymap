@@ -153,14 +153,25 @@ export type PointInfo = {
   /** @group External URLs */
 
   /**
-   * SDSS DR18 Quick Look page for this object (opens in a new tab).
+   * URL of an external catalogue page for this object (opens in a new tab).
    *
-   * Only populated for SDSS-sourced galaxies — non-SDSS surveys (2MRS, GLADE,
-   * Synthetic) have no equivalent per-object catalogue page, so this field is
-   * `null` for them and the UI renders a disabled placeholder instead of a
-   * broken link.
+   * Picked per-source so every real galaxy gets a useful link:
+   *
+   *   - SDSS rows with a valid objID → SDSS DR18 Quick Look (skyserver)
+   *   - 2MRS rows → NED byname using the runtime-formatted 2MASX
+   *     designation (`2MASX J<RA><Dec>`)
+   *   - GLADE rows with a real PGC → NED byname `PGC <n>` (the PGC is
+   *     persisted in `objID` — see `tools/parsers/glade.ts`)
+   *   - GLADE rows with no PGC, or any row that fell through the above
+   *     branches → NED near-position search at the row's RA/Dec
+   *   - Famous rows → NED byname using the primary curated name
+   *     (M31, NGC 224, …) from the famous catalog sidecar
+   *   - Synthetic rows → `null` (no real coords to look up)
+   *
+   * The InfoCard component picks an appropriate link label off `source`
+   * (e.g. "View in SDSS Explorer" for SDSS, "View on NED" otherwise).
    */
-  explorerUrl: string | null;
+  catalogUrl: string | null;
 
   /** @group Physical size */
 

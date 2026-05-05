@@ -380,10 +380,22 @@ export function parseGladeLine(
 
   return {
     source: Source.Glade,
-    // GLADE has no usable SDSS objID. The 0n sentinel signals to the
-    // merger's dedup pass that this row has no SDSS anchor and must
-    // be matched by position+z instead.
-    objID: 0n,
+    // We repurpose the SDSS-shaped 64-bit `objID` slot to carry the
+    // GLADE row's HyperLEDA PGC number when one is present.  PGCs are
+    // 32-bit-bounded integers (max ≈ 6 M today), so they fit trivially
+    // inside the existing 64-bit field — no format bump or sidecar
+    // needed.  Runtime consumers branch on `source` to decide how to
+    // interpret the value:
+    //   - SDSS    → the 64-bit SDSS DR18 objID (image cutouts, Explorer)
+    //   - GLADE   → the PGC number (NED `?objname=PGC+<n>` link)
+    //   - 0n      → no identifier (GLADE rows whose source line had a
+    //                blank/sentinel PGC, plus 2MRS / synthetic rows)
+    //
+    // The merger's dedup pass treats GLADE rows with PGC=0n as "no
+    // SDSS anchor, match by position+z instead", which is also the
+    // correct fallback now: a non-zero GLADE objID is a PGC, not an
+    // SDSS objID, so dedup must continue to ignore it.
+    objID: pgcKey ? BigInt(pgcKey) : 0n,
     ra,
     dec,
     z,

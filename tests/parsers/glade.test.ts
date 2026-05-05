@@ -56,11 +56,16 @@ describe('parseGlade', () => {
     // Every record carries the GLADE source tag.
     for (const r of records) {
       expect(r.source).toBe(Source.Glade);
-      // GLADE has no usable SDSS objID (its SDSS-DR12 column is a name
-      // string, not a numeric ID), so the parser must always emit the
-      // 0n sentinel — the merger's dedup pass relies on this.
-      expect(r.objID).toBe(0n);
     }
+    // The SDSS-shaped 64-bit `objID` slot is repurposed for GLADE rows to
+    // carry the HyperLEDA PGC number when one is present.  Rows whose
+    // source line had a sentinel PGC (`---`, blank, or `0`) emit `0n`.
+    //   - row 0 = NGC 253, PGC 2789
+    //   - row 1 = NGC 5128 (Cen A), PGC 46957
+    //   - row 2 = no-name source, PGC = `---` → 0n
+    expect(records[0]!.objID).toBe(2789n);
+    expect(records[1]!.objID).toBe(46957n);
+    expect(records[2]!.objID).toBe(0n);
 
     // ─── NGC 253 (row 0) — published values from VizieR VII/281 ─────────
     // RA/Dec come from bytes 106-123 / 125-144.
