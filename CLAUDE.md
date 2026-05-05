@@ -47,6 +47,7 @@ npm run typecheck   # both src and tools tsconfigs
 npm test            # vitest run (single pass)
 npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs
+npm run build-tiers # alias for build-all — emits per-tier .bin variants
 npm run format      # prettier
 ```
 
@@ -65,6 +66,16 @@ data/raw/*.dat,*.csv  ──parsers──▶  ParsedRecord[]  ──crossMatch�
 ```
 
 Binary format is in `src/data/pointCloudFormat.ts` — currently v2, 48 bytes/point. Bumping the version means regenerating bins via `npm run build-all`. The format header stores `magic + version + count`, so old bins fail loudly with a clear regenerate message.
+
+### Deploy workflow (Firebase static hosting)
+
+1. `npm run build-tiers` — regenerates all `public/data/*.bin` (12 tier-suffixed variants for SDSS + GLADE; one shared `2mrs.bin` and `famous.bin`).
+2. `npm run build-filaments` (if filaments need rebuilding).
+3. `npm run deploy` — runs `npm run build && firebase deploy --only hosting`.
+
+The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitignored). They are pure build artefacts: deterministic outputs of `tools/buildAllBins.ts` against the raw catalog files in `data/raw/`. Checking them in would inflate every clone by ~150 MB for no informational gain — the same bytes can always be rebuilt from source on demand. Keeping them out also avoids accidental drift between `tools/buildAllBins.ts` settings (tier targets, abs-mag thresholds) and a stale committed binary; each deploy ships a fresh build, so what's hosted is always in sync with the current pipeline code.
+
+The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers. A complete deploy must therefore include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin` and `famous.bin`. (`firebase deploy --only hosting` uploads the full `public/` tree, so as long as `npm run build-tiers` ran first, all variants ship.)
 
 ## Catalog gotchas
 
