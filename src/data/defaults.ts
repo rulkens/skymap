@@ -160,12 +160,33 @@ export const DEFAULT_EXPOSURE = 3.0;
 // ── Malmquist-bias correction ────────────────────────────────────────────────
 
 /**
- * Default density-correction mode — `None` (no correction).  Picking
- * `VolumeLimited`, `VMax`, `Schechter`, or `AngularReweight` is a
- * deliberate user choice; we don't surprise them with re-weighted alpha
- * on first paint.
+ * Default density-correction mode — `AngularReweight` (per-survey HEALPix).
+ *
+ * Why on by default:  GLADE's parent-catalogue coverage is non-uniform on
+ * the sky, which produces visible "pencil-beam jets" radiating from
+ * over-detected sky cells in the raw render.  The HEALPix re-weight bins
+ * each cloud's galaxies into (HEALPix cell, log-distance shell) pairs and
+ * modulates per-vertex alpha by the ratio of median-cell density to the
+ * local cell density.  Net effect: bright sky patches are dimmed and dim
+ * patches are brightened, so the visible density on first paint reads as
+ * "structure" rather than "where the parent surveys looked harder."  The
+ * weight is baked into the vertex buffer at startup (lazy, mirrors the
+ * Schechter pattern) so this default has zero per-frame cost.
+ *
+ * Per-cloud, never global, so SDSS's wedge footprint can't contaminate
+ * GLADE's correction (and vice-versa).  See
+ * `services/engine/computeAngularWeights.ts` for the algorithm and the
+ * survey-isolation rationale.
+ *
+ * Off-mode (`None`) is still the right choice for screenshots that need
+ * to show raw catalogue density, or when comparing against a reference
+ * paper that uses no correction.  `VolumeLimited`, `VMax`, and `Schechter`
+ * remain available in the dropdown — they correct different aspects of
+ * the survey selection function (radial completeness vs. angular
+ * completeness) and aren't mutually exclusive in principle, but the UI
+ * exposes them as one-of-five for simplicity.
  */
-export const DEFAULT_BIAS_MODE: BiasMode = BiasMode.None;
+export const DEFAULT_BIAS_MODE: BiasMode = BiasMode.AngularReweight;
 
 /**
  * Default absolute-magnitude threshold for `BiasMode.VolumeLimited`.
