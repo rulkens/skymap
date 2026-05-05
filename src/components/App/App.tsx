@@ -107,6 +107,10 @@ import {
   loadFamousSidecars,
   type FamousMetaEntry,
 } from '../../services/engine/famousMetaLoader';
+import {
+  loadPgcAliases,
+  type AliasIndexEntry,
+} from '../../services/engine/pgcAliasLoader';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -332,6 +336,22 @@ export function App(): React.ReactElement {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [famousMeta, setFamousMeta] = useState<FamousMetaEntry[]>([]);
 
+  // ── Alias-search state ───────────────────────────────────────────────────
+  //
+  // The PGC->aliases JSON sidecar is ~1.7 MB and we don't pay that cost on
+  // engine startup.  Instead, when the palette opens for the first time, we
+  // kick off `loadPgcAliases()` and join the result against the GLADE and
+  // 2MRS clouds' `objIDs` arrays to produce a single flat alias index the
+  // palette can search.  Subsequent palette opens reuse the cached index.
+  //
+  // `aliasIndex === null` means "not loaded yet"; `[]` means "loaded but
+  // empty" (sidecar absent, or join produced no hits).  The palette
+  // accepts undefined/empty without complaint.
+  const [aliasIndex, setAliasIndex] = useState<readonly AliasIndexEntry[] | null>(null);
+  // Tracks whether we've already kicked off the lazy load — useEffect's
+  // `paletteOpen` dependency would otherwise re-trigger on every open.
+  const aliasLoadStarted = useRef(false);
+
   // ── Engine startup effect ──────────────────────────────────────────────────
 
   useEffect(() => {
@@ -454,6 +474,58 @@ export function App(): React.ReactElement {
   useEffect(() => {
     loadFamousSidecars().then((sc) => setFamousMeta(sc.meta));
   }, []);
+
+  // ── Alias index — lazy-built on first palette open ────────────────────────
+  //
+  // Two-phase pipeline:
+  //
+  //   1. Fetch `pgc_aliases.json` (the PGC -> human-name Map).
+  //   2. Walk both GLADE and 2MRS objIDs, look up each non-zero PGC in
+  //      that Map, emit one `AliasIndexEntry` per match.
+  //
+  // Both phases happen exactly once per session; the result is held in
+  // `aliasIndex` state and reused on subsequent opens.  We trigger off
+  // `paletteOpen` (rather than at engine-ready time) because most users
+  // never hit Cmd+K — paying the 1.7 MB JSON download up front would be
+  // wasteful for them.
+  //
+  // The `sourceCounts` dependency ensures the effect re-runs when each
+  // cloud finishes loading; the `engine.getCloudObjIds()` calls inside
+  // would return undefined before that.  We *also* require both 2MRS
+  // and GLADE counts to be non-zero before kicking off so we don't
+  // build a half-populated index from a mid-load engine state.
+  useEffect(() => {
+    if (!paletteOpen) return;
+    if (aliasLoadStarted.current) return;
+    const handle = handleRef.current;
+    if (!handle?.getCloudObjIds) return;
+    // Don't kick off until both GLADE and 2MRS have at least started loading.
+    // Without this guard the join walks a missing array and emits no entries,
+    // permanently caching an empty index.
+    const gladeCount = sourceCounts[Source.Glade] ?? 0;
+    const twoMrsCount = sourceCounts[Source.TwoMRS] ?? 0;
+    if (gladeCount === 0 && twoMrsCount === 0) return;
+
+    aliasLoadStarted.current = true;
+    loadPgcAliases().then((aliasMap) => {
+      // Build the flat index — one entry per (cloud, localIdx) where the
+      // PGC at that localIdx has at least one named alias.  Skip zero
+      // PGCs (unmapped rows in the catalog cross-match).
+      const out: AliasIndexEntry[] = [];
+      for (const source of [Source.Glade, Source.TwoMRS] as const) {
+        const objIds = handle.getCloudObjIds?.(source);
+        if (!objIds) continue;
+        for (let i = 0; i < objIds.length; i++) {
+          const pgc = objIds[i]!;
+          if (pgc === 0n) continue;
+          const names = aliasMap.get(pgc);
+          if (!names || names.length === 0) continue;
+          out.push({ pgc, names, source, localIdx: i });
+        }
+      }
+      setAliasIndex(out);
+    });
+  }, [paletteOpen, sourceCounts]);
 
   // ── Keyboard shortcuts effect ──────────────────────────────────────────────
   //
@@ -751,9 +823,11 @@ export function App(): React.ReactElement {
       */}
       <CommandPalette
         entries={famousMeta}
+        aliasIndex={aliasIndex ?? undefined}
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
         onSelect={(id) => handleRef.current?.selectFamous?.(id)}
+        onSelectAlias={(target) => handleRef.current?.selectByAlias?.(target)}
       />
     </>
   );

@@ -48,6 +48,27 @@
  */
 
 import { dataUrl } from './cloudLoader';
+import type { Source } from '../../data/sources';
+
+/**
+ * One row of the runtime alias-search index.
+ *
+ * Built by joining the PGC→names Map (this loader) against the GLADE
+ * and 2MRS PointClouds in App.tsx.  The palette filters across these
+ * entries; selecting one calls back through `engine.selectByAlias`
+ * which uses `(source, localIdx)` to compute the global index +
+ * camera focus.
+ *
+ * `pgc` is retained for debugging/tracing (logs read better with PGC
+ * numbers attached) but the runtime selection path doesn't need it —
+ * `localIdx` already pins the row inside its source cloud.
+ */
+export type AliasIndexEntry = {
+  pgc: bigint;
+  names: readonly string[];
+  source: Source;
+  localIdx: number;
+};
 
 /**
  * The JSON-on-disk shape: `{ "<pgc>": ["NGC 4565", "UGC 7772", …], … }`.
