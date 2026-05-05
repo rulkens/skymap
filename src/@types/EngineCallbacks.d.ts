@@ -8,6 +8,7 @@ import type { EngineStatus } from './EngineStatus';
 import type { PointInfo } from './PointInfo';
 import type { ScaleInfo } from './ScaleInfo';
 import type { LodMode } from './LodMode';
+import type { Tier } from './Tier';
 import type { Source } from '../data/sources';
 import type { BiasMode } from '../data/biasMode';
 import type { ToneMapCurve } from '../data/toneMapCurve';
@@ -200,4 +201,14 @@ export type EngineCallbacks = {
    * code path for the no-data case.
    */
   onCloudReady?: (source: Source, count: number) => void;
+
+  /**
+   * Initial data tier to load on engine startup.  Defaults to `'medium'`
+   * when absent.  This is technically an option, not a callback, but the
+   * `createEngine(canvas, cb)` signature already passes a single bag for
+   * both — extending it here keeps the public surface compact rather than
+   * introducing a separate `EngineOpts` type for one extra field.  Will
+   * grow into a richer Opts split if more startup-only knobs accumulate.
+   */
+  initialTier?: Tier;
 };

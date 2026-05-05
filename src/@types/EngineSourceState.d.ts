@@ -32,6 +32,7 @@
 
 import type { LodMode } from './LodMode';
 import type { PointCloud } from './PointCloud';
+import type { Tier } from './Tier';
 import type { Source } from '../data/sources';
 import type { FamousMetaEntry, FamousXrefMap } from '../services/engine/famousMetaLoader';
 
@@ -41,4 +42,12 @@ export type EngineSourceState = {
   clouds: Map<Source, PointCloud>;
   famousMeta: FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
+  /**
+   * Currently-loaded data tier — drives subsequent `setTier` diffing.
+   * Seeded at engine init from `opts.initialTier` (defaulting to 'medium')
+   * and re-assigned synchronously from inside `setTier` before the per-source
+   * reloads dispatch, so the next `setTier` call sees the freshly-active tier
+   * as its `prev`.
+   */
+  tier: Tier;
 };

@@ -90,6 +90,7 @@ describe('EngineState type', () => {
       clouds: new Map(),
       famousMeta: [],
       famousXrefs: {},
+      tier: 'medium',
     };
     const picking: EnginePickingState = {
       hoveredIndex: null,
@@ -204,6 +205,7 @@ describe('EngineState type', () => {
         clouds: new Map(),
         famousMeta: [],
         famousXrefs: {},
+        tier: 'medium',
       },
       picking: {
         hoveredIndex: null,

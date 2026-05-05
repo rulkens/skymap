@@ -312,6 +312,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // InfoCard layout.
       famousMeta: [],
       famousXrefs: {},
+      // Currently-loaded data tier.  Seeded from `cb.initialTier` (Task 5
+      // of the data-tiers plan); the default of 'medium' matches the
+      // pre-tier ~600k-galaxy desktop budget.  `setTier` mutates this in
+      // place before kicking off per-source reloads.
+      tier: cb.initialTier ?? 'medium',
     },
     picking: {
       hoveredIndex: null,
@@ -709,7 +714,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // so the first `.then(() => upload(...))` fires immediately.
       let uploadChain: Promise<void> = Promise.resolve();
 
-      const { loadedCount } = await loadAllClouds((result) => {
+      const { loadedCount } = await loadAllClouds(state.sources.tier, (result) => {
         // Renderer might have been destroyed mid-load (StrictMode unmount,
         // hot-reload).  Drop the result silently in that case.
         if (!state.gpu.renderer) return;

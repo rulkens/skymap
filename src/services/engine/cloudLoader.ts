@@ -35,8 +35,10 @@ import { decodePointCloud } from '../../data/pointCloudFormat';
 import { decodeFilaments } from '../../data/filamentBinaryFormat';
 import { generateSyntheticCloud } from '../../data/synthetic';
 import { Source } from '../../data/sources';
+import { TIER_TARGETS, tierFilenameForSource } from '../../data/tierTargets';
 import type { PointCloud } from '../../@types';
 import type { FilamentCloud } from '../../@types/FilamentCloud';
+import type { Tier } from '../../@types/Tier';
 
 /**
  * Discriminated source tag returned to callers that care about which load
@@ -54,20 +56,35 @@ type SurveyFile = {
 };
 
 /**
- * The list of real surveys we try to load on startup.
+ * Build the per-tier list of survey files to attempt.  Replaces the old
+ * static SURVEY_FILES constant — different tiers fetch different filenames
+ * (see `tierFilenameForSource`).  Sources whose tier-target is 0 (excluded)
+ * are dropped from the list entirely so we don't 404-attempt them on
+ * startup; the `setTier` orchestrator takes the same shortcut at swap time.
  *
  * Listed in `Source` enum order (SDSS=1, TwoMRS=2, Glade=3) because the
  * renderer's per-source bookkeeping iterates surveys in enum order and we
- * find diff-reading easier when this file mirrors that order.
+ * find diff-reading easier when this file mirrors that order.  Famous goes
+ * last so its tiny result lands instantly even on slow connections.
  */
-const SURVEY_FILES: readonly SurveyFile[] = [
-  { source: Source.SDSS, url: '/data/sdss.bin', cloudSource: 'sdss.bin' },
-  { source: Source.TwoMRS, url: '/data/2mrs.bin', cloudSource: '2mrs.bin' },
-  { source: Source.Glade, url: '/data/glade.bin', cloudSource: 'glade.bin' },
-  // Curated atlas — small (~1 KB for 20 entries, ~10 KB for 150).
-  // Loaded last so its result lands instantly even on slow connections.
-  { source: Source.Famous, url: '/data/famous.bin', cloudSource: 'famous.bin' },
-];
+function surveyFilesForTier(tier: Tier): readonly SurveyFile[] {
+  const candidates: { source: Source; cloudSource: CloudSource }[] = [
+    { source: Source.SDSS, cloudSource: 'sdss.bin' },
+    { source: Source.TwoMRS, cloudSource: '2mrs.bin' },
+    { source: Source.Glade, cloudSource: 'glade.bin' },
+    { source: Source.Famous, cloudSource: 'famous.bin' },
+  ];
+  const out: SurveyFile[] = [];
+  for (const c of candidates) {
+    if (TIER_TARGETS[tier][c.source] === 0) continue;
+    out.push({
+      source: c.source,
+      url: `/data/${tierFilenameForSource(c.source, tier)}`,
+      cloudSource: c.cloudSource,
+    });
+  }
+  return out;
+}
 
 /** Per-survey load result the engine consumes. */
 export type CloudLoadResult = {
@@ -230,6 +247,7 @@ function decimateFar(
  * @returns         `loadedCount` — how many real surveys made it through.
  */
 export async function loadAllClouds(
+  tier: Tier,
   onResult: (result: CloudLoadResult) => void,
 ): Promise<{ loadedCount: number }> {
   // Wrap each fetch so we can dispatch the per-survey callback as soon as
@@ -237,7 +255,8 @@ export async function loadAllClouds(
   // when every input has settled, so we can't rely on it for streaming.
   // The trick: each promise calls `onResult` inside its own `.then` and
   // *then* resolves; allSettled below just gives us the final count.
-  const wrapped = SURVEY_FILES.map((file) =>
+  const surveyFiles = surveyFilesForTier(tier);
+  const wrapped = surveyFiles.map((file) =>
     fetchOne(file)
       .then((r) => {
         onResult(r);
@@ -255,6 +274,120 @@ export async function loadAllClouds(
   const results = await Promise.allSettled(wrapped);
   const loadedCount = results.filter((r) => r.status === 'fulfilled').length;
   return { loadedCount };
+}
+
+/**
+ * Per-source AbortController registry — see `reloadSource` for the why.
+ *
+ * The hot-swap path lets the user click tier buttons faster than a fetch
+ * resolves.  Without aborting the prior request, two fetches race each
+ * other into `onResult`: the slower one wins (its callback fires last) and
+ * stomps the freshly-uploaded buffer with a buffer from the previous tier.
+ *
+ * Keying by `Source` (not by source × tier) is correct: only one in-flight
+ * cloud per source is ever valid.  Switching tiers always invalidates the
+ * prior fetch for THIS source — even if it happens to be the same tier
+ * (defensive: the user double-clicks "medium").
+ */
+const inflightControllers = new Map<Source, AbortController>();
+
+/**
+ * Re-fetch a single source's .bin for the given tier and dispatch the
+ * decoded cloud to `onResult`.  Aborts and discards any in-flight fetch
+ * for the same source.  Resolves after the fetch settles (success, abort,
+ * or error).
+ *
+ * Aborted fetches do NOT call `onResult` — the engine's swap orchestrator
+ * relies on this to avoid stale uploads.  Network/decode errors are logged
+ * and swallowed so a failing tier swap doesn't crash the engine; the user
+ * sees the previous tier's data unchanged on screen.
+ *
+ * Sources whose tier-target is 0 (excluded — e.g. SDSS in `small`) are
+ * not fetched; instead `onResult` is called with an empty cloud so the
+ * engine's downstream callback chain still fires (and the renderer can
+ * tear down the source's GPU buffer to free VRAM).
+ */
+export async function reloadSource(
+  source: Source,
+  tier: Tier,
+  onResult: (result: CloudLoadResult) => void,
+): Promise<void> {
+  // Cancel any fetch already running for this source — see registry doc above.
+  const prior = inflightControllers.get(source);
+  if (prior) prior.abort();
+
+  // Excluded tier: skip the fetch entirely, fire an empty-cloud callback
+  // so the engine can clear this source's GPU buffer.  We delete the
+  // controller registry entry too so a subsequent tier swap doesn't try
+  // to abort a never-started fetch.
+  if (TIER_TARGETS[tier][source] === 0) {
+    inflightControllers.delete(source);
+    const empty: PointCloud = {
+      count: 0,
+      objIDs: new BigUint64Array(0),
+      positions: new Float32Array(0),
+      magU: new Float32Array(0),
+      magG: new Float32Array(0),
+      magR: new Float32Array(0),
+      magI: new Float32Array(0),
+      magZ: new Float32Array(0),
+      axisRatio: new Float32Array(0),
+      positionAngleDeg: new Float32Array(0),
+      diameterKpc: new Float32Array(0),
+    };
+    onResult({
+      source,
+      cloudSource: cloudSourceFor(source),
+      cloud: empty,
+    });
+    return;
+  }
+
+  const controller = new AbortController();
+  inflightControllers.set(source, controller);
+
+  const url = `/data/${tierFilenameForSource(source, tier)}`;
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    const buf = await res.arrayBuffer();
+    // If a newer call has already aborted this controller, drop the result.
+    if (controller.signal.aborted) return;
+    const cloud = decodePointCloud(buf);
+    onResult({ source, cloudSource: cloudSourceFor(source), cloud });
+  } catch (err) {
+    // AbortError is the expected "user clicked again" path — silent.  Any
+    // other error is logged so dev-server 404s show up clearly.
+    if ((err as Error).name !== 'AbortError') {
+      console.warn(`[cloudLoader] reloadSource ${url} failed:`, err);
+    }
+  } finally {
+    // Only clear if we're still the latest controller — otherwise a more
+    // recent reload has already swapped in its own controller.
+    if (inflightControllers.get(source) === controller) {
+      inflightControllers.delete(source);
+    }
+  }
+}
+
+/**
+ * Map a Source to its CloudSource discriminator string.  Centralised so
+ * `reloadSource` and `loadAllClouds` agree on the value reported back to
+ * the engine, which uses it for status-bar wording.
+ */
+function cloudSourceFor(source: Source): CloudSource {
+  switch (source) {
+    case Source.SDSS:
+      return 'sdss.bin';
+    case Source.TwoMRS:
+      return '2mrs.bin';
+    case Source.Glade:
+      return 'glade.bin';
+    case Source.Famous:
+      return 'famous.bin';
+    default:
+      return 'synthetic';
+  }
 }
 
 /**
