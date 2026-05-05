@@ -14,17 +14,18 @@ coverage/
 .vitest-cache/
 
 # ── Environment files ─────────────────────────────────────────────────────────
-# Default-deny `.env*` keeps secrets out by accident.  The carve-out below
-# is `.env.production`: it carries `VITE_DATA_BASE_URL`, which is the public
-# R2 URL the runtime fetcher uses (visible in any visitor's DevTools network
-# tab — not a secret).  Cloudflare Workers Assets projects with no custom
-# Worker code can't store dashboard-level env vars, so the production build
-# config has to live in the repo to be picked up by `vite build` on the
-# auto-deploy.  Anything genuinely secret should still go through Cloudflare
-# Secrets (`wrangler secret put`) once a Worker script lands in this repo.
+# All `.env*` files stay out of git.  `VITE_DATA_BASE_URL` (the only env var
+# the build currently cares about) is set as a build-time variable in the
+# Cloudflare Workers project's dashboard — Worker+Assets projects unlock
+# the Variables-and-Secrets panel, so infrastructure config lives there
+# instead of in a committed `.env.production`.  See `src/worker.ts` for the
+# pass-through Worker that promotes the project to Worker+Assets mode.
+#
+# Local development can still drop a `.env.production` (gitignored) to
+# point `npm run build && npm run preview` at the live R2 URL — useful
+# for end-to-end smoke tests outside the dev server.
 .env
 .env.*
-!.env.production
 
 # ── OS clutter ────────────────────────────────────────────────────────────────
 .DS_Store
