@@ -106,6 +106,7 @@ import {
   buildSyntheticFallback,
   loadFilaments,
   type CloudSource,
+  type LoadEvent,
 } from './cloudLoader';
 import { createLoadProgressAggregator } from './loadProgressAggregator';
 import { TIER_TARGETS } from '../../data/tierTargets';
@@ -387,6 +388,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       thumbnails: null,
       clickResolver: null,
       inputBindings: null,
+      // Aggregator for download-progress events — instantiated inside
+      // the GPU init IIFE before the first `loadAllClouds` call so
+      // `cb.onLoadProgress` is the closure target.  See the IIFE.
+      loadProgress: null,
     },
     cam: null,
     initialCamSnapshot: null,
@@ -710,6 +715,27 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // so the first `.then(() => upload(...))` fires immediately.
       let uploadChain: Promise<void> = Promise.resolve();
 
+      // Per-engine aggregator so the loading-bar UI can show combined
+      // download progress across both the initial parallel load and
+      // every subsequent tier swap through the same callback.  Hoisted
+      // out of the local scope (assigned to `state.subsystems.loadProgress`
+      // below) so `setTier` can reuse the same instance.
+      const loadProgress = createLoadProgressAggregator((snapshot) => {
+        cb.onLoadProgress?.(snapshot);
+      });
+      state.subsystems.loadProgress = loadProgress;
+
+      // Dispatcher that maps a tagged LoadEvent (the cloud loader's
+      // public progress shape) onto the aggregator's three lifecycle
+      // methods.  Re-used by both `loadAllClouds` here and `setTier`'s
+      // per-source `reloadSource` calls so progress aggregation is
+      // identical between initial load and hot-swap.
+      const dispatchLoadEvent = (e: LoadEvent) => {
+        if (e.type === 'start') loadProgress.start(e.source, e.total);
+        else if (e.type === 'progress') loadProgress.update(e.source, e.loaded, e.total);
+        else loadProgress.finish(e.source);
+      };
+
       const { loadedCount } = await loadAllClouds(state.sources.tier, (result) => {
         // Renderer might have been destroyed mid-load (StrictMode unmount,
         // hot-reload).  Drop the result silently in that case.
@@ -785,7 +811,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         if (firstResult === null) {
           firstResult = result;
         }
-      });
+      }, dispatchLoadEvent);
 
       // ── Famous sidecars — fire-and-forget ─────────────────────────────────
       //
@@ -1706,6 +1732,36 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.subsystems.scheduler.requestRender();
     },
 
+    logCameraState() {
+      // Debug aid for tuning the initial camera framing + reset target.
+      // Prints the live camera state in copy-paste-friendly form so the
+      // values can be pasted into `cameraFraming.ts` (initial camera) or
+      // wherever the reset target is hard-coded.  No-op when the camera
+      // hasn't been constructed yet (early invocation during engine boot).
+      const cam = state.cam;
+      if (!cam) {
+        console.log('[engine] logCameraState: camera not ready yet');
+        return;
+      }
+      const out = {
+        target: [
+          Number(cam.target[0].toFixed(2)),
+          Number(cam.target[1].toFixed(2)),
+          Number(cam.target[2].toFixed(2)),
+        ],
+        distance: Number(cam.distance.toFixed(2)),
+        yaw: Number(cam.yaw.toFixed(4)),
+        pitch: Number(cam.pitch.toFixed(4)),
+        fovYRad: Number(cam.fovYRad.toFixed(4)),
+      };
+      // Two prints — the structured form for human reading, the raw
+      // single-line for fast copy-paste into source.
+      console.log('[engine] camera state:', out);
+      console.log(
+        `[engine] one-liner: target: [${out.target.join(', ')}], distance: ${out.distance}, yaw: ${out.yaw}, pitch: ${out.pitch}, fovYRad: ${out.fovYRad}`,
+      );
+    },
+
     focusOn(worldXYZ, diameterKpc) {
       // Camera may not be ready yet (cloud still loading); drop the call.
       // Same defensive pattern as resetCamera() above.
@@ -1884,15 +1940,29 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // same `onCloudReady` echo, and the same render wake-up — keeping
         // HEALPix re-weight + Schechter ratio re-bake identical to first-
         // load behaviour (see Task 8's regression test).
-        reloadSource(source, tier, (result) => {
-          if (!state.gpu.renderer) return;
-          state.gpu.renderer.upload(result.source, result.cloud).catch((err) => {
-            console.error(`[engine.setTier] upload failed for source ${result.source}:`, err);
-          });
-          state.sources.clouds.set(result.source, result.cloud);
-          cb.onCloudReady?.(result.source, result.cloud.count);
-          state.subsystems.scheduler.requestRender();
-        });
+        reloadSource(
+          source,
+          tier,
+          (result) => {
+            if (!state.gpu.renderer) return;
+            state.gpu.renderer.upload(result.source, result.cloud).catch((err) => {
+              console.error(`[engine.setTier] upload failed for source ${result.source}:`, err);
+            });
+            state.sources.clouds.set(result.source, result.cloud);
+            cb.onCloudReady?.(result.source, result.cloud.count);
+            state.subsystems.scheduler.requestRender();
+          },
+          // Forward per-source byte progress through the same aggregator
+          // the initial load uses, so the loading bar in the React shell
+          // sees a unified "fraction-of-total-loaded" snapshot regardless
+          // of whether the user is on first paint or mid-tier-swap.
+          (e) => {
+            if (e.type === 'start') state.subsystems.loadProgress?.start(e.source, e.total);
+            else if (e.type === 'progress')
+              state.subsystems.loadProgress?.update(e.source, e.loaded, e.total);
+            else state.subsystems.loadProgress?.finish(e.source);
+          },
+        );
       }
     },
 

@@ -470,6 +470,16 @@ export function App(): React.ReactElement {
         handleRef.current?.focusOnHome();
         return;
       }
+
+      // ── l: log the live camera state to console (debug aid) ────────────────
+      // Prints target / distance / yaw / pitch / fovYRad in copy-paste-friendly
+      // form so the developer can tune the initial framing + reset values
+      // interactively.  Lower-case only — capital L is reserved for future
+      // use; keep the dev hotkey unobtrusive.
+      if (e.key === 'l') {
+        handleRef.current?.logCameraState();
+        return;
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);

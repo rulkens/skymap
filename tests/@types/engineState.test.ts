@@ -115,6 +115,7 @@ describe('EngineState type', () => {
       },
       subsystems: {
         thumbnails: null,
+        loadProgress: null,
         spaceMouse: createSpaceMouseSubsystem({
           cancelTween: () => {},
           onConnectionChange: () => {},
@@ -224,6 +225,7 @@ describe('EngineState type', () => {
       },
       subsystems: {
         thumbnails: null,
+        loadProgress: null,
         spaceMouse: createSpaceMouseSubsystem({
           cancelTween: () => {},
           onConnectionChange: () => {},

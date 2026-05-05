@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   computeInitialCamera,
-  INITIAL_FRAME_FACTOR,
+  INITIAL_DISTANCE_MPC,
 } from '../../../src/services/engine/cameraFraming';
 import { MAX_DISTANCE_MPC, MIN_DISTANCE_MPC } from '../../../src/services/camera/orbitCamera';
 
@@ -41,10 +41,15 @@ describe('computeInitialCamera', () => {
     expect(huge.near).toBe(0.01);
   });
 
-  it('scales distance by INITIAL_FRAME_FACTOR for in-envelope bboxes', () => {
-    const bbox = 200;
-    const cam = computeInitialCamera({ bbox, fovYRad: FOV });
-    expect(cam.distance).toBeCloseTo(bbox * INITIAL_FRAME_FACTOR, 6);
+  it('uses the absolute INITIAL_DISTANCE_MPC regardless of bbox', () => {
+    // Distance is now decoupled from bbox — the framing should be the
+    // same whether the loaded catalog is huge (full GLADE) or tiny
+    // (synthetic-only fallback).  bbox still drives `far` (clip plane)
+    // but no longer scales `distance`.
+    const camSmall = computeInitialCamera({ bbox: 200, fovYRad: FOV });
+    const camHuge = computeInitialCamera({ bbox: 2000, fovYRad: FOV });
+    expect(camSmall.distance).toBeCloseTo(INITIAL_DISTANCE_MPC, 6);
+    expect(camHuge.distance).toBeCloseTo(INITIAL_DISTANCE_MPC, 6);
   });
 
   it('scales far by 4× the bbox so the deepest points never clip', () => {
@@ -53,16 +58,15 @@ describe('computeInitialCamera', () => {
     expect(cam.far).toBeCloseTo(bbox * 4, 6);
   });
 
-  it('clamps an oversized bbox so the camera never starts above MAX_DISTANCE_MPC', () => {
-    // 5000 × 1.6 = 8000 Mpc, well above the 5000 Mpc envelope.
-    const cam = computeInitialCamera({ bbox: 5000, fovYRad: FOV });
-    expect(cam.distance).toBe(MAX_DISTANCE_MPC);
-  });
-
-  it('clamps a tiny bbox so the camera never starts below MIN_DISTANCE_MPC', () => {
-    // 0.001 × 1.6 = 0.0016 Mpc, below the 0.05 Mpc floor.
-    const cam = computeInitialCamera({ bbox: 0.001, fovYRad: FOV });
-    expect(cam.distance).toBe(MIN_DISTANCE_MPC);
+  it('clamps the initial distance to MAX_DISTANCE_MPC if the constant ever exceeds it', () => {
+    // The current INITIAL_DISTANCE_MPC (644.72) sits well within the
+    // global envelope, so this test asserts the clamp fires only when
+    // the constant is artificially large.  Kept as a regression rail —
+    // a future tweak that pushes the constant past MAX_DISTANCE_MPC
+    // (5000 by default) would surface here.
+    const cam = computeInitialCamera({ bbox: 200, fovYRad: FOV });
+    expect(cam.distance).toBeLessThanOrEqual(MAX_DISTANCE_MPC);
+    expect(cam.distance).toBeGreaterThanOrEqual(MIN_DISTANCE_MPC);
   });
 
   it('returns a fresh array for target on every call (no shared reference)', () => {

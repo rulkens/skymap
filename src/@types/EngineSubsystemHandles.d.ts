@@ -42,6 +42,7 @@ import type { TweenManager } from '../services/engine/tweenManager';
 import type { ClickResolver } from '../services/engine/clickHandler';
 import type { InputBindings } from '../services/engine/inputBindings';
 import type { RenderScheduler } from '../services/engine/renderScheduler';
+import type { LoadProgressAggregator } from '../services/engine/loadProgressAggregator';
 
 export type EngineSubsystemHandles = {
   thumbnails: ThumbnailSubsystem | null;
@@ -50,4 +51,11 @@ export type EngineSubsystemHandles = {
   clickResolver: ClickResolver | null;
   inputBindings: InputBindings | null;
   scheduler: RenderScheduler;
+  /**
+   * Per-engine download-progress aggregator — instantiated inside the
+   * GPU init IIFE (so `cb.onLoadProgress` is in scope at construction
+   * time) and used by both the initial `loadAllClouds` and per-source
+   * `setTier` reloads.  Null until that init runs.
+   */
+  loadProgress: LoadProgressAggregator | null;
 };

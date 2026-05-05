@@ -181,6 +181,19 @@ export type EngineHandle = {
   resetCamera: () => void;
 
   /**
+   * Debug helper — log the live camera state to the console in
+   * copy-paste-friendly form, so the developer can tune the initial /
+   * reset framing values by interactively orbiting + zooming, hitting
+   * the bound hotkey ('L' in App.tsx), and pasting the printed values
+   * into `cameraFraming.ts`.
+   *
+   * No-op when the camera hasn't constructed yet (early call during
+   * engine boot).  Not part of the user-facing UX — leave the binding
+   * in dev builds; harmless in production but only useful for tuning.
+   */
+  logCameraState: () => void;
+
+  /**
    * Smoothly tween the camera so that `worldXYZ` becomes the new orbit target.
    *
    * The current yaw and pitch are preserved (the user keeps their orientation);

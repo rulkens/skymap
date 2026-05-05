@@ -65,11 +65,17 @@ export type InitialCam = {
 };
 
 /**
- * Multiplier applied to `bbox` to derive the initial camera distance.
- * Empirical — see the module header for the rationale on why 1.6 (rather
- * than the original 2.5).
+ * Initial camera distance in Mpc.  Empirically tuned against the canonical
+ * catalogue (SDSS+2MRS+GLADE merged) so the cosmic-web wedge fills the
+ * viewport without spilling past the corners — see the module header.
+ *
+ * Decoupled from `bbox` (the previous `INITIAL_FRAME_FACTOR * bbox` form)
+ * because the perceived framing on first paint should be invariant across
+ * survey combinations: a synthetic-only fallback or a 2MRS-only build
+ * shouldn't suddenly zoom way out just because the catalog volume's
+ * bbox shrank.  `bbox` still drives the far-clip plane below.
  */
-export const INITIAL_FRAME_FACTOR = 1.6;
+export const INITIAL_DISTANCE_MPC = 644.72;
 
 /**
  * Compute the initial camera snapshot from a bbox scalar and FOV.
@@ -91,7 +97,7 @@ export function computeInitialCamera({
   bbox: number;
   fovYRad: number;
 }): InitialCam {
-  const distance = clampDistance(bbox * INITIAL_FRAME_FACTOR);
+  const distance = clampDistance(INITIAL_DISTANCE_MPC);
   const far = bbox * 4;
   return {
     target: [0, 0, 0],
