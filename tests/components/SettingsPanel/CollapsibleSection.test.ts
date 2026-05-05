@@ -163,11 +163,31 @@ describe('writeSectionOpen', () => {
 //     open — we conditionally render rather than `display: none`.
 
 describe('CollapsibleSection initial render', () => {
-  it('is open by default and shows children', () => {
+  it('is closed by default (collapsed first impression)', () => {
+    // The implicit default flipped from `true` to `false` so a fresh
+    // visitor sees a tidy panel of section headers rather than the full
+    // ~80-control wall.  Sections that need to be open on first visit
+    // pass `defaultOpen={true}` explicitly (e.g. Surveys).
     const html = renderToStaticMarkup(
       createElement(CollapsibleSection, {
         title: 'Surveys',
         storageKey: 'test.surveys',
+        children: createElement('span', { 'data-testid': 'child' }, 'CHILD'),
+      }),
+    );
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('data-open="false"');
+  });
+
+  it('respects defaultOpen=true on first visit', () => {
+    // Inverse of the implicit-default test — explicit override should
+    // still work for sections like Surveys that want to be open
+    // on first visit.
+    const html = renderToStaticMarkup(
+      createElement(CollapsibleSection, {
+        title: 'Surveys',
+        storageKey: 'test.surveys.explicit-open',
+        defaultOpen: true,
         children: createElement('span', { 'data-testid': 'child' }, 'CHILD'),
       }),
     );
@@ -200,7 +220,10 @@ describe('CollapsibleSection initial render', () => {
       createElement(CollapsibleSection, {
         title: 'Surveys',
         storageKey: 'test.persisted',
-        // defaultOpen omitted = true; persistence below should override.
+        // defaultOpen omitted = false (the new implicit default), but
+        // persistence below explicitly seeds '0' so we'd see the same
+        // closed state regardless — the point of this test is the
+        // localStorage-overrides-default branch, which holds either way.
         children: createElement('span', null, 'CHILD'),
       }),
     );

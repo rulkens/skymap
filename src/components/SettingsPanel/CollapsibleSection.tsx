@@ -54,8 +54,12 @@ type Props = {
   /**
    * What to show on the *very first* visit, before any persisted value
    * exists.  After the first toggle this becomes irrelevant — the
-   * persisted value wins.  Defaults to `true` because most users want
-   * to see the controls until they decide to fold a section away.
+   * persisted value wins.  Defaults to `false` (collapsed) so a fresh
+   * visitor sees a tidy panel of section headers rather than an
+   * 80-control wall — they expand only the sections they care about,
+   * and the choice persists from there.  Override with `defaultOpen={true}`
+   * for any section that should be open on first visit (e.g. Surveys,
+   * which is the panel's primary affordance).
    */
   defaultOpen?: boolean;
   children: ReactNode;
@@ -133,7 +137,7 @@ export function writeSectionOpen(storageKey: string, open: boolean): void {
 export function CollapsibleSection({
   title,
   storageKey,
-  defaultOpen = true,
+  defaultOpen = false,
   children,
   headerToggle,
   onHeaderToggleChange,
