@@ -1,0 +1,17 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "https://skymap.rulkens.com",
+          "https://skymap.rulkens.workers.dev",
+          "http://localhost:5173"
+        ],
+        "methods": ["GET", "HEAD"],
+        "headers": ["*"]
+      },
+      "exposeHeaders": ["Content-Length", "Content-Type"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}

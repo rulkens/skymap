@@ -46,6 +46,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "preview": "vite preview",
+    "r2-cors": "npx wrangler r2 bucket cors set skymap-data --file tools/r2Cors.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit && tsc --noEmit --project tsconfig.tools.json"
