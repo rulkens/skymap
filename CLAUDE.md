@@ -67,15 +67,39 @@ data/raw/*.dat,*.csv  ──parsers──▶  ParsedRecord[]  ──crossMatch�
 
 Binary format is in `src/data/pointCloudFormat.ts` — currently v2, 48 bytes/point. Bumping the version means regenerating bins via `npm run build-all`. The format header stores `magic + version + count`, so old bins fail loudly with a clear regenerate message.
 
-### Deploy workflow (Firebase static hosting)
+### Deploy workflow (Cloudflare Workers Assets + R2)
 
-1. `npm run build-tiers` — regenerates all `public/data/*.bin` (12 tier-suffixed variants for SDSS + GLADE; one shared `2mrs.bin` and `famous.bin`).
-2. `npm run build-filaments` (if filaments need rebuilding).
-3. `npm run deploy` — runs `npm run build && firebase deploy --only hosting`.
+Two Cloudflare resources serve skymap, and they're updated independently:
 
-The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitignored). They are pure build artefacts: deterministic outputs of `tools/buildAllBins.ts` against the raw catalog files in `data/raw/`. Checking them in would inflate every clone by ~150 MB for no informational gain — the same bytes can always be rebuilt from source on demand. Keeping them out also avoids accidental drift between `tools/buildAllBins.ts` settings (tier targets, abs-mag thresholds) and a stale committed binary; each deploy ships a fresh build, so what's hosted is always in sync with the current pipeline code.
+- **The static shell** (HTML, JS, CSS, WGSL shaders, `_headers`, famous-galaxy WebPs) ships to **Cloudflare Workers Assets** automatically on every push to `main`. Cloudflare's dashboard-managed GitHub integration runs `npm run build` and uploads `dist/`. There is no local CLI step for the shell deploy — `npm run deploy` is just `git push origin main` with a hint of where to watch the build progress.
 
-The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers. A complete deploy must therefore include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin` and `famous.bin`. (`firebase deploy --only hosting` uploads the full `public/` tree, so as long as `npm run build-tiers` ran first, all variants ship.)
+- **The `.bin` catalog files** (~280 MB across all tiers + filaments) live in **Cloudflare R2** at `data.skymap.rulkens.com`, because they exceed Workers Assets' per-file size limit and because R2 has zero egress costs. They're synced manually via `npm run sync-r2` after a `build-tiers` rerun, **not** on every push.
+
+A full data-refreshing deploy is therefore:
+
+1. `npm run build-tiers` — regenerates all `public/data/*.bin`.
+2. `npm run build-filaments` (only if filaments need rebuilding — rare).
+3. `npm run sync-r2` — uploads regenerated `.bin` files (and `famous_*.json` sidecars) to R2. Idempotent; full bucket replacement on every run.
+4. `npm run deploy` — pushes `main`. The Cloudflare GitHub integration takes over and rebuilds the shell.
+
+If you only changed code and not catalog bytes, **step 4 alone is enough**. The most common loop is "edit, push, watch the Workers build", which finishes in ~30 s.
+
+The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitignored). They are pure build artefacts: deterministic outputs of `tools/buildAllBins.ts` against the raw catalog files in `data/raw/`. Checking them in would inflate every clone by ~150 MB for no informational gain — the same bytes can always be rebuilt from source on demand. Keeping them out also avoids accidental drift between `tools/buildAllBins.ts` settings (tier targets, abs-mag thresholds) and a stale committed binary; the R2 sync ships a fresh build on demand, so what's hosted is always in sync with the current pipeline code.
+
+The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL` (set in `.env.production` to `https://data.skymap.rulkens.com`, empty in dev where Vite serves `public/data/` at the same relative path). A complete R2 sync must therefore include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, and `filaments.bin`. The `tools/syncR2.ts` ALLOW filter encodes that set.
+
+#### Cache-Control
+
+- **Static shell:** `public/_headers` (Workers Assets reads it automatically). JS/CSS/WGSL/WASM get `max-age=31536000, immutable`; `images/famous/*.webp` get `max-age=86400`.
+- **R2 objects:** set per-object on upload by `tools/syncR2.ts` (`max-age=86400`).
+
+#### CORS
+
+R2 has a single CORS rule allowing `GET`/`HEAD` from `https://skymap.rulkens.com`, `https://skymap.rulkens.workers.dev`, and `http://localhost:5173`. Re-apply with `npm run r2-cors` (config in `tools/r2Cors.json`).
+
+#### Why R2 instead of bundling .bin into the Workers deploy
+
+Workers Assets has per-file and per-deploy size caps that the larger tiers (`glade-large.bin` ~130 MB) blow through. R2 has neither, has zero egress fees, and treats large binary blobs as a first-class use case. The split also makes catalog refreshes independent of code deploys — a re-sync to R2 doesn't require a rebuild.
 
 ## Catalog gotchas
 
