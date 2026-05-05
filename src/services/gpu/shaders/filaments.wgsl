@@ -22,7 +22,13 @@ struct Uniforms {
   viewProj : mat4x4<f32>,
   viewport : vec2<f32>,    // [w, h] in physical pixels
   halfWidthPx : f32,       // line half-width in pixels
-  pad0 : f32,
+  // Per-frame uniform scale for the entire filament-pass output, [0..1].
+  // Multiplied into the final pre-multiplied colour + alpha.  Lives in
+  // the slot that used to be `pad0` — the byte layout is unchanged.
+  // Lets the user dim the cosmic-web overlay against the bright HDR
+  // catalogue when high-σ skeletons (with their longer, denser ridges)
+  // saturate to flat white under the tone-mapped pass.
+  intensityScale : f32,
 };
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
@@ -130,6 +136,6 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
   let hotTint  = vec3<f32>(0.85, 0.75, 1.0);  // bright, near-white-violet spine
   let tint = mix(baseTint, hotTint, in.density);
 
-  let alpha = edgeFade * 0.6 * densityBoost;
+  let alpha = edgeFade * 0.6 * densityBoost * u.intensityScale;
   return vec4<f32>(tint * alpha, alpha);  // pre-multiplied alpha
 }

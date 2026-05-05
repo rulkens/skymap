@@ -95,6 +95,16 @@ export type EngineHandle = {
    */
   setFilamentsEnabled?: (enabled: boolean) => void;
 
+  /**
+   * Set the filament-overlay intensity scale, in [0, 1].  Multiplied
+   * into the fragment-stage's final pre-multiplied alpha by the WGSL
+   * shader.  At 1.0 the overlay renders at full strength; at 0.0 it
+   * is invisible (logically equivalent to disabling the overlay).
+   * Useful for dimming high-σ datasets that saturate to white under
+   * the tone-mapped HDR pass.
+   */
+  setFilamentIntensity?: (value: number) => void;
+
   /** Toggle the magenta tint on galaxies whose orientation is fallback. */
   setHighlightFallback?: (enabled: boolean) => void;
   /** Toggle "show only galaxies with real photometric orientation" — fallback rows are discarded. */

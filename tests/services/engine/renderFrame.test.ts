@@ -236,6 +236,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     galaxyTexturesEnabled: true,
     milkyWayEnabled: true,
     filamentsEnabled: false,
+    filamentIntensity: 1,
     ...(overrides.settings ?? {}),
   };
 

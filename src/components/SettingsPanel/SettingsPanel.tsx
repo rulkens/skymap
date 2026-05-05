@@ -115,6 +115,15 @@ type Props = {
   /** Fired when the user toggles the "Filaments" checkbox. */
   onFilamentsChange?: (enabled: boolean) => void;
   /**
+   * Filament-overlay intensity scale, [0, 1].  Optional like the
+   * toggle pair — the slider only renders when both `filamentIntensity`
+   * and `onFilamentIntensityChange` are provided AND the toggle is on.
+   * Hidden when the overlay is disabled because the slider has no
+   * visible effect there.
+   */
+  filamentIntensity?: number;
+  onFilamentIntensityChange?: (value: number) => void;
+  /**
    * Whether fallback-orientation galaxies should be tinted magenta in the
    * fragment shader.  Lets the user scan which surveys have real
    * photometric orientation coverage.  Optional — older call-sites without
@@ -268,6 +277,8 @@ export function SettingsPanel({
   onMilkyWayEnabledChange,
   filamentsEnabled,
   onFilamentsChange,
+  filamentIntensity,
+  onFilamentIntensityChange,
   highlightFallback,
   onHighlightFallbackChange,
   realOnlyMode,
@@ -326,6 +337,14 @@ export function SettingsPanel({
   // on whether the binary loaded — discoverability of the feature
   // beats hiding rows whose backing data may show up later.
   const showFilamentsToggle = filamentsEnabled !== undefined && onFilamentsChange !== undefined;
+  // Intensity slider only shows when both prop pieces are provided AND the
+  // overlay is currently enabled.  Hiding it when the toggle is off keeps
+  // the slider from looking dead — moving it would have no visible effect.
+  const showFilamentIntensitySlider =
+    showFilamentsToggle &&
+    filamentsEnabled === true &&
+    filamentIntensity !== undefined &&
+    onFilamentIntensityChange !== undefined;
 
   // Density-correction section: rendered only when both the current mode and
   // both change-callbacks are wired by the parent.  We require all four
@@ -721,6 +740,22 @@ export function SettingsPanel({
                   type="checkbox"
                   checked={filamentsEnabled}
                   onChange={(e) => onFilamentsChange(e.target.checked)}
+                />
+              </div>
+            )}
+            {showFilamentIntensitySlider && (
+              <div className={styles.panelRow}>
+                <label htmlFor="filament-intensity">Filament intensity</label>
+                <input
+                  id="filament-intensity"
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={filamentIntensity}
+                  onChange={(e) =>
+                    onFilamentIntensityChange(Number(e.target.value))
+                  }
                 />
               </div>
             )}

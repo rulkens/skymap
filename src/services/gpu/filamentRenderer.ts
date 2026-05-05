@@ -215,6 +215,7 @@ export class FilamentRenderer {
     viewProj: mat4,
     viewportPx: [number, number],
     halfWidthPx: number,
+    intensityScale: number,
   ): void {
     if (this.segmentCount === 0 || !this.instanceBuffer) return;
 
@@ -222,14 +223,17 @@ export class FilamentRenderer {
     //   f32[0..15]   viewProj (mat4)
     //   f32[16..17]  viewport (vec2)
     //   f32[18]      halfWidthPx
-    //   f32[19]      padding (zero)
+    //   f32[19]      intensityScale (was: padding; the slot is already
+    //                in the uniform buffer's footprint, repurposing it
+    //                for the user-facing intensity slider doesn't grow
+    //                the uniform's size or change its 16-byte alignment)
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
     f32.set(viewProj as Float32Array, 0);
     f32[16] = viewportPx[0];
     f32[17] = viewportPx[1];
     f32[18] = halfWidthPx;
-    f32[19] = 0;
+    f32[19] = intensityScale;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, buf);
 
     pass.setPipeline(this.pipeline);

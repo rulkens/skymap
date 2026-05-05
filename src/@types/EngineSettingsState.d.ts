@@ -51,6 +51,12 @@ export type EngineSettingsState = {
    * `data/defaults.ts` for the rationale.
    */
   filamentsEnabled: boolean;
+  /**
+   * Filament-overlay intensity scale, in [0, 1].  1.0 = unchanged shader
+   * output; lower values dim the cosmic-web overlay against the bright
+   * HDR catalogue.  See `DEFAULT_FILAMENT_INTENSITY`.
+   */
+  filamentIntensity: number;
   highlightFallback: boolean;
   realOnlyMode: boolean;
   depthFadeEnabled: boolean;

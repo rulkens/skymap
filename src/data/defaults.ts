@@ -125,6 +125,16 @@ export const DEFAULT_MILKY_WAY_ENABLED = true;
  */
 export const DEFAULT_FILAMENTS_ENABLED = false;
 
+/**
+ * Default filament-overlay intensity scale, in [0, 1].  1.0 = full strength
+ * (the per-frame fragment alpha is unchanged from the shader's intrinsic
+ * density-modulated value).  Sliding lower dims the cosmic-web skeleton —
+ * useful when high-σ datasets (longer, denser ridges) saturate to flat
+ * white under the tone-map pass.  Defaulting to 1.0 means new visitors
+ * see the overlay at the brightness the shader was originally tuned for.
+ */
+export const DEFAULT_FILAMENT_INTENSITY = 1.0;
+
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
 
 /**

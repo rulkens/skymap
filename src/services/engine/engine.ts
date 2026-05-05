@@ -77,6 +77,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
+  DEFAULT_FILAMENT_INTENSITY,
   DEFAULT_FILAMENTS_ENABLED,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -268,6 +269,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       galaxyTexturesEnabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
       milkyWayEnabled: DEFAULT_MILKY_WAY_ENABLED,
       filamentsEnabled: DEFAULT_FILAMENTS_ENABLED,
+      filamentIntensity: DEFAULT_FILAMENT_INTENSITY,
       highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
       realOnlyMode: DEFAULT_REAL_ONLY_MODE,
       depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
@@ -1292,6 +1294,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             galaxyTexturesEnabled: state.settings.galaxyTexturesEnabled,
             milkyWayEnabled: state.settings.milkyWayEnabled,
             filamentsEnabled: state.settings.filamentsEnabled,
+            filamentIntensity: state.settings.filamentIntensity,
           },
           famousMeta: state.sources.famousMeta,
           famousXrefs: state.sources.famousXrefs,
@@ -1524,6 +1527,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // older toggles pre-date that pattern and would need a full
       // App.tsx rewire to switch, which isn't this task's scope.
       state.settings.filamentsEnabled = enabled;
+      state.subsystems.scheduler.requestRender();
+    },
+
+    setFilamentIntensity(value) {
+      // Filament overlay intensity scale, [0, 1].  Same App-owns-state
+      // pattern as setFilamentsEnabled — no echo callback, optimistic
+      // update on the React side, engine just mutates + requests render.
+      // The shader reads the value via the per-frame uniform.
+      state.settings.filamentIntensity = Math.max(0, Math.min(1, value));
       state.subsystems.scheduler.requestRender();
     },
 

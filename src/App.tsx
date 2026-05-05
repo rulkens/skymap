@@ -83,6 +83,7 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
+  DEFAULT_FILAMENT_INTENSITY,
   DEFAULT_FILAMENTS_ENABLED,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -168,6 +169,7 @@ export function App(): React.ReactElement {
   // engine does NOT fire an echo callback for this field, so we update
   // React state optimistically inside the change handler below.
   const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(DEFAULT_FILAMENTS_ENABLED);
+  const [filamentIntensity, setFilamentIntensity] = useState<number>(DEFAULT_FILAMENT_INTENSITY);
   const [highlightFallback, setHighlightFallback] = useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
   const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
   const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
@@ -489,6 +491,11 @@ export function App(): React.ReactElement {
         onFilamentsChange={(enabled) => {
           setFilamentsEnabled(enabled);
           handleRef.current?.setFilamentsEnabled?.(enabled);
+        }}
+        filamentIntensity={filamentIntensity}
+        onFilamentIntensityChange={(value) => {
+          setFilamentIntensity(value);
+          handleRef.current?.setFilamentIntensity?.(value);
         }}
         // Task 15 — orientation-visibility toggles. Same forward-only flow
         // as galaxyTexturesEnabled: engine fires the echo callback

@@ -169,6 +169,15 @@ export type RenderFrameSettings = {
    * the call is a cheap no-op.
    */
   filamentsEnabled: boolean;
+  /**
+   * Multiplicative intensity scale for the filament overlay, in [0, 1].
+   * Multiplied into the fragment-stage's final pre-multiplied alpha so
+   * the user can dim the cosmic-web skeleton against the bright HDR
+   * catalogue when high-σ datasets (longer, denser ridges) saturate
+   * to flat white under the tone-mapped pass.  1.0 = full strength;
+   * 0.0 = invisible (logically equivalent to filamentsEnabled=false).
+   */
+  filamentIntensity: number;
 };
 
 /**
@@ -405,6 +414,7 @@ export function renderFrame(input: RenderFrameInput): void {
       // shader expands.  Empirically pleasant — fine enough to feel
       // like a wireframe, thick enough to read against dense fields.
       1.5,
+      settings.filamentIntensity,
     );
   }
 
