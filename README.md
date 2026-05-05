@@ -1,16 +1,18 @@
 # skymap
 
+> An interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs — fly through millions of galaxies in your browser.
+
 [![CI](https://github.com/rulkens/skymap/actions/workflows/ci.yml/badge.svg)](https://github.com/rulkens/skymap/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/rulkens/skymap)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20037028-1f87b3?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.20037028)
 
-**Live demo:** [skymap.rulkens.com](https://skymap.rulkens.com) — open in any modern browser (Chrome / Edge 113+, Firefox 141+, Safari 26+). WebGPU [reached Baseline in January 2026](https://web.dev/blog/webgpu-supported-major-browsers), so a recent stable browser is all you need.
-
 ![skymap — orbit, command palette, focus tween, info card](docs/screenshots/hero.gif)
 
-An interactive WebGPU 3D explorer for the SDSS, GLADE, and 2MRS galaxy catalogs, built in TypeScript with React for the UI. Hover or click any galaxy to see its sky coordinates, redshift, lookback time, and catalog metadata; pin one to compare against another; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
+**[Live demo →](https://skymap.rulkens.com)** &nbsp; · &nbsp; Chrome 113+ &nbsp; · &nbsp; Edge 113+ &nbsp; · &nbsp; Firefox 141+ &nbsp; · &nbsp; Safari 26+
+
+Built in TypeScript with React for the UI. Hover or click any galaxy to see its sky coordinates, redshift, lookback time, and catalog metadata; pin one to compare against another; explore the cosmic-web wedge in 3D with mouse-driven orbit controls.
 
 The code is documented didactically throughout — if you're also looking to learn WebGPU, GPU picking, or the basics of cosmological coordinate math, the source is meant to be read.
 
