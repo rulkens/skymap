@@ -747,35 +747,36 @@ Three audiences, three angles. Drop them in a stepped rhythm so a single dud doe
 - [ ] **First comment** (post immediately after submitting, as the OP — this is the "story" comment that anchors the thread):
 
 ```
-Hi HN — author here. Skymap is a personal learning project: an
-interactive 3D explorer for three real galaxy catalogs (SDSS, 2MRS,
-GLADE — together a few million galaxies), built directly on WebGPU +
-TypeScript with no Three.js layer in between. The whole renderer is
-maybe 8k lines including the WGSL shaders.
+Author here. I'm a frontend dev, and a few years ago I fell
+down the astronomy rabbit hole. Skymap is what happened when
+I wanted to actually do something with galaxy catalog data
+instead of just reading papers.
 
-What surprised me building it:
+It loads SDSS (~500k galaxies), 2MRS (~45k), and GLADE (~2M)
+and renders them as WebGPU instanced billboards. A tier
+selector lets you switch dataset size without a reload;
+mobile auto-picks the smallest tier and pinch-zoom works.
 
-- WebGPU's `queue.writeBuffer` ordering is *not* preserved across
-  submits in a frame, so per-instance state has to live in vertex
-  buffers, not uniforms. Cost me a week.
-- GPU-side picking via an r32uint texture beats CPU-side raycast by
-  orders of magnitude when you have 3.5M instanced points — but you
-  have to encode the instance index into a per-vertex attribute.
-- Browsers blocked DSS thumbnails on CORS, so I'm fetching them via
-  the CDS hips2fits proxy. Still surprises me how much of working
-  astronomy infrastructure assumes wget, not fetch.
+Past a certain on-screen size, each galaxy crossfades from a
+dot into a procedural 3D-oriented disk (using the catalog's
+axis-ratio + position angle from HyperLEDA / 2MASS XSC), and
+then into a real survey image when you're close enough. The
+images come from SDSS DR18 ImgCutout, DSS via CDS hips2fits,
+or hand-curated DESI Legacy thumbnails for the Messier
+greatest-hits. There's also a cosmic-web filament overlay
+(DisPerSE-built offline) — a faint blue lattice tracing the
+ridges of the density field. Striking at supercluster scale.
 
-Open in any modern browser — WebGPU has been Baseline since January
-2026 (Chrome/Edge 113+, Firefox 141+, Safari 26+).  Mobile works too:
-pinch-to-zoom + a small catalog tier (~300k galaxies) auto-selected
-on phones.  Source is documented didactically — the code explains
-*why*, not just *what* — so it doubles as a WebGPU /
-cosmological-coordinates worked example if you're learning either.
+The code's commented to be read, not just to satisfy a
+linter. If you've been meaning to learn WebGPU or wondering
+how distance from redshift actually works, the source is
+meant to be a worked example.
 
-Open to feedback on the rendering, the science, the docs — anything.
+Live: https://skymap.rulkens.com
+Repo: https://github.com/rulkens/skymap (MIT)
+DOI:  https://doi.org/10.5281/zenodo.20037028
 
-Repo: https://github.com/rulkens/skymap
-DOI:  https://doi.org/10.5281/zenodo.20037028 (Zenodo, MIT)
+Would love feedback on any of it.
 ```
 
 - [ ] **Verify a few hours after posting:**
