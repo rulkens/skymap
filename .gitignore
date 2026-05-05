@@ -14,18 +14,22 @@ coverage/
 .vitest-cache/
 
 # ── Environment files ─────────────────────────────────────────────────────────
-# All `.env*` files stay out of git.  `VITE_DATA_BASE_URL` (the only env var
-# the build currently cares about) is set as a build-time variable in the
-# Cloudflare Workers project's dashboard — Worker+Assets projects unlock
-# the Variables-and-Secrets panel, so infrastructure config lives there
-# instead of in a committed `.env.production`.  See `src/worker.ts` for the
-# pass-through Worker that promotes the project to Worker+Assets mode.
+# Default-deny `.env*` keeps secrets out by accident.  The carve-out below
+# is `.env.production`: it carries `VITE_DATA_BASE_URL`, the public R2 URL
+# the runtime fetcher uses (visible to anyone in DevTools' network tab —
+# not a secret).  We tried two cleaner alternatives — Cloudflare's dashboard
+# "Variables and Secrets" panel, and wrangler.toml [vars] — and verified
+# empirically that neither is exposed to the build environment for Workers
+# Assets projects: a `process.env.VITE_DATA_BASE_URL` console.log inside
+# vite.config.ts logged `null` in both cases.  Vite *only* picks the value
+# up via `.env*` files at the repo root, so the file has to ship in git
+# for the prod bundle to inline the URL.
 #
-# Local development can still drop a `.env.production` (gitignored) to
-# point `npm run build && npm run preview` at the live R2 URL — useful
-# for end-to-end smoke tests outside the dev server.
+# Anything genuinely secret (API tokens, write-credentials) should still go
+# through `npx wrangler secret put` — those don't show up in this file.
 .env
 .env.*
+!.env.production
 
 # ── OS clutter ────────────────────────────────────────────────────────────────
 .DS_Store
