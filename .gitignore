@@ -87,3 +87,9 @@ docs/screenshots/*.mp4
 # `firebase deploy` can skip files whose content hasn't changed.  The cache
 # is regenerated on every deploy and is per-developer state, not shared.
 .firebase/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
