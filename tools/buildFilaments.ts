@@ -85,9 +85,17 @@ const DEFAULT_SMOOTHING_PASSES = 2;
  * exactly two flags and the cost of a dependency outweighs the benefit
  * of a 5-line hand-rolled loop.  `--cut` and `--smooth` each consume the
  * next argv slot as their numeric value; anything else is ignored.
+ *
+ * Why does this take `argv` as a parameter (instead of reading
+ * `process.argv` directly)?  Tests construct argv arrays inline and call
+ * this function directly — that's only possible if argv is an explicit
+ * argument.  The default (`process.argv.slice(2)`) preserves the
+ * production invocation path: `main()` calls `parseArgs()` with no
+ * arguments and gets the CLI flags exactly as before.
  */
-function parseArgs(): { cut: number; smooth: number } {
-  const argv = process.argv.slice(2);
+export function parseArgs(
+  argv: string[] = process.argv.slice(2),
+): { cut: number; smooth: number } {
   let cut = DEFAULT_PERSISTENCE_CUT;
   let smooth = DEFAULT_SMOOTHING_PASSES;
   for (let i = 0; i < argv.length; i++) {
