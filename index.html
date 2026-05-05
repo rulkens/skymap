@@ -2,6 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Without this, mobile browsers default to "render the page assuming
+      a 980-px-wide desktop layout and let the user pinch-zoom", which
+      makes window.innerWidth report ~980 even on a phone and breaks
+      `initialTierFromViewport()` — it would pick the medium (600k galaxy)
+      tier on devices that should be on the small (300k) tier.  Setting
+      width=device-width also lets the WebGPU canvas render at native
+      device pixels and stops the awkward double-tap-to-zoom behaviour.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Skymap — SDSS WebGPU</title>
     <!--
       Design tokens + page reset live in src/styles/global.css.  We import
