@@ -28,3 +28,19 @@ compatibility_date = "2026-05-05"
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
+
+# Worker-runtime + build-time variables.  Cloudflare's deploy pipeline
+# exposes `[vars]` to the build command's environment (so Vite picks
+# them up via `process.env` and inlines `import.meta.env.VITE_*` into
+# the bundle), and also passes them to the Worker at runtime via the
+# `env` parameter.  Both surfaces matter here:
+#   - At build, `VITE_DATA_BASE_URL` controls the URL prefix Vite
+#     inlines into the cloudLoader fetch sites.
+#   - At runtime, the Worker doesn't read it (it's a thin pass-through
+#     to the ASSETS binding), but having it available means a future
+#     edge-side rewriter could centralise the catalog host.
+#
+# This is the "non-secret config in code" pattern.  Real secrets go
+# via `npx wrangler secret put`, never in this file.
+[vars]
+VITE_DATA_BASE_URL = "https://pub-1bb6105b369a485ebe7acaa36779d91e.r2.dev"
