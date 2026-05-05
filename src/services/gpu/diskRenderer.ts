@@ -121,27 +121,28 @@ export class DiskRenderer {
         targets: [
           {
             format: this.format,
-            // Premultiplied-alpha "over" composite — same equation as the
-            // points + quads passes, so the disks blend cleanly atop both.
+            // Pure additive — galaxy disks are EMISSIVE.  See
+            // quadRenderer.ts for the full rationale; in short, OVER
+            // blend + depth-write produced a fade-to-black bug at
+            // disk edges where the Milky Way underneath should have
+            // been visible.  Additive blending lets the impostor and
+            // the disk's emission accumulate naturally.
             blend: {
-              color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+              color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+              alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
             },
           },
         ],
       },
       primitive: { topology: 'triangle-list' },
-      // Depth state: TEST and WRITE — see quadRenderer.ts for the
-      // full rationale.  This pipeline is a sibling overlay (textured
-      // 3D-oriented galaxy disk) and must follow the same depth
-      // convention so the Milky Way impostor's depth-test fix works
-      // uniformly across all per-galaxy overlays in the HDR pass.
-      // The fragment shader (`disks.wgsl`) discards low-alpha
-      // fragments so depth writes match the visible silhouette.
+      // Depth state: TEST only, NO WRITE.  See quadRenderer.ts for
+      // the full rationale — emissive additive content doesn't need
+      // depth ordering and writing depth here would re-create the
+      // disk-edge fade-to-black bug against the Milky Way impostor.
       depthStencil: {
         format: 'depth24plus',
         depthCompare: 'less',
-        depthWriteEnabled: true,
+        depthWriteEnabled: false,
       },
     });
 

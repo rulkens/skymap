@@ -108,46 +108,52 @@ export class QuadRenderer {
         targets: [
           {
             format: this.format,
-            // Premultiplied-alpha "over" composite — same equation as the
-            // points pass, lets quads sit cleanly atop the dot field.
+            // Pure additive — galaxy thumbnails are EMISSIVE content
+            // (a photograph of the galaxy's actual light output), not
+            // opaque material occluding a background.  Additive blend
+            // means a thumbnail simply ADDS its emission to whatever's
+            // already in the HDR target; overlapping galaxies + the
+            // Milky Way impostor accumulate naturally without one
+            // covering up the other.
+            //
+            // An earlier revision used premultiplied OVER (`dstFactor:
+            // 'one-minus-src-alpha'`) which treats the thumbnail as
+            // opaque material with an alpha cutout: at fade-region
+            // pixels (alpha < 1) it preserved (1 - alpha) of the
+            // existing pixel.  Combined with depth-write that occluded
+            // the later Milky Way pass, fade regions ended up as
+            // `col*alpha` against a black HDR target — i.e. they faded
+            // to BLACK instead of revealing the Milky Way underneath.
+            // Pure additive sidesteps that entire reasoning.
             blend: {
-              color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+              color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+              alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
             },
           },
         ],
       },
       primitive: { topology: 'triangle-list' },
-      // Depth state: TEST and WRITE.
+      // Depth state: TEST only, NO WRITE.
       //
-      // Thumbnails are the per-galaxy "opaque-ish overlay" in skymap's
-      // layered render: they sit at a galaxy's world-space position
-      // and should occlude the Milky Way impostor (which is drawn
-      // afterwards in the HDR pass) when the galaxy is in front of
-      // the world origin.  See `services/engine/renderFrame.ts` for
-      // the per-frame draw order and `services/gpu/hdrTarget.ts` for
-      // the depth-buffer rationale.
+      // The HDR pass owns a depth attachment so every pipeline that
+      // draws into it must declare matching depthStencil state.  But
+      // emissive content (additive blend) doesn't need depth ordering
+      // — A+B = B+A regardless of which fragment lands first — so
+      // writing depth would only create occlusion artefacts (e.g. a
+      // semi-transparent thumbnail edge writes depth and the Milky
+      // Way pass behind fails its `less` test, leaving the fade
+      // region BLACK instead of additively-blended with the impostor).
       //
-      // Why writeEnabled?  The Milky Way pipeline only reads depth;
-      // unless we write here, the depth buffer stays at its 1.0 clear
-      // value and the impostor's fragment-stage `less` test passes
-      // unconditionally, reproducing the original bug.  Writing puts
-      // each thumbnail's clipPos.z/w into the buffer at every pixel
-      // the quad covers.
-      //
-      // Caveat: the quad's vertex stage emits a planar billboard, so
-      // the depth value is constant across the quad — including in
-      // the transparent corners outside the soft circular mask.  The
-      // fragment shader (quads.wgsl `fs`) compensates by `discard`-ing
-      // those low-alpha corners so the depth buffer doesn't get a
-      // square footprint where the visual is empty; without the
-      // discard, a thumbnail's invisible corners would still write
-      // depth and punch a square-shaped hole in the Milky Way behind
-      // it.
+      // `depthCompare: 'less'` is kept rather than `'always'` for
+      // future-proofing: if we ever introduce truly opaque overlays
+      // that DO want to occlude these thumbnails, this pipeline will
+      // already respect their depth values.  At the moment, with
+      // every HDR pipeline depth-write-disabled, the buffer stays at
+      // its 1.0 clear value and `less` is effectively `always`.
       depthStencil: {
         format: 'depth24plus',
         depthCompare: 'less',
-        depthWriteEnabled: true,
+        depthWriteEnabled: false,
       },
     });
 

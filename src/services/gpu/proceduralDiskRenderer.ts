@@ -88,20 +88,21 @@ export class ProceduralDiskRenderer {
         targets: [
           {
             format,
-            // Premultiplied additive — same as the textured-disk path
-            // so the two pipelines compose cleanly when both are drawing
-            // (e.g. inside the 8-14 px crossfade band where points fade
-            // out, here, but the textured-disk pass would only fire
-            // above 24 px).
+            // Pure additive — galaxy procedural disks are EMISSIVE.
+            // See `quadRenderer.ts` for the full rationale; siblings
+            // in the layered render (quads, disks, this) all use
+            // additive so they compose cleanly with each other and
+            // with the Milky Way impostor underneath without any of
+            // them "covering up" the others.
             blend: {
               color: {
                 srcFactor: 'one',
-                dstFactor: 'one-minus-src-alpha',
+                dstFactor: 'one',
                 operation: 'add',
               },
               alpha: {
                 srcFactor: 'one',
-                dstFactor: 'one-minus-src-alpha',
+                dstFactor: 'one',
                 operation: 'add',
               },
             },
@@ -109,23 +110,14 @@ export class ProceduralDiskRenderer {
         ],
       },
       primitive: { topology: 'triangle-list' },
-      // Depth state: TEST and WRITE — same rationale as
-      // `quadRenderer.ts`.  The procedural-disk pipeline is the
-      // per-galaxy "opaque-ish overlay" in the 8..∞ apparent-pixel
-      // band (textured-thumbnail quads cover ≥24 px; this disk pass
-      // covers the smaller-but-still-resolved end of the band).
-      // Both are siblings in the layered render that should OCCLUDE
-      // the Milky Way impostor drawn afterwards.
-      //
-      // The fragment shader (`proceduralDisks.wgsl`) already has
-      // `if (r > 1.0) { discard; }` — fragments outside the unit
-      // disc never write depth, so the silhouette in the depth
-      // buffer is the elliptical disc the user sees, not the full
-      // bounding quad.  No additional discard is needed here.
+      // Depth state: TEST only, NO WRITE — see `quadRenderer.ts`.
+      // Emissive additive content doesn't need depth ordering, and
+      // writing depth would re-create the fade-to-black bug at the
+      // disk's outer edge against the Milky Way impostor.
       depthStencil: {
         format: 'depth24plus',
         depthCompare: 'less',
-        depthWriteEnabled: true,
+        depthWriteEnabled: false,
       },
     });
   }
