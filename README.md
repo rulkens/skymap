@@ -287,6 +287,53 @@ emitted only for galaxies inside the band (see
 lookup. The fragment cost is dominated by the radial brightness
 profile, not by anything per-galaxy.
 
+## Cosmic-web filaments
+
+Galaxies aren't randomly scattered in space — they cluster along a
+fractal-looking network of filaments and walls separating large
+underdense voids. Skymap can render that network directly as a faint
+blue lattice overlaid on the point field.
+
+**What you see:** thin lines tracing the topological ridges of the
+galaxy density field. Switch the overlay on via the **Filaments**
+toggle in the Settings panel; intensity slider next to the toggle dims
+the overlay if it competes with the underlying point colours under
+tone-mapping.
+
+**How the skeleton is built:** the filament file is computed offline
+by [DisPerSE](https://disperse.readthedocs.io/) (Sousbie 2011), an
+astrophysics topology pipeline that extracts the persistent ridges of
+the Delaunay-tessellation density field. The default build runs
+`delaunay_3D → mse → skelconv` with a 5σ persistence cut and 2
+smoothing passes, against the **2MRS + GLADE** subset of the
+catalogue. SDSS is excluded by default because its wedge footprint
+dominates the density field at the survey edges and DisPerSE locks
+onto those boundaries instead of the actual cosmic web (an SDSS-only
+diagnostic build is available via `--sources sdss` and confirms this
+empirically).
+
+**Building locally** (skip if you don't want filaments — the renderer
+treats `filaments.bin` as optional and silently no-ops the toggle if
+the file isn't present):
+
+1. Install DisPerSE following its upstream instructions; ensure
+   `delaunay_3D`, `mse`, and `skelconv` are on `$PATH`.
+2. Run `npm run build-all` first so the `.bin` catalogues exist.
+3. Run `npm run build-filaments`. Output: `public/data/filaments.bin`.
+   Takes a few minutes on a 2MRS+GLADE input.
+
+CLI flags: `--cut N` (persistence sigma, default 5), `--smooth N`
+(skelconv smoothing passes, default 2), `--sources csv` (subset of
+`sdss,2mrs,glade`, default `2mrs,glade`), `--output path` (write
+elsewhere so diagnostic builds don't clobber the canonical file).
+
+**One file across all tiers.** Unlike the per-tier galaxy `.bin`s, the
+filament skeleton is shared between the small / medium / large
+dataset tiers — the cosmic web extends well beyond the points the
+small tier is rendering, and showing the structure even where the
+point sample is decimated is more informative than tier-matched
+filaments would be.
+
 ## Brightness controls
 
 Real catalogue galaxies span ~10 magnitudes of apparent brightness — the
@@ -386,7 +433,7 @@ Distance from redshift uses Hubble's law: `d = cz/H₀` with `H₀ = 70 km/s/Mpc
 npm test
 ```
 
-Currently **594 tests across 76 files**. Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
+Currently **707 tests across 95 files**. Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, the derived-physics helpers, the data-tier subsampler, and the cloud-loader hot-swap path. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
 
 ## Render pipeline
 
@@ -406,23 +453,44 @@ rationale and curve descriptions.
 
 ```
 src/
-  @types/             Top-level type declarations (PointCloud, EngineHandle, …)
-  components/         React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
+  @types/             Top-level type declarations (PointCloud, EngineHandle,
+                      Tier, …)
+  components/         React UI shell
+    common/Panel/       Shared glass-card chrome reused by Navigation, Stats,
+                        and the SettingsPanel outer frame
+    App/                Root component + canvas mount + state plumbing
+    SettingsPanel/      Tier selector, sliders, toggles, density modes
+    InfoCard/           FullCard / CompactCard / Thumbnail
+    NavigationPanel/    Static cheatsheet
+    StatsPanel/         FPS + galaxy-count rollup
+    StatusBar/          Engine lifecycle text
+    ScaleBar/           Bottom-right Mpc scale legend
+    CommandPalette/     Cmd-K famous-galaxy search
   data/               Static data definitions: sources enum, colour-index spec,
-                      binary point-cloud format
+                      binary point-cloud format, tier-target table
   services/
     camera/           OrbitCamera, OrbitControls, focus tweens
     engine/           Top-level engine orchestrator, autoLod, cloud loader
+                      (tier-aware, abortable hot-swap)
     gpu/              Renderers, texture atlas, image queue/fetcher, WGSL shaders
     input/            SpaceMouse + raw input → camera deltas
-  utils/              Pure helpers (math, format, random) — heavily tested
+  styles/             global.css — design tokens (color, surface, type, spacing,
+                      radius, motion) + page reset, loaded once at boot
+  utils/              Pure helpers (math, format, random, initialTier) —
+                      heavily tested
 
 tools/
-  buildAllBins.ts     Pipeline: parse raw catalogs → cross-match → write .bin
+  buildAllBins.ts     Pipeline: parse raw catalogs → cross-match → emit per-tier
+                      .bin variants (small / medium / large)
+  buildFilaments.ts   Pipeline: read .bin catalogues → write DisPerSE TSV →
+                      run delaunay_3D / mse / skelconv → encode FILA v1
+  subsampleByAbsMag.ts  Tier subsampler (brightest-N by absolute magnitude)
   parsers/            SDSS CSV, 2MRS fixed-width, GLADE fixed-width parsers
   crossMatch.ts       Dedup logic across surveys
   fetch2massXsc.ts    Optional 2MASS XSC orientation enrichment
   fetchHyperLeda.ts   Optional HyperLEDA orientation enrichment
+  fetchFamousImages.ts  DESI Legacy thumbnail processor for the Famous atlas
+  buildFamous.ts        Famous-catalog binary + cross-ref encoder
 
 data/raw/             Catalog source files + their VizieR ReadMes
 tests/                Vitest suite, mirrors src/ tree
