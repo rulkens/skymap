@@ -1420,12 +1420,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         //     When it lands, the onResult uploads to the atlas and
         //     calls requestRender() — but we keep one frame queued
         //     anyway so the load-fade lerp ramps smoothly.
+        //   - pointRenderer.isFading() / filamentRenderer.isFading():
+        //     one or more clouds (point surveys or the filament skeleton)
+        //     are still ramping up their per-source opacity from a recent
+        //     upload (initial load or tier-swap).  The fade lasts
+        //     CLOUD_FADE_DURATION_MS (~600 ms) total; we keep ticking the
+        //     loop so the smoothstep advances on every frame, then go
+        //     silent again.  See `cloudFade.ts` for the shared mechanism.
         const stillAnimating =
           state.settings.autoRotate ||
           state.subsystems.tweens.isActive() ||
           state.subsystems.spaceMouse.hasAxes() ||
           (state.subsystems.thumbnails !== null &&
-            state.subsystems.thumbnails.hasInFlightFetches());
+            state.subsystems.thumbnails.hasInFlightFetches()) ||
+          (state.gpu.renderer !== null && state.gpu.renderer.isFading()) ||
+          (state.gpu.filamentRenderer !== null && state.gpu.filamentRenderer.isFading());
         if (stillAnimating) state.subsystems.scheduler.requestRender();
       };
 

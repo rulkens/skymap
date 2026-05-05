@@ -25,6 +25,7 @@
 import shaderSource from './shaders/filaments.wgsl?raw';
 import type { FilamentCloud } from '../../@types/FilamentCloud';
 import type { mat4 } from 'gl-matrix';
+import { CloudFade } from './cloudFade';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
 
@@ -84,6 +85,22 @@ export class FilamentRenderer {
   private readonly quadVertexBuffer: GPUBuffer;
   private instanceBuffer: GPUBuffer | null = null;
   private segmentCount = 0;
+  /**
+   * Layout for the per-cloud fade bind group (`@group(1)` in filaments.wgsl).
+   * Held on the instance so the lazily-created `fade` controller can pin
+   * to the same layout the pipeline was built with.  See `cloudFade.ts`
+   * for the wire format.
+   */
+  private readonly cloudFadeBindGroupLayout: GPUBindGroupLayout;
+  /**
+   * Fade-in controller for the loaded skeleton.  Null when no `upload()`
+   * has happened yet (the renderer's draw is also a no-op in that
+   * state, so the missing fade isn't observable).  On the first upload
+   * we mint one; subsequent uploads call `restart()` to re-trigger
+   * the fade-in for fresh content (e.g. a tier swap to the lighter
+   * `filaments-small.bin`).
+   */
+  private fade: CloudFade | null = null;
 
   constructor(
     private readonly device: GPUDevice,
@@ -132,13 +149,30 @@ export class FilamentRenderer {
       ],
     });
 
+    // Per-cloud fade-in bind group at @group(1).  Layout matches what
+    // CloudFade expects (single binding 0, uniform, fragment-stage only —
+    // the WGSL only multiplies into fragment alpha, so the vertex stage
+    // never needs to see the opacity).  Stored on the instance so the
+    // lazily-created CloudFade can reuse it.
+    this.cloudFadeBindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        {
+          binding: 0,
+          visibility: GPUShaderStage.FRAGMENT,
+          buffer: { type: 'uniform' },
+        },
+      ],
+    });
+
     this.bindGroup = device.createBindGroup({
       layout: bindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
     });
 
     this.pipeline = device.createRenderPipeline({
-      layout: device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
+      layout: device.createPipelineLayout({
+        bindGroupLayouts: [bindGroupLayout, this.cloudFadeBindGroupLayout],
+      }),
       vertex: {
         module,
         entryPoint: 'vs',
@@ -201,6 +235,14 @@ export class FilamentRenderer {
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
     this.device.queue.writeBuffer(this.instanceBuffer, 0, data);
+
+    // Trigger the fade-in.  First upload mints the controller; subsequent
+    // uploads (rare — usually just on tier swap) restart the existing one.
+    if (this.fade === null) {
+      this.fade = new CloudFade(this.device, this.cloudFadeBindGroupLayout);
+    } else {
+      this.fade.restart();
+    }
   }
 
   /** Drop the loaded filaments without destroying the pipeline itself. */
@@ -217,7 +259,7 @@ export class FilamentRenderer {
     halfWidthPx: number,
     intensityScale: number,
   ): void {
-    if (this.segmentCount === 0 || !this.instanceBuffer) return;
+    if (this.segmentCount === 0 || !this.instanceBuffer || !this.fade) return;
 
     // Pack uniforms.  See UNIFORM_BYTES comment above for the byte layout.
     //   f32[0..15]   viewProj (mat4)
@@ -236,12 +278,26 @@ export class FilamentRenderer {
     f32[19] = intensityScale;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, buf);
 
+    // Cloud-fade-in opacity for this frame.  Steady-state (after the
+    // ~600 ms ramp) writes 1.0 — a no-op on the shader's alpha multiply.
+    this.fade.writeFrame();
+
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
+    pass.setBindGroup(1, this.fade.bindGroup);
     pass.setIndexBuffer(this.indexBuffer, 'uint16');
     pass.setVertexBuffer(0, this.quadVertexBuffer);
     pass.setVertexBuffer(1, this.instanceBuffer);
     pass.drawIndexed(6, this.segmentCount);
+  }
+
+  /**
+   * Whether the filament fade-in is still ramping.  Mirrors
+   * `PointRenderer.isFading()`.  Returns false before any upload (no
+   * fade in flight) and after the smoothstep saturates.
+   */
+  isFading(): boolean {
+    return this.fade !== null && this.fade.isFading();
   }
 
   destroy(): void {
@@ -249,5 +305,6 @@ export class FilamentRenderer {
     this.indexBuffer.destroy();
     this.quadVertexBuffer.destroy();
     this.instanceBuffer?.destroy();
+    this.fade?.destroy();
   }
 }

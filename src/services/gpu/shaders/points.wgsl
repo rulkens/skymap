@@ -269,6 +269,37 @@ struct Uniforms {
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
+// ─── per-cloud uniforms (Cloud fade-in) ───────────────────────────────────────
+//
+// One small uniform buffer per loaded source, set at draw time via
+// `setBindGroup(1, entry.cloudBindGroup)` from the JS render loop.  The
+// only field we currently care about is `opacity` — the smoothstep-shaped
+// 0→1 ramp that the JS side computes from `now() - fadeStartMs`.  Multiplied
+// into the visual fragment's final alpha so a freshly-uploaded cloud
+// glides into view rather than popping.
+//
+// Why a separate bind group rather than extending @group(0)?  WebGPU's
+// `queue.writeBuffer` ordering across submits in one frame is undefined —
+// writing different opacity values to one shared buffer between draws
+// would race.  Per-cloud BUFFERS sidestep that entirely (one writeBuffer
+// per buffer per frame, no overlap), which is exactly the existing
+// "bake per-instance into the vertex buffer" pattern at a coarser
+// granularity.  See CLAUDE.md → "WebGPU `queue.writeBuffer` race".
+//
+// The pick fragment (`fsPick`) doesn't reference `cloud`, so the pick
+// pipeline's auto-derived layout skips this binding — picking remains
+// unaffected by fade.
+struct CloudUniforms {
+  /** 0 → fully transparent (just uploaded), 1 → fully opaque (steady state). */
+  opacity: f32,
+  // Pad to 16-byte alignment — WebGPU's minimum uniform buffer size.
+  _pad0: f32,
+  _pad1: f32,
+  _pad2: f32,
+};
+
+@group(1) @binding(0) var<uniform> cloud: CloudUniforms;
+
 // ─── vertex attributes ────────────────────────────────────────────────────────
 
 // These fields are filled from the *instance* vertex buffer — the buffer that
@@ -1358,6 +1389,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // and zooming in would leave the 8× selection halo rendered on top
   // of the procedural-disk impostor).
   alpha = alpha * pointAlphaMult;
+
+  // ── Cloud fade-in ──────────────────────────────────────────────────────────
+  //
+  // Multiply by the per-source opacity uniform (set per-frame from the JS
+  // side based on time-since-upload).  Steady-state opacity = 1.0, so this
+  // is a no-op once a cloud has finished fading.  See the CloudUniforms
+  // docblock above for the full rationale; tl;dr a freshly-uploaded cloud
+  // glides into view over ~500 ms instead of popping into existence.
+  alpha = alpha * cloud.opacity;
 
   // Highlight fallback rows in magenta when the toggle is on. The 0.3 in
   // the green channel keeps fallback galaxies recognisable as "data-y"

@@ -86,6 +86,7 @@ import { type ComputeAngularWeightsInput } from '../engine/computeAngularWeights
 // runtime we hand it to `device.createShaderModule({ code: shaderSrc })`.
 // Without `?raw`, Vite would try to parse the .wgsl file as JS and fail.
 import shaderSrc from './shaders/points.wgsl?raw';
+import { CloudFade } from './cloudFade';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -726,6 +727,15 @@ type LoadedSource = {
    * mag ≈ 5, far above any real flux limit.
    */
   nRef: number;
+  /**
+   * Per-cloud fade-in controller.  Owns its own 16-byte uniform buffer +
+   * bind group at `@group(1) @binding(0)`, plus the fade-start timestamp.
+   * Reset (`fade.restart()`) on every upload so tier-swap re-uploads
+   * trigger a fresh fade-in.  Written via `fade.writeFrame()` and bound
+   * via `pass.setBindGroup(1, fade.bindGroup)` from the render loop.
+   * See `cloudFade.ts` for the full design.
+   */
+  fade: CloudFade;
 };
 
 // ─── PointRenderer ────────────────────────────────────────────────────────────
@@ -1038,7 +1048,11 @@ export class PointRenderer {
     // source.  Re-bake of any later source's instanceIdOffset still happens
     // through `recomputeInstanceIdOffsets` so the bookkeeping stays right.
     if (cloud.count === 0) {
-      this.clouds.get(source)?.buffer.destroy();
+      const stale = this.clouds.get(source);
+      if (stale) {
+        stale.buffer.destroy();
+        stale.fade.destroy();
+      }
       this.clouds.delete(source);
       this.recomputeInstanceIdOffsets();
       return;
@@ -1090,16 +1104,29 @@ export class PointRenderer {
 
     // ── Write to GPU ────────────────────────────────────────────────────────
     //
-    // Destroy any previous buffer for this source before replacing it (GPU
+    // Destroy or restart the previous-source state before replacing it (GPU
     // buffers can't be realloc'd; allocating a fresh one of the new size and
-    // letting the old one's VRAM go is the only path).
-    this.clouds.get(source)?.buffer.destroy();
+    // letting the old one's VRAM go is the only path).  The fade controller
+    // is recycled on a re-upload — its `restart()` resets the timestamp so
+    // a tier swap re-triggers the fade-in.  Without recycling we'd allocate
+    // a fresh GPU uniform buffer + bind group on every tier flip, which is
+    // unnecessary churn.
+    const prev = this.clouds.get(source);
+    if (prev) {
+      prev.buffer.destroy();
+      prev.fade.restart();
+    }
 
     const buffer = this.device.createBuffer({
       size: interleaved.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
     this.device.queue.writeBuffer(buffer, 0, interleaved);
+
+    // Reuse the previous fade controller if this is a re-upload; otherwise
+    // mint a fresh one.  Either way, the fadeStartMs is "now" so the next
+    // few frames render at low opacity and ramp up.
+    const fade = prev?.fade ?? new CloudFade(this.device, this.pipeline.getBindGroupLayout(1));
 
     // `instanceIdOffset` is set to the priorCount we already computed above
     // — same value baked into the vertex buffer's globalInstanceIdx slot.
@@ -1135,6 +1162,7 @@ export class PointRenderer {
       // buildPointInterleavedBuffer.ts); the upload always writes 1.0 and
       // the cache stays empty until `applyAngularReweightMode()` runs.
       cachedAngularWeights: null,
+      fade,
     });
     this.recomputeInstanceIdOffsets();
     await this.rebakeStaleSources();
@@ -1231,6 +1259,7 @@ export class PointRenderer {
     const entry = this.clouds.get(source);
     if (!entry) return;
     entry.buffer.destroy();
+    entry.fade.destroy();
     this.clouds.delete(source);
     this.recomputeInstanceIdOffsets();
   }
@@ -1727,6 +1756,11 @@ export class PointRenderer {
     // uniform-struct slots at byte offsets 140..155 are now dead-but-
     // reserved — leaving the WGSL struct layout intact avoids re-aligning
     // every other field in the buffer.
+    //
+    // What IS now per-source: the cloud-fade-in opacity write owned by
+    // `entry.fade`.  Each source has its own CloudFade with its own GPU
+    // uniform buffer, so writes don't race across draws in the same
+    // submit — see CLAUDE.md → "WebGPU `queue.writeBuffer` race".
     for (const source of ALL_SOURCES) {
       const entry = this.clouds.get(source);
       if (!entry) continue;
@@ -1735,8 +1769,24 @@ export class PointRenderer {
       // `data/sources.ts`, inlined here because this is the per-frame hot path.
       if (((visibleSourceMask >> source) & 1) === 0) continue;
 
+      entry.fade.writeFrame();
+      pass.setBindGroup(1, entry.fade.bindGroup);
       pass.setVertexBuffer(0, entry.buffer);
       pass.draw(6, entry.count);
     }
+  }
+
+  /**
+   * Whether any loaded source is still ramping up its fade-in opacity.
+   * The engine's render scheduler consults this on every frame tail —
+   * while it returns true, `requestRender()` keeps firing so the smoothstep
+   * keeps advancing.  Returns false once every cloud has saturated at
+   * opacity 1.0, after which the loop can pause as usual.
+   */
+  isFading(): boolean {
+    for (const entry of this.clouds.values()) {
+      if (entry.fade.isFading()) return true;
+    }
+    return false;
   }
 }
