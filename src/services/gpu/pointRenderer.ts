@@ -1018,6 +1018,32 @@ export class PointRenderer {
    * @param cloud   Point cloud to upload (struct-of-arrays SDSS v2 shape).
    */
   async upload(source: Source, cloud: PointCloud): Promise<void> {
+    // ── Empty-cloud unload path ─────────────────────────────────────────────
+    //
+    // `engine.setTier` reuses this method to clear a source when the new
+    // tier excludes it (small tier drops SDSS).  `cloudLoader.reloadSource`
+    // signals "clear this source" by firing onResult with a count=0 cloud.
+    //
+    // The naive replace path below would call `device.createBuffer({ size: 0,
+    // ... })` which the WebGPU spec forbids (some browsers throw an
+    // OperationError; others — including current Chrome — accept it but the
+    // per-frame draw loop then fires `pass.draw(6, 0)` which logs the
+    // "Calling [RenderPassEncoder].Draw with an instance count of 0 is
+    // unusual" developer warning and burns an empty draw call every frame).
+    //
+    // Either failure mode is fixable the same way: short-circuit BEFORE the
+    // bake/createBuffer step.  Destroy any prior buffer for this source
+    // (frees VRAM) and remove the entry from the Map entirely — the draw
+    // loop's existing `if (!entry) continue;` then naturally skips this
+    // source.  Re-bake of any later source's instanceIdOffset still happens
+    // through `recomputeInstanceIdOffsets` so the bookkeeping stays right.
+    if (cloud.count === 0) {
+      this.clouds.get(source)?.buffer.destroy();
+      this.clouds.delete(source);
+      this.recomputeInstanceIdOffsets();
+      return;
+    }
+
     // ── Compute the source's prior-count BEFORE the worker spawns ───────────
     //
     // The worker can't reach back into `this.clouds` to compute the priorCount
