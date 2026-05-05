@@ -22,7 +22,7 @@
  * wrong tool for that.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { PointRenderer } from '../../../src/services/gpu/pointRenderer';
 import { buildPointInterleavedBuffer } from '../../../src/services/engine/buildPointInterleavedBuffer';
 import { Source } from '../../../src/data/sources';
@@ -181,5 +181,48 @@ describe('PointRenderer.loadedSources', () => {
     // With SDSS gone, TwoMRS is now first (offset 0) and Glade follows at 50.
     expect(entries[0]!.instanceIdOffset).toBe(0);
     expect(entries[1]!.instanceIdOffset).toBe(50);
+  });
+});
+
+// ─── Regression: replace, not append ──────────────────────────────────────────
+//
+// `engine.setTier` reuses the same `upload(source, cloud)` path that the
+// initial load uses to swap a source's data when the user picks a different
+// data tier.  The contract is that the *prior* GPU buffer for that source
+// is destroyed before the new one is uploaded — anything else would either
+// leak VRAM or, worse, leave the union of (oldCount + newCount) galaxies
+// "live" on the GPU and visually doubled-up on screen.  This test pins
+// that behaviour so a future refactor can't silently regress it.
+describe('PointRenderer.upload — regression: replace, not append', () => {
+  it('destroys the prior buffer for a source on second upload', async () => {
+    // Two clouds with different counts: an "append" bug would leave the
+    // sum (1500) in the bookkeeping; a correct "replace" leaves only 500.
+    const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
+    const cloudA = makeCloud(1000);
+    const cloudB = makeCloud(500);
+
+    await renderer.upload(Source.SDSS, cloudA);
+    const firstEntry = Array.from(renderer.loadedSources()).find(
+      (e) => e.source === Source.SDSS,
+    );
+    expect(firstEntry).toBeDefined();
+    const firstBuffer = firstEntry!.vertexBuffer;
+
+    // Spy on the prior buffer's `destroy` so we observe the lifecycle event.
+    // `makeStubDevice` mints a fresh GPUBuffer per `createBuffer` call, so
+    // each upload's buffer has its own `destroy` we can spy on independently.
+    const destroySpy = vi.spyOn(firstBuffer, 'destroy');
+
+    await renderer.upload(Source.SDSS, cloudB);
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+
+    // Bookkeeping reflects the second upload's count, not the sum.
+    const secondEntry = Array.from(renderer.loadedSources()).find(
+      (e) => e.source === Source.SDSS,
+    );
+    expect(secondEntry?.count).toBe(500);
+
+    // And the buffer reference itself has changed — replaced, not patched.
+    expect(secondEntry?.vertexBuffer).not.toBe(firstBuffer);
   });
 });
