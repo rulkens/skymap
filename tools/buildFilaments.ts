@@ -11,7 +11,7 @@
  *      See `readMergedPositions` for the full rationale.
  *   2. Write data/raw/galaxies_merged.tsv (DisPerSE ASCII-survey format,
  *      header `px py pz` followed by one line per galaxy: `x y z`)
- *   3. Run DisPerSE: delaunay_3D → mse → skelconv (default 3σ
+ *   3. Run DisPerSE: delaunay_3D → mse → skelconv (default 5σ
  *      persistence, 2 smoothing passes).  delaunay_3D is required because
  *      mse cannot operate on a raw point cloud — it needs the Delaunay
  *      simplicial complex + DTFE density field that delaunay_3D produces.
@@ -62,17 +62,22 @@ import { computeAngularWeights } from '../src/services/engine/computeAngularWeig
  *
  * 5σ (Sousbie 2011 original) is the canonical "robust spine" — visually
  * the cosmic web with its leaves stripped off, only the most persistent
- * ridges survive.  3σ is the typical cosmology-paper choice (Tempel+
- * 2014, etc.) and gives ~3–5× more filaments without crossing into
- * shot-noise territory; this is what we default to.  2σ is dense, may
- * include Poisson-noise ridges, but visually rich for outreach renders.
+ * ridges survive.  We default to 5σ because at the current input scale
+ * (V_max + HEALPix-corrected 2MRS+GLADE, D ≤ 300 Mpc, ~1.6 M weighted
+ * points) the 5σ skeleton produces longer continuous ridges through
+ * cluster spines, reading as cleaner cosmic-web structure.  3σ (the
+ * typical cosmology-paper choice — Tempel+ 2014 etc.) gives ~2× more
+ * filaments but the lower-σ tendrils visually compete with the spine
+ * for attention; user feedback was that 5σ "looks more like the cosmic
+ * web".  2σ is dense, includes Poisson-noise ridges, useful only for
+ * exploration.
  *
  * Override with `--cut N` on the CLI.  The slow Delaunay-tessellation
  * stage (`.NDnet`) is cached on disk and shared across cuts, so
  * iterating on this knob only re-runs `mse + skelconv` (minutes, not
  * hours).
  */
-const DEFAULT_PERSISTENCE_CUT = 3;
+const DEFAULT_PERSISTENCE_CUT = 5;
 const DEFAULT_SMOOTHING_PASSES = 2;
 
 /**
@@ -156,7 +161,7 @@ function checkDisperse(): void {
  * ridges out there reflect the survey's drop-off rather than real
  * cosmic structure.
  */
-const MAX_DISTANCE_MPC = 400;
+const MAX_DISTANCE_MPC = 300;
 
 /**
  * Minimum distance (Mpc) — excludes the Local-Group / Local-Sheet
