@@ -47,6 +47,9 @@ import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js'
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../src/utils/math/galaxyDiameterKpc.js';
 import { Source } from '../src/data/sources.js';
 import type { PointCloud } from '../src/@types/index.js';
+import { TIER_TARGETS, tierFilenameForSource } from '../src/data/tierTargets.js';
+import type { Tier } from '../src/@types/Tier.js';
+import { subsampleByAbsMag } from './subsampleByAbsMag.js';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
 // using the documented `tools/buildAllBins` import path.
@@ -374,15 +377,6 @@ async function runCli(): Promise<void> {
     arr.push(r);
   }
 
-  // Map each survey to its on-disk filename. We use a Partial<Record<>>
-  // because Source.Synthetic has no real catalogue file — synthetic data
-  // is generated at runtime.
-  const OUT_NAMES: Partial<Record<Source, string>> = {
-    [Source.SDSS]: 'sdss.bin',
-    [Source.TwoMRS]: '2mrs.bin',
-    [Source.Glade]: 'glade.bin',
-  };
-
   // Per-source dedup report. Subtracting kept from input gives the number
   // of records dropped as duplicates of a higher-priority survey's row.
   for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade]) {
@@ -395,16 +389,38 @@ async function runCli(): Promise<void> {
   }
 
   const outDir = args['out-dir']!;
+  const TIERS: readonly Tier[] = ['small', 'medium', 'large'];
+
+  // Track filenames already written this run so the tier-agnostic sources
+  // (2MRS, Famous) are only encoded + flushed once.  `tierFilenameForSource`
+  // returns the same string for those across all three tiers, so we'd
+  // otherwise rewrite the same bytes three times.
+  const written = new Set<string>();
+
   for (const [source, records] of bySource) {
-    const filename = OUT_NAMES[source];
-    if (!filename) continue;
-    const cloud = recordsToCloud(records);
-    const buf = encodePointCloud(cloud);
-    const outPath = resolve(outDir, filename);
-    writeFileSync(outPath, Buffer.from(buf));
-    process.stderr.write(
-      `wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength.toLocaleString()} bytes)\n`,
-    );
+    for (const tier of TIERS) {
+      const filename = tierFilenameForSource(source, tier);
+      if (written.has(filename)) continue;
+      written.add(filename);
+
+      // Apply the tier's per-source target, if any.  Missing key = no cap.
+      // 0 = exclude (skip writing this file entirely so the runtime can
+      // detect "no data for this tier" via 404 rather than an empty cloud).
+      const target = TIER_TARGETS[tier][source];
+      if (target === 0) {
+        process.stderr.write(`tier ${tier}: ${Source[source]} excluded — skipping ${filename}\n`);
+        continue;
+      }
+      const slice = target === undefined ? records : subsampleByAbsMag(records, target);
+
+      const cloud = recordsToCloud(slice);
+      const buf = encodePointCloud(cloud);
+      const outPath = resolve(outDir, filename);
+      writeFileSync(outPath, Buffer.from(buf));
+      process.stderr.write(
+        `wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength.toLocaleString()} bytes)\n`,
+      );
+    }
   }
 }
 
