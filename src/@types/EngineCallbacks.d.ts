@@ -220,4 +220,44 @@ export type EngineCallbacks = {
    * grow into a richer Opts split if more startup-only knobs accumulate.
    */
   initialTier?: Tier;
+
+  /**
+   * Fired whenever the aggregated download-progress state changes — both
+   * during the initial parallel `loadAllClouds` and during a per-source
+   * tier hot-swap.  `null` means "no fetches in flight"; React uses that
+   * signal to fade out the loading bar.
+   *
+   * The aggregator inside the engine sums per-source `loaded` and `total`
+   * across every concurrent fetch.  When `total === 0` for one or more
+   * sources (because the response had no `Content-Length` header) the
+   * UI should fall back to an indeterminate shimmer rather than show a
+   * misleading 0/0 ratio.
+   *
+   * Coalescing happens at the source layer: `fetchWithProgress` only
+   * fires per chunk arrival, so this callback is bounded by network
+   * cadence (typically tens of events per second per source on a fast
+   * link, far fewer on slow ones).  React's reconciler handles that
+   * fine; no debouncing needed at the engine layer.
+   */
+  onLoadProgress?: (progress: LoadProgressState | null) => void;
+};
+
+/**
+ * Aggregated download-progress snapshot emitted by `onLoadProgress`.
+ *
+ * The aggregator owns one of these whenever any source's fetch is in
+ * flight.  Once the last in-flight fetch settles (success, abort, or
+ * error), the engine fires `onLoadProgress(null)` so the UI can hide
+ * the bar.
+ */
+export type LoadProgressState = {
+  /** Sum of bytes received across every in-flight source's stream. */
+  loadedBytes: number;
+  /**
+   * Sum of `Content-Length` totals across every in-flight source.  May
+   * be 0 if no source advertised a total — UI falls back to indeterminate.
+   */
+  totalBytes: number;
+  /** Number of sources currently being fetched (1-3 in practice). */
+  inFlightCount: number;
 };

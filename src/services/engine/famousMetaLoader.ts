@@ -60,44 +60,6 @@ export function parseFamousXrefs(rawJson: string): FamousXrefMap {
 }
 
 /**
- * Translate the GLADE local indices in a `FamousXrefMap` through an
- * old → new index table produced by `cloudLoader`'s far-galaxy
- * decimation.  Necessary because the sidecar JSON was authored against
- * the original GLADE binary, but the runtime cloud is a decimated
- * subset and the original `localIdx` values would resolve to the wrong
- * galaxies (or out-of-bounds, when a row was dropped).
- *
- * Behaviour:
- *   - `null` xrefs pass through unchanged (no cross-match found at
- *     build time).
- *   - Non-Glade entries (currently `source: 'TwoMRS'`) pass through
- *     unchanged — only GLADE was decimated.
- *   - GLADE entries whose original row maps to `-1` (dropped) become
- *     `null`.  Same shape as a missing match; the InfoCard's existing
- *     `null` branch already handles this case gracefully.
- *   - Surviving GLADE entries get their `localIdx` rewritten in place.
- *
- * Returns a NEW map — the input is treated as immutable so other
- * possible future consumers (tests, dev-tools) keep their pristine copy.
- */
-export function remapGladeXrefs(xrefs: FamousXrefMap, gladeIdxRemap: Int32Array): FamousXrefMap {
-  const out: FamousXrefMap = {};
-  for (const [id, xref] of Object.entries(xrefs)) {
-    if (xref === null || xref.source !== 'Glade') {
-      out[id] = xref;
-      continue;
-    }
-    const newIdx = gladeIdxRemap[xref.localIdx];
-    if (newIdx === undefined || newIdx < 0) {
-      out[id] = null;
-      continue;
-    }
-    out[id] = { ...xref, localIdx: newIdx };
-  }
-  return out;
-}
-
-/**
  * Fetch and parse both sidecars in parallel.  Returns null/empty values
  * when either file 404s — most users will never run `npm run
  * build-famous`, so absent sidecars must not break the engine.

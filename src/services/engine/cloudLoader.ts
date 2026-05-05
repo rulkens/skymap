@@ -91,145 +91,145 @@ export type CloudLoadResult = {
   source: Source;
   cloudSource: CloudSource;
   cloud: PointCloud;
-  /**
-   * Old-index → new-index translation table, populated only when the
-   * cloud was decimated post-decode (currently: GLADE).  Length matches
-   * the *original* cloud's count; entries are the new index after
-   * decimation, or -1 for points that were dropped.
-   *
-   * Required because runtime sidecars (notably `famous_xrefs.json`)
-   * carry GLADE local indices that were valid against the ORIGINAL
-   * binary.  After we drop ~40% of GLADE's far half, those indices
-   * point at the wrong galaxies — or fall off the end.  The engine
-   * walks the xrefs once at sidecar-load time and rewrites the GLADE
-   * entries through this table.  See engine.ts's `loadFamousSidecars`
-   * `.then` for the application site.
-   */
-  idxRemap?: Int32Array;
 };
+
+/**
+ * Lifecycle event from a streaming-progress fetch.
+ *
+ * The tagged shape lets a single callback handle all three phases without
+ * the consumer having to track "is this the first chunk?" itself:
+ *
+ *   - `start`    fires once per source, immediately after the `fetch`'s
+ *                response headers arrive (so the loading-bar UI can appear
+ *                before any bytes have streamed in).  `total` is `0` when
+ *                `Content-Length` is missing — UI falls back to indeterminate.
+ *   - `progress` fires per chunk arrival.  `total` may be revised upward
+ *                if a chunked-transfer response embeds the real size later.
+ *   - `finish`   fires exactly once per source at the end of the stream
+ *                — covers success, abort, and error symmetrically so the
+ *                aggregator can always close out the entry.
+ *
+ * Tagged-union (rather than three separate callbacks) keeps the cloudLoader
+ * API surface narrow — every entry point that takes progress takes one
+ * `LoadEventCallback` and forwards every phase through it.
+ */
+export type LoadEvent =
+  | { type: 'start'; source: Source; total: number }
+  | { type: 'progress'; source: Source; loaded: number; total: number }
+  | { type: 'finish'; source: Source };
+
+export type LoadEventCallback = (event: LoadEvent) => void;
+
+/**
+ * Stream a `fetch` response body chunk-by-chunk so callers can observe
+ * download progress in real time.  Returns the fully-assembled
+ * `ArrayBuffer` once the stream ends — same shape `res.arrayBuffer()`
+ * returns, just with progress events along the way.
+ *
+ * ### Why a custom stream loop instead of `res.arrayBuffer()`?
+ *
+ * `arrayBuffer()` resolves once the entire body is buffered, with no
+ * intermediate observability — the UI sees one binary "click → 5 s
+ * silence → done".  The body's `ReadableStream` reader, by contrast,
+ * yields chunks as they arrive, so we can sum bytes-loaded and call
+ * `onProgress` as the response streams in.  The cost is a manual
+ * `chunks.push(value)` + final concat, which is microseconds-scale
+ * compared to the network time we're observing.
+ *
+ * ### Why a separate concat at the end (not a single growing typed array)?
+ *
+ * Allocating one big buffer up-front would require knowing the total
+ * size, which we may not (no `Content-Length`).  Pre-counting via two
+ * passes would defeat the streaming purpose.  Push-then-concat hits the
+ * sweet spot: O(N) memory, one final allocation of exactly the right
+ * size, no early-termination resize.
+ */
+async function fetchWithProgress(
+  url: string,
+  source: Source,
+  signal: AbortSignal,
+  onEvent?: LoadEventCallback,
+): Promise<ArrayBuffer> {
+  // Always fire `finish` on exit — success, abort, or error all end up
+  // here, so the aggregator can always close out the entry.  The
+  // try/finally below handles that uniformly; the success path still
+  // explicitly wraps the body to ensure `finish` ordering with the
+  // returned buffer.
+  let finished = false;
+  const fireFinish = () => {
+    if (finished) return;
+    finished = true;
+    onEvent?.({ type: 'finish', source });
+  };
+
+  try {
+    const res = await fetch(url, { signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+
+    // `Content-Length` may be missing (chunked transfer, gzipped, some
+    // proxies).  We cope by reporting `total: 0` — the loading-bar
+    // component switches to an indeterminate shimmer in that case rather
+    // than a misleading 0/0 ratio.
+    const totalHeader = res.headers.get('Content-Length');
+    const total = totalHeader ? Number.parseInt(totalHeader, 10) : 0;
+
+    // Fire `start` immediately after headers — the loading bar appears
+    // before any bytes stream in.
+    onEvent?.({ type: 'start', source, total });
+
+    // Some browsers (older Safari) and some unusual fetch shims don't
+    // expose `res.body` as a ReadableStream.  Fall back to the
+    // all-at-once path so we degrade to "no per-chunk progress events,
+    // but still works".  Synthesise a single end-state progress event so
+    // the bar still ratchets to full before finishing.
+    if (!res.body) {
+      const buf = await res.arrayBuffer();
+      onEvent?.({ type: 'progress', source, loaded: buf.byteLength, total: buf.byteLength });
+      fireFinish();
+      return buf;
+    }
+
+    const reader = res.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let loaded = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      loaded += value.byteLength;
+      onEvent?.({ type: 'progress', source, loaded, total });
+    }
+
+    // Concat all chunks into one contiguous ArrayBuffer.  Pre-sum the
+    // length so the destination is allocated once.
+    const combined = new Uint8Array(loaded);
+    let offset = 0;
+    for (const c of chunks) {
+      combined.set(c, offset);
+      offset += c.byteLength;
+    }
+    fireFinish();
+    return combined.buffer;
+  } catch (err) {
+    fireFinish();
+    throw err;
+  }
+}
 
 /**
  * Fetch a single .bin file and decode it.  Throws on any error so the
  * outer `Promise.allSettled` can record the failure without affecting
  * sibling fetches.
  */
-async function fetchOne(file: SurveyFile): Promise<CloudLoadResult> {
-  const res = await fetch(file.url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${file.url}`);
-  const buf = await res.arrayBuffer();
-  let cloud = decodePointCloud(buf);
-  // ── Far-galaxy decimation experiment (GLADE only) ─────────────────────
-  //
-  // GLADE contributes ~2 M of the catalog's ~3.5 M points and dominates
-  // the back half of the visible volume past ~300 Mpc.  Measurement
-  // showed the points pipeline is partially vertex-bound at default
-  // settings, but a shader-side clip-space discard for the same set of
-  // far points only gained ~10 fps because the GPU still runs the vertex
-  // shader for clipped instances — only the rasteriser + fragment work
-  // is skipped.  This CPU-side path drops the points entirely *before*
-  // upload, so the GPU never sees them and the vertex shader runs
-  // strictly fewer times.
-  //
-  // EXPERIMENT STATUS: hardcoded threshold + stride pending an FPS
-  // measurement.  If the gain is real we'll formalise this with a
-  // SettingsPanel control and address the famous-galaxy cross-reference
-  // data (`famous_xrefs.json`) which currently points at GLADE local
-  // indices that will shift under decimation.  For the measurement
-  // pass the worst-case cross-ref breakage is "click 'Also catalogued
-  // as GLADE row N' jumps to the wrong galaxy" — annoying but doesn't
-  // crash anything.
-  if (file.source === Source.Glade) {
-    const before = cloud.count;
-    const { cloud: decimated, idxRemap } = decimateFar(cloud, 300, 2);
-    cloud = decimated;
-    console.log(
-      `[cloudLoader] GLADE decimated past 300 Mpc with stride 2: ${before} → ${cloud.count} points`,
-    );
-    return { source: file.source, cloudSource: file.cloudSource, cloud, idxRemap };
-  }
+async function fetchOne(
+  file: SurveyFile,
+  signal: AbortSignal,
+  onEvent?: LoadEventCallback,
+): Promise<CloudLoadResult> {
+  const buf = await fetchWithProgress(file.url, file.source, signal, onEvent);
+  const cloud = decodePointCloud(buf);
   return { source: file.source, cloudSource: file.cloudSource, cloud };
-}
-
-/**
- * Drop every Nth point whose origin-relative distance exceeds `distanceMpc`.
- *
- * Bit-stable: the same input cloud always produces the same survivors, so
- * frame-to-frame rendering doesn't shimmer.  Foreground (d ≤ threshold) is
- * kept untouched — `stride` only kicks in for the back half, on the same
- * principle the depth-fade applies: distant galaxies contribute more
- * cumulatively (overlapping additive billboards in the depth column) and
- * the eye can't distinguish individuals out there anyway.
- *
- * Two-pass implementation: first count survivors, then allocate the new
- * typed arrays at the exact final size and copy each slot once.  An
- * append-and-trim approach with `subarray` would skip the pre-count but
- * leak the underlying ArrayBuffer's tail; explicit copies keep the
- * memory footprint clean.
- */
-function decimateFar(
-  cloud: PointCloud,
-  distanceMpc: number,
-  stride: number,
-): { cloud: PointCloud; idxRemap: Int32Array } {
-  const distSq = distanceMpc * distanceMpc;
-  const positions = cloud.positions;
-  const keep = new Uint8Array(cloud.count);
-  let survivorCount = 0;
-  for (let i = 0; i < cloud.count; i++) {
-    const x = positions[i * 3]!;
-    const y = positions[i * 3 + 1]!;
-    const z = positions[i * 3 + 2]!;
-    const d2 = x * x + y * y + z * z;
-    // Foreground always kept.  Past the threshold, `i % stride === 0` is
-    // the bit-stable culling rule — for stride 2 that's "keep every other".
-    if (d2 <= distSq || i % stride === 0) {
-      keep[i] = 1;
-      survivorCount++;
-    }
-  }
-
-  const out: PointCloud = {
-    count: survivorCount,
-    objIDs: new BigUint64Array(survivorCount),
-    positions: new Float32Array(survivorCount * 3),
-    magU: new Float32Array(survivorCount),
-    magG: new Float32Array(survivorCount),
-    magR: new Float32Array(survivorCount),
-    magI: new Float32Array(survivorCount),
-    magZ: new Float32Array(survivorCount),
-    axisRatio: new Float32Array(survivorCount),
-    positionAngleDeg: new Float32Array(survivorCount),
-    diameterKpc: new Float32Array(survivorCount),
-  };
-
-  // Old → new index map.  -1 marks dropped points.  Sized to the original
-  // cloud so consumers can blind-index by the pre-decimation localIdx
-  // they received from sidecar JSON without bounds checks.
-  const idxRemap = new Int32Array(cloud.count);
-
-  let dst = 0;
-  for (let src = 0; src < cloud.count; src++) {
-    if (!keep[src]) {
-      idxRemap[src] = -1;
-      continue;
-    }
-    idxRemap[src] = dst;
-    out.objIDs[dst] = cloud.objIDs[src]!;
-    out.positions[dst * 3] = positions[src * 3]!;
-    out.positions[dst * 3 + 1] = positions[src * 3 + 1]!;
-    out.positions[dst * 3 + 2] = positions[src * 3 + 2]!;
-    out.magU[dst] = cloud.magU[src]!;
-    out.magG[dst] = cloud.magG[src]!;
-    out.magR[dst] = cloud.magR[src]!;
-    out.magI[dst] = cloud.magI[src]!;
-    out.magZ[dst] = cloud.magZ[src]!;
-    out.axisRatio[dst] = cloud.axisRatio[src]!;
-    out.positionAngleDeg[dst] = cloud.positionAngleDeg[src]!;
-    out.diameterKpc[dst] = cloud.diameterKpc[src]!;
-    dst++;
-  }
-
-  return { cloud: out, idxRemap };
 }
 
 /**
@@ -249,6 +249,7 @@ function decimateFar(
 export async function loadAllClouds(
   tier: Tier,
   onResult: (result: CloudLoadResult) => void,
+  onEvent?: LoadEventCallback,
 ): Promise<{ loadedCount: number }> {
   // Wrap each fetch so we can dispatch the per-survey callback as soon as
   // *that* survey resolves — `Promise.allSettled` itself only resolves
@@ -256,20 +257,49 @@ export async function loadAllClouds(
   // The trick: each promise calls `onResult` inside its own `.then` and
   // *then* resolves; allSettled below just gives us the final count.
   const surveyFiles = surveyFilesForTier(tier);
-  const wrapped = surveyFiles.map((file) =>
-    fetchOne(file)
+
+  // Register each fetch's AbortController in the shared `inflightControllers`
+  // registry that `reloadSource` consults.  Without this, a tier-swap click
+  // that lands BEFORE the initial parallel load finishes can't abort the
+  // pre-existing fetch — both fetches race and the slower one wins,
+  // overwriting the freshly-uploaded buffer with stale tier data.  Sharing
+  // the registry makes the swap path's `prior.abort()` work uniformly
+  // regardless of which path started the fetch.  See the registry's docblock.
+  const wrapped = surveyFiles.map((file) => {
+    // If the user has already triggered a swap for this source before
+    // `loadAllClouds` even started its fetch (vanishingly rare in practice
+    // but possible if React effects fire out-of-order), the swap's
+    // `reloadSource` will have populated `inflightControllers` first.  Abort
+    // any such prior — semantically the swap call wins.
+    inflightControllers.get(file.source)?.abort();
+
+    const controller = new AbortController();
+    inflightControllers.set(file.source, controller);
+
+    return fetchOne(file, controller.signal, onEvent)
       .then((r) => {
+        // Drop late results if a swap has already taken over this source.
+        if (controller.signal.aborted) return r;
         onResult(r);
         return r;
       })
       .catch((err) => {
-        // We log here rather than letting `allSettled` swallow the reason
-        // silently — surfacing the URL helps diagnose 404s during dev when
-        // someone forgets to run `npm run build-all`.
+        // AbortError is the expected "swap aborted me" path — silent. Other
+        // errors (404, decode error) bubble through allSettled below.  We
+        // also log here so dev-time 404s show up alongside the URL.
+        if ((err as Error).name === 'AbortError') throw err;
         console.warn(`[cloudLoader] ${file.url} failed:`, err);
         throw err;
-      }),
-  );
+      })
+      .finally(() => {
+        // Only clear if we're still the latest controller for this source.
+        // If a swap happened, its newer controller replaced ours and we
+        // shouldn't unset its entry.
+        if (inflightControllers.get(file.source) === controller) {
+          inflightControllers.delete(file.source);
+        }
+      });
+  });
 
   const results = await Promise.allSettled(wrapped);
   const loadedCount = results.filter((r) => r.status === 'fulfilled').length;
@@ -311,6 +341,7 @@ export async function reloadSource(
   source: Source,
   tier: Tier,
   onResult: (result: CloudLoadResult) => void,
+  onEvent?: LoadEventCallback,
 ): Promise<void> {
   // Cancel any fetch already running for this source — see registry doc above.
   const prior = inflightControllers.get(source);
@@ -348,9 +379,7 @@ export async function reloadSource(
 
   const url = `/data/${tierFilenameForSource(source, tier)}`;
   try {
-    const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-    const buf = await res.arrayBuffer();
+    const buf = await fetchWithProgress(url, source, controller.signal, onEvent);
     // If a newer call has already aborted this controller, drop the result.
     if (controller.signal.aborted) return;
     const cloud = decodePointCloud(buf);

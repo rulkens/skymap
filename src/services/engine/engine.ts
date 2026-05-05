@@ -107,9 +107,10 @@ import {
   loadFilaments,
   type CloudSource,
 } from './cloudLoader';
+import { createLoadProgressAggregator } from './loadProgressAggregator';
 import { TIER_TARGETS } from '../../data/tierTargets';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
-import { loadFamousSidecars, remapGladeXrefs } from './famousMetaLoader';
+import { loadFamousSidecars } from './famousMetaLoader';
 
 // ── Galaxy thumbnail subsystem ────────────────────────────────────────────
 //
@@ -699,13 +700,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       let firstResult: { source: Source; cloud: PointCloud; cloudSource: CloudSource } | null =
         null;
 
-      // Captured when GLADE arrives if the cloudLoader decimated it.
-      // Used inside the famous-sidecar `.then` to translate any
-      // `source: 'Glade'` cross-references through the old → new local
-      // index map.  Without this the deployed feature would point at the
-      // wrong galaxies after the cloudLoader's far-galaxy decimation.
-      let gladeIdxRemap: Int32Array | undefined;
-
       // Promise chain that serialises every `renderer.upload()` call.
       // See the long doc-comment in the `onResult` body below for *why* —
       // short version: concurrent `upload()` calls race on the
@@ -781,9 +775,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             console.error(`[engine] point bake failed for source ${result.source}:`, err);
           });
         state.sources.clouds.set(result.source, result.cloud);
-        if (result.idxRemap && result.source === Source.Glade) {
-          gladeIdxRemap = result.idxRemap;
-        }
         cb.onCloudReady?.(result.source, result.cloud.count);
         // Wake immediately too — `clouds.set` enables hover/pick on the
         // (still-baking) cloud's CPU-side metadata.  Harmless even if
@@ -807,17 +798,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       loadFamousSidecars()
         .then((sc) => {
           state.sources.famousMeta = sc.meta;
-          // If GLADE was decimated at load time, translate any
-          // `source: 'Glade'` xrefs through the remap.  The sidecar JSON
-          // was authored against the original GLADE binary's local
-          // indices; after decimation those indices point at the wrong
-          // galaxies.  Entries whose original GLADE row was dropped
-          // (remap[oldIdx] === -1) become `null` — same shape as a
-          // genuine "no cross-match found" result, so the InfoCard's
-          // existing null-handling path covers them.
-          state.sources.famousXrefs = gladeIdxRemap
-            ? remapGladeXrefs(sc.xrefs, gladeIdxRemap)
-            : sc.xrefs;
+          // GLADE local indices in the sidecar JSON now match the on-disk
+          // binary directly — the cloudLoader no longer post-decodes
+          // GLADE through a far-distance decimator (the data-tier system
+          // owns point-count budgeting via its absolute-magnitude cut at
+          // build time, which is a more principled rule and operates
+          // BEFORE the binary is written, so xref indices stay valid).
+          state.sources.famousXrefs = sc.xrefs;
           // No direct render-state change — the sidecars only feed
           // hover-card text — but the famous-galaxy thumbnails
           // referenced by these entries will now be enqueueable from
