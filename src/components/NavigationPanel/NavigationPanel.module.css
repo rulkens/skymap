@@ -1,0 +1,84 @@
+/*
+ * NavigationPanel.module.css — glassmorphic cheatsheet panel.
+ *
+ * The visual treatment matches SettingsPanel.module.css (background, blur,
+ * border, font, 300px width).  We deliberately duplicate the rules rather
+ * than `composes:` from the SettingsPanel stylesheet — see the module
+ * header in NavigationPanel.tsx for the rationale.
+ *
+ * Layout responsibility: this stylesheet does NOT position the panel.
+ * The parent `.leftStack` (in App.module.css) flex-stacks the three
+ * left-column panels; we only render the card itself here.
+ */
+
+.navigationPanel {
+  background: rgba(8, 12, 28, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(160, 200, 255, 0.16);
+  border-radius: 8px;
+
+  color: #cfd8ff;
+  font:
+    11px/1.4 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
+  user-select: none;
+  /* Match SettingsPanel's 300px so the three panels in the left stack
+   * have a uniform visual width. */
+  width: 300px;
+}
+
+/*
+ * "NAVIGATION" heading — same uppercase letter-spaced treatment as
+ * SettingsPanel's `.panelTitle`, but rendered as a plain header (no
+ * collapse, no chevron — the cheatsheet has nothing to hide).
+ */
+.panelTitle {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(160, 200, 255, 0.16);
+  border-radius: 8px 8px 0 0;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(160, 180, 230, 0.5);
+}
+
+.panelContent {
+  padding: 12px 14px;
+}
+
+/*
+ * One key/action pair.  Two-column layout via flex with space-between, so
+ * keys hug the left and actions hug the right.  Mirrors SettingsPanel's
+ * `.panelRow` semantics without sharing the class name (different module).
+ */
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+/*
+ * The gesture/key cell.  Muted relative to the action label so the eye
+ * reads the action as the primary content; the key is supporting metadata.
+ * Tabular-nums isn't needed here (the strings are textual, not numeric)
+ * but we keep them in the monospace family inherited from the panel.
+ */
+.key {
+  color: rgba(180, 200, 240, 0.55);
+  flex-shrink: 0;
+}
+
+/*
+ * The action label cell.  Right-aligned via flex parent's space-between;
+ * the slightly-brighter color (matching SettingsPanel's `.panelRow label`)
+ * gives it the visual weight of "this is what the key does".
+ */
+.action {
+  color: rgba(200, 220, 255, 0.85);
+  text-align: right;
+}
