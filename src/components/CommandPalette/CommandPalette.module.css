@@ -1,13 +1,14 @@
 /*
- * CommandPalette — modal overlay, centred at the top of the viewport.
+ * CommandPalette — Cmd+K / Ctrl+K / `/` modal overlay for searching the
+ * curated famous-galaxies atlas.
  *
- * Note: this is the only chrome in skymap that intentionally departs
- * from the cosmic-blue glass aesthetic — it's a foreground modal, not
- * a HUD overlay, and reads as a search affordance like Spotlight or
- * Cmd-K palettes from VS Code / Linear.  The deviating tokens
- * (`--surface-modal`, `--border-modal`, etc.) live in
- * `src/styles/global.css` so future components in the same family
- * (settings dialog, toast) can share the look.
+ * Wears the same cosmic-blue glassmorphic identity as the rest of the
+ * skymap UI: monospace typography, blue-tinted dark glass, the same
+ * border / shadow / radius family used by the InfoCard pair.  Earlier
+ * drafts used a plain dark-grey modal (Linear / Spotlight idiom), but
+ * that pulled the search affordance out of the overall visual system
+ * and looked grafted on.  All atoms reference tokens from
+ * `src/styles/global.css`.
  */
 
 .backdrop {
@@ -18,30 +19,55 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  /*
+   * Drop the palette in from the top sixth of the viewport — high
+   * enough that it doesn't overlap the page-left HUD panels at common
+   * laptop heights, low enough that the user's eye isn't yanked all
+   * the way to the top edge.
+   */
   padding-top: 12vh;
 }
 
 .panel {
   width: min(560px, 90vw);
   max-height: 70vh;
-  background: var(--surface-modal);
-  color: #e8e8ea;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-modal);
+
+  background: var(--surface-card-strong);
+  backdrop-filter: blur(var(--blur-card));
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card);
+
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / var(--line-height-base) var(--font-family-mono);
+
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+/*
+ * Search input.  Larger font than the panel default so it reads as the
+ * primary affordance — the user's typing target — without looking like
+ * a separate widget.  We strip native chrome (background / border /
+ * outline) and rely on the bottom-rule to delineate it from the results
+ * list below.
+ */
 .input {
   background: transparent;
   border: none;
-  color: inherit;
+  color: var(--color-fg);
   font: inherit;
-  padding: var(--space-8) var(--space-10);
+  font-size: var(--font-size-lg);
+  letter-spacing: var(--letter-spacing-tight);
+  padding: var(--space-6) var(--space-7);
   outline: none;
-  font-size: var(--font-size-input);
-  border-bottom: 1px solid var(--border-modal);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.input::placeholder {
+  color: var(--color-fg-dim);
 }
 
 .results {
@@ -54,37 +80,63 @@
 .result {
   display: flex;
   align-items: center;
-  gap: var(--space-6);
-  padding: var(--space-4) var(--space-8);
+  gap: var(--space-5);
+  padding: var(--space-3) var(--space-7);
   cursor: pointer;
   user-select: none;
 }
 
+/*
+ * Active row (keyboard or hover focused).  Uses the badge surface tint —
+ * the same blue we apply to source-attribution chips inside info cards.
+ * Soft enough that it reads as "selected" without competing with the
+ * primary text underneath.
+ */
 .resultActive {
-  background: var(--surface-modal-active);
+  background: var(--surface-badge);
 }
 
+/*
+ * Result thumbnail — 32 px square.  Matches the InfoCard thumbnail
+ * styling family at a smaller scale (rounded corners, faint rim).
+ */
 .thumb {
   width: 32px;
   height: 32px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
-  background: var(--surface-modal-thumb);
+  background: var(--surface-panel);
+  border: 1px solid var(--border-default);
   object-fit: cover;
 }
 
+/*
+ * Primary name (e.g. "M31").  Uppercased + tracked like the rest of the
+ * UI's primary headlines so the row reads as a section header within
+ * the result list rather than body text.
+ */
 .primary {
-  font-weight: 600;
+  color: var(--color-fg);
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-tight);
 }
 
+/*
+ * Aliases ("· Andromeda Galaxy · NGC 224") rendered in the dim heading
+ * tone so the eye reads "primary name + supporting metadata".
+ */
 .secondary {
   margin-left: var(--space-4);
-  opacity: 0.6;
-  font-size: 0.85em;
+  color: var(--color-fg-dim);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-mid);
 }
 
+/* Empty-results message — same dim tone as section headings. */
 .empty {
-  padding: var(--space-12);
+  padding: var(--space-10);
   text-align: center;
-  opacity: 0.6;
+  color: var(--color-fg-dim);
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-mid);
 }

@@ -136,15 +136,6 @@
   /** Modal-backdrop scrim (CommandPalette). */
   --surface-scrim: rgba(0, 0, 0, 0.5);
 
-  /** CommandPalette modal body — solid (not glass) on purpose. */
-  --surface-modal: #15151d;
-
-  /** CommandPalette result-row hover fill. */
-  --surface-modal-active: rgba(80, 110, 255, 0.18);
-
-  /** CommandPalette thumbnail placeholder. */
-  --surface-modal-thumb: #1f1f27;
-
   /* ── Borders & strokes ──────────────────────────────────────────────── */
 
   /** Default panel / card border. */
@@ -164,9 +155,6 @@
 
   /** Hover border accent (control hover state). */
   --border-hover: rgba(180, 220, 255, 0.4);
-
-  /** CommandPalette input bottom-rule (different module aesthetic). */
-  --border-modal: #2a2a32;
 
   /* ── Focus + shadow ─────────────────────────────────────────────────── */
 
@@ -315,9 +303,6 @@
    */
   --shadow-card:
     0 8px 32px var(--shadow-card-outer), 0 0 0 1px var(--shadow-card-inset) inset;
-
-  /** CommandPalette modal — different module aesthetic, plain drop. */
-  --shadow-modal: 0 10px 40px var(--shadow-card-outer);
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
