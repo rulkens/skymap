@@ -11,7 +11,15 @@
   position: relative; /* for the ::before accent line */
 
   padding: 8px 12px;
-  min-width: 180px;
+  /*
+   * Match the FullCard's width envelope so the panel doesn't visually
+   * jump when the user transitions from hover (CompactCard) to selected
+   * (FullCard) — the only intentional difference between the two should
+   * be vertical content / padding, not horizontal real-estate.
+   */
+  min-width: 240px;
+  max-width: 320px;
+  overflow-wrap: break-word;
 
   /* Glassmorphism — same family as FullCard, slightly less opaque */
   background: rgba(8, 12, 28, 0.6);
