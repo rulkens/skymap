@@ -2053,3 +2053,29 @@ Current build caps at D = 200 Mpc.  Distribution beyond:
 Recommended change: `MAX_DISTANCE_MPC = 300` (one-line bump in `tools/buildFilaments.ts`).  Forces a full Delaunay re-run (input set ~doubles).  V_max + HEALPix corrections that just landed should handle the additional radial completeness drop-off honestly.
 
 Deferred from session 2026-05-05 because the user wanted to see V_max + HEALPix results at 200 first.
+
+---
+
+## Phase 5 (deferred): render-time radius cropping + pre-compute strategy
+
+**Insight: a larger-radius Delaunay build is a strict superset.** Delaunay tessellation respects locality — each cell only touches its Voronoi neighbours, so a vertex at, say, 150 Mpc has the same local density estimate regardless of whether the global build extended to 200 or 400 Mpc.  The boundary effects of a smaller-radius native build (DTFE unreliable near the edge) actually disappear when you crop a larger build to the same inner volume — the cropped vertices are now in the well-resolved interior.
+
+**One nuance — V_max amplification depends on `D_REF`.**  The corrected weight `(D_REF / d_max)³` uses `D_REF = MAX_DISTANCE_MPC` as the normaliser.  So a galaxy at 100 Mpc gets a different amplification depending on the outer build radius.  Both readings are defensible (the 400 Mpc build's `D_REF` says "the volume our catalogue can plausibly sample is 400 Mpc"); the choice locks the corrected density field.  When we settle on a max radius for production builds, it ALSO locks `D_REF` for the V_max math.
+
+### Implication: stop rebuilding for smaller radii — crop at render time
+
+Add a **"visible radius" uniform** to `filaments.wgsl`.  Fragment stage discards (or fades) segments whose midpoint distance from origin exceeds the user-chosen `visibleRadiusMpc`.  Cost: one extra `f32` uniform + one branch in the fragment stage.  Runtime impact: zero perceptible.
+
+UI: a slider in the Filaments section ("Visible radius: [────●──] 250 Mpc"), bounded by the build's actual `MAX_DISTANCE_MPC`.  The user gets *interactive* radius exploration — drag to see the cosmic web at the Local Supercluster scale, drag further to include the Sloan Great Wall.
+
+### Pre-compute strategy once the recipe settles
+
+Once the input recipe (which catalogues, which corrections, which filters) is locked, the offline build becomes a one-shot ritual:
+
+1. **One Delaunay tessellation at the max radius** (probably 400, possibly 500 if HEALPix proves robust against returning SDSS pencil-beam shapes from inside the SDSS footprint).  ~60 min once.
+2. **Multiple σ runs off the cached `.NDnet`** — minutes each.  Use the `--cuts 2,3,5` syntax the multi-σ-switcher plan (`2026-05-05-multi-sigma-filament-switcher.md`) defines.
+3. **Emit one bin per σ.**  Runtime fetches the manifest, switching is a re-upload (~5–30 MB depending on σ).
+
+The offline cost then asymptotes to **one Delaunay re-run when the input recipe changes** (new catalogue release, weighting algorithm change, filter update).  Everything else — σ exploration, radius exploration — becomes interactive.
+
+Estimated scope: ~3 commits.  Slider + uniform + shader branch is one task; build-pipeline `--cuts` + manifest is covered by the multi-σ plan; UI dropdown is also covered there.  This phase is the runtime-radius slider on top of those.
