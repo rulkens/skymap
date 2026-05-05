@@ -53,18 +53,23 @@ export function CommandPalette({
 
   // ── Filter + rank entries by the current query ─────────────────────────────
   //
-  // Empty query shows the first 20 entries unsorted (the seed file ordering),
-  // so the user sees something useful when the palette opens.  Non-empty
-  // query runs the scoring helper and drops anything with score <= 0.
+  // Empty query shows the full atlas in seed-file order so the user can
+  // browse without typing.  Non-empty query runs the scoring helper and
+  // drops anything with score <= 0.  No cap on the result count: the
+  // atlas is ~75 entries today and the panel's CSS already scrolls the
+  // results list (`max-height: 70vh; overflow-y: auto`), so dropping
+  // entries on the floor would be a confusing UX surprise rather than a
+  // performance win.  Bump back to a slice if the atlas ever grows past
+  // a few hundred and DOM cost becomes measurable.
   const matches: ScoredEntry[] = useMemo(() => {
     if (query.trim().length === 0) {
-      return entries.slice(0, 20).map((e) => ({ entry: e, score: 0 }));
+      return entries.map((e) => ({ entry: e, score: 0 }));
     }
     const scored = entries
       .map((entry) => ({ entry, score: scoreFamousMatch(entry, query) }))
       .filter((s) => s.score > 0);
     scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, 20);
+    return scored;
   }, [entries, query]);
 
   // Reset highlight when the query changes — otherwise we'd point past the
