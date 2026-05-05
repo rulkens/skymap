@@ -1,0 +1,118 @@
+/*
+ * LoadingBar.module.css — thin, glowing top-of-viewport progress bar.
+ *
+ * Visual identity intentionally matches the InfoCard's starlight accent
+ * line: same `--color-accent-gradient-edge → --color-accent-gradient-mid`
+ * stops, same soft cyan glow.  The bar is the network-progress sibling
+ * of that decorative element — same visual language, different role.
+ *
+ * All atoms reference tokens from `src/styles/global.css`.
+ */
+
+/*
+ * Outer track — full-viewport-width strip pinned to the top edge.  Sits
+ * above every other overlay (z-index 100) because it must remain visible
+ * even when the user has the InfoCard pinned, the Settings panel
+ * expanded, or the CommandPalette modal open.
+ *
+ * Background is a faint blue tint — the eye reads it as a "channel" the
+ * fill flows along, even when fill width is 0.  Without this the bar
+ * looks broken before the first chunk arrives.
+ */
+.track {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(160, 200, 255, 0.06);
+  z-index: 100;
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+ * Filled portion — width animates as bytes arrive.  Gradient instead of
+ * solid colour for the same reason the InfoCard's accent line uses one:
+ * a single bright stripe reads as a synthetic chrome element, while a
+ * stop-to-stop gradient reads as starlight along an edge.
+ *
+ * Glow comes from a soft `box-shadow` rather than `filter: blur()`
+ * because shadow stays anchored to the bar (filter blurs the whole box
+ * including the edges, which produces a 1-px halo on the left and right
+ * that doesn't track the fill cleanly).  The shadow's spread is tuned to
+ * stop just shy of the panel widths below — it should bloom but not
+ * smear into the canvas.
+ */
+.fill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--color-accent-gradient-edge) 0%,
+    var(--color-accent-gradient-mid) 50%,
+    var(--color-accent-gradient-edge) 100%
+  );
+  box-shadow:
+    0 0 6px var(--color-accent-gradient-mid),
+    0 0 12px var(--color-accent-gradient-edge);
+  /*
+   * Width transition smooths the per-chunk jumps.  Without it a fast
+   * connection would tick the bar in obvious 64 KB stair-steps; with
+   * 200 ms ease-out the bar sweeps continuously even when chunks land
+   * unevenly.  Easing matches `--ease-standard` for visual coherence
+   * with the rest of the UI.
+   */
+  transition: width var(--duration-base) var(--ease-standard);
+}
+
+/*
+ * Indeterminate state — fires when at least one in-flight source
+ * reports `total: 0` (no `Content-Length` header) and we don't know
+ * how full the bar should be.  A keyframe shimmer slides a narrow
+ * gradient back and forth across the track to communicate "something
+ * is happening" without lying about how close to done we are.
+ */
+.indeterminate {
+  width: 30%;
+  animation: indeterminateSlide 1.4s var(--ease-standard) infinite;
+}
+
+@keyframes indeterminateSlide {
+  /*
+   * Slides a 30%-wide blob from off-screen-left to off-screen-right
+   * via the visible band.  Using `translateX` rather than `left` keeps
+   * the animation on the GPU compositor — cheap, doesn't trigger
+   * layout, plays smoothly even when the main thread is busy with
+   * decoder work.
+   */
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/*
+ * Container fade-out: when no fetches are in flight, parent passes
+ * `data-visible="false"` and we tween opacity to 0 over 200 ms before
+ * the parent unmounts the element entirely (the unmount happens via
+ * React's conditional render, but the opacity tween hides the seam so
+ * the bar fades rather than flashing off).
+ *
+ * `prefers-reduced-motion` honoured — no fade for users who've opted
+ * out at the OS level.
+ */
+.track[data-visible='false'] {
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-standard);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill,
+  .indeterminate,
+  .track[data-visible='false'] {
+    transition: none;
+    animation: none;
+  }
+}

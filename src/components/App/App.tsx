@@ -67,10 +67,12 @@
 import { useRef, useEffect, useState } from 'react';
 import { createEngine } from '../../services/engine';
 import type { EngineHandle, EngineStatus, PointInfo, ScaleInfo } from '../../@types';
+import type { LoadProgressState } from '../../@types/EngineCallbacks';
 import type { LodMode } from '../../@types/LodMode';
 import type { Tier } from '../../@types/Tier';
 import { initialTierFromViewport } from '../../utils/initialTierFromViewport';
 import { StatusBar } from '../StatusBar/StatusBar';
+import { LoadingBar } from '../LoadingBar/LoadingBar';
 import { InfoCard } from '../InfoCard/InfoCard';
 import { ScaleBar } from '../ScaleBar/ScaleBar';
 import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
@@ -252,6 +254,20 @@ export function App(): React.ReactElement {
   // 5 M GLADE one, and the count makes that legible at a glance.
   const [sourceCounts, setSourceCounts] = useState<Partial<Record<Source, number>>>({});
 
+  // ── Loading-bar state ──────────────────────────────────────────────────────
+  //
+  // `null` when no fetches are in flight (the LoadingBar component fades
+  // itself out when this becomes null).  The engine's aggregator owns the
+  // truth and pushes a fresh snapshot through `onLoadProgress` whenever the
+  // per-source progress map mutates — start, progress, finish events all
+  // converge to a single React state update here.
+  //
+  // We don't memoise — React.setState is referential-equality safe for the
+  // null transition, and the per-chunk update rate is bounded by network
+  // cadence (tens per second on a fast link) which is fine for React's
+  // reconciler.
+  const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
+
   // ── SpaceMouse state (optional, WebHID-only) ─────────────────────────────
   //
   // `spaceMouseConnected` mirrors the engine's view of pairing — flipped to
@@ -394,6 +410,12 @@ export function App(): React.ReactElement {
       // state mirrors engine truth — same lifecycle as onLodModeChange.
       initialTier: currentTier,
       onTierChange: setCurrentTier,
+      // Aggregated download-progress snapshot (or null when no fetches are
+      // in flight).  Fires through the engine's `loadProgressAggregator`
+      // for both the initial parallel `loadAllClouds` and every
+      // `setTier`-triggered hot-swap.  The LoadingBar component fades
+      // itself out when this becomes null.
+      onLoadProgress: setLoadProgress,
     });
 
     // Store the handle so the Esc effect (below) can call clearSelection().
@@ -500,6 +522,14 @@ export function App(): React.ReactElement {
         `id="c"` matches the CSS rule in index.html: `#c { display: block; ... }`.
       */}
       <canvas ref={canvasRef} id="c" />
+
+      {/*
+        Loading bar — pinned to top of viewport above every other overlay.
+        Fades itself out when `loadProgress` becomes null (no fetches in
+        flight).  Mounted unconditionally so the first paint after a
+        click-to-tier-swap doesn't flash a visible mount frame.
+      */}
+      <LoadingBar progress={loadProgress} />
 
       {/*
         UI overlays. Each receives only the slice of state it needs.
