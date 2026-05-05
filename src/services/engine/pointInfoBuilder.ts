@@ -26,6 +26,7 @@ import {
   formatRaSexagesimal,
   formatDecSexagesimal,
   iauName,
+  iauName2MasxCompact,
   lookbackTimeGyr,
   hubbleVelocityKmS,
   absoluteMagnitude,
@@ -221,7 +222,11 @@ export function buildPointInfo(
   if (isSdss && objID > 0n) {
     catalogUrl = sdssExplorerUrl(objID);
   } else if (source === Source.TwoMRS) {
-    catalogUrl = nedByNameUrl(iauName(source, ra, dec));
+    // 2MRS rows resolve on NED via the compact 2MASX designation
+    // (no decimal points in the seconds fields).  See
+    // `iauName2MasxCompact` for why the display iauName uses a different
+    // format and we need a dedicated builder here.
+    catalogUrl = nedByNameUrl(iauName2MasxCompact(ra, dec));
   } else if (source === Source.Glade) {
     catalogUrl = objID > 0n ? nedByNameUrl(`PGC ${objID}`) : nedNearPositionUrl(ra, dec);
   } else if (source === Source.Famous && famousMeta && famousMeta[idx]) {

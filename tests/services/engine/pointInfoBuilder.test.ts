@@ -254,10 +254,18 @@ describe('buildPointInfo — TwoMRS source', () => {
     expect(info.sourceLabel).toBe('2MRS');
     expect(info.iauName.startsWith('2MASX J')).toBe(true);
 
-    // 2MRS rows link to NED via the runtime-formatted 2MASX designation.
+    // 2MRS rows link to NED via the runtime-formatted 2MASX designation
+    // in COMPACT form (no decimal points).  NED's resolver only accepts
+    // the compact form for the 2MASX prefix.
     expect(info.catalogUrl).not.toBeNull();
     expect(info.catalogUrl).toContain('ned.ipac.caltech.edu/byname');
     expect(info.catalogUrl).toContain('2MASX');
+    // The compact form has digits-only after `J` up to the sign in Dec.
+    // Asserting the URL doesn't contain `.` between J and the sign rules
+    // out a regression to the long form (which NED rejects).
+    const match = info.catalogUrl!.match(/2MASX\+J([^+\-]*)/);
+    expect(match).not.toBeNull();
+    expect(match![1]).not.toContain('.');
 
     // Thumbnail comes from the CDS hips2fits DSS proxy, not SDSS ImgCutout.
     expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
