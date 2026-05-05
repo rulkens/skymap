@@ -72,7 +72,10 @@ import { StatusBar } from './components/StatusBar/StatusBar';
 import { InfoCard } from './components/InfoCard/InfoCard';
 import { ScaleBar } from './components/ScaleBar/ScaleBar';
 import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
+import { NavigationPanel } from './components/NavigationPanel/NavigationPanel';
+import { StatsPanel } from './components/StatsPanel/StatsPanel';
 import { CommandPalette } from './components/CommandPalette/CommandPalette';
+import appStyles from './App.module.css';
 import { Source } from './data/sources';
 import { BiasMode } from './data/biasMode';
 import { ToneMapCurve } from './data/toneMapCurve';
@@ -170,6 +173,17 @@ export function App(): React.ReactElement {
   // React state optimistically inside the change handler below.
   const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(DEFAULT_FILAMENTS_ENABLED);
   const [filamentIntensity, setFilamentIntensity] = useState<number>(DEFAULT_FILAMENT_INTENSITY);
+  // Strip + vertex counts from the optional cosmic-web `filaments.bin`.
+  // Stays null until the engine fires `onFilamentsReady` (one-shot, after
+  // the binary lands).  The StatsPanel uses both this value and
+  // `filamentsEnabled` to decide whether to render the filaments row —
+  // when the file isn't on disk (fresh clone before `npm run build-filaments`),
+  // this stays null forever and the row stays hidden, which is the
+  // visually-clean default.
+  const [filamentCounts, setFilamentCounts] = useState<{
+    stripCount: number;
+    vertexCount: number;
+  } | null>(null);
   const [highlightFallback, setHighlightFallback] = useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
   const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
   const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
@@ -318,6 +332,14 @@ export function App(): React.ReactElement {
       // can show "SDSS  220,453" alongside the toggle. Functional update so
       // multiple parallel arrivals don't clobber each other.
       onCloudReady: (source, count) => setSourceCounts((prev) => ({ ...prev, [source]: count })),
+      // One-shot: fires after the optional cosmic-web filaments.bin lands.
+      // The StatsPanel surfaces these counts ("Filaments · 3,845 strips,
+      // 27,410 verts") whenever the user has the filaments overlay enabled.
+      // No null-out path: the engine never reports filaments unloading
+      // because the asset is loaded once and stays in GPU memory for the
+      // session — the user toggles visibility, not lifecycle.
+      onFilamentsReady: (stripCount, vertexCount) =>
+        setFilamentCounts({ stripCount, vertexCount }),
       // Rolling FPS — engine throttles to integer-change events so this is a
       // cheap direct setState (no debounce / no useMemo needed).
       onFpsChange: setFps,
@@ -442,11 +464,7 @@ export function App(): React.ReactElement {
         When `status` changes, only `StatusBar` re-renders. When `hovered` or
         `selected` changes, only `InfoCard` re-renders. And so on.
       */}
-      <StatusBar
-        status={status}
-        liveCount={Object.values(sourceCounts).reduce((a, b) => a + (b ?? 0), 0)}
-        fps={fps}
-      />
+      <StatusBar status={status} />
       <InfoCard
         hovered={hovered}
         selected={selected}
@@ -454,12 +472,32 @@ export function App(): React.ReactElement {
       />
       <ScaleBar scale={scale} />
       {/*
-        Settings panel — bottom-left overlay with four renderer controls.
-        All state lives here in App; the panel is purely presentational.
-        Interactions funnel through handleRef to avoid stale-closure issues
-        (same pattern as the Esc key handler above).
+        Left-column overlay stack — wraps the three bottom-left panels
+        (Navigation, Settings, Stats) in a single fixed-position flex
+        column anchored at the bottom-left corner of the viewport.
+
+        Why a wrapper here rather than three independently-positioned
+        panels?  Each panel used to set `position: fixed; bottom: 16px;
+        left: 16px; z-index: 10` itself, and adding a second/third
+        bottom-anchored panel meant manually nudging each one's
+        `bottom:` offset to make room — fragile and hard to keep in
+        sync.  A flex column with `bottom: 16px` on the wrapper grows
+        upward as children are added, so the panels stack naturally
+        without per-panel coordinate math.
+
+        Source order maps to vertical position: Navigation sits at the
+        top of the stack, Stats hugs the viewport bottom, Settings is
+        the visual anchor between them.
       */}
-      <SettingsPanel
+      <div className={appStyles.leftStack}>
+        <NavigationPanel />
+        {/*
+          Settings panel — middle of the left stack.  All state lives here in
+          App; the panel is purely presentational.  Interactions funnel through
+          handleRef to avoid stale-closure issues (same pattern as the Esc key
+          handler above).
+        */}
+        <SettingsPanel
         pointSize={pointSize}
         brightness={brightness}
         autoRotate={autoRotate}
@@ -588,6 +626,19 @@ export function App(): React.ReactElement {
           handleRef.current?.setExposure?.(value);
         }}
       />
+        {/*
+          Stats panel — read-only telemetry: rolling FPS, per-survey loaded
+          counts, optional filaments-loaded row.  All four props are values
+          App.tsx already tracks for other reasons, so wiring them here is
+          essentially free.
+        */}
+        <StatsPanel
+          fps={fps}
+          sourceCounts={sourceCounts}
+          filamentsEnabled={filamentsEnabled}
+          filamentCounts={filamentCounts}
+        />
+      </div>
       {/*
         Command palette — full-screen overlay for fuzzy-searching the
         famous-galaxy catalog.  Opened by Cmd+K / Ctrl+K / `/`; closed by

@@ -27,42 +27,23 @@ import styles from './StatusBar.module.css';
 type StatusBarProps = {
   /** The current engine status, driven by `createEngine`'s `onStatusChange` callback. */
   status: EngineStatus;
-  /**
-   * Live total point count, summed from `onCloudReady` callbacks in App.tsx.
-   *
-   * Why this exists separately from `status.count`: the engine fires
-   * `onStatusChange({ kind: 'ready', count })` exactly once, snapshotted at the
-   * moment the render loop starts.  But `pointRenderer.upload()` is async (the
-   * per-galaxy bake runs in a Web Worker), so when `ready` fires, only the
-   * surveys whose bakes have finished are reflected in `renderer.totalCount()`.
-   * The smaller surveys (2MRS, Famous) typically finish first; SDSS and GLADE
-   * — by far the largest — show up seconds later via `onCloudReady`.
-   *
-   * Passing the live App-side sum here ensures the status bar reflects the
-   * actual on-screen total as each survey lands, rather than freezing at
-   * whatever subset had baked when `ready` fired.
-   */
-  liveCount?: number;
-  /**
-   * Rolling-window FPS estimate (integer Hz), driven by the engine's
-   * `onFpsChange` callback in App.tsx.  Optional so existing test call-sites
-   * that render StatusBar in isolation don't break — when omitted (or 0,
-   * which the engine never reports — its first valid sample requires two
-   * frames) the segment is suppressed.  This keeps the bar readable during
-   * the sub-100 ms window between mount and the first FPS value.
-   */
-  fps?: number;
 };
 
 /**
  * Renders the top-left status bar text.
  *
+ * The bar is intentionally minimal as of the left-stack UI restructure:
+ * point counts moved into `StatsPanel`, the FPS readout moved into
+ * `StatsPanel`, and the "drag to orbit, wheel to zoom" hint moved into
+ * `NavigationPanel`.  What's left is a pure engine-state readout —
+ * initializing / loading / ready / error.
+ *
  * @example
  * // In App.tsx:
- * <StatusBar status={status} liveCount={liveCount} />
+ * <StatusBar status={status} />
  */
-export function StatusBar({ status, liveCount, fps }: StatusBarProps): ReactNode {
-  return <div className={styles.status}>{statusText(status, liveCount, fps)}</div>;
+export function StatusBar({ status }: StatusBarProps): ReactNode {
+  return <div className={styles.status}>{statusText(status)}</div>;
 }
 
 /**
@@ -72,7 +53,7 @@ export function StatusBar({ status, liveCount, fps }: StatusBarProps): ReactNode
  * easy to extend. TypeScript exhaustiveness checking will warn if a new
  * `kind` variant is added to `EngineStatus` but not handled here.
  */
-function statusText(status: EngineStatus, liveCount?: number, fps?: number): string {
+function statusText(status: EngineStatus): string {
   switch (status.kind) {
     case 'initializing':
       return 'initializing…';
@@ -81,26 +62,14 @@ function statusText(status: EngineStatus, liveCount?: number, fps?: number): str
       return 'loading SDSS data…';
 
     case 'ready': {
-      // `liveCount` (driven by App.tsx's `onCloudReady` accumulator) is preferred
-      // when present because it grows as each survey's async upload bake finishes
-      // — see the `liveCount` prop docstring for the full rationale.  We fall
-      // back to `status.count` (the engine's snapshot at render-loop start) only
-      // if the live count hasn't been wired up, so the status bar still works
-      // for tests / consumers that haven't supplied `liveCount`.
-      //
-      // `source` is the first-arrived cloud (engine sets it once, stays put).
-      // We only flag the synthetic fallback explicitly because it implies all
-      // three real fetches failed.  Real data (SDSS, 2MRS, GLADE, or any
-      // combination) renders without a tag — the count itself is the proof.
-      const count = liveCount ?? status.count;
+      // The 'ready' branch used to splice in a point count, an FPS reading,
+      // and a "drag to orbit" hint — that telemetry now lives in StatsPanel
+      // (counts, FPS) and NavigationPanel (gestures), so we keep just the
+      // engine-state readout here.  The synthetic-fallback tag survives
+      // because it's a meaningful state distinction (all three real fetches
+      // failed) that doesn't fit naturally into either of the new panels.
       const suffix = status.source === 'synthetic' ? ' (synthetic fallback)' : '';
-      // Insert the FPS segment between point count and synthetic-fallback /
-      // hint suffix.  Suppressed entirely until the engine reports a non-zero
-      // value (the engine never reports 0 — its rolling window needs ≥ 2
-      // samples), so the bar stays clean during the brief window between
-      // engine ready and the first FPS sample.
-      const fpsSegment = fps && fps > 0 ? ` · ${fps} fps` : '';
-      return `WebGPU OK · ${count.toLocaleString()} points${fpsSegment}${suffix} · drag to orbit, wheel to zoom`;
+      return `WebGPU OK${suffix}`;
     }
 
     case 'error':

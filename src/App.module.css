@@ -1,0 +1,43 @@
+/*
+ * App.module.css — top-level layout primitives owned by App.tsx.
+ *
+ * Right now this stylesheet only defines `.leftStack`, the fixed wrapper
+ * around the three left-column overlay panels (Navigation, Settings,
+ * Stats).  We keep it scoped to App.tsx rather than scattering positional
+ * rules across each panel's own module.css for two reasons:
+ *
+ *   1. The three panels share a single coordinate origin (bottom-left).
+ *      Anchoring them individually would mean three copies of `bottom:
+ *      16px; left: 16px` plus z-index juggling — and any change (e.g.
+ *      to the bottom margin) would have to ripple through three files.
+ *   2. Bottom-anchored stacking means we DON'T set `top:` — the column
+ *      grows upward as panels are added.  Letting flex own that growth
+ *      direction (`flex-direction: column`) makes the source order map
+ *      directly to vertical position: first child = topmost, last child
+ *      = closest to the viewport bottom edge.
+ *
+ * Children render in source order Navigation → Settings → Stats, so:
+ *   - Navigation sits at the top of the stack
+ *   - Settings is the visual anchor in the middle (most-touched panel)
+ *   - Stats hugs the bottom edge (read-only telemetry, glances)
+ */
+
+.leftStack {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /*
+   * `align-items: flex-start` keeps each panel hugging the left edge even
+   * when one renders narrower than another.  Today every panel is 300 px
+   * (NavigationPanel + SettingsPanel + StatsPanel all match), so this is
+   * insurance against future width drift rather than load-bearing now.
+   */
+  align-items: flex-start;
+  /* DO NOT set `top:` — bottom-anchoring is what makes the column grow
+   * upward.  Setting both anchors would stretch the container and break
+   * the natural-height stack. */
+}

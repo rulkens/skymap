@@ -7,13 +7,17 @@
  * styles.* in SettingsPanel.tsx.
  */
 
-/* Outer container */
+/*
+ * Outer container.
+ *
+ * Position is intentionally NOT set here — the panel is rendered inside
+ * App.module.css's `.leftStack` flex column, which handles positioning
+ * for all three left-column panels (Navigation, Settings, Stats).  Keeping
+ * positioning a parent concern lets the stack grow upward from the bottom
+ * without each panel needing its own bottom/left/z-index rules (and
+ * fighting each other over the same coordinates).
+ */
 .settingsPanel {
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  z-index: 10;
-
   background: rgba(8, 12, 28, 0.65);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
