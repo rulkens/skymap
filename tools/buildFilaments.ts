@@ -156,7 +156,7 @@ function checkDisperse(): void {
  * ridges out there reflect the survey's drop-off rather than real
  * cosmic structure.
  */
-const MAX_DISTANCE_MPC = 200;
+const MAX_DISTANCE_MPC = 400;
 
 /**
  * Minimum distance (Mpc) — excludes the Local-Group / Local-Sheet
