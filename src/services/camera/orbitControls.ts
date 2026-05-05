@@ -153,11 +153,38 @@ export function attachOrbitControls(
   // pointer handlers can share it without a wrapper object allocation.
   //
   // `dragMode` distinguishes a left-button orbit from a right-button (or
-  // middle-button) pan.  `null` means no drag in progress.
-  type DragMode = 'orbit' | 'pan';
+  // middle-button) pan, plus the touch-only `'pinch'` mode that fires when
+  // a second finger touches down.  `null` means no drag in progress.
+  type DragMode = 'orbit' | 'pan' | 'pinch';
   let dragMode: DragMode | null = null;
   let lastX = 0; // client-space X of the previous pointermove event
   let lastY = 0; // client-space Y of the previous pointermove event
+
+  // ── Multi-touch state ─────────────────────────────────────────────────────
+  //
+  // We track every active pointer in a small Map (id → last x/y) so we can
+  // compute pinch geometry from any two of them.  For single-pointer drags
+  // (orbit / pan) only `dragPointerId` matters — that's the contact that
+  // started the gesture and whose moves drive the camera.  Other pointers
+  // that arrive mid-gesture promote the mode to `'pinch'` and the
+  // single-pointer driver is paused until everything's released.
+  //
+  // Why not use TouchEvent?  PointerEvent unifies mouse / pen / touch so
+  // the existing orbit/pan code Just Works on a tablet stylus or a touch
+  // screen, and adding pinch on top is a single multi-id case in here
+  // rather than a parallel TouchEvent listener tree.
+  const activePointers = new Map<number, { x: number; y: number }>();
+  let dragPointerId: number | null = null;
+  let lastPinchDist = 0;
+
+  /** Euclidean distance between the first two active pointers, or 0 if <2. */
+  const currentPinchDistance = (): number => {
+    const ptrs = Array.from(activePointers.values());
+    if (ptrs.length < 2) return 0;
+    const dx = ptrs[0]!.x - ptrs[1]!.x;
+    const dy = ptrs[0]!.y - ptrs[1]!.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
 
   // ── Click detection ────────────────────────────────────────────────────────
   //
@@ -178,72 +205,96 @@ export function attachOrbitControls(
   // ── Pointer down — begin drag ──────────────────────────────────────────────
 
   const onDown = (e: PointerEvent) => {
-    // Decide drag mode by mouse button:
-    //   - button 0 (primary / left)         → orbit (rotate around target)
-    //   - buttons 1 (middle) or 2 (right)   → pan   (slide target in screen plane)
-    //
-    // Pen and touch always orbit (no right-click on those input types — touch
-    // long-press menu is suppressed elsewhere if needed).  PointerEvent's
-    // `button` property reports the button that caused the event, mirroring
-    // MouseEvent's convention.
-    if (e.pointerType === 'mouse' && (e.button === 1 || e.button === 2)) {
-      dragMode = 'pan';
-    } else {
-      dragMode = 'orbit';
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointers.size === 1) {
+      // First contact — pick the appropriate single-pointer mode.
+      //   - mouse button 1 / 2 (middle / right) → pan
+      //   - everything else (mouse left, touch, pen) → orbit
+      // Touch + pen never report buttons 1 / 2, so they always fall into
+      // orbit here.  Pinch is set later if a second contact arrives.
+      if (e.pointerType === 'mouse' && (e.button === 1 || e.button === 2)) {
+        dragMode = 'pan';
+      } else {
+        dragMode = 'orbit';
+      }
+      dragPointerId = e.pointerId;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      // Record the exact down position for click detection.
+      downX = e.clientX;
+      downY = e.clientY;
+
+      // `setPointerCapture` tells the browser to route all future pointer events
+      // for this pointer ID to `canvas`, even when the cursor strays outside its
+      // bounding box or leaves the browser window entirely.  Without capture,
+      // `pointermove` events stop arriving the moment the user drags outside
+      // the canvas — the orbit snaps to a halt mid-drag.
+      canvas.setPointerCapture(e.pointerId);
+    } else if (activePointers.size === 2) {
+      // Second contact — promote the gesture to pinch and record the
+      // baseline distance.  Subsequent moves on either pointer will
+      // recompute the distance and scale `cam.distance` by the ratio.
+      // `dragPointerId` is left intact so we can still see the
+      // single-pointer driver, but `dragMode === 'pinch'` short-circuits
+      // the orbit/pan branch in `onMove`.
+      dragMode = 'pinch';
+      lastPinchDist = currentPinchDistance();
     }
-    lastX = e.clientX;
-    lastY = e.clientY;
+    // 3+ pointers: tracked in the map so they're consumed cleanly on
+    // pointerup, but they don't change `dragMode` — pinch stays a
+    // two-finger gesture.
 
-    // Record the exact down position for click detection.
-    downX = e.clientX;
-    downY = e.clientY;
-
-    // `setPointerCapture` tells the browser to route all future pointer events
-    // for this pointer ID to `canvas`, even when the cursor strays outside its
-    // bounding box or leaves the browser window entirely.
-    //
-    // Without capture, `pointermove` events stop arriving the moment the user
-    // drags outside the canvas — the orbit snaps to a halt mid-drag. With
-    // capture, the drag continues smoothly until the user releases, no matter
-    // how far outside the element the cursor goes.
-    //
-    // The pointer ID (`e.pointerId`) is a unique integer assigned by the
-    // browser per active contact point (finger, pen tip, or mouse button).
-    // Passing it back in `releasePointerCapture` targets the exact same contact.
-    canvas.setPointerCapture(e.pointerId);
-    // Notify the engine so it can wake the render loop — any
-    // subsequent pointermove will fire the same callback.  Calling
-    // here too means the click→hover-clear path also gets a frame.
+    // Notify the engine so it can wake the render loop — any subsequent
+    // pointermove will fire the same callback.  Calling here too means
+    // the click→hover-clear path also gets a frame.
     options?.onCameraChange?.();
   };
 
   // ── Pointer up — end drag (or click) ──────────────────────────────────────
 
   const onUp = (e: PointerEvent) => {
-    // Snapshot the mode before clearing it — needed for the click-vs-pan
-    // gate below, otherwise the check sees null and would mis-classify.
-    const endedMode = dragMode;
-    dragMode = null;
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.delete(e.pointerId);
 
-    // Release capture so the pointer is no longer "owned" by this canvas.
-    // The browser automatically releases capture on pointerup in most cases,
-    // but calling it explicitly is defensive and makes intent clear.
-    canvas.releasePointerCapture(e.pointerId);
+    // Release capture if the canvas was holding it for this pointer.
+    // `hasPointerCapture` guard avoids a benign warning when the same id
+    // already auto-released (some browsers do that on touchcancel).
+    if (canvas.hasPointerCapture(e.pointerId)) {
+      canvas.releasePointerCapture(e.pointerId);
+    }
 
-    // ── Click detection ────────────────────────────────────────────────────
-    //
-    // If the pointer barely moved between down and up, treat this as a click
-    // rather than a drag.  We only fire onClick for ORBIT-mode releases
-    // (typically a left-button up): right/middle button taps are part of the
-    // pan gesture family and shouldn't act as picks even if they didn't move
-    // far enough to qualify as a drag.  Without this gate, a flicker of the
-    // right mouse would clear the user's selection.
-    if (options?.onClick && endedMode === 'orbit') {
-      const dx = e.clientX - downX;
-      const dy = e.clientY - downY;
-      if (dx * dx + dy * dy < CLICK_THRESHOLD_SQ) {
-        options.onClick(e.clientX, e.clientY);
+    if (activePointers.size === 0) {
+      // All contacts lifted — close out the gesture.
+      const endedMode = dragMode;
+      dragMode = null;
+      dragPointerId = null;
+      lastPinchDist = 0;
+
+      // ── Click detection ──────────────────────────────────────────────
+      // If the pointer barely moved between down and up, treat this as a
+      // click rather than a drag.  Only fires for ORBIT releases:
+      //   - pan releases (right/middle mouse) shouldn't pick a galaxy
+      //   - pinch releases obviously aren't a tap
+      // Without this gate, a flicker of the right mouse — or the second
+      // finger going up after a pinch — would clear the user's selection.
+      if (options?.onClick && endedMode === 'orbit') {
+        const dx = e.clientX - downX;
+        const dy = e.clientY - downY;
+        if (dx * dx + dy * dy < CLICK_THRESHOLD_SQ) {
+          options.onClick(e.clientX, e.clientY);
+        }
       }
+    } else if (dragMode === 'pinch') {
+      // Pinch broken (one finger lifted, one or more still down) — end
+      // the gesture entirely.  We deliberately do NOT promote the
+      // remaining finger back into orbit mode: that would feel like the
+      // camera "snaps" when the user lifts a finger to readjust grip.
+      // The user has to lift everything and re-engage to start a new
+      // gesture, which keeps gesture boundaries clean.
+      dragMode = null;
+      dragPointerId = null;
+      lastPinchDist = 0;
     }
   };
 
@@ -262,7 +313,47 @@ export function attachOrbitControls(
   const WORLD_UP: vec3 = [0, 1, 0];
 
   const onMove = (e: PointerEvent) => {
+    // Update the live position of whichever pointer this move belongs to.
+    // `pointermove` fires for ALL active pointers, not just the one
+    // driving an orbit — so we always update the map first, then decide
+    // what to do with the gesture as a whole.
+    const ptr = activePointers.get(e.pointerId);
+    if (!ptr) return;
+    ptr.x = e.clientX;
+    ptr.y = e.clientY;
+
+    if (dragMode === 'pinch') {
+      // ── Pinch — multi-touch zoom ────────────────────────────────────
+      //
+      // Use the ratio of last-distance to current-distance to scale
+      // `cam.distance` exponentially.  Pinch OUT (fingers move apart)
+      // grows current distance → ratio < 1 → camera distance shrinks →
+      // zoom IN.  Pinch IN does the inverse.  This matches the "grab
+      // the world and stretch" mental model that mobile users expect.
+      //
+      // Symmetric with the wheel zoom's exponential model — both
+      // produce a constant proportional step regardless of how zoomed
+      // we already are.  No need for a separate sensitivity tuning;
+      // raw pixel ratio is naturally calibrated to the user's hand.
+      if (activePointers.size < 2 || lastPinchDist === 0) return;
+      const newDist = currentPinchDistance();
+      if (newDist > 0) {
+        cam.distance = clampDistance(cam.distance * (lastPinchDist / newDist));
+        lastPinchDist = newDist;
+        updatePosition(cam);
+        options?.onCameraChange?.();
+      }
+      return;
+    }
+
     if (dragMode === null) return;
+
+    // Orbit / pan: only the original gesture-driver pointer mutates the
+    // camera.  Other contacts (e.g. a stray third finger) are tracked
+    // for clean teardown but ignored here.  Without this guard, a
+    // second finger entering the canvas would yank `lastX`/`lastY`
+    // around between the two fingers and the orbit would jitter.
+    if (e.pointerId !== dragPointerId) return;
 
     // Delta in CSS pixels from the last recorded position.
     // We use client coordinates (viewport-relative) rather than offset
@@ -405,6 +496,13 @@ export function attachOrbitControls(
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointerup', onUp);
   canvas.addEventListener('pointermove', onMove);
+  // `pointercancel` fires when the system pre-empts the gesture (notification
+  // shade, phone call, OS gesture-shelf swipe, low-memory pause).  It carries
+  // no end coordinate worth using for click detection, so we route it through
+  // the same teardown path as `pointerup` — the click branch will simply not
+  // fire because the cancelled pointer's recorded down/up positions don't
+  // reflect a real tap intent.
+  canvas.addEventListener('pointercancel', onUp);
 
   // ── Suppress the right-click context menu on the canvas ──────────────────
   //
