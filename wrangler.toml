@@ -1,0 +1,30 @@
+# Cloudflare Workers deploy config for Skymap.
+#
+# The Worker (src/worker.ts) is a thin pass-through to the static assets
+# in `dist/`.  Its purpose is to register the project as "Worker + Assets"
+# rather than "Assets-only" — see the docblock in src/worker.ts for the
+# rationale.  Once the project type is upgraded, the dashboard's Variables
+# and Secrets panel becomes available and infrastructure config (e.g.
+# VITE_DATA_BASE_URL) can move out of `.env.production` and into the
+# Cloudflare project's settings.
+#
+# `compatibility_date` pins the Workers runtime API surface to a specific
+# day's behaviour.  Bump it deliberately (after testing) to opt into newer
+# runtime features; never silently track latest.
+name = "skymap"
+main = "src/worker.ts"
+compatibility_date = "2026-05-05"
+
+# Static-asset binding.  Cloudflare's GitHub integration runs
+# `npm run build` (which writes `dist/`), then `wrangler deploy` reads
+# this block to bundle those assets alongside the Worker.  Requests that
+# match a file in `dist/` get served directly from Cloudflare's edge
+# without invoking the Worker; only unmatched paths reach the Worker's
+# fetch handler — which itself falls back to ASSETS via the SPA rule
+# below.  In practice this means single-page-app routes (e.g. /info/12345)
+# get index.html, and a real 404 only happens if the SPA fallback can't
+# resolve either.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"

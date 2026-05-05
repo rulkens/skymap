@@ -30,7 +30,7 @@
   },
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && rm -rf dist/data",
     "build-all": "tsx tools/buildAllBins.ts",
     "build-famous": "tsx tools/buildFamous.ts",
     "build-filaments": "tsx tools/buildFilaments.ts",
