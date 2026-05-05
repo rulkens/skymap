@@ -5,68 +5,30 @@
  *
  * Same reason as the other component tests in this tree: vitest runs in
  * `node` env, no DOM library installed.  `react-dom/server.renderToStaticMarkup`
- * gives us the initial markup as a string, which is enough to verify all the
- * behavioural cases.
+ * gives us the initial markup as a string, which is enough to verify all
+ * the behavioural cases.
  *
  * ### What we cover
  *
- * StatsPanel is a pure function of its props.  We exercise each branch:
+ * StatsPanel is a pure function of its props.  Collapse chrome belongs to
+ * the shared `Panel` component (covered by its own tests).  Branches we
+ * exercise here:
  *
- *   1. fps=0 → renders the em-dash placeholder (engine hasn't reported yet)
+ *   1. fps=0 → renders the em-dash placeholder
  *   2. fps>0 → renders the integer
  *   3. Rolled-up "Galaxies" total sums sourceCounts across visible-mask bits
  *   4. Galaxies total excludes sources whose visibility bit is OFF
  *   5. Galaxies total excludes Source.Synthetic even when its bit is on
  *   6. filamentsEnabled=false + counts non-null → row HIDDEN
  *   7. filamentsEnabled=true + counts present → row visible, comma-formatted
- *   8. Default mount is OPEN (aria-expanded="true" + body content visible)
- *   9. localStorage["skymap.stats.open"]="0" mounts closed
- *  10. localStorage["skymap.stats.open"]="1" mounts open
+ *   8. Default mount is OPEN (Panel's defaultOpen=true is in effect)
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StatsPanel } from '../../../src/components/StatsPanel/StatsPanel';
 import { ALL_VISIBLE_MASK, Source } from '../../../src/data/sources';
-
-// ── Minimal localStorage shim ────────────────────────────────────────────────
-//
-// Same pattern used in tests/components/SettingsPanel/CollapsibleSection.test.ts
-// — Vitest's default `node` env has no `window` and no `localStorage`, so we
-// install a Map-backed stub for the duration of each test.
-
-type StorageShim = {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-  removeItem(key: string): void;
-  _store: Map<string, string>;
-};
-
-function makeStorageShim(): StorageShim {
-  const store = new Map<string, string>();
-  return {
-    _store: store,
-    getItem: (k) => (store.has(k) ? (store.get(k) as string) : null),
-    setItem: (k, v) => {
-      store.set(k, v);
-    },
-    removeItem: (k) => {
-      store.delete(k);
-    },
-  };
-}
-
-let storage: StorageShim;
-
-beforeEach(() => {
-  storage = makeStorageShim();
-  (globalThis as any).window = { localStorage: storage };
-});
-
-afterEach(() => {
-  delete (globalThis as any).window;
-});
 
 describe('StatsPanel', () => {
   it('renders the STATS header', () => {
@@ -157,8 +119,6 @@ describe('StatsPanel', () => {
   });
 
   it('excludes Source.Synthetic from the Galaxies total even when its bit is set', () => {
-    // Synthetic-fallback row would otherwise mislead users into thinking
-    // procedural placeholder points are real galaxies.
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
         fps: 0,
@@ -237,8 +197,6 @@ describe('StatsPanel', () => {
     expect(html).toContain('verts');
   });
 
-  // ── Collapse affordance ────────────────────────────────────────────────────
-
   it('mounts open by default (aria-expanded="true" + body visible)', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
@@ -252,38 +210,6 @@ describe('StatsPanel', () => {
     expect(html).toContain('aria-expanded="true"');
     // FPS row content present — load-bearing for "open".
     expect(html).toContain('FPS');
-    expect(html).toContain('220,453');
-  });
-
-  it('mounts closed when localStorage["skymap.stats.open"] is "0"', () => {
-    storage.setItem('skymap.stats.open', '0');
-    const html = renderToStaticMarkup(
-      createElement(StatsPanel, {
-        fps: 60,
-        sourceCounts: { [Source.SDSS]: 220_453 },
-        visibleSourceMask: ALL_VISIBLE_MASK,
-        filamentsEnabled: false,
-        filamentCounts: null,
-      }),
-    );
-    expect(html).toContain('aria-expanded="false"');
-    // We use conditional rendering for the body, so when collapsed the
-    // FPS readout and Galaxies row are absent from the markup.
-    expect(html).not.toContain('220,453');
-  });
-
-  it('mounts open when localStorage["skymap.stats.open"] is "1"', () => {
-    storage.setItem('skymap.stats.open', '1');
-    const html = renderToStaticMarkup(
-      createElement(StatsPanel, {
-        fps: 60,
-        sourceCounts: { [Source.SDSS]: 220_453 },
-        visibleSourceMask: ALL_VISIBLE_MASK,
-        filamentsEnabled: false,
-        filamentCounts: null,
-      }),
-    );
-    expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('220,453');
   });
 });

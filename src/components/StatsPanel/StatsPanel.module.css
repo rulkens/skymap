@@ -1,107 +1,10 @@
 /*
- * StatsPanel.module.css — glassmorphic FPS / counts panel.
+ * StatsPanel.module.css — per-row styling for the FPS / counts panel.
  *
- * Visual treatment matches SettingsPanel + NavigationPanel: same background,
- * blur, border, monospace font, 300px width.  Rules duplicated rather than
- * cross-imported via CSS Modules `composes:` — see the StatsPanel.tsx
- * module header for the rationale.
- *
- * Layout responsibility: this stylesheet does NOT position the panel.  The
- * parent `.leftStack` (in App.module.css) flex-stacks the three left-column
- * panels; we only render the card itself here.
+ * The glassmorphic card + clickable header + collapse affordance live
+ * in `components/common/Panel/Panel.module.css`; this file only styles
+ * the label/value rows that render inside Panel's body.
  */
-
-.statsPanel {
-  background: rgba(8, 12, 28, 0.65);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(160, 200, 255, 0.16);
-  border-radius: 8px;
-
-  color: #cfd8ff;
-  font:
-    11px/1.4 ui-monospace,
-    'SF Mono',
-    Menlo,
-    monospace;
-  user-select: none;
-  /* Match SettingsPanel + NavigationPanel for a uniform left-stack width. */
-  width: 300px;
-}
-
-/*
- * Title row reads as a true section header: a full-width <button> wrapping
- * the chevron + uppercase title.  Same visual treatment as SettingsPanel's
- * outer collapse and NavigationPanel — the rules are duplicated here rather
- * than cross-imported because CSS Modules `composes:` from a different file
- * is awkward and the scope can leak.  See the matching docblock in
- * StatsPanel.tsx.
- *
- * Why a <button> rather than a styled <div>: keyboard focus + Enter/Space
- * activation + `aria-expanded` come for free, no extra onKeyDown handler.
- * The CSS reset strips default chrome so the row still reads as a plain
- * heading until the cursor lands on it.
- */
-.panelTitleButton {
-  display: flex;
-  align-items: baseline;
-  width: 100%;
-  padding: 10px 14px;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid rgba(160, 200, 255, 0.16);
-  /* Match the panel's rounded top corners so the header doesn't square
-   * off the top edge of the glassmorphic container. */
-  border-radius: 8px 8px 0 0;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  user-select: none;
-}
-.panelTitleButton:focus-visible {
-  outline: 1px solid rgba(160, 200, 255, 0.5);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-/*
- * When the title button is the only child (i.e. the panel is collapsed),
- * drop its bottom border so the panel reads as a single rounded card
- * rather than a header with an empty body underneath it.
- */
-.panelTitleButton:only-child {
-  border-bottom: 0;
-  border-radius: 8px;
-}
-
-/*
- * Chevron sits to the LEFT of the heading like a tree-twirl / list-marker —
- * a punctuation glyph attached to the heading, not a right-side dropdown
- * indicator.  Dim and small so it doesn't compete with the heading text.
- */
-.panelTitleChevron {
-  font-size: 8px;
-  color: rgba(160, 180, 230, 0.4);
-  margin-right: 6px;
-  /* Nudge up slightly for visual balance with the uppercase heading. */
-  position: relative;
-  top: -1px;
-}
-
-/*
- * "STATS" heading text — same uppercase letter-spaced treatment as the
- * other left-stack panels.  Lives inside the title <button>; the button
- * itself handles padding/border, this rule is just typography.
- */
-.panelTitle {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(160, 180, 230, 0.5);
-}
-
-.panelContent {
-  padding: 12px 14px;
-}
 
 /*
  * One label/value pair.  Two-column layout via flex with space-between.
@@ -118,7 +21,7 @@
 
 /*
  * Label cell on the left.  Matches SettingsPanel's `.panelRow label`
- * brightness so the eye reads "FPS · 60" / "SDSS · 220,453" with the
+ * brightness so the eye reads "FPS · 60" / "Galaxies · 220,453" with the
  * label as primary content and the number as supporting metadata.
  */
 .label {

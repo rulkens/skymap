@@ -1,115 +1,12 @@
 /*
- * SettingsPanel.module.css — glassmorphic control panel fixed to the
- * bottom-left corner.
+ * SettingsPanel.module.css — per-row styling for the controls inside the
+ * settings panel.
  *
- * Migrated from the #settings-panel block and its nested selectors in
- * index.html.  All selectors become local class names referenced via
- * styles.* in SettingsPanel.tsx.
+ * The glassmorphic card chrome + clickable uppercase title row + body
+ * collapse affordance live in `components/common/Panel/Panel.module.css`;
+ * this file only styles the rows, sliders, dropdowns, and divider that
+ * render inside Panel's body.
  */
-
-/*
- * Outer container.
- *
- * Position is intentionally NOT set here — the panel is rendered inside
- * App.module.css's `.leftStack` flex column, which handles positioning
- * for all three left-column panels (Navigation, Settings, Stats).  Keeping
- * positioning a parent concern lets the stack grow upward from the bottom
- * without each panel needing its own bottom/left/z-index rules (and
- * fighting each other over the same coordinates).
- */
-.settingsPanel {
-  background: rgba(8, 12, 28, 0.65);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(160, 200, 255, 0.16);
-  border-radius: 8px;
-
-  color: #cfd8ff;
-  font:
-    11px/1.4 ui-monospace,
-    'SF Mono',
-    Menlo,
-    monospace;
-  user-select: none;
-  /*
-   * Fixed width so the panel doesn't reflow as sections expand / collapse
-   * (e.g., the conditional Schechter slider, the volume-limit absMag
-   * slider, or the density-correction dropdown opening).  260 px fits the
-   * widest survey row ("SDSS · 220,453") plus the toggle, with margin to
-   * spare for narrower controls.  Bump if a future label exceeds it.
-   */
-  width: 300px;
-}
-
-/* "SETTINGS" heading */
-.panelTitle {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(160, 180, 230, 0.5);
-}
-
-/*
- * Title bar — full-width button wrapping the heading.  We strip *all*
- * default <button> chrome (background, border, padding, font) so the
- * row reads as a plain heading.  The chevron sits inside as a list-
- * marker; nothing here looks like a clickable button until the cursor
- * lands on it (browser default `cursor: pointer` on a <button>).
- *
- * Why a <button> at all: keyboard focus + Enter/Space activation +
- * `aria-expanded` for screen readers come for free.  A styled <div>
- * with onClick would need an explicit role, tabIndex, keydown handler.
- * The CSS reset gives us the heading look without sacrificing semantics.
- */
-/*
- * Title row reads as a true section header now: zero outer margin, full-
- * panel-width border on the bottom only.  We use negative horizontal
- * margins to break out of the panel container's `padding: 12px 14px` so
- * the border-bottom spans edge-to-edge inside the rounded panel, and we
- * re-add the equivalent padding inside so the text isn't flush against
- * the panel's left/right edges.  The negative top-margin lifts the
- * header up against the panel's top edge so it sits on the rounded
- * corner — same trick.
- */
-.panelTitleButton {
-  display: flex;
-  align-items: baseline;
-  padding: 10px 14px;
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid rgba(160, 200, 255, 0.16);
-  /* Match the panel's rounded top corners so the header doesn't square
-   * off the top edge of the glassmorphic container. */
-  border-radius: 8px 8px 0 0;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  user-select: none;
-}
-.panelTitleButton:focus-visible {
-  outline: 1px solid rgba(160, 200, 255, 0.5);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/*
- * Chevron sits to the LEFT of the heading like a tree-twirl / list-
- * marker — visually a punctuation glyph attached to the heading, not a
- * right-side dropdown indicator.  Dim and small so it doesn't compete
- * with the heading text for attention.
- */
-.panelTitleChevron {
-  font-size: 8px;
-  color: rgba(160, 180, 230, 0.4);
-  margin-right: 6px;
-  /* Nudge up slightly for visual balance with the uppercase heading. */
-  position: relative;
-  top: -1px;
-}
-
-.panelContent {
-  padding: 12px 14px;
-}
 
 /* A single label + control row */
 .panelRow {
@@ -165,9 +62,8 @@
 /*
  * Per-survey object count appended to the toggle label.  Muted relative to
  * the survey name so the eye reads "SDSS · 220,453" as one phrase, with the
- * name leading.  Tabular-nums keeps the digits aligned across the four rows
- * even though their counts span four orders of magnitude (Famous ~20 vs
- * GLADE ~2.4 M).
+ * name leading.  Tabular-nums keeps the digits aligned across rows that
+ * span four orders of magnitude (Famous ~20 vs GLADE ~2.4 M).
  */
 .sourceCount {
   margin-left: 8px;
@@ -214,9 +110,9 @@
 
 /*
  * LOD mode indicator — a tiny status line under the Auto-LOD checkbox that
- * tells the user whether the engine is in "auto (by zoom)" or
- * "manual override" mode. Sub-sized + dimmed because it's informational,
- * not a control.
+ * tells the user whether the engine is in "auto (by zoom)" or "manual
+ * override" mode.  Sub-sized + dimmed because it's informational, not a
+ * control.
  */
 .panelMode {
   font-size: 10px;
@@ -225,8 +121,17 @@
   margin-top: 4px;
 }
 
-/* "Reset camera" button */
-.settingsPanel button {
+/*
+ * Action buttons rendered inside the panel body — currently "Reset camera"
+ * (footer) and the SpaceMouse connect button.  Both share the legacy
+ * `.settingsPanel button` look from before the Panel chrome refactor; we
+ * apply this class explicitly now rather than via a structural selector,
+ * because the previous `.settingsPanel button` rule also bled into the
+ * title button + CollapsibleSection headers (a side effect of CSS Modules
+ * compound selectors that shipped, but wasn't intended).  Explicit class
+ * is clearer and keeps the chrome rules in Panel.module.css authoritative.
+ */
+.button {
   width: 100%;
   padding: 6px 10px;
   border: 1px solid rgba(160, 200, 255, 0.25);
@@ -238,11 +143,11 @@
   letter-spacing: 0.04em;
 }
 
-.settingsPanel button:hover {
+.button:hover {
   background: rgba(60, 90, 140, 0.5);
   border-color: rgba(180, 220, 255, 0.4);
 }
 
-.settingsPanel button:active {
+.button:active {
   background: rgba(80, 120, 180, 0.55);
 }

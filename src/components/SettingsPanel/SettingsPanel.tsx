@@ -36,11 +36,12 @@
  * the former #settings-panel block in index.html.
  */
 
-import { useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import type { LodMode } from '../../@types/LodMode';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
+import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 
@@ -370,61 +371,14 @@ export function SettingsPanel({
   // section in this panel.
   const showExposureControl = exposure !== undefined && onExposureChange !== undefined;
 
-  // ── Collapse state ─────────────────────────────────────────────────────
-  //
-  // Local UI-only state — no engine implications, no echo callback needed.
-  // Default OPEN because the panel is the primary interaction surface;
-  // users discover its existence on first paint.  Once they know it's
-  // there, they can fold it away to reclaim the bottom-left corner.
-  // Session-only by design: a user reload starts open again so the panel
-  // doesn't appear "missing" on a fresh visit.  localStorage persistence
-  // is a separate concern (matches the engine's own treatment of bias
-  // mode, exposure, etc. — none of those persist across reloads either).
-  const [collapsed, setCollapsed] = useState<boolean>(false);
-
+  // The glassmorphic card chrome + clickable uppercase title row + body
+  // collapse affordance live in the shared `Panel` component (see
+  // `components/common/Panel`).  Collapse state is session-only, defaulting
+  // open so first-time visitors see the panel as the primary interaction
+  // surface.  This module just supplies the section content.
   return (
-    <div className={styles.settingsPanel} aria-label="Renderer settings">
-      {/* ── Title + collapse toggle ──────────────────────────────────────── */}
+    <Panel title="Settings" ariaLabel="Renderer settings">
       {/*
-        Title doubles as the click target for collapse/expand.  Using a real
-        <button> rather than the styled-div approach keeps keyboard focus +
-        Enter/Space activation working without a custom onKeyDown handler,
-        and `aria-expanded` lets screen readers announce the current state.
-        The button styles itself to look like the existing title — no visual
-        change when not interacting — but stretches across the panel width
-        so the entire title row is clickable.
-      */}
-      <button
-        type="button"
-        className={styles.panelTitleButton}
-        onClick={() => setCollapsed((v) => !v)}
-        aria-expanded={!collapsed}
-        aria-controls="settings-panel-body"
-      >
-        {/*
-          Chevron sits LEFT of the heading, styled like a list-marker /
-          tree-twirl rather than a right-side dropdown affordance.  This
-          reads visually as "a header with a fold indicator" rather than
-          "a button I should press" — the user's complaint earlier.
-          The whole row stays clickable (cursor: pointer on hover) so
-          discoverability is unchanged.
-        */}
-        <span className={styles.panelTitleChevron} aria-hidden>
-          {collapsed ? '▸' : '▾'}
-        </span>
-        <span className={styles.panelTitle}>Settings</span>
-      </button>
-
-      {/*
-        Body — everything below the title is hidden when collapsed.  We
-        wrap in an `id`-bearing div so `aria-controls` on the title button
-        points at a real element.  Conditional render rather than a CSS
-        `display: none` so React doesn't pay for the off-screen DOM
-        tree — the panel is large.
-      */}
-      {!collapsed && (
-        <div id="settings-panel-body" className={styles.panelContent}>
-          {/*
         ── Section grouping ──────────────────────────────────────────────
         The panel grew to ~80 controls in seven loose categories.  Wrapping
         each category in a CollapsibleSection turns "scroll a wall of rows"
@@ -488,7 +442,7 @@ export function SettingsPanel({
               return (
                 <CollapsibleSection
                   title="Surveys"
-                  storageKey="settings.section.surveys"
+                  defaultOpen
                   headerToggle={allOn}
                   headerToggleIndeterminate={indeterminate}
                   onHeaderToggleChange={onMasterToggle}
@@ -546,8 +500,6 @@ export function SettingsPanel({
           {showFilamentsToggle && (
             <CollapsibleSection
               title="Filaments (cosmic web)"
-              storageKey="settings.section.filaments"
-              defaultOpen={false}
               headerToggle={filamentsEnabled}
               onHeaderToggleChange={(v) => onFilamentsChange(v)}
             >
@@ -601,7 +553,7 @@ export function SettingsPanel({
         and removes a UI element that would just look broken.
       */}
           {showBiasControls && (
-            <CollapsibleSection title="Density correction" storageKey="settings.section.density">
+            <CollapsibleSection title="Density correction">
               <div className={styles.panelRow}>
                 <label htmlFor="bias-mode">Mode</label>
                 <select
@@ -647,7 +599,7 @@ export function SettingsPanel({
         family of "rendering behaviour" knobs).  These are the controls
         a user reaches for *after* they've decided what surveys to view.
       */}
-          <CollapsibleSection title="Visual" storageKey="settings.section.visual">
+          <CollapsibleSection title="Visual">
             {/* Point size — stacked label/value on top, slider full-width below. */}
             <div className={styles.panelRow}>
               <label htmlFor="slider-point-size">Point size</label>
@@ -745,7 +697,7 @@ export function SettingsPanel({
         `data/toneMapCurve.ts` for the full curve descriptions.
       */}
           {(showToneCurveControls || showExposureControl) && (
-            <CollapsibleSection title="Tone mapping" storageKey="settings.section.tone">
+            <CollapsibleSection title="Tone mapping">
               {showToneCurveControls && (
                 <div className={styles.panelRow}>
                   <label htmlFor="tonemap-curve">Curve</label>
@@ -808,7 +760,7 @@ export function SettingsPanel({
         slider needed a stable home.  See the "Filaments (cosmic web)"
         section above for the new layout.
       */}
-          <CollapsibleSection title="Overlays" storageKey="settings.section.overlays">
+          <CollapsibleSection title="Overlays">
             {/*
           Galaxy thumbnails — gates the entire close-up galaxy-texture quad
           pass.  Default-on (the engine seeds `true` at init), so first-time
@@ -849,11 +801,7 @@ export function SettingsPanel({
         them, but fallback-orientation diagnostic work needs them.
       */}
           {showOrientationToggles && (
-            <CollapsibleSection
-              title="Orientation"
-              storageKey="settings.section.orientation"
-              defaultOpen={false}
-            >
+            <CollapsibleSection title="Orientation">
               <div className={styles.panelRow}>
                 <label htmlFor="toggle-highlight-fallback">Highlight fallback</label>
                 <input
@@ -887,17 +835,17 @@ export function SettingsPanel({
         in even on supported browsers.
       */}
           {spaceMouseSupported && (
-            <CollapsibleSection
-              title="SpaceMouse"
-              storageKey="settings.section.spacemouse"
-              defaultOpen={false}
-            >
+            <CollapsibleSection title="SpaceMouse">
               <div className={styles.panelMode}>
                 {spaceMouseConnected ? 'connected' : 'not connected'}
               </div>
               {!spaceMouseConnected && onConnectSpaceMouse && (
                 <div className={styles.panelRow}>
-                  <button type="button" onClick={onConnectSpaceMouse}>
+                  <button
+                    type="button"
+                    className={styles.button}
+                    onClick={onConnectSpaceMouse}
+                  >
                     Connect SpaceMouse
                   </button>
                 </div>
@@ -933,12 +881,10 @@ export function SettingsPanel({
         above, and folding it away would hide the panel's primary "I'm
         lost, take me home" affordance.
       */}
-          <div className={styles.panelDivider} role="separator" />
-          <button type="button" onClick={onResetCamera}>
-            Reset camera
-          </button>
-        </div>
-      )}
-    </div>
+      <div className={styles.panelDivider} role="separator" />
+      <button type="button" className={styles.button} onClick={onResetCamera}>
+        Reset camera
+      </button>
+    </Panel>
   );
 }
