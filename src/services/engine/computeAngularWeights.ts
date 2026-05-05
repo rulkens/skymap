@@ -105,6 +105,25 @@ export type ComputeAngularWeightsInput = {
    * cloud where 12 288 cells overresolve the data).
    */
   source: Source;
+  /**
+   * Lower clamp for the per-galaxy weight.
+   *
+   * Defaults to 0.3 (visualisation-tuned: dim-heavy, additive-blending
+   * tolerant — see `WEIGHT_MIN` rationale above).  Override e.g. to 1.0
+   * for build-time point-duplication use where amplification > 1× is needed
+   * and dimming below 1× is impossible (you can't emit half a copy of a
+   * galaxy via integer duplication).
+   */
+  weightMin?: number;
+  /**
+   * Upper clamp for the per-galaxy weight.
+   *
+   * Defaults to 1.2 (visualisation-tuned, see `WEIGHT_MAX` rationale above).
+   * Override e.g. to 15 for build-time point-duplication use, matching the
+   * Malmquist V_max `WEIGHT_CAP` so the combined V_max × angular weight
+   * stays within a sensible duplication budget.
+   */
+  weightMax?: number;
 };
 
 /**
@@ -115,11 +134,14 @@ export type ComputeAngularWeightsInput = {
  * folds these into the appropriate slot of the live mirror Float32Array
  * before re-uploading the whole vertex buffer in a single
  * `device.queue.writeBuffer` call.
+ *
+ * The optional `weightMin` / `weightMax` bounds default to the
+ * visualisation-tuned [0.3, 1.2] (dim-heavy, additive-blending tolerant).
+ * Override e.g. to [1.0, 15] for build-time point-duplication use where
+ * amplification > 1× is needed and dimming below 1× is impossible.
  */
-export function computeAngularWeights(
-  input: ComputeAngularWeightsInput,
-): Float32Array {
-  const { cloud } = input;
+export function computeAngularWeights(input: ComputeAngularWeightsInput): Float32Array {
+  const { cloud, weightMin = WEIGHT_MIN, weightMax = WEIGHT_MAX } = input;
   const N = cloud.count;
   const weights = new Float32Array(N);
 
@@ -231,8 +253,7 @@ export function computeAngularWeights(
     const view = scratch.subarray(0, len);
     view.sort();
     const mid = len >> 1;
-    medianPerShell[s] =
-      len % 2 === 1 ? view[mid]! : (view[mid - 1]! + view[mid]!) / 2;
+    medianPerShell[s] = len % 2 === 1 ? view[mid]! : (view[mid - 1]! + view[mid]!) / 2;
   }
 
   // ── Pass 4: per-galaxy weight ────────────────────────────────────────────
@@ -251,8 +272,8 @@ export function computeAngularWeights(
       w = 1;
     } else {
       w = median / localCount;
-      if (w < WEIGHT_MIN) w = WEIGHT_MIN;
-      else if (w > WEIGHT_MAX) w = WEIGHT_MAX;
+      if (w < weightMin) w = weightMin;
+      else if (w > weightMax) w = weightMax;
     }
     weights[i] = w;
   }

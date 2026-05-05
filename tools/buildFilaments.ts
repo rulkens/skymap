@@ -54,6 +54,7 @@ import type { PointCloud } from '../src/@types/index.js';
 import { Source } from '../src/data/sources.js';
 import { surveyFluxLimit } from '../src/data/surveyFluxLimits.js';
 import { absoluteFromApparent, dMaxFromAbsolute } from '../src/utils/math/distanceModulus.js';
+import { computeAngularWeights } from '../src/services/engine/computeAngularWeights.js';
 
 /**
  * Default persistence cut in σ.  Lower = more filaments accepted as
@@ -335,6 +336,23 @@ type TaggedPositions = {
   magG: Float32Array;
   /** Per-galaxy source tag (one of Source.TwoMRS, Source.Glade). */
   sources: Uint8Array;
+  /**
+   * Per-galaxy HEALPix angular re-weight in [1, WEIGHT_CAP].
+   *
+   * Computed per-source on the FULL un-filtered cloud (so 2MRS's
+   * Galactic-plane zone of avoidance and GLADE's mixed-parent footprint
+   * each get their own correction without cross-contamination — see
+   * `computeAngularWeights` "Why per-survey, never global" rationale),
+   * then indexed by the original cloud row at filter time so each
+   * surviving galaxy carries its own pre-computed correction factor.
+   *
+   * Bounded at [1, WEIGHT_CAP] (not the visualisation default [0.3, 1.2])
+   * because point duplication can only amplify (integer copies ≥ 1) —
+   * dimming below 1× is impossible.  The cap matches V_max's
+   * `WEIGHT_CAP` so the combined product `vmax × angular` capped at
+   * `WEIGHT_CAP` keeps the duplication budget under control.
+   */
+  angularWeights: Float32Array;
 };
 
 /**
@@ -374,7 +392,7 @@ function readMergedPositions(): TaggedPositions {
     { name: 'glade.bin', source: Source.Glade },
   ] as const;
 
-  type LoadedCloud = { cloud: PointCloud; source: Source };
+  type LoadedCloud = { cloud: PointCloud; source: Source; angular: Float32Array };
   const loaded: LoadedCloud[] = [];
   for (const { name, source } of sourceFiles) {
     const path = resolve('public/data', name);
@@ -387,7 +405,38 @@ function readMergedPositions(): TaggedPositions {
     // file length, sidestepping the pooled-Buffer offset gotcha noted
     // above.
     const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-    loaded.push({ cloud: decodePointCloud(ab), source });
+    const cloud = decodePointCloud(ab);
+
+    // Compute the HEALPix angular re-weight on the FULL cloud BEFORE
+    // distance-filtering.  Two reasons this has to happen here, not later:
+    //
+    // 1. Per-source binning: 2MRS's all-sky-minus-Galactic-plane footprint
+    //    and GLADE's mixed-parent-survey footprint produce DIFFERENT
+    //    angular completeness patterns.  Mixing them in a global bin
+    //    would let SDSS's wedge contaminate GLADE's correction (and
+    //    vice-versa) — exactly the failure mode `computeAngularWeights`
+    //    documents in its "Why per-survey, never global" section.
+    // 2. Per-shell median: the algorithm's reference density is the
+    //    median populated-cell count within each (shell) ring.  If we
+    //    pre-filtered to D ∈ [5, 200] Mpc the inner/outer shells would
+    //    be truncated and the medians at the boundaries would be wrong.
+    //    Computing on the full cloud gets honest per-shell references,
+    //    then we look up the angular weight for each surviving galaxy
+    //    by its original cloud-row index during filtering.
+    //
+    // Bounds [1.0, WEIGHT_CAP] override the visualisation defaults
+    // [0.3, 1.2]: point duplication can only amplify (integer copies
+    // ≥ 1), so values < 1 are meaningless here, and the cap is raised
+    // to match V_max's `WEIGHT_CAP` so the combined `vmax × angular`
+    // weight (also capped at `WEIGHT_CAP` downstream) doesn't lose
+    // headroom for genuinely under-detected sky cells.
+    const angular = computeAngularWeights({
+      cloud,
+      source,
+      weightMin: 1.0,
+      weightMax: WEIGHT_CAP,
+    });
+    loaded.push({ cloud, source, angular });
   }
 
   // First pass: allocate to the worst-case bound (unfiltered total)
@@ -401,8 +450,9 @@ function readMergedPositions(): TaggedPositions {
   const positions = new Float32Array(totalRaw * 3);
   const magG = new Float32Array(totalRaw);
   const sources = new Uint8Array(totalRaw);
+  const angularWeights = new Float32Array(totalRaw);
   let kept = 0;
-  for (const { cloud, source } of loaded) {
+  for (const { cloud, source, angular } of loaded) {
     for (let i = 0; i < cloud.count; i++) {
       const x = cloud.positions[i * 3 + 0]!;
       const y = cloud.positions[i * 3 + 1]!;
@@ -414,6 +464,10 @@ function readMergedPositions(): TaggedPositions {
       positions[kept * 3 + 2] = z;
       magG[kept] = cloud.magG[i]!;
       sources[kept] = source;
+      // Pull the angular weight by ORIGINAL cloud row index — `i` here
+      // is the un-filtered position in the source cloud, which is
+      // exactly what `computeAngularWeights` indexes by.
+      angularWeights[kept] = angular[i]!;
       kept += 1;
     }
   }
@@ -426,43 +480,65 @@ function readMergedPositions(): TaggedPositions {
     positions: positions.slice(0, kept * 3),
     magG: magG.slice(0, kept),
     sources: sources.slice(0, kept),
+    angularWeights: angularWeights.slice(0, kept),
   };
 }
 
 /**
- * Apply the Malmquist V_max correction by duplicating each galaxy
- * floor(weight) times (plus a stochastic fractional copy) and
- * scattering each duplicate by a Gaussian jitter of σ = 0.5 Mpc.
+ * Apply the combined Malmquist V_max + HEALPix angular re-weight
+ * correction by duplicating each galaxy `floor(combined_weight)` times
+ * (plus a stochastic fractional copy) and scattering each duplicate by
+ * a Gaussian jitter of σ = 0.5 Mpc.
+ *
+ * Two complementary corrections, multiplied together
+ * --------------------------------------------------
+ * V_max corrects RADIAL completeness: a flux-limited survey only sees
+ * intrinsically-faint galaxies nearby, so we duplicate them by
+ * (D_REF / d_max)^3 to represent the population we'd see at this
+ * distance if the survey were volume-limited.
+ *
+ * HEALPix angular re-weight corrects ANGULAR completeness: 2MRS's
+ * Galactic-plane zone of avoidance and GLADE's mixed-parent footprint
+ * leave some sky cells under-detected.  We measure the under-detection
+ * via the per-shell median populated-cell count (see
+ * `computeAngularWeights`) and amplify galaxies in under-dense cells
+ * accordingly.  Bounded at [1, WEIGHT_CAP] for build-time use — point
+ * duplication can't dim below 1×.
+ *
+ * Both corrections amplify by point duplication, so they compose
+ * multiplicatively: a galaxy that's both intrinsically faint AND in a
+ * sparse sky cell deserves the product of the two amplifications.  The
+ * combined weight is capped at WEIGHT_CAP to keep the duplication
+ * budget bounded — without the cap, a faint galaxy in the deepest
+ * shell of an under-detected cell would balloon into hundreds of
+ * copies and dominate the Delaunay tessellation locally.
  *
  * Algorithm per galaxy:
  *   1. Recompute distance D from xyz (we discarded D after filtering).
- *   2. M       = absoluteFromApparent(magG, D)
- *      d_max   = dMaxFromAbsolute(M, m_lim_for_source)
- *      raw_w   = (D_REF / d_max)^3
- *      weight  = clamp(raw_w, 1.0, WEIGHT_CAP)
+ *   2. M         = absoluteFromApparent(magG, D)
+ *      d_max     = dMaxFromAbsolute(M, m_lim_for_source)
+ *      vmax_raw  = (D_REF / d_max)^3
+ *      angular   = pre-computed per-galaxy HEALPix weight in [1, WEIGHT_CAP]
+ *      combined  = clamp(vmax_raw * angular, 1.0, WEIGHT_CAP)
  *      Bail-out: if d_max is non-finite or non-positive (e.g. magG is
- *      NaN), set weight = 1 — the galaxy still contributes itself.
- *   3. integer_copies = floor(weight)
- *      fractional     = weight - integer_copies
+ *      NaN), use vmax_raw = 1 — the angular factor still applies, so the
+ *      galaxy still gets HEALPix amplification even when its photometry
+ *      is missing.
+ *   3. integer_copies = floor(combined)
+ *      fractional     = combined - integer_copies
  *      if rng() < fractional: integer_copies += 1
  *      → over many galaxies the long-run mean matches the continuous
  *        weight (1.3 → averages 1.3 copies, not floor(1.3) = 1).
  *   4. Emit copy 1 at the original (x, y, z) with NO jitter — keeps
- *      the un-amplified case (weight ≈ 1) byte-identical to the
+ *      the un-amplified case (combined ≈ 1) byte-identical to the
  *      pre-correction build for that galaxy.  Emit copies 2..N with
  *      Gaussian (σ = JITTER_SIGMA_MPC) offsets per axis.
  *
- * Out of scope (deferred to Phase 2):
- *   - HEALPix angular re-weight to correct for per-pixel survey
- *     completeness on the sky (see DisPerSE plan).  V_max alone
- *     handles the radial selection function but assumes the angular
- *     selection is uniform; it isn't (2MRS Galactic-plane zone of
- *     avoidance, GLADE per-pixel completeness map).
+ * Out of scope:
  *   - Schechter density correction (different mechanic — corrects
  *     for the LF integral below the flux limit, not the population
  *     above it that V_max amplifies).
  */
-// TODO: HEALPix angular re-weight (Phase 2, see DisPerSE plan)
 function applyMalmquistDuplication(input: TaggedPositions): Float32Array {
   const rng = makeMulberry32(JITTER_SEED);
 
@@ -481,7 +557,12 @@ function applyMalmquistDuplication(input: TaggedPositions): Float32Array {
   // is wasteful when a deterministic two-pass count gets the exact
   // size in microseconds.
   let totalCopies = 0;
+  // Mirror buffer for V_max-only weight, used solely to compute the
+  // diagnostic `vmaxOnlyMean` for the log line below.  Keeping this
+  // alongside the combined weight (rather than recomputing later) is
+  // cheap (~8 MB at full GLADE) and avoids a second pass.
   const perGalaxyWeight = new Float32Array(input.count);
+  const perGalaxyVmaxOnly = new Float32Array(input.count);
   for (let i = 0; i < input.count; i++) {
     const x = input.positions[i * 3 + 0]!;
     const y = input.positions[i * 3 + 1]!;
@@ -490,18 +571,31 @@ function applyMalmquistDuplication(input: TaggedPositions): Float32Array {
     const magG = input.magG[i]!;
     const mLim = surveyFluxLimit(input.sources[i]! as Source);
 
-    // Compute the uncapped V_max weight, bailing safely if any input
-    // is NaN/inf (e.g. a galaxy with missing photometry) — the galaxy
-    // still contributes itself with weight = 1.
-    let weight = 1;
+    // Compute the uncapped V_max raw weight first.  Bail safely to
+    // raw = 1 if any input is NaN/inf (e.g. a galaxy with missing
+    // photometry) — the galaxy still contributes itself, and the
+    // angular factor still applies on top.
+    let vmaxRaw = 1;
     const absMag = absoluteFromApparent(magG, D);
     if (Number.isFinite(absMag)) {
       const dMax = dMaxFromAbsolute(absMag, mLim);
       if (Number.isFinite(dMax) && dMax > 0) {
-        const raw = (D_REF_MPC / dMax) ** 3;
-        weight = Math.min(WEIGHT_CAP, Math.max(1, raw));
+        vmaxRaw = (D_REF_MPC / dMax) ** 3;
       }
     }
+    // V_max-only diagnostic, capped to the same bounds as the combined
+    // weight so the comparison ratio in the log line is apples-to-apples.
+    perGalaxyVmaxOnly[i] = Math.min(WEIGHT_CAP, Math.max(1, vmaxRaw));
+
+    // Combined weight = V_max × angular, capped at [1, WEIGHT_CAP].
+    // The angular factor is in [1, WEIGHT_CAP] already (build-time
+    // bounds set in `readMergedPositions`), so the product is always
+    // ≥ 1 and we never produce zero copies.  The cap protects against
+    // the multiplicative explosion case (faint galaxy in an
+    // under-detected cell could otherwise hit 100×+ before clamping).
+    const angular = input.angularWeights[i]!;
+    const combinedRaw = vmaxRaw * angular;
+    const weight = Math.min(WEIGHT_CAP, Math.max(1, combinedRaw));
     perGalaxyWeight[i] = weight;
   }
 
@@ -550,10 +644,20 @@ function applyMalmquistDuplication(input: TaggedPositions): Float32Array {
   }
 
   const meanWeight = totalCopies / Math.max(1, input.count);
+  // Continuous-weight mean for V_max-only — i.e. what the duplication
+  // mean would have been with the previous-build pure-V_max formula.
+  // This is the continuous mean (sum of pre-rounding weights / count),
+  // not a re-roll of the stochastic round; comparing the continuous
+  // means side-by-side keeps the diagnostic stable across runs (the
+  // stochastic round is identical between the two by construction).
+  let vmaxOnlySum = 0;
+  for (let i = 0; i < input.count; i++) vmaxOnlySum += perGalaxyVmaxOnly[i]!;
+  const vmaxOnlyMean = vmaxOnlySum / Math.max(1, input.count);
   process.stderr.write(
-    `  Malmquist correction: ${input.count.toLocaleString()} unique → ` +
+    `  Combined Malmquist + angular: ${input.count.toLocaleString()} unique → ` +
       `${totalCopies.toLocaleString()} weighted ` +
-      `(×${meanWeight.toFixed(2)} mean, cap=${WEIGHT_CAP}, ` +
+      `(×${meanWeight.toFixed(2)} combined mean, ` +
+      `V_max-only would be ×${vmaxOnlyMean.toFixed(2)}, cap=${WEIGHT_CAP}, ` +
       `σ_jitter=${JITTER_SIGMA_MPC} Mpc)\n`,
   );
   return out;
@@ -827,14 +931,16 @@ async function main(): Promise<void> {
   const tagged = readMergedPositions();
   process.stderr.write(`  merged ${tagged.count.toLocaleString()} galaxy positions\n`);
 
-  // Build-time Malmquist V_max correction: amplify intrinsically-faint
-  // galaxies (small d_max → large weight) by emitting weight-many
-  // jittered copies into the TSV.  This makes the density field
-  // DisPerSE sees approximately volume-limited rather than flux-
-  // limited, killing the radial-stripe artifacts caused by the survey
-  // selection function dropping galaxies past their detection horizon.
-  // See `applyMalmquistDuplication` for the per-galaxy formula and
-  // the parameter rationale at the top of this file.
+  // Build-time Malmquist V_max + HEALPix angular re-weight correction:
+  // amplify both intrinsically-faint galaxies (small d_max → large
+  // V_max weight) and galaxies in under-detected sky cells (sparse
+  // HEALPix → angular weight > 1) by emitting their product-many
+  // jittered copies into the TSV.  V_max corrects RADIAL completeness
+  // (volume-limited equivalent), HEALPix corrects ANGULAR completeness
+  // (uniform sky-coverage equivalent); applied multiplicatively, the
+  // two together give DisPerSE a density field that's been corrected
+  // along both axes the survey selection function bites along.  See
+  // `applyMalmquistDuplication` for the per-galaxy formula.
   const weightedPositions = applyMalmquistDuplication(tagged);
   const weightedCount = weightedPositions.length / 3;
 
