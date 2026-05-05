@@ -45,6 +45,7 @@ import {
   ALL_TONE_MAP_CURVES,
   toneMapCurveLabel,
 } from '../../data/toneMapCurve';
+import { CollapsibleSection } from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
@@ -413,15 +414,29 @@ export function SettingsPanel({
       {!collapsed && (
       <div id="settings-panel-body" className={styles.panelContent}>
 
-      {/* ── Surveys (rev-2 multi-survey toggles) ─────────────────────────── */}
       {/*
-        Rendered above the rendering controls because survey visibility is a
-        higher-level decision than a slider tweak — the user picks *what* to
-        look at first, then fine-tunes *how* it's drawn.
+        ── Section grouping ──────────────────────────────────────────────
+        The panel grew to ~80 controls in seven loose categories.  Wrapping
+        each category in a CollapsibleSection turns "scroll a wall of rows"
+        into "open the section you care about".  Each section persists its
+        open/closed state to localStorage under a unique key so the user's
+        layout choices survive reloads.
+
+        Section order is intentional: catalog choices first (what to look
+        at), then bias correction (which sub-sample), then visual + tone
+        (how the pixels are shaped), then overlays (decorations on top),
+        then orientation visibility (debug-ish), then input (rare).
+        Camera reset stays outside any section as a footer.
+      */}
+
+      {/* ── Surveys ──────────────────────────────────────────────────────── */}
+      {/*
+        Survey toggles are the highest-level decision the user makes — what
+        catalogues are even on screen.  Default open so a first-time visitor
+        immediately sees the four toggles and the per-survey object counts.
       */}
       {showSurveyToggles && (
-        <>
-          <div className={styles.panelSubtitle}>Surveys</div>
+        <CollapsibleSection title="Surveys" storageKey="settings.section.surveys">
           {TOGGLEABLE_SOURCES.map((s) => {
             // `count` is undefined until the .bin lands; we render an empty
             // string in that case rather than "0" (which would imply the
@@ -446,8 +461,7 @@ export function SettingsPanel({
               </div>
             );
           })}
-          <div className={styles.panelDivider} role="separator" />
-        </>
+        </CollapsibleSection>
       )}
 
       {/* ── Density correction (Malmquist bias) ──────────────────────────── */}
@@ -468,8 +482,10 @@ export function SettingsPanel({
         and removes a UI element that would just look broken.
       */}
       {showBiasControls && (
-        <>
-          <div className={styles.panelSubtitle}>Density correction</div>
+        <CollapsibleSection
+          title="Density correction"
+          storageKey="settings.section.density"
+        >
           <div className={styles.panelRow}>
             <label htmlFor="bias-mode">Mode</label>
             <select
@@ -504,54 +520,143 @@ export function SettingsPanel({
               </div>
             </>
           )}
-          <div className={styles.panelDivider} role="separator" />
-        </>
+        </CollapsibleSection>
       )}
 
-      {/* ── HDR tone-map curve selector ─────────────────────────────────── */}
+      {/* ── Visual (per-pixel sliders + camera behaviour) ───────────────── */}
       {/*
-        Sits right below density correction because both are pixel-shape
-        controls (vs. the survey toggles above, which choose *what* to
-        render).  Switching curves is a single 4-byte uniform write per
-        frame — no pipeline rebuild — so the user sees an instant A/B
-        across Linear / Reinhard / Asinh / Gamma 2 / ACES.
+        Bundles the four "how the pixels are drawn" controls together:
+        point size, brightness, depth fade, and auto-rotate, plus the
+        Auto-LOD master switch (which is camera-distance gating, same
+        family of "rendering behaviour" knobs).  These are the controls
+        a user reaches for *after* they've decided what surveys to view.
+      */}
+      <CollapsibleSection title="Visual" storageKey="settings.section.visual">
+        {/* Point size — stacked label/value on top, slider full-width below. */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-point-size">Point size</label>
+          <span className={styles.panelValue}>{pointSize.toFixed(1)} px</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-point-size"
+            type="range"
+            min={1.0}
+            max={8.0}
+            step={0.1}
+            value={pointSize}
+            onChange={(e) => onPointSizeChange(parseFloat(e.target.value))}
+          />
+        </div>
 
-        Linear is the pre-HDR baseline (cluster cores blow out to white)
-        and Reinhard the cinematic default; Asinh is what SDSS's image
-        pipeline uses to make filamentary structure legible.  See
+        {/* Brightness */}
+        <div className={styles.panelRow}>
+          <label htmlFor="slider-brightness">Brightness</label>
+          <span className={styles.panelValue}>{brightness.toFixed(2)}×</span>
+        </div>
+        <div className={styles.panelRow}>
+          <input
+            id="slider-brightness"
+            type="range"
+            min={0.2}
+            max={3.0}
+            step={0.05}
+            value={brightness}
+            onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
+          />
+        </div>
+
+        {/*
+          Depth-fade toggle.  Camera-distance attenuation that gates centre-
+          of-volume saturation glow.  Belongs here in Visual because it's a
+          per-pixel modulation, even though it gets gated on its own pair of
+          props (the parent may not wire it).
+        */}
+        {depthFadeEnabled !== undefined && onDepthFadeEnabledChange !== undefined && (
+          <div className={styles.panelRow}>
+            <label htmlFor="toggle-depth-fade">Depth fade</label>
+            <input
+              id="toggle-depth-fade"
+              type="checkbox"
+              checked={depthFadeEnabled}
+              onChange={(e) => onDepthFadeEnabledChange(e.target.checked)}
+            />
+          </div>
+        )}
+
+        {/* Auto-rotate */}
+        <div className={styles.panelRow}>
+          <label htmlFor="toggle-auto-rotate">Auto-rotate</label>
+          <input
+            id="toggle-auto-rotate"
+            type="checkbox"
+            checked={autoRotate}
+            // `e.target.checked` is a boolean — pass it directly to the callback.
+            onChange={(e) => onAutoRotateChange(e.target.checked)}
+          />
+        </div>
+
+        {/* ── Auto-LOD master switch ──────────────────────────────────────
+          A single boolean checkbox is enough because the engine itself has
+          only two modes: pick LOD from camera distance, or honour an
+          explicit caller override. The mode-indicator line below the
+          checkbox echoes the current state so the wording stays
+          unambiguous even when the user isn't sure what "Auto LOD off"
+          implies. */}
+        {showLodControls && (
+          <>
+            <div className={styles.panelRow}>
+              <label htmlFor="toggle-auto-lod">Auto LOD</label>
+              <input
+                id="toggle-auto-lod"
+                type="checkbox"
+                checked={lodMode === 'auto'}
+                onChange={(e) => onSetLodMode(e.target.checked ? 'auto' : 'manual')}
+              />
+            </div>
+            <div className={styles.panelMode}>
+              mode: {lodMode === 'auto' ? 'auto (by zoom)' : 'manual override'}
+            </div>
+          </>
+        )}
+      </CollapsibleSection>
+
+      {/* ── Tone mapping ─────────────────────────────────────────────────── */}
+      {/*
+        Curve dropdown + exposure slider.  The two work together: curve
+        choice sets the shape (Linear / Reinhard / Asinh / Gamma 2 / ACES),
+        exposure sets where on that shape the per-pixel signal lands.  See
         `data/toneMapCurve.ts` for the full curve descriptions.
       */}
-      {showToneCurveControls && (
-        <>
-          <div className={styles.panelSubtitle}>Tone curve</div>
-          <div className={styles.panelRow}>
-            <label htmlFor="tonemap-curve">Curve</label>
-            <select
-              id="tonemap-curve"
-              className={styles.modeSelect}
-              value={toneMapCurve}
-              onChange={(e) =>
-                onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurve)
-              }
-            >
-              {ALL_TONE_MAP_CURVES.map((c) => (
-                <option key={c} value={c}>
-                  {toneMapCurveLabel(c)}
-                </option>
-              ))}
-            </select>
-          </div>
-          {/* ── Exposure ──────────────────────────────────────────────────────
-            Stacked label-on-top / slider-below layout matching the point-size
-            and brightness sliders below.  Exposure multiplies the HDR signal
-            *before* the tone-map curve runs, so dragging it left dims cluster
-            cores back below saturation and dragging it right lifts the cosmic
-            web out of the noise floor.  The engine clamps to [0.05, 16]; we
-            cap the slider at 4.0 because anything past ~3 already over-bakes
-            the brightest cores under Reinhard / ACES.  Tucked into the same
-            Tone-curve subsection (rather than a separate one) because the
-            two controls work together: curve choice sets the shape, exposure
-            sets where on that shape the per-pixel signal lands. */}
+      {(showToneCurveControls || showExposureControl) && (
+        <CollapsibleSection title="Tone mapping" storageKey="settings.section.tone">
+          {showToneCurveControls && (
+            <div className={styles.panelRow}>
+              <label htmlFor="tonemap-curve">Curve</label>
+              <select
+                id="tonemap-curve"
+                className={styles.modeSelect}
+                value={toneMapCurve}
+                onChange={(e) =>
+                  onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurve)
+                }
+              >
+                {ALL_TONE_MAP_CURVES.map((c) => (
+                  <option key={c} value={c}>
+                    {toneMapCurveLabel(c)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {/*
+            Exposure multiplies the HDR signal *before* the tone-map curve
+            runs, so dragging it left dims cluster cores back below
+            saturation and dragging it right lifts the cosmic web out of
+            the noise floor.  The engine clamps to [0.05, 16]; we cap the
+            slider at 4.0 because anything past ~3 already over-bakes the
+            brightest cores under Reinhard / ACES.
+          */}
           {showExposureControl && (
             <>
               <div className={styles.panelRow}>
@@ -571,143 +676,104 @@ export function SettingsPanel({
               </div>
             </>
           )}
-          <div className={styles.panelDivider} role="separator" />
-        </>
+        </CollapsibleSection>
       )}
 
-      {/* ── Auto-LOD master switch (rev-2) ───────────────────────────────── */}
+      {/* ── Overlays ─────────────────────────────────────────────────────── */}
       {/*
-        A single boolean checkbox is enough because the engine itself has only
-        two modes: pick LOD from camera distance, or honour an explicit caller
-        override. The mode-indicator line below the checkbox echoes the
-        current state so the wording stays unambiguous even when the user
-        isn't sure what "Auto LOD off" implies.
+        Decorative passes that draw *on top of* the main galaxy point cloud:
+        the close-up galaxy thumbnails, the procedural Milky Way impostor at
+        world origin, and the cosmic-web filament skeleton from DisPerSE.
+        All three are independent toggles — turning one off doesn't affect
+        the others.
       */}
-      {showLodControls && (
-        <>
+      <CollapsibleSection title="Overlays" storageKey="settings.section.overlays">
+        {/*
+          Galaxy thumbnails — gates the entire close-up galaxy-texture quad
+          pass.  Default-on (the engine seeds `true` at init), so first-time
+          visitors see the feature without having to opt in.
+        */}
+        <div className={styles.panelRow}>
+          <label htmlFor="toggle-galaxy-textures">Galaxy thumbnails</label>
+          <input
+            id="toggle-galaxy-textures"
+            type="checkbox"
+            checked={galaxyTexturesEnabled}
+            onChange={(e) => onGalaxyTexturesChange(e.target.checked)}
+          />
+        </div>
+
+        {showMilkyWayToggle && (
           <div className={styles.panelRow}>
-            <label htmlFor="toggle-auto-lod">Auto LOD</label>
+            <label htmlFor="toggle-milky-way">Show Milky Way</label>
             <input
-              id="toggle-auto-lod"
+              id="toggle-milky-way"
               type="checkbox"
-              checked={lodMode === 'auto'}
-              onChange={(e) => onSetLodMode(e.target.checked ? 'auto' : 'manual')}
+              checked={milkyWayEnabled}
+              onChange={(e) => onMilkyWayEnabledChange(e.target.checked)}
             />
           </div>
-          <div className={styles.panelMode}>
-            mode: {lodMode === 'auto' ? 'auto (by zoom)' : 'manual override'}
+        )}
+
+        {/*
+          Filaments — optional opt-in overlay.  The underlying `filaments.bin`
+          only exists after `npm run build-filaments` (which depends on the
+          DisPerSE binary the user installs themselves), so we default the
+          toggle OFF and the engine treats the missing file as a silent
+          no-op.  Showing the row regardless of whether the binary loaded is
+          a deliberate discoverability choice — the user sees the
+          affordance, runs the build pipeline, comes back and toggles it on
+          without us having to wire a "is it loaded?" flag through the panel.
+        */}
+        {showFilamentsToggle && (
+          <div className={styles.panelRow}>
+            <label htmlFor="toggle-filaments">Filaments (cosmic web)</label>
+            <input
+              id="toggle-filaments"
+              type="checkbox"
+              checked={filamentsEnabled}
+              onChange={(e) => onFilamentsChange(e.target.checked)}
+            />
           </div>
-          <div className={styles.panelDivider} role="separator" />
-        </>
-      )}
+        )}
+      </CollapsibleSection>
 
-      {/* ── Point size ───────────────────────────────────────────────────── */}
+      {/* ── Orientation visibility (Task 15) ─────────────────────────────── */}
       {/*
-        Layout: label + current value on one line, slider on the line below.
-        This "stacked" arrangement gives the slider its full panel width so it
-        stays easy to drag, while the label and value stay readable together.
+        Two toggles that share the same per-galaxy fallback flag (high bit of
+        globalInstanceIdx, baked at upload time).  "Highlight" tints fallback
+        rows magenta in the fragment shader; "Show only real" discards
+        fallback fragments entirely.  Both default off so existing visual
+        behaviour is unchanged until the user opts in.
+
+        Default-closed because these are debug-ish: most users never touch
+        them, but fallback-orientation diagnostic work needs them.
       */}
-      <div className={styles.panelRow}>
-        <label htmlFor="slider-point-size">Point size</label>
-        <span className={styles.panelValue}>{pointSize.toFixed(1)} px</span>
-      </div>
-      <div className={styles.panelRow}>
-        <input
-          id="slider-point-size"
-          type="range"
-          min={1.0}
-          max={8.0}
-          step={0.1}
-          value={pointSize}
-          onChange={(e) => onPointSizeChange(parseFloat(e.target.value))}
-        />
-      </div>
-
-      {/* ── Brightness ───────────────────────────────────────────────────── */}
-      <div className={styles.panelRow}>
-        <label htmlFor="slider-brightness">Brightness</label>
-        <span className={styles.panelValue}>{brightness.toFixed(2)}×</span>
-      </div>
-      <div className={styles.panelRow}>
-        <input
-          id="slider-brightness"
-          type="range"
-          min={0.2}
-          max={3.0}
-          step={0.05}
-          value={brightness}
-          onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
-        />
-      </div>
-
-      {/* ── Auto-rotate ──────────────────────────────────────────────────── */}
-      {/*
-        Checkbox + label on a single row. The label wraps the text only (not
-        the input) so the flex layout keeps them spaced to the panel width.
-      */}
-      <div className={styles.panelRow}>
-        <label htmlFor="toggle-auto-rotate">Auto-rotate</label>
-        <input
-          id="toggle-auto-rotate"
-          type="checkbox"
-          checked={autoRotate}
-          // `e.target.checked` is a boolean — pass it directly to the callback.
-          onChange={(e) => onAutoRotateChange(e.target.checked)}
-        />
-      </div>
-
-      {/* ── Galaxy thumbnails ────────────────────────────────────────────── */}
-      {/*
-        Gates the entire close-up galaxy-texture quad pass. Default-on (the
-        engine seeds `true` at init), so first-time visitors see the feature
-        without having to opt in. Toggling off cuts the whole pass — no quads
-        are submitted to the GPU — which is cheaper than fading them out per
-        instance and matches the engine's coarse-grained handle API.
-      */}
-      <div className={styles.panelRow}>
-        <label htmlFor="toggle-galaxy-textures">Galaxy thumbnails</label>
-        <input
-          id="toggle-galaxy-textures"
-          type="checkbox"
-          checked={galaxyTexturesEnabled}
-          onChange={(e) => onGalaxyTexturesChange(e.target.checked)}
-        />
-      </div>
-
-      {showMilkyWayToggle && (
-        <div className={styles.panelRow}>
-          <label htmlFor="toggle-milky-way">Show Milky Way</label>
-          <input
-            id="toggle-milky-way"
-            type="checkbox"
-            checked={milkyWayEnabled}
-            onChange={(e) => onMilkyWayEnabledChange(e.target.checked)}
-          />
-        </div>
-      )}
-
-      {/* ── Cosmic-web filament skeleton ─────────────────────────────────── */}
-      {/*
-        Optional opt-in overlay.  The underlying `filaments.bin` only
-        exists after `npm run build-filaments` (which depends on the
-        DisPerSE binary the user installs themselves), so we default
-        the toggle OFF and the engine treats the missing file as a
-        silent no-op.  Showing the row regardless of whether the
-        binary loaded is a deliberate discoverability choice — the
-        user sees the affordance, runs the build pipeline, comes back
-        and toggles it on without us having to wire a "is it loaded?"
-        flag through the panel.
-      */}
-      {showFilamentsToggle && (
-        <div className={styles.panelRow}>
-          <label htmlFor="toggle-filaments">Filaments (cosmic web)</label>
-          <input
-            id="toggle-filaments"
-            type="checkbox"
-            checked={filamentsEnabled}
-            onChange={(e) => onFilamentsChange(e.target.checked)}
-          />
-        </div>
+      {showOrientationToggles && (
+        <CollapsibleSection
+          title="Orientation"
+          storageKey="settings.section.orientation"
+          defaultOpen={false}
+        >
+          <div className={styles.panelRow}>
+            <label htmlFor="toggle-highlight-fallback">Highlight fallback</label>
+            <input
+              id="toggle-highlight-fallback"
+              type="checkbox"
+              checked={highlightFallback}
+              onChange={(e) => onHighlightFallbackChange(e.target.checked)}
+            />
+          </div>
+          <div className={styles.panelRow}>
+            <label htmlFor="toggle-real-only">Show only real</label>
+            <input
+              id="toggle-real-only"
+              type="checkbox"
+              checked={realOnlyMode}
+              onChange={(e) => onRealOnlyModeChange(e.target.checked)}
+            />
+          </div>
+        </CollapsibleSection>
       )}
 
       {/* ── SpaceMouse (rev-3 6DOF input) ────────────────────────────────── */}
@@ -717,11 +783,16 @@ export function SettingsPanel({
         whole section is hidden — users see no broken UI for an inaccessible
         feature. Within the section, the Connect button shows up only when
         no device is paired, and the sensitivity slider only after pairing.
+
+        Default-closed because most users don't have a SpaceMouse plugged
+        in even on supported browsers.
       */}
       {spaceMouseSupported && (
-        <>
-          <div className={styles.panelDivider} role="separator" />
-          <div className={styles.panelSubtitle}>SpaceMouse</div>
+        <CollapsibleSection
+          title="SpaceMouse"
+          storageKey="settings.section.spacemouse"
+          defaultOpen={false}
+        >
           <div className={styles.panelMode}>
             {spaceMouseConnected ? 'connected' : 'not connected'}
           </div>
@@ -757,65 +828,17 @@ export function SettingsPanel({
                 </div>
               </>
             )}
-        </>
+        </CollapsibleSection>
       )}
 
-      {/* ── Orientation visibility (Task 15) ─────────────────────────────── */}
+      {/* ── Footer: divider + reset camera ──────────────────────────────── */}
       {/*
-        Two toggles that share the same per-galaxy fallback flag (high bit of
-        globalInstanceIdx, baked at upload time).  "Highlight" tints fallback
-        rows magenta in the fragment shader; "Show only real" discards
-        fallback fragments entirely.  Both default off so existing visual
-        behaviour is unchanged until the user opts in.
+        Reset camera lives outside any section because it's an action, not
+        a setting — it doesn't belong in any of the configuration buckets
+        above, and folding it away would hide the panel's primary "I'm
+        lost, take me home" affordance.
       */}
-      {showOrientationToggles && (
-        <>
-          <div className={styles.panelDivider} role="separator" />
-          <div className={styles.panelSubtitle}>Orientation</div>
-          <div className={styles.panelRow}>
-            <label htmlFor="toggle-highlight-fallback">Highlight fallback</label>
-            <input
-              id="toggle-highlight-fallback"
-              type="checkbox"
-              checked={highlightFallback}
-              onChange={(e) => onHighlightFallbackChange(e.target.checked)}
-            />
-          </div>
-          <div className={styles.panelRow}>
-            <label htmlFor="toggle-real-only">Show only real</label>
-            <input
-              id="toggle-real-only"
-              type="checkbox"
-              checked={realOnlyMode}
-              onChange={(e) => onRealOnlyModeChange(e.target.checked)}
-            />
-          </div>
-        </>
-      )}
-
-      {/*
-        Depth-fade toggle.  Independent of the orientation block — the
-        depth fade is a camera-distance attenuation gating the centre-of-
-        volume saturation, completely orthogonal to fallback-orientation
-        questions.  Gated on its own pair of props so a panel without the
-        depth-fade callback wired up still works.
-      */}
-      {depthFadeEnabled !== undefined && onDepthFadeEnabledChange !== undefined && (
-        <div className={styles.panelRow}>
-          <label htmlFor="toggle-depth-fade">Depth fade</label>
-          <input
-            id="toggle-depth-fade"
-            type="checkbox"
-            checked={depthFadeEnabled}
-            onChange={(e) => onDepthFadeEnabledChange(e.target.checked)}
-          />
-        </div>
-      )}
-
-      {/* ── Divider ──────────────────────────────────────────────────────── */}
       <div className={styles.panelDivider} role="separator" />
-
-      {/* ── Reset camera ─────────────────────────────────────────────────── */}
       <button type="button" onClick={onResetCamera}>
         Reset camera
       </button>

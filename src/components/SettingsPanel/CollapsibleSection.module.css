@@ -1,0 +1,135 @@
+/*
+ * CollapsibleSection.module.css — visual style for a sub-section folder
+ * inside the SettingsPanel.
+ *
+ * ### Why a separate component (and stylesheet) at all
+ *
+ * The SettingsPanel grew to ~80 controls.  Without internal grouping the
+ * user had to scroll a wall of rows to find one slider.  Sub-section
+ * folding lets the user collapse the parts they don't currently care
+ * about while keeping the panel a single overlay.
+ *
+ * ### Design family
+ *
+ * The look-and-feel intentionally MIRRORS the panel's existing top-level
+ * collapse (`panelTitleButton` + `panelTitleChevron` in
+ * SettingsPanel.module.css).  Same uppercase letterspacing, same dim
+ * colour, same chevron glyph.  The difference is *position*:
+ *
+ *   - Top-level collapse: full-width header bar with bottom border, sits
+ *     ON the panel's outer frame (negative margins, rounded corners).
+ *   - Section collapse: inline within the body, no border, no bleed —
+ *     reads as a list-marker for a row of controls.
+ *
+ * Visually the two form a hierarchy: panel title is "louder" because of
+ * the bar; section titles are "quieter" because they sit inside the
+ * scrollable content.
+ */
+
+.section {
+  /*
+   * No outer margin — adjacent sections sit flush; the body's own
+   * top/bottom padding gives the breathing room.  This means stacking
+   * two sections doesn't double-space; collapsing one doesn't leave a
+   * ghost gap.
+   */
+}
+
+/*
+ * Section header — a real <button> for keyboard focus + Enter/Space
+ * activation + free `aria-expanded` semantics.  We strip ALL default
+ * <button> chrome (background, border, padding, font) so the row reads
+ * as a plain heading; only the cursor changes on hover.
+ *
+ * This mirrors `panelTitleButton` in SettingsPanel.module.css — same
+ * approach, less padding (it sits inside the panel body, not on the
+ * frame).
+ */
+/*
+ * `button.header` rather than plain `.header` so we tie with the panel's
+ * `.settingsPanel button` rule (specificity 0,1,1) — and then the cascade
+ * order resolves in our favour because CSS modules import the
+ * CollapsibleSection sheet *after* SettingsPanel reads it (Vite preserves
+ * import order).  Without this lift, `.settingsPanel button`'s background
+ * + border + padding + width would override our resets.
+ *
+ * Limitation: this means CollapsibleSection's header MUST be a <button>
+ * element.  That's true today and aligned with the ARIA semantics
+ * (`aria-expanded` belongs on a button), but worth noting if anyone
+ * later considers swapping to a div with onClick.
+ */
+button.header {
+  display: flex;
+  align-items: baseline;
+  width: 100%;
+  padding: 6px 0 4px;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+
+.header:focus-visible {
+  outline: 1px solid rgba(160, 200, 255, 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/*
+ * Chevron — sits LEFT of the title like a tree-twirl / disclosure marker.
+ * Same dim treatment as the panel's top-level chevron so the two read
+ * as the same affordance at different scales.
+ *
+ * The animated rotation (▸ → ▾) is done by rotating the same triangle
+ * glyph 90° rather than swapping characters.  Two reasons:
+ *   1. CSS transitions can animate `transform` smoothly; they can't
+ *      animate text-content swaps.
+ *   2. The character box stays the same width across states, so the
+ *      title text doesn't shift horizontally when you toggle.
+ */
+.chevron {
+  display: inline-block;
+  font-size: 8px;
+  color: rgba(160, 180, 230, 0.4);
+  margin-right: 6px;
+  /* Nudge up slightly for visual balance with the uppercase heading,
+   * matching `.panelTitleChevron`. */
+  position: relative;
+  top: -1px;
+  /*
+   * Rotating ▸ by 90° clockwise points it down — the same shape as ▾
+   * without character swapping.  The transition gives a tactile feel
+   * when the user clicks; 120 ms is short enough not to delay the
+   * actual reveal of the body below.
+   */
+  transition: transform 120ms ease-out;
+  transform: rotate(0deg);
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+/*
+ * Section title — uppercase + spaced like `.panelSubtitle` did before
+ * (which it replaces).  Keeping this rule independent of `.panelSubtitle`
+ * lets the SettingsPanel keep using `panelSubtitle` for any rare flat-
+ * label use that doesn't need a collapse, without coupling the two.
+ */
+.title {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(160, 180, 230, 0.5);
+}
+
+/*
+ * Body — wraps the children with a small bottom margin so the next
+ * section's header doesn't touch the last row's input.  No top margin
+ * (the header's bottom padding handles that gap).
+ */
+.body {
+  margin-bottom: 6px;
+}
