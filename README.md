@@ -16,6 +16,14 @@ The code is documented didactically throughout — if you're also looking to lea
 
 _The full overlay surface — left stack (Navigation cheatsheet, Settings panel, FPS / counts) and the InfoCard pinned to a selected galaxy on the right, with the cosmic-web filament skeleton drawn over the point field._
 
+![Data-tier selector](docs/screenshots/tier-selector.png)
+
+_Segmented control at the top of the Settings panel hot-swaps the loaded dataset between three sizes: **Small** (~300k galaxies — mobile-friendly), **Medium** (~600k — default for laptops), and **Large** (~3.5M — full catalog). Tier choice on first paint is driven by viewport width; clicking a button re-fetches the relevant `.bin` files and re-uploads the GPU vertex buffers in place — no page reload._
+
+![Pinned InfoCard for a 2MRS galaxy](docs/screenshots/infocard-detail.png)
+
+_Close-up of the right-side InfoCard. Pinning a galaxy reveals lookback time (with an Earth-era reference line), comoving distance + recession velocity, equatorial coordinates in both sexagesimal and decimal form, redshift, apparent magnitude in the survey's native band, plus a thumbnail (DSS via CDS hips2fits for 2MRS / GLADE; SDSS DR18 ImgCutout for SDSS) and an external-catalogue link where one exists._
+
 ![Local Volume close-up](docs/screenshots/local-group.png)
 
 _Local Volume, roughly 10–20 Mpc across. Bright textured quads are Famous-catalog galaxies with hand-curated DESI Legacy thumbnails; the faint blue lattice is the DisPerSE filament overlay._
@@ -27,6 +35,10 @@ _Supercluster-scale view, roughly 200–400 Mpc across — thousands of galaxies
 ![Close-up zoom](docs/screenshots/zoomed.gif)
 
 _Zooming in: the dot dissolves into a procedural disk impostor (Gaussian bulge + exponential profile, 3D-oriented from catalog axis-ratio + position angle) and then into a real DESI thumbnail once the apparent size crosses the fetch threshold._
+
+![Density-correction modes dropdown](docs/screenshots/density-correction-modes.png)
+
+_Five density-correction modes selectable at runtime (None / Volume-limited / 1/V_max / Schechter LF / Angular re-weight via HEALPix), addressing Malmquist bias and pencil-beam survey-footprint artefacts. See the [Density correction](#density-correction-malmquist-bias) section below for the science behind each mode._
 
 ## Use cases
 
