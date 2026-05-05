@@ -348,7 +348,12 @@ async function main(): Promise<void> {
   process.stderr.write(`buildPgcAliases: chunking PGC space in ${CHUNK_WIDTH}-wide windows\n`);
   if (force) process.stderr.write(`  --force: bypassing chunk cache\n`);
 
-  const allRows: DesignationRow[] = [];
+  // We group chunk-by-chunk rather than accumulating every row in one
+  // array — empirically the first chunk alone yields ~200k rows, and a
+  // full run is many millions of rows.  Streaming through `groupByPgc`
+  // per-chunk keeps memory bounded and avoids spread-arg stack blowups.
+  const aggregateByPgc = new Map<number, string[]>();
+  let aggregateDropped = 0;
   let chunkStart = 0;
   let consecutiveEmpty = 0;
   // The dataset extends past PGC ~5M; stop after two consecutive empty
@@ -365,27 +370,38 @@ async function main(): Promise<void> {
       throw e;
     }
     const rows = parseDesignationsCsv(text);
-    process.stderr.write(
-      `  chunk pgc=${chunkStart.toLocaleString()} → ${rows.length.toLocaleString()} rows\n`,
-    );
     if (rows.length === 0) {
       consecutiveEmpty++;
     } else {
       consecutiveEmpty = 0;
-      allRows.push(...rows);
+      const { byPgc, droppedGroups } = groupByPgc(rows);
+      aggregateDropped += droppedGroups;
+      // Merge into the running map.  PGC keys are unique per chunk
+      // because each chunk is bounded by `pgc<chunkStart+CHUNK_WIDTH`
+      // — but a merger group whose objname spans neighbouring chunks
+      // could in theory split, so we still merge defensively here.
+      for (const [pgc, names] of byPgc) {
+        const existing = aggregateByPgc.get(pgc);
+        if (existing) {
+          for (const n of names) existing.push(n);
+        } else {
+          aggregateByPgc.set(pgc, names);
+        }
+      }
     }
+    process.stderr.write(
+      `  chunk pgc=${chunkStart.toLocaleString()} → ` +
+        `${rows.length.toLocaleString()} rows, ` +
+        `${aggregateByPgc.size.toLocaleString()} PGCs total\n`,
+    );
     chunkStart += CHUNK_WIDTH;
   }
 
   process.stderr.write(
-    `total rows fetched: ${allRows.length.toLocaleString()}, grouping by PGC…\n`,
+    `  ${aggregateByPgc.size.toLocaleString()} PGCs with ≥1 alias; ` +
+      `${aggregateDropped.toLocaleString()} groups dropped (no PGC self-row)\n`,
   );
-
-  const { byPgc, droppedGroups } = groupByPgc(allRows);
-  process.stderr.write(
-    `  ${byPgc.size.toLocaleString()} PGCs with ≥1 alias; ` +
-      `${droppedGroups.toLocaleString()} groups dropped (no PGC self-row)\n`,
-  );
+  const byPgc = aggregateByPgc;
 
   // Build the sorted, deterministic JSON object.  Keys are PGC strings
   // (JSON object keys are strings anyway, and BigInt isn't JSON-serialisable
