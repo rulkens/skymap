@@ -118,6 +118,37 @@ export class QuadRenderer {
         ],
       },
       primitive: { topology: 'triangle-list' },
+      // Depth state: TEST and WRITE.
+      //
+      // Thumbnails are the per-galaxy "opaque-ish overlay" in skymap's
+      // layered render: they sit at a galaxy's world-space position
+      // and should occlude the Milky Way impostor (which is drawn
+      // afterwards in the HDR pass) when the galaxy is in front of
+      // the world origin.  See `services/engine/renderFrame.ts` for
+      // the per-frame draw order and `services/gpu/hdrTarget.ts` for
+      // the depth-buffer rationale.
+      //
+      // Why writeEnabled?  The Milky Way pipeline only reads depth;
+      // unless we write here, the depth buffer stays at its 1.0 clear
+      // value and the impostor's fragment-stage `less` test passes
+      // unconditionally, reproducing the original bug.  Writing puts
+      // each thumbnail's clipPos.z/w into the buffer at every pixel
+      // the quad covers.
+      //
+      // Caveat: the quad's vertex stage emits a planar billboard, so
+      // the depth value is constant across the quad — including in
+      // the transparent corners outside the soft circular mask.  The
+      // fragment shader (quads.wgsl `fs`) compensates by `discard`-ing
+      // those low-alpha corners so the depth buffer doesn't get a
+      // square footprint where the visual is empty; without the
+      // discard, a thumbnail's invisible corners would still write
+      // depth and punch a square-shaped hole in the Milky Way behind
+      // it.
+      depthStencil: {
+        format: 'depth24plus',
+        depthCompare: 'less',
+        depthWriteEnabled: true,
+      },
     });
 
     this.uniformBuffer = this.device.createBuffer({

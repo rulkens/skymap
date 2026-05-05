@@ -110,6 +110,10 @@ function makeFakeHdrView(): GPUTextureView {
   return { __id: 'hdr-view' } as unknown as GPUTextureView;
 }
 
+function makeFakeHdrDepthView(): GPUTextureView {
+  return { __id: 'hdr-depth-view' } as unknown as GPUTextureView;
+}
+
 function makeMockPointRenderer(callLog: CallLog) {
   return {
     draw: vi.fn(() => {
@@ -157,16 +161,21 @@ function makeMockDiskRenderer() {
 }
 
 function makeCam(): OrbitCamera {
+  // Camera distance must be inside the Milky-Way fade band
+  // (FADE_INNER_MPC = 10 ... FADE_OUTER_MPC = 50) so the impostor's
+  // distance-fade gate doesn't suppress the draw call in tests that
+  // need to assert MW ordering.  5 Mpc is comfortably inside the
+  // full-alpha (≤10 Mpc) regime.
   return {
     target: [0, 0, 0] as unknown as Float32Array,
-    distance: 100,
+    distance: 5,
     yaw: 0,
     pitch: 0,
     fovYRad: (60 * Math.PI) / 180,
     aspect: 16 / 9,
     near: 0.001,
     far: 10000,
-    position: new Float32Array([0, 0, 100]),
+    position: new Float32Array([0, 0, 5]),
   } as unknown as OrbitCamera;
 }
 
@@ -199,6 +208,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
   const swapView = makeFakeSwapView();
   const context = makeFakeContext(swapView, callLog);
   const hdrTargetView = makeFakeHdrView();
+  const hdrDepthView = makeFakeHdrDepthView();
   const pointRenderer = makeMockPointRenderer(callLog);
   const milkyWayRenderer = makeMockMilkyWayRenderer(callLog);
   const toneMapPass = makeMockToneMapPass(callLog);
@@ -240,6 +250,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     context,
     swapView,
     hdrTargetView,
+    hdrDepthView,
     pointRenderer,
     milkyWayRenderer,
     toneMapPass,
@@ -257,6 +268,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       device,
       context,
       hdrTargetView,
+      hdrDepthView,
       pointRenderer,
       milkyWayRenderer,
       toneMapPass,
@@ -309,6 +321,27 @@ describe('renderFrame', () => {
     expect(att.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 1 });
   });
 
+  it('attaches the supplied hdrDepthView as the depth-stencil attachment, cleared to 1.0', () => {
+    // The HDR pass needs a depth buffer so the per-galaxy overlay
+    // pipelines (quads + procedural disks) can write per-galaxy
+    // depth values that the Milky Way impostor (drawn last) tests
+    // against.  Without this attachment, every pipeline that
+    // declares `depthStencil` state would fail WebGPU's render-pass
+    // validation, and the Milky-Way-occlusion fix collapses to a
+    // no-op (the original visual bug).
+    renderFrame(fx.input);
+    const desc = (fx.env.beginRenderPass as any).lastDescriptor as GPURenderPassDescriptor;
+    const dsa = desc.depthStencilAttachment as any;
+    expect(dsa).toBeDefined();
+    expect(dsa.view).toBe(fx.hdrDepthView);
+    // Clear to 1.0 (the WebGPU NDC far plane) so any pipeline with
+    // `depthCompare: 'less'` passes its first test against the empty
+    // buffer — the same as having no depth test for the first pass.
+    expect(dsa.depthClearValue).toBe(1.0);
+    expect(dsa.depthLoadOp).toBe('clear');
+    expect(dsa.depthStoreOp).toBe('store');
+  });
+
   it('forwards every settings field to pointRenderer.draw in the canonical order', () => {
     renderFrame(fx.input);
     const draw = fx.pointRenderer.draw as ReturnType<typeof vi.fn>;
@@ -327,7 +360,7 @@ describe('renderFrame', () => {
     expect(args[5]).toBe(0xffffffff >>> 0);
     expect(args[6]).toBe(fx.input.settings.visibleSourceMask);
     // camPos is a 3-tuple snapshot from cam.position
-    expect(Array.from(args[7] as ArrayLike<number>)).toEqual([0, 0, 100]);
+    expect(Array.from(args[7] as ArrayLike<number>)).toEqual([0, 0, 5]);
     // pxPerRad = h / (2 · tan(fovY/2))
     const expectedPxPerRad =
       fx.input.canvasHeight / (2 * Math.tan(fx.input.cam.fovYRad / 2));
@@ -377,7 +410,7 @@ describe('renderFrame', () => {
     const expectedPxPerRad =
       fx.input.canvasHeight / (2 * Math.tan(fx.input.cam.fovYRad / 2));
     expect(arg.pxPerRad).toBeCloseTo(expectedPxPerRad, 6);
-    expect(Array.from(arg.camPos as ArrayLike<number>)).toEqual([0, 0, 100]);
+    expect(Array.from(arg.camPos as ArrayLike<number>)).toEqual([0, 0, 5]);
     expect(arg.canvasSize).toEqual({ width: 1280, height: 720 });
     expect(arg.viewProj).toBe(fx.input.viewProj);
     expect(arg.visibleSourceMask).toBe(fx.input.settings.visibleSourceMask);
@@ -403,15 +436,22 @@ describe('renderFrame', () => {
     expect(args[4]).toBe(fx.input.settings.toneMapCurve);
   });
 
-  it('records full frame in the canonical order: createEncoder → beginRenderPass → pointRenderer.draw → thumbnails.runFrame → pass.end → toneMapPass.draw → encoder.finish → submit', () => {
+  it('records full frame in the canonical order: createEncoder → beginRenderPass → pointRenderer.draw → thumbnails.runFrame → milkyWayRenderer.draw → pass.end → toneMapPass.draw → encoder.finish → submit', () => {
+    // The Milky Way impostor is now drawn LAST inside the HDR pass —
+    // *after* the thumbnail subsystem has populated the depth buffer
+    // with per-galaxy overlay depths.  The impostor's pipeline tests
+    // (but doesn't write) depth, so thumbnails for galaxies in front
+    // of the world origin correctly survive the impostor draw, and
+    // thumbnails for galaxies behind it get correctly occluded.  See
+    // the renderFrame doc-comment for the full draw-order rationale
+    // and `services/gpu/hdrTarget.ts` for the depth-buffer design.
     renderFrame(fx.input);
-    // Filter the log to just the events we care about (in their first
-    // occurrence) so a single ordered subsequence falls out.
     const interesting = [
       'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'pointRenderer.draw',
       'thumbnails.runFrame',
+      'milkyWayRenderer.draw',
       'pass.end',
       'toneMapPass.draw',
       'encoder.finish',
@@ -419,5 +459,22 @@ describe('renderFrame', () => {
     ];
     const filtered = fx.callLog.filter((e) => interesting.includes(e));
     expect(filtered).toEqual(interesting);
+  });
+
+  it('draws the Milky Way impostor after thumbnails.runFrame so the impostor depth-tests against per-galaxy overlay depths', () => {
+    // Concrete ordering claim: thumbnail draws (which write depth)
+    // must happen *before* the Milky Way draw (which reads depth) in
+    // the same render pass.  If the order ever flips back to "MW
+    // first, thumbnails second" the impostor would test against the
+    // empty (cleared 1.0) depth buffer and the original
+    // "thumbnails-blot-out-Milky-Way" bug returns.
+    renderFrame(fx.input);
+    const log = fx.callLog;
+    const idxThumb = log.indexOf('thumbnails.runFrame');
+    const idxMw = log.indexOf('milkyWayRenderer.draw');
+    const idxEnd = log.indexOf('pass.end');
+    expect(idxThumb).toBeGreaterThanOrEqual(0);
+    expect(idxMw).toBeGreaterThan(idxThumb);
+    expect(idxEnd).toBeGreaterThan(idxMw);
   });
 });

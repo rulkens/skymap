@@ -38,13 +38,19 @@
  * ### What the encoder records, in order
  *
  *   pass 1: HDR render pass
- *     - clear hdrTargetView to (0, 0, 0, 1)
- *     - pointRenderer.draw  (instanced billboards)
- *     - thumbnails.runFrame (quad + disk passes — gated on
- *       galaxyTexturesEnabled inside the subsystem caller; this
- *       function calls runFrame unconditionally because the gate is
- *       a per-call decision the engine makes by passing or omitting
- *       the subsystem reference — see the engine call site)
+ *     - clear hdrTargetView to (0, 0, 0, 1) and hdrDepthView to 1.0
+ *     - pointRenderer.draw  (instanced billboards — depth test only,
+ *       no write: pure additive emission, doesn't occlude anything)
+ *     - thumbnails.runFrame (quad + disk passes — write depth at
+ *       per-galaxy world Z so they occlude the Milky Way impostor
+ *       drawn next; gated on galaxyTexturesEnabled inside the
+ *       subsystem caller)
+ *     - milkyWayRenderer.draw (depth test only, no write: tests
+ *       against thumbnail-written depth values so far-side galaxies'
+ *       thumbnails occlude the Milky Way at the world origin and
+ *       near-side galaxies' thumbnails appear in front of it.  Gated
+ *       on the user's "Show Milky Way" toggle and the distance-fade
+ *       threshold)
  *     - pass.end()
  *
  *   pass 2: tone-map post-process
@@ -171,6 +177,23 @@ export type RenderFrameInput = {
   device: GPUDevice;
   context: GPUCanvasContext;
   hdrTargetView: GPUTextureView;
+  /**
+   * Depth-stencil attachment for the HDR render pass.  Companion to
+   * `hdrTargetView` (same size, recreated on resize).  Pipelines drawing
+   * into the HDR pass declare `depthStencil` state with the matching
+   * `depth24plus` format and either WRITE depth (thumbnails / procedural
+   * disks — the per-galaxy overlays that should occlude background
+   * objects) or only TEST it (points + Milky Way impostor — pure
+   * additive emission that should be occluded BY closer overlays without
+   * polluting the depth buffer with their own values).
+   *
+   * See `services/gpu/hdrTarget.ts` for the design rationale and
+   * `renderFrame` below for the per-frame draw order that makes the
+   * occlusion logic actually work (thumbnails before Milky Way, so the
+   * Milky Way's depth-test reads thumbnail-written values instead of
+   * the cleared-1.0 buffer).
+   */
+  hdrDepthView: GPUTextureView;
   pointRenderer: PointRenderer;
   milkyWayRenderer: MilkyWayRenderer;
   toneMapPass: ToneMapPass;
@@ -215,6 +238,7 @@ export function renderFrame(input: RenderFrameInput): void {
     device,
     context,
     hdrTargetView,
+    hdrDepthView,
     pointRenderer,
     milkyWayRenderer,
     toneMapPass,
@@ -263,6 +287,14 @@ export function renderFrame(input: RenderFrameInput): void {
   // written exactly once at the end of the frame by the tone-map
   // pass.  Without HDR + tone-map, additive overlap >1.0 just clips
   // and cluster cores blow out to flat white.
+  // The depth attachment clears to 1.0 each frame.  In WebGPU's NDC,
+  // 1.0 is the *far* plane — i.e. "infinitely far away, occluded by
+  // anything".  After the clear, every fragment from any pipeline
+  // configured with `depthCompare: 'less'` passes the test (its
+  // computed clipPos.z/clipPos.w is < 1.0 for anything in front of
+  // the far plane), so the first pipeline that *writes* depth
+  // populates the buffer; later pipelines that only *test* depth read
+  // those written values and get occluded where appropriate.
   const pass = encoder.beginRenderPass({
     colorAttachments: [
       {
@@ -272,41 +304,13 @@ export function renderFrame(input: RenderFrameInput): void {
         storeOp: 'store',
       },
     ],
+    depthStencilAttachment: {
+      view: hdrDepthView,
+      depthClearValue: 1.0,
+      depthLoadOp: 'clear',
+      depthStoreOp: 'store',
+    },
   });
-
-  // ── Milky Way impostor (procedural backdrop at world origin) ──────
-  //
-  // Drawn before the points pass so per-galaxy point billboards
-  // overdraw the impostor where they overlap (an SDSS row at the
-  // dead centre would compete; in practice there isn't one, but the
-  // ordering is the principled choice regardless).  The pass is
-  // skipped entirely when:
-  //
-  //   - the user has toggled "Show Milky Way" off, or
-  //   - the camera is far enough from the world origin that the
-  //     distance fade has fully attenuated alpha to zero.
-  //
-  // Both are CPU branches; neither costs GPU time when the gate is
-  // closed.  See `utils/math/milkyWayFade.ts` for the band.
-  if (settings.milkyWayEnabled) {
-    const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
-    const fadeAlpha = milkyWayFadeAlpha(camDistMpc);
-    if (fadeAlpha > 0) {
-      milkyWayRenderer.draw(
-        pass,
-        viewProj as Float32Array,
-        [canvasWidth, canvasHeight],
-        fadeAlpha,
-        milkyWayITimeSec,
-        // World-space camera position drives both the impostor's
-        // view-aligned billboard basis (vertex stage) and the
-        // fragment stage's synthetic-camera ray origin — the
-        // raymarched spiral now follows the user's orbit instead of
-        // showing the same hard-coded vantage every frame.
-        [drawCamPos[0], drawCamPos[1], drawCamPos[2]],
-      );
-    }
-  }
 
   // ── Point sprites (instanced billboards) ───────────────────────────
   //
@@ -368,6 +372,57 @@ export function renderFrame(input: RenderFrameInput): void {
       famousMeta,
       famousXrefs,
     });
+  }
+
+  // ── Milky Way impostor (procedural backdrop at world origin) ──────
+  //
+  // Drawn LAST inside the HDR pass — *after* the thumbnail subsystem
+  // has had a chance to write per-galaxy depth values into the depth
+  // buffer.  The Milky Way pipeline is configured with
+  // `depthCompare: 'less', depthWriteEnabled: false`: it tests against
+  // whatever the thumbnail pass wrote (so a thumbnail in front of the
+  // world origin correctly OCCLUDES the impostor) but doesn't pollute
+  // the depth buffer with its own world-origin Z (the impostor is a
+  // raymarched volumetric glow whose perceived 3D extent is implied by
+  // the fragment shader, not the actual quad geometry — writing depth
+  // would create a hard "Milky Way disk" boundary that would be wrong
+  // for galaxies inside the disk extent).
+  //
+  // This ordering fixes the user-visible bug "galaxy thumbnails are
+  // sometimes shown in front of the Milky Way": before this change the
+  // impostor was drawn first, then thumbnails on top with OVER blend,
+  // so any thumbnail (regardless of world Z) blotted out the impostor.
+  // Now thumbnails for galaxies BEHIND the world origin (depth > 0)
+  // get correctly occluded by the impostor (which sits at depth 0 on
+  // the depth-test side of the comparison), while thumbnails for
+  // galaxies IN FRONT of the origin (depth < 0) survive — the
+  // impostor's per-fragment depth value > the thumbnail's already-
+  // written depth, so the Milky Way fragment fails the `less` test.
+  //
+  // The pass is skipped entirely when:
+  //   - the user has toggled "Show Milky Way" off, or
+  //   - the camera is far enough from the world origin that the
+  //     distance fade has fully attenuated alpha to zero.
+  // Both are CPU branches; neither costs GPU time when the gate is
+  // closed.  See `utils/math/milkyWayFade.ts` for the band.
+  if (settings.milkyWayEnabled) {
+    const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
+    const fadeAlpha = milkyWayFadeAlpha(camDistMpc);
+    if (fadeAlpha > 0) {
+      milkyWayRenderer.draw(
+        pass,
+        viewProj as Float32Array,
+        [canvasWidth, canvasHeight],
+        fadeAlpha,
+        milkyWayITimeSec,
+        // World-space camera position drives both the impostor's
+        // view-aligned billboard basis (vertex stage) and the
+        // fragment stage's synthetic-camera ray origin — the
+        // raymarched spiral now follows the user's orbit instead of
+        // showing the same hard-coded vantage every frame.
+        [drawCamPos[0], drawCamPos[1], drawCamPos[2]],
+      );
+    }
   }
 
   pass.end();

@@ -131,6 +131,18 @@ export class DiskRenderer {
         ],
       },
       primitive: { topology: 'triangle-list' },
+      // Depth state: TEST and WRITE — see quadRenderer.ts for the
+      // full rationale.  This pipeline is a sibling overlay (textured
+      // 3D-oriented galaxy disk) and must follow the same depth
+      // convention so the Milky Way impostor's depth-test fix works
+      // uniformly across all per-galaxy overlays in the HDR pass.
+      // The fragment shader (`disks.wgsl`) discards low-alpha
+      // fragments so depth writes match the visible silhouette.
+      depthStencil: {
+        format: 'depth24plus',
+        depthCompare: 'less',
+        depthWriteEnabled: true,
+      },
     });
 
     this.uniformBuffer = this.device.createBuffer({

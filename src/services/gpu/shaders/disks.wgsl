@@ -194,5 +194,12 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   let lum = max(rgba.r, max(rgba.g, rgba.b));
   let lumAlpha = smoothstep(0.05, 0.30, lum);
   let alpha = lumAlpha * mask * in.fadeAlpha;
+  // Discard near-invisible fragments so the depth-write phase
+  // doesn't leave a square footprint in the depth buffer.  Same
+  // reasoning as `quads.wgsl`: the disk pipeline writes depth so it
+  // can occlude the Milky Way impostor; without this guard the
+  // transparent corners would still write depth and punch a square
+  // hole in the impostor behind every thumbnail.
+  if (alpha < 0.01) { discard; }
   return vec4<f32>(rgba.rgb * alpha, alpha);
 }

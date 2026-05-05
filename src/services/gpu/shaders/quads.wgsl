@@ -233,6 +233,21 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // apparent-size threshold) and load fade (~400 ms ramp from
   // bitmap-arrival).  Final alpha is the product of all three.
   let alpha = lumAlpha * mask * in.fadeAlpha;
+  // Discard fragments that are essentially invisible.  The thumbnail
+  // pipeline runs with `depthWriteEnabled: true` so the Milky Way
+  // impostor (drawn afterwards) can be occluded by closer galaxies.
+  // But the QUAD covers the full bounding box, including the
+  // transparent corners outside the soft circular mask (and the
+  // dim-sky pixels filtered out by `lumAlpha`).  Without this
+  // discard, those invisible-but-rasterised fragments would still
+  // run their `clipPos.z/w` through the depth-write stage, writing
+  // a SQUARE depth footprint where the visual is empty.  The Milky
+  // Way fragment behind a thumbnail's invisible corner would then
+  // fail the depth test and we'd see a square hole punched into the
+  // impostor wherever a thumbnail sat.  Discarding skips depth
+  // writes so the silhouette in the depth buffer matches what the
+  // user actually sees.
+  if (alpha < 0.01) { discard; }
   // Premultiplied-alpha output — required by the project's blend
   // configuration (see device.ts `alphaMode: 'premultiplied'`).
   return vec4<f32>(rgba.rgb * alpha, alpha);

@@ -39,7 +39,7 @@ function mockDevice(): GPUDevice {
 }
 
 describe('createHdrTarget', () => {
-  it('allocates a rgba16float texture sized to the requested viewport', () => {
+  it('allocates a rgba16float colour texture sized to the requested viewport', () => {
     const device = mockDevice();
     const target = createHdrTarget(device, { width: 1024, height: 768 });
     expect(device.createTexture).toHaveBeenCalledWith(
@@ -53,11 +53,32 @@ describe('createHdrTarget', () => {
     expect(typeof target.resize).toBe('function');
   });
 
-  it('resize destroys the old texture and creates a new one', () => {
+  it('also allocates a depth24plus depth texture matching the colour size', () => {
+    // The HDR pass needs a depth attachment so the per-galaxy overlay
+    // pipelines (quads + procedural disks) can write depth values
+    // that the Milky Way impostor's pipeline tests against — the
+    // standard transparent-emissive-reads-but-doesnt-write-depth
+    // pattern.  `depth24plus` is the canonical "works everywhere"
+    // depth format; no TEXTURE_BINDING because nothing samples the
+    // depth buffer outside the render pass itself.
+    const device = mockDevice();
+    const target = createHdrTarget(device, { width: 1024, height: 768 });
+    expect(device.createTexture).toHaveBeenCalledWith(
+      expect.objectContaining({
+        format: 'depth24plus',
+        size: { width: 1024, height: 768 },
+        usage: RENDER_ATTACHMENT,
+      }),
+    );
+    expect(target.depthView).toBeDefined();
+  });
+
+  it('resize destroys the old textures and creates new ones for both colour and depth', () => {
     const device = mockDevice();
     const target = createHdrTarget(device, { width: 512, height: 512 });
     target.resize({ width: 1024, height: 1024 });
-    // Two creations: one initial, one after resize.
-    expect(device.createTexture).toHaveBeenCalledTimes(2);
+    // Two creations per resize cycle (colour + depth) × 2 cycles =
+    // four total createTexture calls.
+    expect(device.createTexture).toHaveBeenCalledTimes(4);
   });
 });

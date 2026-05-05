@@ -1229,6 +1229,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           device,
           context,
           hdrTargetView: hdrTargetRef.view,
+          hdrDepthView: hdrTargetRef.depthView,
           pointRenderer: rendererRef,
           milkyWayRenderer,
           toneMapPass: toneMapPassRef,
