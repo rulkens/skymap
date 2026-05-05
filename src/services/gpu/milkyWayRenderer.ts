@@ -175,42 +175,6 @@ export class MilkyWayRenderer {
         ],
       },
       primitive: { topology: 'triangle-list' },
-      // Depth state: TEST against the depth buffer the thumbnail / disk
-      // passes wrote into, but DO NOT WRITE.
-      //
-      // Why test?  The Milky Way impostor sits at the world origin
-      // (cz = 0).  Galaxies on the FAR side of the origin from the
-      // camera have a larger world-space Z than the origin and their
-      // thumbnails (drawn earlier in the pass with depthWriteEnabled =
-      // true) populate the depth buffer with that larger value.  When
-      // this pass's fragment shader runs at the same screen pixel, its
-      // own clipPos.z is roughly the origin's Z — *less* than the
-      // already-written thumbnail Z — so the `less` comparison passes
-      // and the impostor draws over the thumbnail.  CORRECT: a far
-      // galaxy is occluded by the Milky Way.
-      //
-      // Galaxies on the NEAR side of the origin do the opposite: their
-      // thumbnail's depth is smaller than the impostor's, the impostor
-      // fragment fails the `less` test, and the thumbnail survives
-      // unobscured.  CORRECT: a near galaxy stays in front of the
-      // Milky Way.
-      //
-      // Why not write depth?  The impostor is a raymarched volumetric
-      // glow — its perceived 3D extent (the spiral disk reaching out
-      // ~10 kpc from the centre, the bulge dominating ~1 kpc) is
-      // implied by the fragment shader's brightness falloff, NOT by
-      // the actual quad geometry.  Writing the quad's planar depth
-      // would create a hard "Milky Way plane" depth boundary that
-      // would punch a circular cut into any galaxy thumbnail drawn
-      // afterward at greater world-Z, even though the impostor at
-      // that pixel is essentially transparent (pure additive black).
-      // Reading-without-writing is the standard "transparent emissive"
-      // pattern for this exact scenario.
-      depthStencil: {
-        format: 'depth24plus',
-        depthCompare: 'less',
-        depthWriteEnabled: false,
-      },
     });
   }
 

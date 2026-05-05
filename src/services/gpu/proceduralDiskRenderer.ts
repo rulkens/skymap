@@ -110,15 +110,6 @@ export class ProceduralDiskRenderer {
         ],
       },
       primitive: { topology: 'triangle-list' },
-      // Depth state: TEST only, NO WRITE — see `quadRenderer.ts`.
-      // Emissive additive content doesn't need depth ordering, and
-      // writing depth would re-create the fade-to-black bug at the
-      // disk's outer edge against the Milky Way impostor.
-      depthStencil: {
-        format: 'depth24plus',
-        depthCompare: 'less',
-        depthWriteEnabled: false,
-      },
     });
   }
 

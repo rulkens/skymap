@@ -37,20 +37,18 @@
  *
  * ### What the encoder records, in order
  *
- *   pass 1: HDR render pass
- *     - clear hdrTargetView to (0, 0, 0, 1) and hdrDepthView to 1.0
- *     - pointRenderer.draw  (instanced billboards — depth test only,
- *       no write: pure additive emission, doesn't occlude anything)
- *     - thumbnails.runFrame (quad + disk passes — write depth at
- *       per-galaxy world Z so they occlude the Milky Way impostor
- *       drawn next; gated on galaxyTexturesEnabled inside the
- *       subsystem caller)
- *     - milkyWayRenderer.draw (depth test only, no write: tests
- *       against thumbnail-written depth values so far-side galaxies'
- *       thumbnails occlude the Milky Way at the world origin and
- *       near-side galaxies' thumbnails appear in front of it.  Gated
+ *   pass 1: HDR render pass (colour-only — no depth attachment;
+ *     every overlay is emissive + additive so ordering is moot)
+ *     - clear hdrTargetView to (0, 0, 0, 1)
+ *     - pointRenderer.draw  (instanced billboards, additive)
+ *     - thumbnails.runFrame (quad + disk passes, additive; gated on
+ *       galaxyTexturesEnabled inside the subsystem caller)
+ *     - milkyWayRenderer.draw (procedural impostor, additive; gated
  *       on the user's "Show Milky Way" toggle and the distance-fade
- *       threshold)
+ *       threshold).  Drawn LAST so the deterministic crossfade between
+ *       the impostor and the per-galaxy overlays composes the same
+ *       way every frame even though additive blending makes the
+ *       per-fragment colour value order-independent.
  *     - pass.end()
  *
  *   pass 2: tone-map post-process
@@ -177,23 +175,6 @@ export type RenderFrameInput = {
   device: GPUDevice;
   context: GPUCanvasContext;
   hdrTargetView: GPUTextureView;
-  /**
-   * Depth-stencil attachment for the HDR render pass.  Companion to
-   * `hdrTargetView` (same size, recreated on resize).  Pipelines drawing
-   * into the HDR pass declare `depthStencil` state with the matching
-   * `depth24plus` format and either WRITE depth (thumbnails / procedural
-   * disks — the per-galaxy overlays that should occlude background
-   * objects) or only TEST it (points + Milky Way impostor — pure
-   * additive emission that should be occluded BY closer overlays without
-   * polluting the depth buffer with their own values).
-   *
-   * See `services/gpu/hdrTarget.ts` for the design rationale and
-   * `renderFrame` below for the per-frame draw order that makes the
-   * occlusion logic actually work (thumbnails before Milky Way, so the
-   * Milky Way's depth-test reads thumbnail-written values instead of
-   * the cleared-1.0 buffer).
-   */
-  hdrDepthView: GPUTextureView;
   pointRenderer: PointRenderer;
   milkyWayRenderer: MilkyWayRenderer;
   toneMapPass: ToneMapPass;
@@ -238,7 +219,6 @@ export function renderFrame(input: RenderFrameInput): void {
     device,
     context,
     hdrTargetView,
-    hdrDepthView,
     pointRenderer,
     milkyWayRenderer,
     toneMapPass,
@@ -287,14 +267,13 @@ export function renderFrame(input: RenderFrameInput): void {
   // written exactly once at the end of the frame by the tone-map
   // pass.  Without HDR + tone-map, additive overlap >1.0 just clips
   // and cluster cores blow out to flat white.
-  // The depth attachment clears to 1.0 each frame.  In WebGPU's NDC,
-  // 1.0 is the *far* plane — i.e. "infinitely far away, occluded by
-  // anything".  After the clear, every fragment from any pipeline
-  // configured with `depthCompare: 'less'` passes the test (its
-  // computed clipPos.z/clipPos.w is < 1.0 for anything in front of
-  // the far plane), so the first pipeline that *writes* depth
-  // populates the buffer; later pipelines that only *test* depth read
-  // those written values and get occluded where appropriate.
+  //
+  // No depth attachment: every pipeline drawing into this pass uses
+  // pure additive blending (`srcFactor: 'one', dstFactor: 'one'`) with
+  // `depthWriteEnabled: false`, so per-fragment colour is order-
+  // independent (A+B = B+A).  See `services/gpu/hdrTarget.ts` for the
+  // history (a depth attachment was tried in commit 716eb6b and
+  // superseded by 28aced5).
   const pass = encoder.beginRenderPass({
     colorAttachments: [
       {
@@ -304,12 +283,6 @@ export function renderFrame(input: RenderFrameInput): void {
         storeOp: 'store',
       },
     ],
-    depthStencilAttachment: {
-      view: hdrDepthView,
-      depthClearValue: 1.0,
-      depthLoadOp: 'clear',
-      depthStoreOp: 'store',
-    },
   });
 
   // ── Point sprites (instanced billboards) ───────────────────────────
@@ -376,28 +349,14 @@ export function renderFrame(input: RenderFrameInput): void {
 
   // ── Milky Way impostor (procedural backdrop at world origin) ──────
   //
-  // Drawn LAST inside the HDR pass — *after* the thumbnail subsystem
-  // has had a chance to write per-galaxy depth values into the depth
-  // buffer.  The Milky Way pipeline is configured with
-  // `depthCompare: 'less', depthWriteEnabled: false`: it tests against
-  // whatever the thumbnail pass wrote (so a thumbnail in front of the
-  // world origin correctly OCCLUDES the impostor) but doesn't pollute
-  // the depth buffer with its own world-origin Z (the impostor is a
-  // raymarched volumetric glow whose perceived 3D extent is implied by
-  // the fragment shader, not the actual quad geometry — writing depth
-  // would create a hard "Milky Way disk" boundary that would be wrong
-  // for galaxies inside the disk extent).
-  //
-  // This ordering fixes the user-visible bug "galaxy thumbnails are
-  // sometimes shown in front of the Milky Way": before this change the
-  // impostor was drawn first, then thumbnails on top with OVER blend,
-  // so any thumbnail (regardless of world Z) blotted out the impostor.
-  // Now thumbnails for galaxies BEHIND the world origin (depth > 0)
-  // get correctly occluded by the impostor (which sits at depth 0 on
-  // the depth-test side of the comparison), while thumbnails for
-  // galaxies IN FRONT of the origin (depth < 0) survive — the
-  // impostor's per-fragment depth value > the thumbnail's already-
-  // written depth, so the Milky Way fragment fails the `less` test.
+  // Drawn LAST inside the HDR pass.  All HDR pipelines now use pure
+  // additive blending, so per-fragment colour is mathematically
+  // order-independent — but the deterministic draw order (points →
+  // thumbnails → milky way) is still meaningful: it keeps the
+  // crossfade composition between the procedural impostor and the
+  // per-galaxy overlays bit-stable across frames, makes the encoder
+  // record reproducible across HMR reloads, and matches the
+  // conceptual layering "background atlas → cluster overlays".
   //
   // The pass is skipped entirely when:
   //   - the user has toggled "Show Milky Way" off, or

@@ -135,15 +135,6 @@ export class DiskRenderer {
         ],
       },
       primitive: { topology: 'triangle-list' },
-      // Depth state: TEST only, NO WRITE.  See quadRenderer.ts for
-      // the full rationale — emissive additive content doesn't need
-      // depth ordering and writing depth here would re-create the
-      // disk-edge fade-to-black bug against the Milky Way impostor.
-      depthStencil: {
-        format: 'depth24plus',
-        depthCompare: 'less',
-        depthWriteEnabled: false,
-      },
     });
 
     this.uniformBuffer = this.device.createBuffer({

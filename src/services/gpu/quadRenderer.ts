@@ -133,28 +133,6 @@ export class QuadRenderer {
         ],
       },
       primitive: { topology: 'triangle-list' },
-      // Depth state: TEST only, NO WRITE.
-      //
-      // The HDR pass owns a depth attachment so every pipeline that
-      // draws into it must declare matching depthStencil state.  But
-      // emissive content (additive blend) doesn't need depth ordering
-      // — A+B = B+A regardless of which fragment lands first — so
-      // writing depth would only create occlusion artefacts (e.g. a
-      // semi-transparent thumbnail edge writes depth and the Milky
-      // Way pass behind fails its `less` test, leaving the fade
-      // region BLACK instead of additively-blended with the impostor).
-      //
-      // `depthCompare: 'less'` is kept rather than `'always'` for
-      // future-proofing: if we ever introduce truly opaque overlays
-      // that DO want to occlude these thumbnails, this pipeline will
-      // already respect their depth values.  At the moment, with
-      // every HDR pipeline depth-write-disabled, the buffer stays at
-      // its 1.0 clear value and `less` is effectively `always`.
-      depthStencil: {
-        format: 'depth24plus',
-        depthCompare: 'less',
-        depthWriteEnabled: false,
-      },
     });
 
     this.uniformBuffer = this.device.createBuffer({

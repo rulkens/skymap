@@ -973,45 +973,6 @@ export class PointRenderer {
       },
 
       primitive: { topology: 'triangle-list' },
-      // Depth state: TEST against the (per-galaxy thumbnail / disk)
-      // depth values that the overlay passes will write later in the
-      // same render pass — but DO NOT WRITE.
-      //
-      // Why test?  The HDR render pass now has a depth attachment
-      // (added so the Milky Way impostor can be correctly occluded
-      // by per-galaxy overlays — see `services/gpu/hdrTarget.ts` and
-      // `services/engine/renderFrame.ts`).  Once a render pass has a
-      // depth attachment, EVERY pipeline drawing into it must declare
-      // a `depthStencil` state — WebGPU validation rejects pipelines
-      // that don't.  We use `depthCompare: 'less'` (the standard
-      // forward-rendering convention) so the points pass behaves
-      // identically to before for the common case where the depth
-      // buffer is still at its 1.0 clear value: every fragment passes
-      // (its clipPos.z/w < 1.0 for anything in front of the far
-      // plane).  Note that points are drawn FIRST in the HDR pass,
-      // so at the moment this pipeline runs the depth buffer always
-      // contains 1.0 everywhere — the depth test is effectively a
-      // no-op.  We keep it as `less` rather than `always` to honour
-      // the conventional reading: "this object is at world depth Z;
-      // it should be visible only if nothing is closer than Z is
-      // already drawn."
-      //
-      // Why no write?  Points are pure additive emission — millions
-      // of overlapping billboards accumulating colour into the HDR
-      // buffer.  Writing depth from a point would (a) create
-      // self-occlusion artefacts as later points-pass fragments
-      // failed the depth test against earlier same-pass writes (the
-      // exact thing additive blending doesn't want), and (b) populate
-      // the depth buffer with per-point Z values that the Milky Way
-      // pass would then test against, occluding the impostor for
-      // every screen pixel covered by a single SDSS dot — which is
-      // most of the sky.  Reading-without-writing leaves depth
-      // ownership cleanly with the per-galaxy overlay passes.
-      depthStencil: {
-        format: 'depth24plus',
-        depthCompare: 'less',
-        depthWriteEnabled: false,
-      },
     });
 
     this.uniformBuffer_internal = device.createBuffer({
