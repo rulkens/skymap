@@ -1,5 +1,7 @@
 # skymap
 
+[![DOI](https://zenodo.org/badge/1228374974.svg)](https://doi.org/10.5281/zenodo.20037028)
+
 **Live demo:** [skymap.rulkens.com](https://skymap.rulkens.com) — open in Chrome or Edge 113+ for WebGPU.
 
 ![skymap — orbit, command palette, focus tween, info card](docs/screenshots/hero.gif)

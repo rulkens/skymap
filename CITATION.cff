@@ -10,6 +10,6 @@ authors:
 license: MIT
 url: 'https://github.com/rulkens/skymap'
 repository-code: 'https://github.com/rulkens/skymap'
-# Once a Zenodo DOI is minted for a release, fill it in here and uncomment.
-# Example: doi: 10.5281/zenodo.0000000
-# doi: TODO-ZENODO-DOI
+doi: 10.5281/zenodo.20037028
+version: 0.1.0
+date-released: '2026-05-05'
