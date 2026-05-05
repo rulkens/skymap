@@ -1,22 +1,35 @@
 /**
- * StatusBar — top-left HUD text showing the engine's current state.
+ * StatusBar — top-left HUD text, surfaces only the *unhealthy* engine states.
  *
- * This is a pure presentational component: it receives an `EngineStatus` value
- * and renders a string. No local state, no effects — just a function from
- * props to JSX.
+ * Pure presentational component — receives an `EngineStatus`, returns a
+ * string-bearing div or `null`.  No state, no effects.
  *
- * ### Why a separate component?
+ * ### What's surfaced (and why)
  *
- * The status bar text changes four times during startup (initializing → loading
- * → ready / error). Keeping it in its own component isolates those re-renders:
- * when `status` changes, only this component re-renders, not the entire `App`
- * tree. In practice the tree is small and this doesn't matter much, but it's a
- * good habit that scales when the tree grows.
+ * Earlier revisions of this component echoed every engine state including
+ * "WebGPU OK" once startup completed.  That readout always told the user
+ * what they could already see (the canvas was painting galaxies) and
+ * silently aged into noise — the StatusBar competed for attention with
+ * the InfoCard, Settings panel, and the cosmic-web wedge itself.
  *
- * ### CSS
+ * The current rule is simpler: **only render when something is wrong.**
  *
- * Layout rules live in StatusBar.module.css alongside this file. The outer div
- * uses `styles.status` instead of `id="status"`.
+ *   initializing  → null  (sub-second WebGPU bootstrap; not worth telling)
+ *   loading       → null  (the LoadingBar component shows live progress;
+ *                          duplicating the text here would clutter)
+ *   ready (real)  → null  (the canvas is painting; success is self-evident)
+ *   ready (synth) → yellow warning  (all three real fetches failed; the
+ *                          user sees procedural galaxies and might think
+ *                          they're real — flag it)
+ *   error         → red error  (GPU failed, fatal load error; the user
+ *                          sees a black canvas and needs to know why)
+ *
+ * ### Why an explicit warning state for synthetic fallback
+ *
+ * Without telling the user, "synthetic fallback" looks like a real
+ * catalogue rendered with abnormally clean geometry — they could spend
+ * minutes wondering why everything's a perfect sphere.  Yellow text in
+ * the corner is unobtrusive but unmistakable.
  */
 
 import type { ReactNode } from 'react';
@@ -30,56 +43,34 @@ type StatusBarProps = {
 };
 
 /**
- * Renders the top-left status bar text.
- *
- * The bar is intentionally minimal as of the left-stack UI restructure:
- * point counts moved into `StatsPanel`, the FPS readout moved into
- * `StatsPanel`, and the "drag to orbit, wheel to zoom" hint moved into
- * `NavigationPanel`.  What's left is a pure engine-state readout —
- * initializing / loading / ready / error.
- *
- * @example
- * // In App.tsx:
- * <StatusBar status={status} />
+ * Renders status text only when the engine reports a state worth
+ * surfacing.  Returns `null` for healthy/transient states so the corner
+ * stays clean.
  */
 export function StatusBar({ status }: StatusBarProps): ReactNode {
-  return <div className={styles.status}>{statusText(status)}</div>;
-}
-
-/**
- * Convert an `EngineStatus` discriminated union to a human-readable string.
- *
- * Using a plain function (not a lookup map) makes each branch explicit and
- * easy to extend. TypeScript exhaustiveness checking will warn if a new
- * `kind` variant is added to `EngineStatus` but not handled here.
- */
-function statusText(status: EngineStatus): string {
-  switch (status.kind) {
-    case 'initializing':
-      return 'initializing…';
-
-    case 'loading':
-      return 'loading SDSS data…';
-
-    case 'ready': {
-      // The 'ready' branch used to splice in a point count, an FPS reading,
-      // and a "drag to orbit" hint — that telemetry now lives in StatsPanel
-      // (counts, FPS) and NavigationPanel (gestures), so we keep just the
-      // engine-state readout here.  The synthetic-fallback tag survives
-      // because it's a meaningful state distinction (all three real fetches
-      // failed) that doesn't fit naturally into either of the new panels.
-      const suffix = status.source === 'synthetic' ? ' (synthetic fallback)' : '';
-      return `WebGPU OK${suffix}`;
-    }
-
-    case 'error':
-      return `ERROR: ${status.message}`;
-
-    default: {
-      // Exhaustiveness check: TypeScript will error here if a new `kind` is
-      // added to EngineStatus without a matching case above.
-      const _exhaustive: never = status;
-      return String(_exhaustive);
-    }
+  // Healthy states — nothing to show.  The LoadingBar handles "loading",
+  // the canvas handles "ready", and "initializing" is sub-second.
+  if (status.kind === 'initializing' || status.kind === 'loading') {
+    return null;
   }
+  if (status.kind === 'ready' && status.source !== 'synthetic') {
+    return null;
+  }
+
+  // From here on we always render.  The two remaining branches both
+  // surface something the user needs to know about.
+  if (status.kind === 'error') {
+    return (
+      <div className={`${styles.status} ${styles.error}`} role="alert">
+        ERROR: {status.message}
+      </div>
+    );
+  }
+
+  // status.kind === 'ready' && status.source === 'synthetic'
+  return (
+    <div className={`${styles.status} ${styles.warning}`} role="status">
+      synthetic fallback — no real data files loaded
+    </div>
+  );
 }

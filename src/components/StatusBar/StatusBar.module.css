@@ -1,22 +1,49 @@
 /*
  * StatusBar.module.css — fixed top-left HUD text for engine status.
  *
- * No glass surface here — just unobtrusive status text floating over the
- * canvas in the corner.  All atoms reference tokens from
- * `src/styles/global.css`.
+ * Only renders when the engine reports an unhealthy or noteworthy state
+ * (synthetic fallback, GPU error) — see StatusBar.tsx for the rule.
+ * Two colour variants so the urgency is legible at a glance: yellow
+ * warning for synthetic fallback, red error for fatal errors.
+ *
+ * All atoms reference tokens from `src/styles/global.css`.
  */
 
 .status {
   position: fixed;
   top: var(--space-4);
   left: var(--space-4);
-  /*
-   * Greyed-out neutral rather than the blue palette — status text is
-   * deliberately separate from the panel hierarchy so it reads as engine
-   * lifecycle ("initializing", "loading X of Y", "ready", "error: ...")
-   * rather than user controls.  Kept inline (not tokenised) so the
-   * deviation is visible at the point of use.
-   */
-  color: #ccc;
   font: var(--font-size-lg) / var(--line-height-base) var(--font-family-mono);
+  letter-spacing: var(--letter-spacing-tight);
+  /*
+   * Subtle dark-tinted shadow so the text stays readable against bright
+   * areas of the canvas (galaxy clusters near the centre of the volume
+   * stack into near-white).  Not a glassmorphic surface — the StatusBar
+   * is meant to read as engine-state text floating in the corner, not
+   * as a UI panel.
+   */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+ * Yellow warning — synthetic fallback.  The same warm gold (#ffd97a)
+ * the InfoCard's PINNED badge uses, kept inline because both share the
+ * "this is the only non-blue accent in the UI; don't promote to a
+ * reusable token" rationale.
+ */
+.warning {
+  color: #ffd97a;
+}
+
+/*
+ * Red error — GPU init failed, fatal load error.  Slightly desaturated
+ * to fit the dark cosmic palette; pure #f00 reads as garish against the
+ * black starfield.  Inline rather than tokenised because no other
+ * component currently has an error-text variant; promote to a token
+ * if a second consumer ever appears.
+ */
+.error {
+  color: #ff8c8c;
 }
