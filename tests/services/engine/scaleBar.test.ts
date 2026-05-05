@@ -56,7 +56,7 @@ describe('computeScaleInfo', () => {
       targetPx: TARGET_PX,
     });
     expect(result).not.toBeNull();
-    expect(result!.label).toBe('20 Mpc');
+    expect(result!.label).toBe('20.0 Mpc / 65.2 Mly');
     // widthPx = 20 * 6.235 ≈ 124.7 → rounds to 125
     expect(result!.widthPx).toBeCloseTo(125, 0);
   });
@@ -69,7 +69,7 @@ describe('computeScaleInfo', () => {
       targetPx: TARGET_PX,
     });
     expect(result).not.toBeNull();
-    expect(result!.label).toBe('1 Gpc');
+    expect(result!.label).toBe('1.00 Gpc / 3.26 Gly');
   });
 
   it('emits a kpc label at close-up galaxy distance', () => {
@@ -80,7 +80,7 @@ describe('computeScaleInfo', () => {
       targetPx: TARGET_PX,
     });
     expect(result).not.toBeNull();
-    expect(result!.label).toBe('100 kpc');
+    expect(result!.label).toBe('100 kpc / 326 kly');
   });
 
   it('always returns widthPx ≤ targetPx (floor rounding fits inside envelope)', () => {
@@ -132,6 +132,6 @@ describe('computeScaleInfo', () => {
     expect(b).not.toBeNull();
     // Doubled viewport: pxPerMpc doubles, desiredMpc halves.
     // 24 → 12, both round down to 10 in the {1,2,5}×10^k family.
-    expect(b!.label).toBe('10 Mpc');
+    expect(b!.label).toBe('10.0 Mpc / 32.6 Mly');
   });
 });
