@@ -635,6 +635,7 @@ export function App(): React.ReactElement {
         <StatsPanel
           fps={fps}
           sourceCounts={sourceCounts}
+          visibleSourceMask={visibleSourceMask}
           filamentsEnabled={filamentsEnabled}
           filamentCounts={filamentCounts}
         />

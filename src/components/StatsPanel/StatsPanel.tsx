@@ -9,11 +9,14 @@
  * forced the user to parse a long single line.  Splitting the perf
  * telemetry into its own panel lets us:
  *
- *   - Show one row per loaded survey (SDSS · 220,453, GLADE · 2,400,000)
- *     instead of summing them into a single number — useful when the user
- *     toggles surveys and wants to see what each contributes.
- *   - Show filament counts the same way once the optional cosmic-web file
- *     loads (`Filaments · 3,845 strips, 27,410 verts`).
+ *   - Show a single rolled-up "Galaxies · N" total across the surveys
+ *     currently TOGGLED ON (`visibleSourceMask`).  The earlier draft
+ *     listed one row per loaded survey, but the user's mental model is
+ *     "how many points am I looking at right now?" — a single number that
+ *     responds to the survey toggles maps that question more directly than
+ *     four rows that the eye has to sum manually.
+ *   - Show filament counts when the optional cosmic-web file loads
+ *     (`Filaments · 3,845 strips, 27,410 verts`).
  *   - Keep the StatusBar focused on engine lifecycle (initializing /
  *     loading / error / ready).
  *
@@ -61,7 +64,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { ALL_SOURCES, Source, sourceLabel } from '../../data/sources';
+import { ALL_SOURCES, Source, maskHas } from '../../data/sources';
 import styles from './StatsPanel.module.css';
 
 /** Props for StatsPanel.  See module header for design rationale. */
@@ -75,11 +78,23 @@ export type StatsPanelProps = {
   fps: number;
   /**
    * Per-survey loaded point counts, indexed by `Source` enum value.
-   * Populated as each `.bin` finishes uploading via `onCloudReady`.  Only
-   * sources whose entries are defined here render a row — surveys still
-   * loading are silently absent rather than showing a "0" placeholder.
+   * Populated as each `.bin` finishes uploading via `onCloudReady`.  Used
+   * here only as the input to the rolled-up "Galaxies" total — entries
+   * for sources whose visibility bit is OFF in `visibleSourceMask` are
+   * excluded from the sum, so the displayed number reflects what's
+   * currently rendered rather than what's loaded.
    */
   sourceCounts: Partial<Record<Source, number>>;
+  /**
+   * Bitmask of currently-visible sources.  Bits are tested with
+   * `maskHas(mask, source)` from `data/sources.ts`.  Drives the survey
+   * filter on the rolled-up galaxy total — a survey that's loaded but
+   * toggled off contributes 0 to the displayed count.  We deliberately
+   * do NOT show "X loaded, Y visible" because the panel is meant to read
+   * as a glanceable telemetry strip; the SettingsPanel checkboxes already
+   * surface the loaded/visible distinction.
+   */
+  visibleSourceMask: number;
   /**
    * Mirrors the SettingsPanel filaments toggle.  When `false`, the
    * filament row is hidden even if `filamentCounts` is non-null — the
@@ -159,6 +174,7 @@ function writePanelOpen(open: boolean): void {
  * <StatsPanel
  *   fps={fps}
  *   sourceCounts={sourceCounts}
+ *   visibleSourceMask={visibleSourceMask}
  *   filamentsEnabled={filamentsEnabled}
  *   filamentCounts={filamentCounts}
  * />
@@ -166,12 +182,24 @@ function writePanelOpen(open: boolean): void {
 export function StatsPanel({
   fps,
   sourceCounts,
+  visibleSourceMask,
   filamentsEnabled,
   filamentCounts,
 }: StatsPanelProps): ReactNode {
   // Render-time helper: the em-dash placeholder is centralised here so the
   // logic is obvious in one place rather than scattered through the JSX.
   const fpsText = fps > 0 ? String(fps) : '—';
+
+  // Sum only the visible, real surveys — Synthetic is excluded because its
+  // count would only appear in the rare all-fetch-failed fallback, where
+  // labelling its synthetic-cloud points as "Galaxies" would be misleading
+  // (the StatusBar already tags that condition).  ALL_SOURCES gives us a
+  // stable enumeration order; the order doesn't matter for a sum but it
+  // keeps this loop trivially predictable.
+  const galaxyTotal = ALL_SOURCES.filter((s) => s !== Source.Synthetic).reduce((sum, source) => {
+    if (!maskHas(visibleSourceMask, source)) return sum;
+    return sum + (sourceCounts[source] ?? 0);
+  }, 0);
 
   // Lazy initializer — read localStorage exactly once at mount, not on
   // every re-render (this panel re-renders on every FPS sample, so the
@@ -233,27 +261,17 @@ export function StatsPanel({
           </div>
 
           {/*
-            Per-survey rows.  We iterate ALL_SOURCES (rather than
-            Object.keys(sourceCounts)) so the rendering order is stable —
-            relying on object-key order would mean rows shuffle as different
-            .bin files land at different times.  ALL_SOURCES is hard-ordered
-            in src/data/sources.ts.
-
-            We skip Source.Synthetic explicitly because its row would only
-            appear in the (rare) all-fetch-failed fallback, where surfacing
-            a "Synthetic · N" row would be more confusing than helpful — the
-            StatusBar already flags the synthetic-fallback condition.
+            Rolled-up galaxy total.  Sums the loaded counts for sources
+            whose visibility bit is ON, so the number tracks the user's
+            survey toggles in real time.  See `galaxyTotal` above for the
+            filter rationale; the row renders unconditionally even when
+            the total is zero (e.g. all surveys toggled off) so the panel
+            doesn't visually shrink mid-session.
           */}
-          {ALL_SOURCES.filter((s) => s !== Source.Synthetic).map((source) => {
-            const count = sourceCounts[source];
-            if (count === undefined) return null;
-            return (
-              <div className={styles.row} key={source}>
-                <span className={styles.label}>{sourceLabel(source)}</span>
-                <span className={styles.value}>{count.toLocaleString()}</span>
-              </div>
-            );
-          })}
+          <div className={styles.row}>
+            <span className={styles.label}>Galaxies</span>
+            <span className={styles.value}>{galaxyTotal.toLocaleString()}</span>
+          </div>
 
           {/*
             Filament row — gated on BOTH the user-facing toggle AND the

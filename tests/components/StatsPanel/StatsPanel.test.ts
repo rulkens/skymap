@@ -6,29 +6,29 @@
  * Same reason as the other component tests in this tree: vitest runs in
  * `node` env, no DOM library installed.  `react-dom/server.renderToStaticMarkup`
  * gives us the initial markup as a string, which is enough to verify all the
- * behavioural cases (FPS placeholder, comma formatting, conditional rows).
+ * behavioural cases.
  *
  * ### What we cover
  *
- * StatsPanel is a pure function of its props — no callbacks, only local UI
- * state for the recently-added top-level collapse.  We exercise each branch:
+ * StatsPanel is a pure function of its props.  We exercise each branch:
  *
  *   1. fps=0 → renders the em-dash placeholder (engine hasn't reported yet)
  *   2. fps>0 → renders the integer
- *   3. sourceCounts entry present → renders label + comma-formatted count
- *   4. filamentsEnabled=false + counts non-null → row HIDDEN
- *   5. filamentsEnabled=true + counts present → row visible, comma-formatted
- *   6. sourceCounts is empty → no per-source rows render
- *   7. Default mount is OPEN (aria-expanded="true" + body content visible).
- *   8. localStorage["skymap.stats.open"]="0" mounts closed.
- *   9. localStorage["skymap.stats.open"]="1" mounts open.
+ *   3. Rolled-up "Galaxies" total sums sourceCounts across visible-mask bits
+ *   4. Galaxies total excludes sources whose visibility bit is OFF
+ *   5. Galaxies total excludes Source.Synthetic even when its bit is on
+ *   6. filamentsEnabled=false + counts non-null → row HIDDEN
+ *   7. filamentsEnabled=true + counts present → row visible, comma-formatted
+ *   8. Default mount is OPEN (aria-expanded="true" + body content visible)
+ *   9. localStorage["skymap.stats.open"]="0" mounts closed
+ *  10. localStorage["skymap.stats.open"]="1" mounts open
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StatsPanel } from '../../../src/components/StatsPanel/StatsPanel';
-import { Source } from '../../../src/data/sources';
+import { ALL_VISIBLE_MASK, Source } from '../../../src/data/sources';
 
 // ── Minimal localStorage shim ────────────────────────────────────────────────
 //
@@ -74,6 +74,7 @@ describe('StatsPanel', () => {
       createElement(StatsPanel, {
         fps: 0,
         sourceCounts: {},
+        visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
         filamentCounts: null,
       }),
@@ -86,6 +87,7 @@ describe('StatsPanel', () => {
       createElement(StatsPanel, {
         fps: 0,
         sourceCounts: {},
+        visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
         filamentCounts: null,
       }),
@@ -102,6 +104,7 @@ describe('StatsPanel', () => {
       createElement(StatsPanel, {
         fps: 60,
         sourceCounts: {},
+        visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
         filamentCounts: null,
       }),
@@ -109,33 +112,84 @@ describe('StatsPanel', () => {
     expect(html).toContain('60');
   });
 
-  it('renders a per-source row with comma-formatted count', () => {
+  it('rolls source counts into a single Galaxies total when all bits are visible', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
         fps: 0,
-        sourceCounts: { [Source.SDSS]: 220453 },
+        sourceCounts: {
+          [Source.SDSS]: 220_453,
+          [Source.TwoMRS]: 44_000,
+          [Source.Glade]: 2_400_000,
+        },
+        visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
         filamentCounts: null,
       }),
     );
-    expect(html).toContain('SDSS');
-    expect(html).toContain('220,453');
-  });
-
-  it('omits per-source rows for sources not in sourceCounts', () => {
-    const html = renderToStaticMarkup(
-      createElement(StatsPanel, {
-        fps: 0,
-        sourceCounts: { [Source.SDSS]: 100 },
-        filamentsEnabled: false,
-        filamentCounts: null,
-      }),
-    );
-    // SDSS row should be present, but no other survey labels.
-    expect(html).toContain('SDSS');
+    expect(html).toContain('Galaxies');
+    // 220,453 + 44,000 + 2,400,000 = 2,664,453
+    expect(html).toContain('2,664,453');
+    // No per-survey rows render any more — the rollup replaces them.
+    expect(html).not.toContain('SDSS');
     expect(html).not.toContain('GLADE');
     expect(html).not.toContain('2MRS');
-    expect(html).not.toContain('Famous');
+  });
+
+  it('excludes sources whose visibility bit is off from the Galaxies total', () => {
+    // SDSS toggled off (bit cleared) — only GLADE and 2MRS contribute.
+    const sdssBit = 1 << Source.SDSS;
+    const html = renderToStaticMarkup(
+      createElement(StatsPanel, {
+        fps: 0,
+        sourceCounts: {
+          [Source.SDSS]: 220_453,
+          [Source.TwoMRS]: 44_000,
+          [Source.Glade]: 2_400_000,
+        },
+        visibleSourceMask: ALL_VISIBLE_MASK & ~sdssBit,
+        filamentsEnabled: false,
+        filamentCounts: null,
+      }),
+    );
+    // 44,000 + 2,400,000 = 2,444,000 — SDSS dropped.
+    expect(html).toContain('2,444,000');
+    expect(html).not.toContain('2,664,453');
+  });
+
+  it('excludes Source.Synthetic from the Galaxies total even when its bit is set', () => {
+    // Synthetic-fallback row would otherwise mislead users into thinking
+    // procedural placeholder points are real galaxies.
+    const html = renderToStaticMarkup(
+      createElement(StatsPanel, {
+        fps: 0,
+        sourceCounts: {
+          [Source.Synthetic]: 100_000,
+          [Source.SDSS]: 50,
+        },
+        visibleSourceMask: ALL_VISIBLE_MASK,
+        filamentsEnabled: false,
+        filamentCounts: null,
+      }),
+    );
+    // Only the SDSS 50 contributes; Synthetic's 100,000 is excluded.
+    expect(html).toContain('Galaxies');
+    expect(html).toContain('>50<');
+    expect(html).not.toContain('100,000');
+    expect(html).not.toContain('100,050');
+  });
+
+  it('renders a Galaxies total of 0 when all surveys are toggled off', () => {
+    const html = renderToStaticMarkup(
+      createElement(StatsPanel, {
+        fps: 0,
+        sourceCounts: { [Source.SDSS]: 220_453 },
+        visibleSourceMask: 0,
+        filamentsEnabled: false,
+        filamentCounts: null,
+      }),
+    );
+    expect(html).toContain('Galaxies');
+    expect(html).toContain('>0<');
   });
 
   it('hides the filament row when filamentsEnabled is false even if counts are non-null', () => {
@@ -143,6 +197,7 @@ describe('StatsPanel', () => {
       createElement(StatsPanel, {
         fps: 0,
         sourceCounts: {},
+        visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
         filamentCounts: { stripCount: 3845, vertexCount: 27410 },
       }),
@@ -156,6 +211,7 @@ describe('StatsPanel', () => {
       createElement(StatsPanel, {
         fps: 0,
         sourceCounts: {},
+        visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: true,
         filamentCounts: null,
       }),
@@ -169,6 +225,7 @@ describe('StatsPanel', () => {
       createElement(StatsPanel, {
         fps: 0,
         sourceCounts: {},
+        visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: true,
         filamentCounts: { stripCount: 3845, vertexCount: 27410 },
       }),
@@ -186,7 +243,8 @@ describe('StatsPanel', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
         fps: 60,
-        sourceCounts: { [Source.SDSS]: 220453 },
+        sourceCounts: { [Source.SDSS]: 220_453 },
+        visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
         filamentCounts: null,
       }),
@@ -202,14 +260,15 @@ describe('StatsPanel', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
         fps: 60,
-        sourceCounts: { [Source.SDSS]: 220453 },
+        sourceCounts: { [Source.SDSS]: 220_453 },
+        visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
         filamentCounts: null,
       }),
     );
     expect(html).toContain('aria-expanded="false"');
     // We use conditional rendering for the body, so when collapsed the
-    // FPS readout and per-source rows are absent from the markup.
+    // FPS readout and Galaxies row are absent from the markup.
     expect(html).not.toContain('220,453');
   });
 
@@ -218,7 +277,8 @@ describe('StatsPanel', () => {
     const html = renderToStaticMarkup(
       createElement(StatsPanel, {
         fps: 60,
-        sourceCounts: { [Source.SDSS]: 220453 },
+        sourceCounts: { [Source.SDSS]: 220_453 },
+        visibleSourceMask: ALL_VISIBLE_MASK,
         filamentsEnabled: false,
         filamentCounts: null,
       }),
