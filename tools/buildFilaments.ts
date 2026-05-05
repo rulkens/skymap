@@ -155,6 +155,28 @@ function checkDisperse(): void {
 const MAX_DISTANCE_MPC = 200;
 
 /**
+ * Minimum distance (Mpc) — excludes the Local-Group / Local-Sheet
+ * inner zone where cz → distance via cz/H0 breaks down.
+ *
+ * For nearby galaxies (D < ~5 Mpc) the observed line-of-sight velocity
+ * is dominated by peculiar motion (gravitational infall toward Virgo,
+ * Local Group dynamics, etc.) rather than the Hubble flow; cz/H0 then
+ * produces near-zero or even negative pseudo-distances, smearing real
+ * positions onto a tiny knot around the world origin.  M31's cz is
+ * ≈−300 km/s; the LMC/SMC are ≈+280 km/s — both map to fractions of a
+ * Mpc instead of their actual distances (770 kpc, 50 kpc).
+ *
+ * DisPerSE then identifies that ~83-galaxy near-origin knot as a
+ * persistent hub and threads filaments outward from the Milky Way's
+ * position — visually wrong, since we sit in the Local Void with no
+ * real filament hub here.  Cutting at 5 Mpc removes the Local Group
+ * and Local Sheet from the input without losing any cosmic-web
+ * structure (the cosmic-web concept doesn't apply at < ~5 Mpc; that
+ * scale is dominated by gravitational dynamics, not topology).
+ */
+const MIN_DISTANCE_MPC = 5;
+
+/**
  * Read each catalogue's `.bin`, merge into a single Float32Array of xyz
  * triples, filter to `MAX_DISTANCE_MPC`.
  *
@@ -190,11 +212,12 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
     clouds.push(decodePointCloud(ab));
   }
 
-  // First pass: count survivors of the distance filter.  We build the
-  // filtered output buffer to its final size in one allocation (cheaper
-  // than push + concat) since the worst-case bound is the unfiltered
-  // total count.
-  const distSqLimit = MAX_DISTANCE_MPC * MAX_DISTANCE_MPC;
+  // First pass: count survivors of the inner+outer distance filter.
+  // We build the filtered output buffer to its final size in one
+  // allocation (cheaper than push + concat) since the worst-case bound
+  // is the unfiltered total count.
+  const distSqMin = MIN_DISTANCE_MPC * MIN_DISTANCE_MPC;
+  const distSqMax = MAX_DISTANCE_MPC * MAX_DISTANCE_MPC;
   const totalRaw = clouds.reduce((acc, c) => acc + c.count, 0);
   const positions = new Float32Array(totalRaw * 3);
   let kept = 0;
@@ -203,7 +226,8 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
       const x = c.positions[i * 3 + 0]!;
       const y = c.positions[i * 3 + 1]!;
       const z = c.positions[i * 3 + 2]!;
-      if (x * x + y * y + z * z > distSqLimit) continue;
+      const r2 = x * x + y * y + z * z;
+      if (r2 < distSqMin || r2 > distSqMax) continue;
       positions[kept * 3 + 0] = x;
       positions[kept * 3 + 1] = y;
       positions[kept * 3 + 2] = z;
@@ -212,7 +236,7 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
   }
   process.stderr.write(
     `  filtered ${totalRaw.toLocaleString()} → ${kept.toLocaleString()} ` +
-      `(D < ${MAX_DISTANCE_MPC} Mpc)\n`,
+      `(${MIN_DISTANCE_MPC} Mpc < D < ${MAX_DISTANCE_MPC} Mpc)\n`,
   );
   // Trim trailing unused slots so downstream consumers see the exact
   // count rather than zero-padded entries that DisPerSE would treat as
