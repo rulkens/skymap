@@ -81,11 +81,7 @@ function spreadBits(v: number): number {
  *               pixels of ~1.83° on a side.
  * @returns      Integer pixel index in [0, 12·nside²).
  */
-export function healpixNest(
-  raDeg: number,
-  decDeg: number,
-  nside: number,
-): number {
+export function healpixNest(raDeg: number, decDeg: number, nside: number): number {
   // Convert to colatitude/longitude in radians.  HEALPix's reference frame
   // uses theta = 0 at the north pole, π at the south, and phi growing
   // counterclockwise from +x in the equatorial plane — same handedness as

@@ -80,10 +80,7 @@ export function parseFamousXrefs(rawJson: string): FamousXrefMap {
  * Returns a NEW map — the input is treated as immutable so other
  * possible future consumers (tests, dev-tools) keep their pristine copy.
  */
-export function remapGladeXrefs(
-  xrefs: FamousXrefMap,
-  gladeIdxRemap: Int32Array,
-): FamousXrefMap {
+export function remapGladeXrefs(xrefs: FamousXrefMap, gladeIdxRemap: Int32Array): FamousXrefMap {
   const out: FamousXrefMap = {};
   for (const [id, xref] of Object.entries(xrefs)) {
     if (xref === null || xref.source !== 'Glade') {

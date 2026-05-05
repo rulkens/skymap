@@ -10,19 +10,20 @@
 
 **Locked design decisions** (settled with user before plan-write):
 
-| # | Question | Decision |
-|---|---|---|
-| 1 | Sibling renderer or replacement? | REPLACEMENT. Old `proceduralDiskRenderer` + `proceduralDisks.wgsl` get `git rm`-deleted. The new renderer is a strict superset. |
-| 2 | Per-instance attribute layout | Same 3× `vec4<f32>` (48 bytes) ABI as `ProceduralDiskInstance`. New `hasDisc` boolean packed into `extras.z` (was zero-padding). |
-| 3 | Pipeline state | Pure additive blend (`srcFactor: 'one'`, `dstFactor: 'one'`). NO `depthStencil` block — the HDR pass has no depth attachment as of `d69ab75`. |
-| 4 | Where category is computed | JS-side at frame time via `galaxyType(source, mags).category`. No `pointCloud.bin` format bump. |
-| 5 | Bulge fragment math source | Copy-and-adapt from `milkyWayImpostor.wgsl`'s `renderGalaxy` (bulge raymarch + soft outer halo). `milkyWayImpostor.wgsl` itself stays unchanged. |
-| 6 | Disc-halo fragment math source | Copy-and-adapt from `milkyWayImpostor.wgsl`'s thin-disc-halo raymarch (anisotropic Gaussian). Conditional on per-instance `hasDisc > 0.5`. |
-| 7 | Spiral arms | NOT included. The Milky Way's noise/star-cell math is per-fragment trig and unsuitable for thousands of impostors. |
-| 8 | Color tinting | `bulgeRamp(colourIndex)` biased warm yellow/red for the passive old-stellar-population bulge; the existing `ramp(colourIndex)` (cool / blue) reused for the disc-halo's tint. |
-| 9 | Fade-band constants | Renamed `PROCEDURAL_DISK_FADE_START_PX` / `_END_PX` → `PROCEDURAL_GALAXY_FADE_START_PX` / `_END_PX`. Same numeric values (8, 14). All consumers (engine.ts, pointRenderer.ts callers) follow. |
+| #   | Question                         | Decision                                                                                                                                                                                      |
+| --- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Sibling renderer or replacement? | REPLACEMENT. Old `proceduralDiskRenderer` + `proceduralDisks.wgsl` get `git rm`-deleted. The new renderer is a strict superset.                                                               |
+| 2   | Per-instance attribute layout    | Same 3× `vec4<f32>` (48 bytes) ABI as `ProceduralDiskInstance`. New `hasDisc` boolean packed into `extras.z` (was zero-padding).                                                              |
+| 3   | Pipeline state                   | Pure additive blend (`srcFactor: 'one'`, `dstFactor: 'one'`). NO `depthStencil` block — the HDR pass has no depth attachment as of `d69ab75`.                                                 |
+| 4   | Where category is computed       | JS-side at frame time via `galaxyType(source, mags).category`. No `pointCloud.bin` format bump.                                                                                               |
+| 5   | Bulge fragment math source       | Copy-and-adapt from `milkyWayImpostor.wgsl`'s `renderGalaxy` (bulge raymarch + soft outer halo). `milkyWayImpostor.wgsl` itself stays unchanged.                                              |
+| 6   | Disc-halo fragment math source   | Copy-and-adapt from `milkyWayImpostor.wgsl`'s thin-disc-halo raymarch (anisotropic Gaussian). Conditional on per-instance `hasDisc > 0.5`.                                                    |
+| 7   | Spiral arms                      | NOT included. The Milky Way's noise/star-cell math is per-fragment trig and unsuitable for thousands of impostors.                                                                            |
+| 8   | Color tinting                    | `bulgeRamp(colourIndex)` biased warm yellow/red for the passive old-stellar-population bulge; the existing `ramp(colourIndex)` (cool / blue) reused for the disc-halo's tint.                 |
+| 9   | Fade-band constants              | Renamed `PROCEDURAL_DISK_FADE_START_PX` / `_END_PX` → `PROCEDURAL_GALAXY_FADE_START_PX` / `_END_PX`. Same numeric values (8, 14). All consumers (engine.ts, pointRenderer.ts callers) follow. |
 
 **Out of scope:**
+
 - Format-version bump for `pointCloud.bin` (decision 4).
 - A user-facing toggle.
 - Texture-based / Sersic-from-texture ellipticals.
@@ -820,6 +821,7 @@ describe('ProceduralGalaxyRenderer', () => {
 Run: `npx vitest run tests/services/gpu/proceduralGalaxyRenderer.test.ts`
 
 Expected:
+
 ```
 ✓ tests/services/gpu/proceduralGalaxyRenderer.test.ts (1)
   ✓ ProceduralGalaxyRenderer (1)
@@ -901,55 +903,85 @@ describe('maybeEmitProceduralGalaxy', () => {
 
   it('returns null below the fade start (strictly-greater gate)', () => {
     const r = maybeEmitProceduralGalaxy(
-      7, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      7,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'blue',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r).toBeNull();
   });
 
   it('returns null exactly at the fade-start edge', () => {
     const r = maybeEmitProceduralGalaxy(
-      8, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      8,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'blue',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r).toBeNull();
   });
 
   it('returns null when axisRatio is NaN', () => {
     const r = maybeEmitProceduralGalaxy(
-      10, NaN, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      10,
+      NaN,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'blue',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r).toBeNull();
   });
 
   it('returns null when positionAngleDeg is NaN', () => {
     const r = maybeEmitProceduralGalaxy(
-      10, 0.7, NaN,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      10,
+      0.7,
+      NaN,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'blue',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r).toBeNull();
   });
 
   it('emits with crossfadeAlpha ≈ 0 just above the fade-start edge', () => {
     const r = maybeEmitProceduralGalaxy(
-      8.0001, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      8.0001,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'blue',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r).not.toBeNull();
     expect(r!.crossfadeAlpha).toBeCloseTo(0, 3);
@@ -957,54 +989,83 @@ describe('maybeEmitProceduralGalaxy', () => {
 
   it('emits with crossfadeAlpha ≈ 1 at and beyond fadeEnd', () => {
     const atEnd = maybeEmitProceduralGalaxy(
-      14, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      14,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'blue',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(atEnd!.crossfadeAlpha).toBeCloseTo(1, 6);
 
     const farPast = maybeEmitProceduralGalaxy(
-      50, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      50,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'blue',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(farPast!.crossfadeAlpha).toBeCloseTo(1, 6);
   });
 
   it('smoothstep crossfade hits 0.5 at the band midpoint', () => {
     const r = maybeEmitProceduralGalaxy(
-      11, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      11,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'blue',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r!.crossfadeAlpha).toBeCloseTo(0.5, 6);
   });
 
   it('smoothstep crossfade matches the cubic at t = 0.25', () => {
     const r = maybeEmitProceduralGalaxy(
-      9.5, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      9.5,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'blue',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r!.crossfadeAlpha).toBeCloseTo(0.15625, 6);
   });
 
   it('forwards positional + orientation fields verbatim onto the instance', () => {
     const r = maybeEmitProceduralGalaxy(
-      11, 0.42, 137,
-      11, 22, 33,
+      11,
+      0.42,
+      137,
+      11,
+      22,
+      33,
       0.05,
       1.7,
       'green',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r).not.toBeNull();
     expect(r!.x).toBe(11);
@@ -1020,44 +1081,68 @@ describe('maybeEmitProceduralGalaxy', () => {
 
   it('hasDisc = 0 for category "red" (bulge-only / elliptical look)', () => {
     const r = maybeEmitProceduralGalaxy(
-      10, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      10,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'red',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r!.hasDisc).toBe(0);
   });
 
   it('hasDisc = 1 for category "blue"', () => {
     const r = maybeEmitProceduralGalaxy(
-      10, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      10,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'blue',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r!.hasDisc).toBe(1);
   });
 
   it('hasDisc = 1 for category "green"', () => {
     const r = maybeEmitProceduralGalaxy(
-      10, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      10,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'green',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r!.hasDisc).toBe(1);
   });
 
   it('hasDisc = 1 for category "unknown" (fallback to disc render)', () => {
     const r = maybeEmitProceduralGalaxy(
-      10, 0.7, 30,
-      base.x, base.y, base.z,
-      base.sizeWorldMpc, base.colourIndex,
+      10,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
       'unknown',
-      base.fadeStartPx, base.fadeEndPx,
+      base.fadeStartPx,
+      base.fadeEndPx,
     );
     expect(r!.hasDisc).toBe(1);
   });
@@ -1175,10 +1260,7 @@ export function maybeEmitProceduralGalaxy(
 
   // Smoothstep over the [fadeStartPx, fadeEndPx] band — see the
   // doc-comment above for why this exact cubic.
-  const t = Math.min(
-    1,
-    Math.max(0, (px - fadeStartPx) / (fadeEndPx - fadeStartPx)),
-  );
+  const t = Math.min(1, Math.max(0, (px - fadeStartPx) / (fadeEndPx - fadeStartPx)));
   const crossfadeAlpha = t * t * (3 - 2 * t);
   // Red galaxies render as bulge-only — that's the whole point of this
   // refactor.  Everything else (blue / green / unknown) gets the disc-
@@ -1333,72 +1415,68 @@ const proceduralGalaxies: ProceduralGalaxyInstance[] = [];
 6. Find the `minPxForLoopEntry` line that references the old constant:
 
 ```ts
-const minPxForLoopEntry = Math.min(
-  APPARENT_SIZE_THRESHOLD_PX,
-  PROCEDURAL_DISK_FADE_START_PX,
-);
+const minPxForLoopEntry = Math.min(APPARENT_SIZE_THRESHOLD_PX, PROCEDURAL_DISK_FADE_START_PX);
 ```
 
 Replace with:
 
 ```ts
-const minPxForLoopEntry = Math.min(
-  APPARENT_SIZE_THRESHOLD_PX,
-  PROCEDURAL_GALAXY_FADE_START_PX,
-);
+const minPxForLoopEntry = Math.min(APPARENT_SIZE_THRESHOLD_PX, PROCEDURAL_GALAXY_FADE_START_PX);
 ```
 
 7. Find the procedural-disk emission block at the tail of the per-galaxy loop body (the `if (px > PROCEDURAL_DISK_FADE_START_PX) { ... }` block). Replace the whole block with the version below:
 
 ```ts
-        // ── Procedural-galaxy emission ─────────────────────────────────
-        //
-        // Above PROCEDURAL_GALAXY_FADE_START_PX (8 px), emit a procedural-
-        // galaxy instance with a smoothstep crossfade alpha that ramps
-        // 0 → 1 across the [8, 14] band.  The points pass uses the
-        // *same* smoothstep shape on the same px values to fade out, so
-        // the two passes crossfade exactly.
-        //
-        // The unified procedural-galaxy pass renders a bulge for every
-        // galaxy + a thin disc-halo for non-red galaxies.  The category
-        // (`red` / `green` / `blue` / `unknown`) is computed JS-side at
-        // frame time via `galaxyType(source, mags)` and forwarded to
-        // the helper, which packs `hasDisc` into the per-instance vec4.
-        // Red galaxies get bulge-only and look like ellipticals; spirals
-        // get the layered look.  No `pointCloud.bin` format bump
-        // required — the classification runs every frame, but the loop
-        // already runs once per galaxy and `galaxyType` is a cheap
-        // float-compare dispatch.
-        if (px > PROCEDURAL_GALAXY_FADE_START_PX) {
-          const ci = pickColourIndex(
-            cloudSource,
-            cloud.magU[i] ?? NaN,
-            cloud.magG[i] ?? NaN,
-            cloud.magR[i] ?? NaN,
-            cloud.magI[i] ?? NaN,
-            cloud.magZ[i] ?? NaN,
-          );
-          const colourIndex = ci !== null ? ci.colourIndex : 1.0;
-          const cat = galaxyType(cloudSource, {
-            magU: cloud.magU[i] ?? NaN,
-            magG: cloud.magG[i] ?? NaN,
-            magR: cloud.magR[i] ?? NaN,
-            magI: cloud.magI[i] ?? NaN,
-            magZ: cloud.magZ[i] ?? NaN,
-          }).category;
-          const emitted = maybeEmitProceduralGalaxy(
-            px,
-            ar,
-            pa,
-            x, y, z,
-            sizeWorldMpc,
-            colourIndex,
-            cat,
-            PROCEDURAL_GALAXY_FADE_START_PX,
-            PROCEDURAL_GALAXY_FADE_END_PX,
-          );
-          if (emitted) proceduralGalaxies.push(emitted);
-        }
+// ── Procedural-galaxy emission ─────────────────────────────────
+//
+// Above PROCEDURAL_GALAXY_FADE_START_PX (8 px), emit a procedural-
+// galaxy instance with a smoothstep crossfade alpha that ramps
+// 0 → 1 across the [8, 14] band.  The points pass uses the
+// *same* smoothstep shape on the same px values to fade out, so
+// the two passes crossfade exactly.
+//
+// The unified procedural-galaxy pass renders a bulge for every
+// galaxy + a thin disc-halo for non-red galaxies.  The category
+// (`red` / `green` / `blue` / `unknown`) is computed JS-side at
+// frame time via `galaxyType(source, mags)` and forwarded to
+// the helper, which packs `hasDisc` into the per-instance vec4.
+// Red galaxies get bulge-only and look like ellipticals; spirals
+// get the layered look.  No `pointCloud.bin` format bump
+// required — the classification runs every frame, but the loop
+// already runs once per galaxy and `galaxyType` is a cheap
+// float-compare dispatch.
+if (px > PROCEDURAL_GALAXY_FADE_START_PX) {
+  const ci = pickColourIndex(
+    cloudSource,
+    cloud.magU[i] ?? NaN,
+    cloud.magG[i] ?? NaN,
+    cloud.magR[i] ?? NaN,
+    cloud.magI[i] ?? NaN,
+    cloud.magZ[i] ?? NaN,
+  );
+  const colourIndex = ci !== null ? ci.colourIndex : 1.0;
+  const cat = galaxyType(cloudSource, {
+    magU: cloud.magU[i] ?? NaN,
+    magG: cloud.magG[i] ?? NaN,
+    magR: cloud.magR[i] ?? NaN,
+    magI: cloud.magI[i] ?? NaN,
+    magZ: cloud.magZ[i] ?? NaN,
+  }).category;
+  const emitted = maybeEmitProceduralGalaxy(
+    px,
+    ar,
+    pa,
+    x,
+    y,
+    z,
+    sizeWorldMpc,
+    colourIndex,
+    cat,
+    PROCEDURAL_GALAXY_FADE_START_PX,
+    PROCEDURAL_GALAXY_FADE_END_PX,
+  );
+  if (emitted) proceduralGalaxies.push(emitted);
+}
 ```
 
 8. Find the back-to-front sort + draw block at the bottom of `runFrame`:
@@ -1570,54 +1648,54 @@ import {
 Find the comment block + instantiation:
 
 ```ts
-      // ProceduralDiskRenderer fills the visibility gap between the
-      // screen-aligned point glow (which goes pixelated above ~8 px) and
-      // the textured-disk pass (which only kicks in at 24 px).  In the
-      // 8-14 px band both the points pass and this renderer are active,
-      // crossfading via complementary smoothstep alphas (see
-      // PROCEDURAL_DISK_FADE_START_PX / _END_PX in thumbnailSubsystem.ts).
-      // Same HDR target as the other thumbnail-pass renderers so the
-      // procedural disk composites into the same linear-light buffer.
-      const proceduralDiskRenderer = new ProceduralDiskRenderer({
-        device,
-        context,
-        format: 'rgba16float',
-        canvas,
-      });
+// ProceduralDiskRenderer fills the visibility gap between the
+// screen-aligned point glow (which goes pixelated above ~8 px) and
+// the textured-disk pass (which only kicks in at 24 px).  In the
+// 8-14 px band both the points pass and this renderer are active,
+// crossfading via complementary smoothstep alphas (see
+// PROCEDURAL_DISK_FADE_START_PX / _END_PX in thumbnailSubsystem.ts).
+// Same HDR target as the other thumbnail-pass renderers so the
+// procedural disk composites into the same linear-light buffer.
+const proceduralDiskRenderer = new ProceduralDiskRenderer({
+  device,
+  context,
+  format: 'rgba16float',
+  canvas,
+});
 ```
 
 Replace with:
 
 ```ts
-      // ProceduralGalaxyRenderer fills the visibility gap between the
-      // screen-aligned point glow (which goes pixelated above ~8 px) and
-      // the textured-disk pass (which only kicks in at 24 px).  In the
-      // 8-14 px band both the points pass and this renderer are active,
-      // crossfading via complementary smoothstep alphas (see
-      // PROCEDURAL_GALAXY_FADE_START_PX / _END_PX in thumbnailSubsystem.ts).
-      // Renders a volumetric bulge for every galaxy + a thin disc-halo
-      // for non-red galaxies — red galaxies (passive / likely-elliptical)
-      // get bulge-only.  Same HDR target as the other thumbnail-pass
-      // renderers so the procedural galaxy composites into the same
-      // linear-light buffer.
-      const proceduralGalaxyRenderer = new ProceduralGalaxyRenderer({
-        device,
-        context,
-        format: 'rgba16float',
-        canvas,
-      });
+// ProceduralGalaxyRenderer fills the visibility gap between the
+// screen-aligned point glow (which goes pixelated above ~8 px) and
+// the textured-disk pass (which only kicks in at 24 px).  In the
+// 8-14 px band both the points pass and this renderer are active,
+// crossfading via complementary smoothstep alphas (see
+// PROCEDURAL_GALAXY_FADE_START_PX / _END_PX in thumbnailSubsystem.ts).
+// Renders a volumetric bulge for every galaxy + a thin disc-halo
+// for non-red galaxies — red galaxies (passive / likely-elliptical)
+// get bulge-only.  Same HDR target as the other thumbnail-pass
+// renderers so the procedural galaxy composites into the same
+// linear-light buffer.
+const proceduralGalaxyRenderer = new ProceduralGalaxyRenderer({
+  device,
+  context,
+  format: 'rgba16float',
+  canvas,
+});
 ```
 
 Find the `bindToRenderers` call:
 
 ```ts
-      thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralDiskRenderer);
+thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralDiskRenderer);
 ```
 
 Replace with:
 
 ```ts
-      thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralGalaxyRenderer);
+thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralGalaxyRenderer);
 ```
 
 - [ ] **Step 3: Update `engine.ts` points-pass uniform fields**
@@ -1677,10 +1755,11 @@ Run: `npm test`
 Expected: 590+ passing across all files. The two old test files (`proceduralDiskRenderer.test.ts`, `proceduralDiskEmission.test.ts`) have NOT yet been deleted at this point — they will fail with import errors. That's expected; Task 7 deletes them.
 
 Acceptance: the test count should be (previous count − the two failing files' test counts + the new file's tests). Specifically:
-  - `proceduralDiskRenderer.test.ts` had 1 test → now broken / fails import
-  - `proceduralDiskEmission.test.ts` had 9 tests → now broken / fails import
-  - `proceduralGalaxyRenderer.test.ts` adds 1 test
-  - `proceduralGalaxyEmission.test.ts` adds 13 tests
+
+- `proceduralDiskRenderer.test.ts` had 1 test → now broken / fails import
+- `proceduralDiskEmission.test.ts` had 9 tests → now broken / fails import
+- `proceduralGalaxyRenderer.test.ts` adds 1 test
+- `proceduralGalaxyEmission.test.ts` adds 13 tests
 
 So typecheck passes, but test run shows 2 file-level import-error failures plus an overall count higher than baseline. We accept that interim state because the deletions are a single coherent commit in Task 7.
 
@@ -1750,6 +1829,7 @@ npm run typecheck && npm test
 ```
 
 Expected:
+
 - typecheck passes.
 - `npm test` reports the new total: starting from a 590+ baseline, − 1 (proceduralDiskRenderer.test) − 9 (proceduralDiskEmission.test) + 1 (proceduralGalaxyRenderer.test) + 13 (proceduralGalaxyEmission.test) = baseline + 4 tests, all green.
 
@@ -1791,6 +1871,7 @@ Per CLAUDE.md, `npm run dev` is left running. Open the browser tab; if HMR didn'
 In the UI's Famous-galaxies dropdown (or the InfoCard search), navigate to M87. Zoom until the impostor's apparent size is ~80–150 px on screen.
 
 Visual checklist:
+
 - [ ] Spheroidal warm-yellow glow centred on the M87 row's position.
 - [ ] No disc tilt, no thin halo extending sideways — just a smooth ball.
 - [ ] Edges fade smoothly to zero (no hard square / no NaN-ring artefacts at corners).
@@ -1803,6 +1884,7 @@ If the impostor looks like a flat disk (the old look), `hasDisc` is being packed
 Navigate to M101. Zoom until apparent size is ~80–150 px.
 
 Visual checklist:
+
 - [ ] Bright warm bulge core in the centre.
 - [ ] Thin softer-blue / cooler disc-halo extending in the direction of the catalogued position angle, foreshortened by the catalogued axis ratio.
 - [ ] Bulge tint visibly warmer than disc-halo tint (the `bulgeRamp` vs. `ramp` divergence).
@@ -1813,6 +1895,7 @@ If the bulge looks "swallowed" by the disc-halo (hard to see distinct from the d
 - [ ] **Step 4: Stress-test — orbit and zoom across ~10 galaxies of mixed type**
 
 With a modest sky region in view (mostly nearby SDSS / 2MRS galaxies above the 8 px threshold), orbit the camera. Visual checklist:
+
 - [ ] No "tilted black rectangle" artefacts (the milky-way impostor's old bug — solved there but worth confirming hasn't appeared here).
 - [ ] No flickering at the 8 px crossfade boundary as galaxies move in and out of the band.
 - [ ] No "double bright donut" of overlapping pass alphas — the points-pass fade-out and the procedural-galaxy fade-in still sum to ≈1.
@@ -1830,6 +1913,7 @@ git -C /Users/rulkens/Development/js/skymap status
 ```
 
 Expected:
+
 - All tests green (the new total is baseline + 4 per Task 7 step 3).
 - typecheck passes.
 - working tree is clean (no stray uncommitted changes from the visual-verify session).
@@ -1842,17 +1926,17 @@ If everything passes, the plan is done.
 
 (For the writer's pre-save sanity check.)
 
-| Decision | Task(s) implementing it |
-|---|---|
-| 1: Replace, not add a sibling | Tasks 7 (delete) + 3 (the new renderer takes over the slot) |
-| 2: Same 48-byte ABI; `hasDisc` in `extras.z` | Task 1 (type), Task 2 (shader vertex `extras.z`), Task 3 (renderer pack), Task 4 (helper sets `hasDisc`) |
-| 3: Pure additive blend, no depthStencil | Task 3 (pipeline descriptor) |
-| 4: Category at frame time (no .bin bump) | Task 5 (loop calls `galaxyType(...)`), Task 4 (helper takes `category`) |
-| 5: Bulge math copied from milkyWayImpostor | Task 2 (BULGE_RADIUS, BULGE_SIGMA_SQ, BULGE_STEPS, BULGE_OPACITY, BULGE_BRIGHTNESS literals + raymarch loop verbatim) |
-| 6: Disc-halo math copied; gated by hasDisc | Task 2 (DISC_HALO_* constants + raymarch loop, wrapped in `if (in.hasDisc > 0.5)`) |
-| 7: No spiral arms | Task 2 (no noise/star/galaxy() helpers ported) |
-| 8: bulgeRamp() warm, ramp() reused for disc | Task 2 (both ramp functions defined, applied to bulge vs. disc-halo respectively) |
-| 9: Constants renamed | Task 4 (definition), Task 5 (loop call sites), Task 6 (engine + pointRenderer + renderFrame) |
-| Visual verification | Task 8 (M87 + M101 spot-check) |
-| Old files deleted, not stranded | Task 7 (`git rm` of all 5 files) |
-| Cross-codebase rename | Tasks 5 + 6 (subsystem + tests + engine + pointRenderer + renderFrame) |
+| Decision                                     | Task(s) implementing it                                                                                               |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1: Replace, not add a sibling                | Tasks 7 (delete) + 3 (the new renderer takes over the slot)                                                           |
+| 2: Same 48-byte ABI; `hasDisc` in `extras.z` | Task 1 (type), Task 2 (shader vertex `extras.z`), Task 3 (renderer pack), Task 4 (helper sets `hasDisc`)              |
+| 3: Pure additive blend, no depthStencil      | Task 3 (pipeline descriptor)                                                                                          |
+| 4: Category at frame time (no .bin bump)     | Task 5 (loop calls `galaxyType(...)`), Task 4 (helper takes `category`)                                               |
+| 5: Bulge math copied from milkyWayImpostor   | Task 2 (BULGE_RADIUS, BULGE_SIGMA_SQ, BULGE_STEPS, BULGE_OPACITY, BULGE_BRIGHTNESS literals + raymarch loop verbatim) |
+| 6: Disc-halo math copied; gated by hasDisc   | Task 2 (DISC*HALO*\* constants + raymarch loop, wrapped in `if (in.hasDisc > 0.5)`)                                   |
+| 7: No spiral arms                            | Task 2 (no noise/star/galaxy() helpers ported)                                                                        |
+| 8: bulgeRamp() warm, ramp() reused for disc  | Task 2 (both ramp functions defined, applied to bulge vs. disc-halo respectively)                                     |
+| 9: Constants renamed                         | Task 4 (definition), Task 5 (loop call sites), Task 6 (engine + pointRenderer + renderFrame)                          |
+| Visual verification                          | Task 8 (M87 + M101 spot-check)                                                                                        |
+| Old files deleted, not stranded              | Task 7 (`git rm` of all 5 files)                                                                                      |
+| Cross-codebase rename                        | Tasks 5 + 6 (subsystem + tests + engine + pointRenderer + renderFrame)                                                |

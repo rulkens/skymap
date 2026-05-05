@@ -143,11 +143,7 @@ describe('skeletonToFilamentCloud', () => {
     // Densities are normalised across all surviving vertices: input range
     // is [0.5, 0.9], so 0.5→0, 0.6→0.25, 0.7→0.5, 0.8→0.75, 0.9→1.
     expect(Array.from(cloud.vertices)).toEqual([
-      10, 20, 30, 1,
-      11, 21, 31, 0.75,
-      40, 50, 60, 0.5,
-      41, 51, 61, 0.25,
-      42, 52, 62, 0,
+      10, 20, 30, 1, 11, 21, 31, 0.75, 40, 50, 60, 0.5, 41, 51, 61, 0.25, 42, 52, 62, 0,
     ]);
   });
 

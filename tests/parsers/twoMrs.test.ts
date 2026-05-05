@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import {
-  parseTwoMrs,
-  parseXscShapeCsv,
-  type XscShapeMap,
-} from '../../tools/parsers/twoMrs';
+import { parseTwoMrs, parseXscShapeCsv, type XscShapeMap } from '../../tools/parsers/twoMrs';
 import { Source } from '../../src/data/sources';
 
 /**
@@ -25,9 +21,7 @@ import { Source } from '../../src/data/sources';
  * a parse failure that's easy to debug, whereas an exception here would
  * mask the underlying intent of the test.
  */
-function buildTwoMrsRow(
-  fields: ReadonlyArray<readonly [number, number, string]>,
-): string {
+function buildTwoMrsRow(fields: ReadonlyArray<readonly [number, number, string]>): string {
   const buf = ' '.repeat(233).split('');
   for (const [start, end, val] of fields) {
     const slot = end - start + 1;
@@ -201,9 +195,7 @@ describe('parseTwoMrs', () => {
     // arithmetic on these values would be a bug, since both fields are
     // already in the units the renderer expects.
     const line = buildTwoMrsRow(FIXTURE_FIELDS);
-    const xsc: XscShapeMap = new Map([
-      [FIXTURE_ID, { sup_phi: 45, sup_ba: 0.6 }],
-    ]);
+    const xsc: XscShapeMap = new Map([[FIXTURE_ID, { sup_phi: 45, sup_ba: 0.6 }]]);
     const { records } = parseTwoMrs(line, xsc);
     expect(records).toHaveLength(1);
     expect(records[0]!.axisRatio).toBe(0.6);

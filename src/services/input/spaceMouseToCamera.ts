@@ -120,11 +120,7 @@ const PITCH_LIMIT = Math.PI / 2 - PITCH_EPSILON;
  * @param axes  The shaped axes (already through `applyCurve`).
  * @param dtMs  Time elapsed since the last frame, in milliseconds.
  */
-export function applyAxesToCamera(
-  cam: OrbitCamera,
-  axes: SpaceMouseAxes,
-  dtMs: number,
-): void {
+export function applyAxesToCamera(cam: OrbitCamera, axes: SpaceMouseAxes, dtMs: number): void {
   // ── Yaw (rz: turn left/right) ────────────────────────────────────────────
   //
   // Direct add — yaw wraps freely (no clamp) since 2π is just back where

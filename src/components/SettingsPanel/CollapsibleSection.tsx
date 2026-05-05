@@ -132,10 +132,7 @@ export function CollapsibleSection({
           it 90° via CSS transform when open.  Animating transform is
           smooth; swapping text characters can't be animated.
         */}
-        <span
-          className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}
-          aria-hidden
-        >
+        <span className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`} aria-hidden>
           ▸
         </span>
         <span className={styles.title}>{title}</span>
@@ -156,11 +153,7 @@ export function CollapsibleSection({
         land in a closed section via Tab key.  Not a big deal in
         practice — closed sections are typically opened then explored.
       */}
-      <div
-        className={styles.bodyWrapper}
-        data-open={open}
-        aria-hidden={!open}
-      >
+      <div className={styles.bodyWrapper} data-open={open} aria-hidden={!open}>
         <div className={styles.body}>{children}</div>
       </div>
     </div>

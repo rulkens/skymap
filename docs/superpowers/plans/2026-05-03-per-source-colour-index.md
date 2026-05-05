@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Give 2MRS and GLADE galaxies real galaxy-type colour variation by computing per-source colour indices from each survey's *own* photometry (`B−J` for GLADE, `J−K` for 2MRS) instead of forcing every row through SDSS-style `u−g` (which non-SDSS surveys don't measure). Currently every non-SDSS galaxy renders with the same fixed sentinel colour because `u−g` is `NaN`; after this plan, 2MRS shows the narrow J/K colour spread and GLADE shows the wide B/J spread, so spirals/ellipticals are distinguishable in both.
+**Goal:** Give 2MRS and GLADE galaxies real galaxy-type colour variation by computing per-source colour indices from each survey's _own_ photometry (`B−J` for GLADE, `J−K` for 2MRS) instead of forcing every row through SDSS-style `u−g` (which non-SDSS surveys don't measure). Currently every non-SDSS galaxy renders with the same fixed sentinel colour because `u−g` is `NaN`; after this plan, 2MRS shows the narrow J/K colour spread and GLADE shows the wide B/J spread, so spirals/ellipticals are distinguishable in both.
 
-**Architecture:** Colour-index choice and remapping is a *load-time* concern, not a render-time concern. We do the per-source pick (which bands), normalise to a common 0..2 scale (so the existing WGSL ramp doesn't need per-source branches), and pre-bake the result into the per-instance vertex attribute that `colorIndex` reads. The K-correction coefficient — which ALSO varies by colour pair — moves from a hard-coded shader constant to a NEW per-vertex attribute, appended after the existing 6-slot layout (position×3, magnitude, colorIndex, globalInstanceIdx). After this plan, the per-instance vertex stride goes from 24 bytes (6 slots) to 28 bytes (7 slots), with kPerZ at byte offset 24 / shaderLocation 4. The visual fragment is unchanged. The InfoCard's qualitative galaxy-type classifier (currently `galaxyTypeFromColor(u−r)`) gains per-source variants so "Red, quiescent" is judged against the actual colour pair rather than against SDSS thresholds.
+**Architecture:** Colour-index choice and remapping is a _load-time_ concern, not a render-time concern. We do the per-source pick (which bands), normalise to a common 0..2 scale (so the existing WGSL ramp doesn't need per-source branches), and pre-bake the result into the per-instance vertex attribute that `colorIndex` reads. The K-correction coefficient — which ALSO varies by colour pair — moves from a hard-coded shader constant to a NEW per-vertex attribute, appended after the existing 6-slot layout (position×3, magnitude, colorIndex, globalInstanceIdx). After this plan, the per-instance vertex stride goes from 24 bytes (6 slots) to 28 bytes (7 slots), with kPerZ at byte offset 24 / shaderLocation 4. The visual fragment is unchanged. The InfoCard's qualitative galaxy-type classifier (currently `galaxyTypeFromColor(u−r)`) gains per-source variants so "Red, quiescent" is judged against the actual colour pair rather than against SDSS thresholds.
 
 **Tech Stack:** TypeScript 6, WebGPU + WGSL, Vitest 4. Project conventions: `type` not `interface`, didactic comments, single quotes, 100-char lines, trailing commas.
 
@@ -44,7 +44,7 @@
 
 **Untouched:**
 
-- `tools/parsers/*` — the `.bin` file format and per-row five-band slot layout already stays intact; the parsers just dump whatever bands they have. This plan changes only how those slots are *interpreted* at upload time.
+- `tools/parsers/*` — the `.bin` file format and per-row five-band slot layout already stays intact; the parsers just dump whatever bands they have. This plan changes only how those slots are _interpreted_ at upload time.
 
 ---
 
@@ -52,12 +52,12 @@
 
 This is the table all the code revolves around. Each row gives the colour pair, its natural range across galaxy types, and the K-correction coefficient.
 
-| Source     | Bands  | Slot diff      | Natural range | k_per_z | Why this k                                                                  |
-| ---------- | ------ | -------------- | ------------- | ------- | --------------------------------------------------------------------------- |
-| SDSS       | u−g    | `magU − magG`  | 0.5 .. 2.0    | 3.0     | matches existing shader behaviour; calibrated against SDSS spec sample      |
-| 2MRS       | J−K    | `magG − magI`  | 0.7 .. 1.1    | 0.0     | NIR colours are nearly redshift-invariant at z<0.1 (where 2MRS lives)       |
-| GLADE      | B−J    | `magG − magR`  | 0.5 .. 3.5    | 1.0     | Optical-NIR pair has moderate z dependence; B redshifts out of band slowly  |
-| Synthetic  | u−g    | `magU − magG`  | 0.5 .. 2.0    | 3.0     | Synthetic cloud is generated to mimic SDSS, so reuse SDSS spec              |
+| Source    | Bands | Slot diff     | Natural range | k_per_z | Why this k                                                                 |
+| --------- | ----- | ------------- | ------------- | ------- | -------------------------------------------------------------------------- |
+| SDSS      | u−g   | `magU − magG` | 0.5 .. 2.0    | 3.0     | matches existing shader behaviour; calibrated against SDSS spec sample     |
+| 2MRS      | J−K   | `magG − magI` | 0.7 .. 1.1    | 0.0     | NIR colours are nearly redshift-invariant at z<0.1 (where 2MRS lives)      |
+| GLADE     | B−J   | `magG − magR` | 0.5 .. 3.5    | 1.0     | Optical-NIR pair has moderate z dependence; B redshifts out of band slowly |
+| Synthetic | u−g   | `magU − magG` | 0.5 .. 2.0    | 3.0     | Synthetic cloud is generated to mimic SDSS, so reuse SDSS spec             |
 
 **Normalisation rule:** the value the shader sees is `(raw − rangeMin) / (rangeMax − rangeMin) * 2.0`, clamped to [0, 2]. This puts every source's colour distribution in the 0..2 range the existing `ramp(t)` function expects (blue → white → red across that range).
 
@@ -273,16 +273,19 @@ import { Source } from '../../../src/data/sources';
 describe('galaxyType', () => {
   it('SDSS dispatches to u−r classifier', () => {
     // u=18, g=17.5, r=17 → u−r=1.0 → blue
-    expect(galaxyType(Source.SDSS, { magU: 18, magG: 17.5, magR: 17, magI: 16.8, magZ: 16.6 }).category)
-      .toBe('blue');
+    expect(
+      galaxyType(Source.SDSS, { magU: 18, magG: 17.5, magR: 17, magI: 16.8, magZ: 16.6 }).category,
+    ).toBe('blue');
   });
   it('GLADE dispatches to B−J classifier', () => {
-    expect(galaxyType(Source.Glade, { magU: NaN, magG: 14, magR: 11, magI: 10.5, magZ: 10 }).category)
-      .toBe('red'); // B−J = 3.0
+    expect(
+      galaxyType(Source.Glade, { magU: NaN, magG: 14, magR: 11, magI: 10.5, magZ: 10 }).category,
+    ).toBe('red'); // B−J = 3.0
   });
   it('2MRS dispatches to J−K classifier', () => {
-    expect(galaxyType(Source.TwoMRS, { magU: NaN, magG: 8.5, magR: 8.0, magI: 7.4, magZ: NaN }).category)
-      .toBe('red'); // J−K = 1.1
+    expect(
+      galaxyType(Source.TwoMRS, { magU: NaN, magG: 8.5, magR: 8.0, magI: 7.4, magZ: NaN }).category,
+    ).toBe('red'); // J−K = 1.1
   });
 });
 ```
@@ -424,6 +427,7 @@ git commit -m "feat: add per-source galaxy-type classifiers (B−J, J−K)"
 - Modify: `src/services/gpu/pointRenderer.ts`
 
 **Context:** The current vertex layout is 6 slots / 24 bytes:
+
 - offset 0: position vec3<f32>
 - offset 12: magnitude f32
 - offset 16: colorIndex f32 (currently raw `u - g` or 999 sentinel)
@@ -596,6 +600,7 @@ let restColorIndex = select(p.colorIndex - p.kPerZ * zRedshift, 1.05, isUnknownC
 - [ ] **Step 2: Visually verify in the browser**
 
 With the dev server running, reload `localhost:5173`. Toggle through SDSS / 2MRS / GLADE and confirm:
+
 - SDSS galaxies look unchanged (colour distribution should match what you saw before).
 - GLADE shows real spread: a mix of red ellipticals and blue spirals, not all one colour.
 - 2MRS shows a narrower spread (still mostly white-ish) but with visible reds and blues at the extremes.

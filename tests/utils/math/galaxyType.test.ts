@@ -18,8 +18,7 @@ describe('galaxyType', () => {
   it('2MRS dispatches to J−K classifier', () => {
     // J=8.5, K=7.4 → J−K = 1.1 → red
     expect(
-      galaxyType(Source.TwoMRS, { magU: NaN, magG: 8.5, magR: 8.0, magI: 7.4, magZ: NaN })
-        .category,
+      galaxyType(Source.TwoMRS, { magU: NaN, magG: 8.5, magR: 8.0, magI: 7.4, magZ: NaN }).category,
     ).toBe('red');
   });
 });

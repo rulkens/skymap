@@ -73,10 +73,6 @@ export function diskBrightness(r: number): number {
  * Returns values in [0, bulgeWeight + diskWeight] (typically [0, 1] when
  * the weights sum to 1).
  */
-export function combinedBrightness(
-  r: number,
-  bulgeWeight: number,
-  diskWeight: number,
-): number {
+export function combinedBrightness(r: number, bulgeWeight: number, diskWeight: number): number {
   return bulgeBrightness(r) * bulgeWeight + diskBrightness(r) * diskWeight;
 }

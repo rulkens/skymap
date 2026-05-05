@@ -89,11 +89,11 @@ Bit position in `visibleSourceMask: u32` matches the enum value. `0xF` (= `0b111
 
 **New auto-LOD bands:**
 
-| Distance (Mpc) | Visible sources                |
-| -------------- | ------------------------------ |
-| < 200          | Synthetic + 2MRS + GLADE       |
+| Distance (Mpc) | Visible sources                               |
+| -------------- | --------------------------------------------- |
+| < 200          | Synthetic + 2MRS + GLADE                      |
 | 200 – 800      | all sources (Synthetic + SDSS + 2MRS + GLADE) |
-| > 800          | Synthetic + SDSS               |
+| > 800          | Synthetic + SDSS                              |
 
 ---
 
@@ -286,11 +286,11 @@ git commit -m "refactor(sources): drop TwoMPZ + SixDFGS, add Glade"
 
 The heuristic shape is unchanged (3 distance bands), but the source set inside each band is now Synthetic / SDSS / TwoMRS / Glade.
 
-| Distance (Mpc) | Visible sources                |
-| -------------- | ------------------------------ |
-| < 200          | Synthetic, 2MRS, GLADE         |
+| Distance (Mpc) | Visible sources                            |
+| -------------- | ------------------------------------------ |
+| < 200          | Synthetic, 2MRS, GLADE                     |
 | 200 – 800      | all sources (Synthetic, SDSS, 2MRS, GLADE) |
-| > 800          | Synthetic, SDSS                |
+| > 800          | Synthetic, SDSS                            |
 
 - [ ] **Step 1: Update `tests/autoLod.test.ts`** (replace TwoMPZ/SixDFGS with Glade)
 
@@ -534,7 +534,11 @@ Three real-survey toggles plus the auto-LOD master. Synthetic is hidden — it's
   border: 1px solid rgba(160, 200, 255, 0.16);
   border-radius: 8px;
   color: #cfd8ff;
-  font: 11px/1.4 ui-monospace, 'SF Mono', Menlo, monospace;
+  font:
+    11px/1.4 ui-monospace,
+    'SF Mono',
+    Menlo,
+    monospace;
   user-select: none;
   min-width: 180px;
 }
@@ -591,11 +595,7 @@ type Props = {
  * fallback, not a user-facing data source — letting the user toggle it
  * off would just leave a black screen if the real surveys are absent.
  */
-const TOGGLEABLE: readonly Source[] = [
-  Source.SDSS,
-  Source.TwoMRS,
-  Source.Glade,
-] as const;
+const TOGGLEABLE: readonly Source[] = [Source.SDSS, Source.TwoMRS, Source.Glade] as const;
 
 export function SettingsPanel({ mask, mode, onToggleSource, onSetMode }: Props): ReactNode {
   return (
@@ -680,7 +680,7 @@ const handle = createEngine(canvas, {
     handleRef.current?.setSourceMask(next);
   }}
   onSetMode={(mode) => handleRef.current?.setLodMode(mode)}
-/>
+/>;
 ```
 
 (`handleRef` is the ref already used by the Esc keydown listener — reuse it.)
@@ -763,25 +763,26 @@ The committed parser was written against fabricated column offsets and would not
 
 File: `data/raw/2mrs_table3.dat`, 233-byte fixed-width, 44,599 records. Bytes are 1-based inclusive — slice with `line.slice(N-1, M)`.
 
-| Bytes | Field | Type | Notes |
-|---|---|---|---|
-| 1–16 | ID | A16 | 2MASS designation |
-| 18–26 | RAdeg | F9.5 | decimal degrees |
-| 28–36 | DEdeg | F9.5 | decimal degrees |
-| 38–46 | GLON | F9.5 | galactic longitude |
-| 48–56 | GLAT | F9.5 | galactic latitude |
-| 58–63 | Kcmag | F6.3 | extinction-corrected K |
-| 65–70 | Hcmag | F6.3 | extinction-corrected H |
-| 72–77 | Jcmag | F6.3 | extinction-corrected J; `99.999` sentinel for missing |
-| 79–84 | Ktmag | F6.3 | total extrapolated K |
-| 86–91 | Htmag | F6.3 | total extrapolated H |
-| 93–98 | Jtmag | F6.3 | total extrapolated J |
-| 100–104 | e_Kcmag | F5.3 | error |
-| ... | | | (other error/flag fields) |
-| 174–178 | cz | I5 | km/s; blank if no redshift |
-| 180–182 | e_cz | I3 | km/s |
+| Bytes   | Field   | Type | Notes                                                 |
+| ------- | ------- | ---- | ----------------------------------------------------- |
+| 1–16    | ID      | A16  | 2MASS designation                                     |
+| 18–26   | RAdeg   | F9.5 | decimal degrees                                       |
+| 28–36   | DEdeg   | F9.5 | decimal degrees                                       |
+| 38–46   | GLON    | F9.5 | galactic longitude                                    |
+| 48–56   | GLAT    | F9.5 | galactic latitude                                     |
+| 58–63   | Kcmag   | F6.3 | extinction-corrected K                                |
+| 65–70   | Hcmag   | F6.3 | extinction-corrected H                                |
+| 72–77   | Jcmag   | F6.3 | extinction-corrected J; `99.999` sentinel for missing |
+| 79–84   | Ktmag   | F6.3 | total extrapolated K                                  |
+| 86–91   | Htmag   | F6.3 | total extrapolated H                                  |
+| 93–98   | Jtmag   | F6.3 | total extrapolated J                                  |
+| 100–104 | e_Kcmag | F5.3 | error                                                 |
+| ...     |         |      | (other error/flag fields)                             |
+| 174–178 | cz      | I5   | km/s; blank if no redshift                            |
+| 180–182 | e_cz    | I3   | km/s                                                  |
 
 **Skip rules:**
+
 - Skip if `cz` is blank or non-positive
 - Skip if any of `Kcmag`, `Hcmag` is non-finite
 - Allow `Jcmag = 99.999` (sentinel) → store as `NaN`
@@ -789,6 +790,7 @@ File: `data/raw/2mrs_table3.dat`, 233-byte fixed-width, 44,599 records. Bytes ar
 **Redshift:** `z = cz / 299792.458`.
 
 **Mapping into 5-band slots:**
+
 - magG = Jcmag (handle 99.999 → NaN)
 - magR = Hcmag
 - magI = Kcmag
@@ -807,6 +809,7 @@ These are the actual first three records of the file (M31, NGC 253, M81):
 ```
 
 Expected after parsing:
+
 - M31: cz=−300 → z=−1.0007e-3 (negative — M31 is blueshifted; **skip per `cz > 0` rule**)
 - NGC 253: cz=243 → z=8.106e-4, magG=Jcmag=1.552, magR=Hcmag=0.929, magI=Kcmag=0.797
 - M81: cz=−34 → negative; **skip**
@@ -993,38 +996,40 @@ GLADE v2.3 is a pre-merged catalogue (GWGC + HyperLEDA + 2MASS XSC + 2MPZ + SDSS
 
 File: `data/raw/glade2.3.dat`, 256-byte fixed-width, 3,262,881 records. Bytes are 1-based inclusive.
 
-| Bytes | Field | Type | Notes |
-|---|---|---|---|
-| 1–7 | PGC | I7 | PGC number; `?=-` if absent |
-| 9–36 | GWGC | A28 | name |
-| 38–66 | HyperLEDA | A29 | name |
-| 68–83 | 2MASS | A16 | name (e.g. 2MASX designation) |
-| 85–102 | SDSS-DR12 | A18 | name |
-| 104 | Flag1 | A1 | object type: `Q`=quasar, `C`=globular cluster, `G`=galaxy |
-| 106–123 | RAdeg | F18.14 | decimal degrees |
-| 125–144 | DEdeg | F20.15 | decimal degrees |
-| 146–165 | Dist | F20.14 | luminosity distance Mpc; `?=-` if absent |
-| 167–172 | e_Dist | F6.3 | distance error |
-| 174–191 | z | E18.15 | redshift; `?=-` if absent |
-| 193–198 | Bmag | F6.3 | apparent B mag |
-| 200–203 | e_Bmag | F4.2 | error |
-| 205–213 | BMAG | F9.5 | absolute B mag |
-| 215–220 | Jmag | F6.3 | 2MASS J |
-| 222–226 | e_Jmag | F5.3 | error |
-| 228–233 | Hmag | F6.3 | 2MASS H |
-| 235–239 | e_Hmag | F5.3 | error |
-| 241–246 | Kmag | F6.3 | 2MASS K |
-| 248–252 | e_Kmag | F5.3 | error |
-| 254 | Flag2 | A1 | distance source: `0`=neither, `1`=z→dist, `2`=dist→z, `3`=photo-z replaced by spec-z |
-| 256 | Flag3 | A1 | velocity correction: `0`=not applied, `1`=applied |
+| Bytes   | Field     | Type   | Notes                                                                                |
+| ------- | --------- | ------ | ------------------------------------------------------------------------------------ |
+| 1–7     | PGC       | I7     | PGC number; `?=-` if absent                                                          |
+| 9–36    | GWGC      | A28    | name                                                                                 |
+| 38–66   | HyperLEDA | A29    | name                                                                                 |
+| 68–83   | 2MASS     | A16    | name (e.g. 2MASX designation)                                                        |
+| 85–102  | SDSS-DR12 | A18    | name                                                                                 |
+| 104     | Flag1     | A1     | object type: `Q`=quasar, `C`=globular cluster, `G`=galaxy                            |
+| 106–123 | RAdeg     | F18.14 | decimal degrees                                                                      |
+| 125–144 | DEdeg     | F20.15 | decimal degrees                                                                      |
+| 146–165 | Dist      | F20.14 | luminosity distance Mpc; `?=-` if absent                                             |
+| 167–172 | e_Dist    | F6.3   | distance error                                                                       |
+| 174–191 | z         | E18.15 | redshift; `?=-` if absent                                                            |
+| 193–198 | Bmag      | F6.3   | apparent B mag                                                                       |
+| 200–203 | e_Bmag    | F4.2   | error                                                                                |
+| 205–213 | BMAG      | F9.5   | absolute B mag                                                                       |
+| 215–220 | Jmag      | F6.3   | 2MASS J                                                                              |
+| 222–226 | e_Jmag    | F5.3   | error                                                                                |
+| 228–233 | Hmag      | F6.3   | 2MASS H                                                                              |
+| 235–239 | e_Hmag    | F5.3   | error                                                                                |
+| 241–246 | Kmag      | F6.3   | 2MASS K                                                                              |
+| 248–252 | e_Kmag    | F5.3   | error                                                                                |
+| 254     | Flag2     | A1     | distance source: `0`=neither, `1`=z→dist, `2`=dist→z, `3`=photo-z replaced by spec-z |
+| 256     | Flag3     | A1     | velocity correction: `0`=not applied, `1`=applied                                    |
 
 **Skip rules:**
+
 - Skip if `Flag1 != 'G'` (drop quasars and globulars — we want galaxies)
 - Skip if `Flag2 == '0'` (no measured z or distance — useless)
 - Skip if `z` is `?=-` or non-finite or ≤ 0
 - Skip if RA or Dec can't be parsed
 
 **Mapping into 5-band slots:**
+
 - magG = Bmag (B-band optical — bluest available)
 - magR = Jmag (closest IR)
 - magI = Hmag
@@ -1033,7 +1038,7 @@ File: `data/raw/glade2.3.dat`, 256-byte fixed-width, 3,262,881 records. Bytes ar
 
 > **Didactic comment material — write into the parser:** GLADE's photometry is heterogeneous: B-band from optical surveys, JHK from 2MASS. The five SDSS slots are a procrustean fit. We put B in the bluest slot and JHK in the longer-wavelength slots. The K-correction in `points.wgsl` uses redshift, not per-band corrections, so the visual rendering still works — colours won't match SDSS-only points exactly, but the relative brightness ordering is preserved.
 
-**objID:** GLADE has no SDSS-objID-equivalent (the SDSS-DR12 column is a *name* like `SDSSJ123456.78+...`, not the numeric `bestObjID`). Use `0n` always. Cross-match dedup against SDSS in Task 13 falls back to position+z matching.
+**objID:** GLADE has no SDSS-objID-equivalent (the SDSS-DR12 column is a _name_ like `SDSSJ123456.78+...`, not the numeric `bestObjID`). Use `0n` always. Cross-match dedup against SDSS in Task 13 falls back to position+z matching.
 
 **Sentinel handling:** the ReadMe uses `?=-` (a literal dash) to mark missing values. Detect it as the trimmed field being `'---'`, `'-'`, or empty.
 
@@ -1048,6 +1053,7 @@ The first 3 records of the file (NGC 253, NGC 5128, an unnamed 2MASS XSC galaxy)
 ```
 
 Expected after parsing all 3:
+
 - All have `Flag1 = G` and `Flag2 = 3` → kept.
 - Row 1 (NGC 253): RA=11.88806, Dec=-25.2888, z≈9.16e-4, Bmag=7.34, Jmag=4.874, Hmag=4.143, Kmag=3.822
 - Row 2 (NGC 5128): RA=201.366, Dec=-43.019, z≈8.79e-4, Bmag=7.48
@@ -1055,7 +1061,7 @@ Expected after parsing all 3:
 
 So 3 records, 0 skipped.
 
-> **Note on file completeness:** `data/raw/glade2.3.dat` may be a partial download (the curl was running in background; when last checked the file was 36 MB instead of the expected 838 MB). The fixture above is taken from the *real* first three rows of the partial file, which are valid records of the same byte format as the full file. If the download finishes between now and implementation, the same parser handles all 3.26M rows; the implementer can re-sample additional rows if more fixture coverage is wanted.
+> **Note on file completeness:** `data/raw/glade2.3.dat` may be a partial download (the curl was running in background; when last checked the file was 36 MB instead of the expected 838 MB). The fixture above is taken from the _real_ first three rows of the partial file, which are valid records of the same byte format as the full file. If the download finishes between now and implementation, the same parser handles all 3.26M rows; the implementer can re-sample additional rows if more fixture coverage is wanted.
 
 - [ ] **Step 0: Remove the superseded 2MPZ files**
 
@@ -1088,7 +1094,7 @@ describe('parseGlade', () => {
     expect(r0.source).toBe(Source.Glade);
     expect(r0.ra).toBeCloseTo(11.88806, 4);
     expect(r0.dec).toBeCloseTo(-25.2888, 4);
-    expect(r0.z).toBeCloseTo(0.0009160, 6);
+    expect(r0.z).toBeCloseTo(0.000916, 6);
     expect(r0.magG).toBeCloseTo(7.34, 2); // Bmag → magG
     expect(r0.magR).toBeCloseTo(4.874, 3); // Jmag → magR
     expect(r0.magI).toBeCloseTo(4.143, 3); // Hmag → magI
@@ -1273,13 +1279,14 @@ git commit -m "feat(parsers): GLADE v2.3 parser (replaces standalone 2MPZ)"
 
 ### Cross-match strategy (simplified vs. revision 1)
 
-Because GLADE is *already* internally cross-matched (GWGC + HyperLEDA + 2MASS XSC + 2MPZ + SDSS-DR12Q), the only dedup we need to do ourselves is:
+Because GLADE is _already_ internally cross-matched (GWGC + HyperLEDA + 2MASS XSC + 2MPZ + SDSS-DR12Q), the only dedup we need to do ourselves is:
 
-1. **GLADE ↔ SDSS** by position + z. GLADE's SDSS-DR12 column is a *name*, not the numeric objID we use elsewhere. We can't match on objID, so we use angular separation < 5 arcsec AND `|Δz/(1+z)| < 0.01`.
+1. **GLADE ↔ SDSS** by position + z. GLADE's SDSS-DR12 column is a _name_, not the numeric objID we use elsewhere. We can't match on objID, so we use angular separation < 5 arcsec AND `|Δz/(1+z)| < 0.01`.
 2. **GLADE ↔ 2MRS** by the same position + z criterion.
 3. **2MRS ↔ SDSS** by the same criterion.
 
 Priority order (best record kept on duplicate): SDSS > 2MRS > GLADE. Rationale:
+
 - SDSS spectroscopic z is the highest precision.
 - 2MRS spec-z is also high precision, but only K-band photometry — we prefer SDSS where both cover the same galaxy.
 - GLADE inherits its z from whichever underlying catalogue measured it first; some GLADE z's are photometric (lower precision than 2MRS spec-z).
@@ -1344,10 +1351,7 @@ describe('crossMatch', () => {
     const out = crossMatch({
       sdss: [],
       twoMrs: [],
-      glade: [
-        rec(Source.Glade, 30, -25, 0.001),
-        rec(Source.Glade, 200, -43, 0.001),
-      ],
+      glade: [rec(Source.Glade, 30, -25, 0.001), rec(Source.Glade, 200, -43, 0.001)],
     });
     expect(out).toHaveLength(2);
   });
@@ -1512,9 +1516,7 @@ function readArgs(): Record<string, string> {
 
 const args = readArgs();
 if (!args['out-dir']) {
-  process.stderr.write(
-    'usage: build-all --sdss FILE --twomrs FILE --glade FILE --out-dir DIR\n',
-  );
+  process.stderr.write('usage: build-all --sdss FILE --twomrs FILE --glade FILE --out-dir DIR\n');
   process.exit(1);
 }
 
@@ -1750,11 +1752,11 @@ To render galaxies from all three surveys (SDSS Main+BOSS+eBOSS, 2MRS, GLADE) lo
 
 ### 1. Download the catalogues
 
-| Survey | Source | File / Notes |
-| ------ | ------ | -------------- |
-| SDSS   | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql) | Use the wider Main+BOSS+eBOSS query (no `survey=` filter) — see Task 9 for the exact SQL. |
-| 2MRS   | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. |
-| GLADE  | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281) | `glade2.3.dat`, 256-byte fixed-width, 3.26M rows, ~838 MB. Pre-merged from 2MPZ + 2MASS XSC + HyperLEDA + GWGC + SDSS-DR12Q. |
+| Survey | Source                                                                                     | File / Notes                                                                                                                 |
+| ------ | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| SDSS   | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql)                           | Use the wider Main+BOSS+eBOSS query (no `survey=` filter) — see Task 9 for the exact SQL.                                    |
+| 2MRS   | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB.                                                                     |
+| GLADE  | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281)             | `glade2.3.dat`, 256-byte fixed-width, 3.26M rows, ~838 MB. Pre-merged from 2MPZ + 2MASS XSC + HyperLEDA + GWGC + SDSS-DR12Q. |
 
 GLADE alone subsumes 2MPZ and 6dFGS — the GLADE team has already cross-matched and deduplicated the constituents, so a single download replaces what would otherwise be three.
 

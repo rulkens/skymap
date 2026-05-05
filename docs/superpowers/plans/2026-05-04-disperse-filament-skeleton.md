@@ -13,6 +13,7 @@
 ## Scope
 
 **In scope (Phase 1 — this plan):**
+
 - Build-time DisPerSE wrapper, `.NDskl` parser, custom binary writer.
 - New `FilamentRenderer` GPU pipeline drawing line strips via the instanced-quad technique.
 - WGSL shader with soft-glow falloff and density-modulated alpha.
@@ -21,6 +22,7 @@
 - README docs covering install + build steps.
 
 **Out of scope (future plans):**
+
 - Persistence-cut slider with multiple pre-baked bins.
 - Per-filament density coloring along the ridge (Phase 1 ships single-hue + flat alpha; ridge density is parsed but not yet used in the shader).
 - SDSS footprint mask (Phase 1 accepts the boundary artefacts; mask gen is a separate plan).
@@ -28,6 +30,7 @@
 - Picking on filaments (filaments are decorative-only in Phase 1; clicking a filament does nothing).
 
 **Pre-existing dependencies:**
+
 - The merged SDSS + 2MRS + GLADE `.bin` files at `public/data/{sdss,2mrs,glade}.bin` (produced by `npm run build-all`).
 - The v4 PointCloud format (we read it for galaxy positions, not write it).
 - Existing per-frame draw orchestration in `src/services/engine/renderFrame.ts` (post-refactor: `engine.ts` constructs renderers; `renderFrame.ts` owns the HDR-pass + tone-map dispatch).
@@ -105,6 +108,7 @@ For every consecutive pair of vertices `(v_i, v_{i+1})` in a strip, emit one ins
 The fragment shader then uses the UV's y coordinate (0..1 across the line's width) to compute a soft falloff via `smoothstep` — wider in the middle, fading to 0 at the edges.
 
 Vertex buffers:
+
 - **Quad vertex buffer** (4 vertices, drawn once via index buffer): `[(0,0), (1,0), (0,1), (1,1)]`. Static.
 - **Index buffer**: `[0, 1, 2, 1, 3, 2]` — two triangles per quad. Static.
 - **Instance buffer** (one entry per filament segment): `[v_i.xyz, v_i.density, v_{i+1}.xyz, v_{i+1}.density]` = 8 f32 = 32 bytes. Built at filament-load time by walking each strip and emitting `stripVertices.length - 1` instances.
@@ -169,7 +173,7 @@ make install
 
 Then add `~/.local/bin` to PATH (or pass `-DCMAKE_INSTALL_PREFIX=/usr/local` and use `sudo make install` if you prefer system-wide).
 
-Build deps: **CGAL** + **GSL** + **CMake** (the README's override list is QT/GSL/SDL/MATHGL/CGAL — but QT/SDL/MATHGL are only needed for the optional `pdview` GUI and the `delaunay_2D/3D` tessellators, which we don't use; `mse` and `skelconv` only need CGAL + GSL).  Total time ~15 minutes on a modern Mac.
+Build deps: **CGAL** + **GSL** + **CMake** (the README's override list is QT/GSL/SDL/MATHGL/CGAL — but QT/SDL/MATHGL are only needed for the optional `pdview` GUI and the `delaunay_2D/3D` tessellators, which we don't use; `mse` and `skelconv` only need CGAL + GSL). Total time ~15 minutes on a modern Mac.
 
 The build produces five executables in `~/.local/bin/`; we use `mse` (the main pipeline) and `skelconv` (skeleton-format converter that emits `.NDskl`).
 
@@ -182,6 +186,7 @@ Record from Step 1's output: number of tests passing, lines of code (e.g. `find 
 ## Task 1: Pure NDskl parser
 
 **Files:**
+
 - Create: `tools/parsers/ndskl.ts` (mirrors the existing `tools/parsers/{glade,twoMrs,sdssCsv}.ts` layout — every catalog parser lives here)
 - Create: `tests/parsers/ndskl.test.ts` (tests mirror the source tree exactly)
 
@@ -411,9 +416,7 @@ export function parseNDskl(text: string): ParsedSkeleton {
     }
     const nSamples = Number(headerParts[2]);
     if (!Number.isFinite(nSamples) || nSamples < 2) {
-      throw new Error(
-        `parseNDskl: filament ${f} has invalid sample count ${headerParts[2]}`,
-      );
+      throw new Error(`parseNDskl: filament ${f} has invalid sample count ${headerParts[2]}`);
     }
     const vertices: Array<[number, number, number]> = [];
     for (let s = 0; s < nSamples; s++) {
@@ -455,9 +458,7 @@ export function parseNDskl(text: string): ParsedSkeleton {
     }
     const fieldCount = Number(fieldCountLine.trim());
     if (!Number.isFinite(fieldCount) || fieldCount < 0) {
-      throw new Error(
-        `parseNDskl: [FILAMENTS DATA] bad field count "${fieldCountLine}"`,
-      );
+      throw new Error(`parseNDskl: [FILAMENTS DATA] bad field count "${fieldCountLine}"`);
     }
     if (fieldCount > 0) {
       dataCursor += fieldCount; // skip the field-name lines
@@ -508,6 +509,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/parsers/ndskl.ts tests/
 ## Task 2: Filament binary format (encoder + decoder)
 
 **Files:**
+
 - Create: `src/data/filamentBinaryFormat.ts` (lives next to `pointCloudFormat.ts`; consumed by both the build-time encoder in `tools/buildFilaments.ts` and the runtime decoder in `cloudLoader.ts` — putting it under `src/data/` lets the runtime import it without crossing the `src/`↔`tools/` boundary)
 - Create: `src/@types/FilamentCloud.d.ts`
 - Create: `tests/data/filamentBinaryFormat.test.ts` (mirrors `src/data/`)
@@ -559,10 +561,7 @@ Create `/Users/rulkens/Development/js/skymap/tests/data/filamentBinaryFormat.tes
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import {
-  encodeFilaments,
-  decodeFilaments,
-} from '../../src/data/filamentBinaryFormat';
+import { encodeFilaments, decodeFilaments } from '../../src/data/filamentBinaryFormat';
 import type { FilamentCloud } from '../../src/@types/FilamentCloud';
 
 function makeFixture(): FilamentCloud {
@@ -572,11 +571,7 @@ function makeFixture(): FilamentCloud {
     vertexCount: 5,
     stripOffsets: new Uint32Array([0, 3, 5]),
     vertices: new Float32Array([
-      10, 20, 30, 0.9,
-      11, 21, 31, 0.8,
-      12, 22, 32, 0.7,
-      40, 50, 60, 0.6,
-      41, 51, 61, 0.5,
+      10, 20, 30, 0.9, 11, 21, 31, 0.8, 12, 22, 32, 0.7, 40, 50, 60, 0.6, 41, 51, 61, 0.5,
     ]),
   };
 }
@@ -744,11 +739,7 @@ export function decodeFilaments(buf: ArrayBuffer): FilamentCloud {
 
   const vertices = new Float32Array(vertexCount * FLOATS_PER_VERTEX);
   vertices.set(
-    new Float32Array(
-      buf,
-      HEADER_BYTES + offsetTableBytes,
-      vertexCount * FLOATS_PER_VERTEX,
-    ),
+    new Float32Array(buf, HEADER_BYTES + offsetTableBytes, vertexCount * FLOATS_PER_VERTEX),
   );
 
   return { stripCount, vertexCount, stripOffsets, vertices };
@@ -776,6 +767,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/data/filamentBinaryFormat
 ## Task 3: NDskl → FilamentCloud converter
 
 **Files:**
+
 - Modify: `tools/parsers/ndskl.ts` (add a converter helper)
 - Modify: `tests/parsers/ndskl.test.ts` (add tests for the converter)
 
@@ -817,11 +809,7 @@ describe('skeletonToFilamentCloud', () => {
     // [0.9, 0.8, 0.7, 0.6, 0.5] (min=0.5, max=0.9), the normalised slot
     // values are (d - 0.5) / 0.4 = [1.0, 0.75, 0.5, 0.25, 0].
     expect(Array.from(cloud.vertices)).toEqual([
-      10, 20, 30, 1.0,
-      11, 21, 31, 0.75,
-      40, 50, 60, 0.5,
-      41, 51, 61, 0.25,
-      42, 52, 62, 0,
+      10, 20, 30, 1.0, 11, 21, 31, 0.75, 40, 50, 60, 0.5, 41, 51, 61, 0.25, 42, 52, 62, 0,
     ]);
   });
 
@@ -971,6 +959,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/parsers/ndskl.ts tests/
 ## Task 4: buildFilaments CLI orchestrator
 
 **Files:**
+
 - Create: `tools/buildFilaments.ts`
 - Modify: `package.json` (add npm script)
 
@@ -1059,7 +1048,7 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
       }
       return decodePointCloud(readFileSync(path).buffer);
     })
-    .filter(<T,>(c: T | null): c is T => c !== null);
+    .filter(<T>(c: T | null): c is T => c !== null);
   const total = clouds.reduce((acc, c) => acc + c.count, 0);
   const positions = new Float32Array(total * 3);
   let off = 0;
@@ -1073,9 +1062,7 @@ function readMergedPositions(): { count: number; positions: Float32Array } {
 function writeTsvInput(path: string, positions: Float32Array, count: number): void {
   const lines: string[] = [];
   for (let i = 0; i < count; i++) {
-    lines.push(
-      `${positions[i * 3]} ${positions[i * 3 + 1]} ${positions[i * 3 + 2]}`,
-    );
+    lines.push(`${positions[i * 3]} ${positions[i * 3 + 1]} ${positions[i * 3 + 2]}`);
   }
   if (!existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, lines.join('\n') + '\n');
@@ -1126,9 +1113,7 @@ async function main(): Promise<void> {
   const outPath = resolve('public/data/filaments.bin');
   const buf = encodeFilaments(cloud);
   writeFileSync(outPath, Buffer.from(buf));
-  process.stderr.write(
-    `wrote filaments.bin (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB)\n`,
-  );
+  process.stderr.write(`wrote filaments.bin (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB)\n`);
 }
 
 const invokedDirectly = process.argv[1] === fileURLToPath(import.meta.url);
@@ -1169,6 +1154,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/buildFilaments.ts packa
 ## Task 5: cloudLoader fetch helper for filaments.bin
 
 **Files:**
+
 - Modify: `src/services/engine/cloudLoader.ts`
 
 The existing `loadAllClouds()` is hard-wired to the v4 PointCloud schema. Filaments use a different binary format, so we add a parallel function.
@@ -1227,6 +1213,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/engine/cloudLoad
 ## Task 6: filaments.wgsl shader
 
 **Files:**
+
 - Create: `src/services/gpu/shaders/filaments.wgsl`
 
 This is the instanced-quad line shader described at the top of this plan ("Render strategy"). One vertex stage that expands a unit-quad UV into a thick line segment between two filament vertices, plus a fragment stage that does soft-edge falloff.
@@ -1347,10 +1334,12 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/gpu/shaders/fila
 ## Task 7: FilamentRenderer GPU pipeline
 
 **Files:**
+
 - Create: `src/services/gpu/filamentRenderer.ts`
 - Create: `tests/services/gpu/filamentRenderer.test.ts`
 
 The renderer owns:
+
 - One static index buffer `[0, 1, 2, 1, 3, 2]` (six u16).
 - One static quad-corner vertex buffer (4 × vec2 = 32 bytes).
 - One per-segment instance buffer (per call to `upload(cloud)`).
@@ -1377,11 +1366,7 @@ describe('buildSegmentInstances', () => {
       vertexCount: 5,
       stripOffsets: new Uint32Array([0, 3, 5]),
       vertices: new Float32Array([
-        10, 20, 30, 0.9,
-        11, 21, 31, 0.8,
-        12, 22, 32, 0.7,
-        40, 50, 60, 0.6,
-        41, 51, 61, 0.5,
+        10, 20, 30, 0.9, 11, 21, 31, 0.8, 12, 22, 32, 0.7, 40, 50, 60, 0.6, 41, 51, 61, 0.5,
       ]),
     };
     const result = buildSegmentInstances(cloud);
@@ -1389,17 +1374,11 @@ describe('buildSegmentInstances', () => {
     expect(result.data.length).toBe(3 * 8); // 8 floats per segment
 
     // First segment of strip A: (v0, v1)
-    expect(Array.from(result.data.slice(0, 8))).toEqual([
-      10, 20, 30, 0.9, 11, 21, 31, 0.8,
-    ]);
+    expect(Array.from(result.data.slice(0, 8))).toEqual([10, 20, 30, 0.9, 11, 21, 31, 0.8]);
     // Second segment of strip A: (v1, v2)
-    expect(Array.from(result.data.slice(8, 16))).toEqual([
-      11, 21, 31, 0.8, 12, 22, 32, 0.7,
-    ]);
+    expect(Array.from(result.data.slice(8, 16))).toEqual([11, 21, 31, 0.8, 12, 22, 32, 0.7]);
     // First (only) segment of strip B: (v3, v4)
-    expect(Array.from(result.data.slice(16, 24))).toEqual([
-      40, 50, 60, 0.6, 41, 51, 61, 0.5,
-    ]);
+    expect(Array.from(result.data.slice(16, 24))).toEqual([40, 50, 60, 0.6, 41, 51, 61, 0.5]);
   });
 
   it('handles zero strips', () => {
@@ -1588,9 +1567,9 @@ export class FilamentRenderer {
             stepMode: 'instance',
             attributes: [
               { shaderLocation: 1, offset: 0, format: 'float32x3' }, // startPos
-              { shaderLocation: 2, offset: 12, format: 'float32' },  // startDensity
+              { shaderLocation: 2, offset: 12, format: 'float32' }, // startDensity
               { shaderLocation: 3, offset: 16, format: 'float32x3' }, // endPos
-              { shaderLocation: 4, offset: 28, format: 'float32' },  // endDensity
+              { shaderLocation: 4, offset: 28, format: 'float32' }, // endDensity
             ],
           },
         ],
@@ -1703,13 +1682,14 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/gpu/filamentRend
 ## Task 8: Engine integration
 
 **Files:**
+
 - Modify: `src/services/engine/engine.ts`
 - Modify: `src/services/engine/renderFrame.ts`
 - Modify: `src/@types/EngineHandle.d.ts`
 
 Wire `FilamentRenderer` into the per-frame draw path.
 
-Architecture note: post-refactor, the per-frame loop lives in `renderFrame.ts` (see its docstring — points → thumbnails → tone-map). Engine.ts owns *construction* of the renderers and threads them into `renderFrame()` via the `RenderFrameInput` bag. So this task touches both files: engine.ts for instantiation + the public `setFilamentsEnabled` toggle, renderFrame.ts for the actual draw call inside the HDR pass.
+Architecture note: post-refactor, the per-frame loop lives in `renderFrame.ts` (see its docstring — points → thumbnails → tone-map). Engine.ts owns _construction_ of the renderers and threads them into `renderFrame()` via the `RenderFrameInput` bag. So this task touches both files: engine.ts for instantiation + the public `setFilamentsEnabled` toggle, renderFrame.ts for the actual draw call inside the HDR pass.
 
 - [ ] **Step 1: Extend `EngineHandle`**
 
@@ -1735,33 +1715,35 @@ In `/Users/rulkens/Development/js/skymap/src/@types/EngineHandle.d.ts`, add the 
 In `/Users/rulkens/Development/js/skymap/src/services/engine/engine.ts`, follow the `new PointRenderer(device, 'rgba16float')` pattern (search the file for it) — filaments draw into the same HDR target.
 
 1. Imports near the top:
+
    ```ts
    import { FilamentRenderer } from '../gpu/filamentRenderer';
    import { loadFilaments } from './cloudLoader';
    ```
 
 2. Closure state, alongside the other renderer references:
+
    ```ts
    let filamentRenderer: FilamentRenderer | null = null;
    let filamentsEnabled = false;
    ```
 
 3. Inside the GPU-init block (next to where `PointRenderer` / `QuadRenderer` get constructed), add:
+
    ```ts
    filamentRenderer = new FilamentRenderer(device, 'rgba16float');
    loadFilaments().then((cloud) => {
      if (cloud && filamentRenderer) {
        filamentRenderer.upload(cloud);
-       console.log(
-         `[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts`,
-       );
+       console.log(`[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts`);
        scheduler.requestRender(); // wake the render-on-demand loop so the
-                                   // skeleton appears as soon as it loads
+       // skeleton appears as soon as it loads
      }
    });
    ```
 
 4. In the public-API object the engine returns, add:
+
    ```ts
    setFilamentsEnabled(enabled) {
      filamentsEnabled = enabled;
@@ -1785,15 +1767,19 @@ In `/Users/rulkens/Development/js/skymap/src/services/engine/engine.ts`, follow 
 In `/Users/rulkens/Development/js/skymap/src/services/engine/renderFrame.ts`, extend `RenderFrameInput` with the new dependencies and emit the draw call inside the existing HDR `pass`, AFTER `thumbnails.runFrame(...)` and BEFORE `pass.end()`:
 
 1. In the `RenderFrameInput` type (alongside `pointRenderer`, `thumbnails`, etc.), add:
+
    ```ts
    filamentRenderer: FilamentRenderer | null;
    ```
+
    And in the `RenderFrameSettings` type, add:
+
    ```ts
    filamentsEnabled: boolean;
    ```
 
 2. Import the type at the top of the file:
+
    ```ts
    import type { FilamentRenderer } from '../gpu/filamentRenderer';
    ```
@@ -1837,6 +1823,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/engine/engine.ts
 ## Task 9: SettingsPanel toggle
 
 **Files:**
+
 - Modify: `src/components/SettingsPanel/SettingsPanel.tsx`
 - Modify: `src/App.tsx`
 
@@ -1847,14 +1834,14 @@ Add a "Filaments" checkbox following the existing pattern (`galaxyTexturesEnable
 Open `/Users/rulkens/Development/js/skymap/src/components/SettingsPanel/SettingsPanel.tsx`. Find the existing `galaxyTexturesEnabled` checkbox (search for `galaxy-textures` or similar). Below it, add an analogous block:
 
 ```tsx
-        <label className={styles.checkboxRow}>
-          <input
-            type="checkbox"
-            checked={filamentsEnabled}
-            onChange={(e) => onFilamentsChange(e.target.checked)}
-          />
-          <span>Filaments (cosmic web overlay)</span>
-        </label>
+<label className={styles.checkboxRow}>
+  <input
+    type="checkbox"
+    checked={filamentsEnabled}
+    onChange={(e) => onFilamentsChange(e.target.checked)}
+  />
+  <span>Filaments (cosmic web overlay)</span>
+</label>
 ```
 
 Add the matching props to `SettingsPanelProps`:
@@ -1901,13 +1888,14 @@ cd /Users/rulkens/Development/js/skymap && git add src/components/SettingsPanel/
 ## Task 10: README documentation
 
 **Files:**
+
 - Modify: `README.md`
 
 - [ ] **Step 1: Add a section**
 
 Add a new section under the existing data-pipeline docs (after "Loading multi-survey data"):
 
-```markdown
+````markdown
 ### Cosmic-web filament skeleton (optional)
 
 Renders the filament skeleton — the network of 1D ridges connecting
@@ -1917,7 +1905,7 @@ Optional; the renderer works without it.
 #### Build the skeleton (one-time, slow)
 
 The skeleton is computed offline by **DisPerSE** (Sousbie 2011),
-a C++ Morse-theory-based topological extractor.  Install:
+a C++ Morse-theory-based topological extractor. Install:
 
 ```bash
 brew install cgal gsl cmake
@@ -1926,8 +1914,9 @@ cd ~/Development/vendor/cpp/DisPerSE
 mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=$HOME/.local && make -j 4 && make install
 ```
+````
 
-Build deps: CGAL + GSL + CMake (homebrew).  Build time: ~15 min.  See Task 0 for full notes.
+Build deps: CGAL + GSL + CMake (homebrew). Build time: ~15 min. See Task 0 for full notes.
 
 Run order (after `npm run build-all`):
 
@@ -1935,19 +1924,22 @@ Run order (after `npm run build-all`):
 npm run build-filaments
 ```
 
-Wall time: 6–12 hours on a workstation.  RAM peak: ~16 GB.  Output:
+Wall time: 6–12 hours on a workstation. RAM peak: ~16 GB. Output:
 `public/data/filaments.bin` (~5 MB at the default 5σ persistence cut).
 
 #### Run-time toggle
 
-Enable in the Settings panel ("Filaments — cosmic web overlay").  Off
+Enable in the Settings panel ("Filaments — cosmic web overlay"). Off
 by default to avoid loading the 5 MB binary on first paint.
+
 ```
 
 - [ ] **Step 2: Commit**
 
 ```
+
 cd /Users/rulkens/Development/js/skymap && git add README.md && git commit -m "docs(readme): document filament-skeleton build + toggle"
+
 ```
 
 ---
@@ -1959,7 +1951,9 @@ cd /Users/rulkens/Development/js/skymap && git add README.md && git commit -m "d
 - [ ] **Step 1: Run the full type + test suites**
 
 ```
+
 cd /Users/rulkens/Development/js/skymap && npm run typecheck && npm test
+
 ```
 
 Expected: clean.  Total tests: baseline + ~13 (5 NDskl parser + 3 NDskl converter + 5 binary format + 2 segment-instances).
@@ -1967,7 +1961,9 @@ Expected: clean.  Total tests: baseline + ~13 (5 NDskl parser + 3 NDskl converte
 - [ ] **Step 2: Build the skeleton (requires DisPerSE installed)**
 
 ```
+
 cd /Users/rulkens/Development/js/skymap && npm run build-filaments
+
 ```
 
 Expected output (rough): "merged ~2.5M galaxy positions", an `mse` run lasting hours, "10,000-50,000 strips", "~300,000-1,500,000 vertices", final `wrote filaments.bin (5-25 MB)`.
@@ -2038,3 +2034,22 @@ Phase 3 visualises the DisPerSE per-filament *robustness* in σ — the proper "
 5. **filaments.wgsl** — receive σ as a per-instance flat-interpolated attribute, replace the `density`-based ramp with a σ-coded colour map (e.g. plasma or viridis on the input distribution range).  Keep density modulation in addition; σ is per-filament binary, density is per-vertex continuous — they complement.
 
 Estimated scope: ~6 commits.  Not blocking; ship Phase 2 first and iterate from visual feedback.
+```
+
+---
+
+## Phase 4 (deferred): extend MAX_DISTANCE_MPC to 300
+
+Current build caps at D = 200 Mpc.  Distribution beyond:
+
+| Shell (Mpc) | 2MRS | GLADE |
+|---|---|---|
+| 200–300 | 5,111 | 251,850 |
+| 300–500 | 655 | 471,342 |
+| 500+ | ~1 | ~1.1M |
+
+2MRS effectively dies past 300 Mpc.  Bumping MAX_DISTANCE_MPC to 300 captures the Sloan Great Wall (~270 Mpc) in full and keeps 2MRS contributing as radial cross-validation against GLADE.  Past 500 the input becomes GLADE-only and dominated by SDSS-DR12 inside the SDSS footprint — bringing back the pencil-beam-shaped artefacts that motivated dropping SDSS in L1.
+
+Recommended change: `MAX_DISTANCE_MPC = 300` (one-line bump in `tools/buildFilaments.ts`).  Forces a full Delaunay re-run (input set ~doubles).  V_max + HEALPix corrections that just landed should handle the additional radial completeness drop-off honestly.
+
+Deferred from session 2026-05-05 because the user wanted to see V_max + HEALPix results at 200 first.

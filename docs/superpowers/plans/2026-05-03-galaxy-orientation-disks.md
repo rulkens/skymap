@@ -65,18 +65,8 @@ const HEADER_BYTES = 16;
 const BYTES_PER_POINT = 56;
 
 export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
-  const {
-    count,
-    objIDs,
-    positions,
-    magU,
-    magG,
-    magR,
-    magI,
-    magZ,
-    axisRatio,
-    positionAngleDeg,
-  } = cloud;
+  const { count, objIDs, positions, magU, magG, magR, magI, magZ, axisRatio, positionAngleDeg } =
+    cloud;
   if (objIDs.length !== count) throw new Error('objIDs length mismatch');
   if (positions.length !== count * 3) throw new Error('positions length mismatch');
   if (magU.length !== count) throw new Error('magU length mismatch');
@@ -85,8 +75,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
   if (magI.length !== count) throw new Error('magI length mismatch');
   if (magZ.length !== count) throw new Error('magZ length mismatch');
   if (axisRatio.length !== count) throw new Error('axisRatio length mismatch');
-  if (positionAngleDeg.length !== count)
-    throw new Error('positionAngleDeg length mismatch');
+  if (positionAngleDeg.length !== count) throw new Error('positionAngleDeg length mismatch');
 
   const buf = new ArrayBuffer(HEADER_BYTES + count * BYTES_PER_POINT);
   const dv = new DataView(buf);
@@ -274,25 +263,25 @@ export type ParsedRecord = {
 `/Users/rulkens/Development/js/skymap/src/@types/PointCloud.d.ts` — append two fields:
 
 ```ts
-  /**
-   * Galaxy minor/major axis ratio b/a per point — length === count.
-   *
-   * Range (0, 1]: 1.0 = circular (face-on disk or a true E0 elliptical),
-   * 0.1 ≈ thin edge-on disk. NaN means the build pipeline failed to assign
-   * either a real-data or fallback value — should not happen in production
-   * bins but is preserved through the format for diagnostic purposes.
-   */
-  axisRatio: Float32Array;
+/**
+ * Galaxy minor/major axis ratio b/a per point — length === count.
+ *
+ * Range (0, 1]: 1.0 = circular (face-on disk or a true E0 elliptical),
+ * 0.1 ≈ thin edge-on disk. NaN means the build pipeline failed to assign
+ * either a real-data or fallback value — should not happen in production
+ * bins but is preserved through the format for diagnostic purposes.
+ */
+axisRatio: Float32Array;
 
-  /**
-   * Galaxy position angle per point — length === count, units degrees.
-   *
-   * Range [0, 180): the angle of the galaxy's major axis measured east of
-   * north (standard astronomical convention). PA wraps modulo 180° because
-   * a line has no direction; PA = 5° and PA = 185° describe the same
-   * orientation. NaN: same diagnostic-only meaning as axisRatio.
-   */
-  positionAngleDeg: Float32Array;
+/**
+ * Galaxy position angle per point — length === count, units degrees.
+ *
+ * Range [0, 180): the angle of the galaxy's major axis measured east of
+ * north (standard astronomical convention). PA wraps modulo 180° because
+ * a line has no direction; PA = 5° and PA = 185° describe the same
+ * orientation. NaN: same diagnostic-only meaning as axisRatio.
+ */
+positionAngleDeg: Float32Array;
 ```
 
 ### Verify
@@ -444,11 +433,11 @@ npx vitest run tests/utils/random/fallbackOrientation.test.ts
 Replace the column-reading + record-emit block in `/Users/rulkens/Development/js/skymap/tools/parsers/sdssCsv.ts`. Add column lookups after the existing ones:
 
 ```ts
-  const COL_EXP_AB = requireColumn('expAB_r');
-  const COL_EXP_PHI = requireColumn('expPhi_r');
-  const COL_DEV_AB = requireColumn('deVAB_r');
-  const COL_DEV_PHI = requireColumn('deVPhi_r');
-  const COL_FRAC_DEV = requireColumn('fracDeV_r');
+const COL_EXP_AB = requireColumn('expAB_r');
+const COL_EXP_PHI = requireColumn('expPhi_r');
+const COL_DEV_AB = requireColumn('deVAB_r');
+const COL_DEV_PHI = requireColumn('deVPhi_r');
+const COL_FRAC_DEV = requireColumn('fracDeV_r');
 ```
 
 Add a helper above the row loop:
@@ -512,28 +501,28 @@ function blendSdssShape(
 In the row-parse loop, parse the 5 new columns and produce the blended result; replace the final `records.push(...)` with:
 
 ```ts
-    const expAB = parseFloat(cells[COL_EXP_AB] ?? '');
-    const expPhi = parseFloat(cells[COL_EXP_PHI] ?? '');
-    const deVAB = parseFloat(cells[COL_DEV_AB] ?? '');
-    const deVPhi = parseFloat(cells[COL_DEV_PHI] ?? '');
-    const fracDeV = parseFloat(cells[COL_FRAC_DEV] ?? '');
+const expAB = parseFloat(cells[COL_EXP_AB] ?? '');
+const expPhi = parseFloat(cells[COL_EXP_PHI] ?? '');
+const deVAB = parseFloat(cells[COL_DEV_AB] ?? '');
+const deVPhi = parseFloat(cells[COL_DEV_PHI] ?? '');
+const fracDeV = parseFloat(cells[COL_FRAC_DEV] ?? '');
 
-    const shape = blendSdssShape(expAB, expPhi, deVAB, deVPhi, fracDeV);
+const shape = blendSdssShape(expAB, expPhi, deVAB, deVPhi, fracDeV);
 
-    records.push({
-      source: Source.SDSS,
-      objID,
-      ra,
-      dec,
-      z,
-      magU,
-      magG,
-      magR,
-      magI,
-      magZ,
-      axisRatio: shape ? shape.axisRatio : null,
-      positionAngleDeg: shape ? shape.positionAngleDeg : null,
-    });
+records.push({
+  source: Source.SDSS,
+  objID,
+  ra,
+  dec,
+  z,
+  magU,
+  magG,
+  magR,
+  magI,
+  magZ,
+  axisRatio: shape ? shape.axisRatio : null,
+  positionAngleDeg: shape ? shape.positionAngleDeg : null,
+});
 ```
 
 Add a test to `/Users/rulkens/Development/js/skymap/tests/parsers/sdssCsv.test.ts`:
@@ -629,7 +618,9 @@ function readExistingIds(path: string): Set<string> {
   return done;
 }
 
-async function fetchChunk(ids: string[]): Promise<Map<string, { sup_phi: number; sup_ba: number }>> {
+async function fetchChunk(
+  ids: string[],
+): Promise<Map<string, { sup_phi: number; sup_ba: number }>> {
   const inList = ids.map((s) => `'${s}'`).join(',');
   const adql = `SELECT "2MASX", sup_phi, sup_ba FROM "II/246/out" WHERE "2MASX" IN (${inList})`;
   const body = new URLSearchParams({
@@ -790,27 +781,27 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
 Inside the row loop, extract the ID and look up:
 
 ```ts
-    const massId = line.slice(0, 16).trim();
-    const xscEntry = xsc.get(massId);
+const massId = line.slice(0, 16).trim();
+const xscEntry = xsc.get(massId);
 ```
 
 Replace the `records.push({...})` with:
 
 ```ts
-    records.push({
-      source: Source.TwoMRS,
-      objID: 0n,
-      ra,
-      dec,
-      z: cz / C_KM_S,
-      magU: NaN,
-      magG: jc,
-      magR: hc,
-      magI: kc,
-      magZ: NaN,
-      axisRatio: xscEntry ? xscEntry.sup_ba : null,
-      positionAngleDeg: xscEntry ? xscEntry.sup_phi : null,
-    });
+records.push({
+  source: Source.TwoMRS,
+  objID: 0n,
+  ra,
+  dec,
+  z: cz / C_KM_S,
+  magU: NaN,
+  magG: jc,
+  magR: hc,
+  magI: kc,
+  magZ: NaN,
+  axisRatio: xscEntry ? xscEntry.sup_ba : null,
+  positionAngleDeg: xscEntry ? xscEntry.sup_phi : null,
+});
 ```
 
 Add to `/Users/rulkens/Development/js/skymap/tests/parsers/twoMrs.test.ts`:
@@ -820,10 +811,7 @@ it('applies XSC PA and b/a from a cache map', () => {
   // Construct one minimal 2MRS line: bytes 1-16 = '12345678+0123456'
   // pad to >= 178 bytes; cz at bytes 174-178.
   const id = '12345678+0123456';
-  const line =
-    id +
-    ' '.repeat(178 - id.length - 5) +
-    '01000'; // cz = 1000
+  const line = id + ' '.repeat(178 - id.length - 5) + '01000'; // cz = 1000
   // Position columns are between byte 17-36; fill with sentinel space-padded values.
   // Easiest: rebuild with the real offsets.
   // (Use a fixture loaded from disk in the real test; this is a sketch.)
@@ -1077,31 +1065,31 @@ export function parseGladeLine(
 Inside, before the `return`:
 
 ```ts
-  // PGC sits in bytes 1-7 (0-based: 0-7). Empty/sentinel rows (`---`, `0`) are
-  // common — those rows just won't find a match in the cache and will fall
-  // through to the deterministic fallback at build time.
-  const pgcRaw = line.slice(0, 7).trim();
-  const pgcKey = pgcRaw === '' || /^-+$/.test(pgcRaw) || pgcRaw === '0' ? null : pgcRaw;
-  const ledaEntry = pgcKey ? hyperLeda.get(pgcKey) : undefined;
+// PGC sits in bytes 1-7 (0-based: 0-7). Empty/sentinel rows (`---`, `0`) are
+// common — those rows just won't find a match in the cache and will fall
+// through to the deterministic fallback at build time.
+const pgcRaw = line.slice(0, 7).trim();
+const pgcKey = pgcRaw === '' || /^-+$/.test(pgcRaw) || pgcRaw === '0' ? null : pgcRaw;
+const ledaEntry = pgcKey ? hyperLeda.get(pgcKey) : undefined;
 ```
 
 Replace the return object:
 
 ```ts
-  return {
-    source: Source.Glade,
-    objID: 0n,
-    ra,
-    dec,
-    z,
-    magU: NaN,
-    magG: bmag,
-    magR: jmag,
-    magI: hmag,
-    magZ: kmag,
-    axisRatio: ledaEntry ? ledaEntry.axisRatio : null,
-    positionAngleDeg: ledaEntry ? ledaEntry.pa : null,
-  };
+return {
+  source: Source.Glade,
+  objID: 0n,
+  ra,
+  dec,
+  z,
+  magU: NaN,
+  magG: bmag,
+  magR: jmag,
+  magI: hmag,
+  magZ: kmag,
+  axisRatio: ledaEntry ? ledaEntry.axisRatio : null,
+  positionAngleDeg: ledaEntry ? ledaEntry.pa : null,
+};
 ```
 
 Modify `parseGlade` signature similarly:
@@ -1295,13 +1283,13 @@ Add the two new attributes to the pipeline descriptor's `attributes:` array:
 Inside `upload`, in the per-instance fill loop, after writing slot 6 (kPerZ), add:
 
 ```ts
-      // Slots 7 and 8 (offsets 28 and 32 bytes): galaxy orientation. The
-      // shader reads these as f32; NaN at decode time would propagate into
-      // the ellipse mask and produce a black billboard, but the build
-      // pipeline guarantees both fields are finite (real or fallback) so
-      // we just copy them through.
-      interleaved[o + 7] = cloud.axisRatio[i]!;
-      interleaved[o + 8] = cloud.positionAngleDeg[i]!;
+// Slots 7 and 8 (offsets 28 and 32 bytes): galaxy orientation. The
+// shader reads these as f32; NaN at decode time would propagate into
+// the ellipse mask and produce a black billboard, but the build
+// pipeline guarantees both fields are finite (real or fallback) so
+// we just copy them through.
+interleaved[o + 7] = cloud.axisRatio[i]!;
+interleaved[o + 8] = cloud.positionAngleDeg[i]!;
 ```
 
 Modify `/Users/rulkens/Development/js/skymap/src/services/gpu/shaders/points.wgsl` — extend `PerVertex`:
@@ -1801,41 +1789,41 @@ import { DiskRenderer, type DiskInstance } from '../gpu/diskRenderer';
 Inside the async IIFE, after `quadRenderer.bindAtlas(...)`:
 
 ```ts
-      const diskRenderer = new DiskRenderer({ device, context, format, canvas });
-      diskRenderer.bindAtlas(atlas.getTextureView());
+const diskRenderer = new DiskRenderer({ device, context, format, canvas });
+diskRenderer.bindAtlas(atlas.getTextureView());
 ```
 
 In the per-frame thumbnail loop, restructure the QuadInstance push. Replace the loop body's tail (`const sizeWorldMpc = ...; const [u0, ...] = ...; quads.push(...)`) with:
 
 ```ts
-              const sizeWorldMpc = (dKpc / 1000) * 4;
-              const [u0, v0, u1, v1] = atlas.slotUv(slot);
+const sizeWorldMpc = (dKpc / 1000) * 4;
+const [u0, v0, u1, v1] = atlas.slotUv(slot);
 
-              const ar = cloud.axisRatio[i]!;
-              const pa = cloud.positionAngleDeg[i]!;
-              // 3D disk path: only when (a) the apparent size is large
-              // enough that the inclination ellipse is perceptually
-              // distinguishable from a circle, and (b) the orientation
-              // values are finite (defensive — the build pipeline
-              // guarantees this, but a corrupted cache could flip them
-              // to NaN, in which case we fall back to a flat quad rather
-              // than render a NaN-projected mess).
-              if (px > 4 && Number.isFinite(ar) && Number.isFinite(pa)) {
-                disks.push({
-                  x,
-                  y,
-                  z,
-                  sizeWorld: sizeWorldMpc,
-                  u0,
-                  v0,
-                  u1,
-                  v1,
-                  axisRatio: ar,
-                  positionAngleDeg: pa,
-                });
-              } else {
-                quads.push({ x, y, z, sizeWorld: sizeWorldMpc, u0, v0, u1, v1 });
-              }
+const ar = cloud.axisRatio[i]!;
+const pa = cloud.positionAngleDeg[i]!;
+// 3D disk path: only when (a) the apparent size is large
+// enough that the inclination ellipse is perceptually
+// distinguishable from a circle, and (b) the orientation
+// values are finite (defensive — the build pipeline
+// guarantees this, but a corrupted cache could flip them
+// to NaN, in which case we fall back to a flat quad rather
+// than render a NaN-projected mess).
+if (px > 4 && Number.isFinite(ar) && Number.isFinite(pa)) {
+  disks.push({
+    x,
+    y,
+    z,
+    sizeWorld: sizeWorldMpc,
+    u0,
+    v0,
+    u1,
+    v1,
+    axisRatio: ar,
+    positionAngleDeg: pa,
+  });
+} else {
+  quads.push({ x, y, z, sizeWorld: sizeWorldMpc, u0, v0, u1, v1 });
+}
 ```
 
 And just above the loop, declare `const disks: DiskInstance[] = [];` alongside `const quads: QuadInstance[] = [];`.
@@ -1843,18 +1831,18 @@ And just above the loop, declare `const disks: DiskInstance[] = [];` alongside `
 Replace the post-loop draw block with:
 
 ```ts
-          if (quads.length > 0) {
-            quadRenderer.draw(pass, vp, [canvas.width, canvas.height], quads);
-          }
-          if (disks.length > 0) {
-            diskRenderer.draw(
-              pass,
-              vp,
-              [canvas.width, canvas.height],
-              [cam.position[0], cam.position[1], cam.position[2]],
-              disks,
-            );
-          }
+if (quads.length > 0) {
+  quadRenderer.draw(pass, vp, [canvas.width, canvas.height], quads);
+}
+if (disks.length > 0) {
+  diskRenderer.draw(
+    pass,
+    vp,
+    [canvas.width, canvas.height],
+    [cam.position[0], cam.position[1], cam.position[2]],
+    disks,
+  );
+}
 ```
 
 ### Verify
@@ -1870,7 +1858,7 @@ npm run dev   # zoom in on a galaxy; confirm tilted disks appear once apparent-s
 - [ ] Extend `PointInfo` with `orientation: { axisRatio: number; positionAngleDeg: number; provenance: string }`.
 - [ ] Build it in `pointInfoBuilder.ts`. Provenance logic: SDSS rows where `cloud.axisRatio[i]` matches the pipeline's deterministic-fallback signature → "deterministic fallback"; else SDSS → "SDSS exp+deV blend"; 2MRS with finite real → "2MASS XSC sup_phi"; GLADE with finite real → "HyperLEDA PGC"; everyone else → "deterministic fallback".
 
-Since we don't carry a separate provenance flag in the binary format, we'll re-derive it cheaply at the build pipeline level. Update task 9 to write the provenance into a *separate* compact in-memory map keyed by global index (or by source) — but simplest path: at runtime, mark provenance based on `(source, hasOrientation)` where `hasOrientation` is encoded as: real orientation produces a finite value distinct from what `fallbackOrientation` would produce for the same `(objID, ra, dec)`.
+Since we don't carry a separate provenance flag in the binary format, we'll re-derive it cheaply at the build pipeline level. Update task 9 to write the provenance into a _separate_ compact in-memory map keyed by global index (or by source) — but simplest path: at runtime, mark provenance based on `(source, hasOrientation)` where `hasOrientation` is encoded as: real orientation produces a finite value distinct from what `fallbackOrientation` would produce for the same `(objID, ra, dec)`.
 
 A simpler, robust approach: re-run `fallbackOrientation` at runtime and compare with the stored values to detect fallback. If they're identical (within float epsilon), it's a fallback. Cheap: only computed when the user opens the InfoCard.
 
@@ -1879,57 +1867,57 @@ A simpler, robust approach: re-run `fallbackOrientation` at runtime and compare 
 `/Users/rulkens/Development/js/skymap/src/@types/PointInfo.d.ts` — append:
 
 ```ts
-  /**
-   * Orientation provenance + values for the InfoCard "Orientation" row.
-   *
-   * `axisRatio` and `positionAngleDeg` mirror the cloud's per-galaxy
-   * fields (always finite — fallback-filled at build time). `provenance`
-   * is a human-readable tag derived at info-card-build time by comparing
-   * the cloud value to what `fallbackOrientation` would produce for this
-   * row's (objID, ra, dec):
-   *
-   *   - exact match → 'deterministic fallback'
-   *   - SDSS row, mismatch → 'SDSS exp+deV blend'
-   *   - 2MRS row, mismatch → '2MASS XSC sup_phi'
-   *   - GLADE row, mismatch → 'HyperLEDA PGC'
-   *   - Synthetic row → 'deterministic fallback' (synthetic skips real-data fetch)
-   */
-  orientation: {
-    axisRatio: number;
-    positionAngleDeg: number;
-    provenance: string;
-  };
+/**
+ * Orientation provenance + values for the InfoCard "Orientation" row.
+ *
+ * `axisRatio` and `positionAngleDeg` mirror the cloud's per-galaxy
+ * fields (always finite — fallback-filled at build time). `provenance`
+ * is a human-readable tag derived at info-card-build time by comparing
+ * the cloud value to what `fallbackOrientation` would produce for this
+ * row's (objID, ra, dec):
+ *
+ *   - exact match → 'deterministic fallback'
+ *   - SDSS row, mismatch → 'SDSS exp+deV blend'
+ *   - 2MRS row, mismatch → '2MASS XSC sup_phi'
+ *   - GLADE row, mismatch → 'HyperLEDA PGC'
+ *   - Synthetic row → 'deterministic fallback' (synthetic skips real-data fetch)
+ */
+orientation: {
+  axisRatio: number;
+  positionAngleDeg: number;
+  provenance: string;
+}
 ```
 
 Modify `/Users/rulkens/Development/js/skymap/src/services/engine/pointInfoBuilder.ts` — locate `buildPointInfo` and add to the returned object:
 
 ```ts
-  // Detect orientation provenance by replaying the deterministic fallback
-  // for this row and comparing to the stored value. If they match exactly
-  // (down to the float bits — the build pipeline writes the same f32 that
-  // we re-compute here), the row is a fallback; otherwise it's real.
-  // Cheap: only runs when an InfoCard is built (hover or click), not
-  // every frame.
-  const ar = cloud.axisRatio[i]!;
-  const pa = cloud.positionAngleDeg[i]!;
-  const fb = fallbackOrientation(cloud.objIDs[i]!, ra, dec);
-  // Float32 round-trip: encode through Float32Array so the comparison
-  // matches what was written to the .bin.
-  const fbAr = new Float32Array([fb.axisRatio])[0]!;
-  const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
-  const isFallback = ar === fbAr && pa === fbPa;
-  let provenance: string;
-  if (isFallback) {
-    provenance = 'deterministic fallback';
-  } else if (source === Source.SDSS) {
-    provenance = 'SDSS exp+deV blend';
-  } else if (source === Source.TwoMRS) {
-    provenance = '2MASS XSC sup_phi';
-  } else if (source === Source.Glade) {
-    provenance = 'HyperLEDA PGC';
-  } else {
-    provenance = 'deterministic fallback';
-  }
+// Detect orientation provenance by replaying the deterministic fallback
+// for this row and comparing to the stored value. If they match exactly
+// (down to the float bits — the build pipeline writes the same f32 that
+// we re-compute here), the row is a fallback; otherwise it's real.
+// Cheap: only runs when an InfoCard is built (hover or click), not
+// every frame.
+const ar = cloud.axisRatio[i]!;
+const pa = cloud.positionAngleDeg[i]!;
+const fb = fallbackOrientation(cloud.objIDs[i]!, ra, dec);
+// Float32 round-trip: encode through Float32Array so the comparison
+// matches what was written to the .bin.
+const fbAr = new Float32Array([fb.axisRatio])[0]!;
+const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
+const isFallback = ar === fbAr && pa === fbPa;
+let provenance: string;
+if (isFallback) {
+  provenance = 'deterministic fallback';
+} else if (source === Source.SDSS) {
+  provenance = 'SDSS exp+deV blend';
+} else if (source === Source.TwoMRS) {
+  provenance = '2MASS XSC sup_phi';
+} else if (source === Source.Glade) {
+  provenance = 'HyperLEDA PGC';
+} else {
+  provenance = 'deterministic fallback';
+}
 ```
 
 Add `import { fallbackOrientation } from '../../utils/random/fallbackOrientation';` at the top of the file, and add `import { Source } from '../../data/sources';` if not already imported.
@@ -1947,19 +1935,17 @@ In the returned object literal, add:
 Modify `/Users/rulkens/Development/js/skymap/src/components/InfoCard/FullCard.tsx` — inside the `<details>` section, just before the ObjID row, add:
 
 ```tsx
-          <CardRow
-            label="Orientation"
-            value={
-              <>
-                b/a&nbsp;{info.orientation.axisRatio.toFixed(2)}
-                &nbsp;&nbsp;PA&nbsp;{info.orientation.positionAngleDeg.toFixed(0)}&deg;
-                <br />
-                <span style={{ opacity: 0.7, fontSize: '0.85em' }}>
-                  {info.orientation.provenance}
-                </span>
-              </>
-            }
-          />
+<CardRow
+  label="Orientation"
+  value={
+    <>
+      b/a&nbsp;{info.orientation.axisRatio.toFixed(2)}
+      &nbsp;&nbsp;PA&nbsp;{info.orientation.positionAngleDeg.toFixed(0)}&deg;
+      <br />
+      <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{info.orientation.provenance}</span>
+    </>
+  }
+/>
 ```
 
 ### Verify
@@ -1981,49 +1967,49 @@ npm run typecheck && npm run dev   # click a galaxy, expand details; confirm Ori
 Modify `/Users/rulkens/Development/js/skymap/src/services/gpu/pointRenderer.ts`. In the upload loop, replace:
 
 ```ts
-      interleavedU32[o + 5] = priorCount + i;
+interleavedU32[o + 5] = priorCount + i;
 ```
 
 with:
 
 ```ts
-      // Detect fallback by replaying the deterministic fallback hash and
-      // comparing to the stored values (same trick as pointInfoBuilder).
-      // Encode the boolean into the HIGH bit of the global instance ID
-      // u32 — we have 31 bits left over which is 2 billion points,
-      // comfortably beyond any catalogue we'll load.
-      const ar = cloud.axisRatio[i]!;
-      const pa = cloud.positionAngleDeg[i]!;
-      const fb = fallbackOrientation(cloud.objIDs[i]!, /*ra*/ 0, /*dec*/ 0);
-      // NOTE: fallbackOrientation needs ra/dec; the upload path doesn't
-      // have them as scalars, but we recover them from positions via
-      // cartesianToRaDecZ. To keep this hot loop fast, we precompute
-      // outside the loop (see below).
-      // [precomputed isFallback array assumed here]
-      const isFallback = isFallbackArr[i];
-      const idx = priorCount + i;
-      interleavedU32[o + 5] = isFallback ? idx | 0x80000000 : idx;
+// Detect fallback by replaying the deterministic fallback hash and
+// comparing to the stored values (same trick as pointInfoBuilder).
+// Encode the boolean into the HIGH bit of the global instance ID
+// u32 — we have 31 bits left over which is 2 billion points,
+// comfortably beyond any catalogue we'll load.
+const ar = cloud.axisRatio[i]!;
+const pa = cloud.positionAngleDeg[i]!;
+const fb = fallbackOrientation(cloud.objIDs[i]!, /*ra*/ 0, /*dec*/ 0);
+// NOTE: fallbackOrientation needs ra/dec; the upload path doesn't
+// have them as scalars, but we recover them from positions via
+// cartesianToRaDecZ. To keep this hot loop fast, we precompute
+// outside the loop (see below).
+// [precomputed isFallback array assumed here]
+const isFallback = isFallbackArr[i];
+const idx = priorCount + i;
+interleavedU32[o + 5] = isFallback ? idx | 0x80000000 : idx;
 ```
 
 Add at the top of `upload`, before the main loop:
 
 ```ts
-    // Pre-compute the fallback flag for every row. Done once at upload
-    // (CPU, not per-frame); the cost is the same hash + float32 round-trip
-    // we'd pay anyway in the InfoCard.
-    const isFallbackArr = new Uint8Array(cloud.count);
-    for (let i = 0; i < cloud.count; i++) {
-      const x = cloud.positions[i * 3 + 0]!;
-      const y = cloud.positions[i * 3 + 1]!;
-      const z = cloud.positions[i * 3 + 2]!;
-      const [ra, dec] = cartesianToRaDecZ(x, y, z);
-      const fb = fallbackOrientation(cloud.objIDs[i]!, ra, dec);
-      const fbAr = new Float32Array([fb.axisRatio])[0]!;
-      const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
-      if (cloud.axisRatio[i] === fbAr && cloud.positionAngleDeg[i] === fbPa) {
-        isFallbackArr[i] = 1;
-      }
-    }
+// Pre-compute the fallback flag for every row. Done once at upload
+// (CPU, not per-frame); the cost is the same hash + float32 round-trip
+// we'd pay anyway in the InfoCard.
+const isFallbackArr = new Uint8Array(cloud.count);
+for (let i = 0; i < cloud.count; i++) {
+  const x = cloud.positions[i * 3 + 0]!;
+  const y = cloud.positions[i * 3 + 1]!;
+  const z = cloud.positions[i * 3 + 2]!;
+  const [ra, dec] = cartesianToRaDecZ(x, y, z);
+  const fb = fallbackOrientation(cloud.objIDs[i]!, ra, dec);
+  const fbAr = new Float32Array([fb.axisRatio])[0]!;
+  const fbPa = new Float32Array([fb.positionAngleDeg])[0]!;
+  if (cloud.axisRatio[i] === fbAr && cloud.positionAngleDeg[i] === fbPa) {
+    isFallbackArr[i] = 1;
+  }
+}
 ```
 
 Add imports:

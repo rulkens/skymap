@@ -7,13 +7,13 @@ offscreen target instead of straight to the `bgra8unorm` swap chain, then
 run a fullscreen tone-map pass with five selectable curves (Linear,
 Reinhard-extended, Asinh stretch, Gamma 2.0, ACES filmic) so the user
 can A/B compare different ways of compressing the HDR signal into the
-displayable [0, 1] range.  Eliminates the saturated-white "over-exposed"
+displayable [0, 1] range. Eliminates the saturated-white "over-exposed"
 cores that currently clamp at 1.0, and offers a Lupton-style asinh curve
 that emphasises the low-end signal where cosmic-web filaments live.
 
 **Architecture:** A single new texture (`rgba16float`, viewport-sized,
 recreated on resize) sits between the existing render pipelines and the
-swap chain. Every existing pipeline that *currently* targets
+swap chain. Every existing pipeline that _currently_ targets
 `getPreferredCanvasFormat()` is reconstructed against `rgba16float`. The
 engine's per-frame loop adds one extra render pass at the end that samples
 the HDR texture and writes tone-mapped sRGB-encoded values into the swap
@@ -24,27 +24,28 @@ switch with no pipeline rebuild. The pick renderer is unchanged (its
 
 **Tech Stack:** WebGPU + WGSL. No new npm dependencies. Five tone-map
 curves selectable at runtime via a `curve: u32` uniform:
-  - **Linear / Clamp** (`curve=0`): `clamp(c, 0, 1)`.  No tone mapping
-    — the baseline.  Cluster cores saturate, filaments invisible.
-    Useful as a "what is HDR buying us" reference.
-  - **Reinhard-extended** (`curve=1`): `c · (1 + c/W²) / (1 + c)`.
-    Smooth highlight roll-off, "natural" look.  Sensible default.
-  - **Asinh / Lupton** (`curve=2`): `asinh(k·c) / asinh(k)`.  Linear
-    near zero, log-like at high values.  Aggressively lifts the low
-    end where filaments live; SDSS's own image pipeline uses this.
-  - **Gamma 2.0** (`curve=3`): `pow(clamp(c, 0, 1), 0.5)`.  Simple
-    midtone lift; less surgical than asinh but trivially cheap.
-  - **ACES filmic (Narkowicz approx)** (`curve=4`): the modern
-    cinematic S-curve.  `(c·(2.51·c+0.03)) / (c·(2.43·c+0.59)+0.14)`.
-    "Natural" cinematic look with shoulder + toe.
+
+- **Linear / Clamp** (`curve=0`): `clamp(c, 0, 1)`. No tone mapping
+  — the baseline. Cluster cores saturate, filaments invisible.
+  Useful as a "what is HDR buying us" reference.
+- **Reinhard-extended** (`curve=1`): `c · (1 + c/W²) / (1 + c)`.
+  Smooth highlight roll-off, "natural" look. Sensible default.
+- **Asinh / Lupton** (`curve=2`): `asinh(k·c) / asinh(k)`. Linear
+  near zero, log-like at high values. Aggressively lifts the low
+  end where filaments live; SDSS's own image pipeline uses this.
+- **Gamma 2.0** (`curve=3`): `pow(clamp(c, 0, 1), 0.5)`. Simple
+  midtone lift; less surgical than asinh but trivially cheap.
+- **ACES filmic (Narkowicz approx)** (`curve=4`): the modern
+  cinematic S-curve. `(c·(2.51·c+0.03)) / (c·(2.43·c+0.59)+0.14)`.
+  "Natural" cinematic look with shoulder + toe.
 
 Fullscreen pass uses the standard "three-vertex covering triangle"
-technique (no vertex buffer required).  Switching curves at runtime is
+technique (no vertex buffer required). Switching curves at runtime is
 a single 4-byte uniform write — no pipeline rebuild.
 
 **Success criteria:**
 
-- Bright cluster cores in SDSS / GLADE remain *brighter* than mid-density
+- Bright cluster cores in SDSS / GLADE remain _brighter_ than mid-density
   regions instead of saturating to identical white.
 - Switching to asinh visibly lifts mid-density / low-density regions —
   filamentary cosmic-web structure between clusters becomes legible.
@@ -52,7 +53,7 @@ a single 4-byte uniform write — no pipeline rebuild.
 - Linear/Clamp reproduces the pre-HDR look (cores blown out) — a
   baseline reference confirming what HDR is buying.
 - ACES gives a cinematic S-curve alternative; Gamma 2.0 a simpler
-  midtone lift.  Five curves total in the dropdown.
+  midtone lift. Five curves total in the dropdown.
 - Schechter mode 3's redistribution is now visible (currently invisible
   because cores were already saturated and mode 3 just shifts where the
   saturation boundary lies).
@@ -70,16 +71,16 @@ a single 4-byte uniform write — no pipeline rebuild.
 **Create:**
 
 - `src/data/toneMapCurve.ts` — `ToneMapCurve` enum + `ALL_TONE_MAP_CURVES`
-  + `toneMapCurveLabel(curve)` helper, mirroring the pattern of
-  `src/data/sources.ts` and `src/data/biasMode.ts`.  Two values:
-  `Reinhard = 0`, `Asinh = 1`.
+  - `toneMapCurveLabel(curve)` helper, mirroring the pattern of
+    `src/data/sources.ts` and `src/data/biasMode.ts`. Two values:
+    `Reinhard = 0`, `Asinh = 1`.
 - `src/services/gpu/hdrTarget.ts` — owns the `rgba16float` texture, its
   view, and the resize logic. Pure module: no `this`-state mutation;
   exposes a `createHdrTarget(device, size)` factory and a `resize` method.
 - `src/services/gpu/toneMapPass.ts` — render pipeline + draw helper for
   the fullscreen tone-map post-process. Constructor takes the device and
   the swap-chain format; `draw(encoder, swapView, hdrView, exposure,
-  curve)` runs the pass.
+curve)` runs the pass.
 - `src/services/gpu/shaders/toneMap.wgsl` — three-vertex covering tri +
   fragment shader that samples the HDR texture and branches on a
   `curve: u32` uniform between Reinhard-extended and asinh.
@@ -91,7 +92,7 @@ a single 4-byte uniform write — no pipeline rebuild.
 **Modify:**
 
 - `src/services/gpu/device.ts` — keep `alphaMode: 'premultiplied'`. No
-  format change. Just add a comment explaining why we *now* render to
+  format change. Just add a comment explaining why we _now_ render to
   `rgba16float` upstream and tone-map into this target downstream.
 - `src/services/gpu/pointRenderer.ts` — change pipeline format from
   the constructor's `format` parameter to a literal `'rgba16float'`
@@ -583,8 +584,7 @@ export const ToneMapCurve = {
   Aces: 4,
 } as const;
 
-export type ToneMapCurve =
-  (typeof ToneMapCurve)[keyof typeof ToneMapCurve];
+export type ToneMapCurve = (typeof ToneMapCurve)[keyof typeof ToneMapCurve];
 
 export const ALL_TONE_MAP_CURVES: ReadonlyArray<ToneMapCurve> = [
   ToneMapCurve.Linear,
@@ -681,7 +681,11 @@ export function gamma2(c: number, exposure: number): number {
 export function acesFilmic(c: number, exposure: number): number {
   // Narkowicz 2015 closed-form ACES approximation.
   const x = c * exposure;
-  const a = 2.51, b = 0.03, d = 2.43, e = 0.59, f = 0.14;
+  const a = 2.51,
+    b = 0.03,
+    d = 2.43,
+    e = 0.59,
+    f = 0.14;
   return Math.max(0, Math.min(1, (x * (a * x + b)) / (x * (d * x + e) + f)));
 }
 
@@ -696,10 +700,7 @@ export type ToneMapPass = {
   destroy(): void;
 };
 
-export function createToneMapPass(
-  device: GPUDevice,
-  swapFormat: GPUTextureFormat,
-): ToneMapPass {
+export function createToneMapPass(device: GPUDevice, swapFormat: GPUTextureFormat): ToneMapPass {
   const module = device.createShaderModule({ code: toneMapWgsl });
 
   const sampler = device.createSampler({
@@ -843,10 +844,16 @@ Replace `format` with the literal `'rgba16float'`:
 renderer = new PointRenderer(device, 'rgba16float');
 // (also pickRenderer below — leave alone, it targets r32uint)
 const quadRenderer = new QuadRenderer({
-  device, context, format: 'rgba16float', canvas,
+  device,
+  context,
+  format: 'rgba16float',
+  canvas,
 });
 const diskRenderer = new DiskRenderer({
-  device, context, format: 'rgba16float', canvas,
+  device,
+  context,
+  format: 'rgba16float',
+  canvas,
 });
 ```
 
@@ -871,12 +878,7 @@ const pass = encoder.beginRenderPass({
 pass.end();
 
 // New: tone-map the HDR target into the swap chain.
-toneMapPass.draw(
-  encoder,
-  context.getCurrentTexture().createView(),
-  hdrTarget.view,
-  exposure,
-);
+toneMapPass.draw(encoder, context.getCurrentTexture().createView(), hdrTarget.view, exposure);
 ```
 
 The existing `pass.end()` and `device.queue.submit` calls stay where they
@@ -934,7 +936,7 @@ git commit -m "feat(render): route point/quad/disk passes through HDR target + t
 
 We expose two engine handle methods — `setExposure` and
 `setToneMapCurve` — and add a single dropdown (curve selector) to the
-SettingsPanel so the user can compare Reinhard vs Asinh.  The exposure
+SettingsPanel so the user can compare Reinhard vs Asinh. The exposure
 slider is OUT OF SCOPE here; `setExposure` ships ready for future UI but
 no slider lands in this plan (keep the panel addition tight).
 
@@ -1042,32 +1044,34 @@ onToneMapCurveChange?: (curve: ToneMapCurve) => void;
    pattern; place the new section directly above or below it):
 
 ```tsx
-{toneMapCurve !== undefined && onToneMapCurveChange !== undefined && (
-  <>
-    <div className={styles.panelRow}>
-      <label htmlFor="tonemap-curve">Tone curve</label>
-      <select
-        id="tonemap-curve"
-        value={toneMapCurve}
-        onChange={(e) =>
-          onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurve)
-        }
-      >
-        {ALL_TONE_MAP_CURVES.map((c) => (
-          <option key={c} value={c}>{toneMapCurveLabel(c)}</option>
-        ))}
-      </select>
-    </div>
-    <div className={styles.panelDivider} role="separator" />
-  </>
-)}
+{
+  toneMapCurve !== undefined && onToneMapCurveChange !== undefined && (
+    <>
+      <div className={styles.panelRow}>
+        <label htmlFor="tonemap-curve">Tone curve</label>
+        <select
+          id="tonemap-curve"
+          value={toneMapCurve}
+          onChange={(e) => onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurve)}
+        >
+          {ALL_TONE_MAP_CURVES.map((c) => (
+            <option key={c} value={c}>
+              {toneMapCurveLabel(c)}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className={styles.panelDivider} role="separator" />
+    </>
+  );
+}
 ```
 
 - [ ] **Step 5: App.tsx — state + callback wiring**
 
 Add a `useState<ToneMapCurve>(ToneMapCurve.Reinhard)` near the bias-mode
-state.  Wire the callback on the `createEngine` call (mirror
-`onBiasModeChange: setBiasMode`).  Pass `toneMapCurve` and
+state. Wire the callback on the `createEngine` call (mirror
+`onBiasModeChange: setBiasMode`). Pass `toneMapCurve` and
 `onToneMapCurveChange` into the SettingsPanel call:
 
 ```tsx
@@ -1110,6 +1114,7 @@ Frame the same dense GLADE region screenshotted in Task 0 Step 2.
 Take a new screenshot, save to `/tmp/hdr-after.png`.
 
 Expected differences:
+
 - Bright cluster cores no longer pure white; they're brighter than
   the surrounding mid-density regions but visibly distinguishable.
 - Dim outskirts may be slightly darker (the Reinhard curve compresses
@@ -1120,9 +1125,9 @@ Expected differences:
 
 ```js
 // in DevTools:
-window.__engine.setExposure(0.5);   // dimmer
-window.__engine.setExposure(2.0);   // brighter
-window.__engine.setExposure(1.0);   // back to default
+window.__engine.setExposure(0.5); // dimmer
+window.__engine.setExposure(2.0); // brighter
+window.__engine.setExposure(1.0); // back to default
 ```
 
 (Engine handle exposure on `window.__engine` may need a one-line export
@@ -1134,15 +1139,15 @@ without any geometry rebuild — instant visual change.
 
 - [ ] **Step 4: Verify all five tone-curve options switch live**
 
-Settings panel → "Tone curve" dropdown.  Cycle through every option:
+Settings panel → "Tone curve" dropdown. Cycle through every option:
 
-| Curve              | Expected look                                           |
-|--------------------|---------------------------------------------------------|
-| Linear (baseline)  | Cores blown out to white; filaments invisible (pre-HDR) |
+| Curve              | Expected look                                            |
+| ------------------ | -------------------------------------------------------- |
+| Linear (baseline)  | Cores blown out to white; filaments invisible (pre-HDR)  |
 | Reinhard (natural) | Smooth, "natural" — cores brighter than mid, no clipping |
-| Asinh (filaments)  | Mid/dim regions visibly lifted; filaments stand out     |
-| Gamma 2.0          | Brighter midtones than Reinhard, cleaner highlights     |
-| ACES (cinematic)   | S-curve; punchier contrast, slight toe lift             |
+| Asinh (filaments)  | Mid/dim regions visibly lifted; filaments stand out      |
+| Gamma 2.0          | Brighter midtones than Reinhard, cleaner highlights      |
+| ACES (cinematic)   | S-curve; punchier contrast, slight toe lift              |
 
 Switching should be instant (single uniform write — no flicker,
 no pipeline rebuild).
@@ -1150,7 +1155,7 @@ no pipeline rebuild).
 - [ ] **Step 5: Verify Schechter mode 3 is now visible**
 
 Settings panel → density correction → "Schechter LF". The mode 3 alpha
-re-distribution should now be *visible* (it isn't currently because
+re-distribution should now be _visible_ (it isn't currently because
 saturated cores were swallowing the per-galaxy ratio difference).
 Particularly clear under the Asinh curve where dim galaxies are lifted.
 
@@ -1175,9 +1180,9 @@ or update a sentence:
 
 ```markdown
 Visible draw passes (points, quads, disks) render into a `rgba16float`
-HDR offscreen target.  A fullscreen tone-map pass (Reinhard-extended,
+HDR offscreen target. A fullscreen tone-map pass (Reinhard-extended,
 exposure-scaled) compresses the accumulated linear-light values into
-the swap chain's displayable range.  See
+the swap chain's displayable range. See
 `docs/superpowers/plans/2026-05-04-hdr-tonemap.md` for the rationale.
 ```
 
@@ -1211,9 +1216,9 @@ git commit -m "docs(render): note HDR + tone-map pipeline in README"
 ## Self-Review checklist
 
 - [x] Every visible renderer (point, quad, disk) is reconstructed against
-  `'rgba16float'` (Task 3 Step 2).
+      `'rgba16float'` (Task 3 Step 2).
 - [x] Pick renderer is explicitly noted as unchanged (Task 3 Step 2 +
-  Task 5 Step 5).
+      Task 5 Step 5).
 - [x] HDR target is recreated on resize (Task 3 Step 4).
 - [x] HDR target is destroyed on engine destroy (Task 3 Step 5).
 - [x] Tone-map pass writes to the swap chain (Task 3 Step 3).
@@ -1223,7 +1228,7 @@ git commit -m "docs(render): note HDR + tone-map pipeline in README"
 - [x] Type names consistent (`HdrTarget`, `ToneMapPass`, `Size`).
 - [x] No placeholders in step bodies — every code block is concrete.
 - [x] File paths match current repo layout (`src/services/gpu/`,
-  `src/services/engine/`, `tests/services/gpu/`).
+      `src/services/engine/`, `tests/services/gpu/`).
 
 ## Execution handoff
 

@@ -136,9 +136,7 @@ export type CreateClickResolverInput = {
   buildPointInfo: BuildPointInfo;
 };
 
-export function createClickResolver(
-  input: CreateClickResolverInput,
-): ClickResolver {
+export function createClickResolver(input: CreateClickResolverInput): ClickResolver {
   const { pickRenderer, resolveGlobalIdx, buildPointInfo } = input;
 
   return {

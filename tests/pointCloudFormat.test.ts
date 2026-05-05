@@ -50,9 +50,7 @@ describe('point cloud binary format', () => {
 
     // v3 orientation fields.
     expect(Array.from(decoded.axisRatio)).toEqual(Array.from(original.axisRatio));
-    expect(Array.from(decoded.positionAngleDeg)).toEqual(
-      Array.from(original.positionAngleDeg),
-    );
+    expect(Array.from(decoded.positionAngleDeg)).toEqual(Array.from(original.positionAngleDeg));
   });
 
   it('rejects wrong magic', () => {
@@ -115,9 +113,7 @@ describe('pointCloudFormat v4 (orientation round-trip)', () => {
     const cloud = makeOrientCloud(4, false);
     const decoded = decodePointCloud(encodePointCloud(cloud));
     expect(Array.from(decoded.axisRatio)).toEqual(Array.from(cloud.axisRatio));
-    expect(Array.from(decoded.positionAngleDeg)).toEqual(
-      Array.from(cloud.positionAngleDeg),
-    );
+    expect(Array.from(decoded.positionAngleDeg)).toEqual(Array.from(cloud.positionAngleDeg));
   });
 
   it('round-trips NaN sentinel', () => {

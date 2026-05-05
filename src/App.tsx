@@ -156,10 +156,10 @@ export function App(): React.ReactElement {
   const [pointSize, setPointSize] = useState<number>(DEFAULT_POINT_SIZE_PX);
   const [brightness, setBrightness] = useState<number>(DEFAULT_BRIGHTNESS);
   const [autoRotate, setAutoRotate] = useState<boolean>(DEFAULT_AUTO_ROTATE);
-  const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] =
-    useState<boolean>(DEFAULT_GALAXY_TEXTURES_ENABLED);
-  const [milkyWayEnabled, setMilkyWayEnabled] =
-    useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
+  const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(
+    DEFAULT_GALAXY_TEXTURES_ENABLED,
+  );
+  const [milkyWayEnabled, setMilkyWayEnabled] = useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
   // Cosmic-web filament-skeleton overlay toggle.  Defaults OFF
   // (`DEFAULT_FILAMENTS_ENABLED`) because the underlying `filaments.bin`
   // is an optional asset built by `npm run build-filaments` — fresh
@@ -167,13 +167,10 @@ export function App(): React.ReactElement {
   // do nothing.  Unlike `galaxyTexturesEnabled`/`milkyWayEnabled`, the
   // engine does NOT fire an echo callback for this field, so we update
   // React state optimistically inside the change handler below.
-  const [filamentsEnabled, setFilamentsEnabled] =
-    useState<boolean>(DEFAULT_FILAMENTS_ENABLED);
-  const [highlightFallback, setHighlightFallback] =
-    useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
+  const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(DEFAULT_FILAMENTS_ENABLED);
+  const [highlightFallback, setHighlightFallback] = useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
   const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
-  const [depthFadeEnabled, setDepthFadeEnabled] =
-    useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
+  const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
 
   // ── Multi-survey + LOD state (rev-2) ─────────────────────────────────────
   //
@@ -197,8 +194,7 @@ export function App(): React.ReactElement {
   // manual via `setSourceVisible`'s spec). When the engine grows an
   // `onSourceMaskChange` callback later, we can wire it here without changing
   // any other code.
-  const [visibleSourceMask, setVisibleSourceMask] =
-    useState<number>(DEFAULT_VISIBLE_SOURCE_MASK);
+  const [visibleSourceMask, setVisibleSourceMask] = useState<number>(DEFAULT_VISIBLE_SOURCE_MASK);
   const [lodMode, setLodMode] = useState<LodMode>(DEFAULT_LOD_MODE);
 
   // ── Rolling FPS readout ──────────────────────────────────────────────────
@@ -319,8 +315,7 @@ export function App(): React.ReactElement {
       // Each .bin lands at its own pace; record the count so the SettingsPanel
       // can show "SDSS  220,453" alongside the toggle. Functional update so
       // multiple parallel arrivals don't clobber each other.
-      onCloudReady: (source, count) =>
-        setSourceCounts((prev) => ({ ...prev, [source]: count })),
+      onCloudReady: (source, count) => setSourceCounts((prev) => ({ ...prev, [source]: count })),
       // Rolling FPS — engine throttles to integer-change events so this is a
       // cheap direct setState (no debounce / no useMemo needed).
       onFpsChange: setFps,
@@ -409,10 +404,7 @@ export function App(): React.ReactElement {
       // ── f: focus on currently-selected galaxy (no-op if nothing pinned) ────
       if (e.key === 'f' || e.key === 'F') {
         if (selected) {
-          handleRef.current?.focusOn(
-            [selected.x, selected.y, selected.z],
-            selected.diameterKpc,
-          );
+          handleRef.current?.focusOn([selected.x, selected.y, selected.z], selected.diameterKpc);
         }
         return;
       }
@@ -456,9 +448,7 @@ export function App(): React.ReactElement {
       <InfoCard
         hovered={hovered}
         selected={selected}
-        onFocus={(info) =>
-          handleRef.current?.focusOn([info.x, info.y, info.z], info.diameterKpc)
-        }
+        onFocus={(info) => handleRef.current?.focusOn([info.x, info.y, info.z], info.diameterKpc)}
       />
       <ScaleBar scale={scale} />
       {/*

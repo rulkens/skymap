@@ -23,10 +23,7 @@
  * @module
  */
 
-import {
-  computeSchechterRatios,
-  type ComputeSchechterRatiosInput,
-} from './computeSchechterRatios';
+import { computeSchechterRatios, type ComputeSchechterRatiosInput } from './computeSchechterRatios';
 
 self.onmessage = (event: MessageEvent<ComputeSchechterRatiosInput>) => {
   const ratios = computeSchechterRatios(event.data);

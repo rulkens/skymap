@@ -100,11 +100,7 @@ export type CameraTween = {
  * @returns     `true` if the tween has completed (caller should drop it),
  *              `false` if the tween is still in progress.
  */
-export function advanceCameraTween(
-  cam: OrbitCamera,
-  tween: CameraTween,
-  nowMs: number,
-): boolean {
+export function advanceCameraTween(cam: OrbitCamera, tween: CameraTween, nowMs: number): boolean {
   // Linear progress in [0, 1+].  We clamp at 1 (saturate the tween) and use
   // the clamp to detect "finished".
   const rawT = (nowMs - tween.startMs) / tween.durationMs;

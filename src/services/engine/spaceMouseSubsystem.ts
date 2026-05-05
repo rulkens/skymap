@@ -148,9 +148,7 @@ export type SpaceMouseInputCtorOptions = {
   onConnectionChange?: (connected: boolean, productName: string | null) => void;
 };
 
-export type SpaceMouseInputFactory = (
-  options: SpaceMouseInputCtorOptions,
-) => SpaceMouseInputLike;
+export type SpaceMouseInputFactory = (options: SpaceMouseInputCtorOptions) => SpaceMouseInputLike;
 
 export type CreateSpaceMouseSubsystemInput = {
   /**
@@ -265,9 +263,7 @@ export function createSpaceMouseSubsystem(
         return;
       }
       const dt =
-        lastFrameMs === null
-          ? FIRST_FRAME_DT_MS
-          : Math.min(nowMs - lastFrameMs, MAX_DT_MS);
+        lastFrameMs === null ? FIRST_FRAME_DT_MS : Math.min(nowMs - lastFrameMs, MAX_DT_MS);
       lastFrameMs = nowMs;
 
       // Yield to user input — same precedence rule as mouse drag.

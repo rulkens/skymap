@@ -95,7 +95,10 @@
 
 import { Source } from '../../src/data/sources.js';
 import { type ParsedRecord } from './common.js';
-import { galaxyDiameterKpc, DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
+import {
+  galaxyDiameterKpc,
+  DEFAULT_GALAXY_DIAMETER_KPC,
+} from '../../src/utils/math/galaxyDiameterKpc.js';
 import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude.js';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
 

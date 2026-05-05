@@ -118,12 +118,7 @@ export function CommandPalette({
 
   if (!open) return null;
   return (
-    <div
-      className={styles.backdrop}
-      onClick={onClose}
-      onKeyDown={onKeyDown}
-      role="presentation"
-    >
+    <div className={styles.backdrop} onClick={onClose} onKeyDown={onKeyDown} role="presentation">
       <div
         className={styles.panel}
         onClick={(e) => e.stopPropagation()}

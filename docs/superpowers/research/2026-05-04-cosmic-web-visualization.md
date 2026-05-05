@@ -24,7 +24,7 @@ Each requires different upstream data and different rendering plumbing. They are
 
 ### 2.1 Filament identification — DisPerSE remains the workhorse
 
-**[DisPerSE](https://ar5iv.labs.arxiv.org/html/1009.4015)** (Sousbie 2011) is still the canonical filament tracer in the SDSS / DESI literature in 2025-2026.  Method: builds a Delaunay tessellation of the galaxy positions, computes the density field via DTFE, identifies critical points (maxima / saddles / minima) using discrete Morse theory, and threads filaments along ridges between them. Output: persistent topological skeleton (`.NDskl` format) with a configurable persistence threshold for how robust each feature must be.
+**[DisPerSE](https://ar5iv.labs.arxiv.org/html/1009.4015)** (Sousbie 2011) is still the canonical filament tracer in the SDSS / DESI literature in 2025-2026. Method: builds a Delaunay tessellation of the galaxy positions, computes the density field via DTFE, identifies critical points (maxima / saddles / minima) using discrete Morse theory, and threads filaments along ridges between them. Output: persistent topological skeleton (`.NDskl` format) with a configurable persistence threshold for how robust each feature must be.
 
 **Recent 2025 applications using SDSS / DESI data:**
 
@@ -34,6 +34,7 @@ Each requires different upstream data and different rendering plumbing. They are
 - [Tracing missing baryons via tSZ + CMB lensing stacking](https://arxiv.org/html/2507.08561) — DisPerSE filaments on SDSS LOWZ-CMASS, ~30,700 filaments, length 30-100 cMpc, z=0.2-0.6.
 
 **Alternatives, less common:**
+
 - **NEXUS+** (Cautun et al. 2013) — multi-scale tensorial classification (knot/filament/sheet/void per voxel). Modern competitor.
 - **Bisous** (Tempel et al. 2014) — stochastic geometry, models filaments as cylinders. Probabilistic.
 - **β-skeleton** (Suárez-Pérez et al. 2021; Yin et al. 2024) — graph-based, used now for cosmological constraints. Cheap to compute.
@@ -52,6 +53,7 @@ Each requires different upstream data and different rendering plumbing. They are
 - **[ASTRA](https://arxiv.org/html/2404.01124)** (Stochastic Topological RAnking, 2024) — probabilistic per-galaxy classification (void/sheet/filament/knot). Already applied to [DESI EDR](https://arxiv.org/html/2604.01456) — public catalog at [Zenodo doi:10.5281/zenodo.19358024](https://zenodo.org/doi/10.5281/zenodo.19358024). **This one is interesting because it gives a per-galaxy soft membership probability, which maps trivially to a per-vertex shader attribute.**
 
 **For skymap, two paths make sense:**
+
 - For **named famous voids** (Boötes, Eridanus, Local Void): hand-curate a list with center + effective radius.
 - For **comprehensive void overlay**: ingest one of the public catalogs (DESIVAST is freshest; SDSS DR7 has wider sky coverage) as a 4th catalog source rendered as translucent spheres.
 
@@ -60,6 +62,7 @@ Each requires different upstream data and different rendering plumbing. They are
 **[Cosmicflows-4](https://projets.ip2i.in2p3.fr/cosmicflows/)** (Tully et al. 2023) is the canonical peculiar-velocity catalog used to define superclusters as **basins of gravitational attraction** (watersheds in the velocity divergence field).
 
 **[Dupuy & Courtois 2023, A&A](https://www.aanda.org/articles/aa/full_html/2023/10/aa46802-23/aa46802-23.html)** "Dynamic cosmography of the local Universe: Laniakea and five more watershed superclusters":
+
 - Confirmed Laniakea volume: 2 × 10⁶ (Mpc/h)³
 - Defined Apus, Hercules, Lepus, Perseus-Pisces, Shapley as watersheds
 - Located the Boötes and Sculptor void central repellers
@@ -68,7 +71,7 @@ Each requires different upstream data and different rendering plumbing. They are
 
 **[Courtois et al. 2025 (CF4++)](https://www.aanda.org/articles/aa/pdf/2025/09/aa53677-25.pdf)** — extends CF4 with DESI-PV-DR1 + WALLABY + FAST-DR1 to ~30,000 km/s. Reveals the **Vela supercluster** hidden in the Zone of Avoidance.
 
-**Visualization heritage:** the [SDvision](https://irfu.cea.fr/vweb) tool from Pomarède et al. produced the canonical Laniakea visualisation — translucent isosurfaces of velocity divergence overlaid on galaxy points + streamlines.  Publicly accessible interactive viewer at [cosmicweb.kimalbrecht.com](https://cosmicweb.kimalbrecht.com/) and [The Cosmic V-Web (CEA-Irfu)](https://irfu.cea.fr/vweb).  [NASA SVS "Cruising the Cosmic Web" (2024)](https://svs.gsfc.nasa.gov/14598/) is the polished public-facing fly-through.
+**Visualization heritage:** the [SDvision](https://irfu.cea.fr/vweb) tool from Pomarède et al. produced the canonical Laniakea visualisation — translucent isosurfaces of velocity divergence overlaid on galaxy points + streamlines. Publicly accessible interactive viewer at [cosmicweb.kimalbrecht.com](https://cosmicweb.kimalbrecht.com/) and [The Cosmic V-Web (CEA-Irfu)](https://irfu.cea.fr/vweb). [NASA SVS "Cruising the Cosmic Web" (2024)](https://svs.gsfc.nasa.gov/14598/) is the polished public-facing fly-through.
 
 ### 2.4 Density estimators
 
@@ -84,6 +87,7 @@ For skymap, the relevant question is: **what attribute do we attach to each gala
 ### 2.5 Existing in-browser cosmic-web viewers
 
 For inspiration / interop:
+
 - **[Network Behind the Cosmic Web](https://cosmicweb.kimalbrecht.com/)** (Albrecht) — d3-based 2D network viz; not a 3D inspiration per se but the data model (nodes + edges from a filament catalog) is exactly what we'd ingest from DisPerSE.
 - **[The Cosmic V-Web (CEA-Irfu)](https://irfu.cea.fr/vweb)** — Pomarède's interactive browser version; uses pre-rendered isosurfaces.
 - **[NASA SVS Cosmic Web](https://svs.gsfc.nasa.gov/14598/)** — pre-rendered video flythrough; not interactive but visually striking; the per-galaxy points + glowing-purple-filament aesthetic is exactly what skymap could approximate.
@@ -95,15 +99,15 @@ No public viewer renders DisPerSE skeletons interactively in WebGPU as of late 2
 
 ## 3. Public data catalogs available
 
-| Catalog | What | Format | Size | Good for |
-|---------|------|--------|------|----------|
-| [Cosmicflows-4](https://projets.ip2i.in2p3.fr/cosmicflows/) basins | 6 supercluster watershed FITS volumes (Laniakea, Apus, Hercules, Lepus, Perseus-Pisces, Shapley) | FITS, 128³ int volume | ~8 MB | supercluster bounding-region overlays |
-| [DESIVAST](https://data.desi.lbl.gov/doc/releases/dr1/vac/desivast/) | DESI DR1 voids (3 algorithms) | FITS table per algo | ~few MB total | comprehensive void overlay (z<0.24) |
-| [SDSS DR7 voids](https://doi.org/10.5281/zenodo.7406035) | SDSS DR7 voids (3 algorithms) | Zenodo (FITS) | ~few MB | wider-sky void overlay (older but comprehensive) |
-| [DESI EDR ASTRA](https://zenodo.org/doi/10.5281/zenodo.19358024) | per-galaxy void/sheet/filament/knot probability | Zenodo (table) | tens of MB | per-galaxy environment classification (color overlay) |
-| Yang et al. SDSS group catalog | ~500k galaxy groups/clusters | text catalog | ~tens of MB | cluster-scale concentrations within filaments |
-| **Self-computed** DisPerSE skeleton | `.NDskl` filament list | binary | tens-hundreds of MB | the cosmic-web skeleton; **only option for filaments** since no comprehensive public catalog exists |
-| **Self-computed** kth-NN density per galaxy | f32 per cloud point | trivially encoded into existing PointCloud | 0 incremental on disk if appended; +4 bytes/point if added as new slot | local-density color overlay |
+| Catalog                                                              | What                                                                                             | Format                                     | Size                                                                   | Good for                                                                                            |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------ | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [Cosmicflows-4](https://projets.ip2i.in2p3.fr/cosmicflows/) basins   | 6 supercluster watershed FITS volumes (Laniakea, Apus, Hercules, Lepus, Perseus-Pisces, Shapley) | FITS, 128³ int volume                      | ~8 MB                                                                  | supercluster bounding-region overlays                                                               |
+| [DESIVAST](https://data.desi.lbl.gov/doc/releases/dr1/vac/desivast/) | DESI DR1 voids (3 algorithms)                                                                    | FITS table per algo                        | ~few MB total                                                          | comprehensive void overlay (z<0.24)                                                                 |
+| [SDSS DR7 voids](https://doi.org/10.5281/zenodo.7406035)             | SDSS DR7 voids (3 algorithms)                                                                    | Zenodo (FITS)                              | ~few MB                                                                | wider-sky void overlay (older but comprehensive)                                                    |
+| [DESI EDR ASTRA](https://zenodo.org/doi/10.5281/zenodo.19358024)     | per-galaxy void/sheet/filament/knot probability                                                  | Zenodo (table)                             | tens of MB                                                             | per-galaxy environment classification (color overlay)                                               |
+| Yang et al. SDSS group catalog                                       | ~500k galaxy groups/clusters                                                                     | text catalog                               | ~tens of MB                                                            | cluster-scale concentrations within filaments                                                       |
+| **Self-computed** DisPerSE skeleton                                  | `.NDskl` filament list                                                                           | binary                                     | tens-hundreds of MB                                                    | the cosmic-web skeleton; **only option for filaments** since no comprehensive public catalog exists |
+| **Self-computed** kth-NN density per galaxy                          | f32 per cloud point                                                                              | trivially encoded into existing PointCloud | 0 incremental on disk if appended; +4 bytes/point if added as new slot | local-density color overlay                                                                         |
 
 ---
 
@@ -124,12 +128,13 @@ Extend the famous-galaxies pattern (currently in flight) to a `Source.Structures
 For voids: render as translucent sphere mesh (back-face only or with custom alpha falloff) at the void's position+radius. Void list: ~30 famous voids (Boötes, Local, Eridanus, Sculptor, etc.) hand-curated.
 
 For superclusters: harder to render geometry-faithfully. Two options:
+
 - (a) Just label them at their centroid like a city on a map. Cheap; "M31 in space" feel.
 - (b) Import the Cosmicflows-4 basin FITS volumes, march cubes them to mesh at build time, render as semi-transparent meshes. Very visually striking but more work.
 
-**Code surface for (a):** clone of the famous-galaxies stack with a different thumbnail-renderer (none — just text labels), no per-galaxy bin needed, just sidecar JSON.  **Two days.**
+**Code surface for (a):** clone of the famous-galaxies stack with a different thumbnail-renderer (none — just text labels), no per-galaxy bin needed, just sidecar JSON. **Two days.**
 
-**Code surface for (b):** add FITS reader for the basin volumes, marching-cubes mesher (offline, in `tools/`), GLB or custom binary mesh format, new GPU pipeline for translucent triangles.  **Two weeks-ish.**
+**Code surface for (b):** add FITS reader for the basin volumes, marching-cubes mesher (offline, in `tools/`), GLB or custom binary mesh format, new GPU pipeline for translucent triangles. **Two weeks-ish.**
 
 ### 4.3 DisPerSE filament skeleton as a render layer
 
@@ -140,6 +145,7 @@ Build-time conversion: write a `.NDskl` → custom binary parser that emits a fl
 Runtime: new WGSL render pass with `topology: 'line-list'`. Vertex shader reads from a per-vertex f32 buffer; fragment shader does a soft-glow line. Could optionally fade by ridge density so faint filaments are subtle.
 
 **Code surface:**
+
 - Offline: install DisPerSE (C++ build), wrap in a `tools/` Node script, write parser. ~1 week including DisPerSE build.
 - Runtime: new pipeline, vertex/fragment shaders, engine integration. ~3 days.
 - Total: **~2 weeks.**
@@ -156,11 +162,11 @@ Compute a 3D density grid offline (DTFE → 256³ voxels = 64 MB at f32, or 16 M
 
 ### 4.5 Cosmicflows-4 streamlines (cosmography mode)
 
-For users who want to see *how* the cosmic web is moving rather than just where things sit: download the Cosmicflows-4 reconstructed velocity field (publicly available), seed N streamlines per galaxy, integrate forward via Runge-Kutta in a Node build script, ship as a binary list of polylines. Render as line-strip with optional flow-direction color.
+For users who want to see _how_ the cosmic web is moving rather than just where things sit: download the Cosmicflows-4 reconstructed velocity field (publicly available), seed N streamlines per galaxy, integrate forward via Runge-Kutta in a Node build script, ship as a binary list of polylines. Render as line-strip with optional flow-direction color.
 
 This is what makes the Laniakea visualisation look like flowing rivers — each streamline is the gravitational fall-line from a galaxy toward its nearest attractor.
 
-**Code surface:** velocity-field reader (FITS), streamline integrator, line-strip render pass.  **~2 weeks** assuming the velocity field doesn't need modification.
+**Code surface:** velocity-field reader (FITS), streamline integrator, line-strip render pass. **~2 weeks** assuming the velocity field doesn't need modification.
 
 **Effect:** transforms the renderer from "static map" to "flow visualisation". Very dramatic; pairs naturally with named superclusters.
 
@@ -170,14 +176,14 @@ This is what makes the Laniakea visualisation look like flowing rivers — each 
 
 Ordered by ROI (visual payoff per implementation effort), assuming each is implemented independently.
 
-| Rank | Option | Effort | Visual payoff | Dependencies |
-|------|--------|--------|---------------|--------------|
-| 1 | **Per-galaxy kth-NN density coloring** (§4.1) | 2 days | Big — points become structure | None |
-| 2 | **Named voids + supercluster labels** (§4.2a) | 2 days | Moderate — adds context, is searchable via Cmd+K | Famous-galaxies pattern (already in flight) |
-| 3 | **DisPerSE filament skeleton** (§4.3) | 2 weeks | Huge — the canonical cosmic-web look | None |
-| 4 | **Cosmicflows-4 streamlines** (§4.5) | 2 weeks | Huge — flow visualisation, complementary to filaments | None |
-| 5 | **Cosmicflows-4 supercluster basin meshes** (§4.2b) | 2 weeks | Big — translucent shells for the named superclusters | (4) optional |
-| 6 | **DTFE volume rendering** (§4.4) | 3-4 weeks | Spectacular but heavy + fragile | None; conflicts with current compositing |
+| Rank | Option                                              | Effort    | Visual payoff                                         | Dependencies                                |
+| ---- | --------------------------------------------------- | --------- | ----------------------------------------------------- | ------------------------------------------- |
+| 1    | **Per-galaxy kth-NN density coloring** (§4.1)       | 2 days    | Big — points become structure                         | None                                        |
+| 2    | **Named voids + supercluster labels** (§4.2a)       | 2 days    | Moderate — adds context, is searchable via Cmd+K      | Famous-galaxies pattern (already in flight) |
+| 3    | **DisPerSE filament skeleton** (§4.3)               | 2 weeks   | Huge — the canonical cosmic-web look                  | None                                        |
+| 4    | **Cosmicflows-4 streamlines** (§4.5)                | 2 weeks   | Huge — flow visualisation, complementary to filaments | None                                        |
+| 5    | **Cosmicflows-4 supercluster basin meshes** (§4.2b) | 2 weeks   | Big — translucent shells for the named superclusters  | (4) optional                                |
+| 6    | **DTFE volume rendering** (§4.4)                    | 3-4 weeks | Spectacular but heavy + fragile                       | None; conflicts with current compositing    |
 
 **My recommendation for the next pass:** ship (1) first (cheap; immediate visual upgrade), then (3) DisPerSE filaments (canonical look). (2) named voids/supers slot in any time the famous-galaxies pattern is reused. (4) and (5) are great follow-ups once filaments + density are in place.
 
@@ -199,7 +205,7 @@ Ordered by ROI (visual payoff per implementation effort), assuming each is imple
 
 ## 7. Suggested next concrete plan
 
-If you want to act on this, the natural next plan is **Option 1 (per-galaxy density coloring)**.  Rough sketch — would expand into a full bite-sized TDD plan via the writing-plans skill:
+If you want to act on this, the natural next plan is **Option 1 (per-galaxy density coloring)**. Rough sketch — would expand into a full bite-sized TDD plan via the writing-plans skill:
 
 - T0: pre-flight (typecheck + tests green; existing .bin files present)
 - T1: pure helper `kthNearestNeighborDistance(positions, k)` in `tools/parsers/common.ts` or `tools/density.ts` (kd-tree based; Vitest)

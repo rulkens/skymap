@@ -104,8 +104,8 @@ describe('computeAngularWeights', () => {
 
     // Over-dense cone: tight cluster around RA=120, Dec=20.  All at z=0.08.
     for (let i = 0; i < N_CONE; i++) {
-      const ra = 120 + (Math.cos(i) * 1.5);
-      const dec = 20 + (Math.sin(i) * 1.5);
+      const ra = 120 + Math.cos(i) * 1.5;
+      const dec = 20 + Math.sin(i) * 1.5;
       setPos(cloud, i, ra, dec, 0.085 + (i % 7) * 0.001);
     }
 

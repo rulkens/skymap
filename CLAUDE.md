@@ -31,7 +31,7 @@ tests/                Vitest suite — mirrors src/ tree
 
 ## Project conventions (these override defaults)
 
-- **Didactic comments**: this project uses learning-oriented comments. Explain *why* and *what the alternative was*, not just *what*. Many files have multi-paragraph module headers — match that style. (Overrides the default no-comments rule.)
+- **Didactic comments**: this project uses learning-oriented comments. Explain _why_ and _what the alternative was_, not just _what_. Many files have multi-paragraph module headers — match that style. (Overrides the default no-comments rule.)
 - **`type` aliases, never `interface`**: `export type X = { ... }` for all TS shapes.
 - **No barrel exports for components**: import React components directly from their `.tsx`. No `index.ts` re-export files in component folders.
 - **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. To verify a UI change, ask the user to look (or describe what they should see).
@@ -68,7 +68,7 @@ Binary format is in `src/data/pointCloudFormat.ts` — currently v2, 48 bytes/po
 
 ## Catalog gotchas
 
-- **2MRS** (Huchra 2012) has only near-IR (J/H/K) photometry — we map J→magG, H→magR, K→magI to fit the SDSS-shaped slot. Local Group galaxies have *negative* cz; do **not** filter `cz > 0`.
+- **2MRS** (Huchra 2012) has only near-IR (J/H/K) photometry — we map J→magG, H→magR, K→magI to fit the SDSS-shaped slot. Local Group galaxies have _negative_ cz; do **not** filter `cz > 0`.
 - **GLADE v2.3** has no orientation columns. PGC numbers in col 1-7 are the cross-match key into HyperLEDA.
 - **2MRS** has `b/a` but no PA. The 2MASS XSC (the underlying source) has `sup_phi` — cross-match by 2MASS ID.
 - **SDSS** CSV column set is whatever was in the SkyServer SQL query — check the CSV header before assuming a column exists.

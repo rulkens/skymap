@@ -234,7 +234,7 @@ describe('computePriorCount', () => {
       [Source.Synthetic, 10],
       [Source.SDSS, 100],
       [Source.TwoMRS, 50], // ignored — same source
-      [Source.Glade, 25],   // ignored — later in enum order
+      [Source.Glade, 25], // ignored — later in enum order
     ]);
     expect(computePriorCount(Source.TwoMRS, counts)).toBe(110);
   });

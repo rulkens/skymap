@@ -93,9 +93,7 @@ export type ComputeSchechterRatiosInput = {
  * `pointRenderer.applySchechterMode` for why we pay the full re-upload cost
  * rather than issuing N sparse writes.
  */
-export function computeSchechterRatios(
-  input: ComputeSchechterRatiosInput,
-): Float32Array {
+export function computeSchechterRatios(input: ComputeSchechterRatiosInput): Float32Array {
   const { cloud, source } = input;
 
   // Hoist constants outside the per-galaxy loop — these depend only on the

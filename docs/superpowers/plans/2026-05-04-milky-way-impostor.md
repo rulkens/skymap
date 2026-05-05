@@ -10,22 +10,23 @@
 
 **Locked design decisions:**
 
-| Question | Decision |
-|---|---|
-| Quad orientation | Screen-aligned (option a) — billboard-style. World-fixed disk-plane orientation deferred as future enhancement. |
-| Quad sizing | Quad emitted in clip-space directly from the vertex stage; covers `[-1,1]²` NDC plus a 5% bleed margin so smoothstep edge fade has room. Effective world size is irrelevant. |
-| Distance fade | Linear in distance from origin: `fadeAlpha = 1 - smoothstep(10.0, 50.0, |camPosWorld|)` (Mpc). Below 10 Mpc the impostor renders at full alpha; above 50 Mpc it's fully gone. |
-| Time / animation | `iTime` uniform driven by engine wall-clock seconds, multiplied by `0.1` already (the ShaderToy already divides by 10 via its `#define TIME (iTime*0.1)`). One additional outer scale of `0.25` applied at the WGSL boundary so the rotation feels "slow and alive" rather than spinning. Net: `animationTimeSec = (perfNowMs - epoch) * 0.001 * 0.25`. |
-| HDR vs display-space | Output is LINEAR. The ported `postProcess()` function is DELETED entirely — no `pow(col, 0.75)` gamma, no contrast S-curve, no saturation lift, no vignette. Engine's tone-map pass downstream handles all display-space mapping. |
-| Composite order | Impostor renders AFTER clear, BEFORE points. Premultiplied additive blend (same as procedural-disk pass). Point billboards drawn on top hide it where they overlap, which is fine — the points are accurate galaxies, the impostor is an artistic foreground. |
-| Default visibility | `DEFAULT_MILKY_WAY_ENABLED = true`. |
-| Pause on tab-hidden | No special handling. Engine already gates the frame loop on `document.visibilityState === 'visible'` via the existing render-on-demand path. |
+| Question             | Decision                                                                                                                                                                                                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ---------------------------------------------------------------------------------------- |
+| Quad orientation     | Screen-aligned (option a) — billboard-style. World-fixed disk-plane orientation deferred as future enhancement.                                                                                                                                                                                                                                         |
+| Quad sizing          | Quad emitted in clip-space directly from the vertex stage; covers `[-1,1]²` NDC plus a 5% bleed margin so smoothstep edge fade has room. Effective world size is irrelevant.                                                                                                                                                                            |
+| Distance fade        | Linear in distance from origin: `fadeAlpha = 1 - smoothstep(10.0, 50.0,                                                                                                                                                                                                                                                                                 | camPosWorld | )` (Mpc). Below 10 Mpc the impostor renders at full alpha; above 50 Mpc it's fully gone. |
+| Time / animation     | `iTime` uniform driven by engine wall-clock seconds, multiplied by `0.1` already (the ShaderToy already divides by 10 via its `#define TIME (iTime*0.1)`). One additional outer scale of `0.25` applied at the WGSL boundary so the rotation feels "slow and alive" rather than spinning. Net: `animationTimeSec = (perfNowMs - epoch) * 0.001 * 0.25`. |
+| HDR vs display-space | Output is LINEAR. The ported `postProcess()` function is DELETED entirely — no `pow(col, 0.75)` gamma, no contrast S-curve, no saturation lift, no vignette. Engine's tone-map pass downstream handles all display-space mapping.                                                                                                                       |
+| Composite order      | Impostor renders AFTER clear, BEFORE points. Premultiplied additive blend (same as procedural-disk pass). Point billboards drawn on top hide it where they overlap, which is fine — the points are accurate galaxies, the impostor is an artistic foreground.                                                                                           |
+| Default visibility   | `DEFAULT_MILKY_WAY_ENABLED = true`.                                                                                                                                                                                                                                                                                                                     |
+| Pause on tab-hidden  | No special handling. Engine already gates the frame loop on `document.visibilityState === 'visible'` via the existing render-on-demand path.                                                                                                                                                                                                            |
 
 ---
 
 ## File Structure
 
 **Create:**
+
 - `src/services/gpu/milkyWayRenderer.ts` — render pipeline + draw method.
 - `src/services/gpu/shaders/milkyWayImpostor.wgsl` — vertex (clip-space quad) + fragment (ported ShaderToy galaxy).
 - `tests/services/gpu/milkyWayRenderer.test.ts` — pipeline-construction smoke test (mirror of `proceduralDiskRenderer.test.ts`).
@@ -33,6 +34,7 @@
 - `tests/utils/math/milkyWayFade.test.ts`
 
 **Modify:**
+
 - `src/data/defaults.ts` — add `DEFAULT_MILKY_WAY_ENABLED = true`.
 - `src/@types/EngineSettingsState.d.ts` — add `milkyWayEnabled: boolean` field.
 - `src/@types/EngineHandle.d.ts` — add `setMilkyWayEnabled?(enabled: boolean): void` setter.
@@ -332,20 +334,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 **WGSL port differences (apply in Task 4):**
 
-| GLSL | WGSL replacement |
-|---|---|
-| `iTime` global | `u.iTime` from the uniform buffer |
-| `iResolution` global | Removed entirely. The fragment receives `uv` in `[-1, 1]²` from the vertex stage; aspect ratio handled at the vertex stage by stretching the quad in clip-space. |
-| `mainImage(out vec4, in vec2)` | `@fragment fn fs(in: VsOut) -> @location(0) vec4<f32>` |
-| `inout` parameters (`mod2`, `rot`) | WGSL has no `inout`; convert to functions that return modified value. `mod2` must return a struct `{ p: vec2<f32>, c: vec2<f32> }`. |
-| `for (int i = ...)` | `for (var i: i32 = ...; ...; i = i + 1)` — WGSL is strict about types. |
-| `vec3(0.5)` constructor splat | `vec3<f32>(0.5)` |
-| `mix(a, b, c)` | `mix(a, b, c)` (same) |
-| `pow(col, vec3(0.75))` (in postProcess) | DELETED — postProcess function not ported. |
-| `clamp(col, 0.0, 1.0)` | DELETED — we want HDR overflow. |
-| Function overload `galaxy(p, a, z)` vs. `galaxy(p, ro, rd, d)` | WGSL has no overloading; rename the 4-arg overload to `shadeGalaxyDisk` and keep the 3-arg as `galaxy`. |
-| `0.5*TIME` etc. | Inline `(u.iTime * 0.1)` (the ShaderToy's `TIME` macro) at each call site, OR define `let TIME = u.iTime * 0.1;` once at the top of `fs`. Preferred: define once. |
-| `vec3(1.0, 0.9, 0.75).zyx` swizzle | `vec3<f32>(0.75, 0.9, 1.0)` written out — WGSL supports swizzles, but writing the literal makes the swap explicit for review. |
+| GLSL                                                           | WGSL replacement                                                                                                                                                  |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `iTime` global                                                 | `u.iTime` from the uniform buffer                                                                                                                                 |
+| `iResolution` global                                           | Removed entirely. The fragment receives `uv` in `[-1, 1]²` from the vertex stage; aspect ratio handled at the vertex stage by stretching the quad in clip-space.  |
+| `mainImage(out vec4, in vec2)`                                 | `@fragment fn fs(in: VsOut) -> @location(0) vec4<f32>`                                                                                                            |
+| `inout` parameters (`mod2`, `rot`)                             | WGSL has no `inout`; convert to functions that return modified value. `mod2` must return a struct `{ p: vec2<f32>, c: vec2<f32> }`.                               |
+| `for (int i = ...)`                                            | `for (var i: i32 = ...; ...; i = i + 1)` — WGSL is strict about types.                                                                                            |
+| `vec3(0.5)` constructor splat                                  | `vec3<f32>(0.5)`                                                                                                                                                  |
+| `mix(a, b, c)`                                                 | `mix(a, b, c)` (same)                                                                                                                                             |
+| `pow(col, vec3(0.75))` (in postProcess)                        | DELETED — postProcess function not ported.                                                                                                                        |
+| `clamp(col, 0.0, 1.0)`                                         | DELETED — we want HDR overflow.                                                                                                                                   |
+| Function overload `galaxy(p, a, z)` vs. `galaxy(p, ro, rd, d)` | WGSL has no overloading; rename the 4-arg overload to `shadeGalaxyDisk` and keep the 3-arg as `galaxy`.                                                           |
+| `0.5*TIME` etc.                                                | Inline `(u.iTime * 0.1)` (the ShaderToy's `TIME` macro) at each call site, OR define `let TIME = u.iTime * 0.1;` once at the top of `fs`. Preferred: define once. |
+| `vec3(1.0, 0.9, 0.75).zyx` swizzle                             | `vec3<f32>(0.75, 0.9, 1.0)` written out — WGSL supports swizzles, but writing the literal makes the swap explicit for review.                                     |
 
 **ShaderToy lines that must be DROPPED (not ported):**
 
@@ -394,6 +396,7 @@ Per `CLAUDE.md`, `npm run dev` is left running. The canvas should show the exist
 ## Task 2: Pure fade math — `milkyWayFadeAlpha`
 
 **Files:**
+
 - Create: `src/utils/math/milkyWayFade.ts`
 - Create: `tests/utils/math/milkyWayFade.test.ts`
 
@@ -532,6 +535,7 @@ git commit -m "feat(milky-way): add fade-alpha helper for distance-based visibil
 ## Task 3: Settings plumbing — defaults + state types + handle setter
 
 **Files:**
+
 - Modify: `src/data/defaults.ts`
 - Modify: `src/@types/EngineSettingsState.d.ts`
 - Modify: `src/@types/EngineHandle.d.ts`
@@ -618,6 +622,7 @@ git commit -m "feat(milky-way): add settings type + default for impostor toggle"
 ## Task 4: WGSL shader — vertex + fragment ported from ShaderToy
 
 **Files:**
+
 - Create: `src/services/gpu/shaders/milkyWayImpostor.wgsl`
 
 Hand-port the Task 0 GLSL into a single WGSL file. Vertex stage emits a clip-space quad covering the full viewport (with 5% bleed on each side so the smoothstep edge fade has room). Fragment stage runs the ported galaxy code. No texture sampling.
@@ -1027,6 +1032,7 @@ git commit -m "feat(milky-way): add WGSL port of CC0 spiral-galaxy shader"
 ## Task 5: `MilkyWayRenderer` — pipeline + draw method
 
 **Files:**
+
 - Create: `src/services/gpu/milkyWayRenderer.ts`
 - Create: `tests/services/gpu/milkyWayRenderer.test.ts`
 
@@ -1277,6 +1283,7 @@ git commit -m "feat(milky-way): add MilkyWayRenderer pipeline + uniform layout"
 ## Task 6: Engine integration — instantiate + plumb iTime epoch + setter
 
 **Files:**
+
 - Modify: `src/services/engine/engine.ts`
 
 The engine creates the renderer at startup, holds an `iTimeEpoch` (`performance.now()` snapshot at construction) so the per-frame iTime is `(now - epoch) * 0.001 * 0.25`, seeds the `milkyWayEnabled` setting from the default, and exposes the `setMilkyWayEnabled` setter on the public handle.
@@ -1304,15 +1311,15 @@ In the engine's `state.settings = { ... }` initialiser (around line 248 where `g
 In the engine's GPU-startup block (look for `const proceduralDiskRenderer = new ProceduralDiskRenderer({ ... });` — that's the closest sibling), add immediately after it:
 
 ```ts
-    // Procedural Milky Way impostor at world origin.  See
-    // `services/gpu/milkyWayRenderer.ts` for the rationale on why this
-    // is a sibling renderer rather than tucked into the per-galaxy
-    // procedural-disk pass, and `utils/math/milkyWayFade.ts` for the
-    // distance-fade band.
-    const milkyWayRenderer = new MilkyWayRenderer({
-      device,
-      format: presentationFormat,
-    });
+// Procedural Milky Way impostor at world origin.  See
+// `services/gpu/milkyWayRenderer.ts` for the rationale on why this
+// is a sibling renderer rather than tucked into the per-galaxy
+// procedural-disk pass, and `utils/math/milkyWayFade.ts` for the
+// distance-fade band.
+const milkyWayRenderer = new MilkyWayRenderer({
+  device,
+  format: presentationFormat,
+});
 ```
 
 (If the local variable name for the format differs in the file, use whatever the existing renderers pass — grep for `format: presentationFormat` near the existing renderer constructions.)
@@ -1322,16 +1329,16 @@ In the engine's GPU-startup block (look for `const proceduralDiskRenderer = new 
 Near the top of the engine's per-frame state block (where `lastTickMs` or similar wall-clock baselines live; if no such block exists, immediately above the `frame()` function definition), add:
 
 ```ts
-  /**
-   * Wall-clock epoch (ms, from `performance.now`) snapshot taken at
-   * engine construction.  Per-frame the Milky Way impostor's iTime
-   * is computed as `(performance.now() - milkyWayITimeEpochMs) * 0.001 *
-   * 0.25` — outer factor `0.25` is the slow-but-alive animation scale
-   * decided in the plan.  See `shaders/milkyWayImpostor.wgsl` line
-   * tagged `Match the ShaderToy's TIME macro` for the inner `* 0.1`
-   * factor that runs on top of this.
-   */
-  const milkyWayITimeEpochMs = performance.now();
+/**
+ * Wall-clock epoch (ms, from `performance.now`) snapshot taken at
+ * engine construction.  Per-frame the Milky Way impostor's iTime
+ * is computed as `(performance.now() - milkyWayITimeEpochMs) * 0.001 *
+ * 0.25` — outer factor `0.25` is the slow-but-alive animation scale
+ * decided in the plan.  See `shaders/milkyWayImpostor.wgsl` line
+ * tagged `Match the ShaderToy's TIME macro` for the inner `* 0.1`
+ * factor that runs on top of this.
+ */
+const milkyWayITimeEpochMs = performance.now();
 ```
 
 - [ ] **Step 5: Wire the public-handle setter**
@@ -1391,6 +1398,7 @@ Expected: TypeScript reports `Property 'milkyWayRenderer' does not exist on type
 ## Task 7: Engine integration — `renderFrame` early Milky Way pass
 
 **Files:**
+
 - Modify: `src/services/engine/renderFrame.ts`
 
 Widen `RenderFrameInput` and `RenderFrameSettings`, then add a Milky Way draw call inside the HDR pass BEFORE the points draw and BEFORE the thumbnails. Premultiplied additive blend means draw order doesn't change the math, but conceptually the impostor is a backdrop, so we put it first.
@@ -1409,13 +1417,13 @@ import { milkyWayFadeAlpha } from '../../utils/math/milkyWayFade';
 In the `RenderFrameSettings` type definition (around line 99-141), add after `galaxyTexturesEnabled`:
 
 ```ts
-  /**
-   * Whether to render the procedural Milky Way impostor at the world
-   * origin.  See `services/gpu/milkyWayRenderer.ts` for the rationale.
-   * When false, the pass is skipped entirely (zero GPU cost beyond a
-   * branch in the host CPU code).
-   */
-  milkyWayEnabled: boolean;
+/**
+ * Whether to render the procedural Milky Way impostor at the world
+ * origin.  See `services/gpu/milkyWayRenderer.ts` for the rationale.
+ * When false, the pass is skipped entirely (zero GPU cost beyond a
+ * branch in the host CPU code).
+ */
+milkyWayEnabled: boolean;
 ```
 
 - [ ] **Step 3: Add to `RenderFrameInput`**
@@ -1423,18 +1431,18 @@ In the `RenderFrameSettings` type definition (around line 99-141), add after `ga
 In the `RenderFrameInput` type definition (around line 148-179), in the GPU handles section add after `pointRenderer: PointRenderer;`:
 
 ```ts
-  milkyWayRenderer: MilkyWayRenderer;
+milkyWayRenderer: MilkyWayRenderer;
 ```
 
 And after the `viewProj: mat4;` field, add:
 
 ```ts
-  /**
-   * Animation time in seconds for the Milky Way impostor, already
-   * scaled by the engine's chosen "slow but alive" factor (0.25× wall
-   * clock).  See `engine.ts` for the epoch-relative calculation.
-   */
-  milkyWayITimeSec: number;
+/**
+ * Animation time in seconds for the Milky Way impostor, already
+ * scaled by the engine's chosen "slow but alive" factor (0.25× wall
+ * clock).  See `engine.ts` for the epoch-relative calculation.
+ */
+milkyWayITimeSec: number;
 ```
 
 - [ ] **Step 4: Destructure them**
@@ -1446,35 +1454,35 @@ Inside `renderFrame`, in the `const { ... } = input;` block (around line 192-210
 Inside the HDR `pass = encoder.beginRenderPass(...)` block, BEFORE the `pointRenderer.draw(...)` call (line 266 area), add:
 
 ```ts
-  // ── Milky Way impostor (procedural backdrop at world origin) ──────
-  //
-  // Drawn before the points pass so per-galaxy point billboards
-  // overdraw the impostor where they overlap (an SDSS row at the
-  // dead centre would compete; in practice there isn't one, but the
-  // ordering is the principled choice regardless).  The pass is
-  // skipped entirely when:
-  //
-  //   - the user has toggled "Show Milky Way" off, or
-  //   - the camera is far enough from the world origin that the
-  //     distance fade has fully attenuated alpha to zero.
-  //
-  // Both are CPU branches; neither costs GPU time when the gate is
-  // closed.  See `utils/math/milkyWayFade.ts` for the band.
-  if (settings.milkyWayEnabled) {
-    const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
-    const fadeAlpha = milkyWayFadeAlpha(camDistMpc);
-    if (fadeAlpha > 0) {
-      milkyWayRenderer.draw(
-        pass,
-        // viewProj is uploaded for ABI symmetry only; the impostor's
-        // vertex stage emits clip-space directly without sampling it.
-        viewProj as Float32Array,
-        [canvasWidth, canvasHeight],
-        fadeAlpha,
-        milkyWayITimeSec,
-      );
-    }
+// ── Milky Way impostor (procedural backdrop at world origin) ──────
+//
+// Drawn before the points pass so per-galaxy point billboards
+// overdraw the impostor where they overlap (an SDSS row at the
+// dead centre would compete; in practice there isn't one, but the
+// ordering is the principled choice regardless).  The pass is
+// skipped entirely when:
+//
+//   - the user has toggled "Show Milky Way" off, or
+//   - the camera is far enough from the world origin that the
+//     distance fade has fully attenuated alpha to zero.
+//
+// Both are CPU branches; neither costs GPU time when the gate is
+// closed.  See `utils/math/milkyWayFade.ts` for the band.
+if (settings.milkyWayEnabled) {
+  const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
+  const fadeAlpha = milkyWayFadeAlpha(camDistMpc);
+  if (fadeAlpha > 0) {
+    milkyWayRenderer.draw(
+      pass,
+      // viewProj is uploaded for ABI symmetry only; the impostor's
+      // vertex stage emits clip-space directly without sampling it.
+      viewProj as Float32Array,
+      [canvasWidth, canvasHeight],
+      fadeAlpha,
+      milkyWayITimeSec,
+    );
   }
+}
 ```
 
 - [ ] **Step 6: Typecheck**
@@ -1503,6 +1511,7 @@ git commit -m "feat(milky-way): wire impostor renderer through engine + render-f
 ## Task 8: SettingsPanel — "Show Milky Way" checkbox
 
 **Files:**
+
 - Modify: `src/components/SettingsPanel/SettingsPanel.tsx`
 
 Add an optional pair of props (`milkyWayEnabled` + `onMilkyWayEnabledChange`), gated render of a checkbox row alongside the existing "Galaxy thumbnails" toggle.
@@ -1535,11 +1544,10 @@ In the function signature destructuring (around line 242-276), after `onGalaxyTe
 After the existing `showOrientationToggles` / `showBiasControls` gate constants (around line 290-320), add:
 
 ```ts
-  // Milky Way checkbox: rendered only when both the value and the
-  // change-callback are wired by the parent.  Same opt-in idiom as
-  // every other optional section in this panel.
-  const showMilkyWayToggle =
-    milkyWayEnabled !== undefined && onMilkyWayEnabledChange !== undefined;
+// Milky Way checkbox: rendered only when both the value and the
+// change-callback are wired by the parent.  Same opt-in idiom as
+// every other optional section in this panel.
+const showMilkyWayToggle = milkyWayEnabled !== undefined && onMilkyWayEnabledChange !== undefined;
 ```
 
 - [ ] **Step 3: Render the row**
@@ -1547,17 +1555,19 @@ After the existing `showOrientationToggles` / `showBiasControls` gate constants 
 Find the existing "Galaxy thumbnails" checkbox in the JSX (search for `galaxyTexturesEnabled` in the JSX body — it'll be a `<input id="toggle-galaxy-textures" type="checkbox" ...>`). Immediately after that row's closing `</div>`, add:
 
 ```tsx
-      {showMilkyWayToggle && (
-        <div className={styles.panelRow}>
-          <label htmlFor="toggle-milky-way">Show Milky Way</label>
-          <input
-            id="toggle-milky-way"
-            type="checkbox"
-            checked={milkyWayEnabled}
-            onChange={(e) => onMilkyWayEnabledChange(e.target.checked)}
-          />
-        </div>
-      )}
+{
+  showMilkyWayToggle && (
+    <div className={styles.panelRow}>
+      <label htmlFor="toggle-milky-way">Show Milky Way</label>
+      <input
+        id="toggle-milky-way"
+        type="checkbox"
+        checked={milkyWayEnabled}
+        onChange={(e) => onMilkyWayEnabledChange(e.target.checked)}
+      />
+    </div>
+  );
+}
 ```
 
 - [ ] **Step 4: Typecheck**
@@ -1578,6 +1588,7 @@ git commit -m "feat(milky-way): add Show Milky Way toggle to SettingsPanel"
 ## Task 9: App.tsx — wire React state to the new toggle
 
 **Files:**
+
 - Modify: `src/App.tsx`
 
 A `useState` for `milkyWayEnabled`, an echo wiring through the engine callback, and the prop pass-through to SettingsPanel.
@@ -1591,8 +1602,7 @@ At the top of `App.tsx`, in the import block from `'./data/defaults'`, add `DEFA
 Find the existing `useState` for `galaxyTexturesEnabled` (around line 157). Immediately after that line, add:
 
 ```tsx
-  const [milkyWayEnabled, setMilkyWayEnabled] =
-    useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
+const [milkyWayEnabled, setMilkyWayEnabled] = useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
 ```
 
 - [ ] **Step 3: Wire the engine callback**
@@ -1669,21 +1679,21 @@ If `npm run build` shifted any auto-generated file (it shouldn't), commit it. Ot
 
 Tell the user to open the canvas in the browser. They should see:
 
-  1. A slowly-rotating procedural spiral galaxy (the impostor) covering most of the viewport when the camera is at default starting position (~few Mpc from origin in the SDSS volume).
-  2. The catalog galaxies (SDSS / 2MRS / GLADE) draw on top of the impostor — points and procedural disks composite additively, so dense regions blend bright against the spiral.
-  3. The SettingsPanel has a new "Show Milky Way" row, default ON. Toggling it off makes the spiral disappear instantly with no other visual change.
-  4. Flying the camera "outward" (orbit-out / scroll) past ~10 Mpc starts to fade the impostor; past ~50 Mpc it's invisible. Flying back in, it re-emerges smoothly.
-  5. The animation is slow — visible motion if you watch for a few seconds, but not "spinny" or distracting.
+1. A slowly-rotating procedural spiral galaxy (the impostor) covering most of the viewport when the camera is at default starting position (~few Mpc from origin in the SDSS volume).
+2. The catalog galaxies (SDSS / 2MRS / GLADE) draw on top of the impostor — points and procedural disks composite additively, so dense regions blend bright against the spiral.
+3. The SettingsPanel has a new "Show Milky Way" row, default ON. Toggling it off makes the spiral disappear instantly with no other visual change.
+4. Flying the camera "outward" (orbit-out / scroll) past ~10 Mpc starts to fade the impostor; past ~50 Mpc it's invisible. Flying back in, it re-emerges smoothly.
+5. The animation is slow — visible motion if you watch for a few seconds, but not "spinny" or distracting.
 
 - [ ] **Step 2: Note any visual issues**
 
 If the user reports issues — e.g., the impostor is too bright, too dim, washes out the points pass, has a visible rectangular edge, or the fade band feels off — record them in this task before declaring done. Likely fix surfaces:
 
-  - Too bright / washes out points: lower the per-frame `fadeAlpha` ceiling (multiply by 0.5 in `renderFrame.ts`).
-  - Visible rectangular edge: the WGSL `smoothstep(1.0, 1.05, r)` band is too narrow; widen to `smoothstep(0.95, 1.05, r)`.
-  - Fade feels too aggressive: bump the band to `[20, 100]` Mpc in `milkyWayFade.ts` (and update its test fixtures).
-  - Animation too fast: lower the engine's outer scale from 0.25 to 0.10.
-  - Shader doesn't compile: WebGPU console will show a precise WGSL error — most likely a missed `inout` removal or a `vec3(...)` literal that should be `vec3<f32>(...)`. Fix in `milkyWayImpostor.wgsl` and reload.
+- Too bright / washes out points: lower the per-frame `fadeAlpha` ceiling (multiply by 0.5 in `renderFrame.ts`).
+- Visible rectangular edge: the WGSL `smoothstep(1.0, 1.05, r)` band is too narrow; widen to `smoothstep(0.95, 1.05, r)`.
+- Fade feels too aggressive: bump the band to `[20, 100]` Mpc in `milkyWayFade.ts` (and update its test fixtures).
+- Animation too fast: lower the engine's outer scale from 0.25 to 0.10.
+- Shader doesn't compile: WebGPU console will show a precise WGSL error — most likely a missed `inout` removal or a `vec3(...)` literal that should be `vec3<f32>(...)`. Fix in `milkyWayImpostor.wgsl` and reload.
 
 ---
 
@@ -1691,21 +1701,21 @@ If the user reports issues — e.g., the impostor is too bright, too dim, washes
 
 **1. Spec coverage**
 
-| Spec requirement | Task |
-|---|---|
-| Port GLSL to WGSL inline at `shaders/milkyWayImpostor.wgsl` | Task 4 |
-| `iTime` as a uniform | Tasks 4, 5, 6, 7 |
-| Quad-local UVs in `[-1,1]²` (with 5% bleed) | Task 4 vertex stage |
-| Screen-aligned quad at world origin | Task 4 vertex stage (clip-space) |
-| Distance-fade across `[10, 50]` Mpc | Task 2 (math) + Task 7 (apply) |
-| Drop ShaderToy `postProcess` | Task 0 reference + Task 4 explicit list |
-| New `milkyWayRenderer.ts` mirrors `proceduralDiskRenderer.ts` | Task 5 |
+| Spec requirement                                                              | Task                                                                                                                                |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Port GLSL to WGSL inline at `shaders/milkyWayImpostor.wgsl`                   | Task 4                                                                                                                              |
+| `iTime` as a uniform                                                          | Tasks 4, 5, 6, 7                                                                                                                    |
+| Quad-local UVs in `[-1,1]²` (with 5% bleed)                                   | Task 4 vertex stage                                                                                                                 |
+| Screen-aligned quad at world origin                                           | Task 4 vertex stage (clip-space)                                                                                                    |
+| Distance-fade across `[10, 50]` Mpc                                           | Task 2 (math) + Task 7 (apply)                                                                                                      |
+| Drop ShaderToy `postProcess`                                                  | Task 0 reference + Task 4 explicit list                                                                                             |
+| New `milkyWayRenderer.ts` mirrors `proceduralDiskRenderer.ts`                 | Task 5                                                                                                                              |
 | Engine integration via `renderFrame.ts` (after sky background, before points) | Task 7 (note: there's no separate "sky background" pass — the HDR clear is the sky background; the impostor draws right after that) |
-| SettingsPanel "Show Milky Way" default ON | Tasks 3, 8, 9 |
-| Pipeline / uniform-layout test | Task 5 |
-| Slow time scale (animation) | Task 6 (epoch + 0.25× scale) + Task 4 (further 0.1× inside shader) |
-| Premultiplied additive HDR composite | Task 5 (blend state) + Task 4 (alpha output) |
-| Linear HDR output (no display-space ops) | Task 4 |
+| SettingsPanel "Show Milky Way" default ON                                     | Tasks 3, 8, 9                                                                                                                       |
+| Pipeline / uniform-layout test                                                | Task 5                                                                                                                              |
+| Slow time scale (animation)                                                   | Task 6 (epoch + 0.25× scale) + Task 4 (further 0.1× inside shader)                                                                  |
+| Premultiplied additive HDR composite                                          | Task 5 (blend state) + Task 4 (alpha output)                                                                                        |
+| Linear HDR output (no display-space ops)                                      | Task 4                                                                                                                              |
 
 All requirements covered.
 

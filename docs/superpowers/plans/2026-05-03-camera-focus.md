@@ -309,7 +309,7 @@ describe('lerpAngleShortest', () => {
     // The output may be `b` itself OR an equivalent angle (b + 2π·k).
     // We compare modulo 2π to allow for the implementation’s choice.
     const out = lerpAngleShortest(1.0, 2.5, 1);
-    const diff = ((out - 2.5) % TAU + TAU) % TAU;
+    const diff = (((out - 2.5) % TAU) + TAU) % TAU;
     // Either ~0 or ~2π — both are valid representations of the same angle.
     expect(Math.min(diff, TAU - diff)).toBeLessThan(1e-10);
   });
@@ -647,11 +647,7 @@ export type CameraTween = {
  * @returns     `true` if the tween has completed (caller should drop it),
  *              `false` if the tween is still in progress.
  */
-export function advanceCameraTween(
-  cam: OrbitCamera,
-  tween: CameraTween,
-  nowMs: number,
-): boolean {
+export function advanceCameraTween(cam: OrbitCamera, tween: CameraTween, nowMs: number): boolean {
   // Linear progress in [0, 1+].  We clamp at 1 (saturate the tween) and use
   // the clamp to detect "finished".
   const rawT = (nowMs - tween.startMs) / tween.durationMs;
@@ -805,45 +801,45 @@ function focusDistanceMpc(): number {
 (c) Inside `createEngine`, just below the `let initialCamRef: InitialCam | null = null;` line, add:
 
 ```ts
-  // ── In-flight focus / home tween ────────────────────────────────────────
-  //
-  // At most one tween at a time.  Starting a new focus or home cancels the
-  // running one (we replace this reference; the old tween descriptor is just
-  // GC'd).  Set to null when no tween is active.  Mutated by:
-  //   - the public handle's `focusOn` / `focusOnHome` (start a tween)
-  //   - the `pointerdown` handler           (cancel on user grab)
-  //   - the per-frame `frame()` loop         (clear when finished)
-  let currentTween: CameraTween | null = null;
+// ── In-flight focus / home tween ────────────────────────────────────────
+//
+// At most one tween at a time.  Starting a new focus or home cancels the
+// running one (we replace this reference; the old tween descriptor is just
+// GC'd).  Set to null when no tween is active.  Mutated by:
+//   - the public handle's `focusOn` / `focusOnHome` (start a tween)
+//   - the `pointerdown` handler           (cancel on user grab)
+//   - the per-frame `frame()` loop         (clear when finished)
+let currentTween: CameraTween | null = null;
 ```
 
 (d) In the `pointerdown` listener body (find `addCanvasListener('pointerdown', () => {`), add `currentTween = null;` as the first line of the handler body, with a comment:
 
 ```ts
-      addCanvasListener('pointerdown', () => {
-        // Manual orbit controls always win — cancel any running focus tween
-        // the moment the user grabs the mouse.  Otherwise the tween's
-        // updatePosition would fight the orbit-controls' updatePosition for
-        // the same camera each frame, producing a juddery jump.
-        currentTween = null;
-        pointerDown = true;
-        setHovered(null);
-      });
+addCanvasListener('pointerdown', () => {
+  // Manual orbit controls always win — cancel any running focus tween
+  // the moment the user grabs the mouse.  Otherwise the tween's
+  // updatePosition would fight the orbit-controls' updatePosition for
+  // the same camera each frame, producing a juddery jump.
+  currentTween = null;
+  pointerDown = true;
+  setHovered(null);
+});
 ```
 
 (e) Inside `frame()`, immediately above the auto-rotate block (`if (autoRotate && cam) { ... }`), add the tween advance:
 
 ```ts
-        // ── Focus / home tween ────────────────────────────────────────────
-        //
-        // If a tween is in flight, advance it.  `advanceCameraTween` mutates
-        // the camera state and calls updatePosition internally, so by the time
-        // we hit the auto-rotate block below the camera is already at the
-        // eased intermediate frame.  When the tween reports finished we clear
-        // the reference so subsequent frames skip this branch entirely.
-        if (currentTween && cam) {
-          const finished = advanceCameraTween(cam, currentTween, performance.now());
-          if (finished) currentTween = null;
-        }
+// ── Focus / home tween ────────────────────────────────────────────
+//
+// If a tween is in flight, advance it.  `advanceCameraTween` mutates
+// the camera state and calls updatePosition internally, so by the time
+// we hit the auto-rotate block below the camera is already at the
+// eased intermediate frame.  When the tween reports finished we clear
+// the reference so subsequent frames skip this branch entirely.
+if (currentTween && cam) {
+  const finished = advanceCameraTween(cam, currentTween, performance.now());
+  if (finished) currentTween = null;
+}
 ```
 
 (f) Inside the public `handle` object literal, just after the existing `resetCamera()` method, add the two new methods:
@@ -1067,37 +1063,37 @@ export function InfoCard({ hovered, selected, onFocus }: InfoCardProps): ReactNo
 Edit `src/App.tsx`. Update the `<InfoCard ... />` line in the render:
 
 ```tsx
-      <InfoCard
-        hovered={hovered}
-        selected={selected}
-        onFocus={(info) =>
-          handleRef.current?.focusOn([
-            // Recover the world-space xyz from the cloud's stored RA/Dec/distance
-            // is unnecessary here — PointInfo doesn't carry x/y/z directly, but
-            // the engine indexes the cloud internally.  We pass the info index
-            // forward by computing the position from the cloud arrays *inside*
-            // the engine.  The simplest API is to add a separate `focusOnIndex`
-            // method, BUT we deliberately keep the spec's signature: a
-            // [x, y, z] tuple in Mpc.  We extract xyz from the PointInfo's
-            // distance + RA/Dec via raDecZToCartesian.
-            ...raDecZToCartesianTuple(info),
-          ])
-        }
-      />
+<InfoCard
+  hovered={hovered}
+  selected={selected}
+  onFocus={(info) =>
+    handleRef.current?.focusOn([
+      // Recover the world-space xyz from the cloud's stored RA/Dec/distance
+      // is unnecessary here — PointInfo doesn't carry x/y/z directly, but
+      // the engine indexes the cloud internally.  We pass the info index
+      // forward by computing the position from the cloud arrays *inside*
+      // the engine.  The simplest API is to add a separate `focusOnIndex`
+      // method, BUT we deliberately keep the spec's signature: a
+      // [x, y, z] tuple in Mpc.  We extract xyz from the PointInfo's
+      // distance + RA/Dec via raDecZToCartesian.
+      ...raDecZToCartesianTuple(info),
+    ])
+  }
+/>
 ```
 
 Wait — `PointInfo` does NOT carry the raw `x, y, z`. We have two reasonable options. Pick option A for this plan:
 
-  - **Option A (chosen here):** add `x, y, z` to `PointInfo` and populate them in `buildPointInfo`. This is the smallest change and keeps the engine's `focusOn` signature pure-data (no index lookup).
+- **Option A (chosen here):** add `x, y, z` to `PointInfo` and populate them in `buildPointInfo`. This is the smallest change and keeps the engine's `focusOn` signature pure-data (no index lookup).
 
 Replace the JSX above with the simpler (final) form, and instead extend `PointInfo`:
 
 ```tsx
-      <InfoCard
-        hovered={hovered}
-        selected={selected}
-        onFocus={(info) => handleRef.current?.focusOn([info.x, info.y, info.z])}
-      />
+<InfoCard
+  hovered={hovered}
+  selected={selected}
+  onFocus={(info) => handleRef.current?.focusOn([info.x, info.y, info.z])}
+/>
 ```
 
 Now apply the `PointInfo` extension below in Step 5.
@@ -1107,18 +1103,18 @@ Now apply the `PointInfo` extension below in Step 5.
 Edit `src/@types/PointInfo.d.ts`. Add a new section just after the `objID` field:
 
 ```ts
-  /** @group World-space position */
+/** @group World-space position */
 
-  /**
-   * World-space X coordinate in Mpc.  Same value as `cloud.positions[idx*3+0]`.
-   * Carried on `PointInfo` so consumers like the camera-focus button can pivot
-   * the orbit camera onto this galaxy without re-deriving xyz from RA/Dec.
-   */
-  x: number;
-  /** World-space Y coordinate in Mpc. */
-  y: number;
-  /** World-space Z coordinate in Mpc. */
-  z: number;
+/**
+ * World-space X coordinate in Mpc.  Same value as `cloud.positions[idx*3+0]`.
+ * Carried on `PointInfo` so consumers like the camera-focus button can pivot
+ * the orbit camera onto this galaxy without re-deriving xyz from RA/Dec.
+ */
+x: number;
+/** World-space Y coordinate in Mpc. */
+y: number;
+/** World-space Z coordinate in Mpc. */
+z: number;
 ```
 
 Edit `src/engine.ts`'s `buildPointInfo` function. Inside the returned object literal (just after `objID: cloud.objIDs[idx]!,`), add:
@@ -1284,12 +1280,12 @@ import { HomeButton } from './components/HomeButton/HomeButton';
 (b) Add the `<HomeButton ... />` line right after `<SettingsPanel ... />` in the render output:
 
 ```tsx
-      <HomeButton onClick={() => handleRef.current?.focusOnHome()} />
+<HomeButton onClick={() => handleRef.current?.focusOnHome()} />
 ```
 
 - [ ] **Step 4: Smoke test in the dev server**
 
-`npm run dev` should already be running (per the user's working-style note).  Open the page in the browser, click a galaxy to pin it, click Focus on the InfoCard — camera should glide to the galaxy.  Click the home button — camera glides back.
+`npm run dev` should already be running (per the user's working-style note). Open the page in the browser, click a galaxy to pin it, click Focus on the InfoCard — camera should glide to the galaxy. Click the home button — camera glides back.
 
 - [ ] **Step 5: Commit**
 
@@ -1308,59 +1304,59 @@ git commit -m "feat: add HomeButton to return the camera to its initial framing"
 
 - [ ] **Step 1: Extend the existing keydown effect**
 
-Edit `src/App.tsx`. Replace the existing Esc-only `useEffect` body with a multi-key handler that also handles `f` (focus selected) and `h` (home).  Find:
+Edit `src/App.tsx`. Replace the existing Esc-only `useEffect` body with a multi-key handler that also handles `f` (focus selected) and `h` (home). Find:
 
 ```ts
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        // `?.` safe-calls: no-op if the engine hasn't started yet or was destroyed.
-        handleRef.current?.clearSelection();
-      }
-    };
+const onKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') {
+    // `?.` safe-calls: no-op if the engine hasn't started yet or was destroyed.
+    handleRef.current?.clearSelection();
+  }
+};
 ```
 
 Replace it with:
 
 ```ts
-    const onKeyDown = (e: KeyboardEvent) => {
-      // ── Ignore keystrokes typed into form fields ──────────────────────────
-      //
-      // If the user is editing an <input> or <textarea>, we shouldn't hijack
-      // their `f` and `h` keystrokes.  `e.target` could be any Element, so we
-      // narrow with a tag check before reading its name.  This guards against
-      // future text inputs (search box, label rename, etc.).
-      const target = e.target as Element | null;
-      const tag = target?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (target as HTMLElement)?.isContentEditable) {
-        return;
-      }
+const onKeyDown = (e: KeyboardEvent) => {
+  // ── Ignore keystrokes typed into form fields ──────────────────────────
+  //
+  // If the user is editing an <input> or <textarea>, we shouldn't hijack
+  // their `f` and `h` keystrokes.  `e.target` could be any Element, so we
+  // narrow with a tag check before reading its name.  This guards against
+  // future text inputs (search box, label rename, etc.).
+  const target = e.target as Element | null;
+  const tag = target?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || (target as HTMLElement)?.isContentEditable) {
+    return;
+  }
 
-      // ── Esc: clear pinned selection ──────────────────────────────────────
-      if (e.key === 'Escape') {
-        // `?.` safe-calls: no-op if the engine hasn't started yet or was destroyed.
-        handleRef.current?.clearSelection();
-        return;
-      }
+  // ── Esc: clear pinned selection ──────────────────────────────────────
+  if (e.key === 'Escape') {
+    // `?.` safe-calls: no-op if the engine hasn't started yet or was destroyed.
+    handleRef.current?.clearSelection();
+    return;
+  }
 
-      // ── f: focus on currently-selected galaxy (no-op if nothing pinned) ──
-      //
-      // We read `selected` from React state via a ref-style closure: the
-      // listener captures the current `selected` because this effect re-runs
-      // when `selected` changes (see the dependency array below).  Without
-      // that re-run we would close over the initial `null` value forever.
-      if (e.key === 'f' || e.key === 'F') {
-        if (selected) {
-          handleRef.current?.focusOn([selected.x, selected.y, selected.z]);
-        }
-        return;
-      }
+  // ── f: focus on currently-selected galaxy (no-op if nothing pinned) ──
+  //
+  // We read `selected` from React state via a ref-style closure: the
+  // listener captures the current `selected` because this effect re-runs
+  // when `selected` changes (see the dependency array below).  Without
+  // that re-run we would close over the initial `null` value forever.
+  if (e.key === 'f' || e.key === 'F') {
+    if (selected) {
+      handleRef.current?.focusOn([selected.x, selected.y, selected.z]);
+    }
+    return;
+  }
 
-      // ── h: return to the home / Earth view ────────────────────────────────
-      if (e.key === 'h' || e.key === 'H') {
-        handleRef.current?.focusOnHome();
-        return;
-      }
-    };
+  // ── h: return to the home / Earth view ────────────────────────────────
+  if (e.key === 'h' || e.key === 'H') {
+    handleRef.current?.focusOnHome();
+    return;
+  }
+};
 ```
 
 (b) Update the dependency array on this `useEffect` from `[]` to `[selected]` so the closure picks up the latest selection:
@@ -1371,7 +1367,7 @@ Replace it with:
 
 - [ ] **Step 2: Smoke test in the dev server**
 
-In the running app: click a galaxy to pin it, press `f` → camera focuses on it; press `h` → camera returns home.  Make sure the SettingsPanel's slider focus doesn't accidentally trigger keystrokes (test by clicking into a slider and typing).
+In the running app: click a galaxy to pin it, press `f` → camera focuses on it; press `h` → camera returns home. Make sure the SettingsPanel's slider focus doesn't accidentally trigger keystrokes (test by clicking into a slider and typing).
 
 - [ ] **Step 3: Run all tests one more time**
 
@@ -1405,7 +1401,7 @@ Append (or merge into the existing controls section) the following block in `REA
 ### Camera focus
 
 - **Focus button** on a pinned galaxy's InfoCard pivots the camera onto that
-  galaxy with a 600 ms ease-out tween.  Yaw and pitch are preserved so you
+  galaxy with a 600 ms ease-out tween. Yaw and pitch are preserved so you
   don't lose your orientation.
 - **Home button** (bottom-left, next to the Settings panel) returns the camera
   to its initial framing — origin target, default distance and pitch.
@@ -1432,7 +1428,7 @@ git commit -m "docs: document focus and home camera controls"
 **Spec coverage check:**
 
 - "Focus button on pinned InfoCard" — Task 6 (FullCard.tsx) renders the button when pinned, wires the callback through InfoCard, and into App.tsx via `focusOn`.
-- "Distance tweens to ~8-15 Mpc, or 4× galaxy diameter — use 30 kpc constant for now" — Task 5 defines `FOCUS_GALAXY_DIAMETER_KPC = 30` and `focusDistanceMpc()` that returns 4 × 30 / 1000 = 0.12 Mpc.  *Spec ambiguity:* the spec says "~8-15 Mpc OR 4× a 30 kpc galaxy diameter", but those don't agree — 4 × 30 kpc = 0.12 Mpc, two orders of magnitude below 8 Mpc.  We honour the explicit "4× galaxy diameter, 30 kpc constant" instruction; the 8-15 Mpc range presumably referred to a different galaxy size.  The constant is named so a future task can swap in a real diameter helper without changing the formula.
+- "Distance tweens to ~8-15 Mpc, or 4× galaxy diameter — use 30 kpc constant for now" — Task 5 defines `FOCUS_GALAXY_DIAMETER_KPC = 30` and `focusDistanceMpc()` that returns 4 × 30 / 1000 = 0.12 Mpc. _Spec ambiguity:_ the spec says "~8-15 Mpc OR 4× a 30 kpc galaxy diameter", but those don't agree — 4 × 30 kpc = 0.12 Mpc, two orders of magnitude below 8 Mpc. We honour the explicit "4× galaxy diameter, 30 kpc constant" instruction; the 8-15 Mpc range presumably referred to a different galaxy size. The constant is named so a future task can swap in a real diameter helper without changing the formula.
 - "Yaw/pitch unchanged" — Task 5's `focusOn` sets `toYaw = cam.yaw`, `toPitch = cam.pitch`.
 - "Home button bottom-left near SettingsPanel" — Task 7 positions at `left:232px` (right of the panel).
 - "Keyboard `h` for home, `f` for focus on currently-selected" — Task 8.
@@ -1441,10 +1437,10 @@ git commit -m "docs: document focus and home camera controls"
 - "No backwards compatibility shims; EngineHandle gets two additive methods" — Task 5.
 - Edge case: focusOn mid-tween cancels prev — Task 5 step 2(f) overwrites `currentTween`, no queueing.
 - Edge case: mouse-drag during tween cancels — Task 5 step 2(d) clears `currentTween` on `pointerdown`.
-- Edge case: focus on origin — `focusDistanceMpc()` is independent of position; the tween simply tweens to (0,0,0) and a tiny distance.  No div-by-zero anywhere because we never normalise.
+- Edge case: focus on origin — `focusDistanceMpc()` is independent of position; the tween simply tweens to (0,0,0) and a tiny distance. No div-by-zero anywhere because we never normalise.
 - Edge case: home while at home — Task 5's `focusOnHome` doesn't short-circuit; it just produces a 600ms no-op tween, which is acceptable per the spec.
 
-**Placeholder scan:** Searched for "TBD", "TODO", "implement appropriately", "fill in", "similar to". None present in step bodies.  Where a step references "find the existing line X and replace…" the surrounding context is shown so the engineer can match it unambiguously.
+**Placeholder scan:** Searched for "TBD", "TODO", "implement appropriately", "fill in", "similar to". None present in step bodies. Where a step references "find the existing line X and replace…" the surrounding context is shown so the engineer can match it unambiguously.
 
 **Type consistency:**
 
@@ -1455,13 +1451,13 @@ git commit -m "docs: document focus and home camera controls"
 
 **Spec ambiguities surfaced (also noted in agent report):**
 
-1. The "~8-15 Mpc" clause in the focus distance spec contradicts the "4× × 30 kpc" formula by a factor of ~80×.  Plan honours the explicit formula path (the spec calls the 8-15 Mpc bit "or", and the formula is more concrete); future per-galaxy diameter work can revisit.
+1. The "~8-15 Mpc" clause in the focus distance spec contradicts the "4× × 30 kpc" formula by a factor of ~80×. Plan honours the explicit formula path (the spec calls the 8-15 Mpc bit "or", and the formula is more concrete); future per-galaxy diameter work can revisit.
 
 ---
 
 ## Execution Handoff
 
-Plan complete and saved to `docs/superpowers/plans/2026-05-03-camera-focus.md`.  Two execution options:
+Plan complete and saved to `docs/superpowers/plans/2026-05-03-camera-focus.md`. Two execution options:
 
 **1. Subagent-Driven (recommended)** — I dispatch a fresh subagent per task, review between tasks, fast iteration.
 

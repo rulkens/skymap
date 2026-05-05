@@ -9,7 +9,10 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { computeInitialCamera, INITIAL_FRAME_FACTOR } from '../../../src/services/engine/cameraFraming';
+import {
+  computeInitialCamera,
+  INITIAL_FRAME_FACTOR,
+} from '../../../src/services/engine/cameraFraming';
 import { MAX_DISTANCE_MPC, MIN_DISTANCE_MPC } from '../../../src/services/camera/orbitCamera';
 
 describe('computeInitialCamera', () => {

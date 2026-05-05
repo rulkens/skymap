@@ -19,6 +19,7 @@
 This bundles four small actions because none of them is large enough to be its own task and they are mutual prerequisites for everything below. After this task, a stranger landing on the GitHub repo sees: topic chips, a hero GIF at the top of the README, four-six embedded screenshots, a Zenodo DOI badge, and a working "How to cite" block. That is the bar for being taken seriously.
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/README.md` — replace the GIF placeholder comment with embedded GIF + screenshot references; add Zenodo DOI badge at top; update citation block.
 - Modify: `/Users/rulkens/Development/js/skymap/CITATION.cff` — fill in the `doi:` field after Zenodo mints.
 - Create: `/Users/rulkens/Development/js/skymap/docs/screenshots/hero.gif` (and `hero.mp4` source).
@@ -61,7 +62,6 @@ Expected: JSON output containing all 11 topic names. The GitHub web sidebar (htt
 The hero GIF is the single most important asset. It runs above the fold on the README and on every social post. Aim for 15-20 s, looping, < 4 MB once converted to GIF.
 
 - [ ] **Camera path to record (rehearse once before recording):**
-
   1. Start zoomed out, full-sky view of all three surveys loaded (or synthetic if you don't want to load real data — synthetic still looks good).
   2. Slow orbit drag (about 3 s) to show 3D structure / Sloan Great Wall.
   3. Cmd+K to open command palette, type "M51", hit Enter — focus tween flies in (about 4 s).
@@ -109,9 +109,9 @@ Each still uses the existing `docs/screenshots/README.md` checklist as the spec.
 
 - [ ] **`density-correction-modes.png`** — open Settings panel, expand the Density Correction section so all four modes (None / Volume-limited / 1/V_max alpha / Schechter LF) are visible plus the angular-isotropy toggle. Crop to just the panel + a little galaxy field for context.
 
-- [ ] **`milky-way-closeup.png`** *(skip if Milky Way impostor task hasn't shipped)* — camera close to origin, Milky Way impostor visible.
+- [ ] **`milky-way-closeup.png`** _(skip if Milky Way impostor task hasn't shipped)_ — camera close to origin, Milky Way impostor visible.
 
-- [ ] **`cosmic-web-filaments.png`** *(skip if filament rendering hasn't shipped)* — wide view with filament skeleton overlay enabled.
+- [ ] **`cosmic-web-filaments.png`** _(skip if filament rendering hasn't shipped)_ — wide view with filament skeleton overlay enabled.
 
 - [ ] **Verify:**
 
@@ -126,7 +126,6 @@ Expected: at minimum `hero.gif`, `synthetic-data.png`, `all-three-surveys.png`, 
 Zenodo's GitHub integration mints a permanent DOI per release. The DOI never expires and is the citation key academics will paste into BibTeX. This is the single highest-leverage 10-minute action in the plan.
 
 - [ ] **Connect Zenodo to GitHub:**
-
   1. Open https://zenodo.org/account/settings/github/ in a browser.
   2. If not signed in, sign in with GitHub OAuth.
   3. Find `rulkens/skymap` in the repository list. Toggle the switch to ON.
@@ -144,7 +143,6 @@ gh release create v0.1.0 \
 ```
 
 - [ ] **Wait about 60 seconds**, then verify Zenodo picked up the release:
-
   1. Refresh https://zenodo.org/account/settings/github/
   2. The skymap row should now show a DOI badge link. Click it.
   3. The DOI page (https://doi.org/10.5281/zenodo.NNNNNNNN) must resolve to a Zenodo deposit page with skymap metadata, files attached, and a DOI of the form `10.5281/zenodo.<8-digit-number>`.
@@ -163,6 +161,7 @@ Expected: `HTTP/2 302` or `301` redirect to the Zenodo record. Replace `NNNNNNNN
 - [ ] **Edit `/Users/rulkens/Development/js/skymap/CITATION.cff`** — uncomment and fill the DOI line. Replace the two TODO comment lines with a single concrete `doi:` line:
 
 Before:
+
 ```yaml
 # Once a Zenodo DOI is minted for a release, fill it in here and uncomment.
 # Example: doi: 10.5281/zenodo.0000000
@@ -170,6 +169,7 @@ Before:
 ```
 
 After (substitute the real digits):
+
 ```yaml
 doi: 10.5281/zenodo.NNNNNNNN
 version: 0.1.0
@@ -271,6 +271,7 @@ git push origin main
 The current README tells users to run `npm run fetch-hyperleda` for "roughly 1 hour" against HyperLEDA's servers, fetching about 1.5 M PGCs at 4 concurrent requests. Every new user does this. Two problems: (1) HyperLEDA gets hammered by every reader; (2) it's a friction wall that drops 90% of would-be users before they see real data. Fix: ship the resulting CSV as a versioned release asset. Users `curl` it instead of running the script.
 
 **Files:**
+
 - Generate (one-time): `/Users/rulkens/Development/js/skymap/data/raw/hyperleda_pa.csv`
 - Modify: `/Users/rulkens/Development/js/skymap/README.md` — replace the "run the fetcher for 1 hour" guidance with a `curl` from the release.
 
@@ -337,10 +338,10 @@ Expected: the JSON output lists `hyperleda_pa.csv.gz`. The HEAD check returns `H
 - [ ] **Find this paragraph in `/Users/rulkens/Development/js/skymap/README.md`** (around line 112-118):
 
 ```markdown
-npm run fetch-hyperleda    # ~1 hour; adds PA + axis-ratio for GLADE galaxies
+npm run fetch-hyperleda # ~1 hour; adds PA + axis-ratio for GLADE galaxies
 ```
 
-  and the surrounding explanation:
+and the surrounding explanation:
 
 ```markdown
 - `fetch-hyperleda` queries HyperLEDA at 4 concurrent requests across ~1.5 M PGCs and writes `data/raw/hyperleda_pa.csv`. Takes roughly **1 hour** end-to-end. The script is resumable — interrupt and restart safely.
@@ -348,11 +349,11 @@ npm run fetch-hyperleda    # ~1 hour; adds PA + axis-ratio for GLADE galaxies
 
 - [ ] **Replace the run-the-fetcher guidance with a curl from the release.** Add the new prose above the existing block (don't delete the old block — leave it as a fallback for people who want to refresh the cache themselves):
 
-```markdown
+````markdown
 ### HyperLEDA orientation cache (recommended: download, don't fetch)
 
 The HyperLEDA enrichment fetch takes about an hour and hits the HyperLEDA
-servers with ~1.5 M queries.  We ship a pre-computed cache as a release
+servers with ~1.5 M queries. We ship a pre-computed cache as a release
 artifact so you can skip the fetch entirely:
 
 ```bash
@@ -361,17 +362,19 @@ curl -L -o data/raw/hyperleda_pa.csv.gz \
   https://github.com/rulkens/skymap/releases/download/v0.1.0/hyperleda_pa.csv.gz
 gunzip data/raw/hyperleda_pa.csv.gz
 ```
+````
 
-The cache is regenerated and re-uploaded with each tagged release.  If you
+The cache is regenerated and re-uploaded with each tagged release. If you
 need the absolute latest HyperLEDA values, the original `npm run
 fetch-hyperleda` path below still works.
-```
+
+````
 
 - [ ] **Verify:**
 
 ```bash
 grep -n "hyperleda_pa.csv.gz\|releases/download/v0.1.0" /Users/rulkens/Development/js/skymap/README.md
-```
+````
 
 Expected: at least 2 matching lines pointing at the release URL.
 
@@ -403,6 +406,7 @@ git push origin main
 The Journal of Open Source Software accepts ~1000-word software papers with a light, public review process. A merged JOSS submission gets a DOI, a Crossref entry, and lands in ADS — meaning when astronomers grep ADS for "WebGPU galaxy", skymap shows up. This is the single most durable academic artifact we can produce. JOSS expects a specific structure: summary, statement of need, key features, acknowledgements, references. Write the draft now; submit at joss.theoj.org once Task 1's Zenodo DOI is in place.
 
 **Files:**
+
 - Create: `/Users/rulkens/Development/js/skymap/paper/paper.md`
 - Create: `/Users/rulkens/Development/js/skymap/paper/paper.bib`
 
@@ -440,12 +444,12 @@ bibliography: paper.bib
 # Summary
 
 `skymap` is a browser-based interactive 3D explorer for combined galaxy
-catalogs.  It loads selected slices of the Sloan Digital Sky Survey
+catalogs. It loads selected slices of the Sloan Digital Sky Survey
 (SDSS DR18; @Almeida2023), the 2MASS Redshift Survey (2MRS;
 @Huchra2012), and the GLADE catalog (@Dalya2018) — together totalling
 several million galaxies — and renders them as point primitives with
 selective per-galaxy thumbnail textures on close approach, using the
-WebGPU graphics API directly from a Chromium-based browser.  The user
+WebGPU graphics API directly from a Chromium-based browser. The user
 can orbit the cosmic-web wedge, focus on individual galaxies via a
 command palette, view their photometric and spectroscopic metadata in a
 side panel, and toggle between four density-correction modes
@@ -463,57 +467,57 @@ coordinate transforms in TypeScript.
 Astronomers and outreach educators frequently want to inspect 3D galaxy
 distributions without spinning up a Jupyter notebook with `astropy` and
 `plotly`, and without installing a desktop visualisation suite such as
-TOPCAT [@Taylor2005] or Aladin Desktop [@Bonnarel2000].  Existing
+TOPCAT [@Taylor2005] or Aladin Desktop [@Bonnarel2000]. Existing
 browser tools either focus on 2D sky overlays (Aladin Lite,
 @Boch2014), provide curated guided tours rather than free
 exploration (AAS WorldWide Telescope, @Rosenfield2018), or are limited
 to a single survey.
 
 `skymap` fills the niche of a free-exploration, multi-survey, 3D,
-zero-install browser tool.  Its three target user groups are:
+zero-install browser tool. Its three target user groups are:
 
-1. *Gravitational-wave electromagnetic follow-up.* Given a sky
+1. _Gravitational-wave electromagnetic follow-up._ Given a sky
    localisation region from a LIGO–Virgo–KAGRA detection (@LVK2021),
    observers can scan the GLADE-derived nearby-universe volume for
    plausible host galaxies in 3D rather than projected onto the sphere.
-2. *Teaching and student exploration of large-scale structure.* The
+2. _Teaching and student exploration of large-scale structure._ The
    SDSS wedge with the Sloan Great Wall, the 2MRS local-volume cluster,
    and the cosmic-web filaments are visible at a glance, supporting
    classroom demonstrations without preparation overhead.
-3. *Public outreach and general curiosity.*  A WebGPU-capable browser
+3. _Public outreach and general curiosity._ A WebGPU-capable browser
    is the only requirement; no Python, no data download, no install.
 
 # Key features
 
-- *Three real galaxy catalogs* parsed at build time into a custom 48-byte
-  binary format and loaded incrementally in the browser.  Cross-matched
+- _Three real galaxy catalogs_ parsed at build time into a custom 48-byte
+  binary format and loaded incrementally in the browser. Cross-matched
   by position to deduplicate galaxies present in more than one survey.
-- *Density-correction modes* implementing $1/V_{\max}$ (@Schmidt1968)
+- _Density-correction modes_ implementing $1/V_{\max}$ (@Schmidt1968)
   and Schechter luminosity-function (@Schechter1976) weights, plus an
   angular-isotropy toggle, addressing Malmquist bias for visual
   comparison across distance.
-- *Per-galaxy thumbnail rendering* on close approach, using a 2048×2048
-  texture atlas with LRU eviction.  Thumbnails are fetched on demand
+- _Per-galaxy thumbnail rendering_ on close approach, using a 2048×2048
+  texture atlas with LRU eviction. Thumbnails are fetched on demand
   from SDSS DR18 ImgCutout (CORS-permitted) for SDSS galaxies and from
   the CDS hips2fits DSS proxy for 2MRS and GLADE.
-- *GPU-side picking* via an `r32uint` pick texture, allowing
+- _GPU-side picking_ via an `r32uint` pick texture, allowing
   interactive hover and click selection across the full multi-million
   galaxy set with constant-time lookup.
-- *Render-on-demand* main loop: the renderer idles when the camera and
+- _Render-on-demand_ main loop: the renderer idles when the camera and
   thumbnail queue are quiescent, enabling the tab to remain open in the
   background without sustained GPU load.
-- *HyperLEDA orientation enrichment* (@Makarov2014) for galaxies with
+- _HyperLEDA orientation enrichment_ (@Makarov2014) for galaxies with
   measurable axis ratio and position angle, so disc galaxies render as
   oriented impostors rather than circular dots.
 
 # Acknowledgements
 
 This project is built entirely on publicly available data and open
-software.  The author thanks the SDSS, 2MRS (Huchra et al.), GLADE, and
+software. The author thanks the SDSS, 2MRS (Huchra et al.), GLADE, and
 HyperLEDA teams for releasing their catalogs in machine-readable form,
 the CDS Strasbourg group for the VizieR service and the hips2fits proxy,
 and the WebGPU working group at the W3C for an API that makes
-multi-million-point browser rendering tractable.  Skymap was developed
+multi-million-point browser rendering tractable. Skymap was developed
 as a personal didactic project; community feedback and bug reports are
 welcome via the GitHub issue tracker.
 
@@ -701,17 +705,16 @@ Expected: a pre-review issue exists, opened by `whedon` or `editorialbot`. Reply
 
 ## Task 4: Public posts (HN, Bluesky, Reddit)
 
-Three audiences, three angles. Drop them in a stepped rhythm so a single dud doesn't cap exposure: HN first (Tuesday morning, US east coast — that's the proven peak), Bluesky two hours later (the #astrodataviz crowd is largely Europe + east-coast US, late afternoon their time), then Reddit over the next 1-2 days. Don't ship them all at once: a high-traction Show HN gives you a link to reference in subsequent posts. *All three of HN, Bluesky, and Reddit must wait for Task 1 to complete — there is no point posting before the README has a hero GIF.*
+Three audiences, three angles. Drop them in a stepped rhythm so a single dud doesn't cap exposure: HN first (Tuesday morning, US east coast — that's the proven peak), Bluesky two hours later (the #astrodataviz crowd is largely Europe + east-coast US, late afternoon their time), then Reddit over the next 1-2 days. Don't ship them all at once: a high-traction Show HN gives you a link to reference in subsequent posts. _All three of HN, Bluesky, and Reddit must wait for Task 1 to complete — there is no point posting before the README has a hero GIF._
 
 **Files:** No source-tree files. Drafts live in this plan, copy-paste at post time.
 
 ### Step 4.1: Show HN draft
 
 - [ ] **At submit time**, open https://news.ycombinator.com/submit. Use these exact fields:
-
   - **Title:** `Show HN: Skymap – a 3D galaxy catalog explorer in the browser via WebGPU`
   - **URL:** `https://skymap.rulkens.com`
-  - **Text:** *(leave URL set; HN auto-pulls)*
+  - **Text:** _(leave URL set; HN auto-pulls)_
 
 - [ ] **First comment** (post immediately after submitting, as the OP — this is the "story" comment that anchors the thread):
 
@@ -760,6 +763,7 @@ The astronomy crowd (Brice Ménard, the Map of the Universe collaborators, AAS W
 - [ ] **At post time**, on bsky.app, post this thread (post-and-reply, four parts):
 
   **Post 1:**
+
   ```
   Spent the last few months building skymap — an interactive WebGPU
   3D explorer for SDSS, 2MRS, and GLADE galaxy catalogs in the
@@ -772,6 +776,7 @@ The astronomy crowd (Brice Ménard, the Map of the Universe collaborators, AAS W
   ```
 
   **Post 2 (reply to 1):**
+
   ```
   The cosmic-web wedge is right there — Sloan Great Wall, the
   Coma cluster, the local-volume 2MRS galaxies. Density-correction
@@ -782,6 +787,7 @@ The astronomy crowd (Brice Ménard, the Map of the Universe collaborators, AAS W
   ```
 
   **Post 3 (reply to 2):**
+
   ```
   Up close, dots become DR18 thumbnail cutouts (SDSS) or DSS proxies
   via CDS hips2fits (2MRS / GLADE). Click to pin metadata: redshift,
@@ -791,6 +797,7 @@ The astronomy crowd (Brice Ménard, the Map of the Universe collaborators, AAS W
   ```
 
   **Post 4 (reply to 3):**
+
   ```
   Built as a personal learning project — the source is documented
   didactically (every WebGPU surprise written up where it bit me).
@@ -807,12 +814,12 @@ The astronomy crowd (Brice Ménard, the Map of the Universe collaborators, AAS W
 
 ### Step 4.3: Reddit posts (stepped over 24-48 hours)
 
-Three subs, three angles, *stepped* — not simultaneous. Reddit's spam detection flags identical content across subs.
+Three subs, three angles, _stepped_ — not simultaneous. Reddit's spam detection flags identical content across subs.
 
-- [ ] **r/Astronomy** *(post Day 2, morning US time — angle: science / catalogs)*:
-
+- [ ] **r/Astronomy** _(post Day 2, morning US time — angle: science / catalogs)_:
   - **Title:** `I built a browser-based 3D explorer for SDSS, GLADE, and 2MRS — open source, no install`
   - **Body:**
+
     ```
     Hey r/Astronomy — I've been working on a personal-learning project
     that I think might be useful to some of you.  It's a free-explore
@@ -838,10 +845,10 @@ Three subs, three angles, *stepped* — not simultaneous. Reddit's spam detectio
     for what to add next?
     ```
 
-- [ ] **r/dataisbeautiful** *(post Day 2, afternoon US time — angle: visual / structure)*:
-
+- [ ] **r/dataisbeautiful** _(post Day 2, afternoon US time — angle: visual / structure)_:
   - **Title:** `[OC] Cosmic-web structure in 3 galaxy catalogs (SDSS + GLADE + 2MRS, 3.5M galaxies, WebGPU)`
   - **Body:**
+
     ```
     Source data: SDSS DR18 (~500k galaxies, sky.sdss.org), GLADE v2.3
     (~3M, gravitational-wave host catalog), and 2MASS Redshift Survey
@@ -857,10 +864,10 @@ Three subs, three angles, *stepped* — not simultaneous. Reddit's spam detectio
     [attach all-three-surveys.png]
     ```
 
-- [ ] **r/WebGPU** *(post Day 3 — angle: graphics engineering)*:
-
+- [ ] **r/WebGPU** _(post Day 3 — angle: graphics engineering)_:
   - **Title:** `Skymap: instanced billboards + GPU picking + per-instance texture quads, 3.5M galaxy points`
   - **Body:**
+
     ```
     Sharing a WebGPU project I've been building — happy to talk
     implementation.
@@ -896,13 +903,13 @@ Three subs, three angles, *stepped* — not simultaneous. Reddit's spam detectio
 
 ## Task 5: Targeted academic outreach (cold emails)
 
-After Show HN lands (or doesn't — but ideally lands), send five customised cold emails. Each email has its own audience and angle. *Wait until Task 4 has at least one piece of traction to reference* — even a Show HN with 30 points is a real warm-opener. If HN was a complete dud, lead with the live demo and Zenodo DOI instead.
+After Show HN lands (or doesn't — but ideally lands), send five customised cold emails. Each email has its own audience and angle. _Wait until Task 4 has at least one piece of traction to reference_ — even a Show HN with 30 points is a real warm-opener. If HN was a complete dud, lead with the live demo and Zenodo DOI instead.
 
 **Files:** No source-tree files. Drafts below; copy-paste at send time.
 
 ### Step 5.1: Email 1 — SDSS outreach team
 
-- [ ] **To:** `outreach@sdss.org` *(check the SDSS web team's current contact at https://www.sdss.org/people/ if this address bounces)*
+- [ ] **To:** `outreach@sdss.org` _(check the SDSS web team's current contact at https://www.sdss.org/people/ if this address bounces)_
 - [ ] **Subject:** `Browser-based WebGPU 3D explorer for SDSS DR18 — feedback welcome`
 - [ ] **Body:**
 
@@ -1014,7 +1021,7 @@ Alexander Rulkens
 rulkens@gmail.com
 ```
 
-- [ ] **Verify:** if Show HN didn't get traction, *delete the "Recent traction on Hacker News" sentence entirely* before sending.
+- [ ] **Verify:** if Show HN didn't get traction, _delete the "Recent traction on Hacker News" sentence entirely_ before sending.
 
 ### Step 5.4: Email 4 — CDS Strasbourg / Aladin team
 
@@ -1097,7 +1104,7 @@ Alexander Rulkens
 rulkens@gmail.com
 ```
 
-- [ ] **Verify** — *do not* claim skymap has a GW skymap overlay if it doesn't. The body above is honest about the gap; keep it that way.
+- [ ] **Verify** — _do not_ claim skymap has a GW skymap overlay if it doesn't. The body above is honest about the gap; keep it that way.
 
 ### Step 5.6: Send-all checklist
 
@@ -1116,6 +1123,7 @@ rulkens@gmail.com
 A Research Note of the AAS (RNAAS) is a 1000-word, lightly-reviewed, citable note in the AAS journals system. It lands in ADS and Crossref, just like JOSS, but the review is much faster (days, not weeks) and the audience is squarely astronomers. The cost is one re-write of the JOSS paper from a slightly different angle — JOSS frames it as software, RNAAS frames it as a tool/announcement. This is optional: do it only if Task 3's JOSS draft went smoothly and you have an evening.
 
 **Files:**
+
 - Create: `/Users/rulkens/Development/js/skymap/paper/rnaas.md` (a derivative of `paper.md` with a different framing).
 
 ### Step 6.1: Write `rnaas.md`
@@ -1133,13 +1141,13 @@ date: 2026-05-05
 # Abstract
 
 We present skymap, a free, open-source, browser-based interactive 3D
-visualisation tool for galaxy catalogs.  Skymap loads selected slices
+visualisation tool for galaxy catalogs. Skymap loads selected slices
 of SDSS DR18 (~500k galaxies), the 2MASS Redshift Survey (~45k), and
 the GLADE catalog (~3M), cross-matches them by sky position, and
 renders the combined catalog as instanced billboards using the WebGPU
-graphics API.  Per-galaxy thumbnail textures are streamed in on close
+graphics API. Per-galaxy thumbnail textures are streamed in on close
 approach from SDSS DR18 ImgCutout (for SDSS sources) and from the CDS
-hips2fits proxy (for 2MRS and GLADE sources).  The tool requires only
+hips2fits proxy (for 2MRS and GLADE sources). The tool requires only
 a Chrome 113+ or Edge 113+ browser; no installation, Python
 environment, or local data download is needed.
 
@@ -1157,29 +1165,29 @@ public.
 The renderer supports four density-correction modes (none,
 volume-limited, $1/V_{\max}$, Schechter LF weighting) plus an
 angular-isotropy toggle, addressing Malmquist bias for visual
-comparison across distance.  GPU-side picking via an `r32uint` texture
+comparison across distance. GPU-side picking via an `r32uint` texture
 permits interactive hover and click selection across the full
-multi-million galaxy set.  A 2048×2048 LRU texture atlas streams in
+multi-million galaxy set. A 2048×2048 LRU texture atlas streams in
 per-galaxy thumbnails based on a per-frame apparent-pixel-size gate;
 optional HyperLEDA orientation enrichment renders disc galaxies as
 oriented impostors.
 
 The codebase is documented didactically — explanatory prose lives
-alongside implementation — and is released under the MIT license.  Live
-demonstration: https://skymap.rulkens.com.  Source code, citation
+alongside implementation — and is released under the MIT license. Live
+demonstration: https://skymap.rulkens.com. Source code, citation
 metadata, and attribution: https://github.com/rulkens/skymap.
 
 # Acknowledgements
 
 Built on publicly available data from the SDSS, 2MRS, and GLADE
 collaborations; thumbnail and DSS proxy services from the CDS
-Strasbourg.  WebGPU specification by the W3C GPU for the Web Working
+Strasbourg. WebGPU specification by the W3C GPU for the Web Working
 Group.
 
 # Software citation
 
 Rulkens, A. (2026). skymap: An interactive WebGPU explorer for galaxy
-catalogs (v0.1.0).  Zenodo. https://doi.org/10.5281/zenodo.NNNNNNNN
+catalogs (v0.1.0). Zenodo. https://doi.org/10.5281/zenodo.NNNNNNNN
 ```
 
 - [ ] **Verify:**

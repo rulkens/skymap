@@ -24,6 +24,7 @@ Phase 1 colours strictly by `|v_pec|` — watershed-based basin segmentation (wh
 ## Scope
 
 **In scope (Phase 1 — this plan):**
+
 - `tools/fetchCF4.ts` — one-shot download of CF4 catalog + CF4gp velocity grid into `data/raw/cf4/`.
 - Two binary formats with encode/decode + tests.
 - Pure-function SG→equatorial coordinate transform with unit tests.
@@ -39,6 +40,7 @@ Phase 1 colours strictly by `|v_pec|` — watershed-based basin segmentation (wh
 - README "Cosmic flow (CF4)" section + visual verification checklist.
 
 **Out of scope (future plans):**
+
 - Watershed-based basin segmentation (Phase 1 colours by velocity magnitude only).
 - 3D basin-boundary isosurfaces (Laniakea / Great Attractor / etc. as translucent shells).
 - Time-evolution / linear-theory back-projection animations.
@@ -48,6 +50,7 @@ Phase 1 colours strictly by `|v_pec|` — watershed-based basin segmentation (wh
 - Density slider with multiple pre-baked LOD bins (Phase 1 slider just changes a draw-call upper-bound; the binary always ships all strips).
 
 **Pre-existing dependencies:**
+
 - The post-refactor `renderFrame.ts` (engine.ts no longer owns the per-frame loop directly — it constructs renderers and threads them into `renderFrame()`).
 - The existing HDR target + tone-map pass.
 - `tools/parsers/` convention (every parser lives there, pure-function, tested with fixtures).
@@ -156,7 +159,7 @@ The format precedent here is `filamentBinaryFormat.ts` for variable-length polyl
 ```ts
 for (let i = 0; i < drawnStripCount; i++) {
   const start = stripOffsets[i];
-  const end   = stripOffsets[i + 1];
+  const end = stripOffsets[i + 1];
   pass.draw(end - start, 1, start, 0);
 }
 ```
@@ -174,6 +177,7 @@ for (let i = 0; i < drawnStripCount; i++) {
 ## Task 0: Pre-flight + fetch CF4 sample data
 
 **Files:**
+
 - Create: `tools/fetchCF4.ts`
 - Modify: `package.json`
 - Create: `data/raw/cf4/` (directory only, contents downloaded by the script)
@@ -342,6 +346,7 @@ git add tools/fetchCF4.ts package.json && git commit -m "feat(cf4): add fetchCF4
 ## Task 1: Binary formats + encode/decode tests
 
 **Files:**
+
 - Create: `src/@types/CF4Cloud.d.ts`
 - Create: `src/@types/CF4StreamlineCloud.d.ts`
 - Create: `src/data/cf4GalaxiesBinaryFormat.ts`
@@ -403,10 +408,7 @@ Create `/Users/rulkens/Development/js/skymap/tests/data/cf4GalaxiesBinaryFormat.
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import {
-  encodeCF4Galaxies,
-  decodeCF4Galaxies,
-} from '../../src/data/cf4GalaxiesBinaryFormat';
+import { encodeCF4Galaxies, decodeCF4Galaxies } from '../../src/data/cf4GalaxiesBinaryFormat';
 import type { CF4Cloud } from '../../src/@types/CF4Cloud';
 
 describe('cf4GalaxiesBinaryFormat', () => {
@@ -601,11 +603,7 @@ describe('cf4StreamlinesBinaryFormat', () => {
       vertexCount: 5,
       stripOffsets: new Uint32Array([0, 3, 5]),
       vertices: new Float32Array([
-        1, 1, 1, 100, 0,
-        2, 2, 2, 110, 0,
-        3, 3, 3, 120, 0,
-        10, 10, 10, 200, 1,
-        11, 11, 11, 210, 1,
+        1, 1, 1, 100, 0, 2, 2, 2, 110, 0, 3, 3, 3, 120, 0, 10, 10, 10, 200, 1, 11, 11, 11, 210, 1,
       ]),
     };
     const buf = encodeCF4Streamlines(original);
@@ -613,9 +611,7 @@ describe('cf4StreamlinesBinaryFormat', () => {
     expect(decoded.stripCount).toBe(2);
     expect(decoded.vertexCount).toBe(5);
     expect(Array.from(decoded.stripOffsets)).toEqual([0, 3, 5]);
-    expect(Array.from(decoded.vertices)).toEqual(
-      Array.from(original.vertices),
-    );
+    expect(Array.from(decoded.vertices)).toEqual(Array.from(original.vertices));
   });
 
   it('throws on bad magic', () => {
@@ -752,11 +748,7 @@ export function decodeCF4Streamlines(buf: ArrayBuffer): CF4StreamlineCloud {
 
   const vertices = new Float32Array(vertexCount * FLOATS_PER_VERTEX);
   vertices.set(
-    new Float32Array(
-      buf,
-      HEADER_BYTES + offsetTableBytes,
-      vertexCount * FLOATS_PER_VERTEX,
-    ),
+    new Float32Array(buf, HEADER_BYTES + offsetTableBytes, vertexCount * FLOATS_PER_VERTEX),
   );
 
   return { stripCount, vertexCount, stripOffsets, vertices };
@@ -782,6 +774,7 @@ git add src/@types/CF4Cloud.d.ts src/@types/CF4StreamlineCloud.d.ts src/data/cf4
 ## Task 2: CF4 catalog + grid parsers
 
 **Files:**
+
 - Create: `tools/parsers/cf4Catalog.ts`
 - Create: `tools/parsers/cf4Grid.ts`
 - Create: `tests/parsers/cf4Catalog.test.ts`
@@ -837,9 +830,7 @@ describe('parseCF4Catalog', () => {
 
   it('throws on a non-numeric field', () => {
     expect(() =>
-      parseCF4Catalog(
-        '2557 abc -1.23 5.0 10.0 -2.0 1234.5 250.0 100.0 50.0 -75.0\n',
-      ),
+      parseCF4Catalog('2557 abc -1.23 5.0 10.0 -2.0 1234.5 250.0 100.0 50.0 -75.0\n'),
     ).toThrow(/parse.*SGL/);
   });
 });
@@ -1069,9 +1060,7 @@ export function parseCF4Grid(buf: ArrayBuffer): CF4Grid {
     }
   }
   if (headerEnd < 0) {
-    throw new Error(
-      'parseCF4Grid: missing "\\n\\n" header terminator — file truncated?',
-    );
+    throw new Error('parseCF4Grid: missing "\\n\\n" header terminator — file truncated?');
   }
   const headerText = new TextDecoder().decode(bytes.subarray(0, headerEnd));
   const tokens = headerText.trim().split(/\s+/);
@@ -1140,6 +1129,7 @@ git add tools/parsers/cf4Catalog.ts tools/parsers/cf4Grid.ts tests/parsers/cf4Ca
 ## Task 3: Coordinate transform pure helper
 
 **Files:**
+
 - Create: `tools/cf4/sgToEquatorial.ts`
 - Create: `tests/cf4/sgToEquatorial.test.ts`
 
@@ -1238,14 +1228,12 @@ Create `/Users/rulkens/Development/js/skymap/tools/cf4/sgToEquatorial.ts`:
 // Computed offline from the angle definitions above; tests pin the
 // result to the known SG-pole equatorial coordinates.
 const M: ReadonlyArray<readonly [number, number, number]> = [
-  [-0.7357425748, 0.6772612964, 0.0,         ],
+  [-0.7357425748, 0.6772612964, 0.0],
   [-0.0745829778, -0.0809914713, 0.9939225904],
-  [0.6731453021, 0.7312711772, 0.1100812622 ],
+  [0.6731453021, 0.7312711772, 0.1100812622],
 ];
 
-export function sgToEquatorial(
-  v: readonly [number, number, number],
-): [number, number, number] {
+export function sgToEquatorial(v: readonly [number, number, number]): [number, number, number] {
   const [x, y, z] = v;
   return [
     M[0]![0] * x + M[0]![1] * y + M[0]![2] * z,
@@ -1276,6 +1264,7 @@ git add tools/cf4/sgToEquatorial.ts tests/cf4/sgToEquatorial.test.ts && git comm
 ## Task 4: RK4 streamline integrator
 
 **Files:**
+
 - Create: `tools/cf4/rk4Streamline.ts`
 - Create: `tests/cf4/rk4Streamline.test.ts`
 
@@ -1350,8 +1339,7 @@ describe('rk4Streamline', () => {
   it('integrates a rotational field on a near-circle', () => {
     // v(x, y, z) = (-y, x, 0) → circular motion in the xy plane,
     // angular velocity 1 rad/unit-time, radius = |seed|.
-    const sampler = (x: number, y: number) =>
-      [-y, x, 0] as [number, number, number];
+    const sampler = (x: number, y: number) => [-y, x, 0] as [number, number, number];
     const verts = rk4Streamline({
       seed: [1, 0, 0],
       sampler,
@@ -1437,20 +1425,11 @@ function inBbox(
   bbox: readonly [number, number, number, number, number, number],
 ): boolean {
   return (
-    x >= bbox[0] &&
-    y >= bbox[1] &&
-    z >= bbox[2] &&
-    x <= bbox[3] &&
-    y <= bbox[4] &&
-    z <= bbox[5]
+    x >= bbox[0] && y >= bbox[1] && z >= bbox[2] && x <= bbox[3] && y <= bbox[4] && z <= bbox[5]
   );
 }
 
-function unit(
-  vx: number,
-  vy: number,
-  vz: number,
-): [number, number, number, number] {
+function unit(vx: number, vy: number, vz: number): [number, number, number, number] {
   const m = Math.hypot(vx, vy, vz);
   if (m === 0) return [0, 0, 0, 0];
   return [vx / m, vy / m, vz / m, m];
@@ -1477,16 +1456,16 @@ export function rk4Streamline(opts: RK4StreamlineOptions): Float32Array {
     const h = step;
 
     // k2
-    const ax = px + (h * 0.5) * u1[0];
-    const ay = py + (h * 0.5) * u1[1];
-    const az = pz + (h * 0.5) * u1[2];
+    const ax = px + h * 0.5 * u1[0];
+    const ay = py + h * 0.5 * u1[1];
+    const az = pz + h * 0.5 * u1[2];
     const v2 = sampler(ax, ay, az);
     const u2 = unit(v2[0], v2[1], v2[2]);
 
     // k3
-    const bx = px + (h * 0.5) * u2[0];
-    const by = py + (h * 0.5) * u2[1];
-    const bz = pz + (h * 0.5) * u2[2];
+    const bx = px + h * 0.5 * u2[0];
+    const by = py + h * 0.5 * u2[1];
+    const bz = pz + h * 0.5 * u2[2];
     const v3 = sampler(bx, by, bz);
     const u3 = unit(v3[0], v3[1], v3[2]);
 
@@ -1533,6 +1512,7 @@ git add tools/cf4/rk4Streamline.ts tests/cf4/rk4Streamline.test.ts && git commit
 ## Task 5: buildCF4 orchestrator
 
 **Files:**
+
 - Create: `tools/buildCF4.ts`
 - Modify: `package.json`
 
@@ -1618,8 +1598,7 @@ function makeGridSampler(grid: CF4Grid) {
     const iy1 = Math.min(iy + 1, ny - 1);
     const iz1 = Math.min(iz + 1, nz - 1);
 
-    const stride = (xi: number, yi: number, zi: number) =>
-      xi + yi * nx + zi * nx * ny;
+    const stride = (xi: number, yi: number, zi: number) => xi + yi * nx + zi * nx * ny;
 
     function sample(arr: Float32Array): number {
       const c000 = arr[stride(ix, iy, iz)]!;
@@ -1664,10 +1643,7 @@ function buildGalaxiesCloud(rows: ParsedCF4Galaxy[]): CF4Cloud {
   return { count, positions, basinIds, vpec };
 }
 
-function buildStreamlinesCloud(
-  rows: ParsedCF4Galaxy[],
-  grid: CF4Grid,
-): CF4StreamlineCloud {
+function buildStreamlinesCloud(rows: ParsedCF4Galaxy[], grid: CF4Grid): CF4StreamlineCloud {
   const sampler = makeGridSampler(grid);
   const stripOffsets: number[] = [0];
   const vertexFloats: number[] = [];
@@ -1678,14 +1654,7 @@ function buildStreamlinesCloud(
   const xMax = ox + (grid.nx - 1) * grid.dx;
   const yMax = oy + (grid.ny - 1) * grid.dx;
   const zMax = oz + (grid.nz - 1) * grid.dx;
-  const bbox: [number, number, number, number, number, number] = [
-    ox,
-    oy,
-    oz,
-    xMax,
-    yMax,
-    zMax,
-  ];
+  const bbox: [number, number, number, number, number, number] = [ox, oy, oz, xMax, yMax, zMax];
 
   let kept = 0;
   for (const r of rows) {
@@ -1714,8 +1683,7 @@ function buildStreamlinesCloud(
   const stripCount = kept;
   const vertexCount = vertexFloats.length / 5;
   console.log(
-    `[buildCF4] streamlines: kept ${kept} / ${rows.length}, ` +
-      `${vertexCount} vertices total`,
+    `[buildCF4] streamlines: kept ${kept} / ${rows.length}, ` + `${vertexCount} vertices total`,
   );
   return {
     stripCount,
@@ -1726,10 +1694,7 @@ function buildStreamlinesCloud(
 }
 
 async function main(): Promise<void> {
-  const catalogText = await readFile(
-    resolve(RAW_DIR, 'CF4_distances.dat'),
-    'utf-8',
-  );
+  const catalogText = await readFile(resolve(RAW_DIR, 'CF4_distances.dat'), 'utf-8');
   const rows = parseCF4Catalog(catalogText);
   console.log(`[buildCF4] parsed ${rows.length} CF4 galaxies`);
 
@@ -1748,19 +1713,12 @@ async function main(): Promise<void> {
   const galaxiesBuf = encodeCF4Galaxies(galaxiesCloud);
   await mkdir(PUBLIC_DIR, { recursive: true });
   await writeFile(resolve(PUBLIC_DIR, 'cf4_galaxies.bin'), Buffer.from(galaxiesBuf));
-  console.log(
-    `[buildCF4] wrote cf4_galaxies.bin (${galaxiesBuf.byteLength} bytes)`,
-  );
+  console.log(`[buildCF4] wrote cf4_galaxies.bin (${galaxiesBuf.byteLength} bytes)`);
 
   const streamlinesCloud = buildStreamlinesCloud(rows, grid);
   const streamlinesBuf = encodeCF4Streamlines(streamlinesCloud);
-  await writeFile(
-    resolve(PUBLIC_DIR, 'cf4_streamlines.bin'),
-    Buffer.from(streamlinesBuf),
-  );
-  console.log(
-    `[buildCF4] wrote cf4_streamlines.bin (${streamlinesBuf.byteLength} bytes)`,
-  );
+  await writeFile(resolve(PUBLIC_DIR, 'cf4_streamlines.bin'), Buffer.from(streamlinesBuf));
+  console.log(`[buildCF4] wrote cf4_streamlines.bin (${streamlinesBuf.byteLength} bytes)`);
   console.log('[buildCF4] done');
 }
 
@@ -1798,6 +1756,7 @@ Expected output (approximate counts):
 ```
 
 Sanity checks:
+
 - `ls -lh public/data/cf4_galaxies.bin public/data/cf4_streamlines.bin` should show both files.
 - Galaxies file size matches `16 + 28 * count`.
 - Streamlines file ≤ 50 MB (Phase 1 cap is informal — if it exceeds 50 MB, raise `VPEC_SEED_THRESHOLD` and re-run).
@@ -1821,6 +1780,7 @@ git add tools/buildCF4.ts package.json && git commit -m "feat(cf4): add buildCF4
 ## Task 6: cloudLoader additions
 
 **Files:**
+
 - Modify: `src/services/engine/cloudLoader.ts`
 
 The existing `cloudLoader.ts` has a per-source loader for the survey bins. Add two more functions for the CF4 layers, mirroring the same fetch-and-decode shape.
@@ -1851,9 +1811,7 @@ export async function loadCF4Galaxies(): Promise<CF4Cloud | null> {
   const res = await fetch('/data/cf4_galaxies.bin');
   if (res.status === 404) return null;
   if (!res.ok) {
-    throw new Error(
-      `loadCF4Galaxies: HTTP ${res.status} ${res.statusText}`,
-    );
+    throw new Error(`loadCF4Galaxies: HTTP ${res.status} ${res.statusText}`);
   }
   const buf = await res.arrayBuffer();
   return decodeCF4Galaxies(buf);
@@ -1867,9 +1825,7 @@ export async function loadCF4Streamlines(): Promise<CF4StreamlineCloud | null> {
   const res = await fetch('/data/cf4_streamlines.bin');
   if (res.status === 404) return null;
   if (!res.ok) {
-    throw new Error(
-      `loadCF4Streamlines: HTTP ${res.status} ${res.statusText}`,
-    );
+    throw new Error(`loadCF4Streamlines: HTTP ${res.status} ${res.statusText}`);
   }
   const buf = await res.arrayBuffer();
   return decodeCF4Streamlines(buf);
@@ -1895,6 +1851,7 @@ git add src/services/engine/cloudLoader.ts && git commit -m "feat(cf4): add clou
 ## Task 7: CF4PointRenderer + smoke test
 
 **Files:**
+
 - Create: `src/services/gpu/cf4PointRenderer.ts`
 - Create: `tests/services/gpu/cf4PointRenderer.test.ts`
 
@@ -2057,9 +2014,7 @@ export function createCF4PointRenderer(
         {
           arrayStride: STRIDE,
           stepMode: 'instance',
-          attributes: [
-            { shaderLocation: 1, offset: 0, format: 'float32x4' },
-          ],
+          attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x4' }],
         },
       ],
     },
@@ -2140,6 +2095,7 @@ git add src/services/gpu/cf4PointRenderer.ts tests/services/gpu/cf4PointRenderer
 ## Task 8: StreamlineRenderer + smoke test
 
 **Files:**
+
 - Create: `src/services/gpu/streamlineRenderer.ts`
 - Create: `tests/services/gpu/streamlineRenderer.test.ts`
 
@@ -2160,11 +2116,7 @@ describe('streamlineRenderer', () => {
       stripCount: 1,
       vertexCount: 3,
       stripOffsets: new Uint32Array([0, 3]),
-      vertices: new Float32Array([
-        0, 0, 0, 100, 0,
-        1, 0, 0, 110, 0,
-        2, 0, 0, 120, 0,
-      ]),
+      vertices: new Float32Array([0, 0, 0, 100, 0, 1, 0, 0, 110, 0, 2, 0, 0, 120, 0]),
     };
     const createBuffer = vi.fn().mockImplementation((desc: GPUBufferDescriptor) => ({
       __size: desc.size,
@@ -2369,6 +2321,7 @@ git add src/services/gpu/streamlineRenderer.ts tests/services/gpu/streamlineRend
 ## Task 9: WGSL shaders
 
 **Files:**
+
 - Create: `src/services/gpu/shaders/cf4Galaxies.wgsl`
 - Create: `src/services/gpu/shaders/streamlines.wgsl`
 
@@ -2529,6 +2482,7 @@ git add src/services/gpu/shaders/cf4Galaxies.wgsl src/services/gpu/shaders/strea
 ## Task 10: Engine integration in renderFrame.ts
 
 **Files:**
+
 - Modify: `src/services/engine/renderFrame.ts`
 - Modify: `src/services/engine/engine.ts`
 - Modify: `src/@types/EngineHandle.d.ts`
@@ -2545,65 +2499,65 @@ import type { StreamlineRenderer } from '../gpu/streamlineRenderer';
 Append to `RenderFrameSettings`:
 
 ```ts
-  /** CF4 layer toggles + density. */
-  cf4GalaxiesEnabled: boolean;
-  cf4StreamlinesEnabled: boolean;
-  /** ∈ [0, 1]; truncates the strip-draw loop. */
-  cf4StreamlineDensity: number;
-  /** km/s — input velocity that maps to the warm colour endpoint. */
-  cf4VMagScale: number;
+/** CF4 layer toggles + density. */
+cf4GalaxiesEnabled: boolean;
+cf4StreamlinesEnabled: boolean;
+/** ∈ [0, 1]; truncates the strip-draw loop. */
+cf4StreamlineDensity: number;
+/** km/s — input velocity that maps to the warm colour endpoint. */
+cf4VMagScale: number;
 ```
 
 Append to `RenderFrameInput` (after `thumbnails`):
 
 ```ts
-  /**
-   * CF4 GPU pipelines.  Both can be `null` when the user has not run
-   * `npm run build-cf4` — `cloudLoader.ts` returns null on 404 and
-   * the engine forwards that null so the per-frame loop can skip
-   * cleanly without changing the encoder lifecycle.
-   */
-  cf4PointRenderer: CF4PointRenderer | null;
-  streamlineRenderer: StreamlineRenderer | null;
+/**
+ * CF4 GPU pipelines.  Both can be `null` when the user has not run
+ * `npm run build-cf4` — `cloudLoader.ts` returns null on 404 and
+ * the engine forwards that null so the per-frame loop can skip
+ * cleanly without changing the encoder lifecycle.
+ */
+cf4PointRenderer: CF4PointRenderer | null;
+streamlineRenderer: StreamlineRenderer | null;
 ```
 
 Inside the `renderFrame` function body, just before `pass.end()`, add:
 
 ```ts
-  // ── CF4 galaxy billboards ──────────────────────────────────────────
-  //
-  // Drawn after the survey points (so dense overlap reads CF4 dots on
-  // top, which matches user expectation since CF4 is the smaller +
-  // higher-quality dataset) but before thumbnails.runFrame so atlas
-  // quads / procedural disks still write last.
-  if (settings.cf4GalaxiesEnabled && input.cf4PointRenderer !== null) {
-    input.cf4PointRenderer.draw(
-      pass,
-      viewProj,
-      [canvasWidth, canvasHeight],
-      settings.pointSizePx,
-      settings.brightness,
-      settings.cf4VMagScale,
-    );
-  }
+// ── CF4 galaxy billboards ──────────────────────────────────────────
+//
+// Drawn after the survey points (so dense overlap reads CF4 dots on
+// top, which matches user expectation since CF4 is the smaller +
+// higher-quality dataset) but before thumbnails.runFrame so atlas
+// quads / procedural disks still write last.
+if (settings.cf4GalaxiesEnabled && input.cf4PointRenderer !== null) {
+  input.cf4PointRenderer.draw(
+    pass,
+    viewProj,
+    [canvasWidth, canvasHeight],
+    settings.pointSizePx,
+    settings.brightness,
+    settings.cf4VMagScale,
+  );
+}
 
-  // ── CF4 streamlines ────────────────────────────────────────────────
-  //
-  // Drawn last inside the HDR pass — additive blending means draw
-  // order doesn't change the *final* pixel sum, but the GPU can
-  // early-out on rasterisation if a strip is fully behind the
-  // depth-cleared target.  No depth here, so order is purely
-  // aesthetic; we put streamlines last because they're the most
-  // visually dominant CF4 element.
-  if (settings.cf4StreamlinesEnabled && input.streamlineRenderer !== null) {
-    input.streamlineRenderer.draw(
-      pass,
-      viewProj,
-      settings.brightness,
-      settings.cf4VMagScale,
-      settings.cf4StreamlineDensity,
-    );
-  }
+// ── CF4 streamlines ────────────────────────────────────────────────
+//
+// Drawn last inside the HDR pass — additive blending means draw
+// order doesn't change the *final* pixel sum, but the GPU can
+// early-out on rasterisation if a strip is fully behind the
+// depth-cleared target.  No depth here, so order is purely
+// aesthetic; we put streamlines last because they're the most
+// visually dominant CF4 element.
+if (settings.cf4StreamlinesEnabled && input.streamlineRenderer !== null) {
+  input.streamlineRenderer.draw(
+    pass,
+    viewProj,
+    settings.brightness,
+    settings.cf4VMagScale,
+    settings.cf4StreamlineDensity,
+  );
+}
 ```
 
 - [ ] **Step 2: Wire engine.ts**
@@ -2621,10 +2575,7 @@ import { loadCF4Galaxies, loadCF4Streamlines } from './cloudLoader';
 2. Inside the engine's startup async block (next to where survey clouds are loaded), parallel-load the CF4 binaries and instantiate the renderers:
 
 ```ts
-const [cf4Cloud, cf4Streamlines] = await Promise.all([
-  loadCF4Galaxies(),
-  loadCF4Streamlines(),
-]);
+const [cf4Cloud, cf4Streamlines] = await Promise.all([loadCF4Galaxies(), loadCF4Streamlines()]);
 let cf4PointRenderer: CF4PointRenderer | null = null;
 let streamlineRenderer: StreamlineRenderer | null = null;
 if (cf4Cloud !== null) {
@@ -2724,6 +2675,7 @@ git add src/services/engine/renderFrame.ts src/services/engine/engine.ts src/@ty
 ## Task 11: SettingsPanel "Cosmic flow (CF4)" section
 
 **Files:**
+
 - Modify: `src/components/SettingsPanel/SettingsPanel.tsx`
 
 - [ ] **Step 1: Add the props to the panel's prop type**
@@ -2797,6 +2749,7 @@ git add src/components/SettingsPanel/SettingsPanel.tsx && git commit -m "feat(cf
 ## Task 12: App.tsx state wiring
 
 **Files:**
+
 - Modify: `src/App.tsx`
 
 - [ ] **Step 1: Add the React state**
@@ -2854,13 +2807,14 @@ git add src/App.tsx && git commit -m "feat(cf4): wire CF4 settings state through
 ## Task 13: README + visual verification
 
 **Files:**
+
 - Modify: `README.md`
 
 - [ ] **Step 1: Add a "Cosmic flow (CF4)" section to the README**
 
 Open `/Users/rulkens/Development/js/skymap/README.md`. Find the "Building data" / "Data pipeline" section (or whatever the equivalent heading is — keep the existing pattern) and append:
 
-```markdown
+````markdown
 ### Cosmic flow (CF4)
 
 Cosmicflows-4 (Tully+ 2023) ships peculiar-velocity measurements for
@@ -2873,6 +2827,7 @@ the field. Builds are independent of `npm run build-all`.
 npm run fetch-cf4   # download raw catalog + velocity grid (~200 MB)
 npm run build-cf4   # parse, integrate, write public/data/cf4_*.bin
 ```
+````
 
 Toggle the layers from Settings panel → "Cosmic flow (CF4)".
 Streamline density slider lets you reduce strip count for older GPUs.
@@ -2885,6 +2840,7 @@ exposure / tone-map settings.
 Phase 1 colours by velocity magnitude only. Watershed-based basin
 segmentation (Laniakea / Great Attractor / Perseus-Pisces / Shapley
 / Coma / Hercules colours) is deferred to a follow-up plan.
+
 ```
 
 - [ ] **Step 2: Manual visual verification (with the dev server running)**
@@ -2902,7 +2858,9 @@ If any item fails, treat it as a bug and follow the project's "reproduce as fail
 - [ ] **Step 3: Final test + typecheck pass**
 
 ```
+
 npm run typecheck && npm test
+
 ```
 
 Expected: clean. Compare test count against the Task 0 baseline — should be exactly N + (new tests added by this plan). Any unrelated regression is a bug.
@@ -2910,7 +2868,9 @@ Expected: clean. Compare test count against the Task 0 baseline — should be ex
 - [ ] **Step 4: Commit**
 
 ```
+
 git add README.md && git commit -m "docs(cf4): document Cosmic flow (CF4) build + UI in README"
+
 ```
 
 ---
@@ -2959,3 +2919,4 @@ Before declaring the plan complete, walk every task and confirm:
 - [ ] Tests mirror src tree exactly (`tests/data/...`, `tests/parsers/...`, `tests/cf4/...`, `tests/services/gpu/...`).
 - [ ] No barrel exports added; React component imports in App.tsx target the `.tsx` directly.
 - [ ] Dev server is left running throughout — Task 13's verification asks the user to look, doesn't restart anything.
+```

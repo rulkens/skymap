@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { absoluteFromApparent, apparentFromAbsolute } from '../../../src/utils/math/distanceModulus';
+import {
+  absoluteFromApparent,
+  apparentFromAbsolute,
+} from '../../../src/utils/math/distanceModulus';
 
 describe('distanceModulus', () => {
   it('apparent 17, distance 100 Mpc → absolute −18.0', () => {

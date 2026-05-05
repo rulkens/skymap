@@ -1,9 +1,9 @@
 # Attributions
 
-Skymap's source code is MIT-licensed (see [LICENSE](LICENSE)).  This file
+Skymap's source code is MIT-licensed (see [LICENSE](LICENSE)). This file
 enumerates the third-party data, imagery, and software that the project
 depends on, together with their licences and the references their authors
-ask be cited.  It is the project's good-faith effort to give credit where
+ask be cited. It is the project's good-faith effort to give credit where
 credit is due — if anything is missing or mis-attributed, please open an
 issue.
 
@@ -12,18 +12,18 @@ issue.
 ## Source code
 
 The TypeScript / WGSL / React source under `src/`, `tools/`, and `tests/`
-is © Alexander Rulkens, MIT-licensed.  See [LICENSE](LICENSE).
+is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
 
 ## Catalogue data
 
 ### SDSS — Sloan Digital Sky Survey
 
 - **Use:** Spectroscopic galaxy positions, redshifts, and `ugriz` photometry,
-  exported via SDSS SkyServer SQL queries.  Reference catalog file lives
+  exported via SDSS SkyServer SQL queries. Reference catalog file lives
   under `data/` (gitignored).
 - **Licence / citation:** SDSS data products are publicly released; the
   collaboration asks that publications using SDSS cite Abdurro'uf et al.
-  2022 (DR17) or the DR18 release paper as appropriate.  See
+  2022 (DR17) or the DR18 release paper as appropriate. See
   <https://www.sdss.org/collaboration/citing-sdss/>.
 
 ### 2MRS — 2MASS Redshift Survey
@@ -44,7 +44,7 @@ is © Alexander Rulkens, MIT-licensed.  See [LICENSE](LICENSE).
 
 - **Use:** Per-galaxy axis-ratio, position-angle, and isophotal-diameter data
   fetched via the `fG.cgi` JSON-ish endpoint at
-  <http://atlas.obs-hp.fr/hyperleda/>.  Used for both the GLADE orientation
+  <http://atlas.obs-hp.fr/hyperleda/>. Used for both the GLADE orientation
   enrichment cache (`data/raw/hyperleda_pa.csv`) and the famous-galaxy
   catalog metadata (`data/famous_galaxies.seed.json`).
 - **Reference:** Paturel et al. 2003, A&A 412, 45; Makarov et al. 2014, A&A
@@ -74,7 +74,7 @@ sources, with the source recorded per-entry in
   `originalimage.source` URL, then resized + radial-faded by
   `tools/fetchFamousImages.ts`.
 - **Licences:** Mix of CC-BY-SA 4.0, CC-BY 4.0, public-domain
-  (NASA / ESA / Hubble), and ESO with required attribution.  Each image's
+  (NASA / ESA / Hubble), and ESO with required attribution. Each image's
   per-file licence is what governs its redistribution; the cache JSON
   retains the full Wikipedia API response, which is enough to mechanically
   reconstruct the attribution chain back to the upload page on
@@ -82,7 +82,7 @@ sources, with the source recorded per-entry in
 - **Caution for redistribution:** if this repository's `public/images/famous/`
   is ever redistributed (e.g. as part of a published binary), each
   individual image's attribution string + licence should be enumerated
-  in a per-file table or sidecar.  The CC-BY-SA portion in particular
+  in a per-file table or sidecar. The CC-BY-SA portion in particular
   forces share-alike on derivative atlases.
 
 #### DESI Legacy Imaging Surveys (fallback source)
@@ -90,14 +90,14 @@ sources, with the source recorded per-entry in
 - **Use:** Sky cutouts from
   <https://www.legacysurvey.org/viewer/cutout.jpg> for entries Wikipedia
   failed to provide (Wikimedia Commons HTTP 429 rate-limit during the
-  initial fetch run).  Layer fallback chain: `ls-dr10` → `sdss` →
+  initial fetch run). Layer fallback chain: `ls-dr10` → `sdss` →
   `unwise-neo7`.
 - **Reference:** Dey et al. 2019, AJ 157, 168.
 - **Licence:** DESI Legacy data products are publicly released for
-  scientific and educational use.  The Legacy Surveys data is composed
+  scientific and educational use. The Legacy Surveys data is composed
   of imaging from the DECaLS (Dey, Schlegel, Lang et al.), MzLS (Silva,
   Lang et al.), BASS (Zou, Zhou et al.), and unWISE (Lang, Hogg, Schlegel)
-  surveys.  Acknowledgements per
+  surveys. Acknowledgements per
   <https://www.legacysurvey.org/acknowledgment/>.
 
 ### Galaxy descriptions
@@ -108,7 +108,7 @@ two sources:
 - **20 hand-curated entries** (M31, M33, M51, M81, M82, M104, etc.) — written
   by the project author, MIT-licensed alongside the rest of the source.
 - **~50 auto-extracted entries** — the `extract` field of the Wikipedia REST
-  `/page/summary/<title>` response.  CC-BY-SA 4.0; attribution chain back
+  `/page/summary/<title>` response. CC-BY-SA 4.0; attribution chain back
   to the Wikipedia article is recorded in
   `data/raw/wikipedia_famous_cache.json`.
 
@@ -125,13 +125,13 @@ The volumetric raymarched fragment shader at the heart of
 - **Licence:** CC0 (public domain dedication, declared in the original
   source's leading `// License CC0: Spiral galaxy` comment).
 - **Use:** WGSL port serves as the procedural Milky Way at the world
-  origin so the user has a meaningful "here" to anchor on.  The vertex
+  origin so the user has a meaningful "here" to anchor on. The vertex
   stage was rewritten from the ground up to use a world-anchored view-
   aligned billboard driven by the engine's real camera; the fragment
   stage's raymarched render logic (bulge sphere, exponential disk,
   star-cell sampling, dust integral) is structurally a line-by-line
   port with WGSL-syntax adjustments and skymap-specific output
-  sanitisation (NaN masking, disk-extent envelope).  Display-space
+  sanitisation (NaN masking, disk-extent envelope). Display-space
   post-processing (gamma, contrast, vignette) was deleted so the
   engine's HDR tone-map pass can run on a clean linear-light input.
 
@@ -153,13 +153,13 @@ flows from skymap to them.
   used by `tools/fetch2massXsc.ts` to fetch 2MASS XSC shape data via ADQL.
 - **NED — NASA/IPAC Extragalactic Database**
   (`https://ned.ipac.caltech.edu/byname?objname=…`) — linked from the
-  InfoCard "Catalogues" row for famous galaxies.  Read-only; no programmatic
+  InfoCard "Catalogues" row for famous galaxies. Read-only; no programmatic
   access at build time.
 
 ## NPM dependencies
 
 The runtime + build-time JavaScript dependencies are listed in
-[`package.json`](package.json).  Notable third-party libraries:
+[`package.json`](package.json). Notable third-party libraries:
 
 - **react / react-dom** (MIT) — UI framework.
 - **gl-matrix** (MIT) — vector / matrix math.
@@ -171,7 +171,7 @@ The runtime + build-time JavaScript dependencies are listed in
 - **prettier** (MIT) — code formatter.
 - **sharp** (Apache-2.0) — image processing for the thumbnail pipeline.
 - **tsx** (MIT) — TypeScript runner for tools scripts.
-- **@types/* packages** (MIT) — type stubs.
+- **@types/\* packages** (MIT) — type stubs.
 
 Each dependency's licence and full attribution is enumerated in its own
 `node_modules/<package>/LICENSE` after `npm install`.

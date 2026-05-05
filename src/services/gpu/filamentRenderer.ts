@@ -155,9 +155,9 @@ export class FilamentRenderer {
             stepMode: 'instance',
             attributes: [
               { shaderLocation: 1, offset: 0, format: 'float32x3' }, // startPos
-              { shaderLocation: 2, offset: 12, format: 'float32' },  // startDensity
+              { shaderLocation: 2, offset: 12, format: 'float32' }, // startDensity
               { shaderLocation: 3, offset: 16, format: 'float32x3' }, // endPos
-              { shaderLocation: 4, offset: 28, format: 'float32' },  // endDensity
+              { shaderLocation: 4, offset: 28, format: 'float32' }, // endDensity
             ],
           },
         ],

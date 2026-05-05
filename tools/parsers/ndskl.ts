@@ -91,9 +91,7 @@ export function parseNDskl(text: string): ParsedSkeleton {
     }
     const nSamples = Number(headerParts[2]);
     if (!Number.isFinite(nSamples) || nSamples < 2) {
-      throw new Error(
-        `parseNDskl: filament ${f} has invalid sample count ${headerParts[2]}`,
-      );
+      throw new Error(`parseNDskl: filament ${f} has invalid sample count ${headerParts[2]}`);
     }
     const vertices: Array<[number, number, number]> = [];
     for (let s = 0; s < nSamples; s++) {
@@ -127,15 +125,11 @@ export function parseNDskl(text: string): ParsedSkeleton {
     let dataCursor = dataHdr + 1;
     const fieldCountLine = lines[dataCursor++];
     if (fieldCountLine === undefined) {
-      throw new Error(
-        'parseNDskl: [FILAMENTS DATA] header found but field count line is missing',
-      );
+      throw new Error('parseNDskl: [FILAMENTS DATA] header found but field count line is missing');
     }
     const fieldCount = Number(fieldCountLine.trim());
     if (!Number.isFinite(fieldCount) || fieldCount < 0) {
-      throw new Error(
-        `parseNDskl: bad [FILAMENTS DATA] field count "${fieldCountLine}"`,
-      );
+      throw new Error(`parseNDskl: bad [FILAMENTS DATA] field count "${fieldCountLine}"`);
     }
     if (fieldCount === 0) {
       // Header present but zero declared fields → genuinely no per-vertex

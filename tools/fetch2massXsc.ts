@@ -66,7 +66,9 @@ function readExistingIds(path: string): Set<string> {
   return done;
 }
 
-async function fetchChunk(ids: string[]): Promise<Map<string, { sup_phi: number; sup_ba: number }>> {
+async function fetchChunk(
+  ids: string[],
+): Promise<Map<string, { sup_phi: number; sup_ba: number }>> {
   // The XSC stores the 2MASS designation with a trailing space inside the
   // string ("12345678+1234567 "). 2MRS publishes it without the trailing
   // space.  We add it back when building the IN-list so the equality test
@@ -75,8 +77,7 @@ async function fetchChunk(ids: string[]): Promise<Map<string, { sup_phi: number;
   const inList = ids.map((s) => `'${s} '`).join(',');
   // `Sb/a` and `Spa` need quoted identifiers because of the slash and the
   // mixed case — most other columns work without quotes but these don't.
-  const adql =
-    `SELECT "2MASX", "Spa", "Sb/a" FROM "VII/233/xsc" WHERE "2MASX" IN (${inList})`;
+  const adql = `SELECT "2MASX", "Spa", "Sb/a" FROM "VII/233/xsc" WHERE "2MASX" IN (${inList})`;
   const body = new URLSearchParams({
     REQUEST: 'doQuery',
     LANG: 'ADQL',

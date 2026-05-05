@@ -26,8 +26,6 @@ describe('scoreFamousMatch', () => {
   });
 
   it('ranks exact name matches higher than description matches', () => {
-    expect(scoreFamousMatch(M31, 'M31')).toBeGreaterThan(
-      scoreFamousMatch(M31, 'spiral'),
-    );
+    expect(scoreFamousMatch(M31, 'M31')).toBeGreaterThan(scoreFamousMatch(M31, 'spiral'));
   });
 });

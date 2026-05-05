@@ -40,11 +40,7 @@ import { useState, type ReactNode } from 'react';
 import type { LodMode } from '../../@types/LodMode';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
-import {
-  ToneMapCurve,
-  ALL_TONE_MAP_CURVES,
-  toneMapCurveLabel,
-} from '../../data/toneMapCurve';
+import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import { CollapsibleSection } from './CollapsibleSection';
 import styles from './SettingsPanel.module.css';
 
@@ -320,8 +316,7 @@ export function SettingsPanel({
   // Milky Way checkbox: rendered only when both the value and the
   // change-callback are wired by the parent.  Same opt-in idiom as
   // every other optional section in this panel.
-  const showMilkyWayToggle =
-    milkyWayEnabled !== undefined && onMilkyWayEnabledChange !== undefined;
+  const showMilkyWayToggle = milkyWayEnabled !== undefined && onMilkyWayEnabledChange !== undefined;
 
   // Filaments checkbox: same opt-in idiom — both pieces or neither.
   // On a fresh clone the underlying `filaments.bin` won't exist; the
@@ -330,8 +325,7 @@ export function SettingsPanel({
   // `npm run build-filaments`.  We deliberately do NOT gate visibility
   // on whether the binary loaded — discoverability of the feature
   // beats hiding rows whose backing data may show up later.
-  const showFilamentsToggle =
-    filamentsEnabled !== undefined && onFilamentsChange !== undefined;
+  const showFilamentsToggle = filamentsEnabled !== undefined && onFilamentsChange !== undefined;
 
   // Density-correction section: rendered only when both the current mode and
   // both change-callbacks are wired by the parent.  We require all four
@@ -349,15 +343,13 @@ export function SettingsPanel({
   // we hide the whole row.  No `disabled` fallback because every curve
   // option ships functional today (no future placeholders to gray out,
   // unlike the biasMode dropdown's roadmap entries).
-  const showToneCurveControls =
-    toneMapCurve !== undefined && onToneMapCurveChange !== undefined;
+  const showToneCurveControls = toneMapCurve !== undefined && onToneMapCurveChange !== undefined;
 
   // Exposure slider gate — independent of the tone-curve dropdown so a
   // caller can wire one without the other (mostly defensive: in practice
   // App.tsx wires both together).  Same idiom as every other optional
   // section in this panel.
-  const showExposureControl =
-    exposure !== undefined && onExposureChange !== undefined;
+  const showExposureControl = exposure !== undefined && onExposureChange !== undefined;
 
   // ── Collapse state ─────────────────────────────────────────────────────
   //
@@ -412,9 +404,8 @@ export function SettingsPanel({
         tree — the panel is large.
       */}
       {!collapsed && (
-      <div id="settings-panel-body" className={styles.panelContent}>
-
-      {/*
+        <div id="settings-panel-body" className={styles.panelContent}>
+          {/*
         ── Section grouping ──────────────────────────────────────────────
         The panel grew to ~80 controls in seven loose categories.  Wrapping
         each category in a CollapsibleSection turns "scroll a wall of rows"
@@ -429,43 +420,43 @@ export function SettingsPanel({
         Camera reset stays outside any section as a footer.
       */}
 
-      {/* ── Surveys ──────────────────────────────────────────────────────── */}
-      {/*
+          {/* ── Surveys ──────────────────────────────────────────────────────── */}
+          {/*
         Survey toggles are the highest-level decision the user makes — what
         catalogues are even on screen.  Default open so a first-time visitor
         immediately sees the four toggles and the per-survey object counts.
       */}
-      {showSurveyToggles && (
-        <CollapsibleSection title="Surveys" storageKey="settings.section.surveys">
-          {TOGGLEABLE_SOURCES.map((s) => {
-            // `count` is undefined until the .bin lands; we render an empty
-            // string in that case rather than "0" (which would imply the
-            // survey is empty rather than still loading).
-            const count = sourceCounts?.[s];
-            return (
-              <div className={styles.panelRow} key={s}>
-                <label htmlFor={`toggle-source-${s}`}>
-                  {sourceLabel(s)}
-                  {count !== undefined && (
-                    <span className={styles.sourceCount}>{count.toLocaleString()}</span>
-                  )}
-                </label>
-                <input
-                  id={`toggle-source-${s}`}
-                  type="checkbox"
-                  // `maskHas` keeps us from leaking the bitmask shape into the JSX —
-                  // we ask "is bit s set?" and trust `data/sources.ts` to know how.
-                  checked={maskHas(visibleSourceMask, s)}
-                  onChange={(e) => onToggleSource(s, e.target.checked)}
-                />
-              </div>
-            );
-          })}
-        </CollapsibleSection>
-      )}
+          {showSurveyToggles && (
+            <CollapsibleSection title="Surveys" storageKey="settings.section.surveys">
+              {TOGGLEABLE_SOURCES.map((s) => {
+                // `count` is undefined until the .bin lands; we render an empty
+                // string in that case rather than "0" (which would imply the
+                // survey is empty rather than still loading).
+                const count = sourceCounts?.[s];
+                return (
+                  <div className={styles.panelRow} key={s}>
+                    <label htmlFor={`toggle-source-${s}`}>
+                      {sourceLabel(s)}
+                      {count !== undefined && (
+                        <span className={styles.sourceCount}>{count.toLocaleString()}</span>
+                      )}
+                    </label>
+                    <input
+                      id={`toggle-source-${s}`}
+                      type="checkbox"
+                      // `maskHas` keeps us from leaking the bitmask shape into the JSX —
+                      // we ask "is bit s set?" and trust `data/sources.ts` to know how.
+                      checked={maskHas(visibleSourceMask, s)}
+                      onChange={(e) => onToggleSource(s, e.target.checked)}
+                    />
+                  </div>
+                );
+              })}
+            </CollapsibleSection>
+          )}
 
-      {/* ── Density correction (Malmquist bias) ──────────────────────────── */}
-      {/*
+          {/* ── Density correction (Malmquist bias) ──────────────────────────── */}
+          {/*
         Sits just below Surveys because density correction is a high-level
         decision about *what sub-sample of the catalog to render* — closer in
         spirit to a survey toggle than to a per-pixel slider.  Only the first
@@ -481,175 +472,172 @@ export function SettingsPanel({
         Hiding the control rather than disabling it keeps the panel compact
         and removes a UI element that would just look broken.
       */}
-      {showBiasControls && (
-        <CollapsibleSection
-          title="Density correction"
-          storageKey="settings.section.density"
-        >
-          <div className={styles.panelRow}>
-            <label htmlFor="bias-mode">Mode</label>
-            <select
-              id="bias-mode"
-              className={styles.modeSelect}
-              value={biasMode}
-              onChange={(e) => onBiasModeChange(Number(e.target.value) as BiasMode)}
-            >
-              <option value={BiasMode.None}>None — raw catalogue</option>
-              <option value={BiasMode.VolumeLimited}>Volume-limited</option>
-              <option value={BiasMode.VMax}>1/V_max</option>
-              <option value={BiasMode.Schechter}>Schechter LF</option>
-              <option value={BiasMode.AngularReweight}>Angular re-weight (HEALPix)</option>
-            </select>
-          </div>
-          {biasMode === BiasMode.VolumeLimited && (
-            <>
+          {showBiasControls && (
+            <CollapsibleSection title="Density correction" storageKey="settings.section.density">
               <div className={styles.panelRow}>
-                <label htmlFor="abs-mag-limit">M_lim</label>
-                <span className={styles.panelValue}>{absMagLimit.toFixed(1)}</span>
+                <label htmlFor="bias-mode">Mode</label>
+                <select
+                  id="bias-mode"
+                  className={styles.modeSelect}
+                  value={biasMode}
+                  onChange={(e) => onBiasModeChange(Number(e.target.value) as BiasMode)}
+                >
+                  <option value={BiasMode.None}>None — raw catalogue</option>
+                  <option value={BiasMode.VolumeLimited}>Volume-limited</option>
+                  <option value={BiasMode.VMax}>1/V_max</option>
+                  <option value={BiasMode.Schechter}>Schechter LF</option>
+                  <option value={BiasMode.AngularReweight}>Angular re-weight (HEALPix)</option>
+                </select>
               </div>
-              <div className={styles.panelRow}>
-                <input
-                  id="abs-mag-limit"
-                  type="range"
-                  min={-24}
-                  max={-15}
-                  step={0.1}
-                  value={absMagLimit}
-                  onChange={(e) => onAbsMagLimitChange(parseFloat(e.target.value))}
-                />
-              </div>
-            </>
+              {biasMode === BiasMode.VolumeLimited && (
+                <>
+                  <div className={styles.panelRow}>
+                    <label htmlFor="abs-mag-limit">M_lim</label>
+                    <span className={styles.panelValue}>{absMagLimit.toFixed(1)}</span>
+                  </div>
+                  <div className={styles.panelRow}>
+                    <input
+                      id="abs-mag-limit"
+                      type="range"
+                      min={-24}
+                      max={-15}
+                      step={0.1}
+                      value={absMagLimit}
+                      onChange={(e) => onAbsMagLimitChange(parseFloat(e.target.value))}
+                    />
+                  </div>
+                </>
+              )}
+            </CollapsibleSection>
           )}
-        </CollapsibleSection>
-      )}
 
-      {/* ── Visual (per-pixel sliders + camera behaviour) ───────────────── */}
-      {/*
+          {/* ── Visual (per-pixel sliders + camera behaviour) ───────────────── */}
+          {/*
         Bundles the four "how the pixels are drawn" controls together:
         point size, brightness, depth fade, and auto-rotate, plus the
         Auto-LOD master switch (which is camera-distance gating, same
         family of "rendering behaviour" knobs).  These are the controls
         a user reaches for *after* they've decided what surveys to view.
       */}
-      <CollapsibleSection title="Visual" storageKey="settings.section.visual">
-        {/* Point size — stacked label/value on top, slider full-width below. */}
-        <div className={styles.panelRow}>
-          <label htmlFor="slider-point-size">Point size</label>
-          <span className={styles.panelValue}>{pointSize.toFixed(1)} px</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-point-size"
-            type="range"
-            min={1.0}
-            max={8.0}
-            step={0.1}
-            value={pointSize}
-            onChange={(e) => onPointSizeChange(parseFloat(e.target.value))}
-          />
-        </div>
+          <CollapsibleSection title="Visual" storageKey="settings.section.visual">
+            {/* Point size — stacked label/value on top, slider full-width below. */}
+            <div className={styles.panelRow}>
+              <label htmlFor="slider-point-size">Point size</label>
+              <span className={styles.panelValue}>{pointSize.toFixed(1)} px</span>
+            </div>
+            <div className={styles.panelRow}>
+              <input
+                id="slider-point-size"
+                type="range"
+                min={1.0}
+                max={8.0}
+                step={0.1}
+                value={pointSize}
+                onChange={(e) => onPointSizeChange(parseFloat(e.target.value))}
+              />
+            </div>
 
-        {/* Brightness */}
-        <div className={styles.panelRow}>
-          <label htmlFor="slider-brightness">Brightness</label>
-          <span className={styles.panelValue}>{brightness.toFixed(2)}×</span>
-        </div>
-        <div className={styles.panelRow}>
-          <input
-            id="slider-brightness"
-            type="range"
-            min={0.2}
-            max={3.0}
-            step={0.05}
-            value={brightness}
-            onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
-          />
-        </div>
+            {/* Brightness */}
+            <div className={styles.panelRow}>
+              <label htmlFor="slider-brightness">Brightness</label>
+              <span className={styles.panelValue}>{brightness.toFixed(2)}×</span>
+            </div>
+            <div className={styles.panelRow}>
+              <input
+                id="slider-brightness"
+                type="range"
+                min={0.2}
+                max={3.0}
+                step={0.05}
+                value={brightness}
+                onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
+              />
+            </div>
 
-        {/*
+            {/*
           Depth-fade toggle.  Camera-distance attenuation that gates centre-
           of-volume saturation glow.  Belongs here in Visual because it's a
           per-pixel modulation, even though it gets gated on its own pair of
           props (the parent may not wire it).
         */}
-        {depthFadeEnabled !== undefined && onDepthFadeEnabledChange !== undefined && (
-          <div className={styles.panelRow}>
-            <label htmlFor="toggle-depth-fade">Depth fade</label>
-            <input
-              id="toggle-depth-fade"
-              type="checkbox"
-              checked={depthFadeEnabled}
-              onChange={(e) => onDepthFadeEnabledChange(e.target.checked)}
-            />
-          </div>
-        )}
+            {depthFadeEnabled !== undefined && onDepthFadeEnabledChange !== undefined && (
+              <div className={styles.panelRow}>
+                <label htmlFor="toggle-depth-fade">Depth fade</label>
+                <input
+                  id="toggle-depth-fade"
+                  type="checkbox"
+                  checked={depthFadeEnabled}
+                  onChange={(e) => onDepthFadeEnabledChange(e.target.checked)}
+                />
+              </div>
+            )}
 
-        {/* Auto-rotate */}
-        <div className={styles.panelRow}>
-          <label htmlFor="toggle-auto-rotate">Auto-rotate</label>
-          <input
-            id="toggle-auto-rotate"
-            type="checkbox"
-            checked={autoRotate}
-            // `e.target.checked` is a boolean — pass it directly to the callback.
-            onChange={(e) => onAutoRotateChange(e.target.checked)}
-          />
-        </div>
+            {/* Auto-rotate */}
+            <div className={styles.panelRow}>
+              <label htmlFor="toggle-auto-rotate">Auto-rotate</label>
+              <input
+                id="toggle-auto-rotate"
+                type="checkbox"
+                checked={autoRotate}
+                // `e.target.checked` is a boolean — pass it directly to the callback.
+                onChange={(e) => onAutoRotateChange(e.target.checked)}
+              />
+            </div>
 
-        {/* ── Auto-LOD master switch ──────────────────────────────────────
+            {/* ── Auto-LOD master switch ──────────────────────────────────────
           A single boolean checkbox is enough because the engine itself has
           only two modes: pick LOD from camera distance, or honour an
           explicit caller override. The mode-indicator line below the
           checkbox echoes the current state so the wording stays
           unambiguous even when the user isn't sure what "Auto LOD off"
           implies. */}
-        {showLodControls && (
-          <>
-            <div className={styles.panelRow}>
-              <label htmlFor="toggle-auto-lod">Auto LOD</label>
-              <input
-                id="toggle-auto-lod"
-                type="checkbox"
-                checked={lodMode === 'auto'}
-                onChange={(e) => onSetLodMode(e.target.checked ? 'auto' : 'manual')}
-              />
-            </div>
-            <div className={styles.panelMode}>
-              mode: {lodMode === 'auto' ? 'auto (by zoom)' : 'manual override'}
-            </div>
-          </>
-        )}
-      </CollapsibleSection>
+            {showLodControls && (
+              <>
+                <div className={styles.panelRow}>
+                  <label htmlFor="toggle-auto-lod">Auto LOD</label>
+                  <input
+                    id="toggle-auto-lod"
+                    type="checkbox"
+                    checked={lodMode === 'auto'}
+                    onChange={(e) => onSetLodMode(e.target.checked ? 'auto' : 'manual')}
+                  />
+                </div>
+                <div className={styles.panelMode}>
+                  mode: {lodMode === 'auto' ? 'auto (by zoom)' : 'manual override'}
+                </div>
+              </>
+            )}
+          </CollapsibleSection>
 
-      {/* ── Tone mapping ─────────────────────────────────────────────────── */}
-      {/*
+          {/* ── Tone mapping ─────────────────────────────────────────────────── */}
+          {/*
         Curve dropdown + exposure slider.  The two work together: curve
         choice sets the shape (Linear / Reinhard / Asinh / Gamma 2 / ACES),
         exposure sets where on that shape the per-pixel signal lands.  See
         `data/toneMapCurve.ts` for the full curve descriptions.
       */}
-      {(showToneCurveControls || showExposureControl) && (
-        <CollapsibleSection title="Tone mapping" storageKey="settings.section.tone">
-          {showToneCurveControls && (
-            <div className={styles.panelRow}>
-              <label htmlFor="tonemap-curve">Curve</label>
-              <select
-                id="tonemap-curve"
-                className={styles.modeSelect}
-                value={toneMapCurve}
-                onChange={(e) =>
-                  onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurve)
-                }
-              >
-                {ALL_TONE_MAP_CURVES.map((c) => (
-                  <option key={c} value={c}>
-                    {toneMapCurveLabel(c)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {/*
+          {(showToneCurveControls || showExposureControl) && (
+            <CollapsibleSection title="Tone mapping" storageKey="settings.section.tone">
+              {showToneCurveControls && (
+                <div className={styles.panelRow}>
+                  <label htmlFor="tonemap-curve">Curve</label>
+                  <select
+                    id="tonemap-curve"
+                    className={styles.modeSelect}
+                    value={toneMapCurve}
+                    onChange={(e) =>
+                      onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurve)
+                    }
+                  >
+                    {ALL_TONE_MAP_CURVES.map((c) => (
+                      <option key={c} value={c}>
+                        {toneMapCurveLabel(c)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/*
             Exposure multiplies the HDR signal *before* the tone-map curve
             runs, so dragging it left dims cluster cores back below
             saturation and dragging it right lifts the cosmic web out of
@@ -657,65 +645,65 @@ export function SettingsPanel({
             slider at 4.0 because anything past ~3 already over-bakes the
             brightest cores under Reinhard / ACES.
           */}
-          {showExposureControl && (
-            <>
-              <div className={styles.panelRow}>
-                <label htmlFor="slider-exposure">Exposure</label>
-                <span className={styles.panelValue}>{exposure.toFixed(2)}×</span>
-              </div>
-              <div className={styles.panelRow}>
-                <input
-                  id="slider-exposure"
-                  type="range"
-                  min={0.1}
-                  max={4.0}
-                  step={0.05}
-                  value={exposure}
-                  onChange={(e) => onExposureChange(parseFloat(e.target.value))}
-                />
-              </div>
-            </>
+              {showExposureControl && (
+                <>
+                  <div className={styles.panelRow}>
+                    <label htmlFor="slider-exposure">Exposure</label>
+                    <span className={styles.panelValue}>{exposure.toFixed(2)}×</span>
+                  </div>
+                  <div className={styles.panelRow}>
+                    <input
+                      id="slider-exposure"
+                      type="range"
+                      min={0.1}
+                      max={4.0}
+                      step={0.05}
+                      value={exposure}
+                      onChange={(e) => onExposureChange(parseFloat(e.target.value))}
+                    />
+                  </div>
+                </>
+              )}
+            </CollapsibleSection>
           )}
-        </CollapsibleSection>
-      )}
 
-      {/* ── Overlays ─────────────────────────────────────────────────────── */}
-      {/*
+          {/* ── Overlays ─────────────────────────────────────────────────────── */}
+          {/*
         Decorative passes that draw *on top of* the main galaxy point cloud:
         the close-up galaxy thumbnails, the procedural Milky Way impostor at
         world origin, and the cosmic-web filament skeleton from DisPerSE.
         All three are independent toggles — turning one off doesn't affect
         the others.
       */}
-      <CollapsibleSection title="Overlays" storageKey="settings.section.overlays">
-        {/*
+          <CollapsibleSection title="Overlays" storageKey="settings.section.overlays">
+            {/*
           Galaxy thumbnails — gates the entire close-up galaxy-texture quad
           pass.  Default-on (the engine seeds `true` at init), so first-time
           visitors see the feature without having to opt in.
         */}
-        <div className={styles.panelRow}>
-          <label htmlFor="toggle-galaxy-textures">Galaxy thumbnails</label>
-          <input
-            id="toggle-galaxy-textures"
-            type="checkbox"
-            checked={galaxyTexturesEnabled}
-            onChange={(e) => onGalaxyTexturesChange(e.target.checked)}
-          />
-        </div>
+            <div className={styles.panelRow}>
+              <label htmlFor="toggle-galaxy-textures">Galaxy thumbnails</label>
+              <input
+                id="toggle-galaxy-textures"
+                type="checkbox"
+                checked={galaxyTexturesEnabled}
+                onChange={(e) => onGalaxyTexturesChange(e.target.checked)}
+              />
+            </div>
 
-        {showMilkyWayToggle && (
-          <div className={styles.panelRow}>
-            <label htmlFor="toggle-milky-way">Show Milky Way</label>
-            <input
-              id="toggle-milky-way"
-              type="checkbox"
-              checked={milkyWayEnabled}
-              onChange={(e) => onMilkyWayEnabledChange(e.target.checked)}
-            />
-          </div>
-        )}
+            {showMilkyWayToggle && (
+              <div className={styles.panelRow}>
+                <label htmlFor="toggle-milky-way">Show Milky Way</label>
+                <input
+                  id="toggle-milky-way"
+                  type="checkbox"
+                  checked={milkyWayEnabled}
+                  onChange={(e) => onMilkyWayEnabledChange(e.target.checked)}
+                />
+              </div>
+            )}
 
-        {/*
+            {/*
           Filaments — optional opt-in overlay.  The underlying `filaments.bin`
           only exists after `npm run build-filaments` (which depends on the
           DisPerSE binary the user installs themselves), so we default the
@@ -725,21 +713,21 @@ export function SettingsPanel({
           affordance, runs the build pipeline, comes back and toggles it on
           without us having to wire a "is it loaded?" flag through the panel.
         */}
-        {showFilamentsToggle && (
-          <div className={styles.panelRow}>
-            <label htmlFor="toggle-filaments">Filaments (cosmic web)</label>
-            <input
-              id="toggle-filaments"
-              type="checkbox"
-              checked={filamentsEnabled}
-              onChange={(e) => onFilamentsChange(e.target.checked)}
-            />
-          </div>
-        )}
-      </CollapsibleSection>
+            {showFilamentsToggle && (
+              <div className={styles.panelRow}>
+                <label htmlFor="toggle-filaments">Filaments (cosmic web)</label>
+                <input
+                  id="toggle-filaments"
+                  type="checkbox"
+                  checked={filamentsEnabled}
+                  onChange={(e) => onFilamentsChange(e.target.checked)}
+                />
+              </div>
+            )}
+          </CollapsibleSection>
 
-      {/* ── Orientation visibility (Task 15) ─────────────────────────────── */}
-      {/*
+          {/* ── Orientation visibility (Task 15) ─────────────────────────────── */}
+          {/*
         Two toggles that share the same per-galaxy fallback flag (high bit of
         globalInstanceIdx, baked at upload time).  "Highlight" tints fallback
         rows magenta in the fragment shader; "Show only real" discards
@@ -749,35 +737,35 @@ export function SettingsPanel({
         Default-closed because these are debug-ish: most users never touch
         them, but fallback-orientation diagnostic work needs them.
       */}
-      {showOrientationToggles && (
-        <CollapsibleSection
-          title="Orientation"
-          storageKey="settings.section.orientation"
-          defaultOpen={false}
-        >
-          <div className={styles.panelRow}>
-            <label htmlFor="toggle-highlight-fallback">Highlight fallback</label>
-            <input
-              id="toggle-highlight-fallback"
-              type="checkbox"
-              checked={highlightFallback}
-              onChange={(e) => onHighlightFallbackChange(e.target.checked)}
-            />
-          </div>
-          <div className={styles.panelRow}>
-            <label htmlFor="toggle-real-only">Show only real</label>
-            <input
-              id="toggle-real-only"
-              type="checkbox"
-              checked={realOnlyMode}
-              onChange={(e) => onRealOnlyModeChange(e.target.checked)}
-            />
-          </div>
-        </CollapsibleSection>
-      )}
+          {showOrientationToggles && (
+            <CollapsibleSection
+              title="Orientation"
+              storageKey="settings.section.orientation"
+              defaultOpen={false}
+            >
+              <div className={styles.panelRow}>
+                <label htmlFor="toggle-highlight-fallback">Highlight fallback</label>
+                <input
+                  id="toggle-highlight-fallback"
+                  type="checkbox"
+                  checked={highlightFallback}
+                  onChange={(e) => onHighlightFallbackChange(e.target.checked)}
+                />
+              </div>
+              <div className={styles.panelRow}>
+                <label htmlFor="toggle-real-only">Show only real</label>
+                <input
+                  id="toggle-real-only"
+                  type="checkbox"
+                  checked={realOnlyMode}
+                  onChange={(e) => onRealOnlyModeChange(e.target.checked)}
+                />
+              </div>
+            </CollapsibleSection>
+          )}
 
-      {/* ── SpaceMouse (rev-3 6DOF input) ────────────────────────────────── */}
-      {/*
+          {/* ── SpaceMouse (rev-3 6DOF input) ────────────────────────────────── */}
+          {/*
         Rendered only when WebHID is available (Chromium-only). On Firefox
         and Safari the parent passes `spaceMouseSupported={false}` and this
         whole section is hidden — users see no broken UI for an inaccessible
@@ -787,62 +775,58 @@ export function SettingsPanel({
         Default-closed because most users don't have a SpaceMouse plugged
         in even on supported browsers.
       */}
-      {spaceMouseSupported && (
-        <CollapsibleSection
-          title="SpaceMouse"
-          storageKey="settings.section.spacemouse"
-          defaultOpen={false}
-        >
-          <div className={styles.panelMode}>
-            {spaceMouseConnected ? 'connected' : 'not connected'}
-          </div>
-          {!spaceMouseConnected && onConnectSpaceMouse && (
-            <div className={styles.panelRow}>
-              <button type="button" onClick={onConnectSpaceMouse}>
-                Connect SpaceMouse
-              </button>
-            </div>
+          {spaceMouseSupported && (
+            <CollapsibleSection
+              title="SpaceMouse"
+              storageKey="settings.section.spacemouse"
+              defaultOpen={false}
+            >
+              <div className={styles.panelMode}>
+                {spaceMouseConnected ? 'connected' : 'not connected'}
+              </div>
+              {!spaceMouseConnected && onConnectSpaceMouse && (
+                <div className={styles.panelRow}>
+                  <button type="button" onClick={onConnectSpaceMouse}>
+                    Connect SpaceMouse
+                  </button>
+                </div>
+              )}
+              {spaceMouseConnected &&
+                spaceMouseSensitivity !== undefined &&
+                onSpaceMouseSensitivityChange && (
+                  <>
+                    <div className={styles.panelRow}>
+                      <label htmlFor="slider-spacemouse-sensitivity">Sensitivity</label>
+                      <span className={styles.panelValue}>{spaceMouseSensitivity.toFixed(2)}×</span>
+                    </div>
+                    <div className={styles.panelRow}>
+                      <input
+                        id="slider-spacemouse-sensitivity"
+                        type="range"
+                        min={0.1}
+                        max={3.0}
+                        step={0.05}
+                        value={spaceMouseSensitivity}
+                        onChange={(e) => onSpaceMouseSensitivityChange(parseFloat(e.target.value))}
+                      />
+                    </div>
+                  </>
+                )}
+            </CollapsibleSection>
           )}
-          {spaceMouseConnected &&
-            spaceMouseSensitivity !== undefined &&
-            onSpaceMouseSensitivityChange && (
-              <>
-                <div className={styles.panelRow}>
-                  <label htmlFor="slider-spacemouse-sensitivity">Sensitivity</label>
-                  <span className={styles.panelValue}>
-                    {spaceMouseSensitivity.toFixed(2)}×
-                  </span>
-                </div>
-                <div className={styles.panelRow}>
-                  <input
-                    id="slider-spacemouse-sensitivity"
-                    type="range"
-                    min={0.1}
-                    max={3.0}
-                    step={0.05}
-                    value={spaceMouseSensitivity}
-                    onChange={(e) =>
-                      onSpaceMouseSensitivityChange(parseFloat(e.target.value))
-                    }
-                  />
-                </div>
-              </>
-            )}
-        </CollapsibleSection>
-      )}
 
-      {/* ── Footer: divider + reset camera ──────────────────────────────── */}
-      {/*
+          {/* ── Footer: divider + reset camera ──────────────────────────────── */}
+          {/*
         Reset camera lives outside any section because it's an action, not
         a setting — it doesn't belong in any of the configuration buckets
         above, and folding it away would hide the panel's primary "I'm
         lost, take me home" affordance.
       */}
-      <div className={styles.panelDivider} role="separator" />
-      <button type="button" onClick={onResetCamera}>
-        Reset camera
-      </button>
-      </div>
+          <div className={styles.panelDivider} role="separator" />
+          <button type="button" onClick={onResetCamera}>
+            Reset camera
+          </button>
+        </div>
       )}
     </div>
   );

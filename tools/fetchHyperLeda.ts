@@ -102,9 +102,7 @@ async function fetchOne(pgc: string): Promise<HyperLedaRow | null> {
   // future case-flip.
   const headerLine = lines.find((l) => l.startsWith('$objname'));
   if (!headerLine) return null;
-  const headerTokens = headerLine
-    .split(/\s+/)
-    .map((s) => s.replace(/^"|"$/g, '').toLowerCase());
+  const headerTokens = headerLine.split(/\s+/).map((s) => s.replace(/^"|"$/g, '').toLowerCase());
   const paIdx = headerTokens.indexOf('pa');
   const lrIdx = headerTokens.indexOf('logr25');
   const ldIdx = headerTokens.indexOf('logd25');

@@ -12,7 +12,7 @@ describe('lerpAngleShortest', () => {
     // The output may be `b` itself OR an equivalent angle (b + 2π·k).
     // We compare modulo 2π to allow for the implementation’s choice.
     const out = lerpAngleShortest(1.0, 2.5, 1);
-    const diff = ((out - 2.5) % TAU + TAU) % TAU;
+    const diff = (((out - 2.5) % TAU) + TAU) % TAU;
     // Either ~0 or ~2π — both are valid representations of the same angle.
     expect(Math.min(diff, TAU - diff)).toBeLessThan(1e-10);
   });

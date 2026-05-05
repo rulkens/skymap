@@ -82,6 +82,7 @@ Expected: `HTTP/2 200`, `content-type: image/jpeg`. The endpoint is the canonica
 ## Task 1: Add `Source.Famous` enum value + per-source metadata entries
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/data/sources.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/tests/data/sources.test.ts` (verify or create)
 
@@ -263,6 +264,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/data/sources.ts tests/dat
 ## Task 2: Define + author the seed catalog JSON schema
 
 **Files:**
+
 - Create: `/Users/rulkens/Development/js/skymap/data/famous_galaxies.seed.json`
 - Create: `/Users/rulkens/Development/js/skymap/tools/parsers/famousSeed.ts`
 - Create: `/Users/rulkens/Development/js/skymap/tests/parsers/famousSeed.test.ts`
@@ -326,7 +328,7 @@ Create `/Users/rulkens/Development/js/skymap/data/famous_galaxies.seed.json`:
   {
     "id": "m61",
     "names": ["M61", "NGC 4303"],
-    "ra": 185.4790,
+    "ra": 185.479,
     "dec": 4.4737,
     "distanceMpc": 16.0,
     "diameterKpc": 31.0,
@@ -387,7 +389,7 @@ Create `/Users/rulkens/Development/js/skymap/data/famous_galaxies.seed.json`:
     "id": "m84",
     "names": ["M84", "NGC 4374"],
     "ra": 186.2654,
-    "dec": 12.8870,
+    "dec": 12.887,
     "distanceMpc": 18.4,
     "diameterKpc": 26.4,
     "type": "E1",
@@ -506,8 +508,26 @@ describe('parseFamousSeed', () => {
 
   it('rejects entries with duplicate ids', () => {
     const dup = [
-      { id: 'm31', names: ['M31'], ra: 10, dec: 41, distanceMpc: 0.778, diameterKpc: 67, type: 'Sb', description: 'a' },
-      { id: 'm31', names: ['M31 alt'], ra: 11, dec: 42, distanceMpc: 0.8, diameterKpc: 68, type: 'Sb', description: 'b' },
+      {
+        id: 'm31',
+        names: ['M31'],
+        ra: 10,
+        dec: 41,
+        distanceMpc: 0.778,
+        diameterKpc: 67,
+        type: 'Sb',
+        description: 'a',
+      },
+      {
+        id: 'm31',
+        names: ['M31 alt'],
+        ra: 11,
+        dec: 42,
+        distanceMpc: 0.8,
+        diameterKpc: 68,
+        type: 'Sb',
+        description: 'b',
+      },
     ];
     expect(() => parseFamousSeed(JSON.stringify(dup))).toThrow(/duplicate id/i);
   });
@@ -751,6 +771,7 @@ cd /Users/rulkens/Development/js/skymap && git add data/famous_galaxies.seed.jso
 ## Task 3: Image processor (pure background-removal helpers)
 
 **Files:**
+
 - Create: `/Users/rulkens/Development/js/skymap/tools/famousImageProcessor.ts`
 - Create: `/Users/rulkens/Development/js/skymap/tests/famousImageProcessor.test.ts`
 
@@ -770,11 +791,7 @@ Create `/Users/rulkens/Development/js/skymap/tests/famousImageProcessor.test.ts`
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import {
-  sampleCornerColor,
-  applyTransparency,
-  type RGBA,
-} from '../tools/famousImageProcessor';
+import { sampleCornerColor, applyTransparency, type RGBA } from '../tools/famousImageProcessor';
 
 /**
  * Build a 4x4 RGBA buffer where the corners are dark (sky) and the
@@ -866,10 +883,16 @@ describe('applyTransparency', () => {
       buf[i + 2] = 200;
       buf[i + 3] = 255;
     }
-    applyTransparency(buf, width, height, { r: 0, g: 0, b: 0, a: 255 }, {
-      skyTolerance: 0,
-      fadeOuterFraction: 0.5,
-    });
+    applyTransparency(
+      buf,
+      width,
+      height,
+      { r: 0, g: 0, b: 0, a: 255 },
+      {
+        skyTolerance: 0,
+        fadeOuterFraction: 0.5,
+      },
+    );
     // Centre pixel alpha unchanged
     const centreIdx = (3 * width + 3) * 4 + 3;
     expect(buf[centreIdx]).toBeGreaterThan(200);
@@ -931,11 +954,7 @@ export type RGBA = { r: number; g: number; b: number; a: number };
  * average colour.  Used to establish the "sky" colour for the
  * transparency pass below.
  */
-export function sampleCornerColor(
-  buf: Uint8ClampedArray,
-  width: number,
-  height: number,
-): RGBA {
+export function sampleCornerColor(buf: Uint8ClampedArray, width: number, height: number): RGBA {
   const corners: ReadonlyArray<readonly [number, number]> = [
     [0, 0],
     [width - 1, 0],
@@ -1051,6 +1070,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/famousImageProcessor.ts
 ## Task 4: Image fetcher CLI
 
 **Files:**
+
 - Create: `/Users/rulkens/Development/js/skymap/tools/fetchFamousImages.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/package.json` (add npm script)
 
@@ -1092,15 +1112,11 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 import { parseFamousSeed, type FamousEntry } from './parsers/famousSeed.js';
-import {
-  sampleCornerColor,
-  applyTransparency,
-  type RGBA,
-} from './famousImageProcessor.js';
+import { sampleCornerColor, applyTransparency, type RGBA } from './famousImageProcessor.js';
 
 const CONCURRENCY = 4;
 const FETCH_PX = 512; // input resolution (DESI cutout)
-const OUT_PX = 256;   // output WebP resolution
+const OUT_PX = 256; // output WebP resolution
 /**
  * Pixel colour-distance threshold for the sky-cut.  16 is permissive
  * enough that DESI's slightly-noisy backgrounds get fully cut, but
@@ -1246,6 +1262,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/fetchFamousImages.ts pa
 ## Task 5: Famous .bin builder + cross-match + sidecars
 
 **Files:**
+
 - Create: `/Users/rulkens/Development/js/skymap/tools/buildFamous.ts`
 - Create: `/Users/rulkens/Development/js/skymap/tests/buildFamous.test.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/package.json` (add npm script)
@@ -1559,6 +1576,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/buildFamous.ts tests/bu
 ## Task 6: Load `famous.bin` at startup
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/services/engine/cloudLoader.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/tests/services/engine/cloudLoader.test.ts` (if it exists; otherwise skip)
 
@@ -1616,6 +1634,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/engine/cloudLoad
 ## Task 7: Load `famous_meta.json` + `famous_xrefs.json` at startup
 
 **Files:**
+
 - Create: `/Users/rulkens/Development/js/skymap/src/services/engine/famousMetaLoader.ts`
 - Create: `/Users/rulkens/Development/js/skymap/tests/services/engine/famousMetaLoader.test.ts`
 
@@ -1780,6 +1799,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/engine/famousMet
 ## Task 8: Engine — wire sidecars + special-case the quad pass for Famous
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/@types/PointInfo.d.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/src/services/engine/pointInfoBuilder.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/src/services/engine/engine.ts`
@@ -1842,26 +1862,26 @@ export function buildPointInfo(
 At the end of the function (before `return { ... }`), build the `famous` block:
 
 ```ts
-  // ── Famous-atlas metadata ─────────────────────────────────────────────────
-  //
-  // For Source.Famous rows, look up the curated metadata + cross-match by
-  // local index.  The sidecars are loaded at engine startup; both default
-  // to empty when the build-famous artefacts haven't shipped, in which
-  // case we silently fall back to no `famous` field.  The InfoCard then
-  // renders the row generically (still useful: gives the user a position
-  // and a galaxyType chip).
-  let famous: PointInfo['famous'] | undefined;
-  if (source === Source.Famous && famousMeta && famousMeta[idx]) {
-    const meta = famousMeta[idx]!;
-    const xref = (famousXrefs && famousXrefs[meta.id]) ?? null;
-    famous = {
-      id: meta.id,
-      names: meta.names,
-      description: meta.description,
-      type: meta.type,
-      xref,
-    };
-  }
+// ── Famous-atlas metadata ─────────────────────────────────────────────────
+//
+// For Source.Famous rows, look up the curated metadata + cross-match by
+// local index.  The sidecars are loaded at engine startup; both default
+// to empty when the build-famous artefacts haven't shipped, in which
+// case we silently fall back to no `famous` field.  The InfoCard then
+// renders the row generically (still useful: gives the user a position
+// and a galaxyType chip).
+let famous: PointInfo['famous'] | undefined;
+if (source === Source.Famous && famousMeta && famousMeta[idx]) {
+  const meta = famousMeta[idx]!;
+  const xref = (famousXrefs && famousXrefs[meta.id]) ?? null;
+  famous = {
+    id: meta.id,
+    names: meta.names,
+    description: meta.description,
+    type: meta.type,
+    xref,
+  };
+}
 ```
 
 In the returned object literal, add `famous,` next to `orientation:` (or anywhere after the `diameterProvenance` field).
@@ -1877,31 +1897,31 @@ import { loadFamousSidecars, type FamousMetaEntry, type FamousXrefMap } from './
 Find the engine's local state declarations (the block where `clouds`, `selectedIndex`, `hoveredIndex` etc. live — around line 150) and add:
 
 ```ts
-  let famousMeta: FamousMetaEntry[] = [];
-  let famousXrefs: FamousXrefMap = {};
+let famousMeta: FamousMetaEntry[] = [];
+let famousXrefs: FamousXrefMap = {};
 ```
 
 Find where the engine kicks off the cloud loader (search for `loadAllClouds`) and add a parallel sidecar load. Just before or just after the existing `loadAllClouds(...)` call, add:
 
 ```ts
-  // Fetch the famous-atlas sidecars concurrently with the .bin files.
-  // Both fail-safely return empty defaults when the artefacts are absent,
-  // so the engine still works on a fresh checkout where build-famous
-  // hasn't run yet.
-  loadFamousSidecars()
-    .then((sc) => {
-      famousMeta = sc.meta;
-      famousXrefs = sc.xrefs;
-    })
-    .catch((err) => {
-      console.warn('[engine] famous sidecars failed to load:', err);
-    });
+// Fetch the famous-atlas sidecars concurrently with the .bin files.
+// Both fail-safely return empty defaults when the artefacts are absent,
+// so the engine still works on a fresh checkout where build-famous
+// hasn't run yet.
+loadFamousSidecars()
+  .then((sc) => {
+    famousMeta = sc.meta;
+    famousXrefs = sc.xrefs;
+  })
+  .catch((err) => {
+    console.warn('[engine] famous sidecars failed to load:', err);
+  });
 ```
 
 Find every call to `buildPointInfo(...)` in this file (likely 1-2 places — hover and select) and add the sidecars as the new trailing arguments:
 
 ```ts
-buildPointInfo(cloud, localIdx, source, famousMeta, famousXrefs)
+buildPointInfo(cloud, localIdx, source, famousMeta, famousXrefs);
 ```
 
 - [ ] **Step 4: Special-case the Famous source in the quad-pass**
@@ -1913,44 +1933,44 @@ Replace the inner-loop's apparent-size gate so Famous rows always proceed:
 Find:
 
 ```ts
-              const camDistSq = dx * dx + dy * dy + dz * dz;
-              if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
+const camDistSq = dx * dx + dy * dy + dz * dz;
+if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
 
-              // Survived the cheap cull; pay for the per-galaxy diameter
-              // read + sqrt + exact apparent-size compare.
-              const dKpcRow = cloud.diameterKpc[i]!;
-              const dMpcRow = dKpcRow / 1000;
-              const camDist = Math.sqrt(camDistSq);
-              const px = (dMpcRow / camDist) * pxPerRad;
-              if (px < APPARENT_SIZE_THRESHOLD_PX) continue;
+// Survived the cheap cull; pay for the per-galaxy diameter
+// read + sqrt + exact apparent-size compare.
+const dKpcRow = cloud.diameterKpc[i]!;
+const dMpcRow = dKpcRow / 1000;
+const camDist = Math.sqrt(camDistSq);
+const px = (dMpcRow / camDist) * pxPerRad;
+if (px < APPARENT_SIZE_THRESHOLD_PX) continue;
 ```
 
 …and modify the threshold check so Famous rows skip it. (We KEEP the cheap squared-distance early-out so far-away famous galaxies don't trigger a useless quad; just remove the apparent-size gate.) Replace with:
 
 ```ts
-              const camDistSq = dx * dx + dy * dy + dz * dz;
-              if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
+const camDistSq = dx * dx + dy * dy + dz * dz;
+if (camDistSq <= 0 || camDistSq > maxCamDistSqUpper) continue;
 
-              // Survived the cheap cull; pay for the per-galaxy diameter
-              // read + sqrt + exact apparent-size compare.
-              const dKpcRow = cloud.diameterKpc[i]!;
-              const dMpcRow = dKpcRow / 1000;
-              const camDist = Math.sqrt(camDistSq);
-              const px = (dMpcRow / camDist) * pxPerRad;
-              // Famous-atlas rows always show a thumbnail — they're
-              // landmarks, the user expects them visible regardless of
-              // angular size.  Survey rows still gate on the threshold so
-              // we don't load 3.5 M cutouts at maximum zoom-out.
-              if (cloud.source !== Source.Famous && px < APPARENT_SIZE_THRESHOLD_PX) continue;
+// Survived the cheap cull; pay for the per-galaxy diameter
+// read + sqrt + exact apparent-size compare.
+const dKpcRow = cloud.diameterKpc[i]!;
+const dMpcRow = dKpcRow / 1000;
+const camDist = Math.sqrt(camDistSq);
+const px = (dMpcRow / camDist) * pxPerRad;
+// Famous-atlas rows always show a thumbnail — they're
+// landmarks, the user expects them visible regardless of
+// angular size.  Survey rows still gate on the threshold so
+// we don't load 3.5 M cutouts at maximum zoom-out.
+if (cloud.source !== Source.Famous && px < APPARENT_SIZE_THRESHOLD_PX) continue;
 ```
 
-Note: this assumes the cloud carries its `source` tag.  Look up the surrounding code: `clouds` is a Map keyed by `Source`, but each cloud value's source isn't stored on the `PointCloud` itself.  If `cloud.source` isn't available in the inner loop, change the iteration:
+Note: this assumes the cloud carries its `source` tag. Look up the surrounding code: `clouds` is a Map keyed by `Source`, but each cloud value's source isn't stored on the `PointCloud` itself. If `cloud.source` isn't available in the inner loop, change the iteration:
 
 ```ts
 for (const [cloudSource, cloud] of clouds.entries()) {
 ```
 
-…and replace `cloud.source !== Source.Famous` with `cloudSource !== Source.Famous`.  Adapt to whatever variable name is already in scope; the test is "is this loop iteration the famous source?".
+…and replace `cloud.source !== Source.Famous` with `cloudSource !== Source.Famous`. Adapt to whatever variable name is already in scope; the test is "is this loop iteration the famous source?".
 
 - [ ] **Step 5: Add a Famous branch to the image fetcher**
 
@@ -2050,6 +2070,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/@types/PointInfo.d.ts src
 ## Task 9: InfoCard — render the famous block
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/components/InfoCard/FullCard.tsx`
 
 - [ ] **Step 1: Add the famous-section rendering block**
@@ -2059,59 +2080,68 @@ In `/Users/rulkens/Development/js/skymap/src/components/InfoCard/FullCard.tsx`, 
 Replace this region:
 
 ```tsx
-      {/* ── SDSS designation ──────────────────────────────────────────────── */}
-      <div className={styles.cardHeadline}>{info.iauName}</div>
+{
+  /* ── SDSS designation ──────────────────────────────────────────────── */
+}
+<div className={styles.cardHeadline}>{info.iauName}</div>;
 
-      {/* ── Source attribution badge ──────────────────────────────────────── */}
-      <div className={styles.sourceBadge}>{info.sourceLabel}</div>
+{
+  /* ── Source attribution badge ──────────────────────────────────────── */
+}
+<div className={styles.sourceBadge}>{info.sourceLabel}</div>;
 ```
 
 with:
 
 ```tsx
-      {/* ── Headline ──────────────────────────────────────────────────────── */}
-      {/*
+{
+  /* ── Headline ──────────────────────────────────────────────────────── */
+}
+{
+  /*
         Famous-atlas rows show their primary curated name as the headline
         (e.g. "M31") instead of the coordinate-derived IAU designation.
         Survey rows fall back to `info.iauName` so SDSS galaxies still
         display their `SDSS J123456.78+012345.6`-style label.
-      */}
-      <div className={styles.cardHeadline}>
-        {info.famous ? info.famous.names[0] : info.iauName}
-      </div>
+      */
+}
+<div className={styles.cardHeadline}>{info.famous ? info.famous.names[0] : info.iauName}</div>;
 
-      {/* ── Source attribution badge ──────────────────────────────────────── */}
-      <div className={styles.sourceBadge}>{info.sourceLabel}</div>
+{
+  /* ── Source attribution badge ──────────────────────────────────────── */
+}
+<div className={styles.sourceBadge}>{info.sourceLabel}</div>;
 
-      {/* ── Famous-atlas detail block ─────────────────────────────────────── */}
-      {info.famous && (
-        <div className={styles.cardSection}>
-          {/*
+{
+  /* ── Famous-atlas detail block ─────────────────────────────────────── */
+}
+{
+  info.famous && (
+    <div className={styles.cardSection}>
+      {/*
             "Also known as" — every name beyond the headline, comma-
             separated.  Many famous galaxies have an NGC number AND a
             common name (e.g. M31 / NGC 224 / Andromeda Galaxy); listing
             all aliases makes the InfoCard recognisable to users coming
             from any naming convention.
           */}
-          {info.famous.names.length > 1 && (
-            <div className={styles.cardRow}>
-              <span className={styles.cardLabel}>Also known as</span>
-              <span className={styles.cardValue}>
-                {info.famous.names.slice(1).join(' · ')}
-              </span>
-            </div>
-          )}
-          {/*
+      {info.famous.names.length > 1 && (
+        <div className={styles.cardRow}>
+          <span className={styles.cardLabel}>Also known as</span>
+          <span className={styles.cardValue}>{info.famous.names.slice(1).join(' · ')}</span>
+        </div>
+      )}
+      {/*
             Curated description — the most editorial part of the card.
             Two or three sentences chosen at seed-write time to give the
             user something more colourful than "Sb-type spiral".
           */}
-          <div className={styles.cardRow}>
-            <span className={styles.cardValue} style={{ fontStyle: 'italic' }}>
-              {info.famous.description}
-            </span>
-          </div>
-          {/*
+      <div className={styles.cardRow}>
+        <span className={styles.cardValue} style={{ fontStyle: 'italic' }}>
+          {info.famous.description}
+        </span>
+      </div>
+      {/*
             Cross-match link — when the build-time matcher found a nearby
             survey row, surface the catalog name + offset so power users
             can see their famous click is consistent with the underlying
@@ -2119,20 +2149,21 @@ with:
             handler yet — Task 11 wires the navigation.  For now the
             label and offset alone are useful provenance.
           */}
-          {info.famous.xref && (
-            <div className={styles.cardRow}>
-              <span className={styles.cardLabel}>Also catalogued as</span>
-              <span className={styles.cardValue}>
-                {info.famous.xref.source} row #{info.famous.xref.localIdx}
-                {' · '}
-                <span style={{ opacity: 0.7, fontSize: '0.85em' }}>
-                  {info.famous.xref.distanceArcsec.toFixed(1)}″ from curated position
-                </span>
-              </span>
-            </div>
-          )}
+      {info.famous.xref && (
+        <div className={styles.cardRow}>
+          <span className={styles.cardLabel}>Also catalogued as</span>
+          <span className={styles.cardValue}>
+            {info.famous.xref.source} row #{info.famous.xref.localIdx}
+            {' · '}
+            <span style={{ opacity: 0.7, fontSize: '0.85em' }}>
+              {info.famous.xref.distanceArcsec.toFixed(1)}″ from curated position
+            </span>
+          </span>
         </div>
       )}
+    </div>
+  );
+}
 ```
 
 - [ ] **Step 2: Run typecheck + tests**
@@ -2148,6 +2179,7 @@ Expected: clean.
 - [ ] **Step 3: Manual smoke test**
 
 Click the M31 marker in the dev server. The InfoCard should show:
+
 - Headline: "M31"
 - Source badge: "Famous"
 - "Also known as": NGC 224 · Andromeda Galaxy
@@ -2167,6 +2199,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/components/InfoCard/FullC
 ## Task 10: Command palette — search overlay (Cmd+K)
 
 **Files:**
+
 - Create: `/Users/rulkens/Development/js/skymap/src/components/CommandPalette/CommandPalette.tsx`
 - Create: `/Users/rulkens/Development/js/skymap/src/components/CommandPalette/CommandPalette.module.css`
 - Create: `/Users/rulkens/Development/js/skymap/tests/components/CommandPalette/scoreFamousMatch.test.ts`
@@ -2204,9 +2237,7 @@ describe('scoreFamousMatch', () => {
   });
 
   it('ranks exact name matches higher than description matches', () => {
-    expect(scoreFamousMatch(M31, 'M31')).toBeGreaterThan(
-      scoreFamousMatch(M31, 'spiral'),
-    );
+    expect(scoreFamousMatch(M31, 'M31')).toBeGreaterThan(scoreFamousMatch(M31, 'spiral'));
   });
 });
 ```
@@ -2497,12 +2528,7 @@ export function CommandPalette({
 
   if (!open) return null;
   return (
-    <div
-      className={styles.backdrop}
-      onClick={onClose}
-      onKeyDown={onKeyDown}
-      role="presentation"
-    >
+    <div className={styles.backdrop} onClick={onClose} onKeyDown={onKeyDown} role="presentation">
       <div
         className={styles.panel}
         onClick={(e) => e.stopPropagation()}
@@ -2573,6 +2599,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/components/CommandPalette
 ## Task 11: Wire `selectFamous` engine API + mount palette in App
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/@types/EngineHandle.d.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/src/services/engine/engine.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/src/App.tsx`
@@ -2663,32 +2690,32 @@ import { loadFamousSidecars, type FamousMetaEntry } from './services/engine/famo
 Add palette state next to the other useState calls:
 
 ```tsx
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [famousMeta, setFamousMeta] = useState<FamousMetaEntry[]>([]);
+const [paletteOpen, setPaletteOpen] = useState(false);
+const [famousMeta, setFamousMeta] = useState<FamousMetaEntry[]>([]);
 ```
 
 Add a useEffect that loads the meta once at mount:
 
 ```tsx
-  useEffect(() => {
-    loadFamousSidecars().then((sc) => setFamousMeta(sc.meta));
-  }, []);
+useEffect(() => {
+  loadFamousSidecars().then((sc) => setFamousMeta(sc.meta));
+}, []);
 ```
 
 Extend the existing keyboard `useEffect` to handle Cmd+K / Ctrl+K / `/`. Find the `onKeyDown` handler and add this block before the Esc handler:
 
 ```tsx
-      // ── Cmd+K / Ctrl+K / `/` opens the command palette ──────────────────────
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setPaletteOpen(true);
-        return;
-      }
-      if (e.key === '/' && !paletteOpen) {
-        e.preventDefault();
-        setPaletteOpen(true);
-        return;
-      }
+// ── Cmd+K / Ctrl+K / `/` opens the command palette ──────────────────────
+if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+  e.preventDefault();
+  setPaletteOpen(true);
+  return;
+}
+if (e.key === '/' && !paletteOpen) {
+  e.preventDefault();
+  setPaletteOpen(true);
+  return;
+}
 ```
 
 Add `paletteOpen` to the deps array of the keyboard effect, alongside `selected`.
@@ -2696,12 +2723,12 @@ Add `paletteOpen` to the deps array of the keyboard effect, alongside `selected`
 Mount the palette JSX — at the end of the JSX tree, before the closing fragment:
 
 ```tsx
-      <CommandPalette
-        entries={famousMeta}
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        onSelect={(id) => handleRef.current?.selectFamous?.(id)}
-      />
+<CommandPalette
+  entries={famousMeta}
+  open={paletteOpen}
+  onClose={() => setPaletteOpen(false)}
+  onSelect={(id) => handleRef.current?.selectFamous?.(id)}
+/>
 ```
 
 - [ ] **Step 5: Run typecheck + tests + manual smoke**
@@ -2727,6 +2754,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/@types/EngineHandle.d.ts 
 ## Task 12: README + adding-more-galaxies docs
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/README.md`
 
 - [ ] **Step 1: Document the famous-atlas section**
@@ -2737,36 +2765,35 @@ In `/Users/rulkens/Development/js/skymap/README.md`, add a new section after the
 ### Famous galaxies (curated atlas)
 
 A separate small catalog of well-known galaxies (Messier + NGC greatest-hits)
-ships alongside the survey data.  Entries appear with their curated names
+ships alongside the survey data. Entries appear with their curated names
 in the InfoCard and are searchable via the **Cmd+K / Ctrl+K** command
-palette.  Their thumbnails are pre-processed transparent WebPs hand-fetched
+palette. Their thumbnails are pre-processed transparent WebPs hand-fetched
 from the DESI Legacy Imaging service, so famous galaxies always render at
 high quality — even for nearby objects (M31, M33) that survey catalogs
 filter out as too close.
 
 Run order:
 
-1. `npm run build-all`              — produces `2mrs.bin` + `glade.bin`,
-                                      which the famous build needs for cross-match.
-2. `npm run fetch-famous-images`    — downloads + processes 20 thumbnails (~30 s).
-                                      Idempotent; pass `--force` to re-fetch.
-3. `npm run build-famous`           — produces `famous.bin` + `famous_meta.json`
-                                      + `famous_xrefs.json`.
+1. `npm run build-all` — produces `2mrs.bin` + `glade.bin`,
+   which the famous build needs for cross-match.
+2. `npm run fetch-famous-images` — downloads + processes 20 thumbnails (~30 s).
+   Idempotent; pass `--force` to re-fetch.
+3. `npm run build-famous` — produces `famous.bin` + `famous_meta.json` + `famous_xrefs.json`.
 
 #### Adding more galaxies
 
-The seed file is `data/famous_galaxies.seed.json`.  Each entry needs:
+The seed file is `data/famous_galaxies.seed.json`. Each entry needs:
 
-| Field         | Type     | Notes                                                 |
-| ------------- | -------- | ----------------------------------------------------- |
+| Field         | Type     | Notes                                                   |
+| ------------- | -------- | ------------------------------------------------------- |
 | `id`          | string   | URL-safe lower-case identifier (e.g. `m31`, `ngc-5128`) |
-| `names`       | string[] | One or more names; first is the headline             |
-| `ra`          | number   | Right Ascension in degrees, [0, 360)                 |
-| `dec`         | number   | Declination in degrees, [-90, 90]                    |
-| `distanceMpc` | number   | Curated distance in megaparsecs                      |
-| `diameterKpc` | number   | Physical isophotal diameter in kpc                   |
-| `type`        | string   | Hubble morphological type (free-form)                |
-| `description` | string   | 1-3 sentence editorial blurb                         |
+| `names`       | string[] | One or more names; first is the headline                |
+| `ra`          | number   | Right Ascension in degrees, [0, 360)                    |
+| `dec`         | number   | Declination in degrees, [-90, 90]                       |
+| `distanceMpc` | number   | Curated distance in megaparsecs                         |
+| `diameterKpc` | number   | Physical isophotal diameter in kpc                      |
+| `type`        | string   | Hubble morphological type (free-form)                   |
+| `description` | string   | 1-3 sentence editorial blurb                            |
 
 After adding an entry, re-run `npm run fetch-famous-images && npm run build-famous`.
 ```
@@ -2857,6 +2884,7 @@ If a thumbnail looks wrong (sky still visible, or the galaxy got over-cut), twea
 **Placeholder scan:** No "TBD"/"TODO"/"implement later"/"similar to Task N" in any task. Every code step has complete code blocks.
 
 **Type consistency:**
+
 - `FamousEntry` (defined Task 2) → consumed by Tasks 4, 5.
 - `FamousMetaEntry` and `FamousXrefMap` (defined Task 7) → consumed by Tasks 8, 10, 11.
 - `PointInfo.famous` (defined Task 8) → consumed by Task 9.
@@ -2865,4 +2893,3 @@ If a thumbnail looks wrong (sky still visible, or the galaxy got over-cut), twea
 - `scoreFamousMatch(entry, query)` signature consistent across Tasks 10 (definition + tests + palette use).
 
 All names match across tasks. Plan is coherent.
-

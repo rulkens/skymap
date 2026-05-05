@@ -105,11 +105,7 @@ export function decodeFilaments(buf: ArrayBuffer): FilamentCloud {
 
   const vertices = new Float32Array(vertexCount * FLOATS_PER_VERTEX);
   vertices.set(
-    new Float32Array(
-      buf,
-      HEADER_BYTES + offsetTableBytes,
-      vertexCount * FLOATS_PER_VERTEX,
-    ),
+    new Float32Array(buf, HEADER_BYTES + offsetTableBytes, vertexCount * FLOATS_PER_VERTEX),
   );
 
   return { stripCount, vertexCount, stripOffsets, vertices };

@@ -294,7 +294,7 @@ describe('renderFrame', () => {
 
   it('submits exactly once with the encoder.finish() output', () => {
     renderFrame(fx.input);
-    const submit = (fx.device.queue.submit as any) as ReturnType<typeof vi.fn>;
+    const submit = fx.device.queue.submit as any as ReturnType<typeof vi.fn>;
     expect(submit).toHaveBeenCalledTimes(1);
     expect(fx.env.finish).toHaveBeenCalledTimes(1);
     // The submitted buffer is the one finish() returned.
@@ -336,8 +336,7 @@ describe('renderFrame', () => {
     // camPos is a 3-tuple snapshot from cam.position
     expect(Array.from(args[7] as ArrayLike<number>)).toEqual([0, 0, 5]);
     // pxPerRad = h / (2 · tan(fovY/2))
-    const expectedPxPerRad =
-      fx.input.canvasHeight / (2 * Math.tan(fx.input.cam.fovYRad / 2));
+    const expectedPxPerRad = fx.input.canvasHeight / (2 * Math.tan(fx.input.cam.fovYRad / 2));
     expect(args[8]).toBeCloseTo(expectedPxPerRad, 6);
     expect(args[9]).toBe(fx.input.settings.highlightFallback);
     expect(args[10]).toBe(fx.input.settings.realOnlyMode);
@@ -381,8 +380,7 @@ describe('renderFrame', () => {
     const runFrame = fx.thumbnails.runFrame as ReturnType<typeof vi.fn>;
     expect(runFrame).toHaveBeenCalledTimes(1);
     const arg = runFrame.mock.calls[0]![0] as any;
-    const expectedPxPerRad =
-      fx.input.canvasHeight / (2 * Math.tan(fx.input.cam.fovYRad / 2));
+    const expectedPxPerRad = fx.input.canvasHeight / (2 * Math.tan(fx.input.cam.fovYRad / 2));
     expect(arg.pxPerRad).toBeCloseTo(expectedPxPerRad, 6);
     expect(Array.from(arg.camPos as ArrayLike<number>)).toEqual([0, 0, 5]);
     expect(arg.canvasSize).toEqual({ width: 1280, height: 720 });

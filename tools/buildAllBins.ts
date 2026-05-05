@@ -120,9 +120,7 @@ function recordsToCloud(records: ParsedRecord[]): PointCloud {
     // provenance signal for the InfoCard's "real / Tully / fallback"
     // chip in Task 14.
     cloud.diameterKpc[i] =
-      r.diameterKpc !== null && r.diameterKpc > 0
-        ? r.diameterKpc
-        : DEFAULT_GALAXY_DIAMETER_KPC;
+      r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : DEFAULT_GALAXY_DIAMETER_KPC;
   }
   return cloud;
 }
@@ -274,7 +272,9 @@ async function runCli(): Promise<void> {
   const outDirArg = args['out-dir'] || 'public/data';
 
   if (sdssArg) {
-    process.stderr.write(`SDSS source: ${sdssArg}${args.sdss ? '' : '  (auto-detected, latest by mtime)'}\n`);
+    process.stderr.write(
+      `SDSS source: ${sdssArg}${args.sdss ? '' : '  (auto-detected, latest by mtime)'}\n`,
+    );
   } else {
     process.stderr.write(
       'warning: no SDSS CSV supplied AND no Skyserver_*.csv found in data/ — SDSS bin will be empty\n',
@@ -335,9 +335,7 @@ async function runCli(): Promise<void> {
     leda = parseHyperLedaCsv(readFileSync(ledaPath, 'utf8'));
     process.stderr.write(`loaded ${leda.size.toLocaleString()} HyperLEDA orientations\n`);
   } catch {
-    process.stderr.write(
-      `warning: ${ledaPath} not present — GLADE orientation = fallback only\n`,
-    );
+    process.stderr.write(`warning: ${ledaPath} not present — GLADE orientation = fallback only\n`);
   }
 
   process.stderr.write('parsing SDSS…\n');

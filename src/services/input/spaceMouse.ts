@@ -123,10 +123,7 @@ export type SpaceMouseInputOptions = {
 export class SpaceMouseInput {
   private device: HIDDevice | null = null;
   private readonly onAxes: (axes: SpaceMouseAxes) => void;
-  private readonly onConnectionChange?: (
-    connected: boolean,
-    productName: string | null,
-  ) => void;
+  private readonly onConnectionChange?: (connected: boolean, productName: string | null) => void;
 
   /**
    * Latest axes by report ID. The two-report layout sends translation and

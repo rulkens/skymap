@@ -219,7 +219,11 @@ describe('createThumbnailSubsystem', () => {
       requestRender: () => {},
       fetcher,
     });
-    sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
+    sys.bindToRenderers(
+      makeMockQuadRenderer(),
+      makeMockDiskRenderer(),
+      makeMockProceduralDiskRenderer(),
+    );
     const cam = makeCam();
     // Two clouds; only Source.SDSS bit is set in the mask.
     const clouds = new Map([
@@ -241,7 +245,11 @@ describe('createThumbnailSubsystem', () => {
         requestRender: () => {},
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
+      sys.bindToRenderers(
+        makeMockQuadRenderer(),
+        makeMockDiskRenderer(),
+        makeMockProceduralDiskRenderer(),
+      );
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
 
@@ -264,15 +272,17 @@ describe('createThumbnailSubsystem', () => {
     it('a key with no bitmap and not in bitmapFailed gets enqueued exactly once', async () => {
       // Use a fetcher that hangs forever — exercises the "in-flight" path.
       const pending: Array<(b: ImageBitmap | null) => void> = [];
-      const fetcher = vi.fn(
-        () => new Promise<ImageBitmap | null>((res) => pending.push(res)),
-      );
+      const fetcher = vi.fn(() => new Promise<ImageBitmap | null>((res) => pending.push(res)));
       const sys = createThumbnailSubsystem({
         device,
         requestRender: () => {},
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
+      sys.bindToRenderers(
+        makeMockQuadRenderer(),
+        makeMockDiskRenderer(),
+        makeMockProceduralDiskRenderer(),
+      );
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
 
@@ -298,7 +308,11 @@ describe('createThumbnailSubsystem', () => {
         },
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
+      sys.bindToRenderers(
+        makeMockQuadRenderer(),
+        makeMockDiskRenderer(),
+        makeMockProceduralDiskRenderer(),
+      );
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
 
@@ -331,7 +345,11 @@ describe('createThumbnailSubsystem', () => {
         requestRender: () => {},
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
+      sys.bindToRenderers(
+        makeMockQuadRenderer(),
+        makeMockDiskRenderer(),
+        makeMockProceduralDiskRenderer(),
+      );
       const cam = makeCam();
       // 257 galaxies — the 257th will evict the LRU slot.
       const cloud = makeCloud(257, 50);
@@ -358,15 +376,17 @@ describe('createThumbnailSubsystem', () => {
   describe('hasInFlightFetches', () => {
     it('returns true while a fetch is pending and false once it settles', async () => {
       const pending: Array<(b: ImageBitmap | null) => void> = [];
-      const fetcher = vi.fn(
-        () => new Promise<ImageBitmap | null>((res) => pending.push(res)),
-      );
+      const fetcher = vi.fn(() => new Promise<ImageBitmap | null>((res) => pending.push(res)));
       const sys = createThumbnailSubsystem({
         device,
         requestRender: () => {},
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
+      sys.bindToRenderers(
+        makeMockQuadRenderer(),
+        makeMockDiskRenderer(),
+        makeMockProceduralDiskRenderer(),
+      );
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
 
@@ -385,15 +405,17 @@ describe('createThumbnailSubsystem', () => {
   describe('destroy', () => {
     it('clears state and prevents in-flight onResult from mutating it', async () => {
       const pending: Array<(b: ImageBitmap | null) => void> = [];
-      const fetcher = vi.fn(
-        () => new Promise<ImageBitmap | null>((res) => pending.push(res)),
-      );
+      const fetcher = vi.fn(() => new Promise<ImageBitmap | null>((res) => pending.push(res)));
       const sys = createThumbnailSubsystem({
         device,
         requestRender: () => {},
         fetcher,
       });
-      sys.bindToRenderers(makeMockQuadRenderer(), makeMockDiskRenderer(), makeMockProceduralDiskRenderer());
+      sys.bindToRenderers(
+        makeMockQuadRenderer(),
+        makeMockDiskRenderer(),
+        makeMockProceduralDiskRenderer(),
+      );
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
       sys.runFrame(makeFrameInput(cam, clouds));
@@ -410,8 +432,6 @@ describe('createThumbnailSubsystem', () => {
   it('exposes a galaxyCacheKey helper that round-trips RA/Dec to 5 dp', () => {
     expect(galaxyCacheKey(123.456789, -10.123456)).toBe('123.45679_-10.12346');
     // Same precision yields the same key (deduplication).
-    expect(galaxyCacheKey(123.456789, -10.123456)).toBe(
-      galaxyCacheKey(123.456789, -10.123456),
-    );
+    expect(galaxyCacheKey(123.456789, -10.123456)).toBe(galaxyCacheKey(123.456789, -10.123456));
   });
 });

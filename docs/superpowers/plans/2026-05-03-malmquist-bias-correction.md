@@ -12,13 +12,13 @@
 
 ## Context the engineer should know
 
-**The astrophysics in one paragraph.** Surveys catalogue every galaxy whose *apparent* magnitude `m` is brighter than some flux limit `m_lim` (e.g. SDSS spec sample is complete to `m_r ≈ 17.77`). For a given *intrinsic* luminosity `M`, only galaxies within distance `d_max(M) = 10^((m_lim − M)/5 − 5)` Mpc are detectable — bright galaxies (more negative M) reach much farther. Catalogues therefore contain nearby galaxies of every luminosity, but only the brightest at large distance. Number-density per unit volume looks artificially highest near the observer.
+**The astrophysics in one paragraph.** Surveys catalogue every galaxy whose _apparent_ magnitude `m` is brighter than some flux limit `m_lim` (e.g. SDSS spec sample is complete to `m_r ≈ 17.77`). For a given _intrinsic_ luminosity `M`, only galaxies within distance `d_max(M) = 10^((m_lim − M)/5 − 5)` Mpc are detectable — bright galaxies (more negative M) reach much farther. Catalogues therefore contain nearby galaxies of every luminosity, but only the brightest at large distance. Number-density per unit volume looks artificially highest near the observer.
 
 **Three orthodox fixes (and what they trade):**
 
-1. **Volume-limited subsample.** Pick a threshold M_lim such that any galaxy brighter than M_lim is detectable across the volume of interest (i.e., M_lim < m_lim − 5·log₁₀(d_max) − 25). Discard everything fainter. The remaining sample is uniformly complete by construction. *Cost:* you lose the deep survey's faint companions.
-2. **1/V_max weighting** (Schmidt 1968). Keep every galaxy, but weight it by 1/V_max where V_max ∝ d_max(M)³. Bright galaxies visible everywhere get small weight; intrinsically faint galaxies that only show up locally get large weight (representing the many similar ones we couldn't see). *For visualisation:* modulate per-galaxy alpha rather than thinning the cloud. Trade-off: weights span ~3 orders of magnitude, so naïve mapping saturates or vanishes.
-3. **Schechter LF density correction.** Predict expected number-density n(d) at each distance from the survey's flux limit + a Schechter luminosity function (Schechter 1976). Modulate displayed density (alpha) so it approximates the *intrinsic* density. Trade-off: per-survey calibration is delicate; requires a Schechter `(α, M*, φ*)` triple per survey.
+1. **Volume-limited subsample.** Pick a threshold M_lim such that any galaxy brighter than M_lim is detectable across the volume of interest (i.e., M_lim < m_lim − 5·log₁₀(d_max) − 25). Discard everything fainter. The remaining sample is uniformly complete by construction. _Cost:_ you lose the deep survey's faint companions.
+2. **1/V_max weighting** (Schmidt 1968). Keep every galaxy, but weight it by 1/V_max where V_max ∝ d_max(M)³. Bright galaxies visible everywhere get small weight; intrinsically faint galaxies that only show up locally get large weight (representing the many similar ones we couldn't see). _For visualisation:_ modulate per-galaxy alpha rather than thinning the cloud. Trade-off: weights span ~3 orders of magnitude, so naïve mapping saturates or vanishes.
+3. **Schechter LF density correction.** Predict expected number-density n(d) at each distance from the survey's flux limit + a Schechter luminosity function (Schechter 1976). Modulate displayed density (alpha) so it approximates the _intrinsic_ density. Trade-off: per-survey calibration is delicate; requires a Schechter `(α, M*, φ*)` triple per survey.
 
 **Where this fits in the existing renderer:**
 
@@ -31,26 +31,26 @@
 
 ## File structure
 
-| File | Responsibility |
-|---|---|
-| `src/utils/math/distanceModulus.ts` | Pure: `(m, dMpc) → M` and inverse |
-| `src/utils/math/vMaxWeight.ts` | Pure: per-galaxy 1/V_max weight given (M, m_lim, M_normalisation) |
-| `src/utils/math/schechterDensity.ts` | Pure: expected n(d) given Schechter `(α, M*, φ*)` and m_lim |
-| `src/data/surveyFluxLimits.ts` | Per-source flux-limit table + Schechter triple lookup |
-| `src/services/gpu/pointRenderer.ts` | Bake `vMaxWeight` into the vertex buffer; add Malmquist uniforms |
-| `src/services/gpu/pickRenderer.ts` | Mirror new vertex layout (no logic change) |
-| `src/services/gpu/shaders/points.wgsl` | New `kPerZ`-style attribute, mode branch in `vs`, alpha modulation in `fs` |
-| `src/services/engine/engine.ts` | Wire setters → uniform updates |
-| `src/@types/EngineHandle.d.ts` | New methods: `setBiasMode`, `setAbsMagLimit` |
-| `src/@types/EngineCallbacks.d.ts` | Echo callbacks: `onBiasModeChange`, `onAbsMagLimitChange` |
-| `src/components/SettingsPanel/SettingsPanel.tsx` | Dropdown + conditional slider |
-| `src/components/SettingsPanel/SettingsPanel.module.css` | New styles only if needed |
-| `src/App.tsx` | Mirror engine state; thread callbacks |
-| `tests/utils/math/distanceModulus.test.ts` | Unit tests |
-| `tests/utils/math/vMaxWeight.test.ts` | Unit tests |
-| `tests/utils/math/schechterDensity.test.ts` | Unit tests (calibration check) |
-| `tests/data/surveyFluxLimits.test.ts` | Lookup correctness |
-| `README.md` | One section explaining bias-correction modes |
+| File                                                    | Responsibility                                                             |
+| ------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `src/utils/math/distanceModulus.ts`                     | Pure: `(m, dMpc) → M` and inverse                                          |
+| `src/utils/math/vMaxWeight.ts`                          | Pure: per-galaxy 1/V_max weight given (M, m_lim, M_normalisation)          |
+| `src/utils/math/schechterDensity.ts`                    | Pure: expected n(d) given Schechter `(α, M*, φ*)` and m_lim                |
+| `src/data/surveyFluxLimits.ts`                          | Per-source flux-limit table + Schechter triple lookup                      |
+| `src/services/gpu/pointRenderer.ts`                     | Bake `vMaxWeight` into the vertex buffer; add Malmquist uniforms           |
+| `src/services/gpu/pickRenderer.ts`                      | Mirror new vertex layout (no logic change)                                 |
+| `src/services/gpu/shaders/points.wgsl`                  | New `kPerZ`-style attribute, mode branch in `vs`, alpha modulation in `fs` |
+| `src/services/engine/engine.ts`                         | Wire setters → uniform updates                                             |
+| `src/@types/EngineHandle.d.ts`                          | New methods: `setBiasMode`, `setAbsMagLimit`                               |
+| `src/@types/EngineCallbacks.d.ts`                       | Echo callbacks: `onBiasModeChange`, `onAbsMagLimitChange`                  |
+| `src/components/SettingsPanel/SettingsPanel.tsx`        | Dropdown + conditional slider                                              |
+| `src/components/SettingsPanel/SettingsPanel.module.css` | New styles only if needed                                                  |
+| `src/App.tsx`                                           | Mirror engine state; thread callbacks                                      |
+| `tests/utils/math/distanceModulus.test.ts`              | Unit tests                                                                 |
+| `tests/utils/math/vMaxWeight.test.ts`                   | Unit tests                                                                 |
+| `tests/utils/math/schechterDensity.test.ts`             | Unit tests (calibration check)                                             |
+| `tests/data/surveyFluxLimits.test.ts`                   | Lookup correctness                                                         |
+| `README.md`                                             | One section explaining bias-correction modes                               |
 
 ---
 
@@ -60,10 +60,10 @@ The four modes are an enum:
 
 ```ts
 export const enum BiasMode {
-  None = 0,        // raw data — apparent over-density visible
+  None = 0, // raw data — apparent over-density visible
   VolumeLimited = 1, // primary mode; discard galaxies fainter than M_lim
-  VMax = 2,        // 1/V_max alpha modulation
-  Schechter = 3,   // Schechter LF density correction
+  VMax = 2, // 1/V_max alpha modulation
+  Schechter = 3, // Schechter LF density correction
 }
 ```
 
@@ -73,12 +73,12 @@ export const enum BiasMode {
 
 ## Per-survey flux limits (the table this plan revolves around)
 
-| Source     | Band  | m_lim     | Schechter (M*, α, φ*)                | Notes |
-| ---------- | ----- | --------- | ------------------------------------ | ----- |
-| SDSS       | r     | 17.77     | (−21.18, −1.16, 0.0093 / Mpc³)        | Spec sample completeness; Blanton et al. 2003 LF |
-| 2MRS       | K_s   | 11.75     | (−24.13, −1.10, 0.0116 / Mpc³)        | Huchra et al. 2012; Kochanek et al. 2001 LF |
-| GLADE      | B     | 18.0      | (−20.83, −1.08, 0.0093 / Mpc³)        | B-band placeholder; GLADE+ DR2 documents the parent-sample limits |
-| Synthetic  | r     | 17.77     | (use SDSS values)                    | Generated to mimic SDSS, so reuse |
+| Source    | Band | m_lim | Schechter (M*, α, φ*)          | Notes                                                             |
+| --------- | ---- | ----- | ------------------------------ | ----------------------------------------------------------------- |
+| SDSS      | r    | 17.77 | (−21.18, −1.16, 0.0093 / Mpc³) | Spec sample completeness; Blanton et al. 2003 LF                  |
+| 2MRS      | K_s  | 11.75 | (−24.13, −1.10, 0.0116 / Mpc³) | Huchra et al. 2012; Kochanek et al. 2001 LF                       |
+| GLADE     | B    | 18.0  | (−20.83, −1.08, 0.0093 / Mpc³) | B-band placeholder; GLADE+ DR2 documents the parent-sample limits |
+| Synthetic | r    | 17.77 | (use SDSS values)              | Generated to mimic SDSS, so reuse                                 |
 
 The Schechter triple drives Mode 3 only. Modes 1 and 2 use just `m_lim`. We hard-code the table because survey flux limits don't change between releases (they're pinned to the survey's selection function).
 
@@ -103,7 +103,10 @@ Create `tests/utils/math/distanceModulus.test.ts`:
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { absoluteFromApparent, apparentFromAbsolute } from '../../../src/utils/math/distanceModulus';
+import {
+  absoluteFromApparent,
+  apparentFromAbsolute,
+} from '../../../src/utils/math/distanceModulus';
 
 describe('distanceModulus', () => {
   it('apparent 17, distance 100 Mpc → absolute −18.0', () => {
@@ -474,7 +477,7 @@ const M_LIM: Record<Source, number> = {
 
 const SCHECHTER: Record<Source, SchechterTriple> = {
   [Source.SDSS]: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
-  [Source.TwoMRS]: { mStar: -24.13, alpha: -1.10, phiStar: 0.0116 },
+  [Source.TwoMRS]: { mStar: -24.13, alpha: -1.1, phiStar: 0.0116 },
   [Source.Glade]: { mStar: -20.83, alpha: -1.08, phiStar: 0.0093 },
   [Source.Synthetic]: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
 };
@@ -582,10 +585,10 @@ In `src/services/gpu/pointRenderer.ts`:
 const UNIFORM_BYTES = 112; // mat4 (64) + vec4-slot (16) + u32×4 (16) + bias (16)
 
 // In draw(), pack the new fields:
-u32[24] = biasMode;            // offset 96
-f32[25] = absMagLimit;         // offset 100
-f32[26] = apparentMagLimit;    // offset 104
-f32[27] = schechterMStar;      // offset 108
+u32[24] = biasMode; // offset 96
+f32[25] = absMagLimit; // offset 100
+f32[26] = apparentMagLimit; // offset 104
+f32[27] = schechterMStar; // offset 108
 // f32[28] = schechterAlpha — but that overflows 28*4 = 112; expand UNIFORM_BYTES to 128 instead and add f32[28].
 ```
 
@@ -627,8 +630,8 @@ Export `BiasMode` from `src/@types/BiasMode.d.ts` (or co-locate).
 Hard-reload the dev server with the engine wired up. From the browser devtools console:
 
 ```js
-window.__engine.setBiasMode(1)
-window.__engine.setAbsMagLimit(-19)
+window.__engine.setBiasMode(1);
+window.__engine.setAbsMagLimit(-19);
 ```
 
 Expected: galaxies fainter than M=−19 disappear. The local cluster should look noticeably less dense; far-away galaxies should still be visible (they pass the cut by being intrinsically brighter).
@@ -814,14 +817,12 @@ A dropdown to pick the mode, a slider for `M_lim` that's only enabled in volume-
 
 ```tsx
 <div className={styles.section}>
-  <label className={styles.label} htmlFor='biasMode'>
+  <label className={styles.label} htmlFor="biasMode">
     Density correction
-    <span className={styles.hint}>
-      Compensate for nearby-galaxy over-detection
-    </span>
+    <span className={styles.hint}>Compensate for nearby-galaxy over-detection</span>
   </label>
   <select
-    id='biasMode'
+    id="biasMode"
     value={biasMode}
     onChange={(e) => onBiasModeChange(Number(e.target.value) as BiasMode)}
   >
@@ -832,12 +833,12 @@ A dropdown to pick the mode, a slider for `M_lim` that's only enabled in volume-
   </select>
   {biasMode === BiasMode.VolumeLimited && (
     <>
-      <label className={styles.label} htmlFor='absMagLimit'>
+      <label className={styles.label} htmlFor="absMagLimit">
         Absolute magnitude limit (M_lim)
       </label>
       <input
-        id='absMagLimit'
-        type='range'
+        id="absMagLimit"
+        type="range"
         min={-24}
         max={-15}
         step={0.1}
@@ -885,20 +886,20 @@ Under existing renderer docs, add:
 ## Density correction (Malmquist bias)
 
 Flux-limited surveys over-represent nearby galaxies because faint ones
-are only detectable when close.  Skymap offers four user-selectable
+are only detectable when close. Skymap offers four user-selectable
 correction modes via the settings panel:
 
 - **None** — raw catalogue, apparent over-density visible near origin.
-- **Volume-limited** *(recommended)* — show only galaxies brighter than
-  a tunable absolute-magnitude threshold M_lim.  Default M_lim = −19,
-  matching SDSS's spectroscopic completeness near 750 Mpc.  Honest:
+- **Volume-limited** _(recommended)_ — show only galaxies brighter than
+  a tunable absolute-magnitude threshold M_lim. Default M_lim = −19,
+  matching SDSS's spectroscopic completeness near 750 Mpc. Honest:
   shows uniformly-detectable subsample.
 - **1/V_max alpha** — keep all data, but dim each galaxy by its
-  inverse maximum-detection volume.  Schmidt 1968 weighting, applied
+  inverse maximum-detection volume. Schmidt 1968 weighting, applied
   as alpha rather than discard.
 - **Schechter LF** — modulate per-distance alpha by the inverse of the
   expected number density predicted by each survey's Schechter
-  luminosity function.  Most aggressive correction; visually flattens
+  luminosity function. Most aggressive correction; visually flattens
   the local cluster into the cosmic web.
 
 A separate **angular-isotropy** axis (orthogonal to the four modes
@@ -909,9 +910,9 @@ above) addresses GLADE's deep pencil-beam artefacts:
   catalogue is SDSS-DR12 (which is footprint-restricted, ~1/3 of sky).
   Removes the radial "jet" structures that come from deep SDSS-only
   entries dominating outside their footprint.
-- **HEALPix angular re-weighting** *(optional, runtime toggle)* — bin
+- **HEALPix angular re-weighting** _(optional, runtime toggle)_ — bin
   the sky into HEALPix cells and modulate per-galaxy alpha by the
-  ratio of median angular density to local angular density.  Visually
+  ratio of median angular density to local angular density. Visually
   uniform direction-by-direction independent of which surveys
   contributed.
 
@@ -942,7 +943,7 @@ git commit -m "docs: Malmquist-bias correction modes"
 - Modify: `tools/buildAllBins.ts` (add `--glade-isotropic` CLI flag)
 - Modify: `tests/parsers/glade.test.ts` (new test cases)
 
-**Why this is a separate axis from the four BiasModes above.** Modes 1–4 are runtime renderer choices that compensate for *flux-limited Malmquist bias* — the artefact that says "near galaxies are over-represented at every direction equally". GLADE has an extra problem: its **angular completeness is non-uniform** because it's a compilation. Some parents (HyperLEDA, GWGC, 2MASS XSC, 2MPZ) cover the full sky; others (SDSS-DR12, 6dFGS) cover only a footprint. SDSS-DR12 in particular is the worst offender — it covers ~1/3 of the sky but reaches z > 0.5, so beyond ~600 Mpc GLADE has many more galaxies in the SDSS direction than elsewhere. Visually: pencil-beam-like "jets" of galaxies extending radially from the origin, only in the SDSS footprint.
+**Why this is a separate axis from the four BiasModes above.** Modes 1–4 are runtime renderer choices that compensate for _flux-limited Malmquist bias_ — the artefact that says "near galaxies are over-represented at every direction equally". GLADE has an extra problem: its **angular completeness is non-uniform** because it's a compilation. Some parents (HyperLEDA, GWGC, 2MASS XSC, 2MPZ) cover the full sky; others (SDSS-DR12, 6dFGS) cover only a footprint. SDSS-DR12 in particular is the worst offender — it covers ~1/3 of the sky but reaches z > 0.5, so beyond ~600 Mpc GLADE has many more galaxies in the SDSS direction than elsewhere. Visually: pencil-beam-like "jets" of galaxies extending radially from the origin, only in the SDSS footprint.
 
 This task addresses the artefact at parse time by dropping GLADE rows whose **only** parent catalogue is SDSS-DR12. Rows that show up in HyperLEDA, GWGC, 2MASS, or any other all-sky parent are kept regardless. The remaining sample has approximately uniform angular completeness.
 
@@ -999,10 +1000,10 @@ After the existing `specZOnly` block, add:
 // covers a hemisphere — that's coverage we want, not pencil-beam noise.
 if (options.isotropic) {
   const inSdssOnly =
-    nameIsPopulated(line, 84, 102) &&  // SDSS-DR12 populated
-    !nameIsPopulated(line, 8, 36) &&   // GWGC empty
-    !nameIsPopulated(line, 37, 66) &&  // HyperLEDA empty
-    !nameIsPopulated(line, 67, 84);    // 2MASS XSC empty (verified against live parser)
+    nameIsPopulated(line, 84, 102) && // SDSS-DR12 populated
+    !nameIsPopulated(line, 8, 36) && // GWGC empty
+    !nameIsPopulated(line, 37, 66) && // HyperLEDA empty
+    !nameIsPopulated(line, 67, 84); // 2MASS XSC empty (verified against live parser)
   if (inSdssOnly) return null;
 }
 ```

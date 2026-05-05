@@ -24,10 +24,7 @@
  * @module
  */
 
-import {
-  computeAngularWeights,
-  type ComputeAngularWeightsInput,
-} from './computeAngularWeights';
+import { computeAngularWeights, type ComputeAngularWeightsInput } from './computeAngularWeights';
 
 self.onmessage = (event: MessageEvent<ComputeAngularWeightsInput>) => {
   const weights = computeAngularWeights(event.data);

@@ -228,10 +228,7 @@ export function maybeEmitProceduralDisk(
 
   // Smoothstep over the [fadeStartPx, fadeEndPx] band — see the
   // doc-comment above for why this exact cubic.
-  const t = Math.min(
-    1,
-    Math.max(0, (px - fadeStartPx) / (fadeEndPx - fadeStartPx)),
-  );
+  const t = Math.min(1, Math.max(0, (px - fadeStartPx) / (fadeEndPx - fadeStartPx)));
   const crossfadeAlpha = t * t * (3 - 2 * t);
   return {
     x,
@@ -269,11 +266,7 @@ export type CreateThumbnailSubsystemInput = {
    * they can exercise the per-frame gate without touching the
    * network.
    */
-  fetcher?: (args: {
-    ra: number;
-    dec: number;
-    famousId?: string;
-  }) => Promise<ImageBitmap | null>;
+  fetcher?: (args: { ra: number; dec: number; famousId?: string }) => Promise<ImageBitmap | null>;
 };
 
 /**
@@ -362,9 +355,7 @@ export type ThumbnailSubsystem = {
 
 // ── Implementation ──────────────────────────────────────────────────────────
 
-export function createThumbnailSubsystem(
-  input: CreateThumbnailSubsystemInput,
-): ThumbnailSubsystem {
+export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): ThumbnailSubsystem {
   const { device, requestRender } = input;
   const fetcher = input.fetcher ?? fetchGalaxyBitmap;
 
@@ -476,10 +467,8 @@ export function createThumbnailSubsystem(
     // cull eliminates the absolute majority of off-screen rows.
 
     const dMpcMax = MAX_PLAUSIBLE_DIAMETER_KPC / 1000;
-    const maxCamDistForVisibilityUpper =
-      (dMpcMax * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
-    const maxCamDistSqUpper =
-      maxCamDistForVisibilityUpper * maxCamDistForVisibilityUpper;
+    const maxCamDistForVisibilityUpper = (dMpcMax * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
+    const maxCamDistSqUpper = maxCamDistForVisibilityUpper * maxCamDistForVisibilityUpper;
 
     const cx = cam.position[0];
     const cy = cam.position[1];
@@ -621,9 +610,7 @@ export function createThumbnailSubsystem(
                   // Famous galaxies use a curated local WebP rather
                   // than the SDSS/DSS chain.
                   const fId =
-                    sourceForFetch === Source.Famous
-                      ? famousMeta[idxForFetch]?.id
-                      : undefined;
+                    sourceForFetch === Source.Famous ? famousMeta[idxForFetch]?.id : undefined;
                   return fetcher({ ra, dec, famousId: fId });
                 },
                 onResult: (bitmap) => {
@@ -698,9 +685,7 @@ export function createThumbnailSubsystem(
               const distFade = distT * distT * (3 - 2 * distT);
               const tReady = bitmapReadyTime.get(key);
               const loadFade =
-                tReady === undefined
-                  ? 0
-                  : Math.min(1, (nowMs - tReady) / LOAD_FADE_MS);
+                tReady === undefined ? 0 : Math.min(1, (nowMs - tReady) / LOAD_FADE_MS);
               const fadeAlpha = distFade * loadFade;
 
               // 3D disk path: only when (a) the apparent size is
@@ -788,7 +773,9 @@ export function createThumbnailSubsystem(
             px,
             ar,
             pa,
-            x, y, z,
+            x,
+            y,
+            z,
             sizeWorldMpc,
             colourIndex,
             PROCEDURAL_DISK_FADE_START_PX,
@@ -837,13 +824,7 @@ export function createThumbnailSubsystem(
       );
     }
     if (disks.length > 0) {
-      diskRenderer.draw(
-        pass,
-        viewProj,
-        [canvasSize.width, canvasSize.height],
-        camPos,
-        disks,
-      );
+      diskRenderer.draw(pass, viewProj, [canvasSize.width, canvasSize.height], camPos, disks);
     }
     // Procedural-disk pass.  In the steady-state crossfade band [8, 14]
     // px the textured passes don't fire at all (their gate is 24 px),

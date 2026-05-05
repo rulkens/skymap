@@ -89,6 +89,7 @@ Both `data/raw/glade2.3.dat` and `data/raw/2mrs_table3.dat` already carry the co
 ## Task 2: Add `arcsecToKpc` helper + tests
 
 **Files:**
+
 - Create: `/Users/rulkens/Development/js/skymap/src/utils/math/arcsecToKpc.ts`
 - Create: `/Users/rulkens/Development/js/skymap/tests/utils/arcsecToKpc.test.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/src/utils/math/index.ts` (append the re-export)
@@ -214,6 +215,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/utils/math/arcsecToKpc.ts
 ## Task 3: Extend `galaxyDiameterKpc` with Tully size–luminosity (TDD)
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/utils/math/galaxyDiameterKpc.ts`
 - Create: `/Users/rulkens/Development/js/skymap/tests/utils/galaxyDiameterKpc.test.ts`
 
@@ -367,6 +369,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/utils/math/galaxyDiameter
 ## Task 4: Extend `ParsedRecord` and `PointCloud` types with `diameterKpc`
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/tools/parsers/common.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/src/@types/PointCloud.d.ts`
 
@@ -375,21 +378,21 @@ cd /Users/rulkens/Development/js/skymap && git add src/utils/math/galaxyDiameter
 In `/Users/rulkens/Development/js/skymap/tools/parsers/common.ts`, append a new field at the end of the `ParsedRecord` type (after `positionAngleDeg`):
 
 ```ts
-  /**
-   * Physical diameter in kiloparsecs derived from this row's catalog.
-   *
-   *   - 2MRS  → 2 · 10^Riso · arcsecToKpc(1, distance_Mpc)  (real isophotal)
-   *   - GLADE → Tully(1988) on absolute B mag derived from Bmag + distance
-   *   - SDSS  → 3 · petroR50_r · arcsecToKpc(1, distance_Mpc)  (Petrosian)
-   *
-   * `null` means the parser couldn't extract a real measurement — the
-   * build pipeline applies `DEFAULT_GALAXY_DIAMETER_KPC = 30` before
-   * encoding, so the renderer always sees a finite value.  `null` over
-   * NaN keeps the "we have a measurement vs we don't" decision a true
-   * binary at the parser→pipeline boundary, mirroring how the orientation
-   * fields handle the same kind of "real or fallback" distinction.
-   */
-  diameterKpc: number | null;
+/**
+ * Physical diameter in kiloparsecs derived from this row's catalog.
+ *
+ *   - 2MRS  → 2 · 10^Riso · arcsecToKpc(1, distance_Mpc)  (real isophotal)
+ *   - GLADE → Tully(1988) on absolute B mag derived from Bmag + distance
+ *   - SDSS  → 3 · petroR50_r · arcsecToKpc(1, distance_Mpc)  (Petrosian)
+ *
+ * `null` means the parser couldn't extract a real measurement — the
+ * build pipeline applies `DEFAULT_GALAXY_DIAMETER_KPC = 30` before
+ * encoding, so the renderer always sees a finite value.  `null` over
+ * NaN keeps the "we have a measurement vs we don't" decision a true
+ * binary at the parser→pipeline boundary, mirroring how the orientation
+ * fields handle the same kind of "real or fallback" distinction.
+ */
+diameterKpc: number | null;
 ```
 
 - [ ] **Step 2: Add `diameterKpc: Float32Array` to `PointCloud`**
@@ -397,22 +400,22 @@ In `/Users/rulkens/Development/js/skymap/tools/parsers/common.ts`, append a new 
 In `/Users/rulkens/Development/js/skymap/src/@types/PointCloud.d.ts`, append a new field at the end of the type (after `positionAngleDeg`):
 
 ```ts
-  /**
-   * Per-galaxy physical diameter in kiloparsecs — length === count.
-   *
-   * Drives the renderer's apparent-size math, the thumbnail quad's
-   * world-space footprint, the 3D disk plane's geometry, and the focus
-   * tween distance.  The build pipeline guarantees every entry is a
-   * finite, positive value: real catalog measurement when the parser
-   * supplied one, otherwise DEFAULT_GALAXY_DIAMETER_KPC = 30.
-   *
-   * Unlike `axisRatio`/`positionAngleDeg`, NaN is never a legitimate
-   * decoded value here — the renderer multiplies and divides by this
-   * field every frame and a NaN would turn the entire billboard black.
-   * The encoder still preserves NaN bit-for-bit (it's a pure function
-   * of the input cloud), but the pipeline never produces a NaN entry.
-   */
-  diameterKpc: Float32Array;
+/**
+ * Per-galaxy physical diameter in kiloparsecs — length === count.
+ *
+ * Drives the renderer's apparent-size math, the thumbnail quad's
+ * world-space footprint, the 3D disk plane's geometry, and the focus
+ * tween distance.  The build pipeline guarantees every entry is a
+ * finite, positive value: real catalog measurement when the parser
+ * supplied one, otherwise DEFAULT_GALAXY_DIAMETER_KPC = 30.
+ *
+ * Unlike `axisRatio`/`positionAngleDeg`, NaN is never a legitimate
+ * decoded value here — the renderer multiplies and divides by this
+ * field every frame and a NaN would turn the entire billboard black.
+ * The encoder still preserves NaN bit-for-bit (it's a pure function
+ * of the input cloud), but the pipeline never produces a NaN entry.
+ */
+diameterKpc: Float32Array;
 ```
 
 - [ ] **Step 3: Run typecheck to expose every call site that needs updating**
@@ -436,6 +439,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/parsers/common.ts src/@
 ## Task 5: Bump binary format to v4 (encode/decode + tests)
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/data/pointCloudFormat.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/tests/pointCloudFormat.test.ts`
 
@@ -655,8 +659,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
   if (magI.length !== count) throw new Error('magI length mismatch');
   if (magZ.length !== count) throw new Error('magZ length mismatch');
   if (axisRatio.length !== count) throw new Error('axisRatio length mismatch');
-  if (positionAngleDeg.length !== count)
-    throw new Error('positionAngleDeg length mismatch');
+  if (positionAngleDeg.length !== count) throw new Error('positionAngleDeg length mismatch');
   if (diameterKpc.length !== count) throw new Error('diameterKpc length mismatch');
 
   const buf = new ArrayBuffer(HEADER_BYTES + count * BYTES_PER_POINT);
@@ -778,6 +781,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/data/pointCloudFormat.ts 
 ## Task 6: 2MRS parser — decode `Riso`, convert to kpc
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/tools/parsers/twoMrs.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/tests/parsers/twoMrs.test.ts` (if it exists; otherwise create)
 
@@ -899,13 +903,13 @@ Expected: FAIL — either compile error from missing `diameterKpc`, or undefined
 
 In `/Users/rulkens/Development/js/skymap/tools/parsers/twoMrs.ts`:
 
-  1. Add a new import at the top of the file (next to the existing imports):
+1. Add a new import at the top of the file (next to the existing imports):
 
 ```ts
 import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc.js';
 ```
 
-  2. Add a new constant near `C_KM_S` (after the existing constant definitions):
+2. Add a new constant near `C_KM_S` (after the existing constant definitions):
 
 ```ts
 /**
@@ -918,37 +922,37 @@ import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc.js';
 const H0_KM_S_PER_MPC = 70;
 ```
 
-  3. Inside the per-row loop, immediately *before* the `records.push({...})` call (i.e. after the `jc` computation), insert:
+3. Inside the per-row loop, immediately _before_ the `records.push({...})` call (i.e. after the `jc` computation), insert:
 
 ```ts
-    // Riso (log10 of isophotal RADIUS in arcsec, K=20 mag/arcsec² isophote)
-    // sits at bytes 142-146 (1-based inclusive, half-open 141..146).  About
-    // 80 % of 2MRS rows carry it; the rest (mostly faint galaxies near the
-    // K=11.75 sample limit where the isophote fits poorly) have it blank.
-    // We treat blank/non-finite as "no measurement" and emit null — the
-    // build pipeline applies DEFAULT_GALAXY_DIAMETER_KPC = 30 in that case.
-    const risoStr = line.slice(141, 146).trim();
-    const riso = risoStr === '' ? NaN : parseFloat(risoStr);
-    let diameterKpc: number | null = null;
-    if (Number.isFinite(riso)) {
-      // Riso is log10(arcsec-radius) — the radius is 10^Riso, the diameter
-      // is 2× that, and we project to kpc using the cz-derived distance.
-      const arcsecRadius = Math.pow(10, riso);
-      const arcsecDiameter = 2 * arcsecRadius;
-      const distanceMpc = cz / H0_KM_S_PER_MPC;
-      // Local Group galaxies have negative cz — the resulting "negative
-      // distance" is unphysical and would produce a nonsense diameter.
-      // For those rows fall through to null and let the pipeline use the
-      // 30 kpc default; the LG members M31/M33/etc are special-cased
-      // enough that a real-distance lookup belongs in a future pass.
-      if (distanceMpc > 0) {
-        const kpc = arcsecToKpc(arcsecDiameter, distanceMpc);
-        if (Number.isFinite(kpc) && kpc > 0) diameterKpc = kpc;
-      }
-    }
+// Riso (log10 of isophotal RADIUS in arcsec, K=20 mag/arcsec² isophote)
+// sits at bytes 142-146 (1-based inclusive, half-open 141..146).  About
+// 80 % of 2MRS rows carry it; the rest (mostly faint galaxies near the
+// K=11.75 sample limit where the isophote fits poorly) have it blank.
+// We treat blank/non-finite as "no measurement" and emit null — the
+// build pipeline applies DEFAULT_GALAXY_DIAMETER_KPC = 30 in that case.
+const risoStr = line.slice(141, 146).trim();
+const riso = risoStr === '' ? NaN : parseFloat(risoStr);
+let diameterKpc: number | null = null;
+if (Number.isFinite(riso)) {
+  // Riso is log10(arcsec-radius) — the radius is 10^Riso, the diameter
+  // is 2× that, and we project to kpc using the cz-derived distance.
+  const arcsecRadius = Math.pow(10, riso);
+  const arcsecDiameter = 2 * arcsecRadius;
+  const distanceMpc = cz / H0_KM_S_PER_MPC;
+  // Local Group galaxies have negative cz — the resulting "negative
+  // distance" is unphysical and would produce a nonsense diameter.
+  // For those rows fall through to null and let the pipeline use the
+  // 30 kpc default; the LG members M31/M33/etc are special-cased
+  // enough that a real-distance lookup belongs in a future pass.
+  if (distanceMpc > 0) {
+    const kpc = arcsecToKpc(arcsecDiameter, distanceMpc);
+    if (Number.isFinite(kpc) && kpc > 0) diameterKpc = kpc;
+  }
+}
 ```
 
-  4. Add `diameterKpc,` to the object literal pushed into `records` (next to `axisRatio` / `positionAngleDeg`).
+4. Add `diameterKpc,` to the object literal pushed into `records` (next to `axisRatio` / `positionAngleDeg`).
 
 - [ ] **Step 5: Run the test to verify it passes**
 
@@ -981,6 +985,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/parsers/twoMrs.ts tests
 ## Task 7: GLADE parser — extract Bmag, derive diameter via Tully
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/tools/parsers/glade.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/tests/parsers/glade.test.ts`
 
@@ -1082,52 +1087,55 @@ Expected: FAIL — `diameterKpc` is missing from records.
 
 In `/Users/rulkens/Development/js/skymap/tools/parsers/glade.ts`:
 
-  1. Add imports near the top:
+1. Add imports near the top:
 
 ```ts
-import { galaxyDiameterKpc, DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
+import {
+  galaxyDiameterKpc,
+  DEFAULT_GALAXY_DIAMETER_KPC,
+} from '../../src/utils/math/galaxyDiameterKpc.js';
 import { absoluteMagnitude } from '../../src/utils/math/absoluteMagnitude.js';
 ```
 
-  Verify `absoluteMagnitude` exists. Run:
+Verify `absoluteMagnitude` exists. Run:
 
 ```
 grep -l 'export function absoluteMagnitude' /Users/rulkens/Development/js/skymap/src/utils/math/absoluteMagnitude.ts
 ```
 
-  Expected: a single match. If the function name differs, adapt the import.
+Expected: a single match. If the function name differs, adapt the import.
 
-  Open `/Users/rulkens/Development/js/skymap/src/utils/math/absoluteMagnitude.ts` and confirm the signature is `absoluteMagnitude(apparentMag: number, redshift: number): number`. If the signature differs, adapt the call below to match it (it computes M = m - 5·log10(d_pc/10) using H0=70 and small-z Hubble).
+Open `/Users/rulkens/Development/js/skymap/src/utils/math/absoluteMagnitude.ts` and confirm the signature is `absoluteMagnitude(apparentMag: number, redshift: number): number`. If the signature differs, adapt the call below to match it (it computes M = m - 5·log10(d_pc/10) using H0=70 and small-z Hubble).
 
-  2. Inside `parseGladeLine`, after `bmag` is parsed but before `return { ... }`:
+2. Inside `parseGladeLine`, after `bmag` is parsed but before `return { ... }`:
 
 ```ts
-  // GLADE doesn't carry a measured galaxy radius; instead we route the
-  // apparent B magnitude through the Tully (1988) size–luminosity relation
-  // to derive a sensible diameter.  Apparent B + redshift gives absolute
-  // B (via the project's `absoluteMagnitude` helper using H0 = 70), which
-  // then feeds `galaxyDiameterKpc({ absMagBmag })`.
-  //
-  // When Bmag is missing (dash sentinel → NaN), we emit null and let the
-  // build pipeline apply DEFAULT_GALAXY_DIAMETER_KPC.  Routing through
-  // `null` rather than `DEFAULT_GALAXY_DIAMETER_KPC` here keeps the
-  // "real measurement vs fallback" provenance visible at the parser
-  // boundary, mirroring how axisRatio + positionAngleDeg are handled.
-  let diameterKpc: number | null = null;
-  if (Number.isFinite(bmag)) {
-    const absB = absoluteMagnitude(bmag, z);
-    if (Number.isFinite(absB)) {
-      const d = galaxyDiameterKpc({ absMagBmag: absB });
-      // galaxyDiameterKpc returns the constant default when its input is
-      // bad; we want to detect that case and emit null instead, so the
-      // pipeline's default-application path runs uniformly for ALL "no
-      // measurement" rows regardless of which parser produced them.
-      if (d !== DEFAULT_GALAXY_DIAMETER_KPC) diameterKpc = d;
-    }
+// GLADE doesn't carry a measured galaxy radius; instead we route the
+// apparent B magnitude through the Tully (1988) size–luminosity relation
+// to derive a sensible diameter.  Apparent B + redshift gives absolute
+// B (via the project's `absoluteMagnitude` helper using H0 = 70), which
+// then feeds `galaxyDiameterKpc({ absMagBmag })`.
+//
+// When Bmag is missing (dash sentinel → NaN), we emit null and let the
+// build pipeline apply DEFAULT_GALAXY_DIAMETER_KPC.  Routing through
+// `null` rather than `DEFAULT_GALAXY_DIAMETER_KPC` here keeps the
+// "real measurement vs fallback" provenance visible at the parser
+// boundary, mirroring how axisRatio + positionAngleDeg are handled.
+let diameterKpc: number | null = null;
+if (Number.isFinite(bmag)) {
+  const absB = absoluteMagnitude(bmag, z);
+  if (Number.isFinite(absB)) {
+    const d = galaxyDiameterKpc({ absMagBmag: absB });
+    // galaxyDiameterKpc returns the constant default when its input is
+    // bad; we want to detect that case and emit null instead, so the
+    // pipeline's default-application path runs uniformly for ALL "no
+    // measurement" rows regardless of which parser produced them.
+    if (d !== DEFAULT_GALAXY_DIAMETER_KPC) diameterKpc = d;
   }
+}
 ```
 
-  3. Add `diameterKpc,` to the returned object literal.
+3. Add `diameterKpc,` to the returned object literal.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -1150,6 +1158,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/parsers/glade.ts tests/
 ## Task 8: SDSS parser — read `petroR50_r` (graceful when missing)
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/tools/parsers/sdssCsv.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/tests/parsers/sdssCsv.test.ts`
 
@@ -1223,71 +1232,71 @@ Expected: 3 FAIL.
 
 In `/Users/rulkens/Development/js/skymap/tools/parsers/sdssCsv.ts`:
 
-  1. Add imports at the top (next to existing imports):
+1. Add imports at the top (next to existing imports):
 
 ```ts
 import { arcsecToKpc } from '../../src/utils/math/arcsecToKpc.js';
 import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMpc.js';
 ```
 
-  Verify `redshiftToDistanceMpc` exists with that name and signature `(z: number) => number`:
+Verify `redshiftToDistanceMpc` exists with that name and signature `(z: number) => number`:
 
 ```
 grep -n 'export function redshiftToDistanceMpc' /Users/rulkens/Development/js/skymap/src/utils/math/redshiftToDistanceMpc.ts
 ```
 
-  Expected: a single match. If the function name differs, adapt the import + call site.
+Expected: a single match. If the function name differs, adapt the import + call site.
 
-  2. After the existing `requireColumn` calls (just after `COL_FRAC_DEV`), add an OPTIONAL column lookup helper and read `petroR50_r`:
+2. After the existing `requireColumn` calls (just after `COL_FRAC_DEV`), add an OPTIONAL column lookup helper and read `petroR50_r`:
 
 ```ts
-  /**
-   * Find the 0-based column index for an optional column.  Returns -1
-   * when the column is absent — the caller branches on this so the parser
-   * stays compatible with older SDSS CSVs that pre-date the new
-   * `petroR50_r` / `petroR90_r` columns.
-   */
-  const optionalColumn = (name: string): number => headers.indexOf(name.toLowerCase());
+/**
+ * Find the 0-based column index for an optional column.  Returns -1
+ * when the column is absent — the caller branches on this so the parser
+ * stays compatible with older SDSS CSVs that pre-date the new
+ * `petroR50_r` / `petroR90_r` columns.
+ */
+const optionalColumn = (name: string): number => headers.indexOf(name.toLowerCase());
 
-  const COL_PETRO_R50 = optionalColumn('petroR50_r');
-  // We read petroR90 too so a future Phase-2 plan can refine the visual
-  // diameter approximation without re-touching the parser API.
-  const COL_PETRO_R90 = optionalColumn('petroR90_r');
+const COL_PETRO_R50 = optionalColumn('petroR50_r');
+// We read petroR90 too so a future Phase-2 plan can refine the visual
+// diameter approximation without re-touching the parser API.
+const COL_PETRO_R90 = optionalColumn('petroR90_r');
 ```
 
-  3. Inside the per-row loop, just before the `records.push({...})` call, compute the diameter:
+3. Inside the per-row loop, just before the `records.push({...})` call, compute the diameter:
 
 ```ts
-    // ── Petrosian → physical diameter ──────────────────────────────────
-    //
-    // SDSS petroR50_r is the Petrosian half-light RADIUS in arcseconds.
-    // The visual D_25 isophote lies somewhere between petroR90_r diameter
-    // and a few half-light radii out; the empirical multiplier we use is
-    //
-    //   diameter_kpc ≈ 3 · 2 · petroR50_r · arcsecToKpc(1, distance_Mpc)
-    //
-    // i.e. treat 3× the half-light DIAMETER as a stand-in for D_25.  This
-    // brackets the true visual diameter within ±20 % across the SDSS
-    // main-sample magnitude range — enough for a renderer footprint.  A
-    // future plan can refine using petroR90 (closer to the visual edge)
-    // or a per-galaxy sersic-index calibration; the parser exposes
-    // diameterKpc as a single number to avoid leaking that decision.
-    let diameterKpc: number | null = null;
-    if (COL_PETRO_R50 !== -1) {
-      const r50Str = cells[COL_PETRO_R50] ?? '';
-      const r50 = r50Str === '' ? NaN : parseFloat(r50Str);
-      if (Number.isFinite(r50) && r50 > 0) {
-        const distanceMpc = redshiftToDistanceMpc(z);
-        if (Number.isFinite(distanceMpc) && distanceMpc > 0) {
-          const arcsecDiameter = 3 * 2 * r50;
-          const kpc = arcsecToKpc(arcsecDiameter, distanceMpc);
-          if (Number.isFinite(kpc) && kpc > 0) diameterKpc = kpc;
-        }
-      }
+// ── Petrosian → physical diameter ──────────────────────────────────
+//
+// SDSS petroR50_r is the Petrosian half-light RADIUS in arcseconds.
+// The visual D_25 isophote lies somewhere between petroR90_r diameter
+// and a few half-light radii out; the empirical multiplier we use is
+//
+//   diameter_kpc ≈ 3 · 2 · petroR50_r · arcsecToKpc(1, distance_Mpc)
+//
+// i.e. treat 3× the half-light DIAMETER as a stand-in for D_25.  This
+// brackets the true visual diameter within ±20 % across the SDSS
+// main-sample magnitude range — enough for a renderer footprint.  A
+// future plan can refine using petroR90 (closer to the visual edge)
+// or a per-galaxy sersic-index calibration; the parser exposes
+// diameterKpc as a single number to avoid leaking that decision.
+let diameterKpc: number | null = null;
+if (COL_PETRO_R50 !== -1) {
+  const r50Str = cells[COL_PETRO_R50] ?? '';
+  const r50 = r50Str === '' ? NaN : parseFloat(r50Str);
+  if (Number.isFinite(r50) && r50 > 0) {
+    const distanceMpc = redshiftToDistanceMpc(z);
+    if (Number.isFinite(distanceMpc) && distanceMpc > 0) {
+      const arcsecDiameter = 3 * 2 * r50;
+      const kpc = arcsecToKpc(arcsecDiameter, distanceMpc);
+      if (Number.isFinite(kpc) && kpc > 0) diameterKpc = kpc;
     }
+  }
+}
 ```
 
-  4. Add `diameterKpc,` to the `records.push({ ... })` literal.
+4. Add `diameterKpc,` to the `records.push({ ... })` literal.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -1310,6 +1319,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/parsers/sdssCsv.ts test
 ## Task 9: Build pipeline — apply default fallback + materialise into PointCloud
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/tools/buildAllBins.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/tools/crossMatch.ts` (only if it constructs ParsedRecord literals; verify first)
 
@@ -1340,40 +1350,38 @@ import { DEFAULT_GALAXY_DIAMETER_KPC } from '../src/utils/math/galaxyDiameterKpc
 In the `recordsToCloud` function, modify the cloud literal (the `const cloud: PointCloud = { ... }` block) to include the new array:
 
 ```ts
-  const cloud: PointCloud = {
-    count,
-    objIDs: new BigUint64Array(count),
-    positions: new Float32Array(count * 3),
-    magU: new Float32Array(count),
-    magG: new Float32Array(count),
-    magR: new Float32Array(count),
-    magI: new Float32Array(count),
-    magZ: new Float32Array(count),
-    axisRatio: new Float32Array(count),
-    positionAngleDeg: new Float32Array(count),
-    diameterKpc: new Float32Array(count),
-  };
+const cloud: PointCloud = {
+  count,
+  objIDs: new BigUint64Array(count),
+  positions: new Float32Array(count * 3),
+  magU: new Float32Array(count),
+  magG: new Float32Array(count),
+  magR: new Float32Array(count),
+  magI: new Float32Array(count),
+  magZ: new Float32Array(count),
+  axisRatio: new Float32Array(count),
+  positionAngleDeg: new Float32Array(count),
+  diameterKpc: new Float32Array(count),
+};
 ```
 
 In the per-row fill loop (just after the orientation-fallback `if/else`), append:
 
 ```ts
-    // Diameter: prefer the parser-supplied real measurement (2MRS Riso,
-    // GLADE Tully(Bmag), SDSS petroR50_r).  When the parser couldn't
-    // extract a real value, fall back to DEFAULT_GALAXY_DIAMETER_KPC = 30
-    // so the encoded cloud always carries a finite, positive diameter.
-    //
-    // Why apply the fallback here rather than inside each parser?  Three
-    // reasons: (1) a single source-of-truth for the default value, (2)
-    // future Phase-2 plans (HyperLEDA logd25) can swap the fallback to a
-    // pgc-keyed lookup without touching every parser, and (3) the
-    // null/finite distinction at the parser boundary doubles as the
-    // provenance signal for the InfoCard's "real / Tully / fallback"
-    // chip in Task 14.
-    cloud.diameterKpc[i] =
-      r.diameterKpc !== null && r.diameterKpc > 0
-        ? r.diameterKpc
-        : DEFAULT_GALAXY_DIAMETER_KPC;
+// Diameter: prefer the parser-supplied real measurement (2MRS Riso,
+// GLADE Tully(Bmag), SDSS petroR50_r).  When the parser couldn't
+// extract a real value, fall back to DEFAULT_GALAXY_DIAMETER_KPC = 30
+// so the encoded cloud always carries a finite, positive diameter.
+//
+// Why apply the fallback here rather than inside each parser?  Three
+// reasons: (1) a single source-of-truth for the default value, (2)
+// future Phase-2 plans (HyperLEDA logd25) can swap the fallback to a
+// pgc-keyed lookup without touching every parser, and (3) the
+// null/finite distinction at the parser boundary doubles as the
+// provenance signal for the InfoCard's "real / Tully / fallback"
+// chip in Task 14.
+cloud.diameterKpc[i] =
+  r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : DEFAULT_GALAXY_DIAMETER_KPC;
 ```
 
 - [ ] **Step 3: Run typecheck and crossMatch tests**
@@ -1423,6 +1431,7 @@ cd /Users/rulkens/Development/js/skymap && git add tools/buildAllBins.ts && git 
 ## Task 10: Vertex buffer extension — 10 slots / 40 bytes
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/services/gpu/pointRenderer.ts`
 
 - [ ] **Step 1: Update layout constants**
@@ -1484,12 +1493,12 @@ In the `vertex.buffers[0].attributes` array, append:
 In the `upload(source, cloud)` method, locate the per-row write loop. After the existing `interleaved[o + 8] = cloud.positionAngleDeg[i]!` line, append:
 
 ```ts
-      // Slot 9 (offset 36): per-galaxy diameter in kpc.  The build pipeline
-      // guarantees a finite, positive value (real measurement when the
-      // parser had one, otherwise DEFAULT_GALAXY_DIAMETER_KPC = 30), so we
-      // copy through with an `!` non-null assertion just like the other
-      // SoA fields above.
-      interleaved[o + 9] = cloud.diameterKpc[i]!;
+// Slot 9 (offset 36): per-galaxy diameter in kpc.  The build pipeline
+// guarantees a finite, positive value (real measurement when the
+// parser had one, otherwise DEFAULT_GALAXY_DIAMETER_KPC = 30), so we
+// copy through with an `!` non-null assertion just like the other
+// SoA fields above.
+interleaved[o + 9] = cloud.diameterKpc[i]!;
 ```
 
 - [ ] **Step 4: Run typecheck**
@@ -1511,6 +1520,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/gpu/pointRendere
 ## Task 11: WGSL — read `diameterKpc` per instance, replace `GALAXY_RADIUS_MPC` constant
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/services/gpu/shaders/points.wgsl`
 
 - [ ] **Step 1: Add the new attribute to the `PerVertex` struct**
@@ -1586,6 +1596,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/gpu/shaders/poin
 ## Task 12: Engine — replace constant `dKpc` with per-galaxy lookup
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/services/engine/engine.ts`
 
 - [ ] **Step 1: Replace the per-frame constant with a per-galaxy read**
@@ -1603,8 +1614,7 @@ const dMpc = dKpc / 1000;
 // ≥ APPARENT_SIZE_THRESHOLD_PX inequality:
 //   camDist ≤ dMpc * pxPerRad / threshold
 // which lets us cull on a single squared compare without sqrt.
-const maxCamDistForVisibility =
-  (dMpc * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
+const maxCamDistForVisibility = (dMpc * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
 const maxCamDistSq = maxCamDistForVisibility * maxCamDistForVisibility;
 ```
 
@@ -1632,10 +1642,9 @@ const pxPerRad = viewportH / (2 * Math.tan(fovYRad / 2));
 // read forward would defeat the cache-friendly tight loop.  The bound
 // keeps the squared-compare path identical for the 99 % of rows we drop
 // without touching memory.
-const MAX_PLAUSIBLE_DIAMETER_KPC = 200;  // generous: covers giant ellipticals
+const MAX_PLAUSIBLE_DIAMETER_KPC = 200; // generous: covers giant ellipticals
 const dMpcMax = MAX_PLAUSIBLE_DIAMETER_KPC / 1000;
-const maxCamDistForVisibilityUpper =
-  (dMpcMax * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
+const maxCamDistForVisibilityUpper = (dMpcMax * pxPerRad) / APPARENT_SIZE_THRESHOLD_PX;
 const maxCamDistSqUpper = maxCamDistForVisibilityUpper * maxCamDistForVisibilityUpper;
 ```
 
@@ -1716,6 +1725,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/engine/engine.ts
 ## Task 13: Focus tween — per-galaxy distance
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/services/engine/focusTween.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/src/services/engine/engine.ts` (call site at line ~1360)
 
@@ -1825,6 +1835,7 @@ cd /Users/rulkens/Development/js/skymap && git add src/services/engine/focusTwee
 ## Task 14: InfoCard — show diameter + provenance
 
 **Files:**
+
 - Modify: `/Users/rulkens/Development/js/skymap/src/services/engine/pointInfoBuilder.ts`
 - Modify: `/Users/rulkens/Development/js/skymap/src/components/InfoCard.tsx` (or whatever the InfoCard file is — verify)
 
@@ -1841,28 +1852,28 @@ Expected: an `InfoCard.tsx`. If it lives elsewhere, adapt the path below.
 Open `/Users/rulkens/Development/js/skymap/src/services/engine/pointInfoBuilder.ts`. Locate the `PointInfo` (or similarly named) result type. Add two fields:
 
 ```ts
-  /**
-   * Physical diameter in kiloparsecs as encoded in the v4 .bin.  Always
-   * finite (the build pipeline applies DEFAULT_GALAXY_DIAMETER_KPC = 30
-   * when the parser couldn't extract a real value).  The renderer's
-   * apparent-size, focus-tween, and quad-size code all consume the same
-   * field, so what the user sees here is what the GPU is actually using.
-   */
-  diameterKpc: number;
-  /**
-   * Provenance tag describing where the diameter came from.  Three values:
-   *   - 'measured' — real catalog measurement (2MRS Riso, SDSS petroR50_r)
-   *   - 'tully'    — derived via Tully(1988) from absolute B-mag (GLADE)
-   *   - 'fallback' — no real signal; project-wide 30 kpc default
-   *
-   * The v4 binary format does NOT carry this provenance flag (it was
-   * cheaper to recover it heuristically here than to bump the format
-   * again), so we infer it: equality with DEFAULT_GALAXY_DIAMETER_KPC
-   * means fallback; GLADE rows are 'tully' (their parser routes Bmag
-   * through the Tully relation); SDSS/2MRS rows whose diameter differs
-   * from the default are 'measured'.
-   */
-  diameterProvenance: 'measured' | 'tully' | 'fallback';
+/**
+ * Physical diameter in kiloparsecs as encoded in the v4 .bin.  Always
+ * finite (the build pipeline applies DEFAULT_GALAXY_DIAMETER_KPC = 30
+ * when the parser couldn't extract a real value).  The renderer's
+ * apparent-size, focus-tween, and quad-size code all consume the same
+ * field, so what the user sees here is what the GPU is actually using.
+ */
+diameterKpc: number;
+/**
+ * Provenance tag describing where the diameter came from.  Three values:
+ *   - 'measured' — real catalog measurement (2MRS Riso, SDSS petroR50_r)
+ *   - 'tully'    — derived via Tully(1988) from absolute B-mag (GLADE)
+ *   - 'fallback' — no real signal; project-wide 30 kpc default
+ *
+ * The v4 binary format does NOT carry this provenance flag (it was
+ * cheaper to recover it heuristically here than to bump the format
+ * again), so we infer it: equality with DEFAULT_GALAXY_DIAMETER_KPC
+ * means fallback; GLADE rows are 'tully' (their parser routes Bmag
+ * through the Tully relation); SDSS/2MRS rows whose diameter differs
+ * from the default are 'measured'.
+ */
+diameterProvenance: 'measured' | 'tully' | 'fallback';
 ```
 
 In the function body, after the orientation lookups, populate the two new fields. The `Source` and per-galaxy `cloud.diameterKpc[i]` are already in scope:
@@ -1989,11 +2000,11 @@ Take the file size, subtract 16, divide by 64 — must yield an integer matching
 
 Open the running app at http://localhost:5173 (started in Task 11 step 3). Verify:
 
-  - [ ] Galaxies render at visibly diverse billboard sizes (not all the same).
-  - [ ] At least one giant elliptical from 2MRS (M87 / NGC 1316 / etc) appears noticeably bigger than nearby spirals.
-  - [ ] Clicking a galaxy zooms the camera to a distance proportional to its size — small galaxies frame closer, giants frame farther.
-  - [ ] InfoCard shows a Diameter row with one of the three provenance tags.
-  - [ ] No WGSL validation errors, no NaN-rendering artifacts (pure-black billboards), no missing thumbnails.
+- [ ] Galaxies render at visibly diverse billboard sizes (not all the same).
+- [ ] At least one giant elliptical from 2MRS (M87 / NGC 1316 / etc) appears noticeably bigger than nearby spirals.
+- [ ] Clicking a galaxy zooms the camera to a distance proportional to its size — small galaxies frame closer, giants frame farther.
+- [ ] InfoCard shows a Diameter row with one of the three provenance tags.
+- [ ] No WGSL validation errors, no NaN-rendering artifacts (pure-black billboards), no missing thumbnails.
 
 If any item fails, STOP and debug before continuing.
 
@@ -2011,21 +2022,21 @@ cd /Users/rulkens/Development/js/skymap && git commit -am "fix: address verifica
 
 **1. Spec coverage**
 
-  - 2MRS Riso → Task 6 ✓
-  - GLADE Bmag → Tully → Task 7 ✓
-  - SDSS petroR50_r (graceful when missing) → Task 8 ✓
-  - HyperLEDA logd25 deferred to Phase-2 (no task here, called out in Task 0 step 3 + plan goal) ✓
-  - Format v4 (encode/decode + tests, reject v1/v2/v3) → Task 5 ✓
-  - ParsedRecord + PointCloud type extensions → Task 4 ✓
-  - galaxyDiameterKpc Tully + arcsecToKpc helper → Tasks 2 + 3 ✓
-  - Build pipeline applies DEFAULT_GALAXY_DIAMETER_KPC fallback → Task 9 ✓
-  - Vertex buffer 10 slots / 40 bytes → Task 10 ✓
-  - WGSL `PerVertex.diameterKpc` + replace `GALAXY_RADIUS_MPC` constant → Task 11 ✓
-  - Engine replaces constant `dKpc` with per-galaxy lookup; QuadInstance/DiskInstance untouched (already carry per-instance sizeWorld) → Task 12 ✓
-  - Focus tween becomes per-galaxy → Task 13 ✓
-  - InfoCard "Diameter" row + provenance chip → Task 14 ✓
-  - Visual verification step → Task 15 ✓
-  - User data prep (SkyServer SQL with petroR50_r) → Task 1 ✓
+- 2MRS Riso → Task 6 ✓
+- GLADE Bmag → Tully → Task 7 ✓
+- SDSS petroR50_r (graceful when missing) → Task 8 ✓
+- HyperLEDA logd25 deferred to Phase-2 (no task here, called out in Task 0 step 3 + plan goal) ✓
+- Format v4 (encode/decode + tests, reject v1/v2/v3) → Task 5 ✓
+- ParsedRecord + PointCloud type extensions → Task 4 ✓
+- galaxyDiameterKpc Tully + arcsecToKpc helper → Tasks 2 + 3 ✓
+- Build pipeline applies DEFAULT_GALAXY_DIAMETER_KPC fallback → Task 9 ✓
+- Vertex buffer 10 slots / 40 bytes → Task 10 ✓
+- WGSL `PerVertex.diameterKpc` + replace `GALAXY_RADIUS_MPC` constant → Task 11 ✓
+- Engine replaces constant `dKpc` with per-galaxy lookup; QuadInstance/DiskInstance untouched (already carry per-instance sizeWorld) → Task 12 ✓
+- Focus tween becomes per-galaxy → Task 13 ✓
+- InfoCard "Diameter" row + provenance chip → Task 14 ✓
+- Visual verification step → Task 15 ✓
+- User data prep (SkyServer SQL with petroR50_r) → Task 1 ✓
 
 **2. Placeholder scan**
 
@@ -2033,13 +2044,13 @@ No "TBD", no "TODO", no "implement later", no "add appropriate error handling", 
 
 **3. Type consistency**
 
-  - `diameterKpc: number | null` in `ParsedRecord` (Task 4) — matches the assignments in Tasks 6, 7, 8.
-  - `diameterKpc: Float32Array` in `PointCloud` (Task 4) — matches the constructor in Task 9 (`new Float32Array(count)`) and the encoder/decoder in Task 5.
-  - `DEFAULT_GALAXY_DIAMETER_KPC` is exported from `galaxyDiameterKpc.ts` (Task 3) and imported in Tasks 7, 9, 14.
-  - `arcsecToKpc(arcsec, distanceMpc)` (Task 2) — same call signature in Tasks 6 and 8.
-  - `galaxyDiameterKpc({ absMagBmag })` (Task 3) — same call signature in Task 7.
-  - `focusDistanceMpc(diameterKpc?: number)` (Task 13) — optional argument keeps existing call sites compiling.
-  - `SLOTS_PER_POINT = 10`, `POINT_STRIDE = 40`, `DIAMETER_KPC_BYTE_OFFSET = 36` (Task 10) — match `@location(7) diameterKpc` in Task 11 (offset 36 = slot 9 × 4).
-  - InfoCard provenance values `'measured' | 'tully' | 'fallback'` consistent between `pointInfoBuilder.ts` field type and the InfoCard.tsx `title` switch (Task 14).
+- `diameterKpc: number | null` in `ParsedRecord` (Task 4) — matches the assignments in Tasks 6, 7, 8.
+- `diameterKpc: Float32Array` in `PointCloud` (Task 4) — matches the constructor in Task 9 (`new Float32Array(count)`) and the encoder/decoder in Task 5.
+- `DEFAULT_GALAXY_DIAMETER_KPC` is exported from `galaxyDiameterKpc.ts` (Task 3) and imported in Tasks 7, 9, 14.
+- `arcsecToKpc(arcsec, distanceMpc)` (Task 2) — same call signature in Tasks 6 and 8.
+- `galaxyDiameterKpc({ absMagBmag })` (Task 3) — same call signature in Task 7.
+- `focusDistanceMpc(diameterKpc?: number)` (Task 13) — optional argument keeps existing call sites compiling.
+- `SLOTS_PER_POINT = 10`, `POINT_STRIDE = 40`, `DIAMETER_KPC_BYTE_OFFSET = 36` (Task 10) — match `@location(7) diameterKpc` in Task 11 (offset 36 = slot 9 × 4).
+- InfoCard provenance values `'measured' | 'tully' | 'fallback'` consistent between `pointInfoBuilder.ts` field type and the InfoCard.tsx `title` switch (Task 14).
 
 No naming drift detected.

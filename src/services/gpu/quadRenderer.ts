@@ -198,7 +198,7 @@ export class QuadRenderer {
     uni[20] = camPosWorld[0]; // camPosWorld.x at byte offset 80
     uni[21] = camPosWorld[1];
     uni[22] = camPosWorld[2];
-    uni[23] = pxPerRad;       // pxPerRad at byte offset 92
+    uni[23] = pxPerRad; // pxPerRad at byte offset 92
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uni);
 
     // Pack instances.  We allocate a fresh Float32Array each frame; for

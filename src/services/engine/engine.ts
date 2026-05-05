@@ -99,7 +99,12 @@ import { buildPointInfo, maxAbsCoord } from './pointInfoBuilder';
 import { computeInitialCamera } from './cameraFraming';
 import { seedSettingsCallbacks } from './seedSettingsCallbacks';
 import { computeScaleInfo } from './scaleBar';
-import { loadAllClouds, buildSyntheticFallback, loadFilaments, type CloudSource } from './cloudLoader';
+import {
+  loadAllClouds,
+  buildSyntheticFallback,
+  loadFilaments,
+  type CloudSource,
+} from './cloudLoader';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 import { loadFamousSidecars, remapGladeXrefs } from './famousMetaLoader';
 
@@ -642,9 +647,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       loadFilaments().then((cloud) => {
         if (cloud) {
           filamentRenderer.upload(cloud);
-          console.log(
-            `[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts`,
-          );
+          console.log(`[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts`);
           state.subsystems.scheduler.requestRender();
         }
       });
@@ -1190,11 +1193,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // auto-rotate on `!tweens.isActive()` lets the home tween land
         // exactly on the target yaw; auto-rotate resumes from that
         // landing point on the next frame.
-        if (
-          state.settings.autoRotate &&
-          camRef &&
-          !state.subsystems.tweens.isActive()
-        ) {
+        if (state.settings.autoRotate && camRef && !state.subsystems.tweens.isActive()) {
           camRef.yaw += 0.000873;
           updatePosition(camRef);
         }

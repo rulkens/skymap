@@ -35,24 +35,24 @@
 
 ## File structure
 
-| File | Responsibility |
-|---|---|
-| `src/utils/math/apparentSizePx.ts` | Pure: angular size → pixel size on screen, given diameter/distance/fov/viewport |
-| `src/utils/math/galaxyDiameterKpc.ts` | Pure: galaxy diameter estimator (placeholder constant for v1) |
-| `src/data/cutoutUrls.ts` | Pure: build SDSS and DSS thumbnail URLs from RA/Dec |
-| `src/services/gpu/textureAtlas.ts` | Slot-management state machine + GPU texture; `allocate`/`release`/`evictLRU`/`uploadBitmap` |
-| `src/services/gpu/galaxyImageQueue.ts` | Priority queue + concurrency limit + retry policy (pure logic, GPU-free) |
-| `src/services/gpu/galaxyImageFetcher.ts` | Concrete fetcher: SDSS primary, DSS fallback, `createImageBitmap` decode |
-| `src/services/gpu/quadRenderer.ts` | Billboard-quad render pass: pipeline, instance buffer, draw API |
-| `src/services/gpu/shaders/quads.wgsl` | Vertex + fragment shaders for quad pass |
-| `src/services/engine/engine.ts` | Per-frame: select galaxies → enqueue fetches → consume completed bitmaps → call `quadRenderer.draw` |
-| `src/components/SettingsPanel/SettingsPanel.tsx` | Add "Galaxy thumbnails" toggle wired to engine |
-| `src/@types/QuadInstance.d.ts` | `QuadInstance` type used by engine + quadRenderer |
-| `tests/utils/math/apparentSizePx.test.ts` | Unit tests for the pure helper |
-| `tests/utils/math/galaxyDiameterKpc.test.ts` | Unit tests |
-| `tests/data/cutoutUrls.test.ts` | URL formatting tests |
-| `tests/services/gpu/textureAtlas.test.ts` | Slot allocation + LRU tests with GPU mock |
-| `tests/services/gpu/galaxyImageQueue.test.ts` | Priority + concurrency tests with mock fetch |
+| File                                             | Responsibility                                                                                      |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `src/utils/math/apparentSizePx.ts`               | Pure: angular size → pixel size on screen, given diameter/distance/fov/viewport                     |
+| `src/utils/math/galaxyDiameterKpc.ts`            | Pure: galaxy diameter estimator (placeholder constant for v1)                                       |
+| `src/data/cutoutUrls.ts`                         | Pure: build SDSS and DSS thumbnail URLs from RA/Dec                                                 |
+| `src/services/gpu/textureAtlas.ts`               | Slot-management state machine + GPU texture; `allocate`/`release`/`evictLRU`/`uploadBitmap`         |
+| `src/services/gpu/galaxyImageQueue.ts`           | Priority queue + concurrency limit + retry policy (pure logic, GPU-free)                            |
+| `src/services/gpu/galaxyImageFetcher.ts`         | Concrete fetcher: SDSS primary, DSS fallback, `createImageBitmap` decode                            |
+| `src/services/gpu/quadRenderer.ts`               | Billboard-quad render pass: pipeline, instance buffer, draw API                                     |
+| `src/services/gpu/shaders/quads.wgsl`            | Vertex + fragment shaders for quad pass                                                             |
+| `src/services/engine/engine.ts`                  | Per-frame: select galaxies → enqueue fetches → consume completed bitmaps → call `quadRenderer.draw` |
+| `src/components/SettingsPanel/SettingsPanel.tsx` | Add "Galaxy thumbnails" toggle wired to engine                                                      |
+| `src/@types/QuadInstance.d.ts`                   | `QuadInstance` type used by engine + quadRenderer                                                   |
+| `tests/utils/math/apparentSizePx.test.ts`        | Unit tests for the pure helper                                                                      |
+| `tests/utils/math/galaxyDiameterKpc.test.ts`     | Unit tests                                                                                          |
+| `tests/data/cutoutUrls.test.ts`                  | URL formatting tests                                                                                |
+| `tests/services/gpu/textureAtlas.test.ts`        | Slot allocation + LRU tests with GPU mock                                                           |
+| `tests/services/gpu/galaxyImageQueue.test.ts`    | Priority + concurrency tests with mock fetch                                                        |
 
 ---
 
@@ -71,7 +71,7 @@ angular_size_rad = diameter / distance     (small-angle approximation)
 pixel_size       = angular_size_rad × (viewport_height_px / fov_y_rad)
 ```
 
-`diameter` and `distance` must be in the same length units; the fov and viewport must use the *vertical* axis to match `mat4.perspectiveZO`'s convention (which takes `fovY`).
+`diameter` and `distance` must be in the same length units; the fov and viewport must use the _vertical_ axis to match `mat4.perspectiveZO`'s convention (which takes `fovY`).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -98,26 +98,36 @@ describe('apparentSizePx', () => {
   });
 
   it('returns 0 for zero or negative distance (defensive)', () => {
-    expect(apparentSizePx({
-      diameterKpc: 30,
-      distanceMpc: 0,
-      viewportHeightPx: 1080,
-      fovYRad: 1,
-    })).toBe(0);
-    expect(apparentSizePx({
-      diameterKpc: 30,
-      distanceMpc: -5,
-      viewportHeightPx: 1080,
-      fovYRad: 1,
-    })).toBe(0);
+    expect(
+      apparentSizePx({
+        diameterKpc: 30,
+        distanceMpc: 0,
+        viewportHeightPx: 1080,
+        fovYRad: 1,
+      }),
+    ).toBe(0);
+    expect(
+      apparentSizePx({
+        diameterKpc: 30,
+        distanceMpc: -5,
+        viewportHeightPx: 1080,
+        fovYRad: 1,
+      }),
+    ).toBe(0);
   });
 
   it('scales linearly with viewport height', () => {
     const small = apparentSizePx({
-      diameterKpc: 30, distanceMpc: 5, viewportHeightPx: 540, fovYRad: 1,
+      diameterKpc: 30,
+      distanceMpc: 5,
+      viewportHeightPx: 540,
+      fovYRad: 1,
     });
     const big = apparentSizePx({
-      diameterKpc: 30, distanceMpc: 5, viewportHeightPx: 1080, fovYRad: 1,
+      diameterKpc: 30,
+      distanceMpc: 5,
+      viewportHeightPx: 1080,
+      fovYRad: 1,
     });
     expect(big).toBeCloseTo(small * 2, 6);
   });
@@ -220,7 +230,10 @@ Returns a galaxy's physical diameter in kpc. v1 returns a constant 30 kpc (Milky
 ```ts
 // tests/utils/math/galaxyDiameterKpc.test.ts
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_GALAXY_DIAMETER_KPC, galaxyDiameterKpc } from '../../../src/utils/math/galaxyDiameterKpc';
+import {
+  DEFAULT_GALAXY_DIAMETER_KPC,
+  galaxyDiameterKpc,
+} from '../../../src/utils/math/galaxyDiameterKpc';
 
 describe('galaxyDiameterKpc', () => {
   it('returns DEFAULT_GALAXY_DIAMETER_KPC when no magnitude supplied', () => {
@@ -301,18 +314,18 @@ git commit -m "feat: add galaxyDiameterKpc placeholder (30 kpc)"
 
 ## Task 3: Cutout URL builders — REUSE EXISTING HELPERS
 
-> **NOTE:** This task was originally planned to create `src/data/cutoutUrls.ts` from scratch.  Since the plan was written, the InfoCard work landed two helpers that already do exactly what this task needs:
+> **NOTE:** This task was originally planned to create `src/data/cutoutUrls.ts` from scratch. Since the plan was written, the InfoCard work landed two helpers that already do exactly what this task needs:
 >
 > - `sdssThumbnailUrl(raDeg, decDeg, sizePx)` in `src/utils/math/sdssThumbnailUrl.ts` — DR18 ImgCutout, 0.4 arcsec/px (vs the plan's 0.396 — close enough, both are within SDSS's documented native scale).
 > - `dssThumbnailUrl(raDeg, decDeg, arcMin)` in `src/utils/math/dssThumbnailUrl.ts` — ESO DSS proxy (note: different endpoint than the plan originally specified — it uses `archive.eso.org/dss/dss/image` instead of `archive.stsci.edu/cgi-bin/dss_search`, but it returns the same kind of cutout image).
 >
-> **Skip the file/test creation.**  Subsequent tasks should import these directly:
+> **Skip the file/test creation.** Subsequent tasks should import these directly:
 >
 > ```ts
 > import { sdssThumbnailUrl, dssThumbnailUrl } from '../../utils/math';
 > ```
 >
-> Argument shape: positional `(raDeg, decDeg, size)` — NOT the object-arg shape shown in the original task body below.  The fetcher in Task 7 must adapt to this.
+> Argument shape: positional `(raDeg, decDeg, size)` — NOT the object-arg shape shown in the original task body below. The fetcher in Task 7 must adapt to this.
 >
 > The Task 3 prose below is preserved for historical context but **do not implement it**.
 
@@ -440,7 +453,12 @@ The atlas is a 16×16 grid of 128×128 slots inside a 2048×2048 RGBA texture. T
 ```ts
 // tests/services/gpu/textureAtlas.test.ts
 import { describe, it, expect } from 'vitest';
-import { TextureAtlas, ATLAS_SIDE, SLOT_SIDE, SLOT_COUNT } from '../../src/services/gpu/textureAtlas';
+import {
+  TextureAtlas,
+  ATLAS_SIDE,
+  SLOT_SIDE,
+  SLOT_COUNT,
+} from '../../src/services/gpu/textureAtlas';
 
 describe('TextureAtlas slot state machine', () => {
   // Construct without a real GPU device — pass `null as any`. The state-machine
@@ -775,11 +793,16 @@ describe('GalaxyImageQueue', () => {
     const order: string[] = [];
     // Block one slot so the queue must order the remaining work in our enqueue.
     let unblock!: () => void;
-    const blocker = new Promise<void>((r) => { unblock = r; });
+    const blocker = new Promise<void>((r) => {
+      unblock = r;
+    });
     queue.enqueue({
       key: 'blocker',
       priority: 0,
-      fetcher: async () => { await blocker; return null; },
+      fetcher: async () => {
+        await blocker;
+        return null;
+      },
       onResult: () => order.push('blocker'),
     });
     // Saturate the rest of the slots with low-priority fillers so we can
@@ -793,9 +816,24 @@ describe('GalaxyImageQueue', () => {
       });
     }
     // Now push three more with mixed priorities; with all slots busy these wait.
-    queue.enqueue({ key: 'low',  priority: 1,  fetcher: async () => null, onResult: () => order.push('low') });
-    queue.enqueue({ key: 'high', priority: 10, fetcher: async () => null, onResult: () => order.push('high') });
-    queue.enqueue({ key: 'mid',  priority: 5,  fetcher: async () => null, onResult: () => order.push('mid') });
+    queue.enqueue({
+      key: 'low',
+      priority: 1,
+      fetcher: async () => null,
+      onResult: () => order.push('low'),
+    });
+    queue.enqueue({
+      key: 'high',
+      priority: 10,
+      fetcher: async () => null,
+      onResult: () => order.push('high'),
+    });
+    queue.enqueue({
+      key: 'mid',
+      priority: 5,
+      fetcher: async () => null,
+      onResult: () => order.push('mid'),
+    });
 
     // Let fillers drain (they resolve immediately).
     await new Promise((r) => setTimeout(r, 5));
@@ -1239,7 +1277,7 @@ export class QuadRenderer {
             arrayStride: BYTES_PER_INSTANCE,
             stepMode: 'instance',
             attributes: [
-              { shaderLocation: 0, offset: 0,  format: 'float32x4' }, // posSize
+              { shaderLocation: 0, offset: 0, format: 'float32x4' }, // posSize
               { shaderLocation: 1, offset: 16, format: 'float32x4' }, // uvRect
             ],
           },
@@ -1448,7 +1486,11 @@ if (galaxyTexturesEnabled) {
       if (distMpc <= 0 || distMpc > FAR_DISTANCE_CUTOFF_MPC) continue;
       // Distance from camera (not target) — galaxies behind the camera never
       // matter, but Math.hypot from origin is fine because target is origin.
-      const camDist = Math.hypot(camera.position[0] - x, camera.position[1] - y, camera.position[2] - z);
+      const camDist = Math.hypot(
+        camera.position[0] - x,
+        camera.position[1] - y,
+        camera.position[2] - z,
+      );
       if (camDist <= 0) continue;
       const dKpc = galaxyDiameterKpc({}); // v1: constant
       const px = apparentSizePx({
@@ -1728,6 +1770,7 @@ recently visible is evicted. Toggle off via the Settings panel if you don't
 want the network traffic.
 
 **Sources:**
+
 - SDSS cutouts: `https://skyserver.sdss.org/dr18/SkyServerWS/ImgCutout/getjpeg`
 - DSS cutouts: `https://archive.stsci.edu/cgi-bin/dss_search` (POSS-II red)
 ```
@@ -1744,6 +1787,7 @@ git commit -m "docs: document galaxy-thumbnail rendering in README"
 ## Self-Review checklist (executed before plan handoff)
 
 **Spec coverage:**
+
 - ✅ Apparent-size threshold logic — Task 1.
 - ✅ Galaxy diameter source — Task 2.
 - ✅ SDSS + DSS cutout URLs — Task 3.
@@ -1757,6 +1801,7 @@ git commit -m "docs: document galaxy-thumbnail rendering in README"
 - ✅ Docs — Task 12.
 
 **Type consistency:**
+
 - `QuadInstance` defined in Task 8 step 1, used in Task 8 step 4 and Task 9 step 3 — same field names throughout.
 - `TextureAtlas.allocate(key, frame)` (Task 4) used in Task 9 step 3 — signature matches.
 - `GalaxyImageQueue.enqueue({ key, priority, fetcher, onResult })` (Task 6) used in Task 9 step 3 — fields match.
@@ -1765,5 +1810,6 @@ git commit -m "docs: document galaxy-thumbnail rendering in README"
 **Placeholder scan:** No "TBD" / "implement later" / "similar to" instances. All steps include actual code or actual commands.
 
 **Known limitations the engineer should be aware of (not gaps, but worth flagging):**
+
 - Engine integration in Task 9 assumes `loadedClouds: Map<Source, PointCloud>` exists in `engine.ts`. If it doesn't (the multi-survey rev-2 plan adds it), the implementer must add it as part of this task — see the comment in Task 9 step 3.
 - `cartesianToRaDecZ` is needed in `engine.ts` — assumed already imported. Check imports at top of file before the visual check fails on an undefined-reference error.

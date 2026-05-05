@@ -47,7 +47,7 @@ const M_LIM: Record<Source, number> = {
 
 const SCHECHTER: Record<Source, SchechterTriple> = {
   [Source.SDSS]: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
-  [Source.TwoMRS]: { mStar: -24.13, alpha: -1.10, phiStar: 0.0116 },
+  [Source.TwoMRS]: { mStar: -24.13, alpha: -1.1, phiStar: 0.0116 },
   [Source.Glade]: { mStar: -20.83, alpha: -1.08, phiStar: 0.0093 },
   [Source.Synthetic]: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
   [Source.Famous]: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },

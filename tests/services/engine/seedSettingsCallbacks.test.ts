@@ -75,13 +75,9 @@ describe('seedSettingsCallbacks', () => {
     expect(cb.onGalaxyTexturesEnabledChange).toHaveBeenCalledExactlyOnceWith(
       snap.galaxyTexturesEnabled,
     );
-    expect(cb.onHighlightFallbackChange).toHaveBeenCalledExactlyOnceWith(
-      snap.highlightFallback,
-    );
+    expect(cb.onHighlightFallbackChange).toHaveBeenCalledExactlyOnceWith(snap.highlightFallback);
     expect(cb.onRealOnlyModeChange).toHaveBeenCalledExactlyOnceWith(snap.realOnlyMode);
-    expect(cb.onDepthFadeEnabledChange).toHaveBeenCalledExactlyOnceWith(
-      snap.depthFadeEnabled,
-    );
+    expect(cb.onDepthFadeEnabledChange).toHaveBeenCalledExactlyOnceWith(snap.depthFadeEnabled);
     expect(cb.onBiasModeChange).toHaveBeenCalledExactlyOnceWith(snap.biasMode);
     expect(cb.onAbsMagLimitChange).toHaveBeenCalledExactlyOnceWith(snap.absMagLimit);
     expect(cb.onToneMapCurveChange).toHaveBeenCalledExactlyOnceWith(snap.toneMapCurve);

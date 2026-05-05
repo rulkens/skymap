@@ -137,9 +137,7 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
         Survey rows fall back to `info.iauName` so SDSS galaxies still
         display their `SDSS J123456.78+012345.6`-style label.
       */}
-      <div className={styles.cardHeadline}>
-        {info.famous ? info.famous.names[0] : info.iauName}
-      </div>
+      <div className={styles.cardHeadline}>{info.famous ? info.famous.names[0] : info.iauName}</div>
 
       {/* ── Source attribution badge ──────────────────────────────────────── */}
       <div className={styles.sourceBadge}>{info.sourceLabel}</div>
@@ -157,9 +155,7 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
           {info.famous.names.length > 1 && (
             <div className={styles.cardRow}>
               <span className={styles.cardLabel}>Also known as</span>
-              <span className={styles.cardValue}>
-                {info.famous.names.slice(1).join(' · ')}
-              </span>
+              <span className={styles.cardValue}>{info.famous.names.slice(1).join(' · ')}</span>
             </div>
           )}
           {/*
@@ -394,9 +390,7 @@ export function FullCard({ info, pinned = false, onFocus }: FullCardProps): Reac
               <>
                 {info.diameterKpc.toFixed(1)}&nbsp;kpc
                 <br />
-                <span style={{ opacity: 0.7, fontSize: '0.85em' }}>
-                  {info.diameterProvenance}
-                </span>
+                <span style={{ opacity: 0.7, fontSize: '0.85em' }}>{info.diameterProvenance}</span>
               </>
             }
           />

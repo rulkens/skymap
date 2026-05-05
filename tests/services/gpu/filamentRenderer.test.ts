@@ -10,11 +10,7 @@ describe('buildSegmentInstances', () => {
       vertexCount: 5,
       stripOffsets: new Uint32Array([0, 3, 5]),
       vertices: new Float32Array([
-        10, 20, 30, 0.9,
-        11, 21, 31, 0.8,
-        12, 22, 32, 0.7,
-        40, 50, 60, 0.6,
-        41, 51, 61, 0.5,
+        10, 20, 30, 0.9, 11, 21, 31, 0.8, 12, 22, 32, 0.7, 40, 50, 60, 0.6, 41, 51, 61, 0.5,
       ]),
     };
     const result = buildSegmentInstances(cloud);

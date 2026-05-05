@@ -3,7 +3,7 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Convert Skymap's render loop from continuous (`requestAnimationFrame`
-perpetually re-scheduled) to *render-on-demand* — frames are only encoded and
+perpetually re-scheduled) to _render-on-demand_ — frames are only encoded and
 submitted when something has actually changed, and the loop sleeps when the
 scene is idle. Idle CPU should drop from "every-frame ~3.5 M-iteration galaxy
 loop + GPU encode" to "zero".
@@ -12,7 +12,7 @@ loop + GPU encode" to "zero".
 single rAF token. Every state mutation that affects what would be drawn calls
 `requestRender()`, which sets `dirty = true` and schedules exactly one rAF.
 The engine's existing `frame()` body runs unchanged inside that rAF, but its
-*tail* now re-schedules **only** when something is *currently* animating
+_tail_ now re-schedules **only** when something is _currently_ animating
 (autoRotate, an in-flight camera tween, non-zero SpaceMouse axes, or a
 pending image-queue fetch whose async resolution will dirty the atlas). When
 none of those apply, the loop pauses; the next event handler that calls
@@ -97,7 +97,7 @@ None block the plan; all are addressed by tasks below.
 - **HDR + tone-map plan is in flight.** Commit `9a81976` and follow-ups
   refactor `frame()` to render points/quads/disks into an `rgba16float`
   HDR target, then run a fullscreen tone-map pass writing to the swap
-  chain. This plan must be executed *after* HDR lands. The frame-tail
+  chain. This plan must be executed _after_ HDR lands. The frame-tail
   re-schedule call is in the same place either way (right after the
   hover-pick block), so the merge conflict surface is small. Confirm in
   Task 0 that the HDR plan is fully merged before starting.
@@ -114,14 +114,14 @@ None block the plan; all are addressed by tasks below.
   on `latestMouseCss !== lastPickedMouseCss`. With render-on-demand, the
   pointermove handler calls `requestRender()`, the next frame runs the
   hover gate, and the pick completes asynchronously. The `.then()` that
-  calls `setHovered(...)` runs *after* the GPU readback resolves, which
+  calls `setHovered(...)` runs _after_ the GPU readback resolves, which
   is 1-2 frames later — and `setHovered` calls `cb.onHoverChange`, which
   triggers React re-renders, but does NOT need to wake the engine loop
   (the engine doesn't need to redraw on hover). **No regression.**
 
 - **Thumbnail enqueue gate is per-frame.** With render-on-demand the
   per-galaxy enqueue loop only runs when the camera moves (or a setting
-  changes that toggles the visibility mask). That's the *desired*
+  changes that toggles the visibility mask). That's the _desired_
   behaviour — galaxies in the user's current view get their thumbnails;
   galaxies the user never looks at don't enqueue. **No regression.**
 
@@ -129,7 +129,7 @@ None block the plan; all are addressed by tasks below.
   `lastSeenFrame`. With render-on-demand the counter advances less often.
   Semantics still hold — "evict the slot whose key was last touched in
   the oldest render" is still well-defined when renders are sparse. The
-  invariant that matters is *ordering*: every key currently visible
+  invariant that matters is _ordering_: every key currently visible
   shares the same `frameCounter` value within a single render, and any
   newly-visible key gets the next-higher value on the next render. That
   invariant is preserved because we still increment `frameCounter` once
@@ -172,58 +172,58 @@ the call in by hand following Tasks 3, 4, and 5.
 
 ### Pointer / wheel / keyboard (Task 3)
 
-| File | Approx. line | Trigger | Notes |
-|------|--------------|---------|-------|
-| `src/services/camera/orbitControls.ts` | `onMove` orbit branch (line ~332) | `cam.yaw -= dx*0.005; cam.pitch = …; updatePosition(cam)` | Add `options?.onCameraChange?.()` after `updatePosition`. |
-| `src/services/camera/orbitControls.ts` | `onMove` pan branch (line ~310) | `vec3.add(cam.target, …); updatePosition(cam)` | Add `options?.onCameraChange?.()` after `updatePosition`. |
-| `src/services/camera/orbitControls.ts` | `onWheel` (line ~378) | `cam.distance = clampDistance(…); updatePosition(cam)` | Add `options?.onCameraChange?.()` after `updatePosition`. |
-| `src/services/camera/orbitControls.ts` | `onDown` (line ~166) | drag begins, hover cleared in engine | Engine's `pointerdown` listener already mutates state; add `requestRender()` there. |
-| `src/services/engine/engine.ts` | `pointerdown` listener (line ~787) | clears tween, sets `pointerDown=true`, `setHovered(null)` | Add `requestRender()` after `setHovered(null)` — selection halo needs to update. |
-| `src/services/engine/engine.ts` | `pointerleave` listener (line ~774) | `latestMouseCss = null; setHovered(null)` | Add `requestRender()` — hover halo clears. |
-| `src/services/engine/engine.ts` | `pointermove` listener (line ~767) | updates `latestMouseCss` | Add `requestRender()` — hover-pick gate runs in next frame. |
-| `src/services/engine/engine.ts` | `pointerup` (window listener, line ~796) | `pointerDown = false` | No `requestRender` needed — the next pointermove or other event will wake the loop; `pointerDown=false` alone doesn't change render output. |
-| `src/services/engine/engine.ts` | `pointercancel` (line ~800) | same as pointerup | Same — no call needed. |
-| `src/services/engine/engine.ts` | `keydown` Escape (line ~846) | `setSelected(null)` | Add `requestRender()` — selection halo clears. |
-| `src/services/engine/engine.ts` | resize observer / `resizeCanvasToDisplay` true branch (line ~903, inside frame body) | recreates HDR target, updates aspect | Already inside a render frame — no extra call needed there. But: window resize triggers a fresh render too. Add a `window.addEventListener('resize', …)` listener that calls `requestRender()`. |
+| File                                   | Approx. line                                                                         | Trigger                                                   | Notes                                                                                                                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/services/camera/orbitControls.ts` | `onMove` orbit branch (line ~332)                                                    | `cam.yaw -= dx*0.005; cam.pitch = …; updatePosition(cam)` | Add `options?.onCameraChange?.()` after `updatePosition`.                                                                                                                                       |
+| `src/services/camera/orbitControls.ts` | `onMove` pan branch (line ~310)                                                      | `vec3.add(cam.target, …); updatePosition(cam)`            | Add `options?.onCameraChange?.()` after `updatePosition`.                                                                                                                                       |
+| `src/services/camera/orbitControls.ts` | `onWheel` (line ~378)                                                                | `cam.distance = clampDistance(…); updatePosition(cam)`    | Add `options?.onCameraChange?.()` after `updatePosition`.                                                                                                                                       |
+| `src/services/camera/orbitControls.ts` | `onDown` (line ~166)                                                                 | drag begins, hover cleared in engine                      | Engine's `pointerdown` listener already mutates state; add `requestRender()` there.                                                                                                             |
+| `src/services/engine/engine.ts`        | `pointerdown` listener (line ~787)                                                   | clears tween, sets `pointerDown=true`, `setHovered(null)` | Add `requestRender()` after `setHovered(null)` — selection halo needs to update.                                                                                                                |
+| `src/services/engine/engine.ts`        | `pointerleave` listener (line ~774)                                                  | `latestMouseCss = null; setHovered(null)`                 | Add `requestRender()` — hover halo clears.                                                                                                                                                      |
+| `src/services/engine/engine.ts`        | `pointermove` listener (line ~767)                                                   | updates `latestMouseCss`                                  | Add `requestRender()` — hover-pick gate runs in next frame.                                                                                                                                     |
+| `src/services/engine/engine.ts`        | `pointerup` (window listener, line ~796)                                             | `pointerDown = false`                                     | No `requestRender` needed — the next pointermove or other event will wake the loop; `pointerDown=false` alone doesn't change render output.                                                     |
+| `src/services/engine/engine.ts`        | `pointercancel` (line ~800)                                                          | same as pointerup                                         | Same — no call needed.                                                                                                                                                                          |
+| `src/services/engine/engine.ts`        | `keydown` Escape (line ~846)                                                         | `setSelected(null)`                                       | Add `requestRender()` — selection halo clears.                                                                                                                                                  |
+| `src/services/engine/engine.ts`        | resize observer / `resizeCanvasToDisplay` true branch (line ~903, inside frame body) | recreates HDR target, updates aspect                      | Already inside a render frame — no extra call needed there. But: window resize triggers a fresh render too. Add a `window.addEventListener('resize', …)` listener that calls `requestRender()`. |
 
 ### Engine handle setters (Task 4)
 
 Every setter that affects what the GPU draws must call `requestRender()` at the tail. Setters that are pure echoes to React without changing GPU output can skip it (none of these do — every engine handle setter affects rendering).
 
-| Method | engine.ts approx. line | Mutates | requestRender? |
-|--------|------------------------|---------|----------------|
-| `setPointSize` | ~1543 | `pointSizePx` | yes |
-| `setBrightness` | ~1548 | `brightness` | yes |
-| `setAutoRotate` | ~1553 | `autoRotate` | yes (so the loop wakes if previously idle) |
-| `setGalaxyTexturesEnabled` | ~1558 | `galaxyTexturesEnabled` | yes |
-| `setHighlightFallback` | ~1568 | `highlightFallback` | yes |
-| `setRealOnlyMode` | ~1576 | `realOnlyMode` | yes |
-| `setBiasMode` | ~1584 | `biasMode` (also kicks Schechter / angular workers) | yes — and a follow-up `requestRender()` from inside the worker resolution (covered in Task 5) |
-| `setAbsMagLimit` | ~1642 | `absMagLimit` | yes |
-| `setExposure` | ~1652 | `exposure` (clamped) | yes |
-| `setToneMapCurve` | ~1662 | `toneMapCurve` | yes |
-| `resetCamera` | ~1676 | mutates `cam` directly | yes |
-| `focusOn` | ~1693 | sets `currentTween` | yes (kicks the loop, which then keeps re-scheduling while tween in flight) |
-| `selectFamous` | ~1722 | sets selection + tween | yes |
-| `focusOnHome` | ~1765 | sets `currentTween` | yes |
-| `setLodMode` | ~1795 | `lodMode` | yes |
-| `setSourceVisible` | ~1801 | `visibleSourceMask` (and forces manual mode) | yes |
-| `clearSelection` | ~1492 | clears `selectedIndex` | yes |
-| `setSpaceMouseSensitivity` | ~1863 | `spaceMouseSensitivity` (only relevant when puck is deflected — but harmless to call) | yes |
-| `connectSpaceMouse` (onAxes callback inside) | ~1833 | `latestSpaceMouseAxes` | yes (every HID report; harmless because `isScheduled` short-circuits) |
-| `connectSpaceMouse` (onConnectionChange) | ~1841 | resets axes on disconnect | yes |
-| `disconnectSpaceMouse` | ~1852 | resets axes | yes |
+| Method                                       | engine.ts approx. line | Mutates                                                                               | requestRender?                                                                                |
+| -------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `setPointSize`                               | ~1543                  | `pointSizePx`                                                                         | yes                                                                                           |
+| `setBrightness`                              | ~1548                  | `brightness`                                                                          | yes                                                                                           |
+| `setAutoRotate`                              | ~1553                  | `autoRotate`                                                                          | yes (so the loop wakes if previously idle)                                                    |
+| `setGalaxyTexturesEnabled`                   | ~1558                  | `galaxyTexturesEnabled`                                                               | yes                                                                                           |
+| `setHighlightFallback`                       | ~1568                  | `highlightFallback`                                                                   | yes                                                                                           |
+| `setRealOnlyMode`                            | ~1576                  | `realOnlyMode`                                                                        | yes                                                                                           |
+| `setBiasMode`                                | ~1584                  | `biasMode` (also kicks Schechter / angular workers)                                   | yes — and a follow-up `requestRender()` from inside the worker resolution (covered in Task 5) |
+| `setAbsMagLimit`                             | ~1642                  | `absMagLimit`                                                                         | yes                                                                                           |
+| `setExposure`                                | ~1652                  | `exposure` (clamped)                                                                  | yes                                                                                           |
+| `setToneMapCurve`                            | ~1662                  | `toneMapCurve`                                                                        | yes                                                                                           |
+| `resetCamera`                                | ~1676                  | mutates `cam` directly                                                                | yes                                                                                           |
+| `focusOn`                                    | ~1693                  | sets `currentTween`                                                                   | yes (kicks the loop, which then keeps re-scheduling while tween in flight)                    |
+| `selectFamous`                               | ~1722                  | sets selection + tween                                                                | yes                                                                                           |
+| `focusOnHome`                                | ~1765                  | sets `currentTween`                                                                   | yes                                                                                           |
+| `setLodMode`                                 | ~1795                  | `lodMode`                                                                             | yes                                                                                           |
+| `setSourceVisible`                           | ~1801                  | `visibleSourceMask` (and forces manual mode)                                          | yes                                                                                           |
+| `clearSelection`                             | ~1492                  | clears `selectedIndex`                                                                | yes                                                                                           |
+| `setSpaceMouseSensitivity`                   | ~1863                  | `spaceMouseSensitivity` (only relevant when puck is deflected — but harmless to call) | yes                                                                                           |
+| `connectSpaceMouse` (onAxes callback inside) | ~1833                  | `latestSpaceMouseAxes`                                                                | yes (every HID report; harmless because `isScheduled` short-circuits)                         |
+| `connectSpaceMouse` (onConnectionChange)     | ~1841                  | resets axes on disconnect                                                             | yes                                                                                           |
+| `disconnectSpaceMouse`                       | ~1852                  | resets axes                                                                           | yes                                                                                           |
 
 ### Async resolution points (Task 5)
 
-| Site | engine.ts approx. line | Context |
-|------|------------------------|---------|
-| `renderer.upload(...)` resolution | ~637, 679 | Cloud just baked into GPU buffer; new points are now drawable. |
-| `loadFamousSidecars().then(...)` | ~656 | Famous sidecars landed; future hover/select needs them. (No render impact today, but call it for forward-compat.) |
-| Galaxy queue `onResult` (inside per-galaxy enqueue) | ~1228 | Bitmap landed in atlas — must trigger one render so the quad shows up. |
-| `renderer.applySchechterMode()` resolution | ~1614 | Schechter weights baked into GPU buffer; vertex shader reads them next frame. |
-| `renderer.applyAngularReweightMode()` resolution | ~1635 | Same — angular weights baked. |
-| Pick `.then((idx) => setHovered/setSelected(...))` | ~836, 1466 | Hover/select state changed; selection halo needs redraw. |
+| Site                                                | engine.ts approx. line | Context                                                                                                           |
+| --------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `renderer.upload(...)` resolution                   | ~637, 679              | Cloud just baked into GPU buffer; new points are now drawable.                                                    |
+| `loadFamousSidecars().then(...)`                    | ~656                   | Famous sidecars landed; future hover/select needs them. (No render impact today, but call it for forward-compat.) |
+| Galaxy queue `onResult` (inside per-galaxy enqueue) | ~1228                  | Bitmap landed in atlas — must trigger one render so the quad shows up.                                            |
+| `renderer.applySchechterMode()` resolution          | ~1614                  | Schechter weights baked into GPU buffer; vertex shader reads them next frame.                                     |
+| `renderer.applyAngularReweightMode()` resolution    | ~1635                  | Same — angular weights baked.                                                                                     |
+| Pick `.then((idx) => setHovered/setSelected(...))`  | ~836, 1466             | Hover/select state changed; selection halo needs redraw.                                                          |
 
 ---
 
@@ -477,7 +477,7 @@ Expected: FAIL with `Cannot find module '.../renderScheduler'`.
 
 Create `src/services/engine/renderScheduler.ts`:
 
-```ts
+````ts
 /**
  * renderScheduler — coalescing wrapper around `requestAnimationFrame`.
  *
@@ -596,7 +596,7 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
     },
   };
 }
-```
+````
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
@@ -634,7 +634,7 @@ git commit -m "feat(engine): render scheduler abstraction (coalescing rAF)"
 - Modify: `src/services/engine/engine.ts`
 - Modify: `src/services/gpu/galaxyImageQueue.ts` (add `inFlightCount` getter)
 
-The goal of this task is the *minimal* refactor: stop the unconditional
+The goal of this task is the _minimal_ refactor: stop the unconditional
 re-schedule, replace it with a conditional one, and route the kickoff
 through the scheduler. **No** trigger-site plumbing yet — that's Tasks
 3-5. After this task the engine renders once and then sleeps; user
@@ -675,25 +675,25 @@ the end of the file (inside the existing top-level `describe` block,
 before its closing `});`):
 
 ```ts
-  it('inFlightCount reports the number of running fetches', async () => {
-    const queue = new GalaxyImageQueue();
-    expect(queue.inFlightCount()).toBe(0);
+it('inFlightCount reports the number of running fetches', async () => {
+  const queue = new GalaxyImageQueue();
+  expect(queue.inFlightCount()).toBe(0);
 
-    // Build a fetcher that we can resolve manually.
-    let resolveFetch: (b: ImageBitmap | null) => void = () => {};
-    const fetcher = () =>
-      new Promise<ImageBitmap | null>((resolve) => {
-        resolveFetch = resolve;
-      });
+  // Build a fetcher that we can resolve manually.
+  let resolveFetch: (b: ImageBitmap | null) => void = () => {};
+  const fetcher = () =>
+    new Promise<ImageBitmap | null>((resolve) => {
+      resolveFetch = resolve;
+    });
 
-    queue.enqueue({ key: 'k1', priority: 1, fetcher, onResult: () => {} });
-    expect(queue.inFlightCount()).toBe(1);
+  queue.enqueue({ key: 'k1', priority: 1, fetcher, onResult: () => {} });
+  expect(queue.inFlightCount()).toBe(1);
 
-    resolveFetch(null);
-    // Drain so the .finally() runs and the count drops back to 0.
-    await queue.drain();
-    expect(queue.inFlightCount()).toBe(0);
-  });
+  resolveFetch(null);
+  // Drain so the .finally() runs and the count drops back to 0.
+  await queue.drain();
+  expect(queue.inFlightCount()).toBe(0);
+});
 ```
 
 - [ ] **Step 3: Run the test**
@@ -722,24 +722,24 @@ Find the `let rafId = 0;` declaration (around line 292). Replace it
 with:
 
 ```ts
-  // Render scheduler — owns the single rAF token and the dirty flag.
-  // Built inside the async IIFE because `frame` is defined there; the
-  // scheduler instance is hoisted into the outer closure so `destroy()`
-  // can call its `cancelRender()` from the public handle below.
-  //
-  // Initialised to a no-op shim so the type stays non-nullable; the
-  // real scheduler replaces this once the IIFE finishes setup.
-  let scheduler: RenderScheduler = {
-    requestRender(): void {
-      /* not yet wired */
-    },
-    cancelRender(): void {
-      /* not yet wired */
-    },
-    isScheduled(): boolean {
-      return false;
-    },
-  };
+// Render scheduler — owns the single rAF token and the dirty flag.
+// Built inside the async IIFE because `frame` is defined there; the
+// scheduler instance is hoisted into the outer closure so `destroy()`
+// can call its `cancelRender()` from the public handle below.
+//
+// Initialised to a no-op shim so the type stays non-nullable; the
+// real scheduler replaces this once the IIFE finishes setup.
+let scheduler: RenderScheduler = {
+  requestRender(): void {
+    /* not yet wired */
+  },
+  cancelRender(): void {
+    /* not yet wired */
+  },
+  isScheduled(): boolean {
+    return false;
+  },
+};
 ```
 
 - [ ] **Step 5: Replace the frame-tail re-schedule**
@@ -748,46 +748,46 @@ In the `frame()` function, find the early-return block around line
 ~975 that currently reads:
 
 ```ts
-        const vp = cam ? computeViewProj(cam) : null;
-        if (!vp || !renderer) {
-          rafId = requestAnimationFrame(frame);
-          return;
-        }
+const vp = cam ? computeViewProj(cam) : null;
+if (!vp || !renderer) {
+  rafId = requestAnimationFrame(frame);
+  return;
+}
 ```
 
 Replace with:
 
 ```ts
-        const vp = cam ? computeViewProj(cam) : null;
-        if (!vp || !renderer) {
-          // Camera/renderer not ready yet — try again next frame.
-          // (This branch only fires during the brief window between
-          // engine startup and the first cloud landing; once both are
-          // present it's never taken.)
-          scheduler.requestRender();
-          return;
-        }
+const vp = cam ? computeViewProj(cam) : null;
+if (!vp || !renderer) {
+  // Camera/renderer not ready yet — try again next frame.
+  // (This branch only fires during the brief window between
+  // engine startup and the first cloud landing; once both are
+  // present it's never taken.)
+  scheduler.requestRender();
+  return;
+}
 ```
 
 Find the inner early-return inside the hover-pick block (around line
 ~1448) that currently reads:
 
 ```ts
-          if (visibleSources.length === 0) {
-            rafId = requestAnimationFrame(frame);
-            return;
-          }
+if (visibleSources.length === 0) {
+  rafId = requestAnimationFrame(frame);
+  return;
+}
 ```
 
 Replace with:
 
 ```ts
-          if (visibleSources.length === 0) {
-            // No surveys are visible right now (user toggled them all
-            // off).  Let the loop sleep — the next setSourceVisible
-            // call will wake it.
-            return;
-          }
+if (visibleSources.length === 0) {
+  // No surveys are visible right now (user toggled them all
+  // off).  Let the loop sleep — the next setSourceVisible
+  // call will wake it.
+  return;
+}
 ```
 
 Find the unconditional re-schedule at the tail of `frame()` (around
@@ -831,30 +831,30 @@ Find the kickoff line at the end of the IIFE (around line 1479) that
 currently reads:
 
 ```ts
-      rafId = requestAnimationFrame(frame);
+rafId = requestAnimationFrame(frame);
 ```
 
 Replace with:
 
 ```ts
-      // Build the scheduler now that `frame` is defined, then kick off
-      // the first render.  After that one frame, the loop sleeps until
-      // an event handler or a setter calls scheduler.requestRender().
-      scheduler = createRenderScheduler({ onFrame: frame });
-      scheduler.requestRender();
+// Build the scheduler now that `frame` is defined, then kick off
+// the first render.  After that one frame, the loop sleeps until
+// an event handler or a setter calls scheduler.requestRender().
+scheduler = createRenderScheduler({ onFrame: frame });
+scheduler.requestRender();
 ```
 
 Find the `destroy()` method (around line 1500). The line:
 
 ```ts
-      cancelAnimationFrame(rafId);
+cancelAnimationFrame(rafId);
 ```
 
 Replace with:
 
 ```ts
-      // Cancel any in-flight frame so we don't tick after teardown.
-      scheduler.cancelRender();
+// Cancel any in-flight frame so we don't tick after teardown.
+scheduler.cancelRender();
 ```
 
 Find the `let rafId = 0;` declaration that you replaced in Step 4.
@@ -893,7 +893,7 @@ This is the "render-once" milestone — Tasks 3-5 add the wake-up paths.
 
 If the cloud doesn't render at all: a wake-up path required for
 initial animation isn't covered. Likely culprit: an `await` inside
-the IIFE happens *after* the scheduler is built, so the first frame
+the IIFE happens _after_ the scheduler is built, so the first frame
 fires before `cam` and `renderer` are non-null and bails via the
 early-return. Verify the kickoff line lives AFTER all the `await`
 points and AFTER `cam` is assigned.
@@ -965,18 +965,18 @@ Still in `orbitControls.ts`:
 In `onMove`'s pan branch (around line 311), after `updatePosition(cam);` change:
 
 ```ts
-      vec3.add(cam.target as vec3, cam.target as vec3, panDeltaScratch);
-      updatePosition(cam);
-      return;
+vec3.add(cam.target as vec3, cam.target as vec3, panDeltaScratch);
+updatePosition(cam);
+return;
 ```
 
 to:
 
 ```ts
-      vec3.add(cam.target as vec3, cam.target as vec3, panDeltaScratch);
-      updatePosition(cam);
-      options?.onCameraChange?.();
-      return;
+vec3.add(cam.target as vec3, cam.target as vec3, panDeltaScratch);
+updatePosition(cam);
+options?.onCameraChange?.();
+return;
 ```
 
 In `onMove`'s orbit branch (around line 343), after `updatePosition(cam);`, add the same call:
@@ -1016,17 +1016,17 @@ Edit `src/services/engine/engine.ts`. Find the
 (around line 810). Add a second option:
 
 ```ts
-      detachControls = attachOrbitControls(canvas, cam, {
-        onClick: (xCss, yCss) => {
-          // ...existing onClick body unchanged...
-        },
-        onCameraChange: () => {
-          // Camera moved — wake the render loop for one frame.
-          // Auto-LOD recompute, scale-bar refresh, and pick gate all
-          // run inside the next frame body.
-          scheduler.requestRender();
-        },
-      });
+detachControls = attachOrbitControls(canvas, cam, {
+  onClick: (xCss, yCss) => {
+    // ...existing onClick body unchanged...
+  },
+  onCameraChange: () => {
+    // Camera moved — wake the render loop for one frame.
+    // Auto-LOD recompute, scale-bar refresh, and pick gate all
+    // run inside the next frame body.
+    scheduler.requestRender();
+  },
+});
 ```
 
 - [ ] **Step 4: Plumb requestRender into the engine's own pointer / keyboard / resize listeners**
@@ -1036,100 +1036,100 @@ Still in `engine.ts`:
 Find the `pointermove` listener (around line 767):
 
 ```ts
-      addCanvasListener('pointermove', (e) => {
-        const pe = e as PointerEvent;
-        latestMouseCss = { x: pe.clientX, y: pe.clientY };
-      });
+addCanvasListener('pointermove', (e) => {
+  const pe = e as PointerEvent;
+  latestMouseCss = { x: pe.clientX, y: pe.clientY };
+});
 ```
 
 Change to:
 
 ```ts
-      addCanvasListener('pointermove', (e) => {
-        const pe = e as PointerEvent;
-        latestMouseCss = { x: pe.clientX, y: pe.clientY };
-        // Wake the loop so the next frame can issue a hover pick.
-        // The pick itself is async (1-2 frames later) but its .then
-        // also calls requestRender (Task 5) so the selection halo
-        // updates as soon as the readback lands.
-        scheduler.requestRender();
-      });
+addCanvasListener('pointermove', (e) => {
+  const pe = e as PointerEvent;
+  latestMouseCss = { x: pe.clientX, y: pe.clientY };
+  // Wake the loop so the next frame can issue a hover pick.
+  // The pick itself is async (1-2 frames later) but its .then
+  // also calls requestRender (Task 5) so the selection halo
+  // updates as soon as the readback lands.
+  scheduler.requestRender();
+});
 ```
 
 Find the `pointerleave` listener (around line 774):
 
 ```ts
-      addCanvasListener('pointerleave', () => {
-        latestMouseCss = null;
-        setHovered(null);
-      });
+addCanvasListener('pointerleave', () => {
+  latestMouseCss = null;
+  setHovered(null);
+});
 ```
 
 Change to:
 
 ```ts
-      addCanvasListener('pointerleave', () => {
-        latestMouseCss = null;
-        setHovered(null);
-        // Render once so the selection halo (if any) is recomputed
-        // for the cleared hover state.
-        scheduler.requestRender();
-      });
+addCanvasListener('pointerleave', () => {
+  latestMouseCss = null;
+  setHovered(null);
+  // Render once so the selection halo (if any) is recomputed
+  // for the cleared hover state.
+  scheduler.requestRender();
+});
 ```
 
 Find the `pointerdown` listener (around line 787):
 
 ```ts
-      addCanvasListener('pointerdown', () => {
-        currentTween = null;
-        pointerDown = true;
-        setHovered(null);
-      });
+addCanvasListener('pointerdown', () => {
+  currentTween = null;
+  pointerDown = true;
+  setHovered(null);
+});
 ```
 
 Change to:
 
 ```ts
-      addCanvasListener('pointerdown', () => {
-        currentTween = null;
-        pointerDown = true;
-        setHovered(null);
-        scheduler.requestRender();
-      });
+addCanvasListener('pointerdown', () => {
+  currentTween = null;
+  pointerDown = true;
+  setHovered(null);
+  scheduler.requestRender();
+});
 ```
 
 Find the Esc-key listener (around line 846):
 
 ```ts
-      addWindowListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Escape') setSelected(null);
-      });
+addWindowListener('keydown', (e: KeyboardEvent) => {
+  if (e.key === 'Escape') setSelected(null);
+});
 ```
 
 Change to:
 
 ```ts
-      addWindowListener('keydown', (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          setSelected(null);
-          // Selection halo cleared; re-render with the new highlight
-          // index uniform.
-          scheduler.requestRender();
-        }
-      });
+addWindowListener('keydown', (e: KeyboardEvent) => {
+  if (e.key === 'Escape') {
+    setSelected(null);
+    // Selection halo cleared; re-render with the new highlight
+    // index uniform.
+    scheduler.requestRender();
+  }
+});
 ```
 
 Add a new window resize listener directly after the keydown listener:
 
 ```ts
-      // Window resize: schedule one render so resizeCanvasToDisplay()
-      // (which runs at the top of the next frame body) sees the new
-      // size and recreates the HDR target.  Without this wake-up the
-      // canvas would stay at its old backing-store resolution until
-      // some other event happened to schedule a frame.
-      addWindowListener('resize', () => {
-        scheduler.requestRender();
-      });
+// Window resize: schedule one render so resizeCanvasToDisplay()
+// (which runs at the top of the next frame body) sees the new
+// size and recreates the HDR target.  Without this wake-up the
+// canvas would stay at its old backing-store resolution until
+// some other event happened to schedule a frame.
+addWindowListener('resize', () => {
+  scheduler.requestRender();
+});
 ```
 
 - [ ] **Step 5: TypeCheck + tests**
@@ -1181,7 +1181,7 @@ Edit each of the following methods on the public handle (around lines
 `,`, add:
 
 ```ts
-      scheduler.requestRender();
+scheduler.requestRender();
 ```
 
 The full list (paste this exact line at the end of every method):
@@ -1341,56 +1341,56 @@ worker bakes, pick readbacks.
 Find the cloud-upload block inside `loadAllClouds` (around line 637):
 
 ```ts
-        renderer.upload(result.source, result.cloud).catch((err) => {
-          console.error(`[engine] point bake failed for source ${result.source}:`, err);
-        });
-        clouds.set(result.source, result.cloud);
-        cb.onCloudReady?.(result.source, result.cloud.count);
+renderer.upload(result.source, result.cloud).catch((err) => {
+  console.error(`[engine] point bake failed for source ${result.source}:`, err);
+});
+clouds.set(result.source, result.cloud);
+cb.onCloudReady?.(result.source, result.cloud.count);
 ```
 
 Change to:
 
 ```ts
-        renderer
-          .upload(result.source, result.cloud)
-          .then(() => {
-            // GPU buffer is now ready — render so the new points appear
-            // (the per-frame draw skips sources whose buffer isn't ready
-            // yet, so without this call the cloud would stay invisible
-            // until some other event woke the loop).
-            scheduler.requestRender();
-          })
-          .catch((err) => {
-            console.error(`[engine] point bake failed for source ${result.source}:`, err);
-          });
-        clouds.set(result.source, result.cloud);
-        cb.onCloudReady?.(result.source, result.cloud.count);
-        // Wake immediately too — `clouds.set` enables hover/pick on the
-        // (still-baking) cloud's CPU-side metadata.  Harmless even if
-        // the GPU buffer isn't quite ready: the per-frame draw skips
-        // not-yet-uploaded sources by design.
-        scheduler.requestRender();
+renderer
+  .upload(result.source, result.cloud)
+  .then(() => {
+    // GPU buffer is now ready — render so the new points appear
+    // (the per-frame draw skips sources whose buffer isn't ready
+    // yet, so without this call the cloud would stay invisible
+    // until some other event woke the loop).
+    scheduler.requestRender();
+  })
+  .catch((err) => {
+    console.error(`[engine] point bake failed for source ${result.source}:`, err);
+  });
+clouds.set(result.source, result.cloud);
+cb.onCloudReady?.(result.source, result.cloud.count);
+// Wake immediately too — `clouds.set` enables hover/pick on the
+// (still-baking) cloud's CPU-side metadata.  Harmless even if
+// the GPU buffer isn't quite ready: the per-frame draw skips
+// not-yet-uploaded sources by design.
+scheduler.requestRender();
 ```
 
 Find the synthetic-fallback path (around line 679):
 
 ```ts
-          renderer.upload(fallback.source, fallback.cloud).catch((err) => {
-            console.error('[engine] synthetic-fallback bake failed:', err);
-          });
+renderer.upload(fallback.source, fallback.cloud).catch((err) => {
+  console.error('[engine] synthetic-fallback bake failed:', err);
+});
 ```
 
 Change to:
 
 ```ts
-          renderer
-            .upload(fallback.source, fallback.cloud)
-            .then(() => {
-              scheduler.requestRender();
-            })
-            .catch((err) => {
-              console.error('[engine] synthetic-fallback bake failed:', err);
-            });
+renderer
+  .upload(fallback.source, fallback.cloud)
+  .then(() => {
+    scheduler.requestRender();
+  })
+  .catch((err) => {
+    console.error('[engine] synthetic-fallback bake failed:', err);
+  });
 ```
 
 - [ ] **Step 2: Wake on famous-sidecar load**
@@ -1398,39 +1398,38 @@ Change to:
 Find `loadFamousSidecars()` (around line 656):
 
 ```ts
-      loadFamousSidecars()
-        .then((sc) => {
-          famousMeta = sc.meta;
-          famousXrefs = sc.xrefs;
-        })
-        .catch((err) => {
-          console.warn('[engine] famous sidecars failed to load:', err);
-        });
+loadFamousSidecars()
+  .then((sc) => {
+    famousMeta = sc.meta;
+    famousXrefs = sc.xrefs;
+  })
+  .catch((err) => {
+    console.warn('[engine] famous sidecars failed to load:', err);
+  });
 ```
 
 Change to:
 
 ```ts
-      loadFamousSidecars()
-        .then((sc) => {
-          famousMeta = sc.meta;
-          famousXrefs = sc.xrefs;
-          // No direct render-state change — the sidecars only feed
-          // hover-card text — but the famous-galaxy thumbnails
-          // referenced by these entries will now be enqueueable from
-          // the per-frame loop.  Wake one frame so the user sees the
-          // famous overlays without having to nudge the camera.
-          scheduler.requestRender();
-        })
-        .catch((err) => {
-          console.warn('[engine] famous sidecars failed to load:', err);
-        });
+loadFamousSidecars()
+  .then((sc) => {
+    famousMeta = sc.meta;
+    famousXrefs = sc.xrefs;
+    // No direct render-state change — the sidecars only feed
+    // hover-card text — but the famous-galaxy thumbnails
+    // referenced by these entries will now be enqueueable from
+    // the per-frame loop.  Wake one frame so the user sees the
+    // famous overlays without having to nudge the camera.
+    scheduler.requestRender();
+  })
+  .catch((err) => {
+    console.warn('[engine] famous sidecars failed to load:', err);
+  });
 ```
 
 - [ ] **Step 3: Wake on bitmap-fetch resolution**
 
-Find the `queue.enqueue({ ..., onResult: ... })` block (around line
-1228) inside the per-galaxy thumbnail loop:
+Find the `queue.enqueue({ ..., onResult: ... })` block (around line 1228) inside the per-galaxy thumbnail loop:
 
 ```ts
                   onResult: (bitmap) => {
@@ -1489,77 +1488,75 @@ predicate in `engine.ts` (the `stillAnimating = ...` line you wrote
 in Task 2 around line 1476):
 
 ```ts
-        const FADE_DURATION_MS = 400;
-        const fadeInProgress =
-          bitmapReadyTime.size > 0 &&
-          [...bitmapReadyTime.values()].some(
-            (t) => performance.now() - t < FADE_DURATION_MS,
-          );
-        const stillAnimating =
-          autoRotate ||
-          currentTween !== null ||
-          hasAnyAxis(latestSpaceMouseAxes) ||
-          queue.inFlightCount() > 0 ||
-          fadeInProgress;
-        if (stillAnimating) scheduler.requestRender();
+const FADE_DURATION_MS = 400;
+const fadeInProgress =
+  bitmapReadyTime.size > 0 &&
+  [...bitmapReadyTime.values()].some((t) => performance.now() - t < FADE_DURATION_MS);
+const stillAnimating =
+  autoRotate ||
+  currentTween !== null ||
+  hasAnyAxis(latestSpaceMouseAxes) ||
+  queue.inFlightCount() > 0 ||
+  fadeInProgress;
+if (stillAnimating) scheduler.requestRender();
 ```
 
 The `[...map.values()]` allocation is fine — `bitmapReadyTime` caps
 at the atlas slot count (256), so the iteration is < 256 numbers per
-frame and only runs while *some* fade is active.
+frame and only runs while _some_ fade is active.
 
 - [ ] **Step 4: Wake on Schechter / angular bake completion**
 
 Find the lazy bake calls in `setBiasMode` (around line 1614):
 
 ```ts
-      if (!wasSchechter && isSchechter && renderer) {
-        renderer.applySchechterMode().catch((err) => {
-          console.error('[engine] Schechter ratio bake failed:', err);
-        });
-      }
+if (!wasSchechter && isSchechter && renderer) {
+  renderer.applySchechterMode().catch((err) => {
+    console.error('[engine] Schechter ratio bake failed:', err);
+  });
+}
 ```
 
 Change to:
 
 ```ts
-      if (!wasSchechter && isSchechter && renderer) {
-        renderer
-          .applySchechterMode()
-          .then(() => {
-            // Weights are now in the GPU buffer; the next frame will
-            // pick them up.
-            scheduler.requestRender();
-          })
-          .catch((err) => {
-            console.error('[engine] Schechter ratio bake failed:', err);
-          });
-      }
+if (!wasSchechter && isSchechter && renderer) {
+  renderer
+    .applySchechterMode()
+    .then(() => {
+      // Weights are now in the GPU buffer; the next frame will
+      // pick them up.
+      scheduler.requestRender();
+    })
+    .catch((err) => {
+      console.error('[engine] Schechter ratio bake failed:', err);
+    });
+}
 ```
 
 And around line 1635:
 
 ```ts
-      if (!wasAngular && isAngular && renderer) {
-        renderer.applyAngularReweightMode().catch((err) => {
-          console.error('[engine] Angular re-weight bake failed:', err);
-        });
-      }
+if (!wasAngular && isAngular && renderer) {
+  renderer.applyAngularReweightMode().catch((err) => {
+    console.error('[engine] Angular re-weight bake failed:', err);
+  });
+}
 ```
 
 Change to:
 
 ```ts
-      if (!wasAngular && isAngular && renderer) {
-        renderer
-          .applyAngularReweightMode()
-          .then(() => {
-            scheduler.requestRender();
-          })
-          .catch((err) => {
-            console.error('[engine] Angular re-weight bake failed:', err);
-          });
-      }
+if (!wasAngular && isAngular && renderer) {
+  renderer
+    .applyAngularReweightMode()
+    .then(() => {
+      scheduler.requestRender();
+    })
+    .catch((err) => {
+      console.error('[engine] Angular re-weight bake failed:', err);
+    });
+}
 ```
 
 - [ ] **Step 5: Wake on pick readback resolution**
@@ -1577,20 +1574,20 @@ Find the click-pick block (around line 826):
 Change to:
 
 ```ts
-          pickRendererHandle
-            .pick(
-              [canvas.width, canvas.height],
-              cssToTexPx(xCss),
-              cssToTexPx(yCss),
-              visibleSources,
-              renderer.uniformBuffer,
-            )
-            .then((idx) => {
-              setSelected(idx === -1 ? null : idx);
-              // Selection changed — render so the highlight halo
-              // updates on the next frame.
-              scheduler.requestRender();
-            });
+pickRendererHandle
+  .pick(
+    [canvas.width, canvas.height],
+    cssToTexPx(xCss),
+    cssToTexPx(yCss),
+    visibleSources,
+    renderer.uniformBuffer,
+  )
+  .then((idx) => {
+    setSelected(idx === -1 ? null : idx);
+    // Selection changed — render so the highlight halo
+    // updates on the next frame.
+    scheduler.requestRender();
+  });
 ```
 
 Find the hover-pick block (around line 1458):
@@ -1609,31 +1606,31 @@ Find the hover-pick block (around line 1458):
 Change to:
 
 ```ts
-          pickRendererHandle!
-            .pick(
-              [canvas.width, canvas.height],
-              cssToTexPx(pos.x),
-              cssToTexPx(pos.y),
-              visibleSources,
-              renderer.uniformBuffer,
-            )
-            .then((idx) => {
-              const wasHovered = hoveredIndex;
-              setHovered(idx === -1 ? null : idx);
-              // Only schedule a render if hover actually changed —
-              // setHovered already short-circuits its callback in
-              // that case, but the engine's per-frame draw uses the
-              // `selectedIndex` uniform, NOT a hover one.  So a
-              // hover change does NOT actually require a re-render
-              // unless we want to update some hover-only visual.
-              // For now we DON'T have one (hover only feeds the
-              // InfoCard text), so skip the request to keep idle
-              // CPU at zero on mouse-over without click.
-              void wasHovered;
-            })
-            .finally(() => {
-              pickInFlight = false;
-            });
+pickRendererHandle!
+  .pick(
+    [canvas.width, canvas.height],
+    cssToTexPx(pos.x),
+    cssToTexPx(pos.y),
+    visibleSources,
+    renderer.uniformBuffer,
+  )
+  .then((idx) => {
+    const wasHovered = hoveredIndex;
+    setHovered(idx === -1 ? null : idx);
+    // Only schedule a render if hover actually changed —
+    // setHovered already short-circuits its callback in
+    // that case, but the engine's per-frame draw uses the
+    // `selectedIndex` uniform, NOT a hover one.  So a
+    // hover change does NOT actually require a re-render
+    // unless we want to update some hover-only visual.
+    // For now we DON'T have one (hover only feeds the
+    // InfoCard text), so skip the request to keep idle
+    // CPU at zero on mouse-over without click.
+    void wasHovered;
+  })
+  .finally(() => {
+    pickInFlight = false;
+  });
 ```
 
 (If a future task adds a hover halo, add `scheduler.requestRender();`
@@ -1728,6 +1725,7 @@ Pick a famous galaxy via Cmd+K. Same — smooth tween, then flat.
 - [ ] **Step 5: Profile SpaceMouse (skip if no hardware)**
 
 If a 3DConnexion puck is paired:
+
 - Touch the puck → loop runs at ~60 fps.
 - Release the puck → loop sleeps within one frame.
 
@@ -1767,7 +1765,7 @@ render-affecting state (mouse drag, wheel zoom, settings change,
 camera tween, image-queue completion, …) calls
 `scheduler.requestRender()`, which schedules exactly one rAF. Inside
 the frame body, after the GPU work is submitted, the tail re-schedules
-*only* when motion is in flight: `autoRotate`, an active camera
+_only_ when motion is in flight: `autoRotate`, an active camera
 tween, deflected SpaceMouse axes, pending thumbnail fetches, or
 recent thumbnail load-fade. Otherwise the loop pauses.
 
@@ -1788,7 +1786,7 @@ entry:
 - **`renderScheduler.ts` + `engine.ts` frame tail**: render-on-demand.
   `requestRender()` from event handlers wakes the loop; the frame body
   re-schedules only while `autoRotate || currentTween || hasAnyAxis ||
-  queue.inFlightCount > 0 || recent-fade` is true.
+queue.inFlightCount > 0 || recent-fade` is true.
 ```
 
 - [ ] **Step 3: Commit**
@@ -1865,7 +1863,7 @@ check after each commit:
 - **`attachOrbitControls` mutates `cam` directly** without firing any
   callback. Until Task 3 Step 1 introduces `onCameraChange`, the
   engine has no way to know the camera moved except by reading
-  `cam.yaw` etc. on every frame. This is *the* central reason
+  `cam.yaw` etc. on every frame. This is _the_ central reason
   render-on-demand is non-trivial in this codebase — the camera is a
   shared mutable POJO, not an event-emitting object.
 
@@ -1904,7 +1902,7 @@ check after each commit:
 - **`autoRotate` uses a fixed per-frame yaw delta**, not a wall-clock
   delta. With render-on-demand at irregular cadence (e.g. fade-in
   finishes mid-rotation, scheduler sleeps for 100 ms, then resumes),
-  the rotation will appear to *slow down* during sparse periods. This
+  the rotation will appear to _slow down_ during sparse periods. This
   is a pre-existing behavioural quirk, made more visible by render-
   on-demand. The user-facing fix is to convert the yaw advancement
   to wall-clock-based — out of scope for this plan, but worth

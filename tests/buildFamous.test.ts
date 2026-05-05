@@ -26,9 +26,9 @@ describe('findNearestPoint', () => {
     // the angular nearest.  We use different distances (1 Mpc vs 10 Mpc)
     // to confirm the match is based on sky direction, not Euclidean proximity.
     const cloud = makeCloud([
-      [10, 0, 0],   // index 0: +x, 10 Mpc
-      [1, 1, 0],    // index 1: 45° from +x in xy-plane, 1 Mpc
-      [-5, 0, 0],   // index 2: −x, 5 Mpc
+      [10, 0, 0], // index 0: +x, 10 Mpc
+      [1, 1, 0], // index 1: 45° from +x in xy-plane, 1 Mpc
+      [-5, 0, 0], // index 2: −x, 5 Mpc
     ]);
     // Query points nearly along [1, 1, 0] direction — 50000 arcsec ≈ 14°
     // threshold is wide enough to accept the ~0° match at index 1.

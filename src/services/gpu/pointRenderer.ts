@@ -502,9 +502,7 @@ function defaultWorkerRunner(
  * Transferable list).  The worker itself takes 1–2 s to chew through the
  * Schechter integral; the slice cost is in the noise.
  */
-function defaultSchechterWorkerRunner(
-  input: ComputeSchechterRatiosInput,
-): Promise<Float32Array> {
+function defaultSchechterWorkerRunner(input: ComputeSchechterRatiosInput): Promise<Float32Array> {
   return new Promise((resolve, reject) => {
     const worker = new ComputeSchechterRatiosWorker();
     worker.onmessage = (event: MessageEvent<Float32Array>) => {
@@ -513,10 +511,7 @@ function defaultSchechterWorkerRunner(
     };
     worker.onerror = (event: ErrorEvent) => {
       worker.terminate();
-      reject(
-        event.error ??
-          new Error(event.message ?? 'schechter-ratio worker error'),
-      );
+      reject(event.error ?? new Error(event.message ?? 'schechter-ratio worker error'));
     };
 
     // Slice-then-transfer the typed-array buffers (see the long comment
@@ -576,10 +571,7 @@ function defaultAngularWeightsWorkerRunner(
     };
     worker.onerror = (event: ErrorEvent) => {
       worker.terminate();
-      reject(
-        event.error ??
-          new Error(event.message ?? 'angular-weights worker error'),
-      );
+      reject(event.error ?? new Error(event.message ?? 'angular-weights worker error'));
     };
 
     // Slice-then-transfer the typed-array buffers (see the long comment on
@@ -809,9 +801,8 @@ export class PointRenderer {
    * `PointRenderer.setSchechterRatioRunner(...)`.  Same pattern as
    * `setBuildBufferRunner` for the main bake.
    */
-  private static schechterRunner: (
-    input: ComputeSchechterRatiosInput,
-  ) => Promise<Float32Array> = defaultSchechterWorkerRunner;
+  private static schechterRunner: (input: ComputeSchechterRatiosInput) => Promise<Float32Array> =
+    defaultSchechterWorkerRunner;
 
   /**
    * Override the Schechter-ratio runner — used by tests that can't load the
@@ -819,9 +810,7 @@ export class PointRenderer {
    * `computeSchechterRatios` directly, or `null` to restore the default.
    */
   static setSchechterRatioRunner(
-    runner:
-      | ((input: ComputeSchechterRatiosInput) => Promise<Float32Array>)
-      | null,
+    runner: ((input: ComputeSchechterRatiosInput) => Promise<Float32Array>) | null,
   ): void {
     PointRenderer.schechterRunner = runner ?? defaultSchechterWorkerRunner;
   }
@@ -832,9 +821,8 @@ export class PointRenderer {
    * synchronous in-process runner via `setAngularWeightRunner(...)`.  Same
    * pattern as `setSchechterRatioRunner`.
    */
-  private static angularRunner: (
-    input: ComputeAngularWeightsInput,
-  ) => Promise<Float32Array> = defaultAngularWeightsWorkerRunner;
+  private static angularRunner: (input: ComputeAngularWeightsInput) => Promise<Float32Array> =
+    defaultAngularWeightsWorkerRunner;
 
   /**
    * Override the angular-reweight runner — used by tests that can't load
@@ -842,9 +830,7 @@ export class PointRenderer {
    * pure `computeAngularWeights` directly, or `null` to restore the default.
    */
   static setAngularWeightRunner(
-    runner:
-      | ((input: ComputeAngularWeightsInput) => Promise<Float32Array>)
-      | null,
+    runner: ((input: ComputeAngularWeightsInput) => Promise<Float32Array>) | null,
   ): void {
     PointRenderer.angularRunner = runner ?? defaultAngularWeightsWorkerRunner;
   }
@@ -1065,8 +1051,9 @@ export class PointRenderer {
     // is actively viewing mode 3, since the shader's `select(1.0, …, mode==3)`
     // gate makes the slot irrelevant in modes 0/1/2.  See the
     // `BuildPointInterleavedBufferMode` doc for the trade-off.
-    const mode: BuildPointInterleavedBufferMode =
-      this.schechterModeActive ? 'with-schechter' : 'fast';
+    const mode: BuildPointInterleavedBufferMode = this.schechterModeActive
+      ? 'with-schechter'
+      : 'fast';
     const result = await PointRenderer.runBuild({
       cloud,
       source,
@@ -1341,10 +1328,7 @@ export class PointRenderer {
    * stride math.  The caller is responsible for the subsequent
    * `writeBuffer` upload to the GPU.
    */
-  private spliceSchechterIntoMirror(
-    entry: LoadedSource,
-    ratios: Float32Array,
-  ): void {
+  private spliceSchechterIntoMirror(entry: LoadedSource, ratios: Float32Array): void {
     for (let i = 0; i < entry.count; i++) {
       entry.interleaved[i * SLOTS_PER_POINT + 11] = ratios[i]!;
     }
@@ -1449,10 +1433,7 @@ export class PointRenderer {
    * (length = entry.count) into slot 12 of every row of the entry's
    * interleaved mirror.  Mirror of `spliceSchechterIntoMirror`.
    */
-  private spliceAngularIntoMirror(
-    entry: LoadedSource,
-    weights: Float32Array,
-  ): void {
+  private spliceAngularIntoMirror(entry: LoadedSource, weights: Float32Array): void {
     for (let i = 0; i < entry.count; i++) {
       entry.interleaved[i * SLOTS_PER_POINT + 12] = weights[i]!;
     }
@@ -1656,12 +1637,12 @@ export class PointRenderer {
     f32[24] = camPosWorld[0]; // bytes 96..99
     f32[25] = camPosWorld[1]; // bytes 100..103
     f32[26] = camPosWorld[2]; // bytes 104..107
-    f32[27] = pxPerRad;       // bytes 108..111
+    f32[27] = pxPerRad; // bytes 108..111
     // Task 15 — orientation-visibility toggles.  Two u32 booleans + 2 u32
     // padding rounding the struct to 128 bytes.  See UNIFORM_BYTES doc above.
     u32[28] = highlightFallback ? 1 : 0; // bytes 112..115
-    u32[29] = realOnlyMode      ? 1 : 0; // bytes 116..119
-    u32[30] = depthFadeEnabled  ? 1 : 0; // bytes 120..123  depthFadeEnabled (formerly _pad3)
+    u32[29] = realOnlyMode ? 1 : 0; // bytes 116..119
+    u32[30] = depthFadeEnabled ? 1 : 0; // bytes 120..123  depthFadeEnabled (formerly _pad3)
     // u32[31] (_pad4) stays zero.
 
     // Malmquist-bias correction state (Task 2 of the malmquist-bias plan).
@@ -1672,11 +1653,11 @@ export class PointRenderer {
     // is masked with `>>> 0` to coerce the JS number to an unsigned 32-bit
     // value (defensive — `BiasMode` only has 0..3 but a future caller might
     // pass something via `setBiasMode`).
-    u32[32] = biasMode >>> 0;       // bytes 128..131  biasMode
-    f32[33] = absMagLimit;          // bytes 132..135  absMagLimit
-    f32[34] = apparentMagLimit;     // bytes 136..139  apparentMagLimit (Task 3)
-    f32[35] = schechterMStar;       // bytes 140..143  schechterMStar   (Task 4)
-    f32[36] = schechterAlpha;       // bytes 144..147  schechterAlpha   (Task 4)
+    u32[32] = biasMode >>> 0; // bytes 128..131  biasMode
+    f32[33] = absMagLimit; // bytes 132..135  absMagLimit
+    f32[34] = apparentMagLimit; // bytes 136..139  apparentMagLimit (Task 3)
+    f32[35] = schechterMStar; // bytes 140..143  schechterMStar   (Task 4)
+    f32[36] = schechterAlpha; // bytes 144..147  schechterAlpha   (Task 4)
     // u32[37..39] (_pad5/_pad6/_pad7) stay zero — they round the struct
     // out to a 16-byte boundary so a future vec3/vec4 append doesn't
     // silently break alignment.
@@ -1689,8 +1670,8 @@ export class PointRenderer {
     // 16-byte boundary, matching the WGSL struct's `_padFade0/1` fields.
     // The pads stay zero (Float32Array starts zero-initialised; we
     // don't write them, so they're already 0.0).
-    f32[40] = pxFadeStart;          // bytes 160..163  pxFadeStart
-    f32[41] = pxFadeEnd;            // bytes 164..167  pxFadeEnd
+    f32[40] = pxFadeStart; // bytes 160..163  pxFadeStart
+    f32[41] = pxFadeEnd; // bytes 164..167  pxFadeEnd
     // f32[42] / f32[43] (_padFade0 / _padFade1) stay zero.
 
     this.device.queue.writeBuffer(this.uniformBuffer_internal, 0, buf);

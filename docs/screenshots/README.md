@@ -1,7 +1,7 @@
 # Screenshots
 
 This directory holds PNGs / GIFs embedded in the top-level
-[`README.md`](../../README.md).  The captures themselves are added by
+[`README.md`](../../README.md). The captures themselves are added by
 hand — this file is a checklist of what to capture and roughly what
 each shot should show.
 
@@ -11,13 +11,13 @@ Suggested file names and naming convention: lower-case kebab,
 ## Captures to record
 
 - [ ] `synthetic-data.png` — first launch with no `.bin` files, showing
-      the 100,000-galaxy synthetic-sphere fallback.  Demonstrates that
+      the 100,000-galaxy synthetic-sphere fallback. Demonstrates that
       the renderer works end-to-end without any data setup.
 - [ ] `sdss-only.png` — single-survey workflow with just
-      `public/data/sdss.bin` present.  Show the SDSS wedge with the Sloan
-      Great Wall visible.  Settings panel should confirm only SDSS is on.
+      `public/data/sdss.bin` present. Show the SDSS wedge with the Sloan
+      Great Wall visible. Settings panel should confirm only SDSS is on.
 - [ ] `all-three-surveys.png` — SDSS + 2MRS + GLADE all loaded and
-      rendered together.  Camera positioned to show how 2MRS fills the
+      rendered together. Camera positioned to show how 2MRS fills the
       local volume and GLADE fills outside the SDSS footprint.
 - [ ] `zoomed-thumbnail-infocard.png` — close approach to a famous
       galaxy (M31, M51, NGC 5128 — anything with a curated thumbnail).
@@ -32,7 +32,7 @@ Suggested file names and naming convention: lower-case kebab,
 ## Optional extras
 
 - [ ] `hero.gif` — short (~5 s) animated capture for the top-of-README
-      placeholder.  Camera orbit + a focus tween onto a galaxy works
+      placeholder. Camera orbit + a focus tween onto a galaxy works
       well as a hero shot.
 - [ ] `command-palette.png` — Cmd+K / Ctrl+K palette open with
       famous-galaxy results.

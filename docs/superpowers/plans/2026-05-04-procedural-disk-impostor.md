@@ -10,20 +10,21 @@
 
 **Locked design decisions** (settled with the user before plan-write):
 
-| Question | Decision |
-|---|---|
-| Activation threshold | `px > 12` with smooth crossfade across 8–14 px band |
-| Brightness profile | Gaussian bulge + exponential disk (two-component) |
-| Colour | Colour-index ramp drives base hue; bulge mixes warmer (`vec3(1.0, 0.6, 0.4)`); disk mixes cooler (`vec3(0.7, 0.85, 1.0)`) |
-| Pipeline placement | New sibling renderer (option a) — parallel to `diskRenderer`, no shared code path |
-| Interaction with point pass | Crossfade-only across 8–14 px — point alpha fades out, disk alpha fades in; below 8 px only point, above 14 px only disk |
-| Camera-roll behaviour | Fully world-oriented — disk plane is real 3D; camera roll rotates disks with the world; orbiting changes apparent inclination |
+| Question                    | Decision                                                                                                                      |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Activation threshold        | `px > 12` with smooth crossfade across 8–14 px band                                                                           |
+| Brightness profile          | Gaussian bulge + exponential disk (two-component)                                                                             |
+| Colour                      | Colour-index ramp drives base hue; bulge mixes warmer (`vec3(1.0, 0.6, 0.4)`); disk mixes cooler (`vec3(0.7, 0.85, 1.0)`)     |
+| Pipeline placement          | New sibling renderer (option a) — parallel to `diskRenderer`, no shared code path                                             |
+| Interaction with point pass | Crossfade-only across 8–14 px — point alpha fades out, disk alpha fades in; below 8 px only point, above 14 px only disk      |
+| Camera-roll behaviour       | Fully world-oriented — disk plane is real 3D; camera roll rotates disks with the world; orbiting changes apparent inclination |
 
 ---
 
 ## File Structure
 
 **Create:**
+
 - `src/services/gpu/proceduralDiskRenderer.ts` — render pipeline + draw method.
 - `src/services/gpu/shaders/proceduralDisks.wgsl` — vertex (3D quad) + fragment (procedural profile).
 - `src/utils/math/galaxyProfile.ts` — pure profile math (`bulgeBrightness`, `diskBrightness`, `combinedBrightness`). Tested in isolation.
@@ -32,6 +33,7 @@
 - `tests/services/gpu/proceduralDiskRenderer.test.ts` (smoke test of pipeline construction; visual correctness verified manually).
 
 **Modify:**
+
 - `src/services/gpu/shaders/points.wgsl` — fragment-stage alpha fade-out across 8–14 px so the screen-aligned billboard crossfades into the procedural disk.
 - `src/services/engine/thumbnailSubsystem.ts` — per-frame loop emits procedural-disk instances alongside the existing `quads` / `disks` arrays; the post-refactor per-frame quad/disk collection lives here, not in `engine.ts`.
 - `src/services/engine/engine.ts` — constructs the new `ProceduralDiskRenderer` next to the existing `DiskRenderer` and hands it into `thumbnails.bindToRenderers(...)`; passes crossfade-band constants to the points pass via the existing per-frame uniform path.
@@ -230,11 +232,7 @@ export function diskBrightness(r: number): number {
  * Returns values in [0, bulgeWeight + diskWeight] (typically [0, 1] when
  * the weights sum to 1).
  */
-export function combinedBrightness(
-  r: number,
-  bulgeWeight: number,
-  diskWeight: number,
-): number {
+export function combinedBrightness(r: number, bulgeWeight: number, diskWeight: number): number {
   return bulgeBrightness(r) * bulgeWeight + diskBrightness(r) * diskWeight;
 }
 ```
@@ -254,6 +252,7 @@ export * from './galaxyProfile';
 ```
 
 Run typecheck:
+
 ```
 npx tsc --noEmit
 ```
@@ -261,6 +260,7 @@ npx tsc --noEmit
 Expected: clean.
 
 Commit:
+
 ```bash
 git add src/utils/math/galaxyProfile.ts src/utils/math/index.ts tests/utils/math/galaxyProfile.test.ts
 git commit -m "feat(math): galaxyProfile helpers (bulge + disk Sérsic-like brightness)"
@@ -274,7 +274,7 @@ git commit -m "feat(math): galaxyProfile helpers (bulge + disk Sérsic-like brig
 
 - Create: `src/@types/ProceduralDiskInstance.d.ts`
 
-The vertex-buffer record passed to the new renderer.  Mirrors the existing `DiskInstance` type but **without** the texture UV rect (no atlas sampling).
+The vertex-buffer record passed to the new renderer. Mirrors the existing `DiskInstance` type but **without** the texture UV rect (no atlas sampling).
 
 - [x] **Step 1: Create the type definition**
 
@@ -330,7 +330,7 @@ export type ProceduralDiskInstance = {
 
 - [x] **Step 2: Define the band constants in a co-located place**
 
-The constants live where the engine emits instances — `src/services/engine/engine.ts`.  At module top, near the existing `APPARENT_SIZE_THRESHOLD_PX = 24`, add:
+The constants live where the engine emits instances — `src/services/engine/engine.ts`. At module top, near the existing `APPARENT_SIZE_THRESHOLD_PX = 24`, add:
 
 ```ts
 /**
@@ -365,7 +365,7 @@ const PROCEDURAL_DISK_FADE_END_PX = 14;
 
 Run: `npx tsc --noEmit`
 
-Expected: clean.  Nothing imports the new type yet — this just confirms the declaration parses.
+Expected: clean. Nothing imports the new type yet — this just confirms the declaration parses.
 
 - [x] **Step 4: Commit**
 
@@ -382,11 +382,11 @@ git commit -m "feat(types): ProceduralDiskInstance + crossfade band constants"
 
 - Create: `src/services/gpu/shaders/proceduralDisks.wgsl`
 
-The vertex stage is structurally identical to the existing `disks.wgsl` — same orientation math.  Differs only in: no atlas binding, no UV outputs, includes a varying for `colourIndex` and `crossfadeAlpha`.
+The vertex stage is structurally identical to the existing `disks.wgsl` — same orientation math. Differs only in: no atlas binding, no UV outputs, includes a varying for `colourIndex` and `crossfadeAlpha`.
 
 - [x] **Step 1: Read the existing diskRenderer vertex stage as reference**
 
-Read `src/services/gpu/shaders/disks.wgsl` lines 1–180 (vertex stage + shared structs).  The geometry math (constructing the disk-plane basis from `axisRatio` and `positionAngleDeg`, then projecting corners through `viewProj`) is what we reuse verbatim.
+Read `src/services/gpu/shaders/disks.wgsl` lines 1–180 (vertex stage + shared structs). The geometry math (constructing the disk-plane basis from `axisRatio` and `positionAngleDeg`, then projecting corners through `viewProj`) is what we reuse verbatim.
 
 - [x] **Step 2: Write the new shader**
 
@@ -534,7 +534,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
 
 - [x] **Step 3: Typecheck (no-op for WGSL)**
 
-The shader is loaded as a string at runtime; there's no compile-time check yet.  Skip; we'll validate when the renderer is wired up in Task 6.
+The shader is loaded as a string at runtime; there's no compile-time check yet. Skip; we'll validate when the renderer is wired up in Task 6.
 
 - [x] **Step 4: Commit (vertex-only stub — fragment fills in later)**
 
@@ -554,7 +554,7 @@ Don't commit yet — we'll write the fragment stage next and commit them togethe
 
 - Modify: `src/services/gpu/shaders/proceduralDisks.wgsl` (append `@fragment fn fs`).
 
-The procedural shading.  Reads `in.uv` (disk-local in [-1,1]²), computes radial distance, applies the two-component profile, modulates by colour index, multiplies by crossfade alpha, returns RGBA.
+The procedural shading. Reads `in.uv` (disk-local in [-1,1]²), computes radial distance, applies the two-component profile, modulates by colour index, multiplies by crossfade alpha, returns RGBA.
 
 - [x] **Step 1: Append the fragment stage**
 
@@ -637,7 +637,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
 ```
 
 > NB: the long `tintedRgb` form above is for explanation; we ship the
-> shorter `tinted` form.  Delete the `let tintedRgb = …` block before
+> shorter `tinted` form. Delete the `let tintedRgb = …` block before
 > committing — it's there only to make the math obvious to a reader.
 
 - [x] **Step 2: Commit (vertex + fragment together)**
@@ -656,11 +656,11 @@ git commit -m "feat(gpu): proceduralDisks.wgsl — 3D-oriented bulge+disk impost
 - Create: `src/services/gpu/proceduralDiskRenderer.ts`
 - Create: `tests/services/gpu/proceduralDiskRenderer.test.ts` (smoke test only)
 
-Wraps the shader in a render pipeline.  Closely mirrors `diskRenderer.ts` minus the texture-binding plumbing; the shader's `Uniforms` struct matches what the engine already passes to the disks pass, so we can reuse the same buffer.
+Wraps the shader in a render pipeline. Closely mirrors `diskRenderer.ts` minus the texture-binding plumbing; the shader's `Uniforms` struct matches what the engine already passes to the disks pass, so we can reuse the same buffer.
 
 - [x] **Step 1: Read diskRenderer.ts as reference**
 
-Open `src/services/gpu/diskRenderer.ts`.  Note:
+Open `src/services/gpu/diskRenderer.ts`. Note:
 
 - The class takes `{ device, context, format, canvas }` in its constructor.
 - It builds a uniform buffer + bind group layout + pipeline once.
@@ -689,7 +689,7 @@ import wgsl from './shaders/proceduralDisks.wgsl?raw';
 import type { ProceduralDiskInstance } from '../../@types/ProceduralDiskInstance';
 
 const STRIDE_FLOATS = 12; // 3 vec4<f32> per instance
-const STRIDE_BYTES  = STRIDE_FLOATS * 4;
+const STRIDE_BYTES = STRIDE_FLOATS * 4;
 
 type Init = {
   device: GPUDevice;
@@ -749,7 +749,7 @@ export class ProceduralDiskRenderer {
             arrayStride: STRIDE_BYTES,
             stepMode: 'instance',
             attributes: [
-              { shaderLocation: 0, offset: 0,  format: 'float32x4' }, // posSize
+              { shaderLocation: 0, offset: 0, format: 'float32x4' }, // posSize
               { shaderLocation: 1, offset: 16, format: 'float32x4' }, // orientation
               { shaderLocation: 2, offset: 32, format: 'float32x4' }, // extras
             ],
@@ -837,14 +837,14 @@ export class ProceduralDiskRenderer {
     // Pack uniforms (mat4 + vec2 + 2*f32 + vec3 + f32 = 96 bytes).
     const uniforms = new ArrayBuffer(96);
     const u32f = new Float32Array(uniforms);
-    u32f.set(viewProj, 0);            // 0..63
-    u32f[16] = viewport[0];           // 64..67
-    u32f[17] = viewport[1];           // 68..71
+    u32f.set(viewProj, 0); // 0..63
+    u32f[16] = viewport[0]; // 64..67
+    u32f[17] = viewport[1]; // 68..71
     // 72..79 padding
-    u32f[20] = camPosWorld[0];        // 80..83
-    u32f[21] = camPosWorld[1];        // 84..87
-    u32f[22] = camPosWorld[2];        // 88..91
-    u32f[23] = pxPerRad;              // 92..95
+    u32f[20] = camPosWorld[0]; // 80..83
+    u32f[21] = camPosWorld[1]; // 84..87
+    u32f[22] = camPosWorld[2]; // 88..91
+    u32f[23] = pxPerRad; // 92..95
     this.device.queue.writeBuffer(this.uniformBuffer, 0, uniforms);
 
     pass.setPipeline(this.pipeline);
@@ -885,6 +885,7 @@ describe('ProceduralDiskRenderer', () => {
 - [x] **Step 4: Run typecheck + tests**
 
 Run:
+
 ```
 npx tsc --noEmit
 npx vitest run tests/services/gpu/proceduralDiskRenderer.test.ts
@@ -912,14 +913,14 @@ git commit -m "feat(gpu): ProceduralDiskRenderer pipeline + draw method"
 
 After the engine refactor (Phases 1–5), the per-frame quad/disk collection
 loop no longer lives in `engine.ts` — it moved into
-`thumbnailSubsystem.runFrame()`.  That's where the existing `quads` and
+`thumbnailSubsystem.runFrame()`. That's where the existing `quads` and
 `disks` arrays are populated, sorted by camera distance, and passed to
-the per-renderer `draw()` calls.  The procedural-disk integration must
+the per-renderer `draw()` calls. The procedural-disk integration must
 slot in alongside those, NOT in `engine.ts`'s own per-frame body.
 
 `engine.ts` still owns renderer **construction** (it's where the GPU
 device lives) and calls `thumbnails.bindToRenderers(quadRenderer,
-diskRenderer)` to hand the renderers into the subsystem.  We extend
+diskRenderer)` to hand the renderers into the subsystem. We extend
 `bindToRenderers` to accept the new renderer the same way.
 
 The existing pattern in `engine.ts` (around line 572-586):
@@ -968,7 +969,7 @@ bindToRenderers(
 ): void;
 ```
 
-Stash the new renderer in the same closure pattern the existing renderers use (a module-private `let` set inside `bindToRenderers` and read inside `runFrame`).  Add the import for `ProceduralDiskRenderer` from `../gpu/proceduralDiskRenderer` at the top of the file.
+Stash the new renderer in the same closure pattern the existing renderers use (a module-private `let` set inside `bindToRenderers` and read inside `runFrame`). Add the import for `ProceduralDiskRenderer` from `../gpu/proceduralDiskRenderer` at the top of the file.
 
 - [x] **Step 3: Add the `proceduralDisks` instance bucket inside `runFrame`**
 
@@ -984,21 +985,18 @@ const proceduralDisks: ProceduralDiskInstance[] = [];
 
 - [x] **Step 4: Lower the outer apparent-size gate**
 
-The per-cloud loop currently bails out at `px < APPARENT_SIZE_THRESHOLD_PX` (24).  We need to enter the loop body for any galaxy above 8 px so we can emit a procedural-disk instance even when the textured-disk path won't fire.  Find the early-`continue` on apparent size inside `runFrame` and change:
+The per-cloud loop currently bails out at `px < APPARENT_SIZE_THRESHOLD_PX` (24). We need to enter the loop body for any galaxy above 8 px so we can emit a procedural-disk instance even when the textured-disk path won't fire. Find the early-`continue` on apparent size inside `runFrame` and change:
 
 ```ts
 // Old (the existing px gate inside the per-cloud loop):
 if (cloudSource !== Source.Famous && px < APPARENT_SIZE_THRESHOLD_PX) continue;
 
 // New:
-const minPxForLoopEntry = Math.min(
-  APPARENT_SIZE_THRESHOLD_PX,
-  PROCEDURAL_DISK_FADE_START_PX,
-);
+const minPxForLoopEntry = Math.min(APPARENT_SIZE_THRESHOLD_PX, PROCEDURAL_DISK_FADE_START_PX);
 if (cloudSource !== Source.Famous && px < minPxForLoopEntry) continue;
 ```
 
-The bitmap-fetch enqueue block — and the `quads.push(...)` / `disks.push(...)` calls that depend on a real bitmap — should STILL gate on `APPARENT_SIZE_THRESHOLD_PX = 24`, otherwise we'd swamp the priority queue with fetch requests for every barely-visible galaxy.  Wrap the bitmap-and-quad/disk-push section in:
+The bitmap-fetch enqueue block — and the `quads.push(...)` / `disks.push(...)` calls that depend on a real bitmap — should STILL gate on `APPARENT_SIZE_THRESHOLD_PX = 24`, otherwise we'd swamp the priority queue with fetch requests for every barely-visible galaxy. Wrap the bitmap-and-quad/disk-push section in:
 
 ```ts
 if (px >= APPARENT_SIZE_THRESHOLD_PX) {
@@ -1015,16 +1013,22 @@ After the bitmap-and-quad/disk branch above, add the procedural-disk emission:
 // instance, regardless of texture availability.  The crossfade alpha
 // gives a smooth handoff from the points pass below 14 px.
 if (px > PROCEDURAL_DISK_FADE_START_PX && Number.isFinite(ar) && Number.isFinite(pa)) {
-  const t = Math.min(1, Math.max(0,
-    (px - PROCEDURAL_DISK_FADE_START_PX) /
-    (PROCEDURAL_DISK_FADE_END_PX - PROCEDURAL_DISK_FADE_START_PX),
-  ));
+  const t = Math.min(
+    1,
+    Math.max(
+      0,
+      (px - PROCEDURAL_DISK_FADE_START_PX) /
+        (PROCEDURAL_DISK_FADE_END_PX - PROCEDURAL_DISK_FADE_START_PX),
+    ),
+  );
   // Smoothstep — same shape as WGSL's smoothstep so the point-pass
   // fade-out (which uses smoothstep on the same px values) and this
   // fade-in stay perfectly complementary.
   const crossfadeAlpha = t * t * (3 - 2 * t);
   proceduralDisks.push({
-    x, y, z,
+    x,
+    y,
+    z,
     sizeWorldMpc,
     axisRatio: ar,
     positionAngleDeg: pa,
@@ -1036,7 +1040,7 @@ if (px > PROCEDURAL_DISK_FADE_START_PX && Number.isFinite(ar) && Number.isFinite
 
 - [x] **Step 6: Sort + issue the draw call alongside disks/quads**
 
-The existing back-to-front sort and the two `.draw()` calls live around lines 586-607 of `thumbnailSubsystem.ts`.  Add the third pass alongside them:
+The existing back-to-front sort and the two `.draw()` calls live around lines 586-607 of `thumbnailSubsystem.ts`. Add the third pass alongside them:
 
 ```ts
 quads.sort(cmpFar);
@@ -1066,6 +1070,7 @@ if (proceduralDisks.length > 0) {
 - [x] **Step 7: Typecheck + tests**
 
 Run:
+
 ```
 npm run typecheck
 npm test -- --run
@@ -1075,9 +1080,9 @@ Expected: typecheck clean; all tests pass.
 
 - [x] **Step 8: Manual visual verification**
 
-The dev server has HMR, so a save should suffice — but a hard reload is safer for shader changes.  Find a galaxy that's a small dot (~10 px) and zoom in.  As it grows past 8 px the procedural disk should fade in; past 14 px the point billboard should be invisible.  Most spirals should look 3D-tilted.
+The dev server has HMR, so a save should suffice — but a hard reload is safer for shader changes. Find a galaxy that's a small dot (~10 px) and zoom in. As it grows past 8 px the procedural disk should fade in; past 14 px the point billboard should be invisible. Most spirals should look 3D-tilted.
 
-If everything's broken (black screen, error in devtools console), most likely cause: WGSL compile error.  Check the dev tools console for the WebGPU validation message and grep for the offending line.
+If everything's broken (black screen, error in devtools console), most likely cause: WGSL compile error. Check the dev tools console for the WebGPU validation message and grep for the offending line.
 
 - [x] **Step 9: Commit**
 
@@ -1100,7 +1105,7 @@ So the point billboard fades out from 8 → 14 px, complementary to the disk's f
 
 - [x] **Step 1: Extend the points uniform struct**
 
-In `src/services/gpu/shaders/points.wgsl`, find the existing `struct Uniforms` and add at the end (before the closing brace).  The struct currently ends with the Schechter / Malmquist block whose final field is `_pad5: u32` at byte offset 156, total size 160.  Append the new fade-band fields right after:
+In `src/services/gpu/shaders/points.wgsl`, find the existing `struct Uniforms` and add at the end (before the closing brace). The struct currently ends with the Schechter / Malmquist block whose final field is `_pad5: u32` at byte offset 156, total size 160. Append the new fade-band fields right after:
 
 ```wgsl
   // Procedural-disk crossfade band, in apparent-pixels.  When a
@@ -1119,11 +1124,11 @@ In `src/services/gpu/shaders/points.wgsl`, find the existing `struct Uniforms` a
   _padFade1: f32,
 ```
 
-The struct grows from 160 → 176 bytes (4 × f32 = 16 bytes appended at offsets 160..176).  Update the struct alignment comment at the top of the WGSL file accordingly, and grow `UNIFORM_BYTES` in `pointRenderer.ts` (currently `160`) to `176`.
+The struct grows from 160 → 176 bytes (4 × f32 = 16 bytes appended at offsets 160..176). Update the struct alignment comment at the top of the WGSL file accordingly, and grow `UNIFORM_BYTES` in `pointRenderer.ts` (currently `160`) to `176`.
 
 - [x] **Step 2: Wire the new fields into the JS-side uniform packing**
 
-In `pointRenderer.ts`, find the existing uniform packing (`const UNIFORM_BYTES = 160`).  Bump it:
+In `pointRenderer.ts`, find the existing uniform packing (`const UNIFORM_BYTES = 160`). Bump it:
 
 ```ts
 const UNIFORM_BYTES = 176;
@@ -1135,7 +1140,7 @@ f32[40] = pxFadeStart;
 f32[41] = pxFadeEnd;
 ```
 
-**Verify before writing**: re-derive the f32-index from the byte offset using the actual current uniform layout in `pointRenderer.ts` — the layout has shifted across feature work and the source is the source of truth.  The byte offsets 160 / 164 are correct for the post-Malmquist 160-byte layout; if anything has changed in between, recompute.
+**Verify before writing**: re-derive the f32-index from the byte offset using the actual current uniform layout in `pointRenderer.ts` — the layout has shifted across feature work and the source is the source of truth. The byte offsets 160 / 164 are correct for the post-Malmquist 160-byte layout; if anything has changed in between, recompute.
 
 Add the two parameters to `draw()`'s signature:
 
@@ -1154,7 +1159,7 @@ In the engine's points-renderer.draw call, pass `PROCEDURAL_DISK_FADE_START_PX` 
 
 - [x] **Step 4: Apply the fade-out in the fragment shader**
 
-In points.wgsl's `fs` (the visual fragment, not `fsPick`), the alpha computation now flows through several stages — the original `let alpha = exp(-r2 * 4.0)` followed by `alpha = alpha * schechterAlpha_`, `alpha = alpha * angWeight`, and `alpha = alpha * in.depthFade`, before the final `return vec4<f32>(rgb * alpha, alpha)`.  We multiply one more factor in at the end:
+In points.wgsl's `fs` (the visual fragment, not `fsPick`), the alpha computation now flows through several stages — the original `let alpha = exp(-r2 * 4.0)` followed by `alpha = alpha * schechterAlpha_`, `alpha = alpha * angWeight`, and `alpha = alpha * in.depthFade`, before the final `return vec4<f32>(rgb * alpha, alpha)`. We multiply one more factor in at the end:
 
 ```wgsl
 // Fade out as the procedural-disk pass takes over.  Smoothstep over
@@ -1173,13 +1178,13 @@ let pointAlphaMult = 1.0 - fadeT * fadeT * (3.0 - 2.0 * fadeT);
 alpha = alpha * pointAlphaMult;
 ```
 
-Apply this immediately before the existing `return vec4<f32>(rgb * alpha, alpha);` at the end of the normal-disk path.  The fade chains in after the Schechter / angular / depth-fade multiplications, which is the correct ordering — depth fade and Schechter modulate the point's intrinsic brightness; the procedural-disk crossfade modulates whether we're rendering the point pass at all in this px band.
+Apply this immediately before the existing `return vec4<f32>(rgb * alpha, alpha);` at the end of the normal-disk path. The fade chains in after the Schechter / angular / depth-fade multiplications, which is the correct ordering — depth fade and Schechter modulate the point's intrinsic brightness; the procedural-disk crossfade modulates whether we're rendering the point pass at all in this px band.
 
 - [x] **Step 5: Forward `sizePx` from the vertex shader**
 
-`sizePx` is **already computed** in the vertex stage at points.wgsl ~line 782 (`let sizePx = max(u.pointSizePx, apparentPxRadius);`).  We just need to forward it through VSOut.
+`sizePx` is **already computed** in the vertex stage at points.wgsl ~line 782 (`let sizePx = max(u.pointSizePx, apparentPxRadius);`). We just need to forward it through VSOut.
 
-VSOut location numbering note: locations 0–12 + 15 are currently in use after recent changes (the per-vertex bake of paCs/paSn/depthFade put paSn at @location(15) for ABI continuity).  Use **`@location(13)`** for `sizePx` — that's the next free slot.
+VSOut location numbering note: locations 0–12 + 15 are currently in use after recent changes (the per-vertex bake of paCs/paSn/depthFade put paSn at @location(15) for ABI continuity). Use **`@location(13)`** for `sizePx` — that's the next free slot.
 
 ```wgsl
 struct VSOut {
@@ -1221,7 +1226,7 @@ git commit -m "feat(points): smoothstep alpha fade-out across procedural-disk ba
 
 - Create: `tests/services/engine/proceduralDiskEmission.test.ts`
 
-A focused unit test: given a fixture cloud + fake camera, the per-frame loop emits the expected list of `ProceduralDiskInstance` objects.  The trick: the per-frame loop in `thumbnailSubsystem.ts` is deeply embedded in the subsystem factory and not directly testable.  We don't unit-test the whole subsystem; we extract the per-galaxy emission logic into a pure helper that lives at module scope and call it both from the runtime path and the test.
+A focused unit test: given a fixture cloud + fake camera, the per-frame loop emits the expected list of `ProceduralDiskInstance` objects. The trick: the per-frame loop in `thumbnailSubsystem.ts` is deeply embedded in the subsystem factory and not directly testable. We don't unit-test the whole subsystem; we extract the per-galaxy emission logic into a pure helper that lives at module scope and call it both from the runtime path and the test.
 
 - [x] **Step 1: Extract the emission logic to a pure helper**
 
@@ -1232,7 +1237,9 @@ export function maybeEmitProceduralDisk(
   px: number,
   ar: number,
   pa: number,
-  x: number, y: number, z: number,
+  x: number,
+  y: number,
+  z: number,
   sizeWorldMpc: number,
   colourIndex: number,
   fadeStartPx: number,
@@ -1242,7 +1249,16 @@ export function maybeEmitProceduralDisk(
   if (!Number.isFinite(ar) || !Number.isFinite(pa)) return null;
   const t = Math.min(1, Math.max(0, (px - fadeStartPx) / (fadeEndPx - fadeStartPx)));
   const crossfadeAlpha = t * t * (3 - 2 * t);
-  return { x, y, z, sizeWorldMpc, axisRatio: ar, positionAngleDeg: pa, colourIndex, crossfadeAlpha };
+  return {
+    x,
+    y,
+    z,
+    sizeWorldMpc,
+    axisRatio: ar,
+    positionAngleDeg: pa,
+    colourIndex,
+    crossfadeAlpha,
+  };
 }
 ```
 
@@ -1258,7 +1274,9 @@ import { maybeEmitProceduralDisk } from '../../../src/services/engine/engine';
 
 describe('maybeEmitProceduralDisk', () => {
   const base = {
-    x: 1, y: 2, z: 3,
+    x: 1,
+    y: 2,
+    z: 3,
     sizeWorldMpc: 0.03,
     colourIndex: 1.0,
     fadeStartPx: 8,
@@ -1266,31 +1284,97 @@ describe('maybeEmitProceduralDisk', () => {
   };
 
   it('returns null below the fade start', () => {
-    const r = maybeEmitProceduralDisk(7, 0.7, 30, base.x, base.y, base.z, base.sizeWorldMpc, base.colourIndex, base.fadeStartPx, base.fadeEndPx);
+    const r = maybeEmitProceduralDisk(
+      7,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
+      base.fadeStartPx,
+      base.fadeEndPx,
+    );
     expect(r).toBeNull();
   });
 
   it('returns null when axisRatio is NaN', () => {
-    const r = maybeEmitProceduralDisk(10, NaN, 30, base.x, base.y, base.z, base.sizeWorldMpc, base.colourIndex, base.fadeStartPx, base.fadeEndPx);
+    const r = maybeEmitProceduralDisk(
+      10,
+      NaN,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
+      base.fadeStartPx,
+      base.fadeEndPx,
+    );
     expect(r).toBeNull();
   });
 
   it('returns an instance with crossfadeAlpha = 0 exactly at fadeStart edge', () => {
-    const r = maybeEmitProceduralDisk(8.0001, 0.7, 30, base.x, base.y, base.z, base.sizeWorldMpc, base.colourIndex, base.fadeStartPx, base.fadeEndPx);
+    const r = maybeEmitProceduralDisk(
+      8.0001,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
+      base.fadeStartPx,
+      base.fadeEndPx,
+    );
     expect(r).not.toBeNull();
     expect(r!.crossfadeAlpha).toBeCloseTo(0, 3);
   });
 
   it('returns an instance with crossfadeAlpha = 1 at and beyond fadeEnd', () => {
-    const r1 = maybeEmitProceduralDisk(14, 0.7, 30, base.x, base.y, base.z, base.sizeWorldMpc, base.colourIndex, base.fadeStartPx, base.fadeEndPx);
+    const r1 = maybeEmitProceduralDisk(
+      14,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
+      base.fadeStartPx,
+      base.fadeEndPx,
+    );
     expect(r1!.crossfadeAlpha).toBeCloseTo(1, 6);
 
-    const r2 = maybeEmitProceduralDisk(50, 0.7, 30, base.x, base.y, base.z, base.sizeWorldMpc, base.colourIndex, base.fadeStartPx, base.fadeEndPx);
+    const r2 = maybeEmitProceduralDisk(
+      50,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
+      base.fadeStartPx,
+      base.fadeEndPx,
+    );
     expect(r2!.crossfadeAlpha).toBeCloseTo(1, 6);
   });
 
   it('smoothstep crossfade at midpoint', () => {
-    const r = maybeEmitProceduralDisk(11, 0.7, 30, base.x, base.y, base.z, base.sizeWorldMpc, base.colourIndex, base.fadeStartPx, base.fadeEndPx);
+    const r = maybeEmitProceduralDisk(
+      11,
+      0.7,
+      30,
+      base.x,
+      base.y,
+      base.z,
+      base.sizeWorldMpc,
+      base.colourIndex,
+      base.fadeStartPx,
+      base.fadeEndPx,
+    );
     // (11 - 8) / (14 - 8) = 0.5 → smoothstep(0.5) = 0.5
     expect(r!.crossfadeAlpha).toBeCloseTo(0.5, 6);
   });
@@ -1322,13 +1406,13 @@ git commit -m "test(engine): unit-test the procedural-disk emission helper"
 
 Verify visually:
 
-1. **SDSS pencil-beam.** Find an SDSS-only deep field.  Galaxies at moderate zoom should now appear as 3D-tilted disks rather than fuzzy dots.
-2. **GLADE local volume.** Browse the nearby GLADE galaxies (z < 0.05).  Spirals should show distinct bulge + disk components; ellipticals (high axisRatio = ~0.6+) should look more uniformly bright.
-3. **2MRS bright catalog.** 2MRS rows have real shape data.  Compare a few to their actual on-sky inclination.
-4. **Famous catalog.** Famous galaxies above 12 px should now also use the procedural disk.  Below the textured-disk threshold (24 px) we now have a visible 3D shape — was previously a flat point.
-5. **Crossfade band.** Slowly zoom in on a nearby galaxy.  Across 8-14 px the point should fade out and the disk should fade in with no visible double-rendering or flicker.
-6. **Edge-on galaxies.** Find an axisRatio < 0.3 case (Sombrero is a prominent famous example at 0.58, edge-on spirals like NGC 4565 are < 0.2).  At face-on viewing the disk should look like a thin streak; orbiting around it (using the camera) should reveal the disk plane gradually opening up.
-7. **Pole-degeneracy.** Look near the celestial poles (Dec=±90°).  No disk should look broken — the shader's pole-fallback uses world +Y as the in-plane reference.
+1. **SDSS pencil-beam.** Find an SDSS-only deep field. Galaxies at moderate zoom should now appear as 3D-tilted disks rather than fuzzy dots.
+2. **GLADE local volume.** Browse the nearby GLADE galaxies (z < 0.05). Spirals should show distinct bulge + disk components; ellipticals (high axisRatio = ~0.6+) should look more uniformly bright.
+3. **2MRS bright catalog.** 2MRS rows have real shape data. Compare a few to their actual on-sky inclination.
+4. **Famous catalog.** Famous galaxies above 12 px should now also use the procedural disk. Below the textured-disk threshold (24 px) we now have a visible 3D shape — was previously a flat point.
+5. **Crossfade band.** Slowly zoom in on a nearby galaxy. Across 8-14 px the point should fade out and the disk should fade in with no visible double-rendering or flicker.
+6. **Edge-on galaxies.** Find an axisRatio < 0.3 case (Sombrero is a prominent famous example at 0.58, edge-on spirals like NGC 4565 are < 0.2). At face-on viewing the disk should look like a thin streak; orbiting around it (using the camera) should reveal the disk plane gradually opening up.
+7. **Pole-degeneracy.** Look near the celestial poles (Dec=±90°). No disk should look broken — the shader's pole-fallback uses world +Y as the in-plane reference.
 
 - [x] **Step 2: Tune knobs if needed**
 
@@ -1358,30 +1442,30 @@ git commit -m "tune(gpu): procedural-disk profile constants for v1 ship"
 
 - [x] **Step 1: Add a subsection under the renderer overview**
 
-In `README.md`, find the "Galaxy thumbnails" section (or whichever covers the renderer passes).  Add immediately after:
+In `README.md`, find the "Galaxy thumbnails" section (or whichever covers the renderer passes). Add immediately after:
 
 ```markdown
 ### Procedural galaxy impostors
 
 Galaxies whose apparent size exceeds 12 px (with a smooth crossfade
 across 8–14 px) render as 3D-oriented procedural disks rather than
-screen-aligned point billboards.  The new pass takes the catalogued
+screen-aligned point billboards. The new pass takes the catalogued
 inclination (from `axisRatio`) and on-sky position angle (from
 `positionAngleDeg`) and emits a real 3D quad in world space, shaded
 with a Gaussian bulge + exponential disk profile and modulated by the
 existing colour-index ramp (with the bulge biased warmer and the disk
-biased cooler).  No texture fetch is required — every galaxy gets a
+biased cooler). No texture fetch is required — every galaxy gets a
 3D shape at moderate zoom, regardless of whether its DESI/Wikipedia
 thumbnail has loaded yet.
 
 Camera roll and orbit reveal real 3D structure: flying around an
 inclined galaxy gradually opens its disk to face-on, then back to edge-
-on.  The textured-disk pass (existing) still takes precedence above
+on. The textured-disk pass (existing) still takes precedence above
 24 px once a real bitmap arrives — visually the procedural impostor
 hands off cleanly when the curated thumbnail finishes loading.
 
 Implementation: `src/services/gpu/proceduralDiskRenderer.ts` +
-`src/services/gpu/shaders/proceduralDisks.wgsl`.  Plan: see
+`src/services/gpu/shaders/proceduralDisks.wgsl`. Plan: see
 `docs/superpowers/plans/2026-05-04-procedural-disk-impostor.md`.
 ```
 
@@ -1398,27 +1482,28 @@ git commit -m "docs(readme): document the procedural-disk impostor pass"
 
 **Spec coverage:**
 
-| Spec requirement | Task(s) |
-|---|---|
-| Activation threshold px > 12 with smooth crossfade 8-14 | 2, 7, 8 |
-| Two-component bulge + disk brightness profile | 1, 5 |
-| Colour-index ramp + bulge-redder + disk-bluer modulation | 5 |
-| Sibling renderer (no shared code with diskRenderer) | 6 |
-| Crossfade-only interaction with point pass | 7, 8 |
-| Fully world-oriented (real 3D plane via axisRatio + PA) | 3 |
-| Renders without texture dependency | 3, 5, 6, 7 |
-| Tests cover profile math + emission logic | 1, 9 |
-| Visual verification | 10 |
-| Documented in README | 11 |
+| Spec requirement                                         | Task(s)    |
+| -------------------------------------------------------- | ---------- |
+| Activation threshold px > 12 with smooth crossfade 8-14  | 2, 7, 8    |
+| Two-component bulge + disk brightness profile            | 1, 5       |
+| Colour-index ramp + bulge-redder + disk-bluer modulation | 5          |
+| Sibling renderer (no shared code with diskRenderer)      | 6          |
+| Crossfade-only interaction with point pass               | 7, 8       |
+| Fully world-oriented (real 3D plane via axisRatio + PA)  | 3          |
+| Renders without texture dependency                       | 3, 5, 6, 7 |
+| Tests cover profile math + emission logic                | 1, 9       |
+| Visual verification                                      | 10         |
+| Documented in README                                     | 11         |
 
-**Placeholder scan:** No "TBD" / "TODO" / "implement later" / "similar to Task N".  Each step has actual code.
+**Placeholder scan:** No "TBD" / "TODO" / "implement later" / "similar to Task N". Each step has actual code.
 
 **Type consistency:**
+
 - `ProceduralDiskInstance` (defined Task 2) → consumed by Tasks 6, 7, 9.
 - `PROCEDURAL_DISK_FADE_START_PX` / `PROCEDURAL_DISK_FADE_END_PX` (defined Task 2) → consumed by Tasks 7, 8.
 - `maybeEmitProceduralDisk` signature (defined Task 9) → consumed by the engine call site refactored in Task 9.
-- `BULGE_SIGMA / DISK_SCALE / BULGE_WEIGHT / DISK_WEIGHT` constants are duplicated between `galaxyProfile.ts` (Task 1) and `proceduralDisks.wgsl` (Task 5) — intentional (no shared shader/JS module mechanism).  If they ever diverge in the future, update both.
+- `BULGE_SIGMA / DISK_SCALE / BULGE_WEIGHT / DISK_WEIGHT` constants are duplicated between `galaxyProfile.ts` (Task 1) and `proceduralDisks.wgsl` (Task 5) — intentional (no shared shader/JS module mechanism). If they ever diverge in the future, update both.
 
-All names match.  The plan is coherent.
+All names match. The plan is coherent.
 
 ---

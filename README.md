@@ -55,11 +55,11 @@ The renderer fetches `/data/sdss.bin`, `/data/2mrs.bin`, and `/data/glade.bin` a
 
 ### 1. Download the catalogs
 
-| Survey | Source | File / Notes |
-| ------ | ------ | -------------- |
-| SDSS   | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql) | Run the query below; export as CSV. |
+| Survey | Source                                                                                     | File / Notes                                                                                   |
+| ------ | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| SDSS   | [SkyServer SQL](https://skyserver.sdss.org/dr18/SearchTools/sql)                           | Run the query below; export as CSV.                                                            |
 | 2MRS   | [VizieR J/ApJS/199/26](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/ApJS/199/26) | `table3.dat`, 233-byte fixed-width, 44,599 rows, ~10 MB. Drop into `data/raw/2mrs_table3.dat`. |
-| GLADE  | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281) | `glade2.3.dat`, 256-byte fixed-width, 3.26 M rows, ~838 MB. Drop into `data/raw/glade2.3.dat`. |
+| GLADE  | [VizieR VII/281](https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=VII/281)             | `glade2.3.dat`, 256-byte fixed-width, 3.26 M rows, ~838 MB. Drop into `data/raw/glade2.3.dat`. |
 
 GLADE alone subsumes 2MPZ and 6dFGS — the GLADE team has already cross-matched and deduplicated 2MPZ + 2MASS XSC + HyperLEDA + GWGC + SDSS-DR12Q, so a single download replaces what would otherwise be three.
 
@@ -131,17 +131,17 @@ compensates for redshift band-shifting before the ramp is sampled. Rows whose
 preferred bands aren't measured render with a fixed mid-ramp tint instead of
 poisoning the ramp with NaN.
 
-| Survey    | Colour | Natural range | K per unit z | Why this k                                                       |
-| --------- | ------ | ------------- | ------------ | ---------------------------------------------------------------- |
-| SDSS      | u−g    | 0.5 .. 2.0    | 3.0          | Calibrated against the SDSS spectroscopic sample.                |
-| GLADE     | B−J    | 0.5 .. 3.5    | 1.0          | Optical–NIR pair; B redshifts out of band slowly.                |
-| 2MRS      | J−K    | 0.7 .. 1.1    | 0.0          | NIR colours are nearly redshift-invariant in 2MRS's z ≲ 0.1 box. |
+| Survey | Colour | Natural range | K per unit z | Why this k                                                       |
+| ------ | ------ | ------------- | ------------ | ---------------------------------------------------------------- |
+| SDSS   | u−g    | 0.5 .. 2.0    | 3.0          | Calibrated against the SDSS spectroscopic sample.                |
+| GLADE  | B−J    | 0.5 .. 3.5    | 1.0          | Optical–NIR pair; B redshifts out of band slowly.                |
+| 2MRS   | J−K    | 0.7 .. 1.1    | 0.0          | NIR colours are nearly redshift-invariant in 2MRS's z ≲ 0.1 box. |
 
 ## Famous galaxies (curated atlas)
 
 > **Optional.** The renderer works fine without the famous-galaxies bin —
-> survey galaxies still render and the InfoCard still works.  Skip this
-> section entirely if you only want the catalog data.  Build it when you
+> survey galaxies still render and the InfoCard still works. Skip this
+> section entirely if you only want the catalog data. Build it when you
 > want curated names + hand-fetched high-quality thumbnails for the
 > Messier / NGC greatest-hits.
 
@@ -155,12 +155,11 @@ filter out as too close.
 
 Run order (only if you want the famous-galaxies atlas):
 
-1. `npm run build-all`              — produces `2mrs.bin` + `glade.bin`,
-                                      which the famous build needs for cross-match.
-2. `npm run fetch-famous-images`    — downloads + processes 20 thumbnails (~30 s).
-                                      Idempotent; pass `--force` to re-fetch.
-3. `npm run build-famous`           — produces `famous.bin` + `famous_meta.json`
-                                      + `famous_xrefs.json`.
+1. `npm run build-all` — produces `2mrs.bin` + `glade.bin`,
+   which the famous build needs for cross-match.
+2. `npm run fetch-famous-images` — downloads + processes 20 thumbnails (~30 s).
+   Idempotent; pass `--force` to re-fetch.
+3. `npm run build-famous` — produces `famous.bin` + `famous_meta.json` + `famous_xrefs.json`.
 
 ### Adding more galaxies
 
@@ -265,21 +264,21 @@ profile, not by anything per-galaxy.
 Real catalogue galaxies span ~10 magnitudes of apparent brightness — the
 brightest entries are roughly 10⁴× brighter than the faintest — so drawing
 every galaxy as an identical dot would throw away most of the visual
-information.  Three controls in the renderer decide how that range is
+information. Three controls in the renderer decide how that range is
 displayed on screen:
 
-- **Catalogue magnitude → per-galaxy alpha** *(automatic, vertex stage)* —
+- **Catalogue magnitude → per-galaxy alpha** _(automatic, vertex stage)_ —
   every galaxy's apparent magnitude is mapped to an intensity in
   `[0.05, 1.0]` via `clamp((22 − magnitude) / 8, 0.05, 1.0)`
-  (`points.wgsl`).  A magnitude-14 nearby spiral therefore renders with
-  ~20× the alpha of a magnitude-22 background galaxy.  The 0.05 floor
+  (`points.wgsl`). A magnitude-14 nearby spiral therefore renders with
+  ~20× the alpha of a magnitude-22 background galaxy. The 0.05 floor
   keeps the faintest detections barely visible rather than fully
   transparent — a hard zero would leave confusing gaps where survey rows
   are sparse.
-- **Global brightness slider** *(0.2 – 3.0, default 1.0)* — uniform
-  per-galaxy intensity multiplier, exposed in the settings panel.  Lets
+- **Global brightness slider** _(0.2 – 3.0, default 1.0)_ — uniform
+  per-galaxy intensity multiplier, exposed in the settings panel. Lets
   you scale the whole sky up or down without re-uploading point data.
-- **Camera-distance depth fade** *(toggle, default on)* — fragment-stage
+- **Camera-distance depth fade** _(toggle, default on)_ — fragment-stage
   alpha gate that multiplies by `1 / (1 + (camDist / FALLOFF_HALF)²)`,
   taming the additive-overlap glow at the geometric origin where every
   sightline through Earth stacks hundreds of billboards on top of each
@@ -288,36 +287,36 @@ displayed on screen:
 ### Not the same thing as density correction
 
 The next section ("Density correction (Malmquist bias)") describes a
-*conceptually separate* concern: compensating for the fact that
+_conceptually separate_ concern: compensating for the fact that
 flux-limited surveys systematically over-represent nearby galaxies
-(faint ones are only detectable when close).  Density-correction modes
+(faint ones are only detectable when close). Density-correction modes
 do multiply into the same final per-pixel alpha as the brightness
-controls above, but the *purpose* is to correct what the **catalogue**
-under- or over-samples, not to tweak how an individual galaxy *looks*.
+controls above, but the _purpose_ is to correct what the **catalogue**
+under- or over-samples, not to tweak how an individual galaxy _looks_.
 Treat them as orthogonal: the brightness slider is a display preference;
 density correction is a scientific correction for selection bias.
 
 Tone-mapping (covered in [Render pipeline](#render-pipeline) below) is a
-third orthogonal concern again — it operates on the *accumulated HDR
-output* of the entire frame, not on individual galaxies.
+third orthogonal concern again — it operates on the _accumulated HDR
+output_ of the entire frame, not on individual galaxies.
 
 ## Density correction (Malmquist bias)
 
 Flux-limited surveys over-represent nearby galaxies because faint ones
-are only detectable when close.  Skymap offers four user-selectable
+are only detectable when close. Skymap offers four user-selectable
 correction modes via the settings panel:
 
 - **None** — raw catalogue, apparent over-density visible near origin.
-- **Volume-limited** *(recommended)* — show only galaxies brighter than
-  a tunable absolute-magnitude threshold M_lim.  Default M_lim = −19,
-  matching SDSS's spectroscopic completeness near 750 Mpc.  Honest:
+- **Volume-limited** _(recommended)_ — show only galaxies brighter than
+  a tunable absolute-magnitude threshold M_lim. Default M_lim = −19,
+  matching SDSS's spectroscopic completeness near 750 Mpc. Honest:
   shows uniformly-detectable subsample.
 - **1/V_max alpha** — keep all data, but dim each galaxy by its
-  inverse maximum-detection volume.  Schmidt 1968 weighting, applied
+  inverse maximum-detection volume. Schmidt 1968 weighting, applied
   as alpha rather than discard.
 - **Schechter LF** — modulate per-distance alpha by the inverse of the
   expected number density predicted by each survey's Schechter
-  luminosity function.  Most aggressive correction; visually flattens
+  luminosity function. Most aggressive correction; visually flattens
   the local cluster into the cosmic web.
 
 A separate **angular-isotropy** axis (orthogonal to the four modes
@@ -328,9 +327,9 @@ above) addresses GLADE's deep pencil-beam artefacts:
   catalogue is SDSS-DR12 (which is footprint-restricted, ~1/3 of sky).
   Removes the radial "jet" structures that come from deep SDSS-only
   entries dominating outside their footprint.
-- **HEALPix angular re-weighting** *(optional, runtime toggle)* — bin
+- **HEALPix angular re-weighting** _(optional, runtime toggle)_ — bin
   the sky into HEALPix cells and modulate per-galaxy alpha by the
-  ratio of median angular density to local angular density.  Visually
+  ratio of median angular density to local angular density. Visually
   uniform direction-by-direction independent of which surveys
   contributed.
 
@@ -359,19 +358,19 @@ Distance from redshift uses Hubble's law: `d = cz/H₀` with `H₀ = 70 km/s/Mpc
 npm test
 ```
 
-Currently **594 tests across 76 files**.  Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
+Currently **594 tests across 76 files**. Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, and the derived-physics helpers. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
 
 ## Render pipeline
 
 Visible draw passes (points, quads, disks) render into a `rgba16float`
-HDR offscreen target instead of straight to the swap chain.  At the end
+HDR offscreen target instead of straight to the swap chain. At the end
 of every frame, a fullscreen tone-map pass compresses the accumulated
-linear-light values into the swap chain's displayable range.  Five
+linear-light values into the swap chain's displayable range. Five
 curves are runtime-selectable from the SettingsPanel (Linear baseline,
 Reinhard-extended, Asinh / Lupton stretch, Gamma 2.0, ACES filmic);
 switching is a single 4-byte uniform write per frame, no pipeline
-rebuild.  The pick renderer is on a separate `r32uint` integer target
-and is not tone-mapped.  See
+rebuild. The pick renderer is on a separate `r32uint` integer target
+and is not tone-mapped. See
 `docs/superpowers/plans/2026-05-04-hdr-tonemap.md` for the full
 rationale and curve descriptions.
 
@@ -411,7 +410,7 @@ render-affecting state (mouse drag, wheel zoom, settings change,
 camera tween, image-queue completion, …) calls
 `scheduler.requestRender()`, which schedules exactly one rAF. Inside
 the frame body, after the GPU work is submitted, the tail re-schedules
-*only* when motion is in flight: `autoRotate`, an active camera
+_only_ when motion is in flight: `autoRotate`, an active camera
 tween, deflected SpaceMouse axes, pending thumbnail fetches, or
 recent thumbnail load-fade. Otherwise the loop pauses.
 
@@ -453,9 +452,9 @@ These are deliberately not in this version:
 ## A note on AI-assisted development
 
 [`CLAUDE.md`](CLAUDE.md) at the repo root is onboarding guidance for AI
-coding assistants (Claude Code in particular).  It's not load-bearing
+coding assistants (Claude Code in particular). It's not load-bearing
 for the build or runtime — humans don't need to read it, and removing
-it wouldn't change anything that ships.  It's there because parts of
+it wouldn't change anything that ships. It's there because parts of
 this project were developed with AI assistance and that context is
 useful for future AI-assisted edits.
 
@@ -464,7 +463,7 @@ useful for future AI-assisted edits.
 If you use Skymap in a publication, talk, or derived work, please cite it
 via the metadata in [`CITATION.cff`](CITATION.cff) — GitHub renders a
 "Cite this repository" button in the sidebar that exposes both BibTeX and
-APA forms automatically.  Once a tagged release is minted on Zenodo, the
+APA forms automatically. Once a tagged release is minted on Zenodo, the
 DOI in `CITATION.cff` will resolve to a versioned archive.
 
 The catalog data shown by the renderer (SDSS, 2MRS, GLADE, HyperLEDA,
@@ -475,7 +474,7 @@ catalog asks be cited.
 ## License
 
 Skymap's source code is released under the MIT License — see [LICENSE](LICENSE)
-for the full text.  Catalog data, imagery, and external service usage carry
+for the full text. Catalog data, imagery, and external service usage carry
 their own citation and licensing requirements (CC-BY-SA, public-domain,
 publication-citation, etc.) — see [ATTRIBUTIONS.md](ATTRIBUTIONS.md) for the
 full enumeration.
@@ -512,14 +511,14 @@ feel than mouse drag.
 
 Axis mapping:
 
-| Puck motion | Camera effect |
-|---|---|
-| Push left / right | Pan target sideways |
-| Push forward / back | Pan target up / down |
+| Puck motion         | Camera effect                       |
+| ------------------- | ----------------------------------- |
+| Push left / right   | Pan target sideways                 |
+| Push forward / back | Pan target up / down                |
 | Pull up / push down | Zoom (exponential, scale-invariant) |
-| Tilt forward / back | Pitch |
-| Turn left / right | Yaw |
-| Twist | Ignored (orbit camera has no roll) |
+| Tilt forward / back | Pitch                               |
+| Turn left / right   | Yaw                                 |
+| Twist               | Ignored (orbit camera has no roll)  |
 
 **Browser support:** Chromium-only (Chrome, Edge, Brave, Opera). Firefox and
 Safari don't implement WebHID and the entire SpaceMouse section of the settings

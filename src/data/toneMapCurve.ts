@@ -41,8 +41,7 @@ export const ToneMapCurve = {
   Aces: 4,
 } as const;
 
-export type ToneMapCurve =
-  (typeof ToneMapCurve)[keyof typeof ToneMapCurve];
+export type ToneMapCurve = (typeof ToneMapCurve)[keyof typeof ToneMapCurve];
 
 export const ALL_TONE_MAP_CURVES: ReadonlyArray<ToneMapCurve> = [
   ToneMapCurve.Linear,

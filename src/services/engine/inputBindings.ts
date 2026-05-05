@@ -96,9 +96,7 @@ export type AttachEngineInputsOptions = {
   onResize: () => void;
 };
 
-export function attachEngineInputs(
-  options: AttachEngineInputsOptions,
-): InputBindings {
+export function attachEngineInputs(options: AttachEngineInputsOptions): InputBindings {
   const {
     canvas,
     scheduler,

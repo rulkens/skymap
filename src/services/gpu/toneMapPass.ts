@@ -104,10 +104,7 @@ export type ToneMapPass = {
   destroy(): void;
 };
 
-export function createToneMapPass(
-  device: GPUDevice,
-  swapFormat: GPUTextureFormat,
-): ToneMapPass {
+export function createToneMapPass(device: GPUDevice, swapFormat: GPUTextureFormat): ToneMapPass {
   const module = device.createShaderModule({ code: toneMapWgsl });
 
   // Why nearest, not linear?  The HDR texture is the same resolution

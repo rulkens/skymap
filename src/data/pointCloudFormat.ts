@@ -107,8 +107,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
   if (magI.length !== count) throw new Error('magI length mismatch');
   if (magZ.length !== count) throw new Error('magZ length mismatch');
   if (axisRatio.length !== count) throw new Error('axisRatio length mismatch');
-  if (positionAngleDeg.length !== count)
-    throw new Error('positionAngleDeg length mismatch');
+  if (positionAngleDeg.length !== count) throw new Error('positionAngleDeg length mismatch');
   if (diameterKpc.length !== count) throw new Error('diameterKpc length mismatch');
 
   // Allocate exactly the bytes we need: header + per-point records.
