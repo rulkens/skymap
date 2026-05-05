@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/github/license/rulkens/skymap)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20037028.svg)](https://doi.org/10.5281/zenodo.20037028)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.20037028-1f87b3?logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.20037028)
 
 **Live demo:** [skymap.rulkens.com](https://skymap.rulkens.com) — open in any modern browser (Chrome / Edge 113+, Firefox 141+, Safari 26+). WebGPU [reached Baseline in January 2026](https://web.dev/blog/webgpu-supported-major-browsers), so a recent stable browser is all you need.
 
