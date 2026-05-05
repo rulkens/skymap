@@ -65,20 +65,20 @@
  */
 
 import { useRef, useEffect, useState } from 'react';
-import { createEngine } from './services/engine';
-import type { EngineHandle, EngineStatus, PointInfo, ScaleInfo } from './@types';
-import type { LodMode } from './@types/LodMode';
-import { StatusBar } from './components/StatusBar/StatusBar';
-import { InfoCard } from './components/InfoCard/InfoCard';
-import { ScaleBar } from './components/ScaleBar/ScaleBar';
-import { SettingsPanel } from './components/SettingsPanel/SettingsPanel';
-import { NavigationPanel } from './components/NavigationPanel/NavigationPanel';
-import { StatsPanel } from './components/StatsPanel/StatsPanel';
-import { CommandPalette } from './components/CommandPalette/CommandPalette';
+import { createEngine } from '../../services/engine';
+import type { EngineHandle, EngineStatus, PointInfo, ScaleInfo } from '../../@types';
+import type { LodMode } from '../../@types/LodMode';
+import { StatusBar } from '../StatusBar/StatusBar';
+import { InfoCard } from '../InfoCard/InfoCard';
+import { ScaleBar } from '../ScaleBar/ScaleBar';
+import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
+import { NavigationPanel } from '../NavigationPanel/NavigationPanel';
+import { StatsPanel } from '../StatsPanel/StatsPanel';
+import { CommandPalette } from '../CommandPalette/CommandPalette';
 import appStyles from './App.module.css';
-import { Source } from './data/sources';
-import { BiasMode } from './data/biasMode';
-import { ToneMapCurve } from './data/toneMapCurve';
+import { Source } from '../../data/sources';
+import { BiasMode } from '../../data/biasMode';
+import { ToneMapCurve } from '../../data/toneMapCurve';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -97,9 +97,12 @@ import {
   DEFAULT_SPACE_MOUSE_SENSITIVITY,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
-} from './data/defaults';
-import { isWebHIDSupported } from './services/input/spaceMouse';
-import { loadFamousSidecars, type FamousMetaEntry } from './services/engine/famousMetaLoader';
+} from '../../data/defaults';
+import { isWebHIDSupported } from '../../services/input/spaceMouse';
+import {
+  loadFamousSidecars,
+  type FamousMetaEntry,
+} from '../../services/engine/famousMetaLoader';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
