@@ -62,4 +62,19 @@ describe('NavigationPanel', () => {
     // Body content present — pick a row that's load-bearing for "open".
     expect(html).toContain('orbit camera');
   });
+
+  it('shows touch gestures and hides keyboard shortcuts when isMobile=true', () => {
+    const html = renderToStaticMarkup(createElement(NavigationPanel, { isMobile: true }));
+    // Mobile-relevant rows appear:
+    expect(html).toContain('One-finger drag');
+    expect(html).toContain('Two-finger pinch');
+    expect(html).toContain('Tap a galaxy');
+    expect(html).toContain('× on info card');
+    // Keyboard-only shortcuts should NOT appear on the mobile cheatsheet —
+    // they'd be misleading because phones have no Esc / F / H keys.
+    // Match the exact label rendered as the left-column key, not just the
+    // letter (which appears in many words).
+    expect(html).not.toContain('>Esc<');
+    expect(html).not.toContain('search galaxies');
+  });
 });

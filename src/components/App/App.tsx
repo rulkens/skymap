@@ -578,7 +578,7 @@ export function App(): React.ReactElement {
         the visual anchor between them.
       */}
       <div className={appStyles.leftStack}>
-        <NavigationPanel defaultOpen={initialPanelsOpen} />
+        <NavigationPanel defaultOpen={initialPanelsOpen} isMobile={initialMobile} />
         {/*
           Settings panel — middle of the left stack.  All state lives here in
           App; the panel is purely presentational.  Interactions funnel through

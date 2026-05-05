@@ -32,15 +32,25 @@ import { Panel } from '../common/Panel/Panel';
 import styles from './NavigationPanel.module.css';
 
 /**
- * The cheatsheet rows, in display order.
+ * Cheatsheet rows, in display order.  Two columns: gesture/key on the left
+ * (muted), action on the right.  Module-level constants so the JSX stays a
+ * simple `.map`.  Renaming any string here breaks the matching test in
+ * `tests/components/NavigationPanel/NavigationPanel.test.ts` — that's the
+ * canary that keeps the cheatsheet in sync with the actual handlers.
  *
- * Two columns: the gesture/key on the left (muted), the action on the right.
- * Kept as a module-level array so the JSX stays a simple `.map`.  Renaming
- * any string here will make the matching test in
- * `tests/components/NavigationPanel/NavigationPanel.test.ts` fail — that's
- * the canary that keeps the cheatsheet in sync with the actual handlers.
+ * Two variants because the input model differs significantly:
+ *
+ *   - DESKTOP_ROWS lists keyboard + mouse affordances.  Laptop users
+ *     benefit from knowing about Esc, F, H, and the Cmd-K palette.
+ *   - MOBILE_ROWS lists touch gestures and the visible × close button —
+ *     none of the keyboard accelerators apply on a phone, and showing
+ *     them would be misleading.
+ *
+ * App.tsx picks which set to pass at mount time based on viewport width
+ * (the same 768-px breakpoint as the small-tier auto-select).  No live
+ * resize handling — first-paint signal is enough.
  */
-const ROWS: ReadonlyArray<{ key: string; action: string }> = [
+const DESKTOP_ROWS: ReadonlyArray<{ key: string; action: string }> = [
   { key: 'Drag', action: 'orbit camera' },
   { key: 'Wheel', action: 'zoom' },
   { key: 'H', action: 'home view' },
@@ -52,18 +62,33 @@ const ROWS: ReadonlyArray<{ key: string; action: string }> = [
   { key: '⌘K / Ctrl+K / /', action: 'search galaxies' },
 ];
 
-/**
- * `defaultOpen` is forwarded to the shared `Panel` chrome so the parent
- * (App.tsx) can collapse this panel by default on mobile viewports.
- * Defaults to `true` (open) on the desktop path, matching the previous
- * always-open behaviour.
- */
-export type NavigationPanelProps = { defaultOpen?: boolean };
+const MOBILE_ROWS: ReadonlyArray<{ key: string; action: string }> = [
+  { key: 'One-finger drag', action: 'orbit camera' },
+  { key: 'Two-finger pinch', action: 'zoom' },
+  { key: 'Tap a galaxy', action: 'see info' },
+  // Close button on the InfoCard is the touch-equivalent of Esc.
+  { key: '× on info card', action: 'clear selection' },
+  { key: 'Tap a panel title', action: 'expand / collapse' },
+];
 
-export function NavigationPanel({ defaultOpen }: NavigationPanelProps = {}): ReactNode {
+/**
+ * `defaultOpen` and `isMobile` come from App.tsx.  `isMobile` switches the
+ * cheatsheet content between touch gestures and keyboard shortcuts; defaults
+ * to `false` (desktop) so existing call sites and tests stay unchanged.
+ */
+export type NavigationPanelProps = {
+  defaultOpen?: boolean;
+  isMobile?: boolean;
+};
+
+export function NavigationPanel({
+  defaultOpen,
+  isMobile = false,
+}: NavigationPanelProps = {}): ReactNode {
+  const rows = isMobile ? MOBILE_ROWS : DESKTOP_ROWS;
   return (
     <Panel title="NAVIGATION" ariaLabel="Navigation cheatsheet" defaultOpen={defaultOpen}>
-      {ROWS.map((row) => (
+      {rows.map((row) => (
         <div className={styles.row} key={row.key}>
           <span className={styles.key}>{row.key}</span>
           <span className={styles.action}>{row.action}</span>
