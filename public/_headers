@@ -1,0 +1,23 @@
+# Cloudflare Workers Assets header rules for skymap.
+#
+# Long-cache the hash-fingerprinted JS/CSS/WGSL/WASM assets — Vite emits
+# them with content hashes in the filename, so a one-year immutable cache
+# is safe.  Any code change produces a new filename and the old one falls
+# out of cache naturally.
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.wgsl
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.wasm
+  Cache-Control: public, max-age=31536000, immutable
+
+# Famous-galaxy thumbnails — not hash-fingerprinted (the URL is part of
+# the seed JSON and stable), so cap at one day to allow refreshes if the
+# atlas is regenerated.
+/images/famous/*.webp
+  Cache-Control: public, max-age=86400
