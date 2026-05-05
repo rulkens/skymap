@@ -330,9 +330,21 @@ body {
  * everything inside, but the global rule keeps the canvas full-viewport
  * even before React mounts (so the page doesn't briefly show a smaller
  * default-sized canvas during boot).
+ *
+ * `touch-action: none` is load-bearing on mobile.  Without it, the
+ * browser claims any drag gesture after the first ~10 px of movement
+ * for its native pan / pinch-zoom — at which point it fires a
+ * `pointercancel` and stops delivering `pointermove` events.  Symptom
+ * on Android Brave / Chrome / Safari: a drag moves the camera one
+ * step and then freezes.  With `touch-action: none`, the orbit
+ * controls own every touch on the canvas surface and the gesture is
+ * continuous.  The browser's native pinch-to-zoom on the page is
+ * disabled inside the canvas (which is what we want — the WebGPU view
+ * has its own zoom via wheel / pinch in orbit code).
  */
 #c {
   display: block;
   width: 100vw;
   height: 100vh;
+  touch-action: none;
 }
