@@ -444,33 +444,142 @@ export function SettingsPanel({
         Survey toggles are the highest-level decision the user makes — what
         catalogues are even on screen.  Default open so a first-time visitor
         immediately sees the four toggles and the per-survey object counts.
+
+        Master toggle in the section header is a *derived tri-state* over the
+        per-source booleans:
+          - all four on → checked, NOT indeterminate
+          - all four off → unchecked, NOT indeterminate
+          - mixed → unchecked + indeterminate (visual dash)
+        Click semantics follow the standard tri-state convention: from the
+        "none" state, set everything on; from any other state (all or
+        partial), set everything off.  This mirrors how OS file-managers
+        treat tri-state group checkboxes.
+
+        Note we deliberately do NOT use a single bitmask write — the
+        callback contract is `onToggleSource(Source, boolean)` per source,
+        so we loop and emit one call per source.  The parent handles each
+        update through its existing reducer.
       */}
-          {showSurveyToggles && (
-            <CollapsibleSection title="Surveys" storageKey="settings.section.surveys">
-              {TOGGLEABLE_SOURCES.map((s) => {
-                // `count` is undefined until the .bin lands; we render an empty
-                // string in that case rather than "0" (which would imply the
-                // survey is empty rather than still loading).
-                const count = sourceCounts?.[s];
-                return (
-                  <div className={styles.panelRow} key={s}>
-                    <label htmlFor={`toggle-source-${s}`}>
-                      {sourceLabel(s)}
-                      {count !== undefined && (
-                        <span className={styles.sourceCount}>{count.toLocaleString()}</span>
-                      )}
-                    </label>
+          {showSurveyToggles &&
+            (() => {
+              // Derived tri-state.  Counted once per render rather than
+              // peppering `maskHas(...)` into the boolean expressions
+              // below — keeps the intent legible and avoids three bitwise
+              // reads when one suffices.
+              const enabledCount = TOGGLEABLE_SOURCES.reduce(
+                (n, s) => (maskHas(visibleSourceMask, s) ? n + 1 : n),
+                0,
+              );
+              const allOn = enabledCount === TOGGLEABLE_SOURCES.length;
+              const noneOn = enabledCount === 0;
+              const indeterminate = !allOn && !noneOn;
+
+              // Master click handler: from "none" → set all on; from
+              // "all" or "mixed" → clear everything.  This is the
+              // conventional tri-state-checkbox UX (Windows Explorer,
+              // macOS Finder list-view, GitHub PR file-tree, etc.).
+              const onMasterToggle = () => {
+                const targetEnabled = noneOn; // true if currently all off
+                for (const s of TOGGLEABLE_SOURCES) {
+                  onToggleSource(s, targetEnabled);
+                }
+              };
+
+              return (
+                <CollapsibleSection
+                  title="Surveys"
+                  storageKey="settings.section.surveys"
+                  headerToggle={allOn}
+                  headerToggleIndeterminate={indeterminate}
+                  onHeaderToggleChange={onMasterToggle}
+                >
+                  {TOGGLEABLE_SOURCES.map((s) => {
+                    // `count` is undefined until the .bin lands; we render an empty
+                    // string in that case rather than "0" (which would imply the
+                    // survey is empty rather than still loading).
+                    const count = sourceCounts?.[s];
+                    return (
+                      <div className={styles.panelRow} key={s}>
+                        <label htmlFor={`toggle-source-${s}`}>
+                          {sourceLabel(s)}
+                          {count !== undefined && (
+                            <span className={styles.sourceCount}>
+                              {count.toLocaleString()}
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          id={`toggle-source-${s}`}
+                          type="checkbox"
+                          // `maskHas` keeps us from leaking the bitmask shape into the JSX —
+                          // we ask "is bit s set?" and trust `data/sources.ts` to know how.
+                          checked={maskHas(visibleSourceMask, s)}
+                          onChange={(e) => onToggleSource(s, e.target.checked)}
+                        />
+                      </div>
+                    );
+                  })}
+                </CollapsibleSection>
+              );
+            })()}
+
+          {/* ── Filaments (cosmic web) ───────────────────────────────────────── */}
+          {/*
+        Dedicated section, sitting immediately below Surveys because both
+        sections answer the same kind of question — "which large-scale
+        structure am I rendering?".  The master toggle in the header
+        mirrors the previous "Filaments" checkbox row that lived inside
+        Overlays; the intensity slider that used to sit alongside it
+        moves into this section's body and only renders when the
+        overlay is enabled (matches the previous gating).
+
+        On a fresh clone, `filaments.bin` doesn't exist yet — the engine
+        treats the missing file as a silent no-op, so toggling this on
+        is a discoverable affordance even before the user runs
+        `npm run build-filaments`.
+
+        Default-closed (`defaultOpen={false}`) because most first-time
+        visitors aren't yet familiar with the cosmic-web overlay; folding
+        it away keeps the panel compact while still discoverable via the
+        master checkbox visible in the collapsed-section header.
+      */}
+          {showFilamentsToggle && (
+            <CollapsibleSection
+              title="Filaments (cosmic web)"
+              storageKey="settings.section.filaments"
+              defaultOpen={false}
+              headerToggle={filamentsEnabled}
+              onHeaderToggleChange={(v) => onFilamentsChange(v)}
+            >
+              {showFilamentIntensitySlider ? (
+                <>
+                  <div className={styles.panelRow}>
+                    <label htmlFor="filament-intensity">Intensity</label>
+                    <span className={styles.panelValue}>
+                      {filamentIntensity.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className={styles.panelRow}>
                     <input
-                      id={`toggle-source-${s}`}
-                      type="checkbox"
-                      // `maskHas` keeps us from leaking the bitmask shape into the JSX —
-                      // we ask "is bit s set?" and trust `data/sources.ts` to know how.
-                      checked={maskHas(visibleSourceMask, s)}
-                      onChange={(e) => onToggleSource(s, e.target.checked)}
+                      id="filament-intensity"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={filamentIntensity}
+                      onChange={(e) => onFilamentIntensityChange(Number(e.target.value))}
                     />
                   </div>
-                );
-              })}
+                </>
+              ) : (
+                // When the overlay is OFF, the slider is hidden (it
+                // would have no visible effect on the canvas) — but
+                // we still render a subtle hint inside the body so a
+                // user who expanded the section sees *why* there's
+                // nothing to drag.  This matches the pattern used by
+                // the SpaceMouse section's "not connected" hint.
+                <div className={styles.panelMode}>enable to adjust intensity</div>
+              )}
             </CollapsibleSection>
           )}
 
@@ -689,10 +798,15 @@ export function SettingsPanel({
           {/* ── Overlays ─────────────────────────────────────────────────────── */}
           {/*
         Decorative passes that draw *on top of* the main galaxy point cloud:
-        the close-up galaxy thumbnails, the procedural Milky Way impostor at
-        world origin, and the cosmic-web filament skeleton from DisPerSE.
-        All three are independent toggles — turning one off doesn't affect
-        the others.
+        the close-up galaxy thumbnails and the procedural Milky Way impostor
+        at world origin.  Both are independent toggles — turning one off
+        doesn't affect the other.
+
+        The Filaments overlay used to live here too, but graduated into its
+        own dedicated CollapsibleSection (immediately below Surveys) once
+        its master toggle moved to the section header and the intensity
+        slider needed a stable home.  See the "Filaments (cosmic web)"
+        section above for the new layout.
       */}
           <CollapsibleSection title="Overlays" storageKey="settings.section.overlays">
             {/*
@@ -718,44 +832,6 @@ export function SettingsPanel({
                   type="checkbox"
                   checked={milkyWayEnabled}
                   onChange={(e) => onMilkyWayEnabledChange(e.target.checked)}
-                />
-              </div>
-            )}
-
-            {/*
-          Filaments — optional opt-in overlay.  The underlying `filaments.bin`
-          only exists after `npm run build-filaments` (which depends on the
-          DisPerSE binary the user installs themselves), so we default the
-          toggle OFF and the engine treats the missing file as a silent
-          no-op.  Showing the row regardless of whether the binary loaded is
-          a deliberate discoverability choice — the user sees the
-          affordance, runs the build pipeline, comes back and toggles it on
-          without us having to wire a "is it loaded?" flag through the panel.
-        */}
-            {showFilamentsToggle && (
-              <div className={styles.panelRow}>
-                <label htmlFor="toggle-filaments">Filaments (cosmic web)</label>
-                <input
-                  id="toggle-filaments"
-                  type="checkbox"
-                  checked={filamentsEnabled}
-                  onChange={(e) => onFilamentsChange(e.target.checked)}
-                />
-              </div>
-            )}
-            {showFilamentIntensitySlider && (
-              <div className={styles.panelRow}>
-                <label htmlFor="filament-intensity">Filament intensity</label>
-                <input
-                  id="filament-intensity"
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={filamentIntensity}
-                  onChange={(e) =>
-                    onFilamentIntensityChange(Number(e.target.value))
-                  }
                 />
               </div>
             )}

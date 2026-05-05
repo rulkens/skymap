@@ -37,7 +37,7 @@
  * just doesn't survive reload.
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import styles from './CollapsibleSection.module.css';
 
 type Props = {
@@ -59,6 +59,37 @@ type Props = {
    */
   defaultOpen?: boolean;
   children: ReactNode;
+  /**
+   * Optional master on/off checkbox rendered between the chevron and
+   * the title.  Independent of the collapse: clicking the checkbox
+   * does NOT expand or collapse the section, and clicking elsewhere
+   * on the header still toggles the collapse without flipping the
+   * checkbox.  We achieve this by `event.stopPropagation()` on the
+   * checkbox's pointer/click events so the bubble doesn't reach the
+   * surrounding <button>.
+   *
+   * When `headerToggle` is omitted, the section renders exactly as
+   * before — the checkbox slot is fully absent, no layout shift.
+   * Both the value and the change callback must be provided to render
+   * the checkbox; passing only one is a programming error and ignored.
+   */
+  headerToggle?: boolean;
+  onHeaderToggleChange?: (value: boolean) => void;
+  /**
+   * Optional indeterminate visual state for the master checkbox —
+   * rendered as a dash/dot rather than empty or checked.  Used by
+   * the Surveys section when SOME but not ALL per-source toggles are
+   * on, to communicate "mixed".
+   *
+   * Why imperative: the HTML `indeterminate` IDL attribute is *not*
+   * the same as the `checked` attribute.  It's a property on the DOM
+   * element, settable only via JS (`el.indeterminate = true`), with
+   * no JSX-level prop and no CSS pseudo-class that maps to it on
+   * its own.  We therefore set it via `useEffect` against a `ref`,
+   * after the input has rendered — standard React pattern for the
+   * indeterminate-checkbox case.
+   */
+  headerToggleIndeterminate?: boolean;
 };
 
 /**
@@ -104,6 +135,9 @@ export function CollapsibleSection({
   storageKey,
   defaultOpen = true,
   children,
+  headerToggle,
+  onHeaderToggleChange,
+  headerToggleIndeterminate,
 }: Props): ReactNode {
   // useState's lazy initializer pattern: pass a function so the
   // localStorage read happens exactly once at mount, not on every
@@ -118,6 +152,26 @@ export function CollapsibleSection({
   useEffect(() => {
     writeSectionOpen(storageKey, open);
   }, [storageKey, open]);
+
+  // Render the master checkbox slot only when both halves of the
+  // controlled-input pair are wired.  This matches the SettingsPanel-
+  // wide convention: an opt-in feature requires *both* value and
+  // callback to avoid half-rendered controls (state-without-handler
+  // or handler-without-state).
+  const hasHeaderToggle = headerToggle !== undefined && onHeaderToggleChange !== undefined;
+
+  // Imperative `indeterminate` setup — see the docblock on the prop
+  // for why this can't be expressed declaratively in JSX.  The ref
+  // points at the live <input> element after mount; we sync the IDL
+  // attribute on every change of either the indeterminate flag or
+  // the underlying checked state (because some browsers reset
+  // `indeterminate` whenever `checked` is reassigned).
+  const checkboxRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (checkboxRef.current) {
+      checkboxRef.current.indeterminate = headerToggleIndeterminate ?? false;
+    }
+  }, [headerToggleIndeterminate, headerToggle]);
 
   return (
     <div className={styles.section}>
@@ -135,6 +189,46 @@ export function CollapsibleSection({
         <span className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`} aria-hidden>
           ▸
         </span>
+        {/*
+          Optional master toggle.  Sits between the chevron and the
+          title text.  We stop propagation on every pointer event so
+          the surrounding <button>'s onClick (which toggles collapse)
+          does NOT fire when the user clicks the checkbox: collapse
+          and master-toggle are deliberately independent affordances.
+
+          `onClick` alone isn't quite enough — the browser fires
+          `click` after `mousedown`+`mouseup` resolve on the same
+          target, but synthetic React events still bubble through
+          parents.  Calling `stopPropagation` on the React event is
+          sufficient here because the parent handler is also a React
+          synthetic listener (the <button>'s onClick).
+        */}
+        {hasHeaderToggle && (
+          <input
+            ref={checkboxRef}
+            type="checkbox"
+            className={styles.headerToggle}
+            checked={headerToggle}
+            // The change handler fires on both real user clicks and
+            // programmatic toggles (e.g. spacebar when focused).
+            // Either way we want to invert the parent's value.
+            onChange={(e) => {
+              e.stopPropagation();
+              onHeaderToggleChange(e.target.checked);
+            }}
+            // Mouse-down/up on the checkbox MUST NOT bubble to the
+            // outer button — otherwise the browser would
+            // additionally fire the button's click and toggle
+            // collapse on top of the checkbox flip.
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            // Keep keyboard activation working too — Space/Enter on
+            // the focused checkbox should toggle just the checkbox,
+            // not the surrounding button.
+            onKeyDown={(e) => e.stopPropagation()}
+            aria-label={`Toggle ${title}`}
+          />
+        )}
         <span className={styles.title}>{title}</span>
       </button>
       {/*

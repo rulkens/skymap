@@ -113,6 +113,30 @@ button.header {
 }
 
 /*
+ * Optional master toggle — sits between the chevron and the title.
+ *
+ * Why a margin-right rather than `gap` on the header: the existing
+ * header is a flexbox with `align-items: baseline` and no `gap`, so
+ * spacing comes from per-child margins on the chevron + this element.
+ * Using `margin-right` here keeps the spacing rule local to the
+ * checkbox — if a future variant of CollapsibleSection drops the
+ * checkbox, the title's left edge stays aligned with the chevron the
+ * way it has been historically.
+ *
+ * The base `.settingsPanel input[type='checkbox']` rule sets size +
+ * accent-color globally; we don't restyle the box itself, just its
+ * position in the row.  `align-self: center` reads more cleanly than
+ * the default baseline alignment because checkboxes have no text
+ * baseline of their own — the browser fakes one and the result is
+ * usually a few pixels too high relative to uppercase headings.
+ */
+.headerToggle {
+  margin: 0 8px 0 0;
+  align-self: center;
+  cursor: pointer;
+}
+
+/*
  * Section title — uppercase + spaced like `.panelSubtitle` did before
  * (which it replaces).  Keeping this rule independent of `.panelSubtitle`
  * lets the SettingsPanel keep using `panelSubtitle` for any rare flat-

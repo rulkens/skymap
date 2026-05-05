@@ -222,6 +222,67 @@ describe('CollapsibleSection initial render', () => {
     expect(html).toContain('CHILD');
   });
 
+  // ── headerToggle (master on/off checkbox in the section header) ──────────
+  //
+  // The new optional prop pair lets a section render a master
+  // checkbox between the chevron and the title.  Verified by
+  // string-matching the static markup — the runtime click semantics
+  // (collapse vs checkbox independence) are exercised manually
+  // against the live dev server because JSDOM isn't installed.
+
+  it('renders no header checkbox when headerToggle is omitted', () => {
+    const html = renderToStaticMarkup(
+      createElement(CollapsibleSection, {
+        title: 'Surveys',
+        storageKey: 'test.no-toggle',
+        children: createElement('span', null, 'CHILD'),
+      }),
+    );
+    // No <input type="checkbox"> in the header — the only inputs we
+    // render are inside `children`, and we passed none here.
+    expect(html).not.toContain('type="checkbox"');
+  });
+
+  it('renders a checked header checkbox when headerToggle=true', () => {
+    const html = renderToStaticMarkup(
+      createElement(CollapsibleSection, {
+        title: 'Surveys',
+        storageKey: 'test.toggle-on',
+        headerToggle: true,
+        onHeaderToggleChange: () => {},
+        children: createElement('span', null, 'CHILD'),
+      }),
+    );
+    expect(html).toContain('type="checkbox"');
+    // React serialises `checked={true}` as the bare `checked`
+    // attribute in static markup.
+    expect(html).toMatch(/type="checkbox"[^>]*checked/);
+  });
+
+  it('renders an unchecked header checkbox when headerToggle=false', () => {
+    const html = renderToStaticMarkup(
+      createElement(CollapsibleSection, {
+        title: 'Filaments',
+        storageKey: 'test.toggle-off',
+        headerToggle: false,
+        onHeaderToggleChange: () => {},
+        children: createElement('span', null, 'CHILD'),
+      }),
+    );
+    expect(html).toContain('type="checkbox"');
+    // Static markup omits the `checked` attribute when checked={false}.
+    expect(html).not.toMatch(/type="checkbox"[^>]*checked/);
+  });
+
+  // The indeterminate visual state is set imperatively after mount via
+  // `el.indeterminate = true` (see CollapsibleSection.tsx for the
+  // rationale: it's a DOM IDL property, not a JSX-serialisable
+  // attribute).  `renderToStaticMarkup` returns a string without ever
+  // mounting a real DOM element, so we cannot exercise the
+  // indeterminate state from this test environment — verified
+  // manually against the dev server when SOME but not ALL surveys
+  // are enabled.
+
   it('keeps two sections with different storageKeys independent', () => {
     storage.setItem('test.a', '0');
     storage.setItem('test.b', '1');
