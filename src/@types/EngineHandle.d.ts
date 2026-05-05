@@ -5,6 +5,7 @@
  */
 
 import type { LodMode } from './LodMode';
+import type { Tier } from './Tier';
 import type { Source } from '../data/sources';
 import type { BiasMode } from '../data/biasMode';
 import type { ToneMapCurve } from '../data/toneMapCurve';
@@ -277,4 +278,21 @@ export type EngineHandle = {
    * recommended range 0.1 – 3.0.
    */
   setSpaceMouseSensitivity?: (value: number) => void;
+
+  /**
+   * Hot-swap the active data tier.  For each source whose tier-target
+   * differs between the current and next tier, the engine cancels any
+   * in-flight cloud fetch (via cloudLoader's AbortController registry)
+   * and re-fetches the tier-suffixed .bin.  Sources whose target is
+   * unchanged are left alone — 2MRS and Famous use one shared file
+   * across all tiers, so they never re-fetch.
+   *
+   * Fires `onTierChange` synchronously after `state.sources.tier`
+   * mutates so React state mirrors engine truth.  Re-fetches resolve
+   * asynchronously and each lands via the existing `onCloudReady`
+   * callback (same pipeline as the initial load).
+   *
+   * No-op if `tier` equals the current tier.
+   */
+  setTier?: (tier: Tier) => void;
 };

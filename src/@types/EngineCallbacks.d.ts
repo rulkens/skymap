@@ -203,6 +203,15 @@ export type EngineCallbacks = {
   onCloudReady?: (source: Source, count: number) => void;
 
   /**
+   * Echo: fires when the active data tier changes.  Used by App.tsx to
+   * keep its `currentTier` state in sync.  Same lifecycle pattern as
+   * `onLodModeChange` — fires synchronously inside `setTier` after
+   * `state.sources.tier` has mutated, before any per-source reload
+   * starts.
+   */
+  onTierChange?: (tier: Tier) => void;
+
+  /**
    * Initial data tier to load on engine startup.  Defaults to `'medium'`
    * when absent.  This is technically an option, not a callback, but the
    * `createEngine(canvas, cb)` signature already passes a single bag for

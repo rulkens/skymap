@@ -102,10 +102,12 @@ import { seedSettingsCallbacks } from './seedSettingsCallbacks';
 import { computeScaleInfo } from './scaleBar';
 import {
   loadAllClouds,
+  reloadSource,
   buildSyntheticFallback,
   loadFilaments,
   type CloudSource,
 } from './cloudLoader';
+import { TIER_TARGETS } from '../../data/tierTargets';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 import { loadFamousSidecars, remapGladeXrefs } from './famousMetaLoader';
 
@@ -1860,6 +1862,51 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.sources.visibleMask = next;
       cb.onSourceMaskChange?.(next);
       state.subsystems.scheduler.requestRender();
+    },
+
+    // ── Data-tier hot-swap ────────────────────────────────────────────────
+    //
+    // The user picks a different data-volume preset (small/medium/large) and
+    // we re-fetch only the sources whose target count differs between the two
+    // tiers.  2MRS + Famous share one .bin across all tiers, so they're
+    // diffed-out and never re-fetched; SDSS + GLADE typically re-fetch.
+    //
+    // The empty-cloud branch in `reloadSource` (target 0 → exclude) plumbs
+    // through the same `renderer.upload` path as a real fetch — passing a
+    // 0-count cloud destroys the prior buffer and allocates a 0-byte one,
+    // freeing the source's VRAM.  See `pointRenderer.upload`'s replace-not-
+    // append regression test for the contract that hot-swap relies on.
+    setTier(tier) {
+      if (tier === state.sources.tier) return;
+      const prevTier = state.sources.tier;
+      state.sources.tier = tier;
+      cb.onTierChange?.(tier);
+
+      // For each tier-relevant source, decide whether the new tier needs a
+      // re-fetch.  Same target → skip (e.g. 2MRS, Famous).  Different target
+      // → reload, which also covers the "exclude → include" and "include →
+      // exclude" transitions (the empty-cloud branch in `reloadSource`
+      // handles the latter by firing onResult with a 0-count cloud).
+      for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous]) {
+        const prevTarget = TIER_TARGETS[prevTier][source];
+        const nextTarget = TIER_TARGETS[tier][source];
+        if (prevTarget === nextTarget) continue;
+
+        // Use the same onResult pipeline as the initial load so the swapped
+        // cloud goes through the same upload, the same `clouds.set`, the
+        // same `onCloudReady` echo, and the same render wake-up — keeping
+        // HEALPix re-weight + Schechter ratio re-bake identical to first-
+        // load behaviour (see Task 8's regression test).
+        reloadSource(source, tier, (result) => {
+          if (!state.gpu.renderer) return;
+          state.gpu.renderer.upload(result.source, result.cloud).catch((err) => {
+            console.error(`[engine.setTier] upload failed for source ${result.source}:`, err);
+          });
+          state.sources.clouds.set(result.source, result.cloud);
+          cb.onCloudReady?.(result.source, result.cloud.count);
+          state.subsystems.scheduler.requestRender();
+        });
+      }
     },
 
     // ── SpaceMouse 6DOF input setters ─────────────────────────────────────
