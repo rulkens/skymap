@@ -89,10 +89,47 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
   let edgeFade =
     smoothstep(0.0, 0.1, in.uv.y) * (1.0 - smoothstep(0.9, 1.0, in.uv.y));
 
-  // Phase 1: ignore density (constant alpha + colour).  Phase 2 will
-  // multiply by density for ridge-brightness modulation.
-  let alpha = edgeFade * 0.6;
-  let tint = vec3<f32>(0.65, 0.55, 0.95); // soft purple, matches the canonical
-                                          // cosmic-web visual aesthetic.
+  // ── Density-aware brightness + tint ──────────────────────────────
+  //
+  // The per-vertex density attribute is min-max-normalised at build
+  // time (see `skeletonToFilamentCloud` in `tools/parsers/ndskl.ts`),
+  // so `in.density` ∈ [0, 1] across the whole catalogue: 0 = the
+  // sparsest filament vertex, 1 = the densest.  The vertex stage
+  // already linearly interpolates `startDensity` ↔ `endDensity` along
+  // the segment, so within a single filament the value rises smoothly
+  // toward dense hub regions.
+  //
+  // Two simultaneous modulations:
+  //
+  // * `densityBoost` ramps alpha from a visible floor (0.2) at
+  //   low-density tendrils to full (1.0) at the brightest spine
+  //   vertices.  The `pow(d, 0.6)` gamma-correction stretches the
+  //   low end of the curve — without it, a near-linear ramp would
+  //   crush the dim 0.1–0.4 range to invisibility against the
+  //   tone-mapped HDR background.  0.6 is empirical; the eye reads
+  //   the resulting falloff as smooth.
+  //
+  // * `tint` blends from a base soft purple at low density toward a
+  //   brighter, slightly more white-blue purple at high density.
+  //   This adds a second visual axis (hue, not just brightness) so
+  //   the cosmic-web spine pops without needing the alpha alone to
+  //   carry the contrast.  The two endpoints have similar luminance
+  //   so the tint shift reads as colour temperature, not glare.
+  //
+  // Disclaimer: `density` here is the DTFE field value at the vertex,
+  // NOT the per-filament robustness in σ (which is what DisPerSE's
+  // persistence cut threshold uses).  They're correlated — denser
+  // ridges tend to be more persistent — but not identical.  See the
+  // "Phase 3" note in the DisPerSE plan for the proper σ-coded
+  // visualisation, which would require capturing per-filament
+  // robustness in the parser, bumping the FILA binary format to v2,
+  // and adding a second per-segment vertex attribute.
+  let densityBoost = mix(0.2, 1.0, pow(in.density, 0.6));
+
+  let baseTint = vec3<f32>(0.55, 0.45, 0.85); // dim, cool-purple tendrils
+  let hotTint  = vec3<f32>(0.85, 0.75, 1.0);  // bright, near-white-violet spine
+  let tint = mix(baseTint, hotTint, in.density);
+
+  let alpha = edgeFade * 0.6 * densityBoost;
   return vec4<f32>(tint * alpha, alpha);  // pre-multiplied alpha
 }

@@ -2022,3 +2022,19 @@ All in-scope items mapped. Out-of-scope items (per-segment density modulation in
 
 All names align. Plan is internally consistent.
 
+
+---
+
+## Phase 3 (deferred): per-filament σ persistence visualisation
+
+Phase 1 (shipped) renders all filaments with a constant tint + alpha.  Phase 2 (shipped, commit `TBD-density-modulation`) modulates alpha + tint by the per-vertex DTFE field value (already in the v1 binary), which is *correlated* with persistence but not the same thing.
+
+Phase 3 visualises the DisPerSE per-filament *robustness* in σ — the proper "this filament is 5σ persistent vs that one at 3σ" signal.  Requires:
+
+1. **Parser change** (`tools/parsers/ndskl.ts`) — capture the per-filament robustness column from the `[FILAMENTS]` block.  Document the column name; it varies between DisPerSE versions (`persistence_ratio`, `pmin`, etc.).  Validate against a known small skeleton that the captured value matches `skelconv -info`.
+2. **FilamentCloud type bump** — add `persistencePerStrip: Float32Array` (one σ value per strip).
+3. **Binary format v2** — add a `persistence: Float32Array` block after the existing `vertices` block.  Bump magic-version to 2; v1 readers should fail loudly with a "regenerate via build-filaments" message.
+4. **buildSegmentInstances** — emit a 9th float per segment (the parent strip's σ), so the per-segment instance is now 36 bytes instead of 32.
+5. **filaments.wgsl** — receive σ as a per-instance flat-interpolated attribute, replace the `density`-based ramp with a σ-coded colour map (e.g. plasma or viridis on the input distribution range).  Keep density modulation in addition; σ is per-filament binary, density is per-vertex continuous — they complement.
+
+Estimated scope: ~6 commits.  Not blocking; ship Phase 2 first and iterate from visual feedback.
