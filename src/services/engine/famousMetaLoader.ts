@@ -18,6 +18,8 @@
  * pick.  No streaming or lazy-load complexity.
  */
 
+import { dataUrl } from './cloudLoader';
+
 /** One famous-galaxy metadata record, indexed by its local position in famous.bin. */
 export type FamousMetaEntry = {
   id: string;
@@ -68,9 +70,14 @@ export async function loadFamousSidecars(): Promise<{
   meta: FamousMetaEntry[];
   xrefs: FamousXrefMap;
 }> {
+  // The two `dataUrl()` prefixes route the sidecars through the same R2
+  // host as the .bin files in production (and the relative `/data/` path
+  // in dev).  Without the prefix, prod requests land on Workers Assets,
+  // 404, fall back to the SPA index.html, and JSON.parse explodes on
+  // the doctype.  See `cloudLoader.dataUrl()` for the env-var contract.
   const [metaRes, xrefsRes] = await Promise.allSettled([
-    fetch('/data/famous_meta.json'),
-    fetch('/data/famous_xrefs.json'),
+    fetch(dataUrl('famous_meta.json')),
+    fetch(dataUrl('famous_xrefs.json')),
   ]);
   const meta =
     metaRes.status === 'fulfilled' && metaRes.value.ok
