@@ -469,16 +469,49 @@ export function buildSyntheticFallback(): CloudLoadResult {
 }
 
 /**
- * Fetch and decode the optional `filaments.bin`.  Returns null when the
- * file is missing — filaments are an optional decorative layer; the
- * renderer must work without them, so we silently fall back rather than
- * throwing.  Network errors and decode errors both collapse to null.
+ * Filename of the filament binary to fetch for a given dataset tier.
+ *
+ * Small tier gets `filaments-small.bin` — built with a higher DisPerSE
+ * persistence cut so only the strongest ridges survive (~10–15 MB on
+ * disk vs ~30 MB for the full skeleton).  Two motivations:
+ *
+ *   1. Mobile bandwidth: the small tier was introduced as the mobile
+ *      default; pairing it with a 30 MB filament download undid the
+ *      whole point.
+ *   2. Mobile fps: each filament strip is a separate draw + a few
+ *      hundred line-segment vertices; halving the strip count gives
+ *      meaningful headroom on integrated GPUs.
+ *
+ * Medium and large tiers get the full `filaments.bin` — desktop users
+ * have the bandwidth and the GPU to enjoy the denser skeleton.
+ *
+ * Tier-swap mid-session does NOT swap the filament file: filaments are
+ * loaded once at engine boot and the GPU buffers stay live.  Reloading
+ * on every tier flip would re-download tens of MB and re-upload to GPU
+ * for what is mostly the same topology.  Acceptable trade: a desktop
+ * user who started on small (rare) sees the smaller skeleton until
+ * they hard-reload.
+ */
+function filamentFilenameForTier(tier: Tier): string {
+  return tier === 'small' ? 'filaments-small.bin' : 'filaments.bin';
+}
+
+/**
+ * Fetch and decode the optional filament binary for a given tier.
+ * Returns null when the file is missing — filaments are an optional
+ * decorative layer; the renderer must work without them, so we silently
+ * fall back rather than throwing.  Network errors and decode errors
+ * both collapse to null.
  *
  * The famous-galaxies sidecar pattern (see famousMetaLoader.ts) is the
  * direct precedent here — small auxiliary asset, fail-safe to "feature
  * disabled" rather than aborting startup.
  */
-export async function loadFilaments(onEvent?: LoadEventCallback): Promise<FilamentCloud | null> {
+export async function loadFilaments(
+  tier: Tier,
+  onEvent?: LoadEventCallback,
+): Promise<FilamentCloud | null> {
+  const filename = filamentFilenameForTier(tier);
   // Fresh AbortController so the streaming-fetch helper has a signal to
   // honour.  We never abort filament loads (they're fire-and-forget at
   // engine boot — small enough that "let it finish" is fine), but the
@@ -486,7 +519,7 @@ export async function loadFilaments(onEvent?: LoadEventCallback): Promise<Filame
   const controller = new AbortController();
   try {
     const buf = await fetchWithProgress(
-      dataUrl('filaments.bin'),
+      dataUrl(filename),
       'filaments',
       controller.signal,
       onEvent,
@@ -498,7 +531,7 @@ export async function loadFilaments(onEvent?: LoadEventCallback): Promise<Filame
     // without them.  The fetchWithProgress helper still fires its
     // `finish` event from the catch path, so the aggregator clears
     // its entry even when the load fails.
-    console.warn('[cloudLoader] filaments.bin failed:', err);
+    console.warn(`[cloudLoader] ${filename} failed:`, err);
     return null;
   }
 }

@@ -685,7 +685,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // sees the skeleton appear without having to nudge the camera.
       // Errors are already swallowed inside `loadFilaments` (returns
       // null on any failure) — we don't need a `.catch` here.
-      loadFilaments(dispatchLoadEvent).then((cloud) => {
+      // Pass the engine's CURRENT tier (which is the user's initial
+      // tier — engine boot happens before any tier-swap UI exists).
+      // Small tier → filaments-small.bin (lighter for mobile); medium/
+      // large → the full filaments.bin.  See cloudLoader's
+      // filamentFilenameForTier() for the rationale.
+      loadFilaments(state.sources.tier, dispatchLoadEvent).then((cloud) => {
         if (cloud) {
           filamentRenderer.upload(cloud);
           console.log(`[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts`);

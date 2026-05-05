@@ -54,6 +54,11 @@ const ALLOW = (name: string): boolean =>
   name === '2mrs.bin' ||
   name === 'famous.bin' ||
   name === 'filaments.bin' ||
+  // The small-tier filament variant — built by `npm run build-filaments-small`
+  // with a higher DisPerSE persistence cut.  Roughly half the size of the
+  // full file, used as the mobile-default skeleton.  See
+  // cloudLoader.filamentFilenameForTier().
+  name === 'filaments-small.bin' ||
   name === 'famous_meta.json' ||
   name === 'famous_xrefs.json';
 
