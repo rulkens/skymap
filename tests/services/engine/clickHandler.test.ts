@@ -104,7 +104,10 @@ describe('createClickResolver', () => {
       uniformBuffer: ub,
     });
     expect(picker.pick).toHaveBeenCalledTimes(1);
-    expect(picker.pick).toHaveBeenCalledWith([1280, 720], 11, 22, sources, ub);
+    // The 6th arg is `pointSizePx` — undefined when the caller didn't
+    // supply it, which preserves the legacy "no pick-floor boost"
+    // behaviour for tests that aren't exercising that path.
+    expect(picker.pick).toHaveBeenCalledWith([1280, 720], 11, 22, sources, ub, undefined);
   });
 
   it('forwards the resolveGlobalIdx triple into buildPointInfo unchanged', async () => {

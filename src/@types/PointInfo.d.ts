@@ -134,6 +134,27 @@ export type PointInfo = {
    */
   iauName: string;
 
+  /**
+   * The single best human-readable name for this row, suitable as a
+   * headline in the InfoCard / hover preview.  Derived from a small
+   * priority ladder:
+   *
+   *   1. Famous rows → primary curated name from the seed JSON
+   *      (e.g. "M31", "NGC 5128").
+   *   2. 2MRS or GLADE rows with a real PGC (objID > 0n) → `PGC <n>`.
+   *      PGC numbers are widely indexed by NED / SIMBAD and are
+   *      shorter and more memorable than a coord-based name.  For
+   *      GLADE the PGC comes directly from the source row; for 2MRS
+   *      it's populated by the build-time GLADE→2MRS cross-match.
+   *   3. Everything else → `iauName` (the coord-based fallback).
+   *
+   * Pre-computed in the builder rather than left to each surface
+   * (FullCard, CompactCard, command palette) so the headline stays
+   * consistent across the UI without each component duplicating the
+   * priority rules.
+   */
+  displayName: string;
+
   /** @group Source attribution */
 
   /**
@@ -153,14 +174,27 @@ export type PointInfo = {
   /** @group External URLs */
 
   /**
-   * SDSS DR18 Quick Look page for this object (opens in a new tab).
+   * URL of an external catalogue page for this object (opens in a new tab).
    *
-   * Only populated for SDSS-sourced galaxies — non-SDSS surveys (2MRS, GLADE,
-   * Synthetic) have no equivalent per-object catalogue page, so this field is
-   * `null` for them and the UI renders a disabled placeholder instead of a
-   * broken link.
+   * Picked per-source so every real galaxy gets a useful link:
+   *
+   *   - SDSS rows with a valid objID → SDSS DR18 Quick Look (skyserver)
+   *   - 2MRS rows → NED near-position search at the row's RA/Dec.  We
+   *     deliberately don't use 2MASX byname here: NED's name index has
+   *     coverage gaps for the 2MASX prefix (verified empirically), so a
+   *     position search lands more reliably even when one extra click
+   *     is required to drill into the object page.
+   *   - GLADE rows with a real PGC → NED byname `PGC <n>` (the PGC is
+   *     persisted in `objID` — see `tools/parsers/glade.ts`)
+   *   - GLADE rows with no PGC → NED near-position search at the row's RA/Dec
+   *   - Famous rows → NED byname using the primary curated name
+   *     (M31, NGC 224, …) from the famous catalog sidecar
+   *   - Synthetic rows → `null` (no real coords to look up)
+   *
+   * The InfoCard component picks an appropriate link label off `source`
+   * (e.g. "View in SDSS Explorer" for SDSS, "View on NED" otherwise).
    */
-  explorerUrl: string | null;
+  catalogUrl: string | null;
 
   /** @group Physical size */
 

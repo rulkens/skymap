@@ -1084,6 +1084,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           viewportPx: [canvas.width, canvas.height],
           visibleSources,
           uniformBuffer: r.uniformBuffer,
+          // Threaded through so the pick pass can boost its floor size
+          // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
+          pointSizePx: state.settings.pointSizePx,
         });
       };
 
@@ -1437,6 +1440,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               cssToTexPx(pos.y),
               visibleSources,
               rendererRef.uniformBuffer,
+              // Boost the picking floor for easier hover targets — see
+              // PICK_PADDING_PX in pickRenderer.ts.
+              state.settings.pointSizePx,
             )
             .then((idx) => {
               setHovered(idx === -1 ? null : idx);

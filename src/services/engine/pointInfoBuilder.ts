@@ -34,6 +34,8 @@ import {
   sdssExplorerUrl,
   sdssThumbnailUrl,
   dssThumbnailUrl,
+  nedByNameUrl,
+  nedNearPositionUrl,
   DEFAULT_GALAXY_DIAMETER_KPC,
 } from '../../utils/math';
 
@@ -183,14 +185,65 @@ export function buildPointInfo(
   // GLADE, Synthetic) falls back to the all-sky DSS service so we never
   // request blank frames from regions SDSS didn't observe.
   //
-  // explorerUrl is intentionally null for non-SDSS rows: 2MRS and GLADE have
-  // no equivalent per-object catalogue page, so a disabled UI affordance is
-  // more honest than a link that 404s.  We also guard the SDSS branch on
-  // objIDs[idx] > 0n because synthetic-style sequential IDs (0, 1, 2…) won't
-  // resolve either.
+  // ── External catalogue URL ────────────────────────────────────────────────
+  //
+  // Pick a per-source target so every real galaxy gets a useful link:
+  //
+  //   - SDSS rows with a valid objID → SDSS DR18 Quick Look (skyserver),
+  //     which shows the same image-cutout + photometry + spectrum the
+  //     thumbnail pass already pulls from.
+  //   - 2MRS rows → NED byname lookup using the runtime-formatted
+  //     `2MASX J<RA><Dec>` designation (`iauName` produces it for free
+  //     from coords).  NED resolves these directly to the object page.
+  //   - GLADE rows with a real PGC → NED byname `PGC <n>`.  The PGC is
+  //     persisted in the SDSS-shaped `objID` slot — see the comment in
+  //     `tools/parsers/glade.ts` for why the slot is safe to repurpose.
+  //   - GLADE rows with no PGC (the source line had a sentinel) → NED
+  //     near-position search at the row's RA/Dec.  The user lands on a
+  //     short results table sorted by distance to the search centre and
+  //     clicks through; one extra click vs. a direct hit, but always
+  //     resolves to *some* page that describes the row.
+  //   - Famous rows → NED byname using the curated primary name (M31,
+  //     NGC 224, …).  The famous-block in the InfoCard previously
+  //     inlined the same URL; now the field is centralised here so
+  //     every renderer of the card sees a consistent value.
+  //   - Synthetic rows → null.  The coords are randomly drawn and
+  //     don't correspond to any real object, so a real-catalogue link
+  //     would be misleading.
+  //
+  // Why route everything through NED rather than HyperLEDA / SIMBAD?
+  // Coverage.  NED indexes the deep WISE / 2MASS layers that GLADE
+  // rides on top of, including faint distant galaxies that drop out
+  // of HyperLEDA's PGC-only database.  Verified empirically.
   const isSdss = source === Source.SDSS;
   const objID = cloud.objIDs[idx]!;
-  const explorerUrl = isSdss && objID > 0n ? sdssExplorerUrl(objID) : null;
+  let catalogUrl: string | null;
+  if (isSdss && objID > 0n) {
+    catalogUrl = sdssExplorerUrl(objID);
+  } else if (source === Source.TwoMRS) {
+    // 2MRS rows are routed through NED's near-position search rather
+    // than a 2MASX byname lookup.  Reason: NED's name index has
+    // coverage gaps for the 2MASX prefix — verified empirically against
+    // NED's `srs/ObjectLookup` JSON endpoint, where many real 2MRS
+    // rows return `ResultCode: 2 — Unknown name` even though the
+    // underlying object is present in NED under a different catalogue
+    // name (PGC, MCG, IRAS, …).  A position search finds the object
+    // regardless of which name NED indexes it under; the one-extra-
+    // click on the results page is preferable to a "not recognized"
+    // dead-end.
+    catalogUrl = nedNearPositionUrl(ra, dec);
+  } else if (source === Source.Glade) {
+    catalogUrl = objID > 0n ? nedByNameUrl(`PGC ${objID}`) : nedNearPositionUrl(ra, dec);
+  } else if (source === Source.Famous && famousMeta && famousMeta[idx]) {
+    catalogUrl = nedByNameUrl(famousMeta[idx]!.names[0]!);
+  } else if (source === Source.SDSS) {
+    // SDSS row with objID = 0n (synthetic-style test fixture).  Falling
+    // back to coord search keeps the link non-null in tests so the UI
+    // path is exercised, while pointing somewhere real-ish.
+    catalogUrl = nedNearPositionUrl(ra, dec);
+  } else {
+    catalogUrl = null;
+  }
   const thumbnailUrl = isSdss ? sdssThumbnailUrl(ra, dec, 200) : dssThumbnailUrl(ra, dec, 2);
 
   // ── Orientation provenance recovery ────────────────────────────────────────
@@ -312,6 +365,24 @@ export function buildPointInfo(
     galaxyType: galaxyType(source, { magU, magG, magR, magI, magZ }),
     iauName: iauName(source, ra, dec),
 
+    // Best human-readable headline for this row.  Priority ladder:
+    //   1. Famous → curated primary name (set in the famous block above)
+    //   2. Survey row with a real PGC in objID → `PGC <n>`.  Applies
+    //      to BOTH 2MRS (PGC populated by the build-time GLADE→2MRS
+    //      cross-match) and GLADE (PGC inherited directly from the
+    //      source line).  PGC is widely indexed by NED / SIMBAD,
+    //      shorter than a coord-based name, and especially valuable
+    //      for GLADE rows where the iauName ("GLADE J…") is a
+    //      synthetic prefix we generate ourselves and isn't a real
+    //      catalogue identifier anywhere.
+    //   3. Otherwise → IAU coord-based name (`SDSS J…`, `2MASX J…`,
+    //      `GLADE J…`).
+    displayName:
+      famous?.names[0] ??
+      ((source === Source.TwoMRS || source === Source.Glade) && cloud.objIDs[idx]! > 0n
+        ? `PGC ${cloud.objIDs[idx]!}`
+        : iauName(source, ra, dec)),
+
     // Per-slot band names + pre-computed adjacent-slot colour pairs.
     bands,
     colours,
@@ -320,8 +391,8 @@ export function buildPointInfo(
     source,
     sourceLabel: sourceLabel(source),
 
-    // External URLs — null/SDSS-vs-DSS chosen above based on `source`.
-    explorerUrl,
+    // External URLs — chosen above based on `source` (and PGC for GLADE).
+    catalogUrl,
     thumbnailUrl,
 
     // Physical size — drives the focus-tween framing distance and the

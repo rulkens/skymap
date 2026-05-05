@@ -24,6 +24,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import type { PointInfo } from '../../@types';
+import { Source } from '../../data/sources';
 import { formatDistance } from '../../utils/format/distance';
 import { Thumbnail } from './Thumbnail';
 import styles from './FullCard.module.css';
@@ -131,7 +132,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
             type="button"
             className={styles.focusButton}
             onClick={() => onFocus(info)}
-            aria-label={`Focus camera on ${info.iauName}`}
+            aria-label={`Focus camera on ${info.displayName}`}
           >
             Focus
           </button>
@@ -157,12 +158,12 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
 
       {/* ── Headline ──────────────────────────────────────────────────────── */}
       {/*
-        Famous-atlas rows show their primary curated name as the headline
-        (e.g. "M31") instead of the coordinate-derived IAU designation.
-        Survey rows fall back to `info.iauName` so SDSS galaxies still
-        display their `SDSS J123456.78+012345.6`-style label.
+        `info.displayName` carries the priority-resolved best human-readable
+        name for the row: curated primary name for Famous, `PGC <n>` for
+        2MRS rows with a real PGC, IAU coord designation otherwise.  See
+        `pointInfoBuilder.ts` for the ladder.
       */}
-      <div className={styles.cardHeadline}>{info.famous ? info.famous.names[0] : info.iauName}</div>
+      <div className={styles.cardHeadline}>{info.displayName}</div>
 
       {/* ── Source attribution badge ──────────────────────────────────────── */}
       <div className={styles.sourceBadge}>{info.sourceLabel}</div>
@@ -437,16 +438,25 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
         `window.opener` — a standard security practice for any `target="_blank"`
         link.  Without it a malicious (or compromised) page could navigate the
         opener to a phishing URL.  `noreferrer` would also suppress the Referer
-        header, but that's not needed here since skyserver.sdss.org is a trusted
-        public resource.
+        header, but that's not needed here since both SDSS and NED are trusted
+        public resources.
 
-        Only SDSS-sourced galaxies have a useful Explorer page; for 2MRS/GLADE
-        rows we render a disabled-looking note instead of a link that would
-        404 against an unrelated SDSS objID.
+        Label varies by source: SDSS rows go to the SDSS Explorer page;
+        everything else goes to NED (either via byname for rows where we
+        retain a real catalogue ID, or via near-position search where we
+        only have coords).  See `pointInfoBuilder.ts` for the URL-picking
+        logic and `nedUrl.ts` for the URL builders themselves.
+
+        Synthetic-cloud rows are the only case where we can't produce a
+        useful catalogue link — `catalogUrl === null` then, and we render
+        a disabled-looking note instead of a link that would 404.
       */}
-      {info.explorerUrl ? (
-        <a className={styles.externalLink} href={info.explorerUrl} target="_blank" rel="noopener">
-          View in SDSS Explorer &rarr;
+      {info.catalogUrl ? (
+        <a className={styles.externalLink} href={info.catalogUrl} target="_blank" rel="noopener">
+          {info.source === Source.SDSS
+            ? 'View in SDSS Explorer'
+            : 'View on NED'}
+          {' →'}
         </a>
       ) : (
         <div className={`${styles.externalLink} ${styles.externalLinkDisabled}`}>

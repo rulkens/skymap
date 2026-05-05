@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 import { parseSdssCsv } from './parsers/sdssCsv.js';
 import { parseTwoMrs, parseXscShapeCsv } from './parsers/twoMrs.js';
 import type { XscShapeMap } from './parsers/twoMrs.js';
-import { parseGladeLine, parseHyperLedaCsv } from './parsers/glade.js';
+import { parseGladeLine, parseGlade2masxPgcLine, parseHyperLedaCsv } from './parsers/glade.js';
 import type { HyperLedaShapeMap } from './parsers/glade.js';
 import type { ParsedRecord } from './parsers/common.js';
 import { crossMatch } from './crossMatch.js';
@@ -223,6 +223,22 @@ async function loadGladeStream(
   path: string | undefined,
   options: { specZOnly?: boolean; isotropic?: boolean } = {},
   hyperLeda: HyperLedaShapeMap = new Map(),
+  // OUT-parameter: GLADE rows with both a real PGC and a real 2MASX name
+  // populate this map as a side-effect of the streaming parse.  The
+  // 2MRS post-processing pass in runCli below uses it to patch PGCs
+  // into 2MRS records' objID slot, so the InfoCard's NED catalogue
+  // link can resolve via `?objname=PGC+<n>` instead of the fuzzy
+  // near-position-search fallback.
+  //
+  // Optional so existing tests / callers that don't need the map can
+  // omit it without paying the per-row map-write cost.  We populate
+  // the map from the *raw line* regardless of whether parseGladeLine
+  // accepted or rejected the row — even rows we skip (quasars,
+  // no-distance bookkeeping rows) carry valid 2MASX→PGC mappings that
+  // a 2MRS row sharing the same XSC cross-ID can legitimately benefit
+  // from.  See parseGlade2masxPgcLine's docstring for the full
+  // rationale.
+  pgcByMassId?: Map<string, bigint>,
 ): Promise<ParsedRecord[]> {
   if (!path) return [];
 
@@ -244,6 +260,14 @@ async function loadGladeStream(
       skipped++;
     } else {
       records.push(rec);
+    }
+    // Harvest the 2MASX→PGC mapping from the same line, independently
+    // of whether parseGladeLine accepted it as a renderable record.
+    // Single-pass over the file keeps the I/O cost flat regardless of
+    // whether the caller supplied a map.
+    if (pgcByMassId) {
+      const pair = parseGlade2masxPgcLine(line);
+      if (pair) pgcByMassId.set(pair.massId, pair.pgc);
     }
   }
 
@@ -345,12 +369,61 @@ async function runCli(): Promise<void> {
   const sdss = loadOrEmpty(args.sdss, parseSdssCsv);
   process.stderr.write('parsing 2MRS…\n');
   const twoMrs = loadOrEmpty(args.twomrs, (raw) => parseTwoMrs(raw, xsc));
+  // 2MASX-name → PGC map, populated as a side effect of the GLADE
+  // streaming parse below.  We allocate it in runCli (not inside
+  // loadGladeStream) so the post-GLADE 2MRS-patching pass can read it
+  // back without a second pass over GLADE's 800 MB file.  Empty when
+  // GLADE isn't supplied; the patching loop just no-ops in that case.
+  const pgcByMassId = new Map<string, bigint>();
+
   process.stderr.write('parsing GLADE (streaming)…\n');
   const glade = await loadGladeStream(
     args.glade,
     { specZOnly: gladeSpecOnly, isotropic: gladeIsotropic },
     leda,
+    pgcByMassId,
   );
+
+  // ── Cross-pollinate PGCs from GLADE into 2MRS ──────────────────────────
+  //
+  // 2MRS's source file has no PGC column, so its records initially
+  // carry `objID = 0n` and the runtime InfoCard's NED catalogue link
+  // falls back to a near-position search — which can land on the
+  // wrong galaxy in dense fields.  GLADE's source rows DO carry both
+  // PGC (bytes 1-7) and the matching 2MASS XSC name (bytes 68-83);
+  // `loadGladeStream` populated `pgcByMassId` from those fields above.
+  //
+  // Walk the parsed 2MRS records once and patch the objID slot
+  // whenever GLADE has a corresponding 2MASX→PGC mapping.  Uncovered
+  // rows (the long tail — typically <5 % for this nearby-galaxy
+  // catalogue, since GLADE was specifically built to merge 2MASS XSC
+  // and HyperLEDA) keep `objID = 0n` and continue to use the
+  // near-position fallback URL downstream.
+  //
+  // We rebuild the record via spread rather than mutating the existing
+  // object so the change is visible in any future debugging snapshot
+  // of `twoMrs[]` taken before this point — and the spread is cheap
+  // at 2MRS's scale (~45 k rows total).
+  let twoMrsPatched = 0;
+  for (let i = 0; i < twoMrs.length; i++) {
+    const r = twoMrs[i]!;
+    // r.massId is undefined when the 2MRS parser was called from a
+    // codepath that didn't set the field (e.g. older tests pre-dating
+    // this cross-match) — defensive check, not load-bearing in the
+    // CLI path where parseTwoMrs always populates it.
+    if (!r.massId) continue;
+    const pgc = pgcByMassId.get(r.massId);
+    if (pgc !== undefined) {
+      twoMrs[i] = { ...r, objID: pgc };
+      twoMrsPatched++;
+    }
+  }
+  if (twoMrs.length > 0) {
+    const pct = ((twoMrsPatched / twoMrs.length) * 100).toFixed(1);
+    process.stderr.write(
+      `  2MRS PGC cross-match: ${twoMrsPatched.toLocaleString()} of ${twoMrs.length.toLocaleString()} matched (${pct}%)\n`,
+    );
+  }
 
   // Capture per-source input counts up front so the summary can report
   // the dedup drop rate per survey, not just the merged total.

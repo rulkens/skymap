@@ -92,6 +92,15 @@ export type ClickResolveInput = {
   visibleSources: Iterable<PickSourceDraw>;
   /** Uniform buffer shared with PointRenderer; the picker reads, never writes. */
   uniformBuffer: GPUBuffer;
+  /**
+   * The user's current `pointSizePx` setting.  Forwarded to
+   * `pickRenderer.pick` so it can boost the picking floor (see
+   * `PICK_PADDING_PX` in pickRenderer.ts) — distant point-like
+   * galaxies get a wider hit-test area, making them easier to click.
+   * Optional so legacy callers that don't yet thread the setting
+   * through can still construct a ClickResolveInput.
+   */
+  pointSizePx?: number;
 };
 
 /**
@@ -147,6 +156,7 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
         args.pickYPx,
         args.visibleSources,
         args.uniformBuffer,
+        args.pointSizePx,
       );
       if (idx === -1) return { kind: 'clear' };
       // Try to build a PointInfo, but treat failure as "still select

@@ -141,6 +141,17 @@ export type PickRenderer = {
     pickYPx: number,
     sources: Iterable<PickSourceDraw>,
     sharedUniformBuffer: GPUBuffer,
+    /**
+     * The user's current `pointSizePx` setting.  Used to compute the
+     * pick-pass floor: `pointSizePx + PICK_PADDING_PX` is written into
+     * the shared uniform buffer just before the pick pass so distant
+     * point-like galaxies become easier to hover/click.  See
+     * `PICK_PADDING_PX` for the rationale.
+     *
+     * Optional for backwards compatibility — when omitted, the pick
+     * pass reads whatever the visual frame last wrote (no boost).
+     */
+    pointSizePx?: number,
   ): Promise<number>;
 
   /**
@@ -170,6 +181,36 @@ export type PickRenderer = {
  *
  * @param device  The WebGPU logical device.  Owned by the caller.
  */
+/**
+ * Padding (in CSS pixels) added to `pointSizePx` for the pick pass only.
+ *
+ * Distant point-like galaxies render at the visual floor of `pointSizePx`
+ * (default 2.5 px = a 5 px-diameter dot).  That's a small target for a
+ * mouse cursor — easy to miss when trying to inspect a faint background
+ * galaxy among the cosmic-web filaments.  Padding the *pick* pass's
+ * floor by this amount makes the pickable area noticeably larger
+ * without affecting how the galaxy looks on screen.
+ *
+ * Mechanism: just before each pick render pass we overwrite the
+ * `pointSizePx` slot in the shared uniform buffer with
+ * `pointSizePx + PICK_PADDING_PX`.  The next visual frame writes the
+ * real value back, so the visual pass is unaffected.  Same in-place
+ * mutation trick used for `selectedIndex` (see comment near the
+ * sentinel write below for the rationale).
+ *
+ * Why an additive constant rather than a fixed absolute floor?
+ * Scales naturally with the user's chosen `pointSizePx` — bumping
+ * the slider doesn't shrink the pick target relative to the visual
+ * dot.
+ *
+ * Why 4 px?  Empirically comfortable for a mouse cursor (~9 px total
+ * pick diameter from the default 2.5 px floor).  Touch interaction
+ * uses the same value; touch targets benefit from an even larger
+ * radius but the standard 44 px iOS/Android tap-target is enforced
+ * elsewhere by the dedicated touch input layer.
+ */
+const PICK_PADDING_PX = 4;
+
 export function createPickRenderer(device: GPUDevice): PickRenderer {
   // ── Shader module ──────────────────────────────────────────────────────────
   //
@@ -354,6 +395,7 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     pickYPx: number,
     sources: Iterable<PickSourceDraw>,
     sharedUniformBuffer: GPUBuffer,
+    pointSizePx?: number,
   ): Promise<number> {
     // Concurrency guard — see the `inFlight` declaration above for rationale.
     if (inFlight) return -1;
@@ -405,6 +447,26 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     const SELECTED_INDEX_OFFSET = 80;
     const NONE_SENTINEL = new Uint32Array([0xffffffff]);
     device.queue.writeBuffer(sharedUniformBuffer, SELECTED_INDEX_OFFSET, NONE_SENTINEL);
+
+    // ── Boost the floor point size for easier hover/click ────────────────
+    //
+    // See the `PICK_PADDING_PX` doc comment at the top of this file for the
+    // full rationale.  Pads the visual `pointSizePx` floor by a few extra
+    // pixels so distant point-like galaxies become easier mouse targets
+    // without growing them on screen.  Same in-place mutation pattern as
+    // the SELECTED_INDEX write above — the next visual frame writes the
+    // real `pointSizePx` back, so the visual pass is unaffected.
+    //
+    // Layout reminder: pointSizePx sits at byte offset 72 (mat4 viewProj
+    // = 64 + viewport vec2 = 8 → 72).  Skipped entirely when the caller
+    // didn't supply pointSizePx — preserves the legacy "pick whatever the
+    // visual frame just wrote" contract for any test that constructs the
+    // renderer in isolation.
+    if (pointSizePx !== undefined) {
+      const POINT_SIZE_OFFSET = 72;
+      const boostedSize = new Float32Array([pointSizePx + PICK_PADDING_PX]);
+      device.queue.writeBuffer(sharedUniformBuffer, POINT_SIZE_OFFSET, boostedSize);
+    }
 
     // ── Single-encoder, single-submit pick pass ───────────────────────────
     //

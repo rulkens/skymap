@@ -60,11 +60,14 @@ import styles from './SettingsPanel.module.css';
  * Keeping it always-on but invisible-in-the-UI means the renderer always has
  * *something* to draw while the user freely toggles the real catalogs.
  */
+// Ordered smallest-catalogue → largest (Famous ~20 → 2MRS ~38 k → SDSS
+// ~500 k → GLADE ~2 M) so the user sees the "iceberg tip" first and can
+// reason about what each toggle adds in size.
 const TOGGLEABLE_SOURCES: readonly Source[] = [
-  Source.SDSS,
-  Source.TwoMRS,
-  Source.Glade,
   Source.Famous,
+  Source.TwoMRS,
+  Source.SDSS,
+  Source.Glade,
 ];
 
 // ── Props ──────────────────────────────────────────────────────────────────────

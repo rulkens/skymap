@@ -31,7 +31,7 @@ import type { FamousMetaEntry } from '../../../src/services/engine/famousMetaLoa
 
 /**
  * Build a synthetic `PointCloud` of `count` rows, all zeroed except objIDs
- * (sequential 1..N so explorerUrl is well-defined for SDSS rows).  Mirrors
+ * (sequential 1..N so catalogUrl is well-defined for SDSS rows).  Mirrors
  * the helper in `tests/services/gpu/computeSchechterRatios.test.ts` so future
  * readers can copy-paste between test files without pattern-matching surprises.
  */
@@ -177,10 +177,11 @@ describe('buildPointInfo — SDSS source', () => {
     // SDSS prefix on the IAU name; coords match the rounded-down truncation.
     expect(info.iauName.startsWith('SDSS J')).toBe(true);
 
-    // explorerUrl is non-null for SDSS rows with valid objID > 0n.
-    expect(info.explorerUrl).not.toBeNull();
-    expect(info.explorerUrl).toContain('skyserver.sdss.org');
-    expect(info.explorerUrl).toContain('objId=1');
+    // catalogUrl points to the SDSS Quick Look page for SDSS rows with a
+    // valid objID (> 0n).
+    expect(info.catalogUrl).not.toBeNull();
+    expect(info.catalogUrl).toContain('skyserver.sdss.org');
+    expect(info.catalogUrl).toContain('objId=1');
 
     // SDSS rows use the SDSS thumbnail URL (not DSS).
     expect(info.thumbnailUrl).toContain('skyserver.sdss.org');
@@ -205,14 +206,18 @@ describe('buildPointInfo — SDSS source', () => {
     expect(info.famous).toBeUndefined();
   });
 
-  it('returns a null explorerUrl when objID is 0n (synthetic-style ID)', () => {
-    // Synthetic-style sequential IDs starting at 0 don't resolve in the SDSS
-    // explorer.  The function returns null rather than a broken link.
+  it('falls back to a NED coord-search URL when objID is 0n (synthetic-style ID)', () => {
+    // Synthetic-style sequential IDs starting at 0 don't resolve to a real
+    // SDSS Explorer page, so for that edge case we fall back to a NED
+    // near-position search at the row's RA/Dec.  Keeps the catalog link
+    // non-null in tests so the InfoCard's link path stays exercised.
     const cloud = makeCloud(1);
     cloud.objIDs[0] = 0n;
     setPosition(cloud, 0, 100, 0, 0);
     const info = buildPointInfo(cloud, 0, Source.SDSS);
-    expect(info.explorerUrl).toBeNull();
+    expect(info.catalogUrl).not.toBeNull();
+    expect(info.catalogUrl).toContain('ned.ipac.caltech.edu');
+    expect(info.catalogUrl).toContain('Near+Position+Search');
   });
 
   it('flags orientation provenance as "deterministic fallback" when ar/pa match the hash', () => {
@@ -249,8 +254,13 @@ describe('buildPointInfo — TwoMRS source', () => {
     expect(info.sourceLabel).toBe('2MRS');
     expect(info.iauName.startsWith('2MASX J')).toBe(true);
 
-    // Non-SDSS sources never expose an SDSS explorer link.
-    expect(info.explorerUrl).toBeNull();
+    // 2MRS rows resolve via NED's near-position search rather than a
+    // 2MASX byname lookup — NED's name index has coverage gaps for
+    // 2MASX even when the underlying object is present in NED under a
+    // different catalogue name.  See pointInfoBuilder.ts for why.
+    expect(info.catalogUrl).not.toBeNull();
+    expect(info.catalogUrl).toContain('ned.ipac.caltech.edu');
+    expect(info.catalogUrl).toContain('Near+Position+Search');
 
     // Thumbnail comes from the CDS hips2fits DSS proxy, not SDSS ImgCutout.
     expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
@@ -266,6 +276,31 @@ describe('buildPointInfo — TwoMRS source', () => {
     // 2MRS-specific tag.
     expect(info.orientation.provenance).toBe('2MASS XSC sup_phi');
   });
+
+  it('uses `PGC <n>` as displayName when the row has a real PGC', () => {
+    // The build-time GLADE→2MRS cross-match populates objID with the
+    // matching PGC for ~30 % of 2MRS rows.  When present, the headline
+    // should prefer `PGC <n>` over the coord-based 2MASX designation
+    // because PGC numbers are NED-indexed and shorter to read.
+    const cloud = makeCloud(1);
+    cloud.objIDs[0] = 2789n; // NGC 253's PGC
+    setPosition(cloud, 0, 50, 50, 0);
+    const info = buildPointInfo(cloud, 0, Source.TwoMRS);
+    expect(info.displayName).toBe('PGC 2789');
+    // The IAU name still comes through unchanged for callers that need
+    // the coord-based form (it's not the headline anymore but other
+    // code paths may consume it).
+    expect(info.iauName.startsWith('2MASX J')).toBe(true);
+  });
+
+  it('falls back to iauName as displayName when objID is 0n (no cross-match)', () => {
+    const cloud = makeCloud(1);
+    cloud.objIDs[0] = 0n;
+    setPosition(cloud, 0, 50, 50, 0);
+    const info = buildPointInfo(cloud, 0, Source.TwoMRS);
+    expect(info.displayName).toBe(info.iauName);
+    expect(info.displayName.startsWith('2MASX J')).toBe(true);
+  });
 });
 
 // ─── buildPointInfo — Glade branch ──────────────────────────────────────────
@@ -274,6 +309,11 @@ describe('buildPointInfo — Glade source', () => {
   it('uses the GLADE prefix, DSS thumbnail, and HyperLEDA orientation tag', () => {
     // GLADE rows: B/J/H/K in g/r/i/z slots; u-slot is '—'.
     const cloud = makeCloud(1);
+    // makeCloud seeds objIDs[i] = i+1; for GLADE rows the SDSS-shaped
+    // objID slot now carries the row's HyperLEDA PGC.  Force it to 0n
+    // here so this test exercises the "no PGC, fall back to coord
+    // search" branch.  The real-PGC branch has its own test below.
+    cloud.objIDs[0] = 0n;
     setPosition(cloud, 0, 0, 0, 200);
     cloud.magG[0] = 14.0; // B
     cloud.magR[0] = 13.0; // J
@@ -285,7 +325,10 @@ describe('buildPointInfo — Glade source', () => {
     expect(info.source).toBe(Source.Glade);
     expect(info.sourceLabel).toBe('GLADE');
     expect(info.iauName.startsWith('GLADE J')).toBe(true);
-    expect(info.explorerUrl).toBeNull();
+    // GLADE row with PGC = 0n → NED coord-search URL.
+    expect(info.catalogUrl).not.toBeNull();
+    expect(info.catalogUrl).toContain('ned.ipac.caltech.edu');
+    expect(info.catalogUrl).toContain('Near+Position+Search');
     expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
 
     expect(info.bands).toEqual({ u: '—', g: 'B', r: 'J', i: 'H', z: 'K' });
@@ -296,16 +339,29 @@ describe('buildPointInfo — Glade source', () => {
     // Non-fallback orientation values get the HyperLEDA tag.
     expect(info.orientation.provenance).toBe('HyperLEDA PGC');
   });
+
+  it('builds a NED byname URL with PGC<n> when objID encodes a real PGC', () => {
+    // The GLADE parser persists the row's HyperLEDA PGC number into the
+    // SDSS-shaped objID slot when one is present (`tools/parsers/glade.ts`).
+    // The InfoCard builder reads it back and produces a clean
+    // ?objname=PGC+<n> link, which resolves directly to the catalogue page.
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 0, 0, 200);
+    cloud.objIDs[0] = 12345n;
+    const info = buildPointInfo(cloud, 0, Source.Glade);
+    expect(info.catalogUrl).toContain('ned.ipac.caltech.edu/byname');
+    expect(info.catalogUrl).toContain('PGC+12345');
+  });
 });
 
 // ─── buildPointInfo — Synthetic branch ──────────────────────────────────────
 
 describe('buildPointInfo — Synthetic source', () => {
   it('uses the Synth prefix and DSS thumbnail; orientation falls back', () => {
-    // Synthetic data carries SDSS-shaped band labels but the explorer link is
-    // suppressed (synthetic IDs don't resolve).  Orientation provenance is
-    // always "deterministic fallback" for synthetic — synthetic data skips
-    // the real-data fetch entirely.
+    // Synthetic data carries SDSS-shaped band labels but the catalog link is
+    // null (synthetic coords don't correspond to real objects).  Orientation
+    // provenance is always "deterministic fallback" for synthetic — synthetic
+    // data skips the real-data fetch entirely.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 0, 100, 0);
     // Use deterministic-fallback values so provenance lands on the synthetic
@@ -322,7 +378,7 @@ describe('buildPointInfo — Synthetic source', () => {
     expect(info.source).toBe(Source.Synthetic);
     expect(info.sourceLabel).toBe('Synthetic');
     expect(info.iauName.startsWith('Synth J')).toBe(true);
-    expect(info.explorerUrl).toBeNull();
+    expect(info.catalogUrl).toBeNull();
     expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
     expect(info.orientation.provenance).toBe('deterministic fallback');
   });

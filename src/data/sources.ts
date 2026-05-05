@@ -260,12 +260,17 @@ export function bandLabels(source: Source): BandLabels {
  * twice as many keys as you expect. Hard-coding the list also makes the
  * intent obvious and the file format change visible in code review.
  */
+// Ordering: real surveys are listed smallest catalogue → largest, so the
+// UI presents them in an intuitive "tip-of-the-iceberg first" order
+// (Famous → 2MRS → SDSS → GLADE, roughly 20 → 38 k → 500 k → 2 M rows).
+// Synthetic stays first as a special case — it's the procedural-fallback
+// cloud, not a real survey, and is hidden from user-facing lists anyway.
 export const ALL_SOURCES: readonly Source[] = [
   Source.Synthetic,
-  Source.SDSS,
-  Source.TwoMRS,
-  Source.Glade,
   Source.Famous,
+  Source.TwoMRS,
+  Source.SDSS,
+  Source.Glade,
 ];
 
 /**
