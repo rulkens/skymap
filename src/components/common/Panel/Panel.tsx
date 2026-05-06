@@ -32,16 +32,21 @@
  * If persistence becomes a real need, restore it as a single `persistKey`
  * prop on Panel rather than re-introducing the per-consumer helpers.
  *
- * ### Why conditional render rather than CSS hide
+ * ### Animated open/close — grid-template-rows trick
  *
- * The body is wrapped in `open && <div>...</div>` so a collapsed panel
- * removes its children from the DOM entirely.  This matches the existing
- * outer-collapse behaviour of SettingsPanel — for sub-sections inside the
- * panel we use a CSS height animation (see `CollapsibleSection.module.css`)
- * because those collapse/expand frequently and the visual smoothness
- * matters; at the panel level collapse is rare and the unmount cost is
- * negligible while the saved DOM weight (especially for SettingsPanel's
- * ~80 controls) is meaningful.
+ * The body wears the same `grid-template-rows: 0fr → 1fr` animation that
+ * the inner CollapsibleSection uses, so the whole panel family (outer
+ * panel + inner sub-sections) collapse with the same visual rhythm.  The
+ * body stays mounted — collapsed = grid-row collapses to height 0 +
+ * opacity 0 + content clipped via `overflow: hidden` on the inner body
+ * div + min-height: 0 on the grid item (without that, grid items default
+ * to a min-height of `auto` and refuse to collapse).
+ *
+ * An earlier draft conditionally unmounted the children to save DOM
+ * weight on collapse (especially for SettingsPanel's ~80 controls), but
+ * the abrupt show/hide read as jarring next to the smoothly-animating
+ * inner sections.  Keeping the body mounted is the consistency win;
+ * the DOM-weight cost is negligible at this catalog size.
  *
  * ### Aria wiring
  *
@@ -110,28 +115,39 @@ export function Panel({ title, ariaLabel, defaultOpen = true, children }: PanelP
         aria-controls={bodyId}
       >
         {/*
-          Chevron sits LEFT of the heading like a tree-twirl.  Two glyphs
-          (▾ open / ▸ closed) rather than a CSS rotation — the Panel
-          intentionally doesn't animate; only the inner CollapsibleSection
-          sub-sections do.  Keeping the markup minimal also matches the
-          historical SettingsPanel outer collapse.
+          Chevron is a single ▸ glyph rotated 90° via CSS transform when
+          open.  Animating transform is smooth; swapping text characters
+          can't be animated.  Same affordance as the inner
+          CollapsibleSection sub-sections, so the open/close gesture
+          reads as one consistent "fold" at every nesting level.
         */}
-        <span className={styles.chevron} aria-hidden>
-          {open ? '▾' : '▸'}
+        <span
+          className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}
+          aria-hidden
+        >
+          ▸
         </span>
         <span className={styles.title}>{title}</span>
       </button>
 
       {/*
-        Conditionally rendered body — see the module header for why we
-        unmount rather than CSS-hide.  The `id` matches the title button's
-        aria-controls so screen readers can navigate the relationship.
+        Always-mounted body wrapper.  See the module header for the
+        grid-template-rows animation — collapsed = `0fr` (row collapses
+        to height 0), open = `1fr` (row grows to fit content).  Browsers
+        interpolate between the two smoothly, which `height: auto`
+        wouldn't.  The inner `.body` div has `min-height: 0` (so the
+        grid CAN collapse it) and `overflow: hidden` (so content visibly
+        clips during the transition).  Same mechanism as
+        CollapsibleSection — see that file for the full physics.
       */}
-      {open && (
-        <div id={bodyId} className={styles.content}>
-          {children}
-        </div>
-      )}
+      <div
+        id={bodyId}
+        className={styles.bodyWrapper}
+        data-open={open}
+        aria-hidden={!open}
+      >
+        <div className={styles.body}>{children}</div>
+      </div>
     </div>
   );
 }

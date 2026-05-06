@@ -63,11 +63,15 @@
 }
 
 /*
- * When the title button is the only child (panel is collapsed), drop its
- * bottom border so the panel reads as a single rounded card rather than
- * a header with an empty body underneath.
+ * When the panel is collapsed, drop the title button's bottom border so
+ * the card reads as a single rounded chip rather than a header with an
+ * empty rule underneath it.  Pre-animation we used `:only-child` (the
+ * body was unmounted on collapse), but the body now stays mounted with
+ * `grid-template-rows: 0fr` so we detect "collapsed" via a `:has()`
+ * sibling check on the bodyWrapper's `data-open` attribute.  Baseline
+ * 2023, supported across every browser the project targets.
  */
-.titleButton:only-child {
+.titleButton:has(+ .bodyWrapper:not([data-open='true'])) {
   border-bottom: 0;
   border-radius: var(--radius-xl);
 }
@@ -78,12 +82,26 @@
  * indicator.  Dim and small so it doesn't compete with the heading text.
  */
 .chevron {
+  display: inline-block;
   font-size: var(--font-size-xxs);
   color: var(--color-fg-ghost);
   margin-right: var(--space-3);
   /* Nudge up slightly for visual balance with the uppercase heading. */
   position: relative;
   top: -1px;
+  /*
+   * Animated rotation between ▸ (closed) and ▾ (open) — one glyph
+   * rotated 90° via CSS transform rather than swapping characters.
+   * CSS transitions can animate `transform` smoothly; they can't
+   * animate text-content swaps.  Mirrors CollapsibleSection's
+   * chevron so the affordance reads identically at every level.
+   */
+  transition: var(--transition-chevron);
+  transform: rotate(0deg);
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
 }
 
 /*
@@ -99,14 +117,52 @@
 }
 
 /*
- * Body padding container.  Conditionally rendered by Panel.tsx — when
- * collapsed, this wrapper is removed from the DOM (rather than CSS-
- * hidden) so React doesn't pay for the off-screen subtree.  This is
- * deliberately distinct from the inner CollapsibleSection sub-sections,
- * which animate height via grid-template-rows because their content is
- * re-toggled often inside an already-open panel.  At the panel level
- * collapse is rarer and the unmount cost is negligible.
+ * Body wrapper + body — animates open/close via the same modern grid-
+ * template-rows technique that CollapsibleSection uses for its sub-
+ * sections.  Keeps the visual rhythm consistent across every nesting
+ * level of the HUD (outer Panel → CollapsibleSection → controls).
+ *
+ * The wrapper is a single-row CSS Grid: `0fr` when closed (collapses
+ * to zero height), `1fr` when open (grows to fit the body's intrinsic
+ * height).  The body child has `min-height: 0` (without it, grid
+ * items default to a min-height of `auto`, defeating the trick) and
+ * `overflow: hidden` (so content visibly clips during the
+ * transition).  Browsers interpolate `grid-template-rows` between the
+ * two values smoothly; CSS still can't animate `height: auto`.
+ *
+ * Opacity tracks in parallel for a subtle fade-in — visible content
+ * shouldn't pop into existence at full opacity from a zero-height
+ * container; the eye reads that as a flicker.
+ *
+ * `prefers-reduced-motion` skips the transitions entirely.  WCAG 2.1
+ * SC 2.3.3 best practice.
  */
-.content {
+.bodyWrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: var(--transition-collapse);
+}
+
+.bodyWrapper[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.body {
+  min-height: 0;
+  overflow: hidden;
   padding: var(--space-6) var(--space-7);
+  opacity: 0;
+  transition: var(--transition-fade);
+}
+
+.bodyWrapper[data-open='true'] .body {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron,
+  .bodyWrapper,
+  .body {
+    transition: none;
+  }
 }
