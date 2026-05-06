@@ -14,9 +14,12 @@
  * out of App.tsx and lets us evolve the shortcut set without touching
  * the wiring layer.
  *
- * Form-field guard: typing inside an `<input>`, `<textarea>`, or
- * `contenteditable` element should not hijack `f` and `h`.  The check
- * runs first so the rest of the dispatch sees only "real" keystrokes.
+ * Form-field guard: typing inside an `<input>`, `<textarea>`,
+ * `<select>`, or `contenteditable` element should not hijack `f` and
+ * `h`.  The check runs first so the rest of the dispatch sees only
+ * "real" keystrokes.  `<select>` is included because letter keys jump
+ * to options on most platforms; without the guard, hitting `h` while
+ * the BiasMode select is focused would yank the camera home.
  */
 
 import { useEffect, type Dispatch, type RefObject, type SetStateAction } from 'react';
@@ -53,6 +56,7 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       if (
         tag === 'INPUT' ||
         tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
         (target as HTMLElement)?.isContentEditable
       ) {
         return;
