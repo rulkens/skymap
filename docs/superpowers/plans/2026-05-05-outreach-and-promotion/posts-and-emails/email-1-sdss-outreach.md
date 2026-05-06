@@ -31,19 +31,24 @@ Browser-based WebGPU 3D explorer for SDSS DR18 — feedback welcome
 ```
 Dear SDSS Outreach team,
 
-I'm writing as an independent developer with a small project that uses
-SDSS DR18 data and that I hope might be useful to your education /
-public-outreach work. I've built skymap, a free browser-based 3D
-explorer that loads SDSS, 2MRS, and GLADE galaxy catalogs and lets
-users orbit the cosmic-web wedge in real time. It runs on WebGPU
-(Chrome / Edge 113+, Firefox 141+, Safari 26+) with no install, no
-Python.
+I'm an independent designer-engineer based in the Netherlands. My day
+job is building Repper (https://repper.app), a pattern-design tool;
+skymap is an open-source side project that uses SDSS DR18 data and
+that I hope might be useful to the SDSS education / public-outreach
+work.
+
+Skymap is a free browser-based 3D explorer that loads SDSS, 2MRS, and
+GLADE galaxy catalogs and lets users orbit the cosmic-web wedge in
+real time. It runs on WebGPU (Chrome / Edge 113+, Firefox 141+, Safari
+26+) with no install, no Python.
 
 For SDSS galaxies, the on-zoom thumbnail is fetched from your DR18
-ImgCutout endpoint (which exposes CORS headers — thank you for that).
-Spectroscopic redshift and photometric magnitudes are pulled directly
-from your SkyServer SQL output. Citation and attribution are listed
-prominently in the README and in the project's CITATION.cff.
+ImgCutout endpoint (which exposes CORS headers — genuinely thank you
+for that; the equivalent DSS endpoint at ESO doesn't, and that single
+detail is the difference between "this works in a browser" and
+"this needs a backend"). Spectroscopic redshift and photometric
+magnitudes are pulled directly from SkyServer SQL output. Citation
+and attribution are listed in the README and CITATION.cff.
 
 Live: https://skymap.rulkens.com
 Source + acknowledgements: https://github.com/rulkens/skymap
@@ -54,9 +59,21 @@ Two specific questions, if you have time:
 1. Is there an SDSS Voyages page or classroom-resource list where a
    tool like this would fit naturally? I'd value being suggested as a
    complement to the existing 2D sky viewers.
-2. Any data-attribution language I should be using that I'm not?
+2. Any data-attribution language I should be using that I'm not? I'm
+   genuinely an outsider here and would rather hear "you're missing
+   this convention" than not.
 
-Happy to incorporate feedback, and equally happy to hear "no thanks".
+Honest caveats up front: I'm not a scientist (I work at the seam of
+art / engineering / science, which is also where the project was
+born). I can't fully verify the cosmology and catalog math from where
+I'm standing — that's part of why I'm reaching out. There are also
+plenty of unpolished UX edges; if something trips you up, I'd love to
+hear which thing first.
+
+If you know other people working at this art / engineering / science
+seam — astronomers building tools, designers working with science
+data, anyone whose project lives between disciplines — I'd genuinely
+value the introduction.
 
 Best regards,
 Alexander Rulkens

@@ -39,13 +39,20 @@ Skymap — a WebGPU 3D viewer using hips2fits; awareness + interop?
 ```
 Dear Thomas and Pierre,
 
-I'm an independent developer with a small project that depends
-heavily on CDS infrastructure. Skymap is a browser-based 3D explorer
-for SDSS, 2MRS, and GLADE galaxy catalogs, built on WebGPU. For 2MRS
-and GLADE galaxies (which have no native CORS-permitted thumbnail
-source), I fetch DSS cutouts via your hips2fits endpoint — which has
-been *the* enabling piece of infrastructure for this part of the
-project. Thank you.
+I'm an independent designer-engineer based in the Netherlands. Day
+job is building Repper (https://repper.app), a pattern-design tool;
+skymap is an open-source side project — a browser-based 3D explorer
+for SDSS, 2MRS, and GLADE galaxy catalogs, built on WebGPU.
+
+I'm writing primarily to say thank you. For 2MRS and GLADE galaxies
+(roughly two thirds of what skymap loads), the obvious thumbnail
+source is the Digitized Sky Survey at ESO — but ESO's DSS endpoint
+doesn't expose CORS headers, so a browser fetch is rejected on
+cross-origin grounds. Full stop, no workaround browser-side. The
+project's entire thumbnail story for non-SDSS galaxies depends on
+your hips2fits service routing around that — and that single piece
+of infrastructure is the difference between "this works in a browser"
+and "this needs a backend." Genuinely thank you.
 
 Live: https://skymap.rulkens.com
 Source + acknowledgements: https://github.com/rulkens/skymap
@@ -60,10 +67,19 @@ Two questions, no hurry on either:
 2. If I added VOTable export of the current selection or a hips2fits
    "open this region in Aladin Lite" deep-link, would either be
    actually useful to your users, or just clutter? I'm genuinely
-   unsure of the priority.
+   unsure of the priority — I haven't used Aladin desktop, so I can't
+   tell from the user side.
 
-The project is a personal learning effort; I'm not pitching it as
-infrastructure. Feedback in any direction welcome.
+Honest caveats: I'm not a scientist (designer-engineer at the seam
+of art / engineering / science). I can't fully verify the cosmology
+and catalog math from where I'm standing — that's part of why I'm
+reaching out. Plenty of unpolished UX edges too; if anything trips
+your community up, I'd love to hear which thing first.
+
+If you know other people working at this art / engineering / science
+seam — astronomers building tools, designers working with science
+data, anyone whose project lives between disciplines — I'd genuinely
+value the introduction.
 
 With thanks for CDS,
 Alexander Rulkens

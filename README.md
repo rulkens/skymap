@@ -48,9 +48,6 @@ _Five density-correction modes selectable at runtime (None / Volume-limited / 1/
 
 ## Use cases
 
-- **Gravitational-wave host-galaxy candidate exploration** — overlay a GW
-  localisation region on the GLADE-derived nearby-universe catalog to scan the
-  3D volume for plausible electromagnetic-counterpart hosts.
 - **Teaching cosmic large-scale structure** — fly through the SDSS wedge and
   see filaments, voids, and the Sloan Great Wall directly, without needing to
   spin up a Jupyter notebook or a desktop visualisation suite.
@@ -58,6 +55,11 @@ _Five density-correction modes selectable at runtime (None / Volume-limited / 1/
   experience the geometry of the local universe: how galaxies cluster, how
   far apart they really are, and how the Milky Way sits inside the cosmic
   web.
+- **Galaxy-catalog browsing for the GW host-candidate community (potential).**
+  Skymap loads GLADE because GLADE was designed for gravitational-wave
+  host-candidate work; the actual probability-volume overlay isn't built yet,
+  but I'm open to exploring it if there's genuine demand from someone in the
+  follow-up community.
 
 ## Requirements
 

@@ -1,5 +1,41 @@
 # Email 5 — LIGO-Virgo-KAGRA EM follow-up (GROWTH lead, Mansi Kasliwal)
 
+> **Status: dropped from active campaign — 2026-05-06.**
+>
+> This email is **not** being sent as part of the v0.2.0 outreach
+> campaign. The reasons, recorded so a future revisit doesn't repeat
+> the mistake:
+>
+> 1. **No GW feature exists in skymap.** There is no GW skymap overlay,
+>    no probability-volume intersection, no follow-up-triage workflow.
+>    Loading GLADE because GLADE was *designed* for GW work is true;
+>    pitching skymap as a GW tool is not. The previous draft (preserved
+>    below for historical reference) leaned on "the intended workflow"
+>    framing which would have introduced asymmetric-information cost
+>    with a senior practitioner in a small field.
+> 2. **The connection is genuinely cold.** I haven't read the GROWTH /
+>    ENGRAVE literature in depth, I'm not in the GW community, and I
+>    can't have an informed conversation about follow-up triage from
+>    where I'm standing. Cold-emailing into that field without a
+>    warm-opener and without a working feature reads as cargo-cult
+>    outreach.
+> 3. **There is no asymmetric value to send right now.** A reply
+>    requires Kasliwal to either (a) explain to a stranger why the
+>    pitch doesn't apply, or (b) politely ignore. Both are bad uses
+>    of a senior researcher's attention.
+>
+> **Revisit this file only if** (a) the GW skymap overlay feature
+> actually ships and probability-volume intersection works in the
+> browser, or (b) someone in the GW follow-up community contacts
+> skymap organically — from Show HN, Bluesky, a paper citation, etc.
+> Either path turns this from a cold cargo-cult pitch into an
+> informed conversation.
+>
+> The original recipient research and draft body are preserved below
+> as historical reference.
+
+---
+
 ## Recipient
 
 - **Name:** Prof. Mansi M. Kasliwal
@@ -71,6 +107,6 @@ rulkens@gmail.com
 
 ## Status
 
-`pending`
+`dropped 2026-05-06` — see banner at top of file for reasoning.
 
-> Audit pass: 2026-05-06 — Kasliwal address re-verified; ENGRAVE alternative dropped because no public coordination email exists.
+> Audit pass: 2026-05-06 — Kasliwal address re-verified; ENGRAVE alternative dropped because no public coordination email exists. Voice + honesty pass on the same date dropped this email entirely from the active campaign for the reasons in the top-of-file banner.
