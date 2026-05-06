@@ -136,10 +136,30 @@
   box-shadow: var(--shadow-card);
 
   color: var(--color-fg-base);
-  font: var(--font-size-sm) / var(--line-height-relaxed) var(--font-family-mono);
+  /*
+   * Tip body uses --font-size-lg (matches InfoCard body) rather than
+   * the smaller --font-size-sm.  Reading explanatory prose at 10px
+   * felt cramped when the tip is meant to *teach* the meaning of the
+   * value beneath it; one decade up matches the surrounding card and
+   * keeps the panel comfortable on a desktop monitor.
+   */
+  font: var(--font-size-lg) / var(--line-height-relaxed) var(--font-family-mono);
 
-  /* Wait until visible to enable pointer events; stops the tip from
-     stealing hover from the underlying canvas while it's hidden. */
+  /*
+   * `pointer-events: none` always — both hidden AND visible.  The
+   * panel never captures the cursor, so users can sweep the mouse
+   * across stacked InfoCard rows without the visible tip blocking
+   * hover events on the row beneath it (or on the canvas behind a
+   * hovering panel).
+   *
+   * Trade-off: text inside the tip is not selectable.  Astronomy
+   * jargon definitions are short; the use case is "read it once and
+   * move on", not "copy a paragraph for citation".  If a future
+   * tip needs an interactive control (a link, a copy-to-clipboard
+   * button), opt that single child back in with `pointer-events:
+   * auto` on the child, not the panel — that way the rest of the
+   * panel still passes hover through to neighbours.
+   */
   pointer-events: none;
 
   /* Fade-in/out transitions.  See module header for the @starting-style
@@ -157,7 +177,6 @@
   display: block;
   opacity: 1;
   scale: 1;
-  pointer-events: auto;
 
   /*
    * @starting-style supplies the "frame zero" snapshot the browser
