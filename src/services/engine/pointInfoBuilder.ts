@@ -116,7 +116,7 @@ export function buildPointInfo(
   cloud: PointCloud,
   idx: number,
   source: Source,
-  famousMeta?: FamousMetaEntry[],
+  famousMeta?: readonly FamousMetaEntry[],
   famousXrefs?: FamousXrefMap,
 ): PointInfo {
   const px = cloud.positions[idx * 3 + 0]!;

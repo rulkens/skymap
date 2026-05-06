@@ -113,6 +113,7 @@ import { isWebHIDSupported } from '../../services/input/spaceMouse';
 import {
   loadFamousSidecars,
   type FamousMetaEntry,
+  type FamousXrefMap,
 } from '../../services/engine/famousMetaLoader';
 import {
   loadPgcAliases,
@@ -344,6 +345,11 @@ export function App(): React.ReactElement {
   // display names without a second round-trip.
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [famousMeta, setFamousMeta] = useState<FamousMetaEntry[]>([]);
+  // Companion xrefs sidecar — paired with `famousMeta` so the deep-link
+  // drain can hand both to `engine.selectByAlias` and dodge the engine's
+  // internal sidecar-load race.  See the `selectByAlias` JSDoc for why
+  // the override exists.
+  const [famousXrefs, setFamousXrefs] = useState<FamousXrefMap>({});
 
   // ── Alias-search state ───────────────────────────────────────────────────
   //
@@ -498,7 +504,10 @@ export function App(): React.ReactElement {
   // but exposing it here avoids reaching into the engine's internal state.
   // Double-loading is cheap (the browser caches the JSON fetch).
   useEffect(() => {
-    loadFamousSidecars().then((sc) => setFamousMeta(sc.meta));
+    loadFamousSidecars().then((sc) => {
+      setFamousMeta(sc.meta);
+      setFamousXrefs(sc.xrefs);
+    });
   }, []);
 
   // ── Alias index — lazy-built on first palette open ────────────────────────
@@ -596,6 +605,12 @@ export function App(): React.ReactElement {
   // of a finer-grained dependency array is far higher than the saving.
   useEffect(() => {
     if (!pendingTarget) return;
+    // Wait for the engine to fully boot — `status.kind === 'ready'` is
+    // the moment the render loop has started, which guarantees both the
+    // first cloud upload AND `state.cam` are in place.  Resolving any
+    // earlier means `selectByAlias` enters the tween dispatch with
+    // `state.cam === null` and silently bails.
+    if (status.kind !== 'ready') return;
     const handle = handleRef.current;
     if (!handle?.getCloud || !handle?.selectByAlias) return;
 
@@ -634,9 +649,17 @@ export function App(): React.ReactElement {
     // effect's `sourceCounts` / `famousMeta` / `aliasMap` deps will
     // re-fire it on the next data arrival.
     if (result.resolved) {
-      handle.selectByAlias({ source: result.source, localIdx: result.localIdx });
+      // Pass App's own famousMeta + xrefs so `buildPointInfo` inside
+      // `selectByAlias` doesn't read the engine's still-loading copy.
+      // See the EngineHandle JSDoc for the race this avoids.
+      handle.selectByAlias({
+        source: result.source,
+        localIdx: result.localIdx,
+        famousMeta,
+        famousXrefs,
+      });
     }
-  }, [pendingTarget, sourceCounts, famousMeta, aliasMap]);
+  }, [pendingTarget, status, sourceCounts, famousMeta, famousXrefs, aliasMap]);
 
   // ── Selection supersedes pending deep-link ────────────────────────────────
   //

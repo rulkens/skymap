@@ -1961,7 +1961,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       return state.sources.clouds.get(source);
     },
 
-    selectByAlias({ source, localIdx }) {
+    selectByAlias({ source, localIdx, famousMeta, famousXrefs }) {
       // Guard: source cloud may not be loaded yet (e.g. user opened
       // the palette before GLADE finished arriving), or the localIdx
       // could be stale across a tier swap.  Both are safe early-return
@@ -1974,12 +1974,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // pass the famous sidecars even for non-famous sources because
       // buildPointInfo gracefully ignores them when the source isn't
       // Famous — same call shape as the dblclick path uses.
+      //
+      // Caller-supplied `famousMeta`/`famousXrefs` win over the
+      // engine's internal copies — see the EngineHandle JSDoc for the
+      // race this defends against.  The default is the engine's own
+      // sidecar state, which keeps every other call site (click,
+      // hover, palette alias-search) using a single source of truth.
       const info = buildPointInfo(
         cloud,
         localIdx,
         source,
-        state.sources.famousMeta,
-        state.sources.famousXrefs,
+        famousMeta ?? state.sources.famousMeta,
+        famousXrefs ?? state.sources.famousXrefs,
       );
       if (!info) return;
 

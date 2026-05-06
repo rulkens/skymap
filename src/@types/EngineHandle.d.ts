@@ -10,6 +10,10 @@ import type { PointCloud } from './PointCloud';
 import type { Source } from '../data/sources';
 import type { BiasMode } from '../data/biasMode';
 import type { ToneMapCurve } from '../data/toneMapCurve';
+import type {
+  FamousMetaEntry,
+  FamousXrefMap,
+} from '../services/engine/famousMetaLoader';
 
 /**
  * Handle returned by `createEngine`. Allows the React layer to drive the
@@ -247,7 +251,30 @@ export type EngineHandle = {
    * bounds.  Same focus + selection bookkeeping as `selectFamous` so
    * the InfoCard and selection halo stay consistent.
    */
-  selectByAlias?: (target: { source: Source; localIdx: number }) => void;
+  selectByAlias?: (target: {
+    source: Source;
+    localIdx: number;
+    /**
+     * Optional famous-sidecar data the caller is responsible for.  When
+     * present, takes priority over the engine's internal `state.sources.
+     * famousMeta` / `famousXrefs` for `buildPointInfo`.
+     *
+     * Why the override exists: the engine and App both fetch the famous
+     * sidecars (deliberately — see App.tsx's loader comment), and the
+     * two copies can be out of sync during cold-load.  When App's drain
+     * effect fires `selectByAlias` for a deep-linked `#focus=<famous-id>`,
+     * App's famousMeta has already populated (its dep triggered the
+     * effect) but the engine's copy may still be in-flight.  Without
+     * the override, `buildPointInfo` reads the engine's empty array,
+     * `info.famous` comes back undefined, and `selectionToFocusId`
+     * falls through to the placeholder-PGC branch — writing a wrong
+     * `pgc-<idx>` hash to the URL.  Passing App's famousMeta here
+     * eliminates that race.  Other call sites (palette alias-search,
+     * click handlers) leave it undefined and use the engine's copy.
+     */
+    famousMeta?: readonly FamousMetaEntry[];
+    famousXrefs?: FamousXrefMap;
+  }) => void;
 
   /**
    * Return the live `BigUint64Array` of object IDs for a given source,
