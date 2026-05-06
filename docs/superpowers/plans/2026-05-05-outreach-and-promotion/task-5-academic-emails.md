@@ -1,5 +1,8 @@
 # Task 5: Targeted academic outreach (cold emails)
 
+> **Status:** drafts extracted into [posts-and-emails/](posts-and-emails/) with verified contacts on 2026-05-06. This file is kept for historical reference; the per-item files are authoritative going forward.
+
+
 After Show HN lands (or doesn't — but ideally lands), send five customised cold emails. Each email has its own audience and angle. _Wait until Task 4 has at least one piece of traction to reference_ — even a Show HN with 30 points is a real warm-opener. If HN was a complete dud, lead with the live demo and Zenodo DOI instead.
 
 **Files:** No source-tree files. Drafts below; copy-paste at send time.
