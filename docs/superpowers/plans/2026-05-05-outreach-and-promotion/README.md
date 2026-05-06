@@ -38,7 +38,7 @@ Skymap is a personal didactic project that happens to be a useful tool. Outreach
 
 ## Status snapshot (2026-05-06)
 
-- **Task 0** — pending. v0.1.0 is live; v0.2.0 has not been cut yet. Concept DOI `10.5281/zenodo.1228374974`; v0.1.0 version-DOI `10.5281/zenodo.20037028`.
+- **Task 0** — done 2026-05-06. v0.2.0 release cut, Zenodo minted version-DOI `10.5281/zenodo.20053519` under concept DOI `10.5281/zenodo.20037028`. v0.1.0 version-DOI is `10.5281/zenodo.20037029` (kept for reference). README badge + CITATION.cff cite the concept DOI so they always resolve to the latest version.
 - **Task 1** — largely shipped. Topic chips added, hero.gif + zoomed.gif recorded, three stills embedded (`ui-overview.png`, `local-group.png`, `wide-field.png`). DOI badge added after v0.1.0 minted. Still missing: `synthetic-data.png`, `zoomed-thumbnail-infocard.png`, `density-correction-modes.png` (see [task-1-repo-polish.md](task-1-repo-polish.md) Step 1.3).
 - **Task 2** — infra committed on `feat/outreach-r2-hyperleda-cache`. `tools/syncR2.ts` and README updated. CSV fetch is ~52k / ~1.5M rows — needs a full re-run before gzip + sync. See [task-2-hyperleda-r2.md](task-2-hyperleda-r2.md).
 - **Tasks 3–6** — not started.

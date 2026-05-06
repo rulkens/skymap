@@ -1,6 +1,15 @@
 # Task 0: Cut v0.2.0 release + refresh Zenodo DOI
 
-Since v0.1.0, several user-visible features have shipped: deep-link `#focus=…` URLs, the App.tsx hook refactor, and R2 catalog distribution (this branch). A new tagged release creates a fresh news hook for the outreach posts in Task 4 and re-mints a Zenodo version-DOI under the existing concept record. The existing concept DOI (`10.5281/zenodo.1228374974`) always resolves to the latest version — so switching outreach drafts to cite the concept DOI means they won't go stale after a future release.
+> **Status: done 2026-05-06.** v0.2.0 tag, GitHub release, and Zenodo version-DOI all minted.
+>
+> **Actual DOIs (corrected — original draft cited a wrong concept DOI):**
+> - Concept DOI (always-latest): `10.5281/zenodo.20037028`
+> - v0.1.0 version-DOI: `10.5281/zenodo.20037029`
+> - v0.2.0 version-DOI: `10.5281/zenodo.20053519`
+>
+> The original draft of this task confused the concept DOI with the v0.1.0 version-DOI and proposed switching to a non-existent DOI (`1228374974`). PR #19 shipped that broken state to `main`; PR #20 reverted README + CITATION.cff to the real concept DOI `20037028` (which had been correct all along). The steps below are kept for historical reference; ignore the specific DOI digits inside them.
+
+Since v0.1.0, several user-visible features have shipped: deep-link `#focus=…` URLs, the App.tsx hook refactor, and R2 catalog distribution (this branch). A new tagged release creates a fresh news hook for the outreach posts in Task 4 and re-mints a Zenodo version-DOI under the existing concept record. The concept DOI always resolves to the latest version — so citing the concept DOI in outreach drafts means they won't go stale after a future release.
 
 **Files:**
 
