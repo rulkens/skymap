@@ -117,7 +117,16 @@ export function parseFocusHash(hash: string): FocusTarget | null {
   // (e.g. `#about`, future `#search=foo`) bail out cheaply.
   const eq = trimmed.indexOf('=');
   if (eq < 0 || trimmed.slice(0, eq) !== 'focus') return null;
-  const raw = decodeURIComponent(trimmed.slice(eq + 1));
+  // `decodeURIComponent` throws `URIError` on malformed percent-escapes
+  // (e.g. a truncated `%E0%A4`).  Catch and return null so the codec's
+  // "null on anything we can't confidently route" contract holds even
+  // for users pasting half-copied URLs.
+  let raw: string;
+  try {
+    raw = decodeURIComponent(trimmed.slice(eq + 1));
+  } catch {
+    return null;
+  }
   if (!raw) return null;
 
   if (raw.startsWith('pgc-')) {

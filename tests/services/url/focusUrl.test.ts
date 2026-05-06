@@ -181,4 +181,12 @@ describe('parseFocusHash', () => {
   it('returns null for pos@ with non-numeric coordinates', () => {
     expect(parseFocusHash('#focus=pos@bad,values')).toBeNull();
   });
+
+  it('returns null for a malformed percent-escape (decodeURIComponent throws)', () => {
+    // Truncated UTF-8 escape: `%E0%A4` is a valid 2-byte prefix, but
+    // `%E0%A4%A` is missing the final hex digit, which makes
+    // `decodeURIComponent` throw `URIError`.  The codec catches that
+    // and returns null so a half-copied URL doesn't crash the app.
+    expect(parseFocusHash('#focus=%E0%A4%A')).toBeNull();
+  });
 });
