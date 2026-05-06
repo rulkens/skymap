@@ -47,13 +47,13 @@ import type { Tier } from '../../@types/Tier';
  * relative path `/data/<file>`, so we return that directly and the browser
  * fetches same-origin against the dev server.
  *
- * In production, `VITE_DATA_BASE_URL` is set (e.g. `https://data.skymap.rulkens.com`)
+ * In production, `VITE_DATA_BASE_URL` is set (e.g. `https://skymap-data.rulkens.com`)
  * to point at the R2 bucket's custom domain.  R2 object keys live under the
  * `data/` prefix so the URL pattern is identical across environments — only
  * the host changes.
  *
  * Trailing slashes on the base are tolerated so a `.env` file's
- * `VITE_DATA_BASE_URL=https://data.skymap.rulkens.com/` doesn't double up.
+ * `VITE_DATA_BASE_URL=https://skymap-data.rulkens.com/` doesn't double up.
  */
 export function dataUrl(filename: string): string {
   const base = (import.meta.env.VITE_DATA_BASE_URL ?? '').replace(/\/$/, '');
