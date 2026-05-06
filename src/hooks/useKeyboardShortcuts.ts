@@ -6,6 +6,7 @@
  *   - Esc                    → clear pinned selection
  *   - f / F                  → focus on the currently-pinned galaxy
  *   - h / H                  → return camera to home view
+ *   - Tab                    → toggle "hide UI" mode (clean visual)
  *   - l                      → debug: log live camera state
  *
  * Why a hook?  The handler closes over `selected` and `paletteOpen`,
@@ -43,10 +44,18 @@ export type UseKeyboardShortcutsInput = {
    * and force a re-bind on every parent render.
    */
   setPaletteOpen: Dispatch<SetStateAction<boolean>>;
+  /**
+   * The React setter for the "hide UI" mode (`Tab` shortcut).  Same
+   * stable-reference rationale as `setPaletteOpen` — passed in directly
+   * so the effect's dep list stays stable.  Toggled with the functional
+   * form (`prev => !prev`) inside the handler so we don't need to read
+   * the current state.
+   */
+  setUiHidden: Dispatch<SetStateAction<boolean>>;
 };
 
 export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
-  const { selected, paletteOpen, engineHandleRef, setPaletteOpen } = input;
+  const { selected, paletteOpen, engineHandleRef, setPaletteOpen, setUiHidden } = input;
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -93,6 +102,21 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
         return;
       }
 
+      // ── Tab toggles "hide UI" mode ─────────────────────────────
+      // Clean-visual mode for screenshots / recordings.  The form-
+      // field guard above already excludes input/textarea/select/
+      // contentEditable, so `Tab` still focus-traverses inside form
+      // controls (e.g. the BiasMode select); only "loose" Tab presses
+      // outside form fields hijack to toggle the UI.  `preventDefault`
+      // stops the browser's default focus-traversal in the un-guarded
+      // case — otherwise the next focusable button would steal focus
+      // and the user would have a hidden UI plus a stray focus ring.
+      if (e.key === 'Tab' && !e.shiftKey && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault();
+        setUiHidden((prev) => !prev);
+        return;
+      }
+
       // ── l prints the live camera state (dev hotkey) ────────────
       // Lower-case only — capital L is reserved for future use.
       if (e.key === 'l') {
@@ -103,7 +127,7 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selected, paletteOpen, engineHandleRef, setPaletteOpen]);
-  // engineHandleRef (ref object) and setPaletteOpen (React setter) are
-  // both stable references — listed for exhaustive-deps; never trigger re-binds.
+  }, [selected, paletteOpen, engineHandleRef, setPaletteOpen, setUiHidden]);
+  // engineHandleRef (ref object), setPaletteOpen and setUiHidden (React setters)
+  // are stable references — listed for exhaustive-deps; never trigger re-binds.
 }

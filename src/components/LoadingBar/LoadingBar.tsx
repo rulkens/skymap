@@ -44,6 +44,7 @@
  */
 
 import { useEffect, useState, type ReactNode } from 'react';
+import cx from 'classnames';
 import type { LoadProgressState } from '../../@types/EngineCallbacks';
 import styles from './LoadingBar.module.css';
 
@@ -96,8 +97,7 @@ export function LoadingBar({ progress }: LoadingBarProps): ReactNode {
 
   return (
     <div
-      className={styles.track}
-      data-visible={progress !== null ? 'true' : 'false'}
+      className={cx(styles.track, progress === null && styles.trackHidden)}
       role="progressbar"
       aria-label="Loading galaxy data"
       // Screen readers get the determinate fraction when known; absent

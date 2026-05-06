@@ -77,13 +77,18 @@ describe('LoadingBar', () => {
     expect(html).toMatch(/role="progressbar"/);
   });
 
-  it('marks the track as visible via data-visible="true" when progress is non-null', () => {
+  it('omits the trackHidden modifier class when progress is non-null', () => {
+    // When at least one fetch is in flight (progress !== null) the track
+    // mounts at full opacity — the `_trackHidden_*` CSS-module class
+    // is only added on the falling edge to fade the bar out.
     const html = renderToStaticMarkup(
       createElement(LoadingBar, {
         progress: { loadedBytes: 1, totalBytes: 100, inFlightCount: 1 },
       }),
     );
-    expect(html).toMatch(/data-visible="true"/);
+    expect(html).not.toMatch(/_trackHidden_/);
+    // Track itself is still in the DOM with the base class.
+    expect(html).toMatch(/_track_/);
   });
 
   it('exposes an aria-label so screen readers know what is loading', () => {

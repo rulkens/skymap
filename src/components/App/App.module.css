@@ -41,3 +41,43 @@
    * upward.  Setting both anchors would stretch the container and break
    * the natural-height stack. */
 }
+
+/*
+ * `.uiStack` — single wrapper around every overlay component, toggled
+ * by the `Tab` keyboard shortcut for "hide UI" / clean-visual mode.
+ *
+ * Why a wrapper rather than a body class + DOM-traversal selector?
+ * Cleaner: one element owns the fade; one transition; no dependency on
+ * the React-root structure or per-component opt-in.
+ *
+ * The wrapper itself has no layout impact: it's a container with no
+ * geometry of its own.  Each overlay child uses `position: fixed`
+ * anchored to the viewport, and CSS `opacity` does NOT establish a
+ * containing block for fixed descendants (only `transform`, `filter`,
+ * `backdrop-filter`, etc. do), so wrapping doesn't disturb the
+ * existing per-overlay positioning.
+ *
+ * `pointer-events: none` while hidden lets cursor / pinch / drag pass
+ * straight through to the canvas — important: an InfoCard at zero
+ * opacity but full pointer-events would still eat clicks on the right
+ * half of the viewport.
+ *
+ * The transition lives on the base class so the fade animates in BOTH
+ * directions: hide (1 → 0) and show (0 → 1) both on 0.3 s ease-out.
+ * `prefers-reduced-motion` skips the transition; functional toggle is
+ * unchanged, just instant.  WCAG 2.1 SC 2.3.3 best practice.
+ */
+.uiStack {
+  transition: opacity 0.3s ease-out;
+}
+
+.uiStackHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .uiStack {
+    transition: none;
+  }
+}
