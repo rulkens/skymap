@@ -64,17 +64,9 @@
  *     handler, both referring to the same `{ current }` object.
  */
 
-import { useRef, useEffect, useState } from 'react';
-import { createEngine } from '../../services/engine';
-import type {
-  EngineHandle,
-  EngineStatus,
-  PointInfo,
-  ScaleInfo,
-} from '../../@types';
-import type { LoadProgressState } from '../../@types/EngineCallbacks';
-import type { Tier } from '../../@types/Tier';
-import { initialTierFromViewport } from '../../utils/initialTierFromViewport';
+import { useState } from 'react';
+import type { EngineCallbacks } from '../../@types/EngineCallbacks';
+import { useEngine } from '../../hooks/useEngine';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
 import { InfoCard } from '../InfoCard/InfoCard';
@@ -85,24 +77,12 @@ import { StatsPanel } from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SearchTrigger } from '../SearchTrigger/SearchTrigger';
 import appStyles from './App.module.css';
-import { Source } from '../../data/sources';
 import { DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../../data/defaults';
-import { isWebHIDSupported } from '../../services/input/spaceMouse';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
-
-// ── Default / initial state ────────────────────────────────────────────────────
-
-/**
- * The scale bar needs a value from the first render, before the engine fires
- * its first `onScaleChange`. We use a safe placeholder that renders a visible
- * bar (100 px wide, "…" label) so the widget is present in the DOM even before
- * the camera state is ready.
- */
-const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
 
 // ── App ────────────────────────────────────────────────────────────────────────
 
@@ -114,40 +94,6 @@ const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
  * again (no style recalculation, no re-renders caused by canvas changes).
  */
 export function App(): React.ReactElement {
-  // ── Refs ───────────────────────────────────────────────────────────────────
-
-  // The canvas DOM node. React sets `canvasRef.current` after the first render.
-  // We pass it to `createEngine` inside the engine `useEffect`.
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // The engine handle. Written inside the engine `useEffect`; read in the Esc
-  // `useEffect`. Both effects run after mount; storing the handle in a ref
-  // avoids dependency-array gymnastics (see module comment above).
-  const handleRef = useRef<EngineHandle | null>(null);
-
-  // ── State ──────────────────────────────────────────────────────────────────
-  //
-  // Four pieces of state drive the three UI components. They are updated
-  // exclusively by engine callbacks — React never writes to them directly.
-  //
-  // `useState` with an initial value gives the component something to render
-  // on the very first frame, before the engine's first callback fires.
-
-  const [status, setStatus] = useState<EngineStatus>({ kind: 'initializing' });
-  const [hovered, setHovered] = useState<PointInfo | null>(null);
-  const [selected, setSelected] = useState<PointInfo | null>(null);
-  // ── focused: distinct from selected ─────────────────────────────────────
-  //
-  // `selected` is the pin state — set by a bare canvas click, drives the
-  // InfoCard.  `focused` is the camera-focus target — only set by
-  // deliberate focus actions (Focus button, `f` shortcut, palette pick,
-  // deep-link resolve).  The deep-link URL hook reads `focused` (not
-  // `selected`) so a casual click doesn't pollute browser history with a
-  // `#focus=…` entry.  See `EngineCallbacks.onFocusChange` for the engine
-  // side of this contract.
-  const [focused, setFocused] = useState<PointInfo | null>(null);
-  const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
-
   // ── Engine-driven settings (point size, brightness, filaments, tone map, …) ──
   //
   // All settings useStates live inside `useEngineSettings`.  The hook
@@ -156,6 +102,8 @@ export function App(): React.ReactElement {
   //   - `engineCallbacks` — the EngineCallbacks slice the engine uses to
   //     echo those values back into React state; spread into createEngine.
   //   - Three App-owned setters for the no-echo / partial-echo cases.
+  //
+  // useEngineSettings runs FIRST because useEngine consumes its callbacks.
   const {
     settings,
     engineCallbacks: settingsCallbacks,
@@ -183,22 +131,47 @@ export function App(): React.ReactElement {
     exposure,
   } = settings;
 
-  // ── Data tier (small / medium / large) ─────────────────────────────────
+  // ── SpaceMouse state (optional, WebHID-only) ─────────────────────────────
   //
-  // Seeded from the viewport width at mount via `initialTierFromViewport`:
-  //   < 768px → 'small'  (mobile)
-  //   ≥ 768px → 'medium' (default)
-  // 'large' is never auto-selected — opt-in only via the panel.
-  //
-  // Echoed by the engine via `onTierChange` so React mirrors engine truth
-  // (same lifecycle pattern as `lodMode` and `visibleSourceMask`).
-  // Lazy-init: `window` is only safe to read inside the initializer
-  // callback, since SSR hosts (in unit tests) might not have it.  We do
-  // NOT subscribe to resize events — the tier is a one-shot mount-time
-  // decision; the user changes it explicitly via the segmented control.
-  const [currentTier, setCurrentTier] = useState<Tier>(() =>
-    typeof window !== 'undefined' ? initialTierFromViewport(window.innerWidth) : 'medium',
+  // Stays in App until Task 6 deletes it.  `spaceMouseConnected` is driven
+  // by the engine echo; `spaceMouseSensitivity` is a local slider value.
+  // The panel is suppressed by `spaceMouseSupported={false}` in JSX so
+  // neither reaches the user — kept here only because the engine still
+  // fires the callback and Task 5 is a pure relocation pass.
+  const [spaceMouseConnected, setSpaceMouseConnected] = useState<boolean>(false);
+  const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(
+    DEFAULT_SPACE_MOUSE_SENSITIVITY,
   );
+
+  // Merge settings echoes + the temporary SpaceMouse callback into one
+  // extraCallbacks bag for useEngine.  The type annotation is required
+  // because TypeScript needs it to accept spreading a Pick<EngineCallbacks,…>
+  // together with an additional key from the full EngineCallbacks type.
+  const extraEngineCallbacks: Partial<EngineCallbacks> = {
+    ...settingsCallbacks,
+    onSpaceMouseConnectedChange: setSpaceMouseConnected,
+  };
+
+  // ── Engine lifecycle + engine-driven session state ────────────────────────
+  //
+  // canvasRef, handleRef, and the nine engine-driven state values (status,
+  // hovered, selected, focused, scale, fps, sourceCounts, loadProgress,
+  // currentTier) all live inside useEngine.  The hook owns the createEngine
+  // startup effect, the cleanup on unmount, and the lazy viewport-based tier
+  // seed.  See src/hooks/useEngine.ts for the full rationale.
+  const {
+    canvasRef,
+    handleRef,
+    status,
+    hovered,
+    selected,
+    focused,
+    scale,
+    fps,
+    sourceCounts,
+    loadProgress,
+    currentTier,
+  } = useEngine({ extraCallbacks: extraEngineCallbacks });
 
   // ── Initial mobile signal (drives panel-collapse on first paint) ─────────
   //
@@ -215,124 +188,12 @@ export function App(): React.ReactElement {
     typeof window !== 'undefined' ? window.innerWidth < 768 : false;
   const initialPanelsOpen = !initialMobile;
 
-  // ── Rolling FPS readout ──────────────────────────────────────────────────
-  //
-  // Driven by the engine's `onFpsChange` callback, which fires only when
-  // the rounded integer FPS value changes (see EngineCallbacks).  A 0
-  // initial value is correct: the engine produces no readout until at
-  // least 2 frames have elapsed, and a 0 in the status bar during that
-  // sub-100 ms window is fine — by the time the user can read it, the
-  // first real value has already overwritten it.
-  const [fps, setFps] = useState<number>(0);
-
-  // Per-source point counts, indexed by Source enum value. Populated as each
-  // .bin file finishes loading via the engine's `onCloudReady` callback.
-  // Surfaced in SettingsPanel so users see how many points each survey
-  // contributes — a 220 k SDSS slice carries different visual weight than a
-  // 5 M GLADE one, and the count makes that legible at a glance.
-  const [sourceCounts, setSourceCounts] = useState<Partial<Record<Source, number>>>({});
-
-  // ── Loading-bar state ──────────────────────────────────────────────────────
-  //
-  // `null` when no fetches are in flight (the LoadingBar component fades
-  // itself out when this becomes null).  The engine's aggregator owns the
-  // truth and pushes a fresh snapshot through `onLoadProgress` whenever the
-  // per-source progress map mutates — start, progress, finish events all
-  // converge to a single React state update here.
-  //
-  // We don't memoise — React.setState is referential-equality safe for the
-  // null transition, and the per-chunk update rate is bounded by network
-  // cadence (tens per second on a fast link) which is fine for React's
-  // reconciler.
-  const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
-
-  // ── SpaceMouse state (optional, WebHID-only) ─────────────────────────────
-  //
-  // `spaceMouseConnected` mirrors the engine's view of pairing — flipped to
-  // true only when `connectSpaceMouse()` resolves with `ok = true`, and back
-  // to false on disconnect. `spaceMouseSensitivity` is the slider value;
-  // 1.0 is the factory default and matches what the engine uses internally.
-  const [spaceMouseConnected, setSpaceMouseConnected] = useState<boolean>(false);
-  const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(
-    DEFAULT_SPACE_MOUSE_SENSITIVITY,
-  );
-
   // ── Command palette state ─────────────────────────────────────────────────
   //
   // `paletteOpen` controls the overlay visibility.  The famous-galaxy meta
   // (entries + xrefs) comes from `useFamousMeta` below — loaded once at
   // mount and shared with the deep-link drain via `useFocusUrlSync`.
   const [paletteOpen, setPaletteOpen] = useState(false);
-
-  // ── Engine startup effect ──────────────────────────────────────────────────
-
-  useEffect(() => {
-    // Guard: canvasRef.current should always be set by the time useEffect runs
-    // (effects run after the DOM is committed), but the type is `T | null`, so
-    // we check to keep TypeScript happy and avoid a runtime exception if the
-    // component somehow renders without a canvas.
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Start the engine. `createEngine` returns synchronously; async work
-    // (GPU init, data loading) progresses in the background and is reported
-    // via the callbacks below.
-    const handle = createEngine(canvas, {
-      // ── Engine session callbacks (kept inline; extracted in Task 5) ─────────
-      // Each callback just forwards the engine's output to React state.
-      // Because the engine deduplicates (only calls these when values change),
-      // we can pass `setState` functions directly — no extra memoisation needed.
-      onStatusChange: setStatus,
-      onHoverChange: setHovered,
-      onSelectChange: setSelected,
-      onFocusChange: setFocused,
-      onScaleChange: setScale,
-      // Each .bin lands at its own pace; record the count so the SettingsPanel
-      // can show "SDSS  220,453" alongside the toggle. Functional update so
-      // multiple parallel arrivals don't clobber each other.
-      onCloudReady: (source, count) => setSourceCounts((prev) => ({ ...prev, [source]: count })),
-      // Rolling FPS — engine throttles to integer-change events so this is a
-      // cheap direct setState (no debounce / no useMemo needed).
-      onFpsChange: setFps,
-      // SpaceMouse pairing state: `connect()`'s promise gives us the initial
-      // success/failure, but only this callback covers spontaneous disconnects
-      // (USB unplug, permission revocation).  Without it React's "Connected"
-      // indicator could persist after the puck is gone.
-      onSpaceMouseConnectedChange: setSpaceMouseConnected,
-      // ── Data-tier wiring (Phase 3) ───────────────────────────────────────
-      //
-      // `initialTier` lets the engine pick the right `<source>-<tier>.bin`
-      // files on first load; we read the viewport-derived value from the
-      // React state (lazy-initialised above) so the engine and React agree
-      // on the seed without a separate code path.  `onTierChange` echoes
-      // back any tier mutation (including the engine's own seed) so React
-      // state mirrors engine truth — same lifecycle as onLodModeChange.
-      initialTier: currentTier,
-      onTierChange: setCurrentTier,
-      // Aggregated download-progress snapshot (or null when no fetches are
-      // in flight).  Fires through the engine's `loadProgressAggregator`
-      // for both the initial parallel `loadAllClouds` and every
-      // `setTier`-triggered hot-swap.  The LoadingBar component fades
-      // itself out when this becomes null.
-      onLoadProgress: setLoadProgress,
-      // ── Settings echoes (driven by useEngineSettings) ─────────────────────
-      // All settings echo callbacks live in the hook and are spread here so
-      // the engine can fire them to keep React's SettingsPanel in sync.
-      // Captured at first render; stable for the engine's lifetime.
-      ...settingsCallbacks,
-    });
-
-    // Store the handle so the Esc effect (below) can call clearSelection().
-    handleRef.current = handle;
-
-    // Cleanup: runs when the component unmounts (hot-reload, navigation, etc.).
-    // This stops the render loop, removes event listeners, and releases GPU
-    // resources — preventing orphaned RAF loops or memory leaks on hot-reload.
-    return () => {
-      handle.destroy();
-      handleRef.current = null;
-    };
-  }, []); // Empty array: run once on mount, clean up on unmount.
 
   // ── Famous-galaxy sidecars (CommandPalette + deep-link drain) ────────────
   const { famousMeta, famousXrefs } = useFamousMeta();
