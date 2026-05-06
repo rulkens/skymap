@@ -321,6 +321,7 @@ export function CommandPalette({
                 <li key={`featured:${entry.id}`}>
                   <InfoTip
                     interactive
+                    placement="top"
                     title={properName}
                     body={
                       <FeaturedCardTip

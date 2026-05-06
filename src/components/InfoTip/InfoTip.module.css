@@ -280,6 +280,26 @@
       bottom span-left,
       bottom span-right;
   }
+
+  /*
+   * Top-only placement.  Override the auto fallback list so the tip
+   * never lands below its trigger — needed for dense grids (the
+   * featured-galaxy cards) where falling downward would cover the
+   * row beneath the hovered card.  Horizontal shifts (span-left /
+   * span-right) are still allowed so the tip stays on-screen near
+   * viewport edges; the constraint is only on the block axis.
+   *
+   * If no top placement fits at all (e.g. a card in row 1 of a
+   * narrow viewport), the browser draws the first option in the
+   * list and lets it clip.  Acceptable: clipping near the viewport
+   * top-edge is rare on the typical desktop palette use case (panel
+   * is at top:12vh, ~80-100px of clear room above the input).
+   */
+  .tipTopOnly {
+    position-try-fallbacks:
+      top span-left,
+      top span-right;
+  }
 }
 
 .tipTitle {

@@ -78,6 +78,23 @@ export type InfoTipProps = {
    * a passive value or label that should itself be the focus target.
    */
   interactive?: boolean;
+  /**
+   * Restrict where the tip is allowed to appear relative to the
+   * trigger.
+   *
+   *   - `'auto'` (default) — try above, fall back to below if there's
+   *     no room.  The right behaviour for a value in flowing text:
+   *     if the viewport is tight, you'd rather see the tip below than
+   *     have it clip.
+   *   - `'top'` — top-only fallbacks.  Use when the trigger sits in a
+   *     dense grid (the featured-galaxy cards) where falling back
+   *     downward would cover sibling cards.
+   *
+   * Both options always allow horizontal `span-left` / `span-right`
+   * shifts to keep the tip on-screen near viewport edges; the prop
+   * only constrains the block axis.
+   */
+  placement?: 'auto' | 'top';
 };
 
 export function InfoTip({
@@ -85,6 +102,7 @@ export function InfoTip({
   body,
   children,
   interactive = false,
+  placement = 'auto',
 }: InfoTipProps): ReactNode {
   // useId returns a stable ID like ":r0:" — strip the colons so the
   // value is a valid CSS dashed-ident character set.  We don't need
@@ -124,7 +142,7 @@ export function InfoTip({
       <span
         id={tipDomId}
         role="tooltip"
-        className={styles.tip}
+        className={`${styles.tip} ${placement === 'top' ? styles.tipTopOnly : ''}`}
         style={tipStyle}
       >
         <span className={styles.tipTitle}>{title}</span>
