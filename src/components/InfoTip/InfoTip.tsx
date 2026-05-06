@@ -80,21 +80,25 @@ export type InfoTipProps = {
   interactive?: boolean;
   /**
    * Restrict where the tip is allowed to appear relative to the
-   * trigger.
+   * trigger on the block axis.
    *
    *   - `'auto'` (default) — try above, fall back to below if there's
    *     no room.  The right behaviour for a value in flowing text:
    *     if the viewport is tight, you'd rather see the tip below than
    *     have it clip.
-   *   - `'top'` — top-only fallbacks.  Use when the trigger sits in a
-   *     dense grid (the featured-galaxy cards) where falling back
-   *     downward would cover sibling cards.
+   *   - `'top'` — top-only fallbacks.  Use when there's reliable space
+   *     above the trigger (e.g. a footer-anchored bar where above is
+   *     always free).
+   *   - `'bottom'` — bottom-only fallbacks.  Use when there's reliable
+   *     space below the trigger.  The featured-galaxy grid uses this
+   *     because the cards live at the top of the palette panel and
+   *     have empty list area / panel space below them — placing tips
+   *     above would land on the search input or clip the viewport top.
    *
-   * Both options always allow horizontal `span-left` / `span-right`
-   * shifts to keep the tip on-screen near viewport edges; the prop
-   * only constrains the block axis.
+   * Horizontal `span-left` / `span-right` shifts are always allowed so
+   * the tip stays on-screen near viewport edges.
    */
-  placement?: 'auto' | 'top';
+  placement?: 'auto' | 'top' | 'bottom';
 };
 
 export function InfoTip({
@@ -142,7 +146,13 @@ export function InfoTip({
       <span
         id={tipDomId}
         role="tooltip"
-        className={`${styles.tip} ${placement === 'top' ? styles.tipTopOnly : ''}`}
+        className={[
+          styles.tip,
+          placement === 'top' ? styles.tipTopOnly : '',
+          placement === 'bottom' ? styles.tipBottomOnly : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         style={tipStyle}
       >
         <span className={styles.tipTitle}>{title}</span>

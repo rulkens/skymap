@@ -300,6 +300,22 @@
       top span-left,
       top span-right;
   }
+
+  /*
+   * Bottom-only placement.  Pins the tip under the trigger, with
+   * horizontal shifts allowed for viewport-edge fits.  Use when
+   * there's reliable space below the trigger (e.g. featured-grid
+   * cards at the top of the palette panel — empty list area + panel
+   * space below them gives the tip a clear landing zone).
+   */
+  .tipBottomOnly {
+    position-area: bottom span-all;
+    margin-top: 8px;
+    margin-bottom: 0;
+    position-try-fallbacks:
+      bottom span-left,
+      bottom span-right;
+  }
 }
 
 .tipTitle {
