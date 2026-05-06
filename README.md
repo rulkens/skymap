@@ -155,6 +155,19 @@ npm run fetch-hyperleda    # ~1 hour; adds PA + axis-ratio for GLADE galaxies
 - `fetch-2mass-xsc` queries the 2MASS Extended Source Catalog and writes `data/raw/2mass_xsc_pa.csv`. Quick — runs in roughly five minutes.
 - `fetch-hyperleda` queries HyperLEDA at 4 concurrent requests across ~1.5 M PGCs and writes `data/raw/hyperleda_pa.csv`. Takes roughly **1 hour** end-to-end. The script is resumable — interrupt and restart safely.
 
+#### HyperLEDA orientation cache: download instead of fetching
+
+Running the full HyperLEDA fetch yourself takes an hour and hammers HyperLEDA's servers with ~1.5 M requests. A pre-computed cache is available from the same R2 bucket that serves the `.bin` catalog files — download it instead:
+
+```bash
+mkdir -p data/raw
+curl -L -o data/raw/hyperleda_pa.csv.gz \
+  https://data.skymap.rulkens.com/data/hyperleda_pa.csv.gz
+gunzip data/raw/hyperleda_pa.csv.gz
+```
+
+The cache is the output of a completed `npm run fetch-hyperleda` run, gzipped with `-9` for transport. It's updated manually whenever a catalog refresh is synced to R2. If you need the absolute latest HyperLEDA values (e.g. after a new GLADE release), the `npm run fetch-hyperleda` path above still works — run it, then `gzip -k -9 data/raw/hyperleda_pa.csv` and follow the `npm run sync-r2` steps in CLAUDE.md to push a fresh copy.
+
 Both files are picked up automatically by the next `npm run build-all`. Both commands are entirely optional; the renderer works without them.
 
 ### 4. Reload

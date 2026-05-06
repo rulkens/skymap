@@ -40,8 +40,30 @@
  * used by the offline DisPerSE pipeline, never fetched from the browser.
  * Likewise the diagnostic filaments-sdss.bin (the SDSS-only DisPerSE build
  * for the wedge-pollution sanity check) is not part of the runtime.
+ *
+ * ### Extra files: data/raw/
+ *
+ * Some files live outside `public/data/` and don't fit the runtime-fetch
+ * pattern, but are still useful to distribute via R2 — specifically build-time
+ * enrichment caches that contributors would otherwise have to regenerate from
+ * upstream services.  `hyperleda_pa.csv.gz` is the canonical example: it's a
+ * ~1.5 M-row position-angle cache fetched from HyperLEDA over ~1 hour, gzipped
+ * for transport.  It's a build artefact in the same spirit as the .bin files —
+ * deterministic output of a slow external fetch, not a source file — so R2 is
+ * the right distribution vehicle (egress-free, decoupled from release tags,
+ * infra already exists).  Using R2 here instead of a GitHub release asset has
+ * three concrete advantages:
+ *
+ *  1. No size or per-release cap to worry about.
+ *  2. Cache refreshes don't require cutting a new tag or editing a release.
+ *  3. Consistent `curl` URL pattern for contributors — same host, same path
+ *     prefix, regardless of whether the file is a .bin or a .csv.gz.
+ *
+ * These extra files are uploaded with the same Cache-Control as the .bin files.
+ * They are tracked in EXTRA_FILES below and uploaded after the main public/data
+ * sweep so the two concerns remain visually separable in the script.
  */
-import { readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 
@@ -62,6 +84,55 @@ const ALLOW = (name: string): boolean =>
   name === 'famous_meta.json' ||
   name === 'famous_xrefs.json';
 
+/**
+ * Extra files outside public/data/ that should also land in R2.
+ *
+ * Each entry is `{ localPath, r2Key }` where `r2Key` is the path inside the
+ * bucket.  The `data/` prefix is intentional — it keeps all skymap build
+ * artefacts under the same R2 namespace whether they are runtime-fetched
+ * by the browser (.bin) or contributor-downloaded during local setup
+ * (.csv.gz).
+ *
+ * Why keep these separate from the ALLOW filter rather than moving
+ * hyperleda_pa.csv.gz into public/data/ first?  The file belongs
+ * conceptually in data/raw/ — it's a raw-catalog enrichment file, not a
+ * browser-served asset.  Copying or symlinking it into public/data/ just
+ * to satisfy the existing scan would muddy that boundary and risk Vite
+ * accidentally serving the compressed gzip during dev.  A short explicit
+ * list of extra files is cleaner than bending the directory convention.
+ */
+type ExtraFile = { localPath: string; r2Key: string };
+
+const EXTRA_FILES: ExtraFile[] = [
+  {
+    // HyperLEDA position-angle + isophotal-diameter cache.
+    // Built once by `npm run fetch-hyperleda` (~1 hour), then gzipped:
+    //   gzip -k -9 data/raw/hyperleda_pa.csv
+    // Contributors download it instead of re-fetching:
+    //   curl -L -o data/raw/hyperleda_pa.csv.gz \
+    //     https://data.skymap.rulkens.com/data/hyperleda_pa.csv.gz
+    //   gunzip data/raw/hyperleda_pa.csv.gz
+    localPath: 'data/raw/hyperleda_pa.csv.gz',
+    r2Key: 'data/hyperleda_pa.csv.gz',
+  },
+];
+
+function uploadFile(localPath: string, key: string): void {
+  const sizeMB = (statSync(localPath).size / 1024 / 1024).toFixed(1);
+  console.log(`▶ ${localPath} (${sizeMB} MB) → r2://${BUCKET}/${key}`);
+  // `--remote` forces upload to the actual Cloudflare-hosted bucket
+  // rather than wrangler's local-dev simulator.  `--force` skips the
+  // interactive data-catalog validation prompt so the script runs
+  // unattended over a long sync.
+  execSync(
+    `npx wrangler r2 object put ${BUCKET}/${key}` +
+      ` --file ${localPath}` +
+      ` --cache-control "${CACHE_CONTROL}"` +
+      ` --remote --force`,
+    { stdio: 'inherit' },
+  );
+}
+
 function main(): void {
   const files = readdirSync(DATA_DIR).filter(ALLOW);
   if (files.length === 0) {
@@ -69,27 +140,41 @@ function main(): void {
     process.exit(1);
   }
 
-  console.log(`Syncing ${files.length} files to r2://${BUCKET}/data/\n`);
+  // Count extra files that actually exist on disk (they may not be present on
+  // a fresh checkout — the CSV is gitignored, and the .gz won't exist until
+  // the user runs `npm run fetch-hyperleda` + gzip).
+  const presentExtras = EXTRA_FILES.filter((f) => existsSync(f.localPath));
+
+  console.log(
+    `Syncing ${files.length} public/data files` +
+      (presentExtras.length > 0 ? ` + ${presentExtras.length} extra file(s)` : '') +
+      ` to r2://${BUCKET}/data/\n`,
+  );
 
   for (const name of files) {
-    const localPath = join(DATA_DIR, name);
-    const sizeMB = (statSync(localPath).size / 1024 / 1024).toFixed(1);
-    const key = `data/${name}`;
-    console.log(`▶ ${name} (${sizeMB} MB) → r2://${BUCKET}/${key}`);
-    // `--remote` forces upload to the actual Cloudflare-hosted bucket
-    // rather than wrangler's local-dev simulator.  `--force` skips the
-    // interactive data-catalog validation prompt so the script runs
-    // unattended over a long sync.
-    execSync(
-      `npx wrangler r2 object put ${BUCKET}/${key}` +
-        ` --file ${localPath}` +
-        ` --cache-control "${CACHE_CONTROL}"` +
-        ` --remote --force`,
-      { stdio: 'inherit' },
+    uploadFile(join(DATA_DIR, name), `data/${name}`);
+  }
+
+  if (presentExtras.length > 0) {
+    console.log('\n--- Extra files ---\n');
+    for (const { localPath, r2Key } of presentExtras) {
+      uploadFile(localPath, r2Key);
+    }
+  }
+
+  const skippedExtras = EXTRA_FILES.filter((f) => !existsSync(f.localPath));
+  if (skippedExtras.length > 0) {
+    console.log('\n⚠ Skipped (file not present locally):');
+    for (const { localPath } of skippedExtras) {
+      console.log(`  ${localPath}`);
+    }
+    console.log(
+      '  To include, run `npm run fetch-hyperleda` then `gzip -k -9 data/raw/hyperleda_pa.csv`.',
     );
   }
 
-  console.log(`\n✓ Synced ${files.length} files to r2://${BUCKET}/data/`);
+  const total = files.length + presentExtras.length;
+  console.log(`\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/`);
 }
 
 main();
