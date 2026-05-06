@@ -492,7 +492,7 @@ export function App(): React.ReactElement {
     selected,
     paletteOpen,
     engineHandleRef: handleRef,
-    onOpenPalette: () => setPaletteOpen(true),
+    setPaletteOpen,
   });
 
   // ── Render ─────────────────────────────────────────────────────────────────

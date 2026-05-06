@@ -19,7 +19,7 @@
  * runs first so the rest of the dispatch sees only "real" keystrokes.
  */
 
-import { useEffect, type RefObject } from 'react';
+import { useEffect, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import type { EngineHandle, PointInfo } from '../@types';
 
 export type UseKeyboardShortcutsInput = {
@@ -29,12 +29,21 @@ export type UseKeyboardShortcutsInput = {
   paletteOpen: boolean;
   /** Engine driver for clearSelection, focusOn, focusOnHome, logCameraState. */
   engineHandleRef: RefObject<EngineHandle | null>;
-  /** App-side callback to flip palette state on Cmd+K / `/`. */
-  onOpenPalette: () => void;
+  /**
+   * The React setter for the palette-open state.  Taking the setter
+   * directly (instead of an `() => void` callback) is the only honest
+   * way to keep the effect's dep list stable: React's `setState`
+   * functions are guaranteed-stable references for the component
+   * lifetime, so the listener re-binds only when `selected` or
+   * `paletteOpen` actually change.  An arrow `() => setPaletteOpen(true)`
+   * passed from the call site would be a fresh identity each render
+   * and force a re-bind on every parent render.
+   */
+  setPaletteOpen: Dispatch<SetStateAction<boolean>>;
 };
 
 export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
-  const { selected, paletteOpen, engineHandleRef, onOpenPalette } = input;
+  const { selected, paletteOpen, engineHandleRef, setPaletteOpen } = input;
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -52,13 +61,13 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       // ── Cmd+K / Ctrl+K opens the palette ────────────────────────
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        onOpenPalette();
+        setPaletteOpen(true);
         return;
       }
       // ── `/` opens the palette (only if not already open) ────────
       if (e.key === '/' && !paletteOpen) {
         e.preventDefault();
-        onOpenPalette();
+        setPaletteOpen(true);
         return;
       }
 
@@ -90,8 +99,7 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-    // engineHandleRef and onOpenPalette are stable references (ref
-    // object, useState setter respectively) — listed for the
-    // exhaustive-deps lint without triggering re-binds.
-  }, [selected, paletteOpen, engineHandleRef, onOpenPalette]);
+  }, [selected, paletteOpen, engineHandleRef, setPaletteOpen]);
+  // engineHandleRef (ref object) and setPaletteOpen (React setter) are
+  // both stable references — listed for exhaustive-deps; never trigger re-binds.
 }
