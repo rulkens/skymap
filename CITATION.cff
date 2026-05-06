@@ -10,6 +10,6 @@ authors:
 license: MIT
 url: 'https://github.com/rulkens/skymap'
 repository-code: 'https://github.com/rulkens/skymap'
-doi: 10.5281/zenodo.20037028
-version: 0.1.0
-date-released: '2026-05-05'
+doi: 10.5281/zenodo.1228374974
+version: 0.2.0
+date-released: '2026-05-06'
