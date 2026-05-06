@@ -45,6 +45,39 @@ import styles from './CommandPalette.module.css';
 const MAX_ALIAS_RESULTS = 50;
 
 /**
+ * Featured galaxies shown as a 5×3 thumbnail grid above the list when
+ * the palette opens with no query.  Curated by name recognition: the
+ * first row is "households know it" (Andromeda, Whirlpool, Sombrero,
+ * the EHT-imaged M87, Centaurus A); the second is "every space-
+ * interested person knows" (Cigar/Bode pair, Pinwheel, Triangulum,
+ * Black Eye); the third is "amateur-astronomer favourites" (Southern
+ * Pinwheel, Phantom, Cetus A's Seyfert, NGC 7331, Fireworks Galaxy).
+ *
+ * Order matters: the eye reads left-to-right, top-to-bottom, so the
+ * most recognisable picks sit in the first row.  Edit this list to
+ * change the lineup; the grid silently skips any id missing from the
+ * loaded famous catalog so a misconfigured prod environment doesn't
+ * crash the palette.
+ */
+const FEATURED_IDS: readonly string[] = [
+  'm31',  // Andromeda
+  'm51',  // Whirlpool
+  'm104', // Sombrero
+  'm87',  // EHT first-image
+  'c77',  // Centaurus A (NGC 5128)
+  'm82',  // Cigar
+  'm81',  // Bode's
+  'm101', // Pinwheel
+  'm33',  // Triangulum
+  'm64',  // Black Eye
+  'm83',  // Southern Pinwheel
+  'm74',  // Phantom (Webb 2022)
+  'm77',  // Cetus A / Seyfert prototype
+  'c45',  // NGC 7331 (Andromeda's twin)
+  'c12',  // Fireworks Galaxy (NGC 6946)
+];
+
+/**
  * Famous-row tiebreak boost.  Added to every famous-row score so that
  * when a famous entry and an alias entry both score "name starts with
  * query", the famous one ranks higher.  Set just over the largest
@@ -192,6 +225,23 @@ export function CommandPalette({
     }
   };
 
+  // ── Featured grid (no-query state only) ────────────────────────────────────
+  //
+  // Resolve the FEATURED_IDS list against the loaded famous entries so the
+  // grid renders real thumbnails + display names rather than ids.  Any id
+  // missing from the catalog is dropped silently — the grid just gets a
+  // little shorter.  Order is preserved so the curator's intent (most
+  // recognisable first) survives the resolution.
+  const featuredEntries: FamousMetaEntry[] = useMemo(() => {
+    const byId = new Map(entries.map((e) => [e.id, e]));
+    return FEATURED_IDS.flatMap((id) => {
+      const e = byId.get(id);
+      return e ? [e] : [];
+    });
+  }, [entries]);
+
+  const showFeatured = query.trim().length === 0 && featuredEntries.length > 0;
+
   if (!open) return null;
   return (
     <div className={styles.backdrop} onClick={onClose} onKeyDown={onKeyDown} role="presentation">
@@ -208,6 +258,28 @@ export function CommandPalette({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
+        {showFeatured && (
+          <ul className={styles.featuredGrid} aria-label="Featured galaxies">
+            {featuredEntries.map((entry) => (
+              <li key={`featured:${entry.id}`}>
+                <button
+                  type="button"
+                  className={styles.featuredCard}
+                  onClick={() => dispatchSelection({ kind: 'famous', entry, score: 0 })}
+                  aria-label={`Focus ${entry.names[0]}`}
+                >
+                  <img
+                    className={styles.featuredThumb}
+                    src={`/images/famous/${entry.id}.webp`}
+                    alt=""
+                    loading="lazy"
+                  />
+                  <span className={styles.featuredName}>{entry.names[0]}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         {matches.length === 0 ? (
           <div className={styles.empty}>No matches</div>
         ) : (
