@@ -1,5 +1,7 @@
 # Task 1: Repo polish for credibility
 
+> **Status: done 2026-05-06.** All eight README assets are present in `docs/screenshots/` and wired into `README.md`: `hero.gif`, `ui-overview.png`, `tier-selector.png`, `infocard-detail.png`, `local-group.png`, `wide-field.png`, `zoomed.gif`, `density-correction-modes.png`. Topic chips and the Zenodo DOI badge are live. The original asset-name list below (`synthetic-data.png`, `zoomed-thumbnail-infocard.png`, etc.) was partially superseded as the screenshots were captured — the README's actual asset references are authoritative.
+
 This bundles four small actions because none of them is large enough to be its own task and they are mutual prerequisites for everything below. After this task, a stranger landing on the GitHub repo sees: topic chips, a hero GIF at the top of the README, four-six embedded screenshots, a Zenodo DOI badge, and a working "How to cite" block. That is the bar for being taken seriously.
 
 **Files:**
