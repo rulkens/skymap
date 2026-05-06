@@ -65,7 +65,6 @@
  */
 
 import { useState } from 'react';
-import type { EngineCallbacks } from '../../@types/EngineCallbacks';
 import { useEngine } from '../../hooks/useEngine';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
@@ -77,7 +76,6 @@ import { StatsPanel } from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SearchTrigger } from '../SearchTrigger/SearchTrigger';
 import appStyles from './App.module.css';
-import { DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../../data/defaults';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
@@ -131,27 +129,6 @@ export function App(): React.ReactElement {
     exposure,
   } = settings;
 
-  // ── SpaceMouse state (optional, WebHID-only) ─────────────────────────────
-  //
-  // Stays in App until Task 6 deletes it.  `spaceMouseConnected` is driven
-  // by the engine echo; `spaceMouseSensitivity` is a local slider value.
-  // The panel is suppressed by `spaceMouseSupported={false}` in JSX so
-  // neither reaches the user — kept here only because the engine still
-  // fires the callback and Task 5 is a pure relocation pass.
-  const [spaceMouseConnected, setSpaceMouseConnected] = useState<boolean>(false);
-  const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(
-    DEFAULT_SPACE_MOUSE_SENSITIVITY,
-  );
-
-  // Merge settings echoes + the temporary SpaceMouse callback into one
-  // extraCallbacks bag for useEngine.  The type annotation is required
-  // because TypeScript needs it to accept spreading a Pick<EngineCallbacks,…>
-  // together with an additional key from the full EngineCallbacks type.
-  const extraEngineCallbacks: Partial<EngineCallbacks> = {
-    ...settingsCallbacks,
-    onSpaceMouseConnectedChange: setSpaceMouseConnected,
-  };
-
   // ── Engine lifecycle + engine-driven session state ────────────────────────
   //
   // canvasRef, handleRef, and the nine engine-driven state values (status,
@@ -171,21 +148,24 @@ export function App(): React.ReactElement {
     sourceCounts,
     loadProgress,
     currentTier,
-  } = useEngine({ extraCallbacks: extraEngineCallbacks });
+  } = useEngine({ extraCallbacks: settingsCallbacks });
 
   // ── Initial mobile signal (drives panel-collapse on first paint) ─────────
   //
   // Same 768-px breakpoint as `initialTierFromViewport` — small viewports
   // get the small data tier AND get the Navigation / Stats / Settings panels
-  // collapsed by default so the canvas isn't covered on first paint.  One-
-  // shot: read once at mount, no resize listener.  Re-orienting a phone in
-  // the middle of a session shouldn't yank the user's expanded panels back
-  // closed under them.
+  // collapsed by default so the canvas isn't covered on first paint.
+  //
+  // The lazy `useState` initializer runs exactly once at mount and is never
+  // re-evaluated on subsequent renders.  We intentionally drop the setter
+  // (destructure to a single element) — re-orienting a phone mid-session
+  // shouldn't yank the user's expanded panels back closed under them.
   //
   // SSR-safe: in unit tests where `window` is undefined we fall back to the
   // desktop default (panels open).
-  const initialMobile =
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const [initialMobile] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false,
+  );
   const initialPanelsOpen = !initialMobile;
 
   // ── Command palette state ─────────────────────────────────────────────────
