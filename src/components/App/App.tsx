@@ -162,6 +162,16 @@ export function App(): React.ReactElement {
   const [status, setStatus] = useState<EngineStatus>({ kind: 'initializing' });
   const [hovered, setHovered] = useState<PointInfo | null>(null);
   const [selected, setSelected] = useState<PointInfo | null>(null);
+  // ── focused: distinct from selected ─────────────────────────────────────
+  //
+  // `selected` is the pin state — set by a bare canvas click, drives the
+  // InfoCard.  `focused` is the camera-focus target — only set by
+  // deliberate focus actions (Focus button, `f` shortcut, palette pick,
+  // deep-link resolve).  The deep-link URL hook reads `focused` (not
+  // `selected`) so a casual click doesn't pollute browser history with a
+  // `#focus=…` entry.  See `EngineCallbacks.onFocusChange` for the engine
+  // side of this contract.
+  const [focused, setFocused] = useState<PointInfo | null>(null);
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
 
   // ── Settings panel state ─────────────────────────────────────────────────
@@ -402,6 +412,7 @@ export function App(): React.ReactElement {
       onStatusChange: setStatus,
       onHoverChange: setHovered,
       onSelectChange: setSelected,
+      onFocusChange: setFocused,
       onScaleChange: setScale,
 
       // Settings-panel callbacks: engine fires these when a setting changes
@@ -576,7 +587,7 @@ export function App(): React.ReactElement {
   // and the supersede-on-selection cleanup.  See the hook's module
   // header for the full rationale of each effect.
   const { pendingTarget } = useFocusUrlSync({
-    selected,
+    focused,
     status,
     sourceCounts,
     famousMeta,
@@ -626,9 +637,7 @@ export function App(): React.ReactElement {
 
       // ── f: focus on currently-selected galaxy (no-op if nothing pinned) ────
       if (e.key === 'f' || e.key === 'F') {
-        if (selected) {
-          handleRef.current?.focusOn([selected.x, selected.y, selected.z], selected.diameterKpc);
-        }
+        if (selected) handleRef.current?.focusOn(selected);
         return;
       }
 
@@ -685,7 +694,7 @@ export function App(): React.ReactElement {
       <InfoCard
         hovered={hovered}
         selected={selected}
-        onFocus={(info) => handleRef.current?.focusOn([info.x, info.y, info.z], info.diameterKpc)}
+        onFocus={(info) => handleRef.current?.focusOn(info)}
         onClose={() => handleRef.current?.clearSelection()}
       />
       <ScaleBar scale={scale} />

@@ -7,6 +7,7 @@
 import type { LodMode } from './LodMode';
 import type { Tier } from './Tier';
 import type { PointCloud } from './PointCloud';
+import type { PointInfo } from './PointInfo';
 import type { Source } from '../data/sources';
 import type { BiasMode } from '../data/biasMode';
 import type { ToneMapCurve } from '../data/toneMapCurve';
@@ -199,19 +200,19 @@ export type EngineHandle = {
   logCameraState: () => void;
 
   /**
-   * Smoothly tween the camera so that `worldXYZ` becomes the new orbit target.
+   * Smoothly tween the camera so that the given galaxy becomes the new
+   * orbit target.  The engine extracts `xyz` and `diameterKpc` from the
+   * `PointInfo` for the tween, and fires `onFocusChange(info)` so the
+   * URL-sync hook (and any other consumer) learns about the focus
+   * commitment without each caller having to update state separately.
    *
-   * The current yaw and pitch are preserved (the user keeps their orientation);
-   * only `target` and `distance` change.  Distance tweens to a sensible viewing
-   * range — for now a fixed multiple of the synthetic 30 kpc galaxy diameter
-   * (a future task replaces the constant with the real `galaxyDiameterKpc`).
-   *
-   * Calling this while another tween is running cancels the previous tween and
-   * starts a new one from the current camera state, so motion stays continuous.
-   * If the world position is the origin and the camera is already there, the
-   * call is a no-op.  Tween duration: 600 ms.
+   * The current yaw and pitch are preserved (the user keeps their
+   * orientation); only `target` and `distance` change.  Calling this
+   * while another tween is running cancels the previous tween and
+   * starts a new one from the current camera state, so motion stays
+   * continuous.  Tween duration: 600 ms.
    */
-  focusOn: (worldXYZ: [number, number, number], diameterKpc?: number) => void;
+  focusOn: (info: PointInfo) => void;
 
   /**
    * Smoothly tween the camera back to the initial framing captured at engine

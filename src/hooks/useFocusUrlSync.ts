@@ -1,7 +1,13 @@
 /**
  * `useFocusUrlSync` — keep `window.location.hash` in lock-step with the
- * currently selected galaxy, and surface deep-link arrivals back to the
- * App as a `pendingTarget` it can resolve once the clouds finish loading.
+ * currently *focused* galaxy (deliberate camera commitment, distinct
+ * from a bare-click "pinned" selection), and surface deep-link
+ * arrivals back to the App as a `pendingTarget` it can resolve once
+ * the clouds finish loading.  The selected/focused split is what makes
+ * a casual click NOT pollute browser history with `#focus=…` entries —
+ * only a Focus button press, `f` shortcut, palette pick, or deep-link
+ * resolve does.  See `EngineCallbacks.onFocusChange` for the engine
+ * side of that contract.
  *
  * ──────────────────────────────────────────────────────────────────────
  * Why is the logic split into pure helpers + a thin React wrapper?
@@ -19,27 +25,29 @@
  * "test the headless thing in node, leave the DOM-touching glue thin".
  *
  * ──────────────────────────────────────────────────────────────────────
- * Why `replaceState` and not `pushState`?
+ * Why `pushState` (not `replaceState`) for selection-driven writes?
  * ──────────────────────────────────────────────────────────────────────
- * Each click on a galaxy shouldn't add a back-button stop.  If we
- * `pushState`d on every selection, a user clicking through five galaxies
- * would have to mash Back five times to leave the page — annoying, and
- * worse: each Back would walk through stale focus URLs that the engine
- * has long since drifted past, re-firing the resolver each time.
- * `replaceState` keeps the URL shareable without polluting history.
+ * Pinning a galaxy is a navigational act — the user wants Back to
+ * return them to the previous pin (and Forward to redo).  pushState
+ * adds a real history entry per pin transition; the popstate listener
+ * below catches Back/Forward and re-fires the deep-link resolver
+ * against whichever URL the browser navigated to.  The mount-time
+ * "we just landed with `#focus=…`" path uses replaceState (no entry
+ * yet) — see effect 2 below.  Re-fires are idempotent: pendingTarget
+ * is set, drain resolves, selection-effect sees `matches: true` and
+ * writes nothing.
  *
  * ──────────────────────────────────────────────────────────────────────
- * Why scrub the hash on mount after capturing the deep-link target?
+ * Why we DON'T scrub the hash on mount
  * ──────────────────────────────────────────────────────────────────────
- * Once the resolver consumes the pending target the engine takes over
- * as the source-of-truth, and the *next* selection-change effect will
- * write the (possibly identical) hash back if appropriate.  Leaving the
- * raw hash in place would mean a manual Cmd-R reload re-fires the same
- * deep-link resolve even after the user has navigated elsewhere — so we
- * scrub it the moment we've captured it as `pendingTarget`.  This is
- * also the reason for the `mountedRef` guard: under React 18 strict
- * mode the mount effect double-fires, and we want to capture the hash
- * exactly once.
+ * An earlier draft scrubbed `#focus=…` on mount to prevent a manual
+ * reload from re-firing the resolver.  But re-firing is harmless: the
+ * resolver is pure, the drain is idempotent, and once `selected`
+ * matches the URL the selection-effect short-circuits via `matches:
+ * true`.  Leaving the hash in place gives the user a stable visible
+ * URL the whole way through, and — combined with `pushState` for
+ * subsequent pin changes — makes Back/Forward navigation work
+ * naturally.
  *
  * ──────────────────────────────────────────────────────────────────────
  * SSR safety
@@ -73,6 +81,12 @@ import type {
  * keeps the helper testable in the node env.
  */
 export type DesiredHashInput = {
+  /**
+   * The galaxy whose id should appear in the URL.  Named `selected` for
+   * historical reasons (predates the selected/focused split) — callers
+   * should pass whichever state they're encoding.  The hook below
+   * passes `focused`; tests pass synthetic PointInfo fixtures.
+   */
   selected: PointInfo | null;
   /** Raw hash, e.g. `"#focus=m31"` or `""`.  Leading `#` optional. */
   currentHash: string;
@@ -149,7 +163,7 @@ export function initialPendingTarget(hash: string): FocusTarget | null {
  * during App mount and should not retrigger this hook on assignment.
  */
 export type UseFocusUrlInput = {
-  selected: PointInfo | null;
+  focused: PointInfo | null;
   status: EngineStatus;
   sourceCounts: Partial<Record<Source, number>>;
   famousMeta: readonly FamousMetaEntry[];
@@ -199,7 +213,7 @@ export type FocusSyncReturn = {
  */
 export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
   const {
-    selected,
+    focused,
     status,
     sourceCounts,
     famousMeta,
@@ -210,41 +224,71 @@ export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
 
   const [pendingTarget, setPendingTarget] = useState<FocusTarget | null>(null);
 
-  // ── 1. Mount capture ────────────────────────────────────────────────────
+  // ── 1. Mount capture + popstate listener ────────────────────────────────
+  // The mount path also installs a `popstate` listener that turns
+  // browser-driven hash changes (Back/Forward) into the same
+  // pendingTarget mechanism the initial mount uses — so navigating
+  // back to a previous `#focus=<id>` re-resolves and re-pins the
+  // galaxy, while navigating back to no-hash clears the selection.
   const mountedRef = useRef(false);
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     // SSR guard before flipping the ref: if this ever ran in a Node
     // render (we don't SSR today, but the guard is cheap), we want the
     // client-side hydration pass to still mount cleanly rather than be
     // short-circuited by a ref flipped during render.
-    if (typeof window === 'undefined') return;
     if (mountedRef.current) return;
     mountedRef.current = true;
+
     const target = initialPendingTarget(window.location.hash);
-    if (target) {
-      setPendingTarget(target);
-      // Scrub the hash so a manual reload doesn't re-fire the same
-      // deep-link resolve after the user has navigated elsewhere.
-      const url = window.location.pathname + window.location.search;
-      window.history.replaceState(null, '', url);
-    }
+    if (target) setPendingTarget(target);
+
+    const onPopState = () => {
+      const t = initialPendingTarget(window.location.hash);
+      if (t) {
+        setPendingTarget(t);
+      } else {
+        // Empty / unparseable hash: this back-step represents
+        // "before any pin existed".  Tell the engine to clear so the
+        // selection-effect's next run sees `selected === null` and
+        // doesn't try to write an old hash back over the empty one.
+        engineHandleRef.current?.clearSelection();
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+    // engineHandleRef is a ref — its identity doesn't change.  The
+    // empty deps array is intentional: this effect mounts once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── 2. Selection → URL ──────────────────────────────────────────────────
-  // Write the hash to match the selection, but only when it actually
-  // differs.  The `matches` short-circuit avoids a flurry of identical
-  // `replaceState` calls when the App re-renders for unrelated reasons.
+  // Write the hash to match the selection.  Two guards:
+  //   - `matches`: skip no-op writes when the URL already says the
+  //     right thing.  Avoids history-state churn under React strict
+  //     mode and during noisy re-renders.
+  //   - `pendingTarget !== null`: don't fight a still-resolving deep
+  //     link.  In the brief window between mount and resolve,
+  //     `selected` is null but the URL legitimately holds a target
+  //     we're trying to honour; writing `''` here would clobber it.
+  //     Once the drain resolves and supersede clears pending, this
+  //     guard opens and the canonical hash for the new selection is
+  //     written (or already matches).
+  //
+  // pushState (not replaceState) for the back-button UX — see the
+  // module header.  popstate above handles the inverse direction.
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (pendingTarget !== null) return;
     const { desiredHashBody, matches } = computeDesiredHash({
-      selected,
+      selected: focused,
       currentHash: window.location.hash,
     });
     if (matches) return;
     const base = window.location.pathname + window.location.search;
     const next = desiredHashBody ? `${base}#${desiredHashBody}` : base;
-    window.history.replaceState(null, '', next);
-  }, [selected]);
+    window.history.pushState(null, '', next);
+  }, [focused, pendingTarget]);
 
   // ── 3a. Drain ───────────────────────────────────────────────────────────
   // Resolve pendingTarget against the engine's currently loaded data
@@ -308,13 +352,22 @@ export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
   ]);
 
   // ── 3b. Supersede ───────────────────────────────────────────────────────
-  // Once any selection lands — drain-resolved deep-link OR user click —
-  // the original deep-link target stops being load-bearing.  This is the
-  // single place we collapse "we have a deep link to honour" state, so
-  // the drain can stay focused on the resolve-and-dispatch path.
+  // The trigger is a FOCUS change, not a pendingTarget change.  Why
+  // that distinction matters: a back-button press drives popstate to
+  // set pendingTarget to a new target while `focused` is still the
+  // current camera commitment.  If we depended on `pendingTarget` here
+  // we'd clear the freshly-set pending the same render it arrives,
+  // defeating the back-button entirely.  Keying off `focused` only
+  // fires this when a deliberate focus actually lands — drain-resolved
+  // deep-link OR user-triggered focus action — which is the moment the
+  // "deep link to honour" state stops being relevant.
+  //
+  // Bare canvas clicks set `selected` but NOT `focused`, so they don't
+  // pre-empt a still-resolving deep link — the deep-link wins, which
+  // matches the user's URL-pasted intent.
   useEffect(() => {
-    if (selected !== null && pendingTarget !== null) setPendingTarget(null);
-  }, [selected, pendingTarget]);
+    if (focused !== null) setPendingTarget(null);
+  }, [focused]);
 
   return { pendingTarget };
 }
