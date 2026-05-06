@@ -33,6 +33,7 @@
     "build": "tsc --noEmit && vite build && rm -rf dist/data",
     "build-all": "tsx tools/buildAllBins.ts",
     "build-famous": "tsx tools/buildFamous.ts",
+    "build-pgc-aliases": "tsx tools/buildPgcAliases.ts",
     "build-filaments": "tsx tools/buildFilaments.ts",
     "build-filaments-sdss": "tsx tools/buildFilaments.ts --sources sdss --output public/data/filaments-sdss.bin",
     "build-filaments-small": "tsx tools/buildFilaments.ts --cut 7 --output public/data/filaments-small.bin",

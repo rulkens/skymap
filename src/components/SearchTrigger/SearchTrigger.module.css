@@ -1,0 +1,139 @@
+/*
+ * SearchTrigger.module.css — the always-visible search pill at the
+ * top-center of the viewport.
+ *
+ * Visual vocabulary mirrors InfoCard / CommandPalette / SettingsPanel:
+ * frosted-glass dark blue surface, soft inner glow, the cosmic-blue
+ * accent on hover/focus.  All atoms reference tokens from
+ * `src/styles/global.css`.
+ */
+
+.trigger {
+  /*
+   * Fixed top-center.  We use `left: 50%` + `translateX(-50%)` rather
+   * than `inset-inline` because the latter doesn't center reliably
+   * inside the body's default flow once we reset margins.  The
+   * translateX is also the hook the open-transition piggybacks on to
+   * stay in lockstep with the palette's scale — see `.hidden` below.
+   */
+  position: fixed;
+  top: var(--corner-offset);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9; /* one notch below the palette's z=50 backdrop */
+
+  /* Sizing — wide enough for the placeholder and the shortcut chip. */
+  width: 280px;
+  padding: var(--space-4) var(--space-6);
+
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+
+  /* Glassmorphism — softer than InfoCard's "loud" variant; this is
+   * an entry point, not a content card, so it shouldn't compete. */
+  background: var(--surface-card-soft);
+  backdrop-filter: blur(var(--blur-card));
+  -webkit-backdrop-filter: blur(var(--blur-card));
+
+  border: 1px solid var(--border-card);
+  border-radius: 999px; /* full-pill */
+  box-shadow: var(--shadow-card);
+
+  color: var(--color-fg-base);
+  font: var(--font-size-md) / var(--line-height-base) var(--font-family-mono);
+  cursor: pointer;
+  text-align: left;
+
+  /*
+   * The smooth scale-in animation when the palette closes back to the
+   * trigger.  Fast enough not to feel laggy (200 ms), eased so the
+   * end is gentle.  `opacity` and `transform` are GPU-accelerated and
+   * compose with the underlying glass blur without artefacting.
+   */
+  transition:
+    opacity 0.18s ease-out,
+    transform 0.22s ease-out,
+    border-color 0.15s ease-out,
+    background-color 0.15s ease-out;
+  opacity: 1;
+}
+
+/*
+ * Hover / focus state — slightly brighter glass and a thicker rim, in
+ * line with the rest of the UI's button family.
+ */
+.trigger:hover,
+.trigger:focus-visible {
+  background: var(--surface-card-strong);
+  border-color: var(--border-hover);
+  outline: none;
+}
+
+/*
+ * Hidden state — palette is open; the trigger fades out and shrinks
+ * slightly toward the centre so it visually "expands" into the
+ * palette beneath.  We keep `display` intact (instead of `display:
+ * none`) so the transition is observable; `pointer-events: none`
+ * ensures it isn't clickable while invisible.
+ */
+.hidden {
+  opacity: 0;
+  transform: translateX(-50%) scale(0.92);
+  pointer-events: none;
+}
+
+/* Search-icon SVG — small, dim until hover. */
+.icon {
+  flex-shrink: 0;
+  color: var(--color-fg-dim);
+  transition: color 0.15s ease-out;
+}
+
+.trigger:hover .icon,
+.trigger:focus-visible .icon {
+  color: var(--color-accent);
+}
+
+/*
+ * Placeholder text — same dim tone as <input>::placeholder elsewhere
+ * so the trigger looks input-like at a glance.  `flex-grow: 1` lets
+ * the shortcut chip hug the right edge.
+ */
+.placeholder {
+  flex-grow: 1;
+  color: var(--color-fg-dim);
+  letter-spacing: var(--letter-spacing-tight);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+ * Shortcut chip — `⌘K`, small uppercase rounded badge using the same
+ * surface as the alias-source chip in the palette.  Hidden on narrow
+ * viewports if the trigger ever gets crowded; full-pill stays.
+ */
+.shortcut {
+  flex-shrink: 0;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-badge);
+  color: var(--color-fg-dim);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/*
+ * Mobile — the InfoCard occupies the top-right corner already; on
+ * narrow viewports the trigger pill needs to stay below the corner
+ * offset so it doesn't underlap the InfoCard when one is pinned.
+ * The mobile breakpoint matches `initialTierFromViewport` for
+ * consistency.
+ */
+@media (max-width: 768px) {
+  .trigger {
+    width: calc(100vw - 2 * var(--corner-offset));
+    max-width: 280px;
+  }
+}

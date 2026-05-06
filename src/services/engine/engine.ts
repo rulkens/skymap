@@ -1923,6 +1923,62 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.subsystems.scheduler.requestRender();
     },
 
+    getCloudObjIds(source) {
+      // Returns the raw BigUint64Array used by the renderer.  We don't
+      // make a defensive copy because the only consumer (App.tsx's
+      // alias-index builder) walks ~5M elements once and would pay a
+      // 40 MB copy cost for nothing — the type contract documents the
+      // read-only expectation.
+      return state.sources.clouds.get(source)?.objIDs;
+    },
+
+    selectByAlias({ source, localIdx }) {
+      // Guard: source cloud may not be loaded yet (e.g. user opened
+      // the palette before GLADE finished arriving), or the localIdx
+      // could be stale across a tier swap.  Both are safe early-return
+      // conditions — palette stays open, no selection happens.
+      const cloud = state.sources.clouds.get(source);
+      if (!cloud) return;
+      if (localIdx < 0 || localIdx >= cloud.count) return;
+
+      // Build a PointInfo so the InfoCard populates correctly.  We
+      // pass the famous sidecars even for non-famous sources because
+      // buildPointInfo gracefully ignores them when the source isn't
+      // Famous — same call shape as the dblclick path uses.
+      const info = buildPointInfo(
+        cloud,
+        localIdx,
+        source,
+        state.sources.famousMeta,
+        state.sources.famousXrefs,
+      );
+      if (!info) return;
+
+      // Compute the GLOBAL instance index (selection state is keyed
+      // globally because the picker writes a per-vertex globalIdx;
+      // see `instanceIdOffset` for the running-sum convention).
+      const offset = state.gpu.renderer?.instanceIdOffset(source) ?? 0;
+      const globalIdx = offset + localIdx;
+      setSelected(globalIdx);
+
+      // Camera focus tween — same setup as selectFamous / focusOn.
+      const cam = state.cam;
+      if (!cam) return;
+      state.subsystems.tweens.start({
+        startMs: performance.now(),
+        durationMs: FOCUS_TWEEN_MS,
+        fromTarget: vec3.clone(cam.target as vec3),
+        toTarget: vec3.fromValues(info.x, info.y, info.z),
+        fromDistance: cam.distance,
+        toDistance: focusDistanceMpc(info.diameterKpc),
+        fromYaw: cam.yaw,
+        toYaw: cam.yaw,
+        fromPitch: cam.pitch,
+        toPitch: cam.pitch,
+      });
+      state.subsystems.scheduler.requestRender();
+    },
+
     focusOnHome() {
       // Camera or initial snapshot may not be ready yet — same pattern as
       // resetCamera.  Both must exist for a meaningful tween.

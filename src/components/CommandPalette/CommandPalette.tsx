@@ -1,51 +1,95 @@
 /**
- * CommandPalette — Cmd+K (or Ctrl+K, or `/`) overlay for searching the
- * curated famous-galaxies atlas.
+ * CommandPalette — Cmd+K (or Ctrl+K, or `/`) overlay for searching
+ * across two parallel indexes:
+ *
+ *   1. The curated famous-galaxies atlas (`entries`, ~75 hand-picked).
+ *   2. The PGC-keyed alias index (`aliasIndex`, ~48k GLADE+2MRS rows
+ *      with NGC/IC/UGC/M/etc. cross-references from HyperLEDA).
  *
  * UX:
  *   - Triggered by a keyboard shortcut (handled in App.tsx).
- *   - Shows a list of matching galaxies sorted by `scoreFamousMatch`.
+ *   - Famous matches always rank above alias matches at equal score.
+ *   - Alias matches are capped at 50 per query so a query that hits
+ *     "MCG" (which matches thousands of rows) doesn't drown the famous
+ *     hits or balloon the DOM.
  *   - Up/Down arrows move the highlight; Enter selects.
  *   - Esc closes without action.
  *   - Click outside the panel closes.
  *
- * Selection invokes the `onSelect` callback with the picked entry's id;
- * the parent (App.tsx) translates that into an engine `selectFamous(id)`
- * call which pins the galaxy and triggers a focus tween.
+ * Selection: the row's onClick / Enter handler calls either
+ * `onSelect(id)` (famous) or `onSelectAlias({ source, localIdx })`
+ * (alias) — App.tsx routes those to engine.selectFamous or
+ * engine.selectByAlias respectively.
  *
- * Why not a third-party command-palette library?  Two reasons: (1) we
- * only need ~80 lines of UI logic for a single feature; pulling in
- * cmdk or kbar to do that would dwarf the actual code with adapter
- * shims.  (2) Project convention forbids introducing component-level
- * barrel exports; many palette libraries assume them.  Hand-rolling
- * keeps the dependency footprint minimal and the styling fully
- * controllable.
+ * Why not a third-party command-palette library?  Same reasoning as
+ * the original famous-only iteration: ~120 lines of UI logic, no
+ * value-add from cmdk/kbar, and the project bans component-level
+ * barrel exports many of those libraries assume.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { scoreFamousMatch } from './scoreFamousMatch';
+import { scoreAliasMatch } from './scoreAliasMatch';
 import type { FamousMetaEntry } from '../../services/engine/famousMetaLoader';
+import type { AliasIndexEntry } from '../../services/engine/pgcAliasLoader';
+import { Source, sourceLabel } from '../../data/sources';
 import styles from './CommandPalette.module.css';
+
+/**
+ * The maximum number of alias rows to include in the rendered list.
+ * Generic substrings like `MCG` match thousands of rows; without a
+ * cap the palette would render an unscrolled-but-scroll-stuttering
+ * 5,000-row `<ul>` and the user would have to type more to see the
+ * famous hits.
+ */
+const MAX_ALIAS_RESULTS = 50;
+
+/**
+ * Famous-row tiebreak boost.  Added to every famous-row score so that
+ * when a famous entry and an alias entry both score "name starts with
+ * query", the famous one ranks higher.  Set just over the largest
+ * possible length-bonus to avoid an alias's longer query bonus
+ * leapfrogging a famous match — queries are realistically <16 chars,
+ * so a +1 boost would be enough; we use +5 for safety.
+ */
+const FAMOUS_TIEBREAK = 5;
 
 export type CommandPaletteProps = {
   /** All famous entries to search across.  Loaded from `famous_meta.json`. */
   entries: FamousMetaEntry[];
+  /**
+   * The PGC alias index built by joining `pgc_aliases.json` against
+   * the runtime GLADE+2MRS clouds.  Optional — the palette degrades
+   * gracefully to famous-only when the array is undefined or empty
+   * (e.g. on developer clones without the sidecar).
+   */
+  aliasIndex?: readonly AliasIndexEntry[];
   /** Whether the palette is currently shown. */
   open: boolean;
   /** Close handler — called on Esc, click-outside, or after a successful selection. */
   onClose: () => void;
-  /** Selection handler — receives the picked entry's id. */
+  /** Selection handler for famous rows — receives the picked entry's id. */
   onSelect: (id: string) => void;
+  /** Selection handler for alias rows — receives the picked entry's source + localIdx. */
+  onSelectAlias?: (target: { source: Source; localIdx: number }) => void;
 };
 
-/** A scored entry, ready to render. */
-type ScoredEntry = { entry: FamousMetaEntry; score: number };
+/**
+ * One scored row, ready to render.  `kind` discriminates the two
+ * payload shapes; the renderer branches on it to pick the right
+ * onClick handler and the right primary/secondary text.
+ */
+type ScoredRow =
+  | { kind: 'famous'; entry: FamousMetaEntry; score: number }
+  | { kind: 'alias'; entry: AliasIndexEntry; score: number };
 
 export function CommandPalette({
   entries,
+  aliasIndex,
   open,
   onClose,
   onSelect,
+  onSelectAlias,
 }: CommandPaletteProps): ReactNode {
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
@@ -53,24 +97,40 @@ export function CommandPalette({
 
   // ── Filter + rank entries by the current query ─────────────────────────────
   //
-  // Empty query shows the full atlas in seed-file order so the user can
-  // browse without typing.  Non-empty query runs the scoring helper and
-  // drops anything with score <= 0.  No cap on the result count: the
-  // atlas is ~75 entries today and the panel's CSS already scrolls the
-  // results list (`max-height: 70vh; overflow-y: auto`), so dropping
-  // entries on the floor would be a confusing UX surprise rather than a
-  // performance win.  Bump back to a slice if the atlas ever grows past
-  // a few hundred and DOM cost becomes measurable.
-  const matches: ScoredEntry[] = useMemo(() => {
+  // Empty query shows the full famous atlas in seed-file order so the user can
+  // browse without typing — alias entries are NOT shown for empty queries
+  // because there are 48k of them and rendering the full list every time the
+  // palette opens would be a DOM-thrashing disaster.
+  //
+  // Non-empty query: score both indexes, sort, slice the alias list to a
+  // reasonable cap, and concatenate (famous first because famous always
+  // wins ties — see FAMOUS_TIEBREAK).
+  const matches: ScoredRow[] = useMemo(() => {
     if (query.trim().length === 0) {
-      return entries.map((e) => ({ entry: e, score: 0 }));
+      return entries.map<ScoredRow>((e) => ({ kind: 'famous', entry: e, score: 0 }));
     }
-    const scored = entries
-      .map((entry) => ({ entry, score: scoreFamousMatch(entry, query) }))
+
+    const famousScored: ScoredRow[] = entries
+      .map<ScoredRow>((entry) => ({
+        kind: 'famous',
+        entry,
+        score: scoreFamousMatch(entry, query) + (scoreFamousMatch(entry, query) > 0 ? FAMOUS_TIEBREAK : 0),
+      }))
       .filter((s) => s.score > 0);
-    scored.sort((a, b) => b.score - a.score);
-    return scored;
-  }, [entries, query]);
+    famousScored.sort((a, b) => b.score - a.score);
+
+    const aliasScored: ScoredRow[] = (aliasIndex ?? [])
+      .map<ScoredRow>((entry) => ({
+        kind: 'alias',
+        entry,
+        score: scoreAliasMatch(entry, query),
+      }))
+      .filter((s) => s.score > 0);
+    aliasScored.sort((a, b) => b.score - a.score);
+    const aliasCapped = aliasScored.slice(0, MAX_ALIAS_RESULTS);
+
+    return [...famousScored, ...aliasCapped];
+  }, [entries, aliasIndex, query]);
 
   // Reset highlight when the query changes — otherwise we'd point past the
   // end of a shrinking results list.
@@ -90,6 +150,20 @@ export function CommandPalette({
       setQuery('');
     }
   }, [open]);
+
+  /**
+   * Dispatch the selected row to the matching parent handler, then
+   * close.  Centralised so the click and keyboard paths can't drift
+   * apart silently.
+   */
+  const dispatchSelection = (m: ScoredRow): void => {
+    if (m.kind === 'famous') {
+      onSelect(m.entry.id);
+    } else {
+      onSelectAlias?.({ source: m.entry.source, localIdx: m.entry.localIdx });
+    }
+    onClose();
+  };
 
   // ── Keyboard handling ──────────────────────────────────────────────────────
   //
@@ -114,10 +188,7 @@ export function CommandPalette({
     if (e.key === 'Enter') {
       e.preventDefault();
       const m = matches[activeIdx];
-      if (m) {
-        onSelect(m.entry.id);
-        onClose();
-      }
+      if (m) dispatchSelection(m);
     }
   };
 
@@ -128,12 +199,12 @@ export function CommandPalette({
         className={styles.panel}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
-        aria-label="Search famous galaxies"
+        aria-label="Search galaxies"
       >
         <input
           ref={inputRef}
           className={styles.input}
-          placeholder="Search famous galaxies (M31, Andromeda, …)"
+          placeholder="Search galaxies (M31, NGC 4565, Andromeda, …)"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
@@ -141,30 +212,62 @@ export function CommandPalette({
           <div className={styles.empty}>No matches</div>
         ) : (
           <ul className={styles.results}>
-            {matches.map((m, i) => (
-              <li
-                key={m.entry.id}
-                className={`${styles.result} ${i === activeIdx ? styles.resultActive : ''}`}
-                onMouseEnter={() => setActiveIdx(i)}
-                onClick={() => {
-                  onSelect(m.entry.id);
-                  onClose();
-                }}
-              >
-                <img
-                  className={styles.thumb}
-                  src={`/images/famous/${m.entry.id}.webp`}
-                  alt=""
-                  loading="lazy"
-                />
-                <span>
-                  <span className={styles.primary}>{m.entry.names[0]}</span>
-                  {m.entry.names.length > 1 && (
-                    <span className={styles.secondary}>{m.entry.names.slice(1).join(' · ')}</span>
-                  )}
-                </span>
-              </li>
-            ))}
+            {matches.map((m, i) => {
+              const isActive = i === activeIdx;
+              const className = `${styles.result} ${isActive ? styles.resultActive : ''}`;
+              if (m.kind === 'famous') {
+                return (
+                  <li
+                    key={`famous:${m.entry.id}`}
+                    className={className}
+                    onMouseEnter={() => setActiveIdx(i)}
+                    onClick={() => dispatchSelection(m)}
+                  >
+                    <img
+                      className={styles.thumb}
+                      src={`/images/famous/${m.entry.id}.webp`}
+                      alt=""
+                      loading="lazy"
+                    />
+                    <span>
+                      <span className={styles.primary}>{m.entry.names[0]}</span>
+                      {m.entry.names.length > 1 && (
+                        <span className={styles.secondary}>
+                          {m.entry.names.slice(1).join(' · ')}
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                );
+              }
+              // Alias row — distinct visual treatment: no thumbnail (we
+              // don't pre-render NGC galaxies), small letter-glyph
+              // placeholder + source-label chip on the secondary line so
+              // the user can tell GLADE rows from 2MRS rows at a glance.
+              const aliasEntry = m.entry;
+              const primary = aliasEntry.names[0] ?? '(unnamed)';
+              const remaining = aliasEntry.names.slice(1);
+              return (
+                <li
+                  key={`alias:${aliasEntry.source}:${aliasEntry.localIdx}`}
+                  className={className}
+                  onMouseEnter={() => setActiveIdx(i)}
+                  onClick={() => dispatchSelection(m)}
+                  data-testid={`alias-row-${aliasEntry.localIdx}`}
+                >
+                  <span className={styles.aliasGlyph} aria-hidden="true">
+                    {primary[0] ?? '·'}
+                  </span>
+                  <span>
+                    <span className={styles.primary}>{primary}</span>
+                    {remaining.length > 0 && (
+                      <span className={styles.secondary}>{remaining.join(' · ')}</span>
+                    )}
+                    <span className={styles.aliasSource}>{sourceLabel(aliasEntry.source)}</span>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

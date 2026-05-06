@@ -232,6 +232,38 @@ export type EngineHandle = {
   selectFamous: (id: string) => void;
 
   /**
+   * Select (pin) a galaxy in any non-famous source by its (source,
+   * localIdx) coordinate, then run the same focus tween `focusOn`
+   * would.  Used by the command palette to land an alias hit (e.g.
+   * `NGC 4565` -> the GLADE row at PGC 42038) without going through
+   * the click-pick path.
+   *
+   * Optional because older engine builds predate the alias-search
+   * feature; the palette guards on `?.` and silently falls back to
+   * famous-only if absent.
+   *
+   * No-op if the source isn't loaded yet, or if `localIdx` is out of
+   * bounds.  Same focus + selection bookkeeping as `selectFamous` so
+   * the InfoCard and selection halo stay consistent.
+   */
+  selectByAlias?: (target: { source: Source; localIdx: number }) => void;
+
+  /**
+   * Return the live `BigUint64Array` of object IDs for a given source,
+   * or `undefined` if that source isn't loaded yet.
+   *
+   * Read-only contract: the caller must NOT mutate the returned array
+   * (it's the same object the engine uses internally).  Used by the
+   * command palette's alias-index builder, which walks objIDs once per
+   * source post-load to join HyperLEDA aliases against PGC numbers.
+   *
+   * Optional because not every engine build needs to expose internal
+   * cloud arrays — App.tsx's alias-index code guards on `?.` and falls
+   * back to "no aliases" when undefined.
+   */
+  getCloudObjIds?: (source: Source) => BigUint64Array | undefined;
+
+  /**
    * Set the level-of-detail rendering mode.
    *
    * In `'auto'` mode the engine recomputes the visible-source mask each frame
