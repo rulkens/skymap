@@ -69,7 +69,6 @@ import { createEngine } from '../../services/engine';
 import type {
   EngineHandle,
   EngineStatus,
-  PointCloud,
   PointInfo,
   ScaleInfo,
 } from '../../@types';
@@ -87,7 +86,7 @@ import { StatsPanel } from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SearchTrigger } from '../SearchTrigger/SearchTrigger';
 import appStyles from './App.module.css';
-import { ALL_SOURCES, Source } from '../../data/sources';
+import { Source } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import { ToneMapCurve } from '../../data/toneMapCurve';
 import {
@@ -120,7 +119,6 @@ import {
   type AliasIndexEntry,
 } from '../../services/engine/pgcAliasLoader';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
-import { resolveFocusTarget } from '../../services/engine/resolveFocusTarget';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -572,112 +570,20 @@ export function App(): React.ReactElement {
 
   // ── Deep-link focus URL sync ──────────────────────────────────────────────
   //
-  // `useFocusUrlSync` does two things in one place:
-  //
-  //   1. On mount, parses any `#focus=…` from `window.location.hash`,
-  //      surfaces it as `pendingTarget`, and scrubs the hash so a
-  //      reload doesn't re-fire the same resolve forever.
-  //   2. On every `selected` change, mirrors the selection back to the
-  //      URL via `history.replaceState` (no new history entry per click).
-  //
-  // The drain effect below consumes `pendingTarget` once the engine and
-  // the relevant clouds are ready.  See the hook's module header for
-  // the full design rationale (replaceState vs pushState, mountedRef
-  // guard for strict-mode double-mount, etc.).
-  const { pendingTarget, clearPending } = useFocusUrlSync({ selected });
-
-  // ── Drain the pending deep-link target once the engine is ready ──────────
-  //
-  // This effect re-runs whenever `pendingTarget`, `sourceCounts`,
-  // `famousMeta`, or `aliasMap` change because each is a precondition
-  // for at least one resolver branch:
-  //
-  //   - `pendingTarget`        — the thing we're trying to resolve.
-  //   - `sourceCounts`         — proxy for "has at least one cloud landed?"
-  //                              (`onCloudReady` is what grows this map).
-  //   - `famousMeta`           — required for the `famous` branch.
-  //   - `aliasMap`             — required for the `pgc` tier-vs-unknown
-  //                              oracle.
-  //
-  // We don't try to be cleverer (e.g. only re-run when the *specific*
-  // cloud the target needs has loaded).  The cost of an extra resolve
-  // pass over a few-row cloud is sub-millisecond; the readability cost
-  // of a finer-grained dependency array is far higher than the saving.
-  useEffect(() => {
-    if (!pendingTarget) return;
-    // Wait for the engine to fully boot — `status.kind === 'ready'` is
-    // the moment the render loop has started, which guarantees both the
-    // first cloud upload AND `state.cam` are in place.  Resolving any
-    // earlier means `selectByAlias` enters the tween dispatch with
-    // `state.cam === null` and silently bails.
-    if (status.kind !== 'ready') return;
-    const handle = handleRef.current;
-    if (!handle?.getCloud || !handle?.selectByAlias) return;
-
-    // Build the resolver's `clouds` input from currently-loaded sources.
-    // We skip Synthetic for two reasons: (1) the resolver excludes it
-    // anyway because synthetic objIDs are sequential 0..N-1 and would
-    // collide spuriously with low PGCs, and (2) keeping it out of the
-    // input is tidier and saves a pass over the large `pos@` branch.
-    const clouds: { source: Source; cloud: PointCloud }[] = [];
-    for (const source of ALL_SOURCES) {
-      if (source === Source.Synthetic) continue;
-      const cloud = handle.getCloud(source);
-      if (cloud) clouds.push({ source, cloud });
-    }
-    if (clouds.length === 0) return;
-
-    const result = resolveFocusTarget({
-      target: pendingTarget,
-      clouds,
-      famousMeta,
-      aliasMap,
-    });
-
-    // Resolution during loading is monotonic: as more clouds, the
-    // famousMeta sidecar, and the aliasMap arrive, the resolver's
-    // answer can only promote `unknown → tier` or `unknown → resolved`,
-    // never the other way.  So we MUST NOT collapse a transient
-    // `unknown` into a permanent give-up here — doing so would lose
-    // the deep link the moment the smallest cloud (typically Famous,
-    // ~150 points) lands, before the actual survey catalogs arrive.
-    //
-    // Two definitive outcomes act here: `resolved` triggers the
-    // selection (and the supersede effect below clears pending once
-    // `selected` updates); `tier` leaves pending set so the eventual
-    // banner can render off it.  `unknown` is just "not yet" — the
-    // effect's `sourceCounts` / `famousMeta` / `aliasMap` deps will
-    // re-fire it on the next data arrival.
-    if (result.resolved) {
-      // Pass App's own famousMeta + xrefs so `buildPointInfo` inside
-      // `selectByAlias` doesn't read the engine's still-loading copy.
-      // See the EngineHandle JSDoc for the race this avoids.
-      handle.selectByAlias({
-        source: result.source,
-        localIdx: result.localIdx,
-        famousMeta,
-        famousXrefs,
-      });
-    }
-  }, [pendingTarget, status, sourceCounts, famousMeta, famousXrefs, aliasMap]);
-
-  // ── Selection supersedes pending deep-link ────────────────────────────────
-  //
-  // Once a selection exists — whether placed by `selectByAlias` from a
-  // resolved deep link OR by a user click while we were still trying —
-  // the original deep-link target stops being load-bearing.  Clearing
-  // pending here is the single place we collapse the "we have a deep
-  // link to honour" state, and it's idempotent: clearPending() on an
-  // already-null target is a no-op.
-  //
-  // This is what makes "drain never clears on unknown" safe: if the
-  // resolver eventually succeeds, this effect clears.  If the user
-  // clicks something else first, this effect clears.  If the link is
-  // truly unresolvable AND no user interaction occurs, pendingTarget
-  // stays set — Task 5's banner will offer a manual escape.
-  useEffect(() => {
-    if (selected !== null && pendingTarget !== null) clearPending();
-  }, [selected, pendingTarget, clearPending]);
+  // Single hook owning the entire `#focus=…` lifecycle: mount-time hash
+  // parse + scrub, selection-driven URL writes, drain of pending deep
+  // links once the engine is `'ready'` (which guarantees `state.cam`),
+  // and the supersede-on-selection cleanup.  See the hook's module
+  // header for the full rationale of each effect.
+  const { pendingTarget } = useFocusUrlSync({
+    selected,
+    status,
+    sourceCounts,
+    famousMeta,
+    famousXrefs,
+    aliasMap,
+    engineHandleRef: handleRef,
+  });
 
   // ── Keyboard shortcuts effect ──────────────────────────────────────────────
   //

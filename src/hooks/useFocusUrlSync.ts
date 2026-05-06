@@ -50,13 +50,21 @@
  * under tooling that pre-evaluates modules in node.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { PointInfo } from '../@types';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import type { EngineHandle, EngineStatus, PointCloud, PointInfo } from '../@types';
+import { ALL_SOURCES, Source } from '../data/sources';
 import {
   parseFocusHash,
   selectionToFocusId,
   type FocusTarget,
 } from '../services/url/focusUrl';
+import {
+  resolveFocusTarget,
+} from '../services/engine/resolveFocusTarget';
+import type {
+  FamousMetaEntry,
+  FamousXrefMap,
+} from '../services/engine/famousMetaLoader';
 
 /**
  * Inputs to the pure desired-hash decision.  The caller passes in the
@@ -135,35 +143,74 @@ export function initialPendingTarget(hash: string): FocusTarget | null {
 }
 
 /**
- * What the hook returns to the caller.  `pendingTarget` is non-null
- * when a deep-link arrival is waiting to be resolved against the
- * loaded clouds; the App calls `clearPending()` once it has dispatched
- * the resolve (success *or* abandonment) to acknowledge consumption.
+ * Inputs to the deep-link orchestrator hook.  The reactive ones drive
+ * the drain effect's re-runs as data lands; `engineHandleRef` is a
+ * mutable ref because the engine handle is constructed asynchronously
+ * during App mount and should not retrigger this hook on assignment.
  */
-export type FocusSyncReturn = {
-  pendingTarget: FocusTarget | null;
-  clearPending: () => void;
+export type UseFocusUrlInput = {
+  selected: PointInfo | null;
+  status: EngineStatus;
+  sourceCounts: Partial<Record<Source, number>>;
+  famousMeta: readonly FamousMetaEntry[];
+  famousXrefs: FamousXrefMap;
+  aliasMap: ReadonlyMap<bigint, readonly string[]>;
+  engineHandleRef: RefObject<EngineHandle | null>;
 };
 
 /**
- * React hook: parses the URL on mount, keeps the URL in sync with the
- * current selection on change.
+ * What the hook returns to the caller.  `pendingTarget` is non-null
+ * when a deep-link arrival is waiting to be resolved against the
+ * loaded clouds — currently surfaced so a future tier-mismatch banner
+ * can render off it.  Other paths (success, supersede) clear it
+ * internally without the caller having to act.
+ */
+export type FocusSyncReturn = {
+  pendingTarget: FocusTarget | null;
+};
+
+/**
+ * React hook owning the entire URL ↔ selection lifecycle for the
+ * deep-link `#focus=…` feature.  Three internal effects:
+ *
+ *   1. **Mount capture** — parse `location.hash`, set `pendingTarget`,
+ *      scrub the hash so a manual reload doesn't re-fire the same
+ *      target after the user has navigated elsewhere.
+ *
+ *   2. **Selection → URL** — when `selected` changes, write the
+ *      canonical hash (or clear it for a synthetic / null selection)
+ *      via `replaceState`.  Skips no-op writes via the `matches`
+ *      short-circuit on `computeDesiredHash`.
+ *
+ *   3. **Drain + supersede** — once the engine reaches `'ready'`
+ *      (which guarantees `state.cam` is constructed), runs the
+ *      resolver against every loaded cloud + the famous sidecars +
+ *      the alias map and dispatches `engine.selectByAlias` on a
+ *      successful match.  Resolution during loading is monotonic, so
+ *      `unknown` is treated as "not yet" — pending stays set and the
+ *      effect re-fires on the next data dep change.  Pending is
+ *      collapsed by the supersede effect the moment any selection
+ *      lands (deep-link resolved OR user clicked something else).
  *
  * The hook intentionally has minimal direct test coverage — its
- * behaviour is the composition of `computeDesiredHash` (covered) and
- * `replaceState` (a browser primitive).  The `mountedRef` guard exists
- * for React 18 strict-mode double-mount: if we set state from a mount
- * effect that re-fires, we'd briefly thrash `pendingTarget` and re-clear
- * a hash we've already cleared, which is harmless but confusing.
+ * behaviour is the composition of `computeDesiredHash` (covered),
+ * `resolveFocusTarget` (covered), and a couple of browser primitives.
+ * The `mountedRef` guard exists for React 18 strict-mode double-mount.
  */
-export function useFocusUrlSync({
-  selected,
-}: {
-  selected: PointInfo | null;
-}): FocusSyncReturn {
+export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
+  const {
+    selected,
+    status,
+    sourceCounts,
+    famousMeta,
+    famousXrefs,
+    aliasMap,
+    engineHandleRef,
+  } = input;
+
   const [pendingTarget, setPendingTarget] = useState<FocusTarget | null>(null);
 
-  // Mount-only: capture deep link, scrub it from the URL.
+  // ── 1. Mount capture ────────────────────────────────────────────────────
   const mountedRef = useRef(false);
   useEffect(() => {
     // SSR guard before flipping the ref: if this ever ran in a Node
@@ -183,10 +230,10 @@ export function useFocusUrlSync({
     }
   }, []);
 
-  // Selection-change: write the hash to match the selection, but only
-  // when it actually differs.  The `matches` short-circuit is what
-  // lets us avoid a flurry of identical `replaceState` calls when the
-  // App re-renders for unrelated reasons.
+  // ── 2. Selection → URL ──────────────────────────────────────────────────
+  // Write the hash to match the selection, but only when it actually
+  // differs.  The `matches` short-circuit avoids a flurry of identical
+  // `replaceState` calls when the App re-renders for unrelated reasons.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const { desiredHashBody, matches } = computeDesiredHash({
@@ -199,15 +246,75 @@ export function useFocusUrlSync({
     window.history.replaceState(null, '', next);
   }, [selected]);
 
-  // `clearPending` is wrapped in `useCallback` so the consumer's `useEffect`
-  // deps stay referentially stable across re-renders.  Without this, App's
-  // drain effect (which lists `clearPending` in its deps) re-fires on every
-  // parent render while `pendingTarget` is non-null — a real concern for
-  // the `pos@` resolver branch, which scans every loaded cloud's positions.
-  const clearPending = useCallback(() => setPendingTarget(null), []);
+  // ── 3a. Drain ───────────────────────────────────────────────────────────
+  // Resolve pendingTarget against the engine's currently loaded data
+  // and dispatch a selection.  Re-runs on every data dep change because
+  // resolution is monotonic — a transient `unknown` is just "not yet."
+  // We deliberately do NOT clear pending on `unknown`; the supersede
+  // effect below collapses pending the moment any selection lands.
+  useEffect(() => {
+    if (!pendingTarget) return;
+    // Wait for the engine to fully boot — `status.kind === 'ready'` is
+    // the moment the render loop has started, which guarantees both the
+    // first cloud upload AND `state.cam` are in place.  Resolving any
+    // earlier means `selectByAlias` enters the tween dispatch with
+    // `state.cam === null` and silently bails.
+    if (status.kind !== 'ready') return;
+    const handle = engineHandleRef.current;
+    if (!handle?.getCloud || !handle?.selectByAlias) return;
 
-  return {
+    // Build the resolver's `clouds` input from currently-loaded sources.
+    // Skip Synthetic — the resolver excludes it anyway because synthetic
+    // objIDs are sequential 0..N-1 and would collide spuriously with
+    // low PGCs, and keeping it out of the input saves a pass over the
+    // large `pos@` branch.
+    const clouds: { source: Source; cloud: PointCloud }[] = [];
+    for (const source of ALL_SOURCES) {
+      if (source === Source.Synthetic) continue;
+      const cloud = handle.getCloud(source);
+      if (cloud) clouds.push({ source, cloud });
+    }
+    if (clouds.length === 0) return;
+
+    const result = resolveFocusTarget({
+      target: pendingTarget,
+      clouds,
+      famousMeta,
+      aliasMap,
+    });
+
+    if (result.resolved) {
+      // Pass App's own famousMeta + xrefs so `buildPointInfo` inside
+      // `selectByAlias` doesn't read the engine's still-loading copy.
+      // See the EngineHandle JSDoc on `selectByAlias` for the race
+      // this avoids.
+      handle.selectByAlias({
+        source: result.source,
+        localIdx: result.localIdx,
+        famousMeta,
+        famousXrefs,
+      });
+    }
+    // tier and unknown: leave pendingTarget set.  `tier` is read by the
+    // eventual banner; `unknown` simply waits for more data.
+  }, [
     pendingTarget,
-    clearPending,
-  };
+    status,
+    sourceCounts,
+    famousMeta,
+    famousXrefs,
+    aliasMap,
+    engineHandleRef,
+  ]);
+
+  // ── 3b. Supersede ───────────────────────────────────────────────────────
+  // Once any selection lands — drain-resolved deep-link OR user click —
+  // the original deep-link target stops being load-bearing.  This is the
+  // single place we collapse "we have a deep link to honour" state, so
+  // the drain can stay focused on the resolve-and-dispatch path.
+  useEffect(() => {
+    if (selected !== null && pendingTarget !== null) setPendingTarget(null);
+  }, [selected, pendingTarget]);
+
+  return { pendingTarget };
 }
