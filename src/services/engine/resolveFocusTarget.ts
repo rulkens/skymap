@@ -163,16 +163,13 @@ function resolvePgc(pgc: bigint, input: ResolverInput): ResolverOutput {
  * actionable nudge.
  */
 function resolveSdss(objID: bigint, input: ResolverInput): ResolverOutput {
-  let sawSdss = false;
   for (const { source, cloud } of input.clouds) {
     if (source !== Source.SDSS) continue;
-    sawSdss = true;
     const idx = findObjId(cloud.objIDs, objID);
     if (idx >= 0) return { resolved: true, source, localIdx: idx };
   }
   // Whether or not an SDSS cloud was loaded, a miss collapses to
   // `tier`.  See the function header for why.
-  void sawSdss;
   return { resolved: false, reason: 'tier' };
 }
 
