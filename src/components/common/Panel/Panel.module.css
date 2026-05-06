@@ -17,8 +17,15 @@
 
 .panel {
   background: var(--surface-panel);
-  backdrop-filter: blur(var(--blur-panel));
+  /* Vendor-prefixed declaration first, then the standard.  esbuild's
+   * CSS minifier dedupes adjacent declarations and keeps the LAST one;
+   * keeping the unprefixed form last means modern browsers (which
+   * support both) get the standard property and Firefox 103+
+   * (unprefixed-only) renders the blur correctly.  The earlier order
+   * silently broke the production build on Firefox + recent Chrome
+   * after `-webkit-` aliasing started being deprecated. */
   -webkit-backdrop-filter: blur(var(--blur-panel));
+  backdrop-filter: blur(var(--blur-panel));
   border: 1px solid var(--border-default);
   border-radius: var(--radius-xl);
 

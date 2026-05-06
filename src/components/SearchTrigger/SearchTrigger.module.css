@@ -33,8 +33,9 @@
   /* Glassmorphism — softer than InfoCard's "loud" variant; this is
    * an entry point, not a content card, so it shouldn't compete. */
   background: var(--surface-card-soft);
-  backdrop-filter: blur(var(--blur-card));
+  /* Vendor-prefixed first, standard last — see Panel.module.css for why. */
   -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
 
   border: 1px solid var(--border-card);
   border-radius: 999px; /* full-pill */

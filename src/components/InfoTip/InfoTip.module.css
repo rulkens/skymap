@@ -171,8 +171,9 @@
   padding: 10px 12px;
 
   background: var(--surface-card-strong);
-  backdrop-filter: blur(var(--blur-card));
+  /* Vendor-prefixed first, standard last — see Panel.module.css for why. */
   -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
   border: 1px solid var(--border-card);
   border-radius: var(--radius-md, 8px);
   box-shadow: var(--shadow-card);

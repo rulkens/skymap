@@ -16,8 +16,9 @@
   padding: var(--space-4) var(--space-6) var(--space-5);
 
   background: var(--surface-soft);
-  backdrop-filter: blur(var(--blur-panel));
+  /* Vendor-prefixed first, standard last — see Panel.module.css for why. */
   -webkit-backdrop-filter: blur(var(--blur-panel));
+  backdrop-filter: blur(var(--blur-panel));
   /*
    * Border opacity is one notch lower than the canonical panel border
    * (`--border-default` is 0.16; here we use a custom 0.14 because the
