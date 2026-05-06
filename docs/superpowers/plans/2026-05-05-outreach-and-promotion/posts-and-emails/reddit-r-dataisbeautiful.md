@@ -33,7 +33,7 @@
 Source data:
 - SDSS DR18 — ~500k galaxies, https://skyserver.sdss.org/dr18
 - GLADE v2.3 — ~2M galaxies after cross-match dedup
-  (a gravitational-wave host catalogue; original ~3.3M rows)
+  (an all-sky galaxy catalog; original ~3.3M rows)
 - 2MRS — ~45k local-volume galaxies, https://tdc-www.harvard.edu/2mass/
 
 Cross-matched and rendered as instanced points in the browser using
@@ -41,13 +41,16 @@ WebGPU.
 
 Tools: TypeScript + React for the UI, raw WebGPU + WGSL shaders for
 the renderer, custom 64-byte-per-point binary format for the catalog
-files.
+files. Built last weekend in 4 days with Claude Code.
 
 Live (Chrome / Edge 113+, Firefox 141+, Safari 26+):
   https://skymap.rulkens.com
 Source (MIT):
   https://github.com/rulkens/skymap
 DOI: https://doi.org/10.5281/zenodo.20037028
+
+Really curious what I can learn from this sub — happy to answer
+questions about the data or the rendering.
 ```
 
 _Editorial note: the original draft said "48-byte binary format". The on-disk per-point record is now **64 bytes** (v4 format — see README "Browser binary format (SKMP v4)"); the **vertex stride** in GPU memory after the buffer-bake is 52 bytes (13 × float32 slots). Two different numbers, both real. The post deliberately quotes the on-disk number because that's the meaningful one for "what does the data file look like"._

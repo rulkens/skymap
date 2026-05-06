@@ -49,7 +49,7 @@
 ## Subject
 
 ```
-Skymap: a 3D GLADE explorer in the browser, GW host-galaxy use case
+Skymap: a browser 3D explorer that loads GLADE — feedback welcome
 ```
 
 ## Body
@@ -57,27 +57,35 @@ Skymap: a 3D GLADE explorer in the browser, GW host-galaxy use case
 ```
 Dear Dr. Dálya,
 
-I've built skymap, an open-source browser-based 3D explorer for
-several galaxy catalogs. GLADE is one of the three I load (alongside
-SDSS and 2MRS), and it's the most useful of the three for the use
-case I find personally most interesting: scanning the
-gravitational-wave EM-counterpart host-candidate volume in 3D rather
-than projected onto the sky.
+I'm an independent designer-engineer based in the Netherlands. My day
+job is building Repper (https://repper.app), a pattern-design tool;
+skymap is an open-source side project — a browser-based 3D explorer
+for galaxy catalogs.
 
-The use case I write up in the README is exactly the one your group
-designed GLADE for — so I wanted to flag the project to you directly,
-both as an acknowledgement and because feedback from someone closer
-to the actual GW follow-up community would be invaluable.
+I want to be honest about why I'm writing: I picked up GLADE because
+it's the all-sky catalog that complements SDSS's footprint in skymap,
+not because I'm part of the GW follow-up community. Where SDSS gives
+me dense northern coverage and 2MRS gives me the local volume, GLADE
+fills out the rest of the celestial sphere. That's the functional
+reason it's in the project. I haven't read your GLADE / GLADE+ papers
+in depth; I want to learn but I'm not going to pretend.
 
 Live: https://skymap.rulkens.com
 Source: https://github.com/rulkens/skymap
 DOI: https://doi.org/10.5281/zenodo.20037028
 
-It's a personal learning project, not a polished product, so I'd
-welcome bluntness about where the GW host-candidate framing falls
-short. If there are GW-follow-up groups (GROWTH, ENGRAVE, others)
-where it would be worth posting a pointer, I'd be grateful for the
-introduction.
+The reason I'm reaching out specifically: I can't fully verify the
+cosmology and catalog statistics math from where I'm standing — the
+density-correction modes (1/V_max, Schechter LF, HEALPix angular
+re-weighting) are implemented but I'd value blunt feedback from
+someone closer to GLADE on whether what's coming out is actually
+defensible. Plenty of unpolished UX edges too; if anything in the
+data presentation looks visibly wrong, I'd rather hear it than not.
+
+If you know other people working at the seam of art / engineering /
+science — astronomers building tools, designers working with science
+data, anyone whose project lives between disciplines — I'd genuinely
+value the introduction.
 
 With thanks for GLADE,
 Alexander Rulkens

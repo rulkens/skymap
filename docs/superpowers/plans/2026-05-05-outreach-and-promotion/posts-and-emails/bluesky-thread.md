@@ -5,40 +5,19 @@
 - **Compose URL:** `https://bsky.app` _(source: bsky.app is the canonical web client for the AT-protocol Bluesky network; retrieved 2026-05-06)_
 - **Best window:** Roughly 2 h after the HN post — late afternoon in continental Europe / lunchtime US east coast. The astronomy community on Bluesky skews EU + east-coast US, and posting after HN means the embed/OG card will work and the thread can reference HN traction by reply if it landed.
 
-### Mention candidates
+### A note on @-mentions: dropped
 
-| Handle (draft)                  | Verified?                                                        |
-| ------------------------------- | ---------------------------------------------------------------- |
-| `@sdss.bsky.social`             | **TO VERIFY** — see callout below                                |
-| `@aaswwt.bsky.social`           | **TO VERIFY** — see callout below                                |
-| Brice Ménard                    | **TO VERIFY** — no verified handle found                         |
-
-> **TO VERIFY — Bluesky handles for SDSS, AAS WWT, and Brice Ménard.**
->
-> A 2026-05-06 search for `site:bsky.app sloan digital sky survey`,
-> `site:bsky.app aas worldwide telescope`, and Bluesky search of "Brice
-> Ménard" / "mapoftheuniverse" did **not** surface official accounts
-> for any of the three. The closest hits were:
->
-> - `@allthegalaxies.galaxyzoo.org` — adjacent (Galaxy Zoo posts SDSS
->   imagery) but not an SDSS-run account.
-> - `@aas.org` — official American Astronomical Society account; not
->   WWT-specific. WWT itself does not appear to have a separate
->   Bluesky presence as of the search date.
-> - `@adavidweigel.bsky.social` — A. David Weigel, a personal account
->   that bills itself "Astrovizicist for WorldWide Telescope". Not an
->   official WWT channel, but the closest individual presence.
-> - For Brice Ménard, only third-party mentions (e.g. an SFI welcome
->   post). No verified personal account.
->
-> Before posting, do a fresh Bluesky in-app search for each of the
-> three. If a handle still cannot be verified, **drop the @-mention
-> silently** rather than guessing — bad mentions clutter the thread
-> and can ping unrelated users.
+The earlier draft of this thread cc'd `@sdss.bsky.social`,
+`@aaswwt.bsky.social`, and a "(handle?)" placeholder for Brice Ménard.
+None could be verified as real, official accounts on 2026-05-06, AND I
+don't have a genuine relationship with any of them — tagging strangers
+reads as cargo-cult outreach. So this thread relies on **hashtags for
+discovery** instead: `#astrodataviz`, `#astronomy`, `#webgpu`. If real
+relationships exist on Bluesky after this post lands, future threads
+can warm-open from those.
 
 ## Send checklist
 
-- [ ] Re-resolve the three TO-VERIFY handles (in-app Bluesky search). Drop any that still don't resolve — replace the cc-line in post 4 accordingly.
 - [ ] Open Bluesky web; create the four posts as a chained reply thread (post 1, then "Reply" → post 2, etc).
 - [ ] Attach `docs/screenshots/hero.gif` to post 1.
 - [ ] Attach `docs/screenshots/all-three-surveys.png` (or equivalent — see Task 1 deliverables) to post 2.
@@ -53,12 +32,14 @@
 ### Post 1
 
 ```
-Spent the last few months building skymap — an interactive WebGPU 3D
-explorer for SDSS, 2MRS, and GLADE galaxy catalogs in the browser. No
-install, just Chrome / Edge 113+ (and Firefox 141+ / Safari 26+).
+Built skymap last weekend in 4 days with Claude Code: an interactive
+WebGPU 3D explorer for SDSS, 2MRS, and GLADE galaxy catalogs, running in
+the browser. No install (Chrome / Edge 113+, Firefox 141+, Safari 26+).
 
 Live: https://skymap.rulkens.com
 Source: https://github.com/rulkens/skymap
+
+#astrodataviz #astronomy #webgpu
 
 [attach hero.gif]
 ```
@@ -68,7 +49,8 @@ Source: https://github.com/rulkens/skymap
 ```
 The cosmic-web wedge is right there — Sloan Great Wall, the Coma
 cluster, the local-volume 2MRS galaxies. Density-correction toggle
-(1/V_max, Schechter LF) lets you see structure unbiased by Malmquist.
+(1/V_max, Schechter LF, HEALPix angular re-weighting) lets you see
+structure unbiased by Malmquist.
 
 [attach all-three-surveys.png]
 ```
@@ -86,18 +68,25 @@ time, NED link.
 ### Post 4 (reply to 3)
 
 ```
-Built as a personal learning project — the source is documented
-didactically (every WebGPU surprise written up where it bit me). GW
-EM follow-up folks, SDSS team, AAS WWT crowd — feedback very welcome.
+Personal-learning project — source is documented didactically (every
+WebGPU surprise written up where it bit me).
 
-[mentions: drop or include based on TO-VERIFY resolution above]
+One thing I'd genuinely love feedback on: getting the volume corrections
+right. 1/V_max + Schechter LF + HEALPix angular re-weighting are
+implemented as runtime shader uniforms, but I have no way to confirm
+from where I'm standing whether the result is actually a spatially-
+homogeneous visualisation or just looks plausible. If anyone working in
+catalog statistics has a few minutes to tell me what's wrong, I'd be
+more than grateful.
+
+#astrodataviz #astronomy
 ```
 
-_Editorial note for post 4: the original draft included
-`cc @sdss.bsky.social @aaswwt.bsky.social` and a "(handle?)" placeholder
-for Brice Ménard. **Do not paste those literal strings** — they'll show
-up as broken @-tags. Replace with the verified handles you find at
-send-time, or drop the cc-line entirely._
+_Editorial note: post 4 deliberately drops the GW-EM-follow-up @-mention
+that was in the original draft (no GW overlay feature exists; soft-
+pedalling that entire framing). It also drops the
+`cc @sdss.bsky.social @aaswwt.bsky.social` and Brice Ménard mentions
+from the original — see the "A note on @-mentions" section above._
 
 ## Verification
 

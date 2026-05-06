@@ -30,11 +30,15 @@ I built a browser-based 3D explorer for SDSS, GLADE, and 2MRS — open source, n
 ## Body
 
 ```
-Hey r/Astronomy — I've been working on a personal-learning project that
-I think might be useful to some of you. It's a free-explore 3D viewer
-for three galaxy catalogs (SDSS DR18, the 2MASS Redshift Survey, and
-GLADE) running directly in the browser via WebGPU. No install, no
-Python, just Chrome / Edge 113+ (also Firefox 141+ / Safari 26+).
+Hey r/Astronomy — Alex here, designer-engineer, not a scientist. I've
+followed Anton Petrov on YouTube for years and kept getting frustrated
+that all the beautiful catalog flythroughs I saw in research videos
+weren't things I could just open and explore myself. So I built one.
+
+Skymap is a free-explore 3D viewer for three galaxy catalogs (SDSS
+DR18, the 2MASS Redshift Survey, and GLADE) running directly in the
+browser via WebGPU. No install, no Python (Chrome / Edge 113+, Firefox
+141+, Safari 26+).
 
 Live demo: https://skymap.rulkens.com
 Source: https://github.com/rulkens/skymap
@@ -53,8 +57,10 @@ What you can do:
 It's documented didactically — the source is meant to be readable.
 Citation file is in the repo if you'd ever use it for teaching.
 
-Happy to take feedback on the science end especially. Suggestions for
-what to add next?
+Honest caveats: I'm an outsider to the field, plenty of unpolished UX
+edges, and if there are conventions I'm visibly missing I'd rather hear
+it than not. Suggestions for what to add next, or just curious whether
+this is at all useful to you — both more than welcome.
 ```
 
 ## Maintenance

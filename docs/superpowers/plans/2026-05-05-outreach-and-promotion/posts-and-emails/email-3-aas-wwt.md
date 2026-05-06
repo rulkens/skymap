@@ -32,25 +32,40 @@ Skymap (browser WebGPU 3D galaxy explorer) — possible AAS WWT community list?
 ```
 Dear Peter,
 
-I've been following the AAS WWT renewal effort with a lot of
-admiration. I wanted to share a small open-source project that
-overlaps the browser-astronomy-tool space: skymap, an interactive
-WebGPU 3D explorer for SDSS, 2MRS, and GLADE galaxy catalogs.
+I'll be upfront: I don't have a relationship with WWT and I haven't
+used it personally — I'm reaching out cold because I've built
+something in adjacent territory and you seemed like the right person
+to know about it. If this turns out not to be useful to you, an
+honest "no thanks" is welcome.
+
+I'm an independent designer-engineer based in the Netherlands. Day
+job is building Repper (https://repper.app); skymap is an open-source
+side project — an interactive WebGPU 3D explorer for SDSS, 2MRS, and
+GLADE galaxy catalogs that runs in the browser with no install.
 
 Live: https://skymap.rulkens.com
 Source: https://github.com/rulkens/skymap
 DOI: https://doi.org/10.5281/zenodo.20037028
-JOSS submission: in progress
 
-It's not a WWT alternative — WWT is a far broader platform — but it
-does occupy a free-exploration, 3D, no-install niche that I think
-complements the WWT toolkit. If there's an AAS-maintained list of
-community-built browser tools, or any guidance on submitting to one,
-I'd appreciate the pointer.
+It's not a WWT alternative — WWT is a far broader platform, and I'm
+aware enough of the gap to say so plainly. Skymap occupies a smaller
+slice: free-exploration, 3D, galaxy-catalog-focused, no install. If
+there's an AAS-maintained list of community-built browser tools, or
+any guidance on submitting to one, I'd appreciate the pointer.
 
 Recent traction on Hacker News [link if Show HN worked] suggests
 there is real public appetite for "open the browser, see the
 galaxies" tools, which I think bodes well for the WWT mission.
+
+Honest caveats: I'm an outsider to the AAS / WWT community, plenty of
+unpolished UX edges in skymap, and if there are conventions in the
+browser-astronomy space I'm visibly missing I'd rather hear it than
+not.
+
+If you know other people working at the seam of art / engineering /
+science — astronomers building tools, designers working with science
+data, anyone whose project lives between disciplines — I'd genuinely
+value the introduction.
 
 Best regards,
 Alexander Rulkens
