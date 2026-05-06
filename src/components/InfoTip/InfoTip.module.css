@@ -29,15 +29,44 @@
  * per-instance `anchor-name` (set inline by InfoTip.tsx) and the tip
  * resolves it via `position-anchor`.  `position-area: top span-all`
  * places the panel above the trigger, centered on the trigger's
- * inline axis.  `position-try-fallbacks: flip-block, flip-inline`
- * tells the browser to flip below the trigger if there's no room
- * above, and to flip horizontally if the panel would overflow the
- * viewport's left or right edge.  Native, no JS observers.
+ * inline axis.  Native, no JS observers.
+ *
+ * ── Why the explicit position-area cells in the fallback list ─────
+ *
+ * `position-try-fallbacks: flip-block, flip-inline` is the textbook
+ * pattern for popovers, but it doesn't help when `position-area: top
+ * span-all` is the initial placement.  `span-all` is symmetric on the
+ * inline axis (the panel sits centered above the trigger and extends
+ * equally to both sides), so `flip-inline` produces an identical
+ * layout.  When the trigger sits near the right edge of the viewport
+ * — which is exactly where the InfoCard lives by default — the
+ * centered-above placement clips on the right edge and `flip-inline`
+ * leaves it clipping.
+ *
+ * The fix is explicit `position-area` cells:
+ *
+ *   - `top span-left`: anchor the panel's RIGHT edge to the trigger's
+ *     center; extend LEFTWARD into the screen.  Solves the right-
+ *     edge-clip case (every InfoCard tip near the card's right side).
+ *   - `top span-right`: anchor the panel's LEFT edge to the trigger's
+ *     center; extend RIGHTWARD.  Solves the left-edge case (rare in
+ *     practice but cheap to include for symmetry).
+ *   - The same triplet at `bottom`: covers the case where there's no
+ *     vertical room above the trigger either (extreme zoom or stack-
+ *     mode where the InfoCard fills the height of the screen).
+ *
+ * The browser tries each candidate in order and picks the first that
+ * fits without overflow — see `position-try-fallbacks` in MDN.
+ *
+ * ── Pre-anchor-positioning fallback ───────────────────────────────
  *
  * For browsers that predate anchor positioning (Safari 18.1 and
- * earlier as of writing), the `@supports not` block falls back to
- * `position: absolute; bottom: 100%; left: 50%` — the tip still
- * shows, just won't auto-flip at viewport edges.
+ * earlier as of writing), the geometry below the @supports block
+ * falls back to `position: absolute; bottom: 100%; right: 0` — the
+ * tip anchors to the trigger's right edge and extends leftward.
+ * Anchoring right (rather than centering) is the safe default given
+ * the InfoCard sits in the top-right of the viewport.  Centered tips
+ * may look slightly off-axis in this fallback, but they don't clip.
  */
 
 .wrapper {
@@ -80,7 +109,12 @@
 .tip {
   /*
    * Pre-anchor-positioning fallback geometry.  Modern browsers will
-   * override these via the @supports block below.
+   * override these via the @supports block below.  Centered above the
+   * trigger with `transform: translateX(-50%)` is the unbiased
+   * default — works mediocre everywhere but doesn't favour either
+   * viewport edge.  Tooltips on far-right triggers (InfoCard) and
+   * far-left triggers (SettingsPanel) will both clip slightly on
+   * pre-anchor Safari builds.  Acceptable for an aging fallback.
    */
   position: absolute;
   bottom: calc(100% + 8px);
@@ -147,14 +181,30 @@
     margin-bottom: 8px;
 
     /*
-     * `position-area: top span-all` places the tip above the trigger,
-     * stretching across the full inline axis (centered on the
-     * trigger's inline midpoint).  `position-try-fallbacks: flip-
-     * block, flip-inline` tells the browser to flip the placement
-     * if the chosen position would overflow the viewport edge.
+     * Centered above is the default placement.  The fallback list
+     * lets the browser slide the panel toward whichever side of the
+     * trigger has more viewport room — same physics works for the
+     * top-right InfoCard, the left-edge SettingsPanel, and any
+     * future panel anchored anywhere.  See module header for why an
+     * explicit cell list is needed instead of the textbook `flip-
+     * inline` tactic.
+     *
+     * `position-try-order: most-height` is the tiebreaker for the
+     * vertical-axis fallbacks (top vs bottom).  When neither side
+     * has room for the centered placement, the browser picks the
+     * variant with the most available block-axis space rather than
+     * the first one in the list — keeps tall multi-line tip bodies
+     * from getting cropped when both above and below could fit
+     * something but neither could fit everything.
      */
     position-area: top span-all;
-    position-try-fallbacks: flip-block, flip-inline;
+    position-try-order: most-height;
+    position-try-fallbacks:
+      top span-left,
+      top span-right,
+      bottom span-all,
+      bottom span-left,
+      bottom span-right;
   }
 }
 
