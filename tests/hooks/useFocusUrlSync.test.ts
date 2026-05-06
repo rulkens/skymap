@@ -130,6 +130,16 @@ describe('computeDesiredHash', () => {
     });
   });
 
+  it('encodes an SDSS selection into focus=sdss-<objID>', () => {
+    // SDSS objIDs are 19-digit bigints — verify the codec handles them
+    // without precision loss across the helper boundary.
+    const info = baseInfo({ source: Source.SDSS, objID: 1237665128253423687n });
+    expect(computeDesiredHash({ selected: info, currentHash: '' })).toEqual({
+      desiredHashBody: 'focus=sdss-1237665128253423687',
+      matches: false,
+    });
+  });
+
   it('falls back to focus=pos@ra,dec when no objID and no famous metadata', () => {
     const info = baseInfo({
       source: Source.TwoMRS,

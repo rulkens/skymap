@@ -166,9 +166,13 @@ export function useFocusUrlSync({
   // Mount-only: capture deep link, scrub it from the URL.
   const mountedRef = useRef(false);
   useEffect(() => {
+    // SSR guard before flipping the ref: if this ever ran in a Node
+    // render (we don't SSR today, but the guard is cheap), we want the
+    // client-side hydration pass to still mount cleanly rather than be
+    // short-circuited by a ref flipped during render.
+    if (typeof window === 'undefined') return;
     if (mountedRef.current) return;
     mountedRef.current = true;
-    if (typeof window === 'undefined') return;
     const target = initialPendingTarget(window.location.hash);
     if (target) {
       setPendingTarget(target);
