@@ -136,7 +136,14 @@
   box-shadow: var(--shadow-card);
 
   color: var(--color-fg-base);
-  font: var(--font-size-sm) / var(--line-height-relaxed) var(--font-family-mono);
+  /*
+   * Tip body uses --font-size-lg (matches InfoCard body) rather than
+   * the smaller --font-size-sm.  Reading explanatory prose at 10px
+   * felt cramped when the tip is meant to *teach* the meaning of the
+   * value beneath it; one decade up matches the surrounding card and
+   * keeps the panel comfortable on a desktop monitor.
+   */
+  font: var(--font-size-lg) / var(--line-height-relaxed) var(--font-family-mono);
 
   /*
    * `pointer-events: none` always — both hidden AND visible.  The
