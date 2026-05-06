@@ -20,12 +20,12 @@ import {
 } from '../services/engine/famousMetaLoader';
 
 export type UseFamousMetaReturn = {
-  famousMeta: FamousMetaEntry[];
+  famousMeta: readonly FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
 };
 
 export function useFamousMeta(): UseFamousMetaReturn {
-  const [famousMeta, setFamousMeta] = useState<FamousMetaEntry[]>([]);
+  const [famousMeta, setFamousMeta] = useState<readonly FamousMetaEntry[]>([]);
   const [famousXrefs, setFamousXrefs] = useState<FamousXrefMap>({});
 
   useEffect(() => {

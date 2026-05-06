@@ -144,7 +144,7 @@ const FAMOUS_TIEBREAK = 5;
 
 export type CommandPaletteProps = {
   /** All famous entries to search across.  Loaded from `famous_meta.json`. */
-  entries: FamousMetaEntry[];
+  entries: readonly FamousMetaEntry[];
   /**
    * The PGC alias index built by joining `pgc_aliases.json` against
    * the runtime GLADE+2MRS clouds.  Optional — the palette degrades
