@@ -1,5 +1,8 @@
 # Task 4: Public posts (HN, Bluesky, Reddit)
 
+> **Status:** drafts extracted into [posts-and-emails/](posts-and-emails/) with verified contacts on 2026-05-06. This file is kept for historical reference; the per-item files are authoritative going forward.
+
+
 Three audiences, three angles. Drop them in a stepped rhythm so a single dud doesn't cap exposure: HN first (Tuesday morning, US east coast — that's the proven peak), Bluesky two hours later (the #astrodataviz crowd is largely Europe + east-coast US, late afternoon their time), then Reddit over the next 1-2 days. Don't ship them all at once: a high-traction Show HN gives you a link to reference in subsequent posts. _All three of HN, Bluesky, and Reddit must wait for Tasks 0 and 1 to complete — Task 0 provides the v0.2.0 release as a fresh news hook, and Task 1 provides the hero GIF and screenshots that make the README worth sharing._
 
 **Files:** No source-tree files. Drafts live in this plan, copy-paste at post time.
