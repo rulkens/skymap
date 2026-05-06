@@ -7,16 +7,10 @@ Flat checklist of currently-unchecked items, grouped by task. Skip items marked 
 - [ ] Edit `package.json` — bump `"version"` to `"0.2.0"`
 - [ ] Edit `CITATION.cff` — bump `version:` to `0.2.0` and update `date-released:`
 - [ ] Verify: `grep -E '^[[:space:]]*"version"' package.json` and `grep -E '^(version|date-released):' CITATION.cff`
-- [ ] Tag: `git tag -a v0.2.0 -m "v0.2.0 — deep-link focus, hook refactor, R2 catalog distribution"`
-- [ ] Push tag: `git push origin v0.2.0`
-- [ ] Cut GitHub release (CLI Path A if PAT has `Contents: write`; otherwise web UI Path B)
-- [ ] Verify release: `gh release view v0.2.0 --repo rulkens/skymap`
-- [ ] Wait ~60 s, refresh https://zenodo.org/account/settings/github/ — confirm v0.2.0 appears
-- [ ] Verify new version-DOI resolves: `curl -sI "https://doi.org/10.5281/zenodo.<NEW_DIGITS>" | head -5`
-- [ ] Update `CITATION.cff` `doi:` to concept DOI `10.5281/zenodo.1228374974`
-- [ ] Update README DOI badge URLs to `10.5281/zenodo.1228374974`
-- [ ] Verify: `grep -E '10\.5281/zenodo' README.md CITATION.cff` — all hits show `1228374974`
-- [ ] Commit: `git add package.json CITATION.cff README.md && git commit -m "chore: bump to v0.2.0 and switch to concept DOI"`
+- [x] Tag + push v0.2.0 (done 2026-05-06)
+- [x] Cut GitHub release (web UI; PAT lacks `Contents: write`)
+- [x] Zenodo minted v0.2.0 version-DOI `10.5281/zenodo.20053519` under concept DOI `10.5281/zenodo.20037028`
+- [x] CITATION.cff + README badge cite concept DOI `10.5281/zenodo.20037028` (always-latest)
 
 ## Task 1: Repo polish (remaining items)
 
@@ -59,7 +53,7 @@ Flat checklist of currently-unchecked items, grouped by task. Skip items marked 
 
 ## Task 5: Academic emails (pending Task 4 traction)
 
-- [ ] Substitute concept DOI `10.5281/zenodo.1228374974` into all five email drafts
+- [ ] Substitute concept DOI `10.5281/zenodo.20037028` into all five email drafts
 - [ ] Send Email 1 — SDSS outreach team (`outreach@sdss.org`)
 - [ ] Send Email 2 — GLADE authors (Gergely Dálya — confirm address first)
 - [ ] Send Email 3 — AAS WWT / Peter Williams (`pwilliams@aas.org` — confirm)

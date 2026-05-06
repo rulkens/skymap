@@ -147,7 +147,7 @@ gh release create v0.1.0 \
   2. The skymap row should now show a DOI badge link. Click it.
   3. The DOI page (https://doi.org/10.5281/zenodo.NNNNNNNN) must resolve to a Zenodo deposit page with skymap metadata, files attached, and a DOI of the form `10.5281/zenodo.<8-digit-number>`.
 
-> **Minted DOI:** `10.5281/zenodo.20037028` (Zenodo concept-record ID `1228374974`).
+> **Minted DOIs:** concept DOI `10.5281/zenodo.20037028` (always-latest); v0.1.0 version-DOI `10.5281/zenodo.20037029`; v0.2.0 version-DOI `10.5281/zenodo.20053519` (minted 2026-05-06).
 
 - [x] **Verify by URL HEAD check:**
 
