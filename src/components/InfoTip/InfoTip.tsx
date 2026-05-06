@@ -68,9 +68,46 @@ export type InfoTipProps = {
    * supplied between the opening and closing tags.
    */
   children?: ReactNode;
+  /**
+   * When `true`, the trigger span doesn't claim its own keyboard
+   * focus or `aria-describedby` — we assume the children include a
+   * focusable element (button, link) that is the user's intended tab
+   * stop.  The wrapper's `:focus-within` still catches that
+   * descendant's focus, so the tip still reveals on Tab.  Use this to
+   * wrap cards or links; leave it off (default) when the trigger is
+   * a passive value or label that should itself be the focus target.
+   */
+  interactive?: boolean;
+  /**
+   * Restrict where the tip is allowed to appear relative to the
+   * trigger on the block axis.
+   *
+   *   - `'auto'` (default) — try above, fall back to below if there's
+   *     no room.  The right behaviour for a value in flowing text:
+   *     if the viewport is tight, you'd rather see the tip below than
+   *     have it clip.
+   *   - `'top'` — top-only fallbacks.  Use when there's reliable space
+   *     above the trigger (e.g. a footer-anchored bar where above is
+   *     always free).
+   *   - `'bottom'` — bottom-only fallbacks.  Use when there's reliable
+   *     space below the trigger.  The featured-galaxy grid uses this
+   *     because the cards live at the top of the palette panel and
+   *     have empty list area / panel space below them — placing tips
+   *     above would land on the search input or clip the viewport top.
+   *
+   * Horizontal `span-left` / `span-right` shifts are always allowed so
+   * the tip stays on-screen near viewport edges.
+   */
+  placement?: 'auto' | 'top' | 'bottom';
 };
 
-export function InfoTip({ title, body, children }: InfoTipProps): ReactNode {
+export function InfoTip({
+  title,
+  body,
+  children,
+  interactive = false,
+  placement = 'auto',
+}: InfoTipProps): ReactNode {
   // useId returns a stable ID like ":r0:" — strip the colons so the
   // value is a valid CSS dashed-ident character set.  We don't need
   // it to be globally meaningful, only unique among co-rendered tips.
@@ -90,13 +127,18 @@ export function InfoTip({ title, body, children }: InfoTipProps): ReactNode {
   return (
     <span className={styles.wrapper}>
       <span
-        className={styles.trigger}
-        // tabIndex makes the trigger keyboard-focusable AND tappable on
-        // touch devices.  role="button" is intentionally omitted —
-        // there's no action; the tip auto-shows on focus.  The native
-        // tooltip semantics live on the panel via role="tooltip".
-        tabIndex={0}
-        aria-describedby={tipDomId}
+        // Interactive triggers carry no class — the focusable child
+        // is already the visual affordance, so the trigger span is a
+        // pure pass-through (default inline display, no dotted
+        // underline, no cursor:help).  Inline `style={{ anchorName }}`
+        // still resolves because an inline span has a principal box.
+        className={interactive ? undefined : styles.trigger}
+        // Passive triggers carry their own tabIndex + aria-describedby.
+        // Interactive triggers leave focus to the focusable child (e.g.
+        // a <button>), and the wrapper's :focus-within catches the
+        // descendant focus so the tip still reveals on Tab.
+        tabIndex={interactive ? undefined : 0}
+        aria-describedby={interactive ? undefined : tipDomId}
         style={triggerStyle}
       >
         {children}
@@ -104,7 +146,13 @@ export function InfoTip({ title, body, children }: InfoTipProps): ReactNode {
       <span
         id={tipDomId}
         role="tooltip"
-        className={styles.tip}
+        className={[
+          styles.tip,
+          placement === 'top' ? styles.tipTopOnly : '',
+          placement === 'bottom' ? styles.tipBottomOnly : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         style={tipStyle}
       >
         <span className={styles.tipTitle}>{title}</span>

@@ -177,6 +177,25 @@
   --color-accent-gradient-mid: rgba(180, 220, 255, 0.7);
   --color-accent-gradient-edge: rgba(120, 180, 255, 0.45);
 
+  /*
+   * Reusable "starlight" accent bar — the soft gradient line that
+   * runs along the top edge of every glass surface in the system
+   * (InfoCard, CommandPalette panel, future overlays).  Centralising
+   * the gradient as a token means any panel can adopt the look with
+   * a single `background: var(--gradient-accent-bar)` declaration on
+   * its `::before` line, and the whole family retints together when
+   * the underlying stops are tweaked.  CSS custom properties hold
+   * gradient values fine — they're substituted at use site.
+   */
+  --gradient-accent-bar: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-accent-gradient-edge) 30%,
+    var(--color-accent-gradient-mid) 50%,
+    var(--color-accent-gradient-edge) 70%,
+    transparent 100%
+  );
+
   /* ── Typography ─────────────────────────────────────────────────────── */
   /*
    * Single mono stack across the entire UI.  System monospaced first

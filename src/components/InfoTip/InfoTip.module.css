@@ -75,6 +75,32 @@
 }
 
 /*
+ * Modern path: drop the wrapper's box entirely.  `display: contents`
+ * makes the wrapper invisible to layout — its children (the trigger
+ * span and the tip span) become direct children of whatever parent
+ * the InfoTip is mounted in.  Critical when InfoTip wraps a focusable
+ * card inside a CSS grid: with the wrapper's inline-block sizing in
+ * the way, the card's `width: 100%` had nothing to fill against and
+ * collapsed to zero.  With `display: contents`, the card gets its
+ * grid-cell sizing directly and renders correctly.
+ *
+ * `:hover` and `:focus-within` still match against a `display:
+ * contents` element in all modern browsers — they're independent of
+ * the box tree.  The tip's anchor positioning + `position: fixed`
+ * means it doesn't need the wrapper as a positioning context either.
+ *
+ * This block is gated by `@supports (anchor-name: --x)` because the
+ * fallback path's `position: absolute` on the tip *does* need the
+ * wrapper as `position: relative` to anchor against.  Pre-anchor
+ * Safari keeps the inline-block wrapper.
+ */
+@supports (anchor-name: --x) {
+  .wrapper {
+    display: contents;
+  }
+}
+
+/*
  * The trigger wears a dotted underline so users learn that hovering
  * "the underlined value" reveals more info.  Dotted (rather than
  * solid) is the long-standing browser convention for `<abbr>` and
@@ -106,6 +132,7 @@
   border-radius: 2px;
 }
 
+
 .tip {
   /*
    * Pre-anchor-positioning fallback geometry.  Modern browsers will
@@ -123,9 +150,24 @@
 
   /* Box shape and surface */
   display: none;
-  z-index: 100;
+  /*
+   * z-index high enough to land above every other floating UI piece
+   * (InfoCard pinned/hover variants are z-index 10; the
+   * CommandPalette backdrop+panel are 50; SearchTrigger sits in the
+   * same range).  An InfoTip explaining a value should never
+   * disappear behind the panel that owns the value, so 1000 keeps
+   * it on top with comfortable headroom.
+   */
+  z-index: 1000;
   width: max-content;
-  max-width: 320px;
+  /*
+   * 360px gives multi-paragraph bodies (the featured-card tip with
+   * type + aliases + curated description) room to breathe without
+   * letting any single line stretch to an uncomfortable reading
+   * measure on a wide monitor.  Short jargon-row tips remain narrow
+   * because of `width: max-content`.
+   */
+  max-width: 360px;
   padding: 10px 12px;
 
   background: var(--surface-card-strong);
@@ -193,6 +235,19 @@
 /* Modern anchor positioning for browsers that support it. */
 @supports (anchor-name: --x) {
   .tip {
+    /*
+     * `position: fixed` (instead of `absolute`) so the tip lives in
+     * the viewport's coordinate system and escapes ancestor
+     * `overflow: hidden` clipping.  Crucial when the trigger sits
+     * inside a panel that clips its rounded corners — the
+     * CommandPalette panel does that, and so will any future glass
+     * surface that uses the same shared aesthetic.  Anchor
+     * positioning works fine with `position: fixed`, so the tip
+     * still locates itself precisely above the trigger and follows
+     * the trigger if scroll moves it.
+     */
+    position: fixed;
+
     /* Reset the fallback inset/transform; anchor positioning takes over. */
     bottom: auto;
     left: auto;
@@ -222,6 +277,42 @@
       top span-left,
       top span-right,
       bottom span-all,
+      bottom span-left,
+      bottom span-right;
+  }
+
+  /*
+   * Top-only placement.  Override the auto fallback list so the tip
+   * never lands below its trigger — needed for dense grids (the
+   * featured-galaxy cards) where falling downward would cover the
+   * row beneath the hovered card.  Horizontal shifts (span-left /
+   * span-right) are still allowed so the tip stays on-screen near
+   * viewport edges; the constraint is only on the block axis.
+   *
+   * If no top placement fits at all (e.g. a card in row 1 of a
+   * narrow viewport), the browser draws the first option in the
+   * list and lets it clip.  Acceptable: clipping near the viewport
+   * top-edge is rare on the typical desktop palette use case (panel
+   * is at top:12vh, ~80-100px of clear room above the input).
+   */
+  .tipTopOnly {
+    position-try-fallbacks:
+      top span-left,
+      top span-right;
+  }
+
+  /*
+   * Bottom-only placement.  Pins the tip under the trigger, with
+   * horizontal shifts allowed for viewport-edge fits.  Use when
+   * there's reliable space below the trigger (e.g. featured-grid
+   * cards at the top of the palette panel — empty list area + panel
+   * space below them gives the tip a clear landing zone).
+   */
+  .tipBottomOnly {
+    position-area: bottom span-all;
+    margin-top: 8px;
+    margin-bottom: 0;
+    position-try-fallbacks:
       bottom span-left,
       bottom span-right;
   }

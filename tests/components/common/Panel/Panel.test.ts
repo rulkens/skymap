@@ -39,7 +39,7 @@ describe('Panel', () => {
     expect(html).toContain('BODY_CONTENT');
   });
 
-  it('mounts closed when defaultOpen=false (body absent from DOM)', () => {
+  it('mounts closed when defaultOpen=false (body in DOM but data-open=false)', () => {
     const html = renderToStaticMarkup(
       createElement(Panel, {
         title: 'STATS',
@@ -48,10 +48,14 @@ describe('Panel', () => {
       }),
     );
     expect(html).toContain('aria-expanded="false"');
-    // Body is conditionally rendered — when closed the children are
-    // absent from the DOM (not just CSS-hidden).  See the Panel module
-    // header for why.
-    expect(html).not.toContain('BODY_CONTENT');
+    // Body stays mounted in the DOM regardless of open state — the CSS
+    // grid-template-rows trick collapses its visual height to zero
+    // smoothly.  The closed state is signalled by `data-open="false"`
+    // on the body wrapper, which the stylesheet keys off to drive the
+    // height + opacity transitions.
+    expect(html).toContain('data-open="false"');
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).toContain('BODY_CONTENT');
   });
 
   it('forwards aria-label to the outer wrapper when provided', () => {

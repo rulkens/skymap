@@ -35,6 +35,7 @@
 }
 
 .panel {
+  position: relative; /* anchor for the ::before accent bar */
   width: min(560px, 90vw);
   max-height: 70vh;
 
@@ -61,6 +62,24 @@
    */
   animation: palettePanelIn 0.22s ease-out;
   transform-origin: top center;
+}
+
+/*
+ * Starlight accent bar along the top edge — same soft gradient
+ * identity as the InfoCard family.  Both panels share the
+ * `--gradient-accent-bar` token in global.css, so retinting the
+ * accent updates every glass surface in lockstep.
+ */
+.panel::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 0;
+  left: var(--space-6);
+  right: var(--space-6);
+  height: 1px;
+  border-radius: var(--radius-xs);
+  background: var(--gradient-accent-bar);
 }
 
 @keyframes paletteBackdropIn {
@@ -104,6 +123,161 @@
 
 .input::placeholder {
   color: var(--color-fg-dim);
+}
+
+/*
+ * Featured-galaxy grid — 5×3 thumbnail cards shown above the results
+ * list when the palette opens with no query.  Square cards (aspect-
+ * ratio 1) so the layout reads like a contact-sheet of "the famous
+ * fifteen": image-led, no per-card chrome, name floated over the
+ * bottom of the thumbnail with a small dark gradient for legibility.
+ *
+ * The grid is hidden the moment the user starts typing — see
+ * `showFeatured` in CommandPalette.tsx — so search-driven workflows
+ * get the full results list at full height.  No animation on the
+ * hide; the layout reflows once.  Animating an emptying-then-
+ * refilling grid would be busywork the eye doesn't want to track
+ * mid-typing.
+ */
+.featuredGrid {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-5) var(--space-7);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.featuredCard {
+  position: relative;
+  /*
+   * `aspect-ratio: 1` paired with `width: 100%` makes every card a
+   * perfect square that scales with the column width — no media
+   * queries needed when the palette is at 90vw on a narrow viewport.
+   */
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-panel);
+  overflow: hidden;
+  cursor: pointer;
+  /* Native <button> reset — inherit the panel's typography. */
+  font: inherit;
+  color: inherit;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+  /*
+   * Stack context so the hovered card's scale-up sits above
+   * neighbours instead of being clipped by their borders.
+   */
+  isolation: isolate;
+}
+
+.featuredCard:hover,
+.featuredCard:focus-visible {
+  transform: scale(1.04);
+  /*
+   * Muted hover affordance — the previous accent-blue ring competed
+   * with the cards' own colour palette (which already has bright
+   * nuclei and saturated dust lanes in many thumbnails).  Lifted
+   * rim from `--border-hover` is enough cue without painting blue
+   * on top of the picture.
+   */
+  border-color: var(--border-hover);
+  outline: none;
+  z-index: 1;
+}
+
+.featuredThumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/*
+ * Name strip floats over the bottom of the thumbnail with a soft
+ * dark-to-transparent gradient for legibility against bright
+ * thumbnails (M82's blowout core, Centaurus A's nucleus).  Single
+ * line, ellipsised — names like "Centaurus A" fit; rare longer
+ * names get clipped, which the user resolves by hovering for
+ * focus-visible (no extra UI) or scanning the full list below.
+ */
+.featuredName {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.85) 0%,
+    rgba(0, 0, 0, 0.55) 60%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  color: var(--color-fg);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-tight);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+ * Featured-card tip body — three optional sections stacked with
+ * progressively muted typography so the eye sees them in order:
+ * morphological type chip first (compact identifier), aliases line
+ * (designations comma-separated), then the curated paragraph.
+ */
+.tipType {
+  display: inline-block;
+  margin-bottom: var(--space-2);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-badge);
+  color: var(--color-fg-base);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+}
+
+.tipAliases {
+  margin-bottom: var(--space-3);
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-mid);
+  color: var(--color-fg-dim);
+}
+
+.tipAliasesLabel {
+  /*
+   * Slightly lower opacity than the aliases themselves so "Also known
+   * as M31 · NGC 224 · …" reads as label + values rather than as one
+   * undifferentiated string.
+   */
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+  font-size: var(--font-size-xs);
+}
+
+.tipDescription {
+  /*
+   * Comfortable reading width for the curated paragraph.  No max-
+   * height clamp here — InfoTip's max-width: 320px paired with
+   * normal whitespace already keeps the panel reasonable; truncating
+   * mid-sentence would hide the most interesting part of a galaxy's
+   * story.
+   */
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-relaxed);
 }
 
 .results {
