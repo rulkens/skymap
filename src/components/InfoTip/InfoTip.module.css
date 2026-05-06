@@ -75,6 +75,32 @@
 }
 
 /*
+ * Modern path: drop the wrapper's box entirely.  `display: contents`
+ * makes the wrapper invisible to layout — its children (the trigger
+ * span and the tip span) become direct children of whatever parent
+ * the InfoTip is mounted in.  Critical when InfoTip wraps a focusable
+ * card inside a CSS grid: with the wrapper's inline-block sizing in
+ * the way, the card's `width: 100%` had nothing to fill against and
+ * collapsed to zero.  With `display: contents`, the card gets its
+ * grid-cell sizing directly and renders correctly.
+ *
+ * `:hover` and `:focus-within` still match against a `display:
+ * contents` element in all modern browsers — they're independent of
+ * the box tree.  The tip's anchor positioning + `position: fixed`
+ * means it doesn't need the wrapper as a positioning context either.
+ *
+ * This block is gated by `@supports (anchor-name: --x)` because the
+ * fallback path's `position: absolute` on the tip *does* need the
+ * wrapper as `position: relative` to anchor against.  Pre-anchor
+ * Safari keeps the inline-block wrapper.
+ */
+@supports (anchor-name: --x) {
+  .wrapper {
+    display: contents;
+  }
+}
+
+/*
  * The trigger wears a dotted underline so users learn that hovering
  * "the underlined value" reveals more info.  Dotted (rather than
  * solid) is the long-standing browser convention for `<abbr>` and
