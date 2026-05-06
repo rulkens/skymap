@@ -12,12 +12,12 @@ Flat checklist of currently-unchecked items, grouped by task. Skip items marked 
 - [x] Zenodo minted v0.2.0 version-DOI `10.5281/zenodo.20053519` under concept DOI `10.5281/zenodo.20037028`
 - [x] CITATION.cff + README badge cite concept DOI `10.5281/zenodo.20037028` (always-latest)
 
-## Task 1: Repo polish (remaining items)
+## Task 1: Repo polish — DONE 2026-05-06
 
-- [ ] Capture `synthetic-data.png` — launch with no `.bin` files, capture synthetic sphere at ~1500 px wide
-- [ ] Capture `zoomed-thumbnail-infocard.png` — Cmd+K to M51, InfoCard pinned, textured quad visible
-- [ ] Capture `density-correction-modes.png` — Settings panel expanded with all four modes + angular-isotropy toggle visible
-- [ ] Verify post-push: 11 topic chips visible, hero GIF plays, DOI badge clicks through, four screenshots render inline at https://github.com/rulkens/skymap
+All eight README assets are present in `docs/screenshots/` and wired in:
+`hero.gif`, `ui-overview.png`, `tier-selector.png`, `infocard-detail.png`,
+`local-group.png`, `wide-field.png`, `zoomed.gif`, `density-correction-modes.png`.
+Topic chips, DOI badge, and inline rendering verified.
 
 ## Task 2: HyperLEDA R2 distribution (remaining items)
 
