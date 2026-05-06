@@ -50,7 +50,7 @@
  * under tooling that pre-evaluates modules in node.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PointInfo } from '../@types';
 import {
   parseFocusHash,
@@ -199,8 +199,15 @@ export function useFocusUrlSync({
     window.history.replaceState(null, '', next);
   }, [selected]);
 
+  // `clearPending` is wrapped in `useCallback` so the consumer's `useEffect`
+  // deps stay referentially stable across re-renders.  Without this, App's
+  // drain effect (which lists `clearPending` in its deps) re-fires on every
+  // parent render while `pendingTarget` is non-null — a real concern for
+  // the `pos@` resolver branch, which scans every loaded cloud's positions.
+  const clearPending = useCallback(() => setPendingTarget(null), []);
+
   return {
     pendingTarget,
-    clearPending: () => setPendingTarget(null),
+    clearPending,
   };
 }
