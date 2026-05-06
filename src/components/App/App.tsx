@@ -610,43 +610,7 @@ export function App(): React.ReactElement {
       const cloud = handle.getCloud(source);
       if (cloud) clouds.push({ source, cloud });
     }
-
-    // Wait until at least one non-Synthetic cloud has loaded before
-    // attempting to resolve.  Without this guard a `famous` deep link
-    // arriving before the Famous cloud lands would resolve as
-    // `unknown`, the hook would clear the hash, and the user would
-    // lose the focus they typed.  The effect's `sourceCounts` dep
-    // ensures we re-run the moment the first cloud arrives.
     if (clouds.length === 0) return;
-
-    // Per-kind readiness gate.  The resolver gives a definitive
-    // answer only when the data each branch reads has actually
-    // arrived; calling it earlier would surface a transient `unknown`
-    // and we'd clearPending() on noise, losing the user's deep link.
-    //
-    // Famous is the most failure-prone kind here: `famousMeta` (the
-    // sidecar JSON) loads on a separate async path from the .bin
-    // catalogs, and a non-Famous cloud (GLADE) typically lands first.
-    // Without this guard we'd resolve famous targets as `unknown` in
-    // that gap.  The other kinds are simpler — they only need the
-    // matching survey cloud to have begun loading.
-    const ready = ((): boolean => {
-      switch (pendingTarget.kind) {
-        case 'famous':
-          return (
-            famousMeta.length > 0 && clouds.some((c) => c.source === Source.Famous)
-          );
-        case 'pgc':
-          return clouds.some(
-            (c) => c.source === Source.Glade || c.source === Source.TwoMRS,
-          );
-        case 'sdss':
-          return clouds.some((c) => c.source === Source.SDSS);
-        case 'pos':
-          return clouds.length > 0;
-      }
-    })();
-    if (!ready) return;
 
     const result = resolveFocusTarget({
       target: pendingTarget,
@@ -655,43 +619,42 @@ export function App(): React.ReactElement {
       aliasMap,
     });
 
+    // Resolution during loading is monotonic: as more clouds, the
+    // famousMeta sidecar, and the aliasMap arrive, the resolver's
+    // answer can only promote `unknown → tier` or `unknown → resolved`,
+    // never the other way.  So we MUST NOT collapse a transient
+    // `unknown` into a permanent give-up here — doing so would lose
+    // the deep link the moment the smallest cloud (typically Famous,
+    // ~150 points) lands, before the actual survey catalogs arrive.
+    //
+    // Two definitive outcomes act here: `resolved` triggers the
+    // selection (and the supersede effect below clears pending once
+    // `selected` updates); `tier` leaves pending set so the eventual
+    // banner can render off it.  `unknown` is just "not yet" — the
+    // effect's `sourceCounts` / `famousMeta` / `aliasMap` deps will
+    // re-fire it on the next data arrival.
     if (result.resolved) {
-      // Selection bookkeeping (incl. focus tween) lives inside the
-      // engine's `selectByAlias` — we do NOT call `focusOn` separately
-      // because that would cancel the tween `selectByAlias` just
-      // started.  Clear pendingTarget so the URL settles via the
-      // hook's selection-change effect (which writes the canonical
-      // focus id back into the hash).
       handle.selectByAlias({ source: result.source, localIdx: result.localIdx });
-      clearPending();
-    } else if (result.reason === 'unknown') {
-      // Special case: a `pgc` target that misses both the loaded
-      // clouds AND the alias map could STILL be a real PGC living in
-      // a tier the user hasn't loaded — but the resolver can't tell
-      // because the alias map is lazy-loaded on first palette open.
-      // Don't clear pending until we've at least seen the alias map
-      // populate, so a deep-link that looks unresolvable now might
-      // promote to `tier` (or `resolved`) later.  Trade-off: a truly
-      // bogus `pgc-…` URL stays "stuck" until the user opens the
-      // palette — acceptable, since the URL is broken anyway.
-      if (pendingTarget.kind === 'pgc' && aliasMap.size === 0) return;
-      // Silent drop is hostile (the user pasted a URL and got
-      // nothing); a thrown error is overkill (the URL was just
-      // mistyped).  A single console.warn splits the difference:
-      // visible to anyone who opens devtools, ignorable for everyone
-      // else.  `clearPending()` zeroes pendingTarget immediately, so
-      // the warn fires exactly once per unresolved target — even
-      // though the effect re-runs as more clouds arrive, the next
-      // pass short-circuits on the `pendingTarget` null check.
-      console.warn('[deep-link] could not resolve focus target', pendingTarget);
-      clearPending();
     }
-    // tier: leave pendingTarget set so a future render can show a
-    // "load a larger tier" banner (Task 5).  We deliberately do NOT
-    // call clearPending() here — the banner reads off pendingTarget
-    // and clears it itself when the user dismisses or after the user
-    // has switched tier.
-  }, [pendingTarget, sourceCounts, famousMeta, aliasMap, clearPending]);
+  }, [pendingTarget, sourceCounts, famousMeta, aliasMap]);
+
+  // ── Selection supersedes pending deep-link ────────────────────────────────
+  //
+  // Once a selection exists — whether placed by `selectByAlias` from a
+  // resolved deep link OR by a user click while we were still trying —
+  // the original deep-link target stops being load-bearing.  Clearing
+  // pending here is the single place we collapse the "we have a deep
+  // link to honour" state, and it's idempotent: clearPending() on an
+  // already-null target is a no-op.
+  //
+  // This is what makes "drain never clears on unknown" safe: if the
+  // resolver eventually succeeds, this effect clears.  If the user
+  // clicks something else first, this effect clears.  If the link is
+  // truly unresolvable AND no user interaction occurs, pendingTarget
+  // stays set — Task 5's banner will offer a manual escape.
+  useEffect(() => {
+    if (selected !== null && pendingTarget !== null) clearPending();
+  }, [selected, pendingTarget, clearPending]);
 
   // ── Keyboard shortcuts effect ──────────────────────────────────────────────
   //

@@ -481,10 +481,30 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   /**
    * Notify the UI if the selected point changed.
    */
-  function setSelected(idx: number | null): void {
+  /**
+   * Update the live selection.
+   *
+   * The optional `prebuiltInfo` parameter is for callers that already
+   * hold the `PointInfo` for this index — typically `selectByAlias`,
+   * which builds the info from the data-side cloud store BEFORE the
+   * GPU upload has settled.  In that window, `pointInfoFromGlobal`
+   * (which reads from `state.gpu.renderer.loadedSources()`) can return
+   * `null` because the renderer doesn't know about the source yet,
+   * even though the data-side `state.sources.clouds` does.  Passing
+   * the prebuilt info bypasses that race so the React-side selection
+   * updates correctly while the GPU is still settling — the halo will
+   * appear once the upload completes a frame or two later.
+   */
+  function setSelected(idx: number | null, prebuiltInfo?: PointInfo | null): void {
     if (idx === state.picking.selectedIndex) return;
     state.picking.selectedIndex = idx;
-    cb.onSelectChange(idx !== null ? pointInfoFromGlobal(idx) : null);
+    const info =
+      prebuiltInfo !== undefined
+        ? prebuiltInfo
+        : idx !== null
+          ? pointInfoFromGlobal(idx)
+          : null;
+    cb.onSelectChange(info);
   }
 
   // ── Scale bar computation ────────────────────────────────────────────────
@@ -1966,9 +1986,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Compute the GLOBAL instance index (selection state is keyed
       // globally because the picker writes a per-vertex globalIdx;
       // see `instanceIdOffset` for the running-sum convention).
+      //
+      // Caveat: `instanceIdOffset` reads from the renderer's per-source
+      // bookkeeping, which lags `state.sources.clouds` by an upload
+      // chain tick (see the cloud-load wiring around line 803).  When
+      // selectByAlias is called from a deep-link drain that fires the
+      // moment a cloud lands data-side, the renderer hasn't uploaded
+      // yet and the offset is 0 — meaning `globalIdx` would round-trip
+      // through `pointInfoFromGlobal` to a wrong source.  We pass the
+      // already-built `info` to `setSelected` so the React side gets
+      // the correct PointInfo regardless; the halo's globalIdx will
+      // correct itself once the picker draws against the freshly-
+      // uploaded source.
       const offset = state.gpu.renderer?.instanceIdOffset(source) ?? 0;
       const globalIdx = offset + localIdx;
-      setSelected(globalIdx);
+      setSelected(globalIdx, info);
 
       // Camera focus tween — same setup as selectFamous / focusOn.
       const cam = state.cam;
