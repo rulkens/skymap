@@ -31,6 +31,10 @@ import {
 } from '../services/engine/pgcAliasLoader';
 import { buildAliasIndex } from './buildAliasIndex';
 
+// Re-export so callers naming this type don't need a second import path —
+// matches the companion-type re-export pattern in `useFocusUrlSync.ts`.
+export type { AliasIndexEntry } from '../services/engine/pgcAliasLoader';
+
 export type UseAliasIndexInput = {
   paletteOpen: boolean;
   sourceCounts: Partial<Record<Source, number>>;
@@ -79,7 +83,7 @@ export function useAliasIndex(input: UseAliasIndexInput): UseAliasIndexReturn {
         }),
       );
     });
-  }, [paletteOpen, sourceCounts, engineHandleRef]);
+  }, [paletteOpen, sourceCounts, engineHandleRef]); // engineHandleRef is a stable ref object — listed for linter correctness, never triggers re-run
 
   return { aliasIndex, aliasMap };
 }
