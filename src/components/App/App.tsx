@@ -3,41 +3,37 @@
  *
  * ### Architecture overview
  *
- * This component sits at the boundary between the imperative WebGPU engine and
- * the React UI. It:
+ * This component is the boundary between the imperative WebGPU engine and the
+ * React UI.  Its job is wiring: pull state out of focused hooks, hand it to
+ * presentational children, and forward user input back into the engine.  All
+ * substantive logic lives in five custom hooks under `src/hooks/`:
  *
- *   1. Owns a `<canvas>` element via `useRef` — the canvas is passed to the
- *      engine, which takes over its GPU context.
- *   2. Starts the engine in a `useEffect` (runs once, on mount).
- *   3. Holds four pieces of state (`status`, `hovered`, `selected`, `scale`)
- *      that the engine updates via callbacks.
- *   4. Distributes that state to child components as plain props.
+ *   1. `useEngineSettings` — owns the ~17 settings useStates (point size,
+ *      brightness, tone curve, …) and the `EngineCallbacks` echo slice that
+ *      keeps them in sync with engine truth.
+ *   2. `useEngine` — owns `canvasRef`, `handleRef`, the one-shot
+ *      `createEngine` startup `useEffect`, and the engine-driven session
+ *      state (`status`, `hovered`, `selected`, `focused`, `scale`, `fps`,
+ *      `sourceCounts`, `loadProgress`, `currentTier`).  Accepts the settings
+ *      hook's callbacks as `extraCallbacks` so the two interlock cleanly.
+ *   3. `useFamousMeta` — loads `famous_meta.json` + `famous_xrefs.json` once
+ *      at mount; consumed by the CommandPalette and the deep-link drain.
+ *   4. `useAliasIndex` — lazy two-phase pipeline that builds the PGC alias
+ *      index on the first palette open, returning `{ aliasIndex, aliasMap }`.
+ *   5. `useFocusUrlSync` — owns the entire `#focus=…` URL lifecycle.
+ *   6. `useKeyboardShortcuts` — global keydown listener for Cmd+K / Esc /
+ *      f / h / l, plus the form-field guard.
  *
- * The engine drives everything asynchronously (GPU init, data fetch, render
- * loop, pointer events). React just receives the results and re-renders. The
- * two worlds meet only here — the rest of the React tree is purely presentational.
+ * The hook order at the call site is dictated by data flow: settings runs
+ * first so its `engineCallbacks` exist; engine runs next so other hooks can
+ * read `handleRef`; the rest follow in any order.
  *
- * ### Why useRef for the canvas?
+ * ### Why useRef for the canvas (returned from useEngine)?
  *
  * `useRef` gives us a stable container whose `.current` property points to the
  * DOM node after the component mounts. Unlike `useState`, updating a ref does
- * NOT trigger a re-render — which is exactly what we want here. The canvas is
- * never replaced; only the engine needs to know about it.
- *
- * ### Why the empty dependency array on the engine useEffect?
- *
- * `useEffect(() => { ... }, [])` runs exactly once — after the initial mount —
- * and never re-runs. This is correct because:
- *
- *   - The engine is a one-shot side effect tied to the canvas's lifetime. There
- *     are no inputs that should cause it to restart.
- *   - If we listed `canvasRef` as a dependency, the effect would re-run if the
- *     ref object identity changed — but refs are stable by design (same object
- *     for the component's lifetime), so the effect would still run only once.
- *   - Listing callbacks (e.g. `setStatus`) as dependencies would cause a new
- *     engine to start on every render because `setState` functions are stable
- *     but the linter would still warn. The empty array is the honest statement:
- *     "this engine instance lives for as long as this component lives."
+ * NOT trigger a re-render — exactly what we want for the canvas, which the
+ * engine takes over and React never touches again.
  *
  * ### Why no React.StrictMode?
  *
@@ -46,22 +42,14 @@
  * creates GPU resources, starts a render loop, and attaches event listeners —
  * it's not designed for this double-mount pattern. Rather than paper over the
  * issue with guards, we simply don't wrap the app in StrictMode. The cleanup
- * function in `useEffect` is still correct and will run on hot-reload unmounts.
+ * function inside `useEngine` is still correct and runs on hot-reload unmounts.
  *
- * ### Esc key handling
+ * ### Why is `handleRef` a ref, not state?
  *
- * A second `useEffect` (with an empty dep array) attaches a `keydown` listener
- * to `window`. It calls `handleRef.current?.clearSelection()` — reading the
- * latest handle through a ref rather than closing over the initial (null) value.
- *
- * Why a ref for the handle?
- *
- *   - The `keydown` listener is created once and never re-created (empty deps).
- *   - If we captured the handle directly from the engine `useEffect`, the
- *     listener would close over the value at creation time — which is undefined
- *     at the time the `keydown` effect runs. A ref is a stable box: we write
- *     the handle into it inside the engine effect and read it out in the keydown
- *     handler, both referring to the same `{ current }` object.
+ * Multiple hooks need to call methods on the engine (`focusOn`, `clearSelection`,
+ * `selectByAlias`).  Putting the handle in state would force every consumer
+ * to re-render when the engine starts up.  A ref is a stable box: `useEngine`
+ * writes the handle in once, every other hook reads it out, no re-renders.
  */
 
 import { useState } from 'react';
@@ -192,7 +180,13 @@ export function App(): React.ReactElement {
   // links once the engine is `'ready'` (which guarantees `state.cam`),
   // and the supersede-on-selection cleanup.  See the hook's module
   // header for the full rationale of each effect.
-  const { pendingTarget } = useFocusUrlSync({
+  //
+  // Void return: the hook does also expose `pendingTarget` for a future
+  // tier-mismatch banner, but no consumer uses it today.  Destructuring
+  // it here would imply a downstream prop chain that doesn't exist;
+  // skipping the destructure makes the dead binding non-misleading and
+  // keeps the lint clean.
+  useFocusUrlSync({
     focused,
     status,
     sourceCounts,
@@ -400,12 +394,18 @@ export function App(): React.ReactElement {
         onToneMapCurveChange={(c) => handleRef.current?.setToneMapCurve?.(c)}
         // Exposure slider — drag pushes the value through the engine
         // handle, the engine clamps to [0.05, 16] and echoes the
-        // clamped result back via `onExposureChange` (above), which
-        // updates `exposure` state so the displayed number always
-        // matches the shader's effective value.  Optimistic local
-        // setExposure(value) is unnecessary because the engine echoes
-        // synchronously inside its setter — same pattern as
-        // tone-curve, brightness, and the bias-mode controls.
+        // clamped result back via `onExposureChange`, which updates
+        // `exposure` state so the displayed number always matches
+        // the shader's effective value when the engine clamps.
+        //
+        // The optimistic local `setExposure(value)` IS needed for
+        // snappy slider thumb tracking — without it the slider visibly
+        // lags by one frame.  The engine echo lands shortly after and
+        // overwrites with the clamped value, which is what we want for
+        // out-of-range inputs.  Differs from the tone-curve / bias
+        // controls above: those are discrete dropdowns where a one-
+        // frame lag isn't perceptible, so they don't need the optimistic
+        // local update.
         exposure={exposure}
         onExposureChange={(value) => {
           setExposure(value);

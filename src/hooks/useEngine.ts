@@ -133,6 +133,12 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       handleRef.current = null;
     };
     // Engine is a one-shot effect — see hook header for rationale.
+    // `extraCallbacks` and `currentTier` are both intentionally
+    // captured at first render: callbacks are stable React setters
+    // (would never trigger meaningful re-runs even if listed); the
+    // tier is a startup seed that the engine echoes back through
+    // `onTierChange`.  Listing either here would re-create the engine
+    // on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
