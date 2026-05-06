@@ -619,6 +619,35 @@ export function App(): React.ReactElement {
     // ensures we re-run the moment the first cloud arrives.
     if (clouds.length === 0) return;
 
+    // Per-kind readiness gate.  The resolver gives a definitive
+    // answer only when the data each branch reads has actually
+    // arrived; calling it earlier would surface a transient `unknown`
+    // and we'd clearPending() on noise, losing the user's deep link.
+    //
+    // Famous is the most failure-prone kind here: `famousMeta` (the
+    // sidecar JSON) loads on a separate async path from the .bin
+    // catalogs, and a non-Famous cloud (GLADE) typically lands first.
+    // Without this guard we'd resolve famous targets as `unknown` in
+    // that gap.  The other kinds are simpler — they only need the
+    // matching survey cloud to have begun loading.
+    const ready = ((): boolean => {
+      switch (pendingTarget.kind) {
+        case 'famous':
+          return (
+            famousMeta.length > 0 && clouds.some((c) => c.source === Source.Famous)
+          );
+        case 'pgc':
+          return clouds.some(
+            (c) => c.source === Source.Glade || c.source === Source.TwoMRS,
+          );
+        case 'sdss':
+          return clouds.some((c) => c.source === Source.SDSS);
+        case 'pos':
+          return clouds.length > 0;
+      }
+    })();
+    if (!ready) return;
+
     const result = resolveFocusTarget({
       target: pendingTarget,
       clouds,
@@ -636,6 +665,16 @@ export function App(): React.ReactElement {
       handle.selectByAlias({ source: result.source, localIdx: result.localIdx });
       clearPending();
     } else if (result.reason === 'unknown') {
+      // Special case: a `pgc` target that misses both the loaded
+      // clouds AND the alias map could STILL be a real PGC living in
+      // a tier the user hasn't loaded — but the resolver can't tell
+      // because the alias map is lazy-loaded on first palette open.
+      // Don't clear pending until we've at least seen the alias map
+      // populate, so a deep-link that looks unresolvable now might
+      // promote to `tier` (or `resolved`) later.  Trade-off: a truly
+      // bogus `pgc-…` URL stays "stuck" until the user opens the
+      // palette — acceptable, since the URL is broken anyway.
+      if (pendingTarget.kind === 'pgc' && aliasMap.size === 0) return;
       // Silent drop is hostile (the user pasted a URL and got
       // nothing); a thrown error is overkill (the URL was just
       // mistyped).  A single console.warn splits the difference:
