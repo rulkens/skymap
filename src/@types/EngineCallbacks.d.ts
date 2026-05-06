@@ -31,6 +31,29 @@ export type EngineCallbacks = {
   onHoverChange: (info: PointInfo | null) => void;
   /** Fired when the pinned/selected point changes. */
   onSelectChange: (info: PointInfo | null) => void;
+  /**
+   * Fired when the camera-focus target changes — i.e. the engine has
+   * started a tween toward (or away from) a specific galaxy.
+   *
+   * Selection (`onSelectChange`) and focus are separate concepts:
+   *   - Selection is the pin state — InfoCard, halo highlight.  A bare
+   *     canvas click fires `onSelectChange` only.
+   *   - Focus is a user-deliberate camera commitment — the Focus button
+   *     on the InfoCard, the `f` shortcut, a palette pick, or a deep-link
+   *     resolve.  Each of those fires `onFocusChange` *in addition to*
+   *     `onSelectChange`.
+   *
+   * The deep-link URL hook subscribes to focus, not selection, so a
+   * casual click doesn't pollute browser history with `#focus=…` entries
+   * — only deliberate focus actions do.
+   *
+   * Engine call sites that fire this callback: `selectByAlias`,
+   * `selectFamous`, `focusOnHome` (with null), `clearSelection` (with
+   * null).  `focusOn(xyz, diameter)` does NOT fire it because the engine
+   * has no `PointInfo` at that level — its callers (App's Focus button,
+   * `f` shortcut) update App-side `focused` state directly.
+   */
+  onFocusChange?: (info: PointInfo | null) => void;
   /** Fired when the scale bar label or width changes (zoom or resize). */
   onScaleChange: (info: ScaleInfo) => void;
 

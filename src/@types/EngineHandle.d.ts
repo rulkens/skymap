@@ -6,9 +6,15 @@
 
 import type { LodMode } from './LodMode';
 import type { Tier } from './Tier';
+import type { PointCloud } from './PointCloud';
+import type { PointInfo } from './PointInfo';
 import type { Source } from '../data/sources';
 import type { BiasMode } from '../data/biasMode';
 import type { ToneMapCurve } from '../data/toneMapCurve';
+import type {
+  FamousMetaEntry,
+  FamousXrefMap,
+} from '../services/engine/famousMetaLoader';
 
 /**
  * Handle returned by `createEngine`. Allows the React layer to drive the
@@ -194,19 +200,19 @@ export type EngineHandle = {
   logCameraState: () => void;
 
   /**
-   * Smoothly tween the camera so that `worldXYZ` becomes the new orbit target.
+   * Smoothly tween the camera so that the given galaxy becomes the new
+   * orbit target.  The engine extracts `xyz` and `diameterKpc` from the
+   * `PointInfo` for the tween, and fires `onFocusChange(info)` so the
+   * URL-sync hook (and any other consumer) learns about the focus
+   * commitment without each caller having to update state separately.
    *
-   * The current yaw and pitch are preserved (the user keeps their orientation);
-   * only `target` and `distance` change.  Distance tweens to a sensible viewing
-   * range — for now a fixed multiple of the synthetic 30 kpc galaxy diameter
-   * (a future task replaces the constant with the real `galaxyDiameterKpc`).
-   *
-   * Calling this while another tween is running cancels the previous tween and
-   * starts a new one from the current camera state, so motion stays continuous.
-   * If the world position is the origin and the camera is already there, the
-   * call is a no-op.  Tween duration: 600 ms.
+   * The current yaw and pitch are preserved (the user keeps their
+   * orientation); only `target` and `distance` change.  Calling this
+   * while another tween is running cancels the previous tween and
+   * starts a new one from the current camera state, so motion stays
+   * continuous.  Tween duration: 600 ms.
    */
-  focusOn: (worldXYZ: [number, number, number], diameterKpc?: number) => void;
+  focusOn: (info: PointInfo) => void;
 
   /**
    * Smoothly tween the camera back to the initial framing captured at engine
@@ -246,7 +252,30 @@ export type EngineHandle = {
    * bounds.  Same focus + selection bookkeeping as `selectFamous` so
    * the InfoCard and selection halo stay consistent.
    */
-  selectByAlias?: (target: { source: Source; localIdx: number }) => void;
+  selectByAlias?: (target: {
+    source: Source;
+    localIdx: number;
+    /**
+     * Optional famous-sidecar data the caller is responsible for.  When
+     * present, takes priority over the engine's internal `state.sources.
+     * famousMeta` / `famousXrefs` for `buildPointInfo`.
+     *
+     * Why the override exists: the engine and App both fetch the famous
+     * sidecars (deliberately — see App.tsx's loader comment), and the
+     * two copies can be out of sync during cold-load.  When App's drain
+     * effect fires `selectByAlias` for a deep-linked `#focus=<famous-id>`,
+     * App's famousMeta has already populated (its dep triggered the
+     * effect) but the engine's copy may still be in-flight.  Without
+     * the override, `buildPointInfo` reads the engine's empty array,
+     * `info.famous` comes back undefined, and `selectionToFocusId`
+     * falls through to the placeholder-PGC branch — writing a wrong
+     * `pgc-<idx>` hash to the URL.  Passing App's famousMeta here
+     * eliminates that race.  Other call sites (palette alias-search,
+     * click handlers) leave it undefined and use the engine's copy.
+     */
+    famousMeta?: readonly FamousMetaEntry[];
+    famousXrefs?: FamousXrefMap;
+  }) => void;
 
   /**
    * Return the live `BigUint64Array` of object IDs for a given source,
@@ -262,6 +291,24 @@ export type EngineHandle = {
    * back to "no aliases" when undefined.
    */
   getCloudObjIds?: (source: Source) => BigUint64Array | undefined;
+
+  /**
+   * Return the full `PointCloud` for a given source, or `undefined` if it
+   * hasn't been loaded yet.  Read-only contract — same caveat as
+   * `getCloudObjIds`: don't mutate the returned object; it's the same
+   * reference the engine keeps internally.
+   *
+   * Used by the deep-link resolver, which needs both `objIDs` (for
+   * PGC/SDSS exact-match lookup) and `positions` (for the `pos@`
+   * fallback nearest-neighbour search).  Distinct from `getCloudObjIds`
+   * because that helper returns just the objID array — narrower
+   * contract for the alias-index builder which never reads positions.
+   *
+   * Optional because not every engine build needs to expose internal
+   * cloud data; the deep-link resolver guards on `?.` and falls back to
+   * `unknown` when undefined.
+   */
+  getCloud?: (source: Source) => PointCloud | undefined;
 
   /**
    * Set the level-of-detail rendering mode.

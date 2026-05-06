@@ -481,10 +481,30 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   /**
    * Notify the UI if the selected point changed.
    */
-  function setSelected(idx: number | null): void {
+  /**
+   * Update the live selection.
+   *
+   * The optional `prebuiltInfo` parameter is for callers that already
+   * hold the `PointInfo` for this index — typically `selectByAlias`,
+   * which builds the info from the data-side cloud store BEFORE the
+   * GPU upload has settled.  In that window, `pointInfoFromGlobal`
+   * (which reads from `state.gpu.renderer.loadedSources()`) can return
+   * `null` because the renderer doesn't know about the source yet,
+   * even though the data-side `state.sources.clouds` does.  Passing
+   * the prebuilt info bypasses that race so the React-side selection
+   * updates correctly while the GPU is still settling — the halo will
+   * appear once the upload completes a frame or two later.
+   */
+  function setSelected(idx: number | null, prebuiltInfo?: PointInfo | null): void {
     if (idx === state.picking.selectedIndex) return;
     state.picking.selectedIndex = idx;
-    cb.onSelectChange(idx !== null ? pointInfoFromGlobal(idx) : null);
+    const info =
+      prebuiltInfo !== undefined
+        ? prebuiltInfo
+        : idx !== null
+          ? pointInfoFromGlobal(idx)
+          : null;
+    cb.onSelectChange(info);
   }
 
   // ── Scale bar computation ────────────────────────────────────────────────
@@ -1138,10 +1158,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // single-click handler in that case, and we don't want a
           // stale focus tween toward whatever was last clicked.
           if (!lastClickedInfo) return;
-          handle.focusOn(
-            [lastClickedInfo.x, lastClickedInfo.y, lastClickedInfo.z],
-            lastClickedInfo.diameterKpc,
-          );
+          handle.focusOn(lastClickedInfo);
         },
       });
 
@@ -1519,6 +1536,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // This lets the Esc handler in App.tsx call this unconditionally.
       if (state.picking.selectedIndex !== null) {
         setSelected(null);
+        // Clearing the pin also clears the camera-focus target — Esc /
+        // close ✕ are explicit "I'm done with this galaxy" signals.
+        cb.onFocusChange?.(null);
         state.subsystems.scheduler.requestRender();
       }
     },
@@ -1838,29 +1858,35 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       );
     },
 
-    focusOn(worldXYZ, diameterKpc) {
+    focusOn(info) {
       // Camera may not be ready yet (cloud still loading); drop the call.
       // Same defensive pattern as resetCamera() above.
       const cam = state.cam;
       if (!cam) return;
+
+      // Notify before the tween starts so the URL-sync hook can update
+      // `#focus=…` in lock-step with the user's commitment.  Callers
+      // (Focus button, `f` shortcut, double-click) no longer have to
+      // setFocused manually — the engine is the single source of truth
+      // for "we just decided to focus on this galaxy."
+      cb.onFocusChange?.(info);
 
       // Snapshot the CURRENT camera state — not the original startup state —
       // so an in-progress tween hands off smoothly to the new one.  vec3.clone
       // copies the target tuple so future mutation of cam.target doesn't
       // corrupt the from-snapshot.
       //
-      // `diameterKpc` is optional — when undefined, focusDistanceMpc()
-      // falls back to its built-in 30 kpc placeholder, matching the
-      // pre-v4 framing exactly.  When present, the camera ends up
-      // 4× the galaxy's diameter away (close-but-not-inside framing
-      // that scales naturally with size).
+      // The framing distance is 4× the galaxy's diameter (close-but-not-
+      // inside framing that scales naturally with size); when the
+      // PointInfo's diameter is the fallback 30 kpc, this lands on the
+      // pre-v4 placeholder framing exactly.
       state.subsystems.tweens.start({
         startMs: performance.now(),
         durationMs: FOCUS_TWEEN_MS,
         fromTarget: vec3.clone(cam.target as vec3),
-        toTarget: vec3.fromValues(worldXYZ[0], worldXYZ[1], worldXYZ[2]),
+        toTarget: vec3.fromValues(info.x, info.y, info.z),
         fromDistance: cam.distance,
-        toDistance: focusDistanceMpc(diameterKpc),
+        toDistance: focusDistanceMpc(info.diameterKpc),
         fromYaw: cam.yaw,
         toYaw: cam.yaw, // preserve yaw — user keeps their orientation
         fromPitch: cam.pitch,
@@ -1900,6 +1926,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const offset = state.gpu.renderer?.instanceIdOffset(Source.Famous) ?? 0;
       const globalIdx = offset + localIdx;
       setSelected(globalIdx);
+      // selectFamous is a deliberate user focus action (palette pick),
+      // so the camera-focus target moves to this galaxy too.
+      cb.onFocusChange?.(info);
 
       // Tween the camera onto the galaxy — same tween as `focusOn`.
       // We inline the tween-creation here rather than calling `handle.focusOn`
@@ -1932,7 +1961,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       return state.sources.clouds.get(source)?.objIDs;
     },
 
-    selectByAlias({ source, localIdx }) {
+    getCloud(source) {
+      // Same read-only contract as `getCloudObjIds` above — we hand
+      // out the live reference, not a clone, because the resolver
+      // walks positions/objIDs once and would otherwise force a
+      // multi-MB copy for a one-shot deep-link resolve.  The only
+      // current consumer is `resolveFocusTarget`, which never mutates.
+      return state.sources.clouds.get(source);
+    },
+
+    selectByAlias({ source, localIdx, famousMeta, famousXrefs }) {
       // Guard: source cloud may not be loaded yet (e.g. user opened
       // the palette before GLADE finished arriving), or the localIdx
       // could be stale across a tier swap.  Both are safe early-return
@@ -1945,21 +1983,43 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // pass the famous sidecars even for non-famous sources because
       // buildPointInfo gracefully ignores them when the source isn't
       // Famous — same call shape as the dblclick path uses.
+      //
+      // Caller-supplied `famousMeta`/`famousXrefs` win over the
+      // engine's internal copies — see the EngineHandle JSDoc for the
+      // race this defends against.  The default is the engine's own
+      // sidecar state, which keeps every other call site (click,
+      // hover, palette alias-search) using a single source of truth.
       const info = buildPointInfo(
         cloud,
         localIdx,
         source,
-        state.sources.famousMeta,
-        state.sources.famousXrefs,
+        famousMeta ?? state.sources.famousMeta,
+        famousXrefs ?? state.sources.famousXrefs,
       );
       if (!info) return;
 
       // Compute the GLOBAL instance index (selection state is keyed
       // globally because the picker writes a per-vertex globalIdx;
       // see `instanceIdOffset` for the running-sum convention).
+      //
+      // Caveat: `instanceIdOffset` reads from the renderer's per-source
+      // bookkeeping, which lags `state.sources.clouds` by an upload
+      // chain tick (see the cloud-load wiring around line 803).  When
+      // selectByAlias is called from a deep-link drain that fires the
+      // moment a cloud lands data-side, the renderer hasn't uploaded
+      // yet and the offset is 0 — meaning `globalIdx` would round-trip
+      // through `pointInfoFromGlobal` to a wrong source.  We pass the
+      // already-built `info` to `setSelected` so the React side gets
+      // the correct PointInfo regardless; the halo's globalIdx will
+      // correct itself once the picker draws against the freshly-
+      // uploaded source.
       const offset = state.gpu.renderer?.instanceIdOffset(source) ?? 0;
       const globalIdx = offset + localIdx;
-      setSelected(globalIdx);
+      setSelected(globalIdx, info);
+      // selectByAlias is a deliberate user focus action (palette pick
+      // OR deep-link resolve), so the camera-focus target moves with
+      // the selection.
+      cb.onFocusChange?.(info);
 
       // Camera focus tween — same setup as selectFamous / focusOn.
       const cam = state.cam;
@@ -1985,6 +2045,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const cam = state.cam;
       const initialCamSnapshot = state.initialCamSnapshot;
       if (!cam || !initialCamSnapshot) return;
+
+      // Returning to the home view means we're no longer focused on any
+      // particular galaxy.  Notify so the URL clears its `#focus=…`.
+      cb.onFocusChange?.(null);
 
       state.subsystems.tweens.start({
         startMs: performance.now(),

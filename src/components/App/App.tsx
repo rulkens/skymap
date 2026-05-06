@@ -66,7 +66,12 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { createEngine } from '../../services/engine';
-import type { EngineHandle, EngineStatus, PointInfo, ScaleInfo } from '../../@types';
+import type {
+  EngineHandle,
+  EngineStatus,
+  PointInfo,
+  ScaleInfo,
+} from '../../@types';
 import type { LoadProgressState } from '../../@types/EngineCallbacks';
 import type { LodMode } from '../../@types/LodMode';
 import type { Tier } from '../../@types/Tier';
@@ -107,11 +112,13 @@ import { isWebHIDSupported } from '../../services/input/spaceMouse';
 import {
   loadFamousSidecars,
   type FamousMetaEntry,
+  type FamousXrefMap,
 } from '../../services/engine/famousMetaLoader';
 import {
   loadPgcAliases,
   type AliasIndexEntry,
 } from '../../services/engine/pgcAliasLoader';
+import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -155,6 +162,16 @@ export function App(): React.ReactElement {
   const [status, setStatus] = useState<EngineStatus>({ kind: 'initializing' });
   const [hovered, setHovered] = useState<PointInfo | null>(null);
   const [selected, setSelected] = useState<PointInfo | null>(null);
+  // ── focused: distinct from selected ─────────────────────────────────────
+  //
+  // `selected` is the pin state — set by a bare canvas click, drives the
+  // InfoCard.  `focused` is the camera-focus target — only set by
+  // deliberate focus actions (Focus button, `f` shortcut, palette pick,
+  // deep-link resolve).  The deep-link URL hook reads `focused` (not
+  // `selected`) so a casual click doesn't pollute browser history with a
+  // `#focus=…` entry.  See `EngineCallbacks.onFocusChange` for the engine
+  // side of this contract.
+  const [focused, setFocused] = useState<PointInfo | null>(null);
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
 
   // ── Settings panel state ─────────────────────────────────────────────────
@@ -336,6 +353,11 @@ export function App(): React.ReactElement {
   // display names without a second round-trip.
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [famousMeta, setFamousMeta] = useState<FamousMetaEntry[]>([]);
+  // Companion xrefs sidecar — paired with `famousMeta` so the deep-link
+  // drain can hand both to `engine.selectByAlias` and dodge the engine's
+  // internal sidecar-load race.  See the `selectByAlias` JSDoc for why
+  // the override exists.
+  const [famousXrefs, setFamousXrefs] = useState<FamousXrefMap>({});
 
   // ── Alias-search state ───────────────────────────────────────────────────
   //
@@ -352,6 +374,23 @@ export function App(): React.ReactElement {
   // Tracks whether we've already kicked off the lazy load — useEffect's
   // `paletteOpen` dependency would otherwise re-trigger on every open.
   const aliasLoadStarted = useRef(false);
+
+  // Raw PGC->aliases Map.  Same lifecycle as `aliasIndex` (populated
+  // inside the same `loadPgcAliases().then(...)` block), but kept as the
+  // unflattened lookup table so the deep-link resolver can use it as the
+  // "is this PGC a real galaxy in HyperLEDA?" oracle for the
+  // tier-vs-unknown distinction.  Starts as an empty Map so the
+  // resolver can call `aliasMap.has(...)` without a null guard; an
+  // empty map just means we haven't loaded yet, in which case unknown
+  // PGCs collapse to `unknown` instead of `tier`.  That trade-off is
+  // documented in `resolveFocusTarget.ts`: a deep link to a PGC that's
+  // only present in a larger tier silently fails on the very first
+  // navigation if the user hasn't opened the palette yet.  The tier
+  // banner does fire if the user retries after the palette warm-up
+  // populates the map.
+  const [aliasMap, setAliasMap] = useState<ReadonlyMap<bigint, readonly string[]>>(
+    () => new Map(),
+  );
 
   // ── Engine startup effect ──────────────────────────────────────────────────
 
@@ -373,6 +412,7 @@ export function App(): React.ReactElement {
       onStatusChange: setStatus,
       onHoverChange: setHovered,
       onSelectChange: setSelected,
+      onFocusChange: setFocused,
       onScaleChange: setScale,
 
       // Settings-panel callbacks: engine fires these when a setting changes
@@ -473,7 +513,10 @@ export function App(): React.ReactElement {
   // but exposing it here avoids reaching into the engine's internal state.
   // Double-loading is cheap (the browser caches the JSON fetch).
   useEffect(() => {
-    loadFamousSidecars().then((sc) => setFamousMeta(sc.meta));
+    loadFamousSidecars().then((sc) => {
+      setFamousMeta(sc.meta);
+      setFamousXrefs(sc.xrefs);
+    });
   }, []);
 
   // ── Alias index — lazy-built on first palette open ────────────────────────
@@ -508,7 +551,15 @@ export function App(): React.ReactElement {
     if (gladeCount === 0 && twoMrsCount === 0) return;
 
     aliasLoadStarted.current = true;
-    loadPgcAliases().then((aliasMap) => {
+    loadPgcAliases().then((loadedAliasMap) => {
+      // Stash the raw Map for the deep-link resolver's tier-vs-unknown
+      // oracle.  Done before the index build because the resolver only
+      // needs `.has(pgc)`, not the per-source localIdx join — and a
+      // future deep-link arrival should be able to consult the oracle
+      // even before the (slower) index walk finishes if ever it grows
+      // expensive.
+      setAliasMap(loadedAliasMap);
+
       // Build the flat index — one entry per (cloud, localIdx) where the
       // PGC at that localIdx has at least one named alias.  Skip zero
       // PGCs (unmapped rows in the catalog cross-match).
@@ -519,7 +570,7 @@ export function App(): React.ReactElement {
         for (let i = 0; i < objIds.length; i++) {
           const pgc = objIds[i]!;
           if (pgc === 0n) continue;
-          const names = aliasMap.get(pgc);
+          const names = loadedAliasMap.get(pgc);
           if (!names || names.length === 0) continue;
           out.push({ pgc, names, source, localIdx: i });
         }
@@ -527,6 +578,23 @@ export function App(): React.ReactElement {
       setAliasIndex(out);
     });
   }, [paletteOpen, sourceCounts]);
+
+  // ── Deep-link focus URL sync ──────────────────────────────────────────────
+  //
+  // Single hook owning the entire `#focus=…` lifecycle: mount-time hash
+  // parse + scrub, selection-driven URL writes, drain of pending deep
+  // links once the engine is `'ready'` (which guarantees `state.cam`),
+  // and the supersede-on-selection cleanup.  See the hook's module
+  // header for the full rationale of each effect.
+  const { pendingTarget } = useFocusUrlSync({
+    focused,
+    status,
+    sourceCounts,
+    famousMeta,
+    famousXrefs,
+    aliasMap,
+    engineHandleRef: handleRef,
+  });
 
   // ── Keyboard shortcuts effect ──────────────────────────────────────────────
   //
@@ -569,9 +637,7 @@ export function App(): React.ReactElement {
 
       // ── f: focus on currently-selected galaxy (no-op if nothing pinned) ────
       if (e.key === 'f' || e.key === 'F') {
-        if (selected) {
-          handleRef.current?.focusOn([selected.x, selected.y, selected.z], selected.diameterKpc);
-        }
+        if (selected) handleRef.current?.focusOn(selected);
         return;
       }
 
@@ -628,7 +694,7 @@ export function App(): React.ReactElement {
       <InfoCard
         hovered={hovered}
         selected={selected}
-        onFocus={(info) => handleRef.current?.focusOn([info.x, info.y, info.z], info.diameterKpc)}
+        onFocus={(info) => handleRef.current?.focusOn(info)}
         onClose={() => handleRef.current?.clearSelection()}
       />
       <ScaleBar scale={scale} />
