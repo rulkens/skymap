@@ -148,11 +148,20 @@
 }
 
 .body {
+  /*
+   * Pure collapse mechanism — no padding, no margin.  The grid item
+   * shrinks fully to 0px on close; padding goes on the inner wrapper
+   * so it's painted inside the body's clipped overflow region rather
+   * than adding to the body's outer height.
+   */
   min-height: 0;
   overflow: hidden;
-  padding: var(--space-6) var(--space-7);
   opacity: 0;
   transition: var(--transition-fade);
+}
+
+.bodyContent {
+  padding: var(--space-6) var(--space-7);
 }
 
 .bodyWrapper[data-open='true'] .body {

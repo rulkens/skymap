@@ -146,7 +146,20 @@ export function Panel({ title, ariaLabel, defaultOpen = true, children }: PanelP
         data-open={open}
         aria-hidden={!open}
       >
-        <div className={styles.body}>{children}</div>
+        {/*
+          Two-level inner structure:
+          - .body is the grid item.  Its only job is to be collapsible
+            (min-height: 0, overflow: hidden, opacity).  No padding —
+            padding here would add to the outer height even when grid
+            forces the row to 0fr, leaving a stub of empty space below
+            the title button on collapse.
+          - .bodyContent owns the actual padding around the children.
+            When the grid track collapses to 0, the padding goes with
+            it because it's painted INSIDE .body's clipped overflow.
+        */}
+        <div className={styles.body}>
+          <div className={styles.bodyContent}>{children}</div>
+        </div>
       </div>
     </div>
   );
