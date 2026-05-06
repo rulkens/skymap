@@ -112,6 +112,7 @@ import { isWebHIDSupported } from '../../services/input/spaceMouse';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -486,73 +487,13 @@ export function App(): React.ReactElement {
     engineHandleRef: handleRef,
   });
 
-  // ── Keyboard shortcuts effect ──────────────────────────────────────────────
-  //
-  // Three shortcuts: Esc clears selection, `f` focuses on the pinned galaxy,
-  // `h` returns the camera to the home view.  Re-runs when `selected` changes
-  // so the `f` handler always reads the current pin (without a re-bind it
-  // would close over the initial null forever).
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      // ── Ignore keystrokes typed into form fields ────────────────────────────
-      //
-      // If the user is editing an <input> or <textarea>, we shouldn't hijack
-      // their `f` and `h` keystrokes.  `e.target` could be any Element, so we
-      // narrow with a tag check before reading its name.  This guards against
-      // future text inputs (search box, label rename, etc.).
-      const target = e.target as Element | null;
-      const tag = target?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (target as HTMLElement)?.isContentEditable) {
-        return;
-      }
-
-      // ── Cmd+K / Ctrl+K / `/` opens the command palette ───────────────────
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setPaletteOpen(true);
-        return;
-      }
-      if (e.key === '/' && !paletteOpen) {
-        e.preventDefault();
-        setPaletteOpen(true);
-        return;
-      }
-
-      // ── Esc: clear pinned selection ────────────────────────────────────────
-      if (e.key === 'Escape') {
-        // `?.` safe-calls: no-op if the engine hasn't started yet or was destroyed.
-        handleRef.current?.clearSelection();
-        return;
-      }
-
-      // ── f: focus on currently-selected galaxy (no-op if nothing pinned) ────
-      if (e.key === 'f' || e.key === 'F') {
-        if (selected) handleRef.current?.focusOn(selected);
-        return;
-      }
-
-      // ── h: return to the home / Earth view ─────────────────────────────────
-      if (e.key === 'h' || e.key === 'H') {
-        handleRef.current?.focusOnHome();
-        return;
-      }
-
-      // ── l: log the live camera state to console (debug aid) ────────────────
-      // Prints target / distance / yaw / pitch / fovYRad in copy-paste-friendly
-      // form so the developer can tune the initial framing + reset values
-      // interactively.  Lower-case only — capital L is reserved for future
-      // use; keep the dev hotkey unobtrusive.
-      if (e.key === 'l') {
-        handleRef.current?.logCameraState();
-        return;
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [selected, paletteOpen]); // re-bind when pin or palette state changes
+  // ── Global keyboard shortcuts (Cmd+K, Esc, f, h, l) ─────────────────────
+  useKeyboardShortcuts({
+    selected,
+    paletteOpen,
+    engineHandleRef: handleRef,
+    onOpenPalette: () => setPaletteOpen(true),
+  });
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
