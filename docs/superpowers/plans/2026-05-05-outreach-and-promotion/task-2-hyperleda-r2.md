@@ -9,7 +9,7 @@ The original Task 2 called for uploading `hyperleda_pa.csv.gz` to the v0.1.0 Git
 - **No size cap.** GitHub's per-asset limit is 2 GB, but more practically releases are awkward to update without bumping the tag. R2 has no such constraint.
 - **Egress-free.** R2's zero-egress pricing means frequent downloads don't accumulate costs; GitHub release assets are served by GitHub's CDN but with less predictable cost characteristics at scale.
 - **Decoupled from release tags.** The CSV is a build artefact like the `.bin` files — it should be refreshable whenever the catalog changes, independently of code releases. Updating a GitHub release asset requires either re-uploading to the same tag (messy) or bumping the tag (forces a new version number just for a data refresh). An R2 sync is idempotent and has no version semantics attached.
-- **Consistent contributor experience.** After this change, all build artefacts (`.bin` catalogs, `.csv.gz` enrichment caches) come from the same host (`data.skymap.rulkens.com`) with the same `curl` pattern. There's no conceptual split between "catalog data lives in R2" and "enrichment cache lives in a GitHub release".
+- **Consistent contributor experience.** After this change, all build artefacts (`.bin` catalogs, `.csv.gz` enrichment caches) come from the same host (`skymap-data.rulkens.com`) with the same `curl` pattern. There's no conceptual split between "catalog data lives in R2" and "enrichment cache lives in a GitHub release".
 - **Infra already exists.** `tools/syncR2.ts` and `npm run sync-r2` are already in place. Adding one entry to `EXTRA_FILES` is three lines of code.
 
 **Files:**
@@ -89,7 +89,7 @@ npm run sync-r2
 - [ ] **Verify the object is reachable:**
 
 ```bash
-curl -sI https://data.skymap.rulkens.com/data/hyperleda_pa.csv.gz | head -6
+curl -sI https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz | head -6
 ```
 
 Expected: `HTTP/1.1 200 OK` (R2 serves objects directly, no redirect), `Content-Encoding: gzip` or `Content-Type: application/gzip`, and `Cache-Control: public, max-age=86400`. If you see a 404, the sync didn't include the file — check that `data/raw/hyperleda_pa.csv.gz` exists before re-running.
@@ -99,7 +99,7 @@ Expected: `HTTP/1.1 200 OK` (R2 serves objects directly, no redirect), `Content-
 > **Already done** in the `feat/outreach-r2-hyperleda-cache` branch commit. Verify the new section is present:
 
 ```bash
-grep -n "data.skymap.rulkens.com/data/hyperleda_pa.csv.gz" \
+grep -n "skymap-data.rulkens.com/data/hyperleda_pa.csv.gz" \
   /Users/rulkens/Development/js/skymap/README.md
 ```
 
@@ -125,7 +125,7 @@ docs: distribute HyperLEDA cache via R2 instead of GitHub release
 
 Task 2 of the outreach plan originally called for shipping the ~10–20 MB
 gzipped HyperLEDA position-angle cache as a v0.1.0 release asset.
-Switch to R2 (data.skymap.rulkens.com) instead — same infra already
+Switch to R2 (skymap-data.rulkens.com) instead — same infra already
 serving the .bin catalog files, egress-free under R2 pricing, and
 decoupled from release tags so cache refreshes don't need a new tag.
 

@@ -10,7 +10,7 @@
  * are gitignored (~370 MB across all tiers), too large for Workers Assets'
  * per-file size cap, and don't change on every code push.  R2 is the
  * natural home: zero egress, generous free tier, public custom domain
- * (`data.skymap.rulkens.com`) maps cleanly onto the `${VITE_DATA_BASE_URL}/data/...`
+ * (`skymap-data.rulkens.com`) maps cleanly onto the `${VITE_DATA_BASE_URL}/data/...`
  * URL pattern the runtime fetcher uses.  This script is what gets a fresh
  * build of the bins from `public/data/` (where Vite has them for local dev)
  * up to R2 (where the prod bundle fetches them from).
@@ -110,7 +110,7 @@ const EXTRA_FILES: ExtraFile[] = [
     //   gzip -k -9 data/raw/hyperleda_pa.csv
     // Contributors download it instead of re-fetching:
     //   curl -L -o data/raw/hyperleda_pa.csv.gz \
-    //     https://data.skymap.rulkens.com/data/hyperleda_pa.csv.gz
+    //     https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz
     //   gunzip data/raw/hyperleda_pa.csv.gz
     localPath: 'data/raw/hyperleda_pa.csv.gz',
     r2Key: 'data/hyperleda_pa.csv.gz',

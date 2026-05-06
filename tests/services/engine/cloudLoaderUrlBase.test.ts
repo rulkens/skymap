@@ -12,16 +12,16 @@ describe('dataUrl', () => {
   });
 
   it('prefixes the configured base when VITE_DATA_BASE_URL is set', () => {
-    vi.stubEnv('VITE_DATA_BASE_URL', 'https://data.skymap.rulkens.com');
+    vi.stubEnv('VITE_DATA_BASE_URL', 'https://skymap-data.rulkens.com');
     expect(dataUrl('glade-medium.bin')).toBe(
-      'https://data.skymap.rulkens.com/data/glade-medium.bin',
+      'https://skymap-data.rulkens.com/data/glade-medium.bin',
     );
   });
 
   it('strips a trailing slash on the base so the path joiner stays simple', () => {
-    vi.stubEnv('VITE_DATA_BASE_URL', 'https://data.skymap.rulkens.com/');
+    vi.stubEnv('VITE_DATA_BASE_URL', 'https://skymap-data.rulkens.com/');
     expect(dataUrl('filaments.bin')).toBe(
-      'https://data.skymap.rulkens.com/data/filaments.bin',
+      'https://skymap-data.rulkens.com/data/filaments.bin',
     );
   });
 });

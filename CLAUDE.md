@@ -73,7 +73,7 @@ Two Cloudflare resources serve skymap, and they're updated independently:
 
 - **The static shell** (HTML, JS, CSS, WGSL shaders, `_headers`, famous-galaxy WebPs) ships to **Cloudflare Workers Assets** automatically on every push to `main`. Cloudflare's dashboard-managed GitHub integration runs `npm run build` and uploads `dist/`. There is no local CLI step for the shell deploy — `npm run deploy` is just `git push origin main` with a hint of where to watch the build progress.
 
-- **The `.bin` catalog files** (~280 MB across all tiers + filaments) live in **Cloudflare R2** at `data.skymap.rulkens.com`, because they exceed Workers Assets' per-file size limit and because R2 has zero egress costs. They're synced manually via `npm run sync-r2` after a `build-tiers` rerun, **not** on every push.
+- **The `.bin` catalog files** (~280 MB across all tiers + filaments) live in **Cloudflare R2** at `skymap-data.rulkens.com`, because they exceed Workers Assets' per-file size limit and because R2 has zero egress costs. They're synced manually via `npm run sync-r2` after a `build-tiers` rerun, **not** on every push.
 
 A full data-refreshing deploy is therefore:
 

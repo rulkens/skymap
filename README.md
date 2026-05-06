@@ -162,7 +162,7 @@ Running the full HyperLEDA fetch yourself takes an hour and hammers HyperLEDA's 
 ```bash
 mkdir -p data/raw
 curl -L -o data/raw/hyperleda_pa.csv.gz \
-  https://data.skymap.rulkens.com/data/hyperleda_pa.csv.gz
+  https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz
 gunzip data/raw/hyperleda_pa.csv.gz
 ```
 
