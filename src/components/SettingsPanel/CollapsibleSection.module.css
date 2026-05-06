@@ -142,7 +142,7 @@ button.header {
   transition: var(--transition-collapse);
 }
 
-.bodyWrapper[data-open='true'] {
+.bodyWrapperOpen {
   grid-template-rows: 1fr;
 }
 
@@ -154,7 +154,7 @@ button.header {
   transition: var(--transition-fade);
 }
 
-.bodyWrapper[data-open='true'] .body {
+.bodyWrapperOpen .body {
   opacity: 1;
 }
 

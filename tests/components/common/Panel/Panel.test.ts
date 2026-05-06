@@ -39,7 +39,7 @@ describe('Panel', () => {
     expect(html).toContain('BODY_CONTENT');
   });
 
-  it('mounts closed when defaultOpen=false (body in DOM but data-open=false)', () => {
+  it('mounts closed when defaultOpen=false (body in DOM but no bodyWrapperOpen modifier)', () => {
     const html = renderToStaticMarkup(
       createElement(Panel, {
         title: 'STATS',
@@ -50,12 +50,25 @@ describe('Panel', () => {
     expect(html).toContain('aria-expanded="false"');
     // Body stays mounted in the DOM regardless of open state — the CSS
     // grid-template-rows trick collapses its visual height to zero
-    // smoothly.  The closed state is signalled by `data-open="false"`
-    // on the body wrapper, which the stylesheet keys off to drive the
-    // height + opacity transitions.
-    expect(html).toContain('data-open="false"');
+    // smoothly.  The closed state is signalled by the absence of the
+    // `_bodyWrapperOpen_*` modifier class on the body wrapper, which
+    // the stylesheet keys off to drive the height + opacity transitions.
+    expect(html).not.toMatch(/_bodyWrapperOpen_/);
     expect(html).toContain('aria-hidden="true"');
     expect(html).toContain('BODY_CONTENT');
+  });
+
+  it('applies the bodyWrapperOpen modifier when defaultOpen is true (default)', () => {
+    const html = renderToStaticMarkup(
+      createElement(Panel, {
+        title: 'STATS',
+        children: createElement('span', null, 'BODY_CONTENT'),
+      }),
+    );
+    // Open state is signalled by the `_bodyWrapperOpen_*` CSS-module class
+    // on the body wrapper — the stylesheet's `.bodyWrapperOpen` rule sets
+    // grid-template-rows: 1fr to grow the row to the body's intrinsic height.
+    expect(html).toMatch(/_bodyWrapperOpen_/);
   });
 
   it('forwards aria-label to the outer wrapper when provided', () => {

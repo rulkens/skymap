@@ -58,6 +58,7 @@
  */
 
 import { useId, useState, type ReactNode } from 'react';
+import cx from 'classnames';
 import styles from './Panel.module.css';
 
 /** Props for Panel.  See module header for design rationale. */
@@ -122,7 +123,7 @@ export function Panel({ title, ariaLabel, defaultOpen = true, children }: PanelP
           reads as one consistent "fold" at every nesting level.
         */}
         <span
-          className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}
+          className={cx(styles.chevron, open && styles.chevronOpen)}
           aria-hidden
         >
           ▸
@@ -142,8 +143,7 @@ export function Panel({ title, ariaLabel, defaultOpen = true, children }: PanelP
       */}
       <div
         id={bodyId}
-        className={styles.bodyWrapper}
-        data-open={open}
+        className={cx(styles.bodyWrapper, open && styles.bodyWrapperOpen)}
         aria-hidden={!open}
       >
         {/*

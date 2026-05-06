@@ -53,6 +53,7 @@
  */
 
 import { useState } from 'react';
+import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
@@ -163,6 +164,15 @@ export function App(): React.ReactElement {
   // mount and shared with the deep-link drain via `useFocusUrlSync`.
   const [paletteOpen, setPaletteOpen] = useState(false);
 
+  // ── "Hide UI" mode (Tab keyboard shortcut) ───────────────────────────────
+  //
+  // Single boolean toggled by `Tab` (see useKeyboardShortcuts) for "give me a
+  // clean look at the data" moments — screenshots, screen recordings, or
+  // just orbiting without HUD chrome in the way.  Applied as a `data-hidden`
+  // attribute on the `.uiStack` wrapper so a single CSS opacity transition
+  // (in App.module.css) fades every overlay in lockstep.
+  const [uiHidden, setUiHidden] = useState(false);
+
   // ── Famous-galaxy sidecars (CommandPalette + deep-link drain) ────────────
   const { famousMeta, famousXrefs } = useFamousMeta();
 
@@ -202,6 +212,7 @@ export function App(): React.ReactElement {
     paletteOpen,
     engineHandleRef: handleRef,
     setPaletteOpen,
+    setUiHidden,
   });
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -218,6 +229,20 @@ export function App(): React.ReactElement {
       <canvas ref={canvasRef} id="c" />
 
       {/*
+        UI overlay wrapper.  All HUD chrome (loading bar, status,
+        InfoCard, scale, left-stack panels, search trigger, command
+        palette) lives inside this single `<div>` so the `Tab`
+        keyboard shortcut can fade the whole HUD in/out via one CSS
+        transition.  See `.uiStack` / `.uiStackHidden` rules in
+        `App.module.css` for the opacity + pointer-events handling.
+
+        Modifier class via `cx`: `uiStackHidden` is appended only
+        when `uiHidden` is true.  The transition lives on the base
+        class so the fade animates in BOTH directions (opacity 1 → 0
+        on hide, 0 → 1 on show).
+      */}
+      <div className={cx(appStyles.uiStack, uiHidden && appStyles.uiStackHidden)}>
+        {/*
         Loading bar — pinned to top of viewport above every other overlay.
         Fades itself out when `loadProgress` becomes null (no fetches in
         flight).  Mounted unconditionally so the first paint after a
@@ -450,6 +475,7 @@ export function App(): React.ReactElement {
         onSelect={(id) => handleRef.current?.selectFamous?.(id)}
         onSelectAlias={(target) => handleRef.current?.selectByAlias?.(target)}
       />
+      </div>
     </>
   );
 }

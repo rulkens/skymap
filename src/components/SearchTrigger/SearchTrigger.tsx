@@ -37,6 +37,7 @@
  */
 
 import type { ReactNode } from 'react';
+import cx from 'classnames';
 import styles from './SearchTrigger.module.css';
 
 export type SearchTriggerProps = {
@@ -84,7 +85,7 @@ export function SearchTrigger({ onClick, hidden = false }: SearchTriggerProps): 
   return (
     <button
       type="button"
-      className={`${styles.trigger} ${hidden ? styles.hidden : ''}`}
+      className={cx(styles.trigger, hidden && styles.hidden)}
       onClick={onClick}
       aria-label="Search galaxies"
       aria-keyshortcuts="Meta+K Control+K /"

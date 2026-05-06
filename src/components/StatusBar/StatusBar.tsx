@@ -33,6 +33,7 @@
  */
 
 import type { ReactNode } from 'react';
+import cx from 'classnames';
 import type { EngineStatus } from '../../@types';
 import styles from './StatusBar.module.css';
 
@@ -61,7 +62,7 @@ export function StatusBar({ status }: StatusBarProps): ReactNode {
   // surface something the user needs to know about.
   if (status.kind === 'error') {
     return (
-      <div className={`${styles.status} ${styles.error}`} role="alert">
+      <div className={cx(styles.status, styles.error)} role="alert">
         ERROR: {status.message}
       </div>
     );
@@ -69,7 +70,7 @@ export function StatusBar({ status }: StatusBarProps): ReactNode {
 
   // status.kind === 'ready' && status.source === 'synthetic'
   return (
-    <div className={`${styles.status} ${styles.warning}`} role="status">
+    <div className={cx(styles.status, styles.warning)} role="status">
       synthetic fallback — no real data files loaded
     </div>
   );

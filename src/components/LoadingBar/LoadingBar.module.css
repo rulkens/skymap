@@ -94,16 +94,17 @@
 }
 
 /*
- * Container fade-out: when no fetches are in flight, parent passes
- * `data-visible="false"` and we tween opacity to 0 over 200 ms before
- * the parent unmounts the element entirely (the unmount happens via
- * React's conditional render, but the opacity tween hides the seam so
- * the bar fades rather than flashing off).
+ * Container fade-out: when no fetches are in flight, parent toggles
+ * the `.trackHidden` modifier (LoadingBar.tsx via `cx`) and we tween
+ * opacity to 0 over 200 ms before the parent unmounts the element
+ * entirely.  The unmount happens via React's conditional render, but
+ * the opacity tween hides the seam so the bar fades rather than
+ * flashing off.
  *
  * `prefers-reduced-motion` honoured — no fade for users who've opted
  * out at the OS level.
  */
-.track[data-visible='false'] {
+.trackHidden {
   opacity: 0;
   transition: opacity var(--duration-base) var(--ease-standard);
 }
@@ -111,7 +112,7 @@
 @media (prefers-reduced-motion: reduce) {
   .fill,
   .indeterminate,
-  .track[data-visible='false'] {
+  .trackHidden {
     transition: none;
     animation: none;
   }

@@ -37,7 +37,7 @@ describe('CollapsibleSection initial render', () => {
       }),
     );
     expect(html).toContain('aria-expanded="false"');
-    expect(html).toContain('data-open="false"');
+    expect(html).not.toMatch(/_bodyWrapperOpen_/);
   });
 
   it('respects defaultOpen=true on first visit', () => {
@@ -64,9 +64,9 @@ describe('CollapsibleSection initial render', () => {
     // Children stay in the DOM when closed — collapse is a CSS-only
     // transition (grid-template-rows 0fr → 1fr) so the body never
     // unmounts.  Verify the closed state via the markers that DO change:
-    // aria-expanded on the button, data-open on the wrapper, aria-hidden
-    // on the wrapper.
-    expect(html).toContain('data-open="false"');
+    // aria-expanded on the button, absence of the `bodyWrapperOpen`
+    // CSS-module modifier on the wrapper, aria-hidden on the wrapper.
+    expect(html).not.toMatch(/_bodyWrapperOpen_/);
     expect(html).toContain('aria-hidden="true"');
   });
 

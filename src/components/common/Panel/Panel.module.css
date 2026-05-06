@@ -75,10 +75,11 @@
  * empty rule underneath it.  Pre-animation we used `:only-child` (the
  * body was unmounted on collapse), but the body now stays mounted with
  * `grid-template-rows: 0fr` so we detect "collapsed" via a `:has()`
- * sibling check on the bodyWrapper's `data-open` attribute.  Baseline
- * 2023, supported across every browser the project targets.
+ * sibling check for the absence of the `.bodyWrapperOpen` modifier
+ * class (toggled from Panel.tsx via `cx`).  Baseline 2023, supported
+ * across every browser the project targets.
  */
-.titleButton:has(+ .bodyWrapper:not([data-open='true'])) {
+.titleButton:has(+ .bodyWrapper:not(.bodyWrapperOpen)) {
   border-bottom: 0;
   border-radius: var(--radius-xl);
 }
@@ -150,7 +151,7 @@
   transition: var(--transition-collapse);
 }
 
-.bodyWrapper[data-open='true'] {
+.bodyWrapperOpen {
   grid-template-rows: 1fr;
 }
 
@@ -171,7 +172,7 @@
   padding: var(--space-6) var(--space-7);
 }
 
-.bodyWrapper[data-open='true'] .body {
+.bodyWrapperOpen .body {
   opacity: 1;
 }
 

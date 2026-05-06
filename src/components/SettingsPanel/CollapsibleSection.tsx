@@ -34,6 +34,7 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import cx from 'classnames';
 import styles from './CollapsibleSection.module.css';
 
 type Props = {
@@ -121,7 +122,7 @@ export function CollapsibleSection({
           it 90° via CSS transform when open.  Animating transform is
           smooth; swapping text characters can't be animated.
         */}
-        <span className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`} aria-hidden>
+        <span className={cx(styles.chevron, open && styles.chevronOpen)} aria-hidden>
           ▸
         </span>
         {/*
@@ -157,7 +158,10 @@ export function CollapsibleSection({
         moves between `0fr` and `1fr` interpolates smoothly.  See the
         .bodyWrapper rule in the stylesheet for the animation mechanism.
       */}
-      <div className={styles.bodyWrapper} data-open={open} aria-hidden={!open}>
+      <div
+        className={cx(styles.bodyWrapper, open && styles.bodyWrapperOpen)}
+        aria-hidden={!open}
+      >
         <div className={styles.body}>{children}</div>
       </div>
     </div>
