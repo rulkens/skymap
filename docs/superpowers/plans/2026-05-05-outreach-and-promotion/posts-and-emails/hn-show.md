@@ -27,61 +27,48 @@ Show HN: Skymap – a 3D galaxy catalog explorer in the browser via WebGPU
 ## First comment (post immediately after submit, as OP)
 
 ```
-Hi HN, Alex here, designer-engineer based in the Netherlands. Day job is
-building Repper (a pattern-design tool); skymap is a side project — built
-last weekend in 4 days with Claude Code, ~32 hours of focused pair-
-programming.
+Hi HN, Alex here, designer-engineer in the Netherlands. My day job is
+Repper (a pattern-design tool). Skymap is a side project, built last
+weekend in 4 days (~32 hours, AI-assisted with Claude Code).
 
-I've followed Anton Petrov on YouTube for years and kept seeing those
-beautiful pans over galaxy catalogs in research videos, then thinking
-"why can't I just fly through that myself?" Apparently the answer was
-"because nobody had built it yet for the browser." So I did.
+I've followed Anton Petrov on YouTube for years and kept seeing nice
+pans over galaxy catalogs in research videos, thinking "why can't I just
+fly through that?" Turned out nobody had built it for the browser yet.
 
-It loads SDSS (~500k galaxies), 2MRS (~45k), and GLADE (~2M after dedup)
-and renders them as WebGPU instanced billboards. A tier selector swaps
-dataset size without a page reload. Past a certain on-screen size, each
-galaxy crossfades from a dot into a procedural 3D-oriented disk (using
-catalog axis-ratio + position angle from HyperLEDA / 2MASS XSC), then
-into a real survey image when you're close enough — SDSS DR18 ImgCutout,
-or DSS via CDS hips2fits for the rest. There's also a cosmic-web
-filament overlay built offline by DisPerSE (Sousbie 2011), a faint blue
-lattice tracing ridges of the density field. Pretty striking at
-supercluster scale.
+It loads SDSS (~500k galaxies), 2MRS (~45k), and GLADE (~2M) as WebGPU
+instanced billboards. Past a certain on-screen size each galaxy
+crossfades from a dot into a procedural oriented disk (catalog
+axis-ratio + PA from HyperLEDA / 2MASS XSC), then into a real survey
+image when close enough: SDSS DR18 ImgCutout, or DSS via CDS hips2fits
+for the rest. There's a cosmic-web filament overlay built offline with
+DisPerSE (Sousbie 2011), a faint blue lattice over the point field.
+Striking at supercluster scale.
 
-The actual unlock for me with Claude wasn't "code faster" — it was that
-I could read about an algorithm in a paper, ask Claude to derive the
-math against the catalog, and have a working interactive implementation
-the same evening. DisPerSE filament skeletons, Schechter luminosity-
-function corrections, HEALPix angular re-weighting, K-correction in the
-fragment shader, comoving distance from redshift — algorithms I'd
-otherwise have only watched a YouTube video about, now things you can
-drag around in the browser. That collapse-the-paper-to-runtime gap is
-the new thing for me.
+What I love about coding with Claude is that I can read about an
+algorithm in a paper and have it running interactively the same
+evening. DisPerSE skeletons, Schechter LF corrections, HEALPix
+re-weighting, K-correction in the fragment shader. Stuff I'd otherwise
+only have watched a video about.
 
-The bug-arc texture: I came from years of WebGL, where "set a uniform
-per draw call" is muscle memory. In WebGPU, queue.writeBuffer ordering
-isn't preserved across submits in the same frame, so per-instance state
-set via mid-frame uniform writes ends up out of order with the draw it
-was supposed to apply to. That bit me twice (same root cause, different
-symptoms — galaxies rendering on the wrong galaxy, then the selection
-halo lighting up the wrong one). Fix: bake per-instance state into the
-vertex buffer. Also bumped the binary format four times in one day on
-day 1 (the discipline being "bump it again, regenerate, keep building"
-rather than building a flexible extension scheme).
+War story: years of WebGL conditioned me to "set a uniform per draw
+call". In WebGPU, queue.writeBuffer ordering isn't preserved across
+submits in the same frame, so per-instance state set via mid-frame
+uniform writes lands on the wrong draw. Bit me twice (galaxy data on
+the wrong galaxy, then the selection halo lighting up the wrong one).
+Fix: bake per-instance state into the vertex buffer.
 
 Live: https://skymap.rulkens.com
-Repo: https://github.com/rulkens/skymap (MIT, comments are written to
-be read)
+Repo: https://github.com/rulkens/skymap (MIT)
 DOI:  https://doi.org/10.5281/zenodo.20037028
 
-Plenty of unpolished UX edges; touch / mobile gestures aren't built yet
-(works on recent phones with WebGPU but with mouse-style controls).
+UX has plenty of rough edges, mobile gestures aren't there yet. I'm not
+an astronomer (the cosmology math is all Claude-derived against
+textbook formulas), so if anyone here works in the field and spots
+something off, I'd love to hear it.
 
-One thing I'm genuinely curious about for HN: how do people grow a
-project from a seed like this into something more substantial? I keep
-shipping personal-learning side projects and I'd love to read what
-others do — any reading material, blog posts, or bluntness on what the
-next step looks like would be more than welcome.
+I'm also curious how people grow side projects like this into something
+more substantial. I keep shipping personal-learning projects and would
+love any reading or bluntness on what the next step usually looks like.
 ```
 
 ## Verification command
