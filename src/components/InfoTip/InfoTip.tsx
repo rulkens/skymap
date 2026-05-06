@@ -105,7 +105,12 @@ export function InfoTip({
   return (
     <span className={styles.wrapper}>
       <span
-        className={styles.trigger}
+        // Interactive triggers carry no class — the focusable child
+        // is already the visual affordance, so the trigger span is a
+        // pure pass-through (default inline display, no dotted
+        // underline, no cursor:help).  Inline `style={{ anchorName }}`
+        // still resolves because an inline span has a principal box.
+        className={interactive ? undefined : styles.trigger}
         // Passive triggers carry their own tabIndex + aria-describedby.
         // Interactive triggers leave focus to the focusable child (e.g.
         // a <button>), and the wrapper's :focus-within catches the
