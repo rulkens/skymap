@@ -73,7 +73,6 @@ import type {
   ScaleInfo,
 } from '../../@types';
 import type { LoadProgressState } from '../../@types/EngineCallbacks';
-import type { LodMode } from '../../@types/LodMode';
 import type { Tier } from '../../@types/Tier';
 import { initialTierFromViewport } from '../../utils/initialTierFromViewport';
 import { StatusBar } from '../StatusBar/StatusBar';
@@ -87,32 +86,13 @@ import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SearchTrigger } from '../SearchTrigger/SearchTrigger';
 import appStyles from './App.module.css';
 import { Source } from '../../data/sources';
-import { BiasMode } from '../../data/biasMode';
-import { ToneMapCurve } from '../../data/toneMapCurve';
-import {
-  DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_AUTO_ROTATE,
-  DEFAULT_BIAS_MODE,
-  DEFAULT_BRIGHTNESS,
-  DEFAULT_DEPTH_FADE_ENABLED,
-  DEFAULT_EXPOSURE,
-  DEFAULT_FILAMENT_INTENSITY,
-  DEFAULT_FILAMENTS_ENABLED,
-  DEFAULT_GALAXY_TEXTURES_ENABLED,
-  DEFAULT_MILKY_WAY_ENABLED,
-  DEFAULT_HIGHLIGHT_FALLBACK,
-  DEFAULT_LOD_MODE,
-  DEFAULT_POINT_SIZE_PX,
-  DEFAULT_REAL_ONLY_MODE,
-  DEFAULT_SPACE_MOUSE_SENSITIVITY,
-  DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_VISIBLE_SOURCE_MASK,
-} from '../../data/defaults';
+import { DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../../data/defaults';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { useEngineSettings } from '../../hooks/useEngineSettings';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -168,73 +148,40 @@ export function App(): React.ReactElement {
   const [focused, setFocused] = useState<PointInfo | null>(null);
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
 
-  // ── Settings panel state ─────────────────────────────────────────────────
+  // ── Engine-driven settings (point size, brightness, filaments, tone map, …) ──
   //
-  // These mirror the engine's internal settings values. They are seeded by the
-  // engine's `onPointSizeChange`, `onBrightnessChange`, `onAutoRotateChange`
-  // callbacks (including the initial seed fired at startup), so the panel
-  // always reflects the engine's current state — not the other way around.
-  // The user's interactions flow: slider → callback → handleRef.setXxx → engine
-  // closure variable updated → callback fired → setState → React re-render.
-  // Initial values seeded from `data/defaults.ts` — single source of
-  // truth shared with the engine so the SettingsPanel doesn't briefly
-  // flash a stale value before the engine's first echo callback fires.
-  // See `data/defaults.ts` for per-default rationale.
-  const [pointSize, setPointSize] = useState<number>(DEFAULT_POINT_SIZE_PX);
-  const [brightness, setBrightness] = useState<number>(DEFAULT_BRIGHTNESS);
-  const [autoRotate, setAutoRotate] = useState<boolean>(DEFAULT_AUTO_ROTATE);
-  const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(
-    DEFAULT_GALAXY_TEXTURES_ENABLED,
-  );
-  const [milkyWayEnabled, setMilkyWayEnabled] = useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
-  // Cosmic-web filament-skeleton overlay toggle.  Defaults OFF
-  // (`DEFAULT_FILAMENTS_ENABLED`) because the underlying `filaments.bin`
-  // is an optional asset built by `npm run build-filaments` — fresh
-  // clones won't have it and an on-by-default toggle would silently
-  // do nothing.  Unlike `galaxyTexturesEnabled`/`milkyWayEnabled`, the
-  // engine does NOT fire an echo callback for this field, so we update
-  // React state optimistically inside the change handler below.
-  const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(DEFAULT_FILAMENTS_ENABLED);
-  const [filamentIntensity, setFilamentIntensity] = useState<number>(DEFAULT_FILAMENT_INTENSITY);
-  // Strip + vertex counts from the optional cosmic-web `filaments.bin`.
-  // Stays null until the engine fires `onFilamentsReady` (one-shot, after
-  // the binary lands).  The StatsPanel uses both this value and
-  // `filamentsEnabled` to decide whether to render the filaments row —
-  // when the file isn't on disk (fresh clone before `npm run build-filaments`),
-  // this stays null forever and the row stays hidden, which is the
-  // visually-clean default.
-  const [filamentCounts, setFilamentCounts] = useState<{
-    stripCount: number;
-    vertexCount: number;
-  } | null>(null);
-  const [highlightFallback, setHighlightFallback] = useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
-  const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
-  const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
-
-  // ── Multi-survey + LOD state (rev-2) ─────────────────────────────────────
-  //
-  // `visibleSourceMask` is a 32-bit bitmask: bit `n` set means "draw points
-  // from source n". We seed with `ALL_VISIBLE_MASK` (every source on) so the
-  // first paint matches the engine's startup default.
-  //
-  // `lodMode` mirrors the engine's level-of-detail mode. In 'auto' the engine
-  // recomputes the visible-source mask each frame based on camera distance;
-  // in 'manual' it leaves the mask alone (so survey toggles stick).
-  //
-  // ── Source-of-truth note ────────────────────────────────────────────────
-  // `EngineCallbacks` exposes `onLodModeChange` (which we wire up below) but
-  // does NOT currently emit an `onSourceMaskChange` event. That means in
-  // 'auto' mode, where the engine recomputes the mask each frame, our React
-  // copy of `visibleSourceMask` will **not** track those engine-driven
-  // changes — the checkboxes only reflect the user's *manual* toggles.
-  //
-  // For v1 this is acceptable because the survey toggles section is gated by
-  // 'manual' LOD mode in practice (toggling a checkbox flips the engine to
-  // manual via `setSourceVisible`'s spec). When the engine grows an
-  // `onSourceMaskChange` callback later, we can wire it here without changing
-  // any other code.
-  const [visibleSourceMask, setVisibleSourceMask] = useState<number>(DEFAULT_VISIBLE_SOURCE_MASK);
-  const [lodMode, setLodMode] = useState<LodMode>(DEFAULT_LOD_MODE);
+  // All settings useStates live inside `useEngineSettings`.  The hook
+  // returns:
+  //   - `settings` — a read-only object with all current values.
+  //   - `engineCallbacks` — the EngineCallbacks slice the engine uses to
+  //     echo those values back into React state; spread into createEngine.
+  //   - Three App-owned setters for the no-echo / partial-echo cases.
+  const {
+    settings,
+    engineCallbacks: settingsCallbacks,
+    setFilamentsEnabled,
+    setFilamentIntensity,
+    setExposure,
+  } = useEngineSettings();
+  const {
+    pointSize,
+    brightness,
+    autoRotate,
+    galaxyTexturesEnabled,
+    milkyWayEnabled,
+    filamentsEnabled,
+    filamentIntensity,
+    filamentCounts,
+    highlightFallback,
+    realOnlyMode,
+    depthFadeEnabled,
+    visibleSourceMask,
+    lodMode,
+    biasMode,
+    absMagLimit,
+    toneMapCurve,
+    exposure,
+  } = settings;
 
   // ── Data tier (small / medium / large) ─────────────────────────────────
   //
@@ -310,35 +257,6 @@ export function App(): React.ReactElement {
     DEFAULT_SPACE_MOUSE_SENSITIVITY,
   );
 
-  // ── Density-correction state (Malmquist bias, Tasks 1–5) ─────────────────
-  //
-  // `biasMode` mirrors the engine's current correction strategy; `None` is
-  // the safe default so first-time visitors see the raw catalog (and the
-  // engine's init value matches, avoiding a flicker on first paint).
-  // `absMagLimit` is the M_lim threshold used when `biasMode` is
-  // `VolumeLimited`; default −19 mag is a conventional SDSS spec-sample
-  // boundary (~M*+1).  Both are echoed by the engine's `onBiasModeChange` /
-  // `onAbsMagLimitChange` callbacks so React state stays in sync if the
-  // engine ever changes them on its own (e.g. a future preset loader).
-  const [biasMode, setBiasMode] = useState<BiasMode>(DEFAULT_BIAS_MODE);
-  const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
-
-  // ── HDR tone-map state ────────────────────────────────────────────────────
-  //
-  // `toneMapCurve` mirrors the engine's current HDR tone-map curve.  Default
-  // matches the engine's init value (Reinhard) so the first paint of the
-  // dropdown matches what the user sees on the canvas — no flicker.  The
-  // engine echoes via `onToneMapCurveChange` at startup *and* on every
-  // setToneMapCurve call, so React stays in sync.
-  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurve>(DEFAULT_TONE_MAP_CURVE);
-  // `exposure` mirrors the engine's HDR pre-tone-map multiplier.  Default
-  // 1.0 matches the engine's init value so the slider thumb starts in the
-  // middle of its 0.1..4.0 range without flicker.  Echoed by the engine
-  // via `onExposureChange` at startup *and* on every clamped setExposure
-  // call, so the displayed value is always the effective one — even if a
-  // devtools call passes a wild number that the engine clamps to 16.
-  const [exposure, setExposure] = useState<number>(DEFAULT_EXPOSURE);
-
   // ── Command palette state ─────────────────────────────────────────────────
   //
   // `paletteOpen` controls the overlay visibility.  The famous-galaxy meta
@@ -360,6 +278,7 @@ export function App(): React.ReactElement {
     // (GPU init, data loading) progresses in the background and is reported
     // via the callbacks below.
     const handle = createEngine(canvas, {
+      // ── Engine session callbacks (kept inline; extracted in Task 5) ─────────
       // Each callback just forwards the engine's output to React state.
       // Because the engine deduplicates (only calls these when values change),
       // we can pass `setState` functions directly — no extra memoisation needed.
@@ -368,63 +287,13 @@ export function App(): React.ReactElement {
       onSelectChange: setSelected,
       onFocusChange: setFocused,
       onScaleChange: setScale,
-
-      // Settings-panel callbacks: engine fires these when a setting changes
-      // (including the initial seed at startup). React state stays in sync
-      // automatically, so the panel always reflects the engine's truth.
-      onPointSizeChange: setPointSize,
-      onBrightnessChange: setBrightness,
-      onAutoRotateChange: setAutoRotate,
-      // Engine echoes its galaxy-thumbnail flag here at startup *and* on every
-      // `setGalaxyTexturesEnabled`. Wiring this echo (rather than relying on
-      // local-only optimistic updates) keeps React's view of "are thumbnails
-      // on?" identical to the engine's source-of-truth value, even if the
-      // engine ever flips it for non-UI reasons (e.g. perf-driven auto-disable).
-      onGalaxyTexturesEnabledChange: setGalaxyTexturesEnabled,
-      onMilkyWayEnabledChange: setMilkyWayEnabled,
-      // Task 15 — orientation toggles echo back from the engine so React
-      // state stays in sync if the engine ever flips them programmatically.
-      onHighlightFallbackChange: setHighlightFallback,
-      onRealOnlyModeChange: setRealOnlyMode,
-      onDepthFadeEnabledChange: setDepthFadeEnabled,
-      // LOD mode is seeded by the engine at init, then echoed back any time
-      // `setLodMode` runs (or `setSourceVisible` flips us to manual).
-      onLodModeChange: setLodMode,
-      // Mirror the engine's source mask back into React.  Critical for fixing
-      // the "first toggle is a no-op" bug: auto-LOD recomputes the engine mask
-      // continuously, and without this echo React's checkbox state would drift
-      // away from engine truth, making the first user toggle silently agree
-      // with engine state instead of flipping it.
-      onSourceMaskChange: setVisibleSourceMask,
       // Each .bin lands at its own pace; record the count so the SettingsPanel
       // can show "SDSS  220,453" alongside the toggle. Functional update so
       // multiple parallel arrivals don't clobber each other.
       onCloudReady: (source, count) => setSourceCounts((prev) => ({ ...prev, [source]: count })),
-      // One-shot: fires after the optional cosmic-web filaments.bin lands.
-      // The StatsPanel surfaces these counts ("Filaments · 3,845 strips,
-      // 27,410 verts") whenever the user has the filaments overlay enabled.
-      // No null-out path: the engine never reports filaments unloading
-      // because the asset is loaded once and stays in GPU memory for the
-      // session — the user toggles visibility, not lifecycle.
-      onFilamentsReady: (stripCount, vertexCount) =>
-        setFilamentCounts({ stripCount, vertexCount }),
       // Rolling FPS — engine throttles to integer-change events so this is a
       // cheap direct setState (no debounce / no useMemo needed).
       onFpsChange: setFps,
-      // Density-correction echoes (Malmquist bias).  Engine fires these at
-      // startup with its own defaults *and* every time `setBiasMode` /
-      // `setAbsMagLimit` mutates them, so React's SettingsPanel always
-      // reflects engine truth without optimistic local updates.
-      onBiasModeChange: setBiasMode,
-      onAbsMagLimitChange: setAbsMagLimit,
-      // HDR tone-map echo — mirrors the bias-mode pattern.  Engine seeds
-      // its default at init (Reinhard) and fires on every setToneMapCurve.
-      onToneMapCurveChange: setToneMapCurve,
-      // Exposure echo — same lifecycle as the tone-curve echo above.  The
-      // engine seeds its default (1.0) at init and re-fires on every
-      // clamped setExposure, so React's slider position always reflects
-      // the effective value the shader is using.
-      onExposureChange: setExposure,
       // SpaceMouse pairing state: `connect()`'s promise gives us the initial
       // success/failure, but only this callback covers spontaneous disconnects
       // (USB unplug, permission revocation).  Without it React's "Connected"
@@ -446,6 +315,11 @@ export function App(): React.ReactElement {
       // `setTier`-triggered hot-swap.  The LoadingBar component fades
       // itself out when this becomes null.
       onLoadProgress: setLoadProgress,
+      // ── Settings echoes (driven by useEngineSettings) ─────────────────────
+      // All settings echo callbacks live in the hook and are spread here so
+      // the engine can fire them to keep React's SettingsPanel in sync.
+      // Captured at first render; stable for the engine's lifetime.
+      ...settingsCallbacks,
     });
 
     // Store the handle so the Esc effect (below) can call clearSelection().
