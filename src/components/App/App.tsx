@@ -109,12 +109,9 @@ import {
   DEFAULT_VISIBLE_SOURCE_MASK,
 } from '../../data/defaults';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
-import {
-  loadPgcAliases,
-  type AliasIndexEntry,
-} from '../../services/engine/pgcAliasLoader';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
+import { useAliasIndex } from '../../hooks/useAliasIndex';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -348,39 +345,6 @@ export function App(): React.ReactElement {
   // mount and shared with the deep-link drain via `useFocusUrlSync`.
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  // ── Alias-search state ───────────────────────────────────────────────────
-  //
-  // The PGC->aliases JSON sidecar is ~1.7 MB and we don't pay that cost on
-  // engine startup.  Instead, when the palette opens for the first time, we
-  // kick off `loadPgcAliases()` and join the result against the GLADE and
-  // 2MRS clouds' `objIDs` arrays to produce a single flat alias index the
-  // palette can search.  Subsequent palette opens reuse the cached index.
-  //
-  // `aliasIndex === null` means "not loaded yet"; `[]` means "loaded but
-  // empty" (sidecar absent, or join produced no hits).  The palette
-  // accepts undefined/empty without complaint.
-  const [aliasIndex, setAliasIndex] = useState<readonly AliasIndexEntry[] | null>(null);
-  // Tracks whether we've already kicked off the lazy load — useEffect's
-  // `paletteOpen` dependency would otherwise re-trigger on every open.
-  const aliasLoadStarted = useRef(false);
-
-  // Raw PGC->aliases Map.  Same lifecycle as `aliasIndex` (populated
-  // inside the same `loadPgcAliases().then(...)` block), but kept as the
-  // unflattened lookup table so the deep-link resolver can use it as the
-  // "is this PGC a real galaxy in HyperLEDA?" oracle for the
-  // tier-vs-unknown distinction.  Starts as an empty Map so the
-  // resolver can call `aliasMap.has(...)` without a null guard; an
-  // empty map just means we haven't loaded yet, in which case unknown
-  // PGCs collapse to `unknown` instead of `tier`.  That trade-off is
-  // documented in `resolveFocusTarget.ts`: a deep link to a PGC that's
-  // only present in a larger tier silently fails on the very first
-  // navigation if the user hasn't opened the palette yet.  The tier
-  // banner does fire if the user retries after the palette warm-up
-  // populates the map.
-  const [aliasMap, setAliasMap] = useState<ReadonlyMap<bigint, readonly string[]>>(
-    () => new Map(),
-  );
-
   // ── Engine startup effect ──────────────────────────────────────────────────
 
   useEffect(() => {
@@ -498,65 +462,12 @@ export function App(): React.ReactElement {
   // ── Famous-galaxy sidecars (CommandPalette + deep-link drain) ────────────
   const { famousMeta, famousXrefs } = useFamousMeta();
 
-  // ── Alias index — lazy-built on first palette open ────────────────────────
-  //
-  // Two-phase pipeline:
-  //
-  //   1. Fetch `pgc_aliases.json` (the PGC -> human-name Map).
-  //   2. Walk both GLADE and 2MRS objIDs, look up each non-zero PGC in
-  //      that Map, emit one `AliasIndexEntry` per match.
-  //
-  // Both phases happen exactly once per session; the result is held in
-  // `aliasIndex` state and reused on subsequent opens.  We trigger off
-  // `paletteOpen` (rather than at engine-ready time) because most users
-  // never hit Cmd+K — paying the 1.7 MB JSON download up front would be
-  // wasteful for them.
-  //
-  // The `sourceCounts` dependency ensures the effect re-runs when each
-  // cloud finishes loading; the `engine.getCloudObjIds()` calls inside
-  // would return undefined before that.  We *also* require both 2MRS
-  // and GLADE counts to be non-zero before kicking off so we don't
-  // build a half-populated index from a mid-load engine state.
-  useEffect(() => {
-    if (!paletteOpen) return;
-    if (aliasLoadStarted.current) return;
-    const handle = handleRef.current;
-    if (!handle?.getCloudObjIds) return;
-    // Don't kick off until both GLADE and 2MRS have at least started loading.
-    // Without this guard the join walks a missing array and emits no entries,
-    // permanently caching an empty index.
-    const gladeCount = sourceCounts[Source.Glade] ?? 0;
-    const twoMrsCount = sourceCounts[Source.TwoMRS] ?? 0;
-    if (gladeCount === 0 && twoMrsCount === 0) return;
-
-    aliasLoadStarted.current = true;
-    loadPgcAliases().then((loadedAliasMap) => {
-      // Stash the raw Map for the deep-link resolver's tier-vs-unknown
-      // oracle.  Done before the index build because the resolver only
-      // needs `.has(pgc)`, not the per-source localIdx join — and a
-      // future deep-link arrival should be able to consult the oracle
-      // even before the (slower) index walk finishes if ever it grows
-      // expensive.
-      setAliasMap(loadedAliasMap);
-
-      // Build the flat index — one entry per (cloud, localIdx) where the
-      // PGC at that localIdx has at least one named alias.  Skip zero
-      // PGCs (unmapped rows in the catalog cross-match).
-      const out: AliasIndexEntry[] = [];
-      for (const source of [Source.Glade, Source.TwoMRS] as const) {
-        const objIds = handle.getCloudObjIds?.(source);
-        if (!objIds) continue;
-        for (let i = 0; i < objIds.length; i++) {
-          const pgc = objIds[i]!;
-          if (pgc === 0n) continue;
-          const names = loadedAliasMap.get(pgc);
-          if (!names || names.length === 0) continue;
-          out.push({ pgc, names, source, localIdx: i });
-        }
-      }
-      setAliasIndex(out);
-    });
-  }, [paletteOpen, sourceCounts]);
+  // ── Lazy alias index for command palette ────────────────────────────────
+  const { aliasIndex, aliasMap } = useAliasIndex({
+    paletteOpen,
+    sourceCounts,
+    engineHandleRef: handleRef,
+  });
 
   // ── Deep-link focus URL sync ──────────────────────────────────────────────
   //
