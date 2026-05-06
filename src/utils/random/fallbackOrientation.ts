@@ -28,9 +28,28 @@
 
 import { mulberry32 } from './mulberry32';
 
-/** Fold a bigint and two doubles into a single 32-bit seed. */
+/**
+ * Fold a bigint and two doubles into a single 32-bit seed.
+ *
+ * Defensive coercion of `objID`: the function signature promises a
+ * bigint, but in practice the caller is `pointInfoBuilder` reading
+ * `cloud.objIDs[idx]`.  In a brief window during a tier swap, the GPU
+ * pick texture can hand back a global index that briefly out-runs the
+ * just-uploaded cloud buffers — the index lands out of bounds, and
+ * `BigUint64Array[oob]` returns `undefined`.  `undefined & 0xffffffffn`
+ * then throws "Cannot mix BigInt and other types" and crashes the
+ * hover handler.
+ *
+ * Coercing to `0n` here is the right behaviour: the resulting
+ * orientation is still deterministic (derived from RA/Dec, which the
+ * caller does pass), and unmatched rows hash the same way they always
+ * have.  The "real" fix for the upstream race lives in the engine's
+ * pick-to-cloud index resolution; this guard just keeps a transient
+ * mismatch from blowing up the InfoCard build.
+ */
 function hashSeed(objID: bigint, ra: number, dec: number): number {
-  const idLow = Number(objID & 0xffffffffn);
+  const id = typeof objID === 'bigint' ? objID : 0n;
+  const idLow = Number(id & 0xffffffffn);
   const raMix = Math.imul(Math.round(ra * 1e5) | 0, 0x9e3779b1);
   const decMix = Math.imul(Math.round(dec * 1e5) | 0, 0x85ebca77);
   let h = idLow ^ raMix ^ decMix;
