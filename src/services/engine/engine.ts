@@ -1932,6 +1932,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       return state.sources.clouds.get(source)?.objIDs;
     },
 
+    getCloud(source) {
+      // Same read-only contract as `getCloudObjIds` above — we hand
+      // out the live reference, not a clone, because the resolver
+      // walks positions/objIDs once and would otherwise force a
+      // multi-MB copy for a one-shot deep-link resolve.  The only
+      // current consumer is `resolveFocusTarget`, which never mutates.
+      return state.sources.clouds.get(source);
+    },
+
     selectByAlias({ source, localIdx }) {
       // Guard: source cloud may not be loaded yet (e.g. user opened
       // the palette before GLADE finished arriving), or the localIdx

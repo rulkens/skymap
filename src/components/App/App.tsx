@@ -66,7 +66,13 @@
 
 import { useRef, useEffect, useState } from 'react';
 import { createEngine } from '../../services/engine';
-import type { EngineHandle, EngineStatus, PointInfo, ScaleInfo } from '../../@types';
+import type {
+  EngineHandle,
+  EngineStatus,
+  PointCloud,
+  PointInfo,
+  ScaleInfo,
+} from '../../@types';
 import type { LoadProgressState } from '../../@types/EngineCallbacks';
 import type { LodMode } from '../../@types/LodMode';
 import type { Tier } from '../../@types/Tier';
@@ -81,7 +87,7 @@ import { StatsPanel } from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SearchTrigger } from '../SearchTrigger/SearchTrigger';
 import appStyles from './App.module.css';
-import { Source } from '../../data/sources';
+import { ALL_SOURCES, Source } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import { ToneMapCurve } from '../../data/toneMapCurve';
 import {
@@ -112,6 +118,8 @@ import {
   loadPgcAliases,
   type AliasIndexEntry,
 } from '../../services/engine/pgcAliasLoader';
+import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
+import { resolveFocusTarget } from '../../services/engine/resolveFocusTarget';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -353,6 +361,23 @@ export function App(): React.ReactElement {
   // `paletteOpen` dependency would otherwise re-trigger on every open.
   const aliasLoadStarted = useRef(false);
 
+  // Raw PGC->aliases Map.  Same lifecycle as `aliasIndex` (populated
+  // inside the same `loadPgcAliases().then(...)` block), but kept as the
+  // unflattened lookup table so the deep-link resolver can use it as the
+  // "is this PGC a real galaxy in HyperLEDA?" oracle for the
+  // tier-vs-unknown distinction.  Starts as an empty Map so the
+  // resolver can call `aliasMap.has(...)` without a null guard; an
+  // empty map just means we haven't loaded yet, in which case unknown
+  // PGCs collapse to `unknown` instead of `tier`.  That trade-off is
+  // documented in `resolveFocusTarget.ts`: a deep link to a PGC that's
+  // only present in a larger tier silently fails on the very first
+  // navigation if the user hasn't opened the palette yet.  The tier
+  // banner does fire if the user retries after the palette warm-up
+  // populates the map.
+  const [aliasMap, setAliasMap] = useState<ReadonlyMap<bigint, readonly string[]>>(
+    () => new Map(),
+  );
+
   // ── Engine startup effect ──────────────────────────────────────────────────
 
   useEffect(() => {
@@ -508,7 +533,15 @@ export function App(): React.ReactElement {
     if (gladeCount === 0 && twoMrsCount === 0) return;
 
     aliasLoadStarted.current = true;
-    loadPgcAliases().then((aliasMap) => {
+    loadPgcAliases().then((loadedAliasMap) => {
+      // Stash the raw Map for the deep-link resolver's tier-vs-unknown
+      // oracle.  Done before the index build because the resolver only
+      // needs `.has(pgc)`, not the per-source localIdx join — and a
+      // future deep-link arrival should be able to consult the oracle
+      // even before the (slower) index walk finishes if ever it grows
+      // expensive.
+      setAliasMap(loadedAliasMap);
+
       // Build the flat index — one entry per (cloud, localIdx) where the
       // PGC at that localIdx has at least one named alias.  Skip zero
       // PGCs (unmapped rows in the catalog cross-match).
@@ -519,7 +552,7 @@ export function App(): React.ReactElement {
         for (let i = 0; i < objIds.length; i++) {
           const pgc = objIds[i]!;
           if (pgc === 0n) continue;
-          const names = aliasMap.get(pgc);
+          const names = loadedAliasMap.get(pgc);
           if (!names || names.length === 0) continue;
           out.push({ pgc, names, source, localIdx: i });
         }
@@ -527,6 +560,99 @@ export function App(): React.ReactElement {
       setAliasIndex(out);
     });
   }, [paletteOpen, sourceCounts]);
+
+  // ── Deep-link focus URL sync ──────────────────────────────────────────────
+  //
+  // `useFocusUrlSync` does two things in one place:
+  //
+  //   1. On mount, parses any `#focus=…` from `window.location.hash`,
+  //      surfaces it as `pendingTarget`, and scrubs the hash so a
+  //      reload doesn't re-fire the same resolve forever.
+  //   2. On every `selected` change, mirrors the selection back to the
+  //      URL via `history.replaceState` (no new history entry per click).
+  //
+  // The drain effect below consumes `pendingTarget` once the engine and
+  // the relevant clouds are ready.  See the hook's module header for
+  // the full design rationale (replaceState vs pushState, mountedRef
+  // guard for strict-mode double-mount, etc.).
+  const { pendingTarget, clearPending } = useFocusUrlSync({ selected });
+
+  // ── Drain the pending deep-link target once the engine is ready ──────────
+  //
+  // This effect re-runs whenever `pendingTarget`, `sourceCounts`,
+  // `famousMeta`, or `aliasMap` change because each is a precondition
+  // for at least one resolver branch:
+  //
+  //   - `pendingTarget`        — the thing we're trying to resolve.
+  //   - `sourceCounts`         — proxy for "has at least one cloud landed?"
+  //                              (`onCloudReady` is what grows this map).
+  //   - `famousMeta`           — required for the `famous` branch.
+  //   - `aliasMap`             — required for the `pgc` tier-vs-unknown
+  //                              oracle.
+  //
+  // We don't try to be cleverer (e.g. only re-run when the *specific*
+  // cloud the target needs has loaded).  The cost of an extra resolve
+  // pass over a few-row cloud is sub-millisecond; the readability cost
+  // of a finer-grained dependency array is far higher than the saving.
+  useEffect(() => {
+    if (!pendingTarget) return;
+    const handle = handleRef.current;
+    if (!handle?.getCloud || !handle?.selectByAlias) return;
+
+    // Build the resolver's `clouds` input from currently-loaded sources.
+    // We skip Synthetic for two reasons: (1) the resolver excludes it
+    // anyway because synthetic objIDs are sequential 0..N-1 and would
+    // collide spuriously with low PGCs, and (2) keeping it out of the
+    // input is tidier and saves a pass over the large `pos@` branch.
+    const clouds: { source: Source; cloud: PointCloud }[] = [];
+    for (const source of ALL_SOURCES) {
+      if (source === Source.Synthetic) continue;
+      const cloud = handle.getCloud(source);
+      if (cloud) clouds.push({ source, cloud });
+    }
+
+    // Wait until at least one non-Synthetic cloud has loaded before
+    // attempting to resolve.  Without this guard a `famous` deep link
+    // arriving before the Famous cloud lands would resolve as
+    // `unknown`, the hook would clear the hash, and the user would
+    // lose the focus they typed.  The effect's `sourceCounts` dep
+    // ensures we re-run the moment the first cloud arrives.
+    if (clouds.length === 0) return;
+
+    const result = resolveFocusTarget({
+      target: pendingTarget,
+      clouds,
+      famousMeta,
+      aliasMap,
+    });
+
+    if (result.resolved) {
+      // Selection bookkeeping (incl. focus tween) lives inside the
+      // engine's `selectByAlias` — we do NOT call `focusOn` separately
+      // because that would cancel the tween `selectByAlias` just
+      // started.  Clear pendingTarget so the URL settles via the
+      // hook's selection-change effect (which writes the canonical
+      // focus id back into the hash).
+      handle.selectByAlias({ source: result.source, localIdx: result.localIdx });
+      clearPending();
+    } else if (result.reason === 'unknown') {
+      // Silent drop is hostile (the user pasted a URL and got
+      // nothing); a thrown error is overkill (the URL was just
+      // mistyped).  A single console.warn splits the difference:
+      // visible to anyone who opens devtools, ignorable for everyone
+      // else.  `clearPending()` zeroes pendingTarget immediately, so
+      // the warn fires exactly once per unresolved target — even
+      // though the effect re-runs as more clouds arrive, the next
+      // pass short-circuits on the `pendingTarget` null check.
+      console.warn('[deep-link] could not resolve focus target', pendingTarget);
+      clearPending();
+    }
+    // tier: leave pendingTarget set so a future render can show a
+    // "load a larger tier" banner (Task 5).  We deliberately do NOT
+    // call clearPending() here — the banner reads off pendingTarget
+    // and clears it itself when the user dismisses or after the user
+    // has switched tier.
+  }, [pendingTarget, sourceCounts, famousMeta, aliasMap, clearPending]);
 
   // ── Keyboard shortcuts effect ──────────────────────────────────────────────
   //

@@ -6,6 +6,7 @@
 
 import type { LodMode } from './LodMode';
 import type { Tier } from './Tier';
+import type { PointCloud } from './PointCloud';
 import type { Source } from '../data/sources';
 import type { BiasMode } from '../data/biasMode';
 import type { ToneMapCurve } from '../data/toneMapCurve';
@@ -262,6 +263,24 @@ export type EngineHandle = {
    * back to "no aliases" when undefined.
    */
   getCloudObjIds?: (source: Source) => BigUint64Array | undefined;
+
+  /**
+   * Return the full `PointCloud` for a given source, or `undefined` if it
+   * hasn't been loaded yet.  Read-only contract — same caveat as
+   * `getCloudObjIds`: don't mutate the returned object; it's the same
+   * reference the engine keeps internally.
+   *
+   * Used by the deep-link resolver, which needs both `objIDs` (for
+   * PGC/SDSS exact-match lookup) and `positions` (for the `pos@`
+   * fallback nearest-neighbour search).  Distinct from `getCloudObjIds`
+   * because that helper returns just the objID array — narrower
+   * contract for the alias-index builder which never reads positions.
+   *
+   * Optional because not every engine build needs to expose internal
+   * cloud data; the deep-link resolver guards on `?.` and falls back to
+   * `unknown` when undefined.
+   */
+  getCloud?: (source: Source) => PointCloud | undefined;
 
   /**
    * Set the level-of-detail rendering mode.
