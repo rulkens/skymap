@@ -122,7 +122,7 @@ export function CollapsibleSection({
           it 90° via CSS transform when open.  Animating transform is
           smooth; swapping text characters can't be animated.
         */}
-        <span className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`} aria-hidden>
+        <span className={cx(styles.chevron, open && styles.chevronOpen)} aria-hidden>
           ▸
         </span>
         {/*

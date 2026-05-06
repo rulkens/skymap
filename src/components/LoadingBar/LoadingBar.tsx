@@ -108,7 +108,7 @@ export function LoadingBar({ progress }: LoadingBarProps): ReactNode {
       aria-valuenow={indeterminate ? undefined : Math.round(fraction * 100)}
     >
       {indeterminate ? (
-        <div className={`${styles.fill} ${styles.indeterminate}`} />
+        <div className={cx(styles.fill, styles.indeterminate)} />
       ) : (
         <div className={styles.fill} style={{ width: `${fraction * 100}%` }} />
       )}

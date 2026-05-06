@@ -123,7 +123,7 @@ export function Panel({ title, ariaLabel, defaultOpen = true, children }: PanelP
           reads as one consistent "fold" at every nesting level.
         */}
         <span
-          className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`}
+          className={cx(styles.chevron, open && styles.chevronOpen)}
           aria-hidden
         >
           ▸

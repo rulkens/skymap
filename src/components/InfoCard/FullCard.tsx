@@ -23,6 +23,7 @@
 
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import cx from 'classnames';
 import type { PointInfo } from '../../@types';
 import { Source } from '../../data/sources';
 import { formatDistance, formatDiameterKpc } from '../../utils/format/distance';
@@ -200,9 +201,10 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
           {info.famous.description && (
             <div className={styles.cardRow}>
               <span
-                className={`${styles.cardValue} ${
-                  descExpanded ? styles.descExpanded : styles.descCollapsed
-                }`}
+                className={cx(
+                  styles.cardValue,
+                  descExpanded ? styles.descExpanded : styles.descCollapsed,
+                )}
                 style={{ fontStyle: 'italic' }}
               >
                 {info.famous.description}
@@ -286,7 +288,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
       )}
 
       {/* ── Thumbnail + cosmology summary ─────────────────────────────────── */}
-      <div className={`${styles.cardSection} ${styles.cardTopRow}`}>
+      <div className={cx(styles.cardSection, styles.cardTopRow)}>
         <Thumbnail ra={info.ra} dec={info.dec} url={info.thumbnailUrl} />
         <div className={styles.cardSummary}>
           {/* Friendly lookback line — the most memorable single fact about this galaxy. */}
@@ -448,7 +450,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
               element with tabular-nums so the digits don't reflow, and at a
               slightly smaller font size so it fits on one line inside the card.
             */}
-            <code className={`${styles.cardValue} ${styles.cardObjid}`}>{String(info.objID)}</code>
+            <code className={cx(styles.cardValue, styles.cardObjid)}>{String(info.objID)}</code>
           </div>
         </div>
       </details>
@@ -480,7 +482,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
           {' →'}
         </a>
       ) : (
-        <div className={`${styles.externalLink} ${styles.externalLinkDisabled}`}>
+        <div className={cx(styles.externalLink, styles.externalLinkDisabled)}>
           No catalogue page for {info.sourceLabel}
         </div>
       )}

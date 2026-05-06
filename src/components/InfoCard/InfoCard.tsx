@@ -38,6 +38,7 @@
  */
 
 import type { ReactNode } from 'react';
+import cx from 'classnames';
 import type { PointInfo } from '../../@types';
 import { FullCard } from './FullCard';
 import { CompactCard } from './CompactCard';
@@ -105,7 +106,7 @@ export function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps)
   const fullCardPinned = isStacked ? true : !hovered;
 
   return (
-    <div className={`${styles.infoCardStack} infoCardStack`}>
+    <div className={cx(styles.infoCardStack, 'infoCardStack')}>
       <FullCard
         info={fullCardInfo}
         pinned={fullCardPinned}
