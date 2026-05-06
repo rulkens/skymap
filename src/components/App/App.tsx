@@ -110,15 +110,11 @@ import {
 } from '../../data/defaults';
 import { isWebHIDSupported } from '../../services/input/spaceMouse';
 import {
-  loadFamousSidecars,
-  type FamousMetaEntry,
-  type FamousXrefMap,
-} from '../../services/engine/famousMetaLoader';
-import {
   loadPgcAliases,
   type AliasIndexEntry,
 } from '../../services/engine/pgcAliasLoader';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
+import { useFamousMeta } from '../../hooks/useFamousMeta';
 
 // ── Default / initial state ────────────────────────────────────────────────────
 
@@ -347,17 +343,10 @@ export function App(): React.ReactElement {
 
   // ── Command palette state ─────────────────────────────────────────────────
   //
-  // `paletteOpen` controls the overlay visibility; `famousMeta` holds the
-  // loaded famous-galaxy entries.  The meta is fetched once at mount (the
-  // same data the engine loaded at startup) so the palette can filter and
-  // display names without a second round-trip.
+  // `paletteOpen` controls the overlay visibility.  The famous-galaxy meta
+  // (entries + xrefs) comes from `useFamousMeta` below — loaded once at
+  // mount and shared with the deep-link drain via `useFocusUrlSync`.
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [famousMeta, setFamousMeta] = useState<FamousMetaEntry[]>([]);
-  // Companion xrefs sidecar — paired with `famousMeta` so the deep-link
-  // drain can hand both to `engine.selectByAlias` and dodge the engine's
-  // internal sidecar-load race.  See the `selectByAlias` JSDoc for why
-  // the override exists.
-  const [famousXrefs, setFamousXrefs] = useState<FamousXrefMap>({});
 
   // ── Alias-search state ───────────────────────────────────────────────────
   //
@@ -506,18 +495,8 @@ export function App(): React.ReactElement {
     };
   }, []); // Empty array: run once on mount, clean up on unmount.
 
-  // ── Famous-galaxy meta loader ──────────────────────────────────────────────
-  //
-  // Load the famous sidecars once at mount so the CommandPalette has names +
-  // descriptions to filter against.  The engine loads the same file internally,
-  // but exposing it here avoids reaching into the engine's internal state.
-  // Double-loading is cheap (the browser caches the JSON fetch).
-  useEffect(() => {
-    loadFamousSidecars().then((sc) => {
-      setFamousMeta(sc.meta);
-      setFamousXrefs(sc.xrefs);
-    });
-  }, []);
+  // ── Famous-galaxy sidecars (CommandPalette + deep-link drain) ────────────
+  const { famousMeta, famousXrefs } = useFamousMeta();
 
   // ── Alias index — lazy-built on first palette open ────────────────────────
   //
