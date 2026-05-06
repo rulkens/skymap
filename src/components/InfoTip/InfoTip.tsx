@@ -68,9 +68,24 @@ export type InfoTipProps = {
    * supplied between the opening and closing tags.
    */
   children?: ReactNode;
+  /**
+   * When `true`, the trigger span doesn't claim its own keyboard
+   * focus or `aria-describedby` — we assume the children include a
+   * focusable element (button, link) that is the user's intended tab
+   * stop.  The wrapper's `:focus-within` still catches that
+   * descendant's focus, so the tip still reveals on Tab.  Use this to
+   * wrap cards or links; leave it off (default) when the trigger is
+   * a passive value or label that should itself be the focus target.
+   */
+  interactive?: boolean;
 };
 
-export function InfoTip({ title, body, children }: InfoTipProps): ReactNode {
+export function InfoTip({
+  title,
+  body,
+  children,
+  interactive = false,
+}: InfoTipProps): ReactNode {
   // useId returns a stable ID like ":r0:" — strip the colons so the
   // value is a valid CSS dashed-ident character set.  We don't need
   // it to be globally meaningful, only unique among co-rendered tips.
@@ -91,12 +106,12 @@ export function InfoTip({ title, body, children }: InfoTipProps): ReactNode {
     <span className={styles.wrapper}>
       <span
         className={styles.trigger}
-        // tabIndex makes the trigger keyboard-focusable AND tappable on
-        // touch devices.  role="button" is intentionally omitted —
-        // there's no action; the tip auto-shows on focus.  The native
-        // tooltip semantics live on the panel via role="tooltip".
-        tabIndex={0}
-        aria-describedby={tipDomId}
+        // Passive triggers carry their own tabIndex + aria-describedby.
+        // Interactive triggers leave focus to the focusable child (e.g.
+        // a <button>), and the wrapper's :focus-within catches the
+        // descendant focus so the tip still reveals on Tab.
+        tabIndex={interactive ? undefined : 0}
+        aria-describedby={interactive ? undefined : tipDomId}
         style={triggerStyle}
       >
         {children}

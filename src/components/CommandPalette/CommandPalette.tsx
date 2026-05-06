@@ -33,7 +33,62 @@ import { scoreAliasMatch } from './scoreAliasMatch';
 import type { FamousMetaEntry } from '../../services/engine/famousMetaLoader';
 import type { AliasIndexEntry } from '../../services/engine/pgcAliasLoader';
 import { Source, sourceLabel } from '../../data/sources';
+import { InfoTip } from '../InfoTip/InfoTip';
 import styles from './CommandPalette.module.css';
+
+/**
+ * Catalogue-id pattern: ANYTHING that matches is treated as a
+ * designation (M31, NGC 6946, IC 342, UGC 7772, C45, …) rather than
+ * a "proper name".  Used by `pickProperName` to surface human-
+ * readable names like "Andromeda Galaxy" on the featured-grid card
+ * face when one is available.
+ *
+ * The pattern is deliberately liberal — extra prefixes (Arp, Mrk,
+ * MCG, ESO, …) all read as catalog ids and are filtered out.  The
+ * one false-positive risk is "M-named" galaxies whose proper name
+ * happens to start with "M" too, but those don't exist in our seed.
+ */
+const DESIGNATION_RE =
+  /^(M\s*\d+|C\s*\d+|NGC\s*\d+|IC\s*\d+|UGC\s*\d+|UGCA\s*\d+|PGC\s*\d+|MCG[\s-]?[+-]?\d|ESO\s*\d|Arp\s*\d|Mrk\s*\d)/i;
+
+function pickProperName(names: readonly string[]): string {
+  for (const n of names) {
+    if (!DESIGNATION_RE.test(n.trim())) return n;
+  }
+  return names[0] ?? '?';
+}
+
+/**
+ * Body content for an InfoTip that hovers a featured-grid card.
+ * Surfaces the same flavour of context the InfoCard would show if
+ * you actually selected the galaxy: morphological type, every
+ * catalog designation it goes by, and the curated one-paragraph
+ * description.  Lets users browse the grid by hovering rather than
+ * having to commit a click to each card to read what it is.
+ *
+ * The "Also known as" line is the part the user explicitly asked
+ * for: when the card face shows "Andromeda Galaxy", the tip body
+ * reveals that's also M31, NGC 224, etc.
+ */
+type FeaturedCardTipProps = {
+  names: readonly string[];
+  description: string;
+  type: string;
+};
+function FeaturedCardTip({ names, description, type }: FeaturedCardTipProps): ReactNode {
+  return (
+    <>
+      {type && <div className={styles.tipType}>{type}</div>}
+      {names.length > 1 && (
+        <div className={styles.tipAliases}>
+          <span className={styles.tipAliasesLabel}>Also known as </span>
+          {names.join(' · ')}
+        </div>
+      )}
+      {description && <div className={styles.tipDescription}>{description}</div>}
+    </>
+  );
+}
 
 /**
  * The maximum number of alias rows to include in the rendered list.
@@ -260,24 +315,39 @@ export function CommandPalette({
         />
         {showFeatured && (
           <ul className={styles.featuredGrid} aria-label="Featured galaxies">
-            {featuredEntries.map((entry) => (
-              <li key={`featured:${entry.id}`}>
-                <button
-                  type="button"
-                  className={styles.featuredCard}
-                  onClick={() => dispatchSelection({ kind: 'famous', entry, score: 0 })}
-                  aria-label={`Focus ${entry.names[0]}`}
-                >
-                  <img
-                    className={styles.featuredThumb}
-                    src={`/images/famous/${entry.id}.webp`}
-                    alt=""
-                    loading="lazy"
-                  />
-                  <span className={styles.featuredName}>{entry.names[0]}</span>
-                </button>
-              </li>
-            ))}
+            {featuredEntries.map((entry) => {
+              const properName = pickProperName(entry.names);
+              return (
+                <li key={`featured:${entry.id}`}>
+                  <InfoTip
+                    interactive
+                    title={properName}
+                    body={
+                      <FeaturedCardTip
+                        names={entry.names}
+                        description={entry.description}
+                        type={entry.type}
+                      />
+                    }
+                  >
+                    <button
+                      type="button"
+                      className={styles.featuredCard}
+                      onClick={() => dispatchSelection({ kind: 'famous', entry, score: 0 })}
+                      aria-label={`Focus ${properName}`}
+                    >
+                      <img
+                        className={styles.featuredThumb}
+                        src={`/images/famous/${entry.id}.webp`}
+                        alt=""
+                        loading="lazy"
+                      />
+                      <span className={styles.featuredName}>{properName}</span>
+                    </button>
+                  </InfoTip>
+                </li>
+              );
+            })}
           </ul>
         )}
         {matches.length === 0 ? (

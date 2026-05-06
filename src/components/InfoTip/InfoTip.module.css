@@ -123,9 +123,24 @@
 
   /* Box shape and surface */
   display: none;
-  z-index: 100;
+  /*
+   * z-index high enough to land above every other floating UI piece
+   * (InfoCard pinned/hover variants are z-index 10; the
+   * CommandPalette backdrop+panel are 50; SearchTrigger sits in the
+   * same range).  An InfoTip explaining a value should never
+   * disappear behind the panel that owns the value, so 1000 keeps
+   * it on top with comfortable headroom.
+   */
+  z-index: 1000;
   width: max-content;
-  max-width: 320px;
+  /*
+   * 360px gives multi-paragraph bodies (the featured-card tip with
+   * type + aliases + curated description) room to breathe without
+   * letting any single line stretch to an uncomfortable reading
+   * measure on a wide monitor.  Short jargon-row tips remain narrow
+   * because of `width: max-content`.
+   */
+  max-width: 360px;
   padding: 10px 12px;
 
   background: var(--surface-card-strong);
@@ -193,6 +208,19 @@
 /* Modern anchor positioning for browsers that support it. */
 @supports (anchor-name: --x) {
   .tip {
+    /*
+     * `position: fixed` (instead of `absolute`) so the tip lives in
+     * the viewport's coordinate system and escapes ancestor
+     * `overflow: hidden` clipping.  Crucial when the trigger sits
+     * inside a panel that clips its rounded corners — the
+     * CommandPalette panel does that, and so will any future glass
+     * surface that uses the same shared aesthetic.  Anchor
+     * positioning works fine with `position: fixed`, so the tip
+     * still locates itself precisely above the trigger and follows
+     * the trigger if scroll moves it.
+     */
+    position: fixed;
+
     /* Reset the fallback inset/transform; anchor positioning takes over. */
     bottom: auto;
     left: auto;

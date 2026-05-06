@@ -79,14 +79,7 @@
   right: var(--space-6);
   height: 1px;
   border-radius: var(--radius-xs);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--color-accent-gradient-edge) 30%,
-    var(--color-accent-gradient-mid) 50%,
-    var(--color-accent-gradient-edge) 70%,
-    transparent 100%
-  );
+  background: var(--gradient-accent-bar);
 }
 
 /* ── Title row ────────────────────────────────────────────────────────────── */
