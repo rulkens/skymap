@@ -3,41 +3,37 @@
  *
  * ### Architecture overview
  *
- * This component sits at the boundary between the imperative WebGPU engine and
- * the React UI. It:
+ * This component is the boundary between the imperative WebGPU engine and the
+ * React UI.  Its job is wiring: pull state out of focused hooks, hand it to
+ * presentational children, and forward user input back into the engine.  All
+ * substantive logic lives in five custom hooks under `src/hooks/`:
  *
- *   1. Owns a `<canvas>` element via `useRef` — the canvas is passed to the
- *      engine, which takes over its GPU context.
- *   2. Starts the engine in a `useEffect` (runs once, on mount).
- *   3. Holds four pieces of state (`status`, `hovered`, `selected`, `scale`)
- *      that the engine updates via callbacks.
- *   4. Distributes that state to child components as plain props.
+ *   1. `useEngineSettings` — owns the ~17 settings useStates (point size,
+ *      brightness, tone curve, …) and the `EngineCallbacks` echo slice that
+ *      keeps them in sync with engine truth.
+ *   2. `useEngine` — owns `canvasRef`, `handleRef`, the one-shot
+ *      `createEngine` startup `useEffect`, and the engine-driven session
+ *      state (`status`, `hovered`, `selected`, `focused`, `scale`, `fps`,
+ *      `sourceCounts`, `loadProgress`, `currentTier`).  Accepts the settings
+ *      hook's callbacks as `extraCallbacks` so the two interlock cleanly.
+ *   3. `useFamousMeta` — loads `famous_meta.json` + `famous_xrefs.json` once
+ *      at mount; consumed by the CommandPalette and the deep-link drain.
+ *   4. `useAliasIndex` — lazy two-phase pipeline that builds the PGC alias
+ *      index on the first palette open, returning `{ aliasIndex, aliasMap }`.
+ *   5. `useFocusUrlSync` — owns the entire `#focus=…` URL lifecycle.
+ *   6. `useKeyboardShortcuts` — global keydown listener for Cmd+K / Esc /
+ *      f / h / l, plus the form-field guard.
  *
- * The engine drives everything asynchronously (GPU init, data fetch, render
- * loop, pointer events). React just receives the results and re-renders. The
- * two worlds meet only here — the rest of the React tree is purely presentational.
+ * The hook order at the call site is dictated by data flow: settings runs
+ * first so its `engineCallbacks` exist; engine runs next so other hooks can
+ * read `handleRef`; the rest follow in any order.
  *
- * ### Why useRef for the canvas?
+ * ### Why useRef for the canvas (returned from useEngine)?
  *
  * `useRef` gives us a stable container whose `.current` property points to the
  * DOM node after the component mounts. Unlike `useState`, updating a ref does
- * NOT trigger a re-render — which is exactly what we want here. The canvas is
- * never replaced; only the engine needs to know about it.
- *
- * ### Why the empty dependency array on the engine useEffect?
- *
- * `useEffect(() => { ... }, [])` runs exactly once — after the initial mount —
- * and never re-runs. This is correct because:
- *
- *   - The engine is a one-shot side effect tied to the canvas's lifetime. There
- *     are no inputs that should cause it to restart.
- *   - If we listed `canvasRef` as a dependency, the effect would re-run if the
- *     ref object identity changed — but refs are stable by design (same object
- *     for the component's lifetime), so the effect would still run only once.
- *   - Listing callbacks (e.g. `setStatus`) as dependencies would cause a new
- *     engine to start on every render because `setState` functions are stable
- *     but the linter would still warn. The empty array is the honest statement:
- *     "this engine instance lives for as long as this component lives."
+ * NOT trigger a re-render — exactly what we want for the canvas, which the
+ * engine takes over and React never touches again.
  *
  * ### Why no React.StrictMode?
  *
@@ -46,36 +42,18 @@
  * creates GPU resources, starts a render loop, and attaches event listeners —
  * it's not designed for this double-mount pattern. Rather than paper over the
  * issue with guards, we simply don't wrap the app in StrictMode. The cleanup
- * function in `useEffect` is still correct and will run on hot-reload unmounts.
+ * function inside `useEngine` is still correct and runs on hot-reload unmounts.
  *
- * ### Esc key handling
+ * ### Why is `handleRef` a ref, not state?
  *
- * A second `useEffect` (with an empty dep array) attaches a `keydown` listener
- * to `window`. It calls `handleRef.current?.clearSelection()` — reading the
- * latest handle through a ref rather than closing over the initial (null) value.
- *
- * Why a ref for the handle?
- *
- *   - The `keydown` listener is created once and never re-created (empty deps).
- *   - If we captured the handle directly from the engine `useEffect`, the
- *     listener would close over the value at creation time — which is undefined
- *     at the time the `keydown` effect runs. A ref is a stable box: we write
- *     the handle into it inside the engine effect and read it out in the keydown
- *     handler, both referring to the same `{ current }` object.
+ * Multiple hooks need to call methods on the engine (`focusOn`, `clearSelection`,
+ * `selectByAlias`).  Putting the handle in state would force every consumer
+ * to re-render when the engine starts up.  A ref is a stable box: `useEngine`
+ * writes the handle in once, every other hook reads it out, no re-renders.
  */
 
-import { useRef, useEffect, useState } from 'react';
-import { createEngine } from '../../services/engine';
-import type {
-  EngineHandle,
-  EngineStatus,
-  PointInfo,
-  ScaleInfo,
-} from '../../@types';
-import type { LoadProgressState } from '../../@types/EngineCallbacks';
-import type { LodMode } from '../../@types/LodMode';
-import type { Tier } from '../../@types/Tier';
-import { initialTierFromViewport } from '../../utils/initialTierFromViewport';
+import { useState } from 'react';
+import { useEngine } from '../../hooks/useEngine';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
 import { InfoCard } from '../InfoCard/InfoCard';
@@ -86,49 +64,11 @@ import { StatsPanel } from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SearchTrigger } from '../SearchTrigger/SearchTrigger';
 import appStyles from './App.module.css';
-import { Source } from '../../data/sources';
-import { BiasMode } from '../../data/biasMode';
-import { ToneMapCurve } from '../../data/toneMapCurve';
-import {
-  DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_AUTO_ROTATE,
-  DEFAULT_BIAS_MODE,
-  DEFAULT_BRIGHTNESS,
-  DEFAULT_DEPTH_FADE_ENABLED,
-  DEFAULT_EXPOSURE,
-  DEFAULT_FILAMENT_INTENSITY,
-  DEFAULT_FILAMENTS_ENABLED,
-  DEFAULT_GALAXY_TEXTURES_ENABLED,
-  DEFAULT_MILKY_WAY_ENABLED,
-  DEFAULT_HIGHLIGHT_FALLBACK,
-  DEFAULT_LOD_MODE,
-  DEFAULT_POINT_SIZE_PX,
-  DEFAULT_REAL_ONLY_MODE,
-  DEFAULT_SPACE_MOUSE_SENSITIVITY,
-  DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_VISIBLE_SOURCE_MASK,
-} from '../../data/defaults';
-import { isWebHIDSupported } from '../../services/input/spaceMouse';
-import {
-  loadFamousSidecars,
-  type FamousMetaEntry,
-  type FamousXrefMap,
-} from '../../services/engine/famousMetaLoader';
-import {
-  loadPgcAliases,
-  type AliasIndexEntry,
-} from '../../services/engine/pgcAliasLoader';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
-
-// ── Default / initial state ────────────────────────────────────────────────────
-
-/**
- * The scale bar needs a value from the first render, before the engine fires
- * its first `onScaleChange`. We use a safe placeholder that renders a visible
- * bar (100 px wide, "…" label) so the widget is present in the DOM even before
- * the camera state is ready.
- */
-const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
+import { useFamousMeta } from '../../hooks/useFamousMeta';
+import { useAliasIndex } from '../../hooks/useAliasIndex';
+import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
+import { useEngineSettings } from '../../hooks/useEngineSettings';
 
 // ── App ────────────────────────────────────────────────────────────────────────
 
@@ -140,444 +80,98 @@ const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
  * again (no style recalculation, no re-renders caused by canvas changes).
  */
 export function App(): React.ReactElement {
-  // ── Refs ───────────────────────────────────────────────────────────────────
+  // ── Engine-driven settings (point size, brightness, filaments, tone map, …) ──
+  //
+  // All settings useStates live inside `useEngineSettings`.  The hook
+  // returns:
+  //   - `settings` — a read-only object with all current values.
+  //   - `engineCallbacks` — the EngineCallbacks slice the engine uses to
+  //     echo those values back into React state; spread into createEngine.
+  //   - Three App-owned setters for the no-echo / partial-echo cases.
+  //
+  // useEngineSettings runs FIRST because useEngine consumes its callbacks.
+  const {
+    settings,
+    engineCallbacks: settingsCallbacks,
+    setFilamentsEnabled,
+    setFilamentIntensity,
+    setExposure,
+  } = useEngineSettings();
+  const {
+    pointSize,
+    brightness,
+    autoRotate,
+    galaxyTexturesEnabled,
+    milkyWayEnabled,
+    filamentsEnabled,
+    filamentIntensity,
+    filamentCounts,
+    highlightFallback,
+    realOnlyMode,
+    depthFadeEnabled,
+    visibleSourceMask,
+    lodMode,
+    biasMode,
+    absMagLimit,
+    toneMapCurve,
+    exposure,
+  } = settings;
 
-  // The canvas DOM node. React sets `canvasRef.current` after the first render.
-  // We pass it to `createEngine` inside the engine `useEffect`.
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // The engine handle. Written inside the engine `useEffect`; read in the Esc
-  // `useEffect`. Both effects run after mount; storing the handle in a ref
-  // avoids dependency-array gymnastics (see module comment above).
-  const handleRef = useRef<EngineHandle | null>(null);
-
-  // ── State ──────────────────────────────────────────────────────────────────
+  // ── Engine lifecycle + engine-driven session state ────────────────────────
   //
-  // Four pieces of state drive the three UI components. They are updated
-  // exclusively by engine callbacks — React never writes to them directly.
-  //
-  // `useState` with an initial value gives the component something to render
-  // on the very first frame, before the engine's first callback fires.
-
-  const [status, setStatus] = useState<EngineStatus>({ kind: 'initializing' });
-  const [hovered, setHovered] = useState<PointInfo | null>(null);
-  const [selected, setSelected] = useState<PointInfo | null>(null);
-  // ── focused: distinct from selected ─────────────────────────────────────
-  //
-  // `selected` is the pin state — set by a bare canvas click, drives the
-  // InfoCard.  `focused` is the camera-focus target — only set by
-  // deliberate focus actions (Focus button, `f` shortcut, palette pick,
-  // deep-link resolve).  The deep-link URL hook reads `focused` (not
-  // `selected`) so a casual click doesn't pollute browser history with a
-  // `#focus=…` entry.  See `EngineCallbacks.onFocusChange` for the engine
-  // side of this contract.
-  const [focused, setFocused] = useState<PointInfo | null>(null);
-  const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
-
-  // ── Settings panel state ─────────────────────────────────────────────────
-  //
-  // These mirror the engine's internal settings values. They are seeded by the
-  // engine's `onPointSizeChange`, `onBrightnessChange`, `onAutoRotateChange`
-  // callbacks (including the initial seed fired at startup), so the panel
-  // always reflects the engine's current state — not the other way around.
-  // The user's interactions flow: slider → callback → handleRef.setXxx → engine
-  // closure variable updated → callback fired → setState → React re-render.
-  // Initial values seeded from `data/defaults.ts` — single source of
-  // truth shared with the engine so the SettingsPanel doesn't briefly
-  // flash a stale value before the engine's first echo callback fires.
-  // See `data/defaults.ts` for per-default rationale.
-  const [pointSize, setPointSize] = useState<number>(DEFAULT_POINT_SIZE_PX);
-  const [brightness, setBrightness] = useState<number>(DEFAULT_BRIGHTNESS);
-  const [autoRotate, setAutoRotate] = useState<boolean>(DEFAULT_AUTO_ROTATE);
-  const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(
-    DEFAULT_GALAXY_TEXTURES_ENABLED,
-  );
-  const [milkyWayEnabled, setMilkyWayEnabled] = useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
-  // Cosmic-web filament-skeleton overlay toggle.  Defaults OFF
-  // (`DEFAULT_FILAMENTS_ENABLED`) because the underlying `filaments.bin`
-  // is an optional asset built by `npm run build-filaments` — fresh
-  // clones won't have it and an on-by-default toggle would silently
-  // do nothing.  Unlike `galaxyTexturesEnabled`/`milkyWayEnabled`, the
-  // engine does NOT fire an echo callback for this field, so we update
-  // React state optimistically inside the change handler below.
-  const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(DEFAULT_FILAMENTS_ENABLED);
-  const [filamentIntensity, setFilamentIntensity] = useState<number>(DEFAULT_FILAMENT_INTENSITY);
-  // Strip + vertex counts from the optional cosmic-web `filaments.bin`.
-  // Stays null until the engine fires `onFilamentsReady` (one-shot, after
-  // the binary lands).  The StatsPanel uses both this value and
-  // `filamentsEnabled` to decide whether to render the filaments row —
-  // when the file isn't on disk (fresh clone before `npm run build-filaments`),
-  // this stays null forever and the row stays hidden, which is the
-  // visually-clean default.
-  const [filamentCounts, setFilamentCounts] = useState<{
-    stripCount: number;
-    vertexCount: number;
-  } | null>(null);
-  const [highlightFallback, setHighlightFallback] = useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
-  const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
-  const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
-
-  // ── Multi-survey + LOD state (rev-2) ─────────────────────────────────────
-  //
-  // `visibleSourceMask` is a 32-bit bitmask: bit `n` set means "draw points
-  // from source n". We seed with `ALL_VISIBLE_MASK` (every source on) so the
-  // first paint matches the engine's startup default.
-  //
-  // `lodMode` mirrors the engine's level-of-detail mode. In 'auto' the engine
-  // recomputes the visible-source mask each frame based on camera distance;
-  // in 'manual' it leaves the mask alone (so survey toggles stick).
-  //
-  // ── Source-of-truth note ────────────────────────────────────────────────
-  // `EngineCallbacks` exposes `onLodModeChange` (which we wire up below) but
-  // does NOT currently emit an `onSourceMaskChange` event. That means in
-  // 'auto' mode, where the engine recomputes the mask each frame, our React
-  // copy of `visibleSourceMask` will **not** track those engine-driven
-  // changes — the checkboxes only reflect the user's *manual* toggles.
-  //
-  // For v1 this is acceptable because the survey toggles section is gated by
-  // 'manual' LOD mode in practice (toggling a checkbox flips the engine to
-  // manual via `setSourceVisible`'s spec). When the engine grows an
-  // `onSourceMaskChange` callback later, we can wire it here without changing
-  // any other code.
-  const [visibleSourceMask, setVisibleSourceMask] = useState<number>(DEFAULT_VISIBLE_SOURCE_MASK);
-  const [lodMode, setLodMode] = useState<LodMode>(DEFAULT_LOD_MODE);
-
-  // ── Data tier (small / medium / large) ─────────────────────────────────
-  //
-  // Seeded from the viewport width at mount via `initialTierFromViewport`:
-  //   < 768px → 'small'  (mobile)
-  //   ≥ 768px → 'medium' (default)
-  // 'large' is never auto-selected — opt-in only via the panel.
-  //
-  // Echoed by the engine via `onTierChange` so React mirrors engine truth
-  // (same lifecycle pattern as `lodMode` and `visibleSourceMask`).
-  // Lazy-init: `window` is only safe to read inside the initializer
-  // callback, since SSR hosts (in unit tests) might not have it.  We do
-  // NOT subscribe to resize events — the tier is a one-shot mount-time
-  // decision; the user changes it explicitly via the segmented control.
-  const [currentTier, setCurrentTier] = useState<Tier>(() =>
-    typeof window !== 'undefined' ? initialTierFromViewport(window.innerWidth) : 'medium',
-  );
+  // canvasRef, handleRef, and the nine engine-driven state values (status,
+  // hovered, selected, focused, scale, fps, sourceCounts, loadProgress,
+  // currentTier) all live inside useEngine.  The hook owns the createEngine
+  // startup effect, the cleanup on unmount, and the lazy viewport-based tier
+  // seed.  See src/hooks/useEngine.ts for the full rationale.
+  const {
+    canvasRef,
+    handleRef,
+    status,
+    hovered,
+    selected,
+    focused,
+    scale,
+    fps,
+    sourceCounts,
+    loadProgress,
+    currentTier,
+  } = useEngine({ extraCallbacks: settingsCallbacks });
 
   // ── Initial mobile signal (drives panel-collapse on first paint) ─────────
   //
   // Same 768-px breakpoint as `initialTierFromViewport` — small viewports
   // get the small data tier AND get the Navigation / Stats / Settings panels
-  // collapsed by default so the canvas isn't covered on first paint.  One-
-  // shot: read once at mount, no resize listener.  Re-orienting a phone in
-  // the middle of a session shouldn't yank the user's expanded panels back
-  // closed under them.
+  // collapsed by default so the canvas isn't covered on first paint.
+  //
+  // The lazy `useState` initializer runs exactly once at mount and is never
+  // re-evaluated on subsequent renders.  We intentionally drop the setter
+  // (destructure to a single element) — re-orienting a phone mid-session
+  // shouldn't yank the user's expanded panels back closed under them.
   //
   // SSR-safe: in unit tests where `window` is undefined we fall back to the
   // desktop default (panels open).
-  const initialMobile =
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false;
-  const initialPanelsOpen = !initialMobile;
-
-  // ── Rolling FPS readout ──────────────────────────────────────────────────
-  //
-  // Driven by the engine's `onFpsChange` callback, which fires only when
-  // the rounded integer FPS value changes (see EngineCallbacks).  A 0
-  // initial value is correct: the engine produces no readout until at
-  // least 2 frames have elapsed, and a 0 in the status bar during that
-  // sub-100 ms window is fine — by the time the user can read it, the
-  // first real value has already overwritten it.
-  const [fps, setFps] = useState<number>(0);
-
-  // Per-source point counts, indexed by Source enum value. Populated as each
-  // .bin file finishes loading via the engine's `onCloudReady` callback.
-  // Surfaced in SettingsPanel so users see how many points each survey
-  // contributes — a 220 k SDSS slice carries different visual weight than a
-  // 5 M GLADE one, and the count makes that legible at a glance.
-  const [sourceCounts, setSourceCounts] = useState<Partial<Record<Source, number>>>({});
-
-  // ── Loading-bar state ──────────────────────────────────────────────────────
-  //
-  // `null` when no fetches are in flight (the LoadingBar component fades
-  // itself out when this becomes null).  The engine's aggregator owns the
-  // truth and pushes a fresh snapshot through `onLoadProgress` whenever the
-  // per-source progress map mutates — start, progress, finish events all
-  // converge to a single React state update here.
-  //
-  // We don't memoise — React.setState is referential-equality safe for the
-  // null transition, and the per-chunk update rate is bounded by network
-  // cadence (tens per second on a fast link) which is fine for React's
-  // reconciler.
-  const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
-
-  // ── SpaceMouse state (optional, WebHID-only) ─────────────────────────────
-  //
-  // `spaceMouseConnected` mirrors the engine's view of pairing — flipped to
-  // true only when `connectSpaceMouse()` resolves with `ok = true`, and back
-  // to false on disconnect. `spaceMouseSensitivity` is the slider value;
-  // 1.0 is the factory default and matches what the engine uses internally.
-  const [spaceMouseConnected, setSpaceMouseConnected] = useState<boolean>(false);
-  const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(
-    DEFAULT_SPACE_MOUSE_SENSITIVITY,
+  const [initialMobile] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false,
   );
-
-  // ── Density-correction state (Malmquist bias, Tasks 1–5) ─────────────────
-  //
-  // `biasMode` mirrors the engine's current correction strategy; `None` is
-  // the safe default so first-time visitors see the raw catalog (and the
-  // engine's init value matches, avoiding a flicker on first paint).
-  // `absMagLimit` is the M_lim threshold used when `biasMode` is
-  // `VolumeLimited`; default −19 mag is a conventional SDSS spec-sample
-  // boundary (~M*+1).  Both are echoed by the engine's `onBiasModeChange` /
-  // `onAbsMagLimitChange` callbacks so React state stays in sync if the
-  // engine ever changes them on its own (e.g. a future preset loader).
-  const [biasMode, setBiasMode] = useState<BiasMode>(DEFAULT_BIAS_MODE);
-  const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
-
-  // ── HDR tone-map state ────────────────────────────────────────────────────
-  //
-  // `toneMapCurve` mirrors the engine's current HDR tone-map curve.  Default
-  // matches the engine's init value (Reinhard) so the first paint of the
-  // dropdown matches what the user sees on the canvas — no flicker.  The
-  // engine echoes via `onToneMapCurveChange` at startup *and* on every
-  // setToneMapCurve call, so React stays in sync.
-  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurve>(DEFAULT_TONE_MAP_CURVE);
-  // `exposure` mirrors the engine's HDR pre-tone-map multiplier.  Default
-  // 1.0 matches the engine's init value so the slider thumb starts in the
-  // middle of its 0.1..4.0 range without flicker.  Echoed by the engine
-  // via `onExposureChange` at startup *and* on every clamped setExposure
-  // call, so the displayed value is always the effective one — even if a
-  // devtools call passes a wild number that the engine clamps to 16.
-  const [exposure, setExposure] = useState<number>(DEFAULT_EXPOSURE);
+  const initialPanelsOpen = !initialMobile;
 
   // ── Command palette state ─────────────────────────────────────────────────
   //
-  // `paletteOpen` controls the overlay visibility; `famousMeta` holds the
-  // loaded famous-galaxy entries.  The meta is fetched once at mount (the
-  // same data the engine loaded at startup) so the palette can filter and
-  // display names without a second round-trip.
+  // `paletteOpen` controls the overlay visibility.  The famous-galaxy meta
+  // (entries + xrefs) comes from `useFamousMeta` below — loaded once at
+  // mount and shared with the deep-link drain via `useFocusUrlSync`.
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const [famousMeta, setFamousMeta] = useState<FamousMetaEntry[]>([]);
-  // Companion xrefs sidecar — paired with `famousMeta` so the deep-link
-  // drain can hand both to `engine.selectByAlias` and dodge the engine's
-  // internal sidecar-load race.  See the `selectByAlias` JSDoc for why
-  // the override exists.
-  const [famousXrefs, setFamousXrefs] = useState<FamousXrefMap>({});
 
-  // ── Alias-search state ───────────────────────────────────────────────────
-  //
-  // The PGC->aliases JSON sidecar is ~1.7 MB and we don't pay that cost on
-  // engine startup.  Instead, when the palette opens for the first time, we
-  // kick off `loadPgcAliases()` and join the result against the GLADE and
-  // 2MRS clouds' `objIDs` arrays to produce a single flat alias index the
-  // palette can search.  Subsequent palette opens reuse the cached index.
-  //
-  // `aliasIndex === null` means "not loaded yet"; `[]` means "loaded but
-  // empty" (sidecar absent, or join produced no hits).  The palette
-  // accepts undefined/empty without complaint.
-  const [aliasIndex, setAliasIndex] = useState<readonly AliasIndexEntry[] | null>(null);
-  // Tracks whether we've already kicked off the lazy load — useEffect's
-  // `paletteOpen` dependency would otherwise re-trigger on every open.
-  const aliasLoadStarted = useRef(false);
+  // ── Famous-galaxy sidecars (CommandPalette + deep-link drain) ────────────
+  const { famousMeta, famousXrefs } = useFamousMeta();
 
-  // Raw PGC->aliases Map.  Same lifecycle as `aliasIndex` (populated
-  // inside the same `loadPgcAliases().then(...)` block), but kept as the
-  // unflattened lookup table so the deep-link resolver can use it as the
-  // "is this PGC a real galaxy in HyperLEDA?" oracle for the
-  // tier-vs-unknown distinction.  Starts as an empty Map so the
-  // resolver can call `aliasMap.has(...)` without a null guard; an
-  // empty map just means we haven't loaded yet, in which case unknown
-  // PGCs collapse to `unknown` instead of `tier`.  That trade-off is
-  // documented in `resolveFocusTarget.ts`: a deep link to a PGC that's
-  // only present in a larger tier silently fails on the very first
-  // navigation if the user hasn't opened the palette yet.  The tier
-  // banner does fire if the user retries after the palette warm-up
-  // populates the map.
-  const [aliasMap, setAliasMap] = useState<ReadonlyMap<bigint, readonly string[]>>(
-    () => new Map(),
-  );
-
-  // ── Engine startup effect ──────────────────────────────────────────────────
-
-  useEffect(() => {
-    // Guard: canvasRef.current should always be set by the time useEffect runs
-    // (effects run after the DOM is committed), but the type is `T | null`, so
-    // we check to keep TypeScript happy and avoid a runtime exception if the
-    // component somehow renders without a canvas.
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Start the engine. `createEngine` returns synchronously; async work
-    // (GPU init, data loading) progresses in the background and is reported
-    // via the callbacks below.
-    const handle = createEngine(canvas, {
-      // Each callback just forwards the engine's output to React state.
-      // Because the engine deduplicates (only calls these when values change),
-      // we can pass `setState` functions directly — no extra memoisation needed.
-      onStatusChange: setStatus,
-      onHoverChange: setHovered,
-      onSelectChange: setSelected,
-      onFocusChange: setFocused,
-      onScaleChange: setScale,
-
-      // Settings-panel callbacks: engine fires these when a setting changes
-      // (including the initial seed at startup). React state stays in sync
-      // automatically, so the panel always reflects the engine's truth.
-      onPointSizeChange: setPointSize,
-      onBrightnessChange: setBrightness,
-      onAutoRotateChange: setAutoRotate,
-      // Engine echoes its galaxy-thumbnail flag here at startup *and* on every
-      // `setGalaxyTexturesEnabled`. Wiring this echo (rather than relying on
-      // local-only optimistic updates) keeps React's view of "are thumbnails
-      // on?" identical to the engine's source-of-truth value, even if the
-      // engine ever flips it for non-UI reasons (e.g. perf-driven auto-disable).
-      onGalaxyTexturesEnabledChange: setGalaxyTexturesEnabled,
-      onMilkyWayEnabledChange: setMilkyWayEnabled,
-      // Task 15 — orientation toggles echo back from the engine so React
-      // state stays in sync if the engine ever flips them programmatically.
-      onHighlightFallbackChange: setHighlightFallback,
-      onRealOnlyModeChange: setRealOnlyMode,
-      onDepthFadeEnabledChange: setDepthFadeEnabled,
-      // LOD mode is seeded by the engine at init, then echoed back any time
-      // `setLodMode` runs (or `setSourceVisible` flips us to manual).
-      onLodModeChange: setLodMode,
-      // Mirror the engine's source mask back into React.  Critical for fixing
-      // the "first toggle is a no-op" bug: auto-LOD recomputes the engine mask
-      // continuously, and without this echo React's checkbox state would drift
-      // away from engine truth, making the first user toggle silently agree
-      // with engine state instead of flipping it.
-      onSourceMaskChange: setVisibleSourceMask,
-      // Each .bin lands at its own pace; record the count so the SettingsPanel
-      // can show "SDSS  220,453" alongside the toggle. Functional update so
-      // multiple parallel arrivals don't clobber each other.
-      onCloudReady: (source, count) => setSourceCounts((prev) => ({ ...prev, [source]: count })),
-      // One-shot: fires after the optional cosmic-web filaments.bin lands.
-      // The StatsPanel surfaces these counts ("Filaments · 3,845 strips,
-      // 27,410 verts") whenever the user has the filaments overlay enabled.
-      // No null-out path: the engine never reports filaments unloading
-      // because the asset is loaded once and stays in GPU memory for the
-      // session — the user toggles visibility, not lifecycle.
-      onFilamentsReady: (stripCount, vertexCount) =>
-        setFilamentCounts({ stripCount, vertexCount }),
-      // Rolling FPS — engine throttles to integer-change events so this is a
-      // cheap direct setState (no debounce / no useMemo needed).
-      onFpsChange: setFps,
-      // Density-correction echoes (Malmquist bias).  Engine fires these at
-      // startup with its own defaults *and* every time `setBiasMode` /
-      // `setAbsMagLimit` mutates them, so React's SettingsPanel always
-      // reflects engine truth without optimistic local updates.
-      onBiasModeChange: setBiasMode,
-      onAbsMagLimitChange: setAbsMagLimit,
-      // HDR tone-map echo — mirrors the bias-mode pattern.  Engine seeds
-      // its default at init (Reinhard) and fires on every setToneMapCurve.
-      onToneMapCurveChange: setToneMapCurve,
-      // Exposure echo — same lifecycle as the tone-curve echo above.  The
-      // engine seeds its default (1.0) at init and re-fires on every
-      // clamped setExposure, so React's slider position always reflects
-      // the effective value the shader is using.
-      onExposureChange: setExposure,
-      // SpaceMouse pairing state: `connect()`'s promise gives us the initial
-      // success/failure, but only this callback covers spontaneous disconnects
-      // (USB unplug, permission revocation).  Without it React's "Connected"
-      // indicator could persist after the puck is gone.
-      onSpaceMouseConnectedChange: setSpaceMouseConnected,
-      // ── Data-tier wiring (Phase 3) ───────────────────────────────────────
-      //
-      // `initialTier` lets the engine pick the right `<source>-<tier>.bin`
-      // files on first load; we read the viewport-derived value from the
-      // React state (lazy-initialised above) so the engine and React agree
-      // on the seed without a separate code path.  `onTierChange` echoes
-      // back any tier mutation (including the engine's own seed) so React
-      // state mirrors engine truth — same lifecycle as onLodModeChange.
-      initialTier: currentTier,
-      onTierChange: setCurrentTier,
-      // Aggregated download-progress snapshot (or null when no fetches are
-      // in flight).  Fires through the engine's `loadProgressAggregator`
-      // for both the initial parallel `loadAllClouds` and every
-      // `setTier`-triggered hot-swap.  The LoadingBar component fades
-      // itself out when this becomes null.
-      onLoadProgress: setLoadProgress,
-    });
-
-    // Store the handle so the Esc effect (below) can call clearSelection().
-    handleRef.current = handle;
-
-    // Cleanup: runs when the component unmounts (hot-reload, navigation, etc.).
-    // This stops the render loop, removes event listeners, and releases GPU
-    // resources — preventing orphaned RAF loops or memory leaks on hot-reload.
-    return () => {
-      handle.destroy();
-      handleRef.current = null;
-    };
-  }, []); // Empty array: run once on mount, clean up on unmount.
-
-  // ── Famous-galaxy meta loader ──────────────────────────────────────────────
-  //
-  // Load the famous sidecars once at mount so the CommandPalette has names +
-  // descriptions to filter against.  The engine loads the same file internally,
-  // but exposing it here avoids reaching into the engine's internal state.
-  // Double-loading is cheap (the browser caches the JSON fetch).
-  useEffect(() => {
-    loadFamousSidecars().then((sc) => {
-      setFamousMeta(sc.meta);
-      setFamousXrefs(sc.xrefs);
-    });
-  }, []);
-
-  // ── Alias index — lazy-built on first palette open ────────────────────────
-  //
-  // Two-phase pipeline:
-  //
-  //   1. Fetch `pgc_aliases.json` (the PGC -> human-name Map).
-  //   2. Walk both GLADE and 2MRS objIDs, look up each non-zero PGC in
-  //      that Map, emit one `AliasIndexEntry` per match.
-  //
-  // Both phases happen exactly once per session; the result is held in
-  // `aliasIndex` state and reused on subsequent opens.  We trigger off
-  // `paletteOpen` (rather than at engine-ready time) because most users
-  // never hit Cmd+K — paying the 1.7 MB JSON download up front would be
-  // wasteful for them.
-  //
-  // The `sourceCounts` dependency ensures the effect re-runs when each
-  // cloud finishes loading; the `engine.getCloudObjIds()` calls inside
-  // would return undefined before that.  We *also* require both 2MRS
-  // and GLADE counts to be non-zero before kicking off so we don't
-  // build a half-populated index from a mid-load engine state.
-  useEffect(() => {
-    if (!paletteOpen) return;
-    if (aliasLoadStarted.current) return;
-    const handle = handleRef.current;
-    if (!handle?.getCloudObjIds) return;
-    // Don't kick off until both GLADE and 2MRS have at least started loading.
-    // Without this guard the join walks a missing array and emits no entries,
-    // permanently caching an empty index.
-    const gladeCount = sourceCounts[Source.Glade] ?? 0;
-    const twoMrsCount = sourceCounts[Source.TwoMRS] ?? 0;
-    if (gladeCount === 0 && twoMrsCount === 0) return;
-
-    aliasLoadStarted.current = true;
-    loadPgcAliases().then((loadedAliasMap) => {
-      // Stash the raw Map for the deep-link resolver's tier-vs-unknown
-      // oracle.  Done before the index build because the resolver only
-      // needs `.has(pgc)`, not the per-source localIdx join — and a
-      // future deep-link arrival should be able to consult the oracle
-      // even before the (slower) index walk finishes if ever it grows
-      // expensive.
-      setAliasMap(loadedAliasMap);
-
-      // Build the flat index — one entry per (cloud, localIdx) where the
-      // PGC at that localIdx has at least one named alias.  Skip zero
-      // PGCs (unmapped rows in the catalog cross-match).
-      const out: AliasIndexEntry[] = [];
-      for (const source of [Source.Glade, Source.TwoMRS] as const) {
-        const objIds = handle.getCloudObjIds?.(source);
-        if (!objIds) continue;
-        for (let i = 0; i < objIds.length; i++) {
-          const pgc = objIds[i]!;
-          if (pgc === 0n) continue;
-          const names = loadedAliasMap.get(pgc);
-          if (!names || names.length === 0) continue;
-          out.push({ pgc, names, source, localIdx: i });
-        }
-      }
-      setAliasIndex(out);
-    });
-  }, [paletteOpen, sourceCounts]);
+  // ── Lazy alias index for command palette ────────────────────────────────
+  const { aliasIndex, aliasMap } = useAliasIndex({
+    paletteOpen,
+    sourceCounts,
+    engineHandleRef: handleRef,
+  });
 
   // ── Deep-link focus URL sync ──────────────────────────────────────────────
   //
@@ -586,7 +180,13 @@ export function App(): React.ReactElement {
   // links once the engine is `'ready'` (which guarantees `state.cam`),
   // and the supersede-on-selection cleanup.  See the hook's module
   // header for the full rationale of each effect.
-  const { pendingTarget } = useFocusUrlSync({
+  //
+  // Void return: the hook does also expose `pendingTarget` for a future
+  // tier-mismatch banner, but no consumer uses it today.  Destructuring
+  // it here would imply a downstream prop chain that doesn't exist;
+  // skipping the destructure makes the dead binding non-misleading and
+  // keeps the lint clean.
+  useFocusUrlSync({
     focused,
     status,
     sourceCounts,
@@ -596,73 +196,13 @@ export function App(): React.ReactElement {
     engineHandleRef: handleRef,
   });
 
-  // ── Keyboard shortcuts effect ──────────────────────────────────────────────
-  //
-  // Three shortcuts: Esc clears selection, `f` focuses on the pinned galaxy,
-  // `h` returns the camera to the home view.  Re-runs when `selected` changes
-  // so the `f` handler always reads the current pin (without a re-bind it
-  // would close over the initial null forever).
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      // ── Ignore keystrokes typed into form fields ────────────────────────────
-      //
-      // If the user is editing an <input> or <textarea>, we shouldn't hijack
-      // their `f` and `h` keystrokes.  `e.target` could be any Element, so we
-      // narrow with a tag check before reading its name.  This guards against
-      // future text inputs (search box, label rename, etc.).
-      const target = e.target as Element | null;
-      const tag = target?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (target as HTMLElement)?.isContentEditable) {
-        return;
-      }
-
-      // ── Cmd+K / Ctrl+K / `/` opens the command palette ───────────────────
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setPaletteOpen(true);
-        return;
-      }
-      if (e.key === '/' && !paletteOpen) {
-        e.preventDefault();
-        setPaletteOpen(true);
-        return;
-      }
-
-      // ── Esc: clear pinned selection ────────────────────────────────────────
-      if (e.key === 'Escape') {
-        // `?.` safe-calls: no-op if the engine hasn't started yet or was destroyed.
-        handleRef.current?.clearSelection();
-        return;
-      }
-
-      // ── f: focus on currently-selected galaxy (no-op if nothing pinned) ────
-      if (e.key === 'f' || e.key === 'F') {
-        if (selected) handleRef.current?.focusOn(selected);
-        return;
-      }
-
-      // ── h: return to the home / Earth view ─────────────────────────────────
-      if (e.key === 'h' || e.key === 'H') {
-        handleRef.current?.focusOnHome();
-        return;
-      }
-
-      // ── l: log the live camera state to console (debug aid) ────────────────
-      // Prints target / distance / yaw / pitch / fovYRad in copy-paste-friendly
-      // form so the developer can tune the initial framing + reset values
-      // interactively.  Lower-case only — capital L is reserved for future
-      // use; keep the dev hotkey unobtrusive.
-      if (e.key === 'l') {
-        handleRef.current?.logCameraState();
-        return;
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [selected, paletteOpen]); // re-bind when pin or palette state changes
+  // ── Global keyboard shortcuts (Cmd+K, Esc, f, h, l) ─────────────────────
+  useKeyboardShortcuts({
+    selected,
+    paletteOpen,
+    engineHandleRef: handleRef,
+    setPaletteOpen,
+  });
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -854,12 +394,18 @@ export function App(): React.ReactElement {
         onToneMapCurveChange={(c) => handleRef.current?.setToneMapCurve?.(c)}
         // Exposure slider — drag pushes the value through the engine
         // handle, the engine clamps to [0.05, 16] and echoes the
-        // clamped result back via `onExposureChange` (above), which
-        // updates `exposure` state so the displayed number always
-        // matches the shader's effective value.  Optimistic local
-        // setExposure(value) is unnecessary because the engine echoes
-        // synchronously inside its setter — same pattern as
-        // tone-curve, brightness, and the bias-mode controls.
+        // clamped result back via `onExposureChange`, which updates
+        // `exposure` state so the displayed number always matches
+        // the shader's effective value when the engine clamps.
+        //
+        // The optimistic local `setExposure(value)` IS needed for
+        // snappy slider thumb tracking — without it the slider visibly
+        // lags by one frame.  The engine echo lands shortly after and
+        // overwrites with the clamped value, which is what we want for
+        // out-of-range inputs.  Differs from the tone-curve / bias
+        // controls above: those are discrete dropdowns where a one-
+        // frame lag isn't perceptible, so they don't need the optimistic
+        // local update.
         exposure={exposure}
         onExposureChange={(value) => {
           setExposure(value);
