@@ -43,8 +43,9 @@
 
   /* Glassmorphism — strong variant for the "loud" card */
   background: var(--surface-card-strong);
-  backdrop-filter: blur(var(--blur-card));
+  /* Vendor-prefixed first, standard last — see Panel.module.css for why. */
   -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
 
   border: 1px solid var(--border-card);
   border-radius: var(--radius-2xl);
