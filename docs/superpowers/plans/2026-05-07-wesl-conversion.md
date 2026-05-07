@@ -6,7 +6,7 @@
 
 **Architecture:** Build-time linking via `wesl-plugin` for Vite. Each renderer's TS file imports two pre-linked WGSL strings (one per stage) using the `?static` suffix. Library modules live under `src/services/gpu/shaders/lib/`, with math primitives in `lib/math/` (one function per file) and themed cohesive modules at the `lib/` root. Every shader-touching task ends with build + typecheck + full test suite + manual visual sanity check on the running dev server before commit, per the project's `wgsl-meticulous` convention.
 
-**Tech Stack:** TypeScript 5.x, Vite 5.x, raw WebGPU, WGSL, WESL (`wesl@^0.7.19`, `wesl-plugin@^0.7.x`), Vitest 1.x. No shader unit-test framework exists; verification = build green + 590+ existing tests stay green + visual identity check.
+**Tech Stack:** TypeScript 5.x, Vite 5.x, raw WebGPU, WGSL, WESL (`wesl@^0.7.26`, `wesl-plugin@^0.6.74`), Vitest 1.x. No shader unit-test framework exists; verification = build green + 590+ existing tests stay green + visual identity check.
 
 **Spec:** `docs/superpowers/specs/2026-05-07-wesl-conversion-design.md`
 
@@ -22,6 +22,14 @@
 
 **Project visual-verification rule.** Per `feedback_wgsl_meticulous.md`, no shader-touching task is marked complete until the implementer has visually compared the dev-server render to the previous render and confirmed identity. Tests are silent on shader correctness — visual is the only check.
 
+**WESL parser limitations discovered during Task 1 (2026-05-07).** Three concrete gotchas surfaced by the smoke test that affect every later task:
+
+1. **No backticks (`` ` ``) anywhere in shader source** — including inside `//` and `/* */` comments. The WESL parser tokenises the backtick character regardless of comment context and emits "expected a semicolon" errors. The didactic-comment style across the existing `.wgsl` files uses backticks heavily for inline code identifiers (335 occurrences across the 6 not-yet-converted shaders, 204 in `points.wgsl` alone). **Task 2's bulk rename must include a global `` ` `` → `'` substitution** in every shader file, applied as part of the same commit. The single-quote replacement preserves the visual intent (callout for an identifier) at the cost of the markdown-style aesthetic. If the WESL parser later fixes this, the substitution is mechanically reversible.
+
+2. **TypeScript subpath types via the tsconfig `types` array don't reliably resolve.** Adding `"wesl-plugin/suffixes"` to `compilerOptions.types` does not on its own make `import wgsl from './foo.wesl?static'` resolve to `string` under our `moduleResolution: "bundler"` setup. **A triple-slash reference in a project type file is required**, not optional. Task 1 ships `src/@types/wesl.d.ts` with `/// <reference types="wesl-plugin/suffixes" />`; later tasks reference this file rather than re-creating it.
+
+3. **Vitest does NOT inherit Vite plugins from `vite.config.ts`.** Without explicit registration in `vitest.config.ts`, Vitest's SSR-transform pipeline tries to parse `.wesl` files as JavaScript and rolldown rejects them. Task 1 ships an updated `vitest.config.ts` that registers `wesl-plugin` directly. Later tasks should not modify this config unless adding new build extensions.
+
 ---
 
 ## Task 1: Tooling bootstrap (wesl-plugin + Vite + types) and convert toneMap
@@ -29,7 +37,7 @@
 **Files:**
 - Modify: `package.json` (add deps)
 - Create: `wesl.toml` (repo root)
-- Create: `src/@types/wesl.d.ts`
+- Modify: `tsconfig.json` (activate ambient `?static` types from `wesl-plugin/suffixes`)
 - Modify: `vite.config.ts`
 - Rename: `src/services/gpu/shaders/toneMap.wgsl` → `src/services/gpu/shaders/toneMap.wesl`
 - Modify: `src/services/gpu/toneMapPass.ts` (import suffix + dev-mode link logging)
@@ -37,58 +45,44 @@
 - [ ] **Step 1.1: Add devDependencies**
 
 ```bash
-npm install --save-dev wesl@^0.7.19 wesl-plugin@^0.7.0
+npm install --save-dev wesl@^0.7.26 wesl-plugin@^0.6.74
 ```
 
-Expected: lockfile updated, no peer-dep warnings beyond what existed before. If `wesl-plugin` reports a missing peer (e.g. on Vite version), pin Vite minor as needed and document in the commit message.
+Versions verified against the npm registry on 2026-05-07: `wesl-plugin` is still on the 0.6.x track (the original draft assumed 0.7.x, which doesn't exist on npm yet). The matching `wesl` runtime is `0.7.26`. Note: in this implementation pass the controller has already run `npm install` for the agent, so this step is a no-op record of what was added. Expected: lockfile updated, no peer-dep warnings beyond what existed before.
 
 - [ ] **Step 1.2: Create `wesl.toml` at repo root**
 
-```toml
-# WESL linker configuration. The default search root is `./shaders/`,
-# which doesn't match this project's `src/services/gpu/shaders/` layout.
-# `name` becomes the package prefix used in `import` paths inside .wesl files.
-name = "skymap"
-edition = "unstable_2025_1"
+The actual TOML schema (verified against `node_modules/wesl-plugin/dist/PluginExtension-DTjKL6rt.d.mts` on 2026-05-07) has flat top-level keys — no `[package]` table, no `name` field. The package name used as the prefix in WESL `import` paths comes from npm's `package.json` `name` (already `"skymap"`), which keeps a single source of truth.
 
-[package]
+```toml
+edition = "unstable_2025"
+include = ["**/*.wesl", "**/*.wgsl"]
 root = "src/services/gpu/shaders"
 ```
 
-(If wesl-plugin's actual TOML schema differs from this draft when wesl-plugin@0.7.x is installed, adjust to match the version's expectations — the intent is the same: tell the plugin where shader source lives.)
+A short comment block in the file explains why we picked `?static` over `?link` — see the actual file for the full rationale.
 
-- [ ] **Step 1.3: Create `src/@types/wesl.d.ts`**
+- [ ] **Step 1.3: Activate ambient types for `?static` imports**
 
-```ts
-// Ambient module declarations for the wesl-plugin Vite loader.
-//
-// `?static` runs the WESL linker at build time and returns a flat WGSL
-// string with all `import` statements resolved. This mirrors the
-// existing `wgsl.d.ts` shape — both resolve to `string` — so consuming
-// code remains identical to today's `?raw` import pattern.
-declare module '*.wesl?static' {
-  const content: string;
-  export default content;
-}
+`wesl-plugin` ships its own ambient module declarations at the subpath `wesl-plugin/suffixes` (see `node_modules/wesl-plugin/src/defaultSuffixTypes.d.ts` — declares `*?static` as `string`, plus stubs for `?link`, `?simple_reflect`, `?bindingLayout`). There is **no need** to hand-write `src/@types/wesl.d.ts`. Activate the shipped types by adding `"wesl-plugin/suffixes"` to `compilerOptions.types` in `tsconfig.json` — that matches the project's existing pattern (the array already lists `"node"`, `"@webgpu/types"`, `"vite/client"`).
 
-// Fall-through declaration for unsuffixed `.wesl` imports. Not used
-// directly today; kept so accidental imports without `?static` produce
-// a typed string instead of `any`.
-declare module '*.wesl' {
-  const content: string;
-  export default content;
-}
+```jsonc
+// tsconfig.json
+"types": ["node", "@webgpu/types", "vite/client", "wesl-plugin/suffixes"]
 ```
 
 - [ ] **Step 1.4: Wire `wesl-plugin` into `vite.config.ts`**
 
-Read `vite.config.ts` first to see the existing plugin array. Add the import at the top of the file:
+Read `vite.config.ts` first to see the existing plugin array. The actual API splits the Vite plugin entry point from the build extensions: import the Vite-specific factory from `wesl-plugin/vite` and the `staticBuildExtension` from the package root, then pass the extension to the factory.
 
 ```ts
-import wesl from 'wesl-plugin';
+import { staticBuildExtension } from 'wesl-plugin';
+import viteWesl from 'wesl-plugin/vite';
+// ...
+plugins: [viteWesl({ extensions: [staticBuildExtension] }), react()],
 ```
 
-Add `wesl()` to the `plugins: [...]` array, alphabetised among the other plugins. Do not change any other plugin or config.
+Plugin order shouldn't matter for correctness; alphabetise as fits the existing arrangement. Do not change any other plugin or config.
 
 - [ ] **Step 1.5: Rename `toneMap.wgsl` → `toneMap.wesl`**
 
@@ -147,8 +141,9 @@ Confirm the dev server is running (`npm run dev`). Open the browser. The tone-ma
 - [ ] **Step 1.9: Commit**
 
 ```bash
-git add package.json package-lock.json wesl.toml src/@types/wesl.d.ts vite.config.ts \
-  src/services/gpu/shaders/toneMap.wesl src/services/gpu/toneMapPass.ts
+git add package.json package-lock.json wesl.toml tsconfig.json vite.config.ts \
+  src/services/gpu/shaders/toneMap.wgsl src/services/gpu/shaders/toneMap.wesl \
+  src/services/gpu/toneMapPass.ts
 git commit -m "$(cat <<'EOF'
 chore(shaders): bootstrap wesl-plugin tooling and convert toneMap
 
@@ -185,6 +180,31 @@ git mv quads.wgsl quads.wesl
 cd -
 ```
 
+- [ ] **Step 2.1b: Strip backticks from shader comments**
+
+Per the WESL parser limitations documented in the pre-flight reference, every backtick (`` ` ``) inside the shader files must be replaced with a single quote. The didactic-comment style uses backticks for inline-code callouts; single quotes preserve the visual cue while making the WESL parser happy. Apply across all 6 renamed files (toneMap was handled in task 1):
+
+```bash
+for f in src/services/gpu/shaders/disks.wesl \
+         src/services/gpu/shaders/filaments.wesl \
+         src/services/gpu/shaders/milkyWayImpostor.wesl \
+         src/services/gpu/shaders/points.wesl \
+         src/services/gpu/shaders/proceduralDisks.wesl \
+         src/services/gpu/shaders/quads.wesl; do
+  # Use perl rather than sed for portable in-place editing without backup files.
+  perl -i -pe "s/\`/'/g" "$f"
+done
+```
+
+Verify zero backticks remain:
+
+```bash
+grep -c '`' src/services/gpu/shaders/*.wesl
+# Expected: every line ends with `:0`
+```
+
+This is the only content change in this task — every other byte of the shaders stays identical. Document the substitution in the commit message.
+
 - [ ] **Step 2.2: Update each renderer's import**
 
 For each of the 6 renderer TS files, change the `?raw` import to `?static` and update the file extension. Read each file first to find the exact line, then edit:
@@ -220,9 +240,14 @@ git add -u
 git commit -m "$(cat <<'EOF'
 chore(shaders): rename remaining 6 shaders .wgsl → .wesl
 
-Bulk rename, no content changes. Each renderer's `?raw` import
-becomes `?static` so the WESL linker runs on every shader. Output
-WGSL is byte-identical until imports are introduced in later tasks.
+Bulk rename. Each renderer's ?raw import becomes ?static so the WESL
+linker runs on every shader. Output WGSL is byte-identical until
+imports are introduced in later tasks, save for one mechanical content
+change: backticks in comments are replaced with single quotes
+project-wide because the WESL parser tokenises ` regardless of comment
+context. The single-quote replacement preserves the visual intent of
+the inline-code callouts and is mechanically reversible if the parser
+later loosens up.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 EOF
@@ -1566,6 +1591,6 @@ After all 15 tasks, verify against the spec:
 - [x] Section 2 (Why WESL) — three duplications collapsed: ramp (task 7), CloudUniforms (task 8), orientation (task 6). Single-file scale addressed: tasks 13–15 split. One-file-two-entry-points addressed: task 13.
 - [x] Section 3 (Architecture) — every file in the spec's tree exists (or is deleted intentionally).
 - [x] Section 4 (Library modules) — every immediate-win module extracted in tasks 4–11, math primitives in task 3, util staging in task 12.
-- [x] Section 5 (Tooling) — wesl + wesl-plugin + wesl.toml + wesl.d.ts + Vite config in task 1.
+- [x] Section 5 (Tooling) — wesl + wesl-plugin + wesl.toml + tsconfig types activation + Vite config in task 1.
 - [x] Section 6 (Migration plan) — 15 tasks, matching the 15-task spec section.
 - [x] Section 7 (Risks) — sourcemap-survival risk addressed by dev-mode link logging in task 1; struct-alignment risk addressed by canonical CameraUniforms layout in task 4; visual-verification gate present in every task.

@@ -90,7 +90,12 @@
  * monotonicity, asymptotic behaviour, and curve-specific shape.
  */
 
-import toneMapWgsl from './shaders/toneMap.wgsl?raw';
+// `?static` runs the WESL linker at build time and returns a flat WGSL
+// string. For toneMap there are no `import` statements yet, so the
+// linker output is byte-identical to the previous `?raw` import — but
+// wiring `?static` here first makes this the smoke test for the whole
+// wesl-plugin tooling chain. Later tasks add real imports.
+import toneMapWgsl from './shaders/toneMap.wesl?static';
 import { ToneMapCurve } from '../../data/toneMapCurve';
 
 /**
@@ -208,7 +213,33 @@ export function createPostProcess(
   allocateHdr(size);
 
   // ── Tone-map pipeline (built once, lives until destroy) ───────────────
-  const module = device.createShaderModule({ code: toneMapWgsl });
+  //
+  // `label` shows up in `getCompilationInfo` diagnostics and in
+  // browser-devtools error reports, which makes it much easier to tell
+  // *which* shader broke when several modules fail in the same frame.
+  const module = device.createShaderModule({ code: toneMapWgsl, label: 'toneMap' });
+
+  // Why log the linked WGSL here, only in dev?
+  //
+  // Chrome's WGSL compiler reports error line numbers against the
+  // *linked* output that wesl-plugin produces, not the source `.wesl`
+  // module. Until wesl-plugin gains sourcemap support, the only way to
+  // map "error at line 142" back to a source file is to read the linked
+  // string ourselves — so we dump it on any compile error. We dump it
+  // only in dev (gated by `import.meta.env.DEV`) because production
+  // bundles strip dead branches under that flag and we don't want to
+  // ship the shader source twice (once as the module, once as a console
+  // log) in the prod build. `getCompilationInfo` is a Promise; we don't
+  // await it so module creation stays synchronous.
+  if (import.meta.env.DEV) {
+    void module.getCompilationInfo().then((info) => {
+      if (info.messages.some((m) => m.type === 'error')) {
+        console.groupCollapsed('[toneMap] linked WGSL (for error line lookup)');
+        console.log(toneMapWgsl);
+        console.groupEnd();
+      }
+    });
+  }
 
   // Why nearest, not linear?  The HDR texture is the same resolution
   // as the swap chain (we resize it in lockstep) so the fullscreen

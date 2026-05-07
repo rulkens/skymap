@@ -5,20 +5,20 @@
 // entire viewport [-1,1]² with a 50 % overdraw budget that's free
 // because we never sample those off-screen pixels.  No vertex buffer
 // required — the vertex shader synthesises positions directly from
-// `vertex_index`.
+// 'vertex_index'.
 //
-// Curves, branched on `u.curve`:
+// Curves, branched on 'u.curve':
 //   curve=0 — Linear / Clamp.  Pre-HDR baseline, no tone mapping.
 //             Cluster cores blow out, filaments invisible.  Reference.
-//   curve=1 — Reinhard-extended `c·(1 + c/W²) / (1+c)`.  Smooth
+//   curve=1 — Reinhard-extended 'c·(1 + c/W²) / (1+c)'.  Smooth
 //             roll-off near 1.0, "natural" look.  Default.
-//   curve=2 — Asinh / Lupton 2004 `asinh(k·c) / asinh(k)`.  Linear
+//   curve=2 — Asinh / Lupton 2004 'asinh(k·c) / asinh(k)'.  Linear
 //             near zero, log-like at high values.  Aggressively lifts
 //             dim regions — what SDSS's pipeline uses for filaments.
-//   curve=3 — Gamma 2.0 `sqrt(clamp(c, 0, 1))`.  Simple midtone
+//   curve=3 — Gamma 2.0 'sqrt(clamp(c, 0, 1))'.  Simple midtone
 //             lift; cheap, less surgical than asinh.
 //   curve=4 — ACES filmic (Narkowicz 2015 approximation):
-//             `(c·(2.51·c+0.03)) / (c·(2.43·c+0.59)+0.14)`, clamped.
+//             '(c·(2.51·c+0.03)) / (c·(2.43·c+0.59)+0.14)', clamped.
 //             Cinematic S-curve with shoulder + toe.
 
 struct ToneMapUniforms {
@@ -86,8 +86,8 @@ fn applyAsinh(c: vec3<f32>, k: f32) -> vec3<f32> {
   return clamp(y, vec3<f32>(0.0), vec3<f32>(1.0));
 }
 
-// Gamma 2.0 = sqrt of clamped input.  WGSL `pow(c, 0.5)` works but
-// `sqrt` is the dedicated intrinsic and slightly faster.
+// Gamma 2.0 = sqrt of clamped input.  WGSL 'pow(c, 0.5)' works but
+// 'sqrt' is the dedicated intrinsic and slightly faster.
 fn applyGamma2(c: vec3<f32>) -> vec3<f32> {
   return sqrt(clamp(c, vec3<f32>(0.0), vec3<f32>(1.0)));
 }
@@ -112,10 +112,10 @@ fn applyAces(c: vec3<f32>) -> vec3<f32> {
 fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let hdr = textureSample(hdrTex, hdrSamp, in.uv).rgb;
   let scaled = hdr * u.exposure;
-  // Dynamic-uniform branch — `curve` is identical across all fragments
+  // Dynamic-uniform branch — 'curve' is identical across all fragments
   // in a frame, so the GPU's branch predictor handles this efficiently.
-  // We use a chain of `if`s rather than a `switch` because WGSL's
-  // `switch` semantics are slightly stricter (must end in `default`)
+  // We use a chain of 'if's rather than a 'switch' because WGSL's
+  // 'switch' semantics are slightly stricter (must end in 'default')
   // and the chain is cleaner with fall-through-impossible curves.
   var mapped: vec3<f32>;
   if (u.curve == 0u) {
@@ -132,7 +132,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     mapped = applyAces(scaled);
   }
   // Output is opaque — alpha doesn't matter because the swap-chain
-  // is configured `alphaMode: 'premultiplied'` and we just composited
+  // is configured 'alphaMode: 'premultiplied'' and we just composited
   // the entire scene already.
   return vec4<f32>(mapped, 1.0);
 }
