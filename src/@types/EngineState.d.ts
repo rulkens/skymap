@@ -84,6 +84,8 @@ import type { InitialCam } from '../services/engine/cameraFraming';
 import type { AssetSlot } from '../services/loading/AssetSlot';
 import type { PointCloud } from './PointCloud';
 import type { PointCloudReq } from '../services/loading/fetchers/pointCloudFetcher';
+import type { FilamentCloud } from './FilamentCloud';
+import type { FilamentReq } from '../services/loading/fetchers/filamentFetcher';
 import type { Source } from '../data/sources';
 
 /**
@@ -91,17 +93,30 @@ import type { Source } from '../data/sources';
  * GPU renderer.  The asset-loading rework migrates each per-source
  * fetch+upload path from the old imperative `cloudLoader.reloadSource`
  * to a `createAssetSlot` whose race-checked `commit` step is the
- * structural fix for tier-swap stomping bugs.  Task 8 introduces only
- * the SDSS slot here; Task 9 fills in the rest (2MRS, GLADE, Famous,
- * filaments).
+ * structural fix for tier-swap stomping bugs.  Task 8 introduced the
+ * SDSS slot; Task 9 extends the bag with the other surveys (2MRS,
+ * GLADE, Famous) plus the filament layer.
  *
  * `points` is keyed by Source so any future per-source consumer can
- * look up the active slot for a survey without iterating; this also
- * matches the shape that Task 9's bulk migration produces, so we
- * don't have to reshape the type a second time.
+ * look up the active slot for a survey without iterating.  `filaments`
+ * is a single slot rather than a map because filaments are a global
+ * derived asset, not a per-survey one — the request type carries `tier`
+ * alone, no `source`.
+ *
+ * Filaments load exactly once at boot and are NOT swapped on tier
+ * change.  See `services/loading/fetchers/filamentFetcher.ts` for the
+ * rationale (re-downloading tens of MB for what is mostly the same
+ * skeleton topology isn't worth it).
  */
 export type EngineAssetSlots = {
   points: Map<Source, AssetSlot<PointCloud, PointCloudReq>>;
+  /**
+   * Null until the GPU init IIFE constructs the filament renderer and
+   * mints this slot — same lifecycle pattern as `state.gpu.renderer`.
+   * Consumers null-check before calling `.load()` (in practice only the
+   * boot path touches it, and only after the IIFE has populated it).
+   */
+  filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
 };
 
 export type EngineState = {
