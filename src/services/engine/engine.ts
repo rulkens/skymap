@@ -113,7 +113,8 @@ import { filamentFetcher } from '../loading/fetchers/filamentFetcher';
 import { famousMetaFetcher } from '../loading/fetchers/famousMetaFetcher';
 import { pgcAliasFetcher, type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
-import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
+import { FOCUS_TWEEN_MS } from './focusTween';
+import { tweenToGalaxy } from './tweenToGalaxy';
 
 // ── Galaxy thumbnail subsystem ────────────────────────────────────────────
 //
@@ -1891,8 +1892,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
 
     focusOn(info) {
-      // Camera may not be ready yet (cloud still loading); drop the call.
-      // Same defensive pattern as resetCamera() above.
+      // Camera may not be ready yet (cloud still loading); drop the
+      // call.  This guard is *separate* from `tweenToGalaxy`'s own
+      // cam-null guard — we need it here to gate the
+      // `onFocusChange` callback below.  Without the early return,
+      // a focus call against a still-bootstrapping engine would
+      // update `#focus=…` in the URL while the camera silently
+      // refused to move.
       const cam = state.cam;
       if (!cam) return;
 
@@ -1903,31 +1909,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // for "we just decided to focus on this galaxy."
       cb.onFocusChange?.(info);
 
-      // Snapshot the CURRENT camera state — not the original startup state —
-      // so an in-progress tween hands off smoothly to the new one.  vec3.clone
-      // copies the target tuple so future mutation of cam.target doesn't
-      // corrupt the from-snapshot.
-      //
-      // The framing distance is 4× the galaxy's diameter (close-but-not-
-      // inside framing that scales naturally with size); when the
-      // PointInfo's diameter is the fallback 30 kpc, this lands on the
-      // pre-v4 placeholder framing exactly.
-      state.subsystems.tweens.start({
-        startMs: performance.now(),
-        durationMs: FOCUS_TWEEN_MS,
-        fromTarget: vec3.clone(cam.target as vec3),
-        toTarget: vec3.fromValues(info.x, info.y, info.z),
-        fromDistance: cam.distance,
-        toDistance: focusDistanceMpc(info.diameterKpc),
-        fromYaw: cam.yaw,
-        toYaw: cam.yaw, // preserve yaw — user keeps their orientation
-        fromPitch: cam.pitch,
-        toPitch: cam.pitch, // preserve pitch
-      });
-      // Kick the loop into motion — the tween's per-frame advance will
-      // keep it ticking via the still-animating predicate until the
-      // tween completes.
-      state.subsystems.scheduler.requestRender();
+      // The framing distance is derived from the galaxy's diameter
+      // (close-but-not-inside framing that scales naturally with size);
+      // when the PointInfo's diameter is the fallback 30 kpc, this
+      // lands on the pre-v4 placeholder framing exactly.  All the
+      // tween-construction details (yaw/pitch preservation, vec3.clone
+      // of cam.target, performance.now() startMs, scheduler kick-off)
+      // live in `tweenToGalaxy`.
+      tweenToGalaxy(state, info);
     },
 
     selectFamous(id) {
@@ -1961,25 +1950,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cb.onFocusChange?.(info);
 
       // Tween the camera onto the galaxy — same tween as `focusOn`.
-      // We inline the tween-creation here rather than calling `handle.focusOn`
-      // because we're inside the object literal and `this` would be unreliable
-      // at call time (depending on how App.tsx invokes the handle method).
-      // Copying the tween-setup block keeps the behaviour identical.
-      const cam = state.cam;
-      if (!cam) return;
-      state.subsystems.tweens.start({
-        startMs: performance.now(),
-        durationMs: FOCUS_TWEEN_MS,
-        fromTarget: vec3.clone(cam.target as vec3),
-        toTarget: vec3.fromValues(info.x, info.y, info.z),
-        fromDistance: cam.distance,
-        toDistance: focusDistanceMpc(info.diameterKpc),
-        fromYaw: cam.yaw,
-        toYaw: cam.yaw,
-        fromPitch: cam.pitch,
-        toPitch: cam.pitch,
-      });
-      state.subsystems.scheduler.requestRender();
+      // We don't call `handle.focusOn` directly because `this` would be
+      // unreliable at call time (depending on how App.tsx invokes the
+      // handle method) and because focusOn fires `onFocusChange` again,
+      // which we already did above with the prebuilt PointInfo.
+      // `tweenToGalaxy` is the shared kernel both methods build on top
+      // of — same observable behaviour, no duplication.  Cam-null is
+      // handled inside the helper.
+      tweenToGalaxy(state, info);
     },
 
     getCloudObjIds(source) {
@@ -2047,22 +2025,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the selection.
       cb.onFocusChange?.(info);
 
-      // Camera focus tween — same setup as selectFamous / focusOn.
-      const cam = state.cam;
-      if (!cam) return;
-      state.subsystems.tweens.start({
-        startMs: performance.now(),
-        durationMs: FOCUS_TWEEN_MS,
-        fromTarget: vec3.clone(cam.target as vec3),
-        toTarget: vec3.fromValues(info.x, info.y, info.z),
-        fromDistance: cam.distance,
-        toDistance: focusDistanceMpc(info.diameterKpc),
-        fromYaw: cam.yaw,
-        toYaw: cam.yaw,
-        fromPitch: cam.pitch,
-        toPitch: cam.pitch,
-      });
-      state.subsystems.scheduler.requestRender();
+      // Camera focus tween — same setup as selectFamous / focusOn,
+      // routed through the shared `tweenToGalaxy` kernel.  The helper's
+      // own cam-null guard absorbs the post-destroy / pre-bootstrap
+      // race so this method doesn't need a local one.
+      tweenToGalaxy(state, info);
     },
 
     focusOnHome() {
