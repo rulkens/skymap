@@ -1,5 +1,25 @@
 # Task 2: HyperLEDA position-angle cache via R2
 
+> **Status: done 2026-05-07.** Shipping the partial cache as-is.
+>
+> The fetcher targets ~1.5 M unique PGCs but the local run was paused at
+> 52,178 queries (~41,332 with populated PA — the long tail is mostly
+> empty HyperLEDA responses). On 2026-05-07 we decided NOT to spend the
+> remaining ~1 hour to complete the fetch. Rationale:
+>
+> - The queried subset overwhelmingly covers the brightest,
+>   most-cross-matched GLADE galaxies — i.e. the ones a user is most
+>   likely to focus on or click on.
+> - The empty-response tail produces no orientation data anyway, so
+>   pushing through it adds runtime cost for negligible coverage gain.
+> - Contributors who want a complete cache can still run
+>   `npm run fetch-hyperleda` locally (resumable; README documents it).
+>
+> Verified 2026-05-07: `curl -sI https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz`
+> returns `HTTP/2 200`, `content-type: application/gzip`, `cache-control: public, max-age=86400`.
+> The remaining unchecked steps below are kept for historical reference; treat them as
+> "not applicable" for this iteration.
+
 The current README tells users to run `npm run fetch-hyperleda` for "roughly 1 hour" against HyperLEDA's servers, fetching about 1.5 M PGCs at 4 concurrent requests. Every new user does this. Two problems: (1) HyperLEDA gets hammered by every reader; (2) it's a friction wall that drops 90% of would-be users before they see real data. Fix: ship the resulting CSV via R2 (the same Cloudflare R2 bucket that already serves the `.bin` catalog files). Users `curl` it instead of running the script.
 
 **Why R2 and not a GitHub release asset (the original plan)?**
