@@ -9,8 +9,11 @@
  * just a six-vertex `draw(6, 1)` call.
  *
  * The GPU side is a hand port of a CC0 ShaderToy "Spiral galaxy"
- * fragment shader.  See `shaders/milkyWayImpostor.wgsl` for the WGSL
- * source and the per-line port notes.
+ * fragment shader.  See `shaders/milkyWay/{io,vertex,fragment}.wesl`
+ * for the WESL source and the per-line port notes — the procedural-
+ * galaxy helpers (stars, height, galaxyNormal, shadeGalaxyDisk,
+ * renderGalaxy) all live alongside `fs` in `fragment.wesl` because
+ * they're fragment-only.
  *
  * ### Uniform buffer ABI
  *
@@ -76,7 +79,15 @@
  * `@builtin(vertex_index)`.
  */
 
-import wgsl from './shaders/milkyWayImpostor.wesl?static';
+// Two ?static imports mirror the points/* split (Task 13): each
+// pipeline stage compiles its own GPUShaderModule from a strictly-
+// smaller source. The vertex module pulls in 'lib/camera' for
+// 'worldToClip'; the fragment module pulls in 'lib/math' + 'lib/util'
+// for the procedural-galaxy helpers. Sharing modules across pipelines
+// would invite the WebGPU 'auto' bind-group-layout trap — sidestepped
+// here by giving each stage its own module from disjoint sources.
+import vsCode from './shaders/milkyWay/vertex.wesl?static';
+import fsCode from './shaders/milkyWay/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 type Init = {
@@ -104,7 +115,8 @@ export class MilkyWayRenderer {
     const { device, format } = init;
     this.device = device;
 
-    const module = createShaderModuleWithDevLog(device, wgsl, 'milkyWay');
+    const vsModule = createShaderModuleWithDevLog(device, vsCode, 'milkyWay.vertex');
+    const fsModule = createShaderModuleWithDevLog(device, fsCode, 'milkyWay.fragment');
 
     this.bindGroupLayout = device.createBindGroupLayout({
       label: 'milkyWay-bgl-uniforms',
@@ -137,9 +149,9 @@ export class MilkyWayRenderer {
     this.pipeline = device.createRenderPipeline({
       label: 'milkyWay-pipeline',
       layout: pipelineLayout,
-      vertex: { module, entryPoint: 'vs' },
+      vertex: { module: vsModule, entryPoint: 'vs' },
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [
           {

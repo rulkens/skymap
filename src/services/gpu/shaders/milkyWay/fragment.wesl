@@ -7,32 +7,22 @@
 //
 // ─────────────────────────────────────────────────────────────────────
 //
-// milkyWayImpostor.wgsl — single-quad procedural Milky Way at world origin.
+// milkyWay/fragment.wesl — procedural Milky Way fragment stage.
 //
-// This pass renders ONE screen-aligned quad that covers the full
-// viewport (plus a 5% bleed margin on each side, so the fragment-side
-// smoothstep edge fade has room to come down to zero before the
-// quad's hard edge).  The fragment stage runs a ray-marched procedural
-// galaxy that gives the viewer a sense of being "inside" the Milky Way.
+// This file owns the heart of the impostor: the ray-marched
+// procedural galaxy that gives the viewer a sense of being 'inside'
+// the Milky Way.  All the procedural-galaxy helpers (stars, height,
+// galaxyNormal, shadeGalaxyDisk, renderGalaxy, twirl, galaxy, mod2)
+// live here too — they're fragment-only, called from nowhere else
+// in the engine, so promoting them to lib/ would just add coupling
+// without payoff. The decision is 'fragment-only helpers stay with
+// the fragment file'.
 //
-// The impostor is purely cosmetic — there is no Milky Way row in any
-// of the three catalogs (SDSS, 2MRS, GLADE) at the world origin, so
-// without this pass the user looks at empty space when they look "down"
-// at Earth.  With it, they see a slowly-rotating spiral that visually
-// anchors the rendered universe to a meaningful "here".
-//
-// ── Why screen-aligned, not world-fixed disk plane?
-//
-// A future enhancement would orient the quad to lie in the actual
-// galactic disk plane (Galactic latitude 0°), which in the equatorial
-// J2000 coordinates this engine uses corresponds to a tilted plane
-// rotated ~62.6° from the celestial equator.  That would be visually
-// more "correct" but requires a per-camera-distance fudge so the disk
-// looks dramatic at small distances and flat at larger ones, and the
-// user would see a thin streak instead of a face-on spiral when
-// looking edge-on.  Screen-aligned matches the ShaderToy's 2D framing
-// directly — the camera orbits AROUND the galaxy in the shader's own
-// coordinates, regardless of where it sits in skymap world space.
+// The vertex stage in 'milkyWay/vertex.wesl' provides world-space
+// per-fragment positions; this file reconstructs the per-pixel
+// world-space ray as 'normalize(worldPos - cameraPosWorld)' and feeds
+// that ray (rotated into the galactic frame and scaled into the
+// shader's local unit system) to the procedural raymarcher.
 //
 // ── Why output linear HDR colour?
 //
@@ -44,15 +34,6 @@
 // function — all of which are display-space operations that would
 // double-up with the engine's tone-map pass and produce muddy crushed
 // blacks.  Those four operations are DELETED, not ported.
-//
-// ── Coordinate convention inside the fragment stage
-//
-// The fragment receives 'uv' in '[-1.05, 1.05]²' (the 5% bleed
-// margin).  We feed 'uv' directly into the ShaderToy's 'mainImage'
-// equivalent as the "p" vector after aspect-ratio normalisation —
-// since the vertex stage already pre-stretches the quad in clip-space
-// to compensate for non-square viewports, the fragment shader sees a
-// square-aspect-ratio uv and doesn't need to know iResolution.
 //
 // ── ShaderToy → WGSL specific notes
 //
@@ -68,66 +49,8 @@
 //   - 'for (int i = 0; i < 11; ++i)' becomes 'for (var i: i32 = 0; i
 //     < 11; i = i + 1)'.
 
-// ── Uniforms layout ─────────────────────────────────────────────────
-//
-// The first 80 bytes are the shared 'CameraUniforms' prefix from
-// 'lib/camera.wesl' (viewProj + viewportPx + two reserved pad slots).
-// Embedding it as a named member 'cam' rather than inlining the
-// individual fields makes the cross-renderer audit story explicit:
-// every renderer's first uniform field is now 'cam: CameraUniforms',
-// and every projection call goes through 'worldToClip(u.cam, p)'.
-//
-// ## Why the field order changed
-//
-// The pre-WESL-conversion layout had this shape:
-//
-//   offset 0  : viewProj           (mat4)
-//   offset 64 : viewport           (vec2)
-//   offset 72 : fadeAlpha          (f32)   <─── overlaps CameraUniforms
-//   offset 76 : iTime              (f32)   <─── ._pad0/._pad1 slots
-//   offset 80 : cameraPosWorld     (vec3)
-//   offset 92 : _pad               (f32)
-//   total: 96 bytes
-//
-// 'CameraUniforms' explicitly reserves bytes 72..79 as '_pad0/_pad1'
-// (so renderers extending it can place their first vec3-aligned field
-// at offset 80). The old impostor layout filled those bytes with
-// 'fadeAlpha' + 'iTime' — which is fine for a hand-rolled struct but
-// incompatible with embedding 'cam: CameraUniforms' as the first
-// field. We can't drop CameraUniforms in as a pure prefix without
-// moving the renderer-specific scalars somewhere else.
-//
-// Resolution: put 'cam: CameraUniforms' first (occupies 0..79), then
-// pack the renderer-specific fields after. 'cameraPosWorld' goes at
-// offset 80 (already 16-byte aligned, which vec3 requires), and the
-// two f32 scalars 'fadeAlpha' + 'iTime' fall in naturally at 92 / 96.
-// The trailing pad lands at 100..111 to round the struct size up to
-// 112 bytes (a multiple of 16, the struct alignment for vec3-bearing
-// types).
-//
-// ## New byte layout
-//
-//   offset 0   : cam: CameraUniforms  (80 B; viewProj + viewportPx
-//                                       + _pad0 + _pad1)
-//   offset 80  : cameraPosWorld       (vec3; 12 B)
-//   offset 92  : fadeAlpha            (f32; 4 B)
-//   offset 96  : iTime                (f32; 4 B)
-//   offset 100 : _pad                 (12 B; round up to 112)
-//   total: 112 bytes
-//
-// CPU-side counterpart in 'milkyWayRenderer.ts' must write the
-// floats at the matching f32 indices — see that file's 'draw' method
-// for the new offset table.
-
-import package::lib::camera::{ CameraUniforms, worldToClip };
-// Math primitives must be imported at the top of the file alongside the
-// camera import. wesl-plugin@0.6.74's linker only resolves imports it
-// finds before code-emitting begins; if the imports sit further down
-// (next to the call sites) the linker emits the source verbatim, the
-// 'import' keyword reaches Chrome's WGSL parser, and the whole module
-// fails to compile. Verified empirically — moving these four imports
-// here fixed a regression where milkyWay's pipeline was invalidated as
-// soon as fadeAlpha rose above zero (close-zoom = black screen).
+import package::milkyWay::io::Uniforms;
+import package::milkyWay::io::VsOut;
 import package::lib::math::rot2;
 import package::lib::math::sabs;
 import package::lib::math::toPolar;
@@ -143,118 +66,43 @@ import package::lib::util::raySphere;
 import package::lib::util::worldToGalactic;
 import package::lib::util::galacticToShader;
 
-struct Uniforms {
-  // Shared camera prefix — viewProj for clip-space projection plus
-  // the viewportPx slot every other renderer uses for pxPerRad math.
-  // The impostor doesn't actually read viewportPx (its fragment
-  // shader works in local UV directly); the field is present for
-  // ABI symmetry with the rest of the engine.
-  cam: CameraUniforms,
-  // World-space camera position (Mpc).  Used by the vertex stage to
-  // build the view-aligned billboard basis (the impostor always faces
-  // the camera, so the user never sees its rectangular edge), and by
-  // the fragment stage to drive the ShaderToy's synthetic camera —
-  // transformed into the galactic frame and divided by the Milky Way's
-  // physical half-extent, it becomes the 'ro' parameter to the existing
-  // raymarched render logic.  As the user orbits the world origin, the
-  // shader sees a corresponding rotation of its synthetic camera, so
-  // the rendered spiral appears from different angles instead of
-  // staying frozen in the original ShaderToy's hard-coded vantage.
-  cameraPosWorld: vec3<f32>,
-  // Distance-fade alpha pre-computed on the CPU
-  // ('utils/math/milkyWayFade.ts').  Multiplied into the fragment's
-  // emissive output and into alpha for premultiplied blend.
-  fadeAlpha: f32,
-  // iTime in seconds, scaled by 0.25 on the CPU before upload so the
-  // ShaderToy's internal 'TIME = iTime*0.1' works out to a slow,
-  // alive-but-not-spinning rotation.  Currently unread by the
-  // fragment stage (animation is locked off — see 'fs' below) but
-  // retained for ABI symmetry and future re-enablement.
-  iTime: f32,
-  _pad0: f32,
-  _pad1: f32,
-  _pad2: f32,
-};
-
+// ── Bind-group declaration (matches vertex.wesl byte-for-byte) ──────
+//
+// WESL is module-local; we redeclare 'u' here using the Uniforms
+// struct imported from milkyWay/io.wesl. The layout numbers and the
+// underlying byte layout are identical to vertex.wesl's declaration
+// because both files import the same authoritative struct definition.
 @group(0) @binding(0) var<uniform> u: Uniforms;
-
-struct VsOut {
-  @builtin(position) clipPos: vec4<f32>,
-  // Local UV in [-1, 1]² (the corner offsets used to build the quad).
-  // The fragment stage uses these for the soft edge fade only — the
-  // synthetic-camera ray direction is now reconstructed from the
-  // *world-space* fragment position (see VsOut.worldPos) so the
-  // perspective is correct regardless of the impostor's screen size.
-  @location(0) uv: vec2<f32>,
-  // World-space position of this fragment's corresponding vertex.
-  // The fragment stage interpolates this across the quad and
-  // reconstructs the per-pixel world-space ray as
-  // 'normalize(worldPos - cameraPosWorld)' — the actual ray that hits
-  // this point on the impostor from the user's viewpoint.
-  @location(1) worldPos: vec3<f32>,
-};
-
-// Six corners of a unit quad in [-1, 1]², triangle-list order.  The
-// vertex stage scales them by the Milky Way's half-extent and orients
-// them on a view-aligned billboard plane centred at the world origin
-// — see the vs() doc-comment for the full derivation.
-const CORNERS = array<vec2<f32>, 6>(
-  vec2<f32>(-1.0, -1.0),
-  vec2<f32>( 1.0, -1.0),
-  vec2<f32>( 1.0,  1.0),
-  vec2<f32>(-1.0, -1.0),
-  vec2<f32>( 1.0,  1.0),
-  vec2<f32>(-1.0,  1.0),
-);
 
 // ── Physical scale ──────────────────────────────────────────────────
 //
-// Milky Way disk D_25 ≈ 30 kpc.  Two related constants control how
-// big the impostor renders:
+// Milky Way disk D_25 ≈ 30 kpc.  MILKY_WAY_RADIUS_MPC is the
+// world↔shader-unit ratio.  Inside the shader, the disk's exponential
+// brightness falls off around l ≈ 0.7 (shader units) and the bulge
+// ray-sphere has radius 0.125.  Multiplying those by this constant
+// gives the world-space extent of those features.
 //
-// * MILKY_WAY_RADIUS_MPC is the world↔shader-unit ratio.  Inside the
-//   shader, the disk's exponential brightness falls off around
-//   l ≈ 0.7 (shader units) and the bulge ray-sphere has radius
-//   0.125.  Multiplying those by this constant gives the world-space
-//   extent of those features.
-// * MILKY_WAY_HALFEXTENT_MPC is half the side length of the impostor
-//   billboard quad — it bounds where any of the disk's emission can
-//   appear before being clipped by the quad edge.
-//
-// History: an earlier version used 0.015 / 0.025.  That made the
-// visible disk fade at ~10 kpc radius (l=0.7 × 15 kpc) — much smaller
-// than D_25, and visibly tiny next to peer spirals like M31 (whose
+// History: an earlier version used 0.015.  That made the visible
+// disk fade at ~10 kpc radius (l=0.7 × 15 kpc) — much smaller than
+// D_25, and visibly tiny next to peer spirals like M31 (whose
 // procedural-disk pass renders its body at ~D_25 ≈ 46 kpc).
 //
-// Current values:
+// Current value: 0.030 ⇒ visible disk fades around l=0.7 × 30 kpc =
+// 21 kpc radius (42 kpc diameter, matching the apparent body of M31
+// in the procedural pass).
 //
-//   MILKY_WAY_RADIUS_MPC    = 0.030   ⇒  visible disk fades around
-//                                       l=0.7 × 30 kpc = 21 kpc
-//                                       radius (42 kpc diameter,
-//                                       matching the apparent body
-//                                       of M31 in the procedural
-//                                       pass).
-//   MILKY_WAY_HALFEXTENT_MPC = 0.120  ⇒  240 kpc total quad span,
-//                                       matching the 4× padding
-//                                       convention used by every
-//                                       other galaxy
-//                                       ('sizeWorld = diameterKpc *
-//                                       4 / 1000' — see
-//                                       'points.wgsl:864').
-//
-// Together these scale the whole rendered Milky Way uniformly to ~2×
-// the previous size, putting it on equal visual footing with the
-// procedural-disk galaxies at the same viewing distance.
+// The companion MILKY_WAY_HALFEXTENT_MPC (lives in vertex.wesl) bounds
+// the impostor billboard quad at 0.120 Mpc — 240 kpc total span,
+// matching the 4× padding convention used by every other galaxy.
 const MILKY_WAY_RADIUS_MPC: f32 = 0.030;
-const MILKY_WAY_HALFEXTENT_MPC: f32 = 0.120;
 
 // ── Equatorial → galactic frame ─────────────────────────────────────
 //
-// 'worldToGalactic' and 'galacticToShader' (used in the fragment
-// stage to convert the world-space camera ray into the shader-local
-// frame where the disk lies in y=0) live in lib/util.wesl alongside
-// the J2000 rotation matrix constants. See that file for the
-// derivation; the import keeps this file focused on the impostor's
+// 'worldToGalactic' and 'galacticToShader' (used to convert the
+// world-space camera ray into the shader-local frame where the disk
+// lies in y=0) live in lib/util.wesl alongside the J2000 rotation
+// matrix constants. See that file for the derivation; the import at
+// the top of this file keeps this section focused on the impostor's
 // rendering logic.
 
 // ── Volumetric raymarch tunables (bulge + disc halo) ────────────────
@@ -288,7 +136,7 @@ const BULGE_BRIGHTNESS: f32          = 1.7;
 // Disc halo — anisotropic Gaussian.  Two independent sigmas: a wide
 // in-plane sigma (so the halo extends out across the full disk
 // extent) and a *very* narrow disk-normal sigma (so the halo reads
-// as a "razor-thin haze in the disk plane" rather than a puffy cloud).
+// as a 'razor-thin haze in the disk plane' rather than a puffy cloud).
 // Without this halo the inter-arm regions are pure black between
 // arms and the spiral fades to nothing at the edges; with it, there
 // is a soft warm baseline that keeps the arms visually anchored.
@@ -306,67 +154,6 @@ const DISC_HALO_BRIGHTNESS: f32         = 0.45;
 // stellar haze, not as more dust.  Inspired by the warm-yellow
 // colour of an old-disk stellar population.
 const COL_DISC_HALO = vec3<f32>(0.95, 0.92, 0.88);
-
-@vertex
-fn vs(@builtin(vertex_index) vid: u32) -> VsOut {
-  let c = CORNERS[vid];
-
-  // ── View-aligned billboard basis ──────────────────────────────────
-  //
-  // The impostor is centred at the world origin (the catalogue origin
-  // = Earth/Sun position in skymap world space).  We orient the quad
-  // perpendicular to the view direction so the user never sees its
-  // rectangular edge, and size each corner offset by the Milky Way's
-  // physical half-extent.  Result: the impostor's angular size on
-  // screen scales as '2 * atan(halfExtent / cameraDistance)' — full
-  // screen when the camera is right next to the origin, vanishing to
-  // a dot when the camera is far away.  This is the "right physical
-  // size" the previous all-clip-space implementation lacked.
-  //
-  // Why not orient the quad in the galactic disk plane?  Two reasons.
-  // First, viewing edge-on would collapse the quad to a zero-area
-  // sliver and the bulge (which is a sphere, not a disk) would still
-  // need to render — the view-aligned billboard sidesteps this.
-  // Second, the fragment stage's volumetric raymarching naturally
-  // produces a 3D-looking spiral from any vantage, so the orientation
-  // of the BACKING quad doesn't affect the rendered look — only the
-  // *synthetic camera* inside the shader does, and we drive that
-  // separately from 'cameraPosWorld' in the fragment stage.
-  let lookDir = normalize(-u.cameraPosWorld);
-  // World-up reference for the cross-product basis.  This MUST match
-  // the OrbitCamera's 'lookAt' up-vector convention or the
-  // billboard's basis tilts relative to the camera's actual screen
-  // axes — the user-visible failure mode was "the bulge disappears
-  // on one side when looking head-on to the disk", caused by the
-  // billboard rotating around the view direction so its quad's
-  // angular coverage didn't line up with the screen's rectangular
-  // viewport.
-  //
-  // OrbitCamera ('computeViewProj' in 'orbitCamera.ts') uses world
-  // +Y as the up reference for 'mat4.lookAt', with the orbit-
-  // controls module clamping pitch to ±(π/2 − ε) to keep the lookAt
-  // matrix non-degenerate.  We mirror that exactly: worldUp = +Y,
-  // and the same pitch clamp upstream guarantees 'cross(lookDir,
-  // +Y)' is non-degenerate so we never need to use the pole
-  // fallback in practice.  The fallback is kept defensively for
-  // the (currently impossible) case where pitch reaches the pole.
-  let worldUp = vec3<f32>(0.0, 1.0, 0.0);
-  let upDot = abs(dot(lookDir, worldUp));
-  let upRef = select(worldUp, vec3<f32>(0.0, 0.0, 1.0), upDot > 0.999);
-  let right = normalize(cross(lookDir, upRef));
-  let up = cross(right, lookDir);
-
-  // Build the world-space corner position.  Multiplied by the half-
-  // extent so the quad spans 2 × halfExtent in world units (matching
-  // the [-1, 1] range of the corner UV).
-  let worldPos = (c.x * right + c.y * up) * MILKY_WAY_HALFEXTENT_MPC;
-
-  var out: VsOut;
-  out.clipPos = worldToClip(u.cam, worldPos);
-  out.uv = c;
-  out.worldPos = worldPos;
-  return out;
-}
 
 // ── Ported helpers (see Task 0 of the plan for the original GLSL) ────
 //
@@ -491,14 +278,14 @@ fn shadeGalaxyDisk(p_in: vec2<f32>, ro: vec3<f32>, rd: vec3<f32>, d: f32, tm: f3
   // attempt) wasn't enough — NaN times anything is still NaN, and
   // any value the GPU lifts to the HDR target via additive blending
   // can wash out catalog points behind the impostor's quad.  The
-  // user reported a "tilted black rectangle" with catalog points
+  // user reported a 'tilted black rectangle' with catalog points
   // missing inside the impostor's screen-space footprint; toggling
   // the impostor off restored them.
   //
   // The bulletproof fix: return a hard zero outside l = 0.95.  This
   // is INSIDE the disk's natural brightness floor — at l = 0.95,
   // exp(-5.5*0.9) = 4.9e-3 (already pretty dim), and the user
-  // reported a "black ring" at l ≈ 1.0–1.2 caused by NaN propagation
+  // reported a 'black ring' at l ≈ 1.0–1.2 caused by NaN propagation
   // from the dim-tail terms (pow(0, near-zero), 1/s.x when s.x ≈ 0).
   // Cutting at 0.95 trades a slightly more abrupt outer disk edge
   // for guaranteed-zero output in the NaN-risk zone.
@@ -563,7 +350,7 @@ fn shadeGalaxyDisk(p_in: vec2<f32>, ro: vec3<f32>, rd: vec3<f32>, d: f32, tm: f3
   // out there even though they shouldn't:
   //
   //   1. '0.25 * pow(diff2, 4)' — Phong-like specular off the disk's
-  //      "surface".  'diff2' depends only on the surface normal and
+  //      'surface'.  'diff2' depends only on the surface normal and
   //      light position; both are well-defined for any p, so the
   //      term contributes ~0.002 per channel uniformly across the
   //      whole disk plane.
@@ -606,7 +393,7 @@ fn renderGalaxy(ro: vec3<f32>, rd: vec3<f32>, tm: f32) -> vec3<f32> {
   // sphere.  That has TWO problems for a world-anchored impostor:
   //
   //   1. Asymmetric truncation — the original 'min(t0, t1)' clipped
-  //      the chord to "above the disk plane" so the bulge looked
+  //      the chord to 'above the disk plane' so the bulge looked
   //      like a crescent.  Fine for the ShaderToy's hard-coded
   //      vantage, broken when the user can orbit and would see one
   //      side vanish.
@@ -654,7 +441,7 @@ fn renderGalaxy(ro: vec3<f32>, rd: vec3<f32>, tm: f32) -> vec3<f32> {
   // Even with the spiral-arm structure rendered by 'shadeGalaxyDisk',
   // the inter-arm regions and the disk's outer edges go to nearly
   // black against the HDR target.  Adding a *very thin*, in-plane
-  // Gaussian "haze" gives the disk a soft baseline glow so the arms
+  // Gaussian 'haze' gives the disk a soft baseline glow so the arms
   // never completely disappear into the background — a stand-in for
   // the smooth-old-disk stellar population that real galaxies have
   // underneath their visible spiral structure.
@@ -667,7 +454,7 @@ fn renderGalaxy(ro: vec3<f32>, rd: vec3<f32>, tm: f32) -> vec3<f32> {
   //     ρ(p) = exp(-(p.x² + p.z²) / σ_r²)  ·  exp(-p.y² / σ_y²)
   //
   // (The shader's coordinate convention has y as the disk normal —
-  // see 'galacticToShader' above.)
+  // see 'galacticToShader' in lib/util.wesl.)
   let discHits = raySphere(ro, rd, vec3<f32>(0.0), DISC_HALO_INTEGRATION_RADIUS);
 
   var discOpticalDepth: f32 = 0.0;
@@ -698,7 +485,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // 'rot(p, 0.5*tm)' for arm rotation and into 'sin(... + tm * ...)'
   // phase modulation in the noise/star samplers.  Locking it to a
   // constant freezes the spiral pattern.  Cosmic timescales make even
-  // the original "slow but alive" animation physically nonsensical
+  // the original 'slow but alive' animation physically nonsensical
   // (galaxy rotation periods are ~250 Myr); a static impostor reads
   // as a real photographic backdrop instead of a procedural toy.
   // The 'iTime' uniform is retained for ABI symmetry but unread.
@@ -714,8 +501,8 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // The original ShaderToy hard-coded a fixed 'ro = vec3(0, 0.7, 2)
   // * 0.75' and a synthesised perspective FOV via '2.5 * ww'.  That
   // produced a frozen vantage regardless of where the user's orbit
-  // camera actually was — the user reported "the galaxy is not moving
-  // around when the camera is moving" precisely because of this.
+  // camera actually was — the user reported 'the galaxy is not moving
+  // around when the camera is moving' precisely because of this.
   //
   // Replace it with a real-world ray:
   //   - 'ro_world' is the user's camera position (already in skymap
@@ -729,7 +516,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   //     calculation respects the engine's actual viewProj.
   //
   // Both vectors are then rotated into the galactic frame and scaled
-  // into the shader's "1 unit = MILKY_WAY_RADIUS_MPC" length system,
+  // into the shader's '1 unit = MILKY_WAY_RADIUS_MPC' length system,
   // so the shader's existing math works unchanged: at the original
   // ShaderToy framing distance (length(vec3(0, 0.7, 2)*0.75) ≈ 1.6
   // shader units = ~24 kpc world), the user sees the same dramatic
@@ -769,7 +556,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // it lands on the HDR target as NaN, the next OVER-blended
   // catalog point reads it back as 'dst', and the multiplication
   // 'dst * (1 - src_alpha)' poisons that pixel forever.  Visually
-  // the user sees a "black ring" or "black square" tracking the
+  // the user sees a 'black ring' or 'black square' tracking the
   // impostor's footprint.
   //
   // WGSL has no 'isnan' predicate, but exploits the IEEE-754 rule
@@ -782,4 +569,3 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   let safeCol = select(vec3<f32>(0.0), col, isFinite);
   return vec4<f32>(safeCol * alpha, alpha);
 }
-
