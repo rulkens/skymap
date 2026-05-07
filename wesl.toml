@@ -1,27 +1,32 @@
 # WESL linker configuration.
 #
 # `wesl-plugin` reads this file at build time to find shader sources and
-# resolve `import` statements inside `.wesl` modules. The package name
-# used as the prefix in import paths (e.g. `import skymap::lib::math::saturate;`)
-# is **not** set here — it comes from npm's package.json `name` field
-# (`"skymap"`, verified). That avoids drift between two sources of truth.
+# resolve `import` statements inside `.wesl` modules.
+#
+# Schema (verified against `node_modules/wesl-plugin/dist/PluginExtension-DTjKL6rt.d.mts`):
+#   - `edition`: WESL language version. `unstable_2025` is the current
+#     pre-1.0 edition; bump it (and audit syntax) when WESL stabilises.
+#   - `include`: glob patterns (relative to this file's directory) for
+#     finding `.wesl` source files.
+#   - `root`: base directory for relative paths inside discovered files.
+#
+# The package prefix used in WESL `import` paths (e.g.
+# `import package::lib::math::saturate;`) is the literal token `package`
+# — verified empirically. The npm package.json `name` ("skymap") does
+# NOT resolve as the prefix; only `package::` does.
 #
 # Why we picked `?static` over `?link`:
 #   - `?static` runs the linker at build time and emits a flat WGSL
-#     string. Zero runtime cost, identical shape to today's `?raw` import,
-#     and Chrome's `getCompilationInfo` still produces useful diagnostics
-#     (against the linked output — line numbers don't survive into the
-#     source `.wesl`, but each module's leading docblock keeps the
-#     mapping tractable).
-#   - `?link` defers linking to runtime via a `LinkParams` object. That
-#     would buy us conditional compilation against runtime feature flags,
-#     which we don't need yet — and would introduce a non-trivial
+#     string. Zero runtime cost, identical shape to today's `?raw`
+#     import, and Chrome's `getCompilationInfo` still produces useful
+#     diagnostics (against the linked output — line numbers don't
+#     survive into the source `.wesl`, but each module's leading
+#     docblock keeps the mapping tractable).
+#   - `?link` defers linking to runtime via a `LinkParams` object.
+#     That would buy us conditional compilation against runtime feature
+#     flags, which we don't need yet — and would introduce a non-trivial
 #     runtime dependency on the `wesl` linker's JS bundle.
-#
-# `edition` pins the WESL language version this project targets.
-# `unstable_2025` is the current pre-1.0 edition; we'll bump it (and
-# audit syntax) when WESL stabilises.
 
 edition = "unstable_2025"
-include = ["**/*.wesl", "**/*.wgsl"]
+include = ["src/services/gpu/shaders/**/*.wesl"]
 root = "src/services/gpu/shaders"

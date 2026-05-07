@@ -4,7 +4,7 @@
 
 **Goal:** Convert the seven WGSL shaders under `src/services/gpu/shaders/` to WESL, extract a reusable `lib/` of shared modules, and uniformly split each shader into vertex/fragment/io files.
 
-**Architecture:** Build-time linking via `wesl-plugin` for Vite. Each renderer's TS file imports two pre-linked WGSL strings (one per stage) using the `?static` suffix. Library modules live under `src/services/gpu/shaders/lib/`, with math primitives in `lib/math/` (one function per file) and themed cohesive modules at the `lib/` root. Every shader-touching task ends with build + typecheck + full test suite + manual visual sanity check on the running dev server before commit, per the project's `wgsl-meticulous` convention.
+**Architecture:** Build-time linking via `wesl-plugin` for Vite. Each renderer's TS file imports two pre-linked WGSL strings (one per stage) using the `?static` suffix. Library modules live under `src/services/gpu/shaders/lib/` as themed single-file modules (one file per logical group of related fns), e.g. `lib/math.wesl` holds saturate/rot2/sabs/toPolar/toRect/constants. WESL imports a function FROM a module rather than a function-as-module, so one-fn-per-file would force a verbose duplicated leaf in the import path (`lib::math::saturate::saturate`); grouping into one file matches the WESL idiom. Every shader-touching task ends with build + typecheck + full test suite + manual visual sanity check on the running dev server before commit, per the project's `wgsl-meticulous` convention.
 
 **Tech Stack:** TypeScript 5.x, Vite 5.x, raw WebGPU, WGSL, WESL (`wesl@^0.7.26`, `wesl-plugin@^0.6.74`), Vitest 1.x. No shader unit-test framework exists; verification = build green + 590+ existing tests stay green + visual identity check.
 
@@ -29,6 +29,8 @@
 2. **TypeScript subpath types via the tsconfig `types` array don't reliably resolve.** Adding `"wesl-plugin/suffixes"` to `compilerOptions.types` does not on its own make `import wgsl from './foo.wesl?static'` resolve to `string` under our `moduleResolution: "bundler"` setup. **A triple-slash reference in a project type file is required**, not optional. Task 1 ships `src/@types/wesl.d.ts` with `/// <reference types="wesl-plugin/suffixes" />`; later tasks reference this file rather than re-creating it.
 
 3. **Vitest does NOT inherit Vite plugins from `vite.config.ts`.** Without explicit registration in `vitest.config.ts`, Vitest's SSR-transform pipeline tries to parse `.wesl` files as JavaScript and rolldown rejects them. Task 1 ships an updated `vitest.config.ts` that registers `wesl-plugin` directly. Later tasks should not modify this config unless adding new build extensions.
+
+4. **Self-package import prefix is the literal `package`, not the npm package name.** Verified during Task 3 (2026-05-07) — every snippet in this plan that reads `import skymap::lib::...` should be `import package::lib::...`. The wesl-plugin source (`PluginApi.ts`) calls `fileToModulePath(rootModuleName, "package", false)`, hard-coding the literal `"package"` as the root module's prefix; the official `wesl` README example uses the same form (`import package::colors::chartreuse;`). The npm `name` field (`"skymap"`) is reserved for cross-package imports if this project ever publishes a shader library to npm. **Read every later task's `skymap::...` snippet as `package::...` until those are amended in-place.**
 
 ---
 
@@ -256,7 +258,9 @@ EOF
 
 ---
 
-## Task 3: Extract `lib/math/` (six single-function files)
+## Task 3: Extract `lib/math.wesl` (math primitives module)
+
+> **Note (post-execution):** This task originally planned six single-function files under `lib/math/`, but WESL's import resolution treats the last segment of a path as the function name and the rest as the module path. With one-fn-per-file the working import becomes `import package::lib::math::saturate::saturate;` (duplicated leaf) instead of the cleaner `import package::lib::math::saturate;`. We collapsed the six files into a single `lib/math.wesl` with section-divider comments, which matches the WESL idiom. The task as committed creates one file (`lib/math.wesl`) instead of six and uses single-segment imports.
 
 **Files:**
 - Create: `src/services/gpu/shaders/lib/math/constants.wesl`

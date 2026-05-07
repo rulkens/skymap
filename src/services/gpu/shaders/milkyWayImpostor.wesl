@@ -324,16 +324,16 @@ fn vs(@builtin(vertex_index) vid: u32) -> VsOut {
 }
 
 // ── Ported helpers (see Task 0 of the plan for the original GLSL) ────
+//
+// 'rot2', 'sabs', 'toPolar', 'toRect' previously lived inline in this
+// file. They've moved to lib/math.wesl since the same primitives are
+// useful in any shader doing radial domain warps or smooth-distance
+// fields. The semantics are unchanged; the only rename is GLSL's
+// 'rot()' → 'rot2()' (see lib/math.wesl docblock for the why).
+
+import package::lib::math::{ rot2, sabs, toPolar, toRect };
 
 const TWIRLY: f32 = 2.5;
-
-fn toPolar(p: vec2<f32>) -> vec2<f32> {
-  return vec2<f32>(length(p), atan2(p.y, p.x));
-}
-
-fn toRect(p: vec2<f32>) -> vec2<f32> {
-  return p.x * vec2<f32>(cos(p.y), sin(p.y));
-}
 
 // GLSL's 'mod2' mutated 'p' in-place via 'inout' and returned the cell
 // index 'c'.  WGSL has no 'inout'; we return both via a struct.
@@ -362,12 +362,6 @@ fn noise1(p_in: vec2<f32>, tm: f32) -> f32 {
   let c = cos(p.x * sqrt(3.5) + tm);
   let d = cos(p.y * sqrt(1.5) + tm);
   return a * b * c * d;
-}
-
-fn rot(p: vec2<f32>, a: f32) -> vec2<f32> {
-  let c = cos(a);
-  let s = sin(a);
-  return vec2<f32>(c * p.x + s * p.y, -s * p.x + c * p.y);
 }
 
 fn twirl(p_in: vec2<f32>, a: f32, z: f32) -> vec2<f32> {
@@ -406,7 +400,7 @@ fn stars(p_in: vec2<f32>) -> vec3<f32> {
   var s = vec3<f32>(10000.0);
 
   for (var i: i32 = 0; i < 3; i = i + 1) {
-    p = rot(p, 0.5);
+    p = rot2(p, 0.5);
     let m = mod2(p, vec2<f32>(sz));
     let r = rand(m.c);
     let o = -1.0 + 2.0 * vec2<f32>(r, fract(r * 1000.0));
@@ -422,12 +416,6 @@ fn stars(p_in: vec2<f32>) -> vec3<f32> {
 // 'LESS(a, b, c) = mix(a, b, step(0., c))' — i.e., 'c >= 0' ? b : a.
 // Substituting 'c = abs(x) - k': when '|x| >= k' use 'abs(x)', else use
 // the parabolic blend.  WGSL 'select' does the same job.
-fn sabs(x: f32, k: f32) -> f32 {
-  let a = (0.5 / k) * x * x + k * 0.5;
-  let ax = abs(x);
-  return select(a, ax, ax >= k);
-}
-
 fn height(p: vec2<f32>, tm: f32) -> f32 {
   let ang = atan2(p.y, p.x);
   let l = length(p);
@@ -491,7 +479,7 @@ fn shadeGalaxyDisk(p_in: vec2<f32>, ro: vec3<f32>, rd: vec3<f32>, d: f32, tm: f3
   // from the dim-tail terms (pow(0, near-zero), 1/s.x when s.x ≈ 0).
   // Cutting at 0.95 trades a slightly more abrupt outer disk edge
   // for guaranteed-zero output in the NaN-risk zone.
-  let p_check = rot(p_in, 0.5 * tm);
+  let p_check = rot2(p_in, 0.5 * tm);
   let l_check = length(p_check);
   if (l_check > 0.95) { return vec3<f32>(0.0); }
 

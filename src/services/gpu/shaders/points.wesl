@@ -51,6 +51,8 @@
 //      @builtin(vertex_index) steps per-vertex (0..5 within each instance).
 //   5. Calls 'passEncoder.draw(6, pointCount)' to kick off the draw.
 
+import package::lib::math::saturate;
+
 // ─── uniforms ─────────────────────────────────────────────────────────────────
 
 // A "bind group" is a numbered slot (0, 1, 2 …) that you attach resources —
@@ -688,7 +690,7 @@ struct VSOut {
 
 fn ramp(t: f32) -> vec3<f32> {
   // s goes 0→1 as t goes 0→2; clamp stops it at 0 for negatives and 1 for t>2.
-  let s = clamp(t * 0.5, 0.0, 1.0);
+  let s = saturate(t * 0.5);
 
   // Blue-to-white: hot blue (quasars, O/B stars) fading to a warm white.
   let blueWhite = mix(vec3<f32>(0.4, 0.6, 1.0), vec3<f32>(1.0, 0.95, 0.8), s);
@@ -1222,9 +1224,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // normal points) for the px-scaling rationale ('sizePx * 0.5') and the
   // smoothstep choice.
   let apparentDiameterPx = in.sizePx * 0.5;
-  let fadeT = clamp(
+  let fadeT = saturate(
     (apparentDiameterPx - u.pxFadeStart) / (u.pxFadeEnd - u.pxFadeStart),
-    0.0, 1.0,
   );
   let pointAlphaMult = 1.0 - fadeT * fadeT * (3.0 - 2.0 * fadeT);
 

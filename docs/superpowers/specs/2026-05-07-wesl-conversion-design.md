@@ -25,13 +25,13 @@ WESL is a strict superset of WGSL — every existing `.wgsl` file is already a v
 ```
 src/services/gpu/shaders/
 ├── lib/
-│   ├── math/                       # one function per file
-│   │   ├── constants.wesl          #   PI, TAU, LOG10
-│   │   ├── rot2.wesl               #   2D rotation
-│   │   ├── sabs.wesl               #   smooth absolute value
-│   │   ├── saturate.wesl           #   clamp(x, 0, 1)
-│   │   ├── toPolar.wesl
-│   │   └── toRect.wesl
+│   ├── math.wesl                   # PI/TAU/LOG10, saturate, rot2, sabs,
+│   │                               #   toPolar, toRect — small primitives
+│   │                               #   grouped one-per-section in one file
+│   │                               #   (WESL imports a fn from a module,
+│   │                               #   not a fn-as-module — so one-fn-per-
+│   │                               #   file forces a verbose duplicated
+│   │                               #   leaf, e.g. lib::math::saturate::saturate)
 │   ├── astro.wesl                  # distance modulus, mag→intensity
 │   ├── billboard.wesl              # vid→corner, screen/world expansion
 │   ├── camera.wesl                 # CameraUniforms, worldToClip, depth
@@ -106,7 +106,7 @@ The "one function per file" rule applies specifically to `lib/math/`. The other 
 - Add `src/@types/wesl.d.ts` mirroring the existing `wgsl.d.ts`, declaring `*.wesl?static` as resolving to `string`.
 - Rename `.wgsl` → `.wesl` across `src/services/gpu/shaders/`. Because WESL is a strict superset, no shader content changes are required for the rename itself — the build keeps producing identical pipelines until imports are added.
 - Each renderer's TS file changes one line: `import shader from './shaders/foo.wgsl?raw'` becomes `import shader from './shaders/foo.wesl?static'`. The shape (string) is unchanged. Renderers that split into vertex/fragment modules go from one import to two, and `device.createRenderPipeline` is updated to pass two `GPUShaderModule`s — which matches WebGPU's native pipeline shape (vertex and fragment have always been separate fields; today both happen to point at the same module).
-- Inside `.wesl` files, imports use WESL's `::` path syntax (not TypeScript brace syntax): `import lib::math::saturate;` makes `saturate` available as a top-level identifier. Paths are resolved from the configured root (`src/services/gpu/shaders/`), so `lib::math::saturate` maps to `src/services/gpu/shaders/lib/math/saturate.wesl`.
+- Inside `.wesl` files, imports use WESL's `::` path syntax (not TypeScript brace syntax): `import package::lib::math::saturate;` makes `saturate` available as a top-level identifier. The leading `package::` is the literal placeholder for the project's own root package (verified in `wesl-plugin/src/PluginApi.ts` — `fileToModulePath(rootModuleName, "package", false)` — and matches the official `wesl` README example `import package::colors::chartreuse;`). Paths are resolved from the configured root (`src/services/gpu/shaders/`), so `package::lib::math::saturate` maps to `src/services/gpu/shaders/lib/math/saturate.wesl`. The npm package name (`skymap`) is **not** used as the prefix — that name is reserved for cross-package imports if this project ever publishes a shader library.
 
 ## Migration plan (15 tasks)
 
