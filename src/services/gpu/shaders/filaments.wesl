@@ -25,6 +25,7 @@
 // perpendicular math then operates in NDC and never touches a camera
 // position, so 'worldEyeDepth' is intentionally NOT imported here.
 import package::lib::camera::{ CameraUniforms, worldToClip };
+import package::lib::cloudFade::applyCloudFade;
 
 // Renderer-specific Uniforms struct.
 //
@@ -175,6 +176,17 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
   let hotTint  = vec3<f32>(0.85, 0.75, 1.0);  // bright, near-white-violet spine
   let tint = mix(baseTint, hotTint, in.density);
 
-  let alpha = edgeFade * 0.6 * densityBoost * u.intensityScale * cloud.opacity;
-  return vec4<f32>(tint * alpha, alpha);  // pre-multiplied alpha
+  let alpha = edgeFade * 0.6 * densityBoost * u.intensityScale;
+
+  // Per-cloud fade-in (opacity uniform written each frame from JS).  We
+  // delegate to 'applyCloudFade' (lib/cloudFade.wesl) so points.wesl and
+  // filaments.wesl share the exact alpha-only attenuation rule.  The
+  // helper takes a vec4 and returns a vec4 with only the alpha channel
+  // scaled — overkill for a scalar multiply, but the signature documents
+  // the 'RGB passes through, only alpha fades' invariant at the type
+  // level.  See the lib's docblock for why we share the helper but NOT a
+  // 'CloudUniforms' struct (filaments has no equivalent for points's
+  // 'sourceCode' pick-identity field).
+  let faded = applyCloudFade(vec4<f32>(tint, alpha), cloud.opacity);
+  return vec4<f32>(faded.rgb * faded.a, faded.a);  // pre-multiplied alpha
 }

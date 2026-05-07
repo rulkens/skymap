@@ -56,6 +56,7 @@ import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
+import package::lib::cloudFade::applyCloudFade;
 import package::lib::colorIndex::ramp;
 
 // ─── uniforms ─────────────────────────────────────────────────────────────────
@@ -1460,15 +1461,6 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // of the procedural-disk impostor).
   alpha = alpha * pointAlphaMult;
 
-  // ── Cloud fade-in ──────────────────────────────────────────────────────────
-  //
-  // Multiply by the per-source opacity uniform (set per-frame from the JS
-  // side based on time-since-upload).  Steady-state opacity = 1.0, so this
-  // is a no-op once a cloud has finished fading.  See the CloudUniforms
-  // docblock above for the full rationale; tl;dr a freshly-uploaded cloud
-  // glides into view over ~500 ms instead of popping into existence.
-  alpha = alpha * cloud.opacity;
-
   // Highlight fallback rows in magenta when the toggle is on. The 0.3 in
   // the green channel keeps fallback galaxies recognisable as "data-y"
   // rather than turning them into pure UI accents — they still render at
@@ -1477,6 +1469,23 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let tintFinal = select(in.tint, in.tint * vec3<f32>(1.0, 0.3, 1.0), highlightActive);
   // Scale the colour by the per-point intensity.
   let rgb = tintFinal * in.intensity;
+
+  // ── Cloud fade-in ──────────────────────────────────────────────────────────
+  //
+  // Multiply alpha by the per-source opacity uniform (set per-frame from the
+  // JS side based on time-since-upload).  Steady-state opacity = 1.0, so this
+  // is a no-op once a cloud has finished fading.  See the CloudUniforms
+  // docblock above for the full rationale; tl;dr a freshly-uploaded cloud
+  // glides into view over ~500 ms instead of popping into existence.
+  //
+  // We delegate to 'applyCloudFade' (lib/cloudFade.wesl) rather than writing
+  // 'alpha = alpha * cloud.opacity' inline. The helper takes a vec4 and
+  // returns a vec4 with only the alpha channel scaled, which is overkill
+  // for a single scalar multiply — but the signature documents the
+  // RGB-passes-through invariant at the type level, and the same helper is
+  // used by filaments.wesl (which has no 'sourceCode' field, hence why we
+  // share the helper but NOT a CloudUniforms struct).
+  let faded = applyCloudFade(vec4<f32>(rgb, alpha), cloud.opacity);
 
   // ── PREMULTIPLIED ALPHA ──────────────────────────────────────────────────
   //
@@ -1498,7 +1507,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   //
   // The additive blend mode itself is configured in the pipeline descriptor on
   // the JS side (Task 10) — specifically in the 'targets[0].blend' descriptor.
-  return vec4<f32>(rgb * alpha, alpha);
+  return vec4<f32>(faded.rgb * faded.a, faded.a);
 }
 
 // ─── pick fragment stage ──────────────────────────────────────────────────────
