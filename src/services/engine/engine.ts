@@ -459,48 +459,25 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   };
 
   /**
-   * Resolve a global instance ID coming back from the picker into the
-   * (source, local index) pair that lets us look the point up in `clouds`.
+   * Build a PointInfo from a global picker index, or null if unresolvable.
    *
-   * Walks the renderer's loaded sources in `Source`-enum order, subtracting
-   * each survey's count from the running global ID until the remainder
-   * falls inside the current source's range.  This is the inverse of the
-   * renderer's `instanceIdOffset` calculation in `pointRenderer.ts`.
-   *
-   * Returns `null` when the global ID lies past the end of every loaded
-   * source (defensive — should not happen if the picker only returns
-   * indices it actually drew).
+   * Decoding the global index lives on the renderer (`fromGlobalIdx`) —
+   * see its docstring for why the encoding rule belongs there.  The
+   * renderer's bounds-check also defends the tier-swap-window race
+   * where a still-in-flight pick from a previous frame returns a
+   * global idx encoded against an older, larger layout: without that
+   * guard, buildPointInfo would index past the end of the freshly-
+   * uploaded smaller cloud's typed arrays and produce a PointInfo
+   * with runtime-undefined numeric fields, which crashes downstream
+   * `.toFixed()` calls in the InfoCard.  `fromGlobalIdx` returning
+   * null here is the right semantics: "we don't have data for that
+   * pick; render no card, the next frame's pick will succeed".
    */
-  function resolveGlobalIdx(globalIdx: number): { source: Source; localIdx: number } | null {
-    if (!state.gpu.renderer) return null;
-    let remaining = globalIdx;
-    for (const entry of state.gpu.renderer.loadedSources()) {
-      if (remaining < entry.count) {
-        return { source: entry.source, localIdx: remaining };
-      }
-      remaining -= entry.count;
-    }
-    return null;
-  }
-
-  /** Build a PointInfo from a global picker index, or null if unresolvable. */
   function pointInfoFromGlobal(globalIdx: number) {
-    const resolved = resolveGlobalIdx(globalIdx);
+    const resolved = state.gpu.renderer?.fromGlobalIdx(globalIdx);
     if (!resolved) return null;
     const c = state.sources.clouds.get(resolved.source);
     if (!c) return null;
-    // Bounds-check against the cloud's actual count.  During a tier swap
-    // there's a transient window where the renderer's per-source count
-    // and the engine's clouds map can disagree (e.g. the renderer just
-    // re-uploaded a smaller cloud but a still-in-flight pick from a
-    // previous frame returns a global idx encoded against the older,
-    // larger layout).  Without this guard, buildPointInfo would index
-    // past the end of cloud.magG / cloud.axisRatio / etc. and produce
-    // a PointInfo whose numeric fields are runtime-undefined — which
-    // crashes downstream `.toFixed()` calls in the InfoCard.  Returning
-    // null here is the right semantics: "we don't have data for that
-    // pick; render no card, the next frame's pick will succeed".
-    if (resolved.localIdx >= c.count) return null;
     return buildPointInfo(
       c,
       resolved.localIdx,
@@ -1120,23 +1097,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the visual renderer — no extra GPU memory for point data.
       const pickRenderer = createPickRenderer(device);
       state.gpu.pickRenderer = pickRenderer;
-      // The resolver adapts the engine's existing per-global-idx
-      // helpers (see `resolveGlobalIdx` and `pointInfoFromGlobal`
-      // higher up) into the (cloud, localIdx, source) shape the
-      // resolver wants.  The `cloud` lookup goes through the live
-      // `state.sources.clouds` map so a cloud loaded after engine
-      // init still picks up correctly.
+      // The resolver adapts the renderer's `fromGlobalIdx` decoder
+      // (which owns the global-idx encoding rule and the tier-swap-
+      // window bounds-check; see `pointInfoFromGlobal` higher up)
+      // into the (cloud, localIdx, source) shape the resolver wants.
+      // The `cloud` lookup goes through the live `state.sources.clouds`
+      // map so a cloud loaded after engine init still picks up
+      // correctly.
       state.subsystems.clickResolver = createClickResolver({
         pickRenderer,
         resolveGlobalIdx: (globalIdx) => {
-          const r = resolveGlobalIdx(globalIdx);
+          const r = state.gpu.renderer?.fromGlobalIdx(globalIdx);
           if (!r) return null;
           const cloud = state.sources.clouds.get(r.source);
           if (!cloud) return null;
-          // Same bounds-check as pointInfoFromGlobal — see its comment
-          // for the tier-swap window that can produce out-of-range
-          // localIdx values.
-          if (r.localIdx >= cloud.count) return null;
           return { source: r.source, localIdx: r.localIdx, cloud };
         },
         buildPointInfo: (cloud, localIdx, src) =>
