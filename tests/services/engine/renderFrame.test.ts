@@ -226,7 +226,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selectedIndex: null as number | null,
+    selected: null as { source: Source; localIdx: number } | null,
     visibleSourceMask: 0xffffffff,
     highlightFallback: true,
     realOnlyMode: false,
@@ -333,7 +333,7 @@ describe('renderFrame', () => {
     const draw = fx.pointRenderer.draw as ReturnType<typeof vi.fn>;
     expect(draw).toHaveBeenCalledTimes(1);
     const args = draw.mock.calls[0]!;
-    // [pass, viewProj, viewportPx, pointSizePx, brightness, selectedIndex,
+    // [pass, viewProj, viewportPx, pointSizePx, brightness, selectedPacked,
     //  visibleSourceMask, camPosWorld, pxPerRad, highlightFallback,
     //  realOnlyMode, biasMode, absMagLimit, apparentMagLimit,
     //  schechterMStar, schechterAlpha, depthFadeEnabled]
@@ -342,7 +342,7 @@ describe('renderFrame', () => {
     expect(args[2]).toEqual([fx.input.canvasWidth, fx.input.canvasHeight]);
     expect(args[3]).toBe(fx.input.settings.pointSizePx);
     expect(args[4]).toBe(fx.input.settings.brightness);
-    // selectedIndex null → 0xffffffff sentinel
+    // selected null → 0xffffffff packed sentinel
     expect(args[5]).toBe(0xffffffff >>> 0);
     expect(args[6]).toBe(fx.input.settings.visibleSourceMask);
     // camPos is a 3-tuple snapshot from cam.position
@@ -360,11 +360,13 @@ describe('renderFrame', () => {
     expect(args[16]).toBe(fx.input.settings.depthFadeEnabled);
   });
 
-  it('translates a non-null selectedIndex straight through to pointRenderer.draw', () => {
-    const fx2 = makeInput({ settings: { selectedIndex: 42 } });
+  it('packs (source, localIdx) into the selectedPacked u32 sent to pointRenderer.draw', () => {
+    // SDSS = 1, localIdx = 42 → (1 << 27) | 42 = 0x0800_002a = 134217770.
+    const fx2 = makeInput({ settings: { selected: { source: Source.SDSS, localIdx: 42 } } });
     renderFrame(fx2.input);
     const draw = fx2.pointRenderer.draw as ReturnType<typeof vi.fn>;
-    expect(draw.mock.calls[0]![5]).toBe(42);
+    const expected = ((Source.SDSS << 27) | 42) >>> 0;
+    expect(draw.mock.calls[0]![5]).toBe(expected);
   });
 
   it('calls thumbnails.runFrame between pointRenderer.draw and pass.end', () => {

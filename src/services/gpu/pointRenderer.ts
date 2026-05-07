@@ -25,10 +25,11 @@
  * frame, decides which sources are drawn — the renderer simply skips the
  * draw call for any source whose bit is clear.
  *
- * Per-source draw calls also let the picker keep a *global* per-point index
- * across surveys: each draw passes its `instanceIdOffset` (sum of prior
- * sources' counts) to the shader via the uniform buffer, and `fsPick` adds
- * that offset to the per-instance index it writes into the pick texture.
+ * Per-source draw calls also feed the picker its (sourceCode, localIdx)
+ * packing: each source's `@group(1)` CloudFade bind group carries a 5-bit
+ * `sourceCode` that the vertex stage composes with `@builtin(instance_index)`
+ * into each fragment's packed identity, written into the r32uint pick
+ * texture by `fsPick`.  No more cross-source running-sum bake.
  *
  * ### Relationship to other modules
  *
@@ -44,7 +45,6 @@ import { ALL_SOURCES, Source } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import { type SchechterTriple } from '../../data/surveyFluxLimits';
 import {
-  computePriorCount,
   type BuildPointInterleavedBufferInput,
   type BuildPointInterleavedBufferMode,
   type BuildPointInterleavedBufferResult,
@@ -97,178 +97,112 @@ import { CloudFade } from './cloudFade';
  * Layout (matches the `PerVertex` struct in points.wgsl):
  *   [x f32, y f32, z f32,
  *    magnitude f32, colorIndex f32,
- *    globalInstanceIdx u32, kPerZ f32,
- *    axisRatio f32, positionAngleDeg f32,
- *    diameterKpc f32, vMaxWeight f32,
- *    schechterRatio f32, angularDensityWeight f32]
+ *    kPerZ f32,
+ *    axisRatio f32 (sign bit = isFallback flag),
+ *    positionAngleDeg f32, diameterKpc f32,
+ *    vMaxWeight f32, schechterRatio f32, angularDensityWeight f32]
  *
- * The first five slots are interpreted as f32 by the shader; slot 5 is
- * interpreted as u32; slots 6..10 are interpreted as f32 again.  JS-side
- * we treat the buffer as a flat ArrayBuffer and use Float32Array /
- * Uint32Array views over the same bytes so we can write each slot in its
- * native type without conversion.
+ * Every slot is f32 from the GPU's perspective; the single bit of "is
+ * this row a fallback orientation?" rides on the sign bit of axisRatio.
  *
- * Slot 6 (`kPerZ`) carries a per-row K-correction coefficient.  Different
- * surveys use different colour pairs (SDSS u−g, GLADE B−J, 2MRS J−K) and
- * each pair has its own redshift dependence, so the K coefficient varies
- * per *row* — not per draw call.  Baking it into the vertex buffer lets the
- * shader read it for free.
+ * ### Identity encoding (post (source, localIdx) packing refactor)
  *
- * Slots 7 and 8 (`axisRatio`, `positionAngleDeg`) carry the galaxy's disk
- * orientation: minor/major axis ratio b/a in (0, 1] and the position angle
- * (east-of-north) in degrees, [0, 180).  Task 11 will use them to squash
- * and rotate the billboard's UV-space mask so face-on disks render as
- * circles and edge-on disks as thin streaks.  Until that lands the values
- * are forwarded through the vertex stage but the fragment stage still uses
- * the round `dot(uv, uv)` cutoff, so the visual is unchanged.
+ * The previous revision baked a per-instance `globalInstanceIdx u32`
+ * carrying the running-sum-of-prior-source-counts global ID + a
+ * fallback-flag piggyback on the high bit.  Both went away with this
+ * refactor:
  *
- * Slot 10 (`vMaxWeight`) is the Malmquist 1/V_max alpha-modulation factor
- * baked at upload time (Task 3 of the malmquist-bias plan).  Each galaxy's
- * weight is `clamp((dRef / dMax(M, mLim))³, 0, 1)` — a per-galaxy quantity
- * that depends on its absolute magnitude and the survey's flux limit.
+ *   - The picker now writes `(sourceCode << 27) | localIdx + 1` from the
+ *     fragment, where `sourceCode` is a per-draw uniform (5 bits, see
+ *     `SOURCE_CODE_OFFSET` below) and `localIdx` is the GPU's
+ *     `@builtin(instance_index)`.  No per-vertex baking needed; each
+ *     survey's identity range is structurally disjoint by construction
+ *     (top 5 bits = source code, never overlap).
+ *   - The fallback flag rides on the sign bit of axisRatio (real
+ *     measurements are always positive; a negative value flags
+ *     fallback orientation).
  *
- * ### Why bake at upload time rather than compute per-frame?
- *
- * Two reasons.  First, the inputs (apparent magnitude, distance,
- * surveyFluxLimit(source)) never change after upload — recomputing per
- * frame would burn ~3.5 M `pow(10, …) / Math.hypot()` evaluations every
- * draw.  Second, an alternative approach — passing the survey's `mLim`
- * via the uniform and computing the weight in WGSL — would reintroduce
- * the `queue.writeBuffer` race we already paid down for `globalInstanceIdx`
- * (see the long comment on slot 5): every per-source `writeBuffer` between
- * draws within one submit completes BEFORE any draw runs, so all draws
- * would read the last `mLim` written.  Baking sidesteps the race entirely
- * at a cost of 4 bytes per instance (~14 MB at 3.5 M points).
+ * Net result: vertex stride shrinks from 52 → 48 bytes, and the
+ * parallel-upload race that the old global-ID baking suffered from is
+ * structurally impossible.
  */
-const SLOTS_PER_POINT = 13;
+const SLOTS_PER_POINT = 12;
 
 /**
  * Byte stride between consecutive per-instance records in the vertex buffer.
  *
- * 13 slots × 4 bytes = 52 bytes. The pipeline's `arrayStride` must match
+ * 12 slots × 4 bytes = 48 bytes. The pipeline's `arrayStride` must match
  * this exactly; if it disagrees WebGPU will either validate-error or
  * silently read garbage.  PickRenderer's pipeline declares the same
- * 52-byte stride and the same attribute table, so the two pipelines stay
+ * 48-byte stride and the same attribute table, so the two pipelines stay
  * compatible with this single vertex buffer layout.
  */
-const POINT_STRIDE = SLOTS_PER_POINT * 4; // 52 bytes
-
-/**
- * Byte offset of the `globalInstanceIdx` slot inside one per-instance record.
- *
- * Used by the upload loop to write the u32 global index into the buffer
- * after the five f32 slots.  Kept as a named constant so the offset stays
- * single-source-of-truth across upload + the pipeline descriptor below.
- */
-const GLOBAL_IDX_BYTE_OFFSET = 20;
+const POINT_STRIDE = SLOTS_PER_POINT * 4; // 48 bytes
 
 /**
  * Byte offset of the `kPerZ` slot inside one per-instance record.
  *
- * Sits immediately after the u32 globalInstanceIdx, at slot index 6.
- * Mirrors the `GLOBAL_IDX_BYTE_OFFSET` style so both the upload loop and
- * the pipeline-descriptor attribute table can refer to a single named
- * value.  The shader reads this as a per-instance f32 to scale the
- * K-correction by redshift on a per-row basis.
+ * Sits at slot index 5 (offset 20).  Per-row K-correction coefficient
+ * (see colourIndex.ts).  The shader multiplies it by redshift `z` to
+ * obtain the per-point K shift.
  */
-const K_PER_Z_BYTE_OFFSET = 24;
+const K_PER_Z_BYTE_OFFSET = 20;
 
 /**
  * Byte offset of the `axisRatio` slot — the b/a ratio of the galaxy disk.
  *
- * Sits at slot index 7 (offset 28).  The fragment shader will use it to
- * squash the unit-circle UV mask into an ellipse before the radial cutoff;
- * the pipeline-descriptor below names this offset so the vertex-attribute
- * table stays in sync with the upload loop.
+ * Sits at slot index 6 (offset 24).  The fragment shader uses
+ * `abs(axisRatio)` to squash the unit-circle UV mask into an ellipse;
+ * the sign bit doubles as the fallback-orientation flag (real
+ * measurements are positive; a negative value flags a fallback row).
  */
-const AXIS_RATIO_BYTE_OFFSET = 28;
+const AXIS_RATIO_BYTE_OFFSET = 24;
 
 /**
  * Byte offset of the `positionAngleDeg` slot — the east-of-north position
  * angle of the galaxy disk's major axis, in degrees [0, 180).
  *
- * Sits at slot index 8 (offset 32).  The fragment shader rotates the
+ * Sits at slot index 7 (offset 28).  The fragment shader rotates the
  * squashed ellipse around the billboard centre by this angle.
  */
-const POSITION_ANGLE_BYTE_OFFSET = 32;
+const POSITION_ANGLE_BYTE_OFFSET = 28;
 
 /**
  * Byte offset of the `diameterKpc` slot — the per-galaxy physical disk
  * diameter in kiloparsecs.
  *
- * Sits at slot index 9 (offset 36) — the new 10th slot of the v4-aligned
- * vertex format.  The vertex shader uses it to compute each billboard's
- * apparent angular radius from `(diameterKpc / 1000 / 2) / distance_Mpc`,
- * replacing the prior project-wide `GALAXY_RADIUS_MPC = 0.06` constant
- * so dwarfs render small and giants render large.  4 extra bytes per
- * instance is ~14 MB at 3.5 M points — comfortably within VRAM budget.
+ * Sits at slot index 8 (offset 32).  The vertex shader uses it to
+ * compute each billboard's apparent angular radius from
+ * `(diameterKpc / 1000 / 2) / distance_Mpc`.
  */
-const DIAMETER_KPC_BYTE_OFFSET = 36;
+const DIAMETER_KPC_BYTE_OFFSET = 32;
 
 /**
  * Byte offset of the `vMaxWeight` slot — the per-galaxy 1/V_max alpha
  * multiplier used by the Malmquist-bias correction's mode 2.
  *
- * Sits at slot index 10 (offset 40) — the new 11th slot.  Baked at
- * upload time from each galaxy's apparent magnitude, Cartesian distance
- * and the survey's flux limit.  The fragment shader multiplies the
- * intensity by this value when `biasMode == 2u` and otherwise ignores
- * it (via a `select`), so modes 0/1/3 see no change.
- *
- * Why a fresh slot rather than re-using one?  None of the existing
- * slots carry "absolute magnitude" or "max detectable distance", and
- * computing the weight on the GPU would either cost a `pow(10, ...)`
- * per vertex or a per-source uniform write that races with the draw
- * loop (see the SLOTS_PER_POINT comment for the full reasoning).
+ * Sits at slot index 9 (offset 36).  Baked at upload time from each
+ * galaxy's apparent magnitude, Cartesian distance and the survey's flux
+ * limit.
  */
-const VMAX_WEIGHT_BYTE_OFFSET = 40;
+const VMAX_WEIGHT_BYTE_OFFSET = 36;
 
 /**
  * Byte offset of the `schechterRatio` slot — the per-galaxy Schechter
  * density-correction ratio used by the Malmquist-bias correction's mode 3.
  *
- * Sits at slot index 11 (offset 44) — the new 12th slot.  Baked at upload
- * time as `clamp(N_ref / n(d), 0, 10)` from each galaxy's Cartesian
- * distance, the survey's apparent flux limit, and the Schechter triple.
- * Read by the fragment shader's mode-3 alpha modulation, replacing the
- * per-fragment 200-step trapezoidal integral that the original Task 4
- * implementation ran inline (commit 7a6d810).
- *
- * ### Why per-vertex is correct
- *
- * Each galaxy's distance from origin is fixed at upload time (the catalog
- * parser baked the linear-cosmology Cartesian position into the .bin), so
- * the Schechter integral at that distance is also fixed.  Mirrors exactly
- * the pattern Task 3 used for `vMaxWeight`: per-galaxy invariance →
- * one-shot bake at upload.
- *
- * ### Why baking is *much* faster
- *
- * The pre-bake fragment-stage loop ran ~3.5 M galaxies × ~6 fragments/
- * billboard × 200 iterations ≈ 4 billion `pow + exp` evaluations per
- * frame.  Baking collapses that to a single `f32` multiply — the same
- * cost as mode 2's `vMaxWeight` lookup.  4 extra bytes per instance is
- * ~14 MB at 3.5 M points, comfortably within VRAM budget.
- *
- * ### Numeric stability
- *
- * The CPU bake mirrors the shader's old clamp `clamp(ratio, 0, 10)` and
- * also handles the degenerate-distance case (`nHere == 0` or NaN, which
- * happens at extreme distances where the integration window collapses)
- * by writing 0 — so far galaxies with no detectable density disappear in
- * mode 3 instead of going infinite/NaN.  Visual output is bit-for-bit
- * equivalent to the pre-bake implementation modulo the integration
- * step-count rounding (both CPU and GPU used 200 steps).
+ * Sits at slot index 10 (offset 40).  Default 1.0 in fast mode; real
+ * ratios spliced in lazily when the user picks mode 3.
  */
-const SCHECHTER_RATIO_BYTE_OFFSET = 44;
+const SCHECHTER_RATIO_BYTE_OFFSET = 40;
 
 /**
  * Byte offset of the `angularDensityWeight` slot — the per-galaxy HEALPix
  * angular re-weight used by the Malmquist-bias correction's mode 4.
  *
- * Sits at slot index 12 (offset 48) — the new 13th slot.  Default-baked
- * to 1.0 (multiplicative identity) at upload time so modes 0/1/2/3 see
- * no change.  Real per-galaxy values are spliced in lazily by
+ * Sits at slot index 11 (offset 44).  Default-baked to 1.0
+ * (multiplicative identity) at upload time so modes 0/1/2/3 see no
+ * change.  Real per-galaxy values are spliced in lazily by
  * `setBiasMode(BiasMode.AngularReweight)` the first time the user picks
  * mode 4 in the SettingsPanel, mirroring the lazy-Schechter pattern (see
  * SCHECHTER_RATIO_BYTE_OFFSET above for the same trade-off discussion).
@@ -294,7 +228,21 @@ const SCHECHTER_RATIO_BYTE_OFFSET = 44;
  * `setBiasMode` will spawn the worker for the new source and splice in
  * real weights when it resolves — same lazy semantics as Schechter.
  */
-const ANGULAR_WEIGHT_BYTE_OFFSET = 48;
+const ANGULAR_WEIGHT_BYTE_OFFSET = 44;
+
+// ─── Uniform buffer byte offsets (per-pass partial writes) ──────────────────
+
+/**
+ * Byte offset of the `selectedPacked` u32 slot inside the per-frame uniform
+ * buffer.  The picker writes the "no selection" sentinel here at the top of
+ * every pick pass so its 8× selection-ring scaling doesn't bleed into the
+ * pick area, and `renderFrame` writes the live packed selection here before
+ * each visual frame.
+ *
+ * Exported as a named constant so PickRenderer's per-pass tweaks share one
+ * source of truth with PointRenderer's full-uniform pack.
+ */
+export const SELECTED_PACKED_BYTE_OFFSET = 80;
 
 /**
  * Byte size of the `Uniforms` struct as seen by the GPU.
@@ -305,8 +253,8 @@ const ANGULAR_WEIGHT_BYTE_OFFSET = 48;
  *   bytes 64..71  : viewport          vec2<f32>    (2 floats)        }
  *   bytes 72..75  : pointSizePx       f32          (1 float)         } 16 bytes (one vec4 slot)
  *   bytes 76..79  : brightness        f32          (1 float)         }
- *   bytes 80..83  : selectedIndex     u32                             ← picker writes here
- *   bytes 84..87  : instanceIdOffset  u32                             ← per-source offset (legacy; baked per-vertex now)
+ *   bytes 80..83  : selectedPacked    u32                             ← (selectedSource << 27) | selectedLocalIdx, or 0xFFFFFFFF
+ *   bytes 84..87  : sourceCode        u32                             ← per-draw source tag (5 bits used)
  *   bytes 88..95  : _pad0/_pad1       u32×2        (written as 0)     ← alignment for the next vec3 slot
  *   bytes 96..107 : camPosWorld       vec3<f32>    (3 floats)        } 16 bytes (one vec4 slot)
  *   bytes 108..111: pxPerRad          f32          (1 float)         }
@@ -332,13 +280,14 @@ const ANGULAR_WEIGHT_BYTE_OFFSET = 48;
  * WGSL uniform buffers follow rules similar to std140 (see WGSL spec §13,
  * "Memory Layout"). Each member must be aligned to its alignment value:
  * `vec3<f32>` requires 16-byte alignment, which is why the `_pad0/_pad1`
- * pair sits between `instanceIdOffset` and `camPosWorld` — without those
+ * pair sits between `sourceCode` and `camPosWorld` — without those
  * eight bytes, `camPosWorld` would land at offset 88, breaking alignment
  * and silently corrupting the camera position.
  *
- * The picker (`pickRenderer.ts`) writes only `selectedIndex` at offset 80;
- * the new tail fields are read-only from its perspective and are populated
- * by every visual `draw()` call before the pick pass runs.
+ * The picker (`pickRenderer.ts`) writes `selectedPacked` (offset 80) +
+ * `sourceCode` (offset 84) for every per-source draw — see its `pick()`
+ * docblock for the per-source uniform-write pattern that lets the pick
+ * pass see the same packed identity space the visual pass does.
  *
  * Task 15 added the trailing 16-byte slot for the orientation-visibility
  * toggles (`highlightFallback`, `realOnlyMode`).  The two trailing u32
@@ -627,15 +576,12 @@ function defaultAngularWeightsWorkerRunner(
 /**
  * Internal record describing one source's GPU vertex buffer.
  *
- * `instanceIdOffset` is the global index of this source's first point — the
- * sum of `count` across all *prior* sources in `Source` enum order. The
- * picker uses it (via the uniform) to translate each instance's local index
- * into a globally-unique ID, so JS can index into a merged point array.
- *
- * We recompute every offset after each upload/unload because the *order* of
- * sources is fixed (enum order) but which surveys are loaded varies. Doing
- * this on every change is O(numSources) — at most 32 entries — so it is not
- * a hot path.
+ * The previous revision tracked `instanceIdOffset` + `bakedPriorCount` here
+ * to manage the cross-source globally-unique running-sum identity space.
+ * Both fields are gone: the picker now writes
+ * `(sourceCode << 27) | localIdx + 1` from a per-draw uniform, so each
+ * survey's identity range is structurally disjoint by construction and
+ * no per-vertex baking (or post-upload rebake bookkeeping) is needed.
  */
 type LoadedSource = {
   buffer: GPUBuffer;
@@ -643,7 +589,7 @@ type LoadedSource = {
   /**
    * Mirror of the interleaved Float32Array baked into `buffer` at upload
    * time.  Held on the JS side so `bakeSchechterRatios()` can splice
-   * fresh Schechter ratios into slot 11 of every row and re-upload the
+   * fresh Schechter ratios into slot 10 of every row and re-upload the
    * whole buffer with one `device.queue.writeBuffer` call — see that
    * method's doc for why this is faster than N sparse writes.
    *
@@ -665,34 +611,17 @@ type LoadedSource = {
   /**
    * Cached per-galaxy HEALPix angular re-weights, populated lazily the
    * first time the user selects `BiasMode.AngularReweight` (mode 4).
-   * Mirrors `cachedSchechterRatios` exactly: once populated, subsequent
-   * mode-4 toggles reuse this array for an instant flip (single
-   * writeBuffer call), so the user pays the bake cost once per session
-   * per source.
+   * Mirrors `cachedSchechterRatios` exactly.
    *
    * `null` until the first `setBiasMode(BiasMode.AngularReweight)` call
    * resolves for this source.  Callers must check before using.
    */
   cachedAngularWeights: Float32Array | null;
   /**
-   * Current authoritative offset, recomputed after every upload/unload by
-   * `recomputeInstanceIdOffsets`.  This is the running sum of `count`
-   * across earlier-enum-order loaded sources.
-   */
-  instanceIdOffset: number;
-  /**
-   * The `priorCount` that was actually baked into this source's vertex
-   * buffer's `globalInstanceIdx` slot at upload time.  Compared against
-   * `instanceIdOffset` to detect when the baked values are stale (because
-   * an *earlier*-enum-order source was uploaded later — happens whenever
-   * parallel fetches resolve out of enum order).  When stale, the upload
-   * caller re-runs `upload(source, cloud)` so the bake catches up.
-   */
-  bakedPriorCount: number;
-  /**
-   * Reference to the original cloud passed to `upload()`.  Held so we can
-   * re-bake the vertex buffer on demand (see `bakedPriorCount` above).
-   * Same object the engine already holds in its `clouds` map — no
+   * Reference to the original cloud passed to `upload()`.  Held so the
+   * lazy-bake paths (Schechter / angular reweight) can re-traverse the
+   * source data without a round-trip to the engine's cloud map.  Same
+   * object the engine already holds in its `clouds` map — no
    * duplication, just a pointer.
    */
   cloud: PointCloud;
@@ -766,9 +695,9 @@ export class PointRenderer {
    *
    * The map is keyed by `Source` (a numeric enum) and contains exactly the
    * surveys currently present on the GPU. `upload` adds or replaces an entry,
-   * `unload` removes one, and after either operation we call
-   * `recomputeInstanceIdOffsets` to re-derive the per-source offset values
-   * in the canonical enum order.
+   * `unload` removes one.  No global running-sum bookkeeping anymore — each
+   * source's pick identity comes from its CloudFade's per-source sourceCode
+   * uniform, set once at upload.
    *
    * Why a `Map` (not a plain object)? `Map` preserves insertion order, has a
    * straightforward `delete`/`has` API, and avoids the prototype-chain
@@ -900,63 +829,32 @@ export class PointRenderer {
               { shaderLocation: 1, offset: 12, format: 'float32' },
               // colorIndex (f32) — offset 16 bytes
               { shaderLocation: 2, offset: 16, format: 'float32' },
-              // globalInstanceIdx (u32) — offset 20 bytes
-              {
-                shaderLocation: 3,
-                offset: GLOBAL_IDX_BYTE_OFFSET,
-                format: 'uint32',
-              },
-              // kPerZ (f32) — offset 24 bytes.  Per-row K-correction
-              // coefficient (see colourIndex.ts).  Different bands react
-              // differently to redshift: SDSS u−g uses ~3.0/z (UV is highly
-              // K-sensitive), GLADE B−J uses ~1.0/z, and 2MRS J−K uses 0.0/z
-              // because near-infrared galaxy SEDs are nearly z-invariant in
-              // the redshift range we care about.  The shader multiplies
-              // this coefficient by `z` to obtain the per-point K shift.
-              { shaderLocation: 4, offset: K_PER_Z_BYTE_OFFSET, format: 'float32' }, // kPerZ
-              // axisRatio (f32) — offset 28 bytes.  Galaxy disk b/a in
-              // (0, 1].  Read by the fragment shader (Task 11) to squash
-              // the unit-circle UV mask into an ellipse before the radial
-              // cutoff — face-on (b/a = 1) renders round, edge-on (b/a ≈
-              // 0.2) renders as a thin streak.
-              { shaderLocation: 5, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
-              // positionAngleDeg (f32) — offset 32 bytes.  East-of-north
+              // kPerZ (f32) — offset 20 bytes.  Per-row K-correction
+              // coefficient (see colourIndex.ts).
+              { shaderLocation: 3, offset: K_PER_Z_BYTE_OFFSET, format: 'float32' },
+              // axisRatio (f32) — offset 24 bytes.  Galaxy disk b/a in
+              // (0, 1] with the SIGN BIT carrying the fallback flag —
+              // the shader recovers the mask shape via `abs(axisRatio)`
+              // and the flag via `axisRatio < 0.0`.
+              { shaderLocation: 4, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
+              // positionAngleDeg (f32) — offset 28 bytes.  East-of-north
               // position angle of the major axis in degrees, [0, 180).
-              // Read by the fragment shader (Task 11) to rotate the
-              // squashed ellipse around the billboard centre.
-              { shaderLocation: 6, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
-              // diameterKpc (f32) — offset 36 bytes.  Per-galaxy physical
-              // diameter in kiloparsecs.  Vertex shader uses it to size the
-              // billboard's apparent radius (replacing the prior project-wide
-              // GALAXY_RADIUS_MPC = 0.06 constant).
-              { shaderLocation: 7, offset: DIAMETER_KPC_BYTE_OFFSET, format: 'float32' },
-              // vMaxWeight (f32) — offset 40 bytes.  Per-galaxy 1/V_max
-              // alpha multiplier baked at upload time (Task 3 of the
-              // malmquist-bias plan).  Read by the fragment shader's
-              // intensity computation, gated on `u.biasMode == 2u` via a
-              // `select(1.0, vMaxWeight, …)` so the other three modes are
-              // unaffected.  See VMAX_WEIGHT_BYTE_OFFSET for the design
-              // notes on why we bake instead of computing per-frame.
-              { shaderLocation: 8, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
-              // schechterRatio (f32) — offset 44 bytes.  Per-galaxy
-              // Schechter density-correction ratio baked at upload time
-              // (replaces the per-fragment 200-step trapezoidal integral
-              // from commit 7a6d810).  Read by the fragment shader's
-              // intensity computation, gated on `u.biasMode == 3u` via a
-              // `select(1.0, schechterRatio, …)` so the other three modes
-              // are unaffected.  See SCHECHTER_RATIO_BYTE_OFFSET above for
-              // the full design notes on the per-vertex bake.
-              { shaderLocation: 9, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
-              // angularDensityWeight (f32) — offset 48 bytes.  Per-galaxy
-              // HEALPix angular re-weight baked at upload time as 1.0 (the
-              // multiplicative identity), then lazily replaced with real
-              // per-galaxy values when the user toggles
-              // `BiasMode.AngularReweight`.  Read by the fragment shader's
-              // alpha computation, gated on `u.biasMode == 4u` via a
-              // `select(1.0, angularDensityWeight, …)` so the other four
-              // modes are unaffected.  See ANGULAR_WEIGHT_BYTE_OFFSET above
-              // for the design notes.
-              { shaderLocation: 10, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
+              { shaderLocation: 5, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
+              // diameterKpc (f32) — offset 32 bytes.  Per-galaxy physical
+              // diameter in kiloparsecs.  Vertex shader uses it to size
+              // the billboard's apparent radius.
+              { shaderLocation: 6, offset: DIAMETER_KPC_BYTE_OFFSET, format: 'float32' },
+              // vMaxWeight (f32) — offset 36 bytes.  Per-galaxy 1/V_max
+              // alpha multiplier; gated on `u.biasMode == 2u` via
+              // `select(1.0, vMaxWeight, …)`.
+              { shaderLocation: 7, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
+              // schechterRatio (f32) — offset 40 bytes.  Per-galaxy
+              // Schechter density-correction ratio; gated on
+              // `u.biasMode == 3u`.
+              { shaderLocation: 8, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
+              // angularDensityWeight (f32) — offset 44 bytes.  Per-galaxy
+              // HEALPix angular re-weight; gated on `u.biasMode == 4u`.
+              { shaderLocation: 9, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
             ],
           },
         ],
@@ -1011,10 +909,10 @@ export class PointRenderer {
    * full rationale (structured-clone vs Transferable, per-call worker
    * lifecycle, etc.).
    *
-   * The upload now: spawns a fresh worker, ships the cloud + source +
-   * priorCount via structured clone, awaits the result, then writes the
-   * returned `interleaved` buffer to GPU memory and updates bookkeeping.
-   * The worker's transferred ArrayBuffer becomes invalid on the worker
+   * The upload now: spawns a fresh worker, ships the cloud + source via
+   * structured clone, awaits the result, then writes the returned
+   * `interleaved` buffer to GPU memory and updates bookkeeping.  The
+   * worker's transferred ArrayBuffer becomes invalid on the worker
    * side after the message — fine because the worker terminates anyway.
    *
    * ### Why we destroy the old buffer for this source first
@@ -1038,21 +936,25 @@ export class PointRenderer {
    * @param source  Which survey the cloud belongs to.
    * @param cloud   Point cloud to upload (struct-of-arrays SDSS v2 shape).
    */
+  /**
+   * Replace (or clear) one source's GPU vertex buffer with the bytes baked
+   * from `cloud`.  See the class-level docstring for the worker-vs-inline
+   * choice; production runs the bake in a fresh `?worker` chunk per call.
+   *
+   * ### Race-condition behaviour
+   *
+   * If `upload(source, cloudA)` is in flight (worker baking) and a second
+   * `upload(source, cloudB)` fires for the same source, both spawn their
+   * own workers.  Whichever completes LAST wins — its `clouds.set` call
+   * overwrites the first's entry, and the loser's GPU buffer (already
+   * allocated by then) is leaked until the next upload destroys it.  The
+   * older "running-sum globalInstanceIdx" scheme had a much nastier
+   * variant where parallel uploads of *different* sources could leave
+   * one source's identity baked against a stale priorCount; that whole
+   * machinery is gone with this refactor — there's no global running
+   * sum anymore, so cross-source races can't exist.
+   */
   async upload(source: Source, cloud: PointCloud): Promise<void> {
-    // Mark this source as having an in-flight upload so the rebake pass
-    // (run from any concurrent upload's post-bake step) skips it — see
-    // `uploadsInFlight` doc for the race this defends against.  The
-    // try/finally ensures the flag is cleared even if the worker bake
-    // throws or the post-bake code aborts.
-    this.uploadsInFlight.add(source);
-    try {
-      return await this._uploadInner(source, cloud);
-    } finally {
-      this.uploadsInFlight.delete(source);
-    }
-  }
-
-  private async _uploadInner(source: Source, cloud: PointCloud): Promise<void> {
     // ── Empty-cloud unload path ─────────────────────────────────────────────
     //
     // `engine.setTier` reuses this method to clear a source when the new
@@ -1060,18 +962,10 @@ export class PointRenderer {
     // signals "clear this source" by firing onResult with a count=0 cloud.
     //
     // The naive replace path below would call `device.createBuffer({ size: 0,
-    // ... })` which the WebGPU spec forbids (some browsers throw an
-    // OperationError; others — including current Chrome — accept it but the
-    // per-frame draw loop then fires `pass.draw(6, 0)` which logs the
-    // "Calling [RenderPassEncoder].Draw with an instance count of 0 is
-    // unusual" developer warning and burns an empty draw call every frame).
-    //
-    // Either failure mode is fixable the same way: short-circuit BEFORE the
-    // bake/createBuffer step.  Destroy any prior buffer for this source
-    // (frees VRAM) and remove the entry from the Map entirely — the draw
-    // loop's existing `if (!entry) continue;` then naturally skips this
-    // source.  Re-bake of any later source's instanceIdOffset still happens
-    // through `recomputeInstanceIdOffsets` so the bookkeeping stays right.
+    // ... })` which the WebGPU spec forbids.  Short-circuit BEFORE the
+    // bake/createBuffer step: destroy any prior buffer (frees VRAM) and
+    // remove the entry from the Map entirely so the draw loop's
+    // `if (!entry) continue;` naturally skips this source.
     if (cloud.count === 0) {
       const stale = this.clouds.get(source);
       if (stale) {
@@ -1079,50 +973,27 @@ export class PointRenderer {
         stale.fade.destroy();
       }
       this.clouds.delete(source);
-      this.recomputeInstanceIdOffsets();
       return;
     }
-
-    // ── Compute the source's prior-count BEFORE the worker spawns ───────────
-    //
-    // The worker can't reach back into `this.clouds` to compute the priorCount
-    // itself — Map<Source, LoadedSource> isn't structured-cloneable (it
-    // contains GPUBuffer references which are not clonable), and even if it
-    // were the worker would lock in a snapshot at message time anyway.  We
-    // therefore compute the integer here on the main thread and ship it to
-    // the worker as a single number.
-    //
-    // Edge case unchanged from the inline-version: if an *earlier* source (in
-    // enum order) is uploaded after this one, this source's offset shifts
-    // forward but the values already baked here do not.  The
-    // `rebakeStaleSources` pass below catches the divergence and re-uploads
-    // the affected sources with the corrected priorCount.
-    const countsBySource = new Map<Source, number>();
-    for (const [src, entry] of this.clouds) {
-      countsBySource.set(src, entry.count);
-    }
-    const priorCount = computePriorCount(source, countsBySource);
 
     // ── Run the bake off-thread ─────────────────────────────────────────────
     //
     // `runBuild` either spawns a fresh Web Worker (production path) or runs
     // the pure function inline (Node test path — see the static factory
-    // override).  Either way we await a `BuildPointInterleavedBufferResult`.
-    // Each upload uses its own worker instance: parallel surveys can bake
-    // simultaneously, and there's no shared-state cleanup between calls.
+    // override).  Each upload uses its own worker instance: parallel surveys
+    // can bake simultaneously, and there's no shared-state cleanup between
+    // calls.
     //
     // Mode = 'fast' unless Schechter is currently the active bias mode.  We
     // never want to do the per-galaxy integral at upload unless the user
     // is actively viewing mode 3, since the shader's `select(1.0, …, mode==3)`
-    // gate makes the slot irrelevant in modes 0/1/2.  See the
-    // `BuildPointInterleavedBufferMode` doc for the trade-off.
+    // gate makes the slot irrelevant in modes 0/1/2.
     const mode: BuildPointInterleavedBufferMode = this.schechterModeActive
       ? 'with-schechter'
       : 'fast';
     const result = await PointRenderer.runBuild({
       cloud,
       source,
-      priorCount,
       mode,
     });
     const { interleaved, schechter, mLim, nRef } = result;
@@ -1133,9 +1004,7 @@ export class PointRenderer {
     // buffers can't be realloc'd; allocating a fresh one of the new size and
     // letting the old one's VRAM go is the only path).  The fade controller
     // is recycled on a re-upload — its `restart()` resets the timestamp so
-    // a tier swap re-triggers the fade-in.  Without recycling we'd allocate
-    // a fresh GPU uniform buffer + bind group on every tier flip, which is
-    // unnecessary churn.
+    // a tier swap re-triggers the fade-in.
     const prev = this.clouds.get(source);
     if (prev) {
       prev.buffer.destroy();
@@ -1152,46 +1021,42 @@ export class PointRenderer {
     // mint a fresh one.  Either way, the fadeStartMs is "now" so the next
     // few frames render at low opacity and ramp up.
     const fade = prev?.fade ?? new CloudFade(this.device, this.pipeline.getBindGroupLayout(1));
+    // Stamp the per-source 5-bit Source enum value into the cloud's
+    // bind group.  The shader's vertex stage reads `cloud.sourceCode`
+    // and composes each instance's packed identity from it; doing this
+    // once at upload (rather than per-frame in `draw()`) is correct
+    // because the source code never changes for a given cloud — only
+    // the opacity does.
+    fade.setSourceCode(source);
 
-    // `instanceIdOffset` is set to the priorCount we already computed above
-    // — same value baked into the vertex buffer's globalInstanceIdx slot.
-    // We still call `recomputeInstanceIdOffsets()` afterwards so any later
-    // source's offset stays consistent (it currently only matters as JS-
-    // side bookkeeping for `loadedSources()` consumers; the shader reads
-    // the baked vertex attribute directly and no longer needs a uniform
-    // offset at all).
     // If the upload was 'with-schechter', extract the per-row ratios from
-    // slot 11 of the freshly-baked interleaved array and cache them — this
+    // slot 10 of the freshly-baked interleaved array and cache them — this
     // way a subsequent toggle Schechter→other→Schechter doesn't need to
     // re-spawn the worker.
     let cachedSchechterRatios: Float32Array | null = null;
     if (mode === 'with-schechter') {
       cachedSchechterRatios = new Float32Array(cloud.count);
       for (let i = 0; i < cloud.count; i++) {
-        cachedSchechterRatios[i] = interleaved[i * SLOTS_PER_POINT + 11]!;
+        cachedSchechterRatios[i] = interleaved[i * SLOTS_PER_POINT + 10]!;
       }
     }
 
     this.clouds.set(source, {
       buffer,
       count: cloud.count,
-      instanceIdOffset: priorCount,
-      bakedPriorCount: priorCount,
       cloud,
       schechter,
       mLim,
       nRef,
       interleaved,
       cachedSchechterRatios,
-      // Angular weights are never eagerly baked (see slot-12 comment in
+      // Angular weights are never eagerly baked (see slot-11 comment in
       // buildPointInterleavedBuffer.ts); the upload always writes 1.0 and
       // the cache stays empty until `setBiasMode(BiasMode.AngularReweight)`
       // runs.
       cachedAngularWeights: null,
       fade,
     });
-    this.recomputeInstanceIdOffsets();
-    await this.rebakeStaleSources();
   }
 
   /**
@@ -1223,83 +1088,11 @@ export class PointRenderer {
     PointRenderer.buildRunner = runner ?? defaultWorkerRunner;
   }
 
-  /** Convenience wrapper used by `upload()` and `rebakeStaleSources`. */
+  /** Convenience wrapper used by `upload()`. */
   private static runBuild(
     input: BuildPointInterleavedBufferInput,
   ): Promise<BuildPointInterleavedBufferResult> {
     return PointRenderer.buildRunner(input);
-  }
-
-  /**
-   * Re-upload any source whose `bakedPriorCount` diverged from its current
-   * `instanceIdOffset`.
-   *
-   * Why this is needed: parallel fetches resolve in unpredictable order, so
-   * a later-enum-order source (e.g. 2MRS) can upload BEFORE an earlier one
-   * (SDSS).  The first upload bakes the wrong `priorCount` into its
-   * vertex buffer's `globalInstanceIdx` slot — when SDSS arrives later
-   * and `recomputeInstanceIdOffsets` shifts 2MRS's authoritative offset,
-   * the baked vertex data stays unchanged and the picker resolves
-   * 2MRS-clicks to the wrong source slice.
-   *
-   * The fix: after every recompute, walk loaded sources and re-call
-   * `upload()` for any whose baked offset is now stale.  The recursion
-   * guard prevents infinite loops — after one rebake pass every source
-   * is consistent (since `recomputeInstanceIdOffsets` is idempotent and
-   * the rebake itself doesn't change any other source's offset).
-   */
-  private rebaking = false;
-  /**
-   * Sources whose `upload()` has started but not yet returned.  The rebake
-   * pass below uses this to skip any source that has a fresh upload still
-   * in flight — re-baking with the renderer's current `entry.cloud` would
-   * use a STALE cloud reference (the prior tier's data), and the rebake's
-   * worker would race the in-flight fresh upload.  Whichever finished last
-   * would win, and in practice the rebake is the slow one (it bakes the
-   * old big cloud) so it stomps the new small cloud.  This was the
-   * tier-swap "back to large" bug the asset-loading work uncovered.
-   *
-   * Tracked at the renderer level (not the slot level) because the rebake
-   * runs INSIDE one upload's post-bake step and triggers recursive
-   * `this.upload()` calls — slot-level serialization can't reach in here.
-   *
-   * Recursive rebake calls add themselves to this set too; that's fine —
-   * a nested rebake's `if (this.rebaking) return` guard already prevents
-   * a stale-loop from starting, and the additional set membership simply
-   * means a hypothetical future caller observing this set sees rebake-
-   * recursive uploads as "in flight" too, which is correct.
-   */
-  private uploadsInFlight: Set<Source> = new Set();
-  private async rebakeStaleSources(): Promise<void> {
-    if (this.rebaking) return;
-    this.rebaking = true;
-    try {
-      for (const s of ALL_SOURCES) {
-        const entry = this.clouds.get(s);
-        if (!entry) continue;
-        // Skip sources with a pending fresh upload — rebaking with the
-        // current (stale) cloud would race the in-flight upload's bake
-        // and the slow rebake would overwrite the new buffer.  The
-        // pending upload's own post-bake recompute + rebake will catch
-        // any residual staleness with the correct cloud reference.
-        if (this.uploadsInFlight.has(s)) continue;
-        if (entry.bakedPriorCount !== entry.instanceIdOffset) {
-          // Re-upload with the correct priorCount.  upload() destroys the
-          // old buffer, allocates a new one, and updates the LoadedSource
-          // entry — the caller's local snapshot of `entry` is dead after
-          // this returns, but we don't keep a reference past the call.
-          //
-          // We `await` so each rebake completes before the next iteration —
-          // otherwise a second source's rebake could see the in-flight
-          // first source's stale `instanceIdOffset` and trigger an
-          // unnecessary cascade.  In practice this loop visits at most one
-          // stale source per call, so the serialisation costs nothing.
-          await this.upload(s, entry.cloud);
-        }
-      }
-    } finally {
-      this.rebaking = false;
-    }
   }
 
   /**
@@ -1314,7 +1107,6 @@ export class PointRenderer {
     entry.buffer.destroy();
     entry.fade.destroy();
     this.clouds.delete(source);
-    this.recomputeInstanceIdOffsets();
   }
 
   // ─── Bias-mode dispatch (Phase 5: collapsed public surface) ─────────────────
@@ -1485,11 +1277,11 @@ export class PointRenderer {
   clearSchechterRatios(): void {
     this.schechterModeActive = false;
     for (const entry of this.clouds.values()) {
-      // Splice all-1.0 into slot 11 of the mirror, re-upload.  We don't
+      // Splice all-1.0 into slot 10 of the mirror, re-upload.  We don't
       // build a separate "ones" Float32Array — a simple loop is fine
       // since this is invoked at most a few times per session.
       for (let i = 0; i < entry.count; i++) {
-        entry.interleaved[i * SLOTS_PER_POINT + 11] = 1.0;
+        entry.interleaved[i * SLOTS_PER_POINT + 10] = 1.0;
       }
       this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
     }
@@ -1497,7 +1289,7 @@ export class PointRenderer {
 
   /**
    * Splice a tightly-packed Float32Array of per-row ratios (length =
-   * entry.count) into slot 11 of every row of the entry's interleaved
+   * entry.count) into slot 10 of every row of the entry's interleaved
    * mirror.  Pure function over the mirror buffer — no GPU calls.
    *
    * Extracted as a private helper so `bakeSchechterRatios` (cache-hit
@@ -1507,7 +1299,7 @@ export class PointRenderer {
    */
   private spliceSchechterIntoMirror(entry: LoadedSource, ratios: Float32Array): void {
     for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_POINT + 11] = ratios[i]!;
+      entry.interleaved[i * SLOTS_PER_POINT + 10] = ratios[i]!;
     }
   }
 
@@ -1597,7 +1389,7 @@ export class PointRenderer {
     this.angularReweightModeActive = false;
     for (const entry of this.clouds.values()) {
       for (let i = 0; i < entry.count; i++) {
-        entry.interleaved[i * SLOTS_PER_POINT + 12] = 1.0;
+        entry.interleaved[i * SLOTS_PER_POINT + 11] = 1.0;
       }
       this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
     }
@@ -1605,32 +1397,12 @@ export class PointRenderer {
 
   /**
    * Splice a tightly-packed Float32Array of per-row angular weights
-   * (length = entry.count) into slot 12 of every row of the entry's
+   * (length = entry.count) into slot 11 of every row of the entry's
    * interleaved mirror.  Mirror of `spliceSchechterIntoMirror`.
    */
   private spliceAngularIntoMirror(entry: LoadedSource, weights: Float32Array): void {
     for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_POINT + 12] = weights[i]!;
-    }
-  }
-
-  /**
-   * Walk every loaded source in `Source`-enum order and recompute its
-   * `instanceIdOffset` as the running sum of prior counts.
-   *
-   * The order of iteration matters: the picker decodes a global instance ID
-   * by checking which source's `[offset, offset+count)` slice it falls into,
-   * which only works if the slices are contiguous and ordered identically on
-   * the JS side. Using `ALL_SOURCES` (the canonical iteration order from
-   * `data/sources.ts`) guarantees that.
-   */
-  private recomputeInstanceIdOffsets(): void {
-    let runningOffset = 0;
-    for (const source of ALL_SOURCES) {
-      const entry = this.clouds.get(source);
-      if (!entry) continue;
-      entry.instanceIdOffset = runningOffset;
-      runningOffset += entry.count;
+      entry.interleaved[i * SLOTS_PER_POINT + 11] = weights[i]!;
     }
   }
 
@@ -1647,19 +1419,47 @@ export class PointRenderer {
   }
 
   /**
-   * Iterate over every loaded source's GPU buffer + bookkeeping in `Source`
-   * enum order. Used by the picker to issue its own per-source draw calls
-   * with matching `instanceIdOffset` values.
+   * Look up the per-source point count, or 0 when the source isn't
+   * loaded.  Used by the engine to bounds-check a (source, localIdx)
+   * pair before calling `setSelected` or building a PointInfo.
+   *
+   * Replaces the prior `fromGlobalIdx` decoder: the picker now hands
+   * back a structured `{source, localIdx}` directly, so no decoding is
+   * needed — but callers still want to ask "is this localIdx within
+   * the freshly-uploaded cloud?" because tier swaps can shrink a
+   * source's count in flight.  This getter is the smallest possible
+   * answer.
+   */
+  countOf(source: Source): number {
+    return this.clouds.get(source)?.count ?? 0;
+  }
+
+  /**
+   * Iterate over every loaded source's GPU buffer in `Source` enum order.
+   * Used by the picker to issue its own per-source draw calls.
    *
    * The iterable is generated fresh on each call so the caller may call
-   * `unload()` between iterations without affecting the snapshot — but they
-   * must not assume the iteration order beyond "stable for this call".
+   * `unload()` between iterations without affecting the snapshot — but
+   * they must not assume the iteration order beyond "stable for this
+   * call".
    */
   *loadedSources(): IterableIterator<{
     source: Source;
     vertexBuffer: GPUBuffer;
     count: number;
-    instanceIdOffset: number;
+    /**
+     * Per-source `@group(1)` bind group (CloudFade) carrying this
+     * source's `opacity` + 5-bit `sourceCode`.  PickRenderer binds it
+     * before each per-source draw so its vertex stage can compose the
+     * same packed identity the visual pass does — without baking
+     * anything per-vertex.
+     *
+     * The PickRenderer also needs to call `fade.writeFrame()` per
+     * frame so the GPU buffer is up to date — but the visual `draw`
+     * has already done that for the current frame, and the pick pass
+     * runs after.  Pick can therefore reuse the buffer as-is.
+     */
+    cloudBindGroup: GPUBindGroup;
   }> {
     for (const source of ALL_SOURCES) {
       const entry = this.clouds.get(source);
@@ -1668,76 +1468,9 @@ export class PointRenderer {
         source,
         vertexBuffer: entry.buffer,
         count: entry.count,
-        instanceIdOffset: entry.instanceIdOffset,
+        cloudBindGroup: entry.fade.bindGroup,
       };
     }
-  }
-
-  /**
-   * Return the cross-survey global ID offset for `source`, or 0 when the
-   * source isn't loaded.  Used by the engine's `selectFamous` to
-   * convert a local catalog index to the global index format the
-   * renderer's per-vertex `globalInstanceIdx` carries.
-   */
-  instanceIdOffset(source: Source): number {
-    return this.clouds.get(source)?.instanceIdOffset ?? 0;
-  }
-
-  /**
-   * Encode a (source, localIdx) pair into the global instance ID the
-   * picker writes into the pick texture.  Inverse of `fromGlobalIdx`.
-   *
-   * Why this lives on the renderer: the encoding rule (sum of prior-
-   * source counts in `Source` enum order) is the renderer's, baked
-   * into every per-instance vertex buffer's `globalInstanceIdx` slot.
-   * Engine consumers (the `selectFamous` / `selectByAlias` palette
-   * paths) ask the renderer "what's the global ID for this source's
-   * Nth point?" rather than re-deriving the rule themselves — keeps
-   * the encoding to one source of truth.
-   *
-   * Returns `instanceIdOffset(source) + localIdx`; equivalent to the
-   * previous call-site expression but expressed as one method on the
-   * boundary so the encoding rule has only one home.
-   */
-  toGlobalIdx(source: Source, localIdx: number): number {
-    return (this.clouds.get(source)?.instanceIdOffset ?? 0) + localIdx;
-  }
-
-  /**
-   * Decode a global instance ID into the (source, localIdx) pair that
-   * lets a caller look the point up in its source-specific cloud.
-   * Inverse of `toGlobalIdx`.
-   *
-   * Walks `loadedSources()` in enum order and subtracts each source's
-   * count from the running global ID.  Engine's previous
-   * `resolveGlobalIdx` did this inline — moved here so the encoding
-   * rule lives entirely inside the renderer.
-   *
-   * Returns `null` when the global ID falls past the end of every
-   * loaded source.  The bounds check uses the renderer's own per-
-   * source counts (`loadedSources()`), which means the returned
-   * `localIdx` is always strictly less than the renderer's `count`
-   * for the resolved source.  Callers holding a separate cloud map
-   * (e.g. the engine's `state.sources.clouds`) are responsible for
-   * any additional cross-bookkeeping bounds-check they may need;
-   * this method guarantees only `localIdx < renderer.entry.count`.
-   *
-   * In practice the renderer's count and the engine's cloud-map
-   * count track each other tightly (both updated within one
-   * microtask in the slot's commit body), so the engine's previous
-   * out-of-bounds bounds-check on its own cloud map is redundant
-   * given this method's guarantee — and the engine's
-   * `pointInfoFromGlobal` was simplified accordingly.
-   */
-  fromGlobalIdx(globalIdx: number): { source: Source; localIdx: number } | null {
-    let remaining = globalIdx;
-    for (const entry of this.loadedSources()) {
-      if (remaining < entry.count) {
-        return { source: entry.source, localIdx: remaining };
-      }
-      remaining -= entry.count;
-    }
-    return null;
   }
 
   // ─── Draw ────────────────────────────────────────────────────────────────────
@@ -1755,7 +1488,8 @@ export class PointRenderer {
    *                           so they remain visible as faint dots; nearby
    *                           galaxies grow past it to their real disc size.
    * @param brightness         Global brightness multiplier in [0, 1].
-   * @param selectedIndex      Selected point's *global* index, or `0xFFFFFFFF` for none.
+   * @param selectedPacked     Selected galaxy as `(source << 27) | localIdx`,
+   *                           or `0xFFFFFFFF` for "no selection".
    * @param visibleSourceMask  Bitmask of `Source` values to draw (see `data/sources.ts`).
    * @param camPosWorld        Camera position in world Mpc (from
    *                           `orbitCamera.position`). Used by the vertex
@@ -1807,7 +1541,7 @@ export class PointRenderer {
     viewportPx: [number, number],
     pointSizePx: number,
     brightness: number,
-    selectedIndex: number,
+    selectedPacked: number,
     visibleSourceMask: number,
     camPosWorld: Readonly<[number, number, number]>,
     pxPerRad: number,
@@ -1843,16 +1577,11 @@ export class PointRenderer {
 
     // ── Pack and upload the uniform buffer ──────────────────────────────────
     //
-    // The uniform layout still reserves the `instanceIdOffset` u32 slot at
-    // byte offset 84 for backward compatibility with the shader struct, but
-    // the visual + pick paths no longer read it — the global instance ID
-    // is now baked per-vertex (see `globalInstanceIdx` in points.wgsl).  We
-    // leave the slot zeroed here.
-    //
     // The new tail fields (`camPosWorld` and `pxPerRad`) feed apparent-size
     // billboard sizing in the vertex shader. See the `UNIFORM_BYTES` doc
     // above for the exact byte layout — note the eight-byte gap between
-    // `instanceIdOffset` and `camPosWorld` required by vec3 alignment.
+    // `selectedPacked` (offset 80) and `camPosWorld` (offset 96) required
+    // by vec3 alignment.
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
     const u32 = new Uint32Array(buf);
@@ -1862,10 +1591,10 @@ export class PointRenderer {
     f32[17] = viewportPx[1];
     f32[18] = pointSizePx;
     f32[19] = brightness;
-    u32[20] = selectedIndex >>> 0; // selectedIndex at byte offset 80
-    // u32[21] (instanceIdOffset) and u32[22..23] (padding) are zero — the
-    // shader no longer reads u32[21]; it's preserved only so the WGSL
-    // struct layout stays binary-compatible across this refactor.
+    u32[20] = selectedPacked >>> 0; // selectedPacked at byte offset 80
+    // u32[21..23] are pad bytes (sourceCode lives in the per-source
+    // @group(1) cloud bind group, not @group(0)).  Float32Array starts
+    // zero-initialised so we don't need to write them explicitly.
     f32[24] = camPosWorld[0]; // bytes 96..99
     f32[25] = camPosWorld[1]; // bytes 100..103
     f32[26] = camPosWorld[2]; // bytes 104..107
@@ -1910,34 +1639,25 @@ export class PointRenderer {
 
     // ── Per-source draw loop ────────────────────────────────────────────────
     //
-    // Bind the pipeline + bind group once (these don't change between draws)
-    // and then for each loaded source:
+    // Bind the pipeline + global bind group once (these don't change between
+    // draws) and then for each loaded source:
     //   1. Skip it if its visibility bit is not set in the mask.
-    //   2. Set this source's vertex buffer and issue a 6-vertex × N-instance
+    //   2. Bind the source's `entry.fade.bindGroup` (CloudFade) on @group(1)
+    //      — carries this source's `opacity` AND its 5-bit `sourceCode`
+    //      that the shader composes into each instance's packed identity.
+    //   3. Set this source's vertex buffer and issue a 6-vertex × N-instance
     //      draw call.
     //
-    // No more per-source uniform writes — the per-instance vertex attribute
-    // `globalInstanceIdx` already encodes which slice of the global ID
-    // range each source occupies, so the shader doesn't need a per-draw
-    // offset uniform.
+    // The CloudFade's per-source bind group is exactly what dodges the
+    // queue.writeBuffer race: each source has its OWN uniform buffer, so
+    // writing this source's sourceCode + opacity doesn't race against
+    // writes to any other source's uniform between draws within one
+    // submit.  See CLAUDE.md → "WebGPU `queue.writeBuffer` race" and the
+    // `cloudFade.ts` "per-instance buffers" docblock for the full
+    // rationale.
     pass.setPipeline(this.pipeline);
     pass.setBindGroup(0, this.bindGroup);
 
-    // ── Per-source draw loop (post-Schechter-bake refactor) ─────────────────
-    //
-    // The previous revision wrote a per-source 16-byte Schechter quartet
-    // (M*, α, m_lim, N_ref) into the uniform buffer between draws to feed
-    // the fragment shader's mode-3 integral.  That integral has moved to
-    // upload-time bake (see the per-galaxy `schechterRatio` slot in the
-    // vertex buffer), so the per-source uniform write is gone.  The
-    // uniform-struct slots at byte offsets 140..155 are now dead-but-
-    // reserved — leaving the WGSL struct layout intact avoids re-aligning
-    // every other field in the buffer.
-    //
-    // What IS now per-source: the cloud-fade-in opacity write owned by
-    // `entry.fade`.  Each source has its own CloudFade with its own GPU
-    // uniform buffer, so writes don't race across draws in the same
-    // submit — see CLAUDE.md → "WebGPU `queue.writeBuffer` race".
     for (const source of ALL_SOURCES) {
       const entry = this.clouds.get(source);
       if (!entry) continue;

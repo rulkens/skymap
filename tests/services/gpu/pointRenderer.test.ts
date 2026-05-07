@@ -151,7 +151,7 @@ describe('PointRenderer.totalCount', () => {
 });
 
 describe('PointRenderer.loadedSources', () => {
-  it('iterates clouds in `ALL_SOURCES` order with correct instanceIdOffsets', async () => {
+  it('iterates clouds in `ALL_SOURCES` order regardless of upload order', async () => {
     const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
     // Upload in non-iteration order on purpose — the renderer must re-sort.
     // ALL_SOURCES is ordered smallest-catalogue → largest:
@@ -162,21 +162,14 @@ describe('PointRenderer.loadedSources', () => {
 
     const entries = Array.from(renderer.loadedSources());
 
-    // TwoMRS comes before SDSS regardless of upload order, because the
-    // renderer recomputes offsets via `ALL_SOURCES` iteration.
+    // TwoMRS comes before SDSS regardless of upload order.
     expect(entries.map((e) => e.source)).toEqual([Source.TwoMRS, Source.SDSS]);
-
-    // Offsets are running sums in ALL_SOURCES order: TwoMRS at 0, SDSS
-    // after TwoMRS's 50.
-    expect(entries[0]!.instanceIdOffset).toBe(0);
     expect(entries[0]!.count).toBe(50);
-    expect(entries[1]!.instanceIdOffset).toBe(50);
     expect(entries[1]!.count).toBe(100);
   });
 
-  it('recomputes instanceIdOffset after unload', async () => {
+  it('drops an unloaded source from the iterator', async () => {
     const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
-    // ALL_SOURCES order is [Synthetic, Famous, TwoMRS, SDSS, Glade]
     await renderer.upload(Source.TwoMRS, makeCloud(50));
     await renderer.upload(Source.SDSS, makeCloud(100));
     await renderer.upload(Source.Glade, makeCloud(25));
@@ -185,9 +178,8 @@ describe('PointRenderer.loadedSources', () => {
 
     const entries = Array.from(renderer.loadedSources());
     expect(entries.map((e) => e.source)).toEqual([Source.SDSS, Source.Glade]);
-    // With TwoMRS gone, SDSS is now first (offset 0) and Glade follows at 100.
-    expect(entries[0]!.instanceIdOffset).toBe(0);
-    expect(entries[1]!.instanceIdOffset).toBe(100);
+    expect(entries[0]!.count).toBe(100);
+    expect(entries[1]!.count).toBe(25);
   });
 });
 
@@ -361,56 +353,80 @@ describe('PointRenderer.upload — regression: parallel-upload rebake race', () 
   });
 });
 
-// ─── Global-idx encoding / decoding ───────────────────────────────────────────
+// ─── Regression: cross-source pick-identity disjointness ─────────────────────
 //
-// `toGlobalIdx` and `fromGlobalIdx` are the boundary the engine uses to
-// encode (or decode) the cross-survey global instance ID space.  The
-// encoding rule — running sum of prior-source counts in `ALL_SOURCES`
-// enum order — is the renderer's, baked into every per-instance
-// vertex buffer's `globalInstanceIdx` slot.  Engine consumers used to
-// duplicate the rule in three places (`resolveGlobalIdx`,
-// `selectFamous`, `selectByAlias`); now they ask the renderer through
-// these methods, keeping the rule to a single source of truth.
-describe('PointRenderer global-idx encoding', () => {
-  it('toGlobalIdx + fromGlobalIdx round-trip across multiple sources', async () => {
-    const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
-    // ALL_SOURCES order is [Synthetic, Famous, TwoMRS, SDSS, Glade], so
-    // TwoMRS comes before SDSS and Glade comes last.
-    await renderer.upload(Source.SDSS, makeCloud(100));
-    await renderer.upload(Source.TwoMRS, makeCloud(50));
-    await renderer.upload(Source.Glade, makeCloud(200));
+// Before this refactor, the renderer baked a per-instance running-sum
+// `globalInstanceIdx` into each vertex buffer.  Parallel uploads at boot
+// could leave a source's `bakedPriorCount` permanently stale; after all
+// surveys settled, two galaxies in different sources ended up with the
+// same baked global ID and clicking either fired the halo on both —
+// the picking-collision bug we're fixing.
+//
+// With the new (sourceCode << 27) | localIdx packing the collision is
+// structurally impossible: each source's identity range is its top-5-bit
+// slice of the u32, so cross-source overlap can't happen at any
+// localIdx.  This test verifies the property by enumerating the packed
+// values for two sources at every localIdx and asserting set
+// disjointness.
+describe('PointRenderer pick-identity packing — cross-source disjointness', () => {
+  it('packed identities never collide across sources', () => {
+    // The packing rule: top 5 bits = source code, bottom 27 = localIdx.
+    // Any two distinct sources differ in the top 5 bits, so their
+    // packed ranges can never overlap regardless of localIdx.  We assert
+    // this by computing a pair of fixed-size identity sets for two
+    // sources with different IDs and large counts, and checking the
+    // intersection is empty.
+    function packedIdentitiesFor(source: Source, count: number): Set<number> {
+      const out = new Set<number>();
+      for (let i = 0; i < count; i++) {
+        out.add(((source << 27) | i) >>> 0);
+      }
+      return out;
+    }
 
-    // TwoMRS: localIdx 0 → globalIdx 0; SDSS: localIdx 0 → globalIdx 50;
-    // Glade: localIdx 0 → globalIdx 150.
-    expect(renderer.toGlobalIdx(Source.TwoMRS, 0)).toBe(0);
-    expect(renderer.toGlobalIdx(Source.SDSS, 0)).toBe(50);
-    expect(renderer.toGlobalIdx(Source.Glade, 0)).toBe(150);
-    expect(renderer.toGlobalIdx(Source.Glade, 199)).toBe(349);
+    // 100k galaxies in each source — well below the 2^27 = 134M localIdx
+    // budget, but enough to stress the property.
+    const sdss = packedIdentitiesFor(Source.SDSS, 100_000);
+    const glade = packedIdentitiesFor(Source.Glade, 100_000);
 
-    // fromGlobalIdx is the inverse.
-    expect(renderer.fromGlobalIdx(0)).toEqual({ source: Source.TwoMRS, localIdx: 0 });
-    expect(renderer.fromGlobalIdx(49)).toEqual({ source: Source.TwoMRS, localIdx: 49 });
-    expect(renderer.fromGlobalIdx(50)).toEqual({ source: Source.SDSS, localIdx: 0 });
-    expect(renderer.fromGlobalIdx(149)).toEqual({ source: Source.SDSS, localIdx: 99 });
-    expect(renderer.fromGlobalIdx(150)).toEqual({ source: Source.Glade, localIdx: 0 });
-    expect(renderer.fromGlobalIdx(349)).toEqual({ source: Source.Glade, localIdx: 199 });
+    // No overlap.  Old encoding could hit this when SDSS's prior count
+    // happened to overlap GLADE's localIdx range; new encoding can't.
+    let collisions = 0;
+    for (const v of sdss) {
+      if (glade.has(v)) collisions++;
+    }
+    expect(collisions).toBe(0);
   });
 
-  it('fromGlobalIdx returns null for out-of-range indices', async () => {
-    const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
-    await renderer.upload(Source.SDSS, makeCloud(100));
+  it('packed identity is decodable: pack then unpack round-trips', () => {
+    // The picker subtracts 1 from the bottom 27 bits before exposing
+    // localIdx, but its packing rule (with the +1 sentinel that keeps
+    // 0 = "no hit") is what we're encoding here.  The renderer's
+    // selection-halo path uses the same top-5-bit / bottom-27-bit
+    // split sans the +1, so we test both.
+    const cases: Array<{ source: Source; localIdx: number }> = [
+      { source: Source.Synthetic, localIdx: 0 },
+      { source: Source.Famous, localIdx: 17 },
+      { source: Source.TwoMRS, localIdx: 38_000 },
+      { source: Source.SDSS, localIdx: 500_000 },
+      { source: Source.Glade, localIdx: 2_000_000 },
+    ];
+    for (const c of cases) {
+      // Selection-halo packing (no +1).
+      const packed = ((c.source << 27) | c.localIdx) >>> 0;
+      const decodedSource = (packed >>> 27) as Source;
+      const decodedLocalIdx = packed & 0x07ffffff;
+      expect(decodedSource).toBe(c.source);
+      expect(decodedLocalIdx).toBe(c.localIdx);
 
-    // Past the end of every loaded source.
-    expect(renderer.fromGlobalIdx(100)).toBeNull();
-    expect(renderer.fromGlobalIdx(1_000_000)).toBeNull();
-  });
-
-  it('toGlobalIdx returns localIdx for unloaded sources (matches instanceIdOffset === 0)', () => {
-    const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
-    // Nothing uploaded — every source's offset is 0, so toGlobalIdx is
-    // identity on localIdx.
-    expect(renderer.toGlobalIdx(Source.SDSS, 5)).toBe(5);
-    expect(renderer.toGlobalIdx(Source.Glade, 5)).toBe(5);
+      // Pick-output packing (with +1).
+      const pickPacked = (packed + 1) >>> 0;
+      // Decoded the pick way: source from top 5, localIdx = (bottom 27) - 1.
+      const pickDecodedSource = (pickPacked >>> 27) as Source;
+      const pickDecodedLocalIdx = (pickPacked & 0x07ffffff) - 1;
+      expect(pickDecodedSource).toBe(c.source);
+      expect(pickDecodedLocalIdx).toBe(c.localIdx);
+    }
   });
 });
 

@@ -50,6 +50,7 @@ import {
 import { createTweenManager } from '../../src/services/engine/tweenManager';
 import { createSpaceMouseSubsystem } from '../../src/services/engine/spaceMouseSubsystem';
 import { createRenderScheduler } from '../../src/services/engine/renderScheduler';
+import { Source } from '../../src/data/sources';
 
 // Inject a no-op rAF/cAF pair so the scheduler factory doesn't reach
 // for `window.requestAnimationFrame` in the Vitest node environment.
@@ -93,8 +94,8 @@ describe('EngineState type', () => {
       tier: 'medium',
     };
     const picking: EnginePickingState = {
-      hoveredIndex: null,
-      selectedIndex: null,
+      hovered: null,
+      selected: null,
       latestMouseCss: null,
       lastPickedMouseCss: null,
       pickInFlight: false,
@@ -133,7 +134,7 @@ describe('EngineState type', () => {
     expect(state.settings.pointSizePx).toBe(2.5);
     expect(state.bias.mode).toBe(DEFAULT_BIAS_MODE);
     expect(state.sources.visibleMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
-    expect(state.picking.hoveredIndex).toBeNull();
+    expect(state.picking.hovered).toBeNull();
     expect(state.gpu.renderer).toBeNull();
     expect(state.subsystems.tweens.isActive()).toBe(false);
   });
@@ -209,8 +210,8 @@ describe('EngineState type', () => {
         tier: 'medium',
       },
       picking: {
-        hoveredIndex: null,
-        selectedIndex: null,
+        hovered: null,
+        selected: null,
         latestMouseCss: null,
         lastPickedMouseCss: null,
         pickInFlight: false,
@@ -243,13 +244,13 @@ describe('EngineState type', () => {
     state.settings.brightness = 2.5;
     state.bias.absMagLimit = -20;
     state.sources.visibleMask = 0xff;
-    state.picking.hoveredIndex = 42;
+    state.picking.hovered = { source: 1 as Source, localIdx: 42 };
     state.picking.pickInFlight = true;
 
     expect(state.settings.brightness).toBe(2.5);
     expect(state.bias.absMagLimit).toBe(-20);
     expect(state.sources.visibleMask).toBe(0xff);
-    expect(state.picking.hoveredIndex).toBe(42);
+    expect(state.picking.hovered).toEqual({ source: 1, localIdx: 42 });
     expect(state.picking.pickInFlight).toBe(true);
   });
 });

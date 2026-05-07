@@ -73,12 +73,18 @@ import type { createPickRenderer } from '../gpu/pickRenderer';
  * Snapshot of the renderer's per-source draw records the picker
  * needs.  Engine produces this from `renderer.loadedSources()`
  * filtered by the live visibility mask.
+ *
+ * `cloudBindGroup` is the per-source `@group(1)` (CloudFade) binding
+ * carrying this source's `opacity` + 5-bit `sourceCode`.  PickRenderer
+ * binds it before each per-source draw so its vertex stage can compose
+ * the same `(sourceCode << 27) | instance_index` packed identity the
+ * visual pass does — without baking anything per-vertex.
  */
 export type PickSourceDraw = {
   readonly source: Source;
   readonly count: number;
   readonly vertexBuffer: GPUBuffer;
-  readonly instanceIdOffset: number;
+  readonly cloudBindGroup: GPUBindGroup;
 };
 
 export type ClickResolveInput = {
@@ -102,14 +108,19 @@ export type ClickResolveInput = {
 };
 
 /**
- * Hook the engine provides to the resolver: given a global instance
- * index returned by the picker, resolve it into the (source, local
- * index, cloud) triple needed to build a PointInfo.  Production wires
- * this to engine.ts's existing `resolveGlobalIdx` plus a `clouds.get`
+ * Hook the engine provides to the resolver: given a (source, localIdx)
+ * pair the picker returned, resolve it into the cloud needed to build
+ * a PointInfo.  Production wires this to engine.ts's `clouds.get(source)`
  * lookup; tests pass a stub.
+ *
+ * Returns `null` when the source's cloud isn't loaded (yet) or when
+ * `localIdx >= cloud.count` (tier-swap window where the picker's
+ * baked identity references a row past the freshly-uploaded smaller
+ * cloud — the bounds check defends against the same race the prior
+ * `fromGlobalIdx` decoder did).
  */
-export type ResolveGlobalIdx = (
-  globalIdx: number,
+export type ResolveSelection = (
+  selection: { source: Source; localIdx: number },
 ) => { source: Source; localIdx: number; cloud: PointCloud } | null;
 
 /**
@@ -127,10 +138,19 @@ export type BuildPointInfo = (
 /**
  * Result of resolving a click.  See the module-level docstring for
  * the full state-machine commentary.
+ *
+ * The `selection` field carries the (source, localIdx) pair the picker
+ * decoded from the r32uint texture's packed value.  Engine forwards it
+ * straight to `setSelected` for the halo + InfoCard updates; no
+ * intermediate global ID is needed.
  */
 export type ClickResolution =
   | { kind: 'clear' }
-  | { kind: 'select'; globalIdx: number; info: PointInfo | null };
+  | {
+      kind: 'select';
+      selection: { source: Source; localIdx: number };
+      info: PointInfo | null;
+    };
 
 export type ClickResolver = {
   /** Resolve a click position → ClickResolution. */
@@ -139,32 +159,32 @@ export type ClickResolver = {
 
 export type CreateClickResolverInput = {
   pickRenderer: ReturnType<typeof createPickRenderer>;
-  resolveGlobalIdx: ResolveGlobalIdx;
+  resolveSelection: ResolveSelection;
   buildPointInfo: BuildPointInfo;
 };
 
 export function createClickResolver(input: CreateClickResolverInput): ClickResolver {
-  const { pickRenderer, resolveGlobalIdx, buildPointInfo } = input;
+  const { pickRenderer, resolveSelection, buildPointInfo } = input;
 
   return {
     async resolveClick(args: ClickResolveInput): Promise<ClickResolution> {
-      const idx = await pickRenderer.pick(
+      const result = await pickRenderer.pick(
         args.viewportPx,
         args.pickXPx,
         args.pickYPx,
         args.visibleSources,
         args.pointSizePx,
       );
-      if (idx === -1) return { kind: 'clear' };
+      if (result === null) return { kind: 'clear' };
       // Try to build a PointInfo, but treat failure as "still select
-      // the index" for parity with the pre-extraction engine — the
-      // old code did `setSelected(idx)` regardless of whether
-      // `pointInfoFromGlobal` would later resolve null.
-      const resolved = resolveGlobalIdx(idx);
+      // the (source, localIdx)" for parity with the pre-extraction
+      // engine — the old code did `setSelected(idx)` regardless of
+      // whether `pointInfoFromGlobal` would later resolve null.
+      const resolved = resolveSelection(result);
       const info = resolved
         ? buildPointInfo(resolved.cloud, resolved.localIdx, resolved.source)
         : null;
-      return { kind: 'select', globalIdx: idx, info };
+      return { kind: 'select', selection: result, info };
     },
   };
 }

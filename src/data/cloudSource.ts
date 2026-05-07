@@ -9,8 +9,9 @@
  * ### Why a string union instead of reusing `Source`
  *
  * `Source` is the per-point enum (used for visibility masking, the
- * pickRenderer's per-vertex `globalInstanceIdx`, and the renderer's
- * per-source draw loop).  `CloudSource` is a strict subset that
+ * pickRenderer's per-source `cloud.sourceCode` packing, and the
+ * renderer's per-source draw loop).  `CloudSource` is a strict subset
+ * that
  * answers "which build artefact produced this cloud?" — its membership
  * mirrors the filenames in `public/data/`.  Keeping them separate lets
  * `EngineStatus.source` be a tight string literal that's safe to render

@@ -87,48 +87,59 @@ struct Uniforms {
   // within a single 256-byte uniform block and no padding gaps needed here.)
   brightness: f32,
 
-  // The 0-based index of the currently selected point, or 0xFFFFFFFFu when
-  // nothing is selected. When a vertex's instance index matches this value,
-  // the billboard is rendered larger (3× scale) with a ring/halo effect.
+  // The currently-selected point packed as `(sourceCode << 27) | localIdx`,
+  // or `0xFFFFFFFFu` when nothing is selected.  The vertex shader recovers
+  // its own packed identity as `(cloud.sourceCode << 27u) | u32(instance_index)`
+  // (sourceCode lives in the per-source @group(1) bind group — see
+  // CloudUniforms below) and compares against this slot to decide whether
+  // to enlarge for the selection ring.
   //
-  // SENTINEL DESIGN: Using 0xFFFFFFFFu (max u32) as "nothing selected" means
-  // the selection check never accidentally matches a real point.  Point
-  // indices start at 0, so we would need 4 billion points before this
-  // sentinel could collide — far beyond any real catalog.
+  // ### Encoding
   //
-  // OFFSET STABILITY: The four preceding fields (vec2 + f32 + f32 = 16 bytes)
-  // bring the running offset to 80 bytes, and `selectedIndex` sits there.
-  // The picker (`pickRenderer.ts`) writes `selectedIndex` directly using a
-  // hard-coded byte offset of 80 — adding fields *after* `selectedIndex`
-  // (like `instanceIdOffset` below) is therefore safe; adding any field
-  // *before* it would silently break the picker.
-  selectedIndex: u32,
+  // Bits 27..31 carry the 5-bit sourceCode (0..31, plenty for our 5
+  // sources).  Bits 0..26 carry the 27-bit local instance index (~134M,
+  // plenty for any survey we ship).  The two ranges are disjoint by
+  // construction: each source's packed identity space sits in its own
+  // top-5-bit slice, so two galaxies in different surveys can never
+  // collide on the same packed value.  This replaces the prior
+  // running-sum `globalInstanceIdx` baked per-vertex; the parallel-
+  // upload race that scheme suffered from is structurally impossible
+  // here because there is no per-vertex baking — `instance_index` is the
+  // GPU's `@builtin` and `sourceCode` arrives via this same uniform
+  // before each per-source draw.
+  //
+  // ### Sentinel
+  //
+  // `0xFFFFFFFFu` is "no selection".  The maximum legitimate packed
+  // value is `(31 << 27) | 0x07FFFFFF` = `0xFFFFFFFE` for the largest
+  // hypothetical sourceCode + max localIdx — the +1 in the pick path is
+  // what keeps this sentinel below `0xFFFFFFFF`, but the SELECTION
+  // packing has no +1 (the localIdx range starts at 0 and we use a
+  // separate sentinel) so collisions are still impossible at any
+  // realistic scale.
+  //
+  // ### Offset stability
+  //
+  // The four preceding fields (vec2 + f32 + f32 = 16 bytes) bring the
+  // running offset to 80 bytes, where `selectedPacked` sits.  The picker
+  // (`pickRenderer.ts`) writes the sentinel here directly using a
+  // hard-coded byte offset of 80; adding fields *after* `selectedPacked`
+  // is therefore safe.
+  selectedPacked: u32,
 
-  // Per-source instance-ID offset, written by `PointRenderer.draw` once per
-  // source-specific draw call. Multi-source rendering issues N draws (one per
-  // loaded survey), each producing instance indices that start at 0 inside
-  // its own draw. The pick texture, however, identifies points by a *global*
-  // index that runs continuously across all surveys (so JS can use the value
-  // as an index into the merged point arrays). `fsPick` therefore writes
-  // `instanceIdx + 1u + instanceIdOffset` instead of `instanceIdx + 1u`,
-  // shifting each survey's IDs into a unique slice of the global index space.
+  // Three trailing u32 padding words to keep `selectedPacked` (offset 80)
+  // on the same 16-byte vec4 slot as the next vec3.  Required because
+  // the next member (`camPosWorld`, a vec3<f32>) has alignment 16, so
+  // the struct would otherwise insert implicit padding here anyway —
+  // naming the bytes makes the JS-side upload obvious.
   //
-  // Why update only this 4-byte slot per draw call (rather than the whole
-  // struct)? `device.queue.writeBuffer` schedules a CPU→GPU copy whose cost
-  // scales with the bytes written. We only need to change 4 bytes between
-  // draws (everything else — viewProj, viewport, etc. — is identical), so
-  // writing 96 bytes would waste ~95% of the bandwidth on data that did not
-  // change.
-  instanceIdOffset: u32,
-
-  // Two u32 padding words to keep `selectedIndex` (offset 80) and
-  // `instanceIdOffset` (offset 84) on the same 16-byte vec4 slot as the
-  // _pad0/_pad1 below.  Required because the next member (`camPosWorld`,
-  // a vec3<f32>) has alignment 16, so the struct would otherwise insert
-  // implicit padding here anyway — naming the bytes makes the JS-side
-  // upload obvious.
+  // The slot at offset 84 is intentionally unused at the @group(0) level:
+  // sourceCode lives in the per-source @group(1) `CloudUniforms` (see
+  // below) so each cloud's bind group carries its OWN sourceCode value
+  // and draws within one render pass don't race on the per-draw write.
   _pad0: u32,
   _pad1: u32,
+  _pad2: u32,
 
   // ── APPARENT-SIZE BILLBOARD SIZING (added Task: galaxy disc sizing) ──────
   //
@@ -159,8 +170,9 @@ struct Uniforms {
   //
   // u32 booleans (0 / 1) controlling how the fragment shader treats
   // galaxies whose orientation came from the deterministic fallback rather
-  // than a real photometric measurement. The fallback flag itself is baked
-  // per-vertex into the high bit of `globalInstanceIdx` (see PerVertex doc).
+  // than a real photometric measurement. The fallback flag itself rides
+  // on the sign bit of the per-vertex `axisRatio` attribute (see the
+  // PerVertex doc).
   //
   // - `highlightFallback`: when 1, multiply the tint of fallback rows by
   //   magenta `(1.0, 0.3, 1.0)` — a quick visual scan of which surveys
@@ -286,14 +298,43 @@ struct Uniforms {
 // "bake per-instance into the vertex buffer" pattern at a coarser
 // granularity.  See CLAUDE.md → "WebGPU `queue.writeBuffer` race".
 //
-// The pick fragment (`fsPick`) doesn't reference `cloud`, so the pick
-// pipeline's auto-derived layout skips this binding — picking remains
-// unaffected by fade.
+// The pick fragment (`fsPick`) doesn't reference `cloud.opacity`, but
+// the SHARED vertex stage reads `cloud.sourceCode` to compose each
+// instance's packed identity (`(sourceCode << 27u) | instance_index`)
+// for the pick output.  WebGPU's pipeline layout reflects every binding
+// any stage touches, so the pick pipeline auto-derives @group(1) too,
+// and PickRenderer must bind a CloudFade-style group per source before
+// each draw — see PickRenderer.pick().
 struct CloudUniforms {
   /** 0 → fully transparent (just uploaded), 1 → fully opaque (steady state). */
   opacity: f32,
+
+  // 5-bit Source enum value for this cloud.  Set once at upload time
+  // (the JS `pointRenderer.upload` calls `entry.fade.setSourceCode(source)`).
+  // The vertex stage reads this slot to compose
+  // `myPacked = (sourceCode << 27u) | @builtin(instance_index)` — the
+  // per-instance packed identity used for both selection-halo
+  // comparison (`fs`) and pick output (`fsPick`).
+  //
+  // ### Why @group(1) instead of @group(0)
+  //
+  // The visual + pick passes draw every loaded survey in one render
+  // pass each, with one `pass.draw(6, count)` call per source.  If
+  // sourceCode lived in the global @group(0) Uniforms, writing it
+  // between draws within one submit would NOT take effect — WebGPU
+  // sequences all `queue.writeBuffer` calls in a submit before any
+  // draw runs, so all draws would see the last-written value.  That
+  // race is exactly what the prior revision's per-vertex
+  // `globalInstanceIdx` baking dodged.
+  //
+  // Putting sourceCode in the per-source @group(1) bind group makes
+  // every cloud have its OWN uniform buffer.  Different buffers,
+  // different write destinations — the writes can't race because there
+  // is no shared destination across draws.  Same architecture that
+  // already keeps `opacity` from racing.
+  sourceCode: u32,
+
   // Pad to 16-byte alignment — WebGPU's minimum uniform buffer size.
-  _pad0: f32,
   _pad1: f32,
   _pad2: f32,
 };
@@ -333,31 +374,6 @@ struct PerVertex {
   // positive → red (cool stars / old galaxies). Typical range −0.5 to +1.5.
   @location(2) colorIndex: f32,
 
-  // Pre-baked GLOBAL instance index across all loaded surveys.
-  //
-  // Why bake this rather than compute it on the GPU from `instance_index +
-  // u.instanceIdOffset`?  Because `instanceIdOffset` lives in a uniform
-  // buffer the JS side has to overwrite per-source-draw, and WebGPU
-  // sequences `queue.writeBuffer` calls on the queue: every
-  // `writeBuffer(offset_X)` between draws within a single submit completes
-  // BEFORE any draw runs, so all draws read the *last* offset written.
-  // This racing-uniform pattern silently misroutes selection halos and pick
-  // IDs for every source except the last drawn.
-  //
-  // Baking the global index per instance at upload time sidesteps the race
-  // entirely — each vertex carries its own ID, no uniform updates needed
-  // between draws.  It costs 4 bytes per instance (~10 MB for SDSS); the
-  // alternative — separate command-encoder + submit per source — would
-  // multiply per-frame overhead by N for no real cost saving.
-  //
-  // Task 15 reuses the high bit (0x80000000) as a fallback-orientation
-  // flag — set at upload time when the row's (b/a, PA) values match the
-  // deterministic `fallbackOrientation` output.  The vertex stage strips
-  // that bit before exposing the canonical 0..N-1 index downstream, so
-  // ~31 bits remain for the index proper (≈ 2 B points — comfortably
-  // beyond any catalog we'll load).
-  @location(3) globalInstanceIdx: u32,
-
   // Per-row K-correction coefficient (units: per unit redshift z).
   //
   // Used by `vs` to convert observed colour to rest-frame: each survey
@@ -370,27 +386,52 @@ struct PerVertex {
   // and the JS-side upload writes 0 alongside the colorIndex sentinel for
   // rows whose source-specific colour pair isn't measurable, so the
   // sentinel branch in `vs` doesn't need to special-case kPerZ.
-  @location(4) kPerZ: f32,
+  @location(3) kPerZ: f32,
 
-  // Galaxy minor/major axis ratio b/a in (0, 1]. Used by the fragment
-  // shader to squash the unit-circle UV mask into an ellipse before the
-  // radial cutoff — a face-on disk (b/a = 1) renders as the original
-  // round point, an edge-on disk (b/a = 0.2) renders as a thin streak.
-  @location(5) axisRatio: f32,
+  // Galaxy minor/major axis ratio b/a in (0, 1] — with the SIGN BIT
+  // carrying the fallback-orientation flag.  Real measurements are
+  // always positive; the JS-side bake negates the value when the row's
+  // (b/a, PA) match the deterministic `fallbackOrientation` output.
+  // The fragment stage recovers both pieces in one read:
+  //
+  //   - `abs(axisRatio)` for the elliptical mask shape (the existing
+  //     `axisRatio > 0.0` validity check stops working with negative
+  //     reals, so the vertex stage forwards `abs(axisRatio)` through
+  //     VSOut.axisRatio for the fragment to use directly).
+  //   - `axisRatio < 0.0` for the fallback flag.
+  //
+  // ### Why sign-bit packing
+  //
+  // The previous revision rode the fallback flag on the high bit of a
+  // per-vertex `globalInstanceIdx u32`.  That whole slot went away with
+  // the (source, localIdx) packing refactor — the picker now derives
+  // its global identity from `(sourceCode << 27) | instance_index`
+  // without any per-vertex baking.  The fallback flag is a single bit;
+  // rather than reintroduce a dedicated u32 slot just for it, we steal
+  // the sign bit of axisRatio (always a positive value for real
+  // measurements) and shrink the vertex stride from 52 to 48 bytes.
+  //
+  // ### NaN handling (synthetic-fallback cloud)
+  //
+  // The synthetic-fallback cloud (loaded when every real `.bin` fails to
+  // decode) ships its axisRatio array filled with NaN.  WGSL's
+  // `abs(NaN)` returns NaN and `NaN < 0.0` is false, so the vertex
+  // stage routes synthetic rows through the existing "axisRatio > 0
+  // is false" round-mask path with `isFallback = 0u`.
+  @location(4) axisRatio: f32,
   // Position angle in degrees, [0, 180). Rotates the squashed ellipse
   // around the billboard centre. East-of-north convention; we negate
   // before applying because UV-space y points down on the screen.
-  @location(6) positionAngleDeg: f32,
+  @location(5) positionAngleDeg: f32,
   // Per-galaxy physical diameter in kiloparsecs.  Drives the apparent-size
   // billboard radius below — a 100-kpc giant elliptical at 50 Mpc subtends
   // ~6× the angular footprint of a 30-kpc default disk, and the renderer
   // now reflects that.  v4 binary format guarantees a finite positive
   // value (real measurement or DEFAULT_GALAXY_DIAMETER_KPC = 30 fallback)
   // in every row.
-  @location(7) diameterKpc: f32,
+  @location(6) diameterKpc: f32,
   // Per-galaxy 1/V_max weight for Malmquist-bias correction.  Baked at
-  // upload time as `clamp((dRef / dMax(M, m_lim))³, 0, 1)` — see
-  // pointRenderer.upload's slot-10 comment for the derivation.  Read by
+  // upload time as `clamp((dRef / dMax(M, m_lim))³, 0, 1)`.  Read by
   // the fragment shader's intensity computation, but ONLY when
   // `u.biasMode == 2u` (the 1/V_max literal in src/data/biasMode.ts);
   // every other mode multiplies by 1.0 via `select`, so the four bias
@@ -398,12 +439,8 @@ struct PerVertex {
   //
   // Why per-vertex (not a uniform)?  Each galaxy has a different M and
   // therefore a different weight.  A uniform would force one weight
-  // value across the whole survey — a strict information loss.  And we
-  // can't compute the weight in WGSL cheaply: it needs a `pow(10, …)`
-  // and the survey's flux limit (different per source), the latter of
-  // which would reintroduce the writeBuffer race we already paid down
-  // for `globalInstanceIdx`.  Baking is the only no-race option.
-  @location(8) vMaxWeight: f32,
+  // value across the whole survey — a strict information loss.
+  @location(7) vMaxWeight: f32,
 
   // Per-galaxy Schechter density-correction ratio = `clamp(N_ref / n(d), 0, 10)`,
   // baked at upload time (originally introduced in commit 7a6d810 as a
@@ -434,7 +471,7 @@ struct PerVertex {
   // baking 0 — so far galaxies with no detectable density disappear in
   // mode 3 instead of going infinite/NaN.  Visual output is unchanged from
   // the pre-bake implementation.
-  @location(9) schechterRatio: f32,
+  @location(8) schechterRatio: f32,
 
   // Per-galaxy HEALPix angular re-weight = `clamp(medianCount / localCount,
   // 0.1, 10)` baked at upload time by `computeAngularWeights` (lazy, only
@@ -459,7 +496,7 @@ struct PerVertex {
   // *alternative*, not a multiplicative add-on — selecting it bypasses the
   // other modes' alpha modulation via the shader's
   // `select(1.0, …, biasMode == 4u)` gate.
-  @location(10) angularDensityWeight: f32,
+  @location(9) angularDensityWeight: f32,
 };
 
 // ─── vertex-to-fragment interface ─────────────────────────────────────────────
@@ -528,7 +565,7 @@ struct VSOut {
   @location(15) @interpolate(flat) paSn: f32,
 
   // 1u when this row's orientation came from the deterministic fallback
-  // (high bit of globalInstanceIdx was set at upload time); 0u for real
+  // (sign bit of axisRatio was set at upload time); 0u for real
   // measurements. Used by the fragment shader for the highlight + hide
   // toggles. Flat-interpolated for the same reason as the other u32
   // attributes — integers can't be linearly interpolated.
@@ -761,13 +798,22 @@ fn vs(
   let LOG10 = 2.302585092994046;
   let absMag = p.magnitude - 5.0 * (log(dMpc) / LOG10) - 25.0;
 
+  // Recover the per-instance packed identity now so both the early-out
+  // and the main path can share one source of truth.  Bits 27..31 = the
+  // 5-bit `cloud.sourceCode` (this draw's survey, set per-source via the
+  // @group(1) bind group); bits 0..26 = the GPU's
+  // `@builtin(instance_index)` (local 0..count-1).  This is the same
+  // value the pick fragment writes (with a +1 sentinel) and the same
+  // value `u.selectedPacked` is compared against.
+  let myPacked = (cloud.sourceCode << 27u) | ii;
+
   if (u.biasMode == 1u && absMag > u.absMagLimit) {
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
     earlyOut.tint = vec3<f32>(0.0);
     earlyOut.intensity = 0.0;
-    earlyOut.instanceIdx = p.globalInstanceIdx & 0x7fffffffu;
+    earlyOut.instanceIdx = myPacked;
     earlyOut.selected = 0u;
     earlyOut.axisRatio = 1.0;
     // PA cs/sn for an off-screen primitive don't matter (no fragments
@@ -792,24 +838,20 @@ fn vs(
   // ── SELECTION CHECK ───────────────────────────────────────────────────────
   //
   // Determine whether this instance is the user-selected point.
-  // `u.selectedIndex` is 0xFFFFFFFFu when nothing is selected (sentinel),
-  // so this comparison is only ever true for a real selection.
   //
-  // We compare against `p.globalInstanceIdx` (the per-instance baked global
-  // ID) rather than the per-draw `@builtin(instance_index)` because the
-  // selectedIndex coming from the picker is a GLOBAL index across all
-  // surveys.  A naive comparison against the local `ii` would only match
-  // when selectedIndex < SDSS.count — for any 2MRS or GLADE selection it
-  // would either miss entirely OR match the wrong galaxy in the GLADE
-  // draw (whose ii range happens to overlap the global selectedIndex).
+  // `u.selectedPacked` is `(selectedSource << 27) | selectedLocalIdx` when
+  // a galaxy is pinned, or `0xFFFFFFFFu` when nothing is selected.  We
+  // compare against this draw's `myPacked = (cloud.sourceCode << 27) | ii` so
+  // each source's identity range stays disjoint by construction (bits
+  // 27..31 = source code, never overlap across surveys).
   //
-  // High bit of globalInstanceIdx flags a fallback orientation; mask it off
-  // so the canonical 0..N-1 index is what selection/picker logic compares
-  // against (the picker writes plain instance indices into selectedIndex,
-  // never the masked value).
-  let realIdx = p.globalInstanceIdx & 0x7fffffffu;
-  let isFallbackFlag = select(0u, 1u, (p.globalInstanceIdx & 0x80000000u) != 0u);
-  let isSelected = (realIdx == u.selectedIndex);
+  // No more `realIdx & 0x7fffffffu` masking: the previous revision baked
+  // a global running-sum index per vertex with the high bit doubling as a
+  // fallback flag.  Both went away with the (source, localIdx) packing
+  // refactor; the fallback flag now rides on the sign bit of axisRatio,
+  // and the identity comparison is a straight u32 equality.
+  let isFallbackFlag = select(0u, 1u, p.axisRatio < 0.0);
+  let isSelected = (myPacked == u.selectedPacked);
 
   // Scale the billboard ~8× for the selected point so the selection ring
   // is unmistakable — even a faint, magnitude-22 galaxy gets a visible halo.
@@ -949,15 +991,11 @@ fn vs(
   //   - GLADE B−J   →  k ≈ 1.0   (modest — B touches a Balmer break, J is NIR)
   //   - 2MRS  J−K   →  k ≈ 0.0   (NIR is nearly z-invariant at z < 0.1)
   //
-  // Why a per-vertex attribute and not a uniform?  Same race that bit
-  // `instanceIdOffset` (see the long comment on Uniforms.instanceIdOffset
-  // above): WebGPU sequences `queue.writeBuffer` calls so that *all* writes
-  // before a `submit` complete before any draw runs — meaning every draw
-  // would read whichever value was written last, not the per-source value
-  // the JS code intended for that draw.  Baking `k` into the instance buffer
-  // sidesteps the race entirely; each vertex carries its own coefficient and
-  // no uniform tweaking happens between per-source draws.  The cost is 4
-  // bytes per instance (≈10 MB for SDSS) — well worth it for correct colour.
+  // Why a per-vertex attribute and not a uniform?  Per-row variability:
+  // each survey's k coefficient is fixed per draw, but `p.kPerZ` also
+  // carries 0 for the sentinel-colour-index rows that lack a measurable
+  // colour pair, which a global uniform can't express.  4 bytes per
+  // instance (≈10 MB for SDSS) — well worth it for correct colour.
   //
   // The approximation is good to ~0.3 mag scatter per galaxy depending on
   // spectral type, which is acceptable for a colour ramp.
@@ -1020,17 +1058,17 @@ fn vs(
   let vMaxAlpha = select(1.0, p.vMaxWeight, u.biasMode == 2u);
   out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0) * u.brightness * vMaxAlpha;
 
-  // Propagate the GLOBAL instance index (already pre-baked across surveys
-  // by pointRenderer.upload) for the pick fragment entry point (fsPick).
-  // The visual `fs` entry point ignores this field entirely — WGSL silently
-  // allows a fragment shader to declare fewer inputs than the vertex shader
-  // outputs, as long as the @location values that *are* declared match.
+  // Forward the per-instance packed identity to the pick fragment entry
+  // point (`fsPick`).  Same value the visual stage already computed for
+  // `myPacked` above; `fsPick` adds the +1 sentinel and writes it into
+  // the r32uint pick texture.
   //
-  // We keep this here so both fragment entry points share the same vertex stage.
-  //
-  // Strip the fallback flag bit so downstream consumers (fsPick) see the
-  // canonical index; the fallback flag goes through `out.isFallback`.
-  out.instanceIdx = realIdx;
+  // The visual `fs` entry point ignores this field — WGSL silently
+  // allows a fragment shader to declare fewer inputs than the vertex
+  // shader outputs, as long as the @location values that *are* declared
+  // match.  We keep it here so both fragment entry points share one
+  // vertex stage.
+  out.instanceIdx = myPacked;
 
   // Propagate the selection flag for the visual fragment entry point.
   // 1u = this instance is selected; 0u = normal point.
@@ -1039,11 +1077,12 @@ fn vs(
   // Forward the fallback flag for the highlight + hide toggles in `fs`.
   out.isFallback = isFallbackFlag;
 
-  // Forward the orientation attributes through to the fragment stage.
-  // The visual `fs` doesn't use them yet — Task 11 will introduce the
-  // ellipse mask — but plumbing them now means the fragment shader can be
-  // updated in isolation without touching the vertex stage again.
-  out.axisRatio = p.axisRatio;
+  // Forward the absolute axisRatio so the fragment stage's elliptical
+  // mask uses the unsigned magnitude.  Sign bit was the fallback flag
+  // (already extracted into `isFallbackFlag`); negative values would
+  // make the existing `axisRatio > 0.0` validity check trip on every
+  // fallback row and collapse the ellipse mask to a circle.
+  out.axisRatio = abs(p.axisRatio);
 
   // Pre-compute cos/sin of the position-angle rotation so the fragment
   // stage can skip the trig and just read these flat-interpolated values.
@@ -1467,19 +1506,20 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   let r2 = dot(in.uv, in.uv);
   if (r2 > 2.25) { discard; }
 
-  // Write instanceIdx + 1 so that background pixels (cleared to 0) are
-  // distinguishable from the point at index 0 (which would also write 0
-  // without the +1 offset).  The JS readback subtracts 1 to recover the
-  // 0-based index, after checking that the raw value is not 0.
+  // Write `(sourceCode << 27 | instance_index) + 1` so background pixels
+  // (cleared to 0) are distinguishable from a real hit.  The +1 keeps 0
+  // as the unambiguous "no hit" sentinel; even with sourceCode = 0 (the
+  // Synthetic survey) and localIdx = 0 the written value is 1, never 0.
   //
-  // The instanceIdx output here carries the GLOBAL per-instance index
-  // (baked into the vertex buffer at upload time and propagated through
-  // the vertex stage as `out.instanceIdx`), so each surveys's points
-  // already occupy a unique slice of the global ID range without any
-  // per-draw uniform tweaking.  See the `globalInstanceIdx` doc-comment in
-  // the PerVertex struct for why we bake rather than compute on the GPU.
+  // `in.instanceIdx` was assembled in the vertex stage from
+  // `(cloud.sourceCode << 27u) | @builtin(instance_index)`.  The packing
+  // gives every survey a structurally-disjoint identity range (top 5
+  // bits = source code, bottom 27 = local index ≤ 134M), so two
+  // galaxies in different surveys can never collide on the same pick
+  // value — the picking-collision bug the prior baked-running-sum
+  // scheme suffered from is structurally impossible here.
   //
-  // The g/b/a channels are unused — we only read the r channel back on the
-  // JS side.  Filling them with 0 keeps the output well-defined.
+  // The g/b/a channels are unused — we only read the r channel back on
+  // the JS side.  Filling them with 0 keeps the output well-defined.
   return vec4<u32>(in.instanceIdx + 1u, 0u, 0u, 0u);
 }

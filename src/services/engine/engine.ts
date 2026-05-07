@@ -351,8 +351,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       tier: cb.initialTier ?? 'medium',
     },
     picking: {
-      hoveredIndex: null,
-      selectedIndex: null,
+      hovered: null,
+      selected: null,
       latestMouseCss: null,
       lastPickedMouseCss: null,
       pickInFlight: false,
@@ -455,29 +455,30 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   };
 
   /**
-   * Build a PointInfo from a global picker index, or null if unresolvable.
+   * Build a PointInfo for a (source, localIdx) selection, or null if
+   * the source's cloud isn't loaded or `localIdx >= cloud.count`.
    *
-   * Decoding the global index lives on the renderer (`fromGlobalIdx`) —
-   * see its docstring for why the encoding rule belongs there.  The
-   * renderer's bounds-check also defends the tier-swap-window race
-   * where a still-in-flight pick from a previous frame returns a
-   * global idx encoded against an older, larger layout: without that
-   * guard, buildPointInfo would index past the end of the freshly-
-   * uploaded smaller cloud's typed arrays and produce a PointInfo
-   * with runtime-undefined numeric fields, which crashes downstream
-   * `.toFixed()` calls in the InfoCard.  `fromGlobalIdx` returning
-   * null here is the right semantics: "we don't have data for that
-   * pick; render no card, the next frame's pick will succeed".
+   * The bounds check defends the tier-swap-window race where a
+   * still-in-flight pick from a previous frame returns a (source,
+   * localIdx) decoded against an older, larger layout — without it,
+   * `buildPointInfo` would index past the end of the freshly-uploaded
+   * smaller cloud's typed arrays and crash downstream `.toFixed()`
+   * calls in the InfoCard.  Returning null here is the right
+   * semantics: "we don't have data for that pick; render no card,
+   * the next frame's pick will succeed".
+   *
+   * Replaces the prior `pointInfoFromGlobal` decoder — the picker's
+   * r32uint readback now hands back `{source, localIdx}` directly, so
+   * no cross-survey running-sum decode is needed.
    */
-  function pointInfoFromGlobal(globalIdx: number) {
-    const resolved = state.gpu.renderer?.fromGlobalIdx(globalIdx);
-    if (!resolved) return null;
-    const c = state.sources.clouds.get(resolved.source);
+  function pointInfoForSelection(sel: { source: Source; localIdx: number }) {
+    const c = state.sources.clouds.get(sel.source);
     if (!c) return null;
+    if (sel.localIdx < 0 || sel.localIdx >= c.count) return null;
     return buildPointInfo(
       c,
-      resolved.localIdx,
-      resolved.source,
+      sel.localIdx,
+      sel.source,
       state.sources.famousMeta,
       state.sources.famousXrefs,
     );
@@ -513,42 +514,56 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // ── Hover / selection state helpers ─────────────────────────────────────
 
   /**
-   * Notify the UI if the hovered point changed.
-   *
-   * We compare old vs. new index before firing to avoid triggering a React
-   * re-render on every frame when nothing changed.
+   * Are these two selections value-equal?  Both null → equal; both
+   * non-null with matching `(source, localIdx)` → equal; otherwise
+   * different.  Used by setHovered/setSelected to short-circuit the
+   * React notification when nothing actually changed.
    */
-  function setHovered(idx: number | null): void {
-    if (idx === state.picking.hoveredIndex) return;
-    state.picking.hoveredIndex = idx;
-    cb.onHoverChange(idx !== null ? pointInfoFromGlobal(idx) : null);
+  function selectionEq(
+    a: { source: Source; localIdx: number } | null,
+    b: { source: Source; localIdx: number } | null,
+  ): boolean {
+    if (a === null && b === null) return true;
+    if (a === null || b === null) return false;
+    return a.source === b.source && a.localIdx === b.localIdx;
   }
 
   /**
-   * Notify the UI if the selected point changed.
+   * Notify the UI if the hovered point changed.
+   *
+   * We compare old vs. new selection before firing to avoid triggering
+   * a React re-render on every frame when nothing changed.
    */
+  function setHovered(sel: { source: Source; localIdx: number } | null): void {
+    if (selectionEq(sel, state.picking.hovered)) return;
+    state.picking.hovered = sel;
+    cb.onHoverChange(sel !== null ? pointInfoForSelection(sel) : null);
+  }
+
   /**
    * Update the live selection.
    *
    * The optional `prebuiltInfo` parameter is for callers that already
-   * hold the `PointInfo` for this index — typically `selectByAlias`,
+   * hold the `PointInfo` for this selection — typically `selectByAlias`,
    * which builds the info from the data-side cloud store BEFORE the
-   * GPU upload has settled.  In that window, `pointInfoFromGlobal`
-   * (which reads from `state.gpu.renderer.loadedSources()`) can return
-   * `null` because the renderer doesn't know about the source yet,
-   * even though the data-side `state.sources.clouds` does.  Passing
-   * the prebuilt info bypasses that race so the React-side selection
-   * updates correctly while the GPU is still settling — the halo will
-   * appear once the upload completes a frame or two later.
+   * GPU upload has settled.  In that window the renderer's
+   * `loadedSources()` doesn't yet include the source, but the
+   * data-side `state.sources.clouds` does.  Passing the prebuilt info
+   * bypasses that race so the React-side selection updates correctly
+   * while the GPU is still settling — the halo will appear once the
+   * upload completes a frame or two later.
    */
-  function setSelected(idx: number | null, prebuiltInfo?: PointInfo | null): void {
-    if (idx === state.picking.selectedIndex) return;
-    state.picking.selectedIndex = idx;
+  function setSelected(
+    sel: { source: Source; localIdx: number } | null,
+    prebuiltInfo?: PointInfo | null,
+  ): void {
+    if (selectionEq(sel, state.picking.selected)) return;
+    state.picking.selected = sel;
     const info =
       prebuiltInfo !== undefined
         ? prebuiltInfo
-        : idx !== null
-          ? pointInfoFromGlobal(idx)
+        : sel !== null
+          ? pointInfoForSelection(sel)
           : null;
     cb.onSelectChange(info);
   }
@@ -1097,21 +1112,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the visual renderer — no extra GPU memory for point data.
       const pickRenderer = createPickRenderer(device, renderer);
       state.gpu.pickRenderer = pickRenderer;
-      // The resolver adapts the renderer's `fromGlobalIdx` decoder
-      // (which owns the global-idx encoding rule and the tier-swap-
-      // window bounds-check; see `pointInfoFromGlobal` higher up)
-      // into the (cloud, localIdx, source) shape the resolver wants.
-      // The `cloud` lookup goes through the live `state.sources.clouds`
-      // map so a cloud loaded after engine init still picks up
-      // correctly.
+      // The resolver hands back the freshly-decoded `(source, localIdx)`
+      // straight from the picker; the engine's only job is to look up
+      // the matching cloud and bounds-check the localIdx against the
+      // data-side map's count.  The bounds check defends the tier-swap
+      // race (in-flight pick decoded against a now-shrunk cloud) — see
+      // `pointInfoForSelection` higher up for the same guard rationale.
       state.subsystems.clickResolver = createClickResolver({
         pickRenderer,
-        resolveGlobalIdx: (globalIdx) => {
-          const r = state.gpu.renderer?.fromGlobalIdx(globalIdx);
-          if (!r) return null;
-          const cloud = state.sources.clouds.get(r.source);
+        resolveSelection: (sel) => {
+          const cloud = state.sources.clouds.get(sel.source);
           if (!cloud) return null;
-          return { source: r.source, localIdx: r.localIdx, cloud };
+          if (sel.localIdx < 0 || sel.localIdx >= cloud.count) return null;
+          return { source: sel.source, localIdx: sel.localIdx, cloud };
         },
         buildPointInfo: (cloud, localIdx, src) =>
           buildPointInfo(cloud, localIdx, src, state.sources.famousMeta, state.sources.famousXrefs),
@@ -1311,7 +1324,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               setSelected(null);
               lastClickedInfo = null;
             } else {
-              setSelected(result.globalIdx);
+              setSelected(result.selection);
               lastClickedInfo = result.info;
             }
             // Selection changed — render so the highlight halo
@@ -1558,7 +1571,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           settings: {
             pointSizePx: state.settings.pointSizePx,
             brightness: state.settings.brightness,
-            selectedIndex: state.picking.selectedIndex,
+            selected: state.picking.selected,
             visibleSourceMask: state.sources.visibleMask,
             highlightFallback: state.settings.highlightFallback,
             realOnlyMode: state.settings.realOnlyMode,
@@ -1641,8 +1654,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               // PICK_PADDING_PX in pickRenderer.ts.
               state.settings.pointSizePx,
             )
-            .then((idx) => {
-              setHovered(idx === -1 ? null : idx);
+            .then((sel) => {
+              setHovered(sel);
               // No scheduler.requestRender() here intentionally.
               // The hover state only feeds the React InfoCard text —
               // there is no hover halo in the rendered scene today,
@@ -1714,7 +1727,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     clearSelection() {
       // Only fire the callback when something was actually selected.
       // This lets the Esc handler in App.tsx call this unconditionally.
-      if (state.picking.selectedIndex !== null) {
+      if (state.picking.selected !== null) {
         setSelected(null);
         // Clearing the pin also clears the camera-focus target — Esc /
         // close ✕ are explicit "I'm done with this galaxy" signals.
@@ -2057,14 +2070,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       );
       if (!info) return;
 
-      // The engine's selectedIndex is GLOBAL — not per-source local — so
-      // we have to compute the global index.  The renderer owns the
-      // encoding rule (sum of prior-source counts in enum order) via
-      // `toGlobalIdx`; the fallback to `localIdx` preserves the prior
-      // behaviour when the renderer is unavailable (offset would have
-      // been 0, so `0 + localIdx === localIdx`).
-      const globalIdx = state.gpu.renderer?.toGlobalIdx(Source.Famous, localIdx) ?? localIdx;
-      setSelected(globalIdx);
+      // Selection state is keyed by `(source, localIdx)` pair — see
+      // `state.picking.selected` and `pickRenderer.pick`.  No more
+      // global-index encoding: the picker compares packed identities
+      // directly, so the engine forwards the same shape.
+      setSelected({ source: Source.Famous, localIdx });
       // selectFamous is a deliberate user focus action (palette pick),
       // so the camera-focus target moves to this galaxy too.
       cb.onFocusChange?.(info);
@@ -2137,24 +2147,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       );
       if (!info) return;
 
-      // Compute the GLOBAL instance index (selection state is keyed
-      // globally because the picker writes a per-vertex globalIdx;
-      // see `toGlobalIdx` for the running-sum convention).
+      // Selection state holds `(source, localIdx)` directly — no
+      // running-sum global ID needed.  The shader recovers each
+      // instance's packed identity from `cloud.sourceCode << 27 | ii`
+      // and compares to `selectedPacked` for the halo gate, so the
+      // halo lights up the same row this method targets without any
+      // extra encoding.
       //
-      // Caveat: `toGlobalIdx` reads from the renderer's per-source
-      // bookkeeping, which lags `state.sources.clouds` by an upload
-      // chain tick (see the cloud-load wiring around line 803).  When
-      // selectByAlias is called from a deep-link drain that fires the
-      // moment a cloud lands data-side, the renderer hasn't uploaded
-      // yet and the offset is 0 — meaning `globalIdx` would round-trip
-      // through `pointInfoFromGlobal` to a wrong source.  We pass the
-      // already-built `info` to `setSelected` so the React side gets
-      // the correct PointInfo regardless; the halo's globalIdx will
-      // correct itself once the picker draws against the freshly-
-      // uploaded source.  The fallback to `localIdx` preserves the
-      // prior behaviour when the renderer is unavailable.
-      const globalIdx = state.gpu.renderer?.toGlobalIdx(source, localIdx) ?? localIdx;
-      setSelected(globalIdx, info);
+      // Race-window note: when selectByAlias is called from a
+      // deep-link drain that fires the moment the data-side cloud
+      // lands, the renderer hasn't uploaded yet — the halo will
+      // appear once the upload completes a frame or two later.
+      // Passing the prebuilt `info` to `setSelected` ensures the
+      // React side updates immediately regardless.
+      setSelected({ source, localIdx }, info);
       // selectByAlias is a deliberate user focus action (palette pick
       // OR deep-link resolve), so the camera-focus target moves with
       // the selection.
