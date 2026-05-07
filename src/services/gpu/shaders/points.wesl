@@ -52,7 +52,10 @@
 //   5. Calls 'passEncoder.draw(6, pointCount)' to kick off the draw.
 
 import package::lib::math::saturate;
-import package::lib::camera::{ CameraUniforms, worldToClip };
+import package::lib::camera::CameraUniforms;
+import package::lib::camera::worldToClip;
+import package::lib::billboard::quadCorner;
+import package::lib::billboard::expandBillboardScreen;
 
 // ─── uniforms ─────────────────────────────────────────────────────────────────
 
@@ -766,35 +769,19 @@ fn ramp(t: f32) -> vec3<f32> {
   return select(blueWhite, whiteRed, t > 1.0);
 }
 
-// ─── quad corner offsets ──────────────────────────────────────────────────────
-
-// A triangle-list of 6 vertices forming one unit quad in [-1,+1]².
-//
-//   (-1,+1) ──── (+1,+1)
-//      │   ╲  tri2 │
-//      │ tri1 ╲    │
-//   (-1,-1) ──── (+1,-1)
-//
-// triangle 1: verts 0,1,2  →  bottom-left, bottom-right, top-left
-// triangle 2: verts 3,4,5  →  top-left, bottom-right, top-right
-//
-// Why not use an index buffer?  An index buffer would let us share the 4 unique
-// corners and reference them via 6 indices — saving 2 redundant vertex shader
-// invocations per quad. For our case the saving is tiny (2 out of 6 = 33% fewer
-// vertex invocations, but each is extremely cheap), while index buffers add JS-
-// side boilerplate (GPUBuffer creation, pipeline indexFormat declaration,
-// drawIndexed call). The triangle-list approach is the simplest possible setup.
-
-const QUAD = array<vec2<f32>, 6>(
-  vec2<f32>(-1.0, -1.0),  // 0 — bottom-left
-  vec2<f32>( 1.0, -1.0),  // 1 — bottom-right
-  vec2<f32>(-1.0,  1.0),  // 2 — top-left
-  vec2<f32>(-1.0,  1.0),  // 3 — top-left   (repeated for triangle 2)
-  vec2<f32>( 1.0, -1.0),  // 4 — bottom-right (repeated for triangle 2)
-  vec2<f32>( 1.0,  1.0),  // 5 — top-right
-);
-
 // ─── vertex stage ─────────────────────────────────────────────────────────────
+//
+// The 6-vertex quad lookup that used to live here as a 'const QUAD'
+// array now comes from 'lib/billboard.wesl::quadCorner'. The library
+// uses the (BL, BR, TR, BL, TR, TL) ordering shared with the quads,
+// disks, and proceduralDisks renderers; both that ordering and the
+// (BL, BR, TL, TL, BR, TR) form points.wesl previously used are valid
+// CCW triangulations of the same unit square, and the points pipeline
+// runs with WebGPU's default 'cullMode: none' (see pointRenderer.ts
+// 'createRenderPipeline'), so the rendered output is byte-identical.
+// We deliberately don't use an index buffer for the same reason as
+// before: 2 redundant vertex invocations per quad is cheaper than the
+// JS-side boilerplate of 'GPUBuffer + indexFormat + drawIndexed'.
 
 // The vertex shader runs once per (instance, vertex) pair.
 //   @builtin(vertex_index)    cycles 0..5 within each instance (per-vertex)
@@ -821,7 +808,7 @@ fn vs(
   let center = worldToClip(u.cam, p.position);
 
   // Fetch the quad corner for this vertex (in [-1,+1]²).
-  let corner = QUAD[vi];
+  let corner = quadCorner(vi);
 
   // ── Malmquist-bias gating (volume-limited mode) ──────────────────────────
   //
@@ -1019,8 +1006,13 @@ fn vs(
   // For the bare points we therefore keep the original screen-X/+Y
   // basis: stable through camera motion, and the ellipse mask uses
   // sky-PA without any screen-vs-sky reconciliation.
-  let pxToClip = vec2<f32>(2.0 / u.cam.viewportPx.x, 2.0 / u.cam.viewportPx.y);
-  let offset   = corner * sizePx * sizeScale * pxToClip * center.w;
+  // The shared 'expandBillboardScreen' helper computes the clip-space
+  // delta for a 'sizePx'-pixel-radius screen-aligned billboard corner;
+  // we then post-multiply by 'sizeScale' so the per-instance 8× halo
+  // expansion (selection ring) keeps stacking on top of the base pixel
+  // size.  See 'lib/billboard.wesl' for the centerClip.w / viewportPx
+  // cancellation derivation.
+  let offset = expandBillboardScreen(u.cam, center, sizePx, corner) * sizeScale;
 
   var out: VSOut;
 
