@@ -1,0 +1,155 @@
+// lib/camera.wesl — shared camera uniform layout + projection helpers.
+//
+// Every renderer that touches world space ends up writing the same
+// half-dozen lines: 'u.viewProj * vec4<f32>(p, 1.0)' to land in clip
+// space, 'length(u.camPosWorld - p)' for an apparent-size factor, and
+// so on. Centralising the uniform-struct prefix and the helper
+// functions lets us:
+//
+//   1. Audit the camera math in one place — when something looks
+//      foreshortened wrong, there is exactly one definition of
+//      'worldToClip' to blame.
+//   2. Reuse the same byte layout across renderers, so a future
+//      "shared per-frame camera UBO bound at @group(2)" refactor (out
+//      of scope for Task 4 but plausible later) only has to touch the
+//      CPU-side uploader, not the WGSL.
+//   3. Give human reviewers a hook: any new renderer should import
+//      from here rather than rolling its own viewProj wiring.
+//
+// ## Why this is so MINIMAL
+//
+// An earlier draft (see plan 2026-05-07-wesl-conversion.md, Task 4)
+// proposed a much wider CameraUniforms with separate 'view' + 'proj'
+// matrices, plus 'kPerZ', 'dpr', 'timeSec', etc. Reading the actual
+// renderer Uniforms structs revealed:
+//
+//   - None of the seven renderers uses 'view' or 'proj' separately;
+//     all of them only need the combined 'viewProj'.
+//   - 'kPerZ' and 'dpr' are not in any uniform struct today.
+//   - 'cameraPos' (under various spellings: 'camPosWorld',
+//     'cameraPosWorld', 'camPos') lives at WILDLY different byte
+//     offsets across renderers — points puts six other f32/u32
+//     fields between 'viewport' and 'camPosWorld'; milkyWayImpostor
+//     has 'fadeAlpha' + 'iTime' in those same slots; quads/disks
+//     pad those slots out with explicit '_pad0/_pad1'. Forcing all
+//     of them onto the same prefix would mean rewriting the
+//     points/milkyWayImpostor uniform layouts purely to satisfy a
+//     shared struct, with no functional benefit. The plan's
+//     guardrail ('fields used by only one renderer stay
+//     renderer-specific') applies a fortiori when the placement of
+//     a field varies between renderers.
+//   - 'filaments' has no camera position at all — its quads only
+//     need 'viewProj' for endpoint projection.
+//
+// What IS universal across all six camera-using renderers (everything
+// except 'toneMap', which is a fullscreen pass without world-space
+// math) is the prefix:
+//
+//   offset 0:  mat4x4<f32> viewProj   (64 B)
+//   offset 64: vec2<f32>   viewportPx (8 B)
+//   offset 72: f32         _pad0      (4 B; reserves the 16-B-align
+//   offset 76: f32         _pad1       slot used by every renderer
+//                                       between 'viewport' and the
+//                                       next vec3-aligned member).
+//   total: 80 bytes.
+//
+// 'cameraPos' is therefore NOT in CameraUniforms; the helpers that
+// need it ('worldEyeDepth', any future 'pxPerRad'-style scaling)
+// take it as an explicit 'vec3<f32>' parameter so renderers can
+// continue to put it wherever their own layout demands.
+//
+// ## Byte layout (canonical)
+//
+// Renderers extending CameraUniforms (e.g. 'struct Uniforms { cam:
+// CameraUniforms, brightness: f32, ... }') get:
+//
+//   0..63:  viewProj
+//   64..71: viewportPx
+//   72..79: _pad0, _pad1
+//   80..  : renderer-specific fields, naturally 16-B aligned.
+//
+// The two trailing pads are NOT decorative — they reserve the slots
+// the existing renderers' Uniforms structs already use to round
+// 'viewport + 8B' up to a vec3<f32> alignment boundary at offset 80.
+// Without them, a renderer extending 'cam: CameraUniforms' with a
+// vec3 next field would silently insert implicit padding that the
+// CPU side might not match. Naming the bytes makes the JS-side
+// upload obvious and grep-able.
+
+struct CameraUniforms {
+  viewProj:   mat4x4<f32>,
+  viewportPx: vec2<f32>,
+  _pad0:      f32,
+  _pad1:      f32,
+};
+
+// ── worldToClip ─────────────────────────────────────────────────────
+//
+// The single most-repeated camera operation: take a world-space point
+// and produce its homogeneous clip-space coordinate. Every vertex
+// stage that places anything by world position calls this once
+// (sometimes twice, e.g. filaments projects two endpoints; quads
+// projects center + a 'celestial-north' epsilon offset).
+//
+// Why pass 'cam' rather than capture a free-standing 'u'? WESL has
+// no global state — the helper module can't see the renderer's
+// '@group(0) @binding(0) var<uniform> u' binding. Taking 'cam' as a
+// parameter means the helper is portable to any renderer's binding
+// site and to future refactors that put the camera UBO at a
+// different group/binding.
+//
+// Equivalent inline form: 'u.cam.viewProj * vec4<f32>(p, 1.0)'.
+
+fn worldToClip(cam: CameraUniforms, p: vec3<f32>) -> vec4<f32> {
+  return cam.viewProj * vec4<f32>(p, 1.0);
+}
+
+// ── worldToNdc ──────────────────────────────────────────────────────
+//
+// Perspective-divided 2D position. Used by filaments to compute the
+// screen-space tangent + perpendicular for thick-line expansion: it
+// projects both segment endpoints, divides by w to get NDC, and
+// builds a perpendicular from their delta. The perspective divide
+// must happen BEFORE the subtraction (you can't subtract two clip
+// vectors with different w and then divide — the result is gibberish
+// in NDC).
+//
+// We split this out as a named helper because every renderer that
+// does screen-space-aligned billboard math has historically rolled
+// its own 'clip.xy / clip.w' line and called the result something
+// different ('aNdc', 'centerNdc', 'upNdc'). One name + one
+// definition keeps the post-projection step searchable.
+//
+// Note we drop the z component: NDC z is the depth used for the
+// depth test, not for screen layout. Callers who need it should use
+// 'worldToClip' and divide explicitly.
+
+fn worldToNdc(cam: CameraUniforms, p: vec3<f32>) -> vec2<f32> {
+  let clip = cam.viewProj * vec4<f32>(p, 1.0);
+  return clip.xy / clip.w;
+}
+
+// ── worldEyeDepth ───────────────────────────────────────────────────
+//
+// Linear distance from the camera to a world-space point — the
+// natural "how far away is this galaxy?" scalar that drives
+// apparent-size billboards, thumbnail eligibility, and depth-fade
+// gates. Linear (not 1/w) because every consumer multiplies it by
+// an angular size or feeds it into a smoothstep — both of which
+// expect proportional, not perspective-warped, distances.
+//
+// Why does 'cam' NOT carry the camera position? See the module
+// header — cameraPos placement differs across renderer Uniforms
+// structs, so the canonical CameraUniforms struct excludes it. The
+// caller passes its renderer-specific 'u.camPosWorld' (or whatever
+// it spelled the field) as 'eyeWS' here.
+//
+// Edge case: if the camera is exactly at p, the returned distance is
+// 0. The two known consumers (apparent-size + thumbnail gating)
+// already 'max(d, 0.001)' before dividing, so we don't clamp here —
+// callers that need it know better than this generic helper how
+// small a floor they want.
+
+fn worldEyeDepth(eyeWS: vec3<f32>, p: vec3<f32>) -> f32 {
+  return length(eyeWS - p);
+}
