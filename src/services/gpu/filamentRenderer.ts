@@ -13,7 +13,7 @@
  *   indexBuffer (static)        :  6 × uint16  → two-triangle quad
  *   quadVertexBuffer (static)   :  4 × vec2<f32> → corner UVs
  *   segmentInstanceBuffer       :  segmentCount × 8 × f32 → per-segment endpoints
- *   uniformBuffer               :  32 bytes (viewProj + viewport + halfWidth)
+ *   uniformBuffer               :  96 bytes (CameraUniforms prefix + halfWidth + intensityScale + tail pad)
  *
  * Public API:
  *   - new FilamentRenderer(device, format)
@@ -29,14 +29,22 @@ import { CloudFade } from './cloudFade';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
 
-// Uniform block layout (std140-ish, WGSL host-shareable):
-//   viewProj    mat4   = 64 bytes
-//   viewport    vec2   =  8 bytes
-//   halfWidthPx f32    =  4 bytes
-//   _pad        f32    =  4 bytes  (round to 16-byte alignment)
-// Total: 80 bytes.  WebGPU rounds uniform-buffer sizes up to a multiple
-// of 16, so 80 is already aligned — no extra padding needed.
-const UNIFORM_BYTES = 80;
+// Uniform block layout, mirroring 'struct Uniforms' in
+// 'shaders/filaments.wesl'. The first 80 bytes are the shared
+// 'CameraUniforms' prefix from 'shaders/lib/camera.wesl'; the
+// renderer-specific scalars sit AFTER it in offsets 80..87. The
+// trailing 8B pad rounds up to a 16-byte multiple — WebGPU would
+// round the buffer size anyway, but writing the pad explicitly keeps
+// the JS-side layout obvious and grep-able.
+//
+//   offset  0..63 : viewProj       mat4x4<f32>   (CameraUniforms.viewProj)
+//   offset 64..71 : viewportPx     vec2<f32>     (CameraUniforms.viewportPx)
+//   offset 72..79 : _pad0, _pad1   2 × f32       (CameraUniforms reserved)
+//   offset 80..83 : halfWidthPx    f32
+//   offset 84..87 : intensityScale f32
+//   offset 88..95 : _pad0, _pad1   2 × f32       (Uniforms tail pad)
+// Total: 96 bytes.
+const UNIFORM_BYTES = 96;
 
 /**
  * Build a flat per-segment instance array from a `FilamentCloud`.  One
@@ -262,20 +270,25 @@ export class FilamentRenderer {
     if (this.segmentCount === 0 || !this.instanceBuffer || !this.fade) return;
 
     // Pack uniforms.  See UNIFORM_BYTES comment above for the byte layout.
-    //   f32[0..15]   viewProj (mat4)
-    //   f32[16..17]  viewport (vec2)
-    //   f32[18]      halfWidthPx
-    //   f32[19]      intensityScale (was: padding; the slot is already
-    //                in the uniform buffer's footprint, repurposing it
-    //                for the user-facing intensity slider doesn't grow
-    //                the uniform's size or change its 16-byte alignment)
+    //   f32[0..15]   viewProj (mat4)         — CameraUniforms.viewProj
+    //   f32[16..17]  viewportPx (vec2)       — CameraUniforms.viewportPx
+    //   f32[18..19]  CameraUniforms reserved pad (left zero)
+    //   f32[20]      halfWidthPx             — Uniforms.halfWidthPx (offset 80)
+    //   f32[21]      intensityScale          — Uniforms.intensityScale (offset 84)
+    //   f32[22..23]  Uniforms tail pad (left zero)
+    //
+    // Adoption of the shared 'CameraUniforms' prefix moved the two
+    // scalars from f32-indices 18/19 down to 20/21. The two reserved
+    // pad slots in CameraUniforms (f32[18..19]) MUST stay zero —
+    // overwriting them silently shifts the WGSL view of every later
+    // member.
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
     f32.set(viewProj as Float32Array, 0);
     f32[16] = viewportPx[0];
     f32[17] = viewportPx[1];
-    f32[18] = halfWidthPx;
-    f32[19] = intensityScale;
+    f32[20] = halfWidthPx;
+    f32[21] = intensityScale;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, buf);
 
     // Cloud-fade-in opacity for this frame.  Steady-state (after the

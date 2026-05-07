@@ -1,4 +1,4 @@
-// filaments.wgsl — instanced-quad line shader for the cosmic-web skeleton.
+// filaments.wesl — instanced-quad line shader for the cosmic-web skeleton.
 //
 // One instance per filament SEGMENT (consecutive vertex pair within a
 // strip).  The instance attributes are the segment's two endpoints +
@@ -18,17 +18,41 @@
 // uv.x picks startpoint vs endpoint; uv.y picks one side of the line vs
 // the other (mapped to ±half-width along the screen-space perpendicular).
 
+// Shared CameraUniforms prefix + projection helpers. See
+// 'lib/camera.wesl' for the canonical 80-byte layout (viewProj +
+// viewportPx + 8B reserved pad). filaments only needs 'worldToClip'
+// because both endpoints are projected the same way; the screen-space
+// perpendicular math then operates in NDC and never touches a camera
+// position, so 'worldEyeDepth' is intentionally NOT imported here.
+import package::lib::camera::{ CameraUniforms, worldToClip };
+
+// Renderer-specific Uniforms struct.
+//
+// The first 80 bytes are the shared 'CameraUniforms' prefix (viewProj
+// at offset 0, viewportPx at offset 64, two reserved-pad f32s at
+// 72/76). The next two f32 slots at offsets 80 and 84 hold this
+// renderer's two scalar parameters; offsets 88..95 are an explicit
+// 8-byte tail pad to round the struct up to a 16-byte multiple, which
+// matches what WebGPU's uniform-buffer size rounding would do anyway
+// but makes the layout grep-able from the JS side.
+//
+// Total uniform size: 96 bytes (was 80 — the embedded CameraUniforms
+// pulls the shared prefix in, and the two scalars now sit AFTER it
+// rather than overlapping with the old 'viewport + halfWidth + pad'
+// region). The CPU-side uploader in 'filamentRenderer.ts' writes
+// halfWidthPx at f32-index 20 (byte 80) and intensityScale at f32-
+// index 21 (byte 84) — see UNIFORM_BYTES there.
 struct Uniforms {
-  viewProj : mat4x4<f32>,
-  viewport : vec2<f32>,    // [w, h] in physical pixels
-  halfWidthPx : f32,       // line half-width in pixels
+  cam : CameraUniforms,
+  halfWidthPx : f32,       // line half-width in pixels (offset 80)
   // Per-frame uniform scale for the entire filament-pass output, [0..1].
-  // Multiplied into the final pre-multiplied colour + alpha.  Lives in
-  // the slot that used to be 'pad0' — the byte layout is unchanged.
-  // Lets the user dim the cosmic-web overlay against the bright HDR
-  // catalogue when high-σ skeletons (with their longer, denser ridges)
-  // saturate to flat white under the tone-mapped pass.
-  intensityScale : f32,
+  // Multiplied into the final pre-multiplied colour + alpha. Lets the
+  // user dim the cosmic-web overlay against the bright HDR catalogue
+  // when high-σ skeletons (with their longer, denser ridges) saturate
+  // to flat white under the tone-mapped pass.
+  intensityScale : f32,    // offset 84
+  _pad0 : f32,             // offset 88 — see struct comment above
+  _pad1 : f32,             // offset 92
 };
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
@@ -60,9 +84,13 @@ struct VSOut {
 
 @vertex
 fn vs(in : PerVertex) -> VSOut {
-  // Project both endpoints to clip space.
-  let aClip = u.viewProj * vec4<f32>(in.startPos, 1.0);
-  let bClip = u.viewProj * vec4<f32>(in.endPos, 1.0);
+  // Project both endpoints to clip space via the shared helper. We
+  // could call 'worldToNdc' twice and drop the perspective divide
+  // separately, but we still need 'aClip.w' / 'bClip.w' below to
+  // restore clip space after the pixel-space offset, so doing the
+  // divide locally is cheaper than projecting twice.
+  let aClip = worldToClip(u.cam, in.startPos);
+  let bClip = worldToClip(u.cam, in.endPos);
 
   // Choose which endpoint this corner uses (uv.x = 0 → start, 1 → end).
   let endpoint = select(aClip, bClip, in.uv.x > 0.5);
@@ -77,7 +105,7 @@ fn vs(in : PerVertex) -> VSOut {
 
   // pixel width → NDC offset: (px / halfViewport) is the NDC-space length
   // of one pixel.  Multiplied by halfWidthPx gives the half-width in NDC.
-  let halfWidthNdc = perp * (u.halfWidthPx / (u.viewport * 0.5));
+  let halfWidthNdc = perp * (u.halfWidthPx / (u.cam.viewportPx * 0.5));
 
   // uv.y in [0, 1] picks +halfWidth or -halfWidth.
   let sideSign = in.uv.y * 2.0 - 1.0;
