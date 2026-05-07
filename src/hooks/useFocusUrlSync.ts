@@ -72,7 +72,7 @@ import {
 import type {
   FamousMetaEntry,
   FamousXrefMap,
-} from '../services/engine/famousMetaLoader';
+} from '../services/loading/fetchers/famousMetaFetcher';
 
 /**
  * Inputs to the pure desired-hash decision.  The caller passes in the

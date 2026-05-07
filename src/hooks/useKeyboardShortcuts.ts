@@ -8,6 +8,7 @@
  *   - h / H                  → return camera to home view
  *   - Tab                    → toggle "hide UI" mode (clean visual)
  *   - l                      → debug: log live camera state
+ *   - d / D                  → toggle the asset-loading dev panel
  *
  * Why a hook?  The handler closes over `selected` and `paletteOpen`,
  * so we need a re-bind whenever those change.  Wrapping it in a hook
@@ -52,10 +53,23 @@ export type UseKeyboardShortcutsInput = {
    * the current state.
    */
   setUiHidden: Dispatch<SetStateAction<boolean>>;
+  /**
+   * The React setter for the asset-loading dev panel's visibility (`d`
+   * shortcut).  Same stable-reference rationale as the others — the
+   * dev panel defaults to hidden and `d` toggles it.
+   */
+  setLoadingDevPanelOpen: Dispatch<SetStateAction<boolean>>;
 };
 
 export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
-  const { selected, paletteOpen, engineHandleRef, setPaletteOpen, setUiHidden } = input;
+  const {
+    selected,
+    paletteOpen,
+    engineHandleRef,
+    setPaletteOpen,
+    setUiHidden,
+    setLoadingDevPanelOpen,
+  } = input;
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -123,11 +137,27 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
         engineHandleRef.current?.logCameraState();
         return;
       }
+
+      // ── d toggles the asset-loading dev panel ──────────────────
+      // Hidden by default; press `d` to surface it, press again to
+      // tuck it away.  Bare key (no modifier) so it doesn't collide
+      // with browser dev-tool shortcuts (Cmd+Opt+D etc.).
+      if (e.key === 'd' || e.key === 'D') {
+        setLoadingDevPanelOpen((prev) => !prev);
+        return;
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selected, paletteOpen, engineHandleRef, setPaletteOpen, setUiHidden]);
+  }, [
+    selected,
+    paletteOpen,
+    engineHandleRef,
+    setPaletteOpen,
+    setUiHidden,
+    setLoadingDevPanelOpen,
+  ]);
   // engineHandleRef (ref object), setPaletteOpen and setUiHidden (React setters)
   // are stable references — listed for exhaustive-deps; never trigger re-binds.
 }

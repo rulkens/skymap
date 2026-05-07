@@ -99,7 +99,7 @@ import type { DiskRenderer } from '../gpu/diskRenderer';
 import type { MilkyWayRenderer } from '../gpu/milkyWayRenderer';
 import type { FilamentRenderer } from '../gpu/filamentRenderer';
 import type { ThumbnailSubsystem } from './thumbnailSubsystem';
-import type { FamousMetaEntry, FamousXrefMap } from './famousMetaLoader';
+import type { FamousMetaEntry, FamousXrefMap } from '../loading/fetchers/famousMetaFetcher';
 import { milkyWayFadeAlpha } from '../../utils/math/milkyWayFade';
 
 /**

@@ -70,6 +70,29 @@ import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
+import { LoadingDevPanel } from '../LoadingDevPanel/LoadingDevPanel';
+
+// ── Dev-panel availability gate ────────────────────────────────────────────
+//
+// Whether the `d` keyboard shortcut should be wired up at all.  In dev
+// builds we always wire it; in production it's only wired when
+// `?debug=loading` is in the URL — same escape-hatch contract the panel
+// had before, just gated on actual key presses now (default-hidden) so
+// it doesn't clutter the UI for everyone running a dev server.
+//
+// `import.meta.env.DEV` is statically replaced by Vite at build time, so
+// the production bundle sees `false` here and Rollup tree-shakes the
+// `LoadingDevPanel` import + JSX away entirely whenever the URL flag
+// isn't present.
+//
+// SSR-safe: `typeof window` guard so unit tests that render `<App />`
+// without a DOM (jsdom does have `window`, but be defensive) don't blow
+// up.  In a real browser the second branch always runs.
+function isLoadingDevPanelAvailable(): boolean {
+  if (import.meta.env.DEV) return true;
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('debug') === 'loading';
+}
 
 // ── App ────────────────────────────────────────────────────────────────────────
 
@@ -173,6 +196,15 @@ export function App(): React.ReactElement {
   // (in App.module.css) fades every overlay in lockstep.
   const [uiHidden, setUiHidden] = useState(false);
 
+  // ── Asset-loading dev panel visibility (`d` keyboard shortcut) ─────────────
+  //
+  // Default false so the panel doesn't clutter the screen during normal
+  // dev work.  `d` toggles it on/off (see useKeyboardShortcuts).  The
+  // panel itself is gated on `isLoadingDevPanelAvailable()` further down,
+  // so this state is harmless in production builds where the gate is
+  // false and the panel JSX never renders.
+  const [loadingDevPanelOpen, setLoadingDevPanelOpen] = useState(false);
+
   // ── Famous-galaxy sidecars (CommandPalette + deep-link drain) ────────────
   const { famousMeta, famousXrefs } = useFamousMeta();
 
@@ -213,6 +245,7 @@ export function App(): React.ReactElement {
     engineHandleRef: handleRef,
     setPaletteOpen,
     setUiHidden,
+    setLoadingDevPanelOpen,
   });
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -475,6 +508,21 @@ export function App(): React.ReactElement {
         onSelect={(id) => handleRef.current?.selectFamous?.(id)}
         onSelectAlias={(target) => handleRef.current?.selectByAlias?.(target)}
       />
+      {/*
+        Loading dev panel (Task 13).  Mounted only in dev builds or when
+        `?debug=loading` is present in the URL.  Gated on
+        `status.kind !== 'initializing'` because the engine populates its
+        asset-slot registry inside the async GPU init IIFE — once the
+        engine has transitioned out of `initializing`, every slot exists
+        on `handleRef.current.assetSlots`, so the panel's first render is
+        guaranteed to see the full slot set and subscribe to each one.
+      */}
+      {isLoadingDevPanelAvailable() &&
+        loadingDevPanelOpen &&
+        status.kind !== 'initializing' &&
+        handleRef.current?.assetSlots && (
+          <LoadingDevPanel slots={handleRef.current.assetSlots} />
+        )}
       </div>
     </>
   );

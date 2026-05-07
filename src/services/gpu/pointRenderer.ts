@@ -1028,6 +1028,20 @@ export class PointRenderer {
    * @param cloud   Point cloud to upload (struct-of-arrays SDSS v2 shape).
    */
   async upload(source: Source, cloud: PointCloud): Promise<void> {
+    // Mark this source as having an in-flight upload so the rebake pass
+    // (run from any concurrent upload's post-bake step) skips it — see
+    // `uploadsInFlight` doc for the race this defends against.  The
+    // try/finally ensures the flag is cleared even if the worker bake
+    // throws or the post-bake code aborts.
+    this.uploadsInFlight.add(source);
+    try {
+      return await this._uploadInner(source, cloud);
+    } finally {
+      this.uploadsInFlight.delete(source);
+    }
+  }
+
+  private async _uploadInner(source: Source, cloud: PointCloud): Promise<void> {
     // ── Empty-cloud unload path ─────────────────────────────────────────────
     //
     // `engine.setTier` reuses this method to clear a source when the new
@@ -1223,6 +1237,27 @@ export class PointRenderer {
    * the rebake itself doesn't change any other source's offset).
    */
   private rebaking = false;
+  /**
+   * Sources whose `upload()` has started but not yet returned.  The rebake
+   * pass below uses this to skip any source that has a fresh upload still
+   * in flight — re-baking with the renderer's current `entry.cloud` would
+   * use a STALE cloud reference (the prior tier's data), and the rebake's
+   * worker would race the in-flight fresh upload.  Whichever finished last
+   * would win, and in practice the rebake is the slow one (it bakes the
+   * old big cloud) so it stomps the new small cloud.  This was the
+   * tier-swap "back to large" bug the asset-loading work uncovered.
+   *
+   * Tracked at the renderer level (not the slot level) because the rebake
+   * runs INSIDE one upload's post-bake step and triggers recursive
+   * `this.upload()` calls — slot-level serialization can't reach in here.
+   *
+   * Recursive rebake calls add themselves to this set too; that's fine —
+   * a nested rebake's `if (this.rebaking) return` guard already prevents
+   * a stale-loop from starting, and the additional set membership simply
+   * means a hypothetical future caller observing this set sees rebake-
+   * recursive uploads as "in flight" too, which is correct.
+   */
+  private uploadsInFlight: Set<Source> = new Set();
   private async rebakeStaleSources(): Promise<void> {
     if (this.rebaking) return;
     this.rebaking = true;
@@ -1230,6 +1265,12 @@ export class PointRenderer {
       for (const s of ALL_SOURCES) {
         const entry = this.clouds.get(s);
         if (!entry) continue;
+        // Skip sources with a pending fresh upload — rebaking with the
+        // current (stale) cloud would race the in-flight upload's bake
+        // and the slow rebake would overwrite the new buffer.  The
+        // pending upload's own post-bake recompute + rebake will catch
+        // any residual staleness with the correct cloud reference.
+        if (this.uploadsInFlight.has(s)) continue;
         if (entry.bakedPriorCount !== entry.instanceIdOffset) {
           // Re-upload with the correct priorCount.  upload() destroys the
           // old buffer, allocates a new one, and updates the LoadedSource

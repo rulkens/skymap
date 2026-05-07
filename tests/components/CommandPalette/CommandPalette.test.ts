@@ -21,8 +21,8 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { CommandPalette } from '../../../src/components/CommandPalette/CommandPalette';
 import { Source } from '../../../src/data/sources';
-import type { FamousMetaEntry } from '../../../src/services/engine/famousMetaLoader';
-import type { AliasIndexEntry } from '../../../src/services/engine/pgcAliasLoader';
+import type { FamousMetaEntry } from '../../../src/services/loading/fetchers/famousMetaFetcher';
+import type { AliasIndexEntry } from '../../../src/hooks/buildAliasIndex';
 
 const M31: FamousMetaEntry = {
   id: 'm31',

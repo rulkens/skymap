@@ -296,3 +296,66 @@ describe('PointRenderer.upload — regression: empty-cloud unload', () => {
     expect(entries[0]!.count).toBe(750);
   });
 });
+
+// ─── Regression: parallel-upload rebake race ─────────────────────────────────
+//
+// Tier swap fires two `upload()` calls in parallel — typically SDSS and GLADE
+// reloading their new-tier `.bin`s simultaneously.  Whichever finishes its
+// worker bake first runs `recomputeInstanceIdOffsets()` and then calls
+// `rebakeStaleSources()`, which re-bakes the OTHER source via
+// `await this.upload(other, entry.cloud)`.  The bug: `entry.cloud` is the
+// *prior* tier's cloud (the in-flight new upload hasn't replaced it yet).
+// The slow rebake of the prior cloud finishes after the fresh in-flight
+// upload, overwriting the new buffer with old data.
+//
+// Manifested as: medium → large → medium leaves GLADE drawing the LARGE
+// cloud because SDSS's medium-upload's rebake stomped the GLADE-medium
+// buffer that had just landed.
+//
+// Fix: track in-flight uploads per source and skip them in
+// `rebakeStaleSources` — the in-flight upload's own post-bake rebake will
+// catch any residual staleness with the correct (current) cloud reference.
+describe('PointRenderer.upload — regression: parallel-upload rebake race', () => {
+  it('does not overwrite a concurrent upload during rebake', async () => {
+    const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
+
+    // Seed with the "prior tier" layout so the rebake has stale offsets to act on.
+    await renderer.upload(Source.SDSS, makeCloud(498_227));
+    await renderer.upload(Source.Glade, makeCloud(1_995_421));
+
+    // Build per-source delays: SDSS bakes fast (50 ms), GLADE bakes slow
+    // (200 ms).  SDSS's post-bake rebake fires while GLADE's worker is still
+    // running.  Without the fix, SDSS's rebake re-bakes GLADE using the OLD
+    // (1.9M) cloud reference and stomps the in-flight GLADE-medium upload.
+    const delaysMs = new Map<Source, number>([
+      [Source.SDSS, 50],
+      [Source.Glade, 200],
+    ]);
+    PointRenderer.setBuildBufferRunner(async (input) => {
+      const ms = delaysMs.get(input.source) ?? 0;
+      if (ms > 0) await new Promise((r) => setTimeout(r, ms));
+      return buildPointInterleavedBuffer(input);
+    });
+
+    try {
+      // Tier swap: kick off both in parallel, the way `engine.setTier` does.
+      const sdssPromise = renderer.upload(Source.SDSS, makeCloud(156_000));
+      const gladePromise = renderer.upload(Source.Glade, makeCloud(400_000));
+
+      await Promise.all([sdssPromise, gladePromise]);
+
+      const entries = Array.from(renderer.loadedSources());
+      const sdss = entries.find((e) => e.source === Source.SDSS);
+      const glade = entries.find((e) => e.source === Source.Glade);
+
+      expect(sdss?.count).toBe(156_000);
+      // The bug surfaced as `glade.count === 1_995_421` here — the rebake
+      // resurrected the old large cloud.  The fix keeps GLADE on the new
+      // medium cloud the user actually requested.
+      expect(glade?.count).toBe(400_000);
+    } finally {
+      // Restore the no-delay default for sibling tests.
+      PointRenderer.setBuildBufferRunner(async (input) => buildPointInterleavedBuffer(input));
+    }
+  });
+});

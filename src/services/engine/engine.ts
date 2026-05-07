@@ -100,18 +100,22 @@ import { buildPointInfo, maxAbsCoord } from './pointInfoBuilder';
 import { computeInitialCamera } from './cameraFraming';
 import { seedSettingsCallbacks } from './seedSettingsCallbacks';
 import { computeScaleInfo } from './scaleBar';
-import {
-  loadAllClouds,
-  reloadSource,
-  buildSyntheticFallback,
-  loadFilaments,
-  type CloudSource,
-  type LoadEvent,
-} from './cloudLoader';
-import { createLoadProgressAggregator } from './loadProgressAggregator';
+// The legacy load-orchestration surface (`loadAllClouds`, `reloadSource`,
+// `loadFilaments`, `buildSyntheticFallback`, `LoadEvent`) lived in the
+// now-deleted `cloudLoader.ts`.  Tasks 9 and 10 ported every runtime
+// call site to the AssetSlot machinery; Task 12 finished the cleanup
+// by deleting cloudLoader outright.
+import { cloudSourceFor } from '../../data/cloudSource';
+import { createLoadProgressEmitter } from './loadProgressAggregator';
+import type { AssetSlot } from '../loading/types';
+import { createAssetSlot } from '../loading/AssetSlot';
+import { pointCloudFetcher } from '../loading/fetchers/pointCloudFetcher';
+import { filamentFetcher } from '../loading/fetchers/filamentFetcher';
+import { famousMetaFetcher } from '../loading/fetchers/famousMetaFetcher';
+import { pgcAliasFetcher, type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
+import { generateSyntheticCloud } from '../../data/synthetic';
 import { TIER_TARGETS } from '../../data/tierTargets';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
-import { loadFamousSidecars } from './famousMetaLoader';
 
 // ── Galaxy thumbnail subsystem ────────────────────────────────────────────
 //
@@ -163,6 +167,33 @@ import { renderFrame } from './renderFrame';
  *
  * @throws Never — errors are reported via `onStatusChange({ kind: 'error' })`.
  */
+/**
+ * Lowercase short name for a Source — used as the stable prefix for
+ * asset-slot identifiers (e.g. `sdss-points`, `glade-points`).  We keep
+ * a small dedicated helper rather than reusing `sourceLabel` because
+ * the latter returns the user-facing display string ('GLADE',
+ * 'Famous'), while slot names live in logs / progress keys / dev
+ * tooling and benefit from being lowercase + ASCII-clean.
+ *
+ * Defined at module scope so the per-source slot-construction loop
+ * inside `createEngine` can use it without re-declaring on every
+ * engine boot.
+ */
+function sourceName(source: Source): string {
+  switch (source) {
+    case Source.SDSS:
+      return 'sdss';
+    case Source.TwoMRS:
+      return '2mrs';
+    case Source.Glade:
+      return 'glade';
+    case Source.Famous:
+      return 'famous';
+    case Source.Synthetic:
+      return 'synthetic';
+  }
+}
+
 export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────
   //
@@ -395,6 +426,36 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     cam: null,
     initialCamSnapshot: null,
+    // ── Asset-loading slot bag ───────────────────────────────────────────
+    //
+    // The slot machinery (see `services/loading/AssetSlot.ts`) replaces the
+    // imperative `cloudLoader.reloadSource` call sites with a race-checked
+    // fetch→commit pipeline.  We declare the Map up-front so consumers can
+    // call `state.assetSlots.points.get(source)?.load(...)` without a null
+    // check, but the actual slots are constructed inside the GPU init IIFE
+    // — they close over `state.gpu.renderer` for their commit step, and
+    // that handle is null until `initGpu` resolves.
+    //
+    // Task 8 populates only the SDSS entry; Task 9 fills in the rest.  An
+    // alternative would be to lazily construct slots on first `load()`,
+    // but that splits the wiring across two files (engine + setTier helper)
+    // and obscures the lifecycle.  Eager construction inside the IIFE
+    // keeps every slot's birth and its renderer-handle in the same lexical
+    // scope.
+    assetSlots: {
+      points: new Map(),
+      // Filament slot is minted inside the GPU init IIFE — it commits to
+      // `state.gpu.filamentRenderer`, which is null until then.  Null
+      // initial mirrors the `state.gpu.renderer = null` lifecycle.
+      filaments: null,
+      // Famous + PGC-alias slots have no GPU handles to wait for, but we
+      // still construct them inside the IIFE alongside the rest of the
+      // slot bag so every `state.assetSlots.*` field has the same birth
+      // site.  Keeps the lifecycle story uniform: "all slots are minted
+      // in one place, by one IIFE pass".
+      famousMeta: null,
+      pgcAlias: null,
+    },
   };
 
   /**
@@ -428,6 +489,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     if (!resolved) return null;
     const c = state.sources.clouds.get(resolved.source);
     if (!c) return null;
+    // Bounds-check against the cloud's actual count.  During a tier swap
+    // there's a transient window where the renderer's per-source count
+    // and the engine's clouds map can disagree (e.g. the renderer just
+    // re-uploaded a smaller cloud but a still-in-flight pick from a
+    // previous frame returns a global idx encoded against the older,
+    // larger layout).  Without this guard, buildPointInfo would index
+    // past the end of cloud.magG / cloud.axisRatio / etc. and produce
+    // a PointInfo whose numeric fields are runtime-undefined — which
+    // crashes downstream `.toFixed()` calls in the InfoCard.  Returning
+    // null here is the right semantics: "we don't have data for that
+    // pick; render no card, the next frame's pick will succeed".
+    if (resolved.localIdx >= c.count) return null;
     return buildPointInfo(
       c,
       resolved.localIdx,
@@ -542,6 +615,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Async startup ────────────────────────────────────────────────────────
 
+  // Flat slot registry, keyed by `slot.name`.  Lifted to outer scope so the
+  // public handle can expose it as `assetSlots` (consumed by the
+  // `LoadingDevPanel` debug component — see `EngineHandle.assetSlots`).
+  // The IIFE below populates this Map as each slot is minted; it stays
+  // empty until then.  The same Map instance is also handed to
+  // `aggregateRegistry` / `createLoadProgressEmitter`, so the loading
+  // bar and the dev panel agree byte-for-byte on what's "in flight".
+  const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
+
   cb.onStatusChange({ kind: 'initializing' });
 
   // The main async IIFE runs GPU init + data load, then kicks off the render
@@ -592,6 +674,94 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // construction time, so the format choice has to land here.
       const renderer = new PointRenderer(device, 'rgba16float');
       state.gpu.renderer = renderer;
+
+      // ── Per-source asset slots (Task 8 SDSS, Task 9 the rest) ────────────
+      //
+      // Every survey now flows through `createAssetSlot`.  The slot owns
+      // one cell of mutable state (its current LoadState) and exposes
+      // the fetch→commit lifecycle behind a race-checked façade — see
+      // `AssetSlot.ts`'s header for the full why-and-how, especially
+      // the two race-check points that fix the tier-swap stomping bug.
+      //
+      // Why construct here, after the renderer exists?
+      //   The commit step uploads the freshly-decoded PointCloud to
+      //   `state.gpu.renderer`, so the renderer must be non-null at the
+      //   moment commit runs.  Constructing the slots AFTER
+      //   `state.gpu.renderer = renderer` in the same lexical scope
+      //   makes that ordering obvious to anyone reading top-down.  An
+      //   alternative would be to lazily build slots inside setTier on
+      //   first call, but that splits one cohesive subsystem across
+      //   two files.
+      //
+      // Why `await renderer.upload(...)` inside commit?
+      //   The slot fires its `committed` event (which transitions the
+      //   state to `ready`) only after `commit` resolves.  Awaiting the
+      //   GPU upload here — rather than fire-and-forget — guarantees
+      //   that subscribers seeing `kind === 'ready'` can rely on the
+      //   GPU buffer being populated, which is the primary contract the
+      //   asset-loading rework is delivering.  This is also what closes
+      //   the race window the old `loadAllClouds` path papered over with
+      //   an out-of-band `uploadChain` promise.
+      //
+      // Why `requestRender()` in the subscriber?
+      //   The render loop is gated on `requestRender` — without an
+      //   explicit wake-up the new GPU buffer would sit unrendered until
+      //   the user nudged the camera.  Firing it on the `ready`
+      //   transition (rather than inside `commit`) keeps the slot's
+      //   commit step pure of UI concerns; the wake-up is a downstream
+      //   side-effect of the slot's state transition, not part of the
+      //   commit contract.
+      //
+      // Naming: `<source>-points` for survey clouds, `filaments` for
+      // filaments.  The progress aggregator keys on these strings, so
+      // they double as the load-progress identifier.
+      for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous]) {
+        const slotName = `${sourceName(source)}-points`;
+        const slot = createAssetSlot({
+          name: slotName,
+          fetch: pointCloudFetcher,
+          commit: async (cloud) => {
+            // Renderer might have been destroyed mid-load (StrictMode
+            // unmount, hot-reload).  Drop the upload silently in that
+            // case; the slot will still transition to `ready`, but no
+            // GPU buffer exists to consume it.
+            if (!state.gpu.renderer) return;
+            const t0 = performance.now();
+            // eslint-disable-next-line no-console
+            console.log(
+              `[engine] upload start ${sourceName(source)} count=${cloud.count}`,
+            );
+            await state.gpu.renderer.upload(source, cloud);
+            state.sources.clouds.set(source, cloud);
+            const dtMs = Math.round(performance.now() - t0);
+            // After upload, dump what the GPU actually has — the source
+            // of truth the draw loop reads from.  If this disagrees with
+            // the slot's reported `cloud.count`, the upload landed on the
+            // renderer but something else (e.g. a parallel rebake or a
+            // concurrent upload for the same source) overwrote it.
+            const onGpu = Array.from(state.gpu.renderer.loadedSources())
+              .map((e) => `${sourceName(e.source)}=${e.count}`)
+              .join(', ');
+            const total = state.gpu.renderer.totalCount();
+            // eslint-disable-next-line no-console
+            console.log(
+              `[engine] upload done  ${sourceName(source)} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
+            );
+          },
+        });
+        slot.subscribe((s) => {
+          // Per-slot byte-count plumbing into the loading-bar aggregator
+          // is gone post-Task-12 — the new `createLoadProgressEmitter`
+          // recomputes from `aggregateRegistry(slots)` on every state
+          // change, so this subscriber only needs to fire the
+          // app-visible side effects (cb echo + render wake).
+          if (s.kind === 'ready') {
+            cb.onCloudReady?.(source, s.value.count);
+            state.subsystems.scheduler.requestRender();
+          }
+        });
+        state.assetSlots.points.set(source, slot);
+      }
 
       // ── Galaxy thumbnail subsystem ─────────────────────────────────────
       //
@@ -675,52 +845,165 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const filamentRenderer = new FilamentRenderer(device, 'rgba16float');
       state.gpu.filamentRenderer = filamentRenderer;
 
-      // Per-engine aggregator for the loading bar — hoisted to here
-      // (rather than its previous location just above the
-      // `loadAllClouds` call) so the filament fetch right below can
-      // also stream its bytes through the same aggregator.  Filaments
-      // are a non-trivial download (~24 MB on the merged build), so
-      // the user wants to see them in the loading bar alongside the
-      // galaxy `.bin`s.  See `LoadEventSource` for the union that lets
-      // 'filaments' coexist with `Source` enum values as keys.
-      const loadProgress = createLoadProgressAggregator((snapshot) => {
-        cb.onLoadProgress?.(snapshot);
+      // ── Filament asset slot (Task 9) ─────────────────────────────────
+      //
+      // The cosmic-web skeleton flows through its own slot — different
+      // fetcher (binary format is segments-not-points), different
+      // renderer target (`filamentRenderer` rather than the per-source
+      // `pointRenderer`), and a one-shot lifecycle: load() at boot,
+      // never on tier change.
+      //
+      // Why one-shot?  Re-downloading the ~30 MB skeleton every tier
+      // flip would tax bandwidth for a topology that barely differs
+      // between tiers — see `filamentFetcher.ts`'s docblock for the
+      // detailed rationale, including the "small-tier-on-desktop edge
+      // case" trade-off.
+      //
+      // Why awaited `upload()` even though `FilamentRenderer.upload` is
+      // synchronous?  `await undefined` is harmless and keeps the slot's
+      // commit signature uniform with the per-source slots above; if a
+      // future filament-renderer revision adds an async upload path
+      // (e.g. compute-shader rebuild), this site needs no change.
+      const filamentSlot = createAssetSlot({
+        name: 'filaments',
+        fetch: filamentFetcher,
+        commit: async (cloud) => {
+          if (!state.gpu.filamentRenderer) return;
+          await state.gpu.filamentRenderer.upload(cloud);
+        },
       });
-      state.subsystems.loadProgress = loadProgress;
-
-      // Dispatcher that maps a tagged LoadEvent onto the aggregator's
-      // three lifecycle methods.  Used by `loadFilaments` here, the
-      // initial `loadAllClouds` below, and every `reloadSource` call
-      // inside `setTier` — so all three load paths converge on the
-      // same aggregator and the bar reflects everything that's in
-      // flight.
-      const dispatchLoadEvent = (e: LoadEvent) => {
-        if (e.type === 'start') loadProgress.start(e.source, e.total);
-        else if (e.type === 'progress') loadProgress.update(e.source, e.loaded, e.total);
-        else loadProgress.finish(e.source);
-      };
-
-      // Fire-and-forget the fetch.  When (and if) it lands, upload to
-      // the renderer and wake the render-on-demand loop so the user
-      // sees the skeleton appear without having to nudge the camera.
-      // Errors are already swallowed inside `loadFilaments` (returns
-      // null on any failure) — we don't need a `.catch` here.
-      // Pass the engine's CURRENT tier (which is the user's initial
-      // tier — engine boot happens before any tier-swap UI exists).
-      // Small tier → filaments-small.bin (lighter for mobile); medium/
-      // large → the full filaments.bin.  See cloudLoader's
-      // filamentFilenameForTier() for the rationale.
-      loadFilaments(state.sources.tier, dispatchLoadEvent).then((cloud) => {
-        if (cloud) {
-          filamentRenderer.upload(cloud);
-          console.log(`[engine] filaments: ${cloud.stripCount} strips, ${cloud.vertexCount} verts`);
+      filamentSlot.subscribe((s) => {
+        // Loading-bar plumbing is gone post-Task-12 — the emitter
+        // recomputes from `aggregateRegistry(slots)` on every state
+        // change.  This subscriber only fires the app-visible side
+        // effects (counts echo + render wake) on the `ready` transition.
+        if (s.kind === 'ready') {
+          console.log(
+            `[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`,
+          );
           // Push the parsed counts up to the UI layer.  See
           // `EngineCallbacks.onFilamentsReady` for the lifecycle rationale —
           // one-shot, fires only when the optional binary actually loaded.
-          cb.onFilamentsReady?.(cloud.stripCount, cloud.vertexCount);
+          cb.onFilamentsReady?.(s.value.stripCount, s.value.vertexCount);
           state.subsystems.scheduler.requestRender();
         }
       });
+      state.assetSlots.filaments = filamentSlot;
+
+      // ── Famous-galaxy sidecar slot (Task 10) ─────────────────────────
+      //
+      // The two famous-galaxy JSON sidecars (`famous_meta.json` +
+      // `famous_xrefs.json`) flow through one combined slot — the fetcher
+      // pulls them in parallel and returns a `{ meta, xrefs }` payload.
+      //
+      // No `commit` step: there's nothing GPU-side to upload — the
+      // payload is pure metadata consumed by the InfoCard via
+      // `state.sources.famousMeta` / `state.sources.famousXrefs`.  The
+      // subscriber writes both fields and wakes one frame so the
+      // famous-galaxy thumbnails referenced by the cross-match xrefs
+      // become enqueueable from the per-frame loop without the user
+      // having to nudge the camera.
+      //
+      // **Graceful degradation on error.**  The old `loadFamousSidecars`
+      // returned empty values when either file 404'd; the new fetcher
+      // throws on HTTP failure (so the retry policy distinguishes "really
+      // gone" from "transient flake"), and the slot subscriber maps
+      // `kind: 'error'` → "feature off" by writing empty `meta`/`xrefs`.
+      // Net effect for the user is identical to the pre-slot behaviour:
+      // famous galaxies render without enriched InfoCard text, but the
+      // engine keeps running.
+      const famousMetaSlot = createAssetSlot({
+        name: 'famous-meta',
+        fetch: famousMetaFetcher,
+      });
+      famousMetaSlot.subscribe((s) => {
+        if (s.kind === 'ready') {
+          state.sources.famousMeta = s.value.meta;
+          // GLADE local indices in the sidecar JSON now match the on-disk
+          // binary directly — the cloudLoader no longer post-decodes
+          // GLADE through a far-distance decimator (the data-tier system
+          // owns point-count budgeting via its absolute-magnitude cut at
+          // build time, which is a more principled rule and operates
+          // BEFORE the binary is written, so xref indices stay valid).
+          state.sources.famousXrefs = s.value.xrefs;
+          state.subsystems.scheduler.requestRender();
+        }
+        if (s.kind === 'error') {
+          // Match the old "absent file = feature off" behaviour exactly:
+          // empty meta/xrefs disable the enriched InfoCard text but keep
+          // the engine functional.  Defensive — these fields default to
+          // `[]` / `{}` already, but writing them again here is explicit
+          // about the contract.
+          state.sources.famousMeta = [];
+          state.sources.famousXrefs = {};
+          console.warn('[engine] famous sidecars failed to load:', s.error);
+        }
+      });
+      state.assetSlots.famousMeta = famousMetaSlot;
+
+      // ── PGC-alias slot (Task 10) ─────────────────────────────────────
+      //
+      // The Cmd+K command palette's alias search needs `pgc_aliases.json`
+      // (~1.7 MB).  Lazy: most users never hit Cmd+K, so paying the
+      // download up front would be wasteful.  The slot is minted here for
+      // lifecycle parity with every other asset, but `load()` is only
+      // invoked through the public-handle's `loadPgcAliases()` shim on
+      // first palette open.
+      //
+      // No `commit` — the resolved Map is consumed by the React layer via
+      // the Promise the shim returns; nothing engine-side to mutate.
+      const pgcAliasSlot = createAssetSlot({
+        name: 'pgc-aliases',
+        fetch: pgcAliasFetcher,
+      });
+      state.assetSlots.pgcAlias = pgcAliasSlot;
+
+      // ── Loading-bar emitter ──────────────────────────────────────────
+      //
+      // Post-Task-12 the per-engine loading-bar aggregator is a thin
+      // subscriber over `aggregateRegistry`.  Build the slot registry
+      // here (now that every slot exists) and hand it to the emitter;
+      // `attachSlot` then wires each slot's `subscribe` so that any
+      // state transition recomputes the projection and forwards the
+      // snapshot to `cb.onLoadProgress`.
+      //
+      // Why a single shared Map rather than four separate `attachSlot`
+      // calls each owning their own subset?  The same registry also
+      // feeds the dev panel's per-slot view (Task 13); building it
+      // once here keeps both consumers in lock-step on what counts as
+      // "in flight".
+      //
+      // The `unknown` type-erasure below is benign — `aggregateRegistry`
+      // only reads `slot.state()` discriminator fields, never the
+      // payload type.  We re-narrow at the dev panel's per-slot
+      // rendering site if it cares.
+      //
+      // `allSlots` is declared at outer scope (top of `createEngine`) so
+      // the public handle can expose the same Map as `assetSlots` for
+      // the `LoadingDevPanel` debug component.  We populate it here once
+      // every slot exists.
+      for (const [, slot] of state.assetSlots.points) {
+        allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
+      }
+      allSlots.set(filamentSlot.name, filamentSlot as unknown as AssetSlot<unknown, unknown>);
+      allSlots.set(famousMetaSlot.name, famousMetaSlot as unknown as AssetSlot<unknown, unknown>);
+      allSlots.set(pgcAliasSlot.name, pgcAliasSlot as unknown as AssetSlot<unknown, unknown>);
+
+      const progressEmitter = createLoadProgressEmitter(
+        (snapshot) => cb.onLoadProgress?.(snapshot),
+        allSlots,
+      );
+      for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
+      state.subsystems.loadProgress = progressEmitter;
+
+      // Trigger the famous-meta load as soon as the slot is wired —
+      // sidecars are tiny and only feed InfoCard text, so kicking them
+      // off here (rather than awaiting the much larger point fetches)
+      // means the very first hover already has enriched text on a typical
+      // connection.  PGC-aliases stay lazy; see `loadPgcAliases()` on the
+      // handle for the on-demand trigger.
+      famousMetaSlot.load();
+
       // Build the subsystem and hand it the renderer references for
       // atlas-view binding.  The subsystem's `bindToRenderers` is split
       // out from its constructor because the renderers need to exist
@@ -736,173 +1019,83 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // happening before the (potentially multi-second) fetch completes.
       cb.onStatusChange({ kind: 'loading' });
 
-      // ── Parallel multi-survey load ───────────────────────────────────────
+      // ── Parallel multi-survey load via asset slots ────────────────────
       //
-      // Kick all three real-survey fetches off at once.  Each one streams
-      // its decoded cloud back through the `onResult` callback the moment
-      // it lands, so we can:
-      //   - upload it to the renderer (the user sees points appear)
-      //   - record it in the local `clouds` map (so picking can resolve it)
-      //   - fire the optional `onCloudReady` so the UI can show progress
+      // Each survey flows through its own `AssetSlot`.  The slot's
+      // long-lived subscriber (wired at slot construction) handles
+      // upload + `clouds.set` + `onCloudReady` + `requestRender` on
+      // every transition to `ready` — so this block only has to fire
+      // the loads and gate boot on "every slot has settled at least
+      // once" before computing the camera bbox.
       //
-      // The first cloud to arrive *also* owns the camera auto-framing.  We
-      // do this on first arrival rather than waiting for everything to
-      // settle: 2MRS at 2 MB lands far sooner than GLADE at ~96 MB on a
-      // typical connection, and we want the camera to snap to a sensible
-      // framing immediately rather than staring at default-zoom blackness.
-      // Subsequent clouds inherit the framing — they all share the same
-      // origin coordinate system, so re-framing on every arrival would
-      // just yank the camera around without benefit.
-      let firstResult: { source: Source; cloud: PointCloud; cloudSource: CloudSource } | null =
-        null;
-
-      // Promise chain that serialises every `renderer.upload()` call.
-      // See the long doc-comment in the `onResult` body below for *why* —
-      // short version: concurrent `upload()` calls race on the
-      // `priorCount + i` bake of `globalInstanceIdx`, leaving stale GPU
-      // buffers that the shader's selection test then matches in
-      // multiple draws (the user-reported "two selection rings" / "wrong
-      // galaxy in InfoCard" bugs).  Initialising to `Promise.resolve()`
-      // so the first `.then(() => upload(...))` fires immediately.
-      let uploadChain: Promise<void> = Promise.resolve();
-
-      const { loadedCount } = await loadAllClouds(state.sources.tier, (result) => {
-        // Renderer might have been destroyed mid-load (StrictMode unmount,
-        // hot-reload).  Drop the result silently in that case.
-        if (!state.gpu.renderer) return;
-
-        // `renderer.upload()` is now async — the per-galaxy bake runs in a
-        // Web Worker so the main thread stays responsive while ~3.5 M
-        // galaxies are processed.  We deliberately DON'T await here:
-        // firing `onCloudReady` immediately lets the UI show "SDSS loaded"
-        // the moment the .bin decode finishes, even though the GPU buffer
-        // takes another second or two to bake.  The renderer's per-frame
-        // `draw()` simply skips any source whose buffer isn't ready yet —
-        // it pops in on the first frame after the worker resolves.
-        //
-        // **Why we serialise uploads via `uploadChain`** (not just fire
-        // them all in parallel):
-        //
-        // The vertex buffer's per-instance `globalInstanceIdx` is baked
-        // as `priorCount + i` at upload time.  When concurrent uploads
-        // race, each computes its `priorCount` from a snapshot taken
-        // before this source's `clouds.set(...)` lands — so two
-        // concurrent uploads may both see "no prior surveys loaded yet"
-        // and both bake `priorCount = 0`.  `recomputeInstanceIdOffsets`
-        // then shifts the canonical-order-later source's
-        // `instanceIdOffset` away from its (now stale) `bakedPriorCount`,
-        // and `rebakeStaleSources` is supposed to catch the divergence
-        // and re-upload — but that function gates re-entry on a single
-        // `this.rebaking` flag, so when SDSS's upload tries to rebake
-        // *during* 2MRS's already-running rebake, the guard returns
-        // early and the rebake-intent is silently dropped.  Result:
-        // stale `globalInstanceIdx` baked into the GPU buffer; the
-        // shader's `realIdx == u.selectedIndex` test matches BOTH the
-        // stale source and a correctly-baked source whose canonical
-        // global-index range overlaps the stale value — drawing two
-        // selection halos and resolving InfoCard data to the wrong
-        // galaxy.  Same root cause for clicks AND for `selectFamous`,
-        // which uses the live `instanceIdOffset` against stale baked
-        // indices.
-        //
-        // Chaining uploads through `uploadChain` makes them strictly
-        // serial: each upload sees a fully-settled `clouds` map before
-        // computing its `priorCount`, so `bakedPriorCount` always
-        // equals the canonical `instanceIdOffset` and
-        // `rebakeStaleSources` only runs on a never-stale baseline.
-        // Trade-off: surveys finish baking one-at-a-time instead of in
-        // parallel — but each bake is in a worker (off the main
-        // thread), the user-perceived "popped in" latency on the first
-        // cloud is unchanged, and the catalogs arrive over the network
-        // mostly serially anyway.  Errors from the worker are caught +
-        // logged; an upload failure must NOT break the chain, so each
-        // `.catch` returns to a settled promise to keep the chain
-        // alive.
-        uploadChain = uploadChain
-          .then(() => state.gpu.renderer?.upload(result.source, result.cloud))
-          .then(() => {
-            // GPU buffer is now ready — render so the new points appear
-            // (the per-frame draw skips sources whose buffer isn't ready
-            // yet, so without this call the cloud would stay invisible
-            // until some other event woke the loop).
-            state.subsystems.scheduler.requestRender();
-          })
-          .catch((err) => {
-            console.error(`[engine] point bake failed for source ${result.source}:`, err);
+      // **Why gate on all-settled rather than first-arrival?**  The
+      // bbox loop below iterates `state.sources.clouds` to size the
+      // camera's far plane.  If we framed on whichever survey arrived
+      // first (typically 2MRS at ~2 MB / ~100 Mpc), GLADE's distant
+      // galaxies (out to ~1.5 Gpc) would land outside the frustum and
+      // never render — perceptually "the far plane has come closer".
+      //
+      // **Why track `pointsAnyReady` separately?**  The synthetic
+      // fallback fires only when every *real* survey is empty/errored.
+      // Famous is curated (~150 entries) and excluded from the
+      // success/failure check both ways: a Famous-only success
+      // shouldn't suppress synthetic, and a Famous-only failure
+      // shouldn't trigger it.
+      const REAL_POINT_SOURCES = [Source.SDSS, Source.TwoMRS, Source.Glade];
+      const ALL_POINT_SOURCES = [...REAL_POINT_SOURCES, Source.Famous];
+      let pointsAnyReady = false;
+      let firstReadySource: Source | null = null;
+      const allArrivalsPromise = new Promise<void>((resolve) => {
+        let arrived = 0;
+        for (const source of ALL_POINT_SOURCES) {
+          const slot = state.assetSlots.points.get(source);
+          if (!slot) {
+            if (++arrived === ALL_POINT_SOURCES.length) resolve();
+            continue;
+          }
+          let counted = false;
+          const unsub = slot.subscribe((s) => {
+            if (counted) return;
+            if (s.kind === 'ready' && s.value.count > 0) {
+              if (firstReadySource === null) firstReadySource = source;
+              if (REAL_POINT_SOURCES.includes(source)) pointsAnyReady = true;
+            }
+            if (s.kind === 'ready' || s.kind === 'error') {
+              counted = true;
+              if (++arrived === ALL_POINT_SOURCES.length) resolve();
+              unsub();
+            }
           });
-        state.sources.clouds.set(result.source, result.cloud);
-        cb.onCloudReady?.(result.source, result.cloud.count);
-        // Wake immediately too — `clouds.set` enables hover/pick on the
-        // (still-baking) cloud's CPU-side metadata.  Harmless even if
-        // the GPU buffer isn't quite ready: the per-frame draw skips
-        // not-yet-uploaded sources by design.
+        }
+      });
+
+      for (const source of ALL_POINT_SOURCES) {
+        state.assetSlots.points.get(source)?.load({ source, tier: state.sources.tier });
+      }
+      // Filaments load exactly once at boot — never on tier change.
+      // See `filamentFetcher.ts` for the rationale.
+      state.assetSlots.filaments?.load({ tier: state.sources.tier });
+
+      await allArrivalsPromise;
+
+      // Synthetic fallback — every real survey is empty/errored.  Drop
+      // in a 100k procedural cloud so the user sees *something*.
+      // Inline (rather than a subscriber) because boot is the only
+      // place this can fire: tier swaps don't re-enter init, and
+      // `pointsAnyReady` doesn't reset.
+      if (!pointsAnyReady && state.gpu.renderer) {
+        const synthetic = generateSyntheticCloud(100_000);
+        await state.gpu.renderer.upload(Source.Synthetic, synthetic);
+        state.sources.clouds.set(Source.Synthetic, synthetic);
+        cb.onCloudReady?.(Source.Synthetic, synthetic.count);
         state.subsystems.scheduler.requestRender();
-
-        if (firstResult === null) {
-          firstResult = result;
-        }
-      }, dispatchLoadEvent);
-
-      // ── Famous sidecars — fire-and-forget ─────────────────────────────────
-      //
-      // Kicked off after `loadAllClouds` resolves so we don't compete with
-      // the much-larger survey fetches for bandwidth.  The sidecars are tiny
-      // (well under 100 KB combined) so they land almost instantly on any
-      // connection.  Failures are swallowed: absent sidecars don't break the
-      // engine — famous galaxies just render without the enriched InfoCard
-      // block until the user reloads.
-      loadFamousSidecars()
-        .then((sc) => {
-          state.sources.famousMeta = sc.meta;
-          // GLADE local indices in the sidecar JSON now match the on-disk
-          // binary directly — the cloudLoader no longer post-decodes
-          // GLADE through a far-distance decimator (the data-tier system
-          // owns point-count budgeting via its absolute-magnitude cut at
-          // build time, which is a more principled rule and operates
-          // BEFORE the binary is written, so xref indices stay valid).
-          state.sources.famousXrefs = sc.xrefs;
-          // No direct render-state change — the sidecars only feed
-          // hover-card text — but the famous-galaxy thumbnails
-          // referenced by these entries will now be enqueueable from
-          // the per-frame loop.  Wake one frame so the user sees the
-          // famous overlays without having to nudge the camera.
-          state.subsystems.scheduler.requestRender();
-        })
-        .catch((err) => {
-          console.warn('[engine] famous sidecars failed to load:', err);
-        });
-
-      // ── Synthetic fallback ──────────────────────────────────────────────
-      //
-      // If every real fetch failed (offline, no .bin files built, decode
-      // error), the user still deserves *something* on screen.  Generate
-      // the procedural cloud and route it through the same path so the
-      // renderer, the clouds map, and the React status all line up with
-      // the real-data case.
-      if (loadedCount === 0) {
-        const fallback = buildSyntheticFallback();
-        if (state.gpu.renderer) {
-          // Same fire-and-forget pattern as the real-data path above —
-          // the synthetic cloud is small (<10k points) so the worker
-          // finishes nearly instantly, but we keep the error path
-          // explicit so a future regression doesn't silently swallow it.
-          state.gpu.renderer
-            .upload(fallback.source, fallback.cloud)
-            .then(() => {
-              state.subsystems.scheduler.requestRender();
-            })
-            .catch((err) => {
-              console.error('[engine] synthetic-fallback bake failed:', err);
-            });
-          state.sources.clouds.set(fallback.source, fallback.cloud);
-          cb.onCloudReady?.(fallback.source, fallback.cloud.count);
-        }
-        firstResult = fallback;
+        firstReadySource = Source.Synthetic;
       }
 
-      // If we somehow have no first result *and* no fallback (e.g. the
-      // engine was destroyed mid-load), bail before touching the camera.
-      if (firstResult === null) return;
+      // Bail if no clouds reached the GPU (engine torn down mid-load,
+      // or synthetic upload failed).  Without at least one cloud the
+      // bbox computation below has nothing to size the camera against.
+      if (state.sources.clouds.size === 0) return;
 
       // Build the pick renderer. It shares the same vertex/uniform buffers as
       // the visual renderer — no extra GPU memory for point data.
@@ -921,6 +1114,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           if (!r) return null;
           const cloud = state.sources.clouds.get(r.source);
           if (!cloud) return null;
+          // Same bounds-check as pointInfoFromGlobal — see its comment
+          // for the tier-swap window that can produce out-of-range
+          // localIdx values.
+          if (r.localIdx >= cloud.count) return null;
           return { source: r.source, localIdx: r.localIdx, cloud };
         },
         buildPointInfo: (cloud, localIdx, src) =>
@@ -929,28 +1126,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // ── Camera auto-framing ──────────────────────────────────────────────
       //
-      // Frame to whichever cloud arrived first (see comment above).  Each
-      // survey has a very different effective depth — 2MRS ~250 Mpc, GLADE
-      // ~1.5 Gpc, SDSS ~3 Gpc — and using the first arrival's bbox tends
-      // to give the closest "natural" view to start exploring from, with
-      // the auto-LOD kicking surveys in/out as the user zooms.
-      //
-      // `bbox` = max abs of any coordinate component across every cloud
-      // loaded so far (cheap; no sqrt).  We deliberately use the LARGEST
-      // bbox seen so the far plane covers every survey's outermost galaxy
-      // — otherwise SDSS's deep galaxies would clip when 2MRS framed first.
-      //
-      // `computeInitialCamera` (cameraFraming.ts) turns the bbox + FOV
-      // into a target/distance/yaw/pitch/near/far snapshot, including the
-      // global zoom-envelope clamp and the empirical INITIAL_FRAME_FACTOR.
-      let bbox = maxAbsCoord(firstResult.cloud);
+      // bbox = max abs coordinate across every loaded cloud.  Drives
+      // the camera's far plane — must cover the deepest survey
+      // (typically GLADE at ~1.5 Gpc).  `computeInitialCamera`
+      // (cameraFraming.ts) turns it into target/distance/yaw/pitch
+      // /near/far including the zoom-envelope clamp.
+      let bbox = 0;
       for (const c of state.sources.clouds.values()) {
-        const cb2 = maxAbsCoord(c);
-        if (cb2 > bbox) bbox = cb2;
+        const b = maxAbsCoord(c);
+        if (b > bbox) bbox = b;
       }
       const fovYRad = (Math.PI / 180) * 60;
       const initialCam = computeInitialCamera({ bbox, fovYRad });
-      const source: CloudSource = firstResult.cloudSource;
 
       const cam = createOrbitCamera({
         target: initialCam.target,
@@ -1169,7 +1356,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // loading after this point are reflected via `onCloudReady`, not via
       // an additional `onStatusChange` — the status bar's job is "we're up",
       // not "live counter".
-      cb.onStatusChange({ kind: 'ready', count: renderer.totalCount(), source });
+      cb.onStatusChange({
+        kind: 'ready',
+        count: renderer.totalCount(),
+        source: cloudSourceFor(firstReadySource ?? Source.Synthetic),
+      });
 
       // ── Seed settings callbacks ───────────────────────────────────────────
       //
@@ -2122,44 +2313,69 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cb.onTierChange?.(tier);
 
       // For each tier-relevant source, decide whether the new tier needs a
-      // re-fetch.  Same target → skip (e.g. 2MRS, Famous).  Different target
-      // → reload, which also covers the "exclude → include" and "include →
-      // exclude" transitions (the empty-cloud branch in `reloadSource`
-      // handles the latter by firing onResult with a 0-count cloud).
+      // re-fetch.  Same target → skip (e.g. 2MRS, Famous always share one
+      // .bin across tiers).  Different target → hand the slot the new
+      // request and let it cancel any prior in-flight load, re-fetch the
+      // new tier's `.bin`, and run its commit step (upload +
+      // `clouds.set` + `onCloudReady` + render wake) via the subscriber
+      // wired up alongside slot construction.
+      //
+      // Filaments are NOT swapped on tier change — see
+      // `filamentFetcher.ts`'s docblock for the rationale.  No
+      // `state.assetSlots.filaments?.load(...)` here is intentional.
       for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous]) {
-        const prevTarget = TIER_TARGETS[prevTier][source];
-        const nextTarget = TIER_TARGETS[tier][source];
-        if (prevTarget === nextTarget) continue;
-
-        // Use the same onResult pipeline as the initial load so the swapped
-        // cloud goes through the same upload, the same `clouds.set`, the
-        // same `onCloudReady` echo, and the same render wake-up — keeping
-        // HEALPix re-weight + Schechter ratio re-bake identical to first-
-        // load behaviour (see Task 8's regression test).
-        reloadSource(
-          source,
-          tier,
-          (result) => {
-            if (!state.gpu.renderer) return;
-            state.gpu.renderer.upload(result.source, result.cloud).catch((err) => {
-              console.error(`[engine.setTier] upload failed for source ${result.source}:`, err);
-            });
-            state.sources.clouds.set(result.source, result.cloud);
-            cb.onCloudReady?.(result.source, result.cloud.count);
-            state.subsystems.scheduler.requestRender();
-          },
-          // Forward per-source byte progress through the same aggregator
-          // the initial load uses, so the loading bar in the React shell
-          // sees a unified "fraction-of-total-loaded" snapshot regardless
-          // of whether the user is on first paint or mid-tier-swap.
-          (e) => {
-            if (e.type === 'start') state.subsystems.loadProgress?.start(e.source, e.total);
-            else if (e.type === 'progress')
-              state.subsystems.loadProgress?.update(e.source, e.loaded, e.total);
-            else state.subsystems.loadProgress?.finish(e.source);
-          },
-        );
+        if (TIER_TARGETS[prevTier][source] === TIER_TARGETS[tier][source]) continue;
+        state.assetSlots.points.get(source)?.load({ source, tier });
       }
+    },
+
+    // ── Lazy PGC-alias loader (Task 10) ───────────────────────────────────
+    //
+    // Promise-returning shim over the PGC-alias slot.  Matches the public
+    // signature of the legacy standalone `loadPgcAliases()` so existing
+    // palette callers (the `useAliasIndex` hook) can be migrated to call
+    // `handle.loadPgcAliases()` without changing their await/result
+    // shape — a Map<bigint, readonly string[]> on success, an empty Map
+    // on graceful failure (matching the old "feature off" behaviour the
+    // hook already tolerates).
+    //
+    // **Idempotence.**  The slot's `load()` is itself idempotent — calling
+    // it twice in flight just bumps the generation; the first fetch's
+    // race-check drops its commit if a second `load()` arrived.  After
+    // the first success, `slot.state().kind === 'ready'` so the
+    // subscriber here sees the cached value instantly and resolves
+    // synchronously-ish (one microtask).  The "subscribe-once-per-call"
+    // shape mirrors the per-slot first-arrival capture in the boot path
+    // and keeps the resolve path identical for fresh and cached cases.
+    loadPgcAliases() {
+      const slot = state.assetSlots.pgcAlias;
+      if (!slot) {
+        // Slot not minted yet (engine still in pre-IIFE init).  An empty
+        // Map is the same graceful-degradation result we'd return on
+        // 404 — palette code already tolerates an empty alias index.
+        return Promise.resolve(new Map() as PgcAliasMap);
+      }
+      slot.load();
+      // If the slot is already settled (cached from a prior call), the
+      // subscriber won't fire again — fast-path through `state()` so we
+      // resolve synchronously on the next microtask rather than waiting
+      // for a state transition that will never arrive.
+      const current = slot.state();
+      if (current.kind === 'ready') return Promise.resolve(current.value);
+      return new Promise<PgcAliasMap>((resolve) => {
+        const unsub = slot.subscribe((s) => {
+          if (s.kind === 'ready') {
+            unsub();
+            resolve(s.value);
+          } else if (s.kind === 'error') {
+            unsub();
+            // Empty Map matches the legacy `loadPgcAliases` behaviour:
+            // the palette's famous-only search still works, just without
+            // the GLADE/2MRS PGC join.
+            resolve(new Map());
+          }
+        });
+      });
     },
 
     // ── SpaceMouse 6DOF input setters ─────────────────────────────────────
@@ -2188,6 +2404,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     setSpaceMouseSensitivity(value) {
       state.subsystems.spaceMouse.setSensitivity(value);
     },
+
+    // ── Asset-slot registry (dev-panel surface) ──────────────────────────
+    //
+    // `allSlots` is declared at outer scope and populated by the GPU init
+    // IIFE.  Exposing the same Map reference here means the dev panel
+    // observes new slots as they appear (the `LoadingDevPanel`'s effect
+    // re-subscribes whenever the prop identity changes — but since we
+    // hand it a stable reference, it instead picks up new slots on the
+    // first render that runs after the IIFE populates them, then
+    // subscribes once at that point).  Read-only at the type level so
+    // misuse from the React side (mutating the slot bag directly) trips
+    // the typechecker.
+    assetSlots: allSlots,
   };
 
   return handle;

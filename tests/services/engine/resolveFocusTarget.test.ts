@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveFocusTarget } from '../../../src/services/engine/resolveFocusTarget';
 import type { PointCloud } from '../../../src/@types';
 import { Source } from '../../../src/data/sources';
-import type { FamousMetaEntry } from '../../../src/services/engine/famousMetaLoader';
+import type { FamousMetaEntry } from '../../../src/services/loading/fetchers/famousMetaFetcher';
 import { raDecZToCartesian } from '../../../src/utils/math/raDecZToCartesian';
 
 /**

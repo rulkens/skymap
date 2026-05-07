@@ -1,29 +1,40 @@
 /**
- * loadProgressAggregator — combine per-source download progress into a single
- * UI-facing snapshot.
+ * loadProgressAggregator — thin subscriber wrapper around the loading
+ * registry's `aggregateRegistry` pure projection.
  *
- * ### Why a separate module
+ * ### Why this module collapsed to a few lines
  *
- * Two distinct call sites in `engine.ts` need to forward download progress
- * to React: the initial parallel `loadAllClouds` at startup, and each
- * `reloadSource` call inside `setTier`.  Each `fetchWithProgress` chunk
- * arrival fires per-source events, but the loading-bar UI wants a single
- * scalar — total loaded bytes / total expected bytes across whatever's
- * currently in flight.
+ * The original implementation kept its own per-source byte map and
+ * emitted snapshots from inside `start`/`update`/`finish` mutators —
+ * three methods, each idempotent, each duplicated state already living
+ * inside the per-source AssetSlot.  Two copies of the same truth meant
+ * two opportunities to drift (a delayed late event after `finish`, a
+ * `total` revised mid-stream, a slot transitioning to `error` without a
+ * matching `finish`).
  *
- * The aggregation rule is small but easy to get subtly wrong (e.g.
- * accidentally double-counting a source that updates with `loaded=0` after
- * already reporting partial bytes).  Pulling it into a tiny module with
- * its own tests prevents regressions and keeps `engine.ts` focused on its
- * orchestration role.
+ * The asset-loading rework gave every load a slot whose `state()`
+ * already encodes "loading | committing | ready | error" with the byte
+ * counts attached.  `aggregateRegistry` projects that across the slot
+ * map into the same `(loadedBytes, totalBytes, inFlightCount)` shape
+ * the loading-bar UI consumes.  So the aggregator's job collapses to
+ * "subscribe to every slot, recompute the projection on every state
+ * change, forward the snapshot via the engine's onLoadProgress
+ * callback".
  *
- * ### Why an emitter (not just a getter)
+ * ### Why a tiny emitter facade rather than calling the projection inline
  *
- * React state mirrors engine state via callbacks (the project-wide pattern
- * — see `EngineCallbacks`).  The aggregator owns the truth, fires `emit()`
- * after every transition, and the engine forwards the snapshot through
- * `cb.onLoadProgress`.  React reconciles its UI from the snapshot; no
- * polling.
+ * The engine already has the slot map in scope — it could `for-each
+ * subscribe` directly and feed `aggregateRegistry` to `cb.onLoadProgress`.
+ * The facade wins three things:
+ *
+ *   1. The "null when empty" convention (loading bar fades out) is
+ *      encoded in one place, not duplicated at every subscribe site.
+ *   2. The `attachSlot` helper is symmetric with the slot bag's
+ *      population — engine code adds the slot to the registry, then
+ *      hands it to the emitter; can't accidentally subscribe a slot
+ *      that isn't in the registry.
+ *   3. Tests can construct the emitter against a fake slot map without
+ *      touching the engine's GPU init path.
  *
  * ### Why null when empty
  *
@@ -33,114 +44,53 @@
  * the awkward "is `0/0` a finished state or a pre-start state?" ambiguity.
  */
 
-import type { LoadEventSource } from './cloudLoader';
+import { aggregateRegistry } from '../loading/aggregateRegistry';
+import type { AssetSlot } from '../loading/types';
 import type { LoadProgressState } from '../../@types/EngineCallbacks';
 
-/** Per-source progress entry held in the aggregator's internal Map. */
-type Entry = {
-  /** Bytes received so far on this source's stream. */
-  loaded: number;
-  /**
-   * Bytes expected per the response's `Content-Length` header.  Zero when
-   * the header was missing — UI falls back to indeterminate.
-   */
-  total: number;
+/**
+ * Public surface of the emitter.  `emit()` is exported so the engine
+ * (or future ad-hoc callers) can force a recompute outside a slot
+ * transition; `attachSlot` wires a slot's subscriber to call `emit`
+ * on every state change.
+ */
+export type LoadProgressEmitter = {
+  emit(): void;
+  attachSlot(slot: AssetSlot<unknown, unknown>): void;
 };
 
 /**
- * Public surface of the aggregator.  Three lifecycle methods + a getter
- * for tests; nothing else.
+ * Build an emitter bound to a callback and a slot registry.
  *
- * Methods are no-ops on duplicate calls (e.g. calling `finish(source)`
- * twice in a row is benign), so callers don't have to track state.
- */
-export type LoadProgressAggregator = {
-  /**
-   * Mark a source as in-flight with an initial expected total (0 if
-   * Content-Length is unknown).  Idempotent — calling twice for the same
-   * source overwrites the prior `total`.
-   */
-  start(source: LoadEventSource, total: number): void;
-  /**
-   * Update a source's running byte count.  Idempotent — chunk events fire
-   * many times per source per fetch and that's fine.  No-op if the source
-   * isn't currently registered (e.g. a delayed event after `finish`).
-   */
-  update(source: LoadEventSource, loaded: number, total: number): void;
-  /**
-   * Mark a source as no longer in-flight (success, abort, or error all
-   * end up here).  No-op if the source wasn't registered.
-   */
-  finish(source: LoadEventSource): void;
-  /**
-   * Test-only: return the current snapshot without firing the emitter.
-   * `null` when nothing is in flight, matching what `emit` forwards.
-   */
-  snapshot(): LoadProgressState | null;
-};
-
-/**
- * Factory for the aggregator.  Takes the emitter the engine wants
- * connected to `cb.onLoadProgress` and returns the bound aggregator.
+ * The slot map MUST be the same reference the engine populates for
+ * `aggregateRegistry` — both consume `slot.state()` from the same set
+ * so the projection stays consistent with what the dev panel sees.
  *
- * Closure-over-Map rather than a class because there's no inheritance,
- * no public field access, and the surface area is three methods.  A
- * factory function reads as data rather than as machinery.
+ * Closure-over-Map rather than a class because the surface is two
+ * methods and there's no inheritance.  A factory function reads as
+ * data rather than as machinery, matching the rest of the loading
+ * subsystem's style.
  */
-export function createLoadProgressAggregator(
+export function createLoadProgressEmitter(
   emit: (state: LoadProgressState | null) => void,
-): LoadProgressAggregator {
-  const entries = new Map<LoadEventSource, Entry>();
-
-  /**
-   * Recompute the aggregate snapshot from `entries`.  Returns null when
-   * nothing's in flight.  Otherwise returns the running sum of loaded /
-   * total bytes plus the count of in-flight sources.
-   *
-   * O(N) over the in-flight source set, which is bounded by the number
-   * of survey sources (≤ 4 today).  Fine to call on every chunk arrival.
-   */
-  function snapshot(): LoadProgressState | null {
-    if (entries.size === 0) return null;
-    let loadedBytes = 0;
-    let totalBytes = 0;
-    for (const e of entries.values()) {
-      loadedBytes += e.loaded;
-      totalBytes += e.total;
-    }
-    return {
-      loadedBytes,
-      totalBytes,
-      inFlightCount: entries.size,
-    };
-  }
-
-  /** Recompute + emit.  Centralised so every mutator gets the emit for free. */
+  slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>,
+): LoadProgressEmitter {
   function publish(): void {
-    emit(snapshot());
+    const snap = aggregateRegistry(slots);
+    if (snap.inFlightCount === 0) {
+      emit(null);
+    } else {
+      emit({
+        loadedBytes: snap.totalLoadedBytes,
+        totalBytes: snap.totalExpectedBytes,
+        inFlightCount: snap.inFlightCount,
+      });
+    }
   }
-
   return {
-    start(source, total) {
-      entries.set(source, { loaded: 0, total });
-      publish();
+    emit: publish,
+    attachSlot(slot) {
+      slot.subscribe(publish);
     },
-    update(source, loaded, total) {
-      const existing = entries.get(source);
-      if (!existing) return; // Late event after finish — drop silently.
-      existing.loaded = loaded;
-      // Allow `total` to be revised upward — some servers send 0 in the
-      // initial header but populate it once the response body arrives via
-      // `Transfer-Encoding: chunked`.  The aggregator keeps the larger of
-      // the two so the bar's denominator never shrinks mid-stream.
-      if (total > existing.total) existing.total = total;
-      publish();
-    },
-    finish(source) {
-      if (!entries.has(source)) return;
-      entries.delete(source);
-      publish();
-    },
-    snapshot,
   };
 }
