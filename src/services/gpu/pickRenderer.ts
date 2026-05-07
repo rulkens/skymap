@@ -37,9 +37,9 @@
  *
  * The pick pipeline reuses the *same* vertex buffer and *same* uniform buffer as
  * the visual pass.  The caller must ensure that the visual pass has already
- * written its per-frame uniforms (viewProj, viewport, pointSizePx, brightness)
- * before calling `pick()` — the pick pass reads the same values without
- * re-uploading them.  See the `pick()` JSDoc for the exact contract.
+ * written its per-frame uniforms (cam.viewProj, cam.viewportPx, pointSizePx,
+ * brightness, ...) before calling `pick()` — the pick pass reads the same
+ * values without re-uploading them.  See the `pick()` JSDoc for the exact contract.
  *
  * ### Forgiveness radius
  *
@@ -480,8 +480,13 @@ export function createPickRenderer(
     // with the real selectedPacked, so we don't need to restore
     // anything afterward.
     //
-    // Layout: mat4 viewProj (64) + viewport (8) + pointSizePx (4) +
-    // brightness (4) → selectedPacked sits at byte offset 80.
+    // Layout (post-CameraUniforms refactor): the shared 80-byte
+    // 'CameraUniforms' prefix occupies bytes 0..79 (viewProj + viewportPx
+    // + two pad slots), so 'selectedPacked' sits at byte offset 80 — the
+    // SAME offset as before the refactor (pre-refactor was viewProj 64 +
+    // viewport 8 + pointSizePx 4 + brightness 4 = 80).  The value at this
+    // offset is the packed (source, localIdx) u32, not an instance
+    // index — see PointRenderer.toGlobalIdx for the encoding.
     const SELECTED_PACKED_OFFSET = 80;
     const NONE_SENTINEL = new Uint32Array([0xffffffff]);
     device.queue.writeBuffer(sharedUniformBuffer, SELECTED_PACKED_OFFSET, NONE_SENTINEL);
@@ -492,16 +497,24 @@ export function createPickRenderer(
     // full rationale.  Pads the visual `pointSizePx` floor by a few extra
     // pixels so distant point-like galaxies become easier mouse targets
     // without growing them on screen.  Same in-place mutation pattern as
-    // the SELECTED_INDEX write above — the next visual frame writes the
+    // the SELECTED_PACKED write above — the next visual frame writes the
     // real `pointSizePx` back, so the visual pass is unaffected.
     //
-    // Layout reminder: pointSizePx sits at byte offset 72 (mat4 viewProj
-    // = 64 + viewport vec2 = 8 → 72).  Skipped entirely when the caller
-    // didn't supply pointSizePx — preserves the legacy "pick whatever the
-    // visual frame just wrote" contract for any test that constructs the
-    // renderer in isolation.
+    // Layout reminder (post-CameraUniforms refactor): pointSizePx now sits
+    // at byte offset 88 (cam: CameraUniforms = 80 B prefix + selectedPacked
+    // u32 + instanceIdOffset u32 = 88).  It used to live at offset 72, but
+    // adopting the shared 'CameraUniforms' prefix (which reserves bytes
+    // 72..79 as '_pad0/_pad1') forced 'pointSizePx' + 'brightness' to
+    // move into the existing 8-byte alignment slack between
+    // 'instanceIdOffset' and the vec3-aligned 'camPosWorld'.  See the
+    // 'Uniforms layout' doc-block in points.wesl for the migration
+    // diagram and the matching f32-index update in pointRenderer.ts.
+    //
+    // Skipped entirely when the caller didn't supply pointSizePx —
+    // preserves the legacy "pick whatever the visual frame just wrote"
+    // contract for any test that constructs the renderer in isolation.
     if (pointSizePx !== undefined) {
-      const POINT_SIZE_OFFSET = 72;
+      const POINT_SIZE_OFFSET = 88;
       const boostedSize = new Float32Array([pointSizePx + PICK_PADDING_PX]);
       device.queue.writeBuffer(sharedUniformBuffer, POINT_SIZE_OFFSET, boostedSize);
     }

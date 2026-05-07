@@ -52,6 +52,7 @@
 //   5. Calls 'passEncoder.draw(6, pointCount)' to kick off the draw.
 
 import package::lib::math::saturate;
+import package::lib::camera::{ CameraUniforms, worldToClip };
 
 // ─── uniforms ─────────────────────────────────────────────────────────────────
 
@@ -67,27 +68,73 @@ import package::lib::math::saturate;
 // a GPUBindGroup pointing at the Uniforms buffer, and calls
 // passEncoder.setBindGroup(0, bindGroup) before drawing.
 
+// ── Uniforms layout (CameraUniforms-prefixed) ──────────────────────
+//
+// The first 80 bytes are the shared 'CameraUniforms' prefix from
+// 'lib/camera.wesl' (viewProj + viewportPx + two reserved pad slots).
+// Embedding it as a named member 'cam' rather than inlining viewProj
+// + viewport keeps the cross-renderer audit story explicit: every
+// renderer's first uniform field is now 'cam: CameraUniforms', and
+// every projection call goes through 'worldToClip(u.cam, p)'.
+//
+// ## Why the field order changed
+//
+// The pre-WESL-conversion layout had this shape:
+//
+//   offset 0   : viewProj           (mat4)
+//   offset 64  : viewport           (vec2)
+//   offset 72  : pointSizePx        (f32)   <─── overlaps CameraUniforms
+//   offset 76  : brightness         (f32)   <─── ._pad0/._pad1 slots
+//   offset 80  : selectedIndex      (u32)
+//   offset 84  : instanceIdOffset   (u32)
+//   offset 88  : _pad0              (u32)
+//   offset 92  : _pad1              (u32)
+//   offset 96  : camPosWorld        (vec3)  ... and on
+//
+// 'CameraUniforms' explicitly reserves bytes 72..79 as '_pad0/_pad1'
+// (so renderers extending it can place their first vec3-aligned field
+// at offset 80). The old points layout filled those bytes with
+// 'pointSizePx' + 'brightness' — fine for a hand-rolled struct but
+// incompatible with embedding 'cam: CameraUniforms' as a clean prefix.
+//
+// ## Resolution: swap with the existing _pad0/_pad1
+//
+// Conveniently, the OLD layout already had two u32 padding words at
+// offsets 88..95 (the alignment slack that vec3<f32> requires before
+// 'camPosWorld' at offset 96).  Moving 'pointSizePx' and 'brightness'
+// into those slots means EVERY field from offset 80 onward keeps its
+// existing byte position — a strictly local refactor.  The two
+// scalars become f32 instead of u32 padding, but that's a CPU-side
+// view change only; the WGSL struct already reserved 8 bytes there.
+//
+// The CPU-side picker ('pickRenderer.ts') and visual upload
+// ('pointRenderer.ts') need their offsets updated for the two
+// scalars, but 'selectedIndex' (offset 80) — the only field the
+// picker writes mid-frame — stays exactly where it was.  See those
+// files' headers for the matching index-table updates.
+//
+// ## New byte layout
+//
+//   offset 0   : cam: CameraUniforms (80 B; viewProj + viewportPx + 2 pads)
+//   offset 80  : selectedIndex       (u32)
+//   offset 84  : instanceIdOffset    (u32)
+//   offset 88  : pointSizePx         (f32)   <─── moved from offset 72
+//   offset 92  : brightness          (f32)   <─── moved from offset 76
+//   offset 96  : camPosWorld         (vec3<f32>)
+//   offset 108 : pxPerRad            (f32)
+//   offset 112 : highlightFallback   (u32)
+//   offset 116 : realOnlyMode        (u32)
+//   offset 120 : depthFadeEnabled    (u32)
+//   offset 124 : _pad4               (u32)
+//   offset 128..159 : Malmquist block (biasMode, absMagLimit, ...)
+//   offset 160..175 : pxFadeStart, pxFadeEnd, _padFade0, _padFade1
+//   total: 176 bytes (unchanged from the pre-refactor layout).
+
 struct Uniforms {
-  // The combined view-projection matrix (4×4 f32, 64 bytes).
-  // Uploaded by PointRenderer from computeViewProj() (see orbitCamera.ts).
-  // WGSL uniform buffers follow std140-like alignment: mat4x4<f32> is 64 bytes,
-  // naturally aligned to 16 bytes — no padding needed before it.
-  viewProj: mat4x4<f32>,
-
-  // Canvas dimensions in physical pixels (after DPR scaling from device.ts).
-  // Stored as a vec2<f32> because we divide by it below; integer division
-  // would lose precision. Alignment: vec2<f32> = 8 bytes, aligned to 8.
-  viewport: vec2<f32>,
-
-  // Desired radius of each point sprite in pixels. Larger = bigger glowing
-  // halos. Typical range 2.0–8.0. Alignment: f32 = 4 bytes.
-  pointSizePx: f32,
-
-  // Global brightness multiplier in [0, 1]. Lets the UI dim/brighten all
-  // points without re-uploading point data. Alignment: f32 = 4 bytes.
-  // (The vec2 above took 8 bytes, so offset so far is 64+8+4+4 = 80 — still
-  // within a single 256-byte uniform block and no padding gaps needed here.)
-  brightness: f32,
+  // Shared camera prefix — viewProj for clip-space projection and
+  // viewportPx for the px→clip conversion in 'vs'.  All renderer-
+  // specific scalars live AFTER this 80-byte block.
+  cam: CameraUniforms,
 
   // The currently-selected point packed as '(sourceCode << 27) | localIdx',
   // or '0xFFFFFFFFu' when nothing is selected.  The vertex shader recovers
@@ -129,26 +176,42 @@ struct Uniforms {
   // is therefore safe.
   selectedPacked: u32,
 
-  // Three trailing u32 padding words to keep 'selectedPacked' (offset 80)
-  // on the same 16-byte vec4 slot as the next vec3.  Required because
-  // the next member ('camPosWorld', a vec3<f32>) has alignment 16, so
-  // the struct would otherwise insert implicit padding here anyway —
-  // naming the bytes makes the JS-side upload obvious.
-  //
-  // The slot at offset 84 is intentionally unused at the @group(0) level:
-  // sourceCode lives in the per-source @group(1) 'CloudUniforms' (see
+  // Slot at offset 84: intentionally unused at the @group(0) level.
+  // 'sourceCode' lives in the per-source @group(1) 'CloudUniforms' (see
   // below) so each cloud's bind group carries its OWN sourceCode value
   // and draws within one render pass don't race on the per-draw write.
   _pad0: u32,
-  _pad1: u32,
-  _pad2: u32,
+
+  // Desired radius of each point sprite in pixels. Larger = bigger glowing
+  // halos. Typical range 2.0–8.0.
+  //
+  // Lives at byte offset 88 in the post-CameraUniforms layout.  It used
+  // to live at offset 72, but adopting the shared 'CameraUniforms' prefix
+  // (which reserves bytes 72..79 as '_pad0/_pad1') forced 'pointSizePx'
+  // into the existing 8-byte alignment slack between offset 84 and the
+  // vec3-aligned 'camPosWorld' at offset 96.  The pick pass overwrites
+  // this slot in-place to boost hover/click hit-radius (see
+  // 'pickRenderer.ts' POINT_SIZE_OFFSET).
+  pointSizePx: f32,
+
+  // Global brightness multiplier in [0, 1]. Lets the UI dim/brighten all
+  // points without re-uploading point data.
+  //
+  // Lives at byte offset 92 in the post-CameraUniforms layout (was 76).
+  // Together with 'pointSizePx' above, the two scalars recycle the
+  // alignment-slack bytes that the WGSL spec already required between
+  // 'selectedPacked' (offset 80) + the @group(0)-unused slot (offset 84)
+  // and the vec3-aligned 'camPosWorld' (offset 96) — same 8 bytes,
+  // different name.
+  brightness: f32,
 
   // ── APPARENT-SIZE BILLBOARD SIZING (added Task: galaxy disc sizing) ──────
   //
   // World-space camera position in Mpc.  Used by the vertex stage to compute
   // the per-galaxy distance, which feeds the apparent-pixel-size calculation
   // below.  WGSL gives 'vec3<f32>' an alignment of 16 — so this field starts
-  // at offset 96 (the previous _pad0/_pad1 brought us to a 16-byte boundary)
+  // at offset 96 (selectedIndex + instanceIdOffset + pointSizePx + brightness
+  // = 16 bytes after the 80-byte 'cam' block, landing on a 16-byte boundary)
   // and consumes 12 bytes of payload + 4 bytes of trailing padding before
   // 'pxPerRad'.
   //
@@ -753,7 +816,9 @@ fn vs(
   // clip = viewProj * [x, y, z, 1]
   // After this, clip.xyz/clip.w gives the NDC position (in [-1,+1]³ for x,y;
   // [0,1] for z with WebGPU's perspectiveZO convention).
-  let center = u.viewProj * vec4<f32>(p.position, 1.0);
+  // Routed through the shared 'worldToClip' helper from 'lib/camera.wesl'
+  // so every renderer's projection step is searchable under a single name.
+  let center = worldToClip(u.cam, p.position);
 
   // Fetch the quad corner for this vertex (in [-1,+1]²).
   let corner = QUAD[vi];
@@ -954,7 +1019,7 @@ fn vs(
   // For the bare points we therefore keep the original screen-X/+Y
   // basis: stable through camera motion, and the ellipse mask uses
   // sky-PA without any screen-vs-sky reconciliation.
-  let pxToClip = vec2<f32>(2.0 / u.viewport.x, 2.0 / u.viewport.y);
+  let pxToClip = vec2<f32>(2.0 / u.cam.viewportPx.x, 2.0 / u.cam.viewportPx.y);
   let offset   = corner * sizePx * sizeScale * pxToClip * center.w;
 
   var out: VSOut;
