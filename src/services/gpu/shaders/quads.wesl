@@ -14,7 +14,15 @@
 // because the per-quad distance calculation is hand-coded inline
 // (see 'distanceMpc' below) — pulling in the helper would just rename
 // 'length(toGalaxy)' without changing the math.
-import package::lib::camera::{ CameraUniforms, worldToClip };
+import package::lib::camera::CameraUniforms;
+import package::lib::camera::worldToClip;
+// Shared unit-quad helpers from 'lib/billboard.wesl' — replace the
+// inline 'CORNERS' const + '(corner + 1) * 0.5' UV remap that used to
+// live below. The view-aligned celestial-north basis math stays
+// renderer-specific (see 'NORTH_WORLD' / 'upClip' below); only the
+// vertex-index → corner / UV lookups are shared.
+import package::lib::billboard::quadCorner;
+import package::lib::billboard::quadUv;
 
 // Renderer-specific Uniforms struct.
 //
@@ -86,22 +94,14 @@ struct VsOut {
 @group(0) @binding(1) var          atlasTex: texture_2d<f32>;
 @group(0) @binding(2) var          atlasSmp: sampler;
 
-// Hard-coded quad corners.  The vertex shader is invoked with
-// vertex_index 0..5 (two triangles), and we look up the corner from
-// this table.  Saves an index buffer + a vertex buffer for static
-// geometry.
-const CORNERS = array<vec2<f32>, 6>(
-  vec2<f32>(-1.0, -1.0),
-  vec2<f32>( 1.0, -1.0),
-  vec2<f32>( 1.0,  1.0),
-  vec2<f32>(-1.0, -1.0),
-  vec2<f32>( 1.0,  1.0),
-  vec2<f32>(-1.0,  1.0),
-);
-
 @vertex
 fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
-  let corner = CORNERS[vid];
+  // Unit-square corner offset in [-1, +1]² for this triangle-list
+  // vertex. Pulled from 'lib/billboard::quadCorner' so the (BL, BR,
+  // TR, BL, TR, TL) ordering is shared across all four billboard
+  // renderers — see the lib's docblock for the corner-ordering
+  // discussion.
+  let corner = quadCorner(vid);
 
   // Project the world-space center first.  We then offset the corner in
   // clip space by a fixed pixel half-extent.  Historically this was done
@@ -204,12 +204,13 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
     centerClip.w,
   );
 
-  // UV: corner is in [-1, 1]; remap to [0, 1] then to the slot's atlas
-  // rect.  Flip V so the texture isn't upside down — 'flipY: false' on
-  // the atlas upload preserves the natural ImageBitmap orientation
-  // (top-down), and our UV convention here puts v=0 at the top of the
-  // atlas.
-  let cornerUv = (corner + vec2<f32>(1.0, 1.0)) * 0.5;
+  // UV: 'quadUv' returns the unit-square corner remapped to [0, 1]²
+  // (same vertex-index ordering as 'quadCorner' above). We then mix
+  // into the slot's atlas rect.  Flip V so the texture isn't upside
+  // down — 'flipY: false' on the atlas upload preserves the natural
+  // ImageBitmap orientation (top-down), and our UV convention here
+  // puts v=0 at the top of the atlas.
+  let cornerUv = quadUv(vid);
   let uvLocal = vec2<f32>(cornerUv.x, 1.0 - cornerUv.y);
   out.atlasUv = mix(instance.uvRect.xy, instance.uvRect.zw, uvLocal);
   // Forward the corner-local UV to the FS so it can compute the
