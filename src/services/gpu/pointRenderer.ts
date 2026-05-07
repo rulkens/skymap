@@ -81,12 +81,14 @@ import { type ComputeSchechterRatiosInput } from '../engine/computeSchechterRati
 import ComputeAngularWeightsWorker from '../engine/computeAngularWeights.worker?worker';
 import { type ComputeAngularWeightsInput } from '../engine/computeAngularWeights';
 
-// `?raw` is a Vite-specific import suffix. It tells the bundler to import the
-// file's content as a plain string rather than attempting to execute it as
-// JavaScript. The WGSL source text ends up inlined in the JS bundle; at
-// runtime we hand it to `device.createShaderModule({ code: shaderSrc })`.
-// Without `?raw`, Vite would try to parse the .wgsl file as JS and fail.
-import shaderSrc from './shaders/points.wgsl?raw';
+// `?static` is wesl-plugin's Vite import suffix. It runs the WESL linker at
+// build time and hands us a plain WGSL string with all `import` statements
+// resolved into top-level functions. We forward that string straight to
+// `device.createShaderModule({ code: shaderSrc })`. The previous `?raw`
+// suffix bypassed the linker entirely and worked only because the legacy
+// .wgsl source was self-contained — once we extract shared modules under
+// `shaders/lib/`, `?static` is required.
+import shaderSrc from './shaders/points.wesl?static';
 import { CloudFade } from './cloudFade';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────

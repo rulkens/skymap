@@ -32,24 +32,24 @@
 // --------------------
 // This shader is loaded by both PointRenderer (Task 10) and PickRenderer (Task 16),
 // which each select a different fragment entry point from this same module:
-//   - PointRenderer uses `vs` + `fs`   → visual additive-blended render
-//   - PickRenderer  uses `vs` + `fsPick` → offscreen r32uint picking pass
+//   - PointRenderer uses 'vs' + 'fs'   → visual additive-blended render
+//   - PickRenderer  uses 'vs' + 'fsPick' → offscreen r32uint picking pass
 //
-// Both pipelines share the same vertex stage (`vs`) and the same shader module.
+// Both pipelines share the same vertex stage ('vs') and the same shader module.
 // Having two fragment entry points in one file avoids duplicating the vertex
 // stage logic (billboard math, magnitude→intensity, colour ramp) while allowing
 // each pass to write to its own render-target format.
 //
 // The class:
-//   1. Calls `device.createShaderModule({ code: wgslSource })` with this text.
-//   2. Creates a `GPURenderPipeline` that references the `vs` and `fs` (or
-//      `fsPick`) entry points defined below.
-//   3. Uploads a `Uniforms` struct (viewProj, viewport, pointSizePx, brightness)
+//   1. Calls 'device.createShaderModule({ code: wgslSource })' with this text.
+//   2. Creates a 'GPURenderPipeline' that references the 'vs' and 'fs' (or
+//      'fsPick') entry points defined below.
+//   3. Uploads a 'Uniforms' struct (viewProj, viewport, pointSizePx, brightness)
 //      into a uniform buffer and binds it to @group(0) @binding(0).
 //   4. Uploads per-point data (position, magnitude, colorIndex) into a vertex
 //      buffer configured for *instance stepping* (one record per point), while
 //      @builtin(vertex_index) steps per-vertex (0..5 within each instance).
-//   5. Calls `passEncoder.draw(6, pointCount)` to kick off the draw.
+//   5. Calls 'passEncoder.draw(6, pointCount)' to kick off the draw.
 
 // ─── uniforms ─────────────────────────────────────────────────────────────────
 
@@ -87,9 +87,9 @@ struct Uniforms {
   // within a single 256-byte uniform block and no padding gaps needed here.)
   brightness: f32,
 
-  // The currently-selected point packed as `(sourceCode << 27) | localIdx`,
-  // or `0xFFFFFFFFu` when nothing is selected.  The vertex shader recovers
-  // its own packed identity as `(cloud.sourceCode << 27u) | u32(instance_index)`
+  // The currently-selected point packed as '(sourceCode << 27) | localIdx',
+  // or '0xFFFFFFFFu' when nothing is selected.  The vertex shader recovers
+  // its own packed identity as '(cloud.sourceCode << 27u) | u32(instance_index)'
   // (sourceCode lives in the per-source @group(1) bind group — see
   // CloudUniforms below) and compares against this slot to decide whether
   // to enlarge for the selection ring.
@@ -102,18 +102,18 @@ struct Uniforms {
   // construction: each source's packed identity space sits in its own
   // top-5-bit slice, so two galaxies in different surveys can never
   // collide on the same packed value.  This replaces the prior
-  // running-sum `globalInstanceIdx` baked per-vertex; the parallel-
+  // running-sum 'globalInstanceIdx' baked per-vertex; the parallel-
   // upload race that scheme suffered from is structurally impossible
-  // here because there is no per-vertex baking — `instance_index` is the
-  // GPU's `@builtin` and `sourceCode` arrives via this same uniform
+  // here because there is no per-vertex baking — 'instance_index' is the
+  // GPU's '@builtin' and 'sourceCode' arrives via this same uniform
   // before each per-source draw.
   //
   // ### Sentinel
   //
-  // `0xFFFFFFFFu` is "no selection".  The maximum legitimate packed
-  // value is `(31 << 27) | 0x07FFFFFF` = `0xFFFFFFFE` for the largest
+  // '0xFFFFFFFFu' is "no selection".  The maximum legitimate packed
+  // value is '(31 << 27) | 0x07FFFFFF' = '0xFFFFFFFE' for the largest
   // hypothetical sourceCode + max localIdx — the +1 in the pick path is
-  // what keeps this sentinel below `0xFFFFFFFF`, but the SELECTION
+  // what keeps this sentinel below '0xFFFFFFFF', but the SELECTION
   // packing has no +1 (the localIdx range starts at 0 and we use a
   // separate sentinel) so collisions are still impossible at any
   // realistic scale.
@@ -121,20 +121,20 @@ struct Uniforms {
   // ### Offset stability
   //
   // The four preceding fields (vec2 + f32 + f32 = 16 bytes) bring the
-  // running offset to 80 bytes, where `selectedPacked` sits.  The picker
-  // (`pickRenderer.ts`) writes the sentinel here directly using a
-  // hard-coded byte offset of 80; adding fields *after* `selectedPacked`
+  // running offset to 80 bytes, where 'selectedPacked' sits.  The picker
+  // ('pickRenderer.ts') writes the sentinel here directly using a
+  // hard-coded byte offset of 80; adding fields *after* 'selectedPacked'
   // is therefore safe.
   selectedPacked: u32,
 
-  // Three trailing u32 padding words to keep `selectedPacked` (offset 80)
+  // Three trailing u32 padding words to keep 'selectedPacked' (offset 80)
   // on the same 16-byte vec4 slot as the next vec3.  Required because
-  // the next member (`camPosWorld`, a vec3<f32>) has alignment 16, so
+  // the next member ('camPosWorld', a vec3<f32>) has alignment 16, so
   // the struct would otherwise insert implicit padding here anyway —
   // naming the bytes makes the JS-side upload obvious.
   //
   // The slot at offset 84 is intentionally unused at the @group(0) level:
-  // sourceCode lives in the per-source @group(1) `CloudUniforms` (see
+  // sourceCode lives in the per-source @group(1) 'CloudUniforms' (see
   // below) so each cloud's bind group carries its OWN sourceCode value
   // and draws within one render pass don't race on the per-draw write.
   _pad0: u32,
@@ -145,10 +145,10 @@ struct Uniforms {
   //
   // World-space camera position in Mpc.  Used by the vertex stage to compute
   // the per-galaxy distance, which feeds the apparent-pixel-size calculation
-  // below.  WGSL gives `vec3<f32>` an alignment of 16 — so this field starts
+  // below.  WGSL gives 'vec3<f32>' an alignment of 16 — so this field starts
   // at offset 96 (the previous _pad0/_pad1 brought us to a 16-byte boundary)
   // and consumes 12 bytes of payload + 4 bytes of trailing padding before
-  // `pxPerRad`.
+  // 'pxPerRad'.
   //
   // Why a uniform and not a per-vertex attribute?  The camera position is the
   // same for every instance in a frame.  Per-vertex storage would burn ~10 MB
@@ -157,12 +157,12 @@ struct Uniforms {
   camPosWorld: vec3<f32>,
 
   // Pixels-per-radian for the current viewport + camera FOV combination,
-  // pre-computed CPU-side as `viewport.y / (2 · tan(fovY / 2))`.  Multiplying
+  // pre-computed CPU-side as 'viewport.y / (2 · tan(fovY / 2))'.  Multiplying
   // an angular size (radians) by this scalar yields screen pixels — the
   // standard pinhole-camera relation, just packaged for cheap shader use.
   //
   // We pass it pre-divided rather than passing fovY and recomputing per
-  // vertex because `tan` is one of the more expensive intrinsics on mobile
+  // vertex because 'tan' is one of the more expensive intrinsics on mobile
   // GPUs and the result is frame-constant.
   pxPerRad: f32,
 
@@ -171,39 +171,39 @@ struct Uniforms {
   // u32 booleans (0 / 1) controlling how the fragment shader treats
   // galaxies whose orientation came from the deterministic fallback rather
   // than a real photometric measurement. The fallback flag itself rides
-  // on the sign bit of the per-vertex `axisRatio` attribute (see the
+  // on the sign bit of the per-vertex 'axisRatio' attribute (see the
   // PerVertex doc).
   //
-  // - `highlightFallback`: when 1, multiply the tint of fallback rows by
-  //   magenta `(1.0, 0.3, 1.0)` — a quick visual scan of which surveys
+  // - 'highlightFallback': when 1, multiply the tint of fallback rows by
+  //   magenta '(1.0, 0.3, 1.0)' — a quick visual scan of which surveys
   //   have real orientation coverage.
-  // - `realOnlyMode`: when 1, `discard` fallback fragments entirely so the
+  // - 'realOnlyMode': when 1, 'discard' fallback fragments entirely so the
   //   user can see only galaxies with measured (b/a, PA). Useful for
-  //   verifying the cross-match coverage as `npm run fetch-2mass-xsc` and
-  //   `npm run fetch-hyperleda` populate their caches.
+  //   verifying the cross-match coverage as 'npm run fetch-2mass-xsc' and
+  //   'npm run fetch-hyperleda' populate their caches.
   //
   // Two trailing u32s round the struct to a 16-byte boundary (vec4 slot).
   highlightFallback: u32,
   realOnlyMode: u32,
   // Per-galaxy camera-distance depth fade gate.  When 1, the fragment stage
-  // multiplies alpha by `1 / (1 + (camDist / FALLOFF_HALF)²)`; when 0 the
+  // multiplies alpha by '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 the
   // multiplication is skipped (equivalent to weight 1 everywhere).
-  // Repurposed from a former `_pad3` slot — sits with the other UI
+  // Repurposed from a former '_pad3' slot — sits with the other UI
   // boolean toggles so the byte layout reads sensibly.
   depthFadeEnabled: u32,
   _pad4: u32,
 
   // ── Malmquist-bias correction state (Task 2 of malmquist-bias plan) ─────
   //
-  // `biasMode` chooses which correction the vertex stage applies:
+  // 'biasMode' chooses which correction the vertex stage applies:
   //   0 = none         — render every galaxy unchanged.
   //   1 = volume-limit — discard galaxies whose absolute magnitude is
-  //                      fainter (numerically larger) than `absMagLimit`.
+  //                      fainter (numerically larger) than 'absMagLimit'.
   //   2 = 1/V_max      — Task 3: weight by inverse maximum-detection
-  //                      volume; needs `apparentMagLimit` and per-row
+  //                      volume; needs 'apparentMagLimit' and per-row
   //                      flux-limit data.
   //   3 = Schechter    — Task 4: reweight by the expected Schechter
-  //                      luminosity function `phi(M; M*, alpha)`.
+  //                      luminosity function 'phi(M; M*, alpha)'.
   //
   // Modes 2 + 3 are reserved here so we don't have to grow the uniform
   // buffer again when Tasks 3 + 4 land — the shader fields are inert for
@@ -225,10 +225,10 @@ struct Uniforms {
   // tail — so we round up to the next 16-byte boundary (32 bytes added
   // in total).
   //
-  // Task 4 (Schechter density correction): the four `schechter*` fields
+  // Task 4 (Schechter density correction): the four 'schechter*' fields
   // are written PER SOURCE between draw calls — each survey has its own
   // M*, α, m_lim, and pre-computed central-density normaliser N_ref.  The
-  // φ* normalisation drops out of the ratio `N_ref / n(d)`, so it doesn't
+  // φ* normalisation drops out of the ratio 'N_ref / n(d)', so it doesn't
   // need a uniform slot.
   biasMode: u32,
   absMagLimit: f32,
@@ -251,24 +251,24 @@ struct Uniforms {
   // additive accumulation.
   //
   // We therefore feed the same two thresholds into this shader and
-  // multiply the per-fragment alpha by `1 - smoothstep(start, end, sizePx)`
+  // multiply the per-fragment alpha by '1 - smoothstep(start, end, sizePx)'
   // before output.  Outside [start, end] the multiplier is exactly 1.0
   // (below start) or 0.0 (above end), so far-field rendering is byte-
   // for-byte identical to before this task and only galaxies actively
   // in the crossfade band feel the change.
   //
-  // Why alpha=0 instead of vertex-stage `discard` / clip-space cull?
-  // The pick fragment entry point (`fsPick`) shares the vertex stage with
-  // `fs`; if we collapsed the billboard to off-screen-clip when sizePx
+  // Why alpha=0 instead of vertex-stage 'discard' / clip-space cull?
+  // The pick fragment entry point ('fsPick') shares the vertex stage with
+  // 'fs'; if we collapsed the billboard to off-screen-clip when sizePx
   // exceeds end, the user would lose the ability to *click* a galaxy
   // whose visual representation has handed off to the procedural-disk
   // pass.  Selection rings and click hit-testing both still want the
   // points-pass primitive to rasterise.  Multiplying alpha by zero in
-  // `fs` keeps the vertex stage and pick stage untouched while making
+  // 'fs' keeps the vertex stage and pick stage untouched while making
   // the visual contribution invisible.
   //
-  // pxFadeStart / pxFadeEnd are populated by `pointRenderer.draw` from
-  // engine-side constants imported from `./thumbnailSubsystem` so the
+  // pxFadeStart / pxFadeEnd are populated by 'pointRenderer.draw' from
+  // engine-side constants imported from './thumbnailSubsystem' so the
   // two passes can never drift out of sync (a single source of truth).
   // The two trailing pads round the appended payload up to a 16-byte
   // boundary — without them the next vec3/vec4 a future task adds would
@@ -284,23 +284,23 @@ struct Uniforms {
 // ─── per-cloud uniforms (Cloud fade-in) ───────────────────────────────────────
 //
 // One small uniform buffer per loaded source, set at draw time via
-// `setBindGroup(1, entry.cloudBindGroup)` from the JS render loop.  The
-// only field we currently care about is `opacity` — the smoothstep-shaped
-// 0→1 ramp that the JS side computes from `now() - fadeStartMs`.  Multiplied
+// 'setBindGroup(1, entry.cloudBindGroup)' from the JS render loop.  The
+// only field we currently care about is 'opacity' — the smoothstep-shaped
+// 0→1 ramp that the JS side computes from 'now() - fadeStartMs'.  Multiplied
 // into the visual fragment's final alpha so a freshly-uploaded cloud
 // glides into view rather than popping.
 //
 // Why a separate bind group rather than extending @group(0)?  WebGPU's
-// `queue.writeBuffer` ordering across submits in one frame is undefined —
+// 'queue.writeBuffer' ordering across submits in one frame is undefined —
 // writing different opacity values to one shared buffer between draws
 // would race.  Per-cloud BUFFERS sidestep that entirely (one writeBuffer
 // per buffer per frame, no overlap), which is exactly the existing
 // "bake per-instance into the vertex buffer" pattern at a coarser
-// granularity.  See CLAUDE.md → "WebGPU `queue.writeBuffer` race".
+// granularity.  See CLAUDE.md → "WebGPU 'queue.writeBuffer' race".
 //
-// The pick fragment (`fsPick`) doesn't reference `cloud.opacity`, but
-// the SHARED vertex stage reads `cloud.sourceCode` to compose each
-// instance's packed identity (`(sourceCode << 27u) | instance_index`)
+// The pick fragment ('fsPick') doesn't reference 'cloud.opacity', but
+// the SHARED vertex stage reads 'cloud.sourceCode' to compose each
+// instance's packed identity ('(sourceCode << 27u) | instance_index')
 // for the pick output.  WebGPU's pipeline layout reflects every binding
 // any stage touches, so the pick pipeline auto-derives @group(1) too,
 // and PickRenderer must bind a CloudFade-style group per source before
@@ -310,28 +310,28 @@ struct CloudUniforms {
   opacity: f32,
 
   // 5-bit Source enum value for this cloud.  Set once at upload time
-  // (the JS `pointRenderer.upload` calls `entry.fade.setSourceCode(source)`).
+  // (the JS 'pointRenderer.upload' calls 'entry.fade.setSourceCode(source)').
   // The vertex stage reads this slot to compose
-  // `myPacked = (sourceCode << 27u) | @builtin(instance_index)` — the
+  // 'myPacked = (sourceCode << 27u) | @builtin(instance_index)' — the
   // per-instance packed identity used for both selection-halo
-  // comparison (`fs`) and pick output (`fsPick`).
+  // comparison ('fs') and pick output ('fsPick').
   //
   // ### Why @group(1) instead of @group(0)
   //
   // The visual + pick passes draw every loaded survey in one render
-  // pass each, with one `pass.draw(6, count)` call per source.  If
+  // pass each, with one 'pass.draw(6, count)' call per source.  If
   // sourceCode lived in the global @group(0) Uniforms, writing it
   // between draws within one submit would NOT take effect — WebGPU
-  // sequences all `queue.writeBuffer` calls in a submit before any
+  // sequences all 'queue.writeBuffer' calls in a submit before any
   // draw runs, so all draws would see the last-written value.  That
   // race is exactly what the prior revision's per-vertex
-  // `globalInstanceIdx` baking dodged.
+  // 'globalInstanceIdx' baking dodged.
   //
   // Putting sourceCode in the per-source @group(1) bind group makes
   // every cloud have its OWN uniform buffer.  Different buffers,
   // different write destinations — the writes can't race because there
   // is no shared destination across draws.  Same architecture that
-  // already keeps `opacity` from racing.
+  // already keeps 'opacity' from racing.
   sourceCode: u32,
 
   // Pad to 16-byte alignment — WebGPU's minimum uniform buffer size.
@@ -346,7 +346,7 @@ struct CloudUniforms {
 // These fields are filled from the *instance* vertex buffer — the buffer that
 // holds one record per catalog point, not one record per vertex.
 //
-// On the JS side the pipeline descriptor's `vertex.buffers` array will contain
+// On the JS side the pipeline descriptor's 'vertex.buffers' array will contain
 // an entry like:
 //
 //   { arrayStride: 20,             // 3×f32 (pos) + 1×f32 (mag) + 1×f32 (ci) = 20 bytes
@@ -376,7 +376,7 @@ struct PerVertex {
 
   // Per-row K-correction coefficient (units: per unit redshift z).
   //
-  // Used by `vs` to convert observed colour to rest-frame: each survey
+  // Used by 'vs' to convert observed colour to rest-frame: each survey
   // measures a different colour pair with a different sensitivity to z,
   // so the K-correction strength varies per row rather than being a
   // global shader constant:
@@ -385,27 +385,27 @@ struct PerVertex {
   //   - 2MRS  J−K   →  k ≈ 0.0/z (NIR is nearly redshift-invariant at z<0.1)
   // and the JS-side upload writes 0 alongside the colorIndex sentinel for
   // rows whose source-specific colour pair isn't measurable, so the
-  // sentinel branch in `vs` doesn't need to special-case kPerZ.
+  // sentinel branch in 'vs' doesn't need to special-case kPerZ.
   @location(3) kPerZ: f32,
 
   // Galaxy minor/major axis ratio b/a in (0, 1] — with the SIGN BIT
   // carrying the fallback-orientation flag.  Real measurements are
   // always positive; the JS-side bake negates the value when the row's
-  // (b/a, PA) match the deterministic `fallbackOrientation` output.
+  // (b/a, PA) match the deterministic 'fallbackOrientation' output.
   // The fragment stage recovers both pieces in one read:
   //
-  //   - `abs(axisRatio)` for the elliptical mask shape (the existing
-  //     `axisRatio > 0.0` validity check stops working with negative
-  //     reals, so the vertex stage forwards `abs(axisRatio)` through
+  //   - 'abs(axisRatio)' for the elliptical mask shape (the existing
+  //     'axisRatio > 0.0' validity check stops working with negative
+  //     reals, so the vertex stage forwards 'abs(axisRatio)' through
   //     VSOut.axisRatio for the fragment to use directly).
-  //   - `axisRatio < 0.0` for the fallback flag.
+  //   - 'axisRatio < 0.0' for the fallback flag.
   //
   // ### Why sign-bit packing
   //
   // The previous revision rode the fallback flag on the high bit of a
-  // per-vertex `globalInstanceIdx u32`.  That whole slot went away with
+  // per-vertex 'globalInstanceIdx u32'.  That whole slot went away with
   // the (source, localIdx) packing refactor — the picker now derives
-  // its global identity from `(sourceCode << 27) | instance_index`
+  // its global identity from '(sourceCode << 27) | instance_index'
   // without any per-vertex baking.  The fallback flag is a single bit;
   // rather than reintroduce a dedicated u32 slot just for it, we steal
   // the sign bit of axisRatio (always a positive value for real
@@ -413,11 +413,11 @@ struct PerVertex {
   //
   // ### NaN handling (synthetic-fallback cloud)
   //
-  // The synthetic-fallback cloud (loaded when every real `.bin` fails to
+  // The synthetic-fallback cloud (loaded when every real '.bin' fails to
   // decode) ships its axisRatio array filled with NaN.  WGSL's
-  // `abs(NaN)` returns NaN and `NaN < 0.0` is false, so the vertex
+  // 'abs(NaN)' returns NaN and 'NaN < 0.0' is false, so the vertex
   // stage routes synthetic rows through the existing "axisRatio > 0
-  // is false" round-mask path with `isFallback = 0u`.
+  // is false" round-mask path with 'isFallback = 0u'.
   @location(4) axisRatio: f32,
   // Position angle in degrees, [0, 180). Rotates the squashed ellipse
   // around the billboard centre. East-of-north convention; we negate
@@ -431,10 +431,10 @@ struct PerVertex {
   // in every row.
   @location(6) diameterKpc: f32,
   // Per-galaxy 1/V_max weight for Malmquist-bias correction.  Baked at
-  // upload time as `clamp((dRef / dMax(M, m_lim))³, 0, 1)`.  Read by
+  // upload time as 'clamp((dRef / dMax(M, m_lim))³, 0, 1)'.  Read by
   // the fragment shader's intensity computation, but ONLY when
-  // `u.biasMode == 2u` (the 1/V_max literal in src/data/biasMode.ts);
-  // every other mode multiplies by 1.0 via `select`, so the four bias
+  // 'u.biasMode == 2u' (the 1/V_max literal in src/data/biasMode.ts);
+  // every other mode multiplies by 1.0 via 'select', so the four bias
   // modes stay independent and a/b-comparable from the SettingsPanel.
   //
   // Why per-vertex (not a uniform)?  Each galaxy has a different M and
@@ -442,7 +442,7 @@ struct PerVertex {
   // value across the whole survey — a strict information loss.
   @location(7) vMaxWeight: f32,
 
-  // Per-galaxy Schechter density-correction ratio = `clamp(N_ref / n(d), 0, 10)`,
+  // Per-galaxy Schechter density-correction ratio = 'clamp(N_ref / n(d), 0, 10)',
   // baked at upload time (originally introduced in commit 7a6d810 as a
   // per-fragment 200-step trapezoidal integral; that loop is gone now).
   //
@@ -450,32 +450,32 @@ struct PerVertex {
   //
   // Each galaxy's distance from origin is fixed at upload time (the catalog
   // parser baked the linear-cosmology Cartesian position into the .bin).
-  // The Schechter integral at that distance — `n(d)` — depends only on the
+  // The Schechter integral at that distance — 'n(d)' — depends only on the
   // survey's selection function (M*, α, m_lim) and that fixed distance, so
   // its value is also fixed at upload time.  The CPU computes it once per
   // galaxy and writes the resulting ratio here, mirroring exactly the
-  // pattern Task 3 used for `vMaxWeight`.
+  // pattern Task 3 used for 'vMaxWeight'.
   //
   // ── Why baking is *much* faster ─────────────────────────────────────────
   //
   // The original implementation ran the 200-step trapezoidal loop in the
   // FRAGMENT stage, costing ~3.5 M galaxies × ~6 fragments per billboard ×
-  // 200 iterations ≈ 4 billion `pow + exp` evaluations per frame.  With the
-  // ratio baked, mode 3 collapses to a single `f32` lookup and a multiply —
-  // identical cost to mode 2's `vMaxWeight` path.
+  // 200 iterations ≈ 4 billion 'pow + exp' evaluations per frame.  With the
+  // ratio baked, mode 3 collapses to a single 'f32' lookup and a multiply —
+  // identical cost to mode 2's 'vMaxWeight' path.
   //
   // ── Numeric stability ───────────────────────────────────────────────────
   //
-  // The CPU bake mirrors the shader's old clamp `clamp(ratio, 0, 10)` and
-  // also handles the degenerate-distance case (`nHere == 0` or NaN) by
+  // The CPU bake mirrors the shader's old clamp 'clamp(ratio, 0, 10)' and
+  // also handles the degenerate-distance case ('nHere == 0' or NaN) by
   // baking 0 — so far galaxies with no detectable density disappear in
   // mode 3 instead of going infinite/NaN.  Visual output is unchanged from
   // the pre-bake implementation.
   @location(8) schechterRatio: f32,
 
-  // Per-galaxy HEALPix angular re-weight = `clamp(medianCount / localCount,
-  // 0.1, 10)` baked at upload time by `computeAngularWeights` (lazy, only
-  // when the user picks `BiasMode.AngularReweight`; default is 1.0).
+  // Per-galaxy HEALPix angular re-weight = 'clamp(medianCount / localCount,
+  // 0.1, 10)' baked at upload time by 'computeAngularWeights' (lazy, only
+  // when the user picks 'BiasMode.AngularReweight'; default is 1.0).
   //
   // ── Why per-vertex ──────────────────────────────────────────────────────
   //
@@ -495,7 +495,7 @@ struct PerVertex {
   // assume isotropic angular completeness.  Mode 4 is therefore an
   // *alternative*, not a multiplicative add-on — selecting it bypasses the
   // other modes' alpha modulation via the shader's
-  // `select(1.0, …, biasMode == 4u)` gate.
+  // 'select(1.0, …, biasMode == 4u)' gate.
   @location(9) angularDensityWeight: f32,
 };
 
@@ -522,15 +522,15 @@ struct VSOut {
 
   // The 0-based index of the catalog point (galaxy) this quad belongs to.
   //
-  // Used by `fsPick` (the picking fragment entry point) to write the instance
-  // ID into the r32uint pick texture. The visual `fs` entry point does NOT use
+  // Used by 'fsPick' (the picking fragment entry point) to write the instance
+  // ID into the r32uint pick texture. The visual 'fs' entry point does NOT use
   // this field — WGSL permits unused fragment inputs without error.
   //
   // WHY @interpolate(flat)?
   // Integer attributes (u32) MUST be declared with @interpolate(flat) in WGSL.
   // Floating-point attributes interpolate across the triangle by default;
   // integers cannot be meaningfully interpolated (they'd need to be cast to
-  // float, interpolated, then cast back — losing precision). `flat` tells the
+  // float, interpolated, then cast back — losing precision). 'flat' tells the
   // rasteriser to use the "provoking vertex" value unchanged for every fragment,
   // which is correct here: all 6 vertices of one instance share the same index.
   @location(3) @interpolate(flat) instanceIdx: u32,
@@ -538,7 +538,7 @@ struct VSOut {
   // 1u when this instance is the selected point; 0u otherwise.
   // Flat-interpolated for the same reason as instanceIdx — it is a per-instance
   // boolean that must not be interpolated across the triangle.
-  // Used by the visual `fs` to apply the ring/halo selection highlight.
+  // Used by the visual 'fs' to apply the ring/halo selection highlight.
   @location(4) @interpolate(flat) selected: u32,
 
   // Galaxy disk axis ratio b/a in (0, 1], forwarded from the per-instance
@@ -552,15 +552,15 @@ struct VSOut {
 
   // Pre-computed cosine and sine of the position-angle rotation used by the
   // fragment-stage elliptical mask.  These were previously computed per
-  // fragment from `positionAngleDeg`, which meant 2 trig calls per pixel
+  // fragment from 'positionAngleDeg', which meant 2 trig calls per pixel
   // for every billboard — at default 2.5 px point size and ~3.5 M points
-  // that's tens of millions of trig calls per frame.  Since `paRad` is
+  // that's tens of millions of trig calls per frame.  Since 'paRad' is
   // per-instance constant, the cos/sin are too, and the rasteriser can
   // flat-interpolate them at zero per-fragment cost (one write per
-  // primitive, not per pixel).  The value carried is `cos(-paRad)` /
-  // `sin(-paRad)` because the fragment rotates the UV by `-PA` (rotating
+  // primitive, not per pixel).  The value carried is 'cos(-paRad)' /
+  // 'sin(-paRad)' because the fragment rotates the UV by '-PA' (rotating
   // the UV is the inverse of rotating the ellipse) — see the doc-comment
-  // at the top of `fs` for why we negate.
+  // at the top of 'fs' for why we negate.
   @location(6) @interpolate(flat) paCs: f32,
   @location(15) @interpolate(flat) paSn: f32,
 
@@ -572,7 +572,7 @@ struct VSOut {
   @location(7) @interpolate(flat) isFallback: u32,
 
   // Origin-relative distance in Mpc, forwarded from the vertex stage
-  // (`length(p.position)`).  Originally introduced for the Schechter mode 3
+  // ('length(p.position)').  Originally introduced for the Schechter mode 3
   // fragment-stage integral; the integral has since moved to upload-time
   // bake (see PerVertex.schechterRatio), so this field is no longer read by
   // any fragment entry point.  Kept as a plumbing field so we can resurrect
@@ -584,21 +584,21 @@ struct VSOut {
   @location(8) @interpolate(flat) dMpc: f32,
 
   // Per-galaxy Schechter density-correction ratio, forwarded from the
-  // per-instance attribute.  Read in `fs` only when `u.biasMode == 3u`
+  // per-instance attribute.  Read in 'fs' only when 'u.biasMode == 3u'
   // (the Schechter literal).  Flat-interpolated for the same per-instance
   // constancy as the other flat u32/f32 attributes — every fragment of a
   // given billboard reads exactly the same ratio.
   @location(9) @interpolate(flat) schechterRatio: f32,
 
   // Per-galaxy HEALPix angular re-weight, forwarded from the per-instance
-  // attribute.  Read in `fs` only when `u.biasMode == 4u` (the
+  // attribute.  Read in 'fs' only when 'u.biasMode == 4u' (the
   // AngularReweight literal in src/data/biasMode.ts).  Flat-interpolated
   // for the same per-instance constancy as schechterRatio — every fragment
   // of a given billboard reads exactly the same weight.
   @location(10) @interpolate(flat) angularDensityWeight: f32,
 
   // Distance from the camera to this galaxy in Mpc.  Computed once in the
-  // vertex stage (`length(p.position - u.camPosWorld)`) and forwarded so the
+  // vertex stage ('length(p.position - u.camPosWorld)') and forwarded so the
   // fragment stage can apply a per-galaxy depth fade — galaxies far behind
   // the origin (camera-relative far side) contribute less alpha, which
   // tames the cumulative-overlap glow at the geometric origin where every
@@ -611,30 +611,30 @@ struct VSOut {
   // can disable it by setting the falloff half-distance large.
   @location(11) @interpolate(flat) camDistMpc: f32,
 
-  // Pre-computed depth-fade multiplier `1 / (1 + (camDist/FALLOFF_HALF)²)`,
-  // gated by `u.depthFadeEnabled` (passes through 1.0 when the toggle is
-  // off).  Previously computed per fragment from `camDistMpc`, but the
+  // Pre-computed depth-fade multiplier '1 / (1 + (camDist/FALLOFF_HALF)²)',
+  // gated by 'u.depthFadeEnabled' (passes through 1.0 when the toggle is
+  // off).  Previously computed per fragment from 'camDistMpc', but the
   // value is per-instance constant so we bake it once per vertex and
-  // flat-interpolate.  Same motivation as `paCs` / `paSn`: one mul + one
+  // flat-interpolate.  Same motivation as 'paCs' / 'paSn': one mul + one
   // add + one div + one select per fragment over millions of fragments
   // becomes one of each per primitive.  Cosmetic depth-attenuation curve;
-  // see `fs` for why this exists at all (additive emission shouldn't
+  // see 'fs' for why this exists at all (additive emission shouldn't
   // physically care about depth — but the alternative is a saturated
   // depth column through Earth that erases all visible structure).
   @location(12) @interpolate(flat) depthFade: f32,
 
   // Per-instance billboard radius in screen-space pixels (Task 8 of the
-  // procedural-disk-impostor plan).  This is exactly the `sizePx` the
+  // procedural-disk-impostor plan).  This is exactly the 'sizePx' the
   // vertex stage already computes for the apparent-size billboard math
-  // (`max(u.pointSizePx, apparentPxRadius)`).  We forward it through
+  // ('max(u.pointSizePx, apparentPxRadius)').  We forward it through
   // VSOut so the fragment stage can fade the points-pass alpha across
   // the same [pxFadeStart, pxFadeEnd] band the procedural-disk pass
-  // fades IN over — see the `pxFadeStart` / `pxFadeEnd` doc-comment on
+  // fades IN over — see the 'pxFadeStart' / 'pxFadeEnd' doc-comment on
   // Uniforms for the rationale and the chosen alpha-zero strategy.
   //
   // Why @interpolate(flat)?  All 6 vertices of a single billboard share
-  // the same `sizePx` (it's a function of per-instance state — galaxy
-  // distance, diameter, the floor `u.pointSizePx`, and a per-instance
+  // the same 'sizePx' (it's a function of per-instance state — galaxy
+  // distance, diameter, the floor 'u.pointSizePx', and a per-instance
   // selection scale).  Linear interpolation across the quad would be a
   // wasted multiply per fragment and would produce floating-point
   // wobble in the crossfade boundary that flat-interp avoids.  The
@@ -643,7 +643,7 @@ struct VSOut {
   // wants.
   //
   // Note: this field is initialised to 0.0 along the volume-limit
-  // early-out path (see the `earlyOut` initialiser in `vs`).  Those
+  // early-out path (see the 'earlyOut' initialiser in 'vs').  Those
   // primitives never rasterise (clip-space (2,2,2,1) is outside the
   // unit cube), so the value is purely a WGSL-spec requirement that
   // every VSOut field be initialised on every return path.
@@ -653,18 +653,18 @@ struct VSOut {
 // ─── Schechter LF correction (Task 4 of malmquist-bias plan) ────────────────
 //
 // Originally implemented as a per-fragment 200-step trapezoidal integral
-// (commit 7a6d810).  That cost ~3.5 M × 6 × 200 ≈ 4 billion `pow + exp`
+// (commit 7a6d810).  That cost ~3.5 M × 6 × 200 ≈ 4 billion 'pow + exp'
 // evaluations per frame — the slowest path in the fragment shader by an
 // order of magnitude.  The integral now lives at upload time on the CPU
-// (see `expectedNumberDensity` in `src/utils/math/schechterDensity.ts`),
-// with the resulting ratio baked into the per-vertex `schechterRatio`
+// (see 'expectedNumberDensity' in 'src/utils/math/schechterDensity.ts'),
+// with the resulting ratio baked into the per-vertex 'schechterRatio'
 // attribute — identical algorithm, identical numeric output, but
 // evaluated once per galaxy at load instead of millions of times per
-// frame.  See the `schechterRatio` doc-comment in the PerVertex struct
+// frame.  See the 'schechterRatio' doc-comment in the PerVertex struct
 // above for the full per-vertex/per-fragment trade-off discussion.
 //
 // (Helper function removed — the fragment shader now reads
-// `p.schechterRatio` directly.)
+// 'p.schechterRatio' directly.)
 
 // ─── colour ramp ──────────────────────────────────────────────────────────────
 
@@ -677,14 +677,14 @@ struct VSOut {
 //   1 < t ≤ 2    → whiteRed blend from white (1.0, 0.95, 0.8) toward red
 //   t > 2        → fully red (1.0, 0.5, 0.3)
 //
-// Both blends share the same `s = clamp(t * 0.5, 0, 1)` parameter so that
+// Both blends share the same 's = clamp(t * 0.5, 0, 1)' parameter so that
 // the transition is smooth and uses the same 0→1 interpolation range.
 //
-// WGSL `select(a, b, cond)` — note the argument order:
-//   returns `a` when cond is FALSE, returns `b` when cond is TRUE.
+// WGSL 'select(a, b, cond)' — note the argument order:
+//   returns 'a' when cond is FALSE, returns 'b' when cond is TRUE.
 // So  select(blueWhite, whiteRed, t > 1.0)
 //   returns blueWhite when t ≤ 1.0, and whiteRed when t > 1.0.
-// (This is the reverse of a typical ternary `cond ? b : a` — easy to get wrong.)
+// (This is the reverse of a typical ternary 'cond ? b : a' — easy to get wrong.)
 
 fn ramp(t: f32) -> vec3<f32> {
   // s goes 0→1 as t goes 0→2; clamp stops it at 0 for negatives and 1 for t>2.
@@ -765,34 +765,34 @@ fn vs(
   //
   //     M = m  -  5 · log10(d_Mpc)  -  25
   //
-  // The `+25` term comes from the unit choice: distance modulus textbooks
-  // write `M = m - 5·log10(d / 10pc) = m - 5·log10(d_pc) + 5`, and
+  // The '+25' term comes from the unit choice: distance modulus textbooks
+  // write 'M = m - 5·log10(d / 10pc) = m - 5·log10(d_pc) + 5', and
   // log10(1 Mpc / 10 pc) = log10(1e5) = 5, so converting the distance unit
   // from parsecs to megaparsecs adds 5·5 = 25 to the additive constant.
-  // Mirror of `absoluteFromApparent` in src/utils/math/distanceModulus.ts.
+  // Mirror of 'absoluteFromApparent' in src/utils/math/distanceModulus.ts.
   //
-  // WGSL has no `log10` intrinsic — only the natural log — so we divide
+  // WGSL has no 'log10' intrinsic — only the natural log — so we divide
   // by ln(10) ≈ 2.302585093.
   //
-  // ── Why a degenerate clip-space output instead of `discard`? ─────────────
+  // ── Why a degenerate clip-space output instead of 'discard'? ─────────────
   //
-  // `discard` is a *fragment-stage* keyword — it tells the rasteriser to
+  // 'discard' is a *fragment-stage* keyword — it tells the rasteriser to
   // throw away the current pixel.  The vertex stage has no equivalent
   // statement; it must always return a clip-space position.  The accepted
   // workaround is to emit a clip-space coordinate that lies outside the
   // unit cube ([-1, +1]³), so the GPU's clip+cull stage drops every
-  // primitive that touches the vertex.  Setting `xyz = (2, 2, 2)` with
-  // `w = 1` puts the post-divide NDC at (2, 2, 2) — well outside the unit
+  // primitive that touches the vertex.  Setting 'xyz = (2, 2, 2)' with
+  // 'w = 1' puts the post-divide NDC at (2, 2, 2) — well outside the unit
   // cube — and crucially does the same for *all 6 vertices* of the
-  // billboard quad (because `p.biasMode`, `p.absMagLimit`, and `dMpc` all
+  // billboard quad (because 'p.biasMode', 'p.absMagLimit', and 'dMpc' all
   // depend only on per-instance state, every vertex of the quad makes the
   // same decision).  No fragment shader invocations get scheduled for the
   // discarded galaxy, so we save roughly the same work as a fragment-stage
-  // `discard` would have.  The only wasted work is the six vertex
+  // 'discard' would have.  The only wasted work is the six vertex
   // invocations themselves, which are cheap.
   //
-  // We gate this on `u.biasMode == 1u` (the VolumeLimited literal in
-  // src/data/biasMode.ts) so the default mode (`None == 0u`) is a single
+  // We gate this on 'u.biasMode == 1u' (the VolumeLimited literal in
+  // src/data/biasMode.ts) so the default mode ('None == 0u') is a single
   // u32 compare per vertex — effectively free.
   let dMpc = length(p.position);
   let LOG10 = 2.302585092994046;
@@ -800,11 +800,11 @@ fn vs(
 
   // Recover the per-instance packed identity now so both the early-out
   // and the main path can share one source of truth.  Bits 27..31 = the
-  // 5-bit `cloud.sourceCode` (this draw's survey, set per-source via the
+  // 5-bit 'cloud.sourceCode' (this draw's survey, set per-source via the
   // @group(1) bind group); bits 0..26 = the GPU's
-  // `@builtin(instance_index)` (local 0..count-1).  This is the same
+  // '@builtin(instance_index)' (local 0..count-1).  This is the same
   // value the pick fragment writes (with a +1 sentinel) and the same
-  // value `u.selectedPacked` is compared against.
+  // value 'u.selectedPacked' is compared against.
   let myPacked = (cloud.sourceCode << 27u) | ii;
 
   if (u.biasMode == 1u && absMag > u.absMagLimit) {
@@ -828,7 +828,7 @@ fn vs(
     earlyOut.angularDensityWeight = 1.0;
     earlyOut.camDistMpc = 0.0;
     earlyOut.depthFade = 1.0;
-    // sizePx is plumbed for the procedural-disk crossfade-OUT in `fs`
+    // sizePx is plumbed for the procedural-disk crossfade-OUT in 'fs'
     // (Task 8); the early-out primitive never rasterises but WGSL
     // requires every VSOut field be initialised on every return path.
     earlyOut.sizePx = 0.0;
@@ -839,13 +839,13 @@ fn vs(
   //
   // Determine whether this instance is the user-selected point.
   //
-  // `u.selectedPacked` is `(selectedSource << 27) | selectedLocalIdx` when
-  // a galaxy is pinned, or `0xFFFFFFFFu` when nothing is selected.  We
-  // compare against this draw's `myPacked = (cloud.sourceCode << 27) | ii` so
+  // 'u.selectedPacked' is '(selectedSource << 27) | selectedLocalIdx' when
+  // a galaxy is pinned, or '0xFFFFFFFFu' when nothing is selected.  We
+  // compare against this draw's 'myPacked = (cloud.sourceCode << 27) | ii' so
   // each source's identity range stays disjoint by construction (bits
   // 27..31 = source code, never overlap across surveys).
   //
-  // No more `realIdx & 0x7fffffffu` masking: the previous revision baked
+  // No more 'realIdx & 0x7fffffffu' masking: the previous revision baked
   // a global running-sum index per vertex with the high bit doubling as a
   // fallback flag.  Both went away with the (source, localIdx) packing
   // refactor; the fallback flag now rides on the sign bit of axisRatio,
@@ -857,7 +857,7 @@ fn vs(
   // is unmistakable — even a faint, magnitude-22 galaxy gets a visible halo.
   // Non-selected points keep the apparent-size radius.
   //
-  // We use `select(normalSize, selectedSize, isSelected)` — WGSL's ternary.
+  // We use 'select(normalSize, selectedSize, isSelected)' — WGSL's ternary.
   // Recall the argument order: select(falseValue, trueValue, condition).
   let sizeScale = select(1.0, 8.0, isSelected);
 
@@ -865,7 +865,7 @@ fn vs(
   //
   // We want each galaxy's billboard to occupy its real angular footprint on
   // screen — a galaxy 5 Mpc away gets a much bigger disk than one 500 Mpc
-  // away — but never to vanish below `u.pointSizePx`, which acts as the
+  // away — but never to vanish below 'u.pointSizePx', which acts as the
   // far-field "still detectable as a glowing dot" floor.
   //
   // A galaxy approximated as a 30-kpc-diameter disk (the project's current
@@ -876,7 +876,7 @@ fn vs(
   //       = radius_Mpc / distance_Mpc
   //
   // for the small-angle range we care about (galaxies subtend at most a
-  // few degrees even when very close).  Multiplying by `u.pxPerRad`
+  // few degrees even when very close).  Multiplying by 'u.pxPerRad'
   // converts radians to screen pixels.
   //
   // Why max(floor, apparent) rather than just apparent?  In the far field
@@ -889,7 +889,7 @@ fn vs(
   //
   // Why 0.06 Mpc (= 60 kpc radius) rather than the physical 15 kpc radius?
   // Match the QuadRenderer's footprint.  The thumbnail quad uses
-  // `sizeWorld = diameter_kpc * 4 / 1000 = 0.12 Mpc` total = 0.06 Mpc
+  // 'sizeWorld = diameter_kpc * 4 / 1000 = 0.12 Mpc' total = 0.06 Mpc
   // half-extent, with the visible galaxy body filling its central ~25%
   // and a soft alpha-fade in the surrounding tail (the cutout JPEG fades
   // to transparent away from the galaxy).  Sizing the point billboard
@@ -903,13 +903,13 @@ fn vs(
   // texture rather than the soft glow.
   // Per-galaxy radius in Mpc, derived from the per-instance diameterKpc
   // attribute.  The 4× padding factor matches QuadRenderer's
-  // `sizeWorld = (diameterKpc / 1000) * 4`, so the soft glowing dot and
+  // 'sizeWorld = (diameterKpc / 1000) * 4', so the soft glowing dot and
   // the textured thumbnail occupy the same world-space footprint and
   // the load-fade transition is seamless.  Algebra:
   //
   //   radius_Mpc = (diameterKpc / 2) * 4 / 1000 = diameterKpc * 2 / 1000
   //
-  // The `select` clamps pathological zero/NaN diameters back to the
+  // The 'select' clamps pathological zero/NaN diameters back to the
   // project-wide default — the build pipeline already guarantees a
   // finite positive value, but a corrupted .bin shouldn't black-hole
   // the whole sky.
@@ -925,7 +925,7 @@ fn vs(
 
   // ── PIXEL-SIZE-IN-CLIP-SPACE CONVERSION ──────────────────────────────────
   //
-  // We want the billboard to be `sizePx` pixels in radius on screen,
+  // We want the billboard to be 'sizePx' pixels in radius on screen,
   // regardless of the point's clip-space depth.
   //
   // Clip space spans [-1, +1] in X and Y — a range of 2.0 in each direction.
@@ -937,7 +937,7 @@ fn vs(
   // making the apparent size shrink with distance (points farther away look
   // smaller).  This is exactly *wrong* for fixed-pixel billboards (we'd want
   // them constant on screen), so we cancel the divide by multiplying by w.
-  // For our distance-dependent `sizePx`, the same cancellation still applies:
+  // For our distance-dependent 'sizePx', the same cancellation still applies:
   // the math gives "this many screen pixels regardless of clip-space depth"
   // and the size variation comes from sizePx itself, not from perspective.
   //
@@ -982,17 +982,17 @@ fn vs(
   //
   //   colour_rest ≈ colour_obs − k · z
   //
-  // …where the coefficient `k` is *not* a single shader-wide constant.  Each
+  // …where the coefficient 'k' is *not* a single shader-wide constant.  Each
   // survey we render uses a different colour pair, and each pair has its own
-  // sensitivity to bandpass shift, so `k` lives in the per-instance vertex
-  // attribute `p.kPerZ` (baked at upload time per-source on the JS side):
+  // sensitivity to bandpass shift, so 'k' lives in the per-instance vertex
+  // attribute 'p.kPerZ' (baked at upload time per-source on the JS side):
   //
   //   - SDSS u−g    →  k ≈ 3.0   (steep — u and g straddle the 4000 Å break)
   //   - GLADE B−J   →  k ≈ 1.0   (modest — B touches a Balmer break, J is NIR)
   //   - 2MRS  J−K   →  k ≈ 0.0   (NIR is nearly z-invariant at z < 0.1)
   //
   // Why a per-vertex attribute and not a uniform?  Per-row variability:
-  // each survey's k coefficient is fixed per draw, but `p.kPerZ` also
+  // each survey's k coefficient is fixed per draw, but 'p.kPerZ' also
   // carries 0 for the sentinel-colour-index rows that lack a measurable
   // colour pair, which a global uniform can't express.  4 bytes per
   // instance (≈10 MB for SDSS) — well worth it for correct colour.
@@ -1043,14 +1043,14 @@ fn vs(
   //
   // ── 1/V_max alpha modulation (Task 3 of malmquist-bias plan) ─────────────
   //
-  // When `u.biasMode == 2u` (the `BiasMode.VMax` literal), multiply the
-  // intensity by the per-vertex `vMaxWeight` baked at upload time.  This
+  // When 'u.biasMode == 2u' (the 'BiasMode.VMax' literal), multiply the
+  // intensity by the per-vertex 'vMaxWeight' baked at upload time.  This
   // dims intrinsically-bright galaxies whose detectability volume V_max
   // greatly exceeds the reference volume V_ref — they're visible across
   // a much larger slice of space than their faint companions, so without
   // the down-weighting they'd over-represent themselves visually.
   //
-  // The `select(1.0, p.vMaxWeight, …)` keeps the OTHER three modes
+  // The 'select(1.0, p.vMaxWeight, …)' keeps the OTHER three modes
   // (None, VolumeLimited, Schechter) unchanged: each multiplies by 1.0,
   // so the volume-limited gating from above and the no-correction default
   // both render exactly as they did before this task.  This is what makes
@@ -1059,11 +1059,11 @@ fn vs(
   out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0) * u.brightness * vMaxAlpha;
 
   // Forward the per-instance packed identity to the pick fragment entry
-  // point (`fsPick`).  Same value the visual stage already computed for
-  // `myPacked` above; `fsPick` adds the +1 sentinel and writes it into
+  // point ('fsPick').  Same value the visual stage already computed for
+  // 'myPacked' above; 'fsPick' adds the +1 sentinel and writes it into
   // the r32uint pick texture.
   //
-  // The visual `fs` entry point ignores this field — WGSL silently
+  // The visual 'fs' entry point ignores this field — WGSL silently
   // allows a fragment shader to declare fewer inputs than the vertex
   // shader outputs, as long as the @location values that *are* declared
   // match.  We keep it here so both fragment entry points share one
@@ -1074,13 +1074,13 @@ fn vs(
   // 1u = this instance is selected; 0u = normal point.
   out.selected = select(0u, 1u, isSelected);
 
-  // Forward the fallback flag for the highlight + hide toggles in `fs`.
+  // Forward the fallback flag for the highlight + hide toggles in 'fs'.
   out.isFallback = isFallbackFlag;
 
   // Forward the absolute axisRatio so the fragment stage's elliptical
   // mask uses the unsigned magnitude.  Sign bit was the fallback flag
-  // (already extracted into `isFallbackFlag`); negative values would
-  // make the existing `axisRatio > 0.0` validity check trip on every
+  // (already extracted into 'isFallbackFlag'); negative values would
+  // make the existing 'axisRatio > 0.0' validity check trip on every
   // fallback row and collapse the ellipse mask to a circle.
   out.axisRatio = abs(p.axisRatio);
 
@@ -1090,19 +1090,19 @@ fn vs(
   // where rotating the UV is the inverse of rotating the ellipse, with an
   // extra sign flip because astronomical PA is east-of-north — CCW on
   // sky — but our UV-y points down on screen).  See the doc-comment at
-  // the top of `fs` for the full reasoning.
+  // the top of 'fs' for the full reasoning.
   let paRad = -p.positionAngleDeg * 3.14159265 / 180.0;
   out.paCs = cos(paRad);
   out.paSn = sin(paRad);
 
   // Forward origin-relative distance.  Originally consumed by the Schechter
   // mode-3 fragment integral; that integral has moved to per-vertex bake,
-  // so `dMpc` is currently unused in the fragment stage but kept as a
+  // so 'dMpc' is currently unused in the fragment stage but kept as a
   // plumbed field for future distance-dependent fragment effects.
   out.dMpc = dMpc;
 
   // Forward the per-galaxy Schechter density ratio (baked at upload time).
-  // The vertex stage above already folded it into `out.intensity` for
+  // The vertex stage above already folded it into 'out.intensity' for
   // mode 3 — forwarding it through VSOut keeps the attribute available to
   // the fragment stage in case future tweaks (e.g. tint modulation) want
   // to read it.  Costs nothing: with @interpolate(flat) the GPU writes
@@ -1110,21 +1110,21 @@ fn vs(
   out.schechterRatio = p.schechterRatio;
 
   // Forward the per-galaxy HEALPix angular re-weight (baked at mode-4
-  // toggle time, default 1.0).  Read in `fs` only when `u.biasMode == 4u`;
+  // toggle time, default 1.0).  Read in 'fs' only when 'u.biasMode == 4u';
   // flat-interpolated through VSOut for per-instance constancy.
   out.angularDensityWeight = p.angularDensityWeight;
 
   // Forward camera-relative distance for the depth-fade in the fragment
-  // stage.  The vertex stage already computed `distanceMpc` for the
+  // stage.  The vertex stage already computed 'distanceMpc' for the
   // apparent-pixel-size calculation above; we just forward it here so the
-  // fragment doesn't need access to `u.camPosWorld` and another `length()`.
+  // fragment doesn't need access to 'u.camPosWorld' and another 'length()'.
   out.camDistMpc = distanceMpc;
 
   // Pre-compute the depth-fade multiplier here so the fragment doesn't
   // re-derive it for every pixel of every billboard.  Curve:
-  // `1 / (1 + (camDist / FALLOFF_HALF)²)`.  The 1000 Mpc half-distance
+  // '1 / (1 + (camDist / FALLOFF_HALF)²)'.  The 1000 Mpc half-distance
   // matches the fragment-stage version this replaced — see the
-  // depth-fade doc-comment in `fs` for why this constant and why the
+  // depth-fade doc-comment in 'fs' for why this constant and why the
   // effect is cosmetic (additive emission shouldn't physically depth-
   // attenuate, but unbroken depth columns wash out the visible volume).
   let FALLOFF_HALF_MPC = 1000.0;
@@ -1134,9 +1134,9 @@ fn vs(
 
   // Forward the per-instance billboard radius in screen-pixels so the
   // fragment stage can fade points-pass alpha across the procedural-
-  // disk crossfade band.  See the `sizePx` doc-comment on VSOut and the
-  // `pxFadeStart` / `pxFadeEnd` doc-comment on Uniforms.  No extra cost
-  // here — `sizePx` was already computed above for the billboard offset.
+  // disk crossfade band.  See the 'sizePx' doc-comment on VSOut and the
+  // 'pxFadeStart' / 'pxFadeEnd' doc-comment on Uniforms.  No extra cost
+  // here — 'sizePx' was already computed above for the billboard offset.
   out.sizePx = sizePx;
 
   return out;
@@ -1145,7 +1145,7 @@ fn vs(
 // ─── fragment stage ───────────────────────────────────────────────────────────
 
 // The fragment shader runs once per pixel covered by a rasterised triangle.
-// `in.uv` has been interpolated from the three vertices — but since our quad
+// 'in.uv' has been interpolated from the three vertices — but since our quad
 // corners all share the same tint and intensity, only uv varies meaningfully.
 
 @fragment
@@ -1164,11 +1164,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   //   1. Astronomical PA is measured east of north (counter-clockwise on
   //      sky), but our UV-y points down on screen — a sign flip.
   //   2. Rotating the UV is the inverse of rotating the ellipse, so the
-  //      target rotation `+PA` becomes a UV rotation of `-PA`.
+  //      target rotation '+PA' becomes a UV rotation of '-PA'.
   //
   // The cs/sn pair is now pre-computed in the vertex stage and flat-
-  // interpolated.  See the `paCs` / `paSn` doc-comment on VSOut for why:
-  // `paRad` is per-instance constant, so doing the trig once per primitive
+  // interpolated.  See the 'paCs' / 'paSn' doc-comment on VSOut for why:
+  // 'paRad' is per-instance constant, so doing the trig once per primitive
   // (and reading it here) is much cheaper than the same trig per fragment
   // across millions of billboards.
   let cs = in.paCs;
@@ -1184,7 +1184,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // situation we want every billboard to render as a circle, identical to
   // pre-orientation behaviour.
   //
-  // Trick: `NaN > 0.0` is false in WGSL, so the same comparison catches
+  // Trick: 'NaN > 0.0' is false in WGSL, so the same comparison catches
   // both NaN and the (shouldn't-happen) zero/negative case.  When invalid,
   // we use safeAB = 1.0 → elliptic.y = rotated.y → circular r2 = original
   // dot(uv, uv).  When valid, we clamp at 0.05 against a hypothetical
@@ -1211,15 +1211,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // user reported "the point screen-aligned blob shows when the galaxy
   // is selected (not when unselected, which is the right behaviour)".
   //
-  // The fade trigger is the UNSCALED `in.sizePx` (vertex stage line 1070
-  // forwards `sizePx` BEFORE applying the 8× `sizeScale`), so the fade
+  // The fade trigger is the UNSCALED 'in.sizePx' (vertex stage line 1070
+  // forwards 'sizePx' BEFORE applying the 8× 'sizeScale'), so the fade
   // band aligns with the procedural-disk emission band on the underlying
   // galaxy footprint — not the inflated halo radius.  Selecting a galaxy
   // does NOT change when its point fades; only what shape it draws below
   // the band.
   //
   // See the long fade-band doc-comment further down (now reached only by
-  // normal points) for the px-scaling rationale (`sizePx * 0.5`) and the
+  // normal points) for the px-scaling rationale ('sizePx * 0.5') and the
   // smoothstep choice.
   let apparentDiameterPx = in.sizePx * 0.5;
   let fadeT = clamp(
@@ -1230,7 +1230,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // ── SELECTION RING vs NORMAL DISK ─────────────────────────────────────────
   //
-  // For the selected point we rendered a 3× larger billboard in `vs`, so the
+  // For the selected point we rendered a 3× larger billboard in 'vs', so the
   // UV space still spans [-1,+1]² but represents a physically bigger area.
   // We draw a hollow ring by:
   //   1. Discarding the outer region (r² > 1.0) → circular boundary.
@@ -1251,20 +1251,20 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
     // ── Inner disk (the point itself) ──────────────────────────────────────
     //
-    // We scaled the billboard 8× in `vs`, so the original point's footprint
+    // We scaled the billboard 8× in 'vs', so the original point's footprint
     // occupies the inner 1/8 in linear distance — i.e. r² ≤ (1/8)² = 1/64
     // ≈ 0.0156 in this scaled UV space. Inside that radius we render the
     // *normal* point disk so the user can still see the selected galaxy's
     // own brightness, not just the highlight ring around it.
     //
-    // CRITICAL: use the ELLIPTICAL `r2` (computed above from the rotated +
-    // squashed UV) here, NOT `r2_circ`. With the round mask the selected
+    // CRITICAL: use the ELLIPTICAL 'r2' (computed above from the rotated +
+    // squashed UV) here, NOT 'r2_circ'. With the round mask the selected
     // galaxy's inner shape would suddenly become a perfect circle, making
     // it look like the orientation collapsed on click. The elliptical r2
     // gives us the same shape as the unselected point, just scaled 8×.
     //
-    // The alpha factor `exp(-r2 * 256)` is the original `exp(-r2 * 4)`
-    // remapped: at r² = 1/64, we want the same `exp(-4)` falloff the
+    // The alpha factor 'exp(-r2 * 256)' is the original 'exp(-r2 * 4)'
+    // remapped: at r² = 1/64, we want the same 'exp(-4)' falloff the
     // unscaled point would have, so we multiply r² by 64 (= 8²) before
     // applying the original ×4 coefficient → 256.
     if (r2 < 0.0156) {
@@ -1285,16 +1285,16 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     //
     // ── Constant-pixel stroke width ────────────────────────────────────────
     //
-    // The earlier formulation used `r²_circ ∈ [0.72, 1.0]` — a band that's
+    // The earlier formulation used 'r²_circ ∈ [0.72, 1.0]' — a band that's
     // ~15 % of the billboard radius regardless of pixel size.  When the
     // billboard is 200 px (close zoom on a big galaxy with the 8× selection
     // scale), 15 % is 30 px — a fat doughnut.  We instead pick a target
     // stroke width in pixels and convert that into a fraction of the
-    // billboard radius using `in.sizePx * 8.0` (the actual on-screen halo
+    // billboard radius using 'in.sizePx * 8.0' (the actual on-screen halo
     // radius — in.sizePx is the unscaled value, sizeScale = 8 is applied
     // in vs).
     //
-    // `min(0.15, …)` caps the band fraction at the original 15 % so faint/
+    // 'min(0.15, …)' caps the band fraction at the original 15 % so faint/
     // far galaxies (where 8 × sizePx is small) don't end up with a stroke
     // wider than the billboard itself.
     let HALO_RADIUS_PX = in.sizePx * 8.0;
@@ -1309,7 +1309,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
       // of the stroke at full intensity (the ring should look crisp) but
       // avoid the hard pixelated edge a binary test would produce.
       //
-      // We deliberately do NOT multiply by `pointAlphaMult` here — the
+      // We deliberately do NOT multiply by 'pointAlphaMult' here — the
       // ring is UI and stays at full intensity through the procedural-
       // disk crossfade band.  The inner-disk case above (the galaxy's
       // own dot inside the 8× billboard) DOES fade because the
@@ -1336,7 +1336,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // ── NORMAL POINT — solid disk with Gaussian falloff (now ELLIPTICAL) ──────
 
   // Discard fragments outside the oriented ellipse defined by axisRatio + PA.
-  // `r2` was computed from the rotated/squashed UV above, so this single
+  // 'r2' was computed from the rotated/squashed UV above, so this single
   // unit-radius test covers the elliptical mask without needing a separate
   // shape-specific check.
   if (r2 > 1.0) { discard; }
@@ -1348,11 +1348,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // ── Schechter density correction (Task 4 of malmquist-bias plan) ────────
   //
-  // Mode 3: modulate alpha by the per-galaxy ratio `clamp(N_ref / n(d), 0, 10)`
-  // baked at upload time into `in.schechterRatio`.  Originally implemented as
+  // Mode 3: modulate alpha by the per-galaxy ratio 'clamp(N_ref / n(d), 0, 10)'
+  // baked at upload time into 'in.schechterRatio'.  Originally implemented as
   // a 200-step trapezoidal integral evaluated PER FRAGMENT (commit 7a6d810);
-  // that loop is gone and the cost dropped from ~4 billion `pow + exp` per
-  // frame to a single multiply.  See the `schechterRatio` doc-comment in
+  // that loop is gone and the cost dropped from ~4 billion 'pow + exp' per
+  // frame to a single multiply.  See the 'schechterRatio' doc-comment in
   // the PerVertex struct for the bake-time clamp + degenerate-distance
   // handling — the ratio is already finite, already in [0, 10], and already
   // 0 when the survey can't see anything at this distance.  No fragment-side
@@ -1363,16 +1363,16 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // ── HEALPix angular re-weight (Task 8 of malmquist-bias plan) ────────────
   //
   // Mode 4: modulate alpha by the per-galaxy ratio
-  // `clamp(medianCellCount / localCellCount, 0.1, 10)` baked at toggle time
-  // into `in.angularDensityWeight`.  Down-weights galaxies in over-dense
+  // 'clamp(medianCellCount / localCellCount, 0.1, 10)' baked at toggle time
+  // into 'in.angularDensityWeight'.  Down-weights galaxies in over-dense
   // angular cells (e.g., GLADE's SDSS-DR12 footprint at high z) and
   // up-weights galaxies in sparse cells (the rest of the sky at the same
   // shell), flattening the radial pencil-beam-jet artefacts the user
-  // reported.  See `computeAngularWeights.ts` for the per-shell median
+  // reported.  See 'computeAngularWeights.ts' for the per-shell median
   // pass that produces these weights.
   //
   // The bake is per-survey, never global, so SDSS's footprint can't
-  // contaminate GLADE's correction.  Each `select` reads its own cloud's
+  // contaminate GLADE's correction.  Each 'select' reads its own cloud's
   // weight via the per-vertex slot; the only thing the shader knows is
   // "use this weight when biasMode == 4u".
   let angWeight = select(1.0, in.angularDensityWeight, u.biasMode == 4u);
@@ -1388,7 +1388,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // distance from the camera so the back half of the volume contributes
   // less, breaking up the saturation stack.
   //
-  // Curve: `weight = 1 / (1 + (camDist / FALLOFF_HALF)²)`.  Smooth, finite
+  // Curve: 'weight = 1 / (1 + (camDist / FALLOFF_HALF)²)'.  Smooth, finite
   // at d=0 (no divide-by-zero), monotonically decreasing.  At
   // camDist = FALLOFF_HALF the weight is exactly 0.5 (so the half-distance
   // marks the half-power point).  Constant chosen so a galaxy 1 Gpc from
@@ -1397,10 +1397,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // stop the depth-column saturation that motivated this fix.
   //
   // The depth-fade multiplier is now pre-computed in the vertex stage and
-  // flat-interpolated as `in.depthFade`.  See the `depthFade` doc-comment
+  // flat-interpolated as 'in.depthFade'.  See the 'depthFade' doc-comment
   // on VSOut: per-instance constant, so once per primitive instead of
   // once per fragment.  The vertex stage already handles the
-  // `u.depthFadeEnabled` gate, so this is unconditionally a multiply.
+  // 'u.depthFadeEnabled' gate, so this is unconditionally a multiply.
   //
   // Not physically correct (additive emission shouldn't care about
   // depth), but the alternative — letting the depth-column saturate
@@ -1411,9 +1411,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // ── Procedural-disk crossfade-OUT (Task 8 of procedural-disk-impostor) ──
   //
   // The thumbnail subsystem's procedural-disk pass fades IN across the
-  // [u.pxFadeStart, u.pxFadeEnd] band using `t * t * (3 - 2 * t)` (the
+  // [u.pxFadeStart, u.pxFadeEnd] band using 't * t * (3 - 2 * t)' (the
   // smoothstep cubic).  We fade the points-pass OUT with the
-  // *complementary* curve `1 - t * t * (3 - 2 * t)` — fully visible
+  // *complementary* curve '1 - t * t * (3 - 2 * t)' — fully visible
   // below pxFadeStart, fully invisible above pxFadeEnd, and a smooth
   // C¹-continuous handoff inside the band.  Sum of the two curves is
   // identically 1.0 across the band, so the additive HDR contribution
@@ -1421,9 +1421,9 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // double-counting (which is what happens with no fade-out — the
   // "double-bright donut" the user reported).
   //
-  // `pointAlphaMult` is computed up at the top of `fs` so the
+  // 'pointAlphaMult' is computed up at the top of 'fs' so the
   // selection-ring branch can apply the same fade — see the comment
-  // there for the px-scaling rationale (`sizePx * 0.5`) and why the
+  // there for the px-scaling rationale ('sizePx * 0.5') and why the
   // selection halo also has to fade out (otherwise selecting a galaxy
   // and zooming in would leave the 8× selection halo rendered on top
   // of the procedural-disk impostor).
@@ -1451,7 +1451,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   //
   // We output (rgb * alpha, alpha) — "premultiplied alpha" — rather than
   // (rgb, alpha). This is *required* because the canvas was configured with
-  // `alphaMode: 'premultiplied'` in device.ts.
+  // 'alphaMode: 'premultiplied'' in device.ts.
   //
   // In premultiplied alpha, the RGB channels already contain the result of
   // multiplying colour by opacity. The GPU blend equation for additive blending
@@ -1466,35 +1466,35 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // compositing against the page, producing colours that are too dark.
   //
   // The additive blend mode itself is configured in the pipeline descriptor on
-  // the JS side (Task 10) — specifically in the `targets[0].blend` descriptor.
+  // the JS side (Task 10) — specifically in the 'targets[0].blend' descriptor.
   return vec4<f32>(rgb * alpha, alpha);
 }
 
 // ─── pick fragment stage ──────────────────────────────────────────────────────
 
-// `fsPick` is the second fragment entry point in this file.  A single WGSL
+// 'fsPick' is the second fragment entry point in this file.  A single WGSL
 // shader module can contain multiple entry points of the same stage; each
-// `GPURenderPipeline` selects one via its `fragment.entryPoint` field.
+// 'GPURenderPipeline' selects one via its 'fragment.entryPoint' field.
 //
-// The pick pass renders into an `r32uint` offscreen texture (not the visible
+// The pick pass renders into an 'r32uint' offscreen texture (not the visible
 // swap-chain texture).  Each fragment writes the *1-based* instance index of the
 // catalog point whose billboard covers that pixel.  The JS side reads a single
 // pixel from this texture under the cursor and converts it back to a 0-based
 // point index.
 //
 // WHY OFFSET BY 1?
-// The texture is cleared to 0 before the pass.  If we wrote `instanceIdx`
+// The texture is cleared to 0 before the pass.  If we wrote 'instanceIdx'
 // directly, instance 0 would be indistinguishable from the cleared background.
-// Instead we write `instanceIdx + 1`, so 0 always means "no hit" and any
+// Instead we write 'instanceIdx + 1', so 0 always means "no hit" and any
 // value ≥ 1 decodes to a valid point by subtracting 1.
 //
 // WHY A LARGER RADIUS (2.25 vs 1.0)?
 // A forgiveness radius of 1.5× lets the user pick a point without needing to
-// land exactly on its visual disk.  The visual `fs` discards fragments where
-// r² > 1.0 (unit disk); `fsPick` discards fragments where r² > 2.25 (= 1.5²),
+// land exactly on its visual disk.  The visual 'fs' discards fragments where
+// r² > 1.0 (unit disk); 'fsPick' discards fragments where r² > 2.25 (= 1.5²),
 // effectively making each pick billboard 1.5× larger than the visible one.
 //
-// NOTE: `fsPick` writes `vec4<u32>` to @location(0), which maps to an `r32uint`
+// NOTE: 'fsPick' writes 'vec4<u32>' to @location(0), which maps to an 'r32uint'
 // render target.  The pipeline descriptor on the JS side declares the target
 // format as 'r32uint' and no blend state (integers cannot be blended).
 
@@ -1506,13 +1506,13 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   let r2 = dot(in.uv, in.uv);
   if (r2 > 2.25) { discard; }
 
-  // Write `(sourceCode << 27 | instance_index) + 1` so background pixels
+  // Write '(sourceCode << 27 | instance_index) + 1' so background pixels
   // (cleared to 0) are distinguishable from a real hit.  The +1 keeps 0
   // as the unambiguous "no hit" sentinel; even with sourceCode = 0 (the
   // Synthetic survey) and localIdx = 0 the written value is 1, never 0.
   //
-  // `in.instanceIdx` was assembled in the vertex stage from
-  // `(cloud.sourceCode << 27u) | @builtin(instance_index)`.  The packing
+  // 'in.instanceIdx' was assembled in the vertex stage from
+  // '(cloud.sourceCode << 27u) | @builtin(instance_index)'.  The packing
   // gives every survey a structurally-disjoint identity range (top 5
   // bits = source code, bottom 27 = local index ≤ 134M), so two
   // galaxies in different surveys can never collide on the same pick

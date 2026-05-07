@@ -10,7 +10,7 @@
 //
 // ### Why this approach instead of "always face the camera"
 //
-// The first cut of this shader built a basis from `camPos - center` and
+// The first cut of this shader built a basis from 'camPos - center' and
 // squashed it by axisRatio.  That made the disk plane track the camera,
 // so axisRatio became a 2D screen-space squash — visually identical to
 // the points-shader's elliptical billboard mask, with no real 3D
@@ -112,7 +112,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // ── Line of sight ────────────────────────────────────────────────────
   //
   // Earth (the observer) is at world origin in this coordinate system —
-  // the build pipeline's `raDecZToCartesian` places galaxies relative
+  // the build pipeline's 'raDecZToCartesian' places galaxies relative
   // to that point.  losDir is therefore the direction from Earth to
   // the galaxy.  Note: this is NOT the camera direction — the disk's
   // orientation must be camera-independent, otherwise orbiting would
@@ -127,7 +127,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // direction at the galaxy's position.
   //
   // Singularity: when the galaxy is within ~8° of the celestial pole
-  // (|losDir.z| > 0.99), `northPole - dot(...) * losDir` shrinks to
+  // (|losDir.z| > 0.99), 'northPole - dot(...) * losDir' shrinks to
   // near-zero and normalize() amplifies floating-point noise.  Fall
   // back to seeding with world-y in that case — for the handful of
   // real galaxies that close to the pole the resulting PA is still
@@ -195,7 +195,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   let lumAlpha = smoothstep(0.05, 0.30, lum);
   let alpha = lumAlpha * mask * in.fadeAlpha;
   // Discard near-transparent fragments so we don't waste blend
-  // bandwidth on near-zero contributions.  See `quads.wgsl` for
+  // bandwidth on near-zero contributions.  See 'quads.wgsl' for
   // the longer note — same reasoning applies here.
   if (alpha < 0.01) { discard; }
   return vec4<f32>(rgba.rgb * alpha, alpha);

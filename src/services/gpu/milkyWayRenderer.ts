@@ -60,7 +60,7 @@
  * `@builtin(vertex_index)`.
  */
 
-import wgsl from './shaders/milkyWayImpostor.wgsl?raw';
+import wgsl from './shaders/milkyWayImpostor.wesl?static';
 
 type Init = {
   device: GPUDevice;

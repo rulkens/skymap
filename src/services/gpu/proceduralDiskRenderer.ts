@@ -11,7 +11,7 @@
  * is just the JS-side pipeline wiring.
  */
 
-import wgsl from './shaders/proceduralDisks.wgsl?raw';
+import wgsl from './shaders/proceduralDisks.wesl?static';
 import type { ProceduralDiskInstance } from '../../@types/ProceduralDiskInstance';
 
 const STRIDE_FLOATS = 12; // 3 vec4<f32> per instance

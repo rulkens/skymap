@@ -50,7 +50,7 @@
  * @module
  */
 
-import shaderSrc from './shaders/points.wgsl?raw';
+import shaderSrc from './shaders/points.wesl?static';
 import type { Source } from '../../data/sources';
 import type { PointRenderer } from './pointRenderer';
 

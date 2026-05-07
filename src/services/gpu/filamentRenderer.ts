@@ -22,7 +22,7 @@
  *   - clear()                       → drops the instance buffer
  *   - destroy()                     → releases all GPU resources
  */
-import shaderSource from './shaders/filaments.wgsl?raw';
+import shaderSource from './shaders/filaments.wesl?static';
 import type { FilamentCloud } from '../../@types/FilamentCloud';
 import type { mat4 } from 'gl-matrix';
 import { CloudFade } from './cloudFade';

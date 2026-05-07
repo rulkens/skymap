@@ -7,8 +7,8 @@
 // between the two endpoints).
 //
 // Why instanced quads instead of native line topology?  WebGPU's
-// `topology: 'line-list'` always renders 1-pixel-wide lines on most
-// platforms (no `setLineWidth` exists, by spec).  For visible-from-
+// 'topology: 'line-list'' always renders 1-pixel-wide lines on most
+// platforms (no 'setLineWidth' exists, by spec).  For visible-from-
 // orbit cosmic-web filaments we want anti-aliased thick lines with a
 // soft edge falloff — only the instanced-quad trick gives us that.
 //
@@ -24,7 +24,7 @@ struct Uniforms {
   halfWidthPx : f32,       // line half-width in pixels
   // Per-frame uniform scale for the entire filament-pass output, [0..1].
   // Multiplied into the final pre-multiplied colour + alpha.  Lives in
-  // the slot that used to be `pad0` — the byte layout is unchanged.
+  // the slot that used to be 'pad0' — the byte layout is unchanged.
   // Lets the user dim the cosmic-web overlay against the bright HDR
   // catalogue when high-σ skeletons (with their longer, denser ridges)
   // saturate to flat white under the tone-mapped pass.
@@ -109,31 +109,31 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
   // ── Density-aware brightness + tint ──────────────────────────────
   //
   // The per-vertex density attribute is min-max-normalised at build
-  // time (see `skeletonToFilamentCloud` in `tools/parsers/ndskl.ts`),
-  // so `in.density` ∈ [0, 1] across the whole catalogue: 0 = the
+  // time (see 'skeletonToFilamentCloud' in 'tools/parsers/ndskl.ts'),
+  // so 'in.density' ∈ [0, 1] across the whole catalogue: 0 = the
   // sparsest filament vertex, 1 = the densest.  The vertex stage
-  // already linearly interpolates `startDensity` ↔ `endDensity` along
+  // already linearly interpolates 'startDensity' ↔ 'endDensity' along
   // the segment, so within a single filament the value rises smoothly
   // toward dense hub regions.
   //
   // Two simultaneous modulations:
   //
-  // * `densityBoost` ramps alpha from a visible floor (0.2) at
+  // * 'densityBoost' ramps alpha from a visible floor (0.2) at
   //   low-density tendrils to full (1.0) at the brightest spine
-  //   vertices.  The `pow(d, 0.6)` gamma-correction stretches the
+  //   vertices.  The 'pow(d, 0.6)' gamma-correction stretches the
   //   low end of the curve — without it, a near-linear ramp would
   //   crush the dim 0.1–0.4 range to invisibility against the
   //   tone-mapped HDR background.  0.6 is empirical; the eye reads
   //   the resulting falloff as smooth.
   //
-  // * `tint` blends from a base soft purple at low density toward a
+  // * 'tint' blends from a base soft purple at low density toward a
   //   brighter, slightly more white-blue purple at high density.
   //   This adds a second visual axis (hue, not just brightness) so
   //   the cosmic-web spine pops without needing the alpha alone to
   //   carry the contrast.  The two endpoints have similar luminance
   //   so the tint shift reads as colour temperature, not glare.
   //
-  // Disclaimer: `density` here is the DTFE field value at the vertex,
+  // Disclaimer: 'density' here is the DTFE field value at the vertex,
   // NOT the per-filament robustness in σ (which is what DisPerSE's
   // persistence cut threshold uses).  They're correlated — denser
   // ridges tend to be more persistent — but not identical.  See the

@@ -10,13 +10,13 @@
 // share the same conceptual binding even though several points-only
 // fields (brightness / selectedIndex / etc) aren't carried here.
 //
-// `camPosWorld` + `pxPerRad` were added when the original
+// 'camPosWorld' + 'pxPerRad' were added when the original
 // "project-a-unit-X-offset" billboard sizing turned out to depend on
 // camera orientation (orbiting a galaxy made the quad visibly shrink
 // or grow as the world-X axis rotated relative to the view direction).
 // The replacement computes each quad's apparent angular radius from
-// `length(instance.posSize.xyz - camPosWorld)` and converts to screen
-// pixels via `pxPerRad = viewport.y / (2 · tan(fovY / 2))`.  Identical
+// 'length(instance.posSize.xyz - camPosWorld)' and converts to screen
+// pixels via 'pxPerRad = viewport.y / (2 · tan(fovY / 2))'.  Identical
 // approach to points.wgsl — see that file for the derivation.
 struct Uniforms {
   viewProj: mat4x4<f32>,
@@ -28,10 +28,10 @@ struct Uniforms {
 };
 
 // Per-instance attributes.  Three vec4s — first packs (xyz, sizeWorld),
-// second is the uv rect, third carries the per-frame `fadeAlpha`
+// second is the uv rect, third carries the per-frame 'fadeAlpha'
 // multiplier produced by the engine (distance fade × load fade).  All
 // naturally 16-byte aligned.  The remaining three components of
-// `extras` are reserved padding for future per-instance flags.
+// 'extras' are reserved padding for future per-instance flags.
 struct InstanceIn {
   @location(0) posSize: vec4<f32>,
   @location(1) uvRect:  vec4<f32>,
@@ -44,7 +44,7 @@ struct VsOut {
   // sub-rectangle of the 2048×2048 atlas.
   @location(0)       atlasUv:   vec2<f32>,
   // UV inside the corner-local [0, 1]² unit square — used to compute
-  // the radial alpha mask in `fs`.  Independent of atlasUv because the
+  // the radial alpha mask in 'fs'.  Independent of atlasUv because the
   // atlas slot might not occupy the full corner range when slot UV
   // rectangles get clamped or padded.  Threading both lets us decouple
   // "which texel to sample" from "where am I in the quad shape".
@@ -117,14 +117,14 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   //
   // Build the local +Y axis of the billboard from the projected celestial
   // north direction at this galaxy's screen position.  Why?  In skymap's
-  // world convention `raDecZToCartesian`, +Z is the celestial north pole
-  // (Dec = +90°), so projecting `pos + EPS · (0,0,1)` and subtracting the
+  // world convention 'raDecZToCartesian', +Z is the celestial north pole
+  // (Dec = +90°), so projecting 'pos + EPS · (0,0,1)' and subtracting the
   // projected center gives the screen-space direction "toward sky north"
   // at the galaxy.  Using that as the billboard's local +Y means:
   //
   //   - The texture's content (which is north-up by SDSS / DSS source
   //     convention) stays aligned with sky north as the camera rolls.
-  //   - The points-pass elliptical mask (which rotates by `-PA`, with PA
+  //   - The points-pass elliptical mask (which rotates by '-PA', with PA
   //     measured east-of-north) ends up consistent with the texture's
   //     apparent orientation — both are anchored to projected north.
   //
@@ -135,7 +135,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   //
   // Edge case: at the celestial poles the world +Z direction projects to
   // (or very near) the same screen point as the galaxy center, so
-  // `upPx ≈ 0` and `normalize` would blow up.  We fall back to the
+  // 'upPx ≈ 0' and 'normalize' would blow up.  We fall back to the
   // original screen-axis basis in that degenerate case.  This is the only
   // place the old behaviour leaks through — and only for galaxies whose
   // line of sight is essentially parallel to the celestial north axis.
@@ -155,7 +155,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // +X (right) is a +90° rotation of +Y (up) in screen space.  Image-space
   // y points down on screen, so the in-image right-of-north direction is
   // (upY, -upX) — same handedness as the points-pass UV convention so the
-  // `-PA` rotation in points.wgsl agrees with the quad's local +Y meaning
+  // '-PA' rotation in points.wgsl agrees with the quad's local +Y meaning
   // "celestial north".
   let rightPxNorm = vec2<f32>(upPxNorm.y, -upPxNorm.x);
 
@@ -164,8 +164,8 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let offsetPx = corner.x * halfPixels * rightPxNorm + corner.y * halfPixels * upPxNorm;
 
   // Convert pixels to clip-space half-extent.  As in points.wgsl, we
-  // multiply by `centerClip.w` to cancel the perspective divide so the
-  // billboard ends up exactly `halfPixels` on screen regardless of
+  // multiply by 'centerClip.w' to cancel the perspective divide so the
+  // billboard ends up exactly 'halfPixels' on screen regardless of
   // depth.
   let offsetClip = vec2<f32>(
     offsetPx.x * 2.0 / u.viewport.x,
@@ -180,7 +180,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   );
 
   // UV: corner is in [-1, 1]; remap to [0, 1] then to the slot's atlas
-  // rect.  Flip V so the texture isn't upside down — `flipY: false` on
+  // rect.  Flip V so the texture isn't upside down — 'flipY: false' on
   // the atlas upload preserves the natural ImageBitmap orientation
   // (top-down), and our UV convention here puts v=0 at the top of the
   // atlas.
@@ -214,28 +214,28 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // SDSS / DSS cutout JPEGs ship with no alpha channel (rgba.a is always
   // 1.0), so they used to render their full sky background as an opaque
   // grey square against the dark dot field — the cosmetic complaint
-  // logged in `project_thumbnail_quality.md`.
+  // logged in 'project_thumbnail_quality.md'.
   //
   // Trick: use the maximum RGB component as alpha.  A pure-black sky
   // pixel (max ≈ 0.02) becomes nearly transparent; a galaxy body
   // (max ≈ 0.4–0.9) stays opaque; saturated stars (max = 1.0) stay fully
-  // bright.  `smoothstep` applies a soft threshold so the dimmest sky
+  // bright.  'smoothstep' applies a soft threshold so the dimmest sky
   // pixels vanish entirely instead of leaving a faint grey haze:
   //   - lum ≤ 0.05 → fully transparent (sky)
   //   - lum ≥ 0.30 → fully opaque (galaxy / star)
   // This is the "quick fix" stop-gap; the planned proper sky-subtraction
-  // (`project_thumbnail_quality.md` option B) will sample corner pixels
+  // ('project_thumbnail_quality.md' option B) will sample corner pixels
   // and subtract a per-cutout sky level.
   let lum = max(rgba.r, max(rgba.g, rgba.b));
   let lumAlpha = smoothstep(0.05, 0.30, lum);
-  // `fadeAlpha` is the engine's per-frame fade multiplier — combines
+  // 'fadeAlpha' is the engine's per-frame fade multiplier — combines
   // distance fade (galaxies smoothly grow in as they cross the
   // apparent-size threshold) and load fade (~400 ms ramp from
   // bitmap-arrival).  Final alpha is the product of all three.
   let alpha = lumAlpha * mask * in.fadeAlpha;
   // Discard near-transparent fragments — pure early-out
   // optimisation.  The quad covers a full bounding box, but the
-  // soft circular mask + brightness-derived `lumAlpha` zero out the
+  // soft circular mask + brightness-derived 'lumAlpha' zero out the
   // corners and the dim-sky pixels.  An additive blend of
   // (rgb * ~0, ~0) on top of the HDR target would contribute
   // basically nothing visible while still costing a blend-bandwidth
@@ -246,6 +246,6 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // discard as just a cheap early-out.)
   if (alpha < 0.01) { discard; }
   // Premultiplied-alpha output — required by the project's blend
-  // configuration (see device.ts `alphaMode: 'premultiplied'`).
+  // configuration (see device.ts 'alphaMode: 'premultiplied'').
   return vec4<f32>(rgba.rgb * alpha, alpha);
 }

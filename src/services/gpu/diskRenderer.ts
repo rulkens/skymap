@@ -28,7 +28,7 @@
 
 import type { mat4 } from 'gl-matrix';
 import type { GpuContext } from '../../@types';
-import diskWgsl from './shaders/disks.wgsl?raw';
+import diskWgsl from './shaders/disks.wesl?static';
 
 export type DiskInstance = {
   x: number;
