@@ -359,3 +359,56 @@ describe('PointRenderer.upload — regression: parallel-upload rebake race', () 
     }
   });
 });
+
+// ─── Global-idx encoding / decoding ───────────────────────────────────────────
+//
+// `toGlobalIdx` and `fromGlobalIdx` are the boundary the engine uses to
+// encode (or decode) the cross-survey global instance ID space.  The
+// encoding rule — running sum of prior-source counts in `ALL_SOURCES`
+// enum order — is the renderer's, baked into every per-instance
+// vertex buffer's `globalInstanceIdx` slot.  Engine consumers used to
+// duplicate the rule in three places (`resolveGlobalIdx`,
+// `selectFamous`, `selectByAlias`); now they ask the renderer through
+// these methods, keeping the rule to a single source of truth.
+describe('PointRenderer global-idx encoding', () => {
+  it('toGlobalIdx + fromGlobalIdx round-trip across multiple sources', async () => {
+    const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
+    // ALL_SOURCES order is [Synthetic, Famous, TwoMRS, SDSS, Glade], so
+    // TwoMRS comes before SDSS and Glade comes last.
+    await renderer.upload(Source.SDSS, makeCloud(100));
+    await renderer.upload(Source.TwoMRS, makeCloud(50));
+    await renderer.upload(Source.Glade, makeCloud(200));
+
+    // TwoMRS: localIdx 0 → globalIdx 0; SDSS: localIdx 0 → globalIdx 50;
+    // Glade: localIdx 0 → globalIdx 150.
+    expect(renderer.toGlobalIdx(Source.TwoMRS, 0)).toBe(0);
+    expect(renderer.toGlobalIdx(Source.SDSS, 0)).toBe(50);
+    expect(renderer.toGlobalIdx(Source.Glade, 0)).toBe(150);
+    expect(renderer.toGlobalIdx(Source.Glade, 199)).toBe(349);
+
+    // fromGlobalIdx is the inverse.
+    expect(renderer.fromGlobalIdx(0)).toEqual({ source: Source.TwoMRS, localIdx: 0 });
+    expect(renderer.fromGlobalIdx(49)).toEqual({ source: Source.TwoMRS, localIdx: 49 });
+    expect(renderer.fromGlobalIdx(50)).toEqual({ source: Source.SDSS, localIdx: 0 });
+    expect(renderer.fromGlobalIdx(149)).toEqual({ source: Source.SDSS, localIdx: 99 });
+    expect(renderer.fromGlobalIdx(150)).toEqual({ source: Source.Glade, localIdx: 0 });
+    expect(renderer.fromGlobalIdx(349)).toEqual({ source: Source.Glade, localIdx: 199 });
+  });
+
+  it('fromGlobalIdx returns null for out-of-range indices', async () => {
+    const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
+    await renderer.upload(Source.SDSS, makeCloud(100));
+
+    // Past the end of every loaded source.
+    expect(renderer.fromGlobalIdx(100)).toBeNull();
+    expect(renderer.fromGlobalIdx(1_000_000)).toBeNull();
+  });
+
+  it('toGlobalIdx returns localIdx for unloaded sources (matches instanceIdOffset === 0)', () => {
+    const renderer = new PointRenderer(makeStubDevice(), 'bgra8unorm');
+    // Nothing uploaded — every source's offset is 0, so toGlobalIdx is
+    // identity on localIdx.
+    expect(renderer.toGlobalIdx(Source.SDSS, 5)).toBe(5);
+    expect(renderer.toGlobalIdx(Source.Glade, 5)).toBe(5);
+  });
+});
