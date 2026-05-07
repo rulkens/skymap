@@ -130,8 +130,9 @@ export type ComputeAngularWeightsInput = {
  * Compute per-galaxy HEALPix angular re-weighting factors for one cloud.
  *
  * The result is a tightly-packed `Float32Array` (length = cloud.count) — one
- * weight per galaxy.  The caller (`pointRenderer.applyAngularReweightMode`)
- * folds these into the appropriate slot of the live mirror Float32Array
+ * weight per galaxy.  The caller (`pointRenderer.bakeAngularWeights`,
+ * invoked via the public `setBiasMode(BiasMode.AngularReweight)` entry
+ * point) folds these into the appropriate slot of the live mirror Float32Array
  * before re-uploading the whole vertex buffer in a single
  * `device.queue.writeBuffer` call.
  *

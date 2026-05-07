@@ -68,7 +68,6 @@ import { createPostProcess } from '../gpu/postProcess';
 import { createOrbitCamera, computeViewProj, updatePosition } from '../camera/orbitCamera';
 import { attachOrbitControls } from '../camera/orbitControls';
 import { Source, maskWith, maskWithout } from '../../data/sources';
-import { BiasMode } from '../../data/biasMode';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -214,8 +213,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //                    threshold/Schechter parameters; the latter
   //                    three stay 0 until the shader's mode-2/3/4
   //                    branches activate via the `setBiasMode` lazy
-  //                    bake at `applySchechterMode` /
-  //                    `applyAngularReweightMode`).
+  //                    bake forwarded to `pointRenderer.setBiasMode`).
   //   - `sources`    → loaded `PointCloud`s + visibility bitmask +
   //                    LOD mode + the optional famous-galaxy sidecars.
   //   - `picking`    → hover / click / drag mutables (latest CSS-pixel
@@ -1871,78 +1869,37 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
 
     setBiasMode(mode) {
-      // Forwarded into the per-frame uniform on the next draw.  The shader
-      // branches on the integer value (0 = none, 1 = volume-limited, …)
-      // so flipping this from devtools or the future SettingsPanel takes
-      // effect on the next rendered frame without any pipeline rebuild.
+      // Forwarded into the per-frame uniform on the next draw.  The
+      // shader branches on the integer value (0 = none, 1 = volume-
+      // limited, …) so flipping this from devtools or the SettingsPanel
+      // takes effect on the next rendered frame without any pipeline
+      // rebuild.
       //
       // We always fire the echo callback — even when `mode === state.bias.mode`
-      // — so the UI seeds correctly on first call.  The plan calls this
-      // out explicitly because `setBiasMode(BiasMode.None)` is a legitimate
-      // first-frame state that must reach the SettingsPanel.
-      const wasSchechter = state.bias.mode === BiasMode.Schechter;
-      const isSchechter = mode === BiasMode.Schechter;
-      const wasAngular = state.bias.mode === BiasMode.AngularReweight;
-      const isAngular = mode === BiasMode.AngularReweight;
+      // — so the UI seeds correctly on first call.
+      //
+      // The renderer's `setBiasMode` handles the lazy per-galaxy bake
+      // (Schechter, AngularReweight) internally.  See pointRenderer.ts's
+      // setBiasMode docstring for the cache + eager-on-upload contract.
+      // We `.then(requestRender)` so the second frame after the bake
+      // resolves picks up the freshly-spliced GPU buffer.
       state.bias.mode = mode;
       cb.onBiasModeChange?.(mode);
 
-      // ── Lazy Schechter-ratio bake (perf) ──────────────────────────────
-      //
-      // The per-galaxy Schechter integral is ~700 M math ops at full deck
-      // (3.5 M galaxies × 200-step trapezoidal integral) — wasted work if
-      // the user never picks mode 3.  We defer it until the first transition
-      // TO Schechter mode, then cache the result on the renderer for instant
-      // re-toggle.  See `pointRenderer.applySchechterMode()` for the full
-      // mirror-array re-upload trick that keeps this fire-and-forget.
-      //
-      // Going AWAY from Schechter is intentionally a no-op: the shader's
-      // `select(1.0, schechterRatio, biasMode == 3u)` gate already ignores
-      // slot 11 in modes 0/1/2, so leaving the values in the GPU buffer is
-      // both correct and cheaper than re-uploading 1.0s.
-      if (!wasSchechter && isSchechter && state.gpu.renderer) {
-        state.gpu.renderer
-          .applySchechterMode()
-          .then(() => {
-            // Weights are now in the GPU buffer; the next frame will
-            // pick them up.
-            state.subsystems.scheduler.requestRender();
-          })
-          .catch((err) => {
-            console.error('[engine] Schechter ratio bake failed:', err);
-          });
-      }
-
-      // ── Lazy HEALPix angular re-weight bake ────────────────────────────
-      //
-      // Mirror of the Schechter transition above.  The HEALPix bake is
-      // cheaper (~100-300 ms at full deck — three linear passes plus a
-      // per-shell median sort) but still long enough to drop a frame, so
-      // we ship it to a worker via `applyAngularReweightMode()`.  Per-
-      // survey, never global: each cloud bins itself, so SDSS's footprint
-      // can't contaminate GLADE's correction.
-      //
-      // Going AWAY from mode 4 is a no-op for the same reason as Schechter:
-      // the shader's `select(1.0, angularDensityWeight, biasMode == 4u)`
-      // gate already ignores slot 12 in the other four modes, so leaving
-      // the baked weights in the GPU buffer is correct AND keeps the
-      // next mode-4 toggle instant (the cache hit fires off a single
-      // re-upload, no worker spawn).
-      if (!wasAngular && isAngular && state.gpu.renderer) {
-        state.gpu.renderer
-          .applyAngularReweightMode()
-          .then(() => {
-            state.subsystems.scheduler.requestRender();
-          })
-          .catch((err) => {
-            console.error('[engine] Angular re-weight bake failed:', err);
-          });
-      }
+      state.gpu.renderer
+        ?.setBiasMode(mode)
+        .then(() => {
+          state.subsystems.scheduler.requestRender();
+        })
+        .catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error('[engine] bias-mode bake failed:', err);
+        });
 
       // Wake the loop so the new biasMode uniform takes effect on the
-      // next rendered frame.  Schechter / angular bakes (above) also
-      // call requestRender from their resolve handlers in Task 5 to
-      // trigger a second render once the GPU buffers are ready.
+      // next rendered frame.  The renderer's bake (above) also calls
+      // requestRender from its resolve handler to trigger a second
+      // render once the GPU buffers are ready.
       state.subsystems.scheduler.requestRender();
     },
 
