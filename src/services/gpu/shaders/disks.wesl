@@ -54,16 +54,21 @@
 // Each corner is placed at center + (corner.x * major + corner.y *
 // minor_3d) * halfSize, then projected via viewProj.
 
+// CameraUniforms covers the canonical 80-byte prefix shared by every
+// world-space renderer (viewProj + viewportPx + 8B pad).  The disks
+// vertex stage only consults 'viewProj' via 'worldToClip' — the disk
+// math is camera-independent by design (see the docblock above) — so
+// 'worldToNdc' / 'worldEyeDepth' aren't imported.  Restraint matches
+// what filaments + quads already adopted in this WESL conversion.
+import package::lib::camera::{ CameraUniforms, worldToClip };
+
 struct Uniforms {
-  viewProj: mat4x4<f32>,
-  viewport: vec2<f32>,
-  _pad0: f32,
-  _pad1: f32,
+  cam: CameraUniforms,
   // camPos is preserved in the layout for ABI continuity with the JS
   // upload path, but the world-fixed disk math doesn't read it: the
   // disk's orientation is an intrinsic galaxy property, independent of
-  // where the camera sits.  The camera contributes only via viewProj
-  // (which is also a uniform, see above).
+  // where the camera sits.  The camera contributes only via
+  // 'cam.viewProj' (consumed by 'worldToClip').
   camPos: vec3<f32>,
   _pad2: f32,
 };
@@ -171,7 +176,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // automatically when the camera projects them.
   let world = center + (major * corner.x + minor_3d * corner.y) * halfSize;
   var out: VsOut;
-  out.clipPos = u.viewProj * vec4<f32>(world, 1.0);
+  out.clipPos = worldToClip(u.cam, world);
 
   let cornerUv = (corner + vec2<f32>(1.0, 1.0)) * 0.5;
   let uvLocal = vec2<f32>(cornerUv.x, 1.0 - cornerUv.y);
