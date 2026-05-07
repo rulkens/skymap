@@ -726,8 +726,27 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
             // case; the slot will still transition to `ready`, but no
             // GPU buffer exists to consume it.
             if (!state.gpu.renderer) return;
+            const t0 = performance.now();
+            // eslint-disable-next-line no-console
+            console.log(
+              `[engine] upload start ${sourceName(source)} count=${cloud.count}`,
+            );
             await state.gpu.renderer.upload(source, cloud);
             state.sources.clouds.set(source, cloud);
+            const dtMs = Math.round(performance.now() - t0);
+            // After upload, dump what the GPU actually has — the source
+            // of truth the draw loop reads from.  If this disagrees with
+            // the slot's reported `cloud.count`, the upload landed on the
+            // renderer but something else (e.g. a parallel rebake or a
+            // concurrent upload for the same source) overwrote it.
+            const onGpu = Array.from(state.gpu.renderer.loadedSources())
+              .map((e) => `${sourceName(e.source)}=${e.count}`)
+              .join(', ');
+            const total = state.gpu.renderer.totalCount();
+            // eslint-disable-next-line no-console
+            console.log(
+              `[engine] upload done  ${sourceName(source)} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
+            );
           },
         });
         slot.subscribe((s) => {
