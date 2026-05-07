@@ -22,7 +22,8 @@
  *   - clear()                       → drops the instance buffer
  *   - destroy()                     → releases all GPU resources
  */
-import shaderSource from './shaders/filaments.wesl?static';
+import vsCode from './shaders/filaments/vertex.wesl?static';
+import fsCode from './shaders/filaments/fragment.wesl?static';
 import type { FilamentCloud } from '../../@types/FilamentCloud';
 import type { mat4 } from 'gl-matrix';
 import { CloudFade } from './cloudFade';
@@ -125,7 +126,8 @@ export class FilamentRenderer {
      */
     hdrFormat: GPUTextureFormat,
   ) {
-    const module = createShaderModuleWithDevLog(device, shaderSource, 'filaments');
+    const vsModule = createShaderModuleWithDevLog(device, vsCode, 'filaments.vertex');
+    const fsModule = createShaderModuleWithDevLog(device, fsCode, 'filaments.fragment');
 
     this.uniformBuffer = device.createBuffer({
       label: 'filaments-uniform-buffer',
@@ -191,7 +193,7 @@ export class FilamentRenderer {
         bindGroupLayouts: [bindGroupLayout, this.cloudFadeBindGroupLayout],
       }),
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: 'vs',
         buffers: [
           // Per-quad-vertex: uv vec2
@@ -214,7 +216,7 @@ export class FilamentRenderer {
         ],
       },
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [
           {
