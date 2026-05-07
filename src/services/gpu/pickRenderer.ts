@@ -194,6 +194,11 @@ export type PickRenderer = {
  *                       uniforms; passing a different PointRenderer than
  *                       the one rendering the visual pass would make the
  *                       pick texture see a stale or wrong viewProj matrix.
+ *                       Held by reference; the caller owns its lifecycle.
+ *                       Destroying the PointRenderer before this
+ *                       PickRenderer leaves the picker in undefined-
+ *                       behaviour territory — call `pickRenderer.destroy()`
+ *                       first.
  */
 /**
  * Padding (in CSS pixels) added to `pointSizePx` for the pick pass only.
@@ -535,13 +540,16 @@ export function createPickRenderer(
     // ── Bind group ─────────────────────────────────────────────────────────
     //
     // `layout:'auto'` on the pipeline reflects the @group(0) @binding(0) entry
-    // from the shader.  We build the bind group with the *passed-in* uniform
-    // buffer — the same buffer PointRenderer writes to — so the pick pass sees
-    // the same viewProj/viewport values as the visual pass did this frame.
+    // from the shader.  We build the bind group with the lazily-resolved
+    // `sharedUniformBuffer` (read from `pointRenderer.uniformBuffer` at the
+    // top of this call) so the pick pass sees the same viewProj/viewport
+    // values the visual pass wrote.
     //
-    // Creating the bind group inside pick() (rather than once in the constructor)
-    // lets the caller swap the sharedUniformBuffer between calls if needed, and
-    // avoids caching a stale reference if the buffer is ever recreated.
+    // Creating the bind group inside pick() (rather than once in the
+    // constructor) avoids caching a stale buffer reference: if PointRenderer
+    // ever rebuilds its uniform buffer (e.g. device-loss recovery), the
+    // next pick() call picks up the fresh handle without needing to
+    // invalidate this PickRenderer.
     const bindGroup = device.createBindGroup({
       layout: pipeline.getBindGroupLayout(0),
       entries: [{ binding: 0, resource: { buffer: sharedUniformBuffer } }],
