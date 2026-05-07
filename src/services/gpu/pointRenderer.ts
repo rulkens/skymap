@@ -848,10 +848,19 @@ export class PointRenderer {
   // ─── Public accessors ────────────────────────────────────────────────────────
 
   /**
-   * The GPU buffer holding per-frame uniform data (viewProj, viewport, etc.).
+   * @internal
    *
-   * Written every frame by `draw()`. The pick renderer reads the same buffer
-   * so it sees the same camera state as the visual pass — no extra uploads needed.
+   * Read by `createPickRenderer` — the pick pass shares this uniform buffer
+   * with the visual pass so it sees the same view-projection matrix the
+   * visual frame just wrote.  Engine code MUST NOT consume this; the
+   * coupling is bound at PickRenderer construction time and threaded
+   * internally.
+   *
+   * Kept as a public getter for the ESM module-graph reach — TypeScript
+   * does not enforce `@internal` at compile time without
+   * `--stripInternal` configured, but the documented contract + a grep
+   * at PR review time prevents engine consumers from re-introducing
+   * the leak.
    */
   get uniformBuffer(): GPUBuffer {
     return this.uniformBuffer_internal;

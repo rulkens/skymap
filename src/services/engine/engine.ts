@@ -1095,7 +1095,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // Build the pick renderer. It shares the same vertex/uniform buffers as
       // the visual renderer — no extra GPU memory for point data.
-      const pickRenderer = createPickRenderer(device);
+      const pickRenderer = createPickRenderer(device, renderer);
       state.gpu.pickRenderer = pickRenderer;
       // The resolver adapts the renderer's `fromGlobalIdx` decoder
       // (which owns the global-idx encoding rule and the tier-swap-
@@ -1283,7 +1283,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           pickYPx: cssToTexPx(yCss),
           viewportPx: [canvas.width, canvas.height],
           visibleSources,
-          uniformBuffer: r.uniformBuffer,
           // Threaded through so the pick pass can boost its floor size
           // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
           pointSizePx: state.settings.pointSizePx,
@@ -1640,7 +1639,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
               cssToTexPx(pos.x),
               cssToTexPx(pos.y),
               visibleSources,
-              rendererRef.uniformBuffer,
               // Boost the picking floor for easier hover targets — see
               // PICK_PADDING_PX in pickRenderer.ts.
               state.settings.pointSizePx,

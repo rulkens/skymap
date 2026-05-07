@@ -52,6 +52,7 @@
 
 import shaderSrc from './shaders/points.wgsl?raw';
 import type { Source } from '../../data/sources';
+import type { PointRenderer } from './pointRenderer';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,10 +111,13 @@ export type PickRenderer = {
    *
    * ### Uniform buffer contract
    *
-   * `pick()` does NOT write to the uniform buffer.  It relies on the visual
-   * frame having already written the per-frame uniforms (viewProj, viewport,
-   * pointSizePx, brightness) to `sharedUniformBuffer` for the same camera state.
-   * Call `pick()` *after* the visual frame has written its uniforms.
+   * `pick()` does NOT write the per-frame uniforms (viewProj, viewport,
+   * pointSizePx, brightness) — it reuses whatever the visual pass wrote
+   * for the current camera state.  The shared uniform buffer is the one
+   * owned by the `PointRenderer` passed to `createPickRenderer`; the
+   * coupling is bound at construction time and is no longer threaded
+   * through every call.  Call `pick()` *after* the visual frame has
+   * written its uniforms.
    *
    * ### Concurrency
    *
@@ -131,7 +135,6 @@ export type PickRenderer = {
    *                         the same enum order as `PointRenderer.loadedSources()`.
    *                         The caller is responsible for filtering by visibility
    *                         mask — the picker draws every record it receives.
-   * @param sharedUniformBuffer  The uniform buffer shared with `PointRenderer`.
    * @returns 0-based *global* index of the front-most point under the cursor,
    *          or -1 if the cursor is over background or a pick is already in flight.
    */
@@ -140,7 +143,6 @@ export type PickRenderer = {
     pickXPx: number,
     pickYPx: number,
     sources: Iterable<PickSourceDraw>,
-    sharedUniformBuffer: GPUBuffer,
     /**
      * The user's current `pointSizePx` setting.  Used to compute the
      * pick-pass floor: `pointSizePx + PICK_PADDING_PX` is written into
@@ -167,7 +169,8 @@ export type PickRenderer = {
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 /**
- * Construct a `PickRenderer` bound to the given WebGPU device.
+ * Construct a `PickRenderer` bound to the given WebGPU device and a
+ * specific `PointRenderer`.
  *
  * The method:
  *   1. Compiles the same WGSL shader module used by `PointRenderer`.
@@ -179,7 +182,23 @@ export type PickRenderer = {
  * Pick textures are allocated lazily on the first `pick()` call and
  * recreated automatically whenever the viewport size changes.
  *
- * @param device  The WebGPU logical device.  Owned by the caller.
+ * The `pointRenderer` argument is held by reference and read inside
+ * `pick()` to find the shared uniform buffer.  Binding the coupling at
+ * construction time (rather than threading the buffer through every
+ * call) keeps the engine ↔ renderer surface narrow: the engine no
+ * longer needs visibility into a renderer-internal buffer.
+ *
+ * @param device         The WebGPU logical device.  Owned by the caller.
+ * @param pointRenderer  The visual renderer this picker reads its uniform
+ *                       buffer from.  The two MUST share their per-frame
+ *                       uniforms; passing a different PointRenderer than
+ *                       the one rendering the visual pass would make the
+ *                       pick texture see a stale or wrong viewProj matrix.
+ *                       Held by reference; the caller owns its lifecycle.
+ *                       Destroying the PointRenderer before this
+ *                       PickRenderer leaves the picker in undefined-
+ *                       behaviour territory — call `pickRenderer.destroy()`
+ *                       first.
  */
 /**
  * Padding (in CSS pixels) added to `pointSizePx` for the pick pass only.
@@ -211,7 +230,10 @@ export type PickRenderer = {
  */
 const PICK_PADDING_PX = 4;
 
-export function createPickRenderer(device: GPUDevice): PickRenderer {
+export function createPickRenderer(
+  device: GPUDevice,
+  pointRenderer: PointRenderer,
+): PickRenderer {
   // ── Shader module ──────────────────────────────────────────────────────────
   //
   // We reuse the same WGSL source as PointRenderer. The shader file contains
@@ -407,9 +429,16 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     pickXPx: number,
     pickYPx: number,
     sources: Iterable<PickSourceDraw>,
-    sharedUniformBuffer: GPUBuffer,
     pointSizePx?: number,
   ): Promise<number> {
+    // Resolve the shared uniform buffer from the bound PointRenderer at
+    // call time rather than at construction.  Reading it lazily means we
+    // pick up any future buffer recreation (e.g. device-loss recovery
+    // would rebuild the PointRenderer's internal buffer) without having
+    // to invalidate this PickRenderer.  The PointRenderer's
+    // `uniformBuffer` getter is `@internal` — we are the only consumer.
+    const sharedUniformBuffer = pointRenderer.uniformBuffer;
+
     // Concurrency guard — see the `inFlight` declaration above for rationale.
     if (inFlight) return -1;
 
@@ -511,13 +540,16 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     // ── Bind group ─────────────────────────────────────────────────────────
     //
     // `layout:'auto'` on the pipeline reflects the @group(0) @binding(0) entry
-    // from the shader.  We build the bind group with the *passed-in* uniform
-    // buffer — the same buffer PointRenderer writes to — so the pick pass sees
-    // the same viewProj/viewport values as the visual pass did this frame.
+    // from the shader.  We build the bind group with the lazily-resolved
+    // `sharedUniformBuffer` (read from `pointRenderer.uniformBuffer` at the
+    // top of this call) so the pick pass sees the same viewProj/viewport
+    // values the visual pass wrote.
     //
-    // Creating the bind group inside pick() (rather than once in the constructor)
-    // lets the caller swap the sharedUniformBuffer between calls if needed, and
-    // avoids caching a stale reference if the buffer is ever recreated.
+    // Creating the bind group inside pick() (rather than once in the
+    // constructor) avoids caching a stale buffer reference: if PointRenderer
+    // ever rebuilds its uniform buffer (e.g. device-loss recovery), the
+    // next pick() call picks up the fresh handle without needing to
+    // invalidate this PickRenderer.
     const bindGroup = device.createBindGroup({
       layout: pipeline.getBindGroupLayout(0),
       entries: [{ binding: 0, resource: { buffer: sharedUniformBuffer } }],

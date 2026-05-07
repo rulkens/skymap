@@ -12,8 +12,11 @@
  *      the index (info: null) — preserves pre-extraction behaviour.
  *   4. A picker hit but `buildPointInfo` returns null still selects
  *      the index (info: null) — same parity rule.
- *   5. The picker is called with the exact (viewport, x, y, sources,
- *      uniformBuffer) values supplied by the engine — no transformation.
+ *   5. The picker is called with the exact (viewport, x, y, sources)
+ *      values supplied by the engine — no transformation.  The shared
+ *      uniform buffer is no longer threaded through the resolver: the
+ *      pick renderer reads it from its bound PointRenderer instead, so
+ *      the resolver's surface is one less arg wide.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -43,7 +46,6 @@ const dummyArgs: ClickResolveInput = {
   pickYPx: 20,
   viewportPx: [800, 600],
   visibleSources: [],
-  uniformBuffer: {} as GPUBuffer,
 };
 
 describe('createClickResolver', () => {
@@ -95,19 +97,20 @@ describe('createClickResolver', () => {
       buildPointInfo: () => dummyInfo,
     });
     const sources: ClickResolveInput['visibleSources'] = [];
-    const ub = {} as GPUBuffer;
     await r.resolveClick({
       pickXPx: 11,
       pickYPx: 22,
       viewportPx: [1280, 720],
       visibleSources: sources,
-      uniformBuffer: ub,
     });
     expect(picker.pick).toHaveBeenCalledTimes(1);
-    // The 6th arg is `pointSizePx` — undefined when the caller didn't
+    // The 5th arg is `pointSizePx` — undefined when the caller didn't
     // supply it, which preserves the legacy "no pick-floor boost"
-    // behaviour for tests that aren't exercising that path.
-    expect(picker.pick).toHaveBeenCalledWith([1280, 720], 11, 22, sources, ub, undefined);
+    // behaviour for tests that aren't exercising that path.  The
+    // shared uniform buffer is no longer threaded through here; the
+    // pick renderer reads it from its bound PointRenderer (Phase 3 of
+    // the engine-renderer-boundaries plan).
+    expect(picker.pick).toHaveBeenCalledWith([1280, 720], 11, 22, sources, undefined);
   });
 
   it('forwards the resolveGlobalIdx triple into buildPointInfo unchanged', async () => {
