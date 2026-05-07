@@ -1616,9 +1616,9 @@ export class PointRenderer {
    * Nth point?" rather than re-deriving the rule themselves — keeps
    * the encoding to one source of truth.
    *
-   * Returns `instanceIdOffset(source) + localIdx`; equivalent to
-   * `instanceIdOffset(source) + localIdx` at the call site, expressed
-   * as one method on the boundary instead of two.
+   * Returns `instanceIdOffset(source) + localIdx`; equivalent to the
+   * previous call-site expression but expressed as one method on the
+   * boundary so the encoding rule has only one home.
    */
   toGlobalIdx(source: Source, localIdx: number): number {
     return (this.clouds.get(source)?.instanceIdOffset ?? 0) + localIdx;
@@ -1629,17 +1629,26 @@ export class PointRenderer {
    * lets a caller look the point up in its source-specific cloud.
    * Inverse of `toGlobalIdx`.
    *
-   * Returns `null` when the global ID:
-   *   - falls past the end of every loaded source, OR
-   *   - decodes to a `localIdx >= count` for the resolved source
-   *     (which can transiently happen during a tier-swap window —
-   *     see the bounds-check comment for the user-visible bug this
-   *     defends against).
-   *
    * Walks `loadedSources()` in enum order and subtracts each source's
    * count from the running global ID.  Engine's previous
    * `resolveGlobalIdx` did this inline — moved here so the encoding
    * rule lives entirely inside the renderer.
+   *
+   * Returns `null` when the global ID falls past the end of every
+   * loaded source.  The bounds check uses the renderer's own per-
+   * source counts (`loadedSources()`), which means the returned
+   * `localIdx` is always strictly less than the renderer's `count`
+   * for the resolved source.  Callers holding a separate cloud map
+   * (e.g. the engine's `state.sources.clouds`) are responsible for
+   * any additional cross-bookkeeping bounds-check they may need;
+   * this method guarantees only `localIdx < renderer.entry.count`.
+   *
+   * In practice the renderer's count and the engine's cloud-map
+   * count track each other tightly (both updated within one
+   * microtask in the slot's commit body), so the engine's previous
+   * out-of-bounds bounds-check on its own cloud map is redundant
+   * given this method's guarantee — and the engine's
+   * `pointInfoFromGlobal` was simplified accordingly.
    */
   fromGlobalIdx(globalIdx: number): { source: Source; localIdx: number } | null {
     let remaining = globalIdx;
