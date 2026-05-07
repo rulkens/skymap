@@ -23,6 +23,11 @@ import package::lib::camera::worldToClip;
 // vertex-index → corner / UV lookups are shared.
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::quadUv;
+// Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
+// rationale (three smoothstep patterns recurred across four shaders,
+// naming the shapes makes the intent visible at the call site).
+import package::lib::masks::circularMask;
+import package::lib::masks::lumAlpha;
 
 // Renderer-specific Uniforms struct.
 //
@@ -233,7 +238,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // 0.4 → 0.5 gives a ~10% transition band, soft enough to look like
   // a Gaussian halo rather than a clipped circle.
   let r = length(in.cornerUv - vec2<f32>(0.5, 0.5));
-  let mask = 1.0 - smoothstep(0.4, 0.5, r);
+  let mask = circularMask(r, 0.4, 0.5);
 
   // ── BRIGHTNESS-DERIVED ALPHA (sky-subtraction lite) ──────────────────────
   //
@@ -253,12 +258,12 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // ('project_thumbnail_quality.md' option B) will sample corner pixels
   // and subtract a per-cutout sky level.
   let lum = max(rgba.r, max(rgba.g, rgba.b));
-  let lumAlpha = smoothstep(0.05, 0.30, lum);
+  let lumGate = lumAlpha(lum, 0.05, 0.30);
   // 'fadeAlpha' is the engine's per-frame fade multiplier — combines
   // distance fade (galaxies smoothly grow in as they cross the
   // apparent-size threshold) and load fade (~400 ms ramp from
   // bitmap-arrival).  Final alpha is the product of all three.
-  let alpha = lumAlpha * mask * in.fadeAlpha;
+  let alpha = lumGate * mask * in.fadeAlpha;
   // Discard near-transparent fragments — pure early-out
   // optimisation.  The quad covers a full bounding box, but the
   // soft circular mask + brightness-derived 'lumAlpha' zero out the

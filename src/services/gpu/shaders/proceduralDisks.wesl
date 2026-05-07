@@ -50,6 +50,15 @@ import package::lib::billboard::quadCorner;
 import package::lib::orientation::DiskAxes;
 import package::lib::orientation::diskAxes;
 import package::lib::colorIndex::ramp;
+// Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
+// rationale (three smoothstep patterns recurred across four shaders,
+// naming the shapes makes the intent visible at the call site). The
+// previous inline form here was 'smoothstep(1.0, 0.6, r)' which
+// relies on smoothstep's symmetry under edge inversion to produce
+// the high-inside-low-outside shape; 'circularMask(r, 0.6, 1.0)'
+// produces the same output and makes the inner/outer ordering
+// explicit.
+import package::lib::masks::circularMask;
 
 struct Uniforms {
   cam: CameraUniforms,
@@ -225,7 +234,7 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // We multiply the alpha (not the rgb separately) because we use
   // premultiplied alpha additive blending; alpha is the brightness
   // gate, and fading it to 0 at r = 1.0 is what removes the hard edge.
-  let edgeFade = smoothstep(1.0, 0.6, r);
+  let edgeFade = circularMask(r, 0.6, 1.0);
   let edgeFadeLinear = edgeFade * edgeFade;
   let alpha = intensity * in.crossfadeAlpha * edgeFadeLinear;
   // Premultiplied alpha — matches the project's blend mode (see

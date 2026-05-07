@@ -27,6 +27,13 @@
 import package::lib::camera::{ CameraUniforms, worldToClip };
 import package::lib::cloudFade::CloudUniforms;
 import package::lib::cloudFade::applyCloudFade;
+// Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
+// rationale (three smoothstep patterns recurred across four shaders,
+// naming the shapes makes the intent visible at the call site).
+// 'edgeBandMask(axis, fade)' is the two-tailed soft-window pattern
+// previously spelled inline as 'smoothstep(0, fade, x) * (1 -
+// smoothstep(1-fade, 1, x))' below.
+import package::lib::masks::edgeBandMask;
 
 // Renderer-specific Uniforms struct.
 //
@@ -128,11 +135,12 @@ fn vs(in : PerVertex) -> VSOut {
 @fragment
 fn fs(in : VSOut) -> @location(0) vec4<f32> {
   // Soft anti-aliased edge: uv.y ∈ [0, 1], peak at 0.5.
-  // smoothstep(0, 0.1, x) and (1 - smoothstep(0.9, 1, x)) carve a soft
-  // window around the centre.  Multiplied together they give a
-  // perpendicular-distance falloff that fades to 0 at the line's edges.
-  let edgeFade =
-    smoothstep(0.0, 0.1, in.uv.y) * (1.0 - smoothstep(0.9, 1.0, in.uv.y));
+  // 'edgeBandMask(axis, fade)' carves a soft window around the centre
+  // — fade=0.1 gives a 10%-on / 80%-flat / 10%-off shape. The two-tailed
+  // smoothstep pattern lives in 'lib/masks.wesl' for the longer
+  // rationale; this is the call site that motivated the helper's
+  // existence.
+  let edgeFade = edgeBandMask(in.uv.y, 0.1);
 
   // ── Density-aware brightness + tint ──────────────────────────────
   //

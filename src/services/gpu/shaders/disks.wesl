@@ -81,6 +81,11 @@ import package::lib::billboard::quadUv;
 // invariant + the pole-degeneracy discussion.
 import package::lib::orientation::DiskAxes;
 import package::lib::orientation::diskAxes;
+// Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
+// rationale (three smoothstep patterns recurred across four shaders,
+// naming the shapes makes the intent visible at the call site).
+import package::lib::masks::circularMask;
+import package::lib::masks::lumAlpha;
 
 struct Uniforms {
   cam: CameraUniforms,
@@ -173,12 +178,12 @@ fn fs(in: VsOut) -> @location(0) vec4<f32> {
   // space, so the on-screen shape is a true ellipse from projection;
   // the mask just rounds the four corners of the (square) UV space.
   let r = length(in.cornerUv - vec2<f32>(0.5, 0.5));
-  let mask = 1.0 - smoothstep(0.45, 0.5, r);
+  let mask = circularMask(r, 0.45, 0.5);
   // Brightness-derived alpha — same trick as quads.wgsl, lets the dark
   // sky in the cutout JPEG bleed transparent against the dot field.
   let lum = max(rgba.r, max(rgba.g, rgba.b));
-  let lumAlpha = smoothstep(0.05, 0.30, lum);
-  let alpha = lumAlpha * mask * in.fadeAlpha;
+  let lumGate = lumAlpha(lum, 0.05, 0.30);
+  let alpha = lumGate * mask * in.fadeAlpha;
   // Discard near-transparent fragments so we don't waste blend
   // bandwidth on near-zero contributions.  See 'quads.wgsl' for
   // the longer note — same reasoning applies here.
