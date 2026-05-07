@@ -75,7 +75,15 @@ export type PickSourceDraw = {
   source: Source;
   vertexBuffer: GPUBuffer;
   count: number;
-  cloudBindGroup: GPUBindGroup;
+  /**
+   * Underlying `GPUBuffer` of this source's CloudFade uniform (opacity
+   * + 5-bit sourceCode).  PickRenderer builds its own per-source
+   * `@group(1)` bind group around this buffer using its OWN pipeline's
+   * `getBindGroupLayout(1)` — bind groups created against PointRenderer's
+   * auto-derived layout are not compatible with PickRenderer's auto-derived
+   * layout, even though both pipelines compile from the same WGSL.
+   */
+  cloudFadeBuffer: GPUBuffer;
 };
 
 /**
@@ -549,12 +557,20 @@ export function createPickRenderer(
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
 
+    // Build per-source @group(1) bind groups against THIS pipeline's
+    // layout.  Cannot reuse PointRenderer's bind groups because each
+    // `layout: 'auto'` pipeline has its own unique BindGroupLayout
+    // identity — sharing across pipelines fails the WebGPU
+    // "group-equivalent" compatibility check ("BindGroupLayout was
+    // not created by the pipeline").  The underlying GPUBuffer IS
+    // shared — only the layout objects differ.
+    const cloudLayout = pipeline.getBindGroupLayout(1);
     for (const src of sourceList) {
-      // Per-source CloudFade bind group carries this source's
-      // `sourceCode` (and its irrelevant-to-pick `opacity`).  The
-      // vertex stage reads `cloud.sourceCode` to compose each
-      // instance's packed identity.
-      pass.setBindGroup(1, src.cloudBindGroup);
+      const cloudBindGroup = device.createBindGroup({
+        layout: cloudLayout,
+        entries: [{ binding: 0, resource: { buffer: src.cloudFadeBuffer } }],
+      });
+      pass.setBindGroup(1, cloudBindGroup);
       pass.setVertexBuffer(0, src.vertexBuffer);
       pass.draw(6, src.count);
     }

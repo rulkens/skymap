@@ -84,7 +84,7 @@ export type PickSourceDraw = {
   readonly source: Source;
   readonly count: number;
   readonly vertexBuffer: GPUBuffer;
-  readonly cloudBindGroup: GPUBindGroup;
+  readonly cloudFadeBuffer: GPUBuffer;
 };
 
 export type ClickResolveInput = {

@@ -1448,18 +1448,26 @@ export class PointRenderer {
     vertexBuffer: GPUBuffer;
     count: number;
     /**
-     * Per-source `@group(1)` bind group (CloudFade) carrying this
-     * source's `opacity` + 5-bit `sourceCode`.  PickRenderer binds it
-     * before each per-source draw so its vertex stage can compose the
-     * same packed identity the visual pass does — without baking
-     * anything per-vertex.
+     * Underlying CloudFade `GPUBuffer` for this source (containing
+     * opacity + 5-bit `sourceCode`).  PickRenderer builds its OWN
+     * per-source `@group(1)` bind group around this buffer using its
+     * own pipeline's auto-derived layout.
      *
-     * The PickRenderer also needs to call `fade.writeFrame()` per
-     * frame so the GPU buffer is up to date — but the visual `draw`
-     * has already done that for the current frame, and the pick pass
-     * runs after.  Pick can therefore reuse the buffer as-is.
+     * Why expose the buffer rather than the bind group?  WebGPU's
+     * `layout: 'auto'` produces a UNIQUE bind-group layout per
+     * pipeline.  Sharing one bind group across two auto-layout
+     * pipelines fails the "group-equivalent" compatibility check at
+     * draw time ("BindGroupLayout was not created by the pipeline").
+     * Each pipeline must build its own bind groups against its own
+     * `getBindGroupLayout(1)`.  The underlying buffer is shared
+     * fine — it's just the layout objects that differ.
+     *
+     * The visual `draw()` calls `fade.writeFrame()` once per frame,
+     * so by the time the pick pass runs (always after the visual
+     * frame for that mouse event) the buffer is up to date.  No
+     * extra writes from the picker.
      */
-    cloudBindGroup: GPUBindGroup;
+    cloudFadeBuffer: GPUBuffer;
   }> {
     for (const source of ALL_SOURCES) {
       const entry = this.clouds.get(source);
@@ -1468,7 +1476,7 @@ export class PointRenderer {
         source,
         vertexBuffer: entry.buffer,
         count: entry.count,
-        cloudBindGroup: entry.fade.bindGroup,
+        cloudFadeBuffer: entry.fade.buffer,
       };
     }
   }
