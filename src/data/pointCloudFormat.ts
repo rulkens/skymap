@@ -242,3 +242,38 @@ export function decodePointCloud(buf: ArrayBuffer): PointCloud {
     diameterKpc,
   };
 }
+
+/**
+ * Build a zero-count `PointCloud` with all typed-array slots empty.
+ *
+ * Used by the asset-loading subsystem's "excluded tier" path: when
+ * `TIER_TARGETS[tier][source] === 0` (e.g. SDSS at `small`), the fetcher
+ * short-circuits and returns this shape rather than attempting a fetch.
+ *
+ * Why an explicit helper rather than letting each caller hand-roll one?
+ * The PointCloud type has eleven fields; two of them are uncommon typed
+ * arrays (`BigUint64Array` for `objIDs`, `Float32Array * 3` for
+ * `positions`). Centralising the construction here keeps every consumer
+ * honest with the current field set — the moment a new field is added to
+ * `PointCloud`, this helper fails to compile and the maintainer is forced
+ * to extend it, which is exactly the right place to make that decision.
+ *
+ * Downstream `pointRenderer.upload` already treats `count === 0` as
+ * "free this source's VRAM", so the empty cloud composes cleanly with
+ * that contract — no special-cased "skip" state is needed in the slot.
+ */
+export function emptyPointCloud(): PointCloud {
+  return {
+    count: 0,
+    objIDs: new BigUint64Array(0),
+    positions: new Float32Array(0),
+    magU: new Float32Array(0),
+    magG: new Float32Array(0),
+    magR: new Float32Array(0),
+    magI: new Float32Array(0),
+    magZ: new Float32Array(0),
+    axisRatio: new Float32Array(0),
+    positionAngleDeg: new Float32Array(0),
+    diameterKpc: new Float32Array(0),
+  };
+}
