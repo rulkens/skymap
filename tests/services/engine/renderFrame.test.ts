@@ -7,12 +7,13 @@
  * Coverage focus:
  *   - encoder lifecycle: createCommandEncoder + finish + submit happen
  *     exactly once each, in the right order
- *   - HDR render-pass colour attachment uses the supplied hdrTargetView
+ *   - HDR render-pass colour attachment uses the postProcess aggregate's
+ *     `view` (HDR offscreen texture)
  *   - pointRenderer.draw is called with all 17 args in the right order
  *     (selectedIndex sentinel translation included)
  *   - thumbnails.runFrame is called between point draw and pass.end —
  *     and skipped when galaxyTexturesEnabled is false
- *   - toneMapPass.draw is called after pass.end with the correct
+ *   - postProcess.draw is called after pass.end with the correct
  *     exposure + curve uniforms
  *   - the swap-chain view is acquired AFTER pass.end (i.e. when the
  *     tone-map pass needs it), not at frame start
@@ -31,7 +32,7 @@ import type { mat4 } from 'gl-matrix';
 /**
  * Tracks the chronological order of every interesting call so we can
  * assert ordering relationships (e.g. `pointRenderer.draw` came before
- * `pass.end`, which came before `toneMapPass.draw`).  The encoder, the
+ * `pass.end`, which came before `postProcess.draw`).  The encoder, the
  * pass, and every renderer hand the same array back through their
  * `vi.fn()` impls.
  */
@@ -110,6 +111,24 @@ function makeFakeHdrView(): GPUTextureView {
   return { __id: 'hdr-view' } as unknown as GPUTextureView;
 }
 
+/**
+ * Mock the combined HDR-target + tone-map aggregate.  The real
+ * `PostProcess` exposes `view` (live HDR texture view), `resize`,
+ * `draw`, and `destroy`.  We only need a stable view + a spy `draw`
+ * that logs into the call log; resize/destroy stay as no-op spies
+ * so the surface satisfies the `RenderFrameInput.postProcess` type.
+ */
+function makeMockPostProcess(callLog: CallLog, hdrView: GPUTextureView) {
+  return {
+    view: hdrView,
+    resize: vi.fn(),
+    draw: vi.fn(() => {
+      callLog.push('postProcess.draw');
+    }),
+    destroy: vi.fn(),
+  } as any;
+}
+
 function makeMockPointRenderer(callLog: CallLog) {
   return {
     draw: vi.fn(() => {
@@ -122,15 +141,6 @@ function makeMockMilkyWayRenderer(callLog: CallLog) {
   return {
     draw: vi.fn(() => {
       callLog.push('milkyWayRenderer.draw');
-    }),
-    destroy: vi.fn(),
-  } as any;
-}
-
-function makeMockToneMapPass(callLog: CallLog) {
-  return {
-    draw: vi.fn(() => {
-      callLog.push('toneMapPass.draw');
     }),
     destroy: vi.fn(),
   } as any;
@@ -206,7 +216,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
   const hdrTargetView = makeFakeHdrView();
   const pointRenderer = makeMockPointRenderer(callLog);
   const milkyWayRenderer = makeMockMilkyWayRenderer(callLog);
-  const toneMapPass = makeMockToneMapPass(callLog);
+  const postProcess = makeMockPostProcess(callLog, hdrTargetView);
   const thumbnails = makeMockThumbnails(callLog);
   const quadRenderer = makeMockQuadRenderer();
   const diskRenderer = makeMockDiskRenderer();
@@ -247,9 +257,9 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     context,
     swapView,
     hdrTargetView,
+    postProcess,
     pointRenderer,
     milkyWayRenderer,
-    toneMapPass,
     thumbnails,
     quadRenderer,
     diskRenderer,
@@ -263,11 +273,10 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       milkyWayITimeSec: 0,
       device,
       context,
-      hdrTargetView,
+      postProcess,
       pointRenderer,
       milkyWayRenderer,
       filamentRenderer: null,
-      toneMapPass,
       thumbnails,
       quadRenderer,
       diskRenderer,
@@ -304,13 +313,15 @@ describe('renderFrame', () => {
     expect(submitted[0]).toBe((fx.env.finish.mock.results[0] as any).value);
   });
 
-  it('begins the HDR render pass with the supplied hdrTargetView as the colour attachment', () => {
+  it("begins the HDR render pass with the postProcess aggregate's view as the colour attachment", () => {
     renderFrame(fx.input);
     expect(fx.env.beginRenderPass).toHaveBeenCalledTimes(1);
     const desc = (fx.env.beginRenderPass as any).lastDescriptor as GPURenderPassDescriptor;
     const attachments = Array.from(desc.colorAttachments as any);
     expect(attachments).toHaveLength(1);
     const att = attachments[0] as any;
+    // postProcess.view is the HDR offscreen target — the points/quads/
+    // disks pipelines accumulate into it before the tone-map blit.
     expect(att.view).toBe(fx.hdrTargetView);
     expect(att.loadOp).toBe('clear');
     expect(att.storeOp).toBe('store');
@@ -373,7 +384,7 @@ describe('renderFrame', () => {
     expect(fx2.thumbnails.runFrame).not.toHaveBeenCalled();
     // But pointRenderer.draw + tone-map still happen.
     expect(fx2.pointRenderer.draw).toHaveBeenCalledTimes(1);
-    expect(fx2.toneMapPass.draw).toHaveBeenCalledTimes(1);
+    expect(fx2.postProcess.draw).toHaveBeenCalledTimes(1);
   });
 
   it('forwards the shared pxPerRad + camPos to thumbnails.runFrame so both passes match', () => {
@@ -391,25 +402,27 @@ describe('renderFrame', () => {
     expect(arg.pass).toBe(fx.env.pass);
   });
 
-  it('calls toneMapPass.draw after pass.end with exposure, curve, and the swap-chain view', () => {
+  it('calls postProcess.draw after pass.end with exposure, curve, and the swap-chain view', () => {
     renderFrame(fx.input);
     const log = fx.callLog;
     const idxEnd = log.indexOf('pass.end');
-    const idxTm = log.indexOf('toneMapPass.draw');
+    const idxTm = log.indexOf('postProcess.draw');
     expect(idxEnd).toBeGreaterThanOrEqual(0);
     expect(idxTm).toBeGreaterThan(idxEnd);
 
-    const draw = fx.toneMapPass.draw as ReturnType<typeof vi.fn>;
+    // Post-Phase-4 the HDR view is owned by the aggregate, not threaded
+    // through the call site — `postProcess.draw(encoder, swapView,
+    // exposure, curve)` is the four-arg signature.
+    const draw = fx.postProcess.draw as ReturnType<typeof vi.fn>;
     expect(draw).toHaveBeenCalledTimes(1);
     const args = draw.mock.calls[0]!;
     expect(args[0]).toBe(fx.env.encoder);
     expect(args[1]).toBe(fx.swapView);
-    expect(args[2]).toBe(fx.hdrTargetView);
-    expect(args[3]).toBe(fx.input.settings.exposure);
-    expect(args[4]).toBe(fx.input.settings.toneMapCurve);
+    expect(args[2]).toBe(fx.input.settings.exposure);
+    expect(args[3]).toBe(fx.input.settings.toneMapCurve);
   });
 
-  it('records full frame in the canonical order: createEncoder → beginRenderPass → pointRenderer.draw → thumbnails.runFrame → milkyWayRenderer.draw → pass.end → toneMapPass.draw → encoder.finish → submit', () => {
+  it('records full frame in the canonical order: createEncoder → beginRenderPass → pointRenderer.draw → thumbnails.runFrame → milkyWayRenderer.draw → pass.end → postProcess.draw → encoder.finish → submit', () => {
     // Every HDR pipeline now uses pure additive blending, so the
     // per-fragment colour value is mathematically order-independent
     // (A+B = B+A).  Even so, the deterministic draw order points →
@@ -425,7 +438,7 @@ describe('renderFrame', () => {
       'thumbnails.runFrame',
       'milkyWayRenderer.draw',
       'pass.end',
-      'toneMapPass.draw',
+      'postProcess.draw',
       'encoder.finish',
       'device.queue.submit',
     ];

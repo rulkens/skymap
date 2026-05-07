@@ -34,16 +34,21 @@
  */
 
 import type { PointRenderer } from '../services/gpu/pointRenderer';
-import type { HdrTarget } from '../services/gpu/hdrTarget';
-import type { ToneMapPass } from '../services/gpu/toneMapPass';
+import type { PostProcess } from '../services/gpu/postProcess';
 import type { createPickRenderer } from '../services/gpu/pickRenderer';
 import type { FilamentRenderer } from '../services/gpu/filamentRenderer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
   pickRenderer: ReturnType<typeof createPickRenderer> | null;
-  hdrTarget: HdrTarget | null;
-  toneMapPass: ToneMapPass | null;
+  /**
+   * Combined HDR offscreen target + tone-map post-process.  Pre-Phase-4
+   * this was two fields (`hdrTarget` + `toneMapPass`); they merged into
+   * one because their lifetimes are identical and they're always used
+   * together (HDR pass writes the texture, post-process samples it).
+   * See `services/gpu/postProcess.ts` for the rationale.
+   */
+  postProcess: PostProcess | null;
   /**
    * Cosmic-web filament-skeleton renderer.  Constructed unconditionally
    * during GPU init (the pipeline is cheap), stays empty-segment until
