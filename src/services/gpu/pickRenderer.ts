@@ -53,6 +53,7 @@
 import shaderSrc from './shaders/points.wesl?static';
 import type { Source } from '../../data/sources';
 import type { PointRenderer } from './pointRenderer';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -251,7 +252,7 @@ export function createPickRenderer(
   // We reuse the same WGSL source as PointRenderer. The shader file contains
   // both the `fs` (visual) and `fsPick` (picking) fragment entry points.
   // Here we select `fsPick`.
-  const module = device.createShaderModule({ code: shaderSrc });
+  const module = createShaderModuleWithDevLog(device, shaderSrc, 'pick');
 
   // ── Render pipeline ────────────────────────────────────────────────────────
   //
@@ -266,6 +267,7 @@ export function createPickRenderer(
   // `layout: 'auto'` reflects the bind group layout from the shader's @group/@binding
   // declarations.  The single binding is @group(0) @binding(0) — the Uniforms buffer.
   const pipeline = device.createRenderPipeline({
+    label: 'pick-pipeline',
     layout: 'auto',
 
     vertex: {
@@ -344,6 +346,7 @@ export function createPickRenderer(
   // 4-byte texel, we must allocate at least 256 bytes.  We never map this
   // buffer for writing — only MAP_READ is needed.
   const stagingBuffer = device.createBuffer({
+    label: 'pick-staging-buffer',
     size: 256,
     usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
   });
@@ -397,6 +400,7 @@ export function createPickRenderer(
     // `RENDER_ATTACHMENT` — the render pass can write to it.
     // `COPY_SRC`          — we copy a single pixel out of it after the pass.
     pickTexture = device.createTexture({
+      label: 'pick-target',
       size: { width: w, height: h },
       format: 'r32uint',
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
@@ -409,6 +413,7 @@ export function createPickRenderer(
     // Only `RENDER_ATTACHMENT` is needed — depth buffers are not typically read
     // back to the CPU, so no `COPY_SRC` here.
     depthTexture = device.createTexture({
+      label: 'pick-depth',
       size: { width: w, height: h },
       format: 'depth24plus',
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -563,6 +568,7 @@ export function createPickRenderer(
     // next pick() call picks up the fresh handle without needing to
     // invalidate this PickRenderer.
     const bindGroup = device.createBindGroup({
+      label: 'pick-bg-uniforms',
       layout: pipeline.getBindGroupLayout(0),
       entries: [{ binding: 0, resource: { buffer: sharedUniformBuffer } }],
     });
@@ -580,6 +586,7 @@ export function createPickRenderer(
     const cloudLayout = pipeline.getBindGroupLayout(1);
     for (const src of sourceList) {
       const cloudBindGroup = device.createBindGroup({
+        label: `pick-bg-cloudFade-${src.source}`,
         layout: cloudLayout,
         entries: [{ binding: 0, resource: { buffer: src.cloudFadeBuffer } }],
       });

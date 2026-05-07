@@ -77,6 +77,7 @@
  */
 
 import wgsl from './shaders/milkyWayImpostor.wesl?static';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 type Init = {
   device: GPUDevice;
@@ -103,9 +104,10 @@ export class MilkyWayRenderer {
     const { device, format } = init;
     this.device = device;
 
-    const module = device.createShaderModule({ code: wgsl });
+    const module = createShaderModuleWithDevLog(device, wgsl, 'milkyWay');
 
     this.bindGroupLayout = device.createBindGroupLayout({
+      label: 'milkyWay-bgl-uniforms',
       entries: [
         {
           binding: 0,
@@ -116,20 +118,24 @@ export class MilkyWayRenderer {
     });
 
     this.uniformBuffer = device.createBuffer({
+      label: 'milkyWay-uniform-buffer',
       size: MilkyWayRenderer.UNIFORM_BUFFER_SIZE,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     this.bindGroup = device.createBindGroup({
+      label: 'milkyWay-bg-uniforms',
       layout: this.bindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
     });
 
     const pipelineLayout = device.createPipelineLayout({
+      label: 'milkyWay-pipeline-layout',
       bindGroupLayouts: [this.bindGroupLayout],
     });
 
     this.pipeline = device.createRenderPipeline({
+      label: 'milkyWay-pipeline',
       layout: pipelineLayout,
       vertex: { module, entryPoint: 'vs' },
       fragment: {

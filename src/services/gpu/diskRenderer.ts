@@ -29,6 +29,7 @@
 import type { mat4 } from 'gl-matrix';
 import type { GpuContext } from '../../@types';
 import diskWgsl from './shaders/disks.wesl?static';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 export type DiskInstance = {
   x: number;
@@ -102,11 +103,14 @@ export class DiskRenderer {
       ],
     });
 
-    const module = this.device.createShaderModule({ label: 'disks-wgsl', code: diskWgsl });
+    const module = createShaderModuleWithDevLog(this.device, diskWgsl, 'disks');
 
     this.pipeline = this.device.createRenderPipeline({
       label: 'disk-pipeline',
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.bindGroupLayout] }),
+      layout: this.device.createPipelineLayout({
+        label: 'disks-pipeline-layout',
+        bindGroupLayouts: [this.bindGroupLayout],
+      }),
       vertex: {
         module,
         entryPoint: 'vs',

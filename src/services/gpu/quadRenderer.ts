@@ -16,6 +16,7 @@
 import type { mat4 } from 'gl-matrix';
 import type { GpuContext, QuadInstance } from '../../@types';
 import quadsWgsl from './shaders/quads.wesl?static';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 /**
  * Per-instance vertex attributes packed as 12 floats / 48 bytes:
@@ -92,11 +93,14 @@ export class QuadRenderer {
       ],
     });
 
-    const module = this.device.createShaderModule({ label: 'quads-wgsl', code: quadsWgsl });
+    const module = createShaderModuleWithDevLog(this.device, quadsWgsl, 'quads');
 
     this.pipeline = this.device.createRenderPipeline({
       label: 'quad-pipeline',
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.bindGroupLayout] }),
+      layout: this.device.createPipelineLayout({
+        label: 'quads-pipeline-layout',
+        bindGroupLayouts: [this.bindGroupLayout],
+      }),
       vertex: {
         module,
         entryPoint: 'vs',

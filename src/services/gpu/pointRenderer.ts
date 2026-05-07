@@ -90,6 +90,7 @@ import { type ComputeAngularWeightsInput } from '../engine/computeAngularWeights
 // `shaders/lib/`, `?static` is required.
 import shaderSrc from './shaders/points.wesl?static';
 import { CloudFade } from './cloudFade';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -818,9 +819,10 @@ export class PointRenderer {
     private device: GPUDevice,
     format: GPUTextureFormat,
   ) {
-    const module = device.createShaderModule({ code: shaderSrc });
+    const module = createShaderModuleWithDevLog(device, shaderSrc, 'points');
 
     this.pipeline = device.createRenderPipeline({
+      label: 'points-pipeline',
       layout: 'auto',
 
       vertex: {
@@ -889,11 +891,13 @@ export class PointRenderer {
     });
 
     this.uniformBuffer_internal = device.createBuffer({
+      label: 'points-uniform-buffer',
       size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     this.bindGroup = device.createBindGroup({
+      label: 'points-bg-uniforms',
       layout: this.pipeline.getBindGroupLayout(0),
       entries: [{ binding: 0, resource: { buffer: this.uniformBuffer_internal } }],
     });
@@ -1020,6 +1024,7 @@ export class PointRenderer {
     }
 
     const buffer = this.device.createBuffer({
+      label: `points-vertex-buffer-${source}`,
       size: interleaved.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });

@@ -26,6 +26,7 @@ import shaderSource from './shaders/filaments.wesl?static';
 import type { FilamentCloud } from '../../@types/FilamentCloud';
 import type { mat4 } from 'gl-matrix';
 import { CloudFade } from './cloudFade';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
 
@@ -124,9 +125,10 @@ export class FilamentRenderer {
      */
     hdrFormat: GPUTextureFormat,
   ) {
-    const module = device.createShaderModule({ code: shaderSource });
+    const module = createShaderModuleWithDevLog(device, shaderSource, 'filaments');
 
     this.uniformBuffer = device.createBuffer({
+      label: 'filaments-uniform-buffer',
       size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
@@ -134,6 +136,7 @@ export class FilamentRenderer {
     // Static index buffer: two triangles forming the quad.
     const indices = new Uint16Array([0, 1, 2, 1, 3, 2]);
     this.indexBuffer = device.createBuffer({
+      label: 'filaments-index-buffer',
       size: indices.byteLength,
       usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
     });
@@ -142,12 +145,14 @@ export class FilamentRenderer {
     // Static quad-corner buffer: 4 vertices × vec2 = 32 bytes.
     const quadCorners = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]);
     this.quadVertexBuffer = device.createBuffer({
+      label: 'filaments-quad-vertex-buffer',
       size: quadCorners.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
     device.queue.writeBuffer(this.quadVertexBuffer, 0, quadCorners);
 
     const bindGroupLayout = device.createBindGroupLayout({
+      label: 'filaments-bgl-uniforms',
       entries: [
         {
           binding: 0,
@@ -163,6 +168,7 @@ export class FilamentRenderer {
     // never needs to see the opacity).  Stored on the instance so the
     // lazily-created CloudFade can reuse it.
     this.cloudFadeBindGroupLayout = device.createBindGroupLayout({
+      label: 'filaments-bgl-cloudFade',
       entries: [
         {
           binding: 0,
@@ -173,12 +179,15 @@ export class FilamentRenderer {
     });
 
     this.bindGroup = device.createBindGroup({
+      label: 'filaments-bg-uniforms',
       layout: bindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
     });
 
     this.pipeline = device.createRenderPipeline({
+      label: 'filaments-pipeline',
       layout: device.createPipelineLayout({
+        label: 'filaments-pipeline-layout',
         bindGroupLayouts: [bindGroupLayout, this.cloudFadeBindGroupLayout],
       }),
       vertex: {
@@ -239,6 +248,7 @@ export class FilamentRenderer {
     }
     this.instanceBuffer?.destroy();
     this.instanceBuffer = this.device.createBuffer({
+      label: 'filaments-instance-buffer',
       size: data.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });

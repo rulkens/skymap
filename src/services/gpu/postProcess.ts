@@ -97,6 +97,7 @@
 // wesl-plugin tooling chain. Later tasks add real imports.
 import toneMapWgsl from './shaders/toneMap.wesl?static';
 import { ToneMapCurve } from '../../data/toneMapCurve';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 /**
  * Plain `{ width, height }` pair, kept local to this module.  We
@@ -203,6 +204,7 @@ export function createPostProcess(
   function allocateHdr(s: Size): void {
     if (hdrTexture) hdrTexture.destroy();
     hdrTexture = device.createTexture({
+      label: 'hdr-target',
       format: 'rgba16float',
       size: { width: s.width, height: s.height },
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
@@ -217,29 +219,12 @@ export function createPostProcess(
   // `label` shows up in `getCompilationInfo` diagnostics and in
   // browser-devtools error reports, which makes it much easier to tell
   // *which* shader broke when several modules fail in the same frame.
-  const module = device.createShaderModule({ code: toneMapWgsl, label: 'toneMap' });
-
-  // Why log the linked WGSL here, only in dev?
-  //
-  // Chrome's WGSL compiler reports error line numbers against the
-  // *linked* output that wesl-plugin produces, not the source `.wesl`
-  // module. Until wesl-plugin gains sourcemap support, the only way to
-  // map "error at line 142" back to a source file is to read the linked
-  // string ourselves — so we dump it on any compile error. We dump it
-  // only in dev (gated by `import.meta.env.DEV`) because production
-  // bundles strip dead branches under that flag and we don't want to
-  // ship the shader source twice (once as the module, once as a console
-  // log) in the prod build. `getCompilationInfo` is a Promise; we don't
-  // await it so module creation stays synchronous.
-  if (import.meta.env.DEV) {
-    void module.getCompilationInfo().then((info) => {
-      if (info.messages.some((m) => m.type === 'error')) {
-        console.groupCollapsed('[toneMap] linked WGSL (for error line lookup)');
-        console.log(toneMapWgsl);
-        console.groupEnd();
-      }
-    });
-  }
+  // The helper additionally dumps the linked WGSL on compile errors in
+  // dev mode — see `shaderCompileLogger.ts` for the rationale (Chrome's
+  // WGSL compiler reports error line numbers against the linked output
+  // that wesl-plugin produces, so the only way to map them back to a
+  // source file is to read the linked string ourselves).
+  const module = createShaderModuleWithDevLog(device, toneMapWgsl, 'toneMap');
 
   // Why nearest, not linear?  The HDR texture is the same resolution
   // as the swap chain (we resize it in lockstep) so the fullscreen
@@ -248,6 +233,7 @@ export function createPostProcess(
   // work, and on some GPUs `linear` requires `'float32-filterable'`
   // even on rgba16float.  `nearest` is universally supported.
   const sampler = device.createSampler({
+    label: 'toneMap-sampler',
     magFilter: 'nearest',
     minFilter: 'nearest',
   });
@@ -255,11 +241,13 @@ export function createPostProcess(
   // Uniform layout: [exposure: f32, whitepointSq: f32, asinhSoftness: f32,
   // curve: u32] — 16 bytes total, naturally 16-byte aligned.
   const uniformBuffer = device.createBuffer({
+    label: 'toneMap-uniform-buffer',
     size: 16,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
 
   const bindGroupLayout = device.createBindGroupLayout({
+    label: 'toneMap-bgl',
     entries: [
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
@@ -268,7 +256,11 @@ export function createPostProcess(
   });
 
   const pipeline = device.createRenderPipeline({
-    layout: device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] }),
+    label: 'toneMap-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'toneMap-pipeline-layout',
+      bindGroupLayouts: [bindGroupLayout],
+    }),
     vertex: { module, entryPoint: 'vs' },
     fragment: {
       module,
@@ -303,6 +295,7 @@ export function createPostProcess(
       // bind a stale (destroyed) view.  The cost is one allocation
       // per frame; trivial compared to the actual fullscreen blit.
       const bindGroup = device.createBindGroup({
+        label: 'toneMap-bg',
         layout: bindGroupLayout,
         entries: [
           { binding: 0, resource: hdrView! },
