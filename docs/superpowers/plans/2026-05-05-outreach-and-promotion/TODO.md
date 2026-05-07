@@ -2,11 +2,11 @@
 
 Flat checklist of currently-unchecked items, grouped by task. Skip items marked `[x]` in the per-task files. Start at Task 0 and work down.
 
-## Task 0: Cut v0.2.0 release + refresh Zenodo DOI
+## Task 0: Cut v0.2.0 release + refresh Zenodo DOI — DONE 2026-05-06
 
-- [ ] Edit `package.json` — bump `"version"` to `"0.2.0"`
-- [ ] Edit `CITATION.cff` — bump `version:` to `0.2.0` and update `date-released:`
-- [ ] Verify: `grep -E '^[[:space:]]*"version"' package.json` and `grep -E '^(version|date-released):' CITATION.cff`
+- [x] Edit `package.json` — bump `"version"` to `"0.2.0"`
+- [x] Edit `CITATION.cff` — bump `version:` to `0.2.0` and update `date-released:`
+- [x] Verify: `grep -E '^[[:space:]]*"version"' package.json` and `grep -E '^(version|date-released):' CITATION.cff`
 - [x] Tag + push v0.2.0 (done 2026-05-06)
 - [x] Cut GitHub release (web UI; PAT lacks `Contents: write`)
 - [x] Zenodo minted v0.2.0 version-DOI `10.5281/zenodo.20053519` under concept DOI `10.5281/zenodo.20037028`
@@ -19,14 +19,18 @@ All eight README assets are present in `docs/screenshots/` and wired in:
 `local-group.png`, `wide-field.png`, `zoomed.gif`, `density-correction-modes.png`.
 Topic chips, DOI badge, and inline rendering verified.
 
-## Task 2: HyperLEDA R2 distribution (remaining items)
+## Task 2: HyperLEDA R2 distribution — DONE 2026-05-07 (shipped partial cache)
 
-- [ ] Check CSV completeness: `wc -l data/raw/hyperleda_pa.csv` — expect ~1.5 M lines
-- [ ] If incomplete, run: `npm run fetch-hyperleda` (~1 hour, resumable)
-- [ ] Verify CSV header: `head -3 data/raw/hyperleda_pa.csv`
-- [ ] Compress: `gzip -k -9 data/raw/hyperleda_pa.csv`
-- [ ] Run sync: `npm run sync-r2`
-- [ ] Verify upload: `curl -sI https://data.skymap.rulkens.com/data/hyperleda_pa.csv.gz | head -6`
+Decision 2026-05-07: ship the partial run as-is rather than spending another
+hour to fetch the remaining ~1.45 M PGCs. The 52,178-row CSV (41,332 with
+populated PA) is already on R2 and covers the brightest, most-cross-matched
+GLADE galaxies — the long tail is overwhelmingly empty HyperLEDA responses
+anyway. Anyone who wants a fuller cache can still run `npm run fetch-hyperleda`
+locally (it's resumable and the README still documents the fallback).
+
+- [x] CSV exists at `data/raw/hyperleda_pa.csv` — 52,178 rows queried, 41,332 with PA
+- [x] Compressed `hyperleda_pa.csv.gz` synced to R2
+- [x] Verify upload: `curl -sI https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz` returns 200 (verified 2026-05-07)
 
 ## Task 3: JOSS paper draft
 
@@ -41,14 +45,14 @@ Topic chips, DOI badge, and inline rendering verified.
 
 ## Task 4: Public posts (all pending Task 0 + Task 1)
 
-- [ ] Show HN: submit title + URL at https://news.ycombinator.com/submit, post first-comment text immediately after
-- [ ] Verify HN: `curl -s "https://hacker-news.firebaseio.com/v0/item/ITEM_ID.json" | jq '{title,score,descendants}'`
-- [ ] Bluesky: post 4-part thread on bsky.app (content in [task-4-public-posts.md](task-4-public-posts.md) Step 4.2)
-- [ ] Verify Bluesky thread is live and chained
-- [ ] **Thu 7 May, 12:00 CEST**: r/MapPorn (image, no video needed; +10pp morning lift)
+- [x] Show HN: sent 2026-05-06 — https://news.ycombinator.com/item?id=48037383
+- [x] Verify HN: Firebase API returns score, descendants, dead=null (checked 2026-05-07: score 5, 10 comments, ~25 h old)
+- [x] Bluesky: 4-part thread sent 2026-05-07 — https://bsky.app/profile/rulkens.bsky.social/post/3ml723ez2fk2d
+- [ ] Verify Bluesky thread is live and chained (manual check)
+- [ ] ~~**Thu 7 May, 12:00 CEST**: r/MapPorn~~ — slot slipped past noon; reschedule TBD
 - [ ] **Thu 7 May, 12:00-18:00 CEST**: record 20-30 s screen capture of skymap orbit + zoom (Tab-hidden UI). Reused for r/Astronomy and r/WebGPU.
 - [ ] **Thu 7 May, ~19:00 CEST**: r/Astronomy (VIDEO; +17pp lift)
-- [ ] **Fri 8 May, ~12:00 CEST**: r/dataisbeautiful (image, short title; time-of-day is noise)
+- [x] **Thu 7 May, 16:30 CEST**: r/dataisbeautiful — sent. https://www.reddit.com/r/dataisbeautiful/comments/1t6cjhr/oc_cosmicweb_structure_across_2m_galaxies_sdss/
 - [ ] **Fri 8 May, ~21:00-22:00 CEST**: r/WebGPU (VIDEO; +14pp lift, +8pp evening)
 - [ ] Verify each Reddit post appears in /new; check upvote + comment count after 6 h
 - [ ] Maintain threads: reply to comments for 48 h after each post
