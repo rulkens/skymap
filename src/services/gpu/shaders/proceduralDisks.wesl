@@ -24,7 +24,20 @@
 // 'worldEyeDepth': they're unused here, and importing unused names
 // would just add noise for future readers grepping for camera-helper
 // usage.
-import package::lib::camera::{ CameraUniforms, worldToClip };
+import package::lib::camera::CameraUniforms;
+import package::lib::camera::worldToClip;
+// Shared unit-quad helper from 'lib/billboard.wesl' — replaces the
+// inline 'CORNERS' const that used to live below. The orientation-
+// aligned disk-plane basis (PA + inclination → 'majorAxis' /
+// 'minorAxis' in 3D world space) stays renderer-specific; only the
+// vertex-index → corner lookup is shared. We don't import 'quadUv'
+// here: this pass uses the raw [-1, +1]² corner directly as the
+// fragment's radial coordinate (see 'out.uv = corner' below + the
+// 'length(in.uv)' read in 'fs'), so the [0, 1]² remap that 'quadUv'
+// performs would be wrong. See the docblock at the top of
+// 'lib/billboard.wesl' for why the orientation math is intentionally
+// NOT pulled into this lib.
+import package::lib::billboard::quadCorner;
 
 struct Uniforms {
   cam: CameraUniforms,
@@ -59,18 +72,18 @@ struct VsOut {
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
-const CORNERS = array<vec2<f32>, 6>(
-  vec2<f32>(-1.0, -1.0),
-  vec2<f32>( 1.0, -1.0),
-  vec2<f32>( 1.0,  1.0),
-  vec2<f32>(-1.0, -1.0),
-  vec2<f32>( 1.0,  1.0),
-  vec2<f32>(-1.0,  1.0),
-);
-
 @vertex
 fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
-  let corner = CORNERS[vid];
+  // Unit-square corner offset in [-1, +1]² for this triangle-list
+  // vertex. Pulled from 'lib/billboard::quadCorner' so the (BL, BR,
+  // TR, BL, TR, TL) ordering is shared across all four billboard
+  // renderers — see the lib's docblock for the corner-ordering
+  // discussion. The corner here is in the disk's LOCAL 2D frame; the
+  // 3D placement happens via the (majorAxis, minorAxis) basis below,
+  // and 'out.uv = corner' forwards it unchanged so the fragment can
+  // use 'length(in.uv)' as the radial distance for the brightness
+  // profile.
+  let corner = quadCorner(vid);
 
   // ── Disk-plane basis construction ────────────────────────────────────
   //
