@@ -15,7 +15,8 @@
 
 import type { mat4 } from 'gl-matrix';
 import type { GpuContext, QuadInstance } from '../../@types';
-import quadsWgsl from './shaders/quads.wesl?static';
+import vsCode from './shaders/quads/vertex.wesl?static';
+import fsCode from './shaders/quads/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 /**
@@ -93,7 +94,8 @@ export class QuadRenderer {
       ],
     });
 
-    const module = createShaderModuleWithDevLog(this.device, quadsWgsl, 'quads');
+    const vsModule = createShaderModuleWithDevLog(this.device, vsCode, 'quads.vertex');
+    const fsModule = createShaderModuleWithDevLog(this.device, fsCode, 'quads.fragment');
 
     this.pipeline = this.device.createRenderPipeline({
       label: 'quad-pipeline',
@@ -102,7 +104,7 @@ export class QuadRenderer {
         bindGroupLayouts: [this.bindGroupLayout],
       }),
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: 'vs',
         buffers: [
           {
@@ -117,7 +119,7 @@ export class QuadRenderer {
         ],
       },
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [
           {
