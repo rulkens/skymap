@@ -45,9 +45,11 @@ Topic chips, DOI badge, and inline rendering verified.
 - [ ] Verify HN: `curl -s "https://hacker-news.firebaseio.com/v0/item/ITEM_ID.json" | jq '{title,score,descendants}'`
 - [ ] Bluesky: post 4-part thread on bsky.app (content in [task-4-public-posts.md](task-4-public-posts.md) Step 4.2)
 - [ ] Verify Bluesky thread is live and chained
-- [ ] r/Astronomy post (Day 2 morning US time)
-- [ ] r/dataisbeautiful post (Day 2 afternoon US time)
-- [ ] r/WebGPU post (Day 3)
+- [ ] **Thu 7 May, 12:00 CEST**: r/MapPorn (image, no video needed; +10pp morning lift)
+- [ ] **Thu 7 May, 12:00-18:00 CEST**: record 20-30 s screen capture of skymap orbit + zoom (Tab-hidden UI). Reused for r/Astronomy and r/WebGPU.
+- [ ] **Thu 7 May, ~19:00 CEST**: r/Astronomy (VIDEO; +17pp lift)
+- [ ] **Fri 8 May, ~12:00 CEST**: r/dataisbeautiful (image, short title; time-of-day is noise)
+- [ ] **Fri 8 May, ~21:00-22:00 CEST**: r/WebGPU (VIDEO; +14pp lift, +8pp evening)
 - [ ] Verify each Reddit post appears in /new; check upvote + comment count after 6 h
 - [ ] Maintain threads: reply to comments for 48 h after each post
 

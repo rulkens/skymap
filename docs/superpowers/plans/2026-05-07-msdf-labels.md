@@ -280,7 +280,8 @@ import { parseFontMetrics, lookupGlyph, type FontMetrics } from '../../../src/se
 const FIXTURE = {
   pages: ['jetbrains-mono.png'],
   common: { lineHeight: 50, base: 38, scaleW: 1024, scaleH: 1024 },
-  info: { face: 'JetBrains Mono', size: 42, distanceRange: 4 },
+  info: { face: 'JetBrains Mono', size: 42 },
+  distanceField: { fieldType: 'msdf', distanceRange: 4 },
   chars: [
     { id: 65, x: 0, y: 0, width: 30, height: 40, xoffset: 1, yoffset: 2, xadvance: 25, page: 0, chnl: 15 },
     { id: 66, x: 32, y: 0, width: 28, height: 40, xoffset: 0, yoffset: 2, xadvance: 25, page: 0, chnl: 15 },
@@ -369,7 +370,9 @@ export type FontMetrics = {
 export type RawBMFont = {
   pages: string[];
   common: { lineHeight: number; base: number; scaleW: number; scaleH: number };
-  info: { face: string; size: number; distanceRange: number };
+  info: { face: string; size: number };
+  /** Top-level (NOT inside `info`) per msdf-bmfont-xml's JSON output. */
+  distanceField: { fieldType: string; distanceRange: number };
   chars: Array<{
     id: number; x: number; y: number; width: number; height: number;
     xoffset: number; yoffset: number; xadvance: number;
@@ -400,7 +403,7 @@ export function parseFontMetrics(raw: RawBMFont): FontMetrics {
     kerning.set(`${k.first},${k.second}`, k.amount);
   }
   return {
-    atlas: { width: w, height: h, distanceRange: raw.info.distanceRange },
+    atlas: { width: w, height: h, distanceRange: raw.distanceField.distanceRange },
     fontSize: raw.info.size,
     lineHeight: raw.common.lineHeight,
     glyphs,
@@ -446,7 +449,8 @@ import { parseFontMetrics } from '../../../src/services/gpu/fontMetrics';
 const FIXTURE = {
   pages: ['atlas.png'],
   common: { lineHeight: 50, base: 38, scaleW: 1024, scaleH: 1024 },
-  info: { face: 'X', size: 42, distanceRange: 4 },
+  info: { face: 'X', size: 42 },
+  distanceField: { fieldType: 'msdf', distanceRange: 4 },
   chars: [
     { id: 65, x: 0,  y: 0, width: 30, height: 40, xoffset: 1, yoffset: 2, xadvance: 25, page: 0, chnl: 15 },
     { id: 66, x: 32, y: 0, width: 28, height: 40, xoffset: 0, yoffset: 2, xadvance: 26, page: 0, chnl: 15 },
@@ -838,7 +842,8 @@ import { parseFontMetrics } from '../../../src/services/gpu/fontMetrics';
 const FIXTURE_METRICS = parseFontMetrics({
   pages: ['x.png'],
   common: { lineHeight: 50, base: 38, scaleW: 1024, scaleH: 1024 },
-  info: { face: 'X', size: 42, distanceRange: 4 },
+  info: { face: 'X', size: 42 },
+  distanceField: { fieldType: 'msdf', distanceRange: 4 },
   chars: [
     { id: 65, x: 0, y: 0, width: 30, height: 40, xoffset: 0, yoffset: 0, xadvance: 25, page: 0, chnl: 15 },
   ],
