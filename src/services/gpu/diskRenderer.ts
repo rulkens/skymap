@@ -28,7 +28,9 @@
 
 import type { mat4 } from 'gl-matrix';
 import type { GpuContext } from '../../@types';
-import diskWgsl from './shaders/disks.wgsl?raw';
+import vsCode from './shaders/disks/vertex.wesl?static';
+import fsCode from './shaders/disks/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 export type DiskInstance = {
   x: number;
@@ -53,20 +55,27 @@ const FLOATS_PER_INSTANCE = 12;
 const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
 
 /**
- * 96-byte uniform layout (matches the WGSL `Uniforms` struct in disks.wgsl):
+ * 96-byte uniform layout (matches the WESL `Uniforms` struct in
+ * disks.wesl, which now extends the shared `CameraUniforms` prefix from
+ * `lib/camera.wesl`):
  *
- *   bytes  0..63 : viewProj  mat4x4<f32>  (16 floats = 64 B)
- *   bytes 64..71 : viewport  vec2<f32>    (2 floats = 8 B)
- *   bytes 72..79 : _pad0/_pad1 f32 × 2    (8 B; pads next vec3 to 16-B boundary)
- *   bytes 80..91 : camPos    vec3<f32>    (3 floats = 12 B; vec3 needs 16-B alignment)
- *   bytes 92..95 : _pad2     f32          (4 B; trailing pad in camPos's vec4 quantum)
+ *   bytes  0..63 : cam.viewProj   mat4x4<f32>  (16 floats = 64 B)
+ *   bytes 64..71 : cam.viewportPx vec2<f32>    (2 floats = 8 B)
+ *   bytes 72..79 : cam._pad0 / _pad1 f32 × 2   (8 B; pads next vec3 to 16-B boundary)
+ *   bytes 80..91 : camPos          vec3<f32>   (3 floats = 12 B; vec3 needs 16-B alignment)
+ *   bytes 92..95 : _pad2           f32         (4 B; trailing pad in camPos's vec4 quantum)
  *
- * Total: 96 bytes — multiple of 16 ✓.  This mirrors the QuadRenderer's
- * revised layout (after the orbit-warp fix) so the two passes can share
- * the same conceptual binding even though their consumers differ:
- * QuadRenderer uses the trailing slot for `pxPerRad`, while DiskRenderer
- * doesn't need pixel-radius math (the disk geometry sizes itself in
- * world space) and leaves it as padding.
+ * Total: 96 bytes — multiple of 16 ✓.  Byte-for-byte identical to the
+ * pre-CameraUniforms layout: the WESL refactor only renamed the prefix
+ * fields ('viewProj' → 'cam.viewProj', 'viewport' → 'cam.viewportPx',
+ * '_pad0/_pad1' → 'cam._pad0/_pad1') without moving any of the
+ * trailing renderer-specific bytes, so this CPU uploader didn't need to
+ * shift any offsets.  This mirrors the QuadRenderer's revised layout
+ * (after the orbit-warp fix) so the two passes can share the same
+ * conceptual binding even though their consumers differ: QuadRenderer
+ * uses the trailing slot for `pxPerRad`, while DiskRenderer doesn't
+ * need pixel-radius math (the disk geometry sizes itself in world
+ * space) and leaves it as padding.
  */
 const UNIFORM_BYTES = 96;
 
@@ -95,13 +104,17 @@ export class DiskRenderer {
       ],
     });
 
-    const module = this.device.createShaderModule({ label: 'disks-wgsl', code: diskWgsl });
+    const vsModule = createShaderModuleWithDevLog(this.device, vsCode, 'disks.vertex');
+    const fsModule = createShaderModuleWithDevLog(this.device, fsCode, 'disks.fragment');
 
     this.pipeline = this.device.createRenderPipeline({
       label: 'disk-pipeline',
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.bindGroupLayout] }),
+      layout: this.device.createPipelineLayout({
+        label: 'disks-pipeline-layout',
+        bindGroupLayouts: [this.bindGroupLayout],
+      }),
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: 'vs',
         buffers: [
           {
@@ -116,7 +129,7 @@ export class DiskRenderer {
         ],
       },
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [
           {

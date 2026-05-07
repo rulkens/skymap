@@ -27,7 +27,14 @@ beforeAll(() => {
 function makeStubDevice(): GPUDevice {
   // Minimal stub — enough for createPickRenderer construction.
   return {
-    createShaderModule: vi.fn(() => ({})),
+    // PickRenderer + PointRenderer route shader-module creation through
+    // `createShaderModuleWithDevLog`, which calls `getCompilationInfo()`
+    // under `import.meta.env.DEV` (true by default in Vitest).  Stub it
+    // out with a Promise-returning empty-messages response so the
+    // helper's `void module.getCompilationInfo()` doesn't throw.
+    createShaderModule: vi.fn(() => ({
+      getCompilationInfo: () => Promise.resolve({ messages: [] }),
+    })),
     createRenderPipeline: vi.fn(() => ({
       getBindGroupLayout: () => ({}),
     })),
@@ -102,7 +109,15 @@ describe('createPickRenderer', () => {
     const createBindGroupCalls: Array<{ layout: unknown; buffer: unknown }> = [];
 
     const device = {
-      createShaderModule: vi.fn(() => ({})),
+      // PickRenderer + PointRenderer both route shader-module creation
+      // through `createShaderModuleWithDevLog`, which calls
+      // `getCompilationInfo()` when `import.meta.env.DEV` is true
+      // (Vitest's default).  The stub therefore must expose a
+      // Promise-returning `getCompilationInfo` so the helper doesn't
+      // throw on construction.
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
       createRenderPipeline: vi.fn(() => {
         const idx = layoutsByPipeline.length;
         const layouts = {

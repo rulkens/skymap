@@ -11,8 +11,10 @@
  * is just the JS-side pipeline wiring.
  */
 
-import wgsl from './shaders/proceduralDisks.wgsl?raw';
+import vsCode from './shaders/proceduralDisks/vertex.wesl?static';
+import fsCode from './shaders/proceduralDisks/fragment.wesl?static';
 import type { ProceduralDiskInstance } from '../../@types/ProceduralDiskInstance';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 const STRIDE_FLOATS = 12; // 3 vec4<f32> per instance
 const STRIDE_BYTES = STRIDE_FLOATS * 4;
@@ -37,9 +39,11 @@ export class ProceduralDiskRenderer {
     const { device, format } = init;
     this.device = device;
 
-    const module = device.createShaderModule({ code: wgsl });
+    const vsModule = createShaderModuleWithDevLog(device, vsCode, 'proceduralDisks.vertex');
+    const fsModule = createShaderModuleWithDevLog(device, fsCode, 'proceduralDisks.fragment');
 
     this.bindGroupLayout = device.createBindGroupLayout({
+      label: 'proceduralDisks-bgl-uniforms',
       entries: [
         {
           binding: 0,
@@ -52,23 +56,27 @@ export class ProceduralDiskRenderer {
     // Uniform layout matches diskRenderer / quadRenderer (mat4 + vec2 +
     // 2 padding f32 + vec3 + f32) — 96 bytes.
     this.uniformBuffer = device.createBuffer({
+      label: 'proceduralDisks-uniform-buffer',
       size: 96,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     this.bindGroup = device.createBindGroup({
+      label: 'proceduralDisks-bg-uniforms',
       layout: this.bindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
     });
 
     const pipelineLayout = device.createPipelineLayout({
+      label: 'proceduralDisks-pipeline-layout',
       bindGroupLayouts: [this.bindGroupLayout],
     });
 
     this.pipeline = device.createRenderPipeline({
+      label: 'proceduralDisks-pipeline',
       layout: pipelineLayout,
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: 'vs',
         buffers: [
           {
@@ -83,7 +91,7 @@ export class ProceduralDiskRenderer {
         ],
       },
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [
           {
@@ -133,6 +141,7 @@ export class ProceduralDiskRenderer {
       this.vertexBuffer?.destroy();
       const cap = Math.max(instances.length, 64);
       this.vertexBuffer = this.device.createBuffer({
+        label: 'proceduralDisks-vertex-buffer',
         size: cap * STRIDE_BYTES,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });

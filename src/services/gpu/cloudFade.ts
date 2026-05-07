@@ -132,6 +132,7 @@ export class CloudFade {
     startNowMs: number = performance.now(),
   ) {
     this.buffer = device.createBuffer({
+      label: 'cloudFade-uniform-buffer',
       // 16 bytes is WebGPU's minimum uniform-buffer alignment — even though
       // we only need 4 bytes for the f32 opacity, allocating less is a
       // validation error.  The shader's `_pad0/1/2` fields consume the
@@ -140,6 +141,7 @@ export class CloudFade {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     this.bindGroup = device.createBindGroup({
+      label: 'cloudFade-bg',
       layout: bindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this.buffer } }],
     });

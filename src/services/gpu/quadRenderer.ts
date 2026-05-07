@@ -15,7 +15,9 @@
 
 import type { mat4 } from 'gl-matrix';
 import type { GpuContext, QuadInstance } from '../../@types';
-import quadsWgsl from './shaders/quads.wgsl?raw';
+import vsCode from './shaders/quads/vertex.wesl?static';
+import fsCode from './shaders/quads/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 /**
  * Per-instance vertex attributes packed as 12 floats / 48 bytes:
@@ -35,15 +37,25 @@ const FLOATS_PER_INSTANCE = 12;
 const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
 
 /**
- * 96-byte uniform layout (matches the WGSL `Uniforms` struct in quads.wgsl):
+ * 96-byte uniform layout, mirroring `struct Uniforms` in
+ * `shaders/quads.wesl`. The first 80 bytes are the shared
+ * `CameraUniforms` prefix from `shaders/lib/camera.wesl`; the
+ * renderer-specific `camPosWorld + pxPerRad` pair sits AFTER it
+ * starting at offset 80.
  *
- *   bytes  0..63 : viewProj    mat4x4<f32>  (16 floats = 64 B)
- *   bytes 64..71 : viewport    vec2<f32>    (2 floats = 8 B)
- *   bytes 72..79 : _pad0/_pad1 f32 × 2      (8 B; padding so the next vec3 lands on a 16-B boundary)
- *   bytes 80..91 : camPosWorld vec3<f32>    (3 floats = 12 B; vec3 needs 16-B alignment)
- *   bytes 92..95 : pxPerRad    f32          (1 float = 4 B; fits the trailing slot of camPosWorld's 16-B vec4 quantum)
+ *   bytes  0..63 : viewProj      mat4x4<f32>  (CameraUniforms.viewProj)
+ *   bytes 64..71 : viewportPx    vec2<f32>    (CameraUniforms.viewportPx)
+ *   bytes 72..79 : _pad0, _pad1  2 × f32      (CameraUniforms reserved)
+ *   bytes 80..91 : camPosWorld   vec3<f32>    (vec3 needs 16-B alignment, which 80 already provides)
+ *   bytes 92..95 : pxPerRad      f32          (fills the trailing slot of camPosWorld's 16-B vec4 quantum)
  *
- * Total: 96 bytes — multiple of 16 ✓.
+ * Total: 96 bytes — multiple of 16, no tail pad needed.
+ *
+ * Adopting `CameraUniforms` is a pure renaming at this layout: the
+ * shared prefix overlays the previous `viewProj + viewport + _pad0
+ * + _pad1` region byte-for-byte, so f32-indices for camPosWorld /
+ * pxPerRad stay at 20..23 — the CPU writes below are unchanged from
+ * before adoption.
  *
  * `camPosWorld` and `pxPerRad` are used by the vertex stage to compute
  * each quad's apparent angular radius from its world-space distance to
@@ -82,13 +94,17 @@ export class QuadRenderer {
       ],
     });
 
-    const module = this.device.createShaderModule({ label: 'quads-wgsl', code: quadsWgsl });
+    const vsModule = createShaderModuleWithDevLog(this.device, vsCode, 'quads.vertex');
+    const fsModule = createShaderModuleWithDevLog(this.device, fsCode, 'quads.fragment');
 
     this.pipeline = this.device.createRenderPipeline({
       label: 'quad-pipeline',
-      layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.bindGroupLayout] }),
+      layout: this.device.createPipelineLayout({
+        label: 'quads-pipeline-layout',
+        bindGroupLayouts: [this.bindGroupLayout],
+      }),
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: 'vs',
         buffers: [
           {
@@ -103,7 +119,7 @@ export class QuadRenderer {
         ],
       },
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [
           {
@@ -190,11 +206,20 @@ export class QuadRenderer {
     if (instances.length === 0) return;
 
     // Pack uniforms — see UNIFORM_BYTES doc-comment for the layout.
+    //   f32[0..15]   viewProj     — CameraUniforms.viewProj
+    //   f32[16..17]  viewportPx   — CameraUniforms.viewportPx
+    //   f32[18..19]  CameraUniforms reserved pad (left zero)
+    //   f32[20..22]  camPosWorld  — Uniforms.camPosWorld (offset 80)
+    //   f32[23]      pxPerRad     — Uniforms.pxPerRad    (offset 92)
+    //
+    // The CameraUniforms reserved pad slots at f32[18..19] MUST stay
+    // zero — overwriting them silently shifts the WGSL view of every
+    // later member.  `Float32Array` zero-initialises so we rely on
+    // that rather than writing explicit zeros.
     const uni = new Float32Array(UNIFORM_BYTES / 4);
     uni.set(viewProj as Float32Array, 0);
     uni[16] = viewportPx[0];
     uni[17] = viewportPx[1];
-    // uni[18], uni[19] are the _pad0/_pad1 zero slots (left zero by Float32Array init).
     uni[20] = camPosWorld[0]; // camPosWorld.x at byte offset 80
     uni[21] = camPosWorld[1];
     uni[22] = camPosWorld[2];

@@ -106,7 +106,16 @@ function makeStubDevice(): GPUDevice {
     }) as unknown as GPUBuffer;
 
   return {
-    createShaderModule: () => ({}) as unknown as GPUShaderModule,
+    // PointRenderer routes shader-module creation through
+    // `createShaderModuleWithDevLog`, which calls `getCompilationInfo()`
+    // when `import.meta.env.DEV` is true (Vitest's default).  The stub
+    // therefore must expose a Promise-returning `getCompilationInfo` —
+    // otherwise the helper throws on `module.getCompilationInfo is not
+    // a function`.
+    createShaderModule: () =>
+      ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      }) as unknown as GPUShaderModule,
     createRenderPipeline: () =>
       ({
         // `getBindGroupLayout` is invoked by the constructor when wiring the

@@ -81,13 +81,26 @@ import { type ComputeSchechterRatiosInput } from '../engine/computeSchechterRati
 import ComputeAngularWeightsWorker from '../engine/computeAngularWeights.worker?worker';
 import { type ComputeAngularWeightsInput } from '../engine/computeAngularWeights';
 
-// `?raw` is a Vite-specific import suffix. It tells the bundler to import the
-// file's content as a plain string rather than attempting to execute it as
-// JavaScript. The WGSL source text ends up inlined in the JS bundle; at
-// runtime we hand it to `device.createShaderModule({ code: shaderSrc })`.
-// Without `?raw`, Vite would try to parse the .wgsl file as JS and fail.
-import shaderSrc from './shaders/points.wgsl?raw';
+// `?static` is wesl-plugin's Vite import suffix. It runs the WESL linker at
+// build time and hands us a plain WGSL string with all `import` statements
+// resolved into top-level functions. We forward that string straight to
+// `device.createShaderModule({ code: shaderSrc })`. The previous `?raw`
+// suffix bypassed the linker entirely and worked only because the legacy
+// .wgsl source was self-contained — once we extract shared modules under
+// `shaders/lib/`, `?static` is required.
+//
+// The points shader was split into four files (Task 13 of the WGSL→WESL
+// conversion plan): `points/io.wesl` (shared structs), `points/vertex.wesl`
+// (the `vs` entry point shared with PickRenderer), `points/colorFragment.wesl`
+// (the visual `fs` entry point — this renderer), and `points/pickFragment.wesl`
+// (PickRenderer's `fsPick`). Each pipeline now compiles its own vertex +
+// fragment GPUShaderModule from disjoint sources, eliminating a class of
+// selection-on-wrong-galaxy bugs that came from one shader module servicing
+// two pipelines with diverging fragment paths.
+import vsCode from './shaders/points/vertex.wesl?static';
+import colorFsCode from './shaders/points/colorFragment.wesl?static';
 import { CloudFade } from './cloudFade';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -249,13 +262,14 @@ export const SELECTED_PACKED_BYTE_OFFSET = 80;
  *
  * The struct contains (offsets are byte offsets from the start of the buffer):
  *
- *   bytes  0..63  : viewProj          mat4x4<f32>  (16 floats = 64 bytes)
- *   bytes 64..71  : viewport          vec2<f32>    (2 floats)        }
- *   bytes 72..75  : pointSizePx       f32          (1 float)         } 16 bytes (one vec4 slot)
- *   bytes 76..79  : brightness        f32          (1 float)         }
+ *   bytes  0..63  : cam.viewProj      mat4x4<f32>  (16 floats = 64 bytes)  } CameraUniforms
+ *   bytes 64..71  : cam.viewportPx    vec2<f32>    (2 floats)              } prefix from
+ *   bytes 72..75  : cam._pad0         f32          (alignment slack)       } lib/camera.wesl
+ *   bytes 76..79  : cam._pad1         f32          (alignment slack)       } (80 B total)
  *   bytes 80..83  : selectedPacked    u32                             ← (selectedSource << 27) | selectedLocalIdx, or 0xFFFFFFFF
  *   bytes 84..87  : sourceCode        u32                             ← per-draw source tag (5 bits used)
- *   bytes 88..95  : _pad0/_pad1       u32×2        (written as 0)     ← alignment for the next vec3 slot
+ *   bytes 88..91  : pointSizePx       f32   (moved here from offset 72 — see Uniforms doc-block)
+ *   bytes 92..95  : brightness        f32   (moved here from offset 76 — see Uniforms doc-block)
  *   bytes 96..107 : camPosWorld       vec3<f32>    (3 floats)        } 16 bytes (one vec4 slot)
  *   bytes 108..111: pxPerRad          f32          (1 float)         }
  *   bytes 112..115: highlightFallback u32                            }
@@ -279,15 +293,20 @@ export const SELECTED_PACKED_BYTE_OFFSET = 80;
  *
  * WGSL uniform buffers follow rules similar to std140 (see WGSL spec §13,
  * "Memory Layout"). Each member must be aligned to its alignment value:
- * `vec3<f32>` requires 16-byte alignment, which is why the `_pad0/_pad1`
- * pair sits between `sourceCode` and `camPosWorld` — without those
- * eight bytes, `camPosWorld` would land at offset 88, breaking alignment
- * and silently corrupting the camera position.
+ * `vec3<f32>` requires 16-byte alignment, which is why we still need 8
+ * bytes between `sourceCode` (offset 84) and `camPosWorld` (offset 96).
+ * The pre-CameraUniforms layout filled those 8 bytes with explicit
+ * `_pad0/_pad1` u32s; the post-refactor layout fills them with
+ * `pointSizePx` + `brightness` (formerly at offsets 72/76, which now
+ * belong to `CameraUniforms._pad0/_pad1`). Same number of bytes, same
+ * alignment — the displaced scalars simply moved into the existing pad slack.
  *
- * The picker (`pickRenderer.ts`) writes `selectedPacked` (offset 80) +
- * `sourceCode` (offset 84) for every per-source draw — see its `pick()`
- * docblock for the per-source uniform-write pattern that lets the pick
- * pass see the same packed identity space the visual pass does.
+ * The picker (`pickRenderer.ts`) writes `selectedPacked` (offset 80,
+ * UNCHANGED across the refactor) + `sourceCode` (offset 84) for every
+ * per-source draw — see its `pick()` docblock for the per-source
+ * uniform-write pattern that lets the pick pass see the same packed
+ * identity space the visual pass does. It also writes `pointSizePx` at
+ * offset 88 (moved from offset 72 by the CameraUniforms refactor).
  *
  * Task 15 added the trailing 16-byte slot for the orientation-visibility
  * toggles (`highlightFallback`, `realOnlyMode`).  The two trailing u32
@@ -810,13 +829,22 @@ export class PointRenderer {
     private device: GPUDevice,
     format: GPUTextureFormat,
   ) {
-    const module = device.createShaderModule({ code: shaderSrc });
+    // Two modules — one per stage — built from disjoint sources. The
+    // vertex source is shared (textually) with PickRenderer, but each
+    // renderer compiles its OWN GPUShaderModule from it; sharing modules
+    // across pipelines tempts you into the WebGPU 'auto' bind-group-layout
+    // trap (auto-derived layouts are pipeline-specific identities and
+    // sharing them across pipelines fails the 'group-equivalent'
+    // compatibility check at draw time).
+    const vsModule = createShaderModuleWithDevLog(device, vsCode, 'points.vertex');
+    const fsModule = createShaderModuleWithDevLog(device, colorFsCode, 'points.colorFragment');
 
     this.pipeline = device.createRenderPipeline({
+      label: 'points-pipeline',
       layout: 'auto',
 
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: 'vs',
         buffers: [
           {
@@ -861,7 +889,7 @@ export class PointRenderer {
       },
 
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [
           {
@@ -881,11 +909,13 @@ export class PointRenderer {
     });
 
     this.uniformBuffer_internal = device.createBuffer({
+      label: 'points-uniform-buffer',
       size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
     this.bindGroup = device.createBindGroup({
+      label: 'points-bg-uniforms',
       layout: this.pipeline.getBindGroupLayout(0),
       entries: [{ binding: 0, resource: { buffer: this.uniformBuffer_internal } }],
     });
@@ -1012,6 +1042,7 @@ export class PointRenderer {
     }
 
     const buffer = this.device.createBuffer({
+      label: `points-vertex-buffer-${source}`,
       size: interleaved.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
@@ -1594,15 +1625,25 @@ export class PointRenderer {
     const f32 = new Float32Array(buf);
     const u32 = new Uint32Array(buf);
 
+    // Cam block (offsets 0..79) — viewProj + viewportPx + 2 reserved pads.
+    // f32[18] / f32[19] are the CameraUniforms '_pad0' / '_pad1' slots; the
+    // shared struct reserves them for vec3-alignment and they stay zero here.
     f32.set(viewProj, 0);
-    f32[16] = viewportPx[0];
-    f32[17] = viewportPx[1];
-    f32[18] = pointSizePx;
-    f32[19] = brightness;
+    f32[16] = viewportPx[0]; // cam.viewportPx.x at byte offset 64
+    f32[17] = viewportPx[1]; // cam.viewportPx.y at byte offset 68
+    // f32[18], f32[19] (cam._pad0, cam._pad1) stay zero.
     u32[20] = selectedPacked >>> 0; // selectedPacked at byte offset 80
-    // u32[21..23] are pad bytes (sourceCode lives in the per-source
-    // @group(1) cloud bind group, not @group(0)).  Float32Array starts
-    // zero-initialised so we don't need to write them explicitly.
+    // u32[21] (offset 84) is the @group(0) _pad0 — sourceCode lives in
+    // the per-source @group(1) cloud bind group, not @group(0).
+    // ArrayBuffer starts zero-initialised so we don't need to write it.
+    // pointSizePx + brightness moved into f32[22]/f32[23] from f32[18]/f32[19]
+    // when the shared CameraUniforms prefix took over the first 80 bytes —
+    // they recycle the existing 8-byte alignment slack between the
+    // @group(0)-unused slot at offset 84 and the vec3-aligned camPosWorld
+    // at offset 96.  See the 'Uniforms layout' doc-block in points.wesl
+    // and the matching POINT_SIZE_OFFSET = 88 in pickRenderer.ts.
+    f32[22] = pointSizePx; // bytes 88..91
+    f32[23] = brightness; // bytes 92..95
     f32[24] = camPosWorld[0]; // bytes 96..99
     f32[25] = camPosWorld[1]; // bytes 100..103
     f32[26] = camPosWorld[2]; // bytes 104..107

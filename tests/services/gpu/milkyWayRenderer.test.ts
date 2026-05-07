@@ -14,9 +14,15 @@ describe('MilkyWayRenderer', () => {
 
   it('exposes the documented uniform buffer size constant', () => {
     // The renderer uploads exactly UNIFORM_BUFFER_SIZE bytes per frame.
-    // Pinning this in a test ensures the WGSL `Uniforms` struct and
+    // Pinning this in a test ensures the WESL `Uniforms` struct and
     // the JS-side `ArrayBuffer(UNIFORM_BUFFER_SIZE)` allocation can
     // never silently drift.
-    expect(MilkyWayRenderer.UNIFORM_BUFFER_SIZE).toBe(96);
+    //
+    // Layout: CameraUniforms prefix (80 B) + cameraPosWorld vec3 (12 B)
+    // + fadeAlpha f32 (4 B) + iTime f32 (4 B) + 12 B tail pad = 112 B.
+    // Was 96 B before adopting `cam: CameraUniforms` from
+    // `lib/camera.wesl` — see `milkyWayRenderer.ts` doc-block for why
+    // the field order changed.
+    expect(MilkyWayRenderer.UNIFORM_BUFFER_SIZE).toBe(112);
   });
 });

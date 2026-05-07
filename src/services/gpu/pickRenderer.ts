@@ -37,9 +37,9 @@
  *
  * The pick pipeline reuses the *same* vertex buffer and *same* uniform buffer as
  * the visual pass.  The caller must ensure that the visual pass has already
- * written its per-frame uniforms (viewProj, viewport, pointSizePx, brightness)
- * before calling `pick()` — the pick pass reads the same values without
- * re-uploading them.  See the `pick()` JSDoc for the exact contract.
+ * written its per-frame uniforms (cam.viewProj, cam.viewportPx, pointSizePx,
+ * brightness, ...) before calling `pick()` — the pick pass reads the same
+ * values without re-uploading them.  See the `pick()` JSDoc for the exact contract.
  *
  * ### Forgiveness radius
  *
@@ -50,9 +50,19 @@
  * @module
  */
 
-import shaderSrc from './shaders/points.wgsl?raw';
+// The points shader was split into four files (Task 13 of the WGSL→WESL
+// conversion plan): `points/io.wesl` (shared structs), `points/vertex.wesl`
+// (the `vs` entry point shared with PointRenderer), `points/colorFragment.wesl`
+// (PointRenderer's visual `fs`), and `points/pickFragment.wesl` (the
+// `fsPick` entry point — this renderer). The vertex source is textually
+// shared with PointRenderer, but we compile our OWN GPUShaderModule from
+// it; never share modules across pipelines (see the `auto` bind-group-
+// layout trap noted in pointRenderer.ts).
+import vsCode from './shaders/points/vertex.wesl?static';
+import pickFsCode from './shaders/points/pickFragment.wesl?static';
 import type { Source } from '../../data/sources';
 import type { PointRenderer } from './pointRenderer';
+import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -246,12 +256,16 @@ export function createPickRenderer(
   device: GPUDevice,
   pointRenderer: PointRenderer,
 ): PickRenderer {
-  // ── Shader module ──────────────────────────────────────────────────────────
+  // ── Shader modules ─────────────────────────────────────────────────────────
   //
-  // We reuse the same WGSL source as PointRenderer. The shader file contains
-  // both the `fs` (visual) and `fsPick` (picking) fragment entry points.
-  // Here we select `fsPick`.
-  const module = device.createShaderModule({ code: shaderSrc });
+  // The vertex stage source is textually shared with PointRenderer, but we
+  // compile our OWN GPUShaderModule from it — never share modules across
+  // pipelines (see the `auto` bind-group-layout trap above). The fragment
+  // module compiles `pickFragment.wesl`, which contains only the `fsPick`
+  // entry point; the visual `fs` lives in a sibling file that this
+  // renderer never touches.
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
 
   // ── Render pipeline ────────────────────────────────────────────────────────
   //
@@ -266,10 +280,11 @@ export function createPickRenderer(
   // `layout: 'auto'` reflects the bind group layout from the shader's @group/@binding
   // declarations.  The single binding is @group(0) @binding(0) — the Uniforms buffer.
   const pipeline = device.createRenderPipeline({
+    label: 'pick-pipeline',
     layout: 'auto',
 
     vertex: {
-      module,
+      module: vsModule,
       entryPoint: 'vs',
 
       // Vertex buffer layout — must exactly match PointRenderer's layout
@@ -307,7 +322,7 @@ export function createPickRenderer(
     },
 
     fragment: {
-      module,
+      module: fsModule,
       entryPoint: 'fsPick', // the picking fragment — writes instance index to r32uint
 
       targets: [
@@ -344,6 +359,7 @@ export function createPickRenderer(
   // 4-byte texel, we must allocate at least 256 bytes.  We never map this
   // buffer for writing — only MAP_READ is needed.
   const stagingBuffer = device.createBuffer({
+    label: 'pick-staging-buffer',
     size: 256,
     usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST,
   });
@@ -397,6 +413,7 @@ export function createPickRenderer(
     // `RENDER_ATTACHMENT` — the render pass can write to it.
     // `COPY_SRC`          — we copy a single pixel out of it after the pass.
     pickTexture = device.createTexture({
+      label: 'pick-target',
       size: { width: w, height: h },
       format: 'r32uint',
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
@@ -409,6 +426,7 @@ export function createPickRenderer(
     // Only `RENDER_ATTACHMENT` is needed — depth buffers are not typically read
     // back to the CPU, so no `COPY_SRC` here.
     depthTexture = device.createTexture({
+      label: 'pick-depth',
       size: { width: w, height: h },
       format: 'depth24plus',
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
@@ -480,8 +498,13 @@ export function createPickRenderer(
     // with the real selectedPacked, so we don't need to restore
     // anything afterward.
     //
-    // Layout: mat4 viewProj (64) + viewport (8) + pointSizePx (4) +
-    // brightness (4) → selectedPacked sits at byte offset 80.
+    // Layout (post-CameraUniforms refactor): the shared 80-byte
+    // 'CameraUniforms' prefix occupies bytes 0..79 (viewProj + viewportPx
+    // + two pad slots), so 'selectedPacked' sits at byte offset 80 — the
+    // SAME offset as before the refactor (pre-refactor was viewProj 64 +
+    // viewport 8 + pointSizePx 4 + brightness 4 = 80).  The value at this
+    // offset is the packed (source, localIdx) u32, not an instance
+    // index — see PointRenderer.toGlobalIdx for the encoding.
     const SELECTED_PACKED_OFFSET = 80;
     const NONE_SENTINEL = new Uint32Array([0xffffffff]);
     device.queue.writeBuffer(sharedUniformBuffer, SELECTED_PACKED_OFFSET, NONE_SENTINEL);
@@ -492,16 +515,24 @@ export function createPickRenderer(
     // full rationale.  Pads the visual `pointSizePx` floor by a few extra
     // pixels so distant point-like galaxies become easier mouse targets
     // without growing them on screen.  Same in-place mutation pattern as
-    // the SELECTED_INDEX write above — the next visual frame writes the
+    // the SELECTED_PACKED write above — the next visual frame writes the
     // real `pointSizePx` back, so the visual pass is unaffected.
     //
-    // Layout reminder: pointSizePx sits at byte offset 72 (mat4 viewProj
-    // = 64 + viewport vec2 = 8 → 72).  Skipped entirely when the caller
-    // didn't supply pointSizePx — preserves the legacy "pick whatever the
-    // visual frame just wrote" contract for any test that constructs the
-    // renderer in isolation.
+    // Layout reminder (post-CameraUniforms refactor): pointSizePx now sits
+    // at byte offset 88 (cam: CameraUniforms = 80 B prefix + selectedPacked
+    // u32 + instanceIdOffset u32 = 88).  It used to live at offset 72, but
+    // adopting the shared 'CameraUniforms' prefix (which reserves bytes
+    // 72..79 as '_pad0/_pad1') forced 'pointSizePx' + 'brightness' to
+    // move into the existing 8-byte alignment slack between
+    // 'instanceIdOffset' and the vec3-aligned 'camPosWorld'.  See the
+    // 'Uniforms layout' doc-block in points.wesl for the migration
+    // diagram and the matching f32-index update in pointRenderer.ts.
+    //
+    // Skipped entirely when the caller didn't supply pointSizePx —
+    // preserves the legacy "pick whatever the visual frame just wrote"
+    // contract for any test that constructs the renderer in isolation.
     if (pointSizePx !== undefined) {
-      const POINT_SIZE_OFFSET = 72;
+      const POINT_SIZE_OFFSET = 88;
       const boostedSize = new Float32Array([pointSizePx + PICK_PADDING_PX]);
       device.queue.writeBuffer(sharedUniformBuffer, POINT_SIZE_OFFSET, boostedSize);
     }
@@ -550,6 +581,7 @@ export function createPickRenderer(
     // next pick() call picks up the fresh handle without needing to
     // invalidate this PickRenderer.
     const bindGroup = device.createBindGroup({
+      label: 'pick-bg-uniforms',
       layout: pipeline.getBindGroupLayout(0),
       entries: [{ binding: 0, resource: { buffer: sharedUniformBuffer } }],
     });
@@ -567,6 +599,7 @@ export function createPickRenderer(
     const cloudLayout = pipeline.getBindGroupLayout(1);
     for (const src of sourceList) {
       const cloudBindGroup = device.createBindGroup({
+        label: `pick-bg-cloudFade-${src.source}`,
         layout: cloudLayout,
         entries: [{ binding: 0, resource: { buffer: src.cloudFadeBuffer } }],
       });
