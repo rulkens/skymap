@@ -2,11 +2,11 @@
 
 Flat checklist of currently-unchecked items, grouped by task. Skip items marked `[x]` in the per-task files. Start at Task 0 and work down.
 
-## Task 0: Cut v0.2.0 release + refresh Zenodo DOI
+## Task 0: Cut v0.2.0 release + refresh Zenodo DOI — DONE 2026-05-06
 
-- [ ] Edit `package.json` — bump `"version"` to `"0.2.0"`
-- [ ] Edit `CITATION.cff` — bump `version:` to `0.2.0` and update `date-released:`
-- [ ] Verify: `grep -E '^[[:space:]]*"version"' package.json` and `grep -E '^(version|date-released):' CITATION.cff`
+- [x] Edit `package.json` — bump `"version"` to `"0.2.0"`
+- [x] Edit `CITATION.cff` — bump `version:` to `0.2.0` and update `date-released:`
+- [x] Verify: `grep -E '^[[:space:]]*"version"' package.json` and `grep -E '^(version|date-released):' CITATION.cff`
 - [x] Tag + push v0.2.0 (done 2026-05-06)
 - [x] Cut GitHub release (web UI; PAT lacks `Contents: write`)
 - [x] Zenodo minted v0.2.0 version-DOI `10.5281/zenodo.20053519` under concept DOI `10.5281/zenodo.20037028`
@@ -19,14 +19,18 @@ All eight README assets are present in `docs/screenshots/` and wired in:
 `local-group.png`, `wide-field.png`, `zoomed.gif`, `density-correction-modes.png`.
 Topic chips, DOI badge, and inline rendering verified.
 
-## Task 2: HyperLEDA R2 distribution (remaining items)
+## Task 2: HyperLEDA R2 distribution — DONE 2026-05-07 (shipped partial cache)
 
-- [ ] Check CSV completeness: `wc -l data/raw/hyperleda_pa.csv` — expect ~1.5 M lines
-- [ ] If incomplete, run: `npm run fetch-hyperleda` (~1 hour, resumable)
-- [ ] Verify CSV header: `head -3 data/raw/hyperleda_pa.csv`
-- [ ] Compress: `gzip -k -9 data/raw/hyperleda_pa.csv`
-- [ ] Run sync: `npm run sync-r2`
-- [ ] Verify upload: `curl -sI https://data.skymap.rulkens.com/data/hyperleda_pa.csv.gz | head -6`
+Decision 2026-05-07: ship the partial run as-is rather than spending another
+hour to fetch the remaining ~1.45 M PGCs. The 52,178-row CSV (41,332 with
+populated PA) is already on R2 and covers the brightest, most-cross-matched
+GLADE galaxies — the long tail is overwhelmingly empty HyperLEDA responses
+anyway. Anyone who wants a fuller cache can still run `npm run fetch-hyperleda`
+locally (it's resumable and the README still documents the fallback).
+
+- [x] CSV exists at `data/raw/hyperleda_pa.csv` — 52,178 rows queried, 41,332 with PA
+- [x] Compressed `hyperleda_pa.csv.gz` synced to R2
+- [x] Verify upload: `curl -sI https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz` returns 200 (verified 2026-05-07)
 
 ## Task 3: JOSS paper draft
 

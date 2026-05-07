@@ -19,11 +19,11 @@ Since v0.1.0, several user-visible features have shipped: deep-link `#focus=…`
 
 ### Step 0.1: Bump version in package.json + CITATION.cff
 
-- [ ] **Edit `package.json`** — change `"version": "0.1.0"` to `"version": "0.2.0"`.
+- [x] **Edit `package.json`** — change `"version": "0.1.0"` to `"version": "0.2.0"`.
 
-- [ ] **Edit `CITATION.cff`** — change `version: 0.1.0` to `version: 0.2.0` and update `date-released:` to today's date.
+- [x] **Edit `CITATION.cff`** — change `version: 0.1.0` to `version: 0.2.0` and update `date-released:` to today's date.
 
-- [ ] **Verify:**
+- [x] **Verify:**
 
 ```bash
 grep -E '^[[:space:]]*"version"' /Users/rulkens/Development/js/skymap/package.json

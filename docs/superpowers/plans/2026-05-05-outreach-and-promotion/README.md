@@ -30,17 +30,17 @@ Skymap is a personal didactic project that happens to be a useful tool. Outreach
 |---|---|---|
 | [0 — Cut v0.2.0 + concept-DOI](task-0-release.md) | nothing | pending |
 | [1 — Repo polish](task-1-repo-polish.md) | (Task 0 helpful but not strict) | mostly shipped |
-| [2 — HyperLEDA R2 distribution](task-2-hyperleda-r2.md) | nothing | committed (`97ff3cc`), CSV fetch pending |
+| [2 — HyperLEDA R2 distribution](task-2-hyperleda-r2.md) | nothing | done 2026-05-07 (partial cache shipped) |
 | [3 — JOSS paper](task-3-joss-paper.md) | Task 0 (DOI) | pending |
 | [4 — Public posts](task-4-public-posts.md) | Tasks 0 + 1 | pending |
 | [5 — Academic emails](task-5-academic-emails.md) | Task 4 traction | pending |
 | [6 — RNAAS note (optional)](task-6-rnaas.md) | Task 0 (DOI) | pending |
 
-## Status snapshot (2026-05-06)
+## Status snapshot (2026-05-07)
 
 - **Task 0** — done 2026-05-06. v0.2.0 release cut, Zenodo minted version-DOI `10.5281/zenodo.20053519` under concept DOI `10.5281/zenodo.20037028`. v0.1.0 version-DOI is `10.5281/zenodo.20037029` (kept for reference). README badge + CITATION.cff cite the concept DOI so they always resolve to the latest version.
 - **Task 1** — done 2026-05-06. All eight README assets present and wired in: `hero.gif`, `ui-overview.png`, `tier-selector.png`, `infocard-detail.png`, `local-group.png`, `wide-field.png`, `zoomed.gif`, `density-correction-modes.png`. Topic chips and DOI badge live.
-- **Task 2** — infra committed on `feat/outreach-r2-hyperleda-cache`. `tools/syncR2.ts` and README updated. CSV fetch is ~52k / ~1.5M rows — needs a full re-run before gzip + sync. See [task-2-hyperleda-r2.md](task-2-hyperleda-r2.md).
+- **Task 2** — done 2026-05-07. Infra (`tools/syncR2.ts`, README) shipped on `feat/outreach-r2-hyperleda-cache`. R2 serves the partial cache (52,178 PGCs queried; 41,332 with PA) — decision was to ship the partial run rather than spend another hour fetching the empty long tail. Verified `https://skymap-data.rulkens.com/data/hyperleda_pa.csv.gz` returns HTTP 200.
 - **Tasks 3–6** — not started.
 
 ## Files in this folder
