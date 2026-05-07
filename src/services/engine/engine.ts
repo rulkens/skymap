@@ -606,6 +606,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Async startup ────────────────────────────────────────────────────────
 
+  // Flat slot registry, keyed by `slot.name`.  Lifted to outer scope so the
+  // public handle can expose it as `assetSlots` (consumed by the
+  // `LoadingDevPanel` debug component — see `EngineHandle.assetSlots`).
+  // The IIFE below populates this Map as each slot is minted; it stays
+  // empty until then.  The same Map instance is also handed to
+  // `aggregateRegistry` / `createLoadProgressEmitter`, so the loading
+  // bar and the dev panel agree byte-for-byte on what's "in flight".
+  const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
+
   cb.onStatusChange({ kind: 'initializing' });
 
   // The main async IIFE runs GPU init + data load, then kicks off the render
@@ -940,7 +949,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // only reads `slot.state()` discriminator fields, never the
       // payload type.  We re-narrow at the dev panel's per-slot
       // rendering site if it cares.
-      const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
+      //
+      // `allSlots` is declared at outer scope (top of `createEngine`) so
+      // the public handle can expose the same Map as `assetSlots` for
+      // the `LoadingDevPanel` debug component.  We populate it here once
+      // every slot exists.
       for (const [, slot] of state.assetSlots.points) {
         allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
       }
@@ -2480,6 +2493,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     setSpaceMouseSensitivity(value) {
       state.subsystems.spaceMouse.setSensitivity(value);
     },
+
+    // ── Asset-slot registry (dev-panel surface) ──────────────────────────
+    //
+    // `allSlots` is declared at outer scope and populated by the GPU init
+    // IIFE.  Exposing the same Map reference here means the dev panel
+    // observes new slots as they appear (the `LoadingDevPanel`'s effect
+    // re-subscribes whenever the prop identity changes — but since we
+    // hand it a stable reference, it instead picks up new slots on the
+    // first render that runs after the IIFE populates them, then
+    // subscribes once at that point).  Read-only at the type level so
+    // misuse from the React side (mutating the slot bag directly) trips
+    // the typechecker.
+    assetSlots: allSlots,
   };
 
   return handle;

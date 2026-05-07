@@ -70,6 +70,24 @@ import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
+import { LoadingDevPanel } from '../LoadingDevPanel/LoadingDevPanel';
+
+// ── Dev-panel gate (Task 13) ──────────────────────────────────────────────
+//
+// `import.meta.env.DEV` is statically replaced by Vite at build time, so
+// the production bundle sees `false` here and Rollup tree-shakes the
+// `LoadingDevPanel` import + JSX away entirely.  The `?debug=loading`
+// query-param branch survives in production as an explicit escape hatch
+// for diagnosing real production failures from a deployed build.
+//
+// SSR-safe: `typeof window` guard so unit tests that render `<App />`
+// without a DOM (jsdom does have `window`, but be defensive) don't blow
+// up.  In a real browser the second branch always runs.
+function shouldShowLoadingDevPanel(): boolean {
+  if (import.meta.env.DEV) return true;
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('debug') === 'loading';
+}
 
 // ── App ────────────────────────────────────────────────────────────────────────
 
@@ -475,6 +493,20 @@ export function App(): React.ReactElement {
         onSelect={(id) => handleRef.current?.selectFamous?.(id)}
         onSelectAlias={(target) => handleRef.current?.selectByAlias?.(target)}
       />
+      {/*
+        Loading dev panel (Task 13).  Mounted only in dev builds or when
+        `?debug=loading` is present in the URL.  Gated on
+        `status.kind !== 'initializing'` because the engine populates its
+        asset-slot registry inside the async GPU init IIFE — once the
+        engine has transitioned out of `initializing`, every slot exists
+        on `handleRef.current.assetSlots`, so the panel's first render is
+        guaranteed to see the full slot set and subscribe to each one.
+      */}
+      {shouldShowLoadingDevPanel() &&
+        status.kind !== 'initializing' &&
+        handleRef.current?.assetSlots && (
+          <LoadingDevPanel slots={handleRef.current.assetSlots} />
+        )}
       </div>
     </>
   );
