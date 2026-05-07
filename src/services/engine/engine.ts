@@ -489,6 +489,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     if (!resolved) return null;
     const c = state.sources.clouds.get(resolved.source);
     if (!c) return null;
+    // Bounds-check against the cloud's actual count.  During a tier swap
+    // there's a transient window where the renderer's per-source count
+    // and the engine's clouds map can disagree (e.g. the renderer just
+    // re-uploaded a smaller cloud but a still-in-flight pick from a
+    // previous frame returns a global idx encoded against the older,
+    // larger layout).  Without this guard, buildPointInfo would index
+    // past the end of cloud.magG / cloud.axisRatio / etc. and produce
+    // a PointInfo whose numeric fields are runtime-undefined — which
+    // crashes downstream `.toFixed()` calls in the InfoCard.  Returning
+    // null here is the right semantics: "we don't have data for that
+    // pick; render no card, the next frame's pick will succeed".
+    if (resolved.localIdx >= c.count) return null;
     return buildPointInfo(
       c,
       resolved.localIdx,
@@ -1083,6 +1095,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           if (!r) return null;
           const cloud = state.sources.clouds.get(r.source);
           if (!cloud) return null;
+          // Same bounds-check as pointInfoFromGlobal — see its comment
+          // for the tier-swap window that can produce out-of-range
+          // localIdx values.
+          if (r.localIdx >= cloud.count) return null;
           return { source: r.source, localIdx: r.localIdx, cloud };
         },
         buildPointInfo: (cloud, localIdx, src) =>

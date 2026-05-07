@@ -347,6 +347,19 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
   // Task 17 will throttle pointer events so this guard is rarely triggered.
   let inFlight = false;
 
+  // ── Teardown flag ──────────────────────────────────────────────────────────
+  //
+  // React StrictMode and HMR both unmount-then-remount the engine, which
+  // calls `destroy()`.  When that happens with a `pick()` already awaiting
+  // `stagingBuffer.mapAsync`, destroying the buffer aborts the pending map
+  // with `AbortError: Buffer was destroyed before mapping was resolved`.
+  // The error is harmless — the caller doesn't need a result from a torn-
+  // down picker — but it surfaces as an uncaught promise rejection in the
+  // console.  We flip `destroyed` in `destroy()` and use it to swallow that
+  // specific abort silently.  Any other failure still propagates so genuine
+  // bugs aren't masked.
+  let destroyed = false;
+
   // ── Helpers ────────────────────────────────────────────────────────────────
 
   /**
@@ -548,7 +561,17 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
     // memory and is ready for the next pick call.
     inFlight = true;
     try {
-      await stagingBuffer.mapAsync(GPUMapMode.READ);
+      try {
+        await stagingBuffer.mapAsync(GPUMapMode.READ);
+      } catch (err) {
+        // If destroy() ran while we were awaiting the map, the buffer
+        // has been torn down and mapAsync rejects with an AbortError.
+        // Treat this as "no pick result" — the renderer is going away
+        // anyway.  Any other rejection re-throws so genuine errors
+        // (validation, lost device) still surface.
+        if (destroyed && (err as Error).name === 'AbortError') return -1;
+        throw err;
+      }
       const mapped = new Uint32Array(stagingBuffer.getMappedRange(0, 4));
       const raw = mapped[0]!;
       stagingBuffer.unmap();
@@ -562,6 +585,7 @@ export function createPickRenderer(device: GPUDevice): PickRenderer {
   }
 
   function destroy(): void {
+    destroyed = true;
     pickTexture?.destroy();
     depthTexture?.destroy();
     stagingBuffer.destroy();
