@@ -91,11 +91,13 @@
  */
 
 // `?static` runs the WESL linker at build time and returns a flat WGSL
-// string. For toneMap there are no `import` statements yet, so the
-// linker output is byte-identical to the previous `?raw` import — but
-// wiring `?static` here first makes this the smoke test for the whole
-// wesl-plugin tooling chain. Later tasks add real imports.
-import toneMapWgsl from './shaders/toneMap.wesl?static';
+// string. The tone-map pass is split into vertex + fragment source
+// files (mirroring the points/ and milkyWay/ splits) so each stage
+// compiles a strictly-smaller GPUShaderModule from disjoint source.
+// Both modules import their shared structs from `shaders/toneMap/io.wesl`
+// so the vertex-to-fragment interface stays byte-identical.
+import vsCode from './shaders/toneMap/vertex.wesl?static';
+import fsCode from './shaders/toneMap/fragment.wesl?static';
 import { ToneMapCurve } from '../../data/toneMapCurve';
 import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
@@ -224,7 +226,8 @@ export function createPostProcess(
   // WGSL compiler reports error line numbers against the linked output
   // that wesl-plugin produces, so the only way to map them back to a
   // source file is to read the linked string ourselves).
-  const module = createShaderModuleWithDevLog(device, toneMapWgsl, 'toneMap');
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'toneMap.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'toneMap.fragment');
 
   // Why nearest, not linear?  The HDR texture is the same resolution
   // as the swap chain (we resize it in lockstep) so the fullscreen
@@ -261,9 +264,9 @@ export function createPostProcess(
       label: 'toneMap-pipeline-layout',
       bindGroupLayouts: [bindGroupLayout],
     }),
-    vertex: { module, entryPoint: 'vs' },
+    vertex: { module: vsModule, entryPoint: 'vs' },
     fragment: {
-      module,
+      module: fsModule,
       entryPoint: 'fs',
       targets: [{ format: swapFormat }],
     },
