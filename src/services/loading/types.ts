@@ -85,3 +85,17 @@ export type LoadEvent =
   | { kind: 'committed'; value: unknown; nowMs: number }
   | { kind: 'retry-scheduled'; attempt: number }
   | { kind: 'gave-up'; error: Error; attempt: number };
+
+/**
+ * The handle returned by `createAssetSlot`.  This is the public API every
+ * consumer of the loading subsystem talks to.
+ */
+export type AssetSlot<T, Req> = {
+  readonly name: string;
+  load(req: Req): void;
+  current(): T | null;
+  state(): LoadState<T>;
+  subscribe(fn: (state: LoadState<T>) => void): () => void;
+  forceReload(): void;
+  cancel(): void;
+};
