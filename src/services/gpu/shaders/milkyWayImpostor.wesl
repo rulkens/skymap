@@ -132,6 +132,16 @@ import package::lib::math::rot2;
 import package::lib::math::sabs;
 import package::lib::math::toPolar;
 import package::lib::math::toRect;
+// Orphan utilities — single-consumer helpers gathered in lib/util.wesl
+// until a second renderer needs them. See that file's docblock for
+// the rename rationale ('rand' → 'hash21' because it's a deterministic
+// hash, not a PRNG; 'noise1' → 'valueNoise2' because the original was
+// a numbered slot rather than a description).
+import package::lib::util::hash21;
+import package::lib::util::valueNoise2;
+import package::lib::util::raySphere;
+import package::lib::util::worldToGalactic;
+import package::lib::util::galacticToShader;
 
 struct Uniforms {
   // Shared camera prefix — viewProj for clip-space projection plus
@@ -238,45 +248,14 @@ const CORNERS = array<vec2<f32>, 6>(
 const MILKY_WAY_RADIUS_MPC: f32 = 0.030;
 const MILKY_WAY_HALFEXTENT_MPC: f32 = 0.120;
 
-// ── Equatorial → galactic rotation matrix (J2000) ───────────────────
+// ── Equatorial → galactic frame ─────────────────────────────────────
 //
-// Standard fixed astronomical transformation (Liu et al. 2011 update
-// of the IAU 1958 definition).  Each row is a unit equatorial vector
-// in the galactic system's three principal directions:
-//
-//   row 0 — galactic X axis (toward the Galactic Centre)
-//   row 1 — galactic Y axis (direction of Galactic rotation, l=90°)
-//   row 2 — galactic Z axis (toward the North Galactic Pole)
-//
-// Hardcoded in the shader (rather than uploaded as a uniform) because
-// the matrix is a fixed constant for any J2000-epoch galactic frame
-// and never changes per-frame — keeping it in code lets the optimiser
-// constant-fold the dot products.
-const GAL_X_EQ = vec3<f32>(-0.054876, -0.873437, -0.483835);
-const GAL_Y_EQ = vec3<f32>( 0.494109, -0.444830,  0.746982);
-const GAL_Z_EQ = vec3<f32>(-0.867666, -0.198076,  0.455984);
-
-// Rotate a world-space (equatorial-cartesian) vector into the
-// galactic frame.  Result components are (X_gal, Y_gal, Z_gal) — i.e.
-// the projection of the input onto each galactic basis axis.  Pure
-// rotation (no translation), so this is valid for both positions
-// (relative to the world origin) and direction vectors.
-fn worldToGalactic(v: vec3<f32>) -> vec3<f32> {
-  return vec3<f32>(dot(GAL_X_EQ, v), dot(GAL_Y_EQ, v), dot(GAL_Z_EQ, v));
-}
-
-// Convert a galactic-frame vector (X=GC, Y=rotation, Z=NGP) into the
-// shader's local frame, where the disk lies in the y=0 plane and y is
-// the disk normal.  The original ShaderToy uses '(0.0 - ro.y)/rd.y'
-// as the disk-plane intersection, so its Y axis must be the disk
-// normal — which is the galactic Z (NGP) direction.
-//
-//   shader.x = galactic.X (toward GC)            — in-disk
-//   shader.y = galactic.Z (toward NGP)           — disk normal
-//   shader.z = galactic.Y (direction of rotation)— in-disk
-fn galacticToShader(g: vec3<f32>) -> vec3<f32> {
-  return vec3<f32>(g.x, g.z, g.y);
-}
+// 'worldToGalactic' and 'galacticToShader' (used in the fragment
+// stage to convert the world-space camera ray into the shader-local
+// frame where the disk lies in y=0) live in lib/util.wesl alongside
+// the J2000 rotation matrix constants. See that file for the
+// derivation; the import keeps this file focused on the impostor's
+// rendering logic.
 
 // ── Volumetric raymarch tunables (bulge + disc halo) ────────────────
 //
@@ -419,14 +398,9 @@ fn mod2(p_in: vec2<f32>, size: vec2<f32>) -> Mod2Out {
   return out;
 }
 
-fn noise1(p_in: vec2<f32>, tm: f32) -> f32 {
-  let p = p_in * tanh(0.1 * length(p_in));
-  let a = cos(p.x);
-  let b = cos(p.y);
-  let c = cos(p.x * sqrt(3.5) + tm);
-  let d = cos(p.y * sqrt(1.5) + tm);
-  return a * b * c * d;
-}
+// 'valueNoise2' (formerly 'noise1') and 'hash21' (formerly 'rand') now
+// live in lib/util.wesl. 'raySphere' moved with them. See that file's
+// docblock for the rename rationale.
 
 fn twirl(p_in: vec2<f32>, a: f32, z: f32) -> vec2<f32> {
   var pp = toPolar(p_in);
@@ -436,22 +410,7 @@ fn twirl(p_in: vec2<f32>, a: f32, z: f32) -> vec2<f32> {
 }
 
 fn galaxy(p: vec2<f32>, a: f32, z: f32, tm: f32) -> f32 {
-  return noise1(twirl(p, a, z), tm);
-}
-
-fn rand(co: vec2<f32>) -> f32 {
-  return fract(sin(dot(co, vec2<f32>(12.9898, 78.233))) * 43758.5453);
-}
-
-fn raySphere(ro: vec3<f32>, rd: vec3<f32>, center: vec3<f32>, radius: f32) -> vec2<f32> {
-  let m = ro - center;
-  let b = dot(m, rd);
-  let c = dot(m, m) - radius * radius;
-  if (c > 0.0 && b > 0.0) { return vec2<f32>(-1.0, -1.0); }
-  let discr = b * b - c;
-  if (discr < 0.0) { return vec2<f32>(-1.0, -1.0); }
-  let s = sqrt(discr);
-  return vec2<f32>(-b - s, -b + s);
+  return valueNoise2(twirl(p, a, z), tm);
 }
 
 fn stars(p_in: vec2<f32>) -> vec3<f32> {
@@ -466,7 +425,7 @@ fn stars(p_in: vec2<f32>) -> vec3<f32> {
   for (var i: i32 = 0; i < 3; i = i + 1) {
     p = rot2(p, 0.5);
     let m = mod2(p, vec2<f32>(sz));
-    let r = rand(m.c);
+    let r = hash21(m.c);
     let o = -1.0 + 2.0 * vec2<f32>(r, fract(r * 1000.0));
     s.x = min(s.x, length(m.p - 0.25 * sz * o));
     s.y = m.c.x * 0.1;
@@ -574,7 +533,7 @@ fn shadeGalaxyDisk(p_in: vec2<f32>, ro: vec3<f32>, rd: vec3<f32>, d: f32, tm: f3
   let warmCool = mix(vec3<f32>(0.5, 1.0, 1.5), vec3<f32>(1.5, 1.0, 0.5), 1.25 * tl);
   col = col + pow(vec3<f32>(0.5) * h, n.y * 1.75 * warmCool);
 
-  let sr = rand(s.yz);
+  let sr = hash21(s.yz);
   let si = pow(th * sr, 0.25) * 0.001;
   var scol = sr * 5.0 * exp(-2.5 * l * l) * tanh(pow(si / s.x, 2.5))
     * mix(vec3<f32>(0.5, 0.75, 1.0), vec3<f32>(1.0, 0.75, 0.5), sr * 0.6);
