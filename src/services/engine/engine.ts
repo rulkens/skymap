@@ -146,7 +146,7 @@ import { createSpaceMouseSubsystem } from './spaceMouseSubsystem';
 import { createClickResolver } from './clickHandler';
 import { attachEngineInputs } from './inputBindings';
 import { renderFrame } from './renderFrame';
-import { buildSettersFromTable } from './settingsTable';
+import { buildSettersFromTable, type SettingsTableKey } from './settingsTable';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -1796,9 +1796,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // (couples to camera distance), `setSourceVisible` (mask math +
     // implicit LOD-mode switch), `setSpaceMouseSensitivity` (subsystem
     // forward) — keep their hand-rolled bodies below.
-    ...buildSettersFromTable(state, cb, () =>
+    // `satisfies` here is the safety net the settingsTable docstring
+    // advertises: if the builder's return shape ever drifts away from
+    // `Pick<EngineHandle, SettingsTableKey>` (e.g. a renamed key, or
+    // a value type that's not assignable due to contravariance), tsc
+    // catches it at this spread site rather than at distant callers.
+    ...(buildSettersFromTable(state, cb, () =>
       state.subsystems.scheduler.requestRender(),
-    ),
+    ) satisfies Pick<EngineHandle, SettingsTableKey>),
 
     setBiasMode(mode) {
       // Forwarded into the per-frame uniform on the next draw.  The
