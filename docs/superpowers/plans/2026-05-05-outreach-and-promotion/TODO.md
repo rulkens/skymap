@@ -45,10 +45,10 @@ locally (it's resumable and the README still documents the fallback).
 
 ## Task 4: Public posts (all pending Task 0 + Task 1)
 
-- [ ] Show HN: submit title + URL at https://news.ycombinator.com/submit, post first-comment text immediately after
-- [ ] Verify HN: `curl -s "https://hacker-news.firebaseio.com/v0/item/ITEM_ID.json" | jq '{title,score,descendants}'`
-- [ ] Bluesky: post 4-part thread on bsky.app (content in [task-4-public-posts.md](task-4-public-posts.md) Step 4.2)
-- [ ] Verify Bluesky thread is live and chained
+- [x] Show HN: sent 2026-05-06 — https://news.ycombinator.com/item?id=48037383
+- [x] Verify HN: Firebase API returns score, descendants, dead=null (checked 2026-05-07: score 5, 10 comments, ~25 h old)
+- [x] Bluesky: 4-part thread sent 2026-05-07 — https://bsky.app/profile/rulkens.bsky.social/post/3ml723ez2fk2d
+- [ ] Verify Bluesky thread is live and chained (manual check)
 - [ ] ~~**Thu 7 May, 12:00 CEST**: r/MapPorn~~ — slot slipped past noon; reschedule TBD
 - [ ] **Thu 7 May, 12:00-18:00 CEST**: record 20-30 s screen capture of skymap orbit + zoom (Tab-hidden UI). Reused for r/Astronomy and r/WebGPU.
 - [ ] **Thu 7 May, ~19:00 CEST**: r/Astronomy (VIDEO; +17pp lift)
