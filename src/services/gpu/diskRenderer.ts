@@ -28,7 +28,8 @@
 
 import type { mat4 } from 'gl-matrix';
 import type { GpuContext } from '../../@types';
-import diskWgsl from './shaders/disks.wesl?static';
+import vsCode from './shaders/disks/vertex.wesl?static';
+import fsCode from './shaders/disks/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 export type DiskInstance = {
@@ -103,7 +104,8 @@ export class DiskRenderer {
       ],
     });
 
-    const module = createShaderModuleWithDevLog(this.device, diskWgsl, 'disks');
+    const vsModule = createShaderModuleWithDevLog(this.device, vsCode, 'disks.vertex');
+    const fsModule = createShaderModuleWithDevLog(this.device, fsCode, 'disks.fragment');
 
     this.pipeline = this.device.createRenderPipeline({
       label: 'disk-pipeline',
@@ -112,7 +114,7 @@ export class DiskRenderer {
         bindGroupLayouts: [this.bindGroupLayout],
       }),
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: 'vs',
         buffers: [
           {
@@ -127,7 +129,7 @@ export class DiskRenderer {
         ],
       },
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [
           {
