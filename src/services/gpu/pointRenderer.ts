@@ -41,6 +41,7 @@
 import { mat4 } from 'gl-matrix';
 import type { PointCloud } from '../../@types';
 import { ALL_SOURCES, Source } from '../../data/sources';
+import { BiasMode } from '../../data/biasMode';
 import { type SchechterTriple } from '../../data/surveyFluxLimits';
 import {
   computePriorCount,
@@ -64,8 +65,8 @@ import BuildPointBufferWorker from '../engine/buildPointInterleavedBuffer.worker
 
 // Lazy-Schechter worker import — same `?worker` Vite suffix as the main
 // vertex bake, but for the much smaller (single Float32Array) Schechter
-// integral.  Spawned by `applySchechterMode()` the first time the user
-// selects `BiasMode.Schechter`; subsequent toggles reuse the cached
+// integral.  Spawned by `setBiasMode(BiasMode.Schechter)` the first time
+// the user selects that mode; subsequent toggles reuse the cached
 // `Float32Array` per source for instant re-toggle.
 import ComputeSchechterRatiosWorker from '../engine/computeSchechterRatios.worker?worker';
 import { type ComputeSchechterRatiosInput } from '../engine/computeSchechterRatios';
@@ -74,9 +75,9 @@ import { type ComputeSchechterRatiosInput } from '../engine/computeSchechterRati
 // HEALPix bake is much cheaper than the Schechter integral (~100-300 ms for
 // a full deck vs 1-2 s) but still long enough to drop a frame, so we
 // off-thread it for parity with the other lazy bakes.  Spawned by
-// `applyAngularReweightMode()` the first time the user picks
-// `BiasMode.AngularReweight`; subsequent toggles reuse `cachedAngularWeights`
-// for instant re-toggle.
+// `setBiasMode(BiasMode.AngularReweight)` the first time the user picks
+// that mode; subsequent toggles reuse `cachedAngularWeights` for instant
+// re-toggle.
 import ComputeAngularWeightsWorker from '../engine/computeAngularWeights.worker?worker';
 import { type ComputeAngularWeightsInput } from '../engine/computeAngularWeights';
 
@@ -268,8 +269,8 @@ const SCHECHTER_RATIO_BYTE_OFFSET = 44;
  * Sits at slot index 12 (offset 48) — the new 13th slot.  Default-baked
  * to 1.0 (multiplicative identity) at upload time so modes 0/1/2/3 see
  * no change.  Real per-galaxy values are spliced in lazily by
- * `applyAngularReweightMode()` the first time the user picks mode 4 in
- * the SettingsPanel, mirroring the lazy-Schechter pattern (see
+ * `setBiasMode(BiasMode.AngularReweight)` the first time the user picks
+ * mode 4 in the SettingsPanel, mirroring the lazy-Schechter pattern (see
  * SCHECHTER_RATIO_BYTE_OFFSET above for the same trade-off discussion).
  *
  * ### Why per-vertex
@@ -290,9 +291,8 @@ const SCHECHTER_RATIO_BYTE_OFFSET = 44;
  * when shipped to a worker.  The eager-bake path during upload is
  * intentionally NOT supported (see `buildPointInterleavedBuffer.ts`); if
  * the user toggles mode 4 ON, then loads a new survey, the renderer's
- * `applyAngularReweightMode` will spawn the worker for the new source and
- * splice in real weights when it resolves — same lazy semantics as
- * Schechter.
+ * `setBiasMode` will spawn the worker for the new source and splice in
+ * real weights when it resolves — same lazy semantics as Schechter.
  */
 const ANGULAR_WEIGHT_BYTE_OFFSET = 48;
 
@@ -642,10 +642,10 @@ type LoadedSource = {
   count: number;
   /**
    * Mirror of the interleaved Float32Array baked into `buffer` at upload
-   * time.  Held on the JS side so `applySchechterMode()` can splice fresh
-   * Schechter ratios into slot 11 of every row and re-upload the whole
-   * buffer with one `device.queue.writeBuffer` call — see that method's
-   * doc for why this is faster than N sparse writes.
+   * time.  Held on the JS side so `bakeSchechterRatios()` can splice
+   * fresh Schechter ratios into slot 11 of every row and re-upload the
+   * whole buffer with one `device.queue.writeBuffer` call — see that
+   * method's doc for why this is faster than N sparse writes.
    *
    * Memory cost: ~14 MB per fully-loaded SDSS deck.  Dwarfed by the
    * cloud's own struct-of-arrays (~100 MB), so this isn't a budget
@@ -658,8 +658,8 @@ type LoadedSource = {
    * toggles reuse this array — re-toggling Schechter mode is then
    * instant (no worker spawn, just a single writeBuffer call).
    *
-   * `null` until the first `applySchechterMode()` call resolves for
-   * this source.  Callers must check before using.
+   * `null` until the first `setBiasMode(BiasMode.Schechter)` call
+   * resolves for this source.  Callers must check before using.
    */
   cachedSchechterRatios: Float32Array | null;
   /**
@@ -670,8 +670,8 @@ type LoadedSource = {
    * writeBuffer call), so the user pays the bake cost once per session
    * per source.
    *
-   * `null` until the first `applyAngularReweightMode()` call resolves
-   * for this source.  Callers must check before using.
+   * `null` until the first `setBiasMode(BiasMode.AngularReweight)` call
+   * resolves for this source.  Callers must check before using.
    */
   cachedAngularWeights: Float32Array | null;
   /**
@@ -783,10 +783,11 @@ export class PointRenderer {
    *   1. New uploads while this is `true` bake the Schechter ratios
    *      eagerly (so a survey that arrives mid-Schechter renders correctly
    *      from frame 1).
-   *   2. `applySchechterMode()` and `clearSchechterRatios()` flip this flag
-   *      so the renderer's view of "is Schechter active?" stays
-   *      authoritative — the engine's `setBiasMode` call site doesn't
-   *      forward the mode itself, just the on/off intent.
+   *   2. `setBiasMode()` is the canonical writer for this flag (it
+   *      becomes a write-only consequence of the engine's mode change).
+   *      `clearSchechterRatios()` also resets it as a side-effect of
+   *      wiping the GPU buffer back to 1.0 — see that method for the
+   *      rationale.
    *
    * Default `false`: a fresh renderer assumes the default bias mode (None),
    * matching `engine.ts`'s initial `let biasMode: BiasMode = BiasMode.None`.
@@ -795,12 +796,13 @@ export class PointRenderer {
 
   /**
    * Whether the engine has currently selected `BiasMode.AngularReweight`.
-   * Mirrors `schechterModeActive` exactly — flipped by
-   * `applyAngularReweightMode()` and `clearAngularWeights()` so a new
-   * upload arriving while mode 4 is active can know to bake the weights
-   * eagerly (currently we don't — see `buildPointInterleavedBuffer.ts`'s
-   * slot-12 comment — but the flag is here for symmetry and so the same
-   * triggering pattern stays familiar across modes).
+   * Mirrors `schechterModeActive` exactly — written by `setBiasMode()`
+   * (the canonical writer) and `clearAngularWeights()` (side-effect of
+   * the explicit reset) so a new upload arriving while mode 4 is active
+   * can know to bake the weights eagerly (currently we don't — see
+   * `buildPointInterleavedBuffer.ts`'s slot-12 comment — but the flag is
+   * here for symmetry and so the same triggering pattern stays familiar
+   * across modes).
    */
   private angularReweightModeActive = false;
 
@@ -1183,7 +1185,8 @@ export class PointRenderer {
       cachedSchechterRatios,
       // Angular weights are never eagerly baked (see slot-12 comment in
       // buildPointInterleavedBuffer.ts); the upload always writes 1.0 and
-      // the cache stays empty until `applyAngularReweightMode()` runs.
+      // the cache stays empty until `setBiasMode(BiasMode.AngularReweight)`
+      // runs.
       cachedAngularWeights: null,
       fade,
     });
@@ -1314,12 +1317,74 @@ export class PointRenderer {
     this.recomputeInstanceIdOffsets();
   }
 
+  // ─── Bias-mode dispatch (Phase 5: collapsed public surface) ─────────────────
+
+  /**
+   * Set the active bias mode and run any per-mode bake.
+   *
+   * The renderer holds two private flags (`schechterModeActive`,
+   * `angularReweightModeActive`) so a new `upload()` arriving while
+   * one of those modes is active can bake the new cloud eagerly.
+   * This method is the *only* way those flags should be set —
+   * collapsing to one source of truth (the engine's `state.bias.mode`,
+   * forwarded here).
+   *
+   * Behaviour by mode:
+   *   - `Schechter` and `AngularReweight` trigger a per-source bake of
+   *     the corresponding per-galaxy weights.  Cache hits skip the
+   *     worker; cache misses spawn one worker per loaded source.
+   *   - All other modes (None, VolumeLimited, ApparentMagLimited) are
+   *     uniform-only: the shader's `select(1.0, weight, mode==N)` gate
+   *     ignores the per-galaxy slot, so no bake is needed.
+   *   - Re-toggle to the same mode is a no-op (the flag is already
+   *     set; cached values are already in the GPU buffer).
+   *
+   * Fire-and-forget from the engine side: callers may `.then()` on
+   * the returned promise to know when the bake settles, but the
+   * per-frame draw loop continues drawing 1.0-default weights until
+   * the mirror+writeBuffer round trip lands.  Errors propagate
+   * through the returned promise's rejection.
+   *
+   * ### Why we keep the bake helpers private
+   *
+   * Pre-Phase-5 the engine called `applySchechterMode()` and
+   * `applyAngularReweightMode()` directly, then independently mutated
+   * `state.bias.mode` and the renderer's two `*ModeActive` flags.
+   * That duplicated source-of-truth caused subtle ordering bugs (a
+   * caller could forget to set the flag, or set it before the bake
+   * resolved).  Funnelling everything through `setBiasMode` here means
+   * the engine touches `state.bias.mode` and forwards once; the
+   * renderer's flags become a write-only consequence of this call.
+   */
+  async setBiasMode(mode: BiasMode): Promise<void> {
+    const wasSchechter = this.schechterModeActive;
+    const wasAngular = this.angularReweightModeActive;
+    const isSchechter = mode === BiasMode.Schechter;
+    const isAngular = mode === BiasMode.AngularReweight;
+
+    this.schechterModeActive = isSchechter;
+    this.angularReweightModeActive = isAngular;
+
+    if (!wasSchechter && isSchechter) {
+      await this.bakeSchechterRatios();
+      return;
+    }
+    if (!wasAngular && isAngular) {
+      await this.bakeAngularWeights();
+      return;
+    }
+    // Other transitions: no bake needed.  Going AWAY from a baked
+    // mode leaves the per-galaxy slot values in the GPU buffer; the
+    // shader's gate already ignores them in modes 0/1/2/3, so the
+    // residual values are correct and cheap.
+  }
+
   // ─── Lazy Schechter-ratio bake ──────────────────────────────────────────────
 
   /**
    * Compute and upload per-galaxy Schechter ratios for every loaded source.
    *
-   * Called by the engine when the user transitions TO `BiasMode.Schechter`.
+   * Invoked by `setBiasMode` on the first transition TO `BiasMode.Schechter`.
    * The work is potentially expensive (~700 M math ops for a fully-loaded
    * deck), so we run it off-thread in a per-source worker — the renderer's
    * per-frame `draw()` keeps using the current (1.0) slot value until the
@@ -1354,13 +1419,14 @@ export class PointRenderer {
    * source eagerly with mode = 'with-schechter', so no second pass is
    * needed for that source.
    *
-   * Fire-and-forget from the engine side: the per-frame draw loop
-   * continues uninterrupted while ratios compute.  Errors are surfaced
-   * via the returned promise's rejection.
+   * ### Why this is a private helper
+   *
+   * Phase 5 collapsed the public surface to `setBiasMode(mode)` (see the
+   * docstring there).  The flag mutation now lives in `setBiasMode`; this
+   * helper does only the bake work.  Calling it from anywhere else would
+   * skip the flag check and break the eager-on-upload contract.
    */
-  async applySchechterMode(): Promise<void> {
-    this.schechterModeActive = true;
-
+  private async bakeSchechterRatios(): Promise<void> {
     // Collect the work items first so we don't iterate `this.clouds` while
     // any async path could mutate it (an `unload` between sources would
     // skip the rest, but at least we won't crash).
@@ -1409,6 +1475,12 @@ export class PointRenderer {
    * Engine's `setBiasMode` typically does NOT call this on transition AWAY
    * from Schechter — leaving the values in the buffer is harmless and
    * keeps the next Schechter toggle even faster (no writeBuffer cost).
+   *
+   * Note that this method also clears `schechterModeActive`, in contrast
+   * to `setBiasMode` which is the canonical writer for that flag.  We
+   * keep the side-effect here because anyone calling `clearSchechterRatios`
+   * is by definition trying to undo the bake — leaving the flag set
+   * would lie about the renderer's state.
    */
   clearSchechterRatios(): void {
     this.schechterModeActive = false;
@@ -1428,9 +1500,9 @@ export class PointRenderer {
    * entry.count) into slot 11 of every row of the entry's interleaved
    * mirror.  Pure function over the mirror buffer — no GPU calls.
    *
-   * Extracted as a private helper so `applySchechterMode` (cache-hit and
-   * worker-resolve paths) can share the same loop without duplicating the
-   * stride math.  The caller is responsible for the subsequent
+   * Extracted as a private helper so `bakeSchechterRatios` (cache-hit
+   * and worker-resolve paths) can share the same loop without duplicating
+   * the stride math.  The caller is responsible for the subsequent
    * `writeBuffer` upload to the GPU.
    */
   private spliceSchechterIntoMirror(entry: LoadedSource, ratios: Float32Array): void {
@@ -1443,10 +1515,10 @@ export class PointRenderer {
 
   /**
    * Compute and upload per-galaxy HEALPix angular re-weights for every
-   * loaded source.  Mirrors `applySchechterMode()` exactly — same lazy
+   * loaded source.  Mirrors `bakeSchechterRatios()` exactly — same lazy
    * pattern, same per-source caching, same single-buffer-rewrite upload.
    *
-   * Called by the engine when the user transitions TO
+   * Invoked by `setBiasMode` on the first transition TO
    * `BiasMode.AngularReweight`.  The work is moderate (~100-300 ms at
    * full deck), so we run it off-thread in a per-source worker — the
    * renderer's per-frame `draw()` keeps using the current 1.0 default
@@ -1475,9 +1547,7 @@ export class PointRenderer {
    * continues uninterrupted while weights compute.  Errors surface via
    * the returned promise's rejection.
    */
-  async applyAngularReweightMode(): Promise<void> {
-    this.angularReweightModeActive = true;
-
+  private async bakeAngularWeights(): Promise<void> {
     // Snapshot the work items so an async unload mid-bake can't crash us
     // (it'll just skip the ones it should — see the live-entry check below).
     const sources: { source: Source; entry: LoadedSource }[] = [];
