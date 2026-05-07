@@ -2104,11 +2104,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (!info) return;
 
       // The engine's selectedIndex is GLOBAL — not per-source local — so
-      // we have to compute the global index.  The renderer keeps each
-      // source's instanceIdOffset; sum the famous source's offset with
-      // the local idx to reconstruct the same value the picker would write.
-      const offset = state.gpu.renderer?.instanceIdOffset(Source.Famous) ?? 0;
-      const globalIdx = offset + localIdx;
+      // we have to compute the global index.  The renderer owns the
+      // encoding rule (sum of prior-source counts in enum order) via
+      // `toGlobalIdx`; the fallback to `localIdx` preserves the prior
+      // behaviour when the renderer is unavailable (offset would have
+      // been 0, so `0 + localIdx === localIdx`).
+      const globalIdx = state.gpu.renderer?.toGlobalIdx(Source.Famous, localIdx) ?? localIdx;
       setSelected(globalIdx);
       // selectFamous is a deliberate user focus action (palette pick),
       // so the camera-focus target moves to this galaxy too.
@@ -2184,9 +2185,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // Compute the GLOBAL instance index (selection state is keyed
       // globally because the picker writes a per-vertex globalIdx;
-      // see `instanceIdOffset` for the running-sum convention).
+      // see `toGlobalIdx` for the running-sum convention).
       //
-      // Caveat: `instanceIdOffset` reads from the renderer's per-source
+      // Caveat: `toGlobalIdx` reads from the renderer's per-source
       // bookkeeping, which lags `state.sources.clouds` by an upload
       // chain tick (see the cloud-load wiring around line 803).  When
       // selectByAlias is called from a deep-link drain that fires the
@@ -2196,9 +2197,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // already-built `info` to `setSelected` so the React side gets
       // the correct PointInfo regardless; the halo's globalIdx will
       // correct itself once the picker draws against the freshly-
-      // uploaded source.
-      const offset = state.gpu.renderer?.instanceIdOffset(source) ?? 0;
-      const globalIdx = offset + localIdx;
+      // uploaded source.  The fallback to `localIdx` preserves the
+      // prior behaviour when the renderer is unavailable.
+      const globalIdx = state.gpu.renderer?.toGlobalIdx(source, localIdx) ?? localIdx;
       setSelected(globalIdx, info);
       // selectByAlias is a deliberate user focus action (palette pick
       // OR deep-link resolve), so the camera-focus target moves with
