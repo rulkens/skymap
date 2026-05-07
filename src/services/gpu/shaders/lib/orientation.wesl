@@ -84,19 +84,22 @@
 // different threshold conventions existed pre-extraction:
 //
 //   - disks.wesl: 'abs(dot(northPole, losDir)) > 0.99' (~8° from pole),
-//     swap seed BEFORE the projection.
+//     swap seed BEFORE the projection — wide, conservative.
 //   - proceduralDisks.wesl: 'length(northTangentRaw) < 1e-4' (~exactly
-//     at pole), swap result AFTER the projection.
+//     at pole), swap result AFTER the projection — tight, only fires
+//     when the projection itself is degenerate.
 //
-// Both fall back to seeding with world-y, so any galaxy that triggers
-// EITHER fallback gets the same orientation. Standardising on the
-// disks.wesl form (the wider, ~8° threshold) means the two renderers
-// agree across the entire near-pole region rather than only outside
-// it — important because both passes can render the SAME galaxy at a
-// crossfade boundary, and a basis disagreement would show as an
-// abrupt rotation when the procedural impostor hands off to the
-// thumbnail. The handful of real galaxies within 8° of the celestial
-// pole accept the slight loss of sky-PA fidelity in exchange.
+// We standardise on the proceduralDisks form (tight, post-projection
+// length check). Most galaxies within 8° of the celestial pole still
+// produce a usable in-sky north tangent — float math near the pole is
+// fine until length(seed - dot(seed, los) * los) genuinely
+// underflows, which only happens when |dot| is essentially 1.
+// Falling back at the wider 0.99 threshold throws away real PA
+// information for ~8° of sky around each pole; falling back only
+// when the projection is numerically zero preserves PA fidelity for
+// the handful of catalog galaxies that actually live up there. Both
+// renderers fall back to seeding with world-y, so they still agree
+// at the (much narrower) genuine-degeneracy region.
 //
 // ## Edge cases
 //
@@ -126,11 +129,18 @@ fn diskAxes(posWS: vec3<f32>, paRad: f32, cosI: f32, sinI: f32) -> DiskAxes {
   // The celestial north pole lives at +Z in world coords (raDecZToCartesian
   // maps Dec = +90° to (0, 0, 1)). Project that onto the plane
   // perpendicular to losDir to recover sky-north, with the world-Y
-  // fallback for galaxies within ~8° of the celestial pole.
+  // fallback only when the projection is numerically degenerate (i.e.
+  // the galaxy sits essentially AT the celestial pole). See "## Pole
+  // degeneracy" above for why we use the tight post-projection length
+  // check rather than the wider pre-projection dot-product check.
   let northPole = vec3<f32>(0.0, 0.0, 1.0);
-  let nearPole = abs(dot(northPole, losDir)) > 0.99;
-  let seed = select(northPole, vec3<f32>(0.0, 1.0, 0.0), nearPole);
-  let northProj = normalize(seed - dot(seed, losDir) * losDir);
+  let northRaw = northPole - dot(northPole, losDir) * losDir;
+  let northLen = length(northRaw);
+  let northProj = select(
+    northRaw / northLen,
+    vec3<f32>(0.0, 1.0, 0.0),
+    northLen < 1e-4,
+  );
   // 'cross(north, los)' (rather than 'cross(los, north)') keeps the
   // (north, east, los) frame right-handed in the same sense the
   // astronomical PA-east-of-north convention expects. Reversing the
