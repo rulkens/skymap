@@ -16,7 +16,7 @@
  *
  * ### Lifecycle
  *
- *   1. Sub-bag constructed with all four fields = null.
+ *   1. Sub-bag constructed with every field = null.
  *   2. Async IIFE runs: each field gets assigned exactly once after
  *      `initGpu` resolves.
  *   3. `destroy()` releases each pipeline and resets the field back to
@@ -28,7 +28,7 @@
  * ### Why grouped vs. flat?
  *
  * Mirrors the original closure grouping in pre-Phase-4 `engine.ts`,
- * where these four bindings sat together under one header comment.
+ * where these bindings sat together under one header comment.
  * Keeping the bag named lets the renderFrame helper accept just the
  * GPU bag rather than the whole `EngineState`.
  */

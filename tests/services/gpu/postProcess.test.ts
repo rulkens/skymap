@@ -26,10 +26,11 @@ import {
 } from '../../../src/services/gpu/postProcess';
 
 beforeAll(() => {
-  // Same WebGPU global stubs as `hdrTarget.test.ts` and the other
-  // GPU module tests — Node has no `GPUTextureUsage` etc. globals
-  // (those are browser-only in the W3C spec), so we recreate the
-  // bitmask values verbatim here.
+  // Same WebGPU global stubs the other GPU module tests use; mirror
+  // their pattern.  In Node test env the WebGPU global constant
+  // objects (GPUTextureUsage, GPUBufferUsage, GPUShaderStage) aren't
+  // defined — we stub the bits the implementation needs as plain
+  // readonly numeric constants matching the W3C spec verbatim.
   const g = globalThis as unknown as Record<string, unknown>;
   g.GPUTextureUsage ??= {
     COPY_SRC: 0x01,
