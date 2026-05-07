@@ -15,6 +15,7 @@ import type {
   FamousMetaEntry,
   FamousXrefMap,
 } from '../services/engine/famousMetaLoader';
+import type { PgcAliasMap } from '../services/loading/fetchers/pgcAliasFetcher';
 
 /**
  * Handle returned by `createEngine`. Allows the React layer to drive the
@@ -387,4 +388,24 @@ export type EngineHandle = {
    * No-op if `tier` equals the current tier.
    */
   setTier?: (tier: Tier) => void;
+
+  /**
+   * Lazy-load the PGC → human-name alias map for the Cmd+K palette's
+   * alias search.
+   *
+   * The underlying JSON is ~1.7 MB and most users never open the
+   * palette, so the engine does NOT auto-load it at boot.  The first
+   * `loadPgcAliases()` call kicks off the fetch; subsequent calls return
+   * the same in-flight Promise (or the cached result), so palette code
+   * can `await loadPgcAliases()` unconditionally on every open without
+   * re-fetching.
+   *
+   * Resolves to an empty Map on fetch error (404 / parse failure) so
+   * downstream code can treat "feature off" as "no aliases" without a
+   * separate try/catch — exactly matching the behaviour of the previous
+   * standalone `loadPgcAliases` helper that this method supersedes.
+   *
+   * Optional: present whenever the engine has a PGC-alias slot wired up.
+   */
+  loadPgcAliases?: () => Promise<PgcAliasMap>;
 };

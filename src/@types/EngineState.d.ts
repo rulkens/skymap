@@ -86,6 +86,8 @@ import type { PointCloud } from './PointCloud';
 import type { PointCloudReq } from '../services/loading/fetchers/pointCloudFetcher';
 import type { FilamentCloud } from './FilamentCloud';
 import type { FilamentReq } from '../services/loading/fetchers/filamentFetcher';
+import type { FamousPayload } from '../services/loading/fetchers/famousMetaFetcher';
+import type { PgcAliasMap } from '../services/loading/fetchers/pgcAliasFetcher';
 import type { Source } from '../data/sources';
 
 /**
@@ -117,6 +119,31 @@ export type EngineAssetSlots = {
    * boot path touches it, and only after the IIFE has populated it).
    */
   filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
+  /**
+   * Famous-galaxy sidecar pair (`famous_meta.json` + `famous_xrefs.json`)
+   * routed through a slot for parity with point loads.  Loaded eagerly at
+   * engine boot — the JSON is tiny (well under 100 KB combined) so the
+   * cost is negligible, and the InfoCard depends on `meta`/`xrefs` being
+   * present whenever a famous galaxy is hovered.  The fetcher returns
+   * both files combined; the subscriber writes them straight into
+   * `state.sources.famousMeta` / `state.sources.famousXrefs`.
+   *
+   * No `commit` step — there is nothing GPU-side to upload, just CPU
+   * state mutation done by the subscriber.  Null until the IIFE mints it
+   * (matches `filaments` for the same lifecycle reason).
+   */
+  famousMeta: AssetSlot<FamousPayload, void> | null;
+  /**
+   * PGC → human-name alias map (`pgc_aliases.json`, ~1.7 MB).  Lazy:
+   * the engine never auto-loads it; the public-handle's
+   * `loadPgcAliases()` shim calls `slot.load()` on first palette open.
+   * Same null-then-set lifecycle as the filament slot.
+   *
+   * Routed through a slot (rather than a direct fetch) so progress events
+   * flow through the same `aggregateRegistry` reporter as every other
+   * load, and so retry/cancel semantics match.
+   */
+  pgcAlias: AssetSlot<PgcAliasMap, void> | null;
 };
 
 export type EngineState = {
