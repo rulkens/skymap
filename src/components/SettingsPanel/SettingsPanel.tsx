@@ -840,8 +840,8 @@ export function SettingsPanel({
 
           {/* ── Orientation visibility (Task 15) ─────────────────────────────── */}
           {/*
-        Two toggles that share the same per-galaxy fallback flag (high bit of
-        globalInstanceIdx, baked at upload time).  "Highlight" tints fallback
+        Two toggles that share the same per-galaxy fallback flag (sign bit of
+        axisRatio, baked at upload time).  "Highlight" tints fallback
         rows magenta in the fragment shader; "Show only real" discards
         fallback fragments entirely.  Both default off so existing visual
         behaviour is unchanged until the user opts in.

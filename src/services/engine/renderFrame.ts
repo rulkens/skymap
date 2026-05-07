@@ -115,12 +115,13 @@ export type RenderFrameSettings = {
   pointSizePx: number;
   brightness: number;
   /**
-   * Selected galaxy's `globalInstanceIdx` (u32) or `null` when nothing
-   * is selected.  We accept `null` here and translate to the sentinel
-   * `0xffffffff` inside the function so the caller doesn't have to
-   * remember the encoding.
+   * Selected galaxy's `(source, localIdx)` pair, or `null` when nothing
+   * is selected.  Translated inside `renderFrame` to the packed u32
+   * `(source << 27) | localIdx` (or the `0xFFFFFFFF` "no selection"
+   * sentinel) the shader's halo path expects, so the caller doesn't
+   * have to remember the encoding.
    */
-  selectedIndex: number | null;
+  selected: { source: Source; localIdx: number } | null;
   visibleSourceMask: number;
   highlightFallback: boolean;
   realOnlyMode: boolean;
@@ -328,18 +329,25 @@ export function renderFrame(input: RenderFrameInput): void {
 
   // ── Point sprites (instanced billboards) ───────────────────────────
   //
-  // selectedIndex sentinel: 0xffffffff is "nothing selected" — the max
-  // u32 value, which can never match a real point index.  The caller
-  // passes `null` when nothing is selected and we translate here so
-  // settings stay in plain TS-land (null vs. number) and the GPU side
-  // sees a single u32.
+  // Pack the `(source, localIdx)` selection into the u32 the shader
+  // compares against per-vertex `(sourceCode << 27u) | instance_index`.
+  // Sentinel `0xffffffff` means "nothing selected" — the max u32 value,
+  // outside any realistic packed identity range (top 5 bits = 31, which
+  // we don't currently allocate to any survey).  The caller passes
+  // `null` when nothing is selected and we translate here so settings
+  // stay in plain TS-land (structured shape) and the GPU side sees a
+  // single u32.
+  const selectedPacked =
+    settings.selected !== null
+      ? ((settings.selected.source << 27) | settings.selected.localIdx) >>> 0
+      : 0xffffffff >>> 0;
   pointRenderer.draw(
     pass,
     viewProj,
     [canvasWidth, canvasHeight],
     settings.pointSizePx,
     settings.brightness,
-    settings.selectedIndex !== null ? settings.selectedIndex : 0xffffffff >>> 0,
+    selectedPacked,
     settings.visibleSourceMask,
     drawCamPos,
     drawPxPerRad,

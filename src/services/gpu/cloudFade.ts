@@ -40,13 +40,29 @@
  * Consumers must declare in their WGSL:
  *
  *   ```wgsl
- *   struct CloudUniforms { opacity: f32, _pad0: f32, _pad1: f32, _pad2: f32 };
+ *   struct CloudUniforms {
+ *     opacity: f32,
+ *     sourceCode: u32,
+ *     _pad1: f32,
+ *     _pad2: f32,
+ *   };
  *   @group(1) @binding(0) var<uniform> cloud: CloudUniforms;
  *   ```
  *
  * …and multiply their fragment's final alpha by `cloud.opacity` before
  * returning.  Steady-state opacity is 1.0 so this is a no-op for any
  * cloud that's finished fading.
+ *
+ * ### sourceCode (added with the (source, localIdx) packing refactor)
+ *
+ * The second slot carries this cloud's 5-bit Source enum value, written
+ * once per CloudFade instance (per upload).  The points-pass shader
+ * recovers each instance's packed identity as
+ * `(cloud.sourceCode << 27u) | u32(instance_index)` for the selection-
+ * halo + pick-output paths.  Because every cloud has its OWN bind group
+ * and own uniform buffer, draws within one render pass don't race on
+ * sourceCode — the same architecture that already keeps `opacity` from
+ * racing across draws (see "per-instance buffers" above).
  */
 
 /**
@@ -79,13 +95,26 @@ export class CloudFade {
   private fadeStartMs: number;
 
   /**
-   * Reusable scratch Float32Array for the per-frame writeBuffer call.
+   * Reusable scratch buffer for the per-frame writeBuffer call.  16 bytes
+   * total = `f32 opacity + u32 sourceCode + 8 bytes pad`.  We need both
+   * `Float32Array` and `Uint32Array` views over the same backing store
+   * because slot 1 is a u32 and the rest f32.
+   *
    * Allocated once per CloudFade instance (rather than once per process)
    * so two CloudFades writing in the same tick don't trip on each
    * other's stale bytes between the assignment and the queue submit.
-   * 4 floats = 16 bytes = the buffer size.
    */
-  private readonly scratch = new Float32Array(4);
+  private readonly scratchBuffer = new ArrayBuffer(16);
+  private readonly scratchF32 = new Float32Array(this.scratchBuffer);
+  private readonly scratchU32 = new Uint32Array(this.scratchBuffer);
+
+  /**
+   * The 5-bit Source enum value for this cloud.  Set once at construction
+   * (or via `setSourceCode`) and re-uploaded as part of the per-frame
+   * `writeFrame` call.  Defaults to 0 — production paths always pass a
+   * real value.
+   */
+  private sourceCode = 0;
 
   /**
    * Build a new CloudFade.
@@ -140,8 +169,20 @@ export class CloudFade {
    * `writeFrame()` last produced.
    */
   writeFrame(nowMs: number = performance.now()): void {
-    this.scratch[0] = smoothstep(0, CLOUD_FADE_DURATION_MS, nowMs - this.fadeStartMs);
-    this.device.queue.writeBuffer(this.buffer, 0, this.scratch);
+    this.scratchF32[0] = smoothstep(0, CLOUD_FADE_DURATION_MS, nowMs - this.fadeStartMs);
+    this.scratchU32[1] = this.sourceCode >>> 0;
+    // Slots 2 + 3 (pads) stay zero — Uint32Array starts zero-initialised
+    // and we never write them.
+    this.device.queue.writeBuffer(this.buffer, 0, this.scratchBuffer);
+  }
+
+  /**
+   * Set this cloud's sourceCode.  Production callers pass the 5-bit
+   * Source enum value once at upload time; subsequent `writeFrame`
+   * calls forward it to the GPU.
+   */
+  setSourceCode(source: number): void {
+    this.sourceCode = source;
   }
 
   /**

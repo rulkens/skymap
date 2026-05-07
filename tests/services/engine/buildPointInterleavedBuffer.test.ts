@@ -4,20 +4,34 @@
  * The bake is a near-verbatim lift of the loop that used to live inside
  * `pointRenderer.upload()` — same inputs, same per-vertex bytes out.  We
  * verify the lift is faithful by feeding a hand-rolled 3-galaxy synthetic
- * cloud and asserting the per-row outputs (positions, magnitudes, global
- * indices, vMaxWeight, schechterRatio) at known byte offsets.
+ * cloud and asserting the per-row outputs (positions, magnitudes,
+ * vMaxWeight, schechterRatio) at known byte offsets.
  *
  * The Worker plumbing itself isn't exercised here (Vitest runs in Node
  * without a Worker constructor); see the project README's smoke-test
  * checklist for the manual verification step that catches the worker
  * bundle's transitive imports.
+ *
+ * ### Slot layout (post (source, localIdx) packing refactor)
+ *
+ *   slot 0,1,2 — position xyz
+ *   slot 3     — magnitude
+ *   slot 4     — colorIndex
+ *   slot 5     — kPerZ
+ *   slot 6     — axisRatio (sign bit = isFallback)
+ *   slot 7     — positionAngleDeg
+ *   slot 8     — diameterKpc
+ *   slot 9     — vMaxWeight
+ *   slot 10    — schechterRatio
+ *   slot 11    — angularDensityWeight
+ *
+ * 12 slots × 4 bytes = 48 bytes per point.  No more globalInstanceIdx
+ * slot — the picker now derives its packed identity from a per-source
+ * uniform + the GPU's `@builtin(instance_index)`.
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  buildPointInterleavedBuffer,
-  computePriorCount,
-} from '../../../src/services/engine/buildPointInterleavedBuffer';
+import { buildPointInterleavedBuffer } from '../../../src/services/engine/buildPointInterleavedBuffer';
 import { Source } from '../../../src/data/sources';
 import type { PointCloud } from '../../../src/@types';
 
@@ -38,15 +52,14 @@ function makeCloud(count: number): PointCloud {
   };
 }
 
-const SLOTS = 13;
+const SLOTS = 12;
 
 describe('buildPointInterleavedBuffer', () => {
-  it('produces an interleaved Float32Array of the expected length', () => {
+  it('produces an interleaved Float32Array of the expected length (12 slots × 4 bytes)', () => {
     const cloud = makeCloud(3);
     const result = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      priorCount: 0,
     });
     expect(result.interleaved).toBeInstanceOf(Float32Array);
     expect(result.interleaved.length).toBe(3 * SLOTS);
@@ -60,7 +73,6 @@ describe('buildPointInterleavedBuffer', () => {
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      priorCount: 0,
     });
     expect(interleaved[0 * SLOTS + 0]).toBeCloseTo(10);
     expect(interleaved[0 * SLOTS + 1]).toBeCloseTo(20);
@@ -70,24 +82,31 @@ describe('buildPointInterleavedBuffer', () => {
     expect(interleaved[1 * SLOTS + 2]).toBeCloseTo(-15);
   });
 
-  it('bakes globalInstanceIdx as priorCount + i in slot 5', () => {
+  it('writes axisRatio at slot 6 with positive sign for non-fallback rows', () => {
+    // axisRatio = 0.7 is unlikely to match the deterministic
+    // fallbackOrientation for these specific (objIDs, ra, dec) — so
+    // the bake should keep the value positive (no sign-bit flip).
     const cloud = makeCloud(3);
     cloud.magG.set([18, 18, 18]);
-    const { interleaved } = buildPointInterleavedBuffer({
+    const { interleaved, isFallbackArr } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      priorCount: 1000,
     });
-    // Slot 5 is a u32 living at the same byte offset as f32 slot 5.  We
-    // need a u32 view to read it; reinterpret the buffer.
-    const u32 = new Uint32Array(interleaved.buffer);
-    // High bit may be set if the row was classified as fallback — strip it
-    // for the index check.  All three rows here have axisRatio=0.7 which
-    // is unlikely to match the deterministic fallback, so the high bit
-    // should be 0; assert that as well.
-    expect(u32[0 * SLOTS + 5]! & 0x7fffffff).toBe(1000);
-    expect(u32[1 * SLOTS + 5]! & 0x7fffffff).toBe(1001);
-    expect(u32[2 * SLOTS + 5]! & 0x7fffffff).toBe(1002);
+    for (let i = 0; i < 3; i++) {
+      const ab = interleaved[i * SLOTS + 6]!;
+      // Either positive (real measurement) or negative (fallback).  These
+      // particular rows shouldn't be classified as fallback (their
+      // (b/a, PA) doesn't match the deterministic hash output for the
+      // dummy objID + (0,0,0) position), but we double-check via
+      // isFallbackArr to keep the assertion robust.
+      if (isFallbackArr[i] === 0) {
+        expect(ab).toBeGreaterThan(0);
+        expect(ab).toBeCloseTo(0.7, 5);
+      } else {
+        expect(ab).toBeLessThan(0);
+        expect(Math.abs(ab)).toBeCloseTo(0.7, 5);
+      }
+    }
   });
 
   it('returns the survey schechter triple, mLim and central density nRef', () => {
@@ -95,7 +114,6 @@ describe('buildPointInterleavedBuffer', () => {
     const result = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      priorCount: 0,
     });
     // mLim must be a finite positive magnitude — the SDSS spec value sits
     // around 17.77 but we don't assert the exact number here (that's the
@@ -112,7 +130,7 @@ describe('buildPointInterleavedBuffer', () => {
     expect(result.nRef).toBeGreaterThan(0);
   });
 
-  it('writes vMaxWeight in slot 10; default fast mode leaves slot 11 at 1.0', () => {
+  it('writes vMaxWeight in slot 9; default fast mode leaves slot 10 at 1.0', () => {
     const cloud = makeCloud(1);
     // Place the galaxy at d = 100 Mpc with a typical SDSS-like apparent
     // magnitude.  The exact weight value depends on vMaxWeight()'s formula
@@ -122,22 +140,21 @@ describe('buildPointInterleavedBuffer', () => {
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      priorCount: 0,
     });
-    const vMax = interleaved[10]!;
-    const sch = interleaved[11]!;
+    const vMax = interleaved[9]!;
+    const sch = interleaved[10]!;
     expect(Number.isFinite(vMax)).toBe(true);
     expect(vMax).toBeGreaterThanOrEqual(0);
     expect(vMax).toBeLessThanOrEqual(1);
-    // Default mode is 'fast' → slot 11 is the multiplicative identity.
+    // Default mode is 'fast' → slot 10 is the multiplicative identity.
     // The shader's `select(1.0, schechterRatio, biasMode == 3u)` ignores
     // this slot in modes 0/1/2, so the visual is unchanged.
     expect(sch).toBe(1);
   });
 
-  it('mode: fast writes 1.0 to schechterRatio (slot 11) for every row', () => {
+  it('mode: fast writes 1.0 to schechterRatio (slot 10) for every row', () => {
     // Build a multi-row cloud spread across distances and assert every
-    // row's slot 11 is exactly 1.0 — the multiplicative identity that
+    // row's slot 10 is exactly 1.0 — the multiplicative identity that
     // makes the shader's mode-3 multiplication a no-op.
     const cloud = makeCloud(5);
     for (let i = 0; i < 5; i++) {
@@ -147,39 +164,47 @@ describe('buildPointInterleavedBuffer', () => {
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      priorCount: 0,
       mode: 'fast',
     });
     for (let i = 0; i < 5; i++) {
-      expect(interleaved[i * SLOTS + 11]).toBe(1);
+      expect(interleaved[i * SLOTS + 10]).toBe(1);
     }
   });
 
-  it('mode: with-schechter writes the per-row symmetric-rebalance ratios in slot 11', () => {
+  it('mode: with-schechter writes the per-row symmetric-rebalance ratios in slot 10', () => {
     // Symmetric rebalance centers ratios on 1.0 (median pivot): far-field
     // boosts modestly (capped at 1.2×), near-field dims more aggressively
     // (down to 0.3×).  We assert at least one row off 1.0 — this catches
     // a regression where the bake silently degrades to fast-mode (which
-    // writes 1.0 into slot 11 unconditionally).  See
-    // `computeSchechterRatios.test.ts` for the full physical intuition.
+    // writes 1.0 into slot 10 unconditionally).
     const cloud = makeCloud(5);
     cloud.positions.set([20, 0, 0, 50, 0, 0, 100, 0, 0, 200, 0, 0, 500, 0, 0]);
     cloud.magG.set([16, 17, 18, 19, 20]);
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      priorCount: 0,
       mode: 'with-schechter',
     });
     let sawNonUnity = false;
     for (let i = 0; i < 5; i++) {
-      const r = interleaved[i * SLOTS + 11]!;
+      const r = interleaved[i * SLOTS + 10]!;
       expect(Number.isFinite(r)).toBe(true);
       expect(r).toBeGreaterThanOrEqual(0.3 - 1e-6);
       expect(r).toBeLessThanOrEqual(1.2 + 1e-6);
       if (r !== 1) sawNonUnity = true;
     }
     expect(sawNonUnity).toBe(true);
+  });
+
+  it('writes 1.0 into the angularDensityWeight slot (slot 11) by default', () => {
+    const cloud = makeCloud(3);
+    const { interleaved } = buildPointInterleavedBuffer({
+      cloud,
+      source: Source.SDSS,
+    });
+    for (let i = 0; i < 3; i++) {
+      expect(interleaved[i * SLOTS + 11]).toBe(1);
+    }
   });
 
   it('shifts the per-survey magG mean toward the SDSS target (≈18)', () => {
@@ -190,7 +215,6 @@ describe('buildPointInterleavedBuffer', () => {
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.TwoMRS,
-      priorCount: 0,
     });
     const mags = [
       interleaved[0 * SLOTS + 3]!,
@@ -213,31 +237,9 @@ describe('buildPointInterleavedBuffer', () => {
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
-      priorCount: 0,
     });
     expect(interleaved[4]).toBe(999);
     // K-correction defaults to 0 when the colour is absent.
-    expect(interleaved[6]).toBe(0);
-  });
-});
-
-describe('computePriorCount', () => {
-  it('returns 0 when the source has no earlier-loaded surveys', () => {
-    const counts = new Map<Source, number>();
-    expect(computePriorCount(Source.SDSS, counts)).toBe(0);
-  });
-
-  it('sums earlier-iteration-order sources only', () => {
-    // ALL_SOURCES is [Synthetic, Famous, TwoMRS, SDSS, Glade] (ordered
-    // by catalogue size — see data/sources.ts).  For SDSS (position 3),
-    // priorCount should include Synthetic + Famous + TwoMRS.
-    const counts = new Map<Source, number>([
-      [Source.Synthetic, 10],
-      [Source.Famous, 5],
-      [Source.TwoMRS, 50],
-      [Source.SDSS, 100], // ignored — same source
-      [Source.Glade, 25], // ignored — later in iteration order
-    ]);
-    expect(computePriorCount(Source.SDSS, counts)).toBe(65);
+    expect(interleaved[5]).toBe(0);
   });
 });

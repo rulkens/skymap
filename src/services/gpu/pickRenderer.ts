@@ -60,20 +60,30 @@ import type { PointRenderer } from './pointRenderer';
  * One per-source draw record passed to `pick()`.
  *
  * Multi-survey rendering issues one instanced draw per loaded survey; the
- * picker mirrors that so its global instance-ID space lines up with the
- * visual pass. `instanceIdOffset` is the global index of this source's
- * first point — `fsPick` adds it to each fragment's per-instance index so
- * the value written into the pick texture is unique across all surveys.
+ * picker mirrors that so its packed-identity space lines up with the
+ * visual pass.  `cloudBindGroup` carries this source's `@group(1)`
+ * (CloudFade) binding — the vertex stage reads `cloud.sourceCode` from
+ * it to compose `(sourceCode << 27u) | instance_index`, which `fsPick`
+ * writes into the pick texture (with a +1 sentinel).
  *
- * The `source` field is included so the caller can filter by visibility
- * mask before handing the iterable to `pick()`; the picker itself does not
- * read `source` for any other purpose.
+ * The `source` field is mostly ceremonial — picker drives all real
+ * decoding from the packed value the GPU writes — but it lets the
+ * caller filter by visibility mask before handing the iterable to
+ * `pick()`.
  */
 export type PickSourceDraw = {
   source: Source;
   vertexBuffer: GPUBuffer;
   count: number;
-  instanceIdOffset: number;
+  /**
+   * Underlying `GPUBuffer` of this source's CloudFade uniform (opacity
+   * + 5-bit sourceCode).  PickRenderer builds its own per-source
+   * `@group(1)` bind group around this buffer using its OWN pipeline's
+   * `getBindGroupLayout(1)` — bind groups created against PointRenderer's
+   * auto-derived layout are not compatible with PickRenderer's auto-derived
+   * layout, even though both pipelines compile from the same WGSL.
+   */
+  cloudFadeBuffer: GPUBuffer;
 };
 
 /**
@@ -135,8 +145,10 @@ export type PickRenderer = {
    *                         the same enum order as `PointRenderer.loadedSources()`.
    *                         The caller is responsible for filtering by visibility
    *                         mask — the picker draws every record it receives.
-   * @returns 0-based *global* index of the front-most point under the cursor,
-   *          or -1 if the cursor is over background or a pick is already in flight.
+   * @returns `{ source, localIdx }` decoded from the front-most point's
+   *          packed pick value, or `null` if the cursor is over background
+   *          or a pick is already in flight.  See PointRenderer's class
+   *          docstring for the (sourceCode << 27 | localIdx + 1) packing.
    */
   pick(
     viewportPx: [number, number],
@@ -154,7 +166,7 @@ export type PickRenderer = {
      * pass reads whatever the visual frame last wrote (no boost).
      */
     pointSizePx?: number,
-  ): Promise<number>;
+  ): Promise<{ source: Source; localIdx: number } | null>;
 
   /**
    * Release all GPU resources owned by this renderer.
@@ -260,51 +272,35 @@ export function createPickRenderer(
       module,
       entryPoint: 'vs',
 
-      // Vertex buffer layout — must exactly match PointRenderer's layout.
-      // One 52-byte record per *instance* (stepMode:'instance'):
-      //   bytes  0..11  : position vec3<f32>          (shaderLocation 0)
-      //   bytes 12..15  : magnitude f32                (shaderLocation 1)
-      //   bytes 16..19  : colorIndex f32                (shaderLocation 2)
-      //   bytes 20..23  : globalInstanceIdx u32         (shaderLocation 3)
-      //   bytes 24..27  : kPerZ f32                     (shaderLocation 4)
-      //   bytes 28..31  : axisRatio f32                 (shaderLocation 5)
-      //   bytes 32..35  : positionAngleDeg f32          (shaderLocation 6)
-      //   bytes 36..39  : diameterKpc f32               (shaderLocation 7)
-      //   bytes 40..43  : vMaxWeight f32                (shaderLocation 8)
-      //   bytes 44..47  : schechterRatio f32            (shaderLocation 9)
-      //   bytes 48..51  : angularDensityWeight f32      (shaderLocation 10)
+      // Vertex buffer layout — must exactly match PointRenderer's layout
+      // (12 slots × 4 bytes = 48 bytes per instance).  The pipeline
+      // shares the SHARED vertex buffer + shader module with PointRenderer;
+      // WebGPU validation requires the pick pipeline to declare a layout
+      // matching every attribute the buffer carries, even those the pick
+      // fragment doesn't read (the SHARED vertex stage still reads them
+      // before forwarding into VSOut).
       //
-      // The fourth attribute is the cross-survey global instance index,
-      // pre-baked at upload time so `fsPick` can write it directly into
-      // the pick texture without needing a per-source uniform offset.
-      //
-      // The remaining attributes (kPerZ, axisRatio, positionAngleDeg,
-      // diameterKpc, vMaxWeight, schechterRatio, angularDensityWeight) are
-      // per-source / per-galaxy values used only by the visual `vs`/`fs`
-      // path — `fsPick` never reads them, since picking only cares about
-      // which point a pixel belongs to, not how it looks.  We declare them
-      // here anyway because WebGPU validation requires that any pipeline
-      // binding the shared per-instance vertex buffer declare a layout
-      // that matches the buffer's stride and every attribute the visual
-      // pipeline declares.  Omitting any of them would leave the pick
-      // pipeline with a smaller stride than the buffer's actual record
-      // size — a hard validation error the moment we issue a draw call.
+      // Identity encoding: previous revisions had a `globalInstanceIdx
+      // u32` at offset 20 carrying a baked running-sum global ID.  Both
+      // are gone — the picker now reads `cloud.sourceCode` from the
+      // per-source @group(1) bind group and composes each instance's
+      // packed identity as `(sourceCode << 27) | @builtin(instance_index)`
+      // entirely on the GPU side.  Vertex stride shrank 52 → 48 bytes.
       buffers: [
         {
-          arrayStride: 52, // 13 slots × 4 bytes/slot — must match pointRenderer.POINT_STRIDE
+          arrayStride: 48, // 12 slots × 4 bytes/slot — must match pointRenderer.POINT_STRIDE
           stepMode: 'instance',
           attributes: [
             { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
             { shaderLocation: 1, offset: 12, format: 'float32' }, // magnitude
             { shaderLocation: 2, offset: 16, format: 'float32' }, // colorIndex
-            { shaderLocation: 3, offset: 20, format: 'uint32' }, // globalInstanceIdx
-            { shaderLocation: 4, offset: 24, format: 'float32' }, // kPerZ — read by visual `vs`, ignored by `fsPick`
-            { shaderLocation: 5, offset: 28, format: 'float32' }, // axisRatio — ellipse mask, ignored by `fsPick`
-            { shaderLocation: 6, offset: 32, format: 'float32' }, // positionAngleDeg — ellipse mask, ignored by `fsPick`
-            { shaderLocation: 7, offset: 36, format: 'float32' }, // diameterKpc — apparent-size sizing, ignored by `fsPick`
-            { shaderLocation: 8, offset: 40, format: 'float32' }, // vMaxWeight — Malmquist 1/V_max alpha, ignored by `fsPick`
-            { shaderLocation: 9, offset: 44, format: 'float32' }, // schechterRatio — Malmquist Schechter alpha, ignored by `fsPick`
-            { shaderLocation: 10, offset: 48, format: 'float32' }, // angularDensityWeight — Malmquist HEALPix alpha, ignored by `fsPick`
+            { shaderLocation: 3, offset: 20, format: 'float32' }, // kPerZ
+            { shaderLocation: 4, offset: 24, format: 'float32' }, // axisRatio (sign bit = isFallback)
+            { shaderLocation: 5, offset: 28, format: 'float32' }, // positionAngleDeg
+            { shaderLocation: 6, offset: 32, format: 'float32' }, // diameterKpc
+            { shaderLocation: 7, offset: 36, format: 'float32' }, // vMaxWeight
+            { shaderLocation: 8, offset: 40, format: 'float32' }, // schechterRatio
+            { shaderLocation: 9, offset: 44, format: 'float32' }, // angularDensityWeight
           ],
         },
       ],
@@ -430,7 +426,7 @@ export function createPickRenderer(
     pickYPx: number,
     sources: Iterable<PickSourceDraw>,
     pointSizePx?: number,
-  ): Promise<number> {
+  ): Promise<{ source: Source; localIdx: number } | null> {
     // Resolve the shared uniform buffer from the bound PointRenderer at
     // call time rather than at construction.  Reading it lazily means we
     // pick up any future buffer recreation (e.g. device-loss recovery
@@ -440,14 +436,14 @@ export function createPickRenderer(
     const sharedUniformBuffer = pointRenderer.uniformBuffer;
 
     // Concurrency guard — see the `inFlight` declaration above for rationale.
-    if (inFlight) return -1;
+    if (inFlight) return null;
 
     // Materialise the source iterator once so we can check emptiness up front
     // and iterate it again for the draw loop without re-walking the engine's
     // generator (which is one-shot).  Bail before allocating any GPU
     // resources if no surveys are visible — saves a pointless texture clear.
     const sourceList = Array.from(sources);
-    if (sourceList.length === 0) return -1;
+    if (sourceList.length === 0) return null;
 
     const [vpW, vpH] = viewportPx;
 
@@ -469,26 +465,26 @@ export function createPickRenderer(
 
     // ── Suppress the selection halo for the pick pass ─────────────────────
     //
-    // The shared uniform buffer carries `selectedIndex`, which the visual
-    // shader uses to enlarge the selected billboard 8× and render it as a
-    // ring. We re-use the same buffer here so viewProj / viewport stay in
-    // sync, but if we *also* let the pick pass see the real selectedIndex
-    // it would inherit the 8× scaling — combined with the pick fragment's
-    // `r² < 2.25` forgiveness radius this gives the selected point a pick
-    // area roughly 12× larger than every other point, swallowing clicks
-    // around its halo.
+    // The shared uniform buffer carries `selectedPacked`, which the
+    // visual shader uses to enlarge the selected billboard 8× and render
+    // it as a ring.  We re-use the same buffer here so viewProj /
+    // viewport stay in sync, but if we *also* let the pick pass see the
+    // real selectedPacked it would inherit the 8× scaling — combined
+    // with the pick fragment's `r² < 2.25` forgiveness radius this
+    // gives the selected point a pick area roughly 12× larger than
+    // every other point, swallowing clicks around its halo.
     //
-    // Fix: write the "no selection" sentinel (0xFFFFFFFF, the same value
-    // used when nothing is pinned) into the uniform buffer's selectedIndex
-    // slot for the duration of the pick render pass. The visual pass on the
-    // next frame overwrites this with the real selectedIndex, so we don't
-    // need to restore anything afterward.
+    // Fix: write the "no selection" sentinel (0xFFFFFFFF) into the
+    // uniform's selectedPacked slot for the duration of the pick
+    // render pass.  The visual pass on the next frame overwrites this
+    // with the real selectedPacked, so we don't need to restore
+    // anything afterward.
     //
     // Layout: mat4 viewProj (64) + viewport (8) + pointSizePx (4) +
-    // brightness (4) → selectedIndex sits at byte offset 80.
-    const SELECTED_INDEX_OFFSET = 80;
+    // brightness (4) → selectedPacked sits at byte offset 80.
+    const SELECTED_PACKED_OFFSET = 80;
     const NONE_SENTINEL = new Uint32Array([0xffffffff]);
-    device.queue.writeBuffer(sharedUniformBuffer, SELECTED_INDEX_OFFSET, NONE_SENTINEL);
+    device.queue.writeBuffer(sharedUniformBuffer, SELECTED_PACKED_OFFSET, NONE_SENTINEL);
 
     // ── Boost the floor point size for easier hover/click ────────────────
     //
@@ -514,10 +510,13 @@ export function createPickRenderer(
     //
     // One encoder, one render pass, multiple per-source draw calls — the
     // standard WebGPU pattern.  Cross-survey identification works because
-    // each per-instance vertex carries its own globalInstanceIdx (baked at
-    // upload time in pointRenderer.upload), so `fsPick` writes globally-
-    // unique IDs without needing per-draw uniform updates.  No
-    // writeBuffer race to manage; no per-source submits needed.
+    // each source has its own `@group(1)` (CloudFade) bind group whose
+    // `cloud.sourceCode` slot is set at upload time; the shader composes
+    // each instance's packed identity from `(sourceCode << 27) | ii`
+    // without any per-vertex bake.  Per-source bind groups dodge the
+    // queue.writeBuffer race entirely (different uniform buffers per
+    // source means writes to one don't race against draws against
+    // another).
     const encoder = device.createCommandEncoder();
     const pass = encoder.beginRenderPass({
       colorAttachments: [
@@ -558,7 +557,20 @@ export function createPickRenderer(
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
 
+    // Build per-source @group(1) bind groups against THIS pipeline's
+    // layout.  Cannot reuse PointRenderer's bind groups because each
+    // `layout: 'auto'` pipeline has its own unique BindGroupLayout
+    // identity — sharing across pipelines fails the WebGPU
+    // "group-equivalent" compatibility check ("BindGroupLayout was
+    // not created by the pipeline").  The underlying GPUBuffer IS
+    // shared — only the layout objects differ.
+    const cloudLayout = pipeline.getBindGroupLayout(1);
     for (const src of sourceList) {
+      const cloudBindGroup = device.createBindGroup({
+        layout: cloudLayout,
+        entries: [{ binding: 0, resource: { buffer: src.cloudFadeBuffer } }],
+      });
+      pass.setBindGroup(1, cloudBindGroup);
       pass.setVertexBuffer(0, src.vertexBuffer);
       pass.draw(6, src.count);
     }
@@ -601,15 +613,26 @@ export function createPickRenderer(
         // Treat this as "no pick result" — the renderer is going away
         // anyway.  Any other rejection re-throws so genuine errors
         // (validation, lost device) still surface.
-        if (destroyed && (err as Error).name === 'AbortError') return -1;
+        if (destroyed && (err as Error).name === 'AbortError') return null;
         throw err;
       }
       const mapped = new Uint32Array(stagingBuffer.getMappedRange(0, 4));
       const raw = mapped[0]!;
       stagingBuffer.unmap();
 
-      // Decode: 0 → background (return -1), N → point index N-1 (return N-1).
-      return raw === 0 ? -1 : raw - 1;
+      // Decode the (sourceCode << 27 | localIdx + 1) pick value.
+      //
+      //   raw == 0           → cleared sentinel (no hit) → null
+      //   raw >= 1           → top 5 bits = sourceCode, bottom 27 = (localIdx + 1)
+      //
+      // We subtract 1 from the bottom 27 bits to recover the 0-based
+      // localIdx; `>>> 27` recovers the source code.  Both are pure
+      // bitwise ops, so the decode is one shift + one mask + one
+      // subtract.
+      if (raw === 0) return null;
+      const source = (raw >>> 27) as Source;
+      const localIdx = (raw & 0x07ffffff) - 1;
+      return { source, localIdx };
     } finally {
       // Always clear inFlight, even if an exception is thrown.
       inFlight = false;
