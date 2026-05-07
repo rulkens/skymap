@@ -55,7 +55,16 @@ function mockDevice(): GPUDevice {
     })),
     createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
     createSampler: vi.fn(() => ({})),
-    createShaderModule: vi.fn(() => ({})),
+    // postProcess wires a dev-mode getCompilationInfo logger after
+    // creating the shader module (so the linked WGSL is available when
+    // a compile error fires under wesl-plugin's `?static` linker, since
+    // browser error line numbers map to the linked output not the
+    // source). Vitest sets `import.meta.env.DEV = true` by default, so
+    // the mock has to expose getCompilationInfo even though we never
+    // assert on its output here.
+    createShaderModule: vi.fn(() => ({
+      getCompilationInfo: () => Promise.resolve({ messages: [] }),
+    })),
     createBindGroupLayout: vi.fn(() => ({})),
     createPipelineLayout: vi.fn(() => ({})),
     createRenderPipeline: vi.fn(() => ({})),
