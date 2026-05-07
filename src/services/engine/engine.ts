@@ -146,6 +146,7 @@ import { createSpaceMouseSubsystem } from './spaceMouseSubsystem';
 import { createClickResolver } from './clickHandler';
 import { attachEngineInputs } from './inputBindings';
 import { renderFrame } from './renderFrame';
+import { buildSettersFromTable } from './settingsTable';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -1781,105 +1782,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // ── Settings panel setters ─────────────────────────────────────────────
     //
-    // Each setter mutates the corresponding `state.*` field and fires the
-    // optional callback so subscribed React state stays in sync.  The new
-    // value takes effect on the very next rendered frame.
-
-    setPointSize(sizePx) {
-      state.settings.pointSizePx = sizePx;
-      cb.onPointSizeChange?.(sizePx);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setBrightness(value) {
-      state.settings.brightness = value;
-      cb.onBrightnessChange?.(value);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setAutoRotate(enabled) {
-      state.settings.autoRotate = enabled;
-      cb.onAutoRotateChange?.(enabled);
-      // Wake the loop — if previously idle, the new autoRotate=true
-      // keeps it ticking via the still-animating predicate; if
-      // toggling off, this single render lets the next frame body
-      // observe `autoRotate=false` and let the loop sleep.
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setGalaxyTexturesEnabled(enabled) {
-      // The per-frame loop reads `state.settings.galaxyTexturesEnabled`
-      // directly, so the toggle takes effect on the very next rendered
-      // frame — no extra signalling needed.  We still echo via the
-      // optional callback so any subscribed React state mirrors the
-      // engine truth (same pattern as the other settings setters above).
-      state.settings.galaxyTexturesEnabled = enabled;
-      cb.onGalaxyTexturesEnabledChange?.(enabled);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setMilkyWayEnabled(enabled) {
-      // Mirror of `setGalaxyTexturesEnabled`: mutate the per-frame
-      // setting bag in place (the render-on-demand scheduler will
-      // notice the next tick) and fire the echo callback so React's
-      // SettingsPanel state stays in sync with the engine truth.
-      state.settings.milkyWayEnabled = enabled;
-      cb.onMilkyWayEnabledChange?.(enabled);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setFilamentsEnabled(enabled) {
-      // Toggle the cosmic-web filament-skeleton overlay.  Mirrors the
-      // `setMilkyWayEnabled` setter shape (mutate the settings bag,
-      // request render) but DOES NOT fire an echo callback — App.tsx
-      // owns the boolean state for this toggle and updates it
-      // optimistically alongside calling this setter (see App.tsx's
-      // `onFilamentsChange`), so an engine echo would be redundant.
-      // The asymmetry vs. galaxyTextures/milkyWay is deliberate: the
-      // older toggles pre-date that pattern and would need a full
-      // App.tsx rewire to switch, which isn't this task's scope.
-      state.settings.filamentsEnabled = enabled;
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setFilamentIntensity(value) {
-      // Filament overlay intensity scale, [0, 1].  Same App-owns-state
-      // pattern as setFilamentsEnabled — no echo callback, optimistic
-      // update on the React side, engine just mutates + requests render.
-      // The shader reads the value via the per-frame uniform.
-      state.settings.filamentIntensity = Math.max(0, Math.min(1, value));
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setHighlightFallback(enabled) {
-      // Tints fallback-orientation rows magenta (see fragment shader).
-      // Read by the per-frame draw call, so flipping it takes effect on
-      // the very next rendered frame.
-      state.settings.highlightFallback = enabled;
-      cb.onHighlightFallbackChange?.(enabled);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setRealOnlyMode(enabled) {
-      // `discard`s fragments belonging to fallback rows so the user sees
-      // only galaxies with measured (b/a, PA).  Same per-frame uniform
-      // path as the highlight toggle.
-      state.settings.realOnlyMode = enabled;
-      cb.onRealOnlyModeChange?.(enabled);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setDepthFadeEnabled(enabled) {
-      // Toggles the per-galaxy camera-distance alpha fade — when on,
-      // the fragment shader multiplies alpha by
-      // `1 / (1 + (camDist / 1000Mpc)²)` so galaxies far behind the
-      // origin contribute less, breaking up the depth-column saturation
-      // at the centre of the catalog.  Same per-frame uniform path as
-      // the other UI booleans.
-      state.settings.depthFadeEnabled = enabled;
-      cb.onDepthFadeEnabledChange?.(enabled);
-      state.subsystems.scheduler.requestRender();
-    },
+    // The thirteen "boring" setters (`setPointSize`, `setBrightness`, …
+    // `setExposure`, `setToneMapCurve`) all share the same body shape:
+    // mutate one field on `state.settings.*` (or `state.bias.*`), fire
+    // an optional echo callback, request a render.  Rather than spell
+    // them out one-by-one, we build them from a declarative descriptor
+    // table in `./settingsTable.ts` and spread the result into the
+    // public-handle literal.  See that module's docstring for the
+    // why-a-table / why-bespoke-stays-inline rationale.
+    //
+    // Bespoke setters that DO NOT fit the table — `setBiasMode` (async
+    // worker bake), `setTier` (per-source slot reload), `setLodMode`
+    // (couples to camera distance), `setSourceVisible` (mask math +
+    // implicit LOD-mode switch), `setSpaceMouseSensitivity` (subsystem
+    // forward) — keep their hand-rolled bodies below.
+    ...buildSettersFromTable(state, cb, () =>
+      state.subsystems.scheduler.requestRender(),
+    ),
 
     setBiasMode(mode) {
       // Forwarded into the per-frame uniform on the next draw.  The
@@ -1913,49 +1832,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // next rendered frame.  The renderer's bake (above) also calls
       // requestRender from its resolve handler to trigger a second
       // render once the GPU buffers are ready.
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setAbsMagLimit(absMag) {
-      // Threshold used by `BiasMode.VolumeLimited`.  Galaxies with absolute
-      // magnitude *fainter* than this (M > absMag, since fainter = larger
-      // M) are discarded in the vertex stage.  Seeded at engine init from
-      // the closure default (-19, the SDSS spec sample limit); subsequent
-      // calls overwrite that.
-      state.bias.absMagLimit = absMag;
-      cb.onAbsMagLimitChange?.(absMag);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setExposure(value) {
-      // Clamp into a sane range so a runaway slider or a debug
-      // console call (e.g. `setExposure(1e9)`) can't blow out the
-      // float buffer or, on the lower end, multiply the HDR signal
-      // by zero and produce a black frame the user can't recover
-      // from.  0.05 keeps a faint signal visible; 16 is well past
-      // any realistic peak (~5-10 in the densest cluster cores).
-      state.settings.exposure = Math.max(0.05, Math.min(16, value));
-      // Echo the *clamped* value back to the UI so the slider's
-      // displayed number agrees with what the shader actually uses.
-      // Mirrors the setToneMapCurve / setBiasMode pattern: always
-      // fire (even on no-op identical values) so the first call
-      // seeds React state correctly without a separate code path.
-      cb.onExposureChange?.(state.settings.exposure);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setToneMapCurve(curve) {
-      // Forwarded into the per-frame uniform on the next draw.  The
-      // shader branches on the integer value (0=Linear, 1=Reinhard,
-      // 2=Asinh, 3=Gamma2, 4=Aces) so flipping this from devtools or
-      // the SettingsPanel takes effect on the next rendered frame
-      // without any pipeline rebuild.
-      //
-      // Always fire the echo callback — even when `curve === state.settings.toneMapCurve`
-      // — so the UI seeds correctly on first call (mirrors the
-      // setBiasMode pattern).
-      state.settings.toneMapCurve = curve;
-      cb.onToneMapCurveChange?.(curve);
       state.subsystems.scheduler.requestRender();
     },
 
