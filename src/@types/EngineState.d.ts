@@ -81,6 +81,28 @@ import type { EngineGpuHandles } from './EngineGpuHandles';
 import type { EngineSubsystemHandles } from './EngineSubsystemHandles';
 import type { createOrbitCamera } from '../services/camera/orbitCamera';
 import type { InitialCam } from '../services/engine/cameraFraming';
+import type { AssetSlot } from '../services/loading/AssetSlot';
+import type { PointCloud } from './PointCloud';
+import type { PointCloudReq } from '../services/loading/fetchers/pointCloudFetcher';
+import type { Source } from '../data/sources';
+
+/**
+ * Asset-slot bag — owned by the engine and populated alongside the
+ * GPU renderer.  The asset-loading rework migrates each per-source
+ * fetch+upload path from the old imperative `cloudLoader.reloadSource`
+ * to a `createAssetSlot` whose race-checked `commit` step is the
+ * structural fix for tier-swap stomping bugs.  Task 8 introduces only
+ * the SDSS slot here; Task 9 fills in the rest (2MRS, GLADE, Famous,
+ * filaments).
+ *
+ * `points` is keyed by Source so any future per-source consumer can
+ * look up the active slot for a survey without iterating; this also
+ * matches the shape that Task 9's bulk migration produces, so we
+ * don't have to reshape the type a second time.
+ */
+export type EngineAssetSlots = {
+  points: Map<Source, AssetSlot<PointCloud, PointCloudReq>>;
+};
 
 export type EngineState = {
   settings: EngineSettingsState;
@@ -91,4 +113,5 @@ export type EngineState = {
   subsystems: EngineSubsystemHandles;
   cam: ReturnType<typeof createOrbitCamera> | null;
   initialCamSnapshot: InitialCam | null;
+  assetSlots: EngineAssetSlots;
 };

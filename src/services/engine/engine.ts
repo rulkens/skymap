@@ -109,6 +109,8 @@ import {
   type LoadEvent,
 } from './cloudLoader';
 import { createLoadProgressAggregator } from './loadProgressAggregator';
+import { createAssetSlot } from '../loading/AssetSlot';
+import { pointCloudFetcher } from '../loading/fetchers/pointCloudFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 import { loadFamousSidecars } from './famousMetaLoader';
@@ -395,6 +397,25 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
     cam: null,
     initialCamSnapshot: null,
+    // ── Asset-loading slot bag ───────────────────────────────────────────
+    //
+    // The slot machinery (see `services/loading/AssetSlot.ts`) replaces the
+    // imperative `cloudLoader.reloadSource` call sites with a race-checked
+    // fetch→commit pipeline.  We declare the Map up-front so consumers can
+    // call `state.assetSlots.points.get(source)?.load(...)` without a null
+    // check, but the actual slots are constructed inside the GPU init IIFE
+    // — they close over `state.gpu.renderer` for their commit step, and
+    // that handle is null until `initGpu` resolves.
+    //
+    // Task 8 populates only the SDSS entry; Task 9 fills in the rest.  An
+    // alternative would be to lazily construct slots on first `load()`,
+    // but that splits the wiring across two files (engine + setTier helper)
+    // and obscures the lifecycle.  Eager construction inside the IIFE
+    // keeps every slot's birth and its renderer-handle in the same lexical
+    // scope.
+    assetSlots: {
+      points: new Map(),
+    },
   };
 
   /**
@@ -593,6 +614,77 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const renderer = new PointRenderer(device, 'rgba16float');
       state.gpu.renderer = renderer;
 
+      // ── SDSS asset slot (Task 8 — first end-to-end slot wiring) ──────────
+      //
+      // First migration of a per-source load through the new
+      // `createAssetSlot` machinery.  The slot owns one cell of mutable
+      // state (its current LoadState) and exposes the fetch→commit
+      // lifecycle behind a race-checked façade — see `AssetSlot.ts`'s
+      // header for the full why-and-how, especially the two race-check
+      // points that fix the tier-swap stomping bug.
+      //
+      // Why construct here, after the renderer exists?
+      //   The slot's `commit` callback uploads the freshly-decoded
+      //   PointCloud to `state.gpu.renderer`, so the renderer must be
+      //   non-null at the moment commit runs.  Constructing the slot
+      //   AFTER `state.gpu.renderer = renderer` in the same lexical scope
+      //   makes that ordering obvious to anyone reading top-down.  An
+      //   alternative would be to lazily build the slot inside setTier
+      //   on first call, but that splits one cohesive subsystem across
+      //   two files.
+      //
+      // Why `await renderer.upload(...)` inside commit?
+      //   The slot fires its `committed` event (which transitions the
+      //   state to `ready`) only after `commit` resolves.  Awaiting the
+      //   GPU upload here — rather than fire-and-forget — guarantees
+      //   that subscribers seeing `kind === 'ready'` can rely on the
+      //   GPU buffer being populated, which is the primary contract the
+      //   asset-loading rework is delivering.  This is also what closes
+      //   the race window the old `loadAllClouds` path papered over with
+      //   an out-of-band `uploadChain` promise.
+      //
+      // Why `requestRender()` in the subscriber?
+      //   The render loop is gated on `requestRender` — without an
+      //   explicit wake-up the new GPU buffer would sit unrendered until
+      //   the user nudged the camera.  Firing it on the `ready`
+      //   transition (rather than inside `commit`) keeps the slot's
+      //   commit step pure of UI concerns; the wake-up is a downstream
+      //   side-effect of the slot's state transition, not part of the
+      //   commit contract.
+      //
+      // Naming: `sdss-points` matches the convention Task 9 will follow
+      // (`<source>-points` for survey clouds, `filaments` for filaments,
+      // etc.).  The progress aggregator uses this string verbatim, so
+      // bouncing the value through a typed Source enum here would lose
+      // information needlessly.
+      const sdssSlot = createAssetSlot({
+        name: 'sdss-points',
+        fetch: pointCloudFetcher,
+        commit: async (cloud) => {
+          // Renderer might have been destroyed mid-load (StrictMode
+          // unmount, hot-reload).  Drop the upload silently in that
+          // case; the slot will still transition to `ready`, but no
+          // GPU buffer exists to consume it.
+          if (!state.gpu.renderer) return;
+          await state.gpu.renderer.upload(Source.SDSS, cloud);
+          state.sources.clouds.set(Source.SDSS, cloud);
+        },
+      });
+      sdssSlot.subscribe((s) => {
+        if (s.kind === 'loading') {
+          state.subsystems.loadProgress?.start('sdss-points', s.total);
+          state.subsystems.loadProgress?.update('sdss-points', s.loaded, s.total);
+        }
+        if (s.kind === 'ready') {
+          cb.onCloudReady?.(Source.SDSS, s.value.count);
+          state.subsystems.scheduler.requestRender();
+        }
+        if (s.kind === 'ready' || s.kind === 'error') {
+          state.subsystems.loadProgress?.finish('sdss-points');
+        }
+      });
+      state.assetSlots.points.set(Source.SDSS, sdssSlot);
+
       // ── Galaxy thumbnail subsystem ─────────────────────────────────────
       //
       // Three collaborators wired together here:
@@ -765,6 +857,26 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // galaxy in InfoCard" bugs).  Initialising to `Promise.resolve()`
       // so the first `.then(() => upload(...))` fires immediately.
       let uploadChain: Promise<void> = Promise.resolve();
+
+      // ── SDSS first-load via the asset slot (Task 8) ───────────────────
+      //
+      // Fire the SDSS slot's first load alongside `loadAllClouds`.  The
+      // slot's commit step replaces the legacy `loadAllClouds` SDSS
+      // upload path: by the time the slot transitions to `ready`, the
+      // GPU buffer is populated and `requestRender()` has been fired by
+      // the slot's subscriber.
+      //
+      // NOTE: `loadAllClouds` below ALSO fetches SDSS, producing one
+      // redundant download.  We accept this transitionally — the
+      // browser's HTTP cache makes the second request free (304/from-
+      // cache hit), and Task 9 removes the duplicate by porting all
+      // surveys to the slot machinery and dropping `loadAllClouds`
+      // entirely.  Splitting the migration in two keeps the diff small
+      // enough to verify visually before the bulk move.
+      state.assetSlots.points.get(Source.SDSS)?.load({
+        source: Source.SDSS,
+        tier: state.sources.tier,
+      });
 
       const { loadedCount } = await loadAllClouds(state.sources.tier, (result) => {
         // Renderer might have been destroyed mid-load (StrictMode unmount,
@@ -2130,6 +2242,26 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         const prevTarget = TIER_TARGETS[prevTier][source];
         const nextTarget = TIER_TARGETS[tier][source];
         if (prevTarget === nextTarget) continue;
+
+        // ── SDSS — slot-driven path (Task 8) ─────────────────────────
+        //
+        // SDSS is the first survey migrated to `createAssetSlot`.  The
+        // slot owns its own race-checked fetch+commit lifecycle, so all
+        // we have to do is hand it the new request — it cancels any
+        // prior in-flight load, re-fetches the new tier's `.bin`, and
+        // its commit step uploads the result and wakes the render loop
+        // via the subscriber wired up next to the slot's construction.
+        //
+        // The other sources still fall through to the legacy
+        // `reloadSource` block below — Task 9 ports them.  Mixing the
+        // two paths transitionally is intentional: it lets the SDSS
+        // wiring be observed end-to-end (loading bar, render wake,
+        // tier swap) before the bulk migration touches any other
+        // survey.
+        if (source === Source.SDSS) {
+          state.assetSlots.points.get(Source.SDSS)?.load({ source, tier });
+          continue;
+        }
 
         // Use the same onResult pipeline as the initial load so the swapped
         // cloud goes through the same upload, the same `clouds.set`, the

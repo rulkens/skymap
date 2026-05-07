@@ -128,6 +128,7 @@ describe('EngineState type', () => {
       },
       cam: null,
       initialCamSnapshot: null,
+      assetSlots: { points: new Map() },
     };
 
     expect(state.settings.pointSizePx).toBe(2.5);
@@ -238,6 +239,7 @@ describe('EngineState type', () => {
       },
       cam: null,
       initialCamSnapshot: null,
+      assetSlots: { points: new Map() },
     };
 
     state.settings.brightness = 2.5;

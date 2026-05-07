@@ -136,14 +136,21 @@ export type CloudLoadResult = {
 /**
  * Identifier for one in-flight fetch in the loading-bar aggregator.
  *
- * Galaxy `.bin` fetches use the `Source` enum value; the optional
- * `filaments.bin` fetch uses the literal `'filaments'`.  Broadening
- * the key beyond `Source` keeps the loading-bar UI honest about all
- * the fetches happening on first paint — filaments are a non-trivial
- * download (~24 MB on the canonical merged build) that the user
- * should see represented in the progress fill.
+ * Galaxy `.bin` fetches via the legacy `cloudLoader` path use the `Source`
+ * enum value; the optional `filaments.bin` fetch uses the literal
+ * `'filaments'`.  Broadening the key beyond `Source` keeps the loading-bar
+ * UI honest about all the fetches happening on first paint — filaments are
+ * a non-trivial download (~24 MB on the canonical merged build) that the
+ * user should see represented in the progress fill.
+ *
+ * Slot-machinery callers (see `services/loading/AssetSlot.ts`) pass their
+ * slot name verbatim — e.g. `'sdss-points'` — so the aggregator can index
+ * by the same identifier the rest of the loading subsystem uses for
+ * structured logging.  We accept any `string` rather than a fixed literal
+ * union so Task 9's bulk migration doesn't have to widen this type a
+ * second time as each new slot lands.
  */
-export type LoadEventSource = Source | 'filaments';
+export type LoadEventSource = Source | 'filaments' | string;
 
 export type LoadEvent =
   | { type: 'start'; source: LoadEventSource; total: number }
