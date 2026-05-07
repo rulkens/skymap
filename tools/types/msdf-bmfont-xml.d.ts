@@ -34,7 +34,7 @@ declare module 'msdf-bmfont-xml' {
     font: FontData,
   ) => void;
 
-  declare function generateBMFont(
+  function generateBMFont(
     input: string | Buffer,
     options: GenerateOptions,
     callback: GenerateCallback,
