@@ -110,10 +110,10 @@ import { createLoadProgressEmitter } from './loadProgressAggregator';
 import type { AssetSlot } from '../loading/types';
 import { createAssetSlot } from '../loading/AssetSlot';
 import { pointCloudFetcher } from '../loading/fetchers/pointCloudFetcher';
+import { syntheticPointFetcher } from '../loading/fetchers/syntheticPointFetcher';
 import { filamentFetcher } from '../loading/fetchers/filamentFetcher';
 import { famousMetaFetcher } from '../loading/fetchers/famousMetaFetcher';
 import { pgcAliasFetcher, type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
-import { generateSyntheticCloud } from '../../data/synthetic';
 import { TIER_TARGETS } from '../../data/tierTargets';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 
@@ -715,11 +715,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Naming: `<source>-points` for survey clouds, `filaments` for
       // filaments.  The progress aggregator keys on these strings, so
       // they double as the load-progress identifier.
-      for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous]) {
+      for (const source of [
+        Source.SDSS,
+        Source.TwoMRS,
+        Source.Glade,
+        Source.Famous,
+        Source.Synthetic,
+      ]) {
         const slotName = `${sourceName(source)}-points`;
+        // Synthetic uses a different fetcher (procedural generator,
+        // ignores tier).  All real surveys share `pointCloudFetcher`.
+        // The slot's commit body is identical across both — the only
+        // axis of variation here is "where do the bytes come from".
+        const fetch = source === Source.Synthetic ? syntheticPointFetcher : pointCloudFetcher;
         const slot = createAssetSlot({
           name: slotName,
-          fetch: pointCloudFetcher,
+          fetch,
           commit: async (cloud) => {
             // Renderer might have been destroyed mid-load (StrictMode
             // unmount, hot-reload).  Drop the upload silently in that
@@ -1078,18 +1089,26 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       await allArrivalsPromise;
 
-      // Synthetic fallback — every real survey is empty/errored.  Drop
-      // in a 100k procedural cloud so the user sees *something*.
-      // Inline (rather than a subscriber) because boot is the only
-      // place this can fire: tier swaps don't re-enter init, and
-      // `pointsAnyReady` doesn't reset.
-      if (!pointsAnyReady && state.gpu.renderer) {
-        const synthetic = generateSyntheticCloud(100_000);
-        await state.gpu.renderer.upload(Source.Synthetic, synthetic);
-        state.sources.clouds.set(Source.Synthetic, synthetic);
-        cb.onCloudReady?.(Source.Synthetic, synthetic.count);
-        state.subsystems.scheduler.requestRender();
-        firstReadySource = Source.Synthetic;
+      // Synthetic fallback — every real survey is empty/errored.  Drive
+      // through the synthetic slot so the same fetch → commit → upload path
+      // runs (fade-in, dev-panel row, race-checked commit).  See
+      // `syntheticPointFetcher.ts` for why this lives behind a slot.
+      if (!pointsAnyReady) {
+        const synthSlot = state.assetSlots.points.get(Source.Synthetic);
+        if (synthSlot) {
+          await new Promise<void>((resolve) => {
+            const unsub = synthSlot.subscribe((s) => {
+              if (s.kind === 'ready' || s.kind === 'error') {
+                unsub();
+                resolve();
+              }
+            });
+            synthSlot.load({ source: Source.Synthetic, tier: state.sources.tier });
+          });
+          if (synthSlot.state().kind === 'ready') {
+            firstReadySource = Source.Synthetic;
+          }
+        }
       }
 
       // Bail if no clouds reached the GPU (engine torn down mid-load,
