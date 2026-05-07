@@ -1,16 +1,74 @@
 /**
- * toneMapPass — fullscreen post-process that compresses HDR values
- * from the rgba16float offscreen target into the displayable [0, 1]
- * range of the swap chain.
+ * postProcess — single module owning the HDR offscreen target and the
+ * tone-map post-process that writes its contents into the swap chain.
  *
- * ### Why post-process, not in-shader per pipeline
+ * ### Why one module
+ *
+ * Pre-Phase-4, the HDR texture and the tone-map pipeline lived in two
+ * separate modules (`hdrTarget.ts`, `toneMapPass.ts`) and two separate
+ * engine-state fields.  They are conceptually one pipeline stage —
+ * "every visible draw pass writes into a shared rgba16float target,
+ * then the post-process tone-maps it into the swap chain".  Wiring
+ * them through the engine as two pieces meant two construction sites,
+ * two destroy sites, two resize calls (only one of which was actually
+ * needed — the tone-map pass holds no size-dependent state), and two
+ * arguments through `renderFrame`.  Collapsing them removes that
+ * ceremony without losing any of the rationale, which is why this
+ * docstring carries forward the multi-paragraph "why" comments from
+ * the merged modules verbatim.
+ *
+ * ### Why the HDR target lives here at all
+ *
+ * The HDR target's lifetime is "as long as the canvas size is
+ * constant" — it gets thrown away and recreated on resize.  Keeping
+ * that lifecycle outside the renderer classes (which own pipelines,
+ * vertex buffers, and other long-lived resources) avoids tangling
+ * re-creation paths.  The engine's resize handler calls
+ * `postProcess.resize(...)` once per resize and the new view
+ * propagates through the per-frame `draw(...)` calls.
+ *
+ * ### Why rgba16float and not rgba32float
+ *
+ * 16-bit half-float is the WebGPU minimum for sampleable + renderable
+ * floating-point textures; 32-bit float requires the
+ * `float32-filterable` feature on most platforms.  Half-float gives us
+ * ~5 decimal digits of precision and a range of ±65 504, which is more
+ * than enough for our additive billboard math (per-fragment alpha
+ * contributions in [0, 1], accumulating to peaks of maybe a few hundred
+ * in the densest cluster cores before tone-mapping).
+ *
+ * ### Why TEXTURE_BINDING + RENDER_ATTACHMENT
+ *
+ * RENDER_ATTACHMENT lets the points/quads/disks pipelines write into
+ * it.  TEXTURE_BINDING lets the tone-map fragment shader sample from
+ * it.  Both flags are required on the same texture — they're set as a
+ * bitmask because WebGPU descriptors don't support "sample-or-render"
+ * tagging after creation.
+ *
+ * ### Why no depth attachment
+ *
+ * An earlier revision (commit `716eb6b`) added a `depth24plus`
+ * companion texture so the Milky Way impostor could be occluded by
+ * per-galaxy thumbnail / disk overlays via depth-test.  Commit
+ * `28aced5` then switched every overlay pipeline to pure additive
+ * blending (`srcFactor: 'one', dstFactor: 'one'`) with
+ * `depthWriteEnabled: false`, which makes ordering moot: A+B = B+A,
+ * so no occlusion is needed.  At that point the depth buffer became
+ * dead infrastructure — every frame cleared it to 1.0 and nothing
+ * ever wrote a different value.  Removed the attachment to drop the
+ * per-frame clear, the GPU memory, and the cross-cutting "every
+ * pipeline must declare matching depthStencil state" constraint that
+ * already bit us once during HMR.  If a future pass needs depth
+ * (e.g. a truly opaque overlay), it can be added back at that point.
+ *
+ * ### Why post-process tone-map, not in-shader per pipeline
  *
  * Every renderer (point, quad, disk) writes its own HDR contribution
- * into the same target with additive blending.  Doing tone-mapping
- * in each renderer's fragment stage would tone-map *each contribution*
+ * into the same target with additive blending.  Doing tone-mapping in
+ * each renderer's fragment stage would tone-map *each contribution*
  * independently — but tone-mapping is a non-linear operation, so
- * `tonemap(a + b) ≠ tonemap(a) + tonemap(b)`.  The whole point of
- * the HDR pass is to let contributions accumulate linearly and *then*
+ * `tonemap(a + b) ≠ tonemap(a) + tonemap(b)`.  The whole point of the
+ * HDR pass is to let contributions accumulate linearly and *then*
  * compress.  Hence: one post-process at the end of the frame.
  *
  * ### Five curves, one pass
@@ -35,12 +93,23 @@
 import toneMapWgsl from './shaders/toneMap.wgsl?raw';
 import { ToneMapCurve } from '../../data/toneMapCurve';
 
+/**
+ * Plain `{ width, height }` pair, kept local to this module.  We
+ * deliberately don't reuse a DOM type like `DOMRectReadOnly` — those
+ * carry extra fields (x, y, top, ...) the GPU descriptor doesn't
+ * want, and the pinhole-explicit name makes the resize call site
+ * ("`resize({ width, height })`") read like English.
+ */
+export type Size = { readonly width: number; readonly height: number };
+
 /** Default whitepoint for Reinhard-extended — input value where the curve reaches 1.0. */
 const DEFAULT_WHITEPOINT = 4.0;
 
 /** Default softness for asinh stretch — higher = more aggressive low-end lift. */
 const DEFAULT_ASINH_SOFTNESS = 10.0;
 
+// ─── JS-mirror tone-map curves ────────────────────────────────────────────
+//
 // JS-mirrors of every WGSL curve.  Kept by-hand-in-sync so the unit
 // tests catch shader regressions before they ship.
 
@@ -93,18 +162,52 @@ export function acesFilmic(c: number, exposure: number): number {
   return Math.max(0, Math.min(1, (x * (a * x + b)) / (x * (d * x + e) + f)));
 }
 
-export type ToneMapPass = {
+// ─── Aggregate factory ────────────────────────────────────────────────────
+
+export type PostProcess = {
+  /** Current HDR colour-attachment view, stable until the next `resize()` call. */
+  readonly view: GPUTextureView;
+  /** Recreate the HDR texture at a new size.  Old view becomes invalid. */
+  resize(size: Size): void;
+  /**
+   * Encode the fullscreen tone-map blit `hdrView → swapView` onto the
+   * caller's command encoder.  Begins+ends its own render pass.  The
+   * HDR view used as the input is the one the aggregate currently
+   * owns — callers no longer pass it explicitly, which prevents a
+   * stale-after-resize view from leaking back in.
+   */
   draw(
     encoder: GPUCommandEncoder,
     swapView: GPUTextureView,
-    hdrView: GPUTextureView,
     exposure: number,
     curve: ToneMapCurve,
   ): void;
+  /** Tear down — releases both the HDR texture and the tone-map uniform buffer. */
   destroy(): void;
 };
 
-export function createToneMapPass(device: GPUDevice, swapFormat: GPUTextureFormat): ToneMapPass {
+export function createPostProcess(
+  device: GPUDevice,
+  swapFormat: GPUTextureFormat,
+  size: Size,
+): PostProcess {
+  // ── HDR target (lifecycle-controlled by resize/destroy) ───────────────
+  let hdrTexture: GPUTexture | null = null;
+  let hdrView: GPUTextureView | null = null;
+
+  function allocateHdr(s: Size): void {
+    if (hdrTexture) hdrTexture.destroy();
+    hdrTexture = device.createTexture({
+      format: 'rgba16float',
+      size: { width: s.width, height: s.height },
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    hdrView = hdrTexture.createView();
+  }
+
+  allocateHdr(size);
+
+  // ── Tone-map pipeline (built once, lives until destroy) ───────────────
   const module = device.createShaderModule({ code: toneMapWgsl });
 
   // Why nearest, not linear?  The HDR texture is the same resolution
@@ -150,7 +253,14 @@ export function createToneMapPass(device: GPUDevice, swapFormat: GPUTextureForma
   const uniformU32 = new Uint32Array(uniformBytes);
 
   return {
-    draw(encoder, swapView, hdrView, exposure, curve) {
+    get view(): GPUTextureView {
+      if (!hdrView) throw new Error('postProcess: view accessed after destroy');
+      return hdrView;
+    },
+    resize(s: Size): void {
+      allocateHdr(s);
+    },
+    draw(encoder, swapView, exposure, curve): void {
       uniformF32[0] = exposure;
       uniformF32[1] = DEFAULT_WHITEPOINT * DEFAULT_WHITEPOINT;
       uniformF32[2] = DEFAULT_ASINH_SOFTNESS;
@@ -164,7 +274,7 @@ export function createToneMapPass(device: GPUDevice, swapFormat: GPUTextureForma
       const bindGroup = device.createBindGroup({
         layout: bindGroupLayout,
         entries: [
-          { binding: 0, resource: hdrView },
+          { binding: 0, resource: hdrView! },
           { binding: 1, resource: sampler },
           { binding: 2, resource: { buffer: uniformBuffer } },
         ],
@@ -187,6 +297,9 @@ export function createToneMapPass(device: GPUDevice, swapFormat: GPUTextureForma
       pass.end();
     },
     destroy(): void {
+      if (hdrTexture) hdrTexture.destroy();
+      hdrTexture = null;
+      hdrView = null;
       uniformBuffer.destroy();
     },
   };

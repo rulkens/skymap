@@ -109,8 +109,7 @@ describe('EngineState type', () => {
       gpu: {
         renderer: null,
         pickRenderer: null,
-        hdrTarget: null,
-        toneMapPass: null,
+        postProcess: null,
         filamentRenderer: null,
       },
       subsystems: {
@@ -220,8 +219,7 @@ describe('EngineState type', () => {
       gpu: {
         renderer: null,
         pickRenderer: null,
-        hdrTarget: null,
-        toneMapPass: null,
+        postProcess: null,
         filamentRenderer: null,
       },
       subsystems: {

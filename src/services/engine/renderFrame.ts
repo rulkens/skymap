@@ -10,7 +10,7 @@
  *   4. `pointRenderer.draw(...)` (17 args)
  *   5. `thumbnails.runFrame(...)` (10 fields)
  *   6. `pass.end()`
- *   7. `toneMapPass.draw(...)` (HDR → swap chain)
+ *   7. `postProcess.draw(...)` (HDR → swap chain tone-map blit)
  *   8. `device.queue.submit([encoder.finish()])`
  *
  * That whole block reads the engine's per-frame closure state but
@@ -39,7 +39,7 @@
  *
  *   pass 1: HDR render pass (colour-only — no depth attachment;
  *     every overlay is emissive + additive so ordering is moot)
- *     - clear hdrTargetView to (0, 0, 0, 1)
+ *     - clear postProcess.view to (0, 0, 0, 1)
  *     - pointRenderer.draw  (instanced billboards, additive)
  *     - thumbnails.runFrame (quad + disk passes, additive; gated on
  *       galaxyTexturesEnabled inside the subsystem caller)
@@ -60,9 +60,9 @@
  *     - pass.end()
  *
  *   pass 2: tone-map post-process
- *     - sample hdrTargetView, write to swap chain
+ *     - sample the HDR target, write to swap chain
  *     - applies the user's `toneMapCurve` and `exposure` uniforms
- *     - is called via `toneMapPass.draw`, which begins+ends its own
+ *     - is called via `postProcess.draw`, which begins+ends its own
  *       internal render pass on the same encoder
  *
  *   submit: device.queue.submit([encoder.finish()])
@@ -93,7 +93,7 @@ import type { Source } from '../../data/sources';
 import type { BiasMode } from '../../data/biasMode';
 import type { ToneMapCurve } from '../../data/toneMapCurve';
 import type { PointRenderer } from '../gpu/pointRenderer';
-import type { ToneMapPass } from '../gpu/toneMapPass';
+import type { PostProcess } from '../gpu/postProcess';
 import type { QuadRenderer } from '../gpu/quadRenderer';
 import type { DiskRenderer } from '../gpu/diskRenderer';
 import type { MilkyWayRenderer } from '../gpu/milkyWayRenderer';
@@ -103,7 +103,7 @@ import type { FamousMetaEntry, FamousXrefMap } from '../loading/fetchers/famousM
 import { milkyWayFadeAlpha } from '../../utils/math/milkyWayFade';
 
 /**
- * Settings consumed by `pointRenderer.draw` and `toneMapPass.draw`.
+ * Settings consumed by `pointRenderer.draw` and `postProcess.draw`.
  *
  * Grouped into a single sub-struct rather than dumped into the top
  * level of `RenderFrameInput` so the caller can pass `{ ...settings }`
@@ -201,7 +201,14 @@ export type RenderFrameInput = {
   // ── GPU handles ───────────────────────────────────────────────────────
   device: GPUDevice;
   context: GPUCanvasContext;
-  hdrTargetView: GPUTextureView;
+  /**
+   * Combined HDR offscreen target + tone-map post-process.  This module
+   * reads `postProcess.view` for the HDR pass's colour attachment and
+   * calls `postProcess.draw(...)` for the fullscreen blit at the end
+   * of the frame.  See `services/gpu/postProcess.ts` for the merge
+   * rationale.
+   */
+  postProcess: PostProcess;
   pointRenderer: PointRenderer;
   milkyWayRenderer: MilkyWayRenderer;
   /**
@@ -212,7 +219,6 @@ export type RenderFrameInput = {
    * so a missing renderer is silently a no-op.
    */
   filamentRenderer: FilamentRenderer | null;
-  toneMapPass: ToneMapPass;
   thumbnails: ThumbnailSubsystem;
   /**
    * QuadRenderer + DiskRenderer references forwarded straight to the
@@ -253,11 +259,10 @@ export function renderFrame(input: RenderFrameInput): void {
     milkyWayITimeSec,
     device,
     context,
-    hdrTargetView,
+    postProcess,
     pointRenderer,
     milkyWayRenderer,
     filamentRenderer,
-    toneMapPass,
     thumbnails,
     quadRenderer,
     diskRenderer,
@@ -307,13 +312,13 @@ export function renderFrame(input: RenderFrameInput): void {
   // No depth attachment: every pipeline drawing into this pass uses
   // pure additive blending (`srcFactor: 'one', dstFactor: 'one'`) with
   // `depthWriteEnabled: false`, so per-fragment colour is order-
-  // independent (A+B = B+A).  See `services/gpu/hdrTarget.ts` for the
-  // history (a depth attachment was tried in commit 716eb6b and
+  // independent (A+B = B+A).  See `services/gpu/postProcess.ts` for
+  // the history (a depth attachment was tried in commit 716eb6b and
   // superseded by 28aced5).
   const pass = encoder.beginRenderPass({
     colorAttachments: [
       {
-        view: hdrTargetView,
+        view: postProcess.view,
         clearValue: { r: 0, g: 0, b: 0, a: 1 },
         loadOp: 'clear',
         storeOp: 'store',
@@ -470,10 +475,14 @@ export function renderFrame(input: RenderFrameInput): void {
   // Switching `toneMapCurve` between Linear / Reinhard / Asinh /
   // Gamma 2 / ACES is a single 4-byte uniform write inside the pass
   // — no pipeline rebuild, instant visual A/B.
-  toneMapPass.draw(
+  //
+  // Post-Phase-4 the HDR view is owned by `postProcess` itself rather
+  // than being passed in alongside the swap view; the aggregate knows
+  // its own view, which prevents a stale-after-resize view from
+  // sneaking in via this callsite.
+  postProcess.draw(
     encoder,
     context.getCurrentTexture().createView(),
-    hdrTargetView,
     settings.exposure,
     settings.toneMapCurve,
   );

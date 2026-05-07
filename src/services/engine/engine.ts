@@ -64,8 +64,7 @@
 import { initGpu, resizeCanvasToDisplay } from '../gpu/device';
 import { PointRenderer } from '../gpu/pointRenderer';
 import { createPickRenderer } from '../gpu/pickRenderer';
-import { createHdrTarget } from '../gpu/hdrTarget';
-import { createToneMapPass } from '../gpu/toneMapPass';
+import { createPostProcess } from '../gpu/postProcess';
 import { createOrbitCamera, computeViewProj, updatePosition } from '../camera/orbitCamera';
 import { attachOrbitControls } from '../camera/orbitControls';
 import { Source, maskWith, maskWithout } from '../../data/sources';
@@ -362,13 +361,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pointerDown: false,
     },
     gpu: {
-      // All four GPU handles populate during the async IIFE below
-      // and release in `destroy()`.  See `@types/EngineGpuHandles.d.ts`
+      // All GPU handles populate during the async IIFE below and
+      // release in `destroy()`.  See `@types/EngineGpuHandles.d.ts`
       // for the null-until-init lifecycle rationale.
       renderer: null,
       pickRenderer: null,
-      hdrTarget: null,
-      toneMapPass: null,
+      postProcess: null,
       filamentRenderer: null,
     },
     subsystems: {
@@ -634,15 +632,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // separate and never wants tone-mapping.  See
       // `docs/superpowers/plans/2026-05-04-hdr-tonemap.md` for the full
       // rationale.
-      const hdrTarget = createHdrTarget(device, {
+      // Combined HDR offscreen target + tone-map post-process.  See
+      // `services/gpu/postProcess.ts` for why these merged into one
+      // factory (Phase 4 of the engine-renderer-boundaries spec) —
+      // they share a lifetime, share a swap-chain-format dependency,
+      // and were previously two separate construction sites that the
+      // engine had to thread together for every resize and destroy.
+      const postProcess = createPostProcess(device, format, {
         width: canvas.width,
         height: canvas.height,
       });
-      const toneMapPass = createToneMapPass(device, format);
       // Mirror into the engine state so `destroy()` (defined on the
       // public handle, outside this IIFE) can release the GPU resources.
-      state.gpu.hdrTarget = hdrTarget;
-      state.gpu.toneMapPass = toneMapPass;
+      state.gpu.postProcess = postProcess;
 
       // Build the GPU pipeline; cloud data is loaded below.
       // PointRenderer (and QuadRenderer/DiskRenderer further down) target
@@ -1426,7 +1428,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         if (camRef && resizeCanvasToDisplay(canvas)) {
           camRef.aspect = canvas.width / canvas.height;
           updatePosition(camRef);
-          state.gpu.hdrTarget?.resize({ width: canvas.width, height: canvas.height });
+          state.gpu.postProcess?.resize({ width: canvas.width, height: canvas.height });
         }
 
         // Refresh the scale-bar legend. Early-returns when nothing changed,
@@ -1492,9 +1494,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         const vp = camRef ? computeViewProj(camRef) : null;
         const rendererRef = state.gpu.renderer;
         const thumbnailsRef = state.subsystems.thumbnails;
-        const hdrTargetRef = state.gpu.hdrTarget;
-        const toneMapPassRef = state.gpu.toneMapPass;
-        if (!vp || !rendererRef || !camRef || !thumbnailsRef || !hdrTargetRef || !toneMapPassRef) {
+        const postProcessRef = state.gpu.postProcess;
+        if (!vp || !rendererRef || !camRef || !thumbnailsRef || !postProcessRef) {
           // Camera/renderer not ready yet — try again next frame.
           // (This branch only fires during the brief window between
           // engine startup and the first cloud landing; once both are
@@ -1535,7 +1536,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         //
         // The whole encoder lifecycle (createCommandEncoder, beginRenderPass
         // against the HDR target, pointRenderer.draw, thumbnails.runFrame,
-        // pass.end, toneMapPass.draw, queue.submit) lives in `renderFrame.ts`.
+        // pass.end, postProcess.draw, queue.submit) lives in `renderFrame.ts`.
         // Every closure variable that block read is forwarded as an explicit
         // field on `RenderFrameInput` so this site stays free of GPU
         // bookkeeping.  See that module's docstring for the in-order
@@ -1548,11 +1549,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           viewProj: vp,
           device,
           context,
-          hdrTargetView: hdrTargetRef.view,
+          postProcess: postProcessRef,
           pointRenderer: rendererRef,
           milkyWayRenderer,
           filamentRenderer,
-          toneMapPass: toneMapPassRef,
           thumbnails: thumbnailsRef,
           quadRenderer,
           diskRenderer,
@@ -1741,13 +1741,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // 5. Release GPU resources.
       state.gpu.pickRenderer?.destroy();
       state.gpu.pickRenderer = null;
-      // Tone-map pass owns a 16-byte uniform buffer; HDR target owns the
-      // rgba16float texture.  Both must be released so a hot-reload /
-      // remount doesn't leak a per-mount texture (~16 MB at 2× DPR 1080p).
-      state.gpu.hdrTarget?.destroy();
-      state.gpu.hdrTarget = null;
-      state.gpu.toneMapPass?.destroy();
-      state.gpu.toneMapPass = null;
+      // postProcess owns the rgba16float HDR texture and the 16-byte
+      // tone-map uniform buffer (merged into one aggregate in Phase 4).
+      // Must be released so a hot-reload / remount doesn't leak a
+      // per-mount texture (~16 MB at 2× DPR 1080p).
+      state.gpu.postProcess?.destroy();
+      state.gpu.postProcess = null;
       // Filament renderer owns three GPU buffers (uniform + index + quad
       // VBO) plus an optional per-segment instance buffer.  Release them
       // explicitly so HMR / StrictMode remounts don't leak the instance
