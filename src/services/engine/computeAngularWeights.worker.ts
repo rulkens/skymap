@@ -19,7 +19,8 @@
  * One message in, one message out, then the caller terminates.  No long-
  * running state — the renderer spawns one worker per loaded source on
  * mode-select, awaits all of them, and reuses the cached weights on
- * subsequent toggles (see `pointRenderer.applyAngularReweightMode`).
+ * subsequent toggles (see `pointRenderer.setBiasMode`'s AngularReweight
+ * bake path).
  *
  * @module
  */

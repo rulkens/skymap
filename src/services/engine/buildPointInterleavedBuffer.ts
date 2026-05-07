@@ -74,7 +74,7 @@ import { computeSchechterRatios } from './computeSchechterRatios';
  * Slot 12 (`angularDensityWeight`) is left at 1.0 (multiplicative identity)
  * by every default upload.  Mode 4 of the Malmquist-bias correction —
  * HEALPix angular re-weighting — replaces these defaults via the lazy
- * `applyAngularReweightMode()` flow (mirror of Schechter).  Skipping the
+ * `setBiasMode(BiasMode.AngularReweight)` flow (mirror of Schechter).  Skipping the
  * eager bake here keeps the .bin-arrival latency low: the per-cloud
  * HEALPix pass costs ~100 ms even at full deck, and the user only pays it
  * if they actually pick mode 4.
@@ -116,7 +116,8 @@ const NO_COLOUR_SENTINEL = 999;
  *                           ratio, computed via `computeSchechterRatios`.
  *                           Used either when an upload happens *while*
  *                           Schechter mode is already active, or as part
- *                           of the lazy `applySchechterMode` re-bake.
+ *                           of the lazy `setBiasMode(BiasMode.Schechter)`
+ *                           re-bake.
  *
  * Why a flag rather than always doing the work?  The integral is the single
  * largest cost in the upload bake — collapsing it to "fill with 1.0" cuts
@@ -261,7 +262,7 @@ export function buildPointInterleavedBuffer(
   //
   // Calling the helper here — rather than open-coding the integral — keeps
   // the math single-source-of-truth between this path and the lazy
-  // `applySchechterMode` re-bake path.  The shared helper traverses the
+  // `setBiasMode(BiasMode.Schechter)` re-bake path.  The shared helper traverses the
   // cloud once with the same hoisted constants (mLim, schechter triple),
   // so there's no measurable overhead vs the inline version.
   const schechterRatios: Float32Array | null =
@@ -361,11 +362,11 @@ export function buildPointInterleavedBuffer(
     // multiplicative identity) so the shader's
     // `select(1.0, angularDensityWeight, biasMode == 4u)` produces no change
     // in the other four modes.  The lazy bake path
-    // (`pointRenderer.applyAngularReweightMode`) splices real per-galaxy
-    // weights into this slot and re-uploads when the user toggles into
-    // mode 4.  We don't add an eager `'with-angular'` mode here because the
-    // toggle isn't expected to be the default; if a survey arrives mid-mode-4
-    // the renderer's `applyAngularReweightMode` re-runs the worker bake for
+    // (`pointRenderer.setBiasMode(BiasMode.AngularReweight)`) splices real
+    // per-galaxy weights into this slot and re-uploads when the user toggles
+    // into mode 4.  We don't add an eager `'with-angular'` mode here because
+    // the toggle isn't expected to be the default; if a survey arrives
+    // mid-mode-4 the renderer's `setBiasMode` re-runs the worker bake for
     // the new source, picking up the now-stale 1.0s.
     interleaved[o + 12] = 1.0;
   }
