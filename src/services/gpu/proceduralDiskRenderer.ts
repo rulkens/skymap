@@ -11,7 +11,8 @@
  * is just the JS-side pipeline wiring.
  */
 
-import wgsl from './shaders/proceduralDisks.wesl?static';
+import vsCode from './shaders/proceduralDisks/vertex.wesl?static';
+import fsCode from './shaders/proceduralDisks/fragment.wesl?static';
 import type { ProceduralDiskInstance } from '../../@types/ProceduralDiskInstance';
 import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
@@ -38,7 +39,8 @@ export class ProceduralDiskRenderer {
     const { device, format } = init;
     this.device = device;
 
-    const module = createShaderModuleWithDevLog(device, wgsl, 'proceduralDisks');
+    const vsModule = createShaderModuleWithDevLog(device, vsCode, 'proceduralDisks.vertex');
+    const fsModule = createShaderModuleWithDevLog(device, fsCode, 'proceduralDisks.fragment');
 
     this.bindGroupLayout = device.createBindGroupLayout({
       label: 'proceduralDisks-bgl-uniforms',
@@ -74,7 +76,7 @@ export class ProceduralDiskRenderer {
       label: 'proceduralDisks-pipeline',
       layout: pipelineLayout,
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: 'vs',
         buffers: [
           {
@@ -89,7 +91,7 @@ export class ProceduralDiskRenderer {
         ],
       },
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [
           {
