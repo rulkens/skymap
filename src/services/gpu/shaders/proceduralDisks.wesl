@@ -15,13 +15,27 @@
 // for the full derivation; we trust that derivation here and re-use
 // the math.
 
+// CameraUniforms covers the canonical 80-byte prefix shared by every
+// world-space renderer (viewProj + viewportPx + 8B pad).  Like the
+// 'disks' sibling, this vertex stage is intentionally camera-independent
+// — the disk's 3D orientation is an intrinsic galaxy property, so the
+// only camera input the shader consumes is 'cam.viewProj' via
+// 'worldToClip'.  We deliberately don't import 'worldToNdc' or
+// 'worldEyeDepth': they're unused here, and importing unused names
+// would just add noise for future readers grepping for camera-helper
+// usage.
+import package::lib::camera::{ CameraUniforms, worldToClip };
+
 struct Uniforms {
-  viewProj: mat4x4<f32>,
-  viewport: vec2<f32>,
-  _pad0: f32,
-  _pad1: f32,
-  // (unused in this shader; preserved for ABI continuity with the disk
-  // pass — see disks.wgsl line 62-69 for the same pattern.)
+  cam: CameraUniforms,
+  // 'camPosWorld' + 'pxPerRad' are preserved in the layout for ABI
+  // continuity with the JS upload path (proceduralDiskRenderer.ts still
+  // writes them at offsets 80/92), but the world-fixed disk math
+  // doesn't read either — orientation derives from the line of sight
+  // 'normalize(pos)' (Earth → galaxy), not the camera, and the
+  // procedural shader has no apparent-size scaling that would consult
+  // 'pxPerRad'.  Same intentional ABI-preservation pattern as
+  // disks.wesl line 65-74.
   camPosWorld: vec3<f32>,
   pxPerRad: f32,
 };
@@ -171,7 +185,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let worldPos = pos + worldOffset;
 
   var out: VsOut;
-  out.clipPos = u.viewProj * vec4<f32>(worldPos, 1.0);
+  out.clipPos = worldToClip(u.cam, worldPos);
   out.uv = corner;
   out.colourIndex = instance.extras.x;
   out.crossfadeAlpha = instance.extras.y;
