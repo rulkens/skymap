@@ -37,7 +37,11 @@ const OPTIONS = {
   filename: OUTPUT_BASENAME,
   charset: CHARSET,
   fontSize: 42,           // glyph em-size in atlas pixels (resolution of the SDF source)
-  textureSize: [1024, 1024],
+  // 100 glyphs (~95 ASCII + 5 unit symbols) at fontSize 42 pack into
+  // ~213×512 px.  512² leaves a comfortable margin and quarters the
+  // GPU upload (rgba16float-sampled atlas: 4 MB → 1 MB) versus 1024².
+  // 256² doesn't fit — the packer needs ≥12 rows × ~48 px high.
+  textureSize: [512, 512],
   texturePadding: 2,      // px of transparent padding between glyphs (avoids bleed)
   distanceRange: 4,       // SDF range in pixels — must match the shader's smoothing
   fieldType: 'msdf',
