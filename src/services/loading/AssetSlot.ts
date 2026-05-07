@@ -41,6 +41,7 @@ import type {
 } from './types';
 import { reduceLoadState } from './reduceLoadState';
 import { defaultRetryPolicy } from './retryPolicy';
+import { consoleAdapterFor } from './consoleAdapter';
 
 export type { AssetSlot };
 
@@ -61,6 +62,21 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
   const subscribers = new Set<(s: LoadState<T>) => void>();
   let lastRequest: Req | null = null;
   let lastReady: LoadState<T> | null = null; // for cancel() rollback
+
+  // ── Auto-attached console adapter ────────────────────────────────────
+  // Every slot logs structured `[loading] <name> ...` lines for free.  The
+  // adapter wants `(prev, next)` because some transitions (retries, byte
+  // updates) only show up by diffing two states; the slot's `subscribe`
+  // contract only hands subscribers the latest state, so we close over a
+  // local `prevState` cell and bridge it into the adapter signature.  See
+  // consoleAdapter.ts for why the (prev, next) shape was preferred over
+  // each-state-only.
+  const consoleLog = consoleAdapterFor(name);
+  let prevState: LoadState<T> = state;
+  subscribers.add((next) => {
+    consoleLog(prevState, next);
+    prevState = next;
+  });
 
   function dispatch(event: LoadEvent): void {
     state = reduceLoadState(state, event);
