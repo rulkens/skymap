@@ -49,6 +49,7 @@ import package::lib::billboard::quadCorner;
 // camera-independence invariant + the pole-degeneracy discussion.
 import package::lib::orientation::DiskAxes;
 import package::lib::orientation::diskAxes;
+import package::lib::colorIndex::ramp;
 
 struct Uniforms {
   cam: CameraUniforms,
@@ -184,18 +185,11 @@ const DISK_SCALE = 0.5;
 const BULGE_WEIGHT = 0.6;
 const DISK_WEIGHT = 0.4;
 
-// Mirror of points.wgsl's 'ramp(t)'.  Kept under the same name so a
-// grep for 'ramp' finds both copies; kept in this file (rather than
-// shared via WGSL include — there is no include mechanism) so the
-// procedural-disk pass renders exactly the same colour as the
-// points pass for any given colour-index value.  See
-// points.wgsl:601-633 for the full derivation.
-fn ramp(t: f32) -> vec3<f32> {
-  let s = clamp(t * 0.5, 0.0, 1.0);
-  let blueWhite = mix(vec3<f32>(0.4, 0.6, 1.0), vec3<f32>(1.0, 0.95, 0.8), s);
-  let whiteRed  = mix(vec3<f32>(1.0, 0.95, 0.8), vec3<f32>(1.0, 0.5, 0.3), s);
-  return select(blueWhite, whiteRed, t > 1.0);
-}
+// 'ramp(t)' lives in 'lib/colorIndex.wesl' — imported at the top of
+// this file. Sharing the function with the points pass guarantees
+// procedural-disk colour matches points colour exactly at any
+// colour-index value, so the disk impostor fade-in doesn't introduce
+// a visible cross-LOD hue shift.
 
 @fragment
 fn fs(in: VsOut) -> @location(0) vec4<f32> {

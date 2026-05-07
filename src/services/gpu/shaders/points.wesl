@@ -56,6 +56,7 @@ import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
+import package::lib::colorIndex::ramp;
 
 // ─── uniforms ─────────────────────────────────────────────────────────────────
 
@@ -735,39 +736,11 @@ struct VSOut {
 // 'p.schechterRatio' directly.)
 
 // ─── colour ramp ──────────────────────────────────────────────────────────────
-
-// Map SDSS g−r colour index to an RGB tint.
 //
-// The piecewise ramp runs: blue → white → red
-//
-//   t ≤ 0        → blueWhite blend from blue  (0.4, 0.6, 1.0) toward white
-//   0 < t ≤ 1    → blueWhite blend — still in the blue-to-white half
-//   1 < t ≤ 2    → whiteRed blend from white (1.0, 0.95, 0.8) toward red
-//   t > 2        → fully red (1.0, 0.5, 0.3)
-//
-// Both blends share the same 's = clamp(t * 0.5, 0, 1)' parameter so that
-// the transition is smooth and uses the same 0→1 interpolation range.
-//
-// WGSL 'select(a, b, cond)' — note the argument order:
-//   returns 'a' when cond is FALSE, returns 'b' when cond is TRUE.
-// So  select(blueWhite, whiteRed, t > 1.0)
-//   returns blueWhite when t ≤ 1.0, and whiteRed when t > 1.0.
-// (This is the reverse of a typical ternary 'cond ? b : a' — easy to get wrong.)
-
-fn ramp(t: f32) -> vec3<f32> {
-  // s goes 0→1 as t goes 0→2; clamp stops it at 0 for negatives and 1 for t>2.
-  let s = saturate(t * 0.5);
-
-  // Blue-to-white: hot blue (quasars, O/B stars) fading to a warm white.
-  let blueWhite = mix(vec3<f32>(0.4, 0.6, 1.0), vec3<f32>(1.0, 0.95, 0.8), s);
-
-  // White-to-red: warm white fading to cool red (M-type stars, red galaxies).
-  let whiteRed  = mix(vec3<f32>(1.0, 0.95, 0.8), vec3<f32>(1.0, 0.5, 0.3), s);
-
-  // Pick the right half of the ramp: blue-white for t ≤ 1, white-red for t > 1.
-  // Remember: select(falseVal, trueVal, condition).
-  return select(blueWhite, whiteRed, t > 1.0);
-}
+// 'ramp(t)' lives in 'lib/colorIndex.wesl' — imported at the top of
+// this file. Shared with the procedural-disk pass so a galaxy's tint
+// is identical at every LOD; see that file's docblock for the full
+// piecewise definition and anchor colours.
 
 // ─── vertex stage ─────────────────────────────────────────────────────────────
 //
