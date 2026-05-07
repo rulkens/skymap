@@ -38,6 +38,17 @@ import package::lib::camera::worldToClip;
 // 'lib/billboard.wesl' for why the orientation math is intentionally
 // NOT pulled into this lib.
 import package::lib::billboard::quadCorner;
+// Disk-plane axis math (PA + inclination → world-space major/minor basis)
+// is shared with 'disks.wesl' via 'lib/orientation.wesl'. The inline
+// derivation that used to live in this file's vs() body — the
+// los/north/east/major/minor chain plus the inclination tilt of the
+// minor axis out of the sky plane — is now the lib's 'diskAxes' fn,
+// byte-equivalent for proceduralDisks since the lib standardised on
+// the tight 'northLen < 1e-4' post-projection pole-fallback that
+// proceduralDisks already used. See 'lib/orientation.wesl' for the
+// camera-independence invariant + the pole-degeneracy discussion.
+import package::lib::orientation::DiskAxes;
+import package::lib::orientation::diskAxes;
 
 struct Uniforms {
   cam: CameraUniforms,
@@ -119,78 +130,22 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let axisRatio = max(instance.orientation.x, 0.05);
   let paRad = instance.orientation.y * 3.14159265 / 180.0;
 
-  // ── Line of sight (Earth → galaxy) ───────────────────────────────────
+  // ── Disk-plane basis (PA + inclination → world-space major / minor) ─
   //
-  // Earth sits at the world origin in this coordinate system; 'losDir'
-  // is therefore the Earth-to-galaxy direction.  WORLD-FIXED: the disk's
-  // orientation is an intrinsic property of the galaxy in 3D space and
-  // must not depend on where the camera currently sits, otherwise
-  // orbiting would visibly rotate the disk plane with the camera (the
-  // exact bug 'disks.wgsl' was rewritten to fix; see its header).
-  //
-  // Earth (origin) → galaxy direction.  WORLD-FIXED, independent of camera
-  // position, so orbiting reveals the true 3D inclination foreshortening
-  // rather than rotating the disk with the camera.  This mirrors
-  // 'disks.wgsl''s 'losDir = normalize(center)' derivation; see the long
-  // header comment in that file for the full reasoning on why this is
-  // emphatically NOT 'pos - camPosWorld' (the bug fixed there).
-  let los = normalize(pos);
-
-  // Local sky-north and sky-east at the galaxy.  We Gram-Schmidt
-  // celestial-north (+Z world) against 'los' to get the sky-north
-  // tangent direction; sky-east is then los × sky-north.
-  let CELESTIAL_NORTH = vec3<f32>(0.0, 0.0, 1.0);
-  let northTangentRaw = CELESTIAL_NORTH - los * dot(CELESTIAL_NORTH, los);
-  let northLen = length(northTangentRaw);
-  // Pole degeneracy: if the line of sight is essentially along the
-  // celestial pole, the sky-tangent has no defined "north".  Fall back
-  // to using world +Y as the in-plane reference.  Picking +Y is
-  // arbitrary but consistent (every pole-on viewing renders with the
-  // same fallback orientation) and the loss of sky-PA fidelity at the
-  // poles is invisible in practice.
-  let northTangent = select(
-    northTangentRaw / northLen,
-    vec3<f32>(0.0, 1.0, 0.0),
-    northLen < 1e-4,
-  );
-  // East-on-sky tangent.  Argument order MATCHES disks.wgsl's
-  // 'east_proj = cross(north_proj, losDir)' so the (north, east, los)
-  // frame is right-handed in the same sense and PA convention agrees
-  // with the textured-thumbnail pass.  Reversing the cross flips the
-  // sign of the resulting major-axis rotation for any non-zero PA,
-  // which would visibly disagree with the thumbnail at the crossfade
-  // boundary — that bug just got fixed; don't reintroduce it.
-  let eastTangent = cross(northTangent, los);
-
-  // Major axis on sky: rotate sky-north by PA toward sky-east.
-  let majorSky = northTangent * cos(paRad) + eastTangent * sin(paRad);
-  // Perpendicular-to-major in the sky-tangent plane.  This matches
-  // 'disks.wgsl''s 'minor_in_sky = cross(losDir, major)' exactly — the
-  // two passes MUST share basis math, otherwise their on-screen
-  // ellipses disagree at the crossfade boundary.
-  let perpMajorSky = cross(los, majorSky);
-
-  // ── Tilt the minor axis out of the sky plane by inclination ──────────
-  //
-  // Inclination i with cos(i) = axisRatio.  Face-on (axisRatio = 1,
-  // sinI = 0) → minor lies entirely in the sky plane → projects as a
-  // circle.  Edge-on (axisRatio → 0, sinI → 1) → minor ≈ losDir → disk
-  // is parallel to the line of sight and projects as a thin streak.
-  //
-  // This formula is identical to disks.wgsl line 166:
-  //   minor_3d = minor_in_sky * cosI + losDir * sinI
-  // and that identity is load-bearing — an earlier revision built a
-  // disk normal first, then took 'cross(normal, major)' to recover the
-  // minor axis.  That route flips the sign of the 'sinI * los' term
-  // (because 'cross(perpMajorSky, major) = -los' in this right-handed
-  // frame), tilting the disk in the OPPOSITE direction from the
-  // textured-thumbnail pass.  At axisRatio ≈ 0.87 (i ≈ 30°) the visible
-  // mismatch is a ~30° rotation against one axis vs. the thumbnail —
-  // exactly the bug we just fixed; don't reintroduce it.
+  // The full derivation — line-of-sight from Earth-at-origin, sky-tangent
+  // (north, east) frame with pole fallback, PA-east-of-north rotation,
+  // and inclination tilt of the minor axis out of the sky plane — lives
+  // in 'lib/orientation.wesl'. See its docblock for the camera-
+  // independence invariant and the tight post-projection 'northLen <
+  // 1e-4' pole-degeneracy fallback that this renderer historically used
+  // and the lib now standardises on. 'axisRatio' is clamped at the call
+  // site (above) BEFORE we feed it through as cosI, because the lib
+  // intentionally doesn't re-clamp.
   let cosI = axisRatio;
   let sinI = sqrt(max(0.0, 1.0 - cosI * cosI));
-  let majorAxis = majorSky;
-  let minorAxis = perpMajorSky * cosI + los * sinI;
+  let axes = diskAxes(pos, paRad, cosI, sinI);
+  let majorAxis = axes.major;
+  let minorAxis = axes.minor;
 
   // Quad corners in world space: centre + corner.x · major + corner.y · minor,
   // each scaled by the half-extent.
