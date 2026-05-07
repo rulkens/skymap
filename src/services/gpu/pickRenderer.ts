@@ -50,7 +50,16 @@
  * @module
  */
 
-import shaderSrc from './shaders/points.wesl?static';
+// The points shader was split into four files (Task 13 of the WGSL→WESL
+// conversion plan): `points/io.wesl` (shared structs), `points/vertex.wesl`
+// (the `vs` entry point shared with PointRenderer), `points/colorFragment.wesl`
+// (PointRenderer's visual `fs`), and `points/pickFragment.wesl` (the
+// `fsPick` entry point — this renderer). The vertex source is textually
+// shared with PointRenderer, but we compile our OWN GPUShaderModule from
+// it; never share modules across pipelines (see the `auto` bind-group-
+// layout trap noted in pointRenderer.ts).
+import vsCode from './shaders/points/vertex.wesl?static';
+import pickFsCode from './shaders/points/pickFragment.wesl?static';
 import type { Source } from '../../data/sources';
 import type { PointRenderer } from './pointRenderer';
 import { createShaderModuleWithDevLog } from './shaderCompileLogger';
@@ -247,12 +256,16 @@ export function createPickRenderer(
   device: GPUDevice,
   pointRenderer: PointRenderer,
 ): PickRenderer {
-  // ── Shader module ──────────────────────────────────────────────────────────
+  // ── Shader modules ─────────────────────────────────────────────────────────
   //
-  // We reuse the same WGSL source as PointRenderer. The shader file contains
-  // both the `fs` (visual) and `fsPick` (picking) fragment entry points.
-  // Here we select `fsPick`.
-  const module = createShaderModuleWithDevLog(device, shaderSrc, 'pick');
+  // The vertex stage source is textually shared with PointRenderer, but we
+  // compile our OWN GPUShaderModule from it — never share modules across
+  // pipelines (see the `auto` bind-group-layout trap above). The fragment
+  // module compiles `pickFragment.wesl`, which contains only the `fsPick`
+  // entry point; the visual `fs` lives in a sibling file that this
+  // renderer never touches.
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'pick.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, pickFsCode, 'pick.pickFragment');
 
   // ── Render pipeline ────────────────────────────────────────────────────────
   //
@@ -271,7 +284,7 @@ export function createPickRenderer(
     layout: 'auto',
 
     vertex: {
-      module,
+      module: vsModule,
       entryPoint: 'vs',
 
       // Vertex buffer layout — must exactly match PointRenderer's layout
@@ -309,7 +322,7 @@ export function createPickRenderer(
     },
 
     fragment: {
-      module,
+      module: fsModule,
       entryPoint: 'fsPick', // the picking fragment — writes instance index to r32uint
 
       targets: [

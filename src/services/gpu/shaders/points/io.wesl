@@ -1,0 +1,340 @@
+// points/io.wesl — shared structs for the points pipeline.
+//
+// This file is the 'interface' module of the points renderer family. It
+// declares the three structs that ALL points entry points (vs, fs,
+// fsPick) need to agree on byte-for-byte:
+//
+//   - 'Uniforms'   — the @group(0) @binding(0) uniform buffer layout.
+//   - 'PerVertex'  — the per-instance vertex attributes.
+//   - 'VSOut'      — the vertex-to-fragment interface.
+//
+// ## Why a separate io module
+//
+// Originally everything lived in a single 'points.wesl' that contained
+// both '@fragment fn fs' (visual) and '@fragment fn fsPick' (picking).
+// The PointRenderer compiled the whole module and selected the 'fs'
+// entry point; the PickRenderer did the same and selected 'fsPick'.
+// This worked but had two costs we wanted to remove:
+//
+//   1. Each pipeline pulled in the OTHER fragment's code via the same
+//      shader module — the WGSL compiler dropped the unused entry
+//      point but only after a full parse + lower pass.
+//   2. The two pipelines were textually coupled. A change to 'fs'
+//      forced re-validation of the pick path (and vice-versa) even
+//      though the two paths are conceptually independent.
+//
+// Splitting into io + vertex + colorFragment + pickFragment lets each
+// pipeline build a strictly-smaller shader module from disjoint
+// fragment sources. The vertex stage IS still shared (one source file,
+// imported by both renderers), but each renderer compiles its OWN
+// vertex GPUShaderModule — so the WebGPU 'auto' bind-group-layout
+// trap (auto-derived layouts are pipeline-specific identities; sharing
+// across pipelines fails the 'group-equivalent' check) is sidestepped
+// structurally rather than worked around at the bind-group construction
+// site.
+//
+// ## Why bindings live in the consuming files, not here
+//
+// WESL has no global state — a binding declaration like
+// '@group(0) @binding(0) var<uniform> u: Uniforms' is a module-local
+// declaration, not an exportable symbol. Importing 'u' across modules
+// is not supported. The skymap project's lib/ files prove the same
+// point: 'lib/camera.wesl' exposes 'CameraUniforms' + 'worldToClip'
+// but the binding '@group(0) @binding(0) var<uniform> u' is declared
+// fresh in every renderer that uses it. We follow that pattern here:
+// vertex.wesl, colorFragment.wesl each declare '@group(0) @binding(0)
+// var<uniform> u: Uniforms' with IDENTICAL layout numbers. WGSL is
+// fine with multiple files declaring the same binding so long as the
+// layout matches — and 'Uniforms' is imported from this single
+// authoritative place, so the layout cannot drift between consumers.
+//
+// pickFragment.wesl declares NO bindings — its fragment body only
+// reads VSOut fields, so the @group(0) / @group(1) bindings only need
+// to appear in the vertex stage that actually reads them. WebGPU's
+// pipeline layout still auto-derives both bind-group layouts because
+// the SHARED vertex stage references them — see pickRenderer.ts for
+// the matching per-source bind-group construction.
+
+import package::lib::camera::CameraUniforms;
+
+// ── Uniforms layout (CameraUniforms-prefixed) ──────────────────────
+//
+// The first 80 bytes are the shared 'CameraUniforms' prefix from
+// 'lib/camera.wesl' (viewProj + viewportPx + two reserved pad slots).
+// Embedding it as a named member 'cam' rather than inlining viewProj
+// + viewport keeps the cross-renderer audit story explicit: every
+// renderer's first uniform field is now 'cam: CameraUniforms', and
+// every projection call goes through 'worldToClip(u.cam, p)'.
+//
+// ## Byte layout (canonical)
+//
+//   offset 0   : cam: CameraUniforms (80 B; viewProj + viewportPx + 2 pads)
+//   offset 80  : selectedPacked      (u32)
+//   offset 84  : _pad0               (u32; sourceCode lives in @group(1) cloud)
+//   offset 88  : pointSizePx         (f32)
+//   offset 92  : brightness          (f32)
+//   offset 96  : camPosWorld         (vec3<f32>)
+//   offset 108 : pxPerRad            (f32)
+//   offset 112 : highlightFallback   (u32)
+//   offset 116 : realOnlyMode        (u32)
+//   offset 120 : depthFadeEnabled    (u32)
+//   offset 124 : _pad4               (u32)
+//   offset 128..159 : Malmquist block (biasMode, absMagLimit, ...)
+//   offset 160..175 : pxFadeStart, pxFadeEnd, _padFade0, _padFade1
+//   total: 176 bytes.
+//
+// The full historical narrative (why fields moved during the
+// CameraUniforms-prefix adoption, why pointSizePx + brightness now sit
+// at offsets 88/92 instead of 72/76) lives in the git history of
+// points.wesl prior to this split — see the commit that introduced
+// 'cam: CameraUniforms' as the first member.
+
+struct Uniforms {
+  // Shared camera prefix — viewProj for clip-space projection and
+  // viewportPx for the px→clip conversion in 'vs'. All renderer-
+  // specific scalars live AFTER this 80-byte block.
+  cam: CameraUniforms,
+
+  // The currently-selected point packed as '(sourceCode << 27) | localIdx',
+  // or '0xFFFFFFFFu' when nothing is selected. The vertex shader recovers
+  // its own packed identity as '(cloud.sourceCode << 27u) | u32(instance_index)'
+  // and compares against this slot to decide whether to enlarge for the
+  // selection ring.
+  //
+  // Bits 27..31 carry the 5-bit sourceCode (0..31, plenty for our 5
+  // sources). Bits 0..26 carry the 27-bit local instance index (~134M,
+  // plenty for any survey we ship). The two ranges are disjoint by
+  // construction.
+  //
+  // '0xFFFFFFFFu' is 'no selection'. Picker writes this sentinel into
+  // byte offset 80 directly — see 'pickRenderer.ts' SELECTED_PACKED_OFFSET.
+  selectedPacked: u32,
+
+  // Slot at offset 84: intentionally unused at the @group(0) level.
+  // 'sourceCode' lives in the per-source @group(1) 'CloudUniforms'.
+  _pad0: u32,
+
+  // Desired radius of each point sprite in pixels. Larger = bigger
+  // glowing halos. Typical range 2.0–8.0. The pick pass overwrites
+  // this slot in-place to boost hover/click hit-radius (see
+  // 'pickRenderer.ts' POINT_SIZE_OFFSET).
+  pointSizePx: f32,
+
+  // Global brightness multiplier in [0, 1]. Lets the UI dim/brighten
+  // all points without re-uploading point data.
+  brightness: f32,
+
+  // World-space camera position in Mpc. Used by the vertex stage to
+  // compute the per-galaxy distance, which feeds the apparent-pixel-
+  // size calculation. WGSL gives 'vec3<f32>' an alignment of 16 — so
+  // this field starts at offset 96 (16-byte boundary) and consumes 12
+  // bytes of payload + 4 bytes of trailing padding before 'pxPerRad'.
+  camPosWorld: vec3<f32>,
+
+  // Pixels-per-radian for the current viewport + camera FOV combination,
+  // pre-computed CPU-side as 'viewport.y / (2 · tan(fovY / 2))'.
+  pxPerRad: f32,
+
+  // ── Task 15: orientation-visibility toggles ─────────────────────────
+  //
+  // u32 booleans (0 / 1) controlling how the fragment shader treats
+  // galaxies whose orientation came from the deterministic fallback
+  // rather than a real photometric measurement. The fallback flag
+  // itself rides on the sign bit of the per-vertex 'axisRatio'.
+  highlightFallback: u32,
+  realOnlyMode: u32,
+  // Per-galaxy camera-distance depth fade gate. When 1, the vertex
+  // stage computes '1 / (1 + (camDist / FALLOFF_HALF)²)'; when 0 it
+  // skips the gate and forwards 1.0 through.
+  depthFadeEnabled: u32,
+  _pad4: u32,
+
+  // ── Malmquist-bias correction state ─────────────────────────────────
+  //
+  // 'biasMode' chooses which correction the vertex/fragment stages apply:
+  //   0 = none         — render every galaxy unchanged.
+  //   1 = volume-limit — discard galaxies whose absolute magnitude is
+  //                      fainter (numerically larger) than 'absMagLimit'.
+  //   2 = 1/V_max      — weight by inverse maximum-detection volume.
+  //   3 = Schechter    — reweight by the expected Schechter LF.
+  //   4 = AngularReweight — re-weight by HEALPix angular completeness.
+  //
+  // The four 'schechter*' fields are written PER SOURCE between draw
+  // calls. The φ* normalisation drops out of the ratio 'N_ref / n(d)',
+  // so it doesn't need a uniform slot.
+  biasMode: u32,
+  absMagLimit: f32,
+  apparentMagLimit: f32,
+  schechterMStar: f32,
+  schechterAlpha: f32,
+  schechterMLim: f32,
+  schechterNRef: f32,
+  _pad5: u32,
+
+  // ── Procedural-disk crossfade-OUT band ──────────────────────────────
+  //
+  // The thumbnail subsystem's procedural-disk pass fades IN across an
+  // apparent-pixel-size band [pxFadeStart, pxFadeEnd]. Without a
+  // complementary fade-OUT on the points pass, both passes would be
+  // fully present inside the band — a 'double-bright donut'. We feed
+  // the same two thresholds in here and multiply the per-fragment alpha
+  // by '1 - smoothstep(start, end, sizePx)' before output.
+  pxFadeStart: f32,
+  pxFadeEnd: f32,
+  _padFade0: f32,
+  _padFade1: f32,
+};
+
+// ─── per-instance vertex attributes ──────────────────────────────────
+//
+// These fields are filled from the *instance* vertex buffer — one
+// record per catalog point, not one record per vertex. The numbers
+// here (0, 1, 2 …) must exactly match the @location values in
+// pointRenderer.ts's vertex.buffers[].attributes array. If they
+// disagree the GPU silently reads garbage.
+
+struct PerVertex {
+  // World-space Cartesian position in Mpc, produced by raDecZToCartesian.
+  @location(0) position: vec3<f32>,
+
+  // Apparent magnitude. Lower = brighter (the astronomical magnitude
+  // scale runs backwards).
+  @location(1) magnitude: f32,
+
+  // Survey-specific colour index (e.g. SDSS g−r, GLADE B−J, 2MRS J−K).
+  // Negative → blue, positive → red. Sentinel value '>= 100' marks
+  // 'no observed colour for this survey'.
+  @location(2) colorIndex: f32,
+
+  // Per-row K-correction coefficient (units: per unit redshift z).
+  // Each survey has a different colour pair with different sensitivity
+  // to bandpass shift, so 'k' lives per-instance:
+  //   - SDSS u−g    →  k ≈ 3.0
+  //   - GLADE B−J   →  k ≈ 1.0
+  //   - 2MRS  J−K   →  k ≈ 0.0
+  @location(3) kPerZ: f32,
+
+  // Galaxy minor/major axis ratio b/a in (0, 1] — with the SIGN BIT
+  // carrying the fallback-orientation flag. Real measurements are
+  // always positive; the JS-side bake negates the value for fallback
+  // rows. The vertex stage recovers both pieces in one read:
+  //   - 'abs(axisRatio)' for the elliptical mask shape
+  //   - 'axisRatio < 0.0' for the fallback flag
+  //
+  // ## NaN handling (synthetic-fallback cloud)
+  //
+  // The synthetic-fallback cloud ships its axisRatio array filled with
+  // NaN. WGSL's 'abs(NaN)' returns NaN and 'NaN < 0.0' is false, so
+  // the vertex stage routes synthetic rows through the existing
+  // 'axisRatio > 0 is false' round-mask path with 'isFallback = 0u'.
+  @location(4) axisRatio: f32,
+
+  // Position angle in degrees, [0, 180). East-of-north convention; we
+  // negate before applying because UV-space y points down on screen.
+  @location(5) positionAngleDeg: f32,
+
+  // Per-galaxy physical diameter in kiloparsecs. Drives the apparent-
+  // size billboard radius. v4 binary format guarantees a finite
+  // positive value (real measurement or 30-kpc fallback).
+  @location(6) diameterKpc: f32,
+
+  // Per-galaxy 1/V_max weight for Malmquist-bias correction. Baked at
+  // upload time as 'clamp((dRef / dMax(M, m_lim))³, 0, 1)'. Read by the
+  // vertex shader's intensity computation, but ONLY when
+  // 'u.biasMode == 2u'.
+  @location(7) vMaxWeight: f32,
+
+  // Per-galaxy Schechter density-correction ratio. Baked at upload time
+  // as 'clamp(N_ref / n(d), 0, 10)' (originally a 200-step trapezoidal
+  // integral evaluated per-fragment; now a single multiply). Read in
+  // 'fs' only when 'u.biasMode == 3u'.
+  @location(8) schechterRatio: f32,
+
+  // Per-galaxy HEALPix angular re-weight. Baked at mode-toggle time as
+  // 'clamp(medianCount / localCount, 0.1, 10)' (default 1.0). Read in
+  // 'fs' only when 'u.biasMode == 4u'.
+  @location(9) angularDensityWeight: f32,
+};
+
+// ─── vertex-to-fragment interface ───────────────────────────────────
+//
+// VSOut is the contract between 'vs' and the two fragment entry points
+// ('fs' and 'fsPick'). Both fragments declare 'in: VSOut' so the
+// rasteriser interpolates the same set of fields for every fragment of
+// every triangle of every billboard. WGSL permits a fragment shader to
+// declare FEWER inputs than the vertex shader outputs (unused fields
+// are silently dropped by the linker), so 'fsPick' only reads
+// 'in.uv' + 'in.instanceIdx' even though the struct carries far more.
+
+struct VSOut {
+  // Clip-space position, used by the rasteriser for perspective divide
+  // and viewport mapping.
+  @builtin(position) clip: vec4<f32>,
+
+  // The quad corner in [-1, +1]² — doubles as a UV coordinate for the
+  // circle/ellipse falloff.
+  @location(0) uv: vec2<f32>,
+
+  // Pre-computed colour for this point (from the colourIndex ramp).
+  // Interpolated across the quad by the rasteriser — but since all 6
+  // vertices of one instance share the same tint, there is no visible
+  // interpolation.
+  @location(1) tint: vec3<f32>,
+
+  // Combined brightness: magnitude-based intensity × global brightness
+  // knob × per-instance bias-mode alpha (1/V_max).
+  @location(2) intensity: f32,
+
+  // Packed (source, localIdx) identity used by 'fsPick' to write the
+  // pick texture. Flat-interpolated because integers can't be linearly
+  // interpolated, and all 6 vertices of one instance share the same value.
+  @location(3) @interpolate(flat) instanceIdx: u32,
+
+  // 1u when this instance is the selected point; 0u otherwise. Used by
+  // the visual 'fs' to apply the selection ring/halo.
+  @location(4) @interpolate(flat) selected: u32,
+
+  // Forwarded 'abs(axisRatio)' so the fragment stage's elliptical mask
+  // uses the unsigned magnitude. Sign bit was the fallback flag (now
+  // extracted into 'isFallback').
+  @location(5) axisRatio: f32,
+
+  // Pre-computed cos/sin of the position-angle rotation. Computed once
+  // per primitive in 'vs' instead of per fragment, saving millions of
+  // trig calls per frame.
+  @location(6) @interpolate(flat) paCs: f32,
+  @location(15) @interpolate(flat) paSn: f32,
+
+  // 1u when this row's orientation came from the deterministic fallback
+  // (sign bit of axisRatio was set at upload time); 0u for real
+  // measurements.
+  @location(7) @interpolate(flat) isFallback: u32,
+
+  // Origin-relative distance in Mpc, forwarded for future distance-
+  // dependent fragment effects. Currently unused in the fragment stage
+  // but kept as plumbed.
+  @location(8) @interpolate(flat) dMpc: f32,
+
+  // Per-galaxy Schechter density-correction ratio. Read in 'fs' only
+  // when 'u.biasMode == 3u'.
+  @location(9) @interpolate(flat) schechterRatio: f32,
+
+  // Per-galaxy HEALPix angular re-weight. Read in 'fs' only when
+  // 'u.biasMode == 4u'.
+  @location(10) @interpolate(flat) angularDensityWeight: f32,
+
+  // Distance from the camera to this galaxy in Mpc. Forwarded for
+  // potential per-fragment depth-driven effects.
+  @location(11) @interpolate(flat) camDistMpc: f32,
+
+  // Pre-computed depth-fade multiplier '1 / (1 + (camDist/FALLOFF_HALF)²)',
+  // gated by 'u.depthFadeEnabled' (passes through 1.0 when off).
+  // Per-instance constant — flat-interpolated for one mul per primitive
+  // instead of per fragment.
+  @location(12) @interpolate(flat) depthFade: f32,
+
+  // Per-instance billboard radius in screen-space pixels. Used by the
+  // fragment stage to fade points-pass alpha across the procedural-
+  // disk crossfade band. All 6 vertices share the same value.
+  @location(13) @interpolate(flat) sizePx: f32,
+};

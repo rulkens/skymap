@@ -88,7 +88,17 @@ import { type ComputeAngularWeightsInput } from '../engine/computeAngularWeights
 // suffix bypassed the linker entirely and worked only because the legacy
 // .wgsl source was self-contained — once we extract shared modules under
 // `shaders/lib/`, `?static` is required.
-import shaderSrc from './shaders/points.wesl?static';
+//
+// The points shader was split into four files (Task 13 of the WGSL→WESL
+// conversion plan): `points/io.wesl` (shared structs), `points/vertex.wesl`
+// (the `vs` entry point shared with PickRenderer), `points/colorFragment.wesl`
+// (the visual `fs` entry point — this renderer), and `points/pickFragment.wesl`
+// (PickRenderer's `fsPick`). Each pipeline now compiles its own vertex +
+// fragment GPUShaderModule from disjoint sources, eliminating a class of
+// selection-on-wrong-galaxy bugs that came from one shader module servicing
+// two pipelines with diverging fragment paths.
+import vsCode from './shaders/points/vertex.wesl?static';
+import colorFsCode from './shaders/points/colorFragment.wesl?static';
 import { CloudFade } from './cloudFade';
 import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
@@ -819,14 +829,22 @@ export class PointRenderer {
     private device: GPUDevice,
     format: GPUTextureFormat,
   ) {
-    const module = createShaderModuleWithDevLog(device, shaderSrc, 'points');
+    // Two modules — one per stage — built from disjoint sources. The
+    // vertex source is shared (textually) with PickRenderer, but each
+    // renderer compiles its OWN GPUShaderModule from it; sharing modules
+    // across pipelines tempts you into the WebGPU 'auto' bind-group-layout
+    // trap (auto-derived layouts are pipeline-specific identities and
+    // sharing them across pipelines fails the 'group-equivalent'
+    // compatibility check at draw time).
+    const vsModule = createShaderModuleWithDevLog(device, vsCode, 'points.vertex');
+    const fsModule = createShaderModuleWithDevLog(device, colorFsCode, 'points.colorFragment');
 
     this.pipeline = device.createRenderPipeline({
       label: 'points-pipeline',
       layout: 'auto',
 
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: 'vs',
         buffers: [
           {
@@ -871,7 +889,7 @@ export class PointRenderer {
       },
 
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [
           {
