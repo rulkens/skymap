@@ -90,8 +90,6 @@ export type ClickResolveInput = {
   viewportPx: [number, number];
   /** Visible per-source draw records — same shape pickRenderer.pick wants. */
   visibleSources: Iterable<PickSourceDraw>;
-  /** Uniform buffer shared with PointRenderer; the picker reads, never writes. */
-  uniformBuffer: GPUBuffer;
   /**
    * The user's current `pointSizePx` setting.  Forwarded to
    * `pickRenderer.pick` so it can boost the picking floor (see
@@ -155,7 +153,6 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
         args.pickXPx,
         args.pickYPx,
         args.visibleSources,
-        args.uniformBuffer,
         args.pointSizePx,
       );
       if (idx === -1) return { kind: 'clear' };
