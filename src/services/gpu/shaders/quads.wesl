@@ -1,4 +1,4 @@
-// quads.wgsl — billboard galaxy thumbnails sampled from a single atlas.
+// quads.wesl — billboard galaxy thumbnails sampled from a single atlas.
 //
 // Run after the existing point pass.  Each instance is one textured
 // quad whose world-space center matches a galaxy and whose size is
@@ -6,9 +6,32 @@
 // the atlas texture + sampler in group(0) so the engine can swap the
 // bind group cheaply when more thumbnails arrive.
 
-// Camera + viewport.  Shape mirrors the points-pass uniforms enough to
-// share the same conceptual binding even though several points-only
-// fields (brightness / selectedIndex / etc) aren't carried here.
+// Shared CameraUniforms prefix + projection helpers. See
+// 'lib/camera.wesl' for the canonical 80-byte layout (viewProj +
+// viewportPx + 8B reserved pad). quads needs 'worldToClip' for both
+// the galaxy center AND the celestial-north EPS offset used to
+// orient the billboard basis; it does NOT use 'worldEyeDepth'
+// because the per-quad distance calculation is hand-coded inline
+// (see 'distanceMpc' below) — pulling in the helper would just rename
+// 'length(toGalaxy)' without changing the math.
+import package::lib::camera::{ CameraUniforms, worldToClip };
+
+// Renderer-specific Uniforms struct.
+//
+// The first 80 bytes are the shared 'CameraUniforms' prefix
+// (viewProj at offset 0, viewportPx at offset 64, two reserved-pad
+// f32s at 72/76). The next 16 bytes carry this renderer's two
+// camera-derived but renderer-specific fields: 'camPosWorld' (a
+// vec3<f32> needing 16-B alignment, which offset 80 already
+// provides) and 'pxPerRad' which fits in the trailing slot of
+// camPosWorld's 16-B vec4 quantum.
+//
+// Why are camPosWorld + pxPerRad NOT in CameraUniforms?  See the
+// header in 'lib/camera.wesl' — cameraPos lives at wildly different
+// byte offsets across the points / milkyWayImpostor / quads / disks
+// renderers, so it stays renderer-specific. quads happens to put it
+// directly after the shared prefix, but a future shared per-frame
+// camera UBO refactor will keep that the right shape.
 //
 // 'camPosWorld' + 'pxPerRad' were added when the original
 // "project-a-unit-X-offset" billboard sizing turned out to depend on
@@ -18,13 +41,15 @@
 // 'length(instance.posSize.xyz - camPosWorld)' and converts to screen
 // pixels via 'pxPerRad = viewport.y / (2 · tan(fovY / 2))'.  Identical
 // approach to points.wgsl — see that file for the derivation.
+//
+// Total uniform size: 96 bytes (unchanged from before the
+// CameraUniforms adoption — the shared prefix exactly overlays the
+// previous 'viewProj + viewport + _pad0 + _pad1' region byte-for-
+// byte, so the CPU-side uploader's f32 indices do not move).
 struct Uniforms {
-  viewProj: mat4x4<f32>,
-  viewport: vec2<f32>,
-  _pad0: f32,
-  _pad1: f32,
-  camPosWorld: vec3<f32>,
-  pxPerRad: f32,
+  cam: CameraUniforms,
+  camPosWorld: vec3<f32>,  // offset 80
+  pxPerRad: f32,           // offset 92
 };
 
 // Per-instance attributes.  Three vec4s — first packs (xyz, sizeWorld),
@@ -88,7 +113,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // dust-lane / disk orientation.  We now build the billboard basis from
   // the projected celestial-north direction at each galaxy's screen
   // position so the texture's north tracks the world's celestial north.
-  let centerClip = u.viewProj * vec4<f32>(instance.posSize.xyz, 1.0);
+  let centerClip = worldToClip(u.cam, instance.posSize.xyz);
 
   // ── ANGULAR-SIZE → PIXEL HALF-EXTENT ─────────────────────────────────────
   //
@@ -141,11 +166,11 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // line of sight is essentially parallel to the celestial north axis.
   let NORTH_WORLD = vec3<f32>(0.0, 0.0, 1.0);
   let EPS = 0.001;
-  let upClip = u.viewProj * vec4<f32>(instance.posSize.xyz + NORTH_WORLD * EPS, 1.0);
+  let upClip = worldToClip(u.cam, instance.posSize.xyz + NORTH_WORLD * EPS);
   let centerNdc = centerClip.xy / centerClip.w;
   let upNdc = upClip.xy / upClip.w;
   let upNdcDelta = upNdc - centerNdc;
-  let upPx = vec2<f32>(upNdcDelta.x * u.viewport.x * 0.5, upNdcDelta.y * u.viewport.y * 0.5);
+  let upPx = vec2<f32>(upNdcDelta.x * u.cam.viewportPx.x * 0.5, upNdcDelta.y * u.cam.viewportPx.y * 0.5);
 
   // Pole-degenerate fallback: when the projected-north delta vanishes,
   // use screen-X / screen-Y so the quad still renders (just unoriented).
@@ -168,8 +193,8 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // billboard ends up exactly 'halfPixels' on screen regardless of
   // depth.
   let offsetClip = vec2<f32>(
-    offsetPx.x * 2.0 / u.viewport.x,
-    offsetPx.y * 2.0 / u.viewport.y,
+    offsetPx.x * 2.0 / u.cam.viewportPx.x,
+    offsetPx.y * 2.0 / u.cam.viewportPx.y,
   ) * centerClip.w;
 
   var out: VsOut;
