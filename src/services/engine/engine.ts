@@ -1029,22 +1029,80 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         }
       };
 
-      // Promise that resolves the moment any cloud — real or synthetic
-      // fallback — produces the first non-empty `PointCloud`.  We need a
-      // signal (rather than waiting on every slot to settle) because the
-      // camera-framing code further down requires `firstResult` to be
-      // populated, and the synthetic-fallback path resolves
-      // asynchronously inside its own subscriber.
+      // Two boot-time signals — both must resolve before camera framing.
       //
-      // Why a single shared resolver?  The two callers (point-slot
-      // first-arrival subscriber + synthetic-fallback subscriber) race
-      // to populate `firstResult`; whichever wins owns the camera
-      // bbox.  Resolving the same Promise from both call sites
-      // collapses the await below into a single `await` regardless of
-      // which path produced the first cloud.
+      // ### `firstArrivalPromise` — "we have a first cloud to point at"
+      //
+      // Resolves the moment any cloud — real or synthetic fallback —
+      // produces the first non-empty `PointCloud` and populates
+      // `firstResult`.  Two callers race to populate it (the point-slot
+      // first-arrival subscriber + the synthetic-fallback subscriber);
+      // whichever wins owns the camera-target source label.
+      //
+      // ### `allArrivalsPromise` — "every survey has settled at least once"
+      //
+      // Resolves when ALL four point slots have transitioned out of
+      // `loading`/`committing` at least once (ready OR error).  This is
+      // load-bearing for the **bbox computation** further down: that loop
+      // iterates `state.sources.clouds` to find the largest axis-aligned
+      // extent across every loaded survey, and we need every survey
+      // present (or definitively absent) before computing.  Without this
+      // gate, a fast survey (typically 2MRS, ~2 MB) frames the camera
+      // against its own ~100 Mpc extent and the much-later-arriving
+      // GLADE's distant galaxies fall outside the frustum — manifesting
+      // visually as "the far plane has come closer."  This was the
+      // primary regression of the cloudLoader → AssetSlot rework before
+      // this gate was added.
+      //
+      // Why two promises (rather than one all-arrivals signal)?  The
+      // synthetic-fallback path needs `firstArrivalPromise` to fire
+      // AFTER its async upload completes — without it, camera framing
+      // would run before `firstResult` is populated and crash on the
+      // null check.  `allArrivalsPromise` resolves on the SETTLE event
+      // (synchronous with the slot's state transition), which is
+      // earlier.  Awaiting both via `Promise.all` collapses the wait
+      // into one expression while preserving each signal's semantics.
       let resolveFirstArrival: (() => void) | null = null;
       const firstArrivalPromise = new Promise<void>((resolve) => {
         resolveFirstArrival = resolve;
+      });
+
+      // Counter-driven resolver for `allArrivalsPromise`.  Each of the
+      // four point slots gets ONE settle counted (ready OR error,
+      // whichever first) — re-readies from later tier swaps don't bump
+      // the counter.  The `counted` closure flag is the per-slot
+      // de-dupe; we self-unsubscribe on first settle to avoid carrying
+      // a useless subscriber for the rest of the engine's life.
+      //
+      // The subscriber loop runs INSIDE the Promise executor so the
+      // resolver function is in scope without a `let | null` dance —
+      // TypeScript's control-flow narrowing through closure-mutated
+      // bindings is unreliable, and threading `resolve` directly into
+      // the loop produces tighter typing.
+      const ALL_POINT_SOURCES = [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous];
+      const allArrivalsPromise = new Promise<void>((resolve) => {
+        let arrivedCount = 0;
+        for (const source of ALL_POINT_SOURCES) {
+          const slot = state.assetSlots.points.get(source);
+          if (!slot) {
+            // Slot wasn't minted (shouldn't happen with current init order,
+            // but defensive).  Count as already-arrived so the gate doesn't
+            // stall forever.
+            arrivedCount += 1;
+            if (arrivedCount === ALL_POINT_SOURCES.length) resolve();
+            continue;
+          }
+          let counted = false;
+          const unsub = slot.subscribe((s) => {
+            if (counted) return;
+            if (s.kind === 'ready' || s.kind === 'error') {
+              counted = true;
+              arrivedCount += 1;
+              if (arrivedCount === ALL_POINT_SOURCES.length) resolve();
+              unsub();
+            }
+          });
+        }
       });
 
       // First-arrival capture across all four point slots.  Each slot
@@ -1159,9 +1217,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // render wake-up.
       state.assetSlots.filaments?.load({ tier: state.sources.tier });
 
-      // Wait for whichever cloud arrives first — real or synthetic — so
-      // the camera-framing code below sees a populated `firstResult`.
-      await firstArrivalPromise;
+      // Wait for BOTH:
+      //   - `firstArrivalPromise`: a first cloud (real or synthetic) is in
+      //     `state.sources.clouds` and has populated `firstResult`.
+      //   - `allArrivalsPromise`: every point slot has settled at least
+      //     once, so the bbox loop below sees every available survey.
+      //
+      // Awaiting only `firstArrivalPromise` (the original Task 10 shape)
+      // caused the "far plane has come closer" bug: bbox was computed
+      // against whichever survey arrived first, and later-arriving deep
+      // surveys (GLADE) fell outside the camera frustum.
+      await Promise.all([firstArrivalPromise, allArrivalsPromise]);
 
       // If we somehow have no first result *and* no fallback (e.g. the
       // engine was destroyed mid-load), bail before touching the camera.
