@@ -59,6 +59,7 @@ import package::lib::billboard::expandBillboardScreen;
 import package::lib::cloudFade::CloudUniforms;
 import package::lib::cloudFade::applyCloudFade;
 import package::lib::colorIndex::ramp;
+import package::lib::astro::distanceModulus;
 
 // ─── uniforms ─────────────────────────────────────────────────────────────────
 
@@ -774,9 +775,8 @@ fn vs(
   // log10(1 Mpc / 10 pc) = log10(1e5) = 5, so converting the distance unit
   // from parsecs to megaparsecs adds 5·5 = 25 to the additive constant.
   // Mirror of 'absoluteFromApparent' in src/utils/math/distanceModulus.ts.
-  //
-  // WGSL has no 'log10' intrinsic — only the natural log — so we divide
-  // by ln(10) ≈ 2.302585093.
+  // The formula itself lives in 'lib/astro.wesl' as 'distanceModulus' so
+  // any future shader that needs the same conversion picks it up by name.
   //
   // ── Why a degenerate clip-space output instead of 'discard'? ─────────────
   //
@@ -799,8 +799,7 @@ fn vs(
   // src/data/biasMode.ts) so the default mode ('None == 0u') is a single
   // u32 compare per vertex — effectively free.
   let dMpc = length(p.position);
-  let LOG10 = 2.302585092994046;
-  let absMag = p.magnitude - 5.0 * (log(dMpc) / LOG10) - 25.0;
+  let absMag = distanceModulus(p.magnitude, dMpc);
 
   // Recover the per-instance packed identity now so both the early-out
   // and the main path can share one source of truth.  Bits 27..31 = the
