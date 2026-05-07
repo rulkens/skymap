@@ -19,7 +19,7 @@
 
 import type { PointCloud, PointInfo } from '../../@types';
 import { Source, sourceLabel, bandLabels } from '../../data/sources';
-import type { FamousMetaEntry, FamousXrefMap } from './famousMetaLoader';
+import type { FamousMetaEntry, FamousXrefMap } from '../loading/fetchers/famousMetaFetcher';
 import { fallbackOrientation } from '../../utils/random/fallbackOrientation';
 import {
   cartesianToRaDecZ,
@@ -105,7 +105,7 @@ export function niceRound(x: number): number {
  * link makes sense.
  *
  * The optional `famousMeta` / `famousXrefs` arguments are the sidecars loaded
- * at engine startup by `famousMetaLoader.loadFamousSidecars()`.  They are
+ * at engine startup by the `famousMeta` AssetSlot (`famousMetaFetcher`).  They are
  * only consulted when `source === Source.Famous`, so passing them for SDSS /
  * 2MRS / GLADE rows is harmless.  If the sidecars haven't arrived yet (fetch
  * still in flight when the user first hovers a famous galaxy), both args will

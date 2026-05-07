@@ -100,16 +100,17 @@ import { buildPointInfo, maxAbsCoord } from './pointInfoBuilder';
 import { computeInitialCamera } from './cameraFraming';
 import { seedSettingsCallbacks } from './seedSettingsCallbacks';
 import { computeScaleInfo } from './scaleBar';
-// `loadAllClouds`, `reloadSource`, `loadFilaments`, `buildSyntheticFallback`,
-// and the `LoadEvent` type were the legacy load-orchestration surface —
-// Tasks 9 and 10 port every runtime call site to the AssetSlot
-// machinery (synthetic fallback now lives as a multi-slot subscriber in
-// the IIFE; the famous-meta sidecar flows through its own slot).  Task 12
-// owns the physical removal of `cloudLoader.ts`.  Until then we keep
-// only the `CloudSource` discriminator type, used by the
-// camera-framing helper to tag the first-arrival cloud.
-import { type CloudSource } from './cloudLoader';
-import { createLoadProgressAggregator } from './loadProgressAggregator';
+// The legacy load-orchestration surface (`loadAllClouds`, `reloadSource`,
+// `loadFilaments`, `buildSyntheticFallback`, `LoadEvent`) lived in the
+// now-deleted `cloudLoader.ts`.  Tasks 9 and 10 ported every runtime
+// call site to the AssetSlot machinery; Task 12 (this file) finished
+// the cleanup by deleting cloudLoader outright.  The `CloudSource`
+// discriminator type — used here to tag the first-arrival cloud for
+// the camera framing path — moved to `src/data/cloudSource.ts` so the
+// engine no longer imports anything from a load-orchestration module.
+import type { CloudSource } from '../../data/cloudSource';
+import { createLoadProgressEmitter } from './loadProgressAggregator';
+import type { AssetSlot } from '../loading/types';
 import { createAssetSlot } from '../loading/AssetSlot';
 import { pointCloudFetcher } from '../loading/fetchers/pointCloudFetcher';
 import { filamentFetcher } from '../loading/fetchers/filamentFetcher';
@@ -712,16 +713,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           },
         });
         slot.subscribe((s) => {
-          if (s.kind === 'loading') {
-            state.subsystems.loadProgress?.start(slotName, s.total);
-            state.subsystems.loadProgress?.update(slotName, s.loaded, s.total);
-          }
+          // Per-slot byte-count plumbing into the loading-bar aggregator
+          // is gone post-Task-12 — the new `createLoadProgressEmitter`
+          // recomputes from `aggregateRegistry(slots)` on every state
+          // change, so this subscriber only needs to fire the
+          // app-visible side effects (cb echo + render wake).
           if (s.kind === 'ready') {
             cb.onCloudReady?.(source, s.value.count);
             state.subsystems.scheduler.requestRender();
-          }
-          if (s.kind === 'ready' || s.kind === 'error') {
-            state.subsystems.loadProgress?.finish(slotName);
           }
         });
         state.assetSlots.points.set(source, slot);
@@ -809,26 +808,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const filamentRenderer = new FilamentRenderer(device, 'rgba16float');
       state.gpu.filamentRenderer = filamentRenderer;
 
-      // Per-engine aggregator for the loading bar — hoisted to here
-      // (rather than its previous location just above the
-      // `loadAllClouds` call) so the filament fetch right below can
-      // also stream its bytes through the same aggregator.  Filaments
-      // are a non-trivial download (~24 MB on the merged build), so
-      // the user wants to see them in the loading bar alongside the
-      // galaxy `.bin`s.  See `LoadEventSource` for the union that lets
-      // 'filaments' coexist with `Source` enum values as keys.
-      const loadProgress = createLoadProgressAggregator((snapshot) => {
-        cb.onLoadProgress?.(snapshot);
-      });
-      state.subsystems.loadProgress = loadProgress;
-
-      // After Task 9, every load path (point sources + filaments) feeds
-      // the aggregator directly from inside the slot subscriber — no
-      // intermediate `LoadEvent` dispatcher is needed any more.  Task 12
-      // will replace `loadProgressAggregator` itself with a thin
-      // `aggregateRegistry` wrapper, after which this aggregator
-      // construction also goes away.
-
       // ── Filament asset slot (Task 9) ─────────────────────────────────
       //
       // The cosmic-web skeleton flows through its own slot — different
@@ -857,10 +836,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         },
       });
       filamentSlot.subscribe((s) => {
-        if (s.kind === 'loading') {
-          state.subsystems.loadProgress?.start('filaments', s.total);
-          state.subsystems.loadProgress?.update('filaments', s.loaded, s.total);
-        }
+        // Loading-bar plumbing is gone post-Task-12 — the emitter
+        // recomputes from `aggregateRegistry(slots)` on every state
+        // change.  This subscriber only fires the app-visible side
+        // effects (counts echo + render wake) on the `ready` transition.
         if (s.kind === 'ready') {
           console.log(
             `[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`,
@@ -870,9 +849,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           // one-shot, fires only when the optional binary actually loaded.
           cb.onFilamentsReady?.(s.value.stripCount, s.value.vertexCount);
           state.subsystems.scheduler.requestRender();
-        }
-        if (s.kind === 'ready' || s.kind === 'error') {
-          state.subsystems.loadProgress?.finish('filaments');
         }
       });
       state.assetSlots.filaments = filamentSlot;
@@ -944,6 +920,40 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         fetch: pgcAliasFetcher,
       });
       state.assetSlots.pgcAlias = pgcAliasSlot;
+
+      // ── Loading-bar emitter ──────────────────────────────────────────
+      //
+      // Post-Task-12 the per-engine loading-bar aggregator is a thin
+      // subscriber over `aggregateRegistry`.  Build the slot registry
+      // here (now that every slot exists) and hand it to the emitter;
+      // `attachSlot` then wires each slot's `subscribe` so that any
+      // state transition recomputes the projection and forwards the
+      // snapshot to `cb.onLoadProgress`.
+      //
+      // Why a single shared Map rather than four separate `attachSlot`
+      // calls each owning their own subset?  The same registry also
+      // feeds the dev panel's per-slot view (Task 13); building it
+      // once here keeps both consumers in lock-step on what counts as
+      // "in flight".
+      //
+      // The `unknown` type-erasure below is benign — `aggregateRegistry`
+      // only reads `slot.state()` discriminator fields, never the
+      // payload type.  We re-narrow at the dev panel's per-slot
+      // rendering site if it cares.
+      const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
+      for (const [, slot] of state.assetSlots.points) {
+        allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
+      }
+      allSlots.set(filamentSlot.name, filamentSlot as unknown as AssetSlot<unknown, unknown>);
+      allSlots.set(famousMetaSlot.name, famousMetaSlot as unknown as AssetSlot<unknown, unknown>);
+      allSlots.set(pgcAliasSlot.name, pgcAliasSlot as unknown as AssetSlot<unknown, unknown>);
+
+      const progressEmitter = createLoadProgressEmitter(
+        (snapshot) => cb.onLoadProgress?.(snapshot),
+        allSlots,
+      );
+      for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
+      state.subsystems.loadProgress = progressEmitter;
 
       // Trigger the famous-meta load as soon as the slot is wired —
       // sidecars are tiny and only feed InfoCard text, so kicking them

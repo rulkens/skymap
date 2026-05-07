@@ -22,7 +22,33 @@
 
 import type { EngineHandle } from '../@types';
 import type { Source } from '../data/sources';
-import type { AliasIndexEntry } from '../services/engine/pgcAliasLoader';
+
+/**
+ * One row of the runtime alias-search index.
+ *
+ * Built by joining the PGC→names Map (loaded via the pgcAlias slot's
+ * fetcher) against the GLADE and 2MRS PointClouds. The palette filters
+ * across these entries; selecting one calls back through
+ * `engine.selectByAlias` which uses `(source, localIdx)` to compute the
+ * global index + camera focus.
+ *
+ * `pgc` is retained for debugging/tracing (logs read better with PGC
+ * numbers attached) but the runtime selection path doesn't need it —
+ * `localIdx` already pins the row inside its source cloud.
+ *
+ * Lives in this file (rather than the fetcher) because it is a
+ * post-processing shape derived from joining the fetcher's raw `Map<bigint,
+ * readonly string[]>` against per-source clouds — no concern of the
+ * fetcher itself.  The pre-rework loader colocated it with the fetch
+ * function for historical convenience; the asset-loading rework split
+ * the concerns and this type stays with its actual builder.
+ */
+export type AliasIndexEntry = {
+  pgc: bigint;
+  names: readonly string[];
+  source: Source;
+  localIdx: number;
+};
 
 export type BuildAliasIndexInput = {
   handle: EngineHandle;

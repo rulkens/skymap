@@ -54,7 +54,7 @@
 import type { FocusTarget } from '../url/focusUrl';
 import type { PointCloud } from '../../@types';
 import { Source } from '../../data/sources';
-import type { FamousMetaEntry } from './famousMetaLoader';
+import type { FamousMetaEntry } from '../loading/fetchers/famousMetaFetcher';
 import { cartesianToRaDecZ } from '../../utils/math/cartesianToRaDecZ';
 
 /**

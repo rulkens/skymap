@@ -34,7 +34,7 @@ import type { LodMode } from './LodMode';
 import type { PointCloud } from './PointCloud';
 import type { Tier } from './Tier';
 import type { Source } from '../data/sources';
-import type { FamousMetaEntry, FamousXrefMap } from '../services/engine/famousMetaLoader';
+import type { FamousMetaEntry, FamousXrefMap } from '../services/loading/fetchers/famousMetaFetcher';
 
 export type EngineSourceState = {
   visibleMask: number;

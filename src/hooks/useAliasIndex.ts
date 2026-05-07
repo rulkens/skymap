@@ -25,15 +25,11 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { EngineHandle } from '../@types';
 import { Source } from '../data/sources';
-import {
-  loadPgcAliases,
-  type AliasIndexEntry,
-} from '../services/engine/pgcAliasLoader';
-import { buildAliasIndex } from './buildAliasIndex';
+import { buildAliasIndex, type AliasIndexEntry } from './buildAliasIndex';
 
 // Re-export so callers naming this type don't need a second import path —
 // matches the companion-type re-export pattern in `useFocusUrlSync.ts`.
-export type { AliasIndexEntry } from '../services/engine/pgcAliasLoader';
+export type { AliasIndexEntry } from './buildAliasIndex';
 
 export type UseAliasIndexInput = {
   paletteOpen: boolean;
@@ -69,9 +65,17 @@ export function useAliasIndex(input: UseAliasIndexInput): UseAliasIndexReturn {
     const gladeCount = sourceCounts[Source.Glade] ?? 0;
     const twoMrsCount = sourceCounts[Source.TwoMRS] ?? 0;
     if (gladeCount === 0 && twoMrsCount === 0) return;
+    // Asset-loading rework: the standalone `loadPgcAliases()` helper is
+    // gone.  The engine handle exposes the same Promise contract via its
+    // own slot-backed shim — same fail-soft "empty Map on error"
+    // semantics, but progress + retry now flow through the asset-slot
+    // machinery alongside every other load.  Engine builds that predate
+    // the slot wiring don't expose this method; guard for that and
+    // silently skip alias indexing in that case.
+    if (!handle.loadPgcAliases) return;
 
     aliasLoadStarted.current = true;
-    loadPgcAliases().then((loadedAliasMap) => {
+    handle.loadPgcAliases().then((loadedAliasMap) => {
       // Stash the raw Map first for the deep-link resolver oracle —
       // it only needs `.has(pgc)`, not the per-source localIdx join.
       setAliasMap(loadedAliasMap);

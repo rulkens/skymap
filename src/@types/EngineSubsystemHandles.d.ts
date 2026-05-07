@@ -42,7 +42,7 @@ import type { TweenManager } from '../services/engine/tweenManager';
 import type { ClickResolver } from '../services/engine/clickHandler';
 import type { InputBindings } from '../services/engine/inputBindings';
 import type { RenderScheduler } from '../services/engine/renderScheduler';
-import type { LoadProgressAggregator } from '../services/engine/loadProgressAggregator';
+import type { LoadProgressEmitter } from '../services/engine/loadProgressAggregator';
 
 export type EngineSubsystemHandles = {
   thumbnails: ThumbnailSubsystem | null;
@@ -52,10 +52,13 @@ export type EngineSubsystemHandles = {
   inputBindings: InputBindings | null;
   scheduler: RenderScheduler;
   /**
-   * Per-engine download-progress aggregator — instantiated inside the
-   * GPU init IIFE (so `cb.onLoadProgress` is in scope at construction
-   * time) and used by both the initial `loadAllClouds` and per-source
-   * `setTier` reloads.  Null until that init runs.
+   * Per-engine download-progress emitter — instantiated inside the
+   * GPU init IIFE (so `cb.onLoadProgress` and the slot registry are in
+   * scope at construction time).  Subscribes to every slot's state
+   * transitions and recomputes the aggregate snapshot from
+   * `aggregateRegistry` on every change, so the loading-bar UI sees
+   * the same view of "what's still loading" as the dev panel.  Null
+   * until the GPU init runs.
    */
-  loadProgress: LoadProgressAggregator | null;
+  loadProgress: LoadProgressEmitter | null;
 };

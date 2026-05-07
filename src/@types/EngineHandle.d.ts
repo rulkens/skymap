@@ -14,7 +14,7 @@ import type { ToneMapCurve } from '../data/toneMapCurve';
 import type {
   FamousMetaEntry,
   FamousXrefMap,
-} from '../services/engine/famousMetaLoader';
+} from '../services/loading/fetchers/famousMetaFetcher';
 import type { PgcAliasMap } from '../services/loading/fetchers/pgcAliasFetcher';
 
 /**
