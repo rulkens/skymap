@@ -342,7 +342,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
           label={
             <InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>
           }
-          value={Number.isNaN(info.magG) ? 'N/A' : info.magG.toFixed(2)}
+          value={Number.isFinite(info.magG) ? info.magG.toFixed(2) : 'N/A'}
         />
       </div>
 
@@ -373,7 +373,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
             label={
               <InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${info.bands.g})`}</InfoTip>
             }
-            value={Number.isNaN(info.absoluteMagG) ? 'N/A' : info.absoluteMagG.toFixed(2)}
+            value={Number.isFinite(info.absoluteMagG) ? info.absoluteMagG.toFixed(2) : 'N/A'}
           />
           {/*
             Colour row uses the pre-computed `info.colours` array instead of

@@ -14,6 +14,11 @@
  *        ▼ ── First race-check: myGen === generation? if not, drop
  *        │
  *        ▼
+ *     [await prior commit-in-flight (commit serialization chain)]
+ *        │
+ *        ▼ ── Third race-check: still current after the wait?
+ *        │
+ *        ▼
  *     [commit (await — async, e.g. GPU upload)]
  *        │
  *        ▼ ── Second race-check: myGen === generation? if not, drop
@@ -21,10 +26,28 @@
  *        ▼
  *     [dispatch 'committed', notify subscribers]
  *
- * The two race-checks are the structural fix for the tier-swap bug.  Without
- * them, a slow load A's commit can stomp a faster load B's value, and a
- * slow load A's `committed` notification can fire after load B's
- * `load-started`, causing the renderer to briefly see A's value as current.
+ * The three race-checks plus the commit-serialization chain together form
+ * the structural fix for the tier-swap bug:
+ *
+ *   - First check (post-fetch): drops a superseded fetch result before
+ *     it touches commit at all.
+ *   - Commit chain (await prior): guarantees that two commits for the
+ *     same slot run sequentially, even when the side-effect itself
+ *     (e.g. a GPU worker bake) can't be aborted mid-flight.  Without
+ *     this, "last writer wins" semantics in the renderer cause the
+ *     slower (older-tier) commit to overwrite the newer one.
+ *   - Third check (post-wait): a generation that arrived while we were
+ *     queued doesn't need our commit — the newer one will do it.  Drop
+ *     without dispatching 'committing' or running our commit.
+ *   - Second check (post-commit): a late-finishing superseded commit
+ *     still ran (its side-effect already happened) but we suppress its
+ *     'committed' notification so subscribers don't see the stale value.
+ *
+ * Mutable state is intentionally a thin shell: a generation counter, an
+ * AbortController reference, the current LoadState (computed via the pure
+ * `reduceLoadState`), a Set of subscribers, and the commit-chain head.
+ * Everything that can be a pure function is — retry decisions, state
+ * transitions, console output.
  *
  * Mutable state is intentionally a thin shell: a generation counter, an
  * AbortController reference, the current LoadState (computed via the pure
@@ -62,6 +85,26 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
   const subscribers = new Set<(s: LoadState<T>) => void>();
   let lastRequest: Req | null = null;
   let lastReady: LoadState<T> | null = null; // for cancel() rollback
+  // ── Commit serialization chain ────────────────────────────────────────
+  // Holds the in-flight commit's resolve-promise, or null when no commit
+  // is running.  Each runLoad's commit phase awaits this promise before
+  // starting its own work, so generation order maps onto commit-completion
+  // order even when commits have side-effects the slot can't see (e.g. a
+  // GPU upload whose worker bake can't be aborted mid-flight).
+  //
+  // Why this matters: two concurrent commits for the same target (the
+  // pointRenderer's vertex buffer being the canonical case) race at the
+  // side-effect layer — "last writer wins" — and the slower one is
+  // typically the larger (older-tier) one, so without serialization a
+  // user toggling medium → large → medium ends up staring at large data
+  // because the late-finishing large commit overwrote the medium commit.
+  // The two existing race-checks guard the *state* transition only; they
+  // can't unwind a side-effect that already happened.
+  //
+  // Fetch parallelism is preserved — only commits serialize.  The fast
+  // cached medium fetch still runs alongside the slow large fetch; only
+  // its GPU upload waits for the large GPU upload to drain.
+  let commitInFlight: Promise<void> | null = null;
 
   // ── Auto-attached console adapter ────────────────────────────────────
   // Every slot logs structured `[loading] <name> ...` lines for free.  The
@@ -139,16 +182,45 @@ export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): Asse
     // ── First race-check ──────────────────────────────────────────────
     if (myGen !== generation) return;
 
-    dispatch({ kind: 'committing' });
+    // ── Acquire the commit slot ───────────────────────────────────────
+    // Snapshot any in-flight prior commit, then publish ours so a
+    // later generation can chain after us.  We keep our own promise in
+    // `mine` so the `finally` block can null `commitInFlight` only if
+    // we're still the current tail of the chain.
+    const prior = commitInFlight;
+    let resolveMine!: () => void;
+    const mine = new Promise<void>((r) => {
+      resolveMine = r;
+    });
+    commitInFlight = mine;
 
-    if (commit) {
-      try {
-        await commit(value, ctrl.signal);
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') return;
-        dispatch({ kind: 'gave-up', error: err as Error, attempt });
-        return;
+    try {
+      if (prior) await prior;
+
+      // ── Third race-check (post-wait) ────────────────────────────────
+      // While we waited for the prior commit to drain, an even newer
+      // generation may have arrived.  If so, drop without starting our
+      // commit at all — the newer gen will do the side-effect we'd
+      // otherwise duplicate.  This keeps the stale-data window to the
+      // single prior commit's duration rather than compounding.
+      if (myGen !== generation) return;
+
+      dispatch({ kind: 'committing' });
+
+      if (commit) {
+        try {
+          await commit(value, ctrl.signal);
+        } catch (err) {
+          if ((err as Error).name === 'AbortError') return;
+          dispatch({ kind: 'gave-up', error: err as Error, attempt });
+          return;
+        }
       }
+    } finally {
+      resolveMine();
+      // Only clear the chain head if no later generation enqueued
+      // behind us — otherwise we'd orphan their `await prior`.
+      if (commitInFlight === mine) commitInFlight = null;
     }
 
     // ── Second race-check ─────────────────────────────────────────────

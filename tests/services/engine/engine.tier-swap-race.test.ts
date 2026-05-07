@@ -43,7 +43,7 @@ describe('AssetSlot tier-swap race', () => {
     expect(uploaded).toEqual(['MEDIUM-DATA']);
   });
 
-  it('commit-side race: commit completes for superseded value, slot still settles to latest', async () => {
+  it('commit-side race: commits run serially in generation order, slot settles to latest', async () => {
     let fetchCalls = 0;
     const fetcher: Fetcher<string, number> = vi.fn(async () => {
       fetchCalls += 1;
@@ -52,6 +52,9 @@ describe('AssetSlot tier-swap race', () => {
     const commitOrder: string[] = [];
     const commit = vi.fn(async (val: string) => {
       commitOrder.push(`start:${val}`);
+      // Earlier gens get a slower commit so that without serialization
+      // they would finish LAST and stomp the later gen's side-effect —
+      // this is the renderer's "last writer wins" failure mode.
       await new Promise((r) => setTimeout(r, val === 'payload-1' ? 50 : 5));
       commitOrder.push(`end:${val}`);
     });
@@ -68,8 +71,57 @@ describe('AssetSlot tier-swap race', () => {
 
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
     expect(slot.current()).toBe('payload-2');
-    // Both commits ran (commit was already in flight for payload-1) but only
-    // payload-2's `committed` event reached the reducer — the second
-    // race-check dropped payload-1's late notification.
+    // The commit-serialization chain forces gen 2's commit to wait for
+    // gen 1's commit to fully drain, so the side-effect order matches
+    // generation order even though gen 2's individual commit is faster.
+    // Without the chain, payload-2 would finish first (5 ms) and
+    // payload-1 would finish second (50 ms), leaving the renderer with
+    // payload-1's data.
+    expect(commitOrder).toEqual([
+      'start:payload-1',
+      'end:payload-1',
+      'start:payload-2',
+      'end:payload-2',
+    ]);
+  });
+
+  it('medium → large → medium: latest tier wins at the side-effect layer', async () => {
+    // Simulates the user-visible bug: if gen N+1's commit (slow large
+    // upload) is in flight when gen N+2 (medium, fast cached) starts,
+    // both commits race in the renderer and the slower one wins.  The
+    // commit chain must serialize them so gen N+2's medium upload
+    // actually lands last.
+    const fetchedTiers: string[] = [];
+    const fetcher: Fetcher<string, { tier: string }> = async (req) => {
+      fetchedTiers.push(req.tier);
+      return `${req.tier.toUpperCase()}-DATA`;
+    };
+    const writes: string[] = [];
+    const commit = async (val: string) => {
+      // Large is slow, medium is fast — without serialization the
+      // earlier (large) write would finish last and overwrite medium.
+      // Large's delay is well above vi.waitFor's polling interval so
+      // the test reliably observes the 'committing' state mid-flight.
+      const delay = val.startsWith('LARGE') ? 200 : 5;
+      await new Promise((r) => setTimeout(r, delay));
+      writes.push(val);
+    };
+    const slot = createAssetSlot<string, { tier: string }>({
+      name: 'pts',
+      fetch: fetcher,
+      commit,
+      retry: () => 'give-up',
+    });
+
+    slot.load({ tier: 'medium' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    slot.load({ tier: 'large' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('committing'));
+    slot.load({ tier: 'medium' });
+
+    await vi.waitFor(() => expect(slot.current()).toBe('MEDIUM-DATA'));
+    // The user-visible side-effect ordering: medium first, then large,
+    // then medium again — ending on medium, not large.
+    expect(writes).toEqual(['MEDIUM-DATA', 'LARGE-DATA', 'MEDIUM-DATA']);
   });
 });
