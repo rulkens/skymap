@@ -60,7 +60,17 @@
 // math is camera-independent by design (see the docblock above) — so
 // 'worldToNdc' / 'worldEyeDepth' aren't imported.  Restraint matches
 // what filaments + quads already adopted in this WESL conversion.
-import package::lib::camera::{ CameraUniforms, worldToClip };
+import package::lib::camera::CameraUniforms;
+import package::lib::camera::worldToClip;
+// Shared unit-quad helpers from 'lib/billboard.wesl' — replace the
+// inline 'CORNERS' const + '(corner + 1) * 0.5' UV remap that used to
+// live below. The orientation-aligned disk-plane basis (PA +
+// inclination → 'major' / 'minor_3d' in 3D world space) stays
+// renderer-specific; only the vertex-index → corner / UV lookups are
+// shared. See the docblock at the top of 'lib/billboard.wesl' for why
+// the orientation math is intentionally NOT pulled into this lib.
+import package::lib::billboard::quadCorner;
+import package::lib::billboard::quadUv;
 
 struct Uniforms {
   cam: CameraUniforms,
@@ -93,18 +103,15 @@ struct VsOut {
 @group(0) @binding(1) var          atlasTex: texture_2d<f32>;
 @group(0) @binding(2) var          atlasSmp: sampler;
 
-const CORNERS = array<vec2<f32>, 6>(
-  vec2<f32>(-1.0, -1.0),
-  vec2<f32>( 1.0, -1.0),
-  vec2<f32>( 1.0,  1.0),
-  vec2<f32>(-1.0, -1.0),
-  vec2<f32>( 1.0,  1.0),
-  vec2<f32>(-1.0,  1.0),
-);
-
 @vertex
 fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
-  let corner = CORNERS[vid];
+  // Unit-square corner offset in [-1, +1]² for this triangle-list
+  // vertex. Pulled from 'lib/billboard::quadCorner' so the (BL, BR,
+  // TR, BL, TR, TL) ordering is shared across all four billboard
+  // renderers — see the lib's docblock for the corner-ordering
+  // discussion. The corner here is in the disk's LOCAL 2D frame; the
+  // 3D placement happens via the (major, minor_3d) basis below.
+  let corner = quadCorner(vid);
   let center = instance.posSize.xyz;
   let halfSize = instance.posSize.w * 0.5;
   // Clamp axisRatio so an edge-on disk still produces a thin sliver
@@ -178,7 +185,11 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   var out: VsOut;
   out.clipPos = worldToClip(u.cam, world);
 
-  let cornerUv = (corner + vec2<f32>(1.0, 1.0)) * 0.5;
+  // 'quadUv' returns the unit-square corner remapped to [0, 1]² (same
+  // vertex-index ordering as 'quadCorner' above). We then flip V so
+  // the texture isn't upside down — matches the atlas's top-down
+  // 'flipY: false' upload convention used by 'quads.wesl'.
+  let cornerUv = quadUv(vid);
   let uvLocal = vec2<f32>(cornerUv.x, 1.0 - cornerUv.y);
   out.atlasUv = mix(instance.uvRect.xy, instance.uvRect.zw, uvLocal);
   out.cornerUv = cornerUv;
