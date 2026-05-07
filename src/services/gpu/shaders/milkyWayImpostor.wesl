@@ -120,6 +120,18 @@
 // for the new offset table.
 
 import package::lib::camera::{ CameraUniforms, worldToClip };
+// Math primitives must be imported at the top of the file alongside the
+// camera import. wesl-plugin@0.6.74's linker only resolves imports it
+// finds before code-emitting begins; if the imports sit further down
+// (next to the call sites) the linker emits the source verbatim, the
+// 'import' keyword reaches Chrome's WGSL parser, and the whole module
+// fails to compile. Verified empirically — moving these four imports
+// here fixed a regression where milkyWay's pipeline was invalidated as
+// soon as fadeAlpha rose above zero (close-zoom = black screen).
+import package::lib::math::rot2;
+import package::lib::math::sabs;
+import package::lib::math::toPolar;
+import package::lib::math::toRect;
 
 struct Uniforms {
   // Shared camera prefix — viewProj for clip-space projection plus
@@ -384,8 +396,6 @@ fn vs(@builtin(vertex_index) vid: u32) -> VsOut {
 // useful in any shader doing radial domain warps or smooth-distance
 // fields. The semantics are unchanged; the only rename is GLSL's
 // 'rot()' → 'rot2()' (see lib/math.wesl docblock for the why).
-
-import package::lib::math::{ rot2, sabs, toPolar, toRect };
 
 const TWIRLY: f32 = 2.5;
 
