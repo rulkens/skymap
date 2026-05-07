@@ -56,6 +56,7 @@ import package::lib::camera::CameraUniforms;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
+import package::lib::cloudFade::CloudUniforms;
 import package::lib::cloudFade::applyCloudFade;
 import package::lib::colorIndex::ramp;
 
@@ -353,62 +354,37 @@ struct Uniforms {
 
 // ─── per-cloud uniforms (Cloud fade-in) ───────────────────────────────────────
 //
-// One small uniform buffer per loaded source, set at draw time via
-// 'setBindGroup(1, entry.cloudBindGroup)' from the JS render loop.  The
-// only field we currently care about is 'opacity' — the smoothstep-shaped
-// 0→1 ramp that the JS side computes from 'now() - fadeStartMs'.  Multiplied
-// into the visual fragment's final alpha so a freshly-uploaded cloud
-// glides into view rather than popping.
+// 'CloudUniforms' is imported from 'lib/cloudFade.wesl' (shared with
+// filaments.wesl). See that file's docblock for field semantics +
+// why the layout is deliberately identical across renderers. The
+// notes below cover what's POINTS-specific.
 //
-// Why a separate bind group rather than extending @group(0)?  WebGPU's
-// 'queue.writeBuffer' ordering across submits in one frame is undefined —
-// writing different opacity values to one shared buffer between draws
-// would race.  Per-cloud BUFFERS sidestep that entirely (one writeBuffer
-// per buffer per frame, no overlap), which is exactly the existing
-// "bake per-instance into the vertex buffer" pattern at a coarser
-// granularity.  See CLAUDE.md → "WebGPU 'queue.writeBuffer' race".
+// ### Why @group(1) instead of @group(0)
+//
+// The visual + pick passes draw every loaded survey in one render
+// pass each, with one 'pass.draw(6, count)' call per source. If
+// 'opacity' or 'sourceCode' lived in the global @group(0) Uniforms,
+// writing between draws within one submit would NOT take effect —
+// WebGPU sequences all 'queue.writeBuffer' calls in a submit before
+// any draw runs, so all draws would see the last-written value. That
+// race is exactly what the prior revision's per-vertex
+// 'globalInstanceIdx' baking dodged.
+//
+// Putting these per-cloud values in the per-source @group(1) bind
+// group makes every cloud have its OWN uniform buffer. Different
+// buffers, different write destinations — the writes can't race
+// because there is no shared destination across draws. See
+// CLAUDE.md → "WebGPU 'queue.writeBuffer' race".
+//
+// ### Pick pipeline layout
 //
 // The pick fragment ('fsPick') doesn't reference 'cloud.opacity', but
 // the SHARED vertex stage reads 'cloud.sourceCode' to compose each
 // instance's packed identity ('(sourceCode << 27u) | instance_index')
-// for the pick output.  WebGPU's pipeline layout reflects every binding
-// any stage touches, so the pick pipeline auto-derives @group(1) too,
-// and PickRenderer must bind a CloudFade-style group per source before
-// each draw — see PickRenderer.pick().
-struct CloudUniforms {
-  /** 0 → fully transparent (just uploaded), 1 → fully opaque (steady state). */
-  opacity: f32,
-
-  // 5-bit Source enum value for this cloud.  Set once at upload time
-  // (the JS 'pointRenderer.upload' calls 'entry.fade.setSourceCode(source)').
-  // The vertex stage reads this slot to compose
-  // 'myPacked = (sourceCode << 27u) | @builtin(instance_index)' — the
-  // per-instance packed identity used for both selection-halo
-  // comparison ('fs') and pick output ('fsPick').
-  //
-  // ### Why @group(1) instead of @group(0)
-  //
-  // The visual + pick passes draw every loaded survey in one render
-  // pass each, with one 'pass.draw(6, count)' call per source.  If
-  // sourceCode lived in the global @group(0) Uniforms, writing it
-  // between draws within one submit would NOT take effect — WebGPU
-  // sequences all 'queue.writeBuffer' calls in a submit before any
-  // draw runs, so all draws would see the last-written value.  That
-  // race is exactly what the prior revision's per-vertex
-  // 'globalInstanceIdx' baking dodged.
-  //
-  // Putting sourceCode in the per-source @group(1) bind group makes
-  // every cloud have its OWN uniform buffer.  Different buffers,
-  // different write destinations — the writes can't race because there
-  // is no shared destination across draws.  Same architecture that
-  // already keeps 'opacity' from racing.
-  sourceCode: u32,
-
-  // Pad to 16-byte alignment — WebGPU's minimum uniform buffer size.
-  _pad1: f32,
-  _pad2: f32,
-};
-
+// for the pick output. WebGPU's pipeline layout reflects every
+// binding any stage touches, so the pick pipeline auto-derives
+// @group(1) too, and PickRenderer must bind a CloudFade-style group
+// per source before each draw — see PickRenderer.pick().
 @group(1) @binding(0) var<uniform> cloud: CloudUniforms;
 
 // ─── vertex attributes ────────────────────────────────────────────────────────
@@ -1473,19 +1449,15 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // ── Cloud fade-in ──────────────────────────────────────────────────────────
   //
   // Multiply alpha by the per-source opacity uniform (set per-frame from the
-  // JS side based on time-since-upload).  Steady-state opacity = 1.0, so this
-  // is a no-op once a cloud has finished fading.  See the CloudUniforms
-  // docblock above for the full rationale; tl;dr a freshly-uploaded cloud
-  // glides into view over ~500 ms instead of popping into existence.
+  // JS side based on time-since-upload). Steady-state opacity = 1.0, so this
+  // is a no-op once a cloud has finished fading. See the CloudUniforms
+  // docblock in lib/cloudFade.wesl for the full rationale; tl;dr a freshly-
+  // uploaded cloud glides into view over ~600 ms instead of popping.
   //
-  // We delegate to 'applyCloudFade' (lib/cloudFade.wesl) rather than writing
-  // 'alpha = alpha * cloud.opacity' inline. The helper takes a vec4 and
-  // returns a vec4 with only the alpha channel scaled, which is overkill
-  // for a single scalar multiply — but the signature documents the
-  // RGB-passes-through invariant at the type level, and the same helper is
-  // used by filaments.wesl (which has no 'sourceCode' field, hence why we
-  // share the helper but NOT a CloudUniforms struct).
-  let faded = applyCloudFade(vec4<f32>(rgb, alpha), cloud.opacity);
+  // 'applyCloudFade' is a documented place that says 'never multiply
+  // opacity into RGB' — it takes the scalar alpha alongside opacity and
+  // returns the faded scalar alpha, leaving 'rgb' untouched.
+  alpha = applyCloudFade(alpha, cloud.opacity);
 
   // ── PREMULTIPLIED ALPHA ──────────────────────────────────────────────────
   //
@@ -1507,7 +1479,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   //
   // The additive blend mode itself is configured in the pipeline descriptor on
   // the JS side (Task 10) — specifically in the 'targets[0].blend' descriptor.
-  return vec4<f32>(faded.rgb * faded.a, faded.a);
+  return vec4<f32>(rgb * alpha, alpha);
 }
 
 // ─── pick fragment stage ──────────────────────────────────────────────────────

@@ -25,6 +25,7 @@
 // perpendicular math then operates in NDC and never touches a camera
 // position, so 'worldEyeDepth' is intentionally NOT imported here.
 import package::lib::camera::{ CameraUniforms, worldToClip };
+import package::lib::cloudFade::CloudUniforms;
 import package::lib::cloudFade::applyCloudFade;
 
 // Renderer-specific Uniforms struct.
@@ -58,15 +59,13 @@ struct Uniforms {
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
 
-// Per-cloud fade-in (CloudFade — see src/services/gpu/cloudFade.ts).  One
-// f32 opacity, written each frame from the JS side; multiplied into the
-// fragment alpha so a freshly-uploaded skeleton glides in over ~600 ms.
-struct CloudUniforms {
-  opacity : f32,
-  _pad0 : f32,
-  _pad1 : f32,
-  _pad2 : f32,
-};
+// Per-cloud fade-in (CloudFade — see src/services/gpu/cloudFade.ts).
+// 'CloudUniforms' is imported from 'lib/cloudFade.wesl' (shared with
+// points.wesl). The CPU-side 'CloudFade' class produces the same
+// 16-byte layout for every consumer, so the shared shader struct is
+// honest: filaments doesn't read 'sourceCode' today, but the bytes
+// are written either way and a future filament feature can opt in
+// without renaming. See the lib's docblock for the full rationale.
 @group(1) @binding(0) var<uniform> cloud : CloudUniforms;
 
 struct PerVertex {
@@ -176,17 +175,13 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
   let hotTint  = vec3<f32>(0.85, 0.75, 1.0);  // bright, near-white-violet spine
   let tint = mix(baseTint, hotTint, in.density);
 
-  let alpha = edgeFade * 0.6 * densityBoost * u.intensityScale;
-
-  // Per-cloud fade-in (opacity uniform written each frame from JS).  We
-  // delegate to 'applyCloudFade' (lib/cloudFade.wesl) so points.wesl and
-  // filaments.wesl share the exact alpha-only attenuation rule.  The
-  // helper takes a vec4 and returns a vec4 with only the alpha channel
-  // scaled — overkill for a scalar multiply, but the signature documents
-  // the 'RGB passes through, only alpha fades' invariant at the type
-  // level.  See the lib's docblock for why we share the helper but NOT a
-  // 'CloudUniforms' struct (filaments has no equivalent for points's
-  // 'sourceCode' pick-identity field).
-  let faded = applyCloudFade(vec4<f32>(tint, alpha), cloud.opacity);
-  return vec4<f32>(faded.rgb * faded.a, faded.a);  // pre-multiplied alpha
+  // Per-cloud fade-in (opacity uniform written each frame from JS).
+  // 'applyCloudFade' (lib/cloudFade.wesl) is the documented place that
+  // says 'never multiply opacity into RGB' — it's a scalar helper that
+  // folds opacity into 'alpha' alongside the other modulators here.
+  let alpha = applyCloudFade(
+    edgeFade * 0.6 * densityBoost * u.intensityScale,
+    cloud.opacity,
+  );
+  return vec4<f32>(tint * alpha, alpha);  // pre-multiplied alpha
 }
