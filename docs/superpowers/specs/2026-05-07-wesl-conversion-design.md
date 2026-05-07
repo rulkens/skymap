@@ -68,7 +68,7 @@ src/services/gpu/shaders/
 └── toneMap.fragment.wesl
 ```
 
-The split rule is **uniform**: every shader is broken into a vertex file, a fragment file, and a `.io.wesl` file containing the V→F interpolant struct + uniform layouts that both stages import. `points` is a special case with two fragment variants (color + pick) sharing a vertex file. The uniformity costs slightly more files for the small shaders (`filaments`, `toneMap`, `disks`) where a single file would be navigable, but it pays off in predictability — every renderer's TS file imports the same shape (`<name>.vertex.wesl?link` + `<name>.fragment.wesl?link`), and the V→F interpolant contract for every shader has a single canonical source.
+The split rule is **uniform**: every shader is broken into a vertex file, a fragment file, and a `.io.wesl` file containing the V→F interpolant struct + uniform layouts that both stages import. `points` is a special case with two fragment variants (color + pick) sharing a vertex file. The uniformity costs slightly more files for the small shaders (`filaments`, `toneMap`, `disks`) where a single file would be navigable, but it pays off in predictability — every renderer's TS file imports the same shape (`<name>.vertex.wesl?static` + `<name>.fragment.wesl?static`), and the V→F interpolant contract for every shader has a single canonical source.
 
 ## Library modules
 
@@ -101,17 +101,19 @@ The "one function per file" rule applies specifically to `lib/math/`. The other 
 
 ## Tooling
 
-- Add `wesl-plugin` as a devDependency. Wire it into `vite.config.ts` alongside the existing React + WebGPU type plugins. The plugin registers a `?link` import suffix that runs the WESL linker at build time and returns the linked WGSL string — semantically equivalent to today's `?raw` import, but with imports resolved.
-- Add `src/@types/wesl.d.ts` mirroring the existing `wgsl.d.ts`, declaring `*.wesl?link` as resolving to `string`.
+- Add `wesl` and `wesl-plugin` as devDependencies (pinned to `0.7.x` — the package is sub-1.0 and we want predictable rebuilds). Wire `wesl-plugin` into `vite.config.ts`. The plugin registers a `?static` import suffix that runs the WESL linker at build time and returns the linked WGSL string — semantically equivalent to today's `?raw` import, but with imports resolved.
+- Add a `wesl.toml` at the repo root configuring the resolution root to `src/services/gpu/shaders/`, since the wesl-plugin default of `./shaders/` doesn't match this project's layout.
+- Add `src/@types/wesl.d.ts` mirroring the existing `wgsl.d.ts`, declaring `*.wesl?static` as resolving to `string`.
 - Rename `.wgsl` → `.wesl` across `src/services/gpu/shaders/`. Because WESL is a strict superset, no shader content changes are required for the rename itself — the build keeps producing identical pipelines until imports are added.
-- Each renderer's TS file changes one line: `import shader from './shaders/foo.wgsl?raw'` becomes `import shader from './shaders/foo.wesl?link'`. The shape (string) is unchanged. Renderers that split into vertex/fragment modules go from one import to two, and `device.createRenderPipeline` is updated to pass two `GPUShaderModule`s — which matches WebGPU's native pipeline shape (vertex and fragment have always been separate fields; today both happen to point at the same module).
+- Each renderer's TS file changes one line: `import shader from './shaders/foo.wgsl?raw'` becomes `import shader from './shaders/foo.wesl?static'`. The shape (string) is unchanged. Renderers that split into vertex/fragment modules go from one import to two, and `device.createRenderPipeline` is updated to pass two `GPUShaderModule`s — which matches WebGPU's native pipeline shape (vertex and fragment have always been separate fields; today both happen to point at the same module).
+- Inside `.wesl` files, imports use WESL's `::` path syntax (not TypeScript brace syntax): `import lib::math::saturate;` makes `saturate` available as a top-level identifier. Paths are resolved from the configured root (`src/services/gpu/shaders/`), so `lib::math::saturate` maps to `src/services/gpu/shaders/lib/math/saturate.wesl`.
 
 ## Migration plan (15 tasks)
 
 Each task is independently shippable. The build stays green throughout, the existing 590+ test suite stays green, and every shader-touching task ends with a manual visual sanity check on the running dev server before being marked complete (per the `wgsl-meticulous` project convention — shader edits never ship on confidence alone).
 
-1. **Tooling bootstrap.** Add `wesl-plugin` + Vite config + `wesl.d.ts`. Convert `toneMap.wgsl` → `toneMap.wesl`, switch the `toneMapPass.ts` import from `?raw` to `?link`. Smoke-test: build, dev HMR, sourcemap line numbers in browser errors. If sourcemaps are broken, decide here whether to live with it or fall back to a hand-rolled Vite plugin around `wesl-js`'s linker.
-2. **Bulk rename.** The remaining 6 shaders renamed `.wgsl` → `.wesl`, all `?raw` imports switched to `?link`. No content changes. Visual diff: nothing.
+1. **Tooling bootstrap.** Add `wesl` + `wesl-plugin` + Vite config + `wesl.toml` + `wesl.d.ts`. Convert `toneMap.wgsl` → `toneMap.wesl`, switch the `toneMapPass.ts` import from `?raw` to `?static`. Smoke-test: build, dev HMR, sourcemap line numbers in browser errors. Document the actual sourcemap behaviour in this commit so the rest of the plan can rely on it (per the research, expect sourcemaps **not** to survive into Chrome's WGSL compiler errors — mitigation is naming-discipline + a dev-mode log of the linked WGSL alongside any compile error).
+2. **Bulk rename.** The remaining 6 shaders renamed `.wgsl` → `.wesl`, all `?raw` imports switched to `?static`. No content changes. Visual diff: nothing.
 3. **Extract `lib/math/`.** Create the six single-function files. Replace inline `clamp(x, 0, 1)` with `saturate(x)` in shaders that already use it; replace the 2D rotation pattern in milkyWay with `rot2`. Constants pulled out into `constants.wesl`. Tests stay green; visual: identical.
 4. **Extract `lib/camera.wesl`.** Replace each renderer's hand-rolled view/proj math with imports. One sub-commit per renderer to keep diffs reviewable. The camera uniform layout changes per renderer because some have additional renderer-specific fields — those move into a renderer-local struct that *contains* `CameraUniforms` rather than duplicating its fields.
 5. **Extract `lib/billboard.wesl`.** Replace the unit-quad expansion + screen-space-sizing logic in `points`, `quads`, `disks`, `proceduralDisks`. Each replacement is mechanical; the win is removing the per-renderer subtle variations.
@@ -124,7 +126,7 @@ Each task is independently shippable. The build stays green throughout, the exis
 12. **Extract `lib/util.wesl`.** Consolidates noise, ray-sphere, galactic-frame, sRGB, and pick-encode utilities pulled out of `milkyWayImpostor`, `toneMap`, and `points` (the pick path).
 13. **Split `points` into 4 files.** `points.io.wesl` (shared structs), `points.vertex.wesl` (shared `vs`), `points.color.fragment.wesl` (`fs` for `pointRenderer`), `points.pick.fragment.wesl` (`fsPick` for `pickRenderer`). `pointRenderer.ts` and `pickRenderer.ts` each import their respective vertex+fragment pair. This replaces the planned `@if(PICK)` approach with a cleaner two-file split — no conditional compilation needed.
 14. **Split `milkyWayImpostor` into 3 files.** `milkyWayImpostor.io.wesl`, `milkyWayImpostor.vertex.wesl`, `milkyWayImpostor.fragment.wesl`. The fragment file is where most of the existing 774 lines end up (procedural galaxy, ray-sphere, noise) — but with `lib/util.wesl` already extracted in task 12, the file is dominated by genuine renderer-specific code rather than reusable primitives.
-15. **Split remaining 5 shaders into 3 files each.** `disks`, `filaments`, `proceduralDisks`, `quads`, `toneMap` each get a `.io.wesl` + `.vertex.wesl` + `.fragment.wesl` triple. Each of the five splits is mechanical and small (the original files are 138–258 lines), so they're bundled into a single sweep with one sub-commit per renderer. Each renderer's TS file gains one extra `?link` import.
+15. **Split remaining 5 shaders into 3 files each.** `disks`, `filaments`, `proceduralDisks`, `quads`, `toneMap` each get a `.io.wesl` + `.vertex.wesl` + `.fragment.wesl` triple. Each of the five splits is mechanical and small (the original files are 138–258 lines), so they're bundled into a single sweep with one sub-commit per renderer. Each renderer's TS file gains one extra `?static` import.
 
 ## Risks
 
