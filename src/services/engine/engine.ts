@@ -103,12 +103,9 @@ import { computeScaleInfo } from './scaleBar';
 // The legacy load-orchestration surface (`loadAllClouds`, `reloadSource`,
 // `loadFilaments`, `buildSyntheticFallback`, `LoadEvent`) lived in the
 // now-deleted `cloudLoader.ts`.  Tasks 9 and 10 ported every runtime
-// call site to the AssetSlot machinery; Task 12 (this file) finished
-// the cleanup by deleting cloudLoader outright.  The `CloudSource`
-// discriminator type — used here to tag the first-arrival cloud for
-// the camera framing path — moved to `src/data/cloudSource.ts` so the
-// engine no longer imports anything from a load-orchestration module.
-import type { CloudSource } from '../../data/cloudSource';
+// call site to the AssetSlot machinery; Task 12 finished the cleanup
+// by deleting cloudLoader outright.
+import { cloudSourceFor } from '../../data/cloudSource';
 import { createLoadProgressEmitter } from './loadProgressAggregator';
 import type { AssetSlot } from '../loading/types';
 import { createAssetSlot } from '../loading/AssetSlot';
@@ -991,264 +988,83 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // happening before the (potentially multi-second) fetch completes.
       cb.onStatusChange({ kind: 'loading' });
 
-      // ── Parallel multi-survey load via asset slots (Task 9) ──────────────
+      // ── Parallel multi-survey load via asset slots ────────────────────
       //
-      // Each survey now flows through its own `AssetSlot`.  Firing every
-      // slot's `load()` in parallel preserves the old `loadAllClouds`
-      // behaviour (concurrent fetches, fastest survey paints first) while
-      // gaining the slot's race-checked commit and per-slot lifecycle.
+      // Each survey flows through its own `AssetSlot`.  The slot's
+      // long-lived subscriber (wired at slot construction) handles
+      // upload + `clouds.set` + `onCloudReady` + `requestRender` on
+      // every transition to `ready` — so this block only has to fire
+      // the loads and gate boot on "every slot has settled at least
+      // once" before computing the camera bbox.
       //
-      // **First-arrival camera framing.**  The first slot to reach `ready`
-      // owns the camera bbox snapshot — same rule as the old loader, for
-      // the same reason: 2MRS at 2 MB lands long before GLADE at ~96 MB
-      // on a typical connection, so we frame immediately on whatever
-      // shows up first rather than staring at default-zoom blackness.
-      // Subsequent clouds expand the bbox via the for-loop further down
-      // (so SDSS-deep galaxies don't clip when 2MRS framed first), but
-      // the framing target/distance is fixed once.
+      // **Why gate on all-settled rather than first-arrival?**  The
+      // bbox loop below iterates `state.sources.clouds` to size the
+      // camera's far plane.  If we framed on whichever survey arrived
+      // first (typically 2MRS at ~2 MB / ~100 Mpc), GLADE's distant
+      // galaxies (out to ~1.5 Gpc) would land outside the frustum and
+      // never render — perceptually "the far plane has come closer".
       //
-      // `firstResult` carries a `cloudSource` discriminator string —
-      // legacy of `cloudLoader`'s `'sdss.bin'`/`'2mrs.bin'`/etc.  We
-      // build it via a tiny inline mapper below to avoid touching
-      // cloudLoader (which Task 12 deletes outright).
-      let firstResult: { source: Source; cloud: PointCloud; cloudSource: CloudSource } | null =
-        null;
-
-      const cloudSourceFor = (s: Source): CloudSource => {
-        switch (s) {
-          case Source.SDSS:
-            return 'sdss.bin';
-          case Source.TwoMRS:
-            return '2mrs.bin';
-          case Source.Glade:
-            return 'glade.bin';
-          case Source.Famous:
-            return 'famous.bin';
-          default:
-            return 'synthetic';
-        }
-      };
-
-      // Two boot-time signals — both must resolve before camera framing.
-      //
-      // ### `firstArrivalPromise` — "we have a first cloud to point at"
-      //
-      // Resolves the moment any cloud — real or synthetic fallback —
-      // produces the first non-empty `PointCloud` and populates
-      // `firstResult`.  Two callers race to populate it (the point-slot
-      // first-arrival subscriber + the synthetic-fallback subscriber);
-      // whichever wins owns the camera-target source label.
-      //
-      // ### `allArrivalsPromise` — "every survey has settled at least once"
-      //
-      // Resolves when ALL four point slots have transitioned out of
-      // `loading`/`committing` at least once (ready OR error).  This is
-      // load-bearing for the **bbox computation** further down: that loop
-      // iterates `state.sources.clouds` to find the largest axis-aligned
-      // extent across every loaded survey, and we need every survey
-      // present (or definitively absent) before computing.  Without this
-      // gate, a fast survey (typically 2MRS, ~2 MB) frames the camera
-      // against its own ~100 Mpc extent and the much-later-arriving
-      // GLADE's distant galaxies fall outside the frustum — manifesting
-      // visually as "the far plane has come closer."  This was the
-      // primary regression of the cloudLoader → AssetSlot rework before
-      // this gate was added.
-      //
-      // Why two promises (rather than one all-arrivals signal)?  The
-      // synthetic-fallback path needs `firstArrivalPromise` to fire
-      // AFTER its async upload completes — without it, camera framing
-      // would run before `firstResult` is populated and crash on the
-      // null check.  `allArrivalsPromise` resolves on the SETTLE event
-      // (synchronous with the slot's state transition), which is
-      // earlier.  Awaiting both via `Promise.all` collapses the wait
-      // into one expression while preserving each signal's semantics.
-      let resolveFirstArrival: (() => void) | null = null;
-      const firstArrivalPromise = new Promise<void>((resolve) => {
-        resolveFirstArrival = resolve;
-      });
-
-      // Counter-driven resolver for `allArrivalsPromise`.  Each of the
-      // four point slots gets ONE settle counted (ready OR error,
-      // whichever first) — re-readies from later tier swaps don't bump
-      // the counter.  The `counted` closure flag is the per-slot
-      // de-dupe; we self-unsubscribe on first settle to avoid carrying
-      // a useless subscriber for the rest of the engine's life.
-      //
-      // The subscriber loop runs INSIDE the Promise executor so the
-      // resolver function is in scope without a `let | null` dance —
-      // TypeScript's control-flow narrowing through closure-mutated
-      // bindings is unreliable, and threading `resolve` directly into
-      // the loop produces tighter typing.
-      const ALL_POINT_SOURCES = [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous];
+      // **Why track `pointsAnyReady` separately?**  The synthetic
+      // fallback fires only when every *real* survey is empty/errored.
+      // Famous is curated (~150 entries) and excluded from the
+      // success/failure check both ways: a Famous-only success
+      // shouldn't suppress synthetic, and a Famous-only failure
+      // shouldn't trigger it.
+      const REAL_POINT_SOURCES = [Source.SDSS, Source.TwoMRS, Source.Glade];
+      const ALL_POINT_SOURCES = [...REAL_POINT_SOURCES, Source.Famous];
+      let pointsAnyReady = false;
+      let firstReadySource: Source | null = null;
       const allArrivalsPromise = new Promise<void>((resolve) => {
-        let arrivedCount = 0;
+        let arrived = 0;
         for (const source of ALL_POINT_SOURCES) {
           const slot = state.assetSlots.points.get(source);
           if (!slot) {
-            // Slot wasn't minted (shouldn't happen with current init order,
-            // but defensive).  Count as already-arrived so the gate doesn't
-            // stall forever.
-            arrivedCount += 1;
-            if (arrivedCount === ALL_POINT_SOURCES.length) resolve();
+            if (++arrived === ALL_POINT_SOURCES.length) resolve();
             continue;
           }
           let counted = false;
           const unsub = slot.subscribe((s) => {
             if (counted) return;
+            if (s.kind === 'ready' && s.value.count > 0) {
+              if (firstReadySource === null) firstReadySource = source;
+              if (REAL_POINT_SOURCES.includes(source)) pointsAnyReady = true;
+            }
             if (s.kind === 'ready' || s.kind === 'error') {
               counted = true;
-              arrivedCount += 1;
-              if (arrivedCount === ALL_POINT_SOURCES.length) resolve();
+              if (++arrived === ALL_POINT_SOURCES.length) resolve();
               unsub();
             }
           });
         }
       });
 
-      // First-arrival capture across all four point slots.  Each slot
-      // subscribes once; the very first non-empty `ready` wins and
-      // unsubscribes itself (the long-lived subscriber wired up at
-      // slot construction handles per-tier re-fetches independently).
-      // No `loadedCount` is tracked here — the synthetic fallback
-      // below owns that bookkeeping via its own dedicated subscriber.
-      for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous]) {
-        const slot = state.assetSlots.points.get(source);
-        if (!slot) continue;
-        const unsub = slot.subscribe((s) => {
-          if (s.kind === 'ready' && s.value.count > 0 && firstResult === null) {
-            firstResult = {
-              source,
-              cloud: s.value,
-              cloudSource: cloudSourceFor(source),
-            };
-            resolveFirstArrival?.();
-            unsub();
-          }
-        });
-      }
-
-      // ── Synthetic fallback subscriber ───────────────────────────────────
-      //
-      // If every *real* fetch fails (offline, no .bin files built, decode
-      // error), the user still deserves *something* on screen.  The
-      // pre-Task-10 implementation gated this on a synchronous
-      // `loadedCount === 0` check after `Promise.all(pointSettlePromises)`;
-      // Task 10 replaces that with a clean multi-slot subscriber so the
-      // synthetic-trigger logic lives in one place rather than threaded
-      // through the boot orchestration.
-      //
-      // **Why exclude Famous?**  Famous is curated (~150 entries) — its
-      // mere presence isn't proof "the sky has data", because the user
-      // really wants the survey context behind it.  Conversely, "Famous
-      // failed but SDSS/2MRS/GLADE delivered" should *not* trigger
-      // synthetic.  So Famous is excluded both ways: it neither suppresses
-      // nor triggers the fallback.
-      //
-      // **Once-per-engine guard.**  `syntheticFired` ensures the upload
-      // happens at most once per engine lifetime.  The subscriber stays
-      // attached after firing — cheap (a no-op closure check on every
-      // future state transition) and avoids the bookkeeping of
-      // unsubscribing three handles atomically.
-      //
-      // **Camera framing handoff.**  The synthetic upload's `.then`
-      // populates `firstResult` and resolves `firstArrivalPromise` if
-      // every real slot was empty/errored — so the camera-framing code
-      // below proceeds normally on top of the procedural cloud.
-      let syntheticFired = false;
-      let pointsSettled = 0;
-      let pointsAnyReady = false;
-      const syntheticPointSlots = [Source.SDSS, Source.TwoMRS, Source.Glade];
-      for (const source of syntheticPointSlots) {
-        const slot = state.assetSlots.points.get(source);
-        if (!slot) continue;
-        slot.subscribe((s) => {
-          if (s.kind === 'ready' && s.value.count > 0) pointsAnyReady = true;
-          if (s.kind === 'ready' || s.kind === 'error') {
-            pointsSettled += 1;
-            if (
-              pointsSettled === syntheticPointSlots.length &&
-              !pointsAnyReady &&
-              !syntheticFired
-            ) {
-              syntheticFired = true;
-              const synthetic = generateSyntheticCloud(100_000);
-              const renderer = state.gpu.renderer;
-              if (!renderer) return;
-              renderer
-                .upload(Source.Synthetic, synthetic)
-                .then(() => {
-                  state.sources.clouds.set(Source.Synthetic, synthetic);
-                  cb.onCloudReady?.(Source.Synthetic, synthetic.count);
-                  // Populate firstResult so the camera-framing await
-                  // unblocks even when every real survey was empty.
-                  if (firstResult === null) {
-                    firstResult = {
-                      source: Source.Synthetic,
-                      cloud: synthetic,
-                      cloudSource: 'synthetic',
-                    };
-                    resolveFirstArrival?.();
-                  }
-                  state.subsystems.scheduler.requestRender();
-                })
-                .catch((err) => {
-                  console.error('[engine] synthetic upload failed:', err);
-                });
-            }
-          }
-        });
-      }
-
-      // Fire every slot's first load.  Each slot's own subscriber (set up
-      // at construction) handles the upload, `clouds.set`, `onCloudReady`
-      // echo, and `requestRender()` wake-up — so this loop is a thin
-      // dispatch.  The race-checked commit chain inside the slot owns
-      // the equivalent of the old `uploadChain` promise: it serialises
-      // commits per-slot and the cross-slot ordering naturally falls out
-      // of each fetch's resolution time.  See `AssetSlot.ts` for the
-      // race-fix details.
-      for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous]) {
+      for (const source of ALL_POINT_SOURCES) {
         state.assetSlots.points.get(source)?.load({ source, tier: state.sources.tier });
       }
-
-      // Filaments load exactly once at boot — never on tier change.  See
-      // `filamentFetcher.ts` for the rationale.  The slot's subscriber
-      // handles the upload, the `onFilamentsReady` echo, and the
-      // render wake-up.
+      // Filaments load exactly once at boot — never on tier change.
+      // See `filamentFetcher.ts` for the rationale.
       state.assetSlots.filaments?.load({ tier: state.sources.tier });
 
-      // Wait for BOTH:
-      //   - `firstArrivalPromise`: a first cloud (real or synthetic) is in
-      //     `state.sources.clouds` and has populated `firstResult`.
-      //   - `allArrivalsPromise`: every point slot has settled at least
-      //     once, so the bbox loop below sees every available survey.
-      //
-      // Awaiting only `firstArrivalPromise` (the original Task 10 shape)
-      // caused the "far plane has come closer" bug: bbox was computed
-      // against whichever survey arrived first, and later-arriving deep
-      // surveys (GLADE) fell outside the camera frustum.
-      await Promise.all([firstArrivalPromise, allArrivalsPromise]);
+      await allArrivalsPromise;
 
-      // If we somehow have no first result *and* no fallback (e.g. the
-      // engine was destroyed mid-load), bail before touching the camera.
-      //
-      // **Why the local `firstCloud` binding?**  TypeScript's
-      // control-flow narrowing can't track mutations to a `let` binding
-      // performed inside subscriber callbacks — every reference below
-      // would otherwise be typed as `never` after the null guard.
-      // Capturing the narrowed value into a `const` snapshot lets the
-      // rest of this scope read concrete fields off it without
-      // non-null-assertions.
-      if (firstResult === null) return;
-      // Re-typed via an explicit annotation rather than `const x = firstResult`
-      // because TS's narrowing of a `let` binding is undone by every
-      // intervening callback that *could* reassign it (we have several
-      // subscribers above that write through `firstResult`).  An
-      // explicit non-nullable annotation pins the type for the remainder
-      // of this scope without resorting to a non-null assertion at every
-      // field access.
-      const firstCloud: { source: Source; cloud: PointCloud; cloudSource: CloudSource } =
-        firstResult;
+      // Synthetic fallback — every real survey is empty/errored.  Drop
+      // in a 100k procedural cloud so the user sees *something*.
+      // Inline (rather than a subscriber) because boot is the only
+      // place this can fire: tier swaps don't re-enter init, and
+      // `pointsAnyReady` doesn't reset.
+      if (!pointsAnyReady && state.gpu.renderer) {
+        const synthetic = generateSyntheticCloud(100_000);
+        await state.gpu.renderer.upload(Source.Synthetic, synthetic);
+        state.sources.clouds.set(Source.Synthetic, synthetic);
+        cb.onCloudReady?.(Source.Synthetic, synthetic.count);
+        state.subsystems.scheduler.requestRender();
+        firstReadySource = Source.Synthetic;
+      }
+
+      // Bail if no clouds reached the GPU (engine torn down mid-load,
+      // or synthetic upload failed).  Without at least one cloud the
+      // bbox computation below has nothing to size the camera against.
+      if (state.sources.clouds.size === 0) return;
 
       // Build the pick renderer. It shares the same vertex/uniform buffers as
       // the visual renderer — no extra GPU memory for point data.
@@ -1275,28 +1091,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // ── Camera auto-framing ──────────────────────────────────────────────
       //
-      // Frame to whichever cloud arrived first (see comment above).  Each
-      // survey has a very different effective depth — 2MRS ~250 Mpc, GLADE
-      // ~1.5 Gpc, SDSS ~3 Gpc — and using the first arrival's bbox tends
-      // to give the closest "natural" view to start exploring from, with
-      // the auto-LOD kicking surveys in/out as the user zooms.
-      //
-      // `bbox` = max abs of any coordinate component across every cloud
-      // loaded so far (cheap; no sqrt).  We deliberately use the LARGEST
-      // bbox seen so the far plane covers every survey's outermost galaxy
-      // — otherwise SDSS's deep galaxies would clip when 2MRS framed first.
-      //
-      // `computeInitialCamera` (cameraFraming.ts) turns the bbox + FOV
-      // into a target/distance/yaw/pitch/near/far snapshot, including the
-      // global zoom-envelope clamp and the empirical INITIAL_FRAME_FACTOR.
-      let bbox = maxAbsCoord(firstCloud.cloud);
+      // bbox = max abs coordinate across every loaded cloud.  Drives
+      // the camera's far plane — must cover the deepest survey
+      // (typically GLADE at ~1.5 Gpc).  `computeInitialCamera`
+      // (cameraFraming.ts) turns it into target/distance/yaw/pitch
+      // /near/far including the zoom-envelope clamp.
+      let bbox = 0;
       for (const c of state.sources.clouds.values()) {
-        const cb2 = maxAbsCoord(c);
-        if (cb2 > bbox) bbox = cb2;
+        const b = maxAbsCoord(c);
+        if (b > bbox) bbox = b;
       }
       const fovYRad = (Math.PI / 180) * 60;
       const initialCam = computeInitialCamera({ bbox, fovYRad });
-      const source: CloudSource = firstCloud.cloudSource;
 
       const cam = createOrbitCamera({
         target: initialCam.target,
@@ -1515,7 +1321,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // loading after this point are reflected via `onCloudReady`, not via
       // an additional `onStatusChange` — the status bar's job is "we're up",
       // not "live counter".
-      cb.onStatusChange({ kind: 'ready', count: renderer.totalCount(), source });
+      cb.onStatusChange({
+        kind: 'ready',
+        count: renderer.totalCount(),
+        source: cloudSourceFor(firstReadySource ?? Source.Synthetic),
+      });
 
       // ── Seed settings callbacks ───────────────────────────────────────────
       //

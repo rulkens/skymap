@@ -25,3 +25,27 @@
  * live there.
  */
 export type CloudSource = 'sdss.bin' | '2mrs.bin' | 'glade.bin' | 'famous.bin' | 'synthetic';
+
+import { Source } from './sources';
+
+/**
+ * Map a `Source` enum value to its `CloudSource` filename label.
+ *
+ * Single canonical mapping — every consumer that needs the
+ * UI-facing source string (engine status, dev panel, status bar)
+ * goes through here so the filename literals don't drift.
+ */
+export function cloudSourceFor(source: Source): CloudSource {
+  switch (source) {
+    case Source.SDSS:
+      return 'sdss.bin';
+    case Source.TwoMRS:
+      return '2mrs.bin';
+    case Source.Glade:
+      return 'glade.bin';
+    case Source.Famous:
+      return 'famous.bin';
+    default:
+      return 'synthetic';
+  }
+}
