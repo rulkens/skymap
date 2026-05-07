@@ -71,6 +71,16 @@ import package::lib::camera::worldToClip;
 // the orientation math is intentionally NOT pulled into this lib.
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::quadUv;
+// Disk-plane axis math (PA + inclination → world-space major/minor basis)
+// is shared with 'proceduralDisks.wesl' via 'lib/orientation.wesl'. The
+// inline derivation that used to live in this file's vs() body — the
+// los/north/east/major/minor chain — is now the lib's 'diskAxes' fn,
+// byte-equivalent for disks since the lib standardised on the wider
+// '|dot(north, los)| > 0.99' (~8°) pole-fallback threshold that disks
+// already used. See 'lib/orientation.wesl' for the camera-independence
+// invariant + the pole-degeneracy discussion.
+import package::lib::orientation::DiskAxes;
+import package::lib::orientation::diskAxes;
 
 struct Uniforms {
   cam: CameraUniforms,
@@ -121,61 +131,20 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   let paDeg = instance.orient.y;
   let paRad = paDeg * 3.14159265 / 180.0;
 
-  // ── Line of sight ────────────────────────────────────────────────────
+  // ── Disk-plane basis (PA + inclination → world-space major / minor) ─
   //
-  // Earth (the observer) is at world origin in this coordinate system —
-  // the build pipeline's 'raDecZToCartesian' places galaxies relative
-  // to that point.  losDir is therefore the direction from Earth to
-  // the galaxy.  Note: this is NOT the camera direction — the disk's
-  // orientation must be camera-independent, otherwise orbiting would
-  // make the disk visibly rotate (which it shouldn't).
-  let losDir = normalize(center);
-
-  // ── Sky tangent basis (north / east at the galaxy's position) ────────
-  //
-  // The celestial north pole is at Dec = +90°, which the build
-  // pipeline maps to world-space (0, 0, 1).  Project that vector onto
-  // the plane perpendicular to losDir to get the in-sky "north"
-  // direction at the galaxy's position.
-  //
-  // Singularity: when the galaxy is within ~8° of the celestial pole
-  // (|losDir.z| > 0.99), 'northPole - dot(...) * losDir' shrinks to
-  // near-zero and normalize() amplifies floating-point noise.  Fall
-  // back to seeding with world-y in that case — for the handful of
-  // real galaxies that close to the pole the resulting PA is still
-  // well-defined, just measured against a different (consistent)
-  // reference direction.
-  let northPole = vec3<f32>(0.0, 0.0, 1.0);
-  let nearPole = abs(dot(northPole, losDir)) > 0.99;
-  let seed = select(northPole, vec3<f32>(0.0, 1.0, 0.0), nearPole);
-  let north_proj = normalize(seed - dot(seed, losDir) * losDir);
-  let east_proj  = cross(north_proj, losDir);
-
-  // ── Major axis on the sky ────────────────────────────────────────────
-  //
-  // Astronomical PA is measured east of north — increasing PA rotates
-  // the major axis from north toward east.
-  let cs = cos(paRad);
-  let sn = sin(paRad);
-  let major = north_proj * cs + east_proj * sn;
-
-  // ── Tilt the disk's true minor axis out of the sky plane ─────────────
-  //
-  // For a face-on galaxy (axisRatio = 1, inclination i = 0°), the disk
-  // minor axis lies entirely in the sky plane perpendicular to major.
-  // For an edge-on galaxy (axisRatio = 0, i = 90°), the disk minor
-  // axis points along the line of sight.  Interpolate using cos(i) =
-  // axisRatio:
-  //
-  //   minor_3d = minor_in_sky · cos(i) + losDir · sin(i)
-  //
-  // This is the disk's REAL minor axis in 3D.  When projected onto the
-  // sky plane, its sky-projection length is cos(i) = axisRatio — which
-  // matches the observed b/a, by definition.
-  let minor_in_sky = cross(losDir, major);
+  // The full derivation — line-of-sight from Earth-at-origin, sky-tangent
+  // (north, east) frame with pole fallback, PA-east-of-north rotation,
+  // and inclination tilt of the minor axis out of the sky plane — lives
+  // in 'lib/orientation.wesl'. See its docblock for the camera-
+  // independence invariant and the ~8°-from-pole degeneracy fallback.
+  // 'axisRatio' is clamped at the call site (above) BEFORE we feed it
+  // through as cosI, because the lib intentionally doesn't re-clamp.
   let cosI = axisRatio;
   let sinI = sqrt(max(0.0, 1.0 - cosI * cosI));
-  let minor_3d = minor_in_sky * cosI + losDir * sinI;
+  let axes = diskAxes(center, paRad, cosI, sinI);
+  let major = axes.major;
+  let minor_3d = axes.minor;
 
   // Place the corner in world space using (major, minor_3d) as the
   // disk's basis.  No squash needed — the basis vectors are already
