@@ -1,3 +1,9 @@
+import package::lib::tonemap::applyLinear;
+import package::lib::tonemap::applyReinhard;
+import package::lib::tonemap::applyAsinh;
+import package::lib::tonemap::applyGamma2;
+import package::lib::tonemap::applyAces;
+
 // Fullscreen tone-map post-process — five selectable curves.
 //
 // Uses the "covering triangle" trick: a single triangle whose three
@@ -53,59 +59,6 @@ fn vs(@builtin(vertex_index) vi: u32) -> VSOut {
   out.clip = vec4<f32>(x * 2.0 - 1.0, 1.0 - y * 2.0, 0.0, 1.0);
   out.uv = vec2<f32>(x, y);
   return out;
-}
-
-// Linear / Clamp — no tone map.  Saturates at 1.0.
-fn applyLinear(c: vec3<f32>) -> vec3<f32> {
-  return clamp(c, vec3<f32>(0.0), vec3<f32>(1.0));
-}
-
-// Reinhard-extended per channel: c * (1 + c/W²) / (1 + c).
-// Reaches exactly 1.0 at the whitepoint W; above W the formula grows
-// unboundedly toward c/W², so we clamp for safety (matches every other
-// curve here and avoids a bgra8unorm flat-white blow-out at outlier
-// peaks beyond the configured whitepoint).
-fn applyReinhard(c: vec3<f32>, wsq: f32) -> vec3<f32> {
-  let y = c * (vec3<f32>(1.0) + c / vec3<f32>(wsq)) / (vec3<f32>(1.0) + c);
-  return clamp(y, vec3<f32>(0.0), vec3<f32>(1.0));
-}
-
-// Asinh stretch (Lupton-style): asinh(k·c) / asinh(k).
-// Reaches exactly 1.0 at c=1; for c>1 grows logarithmically and
-// (eventually) past 1.  We clamp at the end so an outlier peak never
-// pushes a swap-chain pixel >1 — same safety contract as every other
-// curve in this file.
-fn applyAsinh(c: vec3<f32>, k: f32) -> vec3<f32> {
-  // WGSL has no vector asinh — hand-vectorise.
-  let denom = asinh(k);
-  let y = vec3<f32>(
-    asinh(k * c.x) / denom,
-    asinh(k * c.y) / denom,
-    asinh(k * c.z) / denom,
-  );
-  return clamp(y, vec3<f32>(0.0), vec3<f32>(1.0));
-}
-
-// Gamma 2.0 = sqrt of clamped input.  WGSL 'pow(c, 0.5)' works but
-// 'sqrt' is the dedicated intrinsic and slightly faster.
-fn applyGamma2(c: vec3<f32>) -> vec3<f32> {
-  return sqrt(clamp(c, vec3<f32>(0.0), vec3<f32>(1.0)));
-}
-
-// ACES filmic (Narkowicz 2015 closed-form approximation).  Lifts toe,
-// rolls off shoulder, S-curves through midtone.  No exposure division
-// — caller handles that via the exposure multiplier above.
-fn applyAces(c: vec3<f32>) -> vec3<f32> {
-  let a = 2.51;
-  let b = 0.03;
-  let d = 2.43;
-  let e = 0.59;
-  let f = 0.14;
-  return clamp(
-    (c * (a * c + vec3<f32>(b))) / (c * (d * c + vec3<f32>(e)) + vec3<f32>(f)),
-    vec3<f32>(0.0),
-    vec3<f32>(1.0),
-  );
 }
 
 @fragment
