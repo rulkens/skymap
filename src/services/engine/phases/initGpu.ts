@@ -72,7 +72,7 @@
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { PointRenderer } from '../../gpu/pointRenderer';
-import { createPostProcess } from '../../gpu/postProcess';
+import { createPostProcess } from '../../gpu/passes/postProcess';
 import { QuadRenderer } from '../../gpu/quadRenderer';
 import { DiskRenderer } from '../../gpu/diskRenderer';
 import { ProceduralDiskRenderer } from '../../gpu/proceduralDiskRenderer';

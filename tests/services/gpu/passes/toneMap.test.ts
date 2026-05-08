@@ -19,7 +19,7 @@ import {
   asinhStretch,
   gamma2,
   acesFilmic,
-} from '../../../src/services/gpu/postProcess';
+} from '../../../../src/services/gpu/passes/postProcess';
 
 const ALL_CURVES = [linearClamp, reinhardExtended, asinhStretch, gamma2, acesFilmic];
 

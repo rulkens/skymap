@@ -93,7 +93,7 @@ import type { Source } from '../../../data/sources';
 import type { BiasMode } from '../../../data/biasMode';
 import type { ToneMapCurve } from '../../../data/toneMapCurve';
 import type { PointRenderer } from '../../gpu/pointRenderer';
-import type { PostProcess } from '../../gpu/postProcess';
+import type { PostProcess } from '../../gpu/passes/postProcess';
 import type { QuadRenderer } from '../../gpu/quadRenderer';
 import type { DiskRenderer } from '../../gpu/diskRenderer';
 import type { MilkyWayRenderer } from '../../gpu/milkyWayRenderer';

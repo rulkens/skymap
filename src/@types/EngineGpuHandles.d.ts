@@ -34,7 +34,7 @@
  */
 
 import type { PointRenderer } from '../services/gpu/pointRenderer';
-import type { PostProcess } from '../services/gpu/postProcess';
+import type { PostProcess } from '../services/gpu/passes/postProcess';
 import type { createPickRenderer } from '../services/gpu/pickRenderer';
 import type { FilamentRenderer } from '../services/gpu/filamentRenderer';
 

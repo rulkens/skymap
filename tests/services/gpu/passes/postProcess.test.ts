@@ -23,7 +23,7 @@ import {
   asinhStretch,
   gamma2,
   acesFilmic,
-} from '../../../src/services/gpu/postProcess';
+} from '../../../../src/services/gpu/passes/postProcess';
 
 beforeAll(() => {
   // Same WebGPU global stubs the other GPU module tests use; mirror
