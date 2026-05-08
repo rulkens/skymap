@@ -5,7 +5,7 @@
  *
  * ## Why this exists
  *
- * Pre-Spec G the three renderers (`quadRenderer.ts`, `diskRenderer.ts`,
+ * Pre-Spec G the three renderers (`thumbnailRenderer.ts`, `diskRenderer.ts`,
  * `proceduralDiskRenderer.ts`) each carried a near-identical block of
  * WebGPU plumbing:
  *
@@ -45,7 +45,7 @@
  *
  * ## What consumers still own
  *
- *   - Their typed per-instance record (`QuadInstance`, `DiskInstance`,
+ *   - Their typed per-instance record (`ThumbnailInstance`, `DiskInstance`,
  *     `ProceduralDiskInstance`) and the serialization that packs it
  *     into a 12-float-per-instance `Float32Array`. The third vec4's
  *     four floats mean different things for each consumer — `extras`
@@ -55,14 +55,14 @@
  *     just be a typed dispatch, defeating the point.
  *   - Their public API surface, so call sites in the engine don't
  *     change. Each consumer factory returns its own type
- *     (`QuadRenderer` etc.) whose `draw` takes its typed instance
+ *     (`ThumbnailRenderer` etc.) whose `draw` takes its typed instance
  *     array and forwards a packed `Float32Array` here.
  *
  * ## Capacity strategies
  *
  *   - `fixed`: preallocate one `max * 48`-byte vertex buffer at
  *     construction. Each draw `writeBuffer`s into offset 0. Matches
- *     QuadRenderer + DiskRenderer, whose engine-side filters cap the
+ *     ThumbnailRenderer + DiskRenderer, whose engine-side filters cap the
  *     per-frame count at the atlas slot count (256). Over-capacity is
  *     a programming error in the engine; we don't truncate or guard.
  *   - `grow`: lazy first-allocation, regrow on overflow. Matches
@@ -91,7 +91,7 @@
  * impostors plus the Milky Way layer accumulate naturally in the HDR
  * target without any pass "covering up" the others. An earlier Quad
  * revision used premultiplied OVER and produced a fade-to-black bug
- * at thumbnail edges; see `quadRenderer.ts` history for the full
+ * at thumbnail edges; see `thumbnailRenderer.ts` history for the full
  * post-mortem.
  *
  * The factory accepts an `'alpha'` blend variant for forward
@@ -122,7 +122,7 @@ export const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
  *   bytes 92..95 : pxPerRad      f32          (or padding for disks)
  *
  * Total: 96 bytes. The `pxPerRad` slot is consumer-specific —
- * QuadRenderer + ProceduralDiskRenderer use it for pixel-radius
+ * ThumbnailRenderer + ProceduralDiskRenderer use it for pixel-radius
  * computation; DiskRenderer leaves it as zero padding. The factory
  * always writes whatever the caller passes in `draw`'s `pxPerRad`
  * (default 0), so consumers that don't care can simply omit it.
@@ -184,7 +184,7 @@ export type InstancedQuadConfig = {
    *  HDR offscreen `'rgba16float'`. */
   format: GPUTextureFormat;
   /** Visibility for the uniform binding. Defaults to `VERTEX` —
-   *  matches QuadRenderer + DiskRenderer. ProceduralDiskRenderer
+   *  matches ThumbnailRenderer + DiskRenderer. ProceduralDiskRenderer
    *  passes `VERTEX | FRAGMENT` to mirror its existing BGL even
    *  though the fragment doesn't actually read the uniform. The
    *  flag is preserved as-is to avoid silently changing the

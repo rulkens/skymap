@@ -32,7 +32,7 @@
  *
  * The bootstrap IIFE that *assigns* `frame = () => { runFrame(...) }`
  * stays in engine.ts because it captures the GPU device/context and the
- * renderer instances (`milkyWayRenderer`, `quadRenderer`, …) that
+ * renderer instances (`milkyWayRenderer`, `thumbnailRenderer`, …) that
  * `initGpu()` returns asynchronously.  Those instances flow through
  * `RunFrameDeps` rather than living on `EngineState` — see the
  * dep-vs-state rationale below.
@@ -40,7 +40,7 @@
  * ### Why deps are passed explicitly instead of lifted to EngineState
  *
  * Two reasons.  First, the IIFE-local renderers (`device`, `context`,
- * `milkyWayRenderer`, `filamentRenderer`, `quadRenderer`, `diskRenderer`)
+ * `milkyWayRenderer`, `filamentRenderer`, `thumbnailRenderer`, `diskRenderer`)
  * are *only* read by the frame body — promoting them to `state.gpu.*`
  * would widen `EngineState`'s contract for one consumer's convenience,
  * and every other reader of `EngineState` would have to null-check
@@ -75,7 +75,7 @@
  */
 
 import type { EngineCallbacks, EngineState } from '../../../@types';
-import type { QuadRenderer } from '../../gpu/renderers/quadRenderer';
+import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
 import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';
 import type { MilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
 import type { FilamentRenderer } from '../../gpu/renderers/filamentRenderer';
@@ -123,7 +123,7 @@ export type RunFrameDeps = {
   /** Filament renderer; instantiated inside the IIFE. */
   filamentRenderer: FilamentRenderer;
   /** Textured-quad renderer for galaxy thumbnails. */
-  quadRenderer: QuadRenderer;
+  thumbnailRenderer: ThumbnailRenderer;
   /** 3D-oriented disk renderer for large galaxies. */
   diskRenderer: DiskRenderer;
   /**
@@ -323,7 +323,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     context: deps.context,
     milkyWayRenderer: deps.milkyWayRenderer,
     filamentRenderer: deps.filamentRenderer,
-    quadRenderer: deps.quadRenderer,
+    thumbnailRenderer: deps.thumbnailRenderer,
     diskRenderer: deps.diskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
     settings: {

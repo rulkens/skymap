@@ -1,7 +1,7 @@
 /**
  * DiskRenderer — oriented 3D galaxy disks.
  *
- * Differs from QuadRenderer in two ways:
+ * Differs from ThumbnailRenderer in two ways:
  *   1. Each instance is tilted in 3D world space: the disk's normal points
  *      toward the camera by default (face-on), and is rotated around the
  *      line-of-sight axis by PA, then tilted by inclination angle
@@ -11,11 +11,11 @@
  *      (the disk silhouette IS the geometry, so the on-screen ellipse
  *      falls out of the projection naturally).
  *
- * Why a separate renderer instead of extending QuadRenderer? QuadRenderer
+ * Why a separate renderer instead of extending ThumbnailRenderer? ThumbnailRenderer
  * bakes screen-aligned billboarding into the vertex shader — corner offsets
  * are applied in CLIP space after viewProj. Tilting in 3D requires the
  * corners to be transformed in WORLD space and then projected, which is a
- * fundamentally different pipeline. Keeping QuadRenderer alive lets the
+ * fundamentally different pipeline. Keeping ThumbnailRenderer alive lets the
  * engine pick the screen-aligned thumbnail path for fallback orientations
  * (where tilting would be cosmetically misleading) and for galaxies still
  * loading their textures.
@@ -27,13 +27,13 @@
  *   orientation   vec4   axisRatio, positionAngleDeg, fadeAlpha, _
  *
  * Note: `fadeAlpha` lives in the third slot of the orientation vec4, NOT
- * in a fourth `extras` vec4 like QuadInstance. Keeping the layout to
- * three vec4s (48 bytes total) matches QuadInstance + ProceduralDiskInstance.
+ * in a fourth `extras` vec4 like ThumbnailInstance. Keeping the layout to
+ * three vec4s (48 bytes total) matches ThumbnailInstance + ProceduralDiskInstance.
  *
  * ## Why this is a thin wrapper post-Spec G
  *
  * Pipeline / BGL / uniform buffer / instance buffer plumbing now lives
- * in `instancedQuadRenderer.ts`, shared with the quad + procedural disk
+ * in `instancedQuadRenderer.ts`, shared with the thumbnail + procedural disk
  * renderers. This file owns: the consumer-facing `createDiskRenderer`
  * factory signature (preserved unchanged from Spec F), the
  * `DiskInstance → packed Float32Array` serialization, and the wrapper
@@ -61,7 +61,7 @@ export type DiskInstance = {
   /**
    * Per-frame fade multiplier in [0, 1]. Distance fade × load fade,
    * computed CPU-side by the engine and folded into the shader's final
-   * alpha output. See QuadInstance.d.ts for the underlying logic.
+   * alpha output. See ThumbnailInstance.d.ts for the underlying logic.
    */
   fadeAlpha: number;
 };
@@ -99,7 +99,7 @@ export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRen
     fragmentSource: fsCode,
     atlas: {},
     capacity: { kind: 'fixed', max: maxInstances },
-    // Galaxy disks are EMISSIVE — see quadRenderer.ts for the
+    // Galaxy disks are EMISSIVE — see thumbnailRenderer.ts for the
     // fade-to-black bug history that motivates additive over
     // premultiplied-OVER.
     blend: 'additive',

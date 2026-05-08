@@ -1,5 +1,5 @@
 /**
- * QuadRenderer — billboard quad pass for galaxy thumbnails.
+ * ThumbnailRenderer — billboard quad pass for galaxy thumbnails.
  *
  * Runs AFTER the existing point pass each frame. Each instance is one
  * textured quad whose center matches a galaxy and whose size is
@@ -42,29 +42,42 @@
  * instead of revealing the Milky Way underneath. Pure additive
  * sidesteps that entire reasoning.
  *
+ * ## Why the file is named for what it draws, not the GPU primitive
+ *
+ * Pre-rename this file was `quadRenderer.ts` — a name that described
+ * the GPU shape (a textured quad) rather than the purpose (galaxy
+ * thumbnails). Every other renderer in the fleet names its purpose:
+ * `diskRenderer` (galaxy disks), `proceduralDiskRenderer` (procedural
+ * disks), `milkyWayRenderer` (the Milky Way), `filamentRenderer`
+ * (cosmic filaments), `labelRenderer` (MSDF text labels). The shared
+ * pipeline factory `createInstancedQuadRenderer` keeps the GPU-shape
+ * name because it's deliberately purpose-agnostic infrastructure that
+ * three consumers share.
+ *
  * ## Why this is a thin wrapper post-Spec G
  *
  * The pipeline / BGL / uniform buffer / instance buffer plumbing now
  * lives in `instancedQuadRenderer.ts`, shared with disk + procedural
  * disk renderers. This file owns: the consumer-facing
- * `createQuadRenderer` factory signature (preserved unchanged from
- * Spec F), the `QuadInstance → packed Float32Array` serialization,
- * and the wrapper `draw(...)` that translates the engine's call
- * convention into the shared factory's `draw(args)` shape.
+ * `createThumbnailRenderer` factory signature (preserved unchanged
+ * from Spec F, only renamed from `createQuadRenderer`), the
+ * `ThumbnailInstance → packed Float32Array` serialization, and the
+ * wrapper `draw(...)` that translates the engine's call convention
+ * into the shared factory's `draw(args)` shape.
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { GpuContext, QuadInstance } from '../../../@types';
-import vsCode from '../shaders/quads/vertex.wesl?static';
-import fsCode from '../shaders/quads/fragment.wesl?static';
+import type { GpuContext, ThumbnailInstance } from '../../../@types';
+import vsCode from '../shaders/thumbnails/vertex.wesl?static';
+import fsCode from '../shaders/thumbnails/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
 /**
- * Public surface of the quad renderer. Mirrors the methods the
+ * Public surface of the thumbnail renderer. Mirrors the methods the
  * pre-factory `class QuadRenderer` exposed; consumers (engine,
  * thumbnail subsystem, frame body) see the identical shape.
  */
-export type QuadRenderer = {
+export type ThumbnailRenderer = {
   /**
    * Bind the atlas texture view. Must be called once after
    * `atlas.initTexture()`; the bind group can be reused across frames
@@ -80,7 +93,7 @@ export type QuadRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
-    instances: ReadonlyArray<QuadInstance>,
+    instances: ReadonlyArray<ThumbnailInstance>,
     camPosWorld: Readonly<[number, number, number]>,
     pxPerRad: number,
   ): void;
@@ -90,9 +103,9 @@ export type QuadRenderer = {
   destroy(): void;
 };
 
-export function createQuadRenderer(ctx: GpuContext, maxInstances = 256): QuadRenderer {
+export function createThumbnailRenderer(ctx: GpuContext, maxInstances = 256): ThumbnailRenderer {
   const inner = createInstancedQuadRenderer(ctx, {
-    label: 'quad',
+    label: 'thumbnail',
     vertexSource: vsCode,
     fragmentSource: fsCode,
     atlas: {},
@@ -111,7 +124,7 @@ export function createQuadRenderer(ctx: GpuContext, maxInstances = 256): QuadRen
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
-    instances: ReadonlyArray<QuadInstance>,
+    instances: ReadonlyArray<ThumbnailInstance>,
     camPosWorld: Readonly<[number, number, number]>,
     pxPerRad: number,
   ): void {

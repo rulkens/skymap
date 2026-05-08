@@ -1,4 +1,4 @@
-// quads/fragment.wesl — galaxy-thumbnail fragment stage.
+// thumbnails/fragment.wesl — galaxy-thumbnail fragment stage.
 //
 // Samples the 2048x2048 atlas, applies a soft circular mask to fade
 // the corner JPEG artefacts into the surrounding dot field, then
@@ -15,7 +15,7 @@
 // layout is VERTEX-only, matching what the WebGPU pipeline-layout
 // introspection saw in the original single-file shader.
 
-import package::quads::io::VsOut;
+import package::thumbnails::io::VsOut;
 // Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
 // rationale (three smoothstep patterns recurred across four shaders,
 // naming the shapes makes the intent visible at the call site).

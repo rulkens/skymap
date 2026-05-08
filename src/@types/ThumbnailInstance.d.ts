@@ -1,8 +1,9 @@
 /**
- * Per-instance data for the textured-quad pass.
+ * Per-instance data for the textured galaxy-thumbnail pass.
  *
- * Layout (must match WGSL `struct InstanceIn` and the JS-side
- * `Float32Array` write pattern in `QuadRenderer.draw`):
+ * Layout (must match WESL `struct InstanceIn` in
+ * `shaders/thumbnails/io.wesl` and the JS-side `Float32Array` write
+ * pattern in `ThumbnailRenderer.draw`):
  *
  *   pos:    vec3<f32>  // world-space center, Mpc
  *   sizeW:  f32        // world-space quad side length, Mpc
@@ -21,7 +22,7 @@
  * thumbnails don't pop in).  The shader multiplies its computed alpha
  * by this value before output.
  */
-export type QuadInstance = {
+export type ThumbnailInstance = {
   x: number;
   y: number;
   z: number;

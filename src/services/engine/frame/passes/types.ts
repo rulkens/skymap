@@ -57,7 +57,7 @@
  */
 
 import type { EngineState } from '../../../../@types';
-import type { QuadRenderer } from '../../../gpu/renderers/quadRenderer';
+import type { ThumbnailRenderer } from '../../../gpu/renderers/thumbnailRenderer';
 import type { DiskRenderer } from '../../../gpu/renderers/diskRenderer';
 import type { MilkyWayRenderer } from '../../../gpu/renderers/milkyWayRenderer';
 import type { FilamentRenderer } from '../../../gpu/renderers/filamentRenderer';
@@ -84,8 +84,8 @@ import type { RenderFrameSettings } from '../renderFrame';
  * single canonical site.
  */
 export type PassDeps = {
-  /** Atlas-bound textured-quad renderer for galaxy thumbnails. */
-  quadRenderer: QuadRenderer;
+  /** Atlas-bound textured-billboard renderer for galaxy thumbnails. */
+  thumbnailRenderer: ThumbnailRenderer;
   /** 3D-oriented procedural-disk renderer for large galaxies. */
   diskRenderer: DiskRenderer;
   /**

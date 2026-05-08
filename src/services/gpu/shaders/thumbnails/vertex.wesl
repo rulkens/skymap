@@ -1,4 +1,4 @@
-// quads/vertex.wesl — billboard galaxy-thumbnail vertex stage.
+// thumbnails/vertex.wesl — billboard galaxy-thumbnail vertex stage.
 //
 // Each instance is one textured quad whose world-space center
 // matches a galaxy and whose size is computed from the engine's
@@ -29,9 +29,9 @@
 // identical declaration. Atlas-texture / sampler bindings are
 // fragment-only and stay in fragment.wesl.
 
-import package::quads::io::Uniforms;
-import package::quads::io::InstanceIn;
-import package::quads::io::VsOut;
+import package::thumbnails::io::Uniforms;
+import package::thumbnails::io::InstanceIn;
+import package::thumbnails::io::VsOut;
 import package::lib::camera::worldToClip;
 // Shared unit-quad helpers from 'lib/billboard.wesl' — replace the
 // inline 'CORNERS' const + '(corner + 1) * 0.5' UV remap that used to
