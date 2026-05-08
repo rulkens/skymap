@@ -591,3 +591,122 @@ describe('PointRenderer.clearBiasOverlays', () => {
     expect(() => renderer.clearBiasOverlays()).not.toThrow();
   });
 });
+
+// ─── PointRenderer.destroy() ─────────────────────────────────────────────────
+//
+// PointRenderer owns the app's largest GPU allocations (per-source vertex
+// buffers ~14 MB each plus per-cloud CloudFade uniforms plus its own per-
+// frame uniform buffer).  WebGPU buffers don't release via JS GC alone —
+// `GPUBuffer.destroy()` is mandatory.  These tests assert that
+// `PointRenderer.destroy()` actually fires destroy on every owned buffer
+// and clears the per-source map, so the engine.ts teardown chain plateaus
+// browser GPU memory across HMR / StrictMode remount cycles instead of
+// climbing.
+//
+// We extend the stub device with a *tracking* buffer factory: every
+// `createBuffer` call returns a fresh stub whose `destroy()` increments a
+// shared counter we can assert against.  The renderer creates one buffer
+// per upload (the per-source vertex buffer), one buffer per CloudFade (the
+// 16-byte fade uniform), and one buffer up-front for its own
+// `uniformBuffer_internal`.  We can therefore predict the exact destroy
+// fan-out for any given upload sequence.
+
+/**
+ * Build a stub device whose `createBuffer` returns *trackable* stub
+ * buffers.  Each returned buffer carries a `destroyCount` we can read
+ * post-`renderer.destroy()` to assert it was released.  The device also
+ * appends every created buffer to the supplied array so tests can iterate
+ * the fan-out.
+ *
+ * Why not `vi.spyOn` the existing `makeStubDevice` factory?  The
+ * `destroy()` method lives on each *individual* buffer, not on the
+ * factory, and `makeStubDevice`'s `stubBuffer()` closure mints fresh
+ * objects that aren't reachable from outside.  A tracking factory is the
+ * cleanest extension that doesn't refactor the original helper.
+ */
+type TrackedBuffer = GPUBuffer & { destroyCount: number };
+function makeDestroyTrackingDevice(createdBuffers: TrackedBuffer[]): GPUDevice {
+  const device = makeStubDevice();
+  (
+    device as unknown as { createBuffer: () => GPUBuffer }
+  ).createBuffer = (): GPUBuffer => {
+    const buf: TrackedBuffer = {
+      destroy() {
+        buf.destroyCount += 1;
+      },
+      size: 0,
+      destroyCount: 0,
+    } as unknown as TrackedBuffer;
+    createdBuffers.push(buf);
+    return buf;
+  };
+  return device;
+}
+
+describe('PointRenderer.destroy', () => {
+  it("releases the renderer's uniform buffer", () => {
+    const buffers: TrackedBuffer[] = [];
+    const device = makeDestroyTrackingDevice(buffers);
+    const renderer = new PointRenderer(device, 'rgba16float');
+    // The constructor allocates exactly one buffer — `uniformBuffer_internal`.
+    expect(buffers).toHaveLength(1);
+    const uniformBuffer = buffers[0]!;
+    expect(uniformBuffer.destroyCount).toBe(0);
+
+    renderer.destroy();
+
+    expect(uniformBuffer.destroyCount).toBe(1);
+  });
+
+  it('releases each per-source buffer + fade uniform', async () => {
+    const buffers: TrackedBuffer[] = [];
+    const device = makeDestroyTrackingDevice(buffers);
+    const renderer = new PointRenderer(device, 'rgba16float');
+    // Constructor allocates 1 buffer (the renderer's own uniform).
+    expect(buffers).toHaveLength(1);
+
+    await renderer.upload(Source.SDSS, makeCloud(2));
+    // upload() allocates 2 more buffers per source: the vertex buffer
+    // and the CloudFade's 16-byte uniform.
+    expect(buffers).toHaveLength(3);
+
+    await renderer.upload(Source.TwoMRS, makeCloud(3));
+    // Second source: another vertex + fade pair.
+    expect(buffers).toHaveLength(5);
+
+    // Sanity: every tracked buffer starts at 0 destroys.
+    for (const b of buffers) expect(b.destroyCount).toBe(0);
+
+    renderer.destroy();
+
+    // All five buffers (1 renderer uniform + 2 sources × {vertex, fade})
+    // should be destroyed exactly once.
+    for (const b of buffers) expect(b.destroyCount).toBe(1);
+  });
+
+  it('clears the clouds map', async () => {
+    const renderer = new PointRenderer(makeStubDevice(), 'rgba16float');
+    await renderer.upload(Source.SDSS, makeCloud(2));
+    await renderer.upload(Source.TwoMRS, makeCloud(3));
+    expect(Array.from(renderer.loadedSources())).toHaveLength(2);
+
+    renderer.destroy();
+
+    expect(Array.from(renderer.loadedSources())).toHaveLength(0);
+  });
+
+  it('is idempotent — safe to call twice without throwing', async () => {
+    const buffers: TrackedBuffer[] = [];
+    const device = makeDestroyTrackingDevice(buffers);
+    const renderer = new PointRenderer(device, 'rgba16float');
+    await renderer.upload(Source.SDSS, makeCloud(1));
+
+    expect(() => renderer.destroy()).not.toThrow();
+    // Second call iterates an empty clouds map and re-destroys the
+    // already-destroyed uniform buffer.  WebGPU's spec defines
+    // `GPUBuffer.destroy()` as idempotent; our stub mirrors that by
+    // simply incrementing the counter — the test's contract is "no
+    // throw", not "destroyCount stays at 1".
+    expect(() => renderer.destroy()).not.toThrow();
+  });
+});

@@ -1345,4 +1345,96 @@ export class PointRenderer {
     }
     return false;
   }
+
+  /**
+   * Release every GPU resource this renderer owns.
+   *
+   * ### Why this method exists
+   *
+   * WebGPU's resource model splits cleanup responsibility unevenly across
+   * its object types:
+   *
+   *   - `GPUBuffer` and `GPUTexture` — the only WebGPU objects that
+   *     hold *device-side* memory (VRAM or shared-memory equivalents on
+   *     integrated GPUs) — expose explicit `.destroy()` methods.  The
+   *     spec is clear: VRAM is NOT released by JavaScript GC alone.
+   *     Drop the JS reference and the buffer's bytes stay allocated on
+   *     the device until the device itself is dropped.
+   *   - `GPURenderPipeline`, `GPUBindGroup`, `GPUBindGroupLayout`,
+   *     `GPUShaderModule`, and `GPUSampler` are JS-side handles that
+   *     reference device-side state but do not themselves own large
+   *     allocations the runtime can return to the system.  These have
+   *     NO `.destroy()` method in the WebGPU API; JS GC is the correct
+   *     and only release path.  We deliberately do nothing for them
+   *     here — there is no `pipeline.destroy()` to call, and adding a
+   *     `(this.pipeline as any) = null` would just satisfy a phantom
+   *     concern (the field is `private` and the renderer instance
+   *     itself is about to drop out of scope).
+   *
+   * ### Why this method matters in development
+   *
+   * Production renders one engine per page, so a leak per teardown is
+   * bounded and the user navigates away before it matters.  In
+   * development the picture is uglier:
+   *
+   *   - **Vite HMR** swaps the engine module on every save, calling
+   *     the old engine's `destroy()` and constructing a fresh one.
+   *   - **React StrictMode** double-mounts every component on first
+   *     render in development, so even a single page load triggers
+   *     one engine teardown plus a second engine construction.
+   *
+   * Each cycle leaks one full set of per-source vertex buffers
+   * (`LoadedSource.buffer` — ~14 MB GPU + ~14 MB CPU mirror per SDSS
+   * deck, growing across SDSS + GLADE-large + 2MRS + Famous), each
+   * source's `CloudFade` 16-byte uniform, plus the renderer's own
+   * 176-byte `uniformBuffer_internal`.  After ten saves, browser GPU
+   * process memory has climbed past a gigabyte; on a constrained
+   * laptop GPU that's enough to wedge the tab.  Wiring this method
+   * into `engine.ts`'s `destroy()` chain plateaus the curve.
+   *
+   * ### Order rationale
+   *
+   * Per-source buffers go first because each `LoadedSource` carries a
+   * `CloudFade` whose own `destroy()` releases its 16-byte uniform; we
+   * must finish destroying everything *inside* an entry before
+   * dropping the entry's reference from the map.  The renderer's own
+   * uniform buffer is destroyed next (independent — no fan-out).  The
+   * `clouds.clear()` call goes last so any debug tooling that
+   * snapshots the map mid-teardown sees the per-entry buffers already
+   * released before the entries themselves vanish — diagnosing a
+   * "buffer destroyed but entry still present" symptom is easier than
+   * "entry already gone, can't tell what was leaked".
+   *
+   * ### Why no `pipeline` / `bindGroup` / `bindGroupLayout` cleanup
+   *
+   * As noted above, none of those types expose `.destroy()`.  The
+   * pipeline references shader modules and bind-group layouts;
+   * dropping the JS-side handles via the renderer's own GC is
+   * sufficient.  No leak here — they don't own VRAM.
+   *
+   * ### Idempotence
+   *
+   * The WebGPU spec defines `GPUBuffer.destroy()` as idempotent — a
+   * second call on an already-destroyed buffer is a no-op.  This
+   * method inherits that property: a second `destroy()` iterates an
+   * empty `clouds` map and re-destroys the (already-destroyed)
+   * `uniformBuffer_internal` without throwing.  Useful when teardown
+   * paths overlap (e.g. an HMR swap fires while React StrictMode is
+   * still in its remount cycle).
+   */
+  destroy(): void {
+    // Per-source teardown.  Each entry owns a vertex buffer and a
+    // CloudFade; the fade's own destroy() handles its 16-byte uniform.
+    for (const entry of this.clouds.values()) {
+      entry.buffer.destroy();
+      entry.fade.destroy();
+    }
+    // Drop JS references to every LoadedSource so GC can collect the
+    // ~14 MB CPU mirror (`interleaved` Float32Array) per SDSS deck.
+    this.clouds.clear();
+    // The renderer's own per-frame uniform buffer (176 bytes — see
+    // UNIFORM_BYTES above).  Tiny, but releasing it is the correct
+    // shape and matches what we do for per-source buffers.
+    this.uniformBuffer_internal.destroy();
+  }
 }
