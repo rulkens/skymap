@@ -104,6 +104,7 @@ import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
 import type { PostProcess } from '../../gpu/passes/postProcess';
 import type { ThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
 import { computeViewProj } from '../../camera/orbitCamera';
+import { isEngineReady } from '../helpers/engineReady';
 
 /** The not-yet-ready case: bootstrap hasn't finished. */
 export type NotReadyFrameContext = { isReady: false };
@@ -151,18 +152,22 @@ export function deriveFrameContext(
   state: EngineState,
   canvas: HTMLCanvasElement,
 ): FrameContext {
+  // The bootstrap gate.  Pre-D.1 this lived inline in `runFrame()` as
+  // a 5-way `if (!vp || !rendererRef || !camRef || !thumbnailsRef ||
+  // !postProcessRef)` check.  D.1 lifted it here; D.4 then routed it
+  // through `isEngineReady` so every site that asks "is the engine
+  // bootstrapped?" — per-frame, slot-commit, public-handle — funnels
+  // through one predicate.  When MSDF labels (or any future
+  // bootstrap-only handle) lands, only `isEngineReady` and
+  // `ReadyFrameContext`'s field list need updating; this gate stays
+  // the same.
+  if (!isEngineReady(state)) {
+    return { isReady: false };
+  }
   const cam = state.cam;
   const renderer = state.gpu.renderer;
   const postProcess = state.gpu.postProcess;
   const thumbnails = state.subsystems.thumbnails;
-
-  // The bootstrap gate.  Pre-D.1 this lived inline in `runFrame()` as
-  // a 5-way `if (!vp || !rendererRef || !camRef || !thumbnailsRef ||
-  // !postProcessRef)` check; consolidating it here means every future
-  // consumer asks the same question via the same predicate.
-  if (!cam || !renderer || !postProcess || !thumbnails) {
-    return { isReady: false };
-  }
 
   // Snapshot-derive everything the caller would otherwise compute
   // locally.  `computeViewProj` was previously called in `runFrame`;

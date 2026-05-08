@@ -84,6 +84,7 @@ import type { FpsCounter } from '../subsystems/fpsCounter';
 import { updatePosition } from '../../camera/orbitCamera';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { autoLodMask } from '../helpers/autoLod';
+import { isEngineReady } from '../helpers/engineReady';
 import { deriveFrameContext } from './frameContext';
 import { renderFrame } from './renderFrame';
 import {
@@ -371,7 +372,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.picking.latestMouseCss !== null &&
     state.picking.latestMouseCss !== state.picking.lastPickedMouseCss &&
     !state.picking.pickInFlight &&
-    !state.picking.pointerDown // skip hover picks while a drag is in progress
+    !state.picking.pointerDown && // skip hover picks while a drag is in progress
+    // `ctx.isReady` already proved cam/renderer/postProcess/thumbnails
+    // are non-null.  `isEngineReady` is the same predicate plus
+    // pickRenderer, which lets us drop the `state.gpu.pickRenderer!`
+    // non-null assertion below.  The two checks always agree by
+    // construction (same five fields, populated together in
+    // bootstrap, nulled together in destroy).
+    isEngineReady(state)
   ) {
     // Snapshot the renderer's currently-visible per-source draw
     // records.  Same filter rule as the click handler — only sources
@@ -398,8 +406,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.picking.lastPickedMouseCss = pos;
     state.picking.pickInFlight = true;
 
-    state.gpu
-      .pickRenderer!.pick(
+    state.gpu.pickRenderer
+      .pick(
         [deps.canvas.width, deps.canvas.height],
         deps.cssToTexPx(pos.x),
         deps.cssToTexPx(pos.y),
@@ -448,13 +456,23 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //     CLOUD_FADE_DURATION_MS (~600 ms) total; we keep ticking the
   //     loop so the smoothstep advances on every frame, then go
   //     silent again.  See `cloudFade.ts` for the shared mechanism.
+  // The bootstrap-bag fields (thumbnails, point-renderer) might still
+  // be null on the very first few frames after engine construction —
+  // before initGpu / wireSlots have written their handles.  Pre-D.4
+  // the predicate carried bespoke `=== null` guards inline.  Post-D.4,
+  // `isEngineReady` consolidates them: when the engine is ready, all
+  // four bootstrap-bag fields are simultaneously non-null, so we
+  // dereference them without bespoke checks.  filamentRenderer is
+  // checked separately because it's intentionally outside the
+  // bootstrap-complete bag (the no-filaments deployment path keeps
+  // it nullable; see `helpers/engineReady.ts`).
+  const ready = isEngineReady(state);
   const stillAnimating =
     state.settings.autoRotate ||
     state.subsystems.tweens.isActive() ||
     state.subsystems.spaceMouse.hasAxes() ||
-    (state.subsystems.thumbnails !== null &&
-      state.subsystems.thumbnails.hasInFlightFetches()) ||
-    (state.gpu.renderer !== null && state.gpu.renderer.isFading()) ||
+    (ready && state.subsystems.thumbnails.hasInFlightFetches()) ||
+    (ready && state.gpu.renderer.isFading()) ||
     (state.gpu.filamentRenderer !== null && state.gpu.filamentRenderer.isFading());
   if (stillAnimating) state.subsystems.scheduler.requestRender();
 }
