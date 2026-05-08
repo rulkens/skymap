@@ -4,9 +4,9 @@
 // edge falloff perpendicular to the line.  The uv.y coordinate runs
 // 0..1 across the line's width (uv.y = 0 / 1 are the line edges,
 // uv.y = 0.5 is the center), so a triangular distance from center
-// is `abs(uv.y - 0.5) * 2` — 0 at the center, 1 at the edges.
+// is 'abs(uv.y - 0.5) * 2' — 0 at the center, 1 at the edges.
 //
-// `fwidth` gives roughly one pixel's worth of distance at this
+// 'fwidth' gives roughly one pixel's worth of distance at this
 // fragment's scale, so the smoothstep band is one pixel wide
 // regardless of viewport size — same anti-aliasing recipe MSDF text
 // uses, but in a 1D rather than 2D distance field.
@@ -29,7 +29,7 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
 
   // The vertex stage already pre-multiplied fadeAlpha into the colour,
   // so all that's left is to multiply by the edge falloff.  Output is
-  // premultiplied: rgb already carries `originalRgb * fadeAlpha`, so
+  // premultiplied: rgb already carries 'originalRgb * fadeAlpha', so
   // multiplying through by edgeAlpha keeps the (rgb * a) invariant.
   return input.color * edgeAlpha;
 }

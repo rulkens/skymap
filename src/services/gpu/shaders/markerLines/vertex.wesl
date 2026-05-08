@@ -1,19 +1,19 @@
 // markerLines/vertex.wesl — instanced-quad thick-line vertex stage.
 //
 // One instance per line segment.  The two endpoints come in via the
-// `fromAndWidth` / `toAndAlpha` per-instance attributes; the unit-quad
-// `uv` per-vertex attribute selects (a) which endpoint a corner sits
-// at (uv.x → 0/1) and (b) which side of the line it offsets toward
-// (uv.y → ±half-width along the screen-space perpendicular).
+// 'fromAndWidth' / 'toAndAlpha' per-instance attributes; the unit-quad
+// 'uv' per-vertex attribute selects (a) which endpoint a corner sits
+// at (uv.x -> 0/1) and (b) which side of the line it offsets toward
+// (uv.y -> +/-half-width along the screen-space perpendicular).
 //
 // This is the same instanced-quad expansion pattern as
-// `filaments/vertex.wesl` — see that file's docstring for why we
-// can't use WebGPU's `topology: 'line-list'` directly (1-pixel-wide
-// only, no `setLineWidth` exists by spec).
+// 'filaments/vertex.wesl' -- see that file's docstring for why we
+// can't use WebGPU's topology 'line-list' directly (1-pixel-wide
+// only, no setLineWidth exists by spec).
 //
 // ## Why bindings live here, not in io.wesl
 //
-// WESL has no global state — `@group(0) @binding(0) var<uniform> u`
+// WESL has no global state — '@group(0) @binding(0) var<uniform> u'
 // is module-local, not exportable.  Each consuming file (vertex /
 // fragment) redeclares its bindings using the structs imported from
 // io.wesl so layout numbers cannot drift between stages.
@@ -54,7 +54,7 @@ fn vs(input: VsIn) -> VsOut {
   let perp = vec2<f32>(-tangent.y, tangent.x);
 
   // Convert pixelWidth (CSS pixels, full width) to NDC.  One NDC unit
-  // = half the viewport in pixels, so `1 / (viewport * 0.5)` is NDC
+  // = half the viewport in pixels, so '1 / (viewport * 0.5)' is NDC
   // per pixel.  We expand by half-width on each side, hence the * 0.5.
   let halfWidthNdc = perp * (pixelWidth * 0.5 / (u.cam.viewportPx * 0.5));
 
