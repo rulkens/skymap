@@ -2,10 +2,13 @@
 
 This document is the at-a-glance summary of all nine shells. Each shell has its own deep-dive in `shells/0N-*.md`; this is the navigator.
 
-## The nine shells
+## The shells
+
+> **Amendment 2026-05-09:** A pre-shell **0a** (Earth opening + closing) sits before Shell 1. It uses Earth-frame coordinates (km altitude) and is active only during T+0:00 → T+0:22 (open) and T+1:38 → T+1:48 (close). See [`00a-earth-opening.md`](00a-earth-opening.md) and [`../decisions/0010-earth-opening.md`](../decisions/0010-earth-opening.md).
 
 | # | Name | Native unit | Outer scale | Camera origin | Hero data | Hero visual | Spec |
 |---|------|-------------|-------------|---------------|-----------|-------------|------|
+| 0a | Earth opening | km | atmosphere | viewer on surface | Blue Marble + atmosphere LUT | Sunset → night sky → lift-off; mirror at close | [00a](00a-earth-opening.md) |
 | 1 | Solar System | AU | 100 AU | Sun | JPL DE440 ephemeris | Ray-traced Sun + planet billboards on real orbits | [01](01-solar-system.md) |
 | 2 | Stellar Neighborhood | parsec | 100 pc | Sun | Gaia DR3 (≤ 50 pc cut) | Real-color stars, parallax-derived | [02](02-stellar-neighborhood.md) |
 | 3 | Milky Way | kpc | 100 kpc | Galactic center | Composite IRAS / 2MASS / model | Impostor disk + Sun marker | [03](03-milky-way.md) |

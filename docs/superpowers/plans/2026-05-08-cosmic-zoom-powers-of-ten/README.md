@@ -138,6 +138,10 @@ See [`decisions/0009-existing-plan-coordination.md`](decisions/0009-existing-pla
 
 Internally, the codename is **"cosmic zoom"** — shorter than the user-facing label, and easier to grep. User-facing copy uses "Tour" or "Powers of Ten."
 
+## Amendments
+
+- **2026-05-09 — Earth opening and closing.** The cold open and the close beat have been replaced. Instead of dollying into the Sun's photosphere, the tour now opens at ground level on Earth at sunset (sky darkens, stars emerge, Milky Way rises, camera lifts off the surface, Earth shrinks below) and closes mirroring this on Earth at sunrise. Adds 4 new docs: [`shells/00a-earth-opening.md`](shells/00a-earth-opening.md), [`data/11-earth-textures.md`](data/11-earth-textures.md), [`rendering/08-atmosphere.md`](rendering/08-atmosphere.md), [`decisions/0010-earth-opening.md`](decisions/0010-earth-opening.md). The narrative script ([`vision/01-narrative-script.md`](vision/01-narrative-script.md)) now carries a "REVISED OPEN" / "REVISED CLOSE" section ahead of the legacy script. Drives ~2-3 weeks of new work; tightens the 90 s budget to ~1:48.
+
 ## Provenance
 
 This plan was produced overnight on 2026-05-08 by an agent (Claude Opus 4.7) given an open-ended brief: "sketch out a plan in a subfolder of plans/ to the highest detail that you can manage overnight." The user approved the headline ("Powers of Ten zoom-out") during a brainstorm earlier the same day; the per-shell content, technical architecture, and implementation phasing are all proposed by the agent and **awaiting human review.**

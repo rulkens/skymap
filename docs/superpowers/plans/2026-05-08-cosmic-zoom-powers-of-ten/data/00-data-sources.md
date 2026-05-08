@@ -15,6 +15,7 @@ This document is the single source of truth for **every external dataset the cos
 | 7 | [Cosmicflows-4 velocity field](07-cosmicflows.md) | Shell 7 | Tully+ 2023 (CF-4) | 50–200 MB | CC BY-NC | Med (license) |
 | 8 | [ROSAT all-sky X-ray](08-rosat-xray.md) | Shells 6, 7 | ROSAT RASS, MPE | 10–50 MB (downsampled) | Public | Low |
 | 9 | [Planck CMB all-sky](09-planck-cmb.md) | Shell 9 | Planck PR4 SMICA | 5–20 MB (downsampled) | ESA citation | Low |
+| 11 | [Earth textures + atmosphere LUT](11-earth-textures.md) *(2026-05-09 amendment)* | Shell 0a | NASA Visible Earth + precomputed | ~10 MB | NASA public domain | Low |
 
 Plus existing skymap data (already in production):
 

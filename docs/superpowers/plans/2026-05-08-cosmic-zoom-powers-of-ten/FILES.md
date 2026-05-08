@@ -23,7 +23,8 @@ The "what & why." Read before any other section.
 
 One file per zoom level. The shell overview is the navigator.
 
-- [`00-shell-overview.md`](shells/00-shell-overview.md) — table of all 9 shells with native units, camera origins, hero data, hero visuals, render passes.
+- [`00-shell-overview.md`](shells/00-shell-overview.md) — table of all shells with native units, camera origins, hero data, hero visuals, render passes.
+- [`00a-earth-opening.md`](shells/00a-earth-opening.md) — *(2026-05-09 amendment)* the surface-to-space open beat (sunset → night sky → lift-off) and the mirror sunrise close.
 - [`01-solar-system.md`](shells/01-solar-system.md) — Sun + 8 planets + Pluto in AU; ray-marched Sun, planet billboards on real orbits.
 - [`02-stellar-neighborhood.md`](shells/02-stellar-neighborhood.md) — 7,500 Gaia DR3 stars within 50 pc; real BP-RP color, named bright stars labeled.
 - [`03-milky-way.md`](shells/03-milky-way.md) — MW disk impostor + globular clusters + Sun marker + edge-on to top-down camera arc.
@@ -49,6 +50,7 @@ One file per dataset, plus the format spec. The catalog (`00-data-sources.md`) i
 - [`08-rosat-xray.md`](data/08-rosat-xray.md) — ROSAT/MCXC L_X + R_500 per cluster (sidecar to clusters.bin).
 - [`09-planck-cmb.md`](data/09-planck-cmb.md) — Planck PR4 SMICA equirectangular CMB texture.
 - [`10-binary-formats.md`](data/10-binary-formats.md) — byte-level layout for every new `.bin` format.
+- [`11-earth-textures.md`](data/11-earth-textures.md) — *(2026-05-09 amendment)* NASA Blue Marble + Earth night lights + precomputed atmosphere LUT.
 
 ## Rendering (`rendering/`)
 
@@ -62,6 +64,7 @@ GPU and math foundations.
 - [`05-floating-origin.md`](rendering/05-floating-origin.md) — deep dive on f32-precision math, snap-once anchors, worked examples.
 - [`06-depth-precision.md`](rendering/06-depth-precision.md) — per-shell near/far derivation, reverse-Z, depth-buffer format choice.
 - [`07-performance.md`](rendering/07-performance.md) — per-shell budget, adaptive quality, GPU bandwidth, profiling tools.
+- [`08-atmosphere.md`](rendering/08-atmosphere.md) — *(2026-05-09 amendment)* precomputed-LUT sky shader + Earth-as-sphere renderer for shell 0a.
 
 ## UX (`ux/`)
 
@@ -99,3 +102,4 @@ ADRs (Architecture Decision Records). Read when you want to question or change a
 - [`0007-data-licensing.md`](decisions/0007-data-licensing.md) — accept CF-4 CC BY-NC; flag for future commercial pivot.
 - [`0008-build-pipeline.md`](decisions/0008-build-pipeline.md) — per-shell datasets built at deploy time, hosted on R2, lazy-loaded at runtime.
 - [`0009-existing-plan-coordination.md`](decisions/0009-existing-plan-coordination.md) — sequence cosmic zoom AFTER engine restructure / MSDF labels / asset-loader land.
+- [`0010-earth-opening.md`](decisions/0010-earth-opening.md) — *(2026-05-09 amendment)* open and close on Earth (sunset / sunrise) instead of the Sun's photosphere.

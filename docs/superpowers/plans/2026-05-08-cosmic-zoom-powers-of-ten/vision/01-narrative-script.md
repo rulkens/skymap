@@ -4,6 +4,63 @@ This document is the **shooting script** for the tour. It is the source of truth
 
 It is intentionally written like a film treatment, not a spec. The downstream specs (shells, rendering, ux) elaborate the *how*; this document is the *what happens, in what order, with what words on screen*.
 
+> **AMENDMENT 2026-05-09 — Earth opening and closing.** The cold open and close beats below have been superseded by an Earth-surface opening (sunset → night sky → lift-off) and a mirror Earth-surface closing (sunrise). See [`decisions/0010-earth-opening.md`](../decisions/0010-earth-opening.md), [`shells/00a-earth-opening.md`](../shells/00a-earth-opening.md), and the **REVISED OPEN** / **REVISED CLOSE** sections inserted below. The original Sun-photosphere cold open is preserved in the "ACT I — The Familiar" section because the Solar System and onward shells are unchanged.
+
+## REVISED OPEN — Earth at sunset (T+0:00 → T+0:22)
+
+`T+0:00` Camera at ground level on Earth. Featureless black ground silhouette across bottom 25% of frame. Orange sunset sky gradient. Sun visible as a soft disc just above the western horizon. Lower-third overlay: **TOUR BEGINS · 90 SECONDS** (fades in over 1 s).
+
+`T+0:01` Venus emerges low in the west — the first star visible.
+
+`T+0:03` Sky transitions: orange → red → indigo. Sirius rises in the east. Vega visible high in the sky.
+
+`T+0:05` Sky is now mostly dark blue. Maybe 50 brightest stars visible.
+
+`T+0:07` Milky Way band fades up across the overhead sky as a soft luminous river. ~500 stars now visible. Optional sub-overlay (centered, single line): *"Look up."* — fades in 0.5 s, holds 2 s, fades out 0.5 s.
+
+`T+0:08` Camera tilts up. Frame is ~80% sky, 20% ground. Full Gaia DR3 starfield (~7,500 stars within 50 pc).
+
+`T+0:11` Camera lifts off. Black ground silhouette curves into a horizon arc. Atmospheric blue rim becomes visible at the horizon.
+
+`T+0:14` Earth begins to be a disc rather than a surface. Continents resolve briefly (Blue Marble texture); day/night terminator visible.
+
+`T+0:18` Earth is now a small disc. Sun visible to the side. Other planets fade up on their orbits.
+
+`T+0:22` Earth becomes one of the planets. Camera is now at Solar System scale; **Shell 1 takes over** at the dolly-out timing point that previously corresponded to T+0:08 in the original script. Shell 1's beat now runs T+0:22 → T+0:28 (slightly compressed from the original 6 s to fit the budget).
+
+## REVISED CLOSE — Earth at sunrise (T+1:38 → T+1:48)
+
+`T+1:38` Camera approaches Earth (reverse of T+0:18). Earth grows from a small disc.
+
+`T+1:40` Camera enters the atmosphere. Atmospheric blue rim grows. Continents resolve.
+
+`T+1:42` Camera lands at ground level. Looking east this time (mirroring the west-facing open). Pre-dawn sky: deep indigo with a hint of color at the horizon. Stars still visible, but only the brightest.
+
+`T+1:44` Sun rises. Sky transitions: indigo → red → orange. Stars fade west.
+
+`T+1:46` Full sunrise. Lower-third overlay: **TOUR COMPLETE · Click "Replay" to watch again, or fly anywhere — drag to orbit, scroll to zoom.**
+
+`T+1:48` "Replay" button visible. Cursor reappears. Cinematic ends.
+
+## Revised total runtime
+
+To accommodate the +15 seconds of Earth open + close, the following internal trims are made:
+
+| Shell | Original | Revised |
+|-------|----------|---------|
+| Shell 1 — Solar System | 6 s | 5 s |
+| Shell 5 — Local Sheet | 8 s | 6 s |
+| Shell 6 — Virgo SC | 10 s | 9 s |
+| Shell 8 — Cosmic Web | 8 s | 6 s |
+
+Net delta: -7 s from the existing shells, +15 s from the Earth open/close = **+8 s overall**, putting the tour at **~1:48**. Inside the 2:00 ceiling. The trimmed shells lose conceptual padding, not visual hero moments.
+
+The original timing table at the bottom of this doc is the **legacy** plan; the revised pacing replaces it for v1 implementation.
+
+---
+
+The remainder of this document — Acts I-III, the original cold open description, the original closing — is preserved below as the **legacy script**. Everything from "ACT I — The Familiar" onward through Shell 9 is unchanged in content; the only changes are the open and the close.
+
 ## Conventions
 
 - **CAMERA** — the on-screen view's POV.
