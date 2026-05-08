@@ -65,9 +65,9 @@
  * never notices.
  */
 
-import type { PointCloud, PointInfo } from '../../@types';
-import { Source } from '../../data/sources';
-import type { createPickRenderer } from '../gpu/pickRenderer';
+import type { PointCloud, PointInfo } from '../../../@types';
+import { Source } from '../../../data/sources';
+import type { createPickRenderer } from '../../gpu/pickRenderer';
 
 /**
  * Snapshot of the renderer's per-source draw records the picker

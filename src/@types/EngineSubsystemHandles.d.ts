@@ -39,8 +39,8 @@
 import type { ThumbnailSubsystem } from '../services/engine/subsystems/thumbnailSubsystem';
 import type { SpaceMouseSubsystem } from '../services/engine/subsystems/spaceMouseSubsystem';
 import type { TweenManager } from '../services/engine/camera/tweenManager';
-import type { ClickResolver } from '../services/engine/clickHandler';
-import type { InputBindings } from '../services/engine/inputBindings';
+import type { ClickResolver } from '../services/engine/interaction/clickHandler';
+import type { InputBindings } from '../services/engine/interaction/inputBindings';
 import type { RenderScheduler } from '../services/engine/subsystems/renderScheduler';
 import type { LoadProgressEmitter } from '../services/engine/subsystems/loadProgressAggregator';
 

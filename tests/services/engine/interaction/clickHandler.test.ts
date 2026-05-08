@@ -21,10 +21,10 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   createClickResolver,
   type ClickResolveInput,
-} from '../../../src/services/engine/clickHandler';
-import { Source } from '../../../src/data/sources';
-import type { PointCloud, PointInfo } from '../../../src/@types';
-import type { createPickRenderer } from '../../../src/services/gpu/pickRenderer';
+} from '../../../../src/services/engine/interaction/clickHandler';
+import { Source } from '../../../../src/data/sources';
+import type { PointCloud, PointInfo } from '../../../../src/@types';
+import type { createPickRenderer } from '../../../../src/services/gpu/pickRenderer';
 
 type PickRenderer = ReturnType<typeof createPickRenderer>;
 

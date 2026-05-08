@@ -19,8 +19,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { attachEngineInputs } from '../../../src/services/engine/inputBindings';
-import type { RenderScheduler } from '../../../src/services/engine/subsystems/renderScheduler';
+import { attachEngineInputs } from '../../../../src/services/engine/interaction/inputBindings';
+import type { RenderScheduler } from '../../../../src/services/engine/subsystems/renderScheduler';
 
 type Listener = (e: unknown) => void;
 
