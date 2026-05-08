@@ -123,6 +123,7 @@ import {
   type PointCloudReq,
 } from '../../loading/fetchers/pointCloudFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
+import { isEngineReady } from '../helpers/engineReady';
 
 /**
  * Lowercase short name for a Source — `sdss`, `2mrs`, `glade`,
@@ -249,7 +250,15 @@ export function wirePointSourceSlot(
       // unmount, hot-reload).  Drop the upload silently in that case;
       // the slot will still transition to `ready`, but no GPU buffer
       // exists to consume it.  Same guard the pre-registry loop had.
-      if (!state.gpu.renderer) return;
+      //
+      // We use `isEngineReady` rather than the bespoke
+      // `if (!state.gpu.renderer) return;` of pre-D.4: destroy() nulls
+      // all five bootstrap-bag fields together, so any one of them
+      // being null implies the others.  Routing through the predicate
+      // also narrows `state` to `ReadyEngineState` for the rest of
+      // this function — the `await state.gpu.renderer.upload(...)`
+      // line below is type-safe without a `!`.
+      if (!isEngineReady(state)) return;
       const t0 = performance.now();
       // eslint-disable-next-line no-console
       console.log(
