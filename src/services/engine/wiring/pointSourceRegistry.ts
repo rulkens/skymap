@@ -246,19 +246,34 @@ export function wirePointSourceSlot(
     name: slotName,
     fetch: fetcher,
     commit: async (cloud) => {
-      // Renderer might have been destroyed mid-load (StrictMode
-      // unmount, hot-reload).  Drop the upload silently in that case;
-      // the slot will still transition to `ready`, but no GPU buffer
-      // exists to consume it.  Same guard the pre-registry loop had.
+      // Renderer might be missing for two reasons:
+      //   (a) the GPU init phase hasn't run yet (very first frame
+      //       window — possible with synchronous fetch fixtures in
+      //       tests, but rare in production)
+      //   (b) the renderer was destroyed mid-load (StrictMode unmount,
+      //       hot-reload).
       //
-      // We use `isEngineReady` rather than the bespoke
-      // `if (!state.gpu.renderer) return;` of pre-D.4: destroy() nulls
-      // all five bootstrap-bag fields together, so any one of them
-      // being null implies the others.  Routing through the predicate
-      // also narrows `state` to `ReadyEngineState` for the rest of
-      // this function — the `await state.gpu.renderer.upload(...)`
-      // line below is type-safe without a `!`.
-      if (!isEngineReady(state)) return;
+      // Either way, drop the upload silently; the slot still transitions
+      // to `ready` but no GPU buffer exists to consume it.
+      //
+      // ### Why a bespoke `state.gpu.renderer` check, NOT `isEngineReady`
+      //
+      // D.4 originally consolidated this site onto `isEngineReady` on
+      // the reasoning that "destroy() nulls all five bootstrap-bag
+      // fields together, so any one being null implies the others".
+      // That holds for *teardown* — but NOT for *bootstrap progression*.
+      // The slot's commit fires during the `wireSlots` phase, which
+      // runs BEFORE `wireInput` creates `pickRenderer` and `cam`.  At
+      // that lifecycle point, only `renderer`, `postProcess`, and
+      // `thumbnails` are set — `isEngineReady` returns false, the
+      // commit skips, and the cloud never reaches the GPU.  Visible
+      // symptom: black screen with no console errors.
+      //
+      // The renderer-only check captures the actual invariant the
+      // commit cares about (does the destination exist?) without
+      // entangling it with handles populated later in the bootstrap
+      // chain.
+      if (state.gpu.renderer === null) return;
       const t0 = performance.now();
       // eslint-disable-next-line no-console
       console.log(
