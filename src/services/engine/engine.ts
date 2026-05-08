@@ -93,16 +93,16 @@ import type { LodMode, PointCloud, PointInfo } from '../../@types';
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
 import { vec3 } from 'gl-matrix';
 
-import { createTweenManager } from './tweenManager';
-import { createRenderScheduler } from './renderScheduler';
-import { createFpsCounter } from './fpsCounter';
-import { buildPointInfo } from './pointInfoBuilder';
-import { computeScaleInfo } from './scaleBar';
+import { createTweenManager } from './camera/tweenManager';
+import { createRenderScheduler } from './subsystems/renderScheduler';
+import { createFpsCounter } from './subsystems/fpsCounter';
+import { buildPointInfo } from './helpers/pointInfoBuilder';
+import { computeScaleInfo } from './helpers/scaleBar';
 import type { AssetSlot } from '../loading/types';
 import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
-import { FOCUS_TWEEN_MS } from './focusTween';
-import { tweenToGalaxy } from './tweenToGalaxy';
+import { FOCUS_TWEEN_MS } from './camera/focusTween';
+import { tweenToGalaxy } from './camera/tweenToGalaxy';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -112,8 +112,8 @@ import { tweenToGalaxy } from './tweenToGalaxy';
 // pass it `cancelTween` / `onAxes` / `onConnectionChange` callbacks,
 // and call `applyToCamera()` from `frame()`.  The handle's
 // connect/disconnect/sensitivity setters forward straight through.
-import { createSpaceMouseSubsystem } from './spaceMouseSubsystem';
-import { buildSettersFromTable, type SettingsTableKey } from './settingsTable';
+import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
+import { buildSettersFromTable, type SettingsTableKey } from './wiring/settingsTable';
 import { runBootstrapPhases, type BootstrapDeps } from './phases/bootstrap';
 
 /**

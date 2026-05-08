@@ -68,7 +68,7 @@ import {
 } from '../services/url/focusUrl';
 import {
   resolveFocusTarget,
-} from '../services/engine/resolveFocusTarget';
+} from '../services/engine/camera/resolveFocusTarget';
 import type {
   FamousMetaEntry,
   FamousXrefMap,

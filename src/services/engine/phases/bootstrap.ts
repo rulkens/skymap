@@ -81,7 +81,7 @@
 import type { EngineCallbacks, EngineHandle, EngineState, PointInfo } from '../../../@types';
 import type { Source } from '../../../data/sources';
 import type { AssetSlot } from '../../loading/types';
-import type { FpsCounter } from '../fpsCounter';
+import type { FpsCounter } from '../subsystems/fpsCounter';
 
 import { initGpu, type PhaseLocals } from './initGpu';
 import { wireSlots } from './wireSlots';

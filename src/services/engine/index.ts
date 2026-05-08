@@ -15,4 +15,4 @@
  */
 
 export { createEngine } from './engine';
-export { autoLodMask } from './autoLod';
+export { autoLodMask } from './helpers/autoLod';

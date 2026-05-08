@@ -59,7 +59,7 @@
  * pre-Phase-5 IIFE's mid-IIFE early-return semantics.
  */
 
-import { runFrame, type RunFrameDeps } from '../runFrame';
+import { runFrame, type RunFrameDeps } from '../frame/runFrame';
 
 import type { EngineState } from '../../../@types';
 import type { BootstrapDeps } from './bootstrap';

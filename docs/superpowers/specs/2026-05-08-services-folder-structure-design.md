@@ -33,7 +33,6 @@ phases/                 (Spec B — already a subfolder)
 subsystems/             (closure-keyed factories owning multi-frame state)
   thumbnailSubsystem.ts
   spaceMouseSubsystem.ts
-  tweenManager.ts
   renderScheduler.ts
   loadProgressAggregator.ts
   fpsCounter.ts
@@ -50,13 +49,16 @@ bake/                   (off-thread per-cloud bakes)
   computeAngularWeights.ts
   computeAngularWeights.worker.ts
 
-interaction/            (input → engine effects, selection, camera tweens)
-  inputBindings.ts
-  clickHandler.ts
-  tweenToGalaxy.ts
-  resolveFocusTarget.ts
+camera/                 (stateful camera orchestration; uses services/camera/ primitives)
+  tweenManager.ts
   focusTween.ts
   cameraFraming.ts
+  resolveFocusTarget.ts
+  tweenToGalaxy.ts
+
+interaction/            (input → engine effects, selection)
+  inputBindings.ts
+  clickHandler.ts
 
 wiring/                 (declarative glue tables consumed by phases)
   settingsTable.ts
@@ -125,7 +127,6 @@ The four ordered stages of `createEngine` async startup, plus the orchestrator. 
 Inhabitants:
 - `thumbnailSubsystem.ts` — owns the entire galaxy-thumbnail pipeline (atlas, queue, bitmap memo, sorted emission).
 - `spaceMouseSubsystem.ts` — owns the 6DOF puck input, axes-to-camera, dt baseline.
-- `tweenManager.ts` — owns the at-most-one in-flight CameraTween facade.
 - `renderScheduler.ts` — coalescing rAF wrapper used by every event handler that wants to wake the loop.
 - `loadProgressAggregator.ts` — projects `aggregateRegistry` snapshots onto the engine's load-progress callback.
 - `fpsCounter.ts` — rolling-window FPS estimator.
@@ -133,6 +134,31 @@ Inhabitants:
 Why these belong together: each one is a **factory returning a typed handle whose closure carries state across frames**. They are the "things the engine builds once at startup, holds for its lifetime, and consults each frame". The pattern is documented in each module's docstring as the deliberate idiom (e.g. `thumbnailSubsystem.ts` calls it "closure-returning factory rather than a class"). When a future feature wants the same shape (e.g. "a label subsystem"), this folder is where it goes.
 
 `renderScheduler` is borderline — it's a singleton coalescer not a multi-frame state owner. It earns its place here because the engine treats it identically (build once, hold a handle, call methods from event handlers); not putting it here would mean a folder of one. The next factory of its shape (currently theoretical) joins it.
+
+The "subsystem" label here is **looser than the docstring on `EngineSubsystemHandles.d.ts` claims**: the seven handles in `state.subsystems` don't share a common `runFrame()/destroy()` interface — they each expose whatever shape their problem wants. The bag groups owned long-lived helpers, not API-conforming siblings. That's correct (forcing a common interface would create no-op slots) but the docstring overpromises. See "Follow-up — subsystem API consistency" below.
+
+#### `camera/` — stateful camera orchestration on top of `services/camera/` primitives
+Inhabitants:
+- `tweenManager.ts` — at-most-one in-flight CameraTween facade (start / cancel / advance / isActive).
+- `focusTween.ts` — constants + helpers for the focus-on-galaxy camera tween (`FOCUS_TWEEN_MS`, `focusDistanceMpc`).
+- `cameraFraming.ts` — initial camera framing math from a bbox scalar (one-shot at boot).
+- `resolveFocusTarget.ts` — URL focus-target → `(source, localIdx)` resolver, used at boot and on `#focus=` hash changes.
+- `tweenToGalaxy.ts` (Spec B) — shared "build target Vec3, start tween, requestRender" used by select/focus paths.
+
+Why these belong together: every file is part of the **stateful camera orchestration layer** that sits on top of the pure primitives in `src/services/camera/`. `tweenManager` consumes `cameraTween.ts`; `tweenToGalaxy` builds `CameraTween` descriptors; `focusTween` provides the constants both use; `cameraFraming` and `resolveFocusTarget` are the two entry points that say "where should the camera go?". They share one mental model: "given an external trigger, where does the camera need to go and how does it get there?" — and they share one set of dependencies (the `services/camera/` primitives plus engine `state`).
+
+Why not `subsystems/` for `tweenManager` alone? Two reasons. First, isolating it from the helpers that build its inputs (`tweenToGalaxy`, `focusTween`) destroys the local mental model — readers tracing a focus-tween would have to bounce between `subsystems/` and `interaction/`. Second, future camera-related work (e.g. a "camera path recorder", a "camera shake" subsystem, a multi-tween scheduler) lands here naturally; `subsystems/` would force a category-mixing decision every time.
+
+**Layering note:** `services/camera/` (the existing 3-file dir at `src/services/camera/`) holds **pure camera primitives**: `orbitCamera.ts` (state-to-matrices), `orbitControls.ts` (DOM input → mutations), `cameraTween.ts` (pure from→to state machine). Those modules do not depend on `EngineState` and are unit-testable without an engine. `engine/camera/` is one layer up: it consumes those primitives plus `EngineState`, owns the in-flight tween, and wires user-action triggers to camera-state changes. Two layers, two folders, clear separation.
+
+#### `interaction/` — input events and selection
+Inhabitants:
+- `inputBindings.ts` — pointer/keyboard/resize listener attachments + cleanup.
+- `clickHandler.ts` — pick texture readback + selection-index resolver.
+
+Why these belong together: both files own the **input edge** — DOM events come in, get filtered/throttled, and produce engine-state changes (selection, camera wake, tier changes). Camera-following effects used to live here too in an earlier draft; they moved to `camera/` (above) because they're better understood as camera orchestration than as "interaction". `interaction/` now strictly holds the input-side concerns; the camera-side responses live one folder over.
+
+Two inhabitants is the minimum that justifies a folder. Future contenders: a hover-debounce module, a touch-gesture interpreter, a keybinding registry. The folder shape (one input source + one effect path each) is clear enough to attract the next module of that shape.
 
 #### `frame/` — the per-frame body and its GPU pass
 Inhabitants:
@@ -150,19 +176,6 @@ Inhabitants:
 Why these belong together: each pair is one bake — a pure function that takes a `PointCloud` plus parameters and produces a new typed array, paired with a worker entry point that wraps `postMessage` plumbing around the same function. They share an identical idiom (pure module + `?worker` sibling), the same lifetime (one message in, one out, terminate), and the same reason for existing (multi-second main-thread work moved off-thread). Three pairs is enough to want a folder; the next bake (a likely future Schechter-with-evolution variant) drops in trivially.
 
 A future reader scanning `bake/` immediately knows two things: (a) this is per-cloud, off-thread work, (b) every file follows the pure-fn + worker-sibling pattern.
-
-#### `interaction/` — input events, selection, and camera-following effects
-Inhabitants:
-- `inputBindings.ts` — pointer/keyboard/resize listener attachments + cleanup.
-- `clickHandler.ts` — pick texture readback + selection-index resolver.
-- `tweenToGalaxy.ts` (Spec B) — shared "build target Vec3, start tween, requestRender" used by select/focus paths.
-- `resolveFocusTarget.ts` — URL focus-target → (source, localIdx) resolver.
-- `focusTween.ts` — constants/helpers for the focus-on-galaxy camera tween (FOCUS_TWEEN_MS et al).
-- `cameraFraming.ts` — initial camera framing math from a bbox scalar.
-
-Why these belong together: every file in this folder is part of the **user-action → camera state-change chain**. Either the user did something (clicked, opened a focus URL, mounted the page) or the engine reacted by moving the camera (tween-to-galaxy, initial framing). They share one mental model: "given an external trigger, where does the camera need to go and how does it get there?" `clickHandler` and `inputBindings` are the input edge; `tweenToGalaxy`, `focusTween`, `resolveFocusTarget`, `cameraFraming` are the camera-effect responses.
-
-`cameraFraming` is the wobbliest fit (it could plausibly live in `helpers/` since it's pure math). Choosing `interaction/` because (a) its sole caller is the bootstrap's "frame the camera around the loaded cloud" step, which is a one-shot mount-time interaction, and (b) it's narratively close to `focusTween` which sits firmly here. See "edge cases" below.
 
 #### `wiring/` — declarative tables consumed by phases
 Inhabitants:
@@ -260,8 +273,9 @@ The existing `shaders/{disks,filaments,labels,lib,milkyWay,points,proceduralDisk
 
 A few files could plausibly go in two folders. Picking one is a choice; here are the calls and why:
 
-- **`cameraFraming.ts`** — `interaction/` vs `helpers/`. It's a pure function (would fit `helpers/`) but its narrative use is one-shot mount-time interaction. **Pick `interaction/`** because the folder's neighbours (`focusTween`, `resolveFocusTarget`) form the camera-effect cluster it's the boot-time member of. If `helpers/` later acquires a sibling on framing math, revisit.
-- **`focusTween.ts`** — `interaction/` vs `helpers/`. Mostly constants (FOCUS_TWEEN_MS) plus tiny helpers; could be a leaf. **Pick `interaction/`** for the same reason as `cameraFraming`: its sole consumer narrative is "focus on a galaxy = an interaction". The constants travel together with the interaction code that uses them.
+- **`cameraFraming.ts`** — `camera/` vs `helpers/`. It's a pure function (would fit `helpers/`) but its narrative use is one-shot mount-time camera placement. **Pick `camera/`** because all camera-orchestration lives there now; pulling pure math out into `helpers/` would split the camera mental model across two folders. If `helpers/` later acquires a sibling on framing math, revisit.
+- **`focusTween.ts`** — `camera/` vs `helpers/`. Mostly constants (FOCUS_TWEEN_MS) plus tiny helpers; could be a leaf. **Pick `camera/`** for the same reason as `cameraFraming`: the constants travel together with the tween code that uses them, and the camera folder is the single home for camera concerns.
+- **`tweenManager.ts`** — `subsystems/` vs `camera/`. It IS a closure-returning factory (the `subsystems/` shape) but its purpose is camera-specific. **Pick `camera/`** because grouping it with the helpers that build its inputs (`tweenToGalaxy`, `focusTween`) preserves the local mental model. A reader tracing a focus-tween shouldn't bounce between two folders. The "subsystem-shaped factory" pattern is descriptive, not prescriptive — `camera/` is the right home for camera things even when their shape happens to match `subsystems/`.
 - **`renderScheduler.ts`** — `subsystems/` vs `frame/`. It's per-frame in the sense that it schedules frames, but it lives across frames as a singleton with internal `_pending` state. **Pick `subsystems/`** because the engine treats it like the other handle-bearing subsystems (build once, hold across the lifetime, call from many sites).
 - **`youAreHereVisibility.ts`** — `labels/` vs root. Pure math (would fit a hypothetical `helpers/` if gpu had one). **Pick `labels/`** because its narrative use is the Milky Way label marker; that's the only consumer and the docstring explicitly grounds itself in the label work.
 - **`shaderCompileLogger.ts`** — `resources/` vs root. **Pick root** because it's a build-time wrapper, not a resource owner; tucking it into `resources/` would misclassify its lifetime.
@@ -274,7 +288,7 @@ The proposed taxonomy was derived by:
 1. Reading the module-header docstring of every file in `src/services/engine/` and `src/services/gpu/`. Each file's primary responsibility went into a slot.
 2. Cross-checking the ".worker.ts" siblings as obviously-paired, then asking what their shared role is (the answer: "off-thread cloud bakes" → `bake/`).
 3. Identifying the closure-returning-factory pattern (documented as such in `thumbnailSubsystem.ts` and `spaceMouseSubsystem.ts`) and listing every file that follows it → `subsystems/`.
-4. Flagging the input-and-camera-response cluster as a single narrative thread → `interaction/`.
+4. Splitting the input edge from the camera-orchestration response: `interaction/` (input listeners + click resolver) and `camera/` (everything that decides where the camera should go and gets it there). The split's natural seam is "what triggers a state change" vs "how the camera tween is composed and run". Earlier drafts merged these into one `interaction/` folder; the camera-side code outgrew that name once `tweenManager` joined it.
 5. Identifying the small declarative-table set that Spec B's `pointSourceRegistry` joins → `wiring/`.
 6. Sanity-checking the residual "pure leaf math" set is small and well-defined → `helpers/`.
 7. For GPU: separating "owns a `GPURenderPipeline`" (renderers) from "owns a shared GPU resource" (resources) from "consumed by multiple renderers as a fullscreen blit" (passes) from "the BMFont label subsystem" (labels). The split runs cleanly with no leftovers requiring a `misc/` folder.
@@ -402,4 +416,30 @@ npx tsc --noEmit && npx vitest run
 - No new abstractions introduced (no new `index.ts` barrel files, no re-export shims).
 - Two PRs landed (engine first, then gpu), each independently reviewable.
 
-The win is measurable in the post-restructure `ls`: a reader running `ls src/services/engine/` sees 7 directories + 2 files instead of 30 files, and each directory's name tells them what's inside without opening it.
+The win is measurable in the post-restructure `ls`: a reader running `ls src/services/engine/` sees 8 directories + 2 files instead of 30 files, and each directory's name tells them what's inside without opening it.
+
+## Follow-up — subsystem API consistency (NOT in scope here)
+
+Spec C relocates files; it does NOT touch the API of any module. Surfacing one observation that surfaced during the brainstorm and is worth a separate spec later:
+
+**The "subsystem" label across `state.subsystems.*` is loose.** Today's seven handles share the bag and the "build once, hold across the lifetime, call from many sites" lifecycle, but they don't share an API:
+
+| handle | factory | per-frame method | teardown |
+|---|---|---|---|
+| `thumbnails` | `createThumbnailSubsystem(...)` | `runFrame(input)` | `destroy()` |
+| `spaceMouse` | `createSpaceMouseSubsystem(...)` | `applyToCamera(cam, now)` | `destroy()` |
+| `tweens` | `createTweenManager()` | `advance(cam, now)` | none |
+| `scheduler` | `createRenderScheduler(opts)` | none (event-driven) | `cancelRender()` |
+| `clickResolver` | `createClickResolver(input)` | none (event-driven) | none |
+| `inputBindings` | `attachEngineInputs(opts)` | none (event-driven) | `detach()` |
+| `loadProgress` | `createLoadProgressEmitter(...)` | none (subscribe-driven) | none |
+
+Three different per-frame method names, four different teardown shapes, and only 2 of 7 carry the `*Subsystem` suffix. The docstring on `EngineSubsystemHandles.d.ts` claims "a small imperative API (`runFrame`, `apply`, `connect`, etc.)" — that overpromises a contract that doesn't exist.
+
+**Two flavours of follow-up worth distinguishing:**
+
+1. **Light-touch consistency pass (small, near-term).** Rename the 5 non-`*Subsystem` handles to carry the suffix (or drop the suffix from the 2 that have it — pick one). Refresh the `EngineSubsystemHandles` docstring to describe what the bag actually is (owned long-lived helpers, mixed APIs) instead of promising a fake contract. Roughly 7 file renames + import updates + a docstring rewrite. One small PR. No interface change.
+
+2. **Real subsystem interface (larger, requires brainstorm).** Define a minimum `Subsystem` type — possibly `{ destroy?(): void; }` plus per-frame work via a separate optional `FrameSubsystem extends Subsystem { runFrame(...): void; }` interface. Force every handle to conform. This raises real questions (should renderers join the bag too? do per-frame call sites loop over a subsystems list, or stay enumerated?) that need their own design pass. Out of scope here; tracked as a possible Spec D.
+
+This spec deliberately makes neither change. Renaming files in this PR's scope (relocation only) AND in the follow-up's scope (rename to enforce a suffix convention) would conflate two concerns; doing them separately keeps each PR small. The `camera/` choice above similarly steps around the question — `tweenManager` is filed by domain ("camera"), not by API shape ("subsystem"), so the follow-up's outcome doesn't change Spec C's layout.

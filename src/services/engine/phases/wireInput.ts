@@ -80,11 +80,11 @@ import { Source } from '../../../data/sources';
 import { createOrbitCamera } from '../../camera/orbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { createPickRenderer } from '../../gpu/pickRenderer';
-import { createClickResolver } from '../clickHandler';
-import { attachEngineInputs } from '../inputBindings';
-import { computeInitialCamera } from '../cameraFraming';
-import { buildPointInfo, maxAbsCoord } from '../pointInfoBuilder';
-import { seedSettingsCallbacks } from '../seedSettingsCallbacks';
+import { createClickResolver } from '../interaction/clickHandler';
+import { attachEngineInputs } from '../interaction/inputBindings';
+import { computeInitialCamera } from '../camera/cameraFraming';
+import { buildPointInfo, maxAbsCoord } from '../helpers/pointInfoBuilder';
+import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
 import { cloudSourceFor } from '../../../data/cloudSource';
 
 import type { EngineState, PointInfo } from '../../../@types';
