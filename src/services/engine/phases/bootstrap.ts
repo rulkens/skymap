@@ -63,9 +63,11 @@
  *     forward-declared `let`s in `engine.ts` that later phases need to
  *     write to (round-trip via the `{current}` ref pattern, same shape
  *     as `lastReportedFps` from Phase 3);
- *   - the createEngine-scope helpers (`cssToTexPx`, `setHovered`,
- *     `setSelected`, `updateScaleBar`) that close over per-engine
- *     dedup state and so can't sit on `EngineState`;
+ *   - the createEngine-scope helpers (`cssToTexPx`, `updateScaleBar`)
+ *     that close over per-engine dedup state and so can't sit on
+ *     `EngineState` — note that `setHovered` / `setSelected` are no
+ *     longer threaded here; phases call into
+ *     `state.subsystems.selection` directly (Spec D.3);
  *   - `fpsCounter`, `lastReportedFps`, `milkyWayITimeEpochMs` — needed
  *     by `startLoop` to build the `RunFrameDeps` bag;
  *   - `allSlots` — the flat slot Map that `engine.ts` exposes via the
@@ -78,8 +80,7 @@
  *     literal evaluates.
  */
 
-import type { EngineCallbacks, EngineHandle, EngineState, PointInfo } from '../../../@types';
-import type { Source } from '../../../data/sources';
+import type { EngineCallbacks, EngineHandle, EngineState } from '../../../@types';
 import type { AssetSlot } from '../../loading/types';
 import type { FpsCounter } from '../subsystems/fpsCounter';
 
@@ -172,23 +173,6 @@ export type BootstrapDeps = {
 
   /** CSS-pixel → texture-space-pixel conversion (DPR-aware). */
   cssToTexPx: (cssPx: number) => number;
-
-  /**
-   * Notify the UI that the hovered point changed.  Closes over
-   * `state.picking.hovered`, `cb.onHoverChange`, and the
-   * `pointInfoForSelection` helper inside createEngine.
-   */
-  setHovered: (sel: { source: Source; localIdx: number } | null) => void;
-
-  /**
-   * Update the live selection.  Closes over the same dedup helpers
-   * as `setHovered`, plus the optional `prebuiltInfo` short-circuit
-   * for the `selectByAlias` pre-GPU-upload window.
-   */
-  setSelected: (
-    sel: { source: Source; localIdx: number } | null,
-    prebuiltInfo?: PointInfo | null,
-  ) => void;
 
   /**
    * Refresh the scale-bar legend.  Internally dedups via a

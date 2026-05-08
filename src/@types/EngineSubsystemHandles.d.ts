@@ -38,6 +38,7 @@
 
 import type { ThumbnailSubsystem } from '../services/engine/subsystems/thumbnailSubsystem';
 import type { SpaceMouseSubsystem } from '../services/engine/subsystems/spaceMouseSubsystem';
+import type { SelectionSubsystem } from '../services/engine/subsystems/selectionSubsystem';
 import type { TweenManager } from '../services/engine/camera/tweenManager';
 import type { ClickResolver } from '../services/engine/interaction/clickHandler';
 import type { InputBindings } from '../services/engine/interaction/inputBindings';
@@ -51,6 +52,17 @@ export type EngineSubsystemHandles = {
   clickResolver: ClickResolver | null;
   inputBindings: InputBindings | null;
   scheduler: RenderScheduler;
+  /**
+   * Hover/select state façade — owns the user-facing `(source, localIdx)`
+   * selection pair and fans out `cb.onHoverChange` /
+   * `cb.onSelectChange` only on actual change.  Constructed eagerly in
+   * the state literal alongside `tweens` and `scheduler` (no GPU
+   * dependency), so it's non-null from t=0.  See
+   * `selectionSubsystem.ts`'s module header for why state moved off
+   * `EnginePickingState` and onto this subsystem (single source of
+   * truth, callback fan-out lives in one place).
+   */
+  selection: SelectionSubsystem;
   /**
    * Per-engine download-progress emitter — instantiated inside the
    * GPU init IIFE (so `cb.onLoadProgress` and the slot registry are in

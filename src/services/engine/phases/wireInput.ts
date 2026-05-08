@@ -117,7 +117,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // the matching cloud and bounds-check the localIdx against the
   // data-side map's count.  The bounds check defends the tier-swap
   // race (in-flight pick decoded against a now-shrunk cloud) — see
-  // `pointInfoForSelection` higher up for the same guard rationale.
+  // `selectionSubsystem.pointInfoFor` for the same guard rationale.
   state.subsystems.clickResolver = createClickResolver({
     pickRenderer,
     resolveSelection: (sel) => {
@@ -217,7 +217,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // point) — selection state is unaffected.
     onPointerLeave: () => {
       state.picking.latestMouseCss = null;
-      deps.setHovered(null);
+      state.subsystems.selection.setHovered(null);
     },
     // Manual orbit controls always win — cancel any running focus
     // tween the moment the user grabs the mouse.  Otherwise the
@@ -229,7 +229,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     onPointerDown: () => {
       state.subsystems.tweens.cancel();
       state.picking.pointerDown = true;
-      deps.setHovered(null);
+      state.subsystems.selection.setHovered(null);
     },
     onPointerUp: () => {
       state.picking.pointerDown = false;
@@ -238,7 +238,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // forwards Esc through the engine handle's `clearSelection()`
     // — same result, both paths are fine.
     onEscape: () => {
-      deps.setSelected(null);
+      state.subsystems.selection.setSelected(null);
     },
     // resize: the next frame's resizeCanvasToDisplay() picks up
     // the new dimensions and recreates the HDR target.  All we
@@ -321,10 +321,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
         // dblclick handler — see `lastClickedInfo` above for the
         // race-condition rationale.
         if (result.kind === 'clear') {
-          deps.setSelected(null);
+          state.subsystems.selection.setSelected(null);
           lastClickedInfo = null;
         } else {
-          deps.setSelected(result.selection);
+          state.subsystems.selection.setSelected(result.selection);
           lastClickedInfo = result.info;
         }
         // Selection changed — render so the highlight halo

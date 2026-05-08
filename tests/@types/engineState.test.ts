@@ -50,7 +50,19 @@ import {
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
 import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/spaceMouseSubsystem';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
+import { createSelectionSubsystem } from '../../src/services/engine/subsystems/selectionSubsystem';
+import type { EngineCallbacks } from '../../src/@types';
 import { Source } from '../../src/data/sources';
+
+// A no-op callback bag suitable for the selection subsystem fixture.
+// `onHoverChange` / `onSelectChange` are the only fields the subsystem
+// actually reads; the rest are typed-required-only.
+const noopCb = {
+  onStatusChange: () => {},
+  onHoverChange: () => {},
+  onSelectChange: () => {},
+  onScaleChange: () => {},
+} as unknown as EngineCallbacks;
 
 // Inject a no-op rAF/cAF pair so the scheduler factory doesn't reach
 // for `window.requestAnimationFrame` in the Vitest node environment.
@@ -94,8 +106,6 @@ describe('EngineState type', () => {
       tier: 'medium',
     };
     const picking: EnginePickingState = {
-      hovered: null,
-      selected: null,
       latestMouseCss: null,
       lastPickedMouseCss: null,
       pickInFlight: false,
@@ -122,6 +132,12 @@ describe('EngineState type', () => {
           onAxes: () => {},
         }),
         tweens: createTweenManager(),
+        selection: createSelectionSubsystem({
+          cb: noopCb,
+          getCloud: () => undefined,
+          getFamousMeta: () => [],
+          getFamousXrefs: () => ({}),
+        }),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -134,7 +150,9 @@ describe('EngineState type', () => {
     expect(state.settings.pointSizePx).toBe(2.5);
     expect(state.bias.mode).toBe(DEFAULT_BIAS_MODE);
     expect(state.sources.visibleMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
-    expect(state.picking.hovered).toBeNull();
+    // hover/selection moved off `state.picking` and onto
+    // `state.subsystems.selection` in Spec D.3.
+    expect(state.subsystems.selection.hovered()).toBeNull();
     expect(state.gpu.renderer).toBeNull();
     expect(state.subsystems.tweens.isActive()).toBe(false);
   });
@@ -210,8 +228,6 @@ describe('EngineState type', () => {
         tier: 'medium',
       },
       picking: {
-        hovered: null,
-        selected: null,
         latestMouseCss: null,
         lastPickedMouseCss: null,
         pickInFlight: false,
@@ -232,6 +248,12 @@ describe('EngineState type', () => {
           onAxes: () => {},
         }),
         tweens: createTweenManager(),
+        selection: createSelectionSubsystem({
+          cb: noopCb,
+          getCloud: () => undefined,
+          getFamousMeta: () => [],
+          getFamousXrefs: () => ({}),
+        }),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -244,13 +266,15 @@ describe('EngineState type', () => {
     state.settings.brightness = 2.5;
     state.bias.absMagLimit = -20;
     state.sources.visibleMask = 0xff;
-    state.picking.hovered = { source: 1 as Source, localIdx: 42 };
+    // hovered/selected aren't on `state.picking` anymore — exercise the
+    // subsystem's setter instead.
+    state.subsystems.selection.setHovered({ source: 1 as Source, localIdx: 42 });
     state.picking.pickInFlight = true;
 
     expect(state.settings.brightness).toBe(2.5);
     expect(state.bias.absMagLimit).toBe(-20);
     expect(state.sources.visibleMask).toBe(0xff);
-    expect(state.picking.hovered).toEqual({ source: 1, localIdx: 42 });
+    expect(state.subsystems.selection.hovered()).toEqual({ source: 1, localIdx: 42 });
     expect(state.picking.pickInFlight).toBe(true);
   });
 });

@@ -107,8 +107,6 @@ function makeDeps(): any {
     lastReportedFps: { current: null },
     milkyWayITimeEpochMs: 0,
     cssToTexPx: (px: number) => px,
-    setHovered: () => {},
-    setSelected: () => {},
     updateScaleBar: () => {},
   };
 }
