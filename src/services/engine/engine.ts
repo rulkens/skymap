@@ -101,8 +101,6 @@ import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
-import { cssToTexPx } from './helpers/cssToTexPx';
-import { createScaleBarUpdater } from './helpers/scaleBarUpdater';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../loading/types';
 import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
@@ -233,17 +231,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // to it across the module boundary — see runFrame.ts's module header
   // for the {current} ref pattern.
   const lastReportedFps: { current: number | null } = { current: null };
-
-  /**
-   * Wall-clock epoch (ms, from `performance.now`) snapshot taken at
-   * engine construction.  Per-frame the Milky Way impostor's iTime
-   * is computed as `(performance.now() - milkyWayITimeEpochMs) * 0.001 *
-   * 0.25` — outer factor `0.25` is the slow-but-alive animation scale
-   * decided in the plan.  See `shaders/milkyWayImpostor.wgsl` line
-   * tagged `Match the ShaderToy's TIME macro` for the inner `* 0.1`
-   * factor that runs on top of this.
-   */
-  const milkyWayITimeEpochMs = performance.now();
 
   const state: EngineState = {
     settings: {
@@ -439,15 +426,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // ref to detach the listeners.
   const detachControlsRef: { current: (() => void) | null } = { current: null };
 
-  // ── Scale-bar updater ────────────────────────────────────────────────────
-  //
-  // The factory returns a closure that internally dedups via
-  // `lastScaleSig`, reads the live `state.cam` at call time, and fires
-  // `cb.onScaleChange` only when the visible value changed.  See
-  // `helpers/scaleBarUpdater.ts` for the full contract; engine.ts just
-  // hands it a stable reference and forgets about it.
-  const updateScaleBar = createScaleBarUpdater({ state, canvas, cb });
-
   // ── Async startup ────────────────────────────────────────────────────────
 
   // Flat slot registry, keyed by `slot.name`.  Lifted to outer scope so the
@@ -471,7 +449,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // bindings (frameRef, detachControlsRef, handleRef), the createEngine-
   // scope helpers (cssToTexPx, updateScaleBar), and the values needed
   // for `RunFrameDeps` assembly in `startLoop`
-  // (fpsCounter, lastReportedFps, milkyWayITimeEpochMs, allSlots).
+  // (fpsCounter, lastReportedFps, allSlots).
   //
   // `handleRef.current` is null at this point — the public handle is
   // declared AFTER the bootstrap IIFE below.  `wireInput`'s onDoubleClick
@@ -488,9 +466,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     allSlots,
     fpsCounter,
     lastReportedFps,
-    milkyWayITimeEpochMs,
-    cssToTexPx,
-    updateScaleBar,
   };
   // The main async IIFE runs the bootstrap phases.  All errors are
   // caught here and reported via `onStatusChange` — same single

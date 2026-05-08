@@ -63,13 +63,18 @@
  *     forward-declared `let`s in `engine.ts` that later phases need to
  *     write to (round-trip via the `{current}` ref pattern, same shape
  *     as `lastReportedFps` from Phase 3);
- *   - the createEngine-scope helpers (`cssToTexPx`, `updateScaleBar`)
- *     that close over per-engine dedup state and so can't sit on
- *     `EngineState` — note that `setHovered` / `setSelected` are no
- *     longer threaded here; phases call into
- *     `state.subsystems.selection` directly (Spec D.3);
- *   - `fpsCounter`, `lastReportedFps`, `milkyWayITimeEpochMs` — needed
- *     by `startLoop` to build the `RunFrameDeps` bag;
+ *   - `fpsCounter`, `lastReportedFps` — needed by `startLoop` to build
+ *     the `RunFrameDeps` bag.  The pure `cssToTexPx` helper, the
+ *     `createScaleBarUpdater` factory, and the `milkyWayITimeEpochMs`
+ *     snapshot used to live here too, but post-extraction they're
+ *     imported / built / snapshotted directly in `wireInput` /
+ *     `startLoop` — there's no per-engine dedup state for `cssToTexPx`,
+ *     the scale-bar factory closes over `state` / `canvas` / `cb`
+ *     which are already in scope at the consumer, and the iTime epoch
+ *     is `performance.now()` taken once (the * 0.25 animation scale
+ *     makes "engine construction" vs "loop start" imperceptible).
+ *     `setHovered` / `setSelected` similarly don't appear: phases call
+ *     into `state.subsystems.selection` directly (Spec D.3);
  *   - `allSlots` — the flat slot Map that `engine.ts` exposes via the
  *     public handle's `assetSlots` field; populated by `wireSlots`
  *     once every slot has been minted;
@@ -163,23 +168,6 @@ export type BootstrapDeps = {
    * reads + writes it).  Boxed as `{current}` — see Phase 3.
    */
   lastReportedFps: { current: number | null };
-
-  /**
-   * Wall-clock epoch (ms) snapshot taken at engine construction.
-   * Threaded through to `startLoop`'s `RunFrameDeps` so the Milky
-   * Way impostor's iTime is computed against a stable origin.
-   */
-  milkyWayITimeEpochMs: number;
-
-  /** CSS-pixel → texture-space-pixel conversion (DPR-aware). */
-  cssToTexPx: (cssPx: number) => number;
-
-  /**
-   * Refresh the scale-bar legend.  Internally dedups via a
-   * closure-captured `lastScaleSig` so an unchanged label costs ~zero
-   * per frame.
-   */
-  updateScaleBar: () => void;
 
   /**
    * Phase-local carrier for IIFE-scoped renderers/handles that survive
