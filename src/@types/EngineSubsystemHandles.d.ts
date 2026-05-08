@@ -74,10 +74,10 @@ export type EngineSubsystemHandles = {
    * / `tweens` / `scheduler` (no GPU dependency); the renderer is wired
    * in during `phases/initGpu.ts` via `attachRenderer(...)`.
    *
-   * Phase E.3 wires the subsystem and tests it standalone.  Phase E.4
-   * (DEFERRED — pending visual smoke test) cuts over `handle.setBiasMode`
-   * to call into this subsystem.  Until then the subsystem is wired
-   * and idle from the public-handle's POV.
+   * Phase E.3 wired the subsystem (idle); phase E.4 cut
+   * `handle.setBiasMode` over to call `setMode` on this subsystem and
+   * deleted the renderer's old bias-mode methods.  Production now
+   * routes the user's mode toggles through here.
    */
   biasCorrection: BiasCorrectionSubsystem;
   /**

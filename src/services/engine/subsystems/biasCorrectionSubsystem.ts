@@ -59,9 +59,8 @@
  * carry an injection seam that wasn't part of its rendering concern.
  * Spec E moves the seam onto this subsystem's factory parameter:
  * tests pass an in-process stub at construction; production omits
- * the param and gets the default Vite `?worker` runner (wired in
- * Spec E phase E.4 — DEFERRED in this run, so the default in E.3
- * is a loud throw to catch accidental fall-through).
+ * the param and gets the default Vite `?worker` runner declared as
+ * `defaultSchechterRunner` / `defaultAngularRunner` in this module.
  *
  * ### Why `state.bias.mode` stays separate
  *
@@ -72,14 +71,17 @@
  * reader (URL hash, InfoCard, SettingsPanel echo) continues to work
  * unchanged.
  *
- * ### Production behaviour in E.3 — wired and IDLE
+ * ### Production wiring (Spec E phase E.4 — cut-over)
  *
- * E.3 wires the subsystem into `state.subsystems.biasCorrection` and
- * has `phases/initGpu.ts` call `attachRenderer(...)` — but the public
- * handle's `setBiasMode` STILL goes through `pointRenderer.setBiasMode`
- * (the old path).  The cut-over to call this subsystem happens in
- * Spec E phase E.4 (DEFERRED — pending visual smoke test).  The
- * subsystem is exercised by tests in E.3 but not by production calls.
+ * Phase E.4 routed `handle.setBiasMode` through this subsystem and
+ * deleted the renderer's old bias-mode methods.  The Vite `?worker`
+ * imports moved here too — `defaultSchechterRunner` /
+ * `defaultAngularRunner` (see below) spawn one worker per call,
+ * matching the pre-extraction behaviour bit-for-bit.  Same observable
+ * behaviour as pre-E.4: the renderer keeps reading `state.bias.mode`
+ * per-frame for the uniform write; this subsystem owns the splice
+ * pipeline that lays per-galaxy ratios/weights into the per-source
+ * vertex buffers.
  *
  * @module
  */
@@ -90,6 +92,21 @@ import { Source, ALL_SOURCES } from '../../../data/sources';
 import type { ComputeSchechterRatiosInput } from '../bake/computeSchechterRatios';
 import type { ComputeAngularWeightsInput } from '../bake/computeAngularWeights';
 import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
+
+// `?worker` is a Vite-specific import suffix.  It instructs the bundler
+// to emit each `.worker.ts` file as its own worker chunk and hand back a
+// default-exported class whose `new`-instantiation spawns a Worker
+// running that bundle.  Pre-Spec-E these `?worker` imports lived inside
+// `pointRenderer.ts` because the bake state machine was a method on
+// `PointRenderer`; Spec E.4 moved them here alongside the bake state
+// machine so the renderer owns rendering and only rendering.
+//
+// In Node-only test environments the `?worker` suffix isn't resolvable;
+// tests inject a synchronous fallback via the factory's optional
+// `schechterRunner` / `angularRunner` parameters instead of importing
+// this module's defaults.
+import ComputeSchechterRatiosWorker from '../bake/computeSchechterRatios.worker?worker';
+import ComputeAngularWeightsWorker from '../bake/computeAngularWeights.worker?worker';
 
 /** Async function from a Schechter bake input to per-galaxy ratios. */
 export type SchechterRunner = (input: ComputeSchechterRatiosInput) => Promise<Float32Array>;
@@ -110,9 +127,17 @@ export type BiasCorrectionDeps = {
    * the state at engine-construction time.
    */
   getState: () => EngineState;
-  /** Optional override; defaults to a loud throw until E.4 wires Vite `?worker`. */
+  /**
+   * Optional override for the Schechter-ratio bake.  Defaults to a Vite
+   * `?worker` chunk runner (`defaultSchechterRunner` below); tests pass
+   * an in-process synchronous stub so they don't need Worker support.
+   */
   schechterRunner?: SchechterRunner;
-  /** Optional override; defaults to a loud throw until E.4 wires Vite `?worker`. */
+  /**
+   * Optional override for the HEALPix angular-weight bake.  Defaults to
+   * a Vite `?worker` chunk runner (`defaultAngularRunner` below); tests
+   * pass an in-process synchronous stub.
+   */
   angularRunner?: AngularRunner;
 };
 
@@ -134,27 +159,135 @@ export type BiasCorrectionSubsystem = {
 };
 
 /**
- * Default runner for E.3 — throws if invoked without a test stub.
+ * Production default for the lazy Schechter-ratio bake — spawns a fresh
+ * `?worker` chunk per call, ships a copied (slice-then-transfer) cloud,
+ * waits for the resulting `Float32Array`, and terminates the worker.
  *
- * The Vite `?worker` defaults still live on `PointRenderer` in E.3
- * because the public handle's `setBiasMode` continues to drive the
- * old path.  This subsystem is exercised only by tests in E.3, and
- * tests always inject explicit `schechterRunner` / `angularRunner`
- * stubs.  Spec E phase E.4 (DEFERRED) moves the production worker
- * defaults onto this module and replaces this throw — at that point
- * `createBiasCorrectionSubsystem({state})` (no overrides) just works.
+ * Pre-Spec-E this lived as `defaultSchechterWorkerRunner` inside
+ * `pointRenderer.ts` (the renderer owned the bake state machine).
+ * Spec E.4 moved it here alongside the `?worker` import so the
+ * renderer's surface is only "draw instanced billboards".
+ *
+ * ### Why one worker per call?
+ *
+ * Parallel survey fetches resolve in unpredictable order, so SDSS can
+ * finish baking while 2MRS is mid-bake.  A long-lived worker would have
+ * to queue requests internally; a per-call worker has zero shared
+ * state and the OS-level concurrency happens automatically.  Worker
+ * spawn is cheap (a few ms) compared to the 1–2 s bake itself.
+ *
+ * ### Why slice-then-transfer
+ *
+ * The engine retains the original `PointCloud` for picker / InfoCard
+ * reads after the bake is kicked off — we cannot detach those buffers
+ * in place via `Transferable[]`.  `slice(0)` mints owned copies whose
+ * underlying ArrayBuffers we *can* transfer, leaving the engine's
+ * authoritative cloud completely intact.  Cost: ~50 ms memcpy at full
+ * deck (much cheaper than the multi-second structured clone the
+ * pre-Transferable revision paid).
  */
-function defaultRunnerNotWired(): never {
-  throw new Error(
-    'biasCorrectionSubsystem: no default runner wired — pass schechterRunner/angularRunner ' +
-      'in tests, or wait for Spec E phase E.4 to cut over from pointRenderer.setBiasMode.',
-  );
+function defaultSchechterRunner(input: ComputeSchechterRatiosInput): Promise<Float32Array> {
+  return new Promise((resolve, reject) => {
+    const worker = new ComputeSchechterRatiosWorker();
+    worker.onmessage = (event: MessageEvent<Float32Array>) => {
+      worker.terminate();
+      resolve(event.data);
+    };
+    worker.onerror = (event: ErrorEvent) => {
+      worker.terminate();
+      reject(event.error ?? new Error(event.message ?? 'schechter-ratio worker error'));
+    };
+
+    // Slice-then-transfer the typed-array buffers.  See the long
+    // comment at the top of this function for the ownership rationale.
+    const c = input.cloud;
+    const cloudCopy: PointCloud = {
+      count: c.count,
+      objIDs: new BigUint64Array(c.objIDs.buffer.slice(0)),
+      positions: new Float32Array(c.positions.buffer.slice(0)),
+      magU: new Float32Array(c.magU.buffer.slice(0)),
+      magG: new Float32Array(c.magG.buffer.slice(0)),
+      magR: new Float32Array(c.magR.buffer.slice(0)),
+      magI: new Float32Array(c.magI.buffer.slice(0)),
+      magZ: new Float32Array(c.magZ.buffer.slice(0)),
+      axisRatio: new Float32Array(c.axisRatio.buffer.slice(0)),
+      positionAngleDeg: new Float32Array(c.positionAngleDeg.buffer.slice(0)),
+      diameterKpc: new Float32Array(c.diameterKpc.buffer.slice(0)),
+    };
+    const transfer: Transferable[] = [
+      cloudCopy.objIDs.buffer,
+      cloudCopy.positions.buffer,
+      cloudCopy.magU.buffer,
+      cloudCopy.magG.buffer,
+      cloudCopy.magR.buffer,
+      cloudCopy.magI.buffer,
+      cloudCopy.magZ.buffer,
+      cloudCopy.axisRatio.buffer,
+      cloudCopy.positionAngleDeg.buffer,
+      cloudCopy.diameterKpc.buffer,
+    ];
+    worker.postMessage({ ...input, cloud: cloudCopy }, transfer);
+  });
+}
+
+/**
+ * Production default for the lazy HEALPix angular-reweight bake.
+ * Mirror of `defaultSchechterRunner` — same per-call worker spawn,
+ * same slice-then-transfer ownership pattern, same termination on
+ * resolve/error.  See that function's docstring for the full rationale.
+ *
+ * The bake itself is three linear passes through the cloud's positions
+ * plus a per-shell median sort; ~100-300 ms at full deck.  Worker spawn
+ * (~few ms) is the right trade-off — even though the bake isn't as
+ * dramatically expensive as the Schechter integral, dropping a frame
+ * on mode toggle would feel sluggish.
+ */
+function defaultAngularRunner(input: ComputeAngularWeightsInput): Promise<Float32Array> {
+  return new Promise((resolve, reject) => {
+    const worker = new ComputeAngularWeightsWorker();
+    worker.onmessage = (event: MessageEvent<Float32Array>) => {
+      worker.terminate();
+      resolve(event.data);
+    };
+    worker.onerror = (event: ErrorEvent) => {
+      worker.terminate();
+      reject(event.error ?? new Error(event.message ?? 'angular-weights worker error'));
+    };
+
+    const c = input.cloud;
+    const cloudCopy: PointCloud = {
+      count: c.count,
+      objIDs: new BigUint64Array(c.objIDs.buffer.slice(0)),
+      positions: new Float32Array(c.positions.buffer.slice(0)),
+      magU: new Float32Array(c.magU.buffer.slice(0)),
+      magG: new Float32Array(c.magG.buffer.slice(0)),
+      magR: new Float32Array(c.magR.buffer.slice(0)),
+      magI: new Float32Array(c.magI.buffer.slice(0)),
+      magZ: new Float32Array(c.magZ.buffer.slice(0)),
+      axisRatio: new Float32Array(c.axisRatio.buffer.slice(0)),
+      positionAngleDeg: new Float32Array(c.positionAngleDeg.buffer.slice(0)),
+      diameterKpc: new Float32Array(c.diameterKpc.buffer.slice(0)),
+    };
+    const transfer: Transferable[] = [
+      cloudCopy.objIDs.buffer,
+      cloudCopy.positions.buffer,
+      cloudCopy.magU.buffer,
+      cloudCopy.magG.buffer,
+      cloudCopy.magR.buffer,
+      cloudCopy.magI.buffer,
+      cloudCopy.magZ.buffer,
+      cloudCopy.axisRatio.buffer,
+      cloudCopy.positionAngleDeg.buffer,
+      cloudCopy.diameterKpc.buffer,
+    ];
+    worker.postMessage({ ...input, cloud: cloudCopy }, transfer);
+  });
 }
 
 export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCorrectionSubsystem {
   const { getState } = deps;
-  const schechterRunner: SchechterRunner = deps.schechterRunner ?? defaultRunnerNotWired;
-  const angularRunner: AngularRunner = deps.angularRunner ?? defaultRunnerNotWired;
+  const schechterRunner: SchechterRunner = deps.schechterRunner ?? defaultSchechterRunner;
+  const angularRunner: AngularRunner = deps.angularRunner ?? defaultAngularRunner;
 
   // Internal mutable state.  Closure-captured `let`s so they're
   // genuinely inaccessible from outside (no `this.mode` for a future
