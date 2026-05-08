@@ -780,6 +780,42 @@ export class PointRenderer {
     PointRenderer.angularRunner = runner ?? defaultAngularWeightsWorkerRunner;
   }
 
+  /**
+   * Optional callback fired at the tail of `upload(source, cloud)` once
+   * the GPU buffer is committed.  The bias-correction subsystem (Spec E
+   * phase E.3) installs this so it can fire a per-source bake when a
+   * new source arrives mid-mode.  The renderer doesn't reach into
+   * engine state to find the subsystem; the subsystem reaches in via
+   * `attachRenderer(...)` and installs the callback.  Uni-directional
+   * coupling — the renderer doesn't know what the callback does.
+   *
+   * Null when no subsystem is attached (e.g. tests, or the brief
+   * pre-attach window during bootstrap).  No-op in that case.
+   */
+  private biasUploadCallback: ((source: Source, cloud: PointCloud) => void) | null = null;
+
+  /**
+   * Optional callback fired at the tail of `unload(source)` after the
+   * source has been removed from `clouds`.  Mirror of
+   * `biasUploadCallback`.  Lets the bias-correction subsystem drop
+   * cached ratios/weights for the gone source without polling.
+   */
+  private biasUnloadCallback: ((source: Source) => void) | null = null;
+
+  /**
+   * Install the upload-tail callback used by the bias-correction
+   * subsystem.  Pass `null` to detach.  Idempotent: calling twice
+   * replaces the previous callback.
+   */
+  setBiasUploadCallback(cb: ((source: Source, cloud: PointCloud) => void) | null): void {
+    this.biasUploadCallback = cb;
+  }
+
+  /** Install the unload-tail callback for the bias-correction subsystem. */
+  setBiasUnloadCallback(cb: ((source: Source) => void) | null): void {
+    this.biasUnloadCallback = cb;
+  }
+
   // ─── Public accessors ────────────────────────────────────────────────────────
 
   /**
@@ -988,6 +1024,10 @@ export class PointRenderer {
         stale.fade.destroy();
       }
       this.clouds.delete(source);
+      // The empty-cloud path is semantically an unload — fire the
+      // unload callback so the bias-correction subsystem (Spec E phase
+      // E.3) can drop any cached ratios/weights for this source.
+      this.biasUnloadCallback?.(source);
       return;
     }
 
@@ -1076,6 +1116,12 @@ export class PointRenderer {
       cachedAngularWeights: null,
       fade,
     });
+
+    // Notify the bias-correction subsystem (Spec E phase E.3) that a
+    // source has been committed.  If a bias mode is active, the
+    // subsystem fires a per-source bake here.  Null when no subsystem
+    // is attached (tests, or pre-attach bootstrap window).
+    this.biasUploadCallback?.(source, cloud);
   }
 
   /**
@@ -1126,6 +1172,9 @@ export class PointRenderer {
     entry.buffer.destroy();
     entry.fade.destroy();
     this.clouds.delete(source);
+    // Notify the bias-correction subsystem (Spec E phase E.3) so it
+    // can drop any cached ratios/weights for the gone source.
+    this.biasUnloadCallback?.(source);
   }
 
   // ─── Bias-mode dispatch (Phase 5: collapsed public surface) ─────────────────

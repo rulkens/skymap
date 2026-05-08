@@ -51,6 +51,7 @@ import { createTweenManager } from '../../src/services/engine/camera/tweenManage
 import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/spaceMouseSubsystem';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
 import { createSelectionSubsystem } from '../../src/services/engine/subsystems/selectionSubsystem';
+import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
 import type { EngineCallbacks } from '../../src/@types';
 import { Source } from '../../src/data/sources';
 
@@ -112,6 +113,10 @@ describe('EngineState type', () => {
       pointerDown: false,
     };
 
+    // Forward-declare so the bias-correction subsystem's getState
+    // closure can capture the live ref before `state` is assigned.
+    // eslint-disable-next-line prefer-const
+    let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {
       settings,
       bias,
@@ -138,6 +143,9 @@ describe('EngineState type', () => {
           getFamousMeta: () => [],
           getFamousXrefs: () => ({}),
         }),
+        biasCorrection: createBiasCorrectionSubsystem({
+          getState: () => stateRef.current!,
+        }),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -146,6 +154,7 @@ describe('EngineState type', () => {
       initialCamSnapshot: null,
       assetSlots: { points: new Map(), filaments: null, famousMeta: null, pgcAlias: null },
     };
+    stateRef.current = state;
 
     expect(state.settings.pointSizePx).toBe(2.5);
     expect(state.bias.mode).toBe(DEFAULT_BIAS_MODE);
@@ -197,6 +206,8 @@ describe('EngineState type', () => {
     // The engine mutates fields directly (e.g. `state.settings.brightness = v`
     // inside `setBrightness`), so the type must NOT be Readonly.  We
     // exercise a representative mutation per bag to lock that contract.
+    // eslint-disable-next-line prefer-const
+    let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {
       settings: {
         pointSizePx: 1,
@@ -254,6 +265,9 @@ describe('EngineState type', () => {
           getFamousMeta: () => [],
           getFamousXrefs: () => ({}),
         }),
+        biasCorrection: createBiasCorrectionSubsystem({
+          getState: () => stateRef.current!,
+        }),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -262,6 +276,7 @@ describe('EngineState type', () => {
       initialCamSnapshot: null,
       assetSlots: { points: new Map(), filaments: null, famousMeta: null, pgcAlias: null },
     };
+    stateRef.current = state;
 
     state.settings.brightness = 2.5;
     state.bias.absMagLimit = -20;
