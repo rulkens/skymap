@@ -101,12 +101,12 @@ import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
+import { commitFocus } from './helpers/commitFocus';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../loading/types';
 import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
 import { FOCUS_TWEEN_MS } from './camera/focusTween';
-import { tweenToGalaxy } from './camera/tweenToGalaxy';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -632,29 +632,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     focusOn(info) {
       // Camera may not be ready yet (cloud still loading); drop the
       // call.  This guard is *separate* from `tweenToGalaxy`'s own
-      // cam-null guard — we need it here to gate the
-      // `onFocusChange` callback below.  Without the early return,
-      // a focus call against a still-bootstrapping engine would
-      // update `#focus=…` in the URL while the camera silently
+      // cam-null guard — we need it here to gate the `onFocusChange`
+      // callback fan-out inside `commitFocus`.  Without the early
+      // return, a focus call against a still-bootstrapping engine
+      // would update `#focus=…` in the URL while the camera silently
       // refused to move.
-      const cam = state.cam;
-      if (!cam) return;
-
-      // Notify before the tween starts so the URL-sync hook can update
-      // `#focus=…` in lock-step with the user's commitment.  Callers
-      // (Focus button, `f` shortcut, double-click) no longer have to
-      // setFocused manually — the engine is the single source of truth
-      // for "we just decided to focus on this galaxy."
-      cb.onFocusChange?.(info);
-
-      // The framing distance is derived from the galaxy's diameter
-      // (close-but-not-inside framing that scales naturally with size);
-      // when the PointInfo's diameter is the fallback 30 kpc, this
-      // lands on the pre-v4 placeholder framing exactly.  All the
-      // tween-construction details (yaw/pitch preservation, vec3.clone
-      // of cam.target, performance.now() startMs, scheduler kick-off)
-      // live in `tweenToGalaxy`.
-      tweenToGalaxy(state, info);
+      if (!state.cam) return;
+      commitFocus(state, cb, info);
     },
 
     selectFamous(id) {
@@ -678,24 +662,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       );
       if (!info) return;
 
-      // Selection state is keyed by `(source, localIdx)` pair — see
-      // `state.subsystems.selection.selected()` and `pickRenderer.pick`.
-      // No more global-index encoding: the picker compares packed
-      // identities directly, so the engine forwards the same shape.
-      state.subsystems.selection.setSelected({ source: Source.Famous, localIdx });
       // selectFamous is a deliberate user focus action (palette pick),
-      // so the camera-focus target moves to this galaxy too.
-      cb.onFocusChange?.(info);
-
-      // Tween the camera onto the galaxy — same tween as `focusOn`.
-      // We don't call `handle.focusOn` directly because `this` would be
-      // unreliable at call time (depending on how App.tsx invokes the
-      // handle method) and because focusOn fires `onFocusChange` again,
-      // which we already did above with the prebuilt PointInfo.
-      // `tweenToGalaxy` is the shared kernel both methods build on top
-      // of — same observable behaviour, no duplication.  Cam-null is
-      // handled inside the helper.
-      tweenToGalaxy(state, info);
+      // so the camera-focus target moves to this galaxy too — hence
+      // bundling the selection key into `commitFocus` rather than
+      // splitting select-without-focus from focus.  No prebuilt info
+      // here: the famous catalog has already loaded by the time the
+      // palette can fire, so the selection subsystem can safely read
+      // the live sidecars itself at fan-out time.
+      commitFocus(state, cb, info, { key: { source: Source.Famous, localIdx } });
     },
 
     getCloudObjIds(source) {
@@ -744,30 +718,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       );
       if (!info) return;
 
-      // Selection state holds `(source, localIdx)` directly — no
-      // running-sum global ID needed.  The shader recovers each
-      // instance's packed identity from `cloud.sourceCode << 27 | ii`
-      // and compares to `selectedPacked` for the halo gate, so the
-      // halo lights up the same row this method targets without any
-      // extra encoding.
-      //
-      // Race-window note: when selectByAlias is called from a
-      // deep-link drain that fires the moment the data-side cloud
-      // lands, the renderer hasn't uploaded yet — the halo will
-      // appear once the upload completes a frame or two later.
-      // Passing the prebuilt `info` to `setSelected` ensures the
-      // React side updates immediately regardless.
-      state.subsystems.selection.setSelected({ source, localIdx }, info);
-      // selectByAlias is a deliberate user focus action (palette pick
-      // OR deep-link resolve), so the camera-focus target moves with
-      // the selection.
-      cb.onFocusChange?.(info);
-
-      // Camera focus tween — same setup as selectFamous / focusOn,
-      // routed through the shared `tweenToGalaxy` kernel.  The helper's
-      // own cam-null guard absorbs the post-destroy / pre-bootstrap
-      // race so this method doesn't need a local one.
-      tweenToGalaxy(state, info);
+      // Race-window note: when selectByAlias is called from a deep-link
+      // drain that fires the moment the data-side cloud lands, the
+      // renderer hasn't uploaded yet — the halo will appear once the
+      // upload completes a frame or two later.  Passing the prebuilt
+      // `info` through `commitFocus` → `setSelected` ensures the React
+      // side updates immediately regardless.
+      commitFocus(state, cb, info, { key: { source, localIdx }, info });
     },
 
     focusOnHome() {
