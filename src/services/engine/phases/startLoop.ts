@@ -1,0 +1,128 @@
+/**
+ * startLoop — bootstrap phase that builds the per-frame `RunFrameDeps`
+ * bag, assigns the forward-declared `frame` binding, and fires the
+ * first render request so a single rAF tick happens.
+ *
+ * ### What this phase does
+ *
+ *   - Constructs the `RunFrameDeps` object, threading every closure
+ *     capture the frame body needs: `canvas`, `cb`, `fpsCounter`,
+ *     `lastReportedFps` (a `{current}` ref), the GPU device + context
+ *     + every renderer (from `phaseLocals`), the Milky-Way iTime epoch,
+ *     and the createEngine-scope helpers (`cssToTexPx`, `setHovered`,
+ *     `updateScaleBar`).  See `runFrame.ts`'s module header for the
+ *     dep-vs-state rationale.
+ *   - Replaces the no-op `frameRef.current` stub with the real frame
+ *     body — a one-line closure that calls `runFrame(state, frameDeps,
+ *     performance.now())`.  The scheduler in
+ *     `state.subsystems.scheduler` was wired with
+ *     `onFrame: () => frameRef.current()`, so this assignment makes
+ *     every subsequent rAF tick run the real body.
+ *   - Fires `state.subsystems.scheduler.requestRender()` to queue the
+ *     first rAF.  After that single frame, the loop sleeps until an
+ *     event handler or a setter calls `scheduler.requestRender()`
+ *     again.
+ *
+ * ### Why this runs last
+ *
+ * The frame body needs:
+ *   - The renderers from `initGpu` (via `phaseLocals`).
+ *   - The thumbnail subsystem from `wireSlots`
+ *     (via `state.subsystems.thumbnails`).
+ *   - The orbit camera from `wireInput` (via `state.cam`).
+ *
+ * Firing `requestRender()` before any of those exist would either
+ * crash on the first tick or render a black canvas.  Putting this
+ * phase last guarantees every dependency is in place when the loop
+ * starts.
+ *
+ * ### State writes
+ *
+ *   - `state.subsystems.scheduler.requestRender()` — schedules one rAF.
+ *
+ * ### Side effects on `deps`
+ *
+ *   - Mutates `deps.frameRef.current` — replaces the no-op stub with
+ *     the real frame body.
+ *
+ * ### Async work
+ *
+ * None — every call here is synchronous.  The phase is `async` only
+ * to match the orchestrator's `Phase` signature.
+ *
+ * ### Early-return semantics
+ *
+ * If `state.sources.clouds.size === 0` (every load failed and the
+ * synthetic fallback also produced nothing), this phase returns
+ * early — `wireInput` already bailed before constructing the camera,
+ * so there's no point starting the loop.  Same condition as the
+ * pre-Phase-5 IIFE's mid-IIFE early-return semantics.
+ */
+
+import { runFrame, type RunFrameDeps } from '../runFrame';
+
+import type { EngineState } from '../../../@types';
+import type { BootstrapDeps } from './bootstrap';
+
+/**
+ * Bootstrap phase 4: build `RunFrameDeps`, assign the forward-declared
+ * `frame` binding, fire the first render request.
+ */
+export async function startLoop(state: EngineState, deps: BootstrapDeps): Promise<void> {
+  // Bail if no clouds reached the GPU — `wireInput` skipped camera
+  // construction in that case, so there's nothing to render and the
+  // pre-Phase-5 IIFE semantics were "exit silently, sit in 'loading'".
+  if (state.sources.clouds.size === 0) return;
+
+  const phaseLocals = deps.phaseLocals!;
+
+  // ── Render loop ──────────────────────────────────────────────────────
+
+  // Build the dep bag for `runFrame` once, here in the orchestrator's
+  // last phase where every closure-captured local is in scope.  The bag
+  // is stable across frames: `lastReportedFps` rides as a `{current}`
+  // ref so the body's writes round-trip back into engine.ts; the
+  // helpers (`updateScaleBar`, `setHovered`, `cssToTexPx`) close over
+  // their own dedup state inside createEngine and get passed by
+  // reference; and the GPU-side renderers (`milkyWayRenderer`,
+  // `quadRenderer`, …) are the IIFE locals returned from `initGpu` /
+  // their respective constructors above.  See runFrame.ts's module
+  // header for the dep-vs-state rationale.
+  const frameDeps: RunFrameDeps = {
+    canvas: deps.canvas,
+    cb: deps.cb,
+    fpsCounter: deps.fpsCounter,
+    lastReportedFps: deps.lastReportedFps,
+    device: phaseLocals.device,
+    context: phaseLocals.context,
+    milkyWayRenderer: phaseLocals.milkyWayRenderer,
+    filamentRenderer: state.gpu.filamentRenderer!,
+    quadRenderer: phaseLocals.quadRenderer,
+    diskRenderer: phaseLocals.diskRenderer,
+    milkyWayITimeEpochMs: deps.milkyWayITimeEpochMs,
+    cssToTexPx: deps.cssToTexPx,
+    setHovered: deps.setHovered,
+    updateScaleBar: deps.updateScaleBar,
+  };
+
+  // Assign the real frame body to the forward-declared `frame`
+  // binding (boxed as `frameRef` so the write crosses the module
+  // boundary).  The scheduler in `state.subsystems.scheduler` was
+  // wired with `onFrame: () => frameRef.current()` — that closure
+  // reads the current value of `frameRef.current` lazily, so this
+  // assignment makes every subsequent rAF tick run `runFrame`
+  // against the dep bag built just above.  The body itself lives in
+  // `runFrame.ts`; see that module's header for what counts as the
+  // "frame body".
+  deps.frameRef.current = () => {
+    runFrame(state, frameDeps, performance.now());
+  };
+
+  // Kick off the first render.  The scheduler was already created
+  // synchronously in the state literal — this just tells it to queue
+  // one rAF.  The `onFrame: () => frameRef.current()` closure picks up
+  // the just-assigned real frame body.  After that single frame, the
+  // loop sleeps until an event handler or a setter calls
+  // scheduler.requestRender().
+  state.subsystems.scheduler.requestRender();
+}

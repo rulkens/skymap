@@ -41,10 +41,18 @@
  *   - `inputBindings.ts`       — pointer/keyboard/resize listener bag
  *   - `thumbnailSubsystem.ts`  — atlas + queue + per-frame thumbnail draw
  *
- * Hover state, selection state, the renderer/picker/HDR handles, and the
- * orbit-controls attachment stay inline here because they share closure
- * with React-callback boundaries (setHovered/setSelected) or require
- * `cam` (which doesn't exist until the async IIFE runs).
+ *   Bootstrap phases (post-Phase-5; lift the ~1100-line async IIFE):
+ *   - `phases/initGpu.ts`      — device + every renderer + point-source slots
+ *   - `phases/wireSlots.ts`    — sidecar slots + thumbnails + parallel load
+ *   - `phases/wireInput.ts`    — pickRenderer + camera + orbit-controls + click
+ *   - `phases/startLoop.ts`    — RunFrameDeps assembly + first requestRender
+ *   - `phases/bootstrap.ts`    — orchestrator + BootstrapDeps + Phase signature
+ *
+ * Hover state, selection state, the public handle, and the forward-declared
+ * `frameRef` / `detachControlsRef` / `handleRef` boxes stay inline here
+ * because they share closure with React-callback boundaries
+ * (setHovered/setSelected) or are written by the bootstrap phases via the
+ * `{current}` ref pattern (the bootstrap modules are siblings, not parents).
  *
  * ### Usage
  *
@@ -61,12 +69,7 @@
  * ```
  */
 
-import { initGpu, resizeCanvasToDisplay } from '../gpu/device';
-import { PointRenderer } from '../gpu/pointRenderer';
-import { createPickRenderer } from '../gpu/pickRenderer';
-import { createPostProcess } from '../gpu/postProcess';
-import { createOrbitCamera, updatePosition } from '../camera/orbitCamera';
-import { attachOrbitControls } from '../camera/orbitControls';
+import { updatePosition } from '../camera/orbitCamera';
 import { Source, maskWith, maskWithout } from '../../data/sources';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -93,41 +96,13 @@ import { vec3 } from 'gl-matrix';
 import { createTweenManager } from './tweenManager';
 import { createRenderScheduler } from './renderScheduler';
 import { createFpsCounter } from './fpsCounter';
-import { buildPointInfo, maxAbsCoord } from './pointInfoBuilder';
-import { computeInitialCamera } from './cameraFraming';
-import { seedSettingsCallbacks } from './seedSettingsCallbacks';
+import { buildPointInfo } from './pointInfoBuilder';
 import { computeScaleInfo } from './scaleBar';
-// The legacy load-orchestration surface (`loadAllClouds`, `reloadSource`,
-// `loadFilaments`, `buildSyntheticFallback`, `LoadEvent`) lived in the
-// now-deleted `cloudLoader.ts`.  Tasks 9 and 10 ported every runtime
-// call site to the AssetSlot machinery; Task 12 finished the cleanup
-// by deleting cloudLoader outright.
-import { cloudSourceFor } from '../../data/cloudSource';
-import { createLoadProgressEmitter } from './loadProgressAggregator';
 import type { AssetSlot } from '../loading/types';
-import { createAssetSlot } from '../loading/AssetSlot';
-import { filamentFetcher } from '../loading/fetchers/filamentFetcher';
-import { famousMetaFetcher } from '../loading/fetchers/famousMetaFetcher';
-import { pgcAliasFetcher, type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
+import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
 import { FOCUS_TWEEN_MS } from './focusTween';
 import { tweenToGalaxy } from './tweenToGalaxy';
-import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from './pointSourceRegistry';
-
-// ── Galaxy thumbnail subsystem ────────────────────────────────────────────
-//
-// The whole pipeline (atlas + priority queue + per-frame loop + sorting
-// + back-to-front draw) lives in `thumbnailSubsystem.ts`.  Engine-side
-// we just instantiate it, hand it the QuadRenderer + DiskRenderer
-// references, and call `runFrame()` once per tick (gated on the
-// galaxyTexturesEnabled toggle).  See that module's docstring for the
-// rationale on why-a-subsystem and the retry-storm contract.
-import { QuadRenderer } from '../gpu/quadRenderer';
-import { DiskRenderer } from '../gpu/diskRenderer';
-import { ProceduralDiskRenderer } from '../gpu/proceduralDiskRenderer';
-import { MilkyWayRenderer } from '../gpu/milkyWayRenderer';
-import { FilamentRenderer } from '../gpu/filamentRenderer';
-import { createThumbnailSubsystem } from './thumbnailSubsystem';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -138,10 +113,8 @@ import { createThumbnailSubsystem } from './thumbnailSubsystem';
 // and call `applyToCamera()` from `frame()`.  The handle's
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './spaceMouseSubsystem';
-import { createClickResolver } from './clickHandler';
-import { attachEngineInputs } from './inputBindings';
-import { runFrame, type RunFrameDeps } from './runFrame';
 import { buildSettersFromTable, type SettingsTableKey } from './settingsTable';
+import { runBootstrapPhases, type BootstrapDeps } from './phases/bootstrap';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -203,36 +176,37 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Frame-function forward declaration ────────────────────────────────────
   //
-  // The render loop's `frame()` body lives further down inside the async
-  // IIFE, because it reads GPU resources (device, context, quadRenderer,
-  // diskRenderer) that initGpu() returns asynchronously.  But the
-  // `RenderScheduler` we wire into `state.subsystems.scheduler` needs an
-  // `onFrame` callback at construction time — which is *here*, in the
-  // synchronous state literal below.
+  // The render loop's `frame()` body lives in `runFrame.ts`, called
+  // from the `startLoop` bootstrap phase, because it reads GPU
+  // resources (device, context, quadRenderer, diskRenderer) that
+  // initGpu() returns asynchronously.  But the `RenderScheduler` we
+  // wire into `state.subsystems.scheduler` needs an `onFrame` callback
+  // at construction time — which is *here*, in the synchronous state
+  // literal below.
   //
-  // We resolve the chicken-and-egg by forward-declaring `frame` as a
-  // `let` initialised to a no-op stub.  The state literal's scheduler
-  // captures the local `frame` *binding* (via the `() => frame()`
-  // closure) rather than the current value, so when the IIFE later
-  // assigns `frame = () => { /* real body */ }`, every subsequent rAF
-  // invocation runs the real body.
+  // We resolve the chicken-and-egg by forward-declaring `frameRef` as a
+  // `{ current }` ref initialised to a no-op stub.  The state literal's
+  // scheduler captures `frameRef` (via the `() => frameRef.current()`
+  // closure) rather than the stub's current value, so when the
+  // `startLoop` phase later assigns `frameRef.current = () => { /* real
+  // body */ }`, every subsequent rAF invocation runs the real body.
   //
-  // Why this is the architectural fix to the previous "shim captured by
-  // reference" bug: with this pattern, `state.subsystems.scheduler`
-  // is the *real* `RenderScheduler` from the moment `state` is
-  // constructed.  Anyone who captures it by reference — including
-  // `attachEngineInputs` — gets the live scheduler immediately.  No
-  // shim, no proxy, no post-init reassignment.  The only thing
-  // deferred is the *frame body*, and that's deferred safely via a
-  // closure that reads the latest binding lazily.
+  // Why a ref (not a `let`)?  The bootstrap phases live in sibling
+  // modules (`phases/startLoop.ts`); a `let` would be invisible across
+  // the module boundary.  The ref-box round-trip is the same pattern
+  // Phase 3's `lastReportedFps` introduced for `runFrame.ts`'s closure
+  // captures — see `phases/bootstrap.ts`'s `BootstrapDeps` for the
+  // full inventory of refs threaded through.
   //
   // The stub is silently a no-op rather than a logging warning
-  // because its only invocation window is "rAF fires before the IIFE
-  // finishes wiring `frame`" — vanishingly rare (the user would have
-  // to interact with the canvas in the first ~milliseconds of
-  // startup), and harmless even if it does fire.
-  let frame: () => void = () => {
-    /* stub until IIFE assigns the real body — see comment above */
+  // because its only invocation window is "rAF fires before
+  // `startLoop` finishes wiring `frameRef.current`" — vanishingly rare
+  // (the user would have to interact with the canvas in the first
+  // ~milliseconds of startup), and harmless even if it does fire.
+  const frameRef: { current: () => void } = {
+    current: () => {
+      /* stub until startLoop assigns the real body — see comment above */
+    },
   };
 
   // ── Rolling FPS counter ────────────────────────────────────────────────────
@@ -380,7 +354,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // no post-init reassignment.  This is the architectural fix to
       // the Phase 2b "captured the shim by reference" regression that
       // broke hover-pick for one refactor cycle.
-      scheduler: createRenderScheduler({ onFrame: () => frame() }),
+      scheduler: createRenderScheduler({ onFrame: () => frameRef.current() }),
 
       // The remaining three subsystems land later in the IIFE once
       // their dependencies (GPU device, pickRenderer, scheduler) exist.
@@ -462,7 +436,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // engine() time — see inputBindings.ts's docstring.  This handle is
   // a transient local rather than engine state because it's a single
   // teardown function with no other consumers.
-  let detachControls: (() => void) | null = null;
+  //
+  // Boxed as `{current}` because `attachOrbitControls` runs inside the
+  // `wireInput` bootstrap phase (a sibling module), so the assignment
+  // crosses a module boundary — same `{current}` ref pattern Phase 3
+  // introduced for `lastReportedFps`.  `destroy()` reads through the
+  // ref to detach the listeners.
+  const detachControlsRef: { current: (() => void) | null } = { current: null };
 
   // ── Scale-bar deduplication ──────────────────────────────────────────────
   //
@@ -586,789 +566,47 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   cb.onStatusChange({ kind: 'initializing' });
 
-  // The main async IIFE runs GPU init + data load, then kicks off the render
-  // loop. All errors are caught here and reported via `onStatusChange`.
+  // ── Bootstrap dependency bag ─────────────────────────────────────────────
+  //
+  // The four bootstrap phases (`initGpu`, `wireSlots`, `wireInput`,
+  // `startLoop`) live in `phases/*.ts` and consume a shared
+  // `BootstrapDeps` object built here.  Anything the pre-Phase-5 IIFE
+  // captured from createEngine's outer scope flows through this bag —
+  // the canvas + cb args, the `{current}` ref boxes for forward-declared
+  // bindings (frameRef, detachControlsRef, handleRef), the createEngine-
+  // scope helpers (cssToTexPx, setHovered, setSelected, updateScaleBar),
+  // and the values needed for `RunFrameDeps` assembly in `startLoop`
+  // (fpsCounter, lastReportedFps, milkyWayITimeEpochMs, allSlots).
+  //
+  // `handleRef.current` is null at this point — the public handle is
+  // declared AFTER the bootstrap IIFE below.  `wireInput`'s onDoubleClick
+  // closure reads through the ref lazily, so the assignment that lands
+  // a few lines past the IIFE is in scope by the time a user can
+  // physically double-click the canvas.
+  const handleRef: { current: EngineHandle | null } = { current: null };
+  const bootstrapDeps: BootstrapDeps = {
+    canvas,
+    cb,
+    frameRef,
+    detachControlsRef,
+    handleRef,
+    allSlots,
+    fpsCounter,
+    lastReportedFps,
+    milkyWayITimeEpochMs,
+    cssToTexPx,
+    setHovered,
+    setSelected,
+    updateScaleBar,
+  };
+  // The main async IIFE runs the bootstrap phases.  All errors are
+  // caught here and reported via `onStatusChange` — same single
+  // try/catch contract the pre-Phase-5 IIFE had.  See
+  // `phases/bootstrap.ts`'s `runBootstrapPhases` header for what the
+  // four-await chain covers.
   (async () => {
     try {
-      // Sync the backing store to the display size *before* handing the canvas
-      // to WebGPU — otherwise `getCurrentTexture()` may return a 300×150 default.
-      resizeCanvasToDisplay(canvas);
-
-      const { device, context, format } = await initGpu(canvas);
-
-      // ── HDR offscreen target + tone-map post-process ──────────────────
-      //
-      // Every visible draw pass (points, quads, disks) writes into a
-      // viewport-sized rgba16float texture instead of the swap chain.  At
-      // the end of the frame, the tone-map pass samples the HDR target
-      // and writes tone-mapped, compressed-into-[0,1] values into the
-      // swap chain.  This eliminates the saturated-white "blown-out"
-      // cluster cores that pure additive blending into bgra8unorm
-      // suffers from, and gives the user a runtime curve selector so
-      // they can compare Linear / Reinhard / Asinh / Gamma 2 / ACES
-      // (see `data/toneMapCurve.ts`).
-      //
-      // The HDR target is recreated on resize (further down in the
-      // frame loop's resize branch) so it always tracks the swap chain
-      // size 1:1 — that's also why the tone-map sampler uses 'nearest'
-      // filtering (each fragment samples a single texel).
-      //
-      // Pick renderer is unaffected — its r32uint integer target is
-      // separate and never wants tone-mapping.  See
-      // `docs/superpowers/plans/2026-05-04-hdr-tonemap.md` for the full
-      // rationale.
-      // Combined HDR offscreen target + tone-map post-process.  See
-      // `services/gpu/postProcess.ts` for why these merged into one
-      // factory (Phase 4 of the engine-renderer-boundaries spec) —
-      // they share a lifetime, share a swap-chain-format dependency,
-      // and were previously two separate construction sites that the
-      // engine had to thread together for every resize and destroy.
-      const postProcess = createPostProcess(device, format, {
-        width: canvas.width,
-        height: canvas.height,
-      });
-      // Mirror into the engine state so `destroy()` (defined on the
-      // public handle, outside this IIFE) can release the GPU resources.
-      state.gpu.postProcess = postProcess;
-
-      // Build the GPU pipeline; cloud data is loaded below.
-      // PointRenderer (and QuadRenderer/DiskRenderer further down) target
-      // the HDR rgba16float texture instead of the swap-chain `format`.
-      // Their pipelines bake this into a fixed colour-target descriptor at
-      // construction time, so the format choice has to land here.
-      const renderer = new PointRenderer(device, 'rgba16float');
-      state.gpu.renderer = renderer;
-
-      // ── Per-source asset slots (Task 8 SDSS, Task 9 the rest) ────────────
-      //
-      // Every survey now flows through `createAssetSlot`.  The slot owns
-      // one cell of mutable state (its current LoadState) and exposes
-      // the fetch→commit lifecycle behind a race-checked façade — see
-      // `AssetSlot.ts`'s header for the full why-and-how, especially
-      // the two race-check points that fix the tier-swap stomping bug.
-      //
-      // Why construct here, after the renderer exists?
-      //   The commit step uploads the freshly-decoded PointCloud to
-      //   `state.gpu.renderer`, so the renderer must be non-null at the
-      //   moment commit runs.  Constructing the slots AFTER
-      //   `state.gpu.renderer = renderer` in the same lexical scope
-      //   makes that ordering obvious to anyone reading top-down.  An
-      //   alternative would be to lazily build slots inside setTier on
-      //   first call, but that splits one cohesive subsystem across
-      //   two files.
-      //
-      // Why `await renderer.upload(...)` inside commit?
-      //   The slot fires its `committed` event (which transitions the
-      //   state to `ready`) only after `commit` resolves.  Awaiting the
-      //   GPU upload here — rather than fire-and-forget — guarantees
-      //   that subscribers seeing `kind === 'ready'` can rely on the
-      //   GPU buffer being populated, which is the primary contract the
-      //   asset-loading rework is delivering.  This is also what closes
-      //   the race window the old `loadAllClouds` path papered over with
-      //   an out-of-band `uploadChain` promise.
-      //
-      // Why `requestRender()` in the subscriber?
-      //   The render loop is gated on `requestRender` — without an
-      //   explicit wake-up the new GPU buffer would sit unrendered until
-      //   the user nudged the camera.  Firing it on the `ready`
-      //   transition (rather than inside `commit`) keeps the slot's
-      //   commit step pure of UI concerns; the wake-up is a downstream
-      //   side-effect of the slot's state transition, not part of the
-      //   commit contract.
-      //
-      // Naming: `<source>-points` for survey clouds, `filaments` for
-      // filaments.  The progress aggregator keys on these strings, so
-      // they double as the load-progress identifier.
-      //
-      // The 5 point-source slots are now constructed via the
-      // `POINT_SOURCE_REGISTRY` declarative table — see
-      // `pointSourceRegistry.ts` for the registry schema, the per-row
-      // fetcher choice, and the rationale for keeping sidecar slots
-      // (filaments, famous-meta, pgc-aliases) inline below rather than
-      // absorbing them into the registry.  Each call mints the slot,
-      // attaches the upload-on-commit body + ready-state subscriber,
-      // and stores the slot in `state.assetSlots.points` keyed by
-      // `Source` — exactly what the pre-registry inline loop did.
-      for (const cfg of POINT_SOURCE_REGISTRY) {
-        wirePointSourceSlot(state, cfg, { cb });
-      }
-
-      // ── Galaxy thumbnail subsystem ─────────────────────────────────────
-      //
-      // Three collaborators wired together here:
-      //
-      //   - thumbnails:   owns the atlas (GPU texture + slot LRU), the
-      //                   priority queue, and the per-frame loop that
-      //                   allocates slots, kicks off fetches, and emits
-      //                   sorted Quad/Disk instances.  See
-      //                   `thumbnailSubsystem.ts` for the why-and-how.
-      //   - quadRenderer: textured-quad render pass running after the
-      //                   point pass each frame.  Engine owns it
-      //                   directly (rather than the subsystem) because
-      //                   future passes (selection halo) may share it.
-      //   - diskRenderer: 3D-oriented disk variant for large galaxies.
-      //                   Same ownership story as quadRenderer.
-      //
-      // `galaxyTexturesEnabled` is mutated by the SettingsPanel toggle.
-      // The engine simply skips `thumbnails.runFrame()` when the toggle
-      // is off — the LRU clock pauses with it, which is fine because
-      // nothing else reads it while the toggle is off.
-      //
-      // The QuadRenderer/DiskRenderer constructors want a GpuContext;
-      // we build them with the four constituents in scope rather than
-      // restructuring initGpu's return signature.
-
-      // QuadRenderer targets the HDR offscreen texture (see the rationale
-      // at PointRenderer construction above) — it composites galaxy
-      // thumbnails into the same accumulated linear-light buffer the
-      // points pass writes into.
-      const quadRenderer = new QuadRenderer({
-        device,
-        context,
-        format: 'rgba16float',
-        canvas,
-      });
-      // DiskRenderer shares the same atlas as QuadRenderer — both pull from
-      // the same 2048×2048 thumbnail texture.  The engine routes each
-      // galaxy to one renderer or the other per frame based on apparent
-      // size and orientation-data availability (see the per-frame loop).
-      const diskRenderer = new DiskRenderer({
-        device,
-        context,
-        format: 'rgba16float',
-        canvas,
-      });
-      // ProceduralDiskRenderer fills the visibility gap between the
-      // screen-aligned point glow (which goes pixelated above ~8 px) and
-      // the textured-disk pass (which only kicks in at 24 px).  In the
-      // 8-14 px band both the points pass and this renderer are active,
-      // crossfading via complementary smoothstep alphas (see
-      // PROCEDURAL_DISK_FADE_START_PX / _END_PX in thumbnailSubsystem.ts).
-      // Same HDR target as the other thumbnail-pass renderers so the
-      // procedural disk composites into the same linear-light buffer.
-      const proceduralDiskRenderer = new ProceduralDiskRenderer({
-        device,
-        context,
-        format: 'rgba16float',
-        canvas,
-      });
-      // Procedural Milky Way impostor at world origin.  See
-      // `services/gpu/milkyWayRenderer.ts` for the rationale on why this
-      // is a sibling renderer rather than tucked into the per-galaxy
-      // procedural-disk pass, and `utils/math/milkyWayFade.ts` for the
-      // distance-fade band.
-      const milkyWayRenderer = new MilkyWayRenderer({
-        device,
-        format: 'rgba16float',
-      });
-      // ── Cosmic-web filament-skeleton renderer ─────────────────────────
-      //
-      // Built unconditionally (the pipeline / quad VBO / uniform buffer
-      // are cheap), but the per-instance buffer is populated only after
-      // `loadFilaments()` resolves with a non-null cloud — i.e. when the
-      // optional `filaments.bin` exists.  When the binary is absent
-      // (fresh clone before `npm run build-filaments`), `upload` is
-      // simply never called and `draw` returns early on `segmentCount=0`.
-      //
-      // Same HDR target as every other overlay so the additive
-      // contribution accumulates in float-precision before tone mapping.
-      const filamentRenderer = new FilamentRenderer(device, 'rgba16float');
-      state.gpu.filamentRenderer = filamentRenderer;
-
-      // ── Filament asset slot (Task 9) ─────────────────────────────────
-      //
-      // The cosmic-web skeleton flows through its own slot — different
-      // fetcher (binary format is segments-not-points), different
-      // renderer target (`filamentRenderer` rather than the per-source
-      // `pointRenderer`), and a one-shot lifecycle: load() at boot,
-      // never on tier change.
-      //
-      // Why one-shot?  Re-downloading the ~30 MB skeleton every tier
-      // flip would tax bandwidth for a topology that barely differs
-      // between tiers — see `filamentFetcher.ts`'s docblock for the
-      // detailed rationale, including the "small-tier-on-desktop edge
-      // case" trade-off.
-      //
-      // Why awaited `upload()` even though `FilamentRenderer.upload` is
-      // synchronous?  `await undefined` is harmless and keeps the slot's
-      // commit signature uniform with the per-source slots above; if a
-      // future filament-renderer revision adds an async upload path
-      // (e.g. compute-shader rebuild), this site needs no change.
-      const filamentSlot = createAssetSlot({
-        name: 'filaments',
-        fetch: filamentFetcher,
-        commit: async (cloud) => {
-          if (!state.gpu.filamentRenderer) return;
-          await state.gpu.filamentRenderer.upload(cloud);
-        },
-      });
-      filamentSlot.subscribe((s) => {
-        // Loading-bar plumbing is gone post-Task-12 — the emitter
-        // recomputes from `aggregateRegistry(slots)` on every state
-        // change.  This subscriber only fires the app-visible side
-        // effects (counts echo + render wake) on the `ready` transition.
-        if (s.kind === 'ready') {
-          console.log(
-            `[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`,
-          );
-          // Push the parsed counts up to the UI layer.  See
-          // `EngineCallbacks.onFilamentsReady` for the lifecycle rationale —
-          // one-shot, fires only when the optional binary actually loaded.
-          cb.onFilamentsReady?.(s.value.stripCount, s.value.vertexCount);
-          state.subsystems.scheduler.requestRender();
-        }
-      });
-      state.assetSlots.filaments = filamentSlot;
-
-      // ── Famous-galaxy sidecar slot (Task 10) ─────────────────────────
-      //
-      // The two famous-galaxy JSON sidecars (`famous_meta.json` +
-      // `famous_xrefs.json`) flow through one combined slot — the fetcher
-      // pulls them in parallel and returns a `{ meta, xrefs }` payload.
-      //
-      // No `commit` step: there's nothing GPU-side to upload — the
-      // payload is pure metadata consumed by the InfoCard via
-      // `state.sources.famousMeta` / `state.sources.famousXrefs`.  The
-      // subscriber writes both fields and wakes one frame so the
-      // famous-galaxy thumbnails referenced by the cross-match xrefs
-      // become enqueueable from the per-frame loop without the user
-      // having to nudge the camera.
-      //
-      // **Graceful degradation on error.**  The old `loadFamousSidecars`
-      // returned empty values when either file 404'd; the new fetcher
-      // throws on HTTP failure (so the retry policy distinguishes "really
-      // gone" from "transient flake"), and the slot subscriber maps
-      // `kind: 'error'` → "feature off" by writing empty `meta`/`xrefs`.
-      // Net effect for the user is identical to the pre-slot behaviour:
-      // famous galaxies render without enriched InfoCard text, but the
-      // engine keeps running.
-      const famousMetaSlot = createAssetSlot({
-        name: 'famous-meta',
-        fetch: famousMetaFetcher,
-      });
-      famousMetaSlot.subscribe((s) => {
-        if (s.kind === 'ready') {
-          state.sources.famousMeta = s.value.meta;
-          // GLADE local indices in the sidecar JSON now match the on-disk
-          // binary directly — the cloudLoader no longer post-decodes
-          // GLADE through a far-distance decimator (the data-tier system
-          // owns point-count budgeting via its absolute-magnitude cut at
-          // build time, which is a more principled rule and operates
-          // BEFORE the binary is written, so xref indices stay valid).
-          state.sources.famousXrefs = s.value.xrefs;
-          state.subsystems.scheduler.requestRender();
-        }
-        if (s.kind === 'error') {
-          // Match the old "absent file = feature off" behaviour exactly:
-          // empty meta/xrefs disable the enriched InfoCard text but keep
-          // the engine functional.  Defensive — these fields default to
-          // `[]` / `{}` already, but writing them again here is explicit
-          // about the contract.
-          state.sources.famousMeta = [];
-          state.sources.famousXrefs = {};
-          console.warn('[engine] famous sidecars failed to load:', s.error);
-        }
-      });
-      state.assetSlots.famousMeta = famousMetaSlot;
-
-      // ── PGC-alias slot (Task 10) ─────────────────────────────────────
-      //
-      // The Cmd+K command palette's alias search needs `pgc_aliases.json`
-      // (~1.7 MB).  Lazy: most users never hit Cmd+K, so paying the
-      // download up front would be wasteful.  The slot is minted here for
-      // lifecycle parity with every other asset, but `load()` is only
-      // invoked through the public-handle's `loadPgcAliases()` shim on
-      // first palette open.
-      //
-      // No `commit` — the resolved Map is consumed by the React layer via
-      // the Promise the shim returns; nothing engine-side to mutate.
-      const pgcAliasSlot = createAssetSlot({
-        name: 'pgc-aliases',
-        fetch: pgcAliasFetcher,
-      });
-      state.assetSlots.pgcAlias = pgcAliasSlot;
-
-      // ── Loading-bar emitter ──────────────────────────────────────────
-      //
-      // Post-Task-12 the per-engine loading-bar aggregator is a thin
-      // subscriber over `aggregateRegistry`.  Build the slot registry
-      // here (now that every slot exists) and hand it to the emitter;
-      // `attachSlot` then wires each slot's `subscribe` so that any
-      // state transition recomputes the projection and forwards the
-      // snapshot to `cb.onLoadProgress`.
-      //
-      // Why a single shared Map rather than four separate `attachSlot`
-      // calls each owning their own subset?  The same registry also
-      // feeds the dev panel's per-slot view (Task 13); building it
-      // once here keeps both consumers in lock-step on what counts as
-      // "in flight".
-      //
-      // The `unknown` type-erasure below is benign — `aggregateRegistry`
-      // only reads `slot.state()` discriminator fields, never the
-      // payload type.  We re-narrow at the dev panel's per-slot
-      // rendering site if it cares.
-      //
-      // `allSlots` is declared at outer scope (top of `createEngine`) so
-      // the public handle can expose the same Map as `assetSlots` for
-      // the `LoadingDevPanel` debug component.  We populate it here once
-      // every slot exists.
-      for (const [, slot] of state.assetSlots.points) {
-        allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
-      }
-      allSlots.set(filamentSlot.name, filamentSlot as unknown as AssetSlot<unknown, unknown>);
-      allSlots.set(famousMetaSlot.name, famousMetaSlot as unknown as AssetSlot<unknown, unknown>);
-      allSlots.set(pgcAliasSlot.name, pgcAliasSlot as unknown as AssetSlot<unknown, unknown>);
-
-      const progressEmitter = createLoadProgressEmitter(
-        (snapshot) => cb.onLoadProgress?.(snapshot),
-        allSlots,
-      );
-      for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
-      state.subsystems.loadProgress = progressEmitter;
-
-      // Trigger the famous-meta load as soon as the slot is wired —
-      // sidecars are tiny and only feed InfoCard text, so kicking them
-      // off here (rather than awaiting the much larger point fetches)
-      // means the very first hover already has enriched text on a typical
-      // connection.  PGC-aliases stay lazy; see `loadPgcAliases()` on the
-      // handle for the on-demand trigger.
-      famousMetaSlot.load();
-
-      // Build the subsystem and hand it the renderer references for
-      // atlas-view binding.  The subsystem's `bindToRenderers` is split
-      // out from its constructor because the renderers need to exist
-      // first; building them here keeps the construction order linear.
-      const thumbnails = createThumbnailSubsystem({
-        device,
-        requestRender: () => state.subsystems.scheduler.requestRender(),
-      });
-      thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralDiskRenderer);
-      state.subsystems.thumbnails = thumbnails;
-
-      // Signal loading state immediately so the user knows something is
-      // happening before the (potentially multi-second) fetch completes.
-      cb.onStatusChange({ kind: 'loading' });
-
-      // ── Parallel multi-survey load via asset slots ────────────────────
-      //
-      // Each survey flows through its own `AssetSlot`.  The slot's
-      // long-lived subscriber (wired at slot construction) handles
-      // upload + `clouds.set` + `onCloudReady` + `requestRender` on
-      // every transition to `ready` — so this block only has to fire
-      // the loads and gate boot on "every slot has settled at least
-      // once" before computing the camera bbox.
-      //
-      // **Why gate on all-settled rather than first-arrival?**  The
-      // bbox loop below iterates `state.sources.clouds` to size the
-      // camera's far plane.  If we framed on whichever survey arrived
-      // first (typically 2MRS at ~2 MB / ~100 Mpc), GLADE's distant
-      // galaxies (out to ~1.5 Gpc) would land outside the frustum and
-      // never render — perceptually "the far plane has come closer".
-      //
-      // **Why track `pointsAnyReady` separately?**  The synthetic
-      // fallback fires only when every *real* survey is empty/errored.
-      // Famous is curated (~150 entries) and excluded from the
-      // success/failure check both ways: a Famous-only success
-      // shouldn't suppress synthetic, and a Famous-only failure
-      // shouldn't trigger it.
-      const REAL_POINT_SOURCES = [Source.SDSS, Source.TwoMRS, Source.Glade];
-      const ALL_POINT_SOURCES = [...REAL_POINT_SOURCES, Source.Famous];
-      let pointsAnyReady = false;
-      let firstReadySource: Source | null = null;
-      const allArrivalsPromise = new Promise<void>((resolve) => {
-        let arrived = 0;
-        for (const source of ALL_POINT_SOURCES) {
-          const slot = state.assetSlots.points.get(source);
-          if (!slot) {
-            if (++arrived === ALL_POINT_SOURCES.length) resolve();
-            continue;
-          }
-          let counted = false;
-          const unsub = slot.subscribe((s) => {
-            if (counted) return;
-            if (s.kind === 'ready' && s.value.count > 0) {
-              if (firstReadySource === null) firstReadySource = source;
-              if (REAL_POINT_SOURCES.includes(source)) pointsAnyReady = true;
-            }
-            if (s.kind === 'ready' || s.kind === 'error') {
-              counted = true;
-              if (++arrived === ALL_POINT_SOURCES.length) resolve();
-              unsub();
-            }
-          });
-        }
-      });
-
-      for (const source of ALL_POINT_SOURCES) {
-        state.assetSlots.points.get(source)?.load({ source, tier: state.sources.tier });
-      }
-      // Filaments load exactly once at boot — never on tier change.
-      // See `filamentFetcher.ts` for the rationale.
-      state.assetSlots.filaments?.load({ tier: state.sources.tier });
-
-      await allArrivalsPromise;
-
-      // Synthetic fallback — every real survey is empty/errored.  Drive
-      // through the synthetic slot so the same fetch → commit → upload path
-      // runs (fade-in, dev-panel row, race-checked commit).  See
-      // `syntheticPointFetcher.ts` for why this lives behind a slot.
-      if (!pointsAnyReady) {
-        const synthSlot = state.assetSlots.points.get(Source.Synthetic);
-        if (synthSlot) {
-          await new Promise<void>((resolve) => {
-            const unsub = synthSlot.subscribe((s) => {
-              if (s.kind === 'ready' || s.kind === 'error') {
-                unsub();
-                resolve();
-              }
-            });
-            synthSlot.load({ source: Source.Synthetic, tier: state.sources.tier });
-          });
-          if (synthSlot.state().kind === 'ready') {
-            firstReadySource = Source.Synthetic;
-          }
-        }
-      }
-
-      // Bail if no clouds reached the GPU (engine torn down mid-load,
-      // or synthetic upload failed).  Without at least one cloud the
-      // bbox computation below has nothing to size the camera against.
-      if (state.sources.clouds.size === 0) return;
-
-      // Build the pick renderer. It shares the same vertex/uniform buffers as
-      // the visual renderer — no extra GPU memory for point data.
-      const pickRenderer = createPickRenderer(device, renderer);
-      state.gpu.pickRenderer = pickRenderer;
-      // The resolver hands back the freshly-decoded `(source, localIdx)`
-      // straight from the picker; the engine's only job is to look up
-      // the matching cloud and bounds-check the localIdx against the
-      // data-side map's count.  The bounds check defends the tier-swap
-      // race (in-flight pick decoded against a now-shrunk cloud) — see
-      // `pointInfoForSelection` higher up for the same guard rationale.
-      state.subsystems.clickResolver = createClickResolver({
-        pickRenderer,
-        resolveSelection: (sel) => {
-          const cloud = state.sources.clouds.get(sel.source);
-          if (!cloud) return null;
-          if (sel.localIdx < 0 || sel.localIdx >= cloud.count) return null;
-          return { source: sel.source, localIdx: sel.localIdx, cloud };
-        },
-        buildPointInfo: (cloud, localIdx, src) =>
-          buildPointInfo(cloud, localIdx, src, state.sources.famousMeta, state.sources.famousXrefs),
-      });
-
-      // ── Camera auto-framing ──────────────────────────────────────────────
-      //
-      // bbox = max abs coordinate across every loaded cloud.  Drives
-      // the camera's far plane — must cover the deepest survey
-      // (typically GLADE at ~1.5 Gpc).  `computeInitialCamera`
-      // (cameraFraming.ts) turns it into target/distance/yaw/pitch
-      // /near/far including the zoom-envelope clamp.
-      let bbox = 0;
-      for (const c of state.sources.clouds.values()) {
-        const b = maxAbsCoord(c);
-        if (b > bbox) bbox = b;
-      }
-      const fovYRad = (Math.PI / 180) * 60;
-      const initialCam = computeInitialCamera({ bbox, fovYRad });
-
-      const cam = createOrbitCamera({
-        target: initialCam.target,
-        distance: initialCam.distance,
-        yaw: initialCam.yaw,
-        pitch: initialCam.pitch,
-        fovYRad: initialCam.fovYRad,
-        aspect: canvas.width / canvas.height,
-        near: initialCam.near,
-        far: initialCam.far,
-      });
-      state.cam = cam;
-
-      // ── Initial camera snapshot for resetCamera() ────────────────────────
-      //
-      // Capture the framing values now, after the cloud bbox is known, so
-      // `resetCamera()` can restore them at any later time.  We mirror the
-      // helper's output rather than re-reading from `cam` so future
-      // reconfigures of the camera (e.g. user-driven FOV changes) don't
-      // accidentally drift the reset target.  `aspect` is intentionally not
-      // captured — reset uses the *current* canvas aspect so the projection
-      // stays correct after a window resize.
-      //
-      // **Why we clone `target` into a fresh tuple:**
-      //
-      // `createOrbitCamera` does `{ ...init, position: vec3.create() }` —
-      // a shallow spread.  That makes `cam.target` and `initialCam.target`
-      // alias the SAME array object.  Every subsequent `focusOn()` /
-      // tween-advance / orbit-pan call mutates `cam.target` in place via
-      // vec3 ops, which also mutates `initialCam.target`.  By the time
-      // `resetCamera()` later reads `state.initialCamSnapshot.target[0..2]`,
-      // it's reading the most recently-focused galaxy's position back
-      // into itself — i.e. the camera "resets" to whatever it was last
-      // looking at, not to the catalog origin (the user-visible bug:
-      // "reset camera resets the zoom level, but stays focussed on the
-      // currently selected galaxy").
-      //
-      // Fixing it at the spread site (cloning inside `createOrbitCamera`)
-      // would be the architecturally cleaner cure but ripples through the
-      // OrbitCamera type contract; cloning *here* is a one-line fix that
-      // restores the invariant `state.initialCamSnapshot` is meant to uphold.
-      state.initialCamSnapshot = {
-        ...initialCam,
-        target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
-      };
-
-      // ── Pointer / keyboard / resize listeners ────────────────────────────
-      //
-      // Centralised in `inputBindings.ts` so every DOM listener the
-      // engine cares about lives in one module.  Each callback below
-      // is the *semantic* engine action — the inputBindings module
-      // already converts `e.clientX/Y` to a CSS-pixel record and
-      // calls `scheduler.requestRender()` after every event so we
-      // don't repeat that wake-up at every site.
-      state.subsystems.inputBindings = attachEngineInputs({
-        canvas,
-        // Pass the scheduler by reference — safe because it was created
-        // eagerly in the state literal above (the forward-declared
-        // `frame` binding handles the chicken-and-egg between scheduler
-        // construction and frame-body availability).
-        scheduler: state.subsystems.scheduler,
-        // Track latest mouse position for the per-frame throttled
-        // hover pick.  The pick itself is async (1-2 frames later)
-        // but its .then also calls requestRender so the selection
-        // halo updates as soon as the readback lands.
-        onPointerMove: (cssPx) => {
-          state.picking.latestMouseCss = cssPx;
-        },
-        // Pointer left the canvas → clear hover state.  If a point
-        // is selected the card stays visible (showing the pinned
-        // point) — selection state is unaffected.
-        onPointerLeave: () => {
-          state.picking.latestMouseCss = null;
-          setHovered(null);
-        },
-        // Manual orbit controls always win — cancel any running focus
-        // tween the moment the user grabs the mouse.  Otherwise the
-        // tween's updatePosition would fight the orbit-controls'
-        // updatePosition for the same camera each frame, producing a
-        // juddery jump.  Also clear hover so the card immediately
-        // reflects "nothing hovered" instead of lagging until the
-        // drag ends.
-        onPointerDown: () => {
-          state.subsystems.tweens.cancel();
-          state.picking.pointerDown = true;
-          setHovered(null);
-        },
-        onPointerUp: () => {
-          state.picking.pointerDown = false;
-        },
-        // Esc clears selection.  App.tsx also has a useEffect that
-        // forwards Esc through the engine handle's `clearSelection()`
-        // — same result, both paths are fine.
-        onEscape: () => {
-          setSelected(null);
-        },
-        // resize: the next frame's resizeCanvasToDisplay() picks up
-        // the new dimensions and recreates the HDR target.  All we
-        // need to do is wake the loop, which inputBindings already
-        // does via `scheduler.requestRender()` — so this callback is
-        // a no-op.
-        onResize: () => {},
-      });
-
-      // ── Click handling ───────────────────────────────────────────────────
-      //
-      // Click detection is delegated to `attachOrbitControls` via the `onClick`
-      // option. A "click" fires only when pointerup is within 4 CSS pixels of
-      // pointerdown — pure drags (orbit gestures) are suppressed.
-
-      // Cache of the most-recent successful click pick.  The
-      // double-click handler reads from this rather than running a
-      // second pick: two readbacks racing on shared GPU resources
-      // produced flaky results (the dblclick readback would resolve
-      // first and return `clear` while the click's resolved later
-      // with the real hit).  By reusing the click's PointInfo we
-      // also save one readback per double-click.
-      //
-      // Stored as the full PointInfo so we can pull `x/y/z` and
-      // `diameterKpc` straight into `handle.focusOn` without a
-      // second cloud-lookup.  Cleared on every empty-space click so
-      // a dblclick on empty space doesn't trigger a stale focus.
-      let lastClickedInfo: PointInfo | null = null;
-
-      // Shared pick body — used by single-click only now (dblclick
-      // reuses the cached PointInfo).  Returns the click resolver's
-      // result so the caller can decide what to do with it.  Inline
-      // rather than module-level because it closes over `state`,
-      // `canvas`, and the cssToTexPx helper from the surrounding
-      // scope.
-      const runPickAtCss = (
-        xCss: number,
-        yCss: number,
-      ): ReturnType<NonNullable<typeof state.subsystems.clickResolver>['resolveClick']> | null => {
-        const r = state.gpu.renderer;
-        const cr = state.subsystems.clickResolver;
-        if (!r || state.sources.clouds.size === 0 || !cr) return null;
-
-        // Snapshot the renderer's per-source draw records and filter
-        // by the current visibility mask so the pick pass sees the
-        // same surveys the visual pass just rendered.  We materialise
-        // to an array so the iterator survives the async pick promise.
-        const visibleSources = Array.from(r.loadedSources()).filter(
-          (s) => ((state.sources.visibleMask >> s.source) & 1) !== 0,
-        );
-        if (visibleSources.length === 0) return null;
-
-        return cr.resolveClick({
-          pickXPx: cssToTexPx(xCss),
-          pickYPx: cssToTexPx(yCss),
-          viewportPx: [canvas.width, canvas.height],
-          visibleSources,
-          // Threaded through so the pick pass can boost its floor size
-          // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
-          pointSizePx: state.settings.pointSizePx,
-        });
-      };
-
-      detachControls = attachOrbitControls(canvas, cam, {
-        onCameraChange: () => {
-          // Camera moved — wake the render loop for one frame.
-          // Auto-LOD recompute, scale-bar refresh, and pick gate all
-          // run inside the next frame body.
-          state.subsystems.scheduler.requestRender();
-        },
-        onClick: (xCss, yCss) => {
-          // Run a one-shot pick at the click position.  We don't use
-          // the throttle guard here — clicks are infrequent and we
-          // want an immediate, synchronous-feeling response.
-          const pick = runPickAtCss(xCss, yCss);
-          if (!pick) return;
-          pick.then((result) => {
-            // Click on empty space → clear; click on point → pin it.
-            // The PointInfo on `result` is also cached for the
-            // dblclick handler — see `lastClickedInfo` above for the
-            // race-condition rationale.
-            if (result.kind === 'clear') {
-              setSelected(null);
-              lastClickedInfo = null;
-            } else {
-              setSelected(result.selection);
-              lastClickedInfo = result.info;
-            }
-            // Selection changed — render so the highlight halo
-            // updates on the next frame.
-            state.subsystems.scheduler.requestRender();
-          });
-        },
-        onDoubleClick: () => {
-          // Native dblclick fires AFTER the two preceding click
-          // events.  Both have already routed through `onClick` and
-          // populated `lastClickedInfo` with the hit galaxy's
-          // PointInfo.  We deliberately do NOT run a second pick
-          // here: two readbacks racing on the same pickRenderer
-          // resources resolved out of order in practice — the
-          // dblclick read returned `clear` while the click read
-          // resolved later with the real hit.  Reusing the cached
-          // info is correct (same coordinates + camera state, since
-          // dblclick fires before any frame can shift the scene)
-          // and saves a redundant readback.
-          //
-          // No-op when the user double-clicked empty space —
-          // `lastClickedInfo` would have been cleared by the
-          // single-click handler in that case, and we don't want a
-          // stale focus tween toward whatever was last clicked.
-          if (!lastClickedInfo) return;
-          handle.focusOn(lastClickedInfo);
-        },
-      });
-
-      // ── Status: ready ────────────────────────────────────────────────────
-
-      // `count` here is the total number of points across every loaded
-      // survey at the moment we transition to "ready".  Surveys that finish
-      // loading after this point are reflected via `onCloudReady`, not via
-      // an additional `onStatusChange` — the status bar's job is "we're up",
-      // not "live counter".
-      cb.onStatusChange({
-        kind: 'ready',
-        count: renderer.totalCount(),
-        source: cloudSourceFor(firstReadySource ?? Source.Synthetic),
-      });
-
-      // ── Seed settings callbacks ───────────────────────────────────────────
-      //
-      // Fire each optional settings callback once with the engine's default
-      // value so React's initial state matches the engine truth (pointSizePx
-      // = 2.5, brightness = 1.0, autoRotate = false, …).  Without this seed,
-      // App.tsx's React state would only update on the first explicit user
-      // interaction — leaving the UI showing stale values if any default
-      // ever drifts between engine and component.
-      //
-      // The fan-out lives in `seedSettingsCallbacks.ts`; see that module for
-      // the rationale on why every engine-owned setting React mirrors goes
-      // through the same single audited code path.
-      seedSettingsCallbacks(cb, {
-        pointSize: state.settings.pointSizePx,
-        brightness: state.settings.brightness,
-        autoRotate: state.settings.autoRotate,
-        galaxyTexturesEnabled: state.settings.galaxyTexturesEnabled,
-        highlightFallback: state.settings.highlightFallback,
-        realOnlyMode: state.settings.realOnlyMode,
-        depthFadeEnabled: state.settings.depthFadeEnabled,
-        biasMode: state.bias.mode,
-        absMagLimit: state.bias.absMagLimit,
-        toneMapCurve: state.settings.toneMapCurve,
-        exposure: state.settings.exposure,
-        lodMode: state.sources.lodMode,
-        visibleSourceMask: state.sources.visibleMask,
-      });
-
-      // ── Render loop ──────────────────────────────────────────────────────
-
-      // Build the dep bag for `runFrame` once, here in the IIFE scope
-      // where every closure-captured local is in scope.  The bag is
-      // stable across frames: `lastReportedFps` rides as a `{current}`
-      // ref so the body's writes round-trip back into engine.ts; the
-      // helpers (`updateScaleBar`, `setHovered`, `cssToTexPx`) close
-      // over their own dedup state inside createEngine and get passed
-      // by reference; and the GPU-side renderers (`milkyWayRenderer`,
-      // `quadRenderer`, …) are the IIFE locals returned from `initGpu`
-      // / their respective constructors above.  See runFrame.ts's
-      // module header for the dep-vs-state rationale.
-      const frameDeps: RunFrameDeps = {
-        canvas,
-        cb,
-        fpsCounter,
-        lastReportedFps,
-        device,
-        context,
-        milkyWayRenderer,
-        filamentRenderer,
-        quadRenderer,
-        diskRenderer,
-        milkyWayITimeEpochMs,
-        cssToTexPx,
-        setHovered,
-        updateScaleBar,
-      };
-
-      // Assign the real frame body to the forward-declared `frame`
-      // variable.  The scheduler in `state.subsystems.scheduler` was
-      // wired with `onFrame: () => frame()` — that closure reads the
-      // current value of `frame` lazily, so this assignment makes
-      // every subsequent rAF tick run `runFrame` against the dep bag
-      // built just above.  The body itself lives in `runFrame.ts`;
-      // see that module's header for what counts as the "frame body".
-      frame = () => {
-        runFrame(state, frameDeps, performance.now());
-      };
-
-      // Kick off the first render.  The scheduler was already created
-      // synchronously in the state literal — this just tells it to
-      // queue one rAF.  The `onFrame: () => frame()` closure picks up
-      // the just-assigned real frame body.  After that single frame,
-      // the loop sleeps until an event handler or a setter calls
-      // scheduler.requestRender().
-      state.subsystems.scheduler.requestRender();
+      await runBootstrapPhases(state, bootstrapDeps);
     } catch (err) {
       // Surface initialisation failures via the status callback so the UI
       // shows a readable message rather than a blank canvas.
@@ -1403,8 +641,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.subsystems.inputBindings = null;
 
       // 3. Detach orbit controls (removes its own four listeners).
-      detachControls?.();
-      detachControls = null;
+      //    `detachControlsRef.current` was assigned by the `wireInput`
+      //    bootstrap phase; null when destroy() runs before bootstrap
+      //    completes (e.g. unmount during data load).
+      detachControlsRef.current?.();
+      detachControlsRef.current = null;
 
       // 5. Release GPU resources.
       state.gpu.pickRenderer?.destroy();
@@ -1875,6 +1116,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // the typechecker.
     assetSlots: allSlots,
   };
+
+  // Publish the handle to the bootstrap deps so `wireInput`'s onDoubleClick
+  // closure can resolve `handle.focusOn(...)` lazily.  The handle literal
+  // above is fully constructed at this point; the bootstrap IIFE may still
+  // be in flight (resolves async), but by the time the user can physically
+  // double-click the canvas, the orbit controls are wired and `handleRef`
+  // is non-null.
+  handleRef.current = handle;
 
   return handle;
 }
