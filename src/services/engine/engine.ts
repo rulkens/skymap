@@ -104,6 +104,7 @@ import { buildPointInfo } from './helpers/pointInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../loading/types';
+import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
 import { FOCUS_TWEEN_MS } from './camera/focusTween';
@@ -828,51 +829,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // ── Lazy PGC-alias loader (Task 10) ───────────────────────────────────
     //
-    // Promise-returning shim over the PGC-alias slot.  Matches the public
-    // signature of the legacy standalone `loadPgcAliases()` so existing
-    // palette callers (the `useAliasIndex` hook) can be migrated to call
-    // `handle.loadPgcAliases()` without changing their await/result
-    // shape — a Map<bigint, readonly string[]> on success, an empty Map
-    // on graceful failure (matching the old "feature off" behaviour the
-    // hook already tolerates).
-    //
-    // **Idempotence.**  The slot's `load()` is itself idempotent — calling
-    // it twice in flight just bumps the generation; the first fetch's
-    // race-check drops its commit if a second `load()` arrived.  After
-    // the first success, `slot.state().kind === 'ready'` so the
-    // subscriber here sees the cached value instantly and resolves
-    // synchronously-ish (one microtask).  The "subscribe-once-per-call"
-    // shape mirrors the per-slot first-arrival capture in the boot path
-    // and keeps the resolve path identical for fresh and cached cases.
+    // Thin wrapper over `awaitSlotReady`; see that helper's module
+    // header for the idempotence / fallback / null-slot / cached-
+    // resolve-window rationale that used to live inline here.
     loadPgcAliases() {
       const slot = state.assetSlots.pgcAlias;
-      if (!slot) {
-        // Slot not minted yet (engine still in pre-IIFE init).  An empty
-        // Map is the same graceful-degradation result we'd return on
-        // 404 — palette code already tolerates an empty alias index.
-        return Promise.resolve(new Map() as PgcAliasMap);
-      }
-      slot.load();
-      // If the slot is already settled (cached from a prior call), the
-      // subscriber won't fire again — fast-path through `state()` so we
-      // resolve synchronously on the next microtask rather than waiting
-      // for a state transition that will never arrive.
-      const current = slot.state();
-      if (current.kind === 'ready') return Promise.resolve(current.value);
-      return new Promise<PgcAliasMap>((resolve) => {
-        const unsub = slot.subscribe((s) => {
-          if (s.kind === 'ready') {
-            unsub();
-            resolve(s.value);
-          } else if (s.kind === 'error') {
-            unsub();
-            // Empty Map matches the legacy `loadPgcAliases` behaviour:
-            // the palette's famous-only search still works, just without
-            // the GLADE/2MRS PGC join.
-            resolve(new Map());
-          }
-        });
-      });
+      slot?.load();
+      return awaitSlotReady(slot, new Map() as PgcAliasMap);
     },
 
     // ── SpaceMouse 6DOF input setters ─────────────────────────────────────
