@@ -71,7 +71,7 @@
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
-import { PointRenderer } from '../../gpu/renderers/pointRenderer';
+import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
 import { createPostProcess } from '../../gpu/passes/postProcess';
 import { type QuadRenderer, createQuadRenderer } from '../../gpu/renderers/quadRenderer';
 import { type DiskRenderer, createDiskRenderer } from '../../gpu/renderers/diskRenderer';
@@ -183,7 +183,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the HDR rgba16float texture instead of the swap-chain `format`.
   // Their pipelines bake this into a fixed colour-target descriptor at
   // construction time, so the format choice has to land here.
-  const renderer = new PointRenderer(device, 'rgba16float');
+  const renderer = createPointRenderer(device, 'rgba16float');
   state.gpu.renderer = renderer;
 
   // ── Wire the bias-correction subsystem to the freshly-built renderer ──
