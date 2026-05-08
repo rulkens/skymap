@@ -132,15 +132,18 @@ const PASS_STUB = { setPipeline: vi.fn(), setVertexBuffer: vi.fn(), setBindGroup
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('HDR_PASSES registry', () => {
-  it('contains the four HDR passes in canonical draw order', () => {
+  it('contains the six HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the encoder record;
     // see passes/index.ts module header.
-    expect(HDR_PASSES).toHaveLength(4);
+    // Task R4 added marker-lines + labels after milky-way (passes 5 + 6).
+    expect(HDR_PASSES).toHaveLength(6);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
       'point-sprites',
       'galaxy-thumbnails',
       'filaments',
       'milky-way',
+      'marker-lines',
+      'labels',
     ]);
   });
 });

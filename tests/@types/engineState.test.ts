@@ -52,6 +52,7 @@ import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
 import { createSelectionSubsystem } from '../../src/services/engine/subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
+import { createYouAreHereSubsystem } from '../../src/services/engine/subsystems/youAreHereSubsystem';
 import type { EngineCallbacks } from '../../src/@types';
 import { Source } from '../../src/data/sources';
 
@@ -127,6 +128,8 @@ describe('EngineState type', () => {
         pickRenderer: null,
         postProcess: null,
         filamentRenderer: null,
+        labelRenderer: null,
+        markerLineRenderer: null,
       },
       subsystems: {
         thumbnails: null,
@@ -146,6 +149,7 @@ describe('EngineState type', () => {
         biasCorrection: createBiasCorrectionSubsystem({
           getState: () => stateRef.current!,
         }),
+        youAreHere: createYouAreHereSubsystem(),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -249,6 +253,8 @@ describe('EngineState type', () => {
         pickRenderer: null,
         postProcess: null,
         filamentRenderer: null,
+        labelRenderer: null,
+        markerLineRenderer: null,
       },
       subsystems: {
         thumbnails: null,
@@ -268,6 +274,7 @@ describe('EngineState type', () => {
         biasCorrection: createBiasCorrectionSubsystem({
           getState: () => stateRef.current!,
         }),
+        youAreHere: createYouAreHereSubsystem(),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),

@@ -40,6 +40,7 @@ import type { ThumbnailSubsystem } from '../services/engine/subsystems/thumbnail
 import type { SpaceMouseSubsystem } from '../services/engine/subsystems/spaceMouseSubsystem';
 import type { SelectionSubsystem } from '../services/engine/subsystems/selectionSubsystem';
 import type { BiasCorrectionSubsystem } from '../services/engine/subsystems/biasCorrectionSubsystem';
+import type { YouAreHereSubsystem } from '../services/engine/subsystems/youAreHereSubsystem';
 import type { TweenManager } from '../services/engine/camera/tweenManager';
 import type { ClickResolver } from '../services/engine/interaction/clickHandler';
 import type { InputBindings } from '../services/engine/interaction/inputBindings';
@@ -80,6 +81,19 @@ export type EngineSubsystemHandles = {
    * routes the user's mode toggles through here.
    */
   biasCorrection: BiasCorrectionSubsystem;
+  /**
+   * "YOU ARE HERE" Milky Way marker subsystem (Task R4).
+   *
+   * Owns the camera-distance → fade-alpha transition state and drives
+   * `labelRenderer.setLabels` / `markerLineRenderer.setLines` only when
+   * alpha changes.  Constructed eagerly in the engine state literal (no
+   * GPU dep); the two renderers are wired during `phases/initGpu.ts` via
+   * `attachRenderers(...)` after the `loadFontAtlas()` fetch completes.
+   *
+   * Non-null from t=0 — the subsystem's `runFrame` internally null-checks
+   * the renderers, so calling it before `attachRenderers` is safe.
+   */
+  youAreHere: YouAreHereSubsystem;
   /**
    * Per-engine download-progress emitter — instantiated inside the
    * GPU init IIFE (so `cb.onLoadProgress` and the slot registry are in

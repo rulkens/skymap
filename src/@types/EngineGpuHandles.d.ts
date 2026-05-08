@@ -37,6 +37,8 @@ import type { PointRenderer } from '../services/gpu/renderers/pointRenderer';
 import type { PostProcess } from '../services/gpu/passes/postProcess';
 import type { createPickRenderer } from '../services/gpu/renderers/pickRenderer';
 import type { FilamentRenderer } from '../services/gpu/renderers/filamentRenderer';
+import type { LabelRenderer } from '../services/gpu/renderers/labelRenderer';
+import type { MarkerLineRenderer } from '../services/gpu/renderers/markerLineRenderer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -58,4 +60,23 @@ export type EngineGpuHandles = {
    * time closure to outlive the public handle.
    */
   filamentRenderer: FilamentRenderer | null;
+  /**
+   * MSDF text label renderer.  Null until `initGpu` completes the
+   * `loadFontAtlas()` fetch and constructs the renderer against the
+   * decoded atlas bitmap.  Excluded from the `isEngineReady` predicate
+   * — same rationale as `filamentRenderer`: the atlas load is async and
+   * optional from the engine's perspective; the `labelsPass` null-checks
+   * this field at point of use.  Stored here so `destroy()` can release
+   * the GPU buffers (uniform + storage + instance + corner + atlas texture).
+   */
+  labelRenderer: LabelRenderer | null;
+  /**
+   * Thick screen-space line overlay renderer.  Null until `initGpu`
+   * constructs it alongside `labelRenderer` (same phase, no atlas dep).
+   * Excluded from the `isEngineReady` predicate for the same reason as
+   * `labelRenderer`.  The `markerLinesPass` null-checks this field at
+   * point of use.  Stored here so `destroy()` can release the GPU
+   * buffers (uniform + instance + corner).
+   */
+  markerLineRenderer: MarkerLineRenderer | null;
 };

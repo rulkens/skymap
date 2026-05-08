@@ -297,11 +297,11 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     input: {
       ctx,
       // D.2 added `state` to RenderFrameInput so passes can read engine
-      // state.  Today's four HDR passes don't actually read it, but the
-      // parameter is required by the type — provide a stub-shaped value.
-      // The renderFrame body itself just forwards `state` through to
-      // each pass; tests never observe it being read.
-      state: {} as never,
+      // state.  The new label + marker-line passes DO read `state.gpu.*`
+      // in their `enabled()` gates.  Provide null for both new handles so
+      // the passes correctly skip (enabled returns false), which matches the
+      // pre-atlas-load behaviour and keeps existing renderFrame tests green.
+      state: { gpu: { labelRenderer: null, markerLineRenderer: null } } as never,
       milkyWayITimeSec: 0,
       device,
       context,
