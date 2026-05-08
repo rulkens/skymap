@@ -392,6 +392,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // No surveys are visible right now (user toggled them all
       // off).  Let the loop sleep — the next setSourceVisible
       // call will wake it.
+      //
+      // By design: this `return` skips the keep-rendering predicate
+      // at the end of runFrame.  That's correct — with zero visible
+      // surveys there's nothing to animate, and the predicate would
+      // only ever return false in this state anyway.  Acknowledged
+      // here because the early-out is now far enough from the
+      // predicate that the asymmetry isn't visually obvious.
       return;
     }
 
