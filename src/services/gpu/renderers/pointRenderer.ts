@@ -43,7 +43,6 @@ import { mat4 } from 'gl-matrix';
 import type { PointCloud } from '../../../@types';
 import { ALL_SOURCES, Source } from '../../../data/sources';
 import { BiasMode } from '../../../data/biasMode';
-import { type SchechterTriple } from '../../../data/surveyFluxLimits';
 import {
   type BuildPointInterleavedBufferInput,
   type BuildPointInterleavedBufferMode,
@@ -645,36 +644,22 @@ type LoadedSource = {
    */
   cloud: PointCloud;
   /**
-   * Schechter LF triple `(M*, α, φ*)` for this survey's selection band.
-   * Looked up from `surveySchechter(source)` at upload time.  Mode 3 of
-   * the Malmquist-bias correction reads M* and α (φ* cancels in the
-   * `N_ref / n(d)` ratio) into the uniform buffer between per-source
-   * draw calls.
-   */
-  schechter: SchechterTriple;
-  /**
-   * Survey apparent-magnitude flux limit (e.g. SDSS = 17.77).  Forwarded
-   * to the shader so the per-fragment Schechter integration knows where
-   * the detection horizon lands at the fragment's distance.
-   */
-  mLim: number;
-  /**
-   * Pre-computed central-density normaliser N_ref = n(d = 10 Mpc) for
-   * this survey's Schechter parameters.  Computed once at upload time
-   * via `expectedNumberDensity({...sch, mLim, dMpc: 10})` and reused
-   * every frame — the integral is over absolute magnitude only, so the
-   * result depends only on the survey's selection function (M*, α, φ*,
-   * m_lim) and the chosen reference distance, not on any frame-time
-   * state.
+   * ### Survey constants moved to a sibling table (Spec E phase E.2)
    *
-   * Why d = 10 Mpc as the reference?  Far enough beyond the over-density
-   * of the very local universe (the Local Group sits at d ≈ 0–4 Mpc) to
-   * be a representative "central" density, but still well within the
-   * high-completeness regime for every survey we render — at d = 10 Mpc
-   * even the brightest Schechter cutoff M ≈ -25 corresponds to apparent
-   * mag ≈ 5, far above any real flux limit.
+   * Pre-Spec-E this type also carried `schechter`, `mLim`, and `nRef` —
+   * pure-functions-of-Source that were stored here only because the
+   * bias-correction bake was a method on `PointRenderer` (which had to
+   * read them).  Spec E extracts the bias-correction subsystem; survey
+   * constants now live in `src/services/biasCorrection/surveyConstants.ts`
+   * and are looked up by the subsystem on demand via `surveyConstants(source)`.
+   *
+   * The renderer no longer needs them — every former reader (the
+   * `bake*` helpers + per-source uniform writer) is on the deletion
+   * path for phase E.4.  In the meantime, the legacy `bakeSchechterRatios`
+   * / `bakeAngularWeights` paths read them via a per-call lookup
+   * (no perf concern — the bake worker dominates the cost by 4+
+   * orders of magnitude).
    */
-  nRef: number;
   /**
    * Per-cloud fade-in controller.  Owns its own 16-byte uniform buffer +
    * bind group at `@group(1) @binding(0)`, plus the fade-start timestamp.
@@ -1026,7 +1011,13 @@ export class PointRenderer {
       source,
       mode,
     });
-    const { interleaved, schechter, mLim, nRef } = result;
+    // Note (Spec E phase E.2): the build result still carries
+    // `schechter`, `mLim`, `nRef` for backwards compatibility with
+    // its other consumers (notably the bake test suite), but the
+    // renderer no longer stores them on the LoadedSource entry — the
+    // bias-correction subsystem looks them up via `surveyConstants(source)`
+    // when it needs them.  See `services/biasCorrection/surveyConstants.ts`.
+    const { interleaved } = result;
 
     // ── Write to GPU ────────────────────────────────────────────────────────
     //
@@ -1076,9 +1067,6 @@ export class PointRenderer {
       buffer,
       count: cloud.count,
       cloud,
-      schechter,
-      mLim,
-      nRef,
       interleaved,
       cachedSchechterRatios,
       // Angular weights are never eagerly baked (see slot-11 comment in
