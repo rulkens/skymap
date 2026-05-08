@@ -96,6 +96,7 @@
 // for the procedural-galaxy helpers. Sharing modules across pipelines
 // would invite the WebGPU 'auto' bind-group-layout trap — sidestepped
 // here by giving each stage its own module from disjoint sources.
+import { mat4, type vec3 } from 'gl-matrix';
 import vsCode from '../shaders/milkyWay/vertex.wesl?static';
 import fsCode from '../shaders/milkyWay/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -126,6 +127,20 @@ export type MilkyWayRenderer = {
    * threshold (`fadeAlpha === 0` is the natural skip condition; the
    * caller should `return` instead of submitting a no-op draw to keep
    * the per-frame cost honest at zero when the impostor is invisible).
+   *
+   * `centerWorld` is the world-space position the impostor should
+   * render at — in practice the Milky Way's actual galactic center
+   * (Sgr A\*), which sits ~8 kpc away from the catalog origin
+   * (Earth).  Defaults to `[0, 0, 0]` so callers that don't yet
+   * thread the offset through still work; production passes
+   * `MILKY_WAY_CENTER_WORLD` from `data/galacticCenter.ts`.
+   *
+   * Implementation note: the offset is applied *entirely* on the CPU
+   * by pre-multiplying `viewProj` with a translation and subtracting
+   * the offset from `cameraPosWorld` before upload — the shader keeps
+   * treating world origin as the galactic center, which means no
+   * shader changes were needed to move the impostor off-origin.  See
+   * the comment block inside this method for the math.
    */
   draw(
     pass: GPURenderPassEncoder,
@@ -134,6 +149,7 @@ export type MilkyWayRenderer = {
     fadeAlpha: number,
     iTimeSec: number,
     cameraPosWorld: [number, number, number],
+    centerWorld?: readonly [number, number, number],
   ): void;
   /** Release the per-frame uniform buffer. */
   destroy(): void;
@@ -239,6 +255,12 @@ export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
     primitive: { topology: 'triangle-list' },
   });
 
+  // Scratch matrix reused per frame for the `viewProj × translate(centerWorld)`
+  // pre-bake (see `draw` below).  Allocated once at factory time so the per-
+  // frame draw doesn't churn the GC.  Only meaningful when `centerWorld` is
+  // non-zero, but cheap enough to compute unconditionally.
+  const scratchVp = mat4.create();
+
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
@@ -246,14 +268,50 @@ export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
     fadeAlpha: number,
     iTimeSec: number,
     cameraPosWorld: [number, number, number],
+    centerWorld: readonly [number, number, number] = [0, 0, 0],
   ): void {
+    // ── CPU-side reframing for off-origin rendering ────────────────────
+    //
+    // The impostor's vertex+fragment shaders are written assuming the
+    // galactic center sits at world (0, 0, 0).  We don't want to edit
+    // them every time the impostor's anchor moves, so we instead pre-
+    // bake the offset into the two uniform values that drive the
+    // shader's spatial reasoning:
+    //
+    //   modVp     = viewProj × translate(centerWorld)
+    //   shiftedCP = cameraPosWorld − centerWorld
+    //
+    // With these, a vertex worldPos `p` (which the shader still
+    // computes around its conceptual origin) projects through
+    // `modVp · (p, 1) = viewProj · translate(centerWorld) · (p, 1) =
+    // viewProj · (p + centerWorld, 1)` — i.e. the billboard appears
+    // at world `centerWorld + p`, exactly where we want it.
+    //
+    // The fragment stage's `worldToGalactic(cameraPosWorld)` math
+    // assumes camera position is already relative to the galactic
+    // center.  Subtracting `centerWorld` from `cameraPosWorld` makes
+    // that assumption true: the rotation into the galactic axis
+    // frame now correctly describes the camera's position relative
+    // to Sgr A\* rather than relative to Earth.
+    //
+    // Net cost: one mat4 multiply + three subtractions per frame; no
+    // shader bytes touched.  For `centerWorld = [0, 0, 0]` (the
+    // default), the translation is identity and `shiftedCP =
+    // cameraPosWorld`, so back-compat with the pre-offset call sites
+    // is exact.
+    mat4.translate(scratchVp, viewProj as Float32Array as mat4, centerWorld as vec3);
+    const shiftedCamX = cameraPosWorld[0] - centerWorld[0];
+    const shiftedCamY = cameraPosWorld[1] - centerWorld[1];
+    const shiftedCamZ = cameraPosWorld[2] - centerWorld[2];
+
     // Pack uniforms into a 112-byte ArrayBuffer matching the WESL
     // `Uniforms` struct layout.  See the module doc-comment for the
     // full offset table.
     const uniforms = new ArrayBuffer(MILKY_WAY_UNIFORM_BUFFER_SIZE);
     const f32 = new Float32Array(uniforms);
-    // cam.viewProj — mat4 (offsets 0..63 / floats 0..15)
-    f32.set(viewProj, 0);
+    // cam.viewProj — mat4 (offsets 0..63 / floats 0..15).  Pre-baked
+    // with the centerWorld translation per the comment block above.
+    f32.set(scratchVp, 0);
     // cam.viewportPx — vec2 (offsets 64..71 / floats 16..17).  Unread
     // by this pass but uploaded for ABI symmetry with the rest of the
     // engine (every other renderer reads viewportPx for pxPerRad-style
@@ -262,15 +320,13 @@ export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
     f32[17] = viewport[1];
     // cam._pad0/_pad1 (offsets 72..79 / floats 18..19) — reserved by
     // CameraUniforms.  Stays zero (ArrayBuffer init handles it).
-    // cameraPosWorld — vec3 (offsets 80..91 / floats 20..22).  Float
-    // 22 is the third component of the vec3, NOT padding; the next
-    // 16-byte boundary is at offset 96, so the implicit padding sits
-    // at offset 92 in WGSL terms — but our layout repurposes that
-    // slot as the next field (fadeAlpha) since vec3 + f32 fits in a
-    // 16-byte chunk without extra alignment loss.
-    f32[20] = cameraPosWorld[0];
-    f32[21] = cameraPosWorld[1];
-    f32[22] = cameraPosWorld[2];
+    // cameraPosWorld — vec3 (offsets 80..91 / floats 20..22), shifted
+    // by `centerWorld` so the fragment's galactic-frame math (which
+    // assumes the galactic center sits at the camera's "0 vector")
+    // reads correctly.  See the comment block above.
+    f32[20] = shiftedCamX;
+    f32[21] = shiftedCamY;
+    f32[22] = shiftedCamZ;
     // fadeAlpha (offset 92 / float 23) — sits in the f32 slot
     // immediately after the vec3, packing the vec3+f32 quad into
     // bytes 80..95.

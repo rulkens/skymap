@@ -100,6 +100,7 @@ import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
+import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
@@ -310,6 +311,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       pickRenderer: null,
       postProcess: null,
       filamentRenderer: null,
+      // labelRenderer + markerLineRenderer: null until initGpu completes
+      // the loadFontAtlas() fetch and constructs both renderers.  They're
+      // excluded from the isEngineReady predicate (same rationale as
+      // filamentRenderer — optional async resources, null-checked at
+      // point of use by labelsPass / markerLinesPass).
+      labelRenderer: null,
+      markerLineRenderer: null,
     },
     subsystems: {
       // ── Tween manager ──────────────────────────────────────────
@@ -371,6 +379,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // subsystem module) take over in production; tests inject
       // synchronous stubs at the test factory call site.
       biasCorrection: createBiasCorrectionSubsystem({ getState: () => state }),
+
+      // ── You-are-here subsystem (Task R4) ─────────────────────────
+      // Owns the "YOU ARE HERE" marker fade-alpha state and drives
+      // labelRenderer + markerLineRenderer per frame.  Constructed
+      // eagerly here (no GPU dep); the two renderers are wired in
+      // during `phases/initGpu.ts` via `attachRenderers(...)` after
+      // the `loadFontAtlas()` fetch completes.
+      youAreHere: createYouAreHereSubsystem(),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       //
@@ -549,6 +565,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // buffer (proportional to filament-skeleton segment count, ~MB).
       state.gpu.filamentRenderer?.destroy();
       state.gpu.filamentRenderer = null;
+      // Label renderer owns: uniform buffer, storage buffer (LabelData[]),
+      // instance buffer (per-glyph), corner buffer, and the MSDF atlas
+      // texture.  Release explicitly — the atlas texture is the most
+      // significant allocation (~1 MB for the 512² rgba8unorm atlas).
+      state.gpu.labelRenderer?.destroy();
+      state.gpu.labelRenderer = null;
+      // Marker-line renderer owns: uniform buffer, instance buffer, and
+      // corner buffer.  Small allocations but must be released for parity
+      // with every other GPU handle in this bag.
+      state.gpu.markerLineRenderer?.destroy();
+      state.gpu.markerLineRenderer = null;
       // Tear down the thumbnail subsystem (clears the atlas's evict
       // handler and aborts in-flight fetches' write-back).  The atlas's
       // GPU texture itself is released when the device is dropped —

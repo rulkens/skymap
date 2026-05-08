@@ -296,6 +296,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     }
   }
 
+  // ── You-are-here subsystem per-frame update ───────────────────────
+  //
+  // Run BEFORE the GPU dispatch so `labelRenderer.setLabels` /
+  // `markerLineRenderer.setLines` are uploaded to the GPU before
+  // `renderFrame` issues the draw calls that read those buffers.  The
+  // subsystem internally null-checks its renderers, so this call is
+  // safe even before the atlas load completes (the brief window between
+  // engine start and initGpu finishing).
+  state.subsystems.youAreHere.runFrame(state, ctx);
+
   // ── GPU dispatch ──────────────────────────────────────────────────
   //
   // The whole encoder lifecycle (createCommandEncoder, beginRenderPass

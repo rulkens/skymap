@@ -13,6 +13,22 @@
  * (rendering a tofu box) needs special atlas slots and adds complexity
  * we don't need yet.  ASCII + a few unit symbols already cover every
  * label we plan to render.
+ *
+ * ## Horizontal alignment
+ *
+ * The optional `alignX` parameter shifts every glyph's `localOffsetX`
+ * after the layout pass so the label sits left of / centered on / right
+ * of its anchor.  This is a pure post-pass shift on the same field the
+ * shader already consumes, so the vertex stage doesn't need to know
+ * about alignment — it just sees a different `localOffset.x` per glyph
+ * and the world-anchor projection logic stays identical.
+ *
+ *   `'left'`    (default)  pen anchor = label's left edge   → text extends right
+ *   `'center'`  pen anchor = label's horizontal center      → text spans both sides
+ *   `'right'`   pen anchor = label's right edge             → text extends left
+ *
+ * The "you are here" marker uses `'center'` so the vertical line
+ * passes through the middle of the text rather than its left edge.
  */
 import type { FontMetrics } from './fontMetrics';
 import { lookupGlyph } from './fontMetrics';
@@ -31,7 +47,14 @@ export type GlyphQuad = {
   uvV1: number;
 };
 
-export function layoutLabel(text: string, metrics: FontMetrics): GlyphQuad[] {
+/** Horizontal alignment of the rendered text relative to the label's world anchor. */
+export type LabelAlignX = 'left' | 'center' | 'right';
+
+export function layoutLabel(
+  text: string,
+  metrics: FontMetrics,
+  alignX: LabelAlignX = 'left',
+): GlyphQuad[] {
   const quads: GlyphQuad[] = [];
   let penX = 0;
   let prevCodepoint: number | undefined;
@@ -61,5 +84,18 @@ export function layoutLabel(text: string, metrics: FontMetrics): GlyphQuad[] {
     penX += g.advance;
     prevCodepoint = cp;
   }
+
+  // After the layout pass, `penX` holds the total advance width of the
+  // string (sum of glyph advances + kerning).  Apply the alignment shift
+  // by subtracting a fraction of that width from every glyph's offset.
+  // Skipping the loop for the no-op 'left' case keeps the common path
+  // allocation-free (no second pass over the quads array).
+  if (alignX !== 'left' && quads.length > 0) {
+    const shift = alignX === 'center' ? penX * 0.5 : penX;
+    for (const q of quads) {
+      q.localOffsetX -= shift;
+    }
+  }
+
   return quads;
 }

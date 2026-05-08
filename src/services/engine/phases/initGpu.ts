@@ -84,6 +84,9 @@ import {
   createMilkyWayRenderer,
 } from '../../gpu/renderers/milkyWayRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
+import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
+import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
+import { loadFontAtlas } from '../../gpu/labels/loadFontAtlas';
 import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
 
 import type { EngineState } from '../../../@types';
@@ -198,6 +201,46 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // `handle.setBiasMode` over to call `setMode` on this subsystem;
   // production now routes the user's mode toggles through here.
   state.subsystems.biasCorrection.attachRenderer(renderer);
+
+  // ── MSDF label renderer + marker-line renderer (Task R4) ──────────────
+  //
+  // Load the font atlas (BMFont JSON + MSDF PNG) and construct both overlay
+  // renderers in one block.  Sequenced here — after the PointRenderer but
+  // before the POINT_SOURCE_REGISTRY loop — for two reasons:
+  //
+  //   1. The atlas fetch is short (~120 KB on fast localhost; served from
+  //      Cloudflare Workers Assets CDN edge in production).  Awaiting it
+  //      here blocks the `for` loop below from racing ahead of the atlas
+  //      load, but in practice the atlas resolves well before the much
+  //      larger per-survey `.bin` fetches finish.
+  //
+  //   2. Both renderers need a `GpuContext` shaped as `{ device, context,
+  //      format, canvas }` — the same shape the QuadRenderer / DiskRenderer
+  //      below use.  Constructing them here keeps all "GPU resource allocation
+  //      from a GpuContext" at one cohesive site.
+  //
+  // These renderers are stored on `state.gpu` (unlike `quadRenderer` /
+  // `milkyWayRenderer` which stay phase-local) because the `destroy()`
+  // method in `engine.ts` needs to release their GPU buffers + atlas
+  // texture.  They're excluded from `isEngineReady` for the same reason as
+  // `filamentRenderer`: optional async resources, null-checked at point of
+  // use by `labelsPass.enabled` / `markerLinesPass.enabled`.
+  const hdrCtx = { device, context, format: 'rgba16float' as const, canvas };
+
+  const fontAtlas = await loadFontAtlas();
+  state.gpu.labelRenderer = createLabelRenderer(hdrCtx, fontAtlas.metrics, fontAtlas.bitmap);
+  state.gpu.markerLineRenderer = createMarkerLineRenderer(hdrCtx);
+
+  // Wire the freshly-constructed renderers into the you-are-here subsystem.
+  // The subsystem was built eagerly in the engine state literal (alongside
+  // `tweens`, `biasCorrection`, etc.) but had no renderers to call into yet.
+  // This is the same `attachRenderer` post-construction wiring pattern that
+  // `biasCorrectionSubsystem` uses — see that module's header comment for
+  // the "why renderers are null at eager-construction time" rationale.
+  state.subsystems.youAreHere.attachRenderers(
+    state.gpu.labelRenderer,
+    state.gpu.markerLineRenderer,
+  );
 
   // ── Per-source asset slots (Task 8 SDSS, Task 9 the rest) ────────────
   //
