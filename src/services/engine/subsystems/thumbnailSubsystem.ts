@@ -7,7 +7,7 @@
  * `frameCounter`, `bitmapReady`, `bitmapFailed`, `bitmapReadyTime`)
  * tied together one cohesive responsibility — atlas-slot allocation,
  * priority-queued image fetch, idempotent failure memoisation, and
- * back-to-front sorted QuadInstance/DiskInstance emission.  Pulling
+ * back-to-front sorted ThumbnailInstance/DiskInstance emission.  Pulling
  * the whole pipeline into a single module is the largest readability
  * win in the engine.
  *
@@ -34,7 +34,7 @@
  *   this is fine: nothing else reads the clock while the toggle is
  *   off.
  *
- * - The QuadRenderer and DiskRenderer instances themselves.  The
+ * - The ThumbnailRenderer and DiskRenderer instances themselves.  The
  *   subsystem just *uses* them; it doesn't own them.  They have other
  *   consumers (selection halo, etc.) and live longer than the
  *   subsystem's runFrame() invocation.
@@ -68,11 +68,11 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
-import type { PointCloud, QuadInstance } from '../../../@types';
+import type { PointCloud, ThumbnailInstance } from '../../../@types';
 import type { OrbitCamera } from '../../../@types';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
-import type { QuadRenderer } from '../../gpu/renderers/quadRenderer';
+import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
 import type { DiskRenderer, DiskInstance } from '../../gpu/renderers/diskRenderer';
 import type { ProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
 import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
@@ -283,7 +283,7 @@ export type ThumbnailFrameInput = {
   visibleSourceMask: number;
   /** Canvas backing-store size in CSS pixels — feeds the pinhole pxPerRad. */
   canvasSize: { width: number; height: number };
-  /** Render-pass encoder — quadRenderer + diskRenderer encode their draws here. */
+  /** Render-pass encoder — thumbnailRenderer + diskRenderer encode their draws here. */
   pass: GPURenderPassEncoder;
   /** Combined view+projection matrix for the current camera. */
   viewProj: mat4;
@@ -291,9 +291,9 @@ export type ThumbnailFrameInput = {
   pxPerRad: number;
   /** Camera world-position snapshot for the back-to-front sort comparator. */
   camPos: Readonly<[number, number, number]>;
-  /** QuadRenderer instance — engine owns it; subsystem just calls draw(). */
-  quadRenderer: QuadRenderer;
-  /** DiskRenderer instance — same ownership story as quadRenderer. */
+  /** ThumbnailRenderer instance — engine owns it; subsystem just calls draw(). */
+  thumbnailRenderer: ThumbnailRenderer;
+  /** DiskRenderer instance — same ownership story as thumbnailRenderer. */
   diskRenderer: DiskRenderer;
   /** Famous-meta sidecar, used to route Famous-source rows to curated WebPs. */
   famousMeta: FamousMetaEntry[];
@@ -317,12 +317,12 @@ export type ThumbnailSubsystem = {
    * in engine.ts.
    */
   bindToRenderers(
-    quadRenderer: QuadRenderer,
+    thumbnailRenderer: ThumbnailRenderer,
     diskRenderer: DiskRenderer,
     proceduralDiskRenderer: ProceduralDiskRenderer,
   ): void;
   /**
-   * Run the per-frame thumbnail-priority loop and emit QuadInstances
+   * Run the per-frame thumbnail-priority loop and emit ThumbnailInstances
    * + DiskInstances to the renderers.  Increments the LRU clock,
    * allocates atlas slots, kicks off fetches, and sorts back-to-front
    * for correct alpha compositing.
@@ -368,7 +368,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
   //
   // `bitmapReady` is the positive flag: a fetch completed AND the bitmap
   // landed in the atlas.  Without it the per-frame gate would emit a
-  // QuadInstance for a slot that's still pointing at whatever was there
+  // ThumbnailInstance for a slot that's still pointing at whatever was there
   // before (or a blank cleared region of the atlas).
   //
   // `bitmapFailed` is the retry-storm guard: a single permanent flag per
@@ -420,11 +420,11 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
   let proceduralDiskRendererRef: ProceduralDiskRenderer | null = null;
 
   function bindToRenderers(
-    quadRenderer: QuadRenderer,
+    thumbnailRenderer: ThumbnailRenderer,
     diskRenderer: DiskRenderer,
     proceduralDiskRenderer: ProceduralDiskRenderer,
   ): void {
-    quadRenderer.bindAtlas(atlas.getTextureView());
+    thumbnailRenderer.bindAtlas(atlas.getTextureView());
     diskRenderer.bindAtlas(atlas.getTextureView());
     proceduralDiskRendererRef = proceduralDiskRenderer;
     bound = true;
@@ -443,7 +443,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
       viewProj,
       pxPerRad,
       camPos,
-      quadRenderer,
+      thumbnailRenderer,
       diskRenderer,
       famousMeta,
     } = frameInput;
@@ -474,7 +474,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
     const cy = cam.position[1];
     const cz = cam.position[2];
 
-    const quads: QuadInstance[] = [];
+    const quads: ThumbnailInstance[] = [];
     // Disks accumulate alongside quads.  We sort each galaxy into exactly
     // one bucket (see the branch at the tail of the loop body) so the two
     // arrays never double-count an instance.
@@ -656,7 +656,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
               // user still sees something while the fetch is in
               // flight.
             } else {
-              // ── Pack the QuadInstance / DiskInstance ─────────────
+              // ── Pack the ThumbnailInstance / DiskInstance ─────────────
               const [u0, v0, u1, v1] = atlas.slotUv(slot);
 
               // ── Fade-in multipliers ──
@@ -788,7 +788,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
 
     // ── Back-to-front sort for correct alpha compositing ────────────────
     //
-    // Both QuadRenderer and DiskRenderer use premultiplied "over"
+    // Both ThumbnailRenderer and DiskRenderer use premultiplied "over"
     // blending, which is order-dependent: a far galaxy drawn AFTER a near
     // one composites on top of it, breaking the painter's expectation.
     // We sort each list by descending camera-distance² so far galaxies
@@ -814,7 +814,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
     proceduralDisks.sort(cmpFar);
 
     if (quads.length > 0) {
-      quadRenderer.draw(
+      thumbnailRenderer.draw(
         pass,
         viewProj,
         [canvasSize.width, canvasSize.height],

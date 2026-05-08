@@ -1,6 +1,6 @@
 /**
  * thumbnailSubsystem — unit tests for the per-frame galaxy-thumbnail
- * pipeline.  We mock the GPU device, the QuadRenderer, and the
+ * pipeline.  We mock the GPU device, the ThumbnailRenderer, and the
  * DiskRenderer with `vi.fn()` stubs so the subsystem can run end-to-
  * end without WebGPU.  The atlas's slot bookkeeping doesn't actually
  * need a device (it only touches `device.queue.copyExternalImageToTexture`
@@ -111,15 +111,15 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-/** Mock QuadRenderer — only `bindAtlas` and `draw` are called. */
-function makeMockQuadRenderer() {
+/** Mock ThumbnailRenderer — only `bindAtlas` and `draw` are called. */
+function makeMockThumbnailRenderer() {
   return {
     bindAtlas: vi.fn(),
     draw: vi.fn(),
   } as any;
 }
 
-/** Mock DiskRenderer — same surface as QuadRenderer for our purposes. */
+/** Mock DiskRenderer — same surface as ThumbnailRenderer for our purposes. */
 function makeMockDiskRenderer() {
   return {
     bindAtlas: vi.fn(),
@@ -153,7 +153,7 @@ function makeFrameInput(
   clouds: Map<Source, PointCloud>,
   visibleMask: number = 0xffffffff,
 ) {
-  const quadRenderer = makeMockQuadRenderer();
+  const thumbnailRenderer = makeMockThumbnailRenderer();
   const diskRenderer = makeMockDiskRenderer();
   return {
     cam,
@@ -166,7 +166,7 @@ function makeFrameInput(
     camPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
       [number, number, number]
     >,
-    quadRenderer,
+    thumbnailRenderer,
     diskRenderer,
     famousMeta: [],
     famousXrefs: {},
@@ -188,7 +188,7 @@ describe('createThumbnailSubsystem', () => {
       requestRender: () => {},
       fetcher: async () => null,
     });
-    const quad = makeMockQuadRenderer();
+    const quad = makeMockThumbnailRenderer();
     const disk = makeMockDiskRenderer();
     const procDisk = makeMockProceduralDiskRenderer();
     sys.bindToRenderers(quad, disk, procDisk);
@@ -208,7 +208,7 @@ describe('createThumbnailSubsystem', () => {
     sys.runFrame(input);
     // Neither renderer.draw nor any fetch was issued because we
     // didn't bindToRenderers — the guard fires.
-    expect(input.quadRenderer.draw).not.toHaveBeenCalled();
+    expect(input.thumbnailRenderer.draw).not.toHaveBeenCalled();
     expect(input.diskRenderer.draw).not.toHaveBeenCalled();
   });
 
@@ -220,7 +220,7 @@ describe('createThumbnailSubsystem', () => {
       fetcher,
     });
     sys.bindToRenderers(
-      makeMockQuadRenderer(),
+      makeMockThumbnailRenderer(),
       makeMockDiskRenderer(),
       makeMockProceduralDiskRenderer(),
     );
@@ -246,7 +246,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -279,7 +279,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -309,7 +309,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -346,7 +346,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -383,7 +383,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -412,7 +412,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );

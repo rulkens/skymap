@@ -39,7 +39,7 @@ type SlotEntry = { key: string; lastSeenFrame: number };
  * SlotEntry array stays capped at SLOT_COUNT — a small but real memory
  * leak, AND a correctness issue: a key that was evicted, then later
  * re-allocated to a different slot, would still be flagged as
- * `bitmapReady` (so the engine would emit a QuadInstance reading from a
+ * `bitmapReady` (so the engine would emit a ThumbnailInstance reading from a
  * slot that doesn't yet contain its bitmap, briefly displaying whichever
  * galaxy now occupies that slot).
  *

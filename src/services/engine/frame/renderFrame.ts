@@ -70,7 +70,7 @@ import type { EngineState, PointCloud } from '../../../@types';
 import type { Source } from '../../../data/sources';
 import type { BiasMode } from '../../../data/biasMode';
 import type { ToneMapCurve } from '../../../data/toneMapCurve';
-import type { QuadRenderer } from '../../gpu/renderers/quadRenderer';
+import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
 import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';
 import type { MilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
 import type { FilamentRenderer } from '../../gpu/renderers/filamentRenderer';
@@ -208,13 +208,13 @@ export type RenderFrameInput = {
    */
   filamentRenderer: FilamentRenderer | null;
   /**
-   * QuadRenderer + DiskRenderer references forwarded straight to the
+   * ThumbnailRenderer + DiskRenderer references forwarded straight to the
    * thumbnail subsystem.  The subsystem already `bindAtlas`-bound them
    * at engine-startup; the per-frame `runFrame` input still takes them
    * as explicit fields (legacy of the pre-extraction inline body) so
    * we forward them unchanged.  See thumbnailSubsystem.runFrame.
    */
-  quadRenderer: QuadRenderer;
+  thumbnailRenderer: ThumbnailRenderer;
   diskRenderer: DiskRenderer;
 
   // ── Settings ──────────────────────────────────────────────────────────
@@ -248,7 +248,7 @@ export function renderFrame(input: RenderFrameInput): void {
     context,
     milkyWayRenderer,
     filamentRenderer,
-    quadRenderer,
+    thumbnailRenderer,
     diskRenderer,
     settings,
     famousMeta,
@@ -262,7 +262,7 @@ export function renderFrame(input: RenderFrameInput): void {
   // duration of `renderFrame`'s execution.  See `passes/types.ts`'s
   // `PassDeps` declaration for the per-field rationale.
   const deps: PassDeps = {
-    quadRenderer,
+    thumbnailRenderer,
     diskRenderer,
     filamentRenderer,
     milkyWayRenderer,

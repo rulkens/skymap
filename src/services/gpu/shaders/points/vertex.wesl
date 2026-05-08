@@ -139,7 +139,7 @@ fn vs(
   //
   //   radius_Mpc = (diameterKpc / 2) * 4 / 1000 = diameterKpc * 2 / 1000
   //
-  // The 4× padding factor matches QuadRenderer's
+  // The 4× padding factor matches ThumbnailRenderer's
   // 'sizeWorld = (diameterKpc / 1000) * 4', so the soft glowing dot and
   // the textured thumbnail occupy the same world-space footprint and
   // the load-fade transition is seamless. The 'select' clamps zero/NaN

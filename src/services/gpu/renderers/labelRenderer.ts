@@ -32,7 +32,7 @@
  * instance buffer and couple layout to label length.  Instead, each glyph
  * carries just its `localOffset`, `localSize`, `uvRect`, and `labelIndex`
  * (36 bytes/glyph), and the shader fetches shared state from `labels[]`.
- * This is the same indirect-lookup pattern as `quadRenderer`'s per-instance
+ * This is the same indirect-lookup pattern as `thumbnailRenderer`'s per-instance
  * galaxy data — one level of indirection in exchange for a much smaller
  * per-glyph stride.
  *
@@ -46,14 +46,14 @@
  *   bytes 72..79  _pad0, _pad1 two reserved f32s (must stay zero)
  *
  * If `CameraUniforms` ever grows past 80 bytes, the constant and write
- * site here must both be updated.  See `quadRenderer.ts` for the same
+ * site here must both be updated.  See `thumbnailRenderer.ts` for the same
  * 80-byte comment with the per-renderer tail that comes after.
  *
  * ## Blend mode
  *
  * Premultiplied-alpha OVER, NOT additive.  Labels are UI overlay — they
  * should occlude the HDR sky content at full opacity.  Additive blend
- * (used by `quadRenderer` for emissive thumbnails) would make black
+ * (used by `thumbnailRenderer` for emissive thumbnails) would make black
  * pixels in the label transparent rather than opaque, which reads as
  * invisible on a dark sky and as a bright halo on a bright sky.
  *
@@ -501,7 +501,7 @@ export function createLabelRenderer(
     //   f32[18..19]  reserved pad — must remain zero (bytes 72..79)
     //
     // Float32Array zero-initialises on construction, so f32[18..19] stay zero
-    // without an explicit write — consistent with `quadRenderer.ts`'s approach.
+    // without an explicit write — consistent with `thumbnailRenderer.ts`'s approach.
     const uni = new Float32Array(UNIFORM_BYTES / 4);
     uni.set(viewProj, 0);
     uni[16] = viewportSize[0];

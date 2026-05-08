@@ -186,7 +186,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //
   // The render loop's `frame()` body lives in `runFrame.ts`, called
   // from the `startLoop` bootstrap phase, because it reads GPU
-  // resources (device, context, quadRenderer, diskRenderer) that
+  // resources (device, context, thumbnailRenderer, diskRenderer) that
   // initGpu() returns asynchronously.  But the `RenderScheduler` we
   // wire into `state.subsystems.scheduler` needs an `onFrame` callback
   // at construction time — which is *here*, in the synchronous state

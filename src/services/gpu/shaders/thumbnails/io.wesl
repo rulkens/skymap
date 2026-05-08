@@ -1,7 +1,7 @@
-// quads/io.wesl — shared structs for the textured-billboard galaxy
+// thumbnails/io.wesl — shared structs for the textured-billboard galaxy
 // thumbnail pipeline.
 //
-// This file is the 'interface' module of the quads renderer family.
+// This file is the 'interface' module of the thumbnails renderer family.
 // It declares the structs that BOTH the vertex and fragment entry
 // points need to agree on byte-for-byte:
 //
@@ -11,7 +11,7 @@
 //
 // ## Why a separate io module
 //
-// Originally everything lived in a single 'quads.wesl'. Splitting it
+// Originally everything lived in a single 'thumbnails.wesl'. Splitting it
 // into io + vertex + fragment mirrors the points/ and milkyWay/
 // splits (tasks 13 and 14) so each stage compiles a strictly-smaller
 // shader module from disjoint source. The vertex stage doesn't read
@@ -32,7 +32,7 @@ import package::lib::camera::CameraUniforms;
 // ── Uniforms layout (CameraUniforms-prefixed) ──────────────────────
 //
 // 96-byte uniform buffer matching the CPU-side UNIFORM_BYTES in
-// 'quadRenderer.ts'.  The first 80 bytes are the shared
+// 'thumbnailRenderer.ts'.  The first 80 bytes are the shared
 // 'CameraUniforms' prefix (viewProj at offset 0, viewportPx at
 // offset 64, two reserved-pad f32s at 72/76). The next 16 bytes
 // carry this renderer's two camera-derived but renderer-specific
