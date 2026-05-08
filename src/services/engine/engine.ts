@@ -106,14 +106,13 @@ import { cloudSourceFor } from '../../data/cloudSource';
 import { createLoadProgressEmitter } from './loadProgressAggregator';
 import type { AssetSlot } from '../loading/types';
 import { createAssetSlot } from '../loading/AssetSlot';
-import { pointCloudFetcher } from '../loading/fetchers/pointCloudFetcher';
-import { syntheticPointFetcher } from '../loading/fetchers/syntheticPointFetcher';
 import { filamentFetcher } from '../loading/fetchers/filamentFetcher';
 import { famousMetaFetcher } from '../loading/fetchers/famousMetaFetcher';
 import { pgcAliasFetcher, type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
 import { FOCUS_TWEEN_MS } from './focusTween';
 import { tweenToGalaxy } from './tweenToGalaxy';
+import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from './pointSourceRegistry';
 
 // ── Galaxy thumbnail subsystem ────────────────────────────────────────────
 //
@@ -162,33 +161,6 @@ import { buildSettersFromTable, type SettingsTableKey } from './settingsTable';
  *
  * @throws Never — errors are reported via `onStatusChange({ kind: 'error' })`.
  */
-/**
- * Lowercase short name for a Source — used as the stable prefix for
- * asset-slot identifiers (e.g. `sdss-points`, `glade-points`).  We keep
- * a small dedicated helper rather than reusing `sourceLabel` because
- * the latter returns the user-facing display string ('GLADE',
- * 'Famous'), while slot names live in logs / progress keys / dev
- * tooling and benefit from being lowercase + ASCII-clean.
- *
- * Defined at module scope so the per-source slot-construction loop
- * inside `createEngine` can use it without re-declaring on every
- * engine boot.
- */
-function sourceName(source: Source): string {
-  switch (source) {
-    case Source.SDSS:
-      return 'sdss';
-    case Source.TwoMRS:
-      return '2mrs';
-    case Source.Glade:
-      return 'glade';
-    case Source.Famous:
-      return 'famous';
-    case Source.Synthetic:
-      return 'synthetic';
-  }
-}
-
 export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────
   //
@@ -707,63 +679,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Naming: `<source>-points` for survey clouds, `filaments` for
       // filaments.  The progress aggregator keys on these strings, so
       // they double as the load-progress identifier.
-      for (const source of [
-        Source.SDSS,
-        Source.TwoMRS,
-        Source.Glade,
-        Source.Famous,
-        Source.Synthetic,
-      ]) {
-        const slotName = `${sourceName(source)}-points`;
-        // Synthetic uses a different fetcher (procedural generator,
-        // ignores tier).  All real surveys share `pointCloudFetcher`.
-        // The slot's commit body is identical across both — the only
-        // axis of variation here is "where do the bytes come from".
-        const fetch = source === Source.Synthetic ? syntheticPointFetcher : pointCloudFetcher;
-        const slot = createAssetSlot({
-          name: slotName,
-          fetch,
-          commit: async (cloud) => {
-            // Renderer might have been destroyed mid-load (StrictMode
-            // unmount, hot-reload).  Drop the upload silently in that
-            // case; the slot will still transition to `ready`, but no
-            // GPU buffer exists to consume it.
-            if (!state.gpu.renderer) return;
-            const t0 = performance.now();
-            // eslint-disable-next-line no-console
-            console.log(
-              `[engine] upload start ${sourceName(source)} count=${cloud.count}`,
-            );
-            await state.gpu.renderer.upload(source, cloud);
-            state.sources.clouds.set(source, cloud);
-            const dtMs = Math.round(performance.now() - t0);
-            // After upload, dump what the GPU actually has — the source
-            // of truth the draw loop reads from.  If this disagrees with
-            // the slot's reported `cloud.count`, the upload landed on the
-            // renderer but something else (e.g. a parallel rebake or a
-            // concurrent upload for the same source) overwrote it.
-            const onGpu = Array.from(state.gpu.renderer.loadedSources())
-              .map((e) => `${sourceName(e.source)}=${e.count}`)
-              .join(', ');
-            const total = state.gpu.renderer.totalCount();
-            // eslint-disable-next-line no-console
-            console.log(
-              `[engine] upload done  ${sourceName(source)} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
-            );
-          },
-        });
-        slot.subscribe((s) => {
-          // Per-slot byte-count plumbing into the loading-bar aggregator
-          // is gone post-Task-12 — the new `createLoadProgressEmitter`
-          // recomputes from `aggregateRegistry(slots)` on every state
-          // change, so this subscriber only needs to fire the
-          // app-visible side effects (cb echo + render wake).
-          if (s.kind === 'ready') {
-            cb.onCloudReady?.(source, s.value.count);
-            state.subsystems.scheduler.requestRender();
-          }
-        });
-        state.assetSlots.points.set(source, slot);
+      //
+      // The 5 point-source slots are now constructed via the
+      // `POINT_SOURCE_REGISTRY` declarative table — see
+      // `pointSourceRegistry.ts` for the registry schema, the per-row
+      // fetcher choice, and the rationale for keeping sidecar slots
+      // (filaments, famous-meta, pgc-aliases) inline below rather than
+      // absorbing them into the registry.  Each call mints the slot,
+      // attaches the upload-on-commit body + ready-state subscriber,
+      // and stores the slot in `state.assetSlots.points` keyed by
+      // `Source` — exactly what the pre-registry inline loop did.
+      for (const cfg of POINT_SOURCE_REGISTRY) {
+        wirePointSourceSlot(state, cfg, { cb });
       }
 
       // ── Galaxy thumbnail subsystem ─────────────────────────────────────
