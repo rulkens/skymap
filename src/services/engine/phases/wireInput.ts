@@ -84,7 +84,7 @@ import { createClickResolver } from '../clickHandler';
 import { attachEngineInputs } from '../inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
 import { buildPointInfo, maxAbsCoord } from '../helpers/pointInfoBuilder';
-import { seedSettingsCallbacks } from '../seedSettingsCallbacks';
+import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
 import { cloudSourceFor } from '../../../data/cloudSource';
 
 import type { EngineState, PointInfo } from '../../../@types';

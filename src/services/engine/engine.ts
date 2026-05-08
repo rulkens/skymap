@@ -113,7 +113,7 @@ import { tweenToGalaxy } from './camera/tweenToGalaxy';
 // and call `applyToCamera()` from `frame()`.  The handle's
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
-import { buildSettersFromTable, type SettingsTableKey } from './settingsTable';
+import { buildSettersFromTable, type SettingsTableKey } from './wiring/settingsTable';
 import { runBootstrapPhases, type BootstrapDeps } from './phases/bootstrap';
 
 /**

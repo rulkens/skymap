@@ -30,9 +30,9 @@
  * stricter lifecycle rules and the engine handles them inline.
  */
 
-import type { EngineCallbacks, LodMode } from '../../@types';
-import type { BiasMode } from '../../data/biasMode';
-import type { ToneMapCurve } from '../../data/toneMapCurve';
+import type { EngineCallbacks, LodMode } from '../../../@types';
+import type { BiasMode } from '../../../data/biasMode';
+import type { ToneMapCurve } from '../../../data/toneMapCurve';
 
 /**
  * Snapshot of every settings value the engine echoes back at startup.

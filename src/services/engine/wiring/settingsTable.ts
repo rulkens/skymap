@@ -75,7 +75,7 @@
  * `satisfies` clause in `engine.ts`.
  */
 
-import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
+import type { EngineCallbacks, EngineHandle, EngineState } from '../../../@types';
 
 /**
  * The thirteen names this table owns.  Frozen in tests so a future

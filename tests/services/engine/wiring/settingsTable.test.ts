@@ -31,10 +31,10 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   buildSettersFromTable,
   SETTINGS_TABLE,
-} from '../../../src/services/engine/settingsTable';
-import type { EngineCallbacks, EngineState } from '../../../src/@types';
-import { BiasMode } from '../../../src/data/biasMode';
-import { ToneMapCurve } from '../../../src/data/toneMapCurve';
+} from '../../../../src/services/engine/wiring/settingsTable';
+import type { EngineCallbacks, EngineState } from '../../../../src/@types';
+import { BiasMode } from '../../../../src/data/biasMode';
+import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 
 /**
  * Build a deeply-mutable test fixture for the engine state slices the

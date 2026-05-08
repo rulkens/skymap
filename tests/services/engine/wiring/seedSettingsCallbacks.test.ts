@@ -13,10 +13,10 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   seedSettingsCallbacks,
   type Snapshot,
-} from '../../../src/services/engine/seedSettingsCallbacks';
-import type { EngineCallbacks } from '../../../src/@types';
-import { BiasMode } from '../../../src/data/biasMode';
-import { ToneMapCurve } from '../../../src/data/toneMapCurve';
+} from '../../../../src/services/engine/wiring/seedSettingsCallbacks';
+import type { EngineCallbacks } from '../../../../src/@types';
+import { BiasMode } from '../../../../src/data/biasMode';
+import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 
 function makeSnapshot(): Snapshot {
   return {

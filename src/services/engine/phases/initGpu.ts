@@ -78,7 +78,7 @@ import { DiskRenderer } from '../../gpu/diskRenderer';
 import { ProceduralDiskRenderer } from '../../gpu/proceduralDiskRenderer';
 import { MilkyWayRenderer } from '../../gpu/milkyWayRenderer';
 import { FilamentRenderer } from '../../gpu/filamentRenderer';
-import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../pointSourceRegistry';
+import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
 
 import type { EngineState } from '../../../@types';
 import type { BootstrapDeps } from './bootstrap';

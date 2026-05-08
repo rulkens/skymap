@@ -37,9 +37,9 @@ import {
   wirePointSourceSlot,
   type PointSourceConfig,
   type WirePointSourceDeps,
-} from '../../../src/services/engine/pointSourceRegistry';
-import { Source } from '../../../src/data/sources';
-import type { EngineCallbacks, EngineState, PointCloud } from '../../../src/@types';
+} from '../../../../src/services/engine/wiring/pointSourceRegistry';
+import { Source } from '../../../../src/data/sources';
+import type { EngineCallbacks, EngineState, PointCloud } from '../../../../src/@types';
 
 /**
  * Minimal-shape fixture for the `EngineState` slices the helper reads
