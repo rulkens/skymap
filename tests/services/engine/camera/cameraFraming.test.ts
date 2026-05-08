@@ -12,8 +12,8 @@ import { describe, it, expect } from 'vitest';
 import {
   computeInitialCamera,
   INITIAL_DISTANCE_MPC,
-} from '../../../src/services/engine/cameraFraming';
-import { MAX_DISTANCE_MPC, MIN_DISTANCE_MPC } from '../../../src/services/camera/orbitCamera';
+} from '../../../../src/services/engine/camera/cameraFraming';
+import { MAX_DISTANCE_MPC, MIN_DISTANCE_MPC } from '../../../../src/services/camera/orbitCamera';
 
 describe('computeInitialCamera', () => {
   const FOV = (Math.PI / 180) * 60;

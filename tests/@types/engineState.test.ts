@@ -47,7 +47,7 @@ import {
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
 } from '../../src/data/defaults';
-import { createTweenManager } from '../../src/services/engine/tweenManager';
+import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
 import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/spaceMouseSubsystem';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
 import { Source } from '../../src/data/sources';

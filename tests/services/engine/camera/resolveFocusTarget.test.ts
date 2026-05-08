@@ -11,11 +11,11 @@
  * resolver and a real cloud's bytes would only obscure that.
  */
 import { describe, it, expect } from 'vitest';
-import { resolveFocusTarget } from '../../../src/services/engine/resolveFocusTarget';
-import type { PointCloud } from '../../../src/@types';
-import { Source } from '../../../src/data/sources';
-import type { FamousMetaEntry } from '../../../src/services/loading/fetchers/famousMetaFetcher';
-import { raDecZToCartesian } from '../../../src/utils/math/raDecZToCartesian';
+import { resolveFocusTarget } from '../../../../src/services/engine/camera/resolveFocusTarget';
+import type { PointCloud } from '../../../../src/@types';
+import { Source } from '../../../../src/data/sources';
+import type { FamousMetaEntry } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
+import { raDecZToCartesian } from '../../../../src/utils/math/raDecZToCartesian';
 
 /**
  * Build a minimum-viable `PointCloud` for resolver tests.  The resolver

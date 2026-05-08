@@ -44,7 +44,7 @@
  * would lock the wheel input out of useful range).
  */
 
-import { clampDistance } from '../camera/orbitCamera';
+import { clampDistance } from '../../camera/orbitCamera';
 
 /**
  * Snapshot of the camera's initial framing values.

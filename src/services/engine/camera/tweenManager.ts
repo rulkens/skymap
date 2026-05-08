@@ -43,8 +43,8 @@
  * future caller to reach in and poke.
  */
 
-import type { OrbitCamera } from '../../@types';
-import { advanceCameraTween, type CameraTween } from '../camera/cameraTween';
+import type { OrbitCamera } from '../../../@types';
+import { advanceCameraTween, type CameraTween } from '../../camera/cameraTween';
 
 export type TweenManager = {
   /**

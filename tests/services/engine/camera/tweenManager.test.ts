@@ -17,9 +17,9 @@
 import { describe, it, expect } from 'vitest';
 import { vec3 } from 'gl-matrix';
 
-import { createOrbitCamera } from '../../../src/services/camera/orbitCamera';
-import type { CameraTween } from '../../../src/services/camera/cameraTween';
-import { createTweenManager } from '../../../src/services/engine/tweenManager';
+import { createOrbitCamera } from '../../../../src/services/camera/orbitCamera';
+import type { CameraTween } from '../../../../src/services/camera/cameraTween';
+import { createTweenManager } from '../../../../src/services/engine/camera/tweenManager';
 
 function makeCam() {
   return createOrbitCamera({

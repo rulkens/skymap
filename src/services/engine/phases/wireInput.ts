@@ -82,7 +82,7 @@ import { attachOrbitControls } from '../../camera/orbitControls';
 import { createPickRenderer } from '../../gpu/pickRenderer';
 import { createClickResolver } from '../clickHandler';
 import { attachEngineInputs } from '../inputBindings';
-import { computeInitialCamera } from '../cameraFraming';
+import { computeInitialCamera } from '../camera/cameraFraming';
 import { buildPointInfo, maxAbsCoord } from '../helpers/pointInfoBuilder';
 import { seedSettingsCallbacks } from '../seedSettingsCallbacks';
 import { cloudSourceFor } from '../../../data/cloudSource';

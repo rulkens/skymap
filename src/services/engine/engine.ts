@@ -93,7 +93,7 @@ import type { LodMode, PointCloud, PointInfo } from '../../@types';
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
 import { vec3 } from 'gl-matrix';
 
-import { createTweenManager } from './tweenManager';
+import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
@@ -101,8 +101,8 @@ import { computeScaleInfo } from './helpers/scaleBar';
 import type { AssetSlot } from '../loading/types';
 import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
-import { FOCUS_TWEEN_MS } from './focusTween';
-import { tweenToGalaxy } from './tweenToGalaxy';
+import { FOCUS_TWEEN_MS } from './camera/focusTween';
+import { tweenToGalaxy } from './camera/tweenToGalaxy';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //

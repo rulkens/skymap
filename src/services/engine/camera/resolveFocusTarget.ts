@@ -51,11 +51,11 @@
  * frame-by-frame thumbnail-priority loop in the engine uses.
  */
 
-import type { FocusTarget } from '../url/focusUrl';
-import type { PointCloud } from '../../@types';
-import { Source } from '../../data/sources';
-import type { FamousMetaEntry } from '../loading/fetchers/famousMetaFetcher';
-import { cartesianToRaDecZ } from '../../utils/math/cartesianToRaDecZ';
+import type { FocusTarget } from '../../url/focusUrl';
+import type { PointCloud } from '../../../@types';
+import { Source } from '../../../data/sources';
+import type { FamousMetaEntry } from '../../loading/fetchers/famousMetaFetcher';
+import { cartesianToRaDecZ } from '../../../utils/math/cartesianToRaDecZ';
 
 /**
  * The 30-arcsec threshold pulled from `tools/buildFamous.ts` —

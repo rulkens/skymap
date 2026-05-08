@@ -72,7 +72,7 @@
 
 import { vec3 } from 'gl-matrix';
 
-import type { EngineState } from '../../@types';
+import type { EngineState } from '../../../@types';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
 
 /**
