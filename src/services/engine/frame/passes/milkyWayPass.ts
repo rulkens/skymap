@@ -50,6 +50,7 @@
 
 import type { Pass } from './types';
 import { milkyWayFadeAlpha } from '../../../../utils/math/milkyWayFade';
+import { MILKY_WAY_CENTER_WORLD } from '../../../../data/galacticCenter';
 
 export const milkyWayPass: Pass = {
   name: 'milky-way',
@@ -79,6 +80,13 @@ export const milkyWayPass: Pass = {
       // view-aligned billboard basis (vertex stage) and the
       // fragment stage's synthetic-camera ray origin.
       [drawCamPos[0], drawCamPos[1], drawCamPos[2]],
+      // The catalog data origin is the OBSERVER (Earth/Sun), so the
+      // Milky Way's actual center sits ~8 kpc from there in the
+      // direction of Sgr A\*.  Anchoring the impostor at that offset
+      // gives the astronomically correct relationship between the
+      // observer and the galaxy at close zoom.  See
+      // `data/galacticCenter.ts` for the constant's derivation.
+      [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
     );
   },
 };

@@ -100,7 +100,7 @@ const LABEL_ANCHOR_MPC = 0.05;
  * natural zoom — comfortable margin even when the label clamps to
  * its `maxPixelSize` cap at very close zoom.
  */
-const LINE_TOP_MPC = LABEL_ANCHOR_MPC * 0.65;
+const LINE_TOP_MPC = LABEL_ANCHOR_MPC * 0.75;
 
 /**
  * Label colour: premultiplied white at full alpha.
@@ -144,8 +144,13 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
     // gating the entire engine on the atlas load finishing.
     if (!labelRenderer || !lineRenderer) return;
 
-    // Camera distance from the world origin (the Milky Way's adopted
-    // barycentre in catalogue coordinates).
+    // Camera distance from the world origin.  The catalog frame puts
+    // the OBSERVER (Earth/Sun) at the origin, NOT the Milky Way's
+    // barycentre — so this is genuinely the camera's distance from
+    // "where the user is", which is the right input to the
+    // you-are-here fade band.  The Milky Way impostor is rendered at
+    // its own offset (Sgr A\* coordinates, see `milkyWayPass.ts` and
+    // `data/galacticCenter.ts`), but the marker stays at the origin.
     const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     const alpha = youAreHereAlpha(camDist);
 
