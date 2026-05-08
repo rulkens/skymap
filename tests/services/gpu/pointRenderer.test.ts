@@ -24,7 +24,7 @@
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { PointRenderer } from '../../../src/services/gpu/pointRenderer';
-import { buildPointInterleavedBuffer } from '../../../src/services/engine/buildPointInterleavedBuffer';
+import { buildPointInterleavedBuffer } from '../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source } from '../../../src/data/sources';
 import { BiasMode } from '../../../src/data/biasMode';
 import type { PointCloud } from '../../../src/@types';

@@ -51,10 +51,10 @@
  * @module
  */
 
-import type { PointCloud } from '../../@types';
-import type { Source } from '../../data/sources';
-import { cartesianToRaDecZ } from '../../utils/math';
-import { healpixNest } from '../../utils/math/healpix';
+import type { PointCloud } from '../../../@types';
+import type { Source } from '../../../data/sources';
+import { cartesianToRaDecZ } from '../../../utils/math';
+import { healpixNest } from '../../../utils/math/healpix';
 
 /** HEALPix resolution.  See module docstring for choice rationale. */
 const NSIDE = 32;

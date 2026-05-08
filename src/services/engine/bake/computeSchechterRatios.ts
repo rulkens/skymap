@@ -69,10 +69,10 @@
  * @module
  */
 
-import type { PointCloud } from '../../@types';
-import { Source } from '../../data/sources';
-import { surveyFluxLimit, surveySchechter } from '../../data/surveyFluxLimits';
-import { expectedNumberDensity } from '../../utils/math';
+import type { PointCloud } from '../../../@types';
+import { Source } from '../../../data/sources';
+import { surveyFluxLimit, surveySchechter } from '../../../data/surveyFluxLimits';
+import { expectedNumberDensity } from '../../../utils/math';
 
 /** Inputs for a Schechter-ratio bake. */
 export type ComputeSchechterRatiosInput = {

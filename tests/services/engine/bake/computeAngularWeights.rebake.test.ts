@@ -18,9 +18,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { computeAngularWeights } from '../../../src/services/engine/computeAngularWeights';
-import { Source } from '../../../src/data/sources';
-import type { PointCloud } from '../../../src/@types';
+import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
+import { Source } from '../../../../src/data/sources';
+import type { PointCloud } from '../../../../src/@types';
 
 function syntheticCloud(count: number, seedOffset: number): PointCloud {
   const positions = new Float32Array(count * 3);

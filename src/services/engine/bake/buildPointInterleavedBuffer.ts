@@ -47,21 +47,21 @@
  * @module
  */
 
-import type { PointCloud } from '../../@types';
-import { pickColourIndex } from '../../data/colourIndex';
-import { Source } from '../../data/sources';
+import type { PointCloud } from '../../../@types';
+import { pickColourIndex } from '../../../data/colourIndex';
+import { Source } from '../../../data/sources';
 import {
   surveyFluxLimit,
   surveySchechter,
   type SchechterTriple,
-} from '../../data/surveyFluxLimits';
-import { fallbackOrientation } from '../../utils/random/fallbackOrientation';
+} from '../../../data/surveyFluxLimits';
+import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import {
   absoluteFromApparent,
   cartesianToRaDecZ,
   expectedNumberDensity,
   vMaxWeight,
-} from '../../utils/math';
+} from '../../../utils/math';
 import { computeSchechterRatios } from './computeSchechterRatios';
 
 /**

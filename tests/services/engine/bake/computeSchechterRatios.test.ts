@@ -13,9 +13,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { computeSchechterRatios } from '../../../src/services/engine/computeSchechterRatios';
-import { Source } from '../../../src/data/sources';
-import type { PointCloud } from '../../../src/@types';
+import { computeSchechterRatios } from '../../../../src/services/engine/bake/computeSchechterRatios';
+import { Source } from '../../../../src/data/sources';
+import type { PointCloud } from '../../../../src/@types';
 
 function makeCloud(count: number): PointCloud {
   return {

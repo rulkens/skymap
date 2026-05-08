@@ -76,7 +76,7 @@ import type { PointCloud } from '../src/@types/index.js';
 import { Source } from '../src/data/sources.js';
 import { surveyFluxLimit } from '../src/data/surveyFluxLimits.js';
 import { absoluteFromApparent, dMaxFromAbsolute } from '../src/utils/math/distanceModulus.js';
-import { computeAngularWeights } from '../src/services/engine/computeAngularWeights.js';
+import { computeAngularWeights } from '../src/services/engine/bake/computeAngularWeights.js';
 
 /**
  * Default persistence cut in σ.  Lower = more filaments accepted as
