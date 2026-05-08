@@ -65,7 +65,7 @@ import { initGpu, resizeCanvasToDisplay } from '../gpu/device';
 import { PointRenderer } from '../gpu/pointRenderer';
 import { createPickRenderer } from '../gpu/pickRenderer';
 import { createPostProcess } from '../gpu/postProcess';
-import { createOrbitCamera, computeViewProj, updatePosition } from '../camera/orbitCamera';
+import { createOrbitCamera, updatePosition } from '../camera/orbitCamera';
 import { attachOrbitControls } from '../camera/orbitControls';
 import { Source, maskWith, maskWithout } from '../../data/sources';
 import {
@@ -90,7 +90,6 @@ import type { LodMode, PointCloud, PointInfo } from '../../@types';
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
 import { vec3 } from 'gl-matrix';
 
-import { autoLodMask } from './autoLod';
 import { createTweenManager } from './tweenManager';
 import { createRenderScheduler } from './renderScheduler';
 import { createFpsCounter } from './fpsCounter';
@@ -129,11 +128,7 @@ import { DiskRenderer } from '../gpu/diskRenderer';
 import { ProceduralDiskRenderer } from '../gpu/proceduralDiskRenderer';
 import { MilkyWayRenderer } from '../gpu/milkyWayRenderer';
 import { FilamentRenderer } from '../gpu/filamentRenderer';
-import {
-  createThumbnailSubsystem,
-  PROCEDURAL_DISK_FADE_START_PX,
-  PROCEDURAL_DISK_FADE_END_PX,
-} from './thumbnailSubsystem';
+import { createThumbnailSubsystem } from './thumbnailSubsystem';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -146,7 +141,7 @@ import {
 import { createSpaceMouseSubsystem } from './spaceMouseSubsystem';
 import { createClickResolver } from './clickHandler';
 import { attachEngineInputs } from './inputBindings';
-import { renderFrame } from './renderFrame';
+import { runFrame, type RunFrameDeps } from './runFrame';
 import { buildSettersFromTable, type SettingsTableKey } from './settingsTable';
 
 /**
@@ -282,7 +277,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // than every-N-frames polling, which would burn React renders even when
   // the number was unchanged.  Per-change is the lighter option.
   const fpsCounter = createFpsCounter(60);
-  let lastReportedFps: number | null = null;
+  // Boxed as `{current}` so the frame body in `runFrame.ts` can write
+  // to it across the module boundary — see runFrame.ts's module header
+  // for the {current} ref pattern.
+  const lastReportedFps: { current: number | null } = { current: null };
 
   /**
    * Wall-clock epoch (ms, from `performance.now`) snapshot taken at
@@ -1399,312 +1397,42 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
       // ── Render loop ──────────────────────────────────────────────────────
 
+      // Build the dep bag for `runFrame` once, here in the IIFE scope
+      // where every closure-captured local is in scope.  The bag is
+      // stable across frames: `lastReportedFps` rides as a `{current}`
+      // ref so the body's writes round-trip back into engine.ts; the
+      // helpers (`updateScaleBar`, `setHovered`, `cssToTexPx`) close
+      // over their own dedup state inside createEngine and get passed
+      // by reference; and the GPU-side renderers (`milkyWayRenderer`,
+      // `quadRenderer`, …) are the IIFE locals returned from `initGpu`
+      // / their respective constructors above.  See runFrame.ts's
+      // module header for the dep-vs-state rationale.
+      const frameDeps: RunFrameDeps = {
+        canvas,
+        cb,
+        fpsCounter,
+        lastReportedFps,
+        device,
+        context,
+        milkyWayRenderer,
+        filamentRenderer,
+        quadRenderer,
+        diskRenderer,
+        milkyWayITimeEpochMs,
+        cssToTexPx,
+        setHovered,
+        updateScaleBar,
+      };
+
       // Assign the real frame body to the forward-declared `frame`
       // variable.  The scheduler in `state.subsystems.scheduler` was
       // wired with `onFrame: () => frame()` — that closure reads the
       // current value of `frame` lazily, so this assignment makes
-      // every subsequent rAF tick run the body below.
+      // every subsequent rAF tick run `runFrame` against the dep bag
+      // built just above.  The body itself lives in `runFrame.ts`;
+      // see that module's header for what counts as the "frame body".
       frame = () => {
-        // ── FPS measurement ───────────────────────────────────────────────
-        //
-        // Sample BEFORE any frame work so the recorded timestamp is the
-        // gap between successive rAF dispatches — that's what the user
-        // perceives as "framerate", not the gap between when the frame
-        // body finishes.  The counter handles its own < 2-samples
-        // bootstrap (returns null) and rolls over a 60-frame window;
-        // we just throttle the callback to integer-value changes so
-        // React doesn't re-render on noise.
-        const fpsNow = fpsCounter.sample(performance.now());
-        if (fpsNow !== null && fpsNow !== lastReportedFps) {
-          lastReportedFps = fpsNow;
-          cb.onFpsChange?.(fpsNow);
-        }
-
-        // Snapshot the live state references once at the top of the
-        // frame body for readability.  Each is either a live mutable
-        // value (cam) or a slot that becomes null only on `destroy()`
-        // (renderer, thumbnails) — so reading through the snapshots
-        // for the duration of one frame is identical to reading
-        // `state.*` everywhere.
-        const camRef = state.cam;
-
-        // Resize the swap-chain if the canvas element changed size.
-        // `resizeCanvasToDisplay` returns `true` only when dimensions changed,
-        // so we patch `cam.aspect` and `updatePosition` only in that branch.
-        //
-        // We also recreate the HDR target at the new viewport size in the
-        // same branch.  The HDR texture is sized 1:1 with the swap chain,
-        // so a stale (smaller / larger) HDR target after a resize would
-        // either smear pixels or render off-canvas.  The tone-map pass
-        // recreates its bind group every frame, so the new view is picked
-        // up automatically on the next call.
-        if (camRef && resizeCanvasToDisplay(canvas)) {
-          camRef.aspect = canvas.width / canvas.height;
-          updatePosition(camRef);
-          state.gpu.postProcess?.resize({ width: canvas.width, height: canvas.height });
-        }
-
-        // Refresh the scale-bar legend. Early-returns when nothing changed,
-        // so this costs ~zero on stable frames.
-        updateScaleBar();
-
-        // ── Focus / home tween ────────────────────────────────────────────
-        //
-        // If a tween is in flight the manager advances it.  `advance`
-        // mutates the camera state and calls updatePosition internally,
-        // so by the time we hit the auto-rotate block below the camera
-        // is already at the eased intermediate frame.  The manager
-        // auto-clears its internal reference when the tween finishes,
-        // so subsequent frames skip this branch via `isActive()` returning
-        // false.
-        if (camRef) {
-          state.subsystems.tweens.advance(camRef, performance.now());
-        }
-
-        // ── SpaceMouse per-frame application ──────────────────────────────
-        //
-        // The subsystem owns the whole "if puck deflected, apply axes
-        // scaled by wall-clock dt, otherwise reset the dt baseline"
-        // dance — including the `tweens.cancel()` precedence rule (it
-        // calls back into the engine via the `cancelTween` callback we
-        // wired up at construction).  Calling unconditionally is fine:
-        // on a resting puck it's a single hasAnyAxis read + a null
-        // assignment to the dt baseline.
-        if (camRef) {
-          state.subsystems.spaceMouse.applyToCamera(camRef, performance.now());
-        }
-
-        // ── Auto-rotate yaw ───────────────────────────────────────────────
-        //
-        // When autoRotate is on, advance yaw by a small amount every frame.
-        // ~3°/sec at 60 Hz:  3° / 60 frames = 0.05° / frame
-        //                    0.05° × (π/180) ≈ 0.000873 radians / frame.
-        //
-        // Note: this uses a fixed per-frame delta rather than tracking elapsed
-        // wall-clock time.  At high refresh rates (120 Hz) the rotation is
-        // smoother but twice as fast.  For a gentle ambient effect this is
-        // an acceptable trade-off — no timer bookkeeping needed.
-        //
-        // **Why we skip auto-rotate while a tween is active:**
-        //
-        // The focus / focusOnHome tweens drive `cam.yaw` toward a target
-        // value over ~600 ms.  The `tweens.advance()` call earlier in
-        // this frame already mutated `cam.yaw` to its eased intermediate;
-        // if we then add 0.000873 rad on top *every frame* the tween
-        // runs, yaw lands ~36 frames × 0.000873 rad ≈ 1.8° past the
-        // target by the time the tween completes — and continues
-        // drifting forever after.  The user reports this as
-        // "Reset Camera doesn't actually reset to the centre".  Gating
-        // auto-rotate on `!tweens.isActive()` lets the home tween land
-        // exactly on the target yaw; auto-rotate resumes from that
-        // landing point on the next frame.
-        if (state.settings.autoRotate && camRef && !state.subsystems.tweens.isActive()) {
-          camRef.yaw += 0.000873;
-          updatePosition(camRef);
-        }
-
-        // Snapshot the current camera state into a combined view-projection matrix.
-        const vp = camRef ? computeViewProj(camRef) : null;
-        const rendererRef = state.gpu.renderer;
-        const thumbnailsRef = state.subsystems.thumbnails;
-        const postProcessRef = state.gpu.postProcess;
-        if (!vp || !rendererRef || !camRef || !thumbnailsRef || !postProcessRef) {
-          // Camera/renderer not ready yet — try again next frame.
-          // (This branch only fires during the brief window between
-          // engine startup and the first cloud landing; once both are
-          // present it's never taken.)
-          //
-          // We additionally guard on `thumbnails` being non-null so the
-          // renderFrame() dispatch below can take the subsystem
-          // unconditionally.  The subsystem is allocated alongside the
-          // GPU device in the startup IIFE, so by the time this branch
-          // is reachable both are present together.  The `cam` guard
-          // is redundant with the `vp` check (vp is null when cam is)
-          // but kept explicit so the type narrowing flows cleanly into
-          // the renderFrame call.
-          state.subsystems.scheduler.requestRender();
-          return;
-        }
-
-        // ── Auto-LOD mask refresh ────────────────────────────────────────
-        //
-        // In auto mode, recompute which surveys are visible from the
-        // camera's current distance every frame.  The work is essentially
-        // free — `autoLodMask` is a few branches against constants — and
-        // we only fire `onSourceMaskChange` when the mask actually flips
-        // bands so React's setState isn't called every frame.
-        //
-        // In manual mode we leave `visibleMask` alone so a user toggle
-        // in the settings panel sticks until they explicitly re-enter
-        // auto mode.
-        if (state.sources.lodMode === 'auto') {
-          const nextMask = autoLodMask(camRef.distance);
-          if (nextMask !== state.sources.visibleMask) {
-            state.sources.visibleMask = nextMask;
-            cb.onSourceMaskChange?.(nextMask);
-          }
-        }
-
-        // ── GPU dispatch ──────────────────────────────────────────────────
-        //
-        // The whole encoder lifecycle (createCommandEncoder, beginRenderPass
-        // against the HDR target, pointRenderer.draw, thumbnails.runFrame,
-        // pass.end, postProcess.draw, queue.submit) lives in `renderFrame.ts`.
-        // Every closure variable that block read is forwarded as an explicit
-        // field on `RenderFrameInput` so this site stays free of GPU
-        // bookkeeping.  See that module's docstring for the in-order
-        // pass description and the rationale for keeping pick + auto-LOD
-        // out here in `frame()`.
-        renderFrame({
-          cam: camRef,
-          canvasWidth: canvas.width,
-          canvasHeight: canvas.height,
-          viewProj: vp,
-          device,
-          context,
-          postProcess: postProcessRef,
-          pointRenderer: rendererRef,
-          milkyWayRenderer,
-          filamentRenderer,
-          thumbnails: thumbnailsRef,
-          quadRenderer,
-          diskRenderer,
-          milkyWayITimeSec: (performance.now() - milkyWayITimeEpochMs) * 0.001 * 0.25,
-          settings: {
-            pointSizePx: state.settings.pointSizePx,
-            brightness: state.settings.brightness,
-            selected: state.picking.selected,
-            visibleSourceMask: state.sources.visibleMask,
-            highlightFallback: state.settings.highlightFallback,
-            realOnlyMode: state.settings.realOnlyMode,
-            biasMode: state.bias.mode,
-            absMagLimit: state.bias.absMagLimit,
-            apparentMagLimit: state.bias.apparentMagLimit,
-            schechterMStar: state.bias.schechterMStar,
-            schechterAlpha: state.bias.schechterAlpha,
-            depthFadeEnabled: state.settings.depthFadeEnabled,
-            // Task 8 of procedural-disk-impostor: feed the points-pass
-            // fragment shader the same crossfade band the procedural-
-            // disk pass fades IN over, so the two passes blend cleanly
-            // without a double-bright donut.  Constants live in
-            // `thumbnailSubsystem.ts` as a single source of truth.
-            pxFadeStartPoints: PROCEDURAL_DISK_FADE_START_PX,
-            pxFadeEndPoints: PROCEDURAL_DISK_FADE_END_PX,
-            exposure: state.settings.exposure,
-            toneMapCurve: state.settings.toneMapCurve,
-            galaxyTexturesEnabled: state.settings.galaxyTexturesEnabled,
-            milkyWayEnabled: state.settings.milkyWayEnabled,
-            filamentsEnabled: state.settings.filamentsEnabled,
-            filamentIntensity: state.settings.filamentIntensity,
-          },
-          famousMeta: state.sources.famousMeta,
-          famousXrefs: state.sources.famousXrefs,
-          clouds: state.sources.clouds,
-        });
-
-        // ── Throttled hover pick ──────────────────────────────────────────
-        //
-        // Strategy: pointermove updates `state.picking.latestMouseCss`; here
-        // (once per frame) we check whether the mouse has moved since the
-        // last pick. If it has AND no pick is already in flight, we kick
-        // off a new one.
-        //
-        // We compare object references rather than coordinates — a new position
-        // object was created by the pointermove handler, so reference inequality
-        // means the mouse actually moved.
-        //
-        // The pick is fire-and-forget: we do NOT await it here. Awaiting inside
-        // requestAnimationFrame would block the frame loop. Instead the `.then`
-        // callback updates state when the GPU readback completes (typically 1-2
-        // frames later).
-        //
-        // IMPORTANT: pick() is called *after* device.queue.submit(), so the
-        // visual frame's uniform buffer has already been written with the latest
-        // viewProj. The pick renderer reads the same uniform buffer.
-        if (
-          state.sources.clouds.size > 0 &&
-          state.picking.latestMouseCss !== null &&
-          state.picking.latestMouseCss !== state.picking.lastPickedMouseCss &&
-          !state.picking.pickInFlight &&
-          !state.picking.pointerDown // skip hover picks while a drag is in progress
-        ) {
-          // Snapshot the renderer's currently-visible per-source draw
-          // records.  Same filter rule as the click handler — only sources
-          // whose visibility bit is set are eligible to claim hover.
-          const visibleSources = Array.from(rendererRef.loadedSources()).filter(
-            (s) => ((state.sources.visibleMask >> s.source) & 1) !== 0,
-          );
-          if (visibleSources.length === 0) {
-            // No surveys are visible right now (user toggled them all
-            // off).  Let the loop sleep — the next setSourceVisible
-            // call will wake it.
-            return;
-          }
-
-          // Snapshot the position at the moment we kick off the pick.
-          const pos = state.picking.latestMouseCss;
-          state.picking.lastPickedMouseCss = pos;
-          state.picking.pickInFlight = true;
-
-          state.gpu
-            .pickRenderer!.pick(
-              [canvas.width, canvas.height],
-              cssToTexPx(pos.x),
-              cssToTexPx(pos.y),
-              visibleSources,
-              // Boost the picking floor for easier hover targets — see
-              // PICK_PADDING_PX in pickRenderer.ts.
-              state.settings.pointSizePx,
-            )
-            .then((sel) => {
-              setHovered(sel);
-              // No scheduler.requestRender() here intentionally.
-              // The hover state only feeds the React InfoCard text —
-              // there is no hover halo in the rendered scene today,
-              // so a hover change does NOT require a re-render.
-              // Skipping the wake keeps idle CPU at zero on
-              // mouse-over without click.  If a future task adds a
-              // hover halo, add scheduler.requestRender() here.
-            })
-            .finally(() => {
-              state.picking.pickInFlight = false;
-            });
-        }
-
-        // ── Render-on-demand: continue ticking ONLY if motion or async
-        // work is in flight.  Otherwise the loop sleeps; event handlers
-        // and engine handle setters call scheduler.requestRender() to
-        // wake it for one frame each.
-        //
-        // Predicate breakdown:
-        //   - autoRotate: continuous yaw advancement; render every frame.
-        //   - currentTween: easeOutCubic interpolation; render until
-        //     advanceCameraTween reports finished and clears the ref.
-        //   - hasAnyAxis(latestSpaceMouseAxes): puck deflected; render
-        //     every frame to apply the per-frame velocity.
-        //   - thumbnails.hasInFlightFetches(): a thumbnail fetch is
-        //     racing the network OR a recently-landed bitmap is still
-        //     in its 400 ms load-fade window.  The subsystem owns both
-        //     bookkeeping paths; we just OR its single boolean in.
-        //     When it lands, the onResult uploads to the atlas and
-        //     calls requestRender() — but we keep one frame queued
-        //     anyway so the load-fade lerp ramps smoothly.
-        //   - pointRenderer.isFading() / filamentRenderer.isFading():
-        //     one or more clouds (point surveys or the filament skeleton)
-        //     are still ramping up their per-source opacity from a recent
-        //     upload (initial load or tier-swap).  The fade lasts
-        //     CLOUD_FADE_DURATION_MS (~600 ms) total; we keep ticking the
-        //     loop so the smoothstep advances on every frame, then go
-        //     silent again.  See `cloudFade.ts` for the shared mechanism.
-        const stillAnimating =
-          state.settings.autoRotate ||
-          state.subsystems.tweens.isActive() ||
-          state.subsystems.spaceMouse.hasAxes() ||
-          (state.subsystems.thumbnails !== null &&
-            state.subsystems.thumbnails.hasInFlightFetches()) ||
-          (state.gpu.renderer !== null && state.gpu.renderer.isFading()) ||
-          (state.gpu.filamentRenderer !== null && state.gpu.filamentRenderer.isFading());
-        if (stillAnimating) state.subsystems.scheduler.requestRender();
+        runFrame(state, frameDeps, performance.now());
       };
 
       // Kick off the first render.  The scheduler was already created
