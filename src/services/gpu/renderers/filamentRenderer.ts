@@ -16,11 +16,27 @@
  *   uniformBuffer               :  96 bytes (CameraUniforms prefix + halfWidth + intensityScale + tail pad)
  *
  * Public API:
- *   - new FilamentRenderer(device, format)
+ *   - createFilamentRenderer(device, format)
  *   - upload(cloud: FilamentCloud)  → builds the instance buffer
- *   - draw(pass, viewProj, viewportPx, halfWidthPx)
+ *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensityScale)
  *   - clear()                       → drops the instance buffer
+ *   - isFading()                    → mirrors PointRenderer's fade signal
  *   - destroy()                     → releases all GPU resources
+ *
+ * ### Factory shape (Spec F.2)
+ *
+ * Pre-Spec-F.2 this shipped as `class FilamentRenderer`; the conversion
+ * follows the same pattern as F.1's stateless drawers and matches the
+ * already-factory `createPickRenderer` plus every subsystem factory
+ * Spec D extracted (`createSelectionSubsystem`, `createTweenManager`,
+ * …).  The mechanically-distinguishing detail vs F.1 is that this
+ * renderer holds *stateful* per-cloud data — the segment instance
+ * buffer, the segment count, and the lazily-created `CloudFade` — so
+ * the closure carries `let` bindings that the upload state machine
+ * mutates rather than the constants of the F.1 drawers.
+ *
+ * Public surface is byte-identical; the only call-site change is
+ * `new FilamentRenderer(...)` → `createFilamentRenderer(...)`.
  */
 import vsCode from '../shaders/filaments/vertex.wesl?static';
 import fsCode from '../shaders/filaments/fragment.wesl?static';
@@ -87,199 +103,224 @@ export function buildSegmentInstances(cloud: FilamentCloud): {
   return { segmentCount, data };
 }
 
-export class FilamentRenderer {
-  private readonly pipeline: GPURenderPipeline;
-  private readonly bindGroup: GPUBindGroup;
-  private readonly uniformBuffer: GPUBuffer;
-  private readonly indexBuffer: GPUBuffer;
-  private readonly quadVertexBuffer: GPUBuffer;
-  private instanceBuffer: GPUBuffer | null = null;
-  private segmentCount = 0;
-  /**
-   * Layout for the per-cloud fade bind group (`@group(1)` in filaments.wgsl).
-   * Held on the instance so the lazily-created `fade` controller can pin
-   * to the same layout the pipeline was built with.  See `cloudFade.ts`
-   * for the wire format.
-   */
-  private readonly cloudFadeBindGroupLayout: GPUBindGroupLayout;
-  /**
-   * Fade-in controller for the loaded skeleton.  Null when no `upload()`
-   * has happened yet (the renderer's draw is also a no-op in that
-   * state, so the missing fade isn't observable).  On the first upload
-   * we mint one; subsequent uploads call `restart()` to re-trigger
-   * the fade-in for fresh content (e.g. a tier swap to the lighter
-   * `filaments-small.bin`).
-   */
-  private fade: CloudFade | null = null;
-
-  constructor(
-    private readonly device: GPUDevice,
-    /**
-     * The colour-attachment format the pipeline writes into.  In skymap
-     * this is the HDR offscreen target (`rgba16float`) — see
-     * `src/services/gpu/hdrTarget.ts` and the rationale in
-     * `renderFrame.ts`.  Filaments accumulate additively into the same
-     * float buffer the points/quads/disks write, then the tone-map pass
-     * compresses everything onto the swap chain.  Drawing direct to the
-     * swap chain would clip on overlap — exactly the visual cosmic-web
-     * scenes need to NOT do.
-     */
-    hdrFormat: GPUTextureFormat,
-  ) {
-    const vsModule = createShaderModuleWithDevLog(device, vsCode, 'filaments.vertex');
-    const fsModule = createShaderModuleWithDevLog(device, fsCode, 'filaments.fragment');
-
-    this.uniformBuffer = device.createBuffer({
-      label: 'filaments-uniform-buffer',
-      size: UNIFORM_BYTES,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-
-    // Static index buffer: two triangles forming the quad.
-    const indices = new Uint16Array([0, 1, 2, 1, 3, 2]);
-    this.indexBuffer = device.createBuffer({
-      label: 'filaments-index-buffer',
-      size: indices.byteLength,
-      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-    });
-    device.queue.writeBuffer(this.indexBuffer, 0, indices);
-
-    // Static quad-corner buffer: 4 vertices × vec2 = 32 bytes.
-    const quadCorners = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]);
-    this.quadVertexBuffer = device.createBuffer({
-      label: 'filaments-quad-vertex-buffer',
-      size: quadCorners.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-    device.queue.writeBuffer(this.quadVertexBuffer, 0, quadCorners);
-
-    const bindGroupLayout = device.createBindGroupLayout({
-      label: 'filaments-bgl-uniforms',
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: { type: 'uniform' },
-        },
-      ],
-    });
-
-    // Per-cloud fade-in bind group at @group(1).  Layout matches what
-    // CloudFade expects (single binding 0, uniform, fragment-stage only —
-    // the WGSL only multiplies into fragment alpha, so the vertex stage
-    // never needs to see the opacity).  Stored on the instance so the
-    // lazily-created CloudFade can reuse it.
-    this.cloudFadeBindGroupLayout = device.createBindGroupLayout({
-      label: 'filaments-bgl-cloudFade',
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.FRAGMENT,
-          buffer: { type: 'uniform' },
-        },
-      ],
-    });
-
-    this.bindGroup = device.createBindGroup({
-      label: 'filaments-bg-uniforms',
-      layout: bindGroupLayout,
-      entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
-    });
-
-    this.pipeline = device.createRenderPipeline({
-      label: 'filaments-pipeline',
-      layout: device.createPipelineLayout({
-        label: 'filaments-pipeline-layout',
-        bindGroupLayouts: [bindGroupLayout, this.cloudFadeBindGroupLayout],
-      }),
-      vertex: {
-        module: vsModule,
-        entryPoint: 'vs',
-        buffers: [
-          // Per-quad-vertex: uv vec2
-          {
-            arrayStride: 8,
-            stepMode: 'vertex',
-            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
-          },
-          // Per-instance: startxyz + startDensity + endxyz + endDensity
-          {
-            arrayStride: FLOATS_PER_SEGMENT * 4,
-            stepMode: 'instance',
-            attributes: [
-              { shaderLocation: 1, offset: 0, format: 'float32x3' }, // startPos
-              { shaderLocation: 2, offset: 12, format: 'float32' }, // startDensity
-              { shaderLocation: 3, offset: 16, format: 'float32x3' }, // endPos
-              { shaderLocation: 4, offset: 28, format: 'float32' }, // endDensity
-            ],
-          },
-        ],
-      },
-      fragment: {
-        module: fsModule,
-        entryPoint: 'fs',
-        targets: [
-          {
-            format: hdrFormat,
-            // Additive blending — filaments glow over the existing scene
-            // without occluding the point cloud below them.
-            blend: {
-              color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            },
-          },
-        ],
-      },
-      primitive: { topology: 'triangle-list' },
-      // Note: the HDR pass in `renderFrame.ts` does NOT attach a depth
-      // texture — points/quads/disks all skip depth.  Filaments follow
-      // the same convention; if a future plan adds a depth attachment
-      // to the HDR pass, mirror the points-pipeline's depthStencil
-      // block here.
-    });
-  }
-
+/**
+ * Public surface of the filament renderer.  Mirrors the methods the
+ * pre-factory class exposed: upload / draw / clear / isFading /
+ * destroy.  Consumers (engine teardown, the filament asset slot's
+ * commit step, the per-frame loop) see the identical shape.
+ */
+export type FilamentRenderer = {
   /** Upload a new filament cloud, replacing any prior buffer. */
-  upload(cloud: FilamentCloud): void {
-    const { segmentCount, data } = buildSegmentInstances(cloud);
-    this.segmentCount = segmentCount;
-    if (segmentCount === 0) {
-      this.instanceBuffer?.destroy();
-      this.instanceBuffer = null;
-      return;
-    }
-    this.instanceBuffer?.destroy();
-    this.instanceBuffer = this.device.createBuffer({
-      label: 'filaments-instance-buffer',
-      size: data.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-    this.device.queue.writeBuffer(this.instanceBuffer, 0, data);
-
-    // Trigger the fade-in.  First upload mints the controller; subsequent
-    // uploads (rare — usually just on tier swap) restart the existing one.
-    if (this.fade === null) {
-      this.fade = new CloudFade(this.device, this.cloudFadeBindGroupLayout);
-    } else {
-      this.fade.restart();
-    }
-  }
-
+  upload(cloud: FilamentCloud): void;
   /** Drop the loaded filaments without destroying the pipeline itself. */
-  clear(): void {
-    this.instanceBuffer?.destroy();
-    this.instanceBuffer = null;
-    this.segmentCount = 0;
-  }
-
+  clear(): void;
+  /**
+   * Issue the per-frame draw.  No-op until a cloud has been uploaded
+   * (segmentCount = 0 → early return).
+   */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
     halfWidthPx: number,
     intensityScale: number,
+  ): void;
+  /**
+   * Whether the filament fade-in is still ramping.  Mirrors
+   * `PointRenderer.isFading()`.  Returns false before any upload (no
+   * fade in flight) and after the smoothstep saturates.
+   */
+  isFading(): boolean;
+  /** Release every GPU buffer + the lazy CloudFade controller. */
+  destroy(): void;
+};
+
+export function createFilamentRenderer(
+  device: GPUDevice,
+  /**
+   * The colour-attachment format the pipeline writes into.  In skymap
+   * this is the HDR offscreen target (`rgba16float`) — see
+   * `src/services/gpu/hdrTarget.ts` and the rationale in
+   * `renderFrame.ts`.  Filaments accumulate additively into the same
+   * float buffer the points/quads/disks write, then the tone-map pass
+   * compresses everything onto the swap chain.  Drawing direct to the
+   * swap chain would clip on overlap — exactly what the visual cosmic-
+   * web scenes need to NOT do.
+   */
+  hdrFormat: GPUTextureFormat,
+): FilamentRenderer {
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'filaments.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'filaments.fragment');
+
+  const uniformBuffer = device.createBuffer({
+    label: 'filaments-uniform-buffer',
+    size: UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  // Static index buffer: two triangles forming the quad.
+  const indices = new Uint16Array([0, 1, 2, 1, 3, 2]);
+  const indexBuffer = device.createBuffer({
+    label: 'filaments-index-buffer',
+    size: indices.byteLength,
+    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(indexBuffer, 0, indices);
+
+  // Static quad-corner buffer: 4 vertices × vec2 = 32 bytes.
+  const quadCorners = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]);
+  const quadVertexBuffer = device.createBuffer({
+    label: 'filaments-quad-vertex-buffer',
+    size: quadCorners.byteLength,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(quadVertexBuffer, 0, quadCorners);
+
+  const bindGroupLayout = device.createBindGroupLayout({
+    label: 'filaments-bgl-uniforms',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+    ],
+  });
+
+  // Per-cloud fade-in bind group at @group(1).  Layout matches what
+  // CloudFade expects (single binding 0, uniform, fragment-stage only —
+  // the WGSL only multiplies into fragment alpha, so the vertex stage
+  // never needs to see the opacity).  Held in closure-scope so the
+  // lazily-created CloudFade can reuse it.
+  const cloudFadeBindGroupLayout = device.createBindGroupLayout({
+    label: 'filaments-bgl-cloudFade',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+    ],
+  });
+
+  const bindGroup = device.createBindGroup({
+    label: 'filaments-bg-uniforms',
+    layout: bindGroupLayout,
+    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+  });
+
+  const pipeline = device.createRenderPipeline({
+    label: 'filaments-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'filaments-pipeline-layout',
+      bindGroupLayouts: [bindGroupLayout, cloudFadeBindGroupLayout],
+    }),
+    vertex: {
+      module: vsModule,
+      entryPoint: 'vs',
+      buffers: [
+        // Per-quad-vertex: uv vec2
+        {
+          arrayStride: 8,
+          stepMode: 'vertex',
+          attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x2' }],
+        },
+        // Per-instance: startxyz + startDensity + endxyz + endDensity
+        {
+          arrayStride: FLOATS_PER_SEGMENT * 4,
+          stepMode: 'instance',
+          attributes: [
+            { shaderLocation: 1, offset: 0, format: 'float32x3' }, // startPos
+            { shaderLocation: 2, offset: 12, format: 'float32' }, // startDensity
+            { shaderLocation: 3, offset: 16, format: 'float32x3' }, // endPos
+            { shaderLocation: 4, offset: 28, format: 'float32' }, // endDensity
+          ],
+        },
+      ],
+    },
+    fragment: {
+      module: fsModule,
+      entryPoint: 'fs',
+      targets: [
+        {
+          format: hdrFormat,
+          // Additive blending — filaments glow over the existing scene
+          // without occluding the point cloud below them.
+          blend: {
+            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+          },
+        },
+      ],
+    },
+    primitive: { topology: 'triangle-list' },
+    // Note: the HDR pass in `renderFrame.ts` does NOT attach a depth
+    // texture — points/quads/disks all skip depth.  Filaments follow
+    // the same convention; if a future plan adds a depth attachment
+    // to the HDR pass, mirror the points-pipeline's depthStencil
+    // block here.
+  });
+
+  // ── Stateful per-cloud bookkeeping ────────────────────────────────
+  //
+  // Closure-captured `let` bindings — they're reassigned by `upload`
+  // and `clear`.  The class form held these as private fields; the
+  // factory form makes the mutability obvious by leaving them at
+  // top scope of the closure rather than nested inside `this`.
+  //
+  // `instanceBuffer` and `segmentCount` track the currently-loaded
+  // cloud's GPU vertex buffer and its segment count.  Null/zero
+  // means "no cloud uploaded yet" (or `clear()` has been called),
+  // and `draw()` early-returns.
+  //
+  // `fade` is the lazily-created CloudFade controller.  It's null
+  // before the first upload — minted on first `upload()` call and
+  // restarted on subsequent uploads (fresh content → fresh fade-in
+  // ramp).  The `isFading()` check tolerates the null case so callers
+  // don't have to.
+  let instanceBuffer: GPUBuffer | null = null;
+  let segmentCount = 0;
+  let fade: CloudFade | null = null;
+
+  function upload(cloud: FilamentCloud): void {
+    const built = buildSegmentInstances(cloud);
+    segmentCount = built.segmentCount;
+    if (built.segmentCount === 0) {
+      instanceBuffer?.destroy();
+      instanceBuffer = null;
+      return;
+    }
+    instanceBuffer?.destroy();
+    instanceBuffer = device.createBuffer({
+      label: 'filaments-instance-buffer',
+      size: built.data.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(instanceBuffer, 0, built.data);
+
+    // Trigger the fade-in.  First upload mints the controller; subsequent
+    // uploads (rare — usually just on tier swap) restart the existing one.
+    if (fade === null) {
+      fade = new CloudFade(device, cloudFadeBindGroupLayout);
+    } else {
+      fade.restart();
+    }
+  }
+
+  function clear(): void {
+    instanceBuffer?.destroy();
+    instanceBuffer = null;
+    segmentCount = 0;
+  }
+
+  function draw(
+    pass: GPURenderPassEncoder,
+    viewProj: mat4,
+    viewportPx: [number, number],
+    halfWidthPx: number,
+    intensityScale: number,
   ): void {
-    if (this.segmentCount === 0 || !this.instanceBuffer || !this.fade) return;
+    if (segmentCount === 0 || !instanceBuffer || !fade) return;
 
     // Pack uniforms.  See UNIFORM_BYTES comment above for the byte layout.
     //   f32[0..15]   viewProj (mat4)         — CameraUniforms.viewProj
@@ -301,35 +342,32 @@ export class FilamentRenderer {
     f32[17] = viewportPx[1];
     f32[20] = halfWidthPx;
     f32[21] = intensityScale;
-    this.device.queue.writeBuffer(this.uniformBuffer, 0, buf);
+    device.queue.writeBuffer(uniformBuffer, 0, buf);
 
     // Cloud-fade-in opacity for this frame.  Steady-state (after the
     // ~600 ms ramp) writes 1.0 — a no-op on the shader's alpha multiply.
-    this.fade.writeFrame();
+    fade.writeFrame();
 
-    pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bindGroup);
-    pass.setBindGroup(1, this.fade.bindGroup);
-    pass.setIndexBuffer(this.indexBuffer, 'uint16');
-    pass.setVertexBuffer(0, this.quadVertexBuffer);
-    pass.setVertexBuffer(1, this.instanceBuffer);
-    pass.drawIndexed(6, this.segmentCount);
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
+    pass.setBindGroup(1, fade.bindGroup);
+    pass.setIndexBuffer(indexBuffer, 'uint16');
+    pass.setVertexBuffer(0, quadVertexBuffer);
+    pass.setVertexBuffer(1, instanceBuffer);
+    pass.drawIndexed(6, segmentCount);
   }
 
-  /**
-   * Whether the filament fade-in is still ramping.  Mirrors
-   * `PointRenderer.isFading()`.  Returns false before any upload (no
-   * fade in flight) and after the smoothstep saturates.
-   */
-  isFading(): boolean {
-    return this.fade !== null && this.fade.isFading();
+  function isFading(): boolean {
+    return fade !== null && fade.isFading();
   }
 
-  destroy(): void {
-    this.uniformBuffer.destroy();
-    this.indexBuffer.destroy();
-    this.quadVertexBuffer.destroy();
-    this.instanceBuffer?.destroy();
-    this.fade?.destroy();
+  function destroy(): void {
+    uniformBuffer.destroy();
+    indexBuffer.destroy();
+    quadVertexBuffer.destroy();
+    instanceBuffer?.destroy();
+    fade?.destroy();
   }
+
+  return { upload, clear, draw, isFading, destroy };
 }
