@@ -71,13 +71,13 @@
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
-import { PointRenderer } from '../../gpu/pointRenderer';
+import { PointRenderer } from '../../gpu/renderers/pointRenderer';
 import { createPostProcess } from '../../gpu/passes/postProcess';
-import { QuadRenderer } from '../../gpu/quadRenderer';
-import { DiskRenderer } from '../../gpu/diskRenderer';
-import { ProceduralDiskRenderer } from '../../gpu/proceduralDiskRenderer';
-import { MilkyWayRenderer } from '../../gpu/milkyWayRenderer';
-import { FilamentRenderer } from '../../gpu/filamentRenderer';
+import { QuadRenderer } from '../../gpu/renderers/quadRenderer';
+import { DiskRenderer } from '../../gpu/renderers/diskRenderer';
+import { ProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
+import { MilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
+import { FilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
 
 import type { EngineState } from '../../../@types';

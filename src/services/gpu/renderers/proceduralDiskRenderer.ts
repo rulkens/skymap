@@ -11,10 +11,10 @@
  * is just the JS-side pipeline wiring.
  */
 
-import vsCode from './shaders/proceduralDisks/vertex.wesl?static';
-import fsCode from './shaders/proceduralDisks/fragment.wesl?static';
-import type { ProceduralDiskInstance } from '../../@types/ProceduralDiskInstance';
-import { createShaderModuleWithDevLog } from './shaderCompileLogger';
+import vsCode from '../shaders/proceduralDisks/vertex.wesl?static';
+import fsCode from '../shaders/proceduralDisks/fragment.wesl?static';
+import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 const STRIDE_FLOATS = 12; // 3 vec4<f32> per instance
 const STRIDE_BYTES = STRIDE_FLOATS * 4;

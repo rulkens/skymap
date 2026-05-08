@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeAll, vi } from 'vitest';
-import { createPickRenderer } from '../../../src/services/gpu/pickRenderer';
-import { PointRenderer } from '../../../src/services/gpu/pointRenderer';
-import { Source } from '../../../src/data/sources';
+import { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
+import { PointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
+import { Source } from '../../../../src/data/sources';
 
 beforeAll(() => {
   // Same WebGPU global stubs the other gpu tests use; mirror their pattern.

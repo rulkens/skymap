@@ -33,10 +33,10 @@
  * GPU bag rather than the whole `EngineState`.
  */
 
-import type { PointRenderer } from '../services/gpu/pointRenderer';
+import type { PointRenderer } from '../services/gpu/renderers/pointRenderer';
 import type { PostProcess } from '../services/gpu/passes/postProcess';
-import type { createPickRenderer } from '../services/gpu/pickRenderer';
-import type { FilamentRenderer } from '../services/gpu/filamentRenderer';
+import type { createPickRenderer } from '../services/gpu/renderers/pickRenderer';
+import type { FilamentRenderer } from '../services/gpu/renderers/filamentRenderer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;

@@ -86,9 +86,9 @@
 // for the procedural-galaxy helpers. Sharing modules across pipelines
 // would invite the WebGPU 'auto' bind-group-layout trap — sidestepped
 // here by giving each stage its own module from disjoint sources.
-import vsCode from './shaders/milkyWay/vertex.wesl?static';
-import fsCode from './shaders/milkyWay/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from './shaderCompileLogger';
+import vsCode from '../shaders/milkyWay/vertex.wesl?static';
+import fsCode from '../shaders/milkyWay/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 type Init = {
   device: GPUDevice;

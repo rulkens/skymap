@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MilkyWayRenderer } from '../../../src/services/gpu/milkyWayRenderer';
+import { MilkyWayRenderer } from '../../../../src/services/gpu/renderers/milkyWayRenderer';
 
 describe('MilkyWayRenderer', () => {
   it('exports the class as a constructor', () => {
