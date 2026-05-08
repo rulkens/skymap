@@ -79,13 +79,28 @@ export type YouAreHereSubsystem = {
 const LABEL_TEXT = 'You are here';
 
 /**
- * World-space height of the marker line, in Mpc.  The label sits at the
- * top of this line, just above the world origin (the Milky Way barycentre).
+ * World-space height of the LABEL above the world origin, in Mpc.
  * 0.05 Mpc ≈ 50 kpc — about half the radius of the Milky Way's stellar
- * disk, which puts the line just high enough to be readable against
+ * disk, which puts the label just high enough to be readable against
  * the Milky Way impostor without overlapping it at normal close-zoom angles.
+ *
+ * The text-rendering path extends downward from this anchor in world
+ * space (BMFont yoffset → negative world Y in the vertex shader), so
+ * the visible text occupies roughly y ∈ [LABEL_ANCHOR_MPC - emSize,
+ * LABEL_ANCHOR_MPC] at natural zoom.
  */
-const LINE_HEIGHT_MPC = 0.05;
+const LABEL_ANCHOR_MPC = 0.05;
+
+/**
+ * World-space top of the marker line, in Mpc.  The line goes from
+ * the origin up to this height, deliberately stopping SHORT of the
+ * label anchor so the line's top tip doesn't visually intrude into
+ * the rendered text.  0.65× the label anchor leaves ~17.5 kpc of
+ * clear space between the line top and the label baseline at the
+ * natural zoom — comfortable margin even when the label clamps to
+ * its `maxPixelSize` cap at very close zoom.
+ */
+const LINE_TOP_MPC = LABEL_ANCHOR_MPC * 0.65;
 
 /**
  * Label colour: premultiplied white at full alpha.
@@ -146,10 +161,13 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
       const labels: Label[] = [
         {
           id: 'you-are-here',
-          // Sit just above the line's top end.  Centered horizontally
+          // Anchor sits ABOVE the line top by design — the line stops
+          // at LINE_TOP_MPC and the label rendering extends downward
+          // from worldPos in world Y, so this gap keeps the text
+          // visually clear of the line's tip.  Centered horizontally
           // (alignX:'center') so the line passes through the middle
           // of the text rather than its left edge.
-          worldPos: [0, LINE_HEIGHT_MPC, 0],
+          worldPos: [0, LABEL_ANCHOR_MPC, 0],
           text: LABEL_TEXT,
           pixelSize: 18,
           color: LABEL_COLOR,
@@ -162,7 +180,7 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
         {
           id: 'you-are-here',
           fromWorld: [0, 0, 0],
-          toWorld: [0, LINE_HEIGHT_MPC, 0],
+          toWorld: [0, LINE_TOP_MPC, 0],
           // 3 px reads as a clear marker without dominating the
           // surrounding 3D scene; 1.5 was too thin against the bright
           // Milky Way impostor.  Tweakable.
