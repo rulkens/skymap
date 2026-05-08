@@ -67,7 +67,7 @@
 
 import type { GpuContext } from '../../../@types';
 import type { FontMetrics } from '../labels/fontMetrics';
-import { layoutLabel } from '../labels/labelLayout';
+import { layoutLabel, type LabelAlignX } from '../labels/labelLayout';
 import vsCode from '../shaders/labels/vertex.wesl?static';
 import fsCode from '../shaders/labels/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -94,6 +94,14 @@ export type Label = {
   worldEmMpc?: number;
   /** Fade multiplier in [0,1] driven by youAreHereVisibility. Default 1. */
   fadeAlpha?: number;
+  /**
+   * Horizontal alignment of the text relative to `worldPos`.
+   * Default 'left' (text extends rightward from the anchor).
+   * 'center' centers the text horizontally on the anchor — the
+   * "you are here" marker uses this so the vertical line passes
+   * through the middle of the text.
+   */
+  alignX?: LabelAlignX;
 };
 
 /**
@@ -402,7 +410,7 @@ export function createLabelRenderer(
     const count = Math.min(labels.length, maxLabels);
     for (let li = 0; li < count; li++) {
       const label = labels[li]!;
-      const quads = layoutLabel(label.text, metrics);
+      const quads = layoutLabel(label.text, metrics, label.alignX ?? 'left');
 
       // Write per-label storage record (48 bytes, 12 floats) unconditionally
       // — even when `quads` is empty.  Keeping the per-label index stable

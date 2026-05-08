@@ -109,7 +109,7 @@ describe('youAreHereSubsystem', () => {
     expect(vi.isMockFunction(labelStub.setLabels)).toBe(true);
     expect(labelCalls).toHaveLength(1);
     expect(labelCalls[0]).toHaveLength(1);
-    expect(labelCalls[0]![0]!.text).toBe('YOU ARE HERE');
+    expect(labelCalls[0]![0]!.text).toBe('You are here');
 
     // setLines should have been called once with a non-empty array.
     expect(lineCalls).toHaveLength(1);

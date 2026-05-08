@@ -76,7 +76,7 @@ export type YouAreHereSubsystem = {
 };
 
 /** The text displayed as the label. */
-const LABEL_TEXT = 'YOU ARE HERE';
+const LABEL_TEXT = 'You are here';
 
 /**
  * World-space height of the marker line, in Mpc.  The label sits at the
@@ -146,12 +146,16 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
       const labels: Label[] = [
         {
           id: 'you-are-here',
+          // Sit just above the line's top end.  Centered horizontally
+          // (alignX:'center') so the line passes through the middle
+          // of the text rather than its left edge.
           worldPos: [0, LINE_HEIGHT_MPC, 0],
           text: LABEL_TEXT,
           pixelSize: 18,
           color: LABEL_COLOR,
           worldEmMpc: 0.005,
           fadeAlpha: alpha,
+          alignX: 'center',
         },
       ];
       const lines: MarkerLine[] = [
@@ -159,7 +163,10 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
           id: 'you-are-here',
           fromWorld: [0, 0, 0],
           toWorld: [0, LINE_HEIGHT_MPC, 0],
-          pixelWidth: 1.5,
+          // 3 px reads as a clear marker without dominating the
+          // surrounding 3D scene; 1.5 was too thin against the bright
+          // Milky Way impostor.  Tweakable.
+          pixelWidth: 3,
           color: LINE_COLOR,
           fadeAlpha: alpha,
         },
