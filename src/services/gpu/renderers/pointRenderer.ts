@@ -1202,6 +1202,102 @@ export class PointRenderer {
     // residual values are correct and cheap.
   }
 
+  // ─── Splice surface (Spec E phase E.1) ────────────────────────────────────
+  //
+  // Three layout-aware methods that write per-galaxy bias-correction values
+  // straight into the interleaved CPU mirror and re-upload the GPU buffer.
+  // The bias-correction subsystem (Spec E phase E.3) calls into these once
+  // its async worker bakes resolve.  They contain *no* state — no mode
+  // flags, no caches, no async, no worker spawn.  The subsystem owns all
+  // of that; this surface just lays down what it's told.
+  //
+  // The methods are no-ops for unloaded sources because the subsystem's
+  // per-source bakes can race against `unload()` — by the time a bake
+  // resolves, the source may have been removed.  Throwing here would
+  // force every caller to re-check `clouds.has(source)` after an await,
+  // duplicating the safety net.  Returning silently is the correct
+  // semantics: "splice into nothing → nothing happens".
+  //
+  // Length-mismatch IS a programmer error — not a race — and we throw with
+  // a readable message so the test layer catches it before it ships.
+  //
+  // E.1 is purely additive: no caller invokes these methods in this phase
+  // — they exist for E.3 to wire into the subsystem's bake-resolve paths.
+  // The existing `setBiasMode` / `bake*` / `clear*` paths continue to
+  // work via the private `splice*IntoMirror` helpers; E.4 deletes those
+  // and leaves the new public methods standing alone.
+
+  /**
+   * Splice a tightly-packed Float32Array of per-row Schechter ratios
+   * (length must equal the source's `count`) into slot 10 of every row of
+   * the entry's interleaved mirror, then re-upload the whole vertex
+   * buffer.  No mode tracking; the caller (subsystem) decides when to
+   * call this.
+   */
+  spliceSchechterRatios(source: Source, ratios: Float32Array): void {
+    const entry = this.clouds.get(source);
+    if (!entry) return;
+    if (ratios.length !== entry.count) {
+      throw new Error(
+        `spliceSchechterRatios: length mismatch — got ${ratios.length} ratios, expected ${entry.count}`,
+      );
+    }
+    for (let i = 0; i < entry.count; i++) {
+      entry.interleaved[i * SLOTS_PER_POINT + 10] = ratios[i]!;
+    }
+    this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+  }
+
+  /**
+   * Splice a tightly-packed Float32Array of per-row HEALPix angular
+   * weights (length must equal the source's `count`) into slot 11 of
+   * every row of the entry's interleaved mirror, then re-upload.
+   */
+  spliceAngularWeights(source: Source, weights: Float32Array): void {
+    const entry = this.clouds.get(source);
+    if (!entry) return;
+    if (weights.length !== entry.count) {
+      throw new Error(
+        `spliceAngularWeights: length mismatch — got ${weights.length} weights, expected ${entry.count}`,
+      );
+    }
+    for (let i = 0; i < entry.count; i++) {
+      entry.interleaved[i * SLOTS_PER_POINT + 11] = weights[i]!;
+    }
+    this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+  }
+
+  /**
+   * Zero slots 10 (Schechter ratio) AND 11 (angular weight) for either
+   * one named source or every loaded source.
+   *
+   * Why zero rather than 1.0?  The shader's `select(1.0, slot, mode==N)`
+   * gate already substitutes 1.0 (the multiplicative identity) when the
+   * mode doesn't match — so the slot's literal value is irrelevant in
+   * inactive modes.  Zero is the cheapest "obviously-cleared" sentinel a
+   * future debug overlay or diagnostic can recognise without ambiguity.
+   * The pre-Spec-E `clear*` helpers wrote 1.0 for symmetry with the
+   * shader's identity; the new method writes 0.0 because the subsystem
+   * is the only caller and it explicitly transitions to None /
+   * VolumeLimited after a clear (where the slot is dead anyway).
+   */
+  clearBiasOverlays(source?: Source): void {
+    const targets: LoadedSource[] =
+      source !== undefined
+        ? (() => {
+            const entry = this.clouds.get(source);
+            return entry ? [entry] : [];
+          })()
+        : Array.from(this.clouds.values());
+    for (const entry of targets) {
+      for (let i = 0; i < entry.count; i++) {
+        entry.interleaved[i * SLOTS_PER_POINT + 10] = 0;
+        entry.interleaved[i * SLOTS_PER_POINT + 11] = 0;
+      }
+      this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+    }
+  }
+
   // ─── Lazy Schechter-ratio bake ──────────────────────────────────────────────
 
   /**
