@@ -77,14 +77,14 @@
  * but keeps the wrapper for the next reconnect.
  */
 
-import type { OrbitCamera } from '../../@types';
-import { SpaceMouseInput } from '../input/spaceMouse';
-import { applyCurve } from '../input/spaceMouseSensitivity';
-import { applyAxesToCamera, hasAnyAxis } from '../input/spaceMouseToCamera';
-import type { SpaceMouseAxes } from '../input/spaceMouseAxes';
-import { ZERO_AXES } from '../input/spaceMouseAxes';
-import { updatePosition } from '../camera/orbitCamera';
-import { DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../../data/defaults';
+import type { OrbitCamera } from '../../../@types';
+import { SpaceMouseInput } from '../../input/spaceMouse';
+import { applyCurve } from '../../input/spaceMouseSensitivity';
+import { applyAxesToCamera, hasAnyAxis } from '../../input/spaceMouseToCamera';
+import type { SpaceMouseAxes } from '../../input/spaceMouseAxes';
+import { ZERO_AXES } from '../../input/spaceMouseAxes';
+import { updatePosition } from '../../camera/orbitCamera';
+import { DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../../../data/defaults';
 
 /**
  * Hard ceiling on the per-frame wall-clock dt fed into the camera

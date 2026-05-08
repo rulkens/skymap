@@ -18,7 +18,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { maybeEmitProceduralDisk } from '../../../src/services/engine/thumbnailSubsystem';
+import { maybeEmitProceduralDisk } from '../../../src/services/engine/subsystems/thumbnailSubsystem';
 
 describe('maybeEmitProceduralDisk', () => {
   // Fixture values used across most cases.  Distinct primes so a swap-

@@ -36,13 +36,13 @@
  * rather than the whole engine state.
  */
 
-import type { ThumbnailSubsystem } from '../services/engine/thumbnailSubsystem';
-import type { SpaceMouseSubsystem } from '../services/engine/spaceMouseSubsystem';
+import type { ThumbnailSubsystem } from '../services/engine/subsystems/thumbnailSubsystem';
+import type { SpaceMouseSubsystem } from '../services/engine/subsystems/spaceMouseSubsystem';
 import type { TweenManager } from '../services/engine/tweenManager';
 import type { ClickResolver } from '../services/engine/clickHandler';
 import type { InputBindings } from '../services/engine/inputBindings';
-import type { RenderScheduler } from '../services/engine/renderScheduler';
-import type { LoadProgressEmitter } from '../services/engine/loadProgressAggregator';
+import type { RenderScheduler } from '../services/engine/subsystems/renderScheduler';
+import type { LoadProgressEmitter } from '../services/engine/subsystems/loadProgressAggregator';
 
 export type EngineSubsystemHandles = {
   thumbnails: ThumbnailSubsystem | null;

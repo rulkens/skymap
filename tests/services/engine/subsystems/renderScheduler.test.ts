@@ -12,7 +12,7 @@
  * "frame" forward deterministically.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { createRenderScheduler } from '../../../src/services/engine/renderScheduler';
+import { createRenderScheduler } from '../../../../src/services/engine/subsystems/renderScheduler';
 
 /**
  * Build a fake rAF / cAF pair that captures pending callbacks in an

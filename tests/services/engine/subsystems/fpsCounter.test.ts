@@ -10,7 +10,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { createFpsCounter } from '../../../src/services/engine/fpsCounter';
+import { createFpsCounter } from '../../../../src/services/engine/subsystems/fpsCounter';
 
 describe('createFpsCounter', () => {
   it('returns null for the first sample (need ≥ 2 timestamps for a delta)', () => {

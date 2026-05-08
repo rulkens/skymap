@@ -18,9 +18,9 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { createLoadProgressEmitter } from '../../../src/services/engine/loadProgressAggregator';
-import type { AssetSlot, LoadState } from '../../../src/services/loading/types';
-import type { LoadProgressState } from '../../../src/@types/EngineCallbacks';
+import { createLoadProgressEmitter } from '../../../../src/services/engine/subsystems/loadProgressAggregator';
+import type { AssetSlot, LoadState } from '../../../../src/services/loading/types';
+import type { LoadProgressState } from '../../../../src/@types/EngineCallbacks';
 
 /**
  * Build a minimal fake AssetSlot whose `state()` reads a mutable cell

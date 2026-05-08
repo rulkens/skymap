@@ -66,19 +66,19 @@
  * docstring on `setEvictHandler` for the correctness rationale.
  */
 
-import { Source } from '../../data/sources';
-import { pickColourIndex } from '../../data/colourIndex';
-import type { PointCloud, QuadInstance } from '../../@types';
-import type { OrbitCamera } from '../../@types';
-import { TextureAtlas } from '../gpu/textureAtlas';
-import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
-import type { QuadRenderer } from '../gpu/quadRenderer';
-import { DiskRenderer, type DiskInstance } from '../gpu/diskRenderer';
-import { ProceduralDiskRenderer } from '../gpu/proceduralDiskRenderer';
-import type { ProceduralDiskInstance } from '../../@types/ProceduralDiskInstance';
-import { fetchGalaxyBitmap } from '../../utils/network/galaxyImageFetcher';
-import { cartesianToRaDecZ } from '../../utils/math';
-import type { FamousMetaEntry, FamousXrefMap } from '../loading/fetchers/famousMetaFetcher';
+import { Source } from '../../../data/sources';
+import { pickColourIndex } from '../../../data/colourIndex';
+import type { PointCloud, QuadInstance } from '../../../@types';
+import type { OrbitCamera } from '../../../@types';
+import { TextureAtlas } from '../../gpu/textureAtlas';
+import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
+import type { QuadRenderer } from '../../gpu/quadRenderer';
+import { DiskRenderer, type DiskInstance } from '../../gpu/diskRenderer';
+import { ProceduralDiskRenderer } from '../../gpu/proceduralDiskRenderer';
+import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
+import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
+import { cartesianToRaDecZ } from '../../../utils/math';
+import type { FamousMetaEntry, FamousXrefMap } from '../../loading/fetchers/famousMetaFetcher';
 import type { mat4 } from 'gl-matrix';
 
 // ── Tunables ────────────────────────────────────────────────────────────────

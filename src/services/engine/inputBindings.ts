@@ -63,7 +63,7 @@
  * setters / per-frame body don't have to think about it.
  */
 
-import type { RenderScheduler } from './renderScheduler';
+import type { RenderScheduler } from './subsystems/renderScheduler';
 
 export type InputBindings = {
   /** Detach every listener attached by `attachEngineInputs`. */

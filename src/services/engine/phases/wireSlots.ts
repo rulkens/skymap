@@ -84,8 +84,8 @@ import { createAssetSlot } from '../../loading/AssetSlot';
 import { filamentFetcher } from '../../loading/fetchers/filamentFetcher';
 import { famousMetaFetcher } from '../../loading/fetchers/famousMetaFetcher';
 import { pgcAliasFetcher } from '../../loading/fetchers/pgcAliasFetcher';
-import { createLoadProgressEmitter } from '../loadProgressAggregator';
-import { createThumbnailSubsystem } from '../thumbnailSubsystem';
+import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
+import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
 
 import type { AssetSlot } from '../../loading/types';
 import type { EngineState } from '../../../@types';

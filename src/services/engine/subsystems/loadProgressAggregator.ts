@@ -44,9 +44,9 @@
  * the awkward "is `0/0` a finished state or a pre-start state?" ambiguity.
  */
 
-import { aggregateRegistry } from '../loading/aggregateRegistry';
-import type { AssetSlot } from '../loading/types';
-import type { LoadProgressState } from '../../@types/EngineCallbacks';
+import { aggregateRegistry } from '../../loading/aggregateRegistry';
+import type { AssetSlot } from '../../loading/types';
+import type { LoadProgressState } from '../../../@types/EngineCallbacks';
 
 /**
  * Public surface of the emitter.  `emit()` is exported so the engine

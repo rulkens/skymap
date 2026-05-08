@@ -18,7 +18,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../src/data/sources';
+import { Source } from '../../../../src/data/sources';
 
 // The atlas's `initTexture` references `GPUTextureUsage.*` constants
 // which the WebGPU spec exposes as global enum-like objects.  In Node
@@ -36,8 +36,8 @@ import { Source } from '../../../src/data/sources';
 import {
   createThumbnailSubsystem,
   galaxyCacheKey,
-} from '../../../src/services/engine/thumbnailSubsystem';
-import type { PointCloud, OrbitCamera } from '../../../src/@types';
+} from '../../../../src/services/engine/subsystems/thumbnailSubsystem';
+import type { PointCloud, OrbitCamera } from '../../../../src/@types';
 import type { mat4 } from 'gl-matrix';
 
 // ── Shared test fixtures ────────────────────────────────────────────────────
