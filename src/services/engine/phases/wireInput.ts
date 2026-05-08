@@ -86,6 +86,7 @@ import { computeInitialCamera } from '../camera/cameraFraming';
 import { buildPointInfo, maxAbsCoord } from '../helpers/pointInfoBuilder';
 import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
 import { cloudSourceFor } from '../../../data/cloudSource';
+import { cssToTexPx } from '../helpers/cssToTexPx';
 
 import type { EngineState, PointInfo } from '../../../@types';
 import type { BootstrapDeps } from './bootstrap';
@@ -271,9 +272,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // Shared pick body — used by single-click only now (dblclick
   // reuses the cached PointInfo).  Returns the click resolver's
   // result so the caller can decide what to do with it.  Inline
-  // rather than module-level because it closes over `state`,
-  // `canvas`, and the cssToTexPx helper from the surrounding
-  // scope.
+  // rather than module-level because it closes over `state` and
+  // `canvas` from the surrounding scope.  `cssToTexPx` is a pure
+  // module function imported directly — no per-engine state, no
+  // need to thread through deps.
   const runPickAtCss = (
     xCss: number,
     yCss: number,
@@ -292,8 +294,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     if (visibleSources.length === 0) return null;
 
     return cr.resolveClick({
-      pickXPx: deps.cssToTexPx(xCss),
-      pickYPx: deps.cssToTexPx(yCss),
+      pickXPx: cssToTexPx(xCss),
+      pickYPx: cssToTexPx(yCss),
       viewportPx: [canvas.width, canvas.height],
       visibleSources,
       // Threaded through so the pick pass can boost its floor size

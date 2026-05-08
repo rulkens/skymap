@@ -105,9 +105,6 @@ function makeDeps(): any {
     allSlots: new Map(),
     fpsCounter: { sample: () => null } as any,
     lastReportedFps: { current: null },
-    milkyWayITimeEpochMs: 0,
-    cssToTexPx: (px: number) => px,
-    updateScaleBar: () => {},
   };
 }
 

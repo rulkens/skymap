@@ -8,10 +8,11 @@
  *   - Constructs the `RunFrameDeps` object, threading every closure
  *     capture the frame body needs: `canvas`, `cb`, `fpsCounter`,
  *     `lastReportedFps` (a `{current}` ref), the GPU device + context
- *     + every renderer (from `phaseLocals`), the Milky-Way iTime epoch,
- *     and the createEngine-scope helpers (`cssToTexPx`,
- *     `updateScaleBar`).  See `runFrame.ts`'s module header for the
- *     dep-vs-state rationale.  Hover/select callbacks fan out from
+ *     + every renderer (from `phaseLocals`), the imported pure
+ *     `cssToTexPx`, a freshly-built `updateScaleBar` (factory closes
+ *     over `state` / `canvas` / `cb`), and a locally-snapshotted
+ *     Milky-Way iTime epoch.  See `runFrame.ts`'s module header for
+ *     the dep-vs-state rationale.  Hover/select callbacks fan out from
  *     `state.subsystems.selection` rather than being threaded through
  *     deps (Spec D.3).
  *   - Replaces the no-op `frameRef.current` stub with the real frame
@@ -62,6 +63,8 @@
  */
 
 import { runFrame, type RunFrameDeps } from '../frame/runFrame';
+import { cssToTexPx } from '../helpers/cssToTexPx';
+import { createScaleBarUpdater } from '../helpers/scaleBarUpdater';
 
 import type { EngineState } from '../../../@types';
 import type { BootstrapDeps } from './bootstrap';
@@ -80,13 +83,34 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── Render loop ──────────────────────────────────────────────────────
 
+  // Build the per-engine scale-bar updater here.  The factory closes
+  // over `state` / `canvas` / `cb` and owns its own dedup state, so
+  // every rAF tick gets the same closure (no per-frame allocation) and
+  // engine.ts no longer has to manufacture and forward this through
+  // BootstrapDeps.
+  const updateScaleBar = createScaleBarUpdater({
+    state,
+    canvas: deps.canvas,
+    cb: deps.cb,
+  });
+
+  // Wall-clock epoch (ms) for the Milky Way impostor's iTime uniform.
+  // Per-frame the shader receives `(performance.now() - epoch) * 0.001
+  // * 0.25` — the outer `0.25` slow-but-alive scale makes the choice
+  // of origin (engine construction vs loop start) imperceptible, so we
+  // snapshot here at the loop's birth rather than threading the value
+  // through BootstrapDeps from engine.ts.  See `runFrame.ts`'s
+  // milkyWayITimeSec assignment for the consumer side and
+  // `shaders/milkyWayImpostor.wgsl` line tagged "Match the ShaderToy's
+  // TIME macro" for the inner `* 0.1` factor that runs on top.
+  const milkyWayITimeEpochMs = performance.now();
+
   // Build the dep bag for `runFrame` once, here in the orchestrator's
   // last phase where every closure-captured local is in scope.  The bag
   // is stable across frames: `lastReportedFps` rides as a `{current}`
   // ref so the body's writes round-trip back into engine.ts; the
-  // helpers (`updateScaleBar`, `cssToTexPx`) close over
-  // their own dedup state inside createEngine and get passed by
-  // reference; and the GPU-side renderers (`milkyWayRenderer`,
+  // helpers (`updateScaleBar`, `cssToTexPx`) are imported / built
+  // locally above; and the GPU-side renderers (`milkyWayRenderer`,
   // `quadRenderer`, …) are the IIFE locals returned from `initGpu` /
   // their respective constructors above.  See runFrame.ts's module
   // header for the dep-vs-state rationale.
@@ -101,9 +125,9 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     filamentRenderer: state.gpu.filamentRenderer!,
     quadRenderer: phaseLocals.quadRenderer,
     diskRenderer: phaseLocals.diskRenderer,
-    milkyWayITimeEpochMs: deps.milkyWayITimeEpochMs,
-    cssToTexPx: deps.cssToTexPx,
-    updateScaleBar: deps.updateScaleBar,
+    milkyWayITimeEpochMs,
+    cssToTexPx,
+    updateScaleBar,
   };
 
   // Assign the real frame body to the forward-declared `frame`
