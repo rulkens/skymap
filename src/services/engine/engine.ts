@@ -99,6 +99,7 @@ import { vec3 } from 'gl-matrix';
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
+import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
@@ -160,7 +161,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //                    threshold/Schechter parameters; the latter
   //                    three stay 0 until the shader's mode-2/3/4
   //                    branches activate via the `setBiasMode` lazy
-  //                    bake forwarded to `pointRenderer.setBiasMode`).
+  //                    bake forwarded to
+  //                    `state.subsystems.biasCorrection.setMode`).
   //   - `sources`    → loaded `PointCloud`s + visibility bitmask +
   //                    LOD mode + the optional famous-galaxy sidecars.
   //   - `picking`    → hover / click / drag mutables (latest CSS-pixel
@@ -353,6 +355,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         getFamousMeta: () => state.sources.famousMeta,
         getFamousXrefs: () => state.sources.famousXrefs,
       }),
+
+      // ── Bias-correction subsystem (Spec E phase E.3 + E.4) ────────
+      // Owns Malmquist-bias mode flags, cached per-source ratios/
+      // weights, and the async bake state machine — extracted from
+      // PointRenderer.  Constructed eagerly here (no GPU dep); the
+      // renderer is wired during `phases/initGpu` via
+      // `attachRenderer(...)`.  Phase E.4 cut `handle.setBiasMode`
+      // over to call `setMode` on this subsystem (see the handle
+      // method below) and deleted the renderer's legacy bias-mode
+      // methods — production routes mode toggles through here now.
+      //
+      // No `schechterRunner` / `angularRunner` overrides — the
+      // module-level defaults (Vite `?worker` runners on this same
+      // subsystem module) take over in production; tests inject
+      // synchronous stubs at the test factory call site.
+      biasCorrection: createBiasCorrectionSubsystem({ getState: () => state }),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       //
@@ -581,28 +599,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // We always fire the echo callback — even when `mode === state.bias.mode`
       // — so the UI seeds correctly on first call.
       //
-      // The renderer's `setBiasMode` handles the lazy per-galaxy bake
-      // (Schechter, AngularReweight) internally.  See pointRenderer.ts's
-      // setBiasMode docstring for the cache + eager-on-upload contract.
-      // We `.then(requestRender)` so the second frame after the bake
-      // resolves picks up the freshly-spliced GPU buffer.
+      // ### Spec E phase E.4 — cut over to biasCorrectionSubsystem
+      //
+      // Pre-E.4 this delegated to `state.gpu.renderer.setBiasMode(mode)`
+      // and chained a `.then(requestRender)`.  Spec E.4 routes through
+      // the subsystem instead — the subsystem owns the mode-flag mirror,
+      // the cached per-source ratios/weights, and the worker-runner
+      // registry; the renderer keeps only the layout-aware splice
+      // surface (`spliceSchechterRatios` / `spliceAngularWeights` /
+      // `clearBiasOverlays`).  The `void` discards the returned Promise
+      // — engine.ts doesn't await.  The subsystem's `setMode` calls
+      // `state.subsystems.scheduler.requestRender()` itself when each
+      // per-source splice completes, so visuals update progressively as
+      // bakes resolve (same observable behaviour as the pre-E.4 chained
+      // `.then`).
       state.bias.mode = mode;
       cb.onBiasModeChange?.(mode);
-
-      state.gpu.renderer
-        ?.setBiasMode(mode)
-        .then(() => {
-          state.subsystems.scheduler.requestRender();
-        })
-        .catch((err) => {
-          // eslint-disable-next-line no-console
-          console.error('[engine] bias-mode bake failed:', err);
-        });
-
-      // Wake the loop so the new biasMode uniform takes effect on the
-      // next rendered frame.  The renderer's bake (above) also calls
-      // requestRender from its resolve handler to trigger a second
-      // render once the GPU buffers are ready.
+      void state.subsystems.biasCorrection.setMode(mode);
       state.subsystems.scheduler.requestRender();
     },
 

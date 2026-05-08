@@ -1,0 +1,461 @@
+/**
+ * biasCorrectionSubsystem — owns the engine's Malmquist-bias correction
+ * mode flags, cached per-source ratios/weights, the async bake state
+ * machine, and the worker-runner registry.
+ *
+ * Pre-Spec-E this state machine lived inside `PointRenderer` (~400 lines
+ * of code that had no rendering reason to be on the renderer).  Spec E
+ * extracts it into a sibling subsystem under `services/engine/subsystems/`,
+ * leaving the renderer as a clean instanced-billboard drawer.  See the
+ * spec for the full design rationale (uni-directional split, "renderer
+ * doesn't observe subsystem"), the *Race behaviour — preserve exactly*
+ * section for the three named races this subsystem must handle, and the
+ * *Subsystem shape* section for the public API.
+ *
+ * ### Why a closure-returning factory rather than a class?
+ *
+ * Same rationale every other subsystem under this folder uses
+ * (selectionSubsystem, thumbnailSubsystem, spaceMouseSubsystem):
+ * the codebase's convention is "factories return typed handles, not
+ * class instances", the internal mutable state (renderer ref, mode,
+ * cache maps, generation counter) is genuinely inaccessible from
+ * outside (no `this.mode` to reach in and poke), and the per-engine
+ * cost is irrelevant — there's exactly one engine per page.
+ *
+ * ### Race handling via a generation counter
+ *
+ * Each `setMode` increments `generation`.  Each per-source bake captures
+ * the generation at start; on resolve, drops the result if the captured
+ * generation no longer equals `generation`.  This is the same shape
+ * Spec A's `AssetSlot` uses for tier-swap race fixes — proven correct
+ * in production, transplanted here.  The `fast_toggle_race` test in the
+ * test file is the regression-suite anchor for this fix.
+ *
+ * ### Why the renderer ref is null at construction
+ *
+ * The subsystem is constructed eagerly in the engine state literal
+ * (alongside `selection`, `tweens`, `scheduler`) — at that point the
+ * GPU device hasn't been acquired yet, so `state.gpu.renderer` is
+ * null.  `attachRenderer(renderer)` is called from `phases/initGpu.ts`
+ * once the renderer exists.  In the brief pre-attach window:
+ *
+ *   - `setMode(...)` runs the bakes anyway and stores the resolved
+ *     ratios/weights in `cachedSchechter` / `cachedAngular`.  When
+ *     `attachRenderer` lands, the cached results splice immediately
+ *     so the next render frame sees them.
+ *   - `onSourceUploaded(...)` no-ops — the renderer's upload callback
+ *     can't have fired yet (the renderer doesn't exist).
+ *
+ * The "no-op when no renderer" pre-attach behaviour matches Spec A's
+ * eager-construction rule: any consumer capturing
+ * `state.subsystems.biasCorrection` from t=0 onwards gets the live
+ * subsystem.
+ *
+ * ### Why the worker runner is a factory parameter
+ *
+ * Test injection.  Pre-Spec-E the runner was a `private static` on
+ * `PointRenderer` mutated via `setSchechterRatioRunner(...)` — a
+ * mutable global is a smell, and made the renderer's surface area
+ * carry an injection seam that wasn't part of its rendering concern.
+ * Spec E moves the seam onto this subsystem's factory parameter:
+ * tests pass an in-process stub at construction; production omits
+ * the param and gets the default Vite `?worker` runner declared as
+ * `defaultSchechterRunner` / `defaultAngularRunner` in this module.
+ *
+ * ### Why `state.bias.mode` stays separate
+ *
+ * The subsystem mirrors `state.bias.mode` internally (`mode` field
+ * here) but doesn't own it.  The UI-facing knob bag stays on
+ * `EngineState` — same role as `state.settings`.  See the spec's
+ * *State* section for why we keep the two parallel: every existing
+ * reader (URL hash, InfoCard, SettingsPanel echo) continues to work
+ * unchanged.
+ *
+ * ### Production wiring (Spec E phase E.4 — cut-over)
+ *
+ * Phase E.4 routed `handle.setBiasMode` through this subsystem and
+ * deleted the renderer's old bias-mode methods.  The Vite `?worker`
+ * imports moved here too — `defaultSchechterRunner` /
+ * `defaultAngularRunner` (see below) spawn one worker per call,
+ * matching the pre-extraction behaviour bit-for-bit.  Same observable
+ * behaviour as pre-E.4: the renderer keeps reading `state.bias.mode`
+ * per-frame for the uniform write; this subsystem owns the splice
+ * pipeline that lays per-galaxy ratios/weights into the per-source
+ * vertex buffers.
+ *
+ * @module
+ */
+
+import type { EngineState, PointCloud } from '../../../@types';
+import { BiasMode } from '../../../data/biasMode';
+import { Source, ALL_SOURCES } from '../../../data/sources';
+import type { ComputeSchechterRatiosInput } from '../bake/computeSchechterRatios';
+import type { ComputeAngularWeightsInput } from '../bake/computeAngularWeights';
+import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
+
+// `?worker` is a Vite-specific import suffix.  It instructs the bundler
+// to emit each `.worker.ts` file as its own worker chunk and hand back a
+// default-exported class whose `new`-instantiation spawns a Worker
+// running that bundle.  Pre-Spec-E these `?worker` imports lived inside
+// `pointRenderer.ts` because the bake state machine was a method on
+// `PointRenderer`; Spec E.4 moved them here alongside the bake state
+// machine so the renderer owns rendering and only rendering.
+//
+// In Node-only test environments the `?worker` suffix isn't resolvable;
+// tests inject a synchronous fallback via the factory's optional
+// `schechterRunner` / `angularRunner` parameters instead of importing
+// this module's defaults.
+import ComputeSchechterRatiosWorker from '../bake/computeSchechterRatios.worker?worker';
+import ComputeAngularWeightsWorker from '../bake/computeAngularWeights.worker?worker';
+
+/** Async function from a Schechter bake input to per-galaxy ratios. */
+export type SchechterRunner = (input: ComputeSchechterRatiosInput) => Promise<Float32Array>;
+
+/** Async function from an angular bake input to per-galaxy weights. */
+export type AngularRunner = (input: ComputeAngularWeightsInput) => Promise<Float32Array>;
+
+export type BiasCorrectionDeps = {
+  /**
+   * Live accessor for the engine state, NOT a snapshot.  The subsystem
+   * is constructed inside the engine state literal — at that moment the
+   * literal hasn't finished being assigned to its variable, so we can't
+   * pass `state` as a value.  Same closure-deps pattern `selection` uses
+   * (see selectionSubsystem.ts module header for the rationale): the
+   * subsystem reads the LIVE state at call time, not whatever was in
+   * scope at construction.  This also matters across tier swaps —
+   * `state.sources.clouds` is mutated in place; a snapshot would freeze
+   * the state at engine-construction time.
+   */
+  getState: () => EngineState;
+  /**
+   * Optional override for the Schechter-ratio bake.  Defaults to a Vite
+   * `?worker` chunk runner (`defaultSchechterRunner` below); tests pass
+   * an in-process synchronous stub so they don't need Worker support.
+   */
+  schechterRunner?: SchechterRunner;
+  /**
+   * Optional override for the HEALPix angular-weight bake.  Defaults to
+   * a Vite `?worker` chunk runner (`defaultAngularRunner` below); tests
+   * pass an in-process synchronous stub.
+   */
+  angularRunner?: AngularRunner;
+};
+
+export type BiasCorrectionSubsystem = {
+  /** Wire the renderer once it exists (during `phases/initGpu`). */
+  attachRenderer(renderer: PointRenderer): void;
+  /** Switch bias mode; fires bakes for every loaded source. */
+  setMode(mode: BiasMode): Promise<void>;
+  /** Called by the renderer when a source uploads or re-uploads. */
+  onSourceUploaded(source: Source, cloud: PointCloud): void;
+  /** Called by the renderer when a source unloads. */
+  onSourceUnloaded(source: Source): void;
+  /** Test-only: snapshot of internal state. */
+  state(): {
+    mode: BiasMode;
+    sourcesWithSchechter: Source[];
+    sourcesWithAngular: Source[];
+  };
+};
+
+/**
+ * Production default for the lazy Schechter-ratio bake — spawns a fresh
+ * `?worker` chunk per call, ships a copied (slice-then-transfer) cloud,
+ * waits for the resulting `Float32Array`, and terminates the worker.
+ *
+ * Pre-Spec-E this lived as `defaultSchechterWorkerRunner` inside
+ * `pointRenderer.ts` (the renderer owned the bake state machine).
+ * Spec E.4 moved it here alongside the `?worker` import so the
+ * renderer's surface is only "draw instanced billboards".
+ *
+ * ### Why one worker per call?
+ *
+ * Parallel survey fetches resolve in unpredictable order, so SDSS can
+ * finish baking while 2MRS is mid-bake.  A long-lived worker would have
+ * to queue requests internally; a per-call worker has zero shared
+ * state and the OS-level concurrency happens automatically.  Worker
+ * spawn is cheap (a few ms) compared to the 1–2 s bake itself.
+ *
+ * ### Why slice-then-transfer
+ *
+ * The engine retains the original `PointCloud` for picker / InfoCard
+ * reads after the bake is kicked off — we cannot detach those buffers
+ * in place via `Transferable[]`.  `slice(0)` mints owned copies whose
+ * underlying ArrayBuffers we *can* transfer, leaving the engine's
+ * authoritative cloud completely intact.  Cost: ~50 ms memcpy at full
+ * deck (much cheaper than the multi-second structured clone the
+ * pre-Transferable revision paid).
+ */
+function defaultSchechterRunner(input: ComputeSchechterRatiosInput): Promise<Float32Array> {
+  return new Promise((resolve, reject) => {
+    const worker = new ComputeSchechterRatiosWorker();
+    worker.onmessage = (event: MessageEvent<Float32Array>) => {
+      worker.terminate();
+      resolve(event.data);
+    };
+    worker.onerror = (event: ErrorEvent) => {
+      worker.terminate();
+      reject(event.error ?? new Error(event.message ?? 'schechter-ratio worker error'));
+    };
+
+    // Slice-then-transfer the typed-array buffers.  See the long
+    // comment at the top of this function for the ownership rationale.
+    const c = input.cloud;
+    const cloudCopy: PointCloud = {
+      count: c.count,
+      objIDs: new BigUint64Array(c.objIDs.buffer.slice(0)),
+      positions: new Float32Array(c.positions.buffer.slice(0)),
+      magU: new Float32Array(c.magU.buffer.slice(0)),
+      magG: new Float32Array(c.magG.buffer.slice(0)),
+      magR: new Float32Array(c.magR.buffer.slice(0)),
+      magI: new Float32Array(c.magI.buffer.slice(0)),
+      magZ: new Float32Array(c.magZ.buffer.slice(0)),
+      axisRatio: new Float32Array(c.axisRatio.buffer.slice(0)),
+      positionAngleDeg: new Float32Array(c.positionAngleDeg.buffer.slice(0)),
+      diameterKpc: new Float32Array(c.diameterKpc.buffer.slice(0)),
+    };
+    const transfer: Transferable[] = [
+      cloudCopy.objIDs.buffer,
+      cloudCopy.positions.buffer,
+      cloudCopy.magU.buffer,
+      cloudCopy.magG.buffer,
+      cloudCopy.magR.buffer,
+      cloudCopy.magI.buffer,
+      cloudCopy.magZ.buffer,
+      cloudCopy.axisRatio.buffer,
+      cloudCopy.positionAngleDeg.buffer,
+      cloudCopy.diameterKpc.buffer,
+    ];
+    worker.postMessage({ ...input, cloud: cloudCopy }, transfer);
+  });
+}
+
+/**
+ * Production default for the lazy HEALPix angular-reweight bake.
+ * Mirror of `defaultSchechterRunner` — same per-call worker spawn,
+ * same slice-then-transfer ownership pattern, same termination on
+ * resolve/error.  See that function's docstring for the full rationale.
+ *
+ * The bake itself is three linear passes through the cloud's positions
+ * plus a per-shell median sort; ~100-300 ms at full deck.  Worker spawn
+ * (~few ms) is the right trade-off — even though the bake isn't as
+ * dramatically expensive as the Schechter integral, dropping a frame
+ * on mode toggle would feel sluggish.
+ */
+function defaultAngularRunner(input: ComputeAngularWeightsInput): Promise<Float32Array> {
+  return new Promise((resolve, reject) => {
+    const worker = new ComputeAngularWeightsWorker();
+    worker.onmessage = (event: MessageEvent<Float32Array>) => {
+      worker.terminate();
+      resolve(event.data);
+    };
+    worker.onerror = (event: ErrorEvent) => {
+      worker.terminate();
+      reject(event.error ?? new Error(event.message ?? 'angular-weights worker error'));
+    };
+
+    const c = input.cloud;
+    const cloudCopy: PointCloud = {
+      count: c.count,
+      objIDs: new BigUint64Array(c.objIDs.buffer.slice(0)),
+      positions: new Float32Array(c.positions.buffer.slice(0)),
+      magU: new Float32Array(c.magU.buffer.slice(0)),
+      magG: new Float32Array(c.magG.buffer.slice(0)),
+      magR: new Float32Array(c.magR.buffer.slice(0)),
+      magI: new Float32Array(c.magI.buffer.slice(0)),
+      magZ: new Float32Array(c.magZ.buffer.slice(0)),
+      axisRatio: new Float32Array(c.axisRatio.buffer.slice(0)),
+      positionAngleDeg: new Float32Array(c.positionAngleDeg.buffer.slice(0)),
+      diameterKpc: new Float32Array(c.diameterKpc.buffer.slice(0)),
+    };
+    const transfer: Transferable[] = [
+      cloudCopy.objIDs.buffer,
+      cloudCopy.positions.buffer,
+      cloudCopy.magU.buffer,
+      cloudCopy.magG.buffer,
+      cloudCopy.magR.buffer,
+      cloudCopy.magI.buffer,
+      cloudCopy.magZ.buffer,
+      cloudCopy.axisRatio.buffer,
+      cloudCopy.positionAngleDeg.buffer,
+      cloudCopy.diameterKpc.buffer,
+    ];
+    worker.postMessage({ ...input, cloud: cloudCopy }, transfer);
+  });
+}
+
+export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCorrectionSubsystem {
+  const { getState } = deps;
+  const schechterRunner: SchechterRunner = deps.schechterRunner ?? defaultSchechterRunner;
+  const angularRunner: AngularRunner = deps.angularRunner ?? defaultAngularRunner;
+
+  // Internal mutable state.  Closure-captured `let`s so they're
+  // genuinely inaccessible from outside (no `this.mode` for a future
+  // caller to reach in and poke).
+  let renderer: PointRenderer | null = null;
+  // Initialise from the live state at first read time, not at
+  // construction (the engine state literal hasn't been assigned to its
+  // variable when `createBiasCorrectionSubsystem` is called from inside
+  // it).  Lazy init also doubles as a trivial sync between
+  // `state.bias.mode` and our internal `mode` mirror at startup.
+  let mode: BiasMode | null = null;
+  const cachedSchechter = new Map<Source, Float32Array>();
+  const cachedAngular = new Map<Source, Float32Array>();
+  /**
+   * Generation counter — incremented on every `setMode`.  Each per-source
+   * bake captures the generation at start and drops its result if the
+   * captured generation no longer matches `generation` on resolve.  This
+   * is the structural fix for the fast-toggle race documented in the
+   * spec's R1 mitigation; mirrors AssetSlot's tier-swap race counter.
+   */
+  let generation = 0;
+
+  /** Lazily read & memoize the current internal mode mirror. */
+  function currentMode(): BiasMode {
+    if (mode === null) {
+      mode = getState().bias.mode;
+    }
+    return mode;
+  }
+
+  /** Snapshot every loaded `(source, cloud)` from the engine state. */
+  function loadedSourceCloudPairs(): { source: Source; cloud: PointCloud }[] {
+    const out: { source: Source; cloud: PointCloud }[] = [];
+    const clouds = getState().sources.clouds;
+    for (const source of ALL_SOURCES) {
+      const cloud = clouds.get(source);
+      if (cloud && cloud.count > 0) {
+        out.push({ source, cloud });
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Run a per-source Schechter bake.  Captures the generation at start;
+   * on resolve, drops the result if a newer generation has started
+   * (fast-toggle-race fix).  On race-pass: caches the ratios + (if
+   * renderer attached) splices them immediately.
+   */
+  async function bakeSchechterFor(
+    source: Source,
+    cloud: PointCloud,
+    myGen: number,
+  ): Promise<void> {
+    const ratios = await schechterRunner({ cloud, source });
+    if (myGen !== generation) return; // stale — superseded by a newer setMode
+    cachedSchechter.set(source, ratios);
+    // If the renderer is attached, splice immediately.  If not yet
+    // attached, the cached entry will splice on attachRenderer.
+    renderer?.spliceSchechterRatios(source, ratios);
+  }
+
+  async function bakeAngularFor(
+    source: Source,
+    cloud: PointCloud,
+    myGen: number,
+  ): Promise<void> {
+    const weights = await angularRunner({ cloud, source });
+    if (myGen !== generation) return;
+    cachedAngular.set(source, weights);
+    renderer?.spliceAngularWeights(source, weights);
+  }
+
+  async function setMode(next: BiasMode): Promise<void> {
+    generation += 1;
+    const myGen = generation;
+    mode = next;
+
+    if (next === BiasMode.None || next === BiasMode.VolumeLimited || next === BiasMode.VMax) {
+      // Identity-only modes.  The shader's gate ignores the per-galaxy
+      // slot, so the slot's value is irrelevant — but we clear for
+      // diagnostic cleanliness (a future debug overlay can recognise
+      // 0.0 as "not active").  No bake, so this resolves synchronously.
+      renderer?.clearBiasOverlays();
+      return;
+    }
+
+    const pairs = loadedSourceCloudPairs();
+
+    if (next === BiasMode.Schechter) {
+      // Per-source independence: each bake is a separate Promise, splice
+      // fires when each resolves.  Tests assert this ordering invariant
+      // via the multi_source_completion_ordering case.
+      await Promise.all(pairs.map(({ source, cloud }) => bakeSchechterFor(source, cloud, myGen)));
+      // Wake the loop ONCE after every splice has landed.  If `myGen`
+      // is stale (a newer setMode bumped it mid-Promise.all), skip the
+      // wake — the newer setMode will fire its own.
+      if (myGen === generation) {
+        getState().subsystems.scheduler.requestRender();
+      }
+      return;
+    }
+
+    if (next === BiasMode.AngularReweight) {
+      await Promise.all(pairs.map(({ source, cloud }) => bakeAngularFor(source, cloud, myGen)));
+      if (myGen === generation) {
+        getState().subsystems.scheduler.requestRender();
+      }
+      return;
+    }
+  }
+
+  function onSourceUploaded(source: Source, cloud: PointCloud): void {
+    // A re-upload invalidates any prior cache for this source.
+    cachedSchechter.delete(source);
+    cachedAngular.delete(source);
+
+    // If a bias mode is active, fire a fresh per-source bake using
+    // the current generation.  Same race-drop semantics as setMode.
+    // The mid_bake_upload_race test asserts that this is a per-source
+    // bake, NOT a re-bake-all (the original setMode's Promise.all is
+    // independent and continues to resolve).
+    const myGen = generation;
+    const m = currentMode();
+    if (m === BiasMode.Schechter) {
+      void bakeSchechterFor(source, cloud, myGen);
+    } else if (m === BiasMode.AngularReweight) {
+      void bakeAngularFor(source, cloud, myGen);
+    }
+  }
+
+  function onSourceUnloaded(source: Source): void {
+    cachedSchechter.delete(source);
+    cachedAngular.delete(source);
+  }
+
+  function attachRenderer(r: PointRenderer): void {
+    renderer = r;
+    // Install the upload/unload callbacks so the renderer can notify
+    // us mid-mode when a source arrives/leaves.  Uni-directional
+    // coupling — the renderer doesn't import or know about this
+    // subsystem; the subsystem reaches in via these setters.
+    r.setBiasUploadCallback((source, cloud) => onSourceUploaded(source, cloud));
+    r.setBiasUnloadCallback((source) => onSourceUnloaded(source));
+    // Apply any cached results that resolved before attach (the
+    // attach_after_setMode_completes test).  Mode-coherent: only
+    // splice the family that matches the current mode.
+    const m = currentMode();
+    if (m === BiasMode.Schechter) {
+      for (const [source, ratios] of cachedSchechter) {
+        r.spliceSchechterRatios(source, ratios);
+      }
+    } else if (m === BiasMode.AngularReweight) {
+      for (const [source, weights] of cachedAngular) {
+        r.spliceAngularWeights(source, weights);
+      }
+    }
+  }
+
+  return {
+    attachRenderer,
+    setMode,
+    onSourceUploaded,
+    onSourceUnloaded,
+    state: () => ({
+      mode: currentMode(),
+      sourcesWithSchechter: Array.from(cachedSchechter.keys()),
+      sourcesWithAngular: Array.from(cachedAngular.keys()),
+    }),
+  };
+}

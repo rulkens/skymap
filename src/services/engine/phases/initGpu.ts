@@ -180,6 +180,19 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const renderer = new PointRenderer(device, 'rgba16float');
   state.gpu.renderer = renderer;
 
+  // ── Wire the bias-correction subsystem to the freshly-built renderer ──
+  //
+  // Spec E phase E.3 + E.4.  The subsystem was constructed eagerly in
+  // the engine state literal (no GPU dep); now that the renderer
+  // exists, we hand it to the subsystem so its splice methods can fire
+  // when bakes resolve.  `attachRenderer` also installs the
+  // upload/unload callbacks the renderer fires from `upload(...)` /
+  // `unload(...)`, so a tier-swap upload mid-mode triggers a per-source
+  // bake without any engine-side coordination.  Phase E.4 cut
+  // `handle.setBiasMode` over to call `setMode` on this subsystem;
+  // production now routes the user's mode toggles through here.
+  state.subsystems.biasCorrection.attachRenderer(renderer);
+
   // ── Per-source asset slots (Task 8 SDSS, Task 9 the rest) ────────────
   //
   // Every survey now flows through `createAssetSlot`.  The slot owns
