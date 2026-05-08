@@ -23,10 +23,12 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { PointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
+import {
+  PointRenderer,
+  setBuildBufferRunner,
+} from '../../../../src/services/gpu/renderers/pointRenderer';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source } from '../../../../src/data/sources';
-import { BiasMode } from '../../../../src/data/biasMode';
 import type { PointCloud } from '../../../../src/@types';
 
 // `GPUBufferUsage` is a browser-global enum exposed by the WebGPU runtime;
@@ -54,11 +56,16 @@ beforeAll(() => {
   // — instead of trying to polyfill the whole worker harness we just route
   // the bake through the same pure function the worker would call.  Tests
   // get bit-identical behaviour without any structured-clone round-trip.
-  PointRenderer.setBuildBufferRunner(async (input) => buildPointInterleavedBuffer(input));
+  //
+  // Spec E phase E.4 moved `setBuildBufferRunner` from a class static
+  // (`setBuildBufferRunner(...)`) to a module-level export
+  // (the bare `setBuildBufferRunner(...)` imported above).  See the
+  // function's docstring in pointRenderer.ts for the rationale.
+  setBuildBufferRunner(async (input) => buildPointInterleavedBuffer(input));
 });
 
 afterAll(() => {
-  PointRenderer.setBuildBufferRunner(null);
+  setBuildBufferRunner(null);
 });
 
 // ─── Test helpers ─────────────────────────────────────────────────────────────
@@ -333,7 +340,7 @@ describe('PointRenderer.upload — regression: parallel-upload rebake race', () 
       [Source.SDSS, 50],
       [Source.Glade, 200],
     ]);
-    PointRenderer.setBuildBufferRunner(async (input) => {
+    setBuildBufferRunner(async (input) => {
       const ms = delaysMs.get(input.source) ?? 0;
       if (ms > 0) await new Promise((r) => setTimeout(r, ms));
       return buildPointInterleavedBuffer(input);
@@ -357,7 +364,7 @@ describe('PointRenderer.upload — regression: parallel-upload rebake race', () 
       expect(glade?.count).toBe(400_000);
     } finally {
       // Restore the no-delay default for sibling tests.
-      PointRenderer.setBuildBufferRunner(async (input) => buildPointInterleavedBuffer(input));
+      setBuildBufferRunner(async (input) => buildPointInterleavedBuffer(input));
     }
   });
 });
@@ -439,109 +446,18 @@ describe('PointRenderer pick-identity packing — cross-source disjointness', ()
   });
 });
 
-// ─── setBiasMode (Phase 5: collapsed bias-mode dispatch) ──────────────────────
+// ─── Bias-mode tests deleted (Spec E phase E.4) ──────────────────────────────
 //
-// These tests exercise the renderer's single public entry point for bias-mode
-// transitions.  Pre-Phase-5 the engine called `applySchechterMode()` /
-// `applyAngularReweightMode()` directly and tracked the active mode in two
-// places (the engine's `state.bias.mode` AND two private renderer flags) —
-// `setBiasMode(mode)` collapses that to one source of truth: the engine
-// forwards `state.bias.mode` here, and the renderer's internal flags are
-// write-only consequences of this method.
-//
-// We use the test runner overrides (`setSchechterRatioRunner`,
-// `setAngularWeightRunner`) instead of real Vite `?worker` chunks for the
-// same reason as the rest of this file — Node has no Worker and we want
-// deterministic, synchronous control over how many "worker spawns" happen.
-describe('PointRenderer.setBiasMode', () => {
-  it('first transition to Schechter spawns the worker once per source', async () => {
-    const schechterCalls: { source: Source }[] = [];
-    PointRenderer.setSchechterRatioRunner(async (input) => {
-      schechterCalls.push({ source: input.source });
-      return new Float32Array(input.cloud.count);
-    });
-    try {
-      const renderer = new PointRenderer(makeStubDevice() as GPUDevice, 'rgba16float');
-      await renderer.upload(Source.SDSS, makeCloud(10));
-      await renderer.upload(Source.Glade, makeCloud(20));
-
-      await renderer.setBiasMode(BiasMode.Schechter);
-      expect(schechterCalls.length).toBe(2); // SDSS + Glade
-    } finally {
-      PointRenderer.setSchechterRatioRunner(null);
-    }
-  });
-
-  it('re-toggle Schechter hits the cache (worker not re-spawned)', async () => {
-    let calls = 0;
-    PointRenderer.setSchechterRatioRunner(async (input) => {
-      calls += 1;
-      return new Float32Array(input.cloud.count);
-    });
-    try {
-      const renderer = new PointRenderer(makeStubDevice() as GPUDevice, 'rgba16float');
-      await renderer.upload(Source.SDSS, makeCloud(10));
-
-      await renderer.setBiasMode(BiasMode.Schechter);
-      expect(calls).toBe(1);
-
-      await renderer.setBiasMode(BiasMode.None);
-      await renderer.setBiasMode(BiasMode.Schechter);
-      expect(calls).toBe(1); // cache hit, no re-spawn
-    } finally {
-      PointRenderer.setSchechterRatioRunner(null);
-    }
-  });
-
-  it('setBiasMode(None) is a no-op for the bake (no worker spawn)', async () => {
-    let calls = 0;
-    PointRenderer.setSchechterRatioRunner(async (input) => {
-      calls += 1;
-      return new Float32Array(input.cloud.count);
-    });
-    PointRenderer.setAngularWeightRunner(async (input) => {
-      calls += 1;
-      return new Float32Array(input.cloud.count);
-    });
-    try {
-      const renderer = new PointRenderer(makeStubDevice() as GPUDevice, 'rgba16float');
-      await renderer.upload(Source.SDSS, makeCloud(10));
-      await renderer.setBiasMode(BiasMode.None);
-      await renderer.setBiasMode(BiasMode.VolumeLimited);
-      expect(calls).toBe(0);
-    } finally {
-      PointRenderer.setSchechterRatioRunner(null);
-      PointRenderer.setAngularWeightRunner(null);
-    }
-  });
-
-  it('upload arriving mid-Schechter mode bakes the new source eagerly', async () => {
-    let calls = 0;
-    PointRenderer.setSchechterRatioRunner(async (input) => {
-      calls += 1;
-      return new Float32Array(input.cloud.count);
-    });
-    try {
-      const renderer = new PointRenderer(makeStubDevice() as GPUDevice, 'rgba16float');
-      await renderer.upload(Source.SDSS, makeCloud(10));
-      await renderer.setBiasMode(BiasMode.Schechter);
-      expect(calls).toBe(1);
-
-      // New source arrives while Schechter is active.  upload() reads
-      // the renderer's internal mode flag and bakes with-schechter.
-      // The bake happens inside `upload` via the build runner, not via
-      // a re-call into setBiasMode — `calls` should NOT increment.
-      await renderer.upload(Source.Glade, makeCloud(20));
-      expect(calls).toBe(1);
-
-      // Re-toggle Schechter→Schechter is a no-op (already active).
-      await renderer.setBiasMode(BiasMode.Schechter);
-      expect(calls).toBe(1);
-    } finally {
-      PointRenderer.setSchechterRatioRunner(null);
-    }
-  });
-});
+// Pre-E.4 this file held a `describe('PointRenderer.setBiasMode', …)` block
+// that exercised the renderer's `setBiasMode` / `setSchechterRatioRunner` /
+// `setAngularWeightRunner` surface.  Phase E.4 deleted that surface from
+// PointRenderer (the bake state machine moved to `biasCorrectionSubsystem.ts`).
+// The same scenarios — fast toggle, cache hit on re-toggle, no-bake for
+// identity modes, mid-bake source upload — are covered at the right layer
+// in `tests/services/engine/subsystems/biasCorrectionSubsystem.test.ts`
+// under the named race tests `fast_toggle_race`, `mid_bake_upload_race`,
+// `multi_source_completion_ordering`, plus `attach_before_setMode` /
+// `attach_after_setMode_completes` for the renderer-attach edges.
 
 // ─── Splice surface (Spec E phase E.1) ───────────────────────────────────────
 //
