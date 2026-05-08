@@ -311,6 +311,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // out here in `frame()`.
   renderFrame({
     ctx,
+    state,
     device: deps.device,
     context: deps.context,
     milkyWayRenderer: deps.milkyWayRenderer,

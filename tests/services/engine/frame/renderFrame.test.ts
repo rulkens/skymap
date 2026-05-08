@@ -296,6 +296,12 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     viewProj,
     input: {
       ctx,
+      // D.2 added `state` to RenderFrameInput so passes can read engine
+      // state.  Today's four HDR passes don't actually read it, but the
+      // parameter is required by the type — provide a stub-shaped value.
+      // The renderFrame body itself just forwards `state` through to
+      // each pass; tests never observe it being read.
+      state: {} as never,
       milkyWayITimeSec: 0,
       device,
       context,
