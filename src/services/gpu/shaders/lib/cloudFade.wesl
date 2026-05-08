@@ -4,12 +4,12 @@
 // skeleton, future overlays) has a tiny 16-byte uniform buffer at
 // '@group(1) @binding(0)' carrying the smoothstep-shaped fade-in
 // opacity. The CPU side that owns the buffer + bind group + per-frame
-// 'writeBuffer' lives in 'src/services/gpu/cloudFade.ts'; this lib is
+// 'writeBuffer' lives in 'src/services/gpu/resources/cloudFade.ts'; this lib is
 // the GPU half of the same contract.
 //
 // ## Why a SHARED struct
 //
-// The CPU-side 'CloudFade' class (services/gpu/cloudFade.ts) emits a
+// The CPU-side 'CloudFade' class (services/gpu/resources/cloudFade.ts) emits a
 // SINGLE 16-byte layout — 'opacity: f32 + sourceCode: u32 + 8 bytes pad'
 // — for every consumer. Both the points renderer and the filaments
 // renderer bind buffers built by the same class, and the bytes are
@@ -64,7 +64,7 @@ struct CloudUniforms {
   // stage to compose '(sourceCode << 27u) | instance_index' for the
   // selection-halo + pick-output paths. Filaments doesn't read this
   // slot today, but the CPU producer ('CloudFade.writeFrame' in
-  // services/gpu/cloudFade.ts) writes it for every cloud regardless,
+  // services/gpu/resources/cloudFade.ts) writes it for every cloud regardless,
   // so the byte is already there for a future filament feature to
   // opt into.
   sourceCode: u32,

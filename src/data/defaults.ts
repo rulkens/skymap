@@ -107,7 +107,7 @@ export const DEFAULT_DEPTH_FADE_ENABLED = true;
  * Procedural Milky Way impostor defaults ON.  The single screen-aligned
  * quad at the world origin gives the user a visceral "you are here"
  * sense before they fly out into the cosmic-web view.  See
- * `services/gpu/milkyWayRenderer.ts` and `utils/math/milkyWayFade.ts`
+ * `services/gpu/renderers/milkyWayRenderer.ts` and `utils/math/milkyWayFade.ts`
  * for the rendering rationale and the distance-fade band.
  */
 export const DEFAULT_MILKY_WAY_ENABLED = true;
@@ -128,7 +128,7 @@ export const DEFAULT_MILKY_WAY_ENABLED = true;
  * For local-dev clones without the offline DisPerSE pipeline run, the
  * file is missing → `loadFilaments` returns null silently → the
  * renderer skips the overlay regardless of this default.  No regression
- * for that path.  See `services/gpu/filamentRenderer.ts`.
+ * for that path.  See `services/gpu/renderers/filamentRenderer.ts`.
  */
 export const DEFAULT_FILAMENTS_ENABLED = true;
 

@@ -39,7 +39,7 @@ import package::lib::masks::edgeBandMask;
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
 
-// Per-cloud fade-in (CloudFade — see src/services/gpu/cloudFade.ts).
+// Per-cloud fade-in (CloudFade — see src/services/gpu/resources/cloudFade.ts).
 // 'CloudUniforms' is imported from 'lib/cloudFade.wesl' (shared with
 // points.wesl). The CPU-side 'CloudFade' class produces the same
 // 16-byte layout for every consumer, so the shared shader struct is
