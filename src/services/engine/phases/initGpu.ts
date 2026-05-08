@@ -83,7 +83,7 @@ import {
   type MilkyWayRenderer,
   createMilkyWayRenderer,
 } from '../../gpu/renderers/milkyWayRenderer';
-import { FilamentRenderer } from '../../gpu/renderers/filamentRenderer';
+import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
 
 import type { EngineState } from '../../../@types';
@@ -332,7 +332,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   //
   // Same HDR target as every other overlay so the additive
   // contribution accumulates in float-precision before tone mapping.
-  const filamentRenderer = new FilamentRenderer(device, 'rgba16float');
+  const filamentRenderer = createFilamentRenderer(device, 'rgba16float');
   state.gpu.filamentRenderer = filamentRenderer;
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `startLoop`)
