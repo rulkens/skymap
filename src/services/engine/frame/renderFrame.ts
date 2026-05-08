@@ -6,12 +6,16 @@
  *
  *   1. `createCommandEncoder()`
  *   2. `beginRenderPass()` against the HDR offscreen target
- *   3. compute `pxPerRad` + `camPos` snapshot
- *   4. `pointRenderer.draw(...)` (17 args)
- *   5. `thumbnails.runFrame(...)` (10 fields)
- *   6. `pass.end()`
- *   7. `postProcess.draw(...)` (HDR → swap chain tone-map blit)
- *   8. `device.queue.submit([encoder.finish()])`
+ *   3. `pointRenderer.draw(...)` (17 args)
+ *   4. `thumbnails.runFrame(...)` (10 fields)
+ *   5. `pass.end()`
+ *   6. `postProcess.draw(...)` (HDR → swap chain tone-map blit)
+ *   7. `device.queue.submit([encoder.finish()])`
+ *
+ * The `pxPerRad` + `camPos` derivations that used to live at step 3
+ * pre-D.1 have moved upstream into `deriveFrameContext()` — see
+ * `frameContext.ts`.  This module now reads them from `ctx` instead
+ * of recomputing locally.
  *
  * That whole block reads the engine's per-frame closure state but
  * doesn't *write* anything of its own — it's pure GPU dispatch.
@@ -87,19 +91,16 @@
  * `RenderFrameInput` (or the work belongs in `frame()`).
  */
 
-import type { mat4 } from 'gl-matrix';
-import type { OrbitCamera, PointCloud } from '../../../@types';
+import type { PointCloud } from '../../../@types';
 import type { Source } from '../../../data/sources';
 import type { BiasMode } from '../../../data/biasMode';
 import type { ToneMapCurve } from '../../../data/toneMapCurve';
-import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
-import type { PostProcess } from '../../gpu/passes/postProcess';
 import type { QuadRenderer } from '../../gpu/renderers/quadRenderer';
 import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';
 import type { MilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
 import type { FilamentRenderer } from '../../gpu/renderers/filamentRenderer';
-import type { ThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
 import type { FamousMetaEntry, FamousXrefMap } from '../../loading/fetchers/famousMetaFetcher';
+import type { ReadyFrameContext } from './frameContext';
 import { milkyWayFadeAlpha } from '../../../utils/math/milkyWayFade';
 
 /**
@@ -187,11 +188,16 @@ export type RenderFrameSettings = {
  * lifecycle leaks back to the caller.
  */
 export type RenderFrameInput = {
-  // ── Camera + viewport ─────────────────────────────────────────────────
-  cam: OrbitCamera;
-  canvasWidth: number;
-  canvasHeight: number;
-  viewProj: mat4;
+  /**
+   * Per-frame derived snapshot.  Carries the camera, view-projection
+   * matrix, viewport size, camera-position tuple, pixel-per-radian
+   * scalar, plus the post-bootstrap-narrowed `renderer`, `postProcess`,
+   * and `thumbnails` handles.  All five derived values used to be
+   * recomputed locally in this module's body (see Spec D.1's
+   * pre-migration notes); they now flow in pre-derived from
+   * `runFrame.ts`'s single `deriveFrameContext()` call.
+   */
+  ctx: ReadyFrameContext;
   /**
    * Animation time in seconds for the Milky Way impostor, already
    * scaled by the engine's chosen "slow but alive" factor (0.25× wall
@@ -202,15 +208,6 @@ export type RenderFrameInput = {
   // ── GPU handles ───────────────────────────────────────────────────────
   device: GPUDevice;
   context: GPUCanvasContext;
-  /**
-   * Combined HDR offscreen target + tone-map post-process.  This module
-   * reads `postProcess.view` for the HDR pass's colour attachment and
-   * calls `postProcess.draw(...)` for the fullscreen blit at the end
-   * of the frame.  See `services/gpu/postProcess.ts` for the merge
-   * rationale.
-   */
-  postProcess: PostProcess;
-  pointRenderer: PointRenderer;
   milkyWayRenderer: MilkyWayRenderer;
   /**
    * Optional cosmic-web filament-skeleton renderer.  Null when the
@@ -220,7 +217,6 @@ export type RenderFrameInput = {
    * so a missing renderer is silently a no-op.
    */
   filamentRenderer: FilamentRenderer | null;
-  thumbnails: ThumbnailSubsystem;
   /**
    * QuadRenderer + DiskRenderer references forwarded straight to the
    * thumbnail subsystem.  The subsystem already `bindAtlas`-bound them
@@ -253,18 +249,12 @@ export type RenderFrameInput = {
  */
 export function renderFrame(input: RenderFrameInput): void {
   const {
-    cam,
-    canvasWidth,
-    canvasHeight,
-    viewProj,
+    ctx,
     milkyWayITimeSec,
     device,
     context,
-    postProcess,
-    pointRenderer,
     milkyWayRenderer,
     filamentRenderer,
-    thumbnails,
     quadRenderer,
     diskRenderer,
     settings,
@@ -273,28 +263,24 @@ export function renderFrame(input: RenderFrameInput): void {
     clouds,
   } = input;
 
-  // ── Per-frame uniform-pack inputs ──────────────────────────────────
-  //
-  // pxPerRad = viewport.height / (2 · tan(fovY/2)) — the standard
-  // pinhole conversion from radians to screen pixels.  Pre-computed on
-  // the CPU because `tan` is one of the more expensive shader
-  // intrinsics on mobile GPUs and the value is frame-constant.
-  //
-  // We also share this scalar with the thumbnail subsystem (instead of
-  // letting it recompute internally) so both passes use a bit-identical
-  // pxPerRad — small but non-zero shader divergence otherwise.
-  const drawPxPerRad = canvasHeight / (2 * Math.tan(cam.fovYRad / 2));
-
-  // Snapshot the camera position into a plain readonly tuple.  The
-  // OrbitCamera's `position` is a gl-matrix vec3 (Float32Array); copying
-  // to a fixed-length tuple avoids accidental mutation downstream and
-  // matches the shape both `pointRenderer.draw` and
-  // `thumbnails.runFrame` expect.
-  const drawCamPos: Readonly<[number, number, number]> = [
-    cam.position[0]!,
-    cam.position[1]!,
-    cam.position[2]!,
-  ];
+  // Destructure the ready-context once so the rest of the body reads
+  // like the pre-D.1 inline form.  The five derived scalars
+  // (`vp`, `canvasSize`, `drawCamPos`, `drawPxPerRad`) and the three
+  // narrowed handles (`renderer`, `postProcess`, `thumbnails`) all
+  // came from `deriveFrameContext` upstream — see `frameContext.ts`
+  // for why these ride along on the ready snapshot.
+  const {
+    cam,
+    vp: viewProj,
+    canvasSize,
+    drawCamPos,
+    drawPxPerRad,
+    renderer: pointRenderer,
+    postProcess,
+    thumbnails,
+  } = ctx;
+  const canvasWidth = canvasSize.width;
+  const canvasHeight = canvasSize.height;
 
   // ── Encoder + HDR render pass ──────────────────────────────────────
   const encoder = device.createCommandEncoder();
