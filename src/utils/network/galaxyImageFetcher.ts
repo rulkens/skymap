@@ -24,7 +24,7 @@
  */
 
 import { sdssThumbnailUrl, dssThumbnailUrl } from '../math';
-import { SLOT_SIDE } from '../../services/gpu/textureAtlas';
+import { SLOT_SIDE } from '../../services/gpu/resources/textureAtlas';
 
 export type FetchGalaxyBitmapInput = {
   ra: number;

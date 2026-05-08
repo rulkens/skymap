@@ -4,7 +4,7 @@ import {
   ATLAS_SIDE,
   SLOT_SIDE,
   SLOT_COUNT,
-} from '../../../src/services/gpu/textureAtlas';
+} from '../../../../src/services/gpu/resources/textureAtlas';
 
 describe('TextureAtlas slot state machine', () => {
   // Construct without a real GPU device — pass `null as any`. The state-machine

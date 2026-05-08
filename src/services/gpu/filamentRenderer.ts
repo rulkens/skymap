@@ -26,7 +26,7 @@ import vsCode from './shaders/filaments/vertex.wesl?static';
 import fsCode from './shaders/filaments/fragment.wesl?static';
 import type { FilamentCloud } from '../../@types/FilamentCloud';
 import type { mat4 } from 'gl-matrix';
-import { CloudFade } from './cloudFade';
+import { CloudFade } from './resources/cloudFade';
 import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD

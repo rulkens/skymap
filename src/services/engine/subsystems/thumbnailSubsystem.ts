@@ -70,7 +70,7 @@ import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
 import type { PointCloud, QuadInstance } from '../../../@types';
 import type { OrbitCamera } from '../../../@types';
-import { TextureAtlas } from '../../gpu/textureAtlas';
+import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 import type { QuadRenderer } from '../../gpu/quadRenderer';
 import { DiskRenderer, type DiskInstance } from '../../gpu/diskRenderer';

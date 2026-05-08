@@ -99,7 +99,7 @@ import { type ComputeAngularWeightsInput } from '../engine/bake/computeAngularWe
 // two pipelines with diverging fragment paths.
 import vsCode from './shaders/points/vertex.wesl?static';
 import colorFsCode from './shaders/points/colorFragment.wesl?static';
-import { CloudFade } from './cloudFade';
+import { CloudFade } from './resources/cloudFade';
 import { createShaderModuleWithDevLog } from './shaderCompileLogger';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
