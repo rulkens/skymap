@@ -39,6 +39,7 @@
 import type { ThumbnailSubsystem } from '../services/engine/subsystems/thumbnailSubsystem';
 import type { SpaceMouseSubsystem } from '../services/engine/subsystems/spaceMouseSubsystem';
 import type { SelectionSubsystem } from '../services/engine/subsystems/selectionSubsystem';
+import type { BiasCorrectionSubsystem } from '../services/engine/subsystems/biasCorrectionSubsystem';
 import type { TweenManager } from '../services/engine/camera/tweenManager';
 import type { ClickResolver } from '../services/engine/interaction/clickHandler';
 import type { InputBindings } from '../services/engine/interaction/inputBindings';
@@ -63,6 +64,22 @@ export type EngineSubsystemHandles = {
    * truth, callback fan-out lives in one place).
    */
   selection: SelectionSubsystem;
+  /**
+   * Malmquist-bias correction subsystem (Spec E phase E.3).
+   *
+   * Owns the bias-mode flags, cached per-source ratios/weights, and the
+   * async bake state machine — extracted from `PointRenderer` so the
+   * renderer can shrink to a clean instanced-billboard drawer.
+   * Constructed eagerly in the engine state literal alongside `selection`
+   * / `tweens` / `scheduler` (no GPU dependency); the renderer is wired
+   * in during `phases/initGpu.ts` via `attachRenderer(...)`.
+   *
+   * Phase E.3 wires the subsystem and tests it standalone.  Phase E.4
+   * (DEFERRED — pending visual smoke test) cuts over `handle.setBiasMode`
+   * to call into this subsystem.  Until then the subsystem is wired
+   * and idle from the public-handle's POV.
+   */
+  biasCorrection: BiasCorrectionSubsystem;
   /**
    * Per-engine download-progress emitter — instantiated inside the
    * GPU init IIFE (so `cb.onLoadProgress` and the slot registry are in

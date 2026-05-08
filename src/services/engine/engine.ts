@@ -99,6 +99,7 @@ import { vec3 } from 'gl-matrix';
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
+import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
@@ -353,6 +354,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         getFamousMeta: () => state.sources.famousMeta,
         getFamousXrefs: () => state.sources.famousXrefs,
       }),
+
+      // ── Bias-correction subsystem (Spec E phase E.3) ──────────────
+      // Owns Malmquist-bias mode flags, cached per-source ratios/
+      // weights, and the async bake state machine — extracted from
+      // PointRenderer.  Constructed eagerly here (no GPU dep); the
+      // renderer is wired during `phases/initGpu` via
+      // `attachRenderer(...)`.  In E.3 the subsystem is idle from the
+      // public-handle POV — `handle.setBiasMode` STILL goes through
+      // `pointRenderer.setBiasMode` (the old path).  E.4 (DEFERRED —
+      // pending visual smoke test) cuts over.
+      //
+      // No `schechterRunner` / `angularRunner` overrides — the default
+      // throws if invoked, which is safe in E.3 because no production
+      // call path reaches the subsystem yet.  E.4 will wire the Vite
+      // `?worker` defaults.
+      biasCorrection: createBiasCorrectionSubsystem({ getState: () => state }),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       //
