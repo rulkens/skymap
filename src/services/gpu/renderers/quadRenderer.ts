@@ -11,6 +11,25 @@
  * textures at ~16, and a per-galaxy GPUTexture would thrash the
  * resource pool.  One atlas + one bind group = one draw call for
  * thousands of textured galaxies.
+ *
+ * ### Factory shape (Spec F.1)
+ *
+ * This module exports a `createQuadRenderer(ctx, maxInstances?): QuadRenderer`
+ * factory plus the matching `type QuadRenderer = { ... }` interface.  The
+ * pre-Spec-F revision shipped this as a `class QuadRenderer` with a
+ * constructor doing the same wiring; converting to a closure-returning
+ * factory matches the direction Spec D took every engine subsystem
+ * (`createSelectionSubsystem`, `createTweenManager`, …) and the
+ * already-factory `createPickRenderer`.  The previous private fields
+ * are now closure-captured `const`s; the public methods (`bindAtlas`,
+ * `draw`, `destroy`) are inline arrow properties on the returned
+ * object.
+ *
+ * Why a factory?  Closures express "construct, then expose a small
+ * surface" without the prototype machinery a class implies.  Tests
+ * and consumers see exactly the same API shape — `r.draw(...)` /
+ * `r.bindAtlas(...)` / `r.destroy()` — so the only call-site change
+ * is `new QuadRenderer(...)` → `createQuadRenderer(...)`.
  */
 
 import type { mat4 } from 'gl-matrix';
@@ -69,126 +88,24 @@ const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
  */
 const UNIFORM_BYTES = 96;
 
-export class QuadRenderer {
-  private readonly device: GPUDevice;
-  private readonly format: GPUTextureFormat;
-  private readonly pipeline: GPURenderPipeline;
-  private readonly bindGroupLayout: GPUBindGroupLayout;
-  private readonly uniformBuffer: GPUBuffer;
-  private readonly instanceBuffer: GPUBuffer;
-  private readonly sampler: GPUSampler;
-  private bindGroup: GPUBindGroup | undefined;
-  private readonly maxInstances: number;
-
-  constructor(ctx: GpuContext, maxInstances = 256) {
-    this.device = ctx.device;
-    this.format = ctx.format;
-    this.maxInstances = maxInstances;
-
-    this.bindGroupLayout = this.device.createBindGroupLayout({
-      label: 'quad-bgl',
-      entries: [
-        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
-        { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-      ],
-    });
-
-    const vsModule = createShaderModuleWithDevLog(this.device, vsCode, 'quads.vertex');
-    const fsModule = createShaderModuleWithDevLog(this.device, fsCode, 'quads.fragment');
-
-    this.pipeline = this.device.createRenderPipeline({
-      label: 'quad-pipeline',
-      layout: this.device.createPipelineLayout({
-        label: 'quads-pipeline-layout',
-        bindGroupLayouts: [this.bindGroupLayout],
-      }),
-      vertex: {
-        module: vsModule,
-        entryPoint: 'vs',
-        buffers: [
-          {
-            arrayStride: BYTES_PER_INSTANCE,
-            stepMode: 'instance',
-            attributes: [
-              { shaderLocation: 0, offset: 0, format: 'float32x4' }, // posSize
-              { shaderLocation: 1, offset: 16, format: 'float32x4' }, // uvRect
-              { shaderLocation: 2, offset: 32, format: 'float32x4' }, // extras (fadeAlpha + padding)
-            ],
-          },
-        ],
-      },
-      fragment: {
-        module: fsModule,
-        entryPoint: 'fs',
-        targets: [
-          {
-            format: this.format,
-            // Pure additive — galaxy thumbnails are EMISSIVE content
-            // (a photograph of the galaxy's actual light output), not
-            // opaque material occluding a background.  Additive blend
-            // means a thumbnail simply ADDS its emission to whatever's
-            // already in the HDR target; overlapping galaxies + the
-            // Milky Way impostor accumulate naturally without one
-            // covering up the other.
-            //
-            // An earlier revision used premultiplied OVER (`dstFactor:
-            // 'one-minus-src-alpha'`) which treats the thumbnail as
-            // opaque material with an alpha cutout: at fade-region
-            // pixels (alpha < 1) it preserved (1 - alpha) of the
-            // existing pixel.  Combined with depth-write that occluded
-            // the later Milky Way pass, fade regions ended up as
-            // `col*alpha` against a black HDR target — i.e. they faded
-            // to BLACK instead of revealing the Milky Way underneath.
-            // Pure additive sidesteps that entire reasoning.
-            blend: {
-              color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            },
-          },
-        ],
-      },
-      primitive: { topology: 'triangle-list' },
-    });
-
-    this.uniformBuffer = this.device.createBuffer({
-      label: 'quad-uniforms',
-      size: UNIFORM_BYTES,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-
-    this.instanceBuffer = this.device.createBuffer({
-      label: 'quad-instances',
-      size: maxInstances * BYTES_PER_INSTANCE,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-
-    this.sampler = this.device.createSampler({
-      label: 'quad-sampler',
-      magFilter: 'linear',
-      minFilter: 'linear',
-      addressModeU: 'clamp-to-edge',
-      addressModeV: 'clamp-to-edge',
-    });
-  }
-
+/**
+ * Public surface of the quad renderer.  Mirrors the methods the
+ * pre-factory `class QuadRenderer` exposed; consumers (engine,
+ * thumbnail subsystem, frame body) see the identical shape.
+ *
+ * `destroy()` is new in F.1 — pre-factory the class had no teardown.
+ * It releases the uniform buffer + per-instance buffer (the only two
+ * `GPUBuffer`s this renderer owns).  See the factory body for the
+ * rationale on why pipeline / bind group / sampler aren't released
+ * (they're JS-side handles, no device-side memory to reclaim).
+ */
+export type QuadRenderer = {
   /**
    * Bind the atlas texture view.  Must be called once after
    * `atlas.initTexture()`; the bind group can be reused across frames
    * because the atlas's underlying texture doesn't change identity.
    */
-  bindAtlas(atlasView: GPUTextureView): void {
-    this.bindGroup = this.device.createBindGroup({
-      label: 'quad-bg',
-      layout: this.bindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: this.uniformBuffer } },
-        { binding: 1, resource: atlasView },
-        { binding: 2, resource: this.sampler },
-      ],
-    });
-  }
-
+  bindAtlas(atlasView: GPUTextureView): void;
   /**
    * Issue the draw call.  `instances.length` must be ≤ `maxInstances`
    * (the engine pre-filters; in v1 the limit is set to the atlas slot
@@ -201,8 +118,136 @@ export class QuadRenderer {
     instances: ReadonlyArray<QuadInstance>,
     camPosWorld: Readonly<[number, number, number]>,
     pxPerRad: number,
+  ): void;
+  /**
+   * Release every GPU buffer this renderer owns.  Pipeline / bind
+   * group layout / bind group / sampler are JS-side handles with no
+   * `.destroy()` of their own — JS GC reclaims them once the
+   * renderer drops out of scope.  Only the uniform buffer + the
+   * per-instance vertex buffer hold device-side memory.
+   *
+   * Idempotent: `GPUBuffer.destroy()` is a no-op on already-destroyed
+   * buffers per the WebGPU spec, so a second `destroy()` call is safe.
+   */
+  destroy(): void;
+};
+
+export function createQuadRenderer(ctx: GpuContext, maxInstances = 256): QuadRenderer {
+  const { device, format } = ctx;
+
+  const bindGroupLayout = device.createBindGroupLayout({
+    label: 'quad-bgl',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    ],
+  });
+
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'quads.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'quads.fragment');
+
+  const pipeline = device.createRenderPipeline({
+    label: 'quad-pipeline',
+    layout: device.createPipelineLayout({
+      label: 'quads-pipeline-layout',
+      bindGroupLayouts: [bindGroupLayout],
+    }),
+    vertex: {
+      module: vsModule,
+      entryPoint: 'vs',
+      buffers: [
+        {
+          arrayStride: BYTES_PER_INSTANCE,
+          stepMode: 'instance',
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: 'float32x4' }, // posSize
+            { shaderLocation: 1, offset: 16, format: 'float32x4' }, // uvRect
+            { shaderLocation: 2, offset: 32, format: 'float32x4' }, // extras (fadeAlpha + padding)
+          ],
+        },
+      ],
+    },
+    fragment: {
+      module: fsModule,
+      entryPoint: 'fs',
+      targets: [
+        {
+          format,
+          // Pure additive — galaxy thumbnails are EMISSIVE content
+          // (a photograph of the galaxy's actual light output), not
+          // opaque material occluding a background.  Additive blend
+          // means a thumbnail simply ADDS its emission to whatever's
+          // already in the HDR target; overlapping galaxies + the
+          // Milky Way impostor accumulate naturally without one
+          // covering up the other.
+          //
+          // An earlier revision used premultiplied OVER (`dstFactor:
+          // 'one-minus-src-alpha'`) which treats the thumbnail as
+          // opaque material with an alpha cutout: at fade-region
+          // pixels (alpha < 1) it preserved (1 - alpha) of the
+          // existing pixel.  Combined with depth-write that occluded
+          // the later Milky Way pass, fade regions ended up as
+          // `col*alpha` against a black HDR target — i.e. they faded
+          // to BLACK instead of revealing the Milky Way underneath.
+          // Pure additive sidesteps that entire reasoning.
+          blend: {
+            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+          },
+        },
+      ],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+
+  const uniformBuffer = device.createBuffer({
+    label: 'quad-uniforms',
+    size: UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const instanceBuffer = device.createBuffer({
+    label: 'quad-instances',
+    size: maxInstances * BYTES_PER_INSTANCE,
+    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+  });
+
+  const sampler = device.createSampler({
+    label: 'quad-sampler',
+    magFilter: 'linear',
+    minFilter: 'linear',
+    addressModeU: 'clamp-to-edge',
+    addressModeV: 'clamp-to-edge',
+  });
+
+  // Mutable closure-captured slot for the atlas-bound bind group.  Set
+  // by `bindAtlas`; consulted on every `draw` call.  Until the engine
+  // calls `bindAtlas`, `draw` returns silently — same pre-factory
+  // semantics as the class field guard.
+  let bindGroup: GPUBindGroup | undefined;
+
+  function bindAtlas(atlasView: GPUTextureView): void {
+    bindGroup = device.createBindGroup({
+      label: 'quad-bg',
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: atlasView },
+        { binding: 2, resource: sampler },
+      ],
+    });
+  }
+
+  function draw(
+    pass: GPURenderPassEncoder,
+    viewProj: mat4,
+    viewportPx: [number, number],
+    instances: ReadonlyArray<QuadInstance>,
+    camPosWorld: Readonly<[number, number, number]>,
+    pxPerRad: number,
   ): void {
-    if (!this.bindGroup) return; // atlas not yet bound — skip silently
+    if (!bindGroup) return; // atlas not yet bound — skip silently
     if (instances.length === 0) return;
 
     // Pack uniforms — see UNIFORM_BYTES doc-comment for the layout.
@@ -224,7 +269,7 @@ export class QuadRenderer {
     uni[21] = camPosWorld[1];
     uni[22] = camPosWorld[2];
     uni[23] = pxPerRad; // pxPerRad at byte offset 92
-    this.device.queue.writeBuffer(this.uniformBuffer, 0, uni);
+    device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Pack instances.  We allocate a fresh Float32Array each frame; for
     // the v1 instance cap of 256 that's 8 KB per frame, negligible
@@ -245,11 +290,21 @@ export class QuadRenderer {
       data[base + 8] = ins.fadeAlpha;
       // data[base + 9..11] reserved (left zero by Float32Array init)
     }
-    this.device.queue.writeBuffer(this.instanceBuffer, 0, data);
+    device.queue.writeBuffer(instanceBuffer, 0, data);
 
-    pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bindGroup);
-    pass.setVertexBuffer(0, this.instanceBuffer);
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
+    pass.setVertexBuffer(0, instanceBuffer);
     pass.draw(6, instances.length, 0, 0);
   }
+
+  function destroy(): void {
+    // Only the two GPUBuffers hold device-side memory.  Pipeline /
+    // bind-group / sampler are JS-side handles with no `.destroy()`
+    // method — GC reclaims them when the closure drops out of scope.
+    uniformBuffer.destroy();
+    instanceBuffer.destroy();
+  }
+
+  return { bindAtlas, draw, destroy };
 }

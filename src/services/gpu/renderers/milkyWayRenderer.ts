@@ -77,6 +77,16 @@
  * shader).  We do not even need a vertex buffer; the vertex stage
  * looks up its corner from a const `array<vec2<f32>, 6>` indexed by
  * `@builtin(vertex_index)`.
+ *
+ * ### Factory shape (Spec F.1)
+ *
+ * Exposed as `createMilkyWayRenderer(init): MilkyWayRenderer` and the
+ * matching type alias.  The pre-Spec-F revision shipped this as
+ * `class MilkyWayRenderer` with a `static UNIFORM_BUFFER_SIZE`
+ * constant; the static lifts to a module-level `export const
+ * MILKY_WAY_UNIFORM_BUFFER_SIZE`.  Tests pin it directly via the
+ * named export.  Public method surface (`draw`, `destroy`) is
+ * byte-identical with the class form.
  */
 
 // Two ?static imports mirror the points/* split (Task 13): each
@@ -95,124 +105,20 @@ type Init = {
   format: GPUTextureFormat;
 };
 
-export class MilkyWayRenderer {
-  /**
-   * Public constant pinning the on-the-wire uniform buffer size.  Must
-   * match the WESL `Uniforms` struct's std140-ish layout
-   * (`CameraUniforms` 80 B + vec3 cameraPosWorld 12 B + 2 × f32 8 B +
-   * 12 B tail pad = 112 bytes) byte-for-byte.  Changing one without
-   * the other yields silent uniform-read corruption.
-   */
-  static readonly UNIFORM_BUFFER_SIZE = 112;
+/**
+ * Public constant pinning the on-the-wire uniform buffer size.  Must
+ * match the WESL `Uniforms` struct's std140-ish layout
+ * (`CameraUniforms` 80 B + vec3 cameraPosWorld 12 B + 2 × f32 8 B +
+ * 12 B tail pad = 112 bytes) byte-for-byte.  Changing one without
+ * the other yields silent uniform-read corruption.
+ *
+ * Lifted from a class static (`MilkyWayRenderer.UNIFORM_BUFFER_SIZE`)
+ * to a module-level export as part of the Spec F.1 factory conversion.
+ * Tests pin this directly via named import.
+ */
+export const MILKY_WAY_UNIFORM_BUFFER_SIZE = 112;
 
-  private device: GPUDevice;
-  private pipeline: GPURenderPipeline;
-  private bindGroupLayout: GPUBindGroupLayout;
-  private uniformBuffer: GPUBuffer;
-  private bindGroup: GPUBindGroup;
-
-  constructor(init: Init) {
-    const { device, format } = init;
-    this.device = device;
-
-    const vsModule = createShaderModuleWithDevLog(device, vsCode, 'milkyWay.vertex');
-    const fsModule = createShaderModuleWithDevLog(device, fsCode, 'milkyWay.fragment');
-
-    this.bindGroupLayout = device.createBindGroupLayout({
-      label: 'milkyWay-bgl-uniforms',
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: { type: 'uniform' },
-        },
-      ],
-    });
-
-    this.uniformBuffer = device.createBuffer({
-      label: 'milkyWay-uniform-buffer',
-      size: MilkyWayRenderer.UNIFORM_BUFFER_SIZE,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-
-    this.bindGroup = device.createBindGroup({
-      label: 'milkyWay-bg-uniforms',
-      layout: this.bindGroupLayout,
-      entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
-    });
-
-    const pipelineLayout = device.createPipelineLayout({
-      label: 'milkyWay-pipeline-layout',
-      bindGroupLayouts: [this.bindGroupLayout],
-    });
-
-    this.pipeline = device.createRenderPipeline({
-      label: 'milkyWay-pipeline',
-      layout: pipelineLayout,
-      vertex: { module: vsModule, entryPoint: 'vs' },
-      fragment: {
-        module: fsModule,
-        entryPoint: 'fs',
-        targets: [
-          {
-            format,
-            // Pure additive — the Milky Way impostor is *pure
-            // emission* (it adds light to the scene where the spiral is
-            // bright; nothing happens where it isn't).  An earlier
-            // revision used the same premultiplied-OVER blend that the
-            // points / disk passes use:
-            //
-            //   srcFactor: 'one', dstFactor: 'one-minus-src-alpha'
-            //
-            // That's right for textured-thumbnail quads (which COVER
-            // the underlying point billboard with the photographed
-            // galaxy), but wrong for an emissive impostor.  With OVER,
-            // even tiny noise-floor alpha leaking into "dark" corners
-            // — from `pow(0, near_zero)` corner cases in the height
-            // function, or the star-cell sampler returning near-zero
-            // distances at random fragment positions — produces a
-            // faint square outline at the quad boundary because those
-            // fragments end up with a small but non-zero `1 -
-            // src_alpha` term subtracting from the destination.
-            //
-            // Pure additive (`dstFactor: 'one'`) sidesteps the alpha
-            // reasoning entirely: each pixel contributes `col × alpha`
-            // (the premultiplied src colour) ON TOP of whatever was
-            // there before.  Dark fragments contribute zero.  No
-            // square outline.  No mask-shape artefacts.  The user's
-            // earlier report — "the black quad is still there" /
-            // "outside the unit circle is black" — was specifically
-            // this OVER-blend leakage; switching to additive makes
-            // those bugs go away by construction.
-            //
-            // Why this differs from the procedural-disk pass: those
-            // disks render a shaped silhouette (an elliptical disk
-            // with sharp edge) whose brightness *should* darken the
-            // catalog points behind it (because the procedural disk is
-            // representing the galaxy's body, not just emitted light).
-            // The Milky Way impostor isn't shaped like that — it's a
-            // raymarched volumetric glow whose extent is defined by
-            // its own brightness falloff.  Pure additive is the
-            // physically right choice here.
-            blend: {
-              color: {
-                srcFactor: 'one',
-                dstFactor: 'one',
-                operation: 'add',
-              },
-              alpha: {
-                srcFactor: 'one',
-                dstFactor: 'one',
-                operation: 'add',
-              },
-            },
-          },
-        ],
-      },
-      primitive: { topology: 'triangle-list' },
-    });
-  }
-
+export type MilkyWayRenderer = {
   /**
    * Issue the single-instance draw.  Encodes a 6-vertex / 1-instance
    * call after writing the uniform buffer.  Caller is responsible for
@@ -228,11 +134,123 @@ export class MilkyWayRenderer {
     fadeAlpha: number,
     iTimeSec: number,
     cameraPosWorld: [number, number, number],
+  ): void;
+  /** Release the per-frame uniform buffer. */
+  destroy(): void;
+};
+
+export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
+  const { device, format } = init;
+
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'milkyWay.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'milkyWay.fragment');
+
+  const bindGroupLayout = device.createBindGroupLayout({
+    label: 'milkyWay-bgl-uniforms',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+    ],
+  });
+
+  const uniformBuffer = device.createBuffer({
+    label: 'milkyWay-uniform-buffer',
+    size: MILKY_WAY_UNIFORM_BUFFER_SIZE,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const bindGroup = device.createBindGroup({
+    label: 'milkyWay-bg-uniforms',
+    layout: bindGroupLayout,
+    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+  });
+
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'milkyWay-pipeline-layout',
+    bindGroupLayouts: [bindGroupLayout],
+  });
+
+  const pipeline = device.createRenderPipeline({
+    label: 'milkyWay-pipeline',
+    layout: pipelineLayout,
+    vertex: { module: vsModule, entryPoint: 'vs' },
+    fragment: {
+      module: fsModule,
+      entryPoint: 'fs',
+      targets: [
+        {
+          format,
+          // Pure additive — the Milky Way impostor is *pure
+          // emission* (it adds light to the scene where the spiral is
+          // bright; nothing happens where it isn't).  An earlier
+          // revision used the same premultiplied-OVER blend that the
+          // points / disk passes use:
+          //
+          //   srcFactor: 'one', dstFactor: 'one-minus-src-alpha'
+          //
+          // That's right for textured-thumbnail quads (which COVER
+          // the underlying point billboard with the photographed
+          // galaxy), but wrong for an emissive impostor.  With OVER,
+          // even tiny noise-floor alpha leaking into "dark" corners
+          // — from `pow(0, near_zero)` corner cases in the height
+          // function, or the star-cell sampler returning near-zero
+          // distances at random fragment positions — produces a
+          // faint square outline at the quad boundary because those
+          // fragments end up with a small but non-zero `1 -
+          // src_alpha` term subtracting from the destination.
+          //
+          // Pure additive (`dstFactor: 'one'`) sidesteps the alpha
+          // reasoning entirely: each pixel contributes `col × alpha`
+          // (the premultiplied src colour) ON TOP of whatever was
+          // there before.  Dark fragments contribute zero.  No
+          // square outline.  No mask-shape artefacts.  The user's
+          // earlier report — "the black quad is still there" /
+          // "outside the unit circle is black" — was specifically
+          // this OVER-blend leakage; switching to additive makes
+          // those bugs go away by construction.
+          //
+          // Why this differs from the procedural-disk pass: those
+          // disks render a shaped silhouette (an elliptical disk
+          // with sharp edge) whose brightness *should* darken the
+          // catalog points behind it (because the procedural disk is
+          // representing the galaxy's body, not just emitted light).
+          // The Milky Way impostor isn't shaped like that — it's a
+          // raymarched volumetric glow whose extent is defined by
+          // its own brightness falloff.  Pure additive is the
+          // physically right choice here.
+          blend: {
+            color: {
+              srcFactor: 'one',
+              dstFactor: 'one',
+              operation: 'add',
+            },
+            alpha: {
+              srcFactor: 'one',
+              dstFactor: 'one',
+              operation: 'add',
+            },
+          },
+        },
+      ],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+
+  function draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewport: [number, number],
+    fadeAlpha: number,
+    iTimeSec: number,
+    cameraPosWorld: [number, number, number],
   ): void {
     // Pack uniforms into a 112-byte ArrayBuffer matching the WESL
-    // `Uniforms` struct layout.  See the class doc-comment for the
+    // `Uniforms` struct layout.  See the module doc-comment for the
     // full offset table.
-    const uniforms = new ArrayBuffer(MilkyWayRenderer.UNIFORM_BUFFER_SIZE);
+    const uniforms = new ArrayBuffer(MILKY_WAY_UNIFORM_BUFFER_SIZE);
     const f32 = new Float32Array(uniforms);
     // cam.viewProj — mat4 (offsets 0..63 / floats 0..15)
     f32.set(viewProj, 0);
@@ -264,14 +282,16 @@ export class MilkyWayRenderer {
     f32[24] = iTimeSec;
     // Floats 25..27 are tail padding (offsets 100..111) rounding
     // the struct size up to a 16-byte multiple.  Stays zero.
-    this.device.queue.writeBuffer(this.uniformBuffer, 0, uniforms);
+    device.queue.writeBuffer(uniformBuffer, 0, uniforms);
 
-    pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bindGroup);
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
     pass.draw(6, 1);
   }
 
-  destroy(): void {
-    this.uniformBuffer.destroy();
+  function destroy(): void {
+    uniformBuffer.destroy();
   }
+
+  return { draw, destroy };
 }
