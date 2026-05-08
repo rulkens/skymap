@@ -310,17 +310,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // pass description and the rationale for keeping pick + auto-LOD
   // out here in `frame()`.
   renderFrame({
-    cam: ctx.cam,
-    canvasWidth: ctx.canvasSize.width,
-    canvasHeight: ctx.canvasSize.height,
-    viewProj: ctx.vp,
+    ctx,
     device: deps.device,
     context: deps.context,
-    postProcess: ctx.postProcess,
-    pointRenderer: ctx.renderer,
     milkyWayRenderer: deps.milkyWayRenderer,
     filamentRenderer: deps.filamentRenderer,
-    thumbnails: ctx.thumbnails,
     quadRenderer: deps.quadRenderer,
     diskRenderer: deps.diskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,

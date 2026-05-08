@@ -250,6 +250,28 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     ...(overrides.settings ?? {}),
   };
 
+  // Build the per-frame derived snapshot in the shape `RenderFrameInput`
+  // now expects.  Pre-D.1 these fields lived inline on `input`; today
+  // they're consolidated under `input.ctx` (a `ReadyFrameContext`)
+  // because `runFrame` derives them once via `deriveFrameContext()` and
+  // forwards a single struct.  The test mirrors that production wiring.
+  const canvasWidth = 1280;
+  const canvasHeight = 720;
+  const viewProj = new Float32Array(16) as unknown as mat4;
+  const ctx = {
+    isReady: true as const,
+    cam,
+    vp: viewProj,
+    canvasSize: { width: canvasWidth, height: canvasHeight },
+    drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
+      [number, number, number]
+    >,
+    drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
+    renderer: pointRenderer,
+    postProcess,
+    thumbnails,
+  };
+
   return {
     callLog,
     env,
@@ -265,19 +287,20 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     diskRenderer,
     cam,
     clouds,
+    // Keep these on the fixture root so tests can read them directly
+    // without reaching into `input.ctx.*` for every assertion — they
+    // mirror the legacy `input.canvasWidth` / `input.viewProj` shape
+    // the assertions already expect.
+    canvasWidth,
+    canvasHeight,
+    viewProj,
     input: {
-      cam,
-      canvasWidth: 1280,
-      canvasHeight: 720,
-      viewProj: new Float32Array(16) as unknown as mat4,
+      ctx,
       milkyWayITimeSec: 0,
       device,
       context,
-      postProcess,
-      pointRenderer,
       milkyWayRenderer,
       filamentRenderer: null,
-      thumbnails,
       quadRenderer,
       diskRenderer,
       settings,
@@ -338,8 +361,8 @@ describe('renderFrame', () => {
     //  realOnlyMode, biasMode, absMagLimit, apparentMagLimit,
     //  schechterMStar, schechterAlpha, depthFadeEnabled]
     expect(args[0]).toBe(fx.env.pass);
-    expect(args[1]).toBe(fx.input.viewProj);
-    expect(args[2]).toEqual([fx.input.canvasWidth, fx.input.canvasHeight]);
+    expect(args[1]).toBe(fx.viewProj);
+    expect(args[2]).toEqual([fx.canvasWidth, fx.canvasHeight]);
     expect(args[3]).toBe(fx.input.settings.pointSizePx);
     expect(args[4]).toBe(fx.input.settings.brightness);
     // selected null → 0xffffffff packed sentinel
@@ -348,7 +371,7 @@ describe('renderFrame', () => {
     // camPos is a 3-tuple snapshot from cam.position
     expect(Array.from(args[7] as ArrayLike<number>)).toEqual([0, 0, 5]);
     // pxPerRad = h / (2 · tan(fovY/2))
-    const expectedPxPerRad = fx.input.canvasHeight / (2 * Math.tan(fx.input.cam.fovYRad / 2));
+    const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
     expect(args[8]).toBeCloseTo(expectedPxPerRad, 6);
     expect(args[9]).toBe(fx.input.settings.highlightFallback);
     expect(args[10]).toBe(fx.input.settings.realOnlyMode);
@@ -394,11 +417,11 @@ describe('renderFrame', () => {
     const runFrame = fx.thumbnails.runFrame as ReturnType<typeof vi.fn>;
     expect(runFrame).toHaveBeenCalledTimes(1);
     const arg = runFrame.mock.calls[0]![0] as any;
-    const expectedPxPerRad = fx.input.canvasHeight / (2 * Math.tan(fx.input.cam.fovYRad / 2));
+    const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
     expect(arg.pxPerRad).toBeCloseTo(expectedPxPerRad, 6);
     expect(Array.from(arg.camPos as ArrayLike<number>)).toEqual([0, 0, 5]);
     expect(arg.canvasSize).toEqual({ width: 1280, height: 720 });
-    expect(arg.viewProj).toBe(fx.input.viewProj);
+    expect(arg.viewProj).toBe(fx.viewProj);
     expect(arg.visibleSourceMask).toBe(fx.input.settings.visibleSourceMask);
     expect(arg.clouds).toBe(fx.input.clouds);
     expect(arg.pass).toBe(fx.env.pass);
