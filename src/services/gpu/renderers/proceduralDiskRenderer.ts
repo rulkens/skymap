@@ -9,6 +9,17 @@
  *
  * The shader (proceduralDisks.wgsl) is documented in detail; this file
  * is just the JS-side pipeline wiring.
+ *
+ * ### Factory shape (Spec F.1)
+ *
+ * Exposed as `createProceduralDiskRenderer(init): ProceduralDiskRenderer`
+ * matching the already-factory `createPickRenderer` and the Spec D
+ * subsystem factories.  Pre-factory shipped as `class
+ * ProceduralDiskRenderer`; the conversion is mechanical — fields →
+ * closure-captured `let`/`const`, methods → inline functions on the
+ * returned object.  Public API is byte-identical, so the only
+ * call-site change is `new ProceduralDiskRenderer(...)` →
+ * `createProceduralDiskRenderer(...)`.
  */
 
 import vsCode from '../shaders/proceduralDisks/vertex.wesl?static';
@@ -26,101 +37,7 @@ type Init = {
   canvas: HTMLCanvasElement;
 };
 
-export class ProceduralDiskRenderer {
-  private device: GPUDevice;
-  private pipeline: GPURenderPipeline;
-  private bindGroupLayout: GPUBindGroupLayout;
-  private uniformBuffer: GPUBuffer;
-  private bindGroup: GPUBindGroup;
-  private vertexBuffer: GPUBuffer | null = null;
-  private vertexBufferCapacity = 0; // in instances
-
-  constructor(init: Init) {
-    const { device, format } = init;
-    this.device = device;
-
-    const vsModule = createShaderModuleWithDevLog(device, vsCode, 'proceduralDisks.vertex');
-    const fsModule = createShaderModuleWithDevLog(device, fsCode, 'proceduralDisks.fragment');
-
-    this.bindGroupLayout = device.createBindGroupLayout({
-      label: 'proceduralDisks-bgl-uniforms',
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: { type: 'uniform' },
-        },
-      ],
-    });
-
-    // Uniform layout matches diskRenderer / quadRenderer (mat4 + vec2 +
-    // 2 padding f32 + vec3 + f32) — 96 bytes.
-    this.uniformBuffer = device.createBuffer({
-      label: 'proceduralDisks-uniform-buffer',
-      size: 96,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-
-    this.bindGroup = device.createBindGroup({
-      label: 'proceduralDisks-bg-uniforms',
-      layout: this.bindGroupLayout,
-      entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
-    });
-
-    const pipelineLayout = device.createPipelineLayout({
-      label: 'proceduralDisks-pipeline-layout',
-      bindGroupLayouts: [this.bindGroupLayout],
-    });
-
-    this.pipeline = device.createRenderPipeline({
-      label: 'proceduralDisks-pipeline',
-      layout: pipelineLayout,
-      vertex: {
-        module: vsModule,
-        entryPoint: 'vs',
-        buffers: [
-          {
-            arrayStride: STRIDE_BYTES,
-            stepMode: 'instance',
-            attributes: [
-              { shaderLocation: 0, offset: 0, format: 'float32x4' }, // posSize
-              { shaderLocation: 1, offset: 16, format: 'float32x4' }, // orientation
-              { shaderLocation: 2, offset: 32, format: 'float32x4' }, // extras
-            ],
-          },
-        ],
-      },
-      fragment: {
-        module: fsModule,
-        entryPoint: 'fs',
-        targets: [
-          {
-            format,
-            // Pure additive — galaxy procedural disks are EMISSIVE.
-            // See `quadRenderer.ts` for the full rationale; siblings
-            // in the layered render (quads, disks, this) all use
-            // additive so they compose cleanly with each other and
-            // with the Milky Way impostor underneath without any of
-            // them "covering up" the others.
-            blend: {
-              color: {
-                srcFactor: 'one',
-                dstFactor: 'one',
-                operation: 'add',
-              },
-              alpha: {
-                srcFactor: 'one',
-                dstFactor: 'one',
-                operation: 'add',
-              },
-            },
-          },
-        ],
-      },
-      primitive: { topology: 'triangle-list' },
-    });
-  }
-
+export type ProceduralDiskRenderer = {
   /**
    * Issue one draw call for the given list of instances.  Packs the
    * instance data into the GPU vertex buffer (re-allocating if it grew),
@@ -133,19 +50,122 @@ export class ProceduralDiskRenderer {
     camPosWorld: [number, number, number],
     pxPerRad: number,
     instances: ReadonlyArray<ProceduralDiskInstance>,
+  ): void;
+  /** Release the uniform + per-instance vertex buffers. */
+  destroy(): void;
+};
+
+export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer {
+  const { device, format } = init;
+
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'proceduralDisks.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'proceduralDisks.fragment');
+
+  const bindGroupLayout = device.createBindGroupLayout({
+    label: 'proceduralDisks-bgl-uniforms',
+    entries: [
+      {
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform' },
+      },
+    ],
+  });
+
+  // Uniform layout matches diskRenderer / quadRenderer (mat4 + vec2 +
+  // 2 padding f32 + vec3 + f32) — 96 bytes.
+  const uniformBuffer = device.createBuffer({
+    label: 'proceduralDisks-uniform-buffer',
+    size: 96,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const bindGroup = device.createBindGroup({
+    label: 'proceduralDisks-bg-uniforms',
+    layout: bindGroupLayout,
+    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+  });
+
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'proceduralDisks-pipeline-layout',
+    bindGroupLayouts: [bindGroupLayout],
+  });
+
+  const pipeline = device.createRenderPipeline({
+    label: 'proceduralDisks-pipeline',
+    layout: pipelineLayout,
+    vertex: {
+      module: vsModule,
+      entryPoint: 'vs',
+      buffers: [
+        {
+          arrayStride: STRIDE_BYTES,
+          stepMode: 'instance',
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: 'float32x4' }, // posSize
+            { shaderLocation: 1, offset: 16, format: 'float32x4' }, // orientation
+            { shaderLocation: 2, offset: 32, format: 'float32x4' }, // extras
+          ],
+        },
+      ],
+    },
+    fragment: {
+      module: fsModule,
+      entryPoint: 'fs',
+      targets: [
+        {
+          format,
+          // Pure additive — galaxy procedural disks are EMISSIVE.
+          // See `quadRenderer.ts` for the full rationale; siblings
+          // in the layered render (quads, disks, this) all use
+          // additive so they compose cleanly with each other and
+          // with the Milky Way impostor underneath without any of
+          // them "covering up" the others.
+          blend: {
+            color: {
+              srcFactor: 'one',
+              dstFactor: 'one',
+              operation: 'add',
+            },
+            alpha: {
+              srcFactor: 'one',
+              dstFactor: 'one',
+              operation: 'add',
+            },
+          },
+        },
+      ],
+    },
+    primitive: { topology: 'triangle-list' },
+  });
+
+  // Per-instance vertex buffer.  Lazily allocated on first draw with
+  // capacity ≥ the requested instance count and grown on demand.  Held
+  // as closure-captured `let` because the buffer identity changes when
+  // we reallocate.
+  let vertexBuffer: GPUBuffer | null = null;
+  let vertexBufferCapacity = 0; // in instances
+
+  function draw(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewport: [number, number],
+    camPosWorld: [number, number, number],
+    pxPerRad: number,
+    instances: ReadonlyArray<ProceduralDiskInstance>,
   ): void {
     if (instances.length === 0) return;
 
     // Grow vertex buffer if needed.
-    if (this.vertexBuffer === null || this.vertexBufferCapacity < instances.length) {
-      this.vertexBuffer?.destroy();
+    if (vertexBuffer === null || vertexBufferCapacity < instances.length) {
+      vertexBuffer?.destroy();
       const cap = Math.max(instances.length, 64);
-      this.vertexBuffer = this.device.createBuffer({
+      vertexBuffer = device.createBuffer({
         label: 'proceduralDisks-vertex-buffer',
         size: cap * STRIDE_BYTES,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
       });
-      this.vertexBufferCapacity = cap;
+      vertexBufferCapacity = cap;
     }
 
     // Pack instances.  Same memory layout as diskRenderer (3 vec4<f32>),
@@ -168,7 +188,7 @@ export class ProceduralDiskRenderer {
       packed[o + 10] = 0;
       packed[o + 11] = 0;
     }
-    this.device.queue.writeBuffer(this.vertexBuffer!, 0, packed);
+    device.queue.writeBuffer(vertexBuffer!, 0, packed);
 
     // Pack uniforms (mat4 + vec2 + 2*f32 + vec3 + f32 = 96 bytes).
     const uniforms = new ArrayBuffer(96);
@@ -181,17 +201,19 @@ export class ProceduralDiskRenderer {
     u32f[21] = camPosWorld[1]; // 84..87
     u32f[22] = camPosWorld[2]; // 88..91
     u32f[23] = pxPerRad; // 92..95
-    this.device.queue.writeBuffer(this.uniformBuffer, 0, uniforms);
+    device.queue.writeBuffer(uniformBuffer, 0, uniforms);
 
-    pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bindGroup);
-    pass.setVertexBuffer(0, this.vertexBuffer!);
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
+    pass.setVertexBuffer(0, vertexBuffer!);
     pass.draw(6, instances.length);
   }
 
-  destroy(): void {
-    this.uniformBuffer.destroy();
-    this.vertexBuffer?.destroy();
-    this.vertexBuffer = null;
+  function destroy(): void {
+    uniformBuffer.destroy();
+    vertexBuffer?.destroy();
+    vertexBuffer = null;
   }
+
+  return { draw, destroy };
 }

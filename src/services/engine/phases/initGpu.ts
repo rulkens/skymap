@@ -73,10 +73,16 @@
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { PointRenderer } from '../../gpu/renderers/pointRenderer';
 import { createPostProcess } from '../../gpu/passes/postProcess';
-import { QuadRenderer } from '../../gpu/renderers/quadRenderer';
-import { DiskRenderer } from '../../gpu/renderers/diskRenderer';
-import { ProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
-import { MilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
+import { type QuadRenderer, createQuadRenderer } from '../../gpu/renderers/quadRenderer';
+import { type DiskRenderer, createDiskRenderer } from '../../gpu/renderers/diskRenderer';
+import {
+  type ProceduralDiskRenderer,
+  createProceduralDiskRenderer,
+} from '../../gpu/renderers/proceduralDiskRenderer';
+import {
+  type MilkyWayRenderer,
+  createMilkyWayRenderer,
+} from '../../gpu/renderers/milkyWayRenderer';
 import { FilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
 
@@ -276,7 +282,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // at PointRenderer construction above) — it composites galaxy
   // thumbnails into the same accumulated linear-light buffer the
   // points pass writes into.
-  const quadRenderer = new QuadRenderer({
+  const quadRenderer = createQuadRenderer({
     device,
     context,
     format: 'rgba16float',
@@ -286,7 +292,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the same 2048×2048 thumbnail texture.  The engine routes each
   // galaxy to one renderer or the other per frame based on apparent
   // size and orientation-data availability (see the per-frame loop).
-  const diskRenderer = new DiskRenderer({
+  const diskRenderer = createDiskRenderer({
     device,
     context,
     format: 'rgba16float',
@@ -300,7 +306,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // PROCEDURAL_DISK_FADE_START_PX / _END_PX in thumbnailSubsystem.ts).
   // Same HDR target as the other thumbnail-pass renderers so the
   // procedural disk composites into the same linear-light buffer.
-  const proceduralDiskRenderer = new ProceduralDiskRenderer({
+  const proceduralDiskRenderer = createProceduralDiskRenderer({
     device,
     context,
     format: 'rgba16float',
@@ -311,7 +317,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // is a sibling renderer rather than tucked into the per-galaxy
   // procedural-disk pass, and `utils/math/milkyWayFade.ts` for the
   // distance-fade band.
-  const milkyWayRenderer = new MilkyWayRenderer({
+  const milkyWayRenderer = createMilkyWayRenderer({
     device,
     format: 'rgba16float',
   });
