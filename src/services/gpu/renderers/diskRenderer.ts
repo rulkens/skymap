@@ -11,39 +11,41 @@
  *      (the disk silhouette IS the geometry, so the on-screen ellipse
  *      falls out of the projection naturally).
  *
- * Why a separate renderer instead of extending QuadRenderer?  QuadRenderer
+ * Why a separate renderer instead of extending QuadRenderer? QuadRenderer
  * bakes screen-aligned billboarding into the vertex shader — corner offsets
- * are applied in CLIP space after viewProj.  Tilting in 3D requires the
+ * are applied in CLIP space after viewProj. Tilting in 3D requires the
  * corners to be transformed in WORLD space and then projected, which is a
- * fundamentally different pipeline.  Keeping QuadRenderer alive lets the
+ * fundamentally different pipeline. Keeping QuadRenderer alive lets the
  * engine pick the screen-aligned thumbnail path for fallback orientations
  * (where tilting would be cosmetically misleading) and for galaxies still
  * loading their textures.
  *
- * Per-instance attributes (48 bytes / 12 floats):
+ * ## Per-instance attributes (48 bytes / 12 floats)
+ *
  *   posSize       vec4   xyz, sizeWorld
  *   uvRect        vec4   u0, v0, u1, v1
- *   orientation   vec4   axisRatio, positionAngleDeg, _, _
+ *   orientation   vec4   axisRatio, positionAngleDeg, fadeAlpha, _
  *
- * ### Factory shape (Spec F.1)
+ * Note: `fadeAlpha` lives in the third slot of the orientation vec4, NOT
+ * in a fourth `extras` vec4 like QuadInstance. Keeping the layout to
+ * three vec4s (48 bytes total) matches QuadInstance + ProceduralDiskInstance.
  *
- * Exposed as a `createDiskRenderer(ctx, maxInstances?): DiskRenderer`
- * factory plus the matching `type DiskRenderer = { ... }`.  The
- * pre-Spec-F revision shipped this as `class DiskRenderer`; the
- * conversion follows the same shape as `createPickRenderer` and the
- * subsystem factories Spec D extracted (`createSelectionSubsystem`,
- * `createTweenManager`, …).  Public surface is identical — the only
- * call-site change is `new DiskRenderer(...)` → `createDiskRenderer(...)`.
+ * ## Why this is a thin wrapper post-Spec G
  *
- * `destroy()` is new in F.1 — pre-factory the class had no teardown.
- * Releases the uniform buffer + per-instance buffer.
+ * Pipeline / BGL / uniform buffer / instance buffer plumbing now lives
+ * in `instancedQuadRenderer.ts`, shared with the quad + procedural disk
+ * renderers. This file owns: the consumer-facing `createDiskRenderer`
+ * factory signature (preserved unchanged from Spec F), the
+ * `DiskInstance → packed Float32Array` serialization, and the wrapper
+ * `draw(...)` translating the engine's call convention into the
+ * shared factory's `draw(args)` shape.
  */
 
 import type { mat4 } from 'gl-matrix';
 import type { GpuContext } from '../../../@types';
 import vsCode from '../shaders/disks/vertex.wesl?static';
 import fsCode from '../shaders/disks/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
 export type DiskInstance = {
   x: number;
@@ -57,50 +59,22 @@ export type DiskInstance = {
   axisRatio: number;
   positionAngleDeg: number;
   /**
-   * Per-frame fade multiplier in [0, 1].  Distance fade × load fade,
+   * Per-frame fade multiplier in [0, 1]. Distance fade × load fade,
    * computed CPU-side by the engine and folded into the shader's final
-   * alpha output.  See QuadInstance.d.ts for the underlying logic.
+   * alpha output. See QuadInstance.d.ts for the underlying logic.
    */
   fadeAlpha: number;
 };
 
-const FLOATS_PER_INSTANCE = 12;
-const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
-
-/**
- * 96-byte uniform layout (matches the WESL `Uniforms` struct in
- * disks.wesl, which now extends the shared `CameraUniforms` prefix from
- * `lib/camera.wesl`):
- *
- *   bytes  0..63 : cam.viewProj   mat4x4<f32>  (16 floats = 64 B)
- *   bytes 64..71 : cam.viewportPx vec2<f32>    (2 floats = 8 B)
- *   bytes 72..79 : cam._pad0 / _pad1 f32 × 2   (8 B; pads next vec3 to 16-B boundary)
- *   bytes 80..91 : camPos          vec3<f32>   (3 floats = 12 B; vec3 needs 16-B alignment)
- *   bytes 92..95 : _pad2           f32         (4 B; trailing pad in camPos's vec4 quantum)
- *
- * Total: 96 bytes — multiple of 16 ✓.  Byte-for-byte identical to the
- * pre-CameraUniforms layout: the WESL refactor only renamed the prefix
- * fields ('viewProj' → 'cam.viewProj', 'viewport' → 'cam.viewportPx',
- * '_pad0/_pad1' → 'cam._pad0/_pad1') without moving any of the
- * trailing renderer-specific bytes, so this CPU uploader didn't need to
- * shift any offsets.  This mirrors the QuadRenderer's revised layout
- * (after the orbit-warp fix) so the two passes can share the same
- * conceptual binding even though their consumers differ: QuadRenderer
- * uses the trailing slot for `pxPerRad`, while DiskRenderer doesn't
- * need pixel-radius math (the disk geometry sizes itself in world
- * space) and leaves it as padding.
- */
-const UNIFORM_BYTES = 96;
-
 export type DiskRenderer = {
   /**
-   * Bind the atlas texture view.  Must be called once after
+   * Bind the atlas texture view. Must be called once after
    * `atlas.initTexture()`; the bind group can be reused across frames
    * because the atlas's underlying texture doesn't change identity.
    */
   bindAtlas(atlasView: GPUTextureView): void;
   /**
-   * Issue the draw call.  `instances.length` must be ≤ `maxInstances`.
+   * Issue the draw call. `instances.length` must be ≤ `maxInstances`.
    * The engine is responsible for filtering down to the disk-eligible
    * subset (real orientation data + apparent size large enough to warrant
    * a 3D plane vs the screen-aligned quad fallback).
@@ -113,107 +87,27 @@ export type DiskRenderer = {
     instances: ReadonlyArray<DiskInstance>,
   ): void;
   /**
-   * Release every GPU buffer this renderer owns.  Pipeline / bind
-   * group layout / bind group / sampler are JS-side handles — no
-   * `.destroy()` to call.  Idempotent.
+   * Release every GPU buffer this renderer owns. Idempotent.
    */
   destroy(): void;
 };
 
 export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRenderer {
-  const { device, format } = ctx;
-
-  const bindGroupLayout = device.createBindGroupLayout({
-    label: 'disk-bgl',
-    entries: [
-      { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-    ],
+  const inner = createInstancedQuadRenderer(ctx, {
+    label: 'disk',
+    vertexSource: vsCode,
+    fragmentSource: fsCode,
+    atlas: {},
+    capacity: { kind: 'fixed', max: maxInstances },
+    // Galaxy disks are EMISSIVE — see quadRenderer.ts for the
+    // fade-to-black bug history that motivates additive over
+    // premultiplied-OVER.
+    blend: 'additive',
+    format: ctx.format,
   });
-
-  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'disks.vertex');
-  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'disks.fragment');
-
-  const pipeline = device.createRenderPipeline({
-    label: 'disk-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'disks-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout],
-    }),
-    vertex: {
-      module: vsModule,
-      entryPoint: 'vs',
-      buffers: [
-        {
-          arrayStride: BYTES_PER_INSTANCE,
-          stepMode: 'instance',
-          attributes: [
-            { shaderLocation: 0, offset: 0, format: 'float32x4' }, // posSize
-            { shaderLocation: 1, offset: 16, format: 'float32x4' }, // uvRect
-            { shaderLocation: 2, offset: 32, format: 'float32x4' }, // orientation
-          ],
-        },
-      ],
-    },
-    fragment: {
-      module: fsModule,
-      entryPoint: 'fs',
-      targets: [
-        {
-          format,
-          // Pure additive — galaxy disks are EMISSIVE.  See
-          // quadRenderer.ts for the full rationale; in short, OVER
-          // blend + depth-write produced a fade-to-black bug at
-          // disk edges where the Milky Way underneath should have
-          // been visible.  Additive blending lets the impostor and
-          // the disk's emission accumulate naturally.
-          blend: {
-            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-          },
-        },
-      ],
-    },
-    primitive: { topology: 'triangle-list' },
-  });
-
-  const uniformBuffer = device.createBuffer({
-    label: 'disk-uniforms',
-    size: UNIFORM_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const instanceBuffer = device.createBuffer({
-    label: 'disk-instances',
-    size: maxInstances * BYTES_PER_INSTANCE,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-  });
-
-  const sampler = device.createSampler({
-    label: 'disk-sampler',
-    magFilter: 'linear',
-    minFilter: 'linear',
-    addressModeU: 'clamp-to-edge',
-    addressModeV: 'clamp-to-edge',
-  });
-
-  // Mutable closure-captured slot for the atlas-bound bind group.  Set
-  // by `bindAtlas`; consulted on every `draw` call.  Until the engine
-  // calls `bindAtlas`, `draw` returns silently — same pre-factory
-  // semantics as the class field guard.
-  let bindGroup: GPUBindGroup | undefined;
 
   function bindAtlas(atlasView: GPUTextureView): void {
-    bindGroup = device.createBindGroup({
-      label: 'disk-bg',
-      layout: bindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        { binding: 1, resource: atlasView },
-        { binding: 2, resource: sampler },
-      ],
-    });
+    inner.bindAtlas?.(atlasView);
   }
 
   function draw(
@@ -223,25 +117,11 @@ export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRen
     camPos: Readonly<[number, number, number]>,
     instances: ReadonlyArray<DiskInstance>,
   ): void {
-    if (!bindGroup) return; // atlas not yet bound — skip silently
     if (instances.length === 0) return;
 
-    // Pack uniforms — see UNIFORM_BYTES doc-comment for the layout.
-    const uni = new Float32Array(UNIFORM_BYTES / 4);
-    uni.set(viewProj as Float32Array, 0);
-    uni[16] = viewportPx[0];
-    uni[17] = viewportPx[1];
-    // uni[18], uni[19] are _pad0/_pad1 (left zero by Float32Array init).
-    uni[20] = camPos[0]; // camPos.x at byte offset 80
-    uni[21] = camPos[1];
-    uni[22] = camPos[2];
-    // uni[23] = _pad2 (left zero).
-    device.queue.writeBuffer(uniformBuffer, 0, uni);
-
-    // Pack instances.  Fresh allocation per frame — same approach as
-    // QuadRenderer; for the v1 cap of 256 instances this is 12 KB per
-    // frame, negligible.  Swap to a reusable scratch buffer if profiling
-    // later flags it.
+    // Pre-Spec-G this was a fresh-per-frame allocation; preserve
+    // that to keep the refactor mechanical. ~12 KB at the v1 cap
+    // of 256 instances.
     const data = new Float32Array(instances.length * FLOATS_PER_INSTANCE);
     for (let i = 0; i < instances.length; i++) {
       const ins = instances[i]!;
@@ -259,21 +139,19 @@ export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRen
       data[base + 10] = ins.fadeAlpha;
       data[base + 11] = 0;
     }
-    device.queue.writeBuffer(instanceBuffer, 0, data);
 
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, bindGroup);
-    pass.setVertexBuffer(0, instanceBuffer);
-    pass.draw(6, instances.length, 0, 0);
+    inner.draw({
+      pass,
+      viewProj: viewProj as Float32Array,
+      viewport: viewportPx,
+      instanceBytes: data,
+      instanceCount: instances.length,
+      camPosWorld: camPos,
+      // DiskRenderer's shader doesn't need pxPerRad — the disk
+      // geometry sizes itself in world space — so the trailing
+      // uniform slot is left as zero padding (default).
+    });
   }
 
-  function destroy(): void {
-    // Only the two GPUBuffers hold device-side memory.  Pipeline /
-    // bind-group / sampler are JS-side handles with no `.destroy()`
-    // method — GC reclaims them when the closure drops out of scope.
-    uniformBuffer.destroy();
-    instanceBuffer.destroy();
-  }
-
-  return { bindAtlas, draw, destroy };
+  return { bindAtlas, draw, destroy: inner.destroy };
 }
