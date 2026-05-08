@@ -48,19 +48,22 @@
  *   - `phases/startLoop.ts`    — RunFrameDeps assembly + first requestRender
  *   - `phases/bootstrap.ts`    — orchestrator + BootstrapDeps + Phase signature
  *
- * Hover state, selection state, the public handle, and the forward-declared
- * `frameRef` / `detachControlsRef` / `handleRef` boxes stay inline here
- * because they share closure with React-callback boundaries
- * (setHovered/setSelected) or are written by the bootstrap phases via the
- * `{current}` ref pattern (the bootstrap modules are siblings, not parents).
+ * Hover/select state lives in `state.subsystems.selection` (Spec D.3
+ * extracted the four inline helpers — `setHovered` / `setSelected` /
+ * `selectionEq` / `pointInfoForSelection` — into the closure-returning
+ * factory `selectionSubsystem.ts`).  The public handle and the
+ * forward-declared `frameRef` / `detachControlsRef` / `handleRef` boxes
+ * stay inline here because they're written by the bootstrap phases via
+ * the `{current}` ref pattern (the bootstrap modules are siblings, not
+ * parents).
  *
  * ### Usage
  *
  * ```ts
  * const handle = createEngine(canvas, {
  *   onStatusChange: (s) => setStatus(s),
- *   onHoverChange:  (p) => setHovered(p),
- *   onSelectChange: (p) => setSelected(p),
+ *   onHoverChange:  (p) => setReactHovered(p),
+ *   onSelectChange: (p) => setReactSelected(p),
  *   onScaleChange:  (sc) => setScale(sc),
  * });
  *
@@ -95,6 +98,7 @@ import { vec3 } from 'gl-matrix';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
+import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
 import { computeScaleInfo } from './helpers/scaleBar';
@@ -297,8 +301,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       tier: cb.initialTier ?? 'medium',
     },
     picking: {
-      hovered: null,
-      selected: null,
+      // hovered/selected used to live here — they moved to
+      // `state.subsystems.selection` in Spec D.3.  This bag now
+      // exclusively holds the per-frame pick-throttle state (see
+      // `EnginePickingState.d.ts` for the narrowed responsibility).
       latestMouseCss: null,
       lastPickedMouseCss: null,
       pickInFlight: false,
@@ -339,6 +345,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           state.subsystems.scheduler.requestRender();
         },
         onAxes: () => state.subsystems.scheduler.requestRender(),
+      }),
+
+      // ── Selection subsystem ──────────────────────────────────────
+      // Owns the user-facing hover / select state and fans out
+      // `cb.onHoverChange` / `cb.onSelectChange` only on actual
+      // change.  Constructed eagerly here (no GPU dep) so the public
+      // handle's `clearSelection` / `selectFamous` / `selectByAlias`
+      // can call into it from t=0 without a null-check.  Cloud +
+      // sidecar accessors are passed as closures (not snapshots) so
+      // the subsystem reads the LIVE map at call time — see the
+      // module header for why that matters across tier swaps and the
+      // pre-GPU-upload race window.
+      selection: createSelectionSubsystem({
+        cb,
+        getCloud: (s) => state.sources.clouds.get(s),
+        getFamousMeta: () => state.sources.famousMeta,
+        getFamousXrefs: () => state.sources.famousXrefs,
       }),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
@@ -400,36 +423,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
   };
 
-  /**
-   * Build a PointInfo for a (source, localIdx) selection, or null if
-   * the source's cloud isn't loaded or `localIdx >= cloud.count`.
-   *
-   * The bounds check defends the tier-swap-window race where a
-   * still-in-flight pick from a previous frame returns a (source,
-   * localIdx) decoded against an older, larger layout — without it,
-   * `buildPointInfo` would index past the end of the freshly-uploaded
-   * smaller cloud's typed arrays and crash downstream `.toFixed()`
-   * calls in the InfoCard.  Returning null here is the right
-   * semantics: "we don't have data for that pick; render no card,
-   * the next frame's pick will succeed".
-   *
-   * Replaces the prior `pointInfoFromGlobal` decoder — the picker's
-   * r32uint readback now hands back `{source, localIdx}` directly, so
-   * no cross-survey running-sum decode is needed.
-   */
-  function pointInfoForSelection(sel: { source: Source; localIdx: number }) {
-    const c = state.sources.clouds.get(sel.source);
-    if (!c) return null;
-    if (sel.localIdx < 0 || sel.localIdx >= c.count) return null;
-    return buildPointInfo(
-      c,
-      sel.localIdx,
-      sel.source,
-      state.sources.famousMeta,
-      state.sources.famousXrefs,
-    );
-  }
-
   // ── Cleanup function returned by `attachOrbitControls` ─────────────────
   // Orbit-controls attachment lives outside `inputBindings` because it
   // needs a fully-constructed OrbitCamera which doesn't exist at
@@ -461,63 +454,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function cssToTexPx(cssPx: number): number {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     return cssPx * dpr;
-  }
-
-  // ── Hover / selection state helpers ─────────────────────────────────────
-
-  /**
-   * Are these two selections value-equal?  Both null → equal; both
-   * non-null with matching `(source, localIdx)` → equal; otherwise
-   * different.  Used by setHovered/setSelected to short-circuit the
-   * React notification when nothing actually changed.
-   */
-  function selectionEq(
-    a: { source: Source; localIdx: number } | null,
-    b: { source: Source; localIdx: number } | null,
-  ): boolean {
-    if (a === null && b === null) return true;
-    if (a === null || b === null) return false;
-    return a.source === b.source && a.localIdx === b.localIdx;
-  }
-
-  /**
-   * Notify the UI if the hovered point changed.
-   *
-   * We compare old vs. new selection before firing to avoid triggering
-   * a React re-render on every frame when nothing changed.
-   */
-  function setHovered(sel: { source: Source; localIdx: number } | null): void {
-    if (selectionEq(sel, state.picking.hovered)) return;
-    state.picking.hovered = sel;
-    cb.onHoverChange(sel !== null ? pointInfoForSelection(sel) : null);
-  }
-
-  /**
-   * Update the live selection.
-   *
-   * The optional `prebuiltInfo` parameter is for callers that already
-   * hold the `PointInfo` for this selection — typically `selectByAlias`,
-   * which builds the info from the data-side cloud store BEFORE the
-   * GPU upload has settled.  In that window the renderer's
-   * `loadedSources()` doesn't yet include the source, but the
-   * data-side `state.sources.clouds` does.  Passing the prebuilt info
-   * bypasses that race so the React-side selection updates correctly
-   * while the GPU is still settling — the halo will appear once the
-   * upload completes a frame or two later.
-   */
-  function setSelected(
-    sel: { source: Source; localIdx: number } | null,
-    prebuiltInfo?: PointInfo | null,
-  ): void {
-    if (selectionEq(sel, state.picking.selected)) return;
-    state.picking.selected = sel;
-    const info =
-      prebuiltInfo !== undefined
-        ? prebuiltInfo
-        : sel !== null
-          ? pointInfoForSelection(sel)
-          : null;
-    cb.onSelectChange(info);
   }
 
   // ── Scale bar computation ────────────────────────────────────────────────
@@ -574,8 +510,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // captured from createEngine's outer scope flows through this bag —
   // the canvas + cb args, the `{current}` ref boxes for forward-declared
   // bindings (frameRef, detachControlsRef, handleRef), the createEngine-
-  // scope helpers (cssToTexPx, setHovered, setSelected, updateScaleBar),
-  // and the values needed for `RunFrameDeps` assembly in `startLoop`
+  // scope helpers (cssToTexPx, updateScaleBar), and the values needed
+  // for `RunFrameDeps` assembly in `startLoop`
   // (fpsCounter, lastReportedFps, milkyWayITimeEpochMs, allSlots).
   //
   // `handleRef.current` is null at this point — the public handle is
@@ -595,8 +531,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     lastReportedFps,
     milkyWayITimeEpochMs,
     cssToTexPx,
-    setHovered,
-    setSelected,
     updateScaleBar,
   };
   // The main async IIFE runs the bootstrap phases.  All errors are
@@ -622,8 +556,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     clearSelection() {
       // Only fire the callback when something was actually selected.
       // This lets the Esc handler in App.tsx call this unconditionally.
-      if (state.picking.selected !== null) {
-        setSelected(null);
+      if (state.subsystems.selection.selected() !== null) {
+        state.subsystems.selection.setSelected(null);
         // Clearing the pin also clears the camera-focus target — Esc /
         // close ✕ are explicit "I'm done with this galaxy" signals.
         cb.onFocusChange?.(null);
@@ -837,10 +771,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (!info) return;
 
       // Selection state is keyed by `(source, localIdx)` pair — see
-      // `state.picking.selected` and `pickRenderer.pick`.  No more
-      // global-index encoding: the picker compares packed identities
-      // directly, so the engine forwards the same shape.
-      setSelected({ source: Source.Famous, localIdx });
+      // `state.subsystems.selection.selected()` and `pickRenderer.pick`.
+      // No more global-index encoding: the picker compares packed
+      // identities directly, so the engine forwards the same shape.
+      state.subsystems.selection.setSelected({ source: Source.Famous, localIdx });
       // selectFamous is a deliberate user focus action (palette pick),
       // so the camera-focus target moves to this galaxy too.
       cb.onFocusChange?.(info);
@@ -915,7 +849,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // appear once the upload completes a frame or two later.
       // Passing the prebuilt `info` to `setSelected` ensures the
       // React side updates immediately regardless.
-      setSelected({ source, localIdx }, info);
+      state.subsystems.selection.setSelected({ source, localIdx }, info);
       // selectByAlias is a deliberate user focus action (palette pick
       // OR deep-link resolve), so the camera-focus target moves with
       // the selection.

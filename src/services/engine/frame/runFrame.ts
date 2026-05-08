@@ -45,11 +45,14 @@
  * would widen `EngineState`'s contract for one consumer's convenience,
  * and every other reader of `EngineState` would have to null-check
  * fields it never touches.  Second, the createEngine-scope helpers
- * (`updateScaleBar`, `setHovered`, `cssToTexPx`) close over locals like
- * `lastScaleSig`, `selectionEq`, and `pointInfoForSelection` that are
- * inherently per-engine-instance and don't belong in `EngineState`'s
- * data-shape role either.  Threading them through deps preserves the
- * existing closure structure without forcing a state-bag rewrite.
+ * (`updateScaleBar`, `cssToTexPx`) close over locals like
+ * `lastScaleSig` that are inherently per-engine-instance and don't
+ * belong in `EngineState`'s data-shape role either.  Threading them
+ * through deps preserves the existing closure structure without
+ * forcing a state-bag rewrite.  (Hover writes used to live here too,
+ * threaded as `setHovered`; Spec D.3 moved them to
+ * `state.subsystems.selection.setHovered` so the frame body now reads
+ * directly off `state` instead of carrying its own selection callback.)
  *
  * ### The `{current}` ref pattern for mutable closure values
  *
@@ -72,7 +75,6 @@
  */
 
 import type { EngineCallbacks, EngineState } from '../../../@types';
-import type { Source } from '../../../data/sources';
 import type { QuadRenderer } from '../../gpu/renderers/quadRenderer';
 import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';
 import type { MilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
@@ -131,12 +133,6 @@ export type RunFrameDeps = {
   milkyWayITimeEpochMs: number;
   /** CSS-pixel → texture-space-pixel conversion (DPR-aware). */
   cssToTexPx: (cssPx: number) => number;
-  /**
-   * Notify the UI that the hovered point changed.  Closes over
-   * `state.picking.hovered`, `cb.onHoverChange`, and the
-   * pointInfoForSelection helper inside createEngine.
-   */
-  setHovered: (sel: { source: Source; localIdx: number } | null) => void;
   /**
    * Refresh the scale-bar legend.  Internally dedups via a closure-
    * captured `lastScaleSig` so an unchanged label costs ~zero per
@@ -322,7 +318,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     settings: {
       pointSizePx: state.settings.pointSizePx,
       brightness: state.settings.brightness,
-      selected: state.picking.selected,
+      selected: state.subsystems.selection.selected(),
       visibleSourceMask: state.sources.visibleMask,
       highlightFallback: state.settings.highlightFallback,
       realOnlyMode: state.settings.realOnlyMode,
@@ -413,7 +409,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         state.settings.pointSizePx,
       )
       .then((sel) => {
-        deps.setHovered(sel);
+        state.subsystems.selection.setHovered(sel);
         // No scheduler.requestRender() here intentionally.
         // The hover state only feeds the React InfoCard text —
         // there is no hover halo in the rendered scene today,

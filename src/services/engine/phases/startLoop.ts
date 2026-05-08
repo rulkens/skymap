@@ -9,9 +9,11 @@
  *     capture the frame body needs: `canvas`, `cb`, `fpsCounter`,
  *     `lastReportedFps` (a `{current}` ref), the GPU device + context
  *     + every renderer (from `phaseLocals`), the Milky-Way iTime epoch,
- *     and the createEngine-scope helpers (`cssToTexPx`, `setHovered`,
+ *     and the createEngine-scope helpers (`cssToTexPx`,
  *     `updateScaleBar`).  See `runFrame.ts`'s module header for the
- *     dep-vs-state rationale.
+ *     dep-vs-state rationale.  Hover/select callbacks fan out from
+ *     `state.subsystems.selection` rather than being threaded through
+ *     deps (Spec D.3).
  *   - Replaces the no-op `frameRef.current` stub with the real frame
  *     body — a one-line closure that calls `runFrame(state, frameDeps,
  *     performance.now())`.  The scheduler in
@@ -82,7 +84,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // last phase where every closure-captured local is in scope.  The bag
   // is stable across frames: `lastReportedFps` rides as a `{current}`
   // ref so the body's writes round-trip back into engine.ts; the
-  // helpers (`updateScaleBar`, `setHovered`, `cssToTexPx`) close over
+  // helpers (`updateScaleBar`, `cssToTexPx`) close over
   // their own dedup state inside createEngine and get passed by
   // reference; and the GPU-side renderers (`milkyWayRenderer`,
   // `quadRenderer`, …) are the IIFE locals returned from `initGpu` /
@@ -101,7 +103,6 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     diskRenderer: phaseLocals.diskRenderer,
     milkyWayITimeEpochMs: deps.milkyWayITimeEpochMs,
     cssToTexPx: deps.cssToTexPx,
-    setHovered: deps.setHovered,
     updateScaleBar: deps.updateScaleBar,
   };
 

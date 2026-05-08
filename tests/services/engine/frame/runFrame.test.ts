@@ -64,8 +64,6 @@ function makeState(): EngineState {
       tier: 'medium',
     },
     picking: {
-      hovered: null,
-      selected: null,
       latestMouseCss: null,
       lastPickedMouseCss: null,
       pickInFlight: false,
@@ -81,6 +79,18 @@ function makeState(): EngineState {
       tweens: { advance: vi.fn(), isActive: () => false },
       spaceMouse: { applyToCamera: vi.fn(), hasAxes: () => false },
       scheduler: { requestRender: vi.fn() },
+      // Minimal selection-subsystem stub.  The runFrame body reads
+      // `selected()` for the renderFrame settings bag; the renderer-null
+      // guard short-circuits before that read fires in this fixture, but
+      // we provide the stub so the EngineState type is satisfied.
+      selection: {
+        hovered: () => null,
+        selected: () => null,
+        setHovered: vi.fn(),
+        setSelected: vi.fn(),
+        pointInfoFor: () => null,
+        destroy: vi.fn(),
+      },
       thumbnails: null,
       clickResolver: null,
       inputBindings: null,
@@ -125,7 +135,6 @@ function makeDeps(opts: {
     diskRenderer: {} as unknown as RunFrameDeps['diskRenderer'],
     milkyWayITimeEpochMs: 0,
     cssToTexPx: (cssPx: number) => cssPx,
-    setHovered: vi.fn(),
     updateScaleBar: vi.fn(),
   };
 }
