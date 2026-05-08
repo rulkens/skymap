@@ -542,3 +542,136 @@ describe('PointRenderer.setBiasMode', () => {
     }
   });
 });
+
+// ─── Splice surface (Spec E phase E.1) ───────────────────────────────────────
+//
+// Three new public methods carry the layout-aware splice contract that the
+// future biasCorrectionSubsystem (Spec E phase E.3) will call into.  In
+// E.1 they're dead code from the public surface's POV — no caller invokes
+// them yet — but the tests below assert their byte-write semantics so the
+// surface is verified before the subsystem depends on it.
+
+/**
+ * Build a stub device whose `queue.writeBuffer` calls are captured into the
+ * supplied array.  Otherwise identical to `makeStubDevice()` — same
+ * createShaderModule / createRenderPipeline / createBuffer surface.
+ */
+function makeCapturingDevice(
+  writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[],
+): GPUDevice {
+  const device = makeStubDevice();
+  (
+    device.queue as unknown as {
+      writeBuffer: (b: GPUBuffer, o: number, d: ArrayBufferView) => void;
+    }
+  ).writeBuffer = (buffer, offset, data) => {
+    writeCalls.push({ buffer, offset, data });
+  };
+  return device;
+}
+
+describe('PointRenderer.spliceSchechterRatios', () => {
+  it('writes ratios[i] into slot 10 of row i of the interleaved mirror', async () => {
+    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
+    const device = makeCapturingDevice(writeCalls);
+    const renderer = new PointRenderer(device, 'rgba16float');
+    await renderer.upload(Source.SDSS, makeCloud(3));
+
+    const ratios = new Float32Array([0.25, 0.5, 0.75]);
+    renderer.spliceSchechterRatios(Source.SDSS, ratios);
+
+    // The most-recent writeBuffer call carries the spliced mirror.
+    const last = writeCalls[writeCalls.length - 1]!;
+    const view = last.data as Float32Array;
+    const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
+    // SLOTS_PER_POINT = 12; slot 10 = SCHECHTER_RATIO_BYTE_OFFSET / 4 = 10.
+    expect(f32[0 * 12 + 10]).toBeCloseTo(0.25);
+    expect(f32[1 * 12 + 10]).toBeCloseTo(0.5);
+    expect(f32[2 * 12 + 10]).toBeCloseTo(0.75);
+  });
+
+  it('throws when ratios.length !== source count', async () => {
+    const renderer = new PointRenderer(makeStubDevice(), 'rgba16float');
+    await renderer.upload(Source.SDSS, makeCloud(5));
+    expect(() => renderer.spliceSchechterRatios(Source.SDSS, new Float32Array(4))).toThrow(
+      /length/i,
+    );
+  });
+
+  it('is a no-op when the source is not loaded', () => {
+    const renderer = new PointRenderer(makeStubDevice(), 'rgba16float');
+    // Should not throw — subsystem may call this for a stale source mid-bake.
+    expect(() =>
+      renderer.spliceSchechterRatios(Source.Glade, new Float32Array(0)),
+    ).not.toThrow();
+  });
+});
+
+describe('PointRenderer.spliceAngularWeights', () => {
+  it('writes weights[i] into slot 11 of row i', async () => {
+    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
+    const device = makeCapturingDevice(writeCalls);
+    const renderer = new PointRenderer(device, 'rgba16float');
+    await renderer.upload(Source.SDSS, makeCloud(2));
+
+    const weights = new Float32Array([0.1, 0.9]);
+    renderer.spliceAngularWeights(Source.SDSS, weights);
+
+    const last = writeCalls[writeCalls.length - 1]!;
+    const view = last.data as Float32Array;
+    const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
+    // slot 11 = ANGULAR_WEIGHT_BYTE_OFFSET / 4 = 11.
+    expect(f32[0 * 12 + 11]).toBeCloseTo(0.1);
+    expect(f32[1 * 12 + 11]).toBeCloseTo(0.9);
+  });
+
+  it('throws when weights.length !== source count', async () => {
+    const renderer = new PointRenderer(makeStubDevice(), 'rgba16float');
+    await renderer.upload(Source.SDSS, makeCloud(5));
+    expect(() => renderer.spliceAngularWeights(Source.SDSS, new Float32Array(6))).toThrow(
+      /length/i,
+    );
+  });
+});
+
+describe('PointRenderer.clearBiasOverlays', () => {
+  it('zeroes slots 10 and 11 for the named source', async () => {
+    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
+    const device = makeCapturingDevice(writeCalls);
+    const renderer = new PointRenderer(device, 'rgba16float');
+    await renderer.upload(Source.SDSS, makeCloud(2));
+
+    // Populate slots 10/11 first so we can assert clear actually clears.
+    renderer.spliceSchechterRatios(Source.SDSS, new Float32Array([0.5, 0.6]));
+    renderer.spliceAngularWeights(Source.SDSS, new Float32Array([0.7, 0.8]));
+
+    writeCalls.length = 0; // reset capture
+    renderer.clearBiasOverlays(Source.SDSS);
+
+    const last = writeCalls[writeCalls.length - 1]!;
+    const view = last.data as Float32Array;
+    const f32 = new Float32Array(view.buffer, view.byteOffset, view.length);
+    expect(f32[0 * 12 + 10]).toBe(0);
+    expect(f32[0 * 12 + 11]).toBe(0);
+    expect(f32[1 * 12 + 10]).toBe(0);
+    expect(f32[1 * 12 + 11]).toBe(0);
+  });
+
+  it('zeroes for every loaded source when called with no argument', async () => {
+    const writeCalls: { buffer: GPUBuffer; offset: number; data: ArrayBufferView }[] = [];
+    const device = makeCapturingDevice(writeCalls);
+    const renderer = new PointRenderer(device, 'rgba16float');
+    await renderer.upload(Source.SDSS, makeCloud(1));
+    await renderer.upload(Source.Glade, makeCloud(1));
+
+    const before = writeCalls.length;
+    renderer.clearBiasOverlays();
+    // One writeBuffer per loaded source.
+    expect(writeCalls.length - before).toBe(2);
+  });
+
+  it('is a no-op when no sources are loaded', () => {
+    const renderer = new PointRenderer(makeStubDevice(), 'rgba16float');
+    expect(() => renderer.clearBiasOverlays()).not.toThrow();
+  });
+});

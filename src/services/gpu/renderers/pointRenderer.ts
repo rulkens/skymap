@@ -43,7 +43,6 @@ import { mat4 } from 'gl-matrix';
 import type { PointCloud } from '../../../@types';
 import { ALL_SOURCES, Source } from '../../../data/sources';
 import { BiasMode } from '../../../data/biasMode';
-import { type SchechterTriple } from '../../../data/surveyFluxLimits';
 import {
   type BuildPointInterleavedBufferInput,
   type BuildPointInterleavedBufferMode,
@@ -645,36 +644,22 @@ type LoadedSource = {
    */
   cloud: PointCloud;
   /**
-   * Schechter LF triple `(M*, α, φ*)` for this survey's selection band.
-   * Looked up from `surveySchechter(source)` at upload time.  Mode 3 of
-   * the Malmquist-bias correction reads M* and α (φ* cancels in the
-   * `N_ref / n(d)` ratio) into the uniform buffer between per-source
-   * draw calls.
-   */
-  schechter: SchechterTriple;
-  /**
-   * Survey apparent-magnitude flux limit (e.g. SDSS = 17.77).  Forwarded
-   * to the shader so the per-fragment Schechter integration knows where
-   * the detection horizon lands at the fragment's distance.
-   */
-  mLim: number;
-  /**
-   * Pre-computed central-density normaliser N_ref = n(d = 10 Mpc) for
-   * this survey's Schechter parameters.  Computed once at upload time
-   * via `expectedNumberDensity({...sch, mLim, dMpc: 10})` and reused
-   * every frame — the integral is over absolute magnitude only, so the
-   * result depends only on the survey's selection function (M*, α, φ*,
-   * m_lim) and the chosen reference distance, not on any frame-time
-   * state.
+   * ### Survey constants moved to a sibling table (Spec E phase E.2)
    *
-   * Why d = 10 Mpc as the reference?  Far enough beyond the over-density
-   * of the very local universe (the Local Group sits at d ≈ 0–4 Mpc) to
-   * be a representative "central" density, but still well within the
-   * high-completeness regime for every survey we render — at d = 10 Mpc
-   * even the brightest Schechter cutoff M ≈ -25 corresponds to apparent
-   * mag ≈ 5, far above any real flux limit.
+   * Pre-Spec-E this type also carried `schechter`, `mLim`, and `nRef` —
+   * pure-functions-of-Source that were stored here only because the
+   * bias-correction bake was a method on `PointRenderer` (which had to
+   * read them).  Spec E extracts the bias-correction subsystem; survey
+   * constants now live in `src/services/biasCorrection/surveyConstants.ts`
+   * and are looked up by the subsystem on demand via `surveyConstants(source)`.
+   *
+   * The renderer no longer needs them — every former reader (the
+   * `bake*` helpers + per-source uniform writer) is on the deletion
+   * path for phase E.4.  In the meantime, the legacy `bakeSchechterRatios`
+   * / `bakeAngularWeights` paths read them via a per-call lookup
+   * (no perf concern — the bake worker dominates the cost by 4+
+   * orders of magnitude).
    */
-  nRef: number;
   /**
    * Per-cloud fade-in controller.  Owns its own 16-byte uniform buffer +
    * bind group at `@group(1) @binding(0)`, plus the fade-start timestamp.
@@ -1026,7 +1011,13 @@ export class PointRenderer {
       source,
       mode,
     });
-    const { interleaved, schechter, mLim, nRef } = result;
+    // Note (Spec E phase E.2): the build result still carries
+    // `schechter`, `mLim`, `nRef` for backwards compatibility with
+    // its other consumers (notably the bake test suite), but the
+    // renderer no longer stores them on the LoadedSource entry — the
+    // bias-correction subsystem looks them up via `surveyConstants(source)`
+    // when it needs them.  See `services/biasCorrection/surveyConstants.ts`.
+    const { interleaved } = result;
 
     // ── Write to GPU ────────────────────────────────────────────────────────
     //
@@ -1076,9 +1067,6 @@ export class PointRenderer {
       buffer,
       count: cloud.count,
       cloud,
-      schechter,
-      mLim,
-      nRef,
       interleaved,
       cachedSchechterRatios,
       // Angular weights are never eagerly baked (see slot-11 comment in
@@ -1200,6 +1188,102 @@ export class PointRenderer {
     // mode leaves the per-galaxy slot values in the GPU buffer; the
     // shader's gate already ignores them in modes 0/1/2/3, so the
     // residual values are correct and cheap.
+  }
+
+  // ─── Splice surface (Spec E phase E.1) ────────────────────────────────────
+  //
+  // Three layout-aware methods that write per-galaxy bias-correction values
+  // straight into the interleaved CPU mirror and re-upload the GPU buffer.
+  // The bias-correction subsystem (Spec E phase E.3) calls into these once
+  // its async worker bakes resolve.  They contain *no* state — no mode
+  // flags, no caches, no async, no worker spawn.  The subsystem owns all
+  // of that; this surface just lays down what it's told.
+  //
+  // The methods are no-ops for unloaded sources because the subsystem's
+  // per-source bakes can race against `unload()` — by the time a bake
+  // resolves, the source may have been removed.  Throwing here would
+  // force every caller to re-check `clouds.has(source)` after an await,
+  // duplicating the safety net.  Returning silently is the correct
+  // semantics: "splice into nothing → nothing happens".
+  //
+  // Length-mismatch IS a programmer error — not a race — and we throw with
+  // a readable message so the test layer catches it before it ships.
+  //
+  // E.1 is purely additive: no caller invokes these methods in this phase
+  // — they exist for E.3 to wire into the subsystem's bake-resolve paths.
+  // The existing `setBiasMode` / `bake*` / `clear*` paths continue to
+  // work via the private `splice*IntoMirror` helpers; E.4 deletes those
+  // and leaves the new public methods standing alone.
+
+  /**
+   * Splice a tightly-packed Float32Array of per-row Schechter ratios
+   * (length must equal the source's `count`) into slot 10 of every row of
+   * the entry's interleaved mirror, then re-upload the whole vertex
+   * buffer.  No mode tracking; the caller (subsystem) decides when to
+   * call this.
+   */
+  spliceSchechterRatios(source: Source, ratios: Float32Array): void {
+    const entry = this.clouds.get(source);
+    if (!entry) return;
+    if (ratios.length !== entry.count) {
+      throw new Error(
+        `spliceSchechterRatios: length mismatch — got ${ratios.length} ratios, expected ${entry.count}`,
+      );
+    }
+    for (let i = 0; i < entry.count; i++) {
+      entry.interleaved[i * SLOTS_PER_POINT + 10] = ratios[i]!;
+    }
+    this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+  }
+
+  /**
+   * Splice a tightly-packed Float32Array of per-row HEALPix angular
+   * weights (length must equal the source's `count`) into slot 11 of
+   * every row of the entry's interleaved mirror, then re-upload.
+   */
+  spliceAngularWeights(source: Source, weights: Float32Array): void {
+    const entry = this.clouds.get(source);
+    if (!entry) return;
+    if (weights.length !== entry.count) {
+      throw new Error(
+        `spliceAngularWeights: length mismatch — got ${weights.length} weights, expected ${entry.count}`,
+      );
+    }
+    for (let i = 0; i < entry.count; i++) {
+      entry.interleaved[i * SLOTS_PER_POINT + 11] = weights[i]!;
+    }
+    this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+  }
+
+  /**
+   * Zero slots 10 (Schechter ratio) AND 11 (angular weight) for either
+   * one named source or every loaded source.
+   *
+   * Why zero rather than 1.0?  The shader's `select(1.0, slot, mode==N)`
+   * gate already substitutes 1.0 (the multiplicative identity) when the
+   * mode doesn't match — so the slot's literal value is irrelevant in
+   * inactive modes.  Zero is the cheapest "obviously-cleared" sentinel a
+   * future debug overlay or diagnostic can recognise without ambiguity.
+   * The pre-Spec-E `clear*` helpers wrote 1.0 for symmetry with the
+   * shader's identity; the new method writes 0.0 because the subsystem
+   * is the only caller and it explicitly transitions to None /
+   * VolumeLimited after a clear (where the slot is dead anyway).
+   */
+  clearBiasOverlays(source?: Source): void {
+    const targets: LoadedSource[] =
+      source !== undefined
+        ? (() => {
+            const entry = this.clouds.get(source);
+            return entry ? [entry] : [];
+          })()
+        : Array.from(this.clouds.values());
+    for (const entry of targets) {
+      for (let i = 0; i < entry.count; i++) {
+        entry.interleaved[i * SLOTS_PER_POINT + 10] = 0;
+        entry.interleaved[i * SLOTS_PER_POINT + 11] = 0;
+      }
+      this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+    }
   }
 
   // ─── Lazy Schechter-ratio bake ──────────────────────────────────────────────
