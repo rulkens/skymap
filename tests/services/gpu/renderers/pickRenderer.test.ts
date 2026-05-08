@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeAll, vi } from 'vitest';
 import { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
-import { PointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
+import { createPointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
 import { Source } from '../../../../src/data/sources';
 
 beforeAll(() => {
@@ -64,7 +64,7 @@ function makeStubDevice(): GPUDevice {
 describe('createPickRenderer', () => {
   it('takes a PointRenderer at construction (no per-call uniformBuffer arg)', () => {
     const device = makeStubDevice();
-    const pointRenderer = new PointRenderer(device, 'rgba16float');
+    const pointRenderer = createPointRenderer(device, 'rgba16float');
     const pickRenderer = createPickRenderer(device, pointRenderer);
 
     // The compile-time test is the strongest one: this file would fail
@@ -166,7 +166,7 @@ describe('createPickRenderer', () => {
     } as unknown as GPUDevice;
 
     // PointRenderer first → pipeline index 0; PickRenderer → index 1.
-    const pointRenderer = new PointRenderer(device, 'rgba16float');
+    const pointRenderer = createPointRenderer(device, 'rgba16float');
     const pickRenderer = createPickRenderer(device, pointRenderer);
 
     expect(layoutsByPipeline).toHaveLength(2);

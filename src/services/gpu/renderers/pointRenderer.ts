@@ -563,202 +563,260 @@ type LoadedSource = {
 
 // ─── PointRenderer ────────────────────────────────────────────────────────────
 
-export class PointRenderer {
-  /** The compiled and linked render pipeline (vertex + fragment stages). */
-  private pipeline: GPURenderPipeline;
-
+/**
+ * Public surface of the point renderer.
+ *
+ * Mirrors the methods the pre-Spec-F.3 `class PointRenderer` exposed.
+ * The only structural change is that the `uniformBuffer` getter
+ * collapses to a bare property because the captured buffer is never
+ * reassigned over the renderer's lifetime, and `loadedSources` is a
+ * function returning a fresh generator on each call (preserving the
+ * pre-factory call shape `r.loadedSources()`).
+ *
+ * Consumers (engine, frame body, picker, bias-correction subsystem)
+ * see the identical shape; the only call-site change is
+ * `new PointRenderer(...)` → `createPointRenderer(...)`.
+ */
+export type PointRenderer = {
   /**
-   * GPU-side uniform buffer holding the per-frame constants.
-   *
-   * Allocated once in the constructor with `UNIFORM | COPY_DST`:
-   *   - `UNIFORM` means the shader can read it via `var<uniform>`.
-   *   - `COPY_DST` means we can write into it with `device.queue.writeBuffer`.
+   * Pack a `PointCloud` into an interleaved GPU vertex buffer for the
+   * given source.  Replaces any previous buffer for that source.  See
+   * the factory body for the off-thread bake / race-condition rationale.
    */
-  private uniformBuffer_internal: GPUBuffer;
-
+  upload(source: Source, cloud: PointCloud): Promise<void>;
   /**
-   * The bind group that wires the uniform buffer into `@group(0) @binding(0)`.
-   *
-   * Bind groups are immutable after creation — the buffer reference is baked
-   * in. We create one here and reuse it every frame.
+   * Remove a source's GPU vertex buffer and reclaim its VRAM.  No-op
+   * if the source was never uploaded.
    */
-  private bindGroup: GPUBindGroup;
-
-  /**
-   * One GPU vertex buffer per loaded survey.
-   *
-   * The map is keyed by `Source` (a numeric enum) and contains exactly the
-   * surveys currently present on the GPU. `upload` adds or replaces an entry,
-   * `unload` removes one.  No global running-sum bookkeeping anymore — each
-   * source's pick identity comes from its CloudFade's per-source sourceCode
-   * uniform, set once at upload.
-   *
-   * Why a `Map` (not a plain object)? `Map` preserves insertion order, has a
-   * straightforward `delete`/`has` API, and avoids the prototype-chain
-   * ambiguity of indexing a numeric-keyed object literal.
-   */
-  private readonly clouds = new Map<Source, LoadedSource>();
-
-  /**
-   * Optional callback fired at the tail of `upload(source, cloud)` once
-   * the GPU buffer is committed.  The bias-correction subsystem (Spec E
-   * phase E.3 + E.4) installs this so it can fire a per-source bake when
-   * a new source arrives mid-mode.  The renderer doesn't reach into
-   * engine state to find the subsystem; the subsystem reaches in via
-   * `attachRenderer(...)` and installs the callback.  Uni-directional
-   * coupling — the renderer doesn't know what the callback does.
-   *
-   * Null when no subsystem is attached (e.g. tests, or the brief
-   * pre-attach window during bootstrap).  No-op in that case.
-   */
-  private biasUploadCallback: ((source: Source, cloud: PointCloud) => void) | null = null;
-
-  /**
-   * Optional callback fired at the tail of `unload(source)` after the
-   * source has been removed from `clouds`.  Mirror of
-   * `biasUploadCallback`.  Lets the bias-correction subsystem drop
-   * cached ratios/weights for the gone source without polling.
-   */
-  private biasUnloadCallback: ((source: Source) => void) | null = null;
-
+  unload(source: Source): void;
   /**
    * Install the upload-tail callback used by the bias-correction
-   * subsystem.  Pass `null` to detach.  Idempotent: calling twice
-   * replaces the previous callback.
+   * subsystem.  Pass `null` to detach.  Idempotent.
    */
-  setBiasUploadCallback(cb: ((source: Source, cloud: PointCloud) => void) | null): void {
-    this.biasUploadCallback = cb;
-  }
-
+  setBiasUploadCallback(cb: ((source: Source, cloud: PointCloud) => void) | null): void;
   /** Install the unload-tail callback for the bias-correction subsystem. */
-  setBiasUnloadCallback(cb: ((source: Source) => void) | null): void {
-    this.biasUnloadCallback = cb;
-  }
-
-  // ─── Public accessors ────────────────────────────────────────────────────────
-
+  setBiasUnloadCallback(cb: ((source: Source) => void) | null): void;
+  /** Splice per-row Schechter ratios into slot 10 of the source's interleaved mirror. */
+  spliceSchechterRatios(source: Source, ratios: Float32Array): void;
+  /** Splice per-row HEALPix angular weights into slot 11. */
+  spliceAngularWeights(source: Source, weights: Float32Array): void;
+  /** Zero slots 10 + 11 for one source or every loaded source. */
+  clearBiasOverlays(source?: Source): void;
+  /** Total number of points across every loaded source. */
+  totalCount(): number;
+  /** Per-source point count, or 0 when the source isn't loaded. */
+  countOf(source: Source): number;
+  /**
+   * Iterate over every loaded source's GPU buffer in `Source` enum order.
+   * The iterable is generated fresh on each call.
+   */
+  loadedSources(): IterableIterator<{
+    source: Source;
+    vertexBuffer: GPUBuffer;
+    count: number;
+    cloudFadeBuffer: GPUBuffer;
+  }>;
   /**
    * @internal
    *
-   * Read by `createPickRenderer` — the pick pass shares this uniform buffer
-   * with the visual pass so it sees the same view-projection matrix the
-   * visual frame just wrote.  Engine code MUST NOT consume this; the
-   * coupling is bound at PickRenderer construction time and threaded
-   * internally.
+   * Read by `createPickRenderer` — the pick pass shares this uniform
+   * buffer with the visual pass so it sees the same view-projection
+   * matrix the visual frame just wrote.  Engine code MUST NOT consume
+   * this; the coupling is bound at PickRenderer construction time and
+   * threaded internally.
    *
-   * Kept as a public getter for the ESM module-graph reach — TypeScript
-   * does not enforce `@internal` at compile time without
-   * `--stripInternal` configured, but the documented contract + a grep
-   * at PR review time prevents engine consumers from re-introducing
-   * the leak.
+   * Pre-Spec-F.3 this was a getter on the class; here it's a bare
+   * property because the closure-captured buffer is never reassigned.
+   * The semantics are observationally identical from the consumer
+   * side — `pointRenderer.uniformBuffer` returns the same GPUBuffer.
    */
-  get uniformBuffer(): GPUBuffer {
-    return this.uniformBuffer_internal;
+  uniformBuffer: GPUBuffer;
+  /** Issue one instanced draw call per visible source. */
+  draw(
+    pass: GPURenderPassEncoder,
+    viewProj: mat4,
+    viewportPx: [number, number],
+    pointSizePx: number,
+    brightness: number,
+    selectedPacked: number,
+    visibleSourceMask: number,
+    camPosWorld: Readonly<[number, number, number]>,
+    pxPerRad: number,
+    highlightFallback: boolean,
+    realOnlyMode: boolean,
+    biasMode: number,
+    absMagLimit: number,
+    apparentMagLimit: number,
+    schechterMStar: number,
+    schechterAlpha: number,
+    depthFadeEnabled: boolean,
+    pxFadeStart: number,
+    pxFadeEnd: number,
+  ): void;
+  /** Whether any loaded source is still ramping up its fade-in opacity. */
+  isFading(): boolean;
+  /** Release every GPU resource this renderer owns. */
+  destroy(): void;
+};
+
+/**
+ * Build the render pipeline, allocate the uniform buffer, and create
+ * the bind group.  Returns a `PointRenderer` whose public methods
+ * match the pre-Spec-F.3 class form byte-for-byte.
+ *
+ * ### Factory shape (Spec F.3)
+ *
+ * Pre-Spec-F.3 this shipped as `class PointRenderer`.  The conversion
+ * follows the same pattern as F.1's stateless drawers and F.2's
+ * filamentRenderer, matching the already-factory `createPickRenderer`
+ * and every Spec D subsystem extraction (`createSelectionSubsystem`,
+ * `createTweenManager`, `createRenderScheduler`, …).  Private fields
+ * become closure-captured `const`/`let`, private methods become
+ * closure-scoped functions, and the public method surface is exposed
+ * inline on the returned object.  PR #66's `destroy()` body ports
+ * verbatim.
+ *
+ * @param device  The WebGPU logical device. Owned by the caller.
+ * @param format  The swap-chain texture format (e.g. `'bgra8unorm'`).
+ */
+export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat): PointRenderer {
+  // ── Pipeline + uniform buffer + global bind group ─────────────────
+  //
+  // Built once in this prologue and held in closure scope.  The
+  // identities never change — `pipeline`, `bindGroup`, and
+  // `uniformBuffer` are `const` because nothing in the renderer's
+  // lifetime reassigns them.  The mutability lives in the per-source
+  // `clouds` Map and the two bias-correction callbacks below.
+  // Two modules — one per stage — built from disjoint sources. The
+  // vertex source is shared (textually) with PickRenderer, but each
+  // renderer compiles its OWN GPUShaderModule from it; sharing modules
+  // across pipelines tempts you into the WebGPU 'auto' bind-group-layout
+  // trap (auto-derived layouts are pipeline-specific identities and
+  // sharing them across pipelines fails the 'group-equivalent'
+  // compatibility check at draw time).
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'points.vertex');
+  const fsModule = createShaderModuleWithDevLog(device, colorFsCode, 'points.colorFragment');
+
+  const pipeline = device.createRenderPipeline({
+    label: 'points-pipeline',
+    layout: 'auto',
+
+    vertex: {
+      module: vsModule,
+      entryPoint: 'vs',
+      buffers: [
+        {
+          arrayStride: POINT_STRIDE,
+          stepMode: 'instance',
+          attributes: [
+            // position (vec3<f32>) — offset 0 bytes
+            { shaderLocation: 0, offset: 0, format: 'float32x3' },
+            // magnitude (f32) — offset 12 bytes
+            { shaderLocation: 1, offset: 12, format: 'float32' },
+            // colorIndex (f32) — offset 16 bytes
+            { shaderLocation: 2, offset: 16, format: 'float32' },
+            // kPerZ (f32) — offset 20 bytes.  Per-row K-correction
+            // coefficient (see colourIndex.ts).
+            { shaderLocation: 3, offset: K_PER_Z_BYTE_OFFSET, format: 'float32' },
+            // axisRatio (f32) — offset 24 bytes.  Galaxy disk b/a in
+            // (0, 1] with the SIGN BIT carrying the fallback flag —
+            // the shader recovers the mask shape via `abs(axisRatio)`
+            // and the flag via `axisRatio < 0.0`.
+            { shaderLocation: 4, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
+            // positionAngleDeg (f32) — offset 28 bytes.  East-of-north
+            // position angle of the major axis in degrees, [0, 180).
+            { shaderLocation: 5, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
+            // diameterKpc (f32) — offset 32 bytes.  Per-galaxy physical
+            // diameter in kiloparsecs.  Vertex shader uses it to size
+            // the billboard's apparent radius.
+            { shaderLocation: 6, offset: DIAMETER_KPC_BYTE_OFFSET, format: 'float32' },
+            // vMaxWeight (f32) — offset 36 bytes.  Per-galaxy 1/V_max
+            // alpha multiplier; gated on `u.biasMode == 2u` via
+            // `select(1.0, vMaxWeight, …)`.
+            { shaderLocation: 7, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
+            // schechterRatio (f32) — offset 40 bytes.  Per-galaxy
+            // Schechter density-correction ratio; gated on
+            // `u.biasMode == 3u`.
+            { shaderLocation: 8, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
+            // angularDensityWeight (f32) — offset 44 bytes.  Per-galaxy
+            // HEALPix angular re-weight; gated on `u.biasMode == 4u`.
+            { shaderLocation: 9, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
+          ],
+        },
+      ],
+    },
+
+    fragment: {
+      module: fsModule,
+      entryPoint: 'fs',
+      targets: [
+        {
+          format,
+          // Additive blend: dst.rgb = src.rgb + dst.rgb. Required for the
+          // long-exposure-style brightening of overlapping galaxy halos
+          // (see device.ts and the @module comment in points.wgsl).
+          blend: {
+            color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+            alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+          },
+        },
+      ],
+    },
+
+    primitive: { topology: 'triangle-list' },
+  });
+
+  const uniformBuffer = device.createBuffer({
+    label: 'points-uniform-buffer',
+    size: UNIFORM_BYTES,
+    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+  });
+
+  const bindGroup = device.createBindGroup({
+    label: 'points-bg-uniforms',
+    layout: pipeline.getBindGroupLayout(0),
+    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+  });
+
+  // ── Per-source bookkeeping ────────────────────────────────────────
+  //
+  // Closure-captured Map of loaded survey buffers, keyed by `Source`
+  // (numeric enum).  `upload` adds or replaces an entry; `unload`
+  // removes one.  No global running-sum bookkeeping anymore — each
+  // source's pick identity comes from its CloudFade's per-source
+  // sourceCode uniform, set once at upload.
+  //
+  // Why a `Map` (not a plain object)? `Map` preserves insertion
+  // order, has a straightforward `delete`/`has` API, and avoids the
+  // prototype-chain ambiguity of indexing a numeric-keyed object
+  // literal.
+  const clouds = new Map<Source, LoadedSource>();
+
+  // ── Bias-correction subsystem callbacks ───────────────────────────
+  //
+  // Optional callbacks fired at the tail of `upload` / `unload`.  The
+  // bias-correction subsystem (Spec E phase E.3 + E.4) installs them
+  // via `setBiasUploadCallback` / `setBiasUnloadCallback` so it can
+  // fire a per-source bake when a new source arrives mid-mode (or
+  // drop cached ratios/weights when a source goes away).  The
+  // renderer doesn't reach into engine state to find the subsystem;
+  // the subsystem reaches in and installs the callbacks.  Uni-
+  // directional coupling — the renderer doesn't know what the
+  // callbacks do.
+  //
+  // Closure-captured `let` because the setters reassign them.  Null
+  // when no subsystem is attached (e.g. tests, or the brief pre-
+  // attach window during bootstrap); `?.` invocation makes that a
+  // no-op.
+  let biasUploadCallback: ((source: Source, cloud: PointCloud) => void) | null = null;
+  let biasUnloadCallback: ((source: Source) => void) | null = null;
+
+  function setBiasUploadCallback(cb: ((source: Source, cloud: PointCloud) => void) | null): void {
+    biasUploadCallback = cb;
   }
 
-  // ─── Constructor ────────────────────────────────────────────────────────────
-
-  /**
-   * Build the render pipeline, allocate the uniform buffer, and create the
-   * bind group.
-   *
-   * @param device  The WebGPU logical device. Owned by the caller.
-   * @param format  The swap-chain texture format (e.g. `'bgra8unorm'`).
-   */
-  constructor(
-    private device: GPUDevice,
-    format: GPUTextureFormat,
-  ) {
-    // Two modules — one per stage — built from disjoint sources. The
-    // vertex source is shared (textually) with PickRenderer, but each
-    // renderer compiles its OWN GPUShaderModule from it; sharing modules
-    // across pipelines tempts you into the WebGPU 'auto' bind-group-layout
-    // trap (auto-derived layouts are pipeline-specific identities and
-    // sharing them across pipelines fails the 'group-equivalent'
-    // compatibility check at draw time).
-    const vsModule = createShaderModuleWithDevLog(device, vsCode, 'points.vertex');
-    const fsModule = createShaderModuleWithDevLog(device, colorFsCode, 'points.colorFragment');
-
-    this.pipeline = device.createRenderPipeline({
-      label: 'points-pipeline',
-      layout: 'auto',
-
-      vertex: {
-        module: vsModule,
-        entryPoint: 'vs',
-        buffers: [
-          {
-            arrayStride: POINT_STRIDE,
-            stepMode: 'instance',
-            attributes: [
-              // position (vec3<f32>) — offset 0 bytes
-              { shaderLocation: 0, offset: 0, format: 'float32x3' },
-              // magnitude (f32) — offset 12 bytes
-              { shaderLocation: 1, offset: 12, format: 'float32' },
-              // colorIndex (f32) — offset 16 bytes
-              { shaderLocation: 2, offset: 16, format: 'float32' },
-              // kPerZ (f32) — offset 20 bytes.  Per-row K-correction
-              // coefficient (see colourIndex.ts).
-              { shaderLocation: 3, offset: K_PER_Z_BYTE_OFFSET, format: 'float32' },
-              // axisRatio (f32) — offset 24 bytes.  Galaxy disk b/a in
-              // (0, 1] with the SIGN BIT carrying the fallback flag —
-              // the shader recovers the mask shape via `abs(axisRatio)`
-              // and the flag via `axisRatio < 0.0`.
-              { shaderLocation: 4, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
-              // positionAngleDeg (f32) — offset 28 bytes.  East-of-north
-              // position angle of the major axis in degrees, [0, 180).
-              { shaderLocation: 5, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
-              // diameterKpc (f32) — offset 32 bytes.  Per-galaxy physical
-              // diameter in kiloparsecs.  Vertex shader uses it to size
-              // the billboard's apparent radius.
-              { shaderLocation: 6, offset: DIAMETER_KPC_BYTE_OFFSET, format: 'float32' },
-              // vMaxWeight (f32) — offset 36 bytes.  Per-galaxy 1/V_max
-              // alpha multiplier; gated on `u.biasMode == 2u` via
-              // `select(1.0, vMaxWeight, …)`.
-              { shaderLocation: 7, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
-              // schechterRatio (f32) — offset 40 bytes.  Per-galaxy
-              // Schechter density-correction ratio; gated on
-              // `u.biasMode == 3u`.
-              { shaderLocation: 8, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
-              // angularDensityWeight (f32) — offset 44 bytes.  Per-galaxy
-              // HEALPix angular re-weight; gated on `u.biasMode == 4u`.
-              { shaderLocation: 9, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
-            ],
-          },
-        ],
-      },
-
-      fragment: {
-        module: fsModule,
-        entryPoint: 'fs',
-        targets: [
-          {
-            format,
-            // Additive blend: dst.rgb = src.rgb + dst.rgb. Required for the
-            // long-exposure-style brightening of overlapping galaxy halos
-            // (see device.ts and the @module comment in points.wgsl).
-            blend: {
-              color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-              alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
-            },
-          },
-        ],
-      },
-
-      primitive: { topology: 'triangle-list' },
-    });
-
-    this.uniformBuffer_internal = device.createBuffer({
-      label: 'points-uniform-buffer',
-      size: UNIFORM_BYTES,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-
-    this.bindGroup = device.createBindGroup({
-      label: 'points-bg-uniforms',
-      layout: this.pipeline.getBindGroupLayout(0),
-      entries: [{ binding: 0, resource: { buffer: this.uniformBuffer_internal } }],
-    });
+  function setBiasUnloadCallback(cb: ((source: Source) => void) | null): void {
+    biasUnloadCallback = cb;
   }
 
   // ─── Data upload ────────────────────────────────────────────────────────────
@@ -824,7 +882,7 @@ export class PointRenderer {
    * machinery is gone with this refactor — there's no global running
    * sum anymore, so cross-source races can't exist.
    */
-  async upload(source: Source, cloud: PointCloud): Promise<void> {
+  async function upload(source: Source, cloud: PointCloud): Promise<void> {
     // ── Empty-cloud unload path ─────────────────────────────────────────────
     //
     // `engine.setTier` reuses this method to clear a source when the new
@@ -837,16 +895,16 @@ export class PointRenderer {
     // remove the entry from the Map entirely so the draw loop's
     // `if (!entry) continue;` naturally skips this source.
     if (cloud.count === 0) {
-      const stale = this.clouds.get(source);
+      const stale = clouds.get(source);
       if (stale) {
         stale.buffer.destroy();
         stale.fade.destroy();
       }
-      this.clouds.delete(source);
+      clouds.delete(source);
       // The empty-cloud path is semantically an unload — fire the
       // unload callback so the bias-correction subsystem (Spec E phase
       // E.3) can drop any cached ratios/weights for this source.
-      this.biasUnloadCallback?.(source);
+      biasUnloadCallback?.(source);
       return;
     }
 
@@ -890,23 +948,23 @@ export class PointRenderer {
     // letting the old one's VRAM go is the only path).  The fade controller
     // is recycled on a re-upload — its `restart()` resets the timestamp so
     // a tier swap re-triggers the fade-in.
-    const prev = this.clouds.get(source);
+    const prev = clouds.get(source);
     if (prev) {
       prev.buffer.destroy();
       prev.fade.restart();
     }
 
-    const buffer = this.device.createBuffer({
+    const buffer = device.createBuffer({
       label: `points-vertex-buffer-${source}`,
       size: interleaved.byteLength,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-    this.device.queue.writeBuffer(buffer, 0, interleaved);
+    device.queue.writeBuffer(buffer, 0, interleaved);
 
     // Reuse the previous fade controller if this is a re-upload; otherwise
     // mint a fresh one.  Either way, the fadeStartMs is "now" so the next
     // few frames render at low opacity and ramp up.
-    const fade = prev?.fade ?? new CloudFade(this.device, this.pipeline.getBindGroupLayout(1));
+    const fade = prev?.fade ?? new CloudFade(device, pipeline.getBindGroupLayout(1));
     // Stamp the per-source 5-bit Source enum value into the cloud's
     // bind group.  The shader's vertex stage reads `cloud.sourceCode`
     // and composes each instance's packed identity from it; doing this
@@ -915,7 +973,7 @@ export class PointRenderer {
     // the opacity does.
     fade.setSourceCode(source);
 
-    this.clouds.set(source, {
+    clouds.set(source, {
       buffer,
       count: cloud.count,
       interleaved,
@@ -926,7 +984,7 @@ export class PointRenderer {
     // source has been committed.  If a bias mode is active, the
     // subsystem fires a per-source bake here.  Null when no subsystem
     // is attached (tests, or pre-attach bootstrap window).
-    this.biasUploadCallback?.(source, cloud);
+    biasUploadCallback?.(source, cloud);
   }
 
   /**
@@ -935,15 +993,15 @@ export class PointRenderer {
    * No-op if the source was never uploaded — callers shouldn't have to track
    * which surveys are currently loaded.
    */
-  unload(source: Source): void {
-    const entry = this.clouds.get(source);
+  function unload(source: Source): void {
+    const entry = clouds.get(source);
     if (!entry) return;
     entry.buffer.destroy();
     entry.fade.destroy();
-    this.clouds.delete(source);
+    clouds.delete(source);
     // Notify the bias-correction subsystem (Spec E phase E.3) so it
     // can drop any cached ratios/weights for the gone source.
-    this.biasUnloadCallback?.(source);
+    biasUnloadCallback?.(source);
   }
 
   // ─── Bias-correction splice surface (Spec E phase E.1 + E.4) ──────────────
@@ -983,8 +1041,8 @@ export class PointRenderer {
    * buffer.  No mode tracking; the caller (subsystem) decides when to
    * call this.
    */
-  spliceSchechterRatios(source: Source, ratios: Float32Array): void {
-    const entry = this.clouds.get(source);
+  function spliceSchechterRatios(source: Source, ratios: Float32Array): void {
+    const entry = clouds.get(source);
     if (!entry) return;
     if (ratios.length !== entry.count) {
       throw new Error(
@@ -994,7 +1052,7 @@ export class PointRenderer {
     for (let i = 0; i < entry.count; i++) {
       entry.interleaved[i * SLOTS_PER_POINT + 10] = ratios[i]!;
     }
-    this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+    device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
   }
 
   /**
@@ -1002,8 +1060,8 @@ export class PointRenderer {
    * weights (length must equal the source's `count`) into slot 11 of
    * every row of the entry's interleaved mirror, then re-upload.
    */
-  spliceAngularWeights(source: Source, weights: Float32Array): void {
-    const entry = this.clouds.get(source);
+  function spliceAngularWeights(source: Source, weights: Float32Array): void {
+    const entry = clouds.get(source);
     if (!entry) return;
     if (weights.length !== entry.count) {
       throw new Error(
@@ -1013,7 +1071,7 @@ export class PointRenderer {
     for (let i = 0; i < entry.count; i++) {
       entry.interleaved[i * SLOTS_PER_POINT + 11] = weights[i]!;
     }
-    this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+    device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
   }
 
   /**
@@ -1030,20 +1088,20 @@ export class PointRenderer {
    * is the only caller and it explicitly transitions to None /
    * VolumeLimited after a clear (where the slot is dead anyway).
    */
-  clearBiasOverlays(source?: Source): void {
+  function clearBiasOverlays(source?: Source): void {
     const targets: LoadedSource[] =
       source !== undefined
         ? (() => {
-            const entry = this.clouds.get(source);
+            const entry = clouds.get(source);
             return entry ? [entry] : [];
           })()
-        : Array.from(this.clouds.values());
+        : Array.from(clouds.values());
     for (const entry of targets) {
       for (let i = 0; i < entry.count; i++) {
         entry.interleaved[i * SLOTS_PER_POINT + 10] = 0;
         entry.interleaved[i * SLOTS_PER_POINT + 11] = 0;
       }
-      this.device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
+      device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
     }
   }
 
@@ -1053,9 +1111,9 @@ export class PointRenderer {
    * Total number of points across every loaded source. Used by the engine to
    * report cloud size in the status bar.
    */
-  totalCount(): number {
+  function totalCount(): number {
     let total = 0;
-    for (const entry of this.clouds.values()) total += entry.count;
+    for (const entry of clouds.values()) total += entry.count;
     return total;
   }
 
@@ -1071,8 +1129,8 @@ export class PointRenderer {
    * source's count in flight.  This getter is the smallest possible
    * answer.
    */
-  countOf(source: Source): number {
-    return this.clouds.get(source)?.count ?? 0;
+  function countOf(source: Source): number {
+    return clouds.get(source)?.count ?? 0;
   }
 
   /**
@@ -1084,7 +1142,15 @@ export class PointRenderer {
    * they must not assume the iteration order beyond "stable for this
    * call".
    */
-  *loadedSources(): IterableIterator<{
+  // The pre-Spec-F.3 class form used a generator method (`*loadedSources()`)
+  // to lazily walk the clouds Map.  In factory shape, the named inner
+  // generator function is invoked on each `loadedSources()` call — the
+  // returned IterableIterator is fresh per call, matching the previous
+  // semantics ("the iterable is generated fresh on each call so the
+  // caller may call `unload()` between iterations without affecting the
+  // snapshot").  Callers see exactly the same call shape:
+  // `for (const e of r.loadedSources()) { ... }` works unchanged.
+  function* loadedSourcesGen(): IterableIterator<{
     source: Source;
     vertexBuffer: GPUBuffer;
     count: number;
@@ -1111,7 +1177,7 @@ export class PointRenderer {
     cloudFadeBuffer: GPUBuffer;
   }> {
     for (const source of ALL_SOURCES) {
-      const entry = this.clouds.get(source);
+      const entry = clouds.get(source);
       if (!entry) continue;
       yield {
         source,
@@ -1120,6 +1186,14 @@ export class PointRenderer {
         cloudFadeBuffer: entry.fade.buffer,
       };
     }
+  }
+  function loadedSources(): IterableIterator<{
+    source: Source;
+    vertexBuffer: GPUBuffer;
+    count: number;
+    cloudFadeBuffer: GPUBuffer;
+  }> {
+    return loadedSourcesGen();
   }
 
   // ─── Draw ────────────────────────────────────────────────────────────────────
@@ -1184,7 +1258,7 @@ export class PointRenderer {
    * @param schechterAlpha     Initial Schechter α value.  Same per-source
    *                           override as `schechterMStar`.
    */
-  draw(
+  function draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
@@ -1222,7 +1296,7 @@ export class PointRenderer {
     pxFadeEnd: number,
   ): void {
     // Nothing to draw if no source has been uploaded yet.
-    if (this.clouds.size === 0) return;
+    if (clouds.size === 0) return;
 
     // ── Pack and upload the uniform buffer ──────────────────────────────────
     //
@@ -1294,7 +1368,7 @@ export class PointRenderer {
     f32[41] = pxFadeEnd; // bytes 164..167  pxFadeEnd
     // f32[42] / f32[43] (_padFade0 / _padFade1) stay zero.
 
-    this.device.queue.writeBuffer(this.uniformBuffer_internal, 0, buf);
+    device.queue.writeBuffer(uniformBuffer, 0, buf);
 
     // ── Per-source draw loop ────────────────────────────────────────────────
     //
@@ -1314,11 +1388,11 @@ export class PointRenderer {
     // submit.  See CLAUDE.md → "WebGPU `queue.writeBuffer` race" and the
     // `cloudFade.ts` "per-instance buffers" docblock for the full
     // rationale.
-    pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bindGroup);
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
 
     for (const source of ALL_SOURCES) {
-      const entry = this.clouds.get(source);
+      const entry = clouds.get(source);
       if (!entry) continue;
 
       // Bitmask check: `(mask >> source) & 1`. Equivalent to maskHas() from
@@ -1339,8 +1413,8 @@ export class PointRenderer {
    * keeps advancing.  Returns false once every cloud has saturated at
    * opacity 1.0, after which the loop can pause as usual.
    */
-  isFading(): boolean {
-    for (const entry of this.clouds.values()) {
+  function isFading(): boolean {
+    for (const entry of clouds.values()) {
       if (entry.fade.isFading()) return true;
     }
     return false;
@@ -1366,10 +1440,10 @@ export class PointRenderer {
    *     allocations the runtime can return to the system.  These have
    *     NO `.destroy()` method in the WebGPU API; JS GC is the correct
    *     and only release path.  We deliberately do nothing for them
-   *     here — there is no `pipeline.destroy()` to call, and adding a
-   *     `(this.pipeline as any) = null` would just satisfy a phantom
-   *     concern (the field is `private` and the renderer instance
-   *     itself is about to drop out of scope).
+   *     here — there is no `pipeline.destroy()` to call, and assigning
+   *     `pipeline = null` would just satisfy a phantom concern
+   *     (the binding is closure-captured and the closure itself is
+   *     about to drop out of scope).
    *
    * ### Why this method matters in development
    *
@@ -1387,7 +1461,7 @@ export class PointRenderer {
    * (`LoadedSource.buffer` — ~14 MB GPU + ~14 MB CPU mirror per SDSS
    * deck, growing across SDSS + GLADE-large + 2MRS + Famous), each
    * source's `CloudFade` 16-byte uniform, plus the renderer's own
-   * 176-byte `uniformBuffer_internal`.  After ten saves, browser GPU
+   * 176-byte uniform buffer.  After ten saves, browser GPU
    * process memory has climbed past a gigabyte; on a constrained
    * laptop GPU that's enough to wedge the tab.  Wiring this method
    * into `engine.ts`'s `destroy()` chain plateaus the curve.
@@ -1418,23 +1492,49 @@ export class PointRenderer {
    * second call on an already-destroyed buffer is a no-op.  This
    * method inherits that property: a second `destroy()` iterates an
    * empty `clouds` map and re-destroys the (already-destroyed)
-   * `uniformBuffer_internal` without throwing.  Useful when teardown
+   * uniform buffer without throwing.  Useful when teardown
    * paths overlap (e.g. an HMR swap fires while React StrictMode is
    * still in its remount cycle).
    */
-  destroy(): void {
+  function destroy(): void {
     // Per-source teardown.  Each entry owns a vertex buffer and a
     // CloudFade; the fade's own destroy() handles its 16-byte uniform.
-    for (const entry of this.clouds.values()) {
+    for (const entry of clouds.values()) {
       entry.buffer.destroy();
       entry.fade.destroy();
     }
     // Drop JS references to every LoadedSource so GC can collect the
     // ~14 MB CPU mirror (`interleaved` Float32Array) per SDSS deck.
-    this.clouds.clear();
+    clouds.clear();
     // The renderer's own per-frame uniform buffer (176 bytes — see
     // UNIFORM_BYTES above).  Tiny, but releasing it is the correct
     // shape and matches what we do for per-source buffers.
-    this.uniformBuffer_internal.destroy();
+    uniformBuffer.destroy();
   }
+
+  // ── Public surface ────────────────────────────────────────────────
+  //
+  // Build the returned object inline.  `uniformBuffer` ships as a
+  // bare property (rather than the pre-factory class's getter)
+  // because the closure-captured buffer identity is fixed for the
+  // renderer's lifetime — there's nothing to compute lazily.  Every
+  // method is a plain function reference, so consumers can destructure
+  // (`const { draw, destroy } = createPointRenderer(...)`) without
+  // losing `this` binding — there is no `this`.
+  return {
+    upload,
+    unload,
+    setBiasUploadCallback,
+    setBiasUnloadCallback,
+    spliceSchechterRatios,
+    spliceAngularWeights,
+    clearBiasOverlays,
+    totalCount,
+    countOf,
+    loadedSources,
+    uniformBuffer,
+    draw,
+    isFading,
+    destroy,
+  };
 }
