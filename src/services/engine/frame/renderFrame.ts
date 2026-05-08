@@ -88,19 +88,19 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { OrbitCamera, PointCloud } from '../../@types';
-import type { Source } from '../../data/sources';
-import type { BiasMode } from '../../data/biasMode';
-import type { ToneMapCurve } from '../../data/toneMapCurve';
-import type { PointRenderer } from '../gpu/pointRenderer';
-import type { PostProcess } from '../gpu/postProcess';
-import type { QuadRenderer } from '../gpu/quadRenderer';
-import type { DiskRenderer } from '../gpu/diskRenderer';
-import type { MilkyWayRenderer } from '../gpu/milkyWayRenderer';
-import type { FilamentRenderer } from '../gpu/filamentRenderer';
-import type { ThumbnailSubsystem } from './subsystems/thumbnailSubsystem';
-import type { FamousMetaEntry, FamousXrefMap } from '../loading/fetchers/famousMetaFetcher';
-import { milkyWayFadeAlpha } from '../../utils/math/milkyWayFade';
+import type { OrbitCamera, PointCloud } from '../../../@types';
+import type { Source } from '../../../data/sources';
+import type { BiasMode } from '../../../data/biasMode';
+import type { ToneMapCurve } from '../../../data/toneMapCurve';
+import type { PointRenderer } from '../../gpu/pointRenderer';
+import type { PostProcess } from '../../gpu/postProcess';
+import type { QuadRenderer } from '../../gpu/quadRenderer';
+import type { DiskRenderer } from '../../gpu/diskRenderer';
+import type { MilkyWayRenderer } from '../../gpu/milkyWayRenderer';
+import type { FilamentRenderer } from '../../gpu/filamentRenderer';
+import type { ThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
+import type { FamousMetaEntry, FamousXrefMap } from '../../loading/fetchers/famousMetaFetcher';
+import { milkyWayFadeAlpha } from '../../../utils/math/milkyWayFade';
 
 /**
  * Settings consumed by `pointRenderer.draw` and `postProcess.draw`.

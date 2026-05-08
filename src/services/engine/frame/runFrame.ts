@@ -71,22 +71,22 @@
  * counter object itself, no ref-ification needed.
  */
 
-import type { EngineCallbacks, EngineState } from '../../@types';
-import type { Source } from '../../data/sources';
-import type { QuadRenderer } from '../gpu/quadRenderer';
-import type { DiskRenderer } from '../gpu/diskRenderer';
-import type { MilkyWayRenderer } from '../gpu/milkyWayRenderer';
-import type { FilamentRenderer } from '../gpu/filamentRenderer';
-import type { FpsCounter } from './subsystems/fpsCounter';
+import type { EngineCallbacks, EngineState } from '../../../@types';
+import type { Source } from '../../../data/sources';
+import type { QuadRenderer } from '../../gpu/quadRenderer';
+import type { DiskRenderer } from '../../gpu/diskRenderer';
+import type { MilkyWayRenderer } from '../../gpu/milkyWayRenderer';
+import type { FilamentRenderer } from '../../gpu/filamentRenderer';
+import type { FpsCounter } from '../subsystems/fpsCounter';
 
-import { computeViewProj, updatePosition } from '../camera/orbitCamera';
-import { resizeCanvasToDisplay } from '../gpu/device';
-import { autoLodMask } from './helpers/autoLod';
+import { computeViewProj, updatePosition } from '../../camera/orbitCamera';
+import { resizeCanvasToDisplay } from '../../gpu/device';
+import { autoLodMask } from '../helpers/autoLod';
 import { renderFrame } from './renderFrame';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
-} from './subsystems/thumbnailSubsystem';
+} from '../subsystems/thumbnailSubsystem';
 
 /**
  * Closure captures the per-frame body relies on.  Every entry here was

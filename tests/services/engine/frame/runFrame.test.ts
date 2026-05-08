@@ -21,8 +21,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { runFrame, type RunFrameDeps } from '../../../src/services/engine/runFrame';
-import type { EngineState } from '../../../src/@types';
+import { runFrame, type RunFrameDeps } from '../../../../src/services/engine/frame/runFrame';
+import type { EngineState } from '../../../../src/@types';
 
 /**
  * Build a minimal `EngineState`-shaped fixture that lets `runFrame`
