@@ -79,9 +79,10 @@ import type { MilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
 import type { FilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import type { FpsCounter } from '../subsystems/fpsCounter';
 
-import { computeViewProj, updatePosition } from '../../camera/orbitCamera';
+import { updatePosition } from '../../camera/orbitCamera';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { autoLodMask } from '../helpers/autoLod';
+import { deriveFrameContext } from './frameContext';
 import { renderFrame } from './renderFrame';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
@@ -174,15 +175,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     deps.cb.onFpsChange?.(fpsNow);
   }
 
-  // Snapshot the live state references once at the top of the
-  // frame body for readability.  Each is either a live mutable
-  // value (cam) or a slot that becomes null only on `destroy()`
-  // (renderer, thumbnails) — so reading through the snapshots
-  // for the duration of one frame is identical to reading
-  // `state.*` everywhere.
-  const camRef = state.cam;
-
-  // Resize the swap-chain if the canvas element changed size.
+  // ── Resize the swap-chain if the canvas element changed size ──────
+  //
   // `resizeCanvasToDisplay` returns `true` only when dimensions changed,
   // so we patch `cam.aspect` and `updatePosition` only in that branch.
   //
@@ -192,9 +186,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // either smear pixels or render off-canvas.  The tone-map pass
   // recreates its bind group every frame, so the new view is picked
   // up automatically on the next call.
-  if (camRef && resizeCanvasToDisplay(deps.canvas)) {
-    camRef.aspect = deps.canvas.width / deps.canvas.height;
-    updatePosition(camRef);
+  //
+  // We read `state.cam` directly here (rather than going through
+  // `deriveFrameContext`) because resize legitimately runs in the
+  // pre-bootstrap window — the canvas can change size before the
+  // first cloud lands, and the GPU postProcess `?.resize(...)` already
+  // tolerates a null handle.  All the *post-bootstrap* sections
+  // below funnel through the `ctx` snapshot.
+  if (state.cam && resizeCanvasToDisplay(deps.canvas)) {
+    state.cam.aspect = deps.canvas.width / deps.canvas.height;
+    updatePosition(state.cam);
     state.gpu.postProcess?.resize({ width: deps.canvas.width, height: deps.canvas.height });
   }
 
@@ -211,8 +212,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // auto-clears its internal reference when the tween finishes,
   // so subsequent frames skip this branch via `isActive()` returning
   // false.
-  if (camRef) {
-    state.subsystems.tweens.advance(camRef, performance.now());
+  //
+  // Tween / SpaceMouse / auto-rotate all run *before* the
+  // `deriveFrameContext` gate so a camera-only-ready frame (rare in
+  // practice — GPU usually boots before the first cloud lands) still
+  // makes forward progress on motion before we early-return for the
+  // missing GPU handles.
+  if (state.cam) {
+    state.subsystems.tweens.advance(state.cam, performance.now());
   }
 
   // ── SpaceMouse per-frame application ──────────────────────────────
@@ -224,8 +231,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // wired up at construction).  Calling unconditionally is fine:
   // on a resting puck it's a single hasAnyAxis read + a null
   // assignment to the dt baseline.
-  if (camRef) {
-    state.subsystems.spaceMouse.applyToCamera(camRef, performance.now());
+  if (state.cam) {
+    state.subsystems.spaceMouse.applyToCamera(state.cam, performance.now());
   }
 
   // ── Auto-rotate yaw ───────────────────────────────────────────────
@@ -252,30 +259,23 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // auto-rotate on `!tweens.isActive()` lets the home tween land
   // exactly on the target yaw; auto-rotate resumes from that
   // landing point on the next frame.
-  if (state.settings.autoRotate && camRef && !state.subsystems.tweens.isActive()) {
-    camRef.yaw += 0.000873;
-    updatePosition(camRef);
+  if (state.settings.autoRotate && state.cam && !state.subsystems.tweens.isActive()) {
+    state.cam.yaw += 0.000873;
+    updatePosition(state.cam);
   }
 
-  // Snapshot the current camera state into a combined view-projection matrix.
-  const vp = camRef ? computeViewProj(camRef) : null;
-  const rendererRef = state.gpu.renderer;
-  const thumbnailsRef = state.subsystems.thumbnails;
-  const postProcessRef = state.gpu.postProcess;
-  if (!vp || !rendererRef || !camRef || !thumbnailsRef || !postProcessRef) {
-    // Camera/renderer not ready yet — try again next frame.
-    // (This branch only fires during the brief window between
-    // engine startup and the first cloud landing; once both are
-    // present it's never taken.)
-    //
-    // We additionally guard on `thumbnails` being non-null so the
-    // renderFrame() dispatch below can take the subsystem
-    // unconditionally.  The subsystem is allocated alongside the
-    // GPU device in the startup IIFE, so by the time this branch
-    // is reachable both are present together.  The `cam` guard
-    // is redundant with the `vp` check (vp is null when cam is)
-    // but kept explicit so the type narrowing flows cleanly into
-    // the renderFrame call.
+  // ── Per-frame derived snapshot ────────────────────────────────────
+  //
+  // `deriveFrameContext` runs the camera + GPU + thumbnail bootstrap
+  // gate (formerly a 5-way `||` chain inline here) and pre-computes
+  // the view-projection matrix, camera-position tuple, and pixel-
+  // per-radian scalar — values that downstream `renderFrame()`
+  // consumes.  The "not ready" branch is the brief window between
+  // engine startup and the first cloud landing; once `state.cam`
+  // and the GPU handles are populated together, this gate is
+  // never taken again for the lifetime of the engine.
+  const ctx = deriveFrameContext(state, deps.canvas);
+  if (!ctx.isReady) {
     state.subsystems.scheduler.requestRender();
     return;
   }
@@ -292,7 +292,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // in the settings panel sticks until they explicitly re-enter
   // auto mode.
   if (state.sources.lodMode === 'auto') {
-    const nextMask = autoLodMask(camRef.distance);
+    const nextMask = autoLodMask(ctx.cam.distance);
     if (nextMask !== state.sources.visibleMask) {
       state.sources.visibleMask = nextMask;
       deps.cb.onSourceMaskChange?.(nextMask);
@@ -310,17 +310,17 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // pass description and the rationale for keeping pick + auto-LOD
   // out here in `frame()`.
   renderFrame({
-    cam: camRef,
-    canvasWidth: deps.canvas.width,
-    canvasHeight: deps.canvas.height,
-    viewProj: vp,
+    cam: ctx.cam,
+    canvasWidth: ctx.canvasSize.width,
+    canvasHeight: ctx.canvasSize.height,
+    viewProj: ctx.vp,
     device: deps.device,
     context: deps.context,
-    postProcess: postProcessRef,
-    pointRenderer: rendererRef,
+    postProcess: ctx.postProcess,
+    pointRenderer: ctx.renderer,
     milkyWayRenderer: deps.milkyWayRenderer,
     filamentRenderer: deps.filamentRenderer,
-    thumbnails: thumbnailsRef,
+    thumbnails: ctx.thumbnails,
     quadRenderer: deps.quadRenderer,
     diskRenderer: deps.diskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
@@ -385,7 +385,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // Snapshot the renderer's currently-visible per-source draw
     // records.  Same filter rule as the click handler — only sources
     // whose visibility bit is set are eligible to claim hover.
-    const visibleSources = Array.from(rendererRef.loadedSources()).filter(
+    const visibleSources = Array.from(ctx.renderer.loadedSources()).filter(
       (s) => ((state.sources.visibleMask >> s.source) & 1) !== 0,
     );
     if (visibleSources.length === 0) {
