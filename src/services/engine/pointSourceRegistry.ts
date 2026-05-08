@@ -125,12 +125,16 @@ import {
 import { syntheticPointFetcher } from '../loading/fetchers/syntheticPointFetcher';
 
 /**
- * Lowercase short name for a Source — used as the stable prefix for
- * the slot's name (e.g. `sdss-points`, `glade-points`).  Duplicated
- * from `engine.ts`'s `sourceName` rather than imported because the
- * inverse import (engine.ts → registry → engine.ts) would create a
- * cycle.  The mapping is small and stable; living in two places is the
- * lesser of two evils for the duration of Phase 4.
+ * Lowercase short name for a Source — `sdss`, `2mrs`, `glade`,
+ * `famous`, `synthetic`.  Used as the stable prefix for the slot's
+ * name (e.g. `sdss-points`, `glade-points`) and inside the upload-log
+ * line below.
+ *
+ * Lives here rather than next to `LABELS` in `data/sources.ts` because
+ * the only consumers today are this file's slot-name + log-line
+ * strings.  Promote to `data/sources.ts` if a third unrelated caller
+ * appears.  (Phase 4 moved this function out of `engine.ts` — there
+ * is no longer a duplicate to keep in sync.)
  */
 function sourceName(source: Source): string {
   switch (source) {
