@@ -1,5 +1,5 @@
 /**
- * LabelRenderer — MSDF text label pass for the 3D sky map.
+ * labelRenderer — MSDF text label pass for the 3D sky map.
  *
  * Renders a set of world-anchored text labels using a multi-channel signed
  * distance field (MSDF) atlas.  Each character ("glyph") in a label becomes
@@ -9,6 +9,21 @@
  * (in atlas pixels) before projecting the anchor to clip space.  The fragment
  * stage samples the MSDF atlas, takes the R/G/B median, and uses `fwidth` for
  * one-pixel-wide anti-aliasing — crisp at any zoom without mipmaps.
+ *
+ * ## Why a closure-keyed factory and not a class?
+ *
+ * Same convention every other freshly-extracted handle in the engine
+ * follows (`selectionSubsystem`, `thumbnailSubsystem`,
+ * `biasCorrectionSubsystem`, `tweenManager`, the `Pass` object literals
+ * in `engine/frame/passes/`): factories return typed handles, not class
+ * instances.  Internal state (CPU scratch buffers, running counts,
+ * pipeline + bind-group references) is genuinely inaccessible from
+ * outside the closure — there is no `this.glyphBuf` to reach in and
+ * poke from a misbehaving caller — and the `type` aliases convention
+ * (CLAUDE.md) deliberately rejects the inheritance escape hatch a
+ * class would otherwise carry.  Existing renderers (Point/Quad/Disk/…)
+ * are still classes for now; new renderers from this point on follow
+ * the factory shape.
  *
  * ## Why a separate per-label storage buffer?
  *
@@ -81,6 +96,43 @@ export type Label = {
   fadeAlpha?: number;
 };
 
+/**
+ * Public handle returned by `createLabelRenderer`.  Mirrors the shape of
+ * other engine handles (`SelectionSubsystem`, `ThumbnailSubsystem`,
+ * `BiasCorrectionSubsystem`): explicit method type, no internals leaked.
+ */
+export type LabelRenderer = {
+  /**
+   * Replace the current label set.  Calling `setLabels([])` clears all
+   * labels.  Re-packs the CPU-side glyph and label scratch buffers and,
+   * if a real GPU device is present, uploads to the GPU storage /
+   * instance buffers.
+   *
+   * Designed to be called by `youAreHereSubsystem.runFrame` whenever the
+   * label set changes (camera distance crosses the fade band threshold).
+   * For the "you are here" use-case there will typically be 1–3 labels
+   * so the cost is negligible.
+   */
+  setLabels(labels: Label[]): void;
+  /**
+   * Issue the label draw call into an in-flight render pass.  Must be
+   * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`
+   * implementation.  The pass's render target format must match the
+   * `format` field of the `GpuContext` passed to `createLabelRenderer`.
+   */
+  render(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportSize: [number, number],
+  ): void;
+  /** Total glyph count across all active labels. Used by tests + debug HUD. */
+  glyphCount(): number;
+  /** Number of labels last passed to setLabels. Used by tests + debug HUD. */
+  labelCount(): number;
+  /** Release all GPU resources. No-op if constructed with a null device. */
+  destroy(): void;
+};
+
 // ─── buffer constants ──────────────────────────────────────────────────────
 
 /**
@@ -123,72 +175,68 @@ const GLYPH_INSTANCE_BYTES = 36;
 const CORNER_DATA = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]);
 const CORNER_BYTES = CORNER_DATA.byteLength; // 32 bytes (4 × 2 × 4)
 
-// ─── LabelRenderer ────────────────────────────────────────────────────────
+// ─── factory ──────────────────────────────────────────────────────────────
 
-export class LabelRenderer {
-  // Stored for GPU calls guarded behind `if (this.device)`.
-  private readonly device: GPUDevice | null;
-  private readonly format: GPUTextureFormat;
-  private readonly metrics: FontMetrics;
+/**
+ * Construct a `LabelRenderer` against the given GPU context, font metrics,
+ * and pre-baked atlas bitmap.
+ *
+ * Pass `device: null` (or a GpuContext whose `device` is null) for unit
+ * tests that exercise CPU state only.  GPU resource creation is skipped
+ * in that branch and `render(...)` becomes a no-op.
+ *
+ * `maxLabels` and `maxGlyphsPerLabel` size the static GPU buffers; the
+ * defaults (64 × 64 = 4096 glyphs) cover the "you are here" + a few
+ * future tagged-galaxy markers without a follow-up resize.
+ */
+export function createLabelRenderer(
+  ctx: GpuContext,
+  metrics: FontMetrics,
+  atlasBitmap: ImageBitmap | null,
+  maxLabels = 64,
+  maxGlyphsPerLabel = 64,
+): LabelRenderer {
+  // The `as ... | null` cast lets a test pass `device: null as unknown as
+  // GPUDevice` through GpuContext without TypeScript complaining at the
+  // factory's call site.  Runtime code below null-checks before each use.
+  const device = ctx.device as GPUDevice | null;
+  const format = ctx.format;
+  const maxGlyphs = maxLabels * maxGlyphsPerLabel;
 
-  // GPU resources — only allocated when `device !== null`.
-  private readonly pipeline: GPURenderPipeline | undefined;
-  private readonly bindGroupLayout: GPUBindGroupLayout | undefined;
-  private readonly uniformBuffer: GPUBuffer | undefined;
-  private readonly storageBuffer: GPUBuffer | undefined;
-  private readonly instanceBuffer: GPUBuffer | undefined;
-  private readonly cornerBuffer: GPUBuffer | undefined;
-  private readonly atlasTexture: GPUTexture | undefined;
-  private readonly sampler: GPUSampler | undefined;
-  private bindGroup: GPUBindGroup | undefined;
+  // ── CPU scratch buffers — always allocated, safe to use with null device ─
+  //
+  // The Float32Array and Uint32Array share a single ArrayBuffer so we can
+  // write f32 fields and the u32 labelIndex into the same memory region
+  // without any copies.
+  const glyphBuf = new ArrayBuffer(maxGlyphs * GLYPH_INSTANCE_BYTES);
+  const glyphF32 = new Float32Array(glyphBuf);
+  const glyphU32 = new Uint32Array(glyphBuf);
+  const labelBuf = new Float32Array((maxLabels * LABEL_DATA_BYTES) / 4);
 
-  // CPU state — always valid, safe to read in unit tests with null device.
-  private readonly maxLabels: number;
-  private readonly maxGlyphs: number;
-  /** Packed glyph instance data (f32/u32 views of the same ArrayBuffer). */
-  private readonly glyphBuf: ArrayBuffer;
-  private readonly glyphF32: Float32Array;
-  private readonly glyphU32: Uint32Array;
-  /** Packed label storage data. */
-  private readonly labelBuf: Float32Array;
-  /** Running count updated by setLabels. */
-  private currentGlyphCount = 0;
-  private currentLabelCount = 0;
+  // Closure-scoped mutable counters — replace the `this.currentGlyphCount`
+  // / `this.currentLabelCount` fields the class form used.  Updated only
+  // by `setLabels`; read by `render`, `glyphCount`, `labelCount`.
+  let currentGlyphCount = 0;
+  let currentLabelCount = 0;
 
-  constructor(
-    ctx: GpuContext,
-    metrics: FontMetrics,
-    atlasBitmap: ImageBitmap | null,
-    maxLabels = 64,
-    maxGlyphsPerLabel = 64,
-  ) {
-    this.device = ctx.device as GPUDevice | null;
-    this.format = ctx.format;
-    this.metrics = metrics;
-    this.maxLabels = maxLabels;
-    this.maxGlyphs = maxLabels * maxGlyphsPerLabel;
+  // ── GPU resources (null when device is null) ─────────────────────────────
+  let pipeline: GPURenderPipeline | null = null;
+  let uniformBuffer: GPUBuffer | null = null;
+  let storageBuffer: GPUBuffer | null = null;
+  let instanceBuffer: GPUBuffer | null = null;
+  let cornerBuffer: GPUBuffer | null = null;
+  let atlasTexture: GPUTexture | null = null;
+  let bindGroup: GPUBindGroup | null = null;
 
-    // Allocate CPU scratch buffers.  The Float32Array and Uint32Array share
-    // a single ArrayBuffer so we can write f32 fields and the u32 labelIndex
-    // into the same memory region without any copies.
-    const glyphByteLength = this.maxGlyphs * GLYPH_INSTANCE_BYTES;
-    this.glyphBuf = new ArrayBuffer(glyphByteLength);
-    this.glyphF32 = new Float32Array(this.glyphBuf);
-    this.glyphU32 = new Uint32Array(this.glyphBuf);
-    this.labelBuf = new Float32Array((maxLabels * LABEL_DATA_BYTES) / 4);
-
-    if (!this.device) return; // null-device: skip all GPU allocations
-
-    const device = this.device;
-
-    // ── Bind group layout ──────────────────────────────────────────────────
+  if (device) {
+    // ── Bind group layout ────────────────────────────────────────────────
     //
     // Four bindings matching the labels shaders (io.wesl + fragment.wesl):
     //   0 → uniform buffer  (CameraUniforms, vertex-visible)
     //   1 → read-only storage buffer (LabelData[], vertex-visible)
     //   2 → atlas texture   (fragment-visible)
     //   3 → atlas sampler   (fragment-visible)
-    this.bindGroupLayout = device.createBindGroupLayout({
+    const bindGroupLayout = device.createBindGroupLayout({
       label: 'label-bgl',
       entries: [
         { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
@@ -204,15 +252,15 @@ export class LabelRenderer {
       ],
     });
 
-    // ── Pipeline ───────────────────────────────────────────────────────────
+    // ── Pipeline ─────────────────────────────────────────────────────────
     const vsModule = createShaderModuleWithDevLog(device, vsCode, 'labels.vertex');
     const fsModule = createShaderModuleWithDevLog(device, fsCode, 'labels.fragment');
 
-    this.pipeline = device.createRenderPipeline({
+    pipeline = device.createRenderPipeline({
       label: 'label-pipeline',
       layout: device.createPipelineLayout({
         label: 'label-pipeline-layout',
-        bindGroupLayouts: [this.bindGroupLayout],
+        bindGroupLayouts: [bindGroupLayout],
       }),
       vertex: {
         module: vsModule,
@@ -244,7 +292,7 @@ export class LabelRenderer {
         entryPoint: 'fs',
         targets: [
           {
-            format: this.format,
+            format,
             // Premultiplied-alpha OVER blend.  Labels are UI overlay text,
             // not emissive content: at alpha=0 they should be fully
             // transparent against whatever's behind them, not additive.
@@ -265,35 +313,35 @@ export class LabelRenderer {
       // rendered later (e.g. a second label pass) at zero cost.
     });
 
-    // ── Buffers ────────────────────────────────────────────────────────────
-    this.uniformBuffer = device.createBuffer({
+    // ── Buffers ──────────────────────────────────────────────────────────
+    uniformBuffer = device.createBuffer({
       label: 'label-uniforms',
       size: UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    this.storageBuffer = device.createBuffer({
+    storageBuffer = device.createBuffer({
       label: 'label-storage',
       size: maxLabels * LABEL_DATA_BYTES,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
 
-    this.instanceBuffer = device.createBuffer({
+    instanceBuffer = device.createBuffer({
       label: 'label-instances',
-      size: this.maxGlyphs * GLYPH_INSTANCE_BYTES,
+      size: maxGlyphs * GLYPH_INSTANCE_BYTES,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
     // The corner buffer is tiny (32 bytes, 4 × vec2) and static — upload once
     // at construction and reuse across every frame.
-    this.cornerBuffer = device.createBuffer({
+    cornerBuffer = device.createBuffer({
       label: 'label-corners',
       size: CORNER_BYTES,
       usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
-    device.queue.writeBuffer(this.cornerBuffer, 0, CORNER_DATA);
+    device.queue.writeBuffer(cornerBuffer, 0, CORNER_DATA);
 
-    // ── Atlas texture + sampler ────────────────────────────────────────────
+    // ── Atlas texture + sampler ──────────────────────────────────────────
     //
     // Dimensions come from the FontMetrics so the atlas size is not
     // hard-coded here — if the build script ever regenerates at a different
@@ -303,7 +351,7 @@ export class LabelRenderer {
     // on some platforms (Chrome requires it for non-power-of-two sources and
     // for certain pixel-format combinations).  Including it is safe and
     // harmless even when not strictly required.
-    this.atlasTexture = device.createTexture({
+    atlasTexture = device.createTexture({
       label: 'label-atlas',
       size: [metrics.atlas.width, metrics.atlas.height, 1],
       format: 'rgba8unorm',
@@ -316,7 +364,7 @@ export class LabelRenderer {
     if (atlasBitmap !== null) {
       device.queue.copyExternalImageToTexture(
         { source: atlasBitmap },
-        { texture: this.atlasTexture },
+        { texture: atlasTexture },
         [metrics.atlas.width, metrics.atlas.height],
       );
     }
@@ -324,7 +372,7 @@ export class LabelRenderer {
     // No mipmaps: MSDF handles multi-scale rendering internally via the
     // median3 + fwidth technique. Mip-filtering would blur the signed-distance
     // channels and corrupt the glyph edge reconstruction.
-    this.sampler = device.createSampler({
+    const sampler = device.createSampler({
       label: 'label-sampler',
       magFilter: 'linear',
       minFilter: 'linear',
@@ -332,130 +380,111 @@ export class LabelRenderer {
       addressModeV: 'clamp-to-edge',
     });
 
-    // ── Bind group ─────────────────────────────────────────────────────────
-    this.bindGroup = device.createBindGroup({
+    // ── Bind group ───────────────────────────────────────────────────────
+    bindGroup = device.createBindGroup({
       label: 'label-bg',
-      layout: this.bindGroupLayout,
+      layout: bindGroupLayout,
       entries: [
-        { binding: 0, resource: { buffer: this.uniformBuffer } },
-        { binding: 1, resource: { buffer: this.storageBuffer } },
-        { binding: 2, resource: this.atlasTexture.createView() },
-        { binding: 3, resource: this.sampler },
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: { buffer: storageBuffer } },
+        { binding: 2, resource: atlasTexture.createView() },
+        { binding: 3, resource: sampler },
       ],
     });
   }
 
-  // ─── public API ───────────────────────────────────────────────────────────
+  // ── public methods (closures over the locals above) ────────────────────
 
-  /**
-   * Replace the current label set.  Calling setLabels([]) clears all labels.
-   * The method re-packs the CPU-side glyph and label scratch buffers and, if
-   * a real GPU device is present, uploads them to the GPU storage/instance
-   * buffers.
-   *
-   * This is designed to be called once per frame by the engine subsystem when
-   * labels change (camera moved, fade state ticked).  For the "you are here"
-   * use-case there will typically be 1–3 labels so the cost is negligible.
-   */
-  setLabels(labels: Label[]): void {
-    this.currentGlyphCount = 0;
-    this.currentLabelCount = 0;
+  function setLabels(labels: Label[]): void {
+    currentGlyphCount = 0;
+    currentLabelCount = 0;
 
-    const count = Math.min(labels.length, this.maxLabels);
+    const count = Math.min(labels.length, maxLabels);
     for (let li = 0; li < count; li++) {
       const label = labels[li]!;
-      const quads = layoutLabel(label.text, this.metrics);
+      const quads = layoutLabel(label.text, metrics);
 
-      // Skip labels whose entire text produces no known glyphs.
-      // Still advance `li` so label indices stay stable across the outer
-      // loop — but don't write a storage entry until we know there are glyphs.
-
-      // Write per-label storage record (48 bytes, 12 floats).
+      // Write per-label storage record (48 bytes, 12 floats) unconditionally
+      // — even when `quads` is empty.  Keeping the per-label index stable
+      // across the outer loop matters because each glyph carries its
+      // labelIndex by position; if we skipped a label whose text produced
+      // no known glyphs, every subsequent glyph would point to the wrong
+      // label entry.  An unused storage slot is harmless (no glyph
+      // references it, the GPU never reads it).
+      //
       //   [0..3]  worldPos (x,y,z, worldEmMpc)
       //   [4..7]  color    (r,g,b,a premultiplied)
       //   [8..11] sizing   (pixelSize, minPx, maxPx, fadeAlpha)
       const labelBase = li * (LABEL_DATA_BYTES / 4);
-      this.labelBuf[labelBase + 0] = label.worldPos[0];
-      this.labelBuf[labelBase + 1] = label.worldPos[1];
-      this.labelBuf[labelBase + 2] = label.worldPos[2];
-      this.labelBuf[labelBase + 3] = label.worldEmMpc ?? 0.01;
+      labelBuf[labelBase + 0] = label.worldPos[0];
+      labelBuf[labelBase + 1] = label.worldPos[1];
+      labelBuf[labelBase + 2] = label.worldPos[2];
+      labelBuf[labelBase + 3] = label.worldEmMpc ?? 0.01;
       const color = label.color ?? [1, 1, 1, 1];
-      this.labelBuf[labelBase + 4] = color[0]!;
-      this.labelBuf[labelBase + 5] = color[1]!;
-      this.labelBuf[labelBase + 6] = color[2]!;
-      this.labelBuf[labelBase + 7] = color[3]!;
-      this.labelBuf[labelBase + 8]  = label.pixelSize;
-      this.labelBuf[labelBase + 9]  = label.minPixelSize ?? 8;
-      this.labelBuf[labelBase + 10] = label.maxPixelSize ?? 64;
-      this.labelBuf[labelBase + 11] = label.fadeAlpha ?? 1;
+      labelBuf[labelBase + 4] = color[0]!;
+      labelBuf[labelBase + 5] = color[1]!;
+      labelBuf[labelBase + 6] = color[2]!;
+      labelBuf[labelBase + 7] = color[3]!;
+      labelBuf[labelBase + 8] = label.pixelSize;
+      labelBuf[labelBase + 9] = label.minPixelSize ?? 8;
+      labelBuf[labelBase + 10] = label.maxPixelSize ?? 64;
+      labelBuf[labelBase + 11] = label.fadeAlpha ?? 1;
 
-      // Write per-glyph instance records (36 bytes, 9 × f32 or 8 × f32 + 1 × u32).
+      // Write per-glyph instance records (36 bytes = 9 × 4 = 8 × f32 + 1 × u32).
       for (const q of quads) {
-        if (this.currentGlyphCount >= this.maxGlyphs) break;
-        // Byte offset of this glyph in the ArrayBuffer.
-        // GLYPH_INSTANCE_BYTES (36) is not a multiple of 4 — wait, it IS:
-        // 36 = 9 × 4.  But the ArrayBuffer backing Float32Array is allocated
-        // as `maxGlyphs * 36` bytes, so Float32Array has `maxGlyphs * 9`
-        // elements and Uint32Array has the same count.
-        const f32Base = this.currentGlyphCount * (GLYPH_INSTANCE_BYTES / 4);
-        this.glyphF32[f32Base + 0] = q.localOffsetX;
-        this.glyphF32[f32Base + 1] = q.localOffsetY;
-        this.glyphF32[f32Base + 2] = q.localSizeW;
-        this.glyphF32[f32Base + 3] = q.localSizeH;
-        this.glyphF32[f32Base + 4] = q.uvU0;
-        this.glyphF32[f32Base + 5] = q.uvV0;
-        this.glyphF32[f32Base + 6] = q.uvU1;
-        this.glyphF32[f32Base + 7] = q.uvV1;
-        // labelIndex is a u32; write it through the Uint32Array view so
-        // the bit pattern is exact (Float32Array would reinterpret it).
-        this.glyphU32[f32Base + 8] = li;
-        this.currentGlyphCount++;
+        if (currentGlyphCount >= maxGlyphs) break;
+        // f32 base index inside the shared ArrayBuffer view.  9 slots/glyph
+        // (8 floats + 1 uint reinterpreted via the u32 view at the same offset).
+        const f32Base = currentGlyphCount * (GLYPH_INSTANCE_BYTES / 4);
+        glyphF32[f32Base + 0] = q.localOffsetX;
+        glyphF32[f32Base + 1] = q.localOffsetY;
+        glyphF32[f32Base + 2] = q.localSizeW;
+        glyphF32[f32Base + 3] = q.localSizeH;
+        glyphF32[f32Base + 4] = q.uvU0;
+        glyphF32[f32Base + 5] = q.uvV0;
+        glyphF32[f32Base + 6] = q.uvU1;
+        glyphF32[f32Base + 7] = q.uvV1;
+        // labelIndex is a u32; write it through the Uint32Array view so the
+        // bit pattern is exact (Float32Array would reinterpret it).
+        glyphU32[f32Base + 8] = li;
+        currentGlyphCount++;
       }
 
-      this.currentLabelCount++;
+      currentLabelCount++;
     }
 
-    // Upload to GPU if a real device is present.
-    if (!this.device) return;
-    const device = this.device;
+    // Upload to GPU only when a real device is present.
+    if (!device) return;
 
-    if (this.storageBuffer && this.currentLabelCount > 0) {
+    if (storageBuffer && currentLabelCount > 0) {
       device.queue.writeBuffer(
-        this.storageBuffer,
+        storageBuffer,
         0,
-        this.labelBuf,
+        labelBuf,
         0,
-        (this.currentLabelCount * LABEL_DATA_BYTES) / 4,
+        (currentLabelCount * LABEL_DATA_BYTES) / 4,
       );
     }
-    if (this.instanceBuffer && this.currentGlyphCount > 0) {
+    if (instanceBuffer && currentGlyphCount > 0) {
       device.queue.writeBuffer(
-        this.instanceBuffer,
+        instanceBuffer,
         0,
-        this.glyphBuf,
+        glyphBuf,
         0,
-        this.currentGlyphCount * GLYPH_INSTANCE_BYTES,
+        currentGlyphCount * GLYPH_INSTANCE_BYTES,
       );
     }
   }
 
-  /**
-   * Issue the label draw call into an in-flight render pass.
-   *
-   * Must be called inside a `beginRenderPass` / `pass.end()` block by the
-   * engine.  The pass's render target format must match `ctx.format`.
-   *
-   * @param pass        - Active render pass encoder.
-   * @param viewProj    - 4×4 view-projection matrix as a 16-element Float32Array.
-   * @param viewportSize - [width, height] in physical pixels.
-   */
-  render(
+  function render(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: [number, number],
   ): void {
-    if (!this.device || !this.pipeline || !this.bindGroup) return;
-    if (this.currentGlyphCount === 0) return;
+    if (!device || !pipeline || !bindGroup || !uniformBuffer || !cornerBuffer || !instanceBuffer) {
+      return;
+    }
+    if (currentGlyphCount === 0) return;
 
     // Pack uniforms (80 bytes = CameraUniforms prefix only).
     //
@@ -469,34 +498,33 @@ export class LabelRenderer {
     uni.set(viewProj, 0);
     uni[16] = viewportSize[0];
     uni[17] = viewportSize[1];
-    this.device.queue.writeBuffer(this.uniformBuffer!, 0, uni);
+    device.queue.writeBuffer(uniformBuffer, 0, uni);
 
-    pass.setPipeline(this.pipeline);
-    pass.setBindGroup(0, this.bindGroup);
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
     // Buffer slot 0: static corner quad (4 vertices, broadcast across instances).
-    pass.setVertexBuffer(0, this.cornerBuffer!);
+    pass.setVertexBuffer(0, cornerBuffer);
     // Buffer slot 1: per-glyph instance data.
-    pass.setVertexBuffer(1, this.instanceBuffer!);
+    pass.setVertexBuffer(1, instanceBuffer);
     // 4 vertices per triangle-strip quad × N glyph instances.
-    pass.draw(4, this.currentGlyphCount, 0, 0);
+    pass.draw(4, currentGlyphCount, 0, 0);
   }
 
-  /** Total glyph count across all active labels. Used by tests and debug HUD. */
-  glyphCount(): number {
-    return this.currentGlyphCount;
+  function glyphCount(): number {
+    return currentGlyphCount;
   }
 
-  /** Number of labels last passed to setLabels. Used by tests and debug HUD. */
-  labelCount(): number {
-    return this.currentLabelCount;
+  function labelCount(): number {
+    return currentLabelCount;
   }
 
-  /** Release all GPU resources. Does nothing if constructed with a null device. */
-  destroy(): void {
-    this.uniformBuffer?.destroy();
-    this.storageBuffer?.destroy();
-    this.instanceBuffer?.destroy();
-    this.cornerBuffer?.destroy();
-    this.atlasTexture?.destroy();
+  function destroy(): void {
+    uniformBuffer?.destroy();
+    storageBuffer?.destroy();
+    instanceBuffer?.destroy();
+    cornerBuffer?.destroy();
+    atlasTexture?.destroy();
   }
+
+  return { setLabels, render, glyphCount, labelCount, destroy };
 }

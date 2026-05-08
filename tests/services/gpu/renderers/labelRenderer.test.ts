@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { LabelRenderer } from '../../../../src/services/gpu/renderers/labelRenderer';
+import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labelRenderer';
 import { parseFontMetrics } from '../../../../src/services/gpu/labels/fontMetrics';
 
 // Minimal BMFont fixture: just the uppercase A (codepoint 65) so we can test
@@ -14,9 +14,10 @@ const FIXTURE_METRICS = parseFontMetrics({
   ],
 });
 
-// Build a LabelRenderer with a null device — the constructor and setLabels
-// guard all GPU calls behind `if (this.device)`, so CPU state is safe to
-// exercise in unit tests without a real WebGPU context.
+// Build a LabelRenderer with a null device — the factory guards all GPU
+// calls behind `if (device)`, so CPU state is safe to exercise in unit
+// tests without a real WebGPU context.  This mirrors `textureAtlas.test.ts`'s
+// null-device pattern.
 const newRenderer = () => {
   const ctx = {
     device: null as unknown as GPUDevice,
@@ -24,8 +25,7 @@ const newRenderer = () => {
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
   };
-  const bitmap = null as unknown as ImageBitmap;
-  return new LabelRenderer(ctx, FIXTURE_METRICS, bitmap);
+  return createLabelRenderer(ctx, FIXTURE_METRICS, null);
 };
 
 describe('LabelRenderer (CPU state)', () => {
