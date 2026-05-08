@@ -558,6 +558,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Release the WebHID device (no-op if never connected).
       state.subsystems.spaceMouse.destroy();
 
+      // 5b. Release point-renderer GPU resources.  PointRenderer owns the
+      // largest GPU allocations in the app — per-source vertex buffers
+      // (~14 MB GPU + ~14 MB CPU mirror per SDSS deck, growing across
+      // SDSS + GLADE-large + 2MRS + Famous), plus each cloud's CloudFade
+      // 16-byte uniform, plus the renderer's own 176-byte uniform.
+      // WebGPU buffers do NOT release via JS GC alone — `destroy()` is
+      // mandatory.  Without this call, every HMR cycle / StrictMode
+      // remount leaks the entire deck.  See PointRenderer.destroy()'s
+      // docstring for the full rationale.
+      state.gpu.renderer?.destroy();
+
       // 6. Drop references to aid GC.
       state.gpu.renderer = null;
       state.sources.clouds.clear();
