@@ -101,7 +101,9 @@ import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
-import { computeScaleInfo } from './helpers/scaleBar';
+import { cssToTexPx } from './helpers/cssToTexPx';
+import { createScaleBarUpdater } from './helpers/scaleBarUpdater';
+import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../loading/types';
 import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
@@ -437,57 +439,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // ref to detach the listeners.
   const detachControlsRef: { current: (() => void) | null } = { current: null };
 
-  // ── Scale-bar deduplication ──────────────────────────────────────────────
+  // ── Scale-bar updater ────────────────────────────────────────────────────
   //
-  // We only fire `onScaleChange` when the formatted label or rounded pixel
-  // width actually changes.  A string signature (`"${niceMpc}:${widthPx}"`)
-  // is the cheapest dedup — one string comparison per frame.  Both
-  // bindings stay local because they're scoped to `updateScaleBar()`.
-  const SCALE_TARGET_PX = 150;
-  let lastScaleSig = '';
-
-  // ── CSS → texture-space pixel conversion ────────────────────────────────
-  //
-  // DPR cap matches `resizeCanvasToDisplay` in device.ts (≤ 2). Precomputed
-  // once here; if DPR changes (rare) the next pick will use the stale cap —
-  // acceptable, a refresh resolves it.
-  function cssToTexPx(cssPx: number): number {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    return cssPx * dpr;
-  }
-
-  // ── Scale bar computation ────────────────────────────────────────────────
-
-  /**
-   * Compute the scale bar's label and pixel width from the current camera
-   * state, then fire `onScaleChange` if either value changed.
-   *
-   * The pure math (perspective-projection → pxPerMpc → niceRound → label)
-   * lives in `scaleBar.ts:computeScaleInfo`.  This wrapper owns the engine-
-   * frame-local concerns:
-   *
-   *   - Reading the live `cam` reference (initialised post-async).
-   *   - Reading `canvas.clientHeight` (CSS pixels, not backing-store) so
-   *     the bar's physical screen width is DPR-independent.
-   *   - Deduplicating identical results via `lastScaleSig` so React's
-   *     setState only fires when the user-visible value actually changed.
-   */
-  function updateScaleBar(): void {
-    if (!state.cam) return;
-
-    const info = computeScaleInfo({
-      cam: state.cam,
-      canvasSize: { width: canvas.clientWidth, height: canvas.clientHeight },
-      targetPx: SCALE_TARGET_PX,
-    });
-    if (info === null) return;
-
-    const sig = `${info.label}:${info.widthPx}`;
-    if (sig === lastScaleSig) return;
-    lastScaleSig = sig;
-
-    cb.onScaleChange(info);
-  }
+  // The factory returns a closure that internally dedups via
+  // `lastScaleSig`, reads the live `state.cam` at call time, and fires
+  // `cb.onScaleChange` only when the visible value changed.  See
+  // `helpers/scaleBarUpdater.ts` for the full contract; engine.ts just
+  // hands it a stable reference and forgets about it.
+  const updateScaleBar = createScaleBarUpdater({ state, canvas, cb });
 
   // ── Async startup ────────────────────────────────────────────────────────
 
@@ -692,33 +651,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
 
     logCameraState() {
-      // Debug aid for tuning the initial camera framing + reset target.
-      // Prints the live camera state in copy-paste-friendly form so the
-      // values can be pasted into `cameraFraming.ts` (initial camera) or
-      // wherever the reset target is hard-coded.  No-op when the camera
-      // hasn't been constructed yet (early invocation during engine boot).
-      const cam = state.cam;
-      if (!cam) {
-        console.log('[engine] logCameraState: camera not ready yet');
-        return;
-      }
-      const out = {
-        target: [
-          Number(cam.target[0].toFixed(2)),
-          Number(cam.target[1].toFixed(2)),
-          Number(cam.target[2].toFixed(2)),
-        ],
-        distance: Number(cam.distance.toFixed(2)),
-        yaw: Number(cam.yaw.toFixed(4)),
-        pitch: Number(cam.pitch.toFixed(4)),
-        fovYRad: Number(cam.fovYRad.toFixed(4)),
-      };
-      // Two prints — the structured form for human reading, the raw
-      // single-line for fast copy-paste into source.
-      console.log('[engine] camera state:', out);
-      console.log(
-        `[engine] one-liner: target: [${out.target.join(', ')}], distance: ${out.distance}, yaw: ${out.yaw}, pitch: ${out.pitch}, fovYRad: ${out.fovYRad}`,
-      );
+      logCameraState(state.cam);
     },
 
     focusOn(info) {
