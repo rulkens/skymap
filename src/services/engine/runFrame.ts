@@ -81,7 +81,7 @@ import type { FpsCounter } from './fpsCounter';
 
 import { computeViewProj, updatePosition } from '../camera/orbitCamera';
 import { resizeCanvasToDisplay } from '../gpu/device';
-import { autoLodMask } from './autoLod';
+import { autoLodMask } from './helpers/autoLod';
 import { renderFrame } from './renderFrame';
 import {
   PROCEDURAL_DISK_FADE_START_PX,

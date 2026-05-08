@@ -16,7 +16,7 @@
  * the band choices is long and would otherwise dominate `engine.ts`.
  */
 
-import { ALL_VISIBLE_MASK, Source, maskWith } from '../../data/sources';
+import { ALL_VISIBLE_MASK, Source, maskWith } from '../../../data/sources';
 
 /**
  * Pick which surveys should be visible at a given camera distance from the

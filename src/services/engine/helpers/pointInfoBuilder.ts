@@ -17,10 +17,10 @@
  * to test in isolation and means they don't need engine state threaded in.
  */
 
-import type { PointCloud, PointInfo } from '../../@types';
-import { Source, sourceLabel, bandLabels } from '../../data/sources';
-import type { FamousMetaEntry, FamousXrefMap } from '../loading/fetchers/famousMetaFetcher';
-import { fallbackOrientation } from '../../utils/random/fallbackOrientation';
+import type { PointCloud, PointInfo } from '../../../@types';
+import { Source, sourceLabel, bandLabels } from '../../../data/sources';
+import type { FamousMetaEntry, FamousXrefMap } from '../../loading/fetchers/famousMetaFetcher';
+import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import {
   cartesianToRaDecZ,
   formatRaSexagesimal,
@@ -37,7 +37,7 @@ import {
   nedByNameUrl,
   nedNearPositionUrl,
   DEFAULT_GALAXY_DIAMETER_KPC,
-} from '../../utils/math';
+} from '../../../utils/math';
 
 /**
  * Return the maximum absolute value of any coordinate component in the cloud's

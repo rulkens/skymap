@@ -59,9 +59,9 @@
  *     emit garbage.
  */
 
-import { formatDistance } from '../../utils/format/distance';
+import { formatDistance } from '../../../utils/format/distance';
 import { niceRound } from './pointInfoBuilder';
-import type { ScaleInfo } from '../../@types';
+import type { ScaleInfo } from '../../../@types';
 
 /**
  * Camera shape needed by `computeScaleInfo`.  We deliberately accept

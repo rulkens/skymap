@@ -11,7 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { computeScaleInfo } from '../../../src/services/engine/scaleBar';
+import { computeScaleInfo } from '../../../../src/services/engine/helpers/scaleBar';
 
 const FOV = (Math.PI / 180) * 60;
 const TARGET_PX = 150;
