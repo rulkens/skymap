@@ -40,15 +40,15 @@
  */
 
 import { mat4 } from 'gl-matrix';
-import type { PointCloud } from '../../@types';
-import { ALL_SOURCES, Source } from '../../data/sources';
-import { BiasMode } from '../../data/biasMode';
-import { type SchechterTriple } from '../../data/surveyFluxLimits';
+import type { PointCloud } from '../../../@types';
+import { ALL_SOURCES, Source } from '../../../data/sources';
+import { BiasMode } from '../../../data/biasMode';
+import { type SchechterTriple } from '../../../data/surveyFluxLimits';
 import {
   type BuildPointInterleavedBufferInput,
   type BuildPointInterleavedBufferMode,
   type BuildPointInterleavedBufferResult,
-} from '../engine/bake/buildPointInterleavedBuffer';
+} from '../../engine/bake/buildPointInterleavedBuffer';
 
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler to
 // emit `buildPointInterleavedBuffer.worker.ts` as a separate worker chunk
@@ -61,15 +61,15 @@ import {
 // In Node-only test environments the `?worker` suffix isn't resolvable;
 // tests inject a synchronous fallback via `setBuildBufferFactory` instead
 // of importing this module.  See the `BuildBufferFactory` type below.
-import BuildPointBufferWorker from '../engine/bake/buildPointInterleavedBuffer.worker?worker';
+import BuildPointBufferWorker from '../../engine/bake/buildPointInterleavedBuffer.worker?worker';
 
 // Lazy-Schechter worker import — same `?worker` Vite suffix as the main
 // vertex bake, but for the much smaller (single Float32Array) Schechter
 // integral.  Spawned by `setBiasMode(BiasMode.Schechter)` the first time
 // the user selects that mode; subsequent toggles reuse the cached
 // `Float32Array` per source for instant re-toggle.
-import ComputeSchechterRatiosWorker from '../engine/bake/computeSchechterRatios.worker?worker';
-import { type ComputeSchechterRatiosInput } from '../engine/bake/computeSchechterRatios';
+import ComputeSchechterRatiosWorker from '../../engine/bake/computeSchechterRatios.worker?worker';
+import { type ComputeSchechterRatiosInput } from '../../engine/bake/computeSchechterRatios';
 
 // Lazy-angular-reweight worker import — same `?worker` Vite suffix.  The
 // HEALPix bake is much cheaper than the Schechter integral (~100-300 ms for
@@ -78,8 +78,8 @@ import { type ComputeSchechterRatiosInput } from '../engine/bake/computeSchechte
 // `setBiasMode(BiasMode.AngularReweight)` the first time the user picks
 // that mode; subsequent toggles reuse `cachedAngularWeights` for instant
 // re-toggle.
-import ComputeAngularWeightsWorker from '../engine/bake/computeAngularWeights.worker?worker';
-import { type ComputeAngularWeightsInput } from '../engine/bake/computeAngularWeights';
+import ComputeAngularWeightsWorker from '../../engine/bake/computeAngularWeights.worker?worker';
+import { type ComputeAngularWeightsInput } from '../../engine/bake/computeAngularWeights';
 
 // `?static` is wesl-plugin's Vite import suffix. It runs the WESL linker at
 // build time and hands us a plain WGSL string with all `import` statements
@@ -97,10 +97,10 @@ import { type ComputeAngularWeightsInput } from '../engine/bake/computeAngularWe
 // fragment GPUShaderModule from disjoint sources, eliminating a class of
 // selection-on-wrong-galaxy bugs that came from one shader module servicing
 // two pipelines with diverging fragment paths.
-import vsCode from './shaders/points/vertex.wesl?static';
-import colorFsCode from './shaders/points/colorFragment.wesl?static';
-import { CloudFade } from './cloudFade';
-import { createShaderModuleWithDevLog } from './shaderCompileLogger';
+import vsCode from '../shaders/points/vertex.wesl?static';
+import colorFsCode from '../shaders/points/colorFragment.wesl?static';
+import { CloudFade } from '../resources/cloudFade';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 

@@ -14,10 +14,10 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { GpuContext, QuadInstance } from '../../@types';
-import vsCode from './shaders/quads/vertex.wesl?static';
-import fsCode from './shaders/quads/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from './shaderCompileLogger';
+import type { GpuContext, QuadInstance } from '../../../@types';
+import vsCode from '../shaders/quads/vertex.wesl?static';
+import fsCode from '../shaders/quads/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
  * Per-instance vertex attributes packed as 12 floats / 48 bytes:

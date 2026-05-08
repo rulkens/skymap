@@ -23,11 +23,11 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import { PointRenderer } from '../../../src/services/gpu/pointRenderer';
-import { buildPointInterleavedBuffer } from '../../../src/services/engine/bake/buildPointInterleavedBuffer';
-import { Source } from '../../../src/data/sources';
-import { BiasMode } from '../../../src/data/biasMode';
-import type { PointCloud } from '../../../src/@types';
+import { PointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
+import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
+import { Source } from '../../../../src/data/sources';
+import { BiasMode } from '../../../../src/data/biasMode';
+import type { PointCloud } from '../../../../src/@types';
 
 // `GPUBufferUsage` is a browser-global enum exposed by the WebGPU runtime;
 // Node has no idea what it is. Vitest runs in Node, so referencing

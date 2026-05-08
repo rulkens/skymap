@@ -24,7 +24,7 @@ import {
 } from '../../../../src/services/engine/interaction/clickHandler';
 import { Source } from '../../../../src/data/sources';
 import type { PointCloud, PointInfo } from '../../../../src/@types';
-import type { createPickRenderer } from '../../../../src/services/gpu/pickRenderer';
+import type { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 
 type PickRenderer = ReturnType<typeof createPickRenderer>;
 

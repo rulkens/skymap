@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ProceduralDiskRenderer } from '../../../src/services/gpu/proceduralDiskRenderer';
+import { ProceduralDiskRenderer } from '../../../../src/services/gpu/renderers/proceduralDiskRenderer';
 
 describe('ProceduralDiskRenderer', () => {
   it('exports the class as a value', () => {

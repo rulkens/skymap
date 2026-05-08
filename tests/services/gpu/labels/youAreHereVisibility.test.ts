@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { youAreHereAlpha, YOU_ARE_HERE_NEAR_MPC, YOU_ARE_HERE_FAR_MPC } from '../../../src/services/gpu/youAreHereVisibility';
+import { youAreHereAlpha, YOU_ARE_HERE_NEAR_MPC, YOU_ARE_HERE_FAR_MPC } from '../../../../src/services/gpu/labels/youAreHereVisibility';
 
 describe('youAreHereAlpha', () => {
   it('is 1.0 when camera is closer than NEAR threshold', () => {

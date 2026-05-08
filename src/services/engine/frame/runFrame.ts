@@ -73,10 +73,10 @@
 
 import type { EngineCallbacks, EngineState } from '../../../@types';
 import type { Source } from '../../../data/sources';
-import type { QuadRenderer } from '../../gpu/quadRenderer';
-import type { DiskRenderer } from '../../gpu/diskRenderer';
-import type { MilkyWayRenderer } from '../../gpu/milkyWayRenderer';
-import type { FilamentRenderer } from '../../gpu/filamentRenderer';
+import type { QuadRenderer } from '../../gpu/renderers/quadRenderer';
+import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';
+import type { MilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
+import type { FilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import type { FpsCounter } from '../subsystems/fpsCounter';
 
 import { computeViewProj, updatePosition } from '../../camera/orbitCamera';

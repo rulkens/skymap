@@ -58,11 +58,11 @@
 // shared with PointRenderer, but we compile our OWN GPUShaderModule from
 // it; never share modules across pipelines (see the `auto` bind-group-
 // layout trap noted in pointRenderer.ts).
-import vsCode from './shaders/points/vertex.wesl?static';
-import pickFsCode from './shaders/points/pickFragment.wesl?static';
-import type { Source } from '../../data/sources';
+import vsCode from '../shaders/points/vertex.wesl?static';
+import pickFsCode from '../shaders/points/pickFragment.wesl?static';
+import type { Source } from '../../../data/sources';
 import type { PointRenderer } from './pointRenderer';
-import { createShaderModuleWithDevLog } from './shaderCompileLogger';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

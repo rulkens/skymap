@@ -27,10 +27,10 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { GpuContext } from '../../@types';
-import vsCode from './shaders/disks/vertex.wesl?static';
-import fsCode from './shaders/disks/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from './shaderCompileLogger';
+import type { GpuContext } from '../../../@types';
+import vsCode from '../shaders/disks/vertex.wesl?static';
+import fsCode from '../shaders/disks/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 export type DiskInstance = {
   x: number;

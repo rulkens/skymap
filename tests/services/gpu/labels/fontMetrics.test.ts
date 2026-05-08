@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFontMetrics, lookupGlyph, type FontMetrics } from '../../../src/services/gpu/fontMetrics';
+import { parseFontMetrics, lookupGlyph, type FontMetrics } from '../../../../src/services/gpu/labels/fontMetrics';
 
 const FIXTURE = {
   pages: ['jetbrains-mono.png'],

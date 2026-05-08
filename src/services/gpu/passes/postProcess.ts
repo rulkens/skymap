@@ -96,10 +96,10 @@
 // compiles a strictly-smaller GPUShaderModule from disjoint source.
 // Both modules import their shared structs from `shaders/toneMap/io.wesl`
 // so the vertex-to-fragment interface stays byte-identical.
-import vsCode from './shaders/toneMap/vertex.wesl?static';
-import fsCode from './shaders/toneMap/fragment.wesl?static';
-import { ToneMapCurve } from '../../data/toneMapCurve';
-import { createShaderModuleWithDevLog } from './shaderCompileLogger';
+import vsCode from '../shaders/toneMap/vertex.wesl?static';
+import fsCode from '../shaders/toneMap/fragment.wesl?static';
+import { ToneMapCurve } from '../../../data/toneMapCurve';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
  * Plain `{ width, height }` pair, kept local to this module.  We

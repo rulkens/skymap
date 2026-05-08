@@ -79,7 +79,7 @@
 import { Source } from '../../../data/sources';
 import { createOrbitCamera } from '../../camera/orbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
-import { createPickRenderer } from '../../gpu/pickRenderer';
+import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
 import { createClickResolver } from '../interaction/clickHandler';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
