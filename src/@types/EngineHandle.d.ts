@@ -412,6 +412,24 @@ export type EngineHandle = {
   loadPgcAliases?: () => Promise<PgcAliasMap>;
 
   /**
+   * Gate the entire scalar-volume overlay on or off.
+   *
+   * When `false`, every registered field is skipped by `scalarVolumePass`
+   * without releasing GPU resources — the same render-cost saving as
+   * `setVolumeFieldEnabled(handle, false)` but applied to all fields at
+   * once.  Per-field `enabled` flags and `intensity` values are preserved
+   * so re-enabling the master toggle restores the previous per-field
+   * configuration.
+   *
+   * No echo callback — the React layer owns this value optimistically via
+   * the `setVolumesEnabled` setter in `useEngineSettings` (same pattern
+   * as `filamentsEnabled`).
+   *
+   * @param enabled  True to render all fields; false to suppress the whole overlay.
+   */
+  setVolumesEnabled?: (enabled: boolean) => void;
+
+  /**
    * Register a new scalar-volume field from a decoded `ScalarCube`.
    *
    * Uploads the cube's voxel data to a GPU 3D texture and adds it to the
@@ -479,6 +497,30 @@ export type EngineHandle = {
    * per-field slider row for each entry.
    */
   listVolumeFields?: () => string[];
+
+  /**
+   * Return a snapshot of every registered field's UI-facing state — the
+   * data the SettingsPanel needs to render its per-field rows.
+   *
+   * Combines the ordered handle list from the renderer with the per-field
+   * `enabled` and `intensity` tunables from the settings bag.  This single
+   * method replaces the alternative of calling `listVolumeFields()` and
+   * then reading each field's settings out of the bag separately, which
+   * would require exposing internal engine state to the React layer.
+   *
+   * The label defaults to the handle string — callers that want
+   * human-readable names should pass a label when registering the field
+   * (support for a `label` option in `addVolumeField` is a future
+   * extension; for now `handle` doubles as the display name).
+   *
+   * Returns `[]` when no fields are registered.
+   */
+  getVolumeFieldsState?: () => ReadonlyArray<{
+    handle: string;
+    label: string;
+    enabled: boolean;
+    intensity: number;
+  }>;
 
   /**
    * Flat read-only registry of every asset slot the engine owns, keyed by

@@ -52,7 +52,7 @@
  * writes the handle in once, every other hook reads it out, no re-renders.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { StatusBar } from '../StatusBar/StatusBar';
@@ -120,7 +120,36 @@ export function App(): React.ReactElement {
     setFilamentsEnabled,
     setFilamentIntensity,
     setExposure,
+    setVolumesEnabled,
+    setVolumeFields,
   } = useEngineSettings();
+
+  // ── Stable volume-fields refresh callback ─────────────────────────────
+  //
+  // The engine fires `onVolumeFieldsChanged` whenever a field is added or
+  // removed.  The handler needs to call `handleRef.current.getVolumeFieldsState()`
+  // — but `handleRef` is returned by `useEngine` (below), which runs AFTER
+  // this block.  We break the timing dependency with a stable indirection:
+  //
+  //   1. `_onVolumeFieldsChangedTarget` is a mutable ref holding the real
+  //      callback.  It starts as a no-op; App fills it in once `handleRef`
+  //      is available (the assignment below runs every render, which is
+  //      fine — it's a ref write, not state).
+  //
+  //   2. `_onVolumeFieldsChangedStable` is a stable function (captured once
+  //      via `.current`) that dispatches to whatever the target ref holds.
+  //      Because it's stable, passing it in `extraCallbacks` doesn't
+  //      interfere with useEngine's "capture once at startup" contract.
+  //
+  // When `onVolumeFieldsChanged` fires inside the engine (after `addVolumeField`
+  // / `removeVolumeField`), `handleRef.current` is guaranteed to be set
+  // because the engine calls the callback only after construction, so
+  // `getVolumeFieldsState()` is safe to call.
+  const _onVolumeFieldsChangedTarget = useRef<() => void>(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const _onVolumeFieldsChangedStable = useRef(() =>
+    _onVolumeFieldsChangedTarget.current(),
+  ).current;
   const {
     pointSize,
     brightness,
@@ -139,6 +168,8 @@ export function App(): React.ReactElement {
     absMagLimit,
     toneMapCurve,
     exposure,
+    volumesEnabled,
+    volumeFields,
   } = settings;
 
   // ── Engine lifecycle + engine-driven session state ────────────────────────
@@ -160,7 +191,27 @@ export function App(): React.ReactElement {
     sourceCounts,
     loadProgress,
     currentTier,
-  } = useEngine({ extraCallbacks: settingsCallbacks });
+  } = useEngine({
+    extraCallbacks: {
+      ...settingsCallbacks,
+      // Volume-fields changed: rebuild the per-field row data.  Uses
+      // the stable dispatch ref so the engine captures only one stable
+      // function pointer (not a new lambda on every render).  See the
+      // `_onVolumeFieldsChangedStable` comment block above for the
+      // full rationale.
+      onVolumeFieldsChanged: _onVolumeFieldsChangedStable,
+    },
+  });
+
+  // Wire the real volume-fields refresh now that handleRef is available.
+  // This assignment runs every render (a stable ref write — no cost), and
+  // the closure always reflects the latest `setVolumeFields` and `handleRef`.
+  // Even though `setVolumeFields` is a stable React setter (same reference
+  // across renders), being explicit here is safer than relying on that
+  // stability guarantee as implementation detail of useState.
+  _onVolumeFieldsChangedTarget.current = () => {
+    setVolumeFields(handleRef.current?.getVolumeFieldsState?.() ?? []);
+  };
 
   // ── Initial mobile signal (drives panel-collapse on first paint) ─────────
   //
@@ -469,6 +520,31 @@ export function App(): React.ReactElement {
           setExposure(value);
           handleRef.current?.setExposure?.(value);
         }}
+        // ── Scalar-volume overlay ─────────────────────────────────────
+        //
+        // `volumesEnabled` is the master toggle — no engine echo, owned
+        // optimistically in React state (same pattern as filamentsEnabled).
+        // The change handler updates React state first, then forwards to
+        // the engine handle so the render pass knows to skip all fields.
+        //
+        // `volumeFields` is rebuilt by `_onVolumeFieldsChangedTarget` whenever
+        // the engine fires `onVolumeFieldsChanged` (add / remove).  Individual
+        // setters (`setVolumeFieldEnabled` / `setVolumeFieldIntensity`) do NOT
+        // fire `onVolumeFieldsChanged`; the SettingsPanel updates its per-field
+        // checkbox / slider through normal React onChange (optimistic — the
+        // engine mutates its internal settings bag but doesn't echo back).
+        volumesEnabled={volumesEnabled}
+        onVolumesEnabledChange={(v) => {
+          setVolumesEnabled(v);
+          handleRef.current?.setVolumesEnabled?.(v);
+        }}
+        volumeFields={volumeFields}
+        onVolumeFieldEnabledChange={(handle, enabled) =>
+          handleRef.current?.setVolumeFieldEnabled?.(handle, enabled)
+        }
+        onVolumeFieldIntensityChange={(handle, intensity) =>
+          handleRef.current?.setVolumeFieldIntensity?.(handle, intensity)
+        }
       />
         {/*
           Stats panel — read-only telemetry: rolling FPS, per-survey loaded

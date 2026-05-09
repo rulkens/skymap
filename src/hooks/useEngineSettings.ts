@@ -60,7 +60,9 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
+  DEFAULT_VOLUMES_ENABLED,
 } from '../data/defaults';
+import type { VolumeFieldRowData } from '../components/SettingsPanel/SettingsPanel';
 
 export type EngineSettingsState = {
   pointSize: number;
@@ -80,6 +82,18 @@ export type EngineSettingsState = {
   absMagLimit: number;
   toneMapCurve: ToneMapCurve;
   exposure: number;
+  /**
+   * Master toggle for the scalar-volume overlay.  Mirrors
+   * `EngineSettingsState.volumesEnabled` on the engine side.  No echo
+   * callback — React owns it optimistically, same as `filamentsEnabled`.
+   */
+  volumesEnabled: boolean;
+  /**
+   * Snapshot of every registered field's UI state — rebuilt on each
+   * `onVolumeFieldsChanged` callback via `handle.getVolumeFieldsState()`.
+   * Starts empty (no cubes are registered at startup).
+   */
+  volumeFields: ReadonlyArray<VolumeFieldRowData>;
 };
 
 /**
@@ -113,6 +127,18 @@ export type UseEngineSettingsReturn = {
   setFilamentsEnabled: (v: boolean) => void;
   setFilamentIntensity: (v: number) => void;
   setExposure: (v: number) => void;
+  /**
+   * Master on/off for the scalar-volume overlay.  No engine echo — React
+   * owns it optimistically, same as `setFilamentsEnabled`.
+   */
+  setVolumesEnabled: (v: boolean) => void;
+  /**
+   * Rebuilds the per-field row data.  Called by App.tsx whenever the
+   * engine fires `onVolumeFieldsChanged` (add/remove), reading the new
+   * snapshot from `handle.getVolumeFieldsState()`.  This indirect wiring
+   * avoids giving the hook itself a reference to the engine handle.
+   */
+  setVolumeFields: (fields: ReadonlyArray<VolumeFieldRowData>) => void;
 };
 
 export function useEngineSettings(): UseEngineSettingsReturn {
@@ -153,15 +179,26 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   const [exposure, setExposure] = useState<number>(DEFAULT_EXPOSURE);
 
   // ── App-owned optimistic values (no engine echo) ─────────────────────
-  // The engine does NOT fire echo callbacks for filaments state, so React
-  // owns these optimistically. The SettingsPanel onChange handler updates
-  // these directly AND forwards to the engine handle.
+  // The engine does NOT fire echo callbacks for filaments or volumes state,
+  // so React owns these optimistically. The SettingsPanel onChange handler
+  // updates these directly AND forwards to the engine handle.
   const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(
     DEFAULT_FILAMENTS_ENABLED,
   );
   const [filamentIntensity, setFilamentIntensity] = useState<number>(
     DEFAULT_FILAMENT_INTENSITY,
   );
+
+  // Scalar-volume master toggle — no echo, same as filamentsEnabled above.
+  // Starts at the default from data/defaults.ts so the SettingsPanel renders
+  // a correct first frame before any cube is registered.
+  const [volumesEnabled, setVolumesEnabled] = useState<boolean>(DEFAULT_VOLUMES_ENABLED);
+
+  // Per-field row data.  Starts empty (no cubes at startup).  Rebuilt by
+  // App.tsx whenever the engine fires onVolumeFieldsChanged by calling
+  // handle.getVolumeFieldsState() — this indirect approach keeps the hook
+  // free of any reference to the engine handle.
+  const [volumeFields, setVolumeFields] = useState<ReadonlyArray<VolumeFieldRowData>>([]);
 
   // ── One-shot from engine: filament strip + vertex counts ─────────────
   // Stays null until the engine fires `onFilamentsReady` (once, after the
@@ -193,6 +230,8 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       absMagLimit,
       toneMapCurve,
       exposure,
+      volumesEnabled,
+      volumeFields,
     },
     engineCallbacks: {
       onPointSizeChange: setPointSize,
@@ -215,5 +254,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     setFilamentsEnabled,
     setFilamentIntensity,
     setExposure,
+    setVolumesEnabled,
+    setVolumeFields,
   };
 }

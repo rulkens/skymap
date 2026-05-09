@@ -909,12 +909,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // ── Scalar-volume field management ────────────────────────────────────
     //
-    // Five public methods to drive the ScalarVolumeRenderer from outside
-    // the engine (React shell, data-loading logic).  All five optional-
+    // Six public methods to drive the ScalarVolumeRenderer from outside
+    // the engine (React shell, data-loading logic).  All six optional-
     // chain through `state.gpu.scalarVolumeRenderer` so they're safe to
     // call during the brief window before the GPU init IIFE completes —
     // the renderer is null until `initGpu` runs but that window is
     // typically less than one frame at browser-cold-start.
+
+    setVolumesEnabled(enabled) {
+      // Master toggle — mutate the settings bag so the per-frame gate in
+      // `scalarVolumePass` sees the new value on the next frame.  We do
+      // NOT fire an echo callback here (no `cb.onVolumesEnabledChange`)
+      // because the React layer owns this value optimistically (same as
+      // `filamentsEnabled`).  The caller (App.tsx) updates React state
+      // before forwarding here, so the React copy and the engine copy
+      // are always in agreement.
+      state.settings.volumesEnabled = enabled;
+      state.subsystems.scheduler.requestRender();
+    },
 
     addVolumeField(handle, cube) {
       // Upload the cube to the renderer.  If the renderer isn't ready
@@ -986,6 +998,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Delegates to the renderer, which is the authoritative list.
       // Falls back to [] when the renderer is not yet constructed.
       return state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
+    },
+
+    getVolumeFieldsState() {
+      // Combines the ordered handle list from the renderer with the
+      // per-field settings bag — avoiding the need to expose internal
+      // state to the React layer.  The label defaults to the handle
+      // string; a future `addVolumeField({ handle, label, ... })` API
+      // extension would populate it from caller metadata.
+      const handles = state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
+      return handles.map((handle) => {
+        const field = state.settings.volumeFields[handle];
+        return {
+          handle,
+          label: handle,
+          enabled: field?.enabled ?? true,
+          intensity: field?.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
+        };
+      });
     },
 
     // ── SpaceMouse 6DOF input setters ─────────────────────────────────────
