@@ -111,7 +111,6 @@ import {
   snapToCameraSnapshot,
   tweenToCameraSnapshot,
 } from './camera/cameraSnapshot';
-import { FOCUS_TWEEN_MS } from './camera/focusTween';
 import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
@@ -823,10 +822,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // framing at hundreds of Mpc, well past the impostor's fade-out
       // threshold.  This method tweens to a viewpoint inside the
       // impostor's full-visibility band so the Milky Way is the
-      // dominant on-screen subject.  Same target/distance constants
-      // live in `data/galacticCenter.ts`; same `tweens.start` shape as
-      // `focusOnHome` minus the snapshot read because the destination
-      // is a fixed pair of constants rather than a captured framing.
+      // dominant on-screen subject — target Sgr A* in world space, ride
+      // in to `MILKY_WAY_VIEW_DISTANCE_MPC`, preserve the user's
+      // current yaw/pitch so they don't get a disorienting snap.
+      //
+      // Reuses `tweenToCameraSnapshot` (the same helper that powers
+      // `focusOnHome`) by synthesizing an `InitialCam`-shaped snapshot
+      // on the fly: the catalog-side constants for `target`/`distance`,
+      // the live `cam` fields for the orientation and projection
+      // values that the helper expects but that we don't actually want
+      // to change here.
       const cam = state.cam;
       if (!cam) return;
 
@@ -835,26 +840,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // hash doesn't keep trying to resolve a stale focus.
       cb.onFocusChange?.(null);
 
-      state.subsystems.tweens.start({
-        startMs: performance.now(),
-        durationMs: FOCUS_TWEEN_MS,
-        fromTarget: vec3.clone(cam.target as vec3),
-        toTarget: vec3.fromValues(
+      tweenToCameraSnapshot(state, {
+        target: [
           MILKY_WAY_CENTER_WORLD[0],
           MILKY_WAY_CENTER_WORLD[1],
           MILKY_WAY_CENTER_WORLD[2],
-        ),
-        fromDistance: cam.distance,
-        toDistance: MILKY_WAY_VIEW_DISTANCE_MPC,
-        // Preserve current orientation — same as `focusOn` for a
-        // galaxy.  The user keeps their yaw/pitch; only the orbit
-        // target and distance change.
-        fromYaw: cam.yaw,
-        toYaw: cam.yaw,
-        fromPitch: cam.pitch,
-        toPitch: cam.pitch,
+        ],
+        distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+        yaw: cam.yaw,
+        pitch: cam.pitch,
+        fovYRad: cam.fovYRad,
+        near: cam.near,
+        far: cam.far,
       });
-      state.subsystems.scheduler.requestRender();
     },
 
     // ── LOD + per-source visibility setters ────────────────────────────────

@@ -60,18 +60,17 @@ export const MILKY_WAY_CENTER_WORLD: readonly [number, number, number] =
  * camera at a viewpoint where the procedural Milky Way impostor is the
  * dominant on-screen subject.
  *
- * Picked at 5 Mpc — comfortably inside the impostor's full-visibility
- * band (`milkyWayFadeAlpha` returns 1.0 for camDist ≤ 10 Mpc), but
- * not so close that we're "inside" the simulated raymarched volume in
- * a way that produces visual artefacts.  At 5 Mpc the spiral fills
- * roughly half the FOV at the project default 60° vertical FOV — close
- * to the same framing the user sees on a slow fly-out from the home
- * view, but stably anchored as a destination rather than a transient
- * waypoint.
+ * Picked at 0.15 Mpc (≈150 kpc) by visual calibration — at this distance
+ * the spiral fills most of the FOV at the project default 60° vertical
+ * FOV.  This is well inside the impostor's full-visibility band
+ * (`milkyWayFadeAlpha` returns 1.0 for camDist ≤ 10 Mpc) and a few times
+ * the Milky Way's own ~25 kpc disc radius, so we're framing it from
+ * outside without being so close that the procedural volume reveals its
+ * raymarched seams.
  *
  * The home framing is at hundreds of Mpc (whatever the bootstrap bbox
  * computes), which sits well past the 50 Mpc fade-out — that's why
  * `focusOnHome` doesn't put the impostor on screen even though it ends
  * up "near home".
  */
-export const MILKY_WAY_VIEW_DISTANCE_MPC = 5;
+export const MILKY_WAY_VIEW_DISTANCE_MPC = 0.15;
