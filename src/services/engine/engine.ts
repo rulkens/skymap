@@ -72,7 +72,6 @@
  * ```
  */
 
-import { updatePosition } from '../camera/orbitCamera';
 import { Source, maskWith, maskWithout } from '../../data/sources';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -94,7 +93,6 @@ import {
 } from '../../data/defaults';
 import type { LodMode, PointCloud, PointInfo } from '../../@types';
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
-import { vec3 } from 'gl-matrix';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
@@ -109,7 +107,10 @@ import type { AssetSlot } from '../loading/types';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
-import { FOCUS_TWEEN_MS } from './camera/focusTween';
+import {
+  snapToCameraSnapshot,
+  tweenToCameraSnapshot,
+} from './camera/cameraSnapshot';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -658,23 +659,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
 
     resetCamera() {
-      // `state.cam` may be null if the engine is destroyed or the cloud
-      // hasn't loaded yet.  We keep `state.initialCamSnapshot` declared in the
-      // outer state bag (rather than scoped to the async IIFE) so that
-      // this handle method can read it after the IIFE completes.
-      // Reading `state.cam` at call time gives us the live camera object
-      // to mutate, not a stale snapshot.
-      const cam = state.cam;
-      const initialCamSnapshot = state.initialCamSnapshot;
-      if (!cam || !initialCamSnapshot) return;
-      cam.target[0] = initialCamSnapshot.target[0];
-      cam.target[1] = initialCamSnapshot.target[1];
-      cam.target[2] = initialCamSnapshot.target[2];
-      cam.distance = initialCamSnapshot.distance;
-      cam.yaw = initialCamSnapshot.yaw;
-      cam.pitch = initialCamSnapshot.pitch;
-      updatePosition(cam);
-      state.subsystems.scheduler.requestRender();
+      // Snapshot null-check; cam-null is absorbed inside the helper.
+      // Both must exist for a meaningful snap.
+      if (!state.initialCamSnapshot) return;
+      snapToCameraSnapshot(state, state.initialCamSnapshot);
     },
 
     logCameraState() {
@@ -780,33 +768,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
 
     focusOnHome() {
-      // Camera or initial snapshot may not be ready yet — same pattern as
-      // resetCamera.  Both must exist for a meaningful tween.
-      const cam = state.cam;
-      const initialCamSnapshot = state.initialCamSnapshot;
-      if (!cam || !initialCamSnapshot) return;
+      // Snapshot null-check; cam-null is absorbed inside the helper.
+      if (!state.initialCamSnapshot) return;
 
       // Returning to the home view means we're no longer focused on any
       // particular galaxy.  Notify so the URL clears its `#focus=…`.
+      // Stays at the call site (not in the helper) because firing
+      // `onFocusChange(null)` is "this action is leaving a focus
+      // state", which `tweenToCameraSnapshot` doesn't decide.
       cb.onFocusChange?.(null);
 
-      state.subsystems.tweens.start({
-        startMs: performance.now(),
-        durationMs: FOCUS_TWEEN_MS,
-        fromTarget: vec3.clone(cam.target as vec3),
-        toTarget: vec3.fromValues(
-          initialCamSnapshot.target[0],
-          initialCamSnapshot.target[1],
-          initialCamSnapshot.target[2],
-        ),
-        fromDistance: cam.distance,
-        toDistance: initialCamSnapshot.distance,
-        fromYaw: cam.yaw,
-        toYaw: initialCamSnapshot.yaw,
-        fromPitch: cam.pitch,
-        toPitch: initialCamSnapshot.pitch,
-      });
-      state.subsystems.scheduler.requestRender();
+      tweenToCameraSnapshot(state, state.initialCamSnapshot);
     },
 
     // ── LOD + per-source visibility setters ────────────────────────────────
