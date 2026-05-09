@@ -21,4 +21,34 @@ describe('galaxyType', () => {
       galaxyType(Source.TwoMRS, { magU: NaN, magG: 8.5, magR: 8.0, magI: 7.4, magZ: NaN }).category,
     ).toBe('red');
   });
+
+  // Diagnostic outcome: the dispatcher's UNKNOWN fallback uses category
+  // `'green'` (intermediate), not the literal `'unknown'` that the type
+  // permits.  See the docblock on `UNKNOWN` in galaxyType.ts: the
+  // InfoCard prefers a neutral colour swatch over a special unknown
+  // state, so 'green' is intentional.  Pin it here so a refactor that
+  // "fixes" UNKNOWN to actually say `'unknown'` flips this test loudly.
+  it('NaN photometry on the dispatched channels falls back to the green-valley UNKNOWN', () => {
+    expect(
+      galaxyType(Source.SDSS, { magU: NaN, magG: NaN, magR: NaN, magI: NaN, magZ: NaN }).category,
+    ).toBe('green');
+  });
+
+  // Diagnostic outcome: Source.Famous *does* run a classifier (u−r via
+  // galaxyTypeFromColor), so all-zero photometry yields a colour rather
+  // than the UNKNOWN fallback.  u−r = 0 ≤ 2.2, so the result is 'blue'.
+  // The original spec assumed Famous had no classifier; reality is that
+  // the dispatcher reuses the SDSS path because Famous entries borrow
+  // SDSS-style optical slots (see comment in galaxyType.ts case body).
+  it('Source.Famous reuses the SDSS u−r classifier (zero photometry → blue)', () => {
+    expect(
+      galaxyType(Source.Famous, { magU: 0, magG: 0, magR: 0, magI: 0, magZ: 0 }).category,
+    ).toBe('blue');
+  });
+  it('Source.Famous with NaN photometry falls back to UNKNOWN (green)', () => {
+    expect(
+      galaxyType(Source.Famous, { magU: NaN, magG: 0, magR: NaN, magI: 0, magZ: 0 })
+        .category,
+    ).toBe('green');
+  });
 });
