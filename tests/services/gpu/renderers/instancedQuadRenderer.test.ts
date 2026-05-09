@@ -12,7 +12,7 @@
  * can assert on the descriptors the factory passed in.
  */
 
-import { describe, it, expect, beforeAll, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   createInstancedQuadRenderer,
   BYTES_PER_INSTANCE,
@@ -21,30 +21,6 @@ import {
 } from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
 import { MILKY_WAY_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gpu/renderers/milkyWayRenderer';
 import type { GpuContext } from '../../../../src/@types';
-
-beforeAll(() => {
-  // Match the global stubs used by other gpu/renderer tests. WebGPU's
-  // `GPUShaderStage` / `GPUBufferUsage` constants are window-scoped in
-  // the browser and don't exist under Node; the factory references
-  // `GPUShaderStage.VERTEX` etc. at construction so they need to be
-  // present before any factory call.
-  const g = globalThis as unknown as Record<string, unknown>;
-  g.GPUShaderStage ??= { VERTEX: 1, FRAGMENT: 2, COMPUTE: 4 };
-  g.GPUBufferUsage ??= {
-    MAP_READ: 0x01,
-    COPY_SRC: 0x04,
-    COPY_DST: 0x08,
-    UNIFORM: 0x40,
-    VERTEX: 0x20,
-  };
-  g.GPUTextureUsage ??= {
-    COPY_SRC: 0x01,
-    COPY_DST: 0x02,
-    TEXTURE_BINDING: 0x04,
-    STORAGE_BINDING: 0x08,
-    RENDER_ATTACHMENT: 0x10,
-  };
-});
 
 /**
  * Fluent stub-device builder. Each method captures its calls into
