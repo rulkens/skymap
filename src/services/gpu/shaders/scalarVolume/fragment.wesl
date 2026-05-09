@@ -69,9 +69,22 @@ fn intersectUnitAabb(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> vec2<f32> {
 fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
   // Reconstruct the camera-to-fragment ray in WORLD space, then transform
   // into the cube's LOCAL space (where the AABB is the unit cube).
+  //
+  // Critical: normalize rayDirLocal AFTER the inverse-model transform.  The
+  // model matrix scales the unit cube up to its world size (e.g. 200 Mpc),
+  // so invModel scales directions DOWN by the same factor.  A world-space
+  // unit direction becomes magnitude ~1/scale in local space.  If we leave
+  // it unnormalized, the AABB-intersection 't' is in those tiny-direction
+  // units (tMax ≈ scale, not ≈ 1), and stepLength = (tMax-tMin)/N becomes
+  // huge — per-step alpha saturates in 1–2 samples and the order-of-
+  // accumulation effect makes inside views look BRIGHTER than outside ones
+  // (peak hits first → instant saturation in peak colour, no attenuation).
+  // Normalizing here puts 't' in local-space distance units, so the unit
+  // cube spans t ∈ [0, √3] at most and per-step opacity stays in a sane
+  // regime (≈0.005 at peak with our default intensity, totaling ≈1).
   let rayOriginLocal = (u.invModelMatrix * vec4<f32>(u.cameraPosWorld, 1.0)).xyz;
   let rayDirWorld = normalize(in.worldPos - u.cameraPosWorld);
-  let rayDirLocal = (u.invModelMatrix * vec4<f32>(rayDirWorld, 0.0)).xyz;
+  let rayDirLocal = normalize((u.invModelMatrix * vec4<f32>(rayDirWorld, 0.0)).xyz);
 
   let tRange = intersectUnitAabb(rayOriginLocal, rayDirLocal);
   let tMin = tRange.x;
