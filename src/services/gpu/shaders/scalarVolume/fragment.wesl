@@ -89,10 +89,19 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     let p = rayOriginLocal + rayDirLocal * t;
     // Sample the 3D texture in [0,1]^3 -- same coordinate system as the
     // local AABB, so 'p' is directly the texture coordinate.
-    let sampleValue = textureSample(volume, volumeSampler, p).r;
-    // Look up colour through the 1D palette LUT.  The LUT's alpha
-    // channel doubles as the opacity ramp.
-    let lut = textureSample(palette, paletteSampler, sampleValue);
+    //
+    // Why textureSampleLevel with explicit LOD 0 instead of textureSample:
+    // textureSample requires UNIFORM control flow (it computes implicit
+    // mipmap derivatives across a quad of fragments), but the early-out
+    // 'break' below at saturation makes the loop's iteration count vary
+    // across neighbouring fragments — non-uniform.  textureSampleLevel
+    // takes an explicit LOD instead of computing one, so it works in
+    // non-uniform control flow.  Our 3D texture has only one mip level
+    // anyway, so explicit LOD 0 is exactly what we want.
+    let sampleValue = textureSampleLevel(volume, volumeSampler, p, 0.0).r;
+    // Look up colour through the 1D palette LUT.  Same uniformity
+    // constraint, same fix.
+    let lut = textureSampleLevel(palette, paletteSampler, sampleValue, 0.0);
     // Pre-multiply alpha by intensity * stepLength (normalised).
     let alpha = lut.a * u.intensity * stepLength * f32(STEP_COUNT) * 0.01;
     let contrib = vec4<f32>(lut.rgb * alpha, alpha);
