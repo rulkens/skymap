@@ -19,6 +19,7 @@ import {
   FLOATS_PER_INSTANCE,
   UNIFORM_BYTES,
 } from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
+import { MILKY_WAY_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gpu/renderers/milkyWayRenderer';
 import type { GpuContext } from '../../../../src/@types';
 
 beforeAll(() => {
@@ -539,5 +540,24 @@ describe('createInstancedQuadRenderer (Spec G)', () => {
       expect(target!.blend!.color.srcFactor).toBe('src-alpha');
       expect(target!.blend!.color.dstFactor).toBe('one-minus-src-alpha');
     });
+  });
+});
+
+describe('milkyWay uniform layout (co-located)', () => {
+  // MilkyWayRenderer's per-frame uniform buffer is laid out as:
+  //   CameraUniforms prefix (80 B)
+  // + cameraPosWorld vec3   (12 B)
+  // + fadeAlpha f32          (4 B)
+  // + iTime f32              (4 B)
+  // + tail pad              (12 B)
+  // = 112 B total.
+  //
+  // Pinned here (rather than in a milkyWayRenderer-specific test file)
+  // because (a) the rest of the renderer needs a real GPUDevice and
+  // (b) post-Spec G all impostor renderers are factory consumers — the
+  // constant *is* the only externally observable invariant of the
+  // otherwise-stateless renderer.
+  it('size matches the WESL Uniforms struct (80 + 12 + 4 + 4 + 12 = 112)', () => {
+    expect(MILKY_WAY_UNIFORM_BUFFER_SIZE).toBe(112);
   });
 });
