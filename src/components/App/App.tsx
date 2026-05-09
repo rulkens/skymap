@@ -52,7 +52,7 @@
  * writes the handle in once, every other hook reads it out, no re-renders.
  */
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { StatusBar } from '../StatusBar/StatusBar';
@@ -94,6 +94,19 @@ function isLoadingDevPanelAvailable(): boolean {
   return new URLSearchParams(window.location.search).get('debug') === 'loading';
 }
 
+// ── localStorage persistence keys ─────────────────────────────────────────
+//
+// All Skymap localStorage entries share the `skymap.` namespace so they're
+// easy to spot and clear together in DevTools.  String constants here rather
+// than inline literals so a future rename (or per-user keying) happens in
+// one place.
+const LS_VOLUMES_ENABLED = 'skymap.volumesEnabled';
+const LS_VOLUME_FIELDS = 'skymap.volumeFields';
+
+// The shape we serialise to/from JSON for per-field settings.
+type PersistedVolumeField = { enabled: boolean; intensity: number };
+type PersistedVolumeFields = Record<string, PersistedVolumeField>;
+
 // ── App ────────────────────────────────────────────────────────────────────────
 
 /**
@@ -123,6 +136,48 @@ export function App(): React.ReactElement {
     setVolumesEnabled,
     setVolumeFields,
   } = useEngineSettings();
+
+  // ── Per-field localStorage snapshot (persisted across sessions) ──────────
+  //
+  // We parse this ONCE at mount, store it in a ref (not state — it has no
+  // bearing on what React renders), and consume it inside the
+  // `_onVolumeFieldsChangedTarget` callback below.
+  //
+  // ### Why a ref rather than a useEffect restore?
+  //
+  // `addVolumeField` creates the field's entry in `state.settings.volumeFields`
+  // only when the handle is absent — meaning it always starts from the
+  // compile-time defaults.  The engine's `setVolumeFieldEnabled` /
+  // `setVolumeFieldIntensity` setters silently no-op if the entry is missing,
+  // so calling them at mount (before any field is registered) would do nothing
+  // regardless of when the engine initialises.
+  //
+  // The `onVolumeFieldsChanged` callback fires immediately AFTER `addVolumeField`
+  // creates the entry — so checking the snapshot there and applying persisted
+  // values before `getVolumeFieldsState()` returns is the earliest possible
+  // moment to restore them.  The result: React's first `volumeFields` render
+  // for each handle already reflects the persisted enabled/intensity, with
+  // no extra render cycle.
+  // useRef takes a value, not a thunk — so we evaluate the storage read
+  // eagerly via an IIFE.  This runs once during the first render and the
+  // result lives in `.current` for the lifetime of the component.
+  const _persistedVolumeFields = useRef<PersistedVolumeFields>(
+    ((): PersistedVolumeFields => {
+      try {
+        const stored = localStorage.getItem(LS_VOLUME_FIELDS);
+        if (stored) {
+          const parsed = JSON.parse(stored) as PersistedVolumeFields;
+          // Basic shape guard: the outer object must exist.  Individual
+          // entries are validated at point of use so a partial corrupt
+          // payload doesn't throw out all valid handles.
+          if (parsed && typeof parsed === 'object') return parsed;
+        }
+      } catch {
+        // Corrupt JSON or blocked storage — silently ignore.
+      }
+      return {};
+    })(),
+  );
 
   // ── Stable volume-fields refresh callback ─────────────────────────────
   //
@@ -209,9 +264,74 @@ export function App(): React.ReactElement {
   // Even though `setVolumeFields` is a stable React setter (same reference
   // across renders), being explicit here is safer than relying on that
   // stability guarantee as implementation detail of useState.
+  //
+  // ### Per-field localStorage restoration
+  //
+  // Before calling `getVolumeFieldsState()` we apply any persisted
+  // enabled/intensity values from `_persistedVolumeFields`.  The engine's
+  // `addVolumeField` has already run (it fires `onVolumeFieldsChanged` as
+  // its last step), so `state.settings.volumeFields[handle]` exists and
+  // `setVolumeFieldEnabled` / `setVolumeFieldIntensity` will actually take
+  // effect.
+  //
+  // We walk the CURRENT fields list rather than the persisted snapshot so we
+  // only apply restoration for handles that are actually registered — unknown
+  // handles in the snapshot are silently skipped (graceful when a field is
+  // unregistered between sessions).  The ref is not nulled after use because
+  // `removeVolumeField` + re-add would legitimately want the snapshot again.
   _onVolumeFieldsChangedTarget.current = () => {
-    setVolumeFields(handleRef.current?.getVolumeFieldsState?.() ?? []);
+    const handle = handleRef.current;
+    if (!handle) return;
+    const snapshot = _persistedVolumeFields.current;
+    const currentHandles = handle.listVolumeFields?.() ?? [];
+    for (const h of currentHandles) {
+      const saved = snapshot[h];
+      if (!saved) continue;
+      // Only restore if both fields are valid — guards against a partially
+      // corrupt entry (e.g. someone manually editing DevTools storage).
+      if (typeof saved.enabled === 'boolean') {
+        handle.setVolumeFieldEnabled?.(h, saved.enabled);
+      }
+      if (typeof saved.intensity === 'number') {
+        handle.setVolumeFieldIntensity?.(h, saved.intensity);
+      }
+    }
+    setVolumeFields(handle.getVolumeFieldsState?.() ?? []);
   };
+
+  // ── Write-side persistence ───────────────────────────────────────────────
+  //
+  // Mirror `volumesEnabled` and the per-field row data into localStorage on
+  // every change.  Reads happen on the lazy initialiser in `useEngineSettings`
+  // (for the master toggle) and the `_persistedVolumeFields` ref above (for
+  // the per-field bag); these effects are the write half.
+  //
+  // Why a useEffect rather than wrapping the setters?  Two reasons.  First,
+  // localStorage writes can throw (private-browsing mode, quota exhausted) —
+  // confining them to a useEffect keeps the synchronous setter paths clean
+  // of try/catch.  Second, when the engine echoes a field-list change via
+  // `onVolumeFieldsChanged`, the setter inside `setVolumeFields` runs
+  // synchronously; deferring the write to the post-render useEffect means we
+  // serialise the FINAL committed state, not an intermediate one.
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_VOLUMES_ENABLED, String(volumesEnabled));
+    } catch {
+      // Storage unavailable — skip; the next attempt may succeed.
+    }
+  }, [volumesEnabled]);
+
+  useEffect(() => {
+    try {
+      const snapshot: PersistedVolumeFields = {};
+      for (const f of volumeFields) {
+        snapshot[f.handle] = { enabled: f.enabled, intensity: f.intensity };
+      }
+      localStorage.setItem(LS_VOLUME_FIELDS, JSON.stringify(snapshot));
+    } catch {
+      // Storage unavailable — skip.
+    }
+  }, [volumeFields]);
 
   // ── Initial mobile signal (drives panel-collapse on first paint) ─────────
   //
