@@ -13,23 +13,18 @@
  * actually invoked and that a header-only v4 .bin round-trips to a
  * count=0 cloud.
  */
-import { describe, expect, it, vi, afterEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { pointCloudFetcher } from '../../../../src/services/loading/fetchers/pointCloudFetcher';
 import { Source } from '../../../../src/data/sources';
+import { useFetchMock } from '../../../setup/fetchMock';
 
 describe('pointCloudFetcher', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
-  });
+  const fetch = useFetchMock();
 
   it('returns empty cloud and skips fetch when target is 0 for the tier', async () => {
     // SDSS at `small` tier has target=0 in TIER_TARGETS — verified against
     // src/data/tierTargets.ts at the time this test was written.  If the
     // table changes, pick another (source, tier) pair where the target IS 0.
-    const fetchSpy = vi.fn();
-    globalThis.fetch = fetchSpy as unknown as typeof fetch;
-
     const cloud = await pointCloudFetcher(
       { source: Source.SDSS, tier: 'small' },
       new AbortController().signal,
@@ -42,7 +37,7 @@ describe('pointCloudFetcher', () => {
     expect(cloud.diameterKpc.length).toBe(0);
     // Crucial: no URL was hit — the short-circuit is not just a value
     // mapping, it must skip the network entirely.
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(fetch.mock).not.toHaveBeenCalled();
   });
 
   it('fetches and decodes when target is non-zero', async () => {
@@ -58,13 +53,12 @@ describe('pointCloudFetcher', () => {
     dv.setUint32(4, 4, true);
     dv.setUint32(8, 0, true);
 
-    const fetchSpy = vi.fn().mockResolvedValue(
+    fetch.mock.mockResolvedValue(
       new Response(header, {
         status: 200,
         headers: { 'Content-Length': '16' },
       }),
     );
-    globalThis.fetch = fetchSpy as unknown as typeof fetch;
 
     // 2MRS has no entry in TIER_TARGETS.medium → target is undefined
     // (i.e. "no cap"), which is NOT 0, so the fetch path runs.
@@ -75,8 +69,8 @@ describe('pointCloudFetcher', () => {
     );
 
     expect(cloud.count).toBe(0);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const url = fetchSpy.mock.calls[0]?.[0] as string;
+    expect(fetch.mock).toHaveBeenCalledTimes(1);
+    const url = fetch.mock.mock.calls[0]?.[0] as string;
     expect(url).toContain('2mrs.bin');
   });
 });

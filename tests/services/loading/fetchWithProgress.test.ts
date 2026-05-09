@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { HttpError, fetchWithProgress, dataUrl } from '../../../src/services/loading/fetchWithProgress';
+import { useFetchMock } from '../../setup/fetchMock';
 
 describe('HttpError', () => {
   it('exposes status and url', () => {
@@ -29,6 +30,8 @@ describe('dataUrl', () => {
 });
 
 describe('fetchWithProgress', () => {
+  const fetch = useFetchMock();
+
   it('returns ArrayBuffer and reports progress', async () => {
     const body = new Uint8Array([1, 2, 3, 4, 5]);
     const stream = new ReadableStream({
@@ -38,7 +41,7 @@ describe('fetchWithProgress', () => {
         controller.close();
       },
     });
-    globalThis.fetch = vi.fn().mockResolvedValue(
+    fetch.mock.mockResolvedValue(
       new Response(stream, { status: 200, headers: { 'Content-Length': '5' } }),
     );
     const ctrl = new AbortController();
@@ -49,7 +52,7 @@ describe('fetchWithProgress', () => {
   });
 
   it('throws HttpError on non-2xx', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response('x', { status: 404 }));
+    fetch.mock.mockResolvedValue(new Response('x', { status: 404 }));
     const ctrl = new AbortController();
     await expect(fetchWithProgress('http://x/', ctrl.signal, () => {})).rejects.toMatchObject({
       status: 404,
@@ -61,7 +64,7 @@ describe('fetchWithProgress', () => {
     const res = new Response(null, { status: 200 });
     Object.defineProperty(res, 'body', { value: null });
     res.arrayBuffer = vi.fn().mockResolvedValue(buf);
-    globalThis.fetch = vi.fn().mockResolvedValue(res);
+    fetch.mock.mockResolvedValue(res);
     const out = await fetchWithProgress('http://x/', new AbortController().signal, () => {});
     expect(new Uint8Array(out)).toEqual(new Uint8Array(buf));
   });

@@ -20,19 +20,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 
-// The atlas's `initTexture` references `GPUTextureUsage.*` constants
-// which the WebGPU spec exposes as global enum-like objects.  In Node
-// they don't exist; stub the few flags we need so the texture creation
-// path doesn't throw.  Values match the WebGPU spec but the actual
-// numeric values don't matter for these tests — the fake device's
-// createTexture is a noop spy that ignores the descriptor.
-(globalThis as any).GPUTextureUsage = {
-  COPY_SRC: 0x01,
-  COPY_DST: 0x02,
-  TEXTURE_BINDING: 0x04,
-  STORAGE_BINDING: 0x08,
-  RENDER_ATTACHMENT: 0x10,
-};
+// GPUTextureUsage / GPUBufferUsage / GPUShaderStage are populated by
+// the shared `tests/setup/webgpuGlobals.ts` setupFile, which runs once
+// per worker before any `import` here.
 import {
   createThumbnailSubsystem,
   galaxyCacheKey,

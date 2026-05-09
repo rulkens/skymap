@@ -32,26 +32,11 @@ import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bak
 import { Source } from '../../../../src/data/sources';
 import type { PointCloud } from '../../../../src/@types';
 
-// `GPUBufferUsage` is a browser-global enum exposed by the WebGPU runtime;
-// Node has no idea what it is. Vitest runs in Node, so referencing
-// `GPUBufferUsage.VERTEX | …` inside `PointRenderer` would throw a
-// ReferenceError before any of our stubs get a chance to run. We populate
-// the globals with the integer values from the WebGPU spec so the bitwise
-// ORs evaluate to a plain number — the stub buffers don't care.
+// `GPUBufferUsage` and friends are populated by the shared
+// `tests/setup/webgpuGlobals.ts` setupFile, which runs once per worker
+// before any `import` here.  We only retain the beforeAll below to wire
+// the bake-runner override.
 beforeAll(() => {
-  (globalThis as unknown as { GPUBufferUsage: Record<string, number> }).GPUBufferUsage = {
-    MAP_READ: 0x0001,
-    MAP_WRITE: 0x0002,
-    COPY_SRC: 0x0004,
-    COPY_DST: 0x0008,
-    INDEX: 0x0010,
-    VERTEX: 0x0020,
-    UNIFORM: 0x0040,
-    STORAGE: 0x0080,
-    INDIRECT: 0x0100,
-    QUERY_RESOLVE: 0x0200,
-  };
-
   // The production `upload()` spawns a Vite `?worker` chunk to run the bake
   // off-thread.  Vitest loads modules in Node, where `Worker` doesn't exist
   // — instead of trying to polyfill the whole worker harness we just route

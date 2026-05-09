@@ -15,7 +15,7 @@
  *      maps 0→0, asymptotes, etc.) live in the longer-standing
  *      `toneMap.test.ts`, which now also imports from `postProcess`.
  */
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   createPostProcess,
   linearClamp,
@@ -24,24 +24,6 @@ import {
   gamma2,
   acesFilmic,
 } from '../../../../src/services/gpu/passes/postProcess';
-
-beforeAll(() => {
-  // Same WebGPU global stubs the other GPU module tests use; mirror
-  // their pattern.  In Node test env the WebGPU global constant
-  // objects (GPUTextureUsage, GPUBufferUsage, GPUShaderStage) aren't
-  // defined — we stub the bits the implementation needs as plain
-  // readonly numeric constants matching the W3C spec verbatim.
-  const g = globalThis as unknown as Record<string, unknown>;
-  g.GPUTextureUsage ??= {
-    COPY_SRC: 0x01,
-    COPY_DST: 0x02,
-    TEXTURE_BINDING: 0x04,
-    STORAGE_BINDING: 0x08,
-    RENDER_ATTACHMENT: 0x10,
-  };
-  g.GPUBufferUsage ??= { UNIFORM: 0x40, COPY_DST: 0x08 };
-  g.GPUShaderStage ??= { VERTEX: 1, FRAGMENT: 2 };
-});
 
 function mockDevice(): GPUDevice {
   // Each mock returns a plain object the production code never

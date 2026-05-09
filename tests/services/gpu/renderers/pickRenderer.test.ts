@@ -4,23 +4,10 @@ import { createPointRenderer } from '../../../../src/services/gpu/renderers/poin
 import { Source } from '../../../../src/data/sources';
 
 beforeAll(() => {
-  // Same WebGPU global stubs the other gpu tests use; mirror their pattern.
+  // GPUBufferUsage / GPUShaderStage / GPUTextureUsage now come from the
+  // shared `tests/setup/webgpuGlobals.ts` setupFile.  GPUMapMode is only
+  // used by pickRenderer's read-back path, so it stays local for now.
   const g = globalThis as unknown as Record<string, unknown>;
-  g.GPUTextureUsage ??= {
-    COPY_SRC: 0x01,
-    COPY_DST: 0x02,
-    TEXTURE_BINDING: 0x04,
-    STORAGE_BINDING: 0x08,
-    RENDER_ATTACHMENT: 0x10,
-  };
-  g.GPUBufferUsage ??= {
-    MAP_READ: 0x01,
-    COPY_SRC: 0x04,
-    COPY_DST: 0x08,
-    UNIFORM: 0x40,
-    VERTEX: 0x20,
-  };
-  g.GPUShaderStage ??= { VERTEX: 1, FRAGMENT: 2, COMPUTE: 4 };
   g.GPUMapMode ??= { READ: 1, WRITE: 2 };
 });
 
