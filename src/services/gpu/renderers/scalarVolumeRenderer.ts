@@ -40,8 +40,10 @@ import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
-// 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity) = 224
-const UNIFORM_BYTES = 224;
+// 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
+// + 4 (densityScale) = 228, padded up to 240 (next multiple of 16, the
+// struct's alignment from its mat4x4 members).
+const UNIFORM_BYTES = 240;
 
 const CUBE_CORNERS = new Float32Array([
   0, 0, 0,
@@ -122,6 +124,8 @@ type FieldEntry = {
   enabled: boolean;
   intensity: number;
   paletteId: ScalarFieldPaletteId;
+  /** Per-cube opacity multiplier; copied from `cube.densityScale` at registration. */
+  densityScale: number;
   modelMatrix: mat4;
   invModelMatrix: mat4;
   volumeTexture: GPUTexture;
@@ -285,6 +289,7 @@ export function createScalarVolumeRenderer(
         enabled: true,
         intensity: 0.5,
         paletteId: cube.paletteId,
+        densityScale: cube.densityScale,
         modelMatrix,
         invModelMatrix,
         volumeTexture,
@@ -331,7 +336,7 @@ export function createScalarVolumeRenderer(
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
-      // Per-field uniform buffer layout:
+      // Per-field uniform buffer layout (240 bytes; mat4 alignment):
       //   0..63   viewProj        (mat4x4 column-major, 16 floats)
       //  64..71   viewportPx      (vec2)
       //  72..79   _pad0, _pad1
@@ -339,6 +344,8 @@ export function createScalarVolumeRenderer(
       // 144..207  invModelMatrix  (mat4x4)
       // 208..219  cameraPosWorld  (vec3)
       // 220..223  intensity       (f32)
+      // 224..227  densityScale    (f32)
+      // 228..239  trailing pad    (12 bytes, struct rounded up to 16)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       for (const e of fields.values()) {
         if (!e.enabled || e.intensity <= 0) continue;
@@ -353,6 +360,7 @@ export function createScalarVolumeRenderer(
         scratch[53] = cameraPosWorld[1];
         scratch[54] = cameraPosWorld[2];
         scratch[55] = e.intensity;
+        scratch[56] = e.densityScale;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         pass.setBindGroup(0, e.bindGroup);
         pass.drawIndexed(CUBE_INDICES.length);

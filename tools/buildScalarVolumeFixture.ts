@@ -35,6 +35,7 @@ const cube: ScalarCube = {
   voxelSize: 50,
   rotation: [0, 0, 0, 1],
   paletteId: 'viridis',
+  densityScale: 1.0,
   valueMin: 0,
   valueMax: 1,
 };

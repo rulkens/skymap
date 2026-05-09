@@ -33,6 +33,7 @@ struct VolumeUniforms {
   invModelMatrix: mat4x4<f32>,
   cameraPosWorld: vec3<f32>,
   intensity: f32,
+  densityScale: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: VolumeUniforms;
@@ -140,7 +141,12 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     // reads as "saturated through the dense centre" — a reasonable
     // starting point.  Tune in the smoke test if voids feel too thick
     // or peaks too thin.
-    let alpha = lut.a * u.intensity * stepLength;
+    // densityScale is the per-cube knob that maps the data's natural
+    // dynamic range onto "saturate at intensity=1.0".  See
+    // ScalarCube.densityScale for the rationale; values in the [1, 10]
+    // range are typical (1.0 = no scaling for already-normalised data,
+    // 5.0 = lift a sparse Gaussian into a saturating regime).
+    let alpha = lut.a * u.intensity * u.densityScale * stepLength;
     let contrib = vec4<f32>(lut.rgb * alpha, alpha);
     // Front-to-back over-compositing within this field.
     accum = accum + (1.0 - accum.a) * contrib;

@@ -21,7 +21,13 @@
  *  40   16   rotation    : float32 × 4 (unit quaternion x, y, z, w)
  *  56    4   value_min   : float32
  *  60    4   value_max   : float32
- *  64   32   reserved    : uint8 × 32 (zero-filled)
+ *  64    4   density_scale : float32 (per-cube opacity multiplier; see
+ *                                       ScalarCube.densityScale.  Files
+ *                                       written before this field existed
+ *                                       carry 0 here and are decoded as
+ *                                       densityScale=1.0 — the back-compat
+ *                                       sentinel.)
+ *  68   28   reserved    : uint8 × 28 (zero-filled)
  *
  *   ── VOXEL ARRAY (Nx*Ny*Nz × 2 bytes) ─────────────────────────────
  *   voxels[i] : f16 (stored as Uint16 raw bits)
@@ -106,7 +112,8 @@ export function encodeScalarField(cube: ScalarCube): ArrayBuffer {
   dv.setFloat32(52, cube.rotation[3], true);
   dv.setFloat32(56, cube.valueMin, true);
   dv.setFloat32(60, cube.valueMax, true);
-  // bytes 64..95 stay zero (reserved — future extensions land here without
+  dv.setFloat32(64, cube.densityScale, true);
+  // bytes 68..95 stay zero (reserved — future extensions land here without
   // bumping the version, as long as decoders skip them unconditionally)
 
   // Voxel array follows the header.  Source is Uint16Array of f16 bits
@@ -178,6 +185,14 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   ];
   const valueMin = dv.getFloat32(56, true);
   const valueMax = dv.getFloat32(60, true);
+  // densityScale was added after v1 shipped.  Files written before that
+  // carry zero in this slot (the reserved region was zero-filled), and
+  // a zero scale would multiply per-step alpha by zero — invisible.
+  // Substitute the neutral default 1.0 in that case so legacy files
+  // still render with the un-tuned look they had before this field
+  // existed.  Newly-encoded files always write a real value here.
+  const densityScaleRaw = dv.getFloat32(64, true);
+  const densityScale = densityScaleRaw === 0 ? 1.0 : densityScaleRaw;
 
   const expectedVoxels = dims[0] * dims[1] * dims[2];
   const expectedBytes = SCFD_HEADER_BYTES + expectedVoxels * 2;
@@ -192,5 +207,5 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   const voxels = new Uint16Array(expectedVoxels);
   voxels.set(new Uint16Array(buf, SCFD_HEADER_BYTES, expectedVoxels));
 
-  return { dims, voxels, frameKind, origin, voxelSize, rotation, paletteId, valueMin, valueMax };
+  return { dims, voxels, frameKind, origin, voxelSize, rotation, paletteId, densityScale, valueMin, valueMax };
 }

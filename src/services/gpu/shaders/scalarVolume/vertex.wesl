@@ -21,6 +21,8 @@ struct VolumeUniforms {
   invModelMatrix: mat4x4<f32>,    //   64 bytes -- world -> local cube space
   cameraPosWorld: vec3<f32>,      //   12 bytes -- for ray origin
   intensity: f32,                 //    4 bytes -- per-field slider [0,1]
+  densityScale: f32,              //    4 bytes -- per-cube data scale (see ScalarCube.densityScale)
+  // 12 bytes of trailing padding (struct rounded up to mat4 alignment, 16)
 };
 
 @group(0) @binding(0) var<uniform> u: VolumeUniforms;

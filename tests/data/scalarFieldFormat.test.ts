@@ -16,6 +16,7 @@ function makeFixture(): ScalarCube {
     voxelSize: 100,
     rotation: [0, 0, 0, 1],
     paletteId: 'blue-purple',
+    densityScale: 2.5,
     valueMin: 0,
     valueMax: 1,
   };
@@ -32,6 +33,16 @@ describe('SCFD v1 binary format', () => {
     expect(decoded.voxelSize).toBe(100);
     expect(decoded.rotation).toEqual([0, 0, 0, 1]);
     expect(decoded.paletteId).toBe('blue-purple');
+    expect(decoded.densityScale).toBeCloseTo(2.5, 6);
+  });
+
+  it('decodes a legacy file (zero in densityScale slot) as scale 1.0', () => {
+    const buf = encodeScalarField(makeFixture());
+    // Stomp the densityScale slot to simulate a file written before the
+    // field existed — the reserved region was zero-filled in those days.
+    new DataView(buf).setFloat32(64, 0, true);
+    const decoded = decodeScalarField(buf);
+    expect(decoded.densityScale).toBe(1.0);
   });
 
   it('produces the expected byte length', () => {
@@ -84,6 +95,11 @@ describe('SCFD v1 — baked fixture round-trip', () => {
     expect(decoded.rotation).toEqual([0, 0, 0, 1]);
     expect(decoded.valueMin).toBe(0);
     expect(decoded.valueMax).toBe(1);
+    // The baked fixture predates the densityScale field, so its slot
+    // is zero on disk.  The decoder's back-compat path substitutes 1.0
+    // — the canonical "no scaling" value — so this legacy file still
+    // renders with the un-tuned look it had before the field existed.
+    expect(decoded.densityScale).toBe(1.0);
     // Voxel pattern: index 0 → 0, index 1 → 1, ..., index 511 → 511.
     expect(decoded.voxels[0]).toBe(0);
     expect(decoded.voxels[1]).toBe(1);
