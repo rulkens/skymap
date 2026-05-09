@@ -75,7 +75,7 @@ export type EngineSettingsState = {
    * `scalarVolumePass.enabled` short-circuits before consulting the
    * renderer, so all cubes are skipped at zero GPU cost.
    *
-   * Default OFF.  Individual fields also have per-handle `enabled` and
+   * Default ON.  Individual fields also have per-handle `enabled` and
    * `intensity` controls on `ScalarVolumeRenderer`; this flag is the
    * coarser user-facing toggle ("hide all volumes").
    */
