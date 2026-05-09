@@ -93,6 +93,7 @@ import {
   DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_VOLUME_FIELD_INTENSITY,
+  DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
 import type { LodMode, PointCloud, PointInfo } from '../../@types';
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
@@ -990,24 +991,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.gpu.scalarVolumeRenderer?.addField(handle, cube);
       // Seed the per-field settings entry with defaults if not already
       // present — re-registering the same handle preserves any
-      // previously-tuned enabled/intensity values so the slider doesn't
-      // reset to defaults on e.g. a tier-swap reload.
+      // previously-tuned enabled/intensity/palette values so the user's
+      // tweaks don't reset on e.g. a tier-swap reload.  paletteId comes
+      // from the cube metadata so each fixture gets a sensible default
+      // colour ramp on first registration.
       if (!state.settings.volumeFields[handle]) {
         state.settings.volumeFields[handle] = {
           enabled: true,
           intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+          paletteId: cube.paletteId,
         };
       }
       // Forward the current per-field tunables into the renderer so the
       // new upload inherits whatever the user set before re-registering.
-      state.gpu.scalarVolumeRenderer?.setIntensity(
-        handle,
-        state.settings.volumeFields[handle].intensity,
-      );
-      state.gpu.scalarVolumeRenderer?.setEnabled(
-        handle,
-        state.settings.volumeFields[handle].enabled,
-      );
+      const persisted = state.settings.volumeFields[handle];
+      state.gpu.scalarVolumeRenderer?.setIntensity(handle, persisted.intensity);
+      state.gpu.scalarVolumeRenderer?.setEnabled(handle, persisted.enabled);
+      state.gpu.scalarVolumeRenderer?.setFieldPalette(handle, persisted.paletteId);
       // Let React know the field list changed so any SettingsPanel list
       // re-renders with the new row.
       cb.onVolumeFieldsChanged?.();
@@ -1066,8 +1066,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           label: handle,
           enabled: field?.enabled ?? true,
           intensity: field?.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
+          paletteId: field?.paletteId ?? DEFAULT_VOLUME_PALETTE_ID,
         };
       });
+    },
+
+    setVolumeFieldPalette(handle, id) {
+      // Mirror into the settings bag so optimistic React reads see the
+      // new value before the next frame.  The renderer's setFieldPalette
+      // is a single GPU queue.writeTexture; the field's bind group stays
+      // valid because the palette texture is never recreated.
+      if (state.settings.volumeFields[handle]) {
+        state.settings.volumeFields[handle].paletteId = id;
+      }
+      state.gpu.scalarVolumeRenderer?.setFieldPalette(handle, id);
+      state.subsystems.scheduler.requestRender();
     },
 
     // ── SpaceMouse 6DOF input setters ─────────────────────────────────────

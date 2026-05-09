@@ -20,14 +20,21 @@
  *
  * Per-field state lives in a 'Map<handle, FieldEntry>'; each entry owns
  * its own 3D texture, palette LUT texture, bind group, uniform buffer,
- * and runtime tunables (enabled, intensity, model matrix).  Sharing the
- * pipeline across all fields keeps the layout-'auto' trap from biting:
- * one pipeline → one auto-derived bind-group layout → all bind groups
- * are interchangeable across fields with the same shape.
+ * and runtime tunables (enabled, intensity, model matrix, paletteId).
+ * Sharing the pipeline across all fields keeps the layout-'auto' trap
+ * from biting: one pipeline → one auto-derived bind-group layout → all
+ * bind groups are interchangeable across fields with the same shape.
+ *
+ * Per-field palettes (rather than one renderer-wide LUT) let two
+ * overlapping fields use different colour ramps so the user can
+ * visually tell them apart.  'setFieldPalette(handle, id)' rewrites
+ * that field's existing 1D texture in place via writeTexture; bind-group
+ * texture views stay valid, so a palette change costs one queue write
+ * and zero rebinds.
  */
 
 import { mat4 } from 'gl-matrix';
-import type { ScalarCube, ScalarFieldFrameKind } from '../../../@types/ScalarCube';
+import type { ScalarCube, ScalarFieldFrameKind, ScalarFieldPaletteId } from '../../../@types/ScalarCube';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPalettes';
 import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
@@ -114,6 +121,7 @@ type FieldEntry = {
   handle: ScalarFieldHandle;
   enabled: boolean;
   intensity: number;
+  paletteId: ScalarFieldPaletteId;
   modelMatrix: mat4;
   invModelMatrix: mat4;
   volumeTexture: GPUTexture;
@@ -127,6 +135,16 @@ export type ScalarVolumeRenderer = {
   removeField(handle: ScalarFieldHandle): void;
   setEnabled(handle: ScalarFieldHandle, enabled: boolean): void;
   setIntensity(handle: ScalarFieldHandle, intensity: number): void;
+  /**
+   * Replace the palette LUT for a single field.  Rewrites the field's
+   * existing 1D LUT texture in place via `writeTexture`; the bind group
+   * (which references the texture's view) stays valid, so a palette
+   * change costs one queue write and zero rebinds.  No-op if the
+   * handle is unknown.
+   */
+  setFieldPalette(handle: ScalarFieldHandle, id: ScalarFieldPaletteId): void;
+  /** Current palette id for a single field; `null` if the handle is unknown. */
+  getFieldPalette(handle: ScalarFieldHandle): ScalarFieldPaletteId | null;
   hasActiveFields(): boolean;
   listHandles(): ScalarFieldHandle[];
   draw(pass: GPURenderPassEncoder, viewProj: mat4, viewportPx: [number, number], cameraPosWorld: [number, number, number]): void;
@@ -211,21 +229,26 @@ export function createScalarVolumeRenderer(
     return tex;
   }
 
-  function uploadPalette(cube: ScalarCube): GPUTexture {
-    const lut = buildPaletteLut(cube.paletteId);
-    const tex = device.createTexture({
+  // Per-field palette texture — created in `addField`, mutated in
+  // `setFieldPalette` via the shared `writePaletteLut` helper.  A single
+  // 1D r=PALETTE_LUT_SIZE texture per field is the natural cost since
+  // each field uses its own colour ramp; bind groups reference the
+  // texture's view, which stays valid across `writeTexture` calls.
+  function createPaletteTexture(): GPUTexture {
+    return device.createTexture({
       size: { width: PALETTE_LUT_SIZE, height: 1, depthOrArrayLayers: 1 },
       format: 'rgba8unorm',
       dimension: '1d',
       usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
+  }
+  function writePaletteLut(tex: GPUTexture, id: ScalarFieldPaletteId): void {
     device.queue.writeTexture(
       { texture: tex },
-      lut,
+      buildPaletteLut(id),
       { bytesPerRow: PALETTE_LUT_SIZE * 4 },
       { width: PALETTE_LUT_SIZE, height: 1, depthOrArrayLayers: 1 },
     );
-    return tex;
   }
 
   return {
@@ -241,7 +264,8 @@ export function createScalarVolumeRenderer(
       const invModelMatrix = mat4.create();
       mat4.invert(invModelMatrix, modelMatrix);
       const volumeTexture = uploadCube(cube);
-      const paletteTexture = uploadPalette(cube);
+      const paletteTexture = createPaletteTexture();
+      writePaletteLut(paletteTexture, cube.paletteId);
       const uniformBuffer = device.createBuffer({
         size: UNIFORM_BYTES,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -260,6 +284,7 @@ export function createScalarVolumeRenderer(
         handle,
         enabled: true,
         intensity: 0.5,
+        paletteId: cube.paletteId,
         modelMatrix,
         invModelMatrix,
         volumeTexture,
@@ -283,6 +308,15 @@ export function createScalarVolumeRenderer(
     setIntensity(handle, intensity) {
       const entry = fields.get(handle);
       if (entry) entry.intensity = Math.max(0, Math.min(1, intensity));
+    },
+    setFieldPalette(handle, id) {
+      const entry = fields.get(handle);
+      if (!entry) return;
+      entry.paletteId = id;
+      writePaletteLut(entry.paletteTexture, id);
+    },
+    getFieldPalette(handle) {
+      return fields.get(handle)?.paletteId ?? null;
     },
     hasActiveFields() {
       for (const e of fields.values()) {

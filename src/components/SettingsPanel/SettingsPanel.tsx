@@ -42,6 +42,8 @@ import type { Tier } from '../../@types/Tier';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
+import type { ScalarFieldPaletteId } from '../../@types/ScalarCube';
+import { PALETTE_IDS } from '../../data/scalarFieldPalettes';
 import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
 import { TierSelector } from './TierSelector';
@@ -298,6 +300,13 @@ type Props = {
   onVolumeFieldEnabledChange?: (handle: string, enabled: boolean) => void;
   /** Fired when the user moves an individual field's intensity slider. */
   onVolumeFieldIntensityChange?: (handle: string, intensity: number) => void;
+  /**
+   * Fired when the user picks a different palette from a field's dropdown.
+   * Optional — when absent the per-field palette dropdown is hidden but
+   * the rest of the row (enable checkbox + intensity slider) still
+   * renders, so older call sites are unaffected.
+   */
+  onVolumeFieldPaletteChange?: (handle: string, id: ScalarFieldPaletteId) => void;
 };
 
 // ── VolumeFieldRowData ─────────────────────────────────────────────────────────
@@ -324,6 +333,8 @@ export type VolumeFieldRowData = {
   enabled: boolean;
   /** Linear mix-in weight in [0, 1] applied to this field's voxel values. */
   intensity: number;
+  /** Palette LUT id for this field's colour ramp. */
+  paletteId: ScalarFieldPaletteId;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
@@ -394,6 +405,7 @@ export function SettingsPanel({
   volumeFields,
   onVolumeFieldEnabledChange,
   onVolumeFieldIntensityChange,
+  onVolumeFieldPaletteChange,
 }: Props): ReactNode {
   // Tier selector: rendered only when both pieces wired by the parent.  Same
   // opt-in idiom as every other optional section in this panel.  The selector
@@ -454,6 +466,13 @@ export function SettingsPanel({
     volumeFields !== undefined &&
     onVolumeFieldEnabledChange !== undefined &&
     onVolumeFieldIntensityChange !== undefined;
+
+  // Per-field palette dropdown opt-in.  When the change callback is
+  // absent, the dropdown is hidden on every row but the rest of the
+  // row (enable checkbox + intensity slider) still renders, so older
+  // call sites are unaffected.
+  const showFieldPaletteSelect =
+    showVolumesSection && onVolumeFieldPaletteChange !== undefined;
 
   // Density-correction section: rendered only when both the current mode and
   // both change-callbacks are wired by the parent.  We require all four
@@ -732,6 +751,31 @@ export function SettingsPanel({
                         onVolumeFieldIntensityChange!(field.handle, Number(e.target.value))
                       }
                     />
+                    {/*
+                      Per-field palette dropdown.  Each registered field
+                      owns its own LUT texture, so two overlapping fields
+                      can use different colour ramps.  Hidden when the
+                      change callback isn't wired (older call sites still
+                      get the rest of the row).
+                    */}
+                    {showFieldPaletteSelect && (
+                      <select
+                        value={field.paletteId}
+                        disabled={!field.enabled}
+                        onChange={(e) =>
+                          onVolumeFieldPaletteChange!(
+                            field.handle,
+                            e.target.value as ScalarFieldPaletteId,
+                          )
+                        }
+                      >
+                        {PALETTE_IDS.map((id) => (
+                          <option key={id} value={id}>
+                            {id}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 ))
               )}

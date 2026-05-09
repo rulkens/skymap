@@ -17,7 +17,7 @@ import type {
 } from '../services/loading/fetchers/famousMetaFetcher';
 import type { PgcAliasMap } from '../services/loading/fetchers/pgcAliasFetcher';
 import type { AssetSlot } from '../services/loading/types';
-import type { ScalarCube } from './ScalarCube';
+import type { ScalarCube, ScalarFieldPaletteId } from './ScalarCube';
 
 /**
  * Handle returned by `createEngine`. Allows the React layer to drive the
@@ -520,7 +520,20 @@ export type EngineHandle = {
     label: string;
     enabled: boolean;
     intensity: number;
+    paletteId: ScalarFieldPaletteId;
   }>;
+
+  /**
+   * Set the palette LUT for a single registered scalar-volume field.
+   * Updates `EngineSettingsState.volumeFields[handle].paletteId` and
+   * rewrites the field's GPU LUT texture in place (no rebind).  No-op
+   * if the handle is unknown or the renderer is not yet constructed.
+   *
+   * @param handle  The handle string passed to `addVolumeField`.
+   * @param id      One of the values in `PALETTE_IDS`
+   *                (`'viridis' | 'magma' | 'blue-purple' | 'yellow-green'`).
+   */
+  setVolumeFieldPalette?: (handle: string, id: ScalarFieldPaletteId) => void;
 
   /**
    * Flat read-only registry of every asset slot the engine owns, keyed by

@@ -52,7 +52,7 @@
  * writes the handle in once, every other hook reads it out, no re-renders.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { StatusBar } from '../StatusBar/StatusBar';
@@ -71,6 +71,8 @@ import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
 import { LoadingDevPanel } from '../LoadingDevPanel/LoadingDevPanel';
+import type { ScalarFieldPaletteId } from '../../@types/ScalarCube';
+import { PALETTE_IDS } from '../../data/scalarFieldPalettes';
 
 // ── Dev-panel availability gate ────────────────────────────────────────────
 //
@@ -104,7 +106,12 @@ const LS_VOLUMES_ENABLED = 'skymap.volumesEnabled';
 const LS_VOLUME_FIELDS = 'skymap.volumeFields';
 
 // The shape we serialise to/from JSON for per-field settings.
-type PersistedVolumeField = { enabled: boolean; intensity: number };
+type PersistedVolumeField = {
+  enabled: boolean;
+  intensity: number;
+  /** Optional so older localStorage payloads (without paletteId) still load. */
+  paletteId?: ScalarFieldPaletteId;
+};
 type PersistedVolumeFields = Record<string, PersistedVolumeField>;
 
 // ── App ────────────────────────────────────────────────────────────────────────
@@ -295,6 +302,12 @@ export function App(): React.ReactElement {
       if (typeof saved.intensity === 'number') {
         handle.setVolumeFieldIntensity?.(h, saved.intensity);
       }
+      if (
+        typeof saved.paletteId === 'string' &&
+        (PALETTE_IDS as readonly string[]).includes(saved.paletteId)
+      ) {
+        handle.setVolumeFieldPalette?.(h, saved.paletteId as ScalarFieldPaletteId);
+      }
     }
     setVolumeFields(handle.getVolumeFieldsState?.() ?? []);
   };
@@ -325,13 +338,45 @@ export function App(): React.ReactElement {
     try {
       const snapshot: PersistedVolumeFields = {};
       for (const f of volumeFields) {
-        snapshot[f.handle] = { enabled: f.enabled, intensity: f.intensity };
+        snapshot[f.handle] = {
+          enabled: f.enabled,
+          intensity: f.intensity,
+          paletteId: f.paletteId,
+        };
       }
       localStorage.setItem(LS_VOLUME_FIELDS, JSON.stringify(snapshot));
     } catch {
       // Storage unavailable — skip.
     }
   }, [volumeFields]);
+
+  // ── Volumes-section visibility gate ──────────────────────────────────────
+  //
+  // The Volumes UI (master toggle + per-field rows + palette dropdown) is
+  // a developer / power-user surface — currently it's only useful in
+  // combination with the synthetic test fixtures auto-loaded under
+  // `import.meta.env.DEV`.  In production builds the section would be
+  // empty (no fixtures load) but still take up panel space; gating it
+  // keeps the production UI focused on shipped features.
+  //
+  // Two ways to opt in:
+  //   - Dev builds (`npm run dev`) → always visible, no opt-in needed.
+  //   - Production builds → append `?volumes=1` to the URL to enable
+  //     both the UI section AND (when wired in `wireSlots`) the
+  //     synthetic-fixture bootstrap.
+  //
+  // The flag is computed once at component construction.  Toggling
+  // mid-session via History API is a future extension; for now a reload
+  // is the way to flip it.
+  const volumesUiEnabled = useMemo<boolean>(() => {
+    if (import.meta.env.DEV) return true;
+    if (typeof window === 'undefined') return false;
+    try {
+      return new URLSearchParams(window.location.search).has('volumes');
+    } catch {
+      return false;
+    }
+  }, []);
 
   // ── Initial mobile signal (drives panel-collapse on first paint) ─────────
   //
@@ -653,31 +698,44 @@ export function App(): React.ReactElement {
         // fire `onVolumeFieldsChanged`; the SettingsPanel updates its per-field
         // checkbox / slider through normal React onChange (optimistic — the
         // engine mutates its internal settings bag but doesn't echo back).
-        volumesEnabled={volumesEnabled}
-        onVolumesEnabledChange={(v) => {
-          setVolumesEnabled(v);
-          handleRef.current?.setVolumesEnabled?.(v);
-        }}
-        volumeFields={volumeFields}
-        onVolumeFieldEnabledChange={(handle, enabled) => {
-          // Optimistic React-state update — the engine setter does NOT
-          // fire onVolumeFieldsChanged for tunable mutations (only for
-          // add/remove), so the controlled-input value would otherwise
-          // snap back on the next render.  We update local state first
-          // so the UI stays responsive, then forward to the engine.
-          // Reading volumeFields from closure is safe in event handlers
-          // (closure is fresh per render; no batched-update concerns).
-          setVolumeFields(
-            volumeFields.map((f) => (f.handle === handle ? { ...f, enabled } : f)),
-          );
-          handleRef.current?.setVolumeFieldEnabled?.(handle, enabled);
-        }}
-        onVolumeFieldIntensityChange={(handle, intensity) => {
-          setVolumeFields(
-            volumeFields.map((f) => (f.handle === handle ? { ...f, intensity } : f)),
-          );
-          handleRef.current?.setVolumeFieldIntensity?.(handle, intensity);
-        }}
+        // Volumes section is gated on `volumesUiEnabled` (dev build OR
+        // `?volumes=1` in the URL).  When the gate is closed, every volume
+        // prop is omitted; the SettingsPanel's `showVolumesSection`
+        // requires all five to be present, so the section disappears
+        // entirely — both the master toggle and the per-field rows.
+        {...(volumesUiEnabled
+          ? {
+              volumesEnabled,
+              onVolumesEnabledChange: (v: boolean) => {
+                setVolumesEnabled(v);
+                handleRef.current?.setVolumesEnabled?.(v);
+              },
+              volumeFields,
+              onVolumeFieldEnabledChange: (handle: string, enabled: boolean) => {
+                // Optimistic React-state update — the engine setter does NOT
+                // fire onVolumeFieldsChanged for tunable mutations (only for
+                // add/remove), so the controlled-input value would otherwise
+                // snap back on the next render.  We update local state first
+                // so the UI stays responsive, then forward to the engine.
+                setVolumeFields(
+                  volumeFields.map((f) => (f.handle === handle ? { ...f, enabled } : f)),
+                );
+                handleRef.current?.setVolumeFieldEnabled?.(handle, enabled);
+              },
+              onVolumeFieldIntensityChange: (handle: string, intensity: number) => {
+                setVolumeFields(
+                  volumeFields.map((f) => (f.handle === handle ? { ...f, intensity } : f)),
+                );
+                handleRef.current?.setVolumeFieldIntensity?.(handle, intensity);
+              },
+              onVolumeFieldPaletteChange: (handle: string, paletteId: ScalarFieldPaletteId) => {
+                setVolumeFields(
+                  volumeFields.map((f) => (f.handle === handle ? { ...f, paletteId } : f)),
+                );
+                handleRef.current?.setVolumeFieldPalette?.(handle, paletteId);
+              },
+            }
+          : {})}
       />
         {/*
           Stats panel — read-only telemetry: rolling FPS, per-survey loaded

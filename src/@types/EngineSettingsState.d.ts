@@ -35,6 +35,7 @@
  */
 
 import type { ToneMapCurve } from '../data/toneMapCurve';
+import type { ScalarFieldPaletteId } from './ScalarCube';
 
 /**
  * Per-field runtime controls for one registered scalar-volume field.
@@ -51,6 +52,14 @@ export type VolumeFieldSettings = {
   enabled: boolean;
   /** Linear mix-in weight in [0, 1].  Seeded from `DEFAULT_VOLUME_FIELD_INTENSITY`. */
   intensity: number;
+  /**
+   * Palette LUT id for this field.  Each volume field owns its own LUT
+   * texture (see `scalarVolumeRenderer.ts`); this value mirrors the
+   * renderer's per-field palette so the SettingsPanel dropdown can read
+   * authoritative state without going through the GPU handle.  Seeded
+   * from `cube.paletteId` at registration time.
+   */
+  paletteId: ScalarFieldPaletteId;
 };
 
 export type EngineSettingsState = {

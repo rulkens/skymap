@@ -91,7 +91,9 @@ export type EngineSettingsState = {
   /**
    * Snapshot of every registered field's UI state — rebuilt on each
    * `onVolumeFieldsChanged` callback via `handle.getVolumeFieldsState()`.
-   * Starts empty (no cubes are registered at startup).
+   * Starts empty (no cubes are registered at startup).  Each row carries
+   * its own `paletteId` (per-field palette), so the dropdown lives
+   * inside each field's row in the SettingsPanel.
    */
   volumeFields: ReadonlyArray<VolumeFieldRowData>;
 };

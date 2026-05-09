@@ -229,7 +229,7 @@ describe('EngineState type', () => {
         filamentIntensity: 1,
         volumesEnabled: false,
         volumeFields: {},
-        highlightFallback: false,
+          highlightFallback: false,
         realOnlyMode: false,
         depthFadeEnabled: true,
         exposure: 1,

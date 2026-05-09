@@ -245,6 +245,15 @@ export const DEFAULT_VOLUMES_ENABLED = true;
  */
 export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
 
+/**
+ * Default renderer-wide palette LUT for the scalar-volume overlay.
+ * 'viridis' is matplotlib's perceptually-uniform default — neutral
+ * blue-green-yellow ramp that reads as "scientific" without leaning
+ * warm or cool.  Mutated at runtime via `setVolumePalette`; persisted
+ * to localStorage by the App shell so reloads keep the user's choice.
+ */
+export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
+
 // ── SpaceMouse ─────────────────────────────────────────────────────────────
 
 /**

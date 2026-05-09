@@ -37,6 +37,20 @@ import type { ScalarFieldPaletteId } from '../@types/ScalarCube';
 
 export const PALETTE_LUT_SIZE = 256;
 
+/**
+ * Enumerated list of every supported palette id, in the order the UI
+ * should show them in a dropdown.  Kept in this module (rather than
+ * derived at runtime from the `ScalarFieldPaletteId` union) because TS
+ * unions don't survive into JS — we'd otherwise need a second source of
+ * truth in the React layer just to populate a `<select>`.
+ */
+export const PALETTE_IDS: readonly ScalarFieldPaletteId[] = [
+  'viridis',
+  'magma',
+  'blue-purple',
+  'yellow-green',
+];
+
 export function buildPaletteLut(id: ScalarFieldPaletteId): Uint8Array {
   switch (id) {
     case 'viridis':

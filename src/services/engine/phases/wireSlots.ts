@@ -221,7 +221,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   });
   state.assetSlots.pgcAlias = pgcAliasSlot;
 
-  // ── Synthetic volume slot (dev-only) ─────────────────────────────
+  // ── Synthetic volume slot (dev-only or `?volumes=1`) ─────────────
   //
   // Routes the Gaussian-blob smoke-test cube through the same
   // `createAssetSlot` path as real CF-4 / MCPM cubes will use when
@@ -230,14 +230,19 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // and retry semantics as every real volume fetch — without any
   // bespoke "synthetic shortcut" in the render loop.
   //
-  // **Why `import.meta.env.DEV`?**  The synthetic cube is only useful
-  // in development (it exists to give the developer something visible
-  // before real cubes are plumbed).  Wrapping the slot mint in the DEV
-  // guard means Vite's dead-code elimination removes the entire block
-  // (and tree-shakes `syntheticVolumeFetcher.ts` + the Gaussian
-  // generator) from production bundles.  The `syntheticVolume?` field
-  // on `EngineAssetSlots` is optional rather than `| null` to reflect
-  // that it is simply absent in production.
+  // **Visibility gate.**  The synthetic cubes are debug fixtures, not
+  // shipped content, so they only mint when:
+  //   - `import.meta.env.DEV` is true (smoke-test loop in `npm run dev`), OR
+  //   - the URL contains `?volumes=1` (escape hatch for inspecting the
+  //     overlay on the deployed site).
+  //
+  // The same gate drives the SettingsPanel "Volumes" section in
+  // `App.tsx` (`volumesUiEnabled`) — keeping the two in lockstep means
+  // the section is never empty in dev and never visible-but-empty in
+  // prod.  Vite's dead-code elimination still tree-shakes the entire
+  // synthetic block from production bundles (the `?volumes=1` branch
+  // is reachable but the underlying fetcher / generator imports stay,
+  // which is the cost of the escape hatch).
   //
   // **Commit pattern.**  The commit replicates the same operations that
   // `engineHandle.addVolumeField(handle, cube)` performs, but directly
@@ -252,7 +257,19 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // settings-bag seed and renderer calls are intentionally the same
   // four lines as `addVolumeField` so both paths stay in sync when the
   // engine's volume-field logic changes.
-  if (import.meta.env.DEV) {
+  // Mirror of App.tsx's `volumesUiEnabled` gate.  Computed inline (not
+  // hoisted) because wireSlots is one-shot at engine init; checking the
+  // URL once here is cheaper than threading a flag through the deps bag.
+  const volumesEnabledByUrl =
+    typeof window !== 'undefined' &&
+    (() => {
+      try {
+        return new URLSearchParams(window.location.search).has('volumes');
+      } catch {
+        return false;
+      }
+    })();
+  if (import.meta.env.DEV || volumesEnabledByUrl) {
     // Helper that mints one synthetic-volume slot.  The handle and the
     // default-enabled flag are baked into a closure (the AssetSlot
     // commit signature only sees the decoded payload, not the request,
@@ -277,10 +294,13 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
             state.settings.volumeFields[handle] = {
               enabled: defaultEnabled,
               intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+              paletteId: cube.paletteId,
             };
           }
-          renderer.setIntensity(handle, state.settings.volumeFields[handle].intensity);
-          renderer.setEnabled(handle, state.settings.volumeFields[handle].enabled);
+          const persisted = state.settings.volumeFields[handle];
+          renderer.setIntensity(handle, persisted.intensity);
+          renderer.setEnabled(handle, persisted.enabled);
+          renderer.setFieldPalette(handle, persisted.paletteId);
           // Fire the same React-facing callback that engineHandle's
           // addVolumeField fires.  Without this, the SettingsPanel
           // never learns the new field exists — its mirror is rebuilt
