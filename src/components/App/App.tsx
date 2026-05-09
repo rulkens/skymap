@@ -659,12 +659,25 @@ export function App(): React.ReactElement {
           handleRef.current?.setVolumesEnabled?.(v);
         }}
         volumeFields={volumeFields}
-        onVolumeFieldEnabledChange={(handle, enabled) =>
-          handleRef.current?.setVolumeFieldEnabled?.(handle, enabled)
-        }
-        onVolumeFieldIntensityChange={(handle, intensity) =>
-          handleRef.current?.setVolumeFieldIntensity?.(handle, intensity)
-        }
+        onVolumeFieldEnabledChange={(handle, enabled) => {
+          // Optimistic React-state update — the engine setter does NOT
+          // fire onVolumeFieldsChanged for tunable mutations (only for
+          // add/remove), so the controlled-input value would otherwise
+          // snap back on the next render.  We update local state first
+          // so the UI stays responsive, then forward to the engine.
+          // Reading volumeFields from closure is safe in event handlers
+          // (closure is fresh per render; no batched-update concerns).
+          setVolumeFields(
+            volumeFields.map((f) => (f.handle === handle ? { ...f, enabled } : f)),
+          );
+          handleRef.current?.setVolumeFieldEnabled?.(handle, enabled);
+        }}
+        onVolumeFieldIntensityChange={(handle, intensity) => {
+          setVolumeFields(
+            volumeFields.map((f) => (f.handle === handle ? { ...f, intensity } : f)),
+          );
+          handleRef.current?.setVolumeFieldIntensity?.(handle, intensity);
+        }}
       />
         {/*
           Stats panel — read-only telemetry: rolling FPS, per-survey loaded
