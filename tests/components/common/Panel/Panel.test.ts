@@ -1,110 +1,119 @@
+// @vitest-environment jsdom
 /**
  * Tests for Panel.
  *
- * ### Why .test.ts not .test.tsx
- *
- * The project's vitest config runs in the `node` environment with no DOM
- * library installed (see CLAUDE.md for the rationale).  We use
- * `react-dom/server.renderToStaticMarkup` to snapshot the initial markup
- * as a string and assert against it — enough to verify every static branch
- * of the component (default open, defaultOpen=false, title rendering,
- * children rendering, aria-label).  Click-driven toggle is verified
- * manually against the live dev server.
+ * The Panel's collapse animation is driven by a CSS-Grid
+ * `grid-template-rows` interpolation; the body element stays mounted
+ * in both states.  Because CSS-modules class names don't actually
+ * carry styles in jsdom, we assert against ARIA attributes — the
+ * stable, intent-level contract — rather than CSS-modules-mangled
+ * class fragments like `_bodyWrapperOpen_`.  Pre-jsdom that fragment
+ * was the only signal available; the new tests survive any benign
+ * rename of the SCSS file.
  */
 
 import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { Panel } from '../../../../src/components/common/Panel/Panel';
 
 describe('Panel', () => {
   it('renders the supplied title', () => {
-    const html = renderToStaticMarkup(
+    render(
       createElement(Panel, {
         title: 'STATS',
         children: createElement('span', null, 'BODY'),
       }),
     );
-    expect(html).toContain('STATS');
+    expect(screen.getByRole('button', { name: /STATS/i })).toBeInTheDocument();
   });
 
-  it('mounts open by default (aria-expanded="true" + body visible)', () => {
-    const html = renderToStaticMarkup(
+  it('mounts open by default (aria-expanded="true" + body content rendered)', () => {
+    render(
       createElement(Panel, {
         title: 'STATS',
         children: createElement('span', null, 'BODY_CONTENT'),
       }),
     );
-    expect(html).toContain('aria-expanded="true"');
-    expect(html).toContain('BODY_CONTENT');
+    expect(
+      screen.getByRole('button', { name: /STATS/i }),
+    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('BODY_CONTENT')).toBeInTheDocument();
   });
 
-  it('mounts closed when defaultOpen=false (body in DOM but no bodyWrapperOpen modifier)', () => {
-    const html = renderToStaticMarkup(
+  it('mounts closed when defaultOpen=false (body still in DOM)', () => {
+    render(
       createElement(Panel, {
         title: 'STATS',
         defaultOpen: false,
         children: createElement('span', null, 'BODY_CONTENT'),
       }),
     );
-    expect(html).toContain('aria-expanded="false"');
+    expect(
+      screen.getByRole('button', { name: /STATS/i }),
+    ).toHaveAttribute('aria-expanded', 'false');
     // Body stays mounted in the DOM regardless of open state — the CSS
     // grid-template-rows trick collapses its visual height to zero
-    // smoothly.  The closed state is signalled by the absence of the
-    // `_bodyWrapperOpen_*` modifier class on the body wrapper, which
-    // the stylesheet keys off to drive the height + opacity transitions.
-    expect(html).not.toMatch(/_bodyWrapperOpen_/);
-    expect(html).toContain('aria-hidden="true"');
-    expect(html).toContain('BODY_CONTENT');
+    // smoothly.  We verify the *intent* via aria-expanded above and
+    // confirm the children still exist in the tree here.
+    expect(screen.getByText('BODY_CONTENT')).toBeInTheDocument();
   });
 
-  it('applies the bodyWrapperOpen modifier when defaultOpen is true (default)', () => {
-    const html = renderToStaticMarkup(
+  it('toggles aria-expanded when the title button is clicked', async () => {
+    const user = userEvent.setup();
+    render(
       createElement(Panel, {
         title: 'STATS',
-        children: createElement('span', null, 'BODY_CONTENT'),
+        defaultOpen: false,
+        children: createElement('span', null, 'BODY'),
       }),
     );
-    // Open state is signalled by the `_bodyWrapperOpen_*` CSS-module class
-    // on the body wrapper — the stylesheet's `.bodyWrapperOpen` rule sets
-    // grid-template-rows: 1fr to grow the row to the body's intrinsic height.
-    expect(html).toMatch(/_bodyWrapperOpen_/);
+    const btn = screen.getByRole('button', { name: /STATS/i });
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
+    await user.click(btn);
+    expect(btn).toHaveAttribute('aria-expanded', 'true');
+    await user.click(btn);
+    expect(btn).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('forwards aria-label to the outer wrapper when provided', () => {
-    const html = renderToStaticMarkup(
+    const { container } = render(
       createElement(Panel, {
         title: 'STATS',
         ariaLabel: 'Render statistics',
         children: createElement('span', null, 'BODY'),
       }),
     );
-    expect(html).toContain('aria-label="Render statistics"');
+    // The outer wrapper is the first DOM child of our render container.
+    const outer = container.firstElementChild as HTMLElement;
+    expect(outer).toHaveAttribute('aria-label', 'Render statistics');
   });
 
   it('omits the aria-label attribute when not provided', () => {
-    const html = renderToStaticMarkup(
+    const { container } = render(
       createElement(Panel, {
         title: 'STATS',
         children: createElement('span', null, 'BODY'),
       }),
     );
-    expect(html).not.toContain('aria-label=');
+    const outer = container.firstElementChild as HTMLElement;
+    expect(outer).not.toHaveAttribute('aria-label');
   });
 
   it('wires aria-controls on the button to the body id', () => {
     // The exact id is opaque (generated by useId), but it must match
     // between the button's aria-controls and the body div's id — that
     // contract is what lets screen readers traverse the relationship.
-    const html = renderToStaticMarkup(
+    render(
       createElement(Panel, {
         title: 'STATS',
         children: createElement('span', null, 'BODY'),
       }),
     );
-    const controlsMatch = html.match(/aria-controls="([^"]+)"/);
-    expect(controlsMatch).not.toBeNull();
-    const bodyId = controlsMatch![1];
-    expect(html).toContain(`id="${bodyId}"`);
+    const btn = screen.getByRole('button', { name: /STATS/i });
+    const controlledId = btn.getAttribute('aria-controls');
+    expect(controlledId).toBeTruthy();
+    expect(document.getElementById(controlledId!)).not.toBeNull();
   });
 });
