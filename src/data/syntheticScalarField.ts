@@ -71,12 +71,12 @@ export function makeSyntheticGaussianCube(opts: SyntheticGaussianOptions = {}): 
     voxelSize,
     rotation: [0, 0, 0, 1],
     paletteId: 'blue-purple',
-    // Tuned so a center-axis ray saturates at intensity=1.0.  The
-    // Gaussian's integrated density along its peak axis is roughly
-    // √(2π)·σ ≈ 0.31 of cube width (for the default σ = dims/8); a
-    // ~5x scale lifts that into the saturated regime so the slider
-    // covers a useful "barely visible → fully opaque" range.
-    densityScale: 5.0,
+    // Tuned so a center-axis ray saturates well before intensity=1.0,
+    // giving the slider plenty of headroom for the "punchy peak" look.
+    // The Gaussian's integrated density along its peak axis is roughly
+    // √(2π)·σ ≈ 0.31 of cube width (for the default σ = dims/8); a 10x
+    // scale lifts that into the comfortably-saturated regime.
+    densityScale: 10.0,
     valueMin: 0,
     valueMax: 1,
   };
@@ -171,9 +171,10 @@ export function makeCartesianGridCube(opts: CartesianGridOptions = {}): ScalarCu
     paletteId,
     // Lower scale than the Gaussian: a ray crosses ~8 grid planes per
     // axis at default settings, so integrated density is much higher
-    // than the single-peak Gaussian.  2x lifts the average sight line
-    // into a comfortable mid-range without immediately saturating.
-    densityScale: 2.0,
+    // than the single-peak Gaussian.  4x is enough to saturate well
+    // before intensity=1.0 while keeping the low end of the slider
+    // useful for a subtle overlay.
+    densityScale: 4.0,
     valueMin: 0,
     valueMax: 1,
   };
@@ -281,9 +282,10 @@ export function makeSphericalGridCube(opts: SphericalGridOptions = {}): ScalarCu
     paletteId,
     // Between Gaussian (single peak, low integrated density) and the
     // Cartesian grid (many planes, high integrated density): a ray
-    // typically crosses one or two shells plus a spoke.  3x is a
-    // reasonable middle ground.
-    densityScale: 3.0,
+    // typically crosses one or two shells plus a spoke.  6x sits in
+    // the saturated-with-headroom range, matching the doubled scales
+    // of its sibling fixtures.
+    densityScale: 6.0,
     valueMin: 0,
     valueMax: 1,
   };
