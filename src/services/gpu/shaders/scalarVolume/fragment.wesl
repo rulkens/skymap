@@ -102,8 +102,32 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     // Look up colour through the 1D palette LUT.  Same uniformity
     // constraint, same fix.
     let lut = textureSampleLevel(palette, paletteSampler, sampleValue, 0.0);
-    // Pre-multiply alpha by intensity * stepLength (normalised).
-    let alpha = lut.a * u.intensity * stepLength * f32(STEP_COUNT) * 0.01;
+    // Per-step alpha = density * stepLength.  This is the discrete form
+    // of the optical-depth integral: total opacity along the ray =
+    // sum(density * dx) which is path-length-correct (a longer ray
+    // through the same density yields proportionally more opacity).
+    //
+    // The original (buggy) formula was 'lut.a * intensity * stepLength
+    // * STEP_COUNT * 0.01', which cancels the '/ STEP_COUNT' inside
+    // stepLength and ends up with per-step alpha ∝ total path length.
+    // That made the contribution amplitude depend on the ray's full
+    // extent, so a long ray (camera far from cube) over-saturated the
+    // first sample's RGB (alpha can exceed 1, scaling lut.rgb past
+    // unity in the pre-multiply), while a short ray (camera inside)
+    // produced smaller per-step contributions and a darker result.
+    // The visible symptom: the blob got LIGHTER as the camera entered
+    // it.  The fix below makes per-step alpha proportional to the
+    // sampled length, and the multi-step composite naturally
+    // integrates to the correct total optical depth.
+    //
+    // The DENSITY_SCALE constant tunes how aggressive the opacity is
+    // per local-space unit.  Local space spans [0,1]^3 so a full
+    // diagonal ray has length √3 ≈ 1.73; at lut.a=0.9, intensity=0.5,
+    // DENSITY_SCALE=1 we get N·(0.9·0.5·√3/N) ≈ 0.78 of opacity which
+    // reads as "saturated through the dense centre" — a reasonable
+    // starting point.  Tune in the smoke test if voids feel too thick
+    // or peaks too thin.
+    let alpha = lut.a * u.intensity * stepLength;
     let contrib = vec4<f32>(lut.rgb * alpha, alpha);
     // Front-to-back over-compositing within this field.
     accum = accum + (1.0 - accum.a) * contrib;
