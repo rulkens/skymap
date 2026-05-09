@@ -281,6 +281,12 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
           }
           renderer.setIntensity(handle, state.settings.volumeFields[handle].intensity);
           renderer.setEnabled(handle, state.settings.volumeFields[handle].enabled);
+          // Fire the same React-facing callback that engineHandle's
+          // addVolumeField fires.  Without this, the SettingsPanel
+          // never learns the new field exists — its mirror is rebuilt
+          // only on this callback.  We're bypassing the public handle
+          // (per the docblock above) so we have to fire it ourselves.
+          cb.onVolumeFieldsChanged?.();
           state.subsystems.scheduler.requestRender();
         },
       });
