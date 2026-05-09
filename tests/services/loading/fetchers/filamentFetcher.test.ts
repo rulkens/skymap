@@ -1,11 +1,9 @@
-import { describe, expect, it, vi, afterEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
 import { encodeFilaments } from '../../../../src/data/filamentBinaryFormat';
+import { useFetchMock } from '../../../setup/fetchMock';
 
-const originalFetch = globalThis.fetch;
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
+const fetch = useFetchMock();
 
 const emptyFilamentBuffer = (): ArrayBuffer => {
   // Smallest valid encoding: zero strips, zero vertices.  encodeFilaments
@@ -26,29 +24,28 @@ const emptyFilamentBuffer = (): ArrayBuffer => {
 
 describe('filamentFetcher (URL routing)', () => {
   it('uses filaments-small.bin for small tier', async () => {
-    const fetchSpy = vi.fn().mockResolvedValue(
+    fetch.mock.mockResolvedValue(
       new Response(emptyFilamentBuffer(), { status: 200 }),
     );
-    globalThis.fetch = fetchSpy;
     await filamentFetcher({ tier: 'small' }, new AbortController().signal, () => {});
-    expect(fetchSpy.mock.calls[0]?.[0]).toContain('filaments-small.bin');
+    expect(fetch.mock.mock.calls[0]?.[0]).toContain('filaments-small.bin');
   });
 
   it('uses filaments.bin for medium and large', async () => {
     for (const tier of ['medium', 'large'] as const) {
-      const fetchSpy = vi.fn().mockResolvedValue(
+      fetch.mock.mockReset();
+      fetch.mock.mockResolvedValue(
         new Response(emptyFilamentBuffer(), { status: 200 }),
       );
-      globalThis.fetch = fetchSpy;
       await filamentFetcher({ tier }, new AbortController().signal, () => {});
-      expect(fetchSpy.mock.calls[0]?.[0]).toMatch(/\/filaments\.bin$/);
+      expect(fetch.mock.mock.calls[0]?.[0]).toMatch(/\/filaments\.bin$/);
     }
   });
 });
 
 describe('filamentFetcher (success path)', () => {
   it('decodes the response body into a FilamentCloud', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(
+    fetch.mock.mockResolvedValue(
       new Response(emptyFilamentBuffer(), { status: 200 }),
     );
     const cloud = await filamentFetcher(
@@ -70,7 +67,7 @@ describe('filamentFetcher (success path)', () => {
 
 describe('filamentFetcher (error path)', () => {
   it('propagates a non-2xx HTTP status', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(
+    fetch.mock.mockResolvedValue(
       new Response('not found', { status: 404 }),
     );
     await expect(

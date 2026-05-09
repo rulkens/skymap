@@ -1,8 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   pgcAliasFetcher,
   parsePgcAliases,
 } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
+import { useFetchMock } from '../../../setup/fetchMock';
+
+const fetch = useFetchMock();
 
 describe('parsePgcAliases', () => {
   it('parses bigint keys', () => {
@@ -43,9 +46,9 @@ describe('parsePgcAliases', () => {
 
 describe('pgcAliasFetcher', () => {
   it('fetches and parses', async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValue(new Response('{"1":["X"]}', { status: 200 }));
+    fetch.mock.mockResolvedValue(
+      new Response('{"1":["X"]}', { status: 200 }),
+    );
     const map = await pgcAliasFetcher(
       undefined as void,
       new AbortController().signal,

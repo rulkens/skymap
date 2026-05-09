@@ -1,14 +1,10 @@
-import { describe, expect, it, vi, afterEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   famousMetaFetcher,
   parseFamousMeta,
   parseFamousXrefs,
 } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
-
-const originalFetch = globalThis.fetch;
-afterEach(() => {
-  globalThis.fetch = originalFetch;
-});
+import { useFetchMock } from '../../../setup/fetchMock';
 
 describe('parseFamousMeta', () => {
   it('parses valid array', () => {
@@ -31,12 +27,12 @@ describe('parseFamousXrefs', () => {
 });
 
 describe('famousMetaFetcher', () => {
+  const fetch = useFetchMock();
+
   it('fetches both files and returns combined payload', async () => {
-    const seq = [
-      new Response('[]', { status: 200 }),
-      new Response('{}', { status: 200 }),
-    ];
-    globalThis.fetch = vi.fn(() => Promise.resolve(seq.shift()!));
+    fetch.mock
+      .mockResolvedValueOnce(new Response('[]', { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
     const payload = await famousMetaFetcher(
       undefined as void,
       new AbortController().signal,
@@ -46,20 +42,16 @@ describe('famousMetaFetcher', () => {
   });
 
   it('rejects on a non-2xx HTTP status', async () => {
-    globalThis.fetch = vi.fn(() =>
-      Promise.resolve(new Response('boom', { status: 500 })),
-    );
+    fetch.mock.mockResolvedValue(new Response('boom', { status: 500 }));
     await expect(
       famousMetaFetcher(undefined as void, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
   it('rejects when an inner JSON body is malformed', async () => {
-    const seq = [
-      new Response('not-json', { status: 200 }),
-      new Response('{}', { status: 200 }),
-    ];
-    globalThis.fetch = vi.fn(() => Promise.resolve(seq.shift()!));
+    fetch.mock
+      .mockResolvedValueOnce(new Response('not-json', { status: 200 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 200 }));
     await expect(
       famousMetaFetcher(undefined as void, new AbortController().signal, () => {}),
     ).rejects.toThrow();
@@ -74,7 +66,7 @@ describe('famousMetaFetcher', () => {
     // still resolves.  Plain `vi.fn().mockResolvedValue(Response)`
     // would ignore the signal entirely and the test would pass for
     // unrelated reasons (e.g. parser rejection of an empty body).
-    globalThis.fetch = vi.fn((_url, init) => {
+    fetch.mock.mockImplementation((_url, init) => {
       const sig = (init as RequestInit | undefined)?.signal;
       if (sig?.aborted) {
         return Promise.reject(
