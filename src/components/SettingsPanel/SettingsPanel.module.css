@@ -119,57 +119,8 @@
   margin-top: var(--space-2);
 }
 
-/*
- * Per-field rows inside the Volumes section.  Each row lays out a label
- * (checkbox + field name) on the left and an intensity slider on the
- * right.  The label uses `min-width` to prevent very short handle strings
- * from leaving a lopsided gap before the slider starts — 8rem is wide
- * enough for most handles (e.g. "cf4-dm", "density", "temperature") while
- * still leaving the bulk of the row to the slider thumb track.
- */
-.volumeFieldRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-2) 0;
-}
-
-.volumeFieldRow input[type='range'] {
-  /* Stretch to fill the remaining space after the label. */
-  flex: 1;
-  accent-color: var(--color-accent-control);
-  cursor: pointer;
-}
-
-.volumeFieldRow input[type='range']:disabled {
-  /* Dim the slider thumb + track when the field is off so it's obvious
-     that dragging it would have no visual effect.  The cursor is still
-     `default` (not `not-allowed`) because the overall row is interactive
-     — only the range element itself is inert. */
-  opacity: 0.4;
-  cursor: default;
-}
-
-/*
- * Left side of a volumeFieldRow: the enable checkbox + field-name span.
- * `min-width` reserves space for the label so the slider column doesn't
- * collapse when the field name is very short.  `gap` separates the
- * checkbox from the text without requiring a wrapper span.
- */
-.volumeFieldLabel {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 8rem;
-  color: var(--color-fg-muted);
-  cursor: pointer;
-}
-
-.volumeFieldLabel input[type='checkbox'] {
-  accent-color: var(--color-accent-control);
-  cursor: pointer;
-  flex-shrink: 0;
-}
+/* Per-field row layout for the Volumes section moved to
+   `VolumeFieldRow.module.css` alongside the component. */
 
 /*
  * Action buttons rendered inside the panel body — currently "Reset camera"

@@ -43,7 +43,7 @@ import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import type { ScalarFieldPaletteId } from '../../@types/ScalarCube';
-import { PaletteSelect } from '../common/PaletteSelect/PaletteSelect';
+import { VolumeFieldRow } from './VolumeFieldRow';
 import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
 import { TierSelector } from './TierSelector';
@@ -467,12 +467,6 @@ export function SettingsPanel({
     onVolumeFieldEnabledChange !== undefined &&
     onVolumeFieldIntensityChange !== undefined;
 
-  // Per-field palette dropdown opt-in.  When the change callback is
-  // absent, the dropdown is hidden on every row but the rest of the
-  // row (enable checkbox + intensity slider) still renders, so older
-  // call sites are unaffected.
-  const showFieldPaletteSelect =
-    showVolumesSection && onVolumeFieldPaletteChange !== undefined;
 
   // Density-correction section: rendered only when both the current mode and
   // both change-callbacks are wired by the parent.  We require all four
@@ -714,58 +708,17 @@ export function SettingsPanel({
                 <div className={styles.panelMode}>No volume fields registered.</div>
               ) : (
                 volumeFields!.map((field) => (
-                  <div key={field.handle} className={styles.volumeFieldRow}>
-                    {/*
-                      Per-field enable checkbox + label.  The label uses
-                      `field.label` (defaults to the handle string at the
-                      engine side), so a future `addVolumeField({ handle, label })`
-                      API can give each field a human-readable name without
-                      changing this component.
-                    */}
-                    <label className={styles.volumeFieldLabel}>
-                      <input
-                        type="checkbox"
-                        checked={field.enabled}
-                        onChange={(e) =>
-                          onVolumeFieldEnabledChange!(field.handle, e.target.checked)
-                        }
-                      />
-                      <span>{field.label}</span>
-                    </label>
-                    {/*
-                      Intensity slider.  Disabled when the field is off because
-                      moving it would have no visible effect — same logic as
-                      hiding the filament-intensity slider when the overlay is
-                      off.  Here we disable rather than hide so the user can
-                      still see the current intensity value and understand what
-                      they'll get when they re-enable the field.
-                    */}
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={field.intensity}
-                      disabled={!field.enabled}
-                      onChange={(e) =>
-                        onVolumeFieldIntensityChange!(field.handle, Number(e.target.value))
-                      }
-                    />
-                    {/*
-                      Per-field palette dropdown.  Each registered field
-                      owns its own LUT texture, so two overlapping fields
-                      can use different colour ramps.  Hidden when the
-                      change callback isn't wired (older call sites still
-                      get the rest of the row).
-                    */}
-                    {showFieldPaletteSelect && (
-                      <PaletteSelect
-                        value={field.paletteId}
-                        disabled={!field.enabled}
-                        onChange={(id) => onVolumeFieldPaletteChange!(field.handle, id)}
-                      />
-                    )}
-                  </div>
+                  <VolumeFieldRow
+                    key={field.handle}
+                    handle={field.handle}
+                    label={field.label}
+                    enabled={field.enabled}
+                    intensity={field.intensity}
+                    paletteId={field.paletteId}
+                    onEnabledChange={onVolumeFieldEnabledChange!}
+                    onIntensityChange={onVolumeFieldIntensityChange!}
+                    onPaletteChange={onVolumeFieldPaletteChange}
+                  />
                 ))
               )}
             </CollapsibleSection>

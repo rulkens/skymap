@@ -1,0 +1,68 @@
+/*
+ * Per-field row for the SettingsPanel "Volumes" section.  Two visual
+ * lines: a top line with the enable checkbox + label + palette select,
+ * and a bottom line with the intensity slider stretched across the
+ * available width.  Splitting vertically (rather than cramming four
+ * controls onto one line) means none of them have to fight for
+ * horizontal space — the slider gets the full row to itself, and the
+ * palette dropdown gets a stable position regardless of label length.
+ */
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 4px);
+  padding: var(--space-3, 8px) 0;
+  border-bottom: 1px solid var(--color-border-divider, rgba(255, 255, 255, 0.06));
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+/*
+ * Top line: checkbox + label on the left, palette select pushed to the
+ * right via `margin-left: auto`.  The label takes whatever room it
+ * needs; the select is fixed-width via PaletteSelect's own CSS.
+ */
+.topLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 8px);
+}
+
+.label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 4px);
+  color: var(--color-fg-muted, #aaa);
+  cursor: pointer;
+}
+
+.label input[type='checkbox'] {
+  accent-color: var(--color-accent-control, #4a9eff);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.paletteSlot {
+  /* Push the select to the right edge of the row. */
+  margin-left: auto;
+}
+
+/*
+ * Bottom line: the intensity slider takes the full width.  No label
+ * text — the slider's purpose is implied by sitting under the field
+ * name, and adding a redundant "Intensity" label would crowd the row
+ * for no information gain.
+ */
+.intensitySlider {
+  width: 100%;
+  accent-color: var(--color-accent-control, #4a9eff);
+  cursor: pointer;
+}
+
+.intensitySlider:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
