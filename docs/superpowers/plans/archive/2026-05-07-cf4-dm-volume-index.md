@@ -1,5 +1,9 @@
 # CF-4 Dark-Matter Density Volume Render — Plan Index
 
+> **SUPERSEDED 2026-05-10.** Re-scoped against the scalar-volume-renderer primitive that landed 2026-05-09. New spec: [`docs/superpowers/specs/2026-05-10-cf4-dm-volume-content-design.md`](../../specs/2026-05-10-cf4-dm-volume-content-design.md). New plan to follow. The two sub-plans in this directory (`01-build-pipeline`, `02-renderer`) are preserved for historical context but should not be executed.
+
+---
+
 This feature implements the design at
 [`docs/superpowers/specs/2026-05-07-cf4-dark-matter-volume-render-design.md`](../specs/2026-05-07-cf4-dark-matter-volume-render-design.md).
 

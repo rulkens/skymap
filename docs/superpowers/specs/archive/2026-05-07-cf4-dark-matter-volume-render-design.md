@@ -1,6 +1,11 @@
 # CF-4 Dark-Matter Density Volume Render — Design
 
-**Status:** Draft (2026-05-07)
+> **SUPERSEDED 2026-05-10** by [`2026-05-10-cf4-dm-volume-content-design.md`](../2026-05-10-cf4-dm-volume-content-design.md).
+> The scalar-volume-renderer that landed in PR #f0176a8 (2026-05-09) ships a generic, multi-field, palette-driven volume primitive (`SCFD` format, `scalarVolumeRenderer`, WESL ray-march shader, `scalarVolumePass`, `VolumeFieldRow` UI). The bespoke `cf4DensityFormat` / `cf4DensityRenderer` / `cf4Density.wgsl` / settings UI scoped here are no longer needed. The new spec re-scopes CF-4 DM volume as a **content + ingest** task (~10–15 tasks instead of ~50) against the existing primitive. This file is preserved for historical context.
+
+---
+
+**Status:** Draft (2026-05-07) — superseded
 **Owner:** @rulkens
 **First consumer:** A toggleable "Dark Matter (CF-4)" overlay on the Skymap renderer that visualizes the local-universe DM density field as a translucent 3D volume.
 

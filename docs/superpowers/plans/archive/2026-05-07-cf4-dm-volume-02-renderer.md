@@ -1,5 +1,9 @@
 # CF-4 DM Volume — Sub-plan 02: Renderer + UI
 
+> **SUPERSEDED 2026-05-10. DO NOT EXECUTE.** Re-scoped against the scalar-volume-renderer primitive (which obviates this entire sub-plan). See the new spec [`docs/superpowers/specs/2026-05-10-cf4-dm-volume-content-design.md`](../../specs/2026-05-10-cf4-dm-volume-content-design.md). Preserved for historical context.
+
+---
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Each implementer subagent must be dispatched `run_in_background: true` per project convention. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Volume-render the CF-4 density cube produced by Plan 01 as a translucent 3D fog around the observer. After this plan ships, toggling "Dark Matter (CF-4)" in the SettingsPanel makes Laniakea, the Local Void, and the Great Attractor visible behind the existing GLADE galaxies. Toggle off → scene unchanged from current `main`. Intensity slider modulates opacity from 0 to 2.
