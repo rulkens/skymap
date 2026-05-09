@@ -522,6 +522,36 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   (async () => {
     try {
       await runBootstrapPhases(state, bootstrapDeps);
+
+      // ── Dev-only: trigger the synthetic Gaussian volume ──────────────
+      //
+      // This mirrors the pattern used by the synthetic point-cloud slot
+      // fallback in `wireSlots.ts` (`synthSlot.load(...)` at the end of
+      // the parallel survey gate).  The volume slot was minted and
+      // registered inside `wireSlots` but intentionally left without an
+      // initial `load()` call — the load trigger lives here, AFTER
+      // `runBootstrapPhases`, because the slot's commit step calls
+      // `state.gpu.scalarVolumeRenderer.addField(...)`, and that renderer
+      // is only guaranteed non-null once `initGpu` has completed (which
+      // is part of `runBootstrapPhases`).  Calling `load()` before
+      // `initGpu` resolves would race the renderer construction; calling it
+      // here means the renderer is always ready by the time the async
+      // fetch resolves and the commit fires.
+      //
+      // The `import.meta.env.DEV` guard is mandatory: the slot itself is
+      // only minted in dev builds (see `wireSlots.ts`), so
+      // `state.assetSlots.syntheticVolume` is `undefined` in production.
+      // The truthiness check is purely defensive — Vite's dead-code
+      // elimination would strip this entire branch in a production build
+      // regardless, because `import.meta.env.DEV` is a compile-time
+      // constant that evaluates to `false` outside `vite dev`.
+      if (import.meta.env.DEV && state.assetSlots.syntheticVolume) {
+        state.assetSlots.syntheticVolume.load({
+          handle: 'debug-gaussian',
+          dims: 64,
+          boxSizeMpc: 400,
+        });
+      }
     } catch (err) {
       // Surface initialisation failures via the status callback so the UI
       // shows a readable message rather than a blank canvas.
