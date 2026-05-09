@@ -33,16 +33,21 @@
 - `src/services/gpu/shaders/scalarVolume/vertex.wesl` — unit-cube → clip-space.
 - `src/services/gpu/shaders/scalarVolume/fragment.wesl` — back-face raymarch with AABB intersection.
 - `src/services/engine/frame/passes/scalarVolumePass.ts` — `Pass` wrapper.
-- `tests/data/scalarFieldFormat.test.ts` — `SCFD` round-trip + bad-magic + bad-version tests.
+- `src/services/loading/fetchers/syntheticVolumeFetcher.ts` — `Fetcher<ScalarCube, SyntheticVolumeReq>` parallel to `syntheticPointFetcher`; routes the synthetic cube through the same `AssetSlot` machinery as real cubes will.
+- `tools/buildScalarVolumeFixture.ts` — one-shot script that emits the baked test fixture binary; rerun whenever the SCFD format bumps version.
+- `tests/fixtures/scalar-volume/tiny-8x8x8.scfd` — checked-in `.scfd` byte sequence (~272 bytes) used as the format decoder's gold-standard fixture.
+- `tests/data/scalarFieldFormat.test.ts` — `SCFD` round-trip + bad-magic + bad-version tests + on-disk fixture round-trip.
 - `tests/data/scalarFieldPalettes.test.ts` — palette LUT shape + monotonicity tests.
 - `tests/data/syntheticScalarField.test.ts` — Gaussian cube shape + symmetry tests.
+- `tests/services/loading/fetchers/syntheticVolumeFetcher.test.ts` — fetcher returns a non-null cube of the requested dims.
 
 ### Modified
 
 - `src/services/engine/frame/passes/types.ts` — add `scalarVolumeRenderer` to `PassDeps`.
 - `src/services/engine/frame/passes/index.ts` — register `scalarVolumePass` in `HDR_PASSES`.
 - `src/services/engine/frame/renderFrame.ts` — pass `scalarVolumeRenderer` through into `PassDeps`.
-- `src/services/engine/engine.ts` — construct the renderer; in dev mode, register the synthetic Gaussian cube.
+- `src/services/engine/engine.ts` — construct the renderer; in dev mode, kick off the synthetic-volume slot load.
+- `src/services/engine/phases/wireSlots.ts` — add `syntheticVolumeSlot` (only in dev) that fetches the cube via `syntheticVolumeFetcher` and commits via `state.gpu.scalarVolumeRenderer.addField(...)`.
 - `src/@types/EngineHandle.d.ts` — expose `addVolumeField`, `removeVolumeField`, `setVolumeFieldEnabled`, `setVolumeFieldIntensity` on the public engine handle.
 - `src/@types/EngineSettingsState.d.ts` — add `volumesEnabled: boolean` master toggle and `volumeFields: Record<string, { enabled: boolean; intensity: number }>` per-field state.
 - `src/data/defaults.ts` — `DEFAULT_VOLUMES_ENABLED = true`, `DEFAULT_VOLUME_FIELD_INTENSITY = 0.5`.
@@ -425,6 +430,134 @@ palette_id + frame_kind + origin + voxel_size + rotation + value
 range + reserved pad) followed by raw f16 voxels.  Encoder /
 decoder pair plus round-trip + bad-magic + bad-version +
 invalid-frame + invalid-palette tests.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+## Task 2.5: Baked binary fixture (`tiny-8x8x8.scfd`)
+
+**Files:**
+- Create: `tools/buildScalarVolumeFixture.ts` — one-shot generator script.
+- Create: `tests/fixtures/scalar-volume/tiny-8x8x8.scfd` — committed binary (~272 bytes).
+- Modify: `tests/data/scalarFieldFormat.test.ts` — add a "decode the on-disk fixture" test.
+
+**Why this exists:** an in-process encode→decode test catches symmetric bugs (encoder writes wrong, decoder reads wrong, both agree).  A baked fixture catches the asymmetric case — accidental format bumps where the encoder changes but the on-disk bytes don't, OR endianness assumptions that round-trip in JS but break when a Python preprocessor ships the same bytes.  Costs ~272 bytes in the repo, gives us a gold-standard reference that survives encoder churn.
+
+- [ ] **Step 1: Write the generator script**
+
+```ts
+// tools/buildScalarVolumeFixture.ts
+/**
+ * One-shot generator for the SCFD format's regression fixture.
+ *
+ * Run manually: `npx tsx tools/buildScalarVolumeFixture.ts`.
+ *
+ * Re-run only when:
+ *   - SCFD version bumps (the fixture must match the current decoder)
+ *   - The fixture's content needs to change for new test coverage
+ *
+ * The output bytes are checked into git at the path below.  Tests
+ * round-trip them through `decodeScalarField` to detect drift between
+ * the encoder and the on-disk byte format.
+ */
+
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { encodeScalarField } from '../src/data/scalarFieldFormat';
+import type { ScalarCube } from '../src/@types/ScalarCube';
+
+const OUT = 'tests/fixtures/scalar-volume/tiny-8x8x8.scfd';
+
+// 8×8×8 = 512 voxels.  Each voxel = its linear index, stored as raw
+// uint16 (NOT a real f16 encoding — we just need a deterministic byte
+// pattern the decoder can read back without needing to compute f16
+// values for the assertion).  The fixture's purpose is structural
+// (header bytes + voxel byte order), not numerical.
+const voxels = new Uint16Array(8 * 8 * 8);
+for (let i = 0; i < voxels.length; i++) voxels[i] = i;
+
+const cube: ScalarCube = {
+  dims: [8, 8, 8],
+  voxels,
+  frameKind: 'equatorial-cartesian',
+  origin: [-200, -200, -200],
+  voxelSize: 50,
+  rotation: [0, 0, 0, 1],
+  paletteId: 'viridis',
+  valueMin: 0,
+  valueMax: 1,
+};
+
+const buf = encodeScalarField(cube);
+mkdirSync(dirname(OUT), { recursive: true });
+writeFileSync(OUT, Buffer.from(buf));
+console.log(`Wrote ${buf.byteLength} bytes to ${OUT}`);
+```
+
+- [ ] **Step 2: Generate the fixture**
+
+Run: `npx tsx tools/buildScalarVolumeFixture.ts`
+Expected output: `Wrote 1120 bytes to tests/fixtures/scalar-volume/tiny-8x8x8.scfd` (96-byte header + 512 voxels × 2 bytes = 1120 bytes).
+
+- [ ] **Step 3: Add the on-disk round-trip test**
+
+Append to `tests/data/scalarFieldFormat.test.ts`:
+
+```ts
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+describe('SCFD v1 — baked fixture round-trip', () => {
+  it('decodes the checked-in tiny-8x8x8 fixture with expected metadata', () => {
+    const path = join(process.cwd(), 'tests/fixtures/scalar-volume/tiny-8x8x8.scfd');
+    const bytes = readFileSync(path);
+    // Convert Buffer → ArrayBuffer slice that matches its byte range.
+    const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    const decoded = decodeScalarField(ab);
+    expect(decoded.dims).toEqual([8, 8, 8]);
+    expect(decoded.frameKind).toBe('equatorial-cartesian');
+    expect(decoded.paletteId).toBe('viridis');
+    expect(decoded.origin).toEqual([-200, -200, -200]);
+    expect(decoded.voxelSize).toBe(50);
+    // Voxel pattern: index 0 → 0, index 1 → 1, ..., index 511 → 511.
+    expect(decoded.voxels[0]).toBe(0);
+    expect(decoded.voxels[1]).toBe(1);
+    expect(decoded.voxels[511]).toBe(511);
+    expect(decoded.voxels.length).toBe(512);
+  });
+
+  it('on-disk fixture has the expected total byte length', () => {
+    const path = join(process.cwd(), 'tests/fixtures/scalar-volume/tiny-8x8x8.scfd');
+    const bytes = readFileSync(path);
+    expect(bytes.byteLength).toBe(96 + 512 * 2);
+  });
+});
+```
+
+- [ ] **Step 4: Run the test**
+
+Run: `npm test -- scalarFieldFormat`
+Expected: all tests pass, including the two new fixture tests.
+
+- [ ] **Step 5: Commit (fixture + script + test together)**
+
+```bash
+git add tools/buildScalarVolumeFixture.ts tests/fixtures/scalar-volume/tiny-8x8x8.scfd tests/data/scalarFieldFormat.test.ts
+git commit -m "$(cat <<'EOF'
+test(data): baked SCFD fixture for on-disk round-trip
+
+Adds tests/fixtures/scalar-volume/tiny-8x8x8.scfd — an 8³ cube
+(1120 bytes) with a deterministic voxel pattern (voxel[i] = i).
+Tests now round-trip both an in-memory encode→decode AND the
+checked-in bytes; catches accidental format drift where the
+encoder is consistent with itself but inconsistent with the
+documented on-disk layout.  Fixture is regenerated by
+`npx tsx tools/buildScalarVolumeFixture.ts` whenever the SCFD
+version bumps.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 EOF
@@ -2007,32 +2140,191 @@ EOF
 
 ---
 
+## Task 11.5: Synthetic volume fetcher + AssetSlot wiring
+
+**Files:**
+- Create: `src/services/loading/fetchers/syntheticVolumeFetcher.ts`
+- Create: `tests/services/loading/fetchers/syntheticVolumeFetcher.test.ts`
+- Modify: `src/services/engine/phases/wireSlots.ts` — add `syntheticVolumeSlot` (dev-only).
+- Modify: `src/@types/EngineState.d.ts` (or wherever `assetSlots` is declared) — add `syntheticVolume` slot field.
+
+**Why this exists:** the equivalent of `syntheticPointFetcher` for the volume renderer.  Routing the synthetic cube through `AssetSlot` instead of calling `engineHandle.addVolumeField` directly means it gets the same fade-in, status reporting, race-checked commit, and retry semantics as a real CF-4 or MCPM cube will when those land.  Two code paths for the same conceptual "this volume is now on the GPU" event would force every future feature (e.g., a "loading volumes…" status row) to be implemented twice.
+
+- [ ] **Step 1: Write the failing test for the fetcher**
+
+```ts
+// tests/services/loading/fetchers/syntheticVolumeFetcher.test.ts
+import { describe, it, expect } from 'vitest';
+import { syntheticVolumeFetcher } from '../../../../src/services/loading/fetchers/syntheticVolumeFetcher';
+
+describe('syntheticVolumeFetcher', () => {
+  it('resolves to a ScalarCube of the requested dims', async () => {
+    const ctrl = new AbortController();
+    const cube = await syntheticVolumeFetcher(
+      { handle: 'debug-gaussian', dims: 32, boxSizeMpc: 200 },
+      ctrl.signal,
+      () => {},
+    );
+    expect(cube.dims).toEqual([32, 32, 32]);
+    expect(cube.voxels.length).toBe(32 * 32 * 32);
+    expect(cube.voxelSize).toBe(200 / 32);
+  });
+
+  it('respects defaults when dims/boxSizeMpc are not provided', async () => {
+    const ctrl = new AbortController();
+    const cube = await syntheticVolumeFetcher(
+      { handle: 'debug-gaussian' },
+      ctrl.signal,
+      () => {},
+    );
+    expect(cube.dims).toEqual([64, 64, 64]);
+  });
+});
+```
+
+- [ ] **Step 2: Run the test to verify it fails**
+
+Run: `npm test -- syntheticVolumeFetcher`
+Expected: FAIL with module-not-found.
+
+- [ ] **Step 3: Write the fetcher**
+
+```ts
+// src/services/loading/fetchers/syntheticVolumeFetcher.ts
+/**
+ * syntheticVolumeFetcher — `Fetcher<ScalarCube, SyntheticVolumeReq>`.
+ *
+ * Resolves synchronously to a deterministic Gaussian-blob cube produced
+ * by `makeSyntheticGaussianCube`.  Routed through the `AssetSlot`
+ * machinery so the synthetic cube's lifecycle is identical to a real
+ * CF-4 or MCPM cube's: ready/error transitions, race-checked commit,
+ * `LoadingDevPanel` row.
+ *
+ * Mirrors the `syntheticPointFetcher` precedent — see that file's
+ * docblock for the full rationale.  Without this fetcher, dev-mode
+ * synthetic test data would bypass the slot system, and any future
+ * feature that touches the slot machinery (e.g., a "loading volumes…"
+ * status indicator) would have to be implemented twice.
+ */
+
+import type { Fetcher } from '../types';
+import type { ScalarCube } from '../../../@types/ScalarCube';
+import { makeSyntheticGaussianCube } from '../../../data/syntheticScalarField';
+
+export type SyntheticVolumeReq = {
+  /** Caller-chosen identifier; surfaced in `LoadingDevPanel`. */
+  handle: string;
+  /** Cube edge length in voxels.  Default 64 (matches generator default). */
+  dims?: number;
+  /** Physical edge length in Mpc.  Default 400 (matches generator default). */
+  boxSizeMpc?: number;
+};
+
+export const syntheticVolumeFetcher: Fetcher<ScalarCube, SyntheticVolumeReq> = async (req) => {
+  return makeSyntheticGaussianCube({
+    dims: req.dims,
+    boxSizeMpc: req.boxSizeMpc,
+    frameKind: 'equatorial-cartesian',
+  });
+};
+```
+
+- [ ] **Step 4: Run the test to verify it passes**
+
+Run: `npm test -- syntheticVolumeFetcher`
+Expected: PASS, both tests.
+
+- [ ] **Step 5: Wire the slot in `wireSlots.ts`**
+
+Open `src/services/engine/phases/wireSlots.ts` and follow the precedent set by `filamentSlot`.  Add (only in dev):
+
+```ts
+import { syntheticVolumeFetcher } from '../../loading/fetchers/syntheticVolumeFetcher';
+import type { ScalarCube } from '../../../@types/ScalarCube';
+
+// Inside the slot-wiring function, after filamentSlot:
+const syntheticVolumeSlot = import.meta.env.DEV
+  ? createAssetSlot<ScalarCube, { handle: string; dims?: number; boxSizeMpc?: number }>({
+      name: 'syntheticVolume',
+      fetch: syntheticVolumeFetcher,
+      commit: async (cube) => {
+        if (!state.gpu.scalarVolumeRenderer) return;
+        // Use the public engine path so settings + UI bookkeeping run.
+        engineHandle.addVolumeField('debug-gaussian', cube);
+      },
+    })
+  : null;
+
+if (syntheticVolumeSlot) {
+  state.assetSlots.syntheticVolume = syntheticVolumeSlot;
+}
+```
+
+(Match the existing file's exact coding conventions for slot creation — it may use a slightly different helper name or pass `state` differently.  Mirror what `filamentSlot` does.)
+
+- [ ] **Step 6: Add the slot to the assetSlots type**
+
+In whichever file declares `EngineState.assetSlots`:
+
+```ts
+import type { AssetSlot } from '../services/loading/AssetSlot';
+import type { ScalarCube } from './ScalarCube';
+import type { SyntheticVolumeReq } from '../services/loading/fetchers/syntheticVolumeFetcher';
+
+// Inside assetSlots:
+  syntheticVolume?: AssetSlot<ScalarCube, SyntheticVolumeReq>;
+```
+
+The `?` is intentional — production builds don't have the slot.
+
+- [ ] **Step 7: Run typecheck and tests**
+
+Run: `npm run typecheck && npm test`
+Expected: zero errors, all tests pass.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add -A
+git commit -m "$(cat <<'EOF'
+feat(loading): syntheticVolumeFetcher + dev-only AssetSlot
+
+Routes the synthetic Gaussian cube through the same AssetSlot
+machinery as real volume cubes will use, so it gets the same
+fade-in, status reporting, race-checked commit, and retry
+semantics for free.  Mirrors syntheticPointFetcher's precedent.
+Slot is dev-only; production builds don't pay for it.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
 ## Task 12: SMOKE TEST — synthetic Gaussian cube visible in dev server
 
 **Files:**
-- Modify: `src/services/engine/engine.ts` — register the synthetic cube during init when `import.meta.env.DEV` is true.
+- Modify: `src/services/engine/engine.ts` — kick off the synthetic-volume slot load during dev bootstrap.
 
 This is the visual confirmation that everything end-to-end works.  Per the *be meticulous with WGSL* memory: do not declare success until you have actually looked at the running app.
 
-- [ ] **Step 1: Wire the synthetic cube into engine bootstrap**
+- [ ] **Step 1: Trigger the synthetic-volume slot load on dev bootstrap**
 
-In `engine.ts`, after the `scalarVolumeRenderer` is constructed and the engine handle is built, add:
+In `engine.ts`, after the slot-wiring phase has run (so `state.assetSlots.syntheticVolume` is populated), add:
 
 ```ts
-import { makeSyntheticGaussianCube } from '../../data/syntheticScalarField';
-
-// After GPU init, only in dev:
-if (import.meta.env.DEV) {
-  const debugCube = makeSyntheticGaussianCube({
+// After GPU init + slot wiring, only in dev:
+if (import.meta.env.DEV && state.assetSlots.syntheticVolume) {
+  state.assetSlots.syntheticVolume.load({
+    handle: 'debug-gaussian',
     dims: 64,
-    frameKind: 'equatorial-cartesian',
     boxSizeMpc: 400,
   });
-  // Use the public engine handle so the SettingsPanel picks it up
-  // through the same path the real CF-4/MCPM cubes will use.
-  engineHandle.addVolumeField('debug-gaussian', debugCube);
 }
 ```
+
+The slot's `commit` function calls `engineHandle.addVolumeField('debug-gaussian', cube)` once the cube is decoded, so the SettingsPanel sees the field appear via the same `onVolumeFieldsChanged` callback as any other (future) cube would trigger.
 
 - [ ] **Step 2: Run typecheck**
 
@@ -2081,12 +2373,12 @@ EOF
 - [ ] **Step 5: Final check — full test + typecheck pass**
 
 Run: `npm test && npm run typecheck`
-Expected: all tests pass (test count = baseline + ~15 new), zero typecheck errors.
+Expected: all tests pass (test count = baseline + ~20 new), zero typecheck errors.
 
 - [ ] **Step 6: Report**
 
 Report to the user:
-- Total commits in the plan: 12 (one per task; Task 0 has no commit).
+- Total commits in the plan: 14 (one per task; Task 0 has no commit).
 - Smoke test status: confirmed visible in dev server (or list the failure mode you hit).
 - New test count: baseline + N (cite both numbers).
 
@@ -2094,7 +2386,7 @@ Report to the user:
 
 ## Definition of Done
 
-- [ ] All 12 tasks complete; each has its own commit.
+- [ ] All 14 tasks complete (0, 1, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10, 11, 11.5, 12); each non-pre-flight task has its own commit.
 - [ ] `npm test` green (existing tests + ~15 new ones).
 - [ ] `npm run typecheck` clean.
 - [ ] Synthetic Gaussian blob is visible in the dev server with the synthetic cube registered, with the SettingsPanel's Volumes section listing it; toggling and intensity-sliding work; flying inside the box keeps it rendering correctly.
