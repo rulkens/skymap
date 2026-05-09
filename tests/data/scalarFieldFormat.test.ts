@@ -66,10 +66,13 @@ describe('SCFD v1 binary format', () => {
   });
 });
 
+// Hoisted to module scope so all three fixture tests share the same path
+// expression — avoids the duplicated join(process.cwd(), ...) smell.
+const FIXTURE_PATH = join(process.cwd(), 'tests/fixtures/scalar-volume/tiny-8x8x8.scfd');
+
 describe('SCFD v1 — baked fixture round-trip', () => {
   it('decodes the checked-in tiny-8x8x8 fixture with expected metadata', () => {
-    const path = join(process.cwd(), 'tests/fixtures/scalar-volume/tiny-8x8x8.scfd');
-    const bytes = readFileSync(path);
+    const bytes = readFileSync(FIXTURE_PATH);
     // Convert Buffer → ArrayBuffer slice that matches its byte range.
     const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     const decoded = decodeScalarField(ab);
@@ -78,6 +81,9 @@ describe('SCFD v1 — baked fixture round-trip', () => {
     expect(decoded.paletteId).toBe('viridis');
     expect(decoded.origin).toEqual([-200, -200, -200]);
     expect(decoded.voxelSize).toBe(50);
+    expect(decoded.rotation).toEqual([0, 0, 0, 1]);
+    expect(decoded.valueMin).toBe(0);
+    expect(decoded.valueMax).toBe(1);
     // Voxel pattern: index 0 → 0, index 1 → 1, ..., index 511 → 511.
     expect(decoded.voxels[0]).toBe(0);
     expect(decoded.voxels[1]).toBe(1);
@@ -86,8 +92,45 @@ describe('SCFD v1 — baked fixture round-trip', () => {
   });
 
   it('on-disk fixture has the expected total byte length', () => {
-    const path = join(process.cwd(), 'tests/fixtures/scalar-volume/tiny-8x8x8.scfd');
-    const bytes = readFileSync(path);
-    expect(bytes.byteLength).toBe(96 + 512 * 2);
+    const bytes = readFileSync(FIXTURE_PATH);
+    // SCFD_HEADER_BYTES (96) + 512 voxels × 2 bytes each (f16)
+    expect(bytes.byteLength).toBe(SCFD_HEADER_BYTES + 512 * 2);
+  });
+
+  it('on-disk fixture matches the documented SCFD byte layout (independent of decoder)', () => {
+    // Independence check: verify specific raw bytes against the spec
+    // table without going through decodeScalarField.  If encoder + decoder
+    // drift together, the round-trip test would silently pass — this one
+    // wouldn't, because it reads the wire bytes directly.
+    const bytes = readFileSync(FIXTURE_PATH);
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    // Magic 'SCFD' little-endian = 0x44464353 at offset 0
+    expect(dv.getUint32(0, true)).toBe(0x44464353);
+    // Version 1 at offset 4
+    expect(dv.getUint32(4, true)).toBe(1);
+    // dims = (8, 8, 8) at offsets 8, 12, 16
+    expect(dv.getUint32(8, true)).toBe(8);
+    expect(dv.getUint32(12, true)).toBe(8);
+    expect(dv.getUint32(16, true)).toBe(8);
+    // dtype = 0 (f16) at offset 20
+    expect(dv.getUint8(20)).toBe(0);
+    // value_kind = 0 (pre-normalised) at offset 21
+    expect(dv.getUint8(21)).toBe(0);
+    // palette_id = 0 (viridis) at offset 22
+    expect(dv.getUint8(22)).toBe(0);
+    // frame_kind = 1 (equatorial-cartesian) at offset 23
+    expect(dv.getUint8(23)).toBe(1);
+    // origin = (-200, -200, -200) at offsets 24, 28, 32
+    expect(dv.getFloat32(24, true)).toBe(-200);
+    expect(dv.getFloat32(28, true)).toBe(-200);
+    expect(dv.getFloat32(32, true)).toBe(-200);
+    // voxel_size = 50 at offset 36
+    expect(dv.getFloat32(36, true)).toBe(50);
+    // First voxel value = 0 (uint16 little-endian at offset 96)
+    expect(dv.getUint16(96, true)).toBe(0);
+    // Second voxel value = 1 (uint16 little-endian at offset 98)
+    expect(dv.getUint16(98, true)).toBe(1);
+    // Last voxel value = 511 (uint16 LE at offset 96 + 511*2 = 1118)
+    expect(dv.getUint16(1118, true)).toBe(511);
   });
 });
