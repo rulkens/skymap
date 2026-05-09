@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { encodeScalarField, decodeScalarField, SCFD_HEADER_BYTES } from '../../src/data/scalarFieldFormat';
 import type { ScalarCube } from '../../src/@types/ScalarCube';
 
@@ -61,5 +63,31 @@ describe('SCFD v1 binary format', () => {
     expect(() => decodeScalarField(buf)).not.toThrow(); // baseline OK
     new DataView(buf).setUint8(22, 99);
     expect(() => decodeScalarField(buf)).toThrow(/palette/i);
+  });
+});
+
+describe('SCFD v1 — baked fixture round-trip', () => {
+  it('decodes the checked-in tiny-8x8x8 fixture with expected metadata', () => {
+    const path = join(process.cwd(), 'tests/fixtures/scalar-volume/tiny-8x8x8.scfd');
+    const bytes = readFileSync(path);
+    // Convert Buffer → ArrayBuffer slice that matches its byte range.
+    const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    const decoded = decodeScalarField(ab);
+    expect(decoded.dims).toEqual([8, 8, 8]);
+    expect(decoded.frameKind).toBe('equatorial-cartesian');
+    expect(decoded.paletteId).toBe('viridis');
+    expect(decoded.origin).toEqual([-200, -200, -200]);
+    expect(decoded.voxelSize).toBe(50);
+    // Voxel pattern: index 0 → 0, index 1 → 1, ..., index 511 → 511.
+    expect(decoded.voxels[0]).toBe(0);
+    expect(decoded.voxels[1]).toBe(1);
+    expect(decoded.voxels[511]).toBe(511);
+    expect(decoded.voxels.length).toBe(512);
+  });
+
+  it('on-disk fixture has the expected total byte length', () => {
+    const path = join(process.cwd(), 'tests/fixtures/scalar-volume/tiny-8x8x8.scfd');
+    const bytes = readFileSync(path);
+    expect(bytes.byteLength).toBe(96 + 512 * 2);
   });
 });
