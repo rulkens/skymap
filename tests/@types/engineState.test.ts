@@ -130,6 +130,10 @@ describe('EngineState type', () => {
         filamentRenderer: null,
         labelRenderer: null,
         markerLineRenderer: null,
+        thumbnailRenderer: null,
+        diskRenderer: null,
+        proceduralDiskRenderer: null,
+        milkyWayRenderer: null,
       },
       subsystems: {
         thumbnails: null,
@@ -255,6 +259,10 @@ describe('EngineState type', () => {
         filamentRenderer: null,
         labelRenderer: null,
         markerLineRenderer: null,
+        thumbnailRenderer: null,
+        diskRenderer: null,
+        proceduralDiskRenderer: null,
+        milkyWayRenderer: null,
       },
       subsystems: {
         thumbnails: null,

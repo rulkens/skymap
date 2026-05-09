@@ -378,6 +378,34 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const filamentRenderer = createFilamentRenderer(device, 'rgba16float');
   state.gpu.filamentRenderer = filamentRenderer;
 
+  // Mirror the four renderers onto `state.gpu.*` so `engine.ts.destroy()`
+  // has a reachable reference path for teardown.  Pre-2026-05-08 these
+  // four renderers lived only on `phaseLocals` (and on the `RunFrameDeps`
+  // closures captured by `startLoop`), with no path from `engine.ts`'s
+  // public handle to call `.destroy()` on them — PR #66 flagged this gap.
+  //
+  // Why mirror rather than route everything through `state.gpu.*`?  The
+  // frame loop still consumes them via `RunFrameDeps` (assembled in
+  // `phases/startLoop.ts` from `phaseLocals`).  Replacing every read
+  // site with `state.gpu.*` would be a larger diff with no functional
+  // gain — the architectural goal here is destroy reachability, not
+  // perfect dedup of references.  Two parallel references are fine
+  // because both write here exactly once and both null in `destroy()`,
+  // so they can never disagree about whether the renderer exists.
+  //
+  // **Lifecycle note for future contributors.**  Do NOT add these four
+  // fields to `isEngineReady` (in `helpers/engineReady.ts`).  They're
+  // populated during `initGpu` (the first phase), but the predicate
+  // intentionally tracks only the five bootstrap-complete fields whose
+  // simultaneous non-null state means "every phase has finished".  The
+  // 2026-05-08 black-screen incident is the cautionary tale: bootstrap
+  // progression isn't the inverse of teardown, and over-eager predicate
+  // growth re-creates that bug class.
+  state.gpu.thumbnailRenderer = thumbnailRenderer;
+  state.gpu.diskRenderer = diskRenderer;
+  state.gpu.proceduralDiskRenderer = proceduralDiskRenderer;
+  state.gpu.milkyWayRenderer = milkyWayRenderer;
+
   // Stash phase-locals so subsequent phases (`wireSlots`, `startLoop`)
   // can read the IIFE-scoped device/context/renderer handles.  See
   // `PhaseLocals` above for the rationale on not promoting these to
