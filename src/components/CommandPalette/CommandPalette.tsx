@@ -359,6 +359,12 @@ export function CommandPalette({
               const isActive = i === activeIdx;
               const className = `${styles.result} ${isActive ? styles.resultActive : ''}`;
               if (m.kind === 'famous') {
+                // Pseudo entries (currently just the Milky Way) have no
+                // per-id WebP under `/images/famous/`.  Rendering the
+                // standard <img> tag would emit a 404 + broken-image
+                // icon.  Use the alias-style first-letter glyph as the
+                // visual fallback instead.
+                const isPseudo = m.entry.pseudo === true;
                 return (
                   <li
                     key={`famous:${m.entry.id}`}
@@ -366,12 +372,18 @@ export function CommandPalette({
                     onMouseEnter={() => setActiveIdx(i)}
                     onClick={() => dispatchSelection(m)}
                   >
-                    <img
-                      className={styles.thumb}
-                      src={`/images/famous/${m.entry.id}.webp`}
-                      alt=""
-                      loading="lazy"
-                    />
+                    {isPseudo ? (
+                      <span className={styles.aliasGlyph} aria-hidden="true">
+                        {m.entry.names[0]?.[0] ?? '·'}
+                      </span>
+                    ) : (
+                      <img
+                        className={styles.thumb}
+                        src={`/images/famous/${m.entry.id}.webp`}
+                        alt=""
+                        loading="lazy"
+                      />
+                    )}
                     <span>
                       <span className={styles.primary}>{m.entry.names[0]}</span>
                       {m.entry.names.length > 1 && (

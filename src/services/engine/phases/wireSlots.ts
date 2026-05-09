@@ -106,7 +106,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // safe; if `initGpu` ever stops setting it the orchestrator would
   // need updating in lockstep.
   const phaseLocals = deps.phaseLocals!;
-  const { device, quadRenderer, diskRenderer, proceduralDiskRenderer } = phaseLocals;
+  const { device, thumbnailRenderer, diskRenderer, proceduralDiskRenderer } = phaseLocals;
 
   // ── Filament asset slot (Task 9) ─────────────────────────────────
   //
@@ -386,7 +386,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     device,
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
-  thumbnails.bindToRenderers(quadRenderer, diskRenderer, proceduralDiskRenderer);
+  thumbnails.bindToRenderers(thumbnailRenderer, diskRenderer, proceduralDiskRenderer);
   state.subsystems.thumbnails = thumbnails;
 
   // Signal loading state immediately so the user knows something is

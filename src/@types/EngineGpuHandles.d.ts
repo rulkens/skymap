@@ -25,6 +25,17 @@
  *      runs against a stale state object would otherwise see "ready"
  *      handles pointing at destroyed GPU resources.
  *
+ * **Every field on this bag shares the same lifecycle rule** — null
+ * before bootstrap, non-null after `initGpu` resolves, released and
+ * re-nulled by `destroy()`.  That symmetry is load-bearing: the
+ * `thumbnailRenderer` / `diskRenderer` / `proceduralDiskRenderer` /
+ * `milkyWayRenderer` fields exist on this bag specifically so the
+ * `destroy()` chain has a reachable reference to call `.destroy()` on
+ * — they are not consumed via this bag at runtime (the frame loop
+ * receives them through `RunFrameDeps` for historical reasons).  When
+ * adding a new GPU-resource-owning renderer, add it here so the
+ * teardown path stays complete.
+ *
  * ### Why grouped vs. flat?
  *
  * Mirrors the original closure grouping in pre-Phase-4 `engine.ts`,
@@ -40,6 +51,10 @@ import type { FilamentRenderer } from '../services/gpu/renderers/filamentRendere
 import type { LabelRenderer } from '../services/gpu/renderers/labelRenderer';
 import type { MarkerLineRenderer } from '../services/gpu/renderers/markerLineRenderer';
 import type { ScalarVolumeRenderer } from '../services/gpu/renderers/scalarVolumeRenderer';
+import type { ThumbnailRenderer } from '../services/gpu/renderers/thumbnailRenderer';
+import type { DiskRenderer } from '../services/gpu/renderers/diskRenderer';
+import type { ProceduralDiskRenderer } from '../services/gpu/renderers/proceduralDiskRenderer';
+import type { MilkyWayRenderer } from '../services/gpu/renderers/milkyWayRenderer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -80,6 +95,45 @@ export type EngineGpuHandles = {
    * buffers (uniform + instance + corner).
    */
   markerLineRenderer: MarkerLineRenderer | null;
+  /**
+   * Textured-quad renderer for galaxy thumbnails.  Null until `initGpu`
+   * constructs it from a `GpuContext` snapshot.  Stored here purely so
+   * `destroy()` can release the renderer's GPU buffers (uniform + per-
+   * instance + corner) — pre-2026-05-08 this lived on the bootstrap-
+   * local `phaseLocals` carrier, which `engine.ts.destroy()` had no
+   * reachable reference to (PR #66 follow-up: phaseLocals goes away
+   * once `startLoop` finishes, by design).  Promoting to `state.gpu.*`
+   * fixes the destroy-reachability gap without rewiring any of the
+   * frame-loop's existing references through `phaseLocals`.
+   *
+   * Excluded from `isEngineReady` — it's set during `initGpu` (the
+   * first bootstrap phase, well before `wireSlots`/`wireInput`), and
+   * adding fields to that predicate is the same lifecycle hazard the
+   * 2026-05-08 black-screen incident exposed (bootstrap progression
+   * isn't the inverse of teardown).  Read sites that run during
+   * bootstrap null-check this field individually.
+   */
+  thumbnailRenderer: ThumbnailRenderer | null;
+  /**
+   * 3D-oriented disk renderer for large galaxies (close-approach view).
+   * Same lifecycle, same reachability rationale, and same isEngineReady
+   * exclusion as `thumbnailRenderer` above — see that field's docstring
+   * for the full story.
+   */
+  diskRenderer: DiskRenderer | null;
+  /**
+   * Procedural-disk renderer that bridges the visibility band between
+   * point glow (~8 px) and textured disks (~24 px).  Same lifecycle,
+   * same reachability rationale, and same isEngineReady exclusion as
+   * `thumbnailRenderer` above.
+   */
+  proceduralDiskRenderer: ProceduralDiskRenderer | null;
+  /**
+   * Procedural Milky-Way impostor renderer at world origin.  Same
+   * lifecycle, same reachability rationale, and same isEngineReady
+   * exclusion as `thumbnailRenderer` above.
+   */
+  milkyWayRenderer: MilkyWayRenderer | null;
   /**
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).

@@ -72,7 +72,6 @@
  * ```
  */
 
-import { updatePosition } from '../camera/orbitCamera';
 import { Source, maskWith, maskWithout } from '../../data/sources';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -97,7 +96,6 @@ import {
 } from '../../data/defaults';
 import type { LodMode, PointCloud, PointInfo } from '../../@types';
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
-import { vec3 } from 'gl-matrix';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
@@ -112,7 +110,14 @@ import type { AssetSlot } from '../loading/types';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
-import { FOCUS_TWEEN_MS } from './camera/focusTween';
+import {
+  snapToCameraSnapshot,
+  tweenToCameraSnapshot,
+} from './camera/cameraSnapshot';
+import {
+  MILKY_WAY_CENTER_WORLD,
+  MILKY_WAY_VIEW_DISTANCE_MPC,
+} from '../../data/galacticCenter';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -189,7 +194,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //
   // The render loop's `frame()` body lives in `runFrame.ts`, called
   // from the `startLoop` bootstrap phase, because it reads GPU
-  // resources (device, context, quadRenderer, diskRenderer) that
+  // resources (device, context, thumbnailRenderer, diskRenderer) that
   // initGpu() returns asynchronously.  But the `RenderScheduler` we
   // wire into `state.subsystems.scheduler` needs an `onFrame` callback
   // at construction time — which is *here*, in the synchronous state
@@ -326,10 +331,24 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // point of use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
+      // thumbnailRenderer / diskRenderer / proceduralDiskRenderer /
+      // milkyWayRenderer: null until initGpu constructs them.  These
+      // four don't gate any frame-loop logic via state.gpu — the frame
+      // body still reads them through RunFrameDeps (assembled in
+      // `phases/startLoop.ts` from `phaseLocals`).  They live here
+      // exclusively so `destroy()` below has a reachable reference to
+      // release each renderer's GPU buffers.  Pre-2026-05-08 they
+      // lived only on the bootstrap-local `phaseLocals` carrier, which
+      // is intentionally short-lived (goes away once `startLoop`
+      // finishes), leaving destroy() unable to clean them up.  See
+      // `EngineGpuHandles.d.ts` for the full reachability story.
+      thumbnailRenderer: null,
+      diskRenderer: null,
+      proceduralDiskRenderer: null,
+      milkyWayRenderer: null,
       // Constructed during initGpu, null until then.  Excluded from the
       // isEngineReady predicate — the scalarVolumePass optional-chains
-      // hasActiveFields() so a null handle is a silent no-op.  Task 9
-      // will wire up the createScalarVolumeRenderer() call here.
+      // hasActiveFields() so a null handle is a silent no-op.
       scalarVolumeRenderer: null,
     },
     subsystems: {
@@ -641,6 +660,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // with every other GPU handle in this bag.
       state.gpu.markerLineRenderer?.destroy();
       state.gpu.markerLineRenderer = null;
+      // Thumbnail / disk / procedural-disk / Milky-Way renderers each
+      // own a uniform buffer + per-instance buffer + (per-renderer
+      // specifics: corner buffer for the quad-derived ones, atlas
+      // sampler for thumbnails).  Pre-2026-05-08 these renderers
+      // lived on the bootstrap-local `phaseLocals` carrier which
+      // engine.ts had no reference path to — leaking a few hundred KB
+      // of GPU buffers per HMR / StrictMode remount.  Promoting them
+      // to `state.gpu.*` (PR #66 follow-up) closed that gap.  Releasing
+      // here matches every other handle in this bag.
+      state.gpu.thumbnailRenderer?.destroy();
+      state.gpu.thumbnailRenderer = null;
+      state.gpu.diskRenderer?.destroy();
+      state.gpu.diskRenderer = null;
+      state.gpu.proceduralDiskRenderer?.destroy();
+      state.gpu.proceduralDiskRenderer = null;
+      state.gpu.milkyWayRenderer?.destroy();
+      state.gpu.milkyWayRenderer = null;
       // Scalar-volume renderer owns: shared corner/index VBOs plus per-field
       // r16float 3D textures, palette LUT textures, and uniform buffers.
       // The 3D textures can be substantial (e.g. a 128³ cube at 2 bytes/voxel
@@ -729,23 +765,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
 
     resetCamera() {
-      // `state.cam` may be null if the engine is destroyed or the cloud
-      // hasn't loaded yet.  We keep `state.initialCamSnapshot` declared in the
-      // outer state bag (rather than scoped to the async IIFE) so that
-      // this handle method can read it after the IIFE completes.
-      // Reading `state.cam` at call time gives us the live camera object
-      // to mutate, not a stale snapshot.
-      const cam = state.cam;
-      const initialCamSnapshot = state.initialCamSnapshot;
-      if (!cam || !initialCamSnapshot) return;
-      cam.target[0] = initialCamSnapshot.target[0];
-      cam.target[1] = initialCamSnapshot.target[1];
-      cam.target[2] = initialCamSnapshot.target[2];
-      cam.distance = initialCamSnapshot.distance;
-      cam.yaw = initialCamSnapshot.yaw;
-      cam.pitch = initialCamSnapshot.pitch;
-      updatePosition(cam);
-      state.subsystems.scheduler.requestRender();
+      // Snapshot null-check; cam-null is absorbed inside the helper.
+      // Both must exist for a meaningful snap.
+      if (!state.initialCamSnapshot) return;
+      snapToCameraSnapshot(state, state.initialCamSnapshot);
     },
 
     logCameraState() {
@@ -851,33 +874,55 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     },
 
     focusOnHome() {
-      // Camera or initial snapshot may not be ready yet — same pattern as
-      // resetCamera.  Both must exist for a meaningful tween.
-      const cam = state.cam;
-      const initialCamSnapshot = state.initialCamSnapshot;
-      if (!cam || !initialCamSnapshot) return;
+      // Snapshot null-check; cam-null is absorbed inside the helper.
+      if (!state.initialCamSnapshot) return;
 
       // Returning to the home view means we're no longer focused on any
       // particular galaxy.  Notify so the URL clears its `#focus=…`.
+      // Stays at the call site (not in the helper) because firing
+      // `onFocusChange(null)` is "this action is leaving a focus
+      // state", which `tweenToCameraSnapshot` doesn't decide.
       cb.onFocusChange?.(null);
 
-      state.subsystems.tweens.start({
-        startMs: performance.now(),
-        durationMs: FOCUS_TWEEN_MS,
-        fromTarget: vec3.clone(cam.target as vec3),
-        toTarget: vec3.fromValues(
-          initialCamSnapshot.target[0],
-          initialCamSnapshot.target[1],
-          initialCamSnapshot.target[2],
-        ),
-        fromDistance: cam.distance,
-        toDistance: initialCamSnapshot.distance,
-        fromYaw: cam.yaw,
-        toYaw: initialCamSnapshot.yaw,
-        fromPitch: cam.pitch,
-        toPitch: initialCamSnapshot.pitch,
+      tweenToCameraSnapshot(state, state.initialCamSnapshot);
+    },
+
+    focusOnMilkyWay() {
+      // Distinct from `focusOnHome`: home is the bootstrap-derived wide
+      // framing at hundreds of Mpc, well past the impostor's fade-out
+      // threshold.  This method tweens to a viewpoint inside the
+      // impostor's full-visibility band so the Milky Way is the
+      // dominant on-screen subject — target Sgr A* in world space, ride
+      // in to `MILKY_WAY_VIEW_DISTANCE_MPC`, preserve the user's
+      // current yaw/pitch so they don't get a disorienting snap.
+      //
+      // Reuses `tweenToCameraSnapshot` (the same helper that powers
+      // `focusOnHome`) by synthesizing an `InitialCam`-shaped snapshot
+      // on the fly: the catalog-side constants for `target`/`distance`,
+      // the live `cam` fields for the orientation and projection
+      // values that the helper expects but that we don't actually want
+      // to change here.
+      const cam = state.cam;
+      if (!cam) return;
+
+      // The Milky Way isn't a catalog object, so any pinned focus on a
+      // catalog galaxy is no longer relevant — clear it so the URL
+      // hash doesn't keep trying to resolve a stale focus.
+      cb.onFocusChange?.(null);
+
+      tweenToCameraSnapshot(state, {
+        target: [
+          MILKY_WAY_CENTER_WORLD[0],
+          MILKY_WAY_CENTER_WORLD[1],
+          MILKY_WAY_CENTER_WORLD[2],
+        ],
+        distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+        yaw: cam.yaw,
+        pitch: cam.pitch,
+        fovYRad: cam.fovYRad,
+        near: cam.near,
+        far: cam.far,
       });
-      state.subsystems.scheduler.requestRender();
     },
 
     // ── LOD + per-source visibility setters ────────────────────────────────

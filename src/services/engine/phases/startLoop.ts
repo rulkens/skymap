@@ -111,7 +111,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // ref so the body's writes round-trip back into engine.ts; the
   // helpers (`updateScaleBar`, `cssToTexPx`) are imported / built
   // locally above; and the GPU-side renderers (`milkyWayRenderer`,
-  // `quadRenderer`, …) are the IIFE locals returned from `initGpu` /
+  // `thumbnailRenderer`, …) are the IIFE locals returned from `initGpu` /
   // their respective constructors above.  See runFrame.ts's module
   // header for the dep-vs-state rationale.
   const frameDeps: RunFrameDeps = {
@@ -123,7 +123,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     context: phaseLocals.context,
     milkyWayRenderer: phaseLocals.milkyWayRenderer,
     filamentRenderer: state.gpu.filamentRenderer!,
-    quadRenderer: phaseLocals.quadRenderer,
+    thumbnailRenderer: phaseLocals.thumbnailRenderer,
     diskRenderer: phaseLocals.diskRenderer,
     milkyWayITimeEpochMs,
     cssToTexPx,

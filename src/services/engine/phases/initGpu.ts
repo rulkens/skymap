@@ -13,7 +13,7 @@
  *   - `PostProcess` — combined HDR offscreen rgba16float texture + the
  *     tone-map pass that compresses linear-light into the swap chain.
  *     Stored on `state.gpu.postProcess`.
- *   - `QuadRenderer`, `DiskRenderer`, `ProceduralDiskRenderer` — the
+ *   - `ThumbnailRenderer`, `DiskRenderer`, `ProceduralDiskRenderer` — the
  *     three thumbnail-pass renderers (textured quads for medium
  *     galaxies, oriented disks for large galaxies, procedural fade-in
  *     for the visibility band between point glow and textured disk).
@@ -57,7 +57,7 @@
  *
  * ### Outputs threaded forward via the phase module's exports
  *
- * Several IIFE-locals (`device`, `context`, `quadRenderer`,
+ * Several IIFE-locals (`device`, `context`, `thumbnailRenderer`,
  * `diskRenderer`, `proceduralDiskRenderer`, `milkyWayRenderer`) need to
  * survive past this phase: `wireSlots` reads them for the thumbnail
  * subsystem; `startLoop` reads them for the frame-body deps.  Rather
@@ -73,7 +73,7 @@
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
 import { createPostProcess } from '../../gpu/passes/postProcess';
-import { type QuadRenderer, createQuadRenderer } from '../../gpu/renderers/quadRenderer';
+import { type ThumbnailRenderer, createThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
 import { type DiskRenderer, createDiskRenderer } from '../../gpu/renderers/diskRenderer';
 import {
   type ProceduralDiskRenderer,
@@ -112,7 +112,7 @@ import type { BootstrapDeps } from './bootstrap';
 export type PhaseLocals = {
   device: GPUDevice;
   context: GPUCanvasContext;
-  quadRenderer: QuadRenderer;
+  thumbnailRenderer: ThumbnailRenderer;
   diskRenderer: DiskRenderer;
   proceduralDiskRenderer: ProceduralDiskRenderer;
   milkyWayRenderer: MilkyWayRenderer;
@@ -183,7 +183,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.postProcess = postProcess;
 
   // Build the GPU pipeline; cloud data is loaded below.
-  // PointRenderer (and QuadRenderer/DiskRenderer further down) target
+  // PointRenderer (and ThumbnailRenderer/DiskRenderer further down) target
   // the HDR rgba16float texture instead of the swap-chain `format`.
   // Their pipelines bake this into a fixed colour-target descriptor at
   // construction time, so the format choice has to land here.
@@ -216,11 +216,11 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   //      larger per-survey `.bin` fetches finish.
   //
   //   2. Both renderers need a `GpuContext` shaped as `{ device, context,
-  //      format, canvas }` — the same shape the QuadRenderer / DiskRenderer
+  //      format, canvas }` — the same shape the ThumbnailRenderer / DiskRenderer
   //      below use.  Constructing them here keeps all "GPU resource allocation
   //      from a GpuContext" at one cohesive site.
   //
-  // These renderers are stored on `state.gpu` (unlike `quadRenderer` /
+  // These renderers are stored on `state.gpu` (unlike `thumbnailRenderer` /
   // `milkyWayRenderer` which stay phase-local) because the `destroy()`
   // method in `engine.ts` needs to release their GPU buffers + atlas
   // texture.  They're excluded from `isEngineReady` for the same reason as
@@ -306,33 +306,33 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   //                   allocates slots, kicks off fetches, and emits
   //                   sorted Quad/Disk instances.  See
   //                   `thumbnailSubsystem.ts` for the why-and-how.
-  //   - quadRenderer: textured-quad render pass running after the
+  //   - thumbnailRenderer: textured-quad render pass running after the
   //                   point pass each frame.  Engine owns it
   //                   directly (rather than the subsystem) because
   //                   future passes (selection halo) may share it.
   //   - diskRenderer: 3D-oriented disk variant for large galaxies.
-  //                   Same ownership story as quadRenderer.
+  //                   Same ownership story as thumbnailRenderer.
   //
   // `galaxyTexturesEnabled` is mutated by the SettingsPanel toggle.
   // The engine simply skips `thumbnails.runFrame()` when the toggle
   // is off — the LRU clock pauses with it, which is fine because
   // nothing else reads it while the toggle is off.
   //
-  // The QuadRenderer/DiskRenderer constructors want a GpuContext;
+  // The ThumbnailRenderer/DiskRenderer constructors want a GpuContext;
   // we build them with the four constituents in scope rather than
   // restructuring initGpu's return signature.
 
-  // QuadRenderer targets the HDR offscreen texture (see the rationale
+  // ThumbnailRenderer targets the HDR offscreen texture (see the rationale
   // at PointRenderer construction above) — it composites galaxy
   // thumbnails into the same accumulated linear-light buffer the
   // points pass writes into.
-  const quadRenderer = createQuadRenderer({
+  const thumbnailRenderer = createThumbnailRenderer({
     device,
     context,
     format: 'rgba16float',
     canvas,
   });
-  // DiskRenderer shares the same atlas as QuadRenderer — both pull from
+  // DiskRenderer shares the same atlas as ThumbnailRenderer — both pull from
   // the same 2048×2048 thumbnail texture.  The engine routes each
   // galaxy to one renderer or the other per frame based on apparent
   // size and orientation-data availability (see the per-frame loop).
@@ -379,6 +379,34 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const filamentRenderer = createFilamentRenderer(device, 'rgba16float');
   state.gpu.filamentRenderer = filamentRenderer;
 
+  // Mirror the four renderers onto `state.gpu.*` so `engine.ts.destroy()`
+  // has a reachable reference path for teardown.  Pre-2026-05-08 these
+  // four renderers lived only on `phaseLocals` (and on the `RunFrameDeps`
+  // closures captured by `startLoop`), with no path from `engine.ts`'s
+  // public handle to call `.destroy()` on them — PR #66 flagged this gap.
+  //
+  // Why mirror rather than route everything through `state.gpu.*`?  The
+  // frame loop still consumes them via `RunFrameDeps` (assembled in
+  // `phases/startLoop.ts` from `phaseLocals`).  Replacing every read
+  // site with `state.gpu.*` would be a larger diff with no functional
+  // gain — the architectural goal here is destroy reachability, not
+  // perfect dedup of references.  Two parallel references are fine
+  // because both write here exactly once and both null in `destroy()`,
+  // so they can never disagree about whether the renderer exists.
+  //
+  // **Lifecycle note for future contributors.**  Do NOT add these four
+  // fields to `isEngineReady` (in `helpers/engineReady.ts`).  They're
+  // populated during `initGpu` (the first phase), but the predicate
+  // intentionally tracks only the five bootstrap-complete fields whose
+  // simultaneous non-null state means "every phase has finished".  The
+  // 2026-05-08 black-screen incident is the cautionary tale: bootstrap
+  // progression isn't the inverse of teardown, and over-eager predicate
+  // growth re-creates that bug class.
+  state.gpu.thumbnailRenderer = thumbnailRenderer;
+  state.gpu.diskRenderer = diskRenderer;
+  state.gpu.proceduralDiskRenderer = proceduralDiskRenderer;
+  state.gpu.milkyWayRenderer = milkyWayRenderer;
+
   // ── 3D scalar-field volume renderer ──────────────────────────────────
   //
   // Built unconditionally alongside the other overlay renderers.  The
@@ -402,7 +430,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   deps.phaseLocals = {
     device,
     context,
-    quadRenderer,
+    thumbnailRenderer,
     diskRenderer,
     proceduralDiskRenderer,
     milkyWayRenderer,

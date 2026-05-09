@@ -7,7 +7,7 @@
  * `frameCounter`, `bitmapReady`, `bitmapFailed`, `bitmapReadyTime`)
  * tied together one cohesive responsibility — atlas-slot allocation,
  * priority-queued image fetch, idempotent failure memoisation, and
- * back-to-front sorted QuadInstance/DiskInstance emission.  Pulling
+ * back-to-front sorted ThumbnailInstance/DiskInstance emission.  Pulling
  * the whole pipeline into a single module is the largest readability
  * win in the engine.
  *
@@ -34,7 +34,7 @@
  *   this is fine: nothing else reads the clock while the toggle is
  *   off.
  *
- * - The QuadRenderer and DiskRenderer instances themselves.  The
+ * - The ThumbnailRenderer and DiskRenderer instances themselves.  The
  *   subsystem just *uses* them; it doesn't own them.  They have other
  *   consumers (selection halo, etc.) and live longer than the
  *   subsystem's runFrame() invocation.
@@ -68,11 +68,11 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
-import type { PointCloud, QuadInstance } from '../../../@types';
+import type { PointCloud, ThumbnailInstance } from '../../../@types';
 import type { OrbitCamera } from '../../../@types';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
-import type { QuadRenderer } from '../../gpu/renderers/quadRenderer';
+import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
 import type { DiskRenderer, DiskInstance } from '../../gpu/renderers/diskRenderer';
 import type { ProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
 import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
@@ -267,6 +267,29 @@ export type CreateThumbnailSubsystemInput = {
    * network.
    */
   fetcher?: (args: { ra: number; dec: number; famousId?: string }) => Promise<ImageBitmap | null>;
+  /**
+   * Round-robin stride decimation factor for the per-galaxy cull loop.
+   *
+   * The full cloud has ~3.5 M galaxies in the largest tier; the cheap
+   * squared-distance cull alone burns ~5 ms per frame on mid-range
+   * laptops because we walk the entire `positions` array on every wake.
+   * Setting `decimationFactor = N` walks only `count/N` galaxies per
+   * frame, advancing a cursor so a full sweep finishes every N frames.
+   *
+   * Galaxies that pass the cull on a sweep are stashed in a sticky map
+   * keyed by their cloud-local index, and the renderer reads the union
+   * of every cloud's sticky map every frame — so a thumbnail that's
+   * already on screen keeps drawing while the cursor moves on.  Without
+   * the sticky map, decimation would make visible thumbnails blink at
+   * 60/N Hz as the cursor swept past them; with it, the user only sees
+   * thumbnails appear / disappear with up to `N` frames of latency.
+   *
+   * Default 8 — at 60 fps, a full sweep completes in ~133 ms, well
+   * within human tolerance for "thumbnails settle as I pan".  Tests
+   * that need every galaxy visited every frame can pass `1` to disable
+   * decimation entirely.
+   */
+  decimationFactor?: number;
 };
 
 /**
@@ -283,7 +306,7 @@ export type ThumbnailFrameInput = {
   visibleSourceMask: number;
   /** Canvas backing-store size in CSS pixels — feeds the pinhole pxPerRad. */
   canvasSize: { width: number; height: number };
-  /** Render-pass encoder — quadRenderer + diskRenderer encode their draws here. */
+  /** Render-pass encoder — thumbnailRenderer + diskRenderer encode their draws here. */
   pass: GPURenderPassEncoder;
   /** Combined view+projection matrix for the current camera. */
   viewProj: mat4;
@@ -291,9 +314,9 @@ export type ThumbnailFrameInput = {
   pxPerRad: number;
   /** Camera world-position snapshot for the back-to-front sort comparator. */
   camPos: Readonly<[number, number, number]>;
-  /** QuadRenderer instance — engine owns it; subsystem just calls draw(). */
-  quadRenderer: QuadRenderer;
-  /** DiskRenderer instance — same ownership story as quadRenderer. */
+  /** ThumbnailRenderer instance — engine owns it; subsystem just calls draw(). */
+  thumbnailRenderer: ThumbnailRenderer;
+  /** DiskRenderer instance — same ownership story as thumbnailRenderer. */
   diskRenderer: DiskRenderer;
   /** Famous-meta sidecar, used to route Famous-source rows to curated WebPs. */
   famousMeta: FamousMetaEntry[];
@@ -317,12 +340,12 @@ export type ThumbnailSubsystem = {
    * in engine.ts.
    */
   bindToRenderers(
-    quadRenderer: QuadRenderer,
+    thumbnailRenderer: ThumbnailRenderer,
     diskRenderer: DiskRenderer,
     proceduralDiskRenderer: ProceduralDiskRenderer,
   ): void;
   /**
-   * Run the per-frame thumbnail-priority loop and emit QuadInstances
+   * Run the per-frame thumbnail-priority loop and emit ThumbnailInstances
    * + DiskInstances to the renderers.  Increments the LRU clock,
    * allocates atlas slots, kicks off fetches, and sorts back-to-front
    * for correct alpha compositing.
@@ -358,6 +381,11 @@ export type ThumbnailSubsystem = {
 export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): ThumbnailSubsystem {
   const { device, requestRender } = input;
   const fetcher = input.fetcher ?? fetchGalaxyBitmap;
+  // Default 8 → full sweep every ~133 ms at 60 fps.  Sub-1 values are
+  // clamped to 1 so the loop always makes forward progress; we don't
+  // throw because production will pass undefined and tests will pass
+  // a valid integer — defensive clamping costs nothing.
+  const decimationFactor = Math.max(1, Math.floor(input.decimationFactor ?? 8));
 
   const atlas = new TextureAtlas(device);
   atlas.initTexture();
@@ -368,7 +396,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
   //
   // `bitmapReady` is the positive flag: a fetch completed AND the bitmap
   // landed in the atlas.  Without it the per-frame gate would emit a
-  // QuadInstance for a slot that's still pointing at whatever was there
+  // ThumbnailInstance for a slot that's still pointing at whatever was there
   // before (or a blank cleared region of the atlas).
   //
   // `bitmapFailed` is the retry-storm guard: a single permanent flag per
@@ -397,6 +425,32 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
   // stays monotonic even across engine pauses (e.g. tab backgrounded).
   let frameCounter = 0;
 
+  // ── Sticky-instance state (decimation companion) ────────────────────────
+  //
+  // Each per-cloud Map is keyed by the galaxy's cloud-local index.  A
+  // value present means "this galaxy passed the cull on its most recent
+  // visit and the renderer should keep drawing it"; absence means the
+  // galaxy isn't currently visible / is below the apparent-size gate.
+  //
+  // Quad and Disk maps are mutually exclusive per index — a galaxy emits
+  // exactly one of them per visit.  ProceduralDisk is independent (a
+  // galaxy in the 8-14 px crossfade band can emit both a quad/disk AND
+  // a procedural disk simultaneously).
+  //
+  // The `runFrame` walk only TOUCHES indices in the current stride
+  // window; entries from past sweeps are read-only that frame.  Hidden
+  // sources (visibleSourceMask bit clear) clear their cloud's maps
+  // wholesale to prevent ghosting after a layer toggle.
+  const stickyQuadsBySource = new Map<Source, Map<number, ThumbnailInstance>>();
+  const stickyDisksBySource = new Map<Source, Map<number, DiskInstance>>();
+  const stickyProcDisksBySource = new Map<Source, Map<number, ProceduralDiskInstance>>();
+
+  // Round-robin cursor — `runFrame` reads, advances, and writes back.
+  // Per-source so two clouds with different counts each get their own
+  // wrap-around schedule rather than sharing one global cursor that
+  // would oversample short clouds.
+  const strideStartBySource = new Map<Source, number>();
+
   // Latched at destroy() — gates the in-flight onResult callbacks so
   // their writes don't land after teardown.  Unlikely to matter in
   // practice (StrictMode unmount + remount races), but cheap insurance.
@@ -420,11 +474,11 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
   let proceduralDiskRendererRef: ProceduralDiskRenderer | null = null;
 
   function bindToRenderers(
-    quadRenderer: QuadRenderer,
+    thumbnailRenderer: ThumbnailRenderer,
     diskRenderer: DiskRenderer,
     proceduralDiskRenderer: ProceduralDiskRenderer,
   ): void {
-    quadRenderer.bindAtlas(atlas.getTextureView());
+    thumbnailRenderer.bindAtlas(atlas.getTextureView());
     diskRenderer.bindAtlas(atlas.getTextureView());
     proceduralDiskRendererRef = proceduralDiskRenderer;
     bound = true;
@@ -443,7 +497,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
       viewProj,
       pxPerRad,
       camPos,
-      quadRenderer,
+      thumbnailRenderer,
       diskRenderer,
       famousMeta,
     } = frameInput;
@@ -474,7 +528,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
     const cy = cam.position[1];
     const cz = cam.position[2];
 
-    const quads: QuadInstance[] = [];
+    const quads: ThumbnailInstance[] = [];
     // Disks accumulate alongside quads.  We sort each galaxy into exactly
     // one bucket (see the branch at the tail of the loop body) so the two
     // arrays never double-count an instance.
@@ -500,15 +554,82 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
     // Famous-source bypass: famous landmarks always show their curated
     // thumbnail regardless of apparent angular size.
     for (const [cloudSource, cloud] of clouds.entries()) {
+      // Get-or-create the per-source sticky maps up-front so both the
+      // hidden-source clear path and the per-galaxy update path see the
+      // same Map instance.  Lazy creation keeps memory bounded to "sources
+      // we've actually rendered for".
+      let stickyQuads = stickyQuadsBySource.get(cloudSource);
+      if (!stickyQuads) {
+        stickyQuads = new Map();
+        stickyQuadsBySource.set(cloudSource, stickyQuads);
+      }
+      let stickyDisks = stickyDisksBySource.get(cloudSource);
+      if (!stickyDisks) {
+        stickyDisks = new Map();
+        stickyDisksBySource.set(cloudSource, stickyDisks);
+      }
+      let stickyProcDisks = stickyProcDisksBySource.get(cloudSource);
+      if (!stickyProcDisks) {
+        stickyProcDisks = new Map();
+        stickyProcDisksBySource.set(cloudSource, stickyProcDisks);
+      }
+
       // Honour the user's visibility-mask: if a survey is toggled off we
       // shouldn't be enqueueing thumbnails for galaxies the points pass
       // will skip — otherwise hidden surveys' quads would fill the atlas
-      // and ghost across the scene.
-      if (((visibleSourceMask >> cloudSource) & 1) === 0) continue;
+      // and ghost across the scene.  Also wipe the cloud's sticky maps:
+      // without this, a galaxy that was visible at toggle-off time would
+      // keep emitting an instance until its index next surfaced in the
+      // cursor's stride (up to N frames later).
+      if (((visibleSourceMask >> cloudSource) & 1) === 0) {
+        stickyQuads.clear();
+        stickyDisks.clear();
+        stickyProcDisks.clear();
+        continue;
+      }
 
       const positions = cloud.positions;
       const count = cloud.count;
-      for (let i = 0; i < count; i++) {
+
+      // ── Stride window for this cloud ──────────────────────────────────
+      //
+      // Decimation walks 1/N of the cloud per frame and advances the
+      // cursor so a full sweep finishes every N frames.  `stride` is the
+      // ceiling division so a cloud whose count isn't a multiple of N
+      // still finishes its sweep in N frames (the final frame in the
+      // sweep covers the remainder).  We clamp to `count` because the
+      // last stride window is short.
+      const stride = Math.max(1, Math.ceil(count / decimationFactor));
+      const start = strideStartBySource.get(cloudSource) ?? 0;
+      // If positions have shrunk (e.g. cloud reload), the cursor could
+      // point past the end — restart from 0 in that case.
+      const safeStart = start >= count ? 0 : start;
+      const end = Math.min(safeStart + stride, count);
+
+      // Purge any sticky entries whose index lies within the current
+      // stride window — the inner loop is the authoritative source for
+      // what should be visible at those indices, so anything still
+      // present here is from a previous sweep and must clear out unless
+      // the loop re-sets it.  We collect-then-delete because we touch
+      // three maps; mutating-during-iteration is well-defined for Map,
+      // but the two-pass form is easier to reason about.
+      //
+      // Cost is O(|sticky|) per cloud, not O(stride):  the sticky maps
+      // are bounded by atlas slot count (≈256) plus a small handful of
+      // extra disk/proc-disk entries, so each purge is sub-microsecond
+      // even on large tiers.
+      const purgeStride = <V>(m: Map<number, V>): void => {
+        const drop: number[] = [];
+        for (const k of m.keys()) {
+          if (k >= safeStart && k < end) drop.push(k);
+        }
+        for (const k of drop) m.delete(k);
+      };
+      purgeStride(stickyQuads);
+      purgeStride(stickyDisks);
+      purgeStride(stickyProcDisks);
+
+      for (let i = safeStart; i < end; i++) {
         const i3 = i * 3;
         const x = positions[i3 + 0]!;
         const y = positions[i3 + 1]!;
@@ -656,7 +777,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
               // user still sees something while the fetch is in
               // flight.
             } else {
-              // ── Pack the QuadInstance / DiskInstance ─────────────
+              // ── Pack the ThumbnailInstance / DiskInstance ─────────────
               const [u0, v0, u1, v1] = atlas.slotUv(slot);
 
               // ── Fade-in multipliers ──
@@ -697,7 +818,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
               // back to a flat quad rather than render a
               // NaN-projected mess).
               if (px > DISK_THRESHOLD_PX && Number.isFinite(ar) && Number.isFinite(pa)) {
-                disks.push({
+                stickyDisks.set(i, {
                   x,
                   y,
                   z,
@@ -711,7 +832,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
                   fadeAlpha,
                 });
               } else {
-                quads.push({
+                stickyQuads.set(i, {
                   x,
                   y,
                   z,
@@ -781,14 +902,32 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
             PROCEDURAL_DISK_FADE_START_PX,
             PROCEDURAL_DISK_FADE_END_PX,
           );
-          if (emitted) proceduralDisks.push(emitted);
+          if (emitted) stickyProcDisks.set(i, emitted);
         }
       }
+
+      // ── Advance the round-robin cursor ────────────────────────────────
+      //
+      // Wrap back to 0 once we've reached the end of the cloud — next
+      // frame's stride starts a fresh sweep.
+      strideStartBySource.set(cloudSource, end >= count ? 0 : end);
+
+      // ── Append sticky entries to this frame's draw arrays ─────────────
+      //
+      // The sticky maps hold the union of all galaxies that survived the
+      // cull on a recent sweep.  We drain them into the local quads /
+      // disks / proceduralDisks arrays so the existing back-to-front
+      // sort + draw call sequence below sees both freshly-touched
+      // entries (set this frame) and carried-over entries (set on a
+      // previous sweep).
+      for (const q of stickyQuads.values()) quads.push(q);
+      for (const d of stickyDisks.values()) disks.push(d);
+      for (const p of stickyProcDisks.values()) proceduralDisks.push(p);
     }
 
     // ── Back-to-front sort for correct alpha compositing ────────────────
     //
-    // Both QuadRenderer and DiskRenderer use premultiplied "over"
+    // Both ThumbnailRenderer and DiskRenderer use premultiplied "over"
     // blending, which is order-dependent: a far galaxy drawn AFTER a near
     // one composites on top of it, breaking the painter's expectation.
     // We sort each list by descending camera-distance² so far galaxies
@@ -814,7 +953,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
     proceduralDisks.sort(cmpFar);
 
     if (quads.length > 0) {
-      quadRenderer.draw(
+      thumbnailRenderer.draw(
         pass,
         viewProj,
         [canvasSize.width, canvasSize.height],
@@ -872,6 +1011,14 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
     bitmapReady.clear();
     bitmapFailed.clear();
     bitmapReadyTime.clear();
+    // Sticky-instance state lives outside the atlas's eviction path —
+    // explicit clear here so we don't carry stale instances into a
+    // subsequent createThumbnailSubsystem in the same JS realm (e.g.
+    // React StrictMode unmount/remount).
+    stickyQuadsBySource.clear();
+    stickyDisksBySource.clear();
+    stickyProcDisksBySource.clear();
+    strideStartBySource.clear();
   }
 
   return {

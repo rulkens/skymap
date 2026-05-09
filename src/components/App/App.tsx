@@ -64,6 +64,7 @@ import { NavigationPanel } from '../NavigationPanel/NavigationPanel';
 import { StatsPanel } from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import { SearchTrigger } from '../SearchTrigger/SearchTrigger';
+import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
 import appStyles from './App.module.css';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
@@ -424,6 +425,19 @@ export function App(): React.ReactElement {
   // ── Famous-galaxy sidecars (CommandPalette + deep-link drain) ────────────
   const { famousMeta, famousXrefs } = useFamousMeta();
 
+  // ── Palette entries — famous catalog + Milky Way pseudo-entry ────────────
+  //
+  // The Milky Way isn't in any catalog .bin (it's a procedural backdrop, not
+  // a per-galaxy record), but users reasonably expect to find it when typing
+  // "milky way" in the command palette.  We prepend a sentinel-id entry to
+  // the famous list so the palette searches it like any other galaxy; the
+  // onSelect handler intercepts the sentinel id and routes to focusOnHome
+  // (see milkyWayEntry.ts for the rationale).  useMemo because CommandPalette's
+  // scoring useMemo depends on `entries` reference identity — a fresh array
+  // each render would re-score the full ~75-entry catalog on every parent re-
+  // render for no gain.
+  const paletteEntries = useMemo(() => [MILKY_WAY_ENTRY, ...famousMeta], [famousMeta]);
+
   // ── Lazy alias index for command palette ────────────────────────────────
   const { aliasIndex, aliasMap } = useAliasIndex({
     paletteOpen,
@@ -768,11 +782,25 @@ export function App(): React.ReactElement {
       */}
       <SearchTrigger onClick={() => setPaletteOpen(true)} hidden={paletteOpen} />
       <CommandPalette
-        entries={famousMeta}
+        entries={paletteEntries}
         aliasIndex={aliasIndex ?? undefined}
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}
-        onSelect={(id) => handleRef.current?.selectFamous?.(id)}
+        onSelect={(id) => {
+          // Sentinel id from the Milky Way pseudo-entry.  See
+          // `data/milkyWayEntry.ts` for why the Milky Way needs special
+          // routing (no per-galaxy localIdx because the impostor isn't a
+          // catalog object).  `focusOnMilkyWay` (not `focusOnHome`)
+          // tweens to a viewpoint inside the impostor's full-visibility
+          // band — home is at hundreds of Mpc, well past the impostor's
+          // 50 Mpc fade-out, so home doesn't actually show the Milky
+          // Way as the subject.
+          if (id === MILKY_WAY_ID) {
+            handleRef.current?.focusOnMilkyWay?.();
+            return;
+          }
+          handleRef.current?.selectFamous?.(id);
+        }}
         onSelectAlias={(target) => handleRef.current?.selectByAlias?.(target)}
       />
       {/*

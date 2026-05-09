@@ -3,7 +3,7 @@
  * world origin.
  *
  * Sibling to `proceduralDiskRenderer.ts` (per-galaxy 3D-oriented
- * impostors) and `quadRenderer.ts` (textured screen-aligned thumbnails)
+ * impostors) and `thumbnailRenderer.ts` (textured screen-aligned thumbnails)
  * but with a degenerate cardinality: this pass renders exactly ONE
  * instance per frame.  No per-galaxy vertex buffer, no instancing —
  * just a six-vertex `draw(6, 1)` call.

@@ -1,6 +1,6 @@
 /**
  * thumbnailSubsystem — unit tests for the per-frame galaxy-thumbnail
- * pipeline.  We mock the GPU device, the QuadRenderer, and the
+ * pipeline.  We mock the GPU device, the ThumbnailRenderer, and the
  * DiskRenderer with `vi.fn()` stubs so the subsystem can run end-to-
  * end without WebGPU.  The atlas's slot bookkeeping doesn't actually
  * need a device (it only touches `device.queue.copyExternalImageToTexture`
@@ -96,6 +96,47 @@ function makeCloud(count: number, diameterKpc = 50): PointCloud {
   };
 }
 
+/**
+ * Like `makeCloud`, but packs `count` galaxies tightly enough around
+ * (10, 0, 0) Mpc that ALL of them stay above the 24-px apparent-size
+ * threshold from the default camera vantage at (9.95, 0, 0).  Each
+ * galaxy gets a unique (RA, Dec) pair so `galaxyCacheKey` produces
+ * distinct keys and `atlas.allocate` returns distinct slots — without
+ * the y-offset, every galaxy on the +x axis collapses to RA=0/Dec=0
+ * and the priority queue's per-key dedupe would mask multi-galaxy
+ * fetcher counts.
+ *
+ * Geometry: galaxy i sits at (10, 0.001·i, 0).  RA = atan2(0.001·i, 10)
+ * ≈ 0.00573°·i — distinct after rounding to 5 dp.  camDist ≈ 0.05 Mpc
+ * for i ≤ 25, giving px ≈ 624 (well above the 24-px gate).
+ */
+function makeDenseCloud(count: number): PointCloud {
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    positions[i * 3 + 0] = 10;
+    positions[i * 3 + 1] = 0.001 * i;
+    positions[i * 3 + 2] = 0;
+  }
+  const fill = (v: number) => {
+    const a = new Float32Array(count);
+    a.fill(v);
+    return a;
+  };
+  return {
+    count,
+    objIDs: new BigUint64Array(count),
+    positions,
+    magU: fill(20),
+    magG: fill(20),
+    magR: fill(20),
+    magI: fill(20),
+    magZ: fill(20),
+    axisRatio: fill(1),
+    positionAngleDeg: fill(0),
+    diameterKpc: fill(50),
+  };
+}
+
 function makeCam(): OrbitCamera {
   // Position at origin, looking toward +x; FOV = 60deg.
   return {
@@ -111,15 +152,15 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-/** Mock QuadRenderer — only `bindAtlas` and `draw` are called. */
-function makeMockQuadRenderer() {
+/** Mock ThumbnailRenderer — only `bindAtlas` and `draw` are called. */
+function makeMockThumbnailRenderer() {
   return {
     bindAtlas: vi.fn(),
     draw: vi.fn(),
   } as any;
 }
 
-/** Mock DiskRenderer — same surface as QuadRenderer for our purposes. */
+/** Mock DiskRenderer — same surface as ThumbnailRenderer for our purposes. */
 function makeMockDiskRenderer() {
   return {
     bindAtlas: vi.fn(),
@@ -153,7 +194,7 @@ function makeFrameInput(
   clouds: Map<Source, PointCloud>,
   visibleMask: number = 0xffffffff,
 ) {
-  const quadRenderer = makeMockQuadRenderer();
+  const thumbnailRenderer = makeMockThumbnailRenderer();
   const diskRenderer = makeMockDiskRenderer();
   return {
     cam,
@@ -166,7 +207,7 @@ function makeFrameInput(
     camPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
       [number, number, number]
     >,
-    quadRenderer,
+    thumbnailRenderer,
     diskRenderer,
     famousMeta: [],
     famousXrefs: {},
@@ -188,7 +229,7 @@ describe('createThumbnailSubsystem', () => {
       requestRender: () => {},
       fetcher: async () => null,
     });
-    const quad = makeMockQuadRenderer();
+    const quad = makeMockThumbnailRenderer();
     const disk = makeMockDiskRenderer();
     const procDisk = makeMockProceduralDiskRenderer();
     sys.bindToRenderers(quad, disk, procDisk);
@@ -208,7 +249,7 @@ describe('createThumbnailSubsystem', () => {
     sys.runFrame(input);
     // Neither renderer.draw nor any fetch was issued because we
     // didn't bindToRenderers — the guard fires.
-    expect(input.quadRenderer.draw).not.toHaveBeenCalled();
+    expect(input.thumbnailRenderer.draw).not.toHaveBeenCalled();
     expect(input.diskRenderer.draw).not.toHaveBeenCalled();
   });
 
@@ -220,7 +261,7 @@ describe('createThumbnailSubsystem', () => {
       fetcher,
     });
     sys.bindToRenderers(
-      makeMockQuadRenderer(),
+      makeMockThumbnailRenderer(),
       makeMockDiskRenderer(),
       makeMockProceduralDiskRenderer(),
     );
@@ -246,7 +287,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -279,7 +320,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -309,7 +350,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -338,15 +379,19 @@ describe('createThumbnailSubsystem', () => {
     it('clears bitmapReady/Failed/Time entries when the atlas evicts a key', async () => {
       // We need to fill the atlas (256 slots).  Use the cloud-loop path:
       // 256 distinct galaxies → 256 successful fetches → 256 bitmapReady
-      // entries → next allocation evicts slot 0.
+      // entries → next allocation evicts slot 0.  Opt out of decimation
+      // so the single frame visits all 257 indices in one pass — otherwise
+      // we'd need 257/stride frames to reach eviction and the test would
+      // be exercising round-robin scheduling rather than LRU eviction.
       const fetcher = vi.fn(async () => makeFakeBitmap());
       const sys = createThumbnailSubsystem({
         device,
         requestRender: () => {},
         fetcher,
+        decimationFactor: 1,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -383,7 +428,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -412,7 +457,7 @@ describe('createThumbnailSubsystem', () => {
         fetcher,
       });
       sys.bindToRenderers(
-        makeMockQuadRenderer(),
+        makeMockThumbnailRenderer(),
         makeMockDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
@@ -426,6 +471,195 @@ describe('createThumbnailSubsystem', () => {
       pending[0]!(makeFakeBitmap());
       await new Promise((r) => setTimeout(r, 0));
       expect(sys.__testGetState().bitmapReady.size).toBe(0);
+    });
+  });
+
+  describe('decimation (round-robin per-frame stride)', () => {
+    it('walks 1/N of the cloud per frame in round-robin order', async () => {
+      // 16 galaxies all above the apparent-size threshold; decimation = 4.
+      // Frame k visits indices [4·k, 4·(k+1)) — exactly 4 fetches per frame.
+      // Between frames we drain microtasks so the priority queue's
+      // concurrency cap (4 in-flight) doesn't stall newly-enqueued keys.
+      const fetcher = vi.fn(async () => null); // permanent failure
+      const sys = createThumbnailSubsystem({
+        device,
+        requestRender: () => {},
+        fetcher,
+        decimationFactor: 4,
+      });
+      sys.bindToRenderers(
+        makeMockThumbnailRenderer(),
+        makeMockDiskRenderer(),
+        makeMockProceduralDiskRenderer(),
+      );
+      const cam = makeCam();
+      const clouds = new Map([[Source.SDSS, makeDenseCloud(16)]]);
+
+      sys.runFrame(makeFrameInput(cam, clouds));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(fetcher).toHaveBeenCalledTimes(4);
+
+      sys.runFrame(makeFrameInput(cam, clouds));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(fetcher).toHaveBeenCalledTimes(8);
+
+      sys.runFrame(makeFrameInput(cam, clouds));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(fetcher).toHaveBeenCalledTimes(12);
+
+      sys.runFrame(makeFrameInput(cam, clouds));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(fetcher).toHaveBeenCalledTimes(16);
+    });
+
+    it('round-robin cursor wraps to 0 after a full sweep', async () => {
+      const fetcher = vi.fn(async () => null);
+      const sys = createThumbnailSubsystem({
+        device,
+        requestRender: () => {},
+        fetcher,
+        decimationFactor: 2,
+      });
+      sys.bindToRenderers(
+        makeMockThumbnailRenderer(),
+        makeMockDiskRenderer(),
+        makeMockProceduralDiskRenderer(),
+      );
+      const cam = makeCam();
+      const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
+
+      // Frames 1..2: 2 fetches each → 4 unique galaxies enqueued.
+      sys.runFrame(makeFrameInput(cam, clouds));
+      sys.runFrame(makeFrameInput(cam, clouds));
+      await new Promise((r) => setTimeout(r, 0));
+      // All 4 fetches resolved as failures, so all keys are in bitmapFailed.
+      expect(sys.__testGetState().bitmapFailed.size).toBe(4);
+
+      // Frame 3 wraps the cursor back to indices 0..1.  Their keys are in
+      // bitmapFailed, so the retry-storm guard short-circuits — fetcher
+      // count must stay at 4 even though the cursor revisits them.
+      sys.runFrame(makeFrameInput(cam, clouds));
+      expect(fetcher).toHaveBeenCalledTimes(4);
+    });
+
+    it('decimationFactor=1 walks every galaxy each frame (full sweep)', async () => {
+      const fetcher = vi.fn(async () => null);
+      const sys = createThumbnailSubsystem({
+        device,
+        requestRender: () => {},
+        fetcher,
+        decimationFactor: 1,
+      });
+      sys.bindToRenderers(
+        makeMockThumbnailRenderer(),
+        makeMockDiskRenderer(),
+        makeMockProceduralDiskRenderer(),
+      );
+      const cam = makeCam();
+      const clouds = new Map([[Source.SDSS, makeDenseCloud(8)]]);
+
+      sys.runFrame(makeFrameInput(cam, clouds));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(fetcher).toHaveBeenCalledTimes(8);
+    });
+
+    it('keeps emitting instances for galaxies whose bitmap is ready but are outside the current stride', async () => {
+      // Sticky-state contract: once the cursor has visited every galaxy
+      // with its bitmap ready, subsequent frames must keep emitting all
+      // visible thumbnails even when the cursor has advanced past them.
+      // Without sticky state, decimation would make visible thumbnails
+      // blink at 60/N Hz as the cursor sweeps.
+      //
+      // Bitmap availability lags one sweep cycle behind the cursor:
+      //   frame 1: cursor enqueues 0..1 → bitmaps for 0..1 land after
+      //            the microtask drain.
+      //   frame 2: cursor enqueues 2..3 → bitmaps for 2..3 land.
+      //            (Galaxies 0..1 are bitmapReady but cursor doesn't
+      //            visit them this frame — sticky-state is empty for
+      //            them too because the only path that sets sticky
+      //            entries is the inner loop's bitmap-ready branch.)
+      //   frame 3: cursor wraps to 0..1; bitmaps ready → sticky set.
+      //   frame 4: cursor at 2..3; bitmaps ready → sticky set.
+      //   frame 5: cursor at 0..1 — sticky entries from frame 4 for
+      //            indices 2..3 must persist into this frame's draw.
+      //
+      // This is the test that proves persistence across strides.
+      const fetcher = vi.fn(async () => makeFakeBitmap());
+      const sys = createThumbnailSubsystem({
+        device,
+        requestRender: () => {},
+        fetcher,
+        decimationFactor: 2,
+      });
+      const quad = makeMockThumbnailRenderer();
+      const disk = makeMockDiskRenderer();
+      sys.bindToRenderers(quad, disk, makeMockProceduralDiskRenderer());
+      const cam = makeCam();
+      const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
+
+      // Two full sweep cycles so every galaxy has been re-visited with
+      // its bitmap already in `bitmapReady`.
+      for (let f = 0; f < 4; f++) {
+        sys.runFrame(makeFrameInput(cam, clouds, 0xffffffff));
+        await new Promise((r) => setTimeout(r, 0));
+      }
+      expect(sys.__testGetState().bitmapReady.size).toBe(4);
+
+      // Frame 5: cursor only touches indices 0..1.  Sticky entries for
+      // 2..3 (set on frame 4) must persist and drive the draw.
+      const inputF5 = makeFrameInput(cam, clouds);
+      sys.runFrame(inputF5);
+      const quadsF5 = inputF5.thumbnailRenderer.draw.mock.calls.at(-1)?.[3] ?? [];
+      const disksF5 = inputF5.diskRenderer.draw.mock.calls.at(-1)?.[4] ?? [];
+      expect(quadsF5.length + disksF5.length).toBe(4);
+    });
+
+    it('drops sticky entries for galaxies whose visibility lapses on revisit', async () => {
+      // If a galaxy stops passing the apparent-size cull on a sweep, its
+      // sticky entry must be cleared on that visit so the renderer doesn't
+      // keep drawing a stale impostor.  We exercise this by hiding the
+      // source via visibleSourceMask between frames — every galaxy in that
+      // cloud should fall out of the sticky maps when the cursor next
+      // touches them.
+      const fetcher = vi.fn(async () => makeFakeBitmap());
+      const sys = createThumbnailSubsystem({
+        device,
+        requestRender: () => {},
+        fetcher,
+        decimationFactor: 1, // walk the whole cloud every frame for a clean assertion
+      });
+      const quad = makeMockThumbnailRenderer();
+      const disk = makeMockDiskRenderer();
+      sys.bindToRenderers(quad, disk, makeMockProceduralDiskRenderer());
+      const cam = makeCam();
+      const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
+
+      // Frame 1: SDSS visible; bitmaps land.
+      sys.runFrame(makeFrameInput(cam, clouds, 1 << Source.SDSS));
+      await new Promise((r) => setTimeout(r, 0));
+
+      // Frame 2: SDSS visible — sticky entries should now feed the draw.
+      const inputF2 = makeFrameInput(cam, clouds, 1 << Source.SDSS);
+      sys.runFrame(inputF2);
+      const f2Total =
+        (inputF2.thumbnailRenderer.draw.mock.calls.at(-1)?.[3]?.length ?? 0) +
+        (inputF2.diskRenderer.draw.mock.calls.at(-1)?.[4]?.length ?? 0);
+      expect(f2Total).toBeGreaterThanOrEqual(2);
+
+      // Frame 3: hide SDSS → the per-cloud guard skips the loop entirely
+      // and the cloud's sticky entries must be cleared so nothing draws.
+      const inputF3 = makeFrameInput(cam, clouds, 0);
+      sys.runFrame(inputF3);
+      const drawCallF3Q = inputF3.thumbnailRenderer.draw.mock.calls.length;
+      const drawCallF3D = inputF3.diskRenderer.draw.mock.calls.length;
+      // Either no draw at all, or a draw with zero instances.
+      const quadsF3 = inputF3.thumbnailRenderer.draw.mock.calls.at(-1)?.[3] ?? [];
+      const disksF3 = inputF3.diskRenderer.draw.mock.calls.at(-1)?.[4] ?? [];
+      expect(quadsF3.length).toBe(0);
+      expect(disksF3.length).toBe(0);
+      // Touching mock variables to satisfy the no-unused-variable lint.
+      void drawCallF3Q;
+      void drawCallF3D;
     });
   });
 

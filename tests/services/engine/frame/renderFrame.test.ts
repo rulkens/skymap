@@ -158,7 +158,7 @@ function makeMockThumbnails(callLog: CallLog) {
   } as any;
 }
 
-function makeMockQuadRenderer() {
+function makeMockThumbnailRenderer() {
   return { bindAtlas: vi.fn(), draw: vi.fn() } as any;
 }
 
@@ -218,7 +218,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
   const milkyWayRenderer = makeMockMilkyWayRenderer(callLog);
   const postProcess = makeMockPostProcess(callLog, hdrTargetView);
   const thumbnails = makeMockThumbnails(callLog);
-  const quadRenderer = makeMockQuadRenderer();
+  const thumbnailRenderer = makeMockThumbnailRenderer();
   const diskRenderer = makeMockDiskRenderer();
   const cam = makeCam();
   const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
@@ -284,7 +284,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     pointRenderer,
     milkyWayRenderer,
     thumbnails,
-    quadRenderer,
+    thumbnailRenderer,
     diskRenderer,
     cam,
     clouds,
@@ -309,7 +309,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       milkyWayRenderer,
       filamentRenderer: null,
       scalarVolumeRenderer: null,
-      quadRenderer,
+      thumbnailRenderer,
       diskRenderer,
       settings,
       famousMeta: [],

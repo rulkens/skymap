@@ -131,7 +131,7 @@ function makeDeps(opts: {
     context: {} as unknown as GPUCanvasContext,
     milkyWayRenderer: {} as unknown as RunFrameDeps['milkyWayRenderer'],
     filamentRenderer: {} as unknown as RunFrameDeps['filamentRenderer'],
-    quadRenderer: {} as unknown as RunFrameDeps['quadRenderer'],
+    thumbnailRenderer: {} as unknown as RunFrameDeps['thumbnailRenderer'],
     diskRenderer: {} as unknown as RunFrameDeps['diskRenderer'],
     milkyWayITimeEpochMs: 0,
     cssToTexPx: (cssPx: number) => cssPx,
