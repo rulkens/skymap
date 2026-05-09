@@ -319,6 +319,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // point of use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
+      // thumbnailRenderer / diskRenderer / proceduralDiskRenderer /
+      // milkyWayRenderer: null until initGpu constructs them.  These
+      // four don't gate any frame-loop logic via state.gpu — the frame
+      // body still reads them through RunFrameDeps (assembled in
+      // `phases/startLoop.ts` from `phaseLocals`).  They live here
+      // exclusively so `destroy()` below has a reachable reference to
+      // release each renderer's GPU buffers.  Pre-2026-05-08 they
+      // lived only on the bootstrap-local `phaseLocals` carrier, which
+      // is intentionally short-lived (goes away once `startLoop`
+      // finishes), leaving destroy() unable to clean them up.  See
+      // `EngineGpuHandles.d.ts` for the full reachability story.
+      thumbnailRenderer: null,
+      diskRenderer: null,
+      proceduralDiskRenderer: null,
+      milkyWayRenderer: null,
     },
     subsystems: {
       // ── Tween manager ──────────────────────────────────────────
@@ -577,6 +592,23 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // with every other GPU handle in this bag.
       state.gpu.markerLineRenderer?.destroy();
       state.gpu.markerLineRenderer = null;
+      // Thumbnail / disk / procedural-disk / Milky-Way renderers each
+      // own a uniform buffer + per-instance buffer + (per-renderer
+      // specifics: corner buffer for the quad-derived ones, atlas
+      // sampler for thumbnails).  Pre-2026-05-08 these renderers
+      // lived on the bootstrap-local `phaseLocals` carrier which
+      // engine.ts had no reference path to — leaking a few hundred KB
+      // of GPU buffers per HMR / StrictMode remount.  Promoting them
+      // to `state.gpu.*` (PR #66 follow-up) closed that gap.  Releasing
+      // here matches every other handle in this bag.
+      state.gpu.thumbnailRenderer?.destroy();
+      state.gpu.thumbnailRenderer = null;
+      state.gpu.diskRenderer?.destroy();
+      state.gpu.diskRenderer = null;
+      state.gpu.proceduralDiskRenderer?.destroy();
+      state.gpu.proceduralDiskRenderer = null;
+      state.gpu.milkyWayRenderer?.destroy();
+      state.gpu.milkyWayRenderer = null;
       // Tear down the thumbnail subsystem (clears the atlas's evict
       // handler and aborts in-flight fetches' write-back).  The atlas's
       // GPU texture itself is released when the device is dropped —
