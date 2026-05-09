@@ -45,8 +45,11 @@ describe('consoleAdapterFor', () => {
     log(loading(0, 100), loading(10, 100));
     log(loading(10, 100), loading(20, 100));
     log(loading(20, 100), loading(30, 100));
-    // bytes-progress logs are throttled to <= 1 in fast succession
-    expect((console.log as any).mock.calls.length).toBeLessThanOrEqual(1);
+    // Throttle invariant: at most one bytes-progress log per consecutive
+    // run, regardless of how many byte updates arrive.  '<= 1' would also
+    // pass at zero, which silently broke when the throttle was disabled
+    // in an earlier refactor — pinning '=== 1' catches that.
+    expect((console.log as any).mock.calls.length).toBe(1);
   });
 
   it('logs ready transition', () => {
@@ -56,5 +59,12 @@ describe('consoleAdapterFor', () => {
       expect.stringContaining('ready'),
       expect.anything(),
     );
+  });
+
+  it('does not log idle→idle no-op transitions', () => {
+    const log = consoleAdapterFor('test');
+    log(idle, idle);
+    expect(console.log).not.toHaveBeenCalled();
+    expect(console.warn).not.toHaveBeenCalled();
   });
 });
