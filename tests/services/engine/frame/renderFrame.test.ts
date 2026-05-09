@@ -247,6 +247,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     milkyWayEnabled: true,
     filamentsEnabled: false,
     filamentIntensity: 1,
+    volumesEnabled: false,
     ...(overrides.settings ?? {}),
   };
 
@@ -301,12 +302,13 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       // in their `enabled()` gates.  Provide null for both new handles so
       // the passes correctly skip (enabled returns false), which matches the
       // pre-atlas-load behaviour and keeps existing renderFrame tests green.
-      state: { gpu: { labelRenderer: null, markerLineRenderer: null } } as never,
+      state: { gpu: { labelRenderer: null, markerLineRenderer: null, scalarVolumeRenderer: null } } as never,
       milkyWayITimeSec: 0,
       device,
       context,
       milkyWayRenderer,
       filamentRenderer: null,
+      scalarVolumeRenderer: null,
       quadRenderer,
       diskRenderer,
       settings,

@@ -323,6 +323,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     context: deps.context,
     milkyWayRenderer: deps.milkyWayRenderer,
     filamentRenderer: deps.filamentRenderer,
+    // scalarVolumeRenderer: Task 9 will supply this from the IIFE-local
+    // renderer returned by createScalarVolumeRenderer().  For now, we
+    // forward state.gpu.scalarVolumeRenderer which starts as null and
+    // becomes non-null once initGpu is wired to construct it.
+    scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
     quadRenderer: deps.quadRenderer,
     diskRenderer: deps.diskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
@@ -352,6 +357,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       milkyWayEnabled: state.settings.milkyWayEnabled,
       filamentsEnabled: state.settings.filamentsEnabled,
       filamentIntensity: state.settings.filamentIntensity,
+      volumesEnabled: state.settings.volumesEnabled,
     },
     famousMeta: state.sources.famousMeta,
     famousXrefs: state.sources.famousXrefs,

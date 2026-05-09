@@ -52,6 +52,18 @@ export type EngineSettingsState = {
    */
   filamentsEnabled: boolean;
   /**
+   * Whether the 3D scalar-field volume overlay is rendered.  Multiple
+   * field types are supported (CF-4 dark-matter, MCPM reionization,
+   * synthetic test fixtures, …); this is the master gate — when false,
+   * `scalarVolumePass.enabled` short-circuits before consulting the
+   * renderer, so all cubes are skipped at zero GPU cost.
+   *
+   * Default OFF.  Individual fields also have per-handle `enabled` and
+   * `intensity` controls on `ScalarVolumeRenderer`; this flag is the
+   * coarser user-facing toggle ("hide all volumes").
+   */
+  volumesEnabled: boolean;
+  /**
    * Filament-overlay intensity scale, in [0, 1].  1.0 = unchanged shader
    * output; lower values dim the cosmic-web overlay against the bright
    * HDR catalogue.  See `DEFAULT_FILAMENT_INTENSITY`.

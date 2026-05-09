@@ -61,6 +61,7 @@ import type { QuadRenderer } from '../../../gpu/renderers/quadRenderer';
 import type { DiskRenderer } from '../../../gpu/renderers/diskRenderer';
 import type { MilkyWayRenderer } from '../../../gpu/renderers/milkyWayRenderer';
 import type { FilamentRenderer } from '../../../gpu/renderers/filamentRenderer';
+import type { ScalarVolumeRenderer } from '../../../gpu/renderers/scalarVolumeRenderer';
 import type { FamousMetaEntry, FamousXrefMap } from '../../../loading/fetchers/famousMetaFetcher';
 import type { PointCloud } from '../../../../@types';
 import type { Source } from '../../../../data/sources';
@@ -95,6 +96,14 @@ export type PassDeps = {
    * `filamentsPass.draw` never sees a null renderer.
    */
   filamentRenderer: FilamentRenderer | null;
+  /**
+   * Scalar 3D volume renderer (CF-4 DM cube, MCPM, synthetic
+   * fixtures, ...).  Null before GPU init completes; `scalarVolumePass`
+   * optional-chains the `hasActiveFields()` call so a null handle is
+   * silently a no-op — the pass returns `false` from `enabled` and
+   * `draw` is never invoked.
+   */
+  scalarVolumeRenderer: ScalarVolumeRenderer | null;
   /** Procedural Milky Way impostor renderer. */
   milkyWayRenderer: MilkyWayRenderer;
   /**

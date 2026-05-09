@@ -74,6 +74,7 @@ import type { QuadRenderer } from '../../gpu/renderers/quadRenderer';
 import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';
 import type { MilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
 import type { FilamentRenderer } from '../../gpu/renderers/filamentRenderer';
+import type { ScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
 import type { FamousMetaEntry, FamousXrefMap } from '../../loading/fetchers/famousMetaFetcher';
 import type { ReadyFrameContext } from './frameContext';
 import type { PassDeps } from './passes/types';
@@ -155,6 +156,16 @@ export type RenderFrameSettings = {
    * 0.0 = invisible (logically equivalent to filamentsEnabled=false).
    */
   filamentIntensity: number;
+  /**
+   * Master gate for the 3D scalar-field volume overlay.  When false,
+   * `scalarVolumePass.enabled` returns false before consulting the
+   * renderer, so no per-field checks or GPU work occurs.  When true,
+   * the pass also requires `scalarVolumeRenderer.hasActiveFields()` to
+   * be true (at least one registered field is enabled with intensity
+   * > 0).  See `scalarVolumePass.ts` and
+   * `EngineSettingsState.volumesEnabled` for the full gate rationale.
+   */
+  volumesEnabled: boolean;
 };
 
 /**
@@ -208,6 +219,16 @@ export type RenderFrameInput = {
    */
   filamentRenderer: FilamentRenderer | null;
   /**
+   * Optional 3D scalar-field volume renderer.  Null before `initGpu`
+   * constructs it (same brief bootstrap window as the other optional
+   * renderers).  `scalarVolumePass` optional-chains `hasActiveFields()`
+   * so a null handle is silently a no-op — the pass's `enabled`
+   * predicate returns false and `draw` is never called.  Task 9 will
+   * populate this from `state.gpu.scalarVolumeRenderer` once the
+   * runtime construction is wired into the engine bootstrap.
+   */
+  scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  /**
    * QuadRenderer + DiskRenderer references forwarded straight to the
    * thumbnail subsystem.  The subsystem already `bindAtlas`-bound them
    * at engine-startup; the per-frame `runFrame` input still takes them
@@ -248,6 +269,7 @@ export function renderFrame(input: RenderFrameInput): void {
     context,
     milkyWayRenderer,
     filamentRenderer,
+    scalarVolumeRenderer,
     quadRenderer,
     diskRenderer,
     settings,
@@ -265,6 +287,7 @@ export function renderFrame(input: RenderFrameInput): void {
     quadRenderer,
     diskRenderer,
     filamentRenderer,
+    scalarVolumeRenderer,
     milkyWayRenderer,
     clouds,
     famousMeta,

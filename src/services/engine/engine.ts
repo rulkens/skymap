@@ -245,6 +245,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       milkyWayEnabled: DEFAULT_MILKY_WAY_ENABLED,
       filamentsEnabled: DEFAULT_FILAMENTS_ENABLED,
       filamentIntensity: DEFAULT_FILAMENT_INTENSITY,
+      volumesEnabled: false,
       highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
       realOnlyMode: DEFAULT_REAL_ONLY_MODE,
       depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
@@ -318,6 +319,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // point of use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
+      // Constructed during initGpu, null until then.  Excluded from the
+      // isEngineReady predicate — the scalarVolumePass optional-chains
+      // hasActiveFields() so a null handle is a silent no-op.  Task 9
+      // will wire up the createScalarVolumeRenderer() call here.
+      scalarVolumeRenderer: null,
     },
     subsystems: {
       // ── Tween manager ──────────────────────────────────────────

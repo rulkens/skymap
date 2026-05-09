@@ -9,14 +9,28 @@
  *   1. point-sprites      — instanced billboards (always-on)
  *   2. galaxy-thumbnails  — atlas + procedural-disk thumbnails
  *   3. filaments          — cosmic-web skeleton overlay
- *   4. milky-way          — procedural impostor at the world origin
- *   5. marker-lines       — thick-line UI overlay (you-are-here indicator)
- *   6. labels             — MSDF text UI overlay (you-are-here label)
+ *   4. scalar-volume      — 3D raymarched scalar-field cubes (optional)
+ *   5. milky-way          — procedural impostor at the world origin
+ *   6. marker-lines       — thick-line UI overlay (you-are-here indicator)
+ *   7. labels             — MSDF text UI overlay (you-are-here label)
  *
  * The order is preserved exactly because the array entry IS the
  * canonical record now — pre-D.2 the order was folkloric (lines in
  * a function); post-D.2 reordering passes is a one-line array
  * shuffle with a clear semantic.
+ *
+ * ### Why scalar-volume AFTER filaments, BEFORE milky-way?
+ *
+ * Filaments are the per-galaxy large-scale-structure skeleton threaded
+ * between the galaxy points.  Volumes are the broader atmospheric
+ * density fields (CF-4 DM cube, MCPM reionization, …).  The Milky Way
+ * impostor is a bright near-field foreground feature.  Drawing the
+ * volume cubes between filaments and the MW lets the MW's high-
+ * intensity bulge composite over the volume halos rather than being
+ * veiled by them.  All four are additively blended, so the order is a
+ * deterministic-encoder choice rather than a correctness constraint —
+ * but "catalogue → large-structure → field-atmospherics → bright-
+ * foreground" maps cleanly to the intended visual hierarchy.
  *
  * ### Why marker-lines BEFORE labels?
  *
@@ -47,7 +61,7 @@
  * single responsibility explicit at one site.
  *
  * Tone-map is NOT in this array.  It runs OUTSIDE the HDR render
- * pass (it samples the HDR target the six entries above wrote
+ * pass (it samples the HDR target the seven entries above wrote
  * into) and so doesn't fit the `Pass` interface.  See `types.ts`'s
  * "tone-map special case" docstring for the rejected-alternative
  * analysis.
@@ -57,15 +71,17 @@ import type { Pass } from './types';
 import { pointSpritesPass } from './pointSpritesPass';
 import { galaxyThumbnailsPass } from './galaxyThumbnailsPass';
 import { filamentsPass } from './filamentsPass';
+import { scalarVolumePass } from './scalarVolumePass';
 import { milkyWayPass } from './milkyWayPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
 
-/** The six HDR passes, in deterministic draw order. */
+/** The seven HDR passes, in deterministic draw order. */
 export const HDR_PASSES: readonly Pass[] = [
   pointSpritesPass,
   galaxyThumbnailsPass,
   filamentsPass,
+  scalarVolumePass, // ← new: 3D scalar-field volume overlay
   milkyWayPass,
   markerLinesPass,
   labelsPass,
@@ -75,6 +91,7 @@ export type { Pass, PassDeps } from './types';
 export { pointSpritesPass } from './pointSpritesPass';
 export { galaxyThumbnailsPass } from './galaxyThumbnailsPass';
 export { filamentsPass } from './filamentsPass';
+export { scalarVolumePass } from './scalarVolumePass';
 export { milkyWayPass } from './milkyWayPass';
 export { markerLinesPass } from './markerLinesPass';
 export { labelsPass } from './labelsPass';
