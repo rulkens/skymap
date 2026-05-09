@@ -1,0 +1,24 @@
+/*
+ * Default sizing for the palette dropdown.  `flex-shrink: 0` keeps the
+ * select from being squeezed to invisibility when it shares a row with
+ * a `flex: 1` element (e.g. the volume-field intensity slider, which
+ * would otherwise eat all remaining horizontal space).  `min-width` is
+ * a comfortable lower bound that fits "yellow-green" — the longest
+ * palette label — without truncation.
+ */
+.paletteSelect {
+  flex-shrink: 0;
+  min-width: 7.5rem;
+  font: inherit;
+  background: var(--color-surface-input, rgba(255, 255, 255, 0.08));
+  color: var(--color-fg, inherit);
+  border: 1px solid var(--color-border-control, rgba(255, 255, 255, 0.2));
+  border-radius: var(--radius-sm, 4px);
+  padding: var(--space-1, 2px) var(--space-2, 4px);
+  cursor: pointer;
+}
+
+.paletteSelect:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

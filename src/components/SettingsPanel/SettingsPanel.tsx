@@ -43,7 +43,7 @@ import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import type { ScalarFieldPaletteId } from '../../@types/ScalarCube';
-import { PALETTE_IDS } from '../../data/scalarFieldPalettes';
+import { PaletteSelect } from '../common/PaletteSelect/PaletteSelect';
 import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
 import { TierSelector } from './TierSelector';
@@ -759,22 +759,11 @@ export function SettingsPanel({
                       get the rest of the row).
                     */}
                     {showFieldPaletteSelect && (
-                      <select
+                      <PaletteSelect
                         value={field.paletteId}
                         disabled={!field.enabled}
-                        onChange={(e) =>
-                          onVolumeFieldPaletteChange!(
-                            field.handle,
-                            e.target.value as ScalarFieldPaletteId,
-                          )
-                        }
-                      >
-                        {PALETTE_IDS.map((id) => (
-                          <option key={id} value={id}>
-                            {id}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(id) => onVolumeFieldPaletteChange!(field.handle, id)}
+                      />
                     )}
                   </div>
                 ))
