@@ -54,3 +54,24 @@ const SGR_A_DIST_MPC = 0.008;
  */
 export const MILKY_WAY_CENTER_WORLD: readonly [number, number, number] =
   raDecDistToCartesian(SGR_A_RA_DEG, SGR_A_DEC_DEG, SGR_A_DIST_MPC);
+
+/**
+ * Camera distance (Mpc) used by `handle.focusOnMilkyWay` to land the
+ * camera at a viewpoint where the procedural Milky Way impostor is the
+ * dominant on-screen subject.
+ *
+ * Picked at 5 Mpc — comfortably inside the impostor's full-visibility
+ * band (`milkyWayFadeAlpha` returns 1.0 for camDist ≤ 10 Mpc), but
+ * not so close that we're "inside" the simulated raymarched volume in
+ * a way that produces visual artefacts.  At 5 Mpc the spiral fills
+ * roughly half the FOV at the project default 60° vertical FOV — close
+ * to the same framing the user sees on a slow fly-out from the home
+ * view, but stably anchored as a destination rather than a transient
+ * waypoint.
+ *
+ * The home framing is at hundreds of Mpc (whatever the bootstrap bbox
+ * computes), which sits well past the 50 Mpc fade-out — that's why
+ * `focusOnHome` doesn't put the impostor on screen even though it ends
+ * up "near home".
+ */
+export const MILKY_WAY_VIEW_DISTANCE_MPC = 5;

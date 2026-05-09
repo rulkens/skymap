@@ -111,6 +111,11 @@ import {
   snapToCameraSnapshot,
   tweenToCameraSnapshot,
 } from './camera/cameraSnapshot';
+import { FOCUS_TWEEN_MS } from './camera/focusTween';
+import {
+  MILKY_WAY_CENTER_WORLD,
+  MILKY_WAY_VIEW_DISTANCE_MPC,
+} from '../../data/galacticCenter';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -811,6 +816,45 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cb.onFocusChange?.(null);
 
       tweenToCameraSnapshot(state, state.initialCamSnapshot);
+    },
+
+    focusOnMilkyWay() {
+      // Distinct from `focusOnHome`: home is the bootstrap-derived wide
+      // framing at hundreds of Mpc, well past the impostor's fade-out
+      // threshold.  This method tweens to a viewpoint inside the
+      // impostor's full-visibility band so the Milky Way is the
+      // dominant on-screen subject.  Same target/distance constants
+      // live in `data/galacticCenter.ts`; same `tweens.start` shape as
+      // `focusOnHome` minus the snapshot read because the destination
+      // is a fixed pair of constants rather than a captured framing.
+      const cam = state.cam;
+      if (!cam) return;
+
+      // The Milky Way isn't a catalog object, so any pinned focus on a
+      // catalog galaxy is no longer relevant — clear it so the URL
+      // hash doesn't keep trying to resolve a stale focus.
+      cb.onFocusChange?.(null);
+
+      state.subsystems.tweens.start({
+        startMs: performance.now(),
+        durationMs: FOCUS_TWEEN_MS,
+        fromTarget: vec3.clone(cam.target as vec3),
+        toTarget: vec3.fromValues(
+          MILKY_WAY_CENTER_WORLD[0],
+          MILKY_WAY_CENTER_WORLD[1],
+          MILKY_WAY_CENTER_WORLD[2],
+        ),
+        fromDistance: cam.distance,
+        toDistance: MILKY_WAY_VIEW_DISTANCE_MPC,
+        // Preserve current orientation — same as `focusOn` for a
+        // galaxy.  The user keeps their yaw/pitch; only the orbit
+        // target and distance change.
+        fromYaw: cam.yaw,
+        toYaw: cam.yaw,
+        fromPitch: cam.pitch,
+        toPitch: cam.pitch,
+      });
+      state.subsystems.scheduler.requestRender();
     },
 
     // ── LOD + per-source visibility setters ────────────────────────────────

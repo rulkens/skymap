@@ -523,9 +523,13 @@ export function App(): React.ReactElement {
           // Sentinel id from the Milky Way pseudo-entry.  See
           // `data/milkyWayEntry.ts` for why the Milky Way needs special
           // routing (no per-galaxy localIdx because the impostor isn't a
-          // catalog object).
+          // catalog object).  `focusOnMilkyWay` (not `focusOnHome`)
+          // tweens to a viewpoint inside the impostor's full-visibility
+          // band — home is at hundreds of Mpc, well past the impostor's
+          // 50 Mpc fade-out, so home doesn't actually show the Milky
+          // Way as the subject.
           if (id === MILKY_WAY_ID) {
-            handleRef.current?.focusOnHome?.();
+            handleRef.current?.focusOnMilkyWay?.();
             return;
           }
           handleRef.current?.selectFamous?.(id);
