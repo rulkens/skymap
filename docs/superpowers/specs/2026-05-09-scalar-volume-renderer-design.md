@@ -114,14 +114,14 @@ Single shader pipeline shared across all fields; only the bind group differs bet
 
 ### Vertex stage
 
-A unit cube (8 verts, 36 indices, axis-aligned).  The vertex shader transforms by the field's `modelMatrix` and the camera's `viewProj` to draw the cube's bounding box.  Front-face culling so the fragment shader runs on the back faces (standard volume-rendering setup — gives the ray an entry surface to start marching from when the camera is outside the cube; for inside-the-cube cases we'll need a depth-aware fallback, see "Open questions").
+A unit cube (8 verts, 36 indices, axis-aligned).  The vertex shader transforms by the field's `modelMatrix` and the camera's `viewProj` to draw the cube's bounding box.  **Front-face culling** so only back faces rasterise — this is the production-standard setup for handling both inside-the-cube and outside-the-cube cases with the same pipeline.  Back faces always exist at the cube's full screen footprint regardless of camera position; front faces disappear when the camera enters the cube.  A full-screen quad would also work but pays for every screen pixel even when the cube projects to a small footprint (e.g., CF-4 viewed zoomed out), which becomes a real fragment-shader cost with multiple active cubes.
 
 ### Fragment stage — front-to-back raymarch
 
 For each fragment:
 
 1. Compute world-space ray from camera through the fragment.
-2. Intersect with the cube's local-space AABB (transform ray into local coords using the inverse model matrix).  Get `(tMin, tMax)`.
+2. Intersect with the cube's local-space AABB (transform ray into local coords using the inverse model matrix).  Get `(tMin, tMax)`, then `tMin = max(tMin, 0)` so a camera *inside* the cube starts marching from its own position rather than a negative entry point behind it.
 3. March from `tMin` to `tMax` in `STEP_COUNT = 192` fixed-size steps:
    - Sample the 3D texture (linear interpolation) at the current point.
    - Look up `RGBA` in the palette LUT using the sampled value.
@@ -235,9 +235,8 @@ Visual verification (per the *be meticulous with WGSL* memory): a small syntheti
 
 ## Open questions
 
-1. **Inside-the-cube rendering.**  The standard "render back faces, march from fragment" trick fails when the camera is *inside* the cube's bounding box (back faces aren't where the ray enters).  Need either a front-face fallback when the camera is inside, or a fullscreen-quad approach with explicit AABB intersection in the shader.  CF-4 covers ~500 Mpc — the camera will routinely be inside.  Resolve before implementation, probably by going straight to the fullscreen-quad approach.
-2. **Additive vs over compositing across fields.**  The spec assumes additive between fields.  This is right for "two distinct overlays", but if the user wants a single perceptually-coherent density (e.g., CF-4 inside its box, MCPM outside), over-compositing in registration order may read better.  Worth testing both with real data.
-3. **HDR vs LDR target.**  The current `renderFrame` HDR pipeline tone-maps everything together.  Volume renders should participate, but additive accumulation can blow out fast — may need a soft `tanh`-style limiter before write.
+1. **Additive vs over compositing across fields.**  The spec assumes additive between fields.  This is right for "two distinct overlays", but if the user wants a single perceptually-coherent density (e.g., CF-4 inside its box, MCPM outside), over-compositing in registration order may read better.  Worth testing both with real data.
+2. **HDR vs LDR target.**  The current `renderFrame` HDR pipeline tone-maps everything together.  Volume renders should participate, but additive accumulation can blow out fast — may need a soft `tanh`-style limiter before write.
 
 ## Future work
 
