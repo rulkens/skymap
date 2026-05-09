@@ -17,6 +17,7 @@ import type {
 } from '../services/loading/fetchers/famousMetaFetcher';
 import type { PgcAliasMap } from '../services/loading/fetchers/pgcAliasFetcher';
 import type { AssetSlot } from '../services/loading/types';
+import type { ScalarCube } from './ScalarCube';
 
 /**
  * Handle returned by `createEngine`. Allows the React layer to drive the
@@ -409,6 +410,75 @@ export type EngineHandle = {
    * Optional: present whenever the engine has a PGC-alias slot wired up.
    */
   loadPgcAliases?: () => Promise<PgcAliasMap>;
+
+  /**
+   * Register a new scalar-volume field from a decoded `ScalarCube`.
+   *
+   * Uploads the cube's voxel data to a GPU 3D texture and adds it to the
+   * renderer's active field set.  If a field with the same `handle` is
+   * already registered, it is replaced (the old GPU textures are released
+   * first).  Seeds `EngineSettingsState.volumeFields[handle]` with default
+   * `enabled: true` and `intensity: DEFAULT_VOLUME_FIELD_INTENSITY` if not
+   * already present (re-registering preserves any user-tuned values).
+   *
+   * Fires `onVolumeFieldsChanged` so the SettingsPanel can refresh its
+   * local list of registered fields.
+   *
+   * @param handle  Stable string key for this field (e.g. `'cf4-dm'`).
+   * @param cube    Decoded `ScalarCube` ready to upload.
+   */
+  addVolumeField?: (handle: string, cube: ScalarCube) => void;
+
+  /**
+   * Unregister a scalar-volume field and release its GPU resources.
+   *
+   * No-op if `handle` was never registered.  Removes the corresponding
+   * entry from `EngineSettingsState.volumeFields` so the SettingsPanel
+   * stops rendering controls for the absent field.  Fires
+   * `onVolumeFieldsChanged`.
+   *
+   * @param handle  The handle string passed to `addVolumeField`.
+   */
+  removeVolumeField?: (handle: string) => void;
+
+  /**
+   * Gate a single registered field on or off without unloading its GPU
+   * texture.  When `enabled` is `false`, the field is silenced for the
+   * duration but its GPU resources stay allocated so re-enabling it the
+   * same frame is cost-free.
+   *
+   * Updates `EngineSettingsState.volumeFields[handle].enabled` so the
+   * SettingsPanel checkbox stays in sync.  No-op if `handle` is not
+   * registered.
+   *
+   * @param handle   The handle string passed to `addVolumeField`.
+   * @param enabled  True to render this field; false to suppress it.
+   */
+  setVolumeFieldEnabled?: (handle: string, enabled: boolean) => void;
+
+  /**
+   * Set the linear mix-in intensity for a single registered field.
+   *
+   * Clamped to [0, 1] by the renderer; values outside that range are
+   * silently clamped.  At 0, the field is effectively invisible (same
+   * GPU cost as `setVolumeFieldEnabled(handle, false)`).  Updates
+   * `EngineSettingsState.volumeFields[handle].intensity`.  No-op if
+   * `handle` is not registered.
+   *
+   * @param handle     The handle string passed to `addVolumeField`.
+   * @param intensity  Mix-in weight in [0, 1].
+   */
+  setVolumeFieldIntensity?: (handle: string, intensity: number) => void;
+
+  /**
+   * Return the ordered list of currently registered field handles.
+   *
+   * Reflects the same set as `EngineSettingsState.volumeFields`.
+   * Returns `[]` when no fields are registered or the GPU renderer is
+   * not yet constructed.  The SettingsPanel uses this to render a
+   * per-field slider row for each entry.
+   */
+  listVolumeFields?: () => string[];
 
   /**
    * Flat read-only registry of every asset slot the engine owns, keyed by

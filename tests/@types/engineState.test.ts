@@ -46,6 +46,7 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
+  DEFAULT_VOLUMES_ENABLED,
 } from '../../src/data/defaults';
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
 import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/spaceMouseSubsystem';
@@ -87,6 +88,7 @@ describe('EngineState type', () => {
       filamentsEnabled: false,
       filamentIntensity: 1,
       volumesEnabled: false,
+      volumeFields: {},
       highlightFallback: false,
       realOnlyMode: false,
       depthFadeEnabled: true,
@@ -185,7 +187,8 @@ describe('EngineState type', () => {
       milkyWayEnabled: DEFAULT_MILKY_WAY_ENABLED,
       filamentsEnabled: DEFAULT_FILAMENTS_ENABLED,
       filamentIntensity: DEFAULT_FILAMENT_INTENSITY,
-      volumesEnabled: false,
+      volumesEnabled: DEFAULT_VOLUMES_ENABLED,
+      volumeFields: {},
       highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
       realOnlyMode: DEFAULT_REAL_ONLY_MODE,
       depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
@@ -225,6 +228,7 @@ describe('EngineState type', () => {
         filamentsEnabled: false,
         filamentIntensity: 1,
         volumesEnabled: false,
+        volumeFields: {},
         highlightFallback: false,
         realOnlyMode: false,
         depthFadeEnabled: true,

@@ -187,6 +187,23 @@ export type EngineCallbacks = {
    */
   onFpsChange?: (fps: number) => void;
   /**
+   * Fired when a volume field is registered or unregistered (so the
+   * SettingsPanel can refresh its mirrored field list).
+   *
+   * Called by `addVolumeField` (after the GPU upload completes) and
+   * `removeVolumeField` (after the entry is dropped from
+   * `EngineSettingsState.volumeFields`).  Does NOT fire for in-place
+   * mutations (`setVolumeFieldEnabled` / `setVolumeFieldIntensity`) because
+   * those only change per-field tunables, not the set membership —
+   * React can keep a checkbox/slider in sync via optimistic local state
+   * without re-reading the full list.
+   *
+   * Optional: only relevant when the SettingsPanel renders volume-field
+   * controls.  Callers that don't display a field list can omit it.
+   */
+  onVolumeFieldsChanged?: () => void;
+
+  /**
    * Fired exactly once, after the optional cosmic-web `filaments.bin` lands
    * and is uploaded to the renderer.  Reports the strip and vertex counts so
    * the UI can show e.g. "Filaments · 3,845 strips, 27,410 verts" alongside

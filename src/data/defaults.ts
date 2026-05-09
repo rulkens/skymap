@@ -220,6 +220,31 @@ export const DEFAULT_VISIBLE_SOURCE_MASK = ALL_VISIBLE_MASK;
  */
 export const DEFAULT_LOD_MODE: LodMode = 'manual';
 
+// ── Scalar-volume overlay ────────────────────────────────────────────────────
+
+/**
+ * Master toggle for the 3D scalar-field volume overlay defaults ON.
+ *
+ * The overlay renders additively into the same HDR offscreen target as the
+ * galaxy points pass.  At startup no fields are registered yet (the caller
+ * must call `addVolumeField` to load a cube), so this default has no visual
+ * effect until the first field arrives.  Defaulting to `true` means the
+ * overlay is ready to render as soon as the first field is added — the user
+ * doesn't have to hunt for a master toggle to see anything.
+ *
+ * Per-field `enabled` and `intensity` controls are the fine-grained knobs;
+ * this flag is the coarser user-facing "hide all volumes" emergency off.
+ */
+export const DEFAULT_VOLUMES_ENABLED = true;
+
+/**
+ * Default per-field intensity scale, in [0, 1].  0.5 is a practical
+ * starting point: strong enough to see the overlay, dim enough that it
+ * doesn't completely wash out the galaxy-point layer underneath.  The
+ * SettingsPanel slider lets the user tune per field.
+ */
+export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
+
 // ── SpaceMouse ─────────────────────────────────────────────────────────────
 
 /**

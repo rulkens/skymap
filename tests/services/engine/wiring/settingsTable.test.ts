@@ -53,6 +53,7 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
       filamentsEnabled: false,
       filamentIntensity: 0.5,
       volumesEnabled: false,
+      volumeFields: {},
       highlightFallback: true,
       realOnlyMode: false,
       depthFadeEnabled: true,

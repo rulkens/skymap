@@ -91,6 +91,8 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
+  DEFAULT_VOLUMES_ENABLED,
+  DEFAULT_VOLUME_FIELD_INTENSITY,
 } from '../../data/defaults';
 import type { LodMode, PointCloud, PointInfo } from '../../@types';
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
@@ -245,7 +247,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       milkyWayEnabled: DEFAULT_MILKY_WAY_ENABLED,
       filamentsEnabled: DEFAULT_FILAMENTS_ENABLED,
       filamentIntensity: DEFAULT_FILAMENT_INTENSITY,
-      volumesEnabled: false,
+      volumesEnabled: DEFAULT_VOLUMES_ENABLED,
+      // Starts empty; populated by addVolumeField / cleared by removeVolumeField.
+      // The SettingsPanel reads this bag to render per-field intensity sliders
+      // without going through the GPU handle.
+      volumeFields: {},
       highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
       realOnlyMode: DEFAULT_REAL_ONLY_MODE,
       depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
@@ -582,6 +588,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // with every other GPU handle in this bag.
       state.gpu.markerLineRenderer?.destroy();
       state.gpu.markerLineRenderer = null;
+      // Scalar-volume renderer owns: shared corner/index VBOs plus per-field
+      // r16float 3D textures, palette LUT textures, and uniform buffers.
+      // The 3D textures can be substantial (e.g. a 128³ cube at 2 bytes/voxel
+      // is 4 MB); releasing here prevents VRAM leaks on StrictMode remounts.
+      state.gpu.scalarVolumeRenderer?.destroy();
+      state.gpu.scalarVolumeRenderer = null;
       // Tear down the thumbnail subsystem (clears the atlas's evict
       // handler and aborts in-flight fetches' write-back).  The atlas's
       // GPU texture itself is released when the device is dropped —
@@ -893,6 +905,87 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const slot = state.assetSlots.pgcAlias;
       slot?.load();
       return awaitSlotReady(slot, new Map() as PgcAliasMap);
+    },
+
+    // ── Scalar-volume field management ────────────────────────────────────
+    //
+    // Five public methods to drive the ScalarVolumeRenderer from outside
+    // the engine (React shell, data-loading logic).  All five optional-
+    // chain through `state.gpu.scalarVolumeRenderer` so they're safe to
+    // call during the brief window before the GPU init IIFE completes —
+    // the renderer is null until `initGpu` runs but that window is
+    // typically less than one frame at browser-cold-start.
+
+    addVolumeField(handle, cube) {
+      // Upload the cube to the renderer.  If the renderer isn't ready
+      // yet, the call is a silent no-op — the field can be re-added
+      // once the engine boots.  In practice, callers load cubes after
+      // `onStatusChange({ kind: 'ready' })` fires, so the renderer is
+      // always constructed by the time addVolumeField is reachable from
+      // application code.
+      state.gpu.scalarVolumeRenderer?.addField(handle, cube);
+      // Seed the per-field settings entry with defaults if not already
+      // present — re-registering the same handle preserves any
+      // previously-tuned enabled/intensity values so the slider doesn't
+      // reset to defaults on e.g. a tier-swap reload.
+      if (!state.settings.volumeFields[handle]) {
+        state.settings.volumeFields[handle] = {
+          enabled: true,
+          intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+        };
+      }
+      // Forward the current per-field tunables into the renderer so the
+      // new upload inherits whatever the user set before re-registering.
+      state.gpu.scalarVolumeRenderer?.setIntensity(
+        handle,
+        state.settings.volumeFields[handle].intensity,
+      );
+      state.gpu.scalarVolumeRenderer?.setEnabled(
+        handle,
+        state.settings.volumeFields[handle].enabled,
+      );
+      // Let React know the field list changed so any SettingsPanel list
+      // re-renders with the new row.
+      cb.onVolumeFieldsChanged?.();
+      state.subsystems.scheduler.requestRender();
+    },
+
+    removeVolumeField(handle) {
+      // Release the renderer's GPU textures for this field.  If the
+      // renderer or the field itself is absent, `removeField` is a no-op.
+      state.gpu.scalarVolumeRenderer?.removeField(handle);
+      // Mirror the removal into the settings bag so the SettingsPanel
+      // stops rendering the slider row for this handle.
+      delete state.settings.volumeFields[handle];
+      cb.onVolumeFieldsChanged?.();
+      state.subsystems.scheduler.requestRender();
+    },
+
+    setVolumeFieldEnabled(handle, enabled) {
+      // Mutate the settings bag first so any optimistic React read sees
+      // the new value even before the next render.
+      if (state.settings.volumeFields[handle]) {
+        state.settings.volumeFields[handle].enabled = enabled;
+      }
+      state.gpu.scalarVolumeRenderer?.setEnabled(handle, enabled);
+      state.subsystems.scheduler.requestRender();
+    },
+
+    setVolumeFieldIntensity(handle, intensity) {
+      // The renderer clamps to [0, 1] internally; mirror the raw value
+      // here so the slider can be optimistic without needing to read back
+      // from the renderer.  Any clamping will show on the next frame.
+      if (state.settings.volumeFields[handle]) {
+        state.settings.volumeFields[handle].intensity = intensity;
+      }
+      state.gpu.scalarVolumeRenderer?.setIntensity(handle, intensity);
+      state.subsystems.scheduler.requestRender();
+    },
+
+    listVolumeFields() {
+      // Delegates to the renderer, which is the authoritative list.
+      // Falls back to [] when the renderer is not yet constructed.
+      return state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
     },
 
     // ── SpaceMouse 6DOF input setters ─────────────────────────────────────
