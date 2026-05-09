@@ -86,6 +86,8 @@ import { famousMetaFetcher } from '../../loading/fetchers/famousMetaFetcher';
 import { pgcAliasFetcher } from '../../loading/fetchers/pgcAliasFetcher';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
+import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
+import { syntheticVolumeFetcher } from '../../loading/fetchers/syntheticVolumeFetcher';
 
 import type { AssetSlot } from '../../loading/types';
 import type { EngineState } from '../../../@types';
@@ -217,6 +219,64 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   });
   state.assetSlots.pgcAlias = pgcAliasSlot;
 
+  // ── Synthetic volume slot (dev-only) ─────────────────────────────
+  //
+  // Routes the Gaussian-blob smoke-test cube through the same
+  // `createAssetSlot` path as real CF-4 / MCPM cubes will use when
+  // those fetchers land.  By going through the slot the synthetic cube
+  // gets the same fade-in, `LoadingDevPanel` row, race-checked commit,
+  // and retry semantics as every real volume fetch — without any
+  // bespoke "synthetic shortcut" in the render loop.
+  //
+  // **Why `import.meta.env.DEV`?**  The synthetic cube is only useful
+  // in development (it exists to give the developer something visible
+  // before real cubes are plumbed).  Wrapping the slot mint in the DEV
+  // guard means Vite's dead-code elimination removes the entire block
+  // (and tree-shakes `syntheticVolumeFetcher.ts` + the Gaussian
+  // generator) from production bundles.  The `syntheticVolume?` field
+  // on `EngineAssetSlots` is optional rather than `| null` to reflect
+  // that it is simply absent in production.
+  //
+  // **Commit pattern.**  The commit replicates the same operations that
+  // `engineHandle.addVolumeField(handle, cube)` performs, but directly
+  // against `state` rather than through the public handle.  The public
+  // handle is assigned to `deps.handleRef.current` AFTER
+  // `runBootstrapPhases` resolves — so `handleRef.current` is null when
+  // `wireSlots` runs.  The slot's commit callback fires asynchronously
+  // (after the fetch resolves), at which point the handle IS set; but
+  // relying on that timing is fragile.  Accessing `state` directly (the
+  // same pattern the `filamentSlot` commit uses) is structurally safe:
+  // `state` is fully initialised before any slot commit runs.  The
+  // settings-bag seed and renderer calls are intentionally the same
+  // four lines as `addVolumeField` so both paths stay in sync when the
+  // engine's volume-field logic changes.
+  if (import.meta.env.DEV) {
+    const syntheticVolumeSlot = createAssetSlot({
+      name: 'syntheticVolume',
+      fetch: syntheticVolumeFetcher,
+      commit: async (cube) => {
+        const renderer = state.gpu.scalarVolumeRenderer;
+        if (!renderer) return;
+        const handle = 'debug-gaussian';
+        renderer.addField(handle, cube);
+        // Seed the per-field settings entry with defaults if not already
+        // present — mirrors the same guard in `addVolumeField` so
+        // re-registering the synthetic slot (e.g. after a dev hot-reload)
+        // preserves any previously-tuned enabled/intensity values.
+        if (!state.settings.volumeFields[handle]) {
+          state.settings.volumeFields[handle] = {
+            enabled: true,
+            intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+          };
+        }
+        renderer.setIntensity(handle, state.settings.volumeFields[handle].intensity);
+        renderer.setEnabled(handle, state.settings.volumeFields[handle].enabled);
+        state.subsystems.scheduler.requestRender();
+      },
+    });
+    state.assetSlots.syntheticVolume = syntheticVolumeSlot;
+  }
+
   // ── Loading-bar emitter ──────────────────────────────────────────
   //
   // Post-Task-12 the per-engine loading-bar aggregator is a thin
@@ -247,6 +307,16 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   allSlots.set(filamentSlot.name, filamentSlot as unknown as AssetSlot<unknown, unknown>);
   allSlots.set(famousMetaSlot.name, famousMetaSlot as unknown as AssetSlot<unknown, unknown>);
   allSlots.set(pgcAliasSlot.name, pgcAliasSlot as unknown as AssetSlot<unknown, unknown>);
+  // Register the synthetic volume slot only when it was minted (dev builds).
+  // Doing the registration here (after the DEV-guarded mint block) keeps the
+  // `allSlots` population site cohesive with its neighbours instead of
+  // scattering it into the DEV branch.
+  if (state.assetSlots.syntheticVolume) {
+    allSlots.set(
+      state.assetSlots.syntheticVolume.name,
+      state.assetSlots.syntheticVolume as unknown as AssetSlot<unknown, unknown>,
+    );
+  }
 
   const progressEmitter = createLoadProgressEmitter(
     (snapshot) => cb.onLoadProgress?.(snapshot),

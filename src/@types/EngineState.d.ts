@@ -88,6 +88,8 @@ import type { FilamentCloud } from './FilamentCloud';
 import type { FilamentReq } from '../services/loading/fetchers/filamentFetcher';
 import type { FamousPayload } from '../services/loading/fetchers/famousMetaFetcher';
 import type { PgcAliasMap } from '../services/loading/fetchers/pgcAliasFetcher';
+import type { ScalarCube } from './ScalarCube';
+import type { SyntheticVolumeReq } from '../services/loading/fetchers/syntheticVolumeFetcher';
 import type { Source } from '../data/sources';
 
 /**
@@ -144,6 +146,20 @@ export type EngineAssetSlots = {
    * load, and so retry/cancel semantics match.
    */
   pgcAlias: AssetSlot<PgcAliasMap, void> | null;
+  /**
+   * Dev-only slot for the synthetic Gaussian cube used as a smoke-test
+   * stand-in for real CF-4 / MCPM cubes.  `undefined` (not null) in
+   * production builds — the `wireSlots` phase only mints it when
+   * `import.meta.env.DEV` is true, so tree-shaking removes the fetcher
+   * module entirely from production bundles.
+   *
+   * The `?` (optional) rather than `| null` mirrors how TypeScript
+   * expresses "this property may not exist on the object at all", which
+   * is more accurate here than null-then-set: in production the field
+   * is never assigned, so accessing it returns `undefined` rather than
+   * null.  Consumers should guard with `?.` at the call site.
+   */
+  syntheticVolume?: AssetSlot<ScalarCube, SyntheticVolumeReq>;
 };
 
 export type EngineState = {
