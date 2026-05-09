@@ -1,128 +1,111 @@
-/**
- * Tests for CollapsibleSection.
- *
- * ### Why .test.ts not .test.tsx
- *
- * The project's vitest config runs in the `node` environment with no DOM
- * library installed (see CLAUDE.md).  We test the mount-time render via
- * `renderToStaticMarkup`, which gives us the initial DOM tree as a string.
- * We can't drive clicks without a real DOM, but the static branches —
- * defaultOpen, headerToggle visual state — are enough surface to keep
- * regressions out.  Toggle-via-click is verified manually against the live
- * dev server.
- *
- * ### What's covered
- *
- *   1. defaultOpen omitted = closed (the implicit default flipped from
- *      `true` to `false` so a fresh visitor sees a tidy panel of section
- *      headers rather than the full ~80-control wall).
- *   2. defaultOpen={true} renders open.
- *   3. defaultOpen={false} renders closed (children stay in DOM — collapse
- *      is CSS-only, see comments below).
- *   4. headerToggle prop pair renders the master checkbox in the correct
- *      checked/unchecked visual state.
- */
-
-import { describe, expect, it } from 'vitest';
+// @vitest-environment jsdom
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { CollapsibleSection } from '../../../src/components/SettingsPanel/CollapsibleSection';
 
-describe('CollapsibleSection initial render', () => {
-  it('is closed by default (collapsed first impression)', () => {
-    const html = renderToStaticMarkup(
+describe('CollapsibleSection', () => {
+  it('toggles aria-expanded on the header button when clicked', async () => {
+    // Why aria-expanded rather than visibility?  The body is a CSS-Grid
+    // child whose `grid-template-rows` animates from 0fr to 1fr — the
+    // body element stays mounted in both states.  CSS-modules class
+    // names don't actually load styles in jsdom, so visibility checks
+    // would lie either way.  aria-expanded is the stable, intent-level
+    // contract: assistive tech reads it; we should test it.
+    const user = userEvent.setup();
+    render(
       createElement(CollapsibleSection, {
-        title: 'Surveys',
-        children: createElement('span', { 'data-testid': 'child' }, 'CHILD'),
-      }),
-    );
-    expect(html).toContain('aria-expanded="false"');
-    expect(html).not.toMatch(/_bodyWrapperOpen_/);
-  });
-
-  it('respects defaultOpen=true on first visit', () => {
-    const html = renderToStaticMarkup(
-      createElement(CollapsibleSection, {
-        title: 'Surveys',
-        defaultOpen: true,
-        children: createElement('span', { 'data-testid': 'child' }, 'CHILD'),
-      }),
-    );
-    expect(html).toContain('aria-expanded="true"');
-    expect(html).toContain('CHILD');
-  });
-
-  it('respects defaultOpen=false on first visit', () => {
-    const html = renderToStaticMarkup(
-      createElement(CollapsibleSection, {
-        title: 'Surveys',
+        title: 'Display',
         defaultOpen: false,
-        children: createElement('span', null, 'CHILD'),
+        children: createElement('p', null, 'body content'),
       }),
     );
-    expect(html).toContain('aria-expanded="false"');
-    // Children stay in the DOM when closed — collapse is a CSS-only
-    // transition (grid-template-rows 0fr → 1fr) so the body never
-    // unmounts.  Verify the closed state via the markers that DO change:
-    // aria-expanded on the button, absence of the `bodyWrapperOpen`
-    // CSS-module modifier on the wrapper, aria-hidden on the wrapper.
-    expect(html).not.toMatch(/_bodyWrapperOpen_/);
-    expect(html).toContain('aria-hidden="true"');
+    const header = screen.getByRole('button', { name: /display/i });
+    expect(header).toHaveAttribute('aria-expanded', 'false');
+    await user.click(header);
+    expect(header).toHaveAttribute('aria-expanded', 'true');
+    await user.click(header);
+    expect(header).toHaveAttribute('aria-expanded', 'false');
   });
 
-  // ── headerToggle (master on/off checkbox in the section header) ──────────
-  //
-  // The optional prop pair lets a section render a master checkbox between
-  // the chevron and the title.  Verified by string-matching the static
-  // markup — the runtime click semantics (collapse vs checkbox
-  // independence) are exercised manually against the live dev server.
-
-  it('renders no header checkbox when headerToggle is omitted', () => {
-    const html = renderToStaticMarkup(
+  it('renders a header whose initial aria-expanded reflects defaultOpen', () => {
+    render(
       createElement(CollapsibleSection, {
-        title: 'Surveys',
-        children: createElement('span', null, 'CHILD'),
+        title: 'Display',
+        defaultOpen: true,
+        children: 'body',
       }),
     );
-    // No <input type="checkbox"> in the header — the only inputs we
-    // render are inside `children`, and we passed none here.
-    expect(html).not.toContain('type="checkbox"');
+    expect(
+      screen.getByRole('button', { name: /display/i }),
+    ).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('renders a checked header checkbox when headerToggle=true', () => {
-    const html = renderToStaticMarkup(
+  it('honors the headerToggleIndeterminate prop on the master checkbox', () => {
+    // The DOM IDL for HTMLInputElement.indeterminate is settable but
+    // not reflected as an attribute, so pre-jsdom (renderToStaticMarkup)
+    // this couldn't be tested.  The component sets it imperatively in
+    // useEffect against a ref; a real DOM exercises that effect.
+    //
+    // The master checkbox only renders when BOTH headerToggle and
+    // onHeaderToggleChange are supplied, so this test wires both.
+    render(
       createElement(CollapsibleSection, {
-        title: 'Surveys',
-        headerToggle: true,
-        onHeaderToggleChange: () => {},
-        children: createElement('span', null, 'CHILD'),
-      }),
-    );
-    expect(html).toContain('type="checkbox"');
-    // React serialises `checked={true}` as the bare `checked` attribute
-    // in static markup.
-    expect(html).toMatch(/type="checkbox"[^>]*checked/);
-  });
-
-  it('renders an unchecked header checkbox when headerToggle=false', () => {
-    const html = renderToStaticMarkup(
-      createElement(CollapsibleSection, {
-        title: 'Filaments',
+        title: 'Display',
+        defaultOpen: true,
         headerToggle: false,
         onHeaderToggleChange: () => {},
-        children: createElement('span', null, 'CHILD'),
+        headerToggleIndeterminate: true,
+        children: 'body',
       }),
     );
-    expect(html).toContain('type="checkbox"');
-    // Static markup omits the `checked` attribute when checked={false}.
-    expect(html).not.toMatch(/type="checkbox"[^>]*checked/);
+    const toggle = screen.getByRole('checkbox', {
+      name: /toggle display/i,
+    }) as HTMLInputElement;
+    expect(toggle.indeterminate).toBe(true);
   });
 
-  // The indeterminate visual state is set imperatively after mount via
-  // `el.indeterminate = true` (see CollapsibleSection.tsx for the
-  // rationale: it's a DOM IDL property, not a JSX-serialisable
-  // attribute).  `renderToStaticMarkup` returns a string without ever
-  // mounting a real DOM element, so we cannot exercise the indeterminate
-  // state from this test environment — verified manually against the dev
-  // server when SOME but not ALL surveys are enabled.
+  it('calls onHeaderToggleChange when the master checkbox is flipped', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      createElement(CollapsibleSection, {
+        title: 'Display',
+        defaultOpen: true,
+        headerToggle: false,
+        onHeaderToggleChange: onChange,
+        children: 'body',
+      }),
+    );
+    await user.click(
+      screen.getByRole('checkbox', { name: /toggle display/i }),
+    );
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
+  it('keeps collapse independent of the master checkbox click', async () => {
+    // The component stops propagation on the checkbox events so a click
+    // on the checkbox doesn't bubble to the surrounding header <button>
+    // and toggle the section open/closed.  Pre-jsdom this couldn't be
+    // verified — there was no event bubble to interrupt.
+    const user = userEvent.setup();
+    render(
+      createElement(CollapsibleSection, {
+        title: 'Display',
+        defaultOpen: true,
+        headerToggle: false,
+        onHeaderToggleChange: () => {},
+        children: 'body',
+      }),
+    );
+    const header = screen.getByRole('button', { name: /display/i });
+    expect(header).toHaveAttribute('aria-expanded', 'true');
+    await user.click(
+      screen.getByRole('checkbox', { name: /toggle display/i }),
+    );
+    // Section stays open; only the checkbox flipped.
+    expect(header).toHaveAttribute('aria-expanded', 'true');
+  });
 });
