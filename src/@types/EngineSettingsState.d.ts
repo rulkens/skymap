@@ -35,6 +35,32 @@
  */
 
 import type { ToneMapCurve } from '../data/toneMapCurve';
+import type { ScalarFieldPaletteId } from './ScalarCube';
+
+/**
+ * Per-field runtime controls for one registered scalar-volume field.
+ *
+ * Stored in `EngineSettingsState.volumeFields` keyed by the same handle
+ * string passed to `addVolumeField` / `removeVolumeField`.  The engine
+ * seeds these at registration time (via `DEFAULT_VOLUME_FIELD_INTENSITY`)
+ * and keeps them in sync with every `setVolumeFieldEnabled` /
+ * `setVolumeFieldIntensity` call, so the SettingsPanel can read the
+ * authoritative per-field state without polling the GPU handle.
+ */
+export type VolumeFieldSettings = {
+  /** When false, `scalarVolumeRenderer.setEnabled(handle, false)` silences this field. */
+  enabled: boolean;
+  /** Linear mix-in weight in [0, 1].  Seeded from `DEFAULT_VOLUME_FIELD_INTENSITY`. */
+  intensity: number;
+  /**
+   * Palette LUT id for this field.  Each volume field owns its own LUT
+   * texture (see `scalarVolumeRenderer.ts`); this value mirrors the
+   * renderer's per-field palette so the SettingsPanel dropdown can read
+   * authoritative state without going through the GPU handle.  Seeded
+   * from `cube.paletteId` at registration time.
+   */
+  paletteId: ScalarFieldPaletteId;
+};
 
 export type EngineSettingsState = {
   pointSizePx: number;
@@ -51,6 +77,31 @@ export type EngineSettingsState = {
    * `data/defaults.ts` for the rationale.
    */
   filamentsEnabled: boolean;
+  /**
+   * Whether the 3D scalar-field volume overlay is rendered.  Multiple
+   * field types are supported (CF-4 dark-matter, MCPM reionization,
+   * synthetic test fixtures, …); this is the master gate — when false,
+   * `scalarVolumePass.enabled` short-circuits before consulting the
+   * renderer, so all cubes are skipped at zero GPU cost.
+   *
+   * Default ON.  Individual fields also have per-handle `enabled` and
+   * `intensity` controls on `ScalarVolumeRenderer`; this flag is the
+   * coarser user-facing toggle ("hide all volumes").
+   */
+  volumesEnabled: boolean;
+  /**
+   * Per-handle settings for every registered scalar-volume field.
+   *
+   * Keys are the handle strings passed to `addVolumeField`; values are
+   * `VolumeFieldSettings` objects seeded at registration time and mutated
+   * by `setVolumeFieldEnabled` / `setVolumeFieldIntensity`.  Entries are
+   * added by `addVolumeField` and removed by `removeVolumeField`, so
+   * this Record always mirrors the renderer's active field set.
+   *
+   * Empty at engine startup (`{}`).  The SettingsPanel reads this bag to
+   * render per-field sliders without reaching through to the GPU handle.
+   */
+  volumeFields: Record<string, VolumeFieldSettings>;
   /**
    * Filament-overlay intensity scale, in [0, 1].  1.0 = unchanged shader
    * output; lower values dim the cosmic-web overlay against the bright

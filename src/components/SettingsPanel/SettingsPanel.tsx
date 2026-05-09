@@ -42,6 +42,8 @@ import type { Tier } from '../../@types/Tier';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
+import type { ScalarFieldPaletteId } from '../../@types/ScalarCube';
+import { VolumeFieldRow } from './VolumeFieldRow';
 import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
 import { TierSelector } from './TierSelector';
@@ -266,6 +268,73 @@ type Props = {
    * open behaviour.  Users can still tap the title row to expand.
    */
   defaultOpen?: boolean;
+
+  // ── Scalar-volume overlay ───────────────────────────────────────────────
+  //
+  // All four props are optional so older call sites (and the Vitest snapshot
+  // suite) continue to typecheck unchanged.  The whole section is gated on
+  // all of them being present — same idiom as the filaments section above.
+  //
+  // `volumeFields` drives a list-driven layout: one row per registered field,
+  // each with an enable checkbox and an intensity slider.  The list is rebuilt
+  // whenever the engine fires `onVolumeFieldsChanged`, so adding a cube at
+  // runtime appears immediately in the panel.
+  //
+  // `volumesEnabled` is the master toggle in the section header — same shape
+  // as `filamentsEnabled` / the survey master checkbox.  Turning it off
+  // silences every registered field without destroying their per-field
+  // tunable state.
+
+  /** Master on/off for all registered volume fields.  Optional — omitting hides the section. */
+  volumesEnabled?: boolean;
+  /** Fired when the user toggles the master "Volumes" checkbox. */
+  onVolumesEnabledChange?: (enabled: boolean) => void;
+  /**
+   * Snapshot of every registered field's UI state — one entry per field.
+   * Built by `engineHandle.getVolumeFieldsState()` on each
+   * `onVolumeFieldsChanged` callback.  Optional — when absent the
+   * Volumes section is hidden.
+   */
+  volumeFields?: ReadonlyArray<VolumeFieldRowData>;
+  /** Fired when the user toggles an individual field's enable checkbox. */
+  onVolumeFieldEnabledChange?: (handle: string, enabled: boolean) => void;
+  /** Fired when the user moves an individual field's intensity slider. */
+  onVolumeFieldIntensityChange?: (handle: string, intensity: number) => void;
+  /**
+   * Fired when the user picks a different palette from a field's dropdown.
+   * Optional — when absent the per-field palette dropdown is hidden but
+   * the rest of the row (enable checkbox + intensity slider) still
+   * renders, so older call sites are unaffected.
+   */
+  onVolumeFieldPaletteChange?: (handle: string, id: ScalarFieldPaletteId) => void;
+};
+
+// ── VolumeFieldRowData ─────────────────────────────────────────────────────────
+
+/**
+ * The data the SettingsPanel needs to render a single volume-field row.
+ *
+ * Produced by `engineHandle.getVolumeFieldsState()` and held in App.tsx
+ * React state; rebuilt on every `onVolumeFieldsChanged` callback so the
+ * panel always reflects the live field registry without a full re-render
+ * of the engine.
+ *
+ * The `label` field defaults to the `handle` string when the field was
+ * registered without an explicit human-readable name.  A future
+ * `addVolumeField({ handle, label, ... })` API would populate it from
+ * caller metadata.
+ */
+export type VolumeFieldRowData = {
+  /** Stable key matching the handle passed to `addVolumeField`. */
+  handle: string;
+  /** Human-readable display name; defaults to the handle if not provided. */
+  label: string;
+  /** Whether this field is currently included in the render pass. */
+  enabled: boolean;
+  /** Linear mix-in weight in [0, 1] applied to this field's voxel values. */
+  intensity: number;
+  /** Palette LUT id for this field's colour ramp. */
+  paletteId: ScalarFieldPaletteId;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
@@ -331,6 +400,12 @@ export function SettingsPanel({
   exposure,
   onExposureChange,
   defaultOpen,
+  volumesEnabled,
+  onVolumesEnabledChange,
+  volumeFields,
+  onVolumeFieldEnabledChange,
+  onVolumeFieldIntensityChange,
+  onVolumeFieldPaletteChange,
 }: Props): ReactNode {
   // Tier selector: rendered only when both pieces wired by the parent.  Same
   // opt-in idiom as every other optional section in this panel.  The selector
@@ -379,6 +454,19 @@ export function SettingsPanel({
     filamentsEnabled === true &&
     filamentIntensity !== undefined &&
     onFilamentIntensityChange !== undefined;
+
+  // Volumes section: all five props must be wired or we hide the section.
+  // Requiring all five (master toggle + master callback + field list + field
+  // callbacks) prevents a half-rendered UI where the master checkbox exists
+  // but per-field rows can't respond, or vice versa.  Older call sites that
+  // pass none of them still see no Volumes section at all.
+  const showVolumesSection =
+    volumesEnabled !== undefined &&
+    onVolumesEnabledChange !== undefined &&
+    volumeFields !== undefined &&
+    onVolumeFieldEnabledChange !== undefined &&
+    onVolumeFieldIntensityChange !== undefined;
+
 
   // Density-correction section: rendered only when both the current mode and
   // both change-callbacks are wired by the parent.  We require all four
@@ -580,6 +668,58 @@ export function SettingsPanel({
                 // nothing to drag.  This matches the pattern used by
                 // the SpaceMouse section's "not connected" hint.
                 <div className={styles.panelMode}>enable to adjust intensity</div>
+              )}
+            </CollapsibleSection>
+          )}
+
+          {/* ── Scalar-volume overlay ───────────────────────────────────────── */}
+          {/*
+        List-driven section: one row per registered field, each with an
+        enable checkbox and an intensity slider.  The field list is rebuilt
+        whenever the engine fires `onVolumeFieldsChanged` (add/remove), so
+        registering a cube at runtime causes this section to grow a new row
+        without any manual refresh.
+
+        The master checkbox in the section header follows the same pattern
+        as the Filaments toggle: clicking it does NOT expand/collapse — the
+        collapse chevron handles that.  The checkbox acts as a coarse "hide
+        all volumes" emergency off while preserving per-field tunable state.
+
+        Empty-state hint: when no fields are registered yet, the body shows
+        a faint italic line rather than an empty white box — same idiom the
+        SpaceMouse section uses for its "not connected" hint.
+
+        Default-closed (`defaultOpen` omitted, so it falls back to
+        `false`) because no fields are registered on first paint; the
+        user only needs this section when they've explicitly loaded a cube.
+      */}
+          {showVolumesSection && (
+            <CollapsibleSection
+              title="Volumes"
+              headerToggle={volumesEnabled}
+              onHeaderToggleChange={(v) => onVolumesEnabledChange!(v)}
+            >
+              {volumeFields!.length === 0 ? (
+                // Empty state — no cubes registered yet.  The hint mirrors the
+                // SpaceMouse "not connected" line in style (panelMode) so the
+                // visual vocabulary stays consistent.  The user discovers the
+                // feature exists here and knows to call `addVolumeField` to
+                // populate it.
+                <div className={styles.panelMode}>No volume fields registered.</div>
+              ) : (
+                volumeFields!.map((field) => (
+                  <VolumeFieldRow
+                    key={field.handle}
+                    handle={field.handle}
+                    label={field.label}
+                    enabled={field.enabled}
+                    intensity={field.intensity}
+                    paletteId={field.paletteId}
+                    onEnabledChange={onVolumeFieldEnabledChange!}
+                    onIntensityChange={onVolumeFieldIntensityChange!}
+                    onPaletteChange={onVolumeFieldPaletteChange}
+                  />
+                ))
               )}
             </CollapsibleSection>
           )}

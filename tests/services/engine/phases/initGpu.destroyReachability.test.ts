@@ -117,6 +117,10 @@ vi.mock('../../../../src/services/gpu/renderers/markerLineRenderer', () => ({
   createMarkerLineRenderer: vi.fn(() => makeStub('markerLineRenderer')),
 }));
 
+vi.mock('../../../../src/services/gpu/renderers/scalarVolumeRenderer', () => ({
+  createScalarVolumeRenderer: vi.fn(() => makeStub('scalarVolumeRenderer')),
+}));
+
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlas', () => ({
   loadFontAtlas: vi.fn(async () => ({
     metrics: { __mockMetrics: true },
@@ -156,6 +160,7 @@ function makeState(): EngineState {
       diskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
+      scalarVolumeRenderer: null,
     },
     subsystems: {
       biasCorrection: {

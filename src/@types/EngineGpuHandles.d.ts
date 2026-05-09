@@ -50,6 +50,7 @@ import type { createPickRenderer } from '../services/gpu/renderers/pickRenderer'
 import type { FilamentRenderer } from '../services/gpu/renderers/filamentRenderer';
 import type { LabelRenderer } from '../services/gpu/renderers/labelRenderer';
 import type { MarkerLineRenderer } from '../services/gpu/renderers/markerLineRenderer';
+import type { ScalarVolumeRenderer } from '../services/gpu/renderers/scalarVolumeRenderer';
 import type { ThumbnailRenderer } from '../services/gpu/renderers/thumbnailRenderer';
 import type { DiskRenderer } from '../services/gpu/renderers/diskRenderer';
 import type { ProceduralDiskRenderer } from '../services/gpu/renderers/proceduralDiskRenderer';
@@ -133,4 +134,16 @@ export type EngineGpuHandles = {
    * exclusion as `thumbnailRenderer` above.
    */
   milkyWayRenderer: MilkyWayRenderer | null;
+  /**
+   * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
+   * constructs it (same phase as the other optional renderers).
+   * Excluded from the `isEngineReady` predicate — the renderer is
+   * optional at runtime; the `scalarVolumePass.enabled` gate checks the
+   * master `volumesEnabled` setting first and then consults
+   * `hasActiveFields()`, so a null handle (pre-bootstrap or destroyed)
+   * is silently a no-op.  Stored here so `destroy()` can release every
+   * per-field GPU buffer (3D volume textures, palette LUTs, uniform
+   * buffers, corner / index VBOs).
+   */
+  scalarVolumeRenderer: ScalarVolumeRenderer | null;
 };

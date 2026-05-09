@@ -86,8 +86,12 @@ import { famousMetaFetcher } from '../../loading/fetchers/famousMetaFetcher';
 import { pgcAliasFetcher } from '../../loading/fetchers/pgcAliasFetcher';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
+import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
+import { syntheticVolumeFetcher } from '../../loading/fetchers/syntheticVolumeFetcher';
 
 import type { AssetSlot } from '../../loading/types';
+import type { ScalarCube } from '../../../@types/ScalarCube';
+import type { SyntheticVolumeReq } from '../../loading/fetchers/syntheticVolumeFetcher';
 import type { EngineState } from '../../../@types';
 import type { BootstrapDeps } from './bootstrap';
 
@@ -217,6 +221,108 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   });
   state.assetSlots.pgcAlias = pgcAliasSlot;
 
+  // ── Synthetic volume slot (dev-only or `?volumes=1`) ─────────────
+  //
+  // Routes the Gaussian-blob smoke-test cube through the same
+  // `createAssetSlot` path as real CF-4 / MCPM cubes will use when
+  // those fetchers land.  By going through the slot the synthetic cube
+  // gets the same fade-in, `LoadingDevPanel` row, race-checked commit,
+  // and retry semantics as every real volume fetch — without any
+  // bespoke "synthetic shortcut" in the render loop.
+  //
+  // **Visibility gate.**  The synthetic cubes are debug fixtures, not
+  // shipped content, so they only mint when:
+  //   - `import.meta.env.DEV` is true (smoke-test loop in `npm run dev`), OR
+  //   - the URL contains `?volumes=1` (escape hatch for inspecting the
+  //     overlay on the deployed site).
+  //
+  // The same gate drives the SettingsPanel "Volumes" section in
+  // `App.tsx` (`volumesUiEnabled`) — keeping the two in lockstep means
+  // the section is never empty in dev and never visible-but-empty in
+  // prod.  Vite's dead-code elimination still tree-shakes the entire
+  // synthetic block from production bundles (the `?volumes=1` branch
+  // is reachable but the underlying fetcher / generator imports stay,
+  // which is the cost of the escape hatch).
+  //
+  // **Commit pattern.**  The commit replicates the same operations that
+  // `engineHandle.addVolumeField(handle, cube)` performs, but directly
+  // against `state` rather than through the public handle.  The public
+  // handle is assigned to `deps.handleRef.current` AFTER
+  // `runBootstrapPhases` resolves — so `handleRef.current` is null when
+  // `wireSlots` runs.  The slot's commit callback fires asynchronously
+  // (after the fetch resolves), at which point the handle IS set; but
+  // relying on that timing is fragile.  Accessing `state` directly (the
+  // same pattern the `filamentSlot` commit uses) is structurally safe:
+  // `state` is fully initialised before any slot commit runs.  The
+  // settings-bag seed and renderer calls are intentionally the same
+  // four lines as `addVolumeField` so both paths stay in sync when the
+  // engine's volume-field logic changes.
+  // Mirror of App.tsx's `volumesUiEnabled` gate.  Computed inline (not
+  // hoisted) because wireSlots is one-shot at engine init; checking the
+  // URL once here is cheaper than threading a flag through the deps bag.
+  const volumesEnabledByUrl =
+    typeof window !== 'undefined' &&
+    (() => {
+      try {
+        return new URLSearchParams(window.location.search).has('volumes');
+      } catch {
+        return false;
+      }
+    })();
+  if (import.meta.env.DEV || volumesEnabledByUrl) {
+    // Helper that mints one synthetic-volume slot.  The handle and the
+    // default-enabled flag are baked into a closure (the AssetSlot
+    // commit signature only sees the decoded payload, not the request,
+    // so per-fixture identity has to ride along on the slot).  Three
+    // sibling slots share this helper; refactoring to a Map of three
+    // would lose the per-handle commit closure that's the whole point.
+    const mintSyntheticVolumeSlot = (
+      handle: string,
+      defaultEnabled: boolean,
+    ): AssetSlot<ScalarCube, SyntheticVolumeReq> =>
+      createAssetSlot({
+        name: `syntheticVolume:${handle}`,
+        fetch: syntheticVolumeFetcher,
+        commit: async (cube) => {
+          const renderer = state.gpu.scalarVolumeRenderer;
+          if (!renderer) return;
+          renderer.addField(handle, cube);
+          // Seed the per-field settings entry with defaults if not
+          // already present — mirrors the guard in `addVolumeField`
+          // so re-registering preserves any previously-tuned values.
+          if (!state.settings.volumeFields[handle]) {
+            state.settings.volumeFields[handle] = {
+              enabled: defaultEnabled,
+              intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+              paletteId: cube.paletteId,
+            };
+          }
+          const persisted = state.settings.volumeFields[handle];
+          renderer.setIntensity(handle, persisted.intensity);
+          renderer.setEnabled(handle, persisted.enabled);
+          renderer.setFieldPalette(handle, persisted.paletteId);
+          // Fire the same React-facing callback that engineHandle's
+          // addVolumeField fires.  Without this, the SettingsPanel
+          // never learns the new field exists — its mirror is rebuilt
+          // only on this callback.  We're bypassing the public handle
+          // (per the docblock above) so we have to fire it ourselves.
+          cb.onVolumeFieldsChanged?.();
+          state.subsystems.scheduler.requestRender();
+        },
+      });
+
+    // The Gaussian is the canonical "is anything visible?" smoke test
+    // and defaults to enabled.  The two grids (Cartesian + spherical)
+    // are diagnostic fixtures for axis/scale/origin verification —
+    // they register but stay OFF so the scene doesn't get cluttered
+    // on every dev boot; the user opts them in via the Volumes panel.
+    state.assetSlots.syntheticVolumes = {
+      'debug-gaussian': mintSyntheticVolumeSlot('debug-gaussian', true),
+      'debug-cartesian': mintSyntheticVolumeSlot('debug-cartesian', false),
+      'debug-spherical': mintSyntheticVolumeSlot('debug-spherical', false),
+    };
+  }
+
   // ── Loading-bar emitter ──────────────────────────────────────────
   //
   // Post-Task-12 the per-engine loading-bar aggregator is a thin
@@ -247,6 +353,15 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   allSlots.set(filamentSlot.name, filamentSlot as unknown as AssetSlot<unknown, unknown>);
   allSlots.set(famousMetaSlot.name, famousMetaSlot as unknown as AssetSlot<unknown, unknown>);
   allSlots.set(pgcAliasSlot.name, pgcAliasSlot as unknown as AssetSlot<unknown, unknown>);
+  // Register the synthetic volume slots only when they were minted (dev
+  // builds).  Doing the registration here (after the DEV-guarded mint
+  // block) keeps the `allSlots` population site cohesive with its
+  // neighbours instead of scattering it into the DEV branch.
+  if (state.assetSlots.syntheticVolumes) {
+    for (const slot of Object.values(state.assetSlots.syntheticVolumes)) {
+      allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
+    }
+  }
 
   const progressEmitter = createLoadProgressEmitter(
     (snapshot) => cb.onLoadProgress?.(snapshot),

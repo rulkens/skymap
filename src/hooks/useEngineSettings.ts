@@ -60,7 +60,9 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
+  DEFAULT_VOLUMES_ENABLED,
 } from '../data/defaults';
+import type { VolumeFieldRowData } from '../components/SettingsPanel/SettingsPanel';
 
 export type EngineSettingsState = {
   pointSize: number;
@@ -80,6 +82,20 @@ export type EngineSettingsState = {
   absMagLimit: number;
   toneMapCurve: ToneMapCurve;
   exposure: number;
+  /**
+   * Master toggle for the scalar-volume overlay.  Mirrors
+   * `EngineSettingsState.volumesEnabled` on the engine side.  No echo
+   * callback — React owns it optimistically, same as `filamentsEnabled`.
+   */
+  volumesEnabled: boolean;
+  /**
+   * Snapshot of every registered field's UI state — rebuilt on each
+   * `onVolumeFieldsChanged` callback via `handle.getVolumeFieldsState()`.
+   * Starts empty (no cubes are registered at startup).  Each row carries
+   * its own `paletteId` (per-field palette), so the dropdown lives
+   * inside each field's row in the SettingsPanel.
+   */
+  volumeFields: ReadonlyArray<VolumeFieldRowData>;
 };
 
 /**
@@ -113,6 +129,18 @@ export type UseEngineSettingsReturn = {
   setFilamentsEnabled: (v: boolean) => void;
   setFilamentIntensity: (v: number) => void;
   setExposure: (v: number) => void;
+  /**
+   * Master on/off for the scalar-volume overlay.  No engine echo — React
+   * owns it optimistically, same as `setFilamentsEnabled`.
+   */
+  setVolumesEnabled: (v: boolean) => void;
+  /**
+   * Rebuilds the per-field row data.  Called by App.tsx whenever the
+   * engine fires `onVolumeFieldsChanged` (add/remove), reading the new
+   * snapshot from `handle.getVolumeFieldsState()`.  This indirect wiring
+   * avoids giving the hook itself a reference to the engine handle.
+   */
+  setVolumeFields: (fields: ReadonlyArray<VolumeFieldRowData>) => void;
 };
 
 export function useEngineSettings(): UseEngineSettingsReturn {
@@ -153,15 +181,51 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   const [exposure, setExposure] = useState<number>(DEFAULT_EXPOSURE);
 
   // ── App-owned optimistic values (no engine echo) ─────────────────────
-  // The engine does NOT fire echo callbacks for filaments state, so React
-  // owns these optimistically. The SettingsPanel onChange handler updates
-  // these directly AND forwards to the engine handle.
+  // The engine does NOT fire echo callbacks for filaments or volumes state,
+  // so React owns these optimistically. The SettingsPanel onChange handler
+  // updates these directly AND forwards to the engine handle.
   const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(
     DEFAULT_FILAMENTS_ENABLED,
   );
   const [filamentIntensity, setFilamentIntensity] = useState<number>(
     DEFAULT_FILAMENT_INTENSITY,
   );
+
+  // Scalar-volume master toggle — no echo, same as filamentsEnabled above.
+  //
+  // Seeded from localStorage ('skymap.volumesEnabled') when a persisted
+  // value is present so the SettingsPanel reflects the user's last choice
+  // on first paint — before any engine echo lands.  Falls back to the
+  // compile-time default if storage is absent or corrupt (e.g. first load,
+  // private-browsing mode, cleared DevTools storage).
+  //
+  // Why the lazy initializer here rather than a useEffect in App.tsx?
+  // A `useEffect` restore would fire AFTER the first render, causing a
+  // brief flash of the wrong toggle state.  The lazy initializer runs
+  // synchronously during the first render and produces the correct state
+  // from frame 0 — same technique React's own docs recommend for
+  // "expensive" or "read-from-storage" initial values.
+  //
+  // The engine also starts with DEFAULT_VOLUMES_ENABLED.  If the persisted
+  // value differs, App.tsx forwards the seeded state to the engine in a
+  // one-shot useEffect that runs after createEngine (see App.tsx's
+  // "forward persisted volumesEnabled to engine" effect).
+  const [volumesEnabled, setVolumesEnabled] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('skymap.volumesEnabled');
+      if (stored !== null) return stored === 'true';
+    } catch {
+      // localStorage can throw in sandboxed iframes or if storage is full.
+      // Silently fall through to the compile-time default.
+    }
+    return DEFAULT_VOLUMES_ENABLED;
+  });
+
+  // Per-field row data.  Starts empty (no cubes at startup).  Rebuilt by
+  // App.tsx whenever the engine fires onVolumeFieldsChanged by calling
+  // handle.getVolumeFieldsState() — this indirect approach keeps the hook
+  // free of any reference to the engine handle.
+  const [volumeFields, setVolumeFields] = useState<ReadonlyArray<VolumeFieldRowData>>([]);
 
   // ── One-shot from engine: filament strip + vertex counts ─────────────
   // Stays null until the engine fires `onFilamentsReady` (once, after the
@@ -193,6 +257,8 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       absMagLimit,
       toneMapCurve,
       exposure,
+      volumesEnabled,
+      volumeFields,
     },
     engineCallbacks: {
       onPointSizeChange: setPointSize,
@@ -215,5 +281,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     setFilamentsEnabled,
     setFilamentIntensity,
     setExposure,
+    setVolumesEnabled,
+    setVolumeFields,
   };
 }

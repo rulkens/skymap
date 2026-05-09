@@ -52,7 +52,7 @@
  * writes the handle in once, every other hook reads it out, no re-renders.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { StatusBar } from '../StatusBar/StatusBar';
@@ -72,6 +72,8 @@ import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
 import { LoadingDevPanel } from '../LoadingDevPanel/LoadingDevPanel';
+import type { ScalarFieldPaletteId } from '../../@types/ScalarCube';
+import { PALETTE_IDS } from '../../data/scalarFieldPalettes';
 
 // ── Dev-panel availability gate ────────────────────────────────────────────
 //
@@ -94,6 +96,24 @@ function isLoadingDevPanelAvailable(): boolean {
   if (typeof window === 'undefined') return false;
   return new URLSearchParams(window.location.search).get('debug') === 'loading';
 }
+
+// ── localStorage persistence keys ─────────────────────────────────────────
+//
+// All Skymap localStorage entries share the `skymap.` namespace so they're
+// easy to spot and clear together in DevTools.  String constants here rather
+// than inline literals so a future rename (or per-user keying) happens in
+// one place.
+const LS_VOLUMES_ENABLED = 'skymap.volumesEnabled';
+const LS_VOLUME_FIELDS = 'skymap.volumeFields';
+
+// The shape we serialise to/from JSON for per-field settings.
+type PersistedVolumeField = {
+  enabled: boolean;
+  intensity: number;
+  /** Optional so older localStorage payloads (without paletteId) still load. */
+  paletteId?: ScalarFieldPaletteId;
+};
+type PersistedVolumeFields = Record<string, PersistedVolumeField>;
 
 // ── App ────────────────────────────────────────────────────────────────────────
 
@@ -121,7 +141,78 @@ export function App(): React.ReactElement {
     setFilamentsEnabled,
     setFilamentIntensity,
     setExposure,
+    setVolumesEnabled,
+    setVolumeFields,
   } = useEngineSettings();
+
+  // ── Per-field localStorage snapshot (persisted across sessions) ──────────
+  //
+  // We parse this ONCE at mount, store it in a ref (not state — it has no
+  // bearing on what React renders), and consume it inside the
+  // `_onVolumeFieldsChangedTarget` callback below.
+  //
+  // ### Why a ref rather than a useEffect restore?
+  //
+  // `addVolumeField` creates the field's entry in `state.settings.volumeFields`
+  // only when the handle is absent — meaning it always starts from the
+  // compile-time defaults.  The engine's `setVolumeFieldEnabled` /
+  // `setVolumeFieldIntensity` setters silently no-op if the entry is missing,
+  // so calling them at mount (before any field is registered) would do nothing
+  // regardless of when the engine initialises.
+  //
+  // The `onVolumeFieldsChanged` callback fires immediately AFTER `addVolumeField`
+  // creates the entry — so checking the snapshot there and applying persisted
+  // values before `getVolumeFieldsState()` returns is the earliest possible
+  // moment to restore them.  The result: React's first `volumeFields` render
+  // for each handle already reflects the persisted enabled/intensity, with
+  // no extra render cycle.
+  // useRef takes a value, not a thunk — so we evaluate the storage read
+  // eagerly via an IIFE.  This runs once during the first render and the
+  // result lives in `.current` for the lifetime of the component.
+  const _persistedVolumeFields = useRef<PersistedVolumeFields>(
+    ((): PersistedVolumeFields => {
+      try {
+        const stored = localStorage.getItem(LS_VOLUME_FIELDS);
+        if (stored) {
+          const parsed = JSON.parse(stored) as PersistedVolumeFields;
+          // Basic shape guard: the outer object must exist.  Individual
+          // entries are validated at point of use so a partial corrupt
+          // payload doesn't throw out all valid handles.
+          if (parsed && typeof parsed === 'object') return parsed;
+        }
+      } catch {
+        // Corrupt JSON or blocked storage — silently ignore.
+      }
+      return {};
+    })(),
+  );
+
+  // ── Stable volume-fields refresh callback ─────────────────────────────
+  //
+  // The engine fires `onVolumeFieldsChanged` whenever a field is added or
+  // removed.  The handler needs to call `handleRef.current.getVolumeFieldsState()`
+  // — but `handleRef` is returned by `useEngine` (below), which runs AFTER
+  // this block.  We break the timing dependency with a stable indirection:
+  //
+  //   1. `_onVolumeFieldsChangedTarget` is a mutable ref holding the real
+  //      callback.  It starts as a no-op; App fills it in once `handleRef`
+  //      is available (the assignment below runs every render, which is
+  //      fine — it's a ref write, not state).
+  //
+  //   2. `_onVolumeFieldsChangedStable` is a stable function (captured once
+  //      via `.current`) that dispatches to whatever the target ref holds.
+  //      Because it's stable, passing it in `extraCallbacks` doesn't
+  //      interfere with useEngine's "capture once at startup" contract.
+  //
+  // When `onVolumeFieldsChanged` fires inside the engine (after `addVolumeField`
+  // / `removeVolumeField`), `handleRef.current` is guaranteed to be set
+  // because the engine calls the callback only after construction, so
+  // `getVolumeFieldsState()` is safe to call.
+  const _onVolumeFieldsChangedTarget = useRef<() => void>(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const _onVolumeFieldsChangedStable = useRef(() =>
+    _onVolumeFieldsChangedTarget.current(),
+  ).current;
   const {
     pointSize,
     brightness,
@@ -140,6 +231,8 @@ export function App(): React.ReactElement {
     absMagLimit,
     toneMapCurve,
     exposure,
+    volumesEnabled,
+    volumeFields,
   } = settings;
 
   // ── Engine lifecycle + engine-driven session state ────────────────────────
@@ -161,7 +254,130 @@ export function App(): React.ReactElement {
     sourceCounts,
     loadProgress,
     currentTier,
-  } = useEngine({ extraCallbacks: settingsCallbacks });
+  } = useEngine({
+    extraCallbacks: {
+      ...settingsCallbacks,
+      // Volume-fields changed: rebuild the per-field row data.  Uses
+      // the stable dispatch ref so the engine captures only one stable
+      // function pointer (not a new lambda on every render).  See the
+      // `_onVolumeFieldsChangedStable` comment block above for the
+      // full rationale.
+      onVolumeFieldsChanged: _onVolumeFieldsChangedStable,
+    },
+  });
+
+  // Wire the real volume-fields refresh now that handleRef is available.
+  // This assignment runs every render (a stable ref write — no cost), and
+  // the closure always reflects the latest `setVolumeFields` and `handleRef`.
+  // Even though `setVolumeFields` is a stable React setter (same reference
+  // across renders), being explicit here is safer than relying on that
+  // stability guarantee as implementation detail of useState.
+  //
+  // ### Per-field localStorage restoration
+  //
+  // Before calling `getVolumeFieldsState()` we apply any persisted
+  // enabled/intensity values from `_persistedVolumeFields`.  The engine's
+  // `addVolumeField` has already run (it fires `onVolumeFieldsChanged` as
+  // its last step), so `state.settings.volumeFields[handle]` exists and
+  // `setVolumeFieldEnabled` / `setVolumeFieldIntensity` will actually take
+  // effect.
+  //
+  // We walk the CURRENT fields list rather than the persisted snapshot so we
+  // only apply restoration for handles that are actually registered — unknown
+  // handles in the snapshot are silently skipped (graceful when a field is
+  // unregistered between sessions).  The ref is not nulled after use because
+  // `removeVolumeField` + re-add would legitimately want the snapshot again.
+  _onVolumeFieldsChangedTarget.current = () => {
+    const handle = handleRef.current;
+    if (!handle) return;
+    const snapshot = _persistedVolumeFields.current;
+    const currentHandles = handle.listVolumeFields?.() ?? [];
+    for (const h of currentHandles) {
+      const saved = snapshot[h];
+      if (!saved) continue;
+      // Only restore if both fields are valid — guards against a partially
+      // corrupt entry (e.g. someone manually editing DevTools storage).
+      if (typeof saved.enabled === 'boolean') {
+        handle.setVolumeFieldEnabled?.(h, saved.enabled);
+      }
+      if (typeof saved.intensity === 'number') {
+        handle.setVolumeFieldIntensity?.(h, saved.intensity);
+      }
+      if (
+        typeof saved.paletteId === 'string' &&
+        (PALETTE_IDS as readonly string[]).includes(saved.paletteId)
+      ) {
+        handle.setVolumeFieldPalette?.(h, saved.paletteId as ScalarFieldPaletteId);
+      }
+    }
+    setVolumeFields(handle.getVolumeFieldsState?.() ?? []);
+  };
+
+  // ── Write-side persistence ───────────────────────────────────────────────
+  //
+  // Mirror `volumesEnabled` and the per-field row data into localStorage on
+  // every change.  Reads happen on the lazy initialiser in `useEngineSettings`
+  // (for the master toggle) and the `_persistedVolumeFields` ref above (for
+  // the per-field bag); these effects are the write half.
+  //
+  // Why a useEffect rather than wrapping the setters?  Two reasons.  First,
+  // localStorage writes can throw (private-browsing mode, quota exhausted) —
+  // confining them to a useEffect keeps the synchronous setter paths clean
+  // of try/catch.  Second, when the engine echoes a field-list change via
+  // `onVolumeFieldsChanged`, the setter inside `setVolumeFields` runs
+  // synchronously; deferring the write to the post-render useEffect means we
+  // serialise the FINAL committed state, not an intermediate one.
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_VOLUMES_ENABLED, String(volumesEnabled));
+    } catch {
+      // Storage unavailable — skip; the next attempt may succeed.
+    }
+  }, [volumesEnabled]);
+
+  useEffect(() => {
+    try {
+      const snapshot: PersistedVolumeFields = {};
+      for (const f of volumeFields) {
+        snapshot[f.handle] = {
+          enabled: f.enabled,
+          intensity: f.intensity,
+          paletteId: f.paletteId,
+        };
+      }
+      localStorage.setItem(LS_VOLUME_FIELDS, JSON.stringify(snapshot));
+    } catch {
+      // Storage unavailable — skip.
+    }
+  }, [volumeFields]);
+
+  // ── Volumes-section visibility gate ──────────────────────────────────────
+  //
+  // The Volumes UI (master toggle + per-field rows + palette dropdown) is
+  // a developer / power-user surface — currently it's only useful in
+  // combination with the synthetic test fixtures auto-loaded under
+  // `import.meta.env.DEV`.  In production builds the section would be
+  // empty (no fixtures load) but still take up panel space; gating it
+  // keeps the production UI focused on shipped features.
+  //
+  // Two ways to opt in:
+  //   - Dev builds (`npm run dev`) → always visible, no opt-in needed.
+  //   - Production builds → append `?volumes=1` to the URL to enable
+  //     both the UI section AND (when wired in `wireSlots`) the
+  //     synthetic-fixture bootstrap.
+  //
+  // The flag is computed once at component construction.  Toggling
+  // mid-session via History API is a future extension; for now a reload
+  // is the way to flip it.
+  const volumesUiEnabled = useMemo<boolean>(() => {
+    if (import.meta.env.DEV) return true;
+    if (typeof window === 'undefined') return false;
+    try {
+      return new URLSearchParams(window.location.search).has('volumes');
+    } catch {
+      return false;
+    }
+  }, []);
 
   // ── Initial mobile signal (drives panel-collapse on first paint) ─────────
   //
@@ -483,6 +699,57 @@ export function App(): React.ReactElement {
           setExposure(value);
           handleRef.current?.setExposure?.(value);
         }}
+        // ── Scalar-volume overlay ─────────────────────────────────────
+        //
+        // `volumesEnabled` is the master toggle — no engine echo, owned
+        // optimistically in React state (same pattern as filamentsEnabled).
+        // The change handler updates React state first, then forwards to
+        // the engine handle so the render pass knows to skip all fields.
+        //
+        // `volumeFields` is rebuilt by `_onVolumeFieldsChangedTarget` whenever
+        // the engine fires `onVolumeFieldsChanged` (add / remove).  Individual
+        // setters (`setVolumeFieldEnabled` / `setVolumeFieldIntensity`) do NOT
+        // fire `onVolumeFieldsChanged`; the SettingsPanel updates its per-field
+        // checkbox / slider through normal React onChange (optimistic — the
+        // engine mutates its internal settings bag but doesn't echo back).
+        // Volumes section is gated on `volumesUiEnabled` (dev build OR
+        // `?volumes=1` in the URL).  When the gate is closed, every volume
+        // prop is omitted; the SettingsPanel's `showVolumesSection`
+        // requires all five to be present, so the section disappears
+        // entirely — both the master toggle and the per-field rows.
+        {...(volumesUiEnabled
+          ? {
+              volumesEnabled,
+              onVolumesEnabledChange: (v: boolean) => {
+                setVolumesEnabled(v);
+                handleRef.current?.setVolumesEnabled?.(v);
+              },
+              volumeFields,
+              onVolumeFieldEnabledChange: (handle: string, enabled: boolean) => {
+                // Optimistic React-state update — the engine setter does NOT
+                // fire onVolumeFieldsChanged for tunable mutations (only for
+                // add/remove), so the controlled-input value would otherwise
+                // snap back on the next render.  We update local state first
+                // so the UI stays responsive, then forward to the engine.
+                setVolumeFields(
+                  volumeFields.map((f) => (f.handle === handle ? { ...f, enabled } : f)),
+                );
+                handleRef.current?.setVolumeFieldEnabled?.(handle, enabled);
+              },
+              onVolumeFieldIntensityChange: (handle: string, intensity: number) => {
+                setVolumeFields(
+                  volumeFields.map((f) => (f.handle === handle ? { ...f, intensity } : f)),
+                );
+                handleRef.current?.setVolumeFieldIntensity?.(handle, intensity);
+              },
+              onVolumeFieldPaletteChange: (handle: string, paletteId: ScalarFieldPaletteId) => {
+                setVolumeFields(
+                  volumeFields.map((f) => (f.handle === handle ? { ...f, paletteId } : f)),
+                );
+                handleRef.current?.setVolumeFieldPalette?.(handle, paletteId);
+              },
+            }
+          : {})}
       />
         {/*
           Stats panel — read-only telemetry: rolling FPS, per-survey loaded

@@ -86,6 +86,7 @@ import {
 import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
+import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
 import { loadFontAtlas } from '../../gpu/labels/loadFontAtlas';
 import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
 
@@ -405,6 +406,22 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.diskRenderer = diskRenderer;
   state.gpu.proceduralDiskRenderer = proceduralDiskRenderer;
   state.gpu.milkyWayRenderer = milkyWayRenderer;
+
+  // ── 3D scalar-field volume renderer ──────────────────────────────────
+  //
+  // Built unconditionally alongside the other overlay renderers.  The
+  // pipeline + corner/index VBOs are cheap (~1 KB of GPU memory); the
+  // large allocations (per-field r16float 3D textures, palette LUT
+  // textures, uniform buffers) happen only when the caller invokes
+  // `handle.addVolumeField(...)`.  When no fields are registered,
+  // `hasActiveFields()` returns false and the pass draws nothing at zero
+  // GPU cost.
+  //
+  // Same HDR target as every other overlay (`'rgba16float'`) so the
+  // raymarch accumulates into the same linear-light buffer before tone
+  // mapping.  Stored on `state.gpu` so `destroy()` can release the
+  // shared corner/index VBOs and every per-field GPU resource.
+  state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(device, 'rgba16float');
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `startLoop`)
   // can read the IIFE-scoped device/context/renderer handles.  See

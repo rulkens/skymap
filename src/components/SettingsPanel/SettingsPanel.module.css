@@ -119,6 +119,9 @@
   margin-top: var(--space-2);
 }
 
+/* Per-field row layout for the Volumes section moved to
+   `VolumeFieldRow.module.css` alongside the component. */
+
 /*
  * Action buttons rendered inside the panel body — currently "Reset camera"
  * (footer) and the SpaceMouse connect button.  Both share the legacy

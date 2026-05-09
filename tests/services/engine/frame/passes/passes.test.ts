@@ -105,6 +105,7 @@ function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrame
     milkyWayEnabled: true,
     filamentsEnabled: false,
     filamentIntensity: 1,
+    volumesEnabled: false,
     ...overrides,
   };
 }
@@ -114,6 +115,7 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     thumbnailRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     diskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     filamentRenderer: null,
+    scalarVolumeRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
     clouds: new Map(),
     famousMeta: [],
@@ -132,15 +134,18 @@ const PASS_STUB = { setPipeline: vi.fn(), setVertexBuffer: vi.fn(), setBindGroup
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('HDR_PASSES registry', () => {
-  it('contains the six HDR passes in canonical draw order', () => {
+  it('contains the seven HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the encoder record;
     // see passes/index.ts module header.
-    // Task R4 added marker-lines + labels after milky-way (passes 5 + 6).
-    expect(HDR_PASSES).toHaveLength(6);
+    // Task R4 added marker-lines + labels after milky-way (passes 6 + 7).
+    // Task 8 of the scalar-volume-renderer spec adds scalar-volume after
+    // filaments (pass 4).
+    expect(HDR_PASSES).toHaveLength(7);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
       'point-sprites',
       'galaxy-thumbnails',
       'filaments',
+      'scalar-volume',
       'milky-way',
       'marker-lines',
       'labels',
