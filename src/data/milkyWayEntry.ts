@@ -48,10 +48,18 @@ export const MILKY_WAY_ENTRY: FamousMetaEntry = {
   id: MILKY_WAY_ID,
   names: ['Milky Way', 'Galaxy', 'Home', 'Solar System Galaxy'],
   description:
-    'Our home galaxy. Selecting returns to the home view, where the Milky Way ' +
-    'impostor surrounds the camera. The Milky Way is rendered as a procedural ' +
-    'backdrop rather than a catalog object, so it has no individual position ' +
-    'to fly to — instead, going "home" places you back at the bootstrap ' +
-    'framing where its band is most visible.',
+    'Our home galaxy. Selecting tweens the camera to a viewpoint near ' +
+    'Sagittarius A* where the procedural Milky Way impostor fills most of ' +
+    'the field of view. The Milky Way is rendered as a procedural backdrop ' +
+    'rather than a catalog object, so it has no per-galaxy thumbnail — the ' +
+    'palette renders a glyph in place of the usual atlas image.',
   type: 'Spiral',
+  /**
+   * `pseudo: true` tells the command palette this row has no
+   * `/images/famous/{id}.webp` and to render a glyph fallback instead
+   * of a broken-image icon.  Also signals the App.tsx onSelect handler
+   * (via the matching id check) to route to `focusOnMilkyWay` rather
+   * than `selectFamous`.
+   */
+  pseudo: true,
 };

@@ -227,6 +227,28 @@ export type EngineHandle = {
   focusOnHome: () => void;
 
   /**
+   * Tween the camera to a viewpoint where the procedural Milky Way
+   * impostor is the dominant on-screen subject (target =
+   * `MILKY_WAY_CENTER_WORLD`, distance = `MILKY_WAY_VIEW_DISTANCE_MPC`,
+   * preserving the user's current yaw/pitch).
+   *
+   * Distinct from `focusOnHome`: home is the bootstrap-derived wide
+   * framing at hundreds of Mpc, well past the impostor's fade-out
+   * threshold — at home the catalog wedge is the subject and the
+   * impostor isn't visible at all.  This method exists so the command
+   * palette's "Milky Way" pseudo-entry can route to a viewpoint that
+   * actually shows the Milky Way.
+   *
+   * Yaw/pitch are preserved (same as `focusOn`'s galaxy tween) so a
+   * user already mid-rotation keeps their orientation.  Cancels any
+   * running tween.
+   *
+   * No-op when `state.cam` is null — same pre-bootstrap / post-destroy
+   * window every camera-touching method shares.
+   */
+  focusOnMilkyWay: () => void;
+
+  /**
    * Select (pin) the famous-atlas galaxy with the given id, then run
    * the same focus tween `focusOn` would.  No-op if the id is not in
    * the loaded famous catalog (e.g. someone hot-reloaded the build

@@ -111,6 +111,10 @@ import {
   snapToCameraSnapshot,
   tweenToCameraSnapshot,
 } from './camera/cameraSnapshot';
+import {
+  MILKY_WAY_CENTER_WORLD,
+  MILKY_WAY_VIEW_DISTANCE_MPC,
+} from '../../data/galacticCenter';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -811,6 +815,44 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cb.onFocusChange?.(null);
 
       tweenToCameraSnapshot(state, state.initialCamSnapshot);
+    },
+
+    focusOnMilkyWay() {
+      // Distinct from `focusOnHome`: home is the bootstrap-derived wide
+      // framing at hundreds of Mpc, well past the impostor's fade-out
+      // threshold.  This method tweens to a viewpoint inside the
+      // impostor's full-visibility band so the Milky Way is the
+      // dominant on-screen subject — target Sgr A* in world space, ride
+      // in to `MILKY_WAY_VIEW_DISTANCE_MPC`, preserve the user's
+      // current yaw/pitch so they don't get a disorienting snap.
+      //
+      // Reuses `tweenToCameraSnapshot` (the same helper that powers
+      // `focusOnHome`) by synthesizing an `InitialCam`-shaped snapshot
+      // on the fly: the catalog-side constants for `target`/`distance`,
+      // the live `cam` fields for the orientation and projection
+      // values that the helper expects but that we don't actually want
+      // to change here.
+      const cam = state.cam;
+      if (!cam) return;
+
+      // The Milky Way isn't a catalog object, so any pinned focus on a
+      // catalog galaxy is no longer relevant — clear it so the URL
+      // hash doesn't keep trying to resolve a stale focus.
+      cb.onFocusChange?.(null);
+
+      tweenToCameraSnapshot(state, {
+        target: [
+          MILKY_WAY_CENTER_WORLD[0],
+          MILKY_WAY_CENTER_WORLD[1],
+          MILKY_WAY_CENTER_WORLD[2],
+        ],
+        distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+        yaw: cam.yaw,
+        pitch: cam.pitch,
+        fovYRad: cam.fovYRad,
+        near: cam.near,
+        far: cam.far,
+      });
     },
 
     // ── LOD + per-source visibility setters ────────────────────────────────
