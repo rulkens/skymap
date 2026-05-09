@@ -538,16 +538,38 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // here means the renderer is always ready by the time the async
       // fetch resolves and the commit fires.
       //
-      // The `import.meta.env.DEV` guard is mandatory: the slot itself is
-      // only minted in dev builds (see `wireSlots.ts`), so
-      // `state.assetSlots.syntheticVolume` is `undefined` in production.
-      // The truthiness check is purely defensive — Vite's dead-code
-      // elimination would strip this entire branch in a production build
-      // regardless, because `import.meta.env.DEV` is a compile-time
-      // constant that evaluates to `false` outside `vite dev`.
-      if (import.meta.env.DEV && state.assetSlots.syntheticVolume) {
-        state.assetSlots.syntheticVolume.load({
+      // The `import.meta.env.DEV` guard is mandatory: the slots
+      // themselves are only minted in dev builds (see `wireSlots.ts`),
+      // so `state.assetSlots.syntheticVolumes` is `undefined` in
+      // production.  The truthiness check is purely defensive — Vite's
+      // dead-code elimination would strip this entire branch in a
+      // production build regardless, because `import.meta.env.DEV` is
+      // a compile-time constant that evaluates to `false` outside
+      // `vite dev`.
+      //
+      // We trigger all three fixtures' loads with the same dims +
+      // box size so they overlay coherently when the user toggles
+      // them on.  Per-fixture default-enabled state is set inside the
+      // slot's commit (Gaussian on; grids off).  The shape
+      // discriminator on each request picks which generator the
+      // fetcher dispatches to.
+      if (import.meta.env.DEV && state.assetSlots.syntheticVolumes) {
+        const slots = state.assetSlots.syntheticVolumes;
+        slots['debug-gaussian']?.load({
           handle: 'debug-gaussian',
+          shape: 'gaussian',
+          dims: 64,
+          boxSizeMpc: 400,
+        });
+        slots['debug-cartesian']?.load({
+          handle: 'debug-cartesian',
+          shape: 'cartesian',
+          dims: 64,
+          boxSizeMpc: 400,
+        });
+        slots['debug-spherical']?.load({
+          handle: 'debug-spherical',
+          shape: 'spherical',
           dims: 64,
           boxSizeMpc: 400,
         });

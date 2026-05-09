@@ -147,19 +147,26 @@ export type EngineAssetSlots = {
    */
   pgcAlias: AssetSlot<PgcAliasMap, void> | null;
   /**
-   * Dev-only slot for the synthetic Gaussian cube used as a smoke-test
-   * stand-in for real CF-4 / MCPM cubes.  `undefined` (not null) in
-   * production builds — the `wireSlots` phase only mints it when
-   * `import.meta.env.DEV` is true, so tree-shaking removes the fetcher
-   * module entirely from production bundles.
+   * Dev-only slots for the synthetic test cubes (Gaussian blob,
+   * Cartesian grid, spherical grid).  `undefined` (not the slots being
+   * null) in production builds — the `wireSlots` phase only mints
+   * them when `import.meta.env.DEV` is true, so tree-shaking removes
+   * the fetcher module + procedural generators entirely from
+   * production bundles.
+   *
+   * Keyed by the in-engine handle the slot's commit registers, so
+   * iterating the record is the same set of names that show up in
+   * the SettingsPanel's Volumes section.  Engine bootstrap triggers
+   * each slot's `.load()` independently with its own request.
    *
    * The `?` (optional) rather than `| null` mirrors how TypeScript
-   * expresses "this property may not exist on the object at all", which
-   * is more accurate here than null-then-set: in production the field
-   * is never assigned, so accessing it returns `undefined` rather than
-   * null.  Consumers should guard with `?.` at the call site.
+   * expresses "this property may not exist on the object at all",
+   * which is more accurate here than null-then-set: in production
+   * the field is never assigned, so accessing it returns `undefined`
+   * rather than null.  Consumers should guard with `?.` at the call
+   * site.
    */
-  syntheticVolume?: AssetSlot<ScalarCube, SyntheticVolumeReq>;
+  syntheticVolumes?: Record<string, AssetSlot<ScalarCube, SyntheticVolumeReq>>;
 };
 
 export type EngineState = {

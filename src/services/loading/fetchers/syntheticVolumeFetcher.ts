@@ -34,20 +34,31 @@
 
 import type { Fetcher } from '../types';
 import type { ScalarCube } from '../../../@types/ScalarCube';
-import { makeSyntheticGaussianCube } from '../../../data/syntheticScalarField';
+import {
+  makeSyntheticGaussianCube,
+  makeCartesianGridCube,
+  makeSphericalGridCube,
+} from '../../../data/syntheticScalarField';
+
+/** Which procedural shape to generate.  Discriminator on the request. */
+export type SyntheticVolumeShape = 'gaussian' | 'cartesian' | 'spherical';
 
 /**
  * Request shape for the synthetic volume fetcher.
  *
  * `handle` is a caller-chosen identifier surfaced in `LoadingDevPanel`
- * (it mirrors the `name` shown in the slot registry row).  `dims` and
- * `boxSizeMpc` pass through to `makeSyntheticGaussianCube`; both have
- * reasonable defaults so call sites that only care about "any cube"
- * don't need to specify them.
+ * (it mirrors the `name` shown in the slot registry row).  `shape`
+ * picks which procedural generator to call.  `dims` and `boxSizeMpc`
+ * pass through to the generators; both have reasonable defaults so
+ * call sites that only care about "any cube" don't need to specify
+ * them.
  */
 export type SyntheticVolumeReq = {
   /** Caller-chosen identifier; surfaced in `LoadingDevPanel`. */
   handle: string;
+  /** Which shape to build.  Default `'gaussian'` for back-compat with
+   *  callers from before the multi-shape extension. */
+  shape?: SyntheticVolumeShape;
   /** Cube edge length in voxels.  Default 64 (matches generator default). */
   dims?: number;
   /** Physical edge length in Mpc.  Default 400 (matches generator default). */
@@ -55,16 +66,38 @@ export type SyntheticVolumeReq = {
 };
 
 /**
- * Pure synchronous generator wrapped in a promise.  The `signal` and
- * `onProgress` parameters are accepted (matching the `Fetcher` contract)
- * but unused — there is no I/O to cancel and no byte stream to measure.
- * Accepting them makes the call site uniform with every other fetcher so
- * `createAssetSlot` can treat this fetcher identically.
+ * Pure synchronous generator wrapped in a promise.  Dispatches on
+ * `shape` to one of the three generators in `data/syntheticScalarField`.
+ * The `signal` and `onProgress` parameters are accepted (matching the
+ * `Fetcher` contract) but unused — there is no I/O to cancel and no
+ * byte stream to measure.  Accepting them makes the call site uniform
+ * with every other fetcher so `createAssetSlot` can treat this
+ * fetcher identically.
  */
 export const syntheticVolumeFetcher: Fetcher<ScalarCube, SyntheticVolumeReq> = async (req) => {
-  return makeSyntheticGaussianCube({
-    dims: req.dims,
-    boxSizeMpc: req.boxSizeMpc,
-    frameKind: 'equatorial-cartesian',
-  });
+  const shape: SyntheticVolumeShape = req.shape ?? 'gaussian';
+  switch (shape) {
+    case 'gaussian':
+      return makeSyntheticGaussianCube({
+        dims: req.dims,
+        boxSizeMpc: req.boxSizeMpc,
+        frameKind: 'equatorial-cartesian',
+      });
+    case 'cartesian':
+      return makeCartesianGridCube({
+        dims: req.dims,
+        boxSizeMpc: req.boxSizeMpc,
+        frameKind: 'equatorial-cartesian',
+      });
+    case 'spherical':
+      return makeSphericalGridCube({
+        dims: req.dims,
+        boxSizeMpc: req.boxSizeMpc,
+        frameKind: 'equatorial-cartesian',
+      });
+    default: {
+      const _exhaustive: never = shape;
+      throw new Error(`syntheticVolumeFetcher: unknown shape "${String(_exhaustive)}"`);
+    }
+  }
 };
