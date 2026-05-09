@@ -13,10 +13,14 @@
  * functional gain.
  *
  * Why these four palettes:
- *   - viridis  / magma         : generic perceptual gradients (matplotlib
- *                                 colormaps).  Useful fallbacks for new
- *                                 datasets before someone picks a brand
- *                                 colour.
+ *   - viridis                  : matplotlib's cool perceptual gradient
+ *                                 (blue→green→yellow).  Default fallback;
+ *                                 reads as scientific/neutral.
+ *   - magma                    : matplotlib's warm perceptual gradient
+ *                                 (black→purple→orange→cream).  Useful
+ *                                 when a dataset should "feel hot" — e.g.,
+ *                                 a future X-ray or thermal field — so it
+ *                                 reads visually distinct from viridis.
  *   - blue-purple              : CF-4 default; matches the Pomarède/Tully
  *                                 publication aesthetic for cosmography.
  *   - yellow-green             : MCPM default; deliberately distinct from
@@ -87,6 +91,10 @@ export function buildPaletteLut(id: ScalarFieldPaletteId): Uint8Array {
  * linear ramp is also the easiest contract for the WGSL sampler to reason
  * about.
  */
+// Preconditions: anchors length >= 2, sorted ascending by t, with
+// anchors[0][0] === 0 and anchors[anchors.length-1][0] === 1.  All
+// current call sites satisfy this; the function does not validate it
+// because adding runtime guards for an internal helper would be noise.
 function rampLut(anchors: ReadonlyArray<readonly [number, number, number, number]>): Uint8Array {
   const out = new Uint8Array(PALETTE_LUT_SIZE * 4);
   for (let i = 0; i < PALETTE_LUT_SIZE; i++) {

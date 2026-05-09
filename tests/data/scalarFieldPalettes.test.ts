@@ -13,7 +13,8 @@ describe('scalar field palettes', () => {
     const alphaStart = lut[3]!;
     const alphaEnd = lut[(PALETTE_LUT_SIZE - 1) * 4 + 3]!;
     expect(alphaStart).toBeLessThan(alphaEnd);
-    expect(alphaEnd).toBeGreaterThan(200); // basically opaque at peak
+    // alpha = round(t * 255), so at t=1 it must be exactly 255.
+    expect(alphaEnd).toBe(255);
   });
 
   it('blue-purple has higher B than R at the low end', () => {
