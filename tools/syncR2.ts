@@ -82,7 +82,11 @@ const ALLOW = (name: string): boolean =>
   // cloudLoader.filamentFilenameForTier().
   name === 'filaments-small.bin' ||
   name === 'famous_meta.json' ||
-  name === 'famous_xrefs.json';
+  name === 'famous_xrefs.json' ||
+  // Valade 2024 CF-4 HAMLET 256³ DM density cube, written as SCFD by
+  // `npm run build-cf4-density` from the maintainer-produced .npy.
+  // See data/raw/cf4/README.md for the maintainer + contributor paths.
+  name === 'cf4_density.scfd';
 
 /**
  * Extra files outside public/data/ that should also land in R2.
@@ -114,6 +118,23 @@ const EXTRA_FILES: ExtraFile[] = [
     //   gunzip data/raw/hyperleda_pa.csv.gz
     localPath: 'data/raw/hyperleda_pa.csv.gz',
     r2Key: 'data/hyperleda_pa.csv.gz',
+  },
+  {
+    // CF-4 DM density intermediate (flat f32 cube produced by
+    // tools/cf4DensityIngest.py from the upstream IDL .sav). Maintainer-only
+    // to regenerate; contributors curl this from R2 instead of installing
+    // scipy. Same EXTRA_FILES pattern as hyperleda_pa.csv.gz — large
+    // slow-external-fetch artefact that lives in data/raw/, not
+    // public/data/, so the ALLOW filter doesn't see it.
+    localPath: 'data/raw/cf4/cf4_density_256.npy',
+    r2Key: 'data/raw/cf4/cf4_density_256.npy',
+  },
+  {
+    // Cosmology sidecar for cf4_density_256.npy.  Read by
+    // tools/buildCf4Density.ts when producing the runtime .scfd; must
+    // travel together with the .npy so contributors get a consistent pair.
+    localPath: 'data/raw/cf4/cf4_density_256.meta.json',
+    r2Key: 'data/raw/cf4/cf4_density_256.meta.json',
   },
 ];
 
