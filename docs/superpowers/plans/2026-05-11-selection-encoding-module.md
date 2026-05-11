@@ -331,7 +331,7 @@ Add this block to the end of `tests/data/selectionEncoding.test.ts`, **after** t
 
 ```ts
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { join } from 'node:path';
 
 describe('selectionEncoding TS↔WESL parity', () => {
   /**
@@ -341,11 +341,17 @@ describe('selectionEncoding TS↔WESL parity', () => {
    * a `Map<NAME, parsedNumber>`. Throws if a constant we expect to
    * find is missing — the test will then fail with a clear message
    * instead of silently asserting `undefined === expected`.
+   *
+   * Path is resolved from `process.cwd()` (the repo root under Vitest)
+   * to match the project convention — see e.g.
+   * `tests/data/scalarFieldFormat.test.ts` and
+   * `tests/parsers/famousSeed.test.ts`. `__dirname` would not work
+   * under the Vite/Vitest ESM runner used here.
    */
   function parseWeslConstants(): Map<string, number> {
-    const path = resolve(
-      __dirname,
-      '../../src/services/gpu/shaders/lib/selectionEncoding.wesl',
+    const path = join(
+      process.cwd(),
+      'src/services/gpu/shaders/lib/selectionEncoding.wesl',
     );
     const text = readFileSync(path, 'utf-8');
 
