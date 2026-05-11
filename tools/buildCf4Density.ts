@@ -1,16 +1,36 @@
 /**
- * buildCf4Density.ts — convert the maintainer-produced .npy + .meta.json
- * into the runtime cf4_density.scfd consumed by the scalar-volume renderer.
+ * buildCf4Density.ts — convert the maintainer-produced .npy slice of the
+ * Courtois 2025 CF4++ release into the runtime cf4_density.scfd consumed
+ * by the scalar-volume renderer.
  *
- * Pure Node/TS — no Python required. Mirrors the conventions of the
+ * Data provenance:
+ *   Upstream is `CF4pp_mean_std_grids.npz` from
+ *   https://projets.ip2i.in2p3.fr/cosmicflows/ — a numpy ZIP archive
+ *   containing six 128³ arrays (mean + std for density, Cartesian velocity,
+ *   and radial velocity) computed across 10 000 HMC posterior steps.
+ *
+ *   The maintainer extracts the mean density entry once:
+ *
+ *       unzip -j CF4pp_mean_std_grids.npz d_mean_CF4pp.npy
+ *
+ *   …and uploads `d_mean_CF4pp.npy` to R2.  Contributors curl that file
+ *   instead of downloading the 167 MB .npz.
+ *
+ * Cosmology / grid constants are hard-coded below (the CF4++ release
+ * doesn't ship a sidecar; the constants come from the paper / the
+ * accompanying `retrieve_CF4pp_grid_values.py` loader).  Older drafts of
+ * this script read a `.meta.json` sidecar; we dropped it once the data
+ * source stabilised on CF4++ — one less file to keep in sync.
+ *
+ * Pure Node/TS — no Python required.  Mirrors the conventions of the
  * existing build scripts in tools/ (idempotent, prints what it generated,
  * exits non-zero on missing inputs).
  *
  * Output is gitignored and synced to R2 by `npm run sync-r2`.
  *
- * The script exports `buildCf4Density({ npyPath, metaPath, outPath })`
- * for direct invocation from tests; the CLI wrapper at the bottom
- * forwards the standard paths in data/raw/cf4/ → public/data/.
+ * The script exports `buildCf4Density({ npyPath, outPath })` for direct
+ * invocation from tests; the CLI wrapper at the bottom forwards the
+ * standard paths in data/raw/cf4/ → public/data/.
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -19,16 +39,17 @@ import { encodeScalarField } from '../src/data/scalarFieldFormat';
 import { SG_TO_EQ_QUATERNION } from '../src/data/superGalacticTransform';
 import type { ScalarCube, ScalarFieldPaletteId } from '../src/@types/ScalarCube';
 
-type Cf4DensityMeta = {
-  h: number;
-  box_size_h_mpc: number;
-  voxel_size_h_mpc: number;
-  field_type: string;
-  coord_frame: string;
-  source: string;
-  sav_variable_name: string;
-  stats?: { min: number; max: number; mean: number };
-};
+/**
+ * Physical voxel edge length in Mpc.  CF4++ ships a 1000 Mpc box on a
+ * 128³ grid in *physical* Mpc (the upstream loader script's grid
+ * conversion treats coordinates as plain Mpc, not Mpc/h).  This constant
+ * is the load-bearing assumption; if a future CF-4 release switches
+ * resolution or box size, change here and the `.scfd` output adapts.
+ */
+const CF4PP_VOXEL_SIZE_MPC = 1000 / 128;
+
+/** Default palette for CF-4 DM density cubes. */
+const DEFAULT_CF4_PALETTE: ScalarFieldPaletteId = 'magma';
 
 /**
  * Convert a single f32 to its f16 raw bits using round-to-nearest-even.
@@ -74,9 +95,6 @@ function f32ToF16Bits(value: number): number {
   return sign | (exp << 10) | (mant >>> 13);
 }
 
-/** Default palette for CF-4 DM density cubes. */
-const DEFAULT_CF4_PALETTE: ScalarFieldPaletteId = 'magma';
-
 /**
  * Choose a per-cube `densityScale` so that an "interesting" voxel value
  * yields a saturated alpha at intensity=1. For CF-4 delta values which
@@ -107,24 +125,27 @@ function chooseDensityScale(valueMax: number, voxelSizeMpc: number, dims: readon
 }
 
 /**
- * Build a SCFD scalar volume from a CF-4 .npy + .meta.json pair.
+ * Build a SCFD scalar volume from a CF4++ `.npy` mean-density slice.
  *
  * Exported so tests can call it directly without spawning a child process.
  * The CLI wrapper below forwards the standard production paths.
  *
- * @param args.npyPath   Path to the f32 .npy file (3D, C-order).
- * @param args.metaPath  Path to the companion .meta.json sidecar.
- * @param args.outPath   Destination .scfd path (created or overwritten).
- * @param args.paletteId Override the default palette (optional).
+ * @param args.npyPath        Path to the f32 .npy file (3D, C-order).
+ * @param args.outPath        Destination .scfd path (created or overwritten).
+ * @param args.paletteId      Override the default palette (optional).
+ * @param args.voxelSizeMpc   Override the voxel size in Mpc (optional —
+ *                            defaults to CF4PP_VOXEL_SIZE_MPC). Tests pass
+ *                            a synthetic value matching their tmpdir cube.
  */
 export async function buildCf4Density(args: {
   npyPath: string;
-  metaPath: string;
   outPath: string;
   paletteId?: ScalarFieldPaletteId;
+  voxelSizeMpc?: number;
 }): Promise<void> {
-  const { npyPath, metaPath, outPath } = args;
+  const { npyPath, outPath } = args;
   const paletteId = args.paletteId ?? DEFAULT_CF4_PALETTE;
+  const voxelSize = args.voxelSizeMpc ?? CF4PP_VOXEL_SIZE_MPC;
 
   // ── 1. Load .npy ─────────────────────────────────────────────────
   const npyBuf = readFileSync(npyPath);
@@ -138,17 +159,10 @@ export async function buildCf4Density(args: {
   const values = npy.values;
   const dims: [number, number, number] = [npy.shape[0]!, npy.shape[1]!, npy.shape[2]!];
 
-  // ── 2. Load .meta.json ───────────────────────────────────────────
-  const meta: Cf4DensityMeta = JSON.parse(readFileSync(metaPath, 'utf8'));
-  if (meta.coord_frame !== 'supergalactic_cartesian') {
-    throw new Error(
-      `buildCf4Density: meta coord_frame "${meta.coord_frame}" not supported (only supergalactic_cartesian)`,
-    );
-  }
-
-  // ── 3. Compute stats ─────────────────────────────────────────────
-  // Scan the raw f32 values regardless of what the meta.stats block says —
-  // the sidecar stats are advisory; we trust the data directly.
+  // ── 2. Compute stats ─────────────────────────────────────────────
+  // Scan the raw f32 values for diagnostic min/max, embedded in the SCFD
+  // header so consumers (and the densityScale heuristic below) can size
+  // their dynamic range correctly.
   let valueMin = +Infinity;
   let valueMax = -Infinity;
   for (let i = 0; i < values.length; i++) {
@@ -157,7 +171,7 @@ export async function buildCf4Density(args: {
     if (v > valueMax) valueMax = v;
   }
 
-  // ── 4. Convert f32 → f16 bits ────────────────────────────────────
+  // ── 3. Convert f32 → f16 bits ────────────────────────────────────
   // The SCFD voxel array stores raw Uint16 f16 bit patterns, matching
   // the r16float WebGPU 3D texture format. We convert per-element rather
   // than slicing because Float32Array and Float16Array share no direct
@@ -167,20 +181,18 @@ export async function buildCf4Density(args: {
     voxels[i] = f32ToF16Bits(values[i]!);
   }
 
-  // ── 5. Compute origin (voxel (0,0,0) corner in native SG frame, Mpc) ─
-  // The cube is centered on the observer (origin) in supergalactic Cartesian,
-  // so voxel (dims/2, dims/2, dims/2) sits at (0, 0, 0) Mpc. The lower
-  // corner of voxel (0,0,0) is therefore at -voxelSize × (dims/2) per axis.
-  // voxelSize is the physical Mpc value after dividing out the reduced Hubble
-  // constant h: voxelSize = voxel_size_h_mpc / h.
-  const voxelSize = meta.voxel_size_h_mpc / meta.h;
+  // ── 4. Compute origin (voxel (0,0,0) corner in native SG frame, Mpc) ─
+  // The CF4++ cube is centered on the observer (origin) in supergalactic
+  // Cartesian, so voxel (dims/2, dims/2, dims/2) sits at (0, 0, 0) Mpc.
+  // The lower corner of voxel (0, 0, 0) is therefore at -voxelSize × (dims/2)
+  // per axis. CF4++ uses physical Mpc (not Mpc/h), so no h-rescale needed.
   const origin: [number, number, number] = [
     -voxelSize * (dims[0] / 2),
     -voxelSize * (dims[1] / 2),
     -voxelSize * (dims[2] / 2),
   ];
 
-  // ── 6. Build the cube + densityScale ─────────────────────────────
+  // ── 5. Build the cube + densityScale ─────────────────────────────
   const densityScale = chooseDensityScale(Math.max(0.001, Math.abs(valueMax)), voxelSize, dims);
 
   const cube: ScalarCube = {
@@ -206,7 +218,7 @@ export async function buildCf4Density(args: {
     valueMax,
   };
 
-  // ── 7. Encode + write ────────────────────────────────────────────
+  // ── 6. Encode + write ────────────────────────────────────────────
   const out = encodeScalarField(cube);
   writeFileSync(outPath, Buffer.from(out));
 
@@ -225,8 +237,7 @@ export async function buildCf4Density(args: {
 // public/data/ for serving via Vite dev or R2 in production.
 async function main(): Promise<void> {
   await buildCf4Density({
-    npyPath: 'data/raw/cf4/cf4_density_256.npy',
-    metaPath: 'data/raw/cf4/cf4_density_256.meta.json',
+    npyPath: 'data/raw/cf4/d_mean_CF4pp.npy',
     outPath: 'public/data/cf4_density.scfd',
   });
 }

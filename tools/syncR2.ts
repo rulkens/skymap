@@ -120,21 +120,22 @@ const EXTRA_FILES: ExtraFile[] = [
     r2Key: 'data/hyperleda_pa.csv.gz',
   },
   {
-    // CF-4 DM density intermediate (flat f32 cube produced by
-    // tools/cf4DensityIngest.py from the upstream IDL .sav). Maintainer-only
-    // to regenerate; contributors curl this from R2 instead of installing
-    // scipy. Same EXTRA_FILES pattern as hyperleda_pa.csv.gz — large
-    // slow-external-fetch artefact that lives in data/raw/, not
-    // public/data/, so the ALLOW filter doesn't see it.
-    localPath: 'data/raw/cf4/cf4_density_256.npy',
-    r2Key: 'data/raw/cf4/cf4_density_256.npy',
-  },
-  {
-    // Cosmology sidecar for cf4_density_256.npy.  Read by
-    // tools/buildCf4Density.ts when producing the runtime .scfd; must
-    // travel together with the .npy so contributors get a consistent pair.
-    localPath: 'data/raw/cf4/cf4_density_256.meta.json',
-    r2Key: 'data/raw/cf4/cf4_density_256.meta.json',
+    // CF-4 DM mean-density 128³ cube — the `d_mean_CF4pp` array extracted
+    // from the Courtois 2025 CF4++ release.  Maintainer pulls the upstream
+    // 167 MB `CF4pp_mean_std_grids.npz` from
+    // https://projets.ip2i.in2p3.fr/cosmicflows/ and runs
+    //
+    //   unzip -j CF4pp_mean_std_grids.npz d_mean_CF4pp.npy \
+    //     -d data/raw/cf4/
+    //
+    // The ~8 MB result is uploaded here so contributors can curl it
+    // instead of downloading the full ensemble (mean + std for density,
+    // 3-component velocity, and radial velocity = 6 arrays they don't
+    // need).  Same EXTRA_FILES pattern as hyperleda_pa.csv.gz: a
+    // slow-external-fetch artefact in data/raw/, not public/data/, so
+    // the ALLOW filter doesn't see it.
+    localPath: 'data/raw/cf4/d_mean_CF4pp.npy',
+    r2Key: 'data/raw/cf4/d_mean_CF4pp.npy',
   },
 ];
 

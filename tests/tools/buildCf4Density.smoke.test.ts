@@ -1,12 +1,14 @@
 /**
  * End-to-end smoke test for tools/buildCf4Density.ts.
  *
- * Writes a synthetic 8x8x8 .npy + .meta.json into a tmpdir, invokes the
- * build script's main() against those paths, decodes the resulting
- * .scfd, and asserts every header field carries the expected value.
+ * Writes a synthetic 8x8x8 .npy into a tmpdir, invokes the build script's
+ * `buildCf4Density` against it (passing a synthetic voxel size to avoid
+ * baking the production CF4++ constant into test expectations), decodes
+ * the resulting .scfd, and asserts every header field carries the expected
+ * value.
  *
- * Avoids spawning a child process: the build script exports its `main`
- * function so we can call it directly with custom paths.
+ * Avoids spawning a child process: the build script exports its entry
+ * point so we can call it directly with custom paths.
  */
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
@@ -37,30 +39,20 @@ function writeF32Npy(path: string, values: number[], shape: readonly number[]): 
 describe('buildCf4Density (smoke)', () => {
   let dir: string;
   let npyPath: string;
-  let metaPath: string;
   let outPath: string;
+  // Synthetic voxel size: 1000 Mpc box / 8 voxels = 125 Mpc/voxel.  Picked
+  // to mirror the CF4++ 1000-Mpc box convention at a much smaller resolution
+  // so the test cube fits in memory and runs fast.
+  const voxelSizeMpc = 125;
 
   beforeAll(() => {
     dir = mkdtempSync(join(tmpdir(), 'cf4-build-'));
     npyPath = join(dir, 'cube.npy');
-    metaPath = join(dir, 'cube.meta.json');
     outPath = join(dir, 'cf4_density.scfd');
 
     // 8^3 = 512 voxels with values 0..511 normalised so min=-1, max=+1.
     const values = Array.from({ length: 512 }, (_, i) => -1 + (2 * i) / 511);
     writeF32Npy(npyPath, values, [8, 8, 8]);
-
-    const meta = {
-      h: 0.746,
-      box_size_h_mpc: 1000,
-      voxel_size_h_mpc: 1000 / 8, // 125 (so voxel_size = 125/0.746 ≈ 167.56 Mpc per voxel)
-      field_type: 'delta',
-      coord_frame: 'supergalactic_cartesian',
-      source: 'smoke-test synthetic 8^3',
-      sav_variable_name: 'delta',
-      stats: { min: -1, max: 1, mean: 0 },
-    };
-    writeFileSync(metaPath, JSON.stringify(meta));
   });
 
   afterAll(() => {
@@ -68,7 +60,7 @@ describe('buildCf4Density (smoke)', () => {
   });
 
   it('writes a decodable SCFD with correct header', async () => {
-    await buildCf4Density({ npyPath, metaPath, outPath });
+    await buildCf4Density({ npyPath, outPath, voxelSizeMpc });
     expect(existsSync(outPath)).toBe(true);
 
     const buf = readFileSync(outPath);
@@ -76,18 +68,18 @@ describe('buildCf4Density (smoke)', () => {
 
     expect(cube.dims).toEqual([8, 8, 8]);
     expect(cube.frameKind).toBe('supergalactic-cartesian');
-    expect(cube.voxelSize).toBeCloseTo(125 / 0.746, 4);
+    expect(cube.voxelSize).toBeCloseTo(voxelSizeMpc, 4);
     // Origin is voxel (0,0,0)'s corner in the native (SG) frame:
-    // -voxel_size * (dims/2) per axis.
-    const expectedCorner = -(125 / 0.746) * 4;
+    // -voxelSize * (dims/2) per axis.
+    const expectedCorner = -voxelSizeMpc * 4;
     expect(cube.origin[0]).toBeCloseTo(expectedCorner, 3);
     expect(cube.origin[1]).toBeCloseTo(expectedCorner, 3);
     expect(cube.origin[2]).toBeCloseTo(expectedCorner, 3);
     // Rotation matches the SG→eq quaternion exactly.
-    expect(cube.rotation[0]).toBeCloseTo(SG_TO_EQ_QUATERNION[0], 6);
-    expect(cube.rotation[1]).toBeCloseTo(SG_TO_EQ_QUATERNION[1], 6);
-    expect(cube.rotation[2]).toBeCloseTo(SG_TO_EQ_QUATERNION[2], 6);
-    expect(cube.rotation[3]).toBeCloseTo(SG_TO_EQ_QUATERNION[3], 6);
+    expect(cube.rotation[0]).toBeCloseTo(SG_TO_EQ_QUATERNION[0]!, 6);
+    expect(cube.rotation[1]).toBeCloseTo(SG_TO_EQ_QUATERNION[1]!, 6);
+    expect(cube.rotation[2]).toBeCloseTo(SG_TO_EQ_QUATERNION[2]!, 6);
+    expect(cube.rotation[3]).toBeCloseTo(SG_TO_EQ_QUATERNION[3]!, 6);
     expect(cube.valueMin).toBeCloseTo(-1, 4);
     expect(cube.valueMax).toBeCloseTo(1, 4);
     expect(cube.voxels).toBeInstanceOf(Uint16Array);

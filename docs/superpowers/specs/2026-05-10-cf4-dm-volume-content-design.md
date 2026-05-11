@@ -1,9 +1,30 @@
 # CF-4 Dark-Matter Density Volume — Content + Ingest
 
-**Status:** Draft (2026-05-10)
+**Status:** Draft (2026-05-10, retargeted 2026-05-11)
 **Owner:** @rulkens
 **Supersedes:** [`2026-05-07-cf4-dark-matter-volume-render-design.md`](./archive/2026-05-07-cf4-dark-matter-volume-render-design.md)
 **First consumer:** A "CF-4 dark matter" entry in the existing Volumes panel that visualizes the local-universe DM density field as a translucent 3D volume.
+
+## 2026-05-11 retarget — Courtois 2025 CF4++ 128³
+
+While shopping for the Valade 2024 HAMLET 256³ `.sav` referenced below, we discovered that file is **not publicly distributed**.  The closest public dataset is the Courtois 2025 **CF4++** ensemble (`CF4pp_mean_std_grids.npz`, ~167 MB, hosted at <https://projets.ip2i.in2p3.fr/cosmicflows/>), which ships the mean and standard deviation across 10 000 HMC posterior steps at 128³ over a 1000 Mpc box in supergalactic Cartesian.  We consume only the `d_mean_CF4pp` mean-density array; the std cube is the natural input for a future uncertainty overlay.
+
+Concrete changes from the original spec (everything below this section was written against the 256³ HAMLET assumption — read the rest with these in mind):
+
+| Original | Retarget |
+|---|---|
+| 256³ at 5.236 Mpc/h voxels | 128³ at 7.81 Mpc voxels |
+| Coordinates in Mpc/h (h = 0.746 rescale) | Coordinates in physical Mpc (no h-rescale; CF4++ ships in Mpc) |
+| `tools/cf4DensityIngest.py` (Python + scipy) | `unzip -j CF4pp_mean_std_grids.npz d_mean_CF4pp.npy` |
+| `.npy` + `.meta.json` (sidecar with cosmology) | `.npy` alone (cosmology constants baked into `buildCf4Density.ts`) |
+| `cf4_density_256.npy` + `cf4_density_256.meta.json` on R2 (EXTRA_FILES) | `d_mean_CF4pp.npy` on R2 (EXTRA_FILES) |
+| `~32 MB cf4_density.scfd` runtime payload | `~4 MB cf4_density.scfd` runtime payload |
+
+The architectural design is unchanged: SCFD format, scalar-volume renderer, `cf4DensityFetcher`, eager slot wiring in `wireSlots.ts`.  Only the ingest+build path is simpler.
+
+A separate maintainer task is in flight to request the actual 256³ HAMLET cube from Hélène Courtois (IP2I Lyon).  If we receive it, the runtime swap is a one-line change to `tools/buildCf4Density.ts`'s constants — the renderer is dims-agnostic.
+
+---
 
 ## Goal
 
