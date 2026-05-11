@@ -1,6 +1,11 @@
 # ── Dependencies ──────────────────────────────────────────────────────────────
 node_modules/
 
+# Python venv used by the maintainer-only MCPM extractor (data/raw/mcpm/README.md).
+# Local-only; recreate via `python3 -m venv .venv && .venv/bin/pip install ...`.
+.venv/
+__pycache__/
+
 # ── Build output ──────────────────────────────────────────────────────────────
 # Vite ships compiled assets into dist/ and a transient cache into .vite/.
 # TypeScript's incremental-build state lives in *.tsbuildinfo files.
