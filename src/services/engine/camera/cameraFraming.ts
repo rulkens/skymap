@@ -45,6 +45,7 @@
  */
 
 import { clampDistance } from '../../camera/orbitCamera';
+import type { Vec3 } from '../../../@types/Vec';
 
 /**
  * Snapshot of the camera's initial framing values.
@@ -55,7 +56,7 @@ import { clampDistance } from '../../camera/orbitCamera';
  * the projection stays correct after a window resize.
  */
 export type InitialCam = {
-  target: [number, number, number];
+  target: Vec3;
   distance: number;
   yaw: number;
   pitch: number;

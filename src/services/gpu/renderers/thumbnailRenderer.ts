@@ -67,7 +67,7 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { GpuContext, Renderer, ThumbnailInstance } from '../../../@types';
+import type { GpuContext, Renderer, ThumbnailInstance, Vec3 } from '../../../@types';
 import vsCode from '../shaders/thumbnails/vertex.wesl?static';
 import fsCode from '../shaders/thumbnails/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
@@ -99,7 +99,7 @@ export type ThumbnailRenderer = {
     viewProj: mat4,
     viewportPx: [number, number],
     instances: ReadonlyArray<ThumbnailInstance>,
-    camPosWorld: Readonly<[number, number, number]>,
+    camPosWorld: Readonly<Vec3>,
     pxPerRad: number,
   ): void;
   /**
@@ -130,7 +130,7 @@ export function createThumbnailRenderer(ctx: GpuContext, maxInstances = 256): Th
     viewProj: mat4,
     viewportPx: [number, number],
     instances: ReadonlyArray<ThumbnailInstance>,
-    camPosWorld: Readonly<[number, number, number]>,
+    camPosWorld: Readonly<Vec3>,
     pxPerRad: number,
   ): void {
     if (instances.length === 0) return;

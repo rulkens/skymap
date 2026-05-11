@@ -113,7 +113,7 @@ export function advanceCameraTween(cam: OrbitCamera, tween: CameraTween, nowMs: 
 
   // ── Target (vec3 lerp) ────────────────────────────────────────────────
   // We mutate cam.target in place rather than allocating; the orbit camera
-  // type stores target as a `[number, number, number]` tuple under the hood
+  // type stores target as a `Vec3` tuple under the hood
   // (see OrbitCameraInit) and updatePosition reads it directly.
   cam.target[0] = lerp(tween.fromTarget[0], tween.toTarget[0], t);
   cam.target[1] = lerp(tween.fromTarget[1], tween.toTarget[1], t);

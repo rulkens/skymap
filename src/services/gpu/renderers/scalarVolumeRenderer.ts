@@ -35,7 +35,7 @@
 
 import { mat4 } from 'gl-matrix';
 import type { ScalarCube, ScalarFieldFrameKind, ScalarFieldPaletteId } from '../../../@types/ScalarCube';
-import type { Renderer } from '../../../@types';
+import type { Renderer, Vec2, Vec3 } from '../../../@types';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPalettes';
 import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../../data/superGalacticTransform';
 import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
@@ -249,7 +249,7 @@ export type ScalarVolumeRenderer = {
   getFieldPalette(handle: ScalarFieldHandle): ScalarFieldPaletteId | null;
   hasActiveFields(): boolean;
   listHandles(): ScalarFieldHandle[];
-  draw(pass: GPURenderPassEncoder, viewProj: mat4, viewportPx: [number, number], cameraPosWorld: [number, number, number]): void;
+  draw(pass: GPURenderPassEncoder, viewProj: mat4, viewportPx: Vec2, cameraPosWorld: Readonly<Vec3>): void;
   destroy(): void;
   /**
    * Test-only escape hatch: returns the live `FieldEntry` for the given

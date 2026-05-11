@@ -22,6 +22,8 @@
  * task unit-testable without a GPU mock.
  */
 
+import type { Vec4 } from '../../../@types';
+
 export const ATLAS_SIDE = 2048;
 export const SLOT_SIDE = 128;
 const SLOTS_PER_ROW = ATLAS_SIDE / SLOT_SIDE; // 16
@@ -238,7 +240,7 @@ export class TextureAtlas {
    * UV rectangle [u0, v0, u1, v1] for a slot, in [0,1] texture coords.
    * Slots are laid out row-major: slot N is at column (N % 16), row (N / 16).
    */
-  slotUv(slotIdx: number): [number, number, number, number] {
+  slotUv(slotIdx: number): Vec4 {
     const col = slotIdx % SLOTS_PER_ROW;
     const row = Math.floor(slotIdx / SLOTS_PER_ROW);
     const slotNorm = SLOT_SIDE / ATLAS_SIDE;

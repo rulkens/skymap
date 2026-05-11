@@ -54,7 +54,7 @@
 import vsCode from '../shaders/proceduralDisks/vertex.wesl?static';
 import fsCode from '../shaders/proceduralDisks/fragment.wesl?static';
 import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
-import type { Renderer } from '../../../@types';
+import type { Renderer, Vec3 } from '../../../@types';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
 type Init = {
@@ -79,7 +79,7 @@ export type ProceduralDiskRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewport: [number, number],
-    camPosWorld: [number, number, number],
+    camPosWorld: Readonly<Vec3>,
     pxPerRad: number,
     instances: ReadonlyArray<ProceduralDiskInstance>,
   ): void;
@@ -109,7 +109,7 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewport: [number, number],
-    camPosWorld: [number, number, number],
+    camPosWorld: Readonly<Vec3>,
     pxPerRad: number,
     instances: ReadonlyArray<ProceduralDiskInstance>,
   ): void {

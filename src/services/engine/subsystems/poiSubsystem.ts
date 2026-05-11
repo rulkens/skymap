@@ -119,8 +119,8 @@ export function createPoiSubsystem(): PoiSubsystem {
     const [cx, cy, cz] = p.worldPos;
     const mk = (
       id: string,
-      from: [number, number, number],
-      to: [number, number, number],
+      from: Vec3,
+      to: Vec3,
     ): MarkerLine => ({
       id,
       fromWorld: from,

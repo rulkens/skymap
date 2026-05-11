@@ -13,6 +13,8 @@
  * like 23.9999998° become 24° rather than 23°59'60".
  */
 
+import type { Vec3 } from '../../@types/Vec';
+
 /**
  * Zero-pad an integer to at least `width` digits.
  * e.g. pad(7, 2) → "07", pad(123, 2) → "123".
@@ -45,7 +47,7 @@ export function pad(n: number, width: number): string {
 export function decomposeSexagesimal(
   value: number,
   subunitFactor: number,
-): [number, number, number] {
+): Vec3 {
   // Total subunits (centiseconds or deciseconds) as an integer.
   // Math.round handles the floating-point accumulation that would otherwise
   // cause remainders like 59.9999999 to appear instead of 60.
@@ -81,7 +83,7 @@ export function decomposeSexagesimal(
 export function decomposeSexagesimalTrunc(
   value: number,
   subunitFactor: number,
-): [number, number, number] {
+): Vec3 {
   // Convert to total subunits, truncating (flooring) rather than rounding.
   // Math.trunc is used for positive values — equivalent to Math.floor here
   // since value is always ≥ 0 after wrapping/clamping.

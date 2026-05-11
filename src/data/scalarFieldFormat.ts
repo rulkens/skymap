@@ -46,6 +46,7 @@
  */
 
 import type { ScalarCube, ScalarFieldFrameKind } from '../@types/ScalarCube';
+import type { Vec3, Vec4 } from '../@types/Vec';
 
 const MAGIC = 0x44464353; // "SCFD" little-endian
 const VERSION = 2;
@@ -146,7 +147,7 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
       `decodeScalarField: unsupported version ${version} (expected ${VERSION}); regenerate the cube via the dataset's build pipeline`,
     );
   }
-  const dims: [number, number, number] = [
+  const dims: Vec3 = [
     dv.getUint32(8, true),
     dv.getUint32(12, true),
     dv.getUint32(16, true),
@@ -163,13 +164,13 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   if (frameKind === undefined) {
     throw new Error(`decodeScalarField: unknown frameKind id ${frameKindIdx}`);
   }
-  const origin: [number, number, number] = [
+  const origin: Vec3 = [
     dv.getFloat32(24, true),
     dv.getFloat32(28, true),
     dv.getFloat32(32, true),
   ];
   const voxelSize = dv.getFloat32(36, true);
-  const rotation: [number, number, number, number] = [
+  const rotation: Vec4 = [
     dv.getFloat32(40, true),
     dv.getFloat32(44, true),
     dv.getFloat32(48, true),

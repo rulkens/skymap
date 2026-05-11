@@ -65,7 +65,7 @@
  * filter + clamp-to-edge gives smooth sub-pixel glyph rendering.
  */
 
-import type { GpuContext, Renderer } from '../../../@types';
+import type { GpuContext, Renderer, Vec3, Vec4 } from '../../../@types';
 import type { FontMetrics } from '../labels/fontMetrics';
 import { layoutLabel, type LabelAlignX } from '../labels/labelLayout';
 import vsCode from '../shaders/labels/vertex.wesl?static';
@@ -76,12 +76,12 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 export type Label = {
   id: string;
-  worldPos: [number, number, number];
+  worldPos: Vec3;
   text: string;
   /** Target em pixel height at the label's natural viewing distance. */
   pixelSize: number;
   /** RGBA premultiplied, defaults to [1,1,1,1]. */
-  color?: [number, number, number, number];
+  color?: Vec4;
   /** Lower clamp on on-screen em height in pixels (default 8). */
   minPixelSize?: number;
   /** Upper clamp on on-screen em height in pixels (default 64). */

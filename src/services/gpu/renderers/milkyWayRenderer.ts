@@ -155,7 +155,7 @@ export type MilkyWayRenderer = {
     viewport: [number, number],
     fadeAlpha: number,
     iTimeSec: number,
-    cameraPosWorld: [number, number, number],
+    cameraPosWorld: Readonly<Vec3>,
     centerWorld?: Vec3,
   ): void;
   /** Release the per-frame uniform buffer. */
@@ -274,7 +274,7 @@ export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
     viewport: [number, number],
     fadeAlpha: number,
     iTimeSec: number,
-    cameraPosWorld: [number, number, number],
+    cameraPosWorld: Readonly<Vec3>,
     centerWorld: Vec3 = [0, 0, 0],
   ): void {
     // ── CPU-side reframing for off-origin rendering ────────────────────
