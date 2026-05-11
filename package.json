@@ -33,6 +33,7 @@
     "build": "tsc --noEmit && vite build && rm -rf dist/data",
     "build-all": "tsx tools/buildAllBins.ts",
     "build-cf4-density": "tsx tools/buildCf4Density.ts",
+    "build-mcpm": "tsx tools/buildMcpmVolume.ts --all",
     "build-famous": "tsx tools/buildFamous.ts",
     "build-pgc-aliases": "tsx tools/buildPgcAliases.ts",
     "build-filaments": "tsx tools/buildFilaments.ts",

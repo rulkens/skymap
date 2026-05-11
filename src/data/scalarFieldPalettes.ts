@@ -53,6 +53,7 @@ export const PALETTE_LUT_SIZE = 256;
 export const PALETTE_IDS: readonly ScalarFieldPaletteId[] = [
   'viridis',
   'magma',
+  'inferno',
   'blue-purple',
   'yellow-green',
   'coolwarm',
@@ -75,6 +76,21 @@ export function buildPaletteLut(id: ScalarFieldPaletteId): Uint8Array {
         [0.5, 182, 54, 121],
         [0.75, 252, 137, 97],
         [1.0, 252, 253, 191],
+      ]);
+    case 'inferno':
+      // Matplotlib's `inferno` perceptually-uniform palette: dark
+      // purple → red → orange → pale yellow on a near-black floor.
+      // Slightly more orange-saturated than magma, which makes it the
+      // canonical match for slime-mould / cosmic-web fire-on-black
+      // visualisations (Polyphorm, MCPM, plasma family). Anchor RGB
+      // values match matplotlib's `_cm_listed.py` inferno entries
+      // sampled at t = {0, 0.25, 0.5, 0.75, 1.0}.
+      return rampLut([
+        [0.0, 0, 0, 4],
+        [0.25, 87, 16, 110],
+        [0.5, 188, 55, 84],
+        [0.75, 249, 142, 9],
+        [1.0, 252, 255, 164],
       ]);
     case 'blue-purple':
       return rampLut([

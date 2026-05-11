@@ -26,6 +26,7 @@
 // the spec calls for.
 
 import package::lib::camera::CameraUniforms;
+import package::lib::util::hash21Hq;
 
 struct VolumeUniforms {
   cam: CameraUniforms,
@@ -44,6 +45,17 @@ struct VolumeUniforms {
   // intensity: intensity is overall opacity, contrast is which
   // voxels participate.
   contrast: f32,
+  // Per-cube center of the contrast window in LUT space [0, 1].
+  // Divergent palettes (coolwarm; CF-4) want 0.5 — the cosmic mean
+  // sits at the divergent transparent midpoint, the deadband
+  // suppresses it symmetrically.  Sequential palettes (inferno;
+  // MCPM, log-normalised so voxel value = 0 means void) want 0.0 —
+  // voids are the "noise floor" we want to fade out, and the stretch
+  // pushes mid-density values toward the bright end of the palette.
+  // See applyContrastWindow's docblock for the generalised math; this
+  // is the only knob that distinguishes divergent vs sequential
+  // contrast behaviour.
+  contrastCenter: f32,
   // Spatial envelope edges in normalised local-space distance from
   // the cube center.  The cube's inscribed sphere has radius 1.0;
   // the cube's corners are at √3 ≈ 1.73.  sphericalEnvelope runs a
@@ -56,6 +68,32 @@ struct VolumeUniforms {
   // sentinel so their corner test patterns stay visible.
   envelopeInner: f32,
   envelopeOuter: f32,
+  // Per-cube HDR exposure multiplier on the rgb contribution per
+  // ray-march step.  Values > 1 push accumulated color past the LUT's
+  // brightest entry, producing the "peaks blow out to white" effect
+  // once the downstream tonemap pass compresses the rgba16float
+  // accumulator back to display gamut.  Decoupled from alpha so a
+  // higher exposure brightens the cube without making it more
+  // opaque (which would just hide structure behind the front faces).
+  // Default 1.0 = pre-HDR behaviour exactly preserved; 3-5 is the
+  // useful range for "fiery cosmic-web" looks.
+  exposure: f32,
+  // User-tunable low-end cutoff in normalised LUT-coordinate space
+  // [0, 1].  Voxels with deviation-from-center less than 'trim' get
+  // hard-suppressed (visibility = 0).  Equivalent to Polyphorm's
+  // 'trim_density' knob but in normalised space rather than raw
+  // trace units.  Default 0 = no trim (every voxel contributes to
+  // the deadband as set by 'contrast').  Combined with the contrast-
+  // derived deadband by taking the max — user can crank trim past
+  // contrast's implicit deadband to suppress more, never less.
+  trim: f32,
+  // Per-draw frame counter (f32 because the uniform is f32-typed
+  // throughout — the integer monotonicity is what matters, not the
+  // exact value).  Used as a temporal seed for the ray-march jitter
+  // hash so the screen-space dither pattern decorrelates frame-to-
+  // frame instead of staying locked in screen space.  CPU side
+  // wraps at 1e6 to keep the f32 mantissa happy.
+  frame: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: VolumeUniforms;
@@ -97,21 +135,38 @@ struct FsIn {
 // the near-mean noise that already had nonzero alpha — exactly the
 // "more noise, not more structure" symptom this replaces.
 //
-// Generalising for sequential palettes (where the meaningful zero is
-// at t=0, not t=0.5) requires a center argument; the math below
-// hardcodes 0.5 because that is the only consumer today.
-fn applyContrastWindow(sampleValue: f32, contrast: f32) -> vec2<f32> {
-  let dev = abs(sampleValue - 0.5) * 2.0; // [0, 1], 0 at mean, 1 at extremes
-  let deadband = clamp(1.0 - 1.0 / max(contrast, 1e-3), 0.0, 0.9);
+// Generalised for arbitrary 'center' in [0, 1].  For divergent palettes
+// (CF-4, coolwarm) the meaningful zero sits at LUT t=0.5, so center=0.5
+// and dev measures distance from the midpoint symmetrically — both ends
+// of the palette light up.  For sequential palettes (MCPM, inferno) the
+// meaningful zero sits at LUT t=0 (transparent void), so center=0.0
+// and dev measures distance from the low end — only the high end of
+// the palette lights up, voids stay transparent.
+//
+// halfRange normalises dev so deadband math is independent of where the
+// center is: a 50% deadband is always "the half of the palette closest
+// to the center".  At center=0.5, halfRange=0.5; at center=0 or 1,
+// halfRange=1.0.
+//
+// signedT folds the stretched coord back around the center so the
+// stretch direction is correct: at center=0.5 voxels above the
+// midpoint stretch toward t=1, voxels below stretch toward t=0; at
+// center=0 every voxel is above the center so they all stretch
+// monotonically toward t=1.
+fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32, trim: f32) -> vec2<f32> {
+  let halfRange = max(center, 1.0 - center);
+  let dev = abs(sampleValue - center) / max(halfRange, 1e-3);
+  // Deadband from contrast's implicit floor, OR'd with the explicit
+  // trim cutoff (max takes whichever is stricter).
+  let contrastDeadband = clamp(1.0 - 1.0 / max(contrast, 1e-3), 0.0, 0.9);
+  let trimDeadband = clamp(trim, 0.0, 0.95);
+  let deadband = max(contrastDeadband, trimDeadband);
   let stretched = clamp(
     (dev - deadband) / max(1.0 - deadband, 1e-3),
     0.0,
     1.0,
   );
-  let signedT = 0.5 + sign(sampleValue - 0.5) * stretched * 0.5;
-  // Smooth fade across the deadband edge so the threshold isn't a
-  // hard cliff — gives the impression of "structure rising out of fog"
-  // rather than a binary mask popping in.
+  let signedT = center + sign(sampleValue - center) * stretched * halfRange;
   let visibility = smoothstep(deadband - 0.05, deadband + 0.05, dev);
   return vec2<f32>(signedT, visibility);
 }
@@ -153,7 +208,7 @@ fn intersectUnitAabb(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> vec2<f32> {
 }
 
 @fragment
-fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
+fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f32> {
   // Reconstruct the camera-to-fragment ray in WORLD space, then transform
   // into the cube's LOCAL space (where the AABB is the unit cube).
   //
@@ -183,8 +238,33 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
   // Fixed-step march from tMin to tMax.  stepLength normalises against
   // STEP_COUNT so opacity is invariant to changes in the constant.
   let stepLength = (tMax - tMin) / f32(STEP_COUNT);
+  // Jitter the start offset by [0, stepLength) per fragment to break
+  // the visible step-grid moiré that would otherwise slide across the
+  // cube during camera motion.  Without jitter, the 192 fixed sample
+  // positions along each ray show through as a coherent grid because
+  // every pixel uses the same step phase — at high densityScale
+  // (MCPM=18, CF-4=20), per-step opacity is large enough to make that
+  // grid visible.  Per-fragment jitter decorrelates neighbouring rays:
+  // visible aliasing becomes high-frequency grain instead of a moving
+  // grid, and the accumulated integral stays unbiased (jitter averages
+  // to stepLength/2).  hash21Hq (Dave Hoskins' "Hash without Sine") is
+  // used instead of the cheaper sin-based hash21 because the latter's
+  // diagonal banding is visible as a stationary screen-space pattern.
+  //
+  // Temporal seed: offsetting the hash input by frame * irrational
+  // constants decorrelates the dither pattern frame-to-frame, so the
+  // residual grain looks like film noise rather than a stationary
+  // screen-space pattern the eye can latch onto.  Without TAA this
+  // produces visible shimmer when stationary — accepted tradeoff,
+  // because the alternative (no temporal seed) means the same screen
+  // pixel always picks the same step phase, which is exactly the
+  // failure mode the user reported.  The constants 7.13 / 13.71 are
+  // arbitrary irrationals that don't share factors with anything in
+  // the hash mixer.
+  let jitterSeed = fragCoord.xy + vec2<f32>(u.frame * 7.13, u.frame * 13.71);
+  let jitter = hash21Hq(jitterSeed) * stepLength;
   var accum = vec4<f32>(0.0);
-  var t = tMin;
+  var t = tMin + jitter;
   for (var i = 0; i < STEP_COUNT; i = i + 1) {
     let p = rayOriginLocal + rayDirLocal * t;
     // Sample the 3D texture in [0,1]^3 -- same coordinate system as the
@@ -207,7 +287,7 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     // contrast=1 (identity) — branching would break the uniform-
     // control-flow contract that lets us call textureSampleLevel
     // below.
-    let window = applyContrastWindow(sampleValue, u.contrast);
+    let window = applyContrastWindow(sampleValue, u.contrast, u.contrastCenter, u.trim);
     let signedT = window.x;
     let visibility = window.y;
     // Look up colour through the 1D palette LUT.  Same uniformity
@@ -256,7 +336,30 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     let envelope = sphericalEnvelope(p, u.envelopeInner, u.envelopeOuter);
     let alpha = lut.a * u.intensity * u.densityScale * stepLength
               * visibility * envelope;
-    let contrib = vec4<f32>(lut.rgb * alpha, alpha);
+    // Bright-end-weighted exposure boost.  An earlier draft scaled
+    // every voxel uniformly by exposure (rgb * alpha * u.exposure),
+    // which brightened the mid-tone "warm" band just as much as the
+    // peaks — so the peaks never visually stood out as HDR blow-out
+    // even though their accumulated rgb did exceed 1.0.  The
+    // perceptual problem: the user sees the WHOLE cube get brighter
+    // and reads it as "brightness slider", not "peaks blow to white".
+    //
+    // The weighted formula concentrates the boost at the extremes
+    // (far from the contrastCenter):
+    //   highlightGain = 1 + smoothstep(0.5, 1.0, dev) * (exposure - 1)
+    // For sequential palettes (MCPM, contrastCenter=0) the boost
+    // ramps in over signedT > 0.5 and peaks at signedT = 1.0; for
+    // divergent palettes (CF-4, contrastCenter=0.5) it ramps in
+    // symmetrically toward both palette extremes.  Mid-tones near the
+    // center get highlightGain ≈ 1.0 (no boost), so the warm gradient
+    // stays LDR-bounded; only peaks push past the LUT's brightest
+    // entry into the "blow out to white" regime that the rgba16float
+    // target + tonemap pass produce.
+    let halfRange = max(u.contrastCenter, 1.0 - u.contrastCenter);
+    let dev = abs(signedT - u.contrastCenter) / max(halfRange, 1e-3);
+    let blowout = smoothstep(0.5, 1.0, dev);
+    let highlightGain = 1.0 + blowout * max(u.exposure - 1.0, 0.0);
+    let contrib = vec4<f32>(lut.rgb * alpha * highlightGain, alpha);
     // Front-to-back over-compositing within this field.
     accum = accum + (1.0 - accum.a) * contrib;
     if (accum.a > SATURATION_THRESHOLD) { break; }

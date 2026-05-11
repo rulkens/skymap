@@ -66,15 +66,38 @@ const CONTRAST_MAX = 4.0;
 const CONTRAST_STEP = 0.05;
 
 /**
+ * Trim slider bounds: the low-end cutoff in normalised LUT-coord
+ * space.  Range [0, 0.95] — past 0.95 there's no useful signal left
+ * to render.  Step 0.01 for fine control around small trim values
+ * where the visual change per tick is largest.
+ */
+const TRIM_MIN = 0;
+const TRIM_MAX = 0.95;
+const TRIM_STEP = 0.01;
+
+/**
+ * Exposure slider bounds: HDR brightness multiplier on the rgb
+ * contribution per ray-march step.  Range [1, 32] — 1 is no boost
+ * (identity), 4-8 is moderate HDR (peaks brighten, mid-tones
+ * unchanged), 16-32 produces aggressive white blow-out at peaks.
+ * Step 0.5 because the perceptual difference per integer is large.
+ */
+const EXPOSURE_MIN = 1;
+const EXPOSURE_MAX = 32;
+const EXPOSURE_STEP = 0.5;
+
+/**
  * Density (per-cube `densityScale`) slider bounds.  Registry defaults
- * sit in the [4, 10] range (cf4-density = 5; debug-gaussian = 10), so
- * the slider needs to span well past those for tuning headroom.
- * 0..30 with 0.1 step gives ~6x range above the highest registry
- * default at the right end, and "fully invisible" (0) at the left
- * for quick A/B against a no-volume baseline.
+ * sit in the [4, 20] range (mcpm = 4; debug-cartesian = 4;
+ * debug-gaussian = 10; cf4-density = 20), so the slider needs to span
+ * well past those for tuning headroom.  0..60 with 0.1 step gives 3x
+ * the CF-4 default at the right end and "fully invisible" (0) at the
+ * left for quick A/B against a no-volume baseline.  Bumped from 30
+ * after MCPM tuning showed the old cap was too restrictive against
+ * a heavy-tailed log-normalised cube.
  */
 const DENSITY_MIN = 0;
-const DENSITY_MAX = 30;
+const DENSITY_MAX = 60;
 const DENSITY_STEP = 0.1;
 
 export type VolumeFieldRowProps = {
@@ -86,10 +109,14 @@ export type VolumeFieldRowProps = {
   intensity: number;
   contrast: number;
   densityScale: number;
+  trim: number;
+  exposure: number;
   paletteId: ScalarFieldPaletteId;
   onEnabledChange: (handle: string, enabled: boolean) => void;
   onIntensityChange: (handle: string, intensity: number) => void;
   onContrastChange: (handle: string, contrast: number) => void;
+  onTrimChange?: (handle: string, trim: number) => void;
+  onExposureChange?: (handle: string, exposure: number) => void;
   /**
    * Optional — when omitted, the Density slider still renders but its
    * onChange becomes a no-op.  Letting the slider render even without
@@ -163,10 +190,14 @@ export function VolumeFieldRow({
   intensity,
   contrast,
   densityScale,
+  trim,
+  exposure,
   paletteId,
   onEnabledChange,
   onIntensityChange,
   onContrastChange,
+  onTrimChange,
+  onExposureChange,
   onDensityScaleChange,
   onPaletteChange,
 }: VolumeFieldRowProps): ReactNode {
@@ -214,6 +245,30 @@ export function VolumeFieldRow({
         ariaLabel={`${label} contrast`}
         title="Contrast — widens a deadband around the midpoint and stretches the surviving range across the palette."
         onChange={(v) => onContrastChange(handle, v)}
+      />
+      <LabelledSlider
+        label="Trim"
+        value={trim}
+        min={TRIM_MIN}
+        max={TRIM_MAX}
+        step={TRIM_STEP}
+        disabled={!enabled}
+        formatValue={(v) => v.toFixed(2)}
+        ariaLabel={`${label} trim`}
+        title="Trim — low-end cutoff that hard-suppresses voxels below the threshold (Polyphorm-style trim_density in normalised LUT space)."
+        onChange={(v) => onTrimChange?.(handle, v)}
+      />
+      <LabelledSlider
+        label="Exposure"
+        value={exposure}
+        min={EXPOSURE_MIN}
+        max={EXPOSURE_MAX}
+        step={EXPOSURE_STEP}
+        disabled={!enabled}
+        formatValue={(v) => v.toFixed(1)}
+        ariaLabel={`${label} exposure`}
+        title="Exposure — HDR multiplier on the rgb contribution per ray-march step; weighted to brighten only peaks so mid-tones stay LDR-bounded."
+        onChange={(v) => onExposureChange?.(handle, v)}
       />
       <LabelledSlider
         label="Density"

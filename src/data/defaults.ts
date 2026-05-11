@@ -246,6 +246,12 @@ export const DEFAULT_VOLUMES_ENABLED = true;
 export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
 
 /**
+ * Default trim (low-end deadband cutoff) for volume fields that don't
+ * specify one.  0 = no trim — preserves pre-existing behaviour.
+ */
+export const DEFAULT_VOLUME_FIELD_TRIM = 0.0;
+
+/**
  * Default per-field contrast (gamma-style LUT-coordinate remap around
  * the 0.5 pivot, see `VolumeFieldSettings.contrast` and the
  * scalar-volume fragment shader).  1.0 is identity — the value at
@@ -281,14 +287,26 @@ export const DEFAULT_VOLUME_FIELD_DENSITY_SCALE = 1.0;
 export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
 
 /**
- * Per-field default for the CF-4 DM density volume.  Enabled by default:
- * this is the headline scientific overlay (the only real-data volume
- * shipped), and the coolwarm divergent palette gives it a transparent
- * cosmic-mean background so it doesn't fog up the scene for users who
- * haven't opted in.  The synthetic debug fields stay default-off so
- * the CF-4 cube is what greets users on first boot.
+ * Per-field default for the CF-4 DM density volume.  Default-OFF now
+ * that MCPM is the headline cosmic-web overlay shipped by the
+ * volumes gate.  Both can be toggled on simultaneously from the
+ * Volumes panel; the divergent coolwarm palette layers fine over
+ * MCPM's sequential inferno, but defaulting both to ON would
+ * double-fog new users on first boot.  MCPM wins the default slot
+ * because its log-normalised trace density reads as filament
+ * structure immediately at densityScale=4, whereas CF-4 needs more
+ * coaxing past its cosmic-mean midpoint to show interesting voxels.
  */
-export const DEFAULT_CF4_DENSITY_ENABLED = true;
+export const DEFAULT_CF4_DENSITY_ENABLED = false;
+
+/**
+ * Per-field default for the MCPM Cosmic Web volume.  Enabled by
+ * default — paired with the volumes URL gate (`?volumes=1` or DEV
+ * mode) this gives a default-on inferno cosmic-web overlay that's
+ * the headline scientific story for the volume rendering pipeline.
+ * See DEFAULT_CF4_DENSITY_ENABLED for the CF-4-side rationale.
+ */
+export const DEFAULT_MCPM_ENABLED = true;
 
 // ── SpaceMouse ─────────────────────────────────────────────────────────────
 

@@ -88,6 +88,18 @@ The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitign
 
 The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, and `filaments.bin`. The `tools/syncR2.ts` ALLOW filter encodes that set.
 
+### MCPM Cosmic Web volume
+
+The SDSS DR17 Cosmic Slime VAC `SDSS_z_44-476mpc` cube ships as three
+tiered SCFDs (`mcpm-{small,medium,large}.scfd`) alongside CF-4. The
+extract step requires Python + pyslime and only happens once per VAC
+release; contributors curl the pre-extracted `.npy` tiers from R2 and
+run `npm run build-mcpm` to emit the SCFDs locally. The runtime fetches
+`mcpm-<tier>.scfd` per the user's current tier dropdown — same path
+the point clouds use through `state.sources.tier`. See
+`docs/superpowers/specs/2026-05-11-mcpm-cosmic-web-volume-design.md`
+for the full pipeline + format details.
+
 #### Cache-Control
 
 - **Static shell:** `public/_headers` (Workers Assets reads it automatically). JS/CSS/WGSL/WASM get `max-age=31536000, immutable`; `images/famous/*.webp` get `max-age=86400`.

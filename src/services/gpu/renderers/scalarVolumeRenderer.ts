@@ -43,10 +43,20 @@ import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
-// + 4 (densityScale) + 4 (contrast) + 4 (envelopeInner) + 4 (envelopeOuter)
-// = 240.  Already a multiple of 16 — the struct's mat4x4 alignment is
-// satisfied with no trailing pad.
-const UNIFORM_BYTES = 240;
+// + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
+// + 4 (envelopeOuter) + 4 (exposure) + 4 (trim) + 4 (frame) = 256
+// exactly.  The WGSL struct contains mat4x4 (alignment 16), so total
+// must be a multiple of 16 — 256 lands cleanly.  Frame took the last
+// reserved scratch slot (scratch[63]); the next per-field uniform will
+// have to bump UNIFORM_BYTES to the next 16-byte boundary (272).
+const UNIFORM_BYTES = 256;
+
+// Temporal-seed wrap-around for the per-draw frame counter.  f32 has
+// 24 bits of mantissa (~16M integers exact), so wrapping at 1e6
+// leaves headroom for the multiply-by-irrational constants in the
+// shader without losing precision in the hash input.  The eye can't
+// detect a 1M-frame repeat at 60fps (~4.6 hours of continuous render).
+const FRAME_WRAP = 1_000_000;
 
 const CUBE_CORNERS = new Float32Array([
   0, 0, 0,
@@ -164,6 +174,19 @@ type FieldEntry = {
    * the shader for the math.
    */
   contrast: number;
+  /**
+   * Per-cube center of the contrast windowing transform, in LUT
+   * coordinate space [0, 1].  Divergent palettes (CF-4, coolwarm)
+   * want 0.5 so the deadband suppresses the cosmic-mean midpoint
+   * symmetrically; sequential palettes (MCPM, inferno) want 0.0 so
+   * the deadband suppresses the void floor (LUT t=0) and the stretch
+   * pushes mid-density values toward the bright end.  Per-cube
+   * static — set once at registration time from the per-handle
+   * registry, not user-tunable.  See `applyContrastWindow` in
+   * `fragment.wesl` for the math; `VOLUME_FIELD_DEFAULTS[handle]`
+   * for the per-field values.
+   */
+  contrastCenter: number;
   paletteId: ScalarFieldPaletteId;
   /** Per-cube opacity multiplier; seeded to 1.0 in `addField` and overwritten
    *  via `setDensityScale` (called from wireSlots with the value from
@@ -181,6 +204,24 @@ type FieldEntry = {
    */
   envelopeInner: number;
   envelopeOuter: number;
+  /**
+   * Per-cube HDR exposure multiplier on the rgb contribution.  Values
+   * > 1 push accumulated color past the LUT's brightest entry; the
+   * downstream tonemap pass rolls the rgba16float accumulator back to
+   * display gamut, producing the "peaks blow out to white" effect.
+   * Decoupled from alpha so brightening doesn't also occlude.
+   * Per-cube static (set once at registration via setExposure from
+   * the slot commit); not a user-tunable today.
+   */
+  exposure: number;
+  /**
+   * User-tunable low-end cutoff in normalised LUT-coord space [0, 1].
+   * Hard-suppresses voxels with deviation-from-center < trim — the
+   * "Polyphorm trim_density" knob in normalised space.  Default 0 =
+   * no trim.  Combined with contrast's implicit deadband by taking
+   * the max in the shader.
+   */
+  trim: number;
   modelMatrix: mat4;
   invModelMatrix: mat4;
   volumeTexture: GPUTexture;
@@ -237,6 +278,28 @@ export type ScalarVolumeRenderer = {
    * when the handle is unknown.
    */
   setEnvelope(handle: ScalarFieldHandle, inner: number, outer: number): void;
+  /**
+   * Per-cube center of the contrast windowing transform.  See the
+   * `contrastCenter` field on `FieldEntry` for the rationale; values
+   * outside [0, 1] are clamped because the shader's `halfRange =
+   * max(center, 1-center)` only makes sense in that range.  Called
+   * once at slot-commit time with the per-handle registry value.
+   */
+  setContrastCenter(handle: ScalarFieldHandle, center: number): void;
+  /**
+   * Per-cube HDR exposure multiplier on the rgb contribution.  See
+   * the `exposure` field on `FieldEntry` for the rationale.  Negative
+   * or NaN values clamp to 0 (silent overlay); the upper bound is
+   * permissive (32) because the downstream tonemap caps display
+   * brightness anyway.  No-op when the handle is unknown.
+   */
+  setExposure(handle: ScalarFieldHandle, value: number): void;
+  /**
+   * User-tunable low-end cutoff in normalised LUT-coord space.
+   * Range conventionally [0, 0.95]; values past 0.95 get clamped
+   * because they leave no useful signal.  No-op when handle unknown.
+   */
+  setTrim(handle: ScalarFieldHandle, value: number): void;
   /**
    * Replace the palette LUT for a single field.  Rewrites the field's
    * existing 1D LUT texture in place via `writeTexture`; the bind group
@@ -323,6 +386,11 @@ export function createScalarVolumeRenderer(
   const bindGroupLayout = pipeline.getBindGroupLayout(0);
 
   const fields = new Map<ScalarFieldHandle, FieldEntry>();
+  // Per-draw frame counter — incremented every draw() and forwarded to
+  // the fragment shader as a temporal seed for the ray-march jitter
+  // hash.  Wrapping at FRAME_WRAP keeps the f32 mantissa precise
+  // through the shader's irrational-constant multiplies.
+  let frame = 0;
 
   function uploadCube(cube: ScalarCube): GPUTexture {
     const tex = device.createTexture({
@@ -409,6 +477,10 @@ export function createScalarVolumeRenderer(
         // placeholder before any UI / settings state has been
         // threaded in.
         contrast: 1.0,
+        // Default to 0.5 (divergent / CF-4 behaviour); the slot
+        // commit overwrites with the per-handle registry value via
+        // `setContrastCenter` immediately after `addField` returns.
+        contrastCenter: 0.5,
         // Match the palette seeded into `paletteTexture` above.  The
         // commit site (wireSlots) overwrites both via
         // `setFieldPalette` immediately after `addField` returns; the
@@ -431,6 +503,14 @@ export function createScalarVolumeRenderer(
         // version of this sentinel.
         envelopeInner: 2.0,
         envelopeOuter: 2.0,
+        // 1.0 = pre-HDR behaviour exactly preserved.  Slot commit
+        // overwrites with the per-handle registry value via
+        // `setExposure` immediately after `addField` returns.
+        exposure: 1.0,
+        // 0 = no trim (every voxel passes; contrast's implicit
+        // deadband still applies if contrast > 1).  Slot commit
+        // overwrites with persisted setting.
+        trim: 0.0,
         modelMatrix,
         invModelMatrix,
         volumeTexture,
@@ -459,6 +539,33 @@ export function createScalarVolumeRenderer(
       // — the slider in VolumeFieldRow caps lower, but the API stays
       // permissive.
       if (entry) entry.contrast = Math.max(0.05, Math.min(16, contrast));
+    },
+    setContrastCenter(handle, center) {
+      const entry = fields.get(handle);
+      if (!entry) return;
+      // Clamp to [0, 1].  The shader's `halfRange = max(center, 1-center)`
+      // only makes sense inside that range; out-of-range values would
+      // produce a non-monotonic dev metric and yield nonsense visuals
+      // rather than a useful debug signal.  NaN clamps to the divergent
+      // default (0.5) — never propagate non-finite values to the GPU.
+      const c = Number.isFinite(center) ? center : 0.5;
+      entry.contrastCenter = Math.max(0, Math.min(1, c));
+    },
+    setExposure(handle, value) {
+      const entry = fields.get(handle);
+      if (!entry) return;
+      // Clamp negative / NaN to 0 (silent overlay).  Upper bound 32 is
+      // generous; the tonemap downstream rolls off display brightness
+      // before the user notices — values past ~10 mostly just push
+      // more voxels into the saturation flat.
+      const v = Number.isFinite(value) ? value : 1.0;
+      entry.exposure = Math.max(0, Math.min(32, v));
+    },
+    setTrim(handle, value) {
+      const entry = fields.get(handle);
+      if (!entry) return;
+      const v = Number.isFinite(value) ? value : 0.0;
+      entry.trim = Math.max(0, Math.min(0.95, v));
     },
     setEnvelope(handle, inner, outer) {
       const entry = fields.get(handle);
@@ -519,20 +626,26 @@ export function createScalarVolumeRenderer(
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
-      // Per-field uniform buffer layout (240 bytes; mat4 alignment):
-      //   0..63   viewProj        (mat4x4 column-major, 16 floats)
-      //  64..71   viewportPx      (vec2)
+      // Per-field uniform buffer layout (256 bytes; mat4 alignment):
+      //   0..63   viewProj         (mat4x4 column-major, 16 floats)
+      //  64..71   viewportPx       (vec2)
       //  72..79   _pad0, _pad1
-      //  80..143  modelMatrix     (mat4x4)
-      // 144..207  invModelMatrix  (mat4x4)
-      // 208..219  cameraPosWorld  (vec3)
-      // 220..223  intensity       (f32)
-      // 224..227  densityScale    (f32)
-      // 228..231  contrast        (f32)
-      // 232..235  envelopeInner   (f32)
-      // 236..239  envelopeOuter   (f32)
-      // (struct is now exactly 240 bytes content; no trailing pad needed)
+      //  80..143  modelMatrix      (mat4x4)
+      // 144..207  invModelMatrix   (mat4x4)
+      // 208..219  cameraPosWorld   (vec3)
+      // 220..223  intensity        (f32)
+      // 224..227  densityScale     (f32)
+      // 228..231  contrast         (f32)
+      // 232..235  contrastCenter   (f32)
+      // 236..239  envelopeInner    (f32)
+      // 240..243  envelopeOuter    (f32)
+      // 244..247  exposure         (f32)
+      // 248..251  trim             (f32)
+      // 252..255  frame            (f32; per-draw temporal seed for
+      //                            the shader's jitter hash — wraps
+      //                            at FRAME_WRAP, see top of file)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
+      frame = (frame + 1) % FRAME_WRAP;
       for (const e of fields.values()) {
         if (!e.enabled || e.intensity <= 0) continue;
         for (let i = 0; i < 16; i++) scratch[i] = viewProj[i] ?? 0;
@@ -548,8 +661,12 @@ export function createScalarVolumeRenderer(
         scratch[55] = e.intensity;
         scratch[56] = e.densityScale;
         scratch[57] = e.contrast;
-        scratch[58] = e.envelopeInner;
-        scratch[59] = e.envelopeOuter;
+        scratch[58] = e.contrastCenter;
+        scratch[59] = e.envelopeInner;
+        scratch[60] = e.envelopeOuter;
+        scratch[61] = e.exposure;
+        scratch[62] = e.trim;
+        scratch[63] = frame;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         pass.setBindGroup(0, e.bindGroup);
         pass.drawIndexed(CUBE_INDICES.length);

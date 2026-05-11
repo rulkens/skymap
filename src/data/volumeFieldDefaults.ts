@@ -50,6 +50,29 @@ export type VolumeFieldDefaults = {
    */
   contrast: number;
   /**
+   * Per-cube center of the contrast windowing transform, in LUT
+   * coordinate space [0, 1].  Per-cube static (not user-tunable)
+   * because it's a property of the cube's data semantics + palette
+   * choice rather than a tuning knob:
+   *
+   *   - Divergent palettes (coolwarm) with a meaningful zero at the
+   *     midpoint of the data range → `contrastCenter = 0.5`.  The
+   *     deadband suppresses near-mean noise symmetrically; the
+   *     stretch pushes both ends toward palette extremes.  CF-4
+   *     density contrast is the canonical example.
+   *
+   *   - Sequential palettes (inferno, magma, viridis) with a
+   *     meaningful zero at the start of the LUT (voids are
+   *     transparent) → `contrastCenter = 0.0`.  The deadband
+   *     suppresses void voxels (LUT t≈0); the stretch pushes
+   *     mid-density values toward the bright end (LUT t≈1).  MCPM
+   *     log-normalised trace density is the canonical example.
+   *
+   * The shader generalises the windowing transform around this
+   * center; see `applyContrastWindow` in `fragment.wesl`.
+   */
+  contrastCenter: number;
+  /**
    * Per-cube opacity multiplier; see the alpha-formula docblock in
    * `scalarVolumeRenderer.ts`.  Tuned per field so intensity=1 produces
    * a saturated-but-not-flat overlay against typical data ranges.
@@ -81,6 +104,42 @@ export type VolumeFieldDefaults = {
     inner: number;
     outer: number;
   };
+  /**
+   * Per-cube HDR exposure multiplier on the rgb contribution per
+   * ray-march step.  1.0 preserves the pre-HDR behaviour exactly;
+   * values > 1 push the accumulated color past the LUT's brightest
+   * entry, producing the "peaks blow out to white" effect after the
+   * downstream tonemap rolls the rgba16float accumulator back to
+   * display gamut.
+   *
+   * Per-cube static (not a user-tunable slider) because it's a
+   * per-dataset aesthetic decision rather than a tuning knob — MCPM
+   * with its log-normalised heavy tail wants 4-6 to surface the
+   * fiery slime-mould look; CF-4 keeps 1.0 because its divergent
+   * coolwarm is already calibrated against the cosmic mean.
+   */
+  exposure: number;
+  /**
+   * Default user-tunable low-end cutoff (Trim) in normalised LUT space.
+   * Per-cube starting point; user can override via the Trim slider.
+   *
+   *   - 0.0 = no trim (every voxel passes).  CF-4 default — its
+   *     coolwarm palette is already calibrated against the cosmic mean
+   *     and trimming would crop scientifically meaningful structure.
+   *   - 0.2 = light trim hiding the low-density fog band.  MCPM
+   *     default — see the analysis in the spec for the percentile
+   *     breakdown that motivates this value.
+   */
+  trim: number;
+  /**
+   * Optional per-cube starting Intensity (overall opacity multiplier in
+   * [0, 1]).  When omitted, the slot seeds with the global
+   * `DEFAULT_VOLUME_FIELD_INTENSITY`.  Per-cube override exists because
+   * a heavy-tailed log-normalised cube (MCPM) wants intensity=1.0 by
+   * default to read at full saturation, while CF-4's calibrated
+   * coolwarm sits comfortably at the global 0.5.
+   */
+  intensity?: number;
   /** Optional human-readable label override (renderer falls back to handle). */
   label?: string;
 };
@@ -113,8 +172,20 @@ export const FALLBACK_VOLUME_DEFAULTS: VolumeFieldDefaults = {
   // tuned yet.  Safer than a higher value because it never hides
   // data the registry author didn't explicitly opt out of.
   contrast: 1.0,
+  // 0.5 reproduces the pre-generalisation contrast behaviour exactly
+  // (it's the value the shader hardcoded before contrastCenter
+  // existed).  At contrast=1.0 the value is irrelevant anyway, so
+  // this only matters if a producer hand-bumps contrast on a brand
+  // new untuned field.
+  contrastCenter: 0.5,
   densityScale: 1.0,
   envelope: NO_SPATIAL_ENVELOPE,
+  // 1.0 = pre-HDR behaviour for untuned fields.  Same rationale as
+  // contrast=1.0 above: never silently boost a field the registry
+  // author hasn't opted into.
+  exposure: 1.0,
+  // no trim for untuned fields
+  trim: 0.0,
 };
 
 /**
@@ -132,6 +203,12 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // enough to crisp up the structures without yet cropping any
     // real signal.  Tuned visually against d_mean_CF4pp.npy.
     contrast: 1.2,
+    // 0.5 = divergent / midpoint-centred windowing.  CF-4 stores
+    // overdensity δ (signed) with the cosmic mean at 0; the symmetric
+    // builder maps that to LUT t=0.5, where the coolwarm palette is
+    // fully transparent.  See VolumeFieldDefaults.contrastCenter for
+    // the divergent-vs-sequential discussion.
+    contrastCenter: 0.5,
     // Bumped from the original 5.0 to compensate for the windowing
     // visibility multiplier AND the spherical envelope cropping
     // (both new in the volume-windowing-envelope PR).  20× yields a
@@ -145,6 +222,13 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // reconstruction — Laniakea, the Local Void, and the Great
     // Attractor all sit well inside the inscribed sphere.
     envelope: { inner: 0.9, outer: 1.0 },
+    // 1.0 preserves the pre-HDR behaviour exactly — CF-4's divergent
+    // coolwarm is already calibrated against the cosmic-mean midpoint,
+    // and an HDR boost would wash out the careful balance between
+    // overdensity (warm) and underdensity (cool) sides of the palette.
+    exposure: 1.0,
+    // CF-4 keeps the cosmic mean visible
+    trim: 0.0,
     label: 'CF-4 DM density',
   },
   'debug-gaussian': {
@@ -152,6 +236,11 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // Identity contrast — synthetic fixtures don't have a noise
     // floor worth windowing out.
     contrast: 1.0,
+    // 0.5 preserves the pre-generalisation behaviour for synthetic
+    // fixtures: every value of `contrast` works the same way as
+    // before this field was added.  At contrast=1.0 the value is
+    // irrelevant anyway (no deadband, no stretch).
+    contrastCenter: 0.5,
     // Lifted from syntheticScalarField.ts:makeSyntheticGaussianCube.
     // A single Gaussian peak integrates to roughly √(2π)·σ along its
     // central axis, so 10× lifts the peak into the saturated regime
@@ -160,11 +249,14 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // No envelope: the synthetic fixtures exist for axis / scale /
     // origin verification.  Corner visibility is a feature, not a bug.
     envelope: NO_SPATIAL_ENVELOPE,
+    exposure: 1.0,
+    trim: 0.0,
     label: 'Gaussian (debug)',
   },
   'debug-cartesian': {
     paletteId: 'viridis',
     contrast: 1.0,
+    contrastCenter: 0.5,
     // Lifted from syntheticScalarField.ts:makeCartesianGridCube.  A
     // ray crosses ~8 grid planes per axis at default settings, so
     // integrated density is much higher than the single-peak
@@ -172,11 +264,14 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     densityScale: 4.0,
     // Grid corners are part of the test; keep them visible.
     envelope: NO_SPATIAL_ENVELOPE,
+    exposure: 1.0,
+    trim: 0.0,
     label: 'Cartesian grid (debug)',
   },
   'debug-spherical': {
     paletteId: 'magma',
     contrast: 1.0,
+    contrastCenter: 0.5,
     // Lifted from syntheticScalarField.ts:makeSphericalGridCube.  A
     // ray typically crosses one or two shells plus a spoke — sits
     // between the Gaussian (sparse) and Cartesian grid (dense) in
@@ -186,7 +281,71 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // crop the outermost shell asymmetrically — undesirable for a
     // verification fixture.
     envelope: NO_SPATIAL_ENVELOPE,
+    exposure: 1.0,
+    trim: 0.0,
     label: 'Spherical grid (debug)',
+  },
+  'mcpm': {
+    // Inferno (matplotlib perceptually-uniform, fire-on-black) is the
+    // canonical aesthetic for slime-mould / cosmic-web density
+    // visualisations (Polyphorm, MCPM tradition). Visually distinct
+    // from CF-4's divergent coolwarm so both overlays can be enabled
+    // together and read as separate layers. Added to the palette set
+    // by Task 5; this entry is the first consumer.
+    paletteId: 'inferno',
+    // MCPM trace density spans several decades (slime-mould agent
+    // density is heavy-tailed); modest windowing brings filament
+    // structure forward without crushing the low-density voids.
+    // Tuned visually against the SDSS_z_44-476mpc cube alongside the
+    // densityScale=18 + exposure=18 + trim=0.3 + intensity=1.0
+    // combination below — bump only after an A/B against that cube.
+    contrast: 1.7,
+    // 0.0 = sequential / void-floor-centred windowing.  MCPM trace
+    // is non-negative and log-normalised, so void voxels sit at LUT
+    // t=0 (transparent inferno start).  Centering the deadband at 0
+    // suppresses voids when contrast > 1 and stretches mid-density
+    // values toward the bright end of the LUT — exactly what the
+    // user wants for "filaments rising out of fog".  Without this
+    // (i.e. with the cf4 default of 0.5), the contrast slider became
+    // a knife-edge between "all red" and "completely invisible".
+    contrastCenter: 0.0,
+    // Tuned visually against the real SDSS_z_44-476mpc cube — the
+    // log-normalised heavy-tailed distribution needs more density than
+    // the original 4.0 placeholder to reach saturation through the
+    // soft envelope at intensity=1.0.  18 lands in the same ballpark
+    // as CF-4's 20 (similar visibility multiplier + envelope cropping
+    // posture) — both cubes converged on ~20 from very different
+    // starting points.
+    densityScale: 18.0,
+    // Same posture as CF-4: soft skirt from the inscribed sphere
+    // inward to hide the axis-aligned silhouette. The MCPM cube extends
+    // 556×938×569 Mpc, so the inscribed sphere reaches well past the
+    // SDSS volume of interest; envelope corner-cropping costs nothing
+    // visually meaningful.
+    envelope: { inner: 0.85, outer: 1.05 },
+    // 18 = aggressive HDR boost on peaks only.  The shader's
+    // bright-end-weighted formula (highlightGain = 1 + smoothstep(0.5,
+    // 1, dev) * (exposure - 1)) means mid-tones near the contrast
+    // center stay at gain ≈ 1.0; only peaks (signedT > 0.7 for
+    // sequential, |signedT - 0.5| > 0.35 for divergent) get the full
+    // boost.  For MCPM peaks at signedT ≈ 1.0 with exposure=18, the
+    // gain reaches 18x — pushes inferno's pale-yellow LUT entry past
+    // LDR into hard white blow-out at the densest filament cores via
+    // the downstream tonemap.  Tuned visually; bumped from the
+    // original 8.0 placeholder once the bright-end-weighted formula
+    // landed and the warm gradient stayed intact at higher exposures.
+    exposure: 18.0,
+    // 0.3 hides the low-density fog band slightly more aggressively
+    // than the original 0.2 — the dataset is 73% void, so trim only
+    // affects the next ~22% fog slice anyway, and 0.3 was the visual
+    // sweet spot for filament-on-black contrast against intensity=1.0.
+    trim: 0.3,
+    // 1.0 — MCPM is the headline cosmic-web overlay and wants full
+    // saturation by default; the global 0.5 was tuned for CF-4's more
+    // calibrated coolwarm.  Per-cube override lets each cube pick its
+    // starting point independently.
+    intensity: 1.0,
+    label: 'MCPM Cosmic Web',
   },
 };
 
