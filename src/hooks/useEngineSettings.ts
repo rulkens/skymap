@@ -102,6 +102,13 @@ export type EngineSettingsState = {
  * The slice of `EngineCallbacks` this hook owns.  App.tsx spreads this
  * into its `createEngine(canvas, { ... })` options block so the engine
  * can fire echoes that drive React's settings state.
+ *
+ * H5 Task 3: this slice now also exposes the nested sub-bag twins
+ * (`points`, `tonemap`, `camera`, etc.) populated with the same
+ * setState references so the engine's Task-4 dual-fire reaches React
+ * via either shape.  Listed here as the nested keys' supertype rather
+ * than a narrow `Pick<>` because the nested bags are bag-shaped, not
+ * individual top-level keys.
  */
 export type EngineSettingsCallbacks = Pick<
   EngineCallbacks,
@@ -120,6 +127,14 @@ export type EngineSettingsCallbacks = Pick<
   | 'onToneMapCurveChange'
   | 'onExposureChange'
   | 'onFilamentsReady'
+  | 'points'
+  | 'tonemap'
+  | 'camera'
+  | 'sources'
+  | 'bias'
+  | 'thumbnails'
+  | 'milkyWay'
+  | 'filaments'
 >;
 
 export type UseEngineSettingsReturn = {
@@ -235,6 +250,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       volumeFields,
     },
     engineCallbacks: {
+      // ── Flat shape (legacy — removed in Task 11) ─────────────────
       onPointSizeChange: setPointSize,
       onBrightnessChange: setBrightness,
       onAutoRotateChange: setAutoRotate,
@@ -251,6 +267,47 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       onExposureChange: setExposure,
       onFilamentsReady: (stripCount, vertexCount) =>
         setFilamentCounts({ stripCount, vertexCount }),
+
+      // ── Nested twins (H5 Task 3) ─────────────────────────────────
+      // Same setter references as the flat fields above; engine's
+      // dual-fire in Task 4 reaches the same setState twice with the
+      // same value, which React reconciler dedups.  These bags
+      // become the only shape once Task 10/11 drops the flat
+      // fields.  The `partial-echo` cases (filaments, volumes
+      // master) stay App-owned — no nested entry here because the
+      // engine doesn't fire any echo for them, just as before.
+      points: {
+        onSizeChange: setPointSize,
+        onBrightnessChange: setBrightness,
+        onDepthFadeChange: setDepthFadeEnabled,
+        onHighlightFallbackChange: setHighlightFallback,
+        onRealOnlyChange: setRealOnlyMode,
+      },
+      tonemap: {
+        onExposureChange: setExposure,
+        onCurveChange: setToneMapCurve,
+      },
+      camera: {
+        onAutoRotateChange: setAutoRotate,
+      },
+      sources: {
+        onLodModeChange: setLodMode,
+        onMaskChange: setVisibleSourceMask,
+      },
+      bias: {
+        onModeChange: setBiasMode,
+        onAbsMagLimitChange: setAbsMagLimit,
+      },
+      thumbnails: {
+        onEnabledChange: setGalaxyTexturesEnabled,
+      },
+      milkyWay: {
+        onEnabledChange: setMilkyWayEnabled,
+      },
+      filaments: {
+        onReady: (stripCount, vertexCount) =>
+          setFilamentCounts({ stripCount, vertexCount }),
+      },
     },
     setFilamentsEnabled,
     setFilamentIntensity,

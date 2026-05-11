@@ -8,6 +8,7 @@ import type { EngineStatus } from './EngineStatus';
 import type { PointInfo } from './PointInfo';
 import type { LodMode } from './LodMode';
 import type { Tier } from './Tier';
+import type { ScaleInfo } from './ScaleInfo';
 import type { Source } from '../data/sources';
 import type { BiasMode } from '../data/biasMode';
 import type { ToneMapCurve } from '../data/toneMapCurve';
@@ -298,6 +299,66 @@ export type EngineCallbacks = {
    * fine; no debouncing needed at the engine layer.
    */
   onLoadProgress?: (progress: LoadProgressState | null) => void;
+
+  // ── Nested sub-bags (added Task 3; flat fields above removed in Task 10) ──
+  //
+  // Both shapes coexist during the consumer-migration phase.  Engine code
+  // fires both `cb.onPointSizeChange?.(v)` and `cb.points?.onSizeChange?.(v)`
+  // so a consumer can subscribe via either shape during the transition.
+  // The flat fields are deleted in Task 11 once every consumer is on
+  // the nested shape.
+  //
+  // Why duplicate the surface at all (rather than a single rename)?  The
+  // grouping reflects the engine's *internal* state shape (added in
+  // Task 2): point/tonemap/camera/selection/sources/bias/thumbnails/…
+  // Consumers that subscribe to a group's worth of echoes now get a
+  // typed namespace they can destructure (`{ points, camera } = ...`)
+  // rather than 26 sibling lambdas the IDE can't visually cluster.
+  // The alternative (one big rename in a single commit) would break
+  // every call site in lockstep — incompatible with the incremental
+  // dual-fire / dual-write strategy this H5 plan is built around.
+  lifecycle?: {
+    onStatusChange?: (s: EngineStatus) => void;
+    onFpsChange?: (fps: number) => void;
+  };
+  points?: {
+    onSizeChange?: (sizePx: number) => void;
+    onBrightnessChange?: (value: number) => void;
+    onDepthFadeChange?: (enabled: boolean) => void;
+    onHighlightFallbackChange?: (enabled: boolean) => void;
+    onRealOnlyChange?: (enabled: boolean) => void;
+  };
+  tonemap?: {
+    onExposureChange?: (value: number) => void;
+    onCurveChange?: (curve: ToneMapCurve) => void;
+  };
+  camera?: {
+    onAutoRotateChange?: (enabled: boolean) => void;
+    onFocusChange?: (info: PointInfo | null) => void;
+    onScaleChange?: (info: ScaleInfo) => void;
+  };
+  selection?: {
+    onSelectChange?: (info: PointInfo | null) => void;
+    onHoverChange?: (info: PointInfo | null) => void;
+  };
+  sources?: {
+    onLodModeChange?: (mode: LodMode) => void;
+    onMaskChange?: (mask: number) => void;
+    onTierChange?: (tier: Tier) => void;
+    onCloudReady?: (source: Source, count: number) => void;
+    onLoadProgress?: (progress: LoadProgressState | null) => void;
+  };
+  bias?: {
+    onModeChange?: (mode: BiasMode) => void;
+    onAbsMagLimitChange?: (absMag: number) => void;
+  };
+  thumbnails?: { onEnabledChange?: (enabled: boolean) => void };
+  milkyWay?: { onEnabledChange?: (enabled: boolean) => void };
+  filaments?: { onReady?: (stripCount: number, vertexCount: number) => void };
+  volumes?: { onFieldsChanged?: () => void };
+  input?: {
+    spaceMouse?: { onConnectedChange?: (connected: boolean) => void };
+  };
 };
 
 /**
