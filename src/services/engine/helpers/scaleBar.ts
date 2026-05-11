@@ -1,16 +1,18 @@
 /**
  * scaleBar — pure helper that computes the bottom-right distance legend
- * (label + pixel width) from the current camera state and viewport.
+ * (label + pixel width) from a camera snapshot and viewport size.
  *
- * ### Why a separate module?
+ * ### Where this runs
  *
- * The engine.ts `updateScaleBar()` function used to inline both the math
- * *and* the dedup-and-emit lifecycle.  Splitting them makes the pure
- * computation trivially unit-testable (synthetic cam values + canvas
- * sizes, no GPU device, no React stub) while leaving the dedup state
- * (`lastScaleSig`) and the actual `cb.onScaleChange` fire in engine.ts
- * where it belongs — that state is engine-frame-local, not a property of
- * the scale-bar math.
+ * Consumed React-side from `useEngine.ts`, which receives camera
+ * snapshots via `cb.onCameraChange` and feeds them in alongside the
+ * live canvas size.  The pure return value flows into a `useState`
+ * slot whose default equality check dedups unchanged frames —
+ * replacing the engine-side `lastScaleSig` string compare an earlier
+ * iteration relied on.
+ *
+ * The file still lives under `services/engine/helpers/` because moving
+ * it would be unrelated churn; logically it's a pure UI helper.
  *
  * ### The math
  *
@@ -50,7 +52,7 @@
  * ### Returning null
  *
  * Two failure cases short-circuit cleanly to `null` so the caller can
- * skip the emit-and-dedup step without special-casing zero/inf:
+ * skip the setState step without special-casing zero/inf:
  *
  *   - `viewportCssHeight === 0` — pre-resize, no usable scale yet.
  *   - `pxPerMpc` non-finite or non-positive — degenerate camera state
@@ -77,8 +79,7 @@ export type ScaleBarCamera = {
  * Compute the next ScaleInfo (label + rounded pixel width) for the
  * legend, or `null` if the input camera/viewport is degenerate.
  *
- * Pure: no I/O, no mutation.  Bit-for-bit equivalent to the inline math
- * previously inside `engine.ts:updateScaleBar()`.
+ * Pure: no I/O, no mutation.
  *
  * @param cam         Camera state (only `distance` and `fovYRad` are read).
  * @param canvasSize  Viewport dimensions in CSS pixels.  Only `height` is

@@ -64,17 +64,18 @@
  *     write to (round-trip via the `{current}` ref pattern, same shape
  *     as `lastReportedFps` from Phase 3);
  *   - `fpsCounter`, `lastReportedFps` — needed by `startLoop` to build
- *     the `RunFrameDeps` bag.  The pure `cssToTexPx` helper, the
- *     `createScaleBarUpdater` factory, and the `milkyWayITimeEpochMs`
- *     snapshot used to live here too, but post-extraction they're
- *     imported / built / snapshotted directly in `wireInput` /
- *     `startLoop` — there's no per-engine dedup state for `cssToTexPx`,
- *     the scale-bar factory closes over `state` / `canvas` / `cb`
- *     which are already in scope at the consumer, and the iTime epoch
- *     is `performance.now()` taken once (the * 0.25 animation scale
- *     makes "engine construction" vs "loop start" imperceptible).
- *     `setHovered` / `setSelected` similarly don't appear: phases call
- *     into `state.subsystems.selection` directly (Spec D.3);
+ *     the `RunFrameDeps` bag.  The pure `cssToTexPx` helper and the
+ *     `milkyWayITimeEpochMs` snapshot used to live here too, but
+ *     post-extraction they're imported / snapshotted directly in
+ *     `wireInput` / `startLoop` — there's no per-engine dedup state
+ *     for `cssToTexPx`, and the iTime epoch is `performance.now()`
+ *     taken once (the * 0.25 animation scale makes "engine
+ *     construction" vs "loop start" imperceptible).  Scale-bar
+ *     derivation lives entirely React-side now (driven by
+ *     `cb.onCameraChange`), so there's no engine-side scale-bar
+ *     factory to thread either.  `setHovered` / `setSelected`
+ *     similarly don't appear: phases call into
+ *     `state.subsystems.selection` directly (Spec D.3);
  *   - `allSlots` — the flat slot Map that `engine.ts` exposes via the
  *     public handle's `assetSlots` field; populated by `wireSlots`
  *     once every slot has been minted;

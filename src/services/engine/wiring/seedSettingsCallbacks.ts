@@ -26,8 +26,8 @@
  *     value.  No GPU device, no async cloud load.
  *
  * The helper does *not* fire required callbacks (`onStatusChange`,
- * `onHoverChange`, `onSelectChange`, `onScaleChange`) — those have
- * stricter lifecycle rules and the engine handles them inline.
+ * `onHoverChange`, `onSelectChange`) — those have stricter lifecycle
+ * rules and the engine handles them inline.
  */
 
 import type { EngineCallbacks, LodMode } from '../../../@types';

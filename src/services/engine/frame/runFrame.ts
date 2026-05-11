@@ -44,12 +44,9 @@
  * are *only* read by the frame body — promoting them to `state.gpu.*`
  * would widen `EngineState`'s contract for one consumer's convenience,
  * and every other reader of `EngineState` would have to null-check
- * fields it never touches.  Second, the createEngine-scope helpers
- * (`updateScaleBar`, `cssToTexPx`) close over locals like
- * `lastScaleSig` that are inherently per-engine-instance and don't
- * belong in `EngineState`'s data-shape role either.  Threading them
- * through deps preserves the existing closure structure without
- * forcing a state-bag rewrite.  (Hover writes used to live here too,
+ * fields it never touches.  (The pure `cssToTexPx` helper captures
+ * nothing, so it's imported directly at the top of this module instead
+ * of being threaded.)  (Hover writes used to live here too,
  * threaded as `setHovered`; Spec D.3 moved them to
  * `state.subsystems.selection.setHovered` so the frame body now reads
  * directly off `state` instead of carrying its own selection callback.)
@@ -65,13 +62,9 @@
  * `deps.lastReportedFps.current = newValue`; engine.ts sees the same
  * object and observes the writes.
  *
- * Note that `lastScaleSig` (also a `let` in createEngine) does NOT
- * become a ref: it's read/written only inside `updateScaleBar()`, which
- * we pass through deps as a function value.  The function captures
- * `lastScaleSig` via its own closure, so the body never needs to touch
- * it directly.  Same story for `fpsCounter` (a `const` whose
- * `.sample()` method is called once at the top of the body) — pass the
- * counter object itself, no ref-ification needed.
+ * `fpsCounter` (a `const` whose `.sample()` method is called once at the
+ * top of the body) needs no ref-ification — we pass the counter object
+ * itself.
  */
 
 import type { EngineCallbacks, EngineState } from '../../../@types';
@@ -84,6 +77,7 @@ import type { FpsCounter } from '../subsystems/fpsCounter';
 import { updatePosition } from '../../camera/orbitCamera';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { autoLodMask } from '../helpers/autoLod';
+import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
 import { deriveFrameContext } from './frameContext';
 import { renderFrame } from './renderFrame';
@@ -132,14 +126,6 @@ export type RunFrameDeps = {
    * each frame.
    */
   milkyWayITimeEpochMs: number;
-  /** CSS-pixel → texture-space-pixel conversion (DPR-aware). */
-  cssToTexPx: (cssPx: number) => number;
-  /**
-   * Refresh the scale-bar legend.  Internally dedups via a closure-
-   * captured `lastScaleSig` so an unchanged label costs ~zero per
-   * frame.
-   */
-  updateScaleBar: () => void;
 };
 
 /**
@@ -196,9 +182,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.gpu.postProcess?.resize({ width: deps.canvas.width, height: deps.canvas.height });
   }
 
-  // Refresh the scale-bar legend. Early-returns when nothing changed,
-  // so this costs ~zero on stable frames.
-  deps.updateScaleBar();
+  // Emit a per-frame camera snapshot for React-side derived state
+  // (scale bar today; potentially other zoom-dependent UI later).
+  // Fires unconditionally while `cam` exists — React's setState
+  // equality check filters unchanged snapshots, so the cost on stable
+  // frames is one object alloc and one optional-chain call.  No-op
+  // entirely when nobody subscribes.
+  if (state.cam) {
+    deps.cb.onCameraChange?.({
+      distance: state.cam.distance,
+      fovYRad: state.cam.fovYRad,
+    });
+  }
 
   // ── Focus / home tween ────────────────────────────────────────────
   //
@@ -421,8 +416,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.gpu.pickRenderer
       .pick(
         [deps.canvas.width, deps.canvas.height],
-        deps.cssToTexPx(pos.x),
-        deps.cssToTexPx(pos.y),
+        cssToTexPx(pos.x),
+        cssToTexPx(pos.y),
         visibleSources,
         // Boost the picking floor for easier hover targets — see
         // PICK_PADDING_PX in pickRenderer.ts.
