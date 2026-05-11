@@ -17,7 +17,6 @@ import { join } from 'node:path';
 
 import { buildCf4Density } from '../../tools/buildCf4Density';
 import { decodeScalarField } from '../../src/data/scalarFieldFormat';
-import { SG_TO_EQ_QUATERNION } from '../../src/data/superGalacticTransform';
 
 /** Write a flat C-order f32 .npy with the given shape and values. */
 function writeF32Npy(path: string, values: number[], shape: readonly number[]): void {
@@ -75,11 +74,16 @@ describe('buildCf4Density (smoke)', () => {
     expect(cube.origin[0]).toBeCloseTo(expectedCorner, 3);
     expect(cube.origin[1]).toBeCloseTo(expectedCorner, 3);
     expect(cube.origin[2]).toBeCloseTo(expectedCorner, 3);
-    // Rotation matches the SG→eq quaternion exactly.
-    expect(cube.rotation[0]).toBeCloseTo(SG_TO_EQ_QUATERNION[0]!, 6);
-    expect(cube.rotation[1]).toBeCloseTo(SG_TO_EQ_QUATERNION[1]!, 6);
-    expect(cube.rotation[2]).toBeCloseTo(SG_TO_EQ_QUATERNION[2]!, 6);
-    expect(cube.rotation[3]).toBeCloseTo(SG_TO_EQ_QUATERNION[3]!, 6);
+    // Rotation is IDENTITY — the renderer's buildCubeModelMatrix already
+    // applies the SG→EQ rotation via FRAME_TO_WORLD['supergalactic-cartesian']
+    // for any cube whose frameKind is supergalactic.  An earlier draft wrote
+    // SG_TO_EQ_QUATERNION here, which compounded the rotation: cube features
+    // landed at SG_TO_EQ²·X in world space instead of SG_TO_EQ·X.  This
+    // assertion is the regression anchor.
+    expect(cube.rotation[0]).toBeCloseTo(0, 6);
+    expect(cube.rotation[1]).toBeCloseTo(0, 6);
+    expect(cube.rotation[2]).toBeCloseTo(0, 6);
+    expect(cube.rotation[3]).toBeCloseTo(1, 6);
     // valueMin/valueMax are the *original* pre-normalisation range, kept
     // as diagnostic so a future consumer can recover the underlying
     // physical units.  The packed voxel payload itself has been remapped
