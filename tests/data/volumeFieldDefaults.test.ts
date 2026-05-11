@@ -76,4 +76,27 @@ describe('volumeFieldDefaults', () => {
   it('fallback also opts out of the envelope', () => {
     expect(FALLBACK_VOLUME_DEFAULTS.envelope).toEqual(NO_SPATIAL_ENVELOPE);
   });
+
+  it('exposes mcpm with inferno + windowed contrast for heavy-tailed trace density', () => {
+    const d = VOLUME_FIELD_DEFAULTS['mcpm'];
+    expect(d).toBeDefined();
+    // Inferno (matplotlib perceptually-uniform) is the canonical
+    // aesthetic for slime-mould / cosmic-web fire-on-black
+    // visualisations (Polyphorm, MCPM tradition). Visually distinct
+    // from CF-4's coolwarm (divergent cool/warm) so both overlays
+    // can be enabled simultaneously and read as separate layers.
+    expect(d!.paletteId).toBe('inferno');
+    // MCPM trace densities are heavy-tailed (slime-mould agent density
+    // spans decades); modest windowing brings filament structure forward
+    // without crushing low-density voids.
+    expect(d!.contrast).toBeCloseTo(1.5, 6);
+    expect(d!.densityScale).toBeCloseTo(4.0, 6);
+    expect(d!.label).toBe('MCPM Cosmic Web');
+  });
+
+  it('mcpm carries a soft spatial envelope', () => {
+    const env = VOLUME_FIELD_DEFAULTS['mcpm']!.envelope;
+    expect(env.inner).toBeLessThan(env.outer);
+    expect(env.outer).toBeLessThanOrEqual(Math.sqrt(3));
+  });
 });

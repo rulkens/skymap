@@ -188,6 +188,30 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     envelope: NO_SPATIAL_ENVELOPE,
     label: 'Spherical grid (debug)',
   },
+  'mcpm': {
+    // Inferno (matplotlib perceptually-uniform, fire-on-black) is the
+    // canonical aesthetic for slime-mould / cosmic-web density
+    // visualisations (Polyphorm, MCPM tradition). Visually distinct
+    // from CF-4's divergent coolwarm so both overlays can be enabled
+    // together and read as separate layers. Added to the palette set
+    // by Task 5; this entry is the first consumer.
+    paletteId: 'inferno',
+    // MCPM trace density spans several decades (slime-mould agent
+    // density is heavy-tailed); modest windowing brings filament
+    // structure forward without crushing the low-density voids.
+    contrast: 1.5,
+    // Initial value pending visual tuning against the real cube; lower
+    // than CF-4's 20 because MCPM's normalised range stays in [0.5, 1.0]
+    // (non-negative input) and saturates faster.
+    densityScale: 4.0,
+    // Same posture as CF-4: soft skirt from the inscribed sphere
+    // inward to hide the axis-aligned silhouette. The MCPM cube extends
+    // 556×938×569 Mpc, so the inscribed sphere reaches well past the
+    // SDSS volume of interest; envelope corner-cropping costs nothing
+    // visually meaningful.
+    envelope: { inner: 0.85, outer: 1.05 },
+    label: 'MCPM Cosmic Web',
+  },
 };
 
 /**
