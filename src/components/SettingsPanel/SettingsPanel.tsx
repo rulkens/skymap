@@ -24,7 +24,7 @@
  * and the "reset" trigger). The panel renders the current values and fires
  * callback props when the user changes a control:
  *
- *   User drags slider → onChange prop fires → App.tsx calls handle.setPointSize
+ *   User drags slider → onChange prop fires → App.tsx calls handle.points.setSize
  *   → engine updates closure variable → next frame uses new value.
  *
  * This one-way data flow keeps the panel a pure function of its inputs, which
@@ -291,7 +291,7 @@ type Props = {
   onVolumesEnabledChange?: (enabled: boolean) => void;
   /**
    * Snapshot of every registered field's UI state — one entry per field.
-   * Built by `engineHandle.getVolumeFieldsState()` on each
+   * Built by `engineHandle.volumes.getState()` on each
    * `onVolumeFieldsChanged` callback.  Optional — when absent the
    * Volumes section is hidden.
    */
@@ -331,7 +331,7 @@ type Props = {
 /**
  * The data the SettingsPanel needs to render a single volume-field row.
  *
- * Produced by `engineHandle.getVolumeFieldsState()` and held in App.tsx
+ * Produced by `engineHandle.volumes.getState()` and held in App.tsx
  * React state; rebuilt on every `onVolumeFieldsChanged` callback so the
  * panel always reflects the live field registry without a full re-render
  * of the engine.
@@ -381,10 +381,10 @@ export type VolumeFieldRowData = {
  *   pointSize={pointSize}
  *   brightness={brightness}
  *   autoRotate={autoRotate}
- *   onPointSizeChange={(v) => handleRef.current?.setPointSize(v)}
- *   onBrightnessChange={(v) => handleRef.current?.setBrightness(v)}
- *   onAutoRotateChange={(v) => handleRef.current?.setAutoRotate(v)}
- *   onResetCamera={() => handleRef.current?.resetCamera()}
+ *   onPointSizeChange={(v) => handleRef.current?.points.setSize(v)}
+ *   onBrightnessChange={(v) => handleRef.current?.points.setBrightness(v)}
+ *   onAutoRotateChange={(v) => handleRef.current?.camera.setAutoRotate(v)}
+ *   onResetCamera={() => handleRef.current?.camera.reset()}
  * />
  */
 export function SettingsPanel({
