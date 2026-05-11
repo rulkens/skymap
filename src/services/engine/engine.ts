@@ -1096,40 +1096,62 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function destroy(): void {
-    // 1. Cancel any in-flight frame so we don't tick after teardown.
+    // Every subsystem and every GPU renderer now satisfies `Destroyable`
+    // (see `@types/Destroyable.d.ts` and the `_EnforceDestroyable`
+    // compile-time guard at the bottom of `EngineSubsystemHandles.d.ts`).
+    // That uniformity lets this function read top-to-bottom as a flat
+    // list of `.destroy()` calls instead of the previous mosaic of
+    // ad-hoc `cancelRender()` / `detach()` / `destroy()` invocations.
+    //
+    // The ordering below is load-bearing for the first two groups
+    // (scheduler before everything; DOM listeners before subsystems
+    // that may fire from them).  Past that, teardown order is free —
+    // subsystems and renderers are independent of each other for
+    // destroy() purposes.
+
+    // 1. Cancel the render loop first — every subsequent destroy() must
+    //    be safe to call after the loop has stopped.
     state.subsystems.scheduler.destroy();
 
-    // 2. Detach every pointer/keyboard/resize listener attached via
-    //    inputBindings (the module owns the bookkeeping internally).
+    // 2. Detach DOM-level listeners next (before subsystems that may
+    //    fire from those listeners are torn down).
     state.subsystems.inputBindings?.destroy();
     state.subsystems.inputBindings = null;
-
-    // 3. Detach orbit controls (removes its own four listeners).
     detachControlsRef.current?.();
     detachControlsRef.current = null;
 
-    // 5. Release GPU resources.
+    // 3. Walk every other subsystem. Order doesn't matter past this
+    //    point — all subsystems are independent of each other for
+    //    teardown.
+    state.subsystems.selection.destroy();
+    state.subsystems.tweens.destroy();
+    state.subsystems.biasCorrection.destroy();
+    state.subsystems.youAreHere.destroy();
+    state.subsystems.labelDirector.destroy();
+    state.subsystems.pois.destroy();
+    state.subsystems.thumbnails?.destroy();
+    state.subsystems.thumbnails = null;
+    state.subsystems.spaceMouse.destroy();
+    state.subsystems.clickResolver?.destroy();
+    state.subsystems.clickResolver = null;
+    state.subsystems.loadProgress?.destroy();
+    state.subsystems.loadProgress = null;
+
+    // 4. GPU renderers — every one satisfies Destroyable too.  WebGPU
+    //    buffers/textures do NOT release via JS GC alone, so destroy()
+    //    is mandatory for each.  The point renderer (state.gpu.renderer)
+    //    owns the largest allocations in the app (per-source vertex
+    //    buffers, ~14 MB GPU + ~14 MB CPU mirror per SDSS deck).
     state.gpu.pickRenderer?.destroy();
     state.gpu.pickRenderer = null;
-    // postProcess owns the rgba16float HDR texture and the 16-byte
-    // tone-map uniform buffer.  Must be released so a hot-reload /
-    // remount doesn't leak a per-mount texture (~16 MB at 2× DPR 1080p).
     state.gpu.postProcess?.destroy();
     state.gpu.postProcess = null;
-    // Filament renderer owns three GPU buffers (uniform + index + quad
-    // VBO) plus an optional per-segment instance buffer.
     state.gpu.filamentRenderer?.destroy();
     state.gpu.filamentRenderer = null;
-    // Label renderer owns: uniform buffer, storage buffer, instance
-    // buffer, corner buffer, and the MSDF atlas texture (~1 MB).
     state.gpu.labelRenderer?.destroy();
     state.gpu.labelRenderer = null;
-    // Marker-line renderer owns: uniform buffer, instance buffer, and
-    // corner buffer.  Small but released for parity.
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
-    // Thumbnail / disk / procedural-disk / Milky-Way renderers each
-    // own a uniform buffer + per-instance buffer.
     state.gpu.thumbnailRenderer?.destroy();
     state.gpu.thumbnailRenderer = null;
     state.gpu.diskRenderer?.destroy();
@@ -1138,25 +1160,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.proceduralDiskRenderer = null;
     state.gpu.milkyWayRenderer?.destroy();
     state.gpu.milkyWayRenderer = null;
-    // Scalar-volume renderer owns: shared corner/index VBOs plus per-field
-    // r16float 3D textures, palette LUT textures, and uniform buffers.
     state.gpu.scalarVolumeRenderer?.destroy();
     state.gpu.scalarVolumeRenderer = null;
-    // Tear down the thumbnail subsystem (clears the atlas's evict
-    // handler and aborts in-flight fetches' write-back).
-    state.subsystems.thumbnails?.destroy();
-    state.subsystems.thumbnails = null;
-    // Release the WebHID device (no-op if never connected).
-    state.subsystems.spaceMouse.destroy();
-
-    // 5b. Release point-renderer GPU resources — the largest GPU
-    // allocations in the app (per-source vertex buffers, ~14 MB GPU +
-    // ~14 MB CPU mirror per SDSS deck).  WebGPU buffers do NOT release
-    // via JS GC alone — `destroy()` is mandatory.
     state.gpu.renderer?.destroy();
-
-    // 6. Drop references to aid GC.
     state.gpu.renderer = null;
+
+    // 5. Drop remaining strong references to aid GC.
     state.sources.clouds.clear();
     state.cam = null;
   }
