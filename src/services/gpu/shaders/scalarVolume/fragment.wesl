@@ -26,7 +26,7 @@
 // the spec calls for.
 
 import package::lib::camera::CameraUniforms;
-import package::lib::util::hash21;
+import package::lib::util::hash21Hq;
 
 struct VolumeUniforms {
   cam: CameraUniforms,
@@ -240,9 +240,11 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // grid visible.  Per-fragment jitter decorrelates neighbouring rays:
   // visible aliasing becomes high-frequency grain instead of a moving
   // grid, and the accumulated integral stays unbiased (jitter averages
-  // to stepLength/2).  hash21 lives in lib/util.wesl alongside other
-  // tiny PRNGs the renderers share.
-  let jitter = hash21(fragCoord.xy) * stepLength;
+  // to stepLength/2).  hash21Hq (Dave Hoskins' "Hash without Sine") is
+  // used instead of the cheaper sin-based hash21 because the latter's
+  // diagonal banding is visible as a stationary screen-space pattern
+  // during camera motion.
+  let jitter = hash21Hq(fragCoord.xy) * stepLength;
   var accum = vec4<f32>(0.0);
   var t = tMin + jitter;
   for (var i = 0; i < STEP_COUNT; i = i + 1) {

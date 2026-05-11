@@ -66,6 +66,27 @@ fn hash21(co: vec2<f32>) -> f32 {
   return fract(sin(dot(co, vec2<f32>(12.9898, 78.233))) * 43758.5453);
 }
 
+// hash21Hq — higher-quality 2D-to-1D hash in [0, 1).
+//
+// Dave Hoskins' "Hash without Sine" (https://www.shadertoy.com/view/4djSRW),
+// the de-facto upgrade for callers that found hash21's sin-based
+// banding visually objectionable.  Three integer-style multiply +
+// fract steps that scramble the bits much more thoroughly than a
+// single sin; produces no visible coherent patterns at fragment-coord
+// frequencies (where hash21 shows diagonal stripes that the eye
+// readily latches onto when the camera is moving).
+//
+// Cost is ~3-4× hash21's: still single-digit ALU ops, still no texture
+// fetch.  Cheap enough that screen-space jitter (volume ray-march
+// start offset, dithered alpha) should default to this; reserve hash21
+// for one-shot uses where the input domain is so sparse the banding
+// doesn't manifest (e.g. the milky-way impostor's per-octave seeds).
+fn hash21Hq(p: vec2<f32>) -> f32 {
+  var p3 = fract(vec3<f32>(p.x, p.y, p.x) * 0.1031);
+  p3 = p3 + dot(p3, p3.yzx + vec3<f32>(33.33));
+  return fract((p3.x + p3.y) * p3.z);
+}
+
 // valueNoise2 — 2D analytic noise via products of cosines.
 //
 // Not a value-noise grid in the strict Perlin/Worley sense — there's
