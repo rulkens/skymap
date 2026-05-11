@@ -36,6 +36,7 @@ import package::lib::billboard::expandBillboardScreen;
 import package::lib::cloudFade::CloudUniforms;
 import package::lib::colorIndex::ramp;
 import package::lib::astro::distanceModulus;
+import package::lib::selectionEncoding::packSelection;
 
 // ── @group(0) — per-frame uniforms ──────────────────────────────────
 //
@@ -95,7 +96,7 @@ fn vs(
   // 5-bit 'cloud.sourceCode' (this draw's survey, set per-source via
   // the @group(1) bind group); bits 0..26 = the GPU's
   // '@builtin(instance_index)' (local 0..count-1).
-  let myPacked = (cloud.sourceCode << 27u) | ii;
+  let myPacked = packSelection(cloud.sourceCode, ii);
 
   if (u.biasMode == 1u && absMag > u.absMagLimit) {
     var earlyOut: VSOut;
