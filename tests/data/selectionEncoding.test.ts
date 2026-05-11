@@ -70,3 +70,69 @@ describe('selectionEncoding', () => {
     expect(largestAllocated).toBeLessThan(SELECTION_NONE_SENTINEL);
   });
 });
+
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+describe('selectionEncoding TS↔WESL parity', () => {
+  /**
+   * Reads the WESL file as text, extracts each
+   * `const NAME: u32 = VALUE;` declaration via regex, parses the
+   * value (decimal or hex literal, optional 'u' suffix), and returns
+   * a `Map<NAME, parsedNumber>`. Throws if a constant we expect to
+   * find is missing — the test will then fail with a clear message
+   * instead of silently asserting `undefined === expected`.
+   *
+   * Path is resolved from `process.cwd()` (the repo root under Vitest)
+   * to match the project convention — see e.g.
+   * `tests/data/scalarFieldFormat.test.ts` and
+   * `tests/parsers/famousSeed.test.ts`. `__dirname` would not work
+   * under the Vite/Vitest ESM runner used here.
+   */
+  function parseWeslConstants(): Map<string, number> {
+    const path = join(
+      process.cwd(),
+      'src/services/gpu/shaders/lib/selectionEncoding.wesl',
+    );
+    const text = readFileSync(path, 'utf-8');
+
+    // Match e.g.  const SELECTION_SOURCE_SHIFT: u32 = 27u;
+    //   const FOO: u32 = 0x1234u;
+    //   const FOO: u32 = 42;
+    const re = /const\s+(\w+)\s*:\s*u32\s*=\s*(0x[0-9a-fA-F]+|\d+)u?\s*;/g;
+    const map = new Map<string, number>();
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      const name = m[1]!;
+      const literal = m[2]!;
+      const value = literal.startsWith('0x')
+        ? parseInt(literal, 16)
+        : parseInt(literal, 10);
+      map.set(name, value);
+    }
+    return map;
+  }
+
+  it('each TS constant matches the WESL declaration of the same name', () => {
+    const wesl = parseWeslConstants();
+
+    // Use a table so a failure on any one constant reports both the
+    // name and the mismatch — easier to debug than a bare equality
+    // failure on a Map.
+    const cases: Array<[string, number]> = [
+      ['SELECTION_SOURCE_SHIFT', SELECTION_SOURCE_SHIFT],
+      ['SELECTION_LOCAL_IDX_MASK', SELECTION_LOCAL_IDX_MASK],
+      ['SELECTION_NONE_SENTINEL', SELECTION_NONE_SENTINEL],
+      ['PICK_SENTINEL_OFFSET', PICK_SENTINEL_OFFSET],
+    ];
+
+    for (const [name, tsValue] of cases) {
+      const weslValue = wesl.get(name);
+      expect(weslValue, `WESL constant ${name} is missing from selectionEncoding.wesl`).toBeDefined();
+      expect(
+        weslValue,
+        `WESL ${name} (${weslValue}) does not match TS ${name} (${tsValue})`,
+      ).toBe(tsValue);
+    }
+  });
+});
