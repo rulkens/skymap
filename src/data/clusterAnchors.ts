@@ -81,3 +81,60 @@ export const CLUSTER_ANCHORS: readonly ClusterAnchor[] = [
   { name: 'Hercules (A2151)',         raHours: 16 +  5 / 60 + 15 / 3600, decDeg:  17 + 45 / 60,    distMpc: 158   },
   { name: 'Shapley (A3558)',          raHours: 13 + 27 / 60 + 57 / 3600, decDeg: -(31 + 30 / 60),  distMpc: 200   },
 ];
+
+/**
+ * Well-known supercluster centres — extended cosmic structures rather
+ * than the dense cluster cores in `CLUSTER_ANCHORS`.  Each anchor
+ * points at the supercluster's bulk-density peak rather than at a
+ * single Abell cluster member, so the position is best-effort and
+ * sourced from CF-4's own reconstruction peaks (see
+ * `tools/verifyCf4Scfd.ts` for the methodology).
+ *
+ * Why a separate list: the cluster anchors above are tight, well-named
+ * Abell-catalog members; superclusters span 50+ Mpc and don't have a
+ * single textbook centre.  Splitting them keeps the cluster anchors
+ * "ground truth" while leaving room for the more-interpretive
+ * supercluster positions to be retuned without disturbing the audit.
+ *
+ * Listed by RA for stable iteration.
+ */
+export const SUPERCLUSTER_ANCHORS: readonly ClusterAnchor[] = [
+  // Mid-distance density peak in the Hydra/Centaurus direction.  CF-4
+  // shows a sustained 99.5th+ percentile blob at this location; the
+  // closest named structure in the literature is the Hydra Wall, an
+  // extension of the Hydra-Centaurus complex toward higher redshift.
+  { name: 'Hydra Wall',               raHours: 13 + 17 / 60,             decDeg: -15,              distMpc: 152 },
+  // Foreground core of the Hercules Supercluster (which extends from
+  // ~110 to 200 Mpc and includes A2147 / A2151 / A2152).  The CF-4
+  // peak sits in the supercluster's nearer wall, ~40 Mpc in front of
+  // the named Hercules (A2151) cluster anchor.
+  { name: 'Hercules SC',              raHours: 15 + 40 / 60,             decDeg:  16,              distMpc: 120 },
+];
+
+/**
+ * Well-known voids inside CF-4's 500 Mpc box.  Distances + centres
+ * are best-effort consensus values from the literature (Tully 2008
+ * for Local Void; Kirshner 1981/1987 for Boötes; Sharp 1986 for
+ * Sculptor) and are intentionally approximate — voids span tens of
+ * Mpc and CF-4's Wiener-filter smoothing makes the centre a blob
+ * rather than a point.
+ *
+ * Why a separate list (rather than a `category` field on
+ * `ClusterAnchor`): keeps the cluster/supercluster anchors purely
+ * positive — useful for the existing audit script which assumes the
+ * cluster set should be overdense.  Consumers that want both render
+ * each list with its appropriate `PoiCategory`.
+ */
+export const VOID_ANCHORS: readonly ClusterAnchor[] = [
+  // Sculptor Void — local, just south of the celestial equator.
+  { name: 'Sculptor Void',            raHours:  0,                       decDeg: -30,              distMpc:  35 },
+  // Local Void — adjacent to the Local Group, mostly above the
+  // galactic plane.  Tully 2008 places its centre near galactic
+  // (l=37°, b=15°) → eq (RA≈18h 38m, Dec≈+18°) at ~25 Mpc.
+  { name: 'Local Void',               raHours: 18 + 38 / 60,             decDeg:  18,              distMpc:  25 },
+  // Boötes Void — the famous "Great Void" of Kirshner 1981; ~50 Mpc
+  // radius centred at roughly (RA=14h 50m, Dec=+46°) at ~245 Mpc.
+  // Near the edge of CF-4's reliable volume — don't over-interpret a
+  // mismatch here.
+  { name: 'Boötes Void',              raHours: 14 + 50 / 60,             decDeg:  46,              distMpc: 245 },
+];

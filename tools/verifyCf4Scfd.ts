@@ -22,32 +22,14 @@ import { decodeScalarField } from '../src/data/scalarFieldFormat';
 import { SG_TO_EQ_MATRIX } from '../src/data/superGalacticTransform';
 import {
   CLUSTER_ANCHORS,
+  SUPERCLUSTER_ANCHORS,
+  VOID_ANCHORS,
   raDecDistToEqCart,
-  type SkyCoord,
+  type ClusterAnchor,
 } from '../src/data/clusterAnchors';
 
-/** Sky anchor with a display name — voids only, inlined here. */
-type NamedAnchor = SkyCoord & { readonly name: string };
-
-/**
- * Well-known local voids inside CF-4's 500 Mpc box.  Distances and
- * centres are best-effort from the literature (Tully 2008, Pomarède 2020,
- * Kirshner 1987 for Boötes); ±20 % uncertainty is common, and CF-4's
- * Wiener-filter smoothing makes void centres a blob rather than a point
- * anyway.  These are sanity checks, not survey-grade anchors.
- */
-const VOID_ANCHORS: readonly NamedAnchor[] = [
-  // Local Void — adjacent to the Local Group, mostly above the galactic
-  // plane.  Tully 2008 places its centre near (l=37°, b=15°) → eq (RA≈18h 38m,
-  // Dec≈+18°) at ~25 Mpc.
-  { name: 'Local Void',     raHours: 18 + 38 / 60, decDeg:  18,         distMpc:  25 },
-  // Sculptor Void — closer, around (RA=0h, Dec=-30°), ~30-40 Mpc.
-  { name: 'Sculptor Void',  raHours:  0,           decDeg: -30,         distMpc:  35 },
-  // Boötes Void — the famous "Great Void" of Kirshner 1981; ~50 Mpc
-  // radius centered at roughly (RA=14h 50m, Dec=+46°) at ~245 Mpc.  Near
-  // the edge of CF-4's reliable volume.
-  { name: 'Boötes Void',    raHours: 14 + 50 / 60, decDeg:  46,         distMpc: 245 },
-];
+/** Local alias for read-clarity in the per-list loops below. */
+type NamedAnchor = ClusterAnchor;
 
 function transpose3(m: typeof SG_TO_EQ_MATRIX): typeof SG_TO_EQ_MATRIX {
   return [
@@ -173,6 +155,21 @@ function main(): void {
   console.log('');
   console.log('── CLUSTERS — expect high percentile (overdense) ──');
   for (const a of CLUSTER_ANCHORS) {
+    const r = sampleAtAnchor(decoded, sorted, a, dims, voxelSize);
+    if (!r) {
+      console.log(`  ${a.name.padEnd(28)} OUT OF BOUNDS`);
+      continue;
+    }
+    const sign = r.value >= 0 ? '+' : '-';
+    console.log(
+      `  ${a.name.padEnd(28)} → vox(${r.vox.join(',')}) → ${sign}${Math.abs(r.value).toFixed(3)} (${r.pct.toFixed(1)}th)`,
+    );
+  }
+
+  // ── 1b. Superclusters — expect very high percentile ──────────────────
+  console.log('');
+  console.log('── SUPERCLUSTERS — expect very high percentile (extended overdensity) ──');
+  for (const a of SUPERCLUSTER_ANCHORS) {
     const r = sampleAtAnchor(decoded, sorted, a, dims, voxelSize);
     if (!r) {
       console.log(`  ${a.name.padEnd(28)} OUT OF BOUNDS`);

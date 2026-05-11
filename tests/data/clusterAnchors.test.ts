@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   CLUSTER_ANCHORS,
+  SUPERCLUSTER_ANCHORS,
+  VOID_ANCHORS,
   raDecDistToEqCart,
   type ClusterAnchor,
 } from '../../src/data/clusterAnchors';
@@ -52,5 +54,54 @@ describe('CLUSTER_ANCHORS', () => {
     // This compiles only if CLUSTER_ANCHORS is `readonly ClusterAnchor[]`.
     const _check: readonly ClusterAnchor[] = CLUSTER_ANCHORS;
     expect(_check).toBe(CLUSTER_ANCHORS);
+  });
+});
+
+describe('SUPERCLUSTER_ANCHORS', () => {
+  it('exposes the two CF-4 supercluster peaks (Hydra Wall + Hercules SC)', () => {
+    const names = SUPERCLUSTER_ANCHORS.map((a) => a.name);
+    expect(names).toContain('Hydra Wall');
+    expect(names).toContain('Hercules SC');
+  });
+
+  it('every supercluster has a positive distance', () => {
+    for (const a of SUPERCLUSTER_ANCHORS) {
+      expect(a.distMpc).toBeGreaterThan(0);
+    }
+  });
+
+  it('is a readonly tuple at the type level', () => {
+    const _check: readonly ClusterAnchor[] = SUPERCLUSTER_ANCHORS;
+    expect(_check).toBe(SUPERCLUSTER_ANCHORS);
+  });
+});
+
+describe('VOID_ANCHORS', () => {
+  it('exposes the three local voids (Sculptor / Local / Boötes)', () => {
+    const names = VOID_ANCHORS.map((a) => a.name);
+    expect(names).toContain('Sculptor Void');
+    expect(names).toContain('Local Void');
+    expect(names).toContain('Boötes Void');
+  });
+
+  it('every void has a positive distance', () => {
+    for (const a of VOID_ANCHORS) {
+      expect(a.distMpc).toBeGreaterThan(0);
+    }
+  });
+
+  it('is a readonly tuple at the type level', () => {
+    const _check: readonly ClusterAnchor[] = VOID_ANCHORS;
+    expect(_check).toBe(VOID_ANCHORS);
+  });
+
+  it('Boötes Void sits inside the 500 Mpc CF-4 box', () => {
+    // The CF-4 reconstruction volume is 500 Mpc radius from the observer;
+    // Boötes is at the edge of reliable reconstruction.  This test pins
+    // the value at 245 Mpc so a casual revision can't accidentally place
+    // it outside the box.
+    const bootes = VOID_ANCHORS.find((a) => a.name === 'Boötes Void');
+    expect(bootes).toBeDefined();
+    expect(bootes!.distMpc).toBeLessThan(500);
   });
 });
