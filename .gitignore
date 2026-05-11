@@ -142,3 +142,10 @@ docs/outreach/emails/
 data/raw/cf4/*.sav
 data/raw/cf4/*.npy
 data/raw/cf4/*.meta.json
+
+# MCPM Cosmic Web cube intermediates and build artefacts (gitignored —
+# .npy tiers hosted on R2; .scfd outputs are deterministic build outputs.
+# See data/raw/mcpm/README.md.)
+data/raw/mcpm/*.npy
+data/raw/mcpm/*.bin.bz2
+public/data/mcpm-*.scfd
