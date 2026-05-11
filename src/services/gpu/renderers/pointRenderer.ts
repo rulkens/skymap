@@ -40,7 +40,7 @@
  */
 
 import { mat4 } from 'gl-matrix';
-import type { PointCloud } from '../../../@types';
+import type { PointCloud, Renderer } from '../../../@types';
 import { ALL_SOURCES, Source } from '../../../data/sources';
 import {
   type BuildPointInterleavedBufferInput,
@@ -674,6 +674,11 @@ export type PointDrawSettings = {
  * `new PointRenderer(...)` → `createPointRenderer(...)`.
  */
 export type PointRenderer = {
+  /**
+   * Human-readable identifier (`'pointRenderer'`).  Part of the
+   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   /**
    * Pack a `PointCloud` into an interleaved GPU vertex buffer for the
    * given source.  Replaces any previous buffer for that source.  See
@@ -1514,7 +1519,8 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
   // method is a plain function reference, so consumers can destructure
   // (`const { draw, destroy } = createPointRenderer(...)`) without
   // losing `this` binding — there is no `this`.
-  return {
+  const renderer: PointRenderer = {
+    label: 'pointRenderer',
     upload,
     unload,
     setBiasUploadCallback,
@@ -1530,4 +1536,9 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
     isFading,
     destroy,
   };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening `renderer`'s static type (the
+  // narrower `PointRenderer` is what consumers see).
+  renderer satisfies Renderer;
+  return renderer;
 }

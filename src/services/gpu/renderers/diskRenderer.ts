@@ -42,7 +42,7 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { GpuContext } from '../../../@types';
+import type { GpuContext, Renderer } from '../../../@types';
 import vsCode from '../shaders/disks/vertex.wesl?static';
 import fsCode from '../shaders/disks/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
@@ -67,6 +67,11 @@ export type DiskInstance = {
 };
 
 export type DiskRenderer = {
+  /**
+   * Human-readable identifier (`'diskRenderer'`).  Part of the
+   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   /**
    * Bind the atlas texture view. Must be called once after
    * `atlas.initTexture()`; the bind group can be reused across frames
@@ -153,5 +158,14 @@ export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRen
     });
   }
 
-  return { bindAtlas, draw, destroy: inner.destroy };
+  const renderer: DiskRenderer = {
+    label: 'diskRenderer',
+    bindAtlas,
+    draw,
+    destroy: inner.destroy,
+  };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening the static type seen by consumers.
+  renderer satisfies Renderer;
+  return renderer;
 }

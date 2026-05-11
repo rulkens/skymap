@@ -26,3 +26,4 @@ export type * from './EnginePickingState';
 export type * from './EngineGpuHandles';
 export type * from './EngineSubsystemHandles';
 export type * from './EngineState';
+export type * from './Renderer';

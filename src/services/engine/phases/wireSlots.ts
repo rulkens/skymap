@@ -80,19 +80,18 @@
  */
 
 import { Source } from '../../../data/sources';
-import { createAssetSlot } from '../../loading/AssetSlot';
-import { cf4DensityFetcher } from '../../loading/fetchers/cf4DensityFetcher';
-import { filamentFetcher } from '../../loading/fetchers/filamentFetcher';
-import { famousMetaFetcher } from '../../loading/fetchers/famousMetaFetcher';
-import { pgcAliasFetcher } from '../../loading/fetchers/pgcAliasFetcher';
+import { createFilamentSlot } from '../../loading/slots/filamentSlot';
+import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
+import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
+import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
+import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
-import {
-  DEFAULT_CF4_DENSITY_ENABLED,
-  DEFAULT_VOLUME_FIELD_INTENSITY,
-} from '../../../data/defaults';
-import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
-import { syntheticVolumeFetcher } from '../../loading/fetchers/syntheticVolumeFetcher';
+// Cosmography POI anchors used by the `?anchors=1` overlay below.
+// Synthetic-volume imports that previously sat here
+// (DEFAULT_VOLUME_FIELD_INTENSITY, getVolumeFieldDefaults,
+// syntheticVolumeFetcher) were moved into `syntheticVolumeSlots.ts`
+// by H4 and intentionally stay out.
 import {
   CLUSTER_ANCHORS,
   SUPERCLUSTER_ANCHORS,
@@ -102,8 +101,6 @@ import {
 import type { PointOfInterest } from '../subsystems/poiSubsystem';
 
 import type { AssetSlot } from '../../loading/types';
-import type { ScalarCube } from '../../../@types/ScalarCube';
-import type { SyntheticVolumeReq } from '../../loading/fetchers/syntheticVolumeFetcher';
 import type { EngineState } from '../../../@types';
 import type { BootstrapDeps } from './bootstrap';
 
@@ -136,49 +133,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
 
   // ── Filament asset slot (Task 9) ─────────────────────────────────
-  //
-  // The cosmic-web skeleton flows through its own slot — different
-  // fetcher (binary format is segments-not-points), different
-  // renderer target (`filamentRenderer` rather than the per-source
-  // `pointRenderer`), and a one-shot lifecycle: load() at boot,
-  // never on tier change.
-  //
-  // Why one-shot?  Re-downloading the ~30 MB skeleton every tier
-  // flip would tax bandwidth for a topology that barely differs
-  // between tiers — see `filamentFetcher.ts`'s docblock for the
-  // detailed rationale, including the "small-tier-on-desktop edge
-  // case" trade-off.
-  //
-  // Why awaited `upload()` even though `FilamentRenderer.upload` is
-  // synchronous?  `await undefined` is harmless and keeps the slot's
-  // commit signature uniform with the per-source slots above; if a
-  // future filament-renderer revision adds an async upload path
-  // (e.g. compute-shader rebuild), this site needs no change.
-  const filamentSlot = createAssetSlot({
-    name: 'filaments',
-    fetch: filamentFetcher,
-    commit: async (cloud) => {
-      if (!state.gpu.filamentRenderer) return;
-      await state.gpu.filamentRenderer.upload(cloud);
-    },
-  });
-  filamentSlot.subscribe((s) => {
-    // Loading-bar plumbing is gone post-Task-12 — the emitter
-    // recomputes from `aggregateRegistry(slots)` on every state
-    // change.  This subscriber only fires the app-visible side
-    // effects (counts echo + render wake) on the `ready` transition.
-    if (s.kind === 'ready') {
-      console.log(
-        `[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`,
-      );
-      // Push the parsed counts up to the UI layer.  See
-      // `EngineCallbacks.filaments.onReady` for the lifecycle rationale —
-      // one-shot, fires only when the optional binary actually loaded.
-      cb.filaments?.onReady?.(s.value.stripCount, s.value.vertexCount);
-      state.subsystems.scheduler.requestRender();
-    }
-  });
-  state.assetSlots.filaments = filamentSlot;
+  // Factory owns the mint + subscribe + state write.  See
+  // `loading/slots/filamentSlot.ts` for the lifecycle rationale.
+  const filamentSlot = createFilamentSlot(state, cb);
 
   // ── Volumes URL gate ─────────────────────────────────────────────
   //
@@ -281,246 +238,38 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
 
   // ── CF-4 DM density volume slot ──────────────────────────────────
-  //
-  // Eager-at-boot fetch of public/data/cf4_density.scfd. On commit,
-  // hands the decoded ScalarCube to scalarVolumeRenderer.addField under
-  // the handle 'cf4-density', then seeds per-field settings if not
-  // already present (preserving any user-tuned intensity/palette across
-  // sessions).  Gated behind `volumesGateOpen` so production users
-  // don't see the still-tuning overlay unless they opt in with
-  // `?volumes=1`.
-  //
-  // When the gate is closed, `state.assetSlots.cf4Density` stays null;
-  // the loader's `.load()` call below is a `?.` no-op so nothing else
-  // has to change.
+  // Gated behind `volumesGateOpen` so production users don't see the
+  // still-tuning overlay unless they opt in with `?volumes=1`.  When the
+  // gate is closed, `state.assetSlots.cf4Density` stays null and the
+  // loader's `.load()` call below is a `?.` no-op so nothing else has to
+  // change.  Factory owns the mint + commit + state write — see
+  // `loading/slots/cf4DensitySlot.ts`.
   if (volumesGateOpen) {
-    const cf4DensitySlot = createAssetSlot({
-      name: 'cf4Density',
-      fetch: cf4DensityFetcher,
-      commit: async (cube) => {
-        const renderer = state.gpu.scalarVolumeRenderer;
-        if (!renderer) return;
-        const handle = 'cf4-density';
-        // Seed defaults from the per-handle registry rather than the
-        // cube; SCFD v2 is a data-only format (dims + frame + voxels
-        // + dynamic range) so palette + densityScale don't ride along
-        // in the binary anymore.  See `src/data/volumeFieldDefaults.ts`
-        // for the why-not-binary discussion.  The renderer setters
-        // below read from `persisted`, so once an entry exists the
-        // user-tuned values (future persistence) override the seed.
-        const defaults = getVolumeFieldDefaults(handle);
-        renderer.addField(handle, cube);
-        if (!state.settings.volumes.fields[handle]) {
-          state.settings.volumes.fields[handle] = {
-            enabled: DEFAULT_CF4_DENSITY_ENABLED,
-            intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
-            contrast: defaults.contrast,
-            densityScale: defaults.densityScale,
-            paletteId: defaults.paletteId,
-          };
-        }
-        const persisted = state.settings.volumes.fields[handle]!;
-        renderer.setIntensity(handle, persisted.intensity);
-        renderer.setEnabled(handle, persisted.enabled);
-        renderer.setContrast(handle, persisted.contrast);
-        renderer.setFieldPalette(handle, persisted.paletteId);
-        renderer.setDensityScale(handle, persisted.densityScale);
-        // Envelope is per-cube static (a presentation property of the
-        // dataset, not a user-tunable slider) so we apply it straight
-        // from the registry rather than mirroring it into
-        // `persisted` — no JS-side state to keep in sync.
-        renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
-        cb.volumes?.onFieldsChanged?.();
-        state.subsystems.scheduler.requestRender();
-      },
-    });
-    cf4DensitySlot.subscribe((s) => {
-      if (s.kind === 'ready') {
-        console.log(
-          `[engine] cf4Density: ${s.value.dims.join('x')} cube, ` +
-            `min=${s.value.valueMin.toFixed(3)}, max=${s.value.valueMax.toFixed(3)}`,
-        );
-      }
-    });
-    state.assetSlots.cf4Density = cf4DensitySlot;
+    createCf4DensitySlot(state, cb);
   }
 
   // ── Famous-galaxy sidecar slot (Task 10) ─────────────────────────
-  //
-  // The two famous-galaxy JSON sidecars (`famous_meta.json` +
-  // `famous_xrefs.json`) flow through one combined slot — the fetcher
-  // pulls them in parallel and returns a `{ meta, xrefs }` payload.
-  //
-  // No `commit` step: there's nothing GPU-side to upload — the
-  // payload is pure metadata consumed by the InfoCard via
-  // `state.sources.famousMeta` / `state.sources.famousXrefs`.  The
-  // subscriber writes both fields and wakes one frame so the
-  // famous-galaxy thumbnails referenced by the cross-match xrefs
-  // become enqueueable from the per-frame loop without the user
-  // having to nudge the camera.
-  //
-  // **Graceful degradation on error.**  The old `loadFamousSidecars`
-  // returned empty values when either file 404'd; the new fetcher
-  // throws on HTTP failure (so the retry policy distinguishes "really
-  // gone" from "transient flake"), and the slot subscriber maps
-  // `kind: 'error'` → "feature off" by writing empty `meta`/`xrefs`.
-  // Net effect for the user is identical to the pre-slot behaviour:
-  // famous galaxies render without enriched InfoCard text, but the
-  // engine keeps running.
-  const famousMetaSlot = createAssetSlot({
-    name: 'famous-meta',
-    fetch: famousMetaFetcher,
-  });
-  famousMetaSlot.subscribe((s) => {
-    if (s.kind === 'ready') {
-      state.sources.famousMeta = s.value.meta;
-      // GLADE local indices in the sidecar JSON now match the on-disk
-      // binary directly — the cloudLoader no longer post-decodes
-      // GLADE through a far-distance decimator (the data-tier system
-      // owns point-count budgeting via its absolute-magnitude cut at
-      // build time, which is a more principled rule and operates
-      // BEFORE the binary is written, so xref indices stay valid).
-      state.sources.famousXrefs = s.value.xrefs;
-      state.subsystems.scheduler.requestRender();
-    }
-    if (s.kind === 'error') {
-      // Match the old "absent file = feature off" behaviour exactly:
-      // empty meta/xrefs disable the enriched InfoCard text but keep
-      // the engine functional.  Defensive — these fields default to
-      // `[]` / `{}` already, but writing them again here is explicit
-      // about the contract.
-      state.sources.famousMeta = [];
-      state.sources.famousXrefs = {};
-      console.warn('[engine] famous sidecars failed to load:', s.error);
-    }
-  });
-  state.assetSlots.famousMeta = famousMetaSlot;
+  // Factory owns the mint + subscribe + state write.  See
+  // `loading/slots/famousMetaSlot.ts` for the dual-sidecar rationale and
+  // the graceful-degradation policy on fetch error.
+  const famousMetaSlot = createFamousMetaSlot(state, cb);
 
   // ── PGC-alias slot (Task 10) ─────────────────────────────────────
-  //
-  // The Cmd+K command palette's alias search needs `pgc_aliases.json`
-  // (~1.7 MB).  Lazy: most users never hit Cmd+K, so paying the
-  // download up front would be wasteful.  The slot is minted here for
-  // lifecycle parity with every other asset, but `load()` is only
-  // invoked through the public-handle's `loadPgcAliases()` shim on
-  // first palette open.
-  //
-  // No `commit` — the resolved Map is consumed by the React layer via
-  // the Promise the shim returns; nothing engine-side to mutate.
-  const pgcAliasSlot = createAssetSlot({
-    name: 'pgc-aliases',
-    fetch: pgcAliasFetcher,
-  });
-  state.assetSlots.pgcAlias = pgcAliasSlot;
+  // Lazy: only `load()`-ed on first Cmd+K palette open via the public
+  // handle's `loadPgcAliases()` shim.  Factory owns the mint + state
+  // write; see `loading/slots/pgcAliasSlot.ts`.
+  const pgcAliasSlot = createPgcAliasSlot(state, cb);
 
-  // ── Synthetic volume slot (dev-only or `?volumes=1`) ─────────────
-  //
-  // Routes the Gaussian-blob smoke-test cube through the same
-  // `createAssetSlot` path as real CF-4 / MCPM cubes will use when
-  // those fetchers land.  By going through the slot the synthetic cube
-  // gets the same fade-in, `LoadingDevPanel` row, race-checked commit,
-  // and retry semantics as every real volume fetch — without any
-  // bespoke "synthetic shortcut" in the render loop.
-  //
-  // **Visibility gate.**  The synthetic cubes are debug fixtures, not
-  // shipped content, so they only mint when:
-  //   - `import.meta.env.DEV` is true (smoke-test loop in `npm run dev`), OR
-  //   - the URL contains `?volumes=1` (escape hatch for inspecting the
-  //     overlay on the deployed site).
-  //
-  // The same gate drives the SettingsPanel "Volumes" section in
-  // `App.tsx` (`volumesUiEnabled`) — keeping the two in lockstep means
-  // the section is never empty in dev and never visible-but-empty in
-  // prod.  Vite's dead-code elimination still tree-shakes the entire
-  // synthetic block from production bundles (the `?volumes=1` branch
-  // is reachable but the underlying fetcher / generator imports stay,
-  // which is the cost of the escape hatch).
-  //
-  // **Commit pattern.**  The commit replicates the same operations that
-  // `engineHandle.addVolumeField(handle, cube)` performs, but directly
-  // against `state` rather than through the public handle.  The public
-  // handle is assigned to `deps.handleRef.current` AFTER
-  // `runBootstrapPhases` resolves — so `handleRef.current` is null when
-  // `wireSlots` runs.  The slot's commit callback fires asynchronously
-  // (after the fetch resolves), at which point the handle IS set; but
-  // relying on that timing is fragile.  Accessing `state` directly (the
-  // same pattern the `filamentSlot` commit uses) is structurally safe:
-  // `state` is fully initialised before any slot commit runs.  The
-  // settings-bag seed and renderer calls are intentionally the same
-  // four lines as `addVolumeField` so both paths stay in sync when the
-  // engine's volume-field logic changes.
-  // Same gate as the CF-4 slot above (`volumesGateOpen`, hoisted near
-  // the top of wireSlots).  Keeping both volume slot families behind
-  // one flag means the SettingsPanel's Volumes section is never empty
-  // in dev and never visible-but-empty in production.
+  // ── Synthetic volume slots (DEV-only or `?volumes=1`) ────────────
+  // Three debug fixtures (Gaussian blob + Cartesian/spherical grids).
+  // Same `volumesGateOpen` flag as the CF-4 slot above so the
+  // SettingsPanel Volumes section is never empty-in-dev or visible-
+  // but-empty-in-prod.  Vite tree-shakes the synthetic factory's
+  // imports out of production bundles when neither flag is reachable.
+  // Factory owns the mint + state write; see
+  // `loading/slots/syntheticVolumeSlots.ts` for the commit rationale.
   if (volumesGateOpen) {
-    // Helper that mints one synthetic-volume slot.  The handle and the
-    // default-enabled flag are baked into a closure (the AssetSlot
-    // commit signature only sees the decoded payload, not the request,
-    // so per-fixture identity has to ride along on the slot).  Three
-    // sibling slots share this helper; refactoring to a Map of three
-    // would lose the per-handle commit closure that's the whole point.
-    const mintSyntheticVolumeSlot = (
-      handle: string,
-      defaultEnabled: boolean,
-    ): AssetSlot<ScalarCube, SyntheticVolumeReq> =>
-      createAssetSlot({
-        name: `syntheticVolume:${handle}`,
-        fetch: syntheticVolumeFetcher,
-        commit: async (cube) => {
-          const renderer = state.gpu.scalarVolumeRenderer;
-          if (!renderer) return;
-          // Seed defaults from the per-handle registry; see
-          // `src/data/volumeFieldDefaults.ts` for the why-not-binary
-          // discussion.  Same shape as the cf4Density commit above —
-          // only the handle (closure-captured) and the `enabled` seed
-          // (per-fixture via `defaultEnabled`) differ.
-          const defaults = getVolumeFieldDefaults(handle);
-          renderer.addField(handle, cube);
-          // Seed the per-field settings entry with defaults if not
-          // already present — mirrors the guard in `addVolumeField`
-          // so re-registering preserves any previously-tuned values.
-          if (!state.settings.volumes.fields[handle]) {
-            state.settings.volumes.fields[handle] = {
-              enabled: defaultEnabled,
-              intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
-              contrast: defaults.contrast,
-              densityScale: defaults.densityScale,
-              paletteId: defaults.paletteId,
-            };
-          }
-          const persisted = state.settings.volumes.fields[handle]!;
-          renderer.setIntensity(handle, persisted.intensity);
-          renderer.setEnabled(handle, persisted.enabled);
-          renderer.setContrast(handle, persisted.contrast);
-          renderer.setFieldPalette(handle, persisted.paletteId);
-          renderer.setDensityScale(handle, persisted.densityScale);
-          // Same per-cube envelope plumbing as the cf4Density commit
-          // above.  Debug fixtures register `NO_SPATIAL_ENVELOPE` in
-          // the registry so the envelope is visually a no-op here —
-          // grid corners stay visible for axis verification.
-          renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
-          // Fire the same React-facing callback that engineHandle's
-          // addVolumeField fires.  Without this, the SettingsPanel
-          // never learns the new field exists — its mirror is rebuilt
-          // only on this callback.  We're bypassing the public handle
-          // (per the docblock above) so we have to fire it ourselves.
-          cb.volumes?.onFieldsChanged?.();
-          state.subsystems.scheduler.requestRender();
-        },
-      });
-
-    // All three synthetic fixtures register but stay OFF on boot: they
-    // exist as opt-in diagnostic fixtures (Gaussian for "is anything
-    // visible?" smoke tests, the two grids for axis/scale/origin
-    // verification).  The CF-4 density field is what users should see
-    // first; cluttering the scene with a default-on Gaussian sphere
-    // fights that.  Toggle any of them from the Volumes panel.
-    state.assetSlots.syntheticVolumes = {
-      'debug-gaussian': mintSyntheticVolumeSlot('debug-gaussian', false),
-      'debug-cartesian': mintSyntheticVolumeSlot('debug-cartesian', false),
-      'debug-spherical': mintSyntheticVolumeSlot('debug-spherical', false),
-    };
+    createSyntheticVolumeSlots(state, cb);
   }
 
   // ── Loading-bar emitter ──────────────────────────────────────────

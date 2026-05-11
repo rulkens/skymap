@@ -62,7 +62,7 @@
  * accumulate rather than replace, which is wrong for an opaque indicator line.
  */
 
-import type { GpuContext } from '../../../@types';
+import type { GpuContext, Renderer } from '../../../@types';
 import vsCode from '../shaders/markerLines/vertex.wesl?static';
 import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -95,6 +95,11 @@ export type MarkerLine = {
  * `LabelRenderer`): explicit method type, no internals leaked.
  */
 export type MarkerLineRenderer = {
+  /**
+   * Human-readable identifier (`'markerLineRenderer'`).  Part of the
+   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   /**
    * Replace the current line set.  Calling `setLines([])` clears all lines.
    * Re-packs the CPU-side instance scratch buffer and, if a real GPU device
@@ -405,5 +410,15 @@ export function createMarkerLineRenderer(
     cornerBuffer?.destroy();
   }
 
-  return { setLines, render, lineCount, destroy };
+  const renderer: MarkerLineRenderer = {
+    label: 'markerLineRenderer',
+    setLines,
+    render,
+    lineCount,
+    destroy,
+  };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening the static type seen by consumers.
+  renderer satisfies Renderer;
+  return renderer;
 }
