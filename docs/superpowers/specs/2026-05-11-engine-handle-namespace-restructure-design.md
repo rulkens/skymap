@@ -114,10 +114,17 @@ type EngineVolumesHandle = {
   setEnabled: (handle: string, enabled: boolean) => void; // setVolumeFieldEnabled
   setIntensity: (handle: string, intensity: number) => void;
   setContrast: (handle: string, contrast: number) => void;
+  setDensityScale: (handle: string, value: number) => void; // added by PR #91 (SCFD-v2 density)
   setPalette: (handle: string, id: ScalarFieldPaletteId) => void;
   list: () => string[];                                  // formerly listVolumeFields
   getState: () => ReadonlyArray<{...}>;                  // formerly getVolumeFieldsState
 };
+
+// Note: the spherical-envelope control (`scalarVolumeRenderer.setEnvelope`) is
+// intentionally NOT on EngineHandle.  Envelopes are registry-driven via
+// `VolumeFieldDefaults` keyed by handle — runtime UI tweaking would be
+// surprising for a content-property that the renderer knows how to pick.
+// `wireSlots` calls `setEnvelope` at registration time only.
 
 type EngineInputHandle = {
   spaceMouse: {
