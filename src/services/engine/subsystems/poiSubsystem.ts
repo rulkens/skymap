@@ -35,6 +35,7 @@ import type { Label } from '../../gpu/renderers/labelRenderer';
 import type { MarkerLine } from '../../gpu/renderers/markerLineRenderer';
 import type { ReadyFrameContext } from '../frame/frameContext';
 import type { EngineState } from '../../../@types';
+import type { Vec3, Vec4 } from '../../../@types/Vec';
 import type { LabelProducer, LabelProducerOutput } from './labelProducer';
 
 export type PoiCategory = 'cluster' | 'galaxy' | 'void';
@@ -43,7 +44,7 @@ export type PointOfInterest = {
   readonly id: string;
   readonly name: string;
   readonly category: PoiCategory;
-  readonly worldPos: readonly [number, number, number];
+  readonly worldPos: Vec3;
   /** Crosshair half-length in Mpc.  Omit to draw label only. */
   readonly crosshairSizeMpc?: number;
 };
@@ -55,8 +56,8 @@ export type PoiSubsystem = LabelProducer & {
 };
 
 type CategoryStyle = {
-  readonly labelColor: readonly [number, number, number, number];
-  readonly lineColor: readonly [number, number, number, number];
+  readonly labelColor: Vec4;
+  readonly lineColor: Vec4;
   readonly pixelSize: number;
   readonly worldEmMpc: number;
   readonly pixelWidth: number;
@@ -118,8 +119,8 @@ export function createPoiSubsystem(): PoiSubsystem {
     const [cx, cy, cz] = p.worldPos;
     const mk = (
       id: string,
-      from: [number, number, number],
-      to: [number, number, number],
+      from: Vec3,
+      to: Vec3,
     ): MarkerLine => ({
       id,
       fromWorld: from,

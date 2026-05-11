@@ -68,7 +68,7 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
-import type { PointCloud, ThumbnailInstance } from '../../../@types';
+import type { PointCloud, ThumbnailInstance, Vec3 } from '../../../@types';
 import type { OrbitCamera } from '../../../@types';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
@@ -313,7 +313,7 @@ export type ThumbnailFrameInput = {
   /** pre-computed `canvas.height / (2 · tan(fovY/2))` to share with engine. */
   pxPerRad: number;
   /** Camera world-position snapshot for the back-to-front sort comparator. */
-  camPos: Readonly<[number, number, number]>;
+  camPos: Readonly<Vec3>;
   /** ThumbnailRenderer instance — engine owns it; subsystem just calls draw(). */
   thumbnailRenderer: ThumbnailRenderer;
   /** DiskRenderer instance — same ownership story as thumbnailRenderer. */

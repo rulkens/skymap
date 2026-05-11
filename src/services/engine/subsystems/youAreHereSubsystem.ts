@@ -27,14 +27,15 @@ import type { Label } from '../../gpu/renderers/labelRenderer';
 import type { MarkerLine } from '../../gpu/renderers/markerLineRenderer';
 import type { ReadyFrameContext } from '../frame/frameContext';
 import type { EngineState } from '../../../@types';
+import type { Vec4 } from '../../../@types/Vec';
 import type { LabelProducer, LabelProducerOutput } from './labelProducer';
 import { youAreHereAlpha } from '../../gpu/labels/youAreHereVisibility';
 
 const LABEL_TEXT = 'You are here';
 const LABEL_ANCHOR_MPC = 0.05;
 const LINE_TOP_MPC = LABEL_ANCHOR_MPC * 0.75;
-const LABEL_COLOR: readonly [number, number, number, number] = [1, 1, 1, 1];
-const LINE_COLOR: readonly [number, number, number, number] = [0.85, 0.85, 0.85, 1];
+const LABEL_COLOR: Vec4 = [1, 1, 1, 1];
+const LINE_COLOR: Vec4 = [0.85, 0.85, 0.85, 1];
 
 export type YouAreHereSubsystem = LabelProducer;
 

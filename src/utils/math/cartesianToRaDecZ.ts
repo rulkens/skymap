@@ -20,6 +20,7 @@
  *   divide-by-zero.
  */
 
+import type { Vec3 } from '../../@types/Vec';
 import { HUBBLE_DISTANCE_MPC } from './constants';
 
 /**
@@ -53,7 +54,7 @@ import { HUBBLE_DISTANCE_MPC } from './constants';
  * @param z  Cartesian z in Mpc (note: this is the *spatial* z, not redshift).
  * @returns  [raDeg, decDeg, zRedshift] — RA in [0, 360), Dec in [-90, +90], z ≥ 0.
  */
-export function cartesianToRaDecZ(x: number, y: number, z: number): [number, number, number] {
+export function cartesianToRaDecZ(x: number, y: number, z: number): Vec3 {
   const d = Math.sqrt(x * x + y * y + z * z);
 
   // Guard against the degenerate origin — asin(0/0) and atan2(0,0) are both

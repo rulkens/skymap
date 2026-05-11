@@ -59,7 +59,7 @@
  * `ReadyFrameContext`, so the type checker proves the engine was ready
  * when the pass fired without re-asserting the precondition.
  *
- * ### Why `drawCamPos: Readonly<[number, number, number]>` (a tuple)
+ * ### Why `drawCamPos: Readonly<Vec3>` (a tuple)
  *
  * `OrbitCamera.position` is a gl-matrix `vec3`, which under the hood is
  * a `Float32Array`.  Forwarding the live `Float32Array` to downstream
@@ -99,7 +99,7 @@
 
 import type { mat4 } from 'gl-matrix';
 
-import type { EngineState, OrbitCamera } from '../../../@types';
+import type { EngineState, OrbitCamera, Vec3 } from '../../../@types';
 import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
 import type { PostProcess } from '../../gpu/passes/postProcess';
 import type { ThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
@@ -119,7 +119,7 @@ export type ReadyFrameContext = {
   /** Backing-store-pixel viewport size; same as `canvas.{width,height}`. */
   canvasSize: { width: number; height: number };
   /** Snapshot of `cam.position` as a readonly tuple (no live Float32Array aliasing). */
-  drawCamPos: Readonly<[number, number, number]>;
+  drawCamPos: Readonly<Vec3>;
   /** `canvasSize.height / (2·tan(fovY/2))` — pinhole radian→pixel conversion. */
   drawPxPerRad: number;
   /**
@@ -176,7 +176,7 @@ export function deriveFrameContext(
   // read from `ctx`.
   const canvasSize = { width: canvas.width, height: canvas.height };
   const vp = computeViewProj(cam);
-  const drawCamPos: Readonly<[number, number, number]> = [
+  const drawCamPos: Readonly<Vec3> = [
     cam.position[0]!,
     cam.position[1]!,
     cam.position[2]!,

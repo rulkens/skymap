@@ -99,7 +99,7 @@
  * current consumer uses it.
  */
 
-import type { GpuContext, Renderer } from '../../../@types';
+import type { GpuContext, Renderer, Vec3 } from '../../../@types';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
@@ -222,7 +222,7 @@ export type InstancedQuadRenderer = {
     viewport: [number, number];
     instanceBytes: Float32Array;
     instanceCount: number;
-    camPosWorld?: Readonly<[number, number, number]>;
+    camPosWorld?: Readonly<Vec3>;
     pxPerRad?: number;
   }) => void;
   /**
@@ -404,7 +404,7 @@ export function createInstancedQuadRenderer(
     viewport: [number, number];
     instanceBytes: Float32Array;
     instanceCount: number;
-    camPosWorld?: Readonly<[number, number, number]>;
+    camPosWorld?: Readonly<Vec3>;
     pxPerRad?: number;
   }): void {
     if (args.instanceCount === 0) return;

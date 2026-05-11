@@ -42,7 +42,7 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { GpuContext, Renderer } from '../../../@types';
+import type { GpuContext, Renderer, Vec3 } from '../../../@types';
 import vsCode from '../shaders/disks/vertex.wesl?static';
 import fsCode from '../shaders/disks/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
@@ -88,7 +88,7 @@ export type DiskRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
-    camPos: Readonly<[number, number, number]>,
+    camPos: Readonly<Vec3>,
     instances: ReadonlyArray<DiskInstance>,
   ): void;
   /**
@@ -119,7 +119,7 @@ export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRen
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
-    camPos: Readonly<[number, number, number]>,
+    camPos: Readonly<Vec3>,
     instances: ReadonlyArray<DiskInstance>,
   ): void {
     if (instances.length === 0) return;

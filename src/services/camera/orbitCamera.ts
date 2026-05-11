@@ -37,6 +37,7 @@
 
 import { mat4, vec3 } from 'gl-matrix';
 import type { OrbitCameraInit, OrbitCamera } from '../../@types';
+import type { Vec3 } from '../../@types/Vec';
 
 // ─── Distance limits ──────────────────────────────────────────────────────────
 
@@ -229,7 +230,7 @@ export function computeViewProj(cam: OrbitCamera): mat4 {
   let upZ = 0;
   if (Number.isFinite(roll) && roll !== 0) {
     // k = unit vector from position toward target (the view direction axis)
-    const tgt = cam.target as readonly [number, number, number];
+    const tgt = cam.target as Vec3;
     let kx = tgt[0] - cam.position[0];
     let ky = tgt[1] - cam.position[1];
     let kz = tgt[2] - cam.position[2];

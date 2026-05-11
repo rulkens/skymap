@@ -17,6 +17,7 @@
  *     z = d · sin(dec)
  */
 
+import type { Vec3 } from '../../@types/Vec';
 import { redshiftToDistanceMpc } from './redshiftToDistanceMpc';
 
 /**
@@ -42,7 +43,7 @@ export function raDecZToCartesian(
   raDeg: number,
   decDeg: number,
   z: number,
-): [number, number, number] {
+): Vec3 {
   const d = redshiftToDistanceMpc(z);
   // Math.cos / Math.sin take radians; SDSS gives us degrees.
   const ra = (raDeg * Math.PI) / 180;

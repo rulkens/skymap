@@ -40,7 +40,7 @@
  */
 
 import { mat4 } from 'gl-matrix';
-import type { PointCloud, Renderer } from '../../../@types';
+import type { PointCloud, Renderer, Vec3 } from '../../../@types';
 import { ALL_SOURCES, Source } from '../../../data/sources';
 import {
   type BuildPointInterleavedBufferInput,
@@ -634,7 +634,7 @@ export type PointDrawSettings = {
   /** Bitmask of `Source` values to draw (see `data/sources.ts`). */
   visibleSourceMask: number;
   /** Camera position in world Mpc (`orbitCamera.position`), used by the vertex shader for apparent-size sizing. */
-  camPosWorld: Readonly<[number, number, number]>;
+  camPosWorld: Readonly<Vec3>;
   /** Pixels-per-radian for the current viewport + FOV: `viewportPx[1] / (2 * tan(fovYRad / 2))`. */
   pxPerRad: number;
   /** When true, fallback-orientation fragments are tinted magenta in the visual shader.  Selection / pick paths unaffected. */

@@ -33,6 +33,8 @@
  * the audit's pass/fail percentile.
  */
 
+import type { Vec3 } from '../@types/Vec';
+
 /** Right-ascension hours, declination degrees, distance in Mpc. */
 export type SkyCoord = {
   readonly raHours: number;
@@ -57,7 +59,7 @@ export type ClusterAnchor = SkyCoord & {
  *
  * where RA is converted from hours to radians via × 15° × π/180.
  */
-export function raDecDistToEqCart(c: SkyCoord): readonly [number, number, number] {
+export function raDecDistToEqCart(c: SkyCoord): Vec3 {
   const RAD = Math.PI / 180;
   const ra = c.raHours * 15 * RAD;
   const dec = c.decDeg * RAD;

@@ -10,9 +10,11 @@
  * Separating init from state lets us pass a plain object literal to
  * `createOrbitCamera` and derive the rest (e.g. `position`) from it.
  */
+import type { Vec3 } from './Vec';
+
 export type OrbitCameraInit = {
   /** World-space point the camera orbits around and looks at. */
-  target: [number, number, number];
+  target: Vec3;
 
   /**
    * Radius of the orbit sphere — distance between camera and target.

@@ -62,7 +62,7 @@
  * accumulate rather than replace, which is wrong for an opaque indicator line.
  */
 
-import type { GpuContext, Renderer } from '../../../@types';
+import type { GpuContext, Renderer, Vec3, Vec4 } from '../../../@types';
 import vsCode from '../shaders/markerLines/vertex.wesl?static';
 import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -79,12 +79,12 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
  */
 export type MarkerLine = {
   id: string;
-  fromWorld: [number, number, number];
-  toWorld: [number, number, number];
+  fromWorld: Vec3;
+  toWorld: Vec3;
   /** Full pixel width of the rendered line (the shader halves to half-width). */
   pixelWidth: number;
   /** Premultiplied RGBA — alpha-weighted colour packed into a single vec4. */
-  color: [number, number, number, number];
+  color: Vec4;
   /** Fade multiplier in [0,1] driven by youAreHereVisibility. Defaults to 1. */
   fadeAlpha?: number;
 };

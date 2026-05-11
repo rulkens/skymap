@@ -101,6 +101,7 @@ import vsCode from '../shaders/milkyWay/vertex.wesl?static';
 import fsCode from '../shaders/milkyWay/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { Renderer } from '../../../@types';
+import type { Vec3 } from '../../../@types/Vec';
 
 type Init = {
   device: GPUDevice;
@@ -154,8 +155,8 @@ export type MilkyWayRenderer = {
     viewport: [number, number],
     fadeAlpha: number,
     iTimeSec: number,
-    cameraPosWorld: [number, number, number],
-    centerWorld?: readonly [number, number, number],
+    cameraPosWorld: Readonly<Vec3>,
+    centerWorld?: Vec3,
   ): void;
   /** Release the per-frame uniform buffer. */
   destroy(): void;
@@ -273,8 +274,8 @@ export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
     viewport: [number, number],
     fadeAlpha: number,
     iTimeSec: number,
-    cameraPosWorld: [number, number, number],
-    centerWorld: readonly [number, number, number] = [0, 0, 0],
+    cameraPosWorld: Readonly<Vec3>,
+    centerWorld: Vec3 = [0, 0, 0],
   ): void {
     // ── CPU-side reframing for off-origin rendering ────────────────────
     //
