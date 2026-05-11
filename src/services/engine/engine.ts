@@ -265,6 +265,49 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
       exposure: DEFAULT_EXPOSURE,
       toneMapCurve: DEFAULT_TONE_MAP_CURVE,
+      // ── Task 2 of H5 namespace restructure: nested sub-bags ───────
+      // Seeded from the SAME defaults as the flat fields above.  Both
+      // shapes coexist until consumer-side migration is complete (Task
+      // 11 deletes the flat fields).  We do NOT introduce a "single
+      // source of truth" via a getter alias here — that would mean
+      // tests can't write to both shapes independently, and the dual-
+      // write pattern in Task 5 explicitly relies on each shape being
+      // its own mutable slot.
+      points: {
+        sizePx: DEFAULT_POINT_SIZE_PX,
+        brightness: DEFAULT_BRIGHTNESS,
+        depthFade: DEFAULT_DEPTH_FADE_ENABLED,
+        highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
+        realOnly: DEFAULT_REAL_ONLY_MODE,
+      },
+      tonemap: {
+        exposure: DEFAULT_EXPOSURE,
+        curve: DEFAULT_TONE_MAP_CURVE,
+      },
+      camera: {
+        autoRotate: DEFAULT_AUTO_ROTATE,
+      },
+      // Bias's user-tunable subset.  The bake-derived fields
+      // (apparentMagLimit / schechterMStar / schechterAlpha) stay on
+      // `state.bias` — they're worker outputs, not settings.
+      bias: {
+        mode: DEFAULT_BIAS_MODE,
+        absMagLimit: DEFAULT_ABS_MAG_LIMIT,
+      },
+      thumbnails: {
+        enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
+      },
+      milkyWay: {
+        enabled: DEFAULT_MILKY_WAY_ENABLED,
+      },
+      filaments: {
+        enabled: DEFAULT_FILAMENTS_ENABLED,
+        intensity: DEFAULT_FILAMENT_INTENSITY,
+      },
+      volumes: {
+        masterEnabled: DEFAULT_VOLUMES_ENABLED,
+        fields: {},
+      },
     },
     bias: {
       // Why -19 as the volume-limited default?  It's roughly the

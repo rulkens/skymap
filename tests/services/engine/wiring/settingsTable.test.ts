@@ -59,6 +59,24 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
       depthFadeEnabled: true,
       exposure: 1.0,
       toneMapCurve: ToneMapCurve.Reinhard,
+      // Nested sub-bag mirror (Task 2 of H5 namespace restructure).
+      // Same values as the flat fields above.  The settingsTable
+      // builder still reads/writes the flat shape in this commit;
+      // Task 5 will dual-write to both.
+      points: {
+        sizePx: 2.5,
+        brightness: 1.0,
+        depthFade: true,
+        highlightFallback: true,
+        realOnly: false,
+      },
+      tonemap: { exposure: 1.0, curve: ToneMapCurve.Reinhard },
+      camera: { autoRotate: false },
+      bias: { mode: BiasMode.None, absMagLimit: -19 },
+      thumbnails: { enabled: true },
+      milkyWay: { enabled: true },
+      filaments: { enabled: false, intensity: 0.5 },
+      volumes: { masterEnabled: false, fields: {} },
     },
     bias: {
       mode: BiasMode.None,

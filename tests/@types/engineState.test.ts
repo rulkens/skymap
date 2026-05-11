@@ -93,6 +93,23 @@ describe('EngineState type', () => {
       depthFadeEnabled: true,
       exposure: 3.0,
       toneMapCurve: DEFAULT_TONE_MAP_CURVE,
+      // Nested sub-bag mirror (Task 2 of H5 namespace restructure).
+      // Same values as the flat fields above — coexistence is the
+      // contract these tests pin down.
+      points: {
+        sizePx: 2.5,
+        brightness: 1.0,
+        depthFade: true,
+        highlightFallback: false,
+        realOnly: false,
+      },
+      tonemap: { exposure: 3.0, curve: DEFAULT_TONE_MAP_CURVE },
+      camera: { autoRotate: false },
+      bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: -19 },
+      thumbnails: { enabled: true },
+      milkyWay: { enabled: true },
+      filaments: { enabled: false, intensity: 1 },
+      volumes: { masterEnabled: false, fields: {} },
     };
     const bias: EngineBiasState = {
       mode: DEFAULT_BIAS_MODE,
@@ -197,6 +214,22 @@ describe('EngineState type', () => {
       depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
       exposure: DEFAULT_EXPOSURE,
       toneMapCurve: DEFAULT_TONE_MAP_CURVE,
+      // Nested sub-bag mirror — populated from the same constants so
+      // the "build from defaults" contract holds for both shapes.
+      points: {
+        sizePx: DEFAULT_POINT_SIZE_PX,
+        brightness: DEFAULT_BRIGHTNESS,
+        depthFade: DEFAULT_DEPTH_FADE_ENABLED,
+        highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
+        realOnly: DEFAULT_REAL_ONLY_MODE,
+      },
+      tonemap: { exposure: DEFAULT_EXPOSURE, curve: DEFAULT_TONE_MAP_CURVE },
+      camera: { autoRotate: DEFAULT_AUTO_ROTATE },
+      bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: DEFAULT_ABS_MAG_LIMIT },
+      thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
+      milkyWay: { enabled: DEFAULT_MILKY_WAY_ENABLED },
+      filaments: { enabled: DEFAULT_FILAMENTS_ENABLED, intensity: DEFAULT_FILAMENT_INTENSITY },
+      volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
     };
     const bias: EngineBiasState = {
       mode: DEFAULT_BIAS_MODE,
@@ -237,6 +270,21 @@ describe('EngineState type', () => {
         depthFadeEnabled: true,
         exposure: 1,
         toneMapCurve: DEFAULT_TONE_MAP_CURVE,
+        // Nested sub-bag mirror — see the comment in the first sub-test.
+        points: {
+          sizePx: 1,
+          brightness: 1,
+          depthFade: true,
+          highlightFallback: false,
+          realOnly: false,
+        },
+        tonemap: { exposure: 1, curve: DEFAULT_TONE_MAP_CURVE },
+        camera: { autoRotate: false },
+        bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: 0 },
+        thumbnails: { enabled: true },
+        milkyWay: { enabled: true },
+        filaments: { enabled: false, intensity: 1 },
+        volumes: { masterEnabled: false, fields: {} },
       },
       bias: {
         mode: DEFAULT_BIAS_MODE,

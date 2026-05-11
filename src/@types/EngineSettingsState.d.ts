@@ -34,6 +34,7 @@
  * `EngineSettingsState` value by pulling those constants into each field.
  */
 
+import type { BiasMode } from '../data/biasMode';
 import type { ToneMapCurve } from '../data/toneMapCurve';
 import type { ScalarFieldPaletteId } from './ScalarCube';
 
@@ -138,4 +139,121 @@ export type EngineSettingsState = {
   depthFadeEnabled: boolean;
   exposure: number;
   toneMapCurve: ToneMapCurve;
+
+  /**
+   * ### Nested sub-bag mirror (Task 2 of H5 namespace restructure)
+   *
+   * Below this point we expose the *same* settings reorganised by
+   * concern: `points.*`, `tonemap.*`, `camera.*`, `bias.*`, etc.  This
+   * dual-shape is intentional and transitional.
+   *
+   * **Why both shapes exist for now:** The 30-ish flat fields above
+   * accreted organically as features landed.  By Task 11 they will be
+   * gone, replaced entirely by the namespaced sub-bags — which makes
+   * setter signatures, snapshot diffs, and the SettingsPanel rows all
+   * map 1-to-1 onto the engine's mental model.  But there are dozens
+   * of read sites across renderer wiring, the per-frame loop and
+   * tests; flipping them in a single commit would be a 600-line diff
+   * that's impossible to bisect.  Coexistence lets each consumer
+   * migrate one PR at a time: write to both, read from either, then
+   * once every reader has moved we delete the flat fields.
+   *
+   * **What's NOT here yet:** `state.bias.mode` / `state.bias.absMagLimit`
+   * still live on the top-level `EngineBiasState` (see its own type
+   * file — we explicitly did NOT shrink it in this commit).  The dual
+   * write to both `state.bias.mode` and `state.settings.bias.mode`
+   * lands in Task 5; the cleanup that finally removes the duplicate
+   * lands in Task 11.
+   *
+   * The fields below are required (not `?:` optional) because the
+   * engine populates every one of them at startup from the same
+   * `DEFAULT_*` constants the flat fields use — there's no codepath
+   * where the sub-bag is absent.  Marking them required catches
+   * "forgot to seed it" bugs at compile time.
+   */
+
+  /**
+   * Point-billboard rendering controls.  Mirrors `pointSizePx`,
+   * `brightness`, `depthFadeEnabled`, `highlightFallback`, `realOnlyMode`
+   * — every flat field whose effect lands in `points.wgsl` or the
+   * per-instance attribute bake.
+   */
+  points: {
+    sizePx: number;
+    brightness: number;
+    depthFade: boolean;
+    highlightFallback: boolean;
+    realOnly: boolean;
+  };
+
+  /**
+   * HDR → LDR tone-mapping controls.  Mirrors `exposure` and
+   * `toneMapCurve` — both consumed by the post-process pass and
+   * neither tied to any individual draw call.
+   */
+  tonemap: {
+    exposure: number;
+    curve: ToneMapCurve;
+  };
+
+  /**
+   * Camera-orbit behaviour controls.  Currently just `autoRotate`;
+   * future tween / damping knobs would also live here rather than
+   * polluting the flat root.
+   */
+  camera: {
+    autoRotate: boolean;
+  };
+
+  /**
+   * Luminosity-bias correction inputs.  Mirrors the user-tunable
+   * subset of `EngineBiasState` (`mode`, `absMagLimit`).  The
+   * bake-derived fields (`apparentMagLimit`, `schechterMStar`,
+   * `schechterAlpha`) stay on `state.bias` — they're outputs of the
+   * worker bake, not user-facing settings, so they don't belong in
+   * the SettingsPanel's mental model.
+   */
+  bias: {
+    mode: BiasMode;
+    absMagLimit: number;
+  };
+
+  /**
+   * Galaxy-thumbnail overlay master toggle.  Mirrors
+   * `galaxyTexturesEnabled` — the name change is deliberate: the
+   * underlying feature is "per-galaxy thumbnail quads on close
+   * approach", and `thumbnails.enabled` reads more cleanly at call
+   * sites than `galaxyTexturesEnabled`.
+   */
+  thumbnails: {
+    enabled: boolean;
+  };
+
+  /**
+   * Milky-Way disk overlay master toggle.  Mirrors `milkyWayEnabled`.
+   */
+  milkyWay: {
+    enabled: boolean;
+  };
+
+  /**
+   * Filament-skeleton overlay controls.  Mirrors `filamentsEnabled`
+   * and `filamentIntensity` — paired here because the intensity
+   * slider is meaningless when the master toggle is off.
+   */
+  filaments: {
+    enabled: boolean;
+    intensity: number;
+  };
+
+  /**
+   * Scalar-volume overlay controls.  `masterEnabled` mirrors the flat
+   * `volumesEnabled` (renamed for clarity — the field is the master
+   * gate, not a per-cube switch).  `fields` mirrors `volumeFields`:
+   * the per-handle settings record populated by `addVolumeField`.
+   */
+  volumes: {
+    masterEnabled: boolean;
+    fields: Record<string, VolumeFieldSettings>;
+  };
 };
