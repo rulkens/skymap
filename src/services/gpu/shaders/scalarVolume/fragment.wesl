@@ -175,6 +175,32 @@ fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32, trim: f32) 
 // the cube because dev never exceeds either edge, and the function
 // returns 1.0 — visually identical to no envelope at all.  No
 // branching needed.
+// Per-fragment hash for ray-march start jitter.  With STEP_COUNT fixed
+// at 192 and per-step opacity made large by high densityScale (e.g.
+// MCPM at 18), the regular step grid shows through as a visible
+// pattern that 'slides' across the cube as the camera rotates — every
+// pixel uses the same step phase, so neighbouring pixels sample
+// neighbouring voxels in lockstep, and slight changes in ray angle
+// shift which voxels 'win' coherently across the screen.
+//
+// Jittering the start offset by a per-fragment value in [0, stepLength)
+// breaks the lockstep: neighbouring pixels now sample at different
+// phases, so the visible aliasing becomes high-frequency noise rather
+// than a coherent grid.  The accumulated integral is unbiased (jitter
+// averages to stepLength/2), so the only cost is a tiny per-pixel
+// brightness fluctuation that reads as fine grain — much less
+// objectionable than sliding grid cells.
+//
+// hash12 is the standard "tiny PRNG you can paste into any shader"
+// from Hugo Elias / DaveHoskins (https://www.shadertoy.com/view/4djSRW);
+// good enough decorrelation for screen-space jitter without needing a
+// blue-noise texture upload.
+fn hash12(p: vec2<f32>) -> f32 {
+  var p3 = fract(vec3<f32>(p.x, p.y, p.x) * 0.1031);
+  p3 = p3 + dot(p3, p3.yzx + vec3<f32>(33.33));
+  return fract((p3.x + p3.y) * p3.z);
+}
+
 fn sphericalEnvelope(localPos: vec3<f32>, inner: f32, outer: f32) -> f32 {
   // Center the cube on the origin in cube-space, scale by 2 so the
   // inscribed sphere has radius 1.0 (matches the convention used by
@@ -200,7 +226,7 @@ fn intersectUnitAabb(rayOrigin: vec3<f32>, rayDir: vec3<f32>) -> vec2<f32> {
 }
 
 @fragment
-fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
+fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f32> {
   // Reconstruct the camera-to-fragment ray in WORLD space, then transform
   // into the cube's LOCAL space (where the AABB is the unit cube).
   //
@@ -230,8 +256,12 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
   // Fixed-step march from tMin to tMax.  stepLength normalises against
   // STEP_COUNT so opacity is invariant to changes in the constant.
   let stepLength = (tMax - tMin) / f32(STEP_COUNT);
+  // Jitter the start offset by [0, stepLength) per fragment to break
+  // the visible step-grid moiré that otherwise slides across the cube
+  // during camera motion.  See hash12's docblock for the rationale.
+  let jitter = hash12(fragCoord.xy) * stepLength;
   var accum = vec4<f32>(0.0);
-  var t = tMin;
+  var t = tMin + jitter;
   for (var i = 0; i < STEP_COUNT; i = i + 1) {
     let p = rayOriginLocal + rayDirLocal * t;
     // Sample the 3D texture in [0,1]^3 -- same coordinate system as the
