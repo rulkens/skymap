@@ -9,12 +9,12 @@ import type { Vec2, Vec3, Vec4 } from '../../src/@types/Vec';
 
 describe('Vec tuple aliases', () => {
   it('Vec2 is a 2-element tuple of number', () => {
-    expectTypeOf<Vec2>().toEqualTypeOf<readonly [number, number]>();
+    expectTypeOf<Vec2>().toEqualTypeOf<[number, number]>();
   });
   it('Vec3 is a 3-element tuple of number', () => {
-    expectTypeOf<Vec3>().toEqualTypeOf<readonly [number, number, number]>();
+    expectTypeOf<Vec3>().toEqualTypeOf<[number, number, number]>();
   });
   it('Vec4 is a 4-element tuple of number', () => {
-    expectTypeOf<Vec4>().toEqualTypeOf<readonly [number, number, number, number]>();
+    expectTypeOf<Vec4>().toEqualTypeOf<[number, number, number, number]>();
   });
 });
