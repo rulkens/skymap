@@ -36,7 +36,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { readNpy } from './parsers/npyReader';
 import { encodeScalarField } from '../src/data/scalarFieldFormat';
-import { SG_TO_EQ_QUATERNION } from '../src/data/superGalacticTransform';
 import type { ScalarCube } from '../src/@types/ScalarCube';
 
 /**
@@ -175,13 +174,44 @@ export async function buildCf4Density(args: {
   const half = Math.max(1e-9, Math.max(Math.abs(valueMin), Math.abs(valueMax)));
   const invTwoHalf = 1 / (2 * half);
   const voxels = new Uint16Array(values.length);
-  for (let i = 0; i < values.length; i++) {
-    const normalised = 0.5 + values[i]! * invTwoHalf;
-    // Clamp protects against the slightly-out-of-range corner from
-    // floating-point drift; the input from CF4++ is well within
-    // [-half, +half] by construction.
-    const clamped = normalised < 0 ? 0 : normalised > 1 ? 1 : normalised;
-    voxels[i] = f32ToF16Bits(clamped);
+
+  // ── Axis transpose: numpy C-order → WebGPU x-fastest ─────────────────
+  // The CF4++ .npy is C-order with shape (Nx, Ny, Nz) where the author's
+  // convention puts axis 0 = SGX (slowest in memory), axis 1 = SGY,
+  // axis 2 = SGZ (fastest).  Numpy stores npy[i, j, k] at linear offset
+  // i*Ny*Nz + j*Nz + k — so the LAST index varies fastest.
+  //
+  // WebGPU's writeTexture, configured with `bytesPerRow = dims[0]*2`
+  // and `rowsPerImage = dims[1]`, interprets the linear buffer as
+  // x-FASTEST: texture coordinate (xt, yt, zt) reads from offset
+  // zt*Ny*Nx + yt*Nx + xt.  The FIRST coordinate varies fastest.
+  //
+  // A straight-copy `voxels[i] = packed(values[i])` would therefore
+  // place numpy axis 2 (SGZ) into WebGPU's x-axis and numpy axis 0
+  // (SGX) into WebGPU's z-axis — visually swapping the cube's X and Z
+  // directions vs. the model matrix's assumption that local-x = SGX.
+  // Empirically caught: cluster labels rendered via raDecDistToEqCart
+  // sit at known cluster positions, but the rendered density blobs
+  // appear at completely different locations.
+  //
+  // Fix: transpose axes 0 ↔ 2 at pack time so the WebGPU x-fastest
+  // layout carries SGX data in its fastest axis.  For each input cell
+  // npy[i, j, k] (representing SG position (i, j, k)), write into the
+  // output buffer at the WebGPU-x-fastest offset that the shader will
+  // later sample for SG-local coordinate (xt=i, yt=j, zt=k).
+  for (let i = 0; i < dims[0]; i++) {
+    for (let j = 0; j < dims[1]; j++) {
+      for (let k = 0; k < dims[2]; k++) {
+        const inputIdx = i * dims[1] * dims[2] + j * dims[2] + k;
+        const outputIdx = k * dims[1] * dims[0] + j * dims[0] + i;
+        const normalised = 0.5 + values[inputIdx]! * invTwoHalf;
+        // Clamp protects against the slightly-out-of-range corner from
+        // floating-point drift; the input from CF4++ is well within
+        // [-half, +half] by construction.
+        const clamped = normalised < 0 ? 0 : normalised > 1 ? 1 : normalised;
+        voxels[outputIdx] = f32ToF16Bits(clamped);
+      }
+    }
   }
 
   // ── 4. Compute origin (voxel (0,0,0) corner in native SG frame, Mpc) ─
@@ -202,17 +232,20 @@ export async function buildCf4Density(args: {
     frameKind: 'supergalactic-cartesian',
     origin,
     voxelSize,
-    // The rotation quaternion places the cube's native SG frame into
-    // equatorial Cartesian world space. Both the renderer's model matrix
-    // and the ray-AABB test operate in equatorial Cartesian, so this
-    // quaternion must match the same transform used by all other
-    // supergalactic-frame objects in the scene.
-    rotation: [
-      SG_TO_EQ_QUATERNION[0],
-      SG_TO_EQ_QUATERNION[1],
-      SG_TO_EQ_QUATERNION[2],
-      SG_TO_EQ_QUATERNION[3],
-    ],
+    // Identity quaternion — NOT the SG→EQ rotation.  The renderer's
+    // `buildCubeModelMatrix` already applies the SG→EQ rotation via
+    // `FRAME_TO_WORLD[supergalactic-cartesian]` for any cube whose
+    // `frameKind` is supergalactic; this `rotation` field is composed
+    // ON TOP of that, so it must be identity for vanilla SG cubes.  An
+    // earlier draft wrote `SG_TO_EQ_QUATERNION` here, which compounded
+    // the rotation and visually placed cube features at SG_TO_EQ²·X
+    // instead of SG_TO_EQ·X — the cluster labels (which use the
+    // canonical eq-Cartesian) ended up rotated away from their cube
+    // overdensities even after the axis-transpose fix.  The
+    // `rotation` field is reserved for per-cube TILT offsets (e.g.
+    // align a cube manually to a survey ROI); vanilla cubes ship
+    // identity.
+    rotation: [0, 0, 0, 1],
     valueMin,
     valueMax,
   };
