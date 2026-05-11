@@ -65,7 +65,7 @@
  * filter + clamp-to-edge gives smooth sub-pixel glyph rendering.
  */
 
-import type { GpuContext } from '../../../@types';
+import type { GpuContext, Renderer } from '../../../@types';
 import type { FontMetrics } from '../labels/fontMetrics';
 import { layoutLabel, type LabelAlignX } from '../labels/labelLayout';
 import vsCode from '../shaders/labels/vertex.wesl?static';
@@ -110,6 +110,11 @@ export type Label = {
  * `BiasCorrectionSubsystem`): explicit method type, no internals leaked.
  */
 export type LabelRenderer = {
+  /**
+   * Human-readable identifier (`'labelRenderer'`).  Part of the
+   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   /**
    * Replace the current label set.  Calling `setLabels([])` clears all
    * labels.  Re-packs the CPU-side glyph and label scratch buffers and,
@@ -534,5 +539,16 @@ export function createLabelRenderer(
     atlasTexture?.destroy();
   }
 
-  return { setLabels, render, glyphCount, labelCount, destroy };
+  const renderer: LabelRenderer = {
+    label: 'labelRenderer',
+    setLabels,
+    render,
+    glyphCount,
+    labelCount,
+    destroy,
+  };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening the static type seen by consumers.
+  renderer satisfies Renderer;
+  return renderer;
 }

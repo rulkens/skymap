@@ -41,6 +41,7 @@
 import vsCode from '../shaders/filaments/vertex.wesl?static';
 import fsCode from '../shaders/filaments/fragment.wesl?static';
 import type { FilamentCloud } from '../../../@types/FilamentCloud';
+import type { Renderer } from '../../../@types';
 import type { mat4 } from 'gl-matrix';
 import { CloudFade } from '../resources/cloudFade';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -110,6 +111,11 @@ export function buildSegmentInstances(cloud: FilamentCloud): {
  * commit step, the per-frame loop) see the identical shape.
  */
 export type FilamentRenderer = {
+  /**
+   * Human-readable identifier (`'filamentRenderer'`).  Part of the
+   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   /** Upload a new filament cloud, replacing any prior buffer. */
   upload(cloud: FilamentCloud): void;
   /** Drop the loaded filaments without destroying the pipeline itself. */
@@ -369,5 +375,16 @@ export function createFilamentRenderer(
     fade?.destroy();
   }
 
-  return { upload, clear, draw, isFading, destroy };
+  const renderer: FilamentRenderer = {
+    label: 'filamentRenderer',
+    upload,
+    clear,
+    draw,
+    isFading,
+    destroy,
+  };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening the static type seen by consumers.
+  renderer satisfies Renderer;
+  return renderer;
 }

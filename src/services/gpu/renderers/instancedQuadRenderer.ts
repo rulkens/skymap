@@ -99,7 +99,7 @@
  * current consumer uses it.
  */
 
-import type { GpuContext } from '../../../@types';
+import type { GpuContext, Renderer } from '../../../@types';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
@@ -198,6 +198,11 @@ export type InstancedQuadConfig = {
  * engine never imports this type directly.
  */
 export type InstancedQuadRenderer = {
+  /**
+   * Human-readable identifier (`'instancedQuadRenderer'`).  Part of the
+   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   /**
    * Bind the atlas texture view. Only defined when `config.atlas`
    * was set. Idempotent — calling again with a different view
@@ -467,5 +472,11 @@ export function createInstancedQuadRenderer(
   // don't need it never see the method, which is both clearer at the
   // wrapper site and prevents accidental late-binding of a sampler-
   // less BGL.
-  return atlas ? { bindAtlas, draw, destroy } : { draw, destroy };
+  const renderer: InstancedQuadRenderer = atlas
+    ? { label: 'instancedQuadRenderer', bindAtlas, draw, destroy }
+    : { label: 'instancedQuadRenderer', draw, destroy };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening the static type seen by consumers.
+  renderer satisfies Renderer;
+  return renderer;
 }

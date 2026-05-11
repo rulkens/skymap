@@ -100,6 +100,7 @@ import { mat4, type vec3 } from 'gl-matrix';
 import vsCode from '../shaders/milkyWay/vertex.wesl?static';
 import fsCode from '../shaders/milkyWay/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import type { Renderer } from '../../../@types';
 
 type Init = {
   device: GPUDevice;
@@ -120,6 +121,11 @@ type Init = {
 export const MILKY_WAY_UNIFORM_BUFFER_SIZE = 112;
 
 export type MilkyWayRenderer = {
+  /**
+   * Human-readable identifier (`'milkyWayRenderer'`).  Part of the
+   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   /**
    * Issue the single-instance draw.  Encodes a 6-vertex / 1-instance
    * call after writing the uniform buffer.  Caller is responsible for
@@ -349,5 +355,13 @@ export function createMilkyWayRenderer(init: Init): MilkyWayRenderer {
     uniformBuffer.destroy();
   }
 
-  return { draw, destroy };
+  const renderer: MilkyWayRenderer = {
+    label: 'milkyWayRenderer',
+    draw,
+    destroy,
+  };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening the static type seen by consumers.
+  renderer satisfies Renderer;
+  return renderer;
 }

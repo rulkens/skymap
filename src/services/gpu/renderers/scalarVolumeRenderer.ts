@@ -35,6 +35,7 @@
 
 import { mat4 } from 'gl-matrix';
 import type { ScalarCube, ScalarFieldFrameKind, ScalarFieldPaletteId } from '../../../@types/ScalarCube';
+import type { Renderer } from '../../../@types';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPalettes';
 import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
@@ -171,6 +172,11 @@ type FieldEntry = {
 };
 
 export type ScalarVolumeRenderer = {
+  /**
+   * Human-readable identifier (`'scalarVolumeRenderer'`).  Part of the
+   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   addField(handle: ScalarFieldHandle, cube: ScalarCube): void;
   removeField(handle: ScalarFieldHandle): void;
   setEnabled(handle: ScalarFieldHandle, enabled: boolean): void;
@@ -338,7 +344,8 @@ export function createScalarVolumeRenderer(
     );
   }
 
-  return {
+  const renderer: ScalarVolumeRenderer = {
+    label: 'scalarVolumeRenderer',
     addField(handle, cube) {
       const existing = fields.get(handle);
       if (existing) {
@@ -541,4 +548,8 @@ export function createScalarVolumeRenderer(
       indexBuffer.destroy();
     },
   };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening the static type seen by consumers.
+  renderer satisfies Renderer;
+  return renderer;
 }

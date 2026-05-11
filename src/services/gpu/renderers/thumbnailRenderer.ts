@@ -67,7 +67,7 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { GpuContext, ThumbnailInstance } from '../../../@types';
+import type { GpuContext, Renderer, ThumbnailInstance } from '../../../@types';
 import vsCode from '../shaders/thumbnails/vertex.wesl?static';
 import fsCode from '../shaders/thumbnails/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
@@ -78,6 +78,11 @@ import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQua
  * thumbnail subsystem, frame body) see the identical shape.
  */
 export type ThumbnailRenderer = {
+  /**
+   * Human-readable identifier (`'thumbnailRenderer'`).  Part of the
+   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   /**
    * Bind the atlas texture view. Must be called once after
    * `atlas.initTexture()`; the bind group can be reused across frames
@@ -167,5 +172,14 @@ export function createThumbnailRenderer(ctx: GpuContext, maxInstances = 256): Th
     });
   }
 
-  return { bindAtlas, draw, destroy: inner.destroy };
+  const renderer: ThumbnailRenderer = {
+    label: 'thumbnailRenderer',
+    bindAtlas,
+    draw,
+    destroy: inner.destroy,
+  };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening the static type seen by consumers.
+  renderer satisfies Renderer;
+  return renderer;
 }

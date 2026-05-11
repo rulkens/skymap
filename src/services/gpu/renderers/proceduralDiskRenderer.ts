@@ -54,6 +54,7 @@
 import vsCode from '../shaders/proceduralDisks/vertex.wesl?static';
 import fsCode from '../shaders/proceduralDisks/fragment.wesl?static';
 import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
+import type { Renderer } from '../../../@types';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
 type Init = {
@@ -64,6 +65,11 @@ type Init = {
 };
 
 export type ProceduralDiskRenderer = {
+  /**
+   * Human-readable identifier (`'proceduralDiskRenderer'`).  Part of
+   * the shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   /**
    * Issue one draw call for the given list of instances. Packs the
    * instance data into the GPU vertex buffer (re-allocating if it grew),
@@ -143,5 +149,13 @@ export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer
     });
   }
 
-  return { draw, destroy: inner.destroy };
+  const renderer: ProceduralDiskRenderer = {
+    label: 'proceduralDiskRenderer',
+    draw,
+    destroy: inner.destroy,
+  };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening the static type seen by consumers.
+  renderer satisfies Renderer;
+  return renderer;
 }
