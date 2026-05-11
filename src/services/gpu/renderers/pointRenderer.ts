@@ -59,6 +59,8 @@ import {
 // tests inject a synchronous fallback via `setBuildBufferFactory` instead
 // of importing this module.  See the `BuildBufferFactory` type below.
 import BuildPointBufferWorker from '../../engine/bake/buildPointInterleavedBuffer.worker?worker';
+import { clonePointCloudForTransfer } from '../../../data/pointCloudTransfer';
+import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 
 // Spec E phase E.4 moved the lazy-Schechter and lazy-angular-reweight
 // `?worker` imports out of this file.  They now live in
@@ -432,58 +434,13 @@ const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; //
 function defaultWorkerRunner(
   input: BuildPointInterleavedBufferInput,
 ): Promise<BuildPointInterleavedBufferResult> {
-  return new Promise((resolve, reject) => {
-    const worker = new BuildPointBufferWorker();
-    worker.onmessage = (event: MessageEvent<BuildPointInterleavedBufferResult>) => {
-      worker.terminate();
-      resolve(event.data);
-    };
-    worker.onerror = (event: ErrorEvent) => {
-      worker.terminate();
-      reject(event.error ?? new Error(event.message ?? 'point-bake worker error'));
-    };
-
-    // Slice every typed array's underlying buffer so we own a fresh,
-    // detachable copy.  `.slice(0)` on a typed array returns a NEW typed
-    // array whose `.buffer` is a fresh ArrayBuffer — distinct from the
-    // engine-owned cloud's buffers.  We can therefore transfer these
-    // safely without detaching anything the rest of the app reads.
-    //
-    // Note on BigUint64Array: even though BigUint64Array itself is NOT on
-    // the Transferable allowlist, its underlying `.buffer` (a plain
-    // ArrayBuffer) IS — and the worker reconstructs a BigUint64Array
-    // view over the received buffer via the structured-clone roundtrip
-    // of the typed-array wrapper.  Structured clone correctly serialises
-    // typed-array views over transferred buffers (HTML spec §StructuredSerialize
-    // step "If value has [[ArrayBufferData]]…").
-    const c = input.cloud;
-    const cloudCopy: PointCloud = {
-      count: c.count,
-      objIDs: new BigUint64Array(c.objIDs.buffer.slice(0)),
-      positions: new Float32Array(c.positions.buffer.slice(0)),
-      magU: new Float32Array(c.magU.buffer.slice(0)),
-      magG: new Float32Array(c.magG.buffer.slice(0)),
-      magR: new Float32Array(c.magR.buffer.slice(0)),
-      magI: new Float32Array(c.magI.buffer.slice(0)),
-      magZ: new Float32Array(c.magZ.buffer.slice(0)),
-      axisRatio: new Float32Array(c.axisRatio.buffer.slice(0)),
-      positionAngleDeg: new Float32Array(c.positionAngleDeg.buffer.slice(0)),
-      diameterKpc: new Float32Array(c.diameterKpc.buffer.slice(0)),
-    };
-    const transfer: Transferable[] = [
-      cloudCopy.objIDs.buffer,
-      cloudCopy.positions.buffer,
-      cloudCopy.magU.buffer,
-      cloudCopy.magG.buffer,
-      cloudCopy.magR.buffer,
-      cloudCopy.magI.buffer,
-      cloudCopy.magZ.buffer,
-      cloudCopy.axisRatio.buffer,
-      cloudCopy.positionAngleDeg.buffer,
-      cloudCopy.diameterKpc.buffer,
-    ];
-    worker.postMessage({ ...input, cloud: cloudCopy }, transfer);
-  });
+  const { copy, transfer } = clonePointCloudForTransfer(input.cloud);
+  return runDisposableWorker<BuildPointInterleavedBufferInput, BuildPointInterleavedBufferResult>(
+    BuildPointBufferWorker,
+    { ...input, cloud: copy },
+    transfer,
+    'point-bake',
+  );
 }
 
 // ─── Build-runner injection (module-level — Spec E phase E.4) ────────────────
