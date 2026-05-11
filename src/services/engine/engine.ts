@@ -416,6 +416,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         cancelTween: () => state.subsystems.tweens.cancel(),
         onConnectionChange: (connected) => {
           cb.onSpaceMouseConnectedChange?.(connected);
+          // Nested twin (H5 task 5).  The SpaceMouse subsystem is the
+          // single site that fires the connected-change echo for both
+          // `connectSpaceMouse` and `disconnectSpaceMouse` (the handle
+          // methods don't echo directly — the subsystem's lifecycle
+          // owns the truth and pushes it back out via this callback).
+          cb.input?.spaceMouse?.onConnectedChange?.(connected);
           // Wake one frame so the still-animating predicate sees
           // the freshly-zeroed axes (the subsystem clears them on
           // disconnect) and lets the loop sleep cleanly.
@@ -809,8 +815,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // per-source splice completes, so visuals update progressively as
       // bakes resolve (same observable behaviour as the pre-E.4 chained
       // `.then`).
+      // Dual-write: legacy `state.bias.mode` + new `state.settings.bias.mode`.
+      // Task 2's deviation kept `state.bias.mode` alive on `EngineBiasState`
+      // (the bake-derived fields next to it can't move yet), so we mirror
+      // the value into the nested settings sub-bag for the duration of the
+      // H5 transition.  Task 11 collapses to the nested location only.
       state.bias.mode = mode;
+      state.settings.bias.mode = mode;
       cb.onBiasModeChange?.(mode);
+      cb.bias?.onModeChange?.(mode);
       void state.subsystems.biasCorrection.setMode(mode);
       state.subsystems.scheduler.requestRender();
     },
@@ -988,6 +1001,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (mode === state.sources.lodMode) return;
       state.sources.lodMode = mode;
       cb.onLodModeChange?.(mode);
+      // Mirror into the nested callback bag (H5 task 5).  Both fire so
+      // legacy flat consumers and the new nested `callbacks.sources`
+      // consumers both observe the change.
+      cb.sources?.onLodModeChange?.(mode);
       state.subsystems.scheduler.requestRender();
     },
 
@@ -999,6 +1016,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (state.sources.lodMode !== 'manual') {
         state.sources.lodMode = 'manual';
         cb.onLodModeChange?.('manual');
+        // Nested twin (H5 task 5).  Fires alongside the flat echo at
+        // the same point so callers subscribed to either shape see
+        // the implicit auto→manual flip.
+        cb.sources?.onLodModeChange?.('manual');
       }
 
       const next = visible
@@ -1007,6 +1028,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (next === state.sources.visibleMask) return;
       state.sources.visibleMask = next;
       cb.onSourceMaskChange?.(next);
+      // Mirror into the nested `sources.onMaskChange` (H5 task 5).
+      cb.sources?.onMaskChange?.(next);
       state.subsystems.scheduler.requestRender();
     },
 
@@ -1027,6 +1050,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       const prevTier = state.sources.tier;
       state.sources.tier = tier;
       cb.onTierChange?.(tier);
+      // Nested twin (H5 task 5): mirror the tier-change echo into
+      // `callbacks.sources.onTierChange` so consumers wired to the new
+      // namespaced shape see the same event.
+      cb.sources?.onTierChange?.(tier);
 
       // For each tier-relevant source, decide whether the new tier needs a
       // re-fetch.  Same target → skip (e.g. 2MRS, Famous always share one
