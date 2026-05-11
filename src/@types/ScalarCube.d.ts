@@ -13,6 +13,8 @@
  * builder writes them out via a small float→f16 helper).
  */
 
+import type { Vec3, Vec4 } from './Vec';
+
 export type ScalarFieldFrameKind = 'supergalactic-cartesian' | 'equatorial-cartesian' | 'galactic';
 
 export type ScalarFieldPaletteId =
@@ -32,17 +34,17 @@ export type ScalarFieldPaletteId =
 
 export type ScalarCube = {
   /** Voxel grid dimensions; x-fastest. */
-  readonly dims: readonly [number, number, number];
+  readonly dims: Vec3;
   /** Raw f16 voxels as Uint16, length = dims[0] * dims[1] * dims[2]. */
   readonly voxels: Uint16Array;
   /** Coordinate frame the cube lives in.  Renderer maps this to world. */
   readonly frameKind: ScalarFieldFrameKind;
   /** Position of voxel (0,0,0) corner in `frameKind`'s coords, Mpc. */
-  readonly origin: readonly [number, number, number];
+  readonly origin: Vec3;
   /** Edge length of one cubic voxel in Mpc. */
   readonly voxelSize: number;
   /** Unit quaternion (x, y, z, w) applied in the native frame. */
-  readonly rotation: readonly [number, number, number, number];
+  readonly rotation: Vec4;
   /** Diagnostic; only meaningful when the source data was raw, not pre-normalised. */
   readonly valueMin: number;
   readonly valueMax: number;

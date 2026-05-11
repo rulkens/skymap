@@ -25,6 +25,7 @@
  * existing meta lookup; only the Milky Way needs this special case.
  */
 
+import type { Vec3 } from '../@types/Vec';
 import { raDecDistToCartesian } from '../utils/math/raDecDistToCartesian';
 
 /** Sagittarius A\* RA (J2000) in degrees: 17h 45m 40.04s. */
@@ -52,7 +53,7 @@ const SGR_A_DIST_MPC = 0.008;
  *
  * Approximate value: (-0.000476, -0.006982, -0.003879) Mpc.
  */
-export const MILKY_WAY_CENTER_WORLD: readonly [number, number, number] =
+export const MILKY_WAY_CENTER_WORLD: Vec3 =
   raDecDistToCartesian(SGR_A_RA_DEG, SGR_A_DEC_DEG, SGR_A_DIST_MPC);
 
 /**
