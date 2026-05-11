@@ -13,8 +13,6 @@ function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
     origin: [-100, -100, -100],
     voxelSize: 50,
     rotation: [0, 0, 0, 1],
-    paletteId: 'blue-purple',
-    densityScale: 1.0,
     valueMin: 0,
     valueMax: 1,
     ...overrides,

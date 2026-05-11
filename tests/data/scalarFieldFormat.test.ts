@@ -7,12 +7,9 @@ import type { ScalarCube } from '../../src/@types/ScalarCube';
 function makeFixture(): ScalarCube {
   // Tiny 2x2x2 cube — 8 voxels — for quick round-trip checks.
   //
-  // Note: as of SCFD v2 the decoded cube no longer carries `paletteId`
-  // or `densityScale`; those are presentation concerns sourced from
-  // `volumeFieldDefaults` at registration time.  Task 5 strips the
-  // fields from the `ScalarCube` type proper; until then we still
-  // populate them on the input fixture so the producer-side type stays
-  // exhaustive, but the decoder no longer reads them.
+  // SCFD v2 cubes are data-only: palette and densityScale moved out of
+  // the binary into the per-handle `volumeFieldDefaults` registry, so
+  // they're no longer fields on the `ScalarCube` type.
   const voxels = new Uint16Array(8);
   for (let i = 0; i < 8; i++) voxels[i] = i * 1000;
   return {
@@ -22,8 +19,6 @@ function makeFixture(): ScalarCube {
     origin: [-100, -100, -100],
     voxelSize: 100,
     rotation: [0, 0, 0, 1],
-    paletteId: 'blue-purple',
-    densityScale: 2.5,
     valueMin: 0,
     valueMax: 1,
   };
@@ -144,8 +139,6 @@ function buildFixtureCube(): ScalarCube {
     origin: [-200, -200, -200],
     voxelSize: 50,
     rotation: [0, 0, 0, 1],
-    paletteId: 'viridis',
-    densityScale: 1.0,
     valueMin: 0,
     valueMax: 1,
   };

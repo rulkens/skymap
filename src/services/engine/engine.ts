@@ -93,7 +93,6 @@ import {
   DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_VOLUME_FIELD_CONTRAST,
-  DEFAULT_VOLUME_FIELD_DENSITY_SCALE,
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
@@ -121,6 +120,7 @@ import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../data/galacticCenter';
+import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -1046,24 +1046,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Seed the per-field settings entry with defaults if not already
       // present — re-registering the same handle preserves any
       // previously-tuned enabled/intensity/palette values so the user's
-      // tweaks don't reset on e.g. a tier-swap reload.  paletteId comes
-      // from the cube metadata so each fixture gets a sensible default
-      // colour ramp on first registration.
+      // tweaks don't reset on e.g. a tier-swap reload.  Presentation
+      // defaults (palette + densityScale) come from the per-handle
+      // registry in `src/data/volumeFieldDefaults.ts` — the cube itself
+      // is data-only in SCFD v2.  Unregistered handles fall through to
+      // `FALLBACK_VOLUME_DEFAULTS` (viridis + 1.0) so a brand-new field
+      // still renders sanely until a tuned entry is added.
       if (!state.settings.volumeFields[handle]) {
+        const defaults = getVolumeFieldDefaults(handle);
         state.settings.volumeFields[handle] = {
           enabled: true,
           intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
           contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
-          // Seeded from the neutral-default constant.  The SCFD-v2
-          // `wireSlots` commit sites (plan
-          // 2026-05-11-scfd-v2-presentation-defaults, Task 4) overwrite
-          // this immediately via `setDensityScale` using the per-handle
-          // value from `VOLUME_FIELD_DEFAULTS`; this default only matters
-          // for the brief window between settings-bag construction and
-          // that explicit set, and for ad-hoc tests that exercise
-          // addVolumeField directly.
-          densityScale: DEFAULT_VOLUME_FIELD_DENSITY_SCALE,
-          paletteId: cube.paletteId,
+          densityScale: defaults.densityScale,
+          paletteId: defaults.paletteId,
         };
       }
       // Forward the current per-field tunables into the renderer so the

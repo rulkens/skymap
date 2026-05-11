@@ -37,7 +37,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { readNpy } from './parsers/npyReader';
 import { encodeScalarField } from '../src/data/scalarFieldFormat';
 import { SG_TO_EQ_QUATERNION } from '../src/data/superGalacticTransform';
-import type { ScalarCube, ScalarFieldPaletteId } from '../src/@types/ScalarCube';
+import type { ScalarCube } from '../src/@types/ScalarCube';
 
 /**
  * Physical voxel edge length in Mpc.  CF4++ ships a 1000 Mpc box on a
@@ -47,19 +47,6 @@ import type { ScalarCube, ScalarFieldPaletteId } from '../src/@types/ScalarCube'
  * resolution or box size, change here and the `.scfd` output adapts.
  */
 const CF4PP_VOXEL_SIZE_MPC = 1000 / 128;
-
-/**
- * Default palette for CF-4 DM density cubes.
- *
- * `coolwarm` is the natural fit: the field is symmetrically normalised
- * around the cosmic mean (LUT coord 0.5), and coolwarm's V-shaped alpha
- * makes that midpoint fully transparent — over-densities glow red,
- * under-densities glow blue, and the empty cosmic-mean background reads
- * as space.  Sequential palettes (magma / viridis) fight this by giving
- * the midpoint a visible colour, which makes the void regions wash the
- * whole cube out.
- */
-const DEFAULT_CF4_PALETTE: ScalarFieldPaletteId = 'coolwarm';
 
 /**
  * Convert a single f32 to its f16 raw bits using round-to-nearest-even.
@@ -106,40 +93,21 @@ function f32ToF16Bits(value: number): number {
 }
 
 /**
- * Per-cube opacity multiplier baked into the SCFD header.  See
- * `ScalarCube.densityScale` for the shader-side semantics — it's the
- * factor that maps "voxel value at palette-LUT coordinate 1.0" onto
- * "fully saturated through a typical ray".  The synthetic Gaussian
- * generator in `src/data/syntheticScalarField.ts` uses 10.0; the
- * sparser cartesian-grid uses 4.0; we pick 5.0 for the CF-4 mean
- * density field (broader features than the Gaussian, denser than the
- * grids) and revisit if the user-facing intensity slider can't tune
- * away the gap.
- *
- * Why a constant, not a heuristic: an earlier version of this script
- * computed `densityScale` from `valueMax × cube-diagonal` under the
- * (wrong) assumption that the shader multiplies alpha by the sampled
- * voxel value.  It doesn't — voxel values only pick the palette colour
- * via LUT lookup, and the shader's per-step alpha is
- *
- *     palette.a × intensity × densityScale × stepLength
- *
- * The fix is upstream of densityScale: normalise the voxel values into
- * [0, 1] so the LUT lookup actually lands in the visible part of the
- * palette, then use a `densityScale` in the standard [1, 10] regime
- * the synthetic generators target.
- */
-const CF4_DENSITY_SCALE = 5.0;
-
-/**
  * Build a SCFD scalar volume from a CF4++ `.npy` mean-density slice.
  *
  * Exported so tests can call it directly without spawning a child process.
  * The CLI wrapper below forwards the standard production paths.
  *
+ * SCFD v2 is data-only: palette and `densityScale` are presentation
+ * concerns and live in `src/data/volumeFieldDefaults.ts` keyed by the
+ * `'cf4-density'` handle (coolwarm + 5.0).  This builder no longer
+ * accepts a `--palette` override — to ship a magma variant for a paper
+ * or similar one-off, point the runtime's wireSlots commit at a
+ * different registry entry, or call `setFieldPalette` after the field
+ * registers.  The binary itself stays purely descriptive.
+ *
  * @param args.npyPath        Path to the f32 .npy file (3D, C-order).
  * @param args.outPath        Destination .scfd path (created or overwritten).
- * @param args.paletteId      Override the default palette (optional).
  * @param args.voxelSizeMpc   Override the voxel size in Mpc (optional —
  *                            defaults to CF4PP_VOXEL_SIZE_MPC). Tests pass
  *                            a synthetic value matching their tmpdir cube.
@@ -147,11 +115,9 @@ const CF4_DENSITY_SCALE = 5.0;
 export async function buildCf4Density(args: {
   npyPath: string;
   outPath: string;
-  paletteId?: ScalarFieldPaletteId;
   voxelSizeMpc?: number;
 }): Promise<void> {
   const { npyPath, outPath } = args;
-  const paletteId = args.paletteId ?? DEFAULT_CF4_PALETTE;
   const voxelSize = args.voxelSizeMpc ?? CF4PP_VOXEL_SIZE_MPC;
 
   // ── 1. Load .npy ─────────────────────────────────────────────────
@@ -229,9 +195,7 @@ export async function buildCf4Density(args: {
     -voxelSize * (dims[2] / 2),
   ];
 
-  // ── 5. Build the cube with the fixed CF-4 densityScale ─────────────
-  const densityScale = CF4_DENSITY_SCALE;
-
+  // ── 5. Build the data-only cube ────────────────────────────────────
   const cube: ScalarCube = {
     dims,
     voxels,
@@ -249,8 +213,6 @@ export async function buildCf4Density(args: {
       SG_TO_EQ_QUATERNION[2],
       SG_TO_EQ_QUATERNION[3],
     ],
-    paletteId,
-    densityScale,
     valueMin,
     valueMax,
   };
@@ -263,7 +225,6 @@ export async function buildCf4Density(args: {
     `[buildCf4Density] wrote ${outPath} ` +
       `(dims=${dims.join('x')}, voxelSize=${voxelSize.toFixed(3)} Mpc, ` +
       `min=${valueMin.toFixed(3)}, max=${valueMax.toFixed(3)}, ` +
-      `palette=${paletteId}, densityScale=${densityScale.toExponential(2)}, ` +
       `${out.byteLength} bytes)`,
   );
 }

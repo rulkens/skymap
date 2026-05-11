@@ -81,7 +81,8 @@ export type VolumeFieldSettings = {
    * texture (see `scalarVolumeRenderer.ts`); this value mirrors the
    * renderer's per-field palette so the SettingsPanel dropdown can read
    * authoritative state without going through the GPU handle.  Seeded
-   * from `cube.paletteId` at registration time.
+   * from `VOLUME_FIELD_DEFAULTS[handle].paletteId` at registration time
+   * (SCFD v2 cubes no longer carry palette themselves).
    */
   paletteId: ScalarFieldPaletteId;
 };

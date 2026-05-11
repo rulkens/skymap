@@ -191,19 +191,8 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   const voxels = new Uint16Array(expectedVoxels);
   voxels.set(new Uint16Array(buf, SCFD_HEADER_BYTES, expectedVoxels));
 
-  // NOTE: the returned object intentionally OMITS `paletteId` and
-  // `densityScale`.  The runtime `ScalarCube` type still declares those
-  // fields today (Task 5 of the SCFD-v2 plan strips them) but the v2
-  // decoder no longer populates them — presentation defaults are looked
-  // up via `volumeFieldDefaults` keyed by the renderer's field handle.
-  //
-  // The `as Omit<...> as ScalarCube` cast surfaces this as a deliberate
-  // narrowing rather than a silent lie: downstream readers that still
-  // touch `cube.paletteId` / `cube.densityScale` will compile (because
-  // the static type still has the fields) but read `undefined` at
-  // runtime, and Tasks 4–5 of the SCFD-v2 plan own the consumer-side
-  // cleanup.  The double cast is the standard TS escape hatch for
-  // "the shape is intentionally incomplete during a migration".
+  // Decoded cube is data-only; presentation defaults flow through
+  // `volumeFieldDefaults.ts` at registration time.
   return {
     dims,
     voxels,
@@ -213,5 +202,5 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
     rotation,
     valueMin,
     valueMax,
-  } as Omit<ScalarCube, 'paletteId' | 'densityScale'> as ScalarCube;
+  };
 }

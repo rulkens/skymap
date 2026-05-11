@@ -143,7 +143,9 @@ type FieldEntry = {
    */
   contrast: number;
   paletteId: ScalarFieldPaletteId;
-  /** Per-cube opacity multiplier; copied from `cube.densityScale` at registration. */
+  /** Per-cube opacity multiplier; seeded to 1.0 in `addField` and overwritten
+   *  via `setDensityScale` (called from wireSlots with the value from
+   *  `VOLUME_FIELD_DEFAULTS[handle]`). */
   densityScale: number;
   modelMatrix: mat4;
   invModelMatrix: mat4;
@@ -319,7 +321,14 @@ export function createScalarVolumeRenderer(
       mat4.invert(invModelMatrix, modelMatrix);
       const volumeTexture = uploadCube(cube);
       const paletteTexture = createPaletteTexture();
-      writePaletteLut(paletteTexture, cube.paletteId);
+      // Seed with the neutral fallback palette.  Callers (wireSlots /
+      // engine.addVolumeField) immediately overwrite this via
+      // `setFieldPalette` using the per-handle entry from
+      // `VOLUME_FIELD_DEFAULTS`.  Hard-coding 'viridis' here keeps the
+      // renderer self-contained and free of the volumeFieldDefaults
+      // import — the renderer doesn't know field handles, only GPU
+      // resources.
+      writePaletteLut(paletteTexture, 'viridis');
       const uniformBuffer = device.createBuffer({
         size: UNIFORM_BYTES,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -343,17 +352,19 @@ export function createScalarVolumeRenderer(
         // commit; this is the safe placeholder before any UI / settings
         // state has been threaded in.
         contrast: 1.0,
-        paletteId: cube.paletteId,
-        // Default to identity (1.0) when the cube doesn't carry an
-        // explicit densityScale.  SCFD v2 (in-flight; Task 5 of plan
-        // 2026-05-11-scfd-v2-presentation-defaults) drops the field
-        // from `ScalarCube` entirely — presentation defaults move to
-        // the per-handle `VOLUME_FIELD_DEFAULTS` registry and feed in
-        // via `setDensityScale` from the wireSlots commit site.  Until
-        // that task lands the cast is the bridge that lets this file
-        // compile while the cube type still has the field.  When Task
-        // 5 ships, drop the cast and read `??1.0` directly.
-        densityScale: (cube as { densityScale?: number }).densityScale ?? 1.0,
+        // Match the palette seeded into `paletteTexture` above.  The
+        // commit site (wireSlots) overwrites both via
+        // `setFieldPalette` immediately after `addField` returns; the
+        // pair just has to agree until that happens.
+        paletteId: 'viridis',
+        // SCFD v2 cubes are data-only — `densityScale` is no longer a
+        // cube property.  Seed to identity (1.0); the wireSlots commit
+        // calls `setDensityScale(handle, defaults.densityScale)` using
+        // the per-handle value from `VOLUME_FIELD_DEFAULTS` right
+        // after `addField` returns, so this default only matters for
+        // the brief window before that — and for direct test calls
+        // that don't go through wireSlots.
+        densityScale: 1.0,
         modelMatrix,
         invModelMatrix,
         volumeTexture,
