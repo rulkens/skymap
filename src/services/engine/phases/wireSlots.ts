@@ -247,10 +247,14 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // `loading/slots/cf4DensitySlot.ts`.
   if (volumesGateOpen) {
     createCf4DensitySlot(state, cb);
-    const mcpmSlot = createMcpmSlot(state, cb);
-    // Eager initial load at the tier the engine boots into. Tier changes
-    // mid-session reroute through engine.setTier (see engine.ts).
-    void mcpmSlot.load({ tier: state.sources.tier });
+    // MCPM Cosmic Web slot — minted here, but `.load()` deferred to the
+    // central coordination point below alongside filaments / CF-4 /
+    // point-source loads.  Loading inline at mint time fires too early
+    // in bootstrap (renderer not yet wired, no loading-bar registry),
+    // so the slot's commit is a silent no-op.  Same pattern as
+    // cf4DensitySlot: factory writes `state.assetSlots.mcpm`, the
+    // central `.load()` below picks it up and triggers the actual fetch.
+    createMcpmSlot(state, cb);
   }
 
   // ── Famous-galaxy sidecar slot (Task 10) ─────────────────────────
@@ -415,6 +419,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Failure (404, decode error) leaves the field unregistered; Volumes
   // panel simply omits it.
   state.assetSlots.cf4Density?.load();
+  // MCPM Cosmic Web loads at the boot tier; `engine.setTier` reloads
+  // on tier change.  Same failure posture as cf4Density above —
+  // missing/404 .scfd silently omits the field from the Volumes panel.
+  state.assetSlots.mcpm?.load({ tier: state.sources.tier });
 
   await allArrivalsPromise;
 
