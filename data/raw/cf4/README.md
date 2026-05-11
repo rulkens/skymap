@@ -1,0 +1,88 @@
+# CF-4 raw data — DM density cube
+
+This directory stores the intermediate `.npy` slice of the Courtois 2025
+**CF4++** release that feeds Skymap's CF-4 DM density volume.  Nothing in
+this directory is committed to git (see `.gitignore`); the runtime
+artefact lives on R2 and is pulled by `curl`, the intermediate is
+regenerable from the upstream `.npz`.
+
+## Why CF4++ (and not Valade 2024 HAMLET 256³)?
+
+The original 2026-05-10 spec assumed the Valade 2024 256³ HAMLET cube as
+the data source, but that exact file is not publicly distributed.  The
+nearest equivalent on the public IP2I page is the Courtois 2025 CF4++
+ensemble — a 128³, 1000 Mpc box reconstruction in supergalactic Cartesian
+that ships the mean and standard deviation across 10 000 HMC posterior
+steps for density, Cartesian velocity, and radial velocity (six arrays
+total).
+
+We consume only the `d_mean_CF4pp` mean-density array.  The std cube is
+the natural future input for an uncertainty-aware overlay; that's a
+separate plan.
+
+## Files
+
+| File | Size | Purpose | How to obtain |
+|------|------|---------|---------------|
+| `CF4pp_mean_std_grids.npz` | ~167 MB | Upstream Courtois 2025 ensemble (maintainer only) | Download from <https://projets.ip2i.in2p3.fr/cosmicflows/> |
+| `d_mean_CF4pp.npy` | ~8 MB | Flat f32 128³ mean-density slice | `curl` from R2 (see below) — or extract from `.npz` |
+
+The runtime artefact is `public/data/cf4_density.scfd` (~4 MB f16),
+produced from the `.npy` via `npm run build-cf4-density`.  That `.scfd`
+is also synced to R2 and is what the browser fetches at runtime.
+
+License: CF-4 data is free for research and visualisation use; cite
+Courtois et al. 2025 (A&A, arXiv:2502.01308) and Tully et al. 2023 (CF-4
+catalog) in any derived work.  If you swap in the Valade 2024 HAMLET cube
+later (e.g. by personal request to the IP2I group), also cite Valade et
+al. 2024 (Nature Astronomy, arXiv:2409.17261).
+
+## Contributor path (no Python, no unzip required)
+
+Pull the pre-extracted slice from R2:
+
+```
+curl -L -o data/raw/cf4/d_mean_CF4pp.npy \
+  https://skymap-data.rulkens.com/data/raw/cf4/d_mean_CF4pp.npy
+```
+
+Then build the runtime `.scfd`:
+
+```
+npm run build-cf4-density
+```
+
+This reads the `.npy`, converts f32 → f16, builds the SG→equatorial
+rotation, and writes `public/data/cf4_density.scfd` (~4 MB) — pure
+Node/TS, no Python.
+
+If you don't even need to rebuild the `.scfd` (because you're not
+modifying the format or the build pipeline), just curl the `.scfd`:
+
+```
+curl -L -o public/data/cf4_density.scfd \
+  https://skymap-data.rulkens.com/data/cf4_density.scfd
+```
+
+## Maintainer path (run once per upstream release)
+
+1. Download the upstream archive:
+   ```
+   curl -L -o data/raw/cf4/CF4pp_mean_std_grids.npz \
+     https://projets.ip2i.in2p3.fr/cosmicflows/CF4pp_mean_std_grids.npz
+   ```
+2. Extract just the mean-density array (no Python required — `.npz` is
+   a plain ZIP archive of `.npy` files):
+   ```
+   unzip -j data/raw/cf4/CF4pp_mean_std_grids.npz d_mean_CF4pp.npy \
+     -d data/raw/cf4/
+   ```
+3. Sync both the intermediate and any rebuilt `.scfd` to R2:
+   ```
+   npm run build-cf4-density   # produces public/data/cf4_density.scfd
+   npm run sync-r2             # uploads .npy (EXTRA_FILES) + .scfd (ALLOW)
+   ```
+
+The upstream `.npz` itself is **not** synced to R2 — contributors should
+never need to handle the 167 MB ensemble.  Only the ~8 MB `d_mean_CF4pp.npy`
+slice goes up.

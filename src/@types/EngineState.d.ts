@@ -147,6 +147,22 @@ export type EngineAssetSlots = {
    */
   pgcAlias: AssetSlot<PgcAliasMap, void> | null;
   /**
+   * CF-4 dark-matter density volume — Valade 2024 256³ HAMLET cube.
+   *
+   * Loaded eagerly at engine boot via `cf4DensityFetcher`; the slot's
+   * commit registers the cube as the `'cf4-density'` field on the
+   * scalar-volume renderer. Default-off in user settings, so the
+   * extra ~32 MB of decoded voxel data is paid on every page load
+   * but the field is invisible until the user toggles it on in the
+   * Volumes panel.
+   *
+   * Null until the IIFE mints it (matches `filaments` for the same
+   * lifecycle reason — the renderer must exist before the slot can
+   * commit). Missing/404 .scfd surfaces as a never-fires commit; the
+   * field simply won't appear in the Volumes panel.
+   */
+  cf4Density: AssetSlot<ScalarCube, void> | null;
+  /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being
    * null) in production builds — the `wireSlots` phase only mints

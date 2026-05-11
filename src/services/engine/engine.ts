@@ -476,6 +476,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // in one place, by one IIFE pass".
       famousMeta: null,
       pgcAlias: null,
+      // CF-4 DM density slot — minted inside the GPU init IIFE alongside
+      // the filament slot.  Same null-then-set lifecycle: the slot's
+      // commit registers a field on `state.gpu.scalarVolumeRenderer`,
+      // which is null until the IIFE constructs it.
+      cf4Density: null,
     },
   };
 

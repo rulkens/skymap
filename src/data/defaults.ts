@@ -254,6 +254,15 @@ export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
  */
 export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
 
+/**
+ * Per-field default for the CF-4 DM density volume.  False on first
+ * load so users discover the field in the Volumes panel and opt in,
+ * rather than being surprised by a translucent fog they didn't ask for.
+ * Once the visual is dialed in we may flip this to `true` in a follow-up;
+ * the field is always wired (the SCFD is fetched at boot regardless).
+ */
+export const DEFAULT_CF4_DENSITY_ENABLED = false;
+
 // ── SpaceMouse ─────────────────────────────────────────────────────────────
 
 /**

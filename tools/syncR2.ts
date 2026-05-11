@@ -82,7 +82,11 @@ const ALLOW = (name: string): boolean =>
   // cloudLoader.filamentFilenameForTier().
   name === 'filaments-small.bin' ||
   name === 'famous_meta.json' ||
-  name === 'famous_xrefs.json';
+  name === 'famous_xrefs.json' ||
+  // Valade 2024 CF-4 HAMLET 256³ DM density cube, written as SCFD by
+  // `npm run build-cf4-density` from the maintainer-produced .npy.
+  // See data/raw/cf4/README.md for the maintainer + contributor paths.
+  name === 'cf4_density.scfd';
 
 /**
  * Extra files outside public/data/ that should also land in R2.
@@ -114,6 +118,24 @@ const EXTRA_FILES: ExtraFile[] = [
     //   gunzip data/raw/hyperleda_pa.csv.gz
     localPath: 'data/raw/hyperleda_pa.csv.gz',
     r2Key: 'data/hyperleda_pa.csv.gz',
+  },
+  {
+    // CF-4 DM mean-density 128³ cube — the `d_mean_CF4pp` array extracted
+    // from the Courtois 2025 CF4++ release.  Maintainer pulls the upstream
+    // 167 MB `CF4pp_mean_std_grids.npz` from
+    // https://projets.ip2i.in2p3.fr/cosmicflows/ and runs
+    //
+    //   unzip -j CF4pp_mean_std_grids.npz d_mean_CF4pp.npy \
+    //     -d data/raw/cf4/
+    //
+    // The ~8 MB result is uploaded here so contributors can curl it
+    // instead of downloading the full ensemble (mean + std for density,
+    // 3-component velocity, and radial velocity = 6 arrays they don't
+    // need).  Same EXTRA_FILES pattern as hyperleda_pa.csv.gz: a
+    // slow-external-fetch artefact in data/raw/, not public/data/, so
+    // the ALLOW filter doesn't see it.
+    localPath: 'data/raw/cf4/d_mean_CF4pp.npy',
+    r2Key: 'data/raw/cf4/d_mean_CF4pp.npy',
   },
 ];
 

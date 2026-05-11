@@ -164,7 +164,7 @@ describe('EngineState type', () => {
       },
       cam: null,
       initialCamSnapshot: null,
-      assetSlots: { points: new Map(), filaments: null, famousMeta: null, pgcAlias: null },
+      assetSlots: { points: new Map(), filaments: null, famousMeta: null, pgcAlias: null, cf4Density: null },
     };
     stateRef.current = state;
 
@@ -298,7 +298,7 @@ describe('EngineState type', () => {
       },
       cam: null,
       initialCamSnapshot: null,
-      assetSlots: { points: new Map(), filaments: null, famousMeta: null, pgcAlias: null },
+      assetSlots: { points: new Map(), filaments: null, famousMeta: null, pgcAlias: null, cf4Density: null },
     };
     stateRef.current = state;
 

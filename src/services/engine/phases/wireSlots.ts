@@ -81,12 +81,13 @@
 
 import { Source } from '../../../data/sources';
 import { createAssetSlot } from '../../loading/AssetSlot';
+import { cf4DensityFetcher } from '../../loading/fetchers/cf4DensityFetcher';
 import { filamentFetcher } from '../../loading/fetchers/filamentFetcher';
 import { famousMetaFetcher } from '../../loading/fetchers/famousMetaFetcher';
 import { pgcAliasFetcher } from '../../loading/fetchers/pgcAliasFetcher';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
-import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
+import { DEFAULT_CF4_DENSITY_ENABLED, DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
 import { syntheticVolumeFetcher } from '../../loading/fetchers/syntheticVolumeFetcher';
 
 import type { AssetSlot } from '../../loading/types';
@@ -152,6 +153,53 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     }
   });
   state.assetSlots.filaments = filamentSlot;
+
+  // ── CF-4 DM density volume slot ──────────────────────────────────
+  //
+  // Eager-at-boot fetch of public/data/cf4_density.scfd. On commit,
+  // hands the decoded ScalarCube to scalarVolumeRenderer.addField under
+  // the handle 'cf4-density', then seeds per-field settings if not
+  // already present (preserving any user-tuned intensity/palette across
+  // sessions). Mirrors the synthetic-volume commit shape, minus the
+  // dev-only gating.
+  //
+  // Why eager (not lazy on toggle): keeps this plan small and matches
+  // the syntheticVolume pattern. If the always-paid ~32 MB shows up
+  // in load metrics, a follow-up plan can add a KNOWN_VOLUME_FIELDS
+  // registry + on-toggle fetch. Default-off settings means the bytes
+  // are paid but the renderer never draws them until the user opts in.
+  const cf4DensitySlot = createAssetSlot({
+    name: 'cf4Density',
+    fetch: cf4DensityFetcher,
+    commit: async (cube) => {
+      const renderer = state.gpu.scalarVolumeRenderer;
+      if (!renderer) return;
+      const handle = 'cf4-density';
+      renderer.addField(handle, cube);
+      if (!state.settings.volumeFields[handle]) {
+        state.settings.volumeFields[handle] = {
+          enabled: DEFAULT_CF4_DENSITY_ENABLED,
+          intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+          paletteId: cube.paletteId,
+        };
+      }
+      const persisted = state.settings.volumeFields[handle]!;
+      renderer.setIntensity(handle, persisted.intensity);
+      renderer.setEnabled(handle, persisted.enabled);
+      renderer.setFieldPalette(handle, persisted.paletteId);
+      cb.onVolumeFieldsChanged?.();
+      state.subsystems.scheduler.requestRender();
+    },
+  });
+  cf4DensitySlot.subscribe((s) => {
+    if (s.kind === 'ready') {
+      console.log(
+        `[engine] cf4Density: ${s.value.dims.join('x')} cube, ` +
+          `min=${s.value.valueMin.toFixed(3)}, max=${s.value.valueMax.toFixed(3)}`,
+      );
+    }
+  });
+  state.assetSlots.cf4Density = cf4DensitySlot;
 
   // ── Famous-galaxy sidecar slot (Task 10) ─────────────────────────
   //
@@ -353,6 +401,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   allSlots.set(filamentSlot.name, filamentSlot as unknown as AssetSlot<unknown, unknown>);
   allSlots.set(famousMetaSlot.name, famousMetaSlot as unknown as AssetSlot<unknown, unknown>);
   allSlots.set(pgcAliasSlot.name, pgcAliasSlot as unknown as AssetSlot<unknown, unknown>);
+  allSlots.set(cf4DensitySlot.name, cf4DensitySlot as unknown as AssetSlot<unknown, unknown>);
   // Register the synthetic volume slots only when they were minted (dev
   // builds).  Doing the registration here (after the DEV-guarded mint
   // block) keeps the `allSlots` population site cohesive with its
@@ -449,6 +498,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Filaments load exactly once at boot — never on tier change.
   // See `filamentFetcher.ts` for the rationale.
   state.assetSlots.filaments?.load({ tier: state.sources.tier });
+  // CF-4 DM density loads exactly once at boot — no tier dependency.
+  // Failure (404, decode error) leaves the field unregistered; Volumes
+  // panel simply omits it.
+  state.assetSlots.cf4Density?.load();
 
   await allArrivalsPromise;
 

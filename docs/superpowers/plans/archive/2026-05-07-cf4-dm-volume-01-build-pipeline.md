@@ -1,5 +1,9 @@
 # CF-4 DM Volume — Sub-plan 01: Build Pipeline
 
+> **SUPERSEDED 2026-05-10. DO NOT EXECUTE.** Re-scoped against the scalar-volume-renderer primitive. See the new spec [`docs/superpowers/specs/2026-05-10-cf4-dm-volume-content-design.md`](../../specs/2026-05-10-cf4-dm-volume-content-design.md). The new plan replaces both sub-plans of this series with a single content+ingest plan. Preserved for historical context.
+
+---
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Each implementer subagent must be dispatched `run_in_background: true` per project convention. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Convert the Valade 2024 256³ CF-4 HAMLET density cube into a compact little-endian `.bin` file, plus the supporting `superGalacticTransform` helper. After this plan ships, `cf4_density.bin` (~32 MB) exists in `public/data/`, round-trips through encode/decode, and all transforms are anchored against known structures (Virgo, Coma). Nothing renders yet — that lands in plan 02.
