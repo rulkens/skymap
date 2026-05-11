@@ -318,6 +318,13 @@ type Props = {
    */
   onVolumeFieldDensityScaleChange?: (handle: string, value: number) => void;
   /**
+   * Fired when the user moves an individual field's trim slider.
+   * `trim` is a low-end cutoff in normalised LUT-coord space [0, 0.95]
+   * that hard-suppresses voxels below the threshold — Polyphorm-style
+   * `trim_density` exposed as a per-cube user knob.
+   */
+  onVolumeFieldTrimChange?: (handle: string, trim: number) => void;
+  /**
    * Fired when the user picks a different palette from a field's dropdown.
    * Optional — when absent the per-field palette dropdown is hidden but
    * the rest of the row (enable checkbox + intensity slider) still
@@ -365,6 +372,11 @@ export type VolumeFieldRowData = {
   densityScale: number;
   /** Palette LUT id for this field's colour ramp. */
   paletteId: ScalarFieldPaletteId;
+  /**
+   * Low-end cutoff in normalised LUT-coord space [0, 0.95].  Drives
+   * the per-cube Trim slider.  See `VolumeFieldSettings.trim`.
+   */
+  trim: number;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
@@ -437,6 +449,7 @@ export function SettingsPanel({
   onVolumeFieldIntensityChange,
   onVolumeFieldContrastChange,
   onVolumeFieldDensityScaleChange,
+  onVolumeFieldTrimChange,
   onVolumeFieldPaletteChange,
 }: Props): ReactNode {
   // Tier selector: rendered only when both pieces wired by the parent.  Same
@@ -748,10 +761,12 @@ export function SettingsPanel({
                     intensity={field.intensity}
                     contrast={field.contrast}
                     densityScale={field.densityScale}
+                    trim={field.trim}
                     paletteId={field.paletteId}
                     onEnabledChange={onVolumeFieldEnabledChange!}
                     onIntensityChange={onVolumeFieldIntensityChange!}
                     onContrastChange={onVolumeFieldContrastChange!}
+                    onTrimChange={onVolumeFieldTrimChange}
                     onDensityScaleChange={onVolumeFieldDensityScaleChange}
                     onPaletteChange={onVolumeFieldPaletteChange}
                   />

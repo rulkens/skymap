@@ -28,6 +28,13 @@ export type EngineVolumesHandle = {
   setContrast: (handle: string, contrast: number) => void;
   /** Set the per-cube opacity multiplier (alpha integral coefficient). */
   setDensityScale: (handle: string, value: number) => void;
+  /**
+   * Set the user-tunable low-end Trim cutoff for a single field, in
+   * normalised LUT-coord space [0, 0.95].  Hard-suppresses voxels with
+   * deviation-from-center less than `trim` — exposed in the
+   * SettingsPanel as a Trim slider per cube.
+   */
+  setTrim: (handle: string, trim: number) => void;
   /** Set the palette LUT id for a single field. */
   setPalette: (handle: string, id: ScalarFieldPaletteId) => void;
   /** Return the ordered list of currently registered field handles. */
@@ -41,5 +48,6 @@ export type EngineVolumesHandle = {
     contrast: number;
     densityScale: number;
     paletteId: ScalarFieldPaletteId;
+    trim: number;
   }>;
 };

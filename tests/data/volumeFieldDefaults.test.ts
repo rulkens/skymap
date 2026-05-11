@@ -116,4 +116,13 @@ describe('volumeFieldDefaults', () => {
     expect(env.inner).toBeLessThan(env.outer);
     expect(env.outer).toBeLessThanOrEqual(Math.sqrt(3));
   });
+
+  it('mcpm gets a moderate trim default; CF-4 + debug fixtures get none', () => {
+    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.trim).toBeCloseTo(0.2, 6);
+    expect(VOLUME_FIELD_DEFAULTS['cf4-density']!.trim).toBeCloseTo(0.0, 6);
+    for (const handle of ['debug-gaussian', 'debug-cartesian', 'debug-spherical']) {
+      expect(VOLUME_FIELD_DEFAULTS[handle]!.trim).toBeCloseTo(0.0, 6);
+    }
+    expect(FALLBACK_VOLUME_DEFAULTS.trim).toBeCloseTo(0.0, 6);
+  });
 });

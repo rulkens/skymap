@@ -66,6 +66,16 @@ const CONTRAST_MAX = 4.0;
 const CONTRAST_STEP = 0.05;
 
 /**
+ * Trim slider bounds: the low-end cutoff in normalised LUT-coord
+ * space.  Range [0, 0.95] — past 0.95 there's no useful signal left
+ * to render.  Step 0.01 for fine control around small trim values
+ * where the visual change per tick is largest.
+ */
+const TRIM_MIN = 0;
+const TRIM_MAX = 0.95;
+const TRIM_STEP = 0.01;
+
+/**
  * Density (per-cube `densityScale`) slider bounds.  Registry defaults
  * sit in the [4, 20] range (mcpm = 4; debug-cartesian = 4;
  * debug-gaussian = 10; cf4-density = 20), so the slider needs to span
@@ -88,10 +98,12 @@ export type VolumeFieldRowProps = {
   intensity: number;
   contrast: number;
   densityScale: number;
+  trim: number;
   paletteId: ScalarFieldPaletteId;
   onEnabledChange: (handle: string, enabled: boolean) => void;
   onIntensityChange: (handle: string, intensity: number) => void;
   onContrastChange: (handle: string, contrast: number) => void;
+  onTrimChange?: (handle: string, trim: number) => void;
   /**
    * Optional — when omitted, the Density slider still renders but its
    * onChange becomes a no-op.  Letting the slider render even without
@@ -165,10 +177,12 @@ export function VolumeFieldRow({
   intensity,
   contrast,
   densityScale,
+  trim,
   paletteId,
   onEnabledChange,
   onIntensityChange,
   onContrastChange,
+  onTrimChange,
   onDensityScaleChange,
   onPaletteChange,
 }: VolumeFieldRowProps): ReactNode {
@@ -216,6 +230,18 @@ export function VolumeFieldRow({
         ariaLabel={`${label} contrast`}
         title="Contrast — widens a deadband around the midpoint and stretches the surviving range across the palette."
         onChange={(v) => onContrastChange(handle, v)}
+      />
+      <LabelledSlider
+        label="Trim"
+        value={trim}
+        min={TRIM_MIN}
+        max={TRIM_MAX}
+        step={TRIM_STEP}
+        disabled={!enabled}
+        formatValue={(v) => v.toFixed(2)}
+        ariaLabel={`${label} trim`}
+        title="Trim — low-end cutoff that hard-suppresses voxels below the threshold (Polyphorm-style trim_density in normalised LUT space)."
+        onChange={(v) => onTrimChange?.(handle, v)}
       />
       <LabelledSlider
         label="Density"

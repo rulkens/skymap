@@ -119,6 +119,18 @@ export type VolumeFieldDefaults = {
    * coolwarm is already calibrated against the cosmic mean.
    */
   exposure: number;
+  /**
+   * Default user-tunable low-end cutoff (Trim) in normalised LUT space.
+   * Per-cube starting point; user can override via the Trim slider.
+   *
+   *   - 0.0 = no trim (every voxel passes).  CF-4 default — its
+   *     coolwarm palette is already calibrated against the cosmic mean
+   *     and trimming would crop scientifically meaningful structure.
+   *   - 0.2 = light trim hiding the low-density fog band.  MCPM
+   *     default — see the analysis in the spec for the percentile
+   *     breakdown that motivates this value.
+   */
+  trim: number;
   /** Optional human-readable label override (renderer falls back to handle). */
   label?: string;
 };
@@ -163,6 +175,8 @@ export const FALLBACK_VOLUME_DEFAULTS: VolumeFieldDefaults = {
   // contrast=1.0 above: never silently boost a field the registry
   // author hasn't opted into.
   exposure: 1.0,
+  // no trim for untuned fields
+  trim: 0.0,
 };
 
 /**
@@ -204,6 +218,8 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // and an HDR boost would wash out the careful balance between
     // overdensity (warm) and underdensity (cool) sides of the palette.
     exposure: 1.0,
+    // CF-4 keeps the cosmic mean visible
+    trim: 0.0,
     label: 'CF-4 DM density',
   },
   'debug-gaussian': {
@@ -225,6 +241,7 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // origin verification.  Corner visibility is a feature, not a bug.
     envelope: NO_SPATIAL_ENVELOPE,
     exposure: 1.0,
+    trim: 0.0,
     label: 'Gaussian (debug)',
   },
   'debug-cartesian': {
@@ -239,6 +256,7 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // Grid corners are part of the test; keep them visible.
     envelope: NO_SPATIAL_ENVELOPE,
     exposure: 1.0,
+    trim: 0.0,
     label: 'Cartesian grid (debug)',
   },
   'debug-spherical': {
@@ -255,6 +273,7 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // verification fixture.
     envelope: NO_SPATIAL_ENVELOPE,
     exposure: 1.0,
+    trim: 0.0,
     label: 'Spherical grid (debug)',
   },
   'mcpm': {
@@ -297,6 +316,10 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // peaks read as too dim or too washed-out: 2-3 = subtle, 4-6 =
     // the "fiery cosmic web" look, 8+ = dominantly white.
     exposure: 4.0,
+    // Hides the 22% low-density fog band; reveals filament structure.
+    // The dataset is 73% void already, so trim only affects the next
+    // ~22% slice
+    trim: 0.2,
     label: 'MCPM Cosmic Web',
   },
 };

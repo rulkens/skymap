@@ -646,6 +646,19 @@ export function App(): React.ReactElement {
                 );
                 handleRef.current?.volumes.setDensityScale(handle, densityScale);
               },
+              onVolumeFieldTrimChange: (handle: string, trim: number) => {
+                // Same optimistic-update pattern as the contrast / density
+                // handlers above: local React state first for input
+                // responsiveness, then forward to the engine which mirrors
+                // the value into state.settings.volumes.fields[handle].trim
+                // and writes the per-cube uniform.
+                setVolumeFields(
+                  volumeFields.map((f) =>
+                    f.handle === handle ? { ...f, trim } : f,
+                  ),
+                );
+                handleRef.current?.volumes.setTrim(handle, trim);
+              },
               onVolumeFieldPaletteChange: (handle: string, paletteId: ScalarFieldPaletteId) => {
                 setVolumeFields(
                   volumeFields.map((f) => (f.handle === handle ? { ...f, paletteId } : f)),

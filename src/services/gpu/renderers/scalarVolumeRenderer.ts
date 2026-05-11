@@ -44,11 +44,11 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
 // + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
-// + 4 (envelopeOuter) + 4 (exposure) = 248.  The WGSL struct contains
-// mat4x4 (alignment 16), so total must be a multiple of 16 — pad up to
-// 256.  The trailing 8 bytes stay zero; reserved for future per-field
-// uniforms (next addition can land at scratch[62] without bumping
-// UNIFORM_BYTES).
+// + 4 (envelopeOuter) + 4 (exposure) + 4 (trim) = 252.  The WGSL struct
+// contains mat4x4 (alignment 16), so total must be a multiple of 16 —
+// pad up to 256.  Trim took 4 of the 8 trailing pad bytes
+// (scratch[62]); the remaining 4 stay zero, reserved for the next
+// per-field uniform (scratch[63]) without bumping UNIFORM_BYTES.
 const UNIFORM_BYTES = 256;
 
 const CUBE_CORNERS = new Float32Array([
@@ -207,6 +207,14 @@ type FieldEntry = {
    * the slot commit); not a user-tunable today.
    */
   exposure: number;
+  /**
+   * User-tunable low-end cutoff in normalised LUT-coord space [0, 1].
+   * Hard-suppresses voxels with deviation-from-center < trim — the
+   * "Polyphorm trim_density" knob in normalised space.  Default 0 =
+   * no trim.  Combined with contrast's implicit deadband by taking
+   * the max in the shader.
+   */
+  trim: number;
   modelMatrix: mat4;
   invModelMatrix: mat4;
   volumeTexture: GPUTexture;
@@ -279,6 +287,12 @@ export type ScalarVolumeRenderer = {
    * brightness anyway.  No-op when the handle is unknown.
    */
   setExposure(handle: ScalarFieldHandle, value: number): void;
+  /**
+   * User-tunable low-end cutoff in normalised LUT-coord space.
+   * Range conventionally [0, 0.95]; values past 0.95 get clamped
+   * because they leave no useful signal.  No-op when handle unknown.
+   */
+  setTrim(handle: ScalarFieldHandle, value: number): void;
   /**
    * Replace the palette LUT for a single field.  Rewrites the field's
    * existing 1D LUT texture in place via `writeTexture`; the bind group
@@ -481,6 +495,10 @@ export function createScalarVolumeRenderer(
         // overwrites with the per-handle registry value via
         // `setExposure` immediately after `addField` returns.
         exposure: 1.0,
+        // 0 = no trim (every voxel passes; contrast's implicit
+        // deadband still applies if contrast > 1).  Slot commit
+        // overwrites with persisted setting.
+        trim: 0.0,
         modelMatrix,
         invModelMatrix,
         volumeTexture,
@@ -530,6 +548,12 @@ export function createScalarVolumeRenderer(
       // more voxels into the saturation flat.
       const v = Number.isFinite(value) ? value : 1.0;
       entry.exposure = Math.max(0, Math.min(32, v));
+    },
+    setTrim(handle, value) {
+      const entry = fields.get(handle);
+      if (!entry) return;
+      const v = Number.isFinite(value) ? value : 0.0;
+      entry.trim = Math.max(0, Math.min(0.95, v));
     },
     setEnvelope(handle, inner, outer) {
       const entry = fields.get(handle);
@@ -604,7 +628,8 @@ export function createScalarVolumeRenderer(
       // 236..239  envelopeInner    (f32)
       // 240..243  envelopeOuter    (f32)
       // 244..247  exposure         (f32)
-      // 248..255  _pad             (8 bytes; struct rounded up to 16-byte multiple)
+      // 248..251  trim             (f32)
+      // 252..255  _pad             (4 bytes; struct rounded up to 16-byte multiple)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       for (const e of fields.values()) {
         if (!e.enabled || e.intensity <= 0) continue;
@@ -625,6 +650,7 @@ export function createScalarVolumeRenderer(
         scratch[59] = e.envelopeInner;
         scratch[60] = e.envelopeOuter;
         scratch[61] = e.exposure;
+        scratch[62] = e.trim;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         pass.setBindGroup(0, e.bindGroup);
         pass.drawIndexed(CUBE_INDICES.length);

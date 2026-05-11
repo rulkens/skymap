@@ -246,6 +246,12 @@ export const DEFAULT_VOLUMES_ENABLED = true;
 export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
 
 /**
+ * Default trim (low-end deadband cutoff) for volume fields that don't
+ * specify one.  0 = no trim — preserves pre-existing behaviour.
+ */
+export const DEFAULT_VOLUME_FIELD_TRIM = 0.0;
+
+/**
  * Default per-field contrast (gamma-style LUT-coordinate remap around
  * the 0.5 pivot, see `VolumeFieldSettings.contrast` and the
  * scalar-volume fragment shader).  1.0 is identity — the value at

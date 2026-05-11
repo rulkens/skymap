@@ -77,6 +77,15 @@ struct VolumeUniforms {
   // Default 1.0 = pre-HDR behaviour exactly preserved; 3-5 is the
   // useful range for "fiery cosmic-web" looks.
   exposure: f32,
+  // User-tunable low-end cutoff in normalised LUT-coordinate space
+  // [0, 1].  Voxels with deviation-from-center less than 'trim' get
+  // hard-suppressed (visibility = 0).  Equivalent to Polyphorm's
+  // 'trim_density' knob but in normalised space rather than raw
+  // trace units.  Default 0 = no trim (every voxel contributes to
+  // the deadband as set by 'contrast').  Combined with the contrast-
+  // derived deadband by taking the max — user can crank trim past
+  // contrast's implicit deadband to suppress more, never less.
+  trim: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: VolumeUniforms;
@@ -136,19 +145,20 @@ struct FsIn {
 // midpoint stretch toward t=1, voxels below stretch toward t=0; at
 // center=0 every voxel is above the center so they all stretch
 // monotonically toward t=1.
-fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32) -> vec2<f32> {
+fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32, trim: f32) -> vec2<f32> {
   let halfRange = max(center, 1.0 - center);
-  let dev = abs(sampleValue - center) / max(halfRange, 1e-3); // [0, 1]
-  let deadband = clamp(1.0 - 1.0 / max(contrast, 1e-3), 0.0, 0.9);
+  let dev = abs(sampleValue - center) / max(halfRange, 1e-3);
+  // Deadband from contrast's implicit floor, OR'd with the explicit
+  // trim cutoff (max takes whichever is stricter).
+  let contrastDeadband = clamp(1.0 - 1.0 / max(contrast, 1e-3), 0.0, 0.9);
+  let trimDeadband = clamp(trim, 0.0, 0.95);
+  let deadband = max(contrastDeadband, trimDeadband);
   let stretched = clamp(
     (dev - deadband) / max(1.0 - deadband, 1e-3),
     0.0,
     1.0,
   );
   let signedT = center + sign(sampleValue - center) * stretched * halfRange;
-  // Smooth fade across the deadband edge so the threshold isn't a
-  // hard cliff — gives the impression of "structure rising out of fog"
-  // rather than a binary mask popping in.
   let visibility = smoothstep(deadband - 0.05, deadband + 0.05, dev);
   return vec2<f32>(signedT, visibility);
 }
@@ -244,7 +254,7 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     // contrast=1 (identity) — branching would break the uniform-
     // control-flow contract that lets us call textureSampleLevel
     // below.
-    let window = applyContrastWindow(sampleValue, u.contrast, u.contrastCenter);
+    let window = applyContrastWindow(sampleValue, u.contrast, u.contrastCenter, u.trim);
     let signedT = window.x;
     let visibility = window.y;
     // Look up colour through the 1D palette LUT.  Same uniformity
