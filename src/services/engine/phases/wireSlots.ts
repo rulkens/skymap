@@ -81,10 +81,10 @@
 
 import { Source } from '../../../data/sources';
 import { createAssetSlot } from '../../loading/AssetSlot';
-import { famousMetaFetcher } from '../../loading/fetchers/famousMetaFetcher';
 import { pgcAliasFetcher } from '../../loading/fetchers/pgcAliasFetcher';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
+import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
 import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
@@ -207,55 +207,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
 
   // ── Famous-galaxy sidecar slot (Task 10) ─────────────────────────
-  //
-  // The two famous-galaxy JSON sidecars (`famous_meta.json` +
-  // `famous_xrefs.json`) flow through one combined slot — the fetcher
-  // pulls them in parallel and returns a `{ meta, xrefs }` payload.
-  //
-  // No `commit` step: there's nothing GPU-side to upload — the
-  // payload is pure metadata consumed by the InfoCard via
-  // `state.sources.famousMeta` / `state.sources.famousXrefs`.  The
-  // subscriber writes both fields and wakes one frame so the
-  // famous-galaxy thumbnails referenced by the cross-match xrefs
-  // become enqueueable from the per-frame loop without the user
-  // having to nudge the camera.
-  //
-  // **Graceful degradation on error.**  The old `loadFamousSidecars`
-  // returned empty values when either file 404'd; the new fetcher
-  // throws on HTTP failure (so the retry policy distinguishes "really
-  // gone" from "transient flake"), and the slot subscriber maps
-  // `kind: 'error'` → "feature off" by writing empty `meta`/`xrefs`.
-  // Net effect for the user is identical to the pre-slot behaviour:
-  // famous galaxies render without enriched InfoCard text, but the
-  // engine keeps running.
-  const famousMetaSlot = createAssetSlot({
-    name: 'famous-meta',
-    fetch: famousMetaFetcher,
-  });
-  famousMetaSlot.subscribe((s) => {
-    if (s.kind === 'ready') {
-      state.sources.famousMeta = s.value.meta;
-      // GLADE local indices in the sidecar JSON now match the on-disk
-      // binary directly — the cloudLoader no longer post-decodes
-      // GLADE through a far-distance decimator (the data-tier system
-      // owns point-count budgeting via its absolute-magnitude cut at
-      // build time, which is a more principled rule and operates
-      // BEFORE the binary is written, so xref indices stay valid).
-      state.sources.famousXrefs = s.value.xrefs;
-      state.subsystems.scheduler.requestRender();
-    }
-    if (s.kind === 'error') {
-      // Match the old "absent file = feature off" behaviour exactly:
-      // empty meta/xrefs disable the enriched InfoCard text but keep
-      // the engine functional.  Defensive — these fields default to
-      // `[]` / `{}` already, but writing them again here is explicit
-      // about the contract.
-      state.sources.famousMeta = [];
-      state.sources.famousXrefs = {};
-      console.warn('[engine] famous sidecars failed to load:', s.error);
-    }
-  });
-  state.assetSlots.famousMeta = famousMetaSlot;
+  // Factory owns the mint + subscribe + state write.  See
+  // `loading/slots/famousMetaSlot.ts` for the dual-sidecar rationale and
+  // the graceful-degradation policy on fetch error.
+  const famousMetaSlot = createFamousMetaSlot(state, cb);
 
   // ── PGC-alias slot (Task 10) ─────────────────────────────────────
   //
