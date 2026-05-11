@@ -211,45 +211,13 @@ function defaultSchechterRunner(input: ComputeSchechterRatiosInput): Promise<Flo
  * on mode toggle would feel sluggish.
  */
 function defaultAngularRunner(input: ComputeAngularWeightsInput): Promise<Float32Array> {
-  return new Promise((resolve, reject) => {
-    const worker = new ComputeAngularWeightsWorker();
-    worker.onmessage = (event: MessageEvent<Float32Array>) => {
-      worker.terminate();
-      resolve(event.data);
-    };
-    worker.onerror = (event: ErrorEvent) => {
-      worker.terminate();
-      reject(event.error ?? new Error(event.message ?? 'angular-weights worker error'));
-    };
-
-    const c = input.cloud;
-    const cloudCopy: PointCloud = {
-      count: c.count,
-      objIDs: new BigUint64Array(c.objIDs.buffer.slice(0)),
-      positions: new Float32Array(c.positions.buffer.slice(0)),
-      magU: new Float32Array(c.magU.buffer.slice(0)),
-      magG: new Float32Array(c.magG.buffer.slice(0)),
-      magR: new Float32Array(c.magR.buffer.slice(0)),
-      magI: new Float32Array(c.magI.buffer.slice(0)),
-      magZ: new Float32Array(c.magZ.buffer.slice(0)),
-      axisRatio: new Float32Array(c.axisRatio.buffer.slice(0)),
-      positionAngleDeg: new Float32Array(c.positionAngleDeg.buffer.slice(0)),
-      diameterKpc: new Float32Array(c.diameterKpc.buffer.slice(0)),
-    };
-    const transfer: Transferable[] = [
-      cloudCopy.objIDs.buffer,
-      cloudCopy.positions.buffer,
-      cloudCopy.magU.buffer,
-      cloudCopy.magG.buffer,
-      cloudCopy.magR.buffer,
-      cloudCopy.magI.buffer,
-      cloudCopy.magZ.buffer,
-      cloudCopy.axisRatio.buffer,
-      cloudCopy.positionAngleDeg.buffer,
-      cloudCopy.diameterKpc.buffer,
-    ];
-    worker.postMessage({ ...input, cloud: cloudCopy }, transfer);
-  });
+  const { copy, transfer } = clonePointCloudForTransfer(input.cloud);
+  return runDisposableWorker<ComputeAngularWeightsInput, Float32Array>(
+    ComputeAngularWeightsWorker,
+    { ...input, cloud: copy },
+    transfer,
+    'angular-weights',
+  );
 }
 
 export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCorrectionSubsystem {
