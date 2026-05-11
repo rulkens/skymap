@@ -546,6 +546,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // commit registers a field on `state.gpu.scalarVolumeRenderer`,
       // which is null until the IIFE constructs it.
       cf4Density: null,
+      // MCPM Cosmic Web slot — same null-then-set lifecycle as cf4Density.
+      // Tier-aware: setTier reloads on tier change.  See loading/slots/mcpmSlot.ts.
+      mcpm: null,
     },
   };
 

@@ -90,6 +90,7 @@ import type { FamousPayload } from '../services/loading/fetchers/famousMetaFetch
 import type { PgcAliasMap } from '../services/loading/fetchers/pgcAliasFetcher';
 import type { ScalarCube } from './ScalarCube';
 import type { SyntheticVolumeReq } from '../services/loading/fetchers/syntheticVolumeFetcher';
+import type { MCPMReq } from '../services/loading/fetchers/mcpmFetcher';
 import type { Source } from '../data/sources';
 
 /**
@@ -162,6 +163,20 @@ export type EngineAssetSlots = {
    * field simply won't appear in the Volumes panel.
    */
   cf4Density: AssetSlot<ScalarCube, void> | null;
+  /**
+   * MCPM Cosmic Web density volume — SDSS DR17 Cosmic Slime VAC
+   * `SDSS_z_44-476mpc` cube (Wilde et al. 2023), 712×1200×728 voxels at
+   * native resolution, downsampled into three tiers.
+   *
+   * Tier-aware (unlike cf4Density above): slot is loaded at boot with
+   * `state.sources.tier`, and reloaded on tier change by `engine.setTier`.
+   * Default-off in user settings; the .scfd is fetched eagerly so the
+   * field is ready when the user toggles it on in the Volumes panel.
+   *
+   * Null until `wireSlots` mints it (matches cf4Density for the same
+   * lifecycle reason — the renderer must exist before commit).
+   */
+  mcpm: AssetSlot<ScalarCube, MCPMReq> | null;
   /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being
