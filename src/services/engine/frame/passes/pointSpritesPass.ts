@@ -47,6 +47,10 @@
  */
 
 import type { Pass } from './types';
+import {
+  packSelection,
+  SELECTION_NONE_SENTINEL,
+} from '../../../../data/selectionEncoding';
 
 export const pointSpritesPass: Pass = {
   name: 'point-sprites',
@@ -66,8 +70,8 @@ export const pointSpritesPass: Pass = {
     // See module header for the sentinel rationale.
     const selectedPacked =
       settings.selected !== null
-        ? ((settings.selected.source << 27) | settings.selected.localIdx) >>> 0
-        : 0xffffffff >>> 0;
+        ? packSelection(settings.selected.source, settings.selected.localIdx)
+        : SELECTION_NONE_SENTINEL;
 
     renderer.draw(pass, vp, [width, height], {
       pointSizePx: settings.pointSizePx,
