@@ -13,7 +13,7 @@
 import { createAssetSlot } from '../AssetSlot';
 import { mcpmFetcher } from '../fetchers/mcpmFetcher';
 import type { MCPMReq } from '../fetchers/mcpmFetcher';
-import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
+import { DEFAULT_MCPM_ENABLED, DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
 import type { ScalarCube } from '../../../@types/ScalarCube';
 import type { SlotFactory } from './types';
@@ -33,9 +33,9 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
       // dedup of this pattern to a follow-up PR).
       if (!state.settings.volumes.fields[handle]) {
         state.settings.volumes.fields[handle] = {
-          // Default-off — same posture as CF-4. The user opts in via the
-          // SettingsPanel toggle.
-          enabled: false,
+          // Default-on — MCPM is the headline cosmic-web overlay for the
+          // volumes gate (CF-4 is now default-off; see defaults.ts).
+          enabled: DEFAULT_MCPM_ENABLED,
           intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
           contrast: defaults.contrast,
           densityScale: defaults.densityScale,
