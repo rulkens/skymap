@@ -30,6 +30,7 @@
 - `src/services/engine/subsystems/poiSubsystem.ts` — `worldPos: Vec3`, `labelColor: Vec4`, `lineColor: Vec4`.
 - `src/services/engine/subsystems/youAreHereSubsystem.ts` — `LABEL_COLOR: Vec4`, `LINE_COLOR: Vec4`.
 - `tools/auditCf4Anchors.ts` — flat-Mat3 indexing, drop local nested-matrix typedef.
+- `tools/verifyCf4Scfd.ts` — flat-Mat3 indexing for its `transpose3`, `eqToSg`, `sgToEq` helpers (uses the same row-major nested access pattern as the audit script).
 - `tests/data/superGalacticTransform.test.ts` — rewrite shape assertions for flat 9-tuple Mat3; rewrite orthonormality to operate on columns; update mat4-vs-mat3 cross-check.
 
 ### Untouched
@@ -849,12 +850,13 @@ git commit -m "refactor(sg): make SG_TO_EQ_MATRIX a flat column-major Mat3"
 
 ---
 
-### Task 5: Fix `tools/auditCf4Anchors.ts` for the new flat-Mat3 layout
+### Task 5: Fix `tools/auditCf4Anchors.ts` and `tools/verifyCf4Scfd.ts` for the new flat-Mat3 layout
 
-The old audit script reads `SG_TO_EQ_MATRIX[i][j]` (nested row-major) via a local `applyMat3` helper. After Task 4 that indexing is wrong. Rewrite for flat column-major.
+Two tools read `SG_TO_EQ_MATRIX[i][j]` (nested row-major) directly. After Task 4 that indexing is wrong. Rewrite both for flat column-major.
 
 **Files:**
 - Modify: `tools/auditCf4Anchors.ts`
+- Modify: `tools/verifyCf4Scfd.ts`
 
 - [ ] **Step 1: Rewrite the matrix helpers and the EQ_TO_SG_MATRIX derivation**
 
@@ -902,6 +904,79 @@ Note: the local `getSgToEqMatrix()` helper and its cast are gone — `SG_TO_EQ_M
 Run: `grep -n "readonly \[number, number, number\]" tools/auditCf4Anchors.ts`
 For each line printed, replace with `Vec3` and add the import to the top of the file if not already there (the import was added in Step 1).
 
+- [ ] **Step 2b: Rewrite `tools/verifyCf4Scfd.ts` helpers for flat column-major**
+
+The current file has these helpers around lines 34–60:
+
+```ts
+function transpose3(m: typeof SG_TO_EQ_MATRIX): typeof SG_TO_EQ_MATRIX {
+  return [
+    [m[0][0], m[1][0], m[2][0]],
+    [m[0][1], m[1][1], m[2][1]],
+    [m[0][2], m[1][2], m[2][2]],
+  ];
+}
+
+const EQ_TO_SG = transpose3(SG_TO_EQ_MATRIX);
+
+function eqToSg(eq: readonly [number, number, number]): [number, number, number] {
+  const m = EQ_TO_SG;
+  return [
+    m[0][0] * eq[0] + m[0][1] * eq[1] + m[0][2] * eq[2],
+    m[1][0] * eq[0] + m[1][1] * eq[1] + m[1][2] * eq[2],
+    m[2][0] * eq[0] + m[2][1] * eq[1] + m[2][2] * eq[2],
+  ];
+}
+
+function sgToEq(sg: readonly [number, number, number]): [number, number, number] {
+  const m = SG_TO_EQ_MATRIX;
+  return [
+    m[0][0] * sg[0] + m[0][1] * sg[1] + m[0][2] * sg[2],
+    m[1][0] * sg[0] + m[1][1] * sg[1] + m[1][2] * sg[2],
+    m[2][0] * sg[0] + m[2][1] * sg[1] + m[2][2] * sg[2],
+  ];
+}
+```
+
+Replace the entire block with:
+
+```ts
+import type { Mat3, Vec3 } from '../src/@types';
+
+/**
+ * Transpose of a column-major Mat3.  For an orthonormal rotation this
+ * is its inverse.  m[c*3 + r] → m'[r*3 + c].
+ */
+function transpose3(m: Mat3): Mat3 {
+  return [
+    m[0]!, m[3]!, m[6]!,
+    m[1]!, m[4]!, m[7]!,
+    m[2]!, m[5]!, m[8]!,
+  ];
+}
+
+const EQ_TO_SG: Mat3 = transpose3(SG_TO_EQ_MATRIX);
+
+/** Apply a column-major Mat3 to a Vec3: result[r] = Σ_c m[c*3 + r] · v[c]. */
+function applyMat3(m: Mat3, v: Vec3): Vec3 {
+  return [
+    m[0]! * v[0] + m[3]! * v[1] + m[6]! * v[2],
+    m[1]! * v[0] + m[4]! * v[1] + m[7]! * v[2],
+    m[2]! * v[0] + m[5]! * v[1] + m[8]! * v[2],
+  ];
+}
+
+function eqToSg(eq: Vec3): Vec3 {
+  return applyMat3(EQ_TO_SG, eq);
+}
+
+function sgToEq(sg: Vec3): Vec3 {
+  return applyMat3(SG_TO_EQ_MATRIX, sg);
+}
+```
+
+Then audit the rest of the file: `grep -n "readonly \[number, number, number\]" tools/verifyCf4Scfd.ts`. Replace each occurrence with `Vec3`.
+
 - [ ] **Step 3: Run typecheck**
 
 Run: `npm run typecheck`
@@ -924,8 +999,8 @@ Expected: PASS for all 1115+ tests.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add tools/auditCf4Anchors.ts
-git commit -m "refactor(tools): port auditCf4Anchors to flat column-major Mat3"
+git add tools/auditCf4Anchors.ts tools/verifyCf4Scfd.ts
+git commit -m "refactor(tools): port CF-4 audit/verify scripts to flat column-major Mat3"
 ```
 
 ---
