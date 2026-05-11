@@ -67,14 +67,16 @@ const CONTRAST_STEP = 0.05;
 
 /**
  * Density (per-cube `densityScale`) slider bounds.  Registry defaults
- * sit in the [4, 10] range (cf4-density = 5; debug-gaussian = 10), so
- * the slider needs to span well past those for tuning headroom.
- * 0..30 with 0.1 step gives ~6x range above the highest registry
- * default at the right end, and "fully invisible" (0) at the left
- * for quick A/B against a no-volume baseline.
+ * sit in the [4, 20] range (mcpm = 4; debug-cartesian = 4;
+ * debug-gaussian = 10; cf4-density = 20), so the slider needs to span
+ * well past those for tuning headroom.  0..60 with 0.1 step gives 3x
+ * the CF-4 default at the right end and "fully invisible" (0) at the
+ * left for quick A/B against a no-volume baseline.  Bumped from 30
+ * after MCPM tuning showed the old cap was too restrictive against
+ * a heavy-tailed log-normalised cube.
  */
 const DENSITY_MIN = 0;
-const DENSITY_MAX = 30;
+const DENSITY_MAX = 60;
 const DENSITY_STEP = 0.1;
 
 export type VolumeFieldRowProps = {
