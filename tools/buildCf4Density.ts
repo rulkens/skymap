@@ -175,13 +175,44 @@ export async function buildCf4Density(args: {
   const half = Math.max(1e-9, Math.max(Math.abs(valueMin), Math.abs(valueMax)));
   const invTwoHalf = 1 / (2 * half);
   const voxels = new Uint16Array(values.length);
-  for (let i = 0; i < values.length; i++) {
-    const normalised = 0.5 + values[i]! * invTwoHalf;
-    // Clamp protects against the slightly-out-of-range corner from
-    // floating-point drift; the input from CF4++ is well within
-    // [-half, +half] by construction.
-    const clamped = normalised < 0 ? 0 : normalised > 1 ? 1 : normalised;
-    voxels[i] = f32ToF16Bits(clamped);
+
+  // ── Axis transpose: numpy C-order → WebGPU x-fastest ─────────────────
+  // The CF4++ .npy is C-order with shape (Nx, Ny, Nz) where the author's
+  // convention puts axis 0 = SGX (slowest in memory), axis 1 = SGY,
+  // axis 2 = SGZ (fastest).  Numpy stores npy[i, j, k] at linear offset
+  // i*Ny*Nz + j*Nz + k — so the LAST index varies fastest.
+  //
+  // WebGPU's writeTexture, configured with `bytesPerRow = dims[0]*2`
+  // and `rowsPerImage = dims[1]`, interprets the linear buffer as
+  // x-FASTEST: texture coordinate (xt, yt, zt) reads from offset
+  // zt*Ny*Nx + yt*Nx + xt.  The FIRST coordinate varies fastest.
+  //
+  // A straight-copy `voxels[i] = packed(values[i])` would therefore
+  // place numpy axis 2 (SGZ) into WebGPU's x-axis and numpy axis 0
+  // (SGX) into WebGPU's z-axis — visually swapping the cube's X and Z
+  // directions vs. the model matrix's assumption that local-x = SGX.
+  // Empirically caught: cluster labels rendered via raDecDistToEqCart
+  // sit at known cluster positions, but the rendered density blobs
+  // appear at completely different locations.
+  //
+  // Fix: transpose axes 0 ↔ 2 at pack time so the WebGPU x-fastest
+  // layout carries SGX data in its fastest axis.  For each input cell
+  // npy[i, j, k] (representing SG position (i, j, k)), write into the
+  // output buffer at the WebGPU-x-fastest offset that the shader will
+  // later sample for SG-local coordinate (xt=i, yt=j, zt=k).
+  for (let i = 0; i < dims[0]; i++) {
+    for (let j = 0; j < dims[1]; j++) {
+      for (let k = 0; k < dims[2]; k++) {
+        const inputIdx = i * dims[1] * dims[2] + j * dims[2] + k;
+        const outputIdx = k * dims[1] * dims[0] + j * dims[0] + i;
+        const normalised = 0.5 + values[inputIdx]! * invTwoHalf;
+        // Clamp protects against the slightly-out-of-range corner from
+        // floating-point drift; the input from CF4++ is well within
+        // [-half, +half] by construction.
+        const clamped = normalised < 0 ? 0 : normalised > 1 ? 1 : normalised;
+        voxels[outputIdx] = f32ToF16Bits(clamped);
+      }
+    }
   }
 
   // ── 4. Compute origin (voxel (0,0,0) corner in native SG frame, Mpc) ─

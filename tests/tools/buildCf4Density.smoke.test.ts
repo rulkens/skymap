@@ -102,11 +102,106 @@ describe('buildCf4Density (smoke)', () => {
     const last = f16BitsToFloat(cube.voxels[cube.voxels.length - 1]!);
     expect(first).toBeCloseTo(0, 3);
     expect(last).toBeCloseTo(1, 3);
-    // Middle voxel: input index where value ~= 0.  For a 512-element
-    // ramp from -1 to +1, index 255 ≈ -1 + 510/511 ≈ -0.002, and
-    // index 256 ≈ +0.002.  Both should land near LUT coord 0.5.
-    expect(f16BitsToFloat(cube.voxels[255]!)).toBeCloseTo(0.5, 2);
-    expect(f16BitsToFloat(cube.voxels[256]!)).toBeCloseTo(0.5, 2);
+    // NOTE: an earlier version of this test asserted that voxels[255]
+    // and voxels[256] decode to ~0.5 (the near-zero middle of the
+    // -1..+1 ramp).  Those positional assertions were correct under
+    // the old straight-copy build but no longer hold once the build
+    // transposes numpy axes 0↔2 into WebGPU x-fastest layout — the
+    // input values that USED to live at flat indices 255/256 now sit
+    // elsewhere in the output.  The first/last assertions above still
+    // hold because corner cells (npy[0,0,0] and npy[N-1,N-1,N-1]) are
+    // invariant under the X↔Z transpose.  The axis-ordering contract
+    // is now verified by the two axis-aware tests below.
+  });
+
+  it('transposes numpy axes 0↔2 into WebGPU x-fastest layout', async () => {
+    // The CF4++ .npy is C-order with axis 0 = SGX (slowest in memory)
+    // and axis 2 = SGZ (fastest).  WebGPU's writeTexture interprets the
+    // buffer as x-fastest.  A straight-copy build would place SGZ data
+    // into the cube's local-x axis (which the model matrix labels as
+    // the +SGX direction), visually swapping the cube X↔Z.  The build
+    // script's transpose pass guards against this.
+    //
+    // This test seeds a single non-zero voxel at numpy[1, 0, 0] in an
+    // asymmetric cube (different counts along each axis would make
+    // accidental axis permutations even more obvious, but a small cube
+    // with one non-zero is enough to pin which slot the data lands in).
+    //
+    // The symmetric normalisation has min = -1 (a sentinel value at
+    // npy[0, 0, 0] makes the min/max defined and forces half = 1.0, so
+    // input value v lands at LUT coord 0.5 + v/2 ∈ [0, 1]).  With the
+    // sentinel at -1 and a "marker" of +1 at npy[1, 0, 0], the marker
+    // round-trips to LUT 1.0; all other zeros round-trip to LUT 0.5.
+    const dims = [4, 4, 4] as const;
+    const Nx = dims[0];
+    const Ny = dims[1];
+    const Nz = dims[2];
+    const values = new Array(Nx * Ny * Nz).fill(0);
+    // npy[0, 0, 0] = -1 sentinel (sets the negative half-range)
+    values[0 * Ny * Nz + 0 * Nz + 0] = -1;
+    // npy[1, 0, 0] = +1 marker (the cell whose location we're verifying)
+    values[1 * Ny * Nz + 0 * Nz + 0] = +1;
+
+    const axisDir = mkdtempSync(join(tmpdir(), 'cf4-axis-'));
+    const axisNpy = join(axisDir, 'cube.npy');
+    const axisOut = join(axisDir, 'cf4_density.scfd');
+    try {
+      writeF32Npy(axisNpy, values, [...dims]);
+      await buildCf4Density({ npyPath: axisNpy, outPath: axisOut, voxelSizeMpc: 1 });
+      const buf = readFileSync(axisOut);
+      const cube = decodeScalarField(
+        buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+      );
+
+      // WebGPU offset for texture coord (xt, yt, zt) is zt*Ny*Nx + yt*Nx + xt.
+      // After the transpose, npy[1, 0, 0] (the marker) should sit at
+      // texture coord (1, 0, 0) — memory offset 1.  Without the transpose,
+      // npy[1, 0, 0] would land at memory offset 16 (texture (0, 0, 1)
+      // — i.e. local-z = 1, which the renderer would interpret as +SGZ
+      // direction, NOT +SGX).
+      const offMarker = 0 * Ny * Nx + 0 * Nx + 1; // tex (1, 0, 0) — expected
+      const offSwapped = 1 * Ny * Nx + 0 * Nx + 0; // tex (0, 0, 1) — old buggy site
+      expect(f16BitsToFloat(cube.voxels[offMarker]!)).toBeCloseTo(1.0, 2);
+      expect(f16BitsToFloat(cube.voxels[offSwapped]!)).toBeCloseTo(0.5, 2);
+
+      // The sentinel at npy[0, 0, 0] sits at the origin of both layouts
+      // (offset 0), so it shouldn't move.  Confirm.
+      expect(f16BitsToFloat(cube.voxels[0]!)).toBeCloseTo(0.0, 2);
+    } finally {
+      rmSync(axisDir, { recursive: true, force: true });
+    }
+  });
+
+  it('places a Y-axis marker at WebGPU y=1 (not z or x)', async () => {
+    // Companion to the X-axis test: pin the Y → Y mapping (this is the
+    // axis that is supposed to pass through unchanged under axis 0↔2
+    // transpose).  If anyone ever mistakenly transposes Y as well, this
+    // test catches it.
+    const dims = [4, 4, 4] as const;
+    const Nx = dims[0];
+    const Ny = dims[1];
+    const Nz = dims[2];
+    const values = new Array(Nx * Ny * Nz).fill(0);
+    values[0 * Ny * Nz + 0 * Nz + 0] = -1; // sentinel for half=1
+    values[0 * Ny * Nz + 1 * Nz + 0] = +1; // marker at npy[0, 1, 0]
+
+    const axisDir = mkdtempSync(join(tmpdir(), 'cf4-axis-y-'));
+    const axisNpy = join(axisDir, 'cube.npy');
+    const axisOut = join(axisDir, 'cf4_density.scfd');
+    try {
+      writeF32Npy(axisNpy, values, [...dims]);
+      await buildCf4Density({ npyPath: axisNpy, outPath: axisOut, voxelSizeMpc: 1 });
+      const buf = readFileSync(axisOut);
+      const cube = decodeScalarField(
+        buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+      );
+
+      // Marker should land at texture (0, 1, 0) — offset 0*16 + 1*4 + 0 = 4.
+      const offMarker = 0 * Ny * Nx + 1 * Nx + 0;
+      expect(f16BitsToFloat(cube.voxels[offMarker]!)).toBeCloseTo(1.0, 2);
+    } finally {
+      rmSync(axisDir, { recursive: true, force: true });
+    }
   });
 });
 
