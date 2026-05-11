@@ -20,6 +20,7 @@ export type ScalarFieldFrameKind = 'supergalactic-cartesian' | 'equatorial-carte
 export type ScalarFieldPaletteId =
   | 'viridis'
   | 'magma'
+  | 'inferno'
   | 'blue-purple'
   | 'yellow-green'
   /**
