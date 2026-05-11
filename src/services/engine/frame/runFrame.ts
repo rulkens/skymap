@@ -156,6 +156,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (fpsNow !== null && fpsNow !== deps.lastReportedFps.current) {
     deps.lastReportedFps.current = fpsNow;
     deps.cb.onFpsChange?.(fpsNow);
+    deps.cb.lifecycle?.onFpsChange?.(fpsNow);
   }
 
   // ── Resize the swap-chain if the canvas element changed size ──────

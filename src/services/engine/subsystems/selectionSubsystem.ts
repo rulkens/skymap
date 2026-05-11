@@ -199,7 +199,11 @@ export function createSelectionSubsystem(
   function setHovered(sel: SelectionInput | null): void {
     if (selectionEq(sel, hovered)) return;
     hovered = sel;
-    cb.onHoverChange?.(sel !== null ? pointInfoFor(sel) : null);
+    // Hoist the info computation so both flat and nested fires receive
+    // the same value (and we don't pay for `pointInfoFor` twice).
+    const info = sel !== null ? pointInfoFor(sel) : null;
+    cb.onHoverChange?.(info);
+    cb.selection?.onHoverChange?.(info);
   }
 
   function setSelected(
@@ -217,6 +221,7 @@ export function createSelectionSubsystem(
     const info =
       prebuiltInfo !== undefined ? prebuiltInfo : sel !== null ? pointInfoFor(sel) : null;
     cb.onSelectChange?.(info);
+    cb.selection?.onSelectChange?.(info);
   }
 
   function destroy(): void {

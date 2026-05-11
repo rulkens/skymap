@@ -473,7 +473,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
 
   const progressEmitter = createLoadProgressEmitter(
-    (snapshot) => cb.onLoadProgress?.(snapshot),
+    (snapshot) => {
+      cb.onLoadProgress?.(snapshot);
+      cb.sources?.onLoadProgress?.(snapshot);
+    },
     allSlots,
   );
   for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
@@ -501,6 +504,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Signal loading state immediately so the user knows something is
   // happening before the (potentially multi-second) fetch completes.
   cb.onStatusChange({ kind: 'loading' });
+  cb.lifecycle?.onStatusChange?.({ kind: 'loading' });
 
   // ── Parallel multi-survey load via asset slots ────────────────────
   //

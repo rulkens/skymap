@@ -561,6 +561,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
 
   cb.onStatusChange({ kind: 'initializing' });
+  cb.lifecycle?.onStatusChange?.({ kind: 'initializing' });
 
   // ── Bootstrap dependency bag ─────────────────────────────────────────────
   //
@@ -656,6 +657,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // shows a readable message rather than a blank canvas.
       const message = err instanceof Error ? err.message : String(err);
       cb.onStatusChange({ kind: 'error', message });
+      cb.lifecycle?.onStatusChange?.({ kind: 'error', message });
       console.error('Engine startup failed:', err);
     }
   })();
@@ -766,6 +768,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // Clearing the pin also clears the camera-focus target — Esc /
         // close ✕ are explicit "I'm done with this galaxy" signals.
         cb.onFocusChange?.(null);
+        cb.camera?.onFocusChange?.(null);
         state.subsystems.scheduler.requestRender();
       }
     },
@@ -1042,6 +1045,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // `onFocusChange(null)` is "this action is leaving a focus
       // state", which `tweenToCameraSnapshot` doesn't decide.
       cb.onFocusChange?.(null);
+      cb.camera?.onFocusChange?.(null);
 
       tweenToCameraSnapshot(state, state.initialCamSnapshot);
     },
@@ -1068,6 +1072,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // catalog galaxy is no longer relevant — clear it so the URL
       // hash doesn't keep trying to resolve a stale focus.
       cb.onFocusChange?.(null);
+      cb.camera?.onFocusChange?.(null);
 
       tweenToCameraSnapshot(state, {
         target: [

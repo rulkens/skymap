@@ -368,11 +368,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // an additional `onStatusChange` — the status bar's job is "we're up",
   // not "live counter".
   const firstReadySource = deps.phaseLocals!.firstReadySource;
-  cb.onStatusChange({
-    kind: 'ready',
+  const readyStatus = {
+    kind: 'ready' as const,
     count: renderer.totalCount(),
     source: cloudSourceFor(firstReadySource ?? Source.Synthetic),
-  });
+  };
+  cb.onStatusChange(readyStatus);
+  cb.lifecycle?.onStatusChange?.(readyStatus);
 
   // ── Seed settings callbacks ───────────────────────────────────────────
   //
