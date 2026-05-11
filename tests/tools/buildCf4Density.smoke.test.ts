@@ -80,10 +80,48 @@ describe('buildCf4Density (smoke)', () => {
     expect(cube.rotation[1]).toBeCloseTo(SG_TO_EQ_QUATERNION[1]!, 6);
     expect(cube.rotation[2]).toBeCloseTo(SG_TO_EQ_QUATERNION[2]!, 6);
     expect(cube.rotation[3]).toBeCloseTo(SG_TO_EQ_QUATERNION[3]!, 6);
+    // valueMin/valueMax are the *original* pre-normalisation range, kept
+    // as diagnostic so a future consumer can recover the underlying
+    // physical units.  The packed voxel payload itself has been remapped
+    // to [0, 1] (see the f16-encode-decode assertions below).
     expect(cube.valueMin).toBeCloseTo(-1, 4);
     expect(cube.valueMax).toBeCloseTo(1, 4);
     expect(cube.voxels).toBeInstanceOf(Uint16Array);
     expect(cube.voxels.length).toBe(512);
     expect(['viridis', 'magma', 'blue-purple', 'yellow-green']).toContain(cube.paletteId);
+
+    // densityScale is the fixed CF-4 constant (5.0), matching the
+    // synthetic-Gaussian regime — see CF4_DENSITY_SCALE in
+    // tools/buildCf4Density.ts.
+    expect(cube.densityScale).toBeCloseTo(5.0, 4);
+
+    // Verify normalisation: input ran linearly from -1 to +1, so the
+    // packed voxel at index 0 should be ~0.0 (f16) and at index N-1
+    // should be ~1.0.  We decode the f16 payload manually using the
+    // standard IEEE-754 unpacking.
+    const first = f16BitsToFloat(cube.voxels[0]!);
+    const last = f16BitsToFloat(cube.voxels[cube.voxels.length - 1]!);
+    expect(first).toBeCloseTo(0, 3);
+    expect(last).toBeCloseTo(1, 3);
   });
 });
+
+/**
+ * Unpack a single f16 bit pattern (as stored in SCFD voxel arrays) into
+ * a JS number.  Inverse of the f32ToF16Bits packer in
+ * `tools/buildCf4Density.ts`; only used here to verify the build
+ * script's normalisation step round-trips through f16 storage.
+ */
+function f16BitsToFloat(bits: number): number {
+  const sign = (bits & 0x8000) >> 15;
+  const exp = (bits & 0x7c00) >> 10;
+  const mant = bits & 0x03ff;
+  if (exp === 0) {
+    // Subnormal or zero.
+    return (sign ? -1 : 1) * (mant / 1024) * Math.pow(2, -14);
+  }
+  if (exp === 31) {
+    return mant === 0 ? (sign ? -Infinity : Infinity) : NaN;
+  }
+  return (sign ? -1 : 1) * (1 + mant / 1024) * Math.pow(2, exp - 15);
+}
