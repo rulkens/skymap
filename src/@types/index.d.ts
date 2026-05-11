@@ -28,3 +28,4 @@ export type * from './EngineSubsystemHandles';
 export type * from './EngineState';
 export type * from './Renderer';
 export type * from './Vec';
+export type * from './Mat';
