@@ -49,4 +49,30 @@ describe('buildCubeModelMatrix', () => {
     const offDiag = Math.abs(m[1]!) + Math.abs(m[2]!) + Math.abs(m[4]!) + Math.abs(m[6]!);
     expect(offDiag).toBeGreaterThan(0.01);
   });
+
+  it('keeps an observer-centered cube centred under non-identity rotation', () => {
+    // 90° rotation around the Z axis as a unit quaternion (x, y, z, w).
+    // The cube fixture is observer-centred (origin = -dims*voxelSize/2),
+    // so its geometric centre sits at the native frame's origin.  Under
+    // ANY rotation about that origin, the centre must remain at (0,0,0)
+    // in native space — and after FRAME_TO_WORLD identity (equatorial
+    // frame here) at (0,0,0) in world space too.
+    //
+    // The previous matrix order (translate-then-rotate) failed this:
+    // it pivoted the cube around its corner rather than its centre,
+    // so the centre ended up at `R*(-origin) + origin ≠ origin` for any
+    // non-identity R.  The current order (rotate-then-translate, with
+    // gl-matrix's post-multiply semantics: copy → R → T → S) fixes it.
+    const s = Math.SQRT1_2;
+    const m = buildCubeModelMatrix(fixture({ rotation: [0, 0, s, s] }));
+    // Apply m to the unit-cube centre (0.5, 0.5, 0.5, 1).  Column-major
+    // mat4 means m[col*4 + row]; the (cx, cy, cz) below is the standard
+    // dot of each row with the homogeneous coordinate.
+    const cx = m[0]! * 0.5 + m[4]! * 0.5 + m[8]! * 0.5 + m[12]!;
+    const cy = m[1]! * 0.5 + m[5]! * 0.5 + m[9]! * 0.5 + m[13]!;
+    const cz = m[2]! * 0.5 + m[6]! * 0.5 + m[10]! * 0.5 + m[14]!;
+    expect(cx).toBeCloseTo(0, 5);
+    expect(cy).toBeCloseTo(0, 5);
+    expect(cz).toBeCloseTo(0, 5);
+  });
 });

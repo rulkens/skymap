@@ -11,6 +11,27 @@ import { describe, expect, it } from 'vitest';
 import { readNpy } from '../../tools/parsers/npyReader';
 
 /**
+ * Write a NumPy v1.0 .npy file representing a flat f64 array.  Same
+ * structure as `writeF32Npy` below, but with dtype `<f8` and 8-byte
+ * elements.  Used to exercise the f64 path the CF4++ release lives on.
+ */
+function writeF64Npy(values: number[], shape: readonly number[]): ArrayBuffer {
+  const headerDict = `{'descr': '<f8', 'fortran_order': False, 'shape': (${shape.join(', ')}${shape.length === 1 ? ',' : ''}), }`;
+  const baseLen = 10 + headerDict.length + 1;
+  const padded = baseLen + ((64 - (baseLen % 64)) % 64);
+  const headerLen = padded - 10;
+  const headerStr = headerDict + ' '.repeat(headerLen - headerDict.length - 1) + '\n';
+  const dataBytes = values.length * 8;
+  const buf = new ArrayBuffer(10 + headerLen + dataBytes);
+  const u8 = new Uint8Array(buf);
+  u8.set([0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59, 1, 0]);
+  new DataView(buf).setUint16(8, headerLen, true);
+  for (let i = 0; i < headerStr.length; i++) u8[10 + i] = headerStr.charCodeAt(i);
+  new Float64Array(buf, 10 + headerLen, values.length).set(values);
+  return buf;
+}
+
+/**
  * Write a NumPy v1.0 .npy file representing a flat f32 array.
  * Returns an ArrayBuffer suitable for `readNpy`.
  *
@@ -67,6 +88,31 @@ describe('readNpy', () => {
     expect(Array.from(result.shape)).toEqual([2, 3, 4]);
     expect((result.values as Float32Array).length).toBe(24);
     expect(Array.from(result.values as Float32Array)).toEqual(data);
+  });
+
+  it('reads a 1-D f64 array (the CF4++ dtype)', () => {
+    // f64 values chosen to exercise both negative and high-precision
+    // fractional parts so a silent narrowing to f32 would be visible
+    // as a precision-loss mismatch.
+    const data = [1.123456789012345, -2.987654321098765, 3.141592653589793, 0];
+    const buf = writeF64Npy(data, [4]);
+    const result = readNpy(buf);
+    expect(result.dtype).toBe('<f8');
+    expect(Array.from(result.shape)).toEqual([4]);
+    expect(result.values).toBeInstanceOf(Float64Array);
+    expect(Array.from(result.values as Float64Array)).toEqual(data);
+  });
+
+  it('reads a 3-D f64 array (matches the CF4++ d_mean_CF4pp 128³ shape pattern)', () => {
+    // Smaller dimensions than 128³ so the test stays fast — the shape
+    // semantics are what we care about, not the bandwidth.
+    const data = Array.from({ length: 2 * 3 * 4 }, (_, i) => i / 7);
+    const buf = writeF64Npy(data, [2, 3, 4]);
+    const result = readNpy(buf);
+    expect(result.dtype).toBe('<f8');
+    expect(Array.from(result.shape)).toEqual([2, 3, 4]);
+    expect((result.values as Float64Array).length).toBe(24);
+    expect(Array.from(result.values as Float64Array)).toEqual(data);
   });
 
   it('throws on bad magic', () => {

@@ -301,6 +301,12 @@ type Props = {
   /** Fired when the user moves an individual field's intensity slider. */
   onVolumeFieldIntensityChange?: (handle: string, intensity: number) => void;
   /**
+   * Fired when the user moves an individual field's contrast slider.
+   * Contrast is a LUT-coordinate gamma remap around 0.5 — visually
+   * distinct from intensity, which is an overall opacity multiplier.
+   */
+  onVolumeFieldContrastChange?: (handle: string, contrast: number) => void;
+  /**
    * Fired when the user picks a different palette from a field's dropdown.
    * Optional — when absent the per-field palette dropdown is hidden but
    * the rest of the row (enable checkbox + intensity slider) still
@@ -333,6 +339,12 @@ export type VolumeFieldRowData = {
   enabled: boolean;
   /** Linear mix-in weight in [0, 1] applied to this field's voxel values. */
   intensity: number;
+  /**
+   * LUT-coordinate contrast around the 0.5 pivot.  1.0 is identity;
+   * > 1.0 pushes mid-tones toward the saturated palette ends; < 1.0
+   * compresses toward the midpoint.  See VolumeFieldSettings.contrast.
+   */
+  contrast: number;
   /** Palette LUT id for this field's colour ramp. */
   paletteId: ScalarFieldPaletteId;
 };
@@ -405,6 +417,7 @@ export function SettingsPanel({
   volumeFields,
   onVolumeFieldEnabledChange,
   onVolumeFieldIntensityChange,
+  onVolumeFieldContrastChange,
   onVolumeFieldPaletteChange,
 }: Props): ReactNode {
   // Tier selector: rendered only when both pieces wired by the parent.  Same
@@ -714,9 +727,11 @@ export function SettingsPanel({
                     label={field.label}
                     enabled={field.enabled}
                     intensity={field.intensity}
+                    contrast={field.contrast}
                     paletteId={field.paletteId}
                     onEnabledChange={onVolumeFieldEnabledChange!}
                     onIntensityChange={onVolumeFieldIntensityChange!}
+                    onContrastChange={onVolumeFieldContrastChange!}
                     onPaletteChange={onVolumeFieldPaletteChange}
                   />
                 ))

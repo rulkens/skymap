@@ -41,8 +41,8 @@ import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
-// + 4 (densityScale) = 228, padded up to 240 (next multiple of 16, the
-// struct's alignment from its mat4x4 members).
+// + 4 (densityScale) + 4 (contrast) = 232, padded up to 240 (next
+// multiple of 16, the struct's alignment from its mat4x4 members).
 const UNIFORM_BYTES = 240;
 
 const CUBE_CORNERS = new Float32Array([
@@ -91,11 +91,21 @@ const FRAME_TO_WORLD: Record<ScalarFieldFrameKind, mat4> = {
 //
 // Maps the unit cube '[0,1]^3' (vertex shader's input space) to the
 // cube's footprint in skymap world space.  Composition order, applied
-// right-to-left to a unit-cube corner:
+// right-to-left to a unit-cube corner v:
 //
-//   1. scale by (Nx*voxelSize, Ny*voxelSize, Nz*voxelSize) → physical extent
-//   2. rotate by the cube's per-cube quaternion (in its native frame)
-//   3. translate by the cube's origin (in its native frame)
+//   1. scale  by (Nx*voxelSize, Ny*voxelSize, Nz*voxelSize) — unit cube
+//      becomes its physical extent (e.g. [0, 1000]^3 for CF-4)
+//   2. translate by the cube's origin in its native frame — shifts the
+//      cube so its corner sits at `origin`, which for an observer-centered
+//      cube means the cube's geometric centre lands at the native frame's
+//      origin
+//   3. rotate by the cube's per-cube quaternion — pivots around the
+//      native frame's origin, which (after step 2) coincides with the
+//      cube's centre.  Order matters: rotating BEFORE the translate
+//      would pivot around the cube's corner instead and offset the
+//      whole volume by `R*origin - origin` in the native frame.  The
+//      synthetic cubes ship identity rotations, so the bug is invisible
+//      there; CF-4 (with the SG→EQ quaternion) exposes it.
 //   4. transform from the native frame into world space
 //
 // The function is exported (rather than locked inside the factory)
@@ -104,10 +114,10 @@ const FRAME_TO_WORLD: Record<ScalarFieldFrameKind, mat4> = {
 export function buildCubeModelMatrix(cube: ScalarCube): mat4 {
   const out = mat4.create();
   mat4.copy(out, FRAME_TO_WORLD[cube.frameKind]);
-  mat4.translate(out, out, [cube.origin[0], cube.origin[1], cube.origin[2]]);
   const rotMat = mat4.create();
   mat4.fromQuat(rotMat, [cube.rotation[0], cube.rotation[1], cube.rotation[2], cube.rotation[3]]);
   mat4.multiply(out, out, rotMat);
+  mat4.translate(out, out, [cube.origin[0], cube.origin[1], cube.origin[2]]);
   const sx = cube.dims[0] * cube.voxelSize;
   const sy = cube.dims[1] * cube.voxelSize;
   const sz = cube.dims[2] * cube.voxelSize;
@@ -123,6 +133,15 @@ type FieldEntry = {
   handle: ScalarFieldHandle;
   enabled: boolean;
   intensity: number;
+  /**
+   * Per-field LUT-coordinate contrast (gamma-style remap around the 0.5
+   * pivot, see fragment.wesl's `contrast` uniform).  1.0 is identity;
+   * > 1.0 pushes mid-tones toward the saturated ends of the palette;
+   * < 1.0 compresses toward the midpoint.  Orthogonal to `intensity`:
+   * intensity controls overall opacity, contrast controls how much of
+   * the dynamic range gets stretched into visible territory.
+   */
+  contrast: number;
   paletteId: ScalarFieldPaletteId;
   /** Per-cube opacity multiplier; copied from `cube.densityScale` at registration. */
   densityScale: number;
@@ -139,6 +158,13 @@ export type ScalarVolumeRenderer = {
   removeField(handle: ScalarFieldHandle): void;
   setEnabled(handle: ScalarFieldHandle, enabled: boolean): void;
   setIntensity(handle: ScalarFieldHandle, intensity: number): void;
+  /**
+   * Per-field LUT-coordinate contrast around the 0.5 pivot.  Range is
+   * conventionally [0.25, 4.0]; 1.0 is identity.  Values are clamped to
+   * a non-negative non-zero range to keep the shader's `pow(_, 1/c)`
+   * well-defined.  No-op if the handle is unknown.
+   */
+  setContrast(handle: ScalarFieldHandle, contrast: number): void;
   /**
    * Replace the palette LUT for a single field.  Rewrites the field's
    * existing 1D LUT texture in place via `writeTexture`; the bind group
@@ -288,6 +314,11 @@ export function createScalarVolumeRenderer(
         handle,
         enabled: true,
         intensity: 0.5,
+        // 1.0 is identity for the shader's gamma-style contrast remap.
+        // Real-world default is supplied via setContrast() from the slot
+        // commit; this is the safe placeholder before any UI / settings
+        // state has been threaded in.
+        contrast: 1.0,
         paletteId: cube.paletteId,
         densityScale: cube.densityScale,
         modelMatrix,
@@ -309,6 +340,14 @@ export function createScalarVolumeRenderer(
     setEnabled(handle, enabled) {
       const entry = fields.get(handle);
       if (entry) entry.enabled = enabled;
+    },
+    setContrast(handle, contrast) {
+      const entry = fields.get(handle);
+      // Clamp away from zero so the shader's pow(_, 1/contrast) stays
+      // well-defined.  Upper bound is generous (16x) because the
+      // perceptual effect plateaus well before that — the slider in
+      // VolumeFieldRow caps lower, but the API stays permissive.
+      if (entry) entry.contrast = Math.max(0.05, Math.min(16, contrast));
     },
     setIntensity(handle, intensity) {
       const entry = fields.get(handle);
@@ -345,7 +384,8 @@ export function createScalarVolumeRenderer(
       // 208..219  cameraPosWorld  (vec3)
       // 220..223  intensity       (f32)
       // 224..227  densityScale    (f32)
-      // 228..239  trailing pad    (12 bytes, struct rounded up to 16)
+      // 228..231  contrast        (f32)
+      // 232..239  trailing pad    (8 bytes, struct rounded up to 16)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       for (const e of fields.values()) {
         if (!e.enabled || e.intensity <= 0) continue;
@@ -361,6 +401,7 @@ export function createScalarVolumeRenderer(
         scratch[54] = cameraPosWorld[2];
         scratch[55] = e.intensity;
         scratch[56] = e.densityScale;
+        scratch[57] = e.contrast;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         pass.setBindGroup(0, e.bindGroup);
         pass.drawIndexed(CUBE_INDICES.length);

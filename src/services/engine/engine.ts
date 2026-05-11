@@ -91,6 +91,7 @@ import {
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
+  DEFAULT_VOLUME_FIELD_CONTRAST,
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
@@ -1049,14 +1050,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.settings.volumeFields[handle] = {
           enabled: true,
           intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+          contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
           paletteId: cube.paletteId,
         };
       }
       // Forward the current per-field tunables into the renderer so the
       // new upload inherits whatever the user set before re-registering.
-      const persisted = state.settings.volumeFields[handle];
+      // The if-guard above ensures the entry exists; the non-null
+      // assertion satisfies noUncheckedIndexedAccess on the Record.
+      const persisted = state.settings.volumeFields[handle]!;
       state.gpu.scalarVolumeRenderer?.setIntensity(handle, persisted.intensity);
       state.gpu.scalarVolumeRenderer?.setEnabled(handle, persisted.enabled);
+      state.gpu.scalarVolumeRenderer?.setContrast(handle, persisted.contrast);
       state.gpu.scalarVolumeRenderer?.setFieldPalette(handle, persisted.paletteId);
       // Let React know the field list changed so any SettingsPanel list
       // re-renders with the new row.
@@ -1096,6 +1101,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.subsystems.scheduler.requestRender();
     },
 
+    setVolumeFieldContrast(handle, contrast) {
+      // Same shape as setVolumeFieldIntensity: mirror to the settings
+      // bag for optimistic UI, forward to the renderer which clamps to
+      // its safe range.  No-op on unknown handle; the renderer
+      // tolerates that too.
+      if (state.settings.volumeFields[handle]) {
+        state.settings.volumeFields[handle].contrast = contrast;
+      }
+      state.gpu.scalarVolumeRenderer?.setContrast(handle, contrast);
+      state.subsystems.scheduler.requestRender();
+    },
+
     listVolumeFields() {
       // Delegates to the renderer, which is the authoritative list.
       // Falls back to [] when the renderer is not yet constructed.
@@ -1116,6 +1133,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           label: handle,
           enabled: field?.enabled ?? true,
           intensity: field?.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
+          contrast: field?.contrast ?? DEFAULT_VOLUME_FIELD_CONTRAST,
           paletteId: field?.paletteId ?? DEFAULT_VOLUME_PALETTE_ID,
         };
       });

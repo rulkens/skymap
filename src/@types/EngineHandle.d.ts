@@ -511,6 +511,24 @@ export type EngineHandle = {
   setVolumeFieldIntensity?: (handle: string, intensity: number) => void;
 
   /**
+   * Set the LUT-coordinate contrast for a single registered field.
+   *
+   * Contrast is a gamma-style remap around the 0.5 pivot in palette-LUT
+   * coordinate space (see `VolumeFieldSettings.contrast` and the
+   * scalar-volume fragment shader).  Values > 1.0 push mid-tones toward
+   * the saturated ends of the palette; values < 1.0 compress toward the
+   * midpoint; 1.0 is identity.  Orthogonal to intensity: intensity
+   * controls overall opacity, contrast controls dynamic-range remapping.
+   *
+   * Updates `EngineSettingsState.volumeFields[handle].contrast`.  No-op
+   * if `handle` is not registered.
+   *
+   * @param handle    The handle string passed to `addVolumeField`.
+   * @param contrast  Non-negative value, conventionally in [0.25, 4.0].
+   */
+  setVolumeFieldContrast?: (handle: string, contrast: number) => void;
+
+  /**
    * Return the ordered list of currently registered field handles.
    *
    * Reflects the same set as `EngineSettingsState.volumeFields`.
@@ -542,6 +560,7 @@ export type EngineHandle = {
     label: string;
     enabled: boolean;
     intensity: number;
+    contrast: number;
     paletteId: ScalarFieldPaletteId;
   }>;
 

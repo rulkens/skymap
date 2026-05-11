@@ -192,34 +192,8 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   );
 
   // Scalar-volume master toggle — no echo, same as filamentsEnabled above.
-  //
-  // Seeded from localStorage ('skymap.volumesEnabled') when a persisted
-  // value is present so the SettingsPanel reflects the user's last choice
-  // on first paint — before any engine echo lands.  Falls back to the
-  // compile-time default if storage is absent or corrupt (e.g. first load,
-  // private-browsing mode, cleared DevTools storage).
-  //
-  // Why the lazy initializer here rather than a useEffect in App.tsx?
-  // A `useEffect` restore would fire AFTER the first render, causing a
-  // brief flash of the wrong toggle state.  The lazy initializer runs
-  // synchronously during the first render and produces the correct state
-  // from frame 0 — same technique React's own docs recommend for
-  // "expensive" or "read-from-storage" initial values.
-  //
-  // The engine also starts with DEFAULT_VOLUMES_ENABLED.  If the persisted
-  // value differs, App.tsx forwards the seeded state to the engine in a
-  // one-shot useEffect that runs after createEngine (see App.tsx's
-  // "forward persisted volumesEnabled to engine" effect).
-  const [volumesEnabled, setVolumesEnabled] = useState<boolean>(() => {
-    try {
-      const stored = localStorage.getItem('skymap.volumesEnabled');
-      if (stored !== null) return stored === 'true';
-    } catch {
-      // localStorage can throw in sandboxed iframes or if storage is full.
-      // Silently fall through to the compile-time default.
-    }
-    return DEFAULT_VOLUMES_ENABLED;
-  });
+  // No persistence: every session starts from the compile-time default.
+  const [volumesEnabled, setVolumesEnabled] = useState<boolean>(DEFAULT_VOLUMES_ENABLED);
 
   // Per-field row data.  Starts empty (no cubes at startup).  Rebuilt by
   // App.tsx whenever the engine fires onVolumeFieldsChanged by calling

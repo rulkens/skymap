@@ -48,8 +48,18 @@ import type { ScalarCube, ScalarFieldPaletteId } from '../src/@types/ScalarCube'
  */
 const CF4PP_VOXEL_SIZE_MPC = 1000 / 128;
 
-/** Default palette for CF-4 DM density cubes. */
-const DEFAULT_CF4_PALETTE: ScalarFieldPaletteId = 'magma';
+/**
+ * Default palette for CF-4 DM density cubes.
+ *
+ * `coolwarm` is the natural fit: the field is symmetrically normalised
+ * around the cosmic mean (LUT coord 0.5), and coolwarm's V-shaped alpha
+ * makes that midpoint fully transparent — over-densities glow red,
+ * under-densities glow blue, and the empty cosmic-mean background reads
+ * as space.  Sequential palettes (magma / viridis) fight this by giving
+ * the midpoint a visible colour, which makes the void regions wash the
+ * whole cube out.
+ */
+const DEFAULT_CF4_PALETTE: ScalarFieldPaletteId = 'coolwarm';
 
 /**
  * Convert a single f32 to its f16 raw bits using round-to-nearest-even.
@@ -96,33 +106,30 @@ function f32ToF16Bits(value: number): number {
 }
 
 /**
- * Choose a per-cube `densityScale` so that an "interesting" voxel value
- * yields a saturated alpha at intensity=1. For CF-4 delta values which
- * range over [~-1, +30], we pick scale such that a path through the
- * peak voxel saturates over ~10% of the cube diagonal — soft enough to
- * see structure, dense enough to read as fog.
+ * Per-cube opacity multiplier baked into the SCFD header.  See
+ * `ScalarCube.densityScale` for the shader-side semantics — it's the
+ * factor that maps "voxel value at palette-LUT coordinate 1.0" onto
+ * "fully saturated through a typical ray".  The synthetic Gaussian
+ * generator in `src/data/syntheticScalarField.ts` uses 10.0; the
+ * sparser cartesian-grid uses 4.0; we pick 5.0 for the CF-4 mean
+ * density field (broader features than the Gaussian, denser than the
+ * grids) and revisit if the user-facing intensity slider can't tune
+ * away the gap.
  *
- * Heuristic only; can be retuned without invalidating the format.
+ * Why a constant, not a heuristic: an earlier version of this script
+ * computed `densityScale` from `valueMax × cube-diagonal` under the
+ * (wrong) assumption that the shader multiplies alpha by the sampled
+ * voxel value.  It doesn't — voxel values only pick the palette colour
+ * via LUT lookup, and the shader's per-step alpha is
  *
- * Why 0.1 of the diagonal: shorter (e.g. 1%) makes the density
- * field opaque and featureless; longer (e.g. 50%) leaves it washed out at
- * default intensity. 10% is the empirically pleasing midpoint for overdensity
- * fields with a high dynamic range.
+ *     palette.a × intensity × densityScale × stepLength
+ *
+ * The fix is upstream of densityScale: normalise the voxel values into
+ * [0, 1] so the LUT lookup actually lands in the visible part of the
+ * palette, then use a `densityScale` in the standard [1, 10] regime
+ * the synthetic generators target.
  */
-function chooseDensityScale(valueMax: number, voxelSizeMpc: number, dims: readonly [number, number, number]): number {
-  const diagonalMpc = voxelSizeMpc * Math.hypot(dims[0], dims[1], dims[2]);
-  const targetSaturationPathMpc = diagonalMpc * 0.1;
-  // alpha_per_step ≈ palette.a × intensity × densityScale × stepLengthMpc
-  // We want sum over targetSaturationPath/stepLength steps to ≈ 1 at value=valueMax.
-  // Ignoring the per-step palette modulation (which is data-dependent), this
-  // gives densityScale ≈ 1 / (valueMax × targetSaturationPathMpc).
-  const scale = 1 / Math.max(1e-3, valueMax * targetSaturationPathMpc);
-  // Clamp to a sane range so a degenerate stats block doesn't produce
-  // NaN/Inf opacity. Floor of 1e-4 ensures the SCFD f32 slot is always
-  // non-zero; the decoder treats zero as the legacy sentinel and substitutes
-  // 1.0, which would give wrong opacity for newly-generated files.
-  return Math.min(10, Math.max(1e-4, scale));
-}
+const CF4_DENSITY_SCALE = 5.0;
 
 /**
  * Build a SCFD scalar volume from a CF4++ `.npy` mean-density slice.
@@ -148,21 +155,28 @@ export async function buildCf4Density(args: {
   const voxelSize = args.voxelSizeMpc ?? CF4PP_VOXEL_SIZE_MPC;
 
   // ── 1. Load .npy ─────────────────────────────────────────────────
+  // CF4++ ships `d_mean_CF4pp` as f64; older catalog fixtures and our
+  // smoke tests use f32.  Accept either, narrow to a single Float64Array
+  // for the f16-packing loop below — JS numbers are f64 internally, so
+  // upcasting f32 → f64 here is a no-op for precision and lets the
+  // packing loop stay a single code path.
   const npyBuf = readFileSync(npyPath);
   const npy = readNpy(npyBuf.buffer.slice(npyBuf.byteOffset, npyBuf.byteOffset + npyBuf.byteLength));
   if (npy.shape.length !== 3) {
     throw new Error(`buildCf4Density: expected 3D array, got shape ${npy.shape.join('x')}`);
   }
-  if (!(npy.values instanceof Float32Array)) {
-    throw new Error(`buildCf4Density: expected f32 .npy, got dtype ${npy.dtype}`);
+  if (!(npy.values instanceof Float64Array) && !(npy.values instanceof Float32Array)) {
+    throw new Error(`buildCf4Density: expected f64 or f32 .npy, got dtype ${npy.dtype}`);
   }
-  const values = npy.values;
+  const values: Float64Array | Float32Array = npy.values;
   const dims: [number, number, number] = [npy.shape[0]!, npy.shape[1]!, npy.shape[2]!];
 
   // ── 2. Compute stats ─────────────────────────────────────────────
-  // Scan the raw f32 values for diagnostic min/max, embedded in the SCFD
-  // header so consumers (and the densityScale heuristic below) can size
-  // their dynamic range correctly.
+  // Scan the raw values for diagnostic min/max.  The SCFD header keeps
+  // these as the *original* pre-normalisation range so a future consumer
+  // can recover physical units (δ, log(1+δ), σ, …) from the f16 voxel
+  // payload if it needs to.  The shader itself never reads them — its
+  // palette LUT lookup assumes voxels are already in [0, 1].
   let valueMin = +Infinity;
   let valueMax = -Infinity;
   for (let i = 0; i < values.length; i++) {
@@ -171,14 +185,37 @@ export async function buildCf4Density(args: {
     if (v > valueMax) valueMax = v;
   }
 
-  // ── 3. Convert f32 → f16 bits ────────────────────────────────────
-  // The SCFD voxel array stores raw Uint16 f16 bit patterns, matching
-  // the r16float WebGPU 3D texture format. We convert per-element rather
-  // than slicing because Float32Array and Float16Array share no direct
-  // cast path in current JS runtimes.
+  // ── 3. Symmetric normalisation around 0 → [0, 1] and pack as f16 ──
+  // CF4++ density values are signed (overdensity δ or a Gaussianised
+  // equivalent) and the cosmic mean lives at value=0.  A naive linear
+  // remap `(v - min) / (max - min)` lands 0 at LUT coord
+  // |min| / (|min| + |max|) — typically ~0.52 for CF4++, not 0.5.  That
+  // small asymmetry breaks the divergent `coolwarm` palette's
+  // transparent-mean visual (the cosmic mean leaks a faint warm tint).
+  //
+  // Symmetric mapping: half = max(|min|, |max|), then
+  //   normalised = clamp(0.5 + v / (2 × half), 0, 1)
+  // This guarantees 0 → 0.5 (transparent for divergent palettes), and
+  // the more-extreme tail saturates at one end while the less-extreme
+  // tail does NOT reach the opposite end.  For sequential palettes
+  // (viridis / magma / blue-purple / yellow-green) the effect is the
+  // same as before for the high tail; the low tail now starts at 0.5
+  // rather than 0, which crushes void contrast a bit but lets users
+  // who want to see the FULL signed dynamic range flip to coolwarm
+  // without re-encoding.
+  //
+  // Guard against a degenerate constant cube (would make the divisor
+  // zero) by clamping `half` to a non-zero minimum.
+  const half = Math.max(1e-9, Math.max(Math.abs(valueMin), Math.abs(valueMax)));
+  const invTwoHalf = 1 / (2 * half);
   const voxels = new Uint16Array(values.length);
   for (let i = 0; i < values.length; i++) {
-    voxels[i] = f32ToF16Bits(values[i]!);
+    const normalised = 0.5 + values[i]! * invTwoHalf;
+    // Clamp protects against the slightly-out-of-range corner from
+    // floating-point drift; the input from CF4++ is well within
+    // [-half, +half] by construction.
+    const clamped = normalised < 0 ? 0 : normalised > 1 ? 1 : normalised;
+    voxels[i] = f32ToF16Bits(clamped);
   }
 
   // ── 4. Compute origin (voxel (0,0,0) corner in native SG frame, Mpc) ─
@@ -192,8 +229,8 @@ export async function buildCf4Density(args: {
     -voxelSize * (dims[2] / 2),
   ];
 
-  // ── 5. Build the cube + densityScale ─────────────────────────────
-  const densityScale = chooseDensityScale(Math.max(0.001, Math.abs(valueMax)), voxelSize, dims);
+  // ── 5. Build the cube with the fixed CF-4 densityScale ─────────────
+  const densityScale = CF4_DENSITY_SCALE;
 
   const cube: ScalarCube = {
     dims,
