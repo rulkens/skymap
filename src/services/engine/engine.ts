@@ -93,6 +93,7 @@ import {
   DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_VOLUME_FIELD_CONTRAST,
+  DEFAULT_VOLUME_FIELD_DENSITY_SCALE,
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
@@ -1053,6 +1054,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
           enabled: true,
           intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
           contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
+          // Seeded from the neutral-default constant.  The SCFD-v2
+          // `wireSlots` commit sites (plan
+          // 2026-05-11-scfd-v2-presentation-defaults, Task 4) overwrite
+          // this immediately via `setDensityScale` using the per-handle
+          // value from `VOLUME_FIELD_DEFAULTS`; this default only matters
+          // for the brief window between settings-bag construction and
+          // that explicit set, and for ad-hoc tests that exercise
+          // addVolumeField directly.
+          densityScale: DEFAULT_VOLUME_FIELD_DENSITY_SCALE,
           paletteId: cube.paletteId,
         };
       }
@@ -1064,6 +1074,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.gpu.scalarVolumeRenderer?.setIntensity(handle, persisted.intensity);
       state.gpu.scalarVolumeRenderer?.setEnabled(handle, persisted.enabled);
       state.gpu.scalarVolumeRenderer?.setContrast(handle, persisted.contrast);
+      state.gpu.scalarVolumeRenderer?.setDensityScale(handle, persisted.densityScale);
       state.gpu.scalarVolumeRenderer?.setFieldPalette(handle, persisted.paletteId);
       // Let React know the field list changed so any SettingsPanel list
       // re-renders with the new row.
@@ -1112,6 +1123,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.settings.volumeFields[handle].contrast = contrast;
       }
       state.gpu.scalarVolumeRenderer?.setContrast(handle, contrast);
+      state.subsystems.scheduler.requestRender();
+    },
+
+    setVolumeFieldDensityScale(handle, value) {
+      // Identical shape to setVolumeFieldContrast: mirror to the
+      // settings bag first (so optimistic React reads see the raw
+      // value), then forward to the renderer which clamps negative /
+      // NaN inputs to 0.  No-op on unknown handle.  The renderer
+      // tolerates a no-op call before it's constructed via the `?.`
+      // chain — same forgiving pattern as the rest of this surface.
+      if (state.settings.volumeFields[handle]) {
+        state.settings.volumeFields[handle].densityScale = value;
+      }
+      state.gpu.scalarVolumeRenderer?.setDensityScale(handle, value);
       state.subsystems.scheduler.requestRender();
     },
 

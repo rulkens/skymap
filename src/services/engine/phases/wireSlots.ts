@@ -90,6 +90,7 @@ import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
 import {
   DEFAULT_CF4_DENSITY_ENABLED,
   DEFAULT_VOLUME_FIELD_CONTRAST,
+  DEFAULT_VOLUME_FIELD_DENSITY_SCALE,
   DEFAULT_VOLUME_FIELD_INTENSITY,
 } from '../../../data/defaults';
 import { syntheticVolumeFetcher } from '../../loading/fetchers/syntheticVolumeFetcher';
@@ -210,6 +211,12 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
             enabled: DEFAULT_CF4_DENSITY_ENABLED,
             intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
             contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
+            // Neutral fallback; SCFD-v2 plan Task 4 will replace this
+            // seed site with a `VOLUME_FIELD_DEFAULTS['cf4-density']`
+            // lookup (which carries the tuned value of 5.0).  Keeping
+            // the default here means the settings bag stays satisfiable
+            // today without `densityScale` being optional.
+            densityScale: DEFAULT_VOLUME_FIELD_DENSITY_SCALE,
             paletteId: cube.paletteId,
           };
         }
@@ -367,6 +374,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
               enabled: defaultEnabled,
               intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
               contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
+              // Same story as the cf4Density seed above: Task 4 owns
+              // the per-handle registry wiring; this default keeps the
+              // bag type-satisfied today.
+              densityScale: DEFAULT_VOLUME_FIELD_DENSITY_SCALE,
               paletteId: cube.paletteId,
             };
           }
