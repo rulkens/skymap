@@ -459,7 +459,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // module-level defaults (Vite `?worker` runners on this same
       // subsystem module) take over in production; tests inject
       // synchronous stubs at the test factory call site.
-      biasCorrection: createBiasCorrectionSubsystem({ getState: () => state }),
+      biasCorrection: createBiasCorrectionSubsystem({
+        getMode: () => state.settings.bias.mode,
+        getLoadedClouds: () => state.sources.clouds,
+        requestRender: () => state.subsystems.scheduler.requestRender(),
+      }),
 
       // ── You-are-here subsystem (Task R4) ─────────────────────────
       // Owns the "YOU ARE HERE" marker fade-alpha state and drives
