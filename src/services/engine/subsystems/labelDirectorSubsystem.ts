@@ -35,7 +35,7 @@
 import type { LabelRenderer, Label } from '../../gpu/renderers/labelRenderer';
 import type { MarkerLineRenderer, MarkerLine } from '../../gpu/renderers/markerLineRenderer';
 import type { ReadyFrameContext } from '../frame/frameContext';
-import type { EngineState } from '../../../@types';
+import type { Destroyable, EngineState } from '../../../@types';
 import type { LabelProducer } from './labelProducer';
 
 export type LabelDirectorSubsystem = {
@@ -45,6 +45,16 @@ export type LabelDirectorSubsystem = {
   registerProducer(producer: LabelProducer): void;
   /** Per-frame entry point — poll producers, merge, flush. */
   runFrame(state: EngineState, ctx: ReadyFrameContext): void;
+  /**
+   * Tear down the director.  No-op — the director holds renderer refs
+   * and a producers list, but the renderers' lifecycle is the engine's
+   * concern (the engine destroys them separately) and producers
+   * unregister implicitly when their owning subsystems are destroyed.
+   * Method exists so the engine's bag of subsystems can be torn down
+   * uniformly via the shared `Destroyable` shape (`engine.destroy()`
+   * iterates and calls `destroy()` on each).
+   */
+  destroy(): void;
 };
 
 export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
@@ -112,5 +122,18 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
     }
   }
 
-  return { attachRenderers, registerProducer, runFrame };
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the label director is one of
+  // the engine's ~13 teardown targets, and the shared shape lets
+  // engine.destroy() iterate uniformly across the bag.
+  const director: LabelDirectorSubsystem = {
+    attachRenderers,
+    registerProducer,
+    runFrame,
+    destroy(): void {
+      // Intentionally empty — see the type-level docstring for why.
+    },
+  };
+  director satisfies Destroyable;
+  return director;
 }

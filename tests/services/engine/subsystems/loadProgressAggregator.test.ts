@@ -36,6 +36,7 @@ import type { LoadProgressState } from '../../../../src/@types/EngineCallbacks';
 function fakeSlot(name: string): {
   slot: AssetSlot<unknown, unknown>;
   set: (s: LoadState<unknown>) => void;
+  subscriberCount: () => number;
 } {
   let cur: LoadState<unknown> = { kind: 'idle' };
   const subs = new Set<(s: LoadState<unknown>) => void>();
@@ -55,7 +56,7 @@ function fakeSlot(name: string): {
     cur = next;
     for (const fn of subs) fn(next);
   }
-  return { slot, set };
+  return { slot, set, subscriberCount: () => subs.size };
 }
 
 describe('createLoadProgressEmitter', () => {
@@ -140,5 +141,69 @@ describe('createLoadProgressEmitter', () => {
     a.set({ kind: 'loading', req: undefined, loaded: 0, total: 1000, attempt: 0 });
     a.set({ kind: 'error', req: undefined, error: new Error('x'), finalAttempt: 0 });
     expect(emit).toHaveBeenLastCalledWith(null);
+  });
+
+  /**
+   * Audit finding #15: pre-this-PR, `attachSlot(slot)` called
+   * `slot.subscribe(publish)` and discarded the unsubscriber.
+   * Subscriptions outlived `engine.destroy()`, so any slot state change
+   * after teardown still fired `publish` (which then called the emit
+   * callback, possibly closing over a stale reference).  The three
+   * tests below pin the fix: attach wires a subscriber, destroy()
+   * releases every captured handle, and destroy() is idempotent.
+   */
+  it('attachSlot wires a subscriber that fires emit on slot transition', () => {
+    const emit = vi.fn<(state: LoadProgressState | null) => void>();
+    const a = fakeSlot('a');
+    const slots = new Map<string, AssetSlot<unknown, unknown>>([[a.slot.name, a.slot]]);
+    const emitter = createLoadProgressEmitter(emit, slots);
+
+    emitter.attachSlot(a.slot);
+    expect(a.subscriberCount()).toBe(1);
+
+    a.set({ kind: 'loading', req: undefined, loaded: 0, total: 1000, attempt: 0 });
+    expect(emit).toHaveBeenCalled();
+  });
+
+  it('destroy() releases every attached subscriber', () => {
+    const emit = vi.fn<(state: LoadProgressState | null) => void>();
+    const a = fakeSlot('a');
+    const b = fakeSlot('b');
+    const slots = new Map<string, AssetSlot<unknown, unknown>>([
+      [a.slot.name, a.slot],
+      [b.slot.name, b.slot],
+    ]);
+    const emitter = createLoadProgressEmitter(emit, slots);
+
+    emitter.attachSlot(a.slot);
+    emitter.attachSlot(b.slot);
+    expect(a.subscriberCount()).toBe(1);
+    expect(b.subscriberCount()).toBe(1);
+
+    emitter.destroy();
+
+    // Both slots now have zero subscribers — the unsubscribers were
+    // called from inside destroy().
+    expect(a.subscriberCount()).toBe(0);
+    expect(b.subscriberCount()).toBe(0);
+
+    // Post-destroy transitions must not fire emit.
+    emit.mockClear();
+    a.set({ kind: 'loading', req: undefined, loaded: 0, total: 1000, attempt: 0 });
+    b.set({ kind: 'loading', req: undefined, loaded: 0, total: 1000, attempt: 0 });
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('destroy() is idempotent', () => {
+    const emit = vi.fn<(state: LoadProgressState | null) => void>();
+    const a = fakeSlot('a');
+    const slots = new Map<string, AssetSlot<unknown, unknown>>([[a.slot.name, a.slot]]);
+    const emitter = createLoadProgressEmitter(emit, slots);
+
+    emitter.attachSlot(a.slot);
+    emitter.destroy();
+
+    expect(() => emitter.destroy()).not.toThrow();
+    expect(a.subscriberCount()).toBe(0);
   });
 });

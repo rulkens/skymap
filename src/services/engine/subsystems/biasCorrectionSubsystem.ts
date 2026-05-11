@@ -86,7 +86,7 @@
  * @module
  */
 
-import type { EngineState, PointCloud } from '../../../@types';
+import type { Destroyable, PointCloud } from '../../../@types';
 import { BiasMode } from '../../../data/biasMode';
 import { Source, ALL_SOURCES } from '../../../data/sources';
 import type { ComputeSchechterRatiosInput } from '../bake/computeSchechterRatios';
@@ -118,28 +118,32 @@ export type AngularRunner = (input: ComputeAngularWeightsInput) => Promise<Float
 
 export type BiasCorrectionDeps = {
   /**
-   * Live accessor for the engine state, NOT a snapshot.  The subsystem
-   * is constructed inside the engine state literal — at that moment the
-   * literal hasn't finished being assigned to its variable, so we can't
-   * pass `state` as a value.  Same closure-deps pattern `selection` uses
-   * (see selectionSubsystem.ts module header for the rationale): the
-   * subsystem reads the LIVE state at call time, not whatever was in
-   * scope at construction.  This also matters across tier swaps —
-   * `state.sources.clouds` is mutated in place; a snapshot would freeze
-   * the state at engine-construction time.
+   * Current bias mode — read lazily on every bake decision because
+   * the user can flip modes between bakes. Replaces the old
+   * `getState().settings.bias.mode` read.
    */
-  getState: () => EngineState;
+  getMode: () => BiasMode;
+
   /**
-   * Optional override for the Schechter-ratio bake.  Defaults to a Vite
-   * `?worker` chunk runner (`defaultSchechterRunner` below); tests pass
-   * an in-process synchronous stub so they don't need Worker support.
+   * Currently-loaded source clouds, keyed by Source enum. Read
+   * lazily because the cloud map is mutated in place across tier
+   * swaps and per-source uploads. Replaces the old
+   * `getState().sources.clouds` read.
    */
+  getLoadedClouds: () => Map<Source, PointCloud>;
+
+  /**
+   * Wake the render loop. Called after every bake completes (the
+   * uploaded splice changes what the visual pass renders, so the
+   * shader needs another frame). Replaces the old
+   * `getState().subsystems.scheduler.requestRender()` reach-in.
+   */
+  requestRender: () => void;
+
+  /** Optional override for the Schechter-ratio bake (test-injected). */
   schechterRunner?: SchechterRunner;
-  /**
-   * Optional override for the HEALPix angular-weight bake.  Defaults to
-   * a Vite `?worker` chunk runner (`defaultAngularRunner` below); tests
-   * pass an in-process synchronous stub.
-   */
+
+  /** Optional override for the angular-weight bake (test-injected). */
   angularRunner?: AngularRunner;
 };
 
@@ -158,6 +162,17 @@ export type BiasCorrectionSubsystem = {
     sourcesWithSchechter: Source[];
     sourcesWithAngular: Source[];
   };
+  /**
+   * Tear down the subsystem.  Currently a no-op — bias bakes spawn
+   * per-call workers that self-terminate (`runDisposableWorker`), and
+   * there are no event listeners or persistent subscriptions to
+   * release.  The method exists for uniform iteration in
+   * `engine.destroy()` (every subsystem satisfies `Destroyable`) and
+   * acts as the placeholder for the audit-#2 follow-up: if we later
+   * track in-flight bake workers so a teardown mid-bake can abort
+   * them, the abort logic lands here without disturbing call sites.
+   */
+  destroy(): void;
 };
 
 /**
@@ -221,7 +236,7 @@ function defaultAngularRunner(input: ComputeAngularWeightsInput): Promise<Float3
 }
 
 export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCorrectionSubsystem {
-  const { getState } = deps;
+  const { getMode, getLoadedClouds, requestRender } = deps;
   const schechterRunner: SchechterRunner = deps.schechterRunner ?? defaultSchechterRunner;
   const angularRunner: AngularRunner = deps.angularRunner ?? defaultAngularRunner;
 
@@ -249,7 +264,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   /** Lazily read & memoize the current internal mode mirror. */
   function currentMode(): BiasMode {
     if (mode === null) {
-      mode = getState().settings.bias.mode;
+      mode = getMode();
     }
     return mode;
   }
@@ -257,7 +272,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   /** Snapshot every loaded `(source, cloud)` from the engine state. */
   function loadedSourceCloudPairs(): { source: Source; cloud: PointCloud }[] {
     const out: { source: Source; cloud: PointCloud }[] = [];
-    const clouds = getState().sources.clouds;
+    const clouds = getLoadedClouds();
     for (const source of ALL_SOURCES) {
       const cloud = clouds.get(source);
       if (cloud && cloud.count > 0) {
@@ -322,7 +337,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
       // is stale (a newer setMode bumped it mid-Promise.all), skip the
       // wake — the newer setMode will fire its own.
       if (myGen === generation) {
-        getState().subsystems.scheduler.requestRender();
+        requestRender();
       }
       return;
     }
@@ -330,7 +345,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     if (next === BiasMode.AngularReweight) {
       await Promise.all(pairs.map(({ source, cloud }) => bakeAngularFor(source, cloud, myGen)));
       if (myGen === generation) {
-        getState().subsystems.scheduler.requestRender();
+        requestRender();
       }
       return;
     }
@@ -383,7 +398,11 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     }
   }
 
-  return {
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the bias-correction subsystem
+  // is one of the engine's ~13 teardown targets, and the shared shape
+  // lets engine.destroy() iterate uniformly across the bag.
+  const subsystem: BiasCorrectionSubsystem = {
     attachRenderer,
     setMode,
     onSourceUploaded,
@@ -393,5 +412,10 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
       sourcesWithSchechter: Array.from(cachedSchechter.keys()),
       sourcesWithAngular: Array.from(cachedAngular.keys()),
     }),
+    destroy(): void {
+      // Intentionally empty — see the type-level docstring for why.
+    },
   };
+  subsystem satisfies Destroyable;
+  return subsystem;
 }

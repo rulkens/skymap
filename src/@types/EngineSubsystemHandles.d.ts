@@ -48,6 +48,7 @@ import type { ClickResolver } from '../services/engine/interaction/clickHandler'
 import type { InputBindings } from '../services/engine/interaction/inputBindings';
 import type { RenderScheduler } from '../services/engine/subsystems/renderScheduler';
 import type { LoadProgressEmitter } from '../services/engine/subsystems/loadProgressAggregator';
+import type { Destroyable } from './Destroyable';
 
 export type EngineSubsystemHandles = {
   thumbnails: ThumbnailSubsystem | null;
@@ -136,4 +137,22 @@ export type EngineSubsystemHandles = {
    * until the GPU init runs.
    */
   loadProgress: LoadProgressEmitter | null;
+};
+
+/**
+ * Compile-time guard: every subsystem field MUST satisfy `Destroyable`.
+ *
+ * This is an unused type alias — its only job is to fail tsc if a future
+ * subsystem is added to `EngineSubsystemHandles` without a `destroy()`
+ * method.  The mapped type strips `| null` from each field via
+ * `NonNullable<...>` (nullable fields are fine — the engine null-checks
+ * before calling destroy), then requires every non-null field to be
+ * assignable to `Destroyable`.  If any field is missing `destroy()`,
+ * the conditional resolves to `never` for that key, surfacing as a
+ * compile error here rather than as a silent leak at runtime when
+ * `engine.destroy()` walks the bag uniformly.
+ */
+type _EnforceDestroyable = {
+  [K in keyof EngineSubsystemHandles]:
+    NonNullable<EngineSubsystemHandles[K]> extends Destroyable ? true : never;
 };

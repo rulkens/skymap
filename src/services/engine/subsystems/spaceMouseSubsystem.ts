@@ -77,7 +77,7 @@
  * but keeps the wrapper for the next reconnect.
  */
 
-import type { OrbitCamera } from '../../../@types';
+import type { Destroyable, OrbitCamera } from '../../../@types';
 import { SpaceMouseInput } from '../../input/spaceMouse';
 import { applyCurve } from '../../input/spaceMouseSensitivity';
 import { applyAxesToCamera, hasAnyAxis } from '../../input/spaceMouseToCamera';
@@ -233,7 +233,11 @@ export function createSpaceMouseSubsystem(
     return spaceMouseInput;
   }
 
-  return {
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the SpaceMouse subsystem is one
+  // of the engine's ~13 teardown targets, and the shared shape lets
+  // engine.destroy() iterate uniformly across the bag.
+  const subsystem: SpaceMouseSubsystem = {
     async connect(): Promise<{ ok: boolean }> {
       const sm = ensureInput();
       const ok = await sm.connect();
@@ -283,4 +287,6 @@ export function createSpaceMouseSubsystem(
       lastFrameMs = null;
     },
   };
+  subsystem satisfies Destroyable;
+  return subsystem;
 }

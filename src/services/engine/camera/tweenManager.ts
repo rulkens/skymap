@@ -43,7 +43,7 @@
  * future caller to reach in and poke.
  */
 
-import type { OrbitCamera } from '../../../@types';
+import type { Destroyable, OrbitCamera } from '../../../@types';
 import { advanceCameraTween, type CameraTween } from '../../camera/cameraTween';
 
 export type TweenManager = {
@@ -71,6 +71,14 @@ export type TweenManager = {
    * No-op when no tween is active; returns `false`.
    */
   advance(cam: OrbitCamera, nowMs: number): boolean;
+  /**
+   * Tear down the manager.  Cancels any running tween and is otherwise
+   * inert — there are no event listeners, workers, or timers to release.
+   * Exists so the engine's bag of subsystems can be torn down uniformly
+   * via the shared `Destroyable` shape (`engine.destroy()` iterates and
+   * calls `destroy()` on each).
+   */
+  destroy(): void;
 };
 
 export function createTweenManager(): TweenManager {
@@ -79,13 +87,19 @@ export function createTweenManager(): TweenManager {
   // reach this binding.
   let currentTween: CameraTween | null = null;
 
-  return {
+  function cancel(): void {
+    currentTween = null;
+  }
+
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the tween manager is one of the
+  // engine's ~13 teardown targets, and the shared shape lets
+  // engine.destroy() iterate uniformly across the bag.
+  const manager: TweenManager = {
     start(tween: CameraTween): void {
       currentTween = tween;
     },
-    cancel(): void {
-      currentTween = null;
-    },
+    cancel,
     isActive(): boolean {
       return currentTween !== null;
     },
@@ -95,5 +109,16 @@ export function createTweenManager(): TweenManager {
       if (finished) currentTween = null;
       return finished;
     },
+    // destroy() simply funnels through cancel() — tearing down a
+    // manager whose only owned state is the single tween reference IS
+    // cancelling that tween.  Keeping `destroy` and `cancel` as
+    // separate names preserves the existing call-site vocabulary
+    // (pointerdown / SpaceMouse cancel a tween *without* destroying
+    // the manager) while wiring into the uniform teardown contract.
+    destroy(): void {
+      cancel();
+    },
   };
+  manager satisfies Destroyable;
+  return manager;
 }

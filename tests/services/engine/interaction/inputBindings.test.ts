@@ -59,7 +59,7 @@ let originalWindow: unknown;
 
 const scheduler: RenderScheduler = {
   requestRender: vi.fn(),
-  cancelRender: vi.fn(),
+  destroy: vi.fn(),
   isScheduled: () => false,
 };
 
@@ -191,7 +191,7 @@ describe('attachEngineInputs', () => {
     expect(scheduler.requestRender).toHaveBeenCalledTimes(1);
   });
 
-  it('detach() removes every listener it added', () => {
+  it('destroy() removes every listener it added', () => {
     const onPointerMove = vi.fn();
     const onResize = vi.fn();
     const bindings = attachEngineInputs({
@@ -204,11 +204,11 @@ describe('attachEngineInputs', () => {
       onEscape: () => {},
       onResize,
     });
-    // Sanity check: events fire before detach.
+    // Sanity check: events fire before destroy.
     canvas.fire('pointermove', { clientX: 1, clientY: 2 });
     expect(onPointerMove).toHaveBeenCalledTimes(1);
 
-    bindings.detach();
+    bindings.destroy();
     // Recorder lists should now be empty for both targets.
     expect(canvas.listeners).toHaveLength(0);
     expect(windowRecorder.listeners).toHaveLength(0);

@@ -46,6 +46,7 @@
 
 import { aggregateRegistry } from '../../loading/aggregateRegistry';
 import type { AssetSlot } from '../../loading/types';
+import type { Destroyable } from '../../../@types';
 import type { LoadProgressState } from '../../../@types/EngineCallbacks';
 
 /**
@@ -57,6 +58,14 @@ import type { LoadProgressState } from '../../../@types/EngineCallbacks';
 export type LoadProgressEmitter = {
   emit(): void;
   attachSlot(slot: AssetSlot<unknown, unknown>): void;
+  /**
+   * Release every subscriber attached via `attachSlot`.  Without
+   * this, slot state changes after `engine.destroy()` still fire
+   * `publish`, holding the emit callback (and every closure it
+   * captures) alive past intended lifetime — that's audit finding
+   * #15.  Idempotent: a second call walks an empty list.
+   */
+  destroy(): void;
 };
 
 /**
@@ -87,10 +96,29 @@ export function createLoadProgressEmitter(
       });
     }
   }
-  return {
+  // Capture every subscriber's unsubscribe handle so `destroy()` can
+  // release the lot.  Without this, slot state changes after engine
+  // teardown still fired `publish`, holding the emit callback (and
+  // every closure it captures) alive past intended lifetime — that's
+  // audit finding #15.  The closure-scoped array is the minimal fix:
+  // each `attachSlot` pushes the handle returned by `slot.subscribe`,
+  // `destroy()` walks the list and clears it (so a second `destroy()`
+  // is a no-op rather than a double-release).
+  const unsubscribers: Array<() => void> = [];
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the emitter is one of the
+  // engine's ~13 teardown targets, and the shared shape lets
+  // engine.destroy() iterate uniformly across the bag.
+  const emitter: LoadProgressEmitter = {
     emit: publish,
     attachSlot(slot) {
-      slot.subscribe(publish);
+      unsubscribers.push(slot.subscribe(publish));
+    },
+    destroy(): void {
+      for (const u of unsubscribers) u();
+      unsubscribers.length = 0;
     },
   };
+  emitter satisfies Destroyable;
+  return emitter;
 }

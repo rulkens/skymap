@@ -125,8 +125,9 @@ describe('EngineState type', () => {
       pointerDown: false,
     };
 
-    // Forward-declare so the bias-correction subsystem's getState
-    // closure can capture the live ref before `state` is assigned.
+    // Forward-declare so the bias-correction subsystem's narrow
+    // closures (getMode / getLoadedClouds / requestRender) can capture
+    // the live ref before `state` is assigned.
     // eslint-disable-next-line prefer-const
     let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {
@@ -163,7 +164,9 @@ describe('EngineState type', () => {
           getFamousXrefs: () => ({}),
         }),
         biasCorrection: createBiasCorrectionSubsystem({
-          getState: () => stateRef.current!,
+          getMode: () => stateRef.current!.settings.bias.mode,
+          getLoadedClouds: () => stateRef.current!.sources.clouds,
+          requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
         youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),
@@ -297,7 +300,9 @@ describe('EngineState type', () => {
           getFamousXrefs: () => ({}),
         }),
         biasCorrection: createBiasCorrectionSubsystem({
-          getState: () => stateRef.current!,
+          getMode: () => stateRef.current!.settings.bias.mode,
+          getLoadedClouds: () => stateRef.current!.sources.clouds,
+          requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
         youAreHere: createYouAreHereSubsystem(),
         labelDirector: createLabelDirectorSubsystem(),

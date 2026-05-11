@@ -34,7 +34,7 @@
 import type { Label } from '../../gpu/renderers/labelRenderer';
 import type { MarkerLine } from '../../gpu/renderers/markerLineRenderer';
 import type { ReadyFrameContext } from '../frame/frameContext';
-import type { EngineState } from '../../../@types';
+import type { Destroyable, EngineState } from '../../../@types';
 import type { Vec3, Vec4 } from '../../../@types/Vec';
 import type { LabelProducer, LabelProducerOutput } from './labelProducer';
 
@@ -53,6 +53,15 @@ export type PoiSubsystem = LabelProducer & {
   setPois(pois: readonly PointOfInterest[]): void;
   clearPois(): void;
   setCategoryVisible(category: PoiCategory, visible: boolean): void;
+  /**
+   * Tear down the subsystem.  No-op — the subsystem owns only
+   * plain-data state (pois list, visibility record); there are no
+   * listeners, timers, or workers to release.  Method exists so the
+   * engine's bag of subsystems can be torn down uniformly via the
+   * shared `Destroyable` shape (`engine.destroy()` iterates and calls
+   * `destroy()` on each).
+   */
+  destroy(): void;
 };
 
 type CategoryStyle = {
@@ -159,5 +168,20 @@ export function createPoiSubsystem(): PoiSubsystem {
     return { labels, lines, awake: false };
   }
 
-  return { id: 'pois', produceLabels, setPois, clearPois, setCategoryVisible };
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the POI subsystem is one of
+  // the engine's ~13 teardown targets, and the shared shape lets
+  // engine.destroy() iterate uniformly across the bag.
+  const subsystem: PoiSubsystem = {
+    id: 'pois',
+    produceLabels,
+    setPois,
+    clearPois,
+    setCategoryVisible,
+    destroy(): void {
+      // Intentionally empty — see the type-level docstring for why.
+    },
+  };
+  subsystem satisfies Destroyable;
+  return subsystem;
 }
