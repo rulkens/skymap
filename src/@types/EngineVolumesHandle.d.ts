@@ -35,6 +35,16 @@ export type EngineVolumesHandle = {
    * SettingsPanel as a Trim slider per cube.
    */
   setTrim: (handle: string, trim: number) => void;
+  /**
+   * Set the user-tunable HDR Exposure multiplier on the rgb
+   * contribution per ray-march step for a single field, range [1, 32].
+   * Combined with the shader's bright-end-weighted formula
+   * (highlightGain = 1 + smoothstep(0.5, 1.0, dev) * (exposure - 1))
+   * so peaks brighten (white blow-out) without washing out the
+   * mid-tone gradient.  Exposed in the SettingsPanel as an Exposure
+   * slider per cube.
+   */
+  setExposure: (handle: string, exposure: number) => void;
   /** Set the palette LUT id for a single field. */
   setPalette: (handle: string, id: ScalarFieldPaletteId) => void;
   /** Return the ordered list of currently registered field handles. */
@@ -49,5 +59,6 @@ export type EngineVolumesHandle = {
     densityScale: number;
     paletteId: ScalarFieldPaletteId;
     trim: number;
+    exposure: number;
   }>;
 };

@@ -98,6 +98,7 @@ export function createSyntheticVolumeSlots(
             densityScale: defaults.densityScale,
             paletteId: defaults.paletteId,
             trim: defaults.trim,
+            exposure: defaults.exposure,
           };
         }
         const persisted = state.settings.volumes.fields[handle]!;
@@ -111,6 +112,7 @@ export function createSyntheticVolumeSlots(
         // registry so the envelope is visually a no-op here —
         // grid corners stay visible for axis verification.
         renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
+        renderer.setExposure(handle, persisted.exposure);
         renderer.setTrim(handle, persisted.trim);
         // Fire the same React-facing callback that engineHandle's
         // addVolumeField fires.  Without this, the SettingsPanel

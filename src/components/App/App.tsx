@@ -659,6 +659,19 @@ export function App(): React.ReactElement {
                 );
                 handleRef.current?.volumes.setTrim(handle, trim);
               },
+              onVolumeFieldExposureChange: (handle: string, exposure: number) => {
+                // Same optimistic-update pattern as the trim handler
+                // above: local React state first for input responsiveness,
+                // then forward to the engine which mirrors the value into
+                // state.settings.volumes.fields[handle].exposure and writes
+                // the per-cube uniform.
+                setVolumeFields(
+                  volumeFields.map((f) =>
+                    f.handle === handle ? { ...f, exposure } : f,
+                  ),
+                );
+                handleRef.current?.volumes.setExposure(handle, exposure);
+              },
               onVolumeFieldPaletteChange: (handle: string, paletteId: ScalarFieldPaletteId) => {
                 setVolumeFields(
                   volumeFields.map((f) => (f.handle === handle ? { ...f, paletteId } : f)),

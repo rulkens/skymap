@@ -41,6 +41,7 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
           densityScale: defaults.densityScale,
           paletteId: defaults.paletteId,
           trim: defaults.trim,
+          exposure: defaults.exposure,
         };
       }
       const persisted = state.settings.volumes.fields[handle]!;
@@ -51,7 +52,7 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
       renderer.setDensityScale(handle, persisted.densityScale);
       renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
       renderer.setContrastCenter(handle, defaults.contrastCenter);
-      renderer.setExposure(handle, defaults.exposure);
+      renderer.setExposure(handle, persisted.exposure);
       renderer.setTrim(handle, persisted.trim);
       cb.volumes?.onFieldsChanged?.();
       state.subsystems.scheduler.requestRender();

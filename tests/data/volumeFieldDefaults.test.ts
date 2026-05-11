@@ -125,4 +125,13 @@ describe('volumeFieldDefaults', () => {
     }
     expect(FALLBACK_VOLUME_DEFAULTS.trim).toBeCloseTo(0.0, 6);
   });
+
+  it('exposure boost: MCPM = 8 (peaks blow to white), others = 1 (no change)', () => {
+    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.exposure).toBeCloseTo(8.0, 6);
+    expect(VOLUME_FIELD_DEFAULTS['cf4-density']!.exposure).toBeCloseTo(1.0, 6);
+    for (const handle of ['debug-gaussian', 'debug-cartesian', 'debug-spherical']) {
+      expect(VOLUME_FIELD_DEFAULTS[handle]!.exposure).toBeCloseTo(1.0, 6);
+    }
+    expect(FALLBACK_VOLUME_DEFAULTS.exposure).toBeCloseTo(1.0, 6);
+  });
 });

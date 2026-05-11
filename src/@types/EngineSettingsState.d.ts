@@ -111,6 +111,16 @@ export type VolumeFieldSettings = {
    * `setVolumeFieldTrim`.
    */
   trim: number;
+  /**
+   * User-tunable HDR exposure multiplier on the rgb contribution per
+   * ray-march step.  Combined with the shader's bright-end-weighted
+   * formula (highlightGain = 1 + smoothstep(0.5, 1.0, dev) * (exposure - 1))
+   * so mid-tones stay LDR-bounded while peaks blow out past the LUT's
+   * brightest entry.  Seeded at registration from
+   * `VOLUME_FIELD_DEFAULTS[handle].exposure`; mutated by
+   * `setVolumeFieldExposure`.
+   */
+  exposure: number;
 };
 
 export type EngineSettingsState = {

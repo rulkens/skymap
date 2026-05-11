@@ -994,6 +994,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         densityScale: defaults.densityScale,
         paletteId: defaults.paletteId,
         trim: defaults.trim,
+        exposure: defaults.exposure,
       };
     }
     // Forward the current per-field tunables into the renderer so the
@@ -1005,6 +1006,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.scalarVolumeRenderer?.setDensityScale(fieldHandle, persisted.densityScale);
     state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldHandle, persisted.paletteId);
     state.gpu.scalarVolumeRenderer?.setTrim(fieldHandle, persisted.trim);
+    state.gpu.scalarVolumeRenderer?.setExposure(fieldHandle, persisted.exposure);
     cb.volumes?.onFieldsChanged?.();
     state.subsystems.scheduler.requestRender();
   }
@@ -1056,6 +1058,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.scheduler.requestRender();
   }
 
+  function setVolumeFieldExposure(fieldHandle: string, exposure: number): void {
+    if (state.settings.volumes.fields[fieldHandle]) {
+      state.settings.volumes.fields[fieldHandle].exposure = exposure;
+    }
+    state.gpu.scalarVolumeRenderer?.setExposure(fieldHandle, exposure);
+    state.subsystems.scheduler.requestRender();
+  }
+
   function setVolumeFieldPalette(
     fieldHandle: string,
     id: ScalarFieldPaletteId,
@@ -1080,6 +1090,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     densityScale: number;
     paletteId: ScalarFieldPaletteId;
     trim: number;
+    exposure: number;
   }> {
     const handles = state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
     return handles.map((h) => {
@@ -1094,6 +1105,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         densityScale: field?.densityScale ?? defaults.densityScale,
         paletteId: field?.paletteId ?? DEFAULT_VOLUME_PALETTE_ID,
         trim: field?.trim ?? defaults.trim,
+        exposure: field?.exposure ?? defaults.exposure,
       };
     });
   }
@@ -1253,6 +1265,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setContrast: setVolumeFieldContrast,
       setDensityScale: setVolumeFieldDensityScale,
       setTrim: setVolumeFieldTrim,
+      setExposure: setVolumeFieldExposure,
       setPalette: setVolumeFieldPalette,
       list: listVolumeFields,
       getState: getVolumeFieldsState,

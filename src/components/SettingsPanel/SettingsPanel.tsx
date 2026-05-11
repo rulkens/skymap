@@ -325,6 +325,14 @@ type Props = {
    */
   onVolumeFieldTrimChange?: (handle: string, trim: number) => void;
   /**
+   * Fired when the user moves an individual field's exposure slider.
+   * `exposure` is a per-cube HDR multiplier on the rgb contribution
+   * per ray-march step, range [1, 32].  Combined with the shader's
+   * bright-end-weighted formula so peaks brighten (white blow-out)
+   * while mid-tones stay LDR-bounded.
+   */
+  onVolumeFieldExposureChange?: (handle: string, exposure: number) => void;
+  /**
    * Fired when the user picks a different palette from a field's dropdown.
    * Optional — when absent the per-field palette dropdown is hidden but
    * the rest of the row (enable checkbox + intensity slider) still
@@ -377,6 +385,12 @@ export type VolumeFieldRowData = {
    * the per-cube Trim slider.  See `VolumeFieldSettings.trim`.
    */
   trim: number;
+  /**
+   * HDR exposure multiplier on rgb contribution per ray-march step,
+   * range [1, 32].  Drives the per-cube Exposure slider.  See
+   * `VolumeFieldSettings.exposure`.
+   */
+  exposure: number;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
@@ -450,6 +464,7 @@ export function SettingsPanel({
   onVolumeFieldContrastChange,
   onVolumeFieldDensityScaleChange,
   onVolumeFieldTrimChange,
+  onVolumeFieldExposureChange,
   onVolumeFieldPaletteChange,
 }: Props): ReactNode {
   // Tier selector: rendered only when both pieces wired by the parent.  Same
@@ -762,11 +777,13 @@ export function SettingsPanel({
                     contrast={field.contrast}
                     densityScale={field.densityScale}
                     trim={field.trim}
+                    exposure={field.exposure}
                     paletteId={field.paletteId}
                     onEnabledChange={onVolumeFieldEnabledChange!}
                     onIntensityChange={onVolumeFieldIntensityChange!}
                     onContrastChange={onVolumeFieldContrastChange!}
                     onTrimChange={onVolumeFieldTrimChange}
+                    onExposureChange={onVolumeFieldExposureChange}
                     onDensityScaleChange={onVolumeFieldDensityScaleChange}
                     onPaletteChange={onVolumeFieldPaletteChange}
                   />

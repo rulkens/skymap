@@ -76,6 +76,17 @@ const TRIM_MAX = 0.95;
 const TRIM_STEP = 0.01;
 
 /**
+ * Exposure slider bounds: HDR brightness multiplier on the rgb
+ * contribution per ray-march step.  Range [1, 32] — 1 is no boost
+ * (identity), 4-8 is moderate HDR (peaks brighten, mid-tones
+ * unchanged), 16-32 produces aggressive white blow-out at peaks.
+ * Step 0.5 because the perceptual difference per integer is large.
+ */
+const EXPOSURE_MIN = 1;
+const EXPOSURE_MAX = 32;
+const EXPOSURE_STEP = 0.5;
+
+/**
  * Density (per-cube `densityScale`) slider bounds.  Registry defaults
  * sit in the [4, 20] range (mcpm = 4; debug-cartesian = 4;
  * debug-gaussian = 10; cf4-density = 20), so the slider needs to span
@@ -99,11 +110,13 @@ export type VolumeFieldRowProps = {
   contrast: number;
   densityScale: number;
   trim: number;
+  exposure: number;
   paletteId: ScalarFieldPaletteId;
   onEnabledChange: (handle: string, enabled: boolean) => void;
   onIntensityChange: (handle: string, intensity: number) => void;
   onContrastChange: (handle: string, contrast: number) => void;
   onTrimChange?: (handle: string, trim: number) => void;
+  onExposureChange?: (handle: string, exposure: number) => void;
   /**
    * Optional — when omitted, the Density slider still renders but its
    * onChange becomes a no-op.  Letting the slider render even without
@@ -178,11 +191,13 @@ export function VolumeFieldRow({
   contrast,
   densityScale,
   trim,
+  exposure,
   paletteId,
   onEnabledChange,
   onIntensityChange,
   onContrastChange,
   onTrimChange,
+  onExposureChange,
   onDensityScaleChange,
   onPaletteChange,
 }: VolumeFieldRowProps): ReactNode {
@@ -242,6 +257,18 @@ export function VolumeFieldRow({
         ariaLabel={`${label} trim`}
         title="Trim — low-end cutoff that hard-suppresses voxels below the threshold (Polyphorm-style trim_density in normalised LUT space)."
         onChange={(v) => onTrimChange?.(handle, v)}
+      />
+      <LabelledSlider
+        label="Exposure"
+        value={exposure}
+        min={EXPOSURE_MIN}
+        max={EXPOSURE_MAX}
+        step={EXPOSURE_STEP}
+        disabled={!enabled}
+        formatValue={(v) => v.toFixed(1)}
+        ariaLabel={`${label} exposure`}
+        title="Exposure — HDR multiplier on the rgb contribution per ray-march step; weighted to brighten only peaks so mid-tones stay LDR-bounded."
+        onChange={(v) => onExposureChange?.(handle, v)}
       />
       <LabelledSlider
         label="Density"
