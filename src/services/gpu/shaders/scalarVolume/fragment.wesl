@@ -67,6 +67,16 @@ struct VolumeUniforms {
   // sentinel so their corner test patterns stay visible.
   envelopeInner: f32,
   envelopeOuter: f32,
+  // Per-cube HDR exposure multiplier on the rgb contribution per
+  // ray-march step.  Values > 1 push accumulated color past the LUT's
+  // brightest entry, producing the "peaks blow out to white" effect
+  // once the downstream tonemap pass compresses the rgba16float
+  // accumulator back to display gamut.  Decoupled from alpha so a
+  // higher exposure brightens the cube without making it more
+  // opaque (which would just hide structure behind the front faces).
+  // Default 1.0 = pre-HDR behaviour exactly preserved; 3-5 is the
+  // useful range for "fiery cosmic-web" looks.
+  exposure: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: VolumeUniforms;
@@ -283,7 +293,13 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     let envelope = sphericalEnvelope(p, u.envelopeInner, u.envelopeOuter);
     let alpha = lut.a * u.intensity * u.densityScale * stepLength
               * visibility * envelope;
-    let contrib = vec4<f32>(lut.rgb * alpha, alpha);
+    // RGB scaled by exposure, alpha is NOT — the two are decoupled so
+    // an HDR-bright cube doesn't also become opaque (which would hide
+    // structure behind the front faces).  rgba16float target accepts
+    // values > 1; the tonemap pass downstream rolls them off to
+    // display gamut, producing the "blow out to white" effect at peak
+    // density voxels.
+    let contrib = vec4<f32>(lut.rgb * alpha * u.exposure, alpha);
     // Front-to-back over-compositing within this field.
     accum = accum + (1.0 - accum.a) * contrib;
     if (accum.a > SATURATION_THRESHOLD) { break; }

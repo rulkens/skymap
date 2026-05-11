@@ -50,6 +50,7 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
       renderer.setDensityScale(handle, persisted.densityScale);
       renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
       renderer.setContrastCenter(handle, defaults.contrastCenter);
+      renderer.setExposure(handle, defaults.exposure);
       cb.volumes?.onFieldsChanged?.();
       state.subsystems.scheduler.requestRender();
     },

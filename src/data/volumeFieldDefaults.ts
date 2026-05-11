@@ -104,6 +104,21 @@ export type VolumeFieldDefaults = {
     inner: number;
     outer: number;
   };
+  /**
+   * Per-cube HDR exposure multiplier on the rgb contribution per
+   * ray-march step.  1.0 preserves the pre-HDR behaviour exactly;
+   * values > 1 push the accumulated color past the LUT's brightest
+   * entry, producing the "peaks blow out to white" effect after the
+   * downstream tonemap rolls the rgba16float accumulator back to
+   * display gamut.
+   *
+   * Per-cube static (not a user-tunable slider) because it's a
+   * per-dataset aesthetic decision rather than a tuning knob — MCPM
+   * with its log-normalised heavy tail wants 4-6 to surface the
+   * fiery slime-mould look; CF-4 keeps 1.0 because its divergent
+   * coolwarm is already calibrated against the cosmic mean.
+   */
+  exposure: number;
   /** Optional human-readable label override (renderer falls back to handle). */
   label?: string;
 };
@@ -144,6 +159,10 @@ export const FALLBACK_VOLUME_DEFAULTS: VolumeFieldDefaults = {
   contrastCenter: 0.5,
   densityScale: 1.0,
   envelope: NO_SPATIAL_ENVELOPE,
+  // 1.0 = pre-HDR behaviour for untuned fields.  Same rationale as
+  // contrast=1.0 above: never silently boost a field the registry
+  // author hasn't opted into.
+  exposure: 1.0,
 };
 
 /**
@@ -180,6 +199,11 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // reconstruction — Laniakea, the Local Void, and the Great
     // Attractor all sit well inside the inscribed sphere.
     envelope: { inner: 0.9, outer: 1.0 },
+    // 1.0 preserves the pre-HDR behaviour exactly — CF-4's divergent
+    // coolwarm is already calibrated against the cosmic-mean midpoint,
+    // and an HDR boost would wash out the careful balance between
+    // overdensity (warm) and underdensity (cool) sides of the palette.
+    exposure: 1.0,
     label: 'CF-4 DM density',
   },
   'debug-gaussian': {
@@ -200,6 +224,7 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // No envelope: the synthetic fixtures exist for axis / scale /
     // origin verification.  Corner visibility is a feature, not a bug.
     envelope: NO_SPATIAL_ENVELOPE,
+    exposure: 1.0,
     label: 'Gaussian (debug)',
   },
   'debug-cartesian': {
@@ -213,6 +238,7 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     densityScale: 4.0,
     // Grid corners are part of the test; keep them visible.
     envelope: NO_SPATIAL_ENVELOPE,
+    exposure: 1.0,
     label: 'Cartesian grid (debug)',
   },
   'debug-spherical': {
@@ -228,6 +254,7 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // crop the outermost shell asymmetrically — undesirable for a
     // verification fixture.
     envelope: NO_SPATIAL_ENVELOPE,
+    exposure: 1.0,
     label: 'Spherical grid (debug)',
   },
   'mcpm': {
@@ -261,6 +288,15 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // SDSS volume of interest; envelope corner-cropping costs nothing
     // visually meaningful.
     envelope: { inner: 0.85, outer: 1.05 },
+    // 4.0 = HDR-ish boost on the rgb contribution.  MCPM's
+    // log-normalised heavy tail produces few but very-high-density
+    // peaks; an exposure boost pushes those past the inferno LUT's
+    // brightest entry (pale yellow ~252,255,164) into "blow out to
+    // white" territory after the downstream tonemap rolls the
+    // rgba16float accumulator back to display gamut.  Tuning knob if
+    // peaks read as too dim or too washed-out: 2-3 = subtle, 4-6 =
+    // the "fiery cosmic web" look, 8+ = dominantly white.
+    exposure: 4.0,
     label: 'MCPM Cosmic Web',
   },
 };

@@ -44,9 +44,11 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
 // + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
-// + 4 (envelopeOuter) = 244.  The WGSL struct contains mat4x4 (alignment 16),
-// so total must be a multiple of 16 — pad up to 256.  The trailing 12 bytes
-// stay zero; they're reserved for future per-field uniforms.
+// + 4 (envelopeOuter) + 4 (exposure) = 248.  The WGSL struct contains
+// mat4x4 (alignment 16), so total must be a multiple of 16 — pad up to
+// 256.  The trailing 8 bytes stay zero; reserved for future per-field
+// uniforms (next addition can land at scratch[62] without bumping
+// UNIFORM_BYTES).
 const UNIFORM_BYTES = 256;
 
 const CUBE_CORNERS = new Float32Array([
@@ -195,6 +197,16 @@ type FieldEntry = {
    */
   envelopeInner: number;
   envelopeOuter: number;
+  /**
+   * Per-cube HDR exposure multiplier on the rgb contribution.  Values
+   * > 1 push accumulated color past the LUT's brightest entry; the
+   * downstream tonemap pass rolls the rgba16float accumulator back to
+   * display gamut, producing the "peaks blow out to white" effect.
+   * Decoupled from alpha so brightening doesn't also occlude.
+   * Per-cube static (set once at registration via setExposure from
+   * the slot commit); not a user-tunable today.
+   */
+  exposure: number;
   modelMatrix: mat4;
   invModelMatrix: mat4;
   volumeTexture: GPUTexture;
@@ -259,6 +271,14 @@ export type ScalarVolumeRenderer = {
    * once at slot-commit time with the per-handle registry value.
    */
   setContrastCenter(handle: ScalarFieldHandle, center: number): void;
+  /**
+   * Per-cube HDR exposure multiplier on the rgb contribution.  See
+   * the `exposure` field on `FieldEntry` for the rationale.  Negative
+   * or NaN values clamp to 0 (silent overlay); the upper bound is
+   * permissive (32) because the downstream tonemap caps display
+   * brightness anyway.  No-op when the handle is unknown.
+   */
+  setExposure(handle: ScalarFieldHandle, value: number): void;
   /**
    * Replace the palette LUT for a single field.  Rewrites the field's
    * existing 1D LUT texture in place via `writeTexture`; the bind group
@@ -457,6 +477,10 @@ export function createScalarVolumeRenderer(
         // version of this sentinel.
         envelopeInner: 2.0,
         envelopeOuter: 2.0,
+        // 1.0 = pre-HDR behaviour exactly preserved.  Slot commit
+        // overwrites with the per-handle registry value via
+        // `setExposure` immediately after `addField` returns.
+        exposure: 1.0,
         modelMatrix,
         invModelMatrix,
         volumeTexture,
@@ -496,6 +520,16 @@ export function createScalarVolumeRenderer(
       // default (0.5) — never propagate non-finite values to the GPU.
       const c = Number.isFinite(center) ? center : 0.5;
       entry.contrastCenter = Math.max(0, Math.min(1, c));
+    },
+    setExposure(handle, value) {
+      const entry = fields.get(handle);
+      if (!entry) return;
+      // Clamp negative / NaN to 0 (silent overlay).  Upper bound 32 is
+      // generous; the tonemap downstream rolls off display brightness
+      // before the user notices — values past ~10 mostly just push
+      // more voxels into the saturation flat.
+      const v = Number.isFinite(value) ? value : 1.0;
+      entry.exposure = Math.max(0, Math.min(32, v));
     },
     setEnvelope(handle, inner, outer) {
       const entry = fields.get(handle);
@@ -569,7 +603,8 @@ export function createScalarVolumeRenderer(
       // 232..235  contrastCenter   (f32)
       // 236..239  envelopeInner    (f32)
       // 240..243  envelopeOuter    (f32)
-      // 244..255  _pad             (12 bytes; struct rounded up to 16-byte multiple)
+      // 244..247  exposure         (f32)
+      // 248..255  _pad             (8 bytes; struct rounded up to 16-byte multiple)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       for (const e of fields.values()) {
         if (!e.enabled || e.intensity <= 0) continue;
@@ -589,6 +624,7 @@ export function createScalarVolumeRenderer(
         scratch[58] = e.contrastCenter;
         scratch[59] = e.envelopeInner;
         scratch[60] = e.envelopeOuter;
+        scratch[61] = e.exposure;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         pass.setBindGroup(0, e.bindGroup);
         pass.drawIndexed(CUBE_INDICES.length);
