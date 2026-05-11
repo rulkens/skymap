@@ -278,15 +278,19 @@ describe('pointSpritesPass.draw', () => {
     pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, settings, deps);
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    // Arg [5] is the packed selection u32.
+    // Selection now lives on arg[3].selectedPacked after the
+    // PointDrawSettings refactor — the 16 trailing positional scalars
+    // collapsed into a single named-field object.
     const expected = ((Source.SDSS << 27) | 42) >>> 0;
-    expect(drawSpy.mock.calls[0]![5]).toBe(expected);
+    const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
+    expect(drawSettings.selectedPacked).toBe(expected);
   });
 
   it('translates null selection to the 0xFFFFFFFF sentinel', () => {
     const ctx = makeCtx();
     pointSpritesPass.draw(PASS_STUB, ctx, STATE_STUB, makeSettings({ selected: null }), makeDeps());
     const drawSpy = ctx.renderer.draw as ReturnType<typeof vi.fn>;
-    expect(drawSpy.mock.calls[0]![5]).toBe(0xffffffff >>> 0);
+    const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
+    expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
   });
 });

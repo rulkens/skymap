@@ -136,7 +136,7 @@ const SLOTS_PER_POINT = 12;
  * 48-byte stride and the same attribute table, so the two pipelines stay
  * compatible with this single vertex buffer layout.
  */
-const POINT_STRIDE = SLOTS_PER_POINT * 4; // 48 bytes
+export const POINT_STRIDE = SLOTS_PER_POINT * 4; // 48 bytes
 
 /**
  * Byte offset of the `kPerZ` slot inside one per-instance record.
@@ -230,6 +230,51 @@ const SCHECHTER_RATIO_BYTE_OFFSET = 40;
  * it resolves — same lazy semantics as Schechter.
  */
 const ANGULAR_WEIGHT_BYTE_OFFSET = 44;
+
+/**
+ * Vertex buffer attribute table — single source of truth shared with
+ * `PickRenderer`.
+ *
+ * Pre-cleanup, `PickRenderer` re-declared this table inline with magic
+ * numbers (`0, 12, 16, 20, …, 44`) guarded only by a comment
+ * (`// must exactly match PointRenderer's layout`).  A missed edit
+ * silently failed at WebGPU draw-time pipeline validation, or worse,
+ * read garbage attributes.  Exporting the array and importing it
+ * verbatim into `PickRenderer` makes drift structurally impossible —
+ * editing one offset propagates everywhere automatically.
+ *
+ * Slot semantics (see the per-offset JSDoc above for the full rationale):
+ *
+ *   0  position (vec3<f32>)
+ *   1  magnitude (f32)
+ *   2  colorIndex (f32)
+ *   3  kPerZ (f32) — per-row K-correction; vertex shader × redshift z
+ *   4  axisRatio (f32) — b/a; SIGN BIT = isFallback flag
+ *   5  positionAngleDeg (f32) — east-of-north major-axis angle, [0, 180)
+ *   6  diameterKpc (f32) — per-galaxy physical disk diameter
+ *   7  vMaxWeight (f32) — Malmquist mode 2 (1/V_max) multiplier
+ *   8  schechterRatio (f32) — Malmquist mode 3 (Schechter) ratio
+ *   9  angularDensityWeight (f32) — Malmquist mode 4 (HEALPix) re-weight
+ *
+ * The right-hand sides reference the named byte-offset constants above
+ * so the JSDoc on each constant stays the canonical documentation for
+ * its slot.  Position / magnitude / colorIndex use literal offsets
+ * (0 / 12 / 16) because they're never read by name elsewhere — only
+ * the offsets that the bake or shader-side code needs to address by
+ * name get named constants.
+ */
+export const POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
+  { shaderLocation: 0, offset: 0, format: 'float32x3' },
+  { shaderLocation: 1, offset: 12, format: 'float32' },
+  { shaderLocation: 2, offset: 16, format: 'float32' },
+  { shaderLocation: 3, offset: K_PER_Z_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 4, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 5, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 6, offset: DIAMETER_KPC_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 7, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 8, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 9, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
+];
 
 // ─── Uniform buffer byte offsets (per-pass partial writes) ──────────────────
 
@@ -564,6 +609,57 @@ type LoadedSource = {
 // ─── PointRenderer ────────────────────────────────────────────────────────────
 
 /**
+ * Per-call draw parameters for `PointRenderer.draw`.
+ *
+ * Pre-cleanup, `draw()` took these as 16 trailing positional arguments
+ * (`pointSizePx`, `brightness`, …, `pxFadeEnd`).  Grouping them into a
+ * single record decouples the renderer's contract from the order each
+ * argument was added in: callers fill named fields, new knobs are
+ * added at the type level with one edit, and TypeScript's structural
+ * matching catches a missing field at compile time instead of a silent
+ * shifted-argument bug at draw time.
+ *
+ * Field semantics are unchanged from the pre-cleanup positional list;
+ * see each field's inline doc for details.  The block deliberately
+ * mirrors `RenderFrameSettings`'s naming (renderFrame.ts) so the
+ * engine-side pass code can pass `{ …settings, … }` without renames.
+ */
+export type PointDrawSettings = {
+  /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
+  pointSizePx: number;
+  /** Global brightness multiplier in [0, 1]. */
+  brightness: number;
+  /** Selected galaxy as `(source << 27) | localIdx`, or `0xFFFFFFFF` for "no selection". */
+  selectedPacked: number;
+  /** Bitmask of `Source` values to draw (see `data/sources.ts`). */
+  visibleSourceMask: number;
+  /** Camera position in world Mpc (`orbitCamera.position`), used by the vertex shader for apparent-size sizing. */
+  camPosWorld: Readonly<[number, number, number]>;
+  /** Pixels-per-radian for the current viewport + FOV: `viewportPx[1] / (2 * tan(fovYRad / 2))`. */
+  pxPerRad: number;
+  /** When true, fallback-orientation fragments are tinted magenta in the visual shader.  Selection / pick paths unaffected. */
+  highlightFallback: boolean;
+  /** When true, fallback-orientation fragments are `discard`ed entirely. */
+  realOnlyMode: boolean;
+  /** Malmquist-bias correction selector (`data/biasMode.ts`).  0 = no correction; next four fields ignored. */
+  biasMode: number;
+  /** Volume-limit threshold for `biasMode == 1`.  Galaxies fainter than this are discarded in the vertex stage. */
+  absMagLimit: number;
+  /** Reserved for `biasMode == 2` (1/V_max). */
+  apparentMagLimit: number;
+  /** Initial Schechter M* — per-source override applies in the draw loop. */
+  schechterMStar: number;
+  /** Initial Schechter α — per-source override applies in the draw loop. */
+  schechterAlpha: number;
+  /** Whether the points pass applies depth-based alpha fade. */
+  depthFadeEnabled: boolean;
+  /** Procedural-disk crossfade band — pixel threshold below which points render full-alpha. */
+  pxFadeStart: number;
+  /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */
+  pxFadeEnd: number;
+};
+
+/**
  * Public surface of the point renderer.
  *
  * Mirrors the methods the pre-Spec-F.3 `class PointRenderer` exposed.
@@ -636,22 +732,7 @@ export type PointRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
-    pointSizePx: number,
-    brightness: number,
-    selectedPacked: number,
-    visibleSourceMask: number,
-    camPosWorld: Readonly<[number, number, number]>,
-    pxPerRad: number,
-    highlightFallback: boolean,
-    realOnlyMode: boolean,
-    biasMode: number,
-    absMagLimit: number,
-    apparentMagLimit: number,
-    schechterMStar: number,
-    schechterAlpha: number,
-    depthFadeEnabled: boolean,
-    pxFadeStart: number,
-    pxFadeEnd: number,
+    settings: PointDrawSettings,
   ): void;
   /** Whether any loaded source is still ramping up its fade-in opacity. */
   isFading(): boolean;
@@ -708,40 +789,13 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
         {
           arrayStride: POINT_STRIDE,
           stepMode: 'instance',
-          attributes: [
-            // position (vec3<f32>) — offset 0 bytes
-            { shaderLocation: 0, offset: 0, format: 'float32x3' },
-            // magnitude (f32) — offset 12 bytes
-            { shaderLocation: 1, offset: 12, format: 'float32' },
-            // colorIndex (f32) — offset 16 bytes
-            { shaderLocation: 2, offset: 16, format: 'float32' },
-            // kPerZ (f32) — offset 20 bytes.  Per-row K-correction
-            // coefficient (see colourIndex.ts).
-            { shaderLocation: 3, offset: K_PER_Z_BYTE_OFFSET, format: 'float32' },
-            // axisRatio (f32) — offset 24 bytes.  Galaxy disk b/a in
-            // (0, 1] with the SIGN BIT carrying the fallback flag —
-            // the shader recovers the mask shape via `abs(axisRatio)`
-            // and the flag via `axisRatio < 0.0`.
-            { shaderLocation: 4, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
-            // positionAngleDeg (f32) — offset 28 bytes.  East-of-north
-            // position angle of the major axis in degrees, [0, 180).
-            { shaderLocation: 5, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
-            // diameterKpc (f32) — offset 32 bytes.  Per-galaxy physical
-            // diameter in kiloparsecs.  Vertex shader uses it to size
-            // the billboard's apparent radius.
-            { shaderLocation: 6, offset: DIAMETER_KPC_BYTE_OFFSET, format: 'float32' },
-            // vMaxWeight (f32) — offset 36 bytes.  Per-galaxy 1/V_max
-            // alpha multiplier; gated on `u.biasMode == 2u` via
-            // `select(1.0, vMaxWeight, …)`.
-            { shaderLocation: 7, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
-            // schechterRatio (f32) — offset 40 bytes.  Per-galaxy
-            // Schechter density-correction ratio; gated on
-            // `u.biasMode == 3u`.
-            { shaderLocation: 8, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
-            // angularDensityWeight (f32) — offset 44 bytes.  Per-galaxy
-            // HEALPix angular re-weight; gated on `u.biasMode == 4u`.
-            { shaderLocation: 9, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
-          ],
+          // Spread the readonly shared table into a mutable array — the
+          // `@webgpu/types` `GPUVertexBufferLayout.attributes` field is
+          // typed `GPUVertexAttribute[]` (mutable), so a `readonly` const
+          // can't be passed directly.  We deliberately keep the export
+          // `readonly` (callers must not mutate the canonical table), and
+          // pay the one-time spread at pipeline-construction time.
+          attributes: [...POINT_VERTEX_ATTRIBUTES],
         },
       ],
     },
@@ -1202,99 +1256,38 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
    * Write the per-frame uniforms (viewProj, viewport, …) once, then issue one
    * instanced draw call per visible source.
    *
-   * @param pass               Active render pass encoder.
-   * @param viewProj           Column-major 4×4 view-projection matrix.
-   * @param viewportPx         Physical canvas size [w, h] in pixels.
-   * @param pointSizePx        Far-field billboard floor radius in pixels.
-   *                           Galaxies whose apparent angular radius is
-   *                           smaller than this stay rendered at this size
-   *                           so they remain visible as faint dots; nearby
-   *                           galaxies grow past it to their real disc size.
-   * @param brightness         Global brightness multiplier in [0, 1].
-   * @param selectedPacked     Selected galaxy as `(source << 27) | localIdx`,
-   *                           or `0xFFFFFFFF` for "no selection".
-   * @param visibleSourceMask  Bitmask of `Source` values to draw (see `data/sources.ts`).
-   * @param camPosWorld        Camera position in world Mpc (from
-   *                           `orbitCamera.position`). Used by the vertex
-   *                           shader to compute per-galaxy distance for
-   *                           apparent-size sizing.
-   * @param pxPerRad           Pixels-per-radian for the current viewport +
-   *                           camera FOV, computed CPU-side as
-   *                           `viewportPx[1] / (2 * tan(fovYRad / 2))`.
-   *                           Engine pre-computes this once per frame and
-   *                           hands it down so we don't repeat the `tan`
-   *                           call inside the per-vertex shader.
-   * @param highlightFallback  When true, fragments belonging to fallback-
-   *                           orientation rows are tinted magenta in the
-   *                           visual fragment shader.  Selection /
-   *                           pick paths are unaffected.
-   * @param realOnlyMode       When true, fragments belonging to fallback
-   *                           rows are `discard`ed entirely.  Lets the
-   *                           user see ONLY galaxies for which we have
-   *                           measured (b/a, PA) photometric orientation.
-   * @param biasMode           Malmquist-bias correction selector.  Numeric
-   *                           values come from `data/biasMode.ts` and must
-   *                           match the WGSL literals (`1u` = volume-limit,
-   *                           `2u` = 1/V_max, `3u` = Schechter).  When 0
-   *                           (the default), the shader applies no
-   *                           correction and the next four fields are
-   *                           ignored.
-   * @param absMagLimit        Threshold for `biasMode == 1` (volume-limit):
-   *                           galaxies with absolute magnitude *fainter*
-   *                           than this (numerically larger M) are
-   *                           discarded in the vertex stage by emitting a
-   *                           degenerate clip-space position.
-   * @param apparentMagLimit   Reserved for Task 3 (1/V_max weighting).
-   *                           Pass 0 until that task lands; the shader
-   *                           ignores it while `biasMode != 2u`.
-   * @param schechterMStar     Initial Schechter M* value written into the
-   *                           global uniform slot.  Task 4 of the
-   *                           Malmquist-bias plan overrides this with the
-   *                           per-source value in the per-source draw
-   *                           loop, so this initial value only matters
-   *                           before any source has been written (i.e.
-   *                           never observable in practice).  Engine
-   *                           passes 0 — fine.
-   * @param schechterAlpha     Initial Schechter α value.  Same per-source
-   *                           override as `schechterMStar`.
+   * @param pass        Active render pass encoder.
+   * @param viewProj    Column-major 4×4 view-projection matrix.
+   * @param viewportPx  Physical canvas size [w, h] in pixels.
+   * @param settings    Per-draw scalar inputs.  See `PointDrawSettings` for the
+   *                    full field list — every field flows into the global
+   *                    uniform buffer this method writes once, before iterating
+   *                    visible sources.
    */
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
-    pointSizePx: number,
-    brightness: number,
-    selectedPacked: number,
-    visibleSourceMask: number,
-    camPosWorld: Readonly<[number, number, number]>,
-    pxPerRad: number,
-    highlightFallback: boolean,
-    realOnlyMode: boolean,
-    biasMode: number,
-    absMagLimit: number,
-    apparentMagLimit: number,
-    schechterMStar: number,
-    schechterAlpha: number,
-    depthFadeEnabled: boolean,
-    /**
-     * Procedural-disk crossfade-OUT thresholds (Task 8 of the
-     * procedural-disk-impostor plan).  The points-pass fragment shader
-     * fades alpha to zero across the apparent-pixel-size band
-     * `[pxFadeStart, pxFadeEnd]` so the procedural-disk pass — which
-     * fades IN over the same band — can take over without a "double-
-     * bright donut" of overlapping passes.  Both ends are pixel
-     * thresholds in the same units as the vertex stage's `sizePx`
-     * (the apparent angular radius of the galaxy projected to screen).
-     *
-     * The engine should pass `PROCEDURAL_DISK_FADE_START_PX` and
-     * `PROCEDURAL_DISK_FADE_END_PX` from `./engine/thumbnailSubsystem`
-     * so both passes share a single source of truth — drift between
-     * them would re-introduce the double-bright donut on one side and
-     * a hard gap on the other.
-     */
-    pxFadeStart: number,
-    pxFadeEnd: number,
+    settings: PointDrawSettings,
   ): void {
+    const {
+      pointSizePx,
+      brightness,
+      selectedPacked,
+      visibleSourceMask,
+      camPosWorld,
+      pxPerRad,
+      highlightFallback,
+      realOnlyMode,
+      biasMode,
+      absMagLimit,
+      apparentMagLimit,
+      schechterMStar,
+      schechterAlpha,
+      depthFadeEnabled,
+      pxFadeStart,
+      pxFadeEnd,
+    } = settings;
     // Nothing to draw if no source has been uploaded yet.
     if (clouds.size === 0) return;
 

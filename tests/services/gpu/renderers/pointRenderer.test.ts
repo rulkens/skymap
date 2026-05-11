@@ -686,3 +686,75 @@ describe('PointRenderer.destroy', () => {
     expect(() => renderer.destroy()).not.toThrow();
   });
 });
+
+describe('PointRenderer.draw — PointDrawSettings shape', () => {
+  it('accepts a single PointDrawSettings record', async () => {
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm');
+    await renderer.upload(Source.SDSS, makeCloud(10));
+
+    // Stub the encoder.  draw() must call setPipeline + setBindGroup + draw
+    // once (one source loaded, one passing visibility bit).
+    const calls: string[] = [];
+    const pass = {
+      setPipeline: () => calls.push('setPipeline'),
+      setBindGroup: () => calls.push('setBindGroup'),
+      setVertexBuffer: () => calls.push('setVertexBuffer'),
+      draw: () => calls.push('draw'),
+    } as unknown as GPURenderPassEncoder;
+
+    const viewProj = new Float32Array(16) as unknown as Parameters<PointRenderer['draw']>[1];
+
+    renderer.draw(pass, viewProj, [800, 600], {
+      pointSizePx: 1,
+      brightness: 1,
+      selectedPacked: 0xffffffff >>> 0,
+      visibleSourceMask: 0xffffffff,
+      camPosWorld: [0, 0, 0],
+      pxPerRad: 1,
+      highlightFallback: false,
+      realOnlyMode: false,
+      biasMode: 0,
+      absMagLimit: 0,
+      apparentMagLimit: 0,
+      schechterMStar: 0,
+      schechterAlpha: 0,
+      depthFadeEnabled: false,
+      pxFadeStart: 0,
+      pxFadeEnd: 0,
+    });
+
+    expect(calls).toContain('setPipeline');
+    expect(calls).toContain('draw');
+  });
+});
+
+describe('POINT_VERTEX_ATTRIBUTES — shared layout export', () => {
+  it('has 10 attributes with the expected shader locations and formats', async () => {
+    const {
+      POINT_VERTEX_ATTRIBUTES,
+      POINT_STRIDE,
+    } = await import('../../../../src/services/gpu/renderers/pointRenderer');
+
+    expect(POINT_STRIDE).toBe(48);
+    expect(POINT_VERTEX_ATTRIBUTES).toHaveLength(10);
+
+    // Slot 0 is the only vec3; slots 1-9 are scalar f32s.  Anyone editing
+    // pointRenderer's table must update this expectation deliberately,
+    // which is the point — a silent shape change here would break the
+    // shared invariant with pickRenderer.
+    expect(POINT_VERTEX_ATTRIBUTES[0]).toEqual({
+      shaderLocation: 0,
+      offset: 0,
+      format: 'float32x3',
+    });
+
+    const expectedOffsets = [12, 16, 20, 24, 28, 32, 36, 40, 44];
+    for (let i = 1; i <= 9; i++) {
+      expect(POINT_VERTEX_ATTRIBUTES[i]).toEqual({
+        shaderLocation: i,
+        offset: expectedOffsets[i - 1],
+        format: 'float32',
+      });
+    }
+  });
+});

@@ -364,31 +364,33 @@ describe('renderFrame', () => {
     const draw = fx.pointRenderer.draw as ReturnType<typeof vi.fn>;
     expect(draw).toHaveBeenCalledTimes(1);
     const args = draw.mock.calls[0]!;
-    // [pass, viewProj, viewportPx, pointSizePx, brightness, selectedPacked,
-    //  visibleSourceMask, camPosWorld, pxPerRad, highlightFallback,
-    //  realOnlyMode, biasMode, absMagLimit, apparentMagLimit,
-    //  schechterMStar, schechterAlpha, depthFadeEnabled]
+    // Signature: (pass, viewProj, viewportPx, settings: PointDrawSettings).
+    // The 16 trailing scalars from the legacy positional shape now live as
+    // named fields on a single object — the per-frame uniform buffer write
+    // order inside `pointRenderer.draw` is unchanged, so the assertions
+    // here are an object-by-key reshape of the old positional list.
     expect(args[0]).toBe(fx.env.pass);
     expect(args[1]).toBe(fx.viewProj);
     expect(args[2]).toEqual([fx.canvasWidth, fx.canvasHeight]);
-    expect(args[3]).toBe(fx.input.settings.pointSizePx);
-    expect(args[4]).toBe(fx.input.settings.brightness);
+    const drawSettings = args[3] as Record<string, unknown>;
+    expect(drawSettings.pointSizePx).toBe(fx.input.settings.pointSizePx);
+    expect(drawSettings.brightness).toBe(fx.input.settings.brightness);
     // selected null → 0xffffffff packed sentinel
-    expect(args[5]).toBe(0xffffffff >>> 0);
-    expect(args[6]).toBe(fx.input.settings.visibleSourceMask);
+    expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
+    expect(drawSettings.visibleSourceMask).toBe(fx.input.settings.visibleSourceMask);
     // camPos is a 3-tuple snapshot from cam.position
-    expect(Array.from(args[7] as ArrayLike<number>)).toEqual([0, 0, 5]);
+    expect(Array.from(drawSettings.camPosWorld as ArrayLike<number>)).toEqual([0, 0, 5]);
     // pxPerRad = h / (2 · tan(fovY/2))
     const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
-    expect(args[8]).toBeCloseTo(expectedPxPerRad, 6);
-    expect(args[9]).toBe(fx.input.settings.highlightFallback);
-    expect(args[10]).toBe(fx.input.settings.realOnlyMode);
-    expect(args[11]).toBe(fx.input.settings.biasMode);
-    expect(args[12]).toBe(fx.input.settings.absMagLimit);
-    expect(args[13]).toBe(fx.input.settings.apparentMagLimit);
-    expect(args[14]).toBe(fx.input.settings.schechterMStar);
-    expect(args[15]).toBe(fx.input.settings.schechterAlpha);
-    expect(args[16]).toBe(fx.input.settings.depthFadeEnabled);
+    expect(drawSettings.pxPerRad as number).toBeCloseTo(expectedPxPerRad, 6);
+    expect(drawSettings.highlightFallback).toBe(fx.input.settings.highlightFallback);
+    expect(drawSettings.realOnlyMode).toBe(fx.input.settings.realOnlyMode);
+    expect(drawSettings.biasMode).toBe(fx.input.settings.biasMode);
+    expect(drawSettings.absMagLimit).toBe(fx.input.settings.absMagLimit);
+    expect(drawSettings.apparentMagLimit).toBe(fx.input.settings.apparentMagLimit);
+    expect(drawSettings.schechterMStar).toBe(fx.input.settings.schechterMStar);
+    expect(drawSettings.schechterAlpha).toBe(fx.input.settings.schechterAlpha);
+    expect(drawSettings.depthFadeEnabled).toBe(fx.input.settings.depthFadeEnabled);
   });
 
   it('packs (source, localIdx) into the selectedPacked u32 sent to pointRenderer.draw', () => {
@@ -397,7 +399,8 @@ describe('renderFrame', () => {
     renderFrame(fx2.input);
     const draw = fx2.pointRenderer.draw as ReturnType<typeof vi.fn>;
     const expected = ((Source.SDSS << 27) | 42) >>> 0;
-    expect(draw.mock.calls[0]![5]).toBe(expected);
+    const drawSettings = draw.mock.calls[0]![3] as Record<string, unknown>;
+    expect(drawSettings.selectedPacked).toBe(expected);
   });
 
   it('calls thumbnails.runFrame between pointRenderer.draw and pass.end', () => {
