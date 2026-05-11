@@ -65,6 +65,10 @@ import type { Renderer } from '../../../@types';
 import type { PointRenderer } from './pointRenderer';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import {
+  SELECTION_NONE_SENTINEL,
+  unpackPick,
+} from '../../../data/selectionEncoding';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -510,8 +514,8 @@ export function createPickRenderer(
     // offset is the packed (source, localIdx) u32, not an instance
     // index — see PointRenderer.toGlobalIdx for the encoding.
     const SELECTED_PACKED_OFFSET = 80;
-    const NONE_SENTINEL = new Uint32Array([0xffffffff]);
-    device.queue.writeBuffer(sharedUniformBuffer, SELECTED_PACKED_OFFSET, NONE_SENTINEL);
+    const noneSentinel = new Uint32Array([SELECTION_NONE_SENTINEL]);
+    device.queue.writeBuffer(sharedUniformBuffer, SELECTED_PACKED_OFFSET, noneSentinel);
 
     // ── Boost the floor point size for easier hover/click ────────────────
     //
@@ -666,10 +670,9 @@ export function createPickRenderer(
       // localIdx; `>>> 27` recovers the source code.  Both are pure
       // bitwise ops, so the decode is one shift + one mask + one
       // subtract.
-      if (raw === 0) return null;
-      const source = (raw >>> 27) as Source;
-      const localIdx = (raw & 0x07ffffff) - 1;
-      return { source, localIdx };
+      const decoded = unpackPick(raw);
+      if (decoded === null) return null;
+      return { source: decoded.source as Source, localIdx: decoded.localIdx };
     } finally {
       // Always clear inFlight, even if an exception is thrown.
       inFlight = false;

@@ -32,6 +32,7 @@
 // auto-derived layout objects differ.
 
 import package::points::io::VSOut;
+import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 
 // ─── pick fragment stage ──────────────────────────────────────────────
 //
@@ -70,5 +71,5 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   //
   // The g/b/a channels are unused — we only read the r channel back
   // on the JS side. Filling them with 0 keeps the output well-defined.
-  return vec4<u32>(in.instanceIdx + 1u, 0u, 0u, 0u);
+  return vec4<u32>(in.instanceIdx + PICK_SENTINEL_OFFSET, 0u, 0u, 0u);
 }
