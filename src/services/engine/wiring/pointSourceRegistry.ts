@@ -123,7 +123,6 @@ import {
   type PointCloudReq,
 } from '../../loading/fetchers/pointCloudFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
-import { isEngineReady } from '../helpers/engineReady';
 
 /**
  * Lowercase short name for a Source — `sdss`, `2mrs`, `glade`,

@@ -34,23 +34,24 @@ import type { EngineState } from '../../../../src/@types';
  */
 function makeState(): EngineState {
   return {
+    // Post-H5 nested-only settings shape.
     settings: {
-      autoRotate: false,
-      pointSizePx: 2,
-      brightness: 0.5,
-      galaxyTexturesEnabled: false,
-      milkyWayEnabled: false,
-      filamentsEnabled: false,
-      filamentIntensity: 1,
-      highlightFallback: false,
-      realOnlyMode: false,
-      depthFadeEnabled: false,
-      exposure: 1,
-      toneMapCurve: 'linear',
+      points: {
+        sizePx: 2,
+        brightness: 0.5,
+        depthFade: false,
+        highlightFallback: false,
+        realOnly: false,
+      },
+      tonemap: { exposure: 1, curve: 'linear' },
+      camera: { autoRotate: false },
+      bias: { mode: 'off', absMagLimit: -19 },
+      thumbnails: { enabled: false },
+      milkyWay: { enabled: false },
+      filaments: { enabled: false, intensity: 1 },
+      volumes: { masterEnabled: false, fields: {} },
     },
     bias: {
-      mode: 'off',
-      absMagLimit: -19,
       apparentMagLimit: 0,
       schechterMStar: 0,
       schechterAlpha: 0,

@@ -213,8 +213,8 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         // user-tuned values (future persistence) override the seed.
         const defaults = getVolumeFieldDefaults(handle);
         renderer.addField(handle, cube);
-        if (!state.settings.volumeFields[handle]) {
-          state.settings.volumeFields[handle] = {
+        if (!state.settings.volumes.fields[handle]) {
+          state.settings.volumes.fields[handle] = {
             enabled: DEFAULT_CF4_DENSITY_ENABLED,
             intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
             contrast: defaults.contrast,
@@ -222,7 +222,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
             paletteId: defaults.paletteId,
           };
         }
-        const persisted = state.settings.volumeFields[handle]!;
+        const persisted = state.settings.volumes.fields[handle]!;
         renderer.setIntensity(handle, persisted.intensity);
         renderer.setEnabled(handle, persisted.enabled);
         renderer.setContrast(handle, persisted.contrast);
@@ -383,8 +383,8 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
           // Seed the per-field settings entry with defaults if not
           // already present — mirrors the guard in `addVolumeField`
           // so re-registering preserves any previously-tuned values.
-          if (!state.settings.volumeFields[handle]) {
-            state.settings.volumeFields[handle] = {
+          if (!state.settings.volumes.fields[handle]) {
+            state.settings.volumes.fields[handle] = {
               enabled: defaultEnabled,
               intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
               contrast: defaults.contrast,
@@ -392,7 +392,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
               paletteId: defaults.paletteId,
             };
           }
-          const persisted = state.settings.volumeFields[handle]!;
+          const persisted = state.settings.volumes.fields[handle]!;
           renderer.setIntensity(handle, persisted.intensity);
           renderer.setEnabled(handle, persisted.enabled);
           renderer.setContrast(handle, persisted.contrast);

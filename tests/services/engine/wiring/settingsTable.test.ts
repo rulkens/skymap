@@ -4,8 +4,8 @@
  * The 13 "boring" public-handle setters on `EngineHandle`
  * (`setPointSize`, `setBrightness`, …) all share the same shape:
  *
- *   1. Mutate one field on `state.settings.*` (or `state.bias.*`).
- *   2. Optionally fire an echo callback with the (post-clamp) value.
+ *   1. Mutate one field on `state.settings.<cluster>.<leaf>`.
+ *   2. Optionally fire a nested echo callback with the (post-clamp) value.
  *   3. Call `requestRender()` so the next frame picks up the change.
  *
  * `buildSettersFromTable` reifies that shape as a declarative descriptor
@@ -38,31 +38,13 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 
 /**
  * Build a deeply-mutable test fixture for the engine state slices the
- * table touches.  We keep the rest of `EngineState` as `{} as never`
- * style stubs because the builder only ever follows `path` tuples that
- * end inside `state.settings` or `state.bias`.
+ * table touches.  We keep the rest of `EngineState` as stubs because the
+ * builder only ever follows `path` tuples that end inside
+ * `state.settings.<cluster>`.
  */
 function makeState(): Pick<EngineState, 'settings' | 'bias'> {
   return {
     settings: {
-      pointSizePx: 2.5,
-      brightness: 1.0,
-      autoRotate: false,
-      galaxyTexturesEnabled: true,
-      milkyWayEnabled: true,
-      filamentsEnabled: false,
-      filamentIntensity: 0.5,
-      volumesEnabled: false,
-      volumeFields: {},
-      highlightFallback: true,
-      realOnlyMode: false,
-      depthFadeEnabled: true,
-      exposure: 1.0,
-      toneMapCurve: ToneMapCurve.Reinhard,
-      // Nested sub-bag mirror (Task 2 of H5 namespace restructure).
-      // Same values as the flat fields above.  The settingsTable
-      // builder still reads/writes the flat shape in this commit;
-      // Task 5 will dual-write to both.
       points: {
         sizePx: 2.5,
         brightness: 1.0,
@@ -79,8 +61,6 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
       volumes: { masterEnabled: false, fields: {} },
     },
     bias: {
-      mode: BiasMode.None,
-      absMagLimit: -19,
       apparentMagLimit: 0,
       schechterMStar: 0,
       schechterAlpha: 0,
@@ -121,9 +101,8 @@ describe('settingsTable', () => {
   describe('buildSettersFromTable', () => {
     it('mutates state, fires the nested echo callback, and requests a render', () => {
       const state = makeState();
-      // H5 task 11: callbacks live at their nested sub-bag addresses
-      // (`points.onSizeChange`, `points.onBrightnessChange`).  The flat
-      // siblings were deleted; only the namespaced shape remains.
+      // Callbacks live at their nested sub-bag addresses
+      // (`points.onSizeChange`, `points.onBrightnessChange`).
       const onSizeChange = vi.fn();
       const onBrightnessChange = vi.fn();
       const cb: Partial<EngineCallbacks> = {
@@ -138,12 +117,12 @@ describe('settingsTable', () => {
       );
 
       setters.setPointSize(4.2);
-      expect(state.settings.pointSizePx).toBe(4.2);
+      expect(state.settings.points.sizePx).toBe(4.2);
       expect(onSizeChange).toHaveBeenCalledExactlyOnceWith(4.2);
       expect(requestRender).toHaveBeenCalledOnce();
 
       setters.setBrightness(2.0);
-      expect(state.settings.brightness).toBe(2.0);
+      expect(state.settings.points.brightness).toBe(2.0);
       expect(onBrightnessChange).toHaveBeenCalledExactlyOnceWith(2.0);
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
@@ -167,19 +146,19 @@ describe('settingsTable', () => {
 
       // Above the cap.
       setters.setExposure(1e9);
-      expect(state.settings.exposure).toBe(16);
+      expect(state.settings.tonemap.exposure).toBe(16);
       expect(onExposureChange).toHaveBeenLastCalledWith(16);
 
       // Below the floor.
       setters.setExposure(-1);
-      expect(state.settings.exposure).toBe(0.05);
+      expect(state.settings.tonemap.exposure).toBe(0.05);
       expect(onExposureChange).toHaveBeenLastCalledWith(0.05);
 
       // Filament intensity clamps without an echo callback.
       setters.setFilamentIntensity(2);
-      expect(state.settings.filamentIntensity).toBe(1);
+      expect(state.settings.filaments.intensity).toBe(1);
       setters.setFilamentIntensity(-3);
-      expect(state.settings.filamentIntensity).toBe(0);
+      expect(state.settings.filaments.intensity).toBe(0);
     });
 
     it('tolerates a missing echo callback (optional-chaining contract)', () => {
@@ -199,13 +178,13 @@ describe('settingsTable', () => {
       );
 
       expect(() => setters.setFilamentsEnabled(true)).not.toThrow();
-      expect(state.settings.filamentsEnabled).toBe(true);
+      expect(state.settings.filaments.enabled).toBe(true);
       expect(requestRender).toHaveBeenCalledOnce();
 
       // Same tolerance for setters whose callback is "declared" via the
       // descriptor but happens to be undefined on the cb bag.
       expect(() => setters.setBrightness(0.7)).not.toThrow();
-      expect(state.settings.brightness).toBe(0.7);
+      expect(state.settings.points.brightness).toBe(0.7);
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
   });

@@ -18,13 +18,29 @@
  * the seed-callbacks and render-frame helpers already accept named
  * bags rather than the whole engine state.
  *
+ * ### Shape (post-H5)
+ *
+ * Every settings field lives under one of eight named clusters.  The
+ * clusters mirror EngineHandle's sub-handle namespaces 1:1 — a setter
+ * on `handle.points` writes into `state.settings.points`, a setter on
+ * `handle.tonemap` writes into `state.settings.tonemap`, etc.  This
+ * shape makes the engine's per-frame snapshot and the React-facing
+ * setters trivially derivable from each other.
+ *
+ * Prior to H5 (2026-05-11) this type carried ~14 flat fields at the
+ * root in addition to the cluster sub-bags; settingsTable wrote to
+ * both, and consumers read from whichever they were wired to.  Task
+ * 12 of the H5 plan deleted the flat half once every reader had
+ * migrated.
+ *
  * ### Mutation contract
  *
- * Every field is mutated in place by the public-handle setters at the
- * bottom of `engine.ts` (`setBrightness`, `setPointSize`, etc.) and
- * read inside the per-frame loop and the `renderFrame` dispatch.  The
- * type is intentionally NOT `Readonly<>` — see the smoke tests in
- * `tests/@types/engineState.test.ts` for the contract assertion.
+ * Every leaf field is mutated in place by the public-handle setters in
+ * `engine.ts` (forwarded via `boringSetters` constructed from
+ * `settingsTable.ts`) and read inside the per-frame loop and the
+ * `renderFrame` dispatch.  The type is intentionally NOT `Readonly<>` —
+ * see the smoke tests in `tests/@types/engineState.test.ts` for the
+ * contract assertion.
  *
  * ### Initial values
  *
@@ -41,9 +57,9 @@ import type { ScalarFieldPaletteId } from './ScalarCube';
 /**
  * Per-field runtime controls for one registered scalar-volume field.
  *
- * Stored in `EngineSettingsState.volumeFields` keyed by the same handle
- * string passed to `addVolumeField` / `removeVolumeField`.  The engine
- * seeds these at registration time (via `DEFAULT_VOLUME_FIELD_INTENSITY`)
+ * Stored in `EngineSettingsState.volumes.fields` keyed by the same
+ * handle string passed to `addVolumeField` / `removeVolumeField`.  The
+ * engine seeds these at registration time (via `DEFAULT_VOLUME_FIELD_INTENSITY`)
  * and keeps them in sync with every `setVolumeFieldEnabled` /
  * `setVolumeFieldIntensity` call, so the SettingsPanel can read the
  * authoritative per-field state without polling the GPU handle.
@@ -89,94 +105,9 @@ export type VolumeFieldSettings = {
 };
 
 export type EngineSettingsState = {
-  pointSizePx: number;
-  brightness: number;
-  autoRotate: boolean;
-  galaxyTexturesEnabled: boolean;
-  milkyWayEnabled: boolean;
   /**
-   * Whether the cosmic-web filament-skeleton overlay is rendered.  The
-   * underlying `filaments.bin` is an optional asset (built by the
-   * DisPerSE pipeline via `npm run build-filaments`); when missing,
-   * the renderer never receives an upload and toggling this flag is a
-   * silent no-op.  Default OFF — see `DEFAULT_FILAMENTS_ENABLED` in
-   * `data/defaults.ts` for the rationale.
-   */
-  filamentsEnabled: boolean;
-  /**
-   * Whether the 3D scalar-field volume overlay is rendered.  Multiple
-   * field types are supported (CF-4 dark-matter, MCPM reionization,
-   * synthetic test fixtures, …); this is the master gate — when false,
-   * `scalarVolumePass.enabled` short-circuits before consulting the
-   * renderer, so all cubes are skipped at zero GPU cost.
-   *
-   * Default ON.  Individual fields also have per-handle `enabled` and
-   * `intensity` controls on `ScalarVolumeRenderer`; this flag is the
-   * coarser user-facing toggle ("hide all volumes").
-   */
-  volumesEnabled: boolean;
-  /**
-   * Per-handle settings for every registered scalar-volume field.
-   *
-   * Keys are the handle strings passed to `addVolumeField`; values are
-   * `VolumeFieldSettings` objects seeded at registration time and mutated
-   * by `setVolumeFieldEnabled` / `setVolumeFieldIntensity`.  Entries are
-   * added by `addVolumeField` and removed by `removeVolumeField`, so
-   * this Record always mirrors the renderer's active field set.
-   *
-   * Empty at engine startup (`{}`).  The SettingsPanel reads this bag to
-   * render per-field sliders without reaching through to the GPU handle.
-   */
-  volumeFields: Record<string, VolumeFieldSettings>;
-  /**
-   * Filament-overlay intensity scale, in [0, 1].  1.0 = unchanged shader
-   * output; lower values dim the cosmic-web overlay against the bright
-   * HDR catalogue.  See `DEFAULT_FILAMENT_INTENSITY`.
-   */
-  filamentIntensity: number;
-  highlightFallback: boolean;
-  realOnlyMode: boolean;
-  depthFadeEnabled: boolean;
-  exposure: number;
-  toneMapCurve: ToneMapCurve;
-
-  /**
-   * ### Nested sub-bag mirror (Task 2 of H5 namespace restructure)
-   *
-   * Below this point we expose the *same* settings reorganised by
-   * concern: `points.*`, `tonemap.*`, `camera.*`, `bias.*`, etc.  This
-   * dual-shape is intentional and transitional.
-   *
-   * **Why both shapes exist for now:** The 30-ish flat fields above
-   * accreted organically as features landed.  By Task 11 they will be
-   * gone, replaced entirely by the namespaced sub-bags — which makes
-   * setter signatures, snapshot diffs, and the SettingsPanel rows all
-   * map 1-to-1 onto the engine's mental model.  But there are dozens
-   * of read sites across renderer wiring, the per-frame loop and
-   * tests; flipping them in a single commit would be a 600-line diff
-   * that's impossible to bisect.  Coexistence lets each consumer
-   * migrate one PR at a time: write to both, read from either, then
-   * once every reader has moved we delete the flat fields.
-   *
-   * **What's NOT here yet:** `state.bias.mode` / `state.bias.absMagLimit`
-   * still live on the top-level `EngineBiasState` (see its own type
-   * file — we explicitly did NOT shrink it in this commit).  The dual
-   * write to both `state.bias.mode` and `state.settings.bias.mode`
-   * lands in Task 5; the cleanup that finally removes the duplicate
-   * lands in Task 11.
-   *
-   * The fields below are required (not `?:` optional) because the
-   * engine populates every one of them at startup from the same
-   * `DEFAULT_*` constants the flat fields use — there's no codepath
-   * where the sub-bag is absent.  Marking them required catches
-   * "forgot to seed it" bugs at compile time.
-   */
-
-  /**
-   * Point-billboard rendering controls.  Mirrors `pointSizePx`,
-   * `brightness`, `depthFadeEnabled`, `highlightFallback`, `realOnlyMode`
-   * — every flat field whose effect lands in `points.wgsl` or the
-   * per-instance attribute bake.
+   * Point-billboard rendering controls — every setting that influences
+   * `points.wgsl` or the per-instance attribute bake.
    */
   points: {
     sizePx: number;
@@ -187,9 +118,8 @@ export type EngineSettingsState = {
   };
 
   /**
-   * HDR → LDR tone-mapping controls.  Mirrors `exposure` and
-   * `toneMapCurve` — both consumed by the post-process pass and
-   * neither tied to any individual draw call.
+   * HDR → LDR tone-mapping controls.  Consumed by the post-process pass
+   * and not tied to any individual draw call.
    */
   tonemap: {
     exposure: number;
@@ -198,16 +128,14 @@ export type EngineSettingsState = {
 
   /**
    * Camera-orbit behaviour controls.  Currently just `autoRotate`;
-   * future tween / damping knobs would also live here rather than
-   * polluting the flat root.
+   * future tween / damping knobs would also live here.
    */
   camera: {
     autoRotate: boolean;
   };
 
   /**
-   * Luminosity-bias correction inputs.  Mirrors the user-tunable
-   * subset of `EngineBiasState` (`mode`, `absMagLimit`).  The
+   * Luminosity-bias correction inputs — the user-tunable subset.  The
    * bake-derived fields (`apparentMagLimit`, `schechterMStar`,
    * `schechterAlpha`) stay on `state.bias` — they're outputs of the
    * worker bake, not user-facing settings, so they don't belong in
@@ -219,27 +147,25 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Galaxy-thumbnail overlay master toggle.  Mirrors
-   * `galaxyTexturesEnabled` — the name change is deliberate: the
-   * underlying feature is "per-galaxy thumbnail quads on close
-   * approach", and `thumbnails.enabled` reads more cleanly at call
-   * sites than `galaxyTexturesEnabled`.
+   * Galaxy-thumbnail overlay master toggle.  The underlying feature is
+   * "per-galaxy thumbnail quads on close approach"; `thumbnails.enabled`
+   * reads more cleanly at call sites than the old `galaxyTexturesEnabled`.
    */
   thumbnails: {
     enabled: boolean;
   };
 
   /**
-   * Milky-Way disk overlay master toggle.  Mirrors `milkyWayEnabled`.
+   * Milky-Way disk overlay master toggle.
    */
   milkyWay: {
     enabled: boolean;
   };
 
   /**
-   * Filament-skeleton overlay controls.  Mirrors `filamentsEnabled`
-   * and `filamentIntensity` — paired here because the intensity
-   * slider is meaningless when the master toggle is off.
+   * Filament-skeleton overlay controls.  Master toggle + intensity scale
+   * paired because the intensity slider is meaningless when the master
+   * toggle is off.
    */
   filaments: {
     enabled: boolean;
@@ -247,10 +173,11 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Scalar-volume overlay controls.  `masterEnabled` mirrors the flat
-   * `volumesEnabled` (renamed for clarity — the field is the master
-   * gate, not a per-cube switch).  `fields` mirrors `volumeFields`:
-   * the per-handle settings record populated by `addVolumeField`.
+   * Scalar-volume overlay controls.  `masterEnabled` is the master gate
+   * (when false, `scalarVolumePass.enabled` short-circuits before
+   * consulting the renderer at zero GPU cost).  `fields` is the
+   * per-handle settings record populated by `addVolumeField` and
+   * emptied by `removeVolumeField` — empty `{}` at engine startup.
    */
   volumes: {
     masterEnabled: boolean;

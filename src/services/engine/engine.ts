@@ -97,6 +97,13 @@ import {
 } from '../../data/defaults';
 import type { LodMode, PointCloud, PointInfo } from '../../@types';
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
+import type { BiasMode } from '../../data/biasMode';
+import type { ScalarCube, ScalarFieldPaletteId } from '../../@types/ScalarCube';
+import type { Tier } from '../../@types/Tier';
+import type {
+  FamousMetaEntry,
+  FamousXrefMap,
+} from '../loading/fetchers/famousMetaFetcher';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
@@ -168,12 +175,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //                    source of truth shared with App.tsx so the
   //                    panel doesn't flash a stale value before the
   //                    first echo callback fires).
-  //   - `bias`       → Malmquist-bias correction tuning (mode + four
-  //                    threshold/Schechter parameters; the latter
-  //                    three stay 0 until the shader's mode-2/3/4
-  //                    branches activate via the `setBiasMode` lazy
-  //                    bake forwarded to
-  //                    `state.subsystems.biasCorrection.setMode`).
+  //   - `bias`       → Malmquist-bias bake outputs (apparentMagLimit +
+  //                    two Schechter parameters; all three stay 0 until
+  //                    the shader's mode-2/3/4 branches activate via the
+  //                    `setBiasMode` lazy bake forwarded to
+  //                    `state.subsystems.biasCorrection.setMode`).  The
+  //                    user-facing knobs (mode + absMagLimit) live on
+  //                    `state.settings.bias`.
   //   - `sources`    → loaded `PointCloud`s + visibility bitmask +
   //                    LOD mode + the optional famous-galaxy sidecars.
   //   - `picking`    → hover / click / drag mutables (latest CSS-pixel
@@ -247,32 +255,15 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   const lastReportedFps: { current: number | null } = { current: null };
 
   const state: EngineState = {
+    // ── Settings — the user-facing SettingsPanel sub-bags ──────────
+    //
+    // After H5 (2026-05-11) every settings field lives under a named
+    // cluster.  The defaults flow through unchanged from
+    // `data/defaults.ts`; what changed is the shape — each cluster
+    // groups what conceptually goes together (point billboard knobs
+    // under `points`, HDR controls under `tonemap`, etc.).  See
+    // `EngineSettingsState.d.ts` for the type-level map.
     settings: {
-      pointSizePx: DEFAULT_POINT_SIZE_PX,
-      brightness: DEFAULT_BRIGHTNESS,
-      autoRotate: DEFAULT_AUTO_ROTATE,
-      galaxyTexturesEnabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
-      milkyWayEnabled: DEFAULT_MILKY_WAY_ENABLED,
-      filamentsEnabled: DEFAULT_FILAMENTS_ENABLED,
-      filamentIntensity: DEFAULT_FILAMENT_INTENSITY,
-      volumesEnabled: DEFAULT_VOLUMES_ENABLED,
-      // Starts empty; populated by addVolumeField / cleared by removeVolumeField.
-      // The SettingsPanel reads this bag to render per-field intensity sliders
-      // without going through the GPU handle.
-      volumeFields: {},
-      highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
-      realOnlyMode: DEFAULT_REAL_ONLY_MODE,
-      depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
-      exposure: DEFAULT_EXPOSURE,
-      toneMapCurve: DEFAULT_TONE_MAP_CURVE,
-      // ── Task 2 of H5 namespace restructure: nested sub-bags ───────
-      // Seeded from the SAME defaults as the flat fields above.  Both
-      // shapes coexist until consumer-side migration is complete (Task
-      // 11 deletes the flat fields).  We do NOT introduce a "single
-      // source of truth" via a getter alias here — that would mean
-      // tests can't write to both shapes independently, and the dual-
-      // write pattern in Task 5 explicitly relies on each shape being
-      // its own mutable slot.
       points: {
         sizePx: DEFAULT_POINT_SIZE_PX,
         brightness: DEFAULT_BRIGHTNESS,
@@ -289,7 +280,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       // Bias's user-tunable subset.  The bake-derived fields
       // (apparentMagLimit / schechterMStar / schechterAlpha) stay on
-      // `state.bias` — they're worker outputs, not settings.
+      // `state.bias` — they're worker outputs, not settings.  Why -19
+      // as the volume-limited default?  It's roughly the absolute
+      // magnitude where the SDSS spectroscopic main sample is
+      // volume-complete out to the survey's flux limit — bright enough
+      // that almost every catalog galaxy meeting it has a measured
+      // spectrum, dim enough that we still see plenty of structure.
       bias: {
         mode: DEFAULT_BIAS_MODE,
         absMagLimit: DEFAULT_ABS_MAG_LIMIT,
@@ -306,20 +302,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       },
       volumes: {
         masterEnabled: DEFAULT_VOLUMES_ENABLED,
+        // Starts empty; populated by addVolumeField / cleared by
+        // removeVolumeField.  SettingsPanel reads this map to render
+        // per-field intensity sliders without going through the GPU
+        // handle.
         fields: {},
       },
     },
     bias: {
-      // Why -19 as the volume-limited default?  It's roughly the
-      // absolute magnitude where the SDSS spectroscopic main sample
-      // is volume-complete out to the survey's flux limit — bright
-      // enough that almost every catalog galaxy meeting it has a
-      // measured spectrum, dim enough that we still see plenty of
-      // structure.
-      mode: DEFAULT_BIAS_MODE,
-      absMagLimit: DEFAULT_ABS_MAG_LIMIT,
-      // Sentinels overwritten before the shader's mode-2/3/4 branches
-      // are reachable; see `setBiasMode` for the lazy worker bake.
+      // Bake-only sentinels — overwritten before the shader's
+      // mode-2/3/4 branches are reachable.  See `setBiasMode` for the
+      // lazy worker bake.  The user-tunable mode + absMagLimit live
+      // on `state.settings.bias`.
       apparentMagLimit: 0,
       schechterMStar: 0,
       schechterAlpha: 0,
@@ -661,24 +655,473 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   // ── Public handle ─────────────────────────────────────────────────────────
   //
-  // H5 (task 6): we build the "boring" table-driven setters into a local
-  // first so the sub-handle bag below can forward to them by name without
-  // re-implementing any clamp / dual-write logic.  The same object is then
-  // spread into the legacy flat surface so consumers wired to either shape
-  // observe identical behaviour during the transition.
+  // The thirteen table-driven setters land in `boringSetters` and the
+  // bespoke ones (async bakes, subsystem forwards, multi-field
+  // mutations) live as local `function`s below.  The handle literal at
+  // the end stitches both into the eleven sub-handle clusters that make
+  // up the public surface.
   const boringSetters = buildSettersFromTable(state, cb, () =>
     state.subsystems.scheduler.requestRender(),
-  ) satisfies Pick<EngineHandle, SettingsTableKey>;
+  ) satisfies Record<SettingsTableKey, (value: unknown) => void>;
 
-  const handle: EngineHandle = {
-    // ── Sub-handles (H5 task 6) ──────────────────────────────────────────────
+  // ── Bespoke methods (don't fit the settingsTable shape) ────────────
+  //
+  // Each function below owns work the descriptor table can't express:
+  // async worker bakes (`setBiasMode`), per-source asset-slot reloads
+  // (`setTier`), subsystem forwards (`connectSpaceMouse`,
+  // `setSpaceMouseSensitivity`), multi-field mutations
+  // (`setSourceVisible`), or returning live engine state
+  // (`getCloud`, `listVolumeFields`).  They're declared up-front so the
+  // sub-handle literal below can reference each by its local name —
+  // no `handle.X!` forward references, no `!` non-null assertions.
+
+  function clearSelection(): void {
+    // Only fire the callback when something was actually selected.
+    // This lets the Esc handler in App.tsx call this unconditionally.
+    if (state.subsystems.selection.selected() !== null) {
+      state.subsystems.selection.setSelected(null);
+      // Clearing the pin also clears the camera-focus target — Esc /
+      // close ✕ are explicit "I'm done with this galaxy" signals.
+      cb.camera?.onFocusChange?.(null);
+      state.subsystems.scheduler.requestRender();
+    }
+  }
+
+  function setBiasMode(mode: BiasMode): void {
+    // Forwarded into the per-frame uniform on the next draw.  The
+    // shader branches on the integer value (0 = none, 1 = volume-
+    // limited, …) so flipping this from devtools or the SettingsPanel
+    // takes effect on the next rendered frame without any pipeline
+    // rebuild.
     //
-    // Each sub-handle is a thin forwarder onto the existing flat
-    // implementation that's in scope — either the table-driven
-    // `boringSetters` or one of the bespoke methods spelled out below.
-    // No logic is duplicated; the flat block stays the single source of
-    // truth until Task 11 deletes it and these become the only callable
-    // shape.
+    // We always fire the echo callback — even when the mode is
+    // unchanged — so the UI seeds correctly on first call.
+    //
+    // ### Spec E phase E.4 — cut over to biasCorrectionSubsystem
+    //
+    // Pre-E.4 this delegated to `state.gpu.renderer.setBiasMode(mode)`
+    // and chained a `.then(requestRender)`.  Spec E.4 routes through
+    // the subsystem instead — the subsystem owns the mode-flag mirror,
+    // the cached per-source ratios/weights, and the worker-runner
+    // registry; the renderer keeps only the layout-aware splice
+    // surface (`spliceSchechterRatios` / `spliceAngularWeights` /
+    // `clearBiasOverlays`).  The `void` discards the returned Promise
+    // — engine.ts doesn't await.  The subsystem's `setMode` calls
+    // `state.subsystems.scheduler.requestRender()` itself when each
+    // per-source splice completes, so visuals update progressively as
+    // bakes resolve (same observable behaviour as the pre-E.4 chained
+    // `.then`).
+    state.settings.bias.mode = mode;
+    cb.bias?.onModeChange?.(mode);
+    void state.subsystems.biasCorrection.setMode(mode);
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function resetCamera(): void {
+    // Snapshot null-check; cam-null is absorbed inside the helper.
+    // Both must exist for a meaningful snap.
+    if (!state.initialCamSnapshot) return;
+    snapToCameraSnapshot(state, state.initialCamSnapshot);
+  }
+
+  function focusOn(info: PointInfo): void {
+    // Camera may not be ready yet (cloud still loading); drop the
+    // call.  This guard is *separate* from `tweenToGalaxy`'s own
+    // cam-null guard — we need it here to gate the `onFocusChange`
+    // callback fan-out inside `commitFocus`.  Without the early
+    // return, a focus call against a still-bootstrapping engine
+    // would update `#focus=…` in the URL while the camera silently
+    // refused to move.
+    if (!state.cam) return;
+    commitFocus(state, cb, info);
+  }
+
+  function focusOnHome(): void {
+    // Snapshot null-check; cam-null is absorbed inside the helper.
+    if (!state.initialCamSnapshot) return;
+
+    // Returning to the home view means we're no longer focused on any
+    // particular galaxy.  Notify so the URL clears its `#focus=…`.
+    // Stays at the call site (not in the helper) because firing
+    // `onFocusChange(null)` is "this action is leaving a focus
+    // state", which `tweenToCameraSnapshot` doesn't decide.
+    cb.camera?.onFocusChange?.(null);
+
+    tweenToCameraSnapshot(state, state.initialCamSnapshot);
+  }
+
+  function focusOnMilkyWay(): void {
+    // Distinct from `focusOnHome`: home is the bootstrap-derived wide
+    // framing at hundreds of Mpc, well past the impostor's fade-out
+    // threshold.  This method tweens to a viewpoint inside the
+    // impostor's full-visibility band so the Milky Way is the
+    // dominant on-screen subject — target Sgr A* in world space, ride
+    // in to `MILKY_WAY_VIEW_DISTANCE_MPC`, preserve the user's
+    // current yaw/pitch so they don't get a disorienting snap.
+    //
+    // Reuses `tweenToCameraSnapshot` (the same helper that powers
+    // `focusOnHome`) by synthesizing an `InitialCam`-shaped snapshot
+    // on the fly.
+    const cam = state.cam;
+    if (!cam) return;
+
+    // The Milky Way isn't a catalog object, so any pinned focus on a
+    // catalog galaxy is no longer relevant — clear it so the URL
+    // hash doesn't keep trying to resolve a stale focus.
+    cb.camera?.onFocusChange?.(null);
+
+    tweenToCameraSnapshot(state, {
+      target: [
+        MILKY_WAY_CENTER_WORLD[0],
+        MILKY_WAY_CENTER_WORLD[1],
+        MILKY_WAY_CENTER_WORLD[2],
+      ],
+      distance: MILKY_WAY_VIEW_DISTANCE_MPC,
+      yaw: cam.yaw,
+      pitch: cam.pitch,
+      fovYRad: cam.fovYRad,
+      near: cam.near,
+      far: cam.far,
+    });
+  }
+
+  function logCameraStateFn(): void {
+    logCameraState(state.cam);
+  }
+
+  function selectFamous(id: string): void {
+    // Guard: famous catalog may not be loaded yet (sidecars arrive async,
+    // slightly after the point cloud).  Early return is safe — the user
+    // would have to invoke the palette in the ~500 ms window before the
+    // sidecar fetch resolves, which is cosmetically acceptable.
+    const cloud = state.sources.clouds.get(Source.Famous);
+    if (!cloud) return;
+    const localIdx = state.sources.famousMeta.findIndex((m) => m.id === id);
+    if (localIdx < 0) return;
+
+    // Build the same PointInfo the picker would, using the live sidecars
+    // so the famous block (name, description, thumbnail) populates.
+    const info = buildPointInfo(
+      cloud,
+      localIdx,
+      Source.Famous,
+      state.sources.famousMeta,
+      state.sources.famousXrefs,
+    );
+    if (!info) return;
+
+    // selectFamous is a deliberate user focus action (palette pick),
+    // so the camera-focus target moves to this galaxy too — hence
+    // bundling the selection key into `commitFocus`.
+    commitFocus(state, cb, info, { key: { source: Source.Famous, localIdx } });
+  }
+
+  type SelectByAliasTarget = {
+    source: Source;
+    localIdx: number;
+    famousMeta?: readonly FamousMetaEntry[];
+    famousXrefs?: FamousXrefMap;
+  };
+
+  function selectByAlias({
+    source,
+    localIdx,
+    famousMeta,
+    famousXrefs,
+  }: SelectByAliasTarget): void {
+    // Guard: source cloud may not be loaded yet (e.g. user opened
+    // the palette before GLADE finished arriving), or the localIdx
+    // could be stale across a tier swap.  Both are safe early-return
+    // conditions — palette stays open, no selection happens.
+    const cloud = state.sources.clouds.get(source);
+    if (!cloud) return;
+    if (localIdx < 0 || localIdx >= cloud.count) return;
+
+    // Build a PointInfo so the InfoCard populates correctly.
+    // Caller-supplied `famousMeta`/`famousXrefs` win over the
+    // engine's internal copies — see the EngineHandle JSDoc for the
+    // race this defends against.
+    const info = buildPointInfo(
+      cloud,
+      localIdx,
+      source,
+      famousMeta ?? state.sources.famousMeta,
+      famousXrefs ?? state.sources.famousXrefs,
+    );
+    if (!info) return;
+
+    commitFocus(state, cb, info, { key: { source, localIdx }, info });
+  }
+
+  function loadPgcAliasesFn(): Promise<PgcAliasMap> {
+    const slot = state.assetSlots.pgcAlias;
+    slot?.load();
+    return awaitSlotReady(slot, new Map() as PgcAliasMap);
+  }
+
+  function setLodMode(mode: LodMode): void {
+    if (mode === state.sources.lodMode) return;
+    state.sources.lodMode = mode;
+    cb.sources?.onLodModeChange?.(mode);
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function setSourceVisible(source: Source, visible: boolean): void {
+    // A user explicitly toggling one survey is the strongest possible
+    // signal that they want manual control.  Auto-LOD would clobber the
+    // mask on the very next frame, so we proactively flip into manual
+    // mode here rather than making the caller orchestrate two calls.
+    if (state.sources.lodMode !== 'manual') {
+      state.sources.lodMode = 'manual';
+      cb.sources?.onLodModeChange?.('manual');
+    }
+
+    const next = visible
+      ? maskWith(state.sources.visibleMask, source)
+      : maskWithout(state.sources.visibleMask, source);
+    if (next === state.sources.visibleMask) return;
+    state.sources.visibleMask = next;
+    cb.sources?.onMaskChange?.(next);
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function setTier(tier: Tier): void {
+    if (tier === state.sources.tier) return;
+    const prevTier = state.sources.tier;
+    state.sources.tier = tier;
+    cb.sources?.onTierChange?.(tier);
+
+    // For each tier-relevant source, decide whether the new tier needs
+    // a re-fetch.  Same target → skip; different target → hand the
+    // slot the new request and let it cancel any prior in-flight load,
+    // re-fetch the new tier's `.bin`, and run its commit step.
+    //
+    // Filaments are NOT swapped on tier change — see
+    // `filamentFetcher.ts`'s docblock for the rationale.
+    for (const src of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous]) {
+      if (TIER_TARGETS[prevTier][src] === TIER_TARGETS[tier][src]) continue;
+      state.assetSlots.points.get(src)?.load({ source: src, tier });
+    }
+  }
+
+  function getCloud(source: Source): PointCloud | undefined {
+    return state.sources.clouds.get(source);
+  }
+
+  function getCloudObjIds(source: Source): BigUint64Array | undefined {
+    return state.sources.clouds.get(source)?.objIDs;
+  }
+
+  function setVolumesEnabled(enabled: boolean): void {
+    // Master toggle — mutate the settings bag so the per-frame gate in
+    // `scalarVolumePass` sees the new value on the next frame.  We do
+    // NOT fire an echo callback (no `cb.onVolumesEnabledChange`)
+    // because the React layer owns this value optimistically.
+    state.settings.volumes.masterEnabled = enabled;
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function addVolumeField(fieldHandle: string, cube: ScalarCube): void {
+    // Upload the cube to the renderer.  If the renderer isn't ready
+    // yet, the call is a silent no-op — the field can be re-added
+    // once the engine boots.
+    state.gpu.scalarVolumeRenderer?.addField(fieldHandle, cube);
+    // Seed the per-field settings entry with defaults if not already
+    // present — re-registering the same handle preserves any
+    // previously-tuned values.  Presentation defaults (palette +
+    // densityScale) come from the per-handle registry in
+    // `src/data/volumeFieldDefaults.ts`.
+    if (!state.settings.volumes.fields[fieldHandle]) {
+      const defaults = getVolumeFieldDefaults(fieldHandle);
+      state.settings.volumes.fields[fieldHandle] = {
+        enabled: true,
+        intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+        contrast: defaults.contrast,
+        densityScale: defaults.densityScale,
+        paletteId: defaults.paletteId,
+      };
+    }
+    // Forward the current per-field tunables into the renderer so the
+    // new upload inherits whatever the user set before re-registering.
+    const persisted = state.settings.volumes.fields[fieldHandle]!;
+    state.gpu.scalarVolumeRenderer?.setIntensity(fieldHandle, persisted.intensity);
+    state.gpu.scalarVolumeRenderer?.setEnabled(fieldHandle, persisted.enabled);
+    state.gpu.scalarVolumeRenderer?.setContrast(fieldHandle, persisted.contrast);
+    state.gpu.scalarVolumeRenderer?.setDensityScale(fieldHandle, persisted.densityScale);
+    state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldHandle, persisted.paletteId);
+    cb.volumes?.onFieldsChanged?.();
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function removeVolumeField(fieldHandle: string): void {
+    state.gpu.scalarVolumeRenderer?.removeField(fieldHandle);
+    delete state.settings.volumes.fields[fieldHandle];
+    cb.volumes?.onFieldsChanged?.();
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function setVolumeFieldEnabled(fieldHandle: string, enabled: boolean): void {
+    if (state.settings.volumes.fields[fieldHandle]) {
+      state.settings.volumes.fields[fieldHandle].enabled = enabled;
+    }
+    state.gpu.scalarVolumeRenderer?.setEnabled(fieldHandle, enabled);
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function setVolumeFieldIntensity(fieldHandle: string, intensity: number): void {
+    if (state.settings.volumes.fields[fieldHandle]) {
+      state.settings.volumes.fields[fieldHandle].intensity = intensity;
+    }
+    state.gpu.scalarVolumeRenderer?.setIntensity(fieldHandle, intensity);
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function setVolumeFieldContrast(fieldHandle: string, contrast: number): void {
+    if (state.settings.volumes.fields[fieldHandle]) {
+      state.settings.volumes.fields[fieldHandle].contrast = contrast;
+    }
+    state.gpu.scalarVolumeRenderer?.setContrast(fieldHandle, contrast);
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function setVolumeFieldDensityScale(fieldHandle: string, value: number): void {
+    if (state.settings.volumes.fields[fieldHandle]) {
+      state.settings.volumes.fields[fieldHandle].densityScale = value;
+    }
+    state.gpu.scalarVolumeRenderer?.setDensityScale(fieldHandle, value);
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function setVolumeFieldPalette(
+    fieldHandle: string,
+    id: ScalarFieldPaletteId,
+  ): void {
+    if (state.settings.volumes.fields[fieldHandle]) {
+      state.settings.volumes.fields[fieldHandle].paletteId = id;
+    }
+    state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldHandle, id);
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function listVolumeFields(): string[] {
+    return state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
+  }
+
+  function getVolumeFieldsState(): ReadonlyArray<{
+    handle: string;
+    label: string;
+    enabled: boolean;
+    intensity: number;
+    contrast: number;
+    densityScale: number;
+    paletteId: ScalarFieldPaletteId;
+  }> {
+    const handles = state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
+    return handles.map((h) => {
+      const field = state.settings.volumes.fields[h];
+      const defaults = getVolumeFieldDefaults(h);
+      return {
+        handle: h,
+        label: defaults.label ?? h,
+        enabled: field?.enabled ?? true,
+        intensity: field?.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
+        contrast: field?.contrast ?? defaults.contrast,
+        densityScale: field?.densityScale ?? defaults.densityScale,
+        paletteId: field?.paletteId ?? DEFAULT_VOLUME_PALETTE_ID,
+      };
+    });
+  }
+
+  async function connectSpaceMouse(): Promise<boolean> {
+    const result = await state.subsystems.spaceMouse.connect();
+    return result.ok;
+  }
+
+  function disconnectSpaceMouse(): void {
+    state.subsystems.spaceMouse.disconnect();
+    state.subsystems.scheduler.requestRender();
+  }
+
+  function isSpaceMouseConnected(): boolean {
+    return state.subsystems.spaceMouse.isConnected();
+  }
+
+  function setSpaceMouseSensitivity(value: number): void {
+    state.subsystems.spaceMouse.setSensitivity(value);
+  }
+
+  function destroy(): void {
+    // 1. Cancel any in-flight frame so we don't tick after teardown.
+    state.subsystems.scheduler.cancelRender();
+
+    // 2. Detach every pointer/keyboard/resize listener attached via
+    //    inputBindings (the module owns the bookkeeping internally).
+    state.subsystems.inputBindings?.detach();
+    state.subsystems.inputBindings = null;
+
+    // 3. Detach orbit controls (removes its own four listeners).
+    detachControlsRef.current?.();
+    detachControlsRef.current = null;
+
+    // 5. Release GPU resources.
+    state.gpu.pickRenderer?.destroy();
+    state.gpu.pickRenderer = null;
+    // postProcess owns the rgba16float HDR texture and the 16-byte
+    // tone-map uniform buffer.  Must be released so a hot-reload /
+    // remount doesn't leak a per-mount texture (~16 MB at 2× DPR 1080p).
+    state.gpu.postProcess?.destroy();
+    state.gpu.postProcess = null;
+    // Filament renderer owns three GPU buffers (uniform + index + quad
+    // VBO) plus an optional per-segment instance buffer.
+    state.gpu.filamentRenderer?.destroy();
+    state.gpu.filamentRenderer = null;
+    // Label renderer owns: uniform buffer, storage buffer, instance
+    // buffer, corner buffer, and the MSDF atlas texture (~1 MB).
+    state.gpu.labelRenderer?.destroy();
+    state.gpu.labelRenderer = null;
+    // Marker-line renderer owns: uniform buffer, instance buffer, and
+    // corner buffer.  Small but released for parity.
+    state.gpu.markerLineRenderer?.destroy();
+    state.gpu.markerLineRenderer = null;
+    // Thumbnail / disk / procedural-disk / Milky-Way renderers each
+    // own a uniform buffer + per-instance buffer.
+    state.gpu.thumbnailRenderer?.destroy();
+    state.gpu.thumbnailRenderer = null;
+    state.gpu.diskRenderer?.destroy();
+    state.gpu.diskRenderer = null;
+    state.gpu.proceduralDiskRenderer?.destroy();
+    state.gpu.proceduralDiskRenderer = null;
+    state.gpu.milkyWayRenderer?.destroy();
+    state.gpu.milkyWayRenderer = null;
+    // Scalar-volume renderer owns: shared corner/index VBOs plus per-field
+    // r16float 3D textures, palette LUT textures, and uniform buffers.
+    state.gpu.scalarVolumeRenderer?.destroy();
+    state.gpu.scalarVolumeRenderer = null;
+    // Tear down the thumbnail subsystem (clears the atlas's evict
+    // handler and aborts in-flight fetches' write-back).
+    state.subsystems.thumbnails?.destroy();
+    state.subsystems.thumbnails = null;
+    // Release the WebHID device (no-op if never connected).
+    state.subsystems.spaceMouse.destroy();
+
+    // 5b. Release point-renderer GPU resources — the largest GPU
+    // allocations in the app (per-source vertex buffers, ~14 MB GPU +
+    // ~14 MB CPU mirror per SDSS deck).  WebGPU buffers do NOT release
+    // via JS GC alone — `destroy()` is mandatory.
+    state.gpu.renderer?.destroy();
+
+    // 6. Drop references to aid GC.
+    state.gpu.renderer = null;
+    state.sources.clouds.clear();
+    state.cam = null;
+  }
+
+  // ── Handle literal — eleven sub-handle clusters + destroy + slots ──
+  //
+  // Each sub-handle is a thin forwarder onto the local function or the
+  // table-driven `boringSetters` resolved above.  No logic is
+  // duplicated; this literal is the only public surface.
+  const handle: EngineHandle = {
     points: {
       setSize: (sizePx) => boringSetters.setPointSize(sizePx),
       setBrightness: (value) => boringSetters.setBrightness(value),
@@ -691,36 +1134,29 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setExposure: (value) => boringSetters.setExposure(value),
       setCurve: (curve) => boringSetters.setToneMapCurve(curve),
     },
-    // The `!` non-null assertions below acknowledge that the flat
-    // methods these forward to are declared optional on EngineHandle
-    // (the type started life with optional setters to permit minimal
-    // engine builds), but inside this literal we are concurrently
-    // defining every one of them, so at runtime they are never
-    // undefined.  Task 11's flat-method deletion lets us drop both the
-    // optional markers and these assertions in one pass.
     camera: {
       setAutoRotate: (enabled) => boringSetters.setAutoRotate(enabled),
-      reset: () => handle.resetCamera(),
-      focusOn: (info) => handle.focusOn(info),
-      focusOnHome: () => handle.focusOnHome(),
-      focusOnMilkyWay: () => handle.focusOnMilkyWay(),
-      logState: () => handle.logCameraState(),
+      reset: resetCamera,
+      focusOn,
+      focusOnHome,
+      focusOnMilkyWay,
+      logState: logCameraStateFn,
     },
     selection: {
-      clear: () => handle.clearSelection(),
-      selectFamous: (id) => handle.selectFamous(id),
-      selectByAlias: (target) => handle.selectByAlias!(target),
-      loadAliases: () => handle.loadPgcAliases!(),
+      clear: clearSelection,
+      selectFamous,
+      selectByAlias,
+      loadAliases: loadPgcAliasesFn,
     },
     sources: {
-      setLodMode: (mode) => handle.setLodMode!(mode),
-      setVisible: (source, visible) => handle.setSourceVisible!(source, visible),
-      setTier: (tier) => handle.setTier!(tier),
-      getCloud: (source) => handle.getCloud!(source),
-      getCloudObjIds: (source) => handle.getCloudObjIds!(source),
+      setLodMode,
+      setVisible: setSourceVisible,
+      setTier,
+      getCloud,
+      getCloudObjIds,
     },
     bias: {
-      setMode: (mode) => handle.setBiasMode!(mode),
+      setMode: setBiasMode,
       setAbsMagLimit: (absMag) => boringSetters.setAbsMagLimit(absMag),
     },
     thumbnails: {
@@ -734,638 +1170,33 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
     volumes: {
-      setMasterEnabled: (enabled) => handle.setVolumesEnabled!(enabled),
-      add: (h, cube) => handle.addVolumeField!(h, cube),
-      remove: (h) => handle.removeVolumeField!(h),
-      setEnabled: (h, enabled) => handle.setVolumeFieldEnabled!(h, enabled),
-      setIntensity: (h, intensity) =>
-        handle.setVolumeFieldIntensity!(h, intensity),
-      setContrast: (h, contrast) => handle.setVolumeFieldContrast!(h, contrast),
-      setDensityScale: (h, value) =>
-        handle.setVolumeFieldDensityScale!(h, value),
-      setPalette: (h, id) => handle.setVolumeFieldPalette!(h, id),
-      list: () => handle.listVolumeFields!(),
-      getState: () => handle.getVolumeFieldsState!(),
+      setMasterEnabled: setVolumesEnabled,
+      add: addVolumeField,
+      remove: removeVolumeField,
+      setEnabled: setVolumeFieldEnabled,
+      setIntensity: setVolumeFieldIntensity,
+      setContrast: setVolumeFieldContrast,
+      setDensityScale: setVolumeFieldDensityScale,
+      setPalette: setVolumeFieldPalette,
+      list: listVolumeFields,
+      getState: getVolumeFieldsState,
     },
     input: {
       spaceMouse: {
-        connect: () => handle.connectSpaceMouse!(),
-        disconnect: () => handle.disconnectSpaceMouse!(),
-        isConnected: () => handle.isSpaceMouseConnected!(),
-        setSensitivity: (value) => handle.setSpaceMouseSensitivity!(value),
+        connect: connectSpaceMouse,
+        disconnect: disconnectSpaceMouse,
+        isConnected: isSpaceMouseConnected,
+        setSensitivity: setSpaceMouseSensitivity,
       },
     },
 
-    // ── Legacy flat methods (kept until Task 11 removes them) ────────────────
-    clearSelection() {
-      // Only fire the callback when something was actually selected.
-      // This lets the Esc handler in App.tsx call this unconditionally.
-      if (state.subsystems.selection.selected() !== null) {
-        state.subsystems.selection.setSelected(null);
-        // Clearing the pin also clears the camera-focus target — Esc /
-        // close ✕ are explicit "I'm done with this galaxy" signals.
-        cb.camera?.onFocusChange?.(null);
-        state.subsystems.scheduler.requestRender();
-      }
-    },
-
-    destroy() {
-      // 1. Cancel any in-flight frame so we don't tick after teardown.
-      state.subsystems.scheduler.cancelRender();
-
-      // 2. Detach every pointer/keyboard/resize listener attached via
-      //    inputBindings (the module owns the bookkeeping internally).
-      state.subsystems.inputBindings?.detach();
-      state.subsystems.inputBindings = null;
-
-      // 3. Detach orbit controls (removes its own four listeners).
-      //    `detachControlsRef.current` was assigned by the `wireInput`
-      //    bootstrap phase; null when destroy() runs before bootstrap
-      //    completes (e.g. unmount during data load).
-      detachControlsRef.current?.();
-      detachControlsRef.current = null;
-
-      // 5. Release GPU resources.
-      state.gpu.pickRenderer?.destroy();
-      state.gpu.pickRenderer = null;
-      // postProcess owns the rgba16float HDR texture and the 16-byte
-      // tone-map uniform buffer (merged into one aggregate in Phase 4).
-      // Must be released so a hot-reload / remount doesn't leak a
-      // per-mount texture (~16 MB at 2× DPR 1080p).
-      state.gpu.postProcess?.destroy();
-      state.gpu.postProcess = null;
-      // Filament renderer owns three GPU buffers (uniform + index + quad
-      // VBO) plus an optional per-segment instance buffer.  Release them
-      // explicitly so HMR / StrictMode remounts don't leak the instance
-      // buffer (proportional to filament-skeleton segment count, ~MB).
-      state.gpu.filamentRenderer?.destroy();
-      state.gpu.filamentRenderer = null;
-      // Label renderer owns: uniform buffer, storage buffer (LabelData[]),
-      // instance buffer (per-glyph), corner buffer, and the MSDF atlas
-      // texture.  Release explicitly — the atlas texture is the most
-      // significant allocation (~1 MB for the 512² rgba8unorm atlas).
-      state.gpu.labelRenderer?.destroy();
-      state.gpu.labelRenderer = null;
-      // Marker-line renderer owns: uniform buffer, instance buffer, and
-      // corner buffer.  Small allocations but must be released for parity
-      // with every other GPU handle in this bag.
-      state.gpu.markerLineRenderer?.destroy();
-      state.gpu.markerLineRenderer = null;
-      // Thumbnail / disk / procedural-disk / Milky-Way renderers each
-      // own a uniform buffer + per-instance buffer + (per-renderer
-      // specifics: corner buffer for the quad-derived ones, atlas
-      // sampler for thumbnails).  Pre-2026-05-08 these renderers
-      // lived on the bootstrap-local `phaseLocals` carrier which
-      // engine.ts had no reference path to — leaking a few hundred KB
-      // of GPU buffers per HMR / StrictMode remount.  Promoting them
-      // to `state.gpu.*` (PR #66 follow-up) closed that gap.  Releasing
-      // here matches every other handle in this bag.
-      state.gpu.thumbnailRenderer?.destroy();
-      state.gpu.thumbnailRenderer = null;
-      state.gpu.diskRenderer?.destroy();
-      state.gpu.diskRenderer = null;
-      state.gpu.proceduralDiskRenderer?.destroy();
-      state.gpu.proceduralDiskRenderer = null;
-      state.gpu.milkyWayRenderer?.destroy();
-      state.gpu.milkyWayRenderer = null;
-      // Scalar-volume renderer owns: shared corner/index VBOs plus per-field
-      // r16float 3D textures, palette LUT textures, and uniform buffers.
-      // The 3D textures can be substantial (e.g. a 128³ cube at 2 bytes/voxel
-      // is 4 MB); releasing here prevents VRAM leaks on StrictMode remounts.
-      state.gpu.scalarVolumeRenderer?.destroy();
-      state.gpu.scalarVolumeRenderer = null;
-      // Tear down the thumbnail subsystem (clears the atlas's evict
-      // handler and aborts in-flight fetches' write-back).  The atlas's
-      // GPU texture itself is released when the device is dropped —
-      // the subsystem doesn't expose a destroy on it directly.
-      state.subsystems.thumbnails?.destroy();
-      state.subsystems.thumbnails = null;
-      // Release the WebHID device (no-op if never connected).
-      state.subsystems.spaceMouse.destroy();
-
-      // 5b. Release point-renderer GPU resources.  PointRenderer owns the
-      // largest GPU allocations in the app — per-source vertex buffers
-      // (~14 MB GPU + ~14 MB CPU mirror per SDSS deck, growing across
-      // SDSS + GLADE-large + 2MRS + Famous), plus each cloud's CloudFade
-      // 16-byte uniform, plus the renderer's own 176-byte uniform.
-      // WebGPU buffers do NOT release via JS GC alone — `destroy()` is
-      // mandatory.  Without this call, every HMR cycle / StrictMode
-      // remount leaks the entire deck.  See PointRenderer.destroy()'s
-      // docstring for the full rationale.
-      state.gpu.renderer?.destroy();
-
-      // 6. Drop references to aid GC.
-      state.gpu.renderer = null;
-      state.sources.clouds.clear();
-      state.cam = null;
-    },
-
-    // ── Settings panel setters ─────────────────────────────────────────────
-    //
-    // The thirteen "boring" setters (`setPointSize`, `setBrightness`, …
-    // `setExposure`, `setToneMapCurve`) all share the same body shape:
-    // mutate one field on `state.settings.*` (or `state.bias.*`), fire
-    // an optional echo callback, request a render.  Rather than spell
-    // them out one-by-one, we build them from a declarative descriptor
-    // table in `./settingsTable.ts` and spread the result into the
-    // public-handle literal.  See that module's docstring for the
-    // why-a-table / why-bespoke-stays-inline rationale.
-    //
-    // Bespoke setters that DO NOT fit the table — `setBiasMode` (async
-    // worker bake), `setTier` (per-source slot reload), `setLodMode`
-    // (couples to camera distance), `setSourceVisible` (mask math +
-    // implicit LOD-mode switch), `setSpaceMouseSensitivity` (subsystem
-    // forward) — keep their hand-rolled bodies below.
-    // `satisfies` on the `boringSetters` local above is the safety net
-    // the settingsTable docstring advertises: if the builder's return
-    // shape ever drifts away from `Pick<EngineHandle, SettingsTableKey>`
-    // (renamed key, value type not assignable due to contravariance),
-    // tsc catches it at the construction site rather than at distant
-    // callers.  We spread the same local here so the legacy flat surface
-    // keeps every table-driven setter.
-    ...boringSetters,
-
-    setBiasMode(mode) {
-      // Forwarded into the per-frame uniform on the next draw.  The
-      // shader branches on the integer value (0 = none, 1 = volume-
-      // limited, …) so flipping this from devtools or the SettingsPanel
-      // takes effect on the next rendered frame without any pipeline
-      // rebuild.
-      //
-      // We always fire the echo callback — even when `mode === state.bias.mode`
-      // — so the UI seeds correctly on first call.
-      //
-      // ### Spec E phase E.4 — cut over to biasCorrectionSubsystem
-      //
-      // Pre-E.4 this delegated to `state.gpu.renderer.setBiasMode(mode)`
-      // and chained a `.then(requestRender)`.  Spec E.4 routes through
-      // the subsystem instead — the subsystem owns the mode-flag mirror,
-      // the cached per-source ratios/weights, and the worker-runner
-      // registry; the renderer keeps only the layout-aware splice
-      // surface (`spliceSchechterRatios` / `spliceAngularWeights` /
-      // `clearBiasOverlays`).  The `void` discards the returned Promise
-      // — engine.ts doesn't await.  The subsystem's `setMode` calls
-      // `state.subsystems.scheduler.requestRender()` itself when each
-      // per-source splice completes, so visuals update progressively as
-      // bakes resolve (same observable behaviour as the pre-E.4 chained
-      // `.then`).
-      // Dual-write: legacy `state.bias.mode` + new `state.settings.bias.mode`.
-      // Task 2's deviation kept `state.bias.mode` alive on `EngineBiasState`
-      // (the bake-derived fields next to it can't move yet), so we mirror
-      // the value into the nested settings sub-bag for the duration of the
-      // H5 transition.  Task 11 collapses to the nested location only.
-      state.bias.mode = mode;
-      state.settings.bias.mode = mode;
-      cb.bias?.onModeChange?.(mode);
-      void state.subsystems.biasCorrection.setMode(mode);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    resetCamera() {
-      // Snapshot null-check; cam-null is absorbed inside the helper.
-      // Both must exist for a meaningful snap.
-      if (!state.initialCamSnapshot) return;
-      snapToCameraSnapshot(state, state.initialCamSnapshot);
-    },
-
-    logCameraState() {
-      logCameraState(state.cam);
-    },
-
-    focusOn(info) {
-      // Camera may not be ready yet (cloud still loading); drop the
-      // call.  This guard is *separate* from `tweenToGalaxy`'s own
-      // cam-null guard — we need it here to gate the `onFocusChange`
-      // callback fan-out inside `commitFocus`.  Without the early
-      // return, a focus call against a still-bootstrapping engine
-      // would update `#focus=…` in the URL while the camera silently
-      // refused to move.
-      if (!state.cam) return;
-      commitFocus(state, cb, info);
-    },
-
-    selectFamous(id) {
-      // Guard: famous catalog may not be loaded yet (sidecars arrive async,
-      // slightly after the point cloud).  Early return is safe — the user
-      // would have to invoke the palette in the ~500 ms window before the
-      // sidecar fetch resolves, which is cosmetically acceptable.
-      const cloud = state.sources.clouds.get(Source.Famous);
-      if (!cloud) return;
-      const localIdx = state.sources.famousMeta.findIndex((m) => m.id === id);
-      if (localIdx < 0) return;
-
-      // Build the same PointInfo the picker would, using the live sidecars
-      // so the famous block (name, description, thumbnail) populates.
-      const info = buildPointInfo(
-        cloud,
-        localIdx,
-        Source.Famous,
-        state.sources.famousMeta,
-        state.sources.famousXrefs,
-      );
-      if (!info) return;
-
-      // selectFamous is a deliberate user focus action (palette pick),
-      // so the camera-focus target moves to this galaxy too — hence
-      // bundling the selection key into `commitFocus` rather than
-      // splitting select-without-focus from focus.  No prebuilt info
-      // here: the famous catalog has already loaded by the time the
-      // palette can fire, so the selection subsystem can safely read
-      // the live sidecars itself at fan-out time.
-      commitFocus(state, cb, info, { key: { source: Source.Famous, localIdx } });
-    },
-
-    getCloudObjIds(source) {
-      // Returns the raw BigUint64Array used by the renderer.  We don't
-      // make a defensive copy because the only consumer (App.tsx's
-      // alias-index builder) walks ~5M elements once and would pay a
-      // 40 MB copy cost for nothing — the type contract documents the
-      // read-only expectation.
-      return state.sources.clouds.get(source)?.objIDs;
-    },
-
-    getCloud(source) {
-      // Same read-only contract as `getCloudObjIds` above — we hand
-      // out the live reference, not a clone, because the resolver
-      // walks positions/objIDs once and would otherwise force a
-      // multi-MB copy for a one-shot deep-link resolve.  The only
-      // current consumer is `resolveFocusTarget`, which never mutates.
-      return state.sources.clouds.get(source);
-    },
-
-    selectByAlias({ source, localIdx, famousMeta, famousXrefs }) {
-      // Guard: source cloud may not be loaded yet (e.g. user opened
-      // the palette before GLADE finished arriving), or the localIdx
-      // could be stale across a tier swap.  Both are safe early-return
-      // conditions — palette stays open, no selection happens.
-      const cloud = state.sources.clouds.get(source);
-      if (!cloud) return;
-      if (localIdx < 0 || localIdx >= cloud.count) return;
-
-      // Build a PointInfo so the InfoCard populates correctly.  We
-      // pass the famous sidecars even for non-famous sources because
-      // buildPointInfo gracefully ignores them when the source isn't
-      // Famous — same call shape as the dblclick path uses.
-      //
-      // Caller-supplied `famousMeta`/`famousXrefs` win over the
-      // engine's internal copies — see the EngineHandle JSDoc for the
-      // race this defends against.  The default is the engine's own
-      // sidecar state, which keeps every other call site (click,
-      // hover, palette alias-search) using a single source of truth.
-      const info = buildPointInfo(
-        cloud,
-        localIdx,
-        source,
-        famousMeta ?? state.sources.famousMeta,
-        famousXrefs ?? state.sources.famousXrefs,
-      );
-      if (!info) return;
-
-      // Race-window note: when selectByAlias is called from a deep-link
-      // drain that fires the moment the data-side cloud lands, the
-      // renderer hasn't uploaded yet — the halo will appear once the
-      // upload completes a frame or two later.  Passing the prebuilt
-      // `info` through `commitFocus` → `setSelected` ensures the React
-      // side updates immediately regardless.
-      commitFocus(state, cb, info, { key: { source, localIdx }, info });
-    },
-
-    focusOnHome() {
-      // Snapshot null-check; cam-null is absorbed inside the helper.
-      if (!state.initialCamSnapshot) return;
-
-      // Returning to the home view means we're no longer focused on any
-      // particular galaxy.  Notify so the URL clears its `#focus=…`.
-      // Stays at the call site (not in the helper) because firing
-      // `onFocusChange(null)` is "this action is leaving a focus
-      // state", which `tweenToCameraSnapshot` doesn't decide.
-      cb.camera?.onFocusChange?.(null);
-
-      tweenToCameraSnapshot(state, state.initialCamSnapshot);
-    },
-
-    focusOnMilkyWay() {
-      // Distinct from `focusOnHome`: home is the bootstrap-derived wide
-      // framing at hundreds of Mpc, well past the impostor's fade-out
-      // threshold.  This method tweens to a viewpoint inside the
-      // impostor's full-visibility band so the Milky Way is the
-      // dominant on-screen subject — target Sgr A* in world space, ride
-      // in to `MILKY_WAY_VIEW_DISTANCE_MPC`, preserve the user's
-      // current yaw/pitch so they don't get a disorienting snap.
-      //
-      // Reuses `tweenToCameraSnapshot` (the same helper that powers
-      // `focusOnHome`) by synthesizing an `InitialCam`-shaped snapshot
-      // on the fly: the catalog-side constants for `target`/`distance`,
-      // the live `cam` fields for the orientation and projection
-      // values that the helper expects but that we don't actually want
-      // to change here.
-      const cam = state.cam;
-      if (!cam) return;
-
-      // The Milky Way isn't a catalog object, so any pinned focus on a
-      // catalog galaxy is no longer relevant — clear it so the URL
-      // hash doesn't keep trying to resolve a stale focus.
-      cb.camera?.onFocusChange?.(null);
-
-      tweenToCameraSnapshot(state, {
-        target: [
-          MILKY_WAY_CENTER_WORLD[0],
-          MILKY_WAY_CENTER_WORLD[1],
-          MILKY_WAY_CENTER_WORLD[2],
-        ],
-        distance: MILKY_WAY_VIEW_DISTANCE_MPC,
-        yaw: cam.yaw,
-        pitch: cam.pitch,
-        fovYRad: cam.fovYRad,
-        near: cam.near,
-        far: cam.far,
-      });
-    },
-
-    // ── LOD + per-source visibility setters ────────────────────────────────
-    //
-    // These two methods are the public seam for the survey-toggle UI
-    // (Task #37 / settings panel).  They are kept tiny on purpose: the
-    // engine is the source of truth for `state.sources.lodMode` and
-    // `state.sources.visibleMask`, React just mirrors them via the
-    // optional callbacks.
-
-    setLodMode(mode) {
-      if (mode === state.sources.lodMode) return;
-      state.sources.lodMode = mode;
-      // Nested-only fire (H5 task 11): flat callbacks were removed.
-      cb.sources?.onLodModeChange?.(mode);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setSourceVisible(source, visible) {
-      // A user explicitly toggling one survey is the strongest possible
-      // signal that they want manual control.  Auto-LOD would clobber the
-      // mask on the very next frame, so we proactively flip into manual
-      // mode here rather than making the caller orchestrate two calls.
-      if (state.sources.lodMode !== 'manual') {
-        state.sources.lodMode = 'manual';
-        // Nested-only fire (H5 task 11) — flat callbacks are gone.
-        cb.sources?.onLodModeChange?.('manual');
-      }
-
-      const next = visible
-        ? maskWith(state.sources.visibleMask, source)
-        : maskWithout(state.sources.visibleMask, source);
-      if (next === state.sources.visibleMask) return;
-      state.sources.visibleMask = next;
-      cb.sources?.onMaskChange?.(next);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    // ── Data-tier hot-swap ────────────────────────────────────────────────
-    //
-    // The user picks a different data-volume preset (small/medium/large) and
-    // we re-fetch only the sources whose target count differs between the two
-    // tiers.  2MRS + Famous share one .bin across all tiers, so they're
-    // diffed-out and never re-fetched; SDSS + GLADE typically re-fetch.
-    //
-    // The empty-cloud branch in `reloadSource` (target 0 → exclude) plumbs
-    // through the same `renderer.upload` path as a real fetch — passing a
-    // 0-count cloud destroys the prior buffer and allocates a 0-byte one,
-    // freeing the source's VRAM.  See `pointRenderer.upload`'s replace-not-
-    // append regression test for the contract that hot-swap relies on.
-    setTier(tier) {
-      if (tier === state.sources.tier) return;
-      const prevTier = state.sources.tier;
-      state.sources.tier = tier;
-      // Nested-only fire (H5 task 11): the flat `onTierChange` is gone;
-      // consumers consume the nested `callbacks.sources.onTierChange`
-      // address.
-      cb.sources?.onTierChange?.(tier);
-
-      // For each tier-relevant source, decide whether the new tier needs a
-      // re-fetch.  Same target → skip (e.g. 2MRS, Famous always share one
-      // .bin across tiers).  Different target → hand the slot the new
-      // request and let it cancel any prior in-flight load, re-fetch the
-      // new tier's `.bin`, and run its commit step (upload +
-      // `clouds.set` + `onCloudReady` + render wake) via the subscriber
-      // wired up alongside slot construction.
-      //
-      // Filaments are NOT swapped on tier change — see
-      // `filamentFetcher.ts`'s docblock for the rationale.  No
-      // `state.assetSlots.filaments?.load(...)` here is intentional.
-      for (const source of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous]) {
-        if (TIER_TARGETS[prevTier][source] === TIER_TARGETS[tier][source]) continue;
-        state.assetSlots.points.get(source)?.load({ source, tier });
-      }
-    },
-
-    // ── Lazy PGC-alias loader (Task 10) ───────────────────────────────────
-    //
-    // Thin wrapper over `awaitSlotReady`; see that helper's module
-    // header for the idempotence / fallback / null-slot / cached-
-    // resolve-window rationale that used to live inline here.
-    loadPgcAliases() {
-      const slot = state.assetSlots.pgcAlias;
-      slot?.load();
-      return awaitSlotReady(slot, new Map() as PgcAliasMap);
-    },
-
-    // ── Scalar-volume field management ────────────────────────────────────
-    //
-    // Six public methods to drive the ScalarVolumeRenderer from outside
-    // the engine (React shell, data-loading logic).  All six optional-
-    // chain through `state.gpu.scalarVolumeRenderer` so they're safe to
-    // call during the brief window before the GPU init IIFE completes —
-    // the renderer is null until `initGpu` runs but that window is
-    // typically less than one frame at browser-cold-start.
-
-    setVolumesEnabled(enabled) {
-      // Master toggle — mutate the settings bag so the per-frame gate in
-      // `scalarVolumePass` sees the new value on the next frame.  We do
-      // NOT fire an echo callback here (no `cb.onVolumesEnabledChange`)
-      // because the React layer owns this value optimistically (same as
-      // `filamentsEnabled`).  The caller (App.tsx) updates React state
-      // before forwarding here, so the React copy and the engine copy
-      // are always in agreement.
-      state.settings.volumesEnabled = enabled;
-      state.subsystems.scheduler.requestRender();
-    },
-
-    addVolumeField(handle, cube) {
-      // Upload the cube to the renderer.  If the renderer isn't ready
-      // yet, the call is a silent no-op — the field can be re-added
-      // once the engine boots.  In practice, callers load cubes after
-      // `onStatusChange({ kind: 'ready' })` fires, so the renderer is
-      // always constructed by the time addVolumeField is reachable from
-      // application code.
-      state.gpu.scalarVolumeRenderer?.addField(handle, cube);
-      // Seed the per-field settings entry with defaults if not already
-      // present — re-registering the same handle preserves any
-      // previously-tuned enabled/intensity/palette values so the user's
-      // tweaks don't reset on e.g. a tier-swap reload.  Presentation
-      // defaults (palette + densityScale) come from the per-handle
-      // registry in `src/data/volumeFieldDefaults.ts` — the cube itself
-      // is data-only in SCFD v2.  Unregistered handles fall through to
-      // `FALLBACK_VOLUME_DEFAULTS` (viridis + 1.0) so a brand-new field
-      // still renders sanely until a tuned entry is added.
-      if (!state.settings.volumeFields[handle]) {
-        const defaults = getVolumeFieldDefaults(handle);
-        state.settings.volumeFields[handle] = {
-          enabled: true,
-          intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
-          contrast: defaults.contrast,
-          densityScale: defaults.densityScale,
-          paletteId: defaults.paletteId,
-        };
-      }
-      // Forward the current per-field tunables into the renderer so the
-      // new upload inherits whatever the user set before re-registering.
-      // The if-guard above ensures the entry exists; the non-null
-      // assertion satisfies noUncheckedIndexedAccess on the Record.
-      const persisted = state.settings.volumeFields[handle]!;
-      state.gpu.scalarVolumeRenderer?.setIntensity(handle, persisted.intensity);
-      state.gpu.scalarVolumeRenderer?.setEnabled(handle, persisted.enabled);
-      state.gpu.scalarVolumeRenderer?.setContrast(handle, persisted.contrast);
-      state.gpu.scalarVolumeRenderer?.setDensityScale(handle, persisted.densityScale);
-      state.gpu.scalarVolumeRenderer?.setFieldPalette(handle, persisted.paletteId);
-      // Let React know the field list changed so any SettingsPanel list
-      // re-renders with the new row.
-      cb.volumes?.onFieldsChanged?.();
-      state.subsystems.scheduler.requestRender();
-    },
-
-    removeVolumeField(handle) {
-      // Release the renderer's GPU textures for this field.  If the
-      // renderer or the field itself is absent, `removeField` is a no-op.
-      state.gpu.scalarVolumeRenderer?.removeField(handle);
-      // Mirror the removal into the settings bag so the SettingsPanel
-      // stops rendering the slider row for this handle.
-      delete state.settings.volumeFields[handle];
-      cb.volumes?.onFieldsChanged?.();
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setVolumeFieldEnabled(handle, enabled) {
-      // Mutate the settings bag first so any optimistic React read sees
-      // the new value even before the next render.
-      if (state.settings.volumeFields[handle]) {
-        state.settings.volumeFields[handle].enabled = enabled;
-      }
-      state.gpu.scalarVolumeRenderer?.setEnabled(handle, enabled);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setVolumeFieldIntensity(handle, intensity) {
-      // The renderer clamps to [0, 1] internally; mirror the raw value
-      // here so the slider can be optimistic without needing to read back
-      // from the renderer.  Any clamping will show on the next frame.
-      if (state.settings.volumeFields[handle]) {
-        state.settings.volumeFields[handle].intensity = intensity;
-      }
-      state.gpu.scalarVolumeRenderer?.setIntensity(handle, intensity);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setVolumeFieldContrast(handle, contrast) {
-      // Same shape as setVolumeFieldIntensity: mirror to the settings
-      // bag for optimistic UI, forward to the renderer which clamps to
-      // its safe range.  No-op on unknown handle; the renderer
-      // tolerates that too.
-      if (state.settings.volumeFields[handle]) {
-        state.settings.volumeFields[handle].contrast = contrast;
-      }
-      state.gpu.scalarVolumeRenderer?.setContrast(handle, contrast);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    setVolumeFieldDensityScale(handle, value) {
-      // Identical shape to setVolumeFieldContrast: mirror to the
-      // settings bag first (so optimistic React reads see the raw
-      // value), then forward to the renderer which clamps negative /
-      // NaN inputs to 0.  No-op on unknown handle.  The renderer
-      // tolerates a no-op call before it's constructed via the `?.`
-      // chain — same forgiving pattern as the rest of this surface.
-      if (state.settings.volumeFields[handle]) {
-        state.settings.volumeFields[handle].densityScale = value;
-      }
-      state.gpu.scalarVolumeRenderer?.setDensityScale(handle, value);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    listVolumeFields() {
-      // Delegates to the renderer, which is the authoritative list.
-      // Falls back to [] when the renderer is not yet constructed.
-      return state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
-    },
-
-    getVolumeFieldsState() {
-      // Combines the ordered handle list from the renderer with the
-      // per-field settings bag — avoiding the need to expose internal
-      // state to the React layer.  We pull the human-readable label
-      // from `VOLUME_FIELD_DEFAULTS` when the registry has one, so
-      // the panel shows "CF-4 DM density" instead of "cf4-density";
-      // unregistered handles still fall back to the raw string.
-      const handles = state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
-      return handles.map((handle) => {
-        const field = state.settings.volumeFields[handle];
-        const defaults = getVolumeFieldDefaults(handle);
-        return {
-          handle,
-          label: defaults.label ?? handle,
-          enabled: field?.enabled ?? true,
-          intensity: field?.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
-          contrast: field?.contrast ?? defaults.contrast,
-          densityScale: field?.densityScale ?? defaults.densityScale,
-          paletteId: field?.paletteId ?? DEFAULT_VOLUME_PALETTE_ID,
-        };
-      });
-    },
-
-    setVolumeFieldPalette(handle, id) {
-      // Mirror into the settings bag so optimistic React reads see the
-      // new value before the next frame.  The renderer's setFieldPalette
-      // is a single GPU queue.writeTexture; the field's bind group stays
-      // valid because the palette texture is never recreated.
-      if (state.settings.volumeFields[handle]) {
-        state.settings.volumeFields[handle].paletteId = id;
-      }
-      state.gpu.scalarVolumeRenderer?.setFieldPalette(handle, id);
-      state.subsystems.scheduler.requestRender();
-    },
-
-    // ── SpaceMouse 6DOF input setters ─────────────────────────────────────
-    //
-    // Thin pass-throughs to the subsystem.  The lazy-construction and
-    // axes-cache management both live inside `spaceMouseSubsystem.ts`;
-    // here we just unwrap the `{ ok }` envelope to keep the public
-    // EngineHandle type unchanged (Promise<boolean>).
-
-    async connectSpaceMouse() {
-      const result = await state.subsystems.spaceMouse.connect();
-      return result.ok;
-    },
-
-    disconnectSpaceMouse() {
-      state.subsystems.spaceMouse.disconnect();
-      // Wake one frame so the still-animating predicate sees the
-      // freshly-zeroed axes and lets the loop sleep cleanly.
-      state.subsystems.scheduler.requestRender();
-    },
-
-    isSpaceMouseConnected() {
-      return state.subsystems.spaceMouse.isConnected();
-    },
-
-    setSpaceMouseSensitivity(value) {
-      state.subsystems.spaceMouse.setSensitivity(value);
-    },
+    destroy,
 
     // ── Asset-slot registry (dev-panel surface) ──────────────────────────
     //
     // `allSlots` is declared at outer scope and populated by the GPU init
     // IIFE.  Exposing the same Map reference here means the dev panel
-    // observes new slots as they appear (the `LoadingDevPanel`'s effect
-    // re-subscribes whenever the prop identity changes — but since we
-    // hand it a stable reference, it instead picks up new slots on the
-    // first render that runs after the IIFE populates them, then
-    // subscribes once at that point).  Read-only at the type level so
+    // observes new slots as they appear.  Read-only at the type level so
     // misuse from the React side (mutating the slot bag directly) trips
     // the typechecker.
     assetSlots: allSlots,

@@ -62,14 +62,13 @@
  * the param and gets the default Vite `?worker` runner declared as
  * `defaultSchechterRunner` / `defaultAngularRunner` in this module.
  *
- * ### Why `state.bias.mode` stays separate
+ * ### Why `state.settings.bias.mode` stays separate
  *
- * The subsystem mirrors `state.bias.mode` internally (`mode` field
- * here) but doesn't own it.  The UI-facing knob bag stays on
- * `EngineState` — same role as `state.settings`.  See the spec's
- * *State* section for why we keep the two parallel: every existing
- * reader (URL hash, InfoCard, SettingsPanel echo) continues to work
- * unchanged.
+ * The subsystem mirrors `state.settings.bias.mode` internally (`mode`
+ * field here) but doesn't own it.  The UI-facing knob bag stays on
+ * `EngineState`.  See the spec's *State* section for why we keep the
+ * two parallel: every existing reader (URL hash, InfoCard,
+ * SettingsPanel echo) continues to work unchanged.
  *
  * ### Production wiring (Spec E phase E.4 — cut-over)
  *
@@ -78,8 +77,9 @@
  * imports moved here too — `defaultSchechterRunner` /
  * `defaultAngularRunner` (see below) spawn one worker per call,
  * matching the pre-extraction behaviour bit-for-bit.  Same observable
- * behaviour as pre-E.4: the renderer keeps reading `state.bias.mode`
- * per-frame for the uniform write; this subsystem owns the splice
+ * behaviour as pre-E.4: the renderer keeps reading
+ * `state.settings.bias.mode` per-frame for the uniform write; this
+ * subsystem owns the splice
  * pipeline that lays per-galaxy ratios/weights into the per-source
  * vertex buffers.
  *
@@ -297,7 +297,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   // construction (the engine state literal hasn't been assigned to its
   // variable when `createBiasCorrectionSubsystem` is called from inside
   // it).  Lazy init also doubles as a trivial sync between
-  // `state.bias.mode` and our internal `mode` mirror at startup.
+  // `state.settings.bias.mode` and our internal `mode` mirror at startup.
   let mode: BiasMode | null = null;
   const cachedSchechter = new Map<Source, Float32Array>();
   const cachedAngular = new Map<Source, Float32Array>();
@@ -313,7 +313,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   /** Lazily read & memoize the current internal mode mirror. */
   function currentMode(): BiasMode {
     if (mode === null) {
-      mode = getState().bias.mode;
+      mode = getState().settings.bias.mode;
     }
     return mode;
   }

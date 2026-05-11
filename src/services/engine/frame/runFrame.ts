@@ -252,7 +252,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // auto-rotate on `!tweens.isActive()` lets the home tween land
   // exactly on the target yaw; auto-rotate resumes from that
   // landing point on the next frame.
-  if (state.settings.autoRotate && state.cam && !state.subsystems.tweens.isActive()) {
+  if (state.settings.camera.autoRotate && state.cam && !state.subsystems.tweens.isActive()) {
     state.cam.yaw += 0.000873;
     updatePosition(state.cam);
   }
@@ -324,18 +324,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     diskRenderer: deps.diskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
     settings: {
-      pointSizePx: state.settings.pointSizePx,
-      brightness: state.settings.brightness,
+      pointSizePx: state.settings.points.sizePx,
+      brightness: state.settings.points.brightness,
       selected: state.subsystems.selection.selected(),
       visibleSourceMask: state.sources.visibleMask,
-      highlightFallback: state.settings.highlightFallback,
-      realOnlyMode: state.settings.realOnlyMode,
-      biasMode: state.bias.mode,
-      absMagLimit: state.bias.absMagLimit,
+      highlightFallback: state.settings.points.highlightFallback,
+      realOnlyMode: state.settings.points.realOnly,
+      biasMode: state.settings.bias.mode,
+      absMagLimit: state.settings.bias.absMagLimit,
       apparentMagLimit: state.bias.apparentMagLimit,
       schechterMStar: state.bias.schechterMStar,
       schechterAlpha: state.bias.schechterAlpha,
-      depthFadeEnabled: state.settings.depthFadeEnabled,
+      depthFadeEnabled: state.settings.points.depthFade,
       // Task 8 of procedural-disk-impostor: feed the points-pass
       // fragment shader the same crossfade band the procedural-
       // disk pass fades IN over, so the two passes blend cleanly
@@ -343,13 +343,13 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // `thumbnailSubsystem.ts` as a single source of truth.
       pxFadeStartPoints: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEndPoints: PROCEDURAL_DISK_FADE_END_PX,
-      exposure: state.settings.exposure,
-      toneMapCurve: state.settings.toneMapCurve,
-      galaxyTexturesEnabled: state.settings.galaxyTexturesEnabled,
-      milkyWayEnabled: state.settings.milkyWayEnabled,
-      filamentsEnabled: state.settings.filamentsEnabled,
-      filamentIntensity: state.settings.filamentIntensity,
-      volumesEnabled: state.settings.volumesEnabled,
+      exposure: state.settings.tonemap.exposure,
+      toneMapCurve: state.settings.tonemap.curve,
+      galaxyTexturesEnabled: state.settings.thumbnails.enabled,
+      milkyWayEnabled: state.settings.milkyWay.enabled,
+      filamentsEnabled: state.settings.filaments.enabled,
+      filamentIntensity: state.settings.filaments.intensity,
+      volumesEnabled: state.settings.volumes.masterEnabled,
     },
     famousMeta: state.sources.famousMeta,
     famousXrefs: state.sources.famousXrefs,
@@ -422,7 +422,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         visibleSources,
         // Boost the picking floor for easier hover targets — see
         // PICK_PADDING_PX in pickRenderer.ts.
-        state.settings.pointSizePx,
+        state.settings.points.sizePx,
       )
       .then((sel) => {
         state.subsystems.selection.setHovered(sel);
@@ -476,7 +476,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // it nullable; see `helpers/engineReady.ts`).
   const ready = isEngineReady(state);
   const stillAnimating =
-    state.settings.autoRotate ||
+    state.settings.camera.autoRotate ||
     state.subsystems.tweens.isActive() ||
     state.subsystems.spaceMouse.hasAxes() ||
     (ready && state.subsystems.thumbnails.hasInFlightFetches()) ||

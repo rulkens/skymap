@@ -1,6 +1,6 @@
 /**
- * EngineBiasState — Malmquist-bias correction tuning sub-bag of the
- * canonical `EngineState`.
+ * EngineBiasState — Malmquist-bias bake-output sub-bag of the canonical
+ * `EngineState`.
  *
  * ### What is Malmquist bias and why a sub-bag?
  *
@@ -9,40 +9,34 @@
  * net result is a sample skewed toward intrinsically bright galaxies at
  * large distances, which makes raw counts unsuitable for cosmological
  * inference.  The engine offers a few correction modes (volume-limited
- * cut, Schechter reweighting, angular reweighting) and each needs its
- * own tuning parameters.  Grouping the mode + parameters into one bag
- * keeps the relationship visible: changing `mode` selects which of the
- * other fields the vertex shader actually consults.
+ * cut, Schechter reweighting, angular reweighting) selectable via
+ * `state.settings.bias.mode`; the parameters baked from each per-source
+ * worker run land here.
  *
  * ### Field semantics
  *
- *   - `mode` — selector consumed by `points.wgsl` to choose between
- *              discard / weight strategies.  See `data/biasMode.ts`.
- *   - `absMagLimit` — threshold for `BiasMode.VolumeLimited`.  Galaxies
- *                     with M > absMagLimit (fainter = larger M) drop out
- *                     in the vertex stage.
  *   - `apparentMagLimit` — Schechter / angular modes' apparent-mag cap;
- *                           stays 0 until the corresponding worker bake
- *                           completes (see `setBiasMode` in engine.ts).
+ *                          stays 0 until the corresponding worker bake
+ *                          completes (see `setBiasMode` in engine.ts).
  *   - `schechterMStar` / `schechterAlpha` — Schechter LF parameters baked
  *                                            in from the worker and used
  *                                            for the per-galaxy weighting
  *                                            term.  Sentinels (0, 0) until
  *                                            the lazy bake fires.
  *
- * ### Why a separate type rather than inline in EngineState?
+ * ### Why split from `state.settings.bias`?
  *
- * Same rationale as `EngineSettingsState` — letting the bias-mode
- * setter accept a typed bag rather than five free arguments keeps the
- * engine's setter signatures honest, and matches the style the other
- * sub-bags follow.
+ * The user-facing knobs (`mode`, `absMagLimit`) live on
+ * `state.settings.bias` because they're SettingsPanel-surfaced inputs.
+ * The fields here are worker *outputs* — derived values the shader
+ * consumes after the bake resolves.  Keeping them on a sibling sub-bag
+ * makes the dataflow obvious: settings → setBiasMode → biasCorrection
+ * subsystem → state.bias outputs → shader.  Before H5 (2026-05-11) the
+ * mode + absMagLimit lived here too and the type was the mixed bag;
+ * Task 12 of the H5 plan separated input-from-output.
  */
 
-import type { BiasMode } from '../data/biasMode';
-
 export type EngineBiasState = {
-  mode: BiasMode;
-  absMagLimit: number;
   apparentMagLimit: number;
   schechterMStar: number;
   schechterAlpha: number;
