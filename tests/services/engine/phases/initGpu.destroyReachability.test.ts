@@ -145,7 +145,7 @@ import { initGpu } from '../../../../src/services/engine/phases/initGpu';
  * and writes.  We populate `gpu.*` with the post-Phase-5 expanded
  * shape (every nullable handle starts at `null`); the `subsystems`
  * bag carries just the two facades `initGpu` calls into
- * (`biasCorrection.attachRenderer`, `youAreHere.attachRenderers`).
+ * (`biasCorrection.attachRenderer`, `labelDirector.attachRenderers`).
  */
 function makeState(): EngineState {
   return {
@@ -169,6 +169,11 @@ function makeState(): EngineState {
       },
       youAreHere: {
         attachRenderers: vi.fn(),
+      },
+      labelDirector: {
+        attachRenderers: vi.fn(),
+        registerProducer: vi.fn(),
+        runFrame: vi.fn(),
       },
       scheduler: {
         requestRender: vi.fn(),
