@@ -59,15 +59,11 @@ export type LoadProgressEmitter = {
   emit(): void;
   attachSlot(slot: AssetSlot<unknown, unknown>): void;
   /**
-   * Release every subscriber attached via `attachSlot`.  Currently a
-   * placeholder no-op so the emitter satisfies the shared
-   * `Destroyable` shape every subsystem exposes — the real
-   * implementation, which captures each `slot.subscribe()`
-   * unsubscriber and calls them all here, lands in the next commit
-   * (Task 3 of this branch's plan).  Without the real implementation,
-   * subscriptions outlive `engine.destroy()` and any post-teardown
-   * slot transition still fires `publish` — that's the audit-#15
-   * leak this method is being added to plug.
+   * Release every subscriber attached via `attachSlot`.  Without
+   * this, slot state changes after `engine.destroy()` still fire
+   * `publish`, holding the emit callback (and every closure it
+   * captures) alive past intended lifetime — that's audit finding
+   * #15.  Idempotent: a second call walks an empty list.
    */
   destroy(): void;
 };
@@ -100,6 +96,15 @@ export function createLoadProgressEmitter(
       });
     }
   }
+  // Capture every subscriber's unsubscribe handle so `destroy()` can
+  // release the lot.  Without this, slot state changes after engine
+  // teardown still fired `publish`, holding the emit callback (and
+  // every closure it captures) alive past intended lifetime — that's
+  // audit finding #15.  The closure-scoped array is the minimal fix:
+  // each `attachSlot` pushes the handle returned by `slot.subscribe`,
+  // `destroy()` walks the list and clears it (so a second `destroy()`
+  // is a no-op rather than a double-release).
+  const unsubscribers: Array<() => void> = [];
   // Built as a `const` (rather than returned inline) so we can attach
   // the `satisfies Destroyable` latch — the emitter is one of the
   // engine's ~13 teardown targets, and the shared shape lets
@@ -107,11 +112,11 @@ export function createLoadProgressEmitter(
   const emitter: LoadProgressEmitter = {
     emit: publish,
     attachSlot(slot) {
-      slot.subscribe(publish);
+      unsubscribers.push(slot.subscribe(publish));
     },
     destroy(): void {
-      // Placeholder — real teardown lands in Task 3.  See the
-      // type-level docstring for why.
+      for (const u of unsubscribers) u();
+      unsubscribers.length = 0;
     },
   };
   emitter satisfies Destroyable;
