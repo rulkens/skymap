@@ -86,7 +86,7 @@
  * frame or two once the GPU upload settles.
  */
 
-import type { EngineCallbacks, PointCloud, PointInfo } from '../../../@types';
+import type { Destroyable, EngineCallbacks, PointCloud, PointInfo } from '../../../@types';
 import type { Source } from '../../../data/sources';
 import type {
   FamousMetaEntry,
@@ -231,7 +231,11 @@ export function createSelectionSubsystem(
     selected = null;
   }
 
-  return {
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the selection subsystem is one
+  // of the engine's ~13 teardown targets, and the shared shape lets
+  // engine.destroy() iterate uniformly across the bag.
+  const subsystem: SelectionSubsystem = {
     hovered: () => hovered,
     selected: () => selected,
     setHovered,
@@ -239,4 +243,6 @@ export function createSelectionSubsystem(
     pointInfoFor,
     destroy,
   };
+  subsystem satisfies Destroyable;
+  return subsystem;
 }

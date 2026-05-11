@@ -46,6 +46,8 @@
  * queue and verify behaviour deterministically.
  */
 
+import type { Destroyable } from '../../../@types';
+
 export type RenderSchedulerOptions = {
   /** Called every time a scheduled frame fires. */
   onFrame: () => void;
@@ -74,8 +76,11 @@ export type RenderScheduler = {
    * Cancel a queued frame (if any) and reset to "idle". Used by the
    * engine's `destroy()` to avoid a final post-teardown frame firing
    * after GPU resources have been released.
+   *
+   * Renamed from `cancelRender()` so the scheduler satisfies the
+   * shared `Destroyable` shape every subsystem now exposes.
    */
-  cancelRender(): void;
+  destroy(): void;
   /**
    * `true` when a frame is queued and pending; `false` when the loop is
    * idle. Mostly for tests; also useful for assertions in DevTools.
@@ -101,12 +106,17 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
     opts.onFrame();
   }
 
-  return {
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch below — the scheduler is the
+  // first subsystem the engine tears down (it must stop ticking before
+  // anything else releases GPU state), and the latch makes the
+  // "scheduler always exposes destroy()" invariant a compile-time check.
+  const scheduler: RenderScheduler = {
     requestRender(): void {
       if (token !== 0) return; // already queued — coalesce
       token = raf(tick);
     },
-    cancelRender(): void {
+    destroy(): void {
       if (token === 0) return;
       caf(token);
       token = 0;
@@ -115,4 +125,6 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
       return token !== 0;
     },
   };
+  scheduler satisfies Destroyable;
+  return scheduler;
 }

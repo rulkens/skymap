@@ -68,7 +68,7 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
-import type { PointCloud, ThumbnailInstance, Vec3 } from '../../../@types';
+import type { Destroyable, PointCloud, ThumbnailInstance, Vec3 } from '../../../@types';
 import type { OrbitCamera } from '../../../@types';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
@@ -1021,7 +1021,11 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
     strideStartBySource.clear();
   }
 
-  return {
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the thumbnail subsystem is one
+  // of the engine's ~13 teardown targets, and the shared shape lets
+  // engine.destroy() iterate uniformly across the bag.
+  const subsystem: ThumbnailSubsystem = {
     bindToRenderers,
     runFrame,
     hasInFlightFetches,
@@ -1036,4 +1040,6 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
       };
     },
   };
+  subsystem satisfies Destroyable;
+  return subsystem;
 }

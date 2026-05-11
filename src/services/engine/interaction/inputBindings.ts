@@ -20,7 +20,7 @@
  *      what they do.  Previously you had to grep for `addCanvasListener`
  *      and `addWindowListener` to find the full surface area.
  *
- *   2. A single `detach()` cleanup the engine's `destroy()` calls
+ *   2. A single `destroy()` cleanup the engine's `destroy()` calls
  *      once.  No more two-array dance.
  *
  *   3. Easier unit testing: each callback in the input bag is the
@@ -63,11 +63,19 @@
  * setters / per-frame body don't have to think about it.
  */
 
+import type { Destroyable } from '../../../@types';
 import type { RenderScheduler } from '../subsystems/renderScheduler';
 
 export type InputBindings = {
-  /** Detach every listener attached by `attachEngineInputs`. */
-  detach(): void;
+  /**
+   * Detach every listener attached by `attachEngineInputs`.
+   *
+   * Renamed from `detach()` so the bindings handle satisfies the
+   * shared `Destroyable` shape every subsystem now exposes.  The
+   * underlying mechanic is unchanged — walks the same two listener
+   * arrays the prior `detach()` did.
+   */
+  destroy(): void;
 };
 
 /**
@@ -192,8 +200,13 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
     scheduler.requestRender();
   });
 
-  return {
-    detach(): void {
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the bindings handle is one of
+  // ~13 subsystems the engine tears down, and the shared shape lets
+  // engine.destroy() iterate uniformly instead of remembering each
+  // subsystem's bespoke teardown method name.
+  const bindings: InputBindings = {
+    destroy(): void {
       for (const [type, handler] of canvasListeners) {
         canvas.removeEventListener(type, handler);
       }
@@ -204,4 +217,6 @@ export function attachEngineInputs(options: AttachEngineInputsOptions): InputBin
       windowListeners.length = 0;
     },
   };
+  bindings satisfies Destroyable;
+  return bindings;
 }

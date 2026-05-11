@@ -130,7 +130,7 @@ describe('createRenderScheduler', () => {
     expect(onFrame).toHaveBeenCalledTimes(3);
   });
 
-  it('cancelRender drops a queued frame and lets the loop sleep again', () => {
+  it('destroy drops a queued frame and lets the loop sleep again', () => {
     const fake = makeFakeRaf();
     const onFrame = vi.fn();
     const sched = createRenderScheduler({
@@ -140,7 +140,7 @@ describe('createRenderScheduler', () => {
     });
     sched.requestRender();
     expect(fake.pendingCount()).toBe(1);
-    sched.cancelRender();
+    sched.destroy();
     expect(fake.pendingCount()).toBe(0);
     // Subsequent requestRender works normally.
     sched.requestRender();

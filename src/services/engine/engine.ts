@@ -1093,11 +1093,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
   function destroy(): void {
     // 1. Cancel any in-flight frame so we don't tick after teardown.
-    state.subsystems.scheduler.cancelRender();
+    state.subsystems.scheduler.destroy();
 
     // 2. Detach every pointer/keyboard/resize listener attached via
     //    inputBindings (the module owns the bookkeeping internally).
-    state.subsystems.inputBindings?.detach();
+    state.subsystems.inputBindings?.destroy();
     state.subsystems.inputBindings = null;
 
     // 3. Detach orbit controls (removes its own four listeners).
