@@ -307,15 +307,19 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // SDSS volume of interest; envelope corner-cropping costs nothing
     // visually meaningful.
     envelope: { inner: 0.85, outer: 1.05 },
-    // 4.0 = HDR-ish boost on the rgb contribution.  MCPM's
-    // log-normalised heavy tail produces few but very-high-density
-    // peaks; an exposure boost pushes those past the inferno LUT's
-    // brightest entry (pale yellow ~252,255,164) into "blow out to
-    // white" territory after the downstream tonemap rolls the
-    // rgba16float accumulator back to display gamut.  Tuning knob if
-    // peaks read as too dim or too washed-out: 2-3 = subtle, 4-6 =
-    // the "fiery cosmic web" look, 8+ = dominantly white.
-    exposure: 4.0,
+    // 8.0 = HDR boost on the rgb contribution at peak voxels only.
+    // The shader's bright-end-weighted formula (highlightGain = 1 +
+    // smoothstep(0.5, 1, dev) * (exposure - 1)) means mid-tones near
+    // the contrast center stay at gain ≈ 1.0; only peaks (signedT > 0.7
+    // for sequential, |signedT - 0.5| > 0.35 for divergent) get the
+    // full boost.  For MCPM peaks at signedT ≈ 1.0 with exposure=8,
+    // the gain reaches 8x — pushes inferno's pale-yellow LUT entry
+    // (252, 255, 164) past LDR into white blow-out via the downstream
+    // tonemap.  Was 4.0 under the old uniform-multiplier formula; the
+    // weighted formula gives the same peak boost at exposure=4 but
+    // doesn't brighten mid-tones, so we can crank exposure higher
+    // without washing out the warm gradient.
+    exposure: 8.0,
     // Hides the 22% low-density fog band; reveals filament structure.
     // The dataset is 73% void already, so trim only affects the next
     // ~22% slice

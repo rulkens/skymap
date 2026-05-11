@@ -303,13 +303,30 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     let envelope = sphericalEnvelope(p, u.envelopeInner, u.envelopeOuter);
     let alpha = lut.a * u.intensity * u.densityScale * stepLength
               * visibility * envelope;
-    // RGB scaled by exposure, alpha is NOT — the two are decoupled so
-    // an HDR-bright cube doesn't also become opaque (which would hide
-    // structure behind the front faces).  rgba16float target accepts
-    // values > 1; the tonemap pass downstream rolls them off to
-    // display gamut, producing the "blow out to white" effect at peak
-    // density voxels.
-    let contrib = vec4<f32>(lut.rgb * alpha * u.exposure, alpha);
+    // Bright-end-weighted exposure boost.  An earlier draft scaled
+    // every voxel uniformly by exposure (rgb * alpha * u.exposure),
+    // which brightened the mid-tone "warm" band just as much as the
+    // peaks — so the peaks never visually stood out as HDR blow-out
+    // even though their accumulated rgb did exceed 1.0.  The
+    // perceptual problem: the user sees the WHOLE cube get brighter
+    // and reads it as "brightness slider", not "peaks blow to white".
+    //
+    // The weighted formula concentrates the boost at the extremes
+    // (far from the contrastCenter):
+    //   highlightGain = 1 + smoothstep(0.5, 1.0, dev) * (exposure - 1)
+    // For sequential palettes (MCPM, contrastCenter=0) the boost
+    // ramps in over signedT > 0.5 and peaks at signedT = 1.0; for
+    // divergent palettes (CF-4, contrastCenter=0.5) it ramps in
+    // symmetrically toward both palette extremes.  Mid-tones near the
+    // center get highlightGain ≈ 1.0 (no boost), so the warm gradient
+    // stays LDR-bounded; only peaks push past the LUT's brightest
+    // entry into the "blow out to white" regime that the rgba16float
+    // target + tonemap pass produce.
+    let halfRange = max(u.contrastCenter, 1.0 - u.contrastCenter);
+    let dev = abs(signedT - u.contrastCenter) / max(halfRange, 1e-3);
+    let blowout = smoothstep(0.5, 1.0, dev);
+    let highlightGain = 1.0 + blowout * max(u.exposure - 1.0, 0.0);
+    let contrib = vec4<f32>(lut.rgb * alpha * highlightGain, alpha);
     // Front-to-back over-compositing within this field.
     accum = accum + (1.0 - accum.a) * contrib;
     if (accum.a > SATURATION_THRESHOLD) { break; }
