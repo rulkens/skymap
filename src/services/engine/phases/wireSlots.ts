@@ -25,21 +25,21 @@
  * exposes the same Map as `assetSlots`), constructs the load-progress
  * emitter, and triggers the famous-meta load.  It then constructs the
  * thumbnail subsystem (the renderers it binds to come from `initGpu`
- * via `phaseLocals`) and fires `cb.onStatusChange({ kind: 'loading' })`.
+ * via `state.gpu.*`) and fires `cb.onStatusChange({ kind: 'loading' })`.
  *
  * Finally it runs the parallel multi-survey load: triggers each real
  * survey + Famous + filaments in parallel, awaits the all-arrivals
  * gate, and runs the synthetic fallback if every real survey came back
  * empty/errored.  The first survey whose cloud arrived with `count > 0`
- * is recorded on `phaseLocals.firstReadySource` so `wireInput` can fire
- * the right `cb.onStatusChange({ kind: 'ready', source })` payload.
+ * is recorded on `deps.firstReadySourceRef.current` so `wireInput` can
+ * fire the right `cb.onStatusChange({ kind: 'ready', source })` payload.
  *
  * ### Why this runs second (after initGpu, before wireInput)
  *
  * Slot commits upload to `state.gpu.renderer` / `state.gpu.filamentRenderer`,
  * so the renderers must exist first — that's `initGpu`'s job.  The
  * thumbnail subsystem's `bindToRenderers` wants the quad/disk/procedural
- * renderers from `initGpu`'s `phaseLocals`.
+ * renderers from `state.gpu.*` (populated by `initGpu`).
  *
  * `wireInput` runs after this phase because the bbox computation that
  * sizes the camera (in `wireInput`) needs `state.sources.clouds` to be
@@ -60,7 +60,7 @@
  * ### Side effects on `deps`
  *
  *   - Mutates `deps.allSlots` — populates with every minted slot.
- *   - Mutates `deps.phaseLocals.firstReadySource`.
+ *   - Mutates `deps.firstReadySourceRef.current` — hand-off to wireInput.
  *
  * ### Async work
  *
@@ -111,7 +111,22 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // safe; if `initGpu` ever stops setting it the orchestrator would
   // need updating in lockstep.
   const phaseLocals = deps.phaseLocals!;
-  const { device, thumbnailRenderer, diskRenderer, proceduralDiskRenderer } = phaseLocals;
+  const { device } = phaseLocals;
+  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  Pre-M1
+  // (2026-05-11 audit) we also kept them on `phaseLocals` and read
+  // through there with a `!` bang — the bang was folklore that assumed
+  // phase ordering.  The explicit null-checks below turn that assumption
+  // into a typed runtime error if `initGpu` is ever skipped/reordered.
+  const { thumbnailRenderer, diskRenderer, proceduralDiskRenderer } = state.gpu;
+  if (
+    thumbnailRenderer === null ||
+    diskRenderer === null ||
+    proceduralDiskRenderer === null
+  ) {
+    throw new Error(
+      'wireSlots: thumbnail/disk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
+    );
+  }
 
   // ── Filament asset slot (Task 9) ─────────────────────────────────
   //
@@ -589,8 +604,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     }
   }
 
-  // Hand the resolved first-ready source to the next phase.  See
-  // `PhaseLocals.firstReadySource` for the rationale on why this
-  // crosses the phase boundary via `phaseLocals` rather than `state`.
-  phaseLocals.firstReadySource = firstReadySource;
+  // Hand the resolved first-ready source to `wireInput` via the
+  // mutable ref on `BootstrapDeps`.  Pre-M1 (2026-05-11 audit) this
+  // wrote to `phaseLocals.firstReadySource`, which shaped a `wireSlots`
+  // mutation like an `initGpu` output.  See
+  // `BootstrapDeps.firstReadySourceRef` for the rationale on the
+  // explicit ref shape.
+  deps.firstReadySourceRef.current = firstReadySource;
 }

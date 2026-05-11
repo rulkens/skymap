@@ -88,6 +88,7 @@
 
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../../@types';
 import type { AssetSlot } from '../../loading/types';
+import type { Source } from '../../../data/sources';
 import type { FpsCounter } from '../subsystems/fpsCounter';
 
 import { initGpu, type PhaseLocals } from './initGpu';
@@ -171,13 +172,30 @@ export type BootstrapDeps = {
   lastReportedFps: { current: number | null };
 
   /**
-   * Phase-local carrier for IIFE-scoped renderers/handles that survive
-   * past `initGpu` but don't belong on `EngineState`.  Written by
-   * `initGpu`; read by `wireSlots` and `startLoop`.  Undefined until
-   * `initGpu` runs; the type asserts non-null at the read sites since
-   * the orchestrator's order guarantees `initGpu` has completed by
-   * then.  See `initGpu.ts`'s `PhaseLocals` for the contents and the
-   * rationale on not promoting these to `EngineState`.
+   * Mutable ref carrying the first source whose `.bin` arrived with
+   * `count > 0`, OR `Source.Synthetic` if the synthetic fallback fired,
+   * OR `null` before any arrival.  Written by `wireSlots` once the
+   * all-arrivals gate resolves; read by `wireInput` to populate the
+   * `cb.onStatusChange({ kind: 'ready', source })` payload.
+   *
+   * Lives as a ref on `BootstrapDeps` (rather than as a field on the
+   * `phaseLocals` carrier) so the type is honest about the mutation
+   * site: the previous "stash on phaseLocals" pattern made this look
+   * like a write-once `initGpu` output when it was actually a
+   * `wireSlots` mutation read by a later phase.  M1 of the 2026-05-11
+   * audit teased that apart.
+   */
+  firstReadySourceRef: { current: Source | null };
+
+  /**
+   * Phase-local carrier for IIFE-scoped device/context handles that
+   * survive past `initGpu` but don't belong on `EngineState`.  Written
+   * by `initGpu`; read by `wireSlots`, `wireInput`, and `startLoop`.
+   * Undefined until `initGpu` runs; the type asserts non-null at the
+   * read sites since the orchestrator's order guarantees `initGpu` has
+   * completed by then.  See `initGpu.ts`'s `PhaseLocals` for the
+   * contents and the rationale on not promoting these to
+   * `EngineState`.
    */
   phaseLocals?: PhaseLocals;
 };

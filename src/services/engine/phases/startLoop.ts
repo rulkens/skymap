@@ -8,8 +8,8 @@
  *   - Constructs the `RunFrameDeps` object, threading every closure
  *     capture the frame body needs: `canvas`, `cb`, `fpsCounter`,
  *     `lastReportedFps` (a `{current}` ref), the GPU device + context
- *     + every renderer (from `phaseLocals`), and a locally-snapshotted
- *     Milky-Way iTime epoch.  The pure `cssToTexPx` helper is imported
+ *     (from `phaseLocals`), every renderer (from `state.gpu.*`), and
+ *     a locally-snapshotted Milky-Way iTime epoch.  The pure `cssToTexPx` helper is imported
  *     directly in `runFrame.ts` rather than threaded through deps —
  *     it captures no per-engine state.  See `runFrame.ts`'s module
  *     header for the dep-vs-state rationale.  Hover/select callbacks
@@ -31,7 +31,7 @@
  * ### Why this runs last
  *
  * The frame body needs:
- *   - The renderers from `initGpu` (via `phaseLocals`).
+ *   - The renderers from `initGpu` (read off `state.gpu.*`).
  *   - The thumbnail subsystem from `wireSlots`
  *     (via `state.subsystems.thumbnails`).
  *   - The orbit camera from `wireInput` (via `state.cam`).
@@ -80,6 +80,23 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   if (state.sources.clouds.size === 0) return;
 
   const phaseLocals = deps.phaseLocals!;
+  // Renderers are owned by `state.gpu.*` (written by `initGpu`).  Pre-M1
+  // (2026-05-11 audit) we read them off `phaseLocals` with a `!` bang
+  // that silently assumed phase ordering; the explicit null-checks
+  // here turn that assumption into a typed runtime error if `initGpu`
+  // is ever skipped/reordered.
+  const milkyWayRenderer = state.gpu.milkyWayRenderer;
+  const thumbnailRenderer = state.gpu.thumbnailRenderer;
+  const diskRenderer = state.gpu.diskRenderer;
+  if (
+    milkyWayRenderer === null ||
+    thumbnailRenderer === null ||
+    diskRenderer === null
+  ) {
+    throw new Error(
+      'startLoop: milkyWay/thumbnail/disk renderers must be initialised by initGpu before this phase runs',
+    );
+  }
 
   // ── Render loop ──────────────────────────────────────────────────────
 
@@ -98,10 +115,10 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // last phase where every closure-captured local is in scope.  The bag
   // is stable across frames: `lastReportedFps` rides as a `{current}`
   // ref so the body's writes round-trip back into engine.ts; the GPU-
-  // side renderers (`milkyWayRenderer`, `thumbnailRenderer`, …) are the
-  // IIFE locals returned from `initGpu` / their respective constructors
-  // above.  See runFrame.ts's module header for the dep-vs-state
-  // rationale.
+  // side renderers (`milkyWayRenderer`, `thumbnailRenderer`, …) are
+  // read off `state.gpu.*` directly (M1, 2026-05-11) — they used to
+  // ride on `phaseLocals` too, but that mirror was redundant.  See
+  // runFrame.ts's module header for the dep-vs-state rationale.
   const frameDeps: RunFrameDeps = {
     canvas: deps.canvas,
     cb: deps.cb,
@@ -109,10 +126,10 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     lastReportedFps: deps.lastReportedFps,
     device: phaseLocals.device,
     context: phaseLocals.context,
-    milkyWayRenderer: phaseLocals.milkyWayRenderer,
+    milkyWayRenderer,
     filamentRenderer: state.gpu.filamentRenderer!,
-    thumbnailRenderer: phaseLocals.thumbnailRenderer,
-    diskRenderer: phaseLocals.diskRenderer,
+    thumbnailRenderer,
+    diskRenderer,
     milkyWayITimeEpochMs,
   };
 
