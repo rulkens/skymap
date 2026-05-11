@@ -266,13 +266,14 @@ export const DEFAULT_VOLUME_FIELD_CONTRAST = 1.0;
 export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
 
 /**
- * Per-field default for the CF-4 DM density volume.  False on first
- * load so users discover the field in the Volumes panel and opt in,
- * rather than being surprised by a translucent fog they didn't ask for.
- * Once the visual is dialed in we may flip this to `true` in a follow-up;
- * the field is always wired (the SCFD is fetched at boot regardless).
+ * Per-field default for the CF-4 DM density volume.  Enabled by default:
+ * this is the headline scientific overlay (the only real-data volume
+ * shipped), and the coolwarm divergent palette gives it a transparent
+ * cosmic-mean background so it doesn't fog up the scene for users who
+ * haven't opted in.  The synthetic debug fields stay default-off so
+ * the CF-4 cube is what greets users on first boot.
  */
-export const DEFAULT_CF4_DENSITY_ENABLED = false;
+export const DEFAULT_CF4_DENSITY_ENABLED = true;
 
 // ── SpaceMouse ─────────────────────────────────────────────────────────────
 

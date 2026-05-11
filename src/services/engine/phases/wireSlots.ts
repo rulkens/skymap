@@ -158,54 +158,80 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   });
   state.assetSlots.filaments = filamentSlot;
 
+  // ── Volumes URL gate ─────────────────────────────────────────────
+  //
+  // Mirror of App.tsx's `volumesUiEnabled` gate.  Used to decide
+  // whether ANY volume slot is registered at all — both the CF-4 DM
+  // density (real science data, still in visual-tuning phase) and the
+  // synthetic debug fixtures.  Without `?volumes=1` (or a dev build)
+  // we skip slot creation entirely, so the .scfd is never fetched and
+  // the renderer never sees a field — no bandwidth spent, no half-
+  // baked overlay rendered in production.
+  //
+  // Why gate the data path (not just the UI): the cube is ~4 MB and
+  // — more importantly — the visual isn't ready for users yet.  Once
+  // the rendering / colour-mapping is dialled in, drop both gates
+  // (this one and `volumesUiEnabled` in App.tsx) in lockstep.
+  const volumesEnabledByUrl =
+    typeof window !== 'undefined' &&
+    (() => {
+      try {
+        return new URLSearchParams(window.location.search).has('volumes');
+      } catch {
+        return false;
+      }
+    })();
+  const volumesGateOpen = import.meta.env.DEV || volumesEnabledByUrl;
+
   // ── CF-4 DM density volume slot ──────────────────────────────────
   //
   // Eager-at-boot fetch of public/data/cf4_density.scfd. On commit,
   // hands the decoded ScalarCube to scalarVolumeRenderer.addField under
   // the handle 'cf4-density', then seeds per-field settings if not
   // already present (preserving any user-tuned intensity/palette across
-  // sessions). Mirrors the synthetic-volume commit shape, minus the
-  // dev-only gating.
+  // sessions).  Gated behind `volumesGateOpen` so production users
+  // don't see the still-tuning overlay unless they opt in with
+  // `?volumes=1`.
   //
-  // Why eager (not lazy on toggle): keeps this plan small and matches
-  // the syntheticVolume pattern. If the always-paid ~32 MB shows up
-  // in load metrics, a follow-up plan can add a KNOWN_VOLUME_FIELDS
-  // registry + on-toggle fetch. Default-off settings means the bytes
-  // are paid but the renderer never draws them until the user opts in.
-  const cf4DensitySlot = createAssetSlot({
-    name: 'cf4Density',
-    fetch: cf4DensityFetcher,
-    commit: async (cube) => {
-      const renderer = state.gpu.scalarVolumeRenderer;
-      if (!renderer) return;
-      const handle = 'cf4-density';
-      renderer.addField(handle, cube);
-      if (!state.settings.volumeFields[handle]) {
-        state.settings.volumeFields[handle] = {
-          enabled: DEFAULT_CF4_DENSITY_ENABLED,
-          intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
-          contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
-          paletteId: cube.paletteId,
-        };
+  // When the gate is closed, `state.assetSlots.cf4Density` stays null;
+  // the loader's `.load()` call below is a `?.` no-op so nothing else
+  // has to change.
+  if (volumesGateOpen) {
+    const cf4DensitySlot = createAssetSlot({
+      name: 'cf4Density',
+      fetch: cf4DensityFetcher,
+      commit: async (cube) => {
+        const renderer = state.gpu.scalarVolumeRenderer;
+        if (!renderer) return;
+        const handle = 'cf4-density';
+        renderer.addField(handle, cube);
+        if (!state.settings.volumeFields[handle]) {
+          state.settings.volumeFields[handle] = {
+            enabled: DEFAULT_CF4_DENSITY_ENABLED,
+            intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+            contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
+            paletteId: cube.paletteId,
+          };
+        }
+        const persisted = state.settings.volumeFields[handle]!;
+        renderer.setIntensity(handle, persisted.intensity);
+        renderer.setEnabled(handle, persisted.enabled);
+        renderer.setContrast(handle, persisted.contrast);
+        renderer.setFieldPalette(handle, persisted.paletteId);
+        cb.onVolumeFieldsChanged?.();
+        state.subsystems.scheduler.requestRender();
+      },
+    });
+    cf4DensitySlot.subscribe((s) => {
+      if (s.kind === 'ready') {
+        console.log(
+          `[engine] cf4Density: ${s.value.dims.join('x')} cube, ` +
+            `min=${s.value.valueMin.toFixed(3)}, max=${s.value.valueMax.toFixed(3)}`,
+        );
       }
-      const persisted = state.settings.volumeFields[handle]!;
-      renderer.setIntensity(handle, persisted.intensity);
-      renderer.setEnabled(handle, persisted.enabled);
-      renderer.setContrast(handle, persisted.contrast);
-      renderer.setFieldPalette(handle, persisted.paletteId);
-      cb.onVolumeFieldsChanged?.();
-      state.subsystems.scheduler.requestRender();
-    },
-  });
-  cf4DensitySlot.subscribe((s) => {
-    if (s.kind === 'ready') {
-      console.log(
-        `[engine] cf4Density: ${s.value.dims.join('x')} cube, ` +
-          `min=${s.value.valueMin.toFixed(3)}, max=${s.value.valueMax.toFixed(3)}`,
-      );
-    }
-  });
-  state.assetSlots.cf4Density = cf4DensitySlot;
+    });
+    state.assetSlots.cf4Density = cf4DensitySlot;
+  }
 
   // ── Famous-galaxy sidecar slot (Task 10) ─────────────────────────
   //
@@ -311,19 +337,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // settings-bag seed and renderer calls are intentionally the same
   // four lines as `addVolumeField` so both paths stay in sync when the
   // engine's volume-field logic changes.
-  // Mirror of App.tsx's `volumesUiEnabled` gate.  Computed inline (not
-  // hoisted) because wireSlots is one-shot at engine init; checking the
-  // URL once here is cheaper than threading a flag through the deps bag.
-  const volumesEnabledByUrl =
-    typeof window !== 'undefined' &&
-    (() => {
-      try {
-        return new URLSearchParams(window.location.search).has('volumes');
-      } catch {
-        return false;
-      }
-    })();
-  if (import.meta.env.DEV || volumesEnabledByUrl) {
+  // Same gate as the CF-4 slot above (`volumesGateOpen`, hoisted near
+  // the top of wireSlots).  Keeping both volume slot families behind
+  // one flag means the SettingsPanel's Volumes section is never empty
+  // in dev and never visible-but-empty in production.
+  if (volumesGateOpen) {
     // Helper that mints one synthetic-volume slot.  The handle and the
     // default-enabled flag are baked into a closure (the AssetSlot
     // commit signature only sees the decoded payload, not the request,
@@ -367,13 +385,14 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         },
       });
 
-    // The Gaussian is the canonical "is anything visible?" smoke test
-    // and defaults to enabled.  The two grids (Cartesian + spherical)
-    // are diagnostic fixtures for axis/scale/origin verification —
-    // they register but stay OFF so the scene doesn't get cluttered
-    // on every dev boot; the user opts them in via the Volumes panel.
+    // All three synthetic fixtures register but stay OFF on boot: they
+    // exist as opt-in diagnostic fixtures (Gaussian for "is anything
+    // visible?" smoke tests, the two grids for axis/scale/origin
+    // verification).  The CF-4 density field is what users should see
+    // first; cluttering the scene with a default-on Gaussian sphere
+    // fights that.  Toggle any of them from the Volumes panel.
     state.assetSlots.syntheticVolumes = {
-      'debug-gaussian': mintSyntheticVolumeSlot('debug-gaussian', true),
+      'debug-gaussian': mintSyntheticVolumeSlot('debug-gaussian', false),
       'debug-cartesian': mintSyntheticVolumeSlot('debug-cartesian', false),
       'debug-spherical': mintSyntheticVolumeSlot('debug-spherical', false),
     };
@@ -409,7 +428,12 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   allSlots.set(filamentSlot.name, filamentSlot as unknown as AssetSlot<unknown, unknown>);
   allSlots.set(famousMetaSlot.name, famousMetaSlot as unknown as AssetSlot<unknown, unknown>);
   allSlots.set(pgcAliasSlot.name, pgcAliasSlot as unknown as AssetSlot<unknown, unknown>);
-  allSlots.set(cf4DensitySlot.name, cf4DensitySlot as unknown as AssetSlot<unknown, unknown>);
+  if (state.assetSlots.cf4Density) {
+    allSlots.set(
+      state.assetSlots.cf4Density.name,
+      state.assetSlots.cf4Density as unknown as AssetSlot<unknown, unknown>,
+    );
+  }
   // Register the synthetic volume slots only when they were minted (dev
   // builds).  Doing the registration here (after the DEV-guarded mint
   // block) keeps the `allSlots` population site cohesive with its

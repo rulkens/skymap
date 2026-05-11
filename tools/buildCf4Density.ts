@@ -48,8 +48,18 @@ import type { ScalarCube, ScalarFieldPaletteId } from '../src/@types/ScalarCube'
  */
 const CF4PP_VOXEL_SIZE_MPC = 1000 / 128;
 
-/** Default palette for CF-4 DM density cubes. */
-const DEFAULT_CF4_PALETTE: ScalarFieldPaletteId = 'magma';
+/**
+ * Default palette for CF-4 DM density cubes.
+ *
+ * `coolwarm` is the natural fit: the field is symmetrically normalised
+ * around the cosmic mean (LUT coord 0.5), and coolwarm's V-shaped alpha
+ * makes that midpoint fully transparent — over-densities glow red,
+ * under-densities glow blue, and the empty cosmic-mean background reads
+ * as space.  Sequential palettes (magma / viridis) fight this by giving
+ * the midpoint a visible colour, which makes the void regions wash the
+ * whole cube out.
+ */
+const DEFAULT_CF4_PALETTE: ScalarFieldPaletteId = 'coolwarm';
 
 /**
  * Convert a single f32 to its f16 raw bits using round-to-nearest-even.
@@ -174,23 +184,38 @@ export async function buildCf4Density(args: {
     if (v < valueMin) valueMin = v;
     if (v > valueMax) valueMax = v;
   }
-  // Guard against a degenerate constant cube (would make the
-  // normalisation divisor zero).
-  const valueRange = Math.max(1e-9, valueMax - valueMin);
 
-  // ── 3. Normalise to [0, 1] and pack as f16 ──────────────────────────
-  // The SCFD `value_kind = 0` semantic (and the shader's palette LUT
-  // sampler) expect voxel values in [0, 1].  CF4++ ships δ-like values
-  // roughly in [-4, +4] — without this remap, voids and most of the
-  // mean-density cube clamp to LUT coordinate 0 (the transparent void
-  // colour) and the volume renders invisible.  Linear remap preserves
-  // the relative density ordering (which is what the cosmography
-  // visualisation cares about); the absolute scale is encoded in the
-  // diagnostic valueMin / valueMax header fields.
+  // ── 3. Symmetric normalisation around 0 → [0, 1] and pack as f16 ──
+  // CF4++ density values are signed (overdensity δ or a Gaussianised
+  // equivalent) and the cosmic mean lives at value=0.  A naive linear
+  // remap `(v - min) / (max - min)` lands 0 at LUT coord
+  // |min| / (|min| + |max|) — typically ~0.52 for CF4++, not 0.5.  That
+  // small asymmetry breaks the divergent `coolwarm` palette's
+  // transparent-mean visual (the cosmic mean leaks a faint warm tint).
+  //
+  // Symmetric mapping: half = max(|min|, |max|), then
+  //   normalised = clamp(0.5 + v / (2 × half), 0, 1)
+  // This guarantees 0 → 0.5 (transparent for divergent palettes), and
+  // the more-extreme tail saturates at one end while the less-extreme
+  // tail does NOT reach the opposite end.  For sequential palettes
+  // (viridis / magma / blue-purple / yellow-green) the effect is the
+  // same as before for the high tail; the low tail now starts at 0.5
+  // rather than 0, which crushes void contrast a bit but lets users
+  // who want to see the FULL signed dynamic range flip to coolwarm
+  // without re-encoding.
+  //
+  // Guard against a degenerate constant cube (would make the divisor
+  // zero) by clamping `half` to a non-zero minimum.
+  const half = Math.max(1e-9, Math.max(Math.abs(valueMin), Math.abs(valueMax)));
+  const invTwoHalf = 1 / (2 * half);
   const voxels = new Uint16Array(values.length);
   for (let i = 0; i < values.length; i++) {
-    const normalised = (values[i]! - valueMin) / valueRange;
-    voxels[i] = f32ToF16Bits(normalised);
+    const normalised = 0.5 + values[i]! * invTwoHalf;
+    // Clamp protects against the slightly-out-of-range corner from
+    // floating-point drift; the input from CF4++ is well within
+    // [-half, +half] by construction.
+    const clamped = normalised < 0 ? 0 : normalised > 1 ? 1 : normalised;
+    voxels[i] = f32ToF16Bits(clamped);
   }
 
   // ── 4. Compute origin (voxel (0,0,0) corner in native SG frame, Mpc) ─

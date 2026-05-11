@@ -88,21 +88,29 @@ describe('buildCf4Density (smoke)', () => {
     expect(cube.valueMax).toBeCloseTo(1, 4);
     expect(cube.voxels).toBeInstanceOf(Uint16Array);
     expect(cube.voxels.length).toBe(512);
-    expect(['viridis', 'magma', 'blue-purple', 'yellow-green']).toContain(cube.paletteId);
+    expect(['viridis', 'magma', 'blue-purple', 'yellow-green', 'coolwarm']).toContain(
+      cube.paletteId,
+    );
 
     // densityScale is the fixed CF-4 constant (5.0), matching the
     // synthetic-Gaussian regime — see CF4_DENSITY_SCALE in
     // tools/buildCf4Density.ts.
     expect(cube.densityScale).toBeCloseTo(5.0, 4);
 
-    // Verify normalisation: input ran linearly from -1 to +1, so the
-    // packed voxel at index 0 should be ~0.0 (f16) and at index N-1
-    // should be ~1.0.  We decode the f16 payload manually using the
-    // standard IEEE-754 unpacking.
+    // Verify symmetric normalisation: input ran linearly from -1 to +1
+    // (so half-range = 1), giving (v + 1) / 2 → first voxel → 0, last
+    // voxel → 1, and the value that lands at v=0 → 0.5 (the divergent-
+    // palette transparent midpoint).  We decode the f16 payload
+    // manually using the standard IEEE-754 unpacking.
     const first = f16BitsToFloat(cube.voxels[0]!);
     const last = f16BitsToFloat(cube.voxels[cube.voxels.length - 1]!);
     expect(first).toBeCloseTo(0, 3);
     expect(last).toBeCloseTo(1, 3);
+    // Middle voxel: input index where value ~= 0.  For a 512-element
+    // ramp from -1 to +1, index 255 ≈ -1 + 510/511 ≈ -0.002, and
+    // index 256 ≈ +0.002.  Both should land near LUT coord 0.5.
+    expect(f16BitsToFloat(cube.voxels[255]!)).toBeCloseTo(0.5, 2);
+    expect(f16BitsToFloat(cube.voxels[256]!)).toBeCloseTo(0.5, 2);
   });
 });
 
