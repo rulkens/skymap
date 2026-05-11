@@ -950,6 +950,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (TIER_TARGETS[prevTier][src] === TIER_TARGETS[tier][src]) continue;
       state.assetSlots.points.get(src)?.load({ source: src, tier });
     }
+
+    // MCPM volume: tier-aware (unlike CF-4). Same per-tier reload semantics
+    // as the point-source loop above — different fetcher, different field
+    // handle, but the AssetSlot machinery handles cancellation of any
+    // in-flight previous-tier load identically.
+    state.assetSlots.mcpm?.load({ tier });
   }
 
   function getCloud(source: Source): PointCloud | undefined {

@@ -82,6 +82,7 @@
 import { Source } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
+import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
@@ -246,6 +247,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // `loading/slots/cf4DensitySlot.ts`.
   if (volumesGateOpen) {
     createCf4DensitySlot(state, cb);
+    const mcpmSlot = createMcpmSlot(state, cb);
+    // Eager initial load at the tier the engine boots into. Tier changes
+    // mid-session reroute through engine.setTier (see engine.ts).
+    void mcpmSlot.load({ tier: state.sources.tier });
   }
 
   // ── Famous-galaxy sidecar slot (Task 10) ─────────────────────────
