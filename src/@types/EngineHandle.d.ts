@@ -19,11 +19,54 @@ import type { PgcAliasMap } from '../services/loading/fetchers/pgcAliasFetcher';
 import type { AssetSlot } from '../services/loading/types';
 import type { ScalarCube, ScalarFieldPaletteId } from './ScalarCube';
 
+// ── H5 sub-handle namespaces ──────────────────────────────────────────────────
+//
+// Each cluster's public surface lives in its own type alias so the React
+// shell can migrate one knob-group at a time without seeing the full flat
+// API.  Imported here and re-exposed under named properties on EngineHandle;
+// the flat methods below stay in place until Task 11 deletes them.
+import type { EnginePointsHandle } from './EnginePointsHandle';
+import type { EngineTonemapHandle } from './EngineTonemapHandle';
+import type { EngineCameraHandle } from './EngineCameraHandle';
+import type { EngineSelectionHandle } from './EngineSelectionHandle';
+import type { EngineSourcesHandle } from './EngineSourcesHandle';
+import type { EngineBiasHandle } from './EngineBiasHandle';
+import type { EngineThumbnailsHandle } from './EngineThumbnailsHandle';
+import type { EngineMilkyWayHandle } from './EngineMilkyWayHandle';
+import type { EngineFilamentsHandle } from './EngineFilamentsHandle';
+import type { EngineVolumesHandle } from './EngineVolumesHandle';
+import type { EngineInputHandle } from './EngineInputHandle';
+
 /**
  * Handle returned by `createEngine`. Allows the React layer to drive the
  * engine without knowing its internal structure.
  */
 export type EngineHandle = {
+  // ── Sub-handles (new — UI migrates onto these in Tasks 7-10) ──────────────
+  //
+  // The eleven cluster sub-handles plus the two-level `input.spaceMouse`
+  // are introduced alongside the existing flat methods.  Every sub-handle
+  // method forwards to the same closure-scoped implementation the flat
+  // method below calls, so calling either shape produces identical
+  // behaviour during the H5 transition.  Task 11 deletes the flat block.
+  points: EnginePointsHandle;
+  tonemap: EngineTonemapHandle;
+  camera: EngineCameraHandle;
+  selection: EngineSelectionHandle;
+  sources: EngineSourcesHandle;
+  bias: EngineBiasHandle;
+  thumbnails: EngineThumbnailsHandle;
+  milkyWay: EngineMilkyWayHandle;
+  filaments: EngineFilamentsHandle;
+  volumes: EngineVolumesHandle;
+  input: EngineInputHandle;
+
+  // ── Legacy flat methods (kept until Task 11 deletes them) ─────────────────
+  //
+  // Every flat declaration below this header is preserved verbatim.  UI
+  // consumers continue to compile against these until they're migrated to
+  // the sub-handles above; the cleanup task does a single sweep to drop
+  // the block once the migration is complete.
   /**
    * Programmatically clear the current selection.
    *

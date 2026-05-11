@@ -661,8 +661,103 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   })();
 
   // ── Public handle ─────────────────────────────────────────────────────────
+  //
+  // H5 (task 6): we build the "boring" table-driven setters into a local
+  // first so the sub-handle bag below can forward to them by name without
+  // re-implementing any clamp / dual-write logic.  The same object is then
+  // spread into the legacy flat surface so consumers wired to either shape
+  // observe identical behaviour during the transition.
+  const boringSetters = buildSettersFromTable(state, cb, () =>
+    state.subsystems.scheduler.requestRender(),
+  ) satisfies Pick<EngineHandle, SettingsTableKey>;
 
   const handle: EngineHandle = {
+    // ── Sub-handles (H5 task 6) ──────────────────────────────────────────────
+    //
+    // Each sub-handle is a thin forwarder onto the existing flat
+    // implementation that's in scope — either the table-driven
+    // `boringSetters` or one of the bespoke methods spelled out below.
+    // No logic is duplicated; the flat block stays the single source of
+    // truth until Task 11 deletes it and these become the only callable
+    // shape.
+    points: {
+      setSize: (sizePx) => boringSetters.setPointSize(sizePx),
+      setBrightness: (value) => boringSetters.setBrightness(value),
+      setDepthFade: (enabled) => boringSetters.setDepthFadeEnabled(enabled),
+      setHighlightFallback: (enabled) =>
+        boringSetters.setHighlightFallback(enabled),
+      setRealOnly: (enabled) => boringSetters.setRealOnlyMode(enabled),
+    },
+    tonemap: {
+      setExposure: (value) => boringSetters.setExposure(value),
+      setCurve: (curve) => boringSetters.setToneMapCurve(curve),
+    },
+    // The `!` non-null assertions below acknowledge that the flat
+    // methods these forward to are declared optional on EngineHandle
+    // (the type started life with optional setters to permit minimal
+    // engine builds), but inside this literal we are concurrently
+    // defining every one of them, so at runtime they are never
+    // undefined.  Task 11's flat-method deletion lets us drop both the
+    // optional markers and these assertions in one pass.
+    camera: {
+      setAutoRotate: (enabled) => boringSetters.setAutoRotate(enabled),
+      reset: () => handle.resetCamera(),
+      focusOn: (info) => handle.focusOn(info),
+      focusOnHome: () => handle.focusOnHome(),
+      focusOnMilkyWay: () => handle.focusOnMilkyWay(),
+      logState: () => handle.logCameraState(),
+    },
+    selection: {
+      clear: () => handle.clearSelection(),
+      selectFamous: (id) => handle.selectFamous(id),
+      selectByAlias: (target) => handle.selectByAlias!(target),
+      loadAliases: () => handle.loadPgcAliases!(),
+    },
+    sources: {
+      setLodMode: (mode) => handle.setLodMode!(mode),
+      setVisible: (source, visible) => handle.setSourceVisible!(source, visible),
+      setTier: (tier) => handle.setTier!(tier),
+      getCloud: (source) => handle.getCloud!(source),
+      getCloudObjIds: (source) => handle.getCloudObjIds!(source),
+    },
+    bias: {
+      setMode: (mode) => handle.setBiasMode!(mode),
+      setAbsMagLimit: (absMag) => boringSetters.setAbsMagLimit(absMag),
+    },
+    thumbnails: {
+      setEnabled: (enabled) => boringSetters.setGalaxyTexturesEnabled(enabled),
+    },
+    milkyWay: {
+      setEnabled: (enabled) => boringSetters.setMilkyWayEnabled(enabled),
+    },
+    filaments: {
+      setEnabled: (enabled) => boringSetters.setFilamentsEnabled(enabled),
+      setIntensity: (value) => boringSetters.setFilamentIntensity(value),
+    },
+    volumes: {
+      setMasterEnabled: (enabled) => handle.setVolumesEnabled!(enabled),
+      add: (h, cube) => handle.addVolumeField!(h, cube),
+      remove: (h) => handle.removeVolumeField!(h),
+      setEnabled: (h, enabled) => handle.setVolumeFieldEnabled!(h, enabled),
+      setIntensity: (h, intensity) =>
+        handle.setVolumeFieldIntensity!(h, intensity),
+      setContrast: (h, contrast) => handle.setVolumeFieldContrast!(h, contrast),
+      setDensityScale: (h, value) =>
+        handle.setVolumeFieldDensityScale!(h, value),
+      setPalette: (h, id) => handle.setVolumeFieldPalette!(h, id),
+      list: () => handle.listVolumeFields!(),
+      getState: () => handle.getVolumeFieldsState!(),
+    },
+    input: {
+      spaceMouse: {
+        connect: () => handle.connectSpaceMouse!(),
+        disconnect: () => handle.disconnectSpaceMouse!(),
+        isConnected: () => handle.isSpaceMouseConnected!(),
+        setSensitivity: (value) => handle.setSpaceMouseSensitivity!(value),
+      },
+    },
+
+    // ── Legacy flat methods (kept until Task 11 removes them) ────────────────
     clearSelection() {
       // Only fire the callback when something was actually selected.
       // This lets the Esc handler in App.tsx call this unconditionally.
@@ -782,14 +877,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // (couples to camera distance), `setSourceVisible` (mask math +
     // implicit LOD-mode switch), `setSpaceMouseSensitivity` (subsystem
     // forward) — keep their hand-rolled bodies below.
-    // `satisfies` here is the safety net the settingsTable docstring
-    // advertises: if the builder's return shape ever drifts away from
-    // `Pick<EngineHandle, SettingsTableKey>` (e.g. a renamed key, or
-    // a value type that's not assignable due to contravariance), tsc
-    // catches it at this spread site rather than at distant callers.
-    ...(buildSettersFromTable(state, cb, () =>
-      state.subsystems.scheduler.requestRender(),
-    ) satisfies Pick<EngineHandle, SettingsTableKey>),
+    // `satisfies` on the `boringSetters` local above is the safety net
+    // the settingsTable docstring advertises: if the builder's return
+    // shape ever drifts away from `Pick<EngineHandle, SettingsTableKey>`
+    // (renamed key, value type not assignable due to contravariance),
+    // tsc catches it at the construction site rather than at distant
+    // callers.  We spread the same local here so the legacy flat surface
+    // keeps every table-driven setter.
+    ...boringSetters,
 
     setBiasMode(mode) {
       // Forwarded into the per-frame uniform on the next draw.  The
