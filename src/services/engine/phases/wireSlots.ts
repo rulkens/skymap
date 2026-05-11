@@ -87,12 +87,18 @@ import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
-// PR #95 (cluster POI labels) — imports retained because the POI block
-// below uses them.  The synthetic-volume imports that previously sat
-// here (DEFAULT_VOLUME_FIELD_INTENSITY, getVolumeFieldDefaults,
-// syntheticVolumeFetcher) were moved into syntheticVolumeSlots.ts by
-// H4.
-import { CLUSTER_ANCHORS, raDecDistToEqCart } from '../../../data/clusterAnchors';
+// Cosmography POI anchors used by the `?anchors=1` overlay below.
+// Synthetic-volume imports that previously sat here
+// (DEFAULT_VOLUME_FIELD_INTENSITY, getVolumeFieldDefaults,
+// syntheticVolumeFetcher) were moved into `syntheticVolumeSlots.ts`
+// by H4 and intentionally stay out.
+import {
+  CLUSTER_ANCHORS,
+  SUPERCLUSTER_ANCHORS,
+  VOID_ANCHORS,
+  raDecDistToEqCart,
+} from '../../../data/clusterAnchors';
+import type { PointOfInterest } from '../subsystems/poiSubsystem';
 
 import type { AssetSlot } from '../../loading/types';
 import type { EngineState } from '../../../@types';
@@ -156,19 +162,32 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     })();
   const volumesGateOpen = import.meta.env.DEV || volumesEnabledByUrl;
 
-  // ── Cluster anchor POIs (dev tool, gated on ?anchors=1) ──────────
+  // ── Cosmography anchor POIs (dev tool, gated on ?anchors=1) ──────
   //
-  // Pushes the six well-known cluster anchors (Virgo, Norma, Perseus,
-  // Coma, Hercules, Shapley) into the POI subsystem at startup so the
-  // operator can visually cross-reference the CF-4 DM cube alignment
-  // against known large-scale structure.  Not enabled by default — the
-  // labels would clutter the production view, and most users won't need
-  // a star-chart overlay on a galaxy renderer.
+  // Pushes well-known cluster, supercluster, and void anchors into the
+  // POI subsystem at startup so the operator can visually cross-reference
+  // the CF-4 DM cube alignment against known large-scale structure.  Not
+  // enabled by default — the labels would clutter the production view,
+  // and most users won't need a star-chart overlay on a galaxy renderer.
   //
   // Same window-guarded URL-flag idiom as `volumesEnabledByUrl` above;
   // we deliberately don't fold the two into a single helper because the
   // pattern is short and the duplication is readable.
-  const showClusterAnchors =
+  //
+  // Why three lists merged here (rather than one combined export from
+  // `clusterAnchors.ts`): each list serves a different purpose.
+  // CLUSTER_ANCHORS is the audit ground-truth (tight Abell-catalog
+  // members), SUPERCLUSTER_ANCHORS points at extended density peaks
+  // sourced from CF-4 itself, VOID_ANCHORS points at literature voids.
+  // Keeping them as separate exports lets the audit script consume
+  // CLUSTER_ANCHORS alone without dragging in interpretive POIs.
+  //
+  // Per-category crosshair scaling: clusters get a small marker
+  // (cores are ~1 Mpc), superclusters get a larger one (extent
+  // 30-50 Mpc), voids get a still larger one (radii 30-50+ Mpc).
+  // The per-category min floors prevent vanishing markers on the
+  // closest anchors (e.g. Virgo, Local Void).
+  const showAnchors =
     typeof window !== 'undefined' &&
     (() => {
       try {
@@ -177,21 +196,44 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         return false;
       }
     })();
-  if (showClusterAnchors) {
-    const pois = CLUSTER_ANCHORS.map((a) => ({
-      // Stable, slug-style id derived from the name — used by the
-      // director's signature hash to detect "same POI set" between
-      // frames so the GPU upload is skipped when unchanged.
-      id: `cluster-${a.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
-      name: a.name,
-      category: 'cluster' as const,
-      worldPos: raDecDistToEqCart(a),
-      // Crosshair scaled to ~5% of the anchor distance so it reads from
-      // a comfortable viewing distance without dominating the cluster
-      // glyph at extreme close zoom.  Floor at 2 Mpc so Virgo (~16 Mpc)
-      // still has a visible marker.
-      crosshairSizeMpc: Math.max(2, a.distMpc * 0.05),
-    }));
+  if (showAnchors) {
+    const slug = (name: string): string =>
+      name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const pois: PointOfInterest[] = [
+      ...CLUSTER_ANCHORS.map(
+        (a): PointOfInterest => ({
+          id: `cluster-${slug(a.name)}`,
+          name: a.name,
+          category: 'cluster',
+          worldPos: raDecDistToEqCart(a),
+          crosshairSizeMpc: Math.max(2, a.distMpc * 0.05),
+        }),
+      ),
+      ...SUPERCLUSTER_ANCHORS.map(
+        (a): PointOfInterest => ({
+          id: `supercluster-${slug(a.name)}`,
+          name: a.name,
+          category: 'cluster',
+          worldPos: raDecDistToEqCart(a),
+          // ~10 % of distance, floor 10 Mpc — superclusters span
+          // tens of Mpc so the marker should read at supercluster
+          // scale, not Abell-cluster-core scale.
+          crosshairSizeMpc: Math.max(10, a.distMpc * 0.1),
+        }),
+      ),
+      ...VOID_ANCHORS.map(
+        (a): PointOfInterest => ({
+          id: `void-${slug(a.name)}`,
+          name: a.name,
+          category: 'void',
+          worldPos: raDecDistToEqCart(a),
+          // ~15 % of distance, floor 15 Mpc — voids are large.  The
+          // poiSubsystem already styles voids in soft cyan to read
+          // as a different category from the warm-yellow clusters.
+          crosshairSizeMpc: Math.max(15, a.distMpc * 0.15),
+        }),
+      ),
+    ];
     state.subsystems.pois.setPois(pois);
   }
 
