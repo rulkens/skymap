@@ -65,7 +65,7 @@
  * never notices.
  */
 
-import type { PointCloud, PointInfo } from '../../../@types';
+import type { Destroyable, PointCloud, PointInfo } from '../../../@types';
 import { Source } from '../../../data/sources';
 import type { createPickRenderer } from '../../gpu/renderers/pickRenderer';
 
@@ -155,6 +155,16 @@ export type ClickResolution =
 export type ClickResolver = {
   /** Resolve a click position → ClickResolution. */
   resolveClick(input: ClickResolveInput): Promise<ClickResolution>;
+  /**
+   * Tear down the resolver.  No-op — the resolver is a thin wrapper
+   * around the pick renderer plus two pure resolution closures; its
+   * dependencies (pickRenderer, resolveSelection, buildPointInfo) are
+   * owned by the engine and torn down separately.  Method exists so
+   * the engine's bag of subsystems can be torn down uniformly via the
+   * shared `Destroyable` shape (`engine.destroy()` iterates and calls
+   * `destroy()` on each).
+   */
+  destroy(): void;
 };
 
 export type CreateClickResolverInput = {
@@ -166,7 +176,11 @@ export type CreateClickResolverInput = {
 export function createClickResolver(input: CreateClickResolverInput): ClickResolver {
   const { pickRenderer, resolveSelection, buildPointInfo } = input;
 
-  return {
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the click resolver is one of
+  // the engine's ~13 teardown targets, and the shared shape lets
+  // engine.destroy() iterate uniformly across the bag.
+  const resolver: ClickResolver = {
     async resolveClick(args: ClickResolveInput): Promise<ClickResolution> {
       const result = await pickRenderer.pick(
         args.viewportPx,
@@ -186,5 +200,10 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
         : null;
       return { kind: 'select', selection: result, info };
     },
+    destroy(): void {
+      // Intentionally empty — see the type-level docstring for why.
+    },
   };
+  resolver satisfies Destroyable;
+  return resolver;
 }

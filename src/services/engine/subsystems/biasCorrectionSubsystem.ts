@@ -86,7 +86,7 @@
  * @module
  */
 
-import type { EngineState, PointCloud } from '../../../@types';
+import type { Destroyable, EngineState, PointCloud } from '../../../@types';
 import { BiasMode } from '../../../data/biasMode';
 import { Source, ALL_SOURCES } from '../../../data/sources';
 import type { ComputeSchechterRatiosInput } from '../bake/computeSchechterRatios';
@@ -158,6 +158,17 @@ export type BiasCorrectionSubsystem = {
     sourcesWithSchechter: Source[];
     sourcesWithAngular: Source[];
   };
+  /**
+   * Tear down the subsystem.  Currently a no-op — bias bakes spawn
+   * per-call workers that self-terminate (`runDisposableWorker`), and
+   * there are no event listeners or persistent subscriptions to
+   * release.  The method exists for uniform iteration in
+   * `engine.destroy()` (every subsystem satisfies `Destroyable`) and
+   * acts as the placeholder for the audit-#2 follow-up: if we later
+   * track in-flight bake workers so a teardown mid-bake can abort
+   * them, the abort logic lands here without disturbing call sites.
+   */
+  destroy(): void;
 };
 
 /**
@@ -383,7 +394,11 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     }
   }
 
-  return {
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the bias-correction subsystem
+  // is one of the engine's ~13 teardown targets, and the shared shape
+  // lets engine.destroy() iterate uniformly across the bag.
+  const subsystem: BiasCorrectionSubsystem = {
     attachRenderer,
     setMode,
     onSourceUploaded,
@@ -393,5 +408,10 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
       sourcesWithSchechter: Array.from(cachedSchechter.keys()),
       sourcesWithAngular: Array.from(cachedAngular.keys()),
     }),
+    destroy(): void {
+      // Intentionally empty — see the type-level docstring for why.
+    },
   };
+  subsystem satisfies Destroyable;
+  return subsystem;
 }

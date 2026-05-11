@@ -46,6 +46,7 @@
 
 import { aggregateRegistry } from '../../loading/aggregateRegistry';
 import type { AssetSlot } from '../../loading/types';
+import type { Destroyable } from '../../../@types';
 import type { LoadProgressState } from '../../../@types/EngineCallbacks';
 
 /**
@@ -57,6 +58,18 @@ import type { LoadProgressState } from '../../../@types/EngineCallbacks';
 export type LoadProgressEmitter = {
   emit(): void;
   attachSlot(slot: AssetSlot<unknown, unknown>): void;
+  /**
+   * Release every subscriber attached via `attachSlot`.  Currently a
+   * placeholder no-op so the emitter satisfies the shared
+   * `Destroyable` shape every subsystem exposes — the real
+   * implementation, which captures each `slot.subscribe()`
+   * unsubscriber and calls them all here, lands in the next commit
+   * (Task 3 of this branch's plan).  Without the real implementation,
+   * subscriptions outlive `engine.destroy()` and any post-teardown
+   * slot transition still fires `publish` — that's the audit-#15
+   * leak this method is being added to plug.
+   */
+  destroy(): void;
 };
 
 /**
@@ -87,10 +100,20 @@ export function createLoadProgressEmitter(
       });
     }
   }
-  return {
+  // Built as a `const` (rather than returned inline) so we can attach
+  // the `satisfies Destroyable` latch — the emitter is one of the
+  // engine's ~13 teardown targets, and the shared shape lets
+  // engine.destroy() iterate uniformly across the bag.
+  const emitter: LoadProgressEmitter = {
     emit: publish,
     attachSlot(slot) {
       slot.subscribe(publish);
     },
+    destroy(): void {
+      // Placeholder — real teardown lands in Task 3.  See the
+      // type-level docstring for why.
+    },
   };
+  emitter satisfies Destroyable;
+  return emitter;
 }
