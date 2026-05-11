@@ -102,10 +102,65 @@ export type SettingsTableKey =
  * by a leaf field.  Always indexes into `state.settings` or
  * `state.bias` for the current thirteen — but the type leaves room for
  * other sub-bags to join.
+ *
+ * The 3-tuple form (`['settings', 'bias', 'absMagLimit']`) is included
+ * for completeness of the union but `setAbsMagLimit` currently uses the
+ * 2-tuple `['bias', 'absMagLimit']` flat path.  The 3-tuple slot in the
+ * union keeps the door open for a future flat-write to the nested
+ * sub-bag root without needing a new helper.
  */
 type SettingsPath =
   | readonly ['settings', keyof EngineState['settings']]
-  | readonly ['bias', keyof EngineState['bias']];
+  | readonly ['bias', keyof EngineState['bias']]
+  | readonly ['settings', 'bias', 'absMagLimit'];
+
+/**
+ * Nested form used by descriptors during the H5 dual-write phase.
+ *
+ * Each entry references the new sub-bag fields that Task 2 introduced
+ * alongside the flat ones; dual-writing keeps the flat and nested
+ * shapes in sync so consumers can migrate one at a time without seeing
+ * stale state.  Once the consumer migration completes (Task 12), the
+ * flat paths and the entire dual-write branch get deleted and this
+ * union becomes the only state path.
+ */
+type NestedSettingsPath =
+  | readonly ['settings', 'points', keyof EngineState['settings']['points']]
+  | readonly ['settings', 'tonemap', keyof EngineState['settings']['tonemap']]
+  | readonly ['settings', 'camera', keyof EngineState['settings']['camera']]
+  | readonly ['settings', 'bias', keyof EngineState['settings']['bias']]
+  | readonly [
+      'settings',
+      'thumbnails',
+      keyof EngineState['settings']['thumbnails'],
+    ]
+  | readonly ['settings', 'milkyWay', keyof EngineState['settings']['milkyWay']]
+  | readonly [
+      'settings',
+      'filaments',
+      keyof EngineState['settings']['filaments'],
+    ]
+  | readonly ['settings', 'volumes', 'masterEnabled'];
+
+/**
+ * Nested callback address: `[cluster, method]`.  The cluster names line
+ * up 1:1 with the optional sub-bags Task 3 added to `EngineCallbacks`
+ * (`points`, `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`,
+ * `filaments`, `volumes`, `sources`).  Method names are kept as plain
+ * `string` here because they vary per cluster and adding a full nested
+ * union would duplicate the EngineCallbacks shape — the runtime
+ * optional-chaining safely handles a missing method.
+ */
+type NestedCallbackKey =
+  | readonly ['points', string]
+  | readonly ['tonemap', string]
+  | readonly ['camera', string]
+  | readonly ['bias', string]
+  | readonly ['thumbnails', string]
+  | readonly ['milkyWay', string]
+  | readonly ['filaments', string]
+  | readonly ['volumes', string]
+  | readonly ['sources', string];
 
 /**
  * One row of the descriptor table.
@@ -118,12 +173,22 @@ type SettingsPath =
  *   - `clamp` (optional) wraps the incoming value before it hits
  *      state AND the callback echo.  Returns the post-clamp number.
  *      Used by `setExposure` and `setFilamentIntensity`.
+ *   - `nestedPath` (optional) is the 3-tuple sub-bag path written
+ *      ALONGSIDE `path` during the H5 dual-write phase.  Kept optional
+ *      because the field is only meaningful while both shapes coexist;
+ *      Task 12 deletes both `path` and the dual-write branch.
+ *   - `nestedCallback` (optional) is the `[cluster, method]` address
+ *      fired ALONGSIDE `callback` during the same dual-write phase.
  */
 type SettingsDescriptor = {
   name: SettingsTableKey;
   path: SettingsPath;
   callback?: keyof EngineCallbacks;
   clamp?: (value: number) => number;
+  /** Nested path written ALONGSIDE `path` during the H5 dual-write phase. */
+  nestedPath?: NestedSettingsPath;
+  /** Nested callback fired ALONGSIDE `callback` during the H5 dual-write phase. */
+  nestedCallback?: NestedCallbackKey;
 };
 
 /**
@@ -137,26 +202,36 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     name: 'setPointSize',
     path: ['settings', 'pointSizePx'],
     callback: 'onPointSizeChange',
+    nestedPath: ['settings', 'points', 'sizePx'],
+    nestedCallback: ['points', 'onSizeChange'],
   },
   {
     name: 'setBrightness',
     path: ['settings', 'brightness'],
     callback: 'onBrightnessChange',
+    nestedPath: ['settings', 'points', 'brightness'],
+    nestedCallback: ['points', 'onBrightnessChange'],
   },
   {
     name: 'setAutoRotate',
     path: ['settings', 'autoRotate'],
     callback: 'onAutoRotateChange',
+    nestedPath: ['settings', 'camera', 'autoRotate'],
+    nestedCallback: ['camera', 'onAutoRotateChange'],
   },
   {
     name: 'setGalaxyTexturesEnabled',
     path: ['settings', 'galaxyTexturesEnabled'],
     callback: 'onGalaxyTexturesEnabledChange',
+    nestedPath: ['settings', 'thumbnails', 'enabled'],
+    nestedCallback: ['thumbnails', 'onEnabledChange'],
   },
   {
     name: 'setMilkyWayEnabled',
     path: ['settings', 'milkyWayEnabled'],
     callback: 'onMilkyWayEnabledChange',
+    nestedPath: ['settings', 'milkyWay', 'enabled'],
+    nestedCallback: ['milkyWay', 'onEnabledChange'],
   },
   {
     // App.tsx owns this boolean optimistically; no echo callback wired.
@@ -164,6 +239,7 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     // long comment in the original `setFilamentsEnabled`.
     name: 'setFilamentsEnabled',
     path: ['settings', 'filamentsEnabled'],
+    nestedPath: ['settings', 'filaments', 'enabled'],
   },
   {
     // Filament-overlay intensity scale; clamps to [0, 1] same as the
@@ -172,21 +248,28 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     name: 'setFilamentIntensity',
     path: ['settings', 'filamentIntensity'],
     clamp: (v) => Math.max(0, Math.min(1, v)),
+    nestedPath: ['settings', 'filaments', 'intensity'],
   },
   {
     name: 'setHighlightFallback',
     path: ['settings', 'highlightFallback'],
     callback: 'onHighlightFallbackChange',
+    nestedPath: ['settings', 'points', 'highlightFallback'],
+    nestedCallback: ['points', 'onHighlightFallbackChange'],
   },
   {
     name: 'setRealOnlyMode',
     path: ['settings', 'realOnlyMode'],
     callback: 'onRealOnlyModeChange',
+    nestedPath: ['settings', 'points', 'realOnly'],
+    nestedCallback: ['points', 'onRealOnlyChange'],
   },
   {
     name: 'setDepthFadeEnabled',
     path: ['settings', 'depthFadeEnabled'],
     callback: 'onDepthFadeEnabledChange',
+    nestedPath: ['settings', 'points', 'depthFade'],
+    nestedCallback: ['points', 'onDepthFadeChange'],
   },
   {
     // Note the path: `state.bias.absMagLimit`, not settings.  The only
@@ -194,6 +277,8 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     name: 'setAbsMagLimit',
     path: ['bias', 'absMagLimit'],
     callback: 'onAbsMagLimitChange',
+    nestedPath: ['settings', 'bias', 'absMagLimit'],
+    nestedCallback: ['bias', 'onAbsMagLimitChange'],
   },
   {
     // Clamps to [0.05, 16] before mutation/echo — a runaway slider or
@@ -205,11 +290,15 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     path: ['settings', 'exposure'],
     callback: 'onExposureChange',
     clamp: (v) => Math.max(0.05, Math.min(16, v)),
+    nestedPath: ['settings', 'tonemap', 'exposure'],
+    nestedCallback: ['tonemap', 'onExposureChange'],
   },
   {
     name: 'setToneMapCurve',
     path: ['settings', 'toneMapCurve'],
     callback: 'onToneMapCurveChange',
+    nestedPath: ['settings', 'tonemap', 'curve'],
+    nestedCallback: ['tonemap', 'onCurveChange'],
   },
 ];
 
@@ -229,6 +318,25 @@ function setByPath(
   path: SettingsPath,
   value: unknown,
 ): void {
+  // 3-tuple form: a nested sub-bag traversal (`state.settings.bias.X`).
+  // Pulled out first so the 2-tuple branches stay narrow under the
+  // discriminant.  Only `['settings', 'bias', ...]` is reachable from
+  // the current union, but the branch is generic so a future row can
+  // join without re-shaping the helper.
+  if (path.length === 3) {
+    const [bag, sub, leaf] = path;
+    // Non-null assertion: the descriptor table is the runtime guarantor
+    // that the sub-bag exists.  `noUncheckedIndexedAccess` widens the
+    // result of `Record<string, X>[k]` to `X | undefined`, which we
+    // collapse here because the alternative — a defensive `if` plus
+    // throw — would just be dead code (a future bad descriptor crashes
+    // at the next line either way).
+    const target = (
+      state[bag] as unknown as Record<string, Record<string, unknown>>
+    )[sub as string]!;
+    target[leaf as string] = value;
+    return;
+  }
   const [bag, leaf] = path;
   // The two branches are structurally identical but split so the
   // `bag` discriminant narrows correctly inside each — saves one
@@ -238,6 +346,32 @@ function setByPath(
   } else {
     (state.bias as Record<string, unknown>)[leaf as string] = value;
   }
+}
+
+/**
+ * Apply a value to `state` at the given 3-tuple nested path.  Mirrors
+ * `setByPath` for the new sub-bag fields introduced in Task 2 — kept
+ * as a separate helper so the unsafe cast lives in one place and the
+ * dual-write call sites in `buildSettersFromTable` read symmetrically
+ * ("write flat, then write nested").
+ *
+ * Removed after Task 12 collapses the dual-write to a single nested
+ * write — at which point `setByPath` itself goes away too.
+ */
+function setByNestedPath(
+  state: EngineState,
+  path: NestedSettingsPath,
+  value: unknown,
+): void {
+  const [bag, sub, leaf] = path;
+  // Two-step cast through `unknown` because `EngineState[bag]` is a
+  // narrow struct type — Task 2 nests it as `{points: {...}, ...}` but
+  // TS can't statically prove every sub key is a Record without the
+  // explicit widening.  The descriptor table is the runtime guarantor.
+  const target = (
+    state[bag] as unknown as Record<string, Record<string, unknown>>
+  )[sub as string]!;
+  target[leaf as string] = value;
 }
 
 /**
@@ -266,7 +400,8 @@ export function buildSettersFromTable(
   const out = {} as Record<SettingsTableKey, (value: unknown) => void>;
 
   for (const descriptor of SETTINGS_TABLE) {
-    const { name, path, callback, clamp } = descriptor;
+    const { name, path, callback, clamp, nestedPath, nestedCallback } =
+      descriptor;
 
     out[name] = (value: unknown) => {
       // Clamps only ever apply to numeric fields; descriptors that
@@ -275,7 +410,15 @@ export function buildSettersFromTable(
       const next =
         clamp !== undefined ? clamp(value as number) : value;
 
+      // Flat write — the original behaviour, preserved verbatim so
+      // every existing reader keeps observing the same state.
       setByPath(state, path, next);
+      // Nested twin — Task 2's sub-bag fields.  Additive: new readers
+      // see the same post-clamp value at the namespaced path.  Both
+      // writes go away together when the dual-write phase ends.
+      if (nestedPath !== undefined) {
+        setByNestedPath(state, nestedPath, next);
+      }
 
       if (callback !== undefined) {
         // Optional-chaining mirrors the hand-rolled setters' shape:
@@ -284,6 +427,21 @@ export function buildSettersFromTable(
         // each carry their own narrow signature; the descriptor
         // table is the runtime guarantor that `next` matches.
         const fn = cb[callback] as ((v: unknown) => void) | undefined;
+        fn?.(next);
+      }
+      // Nested callback twin — Task 3's optional sub-bag clusters.
+      // Same optional-chain shape so a missing cluster or missing
+      // method is silently skipped.  The hooks (useEngine + co.) wire
+      // the nested entries to identical function refs as the flat
+      // ones today, so this is a no-op behavioural-wise during the
+      // dual-write phase; the safety net is for consumers who migrate
+      // to ONLY listen on the nested cluster.
+      if (nestedCallback !== undefined) {
+        const [cluster, method] = nestedCallback;
+        const sub = (
+          cb as unknown as Record<string, Record<string, unknown> | undefined>
+        )[cluster];
+        const fn = sub?.[method] as ((v: unknown) => void) | undefined;
         fn?.(next);
       }
 
