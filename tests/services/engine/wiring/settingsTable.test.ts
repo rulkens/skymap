@@ -119,11 +119,15 @@ describe('settingsTable', () => {
   });
 
   describe('buildSettersFromTable', () => {
-    it('mutates state, fires the echo callback, and requests a render', () => {
+    it('mutates state, fires the nested echo callback, and requests a render', () => {
       const state = makeState();
+      // H5 task 11: callbacks live at their nested sub-bag addresses
+      // (`points.onSizeChange`, `points.onBrightnessChange`).  The flat
+      // siblings were deleted; only the namespaced shape remains.
+      const onSizeChange = vi.fn();
+      const onBrightnessChange = vi.fn();
       const cb: Partial<EngineCallbacks> = {
-        onPointSizeChange: vi.fn(),
-        onBrightnessChange: vi.fn(),
+        points: { onSizeChange, onBrightnessChange },
       };
       const requestRender = vi.fn();
 
@@ -135,21 +139,23 @@ describe('settingsTable', () => {
 
       setters.setPointSize(4.2);
       expect(state.settings.pointSizePx).toBe(4.2);
-      expect(cb.onPointSizeChange).toHaveBeenCalledExactlyOnceWith(4.2);
+      expect(onSizeChange).toHaveBeenCalledExactlyOnceWith(4.2);
       expect(requestRender).toHaveBeenCalledOnce();
 
       setters.setBrightness(2.0);
       expect(state.settings.brightness).toBe(2.0);
-      expect(cb.onBrightnessChange).toHaveBeenCalledExactlyOnceWith(2.0);
+      expect(onBrightnessChange).toHaveBeenCalledExactlyOnceWith(2.0);
       expect(requestRender).toHaveBeenCalledTimes(2);
     });
 
     it('applies clamps before mutation and callback echo', () => {
-      // setExposure clamps to [0.05, 16] and echoes the clamped value;
+      // setExposure clamps to [0.05, 16] and echoes the clamped value
+      // via the nested `tonemap.onExposureChange` address;
       // setFilamentIntensity clamps to [0, 1] but has no callback.
       const state = makeState();
+      const onExposureChange = vi.fn();
       const cb: Partial<EngineCallbacks> = {
-        onExposureChange: vi.fn(),
+        tonemap: { onExposureChange },
       };
       const requestRender = vi.fn();
 
@@ -162,12 +168,12 @@ describe('settingsTable', () => {
       // Above the cap.
       setters.setExposure(1e9);
       expect(state.settings.exposure).toBe(16);
-      expect(cb.onExposureChange).toHaveBeenLastCalledWith(16);
+      expect(onExposureChange).toHaveBeenLastCalledWith(16);
 
       // Below the floor.
       setters.setExposure(-1);
       expect(state.settings.exposure).toBe(0.05);
-      expect(cb.onExposureChange).toHaveBeenLastCalledWith(0.05);
+      expect(onExposureChange).toHaveBeenLastCalledWith(0.05);
 
       // Filament intensity clamps without an echo callback.
       setters.setFilamentIntensity(2);

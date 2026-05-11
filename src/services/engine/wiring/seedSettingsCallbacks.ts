@@ -68,17 +68,22 @@ export type Snapshot = {
  * the pre-refactor codebase shows zero call-order changes.
  */
 export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: Snapshot): void {
-  cb.onPointSizeChange?.(snapshot.pointSize);
-  cb.onBrightnessChange?.(snapshot.brightness);
-  cb.onAutoRotateChange?.(snapshot.autoRotate);
-  cb.onGalaxyTexturesEnabledChange?.(snapshot.galaxyTexturesEnabled);
-  cb.onHighlightFallbackChange?.(snapshot.highlightFallback);
-  cb.onRealOnlyModeChange?.(snapshot.realOnlyMode);
-  cb.onDepthFadeEnabledChange?.(snapshot.depthFadeEnabled);
-  cb.onBiasModeChange?.(snapshot.biasMode);
-  cb.onAbsMagLimitChange?.(snapshot.absMagLimit);
-  cb.onToneMapCurveChange?.(snapshot.toneMapCurve);
-  cb.onExposureChange?.(snapshot.exposure);
-  cb.onLodModeChange?.(snapshot.lodMode);
-  cb.onSourceMaskChange?.(snapshot.visibleSourceMask);
+  // H5 task 11: nested-only fires.  Each echo lands on its `EngineCallbacks`
+  // sub-bag address so React consumers (subscribed via `useEngineSettings`)
+  // observe the engine-truth defaults exactly once at startup.  The flat
+  // siblings were deleted alongside this conversion; optional-chaining
+  // keeps every fire safe when a consumer doesn't subscribe to that bag.
+  cb.points?.onSizeChange?.(snapshot.pointSize);
+  cb.points?.onBrightnessChange?.(snapshot.brightness);
+  cb.camera?.onAutoRotateChange?.(snapshot.autoRotate);
+  cb.thumbnails?.onEnabledChange?.(snapshot.galaxyTexturesEnabled);
+  cb.points?.onHighlightFallbackChange?.(snapshot.highlightFallback);
+  cb.points?.onRealOnlyChange?.(snapshot.realOnlyMode);
+  cb.points?.onDepthFadeChange?.(snapshot.depthFadeEnabled);
+  cb.bias?.onModeChange?.(snapshot.biasMode);
+  cb.bias?.onAbsMagLimitChange?.(snapshot.absMagLimit);
+  cb.tonemap?.onCurveChange?.(snapshot.toneMapCurve);
+  cb.tonemap?.onExposureChange?.(snapshot.exposure);
+  cb.sources?.onLodModeChange?.(snapshot.lodMode);
+  cb.sources?.onMaskChange?.(snapshot.visibleSourceMask);
 }

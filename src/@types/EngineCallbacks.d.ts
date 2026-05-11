@@ -20,256 +20,30 @@ import type { ToneMapCurve } from '../data/toneMapCurve';
  * except where noted. They are called only when the value actually changes,
  * so React's `setState` can be passed in directly.
  *
- * The three optional settings callbacks (`onPointSizeChange`, `onBrightnessChange`,
- * `onAutoRotateChange`) are optional so existing call-sites that don't need
- * settings panel integration continue to typecheck without changes.
+ * ### Nested-only shape (H5 task 11)
+ *
+ * Each sub-bag groups its callbacks by the engine sub-system they
+ * concern (lifecycle / selection / camera / sources / bias / points /
+ * tonemap / thumbnails / milkyWay / filaments / volumes / input).
+ * Pre-task-11 the type also exposed flat siblings (`onStatusChange`,
+ * `onPointSizeChange`, …); the migration is complete now and every
+ * fire site lives at its nested address.
+ *
+ * Why namespacing at all (rather than 26 sibling lambdas)?  The
+ * grouping mirrors the engine's *internal* `EngineState` sub-bags so
+ * the public callback surface reads as a parallel projection of the
+ * state tree.  Consumers can destructure a cluster at a time
+ * (`const { points, camera } = ...`), and adding a new echo lands
+ * in the cluster it belongs to instead of further bloating a flat
+ * record.
+ *
+ * Required-ness rules: sub-bags whose members include any required
+ * callback are themselves required (`lifecycle`, `selection`).
+ * Bags that are entirely optional callbacks (`points`, `tonemap`, …)
+ * keep their `?:` marker so subscribers can omit them without
+ * needing to declare an empty object.
  */
 export type EngineCallbacks = {
-  /** Fired whenever the engine status advances (initializing → loading → ready). */
-  onStatusChange: (s: EngineStatus) => void;
-  /** Fired when the point under the cursor changes (null = empty sky). */
-  onHoverChange: (info: PointInfo | null) => void;
-  /** Fired when the pinned/selected point changes. */
-  onSelectChange: (info: PointInfo | null) => void;
-  /**
-   * Fired when the camera-focus target changes — i.e. the engine has
-   * started a tween toward (or away from) a specific galaxy.
-   *
-   * Selection (`onSelectChange`) and focus are separate concepts:
-   *   - Selection is the pin state — InfoCard, halo highlight.  A bare
-   *     canvas click fires `onSelectChange` only.
-   *   - Focus is a user-deliberate camera commitment — the Focus button
-   *     on the InfoCard, the `f` shortcut, a palette pick, or a deep-link
-   *     resolve.  Each of those fires `onFocusChange` *in addition to*
-   *     `onSelectChange`.
-   *
-   * The deep-link URL hook subscribes to focus, not selection, so a
-   * casual click doesn't pollute browser history with `#focus=…` entries
-   * — only deliberate focus actions do.
-   *
-   * Engine call sites that fire this callback: `selectByAlias`,
-   * `selectFamous`, `focusOnHome` (with null), `clearSelection` (with
-   * null).  `focusOn(xyz, diameter)` does NOT fire it because the engine
-   * has no `PointInfo` at that level — its callers (App's Focus button,
-   * `f` shortcut) update App-side `focused` state directly.
-   */
-  onFocusChange?: (info: PointInfo | null) => void;
-  /**
-   * Fired once per frame the camera state may have changed — every tick
-   * inside the engine's `runFrame` body (when a camera exists) plus
-   * whenever orbit-controls mutates the cam from user input.
-   *
-   * The callback carries the two camera scalars the React UI needs to
-   * derive zoom-dependent values (scale bar today; potentially other
-   * overlays later).  Anything more elaborate should read state via
-   * its own subsystem rather than fattening this payload.
-   *
-   * Optional: subscribers that don't need per-frame camera state can
-   * omit it.  When omitted the call is an optional-chain no-op, so the
-   * frame body pays nothing.
-   *
-   * Why a snapshot rather than the live `OrbitCamera` ref?  React
-   * consumers should treat each emission as an immutable value to
-   * compare against the previous one — passing the live object would
-   * leak mutation semantics across the engine→React boundary and
-   * defeat `setState` equality checks.
-   */
-  onCameraChange?: (snapshot: { distance: number; fovYRad: number }) => void;
-
-  /**
-   * Fired when the point size changes (either from a `setPointSize` call or at
-   * engine init so React's initial state matches the engine's default).
-   */
-  onPointSizeChange?: (sizePx: number) => void;
-  /**
-   * Fired when the global brightness multiplier changes (either from a
-   * `setBrightness` call or at engine init to seed React's initial state).
-   */
-  onBrightnessChange?: (value: number) => void;
-  /**
-   * Fired when auto-rotate is toggled (either from `setAutoRotate` or at
-   * engine init so React knows the initial off state).
-   */
-  onAutoRotateChange?: (enabled: boolean) => void;
-  /**
-   * Fired when the galaxy-thumbnail render pass is toggled on/off (either
-   * from `setGalaxyTexturesEnabled` or at engine init to seed React's
-   * initial state).  The pass itself is gated by this flag inside the
-   * per-frame loop, so flipping it stops new fetches and quad emissions
-   * immediately on the next frame.
-   */
-  onGalaxyTexturesEnabledChange?: (enabled: boolean) => void;
-  /**
-   * Fired when the engine's `setMilkyWayEnabled` updates the flag.
-   * The React shell uses this to drive the SettingsPanel checkbox so
-   * the UI reflects the engine's authoritative state.
-   */
-  onMilkyWayEnabledChange?: (enabled: boolean) => void;
-  /**
-   * Optional echo of the highlight-fallback toggle state so the
-   * SettingsPanel can stay in sync if the engine ever flips it
-   * programmatically (e.g. via a future keyboard shortcut).
-   */
-  onHighlightFallbackChange?: (enabled: boolean) => void;
-  /**
-   * Optional echo of the show-only-real-orientations toggle state.
-   */
-  onRealOnlyModeChange?: (enabled: boolean) => void;
-  /**
-   * Optional echo of the depth-fade toggle state.  Mirrors the per-galaxy
-   * camera-distance alpha attenuation that fights the centre-of-volume
-   * over-saturation; the engine seeds it at init and fires this whenever
-   * `setDepthFadeEnabled` is called.
-   */
-  onDepthFadeEnabledChange?: (enabled: boolean) => void;
-  /**
-   * Optional echo of the Malmquist-bias mode selector — fired both when
-   * the engine seeds its initial value at startup and when a future
-   * `setBiasMode` call mutates it.  Subscribed React state should mirror
-   * the engine truth so the SettingsPanel renders the right radio button
-   * (Task 5 of the malmquist-bias plan adds the UI).
-   */
-  onBiasModeChange?: (mode: BiasMode) => void;
-  /**
-   * Optional echo of the volume-limited absolute-magnitude threshold.
-   * Same lifecycle as `onBiasModeChange` — seeded at startup, fired by
-   * `setAbsMagLimit`.
-   */
-  onAbsMagLimitChange?: (absMag: number) => void;
-  /**
-   * Echoed by the engine on init *and* after every `setToneMapCurve`
-   * call so React's SettingsPanel state stays in sync with engine
-   * truth.  Same pattern as `onBiasModeChange`.
-   */
-  onToneMapCurveChange?: (curve: ToneMapCurve) => void;
-  /**
-   * Echoed by the engine on init *and* after every `setExposure` call
-   * so React's SettingsPanel exposure slider stays in sync with engine
-   * truth.  Same lifecycle as `onToneMapCurveChange` — seed at startup
-   * (so the slider shows the engine default — currently 1.0 — on first
-   * paint without React having to duplicate that default), then fire on
-   * every clamped mutation so a runaway value (e.g. devtools setting
-   * 1e9) is reflected back as the actual clamped result rather than the
-   * caller's input.
-   *
-   * Why echo at all (rather than letting React own the value
-   * optimistically)?  Same reason as the rest of the settings echoes —
-   * the engine clamps and is the single source of truth.  If the slider
-   * pushes 100 but the engine clamps to 16, React must reflect the
-   * clamped value or the displayed number drifts away from what the
-   * shader is using.
-   */
-  onExposureChange?: (value: number) => void;
-  /**
-   * Fired when the level-of-detail mode changes (either from a `setLodMode`
-   * call or at engine init to seed React's initial state).
-   */
-  onLodModeChange?: (mode: LodMode) => void;
-  /**
-   * Fired when the SpaceMouse connection state changes — either because the
-   * user successfully paired (`connect()` returned true), explicitly clicked
-   * disconnect, or because the underlying HID device emitted its own
-   * `disconnect` event (USB unplugged, browser permission revoked).
-   *
-   * Without this callback the React-side "Connected" indicator can persist
-   * after the puck is physically gone — confusing because the slider stays
-   * visible but no axes ever move the camera.
-   */
-  onSpaceMouseConnectedChange?: (connected: boolean) => void;
-  /**
-   * Fired when the visible-source bitmask changes — either because auto-LOD
-   * recomputed it after the camera distance crossed a band threshold, or
-   * because `setSourceVisible` flipped a bit.
-   *
-   * Without this callback the React-side checkboxes can drift out of sync with
-   * the engine's actual mask: at startup React initialises to `ALL_VISIBLE_MASK`,
-   * but auto-LOD almost immediately reduces the engine mask based on the
-   * initial camera distance.  The first user toggle then operates on a stale
-   * React state and produces a visible no-op (the toggled bit was already in
-   * the requested state on the engine side), forcing a second click.
-   */
-  onSourceMaskChange?: (mask: number) => void;
-  /**
-   * Fired when the rolling-window FPS estimate changes (integer Hz).
-   *
-   * The engine measures inter-frame deltas inside its `requestAnimationFrame`
-   * loop and averages over the last ~60 frames to smooth out the per-frame
-   * jitter that an instantaneous `1/dt` would produce (a steady visual 60 fps
-   * has individual deltas swinging between 12 and 24 ms — a status-bar number
-   * driven by raw deltas would be unreadable).  This callback fires only when
-   * the *integer* fps value changes (e.g. 59 → 60), so React's setState is a
-   * safe direct wire-up — no spurious renders on noise.
-   *
-   * Optional because most engine consumers (tests, headless renders) don't
-   * care; the perf-investigation HUD in the status bar is the only subscriber
-   * today.
-   */
-  onFpsChange?: (fps: number) => void;
-  /**
-   * Fired when a volume field is registered or unregistered (so the
-   * SettingsPanel can refresh its mirrored field list).
-   *
-   * Called by `addVolumeField` (after the GPU upload completes) and
-   * `removeVolumeField` (after the entry is dropped from
-   * `EngineSettingsState.volumeFields`).  Does NOT fire for in-place
-   * mutations (`setVolumeFieldEnabled` / `setVolumeFieldIntensity`) because
-   * those only change per-field tunables, not the set membership —
-   * React can keep a checkbox/slider in sync via optimistic local state
-   * without re-reading the full list.
-   *
-   * Optional: only relevant when the SettingsPanel renders volume-field
-   * controls.  Callers that don't display a field list can omit it.
-   */
-  onVolumeFieldsChanged?: () => void;
-
-  /**
-   * Fired exactly once, after the optional cosmic-web `filaments.bin` lands
-   * and is uploaded to the renderer.  Reports the strip and vertex counts so
-   * the UI can show e.g. "Filaments · 3,845 strips, 27,410 verts" alongside
-   * the per-survey counts.
-   *
-   * Why a one-shot callback (rather than an echo on every `setFilamentsEnabled`
-   * toggle)?  The counts are properties of the underlying file, not of the
-   * runtime visibility flag — toggling the overlay off doesn't change how
-   * many strips were parsed, and re-firing on every toggle would just spam
-   * React with identical numbers.  The alternative (exposing a getter on the
-   * `EngineHandle`) would force the UI to poll, which is awkward for state
-   * that arrives asynchronously over the network.
-   *
-   * Optional, and only fires when `loadFilaments()` returns a non-null cloud
-   * — i.e. when the binary actually exists on disk.  Fresh clones (before
-   * `npm run build-filaments` has run) silently skip this callback; the
-   * StatsPanel hides the filament row whenever `filamentCounts` stays null,
-   * which keeps the absent-file case visually clean.
-   */
-  onFilamentsReady?: (stripCount: number, vertexCount: number) => void;
-  /**
-   * Fired each time a per-survey `.bin` file finishes loading and the cloud
-   * has been uploaded to the renderer.  Surfaces progressive load state to
-   * the React layer so the status bar can show e.g. "loaded 2/3 surveys".
-   *
-   * Why a granular per-source callback (rather than one final "all done"
-   * event)?  The three .bin files run as parallel `fetch`es with very
-   * different sizes (2MRS ~2 MB, SDSS ~23 MB, GLADE ~96 MB), so they land
-   * minutes apart on slow connections.  Showing each one as it arrives lets
-   * the user see and explore data progressively instead of staring at a
-   * blank canvas until the largest survey finishes.
-   *
-   * Fires for the synthetic fallback too (when all three real fetches fail),
-   * with `source = Source.Synthetic`, so subscribers don't need a separate
-   * code path for the no-data case.
-   */
-  onCloudReady?: (source: Source, count: number) => void;
-
-  /**
-   * Echo: fires when the active data tier changes.  Used by App.tsx to
-   * keep its `currentTier` state in sync.  Same lifecycle pattern as
-   * `onLodModeChange` — fires synchronously inside `setTier` after
-   * `state.sources.tier` has mutated, before any per-source reload
-   * starts.
-   */
-  onTierChange?: (tier: Tier) => void;
-
   /**
    * Initial data tier to load on engine startup.  Defaults to `'medium'`
    * when absent.  This is technically an option, not a callback, but the
@@ -281,46 +55,93 @@ export type EngineCallbacks = {
   initialTier?: Tier;
 
   /**
-   * Fired whenever the aggregated download-progress state changes — both
-   * during the initial parallel `loadAllClouds` and during a per-source
-   * tier hot-swap.  `null` means "no fetches in flight"; React uses that
-   * signal to fade out the loading bar.
-   *
-   * The aggregator inside the engine sums per-source `loaded` and `total`
-   * across every concurrent fetch.  When `total === 0` for one or more
-   * sources (because the response had no `Content-Length` header) the
-   * UI should fall back to an indeterminate shimmer rather than show a
-   * misleading 0/0 ratio.
-   *
-   * Coalescing happens at the source layer: `fetchWithProgress` only
-   * fires per chunk arrival, so this callback is bounded by network
-   * cadence (typically tens of events per second per source on a fast
-   * link, far fewer on slow ones).  React's reconciler handles that
-   * fine; no debouncing needed at the engine layer.
+   * Engine lifecycle callbacks.  `onStatusChange` is required — every
+   * engine consumer needs to observe the initializing → loading →
+   * ready transitions (the React shell hides the loading overlay on
+   * `ready`).  `onFpsChange` is optional; only the perf HUD subscribes.
    */
-  onLoadProgress?: (progress: LoadProgressState | null) => void;
-
-  // ── Nested sub-bags (added Task 3; flat fields above removed in Task 10) ──
-  //
-  // Both shapes coexist during the consumer-migration phase.  Engine code
-  // fires both `cb.onPointSizeChange?.(v)` and `cb.points?.onSizeChange?.(v)`
-  // so a consumer can subscribe via either shape during the transition.
-  // The flat fields are deleted in Task 11 once every consumer is on
-  // the nested shape.
-  //
-  // Why duplicate the surface at all (rather than a single rename)?  The
-  // grouping reflects the engine's *internal* state shape (added in
-  // Task 2): point/tonemap/camera/selection/sources/bias/thumbnails/…
-  // Consumers that subscribe to a group's worth of echoes now get a
-  // typed namespace they can destructure (`{ points, camera } = ...`)
-  // rather than 26 sibling lambdas the IDE can't visually cluster.
-  // The alternative (one big rename in a single commit) would break
-  // every call site in lockstep — incompatible with the incremental
-  // dual-fire / dual-write strategy this H5 plan is built around.
-  lifecycle?: {
-    onStatusChange?: (s: EngineStatus) => void;
+  lifecycle: {
+    /** Fired whenever the engine status advances (initializing → loading → ready). */
+    onStatusChange: (s: EngineStatus) => void;
+    /**
+     * Fired when the rolling-window FPS estimate changes (integer Hz).
+     *
+     * The engine measures inter-frame deltas inside its
+     * `requestAnimationFrame` loop and averages over the last ~60
+     * frames to smooth out per-frame jitter (a steady visual 60 fps
+     * has individual deltas swinging between 12 and 24 ms).  This
+     * callback fires only when the *integer* fps value changes
+     * (e.g. 59 → 60), so React's setState is a safe direct wire-up.
+     */
     onFpsChange?: (fps: number) => void;
   };
+
+  /**
+   * Selection-state callbacks.  Both required because every engine
+   * consumer needs hover/select fan-out — the InfoCard text + halo
+   * highlight depend on them.
+   */
+  selection: {
+    /** Fired when the pinned/selected point changes. */
+    onSelectChange: (info: PointInfo | null) => void;
+    /** Fired when the point under the cursor changes (null = empty sky). */
+    onHoverChange: (info: PointInfo | null) => void;
+  };
+
+  /**
+   * Camera-state callbacks.  All entries optional — App.tsx and the
+   * scale-bar subscribe, but headless / test consumers can omit.
+   */
+  camera?: {
+    /**
+     * Fired when auto-rotate is toggled (either from `setAutoRotate`
+     * or at engine init so React knows the initial off state).
+     */
+    onAutoRotateChange?: (enabled: boolean) => void;
+    /**
+     * Fired when the camera-focus target changes — i.e. the engine has
+     * started a tween toward (or away from) a specific galaxy.
+     *
+     * Selection (`onSelectChange`) and focus are separate concepts:
+     *   - Selection is the pin state — InfoCard, halo highlight.  A bare
+     *     canvas click fires `onSelectChange` only.
+     *   - Focus is a user-deliberate camera commitment — the Focus button
+     *     on the InfoCard, the `f` shortcut, a palette pick, or a deep-
+     *     link resolve.  Each of those fires `onFocusChange` *in
+     *     addition to* `onSelectChange`.
+     *
+     * The deep-link URL hook subscribes to focus, not selection, so a
+     * casual click doesn't pollute browser history with `#focus=…`
+     * entries — only deliberate focus actions do.
+     */
+    onFocusChange?: (info: PointInfo | null) => void;
+    /**
+     * Reserved for the legacy engine-derived scale-bar emission.
+     * Scale-bar derivation now happens React-side from
+     * `onCameraChange` snapshots; the slot stays for future overlays
+     * that want a typed `ScaleInfo` echo.
+     */
+    onScaleChange?: (info: ScaleInfo) => void;
+    /**
+     * Fired once per frame the camera state may have changed.  The
+     * snapshot carries the two camera scalars React needs to derive
+     * zoom-dependent values (scale bar today; potentially other
+     * overlays later).  Anything more elaborate should read state
+     * through its own subsystem rather than fattening this payload.
+     *
+     * Why a snapshot rather than the live `OrbitCamera` ref?  React
+     * consumers should treat each emission as an immutable value to
+     * compare against the previous one — passing the live object
+     * would leak mutation semantics across the engine→React boundary
+     * and defeat `setState` equality checks.
+     */
+    onCameraChange?: (snapshot: { distance: number; fovYRad: number }) => void;
+  };
+
+  /**
+   * Point-render style echoes.  Drive the SettingsPanel controls so
+   * the UI mirrors engine truth on every clamp / re-seed.
+   */
   points?: {
     onSizeChange?: (sizePx: number) => void;
     onBrightnessChange?: (value: number) => void;
@@ -328,19 +149,28 @@ export type EngineCallbacks = {
     onHighlightFallbackChange?: (enabled: boolean) => void;
     onRealOnlyChange?: (enabled: boolean) => void;
   };
+
+  /** HDR tone-mapping echoes (curve + exposure). */
   tonemap?: {
     onExposureChange?: (value: number) => void;
     onCurveChange?: (curve: ToneMapCurve) => void;
   };
-  camera?: {
-    onAutoRotateChange?: (enabled: boolean) => void;
-    onFocusChange?: (info: PointInfo | null) => void;
-    onScaleChange?: (info: ScaleInfo) => void;
-  };
-  selection?: {
-    onSelectChange?: (info: PointInfo | null) => void;
-    onHoverChange?: (info: PointInfo | null) => void;
-  };
+
+  /**
+   * Source-state callbacks — LOD mode, visibility mask, tier, per-
+   * source readiness, and aggregated load progress.
+   *
+   * `onCloudReady` is granular per-source because the three .bin
+   * files run as parallel fetches with very different sizes (2MRS
+   * ~2 MB, SDSS ~23 MB, GLADE ~96 MB), so they land minutes apart on
+   * slow connections.  Showing each as it arrives lets the user
+   * explore data progressively instead of staring at a blank canvas.
+   * Fires for the synthetic fallback too (with `source = Source.
+   * Synthetic`) so subscribers don't need a separate code path.
+   *
+   * `onLoadProgress` aggregates byte counts across in-flight slots;
+   * `null` means "no fetches in flight" (the UI fades the bar out).
+   */
   sources?: {
     onLodModeChange?: (mode: LodMode) => void;
     onMaskChange?: (mask: number) => void;
@@ -348,14 +178,53 @@ export type EngineCallbacks = {
     onCloudReady?: (source: Source, count: number) => void;
     onLoadProgress?: (progress: LoadProgressState | null) => void;
   };
+
+  /**
+   * Malmquist-bias mode + per-volume absolute-magnitude limit echoes.
+   * Mirrored back so the SettingsPanel renders the right radio /
+   * slider on first paint and after every clamp.
+   */
   bias?: {
     onModeChange?: (mode: BiasMode) => void;
     onAbsMagLimitChange?: (absMag: number) => void;
   };
+
+  /**
+   * Galaxy-thumbnail render-pass on/off echo.  Mirrors the
+   * `setGalaxyTexturesEnabled` flag (gated inside the per-frame loop,
+   * so flipping it stops new fetches and quad emissions immediately).
+   */
   thumbnails?: { onEnabledChange?: (enabled: boolean) => void };
+
+  /** Milky Way impostor on/off echo. */
   milkyWay?: { onEnabledChange?: (enabled: boolean) => void };
+
+  /**
+   * Fired exactly once, after the optional cosmic-web `filaments.bin`
+   * lands and is uploaded to the renderer.  Reports strip + vertex
+   * counts so the UI can show e.g. "Filaments · 3,845 strips,
+   * 27,410 verts".  One-shot because counts are properties of the
+   * underlying file, not of the runtime visibility flag.  Silently
+   * skipped on fresh clones (before `npm run build-filaments`).
+   */
   filaments?: { onReady?: (stripCount: number, vertexCount: number) => void };
+
+  /**
+   * Fired when a volume field is registered or unregistered (so the
+   * SettingsPanel can refresh its mirrored field list).  Does NOT
+   * fire for in-place mutations (`setVolumeFieldEnabled` /
+   * `setVolumeFieldIntensity`); React keeps those in optimistic
+   * local state.
+   */
   volumes?: { onFieldsChanged?: () => void };
+
+  /**
+   * SpaceMouse connection-state echo.  Fires for both successful
+   * pair (`connect()` returned true), explicit user disconnect, and
+   * unsolicited HID disconnects (USB unplugged, browser permission
+   * revoked).  Without this the React "Connected" indicator can
+   * persist after the puck is physically gone.
+   */
   input?: {
     spaceMouse?: { onConnectedChange?: (connected: boolean) => void };
   };

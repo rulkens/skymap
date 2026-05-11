@@ -305,7 +305,6 @@ export function wirePointSourceSlot(
     // change, so this subscriber only needs to fire the app-visible
     // side effects (cb echo + render wake) on the `ready` transition.
     if (s.kind === 'ready') {
-      cb.onCloudReady?.(source, s.value.count);
       cb.sources?.onCloudReady?.(source, s.value.count);
       state.subsystems.scheduler.requestRender();
     }

@@ -199,14 +199,8 @@ export function App(): React.ReactElement {
       // the stable dispatch ref so the engine captures only one stable
       // function pointer (not a new lambda on every render).  See the
       // `_onVolumeFieldsChangedStable` comment block above for the
-      // full rationale.
-      //
-      // H5 Task 3: also wire the nested-twin path
-      // `volumes.onFieldsChanged` to the same stable dispatcher.  The
-      // engine's Task-4 dual-fire will call the dispatcher once per
-      // shape; same function identity means React only sees one
-      // setVolumeFields invocation per actual change.
-      onVolumeFieldsChanged: _onVolumeFieldsChangedStable,
+      // full rationale.  H5 task 11 dropped the flat `onVolumeFieldsChanged`
+      // alias; only the nested `volumes.onFieldsChanged` address remains.
       volumes: {
         onFieldsChanged: _onVolumeFieldsChangedStable,
       },

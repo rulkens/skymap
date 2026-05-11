@@ -373,7 +373,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     count: renderer.totalCount(),
     source: cloudSourceFor(firstReadySource ?? Source.Synthetic),
   };
-  cb.onStatusChange(readyStatus);
   cb.lifecycle?.onStatusChange?.(readyStatus);
 
   // ── Seed settings callbacks ───────────────────────────────────────────

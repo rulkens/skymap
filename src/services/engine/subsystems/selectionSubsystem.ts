@@ -202,7 +202,6 @@ export function createSelectionSubsystem(
     // Hoist the info computation so both flat and nested fires receive
     // the same value (and we don't pay for `pointInfoFor` twice).
     const info = sel !== null ? pointInfoFor(sel) : null;
-    cb.onHoverChange?.(info);
     cb.selection?.onHoverChange?.(info);
   }
 
@@ -220,7 +219,6 @@ export function createSelectionSubsystem(
     // null", whereas `undefined` means "look it up yourself".
     const info =
       prebuiltInfo !== undefined ? prebuiltInfo : sel !== null ? pointInfoFor(sel) : null;
-    cb.onSelectChange?.(info);
     cb.selection?.onSelectChange?.(info);
   }
 

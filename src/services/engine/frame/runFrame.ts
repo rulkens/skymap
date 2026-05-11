@@ -155,7 +155,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const fpsNow = deps.fpsCounter.sample(nowMs);
   if (fpsNow !== null && fpsNow !== deps.lastReportedFps.current) {
     deps.lastReportedFps.current = fpsNow;
-    deps.cb.onFpsChange?.(fpsNow);
     deps.cb.lifecycle?.onFpsChange?.(fpsNow);
   }
 
@@ -190,10 +189,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // frames is one object alloc and one optional-chain call.  No-op
   // entirely when nobody subscribes.
   if (state.cam) {
-    deps.cb.onCameraChange?.({
+    const snap = {
       distance: state.cam.distance,
       fovYRad: state.cam.fovYRad,
-    });
+    };
+    deps.cb.camera?.onCameraChange?.(snap);
   }
 
   // ── Focus / home tween ────────────────────────────────────────────
@@ -288,7 +288,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     const nextMask = autoLodMask(ctx.cam.distance);
     if (nextMask !== state.sources.visibleMask) {
       state.sources.visibleMask = nextMask;
-      deps.cb.onSourceMaskChange?.(nextMask);
+      deps.cb.sources?.onMaskChange?.(nextMask);
     }
   }
 

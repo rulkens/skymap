@@ -124,13 +124,10 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Stable refs to the React setters so we can wire them into BOTH
-    // the flat callbacks (legacy shape, removed in Task 11) and the
-    // nested sub-bag twins (new shape, what consumers will migrate to).
-    // Same function identity in both slots → engine's dual-fire in
-    // Task 4 calls the same setState twice with the same value, which
-    // React reconciler dedups — zero behavioural change during the
-    // transition.
+    // Stable refs to the React setters wired into the nested sub-bag
+    // entries below.  H5 task 11 deleted the flat callback shape from
+    // `EngineCallbacks`; every subscriber now lives inside its cluster
+    // (`lifecycle`, `selection`, `camera`, `sources`, …).
     const onCloudReadyImpl = (source: Source, count: number) =>
       setSourceCounts((prev) => ({ ...prev, [source]: count }));
     const onCameraChangeImpl = (snapshot: { distance: number; fovYRad: number }) => {
@@ -144,14 +141,14 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       if (info !== null) setScale(info);
     };
 
-    // Spread order subtlety: settings echoes live in `extraCallbacks`,
-    // which we spread LAST so its flat keys win over any session
-    // default.  But nested sub-bags are *objects*, and a naive spread
-    // would replace (not merge) — settings' `camera = { onAutoRotate
-    // …}` would wholly clobber our `camera = { onFocusChange }`.  We
-    // therefore destructure the nested twins out of `extraCallbacks`
-    // first, merge each bag explicitly, and let the remaining
-    // top-level flat keys spread normally.
+    // H5 Task 11: only nested sub-bags survive in `EngineCallbacks`.
+    // Each bag here merges this hook's session-level subscriptions
+    // (status / hover / select / focus / camera / fps / cloud / tier /
+    // load progress) with whatever `extraCallbacks` from
+    // `useEngineSettings` declares for that cluster.  Spread order
+    // puts the extra-callback entries LAST so the settings hook's
+    // echoes win where both define the same method (rare but well-
+    // defined).  `initialTier` rides through as a non-callback option.
     const {
       lifecycle: extraLifecycle,
       points: extraPoints,
@@ -165,44 +162,10 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       filaments: extraFilaments,
       volumes: extraVolumes,
       input: extraInput,
-      ...extraFlat
     } = extraCallbacks ?? {};
 
     const handle = createEngine(canvas, {
-      onStatusChange: setStatus,
-      onHoverChange: setHovered,
-      onSelectChange: setSelected,
-      onFocusChange: setFocused,
-      // Derive scale-bar legend from the engine's per-frame camera
-      // snapshot.  `computeScaleInfo` is pure (and reused from the
-      // engine's helpers — see scaleBar.ts).  We read viewport
-      // dimensions from the live canvas ref so a resize that hasn't
-      // yet triggered a cam tick still produces an up-to-date bar on
-      // the next emission.  The pure function returns null for
-      // degenerate inputs (viewport height 0, distance ≈ 0); we
-      // skip setState in that window so the placeholder stays.
-      // React's setState equality dedups unchanged frames, replacing
-      // the engine's old `lastSig` string compare.
-      onCameraChange: onCameraChangeImpl,
-      onCloudReady: onCloudReadyImpl,
-      onFpsChange: setFps,
       initialTier: currentTier,
-      onTierChange: setCurrentTier,
-      onLoadProgress: setLoadProgress,
-
-      ...extraFlat,
-
-      // ── Nested sub-bag twins (H5 Task 3) ────────────────────────
-      // Each entry below points at the SAME function reference as
-      // its flat sibling above; the engine in Task 4 fires both
-      // shapes during the migration window, and same-identity dual
-      // fire is a no-op for React's setState equality.  These
-      // namespaces are deleted-then-promoted-to-required in
-      // Task 10/11 once the engine consumes only the nested path.
-      //
-      // Each bag merges this hook's session-level twins with the
-      // settings hook's echoes (passed via `extraCallbacks`) so both
-      // sources land in one engine-visible object.
       lifecycle: {
         onStatusChange: setStatus,
         onFpsChange: setFps,
@@ -214,7 +177,17 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         ...extraSelection,
       },
       camera: {
+        // Derive scale-bar legend from the engine's per-frame camera
+        // snapshot.  `computeScaleInfo` is pure (and reused from the
+        // engine's helpers — see scaleBar.ts).  We read viewport
+        // dimensions from the live canvas ref so a resize that hasn't
+        // yet triggered a cam tick still produces an up-to-date bar on
+        // the next emission.  The pure function returns null for
+        // degenerate inputs (viewport height 0, distance ≈ 0); we
+        // skip setState in that window so the placeholder stays.
+        // React's setState equality dedups unchanged frames.
         onFocusChange: setFocused,
+        onCameraChange: onCameraChangeImpl,
         ...extraCamera,
       },
       sources: {
@@ -223,12 +196,12 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         onLoadProgress: setLoadProgress,
         ...extraSources,
       },
-      // The remaining bags have no session-level twin here — they're
-      // owned entirely by `extraCallbacks` (settings echoes plus the
-      // volumes-changed dispatcher from App.tsx).  We pass them
-      // through unconditionally so the optional-chain in engine code
-      // resolves to the actual function (or stays undefined if the
-      // consumer didn't subscribe).
+      // The remaining bags have no session-level subscription here —
+      // they're owned entirely by `extraCallbacks` (settings echoes
+      // plus the volumes-changed dispatcher from App.tsx).  We pass
+      // them through unconditionally so the optional-chain in engine
+      // code resolves to the actual function (or stays undefined if
+      // the consumer didn't subscribe).
       points: extraPoints,
       tonemap: extraTonemap,
       bias: extraBias,

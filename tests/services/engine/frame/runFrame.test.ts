@@ -124,7 +124,9 @@ function makeDeps(opts: {
       clientWidth: 0,
       clientHeight: 0,
     } as unknown as HTMLCanvasElement,
-    cb: { onFpsChange: opts.onFpsChange } as unknown as RunFrameDeps['cb'],
+    // H5 task 11: runFrame fires the nested `lifecycle.onFpsChange`
+    // address only.  The test fixture mirrors that shape.
+    cb: { lifecycle: { onFpsChange: opts.onFpsChange } } as unknown as RunFrameDeps['cb'],
     fpsCounter: { sample: vi.fn().mockReturnValue(opts.fpsValue) } as unknown as RunFrameDeps['fpsCounter'],
     lastReportedFps: opts.lastReportedFps,
     device: {} as unknown as GPUDevice,

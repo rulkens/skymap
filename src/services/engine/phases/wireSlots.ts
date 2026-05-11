@@ -150,9 +150,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         `[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`,
       );
       // Push the parsed counts up to the UI layer.  See
-      // `EngineCallbacks.onFilamentsReady` for the lifecycle rationale —
+      // `EngineCallbacks.filaments.onReady` for the lifecycle rationale —
       // one-shot, fires only when the optional binary actually loaded.
-      cb.onFilamentsReady?.(s.value.stripCount, s.value.vertexCount);
+      cb.filaments?.onReady?.(s.value.stripCount, s.value.vertexCount);
       state.subsystems.scheduler.requestRender();
     }
   });
@@ -233,7 +233,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         // from the registry rather than mirroring it into
         // `persisted` — no JS-side state to keep in sync.
         renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
-        cb.onVolumeFieldsChanged?.();
+        cb.volumes?.onFieldsChanged?.();
         state.subsystems.scheduler.requestRender();
       },
     });
@@ -408,7 +408,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
           // never learns the new field exists — its mirror is rebuilt
           // only on this callback.  We're bypassing the public handle
           // (per the docblock above) so we have to fire it ourselves.
-          cb.onVolumeFieldsChanged?.();
+          cb.volumes?.onFieldsChanged?.();
           state.subsystems.scheduler.requestRender();
         },
       });
@@ -474,7 +474,6 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   const progressEmitter = createLoadProgressEmitter(
     (snapshot) => {
-      cb.onLoadProgress?.(snapshot);
       cb.sources?.onLoadProgress?.(snapshot);
     },
     allSlots,
@@ -503,7 +502,6 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // Signal loading state immediately so the user knows something is
   // happening before the (potentially multi-second) fetch completes.
-  cb.onStatusChange({ kind: 'loading' });
   cb.lifecycle?.onStatusChange?.({ kind: 'loading' });
 
   // ── Parallel multi-survey load via asset slots ────────────────────

@@ -415,8 +415,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       spaceMouse: createSpaceMouseSubsystem({
         cancelTween: () => state.subsystems.tweens.cancel(),
         onConnectionChange: (connected) => {
-          cb.onSpaceMouseConnectedChange?.(connected);
-          // Nested twin (H5 task 5).  The SpaceMouse subsystem is the
+          // Nested fire only (H5 task 11).  The SpaceMouse subsystem is the
           // single site that fires the connected-change echo for both
           // `connectSpaceMouse` and `disconnectSpaceMouse` (the handle
           // methods don't echo directly — the subsystem's lifecycle
@@ -560,7 +559,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // bar and the dev panel agree byte-for-byte on what's "in flight".
   const allSlots = new Map<string, AssetSlot<unknown, unknown>>();
 
-  cb.onStatusChange({ kind: 'initializing' });
   cb.lifecycle?.onStatusChange?.({ kind: 'initializing' });
 
   // ── Bootstrap dependency bag ─────────────────────────────────────────────
@@ -656,7 +654,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Surface initialisation failures via the status callback so the UI
       // shows a readable message rather than a blank canvas.
       const message = err instanceof Error ? err.message : String(err);
-      cb.onStatusChange({ kind: 'error', message });
       cb.lifecycle?.onStatusChange?.({ kind: 'error', message });
       console.error('Engine startup failed:', err);
     }
@@ -767,7 +764,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.subsystems.selection.setSelected(null);
         // Clearing the pin also clears the camera-focus target — Esc /
         // close ✕ are explicit "I'm done with this galaxy" signals.
-        cb.onFocusChange?.(null);
         cb.camera?.onFocusChange?.(null);
         state.subsystems.scheduler.requestRender();
       }
@@ -920,7 +916,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // H5 transition.  Task 11 collapses to the nested location only.
       state.bias.mode = mode;
       state.settings.bias.mode = mode;
-      cb.onBiasModeChange?.(mode);
       cb.bias?.onModeChange?.(mode);
       void state.subsystems.biasCorrection.setMode(mode);
       state.subsystems.scheduler.requestRender();
@@ -1044,7 +1039,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Stays at the call site (not in the helper) because firing
       // `onFocusChange(null)` is "this action is leaving a focus
       // state", which `tweenToCameraSnapshot` doesn't decide.
-      cb.onFocusChange?.(null);
       cb.camera?.onFocusChange?.(null);
 
       tweenToCameraSnapshot(state, state.initialCamSnapshot);
@@ -1071,7 +1065,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // The Milky Way isn't a catalog object, so any pinned focus on a
       // catalog galaxy is no longer relevant — clear it so the URL
       // hash doesn't keep trying to resolve a stale focus.
-      cb.onFocusChange?.(null);
       cb.camera?.onFocusChange?.(null);
 
       tweenToCameraSnapshot(state, {
@@ -1100,10 +1093,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     setLodMode(mode) {
       if (mode === state.sources.lodMode) return;
       state.sources.lodMode = mode;
-      cb.onLodModeChange?.(mode);
-      // Mirror into the nested callback bag (H5 task 5).  Both fire so
-      // legacy flat consumers and the new nested `callbacks.sources`
-      // consumers both observe the change.
+      // Nested-only fire (H5 task 11): flat callbacks were removed.
       cb.sources?.onLodModeChange?.(mode);
       state.subsystems.scheduler.requestRender();
     },
@@ -1115,10 +1105,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // mode here rather than making the caller orchestrate two calls.
       if (state.sources.lodMode !== 'manual') {
         state.sources.lodMode = 'manual';
-        cb.onLodModeChange?.('manual');
-        // Nested twin (H5 task 5).  Fires alongside the flat echo at
-        // the same point so callers subscribed to either shape see
-        // the implicit auto→manual flip.
+        // Nested-only fire (H5 task 11) — flat callbacks are gone.
         cb.sources?.onLodModeChange?.('manual');
       }
 
@@ -1127,8 +1114,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         : maskWithout(state.sources.visibleMask, source);
       if (next === state.sources.visibleMask) return;
       state.sources.visibleMask = next;
-      cb.onSourceMaskChange?.(next);
-      // Mirror into the nested `sources.onMaskChange` (H5 task 5).
       cb.sources?.onMaskChange?.(next);
       state.subsystems.scheduler.requestRender();
     },
@@ -1149,10 +1134,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (tier === state.sources.tier) return;
       const prevTier = state.sources.tier;
       state.sources.tier = tier;
-      cb.onTierChange?.(tier);
-      // Nested twin (H5 task 5): mirror the tier-change echo into
-      // `callbacks.sources.onTierChange` so consumers wired to the new
-      // namespaced shape see the same event.
+      // Nested-only fire (H5 task 11): the flat `onTierChange` is gone;
+      // consumers consume the nested `callbacks.sources.onTierChange`
+      // address.
       cb.sources?.onTierChange?.(tier);
 
       // For each tier-relevant source, decide whether the new tier needs a
@@ -1243,7 +1227,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.gpu.scalarVolumeRenderer?.setFieldPalette(handle, persisted.paletteId);
       // Let React know the field list changed so any SettingsPanel list
       // re-renders with the new row.
-      cb.onVolumeFieldsChanged?.();
+      cb.volumes?.onFieldsChanged?.();
       state.subsystems.scheduler.requestRender();
     },
 
@@ -1254,7 +1238,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Mirror the removal into the settings bag so the SettingsPanel
       // stops rendering the slider row for this handle.
       delete state.settings.volumeFields[handle];
-      cb.onVolumeFieldsChanged?.();
+      cb.volumes?.onFieldsChanged?.();
       state.subsystems.scheduler.requestRender();
     },
 

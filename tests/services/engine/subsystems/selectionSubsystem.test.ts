@@ -27,14 +27,24 @@ import { Source } from '../../../../src/data/sources';
 /**
  * Build a no-op `EngineCallbacks` bag with vi-spied hover/select hooks.
  * Other callback fields are typed-required-only — the subsystem only
- * reads the two we care about.
+ * reads the two we care about, both under the nested `selection`
+ * cluster after H5 task 11.
  */
-function makeCallbacks(): EngineCallbacks {
+function makeCallbacks(): EngineCallbacks & {
+  selection: { onHoverChange: ReturnType<typeof vi.fn>; onSelectChange: ReturnType<typeof vi.fn> };
+} {
   return {
-    onStatusChange: vi.fn(),
-    onHoverChange: vi.fn(),
-    onSelectChange: vi.fn(),
-  } as unknown as EngineCallbacks;
+    lifecycle: { onStatusChange: vi.fn() },
+    selection: {
+      onHoverChange: vi.fn(),
+      onSelectChange: vi.fn(),
+    },
+  } as unknown as EngineCallbacks & {
+    selection: {
+      onHoverChange: ReturnType<typeof vi.fn>;
+      onSelectChange: ReturnType<typeof vi.fn>;
+    };
+  };
 }
 
 /**
@@ -78,13 +88,13 @@ describe('createSelectionSubsystem', () => {
     // a real change first to bring `hovered` to non-null, then back to
     // null twice — the second null is the dedup target.
     sub.setHovered({ source: Source.SDSS, localIdx: 1 });
-    expect(cb.onHoverChange).toHaveBeenCalledTimes(1);
+    expect(cb.selection.onHoverChange).toHaveBeenCalledTimes(1);
 
     sub.setHovered(null);
     sub.setHovered(null);
     // Total calls: one for the first transition (→ {SDSS, 1}), one for
     // (→ null), then the second null is deduped.
-    expect(cb.onHoverChange).toHaveBeenCalledTimes(2);
+    expect(cb.selection.onHoverChange).toHaveBeenCalledTimes(2);
   });
 
   it('fires onHoverChange twice for two distinct selections', () => {
@@ -102,7 +112,7 @@ describe('createSelectionSubsystem', () => {
     sub.setHovered({ source: Source.SDSS, localIdx: 1 });
     sub.setHovered({ source: Source.SDSS, localIdx: 2 });
 
-    expect(cb.onHoverChange).toHaveBeenCalledTimes(2);
+    expect(cb.selection.onHoverChange).toHaveBeenCalledTimes(2);
   });
 
   it('uses prebuiltInfo on setSelected and bypasses pointInfoFor', () => {
@@ -122,8 +132,8 @@ describe('createSelectionSubsystem', () => {
 
     sub.setSelected({ source: Source.SDSS, localIdx: 5 }, prebuilt);
 
-    expect(cb.onSelectChange).toHaveBeenCalledTimes(1);
-    expect(cb.onSelectChange).toHaveBeenCalledWith(prebuilt);
+    expect(cb.selection.onSelectChange).toHaveBeenCalledTimes(1);
+    expect(cb.selection.onSelectChange).toHaveBeenCalledWith(prebuilt);
   });
 
   it('pointInfoFor returns null when the cloud is missing for the source', () => {

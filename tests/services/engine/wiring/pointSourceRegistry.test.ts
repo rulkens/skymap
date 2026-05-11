@@ -148,7 +148,9 @@ describe('wirePointSourceSlot', () => {
     const upload = vi.fn().mockResolvedValue(undefined);
     const state = makeState({ rendererUpload: upload });
     const onCloudReady = vi.fn();
-    const cb: Partial<EngineCallbacks> = { onCloudReady };
+    // Nested-only fire shape (H5 task 11): the registry fires
+    // `cb.sources?.onCloudReady?.(...)` on the ready transition.
+    const cb: Partial<EngineCallbacks> = { sources: { onCloudReady } };
     // Use a stub fetcher so we control when the slot transitions to ready.
     const cfg: PointSourceConfig = {
       source: Source.SDSS,

@@ -103,20 +103,13 @@ export type EngineSettingsState = {
  * into its `createEngine(canvas, { ... })` options block so the engine
  * can fire echoes that drive React's settings state.
  *
- * H5 Task 10: settings echoes are now subscribed via the nested
- * sub-bags only.  The engine's dual-fire (Task 4 settingsTable +
- * Task 5 bespoke setters) still emits flat callbacks alongside the
- * nested ones, but nothing on the React side listens to the flat
- * shape anymore — optional-chaining on the engine side makes the
- * stray flat fire a silent no-op.  The flat fields themselves are
- * deleted in Task 11; until then the Pick<> below intentionally
- * carries only the nested cluster names plus `onFilamentsReady`,
- * the one flat echo that has no nested twin in the engine code
- * yet (sole flat survivor on the settings side).
+ * H5 task 11: only the nested sub-bag names survive — every flat
+ * sibling on `EngineCallbacks` was deleted in lockstep with the
+ * engine-side fire-site migration.  Filament counts now ride the
+ * `filaments.onReady` address (no flat survivor).
  */
 export type EngineSettingsCallbacks = Pick<
   EngineCallbacks,
-  | 'onFilamentsReady'
   | 'points'
   | 'tonemap'
   | 'camera'
@@ -240,24 +233,11 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       volumeFields,
     },
     engineCallbacks: {
-      // ── Sole flat survivor on the settings side (H5 Task 10) ─────
-      // `onFilamentsReady` has no nested twin in the engine fire
-      // sites yet (wireSlots.ts still emits only the flat shape),
-      // so subscribing nested-only would leave `filamentCounts`
-      // stuck at null and silently hide the filaments stats row.
-      // Stays here until a follow-up dual-fires it or moves the
-      // fire site to a nested address.
-      onFilamentsReady: (stripCount, vertexCount) =>
-        setFilamentCounts({ stripCount, vertexCount }),
-
-      // ── Nested sub-bag subscriptions (H5 Task 10) ────────────────
-      // Every setting that the engine dual-fires (settingsTable.ts
-      // rows + the four bespoke setters in Task 5) is subscribed
-      // here through its nested address only.  Their former flat
-      // siblings are gone — the engine's optional-chained flat fire
-      // is a silent no-op on the React side now.  The `partial-echo`
-      // cases (filaments enabled/intensity, volumes master) remain
-      // App-owned with no echo wiring, just as before.
+      // ── Nested sub-bag subscriptions (H5 task 11) ────────────────
+      // Every echo the engine emits lands at its nested address now;
+      // flat callbacks are gone.  The `partial-echo` cases (filaments
+      // enabled/intensity, volumes master) remain App-owned with no
+      // echo wiring, just as before.
       points: {
         onSizeChange: setPointSize,
         onBrightnessChange: setBrightness,

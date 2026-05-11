@@ -167,9 +167,6 @@ type NestedCallbackKey =
  *
  *   - `name` is the EngineHandle method to emit.
  *   - `path` is the two-step state path the value lands in.
- *   - `callback` (optional) is the EngineCallbacks key to fire after
- *      mutation.  Omit when no echo is wired (App.tsx owns the
- *      boolean optimistically — see `setFilamentsEnabled`).
  *   - `clamp` (optional) wraps the incoming value before it hits
  *      state AND the callback echo.  Returns the post-clamp number.
  *      Used by `setExposure` and `setFilamentIntensity`.
@@ -178,16 +175,16 @@ type NestedCallbackKey =
  *      because the field is only meaningful while both shapes coexist;
  *      Task 12 deletes both `path` and the dual-write branch.
  *   - `nestedCallback` (optional) is the `[cluster, method]` address
- *      fired ALONGSIDE `callback` during the same dual-write phase.
+ *      fired after mutation.  Omit when no echo is wired (App.tsx owns
+ *      the boolean optimistically — see `setFilamentsEnabled`).
  */
 type SettingsDescriptor = {
   name: SettingsTableKey;
   path: SettingsPath;
-  callback?: keyof EngineCallbacks;
   clamp?: (value: number) => number;
   /** Nested path written ALONGSIDE `path` during the H5 dual-write phase. */
   nestedPath?: NestedSettingsPath;
-  /** Nested callback fired ALONGSIDE `callback` during the H5 dual-write phase. */
+  /** Nested callback fired (H5 task 11 — the only callback shape now). */
   nestedCallback?: NestedCallbackKey;
 };
 
@@ -201,35 +198,30 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
   {
     name: 'setPointSize',
     path: ['settings', 'pointSizePx'],
-    callback: 'onPointSizeChange',
     nestedPath: ['settings', 'points', 'sizePx'],
     nestedCallback: ['points', 'onSizeChange'],
   },
   {
     name: 'setBrightness',
     path: ['settings', 'brightness'],
-    callback: 'onBrightnessChange',
     nestedPath: ['settings', 'points', 'brightness'],
     nestedCallback: ['points', 'onBrightnessChange'],
   },
   {
     name: 'setAutoRotate',
     path: ['settings', 'autoRotate'],
-    callback: 'onAutoRotateChange',
     nestedPath: ['settings', 'camera', 'autoRotate'],
     nestedCallback: ['camera', 'onAutoRotateChange'],
   },
   {
     name: 'setGalaxyTexturesEnabled',
     path: ['settings', 'galaxyTexturesEnabled'],
-    callback: 'onGalaxyTexturesEnabledChange',
     nestedPath: ['settings', 'thumbnails', 'enabled'],
     nestedCallback: ['thumbnails', 'onEnabledChange'],
   },
   {
     name: 'setMilkyWayEnabled',
     path: ['settings', 'milkyWayEnabled'],
-    callback: 'onMilkyWayEnabledChange',
     nestedPath: ['settings', 'milkyWay', 'enabled'],
     nestedCallback: ['milkyWay', 'onEnabledChange'],
   },
@@ -253,21 +245,18 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
   {
     name: 'setHighlightFallback',
     path: ['settings', 'highlightFallback'],
-    callback: 'onHighlightFallbackChange',
     nestedPath: ['settings', 'points', 'highlightFallback'],
     nestedCallback: ['points', 'onHighlightFallbackChange'],
   },
   {
     name: 'setRealOnlyMode',
     path: ['settings', 'realOnlyMode'],
-    callback: 'onRealOnlyModeChange',
     nestedPath: ['settings', 'points', 'realOnly'],
     nestedCallback: ['points', 'onRealOnlyChange'],
   },
   {
     name: 'setDepthFadeEnabled',
     path: ['settings', 'depthFadeEnabled'],
-    callback: 'onDepthFadeEnabledChange',
     nestedPath: ['settings', 'points', 'depthFade'],
     nestedCallback: ['points', 'onDepthFadeChange'],
   },
@@ -276,7 +265,6 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     // current row that doesn't live under `state.settings`.
     name: 'setAbsMagLimit',
     path: ['bias', 'absMagLimit'],
-    callback: 'onAbsMagLimitChange',
     nestedPath: ['settings', 'bias', 'absMagLimit'],
     nestedCallback: ['bias', 'onAbsMagLimitChange'],
   },
@@ -288,7 +276,6 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     // displays what the shader actually used.
     name: 'setExposure',
     path: ['settings', 'exposure'],
-    callback: 'onExposureChange',
     clamp: (v) => Math.max(0.05, Math.min(16, v)),
     nestedPath: ['settings', 'tonemap', 'exposure'],
     nestedCallback: ['tonemap', 'onExposureChange'],
@@ -296,7 +283,6 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
   {
     name: 'setToneMapCurve',
     path: ['settings', 'toneMapCurve'],
-    callback: 'onToneMapCurveChange',
     nestedPath: ['settings', 'tonemap', 'curve'],
     nestedCallback: ['tonemap', 'onCurveChange'],
   },
@@ -400,8 +386,7 @@ export function buildSettersFromTable(
   const out = {} as Record<SettingsTableKey, (value: unknown) => void>;
 
   for (const descriptor of SETTINGS_TABLE) {
-    const { name, path, callback, clamp, nestedPath, nestedCallback } =
-      descriptor;
+    const { name, path, clamp, nestedPath, nestedCallback } = descriptor;
 
     out[name] = (value: unknown) => {
       // Clamps only ever apply to numeric fields; descriptors that
@@ -420,22 +405,11 @@ export function buildSettersFromTable(
         setByNestedPath(state, nestedPath, next);
       }
 
-      if (callback !== undefined) {
-        // Optional-chaining mirrors the hand-rolled setters' shape:
-        // a missing callback is silently skipped, never throws.
-        // Indexing through `unknown` because `EngineCallbacks` keys
-        // each carry their own narrow signature; the descriptor
-        // table is the runtime guarantor that `next` matches.
-        const fn = cb[callback] as ((v: unknown) => void) | undefined;
-        fn?.(next);
-      }
-      // Nested callback twin — Task 3's optional sub-bag clusters.
-      // Same optional-chain shape so a missing cluster or missing
-      // method is silently skipped.  The hooks (useEngine + co.) wire
-      // the nested entries to identical function refs as the flat
-      // ones today, so this is a no-op behavioural-wise during the
-      // dual-write phase; the safety net is for consumers who migrate
-      // to ONLY listen on the nested cluster.
+      // Nested callback fire (H5 task 11).  Same optional-chain shape
+      // so a missing cluster or missing method is silently skipped.
+      // The flat `callback` field on the descriptor is now unused at
+      // runtime; Task 12 collapses the descriptor and removes the
+      // dead field along with `path`/`setByPath`.
       if (nestedCallback !== undefined) {
         const [cluster, method] = nestedCallback;
         const sub = (

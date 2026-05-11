@@ -132,7 +132,6 @@ export function commitFocus(
   if (selection) {
     state.subsystems.selection.setSelected(selection.key, selection.info);
   }
-  cb.onFocusChange?.(info);
   cb.camera?.onFocusChange?.(info);
   tweenToGalaxy(state, info);
 }
