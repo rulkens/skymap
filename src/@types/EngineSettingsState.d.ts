@@ -63,11 +63,26 @@ export type VolumeFieldSettings = {
    */
   contrast: number;
   /**
+   * Per-cube opacity multiplier driving the scalar-volume shader's
+   * alpha integral (`1 - exp(-densityScale * sample * step)`).  Seeded
+   * at registration time from `VOLUME_FIELD_DEFAULTS[handle]`
+   * (SCFD v2's per-handle registry; see
+   * `src/data/volumeFieldDefaults.ts`) and mutated by
+   * `setVolumeFieldDensityScale`.  Orthogonal to `intensity` (global
+   * mix-in weight) and `contrast` (LUT-coordinate remap): density
+   * tunes the optical-depth contribution per voxel-step, so it shifts
+   * the balance between "transparent fog" and "saturated cloud"
+   * without changing the colour ramp.  Falls back to
+   * `DEFAULT_VOLUME_FIELD_DENSITY_SCALE` for unregistered handles.
+   */
+  densityScale: number;
+  /**
    * Palette LUT id for this field.  Each volume field owns its own LUT
    * texture (see `scalarVolumeRenderer.ts`); this value mirrors the
    * renderer's per-field palette so the SettingsPanel dropdown can read
    * authoritative state without going through the GPU handle.  Seeded
-   * from `cube.paletteId` at registration time.
+   * from `VOLUME_FIELD_DEFAULTS[handle].paletteId` at registration time
+   * (SCFD v2 cubes no longer carry palette themselves).
    */
   paletteId: ScalarFieldPaletteId;
 };

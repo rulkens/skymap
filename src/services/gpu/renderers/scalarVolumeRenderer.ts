@@ -143,7 +143,9 @@ type FieldEntry = {
    */
   contrast: number;
   paletteId: ScalarFieldPaletteId;
-  /** Per-cube opacity multiplier; copied from `cube.densityScale` at registration. */
+  /** Per-cube opacity multiplier; seeded to 1.0 in `addField` and overwritten
+   *  via `setDensityScale` (called from wireSlots with the value from
+   *  `VOLUME_FIELD_DEFAULTS[handle]`). */
   densityScale: number;
   modelMatrix: mat4;
   invModelMatrix: mat4;
@@ -166,6 +168,21 @@ export type ScalarVolumeRenderer = {
    */
   setContrast(handle: ScalarFieldHandle, contrast: number): void;
   /**
+   * Per-cube opacity multiplier used by the alpha-integral inside the
+   * scalar-volume fragment shader.  Values must be non-negative; the
+   * setter clamps negative or NaN inputs to 0 (a silent overlay)
+   * because a negative densityScale would invert the colour mapping
+   * and yield nonsense visuals rather than a useful debug signal.
+   *
+   * Lives alongside `setContrast` because the two are orthogonal:
+   * contrast remaps LUT coordinates around the 0.5 pivot, densityScale
+   * scales the optical-depth contribution per voxel-step.  No-op when
+   * the handle is unknown — mirrors the rest of the per-field setter
+   * surface so a late-firing settings callback for a removed field
+   * cannot throw.
+   */
+  setDensityScale(handle: ScalarFieldHandle, value: number): void;
+  /**
    * Replace the palette LUT for a single field.  Rewrites the field's
    * existing 1D LUT texture in place via `writeTexture`; the bind group
    * (which references the texture's view) stays valid, so a palette
@@ -179,6 +196,15 @@ export type ScalarVolumeRenderer = {
   listHandles(): ScalarFieldHandle[];
   draw(pass: GPURenderPassEncoder, viewProj: mat4, viewportPx: [number, number], cameraPosWorld: [number, number, number]): void;
   destroy(): void;
+  /**
+   * Test-only escape hatch: returns the live `FieldEntry` for the given
+   * handle (or `undefined`).  Exposed so unit tests can assert that
+   * setters mutated the per-field CPU state without having to read back
+   * through the GPU queue (which is mocked in Node).  Production code
+   * MUST NOT call this — every legitimate caller goes through the
+   * setter / draw surface.  Prefixed `__` to mark the contract.
+   */
+  __getFieldEntryForTest(handle: ScalarFieldHandle): Readonly<FieldEntry> | undefined;
 };
 
 export function createScalarVolumeRenderer(
@@ -295,7 +321,14 @@ export function createScalarVolumeRenderer(
       mat4.invert(invModelMatrix, modelMatrix);
       const volumeTexture = uploadCube(cube);
       const paletteTexture = createPaletteTexture();
-      writePaletteLut(paletteTexture, cube.paletteId);
+      // Seed with the neutral fallback palette.  Callers (wireSlots /
+      // engine.addVolumeField) immediately overwrite this via
+      // `setFieldPalette` using the per-handle entry from
+      // `VOLUME_FIELD_DEFAULTS`.  Hard-coding 'viridis' here keeps the
+      // renderer self-contained and free of the volumeFieldDefaults
+      // import — the renderer doesn't know field handles, only GPU
+      // resources.
+      writePaletteLut(paletteTexture, 'viridis');
       const uniformBuffer = device.createBuffer({
         size: UNIFORM_BYTES,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -319,8 +352,19 @@ export function createScalarVolumeRenderer(
         // commit; this is the safe placeholder before any UI / settings
         // state has been threaded in.
         contrast: 1.0,
-        paletteId: cube.paletteId,
-        densityScale: cube.densityScale,
+        // Match the palette seeded into `paletteTexture` above.  The
+        // commit site (wireSlots) overwrites both via
+        // `setFieldPalette` immediately after `addField` returns; the
+        // pair just has to agree until that happens.
+        paletteId: 'viridis',
+        // SCFD v2 cubes are data-only — `densityScale` is no longer a
+        // cube property.  Seed to identity (1.0); the wireSlots commit
+        // calls `setDensityScale(handle, defaults.densityScale)` using
+        // the per-handle value from `VOLUME_FIELD_DEFAULTS` right
+        // after `addField` returns, so this default only matters for
+        // the brief window before that — and for direct test calls
+        // that don't go through wireSlots.
+        densityScale: 1.0,
         modelMatrix,
         invModelMatrix,
         volumeTexture,
@@ -349,6 +393,22 @@ export function createScalarVolumeRenderer(
       // VolumeFieldRow caps lower, but the API stays permissive.
       if (entry) entry.contrast = Math.max(0.05, Math.min(16, contrast));
     },
+    setDensityScale(handle, value) {
+      const entry = fields.get(handle);
+      if (!entry) return;
+      // Clamp negative / NaN to 0 (a silent overlay).  Why not throw or
+      // clamp to a small positive epsilon: the alpha-integral inside
+      // the fragment shader is `1 - exp(-densityScale * sample * step)`
+      // — a negative densityScale would produce > 1 alpha and invert
+      // the colour mapping, exactly the kind of subtle visual bug that
+      // is hard to diagnose downstream.  Collapsing to 0 keeps the
+      // overlay invisible until a sane value is set, matching the
+      // forgiving pattern of `setIntensity` / `setContrast`.  Mutating
+      // the entry only — the next `draw` call composes the uniform
+      // buffer from the live entry, so no separate writeBuffer is
+      // needed here (same shape as the sibling setters).
+      entry.densityScale = Number.isFinite(value) && value > 0 ? value : 0;
+    },
     setIntensity(handle, intensity) {
       const entry = fields.get(handle);
       if (entry) entry.intensity = Math.max(0, Math.min(1, intensity));
@@ -370,6 +430,12 @@ export function createScalarVolumeRenderer(
     },
     listHandles() {
       return Array.from(fields.keys());
+    },
+    __getFieldEntryForTest(handle) {
+      // Test-only accessor; see the docblock on the type.  Returns the
+      // live `FieldEntry` so unit tests can assert that setters mutated
+      // CPU state without round-tripping through a mocked GPU queue.
+      return fields.get(handle);
     },
     draw(pass, viewProj, viewportPx, cameraPosWorld) {
       pass.setPipeline(pipeline);

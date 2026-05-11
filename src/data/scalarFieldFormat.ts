@@ -1,18 +1,30 @@
 /**
- * SCFD v1 — Scalar Field binary format.  Self-describing; one cube
+ * SCFD v2 — Scalar Field binary format.  Self-describing; one cube
  * per file.  Carries enough metadata that the renderer never needs
  * a sidecar JSON.
+ *
+ * **Breaking change vs v1:** the binary no longer carries `palette_id`
+ * (formerly at offset 22) or `density_scale` (formerly at offsets 64..67).
+ * Those slots return to the `reserved` region and are zero-filled.  See
+ * the docblock at the bottom of this file for the rationale; the short
+ * version is that palette and density-scale are presentation, not data,
+ * and live in `src/data/volumeFieldDefaults.ts` keyed by the renderer's
+ * field handle.
+ *
+ * v1 files are rejected outright with a "regenerate" hint — same precedent
+ * as the PointCloud and Filament decoders.  Operators run `npm run
+ * build-cf4-density` (or the relevant builder) and re-sync R2 in lockstep
+ * with the code deploy.
  *
  * Layout (little-endian):
  *
  *   ── HEADER (96 bytes) ────────────────────────────────────────────
  *   0    4   magic       = "SCFD"  (0x44464353)
- *   4    4   version     = 1
+ *   4    4   version     = 2
  *   8   12   dims        : uint32 × 3 (Nx, Ny, Nz)
- *  20    1   dtype       : uint8  (0 = f16; only value supported in v1)
+ *  20    1   dtype       : uint8  (0 = f16; only value supported in v2)
  *  21    1   value_kind  : uint8  (0 = pre-normalised [0,1]; 1 reserved)
- *  22    1   palette_id  : uint8  (index into the palette table; see
- *                                    src/data/scalarFieldPalettes.ts)
+ *  22    1   reserved    : uint8  (was: palette_id in v1; zero in v2)
  *  23    1   frame_kind  : uint8  (0 = supergalactic-cartesian,
  *                                    1 = equatorial-cartesian,
  *                                    2 = galactic)
@@ -21,32 +33,22 @@
  *  40   16   rotation    : float32 × 4 (unit quaternion x, y, z, w)
  *  56    4   value_min   : float32
  *  60    4   value_max   : float32
- *  64    4   density_scale : float32 (per-cube opacity multiplier; see
- *                                       ScalarCube.densityScale.  Files
- *                                       written before this field existed
- *                                       carry 0 here and are decoded as
- *                                       densityScale=1.0 — the back-compat
- *                                       sentinel.)
+ *  64    4   reserved    : float32 (was: density_scale in v1; zero in v2)
  *  68   28   reserved    : uint8 × 28 (zero-filled)
  *
  *   ── VOXEL ARRAY (Nx*Ny*Nz × 2 bytes) ─────────────────────────────
  *   voxels[i] : f16 (stored as Uint16 raw bits)
  *
- * Why bake palette + frame into the binary instead of a sidecar JSON:
- * the existing `.bin` files in skymap (PointCloud, FilamentCloud) are
- * all single-file self-describing — having one consumer require a
- * sidecar would break the precedent and add a fetch.  All metadata
- * here is fixed-width, so the cost is 96 bytes regardless of cube size.
+ * v2 strips palette and densityScale from the binary — those are
+ * presentation concerns and live in `src/data/volumeFieldDefaults.ts`.
+ * The format remains self-describing for everything that IS data: dims,
+ * dtype, frame, origin, voxelSize, rotation, valueMin/valueMax, voxels.
  */
 
-import type {
-  ScalarCube,
-  ScalarFieldFrameKind,
-  ScalarFieldPaletteId,
-} from '../@types/ScalarCube';
+import type { ScalarCube, ScalarFieldFrameKind } from '../@types/ScalarCube';
 
 const MAGIC = 0x44464353; // "SCFD" little-endian
-const VERSION = 1;
+const VERSION = 2;
 export const SCFD_HEADER_BYTES = 96;
 
 const FRAME_KIND_TO_ID: Record<ScalarFieldFrameKind, number> = {
@@ -59,22 +61,6 @@ const ID_TO_FRAME_KIND: ReadonlyArray<ScalarFieldFrameKind> = [
   'supergalactic-cartesian',
   'equatorial-cartesian',
   'galactic',
-];
-
-const PALETTE_ID_TO_INDEX: Record<ScalarFieldPaletteId, number> = {
-  viridis: 0,
-  magma: 1,
-  'blue-purple': 2,
-  'yellow-green': 3,
-  coolwarm: 4,
-};
-
-const INDEX_TO_PALETTE_ID: ReadonlyArray<ScalarFieldPaletteId> = [
-  'viridis',
-  'magma',
-  'blue-purple',
-  'yellow-green',
-  'coolwarm',
 ];
 
 /**
@@ -100,9 +86,11 @@ export function encodeScalarField(cube: ScalarCube): ArrayBuffer {
   dv.setUint32(8, cube.dims[0], true);
   dv.setUint32(12, cube.dims[1], true);
   dv.setUint32(16, cube.dims[2], true);
-  dv.setUint8(20, 0); // dtype = f16 (the only dtype supported in v1)
+  dv.setUint8(20, 0); // dtype = f16 (the only dtype supported in v2)
   dv.setUint8(21, 0); // value_kind = pre-normalised [0,1]
-  dv.setUint8(22, PALETTE_ID_TO_INDEX[cube.paletteId]);
+  // Byte 22 is intentionally left zero — it was `palette_id` in v1 and is
+  // now reserved.  `new ArrayBuffer(...)` zero-fills, so we rely on that
+  // rather than an explicit `setUint8(22, 0)` write.
   dv.setUint8(23, FRAME_KIND_TO_ID[cube.frameKind]);
   dv.setFloat32(24, cube.origin[0], true);
   dv.setFloat32(28, cube.origin[1], true);
@@ -114,9 +102,10 @@ export function encodeScalarField(cube: ScalarCube): ArrayBuffer {
   dv.setFloat32(52, cube.rotation[3], true);
   dv.setFloat32(56, cube.valueMin, true);
   dv.setFloat32(60, cube.valueMax, true);
-  dv.setFloat32(64, cube.densityScale, true);
-  // bytes 68..95 stay zero (reserved — future extensions land here without
-  // bumping the version, as long as decoders skip them unconditionally)
+  // Bytes 64..67 are intentionally left zero — they held `density_scale`
+  // in v1 and are now reserved (relying on ArrayBuffer's zero-init).
+  // Bytes 68..95 stay zero (reserved — future extensions land here without
+  // bumping the version, as long as decoders skip them unconditionally).
 
   // Voxel array follows the header.  Source is Uint16Array of f16 bits
   // — copy bytes directly, no per-element conversion.
@@ -130,8 +119,11 @@ export function encodeScalarField(cube: ScalarCube): ArrayBuffer {
  * Decode an ArrayBuffer to a `ScalarCube`.  Throws on:
  *   - bad magic (not an SCFD file)
  *   - unsupported version (with a "regenerate" hint, matching the filament
- *     decoder's style so operators know what command to run)
- *   - unknown palette_id or frame_kind byte
+ *     decoder's style so operators know what command to run).  In
+ *     particular, v1 files are rejected outright — palette and densityScale
+ *     migrated out of the binary, and the v1 → v2 transition is a hard
+ *     break by design.
+ *   - unknown frame_kind byte
  *   - byte-length mismatch between header dims and actual buffer size
  *
  * Voxels are copied into a freshly-owned `Uint16Array` so the caller can
@@ -161,13 +153,11 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   ];
   const dtype = dv.getUint8(20);
   if (dtype !== 0) {
-    throw new Error(`decodeScalarField: unsupported dtype ${dtype} (v1 supports f16 only)`);
+    throw new Error(`decodeScalarField: unsupported dtype ${dtype} (v2 supports f16 only)`);
   }
-  const paletteIdIdx = dv.getUint8(22);
-  const paletteId = INDEX_TO_PALETTE_ID[paletteIdIdx];
-  if (paletteId === undefined) {
-    throw new Error(`decodeScalarField: unknown palette id ${paletteIdIdx}`);
-  }
+  // Byte 22 (palette_id in v1) and bytes 64..67 (density_scale in v1)
+  // are reserved in v2 — we don't read them, on purpose.  Producers must
+  // write zero; readers must not interpret the bytes.
   const frameKindIdx = dv.getUint8(23);
   const frameKind = ID_TO_FRAME_KIND[frameKindIdx];
   if (frameKind === undefined) {
@@ -187,14 +177,6 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   ];
   const valueMin = dv.getFloat32(56, true);
   const valueMax = dv.getFloat32(60, true);
-  // densityScale was added after v1 shipped.  Files written before that
-  // carry zero in this slot (the reserved region was zero-filled), and
-  // a zero scale would multiply per-step alpha by zero — invisible.
-  // Substitute the neutral default 1.0 in that case so legacy files
-  // still render with the un-tuned look they had before this field
-  // existed.  Newly-encoded files always write a real value here.
-  const densityScaleRaw = dv.getFloat32(64, true);
-  const densityScale = densityScaleRaw === 0 ? 1.0 : densityScaleRaw;
 
   const expectedVoxels = dims[0] * dims[1] * dims[2];
   const expectedBytes = SCFD_HEADER_BYTES + expectedVoxels * 2;
@@ -209,5 +191,16 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   const voxels = new Uint16Array(expectedVoxels);
   voxels.set(new Uint16Array(buf, SCFD_HEADER_BYTES, expectedVoxels));
 
-  return { dims, voxels, frameKind, origin, voxelSize, rotation, paletteId, densityScale, valueMin, valueMax };
+  // Decoded cube is data-only; presentation defaults flow through
+  // `volumeFieldDefaults.ts` at registration time.
+  return {
+    dims,
+    voxels,
+    frameKind,
+    origin,
+    voxelSize,
+    rotation,
+    valueMin,
+    valueMax,
+  };
 }

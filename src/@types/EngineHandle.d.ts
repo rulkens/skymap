@@ -529,6 +529,37 @@ export type EngineHandle = {
   setVolumeFieldContrast?: (handle: string, contrast: number) => void;
 
   /**
+   * Set the per-cube opacity multiplier for a single registered field.
+   *
+   * `densityScale` enters the alpha-integral inside the scalar-volume
+   * fragment shader as `1 - exp(-densityScale * sample * step)`, so it
+   * controls how strongly each voxel contributes to the accumulated
+   * opacity along a ray.  Independent of `intensity` (which is a final
+   * linear mix-in weight) and of `contrast` (which remaps LUT
+   * coordinates): density tunes optical depth, contrast tunes the
+   * colour ramp's dynamic range, intensity is the global volume knob.
+   *
+   * Why a separate setter rather than baking it into the cube binary:
+   * SCFD v2 (plan 2026-05-11) moves presentation defaults — palette
+   * and densityScale — out of the binary header and into a per-handle
+   * TypeScript registry.  The renderer no longer reads `densityScale`
+   * from the cube; the `wireSlots` commit site sets it from
+   * `VOLUME_FIELD_DEFAULTS[handle]` at registration time, and any
+   * future runtime UI (a "density" slider) can feed values through
+   * this method.
+   *
+   * Updates `EngineSettingsState.volumeFields[handle].densityScale`.
+   * No-op when the handle is unknown or the renderer is not yet
+   * constructed.  Negative / NaN values are clamped to 0 by the
+   * renderer (a silent overlay rather than an inverted-colour bug).
+   *
+   * @param handle  The handle string passed to `addVolumeField`.
+   * @param value   Non-negative opacity multiplier; conventionally
+   *                ~1.0 for natural cubes, larger for sparse fields.
+   */
+  setVolumeFieldDensityScale?: (handle: string, value: number) => void;
+
+  /**
    * Return the ordered list of currently registered field handles.
    *
    * Reflects the same set as `EngineSettingsState.volumeFields`.

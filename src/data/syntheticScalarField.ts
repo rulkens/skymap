@@ -27,7 +27,7 @@
  * renderer-level integration tests.
  */
 
-import type { ScalarCube, ScalarFieldFrameKind, ScalarFieldPaletteId } from '../@types/ScalarCube';
+import type { ScalarCube, ScalarFieldFrameKind } from '../@types/ScalarCube';
 
 export type SyntheticGaussianOptions = {
   /** Cube edge length in voxels (cubic grid).  Default 64. */
@@ -70,13 +70,9 @@ export function makeSyntheticGaussianCube(opts: SyntheticGaussianOptions = {}): 
     origin: [-boxSizeMpc / 2, -boxSizeMpc / 2, -boxSizeMpc / 2],
     voxelSize,
     rotation: [0, 0, 0, 1],
-    paletteId: 'blue-purple',
-    // Tuned so a center-axis ray saturates well before intensity=1.0,
-    // giving the slider plenty of headroom for the "punchy peak" look.
-    // The Gaussian's integrated density along its peak axis is roughly
-    // √(2π)·σ ≈ 0.31 of cube width (for the default σ = dims/8); a 10x
-    // scale lifts that into the comfortably-saturated regime.
-    densityScale: 10.0,
+    // Palette + densityScale presentation defaults live in
+    // `src/data/volumeFieldDefaults.ts` keyed by the renderer's field
+    // handle ('debug-gaussian'), no longer encoded in the cube.
     valueMin: 0,
     valueMax: 1,
   };
@@ -97,10 +93,6 @@ export type CartesianGridOptions = {
    *  Default 3 — roughly half a voxel at default 64³ / 400 Mpc, so the
    *  planes read as crisp lines rather than fat slabs. */
   lineSigmaMpc?: number;
-  /** Palette index baked into the cube header.  Default `viridis` so
-   *  the grid reads as cool-toned and visually distinct from the
-   *  warm-toned spherical grid when both are on. */
-  paletteId?: ScalarFieldPaletteId;
 };
 
 /**
@@ -129,7 +121,6 @@ export function makeCartesianGridCube(opts: CartesianGridOptions = {}): ScalarCu
   const boxSizeMpc = opts.boxSizeMpc ?? 400;
   const gridSpacingMpc = opts.gridSpacingMpc ?? 50;
   const lineSigmaMpc = opts.lineSigmaMpc ?? 3;
-  const paletteId = opts.paletteId ?? 'viridis';
   const voxelSize = boxSizeMpc / dims;
   const origin = -boxSizeMpc / 2;
   const inv2Sigma2 = 1 / (2 * lineSigmaMpc * lineSigmaMpc);
@@ -168,13 +159,9 @@ export function makeCartesianGridCube(opts: CartesianGridOptions = {}): ScalarCu
     origin: [-boxSizeMpc / 2, -boxSizeMpc / 2, -boxSizeMpc / 2],
     voxelSize,
     rotation: [0, 0, 0, 1],
-    paletteId,
-    // Lower scale than the Gaussian: a ray crosses ~8 grid planes per
-    // axis at default settings, so integrated density is much higher
-    // than the single-peak Gaussian.  4x is enough to saturate well
-    // before intensity=1.0 while keeping the low end of the slider
-    // useful for a subtle overlay.
-    densityScale: 4.0,
+    // Palette + densityScale presentation defaults live in
+    // `src/data/volumeFieldDefaults.ts` keyed by the renderer's field
+    // handle ('debug-cartesian'), no longer encoded in the cube.
     valueMin: 0,
     valueMax: 1,
   };
@@ -199,10 +186,6 @@ export type SphericalGridOptions = {
    *  distance to the axis), in Mpc.  Default 2 — slightly tighter than
    *  the shells so spokes read as lines, not tubes. */
   spokeSigmaMpc?: number;
-  /** Palette index baked into the cube header.  Default `magma` so
-   *  the grid reads warm-toned and visually distinct from the
-   *  cool-toned cartesian grid when both are on. */
-  paletteId?: ScalarFieldPaletteId;
 };
 
 /**
@@ -232,7 +215,6 @@ export function makeSphericalGridCube(opts: SphericalGridOptions = {}): ScalarCu
   const shellSpacingMpc = opts.shellSpacingMpc ?? 50;
   const shellSigmaMpc = opts.shellSigmaMpc ?? 3;
   const spokeSigmaMpc = opts.spokeSigmaMpc ?? 2;
-  const paletteId = opts.paletteId ?? 'magma';
   const voxelSize = boxSizeMpc / dims;
   const origin = -boxSizeMpc / 2;
   const invShellSigma2 = 1 / (2 * shellSigmaMpc * shellSigmaMpc);
@@ -279,13 +261,9 @@ export function makeSphericalGridCube(opts: SphericalGridOptions = {}): ScalarCu
     origin: [-boxSizeMpc / 2, -boxSizeMpc / 2, -boxSizeMpc / 2],
     voxelSize,
     rotation: [0, 0, 0, 1],
-    paletteId,
-    // Between Gaussian (single peak, low integrated density) and the
-    // Cartesian grid (many planes, high integrated density): a ray
-    // typically crosses one or two shells plus a spoke.  6x sits in
-    // the saturated-with-headroom range, matching the doubled scales
-    // of its sibling fixtures.
-    densityScale: 6.0,
+    // Palette + densityScale presentation defaults live in
+    // `src/data/volumeFieldDefaults.ts` keyed by the renderer's field
+    // handle ('debug-spherical'), no longer encoded in the cube.
     valueMin: 0,
     valueMax: 1,
   };

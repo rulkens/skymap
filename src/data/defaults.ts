@@ -257,6 +257,21 @@ export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
 export const DEFAULT_VOLUME_FIELD_CONTRAST = 1.0;
 
 /**
+ * Neutral-no-tuning default for per-field densityScale — the
+ * fallback used when a field's handle isn't registered in the SCFD-v2
+ * `VOLUME_FIELD_DEFAULTS` table (`src/data/volumeFieldDefaults.ts`).
+ *
+ * 1.0 corresponds to the shader's identity case: each voxel-step
+ * contributes `1 - exp(-sample * step)` to the alpha integral, so the
+ * raw cube data drives the overlay's opacity directly.  Fields like
+ * CF-4 with a wide-but-low dynamic range want a larger value (5.0)
+ * baked into the registry to lift them off the cosmic mean; new or
+ * external fields default to 1.0 so they at least render visibly
+ * before per-handle tuning lands.
+ */
+export const DEFAULT_VOLUME_FIELD_DENSITY_SCALE = 1.0;
+
+/**
  * Default renderer-wide palette LUT for the scalar-volume overlay.
  * 'viridis' is matplotlib's perceptually-uniform default — neutral
  * blue-green-yellow ramp that reads as "scientific" without leaning

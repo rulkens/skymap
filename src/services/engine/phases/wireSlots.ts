@@ -92,6 +92,7 @@ import {
   DEFAULT_VOLUME_FIELD_CONTRAST,
   DEFAULT_VOLUME_FIELD_INTENSITY,
 } from '../../../data/defaults';
+import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
 import { syntheticVolumeFetcher } from '../../loading/fetchers/syntheticVolumeFetcher';
 
 import type { AssetSlot } from '../../loading/types';
@@ -204,13 +205,22 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         const renderer = state.gpu.scalarVolumeRenderer;
         if (!renderer) return;
         const handle = 'cf4-density';
+        // Seed defaults from the per-handle registry rather than the
+        // cube; SCFD v2 is a data-only format (dims + frame + voxels
+        // + dynamic range) so palette + densityScale don't ride along
+        // in the binary anymore.  See `src/data/volumeFieldDefaults.ts`
+        // for the why-not-binary discussion.  The renderer setters
+        // below read from `persisted`, so once an entry exists the
+        // user-tuned values (future persistence) override the seed.
+        const defaults = getVolumeFieldDefaults(handle);
         renderer.addField(handle, cube);
         if (!state.settings.volumeFields[handle]) {
           state.settings.volumeFields[handle] = {
             enabled: DEFAULT_CF4_DENSITY_ENABLED,
             intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
             contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
-            paletteId: cube.paletteId,
+            densityScale: defaults.densityScale,
+            paletteId: defaults.paletteId,
           };
         }
         const persisted = state.settings.volumeFields[handle]!;
@@ -218,6 +228,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         renderer.setEnabled(handle, persisted.enabled);
         renderer.setContrast(handle, persisted.contrast);
         renderer.setFieldPalette(handle, persisted.paletteId);
+        renderer.setDensityScale(handle, persisted.densityScale);
         cb.onVolumeFieldsChanged?.();
         state.subsystems.scheduler.requestRender();
       },
@@ -358,6 +369,12 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         commit: async (cube) => {
           const renderer = state.gpu.scalarVolumeRenderer;
           if (!renderer) return;
+          // Seed defaults from the per-handle registry; see
+          // `src/data/volumeFieldDefaults.ts` for the why-not-binary
+          // discussion.  Same shape as the cf4Density commit above —
+          // only the handle (closure-captured) and the `enabled` seed
+          // (per-fixture via `defaultEnabled`) differ.
+          const defaults = getVolumeFieldDefaults(handle);
           renderer.addField(handle, cube);
           // Seed the per-field settings entry with defaults if not
           // already present — mirrors the guard in `addVolumeField`
@@ -367,7 +384,8 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
               enabled: defaultEnabled,
               intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
               contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
-              paletteId: cube.paletteId,
+              densityScale: defaults.densityScale,
+              paletteId: defaults.paletteId,
             };
           }
           const persisted = state.settings.volumeFields[handle]!;
@@ -375,6 +393,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
           renderer.setEnabled(handle, persisted.enabled);
           renderer.setContrast(handle, persisted.contrast);
           renderer.setFieldPalette(handle, persisted.paletteId);
+          renderer.setDensityScale(handle, persisted.densityScale);
           // Fire the same React-facing callback that engineHandle's
           // addVolumeField fires.  Without this, the SettingsPanel
           // never learns the new field exists — its mirror is rebuilt

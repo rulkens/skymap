@@ -25,8 +25,6 @@ function makeTinyCube(): ScalarCube {
       SG_TO_EQ_QUATERNION[2]!,
       SG_TO_EQ_QUATERNION[3]!,
     ],
-    paletteId: 'magma',
-    densityScale: 1,
     valueMin: 0,
     valueMax: 7,
   };
@@ -34,6 +32,10 @@ function makeTinyCube(): ScalarCube {
 
 describe('cf4DensityFetcher (success path)', () => {
   it('fetches and decodes a SCFD into a ScalarCube', async () => {
+    // The fetcher's contract is: HTTP GET + decodeScalarField — the
+    // returned cube should round-trip the data-side fields (dims,
+    // frame, voxelSize).  Palette is no longer the fetcher's concern;
+    // see `src/data/volumeFieldDefaults.ts`.
     const buf = encodeScalarField(makeTinyCube());
     fetch.mock.mockResolvedValue(new Response(buf, { status: 200 }));
     const cube = await cf4DensityFetcher(
@@ -43,7 +45,7 @@ describe('cf4DensityFetcher (success path)', () => {
     );
     expect(cube.dims).toEqual([2, 2, 2]);
     expect(cube.frameKind).toBe('supergalactic-cartesian');
-    expect(cube.paletteId).toBe('magma');
+    expect(cube.voxelSize).toBe(1);
   });
 
   it('requests cf4_density.scfd', async () => {

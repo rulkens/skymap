@@ -120,6 +120,7 @@ import {
   MILKY_WAY_CENTER_WORLD,
   MILKY_WAY_VIEW_DISTANCE_MPC,
 } from '../../data/galacticCenter';
+import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -1045,15 +1046,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Seed the per-field settings entry with defaults if not already
       // present — re-registering the same handle preserves any
       // previously-tuned enabled/intensity/palette values so the user's
-      // tweaks don't reset on e.g. a tier-swap reload.  paletteId comes
-      // from the cube metadata so each fixture gets a sensible default
-      // colour ramp on first registration.
+      // tweaks don't reset on e.g. a tier-swap reload.  Presentation
+      // defaults (palette + densityScale) come from the per-handle
+      // registry in `src/data/volumeFieldDefaults.ts` — the cube itself
+      // is data-only in SCFD v2.  Unregistered handles fall through to
+      // `FALLBACK_VOLUME_DEFAULTS` (viridis + 1.0) so a brand-new field
+      // still renders sanely until a tuned entry is added.
       if (!state.settings.volumeFields[handle]) {
+        const defaults = getVolumeFieldDefaults(handle);
         state.settings.volumeFields[handle] = {
           enabled: true,
           intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
           contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
-          paletteId: cube.paletteId,
+          densityScale: defaults.densityScale,
+          paletteId: defaults.paletteId,
         };
       }
       // Forward the current per-field tunables into the renderer so the
@@ -1064,6 +1070,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.gpu.scalarVolumeRenderer?.setIntensity(handle, persisted.intensity);
       state.gpu.scalarVolumeRenderer?.setEnabled(handle, persisted.enabled);
       state.gpu.scalarVolumeRenderer?.setContrast(handle, persisted.contrast);
+      state.gpu.scalarVolumeRenderer?.setDensityScale(handle, persisted.densityScale);
       state.gpu.scalarVolumeRenderer?.setFieldPalette(handle, persisted.paletteId);
       // Let React know the field list changed so any SettingsPanel list
       // re-renders with the new row.
@@ -1112,6 +1119,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.settings.volumeFields[handle].contrast = contrast;
       }
       state.gpu.scalarVolumeRenderer?.setContrast(handle, contrast);
+      state.subsystems.scheduler.requestRender();
+    },
+
+    setVolumeFieldDensityScale(handle, value) {
+      // Identical shape to setVolumeFieldContrast: mirror to the
+      // settings bag first (so optimistic React reads see the raw
+      // value), then forward to the renderer which clamps negative /
+      // NaN inputs to 0.  No-op on unknown handle.  The renderer
+      // tolerates a no-op call before it's constructed via the `?.`
+      // chain — same forgiving pattern as the rest of this surface.
+      if (state.settings.volumeFields[handle]) {
+        state.settings.volumeFields[handle].densityScale = value;
+      }
+      state.gpu.scalarVolumeRenderer?.setDensityScale(handle, value);
       state.subsystems.scheduler.requestRender();
     },
 

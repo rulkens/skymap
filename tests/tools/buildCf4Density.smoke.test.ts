@@ -88,14 +88,10 @@ describe('buildCf4Density (smoke)', () => {
     expect(cube.valueMax).toBeCloseTo(1, 4);
     expect(cube.voxels).toBeInstanceOf(Uint16Array);
     expect(cube.voxels.length).toBe(512);
-    expect(['viridis', 'magma', 'blue-purple', 'yellow-green', 'coolwarm']).toContain(
-      cube.paletteId,
-    );
-
-    // densityScale is the fixed CF-4 constant (5.0), matching the
-    // synthetic-Gaussian regime — see CF4_DENSITY_SCALE in
-    // tools/buildCf4Density.ts.
-    expect(cube.densityScale).toBeCloseTo(5.0, 4);
+    // Palette + densityScale are no longer encoded in the binary — they
+    // live in `src/data/volumeFieldDefaults.ts` keyed by the `'cf4-density'`
+    // handle.  See `tests/data/volumeFieldDefaults.test.ts` for the
+    // registry-side coverage.
 
     // Verify symmetric normalisation: input ran linearly from -1 to +1
     // (so half-range = 1), giving (v + 1) / 2 → first voxel → 0, last

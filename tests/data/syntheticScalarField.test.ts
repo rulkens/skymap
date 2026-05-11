@@ -46,11 +46,13 @@ describe('synthetic Gaussian cube', () => {
 });
 
 describe('cartesian grid cube', () => {
-  it('produces the requested dims and uses viridis by default', () => {
+  it('produces the requested dims', () => {
+    // Palette + densityScale are no longer cube properties — they live
+    // in `volumeFieldDefaults.ts` keyed by the renderer's handle.  The
+    // generator's job here is purely to produce a valid voxel grid.
     const cube = makeCartesianGridCube({ dims: 8 });
     expect(cube.dims).toEqual([8, 8, 8]);
     expect(cube.voxels.length).toBe(8 * 8 * 8);
-    expect(cube.paletteId).toBe('viridis');
   });
 
   it('peaks at the world origin (which sits on a grid plane on every axis)', () => {
@@ -92,11 +94,12 @@ describe('cartesian grid cube', () => {
 });
 
 describe('spherical grid cube', () => {
-  it('produces the requested dims and uses magma by default', () => {
+  it('produces the requested dims', () => {
+    // Palette + densityScale are no longer cube properties; see the
+    // companion comment on the cartesian generator's test above.
     const cube = makeSphericalGridCube({ dims: 8 });
     expect(cube.dims).toEqual([8, 8, 8]);
     expect(cube.voxels.length).toBe(8 * 8 * 8);
-    expect(cube.paletteId).toBe('magma');
   });
 
   it('has high value near the world origin (all three spokes pass through it)', () => {
