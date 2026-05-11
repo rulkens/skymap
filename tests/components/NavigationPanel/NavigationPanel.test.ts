@@ -1,31 +1,24 @@
+// @vitest-environment jsdom
 /**
  * Tests for NavigationPanel.
  *
- * ### Why .test.ts not .test.tsx
+ * NavigationPanel is a static cheatsheet — no props (or just isMobile),
+ * no callbacks.  Its collapse state lives in the shared Panel
+ * component (covered by Panel's own tests).  These tests function as
+ * a "keyboard-binding label sync canary": if someone rebinds a
+ * shortcut in App.tsx but forgets the cheatsheet, this surface is
+ * what catches it.
  *
- * The project's vitest config runs in the `node` environment with no DOM
- * library installed (see CLAUDE.md).  We use
- * `react-dom/server.renderToStaticMarkup` to snapshot the initial markup
- * as a string and assert against it.
- *
- * ### What we cover here
- *
- * NavigationPanel is a static cheatsheet — no props, no callbacks.  Its
- * collapse state lives in the shared `Panel` component (whose own tests
- * cover the open/closed visual branches).  The cases here:
- *
- *   1. Every label and gesture/key string appears in the rendered output
- *      (canary that keeps the cheatsheet in sync with the actual key
- *      bindings — those live in `App.tsx`'s keydown handler).
- *   2. Default render is OPEN (Panel's defaultOpen=true is in effect).
- *
- * Click-to-toggle behaviour is verified manually against the live dev
- * server (project convention — see CLAUDE.md "dev server stays running").
+ * Pre-jsdom this used `>Esc<` substring matches over SSR markup to
+ * pin Esc to a left-column key cell rather than picking up the letter
+ * "E" inside random labels.  jsdom + getByText with a regex anchored
+ * to a single-token string fills the same role with a more readable
+ * selector.
  */
 
 import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import {
   NavigationPanel,
   type NavigationPanelProps,
@@ -33,37 +26,41 @@ import {
 
 describe('NavigationPanel', () => {
   it('renders the NAVIGATION header', () => {
-    const html = renderToStaticMarkup(createElement(NavigationPanel, {}));
-    expect(html).toContain('NAVIGATION');
+    render(createElement(NavigationPanel, {}));
+    expect(
+      screen.getByRole('button', { name: /NAVIGATION/i }),
+    ).toBeInTheDocument();
   });
 
   it('renders every gesture/key on the left column', () => {
-    const html = renderToStaticMarkup(createElement(NavigationPanel, {}));
-    expect(html).toContain('Drag');
-    expect(html).toContain('Wheel');
-    expect(html).toContain('H');
-    expect(html).toContain('F');
-    expect(html).toContain('Esc');
-    // Cmd / Ctrl / slash hint for the command palette — assert the search
-    // shortcut appears in some form (the exact glyph is fine to spot-check).
-    expect(html).toMatch(/⌘K|Ctrl\+K|\//);
+    render(createElement(NavigationPanel, {}));
+    expect(screen.getByText('Drag')).toBeInTheDocument();
+    expect(screen.getByText('Wheel')).toBeInTheDocument();
+    expect(screen.getByText('H')).toBeInTheDocument();
+    expect(screen.getByText('F')).toBeInTheDocument();
+    expect(screen.getByText('Esc')).toBeInTheDocument();
+    // Cmd / Ctrl / slash hint for the command palette — accept any of
+    // the three glyphs the panel might surface.
+    expect(screen.getByText(/⌘K|Ctrl\+K|\//)).toBeInTheDocument();
   });
 
   it('renders every action label on the right column', () => {
-    const html = renderToStaticMarkup(createElement(NavigationPanel, {}));
-    expect(html).toContain('orbit camera');
-    expect(html).toContain('zoom');
-    expect(html).toContain('home view');
-    expect(html).toContain('focus selected');
-    expect(html).toContain('clear selection');
-    expect(html).toContain('search galaxies');
+    render(createElement(NavigationPanel, {}));
+    expect(screen.getByText(/orbit camera/i)).toBeInTheDocument();
+    expect(screen.getByText(/zoom/i)).toBeInTheDocument();
+    expect(screen.getByText(/home view/i)).toBeInTheDocument();
+    expect(screen.getByText(/focus selected/i)).toBeInTheDocument();
+    expect(screen.getByText(/clear selection/i)).toBeInTheDocument();
+    expect(screen.getByText(/search galaxies/i)).toBeInTheDocument();
   });
 
-  it('mounts open by default (aria-expanded="true" + body visible)', () => {
-    const html = renderToStaticMarkup(createElement(NavigationPanel, {}));
-    expect(html).toContain('aria-expanded="true"');
-    // Body content present — pick a row that's load-bearing for "open".
-    expect(html).toContain('orbit camera');
+  it('mounts open by default (Panel aria-expanded="true")', () => {
+    render(createElement(NavigationPanel, {}));
+    expect(
+      screen.getByRole('button', { name: /NAVIGATION/i }),
+    ).toHaveAttribute('aria-expanded', 'true');
+    // Body content visible — pick a row that's load-bearing for "open".
+    expect(screen.getByText(/orbit camera/i)).toBeInTheDocument();
   });
 
   it('shows touch gestures and hides keyboard shortcuts when isMobile=true', () => {
@@ -72,17 +69,15 @@ describe('NavigationPanel', () => {
     // signature when the component has destructured-with-default props,
     // which makes inline `{ isMobile: true }` look like a stray Attribute.
     const props: NavigationPanelProps = { isMobile: true };
-    const html = renderToStaticMarkup(createElement(NavigationPanel, props));
-    // Mobile-relevant rows appear:
-    expect(html).toContain('One-finger drag');
-    expect(html).toContain('Two-finger pinch');
-    expect(html).toContain('Tap a galaxy');
-    expect(html).toContain('× on info card');
-    // Keyboard-only shortcuts should NOT appear on the mobile cheatsheet —
-    // they'd be misleading because phones have no Esc / F / H keys.
-    // Match the exact label rendered as the left-column key, not just the
-    // letter (which appears in many words).
-    expect(html).not.toContain('>Esc<');
-    expect(html).not.toContain('search galaxies');
+    render(createElement(NavigationPanel, props));
+    expect(screen.getByText(/One-finger drag/i)).toBeInTheDocument();
+    expect(screen.getByText(/Two-finger pinch/i)).toBeInTheDocument();
+    expect(screen.getByText(/Tap a galaxy/i)).toBeInTheDocument();
+    expect(screen.getByText(/× on info card/i)).toBeInTheDocument();
+    // Keyboard-only shortcuts should NOT appear on the mobile
+    // cheatsheet — they'd be misleading because phones have no Esc /
+    // F / H keys.  Use queryByText (not get) so absence doesn't throw.
+    expect(screen.queryByText('Esc')).not.toBeInTheDocument();
+    expect(screen.queryByText(/search galaxies/i)).not.toBeInTheDocument();
   });
 });

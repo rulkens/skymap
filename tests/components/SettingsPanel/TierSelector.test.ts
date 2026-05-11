@@ -1,45 +1,53 @@
-/**
- * Tests for TierSelector — three-button segmented control at the top of the
- * Settings panel.
- *
- * vitest runs in node env (no DOM lib).  We test the static-render branches
- * via renderToStaticMarkup, mirroring the CollapsibleSection test pattern.
- * Click handling is verified manually against the dev server.
- */
-
-import { describe, expect, it, vi } from 'vitest';
+// @vitest-environment jsdom
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { TierSelector } from '../../../src/components/SettingsPanel/TierSelector';
 
 describe('TierSelector', () => {
-  it('renders all three tier labels', () => {
-    const html = renderToStaticMarkup(
-      createElement(TierSelector, { tier: 'medium', onTierChange: vi.fn() }),
+  it('marks the active tier with aria-pressed=true and the others false', () => {
+    render(
+      createElement(TierSelector, { tier: 'medium', onTierChange: () => {} }),
     );
-    expect(html).toContain('Small');
-    expect(html).toContain('Medium');
-    expect(html).toContain('Large');
+    expect(
+      screen.getByRole('button', { name: /medium/i, pressed: true }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /small/i, pressed: false }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /large/i, pressed: false }),
+    ).toBeInTheDocument();
   });
 
-  it('marks the currently-selected tier as pressed (aria-pressed=true)', () => {
-    const html = renderToStaticMarkup(
-      createElement(TierSelector, { tier: 'large', onTierChange: vi.fn() }),
+  it('fires onTierChange with the clicked tier', async () => {
+    const onTierChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      createElement(TierSelector, { tier: 'small', onTierChange }),
     );
-    // Three buttons; only one with aria-pressed="true".
-    const trueMatches = html.match(/aria-pressed="true"/g) ?? [];
-    expect(trueMatches.length).toBe(1);
-    // The "true" pressed button must be the Large one — we encode this by
-    // putting `data-tier="<value>"` on each button.
-    expect(html).toMatch(/data-tier="large"[^>]*aria-pressed="true"/);
+    await user.click(screen.getByRole('button', { name: /large/i }));
+    expect(onTierChange).toHaveBeenCalledOnce();
+    expect(onTierChange).toHaveBeenCalledWith('large');
   });
 
-  it('renders Small as pressed when tier=small', () => {
-    const html = renderToStaticMarkup(
-      createElement(TierSelector, { tier: 'small', onTierChange: vi.fn() }),
+  it('does not fire onTierChange when the active tier is re-clicked', async () => {
+    // The component guards against pointless re-fetches by short-circuiting
+    // when the click target matches the current tier.  Pre-jsdom we
+    // couldn't exercise this branch.
+    const onTierChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      createElement(TierSelector, { tier: 'medium', onTierChange }),
     );
-    expect(html).toMatch(/data-tier="small"[^>]*aria-pressed="true"/);
-    expect(html).toMatch(/data-tier="medium"[^>]*aria-pressed="false"/);
-    expect(html).toMatch(/data-tier="large"[^>]*aria-pressed="false"/);
+    await user.click(screen.getByRole('button', { name: /medium/i }));
+    expect(onTierChange).not.toHaveBeenCalled();
   });
+
+  // Arrow-key segmented-control nav was considered but skipped — the
+  // component intentionally uses aria-pressed (toggle-button) semantics
+  // rather than a radio group, precisely so arrow keys don't silently
+  // trigger re-fetches per arrow press.  See the docblock at the top of
+  // TierSelector.tsx for the cost-model rationale.
 });

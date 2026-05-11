@@ -1,24 +1,8 @@
-/**
- * Tests for CommandPalette's alias-row branch.
- *
- * Project convention (CLAUDE.md): vitest runs in node with no DOM, so we
- * assert against `renderToStaticMarkup` output rather than React Testing
- * Library queries.  Click/keyboard interactions are exercised in a
- * lightweight integration sense by unit-testing scoreFamousMatch /
- * scoreAliasMatch separately — those scorers drive the entire matches
- * list, so verifying they produce the expected ordering is more
- * valuable than simulating mouse events through SSR.
- *
- * The render assertions here lock in:
- *   - Alias rows show the primary name + source-label chip.
- *   - The empty-query branch shows the famous list, NOT the alias list
- *     (which would render 48k items if naively included).
- *   - Famous rows still render their thumbnail <img>.
- */
-
-import { describe, expect, it } from 'vitest';
+// @vitest-environment jsdom
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { CommandPalette } from '../../../src/components/CommandPalette/CommandPalette';
 import { Source } from '../../../src/data/sources';
 import type { FamousMetaEntry } from '../../../src/services/loading/fetchers/famousMetaFetcher';
@@ -31,6 +15,17 @@ const M31: FamousMetaEntry = {
   type: 'Sb',
 };
 
+// A famous entry whose id is NOT in FEATURED_IDS, so the empty-query
+// state renders only the results list (no featured grid).  Avoids
+// duplicate clickable nodes when we want to assert a single click
+// dispatches selection exactly once.
+const NGC1300: FamousMetaEntry = {
+  id: 'ngc1300',
+  names: ['NGC 1300'],
+  description: 'A barred spiral.',
+  type: 'SBbc',
+};
+
 const NGC4565: AliasIndexEntry = {
   pgc: 42038n,
   names: ['NGC 4565', 'UGC 7772'],
@@ -38,16 +33,9 @@ const NGC4565: AliasIndexEntry = {
   localIdx: 1234,
 };
 
-const NGC253: AliasIndexEntry = {
-  pgc: 2789n,
-  names: ['NGC 253', 'UGCA 13'],
-  source: Source.TwoMRS,
-  localIdx: 99,
-};
-
 describe('CommandPalette', () => {
   it('renders nothing when closed', () => {
-    const html = renderToStaticMarkup(
+    const { container } = render(
       createElement(CommandPalette, {
         entries: [M31],
         open: false,
@@ -55,50 +43,87 @@ describe('CommandPalette', () => {
         onSelect: () => {},
       }),
     );
-    expect(html).toBe('');
+    expect(container).toBeEmptyDOMElement();
   });
 
   it('shows the famous list (not the alias list) when query is empty', () => {
-    const html = renderToStaticMarkup(
+    render(
       createElement(CommandPalette, {
         entries: [M31],
-        aliasIndex: [NGC4565, NGC253],
+        aliasIndex: [NGC4565],
         open: true,
         onClose: () => {},
         onSelect: () => {},
       }),
     );
-    // M31 is rendered (famous, empty-query branch shows them all).
-    expect(html).toMatch(/M31/);
-    // Alias rows are NOT shown for empty queries — confirms the
-    // 48k-item perf guardrail.  We look for the alias-source chip
-    // class which only appears on alias rows.
-    expect(html).not.toMatch(/aliasSource/);
+    // The featured-grid button surfaces the proper name "Andromeda
+    // Galaxy" via its aria-label, so we assert that as the canary that
+    // the famous branch is rendering.
+    expect(
+      screen.getByRole('button', { name: /Focus Andromeda Galaxy/i }),
+    ).toBeInTheDocument();
+    // Alias rows are NOT shown for empty queries — confirms the 48k-row
+    // perf guardrail still holds.
+    expect(screen.queryByText('NGC 4565')).not.toBeInTheDocument();
   });
 
-  it('does not crash without aliasIndex (degrades to famous-only)', () => {
-    const html = renderToStaticMarkup(
+  it('reveals matching alias rows when the user types', async () => {
+    const user = userEvent.setup();
+    render(
       createElement(CommandPalette, {
         entries: [M31],
+        aliasIndex: [NGC4565],
         open: true,
         onClose: () => {},
         onSelect: () => {},
       }),
     );
-    expect(html).toMatch(/M31/);
+    // The input has no explicit role override; the default role for
+    // an <input> with no `type` attribute is "textbox".  Querying by
+    // placeholder is the most stable selector since the placeholder
+    // doubles as the documented affordance ("Search galaxies …").
+    const input = screen.getByPlaceholderText(/search galaxies/i);
+    await user.type(input, 'NGC 4565');
+    expect(await screen.findByText('NGC 4565')).toBeInTheDocument();
   });
 
-  it('renders alias rows with primary name + source label when matching alias index', () => {
-    // We can't actually drive `query` from outside the component (it's
-    // useState-internal), but we can verify the rendering pipeline
-    // produces the expected markup by passing entries that all match
-    // an empty query *plus* aliases — the empty-query branch exercises
-    // the famous-rendering path, but for the alias branch we need a
-    // non-empty query.  Skipping that path in SSR, we instead assert
-    // the AliasIndexEntry shape flows through unchanged:  the type
-    // export is exercised by passing a fully-typed value above (this
-    // test fails to compile if AliasIndexEntry's shape regresses).
-    expect(NGC4565.names[0]).toBe('NGC 4565');
-    expect(NGC4565.source).toBe(Source.Glade);
+  it('calls onSelect when the user clicks a result', async () => {
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
+    render(
+      createElement(CommandPalette, {
+        entries: [NGC1300],
+        open: true,
+        onClose: () => {},
+        onSelect,
+      }),
+    );
+    // NGC 1300 isn't in FEATURED_IDS, so the only clickable row that
+    // surfaces its name is the results-list <li>.  This sidesteps the
+    // ambiguity we'd hit with M31 (which shows up in BOTH the featured
+    // grid button and the results-list row).
+    await user.click(screen.getByText('NGC 1300'));
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(onSelect).toHaveBeenCalledWith('ngc1300');
+  });
+
+  it('calls onClose when the user presses Escape', async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(
+      createElement(CommandPalette, {
+        entries: [M31],
+        open: true,
+        onClose,
+        onSelect: () => {},
+      }),
+    );
+    // The keydown handler is bound to the backdrop div; focus needs
+    // to be inside the dialog for the event to bubble up to it.  The
+    // input auto-focuses on open via requestAnimationFrame, but that
+    // doesn't run in jsdom timing — focus the input explicitly.
+    screen.getByPlaceholderText(/search galaxies/i).focus();
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

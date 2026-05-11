@@ -88,6 +88,7 @@ export function SearchTrigger({ onClick, hidden = false }: SearchTriggerProps): 
       className={cx(styles.trigger, hidden && styles.hidden)}
       onClick={onClick}
       aria-label="Search galaxies"
+      aria-hidden={hidden || undefined}
       aria-keyshortcuts="Meta+K Control+K /"
     >
       <SearchIcon />
