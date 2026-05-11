@@ -246,6 +246,17 @@ export const DEFAULT_VOLUMES_ENABLED = true;
 export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
 
 /**
+ * Default per-field contrast (gamma-style LUT-coordinate remap around
+ * the 0.5 pivot, see `VolumeFieldSettings.contrast` and the
+ * scalar-volume fragment shader).  1.0 is identity — the value at
+ * which the slider has no effect, matching the user's intuition that
+ * "default" should produce the same visual as before the slider
+ * existed.  Cubes are encoded for that baseline; the user dials
+ * upward to expose structure or downward to flatten.
+ */
+export const DEFAULT_VOLUME_FIELD_CONTRAST = 1.0;
+
+/**
  * Default renderer-wide palette LUT for the scalar-volume overlay.
  * 'viridis' is matplotlib's perceptually-uniform default — neutral
  * blue-green-yellow ramp that reads as "scientific" without leaning

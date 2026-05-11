@@ -34,6 +34,18 @@ struct VolumeUniforms {
   cameraPosWorld: vec3<f32>,
   intensity: f32,
   densityScale: f32,
+  // Per-field contrast.  Applied as a gamma-style remap of the LUT
+  // sample coordinate around the 0.5 pivot:
+  //
+  //   t' = 0.5 + sign(t - 0.5) * pow(abs(t - 0.5) * 2, 1/contrast) * 0.5
+  //
+  // contrast = 1.0 → identity.  contrast > 1.0 pushes mid-tones toward
+  // the extremes (more visible structure for divergent palettes
+  // centered on the cosmic mean).  contrast < 1.0 compresses toward
+  // the midpoint.  Orthogonal to `intensity`: intensity controls how
+  // OPAQUE the volume is overall, contrast controls how MUCH of the
+  // dynamic range gets pushed to the saturated ends of the palette.
+  contrast: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: VolumeUniforms;
@@ -113,9 +125,20 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     // non-uniform control flow.  Our 3D texture has only one mip level
     // anyway, so explicit LOD 0 is exactly what we want.
     let sampleValue = textureSampleLevel(volume, volumeSampler, p, 0.0).r;
+    // Apply the per-field contrast remap around the 0.5 pivot.  See
+    // VolumeUniforms.contrast for the formula's rationale.  Branching
+    // on contrast == 1.0 would be a tiny perf win but breaks the
+    // uniform-control-flow contract that lets us use textureSampleLevel
+    // a few lines down; the math is cheap enough to run unconditionally.
+    let centered = sampleValue - 0.5;
+    let contrastedT = clamp(
+      0.5 + sign(centered) * pow(abs(centered) * 2.0, 1.0 / u.contrast) * 0.5,
+      0.0,
+      1.0,
+    );
     // Look up colour through the 1D palette LUT.  Same uniformity
     // constraint, same fix.
-    let lut = textureSampleLevel(palette, paletteSampler, sampleValue, 0.0);
+    let lut = textureSampleLevel(palette, paletteSampler, contrastedT, 0.0);
     // Per-step alpha = density * stepLength.  This is the discrete form
     // of the optical-depth integral: total opacity along the ray =
     // sum(density * dx) which is path-length-correct (a longer ray

@@ -53,6 +53,16 @@ export type VolumeFieldSettings = {
   /** Linear mix-in weight in [0, 1].  Seeded from `DEFAULT_VOLUME_FIELD_INTENSITY`. */
   intensity: number;
   /**
+   * LUT-coordinate contrast around the 0.5 pivot (gamma-style remap).
+   * 1.0 is identity; > 1.0 pushes mid-tones toward the saturated ends
+   * of the palette (more visible structure for divergent palettes
+   * centered on the cosmic mean); < 1.0 compresses toward the midpoint.
+   * Orthogonal to `intensity`: intensity controls overall opacity,
+   * contrast controls dynamic-range remapping.  Seeded from
+   * `DEFAULT_VOLUME_FIELD_CONTRAST`.
+   */
+  contrast: number;
+  /**
    * Palette LUT id for this field.  Each volume field owns its own LUT
    * texture (see `scalarVolumeRenderer.ts`); this value mirrors the
    * renderer's per-field palette so the SettingsPanel dropdown can read

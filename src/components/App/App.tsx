@@ -112,6 +112,12 @@ type PersistedVolumeField = {
   intensity: number;
   /** Optional so older localStorage payloads (without paletteId) still load. */
   paletteId?: ScalarFieldPaletteId;
+  /**
+   * Optional so localStorage payloads written before the contrast
+   * slider existed still hydrate cleanly.  Missing → fall back to
+   * `DEFAULT_VOLUME_FIELD_CONTRAST` at restore time.
+   */
+  contrast?: number;
 };
 type PersistedVolumeFields = Record<string, PersistedVolumeField>;
 
@@ -303,6 +309,9 @@ export function App(): React.ReactElement {
       if (typeof saved.intensity === 'number') {
         handle.setVolumeFieldIntensity?.(h, saved.intensity);
       }
+      if (typeof saved.contrast === 'number' && saved.contrast > 0) {
+        handle.setVolumeFieldContrast?.(h, saved.contrast);
+      }
       if (
         typeof saved.paletteId === 'string' &&
         (PALETTE_IDS as readonly string[]).includes(saved.paletteId)
@@ -342,6 +351,7 @@ export function App(): React.ReactElement {
         snapshot[f.handle] = {
           enabled: f.enabled,
           intensity: f.intensity,
+          contrast: f.contrast,
           paletteId: f.paletteId,
         };
       }
@@ -741,6 +751,17 @@ export function App(): React.ReactElement {
                   volumeFields.map((f) => (f.handle === handle ? { ...f, intensity } : f)),
                 );
                 handleRef.current?.setVolumeFieldIntensity?.(handle, intensity);
+              },
+              onVolumeFieldContrastChange: (handle: string, contrast: number) => {
+                // Same optimistic-update pattern as intensity: local
+                // React state for input responsiveness, then forward to
+                // the engine.  The engine setter is the source of truth
+                // for the shader uniform; React state mirrors what the
+                // user just dragged.
+                setVolumeFields(
+                  volumeFields.map((f) => (f.handle === handle ? { ...f, contrast } : f)),
+                );
+                handleRef.current?.setVolumeFieldContrast?.(handle, contrast);
               },
               onVolumeFieldPaletteChange: (handle: string, paletteId: ScalarFieldPaletteId) => {
                 setVolumeFields(

@@ -87,7 +87,11 @@ import { famousMetaFetcher } from '../../loading/fetchers/famousMetaFetcher';
 import { pgcAliasFetcher } from '../../loading/fetchers/pgcAliasFetcher';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
-import { DEFAULT_CF4_DENSITY_ENABLED, DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
+import {
+  DEFAULT_CF4_DENSITY_ENABLED,
+  DEFAULT_VOLUME_FIELD_CONTRAST,
+  DEFAULT_VOLUME_FIELD_INTENSITY,
+} from '../../../data/defaults';
 import { syntheticVolumeFetcher } from '../../loading/fetchers/syntheticVolumeFetcher';
 
 import type { AssetSlot } from '../../loading/types';
@@ -180,12 +184,14 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         state.settings.volumeFields[handle] = {
           enabled: DEFAULT_CF4_DENSITY_ENABLED,
           intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+          contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
           paletteId: cube.paletteId,
         };
       }
       const persisted = state.settings.volumeFields[handle]!;
       renderer.setIntensity(handle, persisted.intensity);
       renderer.setEnabled(handle, persisted.enabled);
+      renderer.setContrast(handle, persisted.contrast);
       renderer.setFieldPalette(handle, persisted.paletteId);
       cb.onVolumeFieldsChanged?.();
       state.subsystems.scheduler.requestRender();
@@ -342,12 +348,14 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
             state.settings.volumeFields[handle] = {
               enabled: defaultEnabled,
               intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+              contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
               paletteId: cube.paletteId,
             };
           }
-          const persisted = state.settings.volumeFields[handle];
+          const persisted = state.settings.volumeFields[handle]!;
           renderer.setIntensity(handle, persisted.intensity);
           renderer.setEnabled(handle, persisted.enabled);
+          renderer.setContrast(handle, persisted.contrast);
           renderer.setFieldPalette(handle, persisted.paletteId);
           // Fire the same React-facing callback that engineHandle's
           // addVolumeField fires.  Without this, the SettingsPanel
