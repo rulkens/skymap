@@ -66,6 +66,7 @@ const PALETTE_ID_TO_INDEX: Record<ScalarFieldPaletteId, number> = {
   magma: 1,
   'blue-purple': 2,
   'yellow-green': 3,
+  coolwarm: 4,
 };
 
 const INDEX_TO_PALETTE_ID: ReadonlyArray<ScalarFieldPaletteId> = [
@@ -73,6 +74,7 @@ const INDEX_TO_PALETTE_ID: ReadonlyArray<ScalarFieldPaletteId> = [
   'magma',
   'blue-purple',
   'yellow-green',
+  'coolwarm',
 ];
 
 /**
