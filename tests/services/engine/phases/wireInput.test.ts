@@ -207,17 +207,14 @@ function makeDeps(firstReadySource: Source | null): BootstrapDeps {
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
-      thumbnailRenderer: {} as never,
-      diskRenderer: {} as never,
-      proceduralDiskRenderer: {} as never,
-      milkyWayRenderer: {} as never,
-      // The framing flow reads this to populate the `kind: 'ready'`
-      // status payload's `source` field — see wireInput.ts's
-      // `cloudSourceFor(firstReadySource ?? Source.Synthetic)` call.
-      // The test sets it to SDSS to mirror the wireSlots-resolved
-      // outcome.
-      firstReadySource,
     },
+    // Post-M1 (PR #93): firstReadySource flows through a typed ref on
+    // BootstrapDeps (rather than phaseLocals.firstReadySource).  The
+    // framing flow reads `firstReadySourceRef.current` to populate the
+    // `kind: 'ready'` status payload's `source` field — see wireInput's
+    // `cloudSourceFor(... ?? Source.Synthetic)` call.  The test sets it
+    // to SDSS to mirror the wireSlots-resolved outcome.
+    firstReadySourceRef: { current: firstReadySource },
   };
 }
 

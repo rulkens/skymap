@@ -305,12 +305,11 @@ function makeDeps(): BootstrapDeps {
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
-      thumbnailRenderer: {} as never,
-      diskRenderer: {} as never,
-      proceduralDiskRenderer: {} as never,
-      milkyWayRenderer: {} as never,
-      firstReadySource: null,
     },
+    // Post-M1 (PR #93): firstReadySource lives as a typed ref on
+    // BootstrapDeps, not on phaseLocals.  wireSlots mutates this on
+    // first-source-ready; wireInput reads it for framing.
+    firstReadySourceRef: { current: null },
   };
 }
 
@@ -370,9 +369,10 @@ describe('wireSlots', () => {
     // wireInput).
     expect(deps.cb.lifecycle?.onStatusChange).toHaveBeenCalledWith({ kind: 'loading' });
 
-    // SDSS fired first with count > 0, so the phaseLocals carrier
-    // records it as the framing seed for wireInput.
-    expect(deps.phaseLocals!.firstReadySource).toBe(Source.SDSS);
+    // SDSS fired first with count > 0, so wireSlots records it on the
+    // firstReadySourceRef as the framing seed for wireInput (post-M1
+    // ref-based shape; pre-M1 this lived on phaseLocals).
+    expect(deps.firstReadySourceRef.current).toBe(Source.SDSS);
   });
 
   it('synthetic-fallback path fires `load(...)` on the synthetic slot when every real survey errors', async () => {
