@@ -87,6 +87,13 @@ struct VolumeUniforms {
   // derived deadband by taking the max — user can crank trim past
   // contrast's implicit deadband to suppress more, never less.
   trim: f32,
+  // Per-draw frame counter (f32 because the uniform is f32-typed
+  // throughout — the integer monotonicity is what matters, not the
+  // exact value).  Used as a temporal seed for the ray-march jitter
+  // hash so the screen-space dither pattern decorrelates frame-to-
+  // frame instead of staying locked in screen space.  CPU side
+  // wraps at 1e6 to keep the f32 mantissa happy.
+  frame: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: VolumeUniforms;
@@ -242,9 +249,20 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
   // grid, and the accumulated integral stays unbiased (jitter averages
   // to stepLength/2).  hash21Hq (Dave Hoskins' "Hash without Sine") is
   // used instead of the cheaper sin-based hash21 because the latter's
-  // diagonal banding is visible as a stationary screen-space pattern
-  // during camera motion.
-  let jitter = hash21Hq(fragCoord.xy) * stepLength;
+  // diagonal banding is visible as a stationary screen-space pattern.
+  //
+  // Temporal seed: offsetting the hash input by frame * irrational
+  // constants decorrelates the dither pattern frame-to-frame, so the
+  // residual grain looks like film noise rather than a stationary
+  // screen-space pattern the eye can latch onto.  Without TAA this
+  // produces visible shimmer when stationary — accepted tradeoff,
+  // because the alternative (no temporal seed) means the same screen
+  // pixel always picks the same step phase, which is exactly the
+  // failure mode the user reported.  The constants 7.13 / 13.71 are
+  // arbitrary irrationals that don't share factors with anything in
+  // the hash mixer.
+  let jitterSeed = fragCoord.xy + vec2<f32>(u.frame * 7.13, u.frame * 13.71);
+  let jitter = hash21Hq(jitterSeed) * stepLength;
   var accum = vec4<f32>(0.0);
   var t = tMin + jitter;
   for (var i = 0; i < STEP_COUNT; i = i + 1) {

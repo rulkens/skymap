@@ -44,12 +44,19 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
 // + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
-// + 4 (envelopeOuter) + 4 (exposure) + 4 (trim) = 252.  The WGSL struct
-// contains mat4x4 (alignment 16), so total must be a multiple of 16 —
-// pad up to 256.  Trim took 4 of the 8 trailing pad bytes
-// (scratch[62]); the remaining 4 stay zero, reserved for the next
-// per-field uniform (scratch[63]) without bumping UNIFORM_BYTES.
+// + 4 (envelopeOuter) + 4 (exposure) + 4 (trim) + 4 (frame) = 256
+// exactly.  The WGSL struct contains mat4x4 (alignment 16), so total
+// must be a multiple of 16 — 256 lands cleanly.  Frame took the last
+// reserved scratch slot (scratch[63]); the next per-field uniform will
+// have to bump UNIFORM_BYTES to the next 16-byte boundary (272).
 const UNIFORM_BYTES = 256;
+
+// Temporal-seed wrap-around for the per-draw frame counter.  f32 has
+// 24 bits of mantissa (~16M integers exact), so wrapping at 1e6
+// leaves headroom for the multiply-by-irrational constants in the
+// shader without losing precision in the hash input.  The eye can't
+// detect a 1M-frame repeat at 60fps (~4.6 hours of continuous render).
+const FRAME_WRAP = 1_000_000;
 
 const CUBE_CORNERS = new Float32Array([
   0, 0, 0,
@@ -379,6 +386,11 @@ export function createScalarVolumeRenderer(
   const bindGroupLayout = pipeline.getBindGroupLayout(0);
 
   const fields = new Map<ScalarFieldHandle, FieldEntry>();
+  // Per-draw frame counter — incremented every draw() and forwarded to
+  // the fragment shader as a temporal seed for the ray-march jitter
+  // hash.  Wrapping at FRAME_WRAP keeps the f32 mantissa precise
+  // through the shader's irrational-constant multiplies.
+  let frame = 0;
 
   function uploadCube(cube: ScalarCube): GPUTexture {
     const tex = device.createTexture({
@@ -629,8 +641,11 @@ export function createScalarVolumeRenderer(
       // 240..243  envelopeOuter    (f32)
       // 244..247  exposure         (f32)
       // 248..251  trim             (f32)
-      // 252..255  _pad             (4 bytes; struct rounded up to 16-byte multiple)
+      // 252..255  frame            (f32; per-draw temporal seed for
+      //                            the shader's jitter hash — wraps
+      //                            at FRAME_WRAP, see top of file)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
+      frame = (frame + 1) % FRAME_WRAP;
       for (const e of fields.values()) {
         if (!e.enabled || e.intensity <= 0) continue;
         for (let i = 0; i < 16; i++) scratch[i] = viewProj[i] ?? 0;
@@ -651,6 +666,7 @@ export function createScalarVolumeRenderer(
         scratch[60] = e.envelopeOuter;
         scratch[61] = e.exposure;
         scratch[62] = e.trim;
+        scratch[63] = frame;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         pass.setBindGroup(0, e.bindGroup);
         pass.drawIndexed(CUBE_INDICES.length);
