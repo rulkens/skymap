@@ -25,42 +25,19 @@
 import { readFileSync } from 'node:fs';
 import { readNpy } from './parsers/npyReader';
 import { SG_TO_EQ_MATRIX } from '../src/data/superGalacticTransform';
+import {
+  CLUSTER_ANCHORS,
+  raDecDistToEqCart,
+  type ClusterAnchor,
+} from '../src/data/clusterAnchors';
 
-const RAD = Math.PI / 180;
 const VOXEL_SIZE_MPC = 1000 / 128; // CF4++ box size / N
 const DIMS = 128;
 const ORIGIN_MPC = -VOXEL_SIZE_MPC * (DIMS / 2); // -500 Mpc on each axis
 
-type Anchor = {
-  name: string;
-  raHours: number;
-  decDeg: number;
-  distMpc: number;
-};
-
-const ANCHORS: Anchor[] = [
-  { name: 'Virgo (M87)',           raHours: 12 + 30 / 60 + 49 / 3600, decDeg:  12 + 23 / 60,  distMpc:  16.5 },
-  { name: 'Coma (A1656)',          raHours: 12 + 59 / 60 + 49 / 3600, decDeg:  27 + 59 / 60,  distMpc: 100   },
-  { name: 'Perseus (A426)',        raHours:  3 + 19 / 60 + 48 / 3600, decDeg:  41 + 31 / 60,  distMpc:  75   },
-  { name: 'Norma / Great Attractor', raHours: 16 + 15 / 60,           decDeg: -(60 + 54 / 60), distMpc:  70   },
-  { name: 'Hercules (A2151)',      raHours: 16 +  5 / 60 + 15 / 3600, decDeg:  17 + 45 / 60,  distMpc: 158   },
-  { name: 'Shapley (A3558)',       raHours: 13 + 27 / 60 + 57 / 3600, decDeg: -(31 + 30 / 60), distMpc: 200   },
-];
-
-/** Convert (RA hours, Dec deg, distance Mpc) → equatorial Cartesian Mpc. */
-function anchorToEqCart(a: Anchor): [number, number, number] {
-  const ra = a.raHours * 15 * RAD; // hours → degrees → radians
-  const dec = a.decDeg * RAD;
-  const cd = Math.cos(dec);
-  return [
-    a.distMpc * Math.cos(ra) * cd,
-    a.distMpc * Math.sin(ra) * cd,
-    a.distMpc * Math.sin(dec),
-  ];
-}
-
-/** Apply 3×3 matrix to a vec3. */
-function applyMat3(m: ReturnType<typeof getSgToEqMatrix>, v: [number, number, number]): [number, number, number] {
+/** Apply 3×3 matrix to a vec3.  Input is `readonly` so callers can pass
+ *  the immutable tuple returned by `raDecDistToEqCart` without a copy. */
+function applyMat3(m: ReturnType<typeof getSgToEqMatrix>, v: readonly [number, number, number]): [number, number, number] {
   return [
     m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
     m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
@@ -84,7 +61,7 @@ function transpose3(m: ReturnType<typeof getSgToEqMatrix>): ReturnType<typeof ge
 const EQ_TO_SG_MATRIX = transpose3(getSgToEqMatrix());
 
 /** Eq Cartesian → SG Cartesian (Mpc, length-preserving). */
-function eqToSg(eq: [number, number, number]): [number, number, number] {
+function eqToSg(eq: readonly [number, number, number]): [number, number, number] {
   return applyMat3(EQ_TO_SG_MATRIX, eq);
 }
 
@@ -179,12 +156,14 @@ function main(): void {
 
   // Pre-compute each anchor's continuous voxel index from RA/Dec/distance.
   // The numpy axis order is what we vary below — the SG coords are fixed.
-  const anchorSgIdx: { name: string; sgIdx: [number, number, number] }[] = ANCHORS.map((a) => {
-    const eq = anchorToEqCart(a);
-    const sg = eqToSg(eq);
-    const sgIdx = sgToVoxelIndex(sg);
-    return { name: a.name, sgIdx };
-  });
+  const anchorSgIdx: { name: string; sgIdx: [number, number, number] }[] = CLUSTER_ANCHORS.map(
+    (a: ClusterAnchor) => {
+      const eq = raDecDistToEqCart(a);
+      const sg = eqToSg(eq);
+      const sgIdx = sgToVoxelIndex(sg);
+      return { name: a.name, sgIdx };
+    },
+  );
 
   // ── Variant 1: current build-pipeline assumption ────────────────
   // numpy axis 0 = SGX, axis 1 = SGY, axis 2 = SGZ (i.e. perm = [0,1,2],
