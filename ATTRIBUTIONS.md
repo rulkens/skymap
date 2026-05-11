@@ -59,6 +59,63 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
 - **Reference:** Jarrett et al. 2000, AJ 119, 2498.
 - **Licence:** Publicly released; cite the paper above.
 
+## Volume reconstructions
+
+The two scalar-field overlays drawn underneath the point cloud (CF-4 DM
+density and MCPM Cosmic Web; opt-in via `?volumes=1` in production) are
+derived from third-party scientific reconstructions that carry their own
+citation requirements.
+
+### CF-4 / CF4++ — Cosmicflows-4 dark-matter density reconstruction
+
+- **Use:** A 128³ Bayesian dark-matter density reconstruction in a
+  1000 Mpc supergalactic-Cartesian box, derived from the CF-4 peculiar-
+  velocity catalog. Skymap consumes only the `d_mean_CF4pp` mean-density
+  array (mean across 10 000 HMC posterior samples); the per-cell standard
+  deviation is also published in the upstream `.npz` and is the natural
+  future input for an uncertainty-aware overlay.
+- **Source:** Courtois et al. 2025 ensemble release at
+  <https://projets.ip2i.in2p3.fr/cosmicflows/>.
+- **References:**
+  - Courtois et al. 2025, A&A (CF4++ ensemble),
+    [arXiv:2502.01308](https://arxiv.org/abs/2502.01308).
+  - Tully et al. 2023, ApJ (CF-4 distance catalog),
+    [arXiv:2209.11238](https://arxiv.org/abs/2209.11238).
+- **Licence:** CF-4 data products are publicly released for research and
+  visualisation use; cite both papers above in any derived work. If a
+  future Skymap revision swaps in the Valade et al. 2024 HAMLET cube
+  (Nature Astronomy, [arXiv:2409.17261](https://arxiv.org/abs/2409.17261)),
+  add that citation as well.
+
+### MCPM SDSS Cosmic Slime VAC — Monte Carlo Physarum Machine trace density
+
+- **Use:** A 712×1200×728 trace-density cube produced by fitting the
+  Monte Carlo Physarum Machine (slime-mould) algorithm to SDSS DR17
+  galaxies. Skymap downsamples it to three tiers
+  (`mcpm_sdss_d{2,4,8}.npy`) at build time and renders the tier matching
+  the user's data-tier selection.
+- **Source:** SDSS DR17 Cosmic Slime Value-Added Catalog
+  `SDSS_z_44-476mpc`, distributed at
+  <https://www.sdss4.org/dr17/data_access/value-added-catalogs/?vac_id=cosmic-web-environmental-densities-from-mcpm-slimemold>
+  via the upstream `trace.bin.bz2` blob on the SDSS SAS.
+- **References:**
+  - Wilde et al. 2023 (SDSS Cosmic Slime VAC release paper),
+    [arXiv:2301.02719](https://arxiv.org/abs/2301.02719).
+  - Elek et al. 2021 (Polyphorm / MCPM algorithm + visualisation
+    convention), [arXiv:2009.02441](https://arxiv.org/abs/2009.02441).
+  - Burchett et al. 2020 (original MCPM-on-galaxies application that
+    motivated the VAC), [arXiv:1910.05344](https://arxiv.org/abs/1910.05344).
+- **Licence:** SDSS Value-Added Catalogs are publicly released under the
+  collaboration's standard data-release terms; cite the references above
+  in any derived work, plus the SDSS DR17 paper (Abdurro'uf et al. 2022)
+  alongside the standard SDSS catalog acknowledgement listed in the
+  Catalogue data → SDSS section.
+- **Software dependency:** the maintainer extraction step uses
+  [pyslime](https://github.com/jnburchett/pyslime) (Burchett, MIT) to
+  decode the upstream `trace.bin` into a NumPy array. pyslime is a
+  research-grade reader, not a runtime dependency of Skymap; the runtime
+  consumes its f16-quantised SCFD output, not pyslime directly.
+
 ## Imagery
 
 ### Curated galaxy thumbnails (`public/images/famous/*.webp`)
