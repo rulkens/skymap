@@ -81,10 +81,10 @@
 
 import { Source } from '../../../data/sources';
 import { createAssetSlot } from '../../loading/AssetSlot';
-import { pgcAliasFetcher } from '../../loading/fetchers/pgcAliasFetcher';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
+import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
 import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
@@ -213,21 +213,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   const famousMetaSlot = createFamousMetaSlot(state, cb);
 
   // ── PGC-alias slot (Task 10) ─────────────────────────────────────
-  //
-  // The Cmd+K command palette's alias search needs `pgc_aliases.json`
-  // (~1.7 MB).  Lazy: most users never hit Cmd+K, so paying the
-  // download up front would be wasteful.  The slot is minted here for
-  // lifecycle parity with every other asset, but `load()` is only
-  // invoked through the public-handle's `loadPgcAliases()` shim on
-  // first palette open.
-  //
-  // No `commit` — the resolved Map is consumed by the React layer via
-  // the Promise the shim returns; nothing engine-side to mutate.
-  const pgcAliasSlot = createAssetSlot({
-    name: 'pgc-aliases',
-    fetch: pgcAliasFetcher,
-  });
-  state.assetSlots.pgcAlias = pgcAliasSlot;
+  // Lazy: only `load()`-ed on first Cmd+K palette open via the public
+  // handle's `loadPgcAliases()` shim.  Factory owns the mint + state
+  // write; see `loading/slots/pgcAliasSlot.ts`.
+  const pgcAliasSlot = createPgcAliasSlot(state, cb);
 
   // ── Synthetic volume slot (dev-only or `?volumes=1`) ─────────────
   //
