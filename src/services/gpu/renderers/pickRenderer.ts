@@ -62,6 +62,7 @@ import vsCode from '../shaders/points/vertex.wesl?static';
 import pickFsCode from '../shaders/points/pickFragment.wesl?static';
 import type { Source } from '../../../data/sources';
 import type { PointRenderer } from './pointRenderer';
+import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -287,13 +288,21 @@ export function createPickRenderer(
       module: vsModule,
       entryPoint: 'vs',
 
-      // Vertex buffer layout — must exactly match PointRenderer's layout
-      // (12 slots × 4 bytes = 48 bytes per instance).  The pipeline
-      // shares the SHARED vertex buffer + shader module with PointRenderer;
+      // Vertex buffer layout — imported from PointRenderer as the single
+      // source of truth.  Pre-H2 cleanup this block re-declared the table
+      // inline with magic numbers; a missed edit silently failed pipeline
+      // validation or read garbage attributes.  The imports make drift
+      // structurally impossible — both pipelines bind the same const.
+      //
+      // The spread `[...POINT_VERTEX_ATTRIBUTES]` exists because
+      // `@webgpu/types` declares `attributes: GPUVertexAttribute[]`
+      // (mutable), so the readonly canonical export can't pass verbatim.
+      // The O(10) spread runs once at pipeline build, never per-frame.
+      //
       // WebGPU validation requires the pick pipeline to declare a layout
-      // matching every attribute the buffer carries, even those the pick
-      // fragment doesn't read (the SHARED vertex stage still reads them
-      // before forwarding into VSOut).
+      // matching every attribute the SHARED vertex buffer carries, even
+      // attributes the pick fragment doesn't read (the SHARED vertex
+      // stage still reads them before forwarding into VSOut).
       //
       // Identity encoding: previous revisions had a `globalInstanceIdx
       // u32` at offset 20 carrying a baked running-sum global ID.  Both
@@ -303,20 +312,9 @@ export function createPickRenderer(
       // entirely on the GPU side.  Vertex stride shrank 52 → 48 bytes.
       buffers: [
         {
-          arrayStride: 48, // 12 slots × 4 bytes/slot — must match pointRenderer.POINT_STRIDE
+          arrayStride: POINT_STRIDE,
           stepMode: 'instance',
-          attributes: [
-            { shaderLocation: 0, offset: 0, format: 'float32x3' }, // position
-            { shaderLocation: 1, offset: 12, format: 'float32' }, // magnitude
-            { shaderLocation: 2, offset: 16, format: 'float32' }, // colorIndex
-            { shaderLocation: 3, offset: 20, format: 'float32' }, // kPerZ
-            { shaderLocation: 4, offset: 24, format: 'float32' }, // axisRatio (sign bit = isFallback)
-            { shaderLocation: 5, offset: 28, format: 'float32' }, // positionAngleDeg
-            { shaderLocation: 6, offset: 32, format: 'float32' }, // diameterKpc
-            { shaderLocation: 7, offset: 36, format: 'float32' }, // vMaxWeight
-            { shaderLocation: 8, offset: 40, format: 'float32' }, // schechterRatio
-            { shaderLocation: 9, offset: 44, format: 'float32' }, // angularDensityWeight
-          ],
+          attributes: [...POINT_VERTEX_ATTRIBUTES],
         },
       ],
     },
