@@ -61,6 +61,7 @@
 import vsCode from '../shaders/points/vertex.wesl?static';
 import pickFsCode from '../shaders/points/pickFragment.wesl?static';
 import type { Source } from '../../../data/sources';
+import type { Renderer } from '../../../@types';
 import type { PointRenderer } from './pointRenderer';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -105,6 +106,11 @@ export type PickSourceDraw = {
  * which point is under the cursor.
  */
 export type PickRenderer = {
+  /**
+   * Human-readable identifier (`'pickRenderer'`).  Part of the
+   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
+   */
+  readonly label: string;
   /**
    * Identify the 0-based point index under the given screen coordinate.
    *
@@ -677,5 +683,9 @@ export function createPickRenderer(
     stagingBuffer.destroy();
   }
 
-  return { pick, destroy };
+  const renderer: PickRenderer = { label: 'pickRenderer', pick, destroy };
+  // `satisfies Renderer` confirms the shared label+destroy contract at
+  // compile time without widening the static type seen by consumers.
+  renderer satisfies Renderer;
+  return renderer;
 }
