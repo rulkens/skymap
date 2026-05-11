@@ -51,7 +51,7 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
       if (!state.settings.volumes.fields[handle]) {
         state.settings.volumes.fields[handle] = {
           enabled: DEFAULT_CF4_DENSITY_ENABLED,
-          intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+          intensity: defaults.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
           contrast: defaults.contrast,
           densityScale: defaults.densityScale,
           paletteId: defaults.paletteId,

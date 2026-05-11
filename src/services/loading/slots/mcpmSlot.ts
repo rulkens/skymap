@@ -36,7 +36,7 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
           // Default-on — MCPM is the headline cosmic-web overlay for the
           // volumes gate (CF-4 is now default-off; see defaults.ts).
           enabled: DEFAULT_MCPM_ENABLED,
-          intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+          intensity: defaults.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
           contrast: defaults.contrast,
           densityScale: defaults.densityScale,
           paletteId: defaults.paletteId,

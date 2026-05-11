@@ -106,8 +106,8 @@ describe('volumeFieldDefaults', () => {
     // MCPM trace densities are heavy-tailed (slime-mould agent density
     // spans decades); modest windowing brings filament structure forward
     // without crushing low-density voids.
-    expect(d!.contrast).toBeCloseTo(1.5, 6);
-    expect(d!.densityScale).toBeCloseTo(4.0, 6);
+    expect(d!.contrast).toBeCloseTo(1.7, 6);
+    expect(d!.densityScale).toBeCloseTo(18.0, 6);
     expect(d!.label).toBe('MCPM Cosmic Web');
   });
 
@@ -118,7 +118,7 @@ describe('volumeFieldDefaults', () => {
   });
 
   it('mcpm gets a moderate trim default; CF-4 + debug fixtures get none', () => {
-    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.trim).toBeCloseTo(0.2, 6);
+    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.trim).toBeCloseTo(0.3, 6);
     expect(VOLUME_FIELD_DEFAULTS['cf4-density']!.trim).toBeCloseTo(0.0, 6);
     for (const handle of ['debug-gaussian', 'debug-cartesian', 'debug-spherical']) {
       expect(VOLUME_FIELD_DEFAULTS[handle]!.trim).toBeCloseTo(0.0, 6);
@@ -126,8 +126,20 @@ describe('volumeFieldDefaults', () => {
     expect(FALLBACK_VOLUME_DEFAULTS.trim).toBeCloseTo(0.0, 6);
   });
 
-  it('exposure boost: MCPM = 8 (peaks blow to white), others = 1 (no change)', () => {
-    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.exposure).toBeCloseTo(8.0, 6);
+  it('per-cube intensity override: MCPM = 1.0 (full saturation); others omit (slot falls back to global)', () => {
+    // MCPM is the headline cosmic-web overlay and wants full saturation
+    // by default; other cubes leave intensity unset so the slot uses
+    // the global DEFAULT_VOLUME_FIELD_INTENSITY.
+    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.intensity).toBeCloseTo(1.0, 6);
+    expect(VOLUME_FIELD_DEFAULTS['cf4-density']!.intensity).toBeUndefined();
+    for (const handle of ['debug-gaussian', 'debug-cartesian', 'debug-spherical']) {
+      expect(VOLUME_FIELD_DEFAULTS[handle]!.intensity).toBeUndefined();
+    }
+    expect(FALLBACK_VOLUME_DEFAULTS.intensity).toBeUndefined();
+  });
+
+  it('exposure boost: MCPM = 18 (peaks blow to white), others = 1 (no change)', () => {
+    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.exposure).toBeCloseTo(18.0, 6);
     expect(VOLUME_FIELD_DEFAULTS['cf4-density']!.exposure).toBeCloseTo(1.0, 6);
     for (const handle of ['debug-gaussian', 'debug-cartesian', 'debug-spherical']) {
       expect(VOLUME_FIELD_DEFAULTS[handle]!.exposure).toBeCloseTo(1.0, 6);

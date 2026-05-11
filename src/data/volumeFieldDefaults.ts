@@ -131,6 +131,15 @@ export type VolumeFieldDefaults = {
    *     breakdown that motivates this value.
    */
   trim: number;
+  /**
+   * Optional per-cube starting Intensity (overall opacity multiplier in
+   * [0, 1]).  When omitted, the slot seeds with the global
+   * `DEFAULT_VOLUME_FIELD_INTENSITY`.  Per-cube override exists because
+   * a heavy-tailed log-normalised cube (MCPM) wants intensity=1.0 by
+   * default to read at full saturation, while CF-4's calibrated
+   * coolwarm sits comfortably at the global 0.5.
+   */
+  intensity?: number;
   /** Optional human-readable label override (renderer falls back to handle). */
   label?: string;
 };
@@ -287,7 +296,10 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // MCPM trace density spans several decades (slime-mould agent
     // density is heavy-tailed); modest windowing brings filament
     // structure forward without crushing the low-density voids.
-    contrast: 1.5,
+    // Tuned visually against the SDSS_z_44-476mpc cube alongside the
+    // densityScale=18 + exposure=18 + trim=0.3 + intensity=1.0
+    // combination below — bump only after an A/B against that cube.
+    contrast: 1.7,
     // 0.0 = sequential / void-floor-centred windowing.  MCPM trace
     // is non-negative and log-normalised, so void voxels sit at LUT
     // t=0 (transparent inferno start).  Centering the deadband at 0
@@ -297,33 +309,42 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // (i.e. with the cf4 default of 0.5), the contrast slider became
     // a knife-edge between "all red" and "completely invisible".
     contrastCenter: 0.0,
-    // Initial value pending visual tuning against the real cube; lower
-    // than CF-4's 20 because MCPM's normalised range stays in [0.5, 1.0]
-    // (non-negative input) and saturates faster.
-    densityScale: 4.0,
+    // Tuned visually against the real SDSS_z_44-476mpc cube — the
+    // log-normalised heavy-tailed distribution needs more density than
+    // the original 4.0 placeholder to reach saturation through the
+    // soft envelope at intensity=1.0.  18 lands in the same ballpark
+    // as CF-4's 20 (similar visibility multiplier + envelope cropping
+    // posture) — both cubes converged on ~20 from very different
+    // starting points.
+    densityScale: 18.0,
     // Same posture as CF-4: soft skirt from the inscribed sphere
     // inward to hide the axis-aligned silhouette. The MCPM cube extends
     // 556×938×569 Mpc, so the inscribed sphere reaches well past the
     // SDSS volume of interest; envelope corner-cropping costs nothing
     // visually meaningful.
     envelope: { inner: 0.85, outer: 1.05 },
-    // 8.0 = HDR boost on the rgb contribution at peak voxels only.
-    // The shader's bright-end-weighted formula (highlightGain = 1 +
-    // smoothstep(0.5, 1, dev) * (exposure - 1)) means mid-tones near
-    // the contrast center stay at gain ≈ 1.0; only peaks (signedT > 0.7
-    // for sequential, |signedT - 0.5| > 0.35 for divergent) get the
-    // full boost.  For MCPM peaks at signedT ≈ 1.0 with exposure=8,
-    // the gain reaches 8x — pushes inferno's pale-yellow LUT entry
-    // (252, 255, 164) past LDR into white blow-out via the downstream
-    // tonemap.  Was 4.0 under the old uniform-multiplier formula; the
-    // weighted formula gives the same peak boost at exposure=4 but
-    // doesn't brighten mid-tones, so we can crank exposure higher
-    // without washing out the warm gradient.
-    exposure: 8.0,
-    // Hides the 22% low-density fog band; reveals filament structure.
-    // The dataset is 73% void already, so trim only affects the next
-    // ~22% slice
-    trim: 0.2,
+    // 18 = aggressive HDR boost on peaks only.  The shader's
+    // bright-end-weighted formula (highlightGain = 1 + smoothstep(0.5,
+    // 1, dev) * (exposure - 1)) means mid-tones near the contrast
+    // center stay at gain ≈ 1.0; only peaks (signedT > 0.7 for
+    // sequential, |signedT - 0.5| > 0.35 for divergent) get the full
+    // boost.  For MCPM peaks at signedT ≈ 1.0 with exposure=18, the
+    // gain reaches 18x — pushes inferno's pale-yellow LUT entry past
+    // LDR into hard white blow-out at the densest filament cores via
+    // the downstream tonemap.  Tuned visually; bumped from the
+    // original 8.0 placeholder once the bright-end-weighted formula
+    // landed and the warm gradient stayed intact at higher exposures.
+    exposure: 18.0,
+    // 0.3 hides the low-density fog band slightly more aggressively
+    // than the original 0.2 — the dataset is 73% void, so trim only
+    // affects the next ~22% fog slice anyway, and 0.3 was the visual
+    // sweet spot for filament-on-black contrast against intensity=1.0.
+    trim: 0.3,
+    // 1.0 — MCPM is the headline cosmic-web overlay and wants full
+    // saturation by default; the global 0.5 was tuned for CF-4's more
+    // calibrated coolwarm.  Per-cube override lets each cube pick its
+    // starting point independently.
+    intensity: 1.0,
     label: 'MCPM Cosmic Web',
   },
 };

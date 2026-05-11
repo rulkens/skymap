@@ -93,7 +93,7 @@ export function createSyntheticVolumeSlots(
         if (!state.settings.volumes.fields[handle]) {
           state.settings.volumes.fields[handle] = {
             enabled: defaultEnabled,
-            intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
+            intensity: defaults.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
             contrast: defaults.contrast,
             densityScale: defaults.densityScale,
             paletteId: defaults.paletteId,
