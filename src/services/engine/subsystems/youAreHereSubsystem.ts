@@ -34,8 +34,21 @@ import { youAreHereAlpha } from '../../gpu/labels/youAreHereVisibility';
 const LABEL_TEXT = 'You are here';
 const LABEL_ANCHOR_MPC = 0.05;
 const LINE_TOP_MPC = LABEL_ANCHOR_MPC * 0.75;
-const LABEL_COLOR: Vec4 = [1, 1, 1, 1];
-const LINE_COLOR: Vec4 = [0.85, 0.85, 0.85, 1];
+// HDR colours, NOT display colours.  Labels and marker lines render
+// into the rgba16float HDR target before the tone-map post-process,
+// so anything output at LDR intensity (rgb = 1.0) gets compressed by
+// the tonemap curve and reads as mid-grey on screen.  ACES at the
+// default exposure compresses 1.0 → ~0.6 display; 8.0 lands at
+// roughly display-white after the tonemap rolls off, which is what
+// the user expects from a "you are here" pin.  Linear tonemap clamps
+// at 1.0 anyway, so the overshoot is harmless on that curve.
+//
+// The proper fix is to render UI overlays AFTER the tonemap blit
+// (separate pipeline targeting the swap-chain format) so they bypass
+// the curve entirely; that's a bigger refactor and lives in the
+// backlog.  This is the band-aid in the meantime.
+const LABEL_COLOR: Vec4 = [8, 8, 8, 1];
+const LINE_COLOR: Vec4 = [8, 8, 8, 1];
 
 export type YouAreHereSubsystem = LabelProducer & {
   /**
