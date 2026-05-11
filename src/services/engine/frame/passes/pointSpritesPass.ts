@@ -28,10 +28,10 @@
  *   + brightness terms
  * - `ctx.drawPxPerRad` — radian→pixel scale for apparent-size
  *   computation
- * - The whole `RenderFrameSettings` block — every entry of the
- *   17-arg `pointRenderer.draw` call originates either there or in
- *   `ctx`.  See `renderFrame.ts`'s `RenderFrameSettings` shape for
- *   the per-field rationale.
+ * - The whole `RenderFrameSettings` block — every field of the
+ *   `PointDrawSettings` object passed to `pointRenderer.draw`
+ *   originates either there or in `ctx`.  See `renderFrame.ts`'s
+ *   `RenderFrameSettings` shape for the per-field rationale.
  *
  * ### Selection-packed encoding
  *
@@ -69,24 +69,21 @@ export const pointSpritesPass: Pass = {
         ? ((settings.selected.source << 27) | settings.selected.localIdx) >>> 0
         : 0xffffffff >>> 0;
 
-    renderer.draw(
-      pass,
-      vp,
-      [width, height],
-      settings.pointSizePx,
-      settings.brightness,
+    renderer.draw(pass, vp, [width, height], {
+      pointSizePx: settings.pointSizePx,
+      brightness: settings.brightness,
       selectedPacked,
-      settings.visibleSourceMask,
-      drawCamPos,
-      drawPxPerRad,
-      settings.highlightFallback,
-      settings.realOnlyMode,
-      settings.biasMode,
-      settings.absMagLimit,
-      settings.apparentMagLimit,
-      settings.schechterMStar,
-      settings.schechterAlpha,
-      settings.depthFadeEnabled,
+      visibleSourceMask: settings.visibleSourceMask,
+      camPosWorld: drawCamPos,
+      pxPerRad: drawPxPerRad,
+      highlightFallback: settings.highlightFallback,
+      realOnlyMode: settings.realOnlyMode,
+      biasMode: settings.biasMode,
+      absMagLimit: settings.absMagLimit,
+      apparentMagLimit: settings.apparentMagLimit,
+      schechterMStar: settings.schechterMStar,
+      schechterAlpha: settings.schechterAlpha,
+      depthFadeEnabled: settings.depthFadeEnabled,
       // Task 8 (procedural-disk-impostor): the points-pass fragment
       // fades alpha to zero across this same apparent-pixel-size band
       // that the procedural-disk pass fades IN over.  Both thresholds
@@ -94,8 +91,8 @@ export const pointSpritesPass: Pass = {
       // — single source of truth shared between the two passes so
       // they can never drift apart and re-introduce the double-bright
       // donut artefact.
-      settings.pxFadeStartPoints,
-      settings.pxFadeEndPoints,
-    );
+      pxFadeStart: settings.pxFadeStartPoints,
+      pxFadeEnd: settings.pxFadeEndPoints,
+    });
   },
 };

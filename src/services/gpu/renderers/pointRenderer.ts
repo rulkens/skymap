@@ -687,22 +687,7 @@ export type PointRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
-    pointSizePx: number,
-    brightness: number,
-    selectedPacked: number,
-    visibleSourceMask: number,
-    camPosWorld: Readonly<[number, number, number]>,
-    pxPerRad: number,
-    highlightFallback: boolean,
-    realOnlyMode: boolean,
-    biasMode: number,
-    absMagLimit: number,
-    apparentMagLimit: number,
-    schechterMStar: number,
-    schechterAlpha: number,
-    depthFadeEnabled: boolean,
-    pxFadeStart: number,
-    pxFadeEnd: number,
+    settings: PointDrawSettings,
   ): void;
   /** Whether any loaded source is still ramping up its fade-in opacity. */
   isFading(): boolean;
@@ -1253,99 +1238,38 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
    * Write the per-frame uniforms (viewProj, viewport, …) once, then issue one
    * instanced draw call per visible source.
    *
-   * @param pass               Active render pass encoder.
-   * @param viewProj           Column-major 4×4 view-projection matrix.
-   * @param viewportPx         Physical canvas size [w, h] in pixels.
-   * @param pointSizePx        Far-field billboard floor radius in pixels.
-   *                           Galaxies whose apparent angular radius is
-   *                           smaller than this stay rendered at this size
-   *                           so they remain visible as faint dots; nearby
-   *                           galaxies grow past it to their real disc size.
-   * @param brightness         Global brightness multiplier in [0, 1].
-   * @param selectedPacked     Selected galaxy as `(source << 27) | localIdx`,
-   *                           or `0xFFFFFFFF` for "no selection".
-   * @param visibleSourceMask  Bitmask of `Source` values to draw (see `data/sources.ts`).
-   * @param camPosWorld        Camera position in world Mpc (from
-   *                           `orbitCamera.position`). Used by the vertex
-   *                           shader to compute per-galaxy distance for
-   *                           apparent-size sizing.
-   * @param pxPerRad           Pixels-per-radian for the current viewport +
-   *                           camera FOV, computed CPU-side as
-   *                           `viewportPx[1] / (2 * tan(fovYRad / 2))`.
-   *                           Engine pre-computes this once per frame and
-   *                           hands it down so we don't repeat the `tan`
-   *                           call inside the per-vertex shader.
-   * @param highlightFallback  When true, fragments belonging to fallback-
-   *                           orientation rows are tinted magenta in the
-   *                           visual fragment shader.  Selection /
-   *                           pick paths are unaffected.
-   * @param realOnlyMode       When true, fragments belonging to fallback
-   *                           rows are `discard`ed entirely.  Lets the
-   *                           user see ONLY galaxies for which we have
-   *                           measured (b/a, PA) photometric orientation.
-   * @param biasMode           Malmquist-bias correction selector.  Numeric
-   *                           values come from `data/biasMode.ts` and must
-   *                           match the WGSL literals (`1u` = volume-limit,
-   *                           `2u` = 1/V_max, `3u` = Schechter).  When 0
-   *                           (the default), the shader applies no
-   *                           correction and the next four fields are
-   *                           ignored.
-   * @param absMagLimit        Threshold for `biasMode == 1` (volume-limit):
-   *                           galaxies with absolute magnitude *fainter*
-   *                           than this (numerically larger M) are
-   *                           discarded in the vertex stage by emitting a
-   *                           degenerate clip-space position.
-   * @param apparentMagLimit   Reserved for Task 3 (1/V_max weighting).
-   *                           Pass 0 until that task lands; the shader
-   *                           ignores it while `biasMode != 2u`.
-   * @param schechterMStar     Initial Schechter M* value written into the
-   *                           global uniform slot.  Task 4 of the
-   *                           Malmquist-bias plan overrides this with the
-   *                           per-source value in the per-source draw
-   *                           loop, so this initial value only matters
-   *                           before any source has been written (i.e.
-   *                           never observable in practice).  Engine
-   *                           passes 0 — fine.
-   * @param schechterAlpha     Initial Schechter α value.  Same per-source
-   *                           override as `schechterMStar`.
+   * @param pass        Active render pass encoder.
+   * @param viewProj    Column-major 4×4 view-projection matrix.
+   * @param viewportPx  Physical canvas size [w, h] in pixels.
+   * @param settings    Per-draw scalar inputs.  See `PointDrawSettings` for the
+   *                    full field list — every field flows into the global
+   *                    uniform buffer this method writes once, before iterating
+   *                    visible sources.
    */
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: mat4,
     viewportPx: [number, number],
-    pointSizePx: number,
-    brightness: number,
-    selectedPacked: number,
-    visibleSourceMask: number,
-    camPosWorld: Readonly<[number, number, number]>,
-    pxPerRad: number,
-    highlightFallback: boolean,
-    realOnlyMode: boolean,
-    biasMode: number,
-    absMagLimit: number,
-    apparentMagLimit: number,
-    schechterMStar: number,
-    schechterAlpha: number,
-    depthFadeEnabled: boolean,
-    /**
-     * Procedural-disk crossfade-OUT thresholds (Task 8 of the
-     * procedural-disk-impostor plan).  The points-pass fragment shader
-     * fades alpha to zero across the apparent-pixel-size band
-     * `[pxFadeStart, pxFadeEnd]` so the procedural-disk pass — which
-     * fades IN over the same band — can take over without a "double-
-     * bright donut" of overlapping passes.  Both ends are pixel
-     * thresholds in the same units as the vertex stage's `sizePx`
-     * (the apparent angular radius of the galaxy projected to screen).
-     *
-     * The engine should pass `PROCEDURAL_DISK_FADE_START_PX` and
-     * `PROCEDURAL_DISK_FADE_END_PX` from `./engine/thumbnailSubsystem`
-     * so both passes share a single source of truth — drift between
-     * them would re-introduce the double-bright donut on one side and
-     * a hard gap on the other.
-     */
-    pxFadeStart: number,
-    pxFadeEnd: number,
+    settings: PointDrawSettings,
   ): void {
+    const {
+      pointSizePx,
+      brightness,
+      selectedPacked,
+      visibleSourceMask,
+      camPosWorld,
+      pxPerRad,
+      highlightFallback,
+      realOnlyMode,
+      biasMode,
+      absMagLimit,
+      apparentMagLimit,
+      schechterMStar,
+      schechterAlpha,
+      depthFadeEnabled,
+      pxFadeStart,
+      pxFadeEnd,
+    } = settings;
     // Nothing to draw if no source has been uploaded yet.
     if (clouds.size === 0) return;
 
