@@ -564,6 +564,57 @@ type LoadedSource = {
 // ─── PointRenderer ────────────────────────────────────────────────────────────
 
 /**
+ * Per-call draw parameters for `PointRenderer.draw`.
+ *
+ * Pre-cleanup, `draw()` took these as 16 trailing positional arguments
+ * (`pointSizePx`, `brightness`, …, `pxFadeEnd`).  Grouping them into a
+ * single record decouples the renderer's contract from the order each
+ * argument was added in: callers fill named fields, new knobs are
+ * added at the type level with one edit, and TypeScript's structural
+ * matching catches a missing field at compile time instead of a silent
+ * shifted-argument bug at draw time.
+ *
+ * Field semantics are unchanged from the pre-cleanup positional list;
+ * see each field's inline doc for details.  The block deliberately
+ * mirrors `RenderFrameSettings`'s naming (renderFrame.ts) so the
+ * engine-side pass code can pass `{ …settings, … }` without renames.
+ */
+export type PointDrawSettings = {
+  /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
+  pointSizePx: number;
+  /** Global brightness multiplier in [0, 1]. */
+  brightness: number;
+  /** Selected galaxy as `(source << 27) | localIdx`, or `0xFFFFFFFF` for "no selection". */
+  selectedPacked: number;
+  /** Bitmask of `Source` values to draw (see `data/sources.ts`). */
+  visibleSourceMask: number;
+  /** Camera position in world Mpc (`orbitCamera.position`), used by the vertex shader for apparent-size sizing. */
+  camPosWorld: Readonly<[number, number, number]>;
+  /** Pixels-per-radian for the current viewport + FOV: `viewportPx[1] / (2 * tan(fovYRad / 2))`. */
+  pxPerRad: number;
+  /** When true, fallback-orientation fragments are tinted magenta in the visual shader.  Selection / pick paths unaffected. */
+  highlightFallback: boolean;
+  /** When true, fallback-orientation fragments are `discard`ed entirely. */
+  realOnlyMode: boolean;
+  /** Malmquist-bias correction selector (`data/biasMode.ts`).  0 = no correction; next four fields ignored. */
+  biasMode: number;
+  /** Volume-limit threshold for `biasMode == 1`.  Galaxies fainter than this are discarded in the vertex stage. */
+  absMagLimit: number;
+  /** Reserved for `biasMode == 2` (1/V_max). */
+  apparentMagLimit: number;
+  /** Initial Schechter M* — per-source override applies in the draw loop. */
+  schechterMStar: number;
+  /** Initial Schechter α — per-source override applies in the draw loop. */
+  schechterAlpha: number;
+  /** Whether the points pass applies depth-based alpha fade. */
+  depthFadeEnabled: boolean;
+  /** Procedural-disk crossfade band — pixel threshold below which points render full-alpha. */
+  pxFadeStart: number;
+  /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */
+  pxFadeEnd: number;
+};
+
+/**
  * Public surface of the point renderer.
  *
  * Mirrors the methods the pre-Spec-F.3 `class PointRenderer` exposed.

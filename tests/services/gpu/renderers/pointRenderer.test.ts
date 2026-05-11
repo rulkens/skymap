@@ -686,3 +686,44 @@ describe('PointRenderer.destroy', () => {
     expect(() => renderer.destroy()).not.toThrow();
   });
 });
+
+describe('PointRenderer.draw — PointDrawSettings shape', () => {
+  it('accepts a single PointDrawSettings record', async () => {
+    const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm');
+    await renderer.upload(Source.SDSS, makeCloud(10));
+
+    // Stub the encoder.  draw() must call setPipeline + setBindGroup + draw
+    // once (one source loaded, one passing visibility bit).
+    const calls: string[] = [];
+    const pass = {
+      setPipeline: () => calls.push('setPipeline'),
+      setBindGroup: () => calls.push('setBindGroup'),
+      setVertexBuffer: () => calls.push('setVertexBuffer'),
+      draw: () => calls.push('draw'),
+    } as unknown as GPURenderPassEncoder;
+
+    const viewProj = new Float32Array(16) as unknown as Parameters<PointRenderer['draw']>[1];
+
+    renderer.draw(pass, viewProj, [800, 600], {
+      pointSizePx: 1,
+      brightness: 1,
+      selectedPacked: 0xffffffff >>> 0,
+      visibleSourceMask: 0xffffffff,
+      camPosWorld: [0, 0, 0],
+      pxPerRad: 1,
+      highlightFallback: false,
+      realOnlyMode: false,
+      biasMode: 0,
+      absMagLimit: 0,
+      apparentMagLimit: 0,
+      schechterMStar: 0,
+      schechterAlpha: 0,
+      depthFadeEnabled: false,
+      pxFadeStart: 0,
+      pxFadeEnd: 0,
+    });
+
+    expect(calls).toContain('setPipeline');
+    expect(calls).toContain('draw');
+  });
+});
