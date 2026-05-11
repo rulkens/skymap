@@ -40,14 +40,62 @@ import type { ScalarFieldPaletteId } from '../@types/ScalarCube';
 export type VolumeFieldDefaults = {
   paletteId: ScalarFieldPaletteId;
   /**
+   * Initial contrast for the shader's windowing transform.  1.0 is
+   * identity (no deadband, no stretching); > 1.0 widens a deadband
+   * around the value midpoint and stretches the surviving range
+   * across the full palette.  Per-cube because the right amount of
+   * windowing depends on how noisy the cube's near-mean voxels are —
+   * dense scientific reconstructions (CF-4) want a touch of
+   * windowing on by default; synthetic test fixtures don't.
+   */
+  contrast: number;
+  /**
    * Per-cube opacity multiplier; see the alpha-formula docblock in
    * `scalarVolumeRenderer.ts`.  Tuned per field so intensity=1 produces
    * a saturated-but-not-flat overlay against typical data ranges.
    */
   densityScale: number;
+  /**
+   * Spatial envelope (spherical falloff in local cube space) used to
+   * fade the cube's corner regions to invisibility, hiding the axis-
+   * aligned silhouette of the bounding box.  Whether a cube WANTS this
+   * envelope is content-dependent:
+   *
+   *   - CF-4 density: yes — corners are sparse void anyway, the cosmic
+   *     structures of interest (Laniakea, Local Void, Great Attractor)
+   *     sit comfortably inside the inscribed sphere.  Hiding the cube
+   *     silhouette makes the overlay blend with the surrounding sky.
+   *   - Debug grids: no — the whole point is to verify axis alignment,
+   *     so the corners must stay visible.
+   *
+   * The envelope is a smoothstep from `inner` (fully opaque) to `outer`
+   * (fully transparent), where both numbers are distance from the cube
+   * center in local space, normalised so the face-touching inscribed
+   * sphere has radius 1.  The cube's corners sit at √3 ≈ 1.73, so any
+   * `outer ≥ √3` effectively disables the envelope.  We use the
+   * sentinel `{ inner: 2.0, outer: 2.0 }` for "no envelope" cubes
+   * because two equal values short-circuit the smoothstep without
+   * needing a branch.
+   */
+  envelope: {
+    inner: number;
+    outer: number;
+  };
   /** Optional human-readable label override (renderer falls back to handle). */
   label?: string;
 };
+
+/**
+ * Sentinel envelope that effectively disables spatial falloff.  The
+ * inscribed-sphere radius is 1 (in normalised local space) and the
+ * corner radius is √3 ≈ 1.73, so any `inner ≥ √3` keeps the smoothstep
+ * pinned at 1.0 throughout the cube.  Equal `inner === outer` makes
+ * `smoothstep` degenerate to a step function (which never fires
+ * because the input never exceeds the threshold), so the per-step
+ * envelope multiplier is exactly 1.0 — visually indistinguishable
+ * from no envelope at all, but with zero shader-side branching.
+ */
+export const NO_SPATIAL_ENVELOPE = { inner: 2.0, outer: 2.0 } as const;
 
 /**
  * Neutral fallback for handles not registered above.  Sequential
@@ -61,7 +109,12 @@ export type VolumeFieldDefaults = {
  */
 export const FALLBACK_VOLUME_DEFAULTS: VolumeFieldDefaults = {
   paletteId: 'viridis',
+  // Identity contrast (no deadband) for fields that haven't been
+  // tuned yet.  Safer than a higher value because it never hides
+  // data the registry author didn't explicitly opt out of.
+  contrast: 1.0,
   densityScale: 1.0,
+  envelope: NO_SPATIAL_ENVELOPE,
 };
 
 /**
@@ -72,37 +125,67 @@ export const FALLBACK_VOLUME_DEFAULTS: VolumeFieldDefaults = {
 export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
   'cf4-density': {
     paletteId: 'coolwarm',
-    // Lifted from tools/buildCf4Density.ts:CF4_DENSITY_SCALE.  Tuned
-    // against the CF-4 voxel value range so cosmic mean reads
-    // transparent, over-densities red, voids blue.
-    densityScale: 5.0,
+    // Slight windowing on by default: the CF-4 reconstruction is
+    // smoothed with a 5 Mpc/h Gaussian kernel, leaving a soft noise
+    // floor of voxels just off the cosmic mean that read as visible
+    // fog under identity contrast.  1.2 = a ~17% deadband, just
+    // enough to crisp up the structures without yet cropping any
+    // real signal.  Tuned visually against d_mean_CF4pp.npy.
+    contrast: 1.2,
+    // Bumped from the original 5.0 to compensate for the windowing
+    // visibility multiplier AND the spherical envelope cropping
+    // (both new in the volume-windowing-envelope PR).  20× yields a
+    // saturated peak through Laniakea at intensity ≈ 0.5; lower
+    // values produce a too-translucent cloud that fights the
+    // background sky.  Tuned visually.
+    densityScale: 20.0,
+    // Soft skirt from the inscribed sphere (radius 1.0) inward to 0.9
+    // hides the axis-aligned cube silhouette.  The discarded corner
+    // regions (~48% of cube volume) are nearly empty sky for the CF-4
+    // reconstruction — Laniakea, the Local Void, and the Great
+    // Attractor all sit well inside the inscribed sphere.
+    envelope: { inner: 0.9, outer: 1.0 },
     label: 'CF-4 DM density',
   },
   'debug-gaussian': {
     paletteId: 'blue-purple',
+    // Identity contrast — synthetic fixtures don't have a noise
+    // floor worth windowing out.
+    contrast: 1.0,
     // Lifted from syntheticScalarField.ts:makeSyntheticGaussianCube.
     // A single Gaussian peak integrates to roughly √(2π)·σ along its
     // central axis, so 10× lifts the peak into the saturated regime
     // while leaving the intensity slider plenty of low-end headroom.
     densityScale: 10.0,
+    // No envelope: the synthetic fixtures exist for axis / scale /
+    // origin verification.  Corner visibility is a feature, not a bug.
+    envelope: NO_SPATIAL_ENVELOPE,
     label: 'Gaussian (debug)',
   },
   'debug-cartesian': {
     paletteId: 'viridis',
+    contrast: 1.0,
     // Lifted from syntheticScalarField.ts:makeCartesianGridCube.  A
     // ray crosses ~8 grid planes per axis at default settings, so
     // integrated density is much higher than the single-peak
     // Gaussian — 4× is enough to saturate near intensity=1.0.
     densityScale: 4.0,
+    // Grid corners are part of the test; keep them visible.
+    envelope: NO_SPATIAL_ENVELOPE,
     label: 'Cartesian grid (debug)',
   },
   'debug-spherical': {
     paletteId: 'magma',
+    contrast: 1.0,
     // Lifted from syntheticScalarField.ts:makeSphericalGridCube.  A
     // ray typically crosses one or two shells plus a spoke — sits
     // between the Gaussian (sparse) and Cartesian grid (dense) in
     // integrated density, hence 6×.
     densityScale: 6.0,
+    // Spherical shells extend to the cube corners; envelope would
+    // crop the outermost shell asymmetrically — undesirable for a
+    // verification fixture.
+    envelope: NO_SPATIAL_ENVELOPE,
     label: 'Spherical grid (debug)',
   },
 };

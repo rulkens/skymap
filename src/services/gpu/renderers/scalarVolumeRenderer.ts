@@ -41,8 +41,9 @@ import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
-// + 4 (densityScale) + 4 (contrast) = 232, padded up to 240 (next
-// multiple of 16, the struct's alignment from its mat4x4 members).
+// + 4 (densityScale) + 4 (contrast) + 4 (envelopeInner) + 4 (envelopeOuter)
+// = 240.  Already a multiple of 16 — the struct's mat4x4 alignment is
+// satisfied with no trailing pad.
 const UNIFORM_BYTES = 240;
 
 const CUBE_CORNERS = new Float32Array([
@@ -134,12 +135,14 @@ type FieldEntry = {
   enabled: boolean;
   intensity: number;
   /**
-   * Per-field LUT-coordinate contrast (gamma-style remap around the 0.5
-   * pivot, see fragment.wesl's `contrast` uniform).  1.0 is identity;
-   * > 1.0 pushes mid-tones toward the saturated ends of the palette;
-   * < 1.0 compresses toward the midpoint.  Orthogonal to `intensity`:
-   * intensity controls overall opacity, contrast controls how much of
-   * the dynamic range gets stretched into visible territory.
+   * Per-field contrast — drives the windowing transform in
+   * `fragment.wesl`'s `applyContrastWindow`.  1.0 is identity (no
+   * deadband); > 1.0 widens the deadband around the midpoint
+   * (suppressing near-mean noise) AND stretches the surviving range
+   * across the full palette.  Orthogonal to `intensity`: intensity
+   * controls overall opacity, contrast controls how aggressively
+   * mid-range noise is suppressed.  See the function's docblock in
+   * the shader for the math.
    */
   contrast: number;
   paletteId: ScalarFieldPaletteId;
@@ -147,6 +150,18 @@ type FieldEntry = {
    *  via `setDensityScale` (called from wireSlots with the value from
    *  `VOLUME_FIELD_DEFAULTS[handle]`). */
   densityScale: number;
+  /**
+   * Spatial envelope (smoothstep edges in normalised local-space
+   * distance from cube center, where the inscribed sphere = 1.0).
+   * Voxels at distance < `envelopeInner` get full alpha; voxels past
+   * `envelopeOuter` are fully suppressed; values in between cross-fade.
+   * Setting both to a value ≥ √3 (the cube-corner distance) disables
+   * the envelope — `NO_SPATIAL_ENVELOPE` from `volumeFieldDefaults.ts`
+   * is the canonical sentinel.  Seeded to no-envelope in `addField`
+   * and overwritten via `setEnvelope` from `wireSlots`.
+   */
+  envelopeInner: number;
+  envelopeOuter: number;
   modelMatrix: mat4;
   invModelMatrix: mat4;
   volumeTexture: GPUTexture;
@@ -161,10 +176,13 @@ export type ScalarVolumeRenderer = {
   setEnabled(handle: ScalarFieldHandle, enabled: boolean): void;
   setIntensity(handle: ScalarFieldHandle, intensity: number): void;
   /**
-   * Per-field LUT-coordinate contrast around the 0.5 pivot.  Range is
-   * conventionally [0.25, 4.0]; 1.0 is identity.  Values are clamped to
-   * a non-negative non-zero range to keep the shader's `pow(_, 1/c)`
-   * well-defined.  No-op if the handle is unknown.
+   * Per-field contrast for the windowing transform in `fragment.wesl`.
+   * Range conventionally [0.25, 4.0]; 1.0 is identity (no deadband).
+   * Higher values widen the deadband around the midpoint (suppressing
+   * near-mean noise) and stretch the surviving range across the full
+   * palette.  Clamped to a small positive minimum (1e-3) so the
+   * shader's `1 / contrast` stays well-defined.  No-op if the handle
+   * is unknown.
    */
   setContrast(handle: ScalarFieldHandle, contrast: number): void;
   /**
@@ -175,13 +193,26 @@ export type ScalarVolumeRenderer = {
    * and yield nonsense visuals rather than a useful debug signal.
    *
    * Lives alongside `setContrast` because the two are orthogonal:
-   * contrast remaps LUT coordinates around the 0.5 pivot, densityScale
-   * scales the optical-depth contribution per voxel-step.  No-op when
+   * contrast windows the LUT-coordinate around the midpoint
+   * (suppress noise + stretch structure); densityScale scales the
+   * optical-depth contribution per voxel-step.  No-op when
    * the handle is unknown — mirrors the rest of the per-field setter
    * surface so a late-firing settings callback for a removed field
    * cannot throw.
    */
   setDensityScale(handle: ScalarFieldHandle, value: number): void;
+  /**
+   * Per-field spatial envelope.  `inner` and `outer` are normalised
+   * distances from the cube center in local space (the inscribed
+   * sphere has radius 1.0, the cube's corners are at √3 ≈ 1.73).
+   * The shader smoothsteps from full opacity at `inner` to zero
+   * opacity at `outer`, then multiplies the result onto the per-step
+   * alpha — this hides the axis-aligned cube silhouette for cubes
+   * whose corner regions are visually noisy or scientifically empty.
+   * Setting both edges to a value ≥ √3 disables the envelope.  No-op
+   * when the handle is unknown.
+   */
+  setEnvelope(handle: ScalarFieldHandle, inner: number, outer: number): void;
   /**
    * Replace the palette LUT for a single field.  Rewrites the field's
    * existing 1D LUT texture in place via `writeTexture`; the bind group
@@ -347,10 +378,11 @@ export function createScalarVolumeRenderer(
         handle,
         enabled: true,
         intensity: 0.5,
-        // 1.0 is identity for the shader's gamma-style contrast remap.
-        // Real-world default is supplied via setContrast() from the slot
-        // commit; this is the safe placeholder before any UI / settings
-        // state has been threaded in.
+        // 1.0 is identity for the shader's contrast windowing (no
+        // deadband, no stretching).  Real-world default is supplied
+        // via setContrast() from the slot commit; this is the safe
+        // placeholder before any UI / settings state has been
+        // threaded in.
         contrast: 1.0,
         // Match the palette seeded into `paletteTexture` above.  The
         // commit site (wireSlots) overwrites both via
@@ -365,6 +397,15 @@ export function createScalarVolumeRenderer(
         // the brief window before that — and for direct test calls
         // that don't go through wireSlots.
         densityScale: 1.0,
+        // No envelope by default; the wireSlots commit calls
+        // `setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer)`
+        // immediately afterwards.  Sentinel 2.0/2.0 (both ≥ √3) keeps
+        // the smoothstep pinned at 1.0 — visually identical to "no
+        // envelope" until the real values land.  See
+        // `volumeFieldDefaults.NO_SPATIAL_ENVELOPE` for the canonical
+        // version of this sentinel.
+        envelopeInner: 2.0,
+        envelopeOuter: 2.0,
         modelMatrix,
         invModelMatrix,
         volumeTexture,
@@ -387,11 +428,23 @@ export function createScalarVolumeRenderer(
     },
     setContrast(handle, contrast) {
       const entry = fields.get(handle);
-      // Clamp away from zero so the shader's pow(_, 1/contrast) stays
+      // Clamp away from zero so the shader's `1 / contrast` stays
       // well-defined.  Upper bound is generous (16x) because the
-      // perceptual effect plateaus well before that — the slider in
-      // VolumeFieldRow caps lower, but the API stays permissive.
+      // deadband saturates at 1 - 1/contrast = ~94% well before that
+      // — the slider in VolumeFieldRow caps lower, but the API stays
+      // permissive.
       if (entry) entry.contrast = Math.max(0.05, Math.min(16, contrast));
+    },
+    setEnvelope(handle, inner, outer) {
+      const entry = fields.get(handle);
+      if (!entry) return;
+      // Allow degenerate `inner >= outer` cases without crashing the
+      // shader — `smoothstep` is defined for those (it degenerates to
+      // a step function).  We do clamp non-finite inputs (NaN, ±Inf)
+      // to a "no envelope" sentinel because passing those through to
+      // the uniform would produce undefined sampling behaviour.
+      entry.envelopeInner = Number.isFinite(inner) ? inner : 2.0;
+      entry.envelopeOuter = Number.isFinite(outer) ? outer : 2.0;
     },
     setDensityScale(handle, value) {
       const entry = fields.get(handle);
@@ -451,7 +504,9 @@ export function createScalarVolumeRenderer(
       // 220..223  intensity       (f32)
       // 224..227  densityScale    (f32)
       // 228..231  contrast        (f32)
-      // 232..239  trailing pad    (8 bytes, struct rounded up to 16)
+      // 232..235  envelopeInner   (f32)
+      // 236..239  envelopeOuter   (f32)
+      // (struct is now exactly 240 bytes content; no trailing pad needed)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       for (const e of fields.values()) {
         if (!e.enabled || e.intensity <= 0) continue;
@@ -468,6 +523,8 @@ export function createScalarVolumeRenderer(
         scratch[55] = e.intensity;
         scratch[56] = e.densityScale;
         scratch[57] = e.contrast;
+        scratch[58] = e.envelopeInner;
+        scratch[59] = e.envelopeOuter;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         pass.setBindGroup(0, e.bindGroup);
         pass.drawIndexed(CUBE_INDICES.length);

@@ -34,18 +34,28 @@ struct VolumeUniforms {
   cameraPosWorld: vec3<f32>,
   intensity: f32,
   densityScale: f32,
-  // Per-field contrast.  Applied as a gamma-style remap of the LUT
-  // sample coordinate around the 0.5 pivot:
-  //
-  //   t' = 0.5 + sign(t - 0.5) * pow(abs(t - 0.5) * 2, 1/contrast) * 0.5
-  //
-  // contrast = 1.0 → identity.  contrast > 1.0 pushes mid-tones toward
-  // the extremes (more visible structure for divergent palettes
-  // centered on the cosmic mean).  contrast < 1.0 compresses toward
-  // the midpoint.  Orthogonal to `intensity`: intensity controls how
-  // OPAQUE the volume is overall, contrast controls how MUCH of the
-  // dynamic range gets pushed to the saturated ends of the palette.
+  // Per-field contrast — drives applyContrastWindow's deadband
+  // width.  1.0 = identity (no deadband, no stretching).  Values > 1
+  // widen the deadband around the midpoint (suppressing near-mean
+  // noise) AND stretch the surviving range across the full palette,
+  // so prominent structure stays visible while the noisy "fog" of
+  // mean-ish voxels collapses to transparent.  See the function
+  // docblock below for the windowing math.  Orthogonal to
+  // intensity: intensity is overall opacity, contrast is which
+  // voxels participate.
   contrast: f32,
+  // Spatial envelope edges in normalised local-space distance from
+  // the cube center.  The cube's inscribed sphere has radius 1.0;
+  // the cube's corners are at √3 ≈ 1.73.  sphericalEnvelope runs a
+  // smoothstep from full opacity at envelopeInner to zero at
+  // envelopeOuter.  Setting both to a value ≥ √3 keeps the
+  // smoothstep pinned at 1.0 throughout the cube (effectively
+  // disabling the envelope).  Used to hide the axis-aligned cube
+  // silhouette for content-driven cubes whose corner regions are
+  // empty / noisy (CF-4 density); debug fixtures opt out via the
+  // sentinel so their corner test patterns stay visible.
+  envelopeInner: f32,
+  envelopeOuter: f32,
 };
 
 @group(0) @binding(0) var<uniform> u: VolumeUniforms;
@@ -61,6 +71,70 @@ struct FsIn {
   @location(0) localPos: vec3<f32>,
   @location(1) worldPos: vec3<f32>,
 };
+
+// Windowing transform for the per-step voxel sample.  Returns a
+// (signedT, visibility) pair packed into a vec2:
+//
+//   .x → LUT coordinate to sample the palette at, in [0, 1].
+//   .y → per-step opacity multiplier, in [0, 1].
+//
+// The transform centres a *deadband* on 0.5 (the divergent-palette
+// midpoint) and stretches the surviving range out to fill [0, 1] of
+// the palette.  Deadband width is 1 - 1/contrast, so:
+//
+//   contrast = 1.0 → deadband = 0.0 (identity — every voxel
+//                                    contributes, mapped 1:1 to LUT).
+//   contrast = 2.0 → deadband = 0.5 (voxels within 50% of mean
+//                                    fully suppressed; rest stretched).
+//   contrast = 4.0 → deadband = 0.75 (only the densest peaks and
+//                                     emptiest voids survive).
+//
+// Compared to the older gamma-style remap, this transform separates
+// the two effects users actually want from a "contrast" slider:
+// (1) hide the noise floor, (2) make remaining structure pop.  The
+// gamma curve coupled them implicitly via the LUT's alpha, but for
+// divergent palettes (V-shaped alpha) cranking gamma also amplified
+// the near-mean noise that already had nonzero alpha — exactly the
+// "more noise, not more structure" symptom this replaces.
+//
+// Generalising for sequential palettes (where the meaningful zero is
+// at t=0, not t=0.5) requires a center argument; the math below
+// hardcodes 0.5 because that is the only consumer today.
+fn applyContrastWindow(sampleValue: f32, contrast: f32) -> vec2<f32> {
+  let dev = abs(sampleValue - 0.5) * 2.0; // [0, 1], 0 at mean, 1 at extremes
+  let deadband = clamp(1.0 - 1.0 / max(contrast, 1e-3), 0.0, 0.9);
+  let stretched = clamp(
+    (dev - deadband) / max(1.0 - deadband, 1e-3),
+    0.0,
+    1.0,
+  );
+  let signedT = 0.5 + sign(sampleValue - 0.5) * stretched * 0.5;
+  // Smooth fade across the deadband edge so the threshold isn't a
+  // hard cliff — gives the impression of "structure rising out of fog"
+  // rather than a binary mask popping in.
+  let visibility = smoothstep(deadband - 0.05, deadband + 0.05, dev);
+  return vec2<f32>(signedT, visibility);
+}
+
+// Spatial envelope: smoothstep falloff in local-space cube
+// coordinates, used to fade the cube's corner regions to invisible
+// so the axis-aligned silhouette of the bounding box doesn't show.
+// localPos is the per-step sample point in [0, 1]^3, inner and
+// outer are normalised distances from the cube center where the
+// inscribed sphere has radius 1.0 (so corners sit at √3 ≈ 1.73).
+//
+// When inner >= outer (the degenerate "no envelope" case using the
+// sentinel inner == outer >= √3), smoothstep returns 0 throughout
+// the cube because dev never exceeds either edge, and the function
+// returns 1.0 — visually identical to no envelope at all.  No
+// branching needed.
+fn sphericalEnvelope(localPos: vec3<f32>, inner: f32, outer: f32) -> f32 {
+  // Center the cube on the origin in cube-space, scale by 2 so the
+  // inscribed sphere has radius 1.0 (matches the convention used by
+  // the per-cube envelopeInner/envelopeOuter uniforms).
+  let radius = length(localPos - vec3<f32>(0.5)) * 2.0;
+  return 1.0 - smoothstep(inner, outer, radius);
+}
 
 // Ray-vs-axis-aligned-unit-AABB intersection in the cube's LOCAL space
 // (the cube spans [0, 1]^3 in local coords).  Returns the (tMin, tMax)
@@ -125,20 +199,20 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     // non-uniform control flow.  Our 3D texture has only one mip level
     // anyway, so explicit LOD 0 is exactly what we want.
     let sampleValue = textureSampleLevel(volume, volumeSampler, p, 0.0).r;
-    // Apply the per-field contrast remap around the 0.5 pivot.  See
-    // VolumeUniforms.contrast for the formula's rationale.  Branching
-    // on contrast == 1.0 would be a tiny perf win but breaks the
-    // uniform-control-flow contract that lets us use textureSampleLevel
-    // a few lines down; the math is cheap enough to run unconditionally.
-    let centered = sampleValue - 0.5;
-    let contrastedT = clamp(
-      0.5 + sign(centered) * pow(abs(centered) * 2.0, 1.0 / u.contrast) * 0.5,
-      0.0,
-      1.0,
-    );
+    // Window the sample around the 0.5 midpoint: high contrast widens
+    // the deadband (suppressing near-mean noise) AND stretches the
+    // surviving range across the full palette.  Returns (signedT,
+    // visibility); see applyContrastWindow's docblock for the math
+    // and the "why not gamma" rationale.  Always runs even at
+    // contrast=1 (identity) — branching would break the uniform-
+    // control-flow contract that lets us call textureSampleLevel
+    // below.
+    let window = applyContrastWindow(sampleValue, u.contrast);
+    let signedT = window.x;
+    let visibility = window.y;
     // Look up colour through the 1D palette LUT.  Same uniformity
-    // constraint, same fix.
-    let lut = textureSampleLevel(palette, paletteSampler, contrastedT, 0.0);
+    // constraint as the volume sample above.
+    let lut = textureSampleLevel(palette, paletteSampler, signedT, 0.0);
     // Per-step alpha = density * stepLength.  This is the discrete form
     // of the optical-depth integral: total opacity along the ray =
     // sum(density * dx) which is path-length-correct (a longer ray
@@ -166,10 +240,22 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     // or peaks too thin.
     // densityScale is the per-cube knob that maps the data's natural
     // dynamic range onto "saturate at intensity=1.0".  See
-    // ScalarCube.densityScale for the rationale; values in the [1, 10]
-    // range are typical (1.0 = no scaling for already-normalised data,
-    // 5.0 = lift a sparse Gaussian into a saturating regime).
-    let alpha = lut.a * u.intensity * u.densityScale * stepLength;
+    // VolumeFieldDefaults.densityScale for the rationale; values in
+    // the [1, 10] range are typical (1.0 = no scaling for already-
+    // normalised data, 5.0 = lift a sparse Gaussian into a saturating
+    // regime).
+    //
+    // Two extra multipliers on top of the canonical
+    // lut.a * intensity * densityScale * stepLength:
+    //   - visibility from the contrast window, fading out near-mean
+    //     voxels (problem 1: "contrast was amplifying noise").
+    //   - sphericalEnvelope fading out the cube corners (problem 2:
+    //     "the cube silhouette is visible").  Cubes that don't want
+    //     this set both envelope edges past √3 and the multiplier is
+    //     pinned to 1.0 — same shader path, no branching.
+    let envelope = sphericalEnvelope(p, u.envelopeInner, u.envelopeOuter);
+    let alpha = lut.a * u.intensity * u.densityScale * stepLength
+              * visibility * envelope;
     let contrib = vec4<f32>(lut.rgb * alpha, alpha);
     // Front-to-back over-compositing within this field.
     accum = accum + (1.0 - accum.a) * contrib;
