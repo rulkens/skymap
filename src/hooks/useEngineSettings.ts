@@ -103,29 +103,19 @@ export type EngineSettingsState = {
  * into its `createEngine(canvas, { ... })` options block so the engine
  * can fire echoes that drive React's settings state.
  *
- * H5 Task 3: this slice now also exposes the nested sub-bag twins
- * (`points`, `tonemap`, `camera`, etc.) populated with the same
- * setState references so the engine's Task-4 dual-fire reaches React
- * via either shape.  Listed here as the nested keys' supertype rather
- * than a narrow `Pick<>` because the nested bags are bag-shaped, not
- * individual top-level keys.
+ * H5 Task 10: settings echoes are now subscribed via the nested
+ * sub-bags only.  The engine's dual-fire (Task 4 settingsTable +
+ * Task 5 bespoke setters) still emits flat callbacks alongside the
+ * nested ones, but nothing on the React side listens to the flat
+ * shape anymore — optional-chaining on the engine side makes the
+ * stray flat fire a silent no-op.  The flat fields themselves are
+ * deleted in Task 11; until then the Pick<> below intentionally
+ * carries only the nested cluster names plus `onFilamentsReady`,
+ * the one flat echo that has no nested twin in the engine code
+ * yet (sole flat survivor on the settings side).
  */
 export type EngineSettingsCallbacks = Pick<
   EngineCallbacks,
-  | 'onPointSizeChange'
-  | 'onBrightnessChange'
-  | 'onAutoRotateChange'
-  | 'onGalaxyTexturesEnabledChange'
-  | 'onMilkyWayEnabledChange'
-  | 'onHighlightFallbackChange'
-  | 'onRealOnlyModeChange'
-  | 'onDepthFadeEnabledChange'
-  | 'onLodModeChange'
-  | 'onSourceMaskChange'
-  | 'onBiasModeChange'
-  | 'onAbsMagLimitChange'
-  | 'onToneMapCurveChange'
-  | 'onExposureChange'
   | 'onFilamentsReady'
   | 'points'
   | 'tonemap'
@@ -250,32 +240,24 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       volumeFields,
     },
     engineCallbacks: {
-      // ── Flat shape (legacy — removed in Task 11) ─────────────────
-      onPointSizeChange: setPointSize,
-      onBrightnessChange: setBrightness,
-      onAutoRotateChange: setAutoRotate,
-      onGalaxyTexturesEnabledChange: setGalaxyTexturesEnabled,
-      onMilkyWayEnabledChange: setMilkyWayEnabled,
-      onHighlightFallbackChange: setHighlightFallback,
-      onRealOnlyModeChange: setRealOnlyMode,
-      onDepthFadeEnabledChange: setDepthFadeEnabled,
-      onLodModeChange: setLodMode,
-      onSourceMaskChange: setVisibleSourceMask,
-      onBiasModeChange: setBiasMode,
-      onAbsMagLimitChange: setAbsMagLimit,
-      onToneMapCurveChange: setToneMapCurve,
-      onExposureChange: setExposure,
+      // ── Sole flat survivor on the settings side (H5 Task 10) ─────
+      // `onFilamentsReady` has no nested twin in the engine fire
+      // sites yet (wireSlots.ts still emits only the flat shape),
+      // so subscribing nested-only would leave `filamentCounts`
+      // stuck at null and silently hide the filaments stats row.
+      // Stays here until a follow-up dual-fires it or moves the
+      // fire site to a nested address.
       onFilamentsReady: (stripCount, vertexCount) =>
         setFilamentCounts({ stripCount, vertexCount }),
 
-      // ── Nested twins (H5 Task 3) ─────────────────────────────────
-      // Same setter references as the flat fields above; engine's
-      // dual-fire in Task 4 reaches the same setState twice with the
-      // same value, which React reconciler dedups.  These bags
-      // become the only shape once Task 10/11 drops the flat
-      // fields.  The `partial-echo` cases (filaments, volumes
-      // master) stay App-owned — no nested entry here because the
-      // engine doesn't fire any echo for them, just as before.
+      // ── Nested sub-bag subscriptions (H5 Task 10) ────────────────
+      // Every setting that the engine dual-fires (settingsTable.ts
+      // rows + the four bespoke setters in Task 5) is subscribed
+      // here through its nested address only.  Their former flat
+      // siblings are gone — the engine's optional-chained flat fire
+      // is a silent no-op on the React side now.  The `partial-echo`
+      // cases (filaments enabled/intensity, volumes master) remain
+      // App-owned with no echo wiring, just as before.
       points: {
         onSizeChange: setPointSize,
         onBrightnessChange: setBrightness,

@@ -18,8 +18,8 @@
  *
  * Selection: the row's onClick / Enter handler calls either
  * `onSelect(id)` (famous) or `onSelectAlias({ source, localIdx })`
- * (alias) — App.tsx routes those to engine.selectFamous or
- * engine.selectByAlias respectively.
+ * (alias) — App.tsx routes those to engine.selection.selectFamous
+ * or engine.selection.selectByAlias respectively.
  *
  * Why not a third-party command-palette library?  Same reasoning as
  * the original famous-only iteration: ~120 lines of UI logic, no
