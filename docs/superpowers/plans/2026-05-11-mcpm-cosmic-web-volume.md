@@ -14,6 +14,7 @@
 - The spec calls out a "new SettingsPanel toggle" — but inspecting `src/components/SettingsPanel/SettingsPanel.tsx:734-758`, volume rows are auto-generated from `volumeFields[]` (which itself derives from registered field handles). Adding `'mcpm'` to `VOLUME_FIELD_DEFAULTS` with a `label` is sufficient; **no SettingsPanel.tsx edit is needed**. This plan reflects that.
 - The spec mentions a "volume registry" wiring point — there isn't a generic registry today; CF-4 has a per-cube slot factory (`createCf4DensitySlot`) wired ad-hoc inside `wireSlots.ts`. MCPM follows the same per-cube factory pattern; no registry generalisation needed for one new cube.
 - The spec's tier-aware reload requires a small `setTier` extension in `engine.ts` (the existing `for (const src of [SDSS, …])` loop only iterates point sources; MCPM joins it as a separate one-line invocation).
+- The spec's `'inferno'` palette name doesn't exist in skymap's current `ScalarFieldPaletteId` union (only `viridis | magma | blue-purple | yellow-green | coolwarm`). Task 5 adds `'inferno'` to the palette set as a precondition, then Task 6 uses it in the registry entry. The matplotlib inferno palette is the canonical aesthetic for slime-mould / cosmic-web fire-on-black visualisations (Polyphorm, MCPM tradition).
 
 ---
 
@@ -34,10 +35,13 @@
 **Modified files:**
 - `tools/buildCf4Density.ts` — import `f32ToF16Bits` from new helper module instead of inline
 - `tools/syncR2.ts` — extend `ALLOW` filter for `mcpm-{small,medium,large}.scfd`; add 3 `EXTRA_FILES` entries for the source `.npy` tier files
-- `src/data/volumeFieldDefaults.ts` — add `'mcpm'` entry
+- `src/@types/ScalarCube.d.ts` — add `'inferno'` to the `ScalarFieldPaletteId` union
+- `src/data/scalarFieldPalettes.ts` — add `'inferno'` to `PALETTE_IDS` + `buildPaletteLut`
+- `src/data/volumeFieldDefaults.ts` — add `'mcpm'` entry (uses `'inferno'`)
 - `src/@types/EngineState.d.ts` — add `mcpm: AssetSlot<ScalarCube, MCPMReq> | null` to `assetSlots`
 - `src/services/engine/phases/wireSlots.ts` — mint MCPM slot under `volumesGateOpen`; initial `load({ tier })`
 - `src/services/engine/engine.ts` — extend `setTier` (around line 942) to reload MCPM on tier change
+- `tests/data/scalarFieldPalettes.test.ts` — extend with an inferno assertion
 - `tests/data/volumeFieldDefaults.test.ts` — extend with an `'mcpm'` block
 - `package.json` — add `"build-mcpm"` script
 - `.gitignore` — add `data/raw/mcpm/*.npy` and `public/data/mcpm-*.scfd`
@@ -819,7 +823,124 @@ EOF
 
 ---
 
-## Task 5: `'mcpm'` entry in `volumeFieldDefaults.ts`
+## Task 5: Add `'inferno'` palette to the scalar-field palette set
+
+Aesthetic match for MCPM's slime-mould rendering tradition (warm fire-on-black). Inferno is a matplotlib perceptually-uniform palette in the same family as magma/plasma/viridis — slightly more orange in the upper range than magma, slightly redder in the middle.
+
+**Files:**
+- Modify: `src/@types/ScalarCube.d.ts:20-26` — extend the union
+- Modify: `src/data/scalarFieldPalettes.ts:53-115` — extend `PALETTE_IDS` + `buildPaletteLut`
+- Modify: `tests/data/scalarFieldPalettes.test.ts` — add a peak/valley assertion
+
+- [ ] **Step 1: Write the failing test**
+
+In `tests/data/scalarFieldPalettes.test.ts`, before the closing `});` of the existing `describe`, add:
+
+```ts
+  it('inferno is dark at the low end and warm-bright at the high end', () => {
+    const lut = buildPaletteLut('inferno');
+    expect(lut.length).toBe(PALETTE_LUT_SIZE * 4);
+    // Low end is near-black: R+G+B should be small.
+    const lowSum = lut[0]! + lut[1]! + lut[2]!;
+    expect(lowSum).toBeLessThan(30);
+    // High end is warm-bright: R should be high, B should be lower than R+G.
+    const peak = (PALETTE_LUT_SIZE - 1) * 4;
+    expect(lut[peak + 0]!).toBeGreaterThan(200); // R bright
+    expect(lut[peak + 1]!).toBeGreaterThan(180); // G bright
+    expect(lut[peak + 2]!).toBeLessThan(lut[peak + 0]! + lut[peak + 1]!); // B not dominant
+  });
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+```bash
+npx vitest run tests/data/scalarFieldPalettes.test.ts
+```
+
+Expected: FAIL — TS error or runtime error: `'inferno'` not assignable to `ScalarFieldPaletteId`.
+
+- [ ] **Step 3: Extend the `ScalarFieldPaletteId` union**
+
+In `src/@types/ScalarCube.d.ts`, locate the `ScalarFieldPaletteId` type union (around line 20). Add `'inferno'` between `'magma'` and the next entry:
+
+```ts
+export type ScalarFieldPaletteId =
+  | 'viridis'
+  | 'magma'
+  | 'inferno'
+  | 'blue-purple'
+  | 'yellow-green'
+  | 'coolwarm';
+```
+
+(Match the existing list members; the snippet above shows the expected final state. If the source uses different formatting, preserve that.)
+
+- [ ] **Step 4: Add `'inferno'` to `PALETTE_IDS`**
+
+In `src/data/scalarFieldPalettes.ts`, in the `PALETTE_IDS` array (around line 53), add the entry next to `'magma'`:
+
+```ts
+export const PALETTE_IDS: readonly ScalarFieldPaletteId[] = [
+  'viridis',
+  'magma',
+  'inferno',
+  'blue-purple',
+  'yellow-green',
+  'coolwarm',
+];
+```
+
+- [ ] **Step 5: Implement `'inferno'` in `buildPaletteLut`**
+
+In the same file, add the case inside `buildPaletteLut` between `'magma'` and `'blue-purple'`. Anchor values are taken from matplotlib's canonical inferno LUT control points:
+
+```ts
+    case 'inferno':
+      // Matplotlib's `inferno` perceptually-uniform palette: dark
+      // purple → red → orange → pale yellow on a near-black floor.
+      // Slightly more orange-saturated than magma, which makes it the
+      // canonical match for slime-mould / cosmic-web fire-on-black
+      // visualisations (Polyphorm, MCPM, plasma family). Anchor RGB
+      // values match matplotlib's `_cm_listed.py` inferno entries
+      // sampled at t = {0, 0.25, 0.5, 0.75, 1.0}.
+      return rampLut([
+        [0.0, 0, 0, 4],
+        [0.25, 87, 16, 110],
+        [0.5, 188, 55, 84],
+        [0.75, 249, 142, 9],
+        [1.0, 252, 255, 164],
+      ]);
+```
+
+- [ ] **Step 6: Re-run the palette tests**
+
+```bash
+npm run typecheck && npx vitest run tests/data/scalarFieldPalettes.test.ts
+```
+
+Expected: typecheck PASS; tests PASS.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/@types/ScalarCube.d.ts src/data/scalarFieldPalettes.ts tests/data/scalarFieldPalettes.test.ts
+git commit -m "$(cat <<'EOF'
+feat(palette): add 'inferno' to the scalar-field palette set
+
+Matplotlib's `inferno` perceptually-uniform palette — fiery red/orange/
+yellow on near-black — is the canonical aesthetic for slime-mould /
+cosmic-web density visualisations (Polyphorm, MCPM tradition). Pre-
+requisite for the MCPM volume registration which uses 'inferno' as
+its default palette.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+## Task 6: `'mcpm'` entry in `volumeFieldDefaults.ts`
 
 **Files:**
 - Modify: `src/data/volumeFieldDefaults.ts:125-191` — add `'mcpm'` block
@@ -830,14 +951,15 @@ EOF
 In `tests/data/volumeFieldDefaults.test.ts`, add this `it` block before the closing `});` of the existing `describe`:
 
 ```ts
-  it('exposes mcpm with magma + windowed contrast for heavy-tailed trace density', () => {
+  it('exposes mcpm with inferno + windowed contrast for heavy-tailed trace density', () => {
     const d = VOLUME_FIELD_DEFAULTS['mcpm'];
     expect(d).toBeDefined();
-    // Magma (sequential warm) is visually distinct from CF-4's coolwarm
-    // (divergent cool/warm) so both overlays can be enabled simultaneously
-    // and read as separate layers. Aesthetically aligned with the
-    // Polyphorm/MCPM rendering tradition (plasma/sunset family).
-    expect(d!.paletteId).toBe('magma');
+    // Inferno (matplotlib perceptually-uniform) is the canonical
+    // aesthetic for slime-mould / cosmic-web fire-on-black
+    // visualisations (Polyphorm, MCPM tradition). Visually distinct
+    // from CF-4's coolwarm (divergent cool/warm) so both overlays
+    // can be enabled simultaneously and read as separate layers.
+    expect(d!.paletteId).toBe('inferno');
     // MCPM trace densities are heavy-tailed (slime-mould agent density
     // spans decades); modest windowing brings filament structure forward
     // without crushing low-density voids.
@@ -867,11 +989,13 @@ In `src/data/volumeFieldDefaults.ts`, add this block to `VOLUME_FIELD_DEFAULTS` 
 
 ```ts
   'mcpm': {
-    // Sequential warm (magma) reads as visually distinct from CF-4's
-    // divergent coolwarm so both overlays can be enabled together and
-    // read as separate layers. The debug-spherical fixture also uses
-    // magma but isn't enabled in production paths.
-    paletteId: 'magma',
+    // Inferno (matplotlib perceptually-uniform, fire-on-black) is the
+    // canonical aesthetic for slime-mould / cosmic-web density
+    // visualisations (Polyphorm, MCPM tradition). Visually distinct
+    // from CF-4's divergent coolwarm so both overlays can be enabled
+    // together and read as separate layers. Added to the palette set
+    // by Task 5; this entry is the first consumer.
+    paletteId: 'inferno',
     // MCPM trace density spans several decades (slime-mould agent
     // density is heavy-tailed); modest windowing brings filament
     // structure forward without crushing the low-density voids.
@@ -890,12 +1014,6 @@ In `src/data/volumeFieldDefaults.ts`, add this block to `VOLUME_FIELD_DEFAULTS` 
   },
 ```
 
-**Verify** that `'magma'` is a valid `ScalarFieldPaletteId`. If not, swap to `'magma'` and update the test in step 1 accordingly. Check by reading `src/data/scalarFieldPalettes.ts`:
-
-```bash
-grep -n "PaletteId\|'magma'\|'magma'" src/@types/ScalarCube.d.ts src/data/scalarFieldPalettes.ts
-```
-
 - [ ] **Step 4: Re-run the test**
 
 ```bash
@@ -909,12 +1027,13 @@ Expected: PASS.
 ```bash
 git add src/data/volumeFieldDefaults.ts tests/data/volumeFieldDefaults.test.ts
 git commit -m "$(cat <<'EOF'
-feat(volumes): register 'mcpm' field defaults (magma + windowing)
+feat(volumes): register 'mcpm' field defaults (inferno + windowing)
 
-Magma (sequential warm) pairs visually with CF-4's coolwarm (divergent)
-so both overlays read as distinct layers when enabled together.  Contrast 1.5 windows
-out the heavy-tailed slime-mould density's noise floor; densityScale
-4.0 is an initial value pending visual tuning against the real cube.
+Inferno (matplotlib perceptually-uniform, added in the previous commit)
+pairs visually with CF-4's divergent coolwarm so both overlays read as
+distinct layers when enabled together.  Contrast 1.5 windows out the
+heavy-tailed slime-mould density's noise floor; densityScale 4.0 is an
+initial value pending visual tuning against the real cube.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 EOF
@@ -923,7 +1042,7 @@ EOF
 
 ---
 
-## Task 6: `mcpmFetcher` (tier-aware)
+## Task 7: `mcpmFetcher` (tier-aware)
 
 **Files:**
 - Create: `src/services/loading/fetchers/mcpmFetcher.ts`
@@ -1057,7 +1176,7 @@ EOF
 
 ---
 
-## Task 7: `mcpmSlot` factory + `assetSlots.mcpm` type field
+## Task 8: `mcpmSlot` factory + `assetSlots.mcpm` type field
 
 **Files:**
 - Create: `src/services/loading/slots/mcpmSlot.ts`
@@ -1197,7 +1316,7 @@ EOF
 
 ---
 
-## Task 8: Wire MCPM into `wireSlots.ts` + reload on tier change
+## Task 9: Wire MCPM into `wireSlots.ts` + reload on tier change
 
 **Files:**
 - Modify: `src/services/engine/phases/wireSlots.ts:84` (import), `:240-249` (mint block)
@@ -1265,7 +1384,7 @@ EOF
 
 ---
 
-## Task 9: Sync R2 ALLOW filter + EXTRA_FILES for `.npy` tiers
+## Task 10: Sync R2 ALLOW filter + EXTRA_FILES for `.npy` tiers
 
 **Files:**
 - Modify: `tools/syncR2.ts:74-89` (ALLOW), `:110-140` (EXTRA_FILES)
@@ -1324,7 +1443,7 @@ EOF
 
 ---
 
-## Task 10: package.json script + .gitignore + CLAUDE.md
+## Task 11: package.json script + .gitignore + CLAUDE.md
 
 **Files:**
 - Modify: `package.json:35-50` area (scripts)
@@ -1395,7 +1514,7 @@ EOF
 
 ---
 
-## Task 11: Manual smoke + open PR
+## Task 12: Manual smoke + open PR
 
 This task is the gate before merge. The build pipeline ships fully tested in Tasks 1-10; this task confirms the rendered output matches expectations against the real cube.
 
@@ -1439,7 +1558,7 @@ In the browser:
 1. Open Settings → Volumes section.
 2. Confirm "MCPM Cosmic Web" row appears (registry-driven).
 3. Toggle it on. Expect an orange/red smoky overlay centered on the SDSS galaxy region.
-4. Toggle CF-4 on alongside. Both should render as visually distinct layers (magma vs coolwarm).
+4. Toggle CF-4 on alongside. Both should render as visually distinct layers (inferno vs coolwarm).
 5. Switch tier (small ↔ medium ↔ large). The MCPM overlay should swap and intensify with the higher-resolution cube.
 
 If any visual step fails (mis-aligned cube, no overlay, wrong palette), the diagnosis path is:
@@ -1474,7 +1593,7 @@ EOF
 
 ## Self-review notes
 
-- **Spec coverage:** every numbered section of the spec maps to a task — extractor (Task 2), build script (Task 4), constants/anchors (Task 3), defaults entry (Task 5), runtime wiring (Tasks 6-8), R2 sync (Task 9), gitignore + script + docs (Task 10), visual verification (Task 11). The "geometric invariants" test the spec hints at is covered by the smoke test (Task 4) plus the visual smoke test (Task 11) — a binary fixture for `tests/fixtures/` would be heavyweight for marginal additional coverage and is deferred.
+- **Spec coverage:** every numbered section of the spec maps to a task — extractor (Task 2), build script (Task 4), constants/anchors (Task 3), inferno palette (Task 5), defaults entry (Task 6), runtime wiring (Tasks 7-9), R2 sync (Task 10), gitignore + script + docs (Task 11), visual verification (Task 12). The "geometric invariants" test the spec hints at is covered by the smoke test (Task 4) plus the visual smoke test (Task 12) — a binary fixture for `tests/fixtures/` would be heavyweight for marginal additional coverage and is deferred.
 - **Helper extraction first:** Task 1 must run before Task 4. The plan orders them accordingly. Task 2 (Python) is independent and could run anywhere; placed second because it's the natural reading order for someone following the data flow.
 - **No new SettingsPanel.tsx edit:** confirmed by reading `SettingsPanel.tsx:734-758` — volume rows auto-generate from registered fields. The plan calls this out in the "Reality check vs spec" header section.
 - **Tier-aware reload pattern:** new — neither CF-4 (single cube, void request) nor filaments (one-shot, never reloaded) does this. Task 8 introduces it as a one-line addition to `engine.setTier`.
