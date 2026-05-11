@@ -28,7 +28,8 @@ by re-running step 1 on a fresh checkout.
 # 1. One-time: create the venv and install deps (~150 MB incl. scipy)
 python3 -m venv .venv
 .venv/bin/pip install --upgrade pip
-.venv/bin/pip install pyslime numpy scikit-image
+.venv/bin/pip install pyslime numpy scikit-image astropy
+# astropy is a transitive dep of pyslime that pyslime forgets to declare
 
 # 2. Download the upstream blob (~345 MB)
 mkdir -p data/raw/mcpm
