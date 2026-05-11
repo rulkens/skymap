@@ -91,11 +91,21 @@ const FRAME_TO_WORLD: Record<ScalarFieldFrameKind, mat4> = {
 //
 // Maps the unit cube '[0,1]^3' (vertex shader's input space) to the
 // cube's footprint in skymap world space.  Composition order, applied
-// right-to-left to a unit-cube corner:
+// right-to-left to a unit-cube corner v:
 //
-//   1. scale by (Nx*voxelSize, Ny*voxelSize, Nz*voxelSize) → physical extent
-//   2. rotate by the cube's per-cube quaternion (in its native frame)
-//   3. translate by the cube's origin (in its native frame)
+//   1. scale  by (Nx*voxelSize, Ny*voxelSize, Nz*voxelSize) — unit cube
+//      becomes its physical extent (e.g. [0, 1000]^3 for CF-4)
+//   2. translate by the cube's origin in its native frame — shifts the
+//      cube so its corner sits at `origin`, which for an observer-centered
+//      cube means the cube's geometric centre lands at the native frame's
+//      origin
+//   3. rotate by the cube's per-cube quaternion — pivots around the
+//      native frame's origin, which (after step 2) coincides with the
+//      cube's centre.  Order matters: rotating BEFORE the translate
+//      would pivot around the cube's corner instead and offset the
+//      whole volume by `R*origin - origin` in the native frame.  The
+//      synthetic cubes ship identity rotations, so the bug is invisible
+//      there; CF-4 (with the SG→EQ quaternion) exposes it.
 //   4. transform from the native frame into world space
 //
 // The function is exported (rather than locked inside the factory)
@@ -104,10 +114,10 @@ const FRAME_TO_WORLD: Record<ScalarFieldFrameKind, mat4> = {
 export function buildCubeModelMatrix(cube: ScalarCube): mat4 {
   const out = mat4.create();
   mat4.copy(out, FRAME_TO_WORLD[cube.frameKind]);
-  mat4.translate(out, out, [cube.origin[0], cube.origin[1], cube.origin[2]]);
   const rotMat = mat4.create();
   mat4.fromQuat(rotMat, [cube.rotation[0], cube.rotation[1], cube.rotation[2], cube.rotation[3]]);
   mat4.multiply(out, out, rotMat);
+  mat4.translate(out, out, [cube.origin[0], cube.origin[1], cube.origin[2]]);
   const sx = cube.dims[0] * cube.voxelSize;
   const sy = cube.dims[1] * cube.voxelSize;
   const sz = cube.dims[2] * cube.voxelSize;
