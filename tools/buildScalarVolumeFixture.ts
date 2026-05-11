@@ -27,6 +27,9 @@ const OUT = 'tests/fixtures/scalar-volume/tiny-8x8x8.scfd';
 const voxels = new Uint16Array(8 * 8 * 8);
 for (let i = 0; i < voxels.length; i++) voxels[i] = i;
 
+// Note: SCFD v2 removed `paletteId` and `densityScale` from `ScalarCube`
+// (palette/scale belong on the consumer side, not in the binary).  The
+// fixture stays minimal — header + raw voxel bytes.
 const cube: ScalarCube = {
   dims: [8, 8, 8],
   voxels,
@@ -34,8 +37,6 @@ const cube: ScalarCube = {
   origin: [-200, -200, -200],
   voxelSize: 50,
   rotation: [0, 0, 0, 1],
-  paletteId: 'viridis',
-  densityScale: 1.0,
   valueMin: 0,
   valueMax: 1,
 };

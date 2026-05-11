@@ -30,6 +30,7 @@ import { resolve } from 'node:path';
 import { raDecZToCartesian } from '../src/utils/math/index.js';
 import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
 import { encodePointCloud } from '../src/data/pointCloudFormat.js';
+import { DEFAULT_GALAXY_DIAMETER_KPC } from '../src/utils/math/galaxyDiameterKpc.js';
 import type { PointCloud } from '../src/@types/index.js';
 import { parseSdssCsv } from './parsers/sdssCsv.js';
 
@@ -106,6 +107,7 @@ const cloud: PointCloud = {
   magZ: new Float32Array(count), // z-band apparent magnitude
   axisRatio: new Float32Array(count), // b/a from PhotoObj or fallback
   positionAngleDeg: new Float32Array(count), // PA in deg from PhotoObj or fallback
+  diameterKpc: new Float32Array(count), // physical diameter, default-filled if absent
 };
 
 for (let i = 0; i < count; i++) {
@@ -143,6 +145,13 @@ for (let i = 0; i < count; i++) {
     cloud.axisRatio[i] = fb.axisRatio;
     cloud.positionAngleDeg[i] = fb.positionAngleDeg;
   }
+
+  // Per-galaxy physical diameter.  The SDSS parser produces a real value
+  // when the CSV has `petroR50_r` (etc.) and computes a kpc size from it;
+  // otherwise we fall back to the project-wide default so the renderer
+  // never sees a NaN here.  Same logic as `buildAllBins.ts`.
+  cloud.diameterKpc[i] =
+    r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : DEFAULT_GALAXY_DIAMETER_KPC;
 }
 
 // ─── Encode & write ───────────────────────────────────────────────────────────

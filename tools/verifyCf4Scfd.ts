@@ -27,40 +27,44 @@ import {
   raDecDistToEqCart,
   type ClusterAnchor,
 } from '../src/data/clusterAnchors';
+import type { Mat3, Vec3 } from '../src/@types';
 
 /** Local alias for read-clarity in the per-list loops below. */
 type NamedAnchor = ClusterAnchor;
 
-function transpose3(m: typeof SG_TO_EQ_MATRIX): typeof SG_TO_EQ_MATRIX {
+/**
+ * Transpose of a column-major Mat3.  For an orthonormal rotation this
+ * is its inverse.  m[c*3 + r] → m'[r*3 + c].
+ */
+function transpose3(m: Mat3): Mat3 {
   return [
-    [m[0][0], m[1][0], m[2][0]],
-    [m[0][1], m[1][1], m[2][1]],
-    [m[0][2], m[1][2], m[2][2]],
+    m[0]!, m[3]!, m[6]!,
+    m[1]!, m[4]!, m[7]!,
+    m[2]!, m[5]!, m[8]!,
   ];
 }
 
-const EQ_TO_SG = transpose3(SG_TO_EQ_MATRIX);
+const EQ_TO_SG: Mat3 = transpose3(SG_TO_EQ_MATRIX);
 
-function eqToSg(eq: readonly [number, number, number]): [number, number, number] {
-  const m = EQ_TO_SG;
+/** Apply a column-major Mat3 to a Vec3: result[r] = Σ_c m[c*3 + r] · v[c]. */
+function applyMat3(m: Mat3, v: Vec3): Vec3 {
   return [
-    m[0][0] * eq[0] + m[0][1] * eq[1] + m[0][2] * eq[2],
-    m[1][0] * eq[0] + m[1][1] * eq[1] + m[1][2] * eq[2],
-    m[2][0] * eq[0] + m[2][1] * eq[1] + m[2][2] * eq[2],
+    m[0]! * v[0] + m[3]! * v[1] + m[6]! * v[2],
+    m[1]! * v[0] + m[4]! * v[1] + m[7]! * v[2],
+    m[2]! * v[0] + m[5]! * v[1] + m[8]! * v[2],
   ];
 }
 
-function sgToEq(sg: readonly [number, number, number]): [number, number, number] {
-  const m = SG_TO_EQ_MATRIX;
-  return [
-    m[0][0] * sg[0] + m[0][1] * sg[1] + m[0][2] * sg[2],
-    m[1][0] * sg[0] + m[1][1] * sg[1] + m[1][2] * sg[2],
-    m[2][0] * sg[0] + m[2][1] * sg[1] + m[2][2] * sg[2],
-  ];
+function eqToSg(eq: Vec3): Vec3 {
+  return applyMat3(EQ_TO_SG, eq);
+}
+
+function sgToEq(sg: Vec3): Vec3 {
+  return applyMat3(SG_TO_EQ_MATRIX, sg);
 }
 
 /** Equatorial Cartesian → (RA hours, Dec deg, distance Mpc). */
-function eqCartToRaDecDist(eq: readonly [number, number, number]): {
+function eqCartToRaDecDist(eq: Vec3): {
   raHours: number;
   decDeg: number;
   distMpc: number;
@@ -86,9 +90,9 @@ function sampleAtAnchor(
   decoded: Float64Array,
   sorted: Float64Array,
   anchor: NamedAnchor,
-  dims: readonly [number, number, number],
+  dims: Vec3,
   voxelSize: number,
-): { vox: [number, number, number]; value: number; pct: number } | null {
+): { vox: Vec3; value: number; pct: number } | null {
   const [Nx, Ny, Nz] = dims;
   const eq = raDecDistToEqCart(anchor);
   const sg = eqToSg(eq);
@@ -115,10 +119,10 @@ function percentileOf(value: number, sortedAsc: Float64Array): number {
 }
 
 function voxelToEqCart(
-  vox: readonly [number, number, number],
-  dims: readonly [number, number, number],
+  vox: Vec3,
+  dims: Vec3,
   voxelSize: number,
-): [number, number, number] {
+): Vec3 {
   // Voxel centre in SG Mpc: (vox - dims/2 + 0.5) * voxelSize.
   const sgX = (vox[0] - dims[0] / 2 + 0.5) * voxelSize;
   const sgY = (vox[1] - dims[1] / 2 + 0.5) * voxelSize;

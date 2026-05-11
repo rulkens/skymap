@@ -30,38 +30,40 @@ import {
   raDecDistToEqCart,
   type ClusterAnchor,
 } from '../src/data/clusterAnchors';
+import type { Mat3, Vec3 } from '../src/@types';
 
 const VOXEL_SIZE_MPC = 1000 / 128; // CF4++ box size / N
 const DIMS = 128;
 const ORIGIN_MPC = -VOXEL_SIZE_MPC * (DIMS / 2); // -500 Mpc on each axis
 
-/** Apply 3×3 matrix to a vec3.  Input is `readonly` so callers can pass
- *  the immutable tuple returned by `raDecDistToEqCart` without a copy. */
-function applyMat3(m: ReturnType<typeof getSgToEqMatrix>, v: readonly [number, number, number]): [number, number, number] {
+/**
+ * Apply a column-major Mat3 to a Vec3.
+ *   result[r] = Σ_c m[c*3 + r] · v[c]
+ */
+function applyMat3(m: Mat3, v: Vec3): Vec3 {
   return [
-    m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
-    m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
-    m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2],
+    m[0]! * v[0] + m[3]! * v[1] + m[6]! * v[2],
+    m[1]! * v[0] + m[4]! * v[1] + m[7]! * v[2],
+    m[2]! * v[0] + m[5]! * v[1] + m[8]! * v[2],
   ];
 }
 
-function getSgToEqMatrix() {
-  return SG_TO_EQ_MATRIX as readonly [readonly [number, number, number], readonly [number, number, number], readonly [number, number, number]];
-}
-
-/** Transpose of a 3×3 orthonormal matrix is its inverse. */
-function transpose3(m: ReturnType<typeof getSgToEqMatrix>): ReturnType<typeof getSgToEqMatrix> {
+/**
+ * Transpose of a column-major Mat3.  For an orthonormal rotation this
+ * is its inverse.  Indexing reminder: m[c*3 + r] becomes m'[r*3 + c].
+ */
+function transpose3(m: Mat3): Mat3 {
   return [
-    [m[0][0], m[1][0], m[2][0]],
-    [m[0][1], m[1][1], m[2][1]],
-    [m[0][2], m[1][2], m[2][2]],
+    m[0]!, m[3]!, m[6]!,
+    m[1]!, m[4]!, m[7]!,
+    m[2]!, m[5]!, m[8]!,
   ];
 }
 
-const EQ_TO_SG_MATRIX = transpose3(getSgToEqMatrix());
+const EQ_TO_SG_MATRIX: Mat3 = transpose3(SG_TO_EQ_MATRIX);
 
 /** Eq Cartesian → SG Cartesian (Mpc, length-preserving). */
-function eqToSg(eq: readonly [number, number, number]): [number, number, number] {
+function eqToSg(eq: Vec3): Vec3 {
   return applyMat3(EQ_TO_SG_MATRIX, eq);
 }
 
@@ -227,7 +229,7 @@ function main(): void {
   }
 }
 
-function labelPerm(perm: readonly [number, number, number]): string {
+function labelPerm(perm: Vec3): string {
   const names = ['SGX', 'SGY', 'SGZ'];
   return `[${perm.map((p) => names[p]!).join(',')}]`;
 }
