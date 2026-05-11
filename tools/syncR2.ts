@@ -86,7 +86,11 @@ const ALLOW = (name: string): boolean =>
   // Valade 2024 CF-4 HAMLET 256³ DM density cube, written as SCFD by
   // `npm run build-cf4-density` from the maintainer-produced .npy.
   // See data/raw/cf4/README.md for the maintainer + contributor paths.
-  name === 'cf4_density.scfd';
+  name === 'cf4_density.scfd' ||
+  // MCPM Cosmic Web density cubes — SDSS DR17 Cosmic Slime VAC
+  // (Wilde et al. 2023), tiered downsamples emitted by
+  // `npm run build-mcpm` from the .npy tiers in data/raw/mcpm/.
+  /^mcpm-(small|medium|large)\.scfd$/.test(name);
 
 /**
  * Extra files outside public/data/ that should also land in R2.
@@ -137,6 +141,14 @@ const EXTRA_FILES: ExtraFile[] = [
     localPath: 'data/raw/cf4/d_mean_CF4pp.npy',
     r2Key: 'data/raw/cf4/d_mean_CF4pp.npy',
   },
+  ...([8, 4, 2] as const).map((factor) => ({
+    // MCPM Cosmic Web .npy tier — block-averaged downsample of the SDSS
+    // DR17 Cosmic Slime VAC trace.bin.bz2, produced by
+    // `python tools/extractMcpmCube.py`. Contributors curl these instead
+    // of installing pyslime + the 345 MB upstream blob.
+    localPath: `data/raw/mcpm/mcpm_sdss_d${factor}.npy`,
+    r2Key: `data/raw/mcpm/mcpm_sdss_d${factor}.npy`,
+  })),
 ];
 
 function uploadFile(localPath: string, key: string): void {
