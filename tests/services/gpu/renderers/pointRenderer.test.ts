@@ -727,3 +727,34 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
     expect(calls).toContain('draw');
   });
 });
+
+describe('POINT_VERTEX_ATTRIBUTES — shared layout export', () => {
+  it('has 10 attributes with the expected shader locations and formats', async () => {
+    const {
+      POINT_VERTEX_ATTRIBUTES,
+      POINT_STRIDE,
+    } = await import('../../../../src/services/gpu/renderers/pointRenderer');
+
+    expect(POINT_STRIDE).toBe(48);
+    expect(POINT_VERTEX_ATTRIBUTES).toHaveLength(10);
+
+    // Slot 0 is the only vec3; slots 1-9 are scalar f32s.  Anyone editing
+    // pointRenderer's table must update this expectation deliberately,
+    // which is the point — a silent shape change here would break the
+    // shared invariant with pickRenderer.
+    expect(POINT_VERTEX_ATTRIBUTES[0]).toEqual({
+      shaderLocation: 0,
+      offset: 0,
+      format: 'float32x3',
+    });
+
+    const expectedOffsets = [12, 16, 20, 24, 28, 32, 36, 40, 44];
+    for (let i = 1; i <= 9; i++) {
+      expect(POINT_VERTEX_ATTRIBUTES[i]).toEqual({
+        shaderLocation: i,
+        offset: expectedOffsets[i - 1],
+        format: 'float32',
+      });
+    }
+  });
+});
