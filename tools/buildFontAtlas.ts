@@ -65,7 +65,7 @@ function main() {
     }
     const pngPath = path.join(OUTPUT_DIR, `${OUTPUT_BASENAME}.png`);
     const jsonPath = path.join(OUTPUT_DIR, `${OUTPUT_BASENAME}.json`);
-    fs.writeFileSync(pngPath, textures[0].texture);
+    fs.writeFileSync(pngPath, textures[0]!.texture);
     fs.writeFileSync(jsonPath, font.data);
     const pngKb = (fs.statSync(pngPath).size / 1024).toFixed(1);
     const jsonKb = (fs.statSync(jsonPath).size / 1024).toFixed(1);
