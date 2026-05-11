@@ -155,4 +155,45 @@ describe('createScalarVolumeRenderer setters', () => {
     const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
     expect(() => renderer.setDensityScale('nope', 1.0)).not.toThrow();
   });
+
+  it('addField seeds a no-envelope sentinel (both edges past the cube corner)', () => {
+    // The wireSlots commit overwrites envelope via setEnvelope right
+    // after addField returns — but tests that go directly through
+    // addField (and any future production caller that bypasses
+    // wireSlots) should get a visually-identity envelope by default,
+    // not a silently-cropped cube.
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    renderer.addField('h', fixture());
+    const e = renderer.__getFieldEntryForTest('h');
+    expect(e?.envelopeInner).toBeGreaterThanOrEqual(Math.sqrt(3));
+    expect(e?.envelopeOuter).toBeGreaterThanOrEqual(Math.sqrt(3));
+  });
+
+  it('setEnvelope writes both edges through to the field entry', () => {
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    renderer.addField('h', fixture());
+    renderer.setEnvelope('h', 0.9, 1.0);
+    const e = renderer.__getFieldEntryForTest('h');
+    expect(e?.envelopeInner).toBeCloseTo(0.9, 6);
+    expect(e?.envelopeOuter).toBeCloseTo(1.0, 6);
+  });
+
+  it('setEnvelope replaces NaN / non-finite inputs with the no-envelope sentinel', () => {
+    // A bad input would otherwise propagate to the uniform buffer and
+    // produce undefined sampling behaviour in the shader.  Safer to
+    // silently fall back to the visual identity (no envelope) than to
+    // render garbage; matches the forgiving pattern of the sibling
+    // setters.
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    renderer.addField('h', fixture());
+    renderer.setEnvelope('h', Number.NaN, Infinity);
+    const e = renderer.__getFieldEntryForTest('h');
+    expect(e?.envelopeInner).toBeGreaterThanOrEqual(Math.sqrt(3));
+    expect(e?.envelopeOuter).toBeGreaterThanOrEqual(Math.sqrt(3));
+  });
+
+  it('setEnvelope on an unknown handle is a no-op', () => {
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    expect(() => renderer.setEnvelope('nope', 0.9, 1.0)).not.toThrow();
+  });
 });

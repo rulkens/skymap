@@ -633,6 +633,18 @@ export function App(): React.ReactElement {
                 );
                 handleRef.current?.setVolumeFieldContrast?.(handle, contrast);
               },
+              onVolumeFieldDensityScaleChange: (handle: string, densityScale: number) => {
+                // Same shape as the intensity / contrast handlers.  The
+                // engine's `setVolumeFieldDensityScale` also mirrors the
+                // value into `state.settings.volumeFields[handle]` so
+                // both layers agree.
+                setVolumeFields(
+                  volumeFields.map((f) =>
+                    f.handle === handle ? { ...f, densityScale } : f,
+                  ),
+                );
+                handleRef.current?.setVolumeFieldDensityScale?.(handle, densityScale);
+              },
               onVolumeFieldPaletteChange: (handle: string, paletteId: ScalarFieldPaletteId) => {
                 setVolumeFields(
                   volumeFields.map((f) => (f.handle === handle ? { ...f, paletteId } : f)),

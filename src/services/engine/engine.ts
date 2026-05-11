@@ -92,7 +92,6 @@ import {
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
-  DEFAULT_VOLUME_FIELD_CONTRAST,
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
@@ -1057,7 +1056,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         state.settings.volumeFields[handle] = {
           enabled: true,
           intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
-          contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
+          contrast: defaults.contrast,
           densityScale: defaults.densityScale,
           paletteId: defaults.paletteId,
         };
@@ -1145,18 +1144,21 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     getVolumeFieldsState() {
       // Combines the ordered handle list from the renderer with the
       // per-field settings bag — avoiding the need to expose internal
-      // state to the React layer.  The label defaults to the handle
-      // string; a future `addVolumeField({ handle, label, ... })` API
-      // extension would populate it from caller metadata.
+      // state to the React layer.  We pull the human-readable label
+      // from `VOLUME_FIELD_DEFAULTS` when the registry has one, so
+      // the panel shows "CF-4 DM density" instead of "cf4-density";
+      // unregistered handles still fall back to the raw string.
       const handles = state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
       return handles.map((handle) => {
         const field = state.settings.volumeFields[handle];
+        const defaults = getVolumeFieldDefaults(handle);
         return {
           handle,
-          label: handle,
+          label: defaults.label ?? handle,
           enabled: field?.enabled ?? true,
           intensity: field?.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
-          contrast: field?.contrast ?? DEFAULT_VOLUME_FIELD_CONTRAST,
+          contrast: field?.contrast ?? defaults.contrast,
+          densityScale: field?.densityScale ?? defaults.densityScale,
           paletteId: field?.paletteId ?? DEFAULT_VOLUME_PALETTE_ID,
         };
       });

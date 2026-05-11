@@ -89,7 +89,6 @@ import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator'
 import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
 import {
   DEFAULT_CF4_DENSITY_ENABLED,
-  DEFAULT_VOLUME_FIELD_CONTRAST,
   DEFAULT_VOLUME_FIELD_INTENSITY,
 } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
@@ -218,7 +217,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
           state.settings.volumeFields[handle] = {
             enabled: DEFAULT_CF4_DENSITY_ENABLED,
             intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
-            contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
+            contrast: defaults.contrast,
             densityScale: defaults.densityScale,
             paletteId: defaults.paletteId,
           };
@@ -229,6 +228,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         renderer.setContrast(handle, persisted.contrast);
         renderer.setFieldPalette(handle, persisted.paletteId);
         renderer.setDensityScale(handle, persisted.densityScale);
+        // Envelope is per-cube static (a presentation property of the
+        // dataset, not a user-tunable slider) so we apply it straight
+        // from the registry rather than mirroring it into
+        // `persisted` — no JS-side state to keep in sync.
+        renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
         cb.onVolumeFieldsChanged?.();
         state.subsystems.scheduler.requestRender();
       },
@@ -383,7 +387,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
             state.settings.volumeFields[handle] = {
               enabled: defaultEnabled,
               intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
-              contrast: DEFAULT_VOLUME_FIELD_CONTRAST,
+              contrast: defaults.contrast,
               densityScale: defaults.densityScale,
               paletteId: defaults.paletteId,
             };
@@ -394,6 +398,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
           renderer.setContrast(handle, persisted.contrast);
           renderer.setFieldPalette(handle, persisted.paletteId);
           renderer.setDensityScale(handle, persisted.densityScale);
+          // Same per-cube envelope plumbing as the cf4Density commit
+          // above.  Debug fixtures register `NO_SPATIAL_ENVELOPE` in
+          // the registry so the envelope is visually a no-op here —
+          // grid corners stay visible for axis verification.
+          renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
           // Fire the same React-facing callback that engineHandle's
           // addVolumeField fires.  Without this, the SettingsPanel
           // never learns the new field exists — its mirror is rebuilt

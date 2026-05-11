@@ -1,11 +1,8 @@
 /*
  * Per-field row for the SettingsPanel "Volumes" section.  Two visual
- * lines: a top line with the enable checkbox + label + palette select,
- * and a bottom line with the intensity slider stretched across the
- * available width.  Splitting vertically (rather than cramming four
- * controls onto one line) means none of them have to fight for
- * horizontal space — the slider gets the full row to itself, and the
- * palette dropdown gets a stable position regardless of label length.
+ * regions: a top line with the enable checkbox + label + palette
+ * select, and a stack of three labelled-slider rows underneath (one
+ * each for Intensity / Contrast / Density).
  */
 
 .row {
@@ -51,18 +48,51 @@
 }
 
 /*
- * Bottom line: the intensity slider takes the full width.  No label
- * text — the slider's purpose is implied by sitting under the field
- * name, and adding a redundant "Intensity" label would crowd the row
- * for no information gain.
+ * Labelled-slider row: name on the left (fixed width), current value
+ * next to it (also fixed, right-aligned so digits line up), then the
+ * slider stretches to fill the rest of the row.  Fixed-width columns
+ * keep the three sibling rows visually aligned even when the values
+ * have different digit counts.
+ *
+ * The values use `font-feature-settings: 'tnum'` (tabular numerals)
+ * so 0.51 → 0.52 doesn't shimmy horizontally as the user drags —
+ * each digit occupies the same advance width regardless of glyph.
  */
-.intensitySlider {
-  width: 100%;
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 4px);
+  font-size: 0.85em;
+  color: var(--color-fg-muted, #aaa);
+}
+
+.sliderLabel {
+  /* Wide enough for the longest label ("Intensity", 9 chars) at the
+     current font without wrapping; right-aligning makes the trailing
+     edge line up with the value column for a clean grid look. */
+  flex: 0 0 4.5em;
+  text-align: left;
+  letter-spacing: 0.02em;
+}
+
+.sliderValue {
+  /* Three significant chars max for any of our formatters
+     ("0.00" through "30.0"); 3em is wide enough.  Right-aligned and
+     tabular for visual stability while dragging. */
+  flex: 0 0 3em;
+  text-align: right;
+  font-feature-settings: 'tnum';
+  color: var(--color-fg, #ddd);
+}
+
+.slider {
+  flex: 1;
+  min-width: 0; /* let the flex item shrink below its natural size */
   accent-color: var(--color-accent-control, #4a9eff);
   cursor: pointer;
 }
 
-.intensitySlider:disabled {
+.slider:disabled {
   opacity: 0.4;
   cursor: default;
 }
