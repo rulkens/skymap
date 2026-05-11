@@ -6,6 +6,11 @@
  * assert per-callback call count + argument.  We also verify the
  * optional-chaining behaviour: callbacks left undefined are silently
  * skipped (i.e. no exception, no call).
+ *
+ * H5 task 11: every echo lives on its nested sub-bag address now —
+ * `cb.points?.onSizeChange?.(…)` not `cb.onPointSizeChange?.(…)`.
+ * The test fixtures mirror that namespacing so a regression in either
+ * the dispatch or the nested name shows up here.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -36,64 +41,85 @@ function makeSnapshot(): Snapshot {
   };
 }
 
-function makeRequiredCallbacks() {
-  // The three required callbacks aren't fired by the helper, but the
-  // EngineCallbacks type requires them — fill with no-op spies.
+function makeRequiredCallbacks(): EngineCallbacks {
+  // The two required clusters (`lifecycle`, `selection`) aren't fired by
+  // the helper, but the EngineCallbacks type requires them — fill with
+  // no-op spies.
   return {
-    onStatusChange: vi.fn(),
-    onHoverChange: vi.fn(),
-    onSelectChange: vi.fn(),
+    lifecycle: { onStatusChange: vi.fn() },
+    selection: {
+      onHoverChange: vi.fn(),
+      onSelectChange: vi.fn(),
+    },
   };
 }
 
 describe('seedSettingsCallbacks', () => {
   it('fires every optional callback exactly once with its snapshot value', () => {
     const snap = makeSnapshot();
+    const points = {
+      onSizeChange: vi.fn(),
+      onBrightnessChange: vi.fn(),
+      onDepthFadeChange: vi.fn(),
+      onHighlightFallbackChange: vi.fn(),
+      onRealOnlyChange: vi.fn(),
+    };
+    const tonemap = {
+      onExposureChange: vi.fn(),
+      onCurveChange: vi.fn(),
+    };
+    const camera = {
+      onAutoRotateChange: vi.fn(),
+    };
+    const thumbnails = { onEnabledChange: vi.fn() };
+    const bias = {
+      onModeChange: vi.fn(),
+      onAbsMagLimitChange: vi.fn(),
+    };
+    const sources = {
+      onLodModeChange: vi.fn(),
+      onMaskChange: vi.fn(),
+    };
+
     const cb: EngineCallbacks = {
       ...makeRequiredCallbacks(),
-      onPointSizeChange: vi.fn(),
-      onBrightnessChange: vi.fn(),
-      onAutoRotateChange: vi.fn(),
-      onGalaxyTexturesEnabledChange: vi.fn(),
-      onHighlightFallbackChange: vi.fn(),
-      onRealOnlyModeChange: vi.fn(),
-      onDepthFadeEnabledChange: vi.fn(),
-      onBiasModeChange: vi.fn(),
-      onAbsMagLimitChange: vi.fn(),
-      onToneMapCurveChange: vi.fn(),
-      onExposureChange: vi.fn(),
-      onLodModeChange: vi.fn(),
-      onSourceMaskChange: vi.fn(),
+      points,
+      tonemap,
+      camera,
+      thumbnails,
+      bias,
+      sources,
     };
 
     seedSettingsCallbacks(cb, snap);
 
-    expect(cb.onPointSizeChange).toHaveBeenCalledExactlyOnceWith(snap.pointSize);
-    expect(cb.onBrightnessChange).toHaveBeenCalledExactlyOnceWith(snap.brightness);
-    expect(cb.onAutoRotateChange).toHaveBeenCalledExactlyOnceWith(snap.autoRotate);
-    expect(cb.onGalaxyTexturesEnabledChange).toHaveBeenCalledExactlyOnceWith(
+    expect(points.onSizeChange).toHaveBeenCalledExactlyOnceWith(snap.pointSize);
+    expect(points.onBrightnessChange).toHaveBeenCalledExactlyOnceWith(snap.brightness);
+    expect(camera.onAutoRotateChange).toHaveBeenCalledExactlyOnceWith(snap.autoRotate);
+    expect(thumbnails.onEnabledChange).toHaveBeenCalledExactlyOnceWith(
       snap.galaxyTexturesEnabled,
     );
-    expect(cb.onHighlightFallbackChange).toHaveBeenCalledExactlyOnceWith(snap.highlightFallback);
-    expect(cb.onRealOnlyModeChange).toHaveBeenCalledExactlyOnceWith(snap.realOnlyMode);
-    expect(cb.onDepthFadeEnabledChange).toHaveBeenCalledExactlyOnceWith(snap.depthFadeEnabled);
-    expect(cb.onBiasModeChange).toHaveBeenCalledExactlyOnceWith(snap.biasMode);
-    expect(cb.onAbsMagLimitChange).toHaveBeenCalledExactlyOnceWith(snap.absMagLimit);
-    expect(cb.onToneMapCurveChange).toHaveBeenCalledExactlyOnceWith(snap.toneMapCurve);
-    expect(cb.onExposureChange).toHaveBeenCalledExactlyOnceWith(snap.exposure);
-    expect(cb.onLodModeChange).toHaveBeenCalledExactlyOnceWith(snap.lodMode);
-    expect(cb.onSourceMaskChange).toHaveBeenCalledExactlyOnceWith(snap.visibleSourceMask);
+    expect(points.onHighlightFallbackChange).toHaveBeenCalledExactlyOnceWith(
+      snap.highlightFallback,
+    );
+    expect(points.onRealOnlyChange).toHaveBeenCalledExactlyOnceWith(snap.realOnlyMode);
+    expect(points.onDepthFadeChange).toHaveBeenCalledExactlyOnceWith(snap.depthFadeEnabled);
+    expect(bias.onModeChange).toHaveBeenCalledExactlyOnceWith(snap.biasMode);
+    expect(bias.onAbsMagLimitChange).toHaveBeenCalledExactlyOnceWith(snap.absMagLimit);
+    expect(tonemap.onCurveChange).toHaveBeenCalledExactlyOnceWith(snap.toneMapCurve);
+    expect(tonemap.onExposureChange).toHaveBeenCalledExactlyOnceWith(snap.exposure);
+    expect(sources.onLodModeChange).toHaveBeenCalledExactlyOnceWith(snap.lodMode);
+    expect(sources.onMaskChange).toHaveBeenCalledExactlyOnceWith(snap.visibleSourceMask);
   });
 
   it('does not fire required callbacks (status/hover/select) — those have separate lifecycles', () => {
-    const required = makeRequiredCallbacks();
-    const cb: EngineCallbacks = required;
+    const cb = makeRequiredCallbacks();
 
     seedSettingsCallbacks(cb, makeSnapshot());
 
-    expect(required.onStatusChange).not.toHaveBeenCalled();
-    expect(required.onHoverChange).not.toHaveBeenCalled();
-    expect(required.onSelectChange).not.toHaveBeenCalled();
+    expect(cb.lifecycle.onStatusChange).not.toHaveBeenCalled();
+    expect(cb.selection.onHoverChange).not.toHaveBeenCalled();
+    expect(cb.selection.onSelectChange).not.toHaveBeenCalled();
   });
 
   it('silently no-ops when optional callbacks are undefined', () => {
@@ -108,7 +134,7 @@ describe('seedSettingsCallbacks', () => {
     const onExposureChange = vi.fn();
     const cb: EngineCallbacks = {
       ...makeRequiredCallbacks(),
-      onExposureChange,
+      tonemap: { onExposureChange },
     };
 
     seedSettingsCallbacks(cb, makeSnapshot());

@@ -199,7 +199,7 @@ export type FocusSyncReturn = {
  *   3. **Drain + supersede** — once the engine reaches `'ready'`
  *      (which guarantees `state.cam` is constructed), runs the
  *      resolver against every loaded cloud + the famous sidecars +
- *      the alias map and dispatches `engine.selectByAlias` on a
+ *      the alias map and dispatches `engine.selection.selectByAlias` on a
  *      successful match.  Resolution during loading is monotonic, so
  *      `unknown` is treated as "not yet" — pending stays set and the
  *      effect re-fires on the next data dep change.  Pending is
@@ -252,7 +252,7 @@ export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
         // "before any pin existed".  Tell the engine to clear so the
         // selection-effect's next run sees `selected === null` and
         // doesn't try to write an old hash back over the empty one.
-        engineHandleRef.current?.clearSelection();
+        engineHandleRef.current?.selection.clear();
       }
     };
     window.addEventListener('popstate', onPopState);
@@ -305,7 +305,7 @@ export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
     // `state.cam === null` and silently bails.
     if (status.kind !== 'ready') return;
     const handle = engineHandleRef.current;
-    if (!handle?.getCloud || !handle?.selectByAlias) return;
+    if (!handle?.sources || !handle?.selection) return;
 
     // Build the resolver's `clouds` input from currently-loaded sources.
     // Skip Synthetic — the resolver excludes it anyway because synthetic
@@ -315,7 +315,7 @@ export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
     const clouds: { source: Source; cloud: PointCloud }[] = [];
     for (const source of ALL_SOURCES) {
       if (source === Source.Synthetic) continue;
-      const cloud = handle.getCloud(source);
+      const cloud = handle.sources.getCloud(source);
       if (cloud) clouds.push({ source, cloud });
     }
     if (clouds.length === 0) return;
@@ -332,7 +332,7 @@ export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
       // `selectByAlias` doesn't read the engine's still-loading copy.
       // See the EngineHandle JSDoc on `selectByAlias` for the race
       // this avoids.
-      handle.selectByAlias({
+      handle.selection.selectByAlias({
         source: result.source,
         localIdx: result.localIdx,
         famousMeta,

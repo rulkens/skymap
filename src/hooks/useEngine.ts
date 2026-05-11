@@ -124,38 +124,92 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Stable refs to the React setters wired into the nested sub-bag
+    // entries below.  H5 task 11 deleted the flat callback shape from
+    // `EngineCallbacks`; every subscriber now lives inside its cluster
+    // (`lifecycle`, `selection`, `camera`, `sources`, …).
+    const onCloudReadyImpl = (source: Source, count: number) =>
+      setSourceCounts((prev) => ({ ...prev, [source]: count }));
+    const onCameraChangeImpl = (snapshot: { distance: number; fovYRad: number }) => {
+      const c = canvasRef.current;
+      if (!c) return;
+      const info = computeScaleInfo({
+        cam: snapshot,
+        canvasSize: { width: c.clientWidth, height: c.clientHeight },
+        targetPx: SCALE_TARGET_PX,
+      });
+      if (info !== null) setScale(info);
+    };
+
+    // H5 Task 11: only nested sub-bags survive in `EngineCallbacks`.
+    // Each bag here merges this hook's session-level subscriptions
+    // (status / hover / select / focus / camera / fps / cloud / tier /
+    // load progress) with whatever `extraCallbacks` from
+    // `useEngineSettings` declares for that cluster.  Spread order
+    // puts the extra-callback entries LAST so the settings hook's
+    // echoes win where both define the same method (rare but well-
+    // defined).  `initialTier` rides through as a non-callback option.
+    const {
+      lifecycle: extraLifecycle,
+      points: extraPoints,
+      tonemap: extraTonemap,
+      camera: extraCamera,
+      selection: extraSelection,
+      sources: extraSources,
+      bias: extraBias,
+      thumbnails: extraThumbnails,
+      milkyWay: extraMilkyWay,
+      filaments: extraFilaments,
+      volumes: extraVolumes,
+      input: extraInput,
+    } = extraCallbacks ?? {};
+
     const handle = createEngine(canvas, {
-      onStatusChange: setStatus,
-      onHoverChange: setHovered,
-      onSelectChange: setSelected,
-      onFocusChange: setFocused,
-      // Derive scale-bar legend from the engine's per-frame camera
-      // snapshot.  `computeScaleInfo` is pure (and reused from the
-      // engine's helpers — see scaleBar.ts).  We read viewport
-      // dimensions from the live canvas ref so a resize that hasn't
-      // yet triggered a cam tick still produces an up-to-date bar on
-      // the next emission.  The pure function returns null for
-      // degenerate inputs (viewport height 0, distance ≈ 0); we
-      // skip setState in that window so the placeholder stays.
-      // React's setState equality dedups unchanged frames, replacing
-      // the engine's old `lastSig` string compare.
-      onCameraChange: (snapshot) => {
-        const c = canvasRef.current;
-        if (!c) return;
-        const info = computeScaleInfo({
-          cam: snapshot,
-          canvasSize: { width: c.clientWidth, height: c.clientHeight },
-          targetPx: SCALE_TARGET_PX,
-        });
-        if (info !== null) setScale(info);
-      },
-      onCloudReady: (source, count) =>
-        setSourceCounts((prev) => ({ ...prev, [source]: count })),
-      onFpsChange: setFps,
       initialTier: currentTier,
-      onTierChange: setCurrentTier,
-      onLoadProgress: setLoadProgress,
-      ...extraCallbacks,
+      lifecycle: {
+        onStatusChange: setStatus,
+        onFpsChange: setFps,
+        ...extraLifecycle,
+      },
+      selection: {
+        onHoverChange: setHovered,
+        onSelectChange: setSelected,
+        ...extraSelection,
+      },
+      camera: {
+        // Derive scale-bar legend from the engine's per-frame camera
+        // snapshot.  `computeScaleInfo` is pure (and reused from the
+        // engine's helpers — see scaleBar.ts).  We read viewport
+        // dimensions from the live canvas ref so a resize that hasn't
+        // yet triggered a cam tick still produces an up-to-date bar on
+        // the next emission.  The pure function returns null for
+        // degenerate inputs (viewport height 0, distance ≈ 0); we
+        // skip setState in that window so the placeholder stays.
+        // React's setState equality dedups unchanged frames.
+        onFocusChange: setFocused,
+        onCameraChange: onCameraChangeImpl,
+        ...extraCamera,
+      },
+      sources: {
+        onCloudReady: onCloudReadyImpl,
+        onTierChange: setCurrentTier,
+        onLoadProgress: setLoadProgress,
+        ...extraSources,
+      },
+      // The remaining bags have no session-level subscription here —
+      // they're owned entirely by `extraCallbacks` (settings echoes
+      // plus the volumes-changed dispatcher from App.tsx).  We pass
+      // them through unconditionally so the optional-chain in engine
+      // code resolves to the actual function (or stays undefined if
+      // the consumer didn't subscribe).
+      points: extraPoints,
+      tonemap: extraTonemap,
+      bias: extraBias,
+      thumbnails: extraThumbnails,
+      milkyWay: extraMilkyWay,
+      filaments: extraFilaments,
+      volumes: extraVolumes,
+      input: extraInput,
     });
 
     handleRef.current = handle;

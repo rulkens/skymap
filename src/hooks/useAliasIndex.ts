@@ -58,7 +58,7 @@ export function useAliasIndex(input: UseAliasIndexInput): UseAliasIndexReturn {
     if (!paletteOpen) return;
     if (aliasLoadStarted.current) return;
     const handle = engineHandleRef.current;
-    if (!handle?.getCloudObjIds) return;
+    if (!handle?.sources) return;
     // Don't kick off until at least one of GLADE / 2MRS has started
     // loading.  Without this guard the join walks a missing array and
     // emits no entries, permanently caching an empty index.
@@ -72,10 +72,10 @@ export function useAliasIndex(input: UseAliasIndexInput): UseAliasIndexReturn {
     // machinery alongside every other load.  Engine builds that predate
     // the slot wiring don't expose this method; guard for that and
     // silently skip alias indexing in that case.
-    if (!handle.loadPgcAliases) return;
+    if (!handle.selection?.loadAliases) return;
 
     aliasLoadStarted.current = true;
-    handle.loadPgcAliases().then((loadedAliasMap) => {
+    handle.selection.loadAliases().then((loadedAliasMap) => {
       // Stash the raw Map first for the deep-link resolver oracle —
       // it only needs `.has(pgc)`, not the per-source localIdx join.
       setAliasMap(loadedAliasMap);

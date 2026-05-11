@@ -17,6 +17,15 @@
  * If these three pass and `tsc --noEmit` is clean, the type is wired
  * correctly.  Anything subtler shows up in the engine's own behaviour
  * tests (which exercise it transitively).
+ *
+ * ### Post-H5 (2026-05-11) shape
+ *
+ * `EngineSettingsState` is a flat list of eight cluster sub-bags
+ * (`points`, `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`,
+ * `filaments`, `volumes`).  `EngineBiasState` holds only the
+ * bake-output sentinels (`apparentMagLimit`, `schechterMStar`,
+ * `schechterAlpha`); the user-facing `mode` and `absMagLimit` live
+ * inside `settings.bias`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -79,24 +88,22 @@ describe('EngineState type', () => {
     // an explicit update here too — easier to spot the drift than a
     // single 30-line literal.
     const settings: EngineSettingsState = {
-      pointSizePx: 2.5,
-      brightness: 1.0,
-      autoRotate: false,
-      galaxyTexturesEnabled: true,
-      milkyWayEnabled: true,
-      filamentsEnabled: false,
-      filamentIntensity: 1,
-      volumesEnabled: false,
-      volumeFields: {},
-      highlightFallback: false,
-      realOnlyMode: false,
-      depthFadeEnabled: true,
-      exposure: 3.0,
-      toneMapCurve: DEFAULT_TONE_MAP_CURVE,
+      points: {
+        sizePx: 2.5,
+        brightness: 1.0,
+        depthFade: true,
+        highlightFallback: false,
+        realOnly: false,
+      },
+      tonemap: { exposure: 3.0, curve: DEFAULT_TONE_MAP_CURVE },
+      camera: { autoRotate: false },
+      bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: -19 },
+      thumbnails: { enabled: true },
+      milkyWay: { enabled: true },
+      filaments: { enabled: false, intensity: 1 },
+      volumes: { masterEnabled: false, fields: {} },
     };
     const bias: EngineBiasState = {
-      mode: DEFAULT_BIAS_MODE,
-      absMagLimit: -19,
       apparentMagLimit: 0,
       schechterMStar: 0,
       schechterAlpha: 0,
@@ -167,8 +174,8 @@ describe('EngineState type', () => {
     };
     stateRef.current = state;
 
-    expect(state.settings.pointSizePx).toBe(2.5);
-    expect(state.bias.mode).toBe(DEFAULT_BIAS_MODE);
+    expect(state.settings.points.sizePx).toBe(2.5);
+    expect(state.settings.bias.mode).toBe(DEFAULT_BIAS_MODE);
     expect(state.sources.visibleMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
     // hover/selection moved off `state.picking` and onto
     // `state.subsystems.selection` in Spec D.3.
@@ -183,24 +190,22 @@ describe('EngineState type', () => {
     // string), this test fails to compile and we catch it here rather
     // than inside the 1500-line engine.ts.
     const settings: EngineSettingsState = {
-      pointSizePx: DEFAULT_POINT_SIZE_PX,
-      brightness: DEFAULT_BRIGHTNESS,
-      autoRotate: DEFAULT_AUTO_ROTATE,
-      galaxyTexturesEnabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
-      milkyWayEnabled: DEFAULT_MILKY_WAY_ENABLED,
-      filamentsEnabled: DEFAULT_FILAMENTS_ENABLED,
-      filamentIntensity: DEFAULT_FILAMENT_INTENSITY,
-      volumesEnabled: DEFAULT_VOLUMES_ENABLED,
-      volumeFields: {},
-      highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
-      realOnlyMode: DEFAULT_REAL_ONLY_MODE,
-      depthFadeEnabled: DEFAULT_DEPTH_FADE_ENABLED,
-      exposure: DEFAULT_EXPOSURE,
-      toneMapCurve: DEFAULT_TONE_MAP_CURVE,
+      points: {
+        sizePx: DEFAULT_POINT_SIZE_PX,
+        brightness: DEFAULT_BRIGHTNESS,
+        depthFade: DEFAULT_DEPTH_FADE_ENABLED,
+        highlightFallback: DEFAULT_HIGHLIGHT_FALLBACK,
+        realOnly: DEFAULT_REAL_ONLY_MODE,
+      },
+      tonemap: { exposure: DEFAULT_EXPOSURE, curve: DEFAULT_TONE_MAP_CURVE },
+      camera: { autoRotate: DEFAULT_AUTO_ROTATE },
+      bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: DEFAULT_ABS_MAG_LIMIT },
+      thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
+      milkyWay: { enabled: DEFAULT_MILKY_WAY_ENABLED },
+      filaments: { enabled: DEFAULT_FILAMENTS_ENABLED, intensity: DEFAULT_FILAMENT_INTENSITY },
+      volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
     };
     const bias: EngineBiasState = {
-      mode: DEFAULT_BIAS_MODE,
-      absMagLimit: DEFAULT_ABS_MAG_LIMIT,
       apparentMagLimit: 0,
       schechterMStar: 0,
       schechterAlpha: 0,
@@ -210,37 +215,37 @@ describe('EngineState type', () => {
       lodMode: DEFAULT_LOD_MODE,
     };
 
-    expect(settings.pointSizePx).toBe(DEFAULT_POINT_SIZE_PX);
-    expect(bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
+    expect(settings.points.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
+    expect(settings.bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
+    expect(bias.apparentMagLimit).toBe(0);
     expect(sources.lodMode).toBe(DEFAULT_LOD_MODE);
   });
 
   it('allows in-place mutation of every sub-bag field', () => {
-    // The engine mutates fields directly (e.g. `state.settings.brightness = v`
-    // inside `setBrightness`), so the type must NOT be Readonly.  We
-    // exercise a representative mutation per bag to lock that contract.
+    // The engine mutates fields directly (e.g.
+    // `state.settings.points.brightness = v`), so the type must NOT
+    // be Readonly.  We exercise a representative mutation per bag to
+    // lock that contract.
     // eslint-disable-next-line prefer-const
     let stateRef: { current: EngineState | null } = { current: null };
     const state: EngineState = {
       settings: {
-        pointSizePx: 1,
-        brightness: 1,
-        autoRotate: false,
-        galaxyTexturesEnabled: true,
-        milkyWayEnabled: true,
-        filamentsEnabled: false,
-        filamentIntensity: 1,
-        volumesEnabled: false,
-        volumeFields: {},
+        points: {
+          sizePx: 1,
+          brightness: 1,
+          depthFade: true,
           highlightFallback: false,
-        realOnlyMode: false,
-        depthFadeEnabled: true,
-        exposure: 1,
-        toneMapCurve: DEFAULT_TONE_MAP_CURVE,
+          realOnly: false,
+        },
+        tonemap: { exposure: 1, curve: DEFAULT_TONE_MAP_CURVE },
+        camera: { autoRotate: false },
+        bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: 0 },
+        thumbnails: { enabled: true },
+        milkyWay: { enabled: true },
+        filaments: { enabled: false, intensity: 1 },
+        volumes: { masterEnabled: false, fields: {} },
       },
       bias: {
-        mode: DEFAULT_BIAS_MODE,
-        absMagLimit: 0,
         apparentMagLimit: 0,
         schechterMStar: 0,
         schechterAlpha: 0,
@@ -301,16 +306,16 @@ describe('EngineState type', () => {
     };
     stateRef.current = state;
 
-    state.settings.brightness = 2.5;
-    state.bias.absMagLimit = -20;
+    state.settings.points.brightness = 2.5;
+    state.settings.bias.absMagLimit = -20;
     state.sources.visibleMask = 0xff;
     // hovered/selected aren't on `state.picking` anymore — exercise the
     // subsystem's setter instead.
     state.subsystems.selection.setHovered({ source: 1 as Source, localIdx: 42 });
     state.picking.pickInFlight = true;
 
-    expect(state.settings.brightness).toBe(2.5);
-    expect(state.bias.absMagLimit).toBe(-20);
+    expect(state.settings.points.brightness).toBe(2.5);
+    expect(state.settings.bias.absMagLimit).toBe(-20);
     expect(state.sources.visibleMask).toBe(0xff);
     expect(state.subsystems.selection.hovered()).toEqual({ source: 1, localIdx: 42 });
     expect(state.picking.pickInFlight).toBe(true);

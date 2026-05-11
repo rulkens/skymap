@@ -1,0 +1,26 @@
+import type { LodMode } from './LodMode';
+import type { Source } from '../data/sources';
+import type { Tier } from './Tier';
+import type { PointCloud } from './PointCloud';
+
+/**
+ * EngineSourcesHandle — survey lifecycle: visibility, tier, raw cloud access.
+ *
+ * `setLodMode` flips between auto-LOD (engine drives visibility from camera
+ * distance) and manual (caller drives it).  `setVisible` toggles one survey
+ * and implicitly switches to manual.  `setTier` hot-swaps the active data
+ * tier across all surveys with per-source re-fetch.  `getCloud`/`getCloudObjIds`
+ * expose the in-memory PointCloud for deep-link / alias-index consumers.
+ */
+export type EngineSourcesHandle = {
+  /** Switch between 'auto' and 'manual' LOD modes. */
+  setLodMode: (mode: LodMode) => void;
+  /** Toggle visibility of one survey; implicitly switches LOD to 'manual'. */
+  setVisible: (source: Source, visible: boolean) => void;
+  /** Hot-swap the active data tier (re-fetches per-source bins). */
+  setTier: (tier: Tier) => void;
+  /** Return the full PointCloud for a source, or undefined if unloaded. */
+  getCloud: (source: Source) => PointCloud | undefined;
+  /** Return just the objIDs array for a source (narrower contract). */
+  getCloudObjIds: (source: Source) => BigUint64Array | undefined;
+};

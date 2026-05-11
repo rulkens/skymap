@@ -32,7 +32,7 @@ export type UseKeyboardShortcutsInput = {
   selected: PointInfo | null;
   /** Used to gate the `/` shortcut so the palette doesn't reopen on top of itself. */
   paletteOpen: boolean;
-  /** Engine driver for clearSelection, focusOn, focusOnHome, logCameraState. */
+  /** Engine driver for selection.clear, camera.focusOn, camera.focusOnHome, camera.logState. */
   engineHandleRef: RefObject<EngineHandle | null>;
   /**
    * The React setter for the palette-open state.  Taking the setter
@@ -100,19 +100,19 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
 
       // ── Esc clears the pin ─────────────────────────────────────
       if (e.key === 'Escape') {
-        engineHandleRef.current?.clearSelection();
+        engineHandleRef.current?.selection.clear();
         return;
       }
 
       // ── f focuses on the currently-pinned galaxy ───────────────
       if (e.key === 'f' || e.key === 'F') {
-        if (selected) engineHandleRef.current?.focusOn(selected);
+        if (selected) engineHandleRef.current?.camera.focusOn(selected);
         return;
       }
 
       // ── h returns to the home / Earth view ─────────────────────
       if (e.key === 'h' || e.key === 'H') {
-        engineHandleRef.current?.focusOnHome();
+        engineHandleRef.current?.camera.focusOnHome();
         return;
       }
 
@@ -134,7 +134,7 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
       // ── l prints the live camera state (dev hotkey) ────────────
       // Lower-case only — capital L is reserved for future use.
       if (e.key === 'l') {
-        engineHandleRef.current?.logCameraState();
+        engineHandleRef.current?.camera.logState();
         return;
       }
 

@@ -34,23 +34,24 @@ import type { EngineState } from '../../../../src/@types';
  */
 function makeState(): EngineState {
   return {
+    // Post-H5 nested-only settings shape.
     settings: {
-      autoRotate: false,
-      pointSizePx: 2,
-      brightness: 0.5,
-      galaxyTexturesEnabled: false,
-      milkyWayEnabled: false,
-      filamentsEnabled: false,
-      filamentIntensity: 1,
-      highlightFallback: false,
-      realOnlyMode: false,
-      depthFadeEnabled: false,
-      exposure: 1,
-      toneMapCurve: 'linear',
+      points: {
+        sizePx: 2,
+        brightness: 0.5,
+        depthFade: false,
+        highlightFallback: false,
+        realOnly: false,
+      },
+      tonemap: { exposure: 1, curve: 'linear' },
+      camera: { autoRotate: false },
+      bias: { mode: 'off', absMagLimit: -19 },
+      thumbnails: { enabled: false },
+      milkyWay: { enabled: false },
+      filaments: { enabled: false, intensity: 1 },
+      volumes: { masterEnabled: false, fields: {} },
     },
     bias: {
-      mode: 'off',
-      absMagLimit: -19,
       apparentMagLimit: 0,
       schechterMStar: 0,
       schechterAlpha: 0,
@@ -124,7 +125,9 @@ function makeDeps(opts: {
       clientWidth: 0,
       clientHeight: 0,
     } as unknown as HTMLCanvasElement,
-    cb: { onFpsChange: opts.onFpsChange } as unknown as RunFrameDeps['cb'],
+    // H5 task 11: runFrame fires the nested `lifecycle.onFpsChange`
+    // address only.  The test fixture mirrors that shape.
+    cb: { lifecycle: { onFpsChange: opts.onFpsChange } } as unknown as RunFrameDeps['cb'],
     fpsCounter: { sample: vi.fn().mockReturnValue(opts.fpsValue) } as unknown as RunFrameDeps['fpsCounter'],
     lastReportedFps: opts.lastReportedFps,
     device: {} as unknown as GPUDevice,

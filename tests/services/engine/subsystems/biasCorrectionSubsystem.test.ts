@@ -99,9 +99,13 @@ function makeCloud(count: number): PointCloud {
 function makeState(clouds: Map<Source, PointCloud>): EngineState {
   const requestRender = vi.fn();
   return {
+    // Post-H5 (2026-05-11): the user-facing bias mode lives on
+    // `state.settings.bias.mode`; `state.bias` keeps only the
+    // bake-output sentinels (apparentMagLimit + schechter params).
+    settings: {
+      bias: { mode: BiasMode.None, absMagLimit: 0 },
+    } as unknown as EngineState['settings'],
     bias: {
-      mode: BiasMode.None,
-      absMagLimit: 0,
       apparentMagLimit: 0,
       schechterMStar: 0,
       schechterAlpha: 0,

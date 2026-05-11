@@ -102,24 +102,22 @@ export type EngineSettingsState = {
  * The slice of `EngineCallbacks` this hook owns.  App.tsx spreads this
  * into its `createEngine(canvas, { ... })` options block so the engine
  * can fire echoes that drive React's settings state.
+ *
+ * H5 task 11: only the nested sub-bag names survive — every flat
+ * sibling on `EngineCallbacks` was deleted in lockstep with the
+ * engine-side fire-site migration.  Filament counts now ride the
+ * `filaments.onReady` address (no flat survivor).
  */
 export type EngineSettingsCallbacks = Pick<
   EngineCallbacks,
-  | 'onPointSizeChange'
-  | 'onBrightnessChange'
-  | 'onAutoRotateChange'
-  | 'onGalaxyTexturesEnabledChange'
-  | 'onMilkyWayEnabledChange'
-  | 'onHighlightFallbackChange'
-  | 'onRealOnlyModeChange'
-  | 'onDepthFadeEnabledChange'
-  | 'onLodModeChange'
-  | 'onSourceMaskChange'
-  | 'onBiasModeChange'
-  | 'onAbsMagLimitChange'
-  | 'onToneMapCurveChange'
-  | 'onExposureChange'
-  | 'onFilamentsReady'
+  | 'points'
+  | 'tonemap'
+  | 'camera'
+  | 'sources'
+  | 'bias'
+  | 'thumbnails'
+  | 'milkyWay'
+  | 'filaments'
 >;
 
 export type UseEngineSettingsReturn = {
@@ -235,22 +233,43 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       volumeFields,
     },
     engineCallbacks: {
-      onPointSizeChange: setPointSize,
-      onBrightnessChange: setBrightness,
-      onAutoRotateChange: setAutoRotate,
-      onGalaxyTexturesEnabledChange: setGalaxyTexturesEnabled,
-      onMilkyWayEnabledChange: setMilkyWayEnabled,
-      onHighlightFallbackChange: setHighlightFallback,
-      onRealOnlyModeChange: setRealOnlyMode,
-      onDepthFadeEnabledChange: setDepthFadeEnabled,
-      onLodModeChange: setLodMode,
-      onSourceMaskChange: setVisibleSourceMask,
-      onBiasModeChange: setBiasMode,
-      onAbsMagLimitChange: setAbsMagLimit,
-      onToneMapCurveChange: setToneMapCurve,
-      onExposureChange: setExposure,
-      onFilamentsReady: (stripCount, vertexCount) =>
-        setFilamentCounts({ stripCount, vertexCount }),
+      // ── Nested sub-bag subscriptions (H5 task 11) ────────────────
+      // Every echo the engine emits lands at its nested address now;
+      // flat callbacks are gone.  The `partial-echo` cases (filaments
+      // enabled/intensity, volumes master) remain App-owned with no
+      // echo wiring, just as before.
+      points: {
+        onSizeChange: setPointSize,
+        onBrightnessChange: setBrightness,
+        onDepthFadeChange: setDepthFadeEnabled,
+        onHighlightFallbackChange: setHighlightFallback,
+        onRealOnlyChange: setRealOnlyMode,
+      },
+      tonemap: {
+        onExposureChange: setExposure,
+        onCurveChange: setToneMapCurve,
+      },
+      camera: {
+        onAutoRotateChange: setAutoRotate,
+      },
+      sources: {
+        onLodModeChange: setLodMode,
+        onMaskChange: setVisibleSourceMask,
+      },
+      bias: {
+        onModeChange: setBiasMode,
+        onAbsMagLimitChange: setAbsMagLimit,
+      },
+      thumbnails: {
+        onEnabledChange: setGalaxyTexturesEnabled,
+      },
+      milkyWay: {
+        onEnabledChange: setMilkyWayEnabled,
+      },
+      filaments: {
+        onReady: (stripCount, vertexCount) =>
+          setFilamentCounts({ stripCount, vertexCount }),
+      },
     },
     setFilamentsEnabled,
     setFilamentIntensity,

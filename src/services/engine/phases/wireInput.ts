@@ -300,7 +300,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       visibleSources,
       // Threaded through so the pick pass can boost its floor size
       // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
-      pointSizePx: state.settings.pointSizePx,
+      pointSizePx: state.settings.points.sizePx,
     });
   };
 
@@ -356,7 +356,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // engine.ts; threaded through `deps.handleRef` so this
       // callback resolves it lazily — by the time a user can
       // physically double-click, the handle has been assigned.
-      deps.handleRef.current?.focusOn(lastClickedInfo);
+      deps.handleRef.current?.camera.focusOn(lastClickedInfo);
     },
   });
 
@@ -368,11 +368,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // an additional `onStatusChange` — the status bar's job is "we're up",
   // not "live counter".
   const firstReadySource = deps.phaseLocals!.firstReadySource;
-  cb.onStatusChange({
-    kind: 'ready',
+  const readyStatus = {
+    kind: 'ready' as const,
     count: renderer.totalCount(),
     source: cloudSourceFor(firstReadySource ?? Source.Synthetic),
-  });
+  };
+  cb.lifecycle?.onStatusChange?.(readyStatus);
 
   // ── Seed settings callbacks ───────────────────────────────────────────
   //
@@ -387,17 +388,17 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // the rationale on why every engine-owned setting React mirrors goes
   // through the same single audited code path.
   seedSettingsCallbacks(cb, {
-    pointSize: state.settings.pointSizePx,
-    brightness: state.settings.brightness,
-    autoRotate: state.settings.autoRotate,
-    galaxyTexturesEnabled: state.settings.galaxyTexturesEnabled,
-    highlightFallback: state.settings.highlightFallback,
-    realOnlyMode: state.settings.realOnlyMode,
-    depthFadeEnabled: state.settings.depthFadeEnabled,
-    biasMode: state.bias.mode,
-    absMagLimit: state.bias.absMagLimit,
-    toneMapCurve: state.settings.toneMapCurve,
-    exposure: state.settings.exposure,
+    pointSize: state.settings.points.sizePx,
+    brightness: state.settings.points.brightness,
+    autoRotate: state.settings.camera.autoRotate,
+    galaxyTexturesEnabled: state.settings.thumbnails.enabled,
+    highlightFallback: state.settings.points.highlightFallback,
+    realOnlyMode: state.settings.points.realOnly,
+    depthFadeEnabled: state.settings.points.depthFade,
+    biasMode: state.settings.bias.mode,
+    absMagLimit: state.settings.bias.absMagLimit,
+    toneMapCurve: state.settings.tonemap.curve,
+    exposure: state.settings.tonemap.exposure,
     lodMode: state.sources.lodMode,
     visibleSourceMask: state.sources.visibleMask,
   });

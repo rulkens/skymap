@@ -29,7 +29,7 @@ import type { Source } from '../data/sources';
  * Built by joining the PGC→names Map (loaded via the pgcAlias slot's
  * fetcher) against the GLADE and 2MRS PointClouds. The palette filters
  * across these entries; selecting one calls back through
- * `engine.selectByAlias` which uses `(source, localIdx)` to compute the
+ * `engine.selection.selectByAlias` which uses `(source, localIdx)` to compute the
  * global index + camera focus.
  *
  * `pgc` is retained for debugging/tracing (logs read better with PGC
@@ -60,7 +60,7 @@ export function buildAliasIndex(input: BuildAliasIndexInput): AliasIndexEntry[] 
   const { handle, aliasMap, sources } = input;
   const out: AliasIndexEntry[] = [];
   for (const source of sources) {
-    const objIds = handle.getCloudObjIds?.(source);
+    const objIds = handle.sources.getCloudObjIds(source);
     if (!objIds) continue;
     for (let i = 0; i < objIds.length; i++) {
       const pgc = objIds[i]!;

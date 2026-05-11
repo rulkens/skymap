@@ -7,9 +7,9 @@
  * Thirteen of the setters on `EngineHandle` (`setPointSize`,
  * `setBrightness`, `setExposure`, …) all share the same three-step shape:
  *
- *   1. mutate one field in `state.settings.*` (or `state.bias.*`),
- *   2. fire an optional echo callback so subscribed React state mirrors
- *      the engine truth,
+ *   1. mutate one field in `state.settings.<cluster>.<leaf>`,
+ *   2. fire an optional nested echo callback so subscribed React state
+ *      mirrors the engine truth,
  *   3. call `requestRender()` to wake the render-on-demand scheduler.
  *
  * Spelled out one-by-one in `engine.ts`'s public-handle object literal,
@@ -50,17 +50,16 @@
  * the descriptor and a custom path until neither half is readable.
  * Bespoke stays bespoke; the table only owns the simple cases.
  *
- * ### Why nested `path` tuples instead of a flat key
+ * ### Why nested `path` tuples
  *
- * Twelve of the thirteen setters write to `state.settings.X`; the
- * thirteenth (`setAbsMagLimit`) writes to `state.bias.absMagLimit`.
- * A flat `key: 'settings.brightness'` shape would force the builder
- * to parse strings at runtime; a typed nested tuple
- * (`['settings', 'brightness']`) lets the descriptor still read like
- * a path while leaving runtime traversal as two indexed reads.  The
- * tuple shape also leaves the door open for a future setter that
- * touches a third sub-bag (e.g. `picking.*`) without changing the
- * descriptor type — just add another tuple entry.
+ * Every descriptor writes to `state.settings.<cluster>.<leaf>`.  A flat
+ * `key: 'settings.points.sizePx'` shape would force the builder to
+ * parse strings at runtime; a typed 3-tuple
+ * (`['settings', 'points', 'sizePx']`) lets the descriptor still read
+ * like a path while leaving runtime traversal as three indexed reads.
+ * The tuple shape also leaves the door open for a future setter that
+ * touches a non-`settings` sub-bag without changing the descriptor
+ * type — just widen the union.
  *
  * ### Type-narrowness tradeoff
  *
@@ -69,18 +68,23 @@
  * (`setPointSize: (n: number) => void`, `setAutoRotate:
  * (b: boolean) => void`, …) would require thirteen conditional
  * branches in the return type.  Production callers go through
- * `EngineHandle`'s declared signatures, so the narrowness loss inside
- * the builder is invisible at the API edge.  We assert the spread is
- * compatible with the relevant slice of `EngineHandle` via a
- * `satisfies` clause in `engine.ts`.
+ * `EngineHandle`'s declared signatures (and the sub-handle forwarders
+ * inside `engine.ts`), so the narrowness loss inside the builder is
+ * invisible at the API edge.
  */
 
-import type { EngineCallbacks, EngineHandle, EngineState } from '../../../@types';
+import type { EngineCallbacks, EngineState } from '../../../@types';
 
 /**
  * The thirteen names this table owns.  Frozen in tests so a future
  * accidental drift (boring setter promoted to bespoke, or vice versa)
  * fails loudly rather than silently.
+ *
+ * These names are no longer part of `EngineHandle` (the H5 task 12
+ * cleanup deleted the flat methods) — they're kept as the internal
+ * identity of each descriptor row, used as Record keys so the
+ * sub-handle forwarders in `engine.ts` can resolve a forwarder by
+ * name (`boringSetters.setPointSize`).
  */
 export type SettingsTableKey =
   | 'setPointSize'
@@ -98,102 +102,136 @@ export type SettingsTableKey =
   | 'setToneMapCurve';
 
 /**
- * Path into `EngineState`.  Two-element tuple: a sub-bag key followed
- * by a leaf field.  Always indexes into `state.settings` or
- * `state.bias` for the current thirteen — but the type leaves room for
- * other sub-bags to join.
+ * 3-tuple path into `EngineState`: `['settings', <cluster>, <leaf>]`.
+ *
+ * Every current row writes into one of the eight `state.settings`
+ * sub-bags.  Widening the union is the way to admit a future setter
+ * that touches (say) `state.picking.*` without changing the helper.
  */
 type SettingsPath =
-  | readonly ['settings', keyof EngineState['settings']]
-  | readonly ['bias', keyof EngineState['bias']];
+  | readonly ['settings', 'points', keyof EngineState['settings']['points']]
+  | readonly ['settings', 'tonemap', keyof EngineState['settings']['tonemap']]
+  | readonly ['settings', 'camera', keyof EngineState['settings']['camera']]
+  | readonly ['settings', 'bias', keyof EngineState['settings']['bias']]
+  | readonly [
+      'settings',
+      'thumbnails',
+      keyof EngineState['settings']['thumbnails'],
+    ]
+  | readonly ['settings', 'milkyWay', keyof EngineState['settings']['milkyWay']]
+  | readonly [
+      'settings',
+      'filaments',
+      keyof EngineState['settings']['filaments'],
+    ]
+  | readonly ['settings', 'volumes', 'masterEnabled'];
+
+/**
+ * Nested callback address: `[cluster, method]`.  The cluster names
+ * line up 1:1 with the optional sub-bags on `EngineCallbacks`
+ * (`points`, `tonemap`, `camera`, `bias`, `thumbnails`, `milkyWay`,
+ * `filaments`, `volumes`, `sources`).  Method names are kept as plain
+ * `string` here because they vary per cluster and adding a full nested
+ * union would duplicate the EngineCallbacks shape — the runtime
+ * optional-chaining safely handles a missing method.
+ */
+type NestedCallbackKey =
+  | readonly ['points', string]
+  | readonly ['tonemap', string]
+  | readonly ['camera', string]
+  | readonly ['bias', string]
+  | readonly ['thumbnails', string]
+  | readonly ['milkyWay', string]
+  | readonly ['filaments', string]
+  | readonly ['volumes', string]
+  | readonly ['sources', string];
 
 /**
  * One row of the descriptor table.
  *
- *   - `name` is the EngineHandle method to emit.
- *   - `path` is the two-step state path the value lands in.
- *   - `callback` (optional) is the EngineCallbacks key to fire after
- *      mutation.  Omit when no echo is wired (App.tsx owns the
- *      boolean optimistically — see `setFilamentsEnabled`).
- *   - `clamp` (optional) wraps the incoming value before it hits
- *      state AND the callback echo.  Returns the post-clamp number.
- *      Used by `setExposure` and `setFilamentIntensity`.
+ *   - `name` is the table-key identity of this descriptor (used as the
+ *     Record key on the builder output so sub-handle forwarders can
+ *     resolve a forwarder by name).
+ *   - `path` is the 3-tuple state path the value lands in.
+ *   - `clamp` (optional) wraps the incoming value before it hits state
+ *     AND the callback echo.  Returns the post-clamp number.  Used by
+ *     `setExposure` and `setFilamentIntensity`.
+ *   - `callback` (optional) is the `[cluster, method]` address fired
+ *     after mutation.  Omit when no echo is wired (App.tsx owns the
+ *     boolean optimistically — see `setFilamentsEnabled`).
  */
 type SettingsDescriptor = {
   name: SettingsTableKey;
   path: SettingsPath;
-  callback?: keyof EngineCallbacks;
   clamp?: (value: number) => number;
+  callback?: NestedCallbackKey;
 };
 
 /**
  * The actual table.  Adding a row here automatically extends the
- * builder output — no manual wiring in `engine.ts` beyond the existing
- * spread.  Removing a row from here without re-implementing the setter
- * inline will fail typecheck wherever `EngineHandle.setX` is required.
+ * builder output — no manual wiring in `engine.ts` beyond resolving
+ * the new forwarder from the `boringSetters` record by name.
  */
 export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
   {
     name: 'setPointSize',
-    path: ['settings', 'pointSizePx'],
-    callback: 'onPointSizeChange',
+    path: ['settings', 'points', 'sizePx'],
+    callback: ['points', 'onSizeChange'],
   },
   {
     name: 'setBrightness',
-    path: ['settings', 'brightness'],
-    callback: 'onBrightnessChange',
+    path: ['settings', 'points', 'brightness'],
+    callback: ['points', 'onBrightnessChange'],
   },
   {
     name: 'setAutoRotate',
-    path: ['settings', 'autoRotate'],
-    callback: 'onAutoRotateChange',
+    path: ['settings', 'camera', 'autoRotate'],
+    callback: ['camera', 'onAutoRotateChange'],
   },
   {
     name: 'setGalaxyTexturesEnabled',
-    path: ['settings', 'galaxyTexturesEnabled'],
-    callback: 'onGalaxyTexturesEnabledChange',
+    path: ['settings', 'thumbnails', 'enabled'],
+    callback: ['thumbnails', 'onEnabledChange'],
   },
   {
     name: 'setMilkyWayEnabled',
-    path: ['settings', 'milkyWayEnabled'],
-    callback: 'onMilkyWayEnabledChange',
+    path: ['settings', 'milkyWay', 'enabled'],
+    callback: ['milkyWay', 'onEnabledChange'],
   },
   {
     // App.tsx owns this boolean optimistically; no echo callback wired.
     // Asymmetry vs. galaxyTextures/milkyWay is deliberate — see the
     // long comment in the original `setFilamentsEnabled`.
     name: 'setFilamentsEnabled',
-    path: ['settings', 'filamentsEnabled'],
+    path: ['settings', 'filaments', 'enabled'],
   },
   {
     // Filament-overlay intensity scale; clamps to [0, 1] same as the
     // hand-rolled setter did.  No callback for the same App-owns-state
     // reason as `setFilamentsEnabled`.
     name: 'setFilamentIntensity',
-    path: ['settings', 'filamentIntensity'],
+    path: ['settings', 'filaments', 'intensity'],
     clamp: (v) => Math.max(0, Math.min(1, v)),
   },
   {
     name: 'setHighlightFallback',
-    path: ['settings', 'highlightFallback'],
-    callback: 'onHighlightFallbackChange',
+    path: ['settings', 'points', 'highlightFallback'],
+    callback: ['points', 'onHighlightFallbackChange'],
   },
   {
     name: 'setRealOnlyMode',
-    path: ['settings', 'realOnlyMode'],
-    callback: 'onRealOnlyModeChange',
+    path: ['settings', 'points', 'realOnly'],
+    callback: ['points', 'onRealOnlyChange'],
   },
   {
     name: 'setDepthFadeEnabled',
-    path: ['settings', 'depthFadeEnabled'],
-    callback: 'onDepthFadeEnabledChange',
+    path: ['settings', 'points', 'depthFade'],
+    callback: ['points', 'onDepthFadeChange'],
   },
   {
-    // Note the path: `state.bias.absMagLimit`, not settings.  The only
-    // current row that doesn't live under `state.settings`.
     name: 'setAbsMagLimit',
-    path: ['bias', 'absMagLimit'],
-    callback: 'onAbsMagLimitChange',
+    path: ['settings', 'bias', 'absMagLimit'],
+    callback: ['bias', 'onAbsMagLimitChange'],
   },
   {
     // Clamps to [0.05, 16] before mutation/echo — a runaway slider or
@@ -202,26 +240,25 @@ export const SETTINGS_TABLE: readonly SettingsDescriptor[] = [
     // (lower).  The echo fires the *clamped* value so React's slider
     // displays what the shader actually used.
     name: 'setExposure',
-    path: ['settings', 'exposure'],
-    callback: 'onExposureChange',
+    path: ['settings', 'tonemap', 'exposure'],
     clamp: (v) => Math.max(0.05, Math.min(16, v)),
+    callback: ['tonemap', 'onExposureChange'],
   },
   {
     name: 'setToneMapCurve',
-    path: ['settings', 'toneMapCurve'],
-    callback: 'onToneMapCurveChange',
+    path: ['settings', 'tonemap', 'curve'],
+    callback: ['tonemap', 'onCurveChange'],
   },
 ];
 
 /**
- * Apply a value to `state` at the given two-step path.  Kept as a
+ * Apply a value to `state` at the given 3-tuple path.  Kept as a
  * standalone helper rather than inlined in the builder so the
- * unsafe-but-bounded cast lives in one place — every other consumer
- * of the table calls this.
+ * unsafe-but-bounded cast lives in one place.
  *
- * The `as never` cast is needed because the union over `SettingsPath`
- * means TypeScript can't statically prove that `value` matches the
- * leaf type at the chosen path; the descriptor table is the runtime
+ * The casts are needed because the union over `SettingsPath` means
+ * TypeScript can't statically prove that `value` matches the leaf
+ * type at the chosen path; the descriptor table is the runtime
  * guarantor instead.  See the module-level note on type narrowness.
  */
 function setByPath(
@@ -229,27 +266,23 @@ function setByPath(
   path: SettingsPath,
   value: unknown,
 ): void {
-  const [bag, leaf] = path;
-  // The two branches are structurally identical but split so the
-  // `bag` discriminant narrows correctly inside each — saves one
-  // additional cast on the bag lookup.
-  if (bag === 'settings') {
-    (state.settings as Record<string, unknown>)[leaf as string] = value;
-  } else {
-    (state.bias as Record<string, unknown>)[leaf as string] = value;
-  }
+  const [bag, sub, leaf] = path;
+  const target = (
+    state[bag] as unknown as Record<string, Record<string, unknown>>
+  )[sub as string]!;
+  target[leaf as string] = value;
 }
 
 /**
  * Build the thirteen setters from the descriptor table.  Returns a
- * record keyed by setter name; the consumer (`engine.ts`'s public
- * handle) spreads it into the handle literal.
+ * record keyed by setter name; the consumer (`engine.ts`'s sub-handle
+ * wiring) resolves forwarders by name from the result.
  *
  * Each emitted setter:
  *   1. clamps the incoming value (if a clamp is declared);
  *   2. writes the (possibly clamped) value into `state` at `path`;
- *   3. fires `cb[descriptor.callback]?.(post-clamp value)` if the
- *      descriptor declares a callback;
+ *   3. fires the nested echo callback (if declared) with the
+ *      post-clamp value;
  *   4. calls `requestRender()` so the next frame picks up the change.
  *
  * The return type is widened to `(value: unknown) => void` per
@@ -266,24 +299,24 @@ export function buildSettersFromTable(
   const out = {} as Record<SettingsTableKey, (value: unknown) => void>;
 
   for (const descriptor of SETTINGS_TABLE) {
-    const { name, path, callback, clamp } = descriptor;
+    const { name, path, clamp, callback } = descriptor;
 
     out[name] = (value: unknown) => {
       // Clamps only ever apply to numeric fields; descriptors that
       // declare a clamp are by definition number-typed.  The cast
       // here mirrors the runtime guarantee.
-      const next =
-        clamp !== undefined ? clamp(value as number) : value;
+      const next = clamp !== undefined ? clamp(value as number) : value;
 
       setByPath(state, path, next);
 
+      // Nested-only callback fire.  Optional-chain shape so a missing
+      // cluster or missing method is silently skipped.
       if (callback !== undefined) {
-        // Optional-chaining mirrors the hand-rolled setters' shape:
-        // a missing callback is silently skipped, never throws.
-        // Indexing through `unknown` because `EngineCallbacks` keys
-        // each carry their own narrow signature; the descriptor
-        // table is the runtime guarantor that `next` matches.
-        const fn = cb[callback] as ((v: unknown) => void) | undefined;
+        const [cluster, method] = callback;
+        const sub = (
+          cb as unknown as Record<string, Record<string, unknown> | undefined>
+        )[cluster];
+        const fn = sub?.[method] as ((v: unknown) => void) | undefined;
         fn?.(next);
       }
 
@@ -293,15 +326,3 @@ export function buildSettersFromTable(
 
   return out;
 }
-
-/**
- * Compile-time check that every setter we emit corresponds to a real
- * key on `EngineHandle`.  Removing or renaming an EngineHandle setter
- * without updating the table will trip this assertion.
- *
- * (Runtime cost: zero — `satisfies` is erased.)
- */
-const _enginehandleKeyCheck: SettingsTableKey extends keyof EngineHandle
-  ? true
-  : false = true;
-void _enginehandleKeyCheck;

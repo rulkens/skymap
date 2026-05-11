@@ -150,9 +150,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         `[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`,
       );
       // Push the parsed counts up to the UI layer.  See
-      // `EngineCallbacks.onFilamentsReady` for the lifecycle rationale —
+      // `EngineCallbacks.filaments.onReady` for the lifecycle rationale —
       // one-shot, fires only when the optional binary actually loaded.
-      cb.onFilamentsReady?.(s.value.stripCount, s.value.vertexCount);
+      cb.filaments?.onReady?.(s.value.stripCount, s.value.vertexCount);
       state.subsystems.scheduler.requestRender();
     }
   });
@@ -213,8 +213,8 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         // user-tuned values (future persistence) override the seed.
         const defaults = getVolumeFieldDefaults(handle);
         renderer.addField(handle, cube);
-        if (!state.settings.volumeFields[handle]) {
-          state.settings.volumeFields[handle] = {
+        if (!state.settings.volumes.fields[handle]) {
+          state.settings.volumes.fields[handle] = {
             enabled: DEFAULT_CF4_DENSITY_ENABLED,
             intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
             contrast: defaults.contrast,
@@ -222,7 +222,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
             paletteId: defaults.paletteId,
           };
         }
-        const persisted = state.settings.volumeFields[handle]!;
+        const persisted = state.settings.volumes.fields[handle]!;
         renderer.setIntensity(handle, persisted.intensity);
         renderer.setEnabled(handle, persisted.enabled);
         renderer.setContrast(handle, persisted.contrast);
@@ -233,7 +233,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         // from the registry rather than mirroring it into
         // `persisted` — no JS-side state to keep in sync.
         renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
-        cb.onVolumeFieldsChanged?.();
+        cb.volumes?.onFieldsChanged?.();
         state.subsystems.scheduler.requestRender();
       },
     });
@@ -383,8 +383,8 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
           // Seed the per-field settings entry with defaults if not
           // already present — mirrors the guard in `addVolumeField`
           // so re-registering preserves any previously-tuned values.
-          if (!state.settings.volumeFields[handle]) {
-            state.settings.volumeFields[handle] = {
+          if (!state.settings.volumes.fields[handle]) {
+            state.settings.volumes.fields[handle] = {
               enabled: defaultEnabled,
               intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
               contrast: defaults.contrast,
@@ -392,7 +392,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
               paletteId: defaults.paletteId,
             };
           }
-          const persisted = state.settings.volumeFields[handle]!;
+          const persisted = state.settings.volumes.fields[handle]!;
           renderer.setIntensity(handle, persisted.intensity);
           renderer.setEnabled(handle, persisted.enabled);
           renderer.setContrast(handle, persisted.contrast);
@@ -408,7 +408,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
           // never learns the new field exists — its mirror is rebuilt
           // only on this callback.  We're bypassing the public handle
           // (per the docblock above) so we have to fire it ourselves.
-          cb.onVolumeFieldsChanged?.();
+          cb.volumes?.onFieldsChanged?.();
           state.subsystems.scheduler.requestRender();
         },
       });
@@ -473,7 +473,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
 
   const progressEmitter = createLoadProgressEmitter(
-    (snapshot) => cb.onLoadProgress?.(snapshot),
+    (snapshot) => {
+      cb.sources?.onLoadProgress?.(snapshot);
+    },
     allSlots,
   );
   for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
@@ -500,7 +502,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
 
   // Signal loading state immediately so the user knows something is
   // happening before the (potentially multi-second) fetch completes.
-  cb.onStatusChange({ kind: 'loading' });
+  cb.lifecycle?.onStatusChange?.({ kind: 'loading' });
 
   // ── Parallel multi-survey load via asset slots ────────────────────
   //

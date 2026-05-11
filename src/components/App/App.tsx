@@ -129,7 +129,7 @@ export function App(): React.ReactElement {
   // ── Stable volume-fields refresh callback ─────────────────────────────
   //
   // The engine fires `onVolumeFieldsChanged` whenever a field is added or
-  // removed.  The handler needs to call `handleRef.current.getVolumeFieldsState()`
+  // removed.  The handler needs to call `handleRef.current.volumes.getState()`
   // — but `handleRef` is returned by `useEngine` (below), which runs AFTER
   // this block.  We break the timing dependency with a stable indirection:
   //
@@ -199,8 +199,11 @@ export function App(): React.ReactElement {
       // the stable dispatch ref so the engine captures only one stable
       // function pointer (not a new lambda on every render).  See the
       // `_onVolumeFieldsChangedStable` comment block above for the
-      // full rationale.
-      onVolumeFieldsChanged: _onVolumeFieldsChangedStable,
+      // full rationale.  H5 task 11 dropped the flat `onVolumeFieldsChanged`
+      // alias; only the nested `volumes.onFieldsChanged` address remains.
+      volumes: {
+        onFieldsChanged: _onVolumeFieldsChangedStable,
+      },
     },
   });
 
@@ -212,7 +215,7 @@ export function App(): React.ReactElement {
   _onVolumeFieldsChangedTarget.current = () => {
     const handle = handleRef.current;
     if (!handle) return;
-    setVolumeFields(handle.getVolumeFieldsState?.() ?? []);
+    setVolumeFields(handle.volumes.getState());
   };
 
   // ── Volumes-section visibility gate ──────────────────────────────────────
@@ -402,8 +405,8 @@ export function App(): React.ReactElement {
       <InfoCard
         hovered={hovered}
         selected={selected}
-        onFocus={(info) => handleRef.current?.focusOn(info)}
-        onClose={() => handleRef.current?.clearSelection()}
+        onFocus={(info) => handleRef.current?.camera.focusOn(info)}
+        onClose={() => handleRef.current?.selection.clear()}
       />
       <ScaleBar scale={scale} />
       {/*
@@ -437,9 +440,9 @@ export function App(): React.ReactElement {
         pointSize={pointSize}
         brightness={brightness}
         autoRotate={autoRotate}
-        onPointSizeChange={(v) => handleRef.current?.setPointSize(v)}
-        onBrightnessChange={(v) => handleRef.current?.setBrightness(v)}
-        onAutoRotateChange={(v) => handleRef.current?.setAutoRotate(v)}
+        onPointSizeChange={(v) => handleRef.current?.points.setSize(v)}
+        onBrightnessChange={(v) => handleRef.current?.points.setBrightness(v)}
+        onAutoRotateChange={(v) => handleRef.current?.camera.setAutoRotate(v)}
         // Galaxy-thumbnail toggle: forward straight to the engine handle. The
         // engine fires `onGalaxyTexturesEnabledChange` synchronously, which
         // updates `galaxyTexturesEnabled` — so we don't need an optimistic
@@ -448,11 +451,11 @@ export function App(): React.ReactElement {
         // the EngineHandle type marks `setGalaxyTexturesEnabled` as optional.
         galaxyTexturesEnabled={galaxyTexturesEnabled}
         onGalaxyTexturesChange={(enabled) => {
-          handleRef.current?.setGalaxyTexturesEnabled?.(enabled);
+          handleRef.current?.thumbnails.setEnabled(enabled);
         }}
         milkyWayEnabled={milkyWayEnabled}
         onMilkyWayEnabledChange={(enabled) => {
-          handleRef.current?.setMilkyWayEnabled?.(enabled);
+          handleRef.current?.milkyWay.setEnabled(enabled);
         }}
         // Filaments toggle.  Unlike the milky-way / galaxy-thumbnails
         // toggles above, the engine does NOT fire an echo callback for
@@ -464,12 +467,12 @@ export function App(): React.ReactElement {
         filamentsEnabled={filamentsEnabled}
         onFilamentsChange={(enabled) => {
           setFilamentsEnabled(enabled);
-          handleRef.current?.setFilamentsEnabled?.(enabled);
+          handleRef.current?.filaments.setEnabled(enabled);
         }}
         filamentIntensity={filamentIntensity}
         onFilamentIntensityChange={(value) => {
           setFilamentIntensity(value);
-          handleRef.current?.setFilamentIntensity?.(value);
+          handleRef.current?.filaments.setIntensity(value);
         }}
         // Task 15 — orientation-visibility toggles. Same forward-only flow
         // as galaxyTexturesEnabled: engine fires the echo callback
@@ -477,29 +480,27 @@ export function App(): React.ReactElement {
         // truth without an optimistic local update here.
         highlightFallback={highlightFallback}
         onHighlightFallbackChange={(enabled) => {
-          handleRef.current?.setHighlightFallback?.(enabled);
+          handleRef.current?.points.setHighlightFallback(enabled);
         }}
         realOnlyMode={realOnlyMode}
         onRealOnlyModeChange={(enabled) => {
-          handleRef.current?.setRealOnlyMode?.(enabled);
+          handleRef.current?.points.setRealOnly(enabled);
         }}
         depthFadeEnabled={depthFadeEnabled}
         onDepthFadeEnabledChange={(enabled) => {
-          handleRef.current?.setDepthFadeEnabled?.(enabled);
+          handleRef.current?.points.setDepthFade(enabled);
         }}
-        onResetCamera={() => handleRef.current?.focusOnHome()}
+        onResetCamera={() => handleRef.current?.camera.focusOnHome()}
         // ── Data tier (small / medium / large) ──────────────────────────
         //
         // `currentTier` is the React mirror; the engine echoes its truth
         // through `onTierChange` (in the createEngine callbacks block
-        // above).  Forwarding through `handleRef.current?.setTier` keeps
+        // above).  Forwarding through `handleRef.current?.sources.setTier` keeps
         // the tier swap inside the engine — it cancels in-flight loads,
         // re-fetches the new tier-suffixed bins, and re-uploads, then
-        // fires the echo once `state.sources.tier` has mutated.  The
-        // `?.` chain on setTier covers the unlikely case where the engine
-        // build predates Phase 2 and lacks the method.
+        // fires the echo once `state.sources.tier` has mutated.
         tier={currentTier}
-        onTierChange={(t) => handleRef.current?.setTier?.(t)}
+        onTierChange={(t) => handleRef.current?.sources.setTier(t)}
         // ── Multi-survey toggles + Auto-LOD master (rev-2) ──────────────
         //
         // These mirror what the engine knows. The engine accepts a single
@@ -516,7 +517,7 @@ export function App(): React.ReactElement {
           // synchronously inside `setSourceVisible`, which updates React state
           // before this handler returns.  Optimistic updates would race against
           // auto-LOD's mask, sometimes forcing the user to click twice.
-          handleRef.current?.setSourceVisible?.(s, visible);
+          handleRef.current?.sources.setVisible(s, visible);
         }}
         // Auto-LOD UI is intentionally hidden — the toggle never improved
         // the user experience enough to justify the panel real estate, and
@@ -548,9 +549,9 @@ export function App(): React.ReactElement {
         // predates Task 2 and lacks them; the EngineHandle type marks both
         // as optional for the same reason.
         biasMode={biasMode}
-        onBiasModeChange={(m) => handleRef.current?.setBiasMode?.(m)}
+        onBiasModeChange={(m) => handleRef.current?.bias.setMode(m)}
         absMagLimit={absMagLimit}
-        onAbsMagLimitChange={(M) => handleRef.current?.setAbsMagLimit?.(M)}
+        onAbsMagLimitChange={(M) => handleRef.current?.bias.setAbsMagLimit(M)}
         // ── HDR tone-map curve ───────────────────────────────────────────
         //
         // Same forward-to-handle pattern as the bias controls above — the
@@ -559,7 +560,7 @@ export function App(): React.ReactElement {
         // in the createEngine callbacks block).  No optimistic updates
         // needed.
         toneMapCurve={toneMapCurve}
-        onToneMapCurveChange={(c) => handleRef.current?.setToneMapCurve?.(c)}
+        onToneMapCurveChange={(c) => handleRef.current?.tonemap.setCurve(c)}
         // Exposure slider — drag pushes the value through the engine
         // handle, the engine clamps to [0.05, 16] and echoes the
         // clamped result back via `onExposureChange`, which updates
@@ -577,7 +578,7 @@ export function App(): React.ReactElement {
         exposure={exposure}
         onExposureChange={(value) => {
           setExposure(value);
-          handleRef.current?.setExposure?.(value);
+          handleRef.current?.tonemap.setExposure(value);
         }}
         // ── Scalar-volume overlay ─────────────────────────────────────
         //
@@ -602,7 +603,7 @@ export function App(): React.ReactElement {
               volumesEnabled,
               onVolumesEnabledChange: (v: boolean) => {
                 setVolumesEnabled(v);
-                handleRef.current?.setVolumesEnabled?.(v);
+                handleRef.current?.volumes.setMasterEnabled(v);
               },
               volumeFields: visibleVolumeFields,
               onVolumeFieldEnabledChange: (handle: string, enabled: boolean) => {
@@ -614,13 +615,13 @@ export function App(): React.ReactElement {
                 setVolumeFields(
                   volumeFields.map((f) => (f.handle === handle ? { ...f, enabled } : f)),
                 );
-                handleRef.current?.setVolumeFieldEnabled?.(handle, enabled);
+                handleRef.current?.volumes.setEnabled(handle, enabled);
               },
               onVolumeFieldIntensityChange: (handle: string, intensity: number) => {
                 setVolumeFields(
                   volumeFields.map((f) => (f.handle === handle ? { ...f, intensity } : f)),
                 );
-                handleRef.current?.setVolumeFieldIntensity?.(handle, intensity);
+                handleRef.current?.volumes.setIntensity(handle, intensity);
               },
               onVolumeFieldContrastChange: (handle: string, contrast: number) => {
                 // Same optimistic-update pattern as intensity: local
@@ -631,7 +632,7 @@ export function App(): React.ReactElement {
                 setVolumeFields(
                   volumeFields.map((f) => (f.handle === handle ? { ...f, contrast } : f)),
                 );
-                handleRef.current?.setVolumeFieldContrast?.(handle, contrast);
+                handleRef.current?.volumes.setContrast(handle, contrast);
               },
               onVolumeFieldDensityScaleChange: (handle: string, densityScale: number) => {
                 // Same shape as the intensity / contrast handlers.  The
@@ -643,13 +644,13 @@ export function App(): React.ReactElement {
                     f.handle === handle ? { ...f, densityScale } : f,
                   ),
                 );
-                handleRef.current?.setVolumeFieldDensityScale?.(handle, densityScale);
+                handleRef.current?.volumes.setDensityScale(handle, densityScale);
               },
               onVolumeFieldPaletteChange: (handle: string, paletteId: ScalarFieldPaletteId) => {
                 setVolumeFields(
                   volumeFields.map((f) => (f.handle === handle ? { ...f, paletteId } : f)),
                 );
-                handleRef.current?.setVolumeFieldPalette?.(handle, paletteId);
+                handleRef.current?.volumes.setPalette(handle, paletteId);
               },
             }
           : {})}
@@ -699,12 +700,12 @@ export function App(): React.ReactElement {
           // 50 Mpc fade-out, so home doesn't actually show the Milky
           // Way as the subject.
           if (id === MILKY_WAY_ID) {
-            handleRef.current?.focusOnMilkyWay?.();
+            handleRef.current?.camera.focusOnMilkyWay();
             return;
           }
-          handleRef.current?.selectFamous?.(id);
+          handleRef.current?.selection.selectFamous(id);
         }}
-        onSelectAlias={(target) => handleRef.current?.selectByAlias?.(target)}
+        onSelectAlias={(target) => handleRef.current?.selection.selectByAlias(target)}
       />
       {/*
         Loading dev panel (Task 13).  Mounted only in dev builds or when
