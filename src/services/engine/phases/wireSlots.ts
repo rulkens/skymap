@@ -93,6 +93,7 @@ import {
 } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
 import { syntheticVolumeFetcher } from '../../loading/fetchers/syntheticVolumeFetcher';
+import { CLUSTER_ANCHORS, raDecDistToEqCart } from '../../../data/clusterAnchors';
 
 import type { AssetSlot } from '../../loading/types';
 import type { ScalarCube } from '../../../@types/ScalarCube';
@@ -197,6 +198,45 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
       }
     })();
   const volumesGateOpen = import.meta.env.DEV || volumesEnabledByUrl;
+
+  // ── Cluster anchor POIs (dev tool, gated on ?anchors=1) ──────────
+  //
+  // Pushes the six well-known cluster anchors (Virgo, Norma, Perseus,
+  // Coma, Hercules, Shapley) into the POI subsystem at startup so the
+  // operator can visually cross-reference the CF-4 DM cube alignment
+  // against known large-scale structure.  Not enabled by default — the
+  // labels would clutter the production view, and most users won't need
+  // a star-chart overlay on a galaxy renderer.
+  //
+  // Same window-guarded URL-flag idiom as `volumesEnabledByUrl` above;
+  // we deliberately don't fold the two into a single helper because the
+  // pattern is short and the duplication is readable.
+  const showClusterAnchors =
+    typeof window !== 'undefined' &&
+    (() => {
+      try {
+        return new URLSearchParams(window.location.search).has('anchors');
+      } catch {
+        return false;
+      }
+    })();
+  if (showClusterAnchors) {
+    const pois = CLUSTER_ANCHORS.map((a) => ({
+      // Stable, slug-style id derived from the name — used by the
+      // director's signature hash to detect "same POI set" between
+      // frames so the GPU upload is skipped when unchanged.
+      id: `cluster-${a.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+      name: a.name,
+      category: 'cluster' as const,
+      worldPos: raDecDistToEqCart(a),
+      // Crosshair scaled to ~5% of the anchor distance so it reads from
+      // a comfortable viewing distance without dominating the cluster
+      // glyph at extreme close zoom.  Floor at 2 Mpc so Virgo (~16 Mpc)
+      // still has a visible marker.
+      crosshairSizeMpc: Math.max(2, a.distMpc * 0.05),
+    }));
+    state.subsystems.pois.setPois(pois);
+  }
 
   // ── CF-4 DM density volume slot ──────────────────────────────────
   //

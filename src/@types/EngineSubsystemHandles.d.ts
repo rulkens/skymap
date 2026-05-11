@@ -41,6 +41,8 @@ import type { SpaceMouseSubsystem } from '../services/engine/subsystems/spaceMou
 import type { SelectionSubsystem } from '../services/engine/subsystems/selectionSubsystem';
 import type { BiasCorrectionSubsystem } from '../services/engine/subsystems/biasCorrectionSubsystem';
 import type { YouAreHereSubsystem } from '../services/engine/subsystems/youAreHereSubsystem';
+import type { LabelDirectorSubsystem } from '../services/engine/subsystems/labelDirectorSubsystem';
+import type { PoiSubsystem } from '../services/engine/subsystems/poiSubsystem';
 import type { TweenManager } from '../services/engine/camera/tweenManager';
 import type { ClickResolver } from '../services/engine/interaction/clickHandler';
 import type { InputBindings } from '../services/engine/interaction/inputBindings';
@@ -92,8 +94,38 @@ export type EngineSubsystemHandles = {
    *
    * Non-null from t=0 — the subsystem's `runFrame` internally null-checks
    * the renderers, so calling it before `attachRenderers` is safe.
+   *
+   * Post-Task-6: youAreHere is now a `LabelProducer`; renderer ownership
+   * (and the per-frame setLabels/setLines flush) has moved to
+   * `labelDirector`, which polls every registered producer.
    */
   youAreHere: YouAreHereSubsystem;
+  /**
+   * Label director — owns `labelRenderer.setLabels` / `markerLineRenderer
+   * .setLines`, polls every registered `LabelProducer` each frame, merges
+   * outputs, and flushes once.  Replaces the previous direct-call pattern
+   * (youAreHere called the renderers itself) so multiple overlays
+   * (you-are-here pin, cluster POIs, future galaxy/void labels) coexist
+   * without stomping each other's full-set replacements.
+   *
+   * Constructed eagerly in the engine state literal; the two renderers
+   * are wired in during `phases/initGpu.ts` via `attachRenderers(...)`
+   * once the font-atlas fetch completes.  Producers are registered right
+   * after the state literal so they're in place before the first frame.
+   */
+  labelDirector: LabelDirectorSubsystem;
+  /**
+   * Points-of-interest subsystem — typed list of named anchors (clusters,
+   * famous galaxies, voids) rendered as text labels with optional
+   * crosshairs.  Implements `LabelProducer`; registered with
+   * `labelDirector`.  Populated by various sources: the `?anchors=1` URL
+   * flag pushes the six cluster anchors at startup; future code may add
+   * runtime entries from user clicks or palette searches.
+   *
+   * Constructed eagerly; no GPU dependency.  Empty until something calls
+   * `setPois`.
+   */
+  pois: PoiSubsystem;
   /**
    * Per-engine download-progress emitter — instantiated inside the
    * GPU init IIFE (so `cb.onLoadProgress` and the slot registry are in

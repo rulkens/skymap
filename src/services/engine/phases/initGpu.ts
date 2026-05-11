@@ -215,13 +215,17 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.labelRenderer = createLabelRenderer(hdrCtx, fontAtlas.metrics, fontAtlas.bitmap);
   state.gpu.markerLineRenderer = createMarkerLineRenderer(hdrCtx);
 
-  // Wire the freshly-constructed renderers into the you-are-here subsystem.
-  // The subsystem was built eagerly in the engine state literal (alongside
+  // Wire the freshly-constructed renderers into the label director.
+  // The director was built eagerly in the engine state literal (alongside
   // `tweens`, `biasCorrection`, etc.) but had no renderers to call into yet.
   // This is the same `attachRenderer` post-construction wiring pattern that
   // `biasCorrectionSubsystem` uses — see that module's header comment for
   // the "why renderers are null at eager-construction time" rationale.
-  state.subsystems.youAreHere.attachRenderers(
+  //
+  // Post-Task-6: the director (not youAreHere directly) owns the renderer
+  // refs.  All `LabelProducer`s — youAreHere, pois, future overlays — are
+  // polled by the director, which merges their outputs and flushes once.
+  state.subsystems.labelDirector.attachRenderers(
     state.gpu.labelRenderer,
     state.gpu.markerLineRenderer,
   );

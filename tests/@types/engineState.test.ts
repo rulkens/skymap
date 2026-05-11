@@ -63,6 +63,8 @@ import { createRenderScheduler } from '../../src/services/engine/subsystems/rend
 import { createSelectionSubsystem } from '../../src/services/engine/subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsystems/biasCorrectionSubsystem';
 import { createYouAreHereSubsystem } from '../../src/services/engine/subsystems/youAreHereSubsystem';
+import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
+import { createPoiSubsystem } from '../../src/services/engine/subsystems/poiSubsystem';
 import type { EngineCallbacks } from '../../src/@types';
 import { Source } from '../../src/data/sources';
 
@@ -164,6 +166,8 @@ describe('EngineState type', () => {
           getState: () => stateRef.current!,
         }),
         youAreHere: createYouAreHereSubsystem(),
+        labelDirector: createLabelDirectorSubsystem(),
+        pois: createPoiSubsystem(),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),
@@ -296,6 +300,8 @@ describe('EngineState type', () => {
           getState: () => stateRef.current!,
         }),
         youAreHere: createYouAreHereSubsystem(),
+        labelDirector: createLabelDirectorSubsystem(),
+        pois: createPoiSubsystem(),
         clickResolver: null,
         inputBindings: null,
         scheduler: createRenderScheduler({ onFrame: () => {}, rafImpl: noopRaf, cafImpl: noopCaf }),

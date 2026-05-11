@@ -110,6 +110,8 @@ import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
+import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
+import { createPoiSubsystem } from './subsystems/poiSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
@@ -467,6 +469,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the `loadFontAtlas()` fetch completes.
       youAreHere: createYouAreHereSubsystem(),
 
+      // ── Label director + POI subsystem (Task 6) ──────────────────
+      //
+      // The director owns the actual `labelRenderer.setLabels` /
+      // `markerLineRenderer.setLines` calls — youAreHere and pois are
+      // both `LabelProducer`s that the director polls and merges each
+      // frame.  Renderers are wired in during `initGpu` via the
+      // director's `attachRenderers(...)`; producer registration
+      // happens right after this state literal (see below) so the
+      // director sees both producers before the first frame fires.
+      labelDirector: createLabelDirectorSubsystem(),
+      pois: createPoiSubsystem(),
+
       // ── Render scheduler — eager, capture-safe ────────────────────
       //
       // The real scheduler is created right here in the state literal,
@@ -530,6 +544,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       cf4Density: null,
     },
   };
+
+  // ── Register label producers with the director (Task 6) ───────────────
+  //
+  // Order of registration = order in the merged label list (youAreHere
+  // first, POIs after).  Both producers are constructed eagerly in the
+  // state literal above, so this runs synchronously before any frame can
+  // fire.  We deliberately register both even when the POI subsystem is
+  // empty — the director treats an empty contribution as a no-op and
+  // there's nothing async to gate on.
+  //
+  // Structural typing carries the assignment: `YouAreHereSubsystem` is
+  // an alias for `LabelProducer`, and `PoiSubsystem` extends it.
+  state.subsystems.labelDirector.registerProducer(state.subsystems.youAreHere);
+  state.subsystems.labelDirector.registerProducer(state.subsystems.pois);
 
   // ── Cleanup function returned by `attachOrbitControls` ─────────────────
   // Orbit-controls attachment lives outside `inputBindings` because it
