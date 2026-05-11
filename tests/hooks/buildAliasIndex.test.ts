@@ -14,14 +14,16 @@ import type { EngineHandle } from '../../src/@types';
 
 /**
  * Build a minimal `EngineHandle` whose only live method is
- * `getCloudObjIds`.  Cast through `unknown` because the real handle has
- * ~30 methods we don't care about for this test.
+ * `sources.getCloudObjIds`.  Cast through `unknown` because the real
+ * handle has ~30 methods we don't care about for this test.
  */
 const fakeHandle = (
   objIdsBySource: Partial<Record<Source, BigUint64Array>>,
 ): EngineHandle =>
   ({
-    getCloudObjIds: (s: Source) => objIdsBySource[s],
+    sources: {
+      getCloudObjIds: (s: Source) => objIdsBySource[s],
+    },
   }) as unknown as EngineHandle;
 
 describe('buildAliasIndex', () => {
