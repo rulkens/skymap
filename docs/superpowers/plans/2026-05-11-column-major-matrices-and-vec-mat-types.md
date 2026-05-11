@@ -4,7 +4,7 @@
 
 **Goal:** Make every matrix in the codebase column-major and introduce `Vec2`/`Vec3`/`Vec4`/`Mat3`/`Mat4` types in `src/@types/` so every linear-algebra value uses the same conventions.
 
-**Architecture:** Two new type files under `src/@types/` define flat tuple aliases — `Mat3` is a 9-tuple, `Mat4` is a 16-tuple, both column-major by convention (documented in JSDoc; not branded). The lone row-major export in the codebase (`SG_TO_EQ_MATRIX` as a nested 3×3 in `src/data/superGalacticTransform.ts`) flips to a flat column-major `Mat3`; every helper in that file (`buildSgToGal`, `buildGalToEq`, `multiply3x3`, `reorthonormalise`, `matrixToQuaternion`, `sgCartesianToEquatorial`) rewrites against the new layout. WGSL shaders and gl-matrix call sites are already column-major and need no changes. Inline `readonly [number, number, number]` tuples across `src/@types/`, `src/data/`, and `src/services/` get swapped for the new `Vec3`/`Vec4` aliases — pure rename, no logic change.
+**Architecture:** Two new type files under `src/@types/` define flat tuple aliases — `Mat3` is a 9-tuple, `Mat4` is a 16-tuple, both column-major by convention (documented in JSDoc; not branded). All Vec/Mat aliases are **mutable** by default; consumers that want read-only semantics wrap with `Readonly<VecN>` / `Readonly<MatN>` at the boundary. This matches the project's existing `Readonly<[number, number, number]>` pattern for renderer params, and matches gl-matrix's mutable `vec3`/`mat4`. The lone row-major export in the codebase (`SG_TO_EQ_MATRIX` as a nested 3×3 in `src/data/superGalacticTransform.ts`) flips to a flat column-major `Mat3`; every helper in that file (`buildSgToGal`, `buildGalToEq`, `multiply3x3`, `reorthonormalise`, `matrixToQuaternion`, `sgCartesianToEquatorial`) rewrites against the new layout. WGSL shaders and gl-matrix call sites are already column-major and need no changes. Inline tuple-of-number sites across `src/@types/`, `src/data/`, `src/services/`, and `src/utils/` get swapped for the new `Vec3`/`Vec4` aliases — pure rename, no logic change.
 
 **Tech Stack:** TypeScript (strict, `noUncheckedIndexedAccess`), Vitest, gl-matrix (already column-major), WebGPU/WGSL (already column-major).
 
@@ -277,24 +277,24 @@ git commit -m "refactor(types): use Vec3/Vec4 aliases for all inline number tupl
 
 - [ ] **Step 1: Extend the type-only test for Mat**
 
-Append to `tests/types/vecMat.test-d.ts`:
+Append to `tests/types/vecMat.test.ts`:
 
 ```ts
 import type { Mat3, Mat4 } from '../../src/@types/Mat';
 
 describe('Mat tuple aliases', () => {
-  it('Mat3 is a 9-element tuple of number', () => {
+  it('Mat3 is a 9-element mutable tuple of number', () => {
     expectTypeOf<Mat3>().toEqualTypeOf<
-      readonly [
+      [
         number, number, number,
         number, number, number,
         number, number, number,
       ]
     >();
   });
-  it('Mat4 is a 16-element tuple of number', () => {
+  it('Mat4 is a 16-element mutable tuple of number', () => {
     expectTypeOf<Mat4>().toEqualTypeOf<
-      readonly [
+      [
         number, number, number, number,
         number, number, number, number,
         number, number, number, number,
@@ -316,7 +316,7 @@ Write `src/@types/Mat.d.ts`:
 
 ```ts
 /**
- * Mat3/Mat4 — flat, readonly, number-tuple aliases for the only two
+ * Mat3/Mat4 — flat, mutable, number-tuple aliases for the only two
  * matrix shapes this project uses: 3×3 rotations and 4×4 model/view
  * matrices.  Both are **column-major** by convention, matching:
  *
@@ -325,6 +325,11 @@ Write `src/@types/Mat.d.ts`:
  *   - WebGPU / WGSL (the spec stores `mat3x3<f32>` and `mat4x4<f32>`
  *     as columns of `vec3<f32>` / `vec4<f32>`);
  *   - GLSL (the historical convention from which both the above derive).
+ *
+ * Like Vec*, mutable by default: gl-matrix's `mat4` is a mutable
+ * Float32Array, and many of our renderer-internal accumulator matrices
+ * are filled in place.  Consumers that want read-only access wrap
+ * with `Readonly<Mat4>` at the boundary.
  *
  * ### Column-major index map
  *
@@ -340,22 +345,21 @@ Write `src/@types/Mat.d.ts`:
  *
  * ### Why not branded types?
  *
- * Branding (`Mat4 = readonly [...] & { __order: 'column' }`) would force
- * every gl-matrix interop call to cast.  We pay attention to which
- * matrices end up here instead — the convention is enforced by code
- * review and the SG_TO_EQ_MAT4_COL_MAJOR anti-drift tests, not the
- * compiler.
+ * Branding (`Mat4 = [...] & { __order: 'column' }`) would force every
+ * gl-matrix interop call to cast.  We pay attention to which matrices
+ * end up here instead — the convention is enforced by code review and
+ * the SG_TO_EQ_MAT4_COL_MAJOR anti-drift tests, not the compiler.
  */
 
-/** 3×3 matrix, column-major (9 elements). */
-export type Mat3 = readonly [
+/** 3×3 matrix, column-major (9 elements, mutable). */
+export type Mat3 = [
   number, number, number,
   number, number, number,
   number, number, number,
 ];
 
-/** 4×4 matrix, column-major (16 elements). */
-export type Mat4 = readonly [
+/** 4×4 matrix, column-major (16 elements, mutable). */
+export type Mat4 = [
   number, number, number, number,
   number, number, number, number,
   number, number, number, number,
