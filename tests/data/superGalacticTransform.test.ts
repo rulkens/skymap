@@ -9,6 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   SG_TO_EQ_MATRIX,
+  SG_TO_EQ_MAT4_COL_MAJOR,
   SG_TO_EQ_QUATERNION,
   sgCartesianToEquatorial,
 } from '../../src/data/superGalacticTransform';
@@ -75,5 +76,66 @@ describe('superGalacticTransform', () => {
     expect(ra).toBeLessThan(198);
     expect(dec).toBeGreaterThan(24);
     expect(dec).toBeLessThan(30);
+  });
+
+  describe('SG_TO_EQ_MAT4_COL_MAJOR', () => {
+    // These tests are the *anti-drift* anchor: any consumer that reads
+    // the mat4 form (currently scalarVolumeRenderer) gets the SAME
+    // rotation as `sgCartesianToEquatorial` / `raDecDistToEqCart` /
+    // `SG_TO_EQ_QUATERNION`.  An earlier draft of the renderer kept
+    // a private hardcoded mat4 with values that diverged ~1.9 in
+    // some elements — cluster labels and cube voxels rendered under
+    // different rotations.  These tests would have caught that on
+    // any single change to either side.
+
+    it('is a 16-element column-major layout', () => {
+      expect(SG_TO_EQ_MAT4_COL_MAJOR).toHaveLength(16);
+    });
+
+    it('upper-left 3x3 (column-major) equals SG_TO_EQ_MATRIX', () => {
+      // Index c*4 + r is element at column c, row r in column-major.
+      for (let c = 0; c < 3; c++) {
+        for (let r = 0; r < 3; r++) {
+          expect(SG_TO_EQ_MAT4_COL_MAJOR[c * 4 + r]).toBeCloseTo(
+            SG_TO_EQ_MATRIX[r]![c]!,
+            10,
+          );
+        }
+      }
+    });
+
+    it('translation column is zero, w corner is 1', () => {
+      expect(SG_TO_EQ_MAT4_COL_MAJOR[12]).toBe(0);
+      expect(SG_TO_EQ_MAT4_COL_MAJOR[13]).toBe(0);
+      expect(SG_TO_EQ_MAT4_COL_MAJOR[14]).toBe(0);
+      expect(SG_TO_EQ_MAT4_COL_MAJOR[15]).toBe(1);
+    });
+
+    it('homogeneous-row of upper 3 columns is zero', () => {
+      // Column-major: index c*4 + 3 is the w-row (4th row) of column c.
+      expect(SG_TO_EQ_MAT4_COL_MAJOR[3]).toBe(0);
+      expect(SG_TO_EQ_MAT4_COL_MAJOR[7]).toBe(0);
+      expect(SG_TO_EQ_MAT4_COL_MAJOR[11]).toBe(0);
+    });
+
+    it('applied as a column-major mat4, rotates Coma SG to expected EQ', () => {
+      // SG_Coma ≈ (0, 93.8, 7.8) in voxel-aligned Mpc; expected EQ
+      // matches `raDecDistToEqCart(Coma)` ≈ (-85, -23, 47).  Apply
+      // the column-major mat4 to a column vector by row · column
+      // sum: out[r] = Σ_c (mat[c*4+r] · v[c]).
+      const sg: readonly [number, number, number] = [0, 93.8, 7.8];
+      const eq: [number, number, number] = [0, 0, 0];
+      for (let r = 0; r < 3; r++) {
+        eq[r] =
+          SG_TO_EQ_MAT4_COL_MAJOR[0 * 4 + r]! * sg[0] +
+          SG_TO_EQ_MAT4_COL_MAJOR[1 * 4 + r]! * sg[1] +
+          SG_TO_EQ_MAT4_COL_MAJOR[2 * 4 + r]! * sg[2];
+      }
+      // Cross-check: the 3x3 path returns the same result (within FP).
+      const eq3x3 = sgCartesianToEquatorial(sg);
+      for (let r = 0; r < 3; r++) {
+        expect(eq[r]).toBeCloseTo(eq3x3[r]!, 6);
+      }
+    });
   });
 });

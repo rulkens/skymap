@@ -202,6 +202,42 @@ export const SG_TO_EQ_MATRIX: Mat3 = reorthonormalise(multiply3x3(R_GAL_TO_EQ, R
 /** Same rotation as a unit quaternion (x, y, z, w). For SCFD header. */
 export const SG_TO_EQ_QUATERNION: readonly [number, number, number, number] = matrixToQuaternion(SG_TO_EQ_MATRIX);
 
+/**
+ * Same rotation as a 16-element column-major mat4 (rotation in the
+ * upper-left 3x3, identity translation, w=1).  Ready to pass through
+ * `mat4.fromValues(...SG_TO_EQ_MAT4_COL_MAJOR)` or to construct a
+ * `Float32Array` for direct GPU upload.
+ *
+ * ### Why a separate export and not just "build it in the renderer"
+ *
+ * The scalar-volume renderer previously kept a private hardcoded
+ * mat4 of the SG→EQ rotation, with element values that diverged from
+ * the canonical 3x3 by ~1.9 magnitude in places.  Cluster labels
+ * (which use `raDecDistToEqCart` → canonical 3x3) ended up at
+ * different world positions from the cube's voxels (which used the
+ * renderer's local hardcoded mat4).  This export is the canonical
+ * column-major form derived from `SG_TO_EQ_MATRIX` once, at module
+ * init; every consumer must import it rather than reconstruct.
+ *
+ * Column-major layout (matches gl-matrix and WebGPU mat4x4):
+ *   index    0  4  8 12   col 0   col 1   col 2   col 3
+ *            1  5  9 13   row 0   row 0   row 0   row 0
+ *            2  6 10 14   row 1   row 1   row 1   row 1
+ *            3  7 11 15   row 2   row 2   row 2   row 2
+ *
+ * i.e. column c row r lives at index c*4 + r.
+ */
+export const SG_TO_EQ_MAT4_COL_MAJOR: readonly number[] = Object.freeze([
+  // Column 0 (= SG_TO_EQ_MATRIX[i][0] for i=0..2, then 0 for the homogeneous w-row)
+  SG_TO_EQ_MATRIX[0][0], SG_TO_EQ_MATRIX[1][0], SG_TO_EQ_MATRIX[2][0], 0,
+  // Column 1
+  SG_TO_EQ_MATRIX[0][1], SG_TO_EQ_MATRIX[1][1], SG_TO_EQ_MATRIX[2][1], 0,
+  // Column 2
+  SG_TO_EQ_MATRIX[0][2], SG_TO_EQ_MATRIX[1][2], SG_TO_EQ_MATRIX[2][2], 0,
+  // Column 3 (translation = none, w = 1)
+  0, 0, 0, 1,
+]);
+
 /** Apply the SG → equatorial rotation to a vector. Length is preserved. */
 export function sgCartesianToEquatorial(
   sg: readonly [number, number, number],

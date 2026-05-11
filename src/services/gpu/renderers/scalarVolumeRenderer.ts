@@ -37,6 +37,7 @@ import { mat4 } from 'gl-matrix';
 import type { ScalarCube, ScalarFieldFrameKind, ScalarFieldPaletteId } from '../../../@types/ScalarCube';
 import type { Renderer } from '../../../@types';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPalettes';
+import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../../data/superGalacticTransform';
 import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
 import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -73,14 +74,31 @@ const CUBE_INDICES = new Uint16Array([
   1, 3, 5,  3, 7, 5,
 ]);
 
-// Supergalactic→equatorial rotation, J2000.  Standard astronomy
-// constant — see e.g. de Vaucouleurs 1976.  Stored as a 3x3 column-
-// major matrix because it's only ever multiplied with another mat4.
+// Supergalactic→equatorial rotation, J2000.  Imported directly from
+// the canonical column-major export in `superGalacticTransform.ts`
+// (composed from R_GAL_TO_EQ · R_SG_TO_GAL once at module init).
+//
+// Why import the canonical mat4 layout rather than reconstruct from
+// the 3x3 here: every other path that maps SG → EQ in the codebase
+// (cluster labels via `raDecDistToEqCart`, the SCFD header rotation
+// quaternion, future renderers) flows through the same 3x3 → derived
+// form.  Reconstruction in two places means two opportunities for
+// the column-major-vs-row-major transcription to drift; centralising
+// the layout decision in `superGalacticTransform.ts` makes drift
+// impossible (the renderer never sees the 3x3 form, so it can't
+// re-encode it incorrectly).  See that file's docstring on
+// `SG_TO_EQ_MAT4_COL_MAJOR` for the rationale and the historical
+// drift that prompted the consolidation.
+//
+// Cast: gl-matrix's `mat4` is `Float32Array(16)`, and `mat4.fromValues`
+// expects 16 positional args.  `Float32Array.of(...readonly number[])`
+// would work too, but `mat4.fromValues` makes the gl-matrix contract
+// explicit at the call site.
 const SG_TO_EQ_ROT = mat4.fromValues(
-  -0.7357425, -0.0745682,  0.6731453, 0,
-   0.6772612, -0.0808998,  0.7312238, 0,
-   0.0000000,  0.9938837,  0.1100143, 0,
-   0,          0,          0,         1,
+  SG_TO_EQ_MAT4_COL_MAJOR[0]!,  SG_TO_EQ_MAT4_COL_MAJOR[1]!,  SG_TO_EQ_MAT4_COL_MAJOR[2]!,  SG_TO_EQ_MAT4_COL_MAJOR[3]!,
+  SG_TO_EQ_MAT4_COL_MAJOR[4]!,  SG_TO_EQ_MAT4_COL_MAJOR[5]!,  SG_TO_EQ_MAT4_COL_MAJOR[6]!,  SG_TO_EQ_MAT4_COL_MAJOR[7]!,
+  SG_TO_EQ_MAT4_COL_MAJOR[8]!,  SG_TO_EQ_MAT4_COL_MAJOR[9]!,  SG_TO_EQ_MAT4_COL_MAJOR[10]!, SG_TO_EQ_MAT4_COL_MAJOR[11]!,
+  SG_TO_EQ_MAT4_COL_MAJOR[12]!, SG_TO_EQ_MAT4_COL_MAJOR[13]!, SG_TO_EQ_MAT4_COL_MAJOR[14]!, SG_TO_EQ_MAT4_COL_MAJOR[15]!,
 );
 
 const FRAME_TO_WORLD: Record<ScalarFieldFrameKind, mat4> = {
