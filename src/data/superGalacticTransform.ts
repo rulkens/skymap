@@ -47,11 +47,6 @@ function eqRaDecToCart(raDeg: number, decDeg: number): Vec3 {
   return [Math.cos(a) * Math.cos(d), Math.sin(a) * Math.cos(d), Math.sin(d)];
 }
 
-/** Euclidean length of a 3-vector. */
-function len3(v: Vec3): number {
-  return Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
-}
-
 /** Build a column-major Mat3 from three column vectors. */
 function fromColumns(c0: Vec3, c1: Vec3, c2: Vec3): Mat3 {
   return [
@@ -199,7 +194,7 @@ const R_GAL_TO_EQ = buildGalToEq();
 export const SG_TO_EQ_MATRIX: Mat3 = reorthonormalise(multiply3x3(R_GAL_TO_EQ, R_SG_TO_GAL));
 
 /** Same rotation as a unit quaternion (x, y, z, w). For SCFD header. */
-export const SG_TO_EQ_QUATERNION: Vec4 = matrixToQuaternion(SG_TO_EQ_MATRIX);
+export const SG_TO_EQ_QUATERNION: Readonly<Vec4> = matrixToQuaternion(SG_TO_EQ_MATRIX);
 
 /**
  * Same rotation as a 16-element column-major Mat4 (rotation in the
