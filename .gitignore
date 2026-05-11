@@ -12,6 +12,12 @@ dist/
 coverage/
 .nyc_output/
 .vitest-cache/
+# Playwright per-run output: failure screenshots, traces, and HTML reports.
+# Regenerated on every `npx playwright test` invocation; not useful to track.
+test-results/
+playwright-report/
+# Playwright's per-machine `.cache/` lives outside the repo (in
+# ~/Library/Caches/ms-playwright on macOS), so we don't need to ignore it.
 
 # ── Environment files ─────────────────────────────────────────────────────────
 # Default-deny `.env*` keeps secrets out by accident.  The carve-out below
