@@ -55,34 +55,26 @@
  *
  *   - `await initGpu(canvas)` — the WebGPU device-acquisition handshake.
  *
- * ### Outputs threaded forward via the phase module's exports
+ * ### Outputs threaded forward to later phases
  *
- * Several IIFE-locals (`device`, `context`, `thumbnailRenderer`,
- * `diskRenderer`, `proceduralDiskRenderer`, `milkyWayRenderer`) need to
- * survive past this phase: `wireSlots` reads them for the thumbnail
- * subsystem; `startLoop` reads them for the frame-body deps.  Rather
- * than expand `EngineState` with per-renderer fields used only inside
- * the bootstrap, we stash them on a phase-local object that the
- * orchestrator passes forward via `BootstrapDeps`.  See `BootstrapDeps`
- * in `bootstrap.ts` for the wiring; the actual stash lives on
- * `state.gpu.*` (renderer, postProcess, filamentRenderer) plus a
- * `phaseLocals` carrier for the rest.  The carrier is intentionally
- * cheap and short-lived — it goes away once `startLoop` finishes.
+ * `device` and `context` survive past this phase via the `phaseLocals`
+ * carrier (read by `wireSlots` / `wireInput` / `startLoop`); they don't
+ * have a `state.gpu.*` home today.  Every renderer constructed here is
+ * stored on `state.gpu.*` directly — the four thumbnail-related renderers
+ * (`thumbnailRenderer`, `diskRenderer`, `proceduralDiskRenderer`,
+ * `milkyWayRenderer`) used to ride on `phaseLocals` too, but M1 of the
+ * 2026-05-11 audit collapsed that mirror because phase code already had
+ * the same identities reachable via `state.gpu.*`.  See `PhaseLocals`
+ * below and `BootstrapDeps` in `bootstrap.ts` for the wiring.
  */
 
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
 import { createPostProcess } from '../../gpu/passes/postProcess';
-import { type ThumbnailRenderer, createThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
-import { type DiskRenderer, createDiskRenderer } from '../../gpu/renderers/diskRenderer';
-import {
-  type ProceduralDiskRenderer,
-  createProceduralDiskRenderer,
-} from '../../gpu/renderers/proceduralDiskRenderer';
-import {
-  type MilkyWayRenderer,
-  createMilkyWayRenderer,
-} from '../../gpu/renderers/milkyWayRenderer';
+import { createThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
+import { createDiskRenderer } from '../../gpu/renderers/diskRenderer';
+import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
+import { createMilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
 import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
@@ -94,35 +86,26 @@ import type { EngineState } from '../../../@types';
 import type { BootstrapDeps } from './bootstrap';
 
 /**
- * Phase-local carrier for IIFE-scoped renderers/handles that survive
- * past `initGpu` but don't belong on `EngineState`.  `wireSlots` and
- * `startLoop` read this via `deps.phaseLocals`.
+ * PhaseLocals — minimal cross-phase carrier for objects that don't
+ * (yet) live on `state.gpu`.
  *
- * Intentionally orchestrator-internal — not part of any cross-module
- * contract.  The shared carrier mutation pattern mirrors how the
- * original IIFE used its own closure scope to thread values between
- * sequential blocks.
+ * Pre-cleanup (M1, 2026-05-11) this bag also carried `thumbnailRenderer`,
+ * `diskRenderer`, `proceduralDiskRenderer`, `milkyWayRenderer`, and
+ * `firstReadySource`.  The four renderers were moved off here because
+ * they were duplicates of `state.gpu.X` — phase code now reads them
+ * directly with an explicit non-null check that formalises what the
+ * previous `deps.phaseLocals!.X` bang silently assumed (phase
+ * ordering).  `firstReadySource` became a typed ref on `BootstrapDeps`;
+ * passing it through a phase channel was hiding the mutation site.
  *
- * `firstReadySource` is the only field NOT written by `initGpu`;
- * `wireSlots` writes it after the all-arrivals gate resolves so
- * `wireInput` can fire `cb.onStatusChange({ kind: 'ready', source })`
- * with the right `cloudSourceFor` mapping.  Optional because the
- * "no clouds reached GPU" early-return path leaves it null.
+ * `device` and `context` remain on this bag because they don't have a
+ * `state.gpu.*` home today.  Moving them would mean adding them to
+ * `EngineGpuHandles` (the shape behind `state.gpu`); out of scope for
+ * M1, but tracked as a follow-up in the 2026-05-11 audit.
  */
 export type PhaseLocals = {
   device: GPUDevice;
   context: GPUCanvasContext;
-  thumbnailRenderer: ThumbnailRenderer;
-  diskRenderer: DiskRenderer;
-  proceduralDiskRenderer: ProceduralDiskRenderer;
-  milkyWayRenderer: MilkyWayRenderer;
-  /**
-   * The first survey whose cloud arrived on the GPU with `count > 0`,
-   * or `Source.Synthetic` if the synthetic fallback fired.  Read by
-   * `wireInput` to populate the `cb.onStatusChange({ kind: 'ready' })`
-   * payload.  Written by `wireSlots`.
-   */
-  firstReadySource: import('../../../data/sources').Source | null;
 };
 
 /**
@@ -379,20 +362,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const filamentRenderer = createFilamentRenderer(device, 'rgba16float');
   state.gpu.filamentRenderer = filamentRenderer;
 
-  // Mirror the four renderers onto `state.gpu.*` so `engine.ts.destroy()`
-  // has a reachable reference path for teardown.  Pre-2026-05-08 these
-  // four renderers lived only on `phaseLocals` (and on the `RunFrameDeps`
-  // closures captured by `startLoop`), with no path from `engine.ts`'s
-  // public handle to call `.destroy()` on them — PR #66 flagged this gap.
-  //
-  // Why mirror rather than route everything through `state.gpu.*`?  The
-  // frame loop still consumes them via `RunFrameDeps` (assembled in
-  // `phases/startLoop.ts` from `phaseLocals`).  Replacing every read
-  // site with `state.gpu.*` would be a larger diff with no functional
-  // gain — the architectural goal here is destroy reachability, not
-  // perfect dedup of references.  Two parallel references are fine
-  // because both write here exactly once and both null in `destroy()`,
-  // so they can never disagree about whether the renderer exists.
+  // Store the four thumbnail-related renderers on `state.gpu.*` so
+  // `engine.ts.destroy()` has a reachable reference path for teardown,
+  // AND so the later bootstrap phases (`wireSlots`, `startLoop`) can
+  // consume them by reading `state.gpu.X` directly.  Pre-2026-05-08
+  // these four renderers lived only on `phaseLocals` — PR #66 flagged
+  // that `destroy()` couldn't reach them.  The initial fix mirrored
+  // them onto `state.gpu.*` for destroy reachability while leaving the
+  // phase-side reads pointing at `phaseLocals`; M1 of the 2026-05-11
+  // audit collapsed that mirror, so `state.gpu.*` is now the single
+  // home for these references.
   //
   // **Lifecycle note for future contributors.**  Do NOT add these four
   // fields to `isEngineReady` (in `helpers/engineReady.ts`).  They're
@@ -423,17 +402,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // shared corner/index VBOs and every per-field GPU resource.
   state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(device, 'rgba16float');
 
-  // Stash phase-locals so subsequent phases (`wireSlots`, `startLoop`)
-  // can read the IIFE-scoped device/context/renderer handles.  See
-  // `PhaseLocals` above for the rationale on not promoting these to
-  // `EngineState`.
+  // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
+  // `startLoop`) can read the IIFE-scoped device/context handles.  The
+  // renderers themselves now flow via `state.gpu.*` (see the mirror
+  // block above); this carrier is intentionally minimal — only the
+  // things without a `state.gpu.*` home today.  See `PhaseLocals`
+  // above for the rationale on what does (and doesn't) live here
+  // after M1.
   deps.phaseLocals = {
     device,
     context,
-    thumbnailRenderer,
-    diskRenderer,
-    proceduralDiskRenderer,
-    milkyWayRenderer,
-    firstReadySource: null,
   };
 }

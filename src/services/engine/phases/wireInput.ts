@@ -367,7 +367,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // loading after this point are reflected via `onCloudReady`, not via
   // an additional `onStatusChange` — the status bar's job is "we're up",
   // not "live counter".
-  const firstReadySource = deps.phaseLocals!.firstReadySource;
+  const firstReadySource = deps.firstReadySourceRef.current;
   const readyStatus = {
     kind: 'ready' as const,
     count: renderer.totalCount(),

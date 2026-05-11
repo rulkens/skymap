@@ -201,6 +201,7 @@ function makeDeps(state: EngineState): BootstrapDeps {
     allSlots: new Map(),
     fpsCounter: { sample: () => null } as unknown as BootstrapDeps['fpsCounter'],
     lastReportedFps: { current: null },
+    firstReadySourceRef: { current: null },
   };
 }
 
@@ -226,23 +227,32 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
   });
 
-  it("phaseLocals retains the same renderer references — the state.gpu.* writes are mirrors, not moves", async () => {
-    // The fix deliberately keeps `phaseLocals` populated as a parallel
-    // reference path because `wireSlots` and `startLoop` still consume
-    // the renderers from there.  Removing the phaseLocals writes would
-    // be a larger, riskier diff with no functional gain — destroy
-    // reachability is the bar.  This test pins down that decision so
-    // a future "tidy up phaseLocals" doesn't accidentally regress
-    // either consumer.
+  it('phaseLocals no longer carries the four thumbnail/milky-way renderers — they live solely on state.gpu.*', async () => {
+    // M1 of the 2026-05-11 architectural audit collapsed the
+    // phaseLocals renderer mirror.  Previously initGpu wrote the four
+    // renderers onto BOTH `state.gpu.*` (for destroy reachability) and
+    // `deps.phaseLocals` (for later phases to consume).  That mirror
+    // was redundant: `state.gpu.*` is set before any later phase reads,
+    // so phases now read directly from there with an explicit non-null
+    // check that replaces the previous `deps.phaseLocals!.X` folklore
+    // bang.  This test pins down that decision so a future
+    // "re-add phaseLocals mirror" doesn't silently regress us back to
+    // the hidden phase channel.
     const state = makeState();
     const deps = makeDeps(state);
     await initGpu(state, deps);
 
     expect(deps.phaseLocals).toBeDefined();
-    expect(deps.phaseLocals!.thumbnailRenderer).toBe(state.gpu.thumbnailRenderer);
-    expect(deps.phaseLocals!.diskRenderer).toBe(state.gpu.diskRenderer);
-    expect(deps.phaseLocals!.proceduralDiskRenderer).toBe(state.gpu.proceduralDiskRenderer);
-    expect(deps.phaseLocals!.milkyWayRenderer).toBe(state.gpu.milkyWayRenderer);
+    // PhaseLocals is now exactly { device, context } — no renderer fields.
+    expect(deps.phaseLocals!).not.toHaveProperty('thumbnailRenderer');
+    expect(deps.phaseLocals!).not.toHaveProperty('diskRenderer');
+    expect(deps.phaseLocals!).not.toHaveProperty('proceduralDiskRenderer');
+    expect(deps.phaseLocals!).not.toHaveProperty('milkyWayRenderer');
+    // The renderers are still reachable for destroy + consumption via state.gpu.*.
+    expect(state.gpu.thumbnailRenderer).toBe(stubs.thumbnailRenderer);
+    expect(state.gpu.diskRenderer).toBe(stubs.diskRenderer);
+    expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
+    expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
   });
 
   it('replaying engine.ts.destroy() chain on state.gpu.* invokes each renderer.destroy()', async () => {
