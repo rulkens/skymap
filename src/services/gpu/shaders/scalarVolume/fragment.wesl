@@ -44,6 +44,17 @@ struct VolumeUniforms {
   // intensity: intensity is overall opacity, contrast is which
   // voxels participate.
   contrast: f32,
+  // Per-cube center of the contrast window in LUT space [0, 1].
+  // Divergent palettes (coolwarm; CF-4) want 0.5 — the cosmic mean
+  // sits at the divergent transparent midpoint, the deadband
+  // suppresses it symmetrically.  Sequential palettes (inferno;
+  // MCPM, log-normalised so voxel value = 0 means void) want 0.0 —
+  // voids are the "noise floor" we want to fade out, and the stretch
+  // pushes mid-density values toward the bright end of the palette.
+  // See applyContrastWindow's docblock for the generalised math; this
+  // is the only knob that distinguishes divergent vs sequential
+  // contrast behaviour.
+  contrastCenter: f32,
   // Spatial envelope edges in normalised local-space distance from
   // the cube center.  The cube's inscribed sphere has radius 1.0;
   // the cube's corners are at √3 ≈ 1.73.  sphericalEnvelope runs a
@@ -97,18 +108,34 @@ struct FsIn {
 // the near-mean noise that already had nonzero alpha — exactly the
 // "more noise, not more structure" symptom this replaces.
 //
-// Generalising for sequential palettes (where the meaningful zero is
-// at t=0, not t=0.5) requires a center argument; the math below
-// hardcodes 0.5 because that is the only consumer today.
-fn applyContrastWindow(sampleValue: f32, contrast: f32) -> vec2<f32> {
-  let dev = abs(sampleValue - 0.5) * 2.0; // [0, 1], 0 at mean, 1 at extremes
+// Generalised for arbitrary 'center' in [0, 1].  For divergent palettes
+// (CF-4, coolwarm) the meaningful zero sits at LUT t=0.5, so center=0.5
+// and dev measures distance from the midpoint symmetrically — both ends
+// of the palette light up.  For sequential palettes (MCPM, inferno) the
+// meaningful zero sits at LUT t=0 (transparent void), so center=0.0
+// and dev measures distance from the low end — only the high end of
+// the palette lights up, voids stay transparent.
+//
+// halfRange normalises dev so deadband math is independent of where the
+// center is: a 50% deadband is always "the half of the palette closest
+// to the center".  At center=0.5, halfRange=0.5; at center=0 or 1,
+// halfRange=1.0.
+//
+// signedT folds the stretched coord back around the center so the
+// stretch direction is correct: at center=0.5 voxels above the
+// midpoint stretch toward t=1, voxels below stretch toward t=0; at
+// center=0 every voxel is above the center so they all stretch
+// monotonically toward t=1.
+fn applyContrastWindow(sampleValue: f32, contrast: f32, center: f32) -> vec2<f32> {
+  let halfRange = max(center, 1.0 - center);
+  let dev = abs(sampleValue - center) / max(halfRange, 1e-3); // [0, 1]
   let deadband = clamp(1.0 - 1.0 / max(contrast, 1e-3), 0.0, 0.9);
   let stretched = clamp(
     (dev - deadband) / max(1.0 - deadband, 1e-3),
     0.0,
     1.0,
   );
-  let signedT = 0.5 + sign(sampleValue - 0.5) * stretched * 0.5;
+  let signedT = center + sign(sampleValue - center) * stretched * halfRange;
   // Smooth fade across the deadband edge so the threshold isn't a
   // hard cliff — gives the impression of "structure rising out of fog"
   // rather than a binary mask popping in.
@@ -207,7 +234,7 @@ fn fs_main(in: FsIn) -> @location(0) vec4<f32> {
     // contrast=1 (identity) — branching would break the uniform-
     // control-flow contract that lets us call textureSampleLevel
     // below.
-    let window = applyContrastWindow(sampleValue, u.contrast);
+    let window = applyContrastWindow(sampleValue, u.contrast, u.contrastCenter);
     let signedT = window.x;
     let visibility = window.y;
     // Look up colour through the 1D palette LUT.  Same uniformity

@@ -43,10 +43,11 @@ import fsCode from '../shaders/scalarVolume/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 // 80 (cam) + 64 (model) + 64 (invModel) + 12 (camPos) + 4 (intensity)
-// + 4 (densityScale) + 4 (contrast) + 4 (envelopeInner) + 4 (envelopeOuter)
-// = 240.  Already a multiple of 16 — the struct's mat4x4 alignment is
-// satisfied with no trailing pad.
-const UNIFORM_BYTES = 240;
+// + 4 (densityScale) + 4 (contrast) + 4 (contrastCenter) + 4 (envelopeInner)
+// + 4 (envelopeOuter) = 244.  The WGSL struct contains mat4x4 (alignment 16),
+// so total must be a multiple of 16 — pad up to 256.  The trailing 12 bytes
+// stay zero; they're reserved for future per-field uniforms.
+const UNIFORM_BYTES = 256;
 
 const CUBE_CORNERS = new Float32Array([
   0, 0, 0,
@@ -164,6 +165,19 @@ type FieldEntry = {
    * the shader for the math.
    */
   contrast: number;
+  /**
+   * Per-cube center of the contrast windowing transform, in LUT
+   * coordinate space [0, 1].  Divergent palettes (CF-4, coolwarm)
+   * want 0.5 so the deadband suppresses the cosmic-mean midpoint
+   * symmetrically; sequential palettes (MCPM, inferno) want 0.0 so
+   * the deadband suppresses the void floor (LUT t=0) and the stretch
+   * pushes mid-density values toward the bright end.  Per-cube
+   * static — set once at registration time from the per-handle
+   * registry, not user-tunable.  See `applyContrastWindow` in
+   * `fragment.wesl` for the math; `VOLUME_FIELD_DEFAULTS[handle]`
+   * for the per-field values.
+   */
+  contrastCenter: number;
   paletteId: ScalarFieldPaletteId;
   /** Per-cube opacity multiplier; seeded to 1.0 in `addField` and overwritten
    *  via `setDensityScale` (called from wireSlots with the value from
@@ -237,6 +251,14 @@ export type ScalarVolumeRenderer = {
    * when the handle is unknown.
    */
   setEnvelope(handle: ScalarFieldHandle, inner: number, outer: number): void;
+  /**
+   * Per-cube center of the contrast windowing transform.  See the
+   * `contrastCenter` field on `FieldEntry` for the rationale; values
+   * outside [0, 1] are clamped because the shader's `halfRange =
+   * max(center, 1-center)` only makes sense in that range.  Called
+   * once at slot-commit time with the per-handle registry value.
+   */
+  setContrastCenter(handle: ScalarFieldHandle, center: number): void;
   /**
    * Replace the palette LUT for a single field.  Rewrites the field's
    * existing 1D LUT texture in place via `writeTexture`; the bind group
@@ -409,6 +431,10 @@ export function createScalarVolumeRenderer(
         // placeholder before any UI / settings state has been
         // threaded in.
         contrast: 1.0,
+        // Default to 0.5 (divergent / CF-4 behaviour); the slot
+        // commit overwrites with the per-handle registry value via
+        // `setContrastCenter` immediately after `addField` returns.
+        contrastCenter: 0.5,
         // Match the palette seeded into `paletteTexture` above.  The
         // commit site (wireSlots) overwrites both via
         // `setFieldPalette` immediately after `addField` returns; the
@@ -459,6 +485,17 @@ export function createScalarVolumeRenderer(
       // — the slider in VolumeFieldRow caps lower, but the API stays
       // permissive.
       if (entry) entry.contrast = Math.max(0.05, Math.min(16, contrast));
+    },
+    setContrastCenter(handle, center) {
+      const entry = fields.get(handle);
+      if (!entry) return;
+      // Clamp to [0, 1].  The shader's `halfRange = max(center, 1-center)`
+      // only makes sense inside that range; out-of-range values would
+      // produce a non-monotonic dev metric and yield nonsense visuals
+      // rather than a useful debug signal.  NaN clamps to the divergent
+      // default (0.5) — never propagate non-finite values to the GPU.
+      const c = Number.isFinite(center) ? center : 0.5;
+      entry.contrastCenter = Math.max(0, Math.min(1, c));
     },
     setEnvelope(handle, inner, outer) {
       const entry = fields.get(handle);
@@ -519,19 +556,20 @@ export function createScalarVolumeRenderer(
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
-      // Per-field uniform buffer layout (240 bytes; mat4 alignment):
-      //   0..63   viewProj        (mat4x4 column-major, 16 floats)
-      //  64..71   viewportPx      (vec2)
+      // Per-field uniform buffer layout (256 bytes; mat4 alignment):
+      //   0..63   viewProj         (mat4x4 column-major, 16 floats)
+      //  64..71   viewportPx       (vec2)
       //  72..79   _pad0, _pad1
-      //  80..143  modelMatrix     (mat4x4)
-      // 144..207  invModelMatrix  (mat4x4)
-      // 208..219  cameraPosWorld  (vec3)
-      // 220..223  intensity       (f32)
-      // 224..227  densityScale    (f32)
-      // 228..231  contrast        (f32)
-      // 232..235  envelopeInner   (f32)
-      // 236..239  envelopeOuter   (f32)
-      // (struct is now exactly 240 bytes content; no trailing pad needed)
+      //  80..143  modelMatrix      (mat4x4)
+      // 144..207  invModelMatrix   (mat4x4)
+      // 208..219  cameraPosWorld   (vec3)
+      // 220..223  intensity        (f32)
+      // 224..227  densityScale     (f32)
+      // 228..231  contrast         (f32)
+      // 232..235  contrastCenter   (f32)
+      // 236..239  envelopeInner    (f32)
+      // 240..243  envelopeOuter    (f32)
+      // 244..255  _pad             (12 bytes; struct rounded up to 16-byte multiple)
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       for (const e of fields.values()) {
         if (!e.enabled || e.intensity <= 0) continue;
@@ -548,8 +586,9 @@ export function createScalarVolumeRenderer(
         scratch[55] = e.intensity;
         scratch[56] = e.densityScale;
         scratch[57] = e.contrast;
-        scratch[58] = e.envelopeInner;
-        scratch[59] = e.envelopeOuter;
+        scratch[58] = e.contrastCenter;
+        scratch[59] = e.envelopeInner;
+        scratch[60] = e.envelopeOuter;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
         pass.setBindGroup(0, e.bindGroup);
         pass.drawIndexed(CUBE_INDICES.length);

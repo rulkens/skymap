@@ -77,6 +77,23 @@ describe('volumeFieldDefaults', () => {
     expect(FALLBACK_VOLUME_DEFAULTS.envelope).toEqual(NO_SPATIAL_ENVELOPE);
   });
 
+  it('contrastCenter splits divergent (0.5) vs sequential (0.0) palettes', () => {
+    // Divergent palettes (coolwarm) want the deadband centred on the
+    // midpoint where the cosmic mean lives.
+    expect(VOLUME_FIELD_DEFAULTS['cf4-density']!.contrastCenter).toBeCloseTo(0.5, 6);
+    // Sequential palettes (inferno + log normalisation) want the
+    // deadband centred on the void floor at LUT t=0 — otherwise the
+    // contrast slider becomes a knife-edge and mid-density filaments
+    // either disappear or wash out as solid colour.
+    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.contrastCenter).toBeCloseTo(0.0, 6);
+    // Debug fixtures + fallback inherit the divergent default so the
+    // pre-generalisation contrast behaviour is exactly preserved.
+    expect(FALLBACK_VOLUME_DEFAULTS.contrastCenter).toBeCloseTo(0.5, 6);
+    for (const handle of ['debug-gaussian', 'debug-cartesian', 'debug-spherical']) {
+      expect(VOLUME_FIELD_DEFAULTS[handle]!.contrastCenter).toBeCloseTo(0.5, 6);
+    }
+  });
+
   it('exposes mcpm with inferno + windowed contrast for heavy-tailed trace density', () => {
     const d = VOLUME_FIELD_DEFAULTS['mcpm'];
     expect(d).toBeDefined();

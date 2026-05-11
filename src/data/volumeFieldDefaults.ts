@@ -50,6 +50,29 @@ export type VolumeFieldDefaults = {
    */
   contrast: number;
   /**
+   * Per-cube center of the contrast windowing transform, in LUT
+   * coordinate space [0, 1].  Per-cube static (not user-tunable)
+   * because it's a property of the cube's data semantics + palette
+   * choice rather than a tuning knob:
+   *
+   *   - Divergent palettes (coolwarm) with a meaningful zero at the
+   *     midpoint of the data range → `contrastCenter = 0.5`.  The
+   *     deadband suppresses near-mean noise symmetrically; the
+   *     stretch pushes both ends toward palette extremes.  CF-4
+   *     density contrast is the canonical example.
+   *
+   *   - Sequential palettes (inferno, magma, viridis) with a
+   *     meaningful zero at the start of the LUT (voids are
+   *     transparent) → `contrastCenter = 0.0`.  The deadband
+   *     suppresses void voxels (LUT t≈0); the stretch pushes
+   *     mid-density values toward the bright end (LUT t≈1).  MCPM
+   *     log-normalised trace density is the canonical example.
+   *
+   * The shader generalises the windowing transform around this
+   * center; see `applyContrastWindow` in `fragment.wesl`.
+   */
+  contrastCenter: number;
+  /**
    * Per-cube opacity multiplier; see the alpha-formula docblock in
    * `scalarVolumeRenderer.ts`.  Tuned per field so intensity=1 produces
    * a saturated-but-not-flat overlay against typical data ranges.
@@ -113,6 +136,12 @@ export const FALLBACK_VOLUME_DEFAULTS: VolumeFieldDefaults = {
   // tuned yet.  Safer than a higher value because it never hides
   // data the registry author didn't explicitly opt out of.
   contrast: 1.0,
+  // 0.5 reproduces the pre-generalisation contrast behaviour exactly
+  // (it's the value the shader hardcoded before contrastCenter
+  // existed).  At contrast=1.0 the value is irrelevant anyway, so
+  // this only matters if a producer hand-bumps contrast on a brand
+  // new untuned field.
+  contrastCenter: 0.5,
   densityScale: 1.0,
   envelope: NO_SPATIAL_ENVELOPE,
 };
@@ -132,6 +161,12 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // enough to crisp up the structures without yet cropping any
     // real signal.  Tuned visually against d_mean_CF4pp.npy.
     contrast: 1.2,
+    // 0.5 = divergent / midpoint-centred windowing.  CF-4 stores
+    // overdensity δ (signed) with the cosmic mean at 0; the symmetric
+    // builder maps that to LUT t=0.5, where the coolwarm palette is
+    // fully transparent.  See VolumeFieldDefaults.contrastCenter for
+    // the divergent-vs-sequential discussion.
+    contrastCenter: 0.5,
     // Bumped from the original 5.0 to compensate for the windowing
     // visibility multiplier AND the spherical envelope cropping
     // (both new in the volume-windowing-envelope PR).  20× yields a
@@ -152,6 +187,11 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // Identity contrast — synthetic fixtures don't have a noise
     // floor worth windowing out.
     contrast: 1.0,
+    // 0.5 preserves the pre-generalisation behaviour for synthetic
+    // fixtures: every value of `contrast` works the same way as
+    // before this field was added.  At contrast=1.0 the value is
+    // irrelevant anyway (no deadband, no stretch).
+    contrastCenter: 0.5,
     // Lifted from syntheticScalarField.ts:makeSyntheticGaussianCube.
     // A single Gaussian peak integrates to roughly √(2π)·σ along its
     // central axis, so 10× lifts the peak into the saturated regime
@@ -165,6 +205,7 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
   'debug-cartesian': {
     paletteId: 'viridis',
     contrast: 1.0,
+    contrastCenter: 0.5,
     // Lifted from syntheticScalarField.ts:makeCartesianGridCube.  A
     // ray crosses ~8 grid planes per axis at default settings, so
     // integrated density is much higher than the single-peak
@@ -177,6 +218,7 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
   'debug-spherical': {
     paletteId: 'magma',
     contrast: 1.0,
+    contrastCenter: 0.5,
     // Lifted from syntheticScalarField.ts:makeSphericalGridCube.  A
     // ray typically crosses one or two shells plus a spoke — sits
     // between the Gaussian (sparse) and Cartesian grid (dense) in
@@ -200,6 +242,15 @@ export const VOLUME_FIELD_DEFAULTS: Record<string, VolumeFieldDefaults> = {
     // density is heavy-tailed); modest windowing brings filament
     // structure forward without crushing the low-density voids.
     contrast: 1.5,
+    // 0.0 = sequential / void-floor-centred windowing.  MCPM trace
+    // is non-negative and log-normalised, so void voxels sit at LUT
+    // t=0 (transparent inferno start).  Centering the deadband at 0
+    // suppresses voids when contrast > 1 and stretches mid-density
+    // values toward the bright end of the LUT — exactly what the
+    // user wants for "filaments rising out of fog".  Without this
+    // (i.e. with the cf4 default of 0.5), the contrast slider became
+    // a knife-edge between "all red" and "completely invisible".
+    contrastCenter: 0.0,
     // Initial value pending visual tuning against the real cube; lower
     // than CF-4's 20 because MCPM's normalised range stays in [0.5, 1.0]
     // (non-negative input) and saturates faster.

@@ -68,6 +68,7 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
       // from the registry rather than mirroring it into
       // `persisted` — no JS-side state to keep in sync.
       renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
+      renderer.setContrastCenter(handle, defaults.contrastCenter);
       cb.volumes?.onFieldsChanged?.();
       state.subsystems.scheduler.requestRender();
     },
