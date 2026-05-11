@@ -64,7 +64,6 @@ const noopCb = {
   onStatusChange: () => {},
   onHoverChange: () => {},
   onSelectChange: () => {},
-  onScaleChange: () => {},
 } as unknown as EngineCallbacks;
 
 // Inject a no-op rAF/cAF pair so the scheduler factory doesn't reach

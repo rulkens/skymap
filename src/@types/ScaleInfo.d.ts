@@ -1,17 +1,18 @@
 /**
  * ScaleInfo — label and pixel width for the bottom-right distance legend bar.
- * Emitted by the engine via onScaleChange whenever the camera zoom or viewport
- * size changes.
+ *
+ * Computed React-side from the camera snapshot the engine emits via
+ * `cb.onCameraChange`.  The pure math lives in
+ * `services/engine/helpers/scaleBar.ts` (`computeScaleInfo`); React stores
+ * the latest value in a `useState` slot whose default equality check
+ * filters unchanged emissions.
+ *
+ * Pre-extraction the engine owned this computation, dedup'd on a closure-
+ * captured `lastScaleSig`, and pushed via `onScaleChange`.  The lift to
+ * React lets the engine shed scale-bar state entirely and treat camera
+ * mutations as the single signal — UI derivation is a React concern.
  */
 
-/**
- * Distance scale for the bottom-right legend bar.
- *
- * The engine computes this from the camera distance and viewport height each
- * frame, deduplicates on `label + widthPx`, and fires `onScaleChange` only
- * when the value actually changes. React components receive it as props and
- * render it directly — no derived state needed.
- */
 export type ScaleInfo = {
   /**
    * Pre-formatted human-readable label, e.g. "500 Mpc", "2 Gpc", "750 kpc".

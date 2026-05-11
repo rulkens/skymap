@@ -6,7 +6,6 @@
 
 import type { EngineStatus } from './EngineStatus';
 import type { PointInfo } from './PointInfo';
-import type { ScaleInfo } from './ScaleInfo';
 import type { LodMode } from './LodMode';
 import type { Tier } from './Tier';
 import type { Source } from '../data/sources';
@@ -54,8 +53,27 @@ export type EngineCallbacks = {
    * `f` shortcut) update App-side `focused` state directly.
    */
   onFocusChange?: (info: PointInfo | null) => void;
-  /** Fired when the scale bar label or width changes (zoom or resize). */
-  onScaleChange: (info: ScaleInfo) => void;
+  /**
+   * Fired once per frame the camera state may have changed — every tick
+   * inside the engine's `runFrame` body (when a camera exists) plus
+   * whenever orbit-controls mutates the cam from user input.
+   *
+   * The callback carries the two camera scalars the React UI needs to
+   * derive zoom-dependent values (scale bar today; potentially other
+   * overlays later).  Anything more elaborate should read state via
+   * its own subsystem rather than fattening this payload.
+   *
+   * Optional: subscribers that don't need per-frame camera state can
+   * omit it.  When omitted the call is an optional-chain no-op, so the
+   * frame body pays nothing.
+   *
+   * Why a snapshot rather than the live `OrbitCamera` ref?  React
+   * consumers should treat each emission as an immutable value to
+   * compare against the previous one — passing the live object would
+   * leak mutation semantics across the engine→React boundary and
+   * defeat `setState` equality checks.
+   */
+  onCameraChange?: (snapshot: { distance: number; fovYRad: number }) => void;
 
   /**
    * Fired when the point size changes (either from a `setPointSize` call or at

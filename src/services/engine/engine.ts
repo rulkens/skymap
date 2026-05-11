@@ -16,9 +16,10 @@
  *   GPU pick readback
  *
  * Callbacks are the seam. The engine fires `onStatusChange`, `onHoverChange`,
- * `onSelectChange`, and `onScaleChange` only when values *actually change*, so
- * the React side can call `setState` directly without worrying about spurious
- * re-renders.
+ * and `onSelectChange` only when values *actually change*, so the React side
+ * can call `setState` directly without worrying about spurious re-renders.
+ * Per-frame `onCameraChange` emissions instead fire unconditionally while
+ * the camera exists; React-side `setState` equality checks filter the noise.
  *
  * ### Module layout
  *
@@ -32,7 +33,7 @@
  *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
  *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot
  *   - `seedSettingsCallbacks.ts` — fan-out of default settings to optional cb hooks
- *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting
+ *   - `scaleBar.ts`            — pure scale-bar tick selection + label formatting (consumed by React)
  *
  *   Subsystems (closure-returning factories with internal state):
  *   - `tweenManager.ts`        — at-most-one in-flight CameraTween facade
@@ -64,7 +65,7 @@
  *   onStatusChange: (s) => setStatus(s),
  *   onHoverChange:  (p) => setReactHovered(p),
  *   onSelectChange: (p) => setReactSelected(p),
- *   onScaleChange:  (sc) => setScale(sc),
+ *   onCameraChange: (snap) => setScale(computeScaleInfo({...})),
  * });
  *
  * // later (e.g. React cleanup):
@@ -145,7 +146,7 @@ import { runBootstrapPhases, type BootstrapDeps } from './phases/bootstrap';
  *   3. `cb.onStatusChange({ kind: 'loading' })` fires before the fetch.
  *   4. `cb.onStatusChange({ kind: 'ready', ... })` fires when the render loop
  *      starts, or `{ kind: 'error' }` if GPU init fails.
- *   5. `cb.onHoverChange`, `cb.onSelectChange`, `cb.onScaleChange` fire during
+ *   5. `cb.onHoverChange`, `cb.onSelectChange`, `cb.onCameraChange` fire during
  *      steady-state rendering as the user interacts.
  *
  * @throws Never — errors are reported via `onStatusChange({ kind: 'error' })`.
@@ -519,10 +520,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // `BootstrapDeps` object built here.  Anything the pre-Phase-5 IIFE
   // captured from createEngine's outer scope flows through this bag —
   // the canvas + cb args, the `{current}` ref boxes for forward-declared
-  // bindings (frameRef, detachControlsRef, handleRef), the createEngine-
-  // scope helpers (cssToTexPx, updateScaleBar), and the values needed
-  // for `RunFrameDeps` assembly in `startLoop`
-  // (fpsCounter, lastReportedFps, allSlots).
+  // bindings (frameRef, detachControlsRef, handleRef), and the values
+  // needed for `RunFrameDeps` assembly in `startLoop`
+  // (fpsCounter, lastReportedFps, allSlots).  The pure `cssToTexPx`
+  // helper is imported directly in `runFrame.ts` / `wireInput.ts`;
+  // scale-bar derivation moved to React-side via `cb.onCameraChange`.
   //
   // `handleRef.current` is null at this point — the public handle is
   // declared AFTER the bootstrap IIFE below.  `wireInput`'s onDoubleClick

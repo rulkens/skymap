@@ -134,8 +134,6 @@ function makeDeps(opts: {
     thumbnailRenderer: {} as unknown as RunFrameDeps['thumbnailRenderer'],
     diskRenderer: {} as unknown as RunFrameDeps['diskRenderer'],
     milkyWayITimeEpochMs: 0,
-    cssToTexPx: (cssPx: number) => cssPx,
-    updateScaleBar: vi.fn(),
   };
 }
 

@@ -34,7 +34,6 @@ function makeCallbacks(): EngineCallbacks {
     onStatusChange: vi.fn(),
     onHoverChange: vi.fn(),
     onSelectChange: vi.fn(),
-    onScaleChange: vi.fn(),
   } as unknown as EngineCallbacks;
 }
 

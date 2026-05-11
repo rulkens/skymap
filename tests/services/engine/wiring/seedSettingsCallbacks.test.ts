@@ -37,13 +37,12 @@ function makeSnapshot(): Snapshot {
 }
 
 function makeRequiredCallbacks() {
-  // The four required callbacks aren't fired by the helper, but the
+  // The three required callbacks aren't fired by the helper, but the
   // EngineCallbacks type requires them — fill with no-op spies.
   return {
     onStatusChange: vi.fn(),
     onHoverChange: vi.fn(),
     onSelectChange: vi.fn(),
-    onScaleChange: vi.fn(),
   };
 }
 
@@ -86,7 +85,7 @@ describe('seedSettingsCallbacks', () => {
     expect(cb.onSourceMaskChange).toHaveBeenCalledExactlyOnceWith(snap.visibleSourceMask);
   });
 
-  it('does not fire required callbacks (status/hover/select/scale) — those have separate lifecycles', () => {
+  it('does not fire required callbacks (status/hover/select) — those have separate lifecycles', () => {
     const required = makeRequiredCallbacks();
     const cb: EngineCallbacks = required;
 
@@ -95,7 +94,6 @@ describe('seedSettingsCallbacks', () => {
     expect(required.onStatusChange).not.toHaveBeenCalled();
     expect(required.onHoverChange).not.toHaveBeenCalled();
     expect(required.onSelectChange).not.toHaveBeenCalled();
-    expect(required.onScaleChange).not.toHaveBeenCalled();
   });
 
   it('silently no-ops when optional callbacks are undefined', () => {
