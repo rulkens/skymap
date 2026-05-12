@@ -113,15 +113,14 @@
  * `allSlots` registry population) sees the same Map it always did.
  */
 
-import type { EngineCallbacks, EngineState, PointCloud } from '../../../@types';
-import type { Tier } from '../../../@types/Tier';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import { Source } from '../../../data/sources';
-import type { Fetcher } from '../../loading/types';
+import type { PointCloudReq } from '../../../@types/loading/PointCloudReq';
+import type { PointSourceConfig } from '../../../@types/engine/wiring/PointSourceConfig';
+import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePointSourceDeps';
 import { createAssetSlot } from '../../loading/AssetSlot';
-import {
-  pointCloudFetcher,
-  type PointCloudReq,
-} from '../../loading/fetchers/pointCloudFetcher';
+import { pointCloudFetcher } from '../../loading/fetchers/pointCloudFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
 
 /**
@@ -151,33 +150,7 @@ function sourceName(source: Source): string {
   }
 }
 
-/**
- * One row of the registry.
- *
- * The fields capture exactly the dimensions that vary across the five
- * point-source slots; everything else (slot name shape, commit body,
- * subscriber side effects) is uniform and lives in
- * `wirePointSourceSlot`.
- */
-export type PointSourceConfig = {
-  /** Which catalog this slot represents. */
-  source: Source;
-  /**
-   * Fetcher used to materialise the slot's request into a PointCloud.
-   * The four real surveys share `pointCloudFetcher` (which dispatches
-   * on `req.source` to pick the right .bin URL); Synthetic uses
-   * `syntheticPointFetcher` (which procedurally generates a cloud and
-   * ignores `req.tier`).
-   */
-  fetcher: Fetcher<PointCloud, PointCloudReq>;
-  /**
-   * Declarative initial tier for the slot.  See the module-header
-   * "Why initialTier lives on the config but isn't read by the helper"
-   * note — this field is for forward-uniformity with the spec; the
-   * actual first-load tier today comes from `state.sources.tier`.
-   */
-  initialTier: Tier;
-};
+// PointSourceConfig type moved to @types/engine/wiring/PointSourceConfig.d.ts.
 
 /**
  * The full registry, in Source enum order so the boot-time arrival
@@ -210,9 +183,7 @@ export const POINT_SOURCE_REGISTRY: readonly PointSourceConfig[] = [
  * keeps the call site at a single line and matches how the rest of
  * the engine treats the `EngineCallbacks` value.
  */
-export type WirePointSourceDeps = {
-  cb: EngineCallbacks;
-};
+// WirePointSourceDeps type moved to @types/engine/wiring/WirePointSourceDeps.d.ts.
 
 /**
  * Build the asset slot for one point-source survey, attach its commit

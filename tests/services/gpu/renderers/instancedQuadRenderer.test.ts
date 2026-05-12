@@ -20,7 +20,7 @@ import {
   UNIFORM_BYTES,
 } from '../../../../src/services/gpu/renderers/instancedQuadRenderer';
 import { MILKY_WAY_UNIFORM_BUFFER_SIZE } from '../../../../src/services/gpu/renderers/milkyWayRenderer';
-import type { GpuContext } from '../../../../src/@types';
+import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 
 /**
  * Fluent stub-device builder. Each method captures its calls into

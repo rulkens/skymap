@@ -86,12 +86,18 @@
  * @module
  */
 
-import type { Destroyable, PointCloud } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import { BiasMode } from '../../../data/biasMode';
+import type { BiasMode as BiasModeT } from '../../../@types/data/BiasMode';
 import { Source, ALL_SOURCES } from '../../../data/sources';
-import type { ComputeSchechterRatiosInput } from '../bake/computeSchechterRatios';
-import type { ComputeAngularWeightsInput } from '../bake/computeAngularWeights';
-import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
+import type { ComputeSchechterRatiosInput } from '../../../@types/engine/ComputeSchechterRatiosInput';
+import type { ComputeAngularWeightsInput } from '../../../@types/engine/ComputeAngularWeightsInput';
+import type { SchechterRunner } from '../../../@types/engine/subsystems/SchechterRunner';
+import type { AngularRunner } from '../../../@types/engine/subsystems/AngularRunner';
+import type { BiasCorrectionSubsystem } from '../../../@types/engine/subsystems/BiasCorrectionSubsystem';
+import type { BiasCorrectionDeps } from '../../../@types/engine/subsystems/BiasCorrectionDeps';
+import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler
 // to emit each `.worker.ts` file as its own worker chunk and hand back a
@@ -109,71 +115,6 @@ import ComputeSchechterRatiosWorker from '../bake/computeSchechterRatios.worker?
 import ComputeAngularWeightsWorker from '../bake/computeAngularWeights.worker?worker';
 import { clonePointCloudForTransfer } from '../../../data/pointCloudTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
-
-/** Async function from a Schechter bake input to per-galaxy ratios. */
-export type SchechterRunner = (input: ComputeSchechterRatiosInput) => Promise<Float32Array>;
-
-/** Async function from an angular bake input to per-galaxy weights. */
-export type AngularRunner = (input: ComputeAngularWeightsInput) => Promise<Float32Array>;
-
-export type BiasCorrectionDeps = {
-  /**
-   * Current bias mode — read lazily on every bake decision because
-   * the user can flip modes between bakes. Replaces the old
-   * `getState().settings.bias.mode` read.
-   */
-  getMode: () => BiasMode;
-
-  /**
-   * Currently-loaded source clouds, keyed by Source enum. Read
-   * lazily because the cloud map is mutated in place across tier
-   * swaps and per-source uploads. Replaces the old
-   * `getState().sources.clouds` read.
-   */
-  getLoadedClouds: () => Map<Source, PointCloud>;
-
-  /**
-   * Wake the render loop. Called after every bake completes (the
-   * uploaded splice changes what the visual pass renders, so the
-   * shader needs another frame). Replaces the old
-   * `getState().subsystems.scheduler.requestRender()` reach-in.
-   */
-  requestRender: () => void;
-
-  /** Optional override for the Schechter-ratio bake (test-injected). */
-  schechterRunner?: SchechterRunner;
-
-  /** Optional override for the angular-weight bake (test-injected). */
-  angularRunner?: AngularRunner;
-};
-
-export type BiasCorrectionSubsystem = {
-  /** Wire the renderer once it exists (during `phases/initGpu`). */
-  attachRenderer(renderer: PointRenderer): void;
-  /** Switch bias mode; fires bakes for every loaded source. */
-  setMode(mode: BiasMode): Promise<void>;
-  /** Called by the renderer when a source uploads or re-uploads. */
-  onSourceUploaded(source: Source, cloud: PointCloud): void;
-  /** Called by the renderer when a source unloads. */
-  onSourceUnloaded(source: Source): void;
-  /** Test-only: snapshot of internal state. */
-  state(): {
-    mode: BiasMode;
-    sourcesWithSchechter: Source[];
-    sourcesWithAngular: Source[];
-  };
-  /**
-   * Tear down the subsystem.  Currently a no-op — bias bakes spawn
-   * per-call workers that self-terminate (`runDisposableWorker`), and
-   * there are no event listeners or persistent subscriptions to
-   * release.  The method exists for uniform iteration in
-   * `engine.destroy()` (every subsystem satisfies `Destroyable`) and
-   * acts as the placeholder for the audit-#2 follow-up: if we later
-   * track in-flight bake workers so a teardown mid-bake can abort
-   * them, the abort logic lands here without disturbing call sites.
-   */
-  destroy(): void;
-};
 
 /**
  * Production default for the lazy Schechter-ratio bake — spawns a fresh
@@ -249,7 +190,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   // variable when `createBiasCorrectionSubsystem` is called from inside
   // it).  Lazy init also doubles as a trivial sync between
   // `state.settings.bias.mode` and our internal `mode` mirror at startup.
-  let mode: BiasMode | null = null;
+  let mode: BiasModeT | null = null;
   const cachedSchechter = new Map<Source, Float32Array>();
   const cachedAngular = new Map<Source, Float32Array>();
   /**
@@ -262,7 +203,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   let generation = 0;
 
   /** Lazily read & memoize the current internal mode mirror. */
-  function currentMode(): BiasMode {
+  function currentMode(): BiasModeT {
     if (mode === null) {
       mode = getMode();
     }
@@ -312,7 +253,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     renderer?.spliceAngularWeights(source, weights);
   }
 
-  async function setMode(next: BiasMode): Promise<void> {
+  async function setMode(next: BiasModeT): Promise<void> {
     generation += 1;
     const myGen = generation;
     mode = next;

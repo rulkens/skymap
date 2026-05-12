@@ -45,11 +45,9 @@
  * @module
  */
 
-import {
-  buildPointInterleavedBuffer,
-  type BuildPointInterleavedBufferInput,
-  type BuildPointInterleavedBufferResult,
-} from './buildPointInterleavedBuffer';
+import { buildPointInterleavedBuffer } from './buildPointInterleavedBuffer';
+import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
+import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 
 // `self` inside a worker is the WorkerGlobalScope; we type-narrow via
 // `as Worker`-style cast at the call site for `postMessage`.  The

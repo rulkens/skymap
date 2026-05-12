@@ -12,11 +12,11 @@
  */
 import { createAssetSlot } from '../AssetSlot';
 import { mcpmFetcher } from '../fetchers/mcpmFetcher';
-import type { MCPMReq } from '../fetchers/mcpmFetcher';
+import type { MCPMReq } from '../../../@types/loading/MCPMReq';
 import { DEFAULT_MCPM_ENABLED, DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
-import type { ScalarCube } from '../../../@types/ScalarCube';
-import type { SlotFactory } from './types';
+import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
   const slot = createAssetSlot({

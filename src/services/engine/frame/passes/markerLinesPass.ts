@@ -40,7 +40,7 @@
  * - `ctx.canvasSize` — viewport pixel dimensions
  */
 
-import type { Pass } from './types';
+import type { Pass } from '../../../../@types/engine/frame/Pass';
 
 export const markerLinesPass: Pass = {
   name: 'marker-lines',

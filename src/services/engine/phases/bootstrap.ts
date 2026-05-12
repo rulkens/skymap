@@ -86,119 +86,13 @@
  *     literal evaluates.
  */
 
-import type { EngineCallbacks, EngineHandle, EngineState } from '../../../@types';
-import type { AssetSlot } from '../../loading/types';
-import type { Source } from '../../../data/sources';
-import type { FpsCounter } from '../subsystems/fpsCounter';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
-import { initGpu, type PhaseLocals } from './initGpu';
+import { initGpu } from './initGpu';
 import { wireSlots } from './wireSlots';
 import { wireInput } from './wireInput';
 import { startLoop } from './startLoop';
-
-/**
- * Shared phase signature.  Every phase reads from + writes to `state`
- * and may consume any of the closure-captured locals threaded through
- * `deps`.  Phases run in declared order via `runBootstrapPhases` below;
- * they never call each other directly.
- */
-export type Phase = (state: EngineState, deps: BootstrapDeps) => Promise<void>;
-
-/**
- * Closure captures the bootstrap phases rely on.  Every entry was a
- * free reference in the original `engine.ts` IIFE; the survey done in
- * Phase 5 Task 5.1 enumerated each one and confirmed read-only vs.
- * mutated.  Mutated bindings (`frame`, `detachControls`, `handle`) are
- * boxed as `{current}` refs so writes round-trip back into createEngine's
- * outer scope across the module boundary.
- */
-export type BootstrapDeps = {
-  /** createEngine arg — for resize, viewport reads, listener attach. */
-  canvas: HTMLCanvasElement;
-  /** createEngine arg — UI-callback sink. */
-  cb: EngineCallbacks;
-
-  /**
-   * Mutable: forward-declared `frame` binding from `engine.ts`.  The
-   * scheduler in `state.subsystems.scheduler` was wired with
-   * `onFrame: () => frameRef.current()` so this assignment in
-   * `startLoop` makes every subsequent rAF tick run the real body.
-   * Boxed as `{current}` so the write round-trips back across the
-   * module boundary — see Phase 3's `lastReportedFps` for the same
-   * pattern.
-   */
-  frameRef: { current: () => void };
-
-  /**
-   * Mutable: orbit-controls detach handle.  `wireInput` writes the
-   * detach function returned by `attachOrbitControls`; `engine.ts`'s
-   * `destroy()` reads `detachControlsRef.current?.()` to remove the
-   * listeners.  Boxed for the same write-across-modules reason as
-   * `frameRef`.
-   */
-  detachControlsRef: { current: (() => void) | null };
-
-  /**
-   * Mutable: the public `EngineHandle`.  The handle literal is
-   * evaluated AFTER the bootstrap IIFE in `engine.ts` (it captures
-   * helpers that close over `state`), but `wireInput`'s onDoubleClick
-   * handler calls `handle.focusOn(lastClickedInfo)`.  We thread the
-   * reference through a `{current}` ref so engine.ts can assign it
-   * after the handle literal evaluates — by the time the user can
-   * actually double-click, the handle is fully wired.  Null until
-   * engine.ts sets it.
-   */
-  handleRef: { current: EngineHandle | null };
-
-  /**
-   * Flat slot registry, keyed by `slot.name`.  `wireSlots` populates
-   * it as each slot is minted; the public handle exposes the same
-   * Map as `assetSlots` for the `LoadingDevPanel` debug component.
-   * Same instance is also handed to `createLoadProgressEmitter` so
-   * the loading bar and the dev panel agree byte-for-byte on what's
-   * "in flight".  See engine.ts's outer-scope declaration for the
-   * full lifecycle rationale.
-   */
-  allSlots: Map<string, AssetSlot<unknown, unknown>>;
-
-  /** Rolling 60-frame counter; threaded through to `startLoop`'s `RunFrameDeps`. */
-  fpsCounter: FpsCounter;
-
-  /**
-   * Mutable: last integer fps value reported via `cb.onFpsChange`.
-   * Threaded through to `startLoop`'s `RunFrameDeps` (the frame body
-   * reads + writes it).  Boxed as `{current}` — see Phase 3.
-   */
-  lastReportedFps: { current: number | null };
-
-  /**
-   * Mutable ref carrying the first source whose `.bin` arrived with
-   * `count > 0`, OR `Source.Synthetic` if the synthetic fallback fired,
-   * OR `null` before any arrival.  Written by `wireSlots` once the
-   * all-arrivals gate resolves; read by `wireInput` to populate the
-   * `cb.onStatusChange({ kind: 'ready', source })` payload.
-   *
-   * Lives as a ref on `BootstrapDeps` (rather than as a field on the
-   * `phaseLocals` carrier) so the type is honest about the mutation
-   * site: the previous "stash on phaseLocals" pattern made this look
-   * like a write-once `initGpu` output when it was actually a
-   * `wireSlots` mutation read by a later phase.  M1 of the 2026-05-11
-   * audit teased that apart.
-   */
-  firstReadySourceRef: { current: Source | null };
-
-  /**
-   * Phase-local carrier for IIFE-scoped device/context handles that
-   * survive past `initGpu` but don't belong on `EngineState`.  Written
-   * by `initGpu`; read by `wireSlots`, `wireInput`, and `startLoop`.
-   * Undefined until `initGpu` runs; the type asserts non-null at the
-   * read sites since the orchestrator's order guarantees `initGpu` has
-   * completed by then.  See `initGpu.ts`'s `PhaseLocals` for the
-   * contents and the rationale on not promoting these to
-   * `EngineState`.
-   */
-  phaseLocals?: PhaseLocals;
-};
 
 /**
  * Run the four bootstrap phases in declared order.  First rejection

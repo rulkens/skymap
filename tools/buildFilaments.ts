@@ -72,7 +72,7 @@ import { fileURLToPath } from 'node:url';
 import { decodePointCloud } from '../src/data/pointCloudFormat.js';
 import { parseNDskl, skeletonToFilamentCloud } from './parsers/ndskl.js';
 import { encodeFilaments } from '../src/data/filamentBinaryFormat.js';
-import type { PointCloud } from '../src/@types/index.js';
+import type { PointCloud } from '../src/@types/data/PointCloud.js';
 import { Source } from '../src/data/sources.js';
 import { surveyFluxLimit } from '../src/data/surveyFluxLimits.js';
 import { absoluteFromApparent, dMaxFromAbsolute } from '../src/utils/math/distanceModulus.js';

@@ -27,7 +27,7 @@
  * the cutout URL still works for synthetic data.
  */
 
-import type { PointCloud } from '../@types';
+import type { PointCloud } from '../@types/data/PointCloud';
 import { mulberry32 } from '../utils/random/mulberry32';
 
 // ─── Cloud generator ─────────────────────────────────────────────────────────

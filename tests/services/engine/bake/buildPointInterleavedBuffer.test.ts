@@ -33,7 +33,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source } from '../../../../src/data/sources';
-import type { PointCloud } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 
 /** Build a tiny synthetic cloud with three galaxies at known coordinates. */
 function makeCloud(count: number): PointCloud {

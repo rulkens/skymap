@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { applyCurve } from '../../../src/services/input/spaceMouseSensitivity';
-import type { SpaceMouseAxes } from '../../../src/services/input/spaceMouseAxes';
+import type { SpaceMouseAxes } from '../../../src/@types/input/SpaceMouseAxes';
 
 const ZERO: SpaceMouseAxes = { tx: 0, ty: 0, tz: 0, rx: 0, ry: 0, rz: 0 };
 

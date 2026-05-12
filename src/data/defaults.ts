@@ -52,9 +52,11 @@
  */
 
 import { BiasMode } from './biasMode';
+import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from './toneMapCurve';
+import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import { ALL_VISIBLE_MASK } from './sources';
-import type { LodMode } from '../@types/LodMode';
+import type { LodMode } from '../@types/data/LodMode';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
 
@@ -149,7 +151,7 @@ export const DEFAULT_FILAMENT_INTENSITY = 1.0;
  * "natural" look.  Asinh is the filament-friendly alternative; user
  * picks via the dropdown.  See `data/toneMapCurve.ts` for the full set.
  */
-export const DEFAULT_TONE_MAP_CURVE: ToneMapCurve = ToneMapCurve.Reinhard;
+export const DEFAULT_TONE_MAP_CURVE: ToneMapCurveT = ToneMapCurve.Reinhard;
 
 /**
  * Default exposure multiplier applied before the tone-map curve.  Iterated
@@ -193,7 +195,7 @@ export const DEFAULT_EXPOSURE = 3.0;
  * completeness) and aren't mutually exclusive in principle, but the UI
  * exposes them as one-of-five for simplicity.
  */
-export const DEFAULT_BIAS_MODE: BiasMode = BiasMode.AngularReweight;
+export const DEFAULT_BIAS_MODE: BiasModeT = BiasMode.AngularReweight;
 
 /**
  * Default absolute-magnitude threshold for `BiasMode.VolumeLimited`.

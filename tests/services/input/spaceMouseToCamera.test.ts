@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createOrbitCamera } from '../../../src/services/camera/orbitCamera';
 import { applyAxesToCamera, hasAnyAxis } from '../../../src/services/input/spaceMouseToCamera';
-import type { SpaceMouseAxes } from '../../../src/services/input/spaceMouseAxes';
+import type { SpaceMouseAxes } from '../../../src/@types/input/SpaceMouseAxes';
 
 const ZERO: SpaceMouseAxes = { tx: 0, ty: 0, tz: 0, rx: 0, ry: 0, rz: 0 };
 

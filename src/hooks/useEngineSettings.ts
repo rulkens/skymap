@@ -39,10 +39,11 @@
  */
 
 import { useState } from 'react';
-import type { EngineCallbacks } from '../@types/EngineCallbacks';
-import type { LodMode } from '../@types/LodMode';
+import type { LodMode } from '../@types/data/LodMode';
 import { BiasMode } from '../data/biasMode';
+import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from '../data/toneMapCurve';
+import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -62,84 +63,8 @@ import {
   DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
 } from '../data/defaults';
-import type { VolumeFieldRowData } from '../components/SettingsPanel/SettingsPanel';
-
-export type EngineSettingsState = {
-  pointSize: number;
-  brightness: number;
-  autoRotate: boolean;
-  galaxyTexturesEnabled: boolean;
-  milkyWayEnabled: boolean;
-  filamentsEnabled: boolean;
-  filamentIntensity: number;
-  filamentCounts: { stripCount: number; vertexCount: number } | null;
-  highlightFallback: boolean;
-  realOnlyMode: boolean;
-  depthFadeEnabled: boolean;
-  visibleSourceMask: number;
-  lodMode: LodMode;
-  biasMode: BiasMode;
-  absMagLimit: number;
-  toneMapCurve: ToneMapCurve;
-  exposure: number;
-  /**
-   * Master toggle for the scalar-volume overlay.  Mirrors
-   * `EngineSettingsState.volumesEnabled` on the engine side.  No echo
-   * callback — React owns it optimistically, same as `filamentsEnabled`.
-   */
-  volumesEnabled: boolean;
-  /**
-   * Snapshot of every registered field's UI state — rebuilt on each
-   * `onVolumeFieldsChanged` callback via `handle.getVolumeFieldsState()`.
-   * Starts empty (no cubes are registered at startup).  Each row carries
-   * its own `paletteId` (per-field palette), so the dropdown lives
-   * inside each field's row in the SettingsPanel.
-   */
-  volumeFields: ReadonlyArray<VolumeFieldRowData>;
-};
-
-/**
- * The slice of `EngineCallbacks` this hook owns.  App.tsx spreads this
- * into its `createEngine(canvas, { ... })` options block so the engine
- * can fire echoes that drive React's settings state.
- *
- * H5 task 11: only the nested sub-bag names survive — every flat
- * sibling on `EngineCallbacks` was deleted in lockstep with the
- * engine-side fire-site migration.  Filament counts now ride the
- * `filaments.onReady` address (no flat survivor).
- */
-export type EngineSettingsCallbacks = Pick<
-  EngineCallbacks,
-  | 'points'
-  | 'tonemap'
-  | 'camera'
-  | 'sources'
-  | 'bias'
-  | 'thumbnails'
-  | 'milkyWay'
-  | 'filaments'
->;
-
-export type UseEngineSettingsReturn = {
-  settings: EngineSettingsState;
-  engineCallbacks: EngineSettingsCallbacks;
-  // App-owned optimistic setters for the no-echo / partial-echo cases
-  setFilamentsEnabled: (v: boolean) => void;
-  setFilamentIntensity: (v: number) => void;
-  setExposure: (v: number) => void;
-  /**
-   * Master on/off for the scalar-volume overlay.  No engine echo — React
-   * owns it optimistically, same as `setFilamentsEnabled`.
-   */
-  setVolumesEnabled: (v: boolean) => void;
-  /**
-   * Rebuilds the per-field row data.  Called by App.tsx whenever the
-   * engine fires `onVolumeFieldsChanged` (add/remove), reading the new
-   * snapshot from `handle.getVolumeFieldsState()`.  This indirect wiring
-   * avoids giving the hook itself a reference to the engine handle.
-   */
-  setVolumeFields: (fields: ReadonlyArray<VolumeFieldRowData>) => void;
-};
+import type { VolumeFieldRowData } from '../@types/settings/VolumeFieldRowData';
+import type { UseEngineSettingsReturn } from '../@types/settings/UseEngineSettingsReturn';
 
 export function useEngineSettings(): UseEngineSettingsReturn {
   // ── Engine-echoed values ─────────────────────────────────────────────
@@ -171,9 +96,9 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     DEFAULT_VISIBLE_SOURCE_MASK,
   );
   const [lodMode, setLodMode] = useState<LodMode>(DEFAULT_LOD_MODE);
-  const [biasMode, setBiasMode] = useState<BiasMode>(DEFAULT_BIAS_MODE);
+  const [biasMode, setBiasMode] = useState<BiasModeT>(DEFAULT_BIAS_MODE);
   const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
-  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurve>(
+  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurveT>(
     DEFAULT_TONE_MAP_CURVE,
   );
   const [exposure, setExposure] = useState<number>(DEFAULT_EXPOSURE);

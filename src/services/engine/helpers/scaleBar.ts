@@ -63,17 +63,8 @@
 
 import { formatDistance } from '../../../utils/format/distance';
 import { niceRound } from './pointInfoBuilder';
-import type { ScaleInfo } from '../../../@types';
-
-/**
- * Camera shape needed by `computeScaleInfo`.  We deliberately accept
- * just the two fields the math touches (rather than an entire OrbitCamera)
- * so tests don't need to construct full camera state.
- */
-export type ScaleBarCamera = {
-  distance: number;
-  fovYRad: number;
-};
+import type { ScaleInfo } from '../../../@types/engine/ScaleInfo';
+import type { ScaleBarCamera } from '../../../@types/camera/ScaleBarCamera';
 
 /**
  * Compute the next ScaleInfo (label + rounded pixel width) for the

@@ -23,12 +23,14 @@
  * `produceLabels` is now cheap enough to call every frame.
  */
 
-import type { Label } from '../../gpu/renderers/labelRenderer';
-import type { MarkerLine } from '../../gpu/renderers/markerLineRenderer';
-import type { ReadyFrameContext } from '../frame/frameContext';
-import type { Destroyable, EngineState } from '../../../@types';
-import type { Vec4 } from '../../../@types/Vec';
-import type { LabelProducer, LabelProducerOutput } from './labelProducer';
+import type { Label } from '../../../@types/rendering/Label';
+import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
+import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
+import type { Vec4 } from '../../../@types/math/Vec4';
+import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
+import type { YouAreHereSubsystem } from '../../../@types/engine/subsystems/YouAreHereSubsystem';
 import { youAreHereAlpha } from '../../gpu/labels/youAreHereVisibility';
 
 const LABEL_TEXT = 'You are here';
@@ -49,17 +51,6 @@ const LINE_TOP_MPC = LABEL_ANCHOR_MPC * 0.75;
 // backlog.  This is the band-aid in the meantime.
 const LABEL_COLOR: Vec4 = [8, 8, 8, 1];
 const LINE_COLOR: Vec4 = [8, 8, 8, 1];
-
-export type YouAreHereSubsystem = LabelProducer & {
-  /**
-   * Tear down the subsystem.  No-op — the subsystem owns no closures,
-   * listeners, timers, or workers; `produceLabels` is a pure function
-   * of `state` + `ctx`.  Method exists so the engine's bag of
-   * subsystems can be torn down uniformly via the shared `Destroyable`
-   * shape (`engine.destroy()` iterates and calls `destroy()` on each).
-   */
-  destroy(): void;
-};
 
 export function createYouAreHereSubsystem(): YouAreHereSubsystem {
   function produceLabels(_state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {

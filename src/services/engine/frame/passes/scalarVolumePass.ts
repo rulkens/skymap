@@ -56,7 +56,7 @@
  *   see `frameContext.ts` for the snapshot rationale.
  */
 
-import type { Pass } from './types';
+import type { Pass } from '../../../../@types/engine/frame/Pass';
 
 export const scalarVolumePass: Pass = {
   name: 'scalar-volume',

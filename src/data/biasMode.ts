@@ -72,4 +72,6 @@ export const BiasMode = {
   AngularReweight: 4,
 } as const;
 
-export type BiasMode = (typeof BiasMode)[keyof typeof BiasMode];
+// Type lives in @types/data/BiasMode (inlined literal union for value-free .d.ts);
+// consumers deep-import the type directly from there.  The runtime const above
+// stays as the value-level export.

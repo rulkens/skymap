@@ -35,7 +35,7 @@
  * the default.
  */
 
-export type Env = {
+type Env = {
   /**
    * The static-assets binding.  Cloudflare wires `ASSETS` to the contents
    * of `dist/` declared in `wrangler.toml`'s `[assets]` block.  Calling

@@ -97,7 +97,7 @@
  * widen `F` to the union.
  */
 
-import type { AssetSlot } from './types';
+import type { AssetSlot } from '../../@types/loading/AssetSlot';
 
 /**
  * Adapt an `AssetSlot`'s ready/error transition into a Promise.

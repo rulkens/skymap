@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { reduceLoadState } from '../../../src/services/loading/reduceLoadState';
-import type { LoadEvent, LoadState } from '../../../src/services/loading/types';
+import type { LoadEvent } from '../../../src/@types/loading/LoadEvent';
+import type { LoadState } from '../../../src/@types/loading/LoadState';
 
 const idle: LoadState<unknown> = { kind: 'idle' };
 const ready = (value: unknown): LoadState<unknown> => ({

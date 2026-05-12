@@ -13,7 +13,7 @@ vi.mock('../../../../src/services/loading/fetchWithProgress', () => ({
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
 import { encodeScalarField } from '../../../../src/data/scalarFieldFormat';
 import { fetchWithProgress } from '../../../../src/services/loading/fetchWithProgress';
-import type { ScalarCube } from '../../../../src/@types/ScalarCube';
+import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
 
 const fakeCube: ScalarCube = {
   dims: [2, 2, 2],

@@ -27,15 +27,7 @@
  */
 
 import { Source } from './sources';
-
-export type SchechterTriple = {
-  /** Characteristic absolute magnitude M*. */
-  mStar: number;
-  /** Faint-end slope α. */
-  alpha: number;
-  /** Normalisation φ* in galaxies per Mpc³. */
-  phiStar: number;
-};
+import type { SchechterTriple } from '../@types/data/SchechterTriple';
 
 const M_LIM: Record<Source, number> = {
   [Source.SDSS]: 17.77,

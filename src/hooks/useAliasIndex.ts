@@ -22,25 +22,12 @@
  * instead of `tier`, which is documented in `resolveFocusTarget.ts`.
  */
 
-import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { EngineHandle } from '../@types';
+import { useEffect, useRef, useState } from 'react';
 import { Source } from '../data/sources';
-import { buildAliasIndex, type AliasIndexEntry } from './buildAliasIndex';
-
-// Re-export so callers naming this type don't need a second import path —
-// matches the companion-type re-export pattern in `useFocusUrlSync.ts`.
-export type { AliasIndexEntry } from './buildAliasIndex';
-
-export type UseAliasIndexInput = {
-  paletteOpen: boolean;
-  sourceCounts: Partial<Record<Source, number>>;
-  engineHandleRef: RefObject<EngineHandle | null>;
-};
-
-export type UseAliasIndexReturn = {
-  aliasIndex: readonly AliasIndexEntry[] | null;
-  aliasMap: ReadonlyMap<bigint, readonly string[]>;
-};
+import { buildAliasIndex } from './buildAliasIndex';
+import type { AliasIndexEntry } from '../@types/engine/AliasIndexEntry';
+import type { UseAliasIndexInput } from '../@types/engine/UseAliasIndexInput';
+import type { UseAliasIndexReturn } from '../@types/engine/UseAliasIndexReturn';
 
 export function useAliasIndex(input: UseAliasIndexInput): UseAliasIndexReturn {
   const { paletteOpen, sourceCounts, engineHandleRef } = input;

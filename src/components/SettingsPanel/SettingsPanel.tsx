@@ -37,12 +37,15 @@
  */
 
 import { type ReactNode } from 'react';
-import type { LodMode } from '../../@types/LodMode';
-import type { Tier } from '../../@types/Tier';
+import type { LodMode } from '../../@types/data/LodMode';
+import type { Tier } from '../../@types/data/Tier';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
+import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
 import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
-import type { ScalarFieldPaletteId } from '../../@types/ScalarCube';
+import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
+import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
+import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import { VolumeFieldRow } from './VolumeFieldRow';
 import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
@@ -202,9 +205,9 @@ type Props = {
    * implement those — for now they appear as disabled options so the UI
    * shape doesn't shift when they land.
    */
-  biasMode?: BiasMode;
+  biasMode?: BiasModeT;
   /** Called when the user picks a different density-correction mode. */
-  onBiasModeChange?: (mode: BiasMode) => void;
+  onBiasModeChange?: (mode: BiasModeT) => void;
   /**
    * Faintest absolute magnitude (M_lim) kept under `BiasMode.VolumeLimited`.
    * Larger / more-positive numbers mean a fainter cut-off (more galaxies
@@ -227,9 +230,9 @@ type Props = {
   // via a single 4-byte uniform write, no pipeline rebuild.
 
   /** Currently-selected tone-mapping curve.  See `data/toneMapCurve.ts`. */
-  toneMapCurve?: ToneMapCurve;
+  toneMapCurve?: ToneMapCurveT;
   /** Called when the user picks a different tone-map curve. */
-  onToneMapCurveChange?: (curve: ToneMapCurve) => void;
+  onToneMapCurveChange?: (curve: ToneMapCurveT) => void;
   /**
    * Current HDR exposure multiplier — applied to the HDR signal *before*
    * the tone-map curve runs, so a low exposure (~0.3) brings cluster
@@ -339,58 +342,6 @@ type Props = {
    * renders, so older call sites are unaffected.
    */
   onVolumeFieldPaletteChange?: (handle: string, id: ScalarFieldPaletteId) => void;
-};
-
-// ── VolumeFieldRowData ─────────────────────────────────────────────────────────
-
-/**
- * The data the SettingsPanel needs to render a single volume-field row.
- *
- * Produced by `engineHandle.volumes.getState()` and held in App.tsx
- * React state; rebuilt on every `onVolumeFieldsChanged` callback so the
- * panel always reflects the live field registry without a full re-render
- * of the engine.
- *
- * The `label` field defaults to the `handle` string when the field was
- * registered without an explicit human-readable name.  A future
- * `addVolumeField({ handle, label, ... })` API would populate it from
- * caller metadata.
- */
-export type VolumeFieldRowData = {
-  /** Stable key matching the handle passed to `addVolumeField`. */
-  handle: string;
-  /** Human-readable display name; defaults to the handle if not provided. */
-  label: string;
-  /** Whether this field is currently included in the render pass. */
-  enabled: boolean;
-  /** Linear mix-in weight in [0, 1] applied to this field's voxel values. */
-  intensity: number;
-  /**
-   * Contrast for the per-step windowing transform in the scalar-volume
-   * shader.  1.0 is identity; > 1.0 widens the deadband around the
-   * midpoint and stretches the surviving range across the full
-   * palette.  See `VolumeFieldSettings.contrast`.
-   */
-  contrast: number;
-  /**
-   * Per-cube opacity multiplier (densityScale).  Surfaced for the
-   * per-field Density slider so users can compensate for windowing's
-   * noise suppression or shape a very thin / very dense field.
-   */
-  densityScale: number;
-  /** Palette LUT id for this field's colour ramp. */
-  paletteId: ScalarFieldPaletteId;
-  /**
-   * Low-end cutoff in normalised LUT-coord space [0, 0.95].  Drives
-   * the per-cube Trim slider.  See `VolumeFieldSettings.trim`.
-   */
-  trim: number;
-  /**
-   * HDR exposure multiplier on rgb contribution per ray-march step,
-   * range [1, 32].  Drives the per-cube Exposure slider.  See
-   * `VolumeFieldSettings.exposure`.
-   */
-  exposure: number;
 };
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
@@ -817,7 +768,7 @@ export function SettingsPanel({
                   id="bias-mode"
                   className={styles.modeSelect}
                   value={biasMode}
-                  onChange={(e) => onBiasModeChange(Number(e.target.value) as BiasMode)}
+                  onChange={(e) => onBiasModeChange(Number(e.target.value) as BiasModeT)}
                 >
                   <option value={BiasMode.None}>None — raw catalogue</option>
                   <option value={BiasMode.VolumeLimited}>Volume-limited</option>
@@ -963,7 +914,7 @@ export function SettingsPanel({
                     className={styles.modeSelect}
                     value={toneMapCurve}
                     onChange={(e) =>
-                      onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurve)
+                      onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurveT)
                     }
                   >
                     {ALL_TONE_MAP_CURVES.map((c) => (

@@ -25,7 +25,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { tweenToGalaxy } from '../../../../src/services/engine/camera/tweenToGalaxy';
 import { focusDistanceMpc } from '../../../../src/services/engine/camera/focusTween';
-import type { EngineState } from '../../../../src/@types';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 /**
  * Build a minimal `EngineState`-shaped fixture that exposes only the

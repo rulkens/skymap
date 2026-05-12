@@ -99,7 +99,11 @@
  * current consumer uses it.
  */
 
-import type { GpuContext, Renderer, Vec3 } from '../../../@types';
+import type { GpuContext } from '../../../@types/rendering/GpuContext';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { InstancedQuadConfig } from '../../../@types/rendering/InstancedQuadConfig';
+import type { InstancedQuadRenderer } from '../../../@types/rendering/InstancedQuadRenderer';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
@@ -128,113 +132,6 @@ export const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
  * (default 0), so consumers that don't care can simply omit it.
  */
 export const UNIFORM_BYTES = 96;
-
-/**
- * Output blend mode. ADDITIVE for all three current emissive impostor
- * passes; ALPHA reserved for a hypothetical opaque-material consumer.
- */
-export type BlendMode = 'additive' | 'alpha';
-
-/**
- * Capacity strategy. See module header for the rationale.
- *
- * - `fixed`: preallocate `max * 48` bytes once. Engine guarantees
- *   `instanceCount ≤ max`.
- * - `grow`: lazy allocate on first non-empty draw; reallocate
- *   (destroy + recreate) when `instanceCount` exceeds current
- *   capacity. New capacity is `max(instanceCount, 64)` — the floor
- *   keeps the very first draw from creating an undersized buffer.
- */
-export type CapacityStrategy = { kind: 'fixed'; max: number } | { kind: 'grow' };
-
-/**
- * Optional atlas binding. When present, the bind group becomes a
- * 3-binding shape `[uniform, texture, sampler]` and the returned
- * renderer exposes `bindAtlas`. When absent, the bind group is a
- * 1-binding shape `[uniform]` built at construction time.
- */
-export type AtlasConfig = {
-  /** Sampler descriptor; the factory creates the sampler. Defaults
-   *  to bilinear-clamp, matching the existing Quad + Disk samplers. */
-  samplerDescriptor?: GPUSamplerDescriptor;
-};
-
-export type InstancedQuadConfig = {
-  /** Human-readable label prefix for GPU resource labels and shader
-   *  compile errors. The factory builds `${label}-bgl`,
-   *  `${label}-pipeline`, `${label}-uniforms`, `${label}-instances`
-   *  so each consumer's labels stay distinguishable in devtools. */
-  label: string;
-  /** Vertex shader source (WESL or WGSL) — typically imported via
-   *  `?static` at the consumer module to satisfy the `wesl-plugin`
-   *  build step. */
-  vertexSource: string;
-  /** Fragment shader source — same import convention as `vertexSource`. */
-  fragmentSource: string;
-  /** Atlas binding shape. Present → 3-binding BGL with `bindAtlas`;
-   *  absent → 1-binding BGL with the bind group prebuilt at
-   *  construction. */
-  atlas?: AtlasConfig;
-  /** Instance buffer capacity strategy. */
-  capacity: CapacityStrategy;
-  /** Color target blend mode. All three current consumers use
-   *  `'additive'`. */
-  blend: BlendMode;
-  /** Color target format. All three current consumers target the
-   *  HDR offscreen `'rgba16float'`. */
-  format: GPUTextureFormat;
-  /** Visibility for the uniform binding. Defaults to `VERTEX` —
-   *  matches ThumbnailRenderer + DiskRenderer. ProceduralDiskRenderer
-   *  passes `VERTEX | FRAGMENT` to mirror its existing BGL even
-   *  though the fragment doesn't actually read the uniform. The
-   *  flag is preserved as-is to avoid silently changing the
-   *  pipeline-layout introspection signature. */
-  uniformVisibility?: GPUShaderStageFlags;
-};
-
-/**
- * Public surface returned by `createInstancedQuadRenderer`. Consumers
- * wrap this and re-expose their typed-instance `draw` signature; the
- * engine never imports this type directly.
- */
-export type InstancedQuadRenderer = {
-  /**
-   * Human-readable identifier (`'instancedQuadRenderer'`).  Part of the
-   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
-   */
-  readonly label: string;
-  /**
-   * Bind the atlas texture view. Only defined when `config.atlas`
-   * was set. Idempotent — calling again with a different view
-   * rebuilds the bind group against the new resource.
-   */
-  bindAtlas?: (atlasView: GPUTextureView) => void;
-  /**
-   * Submit one frame's worth of instances. The factory writes the
-   * uniform buffer and instance buffer, then calls
-   * `pass.draw(6, instanceCount, 0, 0)`. Returns silently with no
-   * draw call if `instanceCount === 0`, or — for consumers with
-   * `config.atlas` — if `bindAtlas` hasn't been called yet.
-   */
-  draw: (args: {
-    pass: GPURenderPassEncoder;
-    viewProj: Float32Array;
-    viewport: [number, number];
-    instanceBytes: Float32Array;
-    instanceCount: number;
-    camPosWorld?: Readonly<Vec3>;
-    pxPerRad?: number;
-  }) => void;
-  /**
-   * Release the GPU buffers this factory owns: the uniform buffer
-   * and the instance buffer (if allocated). Pipeline / BGL / bind
-   * group / sampler are JS-side handles with no `.destroy()` —
-   * GC reclaims them when the closure drops out of scope.
-   * Idempotent: `GPUBuffer.destroy()` is a no-op on already-
-   * destroyed buffers per spec.
-   */
-  destroy: () => void;
-};
 
 export function createInstancedQuadRenderer(
   ctx: GpuContext,

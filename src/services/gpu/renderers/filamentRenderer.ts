@@ -40,8 +40,9 @@
  */
 import vsCode from '../shaders/filaments/vertex.wesl?static';
 import fsCode from '../shaders/filaments/fragment.wesl?static';
-import type { FilamentCloud } from '../../../@types/FilamentCloud';
-import type { Renderer } from '../../../@types';
+import type { FilamentCloud } from '../../../@types/data/FilamentCloud';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { FilamentRenderer } from '../../../@types/rendering/FilamentRenderer';
 import type { mat4 } from 'gl-matrix';
 import { CloudFade } from '../resources/cloudFade';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
@@ -103,43 +104,6 @@ export function buildSegmentInstances(cloud: FilamentCloud): {
   }
   return { segmentCount, data };
 }
-
-/**
- * Public surface of the filament renderer.  Mirrors the methods the
- * pre-factory class exposed: upload / draw / clear / isFading /
- * destroy.  Consumers (engine teardown, the filament asset slot's
- * commit step, the per-frame loop) see the identical shape.
- */
-export type FilamentRenderer = {
-  /**
-   * Human-readable identifier (`'filamentRenderer'`).  Part of the
-   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
-   */
-  readonly label: string;
-  /** Upload a new filament cloud, replacing any prior buffer. */
-  upload(cloud: FilamentCloud): void;
-  /** Drop the loaded filaments without destroying the pipeline itself. */
-  clear(): void;
-  /**
-   * Issue the per-frame draw.  No-op until a cloud has been uploaded
-   * (segmentCount = 0 → early return).
-   */
-  draw(
-    pass: GPURenderPassEncoder,
-    viewProj: mat4,
-    viewportPx: [number, number],
-    halfWidthPx: number,
-    intensityScale: number,
-  ): void;
-  /**
-   * Whether the filament fade-in is still ramping.  Mirrors
-   * `PointRenderer.isFading()`.  Returns false before any upload (no
-   * fade in flight) and after the smoothstep saturates.
-   */
-  isFading(): boolean;
-  /** Release every GPU buffer + the lazy CloudFade controller. */
-  destroy(): void;
-};
 
 export function createFilamentRenderer(
   device: GPUDevice,

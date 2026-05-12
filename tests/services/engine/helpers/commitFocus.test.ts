@@ -38,7 +38,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { EngineCallbacks, EngineState, PointInfo } from '../../../../src/@types';
+import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { PointInfo } from '../../../../src/@types/engine/PointInfo';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 

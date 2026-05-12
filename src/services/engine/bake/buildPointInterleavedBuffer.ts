@@ -47,14 +47,9 @@
  * @module
  */
 
-import type { PointCloud } from '../../../@types';
 import { pickColourIndex } from '../../../data/colourIndex';
 import { Source } from '../../../data/sources';
-import {
-  surveyFluxLimit,
-  surveySchechter,
-  type SchechterTriple,
-} from '../../../data/surveyFluxLimits';
+import { surveyFluxLimit, surveySchechter } from '../../../data/surveyFluxLimits';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import {
   absoluteFromApparent,
@@ -63,6 +58,9 @@ import {
   vMaxWeight,
 } from '../../../utils/math';
 import { computeSchechterRatios } from './computeSchechterRatios';
+import type { BuildPointInterleavedBufferMode } from '../../../@types/engine/BuildPointInterleavedBufferMode';
+import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
+import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 
 /**
  * Number of f32 slots packed per point.  Mirrors `SLOTS_PER_POINT` in
@@ -119,70 +117,7 @@ const SDSS_TARGET_MEAN_MAG = 18;
  */
 const NO_COLOUR_SENTINEL = 999;
 
-/**
- * Two-mode flag selecting whether the bake computes per-galaxy Schechter
- * ratios eagerly (~700 M math ops at full deck) or leaves slot 10 at the
- * multiplicative identity (1.0).
- *
- *   - `'fast'`            — slot 10 = 1.0 for every row.  The shader's
- *                           `select(1.0, schechterRatio, biasMode == 3u)`
- *                           gate ignores the slot when bias mode isn't 3,
- *                           so this is correct AS LONG AS the user hasn't
- *                           picked Schechter LF.  This is the default at
- *                           upload time — the .bin lands fast (~2 s saved
- *                           on a fully-loaded deck).
- *   - `'with-schechter'`  — slot 10 holds the real `min(1, sqrt(nRef/n(d)))`
- *                           ratio, computed via `computeSchechterRatios`.
- *                           Used either when an upload happens *while*
- *                           Schechter mode is already active, or as part
- *                           of the lazy `setBiasMode(BiasMode.Schechter)`
- *                           re-bake.
- *
- * Why a flag rather than always doing the work?  The integral is the single
- * largest cost in the upload bake — collapsing it to "fill with 1.0" cuts
- * the bake's main-thread time by roughly two-thirds when the user is on the
- * default bias mode.  See the per-vertex `schechterRatio` doc in
- * `pointRenderer.ts` for the full design notes.
- */
-export type BuildPointInterleavedBufferMode = 'fast' | 'with-schechter';
-
-export type BuildPointInterleavedBufferInput = {
-  /** The point cloud to bake.  Travels by structured clone (see module doc). */
-  cloud: PointCloud;
-  /** Which survey this cloud belongs to — drives flux limit, Schechter triple, etc. */
-  source: Source;
-  /**
-   * Whether to compute the per-galaxy Schechter ratios as part of this bake.
-   * Defaults to `'fast'` (slot 10 = 1.0).  See `BuildPointInterleavedBufferMode`
-   * for the trade-off.  Optional so existing callers (and the worker
-   * structured-clone roundtrip) keep working without recompilation.
-   */
-  mode?: BuildPointInterleavedBufferMode;
-};
-
-/**
- * Output of the bake.  The renderer copies `interleaved` into the GPU
- * vertex buffer and stashes the rest on the per-source bookkeeping so
- * `draw()` can populate the global uniform without redoing the integral.
- */
-export type BuildPointInterleavedBufferResult = {
-  /** Interleaved per-vertex bytes — see `SLOTS_PER_POINT` in pointRenderer.ts. */
-  interleaved: Float32Array;
-  /**
-   * Parallel per-row flag set when the row's (axisRatio, positionAngleDeg)
-   * exactly equals the deterministic fallback for that row.  Used inside
-   * the bake to encode the fallback flag into the sign bit of axisRatio
-   * (slot 6); also exposed so callers and tests can assert which rows the
-   * bake classified as fallback without re-running the hash.
-   */
-  isFallbackArr: Uint8Array;
-  /** Schechter LF triple `(M*, α, φ*)` for this survey's selection band. */
-  schechter: SchechterTriple;
-  /** Survey apparent-magnitude flux limit (e.g. SDSS = 17.77). */
-  mLim: number;
-  /** Pre-computed central-density normaliser N_ref = n(d = 10 Mpc). */
-  nRef: number;
-};
+// Type declarations moved to @types/engine/BuildPointInterleavedBuffer*.d.ts.
 
 /**
  * Bake one point cloud's per-vertex GPU bytes.  Pure: no `this`, no DOM, no

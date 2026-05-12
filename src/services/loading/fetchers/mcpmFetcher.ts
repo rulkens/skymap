@@ -13,14 +13,12 @@
  * unregistered; the Volumes panel simply doesn't show "MCPM Cosmic
  * Web". Mirrors the cf4DensityFetcher fallback.
  */
-import type { Fetcher } from '../types';
-import type { ScalarCube } from '../../../@types/ScalarCube';
-import type { Tier } from '../../../@types/Tier';
+import type { Fetcher } from '../../../@types/loading/Fetcher';
+import type { MCPMReq } from '../../../@types/loading/MCPMReq';
+import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { Tier } from '../../../@types/data/Tier';
 import { decodeScalarField } from '../../../data/scalarFieldFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
-
-/** Request shape: tier alone — the cube isn't per-source. */
-export type MCPMReq = { tier: Tier };
 
 const FILENAME: Record<Tier, string> = {
   small: 'mcpm-small.scfd',

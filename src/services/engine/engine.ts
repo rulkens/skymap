@@ -95,15 +95,18 @@ import {
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
-import type { LodMode, PointCloud, PointInfo } from '../../@types';
-import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
-import type { BiasMode } from '../../data/biasMode';
-import type { ScalarCube, ScalarFieldPaletteId } from '../../@types/ScalarCube';
-import type { Tier } from '../../@types/Tier';
-import type {
-  FamousMetaEntry,
-  FamousXrefMap,
-} from '../loading/fetchers/famousMetaFetcher';
+import type { PointInfo } from '../../@types/engine/PointInfo';
+import type { LodMode } from '../../@types/data/LodMode';
+import type { PointCloud } from '../../@types/data/PointCloud';
+import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
+import type { EngineHandle } from '../../@types/engine/EngineHandle';
+import type { EngineState } from '../../@types/engine/state/EngineState';
+import type { BiasMode } from '../../@types/data/BiasMode';
+import type { ScalarCube } from '../../@types/data/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
+import type { Tier } from '../../@types/data/Tier';
+import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousXrefMap } from '../../@types/loading/FamousXrefMap';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
@@ -116,9 +119,9 @@ import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
 import { logCameraState } from './helpers/logCameraState';
-import type { AssetSlot } from '../loading/types';
+import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
-import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
 import {
   snapToCameraSnapshot,
@@ -139,8 +142,10 @@ import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
 // and call `applyToCamera()` from `frame()`.  The handle's
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
-import { buildSettersFromTable, type SettingsTableKey } from './wiring/settingsTable';
-import { runBootstrapPhases, type BootstrapDeps } from './phases/bootstrap';
+import { buildSettersFromTable } from './wiring/settingsTable';
+import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
+import { runBootstrapPhases } from './phases/bootstrap';
+import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 
 /**
  * Start the WebGPU engine on `canvas`.

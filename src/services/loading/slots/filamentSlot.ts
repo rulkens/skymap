@@ -17,9 +17,9 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { filamentFetcher } from '../fetchers/filamentFetcher';
-import type { FilamentReq } from '../fetchers/filamentFetcher';
-import type { FilamentCloud } from '../../../@types/FilamentCloud';
-import type { SlotFactory } from './types';
+import type { FilamentReq } from '../../../@types/loading/FilamentReq';
+import type { FilamentCloud } from '../../../@types/data/FilamentCloud';
+import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (state, cb) => {
   // Why awaited `upload()` even though `FilamentRenderer.upload` is

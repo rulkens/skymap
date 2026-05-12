@@ -88,8 +88,9 @@ import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
 import { cloudSourceFor } from '../../../data/cloudSource';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 
-import type { EngineState, PointInfo } from '../../../@types';
-import type { BootstrapDeps } from './bootstrap';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PointInfo } from '../../../@types/engine/PointInfo';
+import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 /**
  * Bootstrap phase 3: pick renderer + camera + orbit controls + click

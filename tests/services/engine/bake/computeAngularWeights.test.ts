@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest';
 import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
 import { Source } from '../../../../src/data/sources';
 import { raDecZToCartesian } from '../../../../src/utils/math';
-import type { PointCloud } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 
 function emptyCloud(count: number): PointCloud {
   return {

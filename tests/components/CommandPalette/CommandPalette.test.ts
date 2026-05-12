@@ -5,8 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import { CommandPalette } from '../../../src/components/CommandPalette/CommandPalette';
 import { Source } from '../../../src/data/sources';
-import type { FamousMetaEntry } from '../../../src/services/loading/fetchers/famousMetaFetcher';
-import type { AliasIndexEntry } from '../../../src/hooks/buildAliasIndex';
+import type { FamousMetaEntry } from '../../../src/@types/loading/FamousMetaEntry';
+import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 
 const M31: FamousMetaEntry = {
   id: 'm31',

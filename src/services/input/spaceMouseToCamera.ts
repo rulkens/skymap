@@ -57,9 +57,9 @@
  * controls in `orbitControls.ts`.
  */
 
-import type { OrbitCamera } from '../../@types';
+import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import { clampDistance } from '../camera/orbitCamera';
-import type { SpaceMouseAxes } from './spaceMouseAxes';
+import type { SpaceMouseAxes } from '../../@types/input/SpaceMouseAxes';
 
 // ─── Tuning constants ─────────────────────────────────────────────────────────
 //

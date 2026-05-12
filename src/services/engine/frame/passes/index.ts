@@ -67,7 +67,7 @@
  * analysis.
  */
 
-import type { Pass } from './types';
+import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { pointSpritesPass } from './pointSpritesPass';
 import { galaxyThumbnailsPass } from './galaxyThumbnailsPass';
 import { filamentsPass } from './filamentsPass';
@@ -87,7 +87,6 @@ export const HDR_PASSES: readonly Pass[] = [
   labelsPass,
 ];
 
-export type { Pass, PassDeps } from './types';
 export { pointSpritesPass } from './pointSpritesPass';
 export { galaxyThumbnailsPass } from './galaxyThumbnailsPass';
 export { filamentsPass } from './filamentsPass';

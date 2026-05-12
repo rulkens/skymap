@@ -20,11 +20,10 @@
 
 import { describe, it, expect } from 'vitest';
 
-import {
-  deriveFrameContext,
-  type FrameContext,
-} from '../../../../src/services/engine/frame/frameContext';
-import type { EngineState, OrbitCamera } from '../../../../src/@types';
+import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
+import type { FrameContext } from '../../../../src/@types/engine/frame/FrameContext';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
 /**
  * Build an `OrbitCamera`-shaped stub with just enough fields populated

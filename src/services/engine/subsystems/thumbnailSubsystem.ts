@@ -68,18 +68,20 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
-import type { Destroyable, PointCloud, ThumbnailInstance, Vec3 } from '../../../@types';
-import type { OrbitCamera } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
+import type { ThumbnailInstance } from '../../../@types/rendering/ThumbnailInstance';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
-import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
-import type { DiskRenderer, DiskInstance } from '../../gpu/renderers/diskRenderer';
-import type { ProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
-import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
+import type { ThumbnailRenderer } from '../../../@types/rendering/ThumbnailRenderer';
+import type { DiskRenderer } from '../../../@types/rendering/DiskRenderer';
+import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
+import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
+import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
+import type { CreateThumbnailSubsystemInput } from '../../../@types/engine/subsystems/CreateThumbnailSubsystemInput';
+import type { ThumbnailFrameInput } from '../../../@types/engine/subsystems/ThumbnailFrameInput';
+import type { ThumbnailSubsystem } from '../../../@types/engine/subsystems/ThumbnailSubsystem';
 import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDecZ } from '../../../utils/math';
-import type { FamousMetaEntry, FamousXrefMap } from '../../loading/fetchers/famousMetaFetcher';
-import type { mat4 } from 'gl-matrix';
 
 // ── Tunables ────────────────────────────────────────────────────────────────
 
@@ -241,140 +243,6 @@ export function maybeEmitProceduralDisk(
     crossfadeAlpha,
   };
 }
-
-// ── Public types ────────────────────────────────────────────────────────────
-
-/**
- * Hooks the subsystem needs from the outside world.  All passed once
- * at construction so `runFrame()` doesn't have to take them as
- * arguments — they're stable across the engine's lifetime.
- */
-export type CreateThumbnailSubsystemInput = {
-  /** WebGPU device — used by the atlas to upload bitmaps. */
-  device: GPUDevice;
-  /**
-   * Wake the engine's render loop for the next frame.  Called when a
-   * fetch completes (so the thumbnail appears) and when a fetch fails
-   * (so the still-animating predicate can re-check `inFlightCount`
-   * and let the loop sleep if this was the last pending fetch).
-   */
-  requestRender: () => void;
-  /**
-   * Optional override for the bitmap fetcher.  Production passes
-   * undefined so we use `fetchGalaxyBitmap` from galaxyImageFetcher;
-   * tests pass a stub returning a synthetic ImageBitmap (or null) so
-   * they can exercise the per-frame gate without touching the
-   * network.
-   */
-  fetcher?: (args: { ra: number; dec: number; famousId?: string }) => Promise<ImageBitmap | null>;
-  /**
-   * Round-robin stride decimation factor for the per-galaxy cull loop.
-   *
-   * The full cloud has ~3.5 M galaxies in the largest tier; the cheap
-   * squared-distance cull alone burns ~5 ms per frame on mid-range
-   * laptops because we walk the entire `positions` array on every wake.
-   * Setting `decimationFactor = N` walks only `count/N` galaxies per
-   * frame, advancing a cursor so a full sweep finishes every N frames.
-   *
-   * Galaxies that pass the cull on a sweep are stashed in a sticky map
-   * keyed by their cloud-local index, and the renderer reads the union
-   * of every cloud's sticky map every frame — so a thumbnail that's
-   * already on screen keeps drawing while the cursor moves on.  Without
-   * the sticky map, decimation would make visible thumbnails blink at
-   * 60/N Hz as the cursor swept past them; with it, the user only sees
-   * thumbnails appear / disappear with up to `N` frames of latency.
-   *
-   * Default 8 — at 60 fps, a full sweep completes in ~133 ms, well
-   * within human tolerance for "thumbnails settle as I pan".  Tests
-   * that need every galaxy visited every frame can pass `1` to disable
-   * decimation entirely.
-   */
-  decimationFactor?: number;
-};
-
-/**
- * Per-frame inputs.  Everything the inner loop reads from the engine's
- * closure today is forwarded here as an explicit parameter — no hidden
- * coupling.  The subsystem reads (not writes) every field.
- */
-export type ThumbnailFrameInput = {
-  /** Active orbit camera.  Apparent-size and visibility cull both rely on it. */
-  cam: OrbitCamera;
-  /** All loaded clouds keyed by Source enum.  Hidden surveys are filtered inside. */
-  clouds: Map<Source, PointCloud>;
-  /** Bitmask of currently-visible sources (1 bit per Source enum value). */
-  visibleSourceMask: number;
-  /** Canvas backing-store size in CSS pixels — feeds the pinhole pxPerRad. */
-  canvasSize: { width: number; height: number };
-  /** Render-pass encoder — thumbnailRenderer + diskRenderer encode their draws here. */
-  pass: GPURenderPassEncoder;
-  /** Combined view+projection matrix for the current camera. */
-  viewProj: mat4;
-  /** pre-computed `canvas.height / (2 · tan(fovY/2))` to share with engine. */
-  pxPerRad: number;
-  /** Camera world-position snapshot for the back-to-front sort comparator. */
-  camPos: Readonly<Vec3>;
-  /** ThumbnailRenderer instance — engine owns it; subsystem just calls draw(). */
-  thumbnailRenderer: ThumbnailRenderer;
-  /** DiskRenderer instance — same ownership story as thumbnailRenderer. */
-  diskRenderer: DiskRenderer;
-  /** Famous-meta sidecar, used to route Famous-source rows to curated WebPs. */
-  famousMeta: FamousMetaEntry[];
-  /** Famous-xrefs sidecar — currently unused inside the subsystem but kept
-   * as a hook so future cross-survey badge logic can read it without
-   * widening the function signature. */
-  famousXrefs: FamousXrefMap;
-};
-
-export type ThumbnailSubsystem = {
-  /**
-   * Bind the atlas's GPU view to both texture-sampling renderers, and
-   * stash the procedural-disk renderer for use by `runFrame` (it does
-   * not sample the atlas, so no bindAtlas call for it — but we still
-   * need a stable reference because the procedural-disk pass is issued
-   * alongside quads/disks once per frame).  Called once after the
-   * atlas's `initTexture()` completes (i.e. immediately after
-   * createThumbnailSubsystem returns, but BEFORE the first `runFrame`).
-   * We don't fold this into the constructor because the renderers
-   * don't exist yet at construction time — they're built alongside it
-   * in engine.ts.
-   */
-  bindToRenderers(
-    thumbnailRenderer: ThumbnailRenderer,
-    diskRenderer: DiskRenderer,
-    proceduralDiskRenderer: ProceduralDiskRenderer,
-  ): void;
-  /**
-   * Run the per-frame thumbnail-priority loop and emit ThumbnailInstances
-   * + DiskInstances to the renderers.  Increments the LRU clock,
-   * allocates atlas slots, kicks off fetches, and sorts back-to-front
-   * for correct alpha compositing.
-   */
-  runFrame(input: ThumbnailFrameInput): void;
-  /**
-   * Returns true while at least one fetch is in flight OR a recently-
-   * landed thumbnail is still in its load-fade window.  The engine's
-   * render-on-demand "still animating" predicate ORs this in so the
-   * loop keeps ticking until thumbnails settle.
-   */
-  hasInFlightFetches(): boolean;
-  /**
-   * Tear-down: clear the atlas's eviction handler, clear all
-   * bookkeeping sets/maps.  In-flight fetches' onResult callbacks
-   * become no-ops because the closure flag they check (`destroyed`)
-   * gates the writes.  Called from engine.destroy().
-   */
-  destroy(): void;
-  /** Test/inspection seam — exposed only to allow unit tests to
-   * verify `bitmapReady` updates without poking through the closure. */
-  __testGetState(): {
-    bitmapReady: ReadonlySet<string>;
-    bitmapFailed: ReadonlySet<string>;
-    bitmapReadyTime: ReadonlyMap<string, number>;
-    frameCounter: number;
-    inFlightCount: number;
-  };
-};
 
 // ── Implementation ──────────────────────────────────────────────────────────
 

@@ -27,18 +27,11 @@
  * renderer-level integration tests.
  */
 
-import type { ScalarCube, ScalarFieldFrameKind } from '../@types/ScalarCube';
-
-export type SyntheticGaussianOptions = {
-  /** Cube edge length in voxels (cubic grid).  Default 64. */
-  dims?: number;
-  /** Frame the cube lives in.  Default `equatorial-cartesian`. */
-  frameKind?: ScalarFieldFrameKind;
-  /** Physical edge length of the cube in Mpc.  Default 400. */
-  boxSizeMpc?: number;
-  /** Standard deviation of the Gaussian, in voxels.  Default dims/6. */
-  sigmaVoxels?: number;
-};
+import type { ScalarCube } from '../@types/data/ScalarCube';
+import type { ScalarFieldFrameKind } from '../@types/data/ScalarFieldFrameKind';
+import type { SyntheticGaussianOptions } from '../@types/data/SyntheticGaussianOptions';
+import type { CartesianGridOptions } from '../@types/data/CartesianGridOptions';
+import type { SphericalGridOptions } from '../@types/data/SphericalGridOptions';
 
 export function makeSyntheticGaussianCube(opts: SyntheticGaussianOptions = {}): ScalarCube {
   const dims = opts.dims ?? 64;
@@ -79,21 +72,8 @@ export function makeSyntheticGaussianCube(opts: SyntheticGaussianOptions = {}): 
 }
 
 // ── Cartesian grid ──────────────────────────────────────────────────
-
-export type CartesianGridOptions = {
-  /** Cube edge length in voxels.  Default 64. */
-  dims?: number;
-  /** Frame the cube lives in.  Default `equatorial-cartesian`. */
-  frameKind?: ScalarFieldFrameKind;
-  /** Physical edge length of the cube in Mpc.  Default 400. */
-  boxSizeMpc?: number;
-  /** Spacing between successive grid planes in Mpc.  Default 50. */
-  gridSpacingMpc?: number;
-  /** Half-width of the falloff bell on either side of a plane, in Mpc.
-   *  Default 3 — roughly half a voxel at default 64³ / 400 Mpc, so the
-   *  planes read as crisp lines rather than fat slabs. */
-  lineSigmaMpc?: number;
-};
+// `CartesianGridOptions` lives in `@types/data/CartesianGridOptions` (and
+// is re-exported from the top of this file).
 
 /**
  * Three sets of axis-aligned planes spaced `gridSpacingMpc` apart along
@@ -168,25 +148,8 @@ export function makeCartesianGridCube(opts: CartesianGridOptions = {}): ScalarCu
 }
 
 // ── Spherical grid ──────────────────────────────────────────────────
-
-export type SphericalGridOptions = {
-  /** Cube edge length in voxels.  Default 64. */
-  dims?: number;
-  /** Frame the cube lives in.  Default `equatorial-cartesian`. */
-  frameKind?: ScalarFieldFrameKind;
-  /** Physical edge length of the cube in Mpc.  Default 400. */
-  boxSizeMpc?: number;
-  /** Spacing between successive shells in Mpc.  Default 50 (so shells
-   *  appear at 50, 100, 150, … from the origin). */
-  shellSpacingMpc?: number;
-  /** Half-width of the falloff on either side of a shell radius, in
-   *  Mpc.  Default 3. */
-  shellSigmaMpc?: number;
-  /** Half-width of the falloff for a radial spoke (perpendicular
-   *  distance to the axis), in Mpc.  Default 2 — slightly tighter than
-   *  the shells so spokes read as lines, not tubes. */
-  spokeSigmaMpc?: number;
-};
+// `SphericalGridOptions` lives in `@types/data/SphericalGridOptions` (and
+// is re-exported from the top of this file).
 
 /**
  * Concentric spherical shells centred on the world origin, plus six

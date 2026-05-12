@@ -30,32 +30,8 @@
  * rules and the engine handles them inline.
  */
 
-import type { EngineCallbacks, LodMode } from '../../../@types';
-import type { BiasMode } from '../../../data/biasMode';
-import type { ToneMapCurve } from '../../../data/toneMapCurve';
-
-/**
- * Snapshot of every settings value the engine echoes back at startup.
- *
- * Adding a new setting?  Add the field here, add the matching `cb.onXChange?.()`
- * line in `seedSettingsCallbacks`, and extend the test in
- * `tests/services/engine/seedSettingsCallbacks.test.ts`.
- */
-export type Snapshot = {
-  pointSize: number;
-  brightness: number;
-  autoRotate: boolean;
-  galaxyTexturesEnabled: boolean;
-  highlightFallback: boolean;
-  realOnlyMode: boolean;
-  depthFadeEnabled: boolean;
-  biasMode: BiasMode;
-  absMagLimit: number;
-  toneMapCurve: ToneMapCurve;
-  exposure: number;
-  lodMode: LodMode;
-  visibleSourceMask: number;
-};
+import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+import type { SettingsCallbackSeed } from '../../../@types/engine/wiring/SettingsCallbackSeed';
 
 /**
  * Fire every optional settings callback in `cb` exactly once with the
@@ -67,7 +43,7 @@ export type Snapshot = {
  * preserve the original engine.ts order so a behavioural diff against
  * the pre-refactor codebase shows zero call-order changes.
  */
-export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: Snapshot): void {
+export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCallbackSeed): void {
   // H5 task 11: nested-only fires.  Each echo lands on its `EngineCallbacks`
   // sub-bag address so React consumers (subscribed via `useEngineSettings`)
   // observe the engine-truth defaults exactly once at startup.  The flat

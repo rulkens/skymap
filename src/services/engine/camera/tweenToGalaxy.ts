@@ -72,32 +72,9 @@
 
 import { vec3 } from 'gl-matrix';
 
-import type { EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { TweenTarget } from '../../../@types/camera/TweenTarget';
 import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
-
-/**
- * The minimum-surface descriptor the helper actually consumes.
- *
- * Every existing call site already has a `PointInfo` in scope (built
- * via `buildPointInfo`), and `PointInfo` is structurally a superset of
- * this type — so passing `info` directly works without any field
- * extraction at the call site.
- */
-export type TweenTarget = {
-  /** World-space X in Mpc. */
-  x: number;
-  /** World-space Y in Mpc. */
-  y: number;
-  /** World-space Z in Mpc. */
-  z: number;
-  /**
-   * Physical galaxy diameter in kpc — drives the focus distance via
-   * `focusDistanceMpc`.  Callers that genuinely lack a diameter (none
-   * today) should pass the project-wide fallback explicitly rather
-   * than letting NaN through.
-   */
-  diameterKpc: number;
-};
 
 /**
  * Start a focus tween toward `target`, snapshotting the current camera

@@ -87,30 +87,13 @@
  *   the shared tail.
  */
 
-import type { EngineCallbacks, EngineState, PointInfo } from '../../../@types';
-import type { SelectionInput } from '../subsystems/selectionSubsystem';
+import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PointInfo } from '../../../@types/engine/PointInfo';
+import type { CommitFocusSelection } from '../../../@types/engine/CommitFocusSelection';
 import { tweenToGalaxy } from '../camera/tweenToGalaxy';
 
-/**
- * Optional selection update bundled into a `commitFocus` call.
- *
- * `key` is the `(source, localIdx)` pair the selection subsystem
- * stores; `info` is an optional prebuilt PointInfo that becomes the
- * `prebuiltInfo` argument to `setSelected` — see the module header for
- * why each caller does or doesn't supply it.
- */
-export type CommitFocusSelection = {
-  key: SelectionInput;
-  /**
-   * Optional prebuilt PointInfo to hand into `setSelected`'s second
-   * arg.  `selectByAlias` passes this so the InfoCard updates
-   * immediately during the deep-link race window where the cloud
-   * arrived but the renderer hasn't uploaded yet.  `selectFamous`
-   * omits it so the selection subsystem reads the live sidecars at
-   * fan-out time.
-   */
-  info?: PointInfo;
-};
+// CommitFocusSelection moved to @types/engine/CommitFocusSelection.d.ts.
 
 /**
  * Run the shared focus-commit dance: optionally update selection,

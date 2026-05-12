@@ -51,8 +51,7 @@
  * @module
  */
 
-import type { PointCloud } from '../../../@types';
-import type { Source } from '../../../data/sources';
+import type { ComputeAngularWeightsInput } from '../../../@types/engine/ComputeAngularWeightsInput';
 import { cartesianToRaDecZ } from '../../../utils/math';
 import { healpixNest } from '../../../utils/math/healpix';
 
@@ -93,38 +92,6 @@ const N_SHELLS = 10;
  */
 const WEIGHT_MIN = 0.3;
 const WEIGHT_MAX = 1.2;
-
-export type ComputeAngularWeightsInput = {
-  /** Point cloud whose galaxies need per-row angular re-weight values. */
-  cloud: PointCloud;
-  /**
-   * Survey this cloud belongs to.  Currently unused by the algorithm — the
-   * binning is purely geometric on the cloud's positions — but threaded
-   * through the API for parity with `computeSchechterRatios` and to support
-   * a future per-survey tuning (e.g., different `nside` for the smaller 2MRS
-   * cloud where 12 288 cells overresolve the data).
-   */
-  source: Source;
-  /**
-   * Lower clamp for the per-galaxy weight.
-   *
-   * Defaults to 0.3 (visualisation-tuned: dim-heavy, additive-blending
-   * tolerant — see `WEIGHT_MIN` rationale above).  Override e.g. to 1.0
-   * for build-time point-duplication use where amplification > 1× is needed
-   * and dimming below 1× is impossible (you can't emit half a copy of a
-   * galaxy via integer duplication).
-   */
-  weightMin?: number;
-  /**
-   * Upper clamp for the per-galaxy weight.
-   *
-   * Defaults to 1.2 (visualisation-tuned, see `WEIGHT_MAX` rationale above).
-   * Override e.g. to 15 for build-time point-duplication use, matching the
-   * Malmquist V_max `WEIGHT_CAP` so the combined V_max × angular weight
-   * stays within a sensible duplication budget.
-   */
-  weightMax?: number;
-};
 
 /**
  * Compute per-galaxy HEALPix angular re-weighting factors for one cloud.

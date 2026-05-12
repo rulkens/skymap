@@ -20,12 +20,10 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { createOrbitCamera } from '../../../../src/services/camera/orbitCamera';
-import {
-  createSpaceMouseSubsystem,
-  type SpaceMouseInputCtorOptions,
-  type SpaceMouseInputLike,
-} from '../../../../src/services/engine/subsystems/spaceMouseSubsystem';
-import type { SpaceMouseAxes } from '../../../../src/services/input/spaceMouseAxes';
+import { createSpaceMouseSubsystem } from '../../../../src/services/engine/subsystems/spaceMouseSubsystem';
+import type { SpaceMouseInputCtorOptions } from '../../../../src/@types/input/SpaceMouseInputCtorOptions';
+import type { SpaceMouseInputLike } from '../../../../src/@types/input/SpaceMouseInputLike';
+import type { SpaceMouseAxes } from '../../../../src/@types/input/SpaceMouseAxes';
 
 function makeCam() {
   return createOrbitCamera({

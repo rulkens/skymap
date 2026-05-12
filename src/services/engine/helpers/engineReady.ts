@@ -91,35 +91,10 @@
  * lands without touching any existing type declaration.
  */
 
-import type { EngineState, OrbitCamera } from '../../../@types';
-import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
-import type { PostProcess } from '../../gpu/passes/postProcess';
-import type { createPickRenderer } from '../../gpu/renderers/pickRenderer';
-import type { ThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { ReadyEngineState } from '../../../@types/engine/ReadyEngineState';
 
-/**
- * The `EngineState` shape after `isEngineReady` returns `true`.
- *
- * Every field listed here is one whose pre-bootstrap value is `null`
- * and whose post-bootstrap value is the genuinely-required handle.
- * Built via TypeScript intersection (`EngineState & { ... }`) so the
- * canonical `EngineState` declaration stays untouched — the narrowing
- * is purely an additive overlay on top of the existing shape.
- *
- * Excluded: `state.gpu.filamentRenderer`.  See the module header for
- * the deployment-path rationale.
- */
-export type ReadyEngineState = EngineState & {
-  cam: OrbitCamera;
-  gpu: EngineState['gpu'] & {
-    renderer: PointRenderer;
-    pickRenderer: ReturnType<typeof createPickRenderer>;
-    postProcess: PostProcess;
-  };
-  subsystems: EngineState['subsystems'] & {
-    thumbnails: ThumbnailSubsystem;
-  };
-};
+// ReadyEngineState moved to @types/engine/ReadyEngineState.d.ts.
 
 /**
  * Predicate: `true` iff the four bootstrap phases (`initGpu`,

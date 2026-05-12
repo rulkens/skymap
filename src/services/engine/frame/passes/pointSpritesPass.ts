@@ -46,7 +46,7 @@
  * currently allocate).
  */
 
-import type { Pass } from './types';
+import type { Pass } from '../../../../@types/engine/frame/Pass';
 import {
   packSelection,
   SELECTION_NONE_SENTINEL,

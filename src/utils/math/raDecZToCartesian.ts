@@ -17,7 +17,7 @@
  *     z = d · sin(dec)
  */
 
-import type { Vec3 } from '../../@types/Vec';
+import type { Vec3 } from '../../@types/math/Vec3';
 import { redshiftToDistanceMpc } from './redshiftToDistanceMpc';
 
 /**

@@ -12,9 +12,9 @@
  */
 import { describe, it, expect } from 'vitest';
 import { resolveFocusTarget } from '../../../../src/services/engine/camera/resolveFocusTarget';
-import type { PointCloud } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 import { Source } from '../../../../src/data/sources';
-import type { FamousMetaEntry } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
+import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import { raDecZToCartesian } from '../../../../src/utils/math/raDecZToCartesian';
 
 /**

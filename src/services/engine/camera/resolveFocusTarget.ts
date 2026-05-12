@@ -51,10 +51,9 @@
  * frame-by-frame thumbnail-priority loop in the engine uses.
  */
 
-import type { FocusTarget } from '../../url/focusUrl';
-import type { PointCloud } from '../../../@types';
+import type { ResolverInput } from '../../../@types/camera/ResolverInput';
+import type { ResolverOutput } from '../../../@types/camera/ResolverOutput';
 import { Source } from '../../../data/sources';
-import type { FamousMetaEntry } from '../../loading/fetchers/famousMetaFetcher';
 import { cartesianToRaDecZ } from '../../../utils/math/cartesianToRaDecZ';
 
 /**
@@ -67,17 +66,6 @@ import { cartesianToRaDecZ } from '../../../utils/math/cartesianToRaDecZ';
 const MATCH_THRESHOLD_ARCSEC = 30;
 /** Squared threshold in arcsec² — avoids a Math.sqrt per row. */
 const MATCH_THRESHOLD_ARCSEC_SQ = MATCH_THRESHOLD_ARCSEC * MATCH_THRESHOLD_ARCSEC;
-
-export type ResolverInput = {
-  target: FocusTarget;
-  clouds: { source: Source; cloud: PointCloud }[];
-  famousMeta: readonly FamousMetaEntry[];
-  aliasMap: ReadonlyMap<bigint, readonly string[]>;
-};
-
-export type ResolverOutput =
-  | { resolved: true; source: Source; localIdx: number }
-  | { resolved: false; reason: 'tier' | 'unknown' };
 
 /**
  * Resolve a `FocusTarget` to a concrete `(source, localIdx)` location

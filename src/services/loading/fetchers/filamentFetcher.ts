@@ -20,17 +20,11 @@
  * and avoids a "what does source mean for filaments?" branch in the
  * point-cloud fetcher.
  */
-import type { Fetcher } from '../types';
-import type { FilamentCloud } from '../../../@types/FilamentCloud';
-import type { Tier } from '../../../@types/Tier';
+import type { Fetcher } from '../../../@types/loading/Fetcher';
+import type { FilamentReq } from '../../../@types/loading/FilamentReq';
+import type { FilamentCloud } from '../../../@types/data/FilamentCloud';
 import { decodeFilaments } from '../../../data/filamentBinaryFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
-
-/**
- * The request shape this fetcher accepts. Tier alone — no source — because
- * filaments are a derived global asset, not a per-survey one.
- */
-export type FilamentReq = { tier: Tier };
 
 export const filamentFetcher: Fetcher<FilamentCloud, FilamentReq> = async (
   req,

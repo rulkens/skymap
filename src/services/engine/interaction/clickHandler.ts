@@ -65,113 +65,11 @@
  * never notices.
  */
 
-import type { Destroyable, PointCloud, PointInfo } from '../../../@types';
-import { Source } from '../../../data/sources';
-import type { createPickRenderer } from '../../gpu/renderers/pickRenderer';
-
-/**
- * Snapshot of the renderer's per-source draw records the picker
- * needs.  Engine produces this from `renderer.loadedSources()`
- * filtered by the live visibility mask.
- *
- * `cloudBindGroup` is the per-source `@group(1)` (CloudFade) binding
- * carrying this source's `opacity` + 5-bit `sourceCode`.  PickRenderer
- * binds it before each per-source draw so its vertex stage can compose
- * the same `(sourceCode << 27) | instance_index` packed identity the
- * visual pass does — without baking anything per-vertex.
- */
-export type PickSourceDraw = {
-  readonly source: Source;
-  readonly count: number;
-  readonly vertexBuffer: GPUBuffer;
-  readonly cloudFadeBuffer: GPUBuffer;
-};
-
-export type ClickResolveInput = {
-  /** Click X coordinate in *texture-space* pixels (CSS × capped DPR). */
-  pickXPx: number;
-  /** Click Y coordinate in *texture-space* pixels (CSS × capped DPR). */
-  pickYPx: number;
-  /** Physical canvas size `[width, height]` in backing-store pixels. */
-  viewportPx: [number, number];
-  /** Visible per-source draw records — same shape pickRenderer.pick wants. */
-  visibleSources: Iterable<PickSourceDraw>;
-  /**
-   * The user's current `pointSizePx` setting.  Forwarded to
-   * `pickRenderer.pick` so it can boost the picking floor (see
-   * `PICK_PADDING_PX` in pickRenderer.ts) — distant point-like
-   * galaxies get a wider hit-test area, making them easier to click.
-   * Optional so legacy callers that don't yet thread the setting
-   * through can still construct a ClickResolveInput.
-   */
-  pointSizePx?: number;
-};
-
-/**
- * Hook the engine provides to the resolver: given a (source, localIdx)
- * pair the picker returned, resolve it into the cloud needed to build
- * a PointInfo.  Production wires this to engine.ts's `clouds.get(source)`
- * lookup; tests pass a stub.
- *
- * Returns `null` when the source's cloud isn't loaded (yet) or when
- * `localIdx >= cloud.count` (tier-swap window where the picker's
- * baked identity references a row past the freshly-uploaded smaller
- * cloud — the bounds check defends against the same race the prior
- * `fromGlobalIdx` decoder did).
- */
-export type ResolveSelection = (
-  selection: { source: Source; localIdx: number },
-) => { source: Source; localIdx: number; cloud: PointCloud } | null;
-
-/**
- * Hook the engine provides to the resolver: given a (cloud, localIdx,
- * source) triple, build a PointInfo.  Production wires this to
- * `pointInfoBuilder.buildPointInfo` with the engine's live `famousMeta`
- * and `famousXrefs` sidecars in scope; tests pass a stub.
- */
-export type BuildPointInfo = (
-  cloud: PointCloud,
-  localIdx: number,
-  source: Source,
-) => PointInfo | null;
-
-/**
- * Result of resolving a click.  See the module-level docstring for
- * the full state-machine commentary.
- *
- * The `selection` field carries the (source, localIdx) pair the picker
- * decoded from the r32uint texture's packed value.  Engine forwards it
- * straight to `setSelected` for the halo + InfoCard updates; no
- * intermediate global ID is needed.
- */
-export type ClickResolution =
-  | { kind: 'clear' }
-  | {
-      kind: 'select';
-      selection: { source: Source; localIdx: number };
-      info: PointInfo | null;
-    };
-
-export type ClickResolver = {
-  /** Resolve a click position → ClickResolution. */
-  resolveClick(input: ClickResolveInput): Promise<ClickResolution>;
-  /**
-   * Tear down the resolver.  No-op — the resolver is a thin wrapper
-   * around the pick renderer plus two pure resolution closures; its
-   * dependencies (pickRenderer, resolveSelection, buildPointInfo) are
-   * owned by the engine and torn down separately.  Method exists so
-   * the engine's bag of subsystems can be torn down uniformly via the
-   * shared `Destroyable` shape (`engine.destroy()` iterates and calls
-   * `destroy()` on each).
-   */
-  destroy(): void;
-};
-
-export type CreateClickResolverInput = {
-  pickRenderer: ReturnType<typeof createPickRenderer>;
-  resolveSelection: ResolveSelection;
-  buildPointInfo: BuildPointInfo;
-};
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
+import type { ClickResolveInput } from '../../../@types/engine/ClickResolveInput';
+import type { ClickResolution } from '../../../@types/engine/ClickResolution';
+import type { ClickResolver } from '../../../@types/engine/ClickResolver';
+import type { CreateClickResolverInput } from '../../../@types/engine/CreateClickResolverInput';
 
 export function createClickResolver(input: CreateClickResolverInput): ClickResolver {
   const { pickRenderer, resolveSelection, buildPointInfo } = input;

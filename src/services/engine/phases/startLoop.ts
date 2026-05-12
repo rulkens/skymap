@@ -64,10 +64,11 @@
  * pre-Phase-5 IIFE's mid-IIFE early-return semantics.
  */
 
-import { runFrame, type RunFrameDeps } from '../frame/runFrame';
+import { runFrame } from '../frame/runFrame';
+import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
-import type { EngineState } from '../../../@types';
-import type { BootstrapDeps } from './bootstrap';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 /**
  * Bootstrap phase 4: build `RunFrameDeps`, assign the forward-declared

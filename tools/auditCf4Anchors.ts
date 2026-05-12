@@ -25,12 +25,10 @@
 import { readFileSync } from 'node:fs';
 import { readNpy } from './parsers/npyReader';
 import { SG_TO_EQ_MATRIX } from '../src/data/superGalacticTransform';
-import {
-  CLUSTER_ANCHORS,
-  raDecDistToEqCart,
-  type ClusterAnchor,
-} from '../src/data/clusterAnchors';
-import type { Mat3, Vec3 } from '../src/@types';
+import { CLUSTER_ANCHORS, raDecDistToEqCart } from '../src/data/clusterAnchors';
+import type { ClusterAnchor } from '../src/@types/data/ClusterAnchor';
+import type { Mat3 } from '../src/@types/math/Mat3';
+import type { Vec3 } from '../src/@types/math/Vec3';
 
 const VOXEL_SIZE_MPC = 1000 / 128; // CF4++ box size / N
 const DIMS = 128;

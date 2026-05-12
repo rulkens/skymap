@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createLabelDirectorSubsystem } from '../../../../src/services/engine/subsystems/labelDirectorSubsystem';
-import type { LabelProducer } from '../../../../src/services/engine/subsystems/labelProducer';
-import type { Label } from '../../../../src/services/gpu/renderers/labelRenderer';
-import type { MarkerLine } from '../../../../src/services/gpu/renderers/markerLineRenderer';
-import type { ReadyFrameContext } from '../../../../src/services/engine/frame/frameContext';
-import type { EngineState } from '../../../../src/@types';
+import type { LabelProducer } from '../../../../src/@types/engine/subsystems/LabelProducer';
+import type { Label } from '../../../../src/@types/rendering/Label';
+import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
+import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(requestRender: () => void = () => {}): EngineState {
   return { subsystems: { scheduler: { requestRender } } } as unknown as EngineState;

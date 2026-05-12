@@ -12,39 +12,9 @@
  * GPU code.
  */
 
-export type GlyphMetrics = {
-  /** UV rect in [0,1] atlas space. */
-  uv: { u0: number; v0: number; u1: number; v1: number };
-  /** Glyph plane size in pixels at the atlas's source font size. */
-  size: { w: number; h: number };
-  /** Pen offset to the glyph quad's top-left, in pixels. */
-  offset: { x: number; y: number };
-  /** Pen advance after this glyph, in pixels. */
-  advance: number;
-};
-
-export type FontMetrics = {
-  atlas: { width: number; height: number; distanceRange: number };
-  fontSize: number;
-  lineHeight: number;
-  glyphs: Map<number, GlyphMetrics>;
-  /** Key is `"${first},${second}"` (codepoints). Value is amount in pixels. */
-  kerning: Map<string, number>;
-};
-
-export type RawBMFont = {
-  pages: string[];
-  common: { lineHeight: number; base: number; scaleW: number; scaleH: number };
-  info: { face: string; size: number };
-  /** Top-level (NOT inside `info`) per msdf-bmfont-xml's JSON output. */
-  distanceField: { fieldType: string; distanceRange: number };
-  chars: Array<{
-    id: number; x: number; y: number; width: number; height: number;
-    xoffset: number; yoffset: number; xadvance: number;
-    page: number; chnl: number;
-  }>;
-  kernings?: Array<{ first: number; second: number; amount: number }>;
-};
+import type { GlyphMetrics } from '../../../@types/rendering/GlyphMetrics';
+import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
+import type { RawBMFont } from '../../../@types/rendering/RawBMFont';
 
 export function parseFontMetrics(raw: RawBMFont): FontMetrics {
   const w = raw.common.scaleW;

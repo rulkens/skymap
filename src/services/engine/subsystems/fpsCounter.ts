@@ -30,15 +30,7 @@
  * fine — perf-investigation timescales are minutes, not sub-second.
  */
 
-export type FpsCounter = {
-  /**
-   * Record one frame's wall-clock timestamp (`performance.now()` in ms).
-   * Returns the latest integer FPS estimate, or `null` if the buffer
-   * doesn't yet hold at least two timestamps (FPS undefined from a
-   * single sample).
-   */
-  sample(nowMs: number): number | null;
-};
+import type { FpsCounter } from '../../../@types/engine/subsystems/FpsCounter';
 
 /**
  * Construct a rolling FPS counter.  Defaults to a 60-frame window.

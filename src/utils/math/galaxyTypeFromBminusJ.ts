@@ -17,7 +17,7 @@
  * classifier so the InfoCard treats every source uniformly.
  */
 
-import type { GalaxyTypeInfo } from '../../@types';
+import type { GalaxyTypeInfo } from '../../@types/data/GalaxyTypeInfo';
 
 export function galaxyTypeFromBminusJ(bj: number): GalaxyTypeInfo {
   if (bj < 1.5) return { category: 'blue', description: 'Blue, star-forming galaxy' };

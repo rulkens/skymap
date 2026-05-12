@@ -69,18 +69,9 @@
  * @module
  */
 
-import type { PointCloud } from '../../../@types';
-import { Source } from '../../../data/sources';
+import type { ComputeSchechterRatiosInput } from '../../../@types/engine/ComputeSchechterRatiosInput';
 import { surveyFluxLimit, surveySchechter } from '../../../data/surveyFluxLimits';
 import { expectedNumberDensity } from '../../../utils/math';
-
-/** Inputs for a Schechter-ratio bake. */
-export type ComputeSchechterRatiosInput = {
-  /** Point cloud whose galaxies need per-row Schechter ratios. */
-  cloud: PointCloud;
-  /** Survey this cloud belongs to — drives `mLim` and the Schechter triple. */
-  source: Source;
-};
 
 /**
  * Compute per-galaxy Schechter density-correction ratios for one cloud.

@@ -22,10 +22,10 @@ import {
   niceRound,
 } from '../../../../src/services/engine/helpers/pointInfoBuilder';
 import { Source } from '../../../../src/data/sources';
-import type { PointCloud } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import { cartesianToRaDecZ } from '../../../../src/utils/math/cartesianToRaDecZ';
-import type { FamousMetaEntry } from '../../../../src/services/loading/fetchers/famousMetaFetcher';
+import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 
 // ─── Test helpers ───────────────────────────────────────────────────────────
 

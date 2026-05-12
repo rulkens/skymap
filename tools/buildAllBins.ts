@@ -46,9 +46,9 @@ import { raDecZToCartesian } from '../src/utils/math/index.js';
 import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../src/utils/math/galaxyDiameterKpc.js';
 import { Source } from '../src/data/sources.js';
-import type { PointCloud } from '../src/@types/index.js';
+import type { PointCloud } from '../src/@types/data/PointCloud.js';
 import { TIER_TARGETS, tierFilenameForSource } from '../src/data/tierTargets.js';
-import type { Tier } from '../src/@types/Tier.js';
+import type { Tier } from '../src/@types/data/Tier.js';
 import { subsampleByAbsMag } from './subsampleByAbsMag.js';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep

@@ -28,9 +28,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createBiasCorrectionSubsystem } from '../../../../src/services/engine/subsystems/biasCorrectionSubsystem';
 import { BiasMode } from '../../../../src/data/biasMode';
+import type { BiasMode as BiasModeT } from '../../../../src/@types/data/BiasMode';
 import { Source } from '../../../../src/data/sources';
-import type { PointCloud } from '../../../../src/@types';
-import type { PointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
 
 type SpliceCall =
   | { kind: 'schechter'; source: Source; data: Float32Array }
@@ -116,7 +117,7 @@ function makeCloud(count: number): PointCloud {
  * mode mirror).
  */
 function makeDeps(clouds: Map<Source, PointCloud>) {
-  let currentMode: BiasMode = BiasMode.None;
+  let currentMode: BiasModeT = BiasMode.None;
   const requestRender = vi.fn();
   return {
     deps: {
@@ -125,7 +126,7 @@ function makeDeps(clouds: Map<Source, PointCloud>) {
       requestRender,
     },
     requestRender,
-    setMode: (m: BiasMode) => {
+    setMode: (m: BiasModeT) => {
       currentMode = m;
     },
   };

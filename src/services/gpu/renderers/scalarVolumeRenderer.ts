@@ -34,8 +34,15 @@
  */
 
 import { mat4 } from 'gl-matrix';
-import type { ScalarCube, ScalarFieldFrameKind, ScalarFieldPaletteId } from '../../../@types/ScalarCube';
-import type { Renderer, Vec2, Vec3 } from '../../../@types';
+import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { ScalarFieldFrameKind } from '../../../@types/data/ScalarFieldFrameKind';
+import type { ScalarFieldPaletteId } from '../../../@types/data/ScalarFieldPaletteId';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { ScalarFieldHandle } from '../../../@types/rendering/ScalarFieldHandle';
+import type { ScalarVolumeRenderer } from '../../../@types/rendering/ScalarVolumeRenderer';
+import type { FieldEntry } from '../../../@types/rendering/FieldEntry';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPalettes';
 import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../../data/superGalacticTransform';
 import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
@@ -157,173 +164,8 @@ export function buildCubeModelMatrix(cube: ScalarCube): mat4 {
 
 // ── Factory ─────────────────────────────────────────────────────────
 
-export type ScalarFieldHandle = string;
+// FieldEntry type moved to @types/rendering/FieldEntry.d.ts.
 
-type FieldEntry = {
-  handle: ScalarFieldHandle;
-  enabled: boolean;
-  intensity: number;
-  /**
-   * Per-field contrast — drives the windowing transform in
-   * `fragment.wesl`'s `applyContrastWindow`.  1.0 is identity (no
-   * deadband); > 1.0 widens the deadband around the midpoint
-   * (suppressing near-mean noise) AND stretches the surviving range
-   * across the full palette.  Orthogonal to `intensity`: intensity
-   * controls overall opacity, contrast controls how aggressively
-   * mid-range noise is suppressed.  See the function's docblock in
-   * the shader for the math.
-   */
-  contrast: number;
-  /**
-   * Per-cube center of the contrast windowing transform, in LUT
-   * coordinate space [0, 1].  Divergent palettes (CF-4, coolwarm)
-   * want 0.5 so the deadband suppresses the cosmic-mean midpoint
-   * symmetrically; sequential palettes (MCPM, inferno) want 0.0 so
-   * the deadband suppresses the void floor (LUT t=0) and the stretch
-   * pushes mid-density values toward the bright end.  Per-cube
-   * static — set once at registration time from the per-handle
-   * registry, not user-tunable.  See `applyContrastWindow` in
-   * `fragment.wesl` for the math; `VOLUME_FIELD_DEFAULTS[handle]`
-   * for the per-field values.
-   */
-  contrastCenter: number;
-  paletteId: ScalarFieldPaletteId;
-  /** Per-cube opacity multiplier; seeded to 1.0 in `addField` and overwritten
-   *  via `setDensityScale` (called from wireSlots with the value from
-   *  `VOLUME_FIELD_DEFAULTS[handle]`). */
-  densityScale: number;
-  /**
-   * Spatial envelope (smoothstep edges in normalised local-space
-   * distance from cube center, where the inscribed sphere = 1.0).
-   * Voxels at distance < `envelopeInner` get full alpha; voxels past
-   * `envelopeOuter` are fully suppressed; values in between cross-fade.
-   * Setting both to a value ≥ √3 (the cube-corner distance) disables
-   * the envelope — `NO_SPATIAL_ENVELOPE` from `volumeFieldDefaults.ts`
-   * is the canonical sentinel.  Seeded to no-envelope in `addField`
-   * and overwritten via `setEnvelope` from `wireSlots`.
-   */
-  envelopeInner: number;
-  envelopeOuter: number;
-  /**
-   * Per-cube HDR exposure multiplier on the rgb contribution.  Values
-   * > 1 push accumulated color past the LUT's brightest entry; the
-   * downstream tonemap pass rolls the rgba16float accumulator back to
-   * display gamut, producing the "peaks blow out to white" effect.
-   * Decoupled from alpha so brightening doesn't also occlude.
-   * Per-cube static (set once at registration via setExposure from
-   * the slot commit); not a user-tunable today.
-   */
-  exposure: number;
-  /**
-   * User-tunable low-end cutoff in normalised LUT-coord space [0, 1].
-   * Hard-suppresses voxels with deviation-from-center < trim — the
-   * "Polyphorm trim_density" knob in normalised space.  Default 0 =
-   * no trim.  Combined with contrast's implicit deadband by taking
-   * the max in the shader.
-   */
-  trim: number;
-  modelMatrix: mat4;
-  invModelMatrix: mat4;
-  volumeTexture: GPUTexture;
-  paletteTexture: GPUTexture;
-  uniformBuffer: GPUBuffer;
-  bindGroup: GPUBindGroup;
-};
-
-export type ScalarVolumeRenderer = {
-  /**
-   * Human-readable identifier (`'scalarVolumeRenderer'`).  Part of the
-   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
-   */
-  readonly label: string;
-  addField(handle: ScalarFieldHandle, cube: ScalarCube): void;
-  removeField(handle: ScalarFieldHandle): void;
-  setEnabled(handle: ScalarFieldHandle, enabled: boolean): void;
-  setIntensity(handle: ScalarFieldHandle, intensity: number): void;
-  /**
-   * Per-field contrast for the windowing transform in `fragment.wesl`.
-   * Range conventionally [0.25, 4.0]; 1.0 is identity (no deadband).
-   * Higher values widen the deadband around the midpoint (suppressing
-   * near-mean noise) and stretch the surviving range across the full
-   * palette.  Clamped to a small positive minimum (1e-3) so the
-   * shader's `1 / contrast` stays well-defined.  No-op if the handle
-   * is unknown.
-   */
-  setContrast(handle: ScalarFieldHandle, contrast: number): void;
-  /**
-   * Per-cube opacity multiplier used by the alpha-integral inside the
-   * scalar-volume fragment shader.  Values must be non-negative; the
-   * setter clamps negative or NaN inputs to 0 (a silent overlay)
-   * because a negative densityScale would invert the colour mapping
-   * and yield nonsense visuals rather than a useful debug signal.
-   *
-   * Lives alongside `setContrast` because the two are orthogonal:
-   * contrast windows the LUT-coordinate around the midpoint
-   * (suppress noise + stretch structure); densityScale scales the
-   * optical-depth contribution per voxel-step.  No-op when
-   * the handle is unknown — mirrors the rest of the per-field setter
-   * surface so a late-firing settings callback for a removed field
-   * cannot throw.
-   */
-  setDensityScale(handle: ScalarFieldHandle, value: number): void;
-  /**
-   * Per-field spatial envelope.  `inner` and `outer` are normalised
-   * distances from the cube center in local space (the inscribed
-   * sphere has radius 1.0, the cube's corners are at √3 ≈ 1.73).
-   * The shader smoothsteps from full opacity at `inner` to zero
-   * opacity at `outer`, then multiplies the result onto the per-step
-   * alpha — this hides the axis-aligned cube silhouette for cubes
-   * whose corner regions are visually noisy or scientifically empty.
-   * Setting both edges to a value ≥ √3 disables the envelope.  No-op
-   * when the handle is unknown.
-   */
-  setEnvelope(handle: ScalarFieldHandle, inner: number, outer: number): void;
-  /**
-   * Per-cube center of the contrast windowing transform.  See the
-   * `contrastCenter` field on `FieldEntry` for the rationale; values
-   * outside [0, 1] are clamped because the shader's `halfRange =
-   * max(center, 1-center)` only makes sense in that range.  Called
-   * once at slot-commit time with the per-handle registry value.
-   */
-  setContrastCenter(handle: ScalarFieldHandle, center: number): void;
-  /**
-   * Per-cube HDR exposure multiplier on the rgb contribution.  See
-   * the `exposure` field on `FieldEntry` for the rationale.  Negative
-   * or NaN values clamp to 0 (silent overlay); the upper bound is
-   * permissive (32) because the downstream tonemap caps display
-   * brightness anyway.  No-op when the handle is unknown.
-   */
-  setExposure(handle: ScalarFieldHandle, value: number): void;
-  /**
-   * User-tunable low-end cutoff in normalised LUT-coord space.
-   * Range conventionally [0, 0.95]; values past 0.95 get clamped
-   * because they leave no useful signal.  No-op when handle unknown.
-   */
-  setTrim(handle: ScalarFieldHandle, value: number): void;
-  /**
-   * Replace the palette LUT for a single field.  Rewrites the field's
-   * existing 1D LUT texture in place via `writeTexture`; the bind group
-   * (which references the texture's view) stays valid, so a palette
-   * change costs one queue write and zero rebinds.  No-op if the
-   * handle is unknown.
-   */
-  setFieldPalette(handle: ScalarFieldHandle, id: ScalarFieldPaletteId): void;
-  /** Current palette id for a single field; `null` if the handle is unknown. */
-  getFieldPalette(handle: ScalarFieldHandle): ScalarFieldPaletteId | null;
-  hasActiveFields(): boolean;
-  listHandles(): ScalarFieldHandle[];
-  draw(pass: GPURenderPassEncoder, viewProj: mat4, viewportPx: Vec2, cameraPosWorld: Readonly<Vec3>): void;
-  destroy(): void;
-  /**
-   * Test-only escape hatch: returns the live `FieldEntry` for the given
-   * handle (or `undefined`).  Exposed so unit tests can assert that
-   * setters mutated the per-field CPU state without having to read back
-   * through the GPU queue (which is mocked in Node).  Production code
-   * MUST NOT call this — every legitimate caller goes through the
-   * setter / draw surface.  Prefixed `__` to mark the contract.
-   */
-  __getFieldEntryForTest(handle: ScalarFieldHandle): Readonly<FieldEntry> | undefined;
-};
 
 export function createScalarVolumeRenderer(
   device: GPUDevice,

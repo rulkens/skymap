@@ -22,7 +22,7 @@
  * task unit-testable without a GPU mock.
  */
 
-import type { Vec4 } from '../../../@types';
+import type { Vec4 } from '../../../@types/math/Vec4';
 
 export const ATLAS_SIDE = 2048;
 export const SLOT_SIDE = 128;
@@ -31,26 +31,7 @@ export const SLOT_COUNT = SLOTS_PER_ROW * SLOTS_PER_ROW; // 256
 
 type SlotEntry = { key: string; lastSeenFrame: number };
 
-/**
- * Callback fired when LRU eviction kicks an old key out of the atlas.
- *
- * Why this exists: callers outside the atlas (notably the engine's
- * thumbnail subsystem) maintain parallel maps keyed by the same string —
- * `bitmapReady`, `bitmapFailed`, `bitmapReadyTime`.  Without an eviction
- * notification, those maps grow without bound while the atlas's actual
- * SlotEntry array stays capped at SLOT_COUNT — a small but real memory
- * leak, AND a correctness issue: a key that was evicted, then later
- * re-allocated to a different slot, would still be flagged as
- * `bitmapReady` (so the engine would emit a ThumbnailInstance reading from a
- * slot that doesn't yet contain its bitmap, briefly displaying whichever
- * galaxy now occupies that slot).
- *
- * The handler runs synchronously inside `allocate()` immediately before
- * the slot's previous occupant is overwritten; callers can safely
- * `.delete(key)` from their own maps without racing against another
- * `allocate()` call.
- */
-export type AtlasEvictHandler = (key: string) => void;
+import type { AtlasEvictHandler } from '../../../@types/rendering/AtlasEvictHandler';
 
 export class TextureAtlas {
   // The GPU device is needed only by uploadBitmap (Task 5). Slot management

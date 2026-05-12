@@ -25,18 +25,10 @@
  * keys remain because the most-common downstream use is direct lookup
  * against `BigUint64Array` objIDs.
  */
-import type { Fetcher } from '../types';
+import type { Fetcher } from '../../../@types/loading/Fetcher';
+import type { PgcAliasJsonShape } from '../../../@types/loading/PgcAliasJsonShape';
+import type { PgcAliasMap } from '../../../@types/loading/PgcAliasMap';
 import { dataUrl, HttpError } from '../fetchWithProgress';
-
-/**
- * The JSON-on-disk shape: `{ "<pgc>": ["NGC 4565", "UGC 7772", …], … }`.
- * Public to support unit tests against `parsePgcAliases` without
- * spinning up `fetch`.
- */
-export type PgcAliasJsonShape = Record<string, string[]>;
-
-/** The runtime shape — bigint-keyed for direct objIDs lookup. */
-export type PgcAliasMap = Map<bigint, readonly string[]>;
 
 /**
  * Parse the `pgc_aliases.json` content into a runtime-shaped Map.

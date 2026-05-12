@@ -24,7 +24,7 @@
  *   may transiently report 0.
  */
 
-import type { Tier } from '../@types/Tier';
+import type { Tier } from '../@types/data/Tier';
 
 const MOBILE_BREAKPOINT_PX = 768;
 

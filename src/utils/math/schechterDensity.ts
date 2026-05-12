@@ -23,19 +23,7 @@
  */
 
 import { absoluteFromApparent } from './distanceModulus';
-
-export type SchechterInput = {
-  /** Schechter characteristic absolute magnitude M*. */
-  mStar: number;
-  /** Schechter faint-end slope α (typically −1 to −1.3). */
-  alpha: number;
-  /** Schechter normalisation φ* in galaxies per Mpc³. */
-  phiStar: number;
-  /** Survey apparent-magnitude flux limit. */
-  mLim: number;
-  /** Distance to evaluate density at, in Mpc. */
-  dMpc: number;
-};
+import type { SchechterInput } from '../../@types/math/SchechterInput';
 
 const LN10 = Math.log(10);
 

@@ -33,19 +33,9 @@
  * the audit's pass/fail percentile.
  */
 
-import type { Vec3 } from '../@types/Vec';
-
-/** Right-ascension hours, declination degrees, distance in Mpc. */
-export type SkyCoord = {
-  readonly raHours: number;
-  readonly decDeg: number;
-  readonly distMpc: number;
-};
-
-/** A named cluster anchor — sky coord + display label. */
-export type ClusterAnchor = SkyCoord & {
-  readonly name: string;
-};
+import type { Vec3 } from '../@types/math/Vec3';
+import type { SkyCoord } from '../@types/data/SkyCoord';
+import type { ClusterAnchor } from '../@types/data/ClusterAnchor';
 
 /**
  * Convert (RA hours, Dec degrees, distance Mpc) → equatorial-Cartesian

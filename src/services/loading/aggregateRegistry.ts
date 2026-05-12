@@ -18,14 +18,8 @@
  * snapshot read each frame is cheap (~10 slots in the registry) and never
  * disagrees with `slot.state()`.
  */
-import type { AssetSlot, LoadState } from './types';
-
-export type RegistrySnapshot = {
-  slots: Array<{ name: string; state: LoadState<unknown> }>;
-  totalLoadedBytes: number;
-  totalExpectedBytes: number;
-  inFlightCount: number;
-};
+import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { RegistrySnapshot } from '../../@types/loading/RegistrySnapshot';
 
 export function aggregateRegistry(
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>,

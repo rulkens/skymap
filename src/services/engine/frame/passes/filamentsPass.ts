@@ -38,7 +38,7 @@
  * about), not a correctness one.
  */
 
-import type { Pass } from './types';
+import type { Pass } from '../../../../@types/engine/frame/Pass';
 
 /**
  * Empirically pleasant line halfwidth in screen-space pixels.  The

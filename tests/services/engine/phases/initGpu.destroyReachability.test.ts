@@ -45,8 +45,9 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
-import type { EngineCallbacks, EngineState } from '../../../../src/@types';
-import type { BootstrapDeps } from '../../../../src/services/engine/phases/bootstrap';
+import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //

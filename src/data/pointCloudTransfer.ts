@@ -36,17 +36,8 @@
  * (HTML spec §StructuredSerialize step "If value has [[ArrayBufferData]]…").
  */
 
-import type { PointCloud } from '../@types/PointCloud';
-
-export type ClonedPointCloud = {
-  /** A structurally complete PointCloud whose typed-array buffers are fresh, transferable copies. */
-  copy: PointCloud;
-  /**
-   * Transfer list of the copy's buffers in a stable order. Pass this
-   * directly as the second argument to `worker.postMessage(payload, transfer)`.
-   */
-  transfer: Transferable[];
-};
+import type { PointCloud } from '../@types/data/PointCloud';
+import type { ClonedPointCloud } from '../@types/data/ClonedPointCloud';
 
 /**
  * Slice every typed-array buffer in `cloud` to produce a structurally
