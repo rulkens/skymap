@@ -37,7 +37,7 @@
  * hook) clear the hash gracefully instead of writing nonsense.
  */
 
-import type { PointInfo } from '../../@types';
+import type { PointInfo } from '../../@types/engine/PointInfo';
 import type { FocusTarget } from '../../@types/camera/FocusTarget';
 import { Source } from '../../data/sources';
 

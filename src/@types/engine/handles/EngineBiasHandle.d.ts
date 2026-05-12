@@ -1,4 +1,4 @@
-import type { BiasMode } from '../data/biasMode';
+import type { BiasMode } from '../../../data/biasMode';
 
 /**
  * EngineBiasHandle — Malmquist-bias correction controls.

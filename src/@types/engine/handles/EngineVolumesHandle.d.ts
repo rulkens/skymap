@@ -1,5 +1,5 @@
-import type { ScalarCube } from './data/ScalarCube';
-import type { ScalarFieldPaletteId } from './data/ScalarFieldPaletteId';
+import type { ScalarCube } from '../../data/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../data/ScalarFieldPaletteId';
 
 /**
  * EngineVolumesHandle — scalar-volume overlay registry + per-field tunables.

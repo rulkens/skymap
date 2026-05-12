@@ -25,7 +25,8 @@
  */
 
 import { useEffect, type Dispatch, type RefObject, type SetStateAction } from 'react';
-import type { EngineHandle, PointInfo } from '../@types';
+import type { EngineHandle } from '../@types/engine/EngineHandle';
+import type { PointInfo } from '../@types/engine/PointInfo';
 
 export type UseKeyboardShortcutsInput = {
   /** The currently-pinned galaxy.  `f` is a no-op when null. */

@@ -5,7 +5,7 @@
  * baseline is exercised by other tests.
  */
 import { describe, it, expect } from 'vitest';
-import type { EngineHandle } from '../../../src/@types/EngineHandle';
+import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
 
 describe('EngineHandle — namespace sub-handles', () => {
   it('declares 11 sub-handles + destroy + assetSlots as type-level members', () => {

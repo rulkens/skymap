@@ -91,7 +91,7 @@
  * lands without touching any existing type declaration.
  */
 
-import type { EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { PostProcess } from '../../../@types/rendering/PostProcess';

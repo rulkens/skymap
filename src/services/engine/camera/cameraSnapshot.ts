@@ -57,7 +57,7 @@
 
 import { vec3 } from 'gl-matrix';
 
-import type { EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { InitialCam } from '../../../@types/camera/InitialCam';
 import { updatePosition } from '../../camera/orbitCamera';
 import { FOCUS_TWEEN_MS } from './focusTween';

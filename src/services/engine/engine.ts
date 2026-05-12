@@ -95,10 +95,12 @@ import {
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
-import type { PointInfo } from '../../@types';
+import type { PointInfo } from '../../@types/engine/PointInfo';
 import type { LodMode } from '../../@types/data/LodMode';
 import type { PointCloud } from '../../@types/data/PointCloud';
-import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
+import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
+import type { EngineHandle } from '../../@types/engine/EngineHandle';
+import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { BiasMode } from '../../data/biasMode';
 import type { ScalarCube } from '../../@types/data/ScalarCube';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';

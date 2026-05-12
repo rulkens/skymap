@@ -4,7 +4,7 @@ import type { LabelProducer } from '../../../../src/services/engine/subsystems/l
 import type { Label } from '../../../../src/@types/rendering/Label';
 import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { ReadyFrameContext } from '../../../../src/services/engine/frame/frameContext';
-import type { EngineState } from '../../../../src/@types';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(requestRender: () => void = () => {}): EngineState {
   return { subsystems: { scheduler: { requestRender } } } as unknown as EngineState;

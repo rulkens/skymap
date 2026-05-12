@@ -39,7 +39,7 @@ import type {
 import type {
   RenderFrameSettings,
 } from '../../../../../src/services/engine/frame/renderFrame';
-import type { EngineState } from '../../../../../src/@types';
+import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 
 // ── Stub builders ───────────────────────────────────────────────────────────

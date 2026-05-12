@@ -17,7 +17,7 @@
  * to test in isolation and means they don't need engine state threaded in.
  */
 
-import type { PointInfo } from '../../../@types';
+import type { PointInfo } from '../../../@types/engine/PointInfo';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import { Source, sourceLabel, bandLabels } from '../../../data/sources';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';

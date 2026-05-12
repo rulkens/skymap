@@ -20,7 +20,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { ScaleInfo } from '../../@types';
+import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import styles from './ScaleBar.module.css';
 
 /** Props for ScaleBar. */

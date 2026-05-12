@@ -20,7 +20,7 @@
  *      cheap defensive skip avoids an empty-string row in the palette).
  */
 
-import type { EngineHandle } from '../@types';
+import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { Source } from '../data/sources';
 
 /**

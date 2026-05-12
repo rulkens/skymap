@@ -23,7 +23,7 @@ import {
   type ClickResolveInput,
 } from '../../../../src/services/engine/interaction/clickHandler';
 import { Source } from '../../../../src/data/sources';
-import type { PointInfo } from '../../../../src/@types';
+import type { PointInfo } from '../../../../src/@types/engine/PointInfo';
 import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 import type { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 

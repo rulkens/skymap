@@ -29,8 +29,8 @@
  */
 
 import type { AssetSlot } from './AssetSlot';
-import type { EngineState } from '../EngineState';
-import type { EngineCallbacks } from '../EngineCallbacks';
+import type { EngineState } from '../engine/state/EngineState';
+import type { EngineCallbacks } from '../engine/EngineCallbacks';
 
 export type SlotFactory<TPayload, TRequest> = (
   state: EngineState,

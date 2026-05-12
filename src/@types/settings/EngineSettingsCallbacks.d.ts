@@ -12,7 +12,7 @@
  * `filaments.onReady` address (no flat survivor).
  */
 
-import type { EngineCallbacks } from '../EngineCallbacks';
+import type { EngineCallbacks } from '../engine/EngineCallbacks';
 
 export type EngineSettingsCallbacks = Pick<
   EngineCallbacks,

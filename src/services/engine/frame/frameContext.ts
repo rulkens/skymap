@@ -99,7 +99,7 @@
 
 import type { mat4 } from 'gl-matrix';
 
-import type { EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';

@@ -66,7 +66,7 @@
 
 import { runFrame, type RunFrameDeps } from '../frame/runFrame';
 
-import type { EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from './bootstrap';
 
 /**

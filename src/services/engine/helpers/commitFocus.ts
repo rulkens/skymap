@@ -87,7 +87,9 @@
  *   the shared tail.
  */
 
-import type { EngineCallbacks, EngineState, PointInfo } from '../../../@types';
+import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PointInfo } from '../../../@types/engine/PointInfo';
 import type { SelectionInput } from '../subsystems/selectionSubsystem';
 import { tweenToGalaxy } from '../camera/tweenToGalaxy';
 

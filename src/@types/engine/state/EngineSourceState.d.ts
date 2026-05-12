@@ -30,12 +30,12 @@
  * is otherwise a recipe for callers reaching into unrelated bags.
  */
 
-import type { LodMode } from './data/LodMode';
-import type { PointCloud } from './data/PointCloud';
-import type { Tier } from './data/Tier';
-import type { Source } from '../data/sources';
-import type { FamousMetaEntry } from './loading/FamousMetaEntry';
-import type { FamousXrefMap } from './loading/FamousXrefMap';
+import type { LodMode } from '../../data/LodMode';
+import type { PointCloud } from '../../data/PointCloud';
+import type { Tier } from '../../data/Tier';
+import type { Source } from '../../../data/sources';
+import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
+import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 
 export type EngineSourceState = {
   visibleMask: number;

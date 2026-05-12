@@ -36,20 +36,7 @@
  * unrelated state.
  */
 
-import type { MousePos } from './input/MousePos';
-import type { Source } from '../data/sources';
-
-/**
- * A (source, localIdx) selection — what the picker decodes from its
- * r32uint packed value, and what the engine forwards to React for
- * InfoCard rendering + halo shading.
- *
- * Re-exported here for backward compatibility with existing imports
- * (the pre-D.3 subsystems' API surface used this type name); the
- * canonical home in code is now `SelectionInput` on
- * `selectionSubsystem.ts`, which is structurally identical.
- */
-export type Selection = { source: Source; localIdx: number };
+import type { MousePos } from '../../input/MousePos';
 
 export type EnginePickingState = {
   latestMouseCss: MousePos | null;

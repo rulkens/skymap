@@ -34,7 +34,7 @@
 import type { Label } from '../../../@types/rendering/Label';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { ReadyFrameContext } from '../frame/frameContext';
-import type { EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Vec4 } from '../../../@types/math/Vec4';

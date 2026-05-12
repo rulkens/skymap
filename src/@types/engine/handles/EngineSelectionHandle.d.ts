@@ -1,7 +1,7 @@
-import type { Source } from '../data/sources';
-import type { FamousMetaEntry } from './loading/FamousMetaEntry';
-import type { FamousXrefMap } from './loading/FamousXrefMap';
-import type { PgcAliasMap } from './loading/PgcAliasMap';
+import type { Source } from '../../../data/sources';
+import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
+import type { FamousXrefMap } from '../../loading/FamousXrefMap';
+import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 
 /**
  * EngineSelectionHandle — selection bookkeeping + the data its consumers need.

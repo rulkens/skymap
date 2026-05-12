@@ -14,7 +14,7 @@ import {
   parseFocusHash,
 } from '../../../src/services/url/focusUrl';
 import { Source } from '../../../src/data/sources';
-import type { PointInfo } from '../../../src/@types';
+import type { PointInfo } from '../../../src/@types/engine/PointInfo';
 
 /**
  * Build a minimal `PointInfo` for codec tests.  The codec only reads

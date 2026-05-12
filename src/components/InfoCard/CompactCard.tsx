@@ -11,7 +11,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { PointInfo } from '../../@types';
+import type { PointInfo } from '../../@types/engine/PointInfo';
 import { formatDistance } from '../../utils/format/distance';
 import styles from './CompactCard.module.css';
 

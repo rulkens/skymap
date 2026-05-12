@@ -1,20 +1,11 @@
 /**
- * Barrel re-export of all public type aliases used across the renderer.
+ * Barrel re-export of `@types/`.
  *
- * Import sites should prefer `import type { Foo } from '../@types'`
- * over deep imports — the barrel keeps refactoring easier and the
- * import lines tidy.
+ * Engine-prefixed types (`EngineHandle`, `EngineState`, sub-bags,
+ * sub-handles), `PointInfo`, and `ScaleInfo` no longer re-export here —
+ * consumers deep-import from `@types/engine/...` instead.  The barrel
+ * stays in place for the remaining root-level files (currently none;
+ * subfolder types should be deep-imported directly from their files).
  */
 
-export type * from './PointInfo';
-export type * from './ScaleInfo';
-export type * from './EngineStatus';
-export type * from './EngineCallbacks';
-export type * from './EngineHandle';
-export type * from './settings/EngineSettingsState';
-export type * from './EngineBiasState';
-export type * from './EngineSourceState';
-export type * from './EnginePickingState';
-export type * from './EngineGpuHandles';
-export type * from './EngineSubsystemHandles';
-export type * from './EngineState';
+export {};

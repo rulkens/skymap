@@ -113,7 +113,8 @@
  * `allSlots` registry population) sees the same Map it always did.
  */
 
-import type { EngineCallbacks, EngineState } from '../../../@types';
+import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Tier } from '../../../@types/data/Tier';
 import { Source } from '../../../data/sources';

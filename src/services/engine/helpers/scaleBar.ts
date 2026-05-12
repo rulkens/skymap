@@ -63,7 +63,7 @@
 
 import { formatDistance } from '../../../utils/format/distance';
 import { niceRound } from './pointInfoBuilder';
-import type { ScaleInfo } from '../../../@types';
+import type { ScaleInfo } from '../../../@types/engine/ScaleInfo';
 import type { ScaleBarCamera } from '../../../@types/camera/ScaleBarCamera';
 
 /**

@@ -24,7 +24,7 @@ import {
   initialPendingTarget,
 } from '../../src/hooks/useFocusUrlSync';
 import { Source } from '../../src/data/sources';
-import type { PointInfo } from '../../src/@types';
+import type { PointInfo } from '../../src/@types/engine/PointInfo';
 
 const baseInfo = (overrides: Partial<PointInfo>): PointInfo =>
   ({
