@@ -45,25 +45,7 @@
  */
 
 import { clampDistance } from '../../camera/orbitCamera';
-import type { Vec3 } from '../../../@types/math/Vec3';
-
-/**
- * Snapshot of the camera's initial framing values.
- *
- * Captured once at engine startup (after the cloud bbox is known) so the
- * public `resetCamera()` handle method can restore it later.  `aspect` is
- * deliberately *not* included — reset uses the live canvas aspect ratio so
- * the projection stays correct after a window resize.
- */
-export type InitialCam = {
-  target: Vec3;
-  distance: number;
-  yaw: number;
-  pitch: number;
-  fovYRad: number;
-  near: number;
-  far: number;
-};
+import type { InitialCam } from '../../../@types/camera/InitialCam';
 
 /**
  * Initial camera distance in Mpc.  Empirically tuned against the canonical

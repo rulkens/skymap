@@ -24,7 +24,8 @@ import {
   deriveFrameContext,
   type FrameContext,
 } from '../../../../src/services/engine/frame/frameContext';
-import type { EngineState, OrbitCamera } from '../../../../src/@types';
+import type { EngineState } from '../../../../src/@types';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
 /**
  * Build an `OrbitCamera`-shaped stub with just enough fields populated

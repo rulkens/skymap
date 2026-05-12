@@ -71,7 +71,7 @@ import { pickColourIndex } from '../../../data/colourIndex';
 import type { Destroyable, ThumbnailInstance } from '../../../@types';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { OrbitCamera } from '../../../@types';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';

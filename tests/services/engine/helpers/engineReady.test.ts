@@ -36,7 +36,8 @@ import {
   isEngineReady,
   type ReadyEngineState,
 } from '../../../../src/services/engine/helpers/engineReady';
-import type { EngineState, OrbitCamera } from '../../../../src/@types';
+import type { EngineState } from '../../../../src/@types';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
 /**
  * Build an `EngineState`-shaped fixture with the five guard fields

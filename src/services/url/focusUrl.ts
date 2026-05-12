@@ -38,23 +38,8 @@
  */
 
 import type { PointInfo } from '../../@types';
+import type { FocusTarget } from '../../@types/camera/FocusTarget';
 import { Source } from '../../data/sources';
-
-/**
- * Discriminated union representing a parsed focus target.  The codec
- * is intentionally lossless on `kind`, but the resolver downstream
- * (Task 2) is what turns this into a concrete `(source, localIdx)`
- * pair against the loaded clouds.
- *
- * Field naming: `raDeg`/`decDeg` (vs. `PointInfo`'s `ra`/`dec`) is
- * deliberate.  The codec is far from `PointInfo` and the unit suffix
- * makes the contract self-documenting at every callsite.
- */
-export type FocusTarget =
-  | { kind: 'famous'; id: string }
-  | { kind: 'pgc'; pgc: bigint }
-  | { kind: 'sdss'; objID: bigint }
-  | { kind: 'pos'; raDeg: number; decDeg: number };
 
 /**
  * Build the `#focus=<id>` payload (the bit after `=`) for the given

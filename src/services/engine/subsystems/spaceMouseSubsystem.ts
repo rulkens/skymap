@@ -77,7 +77,8 @@
  * but keeps the wrapper for the next reconnect.
  */
 
-import type { Destroyable, OrbitCamera } from '../../../@types';
+import type { Destroyable } from '../../../@types';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import { SpaceMouseInput } from '../../input/spaceMouse';
 import { applyCurve } from '../../input/spaceMouseSensitivity';
 import { applyAxesToCamera, hasAnyAxis } from '../../input/spaceMouseToCamera';

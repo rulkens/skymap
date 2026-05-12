@@ -27,7 +27,7 @@ import {
   createThumbnailSubsystem,
   galaxyCacheKey,
 } from '../../../../src/services/engine/subsystems/thumbnailSubsystem';
-import type { OrbitCamera } from '../../../../src/@types';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 import type { mat4 } from 'gl-matrix';
 
