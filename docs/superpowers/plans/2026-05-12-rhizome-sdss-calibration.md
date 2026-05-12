@@ -232,7 +232,7 @@ Create the empty repository, pin Python tooling, vendor PolyPhy as a submodule a
   .venv/bin/python -c "import urllib.request; urllib.request.urlretrieve('https://skymap-data.rulkens.com/data/sdss-large.bin', 'cache/sdss-large.bin')"
 
   # 2. Fetch the reference cube (Wilde et al. 2023, pre-extracted by skymap).
-  .venv/bin/python -c "import urllib.request; urllib.request.urlretrieve('https://skymap-data.rulkens.com/data/mcpm_sdss_d2.npy', 'reference/mcpm_sdss_d2.npy')"
+  .venv/bin/python -c "import urllib.request; urllib.request.urlretrieve('https://skymap-data.rulkens.com/data/raw/mcpm/mcpm_sdss_d2.npy', 'reference/mcpm_sdss_d2.npy')"
 
   # 3. Build the PolyPhy input CSV.
   .venv/bin/python buildRhizomeInput.py --shell calibration
@@ -1356,7 +1356,7 @@ Loads two `.npy` cubes (reproduced + reference), normalises each to unit max (so
   ```bash
   cd ~/Development/js/skymap-rhizome
   mkdir -p reference
-  curl -o reference/mcpm_sdss_d2.npy https://skymap-data.rulkens.com/data/mcpm_sdss_d2.npy
+  curl -o reference/mcpm_sdss_d2.npy https://skymap-data.rulkens.com/data/raw/mcpm/mcpm_sdss_d2.npy
   .venv/bin/python compareCubes.py \
       --reproduced output/sdss_reproduced.npy \
       --reference reference/mcpm_sdss_d2.npy \
