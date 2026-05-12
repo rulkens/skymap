@@ -92,10 +92,11 @@ const ALLOW = (name: string): boolean =>
  * Extra files outside public/data/ that should also land in R2.
  *
  * Each entry is `{ localPath, r2Key }` where `r2Key` is the path inside the
- * bucket.  The `data/` prefix is intentional — it keeps all skymap build
- * artefacts under the same R2 namespace whether they are runtime-fetched
- * by the browser (.bin) or contributor-downloaded during local setup
- * (.csv.gz).
+ * bucket.  Most entries use a `data/` prefix to keep skymap build artefacts
+ * under the same R2 namespace whether they are runtime-fetched by the
+ * browser (.bin) or contributor-downloaded during local setup (.csv.gz).
+ * The exception is bucket-infrastructure files like `robots.txt`, which
+ * must live at the host root to be honoured by crawlers.
  *
  * Why keep these separate from the ALLOW filter rather than moving
  * hyperleda_pa.csv.gz into public/data/ first?  The file belongs
@@ -108,6 +109,16 @@ const ALLOW = (name: string): boolean =>
 type ExtraFile = { localPath: string; r2Key: string };
 
 const EXTRA_FILES: ExtraFile[] = [
+  {
+    // robots.txt at the bucket root, disallowing all crawlers.  The data
+    // subdomain serves only binary .bin catalogs + a few JSON sidecars —
+    // no human-readable content — so indexing it wastes crawler budget
+    // and bucket requests for zero SEO value.  Lives at the root key
+    // (no `data/` prefix) because robots.txt is only honoured when fetched
+    // from the host root.  Source file is checked in at tools/r2-static/.
+    localPath: 'tools/r2-static/robots.txt',
+    r2Key: 'robots.txt',
+  },
   {
     // HyperLEDA position-angle + isophotal-diameter cache.
     // Built once by `npm run fetch-hyperleda` (~1 hour), then gzipped:

@@ -1,0 +1,11 @@
+# skymap-data.rulkens.com is the R2 bucket serving binary catalog files
+# (multi-hundred-MB .bin blobs) and a handful of JSON sidecars consumed by
+# the skymap.rulkens.com runtime.  Nothing here is human-readable; crawling
+# it is pure waste — for the crawler (binary garbage), for the bucket
+# (request volume), and for any LLM that ingests it (zero usable text).
+#
+# Indexable content for skymap lives on the main domain; see
+# https://skymap.rulkens.com/robots.txt and /sitemap.xml.
+
+User-agent: *
+Disallow: /
