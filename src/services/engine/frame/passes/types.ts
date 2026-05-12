@@ -56,7 +56,7 @@
  * dep bag without rewriting the frame-context derivation.
  */
 
-import type { EngineState } from '../../../../@types';
+import type { EngineState } from '../../../../@types/engine/state/EngineState';
 import type { ThumbnailRenderer } from '../../../../@types/rendering/ThumbnailRenderer';
 import type { DiskRenderer } from '../../../../@types/rendering/DiskRenderer';
 import type { MilkyWayRenderer } from '../../../../@types/rendering/MilkyWayRenderer';

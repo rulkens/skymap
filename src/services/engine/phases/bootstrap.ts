@@ -86,7 +86,9 @@
  *     literal evaluates.
  */
 
-import type { EngineCallbacks, EngineHandle, EngineState } from '../../../@types';
+import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+import type { EngineHandle } from '../../../@types/engine/EngineHandle';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Source } from '../../../data/sources';
 import type { FpsCounter } from '../subsystems/fpsCounter';

@@ -37,7 +37,7 @@ import type { Label } from '../../../@types/rendering/Label';
 import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { ReadyFrameContext } from '../frame/frameContext';
-import type { EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { LabelProducer } from './labelProducer';
 

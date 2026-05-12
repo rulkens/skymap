@@ -37,7 +37,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import type { EngineState } from '../../../../src/@types';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/services/engine/phases/bootstrap';
 
 // ── Module mocks ──────────────────────────────────────────────────────

@@ -30,13 +30,11 @@
 
 import { describe, it, expect } from 'vitest';
 
-import type {
-  EngineState,
-  EngineSettingsState,
-  EngineBiasState,
-  EngineSourceState,
-  EnginePickingState,
-} from '../../src/@types';
+import type { EngineState } from '../../src/@types/engine/state/EngineState';
+import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
+import type { EngineBiasState } from '../../src/@types/engine/state/EngineBiasState';
+import type { EngineSourceState } from '../../src/@types/engine/state/EngineSourceState';
+import type { EnginePickingState } from '../../src/@types/engine/state/EnginePickingState';
 
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -65,7 +63,7 @@ import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsyst
 import { createYouAreHereSubsystem } from '../../src/services/engine/subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
 import { createPoiSubsystem } from '../../src/services/engine/subsystems/poiSubsystem';
-import type { EngineCallbacks } from '../../src/@types';
+import type { EngineCallbacks } from '../../src/@types/engine/EngineCallbacks';
 import { Source } from '../../src/data/sources';
 
 // A no-op callback bag suitable for the selection subsystem fixture.

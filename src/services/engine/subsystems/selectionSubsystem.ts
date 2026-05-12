@@ -86,7 +86,8 @@
  * frame or two once the GPU upload settles.
  */
 
-import type { EngineCallbacks, PointInfo } from '../../../@types';
+import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+import type { PointInfo } from '../../../@types/engine/PointInfo';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Source } from '../../../data/sources';

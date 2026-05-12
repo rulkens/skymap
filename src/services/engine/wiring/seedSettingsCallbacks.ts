@@ -30,7 +30,7 @@
  * rules and the engine handles them inline.
  */
 
-import type { EngineCallbacks } from '../../../@types';
+import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { LodMode } from '../../../@types/data/LodMode';
 import type { BiasMode } from '../../../data/biasMode';
 import type { ToneMapCurve } from '../../../data/toneMapCurve';

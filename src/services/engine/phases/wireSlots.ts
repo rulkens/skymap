@@ -102,7 +102,7 @@ import {
 import type { PointOfInterest } from '../subsystems/poiSubsystem';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from './bootstrap';
 
 /**

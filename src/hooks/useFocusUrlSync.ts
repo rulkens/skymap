@@ -59,7 +59,9 @@
  */
 
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { EngineHandle, EngineStatus, PointInfo } from '../@types';
+import type { EngineHandle } from '../@types/engine/EngineHandle';
+import type { EngineStatus } from '../@types/engine/EngineStatus';
+import type { PointInfo } from '../@types/engine/PointInfo';
 import type { PointCloud } from '../@types/data/PointCloud';
 import { ALL_SOURCES, Source } from '../data/sources';
 import {

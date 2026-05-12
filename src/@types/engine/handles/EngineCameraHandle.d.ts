@@ -1,4 +1,4 @@
-import type { PointInfo } from './PointInfo';
+import type { PointInfo } from '../PointInfo';
 
 /**
  * EngineCameraHandle — viewpoint, tweens, and auto-rotate.

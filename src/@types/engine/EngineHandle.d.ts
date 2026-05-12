@@ -17,19 +17,19 @@
  * cluster-shaped.  See `docs/superpowers/plans/` for the H5 plan.
  */
 
-import type { AssetSlot } from './loading/AssetSlot';
+import type { AssetSlot } from '../loading/AssetSlot';
 
-import type { EnginePointsHandle } from './EnginePointsHandle';
-import type { EngineTonemapHandle } from './EngineTonemapHandle';
-import type { EngineCameraHandle } from './EngineCameraHandle';
-import type { EngineSelectionHandle } from './EngineSelectionHandle';
-import type { EngineSourcesHandle } from './EngineSourcesHandle';
-import type { EngineBiasHandle } from './EngineBiasHandle';
-import type { EngineThumbnailsHandle } from './EngineThumbnailsHandle';
-import type { EngineMilkyWayHandle } from './EngineMilkyWayHandle';
-import type { EngineFilamentsHandle } from './EngineFilamentsHandle';
-import type { EngineVolumesHandle } from './EngineVolumesHandle';
-import type { EngineInputHandle } from './EngineInputHandle';
+import type { EnginePointsHandle } from './handles/EnginePointsHandle';
+import type { EngineTonemapHandle } from './handles/EngineTonemapHandle';
+import type { EngineCameraHandle } from './handles/EngineCameraHandle';
+import type { EngineSelectionHandle } from './handles/EngineSelectionHandle';
+import type { EngineSourcesHandle } from './handles/EngineSourcesHandle';
+import type { EngineBiasHandle } from './handles/EngineBiasHandle';
+import type { EngineThumbnailsHandle } from './handles/EngineThumbnailsHandle';
+import type { EngineMilkyWayHandle } from './handles/EngineMilkyWayHandle';
+import type { EngineFilamentsHandle } from './handles/EngineFilamentsHandle';
+import type { EngineVolumesHandle } from './handles/EngineVolumesHandle';
+import type { EngineInputHandle } from './handles/EngineInputHandle';
 
 /**
  * Handle returned by `createEngine`. Lets the React layer drive the

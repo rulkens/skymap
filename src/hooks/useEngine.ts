@@ -44,13 +44,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { createEngine } from '../services/engine';
 import { computeScaleInfo } from '../services/engine/helpers/scaleBar';
-import type {
-  EngineHandle,
-  EngineStatus,
-  PointInfo,
-  ScaleInfo,
-} from '../@types';
-import type { EngineCallbacks } from '../@types/EngineCallbacks';
+import type { EngineHandle } from '../@types/engine/EngineHandle';
+import type { EngineStatus } from '../@types/engine/EngineStatus';
+import type { PointInfo } from '../@types/engine/PointInfo';
+import type { ScaleInfo } from '../@types/engine/ScaleInfo';
+import type { EngineCallbacks } from '../@types/engine/EngineCallbacks';
 import type { LoadProgressState } from '../@types/loading/LoadProgressState';
 import type { Tier } from '../@types/data/Tier';
 import { initialTierFromViewport } from '../utils/initialTierFromViewport';

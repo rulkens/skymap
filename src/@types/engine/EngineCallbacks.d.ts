@@ -6,13 +6,13 @@
 
 import type { EngineStatus } from './EngineStatus';
 import type { PointInfo } from './PointInfo';
-import type { LodMode } from './data/LodMode';
-import type { Tier } from './data/Tier';
+import type { LodMode } from '../data/LodMode';
+import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
-import type { Source } from '../data/sources';
-import type { BiasMode } from '../data/biasMode';
-import type { ToneMapCurve } from '../data/toneMapCurve';
-import type { LoadProgressState } from './loading/LoadProgressState';
+import type { Source } from '../../data/sources';
+import type { BiasMode } from '../../data/biasMode';
+import type { ToneMapCurve } from '../../data/toneMapCurve';
+import type { LoadProgressState } from '../loading/LoadProgressState';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.

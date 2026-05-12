@@ -4,7 +4,7 @@ import {
   type PointOfInterest,
 } from '../../../../src/services/engine/subsystems/poiSubsystem';
 import type { ReadyFrameContext } from '../../../../src/services/engine/frame/frameContext';
-import type { EngineState } from '../../../../src/@types';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(): EngineState {
   return { subsystems: { scheduler: { requestRender: () => {} } } } as unknown as EngineState;

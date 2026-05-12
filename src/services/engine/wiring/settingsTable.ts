@@ -73,7 +73,8 @@
  * invisible at the API edge.
  */
 
-import type { EngineCallbacks, EngineState } from '../../../@types';
+import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { SettingsTableKey } from '../../../@types/settings/SettingsTableKey';
 
 /**

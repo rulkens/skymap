@@ -19,7 +19,7 @@ import {
   seedSettingsCallbacks,
   type Snapshot,
 } from '../../../../src/services/engine/wiring/seedSettingsCallbacks';
-import type { EngineCallbacks } from '../../../../src/@types';
+import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import { BiasMode } from '../../../../src/data/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 

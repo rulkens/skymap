@@ -82,7 +82,7 @@ import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRend
 import { loadFontAtlas } from '../../gpu/labels/loadFontAtlas';
 import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
 
-import type { EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from './bootstrap';
 
 /**

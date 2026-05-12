@@ -44,17 +44,17 @@
  * GPU bag rather than the whole `EngineState`.
  */
 
-import type { PointRenderer } from './rendering/PointRenderer';
-import type { PostProcess } from './rendering/PostProcess';
-import type { PickRenderer } from './rendering/PickRenderer';
-import type { FilamentRenderer } from './rendering/FilamentRenderer';
-import type { LabelRenderer } from './rendering/LabelRenderer';
-import type { MarkerLineRenderer } from './rendering/MarkerLineRenderer';
-import type { ScalarVolumeRenderer } from './rendering/ScalarVolumeRenderer';
-import type { ThumbnailRenderer } from './rendering/ThumbnailRenderer';
-import type { DiskRenderer } from './rendering/DiskRenderer';
-import type { ProceduralDiskRenderer } from './rendering/ProceduralDiskRenderer';
-import type { MilkyWayRenderer } from './rendering/MilkyWayRenderer';
+import type { PointRenderer } from '../../rendering/PointRenderer';
+import type { PostProcess } from '../../rendering/PostProcess';
+import type { PickRenderer } from '../../rendering/PickRenderer';
+import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
+import type { LabelRenderer } from '../../rendering/LabelRenderer';
+import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
+import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
+import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
+import type { DiskRenderer } from '../../rendering/DiskRenderer';
+import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
+import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;

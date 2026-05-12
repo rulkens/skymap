@@ -39,7 +39,7 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { PointInfo } from '../../@types';
+import type { PointInfo } from '../../@types/engine/PointInfo';
 import { FullCard } from './FullCard';
 import { CompactCard } from './CompactCard';
 import styles from './InfoCard.module.css';

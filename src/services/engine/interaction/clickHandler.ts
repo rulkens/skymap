@@ -65,7 +65,7 @@
  * never notices.
  */
 
-import type { PointInfo } from '../../../@types';
+import type { PointInfo } from '../../../@types/engine/PointInfo';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import { Source } from '../../../data/sources';

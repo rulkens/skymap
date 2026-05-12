@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildAliasIndex } from '../../src/hooks/buildAliasIndex';
 import { Source } from '../../src/data/sources';
-import type { EngineHandle } from '../../src/@types';
+import type { EngineHandle } from '../../src/@types/engine/EngineHandle';
 
 /**
  * Build a minimal `EngineHandle` whose only live method is

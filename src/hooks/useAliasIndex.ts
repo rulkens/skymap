@@ -23,7 +23,7 @@
  */
 
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { EngineHandle } from '../@types';
+import type { EngineHandle } from '../@types/engine/EngineHandle';
 import { Source } from '../data/sources';
 import { buildAliasIndex, type AliasIndexEntry } from './buildAliasIndex';
 

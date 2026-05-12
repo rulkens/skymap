@@ -34,7 +34,7 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { EngineStatus } from '../../@types';
+import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import styles from './StatusBar.module.css';
 
 /** Props for StatusBar. */

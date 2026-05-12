@@ -4,8 +4,8 @@
  * engine to React components via the onHoverChange / onSelectChange callbacks.
  */
 
-import type { GalaxyTypeInfo } from './data/GalaxyTypeInfo';
-import { Source, type BandLabels } from '../data/sources';
+import type { GalaxyTypeInfo } from '../data/GalaxyTypeInfo';
+import { Source, type BandLabels } from '../../data/sources';
 
 /**
  * Display data for a single galaxy point, computed on-demand from the raw
