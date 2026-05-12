@@ -256,71 +256,309 @@ EOF
 
 ---
 
-## Task 2: Rename `diskRenderer` → `texturedDiskRenderer`
+## Task 2: Rename `diskRenderer` → `texturedDiskRenderer` (type + field)
 
 **Files:**
 - Rename: `src/services/gpu/renderers/diskRenderer.ts` → `src/services/gpu/renderers/texturedDiskRenderer.ts`
 - Modify: `src/services/gpu/renderers/texturedDiskRenderer.ts` (rename `type DiskRenderer` → `type TexturedDiskRenderer`, `createDiskRenderer` → `createTexturedDiskRenderer`; `DiskInstance` stays inline, unchanged)
-- Modify: `src/@types/EngineGpuHandles.d.ts` (import + type-annotation only)
-- Modify: `src/services/engine/frame/passes/types.ts` (import + type-annotation only)
-- Modify: `src/services/engine/frame/renderFrame.ts` (import + type-annotation only)
-- Modify: `src/services/engine/frame/runFrame.ts` (import + type-annotation only)
-- Modify: `src/services/engine/subsystems/thumbnailSubsystem.ts` (import only)
-- Modify: `src/services/engine/phases/initGpu.ts` (import + call site)
-- Modify: `tests/services/gpu/renderers/instancedQuadRenderer.test.ts` (import + type only, if present)
-- Modify: `tests/services/engine/frame/passes/passes.test.ts` (no import — uses string label only)
-- Modify: `tests/services/engine/frame/renderFrame.test.ts` (no source import expected — verify)
-- Modify: `tests/services/engine/frame/runFrame.test.ts` (no source import expected — verify)
+- Modify: `src/@types/EngineGpuHandles.d.ts` (import + type annotation + **field rename `diskRenderer` → `texturedDiskRenderer`**)
+- Modify: `src/services/engine/frame/passes/types.ts` (import + type annotation + **`PassDeps.diskRenderer` → `PassDeps.texturedDiskRenderer`**)
+- Modify: `src/services/engine/frame/passes/galaxyThumbnailsPass.ts` (still alive at this point — `deps.diskRenderer` → `deps.texturedDiskRenderer`; will be deleted in Task 14)
+- Modify: `src/services/engine/frame/renderFrame.ts` (import + type annotation + every `diskRenderer` field/local/destructure → `texturedDiskRenderer`)
+- Modify: `src/services/engine/frame/runFrame.ts` (import + type annotation + `RunFrameDeps.diskRenderer` field + the `deps.diskRenderer` flow-through into the inner `renderFrame` call)
+- Modify: `src/services/engine/subsystems/thumbnailSubsystem.ts` (import + every `DiskRenderer` annotation; **every `diskRenderer` parameter/field/local** in `bindToRenderers`, `ThumbnailFrameInput`, `runFrame` destructure, and the body's `diskRenderer.draw(...)` call → `texturedDiskRenderer`)
+- Modify: `src/services/engine/engine.ts` (initial state literal `diskRenderer: null` → `texturedDiskRenderer: null`; destroy chain `state.gpu.diskRenderer?.destroy()` / `= null` → `state.gpu.texturedDiskRenderer?.destroy()` / `= null`)
+- Modify: `src/services/engine/phases/initGpu.ts` (import + factory call + local `const diskRenderer = ...` → `const texturedDiskRenderer = ...` + `state.gpu.diskRenderer = diskRenderer;` → `state.gpu.texturedDiskRenderer = texturedDiskRenderer;`)
+- Modify: `src/services/engine/phases/wireSlots.ts` (destructure `const { thumbnailRenderer, diskRenderer, proceduralDiskRenderer } = state.gpu;` → `const { thumbnailRenderer, texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;` and the matching null-check + `bindToRenderers(...)` call site)
+- Modify: `src/services/engine/phases/startLoop.ts` (local `const diskRenderer = state.gpu.diskRenderer;` → `const texturedDiskRenderer = state.gpu.texturedDiskRenderer;`, the null check, and the deps spread)
+- Modify: `tests/@types/engineState.test.ts` (`diskRenderer: null` in mock GPU state → `texturedDiskRenderer: null`)
+- Modify: `tests/services/engine/frame/renderFrame.test.ts` (local `const diskRenderer = makeMockDiskRenderer();` → `const texturedDiskRenderer = makeMockTexturedDiskRenderer();` and every reference; rename the mock factory to match)
+- Modify: `tests/services/engine/frame/runFrame.test.ts` (`diskRenderer: {} as unknown as RunFrameDeps['diskRenderer']` → `texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer']`)
+- Modify: `tests/services/engine/frame/passes/passes.test.ts` (mock-deps `diskRenderer: { ... }` → `texturedDiskRenderer: { ... }` and any draw-call mock assertions)
+- Modify: `tests/services/engine/phases/startLoop.test.ts` (mock state `diskRenderer: { label: 'disk' } as never` → `texturedDiskRenderer: ...`; assertion `expect(calledFrameDeps.diskRenderer).toBe(state.gpu.diskRenderer)` → `expect(calledFrameDeps.texturedDiskRenderer).toBe(state.gpu.texturedDiskRenderer)`)
+- Modify: `tests/services/engine/phases/wireSlots.test.ts` (mock `diskRenderer: {} as never` → `texturedDiskRenderer: {} as never`)
+- Modify: `tests/services/engine/phases/wireInput.test.ts` (mock state `diskRenderer: null` → `texturedDiskRenderer: null`)
+- Modify: `tests/services/engine/phases/initGpu.destroyReachability.test.ts` (the `vi.mock('.../diskRenderer', ...)` block path + `createDiskRenderer` factory mock + `makeStub('diskRenderer')` label + state-shape mocks; **every** `state.gpu.diskRenderer` / `stubs.diskRenderer` reference is renamed because the destroy-reachability test asserts on the field slot directly)
+- Modify: `tests/services/engine/subsystems/thumbnailSubsystem.test.ts` (mock factory + every `input.diskRenderer.draw...` and `inputF*.diskRenderer.draw...` reference → `texturedDiskRenderer`; keep the `DiskInstance` payload untouched — only the renderer field/type renames)
 
-Field names on `state.gpu.diskRenderer` and `PassDeps.diskRenderer` are NOT changed in this task — the spec scope explicitly says "no type renames outside the new files" and field names are not type names. The renderer TYPE is renamed; consumers update their imports and the `: DiskRenderer` annotation to `: TexturedDiskRenderer`.
+The rename is wider than the prior plan version because the user's directive is "field names track type names". A field of type `TexturedDiskRenderer` is renamed to `texturedDiskRenderer` everywhere it appears. The instance struct type `DiskInstance` is the lone deliberate hold-out — it stays its current name (the parallel TS-types consolidation will move it).
 
-- [ ] **Step 1: Rename the file**
+- [ ] **Step 1: Enumerate every site touched by this rename**
+
+Run, capturing all matches into your scratch buffer:
+
+```bash
+grep -rn "from.*['\"].*diskRenderer['\"]\|\\bDiskRenderer\\b\|createDiskRenderer\|\\bdiskRenderer\\b" src tests --include="*.ts" --include="*.tsx"
+```
+
+The result inventories every line that touches the type, factory, or field. Cross-check against the Files list above before editing — any extra hit not listed needs an explicit decision (likely just add it to the rename batch).
+
+- [ ] **Step 2: Rename the renderer file**
 
 ```bash
 git mv src/services/gpu/renderers/diskRenderer.ts src/services/gpu/renderers/texturedDiskRenderer.ts
 ```
 
-- [ ] **Step 2: Rename the type, factory, and the docstring's first sentence in the renamed file**
+- [ ] **Step 3: Rename the type, factory, and label in the renamed file**
 
-Open `src/services/gpu/renderers/texturedDiskRenderer.ts`. Replace the module header line `* DiskRenderer — oriented 3D galaxy disks.` with `* TexturedDiskRenderer — oriented 3D galaxy disks (atlas-textured).`. Then replace `export type DiskRenderer = {` with `export type TexturedDiskRenderer = {`. Then replace `export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRenderer {` with `export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256): TexturedDiskRenderer {`. Then replace the inner `const renderer: DiskRenderer = {` with `const renderer: TexturedDiskRenderer = {`, and the `label: 'diskRenderer'` literal with `label: 'texturedDiskRenderer'`. Leave `DiskInstance` unchanged.
+Open `src/services/gpu/renderers/texturedDiskRenderer.ts`. Replace the module header line `* DiskRenderer — oriented 3D galaxy disks.` with `* TexturedDiskRenderer — oriented 3D galaxy disks (atlas-textured).`. Then `export type DiskRenderer = {` → `export type TexturedDiskRenderer = {`. Then `export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRenderer {` → `export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256): TexturedDiskRenderer {`. The inner `const renderer: DiskRenderer = {` → `const renderer: TexturedDiskRenderer = {`. The `label: 'diskRenderer'` literal → `label: 'texturedDiskRenderer'`. Leave `DiskInstance` exactly as-is.
 
-- [ ] **Step 3: Update every importer**
+- [ ] **Step 4: Rename the field on `EngineGpuHandles`**
 
-Run `grep -rn "from.*['\"].*diskRenderer['\"]\\|DiskRenderer\\b\\|createDiskRenderer" src tests --include="*.ts" --include="*.tsx"` to enumerate. Then update each site:
+Edit `src/@types/EngineGpuHandles.d.ts`:
 
-- `src/@types/EngineGpuHandles.d.ts`: change `import type { DiskRenderer } from '../services/gpu/renderers/diskRenderer';` to `import type { TexturedDiskRenderer } from '../services/gpu/renderers/texturedDiskRenderer';` and change `diskRenderer: DiskRenderer | null;` to `diskRenderer: TexturedDiskRenderer | null;` (field name stays).
-- `src/services/engine/frame/passes/types.ts`: change `import type { DiskRenderer } from '../../../gpu/renderers/diskRenderer';` to `import type { TexturedDiskRenderer } from '../../../gpu/renderers/texturedDiskRenderer';` and `diskRenderer: DiskRenderer;` to `diskRenderer: TexturedDiskRenderer;`.
-- `src/services/engine/frame/renderFrame.ts`: change `import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';` to `import type { TexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';` and `diskRenderer: DiskRenderer;` to `diskRenderer: TexturedDiskRenderer;`.
-- `src/services/engine/frame/runFrame.ts`: change `import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';` to `import type { TexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';` and `diskRenderer: DiskRenderer;` to `diskRenderer: TexturedDiskRenderer;`.
-- `src/services/engine/subsystems/thumbnailSubsystem.ts`: change `import type { DiskRenderer, DiskInstance } from '../../gpu/renderers/diskRenderer';` to `import type { TexturedDiskRenderer, DiskInstance } from '../../gpu/renderers/texturedDiskRenderer';` and every `DiskRenderer` annotation inside the file (function parameter on `bindToRenderers`, field on `ThumbnailFrameInput`, parameter in `runFrame`'s destructure type) to `TexturedDiskRenderer`.
-- `src/services/engine/phases/initGpu.ts`: change `import { createDiskRenderer } from '../../gpu/renderers/diskRenderer';` to `import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';` and the call site `createDiskRenderer({...})` to `createTexturedDiskRenderer({...})`. The state-write `state.gpu.diskRenderer = diskRenderer;` and the local `const diskRenderer = ...` stay as-is — the variable is named after the field slot, which is unchanged.
+```diff
+- import type { DiskRenderer } from '../services/gpu/renderers/diskRenderer';
++ import type { TexturedDiskRenderer } from '../services/gpu/renderers/texturedDiskRenderer';
+```
 
-For test files, run `grep -n "DiskRenderer\\|diskRenderer" tests/services/gpu/renderers/instancedQuadRenderer.test.ts tests/services/engine/frame/renderFrame.test.ts tests/services/engine/frame/runFrame.test.ts tests/services/engine/frame/passes/passes.test.ts tests/services/engine/phases/wireSlots.test.ts tests/services/engine/phases/wireInput.test.ts tests/services/engine/phases/startLoop.test.ts tests/services/engine/phases/initGpu.destroyReachability.test.ts tests/services/engine/subsystems/thumbnailSubsystem.test.ts tests/@types/engineState.test.ts` and update any `DiskRenderer` type imports to `TexturedDiskRenderer` (path `../../../../src/services/gpu/renderers/texturedDiskRenderer`). Field-name references like `state.gpu.diskRenderer` or `deps.diskRenderer` stay unchanged.
+```diff
+-  diskRenderer: DiskRenderer | null;
++  texturedDiskRenderer: TexturedDiskRenderer | null;
+```
 
-- [ ] **Step 4: Run typecheck**
+Also update the docstring chunk around lines 31 and 117–123 that names the field — replace each `diskRenderer` mention in the prose with `texturedDiskRenderer`.
+
+- [ ] **Step 5: Rename the field on `PassDeps`**
+
+Edit `src/services/engine/frame/passes/types.ts`:
+
+```diff
+- import type { DiskRenderer } from '../../../gpu/renderers/diskRenderer';
++ import type { TexturedDiskRenderer } from '../../../gpu/renderers/texturedDiskRenderer';
+```
+
+```diff
+-  diskRenderer: DiskRenderer;
++  texturedDiskRenderer: TexturedDiskRenderer;
+```
+
+- [ ] **Step 6: Update the legacy `galaxyThumbnailsPass`**
+
+The pass file is still alive until Task 14. Edit `src/services/engine/frame/passes/galaxyThumbnailsPass.ts`:
+
+```diff
+-      diskRenderer: deps.diskRenderer,
++      texturedDiskRenderer: deps.texturedDiskRenderer,
+```
+
+Plus the matching prose mentions in the module docstring.
+
+The `thumbnails.runFrame` call site receives this as a key in the `input` object — the legacy `ThumbnailFrameInput` field (defined in `src/services/engine/subsystems/thumbnailSubsystem.ts`) gets renamed in Step 9. Match the key names.
+
+- [ ] **Step 7: Update `renderFrame.ts`**
+
+Edit `src/services/engine/frame/renderFrame.ts`:
+
+```diff
+- import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';
++ import type { TexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
+```
+
+The type field on the deps parameter (around line 237):
+
+```diff
+-  diskRenderer: DiskRenderer;
++  texturedDiskRenderer: TexturedDiskRenderer;
+```
+
+The destructure (around line 272) and the PassDeps construction (around line 286) — both `diskRenderer` → `texturedDiskRenderer`.
+
+- [ ] **Step 8: Update `runFrame.ts`**
+
+Edit `src/services/engine/frame/runFrame.ts`:
+
+```diff
+- import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';
++ import type { TexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
+```
+
+Type field on `RunFrameDeps` (line 122):
+
+```diff
+-  diskRenderer: DiskRenderer;
++  texturedDiskRenderer: TexturedDiskRenderer;
+```
+
+The pass-through into `renderFrame(...)` (line 328):
+
+```diff
+-    diskRenderer: deps.diskRenderer,
++    texturedDiskRenderer: deps.texturedDiskRenderer,
+```
+
+Plus any prose mentions in the module header (lines 35, 43).
+
+- [ ] **Step 9: Update `thumbnailSubsystem.ts`**
+
+Edit `src/services/engine/subsystems/thumbnailSubsystem.ts`:
+
+```diff
+- import type { DiskRenderer, DiskInstance } from '../../gpu/renderers/diskRenderer';
++ import type { TexturedDiskRenderer, DiskInstance } from '../../gpu/renderers/texturedDiskRenderer';
+```
+
+Inside the file, rename:
+
+- Field on `ThumbnailFrameInput`: `diskRenderer: DiskRenderer;` → `texturedDiskRenderer: TexturedDiskRenderer;` (line 320).
+- `bindToRenderers` parameter type (line 344): `diskRenderer: DiskRenderer,` → `texturedDiskRenderer: TexturedDiskRenderer,`.
+- Inside `bindToRenderers` (line 478): `diskRenderer: DiskRenderer,` parameter, the `diskRenderer.bindAtlas(...)` call (line 482), and the `{ ..., diskRenderer, ... }` object literal (line 501) all → `texturedDiskRenderer`.
+- The `runFrame` body's destructure / draw call (line 966): `diskRenderer.draw(...)` → `texturedDiskRenderer.draw(...)`.
+- Every prose mention in the module docstring + inline comments.
+
+- [ ] **Step 10: Update `engine.ts` initial state + destroy**
+
+Edit `src/services/engine/engine.ts`:
+
+```diff
+-      diskRenderer: null,
++      texturedDiskRenderer: null,
+```
+
+In the destroy chain (around lines 1190–1191):
+
+```diff
+-    state.gpu.diskRenderer?.destroy();
+-    state.gpu.diskRenderer = null;
++    state.gpu.texturedDiskRenderer?.destroy();
++    state.gpu.texturedDiskRenderer = null;
+```
+
+Plus the prose mentions in the module header (lines 209, 375).
+
+- [ ] **Step 11: Update `initGpu.ts`**
+
+Edit `src/services/engine/phases/initGpu.ts`:
+
+```diff
+- import { createDiskRenderer } from '../../gpu/renderers/diskRenderer';
++ import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
+```
+
+The local and the field write (around lines 326, 389):
+
+```diff
+-  const diskRenderer = createDiskRenderer({
++  const texturedDiskRenderer = createTexturedDiskRenderer({
+     ...
+   });
+   ...
+-  state.gpu.diskRenderer = diskRenderer;
++  state.gpu.texturedDiskRenderer = texturedDiskRenderer;
+```
+
+Plus the prose mentions in the module header (lines 64, 93, 300).
+
+- [ ] **Step 12: Update `wireSlots.ts`**
+
+Edit `src/services/engine/phases/wireSlots.ts`:
+
+```diff
+-  const { thumbnailRenderer, diskRenderer, proceduralDiskRenderer } = state.gpu;
++  const { thumbnailRenderer, texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
+```
+
+The null-check (line 128):
+
+```diff
+-    diskRenderer === null ||
++    texturedDiskRenderer === null ||
+```
+
+The `bindToRenderers` call (line 355):
+
+```diff
+-  thumbnails.bindToRenderers(thumbnailRenderer, diskRenderer, proceduralDiskRenderer);
++  thumbnails.bindToRenderers(thumbnailRenderer, texturedDiskRenderer, proceduralDiskRenderer);
+```
+
+- [ ] **Step 13: Update `startLoop.ts`**
+
+Edit `src/services/engine/phases/startLoop.ts`:
+
+```diff
+-  const diskRenderer = state.gpu.diskRenderer;
++  const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
+```
+
+```diff
+-    diskRenderer === null
++    texturedDiskRenderer === null
+```
+
+Deps spread (line 132): `diskRenderer,` → `texturedDiskRenderer,`.
+
+Plus the prose mention in the module comment (line 118 talks about example renderers — adjust to use the new name).
+
+- [ ] **Step 14: Update test files**
+
+For each of:
+
+- `tests/@types/engineState.test.ts`
+- `tests/services/engine/frame/renderFrame.test.ts`
+- `tests/services/engine/frame/runFrame.test.ts`
+- `tests/services/engine/frame/passes/passes.test.ts`
+- `tests/services/engine/phases/startLoop.test.ts`
+- `tests/services/engine/phases/wireSlots.test.ts`
+- `tests/services/engine/phases/wireInput.test.ts`
+- `tests/services/engine/phases/initGpu.destroyReachability.test.ts`
+- `tests/services/engine/subsystems/thumbnailSubsystem.test.ts`
+
+apply the same rename mechanically: every `diskRenderer` field reference (mocks, destructures, expectations) becomes `texturedDiskRenderer`; every `DiskRenderer` type reference becomes `TexturedDiskRenderer` with imports updated to the new module path. The `initGpu.destroyReachability.test.ts` `vi.mock('.../diskRenderer', () => ({ createDiskRenderer: ... }))` block also flips its module path and factory name.
+
+In `tests/services/engine/frame/renderFrame.test.ts` the mock-factory function `makeMockDiskRenderer` renames to `makeMockTexturedDiskRenderer` and its callers update.
+
+- [ ] **Step 15: Verify nothing else references the old field**
+
+Run:
+
+```bash
+grep -rn "\\bdiskRenderer\\b\|\\bDiskRenderer\\b\|createDiskRenderer" src tests --include="*.ts" --include="*.tsx"
+```
+
+Expected: no matches in `src/` or `tests/` except:
+- comments / strings inside `*.wesl` files (out of scope) — but we used `--include="*.ts"` so this can't appear in output.
+- mentions inside the legacy `thumbnailSubsystem.ts` module header that describe pre-rename history (acceptable; the file gets deleted in Task 14 anyway).
+
+If any actionable hit survives, fix it before proceeding.
+
+- [ ] **Step 16: Run typecheck**
 
 Run: `npm run typecheck`
 
-Expected: PASS — no `Cannot find module '.../diskRenderer'`, no `Type 'TexturedDiskRenderer' is not assignable to type 'DiskRenderer'`.
+Expected: PASS — no `Cannot find module '.../diskRenderer'`, no `Property 'diskRenderer' does not exist on type 'EngineGpuHandles'`.
 
-- [ ] **Step 5: Run the full test suite**
+- [ ] **Step 17: Run the full test suite**
 
 Run: `npm test`
 
-Expected: PASS — all 590+ tests including the new baseline still green. The baseline must still pass because Step 1's `label: 'diskRenderer'` change does not affect the production frame body, only the renderer's `.label` property which the baseline test does not inspect.
+Expected: PASS — all 590+ tests including the Task 1 baseline. The baseline test interacts with the renderer through the `input.diskRenderer` field on `ThumbnailFrameInput`; that field was renamed to `texturedDiskRenderer` in Step 9, so update the Task 1 baseline test's input object likewise (this is the one residual cross-task patch — the alternative would be to defer the field rename inside `thumbnailSubsystem` until Task 14, but that would mean the new field name takes effect later than the renamed type, which contradicts the user's directive). Concretely, in `tests/visual/galaxyImpostorBaseline.test.ts`:
 
-- [ ] **Step 6: Commit**
+```diff
+-      thumbnailRenderer: quad,
+-      diskRenderer: disk,
++      thumbnailRenderer: quad,
++      texturedDiskRenderer: disk,
+```
+
+(The `thumbnailRenderer` field gets its own rename in Task 3 — same pattern.)
+
+- [ ] **Step 18: Commit**
 
 ```bash
 git add -A
 git commit -m "$(cat <<'EOF'
 refactor(renderer): rename diskRenderer to texturedDiskRenderer
 
-Pure file/type/factory rename for symmetry with proceduralDiskRenderer
-and the upcoming texturedQuadRenderer.  No logic changes; DiskInstance
-stays unchanged (renamed later by the parallel TS-types consolidation).
-Field names on state.gpu and PassDeps stay as `diskRenderer` per the
-spec's scope rule.
+Renames the file, type, factory, and every field/local/parameter that
+holds a TexturedDiskRenderer instance — state.gpu.texturedDiskRenderer,
+PassDeps.texturedDiskRenderer, RunFrameDeps.texturedDiskRenderer,
+ThumbnailFrameInput.texturedDiskRenderer, and the wireSlots /
+startLoop / initGpu destructures.  Field names track type names per
+the spec's State / handle wiring rule.
+
+DiskInstance stays its current name (the parallel TS-types
+consolidation will move it).
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 EOF
@@ -329,62 +567,268 @@ EOF
 
 ---
 
-## Task 3: Rename `thumbnailRenderer` → `texturedQuadRenderer`
+## Task 3: Rename `thumbnailRenderer` → `texturedQuadRenderer` (type + field)
 
 **Files:**
 - Rename: `src/services/gpu/renderers/thumbnailRenderer.ts` → `src/services/gpu/renderers/texturedQuadRenderer.ts`
-- Modify: `src/services/gpu/renderers/texturedQuadRenderer.ts` (rename `type ThumbnailRenderer` → `type TexturedQuadRenderer`, `createThumbnailRenderer` → `createTexturedQuadRenderer`)
-- Modify: `src/@types/EngineGpuHandles.d.ts`, `src/services/engine/frame/passes/types.ts`, `src/services/engine/frame/renderFrame.ts`, `src/services/engine/frame/runFrame.ts`, `src/services/engine/subsystems/thumbnailSubsystem.ts`, `src/services/engine/phases/initGpu.ts` (import + type annotation only)
-- Modify: test files using `ThumbnailRenderer` imports
+- Modify: `src/services/gpu/renderers/texturedQuadRenderer.ts` (rename `type ThumbnailRenderer` → `type TexturedQuadRenderer`, `createThumbnailRenderer` → `createTexturedQuadRenderer`; `ThumbnailInstance` stays inline, unchanged)
+- Modify: `src/@types/EngineGpuHandles.d.ts` (import + type annotation + **field rename `thumbnailRenderer` → `texturedQuadRenderer`**)
+- Modify: `src/services/engine/frame/passes/types.ts` (import + type annotation + **`PassDeps.thumbnailRenderer` → `PassDeps.texturedQuadRenderer`**)
+- Modify: `src/services/engine/frame/passes/galaxyThumbnailsPass.ts` (still alive — `deps.thumbnailRenderer` → `deps.texturedQuadRenderer`)
+- Modify: `src/services/engine/frame/renderFrame.ts` (import + type annotation + every `thumbnailRenderer` field/local/destructure → `texturedQuadRenderer`)
+- Modify: `src/services/engine/frame/runFrame.ts` (import + type annotation + `RunFrameDeps.thumbnailRenderer` + the pass-through into `renderFrame`)
+- Modify: `src/services/engine/subsystems/thumbnailSubsystem.ts` (import + every `ThumbnailRenderer` annotation; **every `thumbnailRenderer` parameter/field/local** in `bindToRenderers`, `ThumbnailFrameInput`, `runFrame` destructure, and the body's `thumbnailRenderer.draw(...)` call → `texturedQuadRenderer`)
+- Modify: `src/services/engine/engine.ts` (initial state literal `thumbnailRenderer: null` → `texturedQuadRenderer: null`; destroy chain `state.gpu.thumbnailRenderer?.destroy()` / `= null` → `state.gpu.texturedQuadRenderer?.destroy()` / `= null`)
+- Modify: `src/services/engine/phases/initGpu.ts` (import + factory call + local `const thumbnailRenderer = ...` → `const texturedQuadRenderer = ...` + `state.gpu.thumbnailRenderer = thumbnailRenderer;` → `state.gpu.texturedQuadRenderer = texturedQuadRenderer;`)
+- Modify: `src/services/engine/phases/wireSlots.ts` (destructure pulls `texturedQuadRenderer` from `state.gpu` instead of `thumbnailRenderer`; null check + `bindToRenderers(...)` call site)
+- Modify: `src/services/engine/phases/startLoop.ts` (local rename, null check, deps spread)
+- Modify: `tests/@types/engineState.test.ts` (`thumbnailRenderer: null` → `texturedQuadRenderer: null`)
+- Modify: `tests/services/engine/frame/renderFrame.test.ts` (local + factory rename `makeMockThumbnailRenderer` → `makeMockTexturedQuadRenderer`, every reference)
+- Modify: `tests/services/engine/frame/runFrame.test.ts` (mock-deps field rename)
+- Modify: `tests/services/engine/frame/passes/passes.test.ts` (mock-deps field rename)
+- Modify: `tests/services/engine/phases/startLoop.test.ts` (mock state + assertion rename)
+- Modify: `tests/services/engine/phases/wireSlots.test.ts` (mock field rename)
+- Modify: `tests/services/engine/phases/wireInput.test.ts` (mock state field rename)
+- Modify: `tests/services/engine/phases/initGpu.destroyReachability.test.ts` (the `vi.mock('.../thumbnailRenderer', ...)` block path + `createThumbnailRenderer` factory mock + `makeStub('thumbnailRenderer')` label + every `state.gpu.thumbnailRenderer` / `stubs.thumbnailRenderer` assertion)
+- Modify: `tests/services/engine/subsystems/thumbnailSubsystem.test.ts` (mock factory + every `input.thumbnailRenderer.draw...` / `inputF*.thumbnailRenderer.draw...` reference)
+- Modify: `tests/visual/galaxyImpostorBaseline.test.ts` (the Task 1 fixture — `input.thumbnailRenderer` field on `ThumbnailFrameInput` was renamed in Step 9 of this task; update the fixture object)
 
-`ThumbnailInstance` is **not** renamed — same rationale as `DiskInstance` in Task 2. Field names (`state.gpu.thumbnailRenderer`, `PassDeps.thumbnailRenderer`) stay.
+The field rename is intentionally NOT applied to `state.subsystems.thumbnails` — that's the subsystem slot (about to be replaced by three new slots in Task 11), a different concept than the renamed renderer type. Likewise `state.settings.thumbnails.enabled` is the user-facing Boolean toggle and stays its current name.
 
-- [ ] **Step 1: Rename the file**
+- [ ] **Step 1: Enumerate every site touched by this rename**
+
+```bash
+grep -rn "from.*['\"].*thumbnailRenderer['\"]\|\\bThumbnailRenderer\\b\|createThumbnailRenderer\|\\bthumbnailRenderer\\b" src tests --include="*.ts" --include="*.tsx"
+```
+
+The `\bthumbnailRenderer\b` anchor matches the field/local/parameter rename target. Cross-check the result against the Files list; any extra hit not listed is a missed site.
+
+- [ ] **Step 2: Rename the renderer file**
 
 ```bash
 git mv src/services/gpu/renderers/thumbnailRenderer.ts src/services/gpu/renderers/texturedQuadRenderer.ts
 ```
 
-- [ ] **Step 2: Rename the type, factory, and label in the renamed file**
+- [ ] **Step 3: Rename the type, factory, and label in the renamed file**
 
-Open `src/services/gpu/renderers/texturedQuadRenderer.ts`. Replace the module header first line `* ThumbnailRenderer — billboard quad pass for galaxy thumbnails.` with `* TexturedQuadRenderer — screen-aligned billboard quad pass for galaxy thumbnails (LOD-2 fallback).`. Replace `export type ThumbnailRenderer = {` with `export type TexturedQuadRenderer = {`. Replace `export function createThumbnailRenderer(ctx: GpuContext, maxInstances = 256): ThumbnailRenderer {` with `export function createTexturedQuadRenderer(ctx: GpuContext, maxInstances = 256): TexturedQuadRenderer {`. Replace `const renderer: ThumbnailRenderer = {` with `const renderer: TexturedQuadRenderer = {`. Replace `label: 'thumbnailRenderer'` with `label: 'texturedQuadRenderer'`.
+Open `src/services/gpu/renderers/texturedQuadRenderer.ts`. Replace the module header line `* ThumbnailRenderer — billboard quad pass for galaxy thumbnails.` with `* TexturedQuadRenderer — screen-aligned billboard quad pass for galaxy thumbnails (LOD-2 fallback).`. Then `export type ThumbnailRenderer = {` → `export type TexturedQuadRenderer = {`. `export function createThumbnailRenderer(ctx: GpuContext, maxInstances = 256): ThumbnailRenderer {` → `export function createTexturedQuadRenderer(ctx: GpuContext, maxInstances = 256): TexturedQuadRenderer {`. `const renderer: ThumbnailRenderer = {` → `const renderer: TexturedQuadRenderer = {`. `label: 'thumbnailRenderer'` → `label: 'texturedQuadRenderer'`. Leave `ThumbnailInstance` exactly as-is.
 
-- [ ] **Step 3: Update every importer**
+- [ ] **Step 4: Rename the field on `EngineGpuHandles`**
 
-Run `grep -rn "from.*['\"].*thumbnailRenderer['\"]\\|ThumbnailRenderer\\b\\|createThumbnailRenderer" src tests --include="*.ts" --include="*.tsx"` to enumerate. Then update each site exactly as in Task 2's Step 3, substituting `ThumbnailRenderer` → `TexturedQuadRenderer`, `thumbnailRenderer` (module path) → `texturedQuadRenderer`, and `createThumbnailRenderer` → `createTexturedQuadRenderer`:
+Edit `src/@types/EngineGpuHandles.d.ts`:
 
-- `src/@types/EngineGpuHandles.d.ts`: imports + annotation.
-- `src/services/engine/frame/passes/types.ts`: imports + annotation.
-- `src/services/engine/frame/renderFrame.ts`: imports + annotation.
-- `src/services/engine/frame/runFrame.ts`: imports + annotation.
-- `src/services/engine/subsystems/thumbnailSubsystem.ts`: `import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';` → `import type { TexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';`; every `ThumbnailRenderer` type annotation (parameter on `bindToRenderers`, field on `ThumbnailFrameInput`, destructure in `runFrame`) → `TexturedQuadRenderer`.
-- `src/services/engine/phases/initGpu.ts`: factory import + call site.
+```diff
+- import type { ThumbnailRenderer } from '../services/gpu/renderers/thumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../services/gpu/renderers/texturedQuadRenderer';
+```
 
-Test files: same pattern. Type imports become `TexturedQuadRenderer` from the new path. Field references like `state.gpu.thumbnailRenderer` and `deps.thumbnailRenderer` stay.
+```diff
+-  thumbnailRenderer: ThumbnailRenderer | null;
++  texturedQuadRenderer: TexturedQuadRenderer | null;
+```
 
-- [ ] **Step 4: Run typecheck**
+Plus the prose mentions in the module header (line 31) and the sibling-field docstrings (lines 120, 128, 134, which all say "same lifecycle as `thumbnailRenderer` above"). Replace each prose `thumbnailRenderer` with `texturedQuadRenderer`.
+
+- [ ] **Step 5: Rename the field on `PassDeps`**
+
+Edit `src/services/engine/frame/passes/types.ts`:
+
+```diff
+- import type { ThumbnailRenderer } from '../../../gpu/renderers/thumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../../../gpu/renderers/texturedQuadRenderer';
+```
+
+```diff
+-  thumbnailRenderer: ThumbnailRenderer;
++  texturedQuadRenderer: TexturedQuadRenderer;
+```
+
+- [ ] **Step 6: Update the legacy `galaxyThumbnailsPass`**
+
+Edit `src/services/engine/frame/passes/galaxyThumbnailsPass.ts`:
+
+```diff
+-      thumbnailRenderer: deps.thumbnailRenderer,
++      texturedQuadRenderer: deps.texturedQuadRenderer,
+```
+
+Plus the prose mentions in the module docstring (lines 9, 36).
+
+- [ ] **Step 7: Update `renderFrame.ts`**
+
+Edit `src/services/engine/frame/renderFrame.ts`:
+
+```diff
+- import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';
+```
+
+Deps type field (line 236):
+
+```diff
+-  thumbnailRenderer: ThumbnailRenderer;
++  texturedQuadRenderer: TexturedQuadRenderer;
+```
+
+The destructure (line 271) and the PassDeps literal (line 285): both `thumbnailRenderer` → `texturedQuadRenderer`.
+
+- [ ] **Step 8: Update `runFrame.ts`**
+
+Edit `src/services/engine/frame/runFrame.ts`:
+
+```diff
+- import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';
+```
+
+`RunFrameDeps` field (line 120):
+
+```diff
+-  thumbnailRenderer: ThumbnailRenderer;
++  texturedQuadRenderer: TexturedQuadRenderer;
+```
+
+The pass-through into `renderFrame(...)` (line 327): `thumbnailRenderer: deps.thumbnailRenderer,` → `texturedQuadRenderer: deps.texturedQuadRenderer,`.
+
+Plus prose mentions in the module header (lines 35, 43).
+
+- [ ] **Step 9: Update `thumbnailSubsystem.ts`**
+
+Edit `src/services/engine/subsystems/thumbnailSubsystem.ts`:
+
+```diff
+- import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';
+```
+
+Inside the file:
+
+- `ThumbnailFrameInput` field (line 318): `thumbnailRenderer: ThumbnailRenderer;` → `texturedQuadRenderer: TexturedQuadRenderer;`.
+- `bindToRenderers` parameter type (line 343): rename.
+- The implementation parameters around line 477 (`thumbnailRenderer: ThumbnailRenderer,`), the `thumbnailRenderer.bindAtlas(...)` call (line 481), and the closure object literal (line 500) all → `texturedQuadRenderer`.
+- `runFrame` destructure of `input` and the `thumbnailRenderer.draw(...)` call (line 956) → `texturedQuadRenderer`.
+- Inline comment at line 309 mentions "thumbnailRenderer + diskRenderer encode their draws here" — update to `texturedQuadRenderer + texturedDiskRenderer`.
+
+- [ ] **Step 10: Update `engine.ts` initial state + destroy**
+
+Edit `src/services/engine/engine.ts`:
+
+```diff
+-      thumbnailRenderer: null,
++      texturedQuadRenderer: null,
+```
+
+Destroy chain (around lines 1188–1189):
+
+```diff
+-    state.gpu.thumbnailRenderer?.destroy();
+-    state.gpu.thumbnailRenderer = null;
++    state.gpu.texturedQuadRenderer?.destroy();
++    state.gpu.texturedQuadRenderer = null;
+```
+
+Plus prose mentions (lines 209, 375).
+
+- [ ] **Step 11: Update `initGpu.ts`**
+
+Edit `src/services/engine/phases/initGpu.ts`:
+
+```diff
+- import { createThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
++ import { createTexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';
+```
+
+The local construction + field write (lines 316, 388):
+
+```diff
+-  const thumbnailRenderer = createThumbnailRenderer({
++  const texturedQuadRenderer = createTexturedQuadRenderer({
+     ...
+   });
+   ...
+-  state.gpu.thumbnailRenderer = thumbnailRenderer;
++  state.gpu.texturedQuadRenderer = texturedQuadRenderer;
+```
+
+Plus prose mentions (lines 64, 92, 296).
+
+- [ ] **Step 12: Update `wireSlots.ts`**
+
+Edit `src/services/engine/phases/wireSlots.ts`:
+
+```diff
+-  const { thumbnailRenderer, texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
++  const { texturedQuadRenderer, texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
+```
+
+(Note: the `texturedDiskRenderer` half landed in Task 2; this task only flips the quad half.)
+
+The null check (line 127):
+
+```diff
+-    thumbnailRenderer === null ||
++    texturedQuadRenderer === null ||
+```
+
+The `bindToRenderers` call (line 355):
+
+```diff
+-  thumbnails.bindToRenderers(thumbnailRenderer, texturedDiskRenderer, proceduralDiskRenderer);
++  thumbnails.bindToRenderers(texturedQuadRenderer, texturedDiskRenderer, proceduralDiskRenderer);
+```
+
+- [ ] **Step 13: Update `startLoop.ts`**
+
+Edit `src/services/engine/phases/startLoop.ts`:
+
+```diff
+-  const thumbnailRenderer = state.gpu.thumbnailRenderer;
++  const texturedQuadRenderer = state.gpu.texturedQuadRenderer;
+```
+
+The null check, deps spread (line 131), and the prose mention (line 118).
+
+- [ ] **Step 14: Update test files**
+
+For each test file in the Files list, apply the same rename pattern: field references → `texturedQuadRenderer`, type references → `TexturedQuadRenderer`, factory mocks → `createTexturedQuadRenderer`, vi.mock module paths → `texturedQuadRenderer`. The `tests/visual/galaxyImpostorBaseline.test.ts` fixture's `input` object likewise renames its `thumbnailRenderer:` key to `texturedQuadRenderer:` to match the `ThumbnailFrameInput` shape edited in Step 9.
+
+- [ ] **Step 15: Verify nothing else references the old field**
+
+```bash
+grep -rn "\\bthumbnailRenderer\\b\|\\bThumbnailRenderer\\b\|createThumbnailRenderer" src tests --include="*.ts" --include="*.tsx"
+```
+
+Expected: no matches in `src/` or `tests/` (a hit inside the doomed `thumbnailSubsystem.ts` module header — pre-rename history — is acceptable; that file is deleted in Task 14). The `\b` anchors prevent false positives on `thumbnailSubsystem`, `thumbnails`, `ThumbnailSubsystem`, etc., which remain valid names elsewhere.
+
+- [ ] **Step 16: Run typecheck**
 
 Run: `npm run typecheck`
 
 Expected: PASS.
 
-- [ ] **Step 5: Run the full test suite**
+- [ ] **Step 17: Run the full test suite**
 
 Run: `npm test`
 
-Expected: PASS — including the visual baseline (the snapshot test only inspects `renderer.draw()` mock-call arguments, not `renderer.label`).
+Expected: PASS — including the Task 1 baseline, which by now uses both new field names on its `ThumbnailFrameInput` fixture.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 18: Commit**
 
 ```bash
 git add -A
 git commit -m "$(cat <<'EOF'
 refactor(renderer): rename thumbnailRenderer to texturedQuadRenderer
 
-Pure file/type/factory rename completing the LOD-2 renderer pair
-(texturedDiskRenderer + texturedQuadRenderer).  No logic changes;
-ThumbnailInstance stays.  Field names on state.gpu and PassDeps stay
-as `thumbnailRenderer` per the spec's scope rule.
+Renames file, type, factory, and every field/local/parameter that
+holds a TexturedQuadRenderer instance — state.gpu.texturedQuadRenderer,
+PassDeps.texturedQuadRenderer, RunFrameDeps.texturedQuadRenderer,
+ThumbnailFrameInput.texturedQuadRenderer, and the wireSlots /
+startLoop / initGpu destructures.  Completes the LOD-2 renderer pair
+(texturedDiskRenderer + texturedQuadRenderer).
+
+ThumbnailInstance stays its current name; state.subsystems.thumbnails
+and state.settings.thumbnails.enabled stay (different concepts, not
+holding a TexturedQuadRenderer value).
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 EOF
@@ -1997,8 +2441,8 @@ function makeSettings(): RenderFrameSettings {
 
 function makeDeps(): PassDeps {
   return {
-    thumbnailRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
-    diskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
+    texturedQuadRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
+    texturedDiskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     proceduralDiskRenderer: { draw: vi.fn() } as any,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
@@ -2104,8 +2548,8 @@ function makeSettings(): RenderFrameSettings {
 
 function makeDeps(): PassDeps {
   return {
-    thumbnailRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
-    diskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
+    texturedQuadRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
+    texturedDiskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     proceduralDiskRenderer: { draw: vi.fn() } as any,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
@@ -2144,12 +2588,12 @@ describe('texturedImpostorsPass', () => {
     } as unknown as EngineState;
     const deps = makeDeps();
     texturedImpostorsPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
-    expect(deps.thumbnailRenderer.draw).toHaveBeenCalledTimes(1);
-    expect(deps.diskRenderer.draw).toHaveBeenCalledTimes(1);
+    expect(deps.texturedQuadRenderer.draw).toHaveBeenCalledTimes(1);
+    expect(deps.texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
     // Order: quads first, then disks (matches the legacy thumbnailSubsystem
     // dispatch order at lines 955-967).
-    const quadOrder = (deps.thumbnailRenderer.draw as any).mock.invocationCallOrder[0];
-    const diskOrder = (deps.diskRenderer.draw as any).mock.invocationCallOrder[0];
+    const quadOrder = (deps.texturedQuadRenderer.draw as any).mock.invocationCallOrder[0];
+    const diskOrder = (deps.texturedDiskRenderer.draw as any).mock.invocationCallOrder[0];
     expect(quadOrder).toBeLessThan(diskOrder);
   });
 
@@ -2159,8 +2603,8 @@ describe('texturedImpostorsPass', () => {
     } as unknown as EngineState;
     const deps = makeDeps();
     texturedImpostorsPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
-    expect(deps.thumbnailRenderer.draw).not.toHaveBeenCalled();
-    expect(deps.diskRenderer.draw).toHaveBeenCalledTimes(1);
+    expect(deps.texturedQuadRenderer.draw).not.toHaveBeenCalled();
+    expect(deps.texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
   });
 });
 ```
@@ -2181,7 +2625,7 @@ After the existing imports near line 60, add:
 import type { ProceduralDiskRenderer } from '../../../gpu/renderers/proceduralDiskRenderer';
 ```
 
-Inside the `PassDeps` type definition, after the `diskRenderer: ...` field, add:
+Inside the `PassDeps` type definition, after the `texturedDiskRenderer: ...` field (renamed in Task 2), add:
 
 ```typescript
   /**
@@ -2277,7 +2721,9 @@ export const texturedImpostorsPass: Pass = {
     if (subsys === null) return;
     const { disks, quads } = subsys.lastOutput;
     if (quads.length > 0) {
-      deps.thumbnailRenderer.draw(
+      // PassDeps.texturedQuadRenderer holds a TexturedQuadRenderer — the
+      // field name tracks the type name post-rename (Task 3).
+      deps.texturedQuadRenderer.draw(
         pass,
         ctx.vp,
         [ctx.canvasSize.width, ctx.canvasSize.height],
@@ -2287,7 +2733,7 @@ export const texturedImpostorsPass: Pass = {
       );
     }
     if (disks.length > 0) {
-      deps.diskRenderer.draw(
+      deps.texturedDiskRenderer.draw(
         pass,
         ctx.vp,
         [ctx.canvasSize.width, ctx.canvasSize.height],
@@ -2499,9 +2945,11 @@ Replace the existing construction block (lines 347-356, the `createThumbnailSubs
   // pre-split code did this through thumbnailSubsystem.bindToRenderers;
   // post-split the atlas owns the view and the binding is two direct
   // calls.  proceduralDiskRenderer doesn't sample the atlas, so it
-  // doesn't get a bindAtlas call.
-  thumbnailRenderer.bindAtlas(galaxyAtlas.getTextureView());
-  diskRenderer.bindAtlas(galaxyAtlas.getTextureView());
+  // doesn't get a bindAtlas call.  Locals come from the destructure at
+  // the top of wireSlots() — renamed in Tasks 2/3 from
+  // `thumbnailRenderer` / `diskRenderer` to track their renamed types.
+  texturedQuadRenderer.bindAtlas(galaxyAtlas.getTextureView());
+  texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
 
   state.subsystems.galaxyAtlas = galaxyAtlas;
   state.subsystems.texturedImpostors = texturedImpostors;
@@ -2577,8 +3025,8 @@ Edit `src/services/engine/frame/renderFrame.ts`. The `PassDeps` object built aro
 
 ```typescript
   const deps: PassDeps = {
-    thumbnailRenderer,
-    diskRenderer,
+    texturedQuadRenderer,
+    texturedDiskRenderer,
     proceduralDiskRenderer: state.gpu.proceduralDiskRenderer!,
     filamentRenderer,
     scalarVolumeRenderer,
@@ -2590,7 +3038,7 @@ Edit `src/services/engine/frame/renderFrame.ts`. The `PassDeps` object built aro
   };
 ```
 
-The non-null assertion is sound because `proceduralDiskRenderer` is constructed alongside the other LOD renderers in `initGpu` and committed to `state.gpu` synchronously — every code path that reaches `renderFrame` has already passed the bootstrap gate. (The legacy code also relies on this for `thumbnailRenderer`/`diskRenderer`, which arrive via the `input` field; we use the same pattern for the new one.)
+The non-null assertion is sound because `proceduralDiskRenderer` is constructed alongside the other LOD renderers in `initGpu` and committed to `state.gpu` synchronously — every code path that reaches `renderFrame` has already passed the bootstrap gate. (The legacy code also relies on this for `texturedQuadRenderer`/`texturedDiskRenderer` — Tasks 2/3 renamed those — which arrive via the `input` field; we use the same pattern for the new one.)
 
 - [ ] **Step 8: Run typecheck and the full suite**
 
@@ -2711,7 +3159,7 @@ Run `grep -n "galaxyThumbnailsPass" tests/services/engine/frame/passes/passes.te
 
 - [ ] **Step 3: Update `makeDeps()` in `passes.test.ts` to include `proceduralDiskRenderer`**
 
-Inside `makeDeps()` (around line 113), add `proceduralDiskRenderer: { draw: vi.fn() } as any,` after the `diskRenderer` line.
+Inside `makeDeps()` (around line 113), add `proceduralDiskRenderer: { draw: vi.fn() } as any,` after the `texturedDiskRenderer` line (renamed from `diskRenderer` in Task 2).
 
 - [ ] **Step 4: Run typecheck and the full suite**
 
@@ -3016,13 +3464,18 @@ Run: `grep -rn "thumbnailSubsystem\|ThumbnailSubsystem\|galaxyThumbnailsPass" sr
 
 Expected: no matches.
 
-- [ ] **Step 3: Confirm no residual `DiskRenderer` (the type) / `ThumbnailRenderer` (the type) references**
+- [ ] **Step 3: Confirm no residual `DiskRenderer` / `ThumbnailRenderer` type OR field references**
 
-Run: `grep -rn "\\bDiskRenderer\\b\\|\\bThumbnailRenderer\\b\\|createDiskRenderer\\|createThumbnailRenderer" src tests --include="*.ts" --include="*.tsx"`
+Run two greps — one for type names, one for the now-renamed field/local/parameter names:
 
-Expected: no matches. (Field references like `state.gpu.thumbnailRenderer` are field names, not type names, and live in different patterns; they don't show up under `\b` word-boundary anchoring of the type name.)
+```bash
+grep -rn "\\bDiskRenderer\\b\\|\\bThumbnailRenderer\\b\\|createDiskRenderer\\|createThumbnailRenderer" src tests --include="*.ts" --include="*.tsx"
+grep -rn "\\bdiskRenderer\\b\\|\\bthumbnailRenderer\\b" src tests --include="*.ts" --include="*.tsx"
+```
 
-If `\bThumbnailRenderer\b` matches `thumbnailRenderer` field references, refine the grep — only the camelCase type-name (starting with capital T) should be considered. Field references are out of scope for this rename.
+Expected: zero matches from both greps in `src/` and `tests/`. Per the user's directive that field names track type names, the camelCase identifiers `diskRenderer` and `thumbnailRenderer` (field, local, parameter, destructure key) were all renamed to `texturedDiskRenderer` / `texturedQuadRenderer` in Tasks 2/3. If either grep returns a hit, that site was missed during the rename — fix it before opening the PR.
+
+Note: `proceduralDiskRenderer` and `thumbnails` (the `state.subsystems.thumbnails` settings handle and the `state.settings.thumbnails.enabled` Boolean) are intentionally preserved and do NOT match the `\b...\b`-anchored greps above. They refer to different concepts than the renamed types — see the spec's "Renderer renames" and "State / handle wiring" sections.
 
 - [ ] **Step 4: Visual smoke check one more time in the dev server**
 
@@ -3075,7 +3528,7 @@ After drafting, this plan was re-read against the spec sections one by one. Cove
 
 Judgment calls made during drafting:
 
-- The spec doesn't explicitly say to rename the `state.gpu.thumbnailRenderer` and `state.gpu.diskRenderer` field names (vs. the type names). Spec scope says "No type renames outside the new files." I interpreted this as field names staying — they are values, not types. This keeps the renamed PR diff smaller; if the user prefers the field names renamed for consistency, that's a one-pass follow-up.
+- **Field names track type names.** Per the user's directive — and the spec's "Renderer renames" section, paragraph "Field names track type names" (line 130) and "State / handle wiring" wireSlots note (line 439) — every field, local, parameter, and destructure key that holds a `TexturedDiskRenderer` or `TexturedQuadRenderer` value renames in lockstep with the type. Tasks 2 and 3 each carry a Files block enumerating every site (production source + tests + Task 1's baseline fixture); Steps 4–14 of those tasks drive the rename file-by-file. The two field names explicitly NOT renamed are `state.subsystems.thumbnails` (the legacy subsystem slot — being replaced by three new slots in Task 11 anyway) and `state.settings.thumbnails.enabled` (the user-facing Boolean toggle for the impostor pass); both are different concepts from the renamed renderer types. `state.gpu.proceduralDiskRenderer` is also untouched because the underlying type name is unchanged.
 - The spec's `texturedImpostorsPass` order shows quads-first-then-disks. The legacy `thumbnailSubsystem.runFrame` matches that order at lines 955-967. The plan pins it in `texturedImpostorsPass.draw` and in the test assertion.
 - The spec's `proceduralDisksPass.enabled` includes `state.subsystems.proceduralDisks !== null`. The legacy `galaxyThumbnailsPass.enabled` gated only on `settings.galaxyTexturesEnabled`. I retained the stricter spec gate — if the subsystem was never constructed (impossible after wireSlots, but defensive), the pass is silently a no-op.
 - The visual-baseline approach (hash of draw-call instance arrays, not pixel readback) is a judgment call; the spec says "byte-identical visual output" and "hash a fixed-camera HDR frame" is in the prompt. I chose hash-of-`lastOutput` because no GPU-readback test harness exists, and the new subsystems' `lastOutput` IS the byte-stream the renderers receive — hashing it proves the same bytes go to the same GPU calls.
