@@ -53,8 +53,9 @@
 
 import vsCode from '../shaders/proceduralDisks/vertex.wesl?static';
 import fsCode from '../shaders/proceduralDisks/fragment.wesl?static';
-import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
-import type { Renderer } from '../../../@types';
+import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
+import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
+import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
@@ -63,29 +64,6 @@ type Init = {
   context: GPUCanvasContext;
   format: GPUTextureFormat;
   canvas: HTMLCanvasElement;
-};
-
-export type ProceduralDiskRenderer = {
-  /**
-   * Human-readable identifier (`'proceduralDiskRenderer'`).  Part of
-   * the shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
-   */
-  readonly label: string;
-  /**
-   * Issue one draw call for the given list of instances. Packs the
-   * instance data into the GPU vertex buffer (re-allocating if it grew),
-   * writes the uniform buffer, and emits `draw(6, instances.length)`.
-   */
-  draw(
-    pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewport: [number, number],
-    camPosWorld: Readonly<Vec3>,
-    pxPerRad: number,
-    instances: ReadonlyArray<ProceduralDiskInstance>,
-  ): void;
-  /** Release the uniform + per-instance vertex buffers. */
-  destroy(): void;
 };
 
 export function createProceduralDiskRenderer(init: Init): ProceduralDiskRenderer {

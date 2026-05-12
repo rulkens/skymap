@@ -32,10 +32,13 @@
  * `youAreHereSubsystem`.
  */
 
-import type { LabelRenderer, Label } from '../../gpu/renderers/labelRenderer';
-import type { MarkerLineRenderer, MarkerLine } from '../../gpu/renderers/markerLineRenderer';
+import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
+import type { Label } from '../../../@types/rendering/Label';
+import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
+import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { ReadyFrameContext } from '../frame/frameContext';
-import type { Destroyable, EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { LabelProducer } from './labelProducer';
 
 export type LabelDirectorSubsystem = {

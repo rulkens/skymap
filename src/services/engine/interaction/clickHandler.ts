@@ -65,7 +65,8 @@
  * never notices.
  */
 
-import type { Destroyable, PointInfo } from '../../../@types';
+import type { PointInfo } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import { Source } from '../../../data/sources';
 import type { createPickRenderer } from '../../gpu/renderers/pickRenderer';

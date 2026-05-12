@@ -46,7 +46,7 @@
 
 import { aggregateRegistry } from '../../loading/aggregateRegistry';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { Destroyable } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { LoadProgressState } from '../../../@types/loading/LoadProgressState';
 import type { LoadProgressEmitter } from '../../../@types/loading/LoadProgressEmitter';
 

@@ -1,0 +1,40 @@
+/**
+ * Public handle returned by `createMarkerLineRenderer`.  Mirrors the shape of
+ * other engine handles (`SelectionSubsystem`, `ThumbnailSubsystem`,
+ * `LabelRenderer`): explicit method type, no internals leaked.
+ */
+
+import type { MarkerLine } from './MarkerLine';
+
+export type MarkerLineRenderer = {
+  /**
+   * Human-readable identifier (`'markerLineRenderer'`).  Part of the
+   * shared `Renderer` contract — see `Renderer.d.ts`.
+   */
+  readonly label: string;
+  /**
+   * Replace the current line set.  Calling `setLines([])` clears all lines.
+   * Re-packs the CPU-side instance scratch buffer and, if a real GPU device
+   * is present, uploads to the GPU instance buffer.
+   *
+   * Designed to be called by `youAreHereSubsystem.runFrame` whenever the
+   * line set changes (camera distance crosses the fade band threshold).
+   * For typical use-cases there will be 1–3 lines so the cost is negligible.
+   */
+  setLines(lines: MarkerLine[]): void;
+  /**
+   * Issue the marker-line draw call into an in-flight render pass.  Must be
+   * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`
+   * implementation.  The pass's render target format must match the
+   * `format` field of the `GpuContext` passed to `createMarkerLineRenderer`.
+   */
+  render(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportSize: [number, number],
+  ): void;
+  /** Number of lines last passed to setLines. Used by tests + debug HUD. */
+  lineCount(): number;
+  /** Release all GPU resources. No-op if constructed with a null device. */
+  destroy(): void;
+};

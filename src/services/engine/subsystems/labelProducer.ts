@@ -28,8 +28,8 @@
  * a fresh object — no caching, no shared references between frames.
  */
 
-import type { Label } from '../../gpu/renderers/labelRenderer';
-import type { MarkerLine } from '../../gpu/renderers/markerLineRenderer';
+import type { Label } from '../../../@types/rendering/Label';
+import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { ReadyFrameContext } from '../frame/frameContext';
 import type { EngineState } from '../../../@types';
 

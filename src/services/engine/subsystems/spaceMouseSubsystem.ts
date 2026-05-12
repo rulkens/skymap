@@ -77,7 +77,7 @@
  * but keeps the wrapper for the next reconnect.
  */
 
-import type { Destroyable } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { SpaceMouseAxes } from '../../../@types/input/SpaceMouseAxes';
 import type { SpaceMouseInputFactory } from '../../../@types/input/SpaceMouseInputFactory';

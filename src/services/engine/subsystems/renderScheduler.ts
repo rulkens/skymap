@@ -46,7 +46,7 @@
  * queue and verify behaviour deterministically.
  */
 
-import type { Destroyable } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
 
 export type RenderSchedulerOptions = {
   /** Called every time a scheduled frame fires. */

@@ -30,7 +30,7 @@ import { createBiasCorrectionSubsystem } from '../../../../src/services/engine/s
 import { BiasMode } from '../../../../src/data/biasMode';
 import { Source } from '../../../../src/data/sources';
 import type { PointCloud } from '../../../../src/@types/data/PointCloud';
-import type { PointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
+import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
 
 type SpliceCall =
   | { kind: 'schechter'; source: Source; data: Float32Array }

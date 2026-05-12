@@ -44,12 +44,9 @@
  * corner case better handled by the user's network layer.
  */
 
-import { parseFontMetrics, type FontMetrics, type RawBMFont } from './fontMetrics';
-
-export type LoadedFontAtlas = {
-  metrics: FontMetrics;
-  bitmap: ImageBitmap;
-};
+import { parseFontMetrics } from './fontMetrics';
+import type { RawBMFont } from '../../../@types/rendering/RawBMFont';
+import type { LoadedFontAtlas } from '../../../@types/rendering/LoadedFontAtlas';
 
 /**
  * Base URL for the font atlas files.  Intentionally a relative path so

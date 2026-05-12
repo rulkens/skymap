@@ -93,9 +93,9 @@
 
 import type { EngineState } from '../../../@types';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
-import type { PostProcess } from '../../gpu/passes/postProcess';
-import type { createPickRenderer } from '../../gpu/renderers/pickRenderer';
+import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
+import type { PostProcess } from '../../../@types/rendering/PostProcess';
+import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
 import type { ThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
 
 /**
@@ -114,7 +114,7 @@ export type ReadyEngineState = EngineState & {
   cam: OrbitCamera;
   gpu: EngineState['gpu'] & {
     renderer: PointRenderer;
-    pickRenderer: ReturnType<typeof createPickRenderer>;
+    pickRenderer: PickRenderer;
     postProcess: PostProcess;
   };
   subsystems: EngineState['subsystems'] & {

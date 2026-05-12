@@ -62,72 +62,13 @@
  * accumulate rather than replace, which is wrong for an opaque indicator line.
  */
 
-import type { GpuContext, Renderer } from '../../../@types';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { Vec4 } from '../../../@types/math/Vec4';
+import type { GpuContext } from '../../../@types/rendering/GpuContext';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
+import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
 import vsCode from '../shaders/markerLines/vertex.wesl?static';
 import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-
-// ─── public types ──────────────────────────────────────────────────────────
-
-/**
- * One world-anchored line segment drawn as a screen-aligned thick quad.
- *
- * `id` is a caller-assigned string key — it's not used internally (the
- * renderer only counts and packs instances), but keeping it on the type
- * makes it easy for callers to reconcile the set with their own model
- * without maintaining a parallel index array.
- */
-export type MarkerLine = {
-  id: string;
-  fromWorld: Vec3;
-  toWorld: Vec3;
-  /** Full pixel width of the rendered line (the shader halves to half-width). */
-  pixelWidth: number;
-  /** Premultiplied RGBA — alpha-weighted colour packed into a single vec4. */
-  color: Vec4;
-  /** Fade multiplier in [0,1] driven by youAreHereVisibility. Defaults to 1. */
-  fadeAlpha?: number;
-};
-
-/**
- * Public handle returned by `createMarkerLineRenderer`.  Mirrors the shape of
- * other engine handles (`SelectionSubsystem`, `ThumbnailSubsystem`,
- * `LabelRenderer`): explicit method type, no internals leaked.
- */
-export type MarkerLineRenderer = {
-  /**
-   * Human-readable identifier (`'markerLineRenderer'`).  Part of the
-   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
-   */
-  readonly label: string;
-  /**
-   * Replace the current line set.  Calling `setLines([])` clears all lines.
-   * Re-packs the CPU-side instance scratch buffer and, if a real GPU device
-   * is present, uploads to the GPU instance buffer.
-   *
-   * Designed to be called by `youAreHereSubsystem.runFrame` whenever the
-   * line set changes (camera distance crosses the fade band threshold).
-   * For typical use-cases there will be 1–3 lines so the cost is negligible.
-   */
-  setLines(lines: MarkerLine[]): void;
-  /**
-   * Issue the marker-line draw call into an in-flight render pass.  Must be
-   * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`
-   * implementation.  The pass's render target format must match the
-   * `format` field of the `GpuContext` passed to `createMarkerLineRenderer`.
-   */
-  render(
-    pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewportSize: [number, number],
-  ): void;
-  /** Number of lines last passed to setLines. Used by tests + debug HUD. */
-  lineCount(): number;
-  /** Release all GPU resources. No-op if constructed with a null device. */
-  destroy(): void;
-};
 
 // ─── buffer constants ──────────────────────────────────────────────────────
 

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createLabelDirectorSubsystem } from '../../../../src/services/engine/subsystems/labelDirectorSubsystem';
 import type { LabelProducer } from '../../../../src/services/engine/subsystems/labelProducer';
-import type { Label } from '../../../../src/services/gpu/renderers/labelRenderer';
-import type { MarkerLine } from '../../../../src/services/gpu/renderers/markerLineRenderer';
+import type { Label } from '../../../../src/@types/rendering/Label';
+import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { ReadyFrameContext } from '../../../../src/services/engine/frame/frameContext';
 import type { EngineState } from '../../../../src/@types';
 

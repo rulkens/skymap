@@ -24,7 +24,7 @@
  * the order of async operations or browser-detection boilerplate.
  */
 
-import type { GpuContext } from '../../@types';
+import type { GpuContext } from '../../@types/rendering/GpuContext';
 
 // ─── Initialisation ───────────────────────────────────────────────────────────
 

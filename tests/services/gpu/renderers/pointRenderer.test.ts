@@ -24,13 +24,14 @@
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import {
-  type PointRenderer,
   createPointRenderer,
   setBuildBufferRunner,
 } from '../../../../src/services/gpu/renderers/pointRenderer';
+import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source } from '../../../../src/data/sources';
 import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { mat4 } from 'gl-matrix';
 
 // `GPUBufferUsage` and friends are populated by the shared
 // `tests/setup/webgpuGlobals.ts` setupFile, which runs once per worker
@@ -702,7 +703,7 @@ describe('PointRenderer.draw — PointDrawSettings shape', () => {
       draw: () => calls.push('draw'),
     } as unknown as GPURenderPassEncoder;
 
-    const viewProj = new Float32Array(16) as unknown as Parameters<PointRenderer['draw']>[1];
+    const viewProj = new Float32Array(16) as unknown as mat4;
 
     renderer.draw(pass, viewProj, [800, 600], {
       pointSizePx: 1,

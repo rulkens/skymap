@@ -57,11 +57,11 @@
  */
 
 import type { EngineState } from '../../../../@types';
-import type { ThumbnailRenderer } from '../../../gpu/renderers/thumbnailRenderer';
-import type { DiskRenderer } from '../../../gpu/renderers/diskRenderer';
-import type { MilkyWayRenderer } from '../../../gpu/renderers/milkyWayRenderer';
-import type { FilamentRenderer } from '../../../gpu/renderers/filamentRenderer';
-import type { ScalarVolumeRenderer } from '../../../gpu/renderers/scalarVolumeRenderer';
+import type { ThumbnailRenderer } from '../../../../@types/rendering/ThumbnailRenderer';
+import type { DiskRenderer } from '../../../../@types/rendering/DiskRenderer';
+import type { MilkyWayRenderer } from '../../../../@types/rendering/MilkyWayRenderer';
+import type { FilamentRenderer } from '../../../../@types/rendering/FilamentRenderer';
+import type { ScalarVolumeRenderer } from '../../../../@types/rendering/ScalarVolumeRenderer';
 import type { FamousMetaEntry } from '../../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../../@types/loading/FamousXrefMap';
 import type { PointCloud } from '../../../../@types/data/PointCloud';
