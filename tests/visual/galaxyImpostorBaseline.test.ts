@@ -16,6 +16,9 @@ import { Source } from '../../src/data/sources';
 import { createThumbnailSubsystem } from '../../src/services/engine/subsystems/thumbnailSubsystem';
 import type { PointCloud } from '../../src/@types/data/PointCloud';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
+import type { ThumbnailRenderer } from '../../src/@types/rendering/ThumbnailRenderer';
+import type { DiskRenderer } from '../../src/@types/rendering/DiskRenderer';
+import type { ProceduralDiskRenderer } from '../../src/@types/rendering/ProceduralDiskRenderer';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -57,7 +60,7 @@ function makeCloud(count: number): PointCloud {
 
 function makeCam(): OrbitCamera {
   return {
-    target: [10, 0, 0] as unknown as Float32Array,
+    target: new Float32Array([10, 0, 0]),
     distance: 0.05,
     yaw: 0,
     pitch: 0,
@@ -69,12 +72,15 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function round6(v: number): number {
+function roundTo6dp(v: number): number {
   return Math.round(v * 1e6) / 1e6;
 }
 
-function hashInstances(instances: ReadonlyArray<object>): string {
-  // Stable: sort keys, round numeric fields to 6 dp, concatenate.
+function hashInstances(instances: ReadonlyArray<object>): string[] {
+  // Stable: sort keys, round numeric fields to 6 dp.  Returns one entry
+  // per instance so vitest array-diffs each instance on its own line —
+  // a single renamed field surfaces as a one-line red/green diff rather
+  // than a 1.5 KB string blob.
   const parts: string[] = [];
   for (const ins of instances) {
     const rec = ins as Record<string, unknown>;
@@ -82,14 +88,14 @@ function hashInstances(instances: ReadonlyArray<object>): string {
     const kv: string[] = [];
     for (const k of sortedKeys) {
       const v = rec[k];
-      kv.push(`${k}=${typeof v === 'number' ? round6(v) : String(v)}`);
+      kv.push(`${k}=${typeof v === 'number' ? roundTo6dp(v) : String(v)}`);
     }
     parts.push(kv.join('|'));
   }
-  return parts.join(';');
+  return parts;
 }
 
-type DrawRecord = { renderer: string; count: number; hash: string };
+type DrawRecord = { renderer: string; count: number; hashes: readonly string[] };
 
 describe('galaxy-impostor visual baseline', () => {
   it('emits the same draw sequence given a fixed camera + cloud fixture', async () => {
@@ -102,16 +108,29 @@ describe('galaxy-impostor visual baseline', () => {
     // 50 ms between frames so the load-fade lerp lands on a stable value
     // (50/400 = 0.125 of the load-fade ramp).  Restored in `finally`.
     let nowFake = 1_000_000;
-    const origNow = performance.now.bind(performance);
     const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => nowFake);
 
     const device = makeFakeDevice();
     const quadDraw = vi.fn();
     const diskDraw = vi.fn();
     const procDraw = vi.fn();
-    const quad = { bindAtlas: vi.fn(), draw: quadDraw, label: 'thumbnailRenderer' } as any;
-    const disk = { bindAtlas: vi.fn(), draw: diskDraw, label: 'diskRenderer' } as any;
-    const procDisk = { draw: procDraw, label: 'proceduralDiskRenderer' } as any;
+    // `as unknown as <RendererType>` (not `as any`) so a future signature
+    // change on any of the three renderer handles breaks type-check at
+    // this site — that's the whole point of these baselines.
+    const quad = {
+      bindAtlas: vi.fn(),
+      draw: quadDraw,
+      label: 'thumbnailRenderer',
+    } as unknown as ThumbnailRenderer;
+    const disk = {
+      bindAtlas: vi.fn(),
+      draw: diskDraw,
+      label: 'diskRenderer',
+    } as unknown as DiskRenderer;
+    const procDisk = {
+      draw: procDraw,
+      label: 'proceduralDiskRenderer',
+    } as unknown as ProceduralDiskRenderer;
 
     const sys = createThumbnailSubsystem({
       device,
@@ -157,27 +176,34 @@ describe('galaxy-impostor visual baseline', () => {
 
     const records: DrawRecord[] = [];
     if (quadDraw.mock.calls.length > 0) {
+      // thumbnailRenderer.draw(pass, viewProj, viewportPx, instances, camPosWorld, pxPerRad)
+      // — instances is positional arg 3.
       const instances = quadDraw.mock.calls[0]![3] as ReadonlyArray<object>;
       records.push({
         renderer: 'thumbnailRenderer',
         count: instances.length,
-        hash: hashInstances(instances),
+        hashes: hashInstances(instances),
       });
     }
     if (diskDraw.mock.calls.length > 0) {
+      // diskRenderer.draw(pass, viewProj, viewportPx, camPos, instances)
+      // — instances is positional arg 4 (camPos comes before instances here,
+      // unlike the thumbnail/procedural signatures).
       const instances = diskDraw.mock.calls[0]![4] as ReadonlyArray<object>;
       records.push({
         renderer: 'diskRenderer',
         count: instances.length,
-        hash: hashInstances(instances),
+        hashes: hashInstances(instances),
       });
     }
     if (procDraw.mock.calls.length > 0) {
+      // proceduralDiskRenderer.draw(pass, viewProj, viewport, camPosWorld, pxPerRad, instances)
+      // — instances is positional arg 5 (trails camPos + pxPerRad).
       const instances = procDraw.mock.calls[0]![5] as ReadonlyArray<object>;
       records.push({
         renderer: 'proceduralDiskRenderer',
         count: instances.length,
-        hash: hashInstances(instances),
+        hashes: hashInstances(instances),
       });
     }
 
@@ -186,19 +212,36 @@ describe('galaxy-impostor visual baseline', () => {
         [
           {
             "count": 8,
-            "hash": "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.4375|u1=0.5|v0=0|v1=0.0625|x=10|y=0.007|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.375|u1=0.4375|v0=0|v1=0.0625|x=10|y=0.006|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.3125|u1=0.375|v0=0|v1=0.0625|x=10|y=0.005|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.25|u1=0.3125|v0=0|v1=0.0625|x=10|y=0.004|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.1875|u1=0.25|v0=0|v1=0.0625|x=10|y=0.003|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.125|u1=0.1875|v0=0|v1=0.0625|x=10|y=0.002|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.0625|u1=0.125|v0=0|v1=0.0625|x=10|y=0.001|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0|u1=0.0625|v0=0|v1=0.0625|x=10|y=0|z=0",
+            "hashes": [
+              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.4375|u1=0.5|v0=0|v1=0.0625|x=10|y=0.007|z=0",
+              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.375|u1=0.4375|v0=0|v1=0.0625|x=10|y=0.006|z=0",
+              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.3125|u1=0.375|v0=0|v1=0.0625|x=10|y=0.005|z=0",
+              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.25|u1=0.3125|v0=0|v1=0.0625|x=10|y=0.004|z=0",
+              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.1875|u1=0.25|v0=0|v1=0.0625|x=10|y=0.003|z=0",
+              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.125|u1=0.1875|v0=0|v1=0.0625|x=10|y=0.002|z=0",
+              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.0625|u1=0.125|v0=0|v1=0.0625|x=10|y=0.001|z=0",
+              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0|u1=0.0625|v0=0|v1=0.0625|x=10|y=0|z=0",
+            ],
             "renderer": "diskRenderer",
           },
           {
             "count": 8,
-            "hash": "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.007|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.006|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.005|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.004|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.003|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.002|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.001|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0|z=0",
+            "hashes": [
+              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.007|z=0",
+              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.006|z=0",
+              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.005|z=0",
+              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.004|z=0",
+              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.003|z=0",
+              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.002|z=0",
+              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.001|z=0",
+              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0|z=0",
+            ],
             "renderer": "proceduralDiskRenderer",
           },
         ]
       `);
     } finally {
       nowSpy.mockRestore();
-      void origNow;
     }
   });
 });
