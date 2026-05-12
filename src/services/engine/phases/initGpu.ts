@@ -83,7 +83,7 @@ import { loadFontAtlas } from '../../gpu/labels/loadFontAtlas';
 import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { BootstrapDeps } from './bootstrap';
+import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 /**
  * PhaseLocals — minimal cross-phase carrier for objects that don't
@@ -103,10 +103,7 @@ import type { BootstrapDeps } from './bootstrap';
  * `EngineGpuHandles` (the shape behind `state.gpu`); out of scope for
  * M1, but tracked as a follow-up in the 2026-05-11 audit.
  */
-export type PhaseLocals = {
-  device: GPUDevice;
-  context: GPUCanvasContext;
-};
+// PhaseLocals moved to @types/engine/PhaseLocals.d.ts.
 
 /**
  * Bootstrap phase 1: GPU device acquisition + renderer construction +

@@ -15,15 +15,13 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import {
-  seedSettingsCallbacks,
-  type Snapshot,
-} from '../../../../src/services/engine/wiring/seedSettingsCallbacks';
+import { seedSettingsCallbacks } from '../../../../src/services/engine/wiring/seedSettingsCallbacks';
+import type { SettingsCallbackSeed } from '../../../../src/@types/engine/wiring/SettingsCallbackSeed';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import { BiasMode } from '../../../../src/data/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 
-function makeSnapshot(): Snapshot {
+function makeSnapshot(): SettingsCallbackSeed {
   return {
     pointSize: 2.5,
     brightness: 1.0,

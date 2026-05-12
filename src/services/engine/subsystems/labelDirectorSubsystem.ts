@@ -36,29 +36,11 @@ import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
 import type { Label } from '../../../@types/rendering/Label';
 import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
-import type { ReadyFrameContext } from '../frame/frameContext';
+import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { LabelProducer } from './labelProducer';
-
-export type LabelDirectorSubsystem = {
-  /** Wire in the renderers once initGpu has constructed them. Idempotent. */
-  attachRenderers(label: LabelRenderer, line: MarkerLineRenderer): void;
-  /** Register a producer.  Order of registration = order of merging. */
-  registerProducer(producer: LabelProducer): void;
-  /** Per-frame entry point — poll producers, merge, flush. */
-  runFrame(state: EngineState, ctx: ReadyFrameContext): void;
-  /**
-   * Tear down the director.  No-op — the director holds renderer refs
-   * and a producers list, but the renderers' lifecycle is the engine's
-   * concern (the engine destroys them separately) and producers
-   * unregister implicitly when their owning subsystems are destroyed.
-   * Method exists so the engine's bag of subsystems can be torn down
-   * uniformly via the shared `Destroyable` shape (`engine.destroy()`
-   * iterates and calls `destroy()` on each).
-   */
-  destroy(): void;
-};
+import type { LabelProducer } from '../../../@types/engine/subsystems/LabelProducer';
+import type { LabelDirectorSubsystem } from '../../../@types/engine/subsystems/LabelDirectorSubsystem';
 
 export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   let labelRenderer: LabelRenderer | null = null;

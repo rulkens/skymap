@@ -15,11 +15,6 @@
 import { Source } from './sources';
 import type { ColourIndexSpec } from '../@types/data/ColourIndexSpec';
 
-// Type definition moved to `@types/data/ColourIndexSpec`; re-export so
-// existing `import { ColourIndexSpec } from './colourIndex'` callers keep
-// their single-source-of-truth import line.
-export type { ColourIndexSpec };
-
 const SPEC: Record<Source, ColourIndexSpec> = {
   [Source.SDSS]: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
   [Source.TwoMRS]: { slotA: 'g', slotB: 'i', rangeMin: 0.7, rangeMax: 1.1, kPerZ: 0.0 },

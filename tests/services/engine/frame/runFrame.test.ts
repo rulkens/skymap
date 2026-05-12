@@ -21,7 +21,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { runFrame, type RunFrameDeps } from '../../../../src/services/engine/frame/runFrame';
+import { runFrame } from '../../../../src/services/engine/frame/runFrame';
+import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 /**

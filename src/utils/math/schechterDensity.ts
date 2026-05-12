@@ -25,11 +25,6 @@
 import { absoluteFromApparent } from './distanceModulus';
 import type { SchechterInput } from '../../@types/math/SchechterInput';
 
-// Type moved to `@types/math/SchechterInput`; re-exported so existing
-// `import { SchechterInput } from './schechterDensity'` callers keep
-// their import line.
-export type { SchechterInput };
-
 const LN10 = Math.log(10);
 
 export function expectedNumberDensity(input: SchechterInput): number {

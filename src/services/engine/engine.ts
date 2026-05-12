@@ -101,7 +101,7 @@ import type { PointCloud } from '../../@types/data/PointCloud';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
-import type { BiasMode } from '../../data/biasMode';
+import type { BiasMode } from '../../@types/data/BiasMode';
 import type { ScalarCube } from '../../@types/data/ScalarCube';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { Tier } from '../../@types/data/Tier';
@@ -144,7 +144,8 @@ import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
 import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
-import { runBootstrapPhases, type BootstrapDeps } from './phases/bootstrap';
+import { runBootstrapPhases } from './phases/bootstrap';
+import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
 
 /**
  * Start the WebGPU engine on `canvas`.

@@ -48,7 +48,7 @@
  * local-universe skeleton → bright foreground feature".
  */
 
-import type { Pass } from './types';
+import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { milkyWayFadeAlpha } from '../../../../utils/math/milkyWayFade';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../data/galacticCenter';
 

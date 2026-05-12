@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createYouAreHereSubsystem } from '../../../../src/services/engine/subsystems/youAreHereSubsystem';
-import type { ReadyFrameContext } from '../../../../src/services/engine/frame/frameContext';
+import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 // A skeletal state with just the scheduler stub — the subsystem only

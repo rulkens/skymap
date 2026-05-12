@@ -37,7 +37,7 @@
  *   `runFrame` argument
  */
 
-import type { Pass } from './types';
+import type { Pass } from '../../../../@types/engine/frame/Pass';
 
 export const galaxyThumbnailsPass: Pass = {
   name: 'galaxy-thumbnails',

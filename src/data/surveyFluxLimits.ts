@@ -29,11 +29,6 @@
 import { Source } from './sources';
 import type { SchechterTriple } from '../@types/data/SchechterTriple';
 
-// Type moved to `@types/data/SchechterTriple`; re-exported so existing
-// `import { SchechterTriple } from './surveyFluxLimits'` callers keep
-// their import line.
-export type { SchechterTriple };
-
 const M_LIM: Record<Source, number> = {
   [Source.SDSS]: 17.77,
   [Source.TwoMRS]: 11.75,

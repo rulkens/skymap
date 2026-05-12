@@ -33,10 +33,6 @@ import type { SyntheticGaussianOptions } from '../@types/data/SyntheticGaussianO
 import type { CartesianGridOptions } from '../@types/data/CartesianGridOptions';
 import type { SphericalGridOptions } from '../@types/data/SphericalGridOptions';
 
-// Option types moved to `@types/data/`; re-exported so existing
-// `import { ... } from './syntheticScalarField'` callers keep their lines.
-export type { SyntheticGaussianOptions, CartesianGridOptions, SphericalGridOptions };
-
 export function makeSyntheticGaussianCube(opts: SyntheticGaussianOptions = {}): ScalarCube {
   const dims = opts.dims ?? 64;
   const frameKind = opts.frameKind ?? 'equatorial-cartesian';

@@ -90,7 +90,7 @@ import { cssToTexPx } from '../helpers/cssToTexPx';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PointInfo } from '../../../@types/engine/PointInfo';
-import type { BootstrapDeps } from './bootstrap';
+import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 /**
  * Bootstrap phase 3: pick renderer + camera + orbit controls + click

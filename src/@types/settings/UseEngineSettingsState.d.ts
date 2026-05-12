@@ -27,8 +27,8 @@
  */
 
 import type { LodMode } from '../data/LodMode';
-import type { BiasMode } from '../../data/biasMode';
-import type { ToneMapCurve } from '../../data/toneMapCurve';
+import type { BiasMode } from '../data/BiasMode';
+import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { VolumeFieldRowData } from './VolumeFieldRowData';
 
 export type UseEngineSettingsState = {

@@ -21,11 +21,6 @@ import { galaxyTypeFromColor } from './galaxyTypeFromColor';
 import { galaxyTypeFromBminusJ } from './galaxyTypeFromBminusJ';
 import { galaxyTypeFromJminusK } from './galaxyTypeFromJminusK';
 
-// Type moved to `@types/data/GalaxyTypeMags`; re-exported so existing
-// `import { GalaxyTypeMags } from '../utils/math/galaxyType'` callers keep
-// their import line.
-export type { GalaxyTypeMags };
-
 /**
  * Fallback when the source's required bands are missing or non-finite.
  * We use `'green'` (intermediate) rather than `'unknown'` so the InfoCard

@@ -39,11 +39,6 @@
 import type { PointCloud } from '../@types/data/PointCloud';
 import type { ClonedPointCloud } from '../@types/data/ClonedPointCloud';
 
-// Type moved to `@types/data/ClonedPointCloud`; re-exported so existing
-// `import { ClonedPointCloud } from './pointCloudTransfer'` callers keep
-// their single-import ergonomics.
-export type { ClonedPointCloud };
-
 /**
  * Slice every typed-array buffer in `cloud` to produce a structurally
  * identical copy whose buffers are detached-ownership-ready, plus the

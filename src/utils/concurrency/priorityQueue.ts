@@ -46,14 +46,9 @@
  * `new PriorityQueue<MyResult>()`.
  */
 
-export const MAX_CONCURRENT_FETCHES = 4;
+import type { QueueEntry } from '../../@types/loading/QueueEntry';
 
-export type QueueEntry<T = ImageBitmap | null> = {
-  key: string;
-  priority: number;
-  fetcher: () => Promise<T>;
-  onResult: (result: T) => void;
-};
+export const MAX_CONCURRENT_FETCHES = 4;
 
 export class PriorityQueue<T = ImageBitmap | null> {
   private pending = new Map<string, QueueEntry<T>>();

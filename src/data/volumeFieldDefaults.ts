@@ -37,11 +37,6 @@
  */
 import type { VolumeFieldDefaults } from '../@types/data/VolumeFieldDefaults';
 
-// Type moved to `@types/data/VolumeFieldDefaults`; re-exported so existing
-// `import { VolumeFieldDefaults } from './volumeFieldDefaults'` callers
-// keep their import line.
-export type { VolumeFieldDefaults };
-
 /**
  * Sentinel envelope that effectively disables spatial falloff.  The
  * inscribed-sphere radius is 1 (in normalised local space) and the

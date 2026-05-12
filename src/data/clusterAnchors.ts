@@ -37,11 +37,6 @@ import type { Vec3 } from '../@types/math/Vec3';
 import type { SkyCoord } from '../@types/data/SkyCoord';
 import type { ClusterAnchor } from '../@types/data/ClusterAnchor';
 
-// Re-exported so existing `import { SkyCoord, ClusterAnchor } from
-// './clusterAnchors'` callers keep working.  Type definitions live in
-// `@types/data/`; this module only owns the runtime tables and helper.
-export type { SkyCoord, ClusterAnchor };
-
 /**
  * Convert (RA hours, Dec degrees, distance Mpc) → equatorial-Cartesian
  * Mpc.  Pure; no dependencies on any other module.

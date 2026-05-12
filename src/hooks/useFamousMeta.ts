@@ -35,11 +35,7 @@ import { useEffect, useState } from 'react';
 import { famousMetaFetcher } from '../services/loading/fetchers/famousMetaFetcher';
 import type { FamousMetaEntry } from '../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../@types/loading/FamousXrefMap';
-
-export type UseFamousMetaReturn = {
-  famousMeta: readonly FamousMetaEntry[];
-  famousXrefs: FamousXrefMap;
-};
+import type { UseFamousMetaReturn } from '../@types/engine/UseFamousMetaReturn';
 
 export function useFamousMeta(): UseFamousMetaReturn {
   const [famousMeta, setFamousMeta] = useState<readonly FamousMetaEntry[]>([]);

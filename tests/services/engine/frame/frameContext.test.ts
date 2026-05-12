@@ -20,10 +20,8 @@
 
 import { describe, it, expect } from 'vitest';
 
-import {
-  deriveFrameContext,
-  type FrameContext,
-} from '../../../../src/services/engine/frame/frameContext';
+import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
+import type { FrameContext } from '../../../../src/@types/engine/frame/FrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 

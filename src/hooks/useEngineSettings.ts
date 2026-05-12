@@ -41,7 +41,9 @@
 import { useState } from 'react';
 import type { LodMode } from '../@types/data/LodMode';
 import { BiasMode } from '../data/biasMode';
+import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from '../data/toneMapCurve';
+import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -94,9 +96,9 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     DEFAULT_VISIBLE_SOURCE_MASK,
   );
   const [lodMode, setLodMode] = useState<LodMode>(DEFAULT_LOD_MODE);
-  const [biasMode, setBiasMode] = useState<BiasMode>(DEFAULT_BIAS_MODE);
+  const [biasMode, setBiasMode] = useState<BiasModeT>(DEFAULT_BIAS_MODE);
   const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
-  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurve>(
+  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurveT>(
     DEFAULT_TONE_MAP_CURVE,
   );
   const [exposure, setExposure] = useState<number>(DEFAULT_EXPOSURE);

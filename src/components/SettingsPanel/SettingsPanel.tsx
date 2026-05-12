@@ -41,7 +41,9 @@ import type { LodMode } from '../../@types/data/LodMode';
 import type { Tier } from '../../@types/data/Tier';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
+import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
 import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
+import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import { VolumeFieldRow } from './VolumeFieldRow';
@@ -203,9 +205,9 @@ type Props = {
    * implement those — for now they appear as disabled options so the UI
    * shape doesn't shift when they land.
    */
-  biasMode?: BiasMode;
+  biasMode?: BiasModeT;
   /** Called when the user picks a different density-correction mode. */
-  onBiasModeChange?: (mode: BiasMode) => void;
+  onBiasModeChange?: (mode: BiasModeT) => void;
   /**
    * Faintest absolute magnitude (M_lim) kept under `BiasMode.VolumeLimited`.
    * Larger / more-positive numbers mean a fainter cut-off (more galaxies
@@ -228,9 +230,9 @@ type Props = {
   // via a single 4-byte uniform write, no pipeline rebuild.
 
   /** Currently-selected tone-mapping curve.  See `data/toneMapCurve.ts`. */
-  toneMapCurve?: ToneMapCurve;
+  toneMapCurve?: ToneMapCurveT;
   /** Called when the user picks a different tone-map curve. */
-  onToneMapCurveChange?: (curve: ToneMapCurve) => void;
+  onToneMapCurveChange?: (curve: ToneMapCurveT) => void;
   /**
    * Current HDR exposure multiplier — applied to the HDR signal *before*
    * the tone-map curve runs, so a low exposure (~0.3) brings cluster
@@ -766,7 +768,7 @@ export function SettingsPanel({
                   id="bias-mode"
                   className={styles.modeSelect}
                   value={biasMode}
-                  onChange={(e) => onBiasModeChange(Number(e.target.value) as BiasMode)}
+                  onChange={(e) => onBiasModeChange(Number(e.target.value) as BiasModeT)}
                 >
                   <option value={BiasMode.None}>None — raw catalogue</option>
                   <option value={BiasMode.VolumeLimited}>Volume-limited</option>
@@ -912,7 +914,7 @@ export function SettingsPanel({
                     className={styles.modeSelect}
                     value={toneMapCurve}
                     onChange={(e) =>
-                      onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurve)
+                      onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurveT)
                     }
                   >
                     {ALL_TONE_MAP_CURVES.map((c) => (

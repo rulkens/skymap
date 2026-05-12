@@ -31,7 +31,7 @@ import type { ReactNode } from 'react';
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
-import type { AliasIndexEntry } from '../../hooks/buildAliasIndex';
+import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import { Source, sourceLabel } from '../../data/sources';
 import { InfoTip } from '../InfoTip/InfoTip';
 import styles from './CommandPalette.module.css';

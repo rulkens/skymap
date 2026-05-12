@@ -25,7 +25,6 @@
  * runtime artefacts — same reason `sources.ts` and `tierTargets.ts`
  * live there.
  */
-export type { CloudSource } from '../@types/data/CloudSource';
 import type { CloudSource } from '../@types/data/CloudSource';
 
 import { Source } from './sources';

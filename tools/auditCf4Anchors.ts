@@ -25,11 +25,8 @@
 import { readFileSync } from 'node:fs';
 import { readNpy } from './parsers/npyReader';
 import { SG_TO_EQ_MATRIX } from '../src/data/superGalacticTransform';
-import {
-  CLUSTER_ANCHORS,
-  raDecDistToEqCart,
-  type ClusterAnchor,
-} from '../src/data/clusterAnchors';
+import { CLUSTER_ANCHORS, raDecDistToEqCart } from '../src/data/clusterAnchors';
+import type { ClusterAnchor } from '../src/@types/data/ClusterAnchor';
 import type { Mat3 } from '../src/@types/math/Mat3';
 import type { Vec3 } from '../src/@types/math/Vec3';
 

@@ -4,8 +4,8 @@ import {
   SUPERCLUSTER_ANCHORS,
   VOID_ANCHORS,
   raDecDistToEqCart,
-  type ClusterAnchor,
 } from '../../src/data/clusterAnchors';
+import type { ClusterAnchor } from '../../src/@types/data/ClusterAnchor';
 
 describe('raDecDistToEqCart', () => {
   it('places Virgo at the expected equatorial Cartesian position', () => {
