@@ -36,7 +36,7 @@
  * unrelated state.
  */
 
-import type { MousePos } from './MousePos';
+import type { MousePos } from './input/MousePos';
 import type { Source } from '../data/sources';
 
 /**

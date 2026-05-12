@@ -45,7 +45,7 @@ import type { LabelDirectorSubsystem } from '../services/engine/subsystems/label
 import type { PoiSubsystem } from '../services/engine/subsystems/poiSubsystem';
 import type { TweenManager } from './camera/TweenManager';
 import type { ClickResolver } from '../services/engine/interaction/clickHandler';
-import type { InputBindings } from '../services/engine/interaction/inputBindings';
+import type { InputBindings } from './input/InputBindings';
 import type { RenderScheduler } from '../services/engine/subsystems/renderScheduler';
 import type { LoadProgressEmitter } from './loading/LoadProgressEmitter';
 import type { Destroyable } from './Destroyable';

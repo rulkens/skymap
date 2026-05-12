@@ -49,7 +49,8 @@
  * again. Keeps the code path simple and predictable.
  */
 
-import type { SpaceMouseAxes } from './spaceMouseAxes';
+import type { SpaceMouseAxes } from '../../@types/input/SpaceMouseAxes';
+import type { SpaceMouseInputOptions } from '../../@types/input/SpaceMouseInputOptions';
 import { ZERO_AXES } from './spaceMouseAxes';
 import {
   parseTranslationReport,
@@ -87,29 +88,6 @@ const DEVICE_FILTERS: HIDDeviceFilter[] = [
 export function isWebHIDSupported(): boolean {
   return typeof navigator !== 'undefined' && 'hid' in navigator;
 }
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-/**
- * Constructor options for `SpaceMouseInput`.
- *
- * `onAxes` is called every time we successfully decode a report — typically
- * 60–100 Hz when the puck is deflected, never when it's at rest (the
- * firmware suppresses zero reports).
- *
- * The callback receives a fresh axes object each call; the implementation
- * may safely retain or mutate it.
- */
-export type SpaceMouseInputOptions = {
-  /** Called on every decoded report with the latest axes reading. */
-  onAxes: (axes: SpaceMouseAxes) => void;
-  /**
-   * Optional callback fired when the device's connect/disconnect state
-   * changes (paired, unpaired, USB unplug, etc.). Useful for the settings
-   * panel's "Connected: <product>" status text.
-   */
-  onConnectionChange?: (connected: boolean, productName: string | null) => void;
-};
 
 // ─── SpaceMouseInput class ────────────────────────────────────────────────────
 

@@ -39,7 +39,7 @@
  * see e.g. the spnav Linux daemon and Blender's input plugin.
  */
 
-import type { SpaceMouseAxes } from './spaceMouseAxes';
+import type { SpaceMouseAxes } from '../../@types/input/SpaceMouseAxes';
 
 /**
  * The maximum raw value we expect at full physical deflection.
