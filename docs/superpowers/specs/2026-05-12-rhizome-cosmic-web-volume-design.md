@@ -2,7 +2,7 @@
 
 **Status:** Draft (2026-05-12)
 **Supersedes:** the runtime portion of [`2026-05-11-mcpm-cosmic-web-volume-design.md`](./2026-05-11-mcpm-cosmic-web-volume-design.md) (the MCPM SDSS-wedge cube becomes a *calibration target* rather than the shipped overlay).
-**Companion:** the PolyPhy producer pipeline in the new `skymap-rhizome` repository — referenced here, specified there.
+**Companion:** the PolyPhy producer pipeline in the `rulkens/PolyPhy` fork at `~/Development/vendor/python/PolyPhy`, branch `rhizome-sdss-calibration` (and successors). Input prep tools live here in skymap; simulation + comparison infrastructure lives in the fork.
 
 ## Goal
 
@@ -24,7 +24,8 @@ PolyPhy is now confirmed running headlessly on Apple silicon Metal in seconds, n
   - `rhizome-inner`  — ±150 Mpc domain, 256³ (~1.17 Mpc/voxel), 2MRS+GLADE within 150 Mpc.
   - `rhizome-middle` — ±425 Mpc domain, 256³ (~3.32 Mpc/voxel), 2MRS+GLADE within 425 Mpc.
   - `rhizome-outer`  — ±900 Mpc domain, 256³ (~7.03 Mpc/voxel), 2MRS+GLADE within 900 Mpc.
-- A producer pipeline in the new `skymap-rhizome` repository: input prep from `.bin` catalogs, PolyPhy invocation, `.npy` upload to R2.
+- Entire calibration pipeline in the `rulkens/PolyPhy` fork under a new `rhizome/` directory: bin decoder, input prep, PolyPhy orchestrator, comparison harness, parameter constants, `CALIBRATION.md` log. Eventually emits `.npy` cubes to R2 for skymap to consume (later plan).
+- Skymap itself is **not modified during calibration** — no new tools, no new directories, no new dependencies. Skymap's only role is hosting the published `sdss-large.bin` and `mcpm_sdss_d2.npy` on R2 (already done) which the fork curls.
 - A consumer pipeline in skymap: `tools/buildRhizomeVolume.ts` (`.npy` → `.scfd`), three new field handles (`rhizome-inner` / `-middle` / `-outer`), AABB-fade compositing logic.
 - A **reproduction-against-SDSS calibration** milestone before the rhizome cubes ship: run PolyPhy on our SDSS catalog inside Wilde et al.'s 44–476 Mpc comoving volume, visually compare against the shipped `mcpm-large.scfd`, lock in parameters once they match.
 - Migration of the existing MCPM settings key + UI toggle to the new field set, with a redirect from the legacy `volumeFields.mcpm` URL-query key.
@@ -40,54 +41,93 @@ PolyPhy is now confirmed running headlessly on Apple silicon Metal in seconds, n
 
 ## Repository split
 
-This is the first skymap feature that splits across two repos. The split is deliberate:
+The calibration phase lives **entirely in the `rulkens/PolyPhy` fork**; skymap is not touched until the much-later renderer-wiring plan. This is a deliberate simplification away from the spec's earlier "input prep in skymap, sim in fork" sketch — see the "Why fork-only" subsection below.
 
-| `skymap` (this repo) | `skymap-rhizome` (new repo) |
+| skymap (this repo) | `rulkens/PolyPhy` fork, branch `rhizome-sdss-calibration` |
 |---|---|
-| `tools/buildRhizomeVolume.ts` — `.npy` → `.scfd` per shell | `runRhizomePolyphy.py` — PolyPhy orchestrator |
-| Three new field handles in `volumeFieldDefaults.ts` | `buildRhizomeInput.py` — read skymap `.bin` from R2, emit CSV |
-| Fade-band compositor in scalar-volume renderer | `vendor/polyphy/` — submodule or pinned install of PolyPhy |
-| Settings UI: one toggle, palette default | Calibration runs, parameter constants, Jupyter notebooks |
-| MCPM → rhizome settings-state migration | R2 upload of produced `.npy` cubes |
+| — *nothing during the calibration phase* — | `rhizome/skymapBinDecoder.py` — 50-line Python port of `pointCloudFormat.ts` v4 |
+| | `rhizome/buildRhizomeInput.py` — fetch `sdss-large.bin` from R2, filter, write CSV |
+| | `rhizome/runRhizomePolyphy.py` — PolyPhy orchestrator |
+| | `rhizome/compareCubes.py` — `.npy` vs `.npy` Pearson + max-projection PNG |
+| | `rhizome/CALIBRATION.md` — parameter sweep log |
+| | `rhizome/{cache,reference,output,calibration}/` — gitignored generated artefacts |
+| | `RhizomeParams` dataclass — frozen parameter constants |
+| **Later plan** (after calibration locks parameters and the spec moves to shells): | |
+| `tools/buildRhizomeVolume.ts` — `.npy` → `.scfd` per shell | (fork builds the three rhizome shells via the same `runRhizomePolyphy.py`, uploads to R2) |
+| Three new field handles in `volumeFieldDefaults.ts` | |
+| Fade-band compositor in scalar-volume renderer | |
+| Settings UI + MCPM-key migration | |
 
-**Why separate:**
+**Why fork-only (no skymap involvement during calibration):**
 
-- PolyPhy parameter tuning is a Python+Taichi+Metal loop that has nothing to gain from skymap's vitest / tsc / prettier CI, and a lot to lose from waiting for it.
-- If we ever fork PolyPhy (currently not needed — verification confirmed batch mode works as-is), the fork can sit as a clean submodule in `skymap-rhizome` instead of polluting every skymap clone.
-- "How the rhizome cubes were built" is the kind of thing a future paper or Zenodo deposit wants pinned at a single commit independent of skymap's release cadence.
-- Existing precedent: `extractMcpmCube.py` is already a maintainer-only Python tool in skymap's `tools/`; the rhizome version is the same shape but iterates dozens of times during tuning, which is the threshold at which "one-off script in tools/" stops being honest.
+- The calibration loop is "run PolyPhy → look at the cube → tune params → re-run". skymap CI (vitest, tsc, prettier) has nothing to contribute. Keeping the whole loop inside one repo means one branch, one git history, one venv, zero cross-repo filesystem coordination.
+- The v4 PointCloud format is stable and versioned (the spec characterises it as the load-bearing assumption for all bin consumers). Porting it to a 50-line Python decoder inside the fork carries no drift risk worth two-repo overhead. If the format ever bumps, both decoders update — but that hasn't happened since v4 landed.
+- `sdss-large.bin` is publicly hosted on R2 at `https://skymap-data.rulkens.com/data/sdss-large.bin` (and is the same artefact the runtime fetches). The fork's `buildRhizomeInput.py` curls it directly — no need to reach into skymap's local working copy.
+- "How the rhizome cubes were calibrated" then lives as a single citable timeline in the fork's `rhizome-sdss-calibration` branch, ideal for Zenodo deposits or paper appendices.
 
-**The boundary:** `skymap-rhizome` produces `rhizome_{inner,middle,outer}_d{1,2}.npy` on R2 with a metadata sidecar (origin, voxelSize, frame, agent count, iteration count, PolyPhy version, input catalog version hash). skymap consumes those via `buildRhizomeVolume.ts` exactly the same way it consumes the CF-4 `d_mean_CF4pp.npy` and MCPM `mcpm_sdss_d{8,4,2}.npy` today. No new format on the consumer side.
+**Why a PolyPhy fork at all:**
 
-**Reading skymap's `.bin` format from `skymap-rhizome`:** the producer fetches `2mrs.bin` and `glade-large.bin` from R2 (already public) and decodes them with a ~50-line Python port of the v4 PointCloud reader. Single file, near-zero maintenance — the format is stable and versioned.
+- The fork already exists at `~/Development/vendor/python/PolyPhy` with `origin → github.com/rulkens/PolyPhy` and `upstream → github.com/PolyPhyHub/PolyPhy`. The smoke test that proved Metal batch mode lives there as the `verification/` directory on branch `verification-spike`. Adding `rhizome/` as a sibling directory continues the same pattern — sim/test artefacts colocated with the engine they exercise.
+- If we ever upstream improvements to PolyPhy itself (e.g. a proper CLI for batch outputs to a specified directory), the fork can PR them upstream without entangling skymap.
+
+**No PolyPhy submodule.** Earlier drafts suggested vendoring PolyPhy inside a new repo via git submodule; the fork-with-rhizome-branch model makes that unnecessary. We track upstream PolyPhy via `git fetch upstream` and rebase/merge as desired. Currently pinned at upstream commit `5f9cef8` — the smoke-test-verified revision.
+
+**When skymap finally gets involved:** the later "rhizome shells" plan adds `tools/buildRhizomeVolume.ts` and three field handles. The boundary at that point: fork produces `rhizome_{inner,middle,outer}_d{1,2}.npy` on R2 with a metadata sidecar (origin, voxelSize, frame, agent count, iteration count, PolyPhy commit, input catalog version hash). skymap consumes them via `buildRhizomeVolume.ts` exactly the same way it consumes the CF-4 `d_mean_CF4pp.npy` and MCPM `mcpm_sdss_d{8,4,2}.npy` today. No new format on the consumer side.
 
 ## Architecture
 
 ```
-[in skymap-rhizome, maintainer's machine]
+[CALIBRATION PHASE — all inside PolyPhy fork, branch rhizome-sdss-calibration]
 
-  R2: 2mrs.bin, glade-large.bin
+  R2 (published by skymap, read-only here):
+    https://skymap-data.rulkens.com/data/sdss-large.bin
+    https://skymap-data.rulkens.com/data/raw/mcpm/mcpm_sdss_d2.npy
     │
-    ↓ curl
-  buildRhizomeInput.py
-    ├─ decode v4 PointCloud .bin (Python port)
-    ├─ filter to shell radius (≤150 / ≤425 / ≤900 Mpc) per shell
-    ├─ append 8 corner anchor points to pin PolyPhy's bounding box to a cube
-    └─ write input_{inner,middle,outer}.csv  (x, y, z, weight in SG Mpc)
+    ↓ curl (one-time, gitignored)
+  rhizome/cache/sdss-large.bin
+  rhizome/reference/mcpm_sdss_d2.npy
     │
     ↓
-  runRhizomePolyphy.py  (invokes PolyPhy via subprocess)
-    ├─ for each shell: cd src/polyphy && python polyphy.py 3d_discrete -b -n 700 \
-    │                    -t 256 -f data/csv/input_<shell>.csv <wilde-et-al-params>
-    ├─ collects trace_*.npy outputs from data/fits/
-    ├─ np.squeeze(-1), validate shape == (256, 256, 256), dtype == float32
-    ├─ writes rhizome_<shell>.npy + sidecar.json
-    └─ downsample × 2 for medium tier → rhizome_<shell>_d2.npy
+  rhizome/buildRhizomeInput.py  (uses rhizome/skymapBinDecoder.py)
+    ├─ decode v4 PointCloud .bin (50-line Python port of pointCloudFormat.ts)
+    ├─ filter to 44–476 Mpc Wilde et al. comoving shell
+    └─ write rhizome/cache/sdss_calibration.csv  (x, y, z, weight in SG Mpc)
     │
-    ↓ npx wrangler r2 cp
+    ↓
+  rhizome/runRhizomePolyphy.py  --input rhizome/cache/sdss_calibration.csv
+    ├─ chdir to src/polyphy/, removes /tmp/flag defensively
+    ├─ subprocess: python polyphy.py 3d_discrete -b -n 700 \
+    │                -f <csv> <RhizomeParams CLI flags>
+    ├─ collects trace_*.npy from data/fits/
+    ├─ np.squeeze(-1) — strip trailing channel singleton (4D → 3D)
+    └─ writes rhizome/output/sdss_reproduced.npy + sidecar.json
+    │
+    ↓
+  rhizome/compareCubes.py  --reproduced rhizome/output/sdss_reproduced.npy \
+                           --reference  rhizome/reference/mcpm_sdss_d2.npy \
+                           --out        rhizome/calibration/iter<N>_<name>/
+    ├─ 3D Pearson correlation
+    ├─ per-axis 2D Pearson on max-projections
+    └─ side-by-side max-projection PNG (magma, log-norm)
+    │
+    ↓ iterate: tune params in RhizomeParams, re-run
+    ↓ accept: freeze RhizomeParams + write rhizome/CALIBRATION.md
+
+[SHELLS PHASE — LATER PLAN, fork produces, skymap consumes]
+
+  rhizome/buildRhizomeInput.py  (extended)
+    ├─ now reads 2mrs.bin + glade-large.bin from R2
+    ├─ filters per shell (≤150 / ≤425 / ≤900 Mpc)
+    └─ appends 8 corner anchor points per shell
+
+  rhizome/runRhizomePolyphy.py  --input <shell-csv> --shell <name>
+    └─ writes rhizome/output/rhizome_<shell>.npy + downsampled _d2 variant
+    │
+    ↓ npx wrangler r2 cp rhizome/output/*.npy r2://skymap-data/data/raw/rhizome/
+
   R2: rhizome_{inner,middle,outer}_{d1,d2}.npy + sidecars
 
-[in skymap, contributor build]
+[in skymap, contributor build — LATER PLAN, not this calibration]
 
   R2: rhizome_*.npy
     │
@@ -172,7 +212,7 @@ Before any rhizome cube ships, we calibrate the recipe against a known-correct r
 
 **Acceptance:** a side-by-side render at three fixed camera positions where the reproduced cube and the published cube show the same major filaments at the same locations. Pixel-perfect match is not the goal (our input preprocessing differs from theirs — no RSD correction, no DBSCAN clustering) — *structural* match is.
 
-**Output of the calibration:** a frozen parameter set in `runRhizomePolyphy.py` and a `CALIBRATION.md` in `skymap-rhizome` documenting the comparison. That parameter set then applies to all three rhizome shells unmodified.
+**Output of the calibration:** a frozen parameter set in `rhizome/runRhizomePolyphy.py` (as a `RhizomeParams` dataclass) and a `rhizome/CALIBRATION.md` in the PolyPhy fork documenting the comparison. That parameter set then applies to all three rhizome shells unmodified.
 
 ## Catalog ingestion (2MRS + GLADE)
 
@@ -234,7 +274,7 @@ Mobile users get a real cosmic-web overlay everywhere for the first time (MCPM-s
 2. **PolyPhy's bounding-box behavior with near-zero anchor weights.** The verification used weights ≥ 0.5; we plan `1e-6` for anchors. If PolyPhy rejects or silently clips, fallback is to use the smallest weight that doesn't influence the trace (likely `1.0` with a much larger anchor count to dilute their contribution, or post-subtract a "no-anchors" baseline run).
 3. **Fade-band thickness may be too narrow.** 25 / 50 / 150 Mpc bands were chosen to match each shell's voxel size proportionally. If shell-boundary seams are visible after the first end-to-end render, widen the bands. Cheap to iterate — pure renderer-side change.
 4. **Apple silicon Metal stability under longer runs.** The smoke test was 100 iterations / 5 s; the production run will be 700 iterations × 3 shells ~ 3 minutes total. Taichi+Metal has historically had rougher edges than CUDA; if the Metal backend hangs or produces NaN cubes during longer runs, fallback is Taichi-on-CPU (much slower, still tractable for one-off recipe runs).
-5. **`vendor/polyphy/` pinning.** PolyPhy's README warns it's "currently undergoing refactoring." `skymap-rhizome` pins to commit `5f9cef8` (the verified-working revision) as a git submodule. Upgrades to PolyPhy require re-running the SDSS calibration to confirm output hasn't drifted.
+5. **PolyPhy upstream drift.** PolyPhy's README warns it's "currently undergoing refactoring." The fork branches off upstream at commit `5f9cef8` (the smoke-test-verified revision); our `rhizome-sdss-calibration` branch tracks that base. Pulling new upstream changes via `git fetch upstream && git merge` requires re-running the SDSS calibration to confirm output hasn't drifted.
 
 ## Open follow-ups (not in this spec)
 
