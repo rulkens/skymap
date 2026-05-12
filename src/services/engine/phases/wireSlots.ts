@@ -381,8 +381,8 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // success/failure check both ways: a Famous-only success
   // shouldn't suppress synthetic, and a Famous-only failure
   // shouldn't trigger it.
-  const REAL_POINT_SOURCES = [Source.SDSS, Source.TwoMRS, Source.Glade];
-  const ALL_POINT_SOURCES = [...REAL_POINT_SOURCES, Source.Famous];
+  const REAL_POINT_SOURCES: Source[] = [Source.SDSS, Source.TwoMRS, Source.Glade];
+  const ALL_POINT_SOURCES: Source[] = [...REAL_POINT_SOURCES, Source.Famous];
   let pointsAnyReady = false;
   let firstReadySource: Source | null = null;
   const allArrivalsPromise = new Promise<void>((resolve) => {

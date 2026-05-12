@@ -16,6 +16,17 @@ import { surveyFluxLimit, surveySchechter } from '../../../src/data/surveyFluxLi
 import { expectedNumberDensity } from '../../../src/utils/math/schechterDensity';
 import { Source } from '../../../src/data/sources';
 
+// Reverse-lookup name from a Source value.  TS's old numeric enum
+// auto-generated this map; the `as const` replacement does not, so we
+// derive it locally for the test labels below.
+const SOURCE_NAME: Record<Source, string> = {
+  [Source.Synthetic]: 'Synthetic',
+  [Source.SDSS]: 'SDSS',
+  [Source.TwoMRS]: 'TwoMRS',
+  [Source.Glade]: 'Glade',
+  [Source.Famous]: 'Famous',
+};
+
 describe('surveyConstants table', () => {
   for (const src of [
     Source.Synthetic,
@@ -24,7 +35,7 @@ describe('surveyConstants table', () => {
     Source.Glade,
     Source.Famous,
   ]) {
-    it(`Source.${Source[src]} — schechter, mLim, nRef match live primitives`, () => {
+    it(`Source.${SOURCE_NAME[src]} — schechter, mLim, nRef match live primitives`, () => {
       const c = surveyConstants(src);
       expect(c.schechter).toEqual(surveySchechter(src));
       expect(c.mLim).toBe(surveyFluxLimit(src));

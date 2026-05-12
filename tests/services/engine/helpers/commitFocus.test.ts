@@ -51,6 +51,7 @@ vi.mock('../../../../src/services/engine/camera/tweenToGalaxy', () => ({
 
 // Imported AFTER the mock so commitFocus picks it up.
 import { commitFocus } from '../../../../src/services/engine/helpers/commitFocus';
+import { Source } from '../../../../src/data/sources';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
@@ -85,8 +86,8 @@ describe('commitFocus', () => {
     // animate before the URL flipped, causing the hash and canvas to
     // diverge on deep-link transitions.
     const { state, cb, info, setSelected, onFocusChange } = makeFixtures();
-    const selectionKey = { source: 1, localIdx: 42 };
-    const selectionInfo = { source: 1, localIdx: 42 } as unknown as PointInfo;
+    const selectionKey = { source: Source.SDSS, localIdx: 42 };
+    const selectionInfo = { source: Source.SDSS, localIdx: 42 } as unknown as PointInfo;
 
     commitFocus(state, cb, info, { key: selectionKey, info: selectionInfo });
 
@@ -147,7 +148,7 @@ describe('commitFocus', () => {
     // The selection subsystem must receive `undefined` (NOT skip the
     // call) so its own live-lookup path runs.
     const { state, cb, info, setSelected } = makeFixtures();
-    const selectionKey = { source: 1, localIdx: 42 };
+    const selectionKey = { source: Source.SDSS, localIdx: 42 };
 
     commitFocus(state, cb, info, { key: selectionKey });
 
