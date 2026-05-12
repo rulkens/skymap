@@ -13,7 +13,6 @@ export type * from './EngineCallbacks';
 export type * from './EngineHandle';
 export type * from './GpuContext';
 export type * from './ThumbnailInstance';
-export type * from './MousePos';
 export type * from './EngineSettingsState';
 export type * from './EngineBiasState';
 export type * from './EngineSourceState';

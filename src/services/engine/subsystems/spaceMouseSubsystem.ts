@@ -79,10 +79,12 @@
 
 import type { Destroyable } from '../../../@types';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { SpaceMouseAxes } from '../../../@types/input/SpaceMouseAxes';
+import type { SpaceMouseInputFactory } from '../../../@types/input/SpaceMouseInputFactory';
+import type { SpaceMouseInputLike } from '../../../@types/input/SpaceMouseInputLike';
 import { SpaceMouseInput } from '../../input/spaceMouse';
 import { applyCurve } from '../../input/spaceMouseSensitivity';
 import { applyAxesToCamera, hasAnyAxis } from '../../input/spaceMouseToCamera';
-import type { SpaceMouseAxes } from '../../input/spaceMouseAxes';
 import { ZERO_AXES } from '../../input/spaceMouseAxes';
 import { updatePosition } from '../../camera/orbitCamera';
 import { DEFAULT_SPACE_MOUSE_SENSITIVITY } from '../../../data/defaults';
@@ -131,25 +133,6 @@ export type SpaceMouseSubsystem = {
   /** Tear-down: release the device.  Called from engine.destroy(). */
   destroy(): void;
 };
-
-/**
- * Minimal interface the subsystem needs from a SpaceMouseInput.
- * Production passes the real `SpaceMouseInput` class; tests pass a
- * stub that lets them invoke `onAxes` / `onConnectionChange`
- * synchronously without touching WebHID.
- */
-export type SpaceMouseInputLike = {
-  connect(): Promise<boolean>;
-  disconnect(): void;
-  isConnected(): boolean;
-};
-
-export type SpaceMouseInputCtorOptions = {
-  onAxes: (axes: SpaceMouseAxes) => void;
-  onConnectionChange?: (connected: boolean, productName: string | null) => void;
-};
-
-export type SpaceMouseInputFactory = (options: SpaceMouseInputCtorOptions) => SpaceMouseInputLike;
 
 export type CreateSpaceMouseSubsystemInput = {
   /**

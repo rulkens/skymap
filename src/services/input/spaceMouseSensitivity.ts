@@ -27,7 +27,7 @@
  * from 0.1 (very damped) to 3.0 (very twitchy) per the spec.
  */
 
-import type { SpaceMouseAxes } from './spaceMouseAxes';
+import type { SpaceMouseAxes } from '../../@types/input/SpaceMouseAxes';
 
 /**
  * Apply a cubic response curve plus a global sensitivity multiplier to all

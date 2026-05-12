@@ -64,45 +64,8 @@
  */
 
 import type { Destroyable } from '../../../@types';
-import type { RenderScheduler } from '../subsystems/renderScheduler';
-
-export type InputBindings = {
-  /**
-   * Detach every listener attached by `attachEngineInputs`.
-   *
-   * Renamed from `detach()` so the bindings handle satisfies the
-   * shared `Destroyable` shape every subsystem now exposes.  The
-   * underlying mechanic is unchanged — walks the same two listener
-   * arrays the prior `detach()` did.
-   */
-  destroy(): void;
-};
-
-/**
- * 2D point in CSS-pixel space (i.e. `clientX`/`clientY`).  The engine
- * converts to texture-space pixels via its own `cssToTexPx` helper at
- * the call site that needs it (currently the click-resolver).
- */
-export type CssPx = { x: number; y: number };
-
-export type AttachEngineInputsOptions = {
-  /** The canvas element pointer listeners attach to. */
-  canvas: HTMLCanvasElement;
-  /** Render scheduler — wakes the loop after each event. */
-  scheduler: RenderScheduler;
-  /** Pointer moved over the canvas; arg is the CSS-pixel position. */
-  onPointerMove: (cssPx: CssPx) => void;
-  /** Pointer left the canvas; engine clears hover state. */
-  onPointerLeave: () => void;
-  /** Pointer pressed on the canvas; engine cancels tweens + clears hover. */
-  onPointerDown: () => void;
-  /** Pointer released anywhere (window-level); engine releases drag flag. */
-  onPointerUp: () => void;
-  /** Escape pressed anywhere (window-level); engine clears selection. */
-  onEscape: () => void;
-  /** Window resized; engine bumps the scheduler so the next frame resyncs. */
-  onResize: () => void;
-};
+import type { AttachEngineInputsOptions } from '../../../@types/input/AttachEngineInputsOptions';
+import type { InputBindings } from '../../../@types/input/InputBindings';
 
 export function attachEngineInputs(options: AttachEngineInputsOptions): InputBindings {
   const {
