@@ -127,6 +127,8 @@ The exported type names follow:
 
 The instance struct types (`ThumbnailInstance`, `DiskInstance`, `ProceduralDiskInstance`) are **not** renamed — they describe GPU vertex-buffer layouts, not concepts, and the parallel TS-types consolidation effort would clash with a rename. The renderer constructor names (`createThumbnailRenderer`, `createDiskRenderer`) are renamed to match their renderer types (`createTexturedQuadRenderer`, `createTexturedDiskRenderer`).
 
+**Field names track type names.** Every field, property, local variable, and constructor parameter that holds an instance of one of the renamed types is renamed in lockstep — `state.gpu.thumbnailRenderer` → `state.gpu.texturedQuadRenderer`, `state.gpu.diskRenderer` → `state.gpu.texturedDiskRenderer`, `PassDeps.thumbnailRenderer` / `PassDeps.diskRenderer` likewise, plus every destructure, function parameter, and test mock that names them. State objects should reflect actual type names accurately; leaving a field called `thumbnailRenderer` pointing at a `TexturedQuadRenderer` value is a readability trap. Two field names are explicitly **not** renamed because they refer to different concepts than the renamed types: `state.subsystems.thumbnails` (the on/off settings handle for the impostor pass — and which is being replaced by three new subsystem slots in this spec anyway) and `state.settings.thumbnails.enabled` (the user-facing Boolean toggle). The renderer field `state.gpu.proceduralDiskRenderer` also stays untouched because the renderer type itself is unchanged.
+
 ## File layout (after refactor)
 
 ```
@@ -386,6 +388,8 @@ export const texturedImpostorsPass: Pass = {
     // additive blending into the HDR target is commutative; matching the
     // legacy order keeps the visual baseline test exact.
     if (quads.length > 0) {
+      // PassDeps.texturedQuadRenderer holds a TexturedQuadRenderer — the
+      // field name tracks the type name post-rename.
       deps.texturedQuadRenderer.draw(
         pass, ctx.vp, [ctx.canvasSize.width, ctx.canvasSize.height],
         quads, ctx.drawCamPos, ctx.drawPxPerRad,
@@ -432,7 +436,7 @@ The atlas subsystem doesn't appear in this snippet — it's owned by `texturedIm
 
 The `EngineThumbnailsHandle` type (settings-side: on/off toggle for the impostor pass) is unchanged — it refers to the user-facing setting, not the subsystem. The corresponding settings key `state.settings.thumbnails.enabled` is unchanged.
 
-Bootstrap order in `wireSlots.ts`:
+Bootstrap order in `wireSlots.ts` (note: the destructure at the top of the function pulls `texturedQuadRenderer` and `texturedDiskRenderer` from `state.gpu`, matching their post-rename field names):
 
 1. `galaxyAtlas = createGalaxyAtlasSubsystem({ device, requestRender })`
 2. `texturedImpostors = createTexturedImpostorSubsystem({ device, atlas: galaxyAtlas, requestRender, fetcher })`
