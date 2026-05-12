@@ -47,7 +47,7 @@
  * Pre-rename this file was `quadRenderer.ts` — a name that described
  * the GPU shape (a textured quad) rather than the purpose (galaxy
  * thumbnails). Every other renderer in the fleet names its purpose:
- * `diskRenderer` (galaxy disks), `proceduralDiskRenderer` (procedural
+ * `texturedDiskRenderer` (galaxy disks), `proceduralDiskRenderer` (procedural
  * disks), `milkyWayRenderer` (the Milky Way), `filamentRenderer`
  * (cosmic filaments), `labelRenderer` (MSDF text labels). The shared
  * pipeline factory `createInstancedQuadRenderer` keeps the GPU-shape

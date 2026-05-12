@@ -40,7 +40,7 @@
  * ### Why deps are passed explicitly instead of lifted to EngineState
  *
  * Two reasons.  First, the IIFE-local renderers (`device`, `context`,
- * `milkyWayRenderer`, `filamentRenderer`, `thumbnailRenderer`, `diskRenderer`)
+ * `milkyWayRenderer`, `filamentRenderer`, `thumbnailRenderer`, `texturedDiskRenderer`)
  * are *only* read by the frame body — promoting them to `state.gpu.*`
  * would widen `EngineState`'s contract for one consumer's convenience,
  * and every other reader of `EngineState` would have to null-check
@@ -279,7 +279,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     filamentRenderer: deps.filamentRenderer,
     scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
     thumbnailRenderer: deps.thumbnailRenderer,
-    diskRenderer: deps.diskRenderer,
+    texturedDiskRenderer: deps.texturedDiskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
     settings: {
       pointSizePx: state.settings.points.sizePx,

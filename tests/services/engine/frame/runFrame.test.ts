@@ -136,7 +136,7 @@ function makeDeps(opts: {
     milkyWayRenderer: {} as unknown as RunFrameDeps['milkyWayRenderer'],
     filamentRenderer: {} as unknown as RunFrameDeps['filamentRenderer'],
     thumbnailRenderer: {} as unknown as RunFrameDeps['thumbnailRenderer'],
-    diskRenderer: {} as unknown as RunFrameDeps['diskRenderer'],
+    texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer'],
     milkyWayITimeEpochMs: 0,
   };
 }

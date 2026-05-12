@@ -28,7 +28,7 @@
  * **Every field on this bag shares the same lifecycle rule** — null
  * before bootstrap, non-null after `initGpu` resolves, released and
  * re-nulled by `destroy()`.  That symmetry is load-bearing: the
- * `thumbnailRenderer` / `diskRenderer` / `proceduralDiskRenderer` /
+ * `thumbnailRenderer` / `texturedDiskRenderer` / `proceduralDiskRenderer` /
  * `milkyWayRenderer` fields exist on this bag specifically so the
  * `destroy()` chain has a reachable reference to call `.destroy()` on
  * — they are not consumed via this bag at runtime (the frame loop
@@ -52,7 +52,7 @@ import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
-import type { DiskRenderer } from '../../rendering/DiskRenderer';
+import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 
@@ -120,7 +120,7 @@ export type EngineGpuHandles = {
    * exclusion as `thumbnailRenderer` above — see that field's docstring
    * for the full story.
    */
-  diskRenderer: DiskRenderer | null;
+  texturedDiskRenderer: TexturedDiskRenderer | null;
   /**
    * Procedural-disk renderer that bridges the visibility band between
    * point glow (~8 px) and textured disks (~24 px).  Same lifecycle,

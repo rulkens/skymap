@@ -167,7 +167,7 @@ function makeState(maxAbs: number): EngineState {
       labelRenderer: null,
       markerLineRenderer: null,
       thumbnailRenderer: null,
-      diskRenderer: null,
+      texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
       scalarVolumeRenderer: null,

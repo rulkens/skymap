@@ -163,7 +163,7 @@ function makeMockThumbnailRenderer() {
   return { bindAtlas: vi.fn(), draw: vi.fn() } as any;
 }
 
-function makeMockDiskRenderer() {
+function makeMockTexturedDiskRenderer() {
   return { bindAtlas: vi.fn(), draw: vi.fn() } as any;
 }
 
@@ -220,7 +220,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
   const postProcess = makeMockPostProcess(callLog, hdrTargetView);
   const thumbnails = makeMockThumbnails(callLog);
   const thumbnailRenderer = makeMockThumbnailRenderer();
-  const diskRenderer = makeMockDiskRenderer();
+  const texturedDiskRenderer = makeMockTexturedDiskRenderer();
   const cam = makeCam();
   const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
 
@@ -286,7 +286,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     milkyWayRenderer,
     thumbnails,
     thumbnailRenderer,
-    diskRenderer,
+    texturedDiskRenderer,
     cam,
     clouds,
     // Keep these on the fixture root so tests can read them directly
@@ -311,7 +311,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       filamentRenderer: null,
       scalarVolumeRenderer: null,
       thumbnailRenderer,
-      diskRenderer,
+      texturedDiskRenderer,
       settings,
       famousMeta: [],
       famousXrefs: {},

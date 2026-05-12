@@ -1,5 +1,5 @@
 /**
- * DiskInstance — per-instance CPU-side shape for the DiskRenderer.
+ * DiskInstance — per-instance CPU-side shape for the TexturedDiskRenderer.
  *
  * Per-instance attributes (48 bytes / 12 floats):
  *

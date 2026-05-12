@@ -11,7 +11,7 @@
 
 import type { EngineCallbacks } from '../EngineCallbacks';
 import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
-import type { DiskRenderer } from '../../rendering/DiskRenderer';
+import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { FpsCounter } from '../subsystems/FpsCounter';
@@ -41,7 +41,7 @@ export type RunFrameDeps = {
   /** Textured-quad renderer for galaxy thumbnails. */
   thumbnailRenderer: ThumbnailRenderer;
   /** 3D-oriented disk renderer for large galaxies. */
-  diskRenderer: DiskRenderer;
+  texturedDiskRenderer: TexturedDiskRenderer;
   /**
    * Wall-clock epoch (ms, from `performance.now`) snapshot taken at
    * engine construction; used to derive the Milky Way impostor's iTime

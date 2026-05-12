@@ -16,7 +16,7 @@
  */
 
 import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
-import type { DiskRenderer } from '../../rendering/DiskRenderer';
+import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
@@ -29,7 +29,7 @@ export type PassDeps = {
   /** Atlas-bound textured-billboard renderer for galaxy thumbnails. */
   thumbnailRenderer: ThumbnailRenderer;
   /** 3D-oriented procedural-disk renderer for large galaxies. */
-  diskRenderer: DiskRenderer;
+  texturedDiskRenderer: TexturedDiskRenderer;
   /**
    * Optional cosmic-web filament-skeleton renderer.  Null when the
    * deployment doesn't ship a `filaments.bin` (or the load is in

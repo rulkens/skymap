@@ -88,11 +88,11 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // is ever skipped/reordered.
   const milkyWayRenderer = state.gpu.milkyWayRenderer;
   const thumbnailRenderer = state.gpu.thumbnailRenderer;
-  const diskRenderer = state.gpu.diskRenderer;
+  const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
   if (
     milkyWayRenderer === null ||
     thumbnailRenderer === null ||
-    diskRenderer === null
+    texturedDiskRenderer === null
   ) {
     throw new Error(
       'startLoop: milkyWay/thumbnail/disk renderers must be initialised by initGpu before this phase runs',
@@ -130,7 +130,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     milkyWayRenderer,
     filamentRenderer: state.gpu.filamentRenderer!,
     thumbnailRenderer,
-    diskRenderer,
+    texturedDiskRenderer,
     milkyWayITimeEpochMs,
   };
 

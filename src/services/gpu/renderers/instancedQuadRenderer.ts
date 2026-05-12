@@ -5,7 +5,7 @@
  *
  * ## Why this exists
  *
- * Pre-Spec G the three renderers (`thumbnailRenderer.ts`, `diskRenderer.ts`,
+ * Pre-Spec G the three renderers (`thumbnailRenderer.ts`, `texturedDiskRenderer.ts`,
  * `proceduralDiskRenderer.ts`) each carried a near-identical block of
  * WebGPU plumbing:
  *
@@ -62,7 +62,7 @@
  *
  *   - `fixed`: preallocate one `max * 48`-byte vertex buffer at
  *     construction. Each draw `writeBuffer`s into offset 0. Matches
- *     ThumbnailRenderer + DiskRenderer, whose engine-side filters cap the
+ *     ThumbnailRenderer + TexturedDiskRenderer, whose engine-side filters cap the
  *     per-frame count at the atlas slot count (256). Over-capacity is
  *     a programming error in the engine; we don't truncate or guard.
  *   - `grow`: lazy first-allocation, regrow on overflow. Matches
@@ -127,7 +127,7 @@ export const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
  *
  * Total: 96 bytes. The `pxPerRad` slot is consumer-specific —
  * ThumbnailRenderer + ProceduralDiskRenderer use it for pixel-radius
- * computation; DiskRenderer leaves it as zero padding. The factory
+ * computation; TexturedDiskRenderer leaves it as zero padding. The factory
  * always writes whatever the caller passes in `draw`'s `pxPerRad`
  * (default 0), so consumers that don't care can simply omit it.
  */

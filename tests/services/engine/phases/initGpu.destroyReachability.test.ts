@@ -3,7 +3,7 @@
  *
  * ### What this protects
  *
- * Four renderers (`thumbnailRenderer`, `diskRenderer`,
+ * Four renderers (`thumbnailRenderer`, `texturedDiskRenderer`,
  * `proceduralDiskRenderer`, `milkyWayRenderer`) each own GPU resources
  * — uniform buffer + per-instance buffer + per-renderer specifics — and
  * each expose a `.destroy()` method.  Pre-2026-05-08 they lived only on
@@ -94,8 +94,8 @@ vi.mock('../../../../src/services/gpu/renderers/thumbnailRenderer', () => ({
   createThumbnailRenderer: vi.fn(() => makeStub('thumbnailRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/diskRenderer', () => ({
-  createDiskRenderer: vi.fn(() => makeStub('diskRenderer')),
+vi.mock('../../../../src/services/gpu/renderers/texturedDiskRenderer', () => ({
+  createTexturedDiskRenderer: vi.fn(() => makeStub('texturedDiskRenderer')),
 }));
 
 vi.mock('../../../../src/services/gpu/renderers/proceduralDiskRenderer', () => ({
@@ -158,7 +158,7 @@ function makeState(): EngineState {
       labelRenderer: null,
       markerLineRenderer: null,
       thumbnailRenderer: null,
-      diskRenderer: null,
+      texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
       scalarVolumeRenderer: null,
@@ -219,7 +219,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     for (const k of Object.keys(stubs)) delete stubs[k];
   });
 
-  it('writes thumbnailRenderer/diskRenderer/proceduralDiskRenderer/milkyWayRenderer onto state.gpu.*', async () => {
+  it('writes thumbnailRenderer/texturedDiskRenderer/proceduralDiskRenderer/milkyWayRenderer onto state.gpu.*', async () => {
     const state = makeState();
     const deps = makeDeps(state);
     await initGpu(state, deps);
@@ -228,7 +228,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // reachability claim PR #66's follow-up makes.  Pre-fix these were
     // stashed only on `deps.phaseLocals`.
     expect(state.gpu.thumbnailRenderer).toBe(stubs.thumbnailRenderer);
-    expect(state.gpu.diskRenderer).toBe(stubs.diskRenderer);
+    expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
     expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
     expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
   });
@@ -251,12 +251,12 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(deps.phaseLocals).toBeDefined();
     // PhaseLocals is now exactly { device, context } — no renderer fields.
     expect(deps.phaseLocals!).not.toHaveProperty('thumbnailRenderer');
-    expect(deps.phaseLocals!).not.toHaveProperty('diskRenderer');
+    expect(deps.phaseLocals!).not.toHaveProperty('texturedDiskRenderer');
     expect(deps.phaseLocals!).not.toHaveProperty('proceduralDiskRenderer');
     expect(deps.phaseLocals!).not.toHaveProperty('milkyWayRenderer');
     // The renderers are still reachable for destroy + consumption via state.gpu.*.
     expect(state.gpu.thumbnailRenderer).toBe(stubs.thumbnailRenderer);
-    expect(state.gpu.diskRenderer).toBe(stubs.diskRenderer);
+    expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
     expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
     expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
   });
@@ -273,22 +273,22 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // then the renderer's destroy spy MUST fire.
     state.gpu.thumbnailRenderer?.destroy();
     state.gpu.thumbnailRenderer = null;
-    state.gpu.diskRenderer?.destroy();
-    state.gpu.diskRenderer = null;
+    state.gpu.texturedDiskRenderer?.destroy();
+    state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
     state.gpu.proceduralDiskRenderer = null;
     state.gpu.milkyWayRenderer?.destroy();
     state.gpu.milkyWayRenderer = null;
 
     expect(stubs.thumbnailRenderer!.destroy).toHaveBeenCalledTimes(1);
-    expect(stubs.diskRenderer!.destroy).toHaveBeenCalledTimes(1);
+    expect(stubs.texturedDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.proceduralDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.milkyWayRenderer!.destroy).toHaveBeenCalledTimes(1);
 
     // Symmetric null-out matches the rest of the bag — see
     // `EngineGpuHandles.d.ts`'s lifecycle docstring.
     expect(state.gpu.thumbnailRenderer).toBeNull();
-    expect(state.gpu.diskRenderer).toBeNull();
+    expect(state.gpu.texturedDiskRenderer).toBeNull();
     expect(state.gpu.proceduralDiskRenderer).toBeNull();
     expect(state.gpu.milkyWayRenderer).toBeNull();
   });
@@ -302,8 +302,8 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     expect(() => {
       state.gpu.thumbnailRenderer?.destroy();
       state.gpu.thumbnailRenderer = null;
-      state.gpu.diskRenderer?.destroy();
-      state.gpu.diskRenderer = null;
+      state.gpu.texturedDiskRenderer?.destroy();
+      state.gpu.texturedDiskRenderer = null;
       state.gpu.proceduralDiskRenderer?.destroy();
       state.gpu.proceduralDiskRenderer = null;
       state.gpu.milkyWayRenderer?.destroy();

@@ -1,5 +1,5 @@
 /**
- * DiskRenderer — oriented 3D galaxy disks.
+ * TexturedDiskRenderer — oriented 3D galaxy disks (atlas-textured).
  *
  * Differs from ThumbnailRenderer in two ways:
  *   1. Each instance is tilted in 3D world space: the disk's normal points
@@ -34,7 +34,7 @@
  *
  * Pipeline / BGL / uniform buffer / instance buffer plumbing now lives
  * in `instancedQuadRenderer.ts`, shared with the thumbnail + procedural disk
- * renderers. This file owns: the consumer-facing `createDiskRenderer`
+ * renderers. This file owns: the consumer-facing `createTexturedDiskRenderer`
  * factory signature (preserved unchanged from Spec F), the
  * `DiskInstance → packed Float32Array` serialization, and the wrapper
  * `draw(...)` translating the engine's call convention into the
@@ -45,13 +45,13 @@ import type { mat4 } from 'gl-matrix';
 import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
-import type { DiskRenderer } from '../../../@types/rendering/DiskRenderer';
+import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import vsCode from '../shaders/disks/vertex.wesl?static';
 import fsCode from '../shaders/disks/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
-export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRenderer {
+export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256): TexturedDiskRenderer {
   const inner = createInstancedQuadRenderer(ctx, {
     label: 'disk',
     vertexSource: vsCode,
@@ -106,14 +106,14 @@ export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRen
       instanceBytes: data,
       instanceCount: instances.length,
       camPosWorld: camPos,
-      // DiskRenderer's shader doesn't need pxPerRad — the disk
+      // TexturedDiskRenderer's shader doesn't need pxPerRad — the disk
       // geometry sizes itself in world space — so the trailing
       // uniform slot is left as zero padding (default).
     });
   }
 
-  const renderer: DiskRenderer = {
-    label: 'diskRenderer',
+  const renderer: TexturedDiskRenderer = {
+    label: 'texturedDiskRenderer',
     bindAtlas,
     draw,
     destroy: inner.destroy,

@@ -1,5 +1,5 @@
 import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
-import type { DiskRenderer } from '../../rendering/DiskRenderer';
+import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { ThumbnailFrameInput } from './ThumbnailFrameInput';
 
@@ -18,7 +18,7 @@ export type ThumbnailSubsystem = {
    */
   bindToRenderers(
     thumbnailRenderer: ThumbnailRenderer,
-    diskRenderer: DiskRenderer,
+    texturedDiskRenderer: TexturedDiskRenderer,
     proceduralDiskRenderer: ProceduralDiskRenderer,
   ): void;
   /**

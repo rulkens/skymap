@@ -94,7 +94,7 @@ export function renderFrame(input: RenderFrameInput): void {
     filamentRenderer,
     scalarVolumeRenderer,
     thumbnailRenderer,
-    diskRenderer,
+    texturedDiskRenderer,
     settings,
     famousMeta,
     famousXrefs,
@@ -108,7 +108,7 @@ export function renderFrame(input: RenderFrameInput): void {
   // `PassDeps` declaration for the per-field rationale.
   const deps: PassDeps = {
     thumbnailRenderer,
-    diskRenderer,
+    texturedDiskRenderer,
     filamentRenderer,
     scalarVolumeRenderer,
     milkyWayRenderer,

@@ -253,7 +253,7 @@ function makeState(overrides: Partial<{
       labelRenderer: null,
       markerLineRenderer: null,
       thumbnailRenderer: {} as never,
-      diskRenderer: {} as never,
+      texturedDiskRenderer: {} as never,
       proceduralDiskRenderer: {} as never,
       milkyWayRenderer: null,
       scalarVolumeRenderer: {

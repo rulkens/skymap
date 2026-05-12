@@ -9,7 +9,7 @@
  *   1. `thumbnailRenderer` — atlas-backed textured billboards for galaxies
  *      whose JPEG/WebP cutouts have been fetched and uploaded to the
  *      2048×2048 LRU atlas.
- *   2. `diskRenderer` — view-aligned procedural ellipses for galaxies
+ *   2. `texturedDiskRenderer` — view-aligned procedural ellipses for galaxies
  *      whose apparent size is large enough for the disk to look like
  *      more than a point but whose thumbnail hasn't landed yet (or
  *      whose source doesn't have a thumbnail provider).
@@ -33,7 +33,7 @@
  * - `settings.visibleSourceMask` — mirror the points-pass culling
  *   rule so disabled surveys don't fetch thumbnails
  * - `deps.clouds`, `deps.famousMeta`, `deps.famousXrefs`,
- *   `deps.thumbnailRenderer`, `deps.diskRenderer` — every other
+ *   `deps.thumbnailRenderer`, `deps.texturedDiskRenderer` — every other
  *   `runFrame` argument
  */
 
@@ -59,7 +59,7 @@ export const galaxyThumbnailsPass: Pass = {
       pxPerRad: drawPxPerRad,
       camPos: drawCamPos,
       thumbnailRenderer: deps.thumbnailRenderer,
-      diskRenderer: deps.diskRenderer,
+      texturedDiskRenderer: deps.texturedDiskRenderer,
       famousMeta: deps.famousMeta,
       famousXrefs: deps.famousXrefs,
     });

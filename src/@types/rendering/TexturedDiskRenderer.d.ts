@@ -1,19 +1,20 @@
 /**
- * DiskRenderer — oriented 3D galaxy disks (renderer handle shape).
+ * TexturedDiskRenderer — oriented 3D galaxy disks (renderer handle
+ * shape) — atlas-textured LOD-2 sibling of texturedQuadRenderer.
  *
  * Differs from ThumbnailRenderer: each instance is tilted in 3D world
  * space (the disk's normal points toward the camera by default, rotated
  * by PA, tilted by inclination cos(i) = axisRatio).  See the runtime
- * `diskRenderer.ts` module header for the full pipeline rationale.
+ * `texturedDiskRenderer.ts` module header for the full pipeline rationale.
  */
 
 import type { mat4 } from 'gl-matrix';
 import type { Vec3 } from '../math/Vec3';
 import type { DiskInstance } from './DiskInstance';
 
-export type DiskRenderer = {
+export type TexturedDiskRenderer = {
   /**
-   * Human-readable identifier (`'diskRenderer'`).  Part of the
+   * Human-readable identifier (`'texturedDiskRenderer'`).  Part of the
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;

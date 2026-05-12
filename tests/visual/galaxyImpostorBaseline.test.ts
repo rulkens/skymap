@@ -17,7 +17,7 @@ import { createThumbnailSubsystem } from '../../src/services/engine/subsystems/t
 import type { PointCloud } from '../../src/@types/data/PointCloud';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 import type { ThumbnailRenderer } from '../../src/@types/rendering/ThumbnailRenderer';
-import type { DiskRenderer } from '../../src/@types/rendering/DiskRenderer';
+import type { TexturedDiskRenderer } from '../../src/@types/rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../src/@types/rendering/ProceduralDiskRenderer';
 
 function makeFakeDevice(): GPUDevice {
@@ -125,8 +125,8 @@ describe('galaxy-impostor visual baseline', () => {
     const disk = {
       bindAtlas: vi.fn(),
       draw: diskDraw,
-      label: 'diskRenderer',
-    } as unknown as DiskRenderer;
+      label: 'texturedDiskRenderer',
+    } as unknown as TexturedDiskRenderer;
     const procDisk = {
       draw: procDraw,
       label: 'proceduralDiskRenderer',
@@ -154,7 +154,7 @@ describe('galaxy-impostor visual baseline', () => {
         [number, number, number]
       >,
       thumbnailRenderer: quad,
-      diskRenderer: disk,
+      texturedDiskRenderer: disk,
       famousMeta: [],
       famousXrefs: {},
     };
@@ -186,12 +186,12 @@ describe('galaxy-impostor visual baseline', () => {
       });
     }
     if (diskDraw.mock.calls.length > 0) {
-      // diskRenderer.draw(pass, viewProj, viewportPx, camPos, instances)
+      // texturedDiskRenderer.draw(pass, viewProj, viewportPx, camPos, instances)
       // — instances is positional arg 4 (camPos comes before instances here,
       // unlike the thumbnail/procedural signatures).
       const instances = diskDraw.mock.calls[0]![4] as ReadonlyArray<object>;
       records.push({
-        renderer: 'diskRenderer',
+        renderer: 'texturedDiskRenderer',
         count: instances.length,
         hashes: hashInstances(instances),
       });
@@ -222,7 +222,7 @@ describe('galaxy-impostor visual baseline', () => {
               "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.0625|u1=0.125|v0=0|v1=0.0625|x=10|y=0.001|z=0",
               "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0|u1=0.0625|v0=0|v1=0.0625|x=10|y=0|z=0",
             ],
-            "renderer": "diskRenderer",
+            "renderer": "texturedDiskRenderer",
           },
           {
             "count": 8,

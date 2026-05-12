@@ -1,7 +1,7 @@
 /**
  * thumbnailSubsystem — unit tests for the per-frame galaxy-thumbnail
  * pipeline.  We mock the GPU device, the ThumbnailRenderer, and the
- * DiskRenderer with `vi.fn()` stubs so the subsystem can run end-to-
+ * TexturedDiskRenderer with `vi.fn()` stubs so the subsystem can run end-to-
  * end without WebGPU.  The atlas's slot bookkeeping doesn't actually
  * need a device (it only touches `device.queue.copyExternalImageToTexture`
  * inside `uploadBitmap`), so we provide a minimal shim that swallows
@@ -151,8 +151,8 @@ function makeMockThumbnailRenderer() {
   } as any;
 }
 
-/** Mock DiskRenderer — same surface as ThumbnailRenderer for our purposes. */
-function makeMockDiskRenderer() {
+/** Mock TexturedDiskRenderer — same surface as ThumbnailRenderer for our purposes. */
+function makeMockTexturedDiskRenderer() {
   return {
     bindAtlas: vi.fn(),
     draw: vi.fn(),
@@ -160,7 +160,7 @@ function makeMockDiskRenderer() {
 }
 
 /**
- * Mock ProceduralDiskRenderer.  Unlike Quad/DiskRenderer it doesn't
+ * Mock ProceduralDiskRenderer.  Unlike Quad/TexturedDiskRenderer it doesn't
  * sample the atlas, so no `bindAtlas` — only `draw`.  The subsystem's
  * `bindToRenderers` stash-step writes the reference into a closure
  * variable rather than calling any method on it, so even an empty
@@ -186,7 +186,7 @@ function makeFrameInput(
   visibleMask: number = 0xffffffff,
 ) {
   const thumbnailRenderer = makeMockThumbnailRenderer();
-  const diskRenderer = makeMockDiskRenderer();
+  const texturedDiskRenderer = makeMockTexturedDiskRenderer();
   return {
     cam,
     clouds,
@@ -199,7 +199,7 @@ function makeFrameInput(
       [number, number, number]
     >,
     thumbnailRenderer,
-    diskRenderer,
+    texturedDiskRenderer,
     famousMeta: [],
     famousXrefs: {},
   };
@@ -221,7 +221,7 @@ describe('createThumbnailSubsystem', () => {
       fetcher: async () => null,
     });
     const quad = makeMockThumbnailRenderer();
-    const disk = makeMockDiskRenderer();
+    const disk = makeMockTexturedDiskRenderer();
     const procDisk = makeMockProceduralDiskRenderer();
     sys.bindToRenderers(quad, disk, procDisk);
     expect(quad.bindAtlas).toHaveBeenCalledTimes(1);
@@ -241,7 +241,7 @@ describe('createThumbnailSubsystem', () => {
     // Neither renderer.draw nor any fetch was issued because we
     // didn't bindToRenderers — the guard fires.
     expect(input.thumbnailRenderer.draw).not.toHaveBeenCalled();
-    expect(input.diskRenderer.draw).not.toHaveBeenCalled();
+    expect(input.texturedDiskRenderer.draw).not.toHaveBeenCalled();
   });
 
   it('skips clouds whose source bit is clear in visibleSourceMask', async () => {
@@ -253,7 +253,7 @@ describe('createThumbnailSubsystem', () => {
     });
     sys.bindToRenderers(
       makeMockThumbnailRenderer(),
-      makeMockDiskRenderer(),
+      makeMockTexturedDiskRenderer(),
       makeMockProceduralDiskRenderer(),
     );
     const cam = makeCam();
@@ -279,7 +279,7 @@ describe('createThumbnailSubsystem', () => {
       });
       sys.bindToRenderers(
         makeMockThumbnailRenderer(),
-        makeMockDiskRenderer(),
+        makeMockTexturedDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
       const cam = makeCam();
@@ -312,7 +312,7 @@ describe('createThumbnailSubsystem', () => {
       });
       sys.bindToRenderers(
         makeMockThumbnailRenderer(),
-        makeMockDiskRenderer(),
+        makeMockTexturedDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
       const cam = makeCam();
@@ -342,7 +342,7 @@ describe('createThumbnailSubsystem', () => {
       });
       sys.bindToRenderers(
         makeMockThumbnailRenderer(),
-        makeMockDiskRenderer(),
+        makeMockTexturedDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
       const cam = makeCam();
@@ -383,7 +383,7 @@ describe('createThumbnailSubsystem', () => {
       });
       sys.bindToRenderers(
         makeMockThumbnailRenderer(),
-        makeMockDiskRenderer(),
+        makeMockTexturedDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
       const cam = makeCam();
@@ -420,7 +420,7 @@ describe('createThumbnailSubsystem', () => {
       });
       sys.bindToRenderers(
         makeMockThumbnailRenderer(),
-        makeMockDiskRenderer(),
+        makeMockTexturedDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
       const cam = makeCam();
@@ -449,7 +449,7 @@ describe('createThumbnailSubsystem', () => {
       });
       sys.bindToRenderers(
         makeMockThumbnailRenderer(),
-        makeMockDiskRenderer(),
+        makeMockTexturedDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
       const cam = makeCam();
@@ -480,7 +480,7 @@ describe('createThumbnailSubsystem', () => {
       });
       sys.bindToRenderers(
         makeMockThumbnailRenderer(),
-        makeMockDiskRenderer(),
+        makeMockTexturedDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
       const cam = makeCam();
@@ -513,7 +513,7 @@ describe('createThumbnailSubsystem', () => {
       });
       sys.bindToRenderers(
         makeMockThumbnailRenderer(),
-        makeMockDiskRenderer(),
+        makeMockTexturedDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
       const cam = makeCam();
@@ -543,7 +543,7 @@ describe('createThumbnailSubsystem', () => {
       });
       sys.bindToRenderers(
         makeMockThumbnailRenderer(),
-        makeMockDiskRenderer(),
+        makeMockTexturedDiskRenderer(),
         makeMockProceduralDiskRenderer(),
       );
       const cam = makeCam();
@@ -583,7 +583,7 @@ describe('createThumbnailSubsystem', () => {
         decimationFactor: 2,
       });
       const quad = makeMockThumbnailRenderer();
-      const disk = makeMockDiskRenderer();
+      const disk = makeMockTexturedDiskRenderer();
       sys.bindToRenderers(quad, disk, makeMockProceduralDiskRenderer());
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
@@ -601,7 +601,7 @@ describe('createThumbnailSubsystem', () => {
       const inputF5 = makeFrameInput(cam, clouds);
       sys.runFrame(inputF5);
       const quadsF5 = inputF5.thumbnailRenderer.draw.mock.calls.at(-1)?.[3] ?? [];
-      const disksF5 = inputF5.diskRenderer.draw.mock.calls.at(-1)?.[4] ?? [];
+      const disksF5 = inputF5.texturedDiskRenderer.draw.mock.calls.at(-1)?.[4] ?? [];
       expect(quadsF5.length + disksF5.length).toBe(4);
     });
 
@@ -620,7 +620,7 @@ describe('createThumbnailSubsystem', () => {
         decimationFactor: 1, // walk the whole cloud every frame for a clean assertion
       });
       const quad = makeMockThumbnailRenderer();
-      const disk = makeMockDiskRenderer();
+      const disk = makeMockTexturedDiskRenderer();
       sys.bindToRenderers(quad, disk, makeMockProceduralDiskRenderer());
       const cam = makeCam();
       const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
@@ -634,7 +634,7 @@ describe('createThumbnailSubsystem', () => {
       sys.runFrame(inputF2);
       const f2Total =
         (inputF2.thumbnailRenderer.draw.mock.calls.at(-1)?.[3]?.length ?? 0) +
-        (inputF2.diskRenderer.draw.mock.calls.at(-1)?.[4]?.length ?? 0);
+        (inputF2.texturedDiskRenderer.draw.mock.calls.at(-1)?.[4]?.length ?? 0);
       expect(f2Total).toBeGreaterThanOrEqual(2);
 
       // Frame 3: hide SDSS → the per-cloud guard skips the loop entirely
@@ -642,10 +642,10 @@ describe('createThumbnailSubsystem', () => {
       const inputF3 = makeFrameInput(cam, clouds, 0);
       sys.runFrame(inputF3);
       const drawCallF3Q = inputF3.thumbnailRenderer.draw.mock.calls.length;
-      const drawCallF3D = inputF3.diskRenderer.draw.mock.calls.length;
+      const drawCallF3D = inputF3.texturedDiskRenderer.draw.mock.calls.length;
       // Either no draw at all, or a draw with zero instances.
       const quadsF3 = inputF3.thumbnailRenderer.draw.mock.calls.at(-1)?.[3] ?? [];
-      const disksF3 = inputF3.diskRenderer.draw.mock.calls.at(-1)?.[4] ?? [];
+      const disksF3 = inputF3.texturedDiskRenderer.draw.mock.calls.at(-1)?.[4] ?? [];
       expect(quadsF3.length).toBe(0);
       expect(disksF3.length).toBe(0);
       // Touching mock variables to satisfy the no-unused-variable lint.

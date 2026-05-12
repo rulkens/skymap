@@ -34,7 +34,7 @@
  *   this is fine: nothing else reads the clock while the toggle is
  *   off.
  *
- * - The ThumbnailRenderer and DiskRenderer instances themselves.  The
+ * - The ThumbnailRenderer and TexturedDiskRenderer instances themselves.  The
  *   subsystem just *uses* them; it doesn't own them.  They have other
  *   consumers (selection halo, etc.) and live longer than the
  *   subsystem's runFrame() invocation.
@@ -73,7 +73,7 @@ import type { ThumbnailInstance } from '../../../@types/rendering/ThumbnailInsta
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 import type { ThumbnailRenderer } from '../../../@types/rendering/ThumbnailRenderer';
-import type { DiskRenderer } from '../../../@types/rendering/DiskRenderer';
+import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
@@ -343,11 +343,11 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
 
   function bindToRenderers(
     thumbnailRenderer: ThumbnailRenderer,
-    diskRenderer: DiskRenderer,
+    texturedDiskRenderer: TexturedDiskRenderer,
     proceduralDiskRenderer: ProceduralDiskRenderer,
   ): void {
     thumbnailRenderer.bindAtlas(atlas.getTextureView());
-    diskRenderer.bindAtlas(atlas.getTextureView());
+    texturedDiskRenderer.bindAtlas(atlas.getTextureView());
     proceduralDiskRendererRef = proceduralDiskRenderer;
     bound = true;
   }
@@ -366,7 +366,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
       pxPerRad,
       camPos,
       thumbnailRenderer,
-      diskRenderer,
+      texturedDiskRenderer,
       famousMeta,
     } = frameInput;
 
@@ -795,7 +795,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
 
     // ── Back-to-front sort for correct alpha compositing ────────────────
     //
-    // Both ThumbnailRenderer and DiskRenderer use premultiplied "over"
+    // Both ThumbnailRenderer and TexturedDiskRenderer use premultiplied "over"
     // blending, which is order-dependent: a far galaxy drawn AFTER a near
     // one composites on top of it, breaking the painter's expectation.
     // We sort each list by descending camera-distance² so far galaxies
@@ -831,7 +831,7 @@ export function createThumbnailSubsystem(input: CreateThumbnailSubsystemInput): 
       );
     }
     if (disks.length > 0) {
-      diskRenderer.draw(pass, viewProj, [canvasSize.width, canvasSize.height], camPos, disks);
+      texturedDiskRenderer.draw(pass, viewProj, [canvasSize.width, canvasSize.height], camPos, disks);
     }
     // Procedural-disk pass.  In the steady-state crossfade band [8, 14]
     // px the textured passes don't fire at all (their gate is 24 px),
