@@ -86,13 +86,13 @@
  * @module
  */
 
-import type { Destroyable } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import { BiasMode } from '../../../data/biasMode';
 import { Source, ALL_SOURCES } from '../../../data/sources';
 import type { ComputeSchechterRatiosInput } from '../bake/computeSchechterRatios';
 import type { ComputeAngularWeightsInput } from '../bake/computeAngularWeights';
-import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
+import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler
 // to emit each `.worker.ts` file as its own worker chunk and hand back a

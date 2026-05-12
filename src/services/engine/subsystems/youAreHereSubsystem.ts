@@ -23,10 +23,11 @@
  * `produceLabels` is now cheap enough to call every frame.
  */
 
-import type { Label } from '../../gpu/renderers/labelRenderer';
-import type { MarkerLine } from '../../gpu/renderers/markerLineRenderer';
+import type { Label } from '../../../@types/rendering/Label';
+import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
 import type { ReadyFrameContext } from '../frame/frameContext';
-import type { Destroyable, EngineState } from '../../../@types';
+import type { EngineState } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import type { LabelProducer, LabelProducerOutput } from './labelProducer';
 import { youAreHereAlpha } from '../../gpu/labels/youAreHereVisibility';

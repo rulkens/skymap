@@ -43,7 +43,7 @@
  * future caller to reach in and poke.
  */
 
-import type { Destroyable } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { CameraTween } from '../../../@types/camera/CameraTween';
 import type { TweenManager } from '../../../@types/camera/TweenManager';

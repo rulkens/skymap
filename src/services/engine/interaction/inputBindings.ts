@@ -63,7 +63,7 @@
  * setters / per-frame body don't have to think about it.
  */
 
-import type { Destroyable } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { AttachEngineInputsOptions } from '../../../@types/input/AttachEngineInputsOptions';
 import type { InputBindings } from '../../../@types/input/InputBindings';
 

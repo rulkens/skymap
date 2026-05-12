@@ -65,88 +65,15 @@
  * filter + clamp-to-edge gives smooth sub-pixel glyph rendering.
  */
 
-import type { GpuContext, Renderer } from '../../../@types';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { Vec4 } from '../../../@types/math/Vec4';
-import type { FontMetrics } from '../labels/fontMetrics';
-import { layoutLabel, type LabelAlignX } from '../labels/labelLayout';
+import type { GpuContext } from '../../../@types/rendering/GpuContext';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { Label } from '../../../@types/rendering/Label';
+import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
+import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
+import { layoutLabel } from '../labels/labelLayout';
 import vsCode from '../shaders/labels/vertex.wesl?static';
 import fsCode from '../shaders/labels/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-
-// ─── public label shape ────────────────────────────────────────────────────
-
-export type Label = {
-  id: string;
-  worldPos: Vec3;
-  text: string;
-  /** Target em pixel height at the label's natural viewing distance. */
-  pixelSize: number;
-  /** RGBA premultiplied, defaults to [1,1,1,1]. */
-  color?: Vec4;
-  /** Lower clamp on on-screen em height in pixels (default 8). */
-  minPixelSize?: number;
-  /** Upper clamp on on-screen em height in pixels (default 64). */
-  maxPixelSize?: number;
-  /**
-   * World em size in Mpc — controls the natural distance at which
-   * `pixelSize` is reached.  Default 0.01 Mpc/em (so a 24 px label
-   * with worldEmMpc=0.01 reads at 24 px when ~0.01 Mpc away).
-   */
-  worldEmMpc?: number;
-  /** Fade multiplier in [0,1] driven by youAreHereVisibility. Default 1. */
-  fadeAlpha?: number;
-  /**
-   * Horizontal alignment of the text relative to `worldPos`.
-   * Default 'left' (text extends rightward from the anchor).
-   * 'center' centers the text horizontally on the anchor — the
-   * "you are here" marker uses this so the vertical line passes
-   * through the middle of the text.
-   */
-  alignX?: LabelAlignX;
-};
-
-/**
- * Public handle returned by `createLabelRenderer`.  Mirrors the shape of
- * other engine handles (`SelectionSubsystem`, `ThumbnailSubsystem`,
- * `BiasCorrectionSubsystem`): explicit method type, no internals leaked.
- */
-export type LabelRenderer = {
-  /**
-   * Human-readable identifier (`'labelRenderer'`).  Part of the
-   * shared `Renderer` contract — see `src/@types/Renderer.d.ts`.
-   */
-  readonly label: string;
-  /**
-   * Replace the current label set.  Calling `setLabels([])` clears all
-   * labels.  Re-packs the CPU-side glyph and label scratch buffers and,
-   * if a real GPU device is present, uploads to the GPU storage /
-   * instance buffers.
-   *
-   * Designed to be called by `youAreHereSubsystem.runFrame` whenever the
-   * label set changes (camera distance crosses the fade band threshold).
-   * For the "you are here" use-case there will typically be 1–3 labels
-   * so the cost is negligible.
-   */
-  setLabels(labels: Label[]): void;
-  /**
-   * Issue the label draw call into an in-flight render pass.  Must be
-   * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`
-   * implementation.  The pass's render target format must match the
-   * `format` field of the `GpuContext` passed to `createLabelRenderer`.
-   */
-  render(
-    pass: GPURenderPassEncoder,
-    viewProj: Float32Array,
-    viewportSize: [number, number],
-  ): void;
-  /** Total glyph count across all active labels. Used by tests + debug HUD. */
-  glyphCount(): number;
-  /** Number of labels last passed to setLabels. Used by tests + debug HUD. */
-  labelCount(): number;
-  /** Release all GPU resources. No-op if constructed with a null device. */
-  destroy(): void;
-};
 
 // ─── buffer constants ──────────────────────────────────────────────────────
 

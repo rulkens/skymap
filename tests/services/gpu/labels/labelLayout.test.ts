@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { layoutLabel, type GlyphQuad } from '../../../../src/services/gpu/labels/labelLayout';
+import { layoutLabel } from '../../../../src/services/gpu/labels/labelLayout';
+import type { GlyphQuad } from '../../../../src/@types/rendering/GlyphQuad';
 import { parseFontMetrics } from '../../../../src/services/gpu/labels/fontMetrics';
 
 const FIXTURE = {

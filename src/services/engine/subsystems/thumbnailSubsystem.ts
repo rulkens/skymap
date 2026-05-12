@@ -68,16 +68,18 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
-import type { Destroyable, ThumbnailInstance } from '../../../@types';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
+import type { ThumbnailInstance } from '../../../@types/rendering/ThumbnailInstance';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
-import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
-import type { DiskRenderer, DiskInstance } from '../../gpu/renderers/diskRenderer';
-import type { ProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
-import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
+import type { ThumbnailRenderer } from '../../../@types/rendering/ThumbnailRenderer';
+import type { DiskRenderer } from '../../../@types/rendering/DiskRenderer';
+import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
+import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
+import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDecZ } from '../../../utils/math';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';

@@ -100,15 +100,8 @@ import vsCode from '../shaders/toneMap/vertex.wesl?static';
 import fsCode from '../shaders/toneMap/fragment.wesl?static';
 import { ToneMapCurve } from '../../../data/toneMapCurve';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-
-/**
- * Plain `{ width, height }` pair, kept local to this module.  We
- * deliberately don't reuse a DOM type like `DOMRectReadOnly` — those
- * carry extra fields (x, y, top, ...) the GPU descriptor doesn't
- * want, and the pinhole-explicit name makes the resize call site
- * ("`resize({ width, height })`") read like English.
- */
-export type Size = { readonly width: number; readonly height: number };
+import type { Size } from '../../../@types/rendering/Size';
+import type { PostProcess } from '../../../@types/rendering/PostProcess';
 
 /** Default whitepoint for Reinhard-extended — input value where the curve reaches 1.0. */
 const DEFAULT_WHITEPOINT = 4.0;
@@ -171,28 +164,6 @@ export function acesFilmic(c: number, exposure: number): number {
 }
 
 // ─── Aggregate factory ────────────────────────────────────────────────────
-
-export type PostProcess = {
-  /** Current HDR colour-attachment view, stable until the next `resize()` call. */
-  readonly view: GPUTextureView;
-  /** Recreate the HDR texture at a new size.  Old view becomes invalid. */
-  resize(size: Size): void;
-  /**
-   * Encode the fullscreen tone-map blit `hdrView → swapView` onto the
-   * caller's command encoder.  Begins+ends its own render pass.  The
-   * HDR view used as the input is the one the aggregate currently
-   * owns — callers no longer pass it explicitly, which prevents a
-   * stale-after-resize view from leaking back in.
-   */
-  draw(
-    encoder: GPUCommandEncoder,
-    swapView: GPUTextureView,
-    exposure: number,
-    curve: ToneMapCurve,
-  ): void;
-  /** Tear down — releases both the HDR texture and the tone-map uniform buffer. */
-  destroy(): void;
-};
 
 export function createPostProcess(
   device: GPUDevice,

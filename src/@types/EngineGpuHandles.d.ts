@@ -44,21 +44,21 @@
  * GPU bag rather than the whole `EngineState`.
  */
 
-import type { PointRenderer } from '../services/gpu/renderers/pointRenderer';
-import type { PostProcess } from '../services/gpu/passes/postProcess';
-import type { createPickRenderer } from '../services/gpu/renderers/pickRenderer';
-import type { FilamentRenderer } from '../services/gpu/renderers/filamentRenderer';
-import type { LabelRenderer } from '../services/gpu/renderers/labelRenderer';
-import type { MarkerLineRenderer } from '../services/gpu/renderers/markerLineRenderer';
-import type { ScalarVolumeRenderer } from '../services/gpu/renderers/scalarVolumeRenderer';
-import type { ThumbnailRenderer } from '../services/gpu/renderers/thumbnailRenderer';
-import type { DiskRenderer } from '../services/gpu/renderers/diskRenderer';
-import type { ProceduralDiskRenderer } from '../services/gpu/renderers/proceduralDiskRenderer';
-import type { MilkyWayRenderer } from '../services/gpu/renderers/milkyWayRenderer';
+import type { PointRenderer } from './rendering/PointRenderer';
+import type { PostProcess } from './rendering/PostProcess';
+import type { PickRenderer } from './rendering/PickRenderer';
+import type { FilamentRenderer } from './rendering/FilamentRenderer';
+import type { LabelRenderer } from './rendering/LabelRenderer';
+import type { MarkerLineRenderer } from './rendering/MarkerLineRenderer';
+import type { ScalarVolumeRenderer } from './rendering/ScalarVolumeRenderer';
+import type { ThumbnailRenderer } from './rendering/ThumbnailRenderer';
+import type { DiskRenderer } from './rendering/DiskRenderer';
+import type { ProceduralDiskRenderer } from './rendering/ProceduralDiskRenderer';
+import type { MilkyWayRenderer } from './rendering/MilkyWayRenderer';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
-  pickRenderer: ReturnType<typeof createPickRenderer> | null;
+  pickRenderer: PickRenderer | null;
   /**
    * Combined HDR offscreen target + tone-map post-process.  Pre-Phase-4
    * this was two fields (`hdrTarget` + `toneMapPass`); they merged into

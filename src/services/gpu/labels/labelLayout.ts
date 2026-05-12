@@ -30,25 +30,10 @@
  * The "you are here" marker uses `'center'` so the vertical line
  * passes through the middle of the text rather than its left edge.
  */
-import type { FontMetrics } from './fontMetrics';
+import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
+import type { GlyphQuad } from '../../../@types/rendering/GlyphQuad';
+import type { LabelAlignX } from '../../../@types/rendering/LabelAlignX';
 import { lookupGlyph } from './fontMetrics';
-
-export type GlyphQuad = {
-  /** Pen-relative position of the glyph's top-left corner, in atlas pixels. */
-  localOffsetX: number;
-  localOffsetY: number;
-  /** Glyph plane size in atlas pixels. */
-  localSizeW: number;
-  localSizeH: number;
-  /** Atlas UVs in [0,1]. */
-  uvU0: number;
-  uvV0: number;
-  uvU1: number;
-  uvV1: number;
-};
-
-/** Horizontal alignment of the rendered text relative to the label's world anchor. */
-export type LabelAlignX = 'left' | 'center' | 'right';
 
 export function layoutLabel(
   text: string,
