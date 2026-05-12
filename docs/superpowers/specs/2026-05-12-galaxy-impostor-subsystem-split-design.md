@@ -18,7 +18,7 @@ The restructure is scoped to galaxy rendering. Filaments, volumes, and overlays/
 - **Rendering output changes.** The pixels on screen MUST be byte-identical before and after this refactor. Additive blending into the same HDR target is order-independent (`srcFactor: one, dstFactor: one`, `depthWriteEnabled: false`), so reordering draws within the pass is safe, but no parameter, threshold, or shader is changed.
 - **Renderer file deletions.** The four galaxy renderers (`pointRenderer`, `proceduralDiskRenderer`, `texturedDiskRenderer`, `texturedQuadRenderer`) all survive. Their `draw()` signatures stay as-is.
 - **Unifying disk and quad pipelines.** The two LOD-2 render pipelines remain distinct — same atlas, different geometry/shader. A future spec could unify them with an instance-buffer flag, but that's pipeline-implementation work, not LOD restructuring.
-- **Touching the parallel TS-types consolidation.** New types land in `src/@types/` per concern; one existing types file is edited; `@types/index.d.ts` is not touched. No type renames outside the new files.
+- **Touching the parallel TS-types consolidation.** New types land in `src/@types/engine/subsystems/` per concern (alongside the existing `ThumbnailSubsystem.d.ts`, `SpaceMouseSubsystem.d.ts`, etc.); one existing types file is edited; no barrel re-exports are touched. No type renames outside the new files.
 - **LOD 0 changes.** Point sprites are already structurally clean (renderer + static data + pass entry, no subsystem) and stay that way.
 
 ## Background — the LOD ladder, as it actually is
@@ -153,25 +153,34 @@ src/services/engine/frame/passes/
 src/services/engine/frame/passes/index.ts
                                   (HDR_PASSES list updated — replace galaxyThumbnailsPass with the two new entries)
 
-src/@types/
+src/@types/engine/subsystems/
   GalaxyAtlasSubsystem.d.ts       (new)
   ProceduralDiskSubsystem.d.ts    (new)
   TexturedImpostorSubsystem.d.ts  (new)
+  ThumbnailSubsystem.d.ts             DELETED (legacy subsystem contract)
+  CreateThumbnailSubsystemInput.d.ts  DELETED (legacy constructor input)
+  ThumbnailFrameInput.d.ts            DELETED (legacy per-frame input)
+
+src/@types/engine/handles/
   EngineSubsystemHandles.d.ts     (edited — `thumbnails` slot replaced with three new slots)
-  index.d.ts                      (NOT touched — no new barrel re-exports)
+
+src/@types/rendering/
+  DiskRenderer.d.ts               RENAMED → TexturedDiskRenderer.d.ts (type renamed too)
+  ThumbnailRenderer.d.ts          RENAMED → TexturedQuadRenderer.d.ts (type renamed too)
+  DiskInstance.d.ts               (unchanged — already in @types/rendering/)
 ```
 
 ## Subsystem API contracts
 
-All new types live in `src/@types/`, one per file, with no barrel re-export. Consumers import directly: `import type { GalaxyAtlasSubsystem } from '../../../@types/GalaxyAtlasSubsystem'`.
+All new types live in `src/@types/engine/subsystems/`, one per file, with no barrel re-export. Consumers import directly: `import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem'`.
 
 ### `galaxyAtlasSubsystem`
 
 Pure shared infrastructure. No catalog awareness; no per-frame planning. Provides slot allocation, fetch scheduling, and atlas texture view.
 
 ```ts
-// @types/GalaxyAtlasSubsystem.d.ts
-import type { Destroyable } from './Destroyable';
+// @types/engine/subsystems/GalaxyAtlasSubsystem.d.ts
+import type { Destroyable } from '../../rendering/Destroyable';
 
 export type GalaxyAtlasFetchInput = {
   readonly key: string;
@@ -233,12 +242,12 @@ export function createGalaxyAtlasSubsystem(deps: GalaxyAtlasDeps): GalaxyAtlasSu
 LOD 1 per-frame planner. No GPU work, no atlas dependency.
 
 ```ts
-// @types/ProceduralDiskSubsystem.d.ts
-import type { Destroyable } from './Destroyable';
-import type { PointCloud } from './PointCloud';
-import type { ProceduralDiskInstance } from './ProceduralDiskInstance';
-import type { OrbitCamera } from './OrbitCamera';
-import type { Source } from '../data/sources';
+// @types/engine/subsystems/ProceduralDiskSubsystem.d.ts
+import type { Destroyable } from '../../rendering/Destroyable';
+import type { PointCloud } from '../../data/PointCloud';
+import type { ProceduralDiskInstance } from '../../rendering/ProceduralDiskInstance';
+import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { Source } from '../../../data/sources';
 
 export type ProceduralDiskFrameInput = {
   readonly cam: OrbitCamera;
@@ -283,14 +292,15 @@ export function createProceduralDiskSubsystem(deps?: ProceduralDiskDeps): Proced
 LOD 2 per-frame planner. Depends on `galaxyAtlasSubsystem` (constructor injection).
 
 ```ts
-// @types/TexturedImpostorSubsystem.d.ts
-import type { Destroyable } from './Destroyable';
-import type { PointCloud } from './PointCloud';
-import type { ThumbnailInstance } from './ThumbnailInstance';
-import type { DiskInstance } from '../services/gpu/renderers/texturedDiskRenderer'; // see deferred-type note below
-import type { OrbitCamera } from './OrbitCamera';
-import type { FamousMetaEntry } from '../services/loading/fetchers/famousMetaFetcher';
-import type { Source } from '../data/sources';
+// @types/engine/subsystems/TexturedImpostorSubsystem.d.ts
+import type { Destroyable } from '../../rendering/Destroyable';
+import type { PointCloud } from '../../data/PointCloud';
+import type { ThumbnailInstance } from '../../rendering/ThumbnailInstance';
+import type { DiskInstance } from '../../rendering/DiskInstance';
+import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
+import type { Source } from '../../../data/sources';
+import type { GalaxyAtlasSubsystem } from './GalaxyAtlasSubsystem';
 
 export type TexturedImpostorFrameInput = {
   readonly cam: OrbitCamera;
@@ -339,10 +349,6 @@ export type TexturedImpostorDeps = {
 
 export function createTexturedImpostorSubsystem(deps: TexturedImpostorDeps): TexturedImpostorSubsystem;
 ```
-
-### Deferred type note — `DiskInstance`
-
-`DiskInstance` is currently declared inline at `src/services/gpu/renderers/diskRenderer.ts:50` (soon `texturedDiskRenderer.ts` after rename), not in `@types/`. This violates the project convention but is pre-existing drift, not new drift created by this spec. The parallel TS-types consolidation will relocate it; this spec imports it from its current location, then the import path in `@types/TexturedImpostorSubsystem.d.ts` is the single line the consolidation will need to update.
 
 ## Pass implementations
 
@@ -424,10 +430,10 @@ The atlas subsystem doesn't appear in this snippet — it's owned by `texturedIm
 
 ## State / handle wiring
 
-`EngineSubsystemHandles.d.ts` is the one existing types file edited. The `thumbnails` slot is replaced with three new slots:
+`EngineSubsystemHandles.d.ts` (at `src/@types/engine/handles/`) is the one existing types file edited. The `thumbnails` slot is replaced with three new slots:
 
 ```diff
-// src/@types/EngineSubsystemHandles.d.ts
+// src/@types/engine/handles/EngineSubsystemHandles.d.ts
 - thumbnails: ThumbnailSubsystem | null;
 + galaxyAtlas: GalaxyAtlasSubsystem | null;
 + proceduralDisks: ProceduralDiskSubsystem | null;
@@ -487,7 +493,7 @@ Rename + split sequencing inside the PR (so reviewer's diff reads top-down):
 5. Add `proceduralDisksPass.ts` and `texturedImpostorsPass.ts`. Update `HDR_PASSES`.
 6. Delete `thumbnailSubsystem.ts` and `galaxyThumbnailsPass.ts`.
 7. Update `EngineSubsystemHandles.d.ts` and `wireSlots.ts` wiring.
-8. Add new type files in `@types/` (one per concern, no barrel re-export).
+8. Add new type files in `@types/engine/subsystems/` (one per concern, no barrel re-export); the renames in step 1 also `git mv` the two `@types/rendering/` renderer type files (`DiskRenderer.d.ts` → `TexturedDiskRenderer.d.ts`, `ThumbnailRenderer.d.ts` → `TexturedQuadRenderer.d.ts`) and rename the types inside them.
 9. Split and migrate tests.
 
 ## Open questions

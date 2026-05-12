@@ -72,7 +72,8 @@ import type { mat4 } from 'gl-matrix';
 
 import { Source } from '../../src/data/sources';
 import { createThumbnailSubsystem } from '../../src/services/engine/subsystems/thumbnailSubsystem';
-import type { PointCloud, OrbitCamera } from '../../src/@types';
+import type { PointCloud } from '../../src/@types/data/PointCloud';
+import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -260,13 +261,18 @@ EOF
 
 **Files:**
 - Rename: `src/services/gpu/renderers/diskRenderer.ts` → `src/services/gpu/renderers/texturedDiskRenderer.ts`
-- Modify: `src/services/gpu/renderers/texturedDiskRenderer.ts` (rename `type DiskRenderer` → `type TexturedDiskRenderer`, `createDiskRenderer` → `createTexturedDiskRenderer`; `DiskInstance` stays inline, unchanged)
-- Modify: `src/@types/EngineGpuHandles.d.ts` (import + type annotation + **field rename `diskRenderer` → `texturedDiskRenderer`**)
-- Modify: `src/services/engine/frame/passes/types.ts` (import + type annotation + **`PassDeps.diskRenderer` → `PassDeps.texturedDiskRenderer`**)
+- Modify: `src/services/gpu/renderers/texturedDiskRenderer.ts` (rename `type DiskRenderer` import; `createDiskRenderer` → `createTexturedDiskRenderer`; `DiskInstance` stays unchanged)
+- Rename: `src/@types/rendering/DiskRenderer.d.ts` → `src/@types/rendering/TexturedDiskRenderer.d.ts` (the type itself was extracted out of the renderer source as part of the 2026-05 @types consolidation — the rename now also covers this dedicated type file)
+- Modify: `src/@types/rendering/TexturedDiskRenderer.d.ts` (rename `export type DiskRenderer` → `export type TexturedDiskRenderer`; touch up the module header so it reads `TexturedDiskRenderer — …`)
+- Modify: `src/@types/engine/handles/EngineGpuHandles.d.ts` (import + type annotation + **field rename `diskRenderer` → `texturedDiskRenderer`**)
+- Modify: `src/@types/engine/frame/PassDeps.d.ts` (import + type annotation + **`PassDeps.diskRenderer` → `PassDeps.texturedDiskRenderer`**)
+- Modify: `src/@types/engine/frame/RunFrameDeps.d.ts` (import + type annotation + **`RunFrameDeps.diskRenderer` → `texturedDiskRenderer`** — if that type lives there; if `RunFrameDeps` is declared inline in `runFrame.ts`, edit that file instead)
+- Modify: `src/@types/engine/subsystems/ThumbnailFrameInput.d.ts` (import + type annotation + **field rename `diskRenderer` → `texturedDiskRenderer`**)
+- Modify: `src/@types/engine/subsystems/ThumbnailSubsystem.d.ts` (the `bindToRenderers` second parameter type + name)
 - Modify: `src/services/engine/frame/passes/galaxyThumbnailsPass.ts` (still alive at this point — `deps.diskRenderer` → `deps.texturedDiskRenderer`; will be deleted in Task 14)
 - Modify: `src/services/engine/frame/renderFrame.ts` (import + type annotation + every `diskRenderer` field/local/destructure → `texturedDiskRenderer`)
 - Modify: `src/services/engine/frame/runFrame.ts` (import + type annotation + `RunFrameDeps.diskRenderer` field + the `deps.diskRenderer` flow-through into the inner `renderFrame` call)
-- Modify: `src/services/engine/subsystems/thumbnailSubsystem.ts` (import + every `DiskRenderer` annotation; **every `diskRenderer` parameter/field/local** in `bindToRenderers`, `ThumbnailFrameInput`, `runFrame` destructure, and the body's `diskRenderer.draw(...)` call → `texturedDiskRenderer`)
+- Modify: `src/services/engine/subsystems/thumbnailSubsystem.ts` (import + every `DiskRenderer` annotation; **every `diskRenderer` parameter/field/local** in `bindToRenderers`, `ThumbnailFrameInput` consumer, `runFrame` destructure, and the body's `diskRenderer.draw(...)` call → `texturedDiskRenderer`)
 - Modify: `src/services/engine/engine.ts` (initial state literal `diskRenderer: null` → `texturedDiskRenderer: null`; destroy chain `state.gpu.diskRenderer?.destroy()` / `= null` → `state.gpu.texturedDiskRenderer?.destroy()` / `= null`)
 - Modify: `src/services/engine/phases/initGpu.ts` (import + factory call + local `const diskRenderer = ...` → `const texturedDiskRenderer = ...` + `state.gpu.diskRenderer = diskRenderer;` → `state.gpu.texturedDiskRenderer = texturedDiskRenderer;`)
 - Modify: `src/services/engine/phases/wireSlots.ts` (destructure `const { thumbnailRenderer, diskRenderer, proceduralDiskRenderer } = state.gpu;` → `const { thumbnailRenderer, texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;` and the matching null-check + `bindToRenderers(...)` call site)
@@ -299,17 +305,40 @@ The result inventories every line that touches the type, factory, or field. Cros
 git mv src/services/gpu/renderers/diskRenderer.ts src/services/gpu/renderers/texturedDiskRenderer.ts
 ```
 
-- [ ] **Step 3: Rename the type, factory, and label in the renamed file**
+- [ ] **Step 2b: Rename the renderer type file**
 
-Open `src/services/gpu/renderers/texturedDiskRenderer.ts`. Replace the module header line `* DiskRenderer — oriented 3D galaxy disks.` with `* TexturedDiskRenderer — oriented 3D galaxy disks (atlas-textured).`. Then `export type DiskRenderer = {` → `export type TexturedDiskRenderer = {`. Then `export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRenderer {` → `export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256): TexturedDiskRenderer {`. The inner `const renderer: DiskRenderer = {` → `const renderer: TexturedDiskRenderer = {`. The `label: 'diskRenderer'` literal → `label: 'texturedDiskRenderer'`. Leave `DiskInstance` exactly as-is.
+```bash
+git mv src/@types/rendering/DiskRenderer.d.ts src/@types/rendering/TexturedDiskRenderer.d.ts
+```
+
+Then edit `src/@types/rendering/TexturedDiskRenderer.d.ts`:
+
+```diff
+- /**
+-  * DiskRenderer — oriented 3D galaxy disks (renderer handle shape).
++ /**
++  * TexturedDiskRenderer — oriented 3D galaxy disks (renderer handle
++  * shape) — atlas-textured LOD-2 sibling of texturedQuadRenderer.
+```
+
+```diff
+- export type DiskRenderer = {
++ export type TexturedDiskRenderer = {
+```
+
+Also update the inline `label` docstring (`'diskRenderer'` → `'texturedDiskRenderer'`).
+
+- [ ] **Step 3: Rename the factory, label, and internal type alias in the renamed renderer source**
+
+Open `src/services/gpu/renderers/texturedDiskRenderer.ts`. Replace the module header line `* DiskRenderer — oriented 3D galaxy disks.` with `* TexturedDiskRenderer — oriented 3D galaxy disks (atlas-textured).`. Update the `import type { DiskRenderer } from '../../../@types/rendering/DiskRenderer';` line to `import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';`. Then `export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRenderer {` → `export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256): TexturedDiskRenderer {`. The inner `const renderer: DiskRenderer = {` → `const renderer: TexturedDiskRenderer = {`. The `label: 'diskRenderer'` literal → `label: 'texturedDiskRenderer'`. Leave `DiskInstance` exactly as-is (still imported from `../../../@types/rendering/DiskInstance`).
 
 - [ ] **Step 4: Rename the field on `EngineGpuHandles`**
 
-Edit `src/@types/EngineGpuHandles.d.ts`:
+Edit `src/@types/engine/handles/EngineGpuHandles.d.ts`:
 
 ```diff
-- import type { DiskRenderer } from '../services/gpu/renderers/diskRenderer';
-+ import type { TexturedDiskRenderer } from '../services/gpu/renderers/texturedDiskRenderer';
+- import type { DiskRenderer } from '../../rendering/DiskRenderer';
++ import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 ```
 
 ```diff
@@ -321,16 +350,58 @@ Also update the docstring chunk around lines 31 and 117–123 that names the fie
 
 - [ ] **Step 5: Rename the field on `PassDeps`**
 
-Edit `src/services/engine/frame/passes/types.ts`:
+Edit `src/@types/engine/frame/PassDeps.d.ts`:
 
 ```diff
-- import type { DiskRenderer } from '../../../gpu/renderers/diskRenderer';
-+ import type { TexturedDiskRenderer } from '../../../gpu/renderers/texturedDiskRenderer';
+- import type { DiskRenderer } from '../../rendering/DiskRenderer';
++ import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 ```
 
 ```diff
 -  diskRenderer: DiskRenderer;
 +  texturedDiskRenderer: TexturedDiskRenderer;
+```
+
+- [ ] **Step 5b: Rename the field on `RunFrameDeps`**
+
+Edit `src/@types/engine/frame/RunFrameDeps.d.ts`:
+
+```diff
+- import type { DiskRenderer } from '../../rendering/DiskRenderer';
++ import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
+```
+
+```diff
+-  diskRenderer: DiskRenderer;
++  texturedDiskRenderer: TexturedDiskRenderer;
+```
+
+- [ ] **Step 5c: Rename the field on the legacy `ThumbnailFrameInput` + `ThumbnailSubsystem`**
+
+Edit `src/@types/engine/subsystems/ThumbnailFrameInput.d.ts`:
+
+```diff
+- import type { DiskRenderer } from '../../rendering/DiskRenderer';
++ import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
+```
+
+```diff
+-  diskRenderer: DiskRenderer;
++  texturedDiskRenderer: TexturedDiskRenderer;
+```
+
+Edit `src/@types/engine/subsystems/ThumbnailSubsystem.d.ts`:
+
+```diff
+- import type { DiskRenderer } from '../../rendering/DiskRenderer';
++ import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
+```
+
+Inside `bindToRenderers`:
+
+```diff
+-    diskRenderer: DiskRenderer,
++    texturedDiskRenderer: TexturedDiskRenderer,
 ```
 
 - [ ] **Step 6: Update the legacy `galaxyThumbnailsPass`**
@@ -348,37 +419,15 @@ The `thumbnails.runFrame` call site receives this as a key in the `input` object
 
 - [ ] **Step 7: Update `renderFrame.ts`**
 
-Edit `src/services/engine/frame/renderFrame.ts`:
+Edit `src/services/engine/frame/renderFrame.ts`. The file imports `PassDeps` from `@types/engine/frame/PassDeps` and `RunFrameDeps` from `@types/engine/frame/RunFrameDeps`, so no local type import for `DiskRenderer` is required here — the field rename flows in through those type files (already updated in Steps 5/5b). Inside the function body:
 
-```diff
-- import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';
-+ import type { TexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
-```
-
-The type field on the deps parameter (around line 237):
-
-```diff
--  diskRenderer: DiskRenderer;
-+  texturedDiskRenderer: TexturedDiskRenderer;
-```
-
-The destructure (around line 272) and the PassDeps construction (around line 286) — both `diskRenderer` → `texturedDiskRenderer`.
+- The destructure (around line 272) of the deps parameter: `diskRenderer` → `texturedDiskRenderer`.
+- The PassDeps construction (around line 286): `diskRenderer,` → `texturedDiskRenderer,`.
+- Any prose mention of `diskRenderer` in the module docstring/inline comments.
 
 - [ ] **Step 8: Update `runFrame.ts`**
 
-Edit `src/services/engine/frame/runFrame.ts`:
-
-```diff
-- import type { DiskRenderer } from '../../gpu/renderers/diskRenderer';
-+ import type { TexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
-```
-
-Type field on `RunFrameDeps` (line 122):
-
-```diff
--  diskRenderer: DiskRenderer;
-+  texturedDiskRenderer: TexturedDiskRenderer;
-```
+Edit `src/services/engine/frame/runFrame.ts`. Like `renderFrame.ts`, this file imports `RunFrameDeps` from `@types/engine/frame/RunFrameDeps` (no local renderer-type import lives here). Inside the function:
 
 The pass-through into `renderFrame(...)` (line 328):
 
@@ -391,19 +440,20 @@ Plus any prose mentions in the module header (lines 35, 43).
 
 - [ ] **Step 9: Update `thumbnailSubsystem.ts`**
 
-Edit `src/services/engine/subsystems/thumbnailSubsystem.ts`:
+Edit `src/services/engine/subsystems/thumbnailSubsystem.ts`. The runtime source imports type files separately under the new `@types/rendering/` layout, so update those:
 
 ```diff
-- import type { DiskRenderer, DiskInstance } from '../../gpu/renderers/diskRenderer';
-+ import type { TexturedDiskRenderer, DiskInstance } from '../../gpu/renderers/texturedDiskRenderer';
+- import type { DiskRenderer } from '../../../@types/rendering/DiskRenderer';
++ import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 ```
+
+`DiskInstance` import (`import type { DiskInstance } from '../../../@types/rendering/DiskInstance';`) stays untouched — the instance struct is intentionally not renamed.
 
 Inside the file, rename:
 
-- Field on `ThumbnailFrameInput`: `diskRenderer: DiskRenderer;` → `texturedDiskRenderer: TexturedDiskRenderer;` (line 320).
-- `bindToRenderers` parameter type (line 344): `diskRenderer: DiskRenderer,` → `texturedDiskRenderer: TexturedDiskRenderer,`.
-- Inside `bindToRenderers` (line 478): `diskRenderer: DiskRenderer,` parameter, the `diskRenderer.bindAtlas(...)` call (line 482), and the `{ ..., diskRenderer, ... }` object literal (line 501) all → `texturedDiskRenderer`.
-- The `runFrame` body's destructure / draw call (line 966): `diskRenderer.draw(...)` → `texturedDiskRenderer.draw(...)`.
+- The two type-side field renames (`ThumbnailFrameInput.diskRenderer` and `ThumbnailSubsystem.bindToRenderers`'s second parameter) already landed in Steps 5c and 5b — `thumbnailSubsystem.ts` consumes those types from `@types/engine/subsystems/`. So the runtime `.ts` only needs the body-side renames below.
+- Inside `bindToRenderers`'s implementation: the parameter name `diskRenderer` → `texturedDiskRenderer`, the `diskRenderer.bindAtlas(...)` call → `texturedDiskRenderer.bindAtlas(...)`, and the `{ ..., diskRenderer, ... }` closure-object literal → `texturedDiskRenderer`.
+- The `runFrame` body's destructure of `input` (renames the local) and its `diskRenderer.draw(...)` call → `texturedDiskRenderer.draw(...)`.
 - Every prose mention in the module docstring + inline comments.
 
 - [ ] **Step 10: Update `engine.ts` initial state + destroy**
@@ -571,9 +621,14 @@ EOF
 
 **Files:**
 - Rename: `src/services/gpu/renderers/thumbnailRenderer.ts` → `src/services/gpu/renderers/texturedQuadRenderer.ts`
-- Modify: `src/services/gpu/renderers/texturedQuadRenderer.ts` (rename `type ThumbnailRenderer` → `type TexturedQuadRenderer`, `createThumbnailRenderer` → `createTexturedQuadRenderer`; `ThumbnailInstance` stays inline, unchanged)
-- Modify: `src/@types/EngineGpuHandles.d.ts` (import + type annotation + **field rename `thumbnailRenderer` → `texturedQuadRenderer`**)
-- Modify: `src/services/engine/frame/passes/types.ts` (import + type annotation + **`PassDeps.thumbnailRenderer` → `PassDeps.texturedQuadRenderer`**)
+- Modify: `src/services/gpu/renderers/texturedQuadRenderer.ts` (rename `type ThumbnailRenderer` import; `createThumbnailRenderer` → `createTexturedQuadRenderer`; `ThumbnailInstance` stays unchanged)
+- Rename: `src/@types/rendering/ThumbnailRenderer.d.ts` → `src/@types/rendering/TexturedQuadRenderer.d.ts` (sibling to Task 2's `DiskRenderer` rename; the type was extracted out of the renderer source as part of the 2026-05 @types consolidation)
+- Modify: `src/@types/rendering/TexturedQuadRenderer.d.ts` (rename `export type ThumbnailRenderer` → `export type TexturedQuadRenderer`; update module header)
+- Modify: `src/@types/engine/handles/EngineGpuHandles.d.ts` (import + type annotation + **field rename `thumbnailRenderer` → `texturedQuadRenderer`**)
+- Modify: `src/@types/engine/frame/PassDeps.d.ts` (import + type annotation + **`PassDeps.thumbnailRenderer` → `PassDeps.texturedQuadRenderer`**)
+- Modify: `src/@types/engine/frame/RunFrameDeps.d.ts` (import + type annotation + **`RunFrameDeps.thumbnailRenderer` → `texturedQuadRenderer`**)
+- Modify: `src/@types/engine/subsystems/ThumbnailFrameInput.d.ts` (import + type annotation + **field rename `thumbnailRenderer` → `texturedQuadRenderer`**)
+- Modify: `src/@types/engine/subsystems/ThumbnailSubsystem.d.ts` (the `bindToRenderers` first parameter type + name)
 - Modify: `src/services/engine/frame/passes/galaxyThumbnailsPass.ts` (still alive — `deps.thumbnailRenderer` → `deps.texturedQuadRenderer`)
 - Modify: `src/services/engine/frame/renderFrame.ts` (import + type annotation + every `thumbnailRenderer` field/local/destructure → `texturedQuadRenderer`)
 - Modify: `src/services/engine/frame/runFrame.ts` (import + type annotation + `RunFrameDeps.thumbnailRenderer` + the pass-through into `renderFrame`)
@@ -609,17 +664,42 @@ The `\bthumbnailRenderer\b` anchor matches the field/local/parameter rename targ
 git mv src/services/gpu/renderers/thumbnailRenderer.ts src/services/gpu/renderers/texturedQuadRenderer.ts
 ```
 
-- [ ] **Step 3: Rename the type, factory, and label in the renamed file**
+- [ ] **Step 2b: Rename the renderer type file**
 
-Open `src/services/gpu/renderers/texturedQuadRenderer.ts`. Replace the module header line `* ThumbnailRenderer — billboard quad pass for galaxy thumbnails.` with `* TexturedQuadRenderer — screen-aligned billboard quad pass for galaxy thumbnails (LOD-2 fallback).`. Then `export type ThumbnailRenderer = {` → `export type TexturedQuadRenderer = {`. `export function createThumbnailRenderer(ctx: GpuContext, maxInstances = 256): ThumbnailRenderer {` → `export function createTexturedQuadRenderer(ctx: GpuContext, maxInstances = 256): TexturedQuadRenderer {`. `const renderer: ThumbnailRenderer = {` → `const renderer: TexturedQuadRenderer = {`. `label: 'thumbnailRenderer'` → `label: 'texturedQuadRenderer'`. Leave `ThumbnailInstance` exactly as-is.
+```bash
+git mv src/@types/rendering/ThumbnailRenderer.d.ts src/@types/rendering/TexturedQuadRenderer.d.ts
+```
+
+Then edit `src/@types/rendering/TexturedQuadRenderer.d.ts`:
+
+```diff
+- /**
+-  * ThumbnailRenderer — public surface of the textured galaxy-thumbnail
+-  * renderer.
++ /**
++  * TexturedQuadRenderer — public surface of the screen-aligned textured
++  * galaxy-thumbnail renderer (LOD-2 fallback for galaxies missing
++  * orientation data).
+```
+
+```diff
+- export type ThumbnailRenderer = {
++ export type TexturedQuadRenderer = {
+```
+
+Update the inline `label` docstring (`'thumbnailRenderer'` → `'texturedQuadRenderer'`).
+
+- [ ] **Step 3: Rename the factory, label, and internal type alias in the renamed renderer source**
+
+Open `src/services/gpu/renderers/texturedQuadRenderer.ts`. Replace the module header line `* ThumbnailRenderer — billboard quad pass for galaxy thumbnails.` with `* TexturedQuadRenderer — screen-aligned billboard quad pass for galaxy thumbnails (LOD-2 fallback).`. Update the type import line `import type { ThumbnailRenderer } from '../../../@types/rendering/ThumbnailRenderer';` → `import type { TexturedQuadRenderer } from '../../../@types/rendering/TexturedQuadRenderer';`. Then `export function createThumbnailRenderer(ctx: GpuContext, maxInstances = 256): ThumbnailRenderer {` → `export function createTexturedQuadRenderer(ctx: GpuContext, maxInstances = 256): TexturedQuadRenderer {`. `const renderer: ThumbnailRenderer = {` → `const renderer: TexturedQuadRenderer = {`. `label: 'thumbnailRenderer'` → `label: 'texturedQuadRenderer'`. Leave `ThumbnailInstance` exactly as-is (still imported from `../../../@types/rendering/ThumbnailInstance`).
 
 - [ ] **Step 4: Rename the field on `EngineGpuHandles`**
 
-Edit `src/@types/EngineGpuHandles.d.ts`:
+Edit `src/@types/engine/handles/EngineGpuHandles.d.ts`:
 
 ```diff
-- import type { ThumbnailRenderer } from '../services/gpu/renderers/thumbnailRenderer';
-+ import type { TexturedQuadRenderer } from '../services/gpu/renderers/texturedQuadRenderer';
+- import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 ```
 
 ```diff
@@ -631,16 +711,58 @@ Plus the prose mentions in the module header (line 31) and the sibling-field doc
 
 - [ ] **Step 5: Rename the field on `PassDeps`**
 
-Edit `src/services/engine/frame/passes/types.ts`:
+Edit `src/@types/engine/frame/PassDeps.d.ts`:
 
 ```diff
-- import type { ThumbnailRenderer } from '../../../gpu/renderers/thumbnailRenderer';
-+ import type { TexturedQuadRenderer } from '../../../gpu/renderers/texturedQuadRenderer';
+- import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 ```
 
 ```diff
 -  thumbnailRenderer: ThumbnailRenderer;
 +  texturedQuadRenderer: TexturedQuadRenderer;
+```
+
+- [ ] **Step 5b: Rename the field on `RunFrameDeps`**
+
+Edit `src/@types/engine/frame/RunFrameDeps.d.ts`:
+
+```diff
+- import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
+```
+
+```diff
+-  thumbnailRenderer: ThumbnailRenderer;
++  texturedQuadRenderer: TexturedQuadRenderer;
+```
+
+- [ ] **Step 5c: Rename the field on the legacy `ThumbnailFrameInput` + `ThumbnailSubsystem`**
+
+Edit `src/@types/engine/subsystems/ThumbnailFrameInput.d.ts`:
+
+```diff
+- import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
+```
+
+```diff
+-  thumbnailRenderer: ThumbnailRenderer;
++  texturedQuadRenderer: TexturedQuadRenderer;
+```
+
+Edit `src/@types/engine/subsystems/ThumbnailSubsystem.d.ts`:
+
+```diff
+- import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
+```
+
+Inside `bindToRenderers`:
+
+```diff
+-    thumbnailRenderer: ThumbnailRenderer,
++    texturedQuadRenderer: TexturedQuadRenderer,
 ```
 
 - [ ] **Step 6: Update the legacy `galaxyThumbnailsPass`**
@@ -656,37 +778,15 @@ Plus the prose mentions in the module docstring (lines 9, 36).
 
 - [ ] **Step 7: Update `renderFrame.ts`**
 
-Edit `src/services/engine/frame/renderFrame.ts`:
+Edit `src/services/engine/frame/renderFrame.ts`. The file imports `PassDeps` / `RunFrameDeps` from `@types/engine/frame/`, so no local renderer-type import lives in this file — the rename rides in through Steps 5/5b. Inside the function body:
 
-```diff
-- import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
-+ import type { TexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';
-```
-
-Deps type field (line 236):
-
-```diff
--  thumbnailRenderer: ThumbnailRenderer;
-+  texturedQuadRenderer: TexturedQuadRenderer;
-```
-
-The destructure (line 271) and the PassDeps literal (line 285): both `thumbnailRenderer` → `texturedQuadRenderer`.
+- The destructure (around line 271): `thumbnailRenderer` → `texturedQuadRenderer`.
+- The PassDeps literal (around line 285): `thumbnailRenderer,` → `texturedQuadRenderer,`.
+- Any prose mention of `thumbnailRenderer` in the module docstring / inline comments.
 
 - [ ] **Step 8: Update `runFrame.ts`**
 
-Edit `src/services/engine/frame/runFrame.ts`:
-
-```diff
-- import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
-+ import type { TexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';
-```
-
-`RunFrameDeps` field (line 120):
-
-```diff
--  thumbnailRenderer: ThumbnailRenderer;
-+  texturedQuadRenderer: TexturedQuadRenderer;
-```
+Edit `src/services/engine/frame/runFrame.ts`. `RunFrameDeps` is imported from `@types/engine/frame/RunFrameDeps`, so no local renderer-type import to flip. Inside the function:
 
 The pass-through into `renderFrame(...)` (line 327): `thumbnailRenderer: deps.thumbnailRenderer,` → `texturedQuadRenderer: deps.texturedQuadRenderer,`.
 
@@ -694,19 +794,20 @@ Plus prose mentions in the module header (lines 35, 43).
 
 - [ ] **Step 9: Update `thumbnailSubsystem.ts`**
 
-Edit `src/services/engine/subsystems/thumbnailSubsystem.ts`:
+Edit `src/services/engine/subsystems/thumbnailSubsystem.ts`. The runtime source's renderer-type import:
 
 ```diff
-- import type { ThumbnailRenderer } from '../../gpu/renderers/thumbnailRenderer';
-+ import type { TexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';
+- import type { ThumbnailRenderer } from '../../../@types/rendering/ThumbnailRenderer';
++ import type { TexturedQuadRenderer } from '../../../@types/rendering/TexturedQuadRenderer';
 ```
+
+`ThumbnailInstance` import stays — unchanged.
 
 Inside the file:
 
-- `ThumbnailFrameInput` field (line 318): `thumbnailRenderer: ThumbnailRenderer;` → `texturedQuadRenderer: TexturedQuadRenderer;`.
-- `bindToRenderers` parameter type (line 343): rename.
-- The implementation parameters around line 477 (`thumbnailRenderer: ThumbnailRenderer,`), the `thumbnailRenderer.bindAtlas(...)` call (line 481), and the closure object literal (line 500) all → `texturedQuadRenderer`.
-- `runFrame` destructure of `input` and the `thumbnailRenderer.draw(...)` call (line 956) → `texturedQuadRenderer`.
+- The two type-side field renames (`ThumbnailFrameInput.thumbnailRenderer` and `ThumbnailSubsystem.bindToRenderers` first parameter) already landed in Step 5c.
+- `bindToRenderers` implementation: the parameter name `thumbnailRenderer` → `texturedQuadRenderer`, the `thumbnailRenderer.bindAtlas(...)` call → `texturedQuadRenderer.bindAtlas(...)`, the `{ ..., thumbnailRenderer, ... }` closure-object literal → `texturedQuadRenderer`.
+- `runFrame` destructure of `input` and the `thumbnailRenderer.draw(...)` call → `texturedQuadRenderer`.
 - Inline comment at line 309 mentions "thumbnailRenderer + diskRenderer encode their draws here" — update to `texturedQuadRenderer + texturedDiskRenderer`.
 
 - [ ] **Step 10: Update `engine.ts` initial state + destroy**
@@ -840,13 +941,13 @@ EOF
 ## Task 4: Add `GalaxyAtlasSubsystem` type contract
 
 **Files:**
-- Create: `src/@types/GalaxyAtlasSubsystem.d.ts`
+- Create: `src/@types/engine/subsystems/GalaxyAtlasSubsystem.d.ts`
 
-This task is type-only — no implementation yet. The implementation lands in Task 5. Splitting the type into its own file matches the project convention (one type per file in `@types/`, no barrel re-exports).
+This task is type-only — no implementation yet. The implementation lands in Task 5. Splitting the type into its own file matches the project convention (one type per file under `@types/`, no barrel re-exports). The 2026-05 @types consolidation moved every per-concern type into a subfolder; new subsystem contracts land in `@types/engine/subsystems/` alongside `ThumbnailSubsystem.d.ts`, `SpaceMouseSubsystem.d.ts`, etc.
 
 - [ ] **Step 1: Write the type declaration**
 
-Create `src/@types/GalaxyAtlasSubsystem.d.ts`:
+Create `src/@types/engine/subsystems/GalaxyAtlasSubsystem.d.ts`:
 
 ```typescript
 /**
@@ -878,7 +979,7 @@ Create `src/@types/GalaxyAtlasSubsystem.d.ts`:
  * `atlas.setEvictHandler` wiring in `thumbnailSubsystem.ts` lines 418-422.
  */
 
-import type { Destroyable } from './Destroyable';
+import type { Destroyable } from '../../rendering/Destroyable';
 
 export type GalaxyAtlasFetchInput = {
   readonly key: string;
@@ -946,13 +1047,13 @@ Expected: PASS — the file declares only types, so it compiles with no consumer
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/@types/GalaxyAtlasSubsystem.d.ts
+git add src/@types/engine/subsystems/GalaxyAtlasSubsystem.d.ts
 git commit -m "$(cat <<'EOF'
 feat(@types): add GalaxyAtlasSubsystem type contract
 
 Pure type declaration for the shared atlas + queue infrastructure that
 the upcoming subsystem split will extract from thumbnailSubsystem.
-Lives in @types/ per-concern, no barrel re-export.
+Lives in @types/engine/subsystems/ per-concern, no barrel re-export.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 EOF
@@ -1099,7 +1200,7 @@ Create `src/services/engine/subsystems/galaxyAtlasSubsystem.ts`:
  *
  * No catalog awareness; no per-frame planning; no GPU dispatch.  This
  * file's API surface is exactly the `GalaxyAtlasSubsystem` type in
- * `@types/GalaxyAtlasSubsystem.d.ts`.
+ * `@types/engine/subsystems/GalaxyAtlasSubsystem.d.ts`.
  *
  * ### Why `bitmapReady` and `bitmapFailed` (not just `bitmapReadyTime`)
  *
@@ -1116,8 +1217,11 @@ Create `src/services/engine/subsystems/galaxyAtlasSubsystem.ts`:
  * the LRU clock.
  */
 
-import type { GalaxyAtlasFetchInput, GalaxyAtlasSubsystem } from '../../../@types/GalaxyAtlasSubsystem';
-import type { Destroyable } from '../../../@types/Destroyable';
+import type {
+  GalaxyAtlasFetchInput,
+  GalaxyAtlasSubsystem,
+} from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 
@@ -1270,11 +1374,11 @@ EOF
 ## Task 6: Add `ProceduralDiskSubsystem` type contract
 
 **Files:**
-- Create: `src/@types/ProceduralDiskSubsystem.d.ts`
+- Create: `src/@types/engine/subsystems/ProceduralDiskSubsystem.d.ts`
 
 - [ ] **Step 1: Write the type declaration**
 
-Create `src/@types/ProceduralDiskSubsystem.d.ts`:
+Create `src/@types/engine/subsystems/ProceduralDiskSubsystem.d.ts`:
 
 ```typescript
 /**
@@ -1292,11 +1396,11 @@ Create `src/@types/ProceduralDiskSubsystem.d.ts`:
  * HDR render pass.
  */
 
-import type { Destroyable } from './Destroyable';
-import type { PointCloud } from './PointCloud';
-import type { ProceduralDiskInstance } from './ProceduralDiskInstance';
-import type { OrbitCamera } from './OrbitCamera';
-import type { Source } from '../data/sources';
+import type { Destroyable } from '../../rendering/Destroyable';
+import type { PointCloud } from '../../data/PointCloud';
+import type { ProceduralDiskInstance } from '../../rendering/ProceduralDiskInstance';
+import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { Source } from '../../../data/sources';
 
 export type ProceduralDiskFrameInput = {
   readonly cam: OrbitCamera;
@@ -1336,7 +1440,7 @@ Expected: PASS.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/@types/ProceduralDiskSubsystem.d.ts
+git add src/@types/engine/subsystems/ProceduralDiskSubsystem.d.ts
 git commit -m "$(cat <<'EOF'
 feat(@types): add ProceduralDiskSubsystem type contract
 
@@ -1383,7 +1487,8 @@ Create `tests/services/engine/subsystems/proceduralDiskSubsystem.test.ts`:
 import { describe, it, expect } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
-import type { PointCloud, OrbitCamera } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
 function makeDenseCloud(count: number, ar = 0.7, pa = 45): PointCloud {
   const positions = new Float32Array(count * 3);
@@ -1524,13 +1629,15 @@ Create `src/services/engine/subsystems/proceduralDiskSubsystem.ts`:
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
-import type { PointCloud, OrbitCamera, Destroyable } from '../../../@types';
-import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
+import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
+import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type {
   ProceduralDiskFrameInput,
   ProceduralDiskFrameOutput,
   ProceduralDiskSubsystem,
-} from '../../../@types/ProceduralDiskSubsystem';
+} from '../../../@types/engine/subsystems/ProceduralDiskSubsystem';
 
 /** See thumbnailSubsystem.ts lines 88-119 for the picking rationale. */
 export const PROCEDURAL_DISK_FADE_START_PX = 8;
@@ -1757,11 +1864,11 @@ EOF
 ## Task 8: Add `TexturedImpostorSubsystem` type contract
 
 **Files:**
-- Create: `src/@types/TexturedImpostorSubsystem.d.ts`
+- Create: `src/@types/engine/subsystems/TexturedImpostorSubsystem.d.ts`
 
 - [ ] **Step 1: Write the type declaration**
 
-Create `src/@types/TexturedImpostorSubsystem.d.ts`:
+Create `src/@types/engine/subsystems/TexturedImpostorSubsystem.d.ts`:
 
 ```typescript
 /**
@@ -1779,13 +1886,13 @@ Create `src/@types/TexturedImpostorSubsystem.d.ts`:
  * a slot is recycled.
  */
 
-import type { Destroyable } from './Destroyable';
-import type { PointCloud } from './PointCloud';
-import type { ThumbnailInstance } from './ThumbnailInstance';
-import type { DiskInstance } from '../services/gpu/renderers/texturedDiskRenderer';
-import type { OrbitCamera } from './OrbitCamera';
-import type { FamousMetaEntry } from '../services/loading/fetchers/famousMetaFetcher';
-import type { Source } from '../data/sources';
+import type { Destroyable } from '../../rendering/Destroyable';
+import type { PointCloud } from '../../data/PointCloud';
+import type { ThumbnailInstance } from '../../rendering/ThumbnailInstance';
+import type { DiskInstance } from '../../rendering/DiskInstance';
+import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
+import type { Source } from '../../../data/sources';
 import type { GalaxyAtlasSubsystem } from './GalaxyAtlasSubsystem';
 
 export type TexturedImpostorFrameInput = {
@@ -1839,7 +1946,7 @@ Expected: PASS.
 - [ ] **Step 3: Commit**
 
 ```bash
-git add src/@types/TexturedImpostorSubsystem.d.ts
+git add src/@types/engine/subsystems/TexturedImpostorSubsystem.d.ts
 git commit -m "$(cat <<'EOF'
 feat(@types): add TexturedImpostorSubsystem type contract
 
@@ -1889,7 +1996,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createTexturedImpostorSubsystem } from '../../../../src/services/engine/subsystems/texturedImpostorSubsystem';
-import type { PointCloud, OrbitCamera } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -2071,15 +2179,18 @@ Create `src/services/engine/subsystems/texturedImpostorSubsystem.ts`:
  */
 
 import { Source } from '../../../data/sources';
-import type { PointCloud, OrbitCamera, ThumbnailInstance, Destroyable } from '../../../@types';
-import type { DiskInstance } from '../../gpu/renderers/texturedDiskRenderer';
-import type { GalaxyAtlasSubsystem } from '../../../@types/GalaxyAtlasSubsystem';
+import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { ThumbnailInstance } from '../../../@types/rendering/ThumbnailInstance';
+import type { Destroyable } from '../../../@types/rendering/Destroyable';
+import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
+import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
 import type {
   TexturedImpostorFrameInput,
   TexturedImpostorFrameOutput,
   TexturedImpostorSubsystemWithTestSeam,
-} from '../../../@types/TexturedImpostorSubsystem';
-import type { FamousMetaEntry } from '../../loading/fetchers/famousMetaFetcher';
+} from '../../../@types/engine/subsystems/TexturedImpostorSubsystem';
+import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDecZ } from '../../../utils/math';
 
@@ -2384,7 +2495,7 @@ EOF
 **Files:**
 - Create: `src/services/engine/frame/passes/proceduralDisksPass.ts`
 - Create: `src/services/engine/frame/passes/texturedImpostorsPass.ts`
-- Modify: `src/services/engine/frame/passes/types.ts` (add `proceduralDiskRenderer` to `PassDeps`)
+- Modify: `src/@types/engine/frame/PassDeps.d.ts` (add `proceduralDiskRenderer` to `PassDeps`)
 - Modify: `src/services/engine/frame/passes/index.ts` (import the two new passes; do NOT yet swap them into `HDR_PASSES` — that's Task 12)
 - Create: `tests/services/engine/frame/passes/proceduralDisksPass.test.ts`
 - Create: `tests/services/engine/frame/passes/texturedImpostorsPass.test.ts`
@@ -2399,10 +2510,11 @@ Create `tests/services/engine/frame/passes/proceduralDisksPass.test.ts`:
 import { describe, it, expect, vi } from 'vitest';
 import type { mat4 } from 'gl-matrix';
 import { proceduralDisksPass } from '../../../../../src/services/engine/frame/passes/proceduralDisksPass';
-import type { PassDeps } from '../../../../../src/services/engine/frame/passes';
-import type { ReadyFrameContext } from '../../../../../src/services/engine/frame/frameContext';
-import type { RenderFrameSettings } from '../../../../../src/services/engine/frame/renderFrame';
-import type { EngineState, OrbitCamera } from '../../../../../src/@types';
+import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
+import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
+import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 
 function makeCam(): OrbitCamera {
   return {
@@ -2508,10 +2620,11 @@ Create `tests/services/engine/frame/passes/texturedImpostorsPass.test.ts`:
 import { describe, it, expect, vi } from 'vitest';
 import type { mat4 } from 'gl-matrix';
 import { texturedImpostorsPass } from '../../../../../src/services/engine/frame/passes/texturedImpostorsPass';
-import type { PassDeps } from '../../../../../src/services/engine/frame/passes';
-import type { ReadyFrameContext } from '../../../../../src/services/engine/frame/frameContext';
-import type { RenderFrameSettings } from '../../../../../src/services/engine/frame/renderFrame';
-import type { EngineState, OrbitCamera } from '../../../../../src/@types';
+import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
+import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
+import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
+import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 
 function makeCam(): OrbitCamera {
   return {
@@ -2617,12 +2730,12 @@ Expected: FAIL — modules not found.
 
 - [ ] **Step 3: Add `proceduralDiskRenderer` to `PassDeps`**
 
-Edit `src/services/engine/frame/passes/types.ts`:
+Edit `src/@types/engine/frame/PassDeps.d.ts`:
 
-After the existing imports near line 60, add:
+Add to the imports near the top:
 
 ```typescript
-import type { ProceduralDiskRenderer } from '../../../gpu/renderers/proceduralDiskRenderer';
+import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 ```
 
 Inside the `PassDeps` type definition, after the `texturedDiskRenderer: ...` field (renamed in Task 2), add:
@@ -2661,7 +2774,7 @@ Create `src/services/engine/frame/passes/proceduralDisksPass.ts`:
  * own encoder without re-running its planner.
  */
 
-import type { Pass } from './types';
+import type { Pass } from '../../../../@types/engine/frame/Pass';
 
 export const proceduralDisksPass: Pass = {
   name: 'procedural-disks',
@@ -2706,7 +2819,7 @@ Create `src/services/engine/frame/passes/texturedImpostorsPass.ts`:
  * lastOutput pattern.
  */
 
-import type { Pass } from './types';
+import type { Pass } from '../../../../@types/engine/frame/Pass';
 
 export const texturedImpostorsPass: Pass = {
   name: 'textured-impostors',
@@ -2778,7 +2891,7 @@ Expected: PASS. The old `galaxyThumbnailsPass` still runs in production; the new
 - [ ] **Step 9: Commit**
 
 ```bash
-git add src/services/engine/frame/passes/proceduralDisksPass.ts src/services/engine/frame/passes/texturedImpostorsPass.ts src/services/engine/frame/passes/types.ts src/services/engine/frame/passes/index.ts tests/services/engine/frame/passes/proceduralDisksPass.test.ts tests/services/engine/frame/passes/texturedImpostorsPass.test.ts
+git add src/services/engine/frame/passes/proceduralDisksPass.ts src/services/engine/frame/passes/texturedImpostorsPass.ts src/@types/engine/frame/PassDeps.d.ts src/services/engine/frame/passes/index.ts tests/services/engine/frame/passes/proceduralDisksPass.test.ts tests/services/engine/frame/passes/texturedImpostorsPass.test.ts
 git commit -m "$(cat <<'EOF'
 feat(passes): add proceduralDisksPass and texturedImpostorsPass
 
@@ -2798,7 +2911,7 @@ EOF
 ## Task 11: Update `EngineSubsystemHandles`, `ReadyFrameContext`, `isEngineReady`, and `wireSlots`
 
 **Files:**
-- Modify: `src/@types/EngineSubsystemHandles.d.ts` (replace `thumbnails` slot with three new slots)
+- Modify: `src/@types/engine/handles/EngineSubsystemHandles.d.ts` (replace `thumbnails` slot with three new slots)
 - Modify: `src/services/engine/helpers/engineReady.ts` (update `ReadyEngineState` + `isEngineReady` predicate)
 - Modify: `src/services/engine/frame/frameContext.ts` (drop `thumbnails` from `ReadyFrameContext`; add the three new subsystem references aren't strictly required because passes read off `state.subsystems` directly — but `proceduralDiskRenderer` does need to flow into `deps`)
 - Modify: `src/services/engine/phases/wireSlots.ts` (construct the three new subsystems, drop the old one)
@@ -2820,12 +2933,12 @@ Migration order inside the task:
 
 - [ ] **Step 1: Update `EngineSubsystemHandles.d.ts`**
 
-Edit `src/@types/EngineSubsystemHandles.d.ts`. Replace the `import type { ThumbnailSubsystem }` line with three new imports:
+Edit `src/@types/engine/handles/EngineSubsystemHandles.d.ts`. Replace the `import type { ThumbnailSubsystem } from '../subsystems/ThumbnailSubsystem';` line with three new imports (sibling subsystem files inside `engine/subsystems/`, so the relative path is `../subsystems/...`):
 
 ```typescript
-import type { GalaxyAtlasSubsystem } from './GalaxyAtlasSubsystem';
-import type { ProceduralDiskSubsystem } from './ProceduralDiskSubsystem';
-import type { TexturedImpostorSubsystem } from './TexturedImpostorSubsystem';
+import type { GalaxyAtlasSubsystem } from '../subsystems/GalaxyAtlasSubsystem';
+import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
+import type { TexturedImpostorSubsystem } from '../subsystems/TexturedImpostorSubsystem';
 ```
 
 Then replace the `thumbnails: ThumbnailSubsystem | null;` line with:
@@ -2836,47 +2949,45 @@ Then replace the `thumbnails: ThumbnailSubsystem | null;` line with:
   texturedImpostors: TexturedImpostorSubsystem | null;
 ```
 
-- [ ] **Step 2: Update `engineReady.ts`**
+- [ ] **Step 2: Update `ReadyEngineState.d.ts` and `engineReady.ts`**
 
-Edit `src/services/engine/helpers/engineReady.ts`. Replace the import:
+The 2026-05 @types consolidation extracted `ReadyEngineState` into its own type file, so the narrowing-overlay lives there now and `engineReady.ts` only carries the predicate.
 
-```typescript
-import type { ThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
+Edit `src/@types/engine/ReadyEngineState.d.ts`. Replace the import:
+
+```diff
+- import type { ThumbnailSubsystem } from './subsystems/ThumbnailSubsystem';
++ import type { TexturedImpostorSubsystem } from './subsystems/TexturedImpostorSubsystem';
 ```
 
-with:
+Replace the `subsystems` overlay:
 
-```typescript
-import type { TexturedImpostorSubsystem } from '../../../@types/TexturedImpostorSubsystem';
+```diff
+   subsystems: EngineState['subsystems'] & {
+-    thumbnails: ThumbnailSubsystem;
++    texturedImpostors: TexturedImpostorSubsystem;
+   };
 ```
 
-In `ReadyEngineState`, replace `subsystems: EngineState['subsystems'] & { thumbnails: ThumbnailSubsystem; };` with:
+Then edit `src/services/engine/helpers/engineReady.ts`. In `isEngineReady`, replace `state.subsystems.thumbnails !== null` with `state.subsystems.texturedImpostors !== null`. Update the prose in the module header (lines 11, 61) that names the `thumbnails` slot to name `texturedImpostors` instead. The atlas + proceduralDisks subsystems are NOT in the bootstrap-complete bag because they aren't gating renders — only `texturedImpostors` historically gated via `hasInFlightFetches`, and that role transfers to it.
 
-```typescript
-  subsystems: EngineState['subsystems'] & {
-    texturedImpostors: TexturedImpostorSubsystem;
-  };
+- [ ] **Step 3: Update `ReadyFrameContext.d.ts` and `frameContext.ts`**
+
+The 2026-05 @types consolidation extracted `ReadyFrameContext` into its own type file (`src/@types/engine/frame/ReadyFrameContext.d.ts`); `frameContext.ts` carries only the discriminator helper + `deriveFrameContext()`.
+
+Edit `src/@types/engine/frame/ReadyFrameContext.d.ts`:
+
+```diff
+- import type { ThumbnailSubsystem } from '../subsystems/ThumbnailSubsystem';
++ import type { TexturedImpostorSubsystem } from '../subsystems/TexturedImpostorSubsystem';
 ```
 
-In `isEngineReady`, replace `state.subsystems.thumbnails !== null` with `state.subsystems.texturedImpostors !== null`. The atlas + proceduralDisks subsystems are NOT in the bootstrap-complete bag because they aren't gating renders — only `texturedImpostors` historically gated via `hasInFlightFetches`, and that role transfers to it.
-
-- [ ] **Step 3: Update `frameContext.ts`**
-
-Edit `src/services/engine/frame/frameContext.ts`. Replace the import line:
-
-```typescript
-import type { ThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
+```diff
+-  thumbnails: ThumbnailSubsystem;
++  texturedImpostors: TexturedImpostorSubsystem;
 ```
 
-with:
-
-```typescript
-import type { TexturedImpostorSubsystem } from '../../../@types/TexturedImpostorSubsystem';
-```
-
-In `ReadyFrameContext`, replace `thumbnails: ThumbnailSubsystem;` with `texturedImpostors: TexturedImpostorSubsystem;`.
-
-In the body of `deriveFrameContext`, replace the line `const thumbnails = state.subsystems.thumbnails;` with `const texturedImpostors = state.subsystems.texturedImpostors;`, and in the return object replace `thumbnails,` with `texturedImpostors,`.
+Then edit `src/services/engine/frame/frameContext.ts`. In the body of `deriveFrameContext`, replace `const thumbnails = state.subsystems.thumbnails;` with `const texturedImpostors = state.subsystems.texturedImpostors;`, and in the return object replace `thumbnails,` with `texturedImpostors,`.
 
 - [ ] **Step 4: Update `engine.ts` state literal + destroy**
 
@@ -3256,11 +3367,14 @@ EOF
 
 ---
 
-## Task 14: Delete legacy `thumbnailSubsystem`, `galaxyThumbnailsPass`, and their tests
+## Task 14: Delete legacy `thumbnailSubsystem`, `galaxyThumbnailsPass`, their tests, and obsolete legacy `@types/engine/subsystems/Thumbnail*` files
 
 **Files:**
 - Delete: `src/services/engine/subsystems/thumbnailSubsystem.ts`
 - Delete: `src/services/engine/frame/passes/galaxyThumbnailsPass.ts`
+- Delete: `src/@types/engine/subsystems/ThumbnailSubsystem.d.ts` (legacy subsystem contract — superseded by the three new files in Tasks 4/6/8)
+- Delete: `src/@types/engine/subsystems/CreateThumbnailSubsystemInput.d.ts` (legacy constructor input — never imported by anything once the legacy source is gone)
+- Delete: `src/@types/engine/subsystems/ThumbnailFrameInput.d.ts` (legacy per-frame input — its consumers were all in the legacy subsystem source and the legacy `galaxyThumbnailsPass`)
 - Delete: `tests/services/engine/subsystems/thumbnailSubsystem.test.ts`
 - Delete: `tests/visual/galaxyImpostorBaseline.test.ts` (the legacy baseline; replaced in this task with a post-split baseline that drives the three new subsystems)
 - Create: `tests/visual/galaxyImpostorBaseline.test.ts` (NEW — drives the post-split planners)
@@ -3268,11 +3382,19 @@ EOF
 
 After this task, no file in `src/` references `thumbnailSubsystem`, `ThumbnailSubsystem`, or `galaxyThumbnailsPass`.
 
-- [ ] **Step 1: Delete the legacy source + pass files**
+- [ ] **Step 1: Delete the legacy source + pass + obsolete type files**
 
 ```bash
-git rm src/services/engine/subsystems/thumbnailSubsystem.ts src/services/engine/frame/passes/galaxyThumbnailsPass.ts tests/services/engine/subsystems/thumbnailSubsystem.test.ts tests/visual/galaxyImpostorBaseline.test.ts
+git rm src/services/engine/subsystems/thumbnailSubsystem.ts \
+       src/services/engine/frame/passes/galaxyThumbnailsPass.ts \
+       src/@types/engine/subsystems/ThumbnailSubsystem.d.ts \
+       src/@types/engine/subsystems/CreateThumbnailSubsystemInput.d.ts \
+       src/@types/engine/subsystems/ThumbnailFrameInput.d.ts \
+       tests/services/engine/subsystems/thumbnailSubsystem.test.ts \
+       tests/visual/galaxyImpostorBaseline.test.ts
 ```
+
+Before running, double-check `src/@types/engine/subsystems/` for any other obsolete `Thumbnail*` file the audit might have missed (`ls src/@types/engine/subsystems/ | grep -i thumbnail`).
 
 - [ ] **Step 2: Hunt for any residual imports**
 
@@ -3303,7 +3425,8 @@ import { Source } from '../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../../src/services/engine/subsystems/proceduralDiskSubsystem';
 import { createTexturedImpostorSubsystem } from '../../src/services/engine/subsystems/texturedImpostorSubsystem';
-import type { PointCloud, OrbitCamera } from '../../src/@types';
+import type { PointCloud } from '../../src/@types/data/PointCloud';
+import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
