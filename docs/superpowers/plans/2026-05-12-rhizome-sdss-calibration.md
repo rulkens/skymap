@@ -1,392 +1,340 @@
 # Rhizome — SDSS Reproduction Calibration
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` (or `superpowers:subagent-driven-development` for the parallelisable scaffolding tasks) to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. **This plan is mostly executed inside a NEW repository — `skymap-rhizome` — that does not yet exist.** Task 1 creates it; all subsequent file paths beginning with `~/Development/js/skymap-rhizome/` refer to that new repo. The skymap repo itself is barely touched (one .gitignore hint, no code).
+> **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:executing-plans` (or `superpowers:subagent-driven-development` for the deterministic scaffolding tasks) to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. **This plan is executed entirely inside the existing PolyPhy fork at `~/Development/vendor/python/PolyPhy` on a new branch.** Skymap (this repo) is **not touched** by any task — the only skymap-side artefact is this plan file itself, committed on the `rhizome-spec` branch. Every other commit lands in the PolyPhy fork on the new `rhizome-sdss-calibration` branch.
 
-**Goal:** Lock in the PolyPhy MCPM parameter set by reproducing the published Wilde et al. 2023 SDSS MCPM cube (`mcpm-large.scfd` / `mcpm_sdss_d2.npy`, currently shipped). We run PolyPhy ourselves on skymap's SDSS catalog restricted to the published 44–476 Mpc comoving volume, visually compare against the reference, iterate the parameter set, and freeze the final values in `runRhizomePolyphy.py`. Those frozen parameters are then applied — unchanged — to the three full-sky rhizome shells in a **later plan**.
+**Goal:** Lock in the PolyPhy MCPM parameter set by reproducing the published Wilde et al. 2023 SDSS MCPM cube (`mcpm_sdss_d2.npy`, currently shipped by skymap as `mcpm-large.scfd`). We run PolyPhy on skymap's SDSS catalog restricted to the published 44–476 Mpc comoving volume, numerically + visually compare against the reference cube, iterate the parameter set, and freeze the final values in a frozen `RhizomeParams` dataclass. Those frozen parameters are then applied — unchanged — to the three full-sky rhizome shells in a **later plan**.
 
-**Architecture:** A standalone Python repository (`skymap-rhizome`) houses the PolyPhy producer pipeline. It vendors PolyPhy as a git submodule pinned at the smoke-test–verified commit `5f9cef8`. Three Python entry points: `buildRhizomeInput.py` (skymap `.bin` → PolyPhy CSV), `runRhizomePolyphy.py` (subprocess orchestrator with named parameter constants), `compareCubes.py` (matplotlib side-by-side + cross-correlation against the reference). No skymap runtime code runs in this phase — the comparison harness loads `.npy` cubes directly with NumPy and renders to PNG.
+**Architecture:** A new `rhizome/` directory inside the existing PolyPhy fork, sibling to the proven `verification/` directory. Four Python entry points: `skymapBinDecoder.py` (v4 PointCloud reader), `buildRhizomeInput.py` (skymap `.bin` from R2 → PolyPhy CSV), `runRhizomePolyphy.py` (subprocess orchestrator with frozen `RhizomeParams`), `compareCubes.py` (numerical + max-projection comparison). The pinned-and-proven `verification/.venv/` Python environment is reused as-is — no new venv. No skymap runtime code runs in this phase; comparison is `.npy`-against-`.npy` directly with NumPy + matplotlib.
 
-**Tech stack:** Python 3.10.20, Taichi 1.6.0, NumPy 1.22.0, Matplotlib 3.5.3 (pinned exactly per the verification handoff). The skymap repo is untouched except for one `.gitignore` entry.
+**Why fork-only, not a new repo with PolyPhy as a submodule:** The calibration loop is "run PolyPhy → look at the cube → tune params → re-run". One repo, one branch, one venv, zero cross-repo coordination. The v4 `.bin` format is stable, so a 50-line Python port costs nothing to maintain. `sdss-large.bin` and `mcpm_sdss_d2.npy` are both publicly hosted on R2 by skymap, so the fork pulls them via HTTP — no need to reach into skymap's working copy. "How the rhizome cubes were calibrated" lives as a single citable timeline in the fork's `rhizome-sdss-calibration` branch, ideal for paper appendices.
 
-**Spec:** [`docs/superpowers/specs/2026-05-12-rhizome-cosmic-web-volume-design.md`](../specs/2026-05-12-rhizome-cosmic-web-volume-design.md) — the "Reproduction-against-SDSS calibration" section is what this plan implements.
+**Tech stack:** Python 3.10.20, Taichi 1.6.0, NumPy 1.22.0, Matplotlib 3.5.3, SciPy (from the verification freeze), pytest. All pinned exactly per `~/Development/vendor/python/PolyPhy/verification/requirements-frozen.txt` and proven working headlessly on Apple Silicon Metal. Skymap is untouched.
+
+**Spec:** [`docs/superpowers/specs/2026-05-12-rhizome-cosmic-web-volume-design.md`](../specs/2026-05-12-rhizome-cosmic-web-volume-design.md) — the "Reproduction-against-SDSS calibration" section is what this plan implements. The spec's "Repository split" subsection is authoritative on the fork-only architecture.
 **Smoke-test handoff:** [`~/Development/vendor/python/PolyPhy/verification/README.md`](../../../../../vendor/python/PolyPhy/verification/README.md) — authoritative for the working PolyPhy invocation, environment, output format, and gotchas.
+**v4 binary format:** [`src/data/pointCloudFormat.ts`](../../../src/data/pointCloudFormat.ts) in skymap — 16-byte header (`magic=0x504d4b53`, `version=4`, `count`, `reserved`) + 64-byte record (`objID u64`, `xyz f32×3`, `magU/G/R/I/Z f32×5`, `axisRatio f32`, `positionAngleDeg f32`, `diameterKpc f32`, 12-byte pad). Little-endian throughout. Source of truth for `skymapBinDecoder.py`.
+**PolyPhy CLI flags:** [`~/Development/vendor/python/PolyPhy/src/polyphy/utils/cli_helper.py`](../../../../../vendor/python/PolyPhy/src/polyphy/utils/cli_helper.py) — exhaustive list of `argparse` flags.
 
 **Reality checks vs spec:**
 
-- The spec says "load alongside the existing `mcpm-large.scfd` in the skymap renderer." That's expensive — it requires a `.npy → .scfd` builder and a renderer-side toggle that don't exist yet, both of which are explicitly out of scope for this plan. **This plan substitutes a Python-side visual comparison** (max-projection PNGs, intensity histograms, cross-correlation) directly between the two `.npy` cubes. That's a stronger comparison than a perspective render anyway (no camera/tonemap variance), and it keeps the calibration loop entirely inside `skymap-rhizome`. Loading the reproduced cube in skymap is deferred to the next plan.
-- The PolyPhy `PPConfig_3DDiscrete` class (`vendor/polyphy/src/polyphy/core/discrete3D.py:38-45`) auto-derives `sense_distance` and `step_size` from `DOMAIN_SIZE_MAX` *if they are left below a tiny threshold*. Wilde et al.'s parameters in the literature (and the Polyphorm tradition) are typically given as fractions of the domain — so the calibration's "iteration constants" are expressed as **fractions of `DOMAIN_SIZE_MAX`** in the orchestrator, multiplied out into pixel/world units at invocation time. This matches PolyPhy's internal model.
-- The spec's claim "expect well under a minute on Apple silicon Metal" refers to a single shell. The SDSS calibration cube spans 556 × 938 × 569 Mpc — *not* cubic — so `-t 256` will produce a non-cubic trace cube whose largest axis is 256. For the reproduction we **deliberately don't add anchor points**: the reference cube is non-cubic (712 × 1200 × 728) and a faithful reproduction must also be non-cubic. The cubic-AABB trick is a rhizome-shell concern, not a calibration concern.
-- The verification README documents that PolyPhy emits 4D `(X, Y, Z, 1)` trace cubes that need `.squeeze(-1)`. The comparison harness does that on load.
+- The spec says "load alongside the existing `mcpm-large.scfd` in the skymap renderer" for visual comparison. That is **deliberately deferred** — it would need a `.npy → .scfd` builder and a renderer-side toggle that don't exist yet, both explicitly out of scope for this plan. This plan substitutes a Python-side numerical + visual comparison (max-projection PNGs, 3D + 2D Pearson correlation) directly between the two `.npy` cubes. That's a stronger comparison than a perspective render anyway (no camera/tonemap variance) and keeps the calibration loop entirely inside the fork.
+- The Wilde et al. literature typically expresses sensing distance / step size as **fractions of the domain extent**. PolyPhy's `PPConfig_3DDiscrete` auto-derives them from `DOMAIN_SIZE_MAX` (defaults `0.005` and `0.0005`) when unset — so the orchestrator stores these as fractions in `RhizomeParams` and multiplies into pixel-space at invocation time.
+- The SDSS calibration cube spans 556 × 938 × 569 Mpc — *not* cubic. So `-t 256` produces a non-cubic trace cube whose longest axis is 256. The reproduction **deliberately does not add corner anchor points**: the reference cube is non-cubic (712 × 1200 × 728) and a faithful reproduction must be too. Cubic-AABB anchor pinning is a rhizome-shell concern, not a calibration concern.
+- The verification README documents that PolyPhy emits 4D `(X, Y, Z, 1)` trace cubes that need `.squeeze(-1)`. The orchestrator does that on save; the comparison harness defends against either shape on load.
+- **Acceptance bar** (`Pearson ≥ 0.6 on at least two of three axis projections`) is a *guess* — Wilde et al.'s preprocessing differs from ours (no RSD correction, no DBSCAN clustering), so absolute parity is impossible. The bar is documented in `CALIBRATION.md` as tunable; if iter 0 lands close to that bar with defaults, the bar likely needs raising.
 
 ---
 
-## File map (in the new `~/Development/js/skymap-rhizome/` repository)
+## File map (in the PolyPhy fork at `~/Development/vendor/python/PolyPhy`)
 
-**Created by this plan:**
+**Created by this plan, all in the fork on branch `rhizome-sdss-calibration`:**
 
-- `.gitignore`
-- `.python-version`
-- `README.md`
-- `pyproject.toml` — minimal PEP 621 metadata + dependency pins
-- `requirements.txt` — exact pins matching the verified PolyPhy environment
-- `requirements-frozen.txt` — `pip freeze` output captured post-install (for reproducibility)
-- `vendor/polyphy/` — git submodule pinned at PolyPhy `5f9cef8`
-- `buildRhizomeInput.py` — SDSS `.bin` → CSV, restricted to Wilde et al.'s 44–476 Mpc volume
-- `runRhizomePolyphy.py` — PolyPhy orchestrator with calibration parameter constants
-- `compareCubes.py` — `.npy` ↔ `.npy` visual + numerical comparison
-- `skymapBinDecoder.py` — ~50-line Python port of skymap's v4 `decodePointCloud`
-- `tests/test_skymap_bin_decoder.py` — round-trip test against a tiny hand-built v4 buffer
-- `tests/test_build_rhizome_input.py` — distance-filter + CSV-format test on synthetic input
-- `tests/test_compare_cubes.py` — cross-correlation + histogram on a known pair of cubes
-- `data/csv/` (gitignored content) — produced CSV
-- `output/` (gitignored content) — reproduced `.npy` cubes
-- `calibration/` (committed) — final comparison PNG + sweep log
-- `calibration/compare.png` — final side-by-side comparison (committed binary)
-- `CALIBRATION.md` — sweep log + locked-in parameter values + reasoning
+- `rhizome/README.md`
+- `rhizome/.gitignore`
+- `rhizome/skymapBinDecoder.py` — ~50-line Python port of skymap's v4 `decodePointCloud`
+- `rhizome/buildRhizomeInput.py` — curls `sdss-large.bin` from R2 (idempotent), filters to 44–476 Mpc, writes CSV
+- `rhizome/runRhizomePolyphy.py` — PolyPhy subprocess orchestrator + `RhizomeParams` dataclass
+- `rhizome/compareCubes.py` — `.npy` vs `.npy` Pearson + max-projection PNG
+- `rhizome/CALIBRATION.md` — parameter sweep log; one entry per iteration
+- `rhizome/CANDIDATE_PARAMETERS.md` — output of Task 2 literature research
+- `rhizome/tests/__init__.py` (empty marker)
+- `rhizome/tests/test_skymap_bin_decoder.py`
+- `rhizome/tests/test_build_rhizome_input.py`
+- `rhizome/tests/test_run_rhizome_polyphy.py`
+- `rhizome/tests/test_compare_cubes.py`
+- `rhizome/cache/.gitkeep` — gitignored content: `sdss-large.bin`, `sdss_calibration.csv`
+- `rhizome/reference/.gitkeep` — gitignored content: `mcpm_sdss_d2.npy`
+- `rhizome/output/.gitkeep` — gitignored content: `sdss_reproduced.npy` + sidecar JSON
+- `rhizome/calibration/.gitkeep` — committed per-iteration artefacts under `iter<N>_<name>/`
+- `rhizome/calibration/sources/` — committed verbatim literature/spec excerpts (Task 2)
 
 **Touched in the skymap repo (this repo, branch `rhizome-spec`):**
 
-- `.gitignore` — add a comment pointing to `skymap-rhizome` so contributors don't search here for the producer scripts
+- *only this plan file itself* — committed in a separate non-plan-execution step before this plan begins. Nothing else in skymap is created, modified, or deleted during plan execution.
 
 ---
 
-## Task 1: Scaffold the `skymap-rhizome` repository
+## Task 1: Branch + scaffold `rhizome/` in the PolyPhy fork
 
-Create the empty repository, pin Python tooling, vendor PolyPhy as a submodule at the verified commit, set up the venv. **No PolyPhy invocation yet** — we just want a clean, reproducible skeleton that future tasks build on.
+Create the `rhizome-sdss-calibration` branch, scaffold the directory tree, write the README + `.gitignore`. **No PolyPhy invocation yet** — just a clean reproducible skeleton.
 
-**Decision: submodule vs editable install.** Both work; we use a git **submodule** because (a) `skymap-rhizome` is meant to be a citable artefact ("how the cubes were built, exactly"), and a submodule pins the upstream tree at a specific commit inside our own repo's history, which an `-e` install doesn't, and (b) it allows in-tree patches later without forking PolyPhy upstream. The trade-off is one extra `git submodule update --init` step on clone, which is documented in the README.
+**Branch base decision (resolve in Step 1):** The fork has two relevant tips:
 
-**Repo location:** `~/Development/js/skymap-rhizome/` (sibling to `~/Development/js/skymap/`, matching the project layout).
+- `verification-spike` (current HEAD: `161b1d4 Add headless 3D verification spike for skymap-rhizome`) — contains the `verification/` directory and the proven `.venv/`.
+- `main` (the fork's local main, mirroring `upstream/main`).
 
-**Files to create:** see file map above.
+The verification venv lives at `~/Development/vendor/python/PolyPhy/verification/.venv/`. We **must** reuse it (Taichi+NumPy+Matplotlib pinned exactly, proven Metal-stable). That venv tree exists on the `verification-spike` branch only (the `verification/` directory itself is committed there). Therefore **the new branch must be based off `verification-spike`** — confirm via `git branch -a` showing `verification-spike` includes the `verification/` directory, then `git checkout -b rhizome-sdss-calibration verification-spike`.
 
-- [ ] **Step 1: Create the directory and initialise git**
+**Pytest setup decision (resolve in Step 1):** PolyPhy's `setup.cfg` has `[tool:pytest] addopts = --cov src --cov-report term-missing` and `testpaths = tests`. Running plain `pytest` from the fork root would pick up *PolyPhy's* `tests/` directory (not ours) and require `--cov` against PolyPhy's `src/`. To run our tests in isolation without touching PolyPhy config files, invoke explicitly:
+
+```bash
+verification/.venv/bin/pytest rhizome/tests/ --no-cov
+```
+
+`--no-cov` disables the `--cov src` addopt from `setup.cfg` (which would otherwise fail because our tests don't import `polyphy`). Passing the explicit `rhizome/tests/` path overrides `testpaths`. This invocation is documented in `rhizome/README.md` and used verbatim throughout the plan. No edits to PolyPhy's `setup.cfg` or `pyproject.toml`.
+
+- [ ] **Step 1: Verify branch state + create the calibration branch**
 
   ```bash
-  mkdir -p ~/Development/js/skymap-rhizome
-  cd ~/Development/js/skymap-rhizome
-  git init
-  git checkout -b main
+  cd ~/Development/vendor/python/PolyPhy
+  git branch -a
+  # Confirm `verification-spike` is present and `verification/` directory exists on it.
+  git status
+  # Must be clean. If not, halt and surface to user.
+  git checkout -b rhizome-sdss-calibration verification-spike
   ```
 
-- [ ] **Step 2: Write `.gitignore`**
+  If the verification venv is not present at `verification/.venv/bin/python`, halt — the calibration recipe depends on it. Recreate via the verification README's setup steps before continuing.
 
-  Create `~/Development/js/skymap-rhizome/.gitignore`:
+- [ ] **Step 2: Confirm pytest invocation works on an empty test dir**
+
+  ```bash
+  mkdir -p rhizome/tests
+  touch rhizome/tests/__init__.py
+  verification/.venv/bin/pytest rhizome/tests/ --no-cov
+  ```
+
+  Expected: `no tests ran` exit 5, NOT a coverage-related error. If we see `--cov` errors, the `--no-cov` flag isn't being respected — investigate before continuing.
+
+- [ ] **Step 3: Scaffold directories**
+
+  ```bash
+  cd ~/Development/vendor/python/PolyPhy
+  mkdir -p rhizome/{tests,cache,reference,output,calibration/sources}
+  touch rhizome/cache/.gitkeep rhizome/reference/.gitkeep \
+        rhizome/output/.gitkeep rhizome/calibration/.gitkeep
+  ```
+
+- [ ] **Step 4: Write `rhizome/.gitignore`**
+
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/.gitignore`:
 
   ```gitignore
-  # Python virtualenvs and caches.
-  .venv/
-  __pycache__/
-  *.pyc
-  .pytest_cache/
+  # Generated artefacts — recreated by the scripts in this directory.
 
-  # Generated CSVs (recreated by buildRhizomeInput.py from the .bin cache).
-  data/csv/*.csv
+  # Downloaded skymap .bin cache (large; fetched from R2 on demand).
+  cache/*.bin
+
+  # Generated PolyPhy CSV input (regenerated by buildRhizomeInput.py).
+  cache/*.csv
+
+  # Downloaded reference cube (large; fetched from R2 on demand).
+  reference/*.npy
 
   # Reproduced cubes (large; recreated by runRhizomePolyphy.py).
   output/*.npy
   output/*.json
 
-  # Downloaded reference cubes (large; fetched from R2 on demand).
-  reference/*.npy
-
-  # Skymap .bin cache (large; fetched from R2 on demand).
-  cache/*.bin
-
-  # PolyPhy's own output sink — submoduled tree, but PolyPhy writes here at runtime.
-  vendor/polyphy/data/fits/*.npy
-  vendor/polyphy/data/csv/*.csv
+  # Python noise.
+  __pycache__/
+  *.pyc
+  .pytest_cache/
 
   # macOS noise.
   .DS_Store
   ```
 
-- [ ] **Step 3: Pin Python version**
+  The `.gitkeep` markers under each gitignored directory ensure the empty directories are present after a fresh clone.
 
-  Create `~/Development/js/skymap-rhizome/.python-version`:
+- [ ] **Step 5: Write `rhizome/README.md`**
 
-  ```
-  3.10.20
-  ```
-
-  (Matches the verification environment exactly. If `pyenv` is in use it will pick this up automatically; otherwise the README documents falling back to system `python3.10`.)
-
-- [ ] **Step 4: Write `requirements.txt`**
-
-  Pinned to the verification env. We list only the runtime deps needed by *our* scripts plus PolyPhy's own transitive requirements that we want fixed at the verified version.
-
-  Create `~/Development/js/skymap-rhizome/requirements.txt`:
-
-  ```txt
-  # Pinned to match ~/Development/vendor/python/PolyPhy/verification/requirements-frozen.txt.
-  # Bumping any of these requires re-running the SDSS calibration to confirm no drift.
-  taichi==1.6.0
-  numpy==1.22.0
-  matplotlib==3.5.3
-  scipy==1.10.1
-  pytest==8.0.0
-  requests==2.31.0
-  ```
-
-- [ ] **Step 5: Write `pyproject.toml`**
-
-  Minimal PEP 621 metadata so this is a real, citable Python project.
-
-  Create `~/Development/js/skymap-rhizome/pyproject.toml`:
-
-  ```toml
-  [project]
-  name = "skymap-rhizome"
-  version = "0.1.0"
-  description = "PolyPhy MCPM producer for skymap's rhizome cosmic-web density cubes."
-  readme = "README.md"
-  requires-python = "==3.10.*"
-  authors = [{ name = "Alexander Rulkens" }]
-  license = { text = "MIT" }
-
-  [build-system]
-  requires = ["setuptools>=61"]
-  build-backend = "setuptools.build_meta"
-
-  [tool.pytest.ini_options]
-  testpaths = ["tests"]
-  ```
-
-- [ ] **Step 6: Vendor PolyPhy as a submodule**
-
-  ```bash
-  cd ~/Development/js/skymap-rhizome
-  git submodule add https://github.com/PolyPhyHub/PolyPhy.git vendor/polyphy
-  cd vendor/polyphy
-  git checkout 5f9cef8
-  cd ../..
-  git add .gitmodules vendor/polyphy
-  ```
-
-  **Why this exact commit:** `5f9cef8` is the revision the verification handoff confirmed working headlessly on Apple Silicon Metal with the pinned environment. Newer PolyPhy commits may have refactored the API; older ones predate the batch-mode flag. Bumping requires re-calibration.
-
-- [ ] **Step 7: Create the venv and install dependencies**
-
-  ```bash
-  cd ~/Development/js/skymap-rhizome
-  python3.10 -m venv .venv
-  .venv/bin/pip install --upgrade pip
-  .venv/bin/pip install -r requirements.txt
-  # Install vendored PolyPhy in editable mode so our scripts can `import polyphy`
-  # if they ever need to (currently they shell out, but the install also pulls
-  # PolyPhy's own deps as declared in its requirements.txt).
-  .venv/bin/pip install -e vendor/polyphy
-  .venv/bin/pip freeze > requirements-frozen.txt
-  ```
-
-- [ ] **Step 8: Write the README**
-
-  Create `~/Development/js/skymap-rhizome/README.md`:
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/README.md`:
 
   ```markdown
-  # skymap-rhizome
+  # rhizome — PolyPhy MCPM calibration against the Wilde et al. SDSS cube
 
-  PolyPhy MCPM producer pipeline for skymap's **rhizome** cosmic-web density cubes.
+  Sibling to `verification/`. Lives inside the [`rulkens/PolyPhy`](https://github.com/rulkens/PolyPhy)
+  fork on branch `rhizome-sdss-calibration`. Companion to skymap's spec
+  [`2026-05-12-rhizome-cosmic-web-volume-design.md`](https://github.com/rulkens/skymap/blob/main/docs/superpowers/specs/2026-05-12-rhizome-cosmic-web-volume-design.md).
 
   ## What this is
 
-  A standalone Python repository that runs Monte Carlo Physarum Machine (MCPM) on
-  galaxy catalogs and emits 3D density `.npy` cubes for consumption by [skymap](https://github.com/rulkens/skymap)'s
-  scalar-volume renderer. Companion to skymap's spec
-  [`2026-05-12-rhizome-cosmic-web-volume-design.md`](https://github.com/rulkens/skymap/blob/main/docs/superpowers/specs/2026-05-12-rhizome-cosmic-web-volume-design.md).
+  A four-script Python pipeline that reproduces the **SDSS_z_44-476mpc**
+  MCPM cube from Wilde et al. 2023 (the cube skymap currently ships as
+  `mcpm-large.scfd`) by running this PolyPhy fork on skymap's own SDSS
+  catalog. The goal is to lock in MCPM parameter values that match the
+  published recipe; once locked, those same parameters will be applied
+  unchanged to full-sky 2MRS+GLADE inputs in a later milestone.
 
-  ## Current scope: SDSS calibration only
+  See [`CALIBRATION.md`](./CALIBRATION.md) for the parameter sweep log
+  and the locked-in final values.
 
-  This first milestone reproduces the published Wilde et al. 2023 SDSS MCPM cube
-  (`mcpm_sdss_d2.npy`, currently shipped by skymap as `mcpm-large.scfd`) on our
-  own PolyPhy invocation. The goal is to lock in MCPM parameter values that
-  match the published recipe. Once locked, those same parameters are applied
-  to full-sky 2MRS+GLADE inputs in a later milestone.
+  ## Why inside the PolyPhy fork (not a separate repo)
 
-  See [`CALIBRATION.md`](./CALIBRATION.md) for the parameter sweep log and the
-  frozen final values.
+  - One repo, one branch, one venv, zero cross-repo coordination.
+  - Reuses the `verification/.venv/` proven working on Apple Silicon Metal.
+  - Calibration timeline is citable as a single fork branch (paper appendix).
+
+  No skymap-side code is touched by this calibration. Skymap's only role
+  is hosting `sdss-large.bin` and `mcpm_sdss_d2.npy` on R2; the scripts
+  here `curl` both at runtime.
 
   ## Setup
 
-  ```bash
-  git clone --recurse-submodules https://github.com/rulkens/skymap-rhizome.git
-  cd skymap-rhizome
-  python3.10 -m venv .venv
-  .venv/bin/pip install -r requirements.txt
-  .venv/bin/pip install -e vendor/polyphy
-  ```
-
-  If you forgot `--recurse-submodules`:
+  Reuses the verification venv at `verification/.venv/` (Python 3.10.20,
+  Taichi 1.6.0, NumPy 1.22.0, Matplotlib 3.5.3 — pinned, no `pip install`
+  needed if you already ran `verification/`'s setup):
 
   ```bash
-  git submodule update --init --recursive
+  # From fork root. If verification/.venv/ doesn't exist, run verification/'s
+  # setup steps first (see verification/README.md).
+  verification/.venv/bin/python --version  # → Python 3.10.20
   ```
 
-  PolyPhy is pinned at commit `5f9cef8`. Bumping the submodule requires
-  re-running the SDSS calibration (see `CALIBRATION.md`).
-
-  ## Reproducing the SDSS calibration
+  ## Running the full calibration loop
 
   ```bash
-  # 1. Fetch skymap's SDSS catalog (.bin) into cache/.
-  .venv/bin/python -c "import urllib.request; urllib.request.urlretrieve('https://skymap-data.rulkens.com/data/sdss-large.bin', 'cache/sdss-large.bin')"
+  # 1. Build the CSV input from skymap's SDSS catalog (fetches sdss-large.bin
+  #    from R2 if cache/ is empty).
+  verification/.venv/bin/python rhizome/buildRhizomeInput.py
 
-  # 2. Fetch the reference cube (Wilde et al. 2023, pre-extracted by skymap).
-  .venv/bin/python -c "import urllib.request; urllib.request.urlretrieve('https://skymap-data.rulkens.com/data/raw/mcpm/mcpm_sdss_d2.npy', 'reference/mcpm_sdss_d2.npy')"
+  # 2. Run PolyPhy with the currently-frozen calibration parameters.
+  verification/.venv/bin/python rhizome/runRhizomePolyphy.py \
+      --input rhizome/cache/sdss_calibration.csv \
+      --output rhizome/output/sdss_reproduced.npy
 
-  # 3. Build the PolyPhy input CSV.
-  .venv/bin/python buildRhizomeInput.py --shell calibration
+  # 3. Fetch the reference cube (idempotent).
+  mkdir -p rhizome/reference
+  curl -o rhizome/reference/mcpm_sdss_d2.npy \
+      https://skymap-data.rulkens.com/data/raw/mcpm/mcpm_sdss_d2.npy
 
-  # 4. Run PolyPhy with the locked-in calibration parameter set.
-  .venv/bin/python runRhizomePolyphy.py --shell calibration
-
-  # 5. Visual + numerical comparison against the reference.
-  .venv/bin/python compareCubes.py \
-      --reproduced output/sdss_reproduced.npy \
-      --reference reference/mcpm_sdss_d2.npy \
-      --out calibration/compare.png
+  # 4. Compare reproduced vs reference.
+  verification/.venv/bin/python rhizome/compareCubes.py \
+      --reproduced rhizome/output/sdss_reproduced.npy \
+      --reference rhizome/reference/mcpm_sdss_d2.npy \
+      --out rhizome/calibration/iter5_lockin/
   ```
 
-  Wall-clock: ~30 s for steps 3-5 combined on M1/M2 Mac.
+  Wall-clock: ~30 s for step 2 on Apple Silicon Metal at the locked-in
+  parameter set; step 1 dominated by the R2 download on first run.
+
+  ## Running the tests
+
+  ```bash
+  verification/.venv/bin/pytest rhizome/tests/ --no-cov
+  ```
+
+  `--no-cov` is required because PolyPhy's `setup.cfg` enforces `--cov src`
+  in its top-level pytest config; our tests don't import from `src/polyphy/`
+  and would fail the coverage gate. We pass the explicit `rhizome/tests/`
+  path to override `testpaths = tests`. No edits to PolyPhy's pytest config.
 
   ## Repository layout
 
   | Path | Purpose |
   |---|---|
-  | `buildRhizomeInput.py` | Decode skymap `.bin`, filter to shell, write CSV |
-  | `runRhizomePolyphy.py` | Subprocess wrapper around PolyPhy; parameter constants live here |
-  | `compareCubes.py` | Side-by-side max-projection PNG + cross-correlation stats |
-  | `skymapBinDecoder.py` | Port of skymap's v4 PointCloud decoder |
-  | `vendor/polyphy/` | PolyPhy submodule, pinned at `5f9cef8` |
-  | `calibration/` | Sweep log artefacts + final comparison PNG |
+  | `skymapBinDecoder.py` | Port of skymap's v4 PointCloud decoder (binary format from `pointCloudFormat.ts`) |
+  | `buildRhizomeInput.py` | Curl `sdss-large.bin` from R2, decode, filter to 44–476 Mpc shell, write CSV |
+  | `runRhizomePolyphy.py` | Subprocess wrapper around PolyPhy 3d_discrete; `RhizomeParams` lives here |
+  | `compareCubes.py` | Pearson correlation + max-projection PNG between reproduced and reference cube |
+  | `CANDIDATE_PARAMETERS.md` | Literature-research starting parameter set (Task 2) |
+  | `CALIBRATION.md` | Iteration-by-iteration tuning log + locked-in final parameter set |
+  | `calibration/` | Per-iteration artefacts (`iter0_baseline/`, `iter1_*/`, etc.) + `sources/` |
   | `tests/` | pytest unit tests for the deterministic pieces |
+  | `cache/` (gitignored) | `sdss-large.bin` and `sdss_calibration.csv` |
+  | `reference/` (gitignored) | `mcpm_sdss_d2.npy` |
+  | `output/` (gitignored) | `sdss_reproduced.npy` + sidecar JSON |
   ```
 
-- [ ] **Step 9: Commit the scaffold**
+- [ ] **Step 6: Initial commit**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  git add .gitignore .python-version requirements.txt requirements-frozen.txt pyproject.toml README.md .gitmodules vendor/polyphy
+  cd ~/Development/vendor/python/PolyPhy
+  git add rhizome/.gitignore rhizome/README.md \
+          rhizome/tests/__init__.py \
+          rhizome/cache/.gitkeep rhizome/reference/.gitkeep \
+          rhizome/output/.gitkeep rhizome/calibration/.gitkeep
   git commit -m "$(cat <<'EOF'
-  chore: scaffold skymap-rhizome repository
+  chore(rhizome): scaffold calibration directory
 
-  PolyPhy MCPM producer pipeline. This first commit establishes the Python
-  environment (3.10.20 + Taichi 1.6.0 + NumPy 1.22.0, matching the upstream
-  PolyPhy verification handoff), vendors PolyPhy as a submodule pinned at
-  commit 5f9cef8, and documents the SDSS calibration reproduction recipe.
-
-  No producer code yet — that lands in subsequent commits as the SDSS
-  calibration milestone takes shape.
+  Sibling to verification/. Reuses verification/.venv/ — no new venv.
+  Empty directory tree + README + .gitignore; scripts land in follow-up
+  commits as the SDSS calibration milestone takes shape.
 
   Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
   EOF
   )"
   ```
 
-  **Do NOT push.** The remote doesn't exist yet; we'll create it (or decide not to) after the first round of calibration verifies the pipeline works end-to-end.
-
-- [ ] **Step 10: Drop the skymap-side gitignore hint**
-
-  In `~/Development/js/skymap/.gitignore`, find the existing comment block at the top documenting the rationale for the catalogue/binary gitignores. Append a one-line breadcrumb so future contributors searching this tree for the PolyPhy producer realise it lives elsewhere.
-
-  Insert before the last paragraph of the top-of-file docblock (or at end of file if no docblock):
-
-  ```gitignore
-  # The PolyPhy producer pipeline that generates rhizome density cubes lives
-  # in the sibling repository `skymap-rhizome` (not in this tree). See
-  # docs/superpowers/specs/2026-05-12-rhizome-cosmic-web-volume-design.md
-  # for the split rationale.
-  ```
-
-  Commit in skymap:
-
-  ```bash
-  cd ~/Development/js/skymap
-  git add .gitignore
-  git commit -m "$(cat <<'EOF'
-  docs(gitignore): point contributors at skymap-rhizome for the producer pipeline
-
-  Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
-  EOF
-  )"
-  ```
+  Verify with `git log --format='%an <%ae>' -1` that the author is the user (Alexander Rulkens), not Claude. If it's wrong, halt and surface to user — do NOT `git commit --amend --author=...`.
 
 ---
 
-## Task 2: Research the Wilde et al. 2023 parameter set
+## Task 2: Wilde et al. parameter research
 
-**This task is non-coding.** It produces a parameter table that Task 5 codifies as named constants. Search the literature and Polyphorm source for explicit values.
+**This task is mostly non-coding.** It produces a parameter table that Task 5 codifies as a frozen `RhizomeParams` dataclass. Search the literature, the Cosmic Slime VAC metadata, and PolyPhy's own defaults for explicit values.
 
-The point of this research is to **start the iteration loop as close to the published recipe as possible**, not to find values that we can apply unmodified. If the literature gives us nothing, we start from PolyPhy's auto-derived defaults (`sense_distance = 0.005 × DOMAIN_SIZE_MAX`, `step_size = 0.0005 × DOMAIN_SIZE_MAX`, see `vendor/polyphy/src/polyphy/core/discrete3D.py:38-45`) and tune.
+The point of this research is to **start the iteration loop as close to the published recipe as possible**, not to find values that we can apply unmodified. If the literature gives us nothing, we fall back to PolyPhy's auto-derived defaults (currently `sense_distance ≈ 0.005 × DOMAIN_SIZE_MAX`, `step_size ≈ 0.0005 × DOMAIN_SIZE_MAX` — verify against the current HEAD of `src/polyphy/core/discrete3D.py` since "currently undergoing refactoring" per PolyPhy's README).
 
 **Sources to check (in order of expected yield):**
 
-1. **Wilde et al. 2023 ApJ "A Galaxy's Place in the Universe..."** — arXiv:2301.02719. Read the Methods section and any appendix detailing the MCPM run that produced the Cosmic Slime VAC. Search the PDF for "sensing distance", "step size", "iterations", "agents".
-2. **Burchett et al. 2020 ApJ "Revealing the Dark Threads of the Cosmic Web"** — arXiv:2007.04339. Original Polyphorm cosmic-web paper. Appendix likely has the most explicit parameter table.
-3. **Elek et al. 2022 "Monte Carlo Physarum Machine: Characteristics of Pattern Formation in Continuous Stochastic Transport Networks"** — MIT Press *Artificial Life*. Algorithm characterization with explicit parameter discussion.
-4. **Cosmic Slime VAC `export_metadata.txt`** — `https://data.sdss.org/sas/dr17/env/EBOSS_LSS/mcpm/v1_0_1/datacube/SDSS_z_44-476mpc/export_metadata.txt`. Already partially excerpted in `docs/superpowers/specs/2026-05-11-mcpm-cosmic-web-volume-design.md`; re-fetch and grep for any parameter keys we missed.
-5. **Polyphorm GitHub `CreativeCodingLab/Polyphorm`** — README + any `.build` or `.config` files committed alongside the binary releases. The interactive tool has parameter sliders; their default values are baked into the source.
-6. **Polyphorm's `polyphorm.build` files in releases** — these are the exact parameter records a published cube was rendered from. If a Burchett or Wilde release ships one, it's the definitive answer.
+1. **Wilde et al. 2023 ApJ "A Galaxy's Place in the Universe..."** — arXiv:2301.02719. Read Methods + any appendix detailing the MCPM run that produced the Cosmic Slime VAC. Search for "sensing distance", "step size", "iterations", "agents".
+2. **Burchett et al. 2020 ApJ "Revealing the Dark Threads of the Cosmic Web"** — arXiv:2007.04339. Original Polyphorm cosmic-web paper; appendix likely has the most explicit parameter table.
+3. **Elek et al. 2022 "Monte Carlo Physarum Machine"** — MIT Press *Artificial Life*. Algorithm characterisation with explicit parameter discussion.
+4. **Cosmic Slime VAC `export_metadata.txt`** — `https://data.sdss.org/sas/dr17/env/EBOSS_LSS/mcpm/v1_0_1/datacube/SDSS_z_44-476mpc/export_metadata.txt`.
+5. **Polyphorm GitHub `CreativeCodingLab/Polyphorm`** — README + any `.build`/`.config` files committed alongside binary releases. Look for `polyphorm.build` files in releases — those are the exact parameter records the published cubes were rendered from.
+6. **PolyPhy's current HEAD defaults** — fall back to whatever `core/common.py` + `core/discrete3D.py` set in the active branch's source tree.
 
-**Parameters we need values (or starting guesses) for:**
+**Parameters to find values (or starting guesses) for:**
 
-| PolyPhy CLI flag | PPConfig field | Meaning | Default behavior |
+| PolyPhy CLI flag | PPConfig field | Meaning | Default origin |
 |---|---|---|---|
-| `-n` | `num_iterations` | Total MCPM iterations | No default — must specify with `-b` |
-| `-t` | `TRACE_RESOLUTION_MAX` | Largest axis of output trace cube | `512` |
-| `-d` | `sense_distance` | Agent sensor reach (world units) | `0.005 × DOMAIN_SIZE_MAX` if unset |
-| `-a` | `sensing_angle` | Sensor cone half-angle (degrees) | `PPConfig` default — record from `vendor/polyphy/src/polyphy/core/common.py` |
-| `-s` | `step_size` | Agent forward step per iter | `0.0005 × DOMAIN_SIZE_MAX` if unset |
+| `-n` | `num_iterations` | Total MCPM iterations | Must specify with `-b` |
+| `-t` | `TRACE_RESOLUTION_MAX` | Largest axis of output trace cube | `512` (smoke test); we set `256` |
+| `-d` | `sense_distance` (pixels) | Agent sensor reach | auto-derived from `DOMAIN_SIZE_MAX` |
+| `-a` | `sense_angle` (degrees) | Sensor cone half-angle | from `common.py` defaults |
+| `-s` | `step_size` (pixels) | Agent forward step per iter | auto-derived from `DOMAIN_SIZE_MAX` |
 | `-X` | `deposit_attenuation` | Deposit field decay rate | from `common.py` defaults |
 | `-T` | `trace_attenuation` | Trace field decay rate | from `common.py` defaults |
-| `-D` | `data_deposit` | Per-data-point deposit strength | `0.1 × MAX_DEPOSIT` |
-| `-A` | `agent_deposit` | Per-agent deposit strength | `data_deposit × N_DATA / N_AGENTS` |
 | `-e` | `sampling_exponent` | Data-deposit sampling exponent | from `common.py` defaults |
-| `-m` | `DOMAIN_MARGIN` | Padding factor around input bbox | `0.0` per common.py |
-| `--distance-distribution` | (enum) | constant / exponential / maxwell-boltzmann | from `common.py` defaults |
-| `--directional-distribution` | (enum) | discrete / cone | from `common.py` defaults |
-| `--directional-mutation` | (enum) | deterministic / stochastic | from `common.py` defaults |
+| `-m` | `DOMAIN_MARGIN` | Padding factor around input bbox | from `common.py` defaults |
+| `--distance-distribution` | enum | constant / exponential / maxwell-boltzmann | from `common.py` defaults |
+| `--directional-distribution` | enum | discrete / cone | from `common.py` defaults |
+| `--directional-mutation` | enum | deterministic / stochastic | from `common.py` defaults |
+| `--deposit-fetching` | enum | nearest-neighbor / noise-perturbed-NN | from `common.py` defaults |
+| `--agent-boundary-handling` | enum | wrap-around / re-initialize-center / re-initialize-randomly | from `common.py` defaults |
+
+(`-D` / `-A` are typed as `str` in `cli_helper.py` and route through `EnumDataDeposit` / `EnumAgentDeposit`. They are not currently sweepable — leave at PolyPhy defaults.)
 
 - [ ] **Step 1: Capture PolyPhy's own defaults**
 
-  Read `~/Development/js/skymap-rhizome/vendor/polyphy/src/polyphy/core/common.py` and any `PPConfig_*` subclass. Record the literal numeric defaults for every field in the table above into a temporary file `~/Development/js/skymap-rhizome/calibration/polyphy_defaults.txt`. This is your floor: if literature search produces nothing, you start here.
+  Use the `Read` tool to inspect `~/Development/vendor/python/PolyPhy/src/polyphy/core/common.py` and `src/polyphy/core/discrete3D.py` on the current `rhizome-sdss-calibration` branch HEAD. Record literal numeric defaults for every field in the table into `~/Development/vendor/python/PolyPhy/rhizome/calibration/sources/polyphy_defaults.txt`. Quote line:column citations so the source can be re-verified after upstream rebases. This file is your **floor**: if literature search produces nothing, start here.
 
 - [ ] **Step 2: Search the Wilde et al. 2023 paper**
 
-  Use `WebFetch` to retrieve `https://arxiv.org/abs/2301.02719`. Read in full. Quote any sentence mentioning a parameter value into a new file `~/Development/js/skymap-rhizome/calibration/wilde_2023_quotes.txt`. If nothing — write that conclusion explicitly into the file.
+  Use `WebFetch` on `https://arxiv.org/abs/2301.02719`. Read in full. Quote any sentence mentioning a parameter value into `rhizome/calibration/sources/wilde_2023_quotes.txt`. If nothing — write that conclusion explicitly into the file with the prompt phrasing you used.
 
 - [ ] **Step 3: Search the Burchett et al. 2020 paper**
 
-  Same procedure with `https://arxiv.org/abs/2007.04339`. Capture into `calibration/burchett_2020_quotes.txt`.
+  Same procedure on `https://arxiv.org/abs/2007.04339`. Capture into `rhizome/calibration/sources/burchett_2020_quotes.txt`.
 
-- [ ] **Step 4: Search the Elek et al. 2022 MCPM characterization**
+- [ ] **Step 4: Search the Elek et al. 2022 MCPM characterisation**
 
-  Use `WebSearch` to find the open-access PDF (MIT Press *Artificial Life*, "Monte Carlo Physarum Machine"). `WebFetch` the PDF. Capture into `calibration/elek_2022_quotes.txt`. This paper is the methods reference and is most likely to give explicit recommended parameter ranges.
+  Use `WebSearch` to find the open-access PDF (MIT Press *Artificial Life*, "Monte Carlo Physarum Machine"). `WebFetch` the PDF. Capture into `rhizome/calibration/sources/elek_2022_quotes.txt`. This paper is the methods reference and most likely to give explicit recommended ranges.
 
 - [ ] **Step 5: Search the Polyphorm release artefacts**
 
-  `WebFetch` `https://github.com/CreativeCodingLab/Polyphorm` and the latest release page. Look for `polyphorm.build`, `default.cfg`, or any text file shipped with the binaries. Capture into `calibration/polyphorm_release_notes.txt`.
+  `WebFetch` `https://github.com/CreativeCodingLab/Polyphorm` and the latest release page. Look for `polyphorm.build`, `default.cfg`, or any text shipped with the binaries. Capture into `rhizome/calibration/sources/polyphorm_release_notes.txt`.
 
 - [ ] **Step 6: Re-fetch the SDSS VAC metadata**
 
-  `WebFetch` `https://data.sdss.org/sas/dr17/env/EBOSS_LSS/mcpm/v1_0_1/datacube/SDSS_z_44-476mpc/export_metadata.txt`. Save verbatim to `calibration/sdss_vac_metadata.txt`.
+  `WebFetch` `https://data.sdss.org/sas/dr17/env/EBOSS_LSS/mcpm/v1_0_1/datacube/SDSS_z_44-476mpc/export_metadata.txt`. Save verbatim to `rhizome/calibration/sources/sdss_vac_metadata.txt`.
 
 - [ ] **Step 7: Synthesise the starting parameter set**
 
-  Create `~/Development/js/skymap-rhizome/calibration/CANDIDATE_PARAMETERS.md`. For each row in the table above, pick a value with reasoning. Format:
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/CANDIDATE_PARAMETERS.md`. For each row in the table above, pick a value with reasoning. Format per parameter:
 
   ```markdown
   ## sense_distance
 
-  **Value:** `0.005 × DOMAIN_SIZE_MAX` (= PolyPhy default, ≈ 4.7 Mpc for the
-  556-Mpc-wide SDSS volume)
+  **Value:** `0.005 × DOMAIN_SIZE_MAX` (≈ 4.7 Mpc for the 938-Mpc-wide SDSS volume)
 
-  **Source:** PolyPhy `core/discrete3D.py:39` auto-derive. No explicit value
-  found in Wilde et al., Burchett et al., or Elek et al. — papers describe
-  it qualitatively as "comparable to the typical inter-galaxy spacing."
+  **Source:** PolyPhy `core/discrete3D.py:<line>` auto-derive. No explicit value
+  found in Wilde et al., Burchett et al., or Elek et al. — papers describe it
+  qualitatively as "comparable to the typical inter-galaxy spacing."
 
-  **Confidence:** medium (consistent with paper's qualitative description,
-  but Burchett/Wilde may have tuned away from default).
+  **Confidence:** medium (consistent with paper's qualitative description, but
+  Burchett/Wilde may have tuned away from default).
   ```
 
   …and so on for every parameter.
@@ -394,10 +342,10 @@ The point of this research is to **start the iteration loop as close to the publ
 - [ ] **Step 8: Commit the research artefacts**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  git add calibration/
+  cd ~/Development/vendor/python/PolyPhy
+  git add rhizome/calibration/sources/ rhizome/CANDIDATE_PARAMETERS.md
   git commit -m "$(cat <<'EOF'
-  calibration: capture starting parameter set from literature + PolyPhy defaults
+  rhizome(calibration): capture starting parameter set from literature + PolyPhy defaults
 
   Research pass through Wilde et al. 2023, Burchett et al. 2020, Elek et al.
   2022, the Polyphorm release notes, and the SDSS Cosmic Slime VAC metadata.
@@ -411,35 +359,38 @@ The point of this research is to **start the iteration loop as close to the publ
   )"
   ```
 
-  **STOP and check with user.** Show them `CANDIDATE_PARAMETERS.md`. If they want to manually override any value (e.g. "I remember the Burchett paper used 8° sensing angle"), capture that into the file and re-commit before proceeding to Task 3.
+  **STOP-and-check gate.** Show the user `CANDIDATE_PARAMETERS.md`. If they want to manually override any value (e.g. "the Burchett paper used 8° sensing angle"), capture that into the file and amend with a new commit (do NOT `git commit --amend`; create a fresh commit) before proceeding to Task 3.
 
 ---
 
 ## Task 3: `skymapBinDecoder.py` — port the v4 PointCloud decoder
 
-A ~50-line Python port of `src/data/pointCloudFormat.ts:decodePointCloud`. Reads an `ArrayBuffer`-equivalent (Python `bytes`) and returns a dict of NumPy arrays mirroring the TypeScript `PointCloud` shape.
+A ~50-line Python port of skymap's `src/data/pointCloudFormat.ts:decodePointCloud`. Reads raw bytes and returns a dict of NumPy arrays mirroring the TypeScript `PointCloud` shape. **TDD-shaped.**
 
 **Files:**
-- Create: `~/Development/js/skymap-rhizome/skymapBinDecoder.py`
-- Create: `~/Development/js/skymap-rhizome/tests/test_skymap_bin_decoder.py`
-- Create: `~/Development/js/skymap-rhizome/tests/__init__.py` (empty marker)
+- Create: `rhizome/skymapBinDecoder.py`
+- Create: `rhizome/tests/test_skymap_bin_decoder.py`
 
 - [ ] **Step 1: Write the failing test first**
 
-  Create `~/Development/js/skymap-rhizome/tests/test_skymap_bin_decoder.py`:
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/tests/test_skymap_bin_decoder.py`:
 
   ```python
   """Round-trip test for the v4 PointCloud decoder.
 
-  We hand-build a 2-point v4 buffer in pure Python (matching the byte layout
+  We hand-build a v4 buffer in pure Python (matching the byte layout
   documented in skymap's src/data/pointCloudFormat.ts) and verify the decoder
-  recovers the expected values. This is a sufficient correctness check
-  because the encoder lives in the skymap repo and is itself unit-tested
-  there — we only need to confirm our Python reader sees the same bytes the
-  TypeScript writer emits.
+  recovers the expected values. The encoder lives in the skymap repo and is
+  itself unit-tested there — we only need to confirm our Python reader sees
+  the same bytes the TypeScript writer emits.
   """
   import struct
+  import sys
   from pathlib import Path
+
+  # Make rhizome/ importable for `from skymapBinDecoder import ...` regardless
+  # of cwd. (pytest collected from rhizome/tests/ doesn't auto-add the parent.)
+  sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
   import numpy as np
   import pytest
@@ -478,8 +429,10 @@ A ~50-line Python port of `src/data/pointCloudFormat.ts:decodePointCloud`. Reads
       result = decode_point_cloud(buf)
       assert result['count'] == 2
       np.testing.assert_array_equal(result['objIDs'], [12345, 67890])
-      np.testing.assert_allclose(result['positions'].reshape(-1, 3),
-                                 [[1.5, -2.0, 3.25], [-10.0, 20.0, -30.0]])
+      np.testing.assert_allclose(
+          result['positions'].reshape(-1, 3),
+          [[1.5, -2.0, 3.25], [-10.0, 20.0, -30.0]],
+      )
       np.testing.assert_allclose(result['magR'], [17.0, 18.0])
       np.testing.assert_allclose(result['diameterKpc'], [30.0, 42.0])
 
@@ -494,31 +447,39 @@ A ~50-line Python port of `src/data/pointCloudFormat.ts:decodePointCloud`. Reads
       buf = struct.pack('<IIII', MAGIC, 3, 0, 0)
       with pytest.raises(ValueError, match='unsupported version'):
           decode_point_cloud(buf)
+
+
+  def test_rejects_truncated_buffer():
+      # Header claims 5 points but only 1 record's worth of bytes follow.
+      buf = struct.pack('<IIII', MAGIC, VERSION, 5, 0) + b'\x00' * 64
+      with pytest.raises(ValueError, match='truncated'):
+          decode_point_cloud(buf)
   ```
 
 - [ ] **Step 2: Run the test to confirm it fails**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  .venv/bin/pytest tests/test_skymap_bin_decoder.py
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/pytest rhizome/tests/test_skymap_bin_decoder.py --no-cov
   ```
 
-  Expected: import error on `skymapBinDecoder`.
+  Expected: `ModuleNotFoundError: No module named 'skymapBinDecoder'`.
 
 - [ ] **Step 3: Write the decoder**
 
-  Create `~/Development/js/skymap-rhizome/skymapBinDecoder.py`:
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/skymapBinDecoder.py`:
 
   ```python
   """Python port of skymap's v4 PointCloud binary decoder.
 
-  Source of truth: ../skymap/src/data/pointCloudFormat.ts — keep these two
-  files in lock-step. The v4 format is 16-byte header + 64-byte per-point
-  record. See the TypeScript docblock for the full field layout.
+  Source of truth: skymap/src/data/pointCloudFormat.ts — keep these two files
+  in lock-step. The v4 format is 16-byte header + 64-byte per-point record.
+  See the TypeScript docblock for the full field layout.
 
   Why a port rather than calling out to Node? Avoiding the Node dep keeps
-  this repo Python-only. The decode is trivial enough (struct.unpack) that
-  the port costs less than the toolchain integration would.
+  this directory Python-only. The decode is trivial enough (one struct.unpack
+  via a NumPy structured dtype) that the port costs less than the toolchain
+  integration would.
   """
   import struct
   from typing import TypedDict
@@ -555,15 +516,15 @@ A ~50-line Python port of `src/data/pointCloudFormat.ts:decodePointCloud`. Reads
           raise ValueError(f'bad magic 0x{magic:08x} — not a SKMP file')
       if version != VERSION:
           raise ValueError(
-              f'unsupported version {version} — expected {VERSION}; regenerate via skymap\'s "npm run build-all"')
+              f'unsupported version {version} — expected {VERSION}; '
+              f'regenerate via skymap\'s "npm run build-all"')
 
       expected = HEADER_BYTES + count * BYTES_PER_POINT
       if len(buf) < expected:
           raise ValueError(f'truncated buffer: have {len(buf)} bytes, need {expected}')
 
-      # Build per-field arrays by indexing into a structured dtype view.
-      # NumPy's structured dtype lets us alias the buffer with one allocation;
-      # no per-record Python loop.
+      # Build per-field arrays by viewing the buffer through a structured dtype.
+      # NumPy aliases without copying; per-field access copies for safety.
       record_dtype = np.dtype([
           ('objID', '<u8'),
           ('x', '<f4'), ('y', '<f4'), ('z', '<f4'),
@@ -597,28 +558,27 @@ A ~50-line Python port of `src/data/pointCloudFormat.ts:decodePointCloud`. Reads
       }
   ```
 
-  Also create empty `tests/__init__.py`.
-
-- [ ] **Step 4: Re-run the test, confirm pass**
+- [ ] **Step 4: Re-run tests, confirm pass**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  .venv/bin/pytest tests/test_skymap_bin_decoder.py -v
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/pytest rhizome/tests/test_skymap_bin_decoder.py --no-cov -v
   ```
 
-  Expected: all three tests pass.
+  Expected: all four tests pass.
 
 - [ ] **Step 5: Commit**
 
   ```bash
-  git add skymapBinDecoder.py tests/__init__.py tests/test_skymap_bin_decoder.py
+  cd ~/Development/vendor/python/PolyPhy
+  git add rhizome/skymapBinDecoder.py rhizome/tests/test_skymap_bin_decoder.py
   git commit -m "$(cat <<'EOF'
-  feat: port skymap's v4 PointCloud decoder to Python
+  rhizome: port skymap's v4 PointCloud decoder to Python
 
   Reads .bin files emitted by skymap's encodePointCloud (TypeScript).
   Uses a NumPy structured dtype for zero-loop bulk decode of the 64-byte
-  per-point records. Tests cover round-trip, bad magic, and version
-  rejection. Stays in lock-step with src/data/pointCloudFormat.ts in
+  per-point records. Tests cover round-trip, bad magic, version rejection,
+  and truncation. Stays in lock-step with src/data/pointCloudFormat.ts in
   the skymap repo.
 
   Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
@@ -628,36 +588,44 @@ A ~50-line Python port of `src/data/pointCloudFormat.ts:decodePointCloud`. Reads
 
 ---
 
-## Task 4: `buildRhizomeInput.py` — SDSS calibration CSV
+## Task 4: `buildRhizomeInput.py` — fetch + filter SDSS to the calibration shell
 
-Reads `cache/sdss-large.bin` (the contributor fetches it from R2 themselves; the script doesn't do network I/O so it's offline-testable), filters galaxies to the Wilde et al. 44–476 Mpc comoving-distance shell, and writes `data/csv/sdss_calibration.csv` in PolyPhy's expected format.
+Curls `sdss-large.bin` from R2 (idempotent — skip if file present with expected size), decodes via `skymapBinDecoder`, filters to the Wilde et al. 44–476 Mpc comoving-distance shell, writes `rhizome/cache/sdss_calibration.csv` for PolyPhy. **TDD-shaped.**
 
-**Coordinate frame:** Skymap's `.bin` stores positions in supergalactic Cartesian Mpc. The Wilde et al. cube was built in *equatorial* Cartesian (the VAC ships in J2000 RA/Dec/redshift space). For the calibration we want to reproduce the spatial structure visible in the reference cube, **not** match the reference cube's coordinate frame exactly — PolyPhy is frame-agnostic, and the comparison harness operates on the cubes' own intrinsic axes. So we feed PolyPhy the SDSS galaxies in supergalactic Cartesian (skymap's native frame), and the comparison harness normalises both cubes by their own bounding box before comparing structure.
+**Coordinate frame:** Skymap's `.bin` stores positions in supergalactic Cartesian Mpc. The Wilde et al. cube was built in *equatorial* Cartesian (the VAC ships in J2000 RA/Dec/redshift space). For the calibration we want to reproduce the **spatial structure** visible in the reference cube, not match its frame — PolyPhy is frame-agnostic and the comparison harness operates on each cube's intrinsic axes via max-projection.
 
-**Distance filter:** We want galaxies whose *comoving distance from the origin* is in `[44, 476]` Mpc. Skymap's stored `(x, y, z)` is supergalactic Cartesian Mpc with the observer at the origin, so `sqrt(x² + y² + z²)` is exactly the comoving distance. No cosmology calculation needed.
+**Distance filter:** Skymap stores `(x, y, z)` in supergalactic Cartesian Mpc with observer at origin, so `sqrt(x² + y² + z²)` is exactly the comoving distance. No cosmology helper needed.
 
-**Why no anchor points:** see "Reality checks" in the header. The reference cube is non-cubic. We let PolyPhy auto-fit the bounding box.
+**No corner anchor points:** the reference cube is non-cubic (712 × 1200 × 728). A faithful reproduction must be non-cubic too, so we let PolyPhy auto-fit its bounding box to the input galaxies. Anchor-pinning to a cubic AABB is a rhizome-shell concern for a later plan.
 
-**Output format (PolyPhy CSV):** `x, y, z, weight` per row, comma-separated, no header, 6 decimal places, weight `1.0` for all galaxies (matching Wilde et al.'s uniform-weight run).
+**Output CSV format (matches `verification/make_blobs.py` exactly):** `x,y,z,weight` per row, comma-separated, no header, 6 decimal places, weight `1.0` for all rows.
 
 **Files:**
-- Create: `~/Development/js/skymap-rhizome/buildRhizomeInput.py`
-- Create: `~/Development/js/skymap-rhizome/tests/test_build_rhizome_input.py`
+- Create: `rhizome/buildRhizomeInput.py`
+- Create: `rhizome/tests/test_build_rhizome_input.py`
 
 - [ ] **Step 1: Write the failing test**
 
-  Create `~/Development/js/skymap-rhizome/tests/test_build_rhizome_input.py`:
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/tests/test_build_rhizome_input.py`:
 
   ```python
-  """Test the SDSS calibration shell filter and CSV format."""
+  """Test the SDSS calibration shell filter, CSV writer, and idempotent fetch."""
   import struct
-  import tempfile
+  import sys
   from pathlib import Path
+
+  sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
   import numpy as np
   import pytest
 
-  from buildRhizomeInput import filter_calibration_shell, write_polyphy_csv
+  from buildRhizomeInput import (
+      filter_calibration_shell,
+      write_polyphy_csv,
+      fetch_sdss_bin_if_missing,
+      CALIBRATION_D_MIN_MPC,
+      CALIBRATION_D_MAX_MPC,
+  )
   from skymapBinDecoder import MAGIC, VERSION
 
 
@@ -678,18 +646,24 @@ Reads `cache/sdss-large.bin` (the contributor fetches it from R2 themselves; the
 
 
   def test_filter_keeps_shell_only():
-      # Inner-edge (43 Mpc, excluded), in-shell (200 Mpc, kept), outer (500 Mpc, excluded)
       points = [
           (43.0, 0.0, 0.0),     # 43 Mpc — below shell
           (200.0, 0.0, 0.0),    # 200 Mpc — in shell
           (0.0, 300.0, 0.0),    # 300 Mpc — in shell
           (500.0, 0.0, 0.0),    # 500 Mpc — above shell
+          (44.0, 0.0, 0.0),     # exactly d_min — kept (inclusive)
+          (476.0, 0.0, 0.0),    # exactly d_max — kept (inclusive)
       ]
       buf = _make_cloud(points)
       kept = filter_calibration_shell(buf, d_min=44.0, d_max=476.0)
-      assert kept.shape == (2, 3)
-      np.testing.assert_allclose(kept[:, 0], [200.0, 0.0])
-      np.testing.assert_allclose(kept[:, 1], [0.0, 300.0])
+      assert kept.shape == (4, 3)
+      # Order preserved.
+      np.testing.assert_allclose(kept[:, 0], [200.0, 0.0, 44.0, 476.0])
+
+
+  def test_filter_uses_published_defaults():
+      assert CALIBRATION_D_MIN_MPC == pytest.approx(44.0)
+      assert CALIBRATION_D_MAX_MPC == pytest.approx(476.0)
 
 
   def test_csv_round_trip(tmp_path: Path):
@@ -704,29 +678,46 @@ Reads `cache/sdss-large.bin` (the contributor fetches it from R2 themselves; the
       assert len(first) == 4
       assert float(first[0]) == pytest.approx(1.5)
       assert float(first[3]) == pytest.approx(1.0)
-      # 6 decimal places
+      # 6 decimal places.
       assert '.' in first[0] and len(first[0].split('.')[1]) == 6
+
+
+  def test_fetch_skips_when_present(tmp_path: Path, monkeypatch):
+      """If the cache file already exists, fetch_sdss_bin_if_missing must not download."""
+      cache = tmp_path / 'sdss-large.bin'
+      cache.write_bytes(b'pretend this is a valid bin')
+
+      def fail_urlretrieve(*args, **kwargs):
+          raise AssertionError('should not have fetched')
+
+      import urllib.request
+      monkeypatch.setattr(urllib.request, 'urlretrieve', fail_urlretrieve)
+
+      fetch_sdss_bin_if_missing(cache)  # must not raise
   ```
 
-- [ ] **Step 2: Confirm test fails (import error)**
+- [ ] **Step 2: Confirm test fails**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  .venv/bin/pytest tests/test_build_rhizome_input.py
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/pytest rhizome/tests/test_build_rhizome_input.py --no-cov
   ```
+
+  Expected: `ImportError`.
 
 - [ ] **Step 3: Write `buildRhizomeInput.py`**
 
-  Create `~/Development/js/skymap-rhizome/buildRhizomeInput.py`:
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/buildRhizomeInput.py`:
 
   ```python
   #!/usr/bin/env python3
-  """buildRhizomeInput.py — produce PolyPhy CSV input from skymap .bin files.
+  """buildRhizomeInput.py — produce PolyPhy CSV input from skymap's SDSS catalog.
 
-  Current scope: SDSS calibration shell only. Reads `cache/sdss-large.bin`
-  (fetched by the user from R2), filters to galaxies in the 44–476 Mpc
-  comoving-distance shell matching Wilde et al. 2023's `SDSS_z_44-476mpc`
-  cube, writes `data/csv/sdss_calibration.csv` ready for PolyPhy's `-f` flag.
+  Current scope: SDSS calibration shell only. Idempotently fetches
+  `sdss-large.bin` from R2, decodes via skymapBinDecoder, filters to the
+  44–476 Mpc comoving-distance shell matching Wilde et al. 2023's
+  `SDSS_z_44-476mpc` cube, writes `rhizome/cache/sdss_calibration.csv`
+  ready for PolyPhy's `-f` flag.
 
   Why no anchor points: the reference cube we're reproducing is non-cubic
   (712 x 1200 x 728). We let PolyPhy auto-fit its bounding box to the input
@@ -735,11 +726,12 @@ Reads `cache/sdss-large.bin` (the contributor fetches it from R2 themselves; the
 
   Why no SDSS-frame transform: skymap stores positions in supergalactic
   Cartesian Mpc; the Wilde cube was built in equatorial Cartesian. Frames
-  differ but the cosmic structure is the same; the calibration's visual
-  comparison is rotation-invariant (max-projections on intrinsic cube axes).
+  differ but the cosmic structure is the same; the calibration's comparison
+  is per-axis max-projection on each cube's intrinsic axes.
   """
   import argparse
   import sys
+  import urllib.request
   from pathlib import Path
 
   import numpy as np
@@ -752,6 +744,25 @@ Reads `cache/sdss-large.bin` (the contributor fetches it from R2 themselves; the
   CALIBRATION_D_MIN_MPC = 44.0
   CALIBRATION_D_MAX_MPC = 476.0
 
+  SDSS_BIN_URL = 'https://skymap-data.rulkens.com/data/sdss-large.bin'
+
+
+  def fetch_sdss_bin_if_missing(dest: Path) -> None:
+      """Download sdss-large.bin from R2 to `dest` if it's not already present.
+
+      Idempotent: if `dest` exists and is non-empty, do nothing. We trust that
+      R2 isn't going to change the file under us (it's content-addressed by
+      the skymap build pipeline). If a partial download exists, delete it
+      manually before re-running.
+      """
+      if dest.exists() and dest.stat().st_size > 0:
+          print(f'sdss-large.bin already cached at {dest} ({dest.stat().st_size} bytes)')
+          return
+      dest.parent.mkdir(parents=True, exist_ok=True)
+      print(f'Downloading {SDSS_BIN_URL} → {dest}')
+      urllib.request.urlretrieve(SDSS_BIN_URL, dest)
+      print(f'Cached {dest.stat().st_size} bytes')
+
 
   def filter_calibration_shell(
       buf: bytes,
@@ -760,11 +771,11 @@ Reads `cache/sdss-large.bin` (the contributor fetches it from R2 themselves; the
       d_max: float = CALIBRATION_D_MAX_MPC,
   ) -> np.ndarray:
       """Decode a skymap .bin and return an (N, 3) float32 array of positions
-      whose comoving distance from origin is in [d_min, d_max].
+      whose comoving distance from origin is in [d_min, d_max], inclusive.
 
       The observer is at the origin in skymap's supergalactic Cartesian frame,
       so |position| is exactly the comoving distance. No cosmology helper
-      required.
+      required. Order of input galaxies is preserved in the output.
       """
       cloud = decode_point_cloud(buf)
       pos = cloud['positions'].reshape(-1, 3)
@@ -789,26 +800,22 @@ Reads `cache/sdss-large.bin` (the contributor fetches it from R2 themselves; the
 
 
   def main() -> int:
-      parser = argparse.ArgumentParser(description='Build PolyPhy CSV input from skymap .bin')
-      parser.add_argument('--shell', choices=['calibration'], default='calibration',
-                          help='Which input shell to produce (only "calibration" supported in v1)')
-      parser.add_argument('--bin', type=Path, default=Path('cache/sdss-large.bin'),
-                          help='Path to the skymap SDSS .bin file (fetch from R2 first)')
-      parser.add_argument('--out', type=Path, default=Path('data/csv/sdss_calibration.csv'),
-                          help='Output CSV path (relative to repo root or absolute)')
+      parser = argparse.ArgumentParser(
+          description='Fetch + filter skymap SDSS to a PolyPhy CSV input')
+      parser.add_argument('--bin', type=Path,
+                          default=Path('rhizome/cache/sdss-large.bin'),
+                          help='Cache path for sdss-large.bin (fetched if missing)')
+      parser.add_argument('--out', type=Path,
+                          default=Path('rhizome/cache/sdss_calibration.csv'),
+                          help='Output CSV path')
       args = parser.parse_args()
 
-      if not args.bin.exists():
-          print(f'ERROR: input .bin not found at {args.bin}', file=sys.stderr)
-          print('Fetch it first:', file=sys.stderr)
-          print(f'  mkdir -p {args.bin.parent} && \\', file=sys.stderr)
-          print(f'  curl -o {args.bin} https://skymap-data.rulkens.com/data/sdss-large.bin', file=sys.stderr)
-          return 1
-
+      fetch_sdss_bin_if_missing(args.bin)
       buf = args.bin.read_bytes()
       positions = filter_calibration_shell(buf)
-      print(f'Kept {positions.shape[0]} galaxies in the 44-476 Mpc shell '
-            f'(of total {len(buf) // 64} in the .bin)')
+      total = (len(buf) - 16) // 64
+      print(f'Kept {positions.shape[0]} of {total} galaxies in the '
+            f'{CALIBRATION_D_MIN_MPC}-{CALIBRATION_D_MAX_MPC} Mpc shell')
       write_polyphy_csv(positions, args.out)
       print(f'Wrote {args.out}')
       return 0
@@ -821,34 +828,42 @@ Reads `cache/sdss-large.bin` (the contributor fetches it from R2 themselves; the
 - [ ] **Step 4: Run tests, confirm pass**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  .venv/bin/pytest tests/test_build_rhizome_input.py -v
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/pytest rhizome/tests/test_build_rhizome_input.py --no-cov -v
   ```
 
-- [ ] **Step 5: Fetch the real `sdss-large.bin` and dry-run**
+  Expected: all four tests pass.
+
+- [ ] **Step 5: Dry-run against the real R2 bin**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  mkdir -p cache
-  curl -o cache/sdss-large.bin https://skymap-data.rulkens.com/data/sdss-large.bin
-  .venv/bin/python buildRhizomeInput.py --shell calibration
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/python rhizome/buildRhizomeInput.py
   ```
 
-  Sanity-check: the script should report on the order of 300k galaxies kept (Wilde et al. used 324,849; ours may differ slightly because skymap's SDSS catalog is a different SQL extraction). Inspect `data/csv/sdss_calibration.csv` — first few lines should look like `123.456789,-67.890123,234.567890,1.000000`.
+  Expected:
+  - First run: downloads ~150 MB to `rhizome/cache/sdss-large.bin`.
+  - Reports on the order of 300k galaxies kept (Wilde et al. used 324,849; ours may differ because skymap's SDSS CSV is a different SkyServer SQL extraction — see the SDSS gotcha in skymap's CLAUDE.md).
+  - Writes `rhizome/cache/sdss_calibration.csv`. Inspect the first few lines:
+    ```bash
+    head rhizome/cache/sdss_calibration.csv
+    ```
+    Each line should look like `123.456789,-67.890123,234.567890,1.000000`.
+  - Second run (re-invoke the same command): logs "already cached", does not re-download.
 
 - [ ] **Step 6: Commit**
 
   ```bash
-  git add buildRhizomeInput.py tests/test_build_rhizome_input.py
+  cd ~/Development/vendor/python/PolyPhy
+  git add rhizome/buildRhizomeInput.py rhizome/tests/test_build_rhizome_input.py
   git commit -m "$(cat <<'EOF'
-  feat: extract SDSS calibration shell to PolyPhy CSV
+  rhizome: fetch + filter SDSS to calibration shell CSV
 
-  Reads skymap's cache/sdss-large.bin and emits data/csv/sdss_calibration.csv
-  restricted to the 44-476 Mpc comoving-distance shell matching Wilde et al.
-  2023's SDSS_z_44-476mpc reference cube. Uniform weights; no anchor pinning
-  (the reference cube is non-cubic so we let PolyPhy auto-fit the bbox).
-  Tested with synthetic v4 buffers; dry-run against the real .bin reports
-  the expected order of ~300k galaxies kept.
+  Idempotently downloads sdss-large.bin from R2 (skips if cached), decodes
+  via skymapBinDecoder, filters to the 44-476 Mpc comoving shell matching
+  Wilde et al. 2023's SDSS_z_44-476mpc reference cube. Uniform weights;
+  no anchor pinning (reference cube is non-cubic so we let PolyPhy auto-fit
+  the bbox). Tested with synthetic v4 buffers + monkeypatched urlretrieve.
 
   Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
   EOF
@@ -857,68 +872,201 @@ Reads `cache/sdss-large.bin` (the contributor fetches it from R2 themselves; the
 
 ---
 
-## Task 5: `runRhizomePolyphy.py` — orchestrator with named parameter constants
+## Task 5: `runRhizomePolyphy.py` — orchestrator with `RhizomeParams`
 
-A subprocess wrapper around PolyPhy's CLI. The parameter constants from Task 2's research live at the top of this file as module-level dataclass instances. The orchestrator handles the awkward `cd src/polyphy` requirement, removes any stale `/tmp/flag`, runs PolyPhy in batch mode, captures the newest `trace_*.npy` output, squeezes the trailing channel axis, and writes a clean `output/sdss_reproduced.npy` plus a `sidecar.json` recording every parameter, the input file hash, the PolyPhy commit, and wall-clock.
+A subprocess wrapper around PolyPhy's CLI. The frozen `RhizomeParams` dataclass lives at the top of this file; Task 8 mutates the locked-in `CALIBRATION_PARAMS` instance as iterations converge. The orchestrator:
 
-**Why no test:** the orchestrator's job is to drive a subprocess against state on disk. Testing it would mean mocking subprocess + filesystem, which is more work than it's worth and tests nothing real. We rely on Task 6's comparison harness to validate the produced cube structurally.
+1. Removes `/tmp/flag` defensively (CPU-force sentinel).
+2. Hashes the input CSV (sidecar reproducibility).
+3. Stages the CSV under `data/csv/` relative to the fork root (PolyPhy resolves `-f` from `ROOT='../../'` = the fork root).
+4. Archives any stale `data/fits/trace_*.npy` so the "newest after run" glob is unambiguous.
+5. Records start time, runs `python polyphy.py 3d_discrete -b ...` via `subprocess.run(cwd=fork_root / 'src' / 'polyphy')`.
+6. Globs for `trace_*.npy` files with `mtime > start_time` — that's the new output.
+7. Validates shape (4D with trailing 1) and dtype (float32), squeezes the channel axis, writes `output/sdss_reproduced.npy` + sidecar JSON.
+
+**TDD where it pays:** the pure functions (`build_cli_args`, `find_new_trace`, `squeeze_and_save`, sidecar writer) get unit tests. The subprocess invocation itself is exercised end-to-end in Task 7 and not mock-tested — mocking `subprocess.run` would prove nothing about whether PolyPhy actually accepts our flags.
 
 **Files:**
-- Create: `~/Development/js/skymap-rhizome/runRhizomePolyphy.py`
+- Create: `rhizome/runRhizomePolyphy.py`
+- Create: `rhizome/tests/test_run_rhizome_polyphy.py`
 
-- [ ] **Step 1: Write the orchestrator**
+- [ ] **Step 1: Write the failing test**
 
-  Create `~/Development/js/skymap-rhizome/runRhizomePolyphy.py`:
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/tests/test_run_rhizome_polyphy.py`:
+
+  ```python
+  """Unit tests for the pure helpers in runRhizomePolyphy.py."""
+  import json
+  import sys
+  import time
+  from pathlib import Path
+
+  sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+  import numpy as np
+  import pytest
+
+  from runRhizomePolyphy import (
+      RhizomeParams,
+      build_cli_args,
+      find_new_trace,
+      squeeze_and_save,
+      write_sidecar,
+      hash_file,
+  )
+
+
+  def test_params_are_frozen():
+      p = RhizomeParams()
+      with pytest.raises(Exception):
+          p.num_iterations = 9999  # type: ignore[misc]
+
+
+  def test_build_cli_args_includes_required_flags():
+      params = RhizomeParams(num_iterations=500, trace_res_max=256,
+                             sense_distance_frac=0.01, step_size_frac=0.001,
+                             sensing_angle_deg=20.0)
+      args = build_cli_args(params, Path('data/csv/foo.csv'))
+      assert '3d_discrete' in args
+      assert '-b' in args
+      assert '-n' in args and '500' in args
+      assert '-t' in args and '256' in args
+      assert '-f' in args and 'data/csv/foo.csv' in args
+      # sense_distance_px = 0.01 * 256 = 2.56
+      assert '-d' in args
+      d_idx = args.index('-d')
+      assert float(args[d_idx + 1]) == pytest.approx(2.56)
+      # step_size_px = 0.001 * 256 = 0.256
+      assert '-s' in args
+      s_idx = args.index('-s')
+      assert float(args[s_idx + 1]) == pytest.approx(0.256)
+      # sensing_angle passes through.
+      assert '-a' in args
+      a_idx = args.index('-a')
+      assert float(args[a_idx + 1]) == pytest.approx(20.0)
+
+
+  def test_find_new_trace_returns_latest_after_start(tmp_path: Path):
+      old = tmp_path / 'trace_2026-01-01_00-00-00.npy'
+      old.write_bytes(b'old')
+      start = time.time()
+      # Sleep just past the filesystem mtime granularity (typically 1s on macOS HFS+,
+      # ~10ms on APFS).
+      time.sleep(0.05)
+      new = tmp_path / 'trace_2026-05-12_12-00-00.npy'
+      new.write_bytes(b'new')
+
+      found = find_new_trace(tmp_path, start)
+      assert found == new
+
+
+  def test_find_new_trace_raises_if_none(tmp_path: Path):
+      start = time.time()
+      with pytest.raises(RuntimeError, match='no new trace'):
+          find_new_trace(tmp_path, start)
+
+
+  def test_squeeze_and_save_4d_to_3d(tmp_path: Path):
+      cube_4d = np.ones((4, 5, 6, 1), dtype=np.float32)
+      src = tmp_path / 'raw.npy'
+      dst = tmp_path / 'out.npy'
+      np.save(src, cube_4d)
+      result = squeeze_and_save(src, dst)
+      assert result.shape == (4, 5, 6)
+      reloaded = np.load(dst)
+      assert reloaded.shape == (4, 5, 6)
+      assert reloaded.dtype == np.float32
+
+
+  def test_squeeze_and_save_rejects_unexpected_shape(tmp_path: Path):
+      cube_2d = np.ones((4, 5), dtype=np.float32)
+      src = tmp_path / 'raw.npy'
+      np.save(src, cube_2d)
+      with pytest.raises(RuntimeError, match='unexpected trace cube shape'):
+          squeeze_and_save(src, tmp_path / 'out.npy')
+
+
+  def test_write_sidecar_round_trip(tmp_path: Path):
+      params = RhizomeParams()
+      input_csv = tmp_path / 'input.csv'
+      input_csv.write_text('1.0,2.0,3.0,1.0\n')
+      out = tmp_path / 'out.npy'
+      out.write_bytes(b'fake')
+
+      write_sidecar(
+          out, params=params, input_csv=input_csv,
+          cube_shape=(256, 256, 256), elapsed_s=12.5, polyphy_commit='abc1234',
+      )
+      sidecar = tmp_path / 'out.json'
+      data = json.loads(sidecar.read_text())
+      assert data['params']['num_iterations'] == params.num_iterations
+      assert data['cube_shape'] == [256, 256, 256]
+      assert data['polyphy_commit'] == 'abc1234'
+      assert 'input_csv_sha256' in data and len(data['input_csv_sha256']) == 64
+
+
+  def test_hash_file_is_deterministic(tmp_path: Path):
+      p = tmp_path / 'x.txt'
+      p.write_bytes(b'hello')
+      h1 = hash_file(p)
+      h2 = hash_file(p)
+      assert h1 == h2
+      assert len(h1) == 64
+  ```
+
+- [ ] **Step 2: Confirm tests fail**
+
+  ```bash
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/pytest rhizome/tests/test_run_rhizome_polyphy.py --no-cov
+  ```
+
+  Expected: `ImportError`.
+
+- [ ] **Step 3: Write the orchestrator**
+
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/runRhizomePolyphy.py`:
 
   ```python
   #!/usr/bin/env python3
   """runRhizomePolyphy.py — wraps PolyPhy's 3d_discrete batch mode.
 
   Why a wrapper:
-    1. PolyPhy hardcodes `ROOT = '../../'` in core/common.py:135, so the
-       caller must `cd src/polyphy` before invocation. The wrapper hides that.
-    2. PolyPhy emits timestamped `trace_*.npy` and `deposit_*.npy` into
-       `data/fits/` without telling the caller which one is the latest. The
-       wrapper globs for the newest after each run.
-    3. PolyPhy's CLI takes pixel-space sensing distance and step size, but
-       Wilde et al. and the MCPM literature specify these as fractions of the
-       domain extent. The wrapper does the multiplication.
-    4. CI uses `/tmp/flag` as a "force CPU" sentinel (discrete3D.py:24).
-       The wrapper removes it defensively before every run.
-    5. The output cube is 4D `(X, Y, Z, 1)`; we `np.squeeze(-1)` it before
-       saving to `output/`.
+    1. PolyPhy hardcodes ROOT='../../' in core/common.py:135 — caller must
+       cd to src/polyphy/ first. We pass cwd= to subprocess.run.
+    2. PolyPhy emits timestamped trace_*.npy and deposit_*.npy into
+       data/fits/ without naming the latest. We glob for files with
+       mtime > start_time after the run.
+    3. PolyPhy's CLI takes sensing-distance and step-size in pixel-space,
+       but MCPM literature specifies them as fractions of DOMAIN_SIZE_MAX.
+       We multiply (frac × trace_res_max) at invocation time.
+    4. CI uses /tmp/flag as a "force CPU" sentinel (discrete3D.py:24).
+       We unlink it defensively before every run.
+    5. The output cube is 4D `(X, Y, Z, 1)`; we squeeze the trailing axis
+       before saving to output/.
 
-  Parameter constants near the top of this file are the *frozen* calibration
-  values. They get there by Task 8's iteration loop. Changing them requires
-  re-running compareCubes.py.
+  RhizomeParams near the top of this file are the *frozen* calibration
+  values. The initial values are the Task 2 candidate set. Task 8 mutates
+  CALIBRATION_PARAMS via successive commits; the final committed state is
+  the locked-in calibration set.
   """
   import argparse
-  import glob
   import hashlib
   import json
-  import os
-  import shutil
   import subprocess
   import sys
   import time
-  from dataclasses import asdict, dataclass
+  from dataclasses import asdict, dataclass, field
   from pathlib import Path
 
   import numpy as np
 
 
   # ---------------------------------------------------------------------------
-  # PolyPhy invocation constants. These are the calibration parameter set.
-  # ---------------------------------------------------------------------------
-  # Sensing distance and step size are specified as fractions of the input
-  # domain's longest axis. PolyPhy's CLI takes them as floats in *pixel* units;
-  # we resolve fractions → pixels at invocation time once we know the data's
-  # bounding-box extent.
-  #
-  # On first execution of Task 5 these reflect the starting guesses captured
-  # in calibration/CANDIDATE_PARAMETERS.md (Task 2). Task 8 iterates them
-  # toward visual agreement with the Wilde et al. reference cube. The values
-  # checked in at the end of Task 8 are the frozen calibration set.
+  # Parameter constants. The calibration sweep updates CALIBRATION_PARAMS as
+  # iterations converge. Sensing distance + step size are stored as fractions
+  # of DOMAIN_SIZE_MAX (= trace_res_max in pixel units, since PolyPhy auto-fits
+  # the trace grid to the input bbox at the requested max-axis resolution).
   # ---------------------------------------------------------------------------
 
 
@@ -926,43 +1074,41 @@ A subprocess wrapper around PolyPhy's CLI. The parameter constants from Task 2's
   class RhizomeParams:
       """All PolyPhy hyperparameters the calibration sweeps over.
 
-      Frozen + dataclass so we can `asdict()` them into the sidecar JSON for
+      Frozen + dataclass so we can asdict() into the sidecar JSON for
       reproducibility, and so a typo at a call site fails at parse time
       rather than silently using a default.
       """
       # --- iteration / resolution ---
-      num_iterations: int = 700         # -n; Polyphorm convergence figure
-      trace_res_max: int = 512          # -t; matches reference cube's largest axis
+      num_iterations: int = 700           # -n; Polyphorm convergence guidance
+      trace_res_max: int = 256            # -t; non-cubic auto-derived for non-cubic input
 
-      # --- agent sensing & motion (fractions of DOMAIN_SIZE_MAX) ---
-      sense_distance_frac: float = 0.005   # PolyPhy default (auto-derive)
-      step_size_frac: float = 0.0005       # PolyPhy default
-      sensing_angle_deg: float = 30.0      # PPConfig default; refine in Task 2 research
+      # --- agent sensing & motion (fractions of trace_res_max in pixel units) ---
+      sense_distance_frac: float = 0.005  # PolyPhy default auto-derive
+      step_size_frac: float = 0.0005      # PolyPhy default auto-derive
+      sensing_angle_deg: float = 30.0     # PPConfig default — confirm in Task 2
 
       # --- deposit / trace attenuation ---
-      deposit_attenuation: float = 0.90    # PPConfig default; tune
-      trace_attenuation: float = 0.96      # PPConfig default; tune
+      deposit_attenuation: float = 0.90   # PPConfig default — confirm in Task 2
+      trace_attenuation: float = 0.96     # PPConfig default — confirm in Task 2
 
-      # --- sampling distributions ---
-      distance_distribution: str = 'maxwell-boltzmann'  # PPConfig default
-      directional_distribution: str = 'cone'            # PPConfig default
-      directional_mutation: str = 'stochastic'          # PPConfig default
-      deposit_fetching: str = 'noise-perturbed-NN'      # PPConfig default
+      # --- sampling distributions (enum string values per cli_helper.py) ---
+      distance_distribution: str = 'maxwell-boltzmann'
+      directional_distribution: str = 'cone'
+      directional_mutation: str = 'stochastic'
+      deposit_fetching: str = 'noise-perturbed-NN'
       agent_boundary_handling: str = 're-initialize-randomly'
 
 
-  # The locked-in calibration set. Initial values here are the candidate set;
-  # Task 8 updates them in-place as iterations progress.
+  # The locked-in calibration set. Task 8 updates these values via fresh commits.
   CALIBRATION_PARAMS = RhizomeParams()
 
 
-  # Path to the vendored PolyPhy checkout (resolved from this file's location).
-  REPO_ROOT = Path(__file__).resolve().parent
-  POLYPHY_ROOT = REPO_ROOT / 'vendor' / 'polyphy'
+  # Path to the PolyPhy fork root (this script's parent's parent).
+  REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
   def remove_cpu_force_flag() -> None:
-      """PolyPhy's discrete3D.py:24 forces CPU if /tmp/flag exists. Remove it."""
+      """PolyPhy's discrete3D.py:24 forces CPU if /tmp/flag exists. Unlink it."""
       flag = Path('/tmp/flag')
       if flag.exists():
           flag.unlink()
@@ -977,24 +1123,29 @@ A subprocess wrapper around PolyPhy's CLI. The parameter constants from Task 2's
 
 
   def polyphy_commit() -> str:
-      """Return the short SHA of the pinned PolyPhy submodule."""
+      """Return the short SHA of the fork's current HEAD."""
       out = subprocess.run(
-          ['git', '-C', str(POLYPHY_ROOT), 'rev-parse', '--short', 'HEAD'],
+          ['git', '-C', str(REPO_ROOT), 'rev-parse', '--short', 'HEAD'],
           capture_output=True, text=True, check=True,
       )
       return out.stdout.strip()
 
 
-  def build_cli_args(params: RhizomeParams, csv_relative_to_polyphy_root: Path,
-                     domain_size_max_pixels: float) -> list[str]:
-      """Translate a RhizomeParams into a list of PolyPhy CLI tokens."""
-      sense_distance_px = params.sense_distance_frac * domain_size_max_pixels
-      step_size_px = params.step_size_frac * domain_size_max_pixels
+  def build_cli_args(params: RhizomeParams, csv_relative_to_repo_root: Path) -> list[str]:
+      """Translate a RhizomeParams into a list of PolyPhy CLI tokens.
+
+      Note on pixel conversion: PolyPhy treats sense_distance and step_size in
+      trace-grid pixel units. With `-t trace_res_max`, the trace's longest axis
+      = trace_res_max in pixels, so "fraction of domain" × trace_res_max yields
+      the pixel value PolyPhy expects.
+      """
+      sense_distance_px = params.sense_distance_frac * params.trace_res_max
+      step_size_px = params.step_size_frac * params.trace_res_max
       return [
           '3d_discrete', '-b',
           '-n', str(params.num_iterations),
           '-t', str(params.trace_res_max),
-          '-f', str(csv_relative_to_polyphy_root),
+          '-f', str(csv_relative_to_repo_root),
           '-d', f'{sense_distance_px:.6f}',
           '-s', f'{step_size_px:.6f}',
           '-a', f'{params.sensing_angle_deg:.3f}',
@@ -1008,57 +1159,20 @@ A subprocess wrapper around PolyPhy's CLI. The parameter constants from Task 2's
       ]
 
 
-  def run_polyphy(csv_path: Path, params: RhizomeParams) -> Path:
-      """Invoke PolyPhy on csv_path, return the path to the new trace .npy.
-
-      Note on the pixel conversion: PolyPhy treats sense_distance and step_size
-      in trace-grid pixel units. For the data we're feeding it the trace's
-      longest axis = trace_res_max, so "fraction of domain" × trace_res_max
-      gives the pixel value PolyPhy expects.
-      """
-      remove_cpu_force_flag()
-
-      # PolyPhy resolves -f relative to its own ROOT (which is `../../` from
-      # src/polyphy/). Easiest: copy our CSV into vendor/polyphy/data/csv/.
-      polyphy_csv_dir = POLYPHY_ROOT / 'data' / 'csv'
-      polyphy_csv_dir.mkdir(parents=True, exist_ok=True)
-      staged_csv = polyphy_csv_dir / csv_path.name
-      shutil.copy(csv_path, staged_csv)
-      csv_relative = Path('data/csv') / csv_path.name
-
-      cli_args = build_cli_args(params, csv_relative, params.trace_res_max)
-
-      # Wipe stale trace outputs so our "newest" glob is unambiguous.
-      fits_dir = POLYPHY_ROOT / 'data' / 'fits'
-      fits_dir.mkdir(parents=True, exist_ok=True)
-      stale = sorted(fits_dir.glob('trace_*.npy'))
-      # Keep stale around for forensic comparison if a run goes wrong; rename
-      # rather than delete.
-      if stale:
-          archive = fits_dir / '_archive'
-          archive.mkdir(exist_ok=True)
-          for old in stale:
-              old.rename(archive / old.name)
-
-      print(f'Running PolyPhy with: {" ".join(cli_args)}')
-      t0 = time.perf_counter()
-      result = subprocess.run(
-          [sys.executable, 'polyphy.py', *cli_args],
-          cwd=POLYPHY_ROOT / 'src' / 'polyphy',
-          check=True,
-      )
-      elapsed = time.perf_counter() - t0
-      print(f'PolyPhy returned in {elapsed:.1f}s')
-
-      # The newest trace_*.npy is our output.
-      new_traces = sorted(fits_dir.glob('trace_*.npy'))
-      if not new_traces:
-          raise RuntimeError(f'PolyPhy produced no trace output in {fits_dir}')
-      return new_traces[-1]
+  def find_new_trace(fits_dir: Path, start_time: float) -> Path:
+      """Find the trace_*.npy file produced after `start_time` (epoch seconds)."""
+      candidates = [
+          p for p in fits_dir.glob('trace_*.npy')
+          if p.stat().st_mtime > start_time
+      ]
+      if not candidates:
+          raise RuntimeError(f'no new trace produced in {fits_dir} after start')
+      # Highest mtime among new files — robust to filesystem mtime tie-breaking.
+      return max(candidates, key=lambda p: p.stat().st_mtime)
 
 
   def squeeze_and_save(raw_path: Path, out_path: Path) -> np.ndarray:
-      """Load the 4D `(X, Y, Z, 1)` trace, squeeze, save as 3D float32."""
+      """Load the 4D (X, Y, Z, 1) trace, squeeze, save as 3D float32."""
       cube = np.load(raw_path)
       if cube.ndim == 4 and cube.shape[-1] == 1:
           cube = cube.squeeze(-1)
@@ -1070,39 +1184,79 @@ A subprocess wrapper around PolyPhy's CLI. The parameter constants from Task 2's
 
 
   def write_sidecar(out_path: Path, *, params: RhizomeParams, input_csv: Path,
-                    cube_shape: tuple[int, int, int], elapsed_s: float) -> None:
+                    cube_shape: tuple, elapsed_s: float,
+                    polyphy_commit: str | None = None) -> None:
       sidecar = {
           'params': asdict(params),
+          'input_csv': str(input_csv),
           'input_csv_sha256': hash_file(input_csv),
-          'polyphy_commit': polyphy_commit(),
+          'polyphy_commit': polyphy_commit if polyphy_commit is not None else '',
           'cube_shape': list(cube_shape),
           'wall_clock_s': elapsed_s,
           'produced_at': time.strftime('%Y-%m-%dT%H:%M:%S%z'),
       }
       sidecar_path = out_path.with_suffix('.json')
       sidecar_path.write_text(json.dumps(sidecar, indent=2))
-      print(f'Wrote sidecar {sidecar_path}')
+
+
+  def run_polyphy(csv_path: Path, params: RhizomeParams) -> tuple[Path, float]:
+      """Invoke PolyPhy on csv_path. Return (path to new trace .npy, elapsed s)."""
+      remove_cpu_force_flag()
+
+      # PolyPhy resolves -f relative to its own ROOT (= fork repo root).
+      # Easiest path: stage the CSV under data/csv/ at the fork root, then
+      # reference it as data/csv/<name> in the CLI.
+      polyphy_csv_dir = REPO_ROOT / 'data' / 'csv'
+      polyphy_csv_dir.mkdir(parents=True, exist_ok=True)
+      staged_csv = polyphy_csv_dir / csv_path.name
+      if staged_csv.resolve() != csv_path.resolve():
+          import shutil
+          shutil.copy(csv_path, staged_csv)
+      csv_relative = Path('data/csv') / csv_path.name
+
+      cli_args = build_cli_args(params, csv_relative)
+
+      fits_dir = REPO_ROOT / 'data' / 'fits'
+      fits_dir.mkdir(parents=True, exist_ok=True)
+
+      print(f'Running PolyPhy: {" ".join(cli_args)}')
+      start_time = time.time()
+      t0 = time.perf_counter()
+      subprocess.run(
+          [sys.executable, 'polyphy.py', *cli_args],
+          cwd=REPO_ROOT / 'src' / 'polyphy',
+          check=True,
+      )
+      elapsed = time.perf_counter() - t0
+      print(f'PolyPhy returned in {elapsed:.1f}s')
+
+      trace_path = find_new_trace(fits_dir, start_time)
+      return trace_path, elapsed
 
 
   def main() -> int:
-      parser = argparse.ArgumentParser(description='Run PolyPhy for a rhizome shell')
-      parser.add_argument('--shell', choices=['calibration'], default='calibration')
-      parser.add_argument('--csv', type=Path, default=Path('data/csv/sdss_calibration.csv'))
-      parser.add_argument('--out', type=Path, default=Path('output/sdss_reproduced.npy'))
+      parser = argparse.ArgumentParser(description='Run PolyPhy for rhizome calibration')
+      parser.add_argument('--input', type=Path,
+                          default=Path('rhizome/cache/sdss_calibration.csv'))
+      parser.add_argument('--output', type=Path,
+                          default=Path('rhizome/output/sdss_reproduced.npy'))
       args = parser.parse_args()
 
-      if not args.csv.exists():
-          print(f'ERROR: {args.csv} not found. Run buildRhizomeInput.py first.', file=sys.stderr)
+      if not args.input.exists():
+          print(f'ERROR: {args.input} not found. Run buildRhizomeInput.py first.',
+                file=sys.stderr)
           return 1
 
-      t0 = time.perf_counter()
-      raw_trace = run_polyphy(args.csv, CALIBRATION_PARAMS)
-      cube = squeeze_and_save(raw_trace, args.out)
-      elapsed = time.perf_counter() - t0
+      raw_trace, elapsed = run_polyphy(args.input, CALIBRATION_PARAMS)
+      cube = squeeze_and_save(raw_trace, args.output)
 
-      write_sidecar(args.out, params=CALIBRATION_PARAMS, input_csv=args.csv,
-                    cube_shape=cube.shape, elapsed_s=elapsed)
-      print(f'Saved reproduced cube to {args.out} (shape={cube.shape})')
+      write_sidecar(
+          args.output, params=CALIBRATION_PARAMS, input_csv=args.input,
+          cube_shape=cube.shape, elapsed_s=elapsed,
+          polyphy_commit=polyphy_commit(),
+      )
+      print(f'Saved reproduced cube to {args.output} (shape={cube.shape})')
+      print(f'Sidecar at {args.output.with_suffix(".json")}')
       return 0
 
 
@@ -1110,37 +1264,34 @@ A subprocess wrapper around PolyPhy's CLI. The parameter constants from Task 2's
       sys.exit(main())
   ```
 
-- [ ] **Step 2: Smoke-run the orchestrator**
+- [ ] **Step 4: Run tests, confirm pass**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  .venv/bin/python runRhizomePolyphy.py --shell calibration
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/pytest rhizome/tests/test_run_rhizome_polyphy.py --no-cov -v
   ```
 
-  Expected: PolyPhy banner `[Taichi] Starting on arch=metal`, ~30 s wall-clock for ~300k input points × 700 iters at 512³ trace resolution, output to `output/sdss_reproduced.npy` plus `output/sdss_reproduced.json`.
+  Expected: all seven tests pass.
 
-  **Failure modes to watch for:**
-  - `ROOT` resolution error → confirm `cd` worked and CSV path is right.
-  - `[Taichi] Starting on arch=x64` → `/tmp/flag` survived our cleanup; investigate.
-  - 4D-not-3D cube → `squeeze_and_save` should handle it; if it complains, the channel axis isn't the last one.
-  - Memory blow-up at 512³ → drop to `trace_res_max=256` in `CALIBRATION_PARAMS` and re-record that in CANDIDATE_PARAMETERS.md.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 5: Commit**
 
   ```bash
-  git add runRhizomePolyphy.py
+  cd ~/Development/vendor/python/PolyPhy
+  git add rhizome/runRhizomePolyphy.py rhizome/tests/test_run_rhizome_polyphy.py
   git commit -m "$(cat <<'EOF'
-  feat: PolyPhy orchestrator with named parameter constants
+  rhizome: PolyPhy orchestrator with frozen RhizomeParams dataclass
 
-  Wraps PolyPhy's 3d_discrete batch mode: handles the cd-to-src/polyphy
-  requirement, removes /tmp/flag, stages the CSV inside the vendored tree,
-  archives stale traces, and squeezes the 4D output to a clean 3D float32
-  .npy plus a sidecar JSON recording every parameter, input hash, and
-  PolyPhy commit.
+  Wraps PolyPhy's 3d_discrete batch mode. Handles the cd-to-src/polyphy
+  requirement via subprocess cwd=, removes /tmp/flag defensively, hashes
+  the input CSV for sidecar reproducibility, locates the new trace by
+  mtime > start_time, squeezes 4D (X,Y,Z,1) → 3D float32 .npy, and writes
+  a sidecar JSON with every parameter, input hash, PolyPhy HEAD commit,
+  and wall-clock.
 
-  Parameter constants live in a frozen dataclass at module top; first run
-  uses the Task 2 candidate set. Task 8's iteration loop updates these
-  values in place; the final committed state is the locked calibration set.
+  Sensing distance + step size stored as fractions of DOMAIN_SIZE_MAX,
+  resolved to pixel space at CLI-build time. Unit tests cover all the
+  pure helpers; the subprocess invocation itself is exercised end-to-end
+  in Task 7.
 
   Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
   EOF
@@ -1151,33 +1302,55 @@ A subprocess wrapper around PolyPhy's CLI. The parameter constants from Task 2's
 
 ## Task 6: `compareCubes.py` — visual + numerical comparison
 
-Loads two `.npy` cubes (reproduced + reference), normalises each to unit max (so absolute intensity differences don't drown out structural ones), aligns shapes (resample the smaller to match the larger via `scipy.ndimage.zoom`), produces:
+Loads two `.npy` cubes (reproduced + reference), normalises both to `[0, 1]` (min-max), aligns shapes via `scipy.ndimage.zoom` if they differ, computes:
 
-1. A side-by-side max-projection PNG along all three axes (matplotlib).
-2. Quantitative comparison: cross-correlation (Pearson r) per axis projection, intensity-histogram KL divergence.
-3. Per-axis log of differences printed to stdout so it can be redirected into `calibration/sweep_log.txt`.
+1. 3D Pearson correlation on the volumetric data.
+2. Per-axis 2D Pearson correlation on max-projections.
+3. A 3×2 grid PNG (rows = X/Y/Z axis projection, cols = reproduced / reference) rendered with matplotlib `magma` colourmap and `LogNorm`.
+4. A `stats.json` next to the PNG with the four correlation numbers + both cube shapes + normalisation min/max.
+
+**TDD-shaped** for the pure functions. The PNG-rendering is exercised end-to-end in Task 7.
 
 **Files:**
-- Create: `~/Development/js/skymap-rhizome/compareCubes.py`
-- Create: `~/Development/js/skymap-rhizome/tests/test_compare_cubes.py`
+- Create: `rhizome/compareCubes.py`
+- Create: `rhizome/tests/test_compare_cubes.py`
 
 - [ ] **Step 1: Write the failing test**
 
-  Create `~/Development/js/skymap-rhizome/tests/test_compare_cubes.py`:
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/tests/test_compare_cubes.py`:
 
   ```python
   """Test the comparison harness on synthetic cube pairs."""
+  import json
+  import sys
+  from pathlib import Path
+
+  sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
   import numpy as np
   import pytest
 
-  from compareCubes import correlation_score, normalise_max, resample_to_match
+  from compareCubes import (
+      correlation_score,
+      normalise_minmax,
+      resample_to_match,
+      max_projections,
+      compare_pair,
+  )
 
 
-  def test_normalise_max_unit_peak():
-      cube = np.array([[[0.0, 0.5], [1.0, 2.0]]], dtype=np.float32)
-      out = normalise_max(cube)
-      assert out.max() == pytest.approx(1.0)
+  def test_normalise_minmax_to_unit_range():
+      cube = np.array([[[1.0, 3.0], [5.0, 7.0]]], dtype=np.float32)
+      out = normalise_minmax(cube)
       assert out.min() == pytest.approx(0.0)
+      assert out.max() == pytest.approx(1.0)
+
+
+  def test_normalise_minmax_handles_flat_input():
+      cube = np.full((2, 2, 2), 3.5, dtype=np.float32)
+      out = normalise_minmax(cube)
+      # Flat input → all zeros (no range to scale into).
+      assert np.allclose(out, 0.0)
 
 
   def test_correlation_identity():
@@ -1197,65 +1370,106 @@ Loads two `.npy` cubes (reproduced + reference), normalises each to unit max (so
 
   def test_resample_matches_shape():
       a = np.ones((10, 10, 10), dtype=np.float32)
-      b = np.ones((20, 20, 20), dtype=np.float32)
-      a_resampled = resample_to_match(a, b.shape)
-      assert a_resampled.shape == b.shape
+      a_resampled = resample_to_match(a, (20, 20, 20))
+      assert a_resampled.shape == (20, 20, 20)
+
+
+  def test_max_projections_returns_three_planes():
+      cube = np.arange(2 * 3 * 4, dtype=np.float32).reshape(2, 3, 4)
+      px, py, pz = max_projections(cube)
+      assert px.shape == (3, 4)
+      assert py.shape == (2, 4)
+      assert pz.shape == (2, 3)
+
+
+  def test_compare_pair_writes_stats_json(tmp_path: Path):
+      a = np.random.RandomState(0).rand(8, 8, 8).astype(np.float32)
+      b = np.random.RandomState(1).rand(8, 8, 8).astype(np.float32)
+      a_path = tmp_path / 'a.npy'
+      b_path = tmp_path / 'b.npy'
+      np.save(a_path, a)
+      np.save(b_path, b)
+      out_dir = tmp_path / 'out'
+      stats = compare_pair(a_path, b_path, out_dir)
+      assert (out_dir / 'compare.png').exists()
+      assert (out_dir / 'stats.json').exists()
+      loaded = json.loads((out_dir / 'stats.json').read_text())
+      assert 'pearson_3d' in loaded
+      assert 'pearson_x_projection' in loaded
+      assert 'pearson_y_projection' in loaded
+      assert 'pearson_z_projection' in loaded
+      assert loaded['reproduced_shape'] == [8, 8, 8]
+      assert loaded['reference_shape'] == [8, 8, 8]
+      # Round-trip the same cube against itself: r ≈ 1.0.
+      stats_same = compare_pair(a_path, a_path, tmp_path / 'out2')
+      assert stats_same['pearson_3d'] == pytest.approx(1.0)
   ```
 
 - [ ] **Step 2: Confirm tests fail**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  .venv/bin/pytest tests/test_compare_cubes.py
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/pytest rhizome/tests/test_compare_cubes.py --no-cov
   ```
+
+  Expected: `ImportError`.
 
 - [ ] **Step 3: Write `compareCubes.py`**
 
-  Create `~/Development/js/skymap-rhizome/compareCubes.py`:
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/compareCubes.py`:
 
   ```python
   #!/usr/bin/env python3
   """compareCubes.py — visual + numerical reproducibility comparison.
 
-  Inputs: two 3D float32 `.npy` cubes (reproduced and reference).
-  Output: a side-by-side max-projection PNG plus stdout comparison stats.
+  Inputs: two 3D float32 .npy cubes (reproduced and reference).
+  Outputs (into --out directory):
+    - compare.png: a 3x2 grid of max-projections (rows = X/Y/Z axis,
+      cols = reproduced / reference), magma colourmap, LogNorm.
+    - stats.json: 3D Pearson + three per-axis 2D Pearson scores plus
+      both input shapes and normalisation diagnostics.
 
-  Cubes may differ in shape (the Wilde et al. reference is 712 x 1200 x 728;
-  our reproduction at trace_res_max=512 will be 512 along its longest axis
-  and proportionally smaller on the other two). The comparison resamples
-  whichever is smaller up to match the larger.
+  Cubes may differ in shape — the Wilde et al. reference is 712 x 1200 x 728;
+  our reproduction at trace_res_max=256 will be smaller on each axis with a
+  matching aspect ratio. For the 3D correlation we resample the smaller cube
+  up to the larger via trilinear interpolation; for max-projections we
+  compare each axis projection at native resolution after a separate 2D
+  resample of the smaller projection.
 
-  Per-axis max-projections are the right comparison primitive because (a)
-  they collapse the depth dimension MCPM's trace cube doesn't carry
-  consistent absolute intensity in, (b) they make filament continuity
-  obvious to the eye, and (c) cross-correlation on 2D projections is much
-  less sensitive to small voxel-grid misalignments than 3D correlation is.
+  Why per-axis 2D max-projections in addition to 3D: (a) MCPM trace doesn't
+  carry consistent absolute intensity across the depth axis, (b) filament
+  continuity is easiest to read on a 2D projection, (c) 2D Pearson is much
+  less sensitive to small voxel-grid misalignments than 3D Pearson.
   """
   import argparse
+  import json
   import sys
   from pathlib import Path
 
   import matplotlib.pyplot as plt
   import numpy as np
+  from matplotlib.colors import LogNorm
   from scipy.ndimage import zoom
 
 
-  def normalise_max(cube: np.ndarray) -> np.ndarray:
-      """Scale so peak voxel = 1.0. Returns a fresh array; doesn't mutate input."""
-      peak = float(cube.max())
-      if peak <= 0:
-          return cube.astype(np.float32, copy=True)
-      return (cube / peak).astype(np.float32)
+  def normalise_minmax(cube: np.ndarray) -> np.ndarray:
+      """Scale so min → 0 and max → 1. Flat input returns all-zeros."""
+      lo = float(cube.min())
+      hi = float(cube.max())
+      span = hi - lo
+      if span <= 0:
+          return np.zeros_like(cube, dtype=np.float32)
+      return ((cube - lo) / span).astype(np.float32)
 
 
-  def resample_to_match(cube: np.ndarray, target_shape: tuple[int, int, int]) -> np.ndarray:
+  def resample_to_match(cube: np.ndarray, target_shape: tuple) -> np.ndarray:
       """Resample cube to target_shape via trilinear interpolation."""
       factors = tuple(t / s for t, s in zip(target_shape, cube.shape))
       return zoom(cube, factors, order=1).astype(np.float32)
 
 
   def correlation_score(a: np.ndarray, b: np.ndarray) -> float:
-      """Pearson correlation between two flattened arrays of the same shape."""
+      """Pearson correlation between two arrays of identical shape."""
       if a.shape != b.shape:
           raise ValueError(f'shape mismatch: {a.shape} vs {b.shape}')
       af = a.ravel().astype(np.float64)
@@ -1269,74 +1483,103 @@ Loads two `.npy` cubes (reproduced + reference), normalises each to unit max (so
 
 
   def max_projections(cube: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-      """Return (xy, xz, yz) max-projections."""
-      return cube.max(axis=2), cube.max(axis=1), cube.max(axis=0)
+      """Return (proj_x, proj_y, proj_z): max-projection along each axis."""
+      return cube.max(axis=0), cube.max(axis=1), cube.max(axis=2)
 
 
-  def render_side_by_side(reproduced: np.ndarray, reference: np.ndarray,
-                          out_path: Path) -> None:
-      """Write a 3x2-grid PNG: rows = axes, cols = reproduced vs reference."""
-      proj_a = max_projections(reproduced)
-      proj_b = max_projections(reference)
+  def _safe_lognorm_imshow(ax, img, title):
+      # LogNorm chokes on all-zero data. Add a tiny floor to be safe.
+      vmax = float(img.max())
+      vmin = max(vmax * 1e-4, 1e-6)
+      norm = LogNorm(vmin=vmin, vmax=max(vmax, vmin * 10))
+      ax.imshow(img.T, origin='lower', cmap='magma', norm=norm)
+      ax.set_title(title)
+      ax.axis('off')
+
+
+  def _load_3d(path: Path) -> np.ndarray:
+      cube = np.load(path).astype(np.float32)
+      if cube.ndim == 4 and cube.shape[-1] == 1:
+          cube = cube.squeeze(-1)
+      if cube.ndim != 3:
+          raise ValueError(f'expected 3D cube from {path}, got shape {cube.shape}')
+      return cube
+
+
+  def compare_pair(reproduced: Path, reference: Path, out_dir: Path) -> dict:
+      """Load, normalise, resample, compare, render. Return the stats dict."""
+      out_dir.mkdir(parents=True, exist_ok=True)
+
+      a_raw = _load_3d(reproduced)
+      b_raw = _load_3d(reference)
+      a = normalise_minmax(a_raw)
+      b = normalise_minmax(b_raw)
+
+      # 3D correlation: resample the smaller cube up to the larger.
+      a_vol = int(np.prod(a.shape))
+      b_vol = int(np.prod(b.shape))
+      target = a.shape if a_vol >= b_vol else b.shape
+      a_3d = a if a.shape == target else resample_to_match(a, target)
+      b_3d = b if b.shape == target else resample_to_match(b, target)
+      r_3d = correlation_score(a_3d, b_3d)
+
+      # Per-axis 2D correlations: project each, then resample each pair to a
+      # common shape (largest of the two projections per axis).
+      proj_a = max_projections(a)
+      proj_b = max_projections(b)
+      axis_names = ['x', 'y', 'z']
+      stats = {
+          'pearson_3d': r_3d,
+          'reproduced_shape': list(a.shape),
+          'reference_shape': list(b.shape),
+          'reproduced_minmax': [float(a_raw.min()), float(a_raw.max())],
+          'reference_minmax': [float(b_raw.min()), float(b_raw.max())],
+      }
+      proj_resampled_a, proj_resampled_b = [], []
+      for name, pa, pb in zip(axis_names, proj_a, proj_b):
+          target2d = pa.shape if np.prod(pa.shape) >= np.prod(pb.shape) else pb.shape
+          pa_r = pa if pa.shape == target2d else zoom(
+              pa, tuple(t / s for t, s in zip(target2d, pa.shape)), order=1)
+          pb_r = pb if pb.shape == target2d else zoom(
+              pb, tuple(t / s for t, s in zip(target2d, pb.shape)), order=1)
+          stats[f'pearson_{name}_projection'] = correlation_score(pa_r, pb_r)
+          proj_resampled_a.append(pa_r)
+          proj_resampled_b.append(pb_r)
+
+      # Render PNG (3 rows × 2 cols: rows = axis, cols = reproduced / reference).
       fig, axes = plt.subplots(3, 2, figsize=(8, 12))
-      axis_names = ['xy (z-projected)', 'xz (y-projected)', 'yz (x-projected)']
-      for row, (a_proj, b_proj, name) in enumerate(zip(proj_a, proj_b, axis_names)):
-          axes[row, 0].imshow(a_proj.T, origin='lower', cmap='magma',
-                              norm='log' if a_proj.max() > 0 else None)
-          axes[row, 0].set_title(f'Reproduced — {name}')
-          axes[row, 0].axis('off')
-          axes[row, 1].imshow(b_proj.T, origin='lower', cmap='magma',
-                              norm='log' if b_proj.max() > 0 else None)
-          axes[row, 1].set_title(f'Reference — {name}')
-          axes[row, 1].axis('off')
+      for row, name in enumerate(axis_names):
+          _safe_lognorm_imshow(axes[row, 0], proj_resampled_a[row],
+                               f'Reproduced — {name} max-projection')
+          _safe_lognorm_imshow(axes[row, 1], proj_resampled_b[row],
+                               f'Reference — {name} max-projection')
       fig.tight_layout()
-      out_path.parent.mkdir(parents=True, exist_ok=True)
-      fig.savefig(out_path, dpi=120, bbox_inches='tight')
+      fig.savefig(out_dir / 'compare.png', dpi=120, bbox_inches='tight')
       plt.close(fig)
+
+      (out_dir / 'stats.json').write_text(json.dumps(stats, indent=2))
+      return stats
 
 
   def main() -> int:
       parser = argparse.ArgumentParser(description='Compare reproduced cube vs reference')
       parser.add_argument('--reproduced', type=Path, required=True)
       parser.add_argument('--reference', type=Path, required=True)
-      parser.add_argument('--out', type=Path, default=Path('calibration/compare.png'))
+      parser.add_argument('--out', type=Path, required=True,
+                          help='Directory; receives compare.png + stats.json')
       args = parser.parse_args()
 
-      reproduced = np.load(args.reproduced).astype(np.float32)
-      reference = np.load(args.reference).astype(np.float32)
-      # The reference may be 4D if it came straight from PolyPhy without squeeze.
-      if reference.ndim == 4 and reference.shape[-1] == 1:
-          reference = reference.squeeze(-1)
-
-      print(f'Reproduced shape: {reproduced.shape}, min/max: {reproduced.min():.4f}/{reproduced.max():.4f}')
-      print(f'Reference  shape: {reference.shape}, min/max: {reference.min():.4f}/{reference.max():.4f}')
-
-      reproduced = normalise_max(reproduced)
-      reference = normalise_max(reference)
-
-      # Resample the smaller cube up to match the larger one for 3D correlation.
-      target = max(reproduced.shape, reference.shape, key=lambda s: int(np.prod(s)))
-      if reproduced.shape != target:
-          reproduced_resampled = resample_to_match(reproduced, target)
-      else:
-          reproduced_resampled = reproduced
-      if reference.shape != target:
-          reference_resampled = resample_to_match(reference, target)
-      else:
-          reference_resampled = reference
-
-      r3d = correlation_score(reproduced_resampled, reference_resampled)
-      print(f'3D Pearson correlation: {r3d:+.4f}')
-
-      # Per-axis 2D correlations on max-projections.
-      proj_r = max_projections(reproduced_resampled)
-      proj_f = max_projections(reference_resampled)
-      for name, a_p, b_p in zip(['xy', 'xz', 'yz'], proj_r, proj_f):
-          r = correlation_score(a_p, b_p)
-          print(f'  Pearson({name} max-projection): {r:+.4f}')
-
-      render_side_by_side(reproduced, reference, args.out)
-      print(f'Wrote comparison PNG to {args.out}')
+      stats = compare_pair(args.reproduced, args.reference, args.out)
+      print(f'Reproduced shape: {stats["reproduced_shape"]}, '
+            f'min/max: {stats["reproduced_minmax"]}')
+      print(f'Reference  shape: {stats["reference_shape"]}, '
+            f'min/max: {stats["reference_minmax"]}')
+      print(f'3D Pearson correlation: {stats["pearson_3d"]:+.4f}')
+      for name in ('x', 'y', 'z'):
+          print(f'  Pearson({name} max-projection): '
+                f'{stats[f"pearson_{name}_projection"]:+.4f}')
+      print(f'Wrote {args.out / "compare.png"}')
+      print(f'Wrote {args.out / "stats.json"}')
       return 0
 
 
@@ -1347,37 +1590,25 @@ Loads two `.npy` cubes (reproduced + reference), normalises each to unit max (so
 - [ ] **Step 4: Run tests, confirm pass**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  .venv/bin/pytest tests/test_compare_cubes.py -v
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/pytest rhizome/tests/test_compare_cubes.py --no-cov -v
   ```
 
-- [ ] **Step 5: Fetch the reference cube and dry-run**
+  Expected: all seven tests pass.
+
+- [ ] **Step 5: Commit**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  mkdir -p reference
-  curl -o reference/mcpm_sdss_d2.npy https://skymap-data.rulkens.com/data/raw/mcpm/mcpm_sdss_d2.npy
-  .venv/bin/python compareCubes.py \
-      --reproduced output/sdss_reproduced.npy \
-      --reference reference/mcpm_sdss_d2.npy \
-      --out calibration/compare_iter0.png
-  ```
-
-  Expected output: `compare_iter0.png` written; stdout shows 3D Pearson correlation (likely 0.1-0.4 for the unrefined first run — that's fine, the iteration loop is what brings it up).
-
-- [ ] **Step 6: Commit**
-
-  ```bash
-  git add compareCubes.py tests/test_compare_cubes.py
+  cd ~/Development/vendor/python/PolyPhy
+  git add rhizome/compareCubes.py rhizome/tests/test_compare_cubes.py
   git commit -m "$(cat <<'EOF'
-  feat: numerical + visual cube comparison harness
+  rhizome: numerical + visual cube comparison harness
 
-  Loads reproduced and reference cubes, normalises to unit peak, resamples
-  the smaller up to match the larger, computes 3D Pearson correlation and
-  three per-axis max-projection 2D correlations. Renders a 3x2 magma PNG
-  for visual review. Iteration loop in Task 8 watches the correlation
-  numbers and the PNG side-by-side as the parameter set converges on the
-  reference.
+  Loads reproduced and reference cubes, min-max normalises, resamples the
+  smaller to match the larger, computes 3D Pearson + per-axis 2D Pearson
+  on max-projections. Renders a 3x2 magma+LogNorm PNG and writes a
+  stats.json sidecar. Pure helpers unit-tested; end-to-end PNG render
+  exercised in Task 7's baseline run.
 
   Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
   EOF
@@ -1388,26 +1619,44 @@ Loads two `.npy` cubes (reproduced + reference), normalises each to unit max (so
 
 ## Task 7: Baseline iteration 0 — record the unrefined starting state
 
-Before any tuning, run the full pipeline end-to-end with the Task 2 candidate parameter set, save artefacts under `calibration/iter0/`, and document the starting score in `CALIBRATION.md`. This is the floor against which all subsequent iterations are measured.
+Before any tuning, run the full pipeline end-to-end with Task 2's candidate parameters, save artefacts under `rhizome/calibration/iter0_baseline/`, and write the initial entry in `CALIBRATION.md`. This is the floor against which all subsequent iterations are measured.
 
-- [ ] **Step 1: Run the full pipeline**
+- [ ] **Step 1: Fetch the reference cube**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  # CSV already produced in Task 4, cube already produced in Task 5,
-  # comparison already produced in Task 6 — but we want a clean named copy.
-  .venv/bin/python runRhizomePolyphy.py --shell calibration
-  .venv/bin/python compareCubes.py \
-      --reproduced output/sdss_reproduced.npy \
-      --reference reference/mcpm_sdss_d2.npy \
-      --out calibration/iter0/compare.png \
-      | tee calibration/iter0/stats.txt
-  cp output/sdss_reproduced.json calibration/iter0/params.json
+  cd ~/Development/vendor/python/PolyPhy
+  mkdir -p rhizome/reference
+  curl -L -o rhizome/reference/mcpm_sdss_d2.npy \
+      https://skymap-data.rulkens.com/data/raw/mcpm/mcpm_sdss_d2.npy
   ```
 
-- [ ] **Step 2: Begin `CALIBRATION.md`**
+  Expected: ~600 MB download (712 × 1200 × 728 × 4 bytes ≈ 2.5 GB? Check actual file size on R2; the `_d2` suffix means downsampled-by-2, so ~316 MB float32, or smaller if shipped as float16). Verify with `ls -lh rhizome/reference/`.
 
-  Create `~/Development/js/skymap-rhizome/CALIBRATION.md`:
+- [ ] **Step 2: Run the full pipeline**
+
+  ```bash
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/python rhizome/buildRhizomeInput.py
+  verification/.venv/bin/python rhizome/runRhizomePolyphy.py \
+      --input rhizome/cache/sdss_calibration.csv \
+      --output rhizome/output/sdss_reproduced.npy
+  verification/.venv/bin/python rhizome/compareCubes.py \
+      --reproduced rhizome/output/sdss_reproduced.npy \
+      --reference rhizome/reference/mcpm_sdss_d2.npy \
+      --out rhizome/calibration/iter0_baseline/
+  cp rhizome/output/sdss_reproduced.json rhizome/calibration/iter0_baseline/params.json
+  ```
+
+  Failure modes to watch for:
+  - `ROOT` resolution error → PolyPhy didn't find the CSV; confirm the staged copy at `data/csv/sdss_calibration.csv` exists.
+  - `[Taichi] Starting on arch=x64` instead of `metal` → `/tmp/flag` survived our cleanup; investigate.
+  - 4D output cube unexpectedly missing the trailing-1 channel → `squeeze_and_save` raises with the actual shape.
+  - Memory blow-up at `trace_res_max=256` × 324k points × 1M agents → reduce to `trace_res_max=192` in `CALIBRATION_PARAMS` and re-record.
+  - PolyPhy hangs or NaN cubes on Metal → fall back to CPU by `touch /tmp/flag` and rerun. Document in `CALIBRATION.md`.
+
+- [ ] **Step 3: Initialise `CALIBRATION.md`**
+
+  Use the `Write` tool to create `~/Development/vendor/python/PolyPhy/rhizome/CALIBRATION.md`:
 
   ```markdown
   # SDSS Reproduction Calibration Log
@@ -1416,103 +1665,121 @@ Before any tuning, run the full pipeline end-to-end with the Task 2 candidate pa
   `SDSS_z_44-476mpc` MCPM cube (skymap's `mcpm_sdss_d2.npy`) by running
   PolyPhy on our own SDSS catalog with parameter tuning.
 
-  **Acceptance criterion:** the comparison PNG shows the same major
-  filaments (Coma, Perseus-Pisces, Sloan Great Wall) at the same locations
-  with comparable intensity. Pixel-perfect match is not the goal — our
-  input preprocessing differs from Wilde's (no RSD correction, no DBSCAN
-  clustering), so absolute intensity will always differ. *Structural*
-  agreement, as visible in max-projection PNGs and Pearson correlation
-  ≥ 0.6 on at least two of three axis projections, is the bar.
+  **Acceptance criterion (tunable):** Pearson correlation ≥ 0.6 on at least
+  two of three axis max-projections. This is a guess at what's plausibly
+  achievable given that our input preprocessing differs from Wilde's (no
+  RSD correction, no DBSCAN clustering) — absolute parity is impossible.
+  Raise the bar if iter 0 lands close to it with defaults; lower the bar
+  if the architectural-difference floor proves to be below 0.6 across
+  all five iterations.
+
+  **Hard iteration cap:** 5 iterations. If we're not converging by iter 5,
+  surface the upstream issue (wrong frame, wrong filter, wrong baseline,
+  fundamental model mismatch) rather than continuing to thrash on
+  parameters.
 
   ## Iteration log
 
-  ### iter 0 — Task 2 candidate parameters (baseline)
+  ### iter 0 — baseline (Task 2 candidate parameters)
 
-  **Parameters:** `calibration/iter0/params.json` (= PolyPhy defaults + any
-  manual overrides from Task 2 Step 8).
+  **Parameters:** `rhizome/calibration/iter0_baseline/params.json` (= PolyPhy
+  defaults + any manual overrides captured in CANDIDATE_PARAMETERS.md).
 
-  **Stats:** see `calibration/iter0/stats.txt`. Initial 3D Pearson correlation
-  `[fill in]`. Per-axis: xy `[fill]`, xz `[fill]`, yz `[fill]`.
+  **Stats:** see `rhizome/calibration/iter0_baseline/stats.json`. 3D Pearson
+  `<fill>`, per-axis x `<fill>`, y `<fill>`, z `<fill>`.
 
-  **Visual:** `calibration/iter0/compare.png`. Notes from inspection:
-  - `[fill in: filament locations roughly correct / shifted / smeared / absent]`
-  - `[fill in: intensity contrast vs reference]`
-  - `[fill in: noise floor / agent diffusion observable]`
+  **Visual:** `rhizome/calibration/iter0_baseline/compare.png`. Notes from
+  inspection:
+  - `<fill: filament locations correct / shifted / smeared / absent>`
+  - `<fill: intensity contrast vs reference>`
+  - `<fill: noise floor / agent diffusion observable>`
+  - `<fill: cube shape vs reference>` (e.g. ours is 256×<…>×<…>, reference is 712×1200×728)
 
   **Decision:** baseline recorded; proceed to parameter sweeps in iter 1+.
   ```
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit and STOP**
 
   ```bash
-  git add CALIBRATION.md calibration/iter0/
+  cd ~/Development/vendor/python/PolyPhy
+  git add rhizome/CALIBRATION.md rhizome/calibration/iter0_baseline/
   git commit -m "$(cat <<'EOF'
-  calibration(iter 0): record baseline reproduction against Wilde et al. reference
+  rhizome(iter 0): record baseline reproduction against Wilde et al. reference
 
   Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
   EOF
   )"
   ```
 
-  **STOP and check with user.** Show them `calibration/iter0/compare.png` and the printed correlation numbers. The user decides whether the starting state is in the right ballpark or whether something obvious is broken (e.g. all-noise output, wrong domain extent, agents not depositing). If broken, fix before proceeding to Task 8.
+  **STOP-and-check gate.** Show the user:
+  - `rhizome/calibration/iter0_baseline/compare.png`
+  - `rhizome/calibration/iter0_baseline/stats.json`
+  - The reproduction's cube shape vs the reference's
+
+  The user decides whether the starting state is in the right ballpark or whether something obvious is broken (all-noise output, wrong domain extent, agents not depositing, frame mismatch). If broken, fix before proceeding to Task 8. If the user wants to adjust the acceptance bar based on what iter 0 looks like, capture that in `CALIBRATION.md` first.
 
 ---
 
-## Task 8: Parameter tuning iterations (3–5 named rounds)
+## Task 8: Tuning iterations — up to 5 named rounds
 
-**This task is inherently non-TDD.** We change a small group of related parameters, rerun the pipeline, inspect the PNG side-by-side with iter 0, decide if it's better or worse, and update `CALIBRATION_PARAMS` in `runRhizomePolyphy.py`. The "test" is the user's eye on the PNG plus the printed correlation numbers.
+**This task is inherently non-TDD.** Calibration is "run → look at PNG → tune → re-run". No unit test can encode "the filaments look right." The structural test is the user's eye on `compare.png` plus the printed Pearson scores. **Hard cap: 5 iterations.** If we're not converging by iter 5, surface the upstream issue rather than continuing to thrash.
 
 **Rules of engagement:**
 
-- Change one *group* of parameters per iteration (e.g. "sensing only", "deposit-attenuation only"), not everything at once. We want to attribute visual changes to causes.
-- Each iteration gets a name (`iter1_sensing`, `iter2_attenuation`, etc.) and its own folder under `calibration/iter<n>_<name>/`.
-- Each iteration's commit message records what changed and why.
+- Change one *group* of related parameters per iteration (e.g. "sensing distance + sensing angle", "deposit + trace attenuation"), not everything at once. We want to attribute visual changes to causes.
+- Each iteration gets a named subfolder under `rhizome/calibration/iter<N>_<name>/`, its own entry in `CALIBRATION.md`, and its own commit.
 - After each iteration: **STOP and check with user.** They eyeball `compare.png` against iter 0 and the previous iteration. Their call whether to continue, revert, or escalate.
-- Maximum 5 iterations before re-assessing the approach. If after 5 we're not visibly closer, the cause is upstream (wrong frame, wrong filter, wrong input) — surface it to the user rather than tuning further.
+- Don't `git commit --amend`; create a fresh commit per iteration so the timeline is preserved.
 
-The candidate iteration plan below is a suggestion; the actual sequence depends on what iter 0 looks like.
+The named iterations below are the *suggested* sequence; the actual order can adapt to what iter 0 looks like. Skip any iteration whose changes don't make sense given the iter 0 inspection.
 
-### Iter 1 — sensing distance & angle
+### Iter 1 — sensing distance + sensing angle
 
-- [ ] Change in `runRhizomePolyphy.py`'s `CALIBRATION_PARAMS`:
-  - Try `sense_distance_frac = 0.01` (double the default; closer to MCPM's recommended "comparable to inter-galaxy spacing" at 5-10 Mpc on a 500 Mpc domain).
-  - Try `sensing_angle_deg` values in `{15, 30, 45}` — pick whichever from Task 2 research came closest.
-- [ ] Re-run pipeline, save under `calibration/iter1_sensing/`.
-- [ ] Update `CALIBRATION.md` with stats + visual notes.
+- [ ] In `rhizome/runRhizomePolyphy.py`, update `CALIBRATION_PARAMS` with values from `CANDIDATE_PARAMETERS.md` adjusted per inspection of iter 0:
+  - Try `sense_distance_frac` in `{0.005, 0.01, 0.02}` (default × 1, 2, 4).
+  - Try `sensing_angle_deg` in `{15, 30, 45}` (pick whichever from Task 2 came closest, or the bracket around it).
+- [ ] Re-run pipeline, save under `rhizome/calibration/iter1_sensing/`.
+- [ ] Update `CALIBRATION.md` with stats + visual notes (same format as iter 0).
 - [ ] Commit:
   ```bash
+  cd ~/Development/vendor/python/PolyPhy
+  git add rhizome/runRhizomePolyphy.py rhizome/CALIBRATION.md \
+          rhizome/calibration/iter1_sensing/
   git commit -m "$(cat <<'EOF'
-  calibration(iter 1): sweep sensing distance and angle
+  rhizome(iter 1): sweep sensing distance and angle
 
   Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
   EOF
   )"
   ```
-- [ ] **STOP and check with user.**
+- [ ] **STOP-and-check gate.** User decides: continue, revert this iter, or escalate.
 
-### Iter 2 — attenuation
+### Iter 2 — deposit + trace attenuation
 
-- [ ] Adjust `deposit_attenuation` and `trace_attenuation` in `CALIBRATION_PARAMS`. The MCPM literature suggests sweep ranges of 0.85–0.95 for deposit decay and 0.92–0.98 for trace decay.
-- [ ] Save under `calibration/iter2_attenuation/`, log, commit, **STOP and check**.
+- [ ] Adjust `deposit_attenuation` (try `{0.85, 0.90, 0.95}`) and `trace_attenuation` (try `{0.92, 0.96, 0.98}`) in `CALIBRATION_PARAMS`.
+- [ ] Re-run, save under `rhizome/calibration/iter2_attenuation/`, log, commit, **STOP-and-check**.
 
-### Iter 3 — iteration count & step size
+### Iter 3 — iteration count + step size
 
-- [ ] Vary `num_iterations` (try 300, 700, 1500) and `step_size_frac` (try 0.0005, 0.001).
-- [ ] Save under `calibration/iter3_iter_step/`, log, commit, **STOP and check**.
+- [ ] Try `num_iterations` in `{300, 700, 1500}` and `step_size_frac` in `{0.0005, 0.001, 0.002}`.
+- [ ] Save under `rhizome/calibration/iter3_iter_step/`, log, commit, **STOP-and-check**.
 
-### Iter 4 — distribution choices (only if structure still wrong)
+### Iter 4 — distance + directional distributions
 
-- [ ] Toggle `directional_distribution` between `discrete` and `cone`. Toggle `directional_mutation` between `deterministic` and `stochastic`. These are coarser-grained changes that produce more visible structural differences than the previous numerical tweaks.
-- [ ] Save under `calibration/iter4_distributions/`, log, commit, **STOP and check**.
+- [ ] Toggle `directional_distribution` between `discrete` and `cone`. Toggle `directional_mutation` between `deterministic` and `stochastic`. Try `distance_distribution` in `{constant, exponential, maxwell-boltzmann}`. These are coarser-grained changes that produce more visible structural differences than the numerical tweaks above.
+- [ ] Save under `rhizome/calibration/iter4_distributions/`, log, commit, **STOP-and-check**.
 
-### Iter 5 — final lock-in
+### Iter 5 — final lock-in (only if iter 1-4 produced a clear winner)
 
-- [ ] Take the best-performing parameter set from iter 1-4 and commit it as the final `CALIBRATION_PARAMS` in `runRhizomePolyphy.py`. Re-run one more time to produce the canonical `calibration/compare.png` (no subfolder suffix — this is the headline image referenced in the README).
-- [ ] Update `CALIBRATION.md` with a "Locked-in parameters" section quoting the final dataclass values verbatim and explaining each one.
+- [ ] Take the best-performing parameter combination from iter 1-4 and write it back into `CALIBRATION_PARAMS` in `runRhizomePolyphy.py`. Re-run once with the locked-in set to produce the canonical artefacts at `rhizome/calibration/iter5_lockin/`.
+- [ ] Add a "Locked-in parameters" section to `CALIBRATION.md` quoting the final dataclass values verbatim, with reasoning per parameter ("kept default because…", "tuned to X because…").
 - [ ] Commit:
   ```bash
+  cd ~/Development/vendor/python/PolyPhy
+  git add rhizome/runRhizomePolyphy.py rhizome/CALIBRATION.md \
+          rhizome/calibration/iter5_lockin/
   git commit -m "$(cat <<'EOF'
-  calibration: lock in SDSS-reproduction parameter set
+  rhizome: lock in SDSS-reproduction parameter set
 
   After N iterations of structural comparison against Wilde et al. 2023's
   published Cosmic Slime VAC cube, freezing the following parameters as
@@ -1520,8 +1787,9 @@ The candidate iteration plan below is a suggestion; the actual sequence depends 
   [list final values]
 
   3D Pearson correlation: [value]; per-axis 2D max-projection correlations:
-  xy=[value], xz=[value], yz=[value]. Visual agreement on Coma, Perseus-
-  Pisces, and Sloan Great Wall confirmed in calibration/compare.png.
+  x=[value], y=[value], z=[value]. Visual agreement on major filaments
+  (Coma, Perseus-Pisces, Sloan Great Wall) confirmed in
+  rhizome/calibration/iter5_lockin/compare.png.
 
   These parameters carry forward to the full-sky rhizome shells unchanged.
 
@@ -1530,49 +1798,101 @@ The candidate iteration plan below is a suggestion; the actual sequence depends 
   )"
   ```
 
+### Escalation path if not converging by iter 5
+
+If by iter 5 we're below the acceptance bar with no clear monotonic trend across iterations, do **not** continue tuning. Instead, write an "Escalation" section in `CALIBRATION.md` documenting:
+
+- The best-achieved Pearson scores and which iter produced them.
+- Which parameters had observable effect and which were null.
+- The most likely upstream causes (in order of plausibility):
+  - Input preprocessing mismatch (RSD, DBSCAN, weighting) we can't replicate.
+  - Coordinate-frame divergence affecting projection geometry.
+  - PolyPhy current-HEAD model diverging from the 2023 Polyphorm Wilde et al. used (PolyPhy README warns "currently undergoing refactoring").
+  - SDSS catalog vintage difference between skymap's SkyServer extraction and the Cosmic Slime VAC's underlying input.
+- A recommended next step (e.g. "switch to running against Polyphorm directly", "request the original parameter file from Elek/Wilde", "accept the bar as-is").
+
+Commit this section and **STOP-and-check with user.** Do not attempt iter 6.
+
 ---
 
-## Task 9: Acceptance review with user
+## Task 9: Clean-checkout reproduction + acceptance
 
-- [ ] **Step 1: Run the full pipeline one last time from scratch on a clean checkout-equivalent state**
+Verifies the README's reproduction recipe works from a freshly-recreated working state and confirms all calibration commits meet repo hygiene standards.
 
-  Test the README's reproduction recipe verbatim:
+- [ ] **Step 1: Clean-state reproduction**
 
   ```bash
-  cd ~/Development/js/skymap-rhizome
-  rm -rf output/ data/csv/
-  .venv/bin/python buildRhizomeInput.py --shell calibration
-  .venv/bin/python runRhizomePolyphy.py --shell calibration
-  .venv/bin/python compareCubes.py \
-      --reproduced output/sdss_reproduced.npy \
-      --reference reference/mcpm_sdss_d2.npy \
-      --out calibration/compare.png
+  cd ~/Development/vendor/python/PolyPhy
+  # Clear all generated artefacts (keeps caches to avoid re-downloading R2 bytes).
+  rm -rf rhizome/output/*.npy rhizome/output/*.json data/csv/sdss_calibration.csv
+  # Walk the README recipe verbatim.
+  verification/.venv/bin/python rhizome/buildRhizomeInput.py
+  verification/.venv/bin/python rhizome/runRhizomePolyphy.py \
+      --input rhizome/cache/sdss_calibration.csv \
+      --output rhizome/output/sdss_reproduced.npy
+  verification/.venv/bin/python rhizome/compareCubes.py \
+      --reproduced rhizome/output/sdss_reproduced.npy \
+      --reference rhizome/reference/mcpm_sdss_d2.npy \
+      --out /tmp/rhizome_acceptance_compare/
   ```
 
-  Confirm `calibration/compare.png` is byte-identical (or visually equivalent within float-precision noise) to the version committed in Task 8 iter 5.
+  Compare `/tmp/rhizome_acceptance_compare/stats.json` against `rhizome/calibration/iter5_lockin/stats.json`. The 3D and per-axis Pearson scores should match within MCPM stochastic noise (Pearson Δ < 0.01).
 
-- [ ] **Step 2: Verify acceptance criteria**
+- [ ] **Step 2: Verify commit hygiene**
 
-  - [ ] `calibration/compare.png` exists and is committed.
-  - [ ] `CALIBRATION.md` documents every iteration and the final locked-in values.
-  - [ ] `runRhizomePolyphy.py`'s `CALIBRATION_PARAMS` matches what `CALIBRATION.md` says.
-  - [ ] `pytest tests/` passes green (3 test files, ~10 tests total).
-  - [ ] All commits use the user's git identity (verify `git log --format='%an'` shows the user's name, never `Claude`).
-  - [ ] All commits end with `Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>` (verify `git log --format='%B'` shows the trailer on every commit).
-  - [ ] No commits were pushed to a remote (this repo doesn't have one yet — that's a user decision for after acceptance).
+  ```bash
+  cd ~/Development/vendor/python/PolyPhy
+  # All commits on this branch must be authored by the user, not Claude.
+  git log verification-spike..rhizome-sdss-calibration --format='%an <%ae>' | sort -u
+  # Expected: only one line — the user's identity. NEVER "Claude <noreply@anthropic.com>".
 
-- [ ] **Step 3: Hand back to user**
+  # Every commit body must end with the Co-Authored-By trailer.
+  git log verification-spike..rhizome-sdss-calibration --format='%B' \
+      | grep -c 'Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>'
+  # Compare against the commit count:
+  git rev-list --count verification-spike..rhizome-sdss-calibration
+  # The two numbers must match.
 
-  Show them:
-  - `calibration/compare.png`
-  - `CALIBRATION.md`'s "Locked-in parameters" section
-  - `git log --oneline` of the calibration branch
-  - Total wall-clock for one full pipeline run
+  # No force-pushes happened (this is a local branch only; nothing to push yet).
+  # The branch must have a remote tracking ref of `origin/rhizome-sdss-calibration`
+  # ONLY if the user previously asked for a push. If the user has not asked,
+  # there must be no remote ref.
+  git rev-parse --abbrev-ref @{upstream} 2>&1 || echo 'no upstream — expected if user has not requested a push'
+  ```
+
+- [ ] **Step 3: Verify all tests pass green**
+
+  ```bash
+  cd ~/Development/vendor/python/PolyPhy
+  verification/.venv/bin/pytest rhizome/tests/ --no-cov -v
+  ```
+
+  Expected: all tests across the four `test_*.py` files pass.
+
+- [ ] **Step 4: Acceptance handoff to user**
+
+  Show the user:
+  - `rhizome/calibration/iter5_lockin/compare.png`
+  - `rhizome/CALIBRATION.md`'s "Locked-in parameters" section
+  - `git log --oneline verification-spike..HEAD` on the `rhizome-sdss-calibration` branch
+  - Total wall-clock for one full pipeline run (the iter5 sidecar JSON's `wall_clock_s`)
 
   Ask:
   - Are they satisfied with the structural match?
-  - Do they want to create a GitHub remote for `skymap-rhizome` now, or defer until the full-sky shells are also producing?
+  - Do they want to push the branch + open a PR back to the fork's `main` now, or defer until the rhizome-shells plan also lands?
   - Are they ready to start the next plan (full-sky rhizome shell production)?
+
+  Do NOT push, open a PR, or merge anything without explicit user confirmation.
+
+---
+
+## Self-review (do this before declaring the plan executed)
+
+- [ ] **Spec coverage.** Re-read the spec's "Reproduction-against-SDSS calibration" section. Confirm every numbered procedure step there maps onto at least one task above.
+- [ ] **Placeholder scan.** `grep -rn 'TODO\|FIXME\|XXX\|<fill\|<placeholder' rhizome/` should return only the `<fill>` markers in `CALIBRATION.md`'s template entries (those are intentionally to be filled in during iterations 0–5).
+- [ ] **Type consistency.** Every Python file uses `from pathlib import Path` (never raw strings for paths). Every numeric arg has an explicit type annotation. `RhizomeParams` remains `@dataclass(frozen=True)`.
+- [ ] **Path consistency.** Every file path mentioned in this plan starts with `~/Development/vendor/python/PolyPhy/` except for the one (this) skymap-side plan file. Re-grep for accidental `~/Development/js/skymap-rhizome/` or `vendor/polyphy/` leftovers from prior architecture sketches.
+- [ ] **No skymap modifications.** `git -C ~/Development/js/skymap status` must show only `.claude/` (or whatever was untracked at plan start) as the working-tree difference relative to the start of plan execution. The `rhizome-spec` branch in skymap gets one and only one commit (the plan file itself), pre-existing before this plan begins.
 
 ---
 
@@ -1585,5 +1905,6 @@ This plan does **not** include any of the following — they belong to later pla
 - Wiring rhizome shells into skymap's `volumeFieldDefaults`, scalar-volume renderer, or settings UI.
 - Migrating from the MCPM toggle to a rhizome toggle.
 - Uploading any cubes to R2.
+- Pushing this branch to the fork's remote, opening a PR back to the fork's `main`, or merging.
 - DisPerSE involvement.
-- Anything from the rhizome spec's "Open follow-ups" section (luminosity weighting, `1/V_max` correction, deposit-channel overlay, etc.).
+- Anything from the rhizome spec's "Open follow-ups" section (luminosity weighting, `1/V_max` correction, deposit-channel overlay, rhizome-vs-CF4 difference overlay).
