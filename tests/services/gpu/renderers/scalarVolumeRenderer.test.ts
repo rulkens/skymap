@@ -3,7 +3,7 @@ import {
   buildCubeModelMatrix,
   createScalarVolumeRenderer,
 } from '../../../../src/services/gpu/renderers/scalarVolumeRenderer';
-import type { ScalarCube } from '../../../../src/@types/ScalarCube';
+import type { ScalarCube } from '../../../../src/@types/data/ScalarCube';
 
 function fixture(overrides: Partial<ScalarCube> = {}): ScalarCube {
   return {

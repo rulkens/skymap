@@ -45,7 +45,7 @@
  */
 
 import { clampDistance } from '../../camera/orbitCamera';
-import type { Vec3 } from '../../../@types/Vec';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 /**
  * Snapshot of the camera's initial framing values.

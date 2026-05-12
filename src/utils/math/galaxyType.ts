@@ -15,19 +15,16 @@
  */
 
 import { Source } from '../../data/sources';
-import type { GalaxyTypeInfo } from '../../@types';
+import type { GalaxyTypeInfo } from '../../@types/data/GalaxyTypeInfo';
+import type { GalaxyTypeMags } from '../../@types/data/GalaxyTypeMags';
 import { galaxyTypeFromColor } from './galaxyTypeFromColor';
 import { galaxyTypeFromBminusJ } from './galaxyTypeFromBminusJ';
 import { galaxyTypeFromJminusK } from './galaxyTypeFromJminusK';
 
-/** Subset of mag fields needed for galaxy classification. */
-export type GalaxyTypeMags = {
-  magU: number;
-  magG: number;
-  magR: number;
-  magI: number;
-  magZ: number;
-};
+// Type moved to `@types/data/GalaxyTypeMags`; re-exported so existing
+// `import { GalaxyTypeMags } from '../utils/math/galaxyType'` callers keep
+// their import line.
+export type { GalaxyTypeMags };
 
 /**
  * Fallback when the source's required bands are missing or non-finite.

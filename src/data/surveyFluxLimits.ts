@@ -27,15 +27,12 @@
  */
 
 import { Source } from './sources';
+import type { SchechterTriple } from '../@types/data/SchechterTriple';
 
-export type SchechterTriple = {
-  /** Characteristic absolute magnitude M*. */
-  mStar: number;
-  /** Faint-end slope α. */
-  alpha: number;
-  /** Normalisation φ* in galaxies per Mpc³. */
-  phiStar: number;
-};
+// Type moved to `@types/data/SchechterTriple`; re-exported so existing
+// `import { SchechterTriple } from './surveyFluxLimits'` callers keep
+// their import line.
+export type { SchechterTriple };
 
 const M_LIM: Record<Source, number> = {
   [Source.SDSS]: 17.77,

@@ -99,7 +99,8 @@
  * current consumer uses it.
  */
 
-import type { GpuContext, Renderer, Vec3 } from '../../../@types';
+import type { GpuContext, Renderer } from '../../../@types';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**

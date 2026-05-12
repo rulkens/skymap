@@ -28,7 +28,7 @@ import {
   DEFAULT_VOLUME_FIELD_INTENSITY,
 } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
-import type { ScalarCube } from '../../../@types/ScalarCube';
+import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from './types';
 
 export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) => {

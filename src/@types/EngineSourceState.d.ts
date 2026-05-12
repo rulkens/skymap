@@ -30,9 +30,9 @@
  * is otherwise a recipe for callers reaching into unrelated bags.
  */
 
-import type { LodMode } from './LodMode';
-import type { PointCloud } from './PointCloud';
-import type { Tier } from './Tier';
+import type { LodMode } from './data/LodMode';
+import type { PointCloud } from './data/PointCloud';
+import type { Tier } from './data/Tier';
 import type { Source } from '../data/sources';
 import type { FamousMetaEntry, FamousXrefMap } from '../services/loading/fetchers/famousMetaFetcher';
 

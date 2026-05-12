@@ -27,7 +27,7 @@ import type { Label } from '../../gpu/renderers/labelRenderer';
 import type { MarkerLine } from '../../gpu/renderers/markerLineRenderer';
 import type { ReadyFrameContext } from '../frame/frameContext';
 import type { Destroyable, EngineState } from '../../../@types';
-import type { Vec4 } from '../../../@types/Vec';
+import type { Vec4 } from '../../../@types/math/Vec4';
 import type { LabelProducer, LabelProducerOutput } from './labelProducer';
 import { youAreHereAlpha } from '../../gpu/labels/youAreHereVisibility';
 

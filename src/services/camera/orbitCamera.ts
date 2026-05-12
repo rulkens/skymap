@@ -37,7 +37,7 @@
 
 import { mat4, vec3 } from 'gl-matrix';
 import type { OrbitCameraInit, OrbitCamera } from '../../@types';
-import type { Vec3 } from '../../@types/Vec';
+import type { Vec3 } from '../../@types/math/Vec3';
 
 // ─── Distance limits ──────────────────────────────────────────────────────────
 

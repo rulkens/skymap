@@ -34,9 +34,9 @@
  * decode without any explicit handoff.
  */
 import type { Fetcher } from '../types';
-import type { PointCloud } from '../../../@types';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Source } from '../../../data/sources';
-import type { Tier } from '../../../@types/Tier';
+import type { Tier } from '../../../@types/data/Tier';
 import { decodePointCloud, emptyPointCloud } from '../../../data/pointCloudFormat';
 import { TIER_TARGETS, tierFilenameForSource } from '../../../data/tierTargets';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';

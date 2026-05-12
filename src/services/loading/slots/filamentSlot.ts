@@ -18,7 +18,7 @@
 import { createAssetSlot } from '../AssetSlot';
 import { filamentFetcher } from '../fetchers/filamentFetcher';
 import type { FilamentReq } from '../fetchers/filamentFetcher';
-import type { FilamentCloud } from '../../../@types/FilamentCloud';
+import type { FilamentCloud } from '../../../@types/data/FilamentCloud';
 import type { SlotFactory } from './types';
 
 export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (state, cb) => {

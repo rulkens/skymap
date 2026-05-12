@@ -21,8 +21,8 @@
  * point-cloud fetcher.
  */
 import type { Fetcher } from '../types';
-import type { FilamentCloud } from '../../../@types/FilamentCloud';
-import type { Tier } from '../../../@types/Tier';
+import type { FilamentCloud } from '../../../@types/data/FilamentCloud';
+import type { Tier } from '../../../@types/data/Tier';
 import { decodeFilaments } from '../../../data/filamentBinaryFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 

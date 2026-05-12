@@ -17,7 +17,8 @@
  * to test in isolation and means they don't need engine state threaded in.
  */
 
-import type { PointCloud, PointInfo } from '../../../@types';
+import type { PointInfo } from '../../../@types';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import { Source, sourceLabel, bandLabels } from '../../../data/sources';
 import type { FamousMetaEntry, FamousXrefMap } from '../../loading/fetchers/famousMetaFetcher';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';

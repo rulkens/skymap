@@ -19,9 +19,3 @@
 
 /** Two-element vector, e.g. screen-space size or 2D coord. */
 export type Vec2 = [number, number];
-
-/** Three-element vector, e.g. world position, RGB color, axis. */
-export type Vec3 = [number, number, number];
-
-/** Four-element vector, e.g. RGBA color, quaternion (x, y, z, w). */
-export type Vec4 = [number, number, number, number];

@@ -34,8 +34,12 @@
  */
 
 import { mat4 } from 'gl-matrix';
-import type { ScalarCube, ScalarFieldFrameKind, ScalarFieldPaletteId } from '../../../@types/ScalarCube';
-import type { Renderer, Vec2, Vec3 } from '../../../@types';
+import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { ScalarFieldFrameKind } from '../../../@types/data/ScalarFieldFrameKind';
+import type { ScalarFieldPaletteId } from '../../../@types/data/ScalarFieldPaletteId';
+import type { Renderer } from '../../../@types';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPalettes';
 import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../../data/superGalacticTransform';
 import vsCode from '../shaders/scalarVolume/vertex.wesl?static';

@@ -39,7 +39,7 @@
  * points.
  */
 
-import type { ScalarFieldPaletteId } from '../@types/ScalarCube';
+import type { ScalarFieldPaletteId } from '../@types/data/ScalarFieldPaletteId';
 
 export const PALETTE_LUT_SIZE = 256;
 

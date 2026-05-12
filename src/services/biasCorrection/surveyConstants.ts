@@ -45,21 +45,14 @@
  */
 
 import { Source, ALL_SOURCES } from '../../data/sources';
-import {
-  type SchechterTriple,
-  surveyFluxLimit,
-  surveySchechter,
-} from '../../data/surveyFluxLimits';
+import { surveyFluxLimit, surveySchechter } from '../../data/surveyFluxLimits';
 import { expectedNumberDensity } from '../../utils/math/schechterDensity';
+import type { SurveyConstants } from '../../@types/math/SurveyConstants';
 
-export type SurveyConstants = {
-  /** Schechter LF triple `(M*, α, φ*)` for the band defining the flux limit. */
-  schechter: SchechterTriple;
-  /** Apparent-magnitude flux limit (e.g. SDSS = 17.77, 2MRS = 11.75). */
-  mLim: number;
-  /** Central-density normaliser n(d = 10 Mpc), pre-computed once. */
-  nRef: number;
-};
+// Type moved to `@types/math/SurveyConstants`; re-exported so existing
+// `import { SurveyConstants } from './surveyConstants'` callers keep
+// their import line.
+export type { SurveyConstants };
 
 function buildOne(source: Source): SurveyConstants {
   const schechter = surveySchechter(source);

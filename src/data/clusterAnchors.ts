@@ -33,19 +33,14 @@
  * the audit's pass/fail percentile.
  */
 
-import type { Vec3 } from '../@types/Vec';
+import type { Vec3 } from '../@types/math/Vec3';
+import type { SkyCoord } from '../@types/data/SkyCoord';
+import type { ClusterAnchor } from '../@types/data/ClusterAnchor';
 
-/** Right-ascension hours, declination degrees, distance in Mpc. */
-export type SkyCoord = {
-  readonly raHours: number;
-  readonly decDeg: number;
-  readonly distMpc: number;
-};
-
-/** A named cluster anchor — sky coord + display label. */
-export type ClusterAnchor = SkyCoord & {
-  readonly name: string;
-};
+// Re-exported so existing `import { SkyCoord, ClusterAnchor } from
+// './clusterAnchors'` callers keep working.  Type definitions live in
+// `@types/data/`; this module only owns the runtime tables and helper.
+export type { SkyCoord, ClusterAnchor };
 
 /**
  * Convert (RA hours, Dec degrees, distance Mpc) → equatorial-Cartesian

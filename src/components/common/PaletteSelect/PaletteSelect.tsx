@@ -18,7 +18,7 @@
  * specialisation of it.
  */
 import type { ReactNode } from 'react';
-import type { ScalarFieldPaletteId } from '../../../@types/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../../@types/data/ScalarFieldPaletteId';
 import { PALETTE_IDS } from '../../../data/scalarFieldPalettes';
 import styles from './PaletteSelect.module.css';
 

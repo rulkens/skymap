@@ -29,7 +29,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createBiasCorrectionSubsystem } from '../../../../src/services/engine/subsystems/biasCorrectionSubsystem';
 import { BiasMode } from '../../../../src/data/biasMode';
 import { Source } from '../../../../src/data/sources';
-import type { PointCloud } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 import type { PointRenderer } from '../../../../src/services/gpu/renderers/pointRenderer';
 
 type SpliceCall =

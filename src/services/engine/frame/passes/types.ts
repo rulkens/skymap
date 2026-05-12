@@ -63,7 +63,7 @@ import type { MilkyWayRenderer } from '../../../gpu/renderers/milkyWayRenderer';
 import type { FilamentRenderer } from '../../../gpu/renderers/filamentRenderer';
 import type { ScalarVolumeRenderer } from '../../../gpu/renderers/scalarVolumeRenderer';
 import type { FamousMetaEntry, FamousXrefMap } from '../../../loading/fetchers/famousMetaFetcher';
-import type { PointCloud } from '../../../../@types';
+import type { PointCloud } from '../../../../@types/data/PointCloud';
 import type { Source } from '../../../../data/sources';
 import type { ReadyFrameContext } from '../frameContext';
 import type { RenderFrameSettings } from '../renderFrame';

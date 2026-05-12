@@ -20,7 +20,7 @@
  *   divide-by-zero.
  */
 
-import type { Vec3 } from '../../@types/Vec';
+import type { Vec3 } from '../../@types/math/Vec3';
 import { HUBBLE_DISTANCE_MPC } from './constants';
 
 /**

@@ -45,8 +45,10 @@
  * dtype, frame, origin, voxelSize, rotation, valueMin/valueMax, voxels.
  */
 
-import type { ScalarCube, ScalarFieldFrameKind } from '../@types/ScalarCube';
-import type { Vec3, Vec4 } from '../@types/Vec';
+import type { ScalarCube } from '../@types/data/ScalarCube';
+import type { ScalarFieldFrameKind } from '../@types/data/ScalarFieldFrameKind';
+import type { Vec3 } from '../@types/math/Vec3';
+import type { Vec4 } from '../@types/math/Vec4';
 
 const MAGIC = 0x44464353; // "SCFD" little-endian
 const VERSION = 2;

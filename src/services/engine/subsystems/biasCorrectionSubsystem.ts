@@ -86,7 +86,8 @@
  * @module
  */
 
-import type { Destroyable, PointCloud } from '../../../@types';
+import type { Destroyable } from '../../../@types';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import { BiasMode } from '../../../data/biasMode';
 import { Source, ALL_SOURCES } from '../../../data/sources';
 import type { ComputeSchechterRatiosInput } from '../bake/computeSchechterRatios';

@@ -33,7 +33,7 @@
  */
 
 import type { Fetcher } from '../types';
-import type { ScalarCube } from '../../../@types/ScalarCube';
+import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import {
   makeSyntheticGaussianCube,
   makeCartesianGridCube,

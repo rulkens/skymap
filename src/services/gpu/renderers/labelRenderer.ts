@@ -65,7 +65,9 @@
  * filter + clamp-to-edge gives smooth sub-pixel glyph rendering.
  */
 
-import type { GpuContext, Renderer, Vec3, Vec4 } from '../../../@types';
+import type { GpuContext, Renderer } from '../../../@types';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec4 } from '../../../@types/math/Vec4';
 import type { FontMetrics } from '../labels/fontMetrics';
 import { layoutLabel, type LabelAlignX } from '../labels/labelLayout';
 import vsCode from '../shaders/labels/vertex.wesl?static';

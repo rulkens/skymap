@@ -35,7 +35,8 @@ import type { Label } from '../../gpu/renderers/labelRenderer';
 import type { MarkerLine } from '../../gpu/renderers/markerLineRenderer';
 import type { ReadyFrameContext } from '../frame/frameContext';
 import type { Destroyable, EngineState } from '../../../@types';
-import type { Vec3, Vec4 } from '../../../@types/Vec';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec4 } from '../../../@types/math/Vec4';
 import type { LabelProducer, LabelProducerOutput } from './labelProducer';
 
 export type PoiCategory = 'cluster' | 'galaxy' | 'void';

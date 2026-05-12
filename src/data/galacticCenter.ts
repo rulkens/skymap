@@ -25,7 +25,7 @@
  * existing meta lookup; only the Milky Way needs this special case.
  */
 
-import type { Vec3 } from '../@types/Vec';
+import type { Vec3 } from '../@types/math/Vec3';
 import { raDecDistToCartesian } from '../utils/math/raDecDistToCartesian';
 
 /** Sagittarius A\* RA (J2000) in degrees: 17h 45m 40.04s. */

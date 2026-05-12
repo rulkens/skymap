@@ -38,7 +38,7 @@ import { syntheticVolumeFetcher } from '../fetchers/syntheticVolumeFetcher';
 import type { SyntheticVolumeReq } from '../fetchers/syntheticVolumeFetcher';
 import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
-import type { ScalarCube } from '../../../@types/ScalarCube';
+import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { AssetSlot } from '../types';
 import type { EngineState, EngineCallbacks } from '../../../@types';
 

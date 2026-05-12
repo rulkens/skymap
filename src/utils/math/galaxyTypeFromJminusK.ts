@@ -14,7 +14,7 @@
  * "Red, quiescent".
  */
 
-import type { GalaxyTypeInfo } from '../../@types';
+import type { GalaxyTypeInfo } from '../../@types/data/GalaxyTypeInfo';
 
 export function galaxyTypeFromJminusK(jk: number): GalaxyTypeInfo {
   if (jk < 0.85) return { category: 'blue', description: 'Bluer-than-average galaxy' };

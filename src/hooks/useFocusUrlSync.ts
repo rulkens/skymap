@@ -59,7 +59,8 @@
  */
 
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { EngineHandle, EngineStatus, PointCloud, PointInfo } from '../@types';
+import type { EngineHandle, EngineStatus, PointInfo } from '../@types';
+import type { PointCloud } from '../@types/data/PointCloud';
 import { ALL_SOURCES, Source } from '../data/sources';
 import {
   parseFocusHash,

@@ -27,7 +27,8 @@ import {
   raDecDistToEqCart,
   type ClusterAnchor,
 } from '../src/data/clusterAnchors';
-import type { Mat3, Vec3 } from '../src/@types';
+import type { Mat3 } from '../src/@types/math/Mat3';
+import type { Vec3 } from '../src/@types/math/Vec3';
 
 /** Local alias for read-clarity in the per-list loops below. */
 type NamedAnchor = ClusterAnchor;

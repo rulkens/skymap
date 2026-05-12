@@ -54,7 +54,8 @@
 import vsCode from '../shaders/proceduralDisks/vertex.wesl?static';
 import fsCode from '../shaders/proceduralDisks/fragment.wesl?static';
 import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
-import type { Renderer, Vec3 } from '../../../@types';
+import type { Renderer } from '../../../@types';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
 type Init = {

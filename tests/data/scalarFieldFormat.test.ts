@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { encodeScalarField, decodeScalarField, SCFD_HEADER_BYTES } from '../../src/data/scalarFieldFormat';
-import type { ScalarCube } from '../../src/@types/ScalarCube';
+import type { ScalarCube } from '../../src/@types/data/ScalarCube';
 
 function makeFixture(): ScalarCube {
   // Tiny 2x2x2 cube — 8 voxels — for quick round-trip checks.

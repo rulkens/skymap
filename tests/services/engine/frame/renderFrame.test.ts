@@ -24,7 +24,8 @@ import { Source } from '../../../../src/data/sources';
 import { BiasMode } from '../../../../src/data/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
-import type { OrbitCamera, PointCloud } from '../../../../src/@types';
+import type { OrbitCamera } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 import type { mat4 } from 'gl-matrix';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
