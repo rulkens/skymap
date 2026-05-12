@@ -72,4 +72,9 @@ export const BiasMode = {
   AngularReweight: 4,
 } as const;
 
-export type BiasMode = (typeof BiasMode)[keyof typeof BiasMode];
+// Type lives in @types/data/BiasMode (inlined literal union for value-free .d.ts).
+// Re-declared via a local alias because `export type { BiasMode } from ...`
+// collides with the value-level `BiasMode` const above (TS2323).  The alias
+// keeps the runtime-value + type pair under a single import.
+import type { BiasMode as BiasModeType } from '../@types/data/BiasMode';
+export type BiasMode = BiasModeType;

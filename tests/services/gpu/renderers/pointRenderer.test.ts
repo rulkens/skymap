@@ -30,7 +30,7 @@ import {
 } from '../../../../src/services/gpu/renderers/pointRenderer';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source } from '../../../../src/data/sources';
-import type { PointCloud } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 
 // `GPUBufferUsage` and friends are populated by the shared
 // `tests/setup/webgpuGlobals.ts` setupFile, which runs once per worker

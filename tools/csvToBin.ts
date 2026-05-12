@@ -31,7 +31,7 @@ import { raDecZToCartesian } from '../src/utils/math/index.js';
 import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
 import { encodePointCloud } from '../src/data/pointCloudFormat.js';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../src/utils/math/galaxyDiameterKpc.js';
-import type { PointCloud } from '../src/@types/index.js';
+import type { PointCloud } from '../src/@types/data/PointCloud.js';
 import { parseSdssCsv } from './parsers/sdssCsv.js';
 
 // ─── CLI argument parsing ─────────────────────────────────────────────────────

@@ -40,7 +40,9 @@
  */
 
 import { mat4 } from 'gl-matrix';
-import type { PointCloud, Renderer, Vec3 } from '../../../@types';
+import type { Renderer } from '../../../@types';
+import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import { ALL_SOURCES, Source } from '../../../data/sources';
 import {
   type BuildPointInterleavedBufferInput,

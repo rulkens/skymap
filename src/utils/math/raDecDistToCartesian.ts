@@ -25,7 +25,7 @@
  *                  for the Galactic center) — the math is unitless except
  *                  for this scalar, so any positive value is fine.
  */
-import type { Vec3 } from '../../@types/Vec';
+import type { Vec3 } from '../../@types/math/Vec3';
 
 export function raDecDistToCartesian(
   raDeg: number,

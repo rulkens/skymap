@@ -4,7 +4,7 @@
  * engine to React components via the onHoverChange / onSelectChange callbacks.
  */
 
-import type { GalaxyTypeInfo } from './GalaxyTypeInfo';
+import type { GalaxyTypeInfo } from './data/GalaxyTypeInfo';
 import { Source, type BandLabels } from '../data/sources';
 
 /**

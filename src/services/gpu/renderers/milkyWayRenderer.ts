@@ -101,7 +101,7 @@ import vsCode from '../shaders/milkyWay/vertex.wesl?static';
 import fsCode from '../shaders/milkyWay/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import type { Renderer } from '../../../@types';
-import type { Vec3 } from '../../../@types/Vec';
+import type { Vec3 } from '../../../@types/math/Vec3';
 
 type Init = {
   device: GPUDevice;

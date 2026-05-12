@@ -5,8 +5,11 @@
  * typecheck failure, not a runtime failure.
  */
 import { describe, expectTypeOf, it } from 'vitest';
-import type { Vec2, Vec3, Vec4 } from '../../src/@types/Vec';
-import type { Mat3, Mat4 } from '../../src/@types/Mat';
+import type { Vec2 } from '../../src/@types/math/Vec2';
+import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { Vec4 } from '../../src/@types/math/Vec4';
+import type { Mat3 } from '../../src/@types/math/Mat3';
+import type { Mat4 } from '../../src/@types/math/Mat4';
 
 describe('Vec tuple aliases', () => {
   it('Vec2 is a 2-element tuple of number', () => {

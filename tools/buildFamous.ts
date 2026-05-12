@@ -36,7 +36,7 @@ import { parseFamousSeed, type FamousEntry } from './parsers/famousSeed.js';
 import { encodePointCloud, decodePointCloud } from '../src/data/pointCloudFormat.js';
 import { Source } from '../src/data/sources.js';
 import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
-import type { PointCloud } from '../src/@types/index.js';
+import type { PointCloud } from '../src/@types/data/PointCloud.js';
 
 /** Threshold (arcsec) within which a 2MRS/GLADE point is treated as the same galaxy. */
 const MATCH_THRESHOLD_ARCSEC = 30;

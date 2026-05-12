@@ -15,7 +15,7 @@ import { mcpmFetcher } from '../fetchers/mcpmFetcher';
 import type { MCPMReq } from '../fetchers/mcpmFetcher';
 import { DEFAULT_MCPM_ENABLED, DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
-import type { ScalarCube } from '../../../@types/ScalarCube';
+import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from './types';
 
 export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {

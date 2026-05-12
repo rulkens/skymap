@@ -26,7 +26,7 @@
  */
 
 import { type ReactNode } from 'react';
-import type { Tier } from '../../@types/Tier';
+import type { Tier } from '../../@types/data/Tier';
 import styles from './TierSelector.module.css';
 
 type Props = {

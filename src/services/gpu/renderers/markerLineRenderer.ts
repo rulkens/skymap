@@ -62,7 +62,9 @@
  * accumulate rather than replace, which is wrong for an opaque indicator line.
  */
 
-import type { GpuContext, Renderer, Vec3, Vec4 } from '../../../@types';
+import type { GpuContext, Renderer } from '../../../@types';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Vec4 } from '../../../@types/math/Vec4';
 import vsCode from '../shaders/markerLines/vertex.wesl?static';
 import fsCode from '../shaders/markerLines/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';

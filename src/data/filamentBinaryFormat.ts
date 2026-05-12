@@ -27,7 +27,7 @@
  * AND simpler to render with `pass.draw(6, instanceCount)`.
  */
 
-import type { FilamentCloud } from '../@types/FilamentCloud';
+import type { FilamentCloud } from '../@types/data/FilamentCloud';
 
 const MAGIC = 0x414c4946; // "FILA" little-endian
 const VERSION = 1;

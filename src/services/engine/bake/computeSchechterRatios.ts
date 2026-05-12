@@ -69,7 +69,7 @@
  * @module
  */
 
-import type { PointCloud } from '../../../@types';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import { Source } from '../../../data/sources';
 import { surveyFluxLimit, surveySchechter } from '../../../data/surveyFluxLimits';
 import { expectedNumberDensity } from '../../../utils/math';

@@ -33,7 +33,7 @@
  */
 
 import type { Fetcher } from '../types';
-import type { PointCloud } from '../../../@types';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { PointCloudReq } from './pointCloudFetcher';
 import { generateSyntheticCloud } from '../../../data/synthetic';
 

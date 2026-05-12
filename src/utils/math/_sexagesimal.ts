@@ -13,7 +13,7 @@
  * like 23.9999998° become 24° rather than 23°59'60".
  */
 
-import type { Vec3 } from '../../@types/Vec';
+import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
  * Zero-pad an integer to at least `width` digits.

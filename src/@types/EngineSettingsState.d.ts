@@ -52,7 +52,7 @@
 
 import type { BiasMode } from '../data/biasMode';
 import type { ToneMapCurve } from '../data/toneMapCurve';
-import type { ScalarFieldPaletteId } from './ScalarCube';
+import type { ScalarFieldPaletteId } from './data/ScalarFieldPaletteId';
 
 /**
  * Per-field runtime controls for one registered scalar-volume field.

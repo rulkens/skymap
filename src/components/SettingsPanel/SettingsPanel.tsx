@@ -37,12 +37,12 @@
  */
 
 import { type ReactNode } from 'react';
-import type { LodMode } from '../../@types/LodMode';
-import type { Tier } from '../../@types/Tier';
+import type { LodMode } from '../../@types/data/LodMode';
+import type { Tier } from '../../@types/data/Tier';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
-import type { ScalarFieldPaletteId } from '../../@types/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import { VolumeFieldRow } from './VolumeFieldRow';
 import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';

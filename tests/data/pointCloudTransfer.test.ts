@@ -29,7 +29,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { clonePointCloudForTransfer } from '../../src/data/pointCloudTransfer';
-import type { PointCloud } from '../../src/@types/PointCloud';
+import type { PointCloud } from '../../src/@types/data/PointCloud';
 
 function makeCloud(count: number): PointCloud {
   // Each field gets a distinct fill value so we can later assert which

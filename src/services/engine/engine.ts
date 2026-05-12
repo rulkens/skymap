@@ -95,11 +95,14 @@ import {
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
-import type { LodMode, PointCloud, PointInfo } from '../../@types';
+import type { PointInfo } from '../../@types';
+import type { LodMode } from '../../@types/data/LodMode';
+import type { PointCloud } from '../../@types/data/PointCloud';
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../@types';
 import type { BiasMode } from '../../data/biasMode';
-import type { ScalarCube, ScalarFieldPaletteId } from '../../@types/ScalarCube';
-import type { Tier } from '../../@types/Tier';
+import type { ScalarCube } from '../../@types/data/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
+import type { Tier } from '../../@types/data/Tier';
 import type {
   FamousMetaEntry,
   FamousXrefMap,

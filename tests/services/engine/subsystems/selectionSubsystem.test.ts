@@ -21,7 +21,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { createSelectionSubsystem } from '../../../../src/services/engine/subsystems/selectionSubsystem';
-import type { EngineCallbacks, PointCloud, PointInfo } from '../../../../src/@types';
+import type { EngineCallbacks, PointInfo } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 import { Source } from '../../../../src/data/sources';
 
 /**

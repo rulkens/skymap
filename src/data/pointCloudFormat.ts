@@ -52,7 +52,7 @@
  * Total file size: 16 + count × 64.
  */
 
-import type { PointCloud } from '../@types';
+import type { PointCloud } from '../@types/data/PointCloud';
 
 /**
  * "SKMP" as a little-endian uint32. Reading 4 bytes at offset 0 with

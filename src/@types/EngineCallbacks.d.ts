@@ -6,8 +6,8 @@
 
 import type { EngineStatus } from './EngineStatus';
 import type { PointInfo } from './PointInfo';
-import type { LodMode } from './LodMode';
-import type { Tier } from './Tier';
+import type { LodMode } from './data/LodMode';
+import type { Tier } from './data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
 import type { Source } from '../data/sources';
 import type { BiasMode } from '../data/biasMode';

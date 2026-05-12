@@ -47,7 +47,7 @@
  * @module
  */
 
-import type { PointCloud } from '../../../@types';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import { pickColourIndex } from '../../../data/colourIndex';
 import { Source } from '../../../data/sources';
 import {

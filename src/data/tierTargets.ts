@@ -34,7 +34,7 @@
  */
 
 import { Source } from './sources';
-import type { Tier } from '../@types/Tier';
+import type { Tier } from '../@types/data/Tier';
 
 /**
  * Tier-target table.  Order: small, medium, large.

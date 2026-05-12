@@ -22,7 +22,7 @@
  * task unit-testable without a GPU mock.
  */
 
-import type { Vec4 } from '../../../@types';
+import type { Vec4 } from '../../../@types/math/Vec4';
 
 export const ATLAS_SIDE = 2048;
 export const SLOT_SIDE = 128;

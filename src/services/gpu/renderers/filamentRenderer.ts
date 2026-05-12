@@ -40,7 +40,7 @@
  */
 import vsCode from '../shaders/filaments/vertex.wesl?static';
 import fsCode from '../shaders/filaments/fragment.wesl?static';
-import type { FilamentCloud } from '../../../@types/FilamentCloud';
+import type { FilamentCloud } from '../../../@types/data/FilamentCloud';
 import type { Renderer } from '../../../@types';
 import type { mat4 } from 'gl-matrix';
 import { CloudFade } from '../resources/cloudFade';

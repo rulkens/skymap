@@ -6,17 +6,14 @@
  * import lines tidy.
  */
 
-export type * from './PointCloud';
 export type * from './PointInfo';
 export type * from './ScaleInfo';
 export type * from './EngineStatus';
 export type * from './EngineCallbacks';
 export type * from './EngineHandle';
-export type * from './LodMode';
 export type * from './GpuContext';
 export type * from './OrbitCameraInit';
 export type * from './OrbitCamera';
-export type * from './GalaxyTypeInfo';
 export type * from './ThumbnailInstance';
 export type * from './MousePos';
 export type * from './EngineSettingsState';
@@ -28,5 +25,3 @@ export type * from './EngineSubsystemHandles';
 export type * from './EngineState';
 export type * from './Renderer';
 export type * from './Destroyable';
-export type * from './Vec';
-export type * from './Mat';

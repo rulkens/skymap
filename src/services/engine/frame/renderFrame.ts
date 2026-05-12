@@ -66,7 +66,8 @@
  *     auto-rotate yaw bump).
  */
 
-import type { EngineState, PointCloud } from '../../../@types';
+import type { EngineState } from '../../../@types';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Source } from '../../../data/sources';
 import type { BiasMode } from '../../../data/biasMode';
 import type { ToneMapCurve } from '../../../data/toneMapCurve';

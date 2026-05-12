@@ -56,6 +56,8 @@
  * for any future change.
  */
 
+import type { BandLabels } from '../@types/data/BandLabels';
+
 // ─── The enum itself ────────────────────────────────────────────────────────
 
 /**
@@ -201,18 +203,11 @@ const BAND_LABELS: Record<Source, BandLabels> = {
   [Source.Famous]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
 };
 
-/**
- * The band-label record returned by `bandLabels()`.  Kept as a named export
- * so InfoCard prop types can refer to it directly without needing to spell
- * out the structure at every call site.
- */
-export type BandLabels = {
-  u: string;
-  g: string;
-  r: string;
-  i: string;
-  z: string;
-};
+// The band-label record returned by `bandLabels()` moved to
+// `@types/data/BandLabels` and is re-exported here so InfoCard prop types
+// (and every other consumer) keep their existing `import { BandLabels }
+// from '../data/sources'` line.
+export type { BandLabels } from '../@types/data/BandLabels';
 
 // ─── Public lookup functions ────────────────────────────────────────────────
 //

@@ -14,8 +14,8 @@
  * Web". Mirrors the cf4DensityFetcher fallback.
  */
 import type { Fetcher } from '../types';
-import type { ScalarCube } from '../../../@types/ScalarCube';
-import type { Tier } from '../../../@types/Tier';
+import type { ScalarCube } from '../../../@types/data/ScalarCube';
+import type { Tier } from '../../../@types/data/Tier';
 import { decodeScalarField } from '../../../data/scalarFieldFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 

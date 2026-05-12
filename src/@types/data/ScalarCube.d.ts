@@ -13,25 +13,9 @@
  * builder writes them out via a small float→f16 helper).
  */
 
-import type { Vec3, Vec4 } from './Vec';
-
-export type ScalarFieldFrameKind = 'supergalactic-cartesian' | 'equatorial-cartesian' | 'galactic';
-
-export type ScalarFieldPaletteId =
-  | 'viridis'
-  | 'magma'
-  | 'inferno'
-  | 'blue-purple'
-  | 'yellow-green'
-  /**
-   * Divergent blue → neutral → red, with V-shaped alpha (visible at
-   * both ends, transparent at the midpoint).  Designed for fields
-   * centered on a meaningful zero — CF-4 density contrast, residual
-   * peculiar-velocity divergence, anything where voids and overdensities
-   * are equally interesting and the cosmic mean should fade out.
-   * Inspired by matplotlib's `coolwarm` / `bwr` colour scheme.
-   */
-  | 'coolwarm';
+import type { Vec3 } from '../math/Vec3';
+import type { Vec4 } from '../math/Vec4';
+import type { ScalarFieldFrameKind } from './ScalarFieldFrameKind';
 
 export type ScalarCube = {
   /** Voxel grid dimensions; x-fastest. */

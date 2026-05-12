@@ -51,7 +51,7 @@
  * @module
  */
 
-import type { PointCloud } from '../../../@types';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Source } from '../../../data/sources';
 import { cartesianToRaDecZ } from '../../../utils/math';
 import { healpixNest } from '../../../utils/math/healpix';

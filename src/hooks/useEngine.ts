@@ -54,7 +54,7 @@ import type {
   EngineCallbacks,
   LoadProgressState,
 } from '../@types/EngineCallbacks';
-import type { Tier } from '../@types/Tier';
+import type { Tier } from '../@types/data/Tier';
 import { initialTierFromViewport } from '../utils/initialTierFromViewport';
 import type { Source } from '../data/sources';
 

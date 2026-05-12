@@ -67,7 +67,8 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { GpuContext, Renderer, ThumbnailInstance, Vec3 } from '../../../@types';
+import type { GpuContext, Renderer, ThumbnailInstance } from '../../../@types';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import vsCode from '../shaders/thumbnails/vertex.wesl?static';
 import fsCode from '../shaders/thumbnails/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';

@@ -72,7 +72,7 @@ import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
 import { LoadingDevPanel } from '../LoadingDevPanel/LoadingDevPanel';
-import type { ScalarFieldPaletteId } from '../../@types/ScalarCube';
+import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 
 // ── Dev-panel availability gate ────────────────────────────────────────────
 //

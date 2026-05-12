@@ -28,15 +28,12 @@
  */
 
 import { dMaxFromAbsolute } from './distanceModulus';
+import type { VMaxWeightInput } from '../../@types/math/VMaxWeightInput';
 
-export type VMaxWeightInput = {
-  /** Absolute magnitude of the galaxy in the survey's flux-limit band. */
-  absMag: number;
-  /** Survey's apparent-magnitude flux limit (e.g. SDSS m_r ≈ 17.77). */
-  mLim: number;
-  /** Reference distance (Mpc) defining the normalising volume. */
-  dRefMpc: number;
-};
+// Type moved to `@types/math/VMaxWeightInput`; re-exported so existing
+// `import { VMaxWeightInput } from './vMaxWeight'` callers keep their
+// import line.
+export type { VMaxWeightInput };
 
 export function vMaxWeight(input: VMaxWeightInput): number {
   const { absMag, mLim, dRefMpc } = input;

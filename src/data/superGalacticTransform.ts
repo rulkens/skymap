@@ -29,7 +29,10 @@
  *   rows.
  */
 
-import type { Mat3, Mat4, Vec3, Vec4 } from '../@types';
+import type { Mat3 } from '../@types/math/Mat3';
+import type { Mat4 } from '../@types/math/Mat4';
+import type { Vec3 } from '../@types/math/Vec3';
+import type { Vec4 } from '../@types/math/Vec4';
 
 const RAD = Math.PI / 180;
 

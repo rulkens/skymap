@@ -25,7 +25,8 @@
  * runtime artefacts — same reason `sources.ts` and `tierTargets.ts`
  * live there.
  */
-export type CloudSource = 'sdss.bin' | '2mrs.bin' | 'glade.bin' | 'famous.bin' | 'synthetic';
+export type { CloudSource } from '../@types/data/CloudSource';
+import type { CloudSource } from '../@types/data/CloudSource';
 
 import { Source } from './sources';
 

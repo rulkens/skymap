@@ -20,7 +20,7 @@
 import { describe, expect, it } from 'vitest';
 import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
 import { Source } from '../../../../src/data/sources';
-import type { PointCloud } from '../../../../src/@types';
+import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 
 function syntheticCloud(count: number, seedOffset: number): PointCloud {
   const positions = new Float32Array(count * 3);

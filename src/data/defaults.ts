@@ -54,7 +54,7 @@
 import { BiasMode } from './biasMode';
 import { ToneMapCurve } from './toneMapCurve';
 import { ALL_VISIBLE_MASK } from './sources';
-import type { LodMode } from '../@types/LodMode';
+import type { LodMode } from '../@types/data/LodMode';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
 

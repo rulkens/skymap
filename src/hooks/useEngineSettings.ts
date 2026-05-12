@@ -40,7 +40,7 @@
 
 import { useState } from 'react';
 import type { EngineCallbacks } from '../@types/EngineCallbacks';
-import type { LodMode } from '../@types/LodMode';
+import type { LodMode } from '../@types/data/LodMode';
 import { BiasMode } from '../data/biasMode';
 import { ToneMapCurve } from '../data/toneMapCurve';
 import {

@@ -99,7 +99,8 @@
 
 import type { mat4 } from 'gl-matrix';
 
-import type { EngineState, OrbitCamera, Vec3 } from '../../../@types';
+import type { EngineState, OrbitCamera } from '../../../@types';
+import type { Vec3 } from '../../../@types/math/Vec3';
 import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
 import type { PostProcess } from '../../gpu/passes/postProcess';
 import type { ThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';

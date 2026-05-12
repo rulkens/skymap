@@ -86,7 +86,8 @@
  * frame or two once the GPU upload settles.
  */
 
-import type { Destroyable, EngineCallbacks, PointCloud, PointInfo } from '../../../@types';
+import type { Destroyable, EngineCallbacks, PointInfo } from '../../../@types';
+import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Source } from '../../../data/sources';
 import type {
   FamousMetaEntry,

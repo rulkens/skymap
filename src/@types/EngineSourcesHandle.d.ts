@@ -1,7 +1,7 @@
-import type { LodMode } from './LodMode';
+import type { LodMode } from './data/LodMode';
 import type { Source } from '../data/sources';
-import type { Tier } from './Tier';
-import type { PointCloud } from './PointCloud';
+import type { Tier } from './data/Tier';
+import type { PointCloud } from './data/PointCloud';
 
 /**
  * EngineSourcesHandle — survey lifecycle: visibility, tier, raw cloud access.
