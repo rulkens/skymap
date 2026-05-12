@@ -95,6 +95,7 @@ export function renderFrame(input: RenderFrameInput): void {
     scalarVolumeRenderer,
     texturedQuadRenderer,
     texturedDiskRenderer,
+    proceduralDiskRenderer,
     settings,
     famousMeta,
     famousXrefs,
@@ -109,6 +110,7 @@ export function renderFrame(input: RenderFrameInput): void {
   const deps: PassDeps = {
     texturedQuadRenderer,
     texturedDiskRenderer,
+    proceduralDiskRenderer,
     filamentRenderer,
     scalarVolumeRenderer,
     milkyWayRenderer,

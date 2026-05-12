@@ -70,6 +70,8 @@
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { pointSpritesPass } from './pointSpritesPass';
 import { galaxyThumbnailsPass } from './galaxyThumbnailsPass';
+import { proceduralDisksPass } from './proceduralDisksPass';
+import { texturedImpostorsPass } from './texturedImpostorsPass';
 import { filamentsPass } from './filamentsPass';
 import { scalarVolumePass } from './scalarVolumePass';
 import { milkyWayPass } from './milkyWayPass';
@@ -89,6 +91,8 @@ export const HDR_PASSES: readonly Pass[] = [
 
 export { pointSpritesPass } from './pointSpritesPass';
 export { galaxyThumbnailsPass } from './galaxyThumbnailsPass';
+export { proceduralDisksPass } from './proceduralDisksPass';
+export { texturedImpostorsPass } from './texturedImpostorsPass';
 export { filamentsPass } from './filamentsPass';
 export { scalarVolumePass } from './scalarVolumePass';
 export { milkyWayPass } from './milkyWayPass';

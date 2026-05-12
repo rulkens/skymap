@@ -37,6 +37,8 @@
  */
 
 import type { ThumbnailSubsystem } from '../subsystems/ThumbnailSubsystem';
+import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
+import type { TexturedImpostorSubsystem } from '../subsystems/TexturedImpostorSubsystem';
 import type { SpaceMouseSubsystem } from '../subsystems/SpaceMouseSubsystem';
 import type { SelectionSubsystem } from '../subsystems/SelectionSubsystem';
 import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
@@ -52,6 +54,22 @@ import type { Destroyable } from '../../rendering/Destroyable';
 
 export type EngineSubsystemHandles = {
   thumbnails: ThumbnailSubsystem | null;
+  /**
+   * LOD-1 per-frame planner — walks the catalog and emits a
+   * `ProceduralDiskInstance[]` array.  Coexists with `thumbnails`
+   * until Task 11 cuts production over to read from this slot.
+   * Constructed inside the GPU init phase (no GPU dep itself, but
+   * its consumer pass file lives in the post-init wiring).
+   */
+  proceduralDisks: ProceduralDiskSubsystem | null;
+  /**
+   * LOD-2 per-frame planner — walks the catalog, allocates atlas
+   * slots, schedules fetches, emits sorted `DiskInstance[]` +
+   * `ThumbnailInstance[]` arrays.  Depends on `galaxyAtlas`
+   * (constructed first).  Same coexistence story as above —
+   * Task 11 cuts production over.
+   */
+  texturedImpostors: TexturedImpostorSubsystem | null;
   spaceMouse: SpaceMouseSubsystem;
   tweens: TweenManager;
   clickResolver: ClickResolver | null;

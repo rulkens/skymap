@@ -137,6 +137,7 @@ function makeDeps(opts: {
     filamentRenderer: {} as unknown as RunFrameDeps['filamentRenderer'],
     texturedQuadRenderer: {} as unknown as RunFrameDeps['texturedQuadRenderer'],
     texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer'],
+    proceduralDiskRenderer: {} as unknown as RunFrameDeps['proceduralDiskRenderer'],
     milkyWayITimeEpochMs: 0,
   };
 }

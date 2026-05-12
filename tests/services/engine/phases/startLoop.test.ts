@@ -77,6 +77,7 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
       milkyWayRenderer: { label: 'milkyWay' } as never,
       texturedQuadRenderer: { label: 'thumbnail' } as never,
       texturedDiskRenderer: { label: 'disk' } as never,
+      proceduralDiskRenderer: { label: 'proc' } as never,
       filamentRenderer: { label: 'filament' } as never,
     },
     subsystems: {

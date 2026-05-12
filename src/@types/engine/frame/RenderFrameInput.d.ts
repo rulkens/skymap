@@ -22,6 +22,7 @@ import type { PointCloud } from '../../data/PointCloud';
 import type { Source } from '../../../data/sources';
 import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
+import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
@@ -81,6 +82,12 @@ export type RenderFrameInput = {
    */
   texturedQuadRenderer: TexturedQuadRenderer;
   texturedDiskRenderer: TexturedDiskRenderer;
+  /**
+   * Procedural-disk renderer reference forwarded through to the
+   * `PassDeps` bag for the new LOD-1 pass.  Same forward-it-as-an-
+   * explicit-field pattern as its quad/disk siblings above.
+   */
+  proceduralDiskRenderer: ProceduralDiskRenderer;
 
   // ── Settings ──────────────────────────────────────────────────────────
   settings: RenderFrameSettings;

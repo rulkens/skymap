@@ -280,6 +280,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
     texturedQuadRenderer: deps.texturedQuadRenderer,
     texturedDiskRenderer: deps.texturedDiskRenderer,
+    proceduralDiskRenderer: deps.proceduralDiskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
     settings: {
       pointSizePx: state.settings.points.sizePx,

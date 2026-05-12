@@ -167,6 +167,10 @@ function makeMockTexturedDiskRenderer() {
   return { bindAtlas: vi.fn(), draw: vi.fn() } as any;
 }
 
+function makeMockProceduralDiskRenderer() {
+  return { draw: vi.fn() } as any;
+}
+
 function makeCam(): OrbitCamera {
   // Camera distance must be inside the Milky-Way fade band
   // (FADE_INNER_MPC = 10 ... FADE_OUTER_MPC = 50) so the impostor's
@@ -221,6 +225,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
   const thumbnails = makeMockThumbnails(callLog);
   const texturedQuadRenderer = makeMockTexturedQuadRenderer();
   const texturedDiskRenderer = makeMockTexturedDiskRenderer();
+  const proceduralDiskRenderer = makeMockProceduralDiskRenderer();
   const cam = makeCam();
   const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
 
@@ -287,6 +292,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     thumbnails,
     texturedQuadRenderer,
     texturedDiskRenderer,
+    proceduralDiskRenderer,
     cam,
     clouds,
     // Keep these on the fixture root so tests can read them directly
@@ -312,6 +318,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       scalarVolumeRenderer: null,
       texturedQuadRenderer,
       texturedDiskRenderer,
+      proceduralDiskRenderer,
       settings,
       famousMeta: [],
       famousXrefs: {},

@@ -401,6 +401,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       scalarVolumeRenderer: null,
     },
     subsystems: {
+      // ── LOD-1 / LOD-2 impostor planners ──────────────────────────
+      // Both null until Task 11 wires `wireSlots` to construct them.
+      // Production still reads from the legacy `thumbnails` subsystem
+      // until that cutover lands.
+      proceduralDisks: null,
+      texturedImpostors: null,
       // ── Tween manager ──────────────────────────────────────────
       // At most one camera tween at a time.  Sites that mutate it:
       //   - public handle's focusOn / focusOnHome / selectFamous
