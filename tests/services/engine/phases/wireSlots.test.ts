@@ -115,13 +115,31 @@ vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () =
   })),
 }));
 
-// Thumbnail subsystem: replace with a hollow factory so wireSlots's
-// `bindToRenderers` call has somewhere to land.  We don't assert on
-// it here — the destroy-reachability test in the sibling file
-// covers thumbnail-renderer lifecycle.
-vi.mock('../../../../src/services/engine/subsystems/thumbnailSubsystem', () => ({
-  createThumbnailSubsystem: vi.fn(() => ({
-    bindToRenderers: vi.fn(),
+// Post-Task-11 split: wireSlots constructs three subsystems where the
+// legacy `thumbnailSubsystem` used to live.  Each carries the same
+// GPU-device dependency the legacy mock was guarding against, so we
+// mock all three the same way: hollow factories that satisfy the call
+// sites without touching the (stubbed) device.
+vi.mock('../../../../src/services/engine/subsystems/galaxyAtlasSubsystem', () => ({
+  createGalaxyAtlasSubsystem: vi.fn(() => ({
+    getTextureView: vi.fn(() => ({}) as unknown as GPUTextureView),
+    destroy: vi.fn(),
+  })),
+}));
+vi.mock('../../../../src/services/engine/subsystems/proceduralDiskSubsystem', () => ({
+  createProceduralDiskSubsystem: vi.fn(() => ({
+    runFrame: vi.fn(),
+    lastOutput: { instances: [] },
+    destroy: vi.fn(),
+  })),
+  PROCEDURAL_DISK_FADE_START_PX: 8,
+  PROCEDURAL_DISK_FADE_END_PX: 14,
+}));
+vi.mock('../../../../src/services/engine/subsystems/texturedImpostorSubsystem', () => ({
+  createTexturedImpostorSubsystem: vi.fn(() => ({
+    runFrame: vi.fn(),
+    lastOutput: { quads: [], disks: [] },
+    hasInFlightWork: vi.fn(() => false),
     destroy: vi.fn(),
   })),
 }));
@@ -252,8 +270,8 @@ function makeState(overrides: Partial<{
       } as never,
       labelRenderer: null,
       markerLineRenderer: null,
-      thumbnailRenderer: {} as never,
-      diskRenderer: {} as never,
+      texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
+      texturedDiskRenderer: { bindAtlas: vi.fn() } as never,
       proceduralDiskRenderer: {} as never,
       milkyWayRenderer: null,
       scalarVolumeRenderer: {
@@ -268,7 +286,9 @@ function makeState(overrides: Partial<{
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() } as never,
-      thumbnails: null,
+      galaxyAtlas: null,
+      proceduralDisks: null,
+      texturedImpostors: null,
       loadProgress: null,
     } as never,
     cam: null,

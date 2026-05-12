@@ -1,7 +1,7 @@
 /**
- * DiskRenderer — oriented 3D galaxy disks.
+ * TexturedDiskRenderer — oriented 3D galaxy disks (atlas-textured).
  *
- * Differs from ThumbnailRenderer in two ways:
+ * Differs from TexturedQuadRenderer in two ways:
  *   1. Each instance is tilted in 3D world space: the disk's normal points
  *      toward the camera by default (face-on), and is rotated around the
  *      line-of-sight axis by PA, then tilted by inclination angle
@@ -11,11 +11,11 @@
  *      (the disk silhouette IS the geometry, so the on-screen ellipse
  *      falls out of the projection naturally).
  *
- * Why a separate renderer instead of extending ThumbnailRenderer? ThumbnailRenderer
+ * Why a separate renderer instead of extending TexturedQuadRenderer? TexturedQuadRenderer
  * bakes screen-aligned billboarding into the vertex shader — corner offsets
  * are applied in CLIP space after viewProj. Tilting in 3D requires the
  * corners to be transformed in WORLD space and then projected, which is a
- * fundamentally different pipeline. Keeping ThumbnailRenderer alive lets the
+ * fundamentally different pipeline. Keeping TexturedQuadRenderer alive lets the
  * engine pick the screen-aligned thumbnail path for fallback orientations
  * (where tilting would be cosmetically misleading) and for galaxies still
  * loading their textures.
@@ -34,7 +34,7 @@
  *
  * Pipeline / BGL / uniform buffer / instance buffer plumbing now lives
  * in `instancedQuadRenderer.ts`, shared with the thumbnail + procedural disk
- * renderers. This file owns: the consumer-facing `createDiskRenderer`
+ * renderers. This file owns: the consumer-facing `createTexturedDiskRenderer`
  * factory signature (preserved unchanged from Spec F), the
  * `DiskInstance → packed Float32Array` serialization, and the wrapper
  * `draw(...)` translating the engine's call convention into the
@@ -45,20 +45,20 @@ import type { mat4 } from 'gl-matrix';
 import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
-import type { DiskRenderer } from '../../../@types/rendering/DiskRenderer';
+import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import vsCode from '../shaders/disks/vertex.wesl?static';
 import fsCode from '../shaders/disks/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
-export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRenderer {
+export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256): TexturedDiskRenderer {
   const inner = createInstancedQuadRenderer(ctx, {
     label: 'disk',
     vertexSource: vsCode,
     fragmentSource: fsCode,
     atlas: {},
     capacity: { kind: 'fixed', max: maxInstances },
-    // Galaxy disks are EMISSIVE — see thumbnailRenderer.ts for the
+    // Galaxy disks are EMISSIVE — see texturedQuadRenderer.ts for the
     // fade-to-black bug history that motivates additive over
     // premultiplied-OVER.
     blend: 'additive',
@@ -106,14 +106,14 @@ export function createDiskRenderer(ctx: GpuContext, maxInstances = 256): DiskRen
       instanceBytes: data,
       instanceCount: instances.length,
       camPosWorld: camPos,
-      // DiskRenderer's shader doesn't need pxPerRad — the disk
+      // TexturedDiskRenderer's shader doesn't need pxPerRad — the disk
       // geometry sizes itself in world space — so the trailing
       // uniform slot is left as zero padding (default).
     });
   }
 
-  const renderer: DiskRenderer = {
-    label: 'diskRenderer',
+  const renderer: TexturedDiskRenderer = {
+    label: 'texturedDiskRenderer',
     bindAtlas,
     draw,
     destroy: inner.destroy,

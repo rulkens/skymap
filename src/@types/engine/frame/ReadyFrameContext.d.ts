@@ -52,7 +52,7 @@ import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { Vec3 } from '../../math/Vec3';
 import type { PointRenderer } from '../../rendering/PointRenderer';
 import type { PostProcess } from '../../rendering/PostProcess';
-import type { ThumbnailSubsystem } from '../subsystems/ThumbnailSubsystem';
+import type { TexturedImpostorSubsystem } from '../subsystems/TexturedImpostorSubsystem';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -75,5 +75,5 @@ export type ReadyFrameContext = {
    */
   renderer: PointRenderer;
   postProcess: PostProcess;
-  thumbnails: ThumbnailSubsystem;
+  texturedImpostors: TexturedImpostorSubsystem;
 };

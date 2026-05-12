@@ -17,7 +17,7 @@ import type { OrbitCamera } from '../camera/OrbitCamera';
 import type { PointRenderer } from '../rendering/PointRenderer';
 import type { PickRenderer } from '../rendering/PickRenderer';
 import type { PostProcess } from '../rendering/PostProcess';
-import type { ThumbnailSubsystem } from './subsystems/ThumbnailSubsystem';
+import type { TexturedImpostorSubsystem } from './subsystems/TexturedImpostorSubsystem';
 
 export type ReadyEngineState = EngineState & {
   cam: OrbitCamera;
@@ -27,6 +27,6 @@ export type ReadyEngineState = EngineState & {
     postProcess: PostProcess;
   };
   subsystems: EngineState['subsystems'] & {
-    thumbnails: ThumbnailSubsystem;
+    texturedImpostors: TexturedImpostorSubsystem;
   };
 };

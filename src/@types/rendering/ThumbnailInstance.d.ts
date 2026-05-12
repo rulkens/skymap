@@ -3,7 +3,7 @@
  *
  * Layout (must match WESL `struct InstanceIn` in
  * `shaders/thumbnails/io.wesl` and the JS-side `Float32Array` write
- * pattern in `ThumbnailRenderer.draw`):
+ * pattern in `TexturedQuadRenderer.draw`):
  *
  *   pos:    vec3<f32>  // world-space center, Mpc
  *   sizeW:  f32        // world-space quad side length, Mpc

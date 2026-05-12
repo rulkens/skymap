@@ -93,7 +93,9 @@ function makeState(): EngineState {
         pointInfoFor: () => null,
         destroy: vi.fn(),
       },
-      thumbnails: null,
+      galaxyAtlas: null,
+      proceduralDisks: null,
+      texturedImpostors: null,
       clickResolver: null,
       inputBindings: null,
       loadProgress: null,
@@ -135,8 +137,9 @@ function makeDeps(opts: {
     context: {} as unknown as GPUCanvasContext,
     milkyWayRenderer: {} as unknown as RunFrameDeps['milkyWayRenderer'],
     filamentRenderer: {} as unknown as RunFrameDeps['filamentRenderer'],
-    thumbnailRenderer: {} as unknown as RunFrameDeps['thumbnailRenderer'],
-    diskRenderer: {} as unknown as RunFrameDeps['diskRenderer'],
+    texturedQuadRenderer: {} as unknown as RunFrameDeps['texturedQuadRenderer'],
+    texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer'],
+    proceduralDiskRenderer: {} as unknown as RunFrameDeps['proceduralDiskRenderer'],
     milkyWayITimeEpochMs: 0,
   };
 }

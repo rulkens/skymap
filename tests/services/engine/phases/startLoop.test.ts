@@ -75,8 +75,9 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
     sources: { clouds },
     gpu: {
       milkyWayRenderer: { label: 'milkyWay' } as never,
-      thumbnailRenderer: { label: 'thumbnail' } as never,
-      diskRenderer: { label: 'disk' } as never,
+      texturedQuadRenderer: { label: 'thumbnail' } as never,
+      texturedDiskRenderer: { label: 'disk' } as never,
+      proceduralDiskRenderer: { label: 'proc' } as never,
       filamentRenderer: { label: 'filament' } as never,
     },
     subsystems: {
@@ -148,8 +149,8 @@ describe('startLoop', () => {
     const calledFrameDeps = callArgs[1] as Record<string, unknown>;
     expect(calledFrameDeps.canvas).toBe(deps.canvas);
     expect(calledFrameDeps.milkyWayRenderer).toBe(state.gpu.milkyWayRenderer);
-    expect(calledFrameDeps.thumbnailRenderer).toBe(state.gpu.thumbnailRenderer);
-    expect(calledFrameDeps.diskRenderer).toBe(state.gpu.diskRenderer);
+    expect(calledFrameDeps.texturedQuadRenderer).toBe(state.gpu.texturedQuadRenderer);
+    expect(calledFrameDeps.texturedDiskRenderer).toBe(state.gpu.texturedDiskRenderer);
     expect(calledFrameDeps.filamentRenderer).toBe(state.gpu.filamentRenderer);
     expect(typeof callArgs[2]).toBe('number'); // performance.now() snapshot
   });

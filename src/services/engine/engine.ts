@@ -211,7 +211,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //
   // The render loop's `frame()` body lives in `runFrame.ts`, called
   // from the `startLoop` bootstrap phase, because it reads GPU
-  // resources (device, context, thumbnailRenderer, diskRenderer) that
+  // resources (device, context, texturedQuadRenderer, texturedDiskRenderer) that
   // initGpu() returns asynchronously.  But the `RenderScheduler` we
   // wire into `state.subsystems.scheduler` needs an `onFrame` callback
   // at construction time — which is *here*, in the synchronous state
@@ -377,7 +377,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // point of use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
-      // thumbnailRenderer / diskRenderer / proceduralDiskRenderer /
+      // texturedQuadRenderer / texturedDiskRenderer / proceduralDiskRenderer /
       // milkyWayRenderer: null until initGpu constructs them.  These
       // four don't gate any frame-loop logic via state.gpu — the frame
       // body reads them through RunFrameDeps (assembled in
@@ -391,8 +391,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // clean them up; M1 of the 2026-05-11 audit then collapsed
       // the redundant `phaseLocals` mirror.  See
       // `EngineGpuHandles.d.ts` for the full reachability story.
-      thumbnailRenderer: null,
-      diskRenderer: null,
+      texturedQuadRenderer: null,
+      texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
       // Constructed during initGpu, null until then.  Excluded from the
@@ -401,6 +401,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       scalarVolumeRenderer: null,
     },
     subsystems: {
+      // ── LOD-1 / LOD-2 impostor planners + atlas ─────────────────
+      // All three null until `wireSlots` constructs them post-GPU init.
+      galaxyAtlas: null,
+      proceduralDisks: null,
+      texturedImpostors: null,
       // ── Tween manager ──────────────────────────────────────────
       // At most one camera tween at a time.  Sites that mutate it:
       //   - public handle's focusOn / focusOnHome / selectFamous
@@ -505,9 +510,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // broke hover-pick for one refactor cycle.
       scheduler: createRenderScheduler({ onFrame: () => frameRef.current() }),
 
-      // The remaining three subsystems land later in the IIFE once
-      // their dependencies (GPU device, pickRenderer, scheduler) exist.
-      thumbnails: null,
+      // The remaining subsystems land later in the IIFE once their
+      // dependencies (GPU device, pickRenderer, scheduler) exist.
       clickResolver: null,
       inputBindings: null,
       // Aggregator for download-progress events — instantiated inside
@@ -1167,8 +1171,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.youAreHere.destroy();
     state.subsystems.labelDirector.destroy();
     state.subsystems.pois.destroy();
-    state.subsystems.thumbnails?.destroy();
-    state.subsystems.thumbnails = null;
+    // Teardown order across the three impostor subsystems matters:
+    // texturedImpostors subscribes to galaxyAtlas's eviction handler
+    // (so destroy it first), proceduralDisks is independent, and
+    // galaxyAtlas releases its GPU texture last among the three.
+    state.subsystems.texturedImpostors?.destroy();
+    state.subsystems.texturedImpostors = null;
+    state.subsystems.proceduralDisks?.destroy();
+    state.subsystems.proceduralDisks = null;
+    state.subsystems.galaxyAtlas?.destroy();
+    state.subsystems.galaxyAtlas = null;
     state.subsystems.spaceMouse.destroy();
     state.subsystems.clickResolver?.destroy();
     state.subsystems.clickResolver = null;
@@ -1190,10 +1202,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
-    state.gpu.thumbnailRenderer?.destroy();
-    state.gpu.thumbnailRenderer = null;
-    state.gpu.diskRenderer?.destroy();
-    state.gpu.diskRenderer = null;
+    state.gpu.texturedQuadRenderer?.destroy();
+    state.gpu.texturedQuadRenderer = null;
+    state.gpu.texturedDiskRenderer?.destroy();
+    state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
     state.gpu.proceduralDiskRenderer = null;
     state.gpu.milkyWayRenderer?.destroy();

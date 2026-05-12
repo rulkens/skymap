@@ -15,8 +15,9 @@
  * single canonical site.
  */
 
-import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
-import type { DiskRenderer } from '../../rendering/DiskRenderer';
+import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
+import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
+import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
@@ -27,9 +28,16 @@ import type { Source } from '../../../data/sources';
 
 export type PassDeps = {
   /** Atlas-bound textured-billboard renderer for galaxy thumbnails. */
-  thumbnailRenderer: ThumbnailRenderer;
+  texturedQuadRenderer: TexturedQuadRenderer;
   /** 3D-oriented procedural-disk renderer for large galaxies. */
-  diskRenderer: DiskRenderer;
+  texturedDiskRenderer: TexturedDiskRenderer;
+  /**
+   * Procedural-disk renderer for the LOD-1 pass.  Reads its instance
+   * array from `state.subsystems.proceduralDisks.lastOutput` rather
+   * than from a `runFrame` invocation inside the pass — the subsystem
+   * runs its planner step before the HDR_PASSES loop opens.
+   */
+  proceduralDiskRenderer: ProceduralDiskRenderer;
   /**
    * Optional cosmic-web filament-skeleton renderer.  Null when the
    * deployment doesn't ship a `filaments.bin` (or the load is in

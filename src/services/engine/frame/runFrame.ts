@@ -32,7 +32,7 @@
  *
  * The bootstrap IIFE that *assigns* `frame = () => { runFrame(...) }`
  * stays in engine.ts because it captures the GPU device/context and the
- * renderer instances (`milkyWayRenderer`, `thumbnailRenderer`, …) that
+ * renderer instances (`milkyWayRenderer`, `texturedQuadRenderer`, …) that
  * `initGpu()` returns asynchronously.  Those instances flow through
  * `RunFrameDeps` rather than living on `EngineState` — see the
  * dep-vs-state rationale below.
@@ -40,7 +40,7 @@
  * ### Why deps are passed explicitly instead of lifted to EngineState
  *
  * Two reasons.  First, the IIFE-local renderers (`device`, `context`,
- * `milkyWayRenderer`, `filamentRenderer`, `thumbnailRenderer`, `diskRenderer`)
+ * `milkyWayRenderer`, `filamentRenderer`, `texturedQuadRenderer`, `texturedDiskRenderer`)
  * are *only* read by the frame body — promoting them to `state.gpu.*`
  * would widen `EngineState`'s contract for one consumer's convenience,
  * and every other reader of `EngineState` would have to null-check
@@ -80,7 +80,7 @@ import { renderFrame } from './renderFrame';
 import {
   PROCEDURAL_DISK_FADE_START_PX,
   PROCEDURAL_DISK_FADE_END_PX,
-} from '../subsystems/thumbnailSubsystem';
+} from '../subsystems/proceduralDiskSubsystem';
 
 /**
  * Run one frame of the render loop.  Called every rAF tick by the
@@ -246,6 +246,33 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     }
   }
 
+  // ── Per-frame impostor planners ───────────────────────────────────
+  //
+  // CPU-side step that populates the two LOD-aligned subsystems'
+  // `lastOutput` arrays.  The HDR_PASSES loop reads those arrays via
+  // the new proceduralDisksPass / texturedImpostorsPass entries; this
+  // call site is the one place both walks happen each frame.  The
+  // atlas subsystem is mutated transitively by the textured-impostor
+  // run (slot allocations + fetch enqueues); we don't call into it
+  // directly here.
+  if (state.subsystems.proceduralDisks !== null) {
+    state.subsystems.proceduralDisks.runFrame({
+      cam: ctx.cam,
+      clouds: state.sources.clouds,
+      visibleSourceMask: state.sources.visibleMask,
+      pxPerRad: ctx.drawPxPerRad,
+    });
+  }
+  if (state.subsystems.texturedImpostors !== null) {
+    state.subsystems.texturedImpostors.runFrame({
+      cam: ctx.cam,
+      clouds: state.sources.clouds,
+      visibleSourceMask: state.sources.visibleMask,
+      pxPerRad: ctx.drawPxPerRad,
+      famousMeta: state.sources.famousMeta,
+    });
+  }
+
   // ── Label director per-frame update ───────────────────────────────
   //
   // Run BEFORE the GPU dispatch so `labelRenderer.setLabels` /
@@ -278,8 +305,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     milkyWayRenderer: deps.milkyWayRenderer,
     filamentRenderer: deps.filamentRenderer,
     scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
-    thumbnailRenderer: deps.thumbnailRenderer,
-    diskRenderer: deps.diskRenderer,
+    texturedQuadRenderer: deps.texturedQuadRenderer,
+    texturedDiskRenderer: deps.texturedDiskRenderer,
+    proceduralDiskRenderer: deps.proceduralDiskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
     settings: {
       pointSizePx: state.settings.points.sizePx,
@@ -437,7 +465,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.settings.camera.autoRotate ||
     state.subsystems.tweens.isActive() ||
     state.subsystems.spaceMouse.hasAxes() ||
-    (ready && state.subsystems.thumbnails.hasInFlightFetches()) ||
+    (ready && state.subsystems.texturedImpostors.hasInFlightWork()) ||
     (ready && state.gpu.renderer.isFading()) ||
     (state.gpu.filamentRenderer !== null && state.gpu.filamentRenderer.isFading());
   if (stillAnimating) state.subsystems.scheduler.requestRender();

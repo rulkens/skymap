@@ -51,14 +51,14 @@
  *   bytes 72..79  _pad0, _pad1 two reserved f32s (must stay zero)
  *
  * If `CameraUniforms` ever grows past 80 bytes, the constant and write
- * site here must both be updated.  See `thumbnailRenderer.ts` for the same
+ * site here must both be updated.  See `texturedQuadRenderer.ts` for the same
  * 80-byte comment.
  *
  * ## Blend mode
  *
  * Premultiplied-alpha OVER, NOT additive.  Marker lines are UI overlay — they
  * should occlude the HDR sky content at full opacity.  Additive blend (used by
- * `thumbnailRenderer` for emissive thumbnails) would make dark marker-line pixels
+ * `texturedQuadRenderer` for emissive thumbnails) would make dark marker-line pixels
  * accumulate rather than replace, which is wrong for an opaque indicator line.
  */
 
@@ -326,7 +326,7 @@ export function createMarkerLineRenderer(
     //   f32[18..19]  reserved pad — must remain zero (bytes 72..79)
     //
     // Float32Array zero-initialises on construction, so f32[18..19] stay zero
-    // without an explicit write — consistent with `thumbnailRenderer.ts`'s approach.
+    // without an explicit write — consistent with `texturedQuadRenderer.ts`'s approach.
     const uni = new Float32Array(UNIFORM_BYTES / 4);
     uni.set(viewProj, 0);
     uni[16] = viewportSize[0];

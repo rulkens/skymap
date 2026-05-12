@@ -6,13 +6,14 @@
  * the pre-D.2 inline draw order in `renderFrame.ts`, extended with the
  * two new UI-overlay passes from Task R4:
  *
- *   1. point-sprites      — instanced billboards (always-on)
- *   2. galaxy-thumbnails  — atlas + procedural-disk thumbnails
- *   3. filaments          — cosmic-web skeleton overlay
- *   4. scalar-volume      — 3D raymarched scalar-field cubes (optional)
- *   5. milky-way          — procedural impostor at the world origin
- *   6. marker-lines       — thick-line UI overlay (you-are-here indicator)
- *   7. labels             — MSDF text UI overlay (you-are-here label)
+ *   1. point-sprites       — instanced billboards (always-on)
+ *   2. procedural-disks    — LOD-1 procedural-disk impostors
+ *   3. textured-impostors  — LOD-2 textured-disk + textured-quad impostors
+ *   4. filaments           — cosmic-web skeleton overlay
+ *   5. scalar-volume       — 3D raymarched scalar-field cubes (optional)
+ *   6. milky-way           — procedural impostor at the world origin
+ *   7. marker-lines        — thick-line UI overlay (you-are-here indicator)
+ *   8. labels              — MSDF text UI overlay (you-are-here label)
  *
  * The order is preserved exactly because the array entry IS the
  * canonical record now — pre-D.2 the order was folkloric (lines in
@@ -69,26 +70,29 @@
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { pointSpritesPass } from './pointSpritesPass';
-import { galaxyThumbnailsPass } from './galaxyThumbnailsPass';
+import { proceduralDisksPass } from './proceduralDisksPass';
+import { texturedImpostorsPass } from './texturedImpostorsPass';
 import { filamentsPass } from './filamentsPass';
 import { scalarVolumePass } from './scalarVolumePass';
 import { milkyWayPass } from './milkyWayPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
 
-/** The seven HDR passes, in deterministic draw order. */
+/** The eight HDR passes, in deterministic draw order. */
 export const HDR_PASSES: readonly Pass[] = [
   pointSpritesPass,
-  galaxyThumbnailsPass,
+  proceduralDisksPass,
+  texturedImpostorsPass,
   filamentsPass,
-  scalarVolumePass, // ← new: 3D scalar-field volume overlay
+  scalarVolumePass,
   milkyWayPass,
   markerLinesPass,
   labelsPass,
 ];
 
 export { pointSpritesPass } from './pointSpritesPass';
-export { galaxyThumbnailsPass } from './galaxyThumbnailsPass';
+export { proceduralDisksPass } from './proceduralDisksPass';
+export { texturedImpostorsPass } from './texturedImpostorsPass';
 export { filamentsPass } from './filamentsPass';
 export { scalarVolumePass } from './scalarVolumePass';
 export { milkyWayPass } from './milkyWayPass';

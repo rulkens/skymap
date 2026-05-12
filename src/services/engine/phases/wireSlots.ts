@@ -87,7 +87,9 @@ import { createFamousMetaSlot } from '../../loading/slots/famousMetaSlot';
 import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
-import { createThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
+import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
+import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsystem';
+import { createTexturedImpostorSubsystem } from '../subsystems/texturedImpostorSubsystem';
 // Cosmography POI anchors used by the `?anchors=1` overlay below.
 // Synthetic-volume imports that previously sat here
 // (DEFAULT_VOLUME_FIELD_INTENSITY, getVolumeFieldDefaults,
@@ -122,10 +124,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // through there with a `!` bang — the bang was folklore that assumed
   // phase ordering.  The explicit null-checks below turn that assumption
   // into a typed runtime error if `initGpu` is ever skipped/reordered.
-  const { thumbnailRenderer, diskRenderer, proceduralDiskRenderer } = state.gpu;
+  const { texturedQuadRenderer, texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
   if (
-    thumbnailRenderer === null ||
-    diskRenderer === null ||
+    texturedQuadRenderer === null ||
+    texturedDiskRenderer === null ||
     proceduralDiskRenderer === null
   ) {
     throw new Error(
@@ -344,16 +346,31 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // handle for the on-demand trigger.
   famousMetaSlot.load();
 
-  // Build the subsystem and hand it the renderer references for
-  // atlas-view binding.  The subsystem's `bindToRenderers` is split
-  // out from its constructor because the renderers need to exist
-  // first; building them here keeps the construction order linear.
-  const thumbnails = createThumbnailSubsystem({
+  // Construct the three impostor subsystems in dependency order.  The
+  // textured-impostor planner depends on the atlas (slot allocation +
+  // eviction subscription); the procedural-disk planner is independent.
+  const galaxyAtlas = createGalaxyAtlasSubsystem({
     device,
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
-  thumbnails.bindToRenderers(thumbnailRenderer, diskRenderer, proceduralDiskRenderer);
-  state.subsystems.thumbnails = thumbnails;
+  const texturedImpostors = createTexturedImpostorSubsystem({
+    device,
+    atlas: galaxyAtlas,
+    requestRender: () => state.subsystems.scheduler.requestRender(),
+  });
+  const proceduralDisks = createProceduralDiskSubsystem();
+
+  // Bind the atlas's texture view into the two LOD-2 renderers.  The
+  // pre-split code did this through thumbnailSubsystem.bindToRenderers;
+  // post-split the atlas owns the view and the binding is two direct
+  // calls.  proceduralDiskRenderer doesn't sample the atlas, so it
+  // doesn't get a bindAtlas call.
+  texturedQuadRenderer.bindAtlas(galaxyAtlas.getTextureView());
+  texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
+
+  state.subsystems.galaxyAtlas = galaxyAtlas;
+  state.subsystems.texturedImpostors = texturedImpostors;
+  state.subsystems.proceduralDisks = proceduralDisks;
 
   // Signal loading state immediately so the user knows something is
   // happening before the (potentially multi-second) fetch completes.

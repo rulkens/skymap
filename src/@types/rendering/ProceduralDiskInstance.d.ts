@@ -1,7 +1,7 @@
 /**
  * ProceduralDiskInstance — one entry in the procedural-disk pass's
  * per-instance vertex buffer.  Mirrors the texture-based `DiskInstance`
- * (see `src/services/gpu/diskRenderer.ts`) but drops the atlas UV rect
+ * (see `src/services/gpu/texturedDiskRenderer.ts`) but drops the atlas UV rect
  * — the procedural fragment shader doesn't sample any texture.
  *
  * Each instance describes one galaxy as a 3D-oriented quad in world

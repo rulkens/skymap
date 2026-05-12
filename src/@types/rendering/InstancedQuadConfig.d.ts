@@ -32,7 +32,7 @@ export type InstancedQuadConfig = {
    *  HDR offscreen `'rgba16float'`. */
   format: GPUTextureFormat;
   /** Visibility for the uniform binding. Defaults to `VERTEX` —
-   *  matches ThumbnailRenderer + DiskRenderer. ProceduralDiskRenderer
+   *  matches TexturedQuadRenderer + TexturedDiskRenderer. ProceduralDiskRenderer
    *  passes `VERTEX | FRAGMENT` to mirror its existing BGL even
    *  though the fragment doesn't actually read the uniform. The
    *  flag is preserved as-is to avoid silently changing the
