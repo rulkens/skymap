@@ -11,7 +11,7 @@ export type * from './ScaleInfo';
 export type * from './EngineStatus';
 export type * from './EngineCallbacks';
 export type * from './EngineHandle';
-export type * from './EngineSettingsState';
+export type * from './settings/EngineSettingsState';
 export type * from './EngineBiasState';
 export type * from './EngineSourceState';
 export type * from './EnginePickingState';
