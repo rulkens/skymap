@@ -568,7 +568,7 @@ export function SettingsPanel({
               // peppering `maskHas(...)` into the boolean expressions
               // below — keeps the intent legible and avoids three bitwise
               // reads when one suffices.
-              const enabledCount = TOGGLEABLE_SOURCES.reduce(
+              const enabledCount = TOGGLEABLE_SOURCES.reduce<number>(
                 (n, s) => (maskHas(visibleSourceMask, s) ? n + 1 : n),
                 0,
               );

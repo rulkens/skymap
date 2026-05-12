@@ -45,7 +45,7 @@ import { encodePointCloud } from '../src/data/pointCloudFormat.js';
 import { raDecZToCartesian } from '../src/utils/math/index.js';
 import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../src/utils/math/galaxyDiameterKpc.js';
-import { Source } from '../src/data/sources.js';
+import { Source, sourceLabel } from '../src/data/sources.js';
 import type { PointCloud } from '../src/@types/data/PointCloud.js';
 import { TIER_TARGETS, tierFilenameForSource } from '../src/data/tierTargets.js';
 import type { Tier } from '../src/@types/data/Tier.js';
@@ -457,7 +457,7 @@ async function runCli(): Promise<void> {
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;
     process.stderr.write(
-      `  ${Source[source]}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
+      `  ${sourceLabel(source)}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
     );
   }
 
@@ -481,7 +481,7 @@ async function runCli(): Promise<void> {
       // detect "no data for this tier" via 404 rather than an empty cloud).
       const target = TIER_TARGETS[tier][source];
       if (target === 0) {
-        process.stderr.write(`tier ${tier}: ${Source[source]} excluded — skipping ${filename}\n`);
+        process.stderr.write(`tier ${tier}: ${sourceLabel(source)} excluded — skipping ${filename}\n`);
         continue;
       }
       const slice = target === undefined ? records : subsampleByAbsMag(records, target);

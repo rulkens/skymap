@@ -67,20 +67,20 @@ import type { BandLabels } from '../@types/data/BandLabels';
  * file format. Treat them like API version numbers — append, never
  * renumber. See module docstring for the full rationale.
  */
-export enum Source {
+export const Source = {
   /** Procedurally-generated stand-in cloud (no real photometry). */
-  Synthetic = 0,
+  Synthetic: 0,
   /** Sloan Digital Sky Survey — deep optical spectroscopic survey. */
-  SDSS = 1,
+  SDSS: 1,
   /** 2MASS Redshift Survey — near-IR all-sky redshift catalog. */
-  TwoMRS = 2,
+  TwoMRS: 2,
   /**
    * Galaxy List for the Advanced Detector Era (GLADE v2.3) — an all-sky
    * compilation that pre-merges HyperLEDA, GWGC, 2MASS XSC, 2MPZ, 6dFGS,
    * and SDSS-DR12Q with cross-match dedup. Acts as our "deep all-sky"
    * baseline so we don't have to re-merge those parent catalogs ourselves.
    */
-  Glade = 3,
+  Glade: 3,
   /**
    * Curated atlas of well-known galaxies (Messier + NGC greatest-hits).
    * Distinct from the survey-derived sources because entries are
@@ -89,8 +89,9 @@ export enum Source {
    * us to survive 2MRS/GLADE's small-z filtering, so they need their own
    * positions rather than just tagging existing rows.
    */
-  Famous = 4,
-}
+  Famous: 4,
+} as const;
+export type Source = (typeof Source)[keyof typeof Source];
 
 // ─── Per-survey metadata tables ─────────────────────────────────────────────
 //
@@ -243,11 +244,10 @@ export function bandLabels(source: Source): BandLabels {
  * The list of all currently-defined sources, used to build `ALL_VISIBLE_MASK`
  * and to iterate over surveys when rendering UI controls.
  *
- * We list them explicitly rather than `Object.values(Source).filter(...)`
- * because TS numeric enums produce a *reverse mapping* at runtime
- * (`{ 0: 'Synthetic', Synthetic: 0, ... }`), so naive iteration yields
- * twice as many keys as you expect. Hard-coding the list also makes the
- * intent obvious and the file format change visible in code review.
+ * We list them explicitly (rather than `Object.values(Source)`) to control
+ * the iteration order — see the note below about UI ordering. Hard-coding
+ * the list also makes any file-format-affecting change visible in code
+ * review.
  */
 // Ordering: real surveys are listed smallest catalogue → largest, so the
 // UI presents them in an intuitive "tip-of-the-iceberg first" order
@@ -272,7 +272,10 @@ export const ALL_SOURCES: readonly Source[] = [
  * the same way in JS, WGSL, and TS. JS bitwise ops coerce to 32-bit
  * signed ints, which is fine — we have 32 bits to spare.
  */
-export const ALL_VISIBLE_MASK: number = ALL_SOURCES.reduce((mask, src) => mask | (1 << src), 0);
+export const ALL_VISIBLE_MASK: number = ALL_SOURCES.reduce<number>(
+  (mask, src) => mask | (1 << src),
+  0,
+);
 
 /** True if `mask` has the bit for `source` set. */
 export function maskHas(mask: number, source: Source): boolean {
