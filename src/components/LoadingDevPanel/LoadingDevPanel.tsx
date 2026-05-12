@@ -27,7 +27,8 @@
  * extra prop dance — and the snapshot is cheap (~10 slot reads).
  */
 import { useEffect, useState } from 'react';
-import type { AssetSlot, LoadState } from '../../services/loading/types';
+import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { LoadState } from '../../@types/loading/LoadState';
 import { aggregateRegistry } from '../../services/loading/aggregateRegistry';
 
 export type LoadingDevPanelProps = {

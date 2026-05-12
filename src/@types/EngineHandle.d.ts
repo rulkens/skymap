@@ -17,7 +17,7 @@
  * cluster-shaped.  See `docs/superpowers/plans/` for the H5 plan.
  */
 
-import type { AssetSlot } from '../services/loading/types';
+import type { AssetSlot } from './loading/AssetSlot';
 
 import type { EnginePointsHandle } from './EnginePointsHandle';
 import type { EngineTonemapHandle } from './EngineTonemapHandle';

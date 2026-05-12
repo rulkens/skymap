@@ -81,16 +81,16 @@ import type { EngineGpuHandles } from './EngineGpuHandles';
 import type { EngineSubsystemHandles } from './EngineSubsystemHandles';
 import type { createOrbitCamera } from '../services/camera/orbitCamera';
 import type { InitialCam } from '../services/engine/camera/cameraFraming';
-import type { AssetSlot } from '../services/loading/AssetSlot';
+import type { AssetSlot } from './loading/AssetSlot';
 import type { PointCloud } from './data/PointCloud';
-import type { PointCloudReq } from '../services/loading/fetchers/pointCloudFetcher';
+import type { PointCloudReq } from './loading/PointCloudReq';
 import type { FilamentCloud } from './data/FilamentCloud';
-import type { FilamentReq } from '../services/loading/fetchers/filamentFetcher';
-import type { FamousPayload } from '../services/loading/fetchers/famousMetaFetcher';
-import type { PgcAliasMap } from '../services/loading/fetchers/pgcAliasFetcher';
+import type { FilamentReq } from './loading/FilamentReq';
+import type { FamousPayload } from './loading/FamousPayload';
+import type { PgcAliasMap } from './loading/PgcAliasMap';
 import type { ScalarCube } from './data/ScalarCube';
-import type { SyntheticVolumeReq } from '../services/loading/fetchers/syntheticVolumeFetcher';
-import type { MCPMReq } from '../services/loading/fetchers/mcpmFetcher';
+import type { SyntheticVolumeReq } from './loading/SyntheticVolumeReq';
+import type { MCPMReq } from './loading/MCPMReq';
 import type { Source } from '../data/sources';
 
 /**

@@ -70,10 +70,8 @@ import {
 import {
   resolveFocusTarget,
 } from '../services/engine/camera/resolveFocusTarget';
-import type {
-  FamousMetaEntry,
-  FamousXrefMap,
-} from '../services/loading/fetchers/famousMetaFetcher';
+import type { FamousMetaEntry } from '../@types/loading/FamousMetaEntry';
+import type { FamousXrefMap } from '../@types/loading/FamousXrefMap';
 
 /**
  * Inputs to the pure desired-hash decision.  The caller passes in the

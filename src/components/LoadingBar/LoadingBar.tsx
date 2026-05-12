@@ -45,7 +45,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import cx from 'classnames';
-import type { LoadProgressState } from '../../@types/EngineCallbacks';
+import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import styles from './LoadingBar.module.css';
 
 /** Props for LoadingBar.  Matches the engine's `onLoadProgress` shape. */

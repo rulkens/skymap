@@ -24,7 +24,7 @@
  * over a local mutable cell is the natural place — see AssetSlot's
  * subscriber bridge for the closure that does that.
  */
-import type { LoadState } from './types';
+import type { LoadState } from '../../@types/loading/LoadState';
 
 const BYTES_LOG_INTERVAL_MS = 250;
 

@@ -87,7 +87,7 @@
  */
 
 import type { EngineCallbacks, EngineHandle, EngineState } from '../../../@types';
-import type { AssetSlot } from '../../loading/types';
+import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { Source } from '../../../data/sources';
 import type { FpsCounter } from '../subsystems/fpsCounter';
 

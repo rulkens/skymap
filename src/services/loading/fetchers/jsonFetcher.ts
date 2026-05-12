@@ -28,7 +28,7 @@
  * bar will jump from 0% to 100% in one tick. Use `fetchWithProgress`
  * directly for assets where streaming progress matters.
  */
-import type { Fetcher } from '../types';
+import type { Fetcher } from '../../../@types/loading/Fetcher';
 import { HttpError } from '../fetchWithProgress';
 
 export function makeJsonFetcher<T, Req = void>(

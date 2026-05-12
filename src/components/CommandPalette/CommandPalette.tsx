@@ -30,7 +30,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
-import type { FamousMetaEntry } from '../../services/loading/fetchers/famousMetaFetcher';
+import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../hooks/buildAliasIndex';
 import { Source, sourceLabel } from '../../data/sources';
 import { InfoTip } from '../InfoTip/InfoTip';

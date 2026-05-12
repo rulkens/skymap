@@ -17,7 +17,8 @@
  * property of `(attempt, error)` only.  A pure function is trivially
  * testable, trivially swappable, and impossible to misuse by mistake.
  */
-import type { RetryDecision, RetryPolicy } from './types';
+import type { RetryDecision } from '../../@types/loading/RetryDecision';
+import type { RetryPolicy } from '../../@types/loading/RetryPolicy';
 import { HttpError } from './fetchWithProgress';
 
 const BACKOFF_MS = [1000, 3000];

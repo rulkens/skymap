@@ -54,26 +54,13 @@
  * `reduceLoadState`), and a Set of subscribers.  Everything that can be a
  * pure function is — retry decisions, state transitions, console output.
  */
-import type {
-  AssetSlot,
-  Fetcher,
-  Committer,
-  LoadEvent,
-  LoadState,
-  RetryPolicy,
-} from './types';
+import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { LoadEvent } from '../../@types/loading/LoadEvent';
+import type { LoadState } from '../../@types/loading/LoadState';
+import type { CreateAssetSlotArgs } from '../../@types/loading/CreateAssetSlotArgs';
 import { reduceLoadState } from './reduceLoadState';
 import { defaultRetryPolicy } from './retryPolicy';
 import { consoleAdapterFor } from './consoleAdapter';
-
-export type { AssetSlot };
-
-export type CreateAssetSlotArgs<T, Req> = {
-  name: string;
-  fetch: Fetcher<T, Req>;
-  commit?: Committer<T>;
-  retry?: RetryPolicy;
-};
 
 export function createAssetSlot<T, Req>(args: CreateAssetSlotArgs<T, Req>): AssetSlot<T, Req> {
   const { name, fetch: fetchFn, commit, retry = defaultRetryPolicy } = args;

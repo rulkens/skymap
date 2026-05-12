@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { aggregateRegistry } from '../../../src/services/loading/aggregateRegistry';
-import type { AssetSlot, LoadState } from '../../../src/services/loading/types';
+import type { AssetSlot } from '../../../src/@types/loading/AssetSlot';
+import type { LoadState } from '../../../src/@types/loading/LoadState';
 
 function fakeSlot<T>(name: string, state: LoadState<T>): AssetSlot<T, unknown> {
   return {

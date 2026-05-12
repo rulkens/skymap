@@ -33,21 +33,12 @@
  * want (a renderer-ready PointCloud) and lets the buffer be GC'd after
  * decode without any explicit handoff.
  */
-import type { Fetcher } from '../types';
+import type { Fetcher } from '../../../@types/loading/Fetcher';
+import type { PointCloudReq } from '../../../@types/loading/PointCloudReq';
 import type { PointCloud } from '../../../@types/data/PointCloud';
-import type { Source } from '../../../data/sources';
-import type { Tier } from '../../../@types/data/Tier';
 import { decodePointCloud, emptyPointCloud } from '../../../data/pointCloudFormat';
 import { TIER_TARGETS, tierFilenameForSource } from '../../../data/tierTargets';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
-
-/**
- * The request shape this fetcher accepts.  Carrying tier and source
- * together (rather than baking source into the fetcher's identity) lets
- * one fetcher instance serve every survey — the slot just hands it a
- * different request when the user toggles a survey on.
- */
-export type PointCloudReq = { source: Source; tier: Tier };
 
 export const pointCloudFetcher: Fetcher<PointCloud, PointCloudReq> = async (
   req,

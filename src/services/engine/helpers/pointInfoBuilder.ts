@@ -20,7 +20,8 @@
 import type { PointInfo } from '../../../@types';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import { Source, sourceLabel, bandLabels } from '../../../data/sources';
-import type { FamousMetaEntry, FamousXrefMap } from '../../loading/fetchers/famousMetaFetcher';
+import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
+import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import {
   cartesianToRaDecZ,

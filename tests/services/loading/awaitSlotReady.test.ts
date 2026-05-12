@@ -15,7 +15,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { awaitSlotReady } from '../../../src/services/loading/awaitSlotReady';
-import type { AssetSlot, LoadState } from '../../../src/services/loading/types';
+import type { AssetSlot } from '../../../src/@types/loading/AssetSlot';
+import type { LoadState } from '../../../src/@types/loading/LoadState';
 
 /**
  * Build a minimal fake slot that exposes `state()`, `subscribe()`, and

@@ -28,8 +28,9 @@
  * factory touches, hurting reviewability).
  */
 
-import type { AssetSlot } from '../types';
-import type { EngineState, EngineCallbacks } from '../../../@types';
+import type { AssetSlot } from './AssetSlot';
+import type { EngineState } from '../EngineState';
+import type { EngineCallbacks } from '../EngineCallbacks';
 
 export type SlotFactory<TPayload, TRequest> = (
   state: EngineState,

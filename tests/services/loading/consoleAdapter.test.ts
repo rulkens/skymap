@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { consoleAdapterFor } from '../../../src/services/loading/consoleAdapter';
-import type { LoadState } from '../../../src/services/loading/types';
+import type { LoadState } from '../../../src/@types/loading/LoadState';
 
 const idle: LoadState<unknown> = { kind: 'idle' };
 const loading = (loaded: number, total: number, attempt = 0): LoadState<unknown> => ({

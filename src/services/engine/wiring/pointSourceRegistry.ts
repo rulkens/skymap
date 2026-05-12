@@ -117,12 +117,10 @@ import type { EngineCallbacks, EngineState } from '../../../@types';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Tier } from '../../../@types/data/Tier';
 import { Source } from '../../../data/sources';
-import type { Fetcher } from '../../loading/types';
+import type { Fetcher } from '../../../@types/loading/Fetcher';
+import type { PointCloudReq } from '../../../@types/loading/PointCloudReq';
 import { createAssetSlot } from '../../loading/AssetSlot';
-import {
-  pointCloudFetcher,
-  type PointCloudReq,
-} from '../../loading/fetchers/pointCloudFetcher';
+import { pointCloudFetcher } from '../../loading/fetchers/pointCloudFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
 
 /**
