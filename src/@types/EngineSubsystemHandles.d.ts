@@ -43,7 +43,7 @@ import type { BiasCorrectionSubsystem } from '../services/engine/subsystems/bias
 import type { YouAreHereSubsystem } from '../services/engine/subsystems/youAreHereSubsystem';
 import type { LabelDirectorSubsystem } from '../services/engine/subsystems/labelDirectorSubsystem';
 import type { PoiSubsystem } from '../services/engine/subsystems/poiSubsystem';
-import type { TweenManager } from '../services/engine/camera/tweenManager';
+import type { TweenManager } from './camera/TweenManager';
 import type { ClickResolver } from '../services/engine/interaction/clickHandler';
 import type { InputBindings } from '../services/engine/interaction/inputBindings';
 import type { RenderScheduler } from '../services/engine/subsystems/renderScheduler';

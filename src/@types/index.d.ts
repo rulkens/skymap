@@ -12,8 +12,6 @@ export type * from './EngineStatus';
 export type * from './EngineCallbacks';
 export type * from './EngineHandle';
 export type * from './GpuContext';
-export type * from './OrbitCameraInit';
-export type * from './OrbitCamera';
 export type * from './ThumbnailInstance';
 export type * from './MousePos';
 export type * from './EngineSettingsState';

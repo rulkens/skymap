@@ -21,7 +21,7 @@
  * pass `state.cam` and forget about it.
  */
 
-import type { OrbitCamera } from '../../../@types';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 
 export function logCameraState(cam: OrbitCamera | null): void {
   if (!cam) {

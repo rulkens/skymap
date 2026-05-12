@@ -65,8 +65,8 @@ import { ALL_SOURCES, Source } from '../data/sources';
 import {
   parseFocusHash,
   selectionToFocusId,
-  type FocusTarget,
 } from '../services/url/focusUrl';
+import type { FocusTarget } from '../@types/camera/FocusTarget';
 import {
   resolveFocusTarget,
 } from '../services/engine/camera/resolveFocusTarget';

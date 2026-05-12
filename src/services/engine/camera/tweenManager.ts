@@ -43,43 +43,11 @@
  * future caller to reach in and poke.
  */
 
-import type { Destroyable, OrbitCamera } from '../../../@types';
-import { advanceCameraTween, type CameraTween } from '../../camera/cameraTween';
-
-export type TweenManager = {
-  /**
-   * Start a new tween.  Replaces any running one (the previous tween
-   * descriptor is GC'd; `cameraTween` is a frozen plan, not a stateful
-   * object that needs disposal).
-   */
-  start(tween: CameraTween): void;
-  /** Cancel the running tween, if any.  No-op when no tween is active. */
-  cancel(): void;
-  /** Whether a tween is currently in flight (drives the still-animating predicate). */
-  isActive(): boolean;
-  /**
-   * Advance the running tween by one frame.  Mutates `cam` (target /
-   * distance / yaw / pitch) and calls updatePosition internally; see
-   * `advanceCameraTween` for the full per-frame contract.
-   *
-   * Returns `true` when the tween finished this frame — the manager
-   * has already cleared its internal reference, so the caller does
-   * not need to call `cancel()`.  The boolean is exposed in case the
-   * caller wants to fire a one-shot side effect (e.g. log or wake an
-   * adjacent subsystem) on completion; today's engine ignores it.
-   *
-   * No-op when no tween is active; returns `false`.
-   */
-  advance(cam: OrbitCamera, nowMs: number): boolean;
-  /**
-   * Tear down the manager.  Cancels any running tween and is otherwise
-   * inert — there are no event listeners, workers, or timers to release.
-   * Exists so the engine's bag of subsystems can be torn down uniformly
-   * via the shared `Destroyable` shape (`engine.destroy()` iterates and
-   * calls `destroy()` on each).
-   */
-  destroy(): void;
-};
+import type { Destroyable } from '../../../@types';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { CameraTween } from '../../../@types/camera/CameraTween';
+import type { TweenManager } from '../../../@types/camera/TweenManager';
+import { advanceCameraTween } from '../../camera/cameraTween';
 
 export function createTweenManager(): TweenManager {
   // The single tween reference, owned privately by this closure.  All

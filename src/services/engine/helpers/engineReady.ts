@@ -91,7 +91,8 @@
  * lands without touching any existing type declaration.
  */
 
-import type { EngineState, OrbitCamera } from '../../../@types';
+import type { EngineState } from '../../../@types';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { PointRenderer } from '../../gpu/renderers/pointRenderer';
 import type { PostProcess } from '../../gpu/passes/postProcess';
 import type { createPickRenderer } from '../../gpu/renderers/pickRenderer';

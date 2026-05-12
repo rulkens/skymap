@@ -80,7 +80,7 @@ import type { EnginePickingState } from './EnginePickingState';
 import type { EngineGpuHandles } from './EngineGpuHandles';
 import type { EngineSubsystemHandles } from './EngineSubsystemHandles';
 import type { createOrbitCamera } from '../services/camera/orbitCamera';
-import type { InitialCam } from '../services/engine/camera/cameraFraming';
+import type { InitialCam } from './camera/InitialCam';
 import type { AssetSlot } from './loading/AssetSlot';
 import type { PointCloud } from './data/PointCloud';
 import type { PointCloudReq } from './loading/PointCloudReq';
