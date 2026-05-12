@@ -115,22 +115,11 @@ vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () =
   })),
 }));
 
-// Thumbnail subsystem: replace with a hollow factory so wireSlots's
-// `bindToRenderers` call has somewhere to land.  We don't assert on
-// it here — the destroy-reachability test in the sibling file
-// covers thumbnail-renderer lifecycle.
-vi.mock('../../../../src/services/engine/subsystems/thumbnailSubsystem', () => ({
-  createThumbnailSubsystem: vi.fn(() => ({
-    bindToRenderers: vi.fn(),
-    destroy: vi.fn(),
-  })),
-}));
-
-// Post-Task-11 split: wireSlots now constructs three subsystems where
-// `thumbnailSubsystem` used to live.  Each carries the same GPU-device
-// dependency the legacy mock above was guarding against, so we mock
-// all three the same way: hollow factories that satisfy the call sites
-// without touching the (stubbed) device.
+// Post-Task-11 split: wireSlots constructs three subsystems where the
+// legacy `thumbnailSubsystem` used to live.  Each carries the same
+// GPU-device dependency the legacy mock was guarding against, so we
+// mock all three the same way: hollow factories that satisfy the call
+// sites without touching the (stubbed) device.
 vi.mock('../../../../src/services/engine/subsystems/galaxyAtlasSubsystem', () => ({
   createGalaxyAtlasSubsystem: vi.fn(() => ({
     getTextureView: vi.fn(() => ({}) as unknown as GPUTextureView),

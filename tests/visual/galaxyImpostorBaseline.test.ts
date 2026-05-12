@@ -1,24 +1,32 @@
 /**
- * Visual baseline — galaxy impostor draw-call sequence.
+ * Visual baseline — post-split galaxy-impostor draw-call sequence.
  *
- * Captures the per-frame sequence of renderer.draw() invocations the
- * legacy `thumbnailSubsystem.runFrame` produces given a fixed fixture.
- * Any refactor that re-arranges, re-orders, or alters the instance
- * payload of these draw calls flips this test red.  See tests/visual/
- * README.md for the rationale on hash-based snapshotting vs. pixel
- * readback.
+ * Drives the three new subsystems (galaxyAtlas + proceduralDisk +
+ * texturedImpostor) through one runFrame each, then asserts the
+ * resulting `lastOutput` arrays hash to the same baseline the pre-split
+ * snapshot recorded in Task 1.
+ *
+ * If this test fails after Task 11/12 cut over production: a planner's
+ * extraction diverged from the legacy semantics.  Investigate before
+ * proceeding.
+ *
+ * NOTE on `performance.now()` mocking:  the textured-impostor planner
+ * derives a per-galaxy `fadeAlpha` from `(now - bitmapReadyTime) / 400ms`.
+ * Without a fixed clock the elapsed wall time between bitmap-landing
+ * (inside the microtask drain after Frame 1) and `nowMs` read in Frame 2
+ * varies across runs, perturbing the rounded hash.  We mock `performance.now`
+ * with a synthetic clock advanced by exactly 50 ms between frames so the
+ * load-fade lerp lands deterministically on 50/400 = 0.125 — matching the
+ * pre-split baseline's recorded value byte-for-byte.
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import type { mat4 } from 'gl-matrix';
-
 import { Source } from '../../src/data/sources';
-import { createThumbnailSubsystem } from '../../src/services/engine/subsystems/thumbnailSubsystem';
+import { createGalaxyAtlasSubsystem } from '../../src/services/engine/subsystems/galaxyAtlasSubsystem';
+import { createProceduralDiskSubsystem } from '../../src/services/engine/subsystems/proceduralDiskSubsystem';
+import { createTexturedImpostorSubsystem } from '../../src/services/engine/subsystems/texturedImpostorSubsystem';
 import type { PointCloud } from '../../src/@types/data/PointCloud';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
-import type { TexturedQuadRenderer } from '../../src/@types/rendering/TexturedQuadRenderer';
-import type { TexturedDiskRenderer } from '../../src/@types/rendering/TexturedDiskRenderer';
-import type { ProceduralDiskRenderer } from '../../src/@types/rendering/ProceduralDiskRenderer';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -60,7 +68,7 @@ function makeCloud(count: number): PointCloud {
 
 function makeCam(): OrbitCamera {
   return {
-    target: new Float32Array([10, 0, 0]),
+    target: [10, 0, 0] as unknown as Float32Array,
     distance: 0.05,
     yaw: 0,
     pitch: 0,
@@ -72,15 +80,11 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function roundTo6dp(v: number): number {
+function round6(v: number): number {
   return Math.round(v * 1e6) / 1e6;
 }
 
-function hashInstances(instances: ReadonlyArray<object>): string[] {
-  // Stable: sort keys, round numeric fields to 6 dp.  Returns one entry
-  // per instance so vitest array-diffs each instance on its own line —
-  // a single renamed field surfaces as a one-line red/green diff rather
-  // than a 1.5 KB string blob.
+function hashInstances(instances: ReadonlyArray<object>): string {
   const parts: string[] = [];
   for (const ins of instances) {
     const rec = ins as Record<string, unknown>;
@@ -88,157 +92,78 @@ function hashInstances(instances: ReadonlyArray<object>): string[] {
     const kv: string[] = [];
     for (const k of sortedKeys) {
       const v = rec[k];
-      kv.push(`${k}=${typeof v === 'number' ? roundTo6dp(v) : String(v)}`);
+      kv.push(`${k}=${typeof v === 'number' ? round6(v) : String(v)}`);
     }
     parts.push(kv.join('|'));
   }
-  return parts;
+  return parts.join(';');
 }
 
-type DrawRecord = { renderer: string; count: number; hashes: readonly string[] };
-
-describe('galaxy-impostor visual baseline', () => {
-  it('emits the same draw sequence given a fixed camera + cloud fixture', async () => {
-    // Pin performance.now() to a synthetic clock.  The legacy subsystem
-    // derives a per-quad `fadeAlpha` from `(performance.now() - bitmapReadyTime) / LOAD_FADE_MS`;
-    // without a fixed clock the wall-clock gap between Frame 1 fetch
-    // completion and Frame 2's `nowMs` read varies across runs (warm
-    // module cache vs cold, GC pauses, host load), changing fadeAlpha
-    // by ~5-10 ULP at 6-dp rounding.  We advance the clock by exactly
-    // 50 ms between frames so the load-fade lerp lands on a stable value
-    // (50/400 = 0.125 of the load-fade ramp).  Restored in `finally`.
+describe('galaxy-impostor visual baseline (post-split)', () => {
+  it('emits the same lastOutput sequence given a fixed fixture', async () => {
+    // Synthetic clock — see module docstring for why this is required for
+    // deterministic load-fade.  Restored in `finally`.
     let nowFake = 1_000_000;
     const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => nowFake);
 
-    const device = makeFakeDevice();
-    const quadDraw = vi.fn();
-    const diskDraw = vi.fn();
-    const procDraw = vi.fn();
-    // `as unknown as <RendererType>` (not `as any`) so a future signature
-    // change on any of the three renderer handles breaks type-check at
-    // this site — that's the whole point of these baselines.
-    const quad = {
-      bindAtlas: vi.fn(),
-      draw: quadDraw,
-      label: 'texturedQuadRenderer',
-    } as unknown as TexturedQuadRenderer;
-    const disk = {
-      bindAtlas: vi.fn(),
-      draw: diskDraw,
-      label: 'texturedDiskRenderer',
-    } as unknown as TexturedDiskRenderer;
-    const procDisk = {
-      draw: procDraw,
-      label: 'proceduralDiskRenderer',
-    } as unknown as ProceduralDiskRenderer;
-
-    const sys = createThumbnailSubsystem({
-      device,
-      requestRender: () => {},
-      fetcher: async () => ({ width: 128, height: 128, close: () => {} } as unknown as ImageBitmap),
-      decimationFactor: 1,
-    });
-    sys.bindToRenderers(quad, disk, procDisk);
-
-    const cam = makeCam();
-    const clouds = new Map([[Source.SDSS, makeCloud(8)]]);
-    const input = {
-      cam,
-      clouds,
-      visibleSourceMask: 0xffffffff,
-      canvasSize: { width: 1280, height: 720 },
-      pass: {} as GPURenderPassEncoder,
-      viewProj: new Float32Array(16) as unknown as mat4,
-      pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
-      camPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
-        [number, number, number]
-      >,
-      texturedQuadRenderer: quad,
-      texturedDiskRenderer: disk,
-      famousMeta: [],
-      famousXrefs: {},
-    };
-
-    // Frame 1: kicks off fetches; bitmaps land via microtask drain.
-    sys.runFrame(input);
-    await new Promise((r) => setTimeout(r, 0));
-
-    // Advance the synthetic clock by 50 ms — bitmapReadyTime was
-    // recorded at nowFake=1_000_000 inside the onResult callback above,
-    // so the next frame sees loadFade = 50/400 = 0.125 deterministically.
-    nowFake += 50;
-
-    // Frame 2: bitmaps ready; the disk/quad paths fire.
-    quadDraw.mockClear();
-    diskDraw.mockClear();
-    procDraw.mockClear();
-    sys.runFrame(input);
-
-    const records: DrawRecord[] = [];
-    if (quadDraw.mock.calls.length > 0) {
-      // texturedQuadRenderer.draw(pass, viewProj, viewportPx, instances, camPosWorld, pxPerRad)
-      // — instances is positional arg 3.
-      const instances = quadDraw.mock.calls[0]![3] as ReadonlyArray<object>;
-      records.push({
-        renderer: 'texturedQuadRenderer',
-        count: instances.length,
-        hashes: hashInstances(instances),
-      });
-    }
-    if (diskDraw.mock.calls.length > 0) {
-      // texturedDiskRenderer.draw(pass, viewProj, viewportPx, camPos, instances)
-      // — instances is positional arg 4 (camPos comes before instances here,
-      // unlike the thumbnail/procedural signatures).
-      const instances = diskDraw.mock.calls[0]![4] as ReadonlyArray<object>;
-      records.push({
-        renderer: 'texturedDiskRenderer',
-        count: instances.length,
-        hashes: hashInstances(instances),
-      });
-    }
-    if (procDraw.mock.calls.length > 0) {
-      // proceduralDiskRenderer.draw(pass, viewProj, viewport, camPosWorld, pxPerRad, instances)
-      // — instances is positional arg 5 (trails camPos + pxPerRad).
-      const instances = procDraw.mock.calls[0]![5] as ReadonlyArray<object>;
-      records.push({
-        renderer: 'proceduralDiskRenderer',
-        count: instances.length,
-        hashes: hashInstances(instances),
-      });
-    }
-
     try {
-      expect(records).toMatchInlineSnapshot(`
-        [
-          {
+      const device = makeFakeDevice();
+      const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+      const procSys = createProceduralDiskSubsystem({ decimationFactor: 1 });
+      const texSys = createTexturedImpostorSubsystem({
+        device,
+        atlas,
+        requestRender: () => {},
+        fetcher: async () =>
+          ({ width: 128, height: 128, close: () => {} }) as unknown as ImageBitmap,
+        decimationFactor: 1,
+      });
+
+      const cam = makeCam();
+      const clouds = new Map([[Source.SDSS, makeCloud(8)]]);
+      const pxPerRad = 720 / (2 * Math.tan(cam.fovYRad / 2));
+
+      // Frame 1: kick off fetches; bitmaps land via microtask drain.
+      procSys.runFrame({ cam, clouds, visibleSourceMask: 0xffffffff, pxPerRad });
+      texSys.runFrame({ cam, clouds, visibleSourceMask: 0xffffffff, pxPerRad, famousMeta: [] });
+      await new Promise((r) => setTimeout(r, 0));
+
+      // Advance synthetic clock by 50 ms — bitmapReadyTime was recorded at
+      // nowFake=1_000_000 inside the onResult callback above, so Frame 2
+      // sees loadFade = 50/400 = 0.125 deterministically.
+      nowFake += 50;
+
+      // Frame 2: bitmaps ready; disk path fires.
+      const procOut = procSys.runFrame({ cam, clouds, visibleSourceMask: 0xffffffff, pxPerRad });
+      const texOut = texSys.runFrame({
+        cam,
+        clouds,
+        visibleSourceMask: 0xffffffff,
+        pxPerRad,
+        famousMeta: [],
+      });
+
+      const summary = {
+        procDisks: { count: procOut.instances.length, hash: hashInstances(procOut.instances) },
+        texDisks: { count: texOut.disks.length, hash: hashInstances(texOut.disks) },
+        texQuads: { count: texOut.quads.length, hash: hashInstances(texOut.quads) },
+      };
+
+      expect(summary).toMatchInlineSnapshot(`
+        {
+          "procDisks": {
             "count": 8,
-            "hashes": [
-              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.4375|u1=0.5|v0=0|v1=0.0625|x=10|y=0.007|z=0",
-              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.375|u1=0.4375|v0=0|v1=0.0625|x=10|y=0.006|z=0",
-              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.3125|u1=0.375|v0=0|v1=0.0625|x=10|y=0.005|z=0",
-              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.25|u1=0.3125|v0=0|v1=0.0625|x=10|y=0.004|z=0",
-              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.1875|u1=0.25|v0=0|v1=0.0625|x=10|y=0.003|z=0",
-              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.125|u1=0.1875|v0=0|v1=0.0625|x=10|y=0.002|z=0",
-              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.0625|u1=0.125|v0=0|v1=0.0625|x=10|y=0.001|z=0",
-              "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0|u1=0.0625|v0=0|v1=0.0625|x=10|y=0|z=0",
-            ],
-            "renderer": "texturedDiskRenderer",
+            "hash": "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.007|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.006|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.005|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.004|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.003|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.002|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.001|z=0;axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0|z=0",
           },
-          {
+          "texDisks": {
             "count": 8,
-            "hashes": [
-              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.007|z=0",
-              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.006|z=0",
-              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.005|z=0",
-              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.004|z=0",
-              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.003|z=0",
-              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.002|z=0",
-              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0.001|z=0",
-              "axisRatio=0.7|colourIndex=0|crossfadeAlpha=1|positionAngleDeg=45|sizeWorldMpc=0.2|x=10|y=0|z=0",
-            ],
-            "renderer": "proceduralDiskRenderer",
+            "hash": "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.4375|u1=0.5|v0=0|v1=0.0625|x=10|y=0.007|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.375|u1=0.4375|v0=0|v1=0.0625|x=10|y=0.006|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.3125|u1=0.375|v0=0|v1=0.0625|x=10|y=0.005|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.25|u1=0.3125|v0=0|v1=0.0625|x=10|y=0.004|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.1875|u1=0.25|v0=0|v1=0.0625|x=10|y=0.003|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.125|u1=0.1875|v0=0|v1=0.0625|x=10|y=0.002|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.0625|u1=0.125|v0=0|v1=0.0625|x=10|y=0.001|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0|u1=0.0625|v0=0|v1=0.0625|x=10|y=0|z=0",
           },
-        ]
+          "texQuads": {
+            "count": 0,
+            "hash": "",
+          },
+        }
       `);
     } finally {
       nowSpy.mockRestore();
