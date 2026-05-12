@@ -4,7 +4,7 @@ import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { PointCloud } from '../../data/PointCloud';
 import type { Source } from '../../../data/sources';
 import type { Vec3 } from '../../math/Vec3';
-import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
+import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
@@ -23,7 +23,7 @@ export type ThumbnailFrameInput = {
   visibleSourceMask: number;
   /** Canvas backing-store size in CSS pixels — feeds the pinhole pxPerRad. */
   canvasSize: { width: number; height: number };
-  /** Render-pass encoder — thumbnailRenderer + texturedDiskRenderer encode their draws here. */
+  /** Render-pass encoder — texturedQuadRenderer + texturedDiskRenderer encode their draws here. */
   pass: GPURenderPassEncoder;
   /** Combined view+projection matrix for the current camera. */
   viewProj: mat4;
@@ -31,9 +31,9 @@ export type ThumbnailFrameInput = {
   pxPerRad: number;
   /** Camera world-position snapshot for the back-to-front sort comparator. */
   camPos: Readonly<Vec3>;
-  /** ThumbnailRenderer instance — engine owns it; subsystem just calls draw(). */
-  thumbnailRenderer: ThumbnailRenderer;
-  /** TexturedDiskRenderer instance — same ownership story as thumbnailRenderer. */
+  /** TexturedQuadRenderer instance — engine owns it; subsystem just calls draw(). */
+  texturedQuadRenderer: TexturedQuadRenderer;
+  /** TexturedDiskRenderer instance — same ownership story as texturedQuadRenderer. */
   texturedDiskRenderer: TexturedDiskRenderer;
   /** Famous-meta sidecar, used to route Famous-source rows to curated WebPs. */
   famousMeta: FamousMetaEntry[];

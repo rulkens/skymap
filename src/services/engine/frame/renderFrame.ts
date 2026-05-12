@@ -93,7 +93,7 @@ export function renderFrame(input: RenderFrameInput): void {
     milkyWayRenderer,
     filamentRenderer,
     scalarVolumeRenderer,
-    thumbnailRenderer,
+    texturedQuadRenderer,
     texturedDiskRenderer,
     settings,
     famousMeta,
@@ -107,7 +107,7 @@ export function renderFrame(input: RenderFrameInput): void {
   // duration of `renderFrame`'s execution.  See `passes/types.ts`'s
   // `PassDeps` declaration for the per-field rationale.
   const deps: PassDeps = {
-    thumbnailRenderer,
+    texturedQuadRenderer,
     texturedDiskRenderer,
     filamentRenderer,
     scalarVolumeRenderer,

@@ -32,7 +32,7 @@
  *
  * The bootstrap IIFE that *assigns* `frame = () => { runFrame(...) }`
  * stays in engine.ts because it captures the GPU device/context and the
- * renderer instances (`milkyWayRenderer`, `thumbnailRenderer`, …) that
+ * renderer instances (`milkyWayRenderer`, `texturedQuadRenderer`, …) that
  * `initGpu()` returns asynchronously.  Those instances flow through
  * `RunFrameDeps` rather than living on `EngineState` — see the
  * dep-vs-state rationale below.
@@ -40,7 +40,7 @@
  * ### Why deps are passed explicitly instead of lifted to EngineState
  *
  * Two reasons.  First, the IIFE-local renderers (`device`, `context`,
- * `milkyWayRenderer`, `filamentRenderer`, `thumbnailRenderer`, `texturedDiskRenderer`)
+ * `milkyWayRenderer`, `filamentRenderer`, `texturedQuadRenderer`, `texturedDiskRenderer`)
  * are *only* read by the frame body — promoting them to `state.gpu.*`
  * would widen `EngineState`'s contract for one consumer's convenience,
  * and every other reader of `EngineState` would have to null-check
@@ -278,7 +278,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     milkyWayRenderer: deps.milkyWayRenderer,
     filamentRenderer: deps.filamentRenderer,
     scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
-    thumbnailRenderer: deps.thumbnailRenderer,
+    texturedQuadRenderer: deps.texturedQuadRenderer,
     texturedDiskRenderer: deps.texturedDiskRenderer,
     milkyWayITimeSec: (performance.now() - deps.milkyWayITimeEpochMs) * 0.001 * 0.25,
     settings: {

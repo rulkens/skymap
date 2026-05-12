@@ -166,7 +166,7 @@ function makeState(maxAbs: number): EngineState {
       filamentRenderer: null,
       labelRenderer: null,
       markerLineRenderer: null,
-      thumbnailRenderer: null,
+      texturedQuadRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,

@@ -1,4 +1,4 @@
-import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
+import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { ThumbnailFrameInput } from './ThumbnailFrameInput';
@@ -17,7 +17,7 @@ export type ThumbnailSubsystem = {
    * in engine.ts.
    */
   bindToRenderers(
-    thumbnailRenderer: ThumbnailRenderer,
+    texturedQuadRenderer: TexturedQuadRenderer,
     texturedDiskRenderer: TexturedDiskRenderer,
     proceduralDiskRenderer: ProceduralDiskRenderer,
   ): void;

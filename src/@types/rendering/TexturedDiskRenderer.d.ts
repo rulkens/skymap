@@ -2,7 +2,7 @@
  * TexturedDiskRenderer — oriented 3D galaxy disks (renderer handle
  * shape) — atlas-textured LOD-2 sibling of texturedQuadRenderer.
  *
- * Differs from ThumbnailRenderer: each instance is tilted in 3D world
+ * Differs from TexturedQuadRenderer: each instance is tilted in 3D world
  * space (the disk's normal points toward the camera by default, rotated
  * by PA, tilted by inclination cos(i) = axisRatio).  See the runtime
  * `texturedDiskRenderer.ts` module header for the full pipeline rationale.

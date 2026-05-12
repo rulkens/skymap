@@ -1,7 +1,7 @@
 /**
  * proceduralDiskRenderer — 3D-oriented procedural galaxy impostors.
  *
- * Sibling to texturedDiskRenderer (texture-based) and thumbnailRenderer (screen-
+ * Sibling to texturedDiskRenderer (texture-based) and texturedQuadRenderer (screen-
  * aligned + texture-based). Activates for galaxies in the apparent-
  * size band 8..∞ px, with a crossfade against the points pass across
  * 8..14 px. See `docs/superpowers/plans/2026-05-04-procedural-disk-
@@ -21,7 +21,7 @@
  *
  * ## Why grow-on-demand instance buffer
  *
- * ThumbnailRenderer + TexturedDiskRenderer cap their per-frame count at the atlas
+ * TexturedQuadRenderer + TexturedDiskRenderer cap their per-frame count at the atlas
  * slot count (256), so a fixed-size preallocated buffer fits. The
  * procedural renderer activates for every galaxy in the 8 px+
  * apparent-size band, with no atlas dependency — that count grows
@@ -42,7 +42,7 @@
  * ## Why this is a thin wrapper post-Spec G
  *
  * Pipeline / BGL / uniform buffer / instance buffer plumbing now lives
- * in `instancedQuadRenderer.ts`, shared with thumbnailRenderer +
+ * in `instancedQuadRenderer.ts`, shared with texturedQuadRenderer +
  * texturedDiskRenderer. This file owns: the consumer-facing
  * `createProceduralDiskRenderer` factory signature (preserved
  * unchanged from Spec F), the `ProceduralDiskInstance → packed

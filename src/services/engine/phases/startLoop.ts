@@ -87,11 +87,11 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // here turn that assumption into a typed runtime error if `initGpu`
   // is ever skipped/reordered.
   const milkyWayRenderer = state.gpu.milkyWayRenderer;
-  const thumbnailRenderer = state.gpu.thumbnailRenderer;
+  const texturedQuadRenderer = state.gpu.texturedQuadRenderer;
   const texturedDiskRenderer = state.gpu.texturedDiskRenderer;
   if (
     milkyWayRenderer === null ||
-    thumbnailRenderer === null ||
+    texturedQuadRenderer === null ||
     texturedDiskRenderer === null
   ) {
     throw new Error(
@@ -116,7 +116,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // last phase where every closure-captured local is in scope.  The bag
   // is stable across frames: `lastReportedFps` rides as a `{current}`
   // ref so the body's writes round-trip back into engine.ts; the GPU-
-  // side renderers (`milkyWayRenderer`, `thumbnailRenderer`, …) are
+  // side renderers (`milkyWayRenderer`, `texturedQuadRenderer`, …) are
   // read off `state.gpu.*` directly (M1, 2026-05-11) — they used to
   // ride on `phaseLocals` too, but that mirror was redundant.  See
   // runFrame.ts's module header for the dep-vs-state rationale.
@@ -129,7 +129,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     context: phaseLocals.context,
     milkyWayRenderer,
     filamentRenderer: state.gpu.filamentRenderer!,
-    thumbnailRenderer,
+    texturedQuadRenderer,
     texturedDiskRenderer,
     milkyWayITimeEpochMs,
   };

@@ -21,7 +21,7 @@
  *     `scheduler`.  None of these need a GPU device — their callbacks
  *     queue work that the scheduler will pick up once the IIFE finishes.
  *   - Lazy (inside the IIFE): `thumbnails` (needs the GPU device + the
- *     ThumbnailRenderer / TexturedDiskRenderer pair), `clickResolver` (needs the
+ *     TexturedQuadRenderer / TexturedDiskRenderer pair), `clickResolver` (needs the
  *     pick renderer), `inputBindings` (needs the scheduler so it can
  *     wake the loop on input).  These start as null.
  *

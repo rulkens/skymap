@@ -109,7 +109,7 @@ function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrame
 
 function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
   return {
-    thumbnailRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
+    texturedQuadRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     texturedDiskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     filamentRenderer: null,
     scalarVolumeRenderer: null,

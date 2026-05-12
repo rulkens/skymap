@@ -1,6 +1,7 @@
 /**
- * ThumbnailRenderer — public surface of the textured galaxy-thumbnail
- * renderer. Mirrors the methods the pre-factory `class QuadRenderer`
+ * TexturedQuadRenderer — public surface of the screen-aligned textured
+ * galaxy-thumbnail renderer (LOD-2 fallback for galaxies missing
+ * orientation data). Mirrors the methods the pre-factory `class QuadRenderer`
  * exposed; consumers (engine, thumbnail subsystem, frame body) see the
  * identical shape.
  */
@@ -9,9 +10,9 @@ import type { mat4 } from 'gl-matrix';
 import type { Vec3 } from '../math/Vec3';
 import type { ThumbnailInstance } from './ThumbnailInstance';
 
-export type ThumbnailRenderer = {
+export type TexturedQuadRenderer = {
   /**
-   * Human-readable identifier (`'thumbnailRenderer'`).  Part of the
+   * Human-readable identifier (`'texturedQuadRenderer'`).  Part of the
    * shared `Renderer` contract — see `Renderer.d.ts`.
    */
   readonly label: string;

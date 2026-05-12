@@ -1,5 +1,5 @@
 /**
- * ThumbnailRenderer — billboard quad pass for galaxy thumbnails.
+ * TexturedQuadRenderer — screen-aligned billboard quad pass for galaxy thumbnails (LOD-2 fallback).
  *
  * Runs AFTER the existing point pass each frame. Each instance is one
  * textured quad whose center matches a galaxy and whose size is
@@ -59,7 +59,7 @@
  * The pipeline / BGL / uniform buffer / instance buffer plumbing now
  * lives in `instancedQuadRenderer.ts`, shared with disk + procedural
  * disk renderers. This file owns: the consumer-facing
- * `createThumbnailRenderer` factory signature (preserved unchanged
+ * `createTexturedQuadRenderer` factory signature (preserved unchanged
  * from Spec F, only renamed from `createQuadRenderer`), the
  * `ThumbnailInstance → packed Float32Array` serialization, and the
  * wrapper `draw(...)` that translates the engine's call convention
@@ -70,13 +70,13 @@ import type { mat4 } from 'gl-matrix';
 import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { ThumbnailInstance } from '../../../@types/rendering/ThumbnailInstance';
-import type { ThumbnailRenderer } from '../../../@types/rendering/ThumbnailRenderer';
+import type { TexturedQuadRenderer } from '../../../@types/rendering/TexturedQuadRenderer';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import vsCode from '../shaders/thumbnails/vertex.wesl?static';
 import fsCode from '../shaders/thumbnails/fragment.wesl?static';
 import { FLOATS_PER_INSTANCE, createInstancedQuadRenderer } from './instancedQuadRenderer';
 
-export function createThumbnailRenderer(ctx: GpuContext, maxInstances = 256): ThumbnailRenderer {
+export function createTexturedQuadRenderer(ctx: GpuContext, maxInstances = 256): TexturedQuadRenderer {
   const inner = createInstancedQuadRenderer(ctx, {
     label: 'thumbnail',
     vertexSource: vsCode,
@@ -140,8 +140,8 @@ export function createThumbnailRenderer(ctx: GpuContext, maxInstances = 256): Th
     });
   }
 
-  const renderer: ThumbnailRenderer = {
-    label: 'thumbnailRenderer',
+  const renderer: TexturedQuadRenderer = {
+    label: 'texturedQuadRenderer',
     bindAtlas,
     draw,
     destroy: inner.destroy,

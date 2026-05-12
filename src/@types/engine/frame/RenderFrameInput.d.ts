@@ -20,7 +20,7 @@
 import type { EngineState } from '../state/EngineState';
 import type { PointCloud } from '../../data/PointCloud';
 import type { Source } from '../../../data/sources';
-import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
+import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
@@ -73,13 +73,13 @@ export type RenderFrameInput = {
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
   /**
-   * ThumbnailRenderer + TexturedDiskRenderer references forwarded straight to the
+   * TexturedQuadRenderer + TexturedDiskRenderer references forwarded straight to the
    * thumbnail subsystem.  The subsystem already `bindAtlas`-bound them
    * at engine-startup; the per-frame `runFrame` input still takes them
    * as explicit fields (legacy of the pre-extraction inline body) so
    * we forward them unchanged.  See thumbnailSubsystem.runFrame.
    */
-  thumbnailRenderer: ThumbnailRenderer;
+  texturedQuadRenderer: TexturedQuadRenderer;
   texturedDiskRenderer: TexturedDiskRenderer;
 
   // ── Settings ──────────────────────────────────────────────────────────

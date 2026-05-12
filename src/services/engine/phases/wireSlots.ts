@@ -122,9 +122,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // through there with a `!` bang — the bang was folklore that assumed
   // phase ordering.  The explicit null-checks below turn that assumption
   // into a typed runtime error if `initGpu` is ever skipped/reordered.
-  const { thumbnailRenderer, texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
+  const { texturedQuadRenderer, texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
   if (
-    thumbnailRenderer === null ||
+    texturedQuadRenderer === null ||
     texturedDiskRenderer === null ||
     proceduralDiskRenderer === null
   ) {
@@ -352,7 +352,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     device,
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
-  thumbnails.bindToRenderers(thumbnailRenderer, texturedDiskRenderer, proceduralDiskRenderer);
+  thumbnails.bindToRenderers(texturedQuadRenderer, texturedDiskRenderer, proceduralDiskRenderer);
   state.subsystems.thumbnails = thumbnails;
 
   // Signal loading state immediately so the user knows something is

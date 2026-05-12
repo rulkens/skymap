@@ -6,7 +6,7 @@
  *
  * Two sub-renderers driven by the thumbnail subsystem:
  *
- *   1. `thumbnailRenderer` — atlas-backed textured billboards for galaxies
+ *   1. `texturedQuadRenderer` — atlas-backed textured billboards for galaxies
  *      whose JPEG/WebP cutouts have been fetched and uploaded to the
  *      2048×2048 LRU atlas.
  *   2. `texturedDiskRenderer` — view-aligned procedural ellipses for galaxies
@@ -33,7 +33,7 @@
  * - `settings.visibleSourceMask` — mirror the points-pass culling
  *   rule so disabled surveys don't fetch thumbnails
  * - `deps.clouds`, `deps.famousMeta`, `deps.famousXrefs`,
- *   `deps.thumbnailRenderer`, `deps.texturedDiskRenderer` — every other
+ *   `deps.texturedQuadRenderer`, `deps.texturedDiskRenderer` — every other
  *   `runFrame` argument
  */
 
@@ -58,7 +58,7 @@ export const galaxyThumbnailsPass: Pass = {
       viewProj: vp,
       pxPerRad: drawPxPerRad,
       camPos: drawCamPos,
-      thumbnailRenderer: deps.thumbnailRenderer,
+      texturedQuadRenderer: deps.texturedQuadRenderer,
       texturedDiskRenderer: deps.texturedDiskRenderer,
       famousMeta: deps.famousMeta,
       famousXrefs: deps.famousXrefs,

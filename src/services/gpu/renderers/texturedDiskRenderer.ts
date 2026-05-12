@@ -1,7 +1,7 @@
 /**
  * TexturedDiskRenderer — oriented 3D galaxy disks (atlas-textured).
  *
- * Differs from ThumbnailRenderer in two ways:
+ * Differs from TexturedQuadRenderer in two ways:
  *   1. Each instance is tilted in 3D world space: the disk's normal points
  *      toward the camera by default (face-on), and is rotated around the
  *      line-of-sight axis by PA, then tilted by inclination angle
@@ -11,11 +11,11 @@
  *      (the disk silhouette IS the geometry, so the on-screen ellipse
  *      falls out of the projection naturally).
  *
- * Why a separate renderer instead of extending ThumbnailRenderer? ThumbnailRenderer
+ * Why a separate renderer instead of extending TexturedQuadRenderer? TexturedQuadRenderer
  * bakes screen-aligned billboarding into the vertex shader — corner offsets
  * are applied in CLIP space after viewProj. Tilting in 3D requires the
  * corners to be transformed in WORLD space and then projected, which is a
- * fundamentally different pipeline. Keeping ThumbnailRenderer alive lets the
+ * fundamentally different pipeline. Keeping TexturedQuadRenderer alive lets the
  * engine pick the screen-aligned thumbnail path for fallback orientations
  * (where tilting would be cosmetically misleading) and for galaxies still
  * loading their textures.
@@ -58,7 +58,7 @@ export function createTexturedDiskRenderer(ctx: GpuContext, maxInstances = 256):
     fragmentSource: fsCode,
     atlas: {},
     capacity: { kind: 'fixed', max: maxInstances },
-    // Galaxy disks are EMISSIVE — see thumbnailRenderer.ts for the
+    // Galaxy disks are EMISSIVE — see texturedQuadRenderer.ts for the
     // fade-to-black bug history that motivates additive over
     // premultiplied-OVER.
     blend: 'additive',

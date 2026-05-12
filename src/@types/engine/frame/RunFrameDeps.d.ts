@@ -10,7 +10,7 @@
  */
 
 import type { EngineCallbacks } from '../EngineCallbacks';
-import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
+import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
@@ -39,7 +39,7 @@ export type RunFrameDeps = {
   /** Filament renderer; instantiated inside the IIFE. */
   filamentRenderer: FilamentRenderer;
   /** Textured-quad renderer for galaxy thumbnails. */
-  thumbnailRenderer: ThumbnailRenderer;
+  texturedQuadRenderer: TexturedQuadRenderer;
   /** 3D-oriented disk renderer for large galaxies. */
   texturedDiskRenderer: TexturedDiskRenderer;
   /**

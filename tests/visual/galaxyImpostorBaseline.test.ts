@@ -16,7 +16,7 @@ import { Source } from '../../src/data/sources';
 import { createThumbnailSubsystem } from '../../src/services/engine/subsystems/thumbnailSubsystem';
 import type { PointCloud } from '../../src/@types/data/PointCloud';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
-import type { ThumbnailRenderer } from '../../src/@types/rendering/ThumbnailRenderer';
+import type { TexturedQuadRenderer } from '../../src/@types/rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../src/@types/rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../src/@types/rendering/ProceduralDiskRenderer';
 
@@ -120,8 +120,8 @@ describe('galaxy-impostor visual baseline', () => {
     const quad = {
       bindAtlas: vi.fn(),
       draw: quadDraw,
-      label: 'thumbnailRenderer',
-    } as unknown as ThumbnailRenderer;
+      label: 'texturedQuadRenderer',
+    } as unknown as TexturedQuadRenderer;
     const disk = {
       bindAtlas: vi.fn(),
       draw: diskDraw,
@@ -153,7 +153,7 @@ describe('galaxy-impostor visual baseline', () => {
       camPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
         [number, number, number]
       >,
-      thumbnailRenderer: quad,
+      texturedQuadRenderer: quad,
       texturedDiskRenderer: disk,
       famousMeta: [],
       famousXrefs: {},
@@ -176,11 +176,11 @@ describe('galaxy-impostor visual baseline', () => {
 
     const records: DrawRecord[] = [];
     if (quadDraw.mock.calls.length > 0) {
-      // thumbnailRenderer.draw(pass, viewProj, viewportPx, instances, camPosWorld, pxPerRad)
+      // texturedQuadRenderer.draw(pass, viewProj, viewportPx, instances, camPosWorld, pxPerRad)
       // — instances is positional arg 3.
       const instances = quadDraw.mock.calls[0]![3] as ReadonlyArray<object>;
       records.push({
-        renderer: 'thumbnailRenderer',
+        renderer: 'texturedQuadRenderer',
         count: instances.length,
         hashes: hashInstances(instances),
       });

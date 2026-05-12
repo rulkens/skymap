@@ -5,7 +5,7 @@
  *
  * ## Why this exists
  *
- * Pre-Spec G the three renderers (`thumbnailRenderer.ts`, `texturedDiskRenderer.ts`,
+ * Pre-Spec G the three renderers (`texturedQuadRenderer.ts`, `texturedDiskRenderer.ts`,
  * `proceduralDiskRenderer.ts`) each carried a near-identical block of
  * WebGPU plumbing:
  *
@@ -55,14 +55,14 @@
  *     just be a typed dispatch, defeating the point.
  *   - Their public API surface, so call sites in the engine don't
  *     change. Each consumer factory returns its own type
- *     (`ThumbnailRenderer` etc.) whose `draw` takes its typed instance
+ *     (`TexturedQuadRenderer` etc.) whose `draw` takes its typed instance
  *     array and forwards a packed `Float32Array` here.
  *
  * ## Capacity strategies
  *
  *   - `fixed`: preallocate one `max * 48`-byte vertex buffer at
  *     construction. Each draw `writeBuffer`s into offset 0. Matches
- *     ThumbnailRenderer + TexturedDiskRenderer, whose engine-side filters cap the
+ *     TexturedQuadRenderer + TexturedDiskRenderer, whose engine-side filters cap the
  *     per-frame count at the atlas slot count (256). Over-capacity is
  *     a programming error in the engine; we don't truncate or guard.
  *   - `grow`: lazy first-allocation, regrow on overflow. Matches
@@ -91,7 +91,7 @@
  * impostors plus the Milky Way layer accumulate naturally in the HDR
  * target without any pass "covering up" the others. An earlier Quad
  * revision used premultiplied OVER and produced a fade-to-black bug
- * at thumbnail edges; see `thumbnailRenderer.ts` history for the full
+ * at thumbnail edges; see `texturedQuadRenderer.ts` history for the full
  * post-mortem.
  *
  * The factory accepts an `'alpha'` blend variant for forward
@@ -126,7 +126,7 @@ export const BYTES_PER_INSTANCE = FLOATS_PER_INSTANCE * 4;
  *   bytes 92..95 : pxPerRad      f32          (or padding for disks)
  *
  * Total: 96 bytes. The `pxPerRad` slot is consumer-specific —
- * ThumbnailRenderer + ProceduralDiskRenderer use it for pixel-radius
+ * TexturedQuadRenderer + ProceduralDiskRenderer use it for pixel-radius
  * computation; TexturedDiskRenderer leaves it as zero padding. The factory
  * always writes whatever the caller passes in `draw`'s `pxPerRad`
  * (default 0), so consumers that don't care can simply omit it.

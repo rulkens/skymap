@@ -211,7 +211,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //
   // The render loop's `frame()` body lives in `runFrame.ts`, called
   // from the `startLoop` bootstrap phase, because it reads GPU
-  // resources (device, context, thumbnailRenderer, texturedDiskRenderer) that
+  // resources (device, context, texturedQuadRenderer, texturedDiskRenderer) that
   // initGpu() returns asynchronously.  But the `RenderScheduler` we
   // wire into `state.subsystems.scheduler` needs an `onFrame` callback
   // at construction time — which is *here*, in the synchronous state
@@ -377,7 +377,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // point of use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
-      // thumbnailRenderer / texturedDiskRenderer / proceduralDiskRenderer /
+      // texturedQuadRenderer / texturedDiskRenderer / proceduralDiskRenderer /
       // milkyWayRenderer: null until initGpu constructs them.  These
       // four don't gate any frame-loop logic via state.gpu — the frame
       // body reads them through RunFrameDeps (assembled in
@@ -391,7 +391,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // clean them up; M1 of the 2026-05-11 audit then collapsed
       // the redundant `phaseLocals` mirror.  See
       // `EngineGpuHandles.d.ts` for the full reachability story.
-      thumbnailRenderer: null,
+      texturedQuadRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
@@ -1190,8 +1190,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
-    state.gpu.thumbnailRenderer?.destroy();
-    state.gpu.thumbnailRenderer = null;
+    state.gpu.texturedQuadRenderer?.destroy();
+    state.gpu.texturedQuadRenderer = null;
     state.gpu.texturedDiskRenderer?.destroy();
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();

@@ -15,7 +15,7 @@
  * single canonical site.
  */
 
-import type { ThumbnailRenderer } from '../../rendering/ThumbnailRenderer';
+import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
@@ -27,7 +27,7 @@ import type { Source } from '../../../data/sources';
 
 export type PassDeps = {
   /** Atlas-bound textured-billboard renderer for galaxy thumbnails. */
-  thumbnailRenderer: ThumbnailRenderer;
+  texturedQuadRenderer: TexturedQuadRenderer;
   /** 3D-oriented procedural-disk renderer for large galaxies. */
   texturedDiskRenderer: TexturedDiskRenderer;
   /**
