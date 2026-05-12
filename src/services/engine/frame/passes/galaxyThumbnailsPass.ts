@@ -1,40 +1,21 @@
 /**
- * galaxyThumbnailsPass — per-galaxy thumbnail quads + procedural
- * disk impostors.
+ * galaxyThumbnailsPass — DEPRECATED no-op shim.
  *
- * ### What it draws
+ * The legacy combined "thumbnails + procedural disks" pass was split
+ * into `proceduralDisksPass` and `texturedImpostorsPass` during the
+ * 2026-05-12 impostor-subsystem-split work (Task 11/12).  Production
+ * no longer references this pass — it was removed from
+ * `HDR_PASSES` in Task 12.
  *
- * Two sub-renderers driven by the thumbnail subsystem:
+ * The file is intentionally retained until Task 14 because the visual
+ * baseline test (`tests/visual/galaxyImpostorBaseline.test.ts`) still
+ * imports the legacy `createThumbnailSubsystem` directly, and the
+ * old `passes.test.ts` import history points here.  Task 14 deletes
+ * this file together with `thumbnailSubsystem.ts` once the new
+ * subsystem tests have settled.
  *
- *   1. `texturedQuadRenderer` — atlas-backed textured billboards for galaxies
- *      whose JPEG/WebP cutouts have been fetched and uploaded to the
- *      2048×2048 LRU atlas.
- *   2. `texturedDiskRenderer` — view-aligned procedural ellipses for galaxies
- *      whose apparent size is large enough for the disk to look like
- *      more than a point but whose thumbnail hasn't landed yet (or
- *      whose source doesn't have a thumbnail provider).
- *
- * The subsystem owns the back-to-front sort, the atlas LRU, and the
- * fetch queue priority — this pass just calls `runFrame(...)` and
- * forwards every per-frame value the subsystem reads.
- *
- * ### When it draws
- *
- * Gated on `settings.galaxyTexturesEnabled`.  The toggle is
- * user-facing (Settings panel → "Galaxy thumbnails"); when off, no
- * fetches start, no atlas writes happen, and the entire pass costs
- * one boolean check per frame.
- *
- * ### What it reads
- *
- * - `ctx.thumbnails` (the bootstrap-narrowed `ThumbnailSubsystem`)
- * - `ctx.cam`, `ctx.vp`, `ctx.canvasSize`, `ctx.drawCamPos`,
- *   `ctx.drawPxPerRad` — forwarded into `runFrame`
- * - `settings.visibleSourceMask` — mirror the points-pass culling
- *   rule so disabled surveys don't fetch thumbnails
- * - `deps.clouds`, `deps.famousMeta`, `deps.famousXrefs`,
- *   `deps.texturedQuadRenderer`, `deps.texturedDiskRenderer` — every other
- *   `runFrame` argument
+ * Body retained as a no-op stub so the file compiles (the
+ * `ReadyFrameContext.thumbnails` field is gone post-Task-11).
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
@@ -42,26 +23,11 @@ import type { Pass } from '../../../../@types/engine/frame/Pass';
 export const galaxyThumbnailsPass: Pass = {
   name: 'galaxy-thumbnails',
 
-  enabled(_state, _ctx, settings) {
-    return settings.galaxyTexturesEnabled;
+  enabled() {
+    return false;
   },
 
-  draw(pass, ctx, _state, settings, deps) {
-    const { cam, vp, canvasSize, drawCamPos, drawPxPerRad, thumbnails } = ctx;
-
-    thumbnails.runFrame({
-      cam,
-      clouds: deps.clouds,
-      visibleSourceMask: settings.visibleSourceMask,
-      canvasSize: { width: canvasSize.width, height: canvasSize.height },
-      pass,
-      viewProj: vp,
-      pxPerRad: drawPxPerRad,
-      camPos: drawCamPos,
-      texturedQuadRenderer: deps.texturedQuadRenderer,
-      texturedDiskRenderer: deps.texturedDiskRenderer,
-      famousMeta: deps.famousMeta,
-      famousXrefs: deps.famousXrefs,
-    });
+  draw() {
+    // no-op — superseded by proceduralDisksPass + texturedImpostorsPass.
   },
 };

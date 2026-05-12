@@ -401,10 +401,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       scalarVolumeRenderer: null,
     },
     subsystems: {
-      // ── LOD-1 / LOD-2 impostor planners ──────────────────────────
-      // Both null until Task 11 wires `wireSlots` to construct them.
-      // Production still reads from the legacy `thumbnails` subsystem
-      // until that cutover lands.
+      // ── LOD-1 / LOD-2 impostor planners + atlas ─────────────────
+      // All three null until `wireSlots` constructs them post-GPU init.
+      galaxyAtlas: null,
       proceduralDisks: null,
       texturedImpostors: null,
       // ── Tween manager ──────────────────────────────────────────
@@ -511,9 +510,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // broke hover-pick for one refactor cycle.
       scheduler: createRenderScheduler({ onFrame: () => frameRef.current() }),
 
-      // The remaining three subsystems land later in the IIFE once
-      // their dependencies (GPU device, pickRenderer, scheduler) exist.
-      thumbnails: null,
+      // The remaining subsystems land later in the IIFE once their
+      // dependencies (GPU device, pickRenderer, scheduler) exist.
       clickResolver: null,
       inputBindings: null,
       // Aggregator for download-progress events — instantiated inside
@@ -1173,8 +1171,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.youAreHere.destroy();
     state.subsystems.labelDirector.destroy();
     state.subsystems.pois.destroy();
-    state.subsystems.thumbnails?.destroy();
-    state.subsystems.thumbnails = null;
+    // Teardown order across the three impostor subsystems matters:
+    // texturedImpostors subscribes to galaxyAtlas's eviction handler
+    // (so destroy it first), proceduralDisks is independent, and
+    // galaxyAtlas releases its GPU texture last among the three.
+    state.subsystems.texturedImpostors?.destroy();
+    state.subsystems.texturedImpostors = null;
+    state.subsystems.proceduralDisks?.destroy();
+    state.subsystems.proceduralDisks = null;
+    state.subsystems.galaxyAtlas?.destroy();
+    state.subsystems.galaxyAtlas = null;
     state.subsystems.spaceMouse.destroy();
     state.subsystems.clickResolver?.destroy();
     state.subsystems.clickResolver = null;

@@ -276,7 +276,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     renderer: pointRenderer,
     postProcess,
-    thumbnails,
+    texturedImpostors: thumbnails,
   };
 
   return {
@@ -309,7 +309,15 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       // in their `enabled()` gates.  Provide null for both new handles so
       // the passes correctly skip (enabled returns false), which matches the
       // pre-atlas-load behaviour and keeps existing renderFrame tests green.
-      state: { gpu: { labelRenderer: null, markerLineRenderer: null, scalarVolumeRenderer: null } } as never,
+      state: {
+        gpu: { labelRenderer: null, markerLineRenderer: null, scalarVolumeRenderer: null },
+        // Task 11 split the legacy thumbnails subsystem into three.  The new
+        // proceduralDisksPass / texturedImpostorsPass each read their slot
+        // off `state.subsystems` in their `enabled()` gate; nulling them
+        // here makes the passes skip cleanly so the legacy renderFrame
+        // assertions continue to focus on point + milky-way ordering.
+        subsystems: { proceduralDisks: null, texturedImpostors: null },
+      } as never,
       milkyWayITimeSec: 0,
       device,
       context,
@@ -411,40 +419,14 @@ describe('renderFrame', () => {
     expect(drawSettings.selectedPacked).toBe(expected);
   });
 
-  it('calls thumbnails.runFrame between pointRenderer.draw and pass.end', () => {
-    renderFrame(fx.input);
-    const log = fx.callLog;
-    const idxPoint = log.indexOf('pointRenderer.draw');
-    const idxThumb = log.indexOf('thumbnails.runFrame');
-    const idxEnd = log.indexOf('pass.end');
-    expect(idxPoint).toBeGreaterThanOrEqual(0);
-    expect(idxThumb).toBeGreaterThan(idxPoint);
-    expect(idxEnd).toBeGreaterThan(idxThumb);
-  });
-
-  it('skips thumbnails.runFrame when galaxyTexturesEnabled is false', () => {
-    const fx2 = makeInput({ settings: { galaxyTexturesEnabled: false } });
-    renderFrame(fx2.input);
-    expect(fx2.thumbnails.runFrame).not.toHaveBeenCalled();
-    // But pointRenderer.draw + tone-map still happen.
-    expect(fx2.pointRenderer.draw).toHaveBeenCalledTimes(1);
-    expect(fx2.postProcess.draw).toHaveBeenCalledTimes(1);
-  });
-
-  it('forwards the shared pxPerRad + camPos to thumbnails.runFrame so both passes match', () => {
-    renderFrame(fx.input);
-    const runFrame = fx.thumbnails.runFrame as ReturnType<typeof vi.fn>;
-    expect(runFrame).toHaveBeenCalledTimes(1);
-    const arg = runFrame.mock.calls[0]![0] as any;
-    const expectedPxPerRad = fx.canvasHeight / (2 * Math.tan(fx.cam.fovYRad / 2));
-    expect(arg.pxPerRad).toBeCloseTo(expectedPxPerRad, 6);
-    expect(Array.from(arg.camPos as ArrayLike<number>)).toEqual([0, 0, 5]);
-    expect(arg.canvasSize).toEqual({ width: 1280, height: 720 });
-    expect(arg.viewProj).toBe(fx.viewProj);
-    expect(arg.visibleSourceMask).toBe(fx.input.settings.visibleSourceMask);
-    expect(arg.clouds).toBe(fx.input.clouds);
-    expect(arg.pass).toBe(fx.env.pass);
-  });
+  // Legacy "thumbnails.runFrame" assertions removed in the 2026-05-12
+  // impostor-subsystem-split (Tasks 11/12).  The combined `runFrame` call
+  // that lived inside the legacy galaxyThumbnailsPass is gone — the LOD-1
+  // and LOD-2 plans are now produced by `proceduralDiskSubsystem.runFrame`
+  // and `texturedImpostorSubsystem.runFrame` upstream in `runFrame.ts`,
+  // and the two new passes (`proceduralDisksPass`, `texturedImpostorsPass`)
+  // just issue the renderer draws.  Per-pass coverage lives in
+  // `passes/proceduralDisksPass.test.ts` and `passes/texturedImpostorsPass.test.ts`.
 
   it('calls postProcess.draw after pass.end with exposure, curve, and the swap-chain view', () => {
     renderFrame(fx.input);
@@ -466,20 +448,18 @@ describe('renderFrame', () => {
     expect(args[3]).toBe(fx.input.settings.toneMapCurve);
   });
 
-  it('records full frame in the canonical order: createEncoder → beginRenderPass → pointRenderer.draw → thumbnails.runFrame → milkyWayRenderer.draw → pass.end → postProcess.draw → encoder.finish → submit', () => {
-    // Every HDR pipeline now uses pure additive blending, so the
-    // per-fragment colour value is mathematically order-independent
-    // (A+B = B+A).  Even so, the deterministic draw order points →
-    // thumbnails → milky way is meaningful: it keeps the encoder
-    // record reproducible across frames and HMR reloads, and matches
-    // the conceptual layering "background atlas → cluster overlays".
-    // See the renderFrame doc-comment for context.
+  it('records full frame in the canonical order: createEncoder → beginRenderPass → pointRenderer.draw → milkyWayRenderer.draw → pass.end → postProcess.draw → encoder.finish → submit', () => {
+    // Post-Task-11 split: the legacy `thumbnails.runFrame` is gone from
+    // this trace.  The two new passes (proceduralDisksPass and
+    // texturedImpostorsPass) gate `enabled()` on their subsystems'
+    // `lastOutput` being non-empty; the fixture's `state.subsystems`
+    // nulls both slots so the gates report false and the trace omits
+    // them.  Per-pass coverage lives in their own test files.
     renderFrame(fx.input);
     const interesting = [
       'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'pointRenderer.draw',
-      'thumbnails.runFrame',
       'milkyWayRenderer.draw',
       'pass.end',
       'postProcess.draw',
@@ -490,22 +470,20 @@ describe('renderFrame', () => {
     expect(filtered).toEqual(interesting);
   });
 
-  it('draws the Milky Way impostor after thumbnails.runFrame for deterministic crossfade composition', () => {
-    // Concrete ordering claim: thumbnail draws happen *before* the
-    // Milky Way draw inside the same render pass.  Even though every
-    // HDR pipeline is now additive (so per-fragment colour is
-    // commutative), pinning the order down keeps the encoder record
-    // reproducible — useful for HMR-stability and for any future
-    // visual-regression baseline that captures the encoder
-    // descriptor.  If a future change reorders these draws, this
-    // test makes that an explicit decision rather than an accident.
+  it('draws the Milky Way impostor after pointRenderer.draw for deterministic crossfade composition', () => {
+    // The legacy variant of this test asserted ordering against
+    // `thumbnails.runFrame`.  Post-Task-11 the impostor draws are in
+    // separate passes (proceduralDisks + texturedImpostors), and this
+    // fixture's nulled subsystems keep both passes disabled — so the
+    // residual order claim is points-before-milky-way-before-end, which
+    // is still a meaningful encoder-record invariant.
     renderFrame(fx.input);
     const log = fx.callLog;
-    const idxThumb = log.indexOf('thumbnails.runFrame');
+    const idxPoint = log.indexOf('pointRenderer.draw');
     const idxMw = log.indexOf('milkyWayRenderer.draw');
     const idxEnd = log.indexOf('pass.end');
-    expect(idxThumb).toBeGreaterThanOrEqual(0);
-    expect(idxMw).toBeGreaterThan(idxThumb);
+    expect(idxPoint).toBeGreaterThanOrEqual(0);
+    expect(idxMw).toBeGreaterThan(idxPoint);
     expect(idxEnd).toBeGreaterThan(idxMw);
   });
 });

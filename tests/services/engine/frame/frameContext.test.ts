@@ -51,7 +51,7 @@ function makeCam(overrides: Partial<OrbitCamera> = {}): OrbitCamera {
 
 /**
  * Build an `EngineState`-shaped fixture with the four guard fields
- * (`cam`, `gpu.renderer`, `gpu.postProcess`, `subsystems.thumbnails`)
+ * (`cam`, `gpu.renderer`, `gpu.postProcess`, `subsystems.texturedImpostors`)
  * populated by default.  Each test override can null any one of them
  * to exercise the not-ready branch.
  */
@@ -59,18 +59,18 @@ function makeState(overrides: {
   cam?: OrbitCamera | null;
   renderer?: unknown;
   postProcess?: unknown;
-  thumbnails?: unknown;
+  texturedImpostors?: unknown;
 } = {}): EngineState {
   const cam = overrides.cam === undefined ? makeCam() : overrides.cam;
   const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
   const postProcess =
     overrides.postProcess === undefined ? ({} as unknown) : overrides.postProcess;
-  const thumbnails =
-    overrides.thumbnails === undefined ? ({} as unknown) : overrides.thumbnails;
+  const texturedImpostors =
+    overrides.texturedImpostors === undefined ? ({} as unknown) : overrides.texturedImpostors;
   return {
     cam,
     gpu: { renderer, postProcess },
-    subsystems: { thumbnails },
+    subsystems: { texturedImpostors },
   } as unknown as EngineState;
 }
 
@@ -94,8 +94,8 @@ describe('deriveFrameContext — not-ready branch', () => {
     expect(ctx.isReady).toBe(false);
   });
 
-  it('returns isReady:false when subsystems.thumbnails is null', () => {
-    const ctx = deriveFrameContext(makeState({ thumbnails: null }), makeCanvas());
+  it('returns isReady:false when subsystems.texturedImpostors is null', () => {
+    const ctx = deriveFrameContext(makeState({ texturedImpostors: null }), makeCanvas());
     expect(ctx.isReady).toBe(false);
   });
 });
@@ -130,19 +130,19 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.vp.length).toBe(16);
   });
 
-  it('forwards renderer, postProcess, thumbnails references onto the ready context', () => {
+  it('forwards renderer, postProcess, texturedImpostors references onto the ready context', () => {
     const renderer = { tag: 'renderer' };
     const postProcess = { tag: 'postProcess' };
-    const thumbnails = { tag: 'thumbnails' };
+    const texturedImpostors = { tag: 'texturedImpostors' };
     const ctx = deriveFrameContext(
-      makeState({ renderer, postProcess, thumbnails }),
+      makeState({ renderer, postProcess, texturedImpostors }),
       makeCanvas(),
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.renderer).toBe(renderer);
     expect(ctx.postProcess).toBe(postProcess);
-    expect(ctx.thumbnails).toBe(thumbnails);
+    expect(ctx.texturedImpostors).toBe(texturedImpostors);
   });
 });
 

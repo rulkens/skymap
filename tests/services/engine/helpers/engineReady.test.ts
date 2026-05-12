@@ -11,7 +11,7 @@
  *   2. Type narrowing — after `if (isEngineReady(state))`, the
  *      compiler treats `state.cam`, `state.gpu.renderer`,
  *      `state.gpu.postProcess`, `state.gpu.pickRenderer`, and
- *      `state.subsystems.thumbnails` as non-null without `!` or
+ *      `state.subsystems.texturedImpostors` as non-null without `!` or
  *      `?.`.  We assert this with `@ts-expect-error` over an
  *      access that is intentionally rejected pre-narrowing, plus
  *      a positive access post-narrowing that compiles cleanly.
@@ -47,7 +47,7 @@ function makeState(overrides: {
   renderer?: unknown;
   postProcess?: unknown;
   pickRenderer?: unknown;
-  thumbnails?: unknown;
+  texturedImpostors?: unknown;
 } = {}): EngineState {
   const cam = overrides.cam === undefined ? ({} as unknown as OrbitCamera) : overrides.cam;
   const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
@@ -55,12 +55,12 @@ function makeState(overrides: {
     overrides.postProcess === undefined ? ({} as unknown) : overrides.postProcess;
   const pickRenderer =
     overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
-  const thumbnails =
-    overrides.thumbnails === undefined ? ({} as unknown) : overrides.thumbnails;
+  const texturedImpostors =
+    overrides.texturedImpostors === undefined ? ({} as unknown) : overrides.texturedImpostors;
   return {
     cam,
     gpu: { renderer, postProcess, pickRenderer },
-    subsystems: { thumbnails },
+    subsystems: { texturedImpostors },
   } as unknown as EngineState;
 }
 
@@ -81,8 +81,8 @@ describe('isEngineReady — false branch', () => {
     expect(isEngineReady(makeState({ pickRenderer: null }))).toBe(false);
   });
 
-  it('returns false when state.subsystems.thumbnails is null', () => {
-    expect(isEngineReady(makeState({ thumbnails: null }))).toBe(false);
+  it('returns false when state.subsystems.texturedImpostors is null', () => {
+    expect(isEngineReady(makeState({ texturedImpostors: null }))).toBe(false);
   });
 });
 
@@ -105,7 +105,7 @@ describe('isEngineReady — true branch', () => {
 });
 
 describe('isEngineReady — type narrowing', () => {
-  it('narrows state.cam, gpu handles, and thumbnails to non-null', () => {
+  it('narrows state.cam, gpu handles, and texturedImpostors to non-null', () => {
     const state = makeState();
 
     // Pre-narrowing, `state.cam` is `OrbitCamera | null`, so reading
@@ -125,7 +125,7 @@ describe('isEngineReady — type narrowing', () => {
       void state.gpu.renderer.totalCount;
       void state.gpu.postProcess.draw;
       void state.gpu.pickRenderer.pick;
-      void state.subsystems.thumbnails.runFrame;
+      void state.subsystems.texturedImpostors.runFrame;
 
       // Sanity: the runtime value is the same object, only the type
       // narrowing changed.  This guards against a future

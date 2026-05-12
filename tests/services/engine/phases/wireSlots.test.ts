@@ -126,6 +126,35 @@ vi.mock('../../../../src/services/engine/subsystems/thumbnailSubsystem', () => (
   })),
 }));
 
+// Post-Task-11 split: wireSlots now constructs three subsystems where
+// `thumbnailSubsystem` used to live.  Each carries the same GPU-device
+// dependency the legacy mock above was guarding against, so we mock
+// all three the same way: hollow factories that satisfy the call sites
+// without touching the (stubbed) device.
+vi.mock('../../../../src/services/engine/subsystems/galaxyAtlasSubsystem', () => ({
+  createGalaxyAtlasSubsystem: vi.fn(() => ({
+    getTextureView: vi.fn(() => ({}) as unknown as GPUTextureView),
+    destroy: vi.fn(),
+  })),
+}));
+vi.mock('../../../../src/services/engine/subsystems/proceduralDiskSubsystem', () => ({
+  createProceduralDiskSubsystem: vi.fn(() => ({
+    runFrame: vi.fn(),
+    lastOutput: { instances: [] },
+    destroy: vi.fn(),
+  })),
+  PROCEDURAL_DISK_FADE_START_PX: 8,
+  PROCEDURAL_DISK_FADE_END_PX: 14,
+}));
+vi.mock('../../../../src/services/engine/subsystems/texturedImpostorSubsystem', () => ({
+  createTexturedImpostorSubsystem: vi.fn(() => ({
+    runFrame: vi.fn(),
+    lastOutput: { quads: [], disks: [] },
+    hasInFlightWork: vi.fn(() => false),
+    destroy: vi.fn(),
+  })),
+}));
+
 // Load-progress emitter: keep the real factory (so the slot registry
 // gets walked) but spy on it so we can assert the Map size at the
 // moment wireSlots hands the registry off.
@@ -252,8 +281,8 @@ function makeState(overrides: Partial<{
       } as never,
       labelRenderer: null,
       markerLineRenderer: null,
-      texturedQuadRenderer: {} as never,
-      texturedDiskRenderer: {} as never,
+      texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
+      texturedDiskRenderer: { bindAtlas: vi.fn() } as never,
       proceduralDiskRenderer: {} as never,
       milkyWayRenderer: null,
       scalarVolumeRenderer: {
@@ -268,7 +297,9 @@ function makeState(overrides: Partial<{
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() } as never,
-      thumbnails: null,
+      galaxyAtlas: null,
+      proceduralDisks: null,
+      texturedImpostors: null,
       loadProgress: null,
     } as never,
     cam: null,

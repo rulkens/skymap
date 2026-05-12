@@ -147,7 +147,7 @@ describe('EngineState type', () => {
         scalarVolumeRenderer: null,
       },
       subsystems: {
-        thumbnails: null,
+        galaxyAtlas: null,
         proceduralDisks: null,
         texturedImpostors: null,
         loadProgress: null,
@@ -285,7 +285,7 @@ describe('EngineState type', () => {
         scalarVolumeRenderer: null,
       },
       subsystems: {
-        thumbnails: null,
+        galaxyAtlas: null,
         proceduralDisks: null,
         texturedImpostors: null,
         loadProgress: null,

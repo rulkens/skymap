@@ -20,10 +20,11 @@
  *   - Up-front (before the async GPU IIFE runs): `spaceMouse`, `tweens`,
  *     `scheduler`.  None of these need a GPU device — their callbacks
  *     queue work that the scheduler will pick up once the IIFE finishes.
- *   - Lazy (inside the IIFE): `thumbnails` (needs the GPU device + the
- *     TexturedQuadRenderer / TexturedDiskRenderer pair), `clickResolver` (needs the
- *     pick renderer), `inputBindings` (needs the scheduler so it can
- *     wake the loop on input).  These start as null.
+ *   - Lazy (inside the IIFE): `galaxyAtlas` / `proceduralDisks` /
+ *     `texturedImpostors` (need the GPU device + the
+ *     TexturedQuadRenderer / TexturedDiskRenderer pair), `clickResolver`
+ *     (needs the pick renderer), `inputBindings` (needs the scheduler so
+ *     it can wake the loop on input).  These start as null.
  *
  * The mixed nullability here matches the GPU handles bag — see
  * `EngineGpuHandles.d.ts` for the same rationale (consumer null-checks
@@ -36,7 +37,7 @@
  * rather than the whole engine state.
  */
 
-import type { ThumbnailSubsystem } from '../subsystems/ThumbnailSubsystem';
+import type { GalaxyAtlasSubsystem } from '../subsystems/GalaxyAtlasSubsystem';
 import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
 import type { TexturedImpostorSubsystem } from '../subsystems/TexturedImpostorSubsystem';
 import type { SpaceMouseSubsystem } from '../subsystems/SpaceMouseSubsystem';
@@ -53,22 +54,8 @@ import type { LoadProgressEmitter } from '../../loading/LoadProgressEmitter';
 import type { Destroyable } from '../../rendering/Destroyable';
 
 export type EngineSubsystemHandles = {
-  thumbnails: ThumbnailSubsystem | null;
-  /**
-   * LOD-1 per-frame planner — walks the catalog and emits a
-   * `ProceduralDiskInstance[]` array.  Coexists with `thumbnails`
-   * until Task 11 cuts production over to read from this slot.
-   * Constructed inside the GPU init phase (no GPU dep itself, but
-   * its consumer pass file lives in the post-init wiring).
-   */
+  galaxyAtlas: GalaxyAtlasSubsystem | null;
   proceduralDisks: ProceduralDiskSubsystem | null;
-  /**
-   * LOD-2 per-frame planner — walks the catalog, allocates atlas
-   * slots, schedules fetches, emits sorted `DiskInstance[]` +
-   * `ThumbnailInstance[]` arrays.  Depends on `galaxyAtlas`
-   * (constructed first).  Same coexistence story as above —
-   * Task 11 cuts production over.
-   */
   texturedImpostors: TexturedImpostorSubsystem | null;
   spaceMouse: SpaceMouseSubsystem;
   tweens: TweenManager;

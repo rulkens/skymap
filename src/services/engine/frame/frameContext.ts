@@ -134,7 +134,7 @@ export function deriveFrameContext(
   const cam = state.cam;
   const renderer = state.gpu.renderer;
   const postProcess = state.gpu.postProcess;
-  const thumbnails = state.subsystems.thumbnails;
+  const texturedImpostors = state.subsystems.texturedImpostors;
 
   // Snapshot-derive everything the caller would otherwise compute
   // locally.  `computeViewProj` was previously called in `runFrame`;
@@ -159,6 +159,6 @@ export function deriveFrameContext(
     drawPxPerRad,
     renderer,
     postProcess,
-    thumbnails,
+    texturedImpostors,
   };
 }

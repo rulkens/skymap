@@ -8,7 +8,7 @@
  *
  *   - `runFrame.ts` had a 5-way `||` chain across `state.cam`,
  *     `state.gpu.renderer`, `state.gpu.postProcess`,
- *     `state.gpu.pickRenderer`, and `state.subsystems.thumbnails`
+ *     `state.gpu.pickRenderer`, and `state.subsystems.texturedImpostors`
  *     (later consolidated by D.1's `FrameContext`, but minus
  *     `pickRenderer`).
  *   - `runFrame.ts`'s "still-animating" predicate at the end of the
@@ -58,7 +58,7 @@
  * Unlike `filamentRenderer`, `pickRenderer`'s lifecycle matches the
  * other four handles: it's constructed in `phases/wireInput.ts`
  * during the bootstrap IIFE and torn down in `destroy()` alongside
- * `renderer`, `postProcess`, and `thumbnails`.  Either all five are
+ * `renderer`, `postProcess`, and `texturedImpostors`.  Either all five are
  * present or none are — there is no "engine ran but pickRenderer
  * isn't built" state by design.  Including it here lets the per-frame
  * pick branch drop its `state.gpu.pickRenderer!` non-null assertion.
@@ -120,6 +120,6 @@ export function isEngineReady(state: EngineState): state is ReadyEngineState {
     state.gpu.renderer !== null &&
     state.gpu.pickRenderer !== null &&
     state.gpu.postProcess !== null &&
-    state.subsystems.thumbnails !== null
+    state.subsystems.texturedImpostors !== null
   );
 }

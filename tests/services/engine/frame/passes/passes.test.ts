@@ -28,7 +28,8 @@ import { ToneMapCurve } from '../../../../../src/data/toneMapCurve';
 import {
   HDR_PASSES,
   pointSpritesPass,
-  galaxyThumbnailsPass,
+  proceduralDisksPass,
+  texturedImpostorsPass,
   filamentsPass,
   milkyWayPass,
 } from '../../../../../src/services/engine/frame/passes';
@@ -65,7 +66,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   const vp = new Float32Array(16) as unknown as mat4;
   const renderer = { draw: vi.fn() } as any;
   const postProcess = { view: {} as GPUTextureView, draw: vi.fn(), resize: vi.fn(), destroy: vi.fn() } as any;
-  const thumbnails = { runFrame: vi.fn() } as any;
+  const texturedImpostors = { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any;
   return {
     isReady: true,
     cam,
@@ -75,7 +76,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     renderer,
     postProcess,
-    thumbnails,
+    texturedImpostors,
     ...overrides,
   };
 }
@@ -132,16 +133,16 @@ const PASS_STUB = { setPipeline: vi.fn(), setVertexBuffer: vi.fn(), setBindGroup
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('HDR_PASSES registry', () => {
-  it('contains the seven HDR passes in canonical draw order', () => {
+  it('contains the eight HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the encoder record;
-    // see passes/index.ts module header.
-    // Task R4 added marker-lines + labels after milky-way (passes 6 + 7).
-    // Task 8 of the scalar-volume-renderer spec adds scalar-volume after
-    // filaments (pass 4).
-    expect(HDR_PASSES).toHaveLength(7);
+    // see passes/index.ts module header.  The legacy galaxy-thumbnails
+    // pass was split into procedural-disks + textured-impostors in the
+    // 2026-05-12 impostor-subsystem-split work.
+    expect(HDR_PASSES).toHaveLength(8);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
       'point-sprites',
-      'galaxy-thumbnails',
+      'procedural-disks',
+      'textured-impostors',
       'filaments',
       'scalar-volume',
       'milky-way',
@@ -164,16 +165,60 @@ describe('pointSpritesPass.enabled', () => {
   });
 });
 
-describe('galaxyThumbnailsPass.enabled', () => {
-  it('returns true when galaxyTexturesEnabled is true', () => {
+describe('proceduralDisksPass.enabled', () => {
+  it('returns false when galaxyTexturesEnabled is false', () => {
+    const state = {
+      subsystems: {
+        proceduralDisks: { lastOutput: { instances: [{}] } },
+      },
+    } as unknown as EngineState;
     expect(
-      galaxyThumbnailsPass.enabled(STATE_STUB, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
-    ).toBe(true);
+      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: false })),
+    ).toBe(false);
   });
 
-  it('returns false when galaxyTexturesEnabled is false', () => {
+  it('returns false when subsystem is null', () => {
+    const state = { subsystems: { proceduralDisks: null } } as unknown as EngineState;
     expect(
-      galaxyThumbnailsPass.enabled(STATE_STUB, makeCtx(), makeSettings({ galaxyTexturesEnabled: false })),
+      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
+    ).toBe(false);
+  });
+
+  it('returns false when no instances are pending', () => {
+    const state = {
+      subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
+    } as unknown as EngineState;
+    expect(
+      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
+    ).toBe(false);
+  });
+
+  it('returns true when enabled, subsystem present, and instances pending', () => {
+    const state = {
+      subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
+    } as unknown as EngineState;
+    expect(
+      proceduralDisksPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
+    ).toBe(true);
+  });
+});
+
+describe('texturedImpostorsPass.enabled', () => {
+  it('returns false when galaxyTexturesEnabled is false', () => {
+    const state = {
+      subsystems: {
+        texturedImpostors: { lastOutput: { disks: [{}], quads: [] } },
+      },
+    } as unknown as EngineState;
+    expect(
+      texturedImpostorsPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: false })),
+    ).toBe(false);
+  });
+
+  it('returns false when subsystem is null', () => {
+    const state = { subsystems: { texturedImpostors: null } } as unknown as EngineState;
+    expect(
+      texturedImpostorsPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
     ).toBe(false);
   });
 });
