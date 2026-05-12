@@ -1,4 +1,4 @@
-import type { ToneMapCurve } from '../../../data/toneMapCurve';
+import type { ToneMapCurve } from '../../data/ToneMapCurve';
 
 /**
  * EngineTonemapHandle — HDR tone-mapping pass controls.

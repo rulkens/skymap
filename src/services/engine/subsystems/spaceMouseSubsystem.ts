@@ -82,6 +82,8 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { SpaceMouseAxes } from '../../../@types/input/SpaceMouseAxes';
 import type { SpaceMouseInputFactory } from '../../../@types/input/SpaceMouseInputFactory';
 import type { SpaceMouseInputLike } from '../../../@types/input/SpaceMouseInputLike';
+import type { SpaceMouseSubsystem } from '../../../@types/engine/subsystems/SpaceMouseSubsystem';
+import type { CreateSpaceMouseSubsystemInput } from '../../../@types/engine/subsystems/CreateSpaceMouseSubsystemInput';
 import { SpaceMouseInput } from '../../input/spaceMouse';
 import { applyCurve } from '../../input/spaceMouseSensitivity';
 import { applyAxesToCamera, hasAnyAxis } from '../../input/spaceMouseToCamera';
@@ -103,63 +105,6 @@ const MAX_DT_MS = 50;
  * the real measured delta.
  */
 const FIRST_FRAME_DT_MS = 16;
-
-export type SpaceMouseSubsystem = {
-  /**
-   * Open the device-picker UI and open the selected device.  Forwards
-   * directly to `SpaceMouseInput.connect()`.  Returns `{ ok: true }`
-   * on success, `{ ok: false }` on user-cancelled or browser-unsupported.
-   */
-  connect(): Promise<{ ok: boolean }>;
-  /** Release the device and wipe the cached axes.  Idempotent. */
-  disconnect(): void;
-  /** True when a HIDDevice is currently open. */
-  isConnected(): boolean;
-  /** Update the user-facing sensitivity scalar (applied AFTER the cube curve). */
-  setSensitivity(value: number): void;
-  /**
-   * Fast predicate for the still-animating gate — returns true iff any
-   * axis in the latest report is non-zero.  Runs once per frame.
-   */
-  hasAxes(): boolean;
-  /**
-   * Apply the latest axes to `cam`, scaled by elapsed wall-clock time.
-   * No-op (resets the dt baseline) when all axes are zero.  Calls the
-   * engine-supplied `cancelTween` callback before mutating `cam` so
-   * the focus tween yields to user input — same precedence rule as
-   * mouse drag.
-   */
-  applyToCamera(cam: OrbitCamera, nowMs: number): void;
-  /** Tear-down: release the device.  Called from engine.destroy(). */
-  destroy(): void;
-};
-
-export type CreateSpaceMouseSubsystemInput = {
-  /**
-   * Tween-cancel hook.  Called from `applyToCamera()` whenever the
-   * puck is deflected.  Engine wires this to `tweens.cancel()`.
-   */
-  cancelTween: () => void;
-  /**
-   * Connection-change hook.  Forwarded from the underlying
-   * SpaceMouseInput's onConnectionChange.  Engine wires this to the
-   * `onSpaceMouseConnectedChange` UI callback so React's "Connected"
-   * indicator drops back to false when the puck is unplugged.
-   */
-  onConnectionChange: (connected: boolean) => void;
-  /**
-   * Render-on-demand wake-up.  Called from the WebHID inputreport
-   * listener (outside the rAF loop) so the next frame sees the new
-   * axes.  Engine wires this to `scheduler.requestRender()`.
-   */
-  onAxes: () => void;
-  /**
-   * Optional factory override.  Production omits this and we use the
-   * real `SpaceMouseInput` class; tests pass a stub factory so they
-   * can drive `onAxes` / `onConnectionChange` directly.
-   */
-  inputFactory?: SpaceMouseInputFactory;
-};
 
 export function createSpaceMouseSubsystem(
   input: CreateSpaceMouseSubsystemInput,

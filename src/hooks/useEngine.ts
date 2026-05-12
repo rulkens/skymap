@@ -51,6 +51,8 @@ import type { ScaleInfo } from '../@types/engine/ScaleInfo';
 import type { EngineCallbacks } from '../@types/engine/EngineCallbacks';
 import type { LoadProgressState } from '../@types/loading/LoadProgressState';
 import type { Tier } from '../@types/data/Tier';
+import type { UseEngineInput } from '../@types/engine/UseEngineInput';
+import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { initialTierFromViewport } from '../utils/initialTierFromViewport';
 import type { Source } from '../data/sources';
 
@@ -68,30 +70,7 @@ const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
  */
 const SCALE_TARGET_PX = 150;
 
-export type UseEngineInput = {
-  /**
-   * Extra callbacks to layer onto the engine's options block.  In
-   * practice this is the `engineCallbacks` slice from
-   * `useEngineSettings` — settings echoes that drive React-side
-   * SettingsPanel state.  Captured at first render; do not expect
-   * subsequent changes to take effect.
-   */
-  extraCallbacks?: Partial<EngineCallbacks>;
-};
-
-export type UseEngineReturn = {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
-  handleRef: React.RefObject<EngineHandle | null>;
-  status: EngineStatus;
-  hovered: PointInfo | null;
-  selected: PointInfo | null;
-  focused: PointInfo | null;
-  scale: ScaleInfo;
-  fps: number;
-  sourceCounts: Partial<Record<Source, number>>;
-  loadProgress: LoadProgressState | null;
-  currentTier: Tier;
-};
+// UseEngineInput / UseEngineReturn moved to @types/engine/.
 
 export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const { extraCallbacks } = input;

@@ -86,69 +86,12 @@
  * frame or two once the GPU upload settles.
  */
 
-import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { PointInfo } from '../../../@types/engine/PointInfo';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { PointCloud } from '../../../@types/data/PointCloud';
-import type { Source } from '../../../data/sources';
-import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
+import type { SelectionInput } from '../../../@types/engine/subsystems/SelectionInput';
+import type { SelectionSubsystem } from '../../../@types/engine/subsystems/SelectionSubsystem';
+import type { CreateSelectionSubsystemInput } from '../../../@types/engine/subsystems/CreateSelectionSubsystemInput';
 import { buildPointInfo } from '../helpers/pointInfoBuilder';
-
-/**
- * A `(source, localIdx)` selection — what the picker decodes from its
- * r32uint readback, and what every selection-changing call site
- * forwards to this subsystem.  Two distinct slots (hovered / selected)
- * track independently because the user can hover one galaxy while
- * another stays pinned (CLAUDE.md captures the same invariant).
- */
-export type SelectionInput = {
-  source: Source;
-  localIdx: number;
-};
-
-export type SelectionSubsystem = {
-  /** Currently-hovered point, or null. */
-  hovered(): SelectionInput | null;
-  /** Currently-pinned (clicked) point, or null. */
-  selected(): SelectionInput | null;
-  /** Update the hover state.  Fires `cb.onHoverChange` only on actual change. */
-  setHovered(sel: SelectionInput | null): void;
-  /**
-   * Update the selection state.  Fires `cb.onSelectChange` only on
-   * actual change.  Optional `prebuiltInfo` lets callers (e.g.
-   * `selectByAlias`) pass the PointInfo directly when the GPU upload
-   * hasn't settled yet (the cloud is in `state.sources.clouds` but the
-   * renderer hasn't received it).
-   */
-  setSelected(sel: SelectionInput | null, prebuiltInfo?: PointInfo | null): void;
-  /**
-   * Build the PointInfo for a (source, localIdx) tuple.  Returns null
-   * if the cloud isn't loaded or the index is out-of-range.  Used both
-   * internally (for the hover/select callback fan-out) and by callers
-   * that want to look up a point without changing selection state.
-   */
-  pointInfoFor(sel: SelectionInput): PointInfo | null;
-  /** Release internal state (no GPU resources to release). */
-  destroy(): void;
-};
-
-/**
- * Hooks the subsystem needs from the outside world.  All passed once
- * at construction; the cloud / sidecar accessors are CLOSURES (not
- * values) so the subsystem reads the live state at call time — see
- * the module header for why that matters.
- */
-export type CreateSelectionSubsystemInput = {
-  /** UI-callback sink — only `onHoverChange` / `onSelectChange` are read. */
-  cb: EngineCallbacks;
-  /** Live read of source clouds; closure rather than snapshot so tier swaps land. */
-  getCloud: (source: Source) => PointCloud | undefined;
-  /** Live read of the famous-galaxy meta sidecar (curated names + thumbnail IDs). */
-  getFamousMeta: () => readonly FamousMetaEntry[];
-  /** Live read of the famous-galaxy xref sidecar (cross-survey ID joins). */
-  getFamousXrefs: () => FamousXrefMap;
-};
 
 /**
  * Are these two selections value-equal?  Both null → equal; both

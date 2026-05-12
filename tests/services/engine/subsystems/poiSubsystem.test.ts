@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import {
-  createPoiSubsystem,
-  type PointOfInterest,
-} from '../../../../src/services/engine/subsystems/poiSubsystem';
-import type { ReadyFrameContext } from '../../../../src/services/engine/frame/frameContext';
+import { createPoiSubsystem } from '../../../../src/services/engine/subsystems/poiSubsystem';
+import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
+import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(): EngineState {

@@ -49,11 +49,6 @@ import { surveyFluxLimit, surveySchechter } from '../../data/surveyFluxLimits';
 import { expectedNumberDensity } from '../../utils/math/schechterDensity';
 import type { SurveyConstants } from '../../@types/math/SurveyConstants';
 
-// Type moved to `@types/math/SurveyConstants`; re-exported so existing
-// `import { SurveyConstants } from './surveyConstants'` callers keep
-// their import line.
-export type { SurveyConstants };
-
 function buildOne(source: Source): SurveyConstants {
   const schechter = surveySchechter(source);
   const mLim = surveyFluxLimit(source);

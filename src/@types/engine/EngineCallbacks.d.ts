@@ -10,8 +10,8 @@ import type { LodMode } from '../data/LodMode';
 import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
 import type { Source } from '../../data/sources';
-import type { BiasMode } from '../../data/biasMode';
-import type { ToneMapCurve } from '../../data/toneMapCurve';
+import type { BiasMode } from '../data/BiasMode';
+import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 
 /**

@@ -7,7 +7,7 @@
  * lifetimes (HDR pass writes the texture, post-process samples it).
  */
 
-import type { ToneMapCurve } from '../../data/toneMapCurve';
+import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { Size } from './Size';
 
 export type PostProcess = {

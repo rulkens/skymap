@@ -30,11 +30,6 @@
 import { dMaxFromAbsolute } from './distanceModulus';
 import type { VMaxWeightInput } from '../../@types/math/VMaxWeightInput';
 
-// Type moved to `@types/math/VMaxWeightInput`; re-exported so existing
-// `import { VMaxWeightInput } from './vMaxWeight'` callers keep their
-// import line.
-export type { VMaxWeightInput };
-
 export function vMaxWeight(input: VMaxWeightInput): number {
   const { absMag, mLim, dRefMpc } = input;
   if (!Number.isFinite(absMag)) return 0;

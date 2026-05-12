@@ -13,7 +13,7 @@ import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
 import type { ScalarFieldHandle } from './ScalarFieldHandle';
-import type { FieldEntry } from '../../services/gpu/renderers/scalarVolumeRenderer';
+import type { FieldEntry } from './FieldEntry';
 
 // Note: `FieldEntry` is imported from the renderer source rather than
 // extracted into its own d.ts because it's a private per-field internal

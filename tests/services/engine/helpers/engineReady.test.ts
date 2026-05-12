@@ -32,10 +32,8 @@
 
 import { describe, it, expect } from 'vitest';
 
-import {
-  isEngineReady,
-  type ReadyEngineState,
-} from '../../../../src/services/engine/helpers/engineReady';
+import { isEngineReady } from '../../../../src/services/engine/helpers/engineReady';
+import type { ReadyEngineState } from '../../../../src/@types/engine/ReadyEngineState';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 

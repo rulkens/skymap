@@ -42,14 +42,12 @@ export const ToneMapCurve = {
 } as const;
 
 // Type lives in `@types/data/ToneMapCurve` (inlined literal union for
-// value-free .d.ts).  Re-declared via a local alias because `export type
-// { ToneMapCurve } from ...` collides with the value-level `ToneMapCurve`
-// const above (TS2323).  The alias keeps the runtime-value + type pair
-// under a single import.
-import type { ToneMapCurve as ToneMapCurveType } from '../@types/data/ToneMapCurve';
-export type ToneMapCurve = ToneMapCurveType;
+// value-free .d.ts).  Re-imported here under an alias because the
+// value-level `ToneMapCurve` const above otherwise shadows the type at
+// in-file usage sites.  Consumers deep-import the type directly.
+import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 
-export const ALL_TONE_MAP_CURVES: ReadonlyArray<ToneMapCurve> = [
+export const ALL_TONE_MAP_CURVES: ReadonlyArray<ToneMapCurveT> = [
   ToneMapCurve.Linear,
   ToneMapCurve.Reinhard,
   ToneMapCurve.Asinh,
@@ -57,7 +55,7 @@ export const ALL_TONE_MAP_CURVES: ReadonlyArray<ToneMapCurve> = [
   ToneMapCurve.Aces,
 ];
 
-export function toneMapCurveLabel(curve: ToneMapCurve): string {
+export function toneMapCurveLabel(curve: ToneMapCurveT): string {
   switch (curve) {
     case ToneMapCurve.Linear:
       return 'Linear (baseline)';

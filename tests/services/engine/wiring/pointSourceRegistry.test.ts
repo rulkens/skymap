@@ -35,9 +35,9 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   POINT_SOURCE_REGISTRY,
   wirePointSourceSlot,
-  type PointSourceConfig,
-  type WirePointSourceDeps,
 } from '../../../../src/services/engine/wiring/pointSourceRegistry';
+import type { PointSourceConfig } from '../../../../src/@types/engine/wiring/PointSourceConfig';
+import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/WirePointSourceDeps';
 import { Source } from '../../../../src/data/sources';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';

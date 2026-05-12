@@ -32,13 +32,9 @@ import {
   filamentsPass,
   milkyWayPass,
 } from '../../../../../src/services/engine/frame/passes';
-import type { PassDeps } from '../../../../../src/services/engine/frame/passes';
-import type {
-  ReadyFrameContext,
-} from '../../../../../src/services/engine/frame/frameContext';
-import type {
-  RenderFrameSettings,
-} from '../../../../../src/services/engine/frame/renderFrame';
+import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
+import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 

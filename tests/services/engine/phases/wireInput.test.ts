@@ -48,7 +48,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { BootstrapDeps } from '../../../../src/services/engine/phases/bootstrap';
+import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 

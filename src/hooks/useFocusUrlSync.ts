@@ -58,56 +58,16 @@
  * under tooling that pre-evaluates modules in node.
  */
 
-import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { EngineHandle } from '../@types/engine/EngineHandle';
-import type { EngineStatus } from '../@types/engine/EngineStatus';
-import type { PointInfo } from '../@types/engine/PointInfo';
+import { useEffect, useRef, useState } from 'react';
 import type { PointCloud } from '../@types/data/PointCloud';
 import { ALL_SOURCES, Source } from '../data/sources';
-import {
-  parseFocusHash,
-  selectionToFocusId,
-} from '../services/url/focusUrl';
+import { parseFocusHash, selectionToFocusId } from '../services/url/focusUrl';
 import type { FocusTarget } from '../@types/camera/FocusTarget';
-import {
-  resolveFocusTarget,
-} from '../services/engine/camera/resolveFocusTarget';
-import type { FamousMetaEntry } from '../@types/loading/FamousMetaEntry';
-import type { FamousXrefMap } from '../@types/loading/FamousXrefMap';
-
-/**
- * Inputs to the pure desired-hash decision.  The caller passes in the
- * raw `location.hash` string (with or without the leading `#`) because
- * it's cheaper than re-reading `window` from inside the helper, and it
- * keeps the helper testable in the node env.
- */
-export type DesiredHashInput = {
-  /**
-   * The galaxy whose id should appear in the URL.  Named `selected` for
-   * historical reasons (predates the selected/focused split) — callers
-   * should pass whichever state they're encoding.  The hook below
-   * passes `focused`; tests pass synthetic PointInfo fixtures.
-   */
-  selected: PointInfo | null;
-  /** Raw hash, e.g. `"#focus=m31"` or `""`.  Leading `#` optional. */
-  currentHash: string;
-};
-
-/**
- * Output of the pure desired-hash decision.
- *
- * `desiredHashBody` is the bit *after* `#`, lacking the leading `#`,
- * so the caller can decide whether to write `pathname + '#' + body` or
- * just `pathname` (when the body is empty).  `matches` lets the caller
- * skip the `replaceState` write when the URL already says the right
- * thing, which avoids spurious history-state churn under React strict
- * mode and during noisy state updates that don't actually change the
- * selection.
- */
-export type DesiredHashOutput = {
-  desiredHashBody: string;
-  matches: boolean;
-};
+import { resolveFocusTarget } from '../services/engine/camera/resolveFocusTarget';
+import type { DesiredHashInput } from '../@types/engine/DesiredHashInput';
+import type { DesiredHashOutput } from '../@types/engine/DesiredHashOutput';
+import type { UseFocusUrlInput } from '../@types/engine/UseFocusUrlInput';
+import type { FocusSyncReturn } from '../@types/engine/FocusSyncReturn';
 
 /**
  * Pure decision: given the current selection and the URL's current
@@ -157,32 +117,7 @@ export function initialPendingTarget(hash: string): FocusTarget | null {
   return parseFocusHash(hash);
 }
 
-/**
- * Inputs to the deep-link orchestrator hook.  The reactive ones drive
- * the drain effect's re-runs as data lands; `engineHandleRef` is a
- * mutable ref because the engine handle is constructed asynchronously
- * during App mount and should not retrigger this hook on assignment.
- */
-export type UseFocusUrlInput = {
-  focused: PointInfo | null;
-  status: EngineStatus;
-  sourceCounts: Partial<Record<Source, number>>;
-  famousMeta: readonly FamousMetaEntry[];
-  famousXrefs: FamousXrefMap;
-  aliasMap: ReadonlyMap<bigint, readonly string[]>;
-  engineHandleRef: RefObject<EngineHandle | null>;
-};
-
-/**
- * What the hook returns to the caller.  `pendingTarget` is non-null
- * when a deep-link arrival is waiting to be resolved against the
- * loaded clouds — currently surfaced so a future tier-mismatch banner
- * can render off it.  Other paths (success, supersede) clear it
- * internally without the caller having to act.
- */
-export type FocusSyncReturn = {
-  pendingTarget: FocusTarget | null;
-};
+// UseFocusUrlInput / FocusSyncReturn moved to @types/engine/.
 
 /**
  * React hook owning the entire URL ↔ selection lifecycle for the

@@ -10,7 +10,10 @@ A WebGPU 3D galaxy renderer. Three real catalogs (SDSS, 2MRS, GLADE) are parsed 
 
 ```
 src/
-  @types/             Top-level type declarations (PointCloud, EngineHandle, etc.)
+  @types/             Top-level type declarations, organized into subfolders
+                      (data/, engine/, rendering/, loading/, camera/, input/,
+                      settings/, math/). One file per type. No barrel — all
+                      imports are deep + relative.
   components/         React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
   data/               Static data definitions: sources enum, colourIndex spec, binary format
   services/

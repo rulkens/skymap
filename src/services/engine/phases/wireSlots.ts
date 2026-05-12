@@ -99,11 +99,11 @@ import {
   VOID_ANCHORS,
   raDecDistToEqCart,
 } from '../../../data/clusterAnchors';
-import type { PointOfInterest } from '../subsystems/poiSubsystem';
+import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { BootstrapDeps } from './bootstrap';
+import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 /**
  * Bootstrap phase 2: sidecar slots + load-progress emitter + thumbnail

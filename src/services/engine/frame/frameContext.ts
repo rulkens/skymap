@@ -97,46 +97,11 @@
  * (one declaration site duplicated).
  */
 
-import type { mat4 } from 'gl-matrix';
-
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
-import type { PostProcess } from '../../../@types/rendering/PostProcess';
-import type { ThumbnailSubsystem } from '../subsystems/thumbnailSubsystem';
+import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
 import { computeViewProj } from '../../camera/orbitCamera';
 import { isEngineReady } from '../helpers/engineReady';
-
-/** The not-yet-ready case: bootstrap hasn't finished. */
-export type NotReadyFrameContext = { isReady: false };
-
-/** The ready case: every per-frame derived value is non-null. */
-export type ReadyFrameContext = {
-  isReady: true;
-  /** Live camera reference. */
-  cam: OrbitCamera;
-  /** Combined view-projection matrix, computed once per frame. */
-  vp: mat4;
-  /** Backing-store-pixel viewport size; same as `canvas.{width,height}`. */
-  canvasSize: { width: number; height: number };
-  /** Snapshot of `cam.position` as a readonly tuple (no live Float32Array aliasing). */
-  drawCamPos: Readonly<Vec3>;
-  /** `canvasSize.height / (2·tan(fovY/2))` — pinhole radian→pixel conversion. */
-  drawPxPerRad: number;
-  /**
-   * Non-null GPU + subsystem handles, narrowed across the bootstrap
-   * gate so consumers don't have to re-check `state.gpu.*` /
-   * `state.subsystems.*` themselves.  See the module header for the
-   * "why these ride along" rationale.
-   */
-  renderer: PointRenderer;
-  postProcess: PostProcess;
-  thumbnails: ThumbnailSubsystem;
-};
-
-/** Discriminated union — narrow to `ReadyFrameContext` via `ctx.isReady`. */
-export type FrameContext = ReadyFrameContext | NotReadyFrameContext;
 
 /**
  * Derive the per-frame context.  Reads the camera + GPU + subsystem

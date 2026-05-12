@@ -36,17 +36,17 @@
  * rather than the whole engine state.
  */
 
-import type { ThumbnailSubsystem } from '../../../services/engine/subsystems/thumbnailSubsystem';
-import type { SpaceMouseSubsystem } from '../../../services/engine/subsystems/spaceMouseSubsystem';
-import type { SelectionSubsystem } from '../../../services/engine/subsystems/selectionSubsystem';
-import type { BiasCorrectionSubsystem } from '../../../services/engine/subsystems/biasCorrectionSubsystem';
-import type { YouAreHereSubsystem } from '../../../services/engine/subsystems/youAreHereSubsystem';
-import type { LabelDirectorSubsystem } from '../../../services/engine/subsystems/labelDirectorSubsystem';
-import type { PoiSubsystem } from '../../../services/engine/subsystems/poiSubsystem';
+import type { ThumbnailSubsystem } from '../subsystems/ThumbnailSubsystem';
+import type { SpaceMouseSubsystem } from '../subsystems/SpaceMouseSubsystem';
+import type { SelectionSubsystem } from '../subsystems/SelectionSubsystem';
+import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
+import type { YouAreHereSubsystem } from '../subsystems/YouAreHereSubsystem';
+import type { LabelDirectorSubsystem } from '../subsystems/LabelDirectorSubsystem';
+import type { PoiSubsystem } from '../subsystems/PoiSubsystem';
 import type { TweenManager } from '../../camera/TweenManager';
-import type { ClickResolver } from '../../../services/engine/interaction/clickHandler';
+import type { ClickResolver } from '../ClickResolver';
 import type { InputBindings } from '../../input/InputBindings';
-import type { RenderScheduler } from '../../../services/engine/subsystems/renderScheduler';
+import type { RenderScheduler } from '../subsystems/RenderScheduler';
 import type { LoadProgressEmitter } from '../../loading/LoadProgressEmitter';
 import type { Destroyable } from '../../rendering/Destroyable';
 

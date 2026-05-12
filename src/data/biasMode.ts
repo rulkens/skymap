@@ -72,9 +72,6 @@ export const BiasMode = {
   AngularReweight: 4,
 } as const;
 
-// Type lives in @types/data/BiasMode (inlined literal union for value-free .d.ts).
-// Re-declared via a local alias because `export type { BiasMode } from ...`
-// collides with the value-level `BiasMode` const above (TS2323).  The alias
-// keeps the runtime-value + type pair under a single import.
-import type { BiasMode as BiasModeType } from '../@types/data/BiasMode';
-export type BiasMode = BiasModeType;
+// Type lives in @types/data/BiasMode (inlined literal union for value-free .d.ts);
+// consumers deep-import the type directly from there.  The runtime const above
+// stays as the value-level export.

@@ -46,10 +46,8 @@ import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { ALL_SOURCES, Source } from '../../../data/sources';
-import {
-  type BuildPointInterleavedBufferInput,
-  type BuildPointInterleavedBufferResult,
-} from '../../engine/bake/buildPointInterleavedBuffer';
+import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
+import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler to
 // emit `buildPointInterleavedBuffer.worker.ts` as a separate worker chunk

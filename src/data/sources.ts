@@ -203,12 +203,6 @@ const BAND_LABELS: Record<Source, BandLabels> = {
   [Source.Famous]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
 };
 
-// The band-label record returned by `bandLabels()` moved to
-// `@types/data/BandLabels` and is re-exported here so InfoCard prop types
-// (and every other consumer) keep their existing `import { BandLabels }
-// from '../data/sources'` line.
-export type { BandLabels } from '../@types/data/BandLabels';
-
 // ─── Public lookup functions ────────────────────────────────────────────────
 //
 // These thin wrappers exist so that callers depend on a *function signature*

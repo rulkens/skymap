@@ -18,10 +18,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import {
-  createClickResolver,
-  type ClickResolveInput,
-} from '../../../../src/services/engine/interaction/clickHandler';
+import { createClickResolver } from '../../../../src/services/engine/interaction/clickHandler';
+import type { ClickResolveInput } from '../../../../src/@types/engine/ClickResolveInput';
 import { Source } from '../../../../src/data/sources';
 import type { PointInfo } from '../../../../src/@types/engine/PointInfo';
 import type { PointCloud } from '../../../../src/@types/data/PointCloud';

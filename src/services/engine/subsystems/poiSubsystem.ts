@@ -33,38 +33,15 @@
 
 import type { Label } from '../../../@types/rendering/Label';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
-import type { ReadyFrameContext } from '../frame/frameContext';
+import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Vec4 } from '../../../@types/math/Vec4';
-import type { LabelProducer, LabelProducerOutput } from './labelProducer';
-
-export type PoiCategory = 'cluster' | 'galaxy' | 'void';
-
-export type PointOfInterest = {
-  readonly id: string;
-  readonly name: string;
-  readonly category: PoiCategory;
-  readonly worldPos: Vec3;
-  /** Crosshair half-length in Mpc.  Omit to draw label only. */
-  readonly crosshairSizeMpc?: number;
-};
-
-export type PoiSubsystem = LabelProducer & {
-  setPois(pois: readonly PointOfInterest[]): void;
-  clearPois(): void;
-  setCategoryVisible(category: PoiCategory, visible: boolean): void;
-  /**
-   * Tear down the subsystem.  No-op — the subsystem owns only
-   * plain-data state (pois list, visibility record); there are no
-   * listeners, timers, or workers to release.  Method exists so the
-   * engine's bag of subsystems can be torn down uniformly via the
-   * shared `Destroyable` shape (`engine.destroy()` iterates and calls
-   * `destroy()` on each).
-   */
-  destroy(): void;
-};
+import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
+import type { PoiCategory } from '../../../@types/engine/subsystems/PoiCategory';
+import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
+import type { PoiSubsystem } from '../../../@types/engine/subsystems/PoiSubsystem';
 
 type CategoryStyle = {
   readonly labelColor: Vec4;
