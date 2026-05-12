@@ -33,7 +33,7 @@
  * renders in the result row.
  */
 
-import type { FamousMetaEntry } from '../services/loading/fetchers/famousMetaFetcher';
+import type { FamousMetaEntry } from '../@types/loading/FamousMetaEntry';
 
 /**
  * Sentinel id for the Milky Way pseudo-entry.  Intercepted in App.tsx's

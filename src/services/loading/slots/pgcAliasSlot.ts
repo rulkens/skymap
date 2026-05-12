@@ -16,8 +16,8 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { pgcAliasFetcher } from '../fetchers/pgcAliasFetcher';
-import type { PgcAliasMap } from '../fetchers/pgcAliasFetcher';
-import type { SlotFactory } from './types';
+import type { PgcAliasMap } from '../../../@types/loading/PgcAliasMap';
+import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createPgcAliasSlot: SlotFactory<PgcAliasMap, void> = (state, _cb) => {
   const slot = createAssetSlot({

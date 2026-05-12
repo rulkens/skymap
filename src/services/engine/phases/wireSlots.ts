@@ -101,7 +101,7 @@ import {
 } from '../../../data/clusterAnchors';
 import type { PointOfInterest } from '../subsystems/poiSubsystem';
 
-import type { AssetSlot } from '../../loading/types';
+import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types';
 import type { BootstrapDeps } from './bootstrap';
 

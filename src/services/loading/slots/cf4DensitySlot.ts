@@ -29,7 +29,7 @@ import {
 } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
-import type { SlotFactory } from './types';
+import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) => {
   const slot = createAssetSlot({

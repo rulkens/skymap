@@ -32,11 +32,9 @@
  */
 
 import { useEffect, useState } from 'react';
-import {
-  famousMetaFetcher,
-  type FamousMetaEntry,
-  type FamousXrefMap,
-} from '../services/loading/fetchers/famousMetaFetcher';
+import { famousMetaFetcher } from '../services/loading/fetchers/famousMetaFetcher';
+import type { FamousMetaEntry } from '../@types/loading/FamousMetaEntry';
+import type { FamousXrefMap } from '../@types/loading/FamousXrefMap';
 
 export type UseFamousMetaReturn = {
   famousMeta: readonly FamousMetaEntry[];

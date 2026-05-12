@@ -35,11 +35,11 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { syntheticVolumeFetcher } from '../fetchers/syntheticVolumeFetcher';
-import type { SyntheticVolumeReq } from '../fetchers/syntheticVolumeFetcher';
+import type { SyntheticVolumeReq } from '../../../@types/loading/SyntheticVolumeReq';
 import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
-import type { AssetSlot } from '../types';
+import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState, EngineCallbacks } from '../../../@types';
 
 type SyntheticVolumeHandle = 'debug-gaussian' | 'debug-cartesian' | 'debug-spherical';

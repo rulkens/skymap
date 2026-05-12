@@ -80,7 +80,8 @@ import type { ProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskR
 import type { ProceduralDiskInstance } from '../../../@types/ProceduralDiskInstance';
 import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDecZ } from '../../../utils/math';
-import type { FamousMetaEntry, FamousXrefMap } from '../../loading/fetchers/famousMetaFetcher';
+import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
+import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import type { mat4 } from 'gl-matrix';
 
 // ── Tunables ────────────────────────────────────────────────────────────────

@@ -13,7 +13,7 @@
  * silently rather than crashing).
  */
 
-import type { Fetcher } from '../types';
+import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import { decodeScalarField } from '../../../data/scalarFieldFormat';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';

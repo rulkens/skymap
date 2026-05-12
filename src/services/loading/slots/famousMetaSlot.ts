@@ -26,8 +26,8 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { famousMetaFetcher } from '../fetchers/famousMetaFetcher';
-import type { FamousPayload } from '../fetchers/famousMetaFetcher';
-import type { SlotFactory } from './types';
+import type { FamousPayload } from '../../../@types/loading/FamousPayload';
+import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createFamousMetaSlot: SlotFactory<FamousPayload, void> = (state, _cb) => {
   const slot = createAssetSlot({

@@ -50,10 +50,8 @@ import type {
   PointInfo,
   ScaleInfo,
 } from '../@types';
-import type {
-  EngineCallbacks,
-  LoadProgressState,
-} from '../@types/EngineCallbacks';
+import type { EngineCallbacks } from '../@types/EngineCallbacks';
+import type { LoadProgressState } from '../@types/loading/LoadProgressState';
 import type { Tier } from '../@types/data/Tier';
 import { initialTierFromViewport } from '../utils/initialTierFromViewport';
 import type { Source } from '../data/sources';

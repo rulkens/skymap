@@ -32,9 +32,9 @@
  * every other source's `slot.load({ source, tier })` call.
  */
 
-import type { Fetcher } from '../types';
+import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { PointCloud } from '../../../@types/data/PointCloud';
-import type { PointCloudReq } from './pointCloudFetcher';
+import type { PointCloudReq } from '../../../@types/loading/PointCloudReq';
 import { generateSyntheticCloud } from '../../../data/synthetic';
 
 /** Hard-coded synthetic cloud size — matches the legacy fallback. */

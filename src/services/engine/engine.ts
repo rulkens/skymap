@@ -103,10 +103,8 @@ import type { BiasMode } from '../../data/biasMode';
 import type { ScalarCube } from '../../@types/data/ScalarCube';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { Tier } from '../../@types/data/Tier';
-import type {
-  FamousMetaEntry,
-  FamousXrefMap,
-} from '../loading/fetchers/famousMetaFetcher';
+import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
+import type { FamousXrefMap } from '../../@types/loading/FamousXrefMap';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
@@ -119,9 +117,9 @@ import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildPointInfo } from './helpers/pointInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
 import { logCameraState } from './helpers/logCameraState';
-import type { AssetSlot } from '../loading/types';
+import type { AssetSlot } from '../../@types/loading/AssetSlot';
+import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
-import { type PgcAliasMap } from '../loading/fetchers/pgcAliasFetcher';
 import { TIER_TARGETS } from '../../data/tierTargets';
 import {
   snapToCameraSnapshot,

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createAssetSlot } from '../../../src/services/loading/AssetSlot';
-import type { Fetcher } from '../../../src/services/loading/types';
+import type { Fetcher } from '../../../src/@types/loading/Fetcher';
 
 /**
  * Regression test for the cloudLoader race condition described in the

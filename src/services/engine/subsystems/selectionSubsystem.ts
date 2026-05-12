@@ -89,10 +89,8 @@
 import type { Destroyable, EngineCallbacks, PointInfo } from '../../../@types';
 import type { PointCloud } from '../../../@types/data/PointCloud';
 import type { Source } from '../../../data/sources';
-import type {
-  FamousMetaEntry,
-  FamousXrefMap,
-} from '../../loading/fetchers/famousMetaFetcher';
+import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
+import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import { buildPointInfo } from '../helpers/pointInfoBuilder';
 
 /**

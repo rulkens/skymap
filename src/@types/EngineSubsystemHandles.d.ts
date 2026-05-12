@@ -47,7 +47,7 @@ import type { TweenManager } from '../services/engine/camera/tweenManager';
 import type { ClickResolver } from '../services/engine/interaction/clickHandler';
 import type { InputBindings } from '../services/engine/interaction/inputBindings';
 import type { RenderScheduler } from '../services/engine/subsystems/renderScheduler';
-import type { LoadProgressEmitter } from '../services/engine/subsystems/loadProgressAggregator';
+import type { LoadProgressEmitter } from './loading/LoadProgressEmitter';
 import type { Destroyable } from './Destroyable';
 
 export type EngineSubsystemHandles = {

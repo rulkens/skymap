@@ -25,7 +25,8 @@
  * function of its arguments.  Tests can assert exact timestamps without
  * mocking the clock.
  */
-import type { LoadEvent, LoadState } from './types';
+import type { LoadEvent } from '../../@types/loading/LoadEvent';
+import type { LoadState } from '../../@types/loading/LoadState';
 
 export function reduceLoadState<T>(state: LoadState<T>, event: LoadEvent): LoadState<T> {
   switch (event.kind) {
