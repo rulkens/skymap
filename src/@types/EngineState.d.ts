@@ -73,7 +73,7 @@
  * type's docstring.
  */
 
-import type { EngineSettingsState } from './EngineSettingsState';
+import type { EngineSettingsState } from './settings/EngineSettingsState';
 import type { EngineBiasState } from './EngineBiasState';
 import type { EngineSourceState } from './EngineSourceState';
 import type { EnginePickingState } from './EnginePickingState';

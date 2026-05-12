@@ -140,7 +140,8 @@ import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
 // and call `applyToCamera()` from `frame()`.  The handle's
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
-import { buildSettersFromTable, type SettingsTableKey } from './wiring/settingsTable';
+import { buildSettersFromTable } from './wiring/settingsTable';
+import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases, type BootstrapDeps } from './phases/bootstrap';
 
 /**
