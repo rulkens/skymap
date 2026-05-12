@@ -1,4 +1,22 @@
 /**
+ * @deprecated 2026-05-12 — this test file (and the
+ * `thumbnailSubsystem.ts` source it covers) are being deleted as part
+ * of the galaxy-impostor subsystem split.  Coverage has migrated to
+ * three new test files:
+ *
+ *   - `galaxyAtlasSubsystem.test.ts` — LRU eviction, queue idempotency,
+ *     setEvictHandler.
+ *   - `proceduralDiskSubsystem.test.ts` — apparent-size + orientation
+ *     gates, stride decimation, sticky map persistence.
+ *   - `texturedImpostorSubsystem.test.ts` — atlas-slot allocation,
+ *     disk-vs-quad branch, load-fade, hasInFlightWork.
+ *
+ * The two extra tests this file retains (galaxyCacheKey round-trip, and
+ * the legacy createThumbnailSubsystem smoke test) get deleted together
+ * with the source in Task 14.
+ */
+
+/**
  * thumbnailSubsystem — unit tests for the per-frame galaxy-thumbnail
  * pipeline.  We mock the GPU device, the TexturedQuadRenderer, and the
  * TexturedDiskRenderer with `vi.fn()` stubs so the subsystem can run end-to-
