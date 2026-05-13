@@ -37,4 +37,18 @@ describe('AutoRotateToggle', () => {
     await user.keyboard('{Enter}');
     expect(onToggle).toHaveBeenCalledOnce();
   });
+
+  it('reflects hidden=true via aria-hidden, mirroring SearchTrigger', () => {
+    render(
+      createElement(AutoRotateToggle, { playing: false, onToggle: () => {}, hidden: true }),
+    );
+    const btn = screen.getByRole('button', { hidden: true });
+    expect(btn).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('omits aria-hidden when hidden is false (default)', () => {
+    render(createElement(AutoRotateToggle, { playing: false, onToggle: () => {} }));
+    const btn = screen.getByRole('button', { name: /start camera auto-rotate/i });
+    expect(btn).not.toHaveAttribute('aria-hidden');
+  });
 });
