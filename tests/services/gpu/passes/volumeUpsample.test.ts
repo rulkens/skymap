@@ -16,6 +16,7 @@ import { createVolumeUpsample } from '../../../../src/services/gpu/passes/volume
 function mockDevice(): GPUDevice {
   const renderPipelineDescs: GPURenderPipelineDescriptor[] = [];
   const samplerDescs: GPUSamplerDescriptor[] = [];
+  const bindGroupDescs: GPUBindGroupDescriptor[] = [];
   return {
     createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
     createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
@@ -32,11 +33,15 @@ function mockDevice(): GPUDevice {
       renderPipelineDescs.push(desc);
       return {};
     }),
-    createBindGroup: vi.fn(() => ({})),
+    createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => {
+      bindGroupDescs.push(desc);
+      return {};
+    }),
     queue: { writeBuffer: vi.fn() },
-    // Test-only escape hatch: expose what the factory created.
+    // Test-only escape hatches: expose what the factory created.
     __renderPipelineDescs: renderPipelineDescs,
     __samplerDescs: samplerDescs,
+    __bindGroupDescs: bindGroupDescs,
   } as unknown as GPUDevice;
 }
 
@@ -62,7 +67,7 @@ describe('createVolumeUpsample', () => {
     expect(samplers[0]!.minFilter).toBe('linear');
   });
 
-  it('draw() records setPipeline, setBindGroup, draw(3, 1)', () => {
+  it('draw() records setPipeline, setBindGroup(0, ...), draw(3, 1, 0, 0) with halfResView bound', () => {
     const device = mockDevice();
     const upsample = createVolumeUpsample(device, 'rgba16float');
     const pass = {
@@ -70,11 +75,26 @@ describe('createVolumeUpsample', () => {
       setBindGroup: vi.fn(),
       draw: vi.fn(),
     } as unknown as GPURenderPassEncoder;
-    const halfResView = {} as GPUTextureView;
+    // Use a sentinel object so we can identify the view inside the
+    // captured bind-group descriptor.
+    const halfResView = { __id: 'half-res' } as unknown as GPUTextureView;
     upsample.draw(pass, halfResView);
     expect(pass.setPipeline).toHaveBeenCalledTimes(1);
-    expect(pass.setBindGroup).toHaveBeenCalledTimes(1);
+    // Bind group goes into slot 0 (the only slot the layout declares).
+    expect(pass.setBindGroup).toHaveBeenCalledWith(0, expect.anything());
+    // Three-vertex covering triangle, single instance.  See module
+    // header for the why-not-a-quad rationale.
     expect(pass.draw).toHaveBeenCalledWith(3, 1, 0, 0);
+
+    // The bind group built by this draw must reference the passed-in
+    // half-res view — otherwise a future refactor could silently bind
+    // a stale view from closure state without breaking the call-count
+    // assertions above.
+    const bindGroupDescs = (device as any).__bindGroupDescs as GPUBindGroupDescriptor[];
+    expect(bindGroupDescs).toHaveLength(1);
+    const entries = Array.from(bindGroupDescs[0]!.entries) as GPUBindGroupEntry[];
+    const textureEntry = entries.find((e) => e.binding === 0);
+    expect(textureEntry?.resource).toBe(halfResView);
   });
 
   it('destroy() does not throw', () => {

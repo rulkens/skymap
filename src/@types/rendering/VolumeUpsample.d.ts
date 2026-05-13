@@ -41,6 +41,11 @@ export type VolumeUpsample = {
    *                      changes on canvas resize.
    */
   draw(pass: GPURenderPassEncoder, halfResView: GPUTextureView): void;
-  /** Tear down — releases the sampler, bind-group-layout, and pipeline. */
+  /**
+   * No-op — sampler, bind-group-layout, and pipeline have no explicit
+   * destroy methods (they're GC'd when their last reference drops).
+   * Present purely for lifecycle symmetry with `PostProcess` so the
+   * engine's teardown call shape is uniform across GPU-resource owners.
+   */
   destroy(): void;
 };
