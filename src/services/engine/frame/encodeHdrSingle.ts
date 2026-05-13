@@ -1,5 +1,5 @@
 /**
- * hdrSinglePass — collapses all enabled HDR_PASSES into one
+ * encodeHdrSingle — collapses all enabled HDR_PASSES into one
  * `beginRenderPass` / `pass.end` block.  This is the default production
  * path (taken when `timingService === null`, i.e. no `?gpuTimings`).
  *
@@ -12,7 +12,7 @@
  * predecessor just wrote into, so the OVER blend is computed against
  * fully-coherent state.
  *
- * The companion split path (`hdrSplitPasses`) breaks that
+ * The companion split path (`encodeHdrSplit`) breaks that
  * guarantee: every `pass.end` stores the target to DRAM and the next
  * `pass.begin` reloads it.  On M1 we've observed the OVER overlays
  * render with stale or partially-coherent `dst.color` — the marker
@@ -38,7 +38,7 @@ import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import { HDR_PASSES } from './passes';
 
-export function hdrSinglePass(
+export function encodeHdrSingle(
   encoder: GPUCommandEncoder,
   ctx: ReadyFrameContext,
   state: EngineState,

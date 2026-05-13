@@ -51,24 +51,24 @@ describe('decodeTimestampBuffer', () => {
   });
 
   it('applies a non-unit timestampPeriod correctly', () => {
-    const buf = buildBuffer([[6, 0n, 100_000n]]);
+    // Pair index 3 = filaments (u64 slots 6/7).
+    const buf = buildBuffer([[3, 0n, 100_000n]]);
     const out = decodeTimestampBuffer(buf, 38.5);
 
-    expect(out.get('marker-lines')).toBeCloseTo(3.85, 6);
+    expect(out.get('filaments')).toBeCloseTo(3.85, 6);
   });
 
-  it('decodes all 10 slots independently', () => {
+  it('decodes all 9 slots independently', () => {
     const buf = buildBuffer([
-      [0, 0n, 1_000_000n],
-      [1, 0n, 2_000_000n],
-      [2, 0n, 3_000_000n],
-      [3, 0n, 500_000n],
-      [4, 0n, 4_000_000n],
-      [5, 0n, 600_000n],
-      [6, 0n, 100_000n],
-      [7, 0n, 100_000n],
-      [8, 0n, 400_000n],
-      [9, 0n, 200_000n],
+      [0, 0n, 1_000_000n], // point-sprites
+      [1, 0n, 2_000_000n], // procedural-disks
+      [2, 0n, 3_000_000n], // textured-impostors
+      [3, 0n, 500_000n], //   filaments
+      [4, 0n, 4_000_000n], // scalar-volume
+      [5, 0n, 600_000n], //   milky-way
+      [6, 0n, 100_000n], //   tone-map
+      [7, 0n, 100_000n], //   ui-overlay
+      [8, 0n, 200_000n], //   pick
     ]);
     const out = decodeTimestampBuffer(buf, 1);
 
@@ -78,9 +78,8 @@ describe('decodeTimestampBuffer', () => {
     expect(out.get('filaments')).toBeCloseTo(0.5, 6);
     expect(out.get('scalar-volume')).toBeCloseTo(4.0, 6);
     expect(out.get('milky-way')).toBeCloseTo(0.6, 6);
-    expect(out.get('marker-lines')).toBeCloseTo(0.1, 6);
-    expect(out.get('labels')).toBeCloseTo(0.1, 6);
-    expect(out.get('tone-map')).toBeCloseTo(0.4, 6);
+    expect(out.get('tone-map')).toBeCloseTo(0.1, 6);
+    expect(out.get('ui-overlay')).toBeCloseTo(0.1, 6);
     expect(out.get('pick')).toBeCloseTo(0.2, 6);
   });
 });

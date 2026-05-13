@@ -1,5 +1,5 @@
 /**
- * hdrSplitPasses — opens one `beginRenderPass` per enabled
+ * encodeHdrSplit — opens one `beginRenderPass` per enabled
  * HDR_PASSES entry so each pass can carry its own `timestampWrites`
  * descriptor.  This path runs only when `timingService` is non-null
  * (i.e. `?gpuTimings` is active).
@@ -23,7 +23,7 @@
  * because their blend factor (`srcFactor: 'one', dstFactor: 'one'`)
  * doesn't read `dst.color`.
  *
- * The single-pass path (`hdrSinglePass`) avoids the issue by
+ * The single-pass path (`encodeHdrSingle`) avoids the issue by
  * keeping all draws in one tile-local pass.  We pay the M1 coherency
  * cost here only because timestamp-query attaches to pass boundaries
  * and per-pass GPU timing has no other shape.
@@ -37,7 +37,7 @@ import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingServi
 import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 import { HDR_PASSES } from './passes';
 
-export function hdrSplitPasses(
+export function encodeHdrSplit(
   encoder: GPUCommandEncoder,
   ctx: ReadyFrameContext,
   state: EngineState,

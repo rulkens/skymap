@@ -5,8 +5,9 @@
  * sprawled inside `engine.ts`'s `frame()`.  D.1 (`FrameContext`) cut
  * the ad-hoc snapshot work; D.2 cut the inline draw blocks into the
  * `HDR_PASSES` registry.  What remains in this file is the encoder
- * lifecycle, the conditional HDR-rendering branch, and the tone-map
- * blit — see "What the encoder records, in order" below.
+ * lifecycle, the conditional HDR-rendering branch, the tone-map blit,
+ * and the post-tone-map UI overlay — see "What the encoder records,
+ * in order" below.
  *
  * Each entry in `HDR_PASSES` is a `Pass` const declared in its own
  * file under `passes/`.  See `passes/types.ts` for the interface
@@ -19,52 +20,46 @@
  * taking a struct of inputs is trivially testable and bounds the
  * encoder lifetime to the function body.
  *
- * ### Two HDR-rendering shapes, one per timing-service state
- *
- * `!timingService.enabled` → `hdrSinglePass`: one
- * `beginRenderPass(loadOp: 'clear')` block, all enabled HDR passes
- * draw inside, one `pass.end`.  This is the default production
- * shape — keeps the HDR target tile-local for the full pass, which
- * the premultiplied-OVER overlay passes (marker-lines, labels)
- * require for correct blending on tile-based GPUs.
- *
- * `timingService.enabled` → `hdrSplitPasses`: 1 clear pass +
- * one `beginRenderPass(loadOp: 'load')` per enabled HDR pass.  Each
- * sub-pass carries its own `timestampWrites` descriptor so the
- * timing service can record begin/end ticks per pass.  Required for
- * `?gpuTimings` granular reporting; pays a tile-RAM round-trip per
- * boundary on M1, which is acceptable in dev mode but not in
- * production.
- *
- * Both shapes feed into the same tone-map post-process and submit.
- *
  * ### What the encoder records, in order
  *
- *   1. HDR rendering — single mega-pass OR (clear + per-pass split),
- *      depending on `timingService`.
+ *   1. HDR rendering — `encodeHdrSingle` (default) OR `encodeHdrSplit`
+ *      (when `timingService.enabled`, so each pass can carry its own
+ *      `timestampWrites`).  Both shapes write into the rgba16float
+ *      HDR target; the per-pass-split variant pays a tile-RAM round-
+ *      trip per boundary on M1, which is acceptable in dev mode but
+ *      not in production.
  *
- *   2. Tone-map post-process.  Samples the HDR target, writes the
- *      swap chain.  Begins+ends its own internal render pass on the
- *      same encoder via `postProcess.draw`.
+ *   2. Tone-map post-process.  Samples the HDR target and writes the
+ *      compressed [0, 1] range to the swap chain.  Begins+ends its
+ *      own internal render pass on the same encoder via
+ *      `postProcess.draw`.
  *
- *   3. (timing path only) `resolveQuerySet` + `copyBufferToBuffer`
+ *   3. UI overlay (`encodeUiOverlay`).  Composites marker-lines + labels
+ *      onto the tone-mapped swap chain via premultiplied OVER blend.
+ *      Lives post-tone-map so the OVER overlays bypass the tone-map
+ *      curve (no `[8, 8, 8, 1]` overshoot hack needed) and so their
+ *      blend reads coherent `dst.color` from the swap-chain target
+ *      (the additive HDR passes can't corrupt UI overlay coherency
+ *      because they target a different texture).  See `encodeUiOverlay.ts`
+ *      for the full coherency / colour-mismatch rationale.
+ *
+ *   4. (timing path only) `resolveQuerySet` + `copyBufferToBuffer`
  *      recorded via `timingService.endFrame`.
  *
  *   submit: device.queue.submit([encoder.finish()])
  *
- * The two passes share an encoder so the GPU sees them in deterministic
- * order — critical because the tone-map pass reads the texture the
- * HDR pass wrote.
+ * Every pass shares one encoder so the GPU sees them in deterministic
+ * order — critical because each pass reads what the previous one wrote.
  *
- * ### Why tone-map isn't in `HDR_PASSES`
+ * ### Why tone-map and encodeUiOverlay aren't in `HDR_PASSES`
  *
- * Tone-map runs OUTSIDE the HDR `beginRenderPass` block: it samples
- * the HDR offscreen target the four HDR passes accumulated into and
- * blits to the swap chain.  Modelling it as a `Pass` would force a
- * divergent signature (encoder vs. pass-encoder) for one inhabitant.
- * The spec D.2 "tone-map special case" section documents the
- * rejected alternatives; the inline-after-loop approach is the
- * lightest shape that keeps `Pass` honest.
+ * Tone-map and encodeUiOverlay both target the swap chain (not the HDR
+ * offscreen target), and encodeUiOverlay's blend is premultiplied OVER
+ * rather than additive.  Modelling them as `Pass` entries would
+ * require divergent signatures (target view, blend semantics) for
+ * the two outliers.  Keeping them as named functions called inline
+ * from this orchestrator is the lightest shape that lets `Pass` stay
+ * a uniform additive-HDR contract.
  *
  * ### What stays in `runFrame()` (NOT here)
  *
@@ -78,8 +73,9 @@
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
-import { hdrSinglePass } from './hdrSinglePass';
-import { hdrSplitPasses } from './hdrSplitPasses';
+import { encodeHdrSingle } from './encodeHdrSingle';
+import { encodeHdrSplit } from './encodeHdrSplit';
+import { encodeUiOverlay } from './encodeUiOverlay';
 
 /**
  * Encode and submit one frame's worth of HDR + tone-map work.
@@ -138,71 +134,46 @@ export function renderFrame(input: RenderFrameInput): void {
   // timing is enabled:
   //
   //   • `!timingService.enabled` (production path, no `?gpuTimings`):
-  //     one mega-pass via `hdrSinglePass`.  All HDR draws run
-  //     inside one `beginRenderPass(loadOp: 'clear')` block, keeping
-  //     the target tile-local for the whole pass.  This is required
-  //     for correctness of the premultiplied-OVER overlay passes
-  //     (marker-lines, labels) on tile-based GPUs — see the helper's
-  //     docstring for the coherency rationale.
+  //     one mega-pass via `encodeHdrSingle`.  All HDR draws run inside
+  //     one `beginRenderPass(loadOp: 'clear')` block, keeping the
+  //     target tile-local for the whole pass.
   //
   //   • `timingService.enabled` (dev path, `?gpuTimings` active):
-  //     per-pass split via `hdrSplitPasses` — one
-  //     `beginRenderPass` per enabled HDR_PASSES entry so each pass
-  //     can carry its own `timestampWrites` descriptor.  WebGPU's
-  //     timestamp-query attaches to pass boundaries, not draws, so
-  //     per-pass timing has no other shape.  The OVER overlays may
-  //     render at wrong alpha on M1 in this mode; that's the
-  //     accepted cost of profiling.
+  //     per-pass split via `encodeHdrSplit` — one `beginRenderPass`
+  //     per enabled HDR_PASSES entry so each pass can carry its own
+  //     `timestampWrites` descriptor.  Pays a tile-RAM round-trip per
+  //     boundary on M1, acceptable in dev mode.
   //
   // Both shapes are byte-equivalent on a spec-compliant desktop GPU
-  // implementation; the split path's M1 coherency issue is a
-  // tile-based-GPU driver behaviour the single-pass path sidesteps.
+  // and feed the same downstream tone-map + UI-overlay sequence.
   const encoder = device.createCommandEncoder();
+  const swapView = context.getCurrentTexture().createView();
 
   if (timingService.enabled) {
     const timingCtx = timingService.beginFrame();
-    hdrSplitPasses(encoder, ctx, state, settings, deps, timingService);
+    encodeHdrSplit(encoder, ctx, state, settings, deps, timingService);
     ctx.postProcess.draw(
       encoder,
-      context.getCurrentTexture().createView(),
+      swapView,
       settings.exposure,
       settings.toneMapCurve,
       timingService.descriptorFor('tone-map'),
     );
+    encodeUiOverlay(
+      encoder,
+      swapView,
+      ctx,
+      state,
+      settings,
+      deps,
+      timingService.descriptorFor('ui-overlay'),
+    );
     timingService.endFrame(timingCtx, encoder);
-    device.queue.submit([encoder.finish()]);
-    return;
+  } else {
+    encodeHdrSingle(encoder, ctx, state, settings, deps);
+    ctx.postProcess.draw(encoder, swapView, settings.exposure, settings.toneMapCurve, undefined);
+    encodeUiOverlay(encoder, swapView, ctx, state, settings, deps, undefined);
   }
 
-  hdrSinglePass(encoder, ctx, state, settings, deps);
-
-  // ── HDR → swap chain tone-map ──────────────────────────────────────
-  //
-  // After every additive contribution has been accumulated into the
-  // HDR target, run the fullscreen tone-map post-process to compress
-  // the linear-light values into the swap chain's displayable range.
-  // Both passes are encoded into the same `encoder`, so the GPU sees:
-  //
-  //   1. clear+draw into hdrTarget (HDR_PASSES)
-  //   2. fullscreen blit hdrTarget → swap chain (tone-map)
-  //
-  // Switching `toneMapCurve` between Linear / Reinhard / Asinh /
-  // Gamma 2 / ACES is a single 4-byte uniform write inside the pass
-  // — no pipeline rebuild, instant visual A/B.
-  //
-  // Tone-map stays inline rather than becoming a `Pass`: it samples
-  // the HDR target the four HDR passes wrote into and runs OUTSIDE
-  // the open render-pass block.  Modelling it as a `Pass` would
-  // force a divergent signature (encoder vs. pass-encoder) for one
-  // inhabitant.  See spec D.2 "tone-map special case".
-  ctx.postProcess.draw(
-    encoder,
-    context.getCurrentTexture().createView(),
-    settings.exposure,
-    settings.toneMapCurve,
-    undefined,
-  );
-
-  // Seal the command buffer and send it to the GPU.
   device.queue.submit([encoder.finish()]);
 }

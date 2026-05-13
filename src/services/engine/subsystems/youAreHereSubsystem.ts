@@ -36,21 +36,13 @@ import { youAreHereAlpha } from '../../gpu/labels/youAreHereVisibility';
 const LABEL_TEXT = 'You are here';
 const LABEL_ANCHOR_MPC = 0.05;
 const LINE_TOP_MPC = LABEL_ANCHOR_MPC * 0.75;
-// HDR colours, NOT display colours.  Labels and marker lines render
-// into the rgba16float HDR target before the tone-map post-process,
-// so anything output at LDR intensity (rgb = 1.0) gets compressed by
-// the tonemap curve and reads as mid-grey on screen.  ACES at the
-// default exposure compresses 1.0 → ~0.6 display; 8.0 lands at
-// roughly display-white after the tonemap rolls off, which is what
-// the user expects from a "you are here" pin.  Linear tonemap clamps
-// at 1.0 anyway, so the overshoot is harmless on that curve.
-//
-// The proper fix is to render UI overlays AFTER the tonemap blit
-// (separate pipeline targeting the swap-chain format) so they bypass
-// the curve entirely; that's a bigger refactor and lives in the
-// backlog.  This is the band-aid in the meantime.
-const LABEL_COLOR: Vec4 = [8, 8, 8, 1];
-const LINE_COLOR: Vec4 = [8, 8, 8, 1];
+// LDR display colours.  Marker-lines and labels render in the
+// `uiOverlay` pass AFTER the tone-map blit (see
+// `services/engine/frame/uiOverlay.ts`), so they composite directly
+// onto the swap chain without going through the exposure curve.
+// `[1, 1, 1, 1]` is display white at any tone-map setting.
+const LABEL_COLOR: Vec4 = [1, 1, 1, 1];
+const LINE_COLOR: Vec4 = [1, 1, 1, 1];
 
 export function createYouAreHereSubsystem(): YouAreHereSubsystem {
   function produceLabels(_state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {

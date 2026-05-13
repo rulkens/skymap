@@ -282,26 +282,32 @@ describe('renderFrame — timing service hookup', () => {
     expect(beginFrame).toHaveBeenCalledTimes(1);
 
     // descriptorFor fires once per enabled HDR pass PLUS once for the
-    // tone-map pass.  In this fixture the HDR side is point-sprites +
-    // milky-way (the other six are gated off via null subsystems /
-    // null optional renderers); the tone-map slot is unconditional
-    // because postProcess.draw is always invoked once per frame.
+    // tone-map pass PLUS once for the combined UI overlay.  In this
+    // fixture the HDR side is point-sprites + milky-way (the other
+    // four are gated off via null subsystems / null optional
+    // renderers); the tone-map slot is unconditional because
+    // postProcess.draw runs every frame; the ui-overlay slot fires
+    // even with no marker-lines / labels because the timing-enabled
+    // path always opens the UI overlay pass so its slot reports.
     const slotsCalled = descriptorFor.mock.calls.map((c) => c[0]);
     expect(slotsCalled).toContain('point-sprites');
     expect(slotsCalled).toContain('milky-way');
     expect(slotsCalled).toContain('tone-map');
-    expect(descriptorFor).toHaveBeenCalledTimes(3);
+    expect(slotsCalled).toContain('ui-overlay');
+    expect(descriptorFor).toHaveBeenCalledTimes(4);
 
     // The descriptors returned by the mock must land on the
     // beginRenderPass descriptors.  Each pass's beginRenderPass call
     // should carry the timestampWrites for its slot — we match via
     // the `_stub` tag we embedded in the mock's querySet.
     //
-    // The first beginRenderPass call is the dedicated clear pass; it
-    // never carries timestampWrites (no slot for it).  Every
-    // subsequent call corresponds to an enabled HDR sub-pass.
+    // The first beginRenderPass is the dedicated HDR clear pass (no
+    // timestampWrites).  Subsequent visible passes here are:
+    // point-sprites, milky-way (HDR sub-passes), then the ui-overlay
+    // pass.  Tone-map's beginRenderPass is hidden inside postProcess.draw
+    // (mocked away), so it doesn't appear in `beginCalls`.
     const subPassBegins = beginCalls.slice(1);
-    expect(subPassBegins).toHaveLength(2);
+    expect(subPassBegins).toHaveLength(3);
     const stubSlotsOnDescriptors = subPassBegins.map((b) => {
       const tw = (
         b.desc as GPURenderPassDescriptor & {
@@ -311,7 +317,7 @@ describe('renderFrame — timing service hookup', () => {
       expect(tw).toBeDefined();
       return (tw!.querySet as unknown as { _stub: TimingSlotName })._stub;
     });
-    expect(stubSlotsOnDescriptors).toEqual(['point-sprites', 'milky-way']);
+    expect(stubSlotsOnDescriptors).toEqual(['point-sprites', 'milky-way', 'ui-overlay']);
 
     // The clear pass at index 0 must have NO timestampWrites field.
     const clearDesc = beginCalls[0]!.desc as GPURenderPassDescriptor & {

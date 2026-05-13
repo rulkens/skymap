@@ -50,18 +50,17 @@ import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
 import { HDR_PASSES } from '../../services/engine/frame/passes';
 import { Sparkline } from './Sparkline';
 
-// Row display order: the HDR_PASSES array (which is the source of
-// truth for HDR rendering order in `renderFrame`), with `tone-map`
-// and `pick` appended.  Those two passes live OUTSIDE HDR_PASSES
-// (tone-map runs after the HDR block; pick is its own encoder
-// submitted by the pick renderer) and so don't appear in
-// `HDR_PASSES.map(p => p.name)`.  Listing them explicitly here keeps
-// the panel's row order in lockstep with the renderer's draw
-// sequence, so reordering passes in `passes/index.ts` automatically
-// reorders the timing UI.
+// Row display order: HDR_PASSES (one timing slot per pass), then the
+// three out-of-HDR passes in render order — `tone-map` (HDR→swap-
+// chain blit), `ui-overlay` (marker-lines + labels combined; see
+// `services/engine/frame/uiOverlay.ts` for why they share one slot),
+// and `pick` (its own encoder, submitted by the pick renderer).
+// Reordering passes in `passes/index.ts` automatically reorders the
+// timing UI for the HDR portion.
 const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = [
   ...HDR_PASSES.map((p) => p.name as TimingSlotName),
   'tone-map',
+  'ui-overlay',
   'pick',
 ];
 

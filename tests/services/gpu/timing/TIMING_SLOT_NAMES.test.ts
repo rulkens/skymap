@@ -19,15 +19,14 @@ describe('TIMING_SLOT_NAMES', () => {
     expect(TIMING_SLOT_NAMES.get('filaments')).toEqual([6, 7]);
     expect(TIMING_SLOT_NAMES.get('scalar-volume')).toEqual([8, 9]);
     expect(TIMING_SLOT_NAMES.get('milky-way')).toEqual([10, 11]);
-    expect(TIMING_SLOT_NAMES.get('marker-lines')).toEqual([12, 13]);
-    expect(TIMING_SLOT_NAMES.get('labels')).toEqual([14, 15]);
-    expect(TIMING_SLOT_NAMES.get('tone-map')).toEqual([16, 17]);
-    expect(TIMING_SLOT_NAMES.get('pick')).toEqual([18, 19]);
+    expect(TIMING_SLOT_NAMES.get('tone-map')).toEqual([12, 13]);
+    expect(TIMING_SLOT_NAMES.get('ui-overlay')).toEqual([14, 15]);
+    expect(TIMING_SLOT_NAMES.get('pick')).toEqual([16, 17]);
   });
 
-  it('reserves slots 20-31 (query set sized 32, only 20 in use)', () => {
+  it('reserves slots 18-31 (query set sized 32, 9 in use)', () => {
     expect(TIMING_QUERY_SET_SIZE).toBe(32);
-    expect(TIMING_SLOT_NAMES.size).toBe(10);
+    expect(TIMING_SLOT_NAMES.size).toBe(9);
   });
 
   it('never assigns the same index to two slots', () => {

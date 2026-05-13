@@ -392,6 +392,10 @@ describe('renderFrame visual baseline', () => {
           "renderer": "scalar-volume",
         },
         {
+          "argShape": "object,object,number,number,undefined",
+          "renderer": "postProcess",
+        },
+        {
           "argShape": "pass,Float32Array[16],Array[2]",
           "renderer": "marker-lines",
         },
@@ -399,24 +403,20 @@ describe('renderFrame visual baseline', () => {
           "argShape": "pass,Float32Array[16],Array[2]",
           "renderer": "labels",
         },
-        {
-          "argShape": "object,object,number,number,undefined",
-          "renderer": "postProcess",
-        },
       ]
     `);
 
-    // Boundary-event count for the no-timing path: ONE begin/end pair
-    // for the HDR mega-pass.  Counts are asserted SEPARATELY from the
-    // inline snapshot above on purpose: the drawSequence captures the
-    // renderer-dispatch invariant (byte-identical regardless of how
-    // many begin/end pairs the orchestrator opens), while these counts
-    // capture the pass-boundary structure (which differs between the
-    // timing-on and timing-off paths).  The split-pass shape is
-    // exercised in `recordHdrSplitPasses.test.ts`.
+    // Boundary-event count for the no-timing path: TWO begin/end
+    // pairs — one for the HDR mega-pass (`encodeHdrSingle`) and one
+    // for the post-tone-map UI overlay (`encodeUiOverlay`).  Tone-
+    // map's beginRenderPass is hidden inside postProcess.draw (the
+    // mock just records the call), so it doesn't appear here.
+    // Counts are asserted SEPARATELY from the inline snapshot above
+    // on purpose: drawSequence captures the renderer-dispatch
+    // invariant, these counts capture the pass-boundary structure.
     const beginCount = records.filter((r) => r.kind === 'beginRenderPass').length;
     const endCount = records.filter((r) => r.kind === 'passEnd').length;
-    expect(beginCount).toBe(1);
-    expect(endCount).toBe(1);
+    expect(beginCount).toBe(2);
+    expect(endCount).toBe(2);
   });
 });

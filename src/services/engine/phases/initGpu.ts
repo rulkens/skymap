@@ -205,14 +205,25 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // These renderers are stored on `state.gpu` (unlike `texturedQuadRenderer` /
   // `milkyWayRenderer` which stay phase-local) because the `destroy()`
   // method in `engine.ts` needs to release their GPU buffers + atlas
-  // texture.  They're excluded from `isEngineReady` for the same reason as
-  // `filamentRenderer`: optional async resources, null-checked at point of
-  // use by `labelsPass.enabled` / `markerLinesPass.enabled`.
-  const hdrCtx = { device, context, format: 'rgba16float' as const, canvas };
+  // texture.  They're excluded from `isEngineReady` for the same
+  // reason as `filamentRenderer`: optional async resources, null-
+  // checked at point of use.
+  //
+  // ### Why the swap-chain format, not the HDR target
+  //
+  // Marker-lines + labels are UI overlay drawn AFTER tone-map onto
+  // the swap chain (see `uiOverlay` in `services/engine/frame/`).
+  // Their pipelines are constructed with the swap-chain format so
+  // the WebGPU validation lines up at the colorAttachment.  Drawing
+  // INTO the HDR target (rgba16float) used to require an `[8, 8, 8, 1]`
+  // overshoot to survive the tone-map compression; with the post-
+  // tone-map pass `[1, 1, 1, 1]` is correct (and matches what the
+  // `youAreHereSubsystem` now emits).
+  const uiCtx = { device, context, format, canvas };
 
   const fontAtlas = await loadFontAtlas();
-  state.gpu.labelRenderer = createLabelRenderer(hdrCtx, fontAtlas.metrics, fontAtlas.bitmap);
-  state.gpu.markerLineRenderer = createMarkerLineRenderer(hdrCtx);
+  state.gpu.labelRenderer = createLabelRenderer(uiCtx, fontAtlas.metrics, fontAtlas.bitmap);
+  state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx);
 
   // Wire the freshly-constructed renderers into the label director.
   // The director was built eagerly in the engine state literal (alongside

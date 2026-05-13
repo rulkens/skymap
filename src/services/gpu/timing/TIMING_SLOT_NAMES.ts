@@ -12,17 +12,16 @@
  *   | filaments             | 6         | 7       |
  *   | scalar-volume         | 8         | 9       |
  *   | milky-way             | 10        | 11      |
- *   | marker-lines          | 12        | 13      |
- *   | labels                | 14        | 15      |
- *   | tone-map              | 16        | 17      |
- *   | pick                  | 18        | 19      |
- *   | _reserved_            | 20–31     |         |
+ *   | tone-map              | 12        | 13      |
+ *   | ui-overlay            | 14        | 15      |
+ *   | pick                  | 16        | 17      |
+ *   | _reserved_            | 18–31     |         |
  *
- * 10 slots × 2 indices = 20.  The query set is sized 32 (see
- * `TIMING_QUERY_SET_SIZE` below) for headroom — splitting
- * `textured-impostors` into `textured-quads` + `textured-disks`, or
- * adding a future post-tone-map overlay, fits without resizing the
- * GPU resources.
+ * 9 slots × 2 indices = 18.  The query set is sized 32 (see
+ * `TIMING_QUERY_SET_SIZE` below) for headroom.  `ui-overlay` is the
+ * combined marker-lines + labels pass — they share one swap-chain
+ * `beginRenderPass` for OVER-blend coherency, so they bill against a
+ * single timing slot.
  *
  * ### Why a `Map` rather than a plain object
  *
@@ -63,8 +62,7 @@ export const TIMING_SLOT_NAMES: ReadonlyMap<TimingSlotName, readonly [number, nu
   ['filaments', [6, 7]],
   ['scalar-volume', [8, 9]],
   ['milky-way', [10, 11]],
-  ['marker-lines', [12, 13]],
-  ['labels', [14, 15]],
-  ['tone-map', [16, 17]],
-  ['pick', [18, 19]],
+  ['tone-map', [12, 13]],
+  ['ui-overlay', [14, 15]],
+  ['pick', [16, 17]],
 ]);
