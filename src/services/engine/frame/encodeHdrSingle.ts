@@ -54,12 +54,14 @@ export function encodeHdrSingle(
   // `volumeUpsamplePass` (one of the HDR_PASSES entries) bilinearly samples
   // the half-res target and additively blends into the HDR target.
   //
-  // Gating: the helper itself is a no-op if `state.gpu.scalarVolumeRenderer`
-  // is null (pre-bootstrap), and the HDR-side `volumeUpsamplePass.enabled`
-  // gate checks the master toggle + `hasActiveFields()` — but we ALSO gate
-  // here to avoid opening an empty render pass when nothing's active.
-  // Pre-HDR work that doesn't draw anything is still a non-zero cost on
-  // tile-based GPUs (the GPU still loads / stores the target).
+  // Gating: `encodeVolumes` carries its own null + hasActiveFields guard
+  // for direct callers, but the call-site gate below makes it unreachable
+  // here by construction.  The duplication is deliberate — gating at the
+  // call site avoids even the function-call overhead, and on tile-based
+  // GPUs an empty `beginRenderPass(loadOp: 'clear')` is still a non-zero
+  // cost (tile-RAM load+store) even when nothing draws inside.  The
+  // downstream `volumeUpsamplePass.enabled` checks the same conditions
+  // on the HDR side; the two layers stay in lockstep.
   if (
     settings.volumesEnabled &&
     state.gpu.scalarVolumeRenderer !== null &&
