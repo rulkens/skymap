@@ -3081,30 +3081,79 @@ EOF
 
 This task finishes the UI migration. The umbrella component owns the fixed-position chrome and renders both sections inside it; the App-level mount predicate stays the same (`hasUrlGate('debug') || import.meta.env.DEV`).
 
-The panel needs access to both the asset slots AND the engine's `timingService` handle. The engine handle's existing shape exposes `state.gpu.timingService` indirectly — we expose it via the `EngineHandle` so App.tsx can pass it as a prop. The simplest plumbing: add a `getTimingService()` accessor on the engine handle that returns `state.gpu.timingService` (null when not constructed).
+The panel needs access to both the asset slots AND the engine's `timingService` handle. The H5 namespace pattern (memory `project_h5_namespace_restructure`) is sub-handle-namespaced — every imperative cluster lives under a topical sub-handle. We introduce a new `EngineDebugHandle` for the timing service. Future debug surfaces (CPU timing breakdowns, render-stat counters, frame-timeline exports) will cluster there too.
 
-- [ ] **Step 1: Add `getTimingService` to the engine handle**
+- [ ] **Step 1: Create the `EngineDebugHandle` type**
 
-Inspect the `EngineHandle` type — the convention since the H5 namespace restructure is sub-handle-namespaced (memory `project_h5_namespace_restructure`). Add a thin accessor:
-
-In `src/@types/engine/EngineHandle.d.ts` (or wherever the top-level `EngineHandle` type lives — `grep -rn "export type EngineHandle\b" src/@types/`), add a top-level field:
+Create `src/@types/engine/handles/EngineDebugHandle.d.ts`:
 
 ```typescript
+/**
+ * EngineDebugHandle — the engine's observability sub-handle.
+ *
+ * Hosts handles to debug/inspection surfaces the React shell reads
+ * but never drives.  Today the only inhabitant is `timingService`;
+ * future debug surfaces (CPU-timing breakdowns, render-stat
+ * counters, frame-timeline exports) cluster here rather than
+ * sprawling across the top-level handle.
+ *
+ * ### Why a sub-handle for one field
+ *
+ * H5 (2026-05-11) moved the engine handle from a flat ~50-method
+ * surface to a cluster-shaped one — every related method lives
+ * under a topical namespace.  Adding `timingService` at the root
+ * would regress to the flat shape for new fields.  A `debug`
+ * namespace is the cluster-shaped home that telegraphs intent
+ * ("this is dev/debug scaffolding, not a knob") and gives future
+ * debug additions a natural place to land without re-litigating
+ * placement each time.
+ *
+ * ### Why a getter rather than a copied reference
+ *
+ * `state.gpu.timingService` is assigned by the async `initGpu`
+ * IIFE that runs AFTER `createEngine` returns.  A copied reference
+ * captured at handle construction would always be `null`.  The
+ * getter reads the live slot every time the React shell asks for it.
+ */
+
+import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
+
+export type EngineDebugHandle = {
   /**
-   * The optional gpuTimingService.  Null when the engine was
-   * constructed without the `?gpuTimings` URL gate.  Exposed at the
-   * top level (rather than under a sub-handle) because there are no
-   * sibling timing-related methods — adding a `timing.*` namespace for
-   * one field would be over-architecture.
+   * The optional GPU timing service.  `null` when the engine was
+   * constructed without the `?gpuTimings` URL gate OR the adapter
+   * lacks the `timestamp-query` feature.  The `DebugPanel`'s
+   * `GpuTimingsSection` reads this; when it's `null` the section
+   * renders a fallback message instead of subscribing.
    */
-  timingService: GpuTimingService | null;
+  readonly timingService: GpuTimingService | null;
+};
 ```
 
-…and the matching import at the top of the file. Mirror the pattern in `src/services/engine/engine.ts` (or whichever file constructs the `EngineHandle` object literal) to expose `state.gpu.timingService`:
+- [ ] **Step 2: Add `debug: EngineDebugHandle` to `EngineHandle`**
+
+In `src/@types/engine/EngineHandle.d.ts`, add the import alongside the other sub-handle imports:
 
 ```typescript
-    get timingService() {
-      return state.gpu.timingService;
+import type { EngineDebugHandle } from './handles/EngineDebugHandle';
+```
+
+…and the field inside the sub-handles cluster (place it after `input` to keep the namespace list grouped by domain — UX knobs first, then `debug` as a separate observability surface):
+
+```typescript
+  input: EngineInputHandle;
+  debug: EngineDebugHandle;
+```
+
+- [ ] **Step 3: Construct the debug sub-handle in `engine.ts`**
+
+In `src/services/engine/engine.ts` (or whichever file constructs the `EngineHandle` object literal — `grep -rn "destroy:" src/services/engine/*.ts` finds the construction site), add the sub-handle assembly alongside the existing ones:
+
+```typescript
+    debug: {
+      get timingService() {
+        return state.gpu.timingService;
+      },
     },
 ```
 
@@ -3199,7 +3248,7 @@ function isDebugPanelAvailable(): boolean {
         {isDebugPanelAvailable() && (
           <DebugPanel
             slots={handleRef.current?.assetSlots ?? new Map()}
-            timingService={handleRef.current?.timingService ?? null}
+            timingService={handleRef.current?.debug.timingService ?? null}
           />
         )}
 ```
@@ -3228,7 +3277,7 @@ Expected: PASS — including all four DebugPanel tests, the urlGate test, the ti
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/DebugPanel/DebugPanel.tsx src/components/App/App.tsx src/@types/engine/EngineHandle.d.ts src/services/engine/engine.ts
+git add src/components/DebugPanel/DebugPanel.tsx src/components/App/App.tsx src/@types/engine/EngineHandle.d.ts src/@types/engine/handles/EngineDebugHandle.d.ts src/services/engine/engine.ts
 git rm src/components/LoadingDevPanel/LoadingDevPanel.tsx
 git commit -m "$(cat <<'EOF'
 feat(DebugPanel): introduce umbrella, delete LoadingDevPanel, migrate App.tsx
@@ -3237,8 +3286,9 @@ DebugPanel owns the fixed-position chrome and composes
 AssetLoadingSection (legacy panel body) + GpuTimingsSection (new
 GPU timing readout).  App.tsx replaces the LoadingDevPanel mount
 site; the predicate is now `hasUrlGate('debug') || import.meta.env.DEV`.
-The engine handle exposes `timingService` as a getter so App.tsx
-can pass the live (post-initGpu) reference.
+The engine handle gains a new `debug` sub-handle (per H5 cluster
+pattern) exposing `timingService` as a getter so App.tsx can pass
+the live (post-initGpu) reference.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
 EOF
@@ -3354,4 +3404,4 @@ The author of this plan walked the spec section-by-section to verify coverage. R
   - `TimingSlotName` is the same union across `@types/gpu/timing/TimingSlotName.d.ts`, `TIMING_SLOT_NAMES.ts`, `decodeTimestampBuffer.ts`, `gpuTimingService.ts`, and `renderFrame.ts`. ✔
   - `GpuTimingService.descriptorFor` returns `GPURenderPassTimestampWrites | undefined` everywhere — type alias and implementation agree. ✔
   - `GpuTimingFrame.perPassMs` is a `ReadonlyMap<TimingSlotName, number>` everywhere; the `GpuTimingsSection` reads it as such. ✔
-  - `EngineGpuHandles.timingService` (Task 6), `RenderFrameInput.timingService` (Task 9), `RunFrameDeps.timingService` (Task 9), and `EngineHandle.timingService` (Task 15) are all `GpuTimingService | null` with consistent JSDoc. ✔
+  - `EngineGpuHandles.timingService` (Task 6), `RenderFrameInput.timingService` (Task 9), `RunFrameDeps.timingService` (Task 9), and `EngineDebugHandle.timingService` (Task 15, accessed as `engineHandle.debug.timingService`) are all `GpuTimingService | null` with consistent JSDoc. ✔
