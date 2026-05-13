@@ -402,13 +402,17 @@ describe('renderFrame visual baseline', () => {
       ]
     `);
 
-    // Sanity: the boundary-event count is what we'd expect from the
-    // CURRENT (pre-split) renderFrame — 1 HDR mega-pass open + 1 close,
-    // 1 finish, 1 submit.  Task 8 will rewire renderFrame to open 9
-    // passes instead of 1, changing these counts.  We assert them
-    // SEPARATELY from the inline snapshot above so Task 8 only needs to
-    // update these two numeric lines — the drawSequence snapshot stays
-    // byte-identical.
+    // Boundary-event count: 9 begin/end pairs per frame — 1 dedicated
+    // clear pass + 8 HDR sub-passes (one `beginRenderPass` per enabled
+    // entry in HDR_PASSES, with `loadOp: 'load'`).  These counts are
+    // asserted SEPARATELY from the inline snapshot above on purpose:
+    // the drawSequence captures the renderer-dispatch invariant (which
+    // is byte-identical pre- and post-split), while these two counts
+    // capture the pass-boundary structure (which changed in the
+    // refactor that landed alongside this fixture's update from 1→9).
+    // Keeping them separate means a future refactor that drifts the
+    // *structure* without affecting *what gets drawn* fails just these
+    // two lines, not the whole snapshot.
     const beginCount = records.filter((r) => r.kind === 'beginRenderPass').length;
     const endCount = records.filter((r) => r.kind === 'passEnd').length;
     expect(beginCount).toBe(9);

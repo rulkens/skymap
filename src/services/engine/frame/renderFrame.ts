@@ -3,16 +3,14 @@
  *
  * Before this module existed, ~140 lines of imperative GPU plumbing
  * sprawled inside `engine.ts`'s `frame()`.  D.1 (`FrameContext`) cut
- * the ad-hoc snapshot work; D.2 (this commit) cuts the inline draw
- * blocks.  What remains in this file is the encoder lifecycle plus
- * the registry loop:
- *
- *   1. `createCommandEncoder()`
- *   2. `beginRenderPass()` against the HDR offscreen target
- *   3. `for (const pass of HDR_PASSES) if (pass.enabled(...)) pass.draw(...)`
- *   4. `pass.end()`
- *   5. `postProcess.draw(...)` (HDR → swap chain tone-map blit)
- *   6. `device.queue.submit([encoder.finish()])`
+ * the ad-hoc snapshot work; D.2 cut the inline draw blocks into the
+ * `HDR_PASSES` registry; the per-pass-split refactor turned the
+ * single shared HDR render pass into nine (1 clear + 8 sub-passes)
+ * so each enabled pass can attach its own `timestampWrites`
+ * descriptor.  What remains in this file is the encoder lifecycle,
+ * the dedicated clear pass, the per-pass loop, and the tone-map
+ * blit — see "What the encoder records, in order" below for the
+ * step-by-step shape.
  *
  * Each entry in `HDR_PASSES` is a `Pass` const declared in its own
  * file under `passes/`.  See `passes/types.ts` for the interface
