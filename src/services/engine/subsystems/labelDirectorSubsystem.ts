@@ -64,17 +64,28 @@ export function createLabelDirectorSubsystem(): LabelDirectorSubsystem {
   }
 
   function signatureOf(labels: readonly Label[], lines: readonly MarkerLine[]): string {
-    // Cheap stable signature: id-list + length.  Producers are expected
-    // to emit stable ids when their contribution is unchanged; the
-    // signature only flips when ids change or the count changes, which
-    // is exactly when we need a GPU re-upload.  Edge case: a producer
-    // changing a label's *text* but keeping the same id will NOT trigger
-    // re-upload — accept this; the only current producer with mutable
-    // text is youAreHere (text is constant) and poiSubsystem (text is
-    // derived from POI name, which is included via setPois replacement
-    // → new ids if names change in practice).
-    const lIds = labels.map((l) => l.id).join('|');
-    const mIds = lines.map((m) => m.id).join('|');
+    // Cheap stable signature: per-entry `id:fadeAlpha`, joined.
+    // Re-upload triggers when ids/count change OR when any entry's
+    // `fadeAlpha` differs from the prior frame.  Including `fadeAlpha`
+    // matters because the `youAreHereSubsystem` keeps the same `id`
+    // across the fade band while the alpha smoothly transitions
+    // 0→1→0 as the camera moves; without this term, the GPU instance
+    // buffer would stay stuck at whatever alpha was uploaded the
+    // first frame the marker became visible.  (Symptom: marker
+    // appears at e.g. 0.1 alpha and never brightens as the camera
+    // closes in.)
+    //
+    // We deliberately DON'T include world positions or colours — the
+    // glyph layout in `labelRenderer.setLabels` is the expensive
+    // step we're protecting; static-position producers (youAreHere,
+    // pois) keep their positions stable and benefit from the skip.
+    //
+    // Edge case: a producer mutating a label's `text` while keeping
+    // the same `id` will NOT trigger re-upload.  No current producer
+    // does this — youAreHere has constant text; pois derive text
+    // from POI name which is part of the id space.
+    const lIds = labels.map((l) => `${l.id}:${l.fadeAlpha ?? 1}`).join('|');
+    const mIds = lines.map((m) => `${m.id}:${m.fadeAlpha ?? 1}`).join('|');
     return `L:${labels.length}:${lIds};M:${lines.length}:${mIds}`;
   }
 
