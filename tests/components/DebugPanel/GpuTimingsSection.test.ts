@@ -54,25 +54,19 @@ function makeStubService(opts: { available: boolean }): {
 
 describe('GpuTimingsSection', () => {
   it('renders the "add ?gpuTimings" message when service is null', () => {
-    const { container } = render(
-      createElement(GpuTimingsSection, { service: null }),
-    );
+    const { container } = render(createElement(GpuTimingsSection, { service: null }));
     expect(container.textContent).toContain('?gpuTimings');
   });
 
   it('renders the "unavailable on this adapter" message when available is false', () => {
     const { svc } = makeStubService({ available: false });
-    const { container } = render(
-      createElement(GpuTimingsSection, { service: svc }),
-    );
+    const { container } = render(createElement(GpuTimingsSection, { service: svc }));
     expect(container.textContent).toContain('unavailable');
   });
 
   it('renders one row per slot when frames flow in', () => {
     const { svc, emit } = makeStubService({ available: true });
-    const { container } = render(
-      createElement(GpuTimingsSection, { service: svc }),
-    );
+    const { container } = render(createElement(GpuTimingsSection, { service: svc }));
 
     act(() => {
       emit({
@@ -92,9 +86,7 @@ describe('GpuTimingsSection', () => {
 
   it('unsubscribes on unmount', () => {
     const { svc } = makeStubService({ available: true });
-    const { unmount } = render(
-      createElement(GpuTimingsSection, { service: svc }),
-    );
+    const { unmount } = render(createElement(GpuTimingsSection, { service: svc }));
     unmount();
     // The subscribe spy was called once on mount; we expect the
     // returned-unsubscribe function to have been invoked during

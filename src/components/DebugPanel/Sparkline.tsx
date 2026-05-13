@@ -61,10 +61,7 @@ export function Sparkline({ samples }: SparklineProps): ReactElement {
 
   const chars: string[] = [];
   for (const sample of samples) {
-    const bucket = Math.max(
-      0,
-      Math.min(7, Math.round((sample / denominator) * 7)),
-    );
+    const bucket = Math.max(0, Math.min(7, Math.round((sample / denominator) * 7)));
     chars.push(BLOCKS[bucket]!);
   }
 

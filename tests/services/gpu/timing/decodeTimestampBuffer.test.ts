@@ -36,9 +36,7 @@ describe('decodeTimestampBuffer', () => {
   });
 
   it('skips slots whose (begin, end) are both 0 (pass-did-not-run sentinel)', () => {
-    const buf = buildBuffer([
-      [0, 100n, 1_000_100n],
-    ]);
+    const buf = buildBuffer([[0, 100n, 1_000_100n]]);
     const out = decodeTimestampBuffer(buf, 1);
 
     expect(out.has('point-sprites')).toBe(true);

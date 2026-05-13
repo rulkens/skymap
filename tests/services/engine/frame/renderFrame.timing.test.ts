@@ -302,9 +302,11 @@ describe('renderFrame — timing service hookup', () => {
     const subPassBegins = beginCalls.slice(1);
     expect(subPassBegins).toHaveLength(2);
     const stubSlotsOnDescriptors = subPassBegins.map((b) => {
-      const tw = (b.desc as GPURenderPassDescriptor & {
-        timestampWrites?: GPURenderPassTimestampWrites;
-      }).timestampWrites;
+      const tw = (
+        b.desc as GPURenderPassDescriptor & {
+          timestampWrites?: GPURenderPassTimestampWrites;
+        }
+      ).timestampWrites;
       expect(tw).toBeDefined();
       return (tw!.querySet as unknown as { _stub: TimingSlotName })._stub;
     });

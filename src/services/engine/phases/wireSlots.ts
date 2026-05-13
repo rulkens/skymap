@@ -186,7 +186,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   const showAnchors = hasUrlGate('anchors');
   if (showAnchors) {
     const slug = (name: string): string =>
-      name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
     const pois: PointOfInterest[] = [
       ...CLUSTER_ANCHORS.map(
         (a): PointOfInterest => ({
@@ -314,12 +317,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     }
   }
 
-  const progressEmitter = createLoadProgressEmitter(
-    (snapshot) => {
-      cb.sources?.onLoadProgress?.(snapshot);
-    },
-    allSlots,
-  );
+  const progressEmitter = createLoadProgressEmitter((snapshot) => {
+    cb.sources?.onLoadProgress?.(snapshot);
+  }, allSlots);
   for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
   state.subsystems.loadProgress = progressEmitter;
 

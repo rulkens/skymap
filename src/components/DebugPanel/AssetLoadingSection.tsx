@@ -98,10 +98,7 @@ function SlotRow({ name, state, slot }: SlotRowProps) {
           Reload
         </button>
         {state.kind === 'loading' && (
-          <button
-            onClick={() => slot.cancel()}
-            style={{ fontSize: 10, marginLeft: 4 }}
-          >
+          <button onClick={() => slot.cancel()} style={{ fontSize: 10, marginLeft: 4 }}>
             Cancel
           </button>
         )}

@@ -108,14 +108,7 @@ describe('createClickResolver', () => {
     // behaviour for tests that aren't exercising that path.  The 6th
     // arg is the optional `timingDescriptor` (likewise undefined when
     // the engine's timing service is absent — see PickRenderer JSDoc).
-    expect(picker.pick).toHaveBeenCalledWith(
-      [1280, 720],
-      11,
-      22,
-      sources,
-      undefined,
-      undefined,
-    );
+    expect(picker.pick).toHaveBeenCalledWith([1280, 720], 11, 22, sources, undefined, undefined);
   });
 
   it('forwards the resolveSelection triple into buildPointInfo unchanged', async () => {

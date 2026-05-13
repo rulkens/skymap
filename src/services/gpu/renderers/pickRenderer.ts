@@ -67,10 +67,7 @@ import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import {
-  SELECTION_NONE_SENTINEL,
-  unpackPick,
-} from '../../../data/selectionEncoding';
+import { SELECTION_NONE_SENTINEL, unpackPick } from '../../../data/selectionEncoding';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
@@ -136,10 +133,7 @@ import {
  */
 const PICK_PADDING_PX = 4;
 
-export function createPickRenderer(
-  device: GPUDevice,
-  pointRenderer: PointRenderer,
-): PickRenderer {
+export function createPickRenderer(device: GPUDevice, pointRenderer: PointRenderer): PickRenderer {
   // ── Shader modules ─────────────────────────────────────────────────────────
   //
   // The vertex stage source is textually shared with PointRenderer, but we

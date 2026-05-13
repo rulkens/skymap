@@ -23,7 +23,7 @@ unguided.
 
 WebGPU's `timestamp-query` feature gives us per-pass start/end
 timestamps cheaply. The constraint is that timestamps land on render-
-pass *boundaries* (descriptors), not arbitrary points inside an open
+pass _boundaries_ (descriptors), not arbitrary points inside an open
 pass. Today, all 8 HDR sub-passes share one `beginRenderPass`. To get
 per-sub-pass timing without a debug-only rendering branch, we split
 that one shared pass into 8 separate render passes (same target, all
@@ -87,19 +87,19 @@ lifecycle artefact, not an interesting draw cost.
 Static slot assignment (the indices are compile-time constants, not
 allocated dynamically):
 
-| Slot name             | Begin idx | End idx |
-| --------------------- | --------- | ------- |
-| `point-sprites`       | 0         | 1       |
-| `procedural-disks`    | 2         | 3       |
-| `textured-impostors`  | 4         | 5       |
-| `filaments`           | 6         | 7       |
-| `scalar-volume`       | 8         | 9       |
-| `milky-way`           | 10        | 11      |
-| `marker-lines`        | 12        | 13      |
-| `labels`              | 14        | 15      |
-| `tone-map`            | 16        | 17      |
-| `pick`                | 18        | 19      |
-| _reserved_            | 20–31     |         |
+| Slot name            | Begin idx | End idx |
+| -------------------- | --------- | ------- |
+| `point-sprites`      | 0         | 1       |
+| `procedural-disks`   | 2         | 3       |
+| `textured-impostors` | 4         | 5       |
+| `filaments`          | 6         | 7       |
+| `scalar-volume`      | 8         | 9       |
+| `milky-way`          | 10        | 11      |
+| `marker-lines`       | 12        | 13      |
+| `labels`             | 14        | 15      |
+| `tone-map`           | 16        | 17      |
+| `pick`               | 18        | 19      |
+| _reserved_           | 20–31     |         |
 
 ### `gpuTimingService` module
 
@@ -241,7 +241,7 @@ DebugPanel/
 ### Mount predicate
 
 ```ts
-hasUrlGate('debug') || import.meta.env.DEV
+hasUrlGate('debug') || import.meta.env.DEV;
 ```
 
 In dev, the panel is always mounted. In production builds, it ships
@@ -308,7 +308,7 @@ frame), inside its own encoder + submit. Including it in timing means:
 - The pick encoder needs a `timestampWrites` descriptor on its
   internal `beginRenderPass`. `pickRenderer.draw` signature extends to
   accept an optional `timingDescriptor: RenderPassTimestampWrites |
-  undefined` argument.
+undefined` argument.
 - The pick `resolveQuerySet` + `copyBufferToBuffer` ride on the same
   encoder, alongside the HDR/tone-map resolves of whichever frame the
   pick happens to land in. The staging buffer doesn't care which

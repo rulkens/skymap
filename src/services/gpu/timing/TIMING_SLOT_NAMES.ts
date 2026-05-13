@@ -53,16 +53,18 @@ import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 export const TIMING_QUERY_SET_SIZE = 32;
 
 /** Slot→(begin idx, end idx) map.  See module header for the spec table. */
-export const TIMING_SLOT_NAMES: ReadonlyMap<TimingSlotName, readonly [number, number]> =
-  new Map<TimingSlotName, readonly [number, number]>([
-    ['point-sprites', [0, 1]],
-    ['procedural-disks', [2, 3]],
-    ['textured-impostors', [4, 5]],
-    ['filaments', [6, 7]],
-    ['scalar-volume', [8, 9]],
-    ['milky-way', [10, 11]],
-    ['marker-lines', [12, 13]],
-    ['labels', [14, 15]],
-    ['tone-map', [16, 17]],
-    ['pick', [18, 19]],
-  ]);
+export const TIMING_SLOT_NAMES: ReadonlyMap<TimingSlotName, readonly [number, number]> = new Map<
+  TimingSlotName,
+  readonly [number, number]
+>([
+  ['point-sprites', [0, 1]],
+  ['procedural-disks', [2, 3]],
+  ['textured-impostors', [4, 5]],
+  ['filaments', [6, 7]],
+  ['scalar-volume', [8, 9]],
+  ['milky-way', [10, 11]],
+  ['marker-lines', [12, 13]],
+  ['labels', [14, 15]],
+  ['tone-map', [16, 17]],
+  ['pick', [18, 19]],
+]);

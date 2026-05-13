@@ -46,9 +46,7 @@ export function DebugPanel({ slots, timingService }: DebugPanelProps) {
         pointerEvents: 'auto',
       }}
     >
-      <div style={{ fontWeight: 'bold', marginBottom: 6, opacity: 0.8 }}>
-        Skymap Debug
-      </div>
+      <div style={{ fontWeight: 'bold', marginBottom: 6, opacity: 0.8 }}>Skymap Debug</div>
       <AssetLoadingSection slots={slots} />
       <div style={{ marginTop: 6 }} />
       <GpuTimingsSection service={timingService} />

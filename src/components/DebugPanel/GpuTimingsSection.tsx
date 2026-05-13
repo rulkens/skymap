@@ -62,9 +62,7 @@ export type GpuTimingsSectionProps = {
   service: GpuTimingService | null;
 };
 
-export function GpuTimingsSection({
-  service,
-}: GpuTimingsSectionProps): ReactElement {
+export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactElement {
   // The render-trigger pattern: `tick` increments per frame; the actual
   // stats live in a ref so we don't re-allocate the Map every frame.
   const [, setTick] = useState(0);
@@ -98,9 +96,7 @@ export function GpuTimingsSection({
   if (service === null) {
     return (
       <details open>
-        <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>
-          GPU Timings
-        </summary>
+        <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>GPU Timings</summary>
         <div style={{ marginTop: 4, opacity: 0.7 }}>
           Add <code>?gpuTimings</code> to the URL to enable.
         </div>
@@ -112,12 +108,8 @@ export function GpuTimingsSection({
   if (!service.available) {
     return (
       <details open>
-        <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>
-          GPU Timings
-        </summary>
-        <div style={{ marginTop: 4, opacity: 0.7 }}>
-          GPU timings unavailable on this adapter.
-        </div>
+        <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>GPU Timings</summary>
+        <div style={{ marginTop: 4, opacity: 0.7 }}>GPU timings unavailable on this adapter.</div>
       </details>
     );
   }
@@ -152,14 +144,10 @@ export function GpuTimingsSection({
           const row = stats.get(slot);
           if (!row) return null;
           const avg =
-            row.recent.length === 0
-              ? 0
-              : row.recent.reduce((a, b) => a + b, 0) / row.recent.length;
+            row.recent.length === 0 ? 0 : row.recent.reduce((a, b) => a + b, 0) / row.recent.length;
           return (
             <div key={slot}>
-              <span style={{ display: 'inline-block', width: 130 }}>
-                {slot}
-              </span>
+              <span style={{ display: 'inline-block', width: 130 }}>{slot}</span>
               <span
                 style={{
                   display: 'inline-block',

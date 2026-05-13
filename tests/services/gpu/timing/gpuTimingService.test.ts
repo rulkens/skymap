@@ -80,8 +80,8 @@ describe('gpuTimingService — no-op mode (feature missing)', () => {
     const device = makeDevice({ supportsTimestamp: false });
     createGpuTimingService(device);
 
-    expect((device.createQuerySet as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
-    expect((device.createBuffer as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(device.createQuerySet as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+    expect(device.createBuffer as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 });
 

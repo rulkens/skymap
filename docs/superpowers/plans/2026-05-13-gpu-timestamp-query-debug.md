@@ -15,6 +15,7 @@
 ## Task 1: Add `hasUrlGate` utility and migrate three existing call sites
 
 **Files:**
+
 - Create: `src/utils/url/urlGate.ts`
 - Create: `tests/utils/url/urlGate.test.ts`
 - Modify: `src/components/App/App.tsx` (replace inline `URLSearchParams` reads at the two known sites)
@@ -230,6 +231,7 @@ EOF
 ## Task 2: Add type definitions for the timing service
 
 **Files:**
+
 - Create: `src/@types/gpu/timing/TimingSlotName.d.ts`
 - Create: `src/@types/gpu/timing/GpuTimingFrame.d.ts`
 - Create: `src/@types/gpu/timing/TimingFrameContext.d.ts`
@@ -493,6 +495,7 @@ EOF
 ## Task 3: Add the static `TIMING_SLOT_NAMES` table
 
 **Files:**
+
 - Create: `src/services/gpu/timing/TIMING_SLOT_NAMES.ts`
 - Create: `tests/services/gpu/timing/TIMING_SLOT_NAMES.test.ts`
 
@@ -611,19 +614,21 @@ import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 export const TIMING_QUERY_SET_SIZE = 32;
 
 /** Slot→(begin idx, end idx) map.  See module header for the spec table. */
-export const TIMING_SLOT_NAMES: ReadonlyMap<TimingSlotName, readonly [number, number]> =
-  new Map<TimingSlotName, readonly [number, number]>([
-    ['point-sprites', [0, 1]],
-    ['procedural-disks', [2, 3]],
-    ['textured-impostors', [4, 5]],
-    ['filaments', [6, 7]],
-    ['scalar-volume', [8, 9]],
-    ['milky-way', [10, 11]],
-    ['marker-lines', [12, 13]],
-    ['labels', [14, 15]],
-    ['tone-map', [16, 17]],
-    ['pick', [18, 19]],
-  ]);
+export const TIMING_SLOT_NAMES: ReadonlyMap<TimingSlotName, readonly [number, number]> = new Map<
+  TimingSlotName,
+  readonly [number, number]
+>([
+  ['point-sprites', [0, 1]],
+  ['procedural-disks', [2, 3]],
+  ['textured-impostors', [4, 5]],
+  ['filaments', [6, 7]],
+  ['scalar-volume', [8, 9]],
+  ['milky-way', [10, 11]],
+  ['marker-lines', [12, 13]],
+  ['labels', [14, 15]],
+  ['tone-map', [16, 17]],
+  ['pick', [18, 19]],
+]);
 ```
 
 Run: `npx vitest run tests/services/gpu/timing/TIMING_SLOT_NAMES.test.ts`
@@ -651,6 +656,7 @@ EOF
 ## Task 4: Add `decodeTimestampBuffer` pure function
 
 **Files:**
+
 - Create: `src/services/gpu/timing/decodeTimestampBuffer.ts`
 - Create: `tests/services/gpu/timing/decodeTimestampBuffer.test.ts`
 
@@ -731,16 +737,16 @@ describe('decodeTimestampBuffer', () => {
 
   it('decodes all 10 slots independently', () => {
     const buf = buildBuffer([
-      [0, 0n, 1_000_000n],   // point-sprites:       1 ms
-      [1, 0n, 2_000_000n],   // procedural-disks:    2 ms
-      [2, 0n, 3_000_000n],   // textured-impostors:  3 ms
-      [3, 0n, 500_000n],     // filaments:           0.5 ms
-      [4, 0n, 4_000_000n],   // scalar-volume:       4 ms
-      [5, 0n, 600_000n],     // milky-way:           0.6 ms
-      [6, 0n, 100_000n],     // marker-lines:        0.1 ms
-      [7, 0n, 100_000n],     // labels:              0.1 ms
-      [8, 0n, 400_000n],     // tone-map:            0.4 ms
-      [9, 0n, 200_000n],     // pick:                0.2 ms
+      [0, 0n, 1_000_000n], // point-sprites:       1 ms
+      [1, 0n, 2_000_000n], // procedural-disks:    2 ms
+      [2, 0n, 3_000_000n], // textured-impostors:  3 ms
+      [3, 0n, 500_000n], // filaments:           0.5 ms
+      [4, 0n, 4_000_000n], // scalar-volume:       4 ms
+      [5, 0n, 600_000n], // milky-way:           0.6 ms
+      [6, 0n, 100_000n], // marker-lines:        0.1 ms
+      [7, 0n, 100_000n], // labels:              0.1 ms
+      [8, 0n, 400_000n], // tone-map:            0.4 ms
+      [9, 0n, 200_000n], // pick:                0.2 ms
     ]);
     const out = decodeTimestampBuffer(buf, 1);
 
@@ -868,10 +874,11 @@ EOF
 ## Task 5: Implement `gpuTimingService`
 
 **Files:**
+
 - Create: `src/services/gpu/timing/gpuTimingService.ts`
 - Create: `tests/services/gpu/timing/gpuTimingService.test.ts`
 
-The service owns the GPU resources (query set, resolve buffer, two staging buffers), the subscriber set, and the frame counter. It composes the slot table (Task 3) and decoder (Task 4); the bulk of *new* logic in this task is the staging-buffer rotation + mapAsync queueing.
+The service owns the GPU resources (query set, resolve buffer, two staging buffers), the subscriber set, and the frame counter. It composes the slot table (Task 3) and decoder (Task 4); the bulk of _new_ logic in this task is the staging-buffer rotation + mapAsync queueing.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -968,8 +975,8 @@ describe('gpuTimingService — no-op mode (feature missing)', () => {
     const device = makeDevice({ supportsTimestamp: false });
     createGpuTimingService(device);
 
-    expect((device.createQuerySet as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
-    expect((device.createBuffer as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(device.createQuerySet as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+    expect(device.createBuffer as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 });
 
@@ -1049,8 +1056,8 @@ describe('gpuTimingService — active mode', () => {
           // test elides that.)
           const backing = dst.getMappedRange();
           const u64 = new BigUint64Array(backing);
-          u64[0] = 0n;            // point-sprites begin
-          u64[1] = 1_500_000n;    // point-sprites end → 1.5 ms
+          u64[0] = 0n; // point-sprites begin
+          u64[1] = 1_500_000n; // point-sprites end → 1.5 ms
         },
       ),
     };
@@ -1236,7 +1243,7 @@ export function createGpuTimingService(device: GPUDevice): GpuTimingService {
       stagingSlot: nextStagingSlot,
     };
     nextFrameIndex++;
-    nextStagingSlot = (nextStagingSlot === 0 ? 1 : 0);
+    nextStagingSlot = nextStagingSlot === 0 ? 1 : 0;
     return ctx;
   }
 
@@ -1256,13 +1263,7 @@ export function createGpuTimingService(device: GPUDevice): GpuTimingService {
     if (inFlight[ctx.stagingSlot]) return;
 
     encoder.resolveQuerySet(querySet, 0, TIMING_QUERY_SET_SIZE, resolveBuffer, 0);
-    encoder.copyBufferToBuffer(
-      resolveBuffer,
-      0,
-      stagingBuffers[ctx.stagingSlot],
-      0,
-      BUFFER_BYTES,
-    );
+    encoder.copyBufferToBuffer(resolveBuffer, 0, stagingBuffers[ctx.stagingSlot], 0, BUFFER_BYTES);
 
     // Queue the map for after submit.  The microtask chain below
     // resolves once the GPU has caught up to this frame's submit and
@@ -1364,6 +1365,7 @@ EOF
 ## Task 6: Request `timestamp-query` feature in `initGpu`; wire service slot into `EngineGpuHandles`
 
 **Files:**
+
 - Modify: `src/services/gpu/device.ts` (negotiate the feature)
 - Modify: `src/@types/engine/handles/EngineGpuHandles.d.ts` (add `timingService` slot)
 - Modify: `src/services/engine/engine.ts` (initial state literal + destroy chain)
@@ -1472,24 +1474,24 @@ Expected: FAIL — `initGpu` currently calls `adapter.requestDevice()` with no a
 In `src/services/gpu/device.ts`, replace the line that calls `requestDevice` (currently line 70) with:
 
 ```typescript
-  // Step 2 — Request a device, opting into `timestamp-query` when the
-  // adapter advertises it.  WebGPU treats features as opt-in: if we
-  // ask for a feature the adapter doesn't have, `requestDevice`
-  // throws; if we don't ask, the feature is unavailable on the
-  // device even when the adapter supports it.  So we mirror the
-  // adapter's advertised set for the one optional feature we care
-  // about and let the device's own `features` map drive every
-  // downstream service.
-  //
-  // The `gpuTimingService` constructor reads `device.features.has(
-  // 'timestamp-query')` to decide between active mode and no-op
-  // mode — so omitting the feature here propagates cleanly.
-  // See: https://www.w3.org/TR/webgpu/#dom-gpuadapter-requestdevice
-  const requiredFeatures: GPUFeatureName[] = [];
-  if (adapter.features.has('timestamp-query')) {
-    requiredFeatures.push('timestamp-query');
-  }
-  const device = await adapter.requestDevice({ requiredFeatures });
+// Step 2 — Request a device, opting into `timestamp-query` when the
+// adapter advertises it.  WebGPU treats features as opt-in: if we
+// ask for a feature the adapter doesn't have, `requestDevice`
+// throws; if we don't ask, the feature is unavailable on the
+// device even when the adapter supports it.  So we mirror the
+// adapter's advertised set for the one optional feature we care
+// about and let the device's own `features` map drive every
+// downstream service.
+//
+// The `gpuTimingService` constructor reads `device.features.has(
+// 'timestamp-query')` to decide between active mode and no-op
+// mode — so omitting the feature here propagates cleanly.
+// See: https://www.w3.org/TR/webgpu/#dom-gpuadapter-requestdevice
+const requiredFeatures: GPUFeatureName[] = [];
+if (adapter.features.has('timestamp-query')) {
+  requiredFeatures.push('timestamp-query');
+}
+const device = await adapter.requestDevice({ requiredFeatures });
 ```
 
 Run: `npx vitest run tests/services/gpu/device.timestampQuery.test.ts`
@@ -1507,20 +1509,20 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 …and append the field inside the `EngineGpuHandles` type literal (after `scalarVolumeRenderer`):
 
 ```typescript
-  /**
-   * Per-pass GPU timing service.  Null when the engine is constructed
-   * without the `?gpuTimings` URL gate (the common case) OR when the
-   * adapter lacks the `timestamp-query` feature (the constructor's
-   * own no-op short-circuit would otherwise hand us a service with
-   * `available: false`, but we prefer null at this layer so the
-   * destroy chain doesn't call `.destroy()` on a never-allocated
-   * stub).
-   *
-   * Same lifecycle, same reachability rationale, and same
-   * `isEngineReady` exclusion as `texturedQuadRenderer` above — see
-   * that field's docstring for the full story.
-   */
-  timingService: GpuTimingService | null;
+/**
+ * Per-pass GPU timing service.  Null when the engine is constructed
+ * without the `?gpuTimings` URL gate (the common case) OR when the
+ * adapter lacks the `timestamp-query` feature (the constructor's
+ * own no-op short-circuit would otherwise hand us a service with
+ * `available: false`, but we prefer null at this layer so the
+ * destroy chain doesn't call `.destroy()` on a never-allocated
+ * stub).
+ *
+ * Same lifecycle, same reachability rationale, and same
+ * `isEngineReady` exclusion as `texturedQuadRenderer` above — see
+ * that field's docstring for the full story.
+ */
+timingService: GpuTimingService | null;
 ```
 
 - [ ] **Step 4: Initialise + tear down the slot in `engine.ts`**
@@ -1536,8 +1538,8 @@ In `src/services/engine/engine.ts`, find the `state.gpu` initial-literal block (
 Find the destroy chain and add:
 
 ```typescript
-      state.gpu.timingService?.destroy();
-      state.gpu.timingService = null;
+state.gpu.timingService?.destroy();
+state.gpu.timingService = null;
 ```
 
 Place this near `state.gpu.scalarVolumeRenderer?.destroy() / = null` so the symmetry between init and destroy stays visible at one site.
@@ -1554,22 +1556,22 @@ import { hasUrlGate } from '../../../utils/url/urlGate';
 In the body of `initGpu`, after `state.gpu.scalarVolumeRenderer = scalarVolumeRenderer;` (or near where every other `state.gpu.* = …` assignment lives), add:
 
 ```typescript
-  // ── GPU timing service (gated on `?gpuTimings`) ──────────────────
-  //
-  // The service is allocated only when the URL gate is open.  Even
-  // though `createGpuTimingService` has its own no-op short-circuit
-  // for missing-feature adapters, we still skip construction entirely
-  // when the gate is off — the user opted out, no point reserving GPU
-  // resources for a debug feature.  When the gate is on AND the
-  // adapter has the feature, `available` is true and renderFrame
-  // attaches `timestampWrites` to every pass descriptor.  When the
-  // gate is on but the adapter doesn't have the feature, the service
-  // is still constructed (so the DebugPanel can render the
-  // "unavailable on this adapter" message) but every method is a
-  // no-op.
-  if (hasUrlGate('gpuTimings')) {
-    state.gpu.timingService = createGpuTimingService(device);
-  }
+// ── GPU timing service (gated on `?gpuTimings`) ──────────────────
+//
+// The service is allocated only when the URL gate is open.  Even
+// though `createGpuTimingService` has its own no-op short-circuit
+// for missing-feature adapters, we still skip construction entirely
+// when the gate is off — the user opted out, no point reserving GPU
+// resources for a debug feature.  When the gate is on AND the
+// adapter has the feature, `available` is true and renderFrame
+// attaches `timestampWrites` to every pass descriptor.  When the
+// gate is on but the adapter doesn't have the feature, the service
+// is still constructed (so the DebugPanel can render the
+// "unavailable on this adapter" message) but every method is a
+// no-op.
+if (hasUrlGate('gpuTimings')) {
+  state.gpu.timingService = createGpuTimingService(device);
+}
 ```
 
 - [ ] **Step 6: Verify types + tests**
@@ -1606,9 +1608,10 @@ EOF
 ## Task 7: Capture a pre-split visual baseline (frame-hash fixture)
 
 **Files:**
+
 - Create: `tests/visual/renderFrameSplitBaseline.test.ts`
 
-This task mirrors the impostor-split work's Task 1 visual baseline. The test snapshots the SEQUENCE of `encoder.beginRenderPass` calls, each pass's `renderPass.draw*` invocations, and the eventual `device.queue.submit` payload, all from one invocation of the CURRENT (pre-split) `renderFrame`. After Task 8 rewires `renderFrame` to use 9 passes, the same fixture must still produce a byte-identical hash — proving the split changed nothing about *what* the GPU is told to draw, only the boundary structure of the render passes.
+This task mirrors the impostor-split work's Task 1 visual baseline. The test snapshots the SEQUENCE of `encoder.beginRenderPass` calls, each pass's `renderPass.draw*` invocations, and the eventual `device.queue.submit` payload, all from one invocation of the CURRENT (pre-split) `renderFrame`. After Task 8 rewires `renderFrame` to use 9 passes, the same fixture must still produce a byte-identical hash — proving the split changed nothing about _what_ the GPU is told to draw, only the boundary structure of the render passes.
 
 We hash the PER-PASS draw command sequence (not the render-pass boundary structure) precisely so the split-into-9 refactor doesn't accidentally fail its own baseline. The visual output is what matters, not the number of `beginRenderPass` boundaries.
 
@@ -1662,18 +1665,10 @@ type DrawRecord =
 function makeRecordingPass(records: DrawRecord[]): GPURenderPassEncoder {
   const pass = {
     setPipeline: vi.fn(() => records.push({ kind: 'setPipeline', label: 'p' })),
-    setBindGroup: vi.fn((i: number) =>
-      records.push({ kind: 'setBindGroup', index: i }),
-    ),
-    setVertexBuffer: vi.fn((s: number) =>
-      records.push({ kind: 'setVertexBuffer', slot: s }),
-    ),
-    draw: vi.fn(() =>
-      records.push({ kind: 'draw', renderer: 'unknown', argCount: 4 }),
-    ),
-    drawIndexed: vi.fn(() =>
-      records.push({ kind: 'draw', renderer: 'unknown', argCount: 5 }),
-    ),
+    setBindGroup: vi.fn((i: number) => records.push({ kind: 'setBindGroup', index: i })),
+    setVertexBuffer: vi.fn((s: number) => records.push({ kind: 'setVertexBuffer', slot: s })),
+    draw: vi.fn(() => records.push({ kind: 'draw', renderer: 'unknown', argCount: 4 })),
+    drawIndexed: vi.fn(() => records.push({ kind: 'draw', renderer: 'unknown', argCount: 5 })),
     end: vi.fn(),
   } as unknown as GPURenderPassEncoder;
   return pass;
@@ -1742,7 +1737,7 @@ Run: `npx vitest run tests/visual/renderFrameSplitBaseline.test.ts -u`
 
 Expected: PASS — vitest writes the inline snapshot.
 
-**Note:** the `makeMinimalInput` helper above is a sketch; the implementer mirrors the structure of the existing `tests/services/engine/frame/renderFrame.test.ts` (which already mocks every `RenderFrameInput` field at this level) to keep the stubs consistent. The deliverable is a recorded inline snapshot of the per-pass `draw` commands the *current* `renderFrame` emits.
+**Note:** the `makeMinimalInput` helper above is a sketch; the implementer mirrors the structure of the existing `tests/services/engine/frame/renderFrame.test.ts` (which already mocks every `RenderFrameInput` field at this level) to keep the stubs consistent. The deliverable is a recorded inline snapshot of the per-pass `draw` commands the _current_ `renderFrame` emits.
 
 - [ ] **Step 2: Re-run without `-u` to confirm determinism**
 
@@ -1772,14 +1767,15 @@ EOF
 ## Task 8: Refactor `renderFrame.ts` — split mega-pass into 1 clear + 8 HDR sub-passes
 
 **Files:**
+
 - Modify: `src/services/engine/frame/renderFrame.ts`
 
 This is a STRUCTURAL refactor with NO timing yet. The goal is to prove the orchestrator can open 9 render passes instead of 1 without altering visual output — the baseline test from Task 7 stays green throughout. Timing service hookup happens in Task 9.
 
 The change:
 
-  - Open a dedicated **clear pass** (`loadOp: 'clear'`, no draws, ends immediately) at the top of the HDR section.
-  - Replace the single `for (const pass of HDR_PASSES)` loop with: for each pass that's `enabled`, open its own `beginRenderPass` with `loadOp: 'load'`, call `pass.draw(...)`, end it.
+- Open a dedicated **clear pass** (`loadOp: 'clear'`, no draws, ends immediately) at the top of the HDR section.
+- Replace the single `for (const pass of HDR_PASSES)` loop with: for each pass that's `enabled`, open its own `beginRenderPass` with `loadOp: 'load'`, call `pass.draw(...)`, end it.
 
 The `Pass` interface contract is unchanged. The clear pass is NOT measured (it's a frame-lifecycle artefact; see spec section "Why a dedicated clear pass instead of `clear` on pass 1").
 
@@ -1794,71 +1790,71 @@ Expected: PASS.
 In `src/services/engine/frame/renderFrame.ts`, replace the section currently spanning roughly lines 123–167 (from `// ── Encoder + HDR render pass ──` through `renderPass.end();`) with:
 
 ```typescript
-  // ── Encoder + per-pass HDR rendering ──────────────────────────────
-  //
-  // Pre-split (commits before this one): one `beginRenderPass` opened
-  // the HDR target with `loadOp: 'clear'`, every entry in HDR_PASSES
-  // drew into that single open encoder, and `renderPass.end()` closed
-  // it.
-  //
-  // Post-split: nine render passes per frame, all targeting the same
-  // HDR view.  The first is a dedicated `loadOp: 'clear'` no-draw pass
-  // — it wipes the target to black so subsequent passes can start
-  // their additive accumulation from zero.  The remaining eight are
-  // one per `HDR_PASSES` entry, each using `loadOp: 'load'`, calling
-  // exactly one `pass.draw(...)`, then closing.
-  //
-  // Visual output is identical: every additive draw still composites
-  // into the same float framebuffer in the same order.  See
-  // `tests/visual/renderFrameSplitBaseline.test.ts` for the hash-
-  // equivalence proof.
-  //
-  // Why a separate clear pass instead of `clear` on the first HDR_PASSES
-  // entry: if HDR_PASSES[0] were gated off (e.g. `pointSpritesPass.enabled
-  // = false` in some future configuration), the clear would silently
-  // vanish.  A no-draw clear pass at the top of renderFrame keeps the
-  // clear as a frame-lifecycle invariant — always runs, regardless of
-  // which subsequent passes are enabled.  Cost: ~µs on desktop GPUs,
-  // amortised by the subsequent draws.  See spec "Why a dedicated
-  // clear pass instead of `clear` on pass 1".
-  const encoder = device.createCommandEncoder();
+// ── Encoder + per-pass HDR rendering ──────────────────────────────
+//
+// Pre-split (commits before this one): one `beginRenderPass` opened
+// the HDR target with `loadOp: 'clear'`, every entry in HDR_PASSES
+// drew into that single open encoder, and `renderPass.end()` closed
+// it.
+//
+// Post-split: nine render passes per frame, all targeting the same
+// HDR view.  The first is a dedicated `loadOp: 'clear'` no-draw pass
+// — it wipes the target to black so subsequent passes can start
+// their additive accumulation from zero.  The remaining eight are
+// one per `HDR_PASSES` entry, each using `loadOp: 'load'`, calling
+// exactly one `pass.draw(...)`, then closing.
+//
+// Visual output is identical: every additive draw still composites
+// into the same float framebuffer in the same order.  See
+// `tests/visual/renderFrameSplitBaseline.test.ts` for the hash-
+// equivalence proof.
+//
+// Why a separate clear pass instead of `clear` on the first HDR_PASSES
+// entry: if HDR_PASSES[0] were gated off (e.g. `pointSpritesPass.enabled
+// = false` in some future configuration), the clear would silently
+// vanish.  A no-draw clear pass at the top of renderFrame keeps the
+// clear as a frame-lifecycle invariant — always runs, regardless of
+// which subsequent passes are enabled.  Cost: ~µs on desktop GPUs,
+// amortised by the subsequent draws.  See spec "Why a dedicated
+// clear pass instead of `clear` on pass 1".
+const encoder = device.createCommandEncoder();
 
-  // ── Clear pass (no draws) ─────────────────────────────────────────
-  const clearPass = encoder.beginRenderPass({
+// ── Clear pass (no draws) ─────────────────────────────────────────
+const clearPass = encoder.beginRenderPass({
+  colorAttachments: [
+    {
+      view: ctx.postProcess.view,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+      loadOp: 'clear',
+      storeOp: 'store',
+    },
+  ],
+});
+clearPass.end();
+
+// ── HDR sub-passes — one beginRenderPass per enabled pass ─────────
+//
+// Each pass owns its own enabled-gate.  Per-pass begin/end is
+// necessary so a future `timestampWrites` descriptor can attach to
+// each pass boundary individually (see Task 9 — wires the timing
+// service in).  Today, with no timing service attached, this is
+// pure structural prep: the GPU sees N "load + draw + store"
+// passes where it previously saw "clear + N draws + store".
+for (const pass of HDR_PASSES) {
+  if (!pass.enabled(state, ctx, settings)) continue;
+
+  const passEncoder = encoder.beginRenderPass({
     colorAttachments: [
       {
         view: ctx.postProcess.view,
-        clearValue: { r: 0, g: 0, b: 0, a: 1 },
-        loadOp: 'clear',
+        loadOp: 'load',
         storeOp: 'store',
       },
     ],
   });
-  clearPass.end();
-
-  // ── HDR sub-passes — one beginRenderPass per enabled pass ─────────
-  //
-  // Each pass owns its own enabled-gate.  Per-pass begin/end is
-  // necessary so a future `timestampWrites` descriptor can attach to
-  // each pass boundary individually (see Task 9 — wires the timing
-  // service in).  Today, with no timing service attached, this is
-  // pure structural prep: the GPU sees N "load + draw + store"
-  // passes where it previously saw "clear + N draws + store".
-  for (const pass of HDR_PASSES) {
-    if (!pass.enabled(state, ctx, settings)) continue;
-
-    const passEncoder = encoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: ctx.postProcess.view,
-          loadOp: 'load',
-          storeOp: 'store',
-        },
-      ],
-    });
-    pass.draw(passEncoder, ctx, state, settings, deps);
-    passEncoder.end();
-  }
+  pass.draw(passEncoder, ctx, state, settings, deps);
+  passEncoder.end();
+}
 ```
 
 The remainder of the function (the tone-map call and the `device.queue.submit`) stays unchanged.
@@ -1923,6 +1919,7 @@ EOF
 ## Task 9: Wire timing service into `renderFrame` — attach per-pass timestampWrites
 
 **Files:**
+
 - Modify: `src/@types/engine/frame/RenderFrameInput.d.ts` (add optional `timingService` field)
 - Modify: `src/services/engine/frame/renderFrame.ts` (consume the service)
 - Modify: `src/services/engine/frame/runFrame.ts` (forward the service)
@@ -2016,9 +2013,7 @@ describe('renderFrame — timing service hookup', () => {
 
 // Helper definitions — see top of this file for the rationale.
 function makeMinimalInputWithTiming(
-  timingService:
-    | ReturnType<typeof makeFakeTimingService>['svc']
-    | null,
+  timingService: ReturnType<typeof makeFakeTimingService>['svc'] | null,
 ): RenderFrameInput {
   // Reuse the renderFrameSplitBaseline.test.ts canonical stub builder.
   // Attach `state.gpu.timingService` (a new EngineState field added in
@@ -2046,14 +2041,14 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 …and append the field to the `RenderFrameInput` type:
 
 ```typescript
-  /**
-   * Optional per-pass GPU timing service.  Null when the engine was
-   * constructed without the `?gpuTimings` URL gate (the common case).
-   * When present, `renderFrame` attaches `timestampWrites` to each
-   * HDR sub-pass descriptor and calls `endFrame` after the tone-map
-   * call so the resolve + copy ride on the same encoder.
-   */
-  timingService: GpuTimingService | null;
+/**
+ * Optional per-pass GPU timing service.  Null when the engine was
+ * constructed without the `?gpuTimings` URL gate (the common case).
+ * When present, `renderFrame` attaches `timestampWrites` to each
+ * HDR sub-pass descriptor and calls `endFrame` after the tone-map
+ * call so the resolve + copy ride on the same encoder.
+ */
+timingService: GpuTimingService | null;
 ```
 
 - [ ] **Step 3: Consume the timing service in `renderFrame.ts`**
@@ -2061,24 +2056,24 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 In `src/services/engine/frame/renderFrame.ts`, extend the destructure at the top of the function to pull `timingService`:
 
 ```typescript
-  const {
-    ctx,
-    state,
-    milkyWayITimeSec,
-    device,
-    context,
-    milkyWayRenderer,
-    filamentRenderer,
-    scalarVolumeRenderer,
-    texturedQuadRenderer,
-    texturedDiskRenderer,
-    proceduralDiskRenderer,
-    settings,
-    famousMeta,
-    famousXrefs,
-    clouds,
-    timingService,
-  } = input;
+const {
+  ctx,
+  state,
+  milkyWayITimeSec,
+  device,
+  context,
+  milkyWayRenderer,
+  filamentRenderer,
+  scalarVolumeRenderer,
+  texturedQuadRenderer,
+  texturedDiskRenderer,
+  proceduralDiskRenderer,
+  settings,
+  famousMeta,
+  famousXrefs,
+  clouds,
+  timingService,
+} = input;
 ```
 
 Add the import near the top of the file:
@@ -2090,46 +2085,44 @@ import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 Just before `const encoder = device.createCommandEncoder();` add the begin-frame call:
 
 ```typescript
-  // Per-frame timing window.  Null when the service is null (no-op
-  // mode); otherwise a context the service uses to pick a staging
-  // buffer for this frame's resolve.
-  const timingCtx = timingService?.beginFrame() ?? null;
+// Per-frame timing window.  Null when the service is null (no-op
+// mode); otherwise a context the service uses to pick a staging
+// buffer for this frame's resolve.
+const timingCtx = timingService?.beginFrame() ?? null;
 ```
 
 Inside the `for (const pass of HDR_PASSES)` loop, modify the `encoder.beginRenderPass` call to attach `timestampWrites`:
 
 ```typescript
-    // The pass-name → slot mapping is statically defined by
-    // TIMING_SLOT_NAMES.  Pass.name is typed `string`, but the
-    // HDR_PASSES inhabitants' names are all keys of that table by
-    // construction — the cast is safe and documented.  If a future
-    // pass file forgets to add a slot, `descriptorFor` returns
-    // undefined and the pass simply isn't measured (it still draws).
-    const timestampWrites = timingService?.descriptorFor(
-      pass.name as TimingSlotName,
-    );
+// The pass-name → slot mapping is statically defined by
+// TIMING_SLOT_NAMES.  Pass.name is typed `string`, but the
+// HDR_PASSES inhabitants' names are all keys of that table by
+// construction — the cast is safe and documented.  If a future
+// pass file forgets to add a slot, `descriptorFor` returns
+// undefined and the pass simply isn't measured (it still draws).
+const timestampWrites = timingService?.descriptorFor(pass.name as TimingSlotName);
 
-    const passEncoder = encoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: ctx.postProcess.view,
-          loadOp: 'load',
-          storeOp: 'store',
-        },
-      ],
-      ...(timestampWrites ? { timestampWrites } : {}),
-    });
-    pass.draw(passEncoder, ctx, state, settings, deps);
-    passEncoder.end();
+const passEncoder = encoder.beginRenderPass({
+  colorAttachments: [
+    {
+      view: ctx.postProcess.view,
+      loadOp: 'load',
+      storeOp: 'store',
+    },
+  ],
+  ...(timestampWrites ? { timestampWrites } : {}),
+});
+pass.draw(passEncoder, ctx, state, settings, deps);
+passEncoder.end();
 ```
 
 After the `ctx.postProcess.draw(...)` call (tone-map) and BEFORE `device.queue.submit(...)`, add:
 
 ```typescript
-  // Record the resolveQuerySet + copyBufferToBuffer commands onto
-  // this same encoder so they ride along with the HDR + tone-map
-  // submits.  endFrame is a no-op when timingCtx is null.
-  if (timingCtx && timingService) timingService.endFrame(timingCtx, encoder);
+// Record the resolveQuerySet + copyBufferToBuffer commands onto
+// this same encoder so they ride along with the HDR + tone-map
+// submits.  endFrame is a no-op when timingCtx is null.
+if (timingCtx && timingService) timingService.endFrame(timingCtx, encoder);
 ```
 
 - [ ] **Step 4: Forward `timingService` through `runFrame.ts`**
@@ -2143,12 +2136,12 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 …and append the field:
 
 ```typescript
-  /**
-   * Optional per-pass GPU timing service.  Null unless `?gpuTimings`
-   * is set.  Forwarded straight through to `renderFrame` via
-   * `RenderFrameInput.timingService`.
-   */
-  timingService: GpuTimingService | null;
+/**
+ * Optional per-pass GPU timing service.  Null unless `?gpuTimings`
+ * is set.  Forwarded straight through to `renderFrame` via
+ * `RenderFrameInput.timingService`.
+ */
+timingService: GpuTimingService | null;
 ```
 
 In `src/services/engine/frame/runFrame.ts`, extend the destructure of `deps` to include `timingService` and pass it through into the `renderFrame(...)` call's input bag.
@@ -2198,6 +2191,7 @@ EOF
 ## Task 10: Plumb optional `timestampWrites` through `postProcess.draw`
 
 **Files:**
+
 - Modify: `src/@types/rendering/PostProcess.d.ts` (extend `draw` signature)
 - Modify: `src/services/gpu/passes/postProcess.ts` (consume the new arg)
 - Modify: `src/services/engine/frame/renderFrame.ts` (pass `descriptorFor('tone-map')`)
@@ -2281,24 +2275,24 @@ In `src/services/gpu/passes/postProcess.ts`, find the `draw(encoder, swapView, e
 In `src/services/engine/frame/renderFrame.ts`, replace the existing call:
 
 ```typescript
-  ctx.postProcess.draw(
-    encoder,
-    context.getCurrentTexture().createView(),
-    settings.exposure,
-    settings.toneMapCurve,
-  );
+ctx.postProcess.draw(
+  encoder,
+  context.getCurrentTexture().createView(),
+  settings.exposure,
+  settings.toneMapCurve,
+);
 ```
 
 …with:
 
 ```typescript
-  ctx.postProcess.draw(
-    encoder,
-    context.getCurrentTexture().createView(),
-    settings.exposure,
-    settings.toneMapCurve,
-    timingService?.descriptorFor('tone-map'),
-  );
+ctx.postProcess.draw(
+  encoder,
+  context.getCurrentTexture().createView(),
+  settings.exposure,
+  settings.toneMapCurve,
+  timingService?.descriptorFor('tone-map'),
+);
 ```
 
 The optional 5th argument is `undefined` when `timingService` is null (the common case); when present, it's the `RenderPassTimestampWrites` for slot pair (16, 17).
@@ -2340,14 +2334,15 @@ EOF
 ## Task 11: Plumb optional `timestampWrites` through `pickRenderer.draw`
 
 **Files:**
+
 - Modify: `src/@types/rendering/PickRenderer.d.ts` (extend `pick` signature with optional timing arg)
 - Modify: `src/services/gpu/renderers/pickRenderer.ts` (consume the new arg)
 - Modify: the caller(s) that invoke `pickRenderer.pick` — search for `pickRenderer.pick(` in `src/services/engine/` to find the canonical hover-driven call site
 
 Pick runs on its own encoder, on its own cadence (hover-driven, not per-frame). The slot pair `(18, 19)` is reserved for pick. Two important points:
 
-  1. The pick service's resolve + copy DO ride on the pick encoder — not on the main frame encoder. That's the natural fit because pick owns its own `device.queue.submit`.
-  2. When pick doesn't fire for a frame, the staging buffer slots for pick stay at zero (the decoder's sentinel "didn't run") and the panel shows `—`.
+1. The pick service's resolve + copy DO ride on the pick encoder — not on the main frame encoder. That's the natural fit because pick owns its own `device.queue.submit`.
+2. When pick doesn't fire for a frame, the staging buffer slots for pick stay at zero (the decoder's sentinel "didn't run") and the panel shows `—`.
 
 Because the pick encoder is separate, we DON'T call `timingService.endFrame` from inside pick — that's the main frame's responsibility, and pick's resolve happens via a different mechanism: pickRenderer needs its own micro-resolve, OR we accept that pick timings land "one frame late" via the next main-frame's endFrame consuming a query set written by pick's submit. The spec resolves this by having `pickRenderer` accept the `descriptorFor('pick')` and the rest of the staging-buffer lifecycle ride on the main frame's endFrame (the query set is shared, so resolving 0..32 at endFrame picks up whatever pick wrote since the last resolve).
 
@@ -2408,26 +2403,26 @@ In `src/services/gpu/renderers/pickRenderer.ts`, find the `async function pick(.
 Find the `encoder.beginRenderPass({...})` call (~line 433) and spread `timingDescriptor`:
 
 ```typescript
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: pt.createView(),
-          clearValue: { r: 0, g: 0, b: 0, a: 0 },
-          loadOp: 'clear',
-          storeOp: 'store',
-        },
-      ],
-      depthStencilAttachment: {
-        view: dt.createView(),
-        depthClearValue: 1.0,
-        depthLoadOp: 'clear',
-        depthStoreOp: 'store',
-      },
-      // Per-pass GPU timing.  Undefined unless the caller passed a
-      // descriptor — see PickRenderer.pick JSDoc for the cross-frame
-      // resolution story.
-      ...(timingDescriptor ? { timestampWrites: timingDescriptor } : {}),
-    });
+const pass = encoder.beginRenderPass({
+  colorAttachments: [
+    {
+      view: pt.createView(),
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+      loadOp: 'clear',
+      storeOp: 'store',
+    },
+  ],
+  depthStencilAttachment: {
+    view: dt.createView(),
+    depthClearValue: 1.0,
+    depthLoadOp: 'clear',
+    depthStoreOp: 'store',
+  },
+  // Per-pass GPU timing.  Undefined unless the caller passed a
+  // descriptor — see PickRenderer.pick JSDoc for the cross-frame
+  // resolution story.
+  ...(timingDescriptor ? { timestampWrites: timingDescriptor } : {}),
+});
 ```
 
 - [ ] **Step 4: Update the call site**
@@ -2435,14 +2430,14 @@ Find the `encoder.beginRenderPass({...})` call (~line 433) and spread `timingDes
 In whichever file Step 1 surfaced (likely `src/services/engine/runtime/hoverPickLoop.ts` or similar — Step 1's grep tells you exactly), update the `pickRenderer.pick(...)` invocation to add a trailing argument:
 
 ```typescript
-    const hit = await pickRenderer.pick(
-      viewportPx,
-      pickX,
-      pickY,
-      sources,
-      pointSizePx,
-      state.gpu.timingService?.descriptorFor('pick'),
-    );
+const hit = await pickRenderer.pick(
+  viewportPx,
+  pickX,
+  pickY,
+  sources,
+  pointSizePx,
+  state.gpu.timingService?.descriptorFor('pick'),
+);
 ```
 
 The trailing argument is `undefined` when `state.gpu.timingService` is null — pick behaves exactly as before in that case.
@@ -2481,6 +2476,7 @@ EOF
 ## Task 12: Add `Sparkline.tsx` component
 
 **Files:**
+
 - Create: `src/components/DebugPanel/Sparkline.tsx`
 - Create: `tests/components/DebugPanel/Sparkline.test.tsx`
 
@@ -2627,6 +2623,7 @@ EOF
 ## Task 13: Extract `AssetLoadingSection.tsx` from the current `LoadingDevPanel`
 
 **Files:**
+
 - Create: `src/components/DebugPanel/AssetLoadingSection.tsx`
 
 This is a pure extraction of the body of the current `LoadingDevPanel.tsx` (the asset-slot list + subscription useEffect) into a renamed component. The outer fixed-position wrapper goes away in this task — `DebugPanel` will own it in Task 15. We keep `LoadingDevPanel.tsx` ALIVE for now so nothing is broken mid-task; it's deleted in Task 15.
@@ -2788,14 +2785,15 @@ EOF
 ## Task 14: Create `GpuTimingsSection.tsx` — subscribe to the timing service
 
 **Files:**
+
 - Create: `src/components/DebugPanel/GpuTimingsSection.tsx`
 - Create: `tests/components/DebugPanel/GpuTimingsSection.test.tsx`
 
 Renders one row per `TimingSlotName` slot. Subscribes to `gpuTimingService` on mount; maintains a per-slot rolling-average over 60 frames and an 8-sample ring buffer for the sparkline. Three render branches:
 
-  - `timingService === null` → "Add `?gpuTimings` to the URL to enable" message.
-  - `timingService.available === false` → "GPU timings unavailable on this adapter" message.
-  - Both true → live timing rows.
+- `timingService === null` → "Add `?gpuTimings` to the URL to enable" message.
+- `timingService.available === false` → "GPU timings unavailable on this adapter" message.
+- Both true → live timing rows.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -3075,6 +3073,7 @@ EOF
 ## Task 15: Create `DebugPanel.tsx` umbrella; delete `LoadingDevPanel.tsx`; migrate `App.tsx`
 
 **Files:**
+
 - Create: `src/components/DebugPanel/DebugPanel.tsx`
 - Modify: `src/components/App/App.tsx` (replace `LoadingDevPanel` import + JSX)
 - Delete: `src/components/LoadingDevPanel/LoadingDevPanel.tsx`
@@ -3141,8 +3140,8 @@ import type { EngineDebugHandle } from './handles/EngineDebugHandle';
 …and the field inside the sub-handles cluster (place it after `input` to keep the namespace list grouped by domain — UX knobs first, then `debug` as a separate observability surface):
 
 ```typescript
-  input: EngineInputHandle;
-  debug: EngineDebugHandle;
+input: EngineInputHandle;
+debug: EngineDebugHandle;
 ```
 
 - [ ] **Step 3: Construct the debug sub-handle in `engine.ts`**
@@ -3227,13 +3226,13 @@ export function DebugPanel({ slots, timingService }: DebugPanelProps) {
 
 In `src/components/App/App.tsx`:
 
-  1. Remove the `LoadingDevPanel` import; add a `DebugPanel` import:
+1. Remove the `LoadingDevPanel` import; add a `DebugPanel` import:
 
 ```typescript
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 ```
 
-  2. Rename `isLoadingDevPanelAvailable` to `isDebugPanelAvailable` and update the body (the rename of the predicate keeps the call site readable; the URL gate is already `?debug` after Task 1):
+2. Rename `isLoadingDevPanelAvailable` to `isDebugPanelAvailable` and update the body (the rename of the predicate keeps the call site readable; the URL gate is already `?debug` after Task 1):
 
 ```typescript
 function isDebugPanelAvailable(): boolean {
@@ -3242,20 +3241,22 @@ function isDebugPanelAvailable(): boolean {
 }
 ```
 
-  3. Replace the `<LoadingDevPanel slots={...} />` JSX site with:
+3. Replace the `<LoadingDevPanel slots={...} />` JSX site with:
 
 ```jsx
-        {isDebugPanelAvailable() && (
-          <DebugPanel
-            slots={handleRef.current?.assetSlots ?? new Map()}
-            timingService={handleRef.current?.debug.timingService ?? null}
-          />
-        )}
+{
+  isDebugPanelAvailable() && (
+    <DebugPanel
+      slots={handleRef.current?.assetSlots ?? new Map()}
+      timingService={handleRef.current?.debug.timingService ?? null}
+    />
+  );
+}
 ```
 
-  (Adapt the `slots` source expression to whatever the existing call site uses — the original `LoadingDevPanel` mount site already wires that prop; keep the same wiring.)
+(Adapt the `slots` source expression to whatever the existing call site uses — the original `LoadingDevPanel` mount site already wires that prop; keep the same wiring.)
 
-  4. Update the comment block at the original mount site (~line 738) so it refers to `DebugPanel` and `?debug` rather than `LoadingDevPanel` and `?debug=loading`.
+4. Update the comment block at the original mount site (~line 738) so it refers to `DebugPanel` and `?debug` rather than `LoadingDevPanel` and `?debug=loading`.
 
 - [ ] **Step 4: Delete the legacy file**
 
@@ -3331,11 +3332,11 @@ Expected: PASS — every new file passes Prettier without modification. If the c
 
 The following manual checks are not part of the automated verification but should be in the PR description so the reviewer knows how to validate the feature:
 
-  1. Open the dev server WITHOUT `?gpuTimings` — DebugPanel renders, GPU Timings section shows the "Add `?gpuTimings`" message.
-  2. Open with `?debug&gpuTimings` — DebugPanel renders, GPU Timings section shows live per-pass rows with rolling-avg + sparkline.
-  3. Open with `?debug&gpuTimings&volumes` — scalar-volume row populates (non-zero values).
-  4. Force-hover over a galaxy — pick row updates intermittently (sparkline shows intermittent dashes between samples; rolling avg is non-zero).
-  5. Simulate Safari (or a Chrome adapter without `timestamp-query`) — confirm the GPU Timings section shows "unavailable on this adapter".
+1. Open the dev server WITHOUT `?gpuTimings` — DebugPanel renders, GPU Timings section shows the "Add `?gpuTimings`" message.
+2. Open with `?debug&gpuTimings` — DebugPanel renders, GPU Timings section shows live per-pass rows with rolling-avg + sparkline.
+3. Open with `?debug&gpuTimings&volumes` — scalar-volume row populates (non-zero values).
+4. Force-hover over a galaxy — pick row updates intermittently (sparkline shows intermittent dashes between samples; rolling avg is non-zero).
+5. Simulate Safari (or a Chrome adapter without `timestamp-query`) — confirm the GPU Timings section shows "unavailable on this adapter".
 
 - [ ] **Step 6: Commit (only if Step 4 made changes)**
 
@@ -3359,49 +3360,49 @@ Otherwise skip — there are no changes to commit.
 
 The author of this plan walked the spec section-by-section to verify coverage. Reviewers should re-walk to catch any drift:
 
-  - **Architecture > Split rendering** — Task 8 covers the 1-clear-pass + 8-HDR-sub-pass split.
-  - **Architecture > Why a dedicated clear pass** — Task 8's module-header docstring carries this rationale verbatim.
-  - **Architecture > Timestamp wiring + static slot table** — Task 3 defines the table; Task 9 wires it into renderFrame for HDR passes; Task 10 wires it for tone-map; Task 11 for pick.
-  - **Architecture > `gpuTimingService` module** — Task 5 implements the service; Tasks 2 + 3 + 4 define its types and pure helpers.
-  - **Architecture > Subscriber channel** — Task 5's `subscribe` implementation; Task 14's `GpuTimingsSection` consumes it.
-  - **Architecture > Feature negotiation** — Task 6 negotiates the feature in `initGpu`; Task 5's no-op mode handles the missing-feature case.
-  - **Architecture > URL gate abstraction** — Task 1 covers all four call sites.
-  - **Architecture > "Always on" rejected** — Task 6 gates service construction on `hasUrlGate('gpuTimings')`.
-  - **UI > Component tree** — Tasks 12 (Sparkline), 13 (AssetLoadingSection), 14 (GpuTimingsSection), 15 (DebugPanel umbrella).
-  - **UI > Mount predicate** — Task 15's App.tsx migration sets `hasUrlGate('debug') || import.meta.env.DEV`.
-  - **UI > Section visibility** — Task 14's three render branches.
-  - **UI > Layout sketch** — Task 14's rendered shape matches.
-  - **UI > Sparkline implementation** — Task 12.
-  - **Pick-render handling** — Task 11.
-  - **File layout > New** — every new file appears in some task's Files list.
-  - **File layout > Modified** — every modified file appears in some task's Files list.
-  - **File layout > Deleted** — `LoadingDevPanel.tsx` deleted in Task 15.
-  - **Testing strategy > Unit** — `decodeTimestampBuffer.test.ts` (Task 4), `urlGate.test.ts` (Task 1), `Sparkline.test.tsx` (Task 12).
-  - **Testing strategy > Integration** — `renderFrameSplitBaseline.test.ts` (Task 7, exercised in Task 8); `gpuTimingService.test.ts` (Task 5).
-  - **Testing strategy > Manual** — Task 16 Step 5.
-  - **Risks > HDR draw-order semantics** — flagged in Task 8's module-header rewrite via the visual-baseline equivalence; no further action needed.
-  - **Risks > `timestampPeriod` per-queue** — Task 5 reads `device.queue.timestampPeriod` at service construction.
-  - **Risks > `mapAsync` on destroyed device** — Task 5's `.catch(() => {})` in `endFrame`.
-  - **Risks > Encoder verbosity** — Task 8's new code stays under 30 lines; if it grows during execution, the reviewer can request an inline helper extraction as a follow-up commit, but the size today is fine.
+- **Architecture > Split rendering** — Task 8 covers the 1-clear-pass + 8-HDR-sub-pass split.
+- **Architecture > Why a dedicated clear pass** — Task 8's module-header docstring carries this rationale verbatim.
+- **Architecture > Timestamp wiring + static slot table** — Task 3 defines the table; Task 9 wires it into renderFrame for HDR passes; Task 10 wires it for tone-map; Task 11 for pick.
+- **Architecture > `gpuTimingService` module** — Task 5 implements the service; Tasks 2 + 3 + 4 define its types and pure helpers.
+- **Architecture > Subscriber channel** — Task 5's `subscribe` implementation; Task 14's `GpuTimingsSection` consumes it.
+- **Architecture > Feature negotiation** — Task 6 negotiates the feature in `initGpu`; Task 5's no-op mode handles the missing-feature case.
+- **Architecture > URL gate abstraction** — Task 1 covers all four call sites.
+- **Architecture > "Always on" rejected** — Task 6 gates service construction on `hasUrlGate('gpuTimings')`.
+- **UI > Component tree** — Tasks 12 (Sparkline), 13 (AssetLoadingSection), 14 (GpuTimingsSection), 15 (DebugPanel umbrella).
+- **UI > Mount predicate** — Task 15's App.tsx migration sets `hasUrlGate('debug') || import.meta.env.DEV`.
+- **UI > Section visibility** — Task 14's three render branches.
+- **UI > Layout sketch** — Task 14's rendered shape matches.
+- **UI > Sparkline implementation** — Task 12.
+- **Pick-render handling** — Task 11.
+- **File layout > New** — every new file appears in some task's Files list.
+- **File layout > Modified** — every modified file appears in some task's Files list.
+- **File layout > Deleted** — `LoadingDevPanel.tsx` deleted in Task 15.
+- **Testing strategy > Unit** — `decodeTimestampBuffer.test.ts` (Task 4), `urlGate.test.ts` (Task 1), `Sparkline.test.tsx` (Task 12).
+- **Testing strategy > Integration** — `renderFrameSplitBaseline.test.ts` (Task 7, exercised in Task 8); `gpuTimingService.test.ts` (Task 5).
+- **Testing strategy > Manual** — Task 16 Step 5.
+- **Risks > HDR draw-order semantics** — flagged in Task 8's module-header rewrite via the visual-baseline equivalence; no further action needed.
+- **Risks > `timestampPeriod` per-queue** — Task 5 reads `device.queue.timestampPeriod` at service construction.
+- **Risks > `mapAsync` on destroyed device** — Task 5's `.catch(() => {})` in `endFrame`.
+- **Risks > Encoder verbosity** — Task 8's new code stays under 30 lines; if it grows during execution, the reviewer can request an inline helper extraction as a follow-up commit, but the size today is fine.
 
 ### Sequencing footgun audit
 
-  - Task 6 adds `state.gpu.timingService: GpuTimingService | null` with a `null` default in the engine's initial-state literal. Every read site downstream (Tasks 9, 11, 15) checks `?? null` or `?.` before use. ✔
-  - Task 9 adds `RenderFrameInput.timingService` AND threads it through `RunFrameDeps` and `startLoop` in one commit, so no caller is constructing a `RenderFrameInput` without the field after this commit. ✔
-  - Task 11's call-site update is gated on the implementer finding the actual `pickRenderer.pick(...)` site — the plan flags this as Step 1 of Task 11 specifically because the file path may have shifted since the spec was drafted. ✔
-  - Task 15's engine-handle `timingService` getter reads `state.gpu.timingService` lazily — correct because `initGpu` (which assigns the slot) runs in an async IIFE after `createEngine` returns. ✔
-  - Type definition tasks (2, 3, 4) precede their consumers (5, 9). ✔
-  - Visual baseline (Task 7) is captured BEFORE the structural change (Task 8) that it's meant to gate. ✔
+- Task 6 adds `state.gpu.timingService: GpuTimingService | null` with a `null` default in the engine's initial-state literal. Every read site downstream (Tasks 9, 11, 15) checks `?? null` or `?.` before use. ✔
+- Task 9 adds `RenderFrameInput.timingService` AND threads it through `RunFrameDeps` and `startLoop` in one commit, so no caller is constructing a `RenderFrameInput` without the field after this commit. ✔
+- Task 11's call-site update is gated on the implementer finding the actual `pickRenderer.pick(...)` site — the plan flags this as Step 1 of Task 11 specifically because the file path may have shifted since the spec was drafted. ✔
+- Task 15's engine-handle `timingService` getter reads `state.gpu.timingService` lazily — correct because `initGpu` (which assigns the slot) runs in an async IIFE after `createEngine` returns. ✔
+- Type definition tasks (2, 3, 4) precede their consumers (5, 9). ✔
+- Visual baseline (Task 7) is captured BEFORE the structural change (Task 8) that it's meant to gate. ✔
 
 ### Placeholder scan
 
-  - Task 7's `makeMinimalInput` helper is intentionally left elided — the implementer mirrors the canonical stub shape from the existing impostor-split baseline test (`tests/visual/galaxyImpostorBaseline.test.ts`) and the renderFrame unit test. The plan calls this out explicitly rather than reproducing a 200-line stub literal that would inevitably drift.
-  - Task 9's `makeMinimalInputWithTiming` is similarly elided with the same rationale.
-  - All other code blocks are concrete and runnable as written.
+- Task 7's `makeMinimalInput` helper is intentionally left elided — the implementer mirrors the canonical stub shape from the existing impostor-split baseline test (`tests/visual/galaxyImpostorBaseline.test.ts`) and the renderFrame unit test. The plan calls this out explicitly rather than reproducing a 200-line stub literal that would inevitably drift.
+- Task 9's `makeMinimalInputWithTiming` is similarly elided with the same rationale.
+- All other code blocks are concrete and runnable as written.
 
 ### Type consistency
 
-  - `TimingSlotName` is the same union across `@types/gpu/timing/TimingSlotName.d.ts`, `TIMING_SLOT_NAMES.ts`, `decodeTimestampBuffer.ts`, `gpuTimingService.ts`, and `renderFrame.ts`. ✔
-  - `GpuTimingService.descriptorFor` returns `GPURenderPassTimestampWrites | undefined` everywhere — type alias and implementation agree. ✔
-  - `GpuTimingFrame.perPassMs` is a `ReadonlyMap<TimingSlotName, number>` everywhere; the `GpuTimingsSection` reads it as such. ✔
-  - `EngineGpuHandles.timingService` (Task 6), `RenderFrameInput.timingService` (Task 9), `RunFrameDeps.timingService` (Task 9), and `EngineDebugHandle.timingService` (Task 15, accessed as `engineHandle.debug.timingService`) are all `GpuTimingService | null` with consistent JSDoc. ✔
+- `TimingSlotName` is the same union across `@types/gpu/timing/TimingSlotName.d.ts`, `TIMING_SLOT_NAMES.ts`, `decodeTimestampBuffer.ts`, `gpuTimingService.ts`, and `renderFrame.ts`. ✔
+- `GpuTimingService.descriptorFor` returns `GPURenderPassTimestampWrites | undefined` everywhere — type alias and implementation agree. ✔
+- `GpuTimingFrame.perPassMs` is a `ReadonlyMap<TimingSlotName, number>` everywhere; the `GpuTimingsSection` reads it as such. ✔
+- `EngineGpuHandles.timingService` (Task 6), `RenderFrameInput.timingService` (Task 9), `RunFrameDeps.timingService` (Task 9), and `EngineDebugHandle.timingService` (Task 15, accessed as `engineHandle.debug.timingService`) are all `GpuTimingService | null` with consistent JSDoc. ✔

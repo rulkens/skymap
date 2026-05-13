@@ -150,9 +150,7 @@ export function App(): React.ReactElement {
   // `getVolumeFieldsState()` is safe to call.
   const _onVolumeFieldsChangedTarget = useRef<() => void>(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const _onVolumeFieldsChangedStable = useRef(() =>
-    _onVolumeFieldsChangedTarget.current(),
-  ).current;
+  const _onVolumeFieldsChangedStable = useRef(() => _onVolumeFieldsChangedTarget.current()).current;
   const {
     pointSize,
     brightness,
@@ -390,22 +388,22 @@ export function App(): React.ReactElement {
         flight).  Mounted unconditionally so the first paint after a
         click-to-tier-swap doesn't flash a visible mount frame.
       */}
-      <LoadingBar progress={loadProgress} />
+        <LoadingBar progress={loadProgress} />
 
-      {/*
+        {/*
         UI overlays. Each receives only the slice of state it needs.
         When `status` changes, only `StatusBar` re-renders. When `hovered` or
         `selected` changes, only `InfoCard` re-renders. And so on.
       */}
-      <StatusBar status={status} />
-      <InfoCard
-        hovered={hovered}
-        selected={selected}
-        onFocus={(info) => handleRef.current?.camera.focusOn(info)}
-        onClose={() => handleRef.current?.selection.clear()}
-      />
-      <ScaleBar scale={scale} />
-      {/*
+        <StatusBar status={status} />
+        <InfoCard
+          hovered={hovered}
+          selected={selected}
+          onFocus={(info) => handleRef.current?.camera.focusOn(info)}
+          onClose={() => handleRef.current?.selection.clear()}
+        />
+        <ScaleBar scale={scale} />
+        {/*
         Left-column overlay stack — wraps the three bottom-left panels
         (Navigation, Settings, Stats) in a single fixed-position flex
         column anchored at the bottom-left corner of the viewport.
@@ -423,313 +421,307 @@ export function App(): React.ReactElement {
         top of the stack, Stats hugs the viewport bottom, Settings is
         the visual anchor between them.
       */}
-      <div className={appStyles.leftStack}>
-        <NavigationPanel defaultOpen={initialPanelsOpen} isMobile={initialMobile} />
-        {/*
+        <div className={appStyles.leftStack}>
+          <NavigationPanel defaultOpen={initialPanelsOpen} isMobile={initialMobile} />
+          {/*
           Settings panel — middle of the left stack.  All state lives here in
           App; the panel is purely presentational.  Interactions funnel through
           handleRef to avoid stale-closure issues (same pattern as the Esc key
           handler above).
         */}
-        <SettingsPanel
-        defaultOpen={initialPanelsOpen}
-        pointSize={pointSize}
-        brightness={brightness}
-        autoRotate={autoRotate}
-        onPointSizeChange={(v) => handleRef.current?.points.setSize(v)}
-        onBrightnessChange={(v) => handleRef.current?.points.setBrightness(v)}
-        onAutoRotateChange={(v) => handleRef.current?.camera.setAutoRotate(v)}
-        // Galaxy-thumbnail toggle: forward straight to the engine handle. The
-        // engine fires `onGalaxyTexturesEnabledChange` synchronously, which
-        // updates `galaxyTexturesEnabled` — so we don't need an optimistic
-        // local `setGalaxyTexturesEnabled(v)` here. The `?.` on the setter
-        // covers the (unlikely) case where the handle is missing the method;
-        // the EngineHandle type marks `setGalaxyTexturesEnabled` as optional.
-        galaxyTexturesEnabled={galaxyTexturesEnabled}
-        onGalaxyTexturesChange={(enabled) => {
-          handleRef.current?.thumbnails.setEnabled(enabled);
-        }}
-        milkyWayEnabled={milkyWayEnabled}
-        onMilkyWayEnabledChange={(enabled) => {
-          handleRef.current?.milkyWay.setEnabled(enabled);
-        }}
-        // Filaments toggle.  Unlike the milky-way / galaxy-thumbnails
-        // toggles above, the engine does NOT fire an echo callback for
-        // this field — App.tsx owns the React state directly.  So the
-        // change handler updates state optimistically AND forwards to
-        // the engine handle.  The `?.` chain on the setter covers the
-        // case where the handle isn't constructed yet (early frames
-        // before the async GPU init resolves).
-        filamentsEnabled={filamentsEnabled}
-        onFilamentsChange={(enabled) => {
-          setFilamentsEnabled(enabled);
-          handleRef.current?.filaments.setEnabled(enabled);
-        }}
-        filamentIntensity={filamentIntensity}
-        onFilamentIntensityChange={(value) => {
-          setFilamentIntensity(value);
-          handleRef.current?.filaments.setIntensity(value);
-        }}
-        // Task 15 — orientation-visibility toggles. Same forward-only flow
-        // as galaxyTexturesEnabled: engine fires the echo callback
-        // synchronously inside the setter, so React state mirrors engine
-        // truth without an optimistic local update here.
-        highlightFallback={highlightFallback}
-        onHighlightFallbackChange={(enabled) => {
-          handleRef.current?.points.setHighlightFallback(enabled);
-        }}
-        realOnlyMode={realOnlyMode}
-        onRealOnlyModeChange={(enabled) => {
-          handleRef.current?.points.setRealOnly(enabled);
-        }}
-        depthFadeEnabled={depthFadeEnabled}
-        onDepthFadeEnabledChange={(enabled) => {
-          handleRef.current?.points.setDepthFade(enabled);
-        }}
-        onResetCamera={() => handleRef.current?.camera.focusOnHome()}
-        // ── Data tier (small / medium / large) ──────────────────────────
-        //
-        // `currentTier` is the React mirror; the engine echoes its truth
-        // through `onTierChange` (in the createEngine callbacks block
-        // above).  Forwarding through `handleRef.current?.sources.setTier` keeps
-        // the tier swap inside the engine — it cancels in-flight loads,
-        // re-fetches the new tier-suffixed bins, and re-uploads, then
-        // fires the echo once `state.sources.tier` has mutated.
-        tier={currentTier}
-        onTierChange={(t) => handleRef.current?.sources.setTier(t)}
-        // ── Multi-survey toggles + Auto-LOD master (rev-2) ──────────────
-        //
-        // These mirror what the engine knows. The engine accepts a single
-        // `setSourceVisible(s, visible)` call which both flips the bit and
-        // (per its spec) switches LOD into 'manual' mode automatically — so
-        // we don't need a separate `setLodMode('manual')` from the toggle
-        // handler. We *do* mirror that flip in React state immediately so
-        // the checkbox row stays consistent on the very next render, even
-        // though the engine echoes it back via `onLodModeChange` shortly.
-        visibleSourceMask={visibleSourceMask}
-        sourceCounts={sourceCounts}
-        onToggleSource={(s, visible) => {
-          // No optimistic local update — the engine fires `onSourceMaskChange`
-          // synchronously inside `setSourceVisible`, which updates React state
-          // before this handler returns.  Optimistic updates would race against
-          // auto-LOD's mask, sometimes forcing the user to click twice.
-          handleRef.current?.sources.setVisible(s, visible);
-        }}
-        // Auto-LOD UI is intentionally hidden — the toggle never improved
-        // the user experience enough to justify the panel real estate, and
-        // explaining "manual override" to anyone who clicks it costs more
-        // than the feature is worth.  The engine itself still runs auto-LOD
-        // internally (it drives the survey-mask gating at low zoom), so we
-        // simply omit the `lodMode` / `onSetLodMode` props — SettingsPanel
-        // gates the whole section on both being defined and elides it
-        // automatically.  Re-expose by re-adding the two props here if the
-        // user override is ever needed again.
-        // ── SpaceMouse 6DOF input wiring (hidden) ────────────────────────
-        //
-        // The SpaceMouse panel is intentionally suppressed for now — the
-        // feature still works at the engine layer (the WebHID glue lives
-        // in services/input/ and stays callable), but the UI control was
-        // confusing for the ~99 % of users without a 3DConnexion device.
-        // SettingsPanel gates the whole section on `spaceMouseSupported`,
-        // so passing `false` (regardless of the actual feature check) hides
-        // it cleanly.  Re-expose by replacing this with `isWebHIDSupported()`
-        // and re-adding the connected/sensitivity props alongside.
-        spaceMouseSupported={false}
-        // ── Density correction (Malmquist bias) ──────────────────────────
-        //
-        // Forward straight to the engine handle.  The engine fires its echo
-        // callbacks (`onBiasModeChange` / `onAbsMagLimitChange`) synchronously
-        // inside the setter, which calls `setBiasMode` / `setAbsMagLimit`
-        // here — so we don't need optimistic local updates.  `?.` on the
-        // handle methods covers the (unlikely) case where the engine build
-        // predates Task 2 and lacks them; the EngineHandle type marks both
-        // as optional for the same reason.
-        biasMode={biasMode}
-        onBiasModeChange={(m) => handleRef.current?.bias.setMode(m)}
-        absMagLimit={absMagLimit}
-        onAbsMagLimitChange={(M) => handleRef.current?.bias.setAbsMagLimit(M)}
-        // ── HDR tone-map curve ───────────────────────────────────────────
-        //
-        // Same forward-to-handle pattern as the bias controls above — the
-        // engine fires its `onToneMapCurveChange` echo synchronously inside
-        // `setToneMapCurve`, which lands here as `setToneMapCurve` (above
-        // in the createEngine callbacks block).  No optimistic updates
-        // needed.
-        toneMapCurve={toneMapCurve}
-        onToneMapCurveChange={(c) => handleRef.current?.tonemap.setCurve(c)}
-        // Exposure slider — drag pushes the value through the engine
-        // handle, the engine clamps to [0.05, 16] and echoes the
-        // clamped result back via `onExposureChange`, which updates
-        // `exposure` state so the displayed number always matches
-        // the shader's effective value when the engine clamps.
-        //
-        // The optimistic local `setExposure(value)` IS needed for
-        // snappy slider thumb tracking — without it the slider visibly
-        // lags by one frame.  The engine echo lands shortly after and
-        // overwrites with the clamped value, which is what we want for
-        // out-of-range inputs.  Differs from the tone-curve / bias
-        // controls above: those are discrete dropdowns where a one-
-        // frame lag isn't perceptible, so they don't need the optimistic
-        // local update.
-        exposure={exposure}
-        onExposureChange={(value) => {
-          setExposure(value);
-          handleRef.current?.tonemap.setExposure(value);
-        }}
-        // ── Scalar-volume overlay ─────────────────────────────────────
-        //
-        // `volumesEnabled` is the master toggle — no engine echo, owned
-        // optimistically in React state (same pattern as filamentsEnabled).
-        // The change handler updates React state first, then forwards to
-        // the engine handle so the render pass knows to skip all fields.
-        //
-        // `volumeFields` is rebuilt by `_onVolumeFieldsChangedTarget` whenever
-        // the engine fires `onVolumeFieldsChanged` (add / remove).  Individual
-        // setters (`setVolumeFieldEnabled` / `setVolumeFieldIntensity`) do NOT
-        // fire `onVolumeFieldsChanged`; the SettingsPanel updates its per-field
-        // checkbox / slider through normal React onChange (optimistic — the
-        // engine mutates its internal settings bag but doesn't echo back).
-        // Volumes section is gated on `volumesUiEnabled` (dev build OR
-        // `?volumes=1` in the URL).  When the gate is closed, every volume
-        // prop is omitted; the SettingsPanel's `showVolumesSection`
-        // requires all five to be present, so the section disappears
-        // entirely — both the master toggle and the per-field rows.
-        {...(volumesUiEnabled
-          ? {
-              volumesEnabled,
-              onVolumesEnabledChange: (v: boolean) => {
-                setVolumesEnabled(v);
-                handleRef.current?.volumes.setMasterEnabled(v);
-              },
-              volumeFields: visibleVolumeFields,
-              onVolumeFieldEnabledChange: (handle: string, enabled: boolean) => {
-                // Optimistic React-state update — the engine setter does NOT
-                // fire onVolumeFieldsChanged for tunable mutations (only for
-                // add/remove), so the controlled-input value would otherwise
-                // snap back on the next render.  We update local state first
-                // so the UI stays responsive, then forward to the engine.
-                setVolumeFields(
-                  volumeFields.map((f) => (f.handle === handle ? { ...f, enabled } : f)),
-                );
-                handleRef.current?.volumes.setEnabled(handle, enabled);
-              },
-              onVolumeFieldIntensityChange: (handle: string, intensity: number) => {
-                setVolumeFields(
-                  volumeFields.map((f) => (f.handle === handle ? { ...f, intensity } : f)),
-                );
-                handleRef.current?.volumes.setIntensity(handle, intensity);
-              },
-              onVolumeFieldContrastChange: (handle: string, contrast: number) => {
-                // Same optimistic-update pattern as intensity: local
-                // React state for input responsiveness, then forward to
-                // the engine.  The engine setter is the source of truth
-                // for the shader uniform; React state mirrors what the
-                // user just dragged.
-                setVolumeFields(
-                  volumeFields.map((f) => (f.handle === handle ? { ...f, contrast } : f)),
-                );
-                handleRef.current?.volumes.setContrast(handle, contrast);
-              },
-              onVolumeFieldDensityScaleChange: (handle: string, densityScale: number) => {
-                // Same shape as the intensity / contrast handlers.  The
-                // engine's `setVolumeFieldDensityScale` also mirrors the
-                // value into `state.settings.volumeFields[handle]` so
-                // both layers agree.
-                setVolumeFields(
-                  volumeFields.map((f) =>
-                    f.handle === handle ? { ...f, densityScale } : f,
-                  ),
-                );
-                handleRef.current?.volumes.setDensityScale(handle, densityScale);
-              },
-              onVolumeFieldTrimChange: (handle: string, trim: number) => {
-                // Same optimistic-update pattern as the contrast / density
-                // handlers above: local React state first for input
-                // responsiveness, then forward to the engine which mirrors
-                // the value into state.settings.volumes.fields[handle].trim
-                // and writes the per-cube uniform.
-                setVolumeFields(
-                  volumeFields.map((f) =>
-                    f.handle === handle ? { ...f, trim } : f,
-                  ),
-                );
-                handleRef.current?.volumes.setTrim(handle, trim);
-              },
-              onVolumeFieldExposureChange: (handle: string, exposure: number) => {
-                // Same optimistic-update pattern as the trim handler
-                // above: local React state first for input responsiveness,
-                // then forward to the engine which mirrors the value into
-                // state.settings.volumes.fields[handle].exposure and writes
-                // the per-cube uniform.
-                setVolumeFields(
-                  volumeFields.map((f) =>
-                    f.handle === handle ? { ...f, exposure } : f,
-                  ),
-                );
-                handleRef.current?.volumes.setExposure(handle, exposure);
-              },
-              onVolumeFieldPaletteChange: (handle: string, paletteId: ScalarFieldPaletteId) => {
-                setVolumeFields(
-                  volumeFields.map((f) => (f.handle === handle ? { ...f, paletteId } : f)),
-                );
-                handleRef.current?.volumes.setPalette(handle, paletteId);
-              },
-            }
-          : {})}
-      />
-        {/*
+          <SettingsPanel
+            defaultOpen={initialPanelsOpen}
+            pointSize={pointSize}
+            brightness={brightness}
+            autoRotate={autoRotate}
+            onPointSizeChange={(v) => handleRef.current?.points.setSize(v)}
+            onBrightnessChange={(v) => handleRef.current?.points.setBrightness(v)}
+            onAutoRotateChange={(v) => handleRef.current?.camera.setAutoRotate(v)}
+            // Galaxy-thumbnail toggle: forward straight to the engine handle. The
+            // engine fires `onGalaxyTexturesEnabledChange` synchronously, which
+            // updates `galaxyTexturesEnabled` — so we don't need an optimistic
+            // local `setGalaxyTexturesEnabled(v)` here. The `?.` on the setter
+            // covers the (unlikely) case where the handle is missing the method;
+            // the EngineHandle type marks `setGalaxyTexturesEnabled` as optional.
+            galaxyTexturesEnabled={galaxyTexturesEnabled}
+            onGalaxyTexturesChange={(enabled) => {
+              handleRef.current?.thumbnails.setEnabled(enabled);
+            }}
+            milkyWayEnabled={milkyWayEnabled}
+            onMilkyWayEnabledChange={(enabled) => {
+              handleRef.current?.milkyWay.setEnabled(enabled);
+            }}
+            // Filaments toggle.  Unlike the milky-way / galaxy-thumbnails
+            // toggles above, the engine does NOT fire an echo callback for
+            // this field — App.tsx owns the React state directly.  So the
+            // change handler updates state optimistically AND forwards to
+            // the engine handle.  The `?.` chain on the setter covers the
+            // case where the handle isn't constructed yet (early frames
+            // before the async GPU init resolves).
+            filamentsEnabled={filamentsEnabled}
+            onFilamentsChange={(enabled) => {
+              setFilamentsEnabled(enabled);
+              handleRef.current?.filaments.setEnabled(enabled);
+            }}
+            filamentIntensity={filamentIntensity}
+            onFilamentIntensityChange={(value) => {
+              setFilamentIntensity(value);
+              handleRef.current?.filaments.setIntensity(value);
+            }}
+            // Task 15 — orientation-visibility toggles. Same forward-only flow
+            // as galaxyTexturesEnabled: engine fires the echo callback
+            // synchronously inside the setter, so React state mirrors engine
+            // truth without an optimistic local update here.
+            highlightFallback={highlightFallback}
+            onHighlightFallbackChange={(enabled) => {
+              handleRef.current?.points.setHighlightFallback(enabled);
+            }}
+            realOnlyMode={realOnlyMode}
+            onRealOnlyModeChange={(enabled) => {
+              handleRef.current?.points.setRealOnly(enabled);
+            }}
+            depthFadeEnabled={depthFadeEnabled}
+            onDepthFadeEnabledChange={(enabled) => {
+              handleRef.current?.points.setDepthFade(enabled);
+            }}
+            onResetCamera={() => handleRef.current?.camera.focusOnHome()}
+            // ── Data tier (small / medium / large) ──────────────────────────
+            //
+            // `currentTier` is the React mirror; the engine echoes its truth
+            // through `onTierChange` (in the createEngine callbacks block
+            // above).  Forwarding through `handleRef.current?.sources.setTier` keeps
+            // the tier swap inside the engine — it cancels in-flight loads,
+            // re-fetches the new tier-suffixed bins, and re-uploads, then
+            // fires the echo once `state.sources.tier` has mutated.
+            tier={currentTier}
+            onTierChange={(t) => handleRef.current?.sources.setTier(t)}
+            // ── Multi-survey toggles + Auto-LOD master (rev-2) ──────────────
+            //
+            // These mirror what the engine knows. The engine accepts a single
+            // `setSourceVisible(s, visible)` call which both flips the bit and
+            // (per its spec) switches LOD into 'manual' mode automatically — so
+            // we don't need a separate `setLodMode('manual')` from the toggle
+            // handler. We *do* mirror that flip in React state immediately so
+            // the checkbox row stays consistent on the very next render, even
+            // though the engine echoes it back via `onLodModeChange` shortly.
+            visibleSourceMask={visibleSourceMask}
+            sourceCounts={sourceCounts}
+            onToggleSource={(s, visible) => {
+              // No optimistic local update — the engine fires `onSourceMaskChange`
+              // synchronously inside `setSourceVisible`, which updates React state
+              // before this handler returns.  Optimistic updates would race against
+              // auto-LOD's mask, sometimes forcing the user to click twice.
+              handleRef.current?.sources.setVisible(s, visible);
+            }}
+            // Auto-LOD UI is intentionally hidden — the toggle never improved
+            // the user experience enough to justify the panel real estate, and
+            // explaining "manual override" to anyone who clicks it costs more
+            // than the feature is worth.  The engine itself still runs auto-LOD
+            // internally (it drives the survey-mask gating at low zoom), so we
+            // simply omit the `lodMode` / `onSetLodMode` props — SettingsPanel
+            // gates the whole section on both being defined and elides it
+            // automatically.  Re-expose by re-adding the two props here if the
+            // user override is ever needed again.
+            // ── SpaceMouse 6DOF input wiring (hidden) ────────────────────────
+            //
+            // The SpaceMouse panel is intentionally suppressed for now — the
+            // feature still works at the engine layer (the WebHID glue lives
+            // in services/input/ and stays callable), but the UI control was
+            // confusing for the ~99 % of users without a 3DConnexion device.
+            // SettingsPanel gates the whole section on `spaceMouseSupported`,
+            // so passing `false` (regardless of the actual feature check) hides
+            // it cleanly.  Re-expose by replacing this with `isWebHIDSupported()`
+            // and re-adding the connected/sensitivity props alongside.
+            spaceMouseSupported={false}
+            // ── Density correction (Malmquist bias) ──────────────────────────
+            //
+            // Forward straight to the engine handle.  The engine fires its echo
+            // callbacks (`onBiasModeChange` / `onAbsMagLimitChange`) synchronously
+            // inside the setter, which calls `setBiasMode` / `setAbsMagLimit`
+            // here — so we don't need optimistic local updates.  `?.` on the
+            // handle methods covers the (unlikely) case where the engine build
+            // predates Task 2 and lacks them; the EngineHandle type marks both
+            // as optional for the same reason.
+            biasMode={biasMode}
+            onBiasModeChange={(m) => handleRef.current?.bias.setMode(m)}
+            absMagLimit={absMagLimit}
+            onAbsMagLimitChange={(M) => handleRef.current?.bias.setAbsMagLimit(M)}
+            // ── HDR tone-map curve ───────────────────────────────────────────
+            //
+            // Same forward-to-handle pattern as the bias controls above — the
+            // engine fires its `onToneMapCurveChange` echo synchronously inside
+            // `setToneMapCurve`, which lands here as `setToneMapCurve` (above
+            // in the createEngine callbacks block).  No optimistic updates
+            // needed.
+            toneMapCurve={toneMapCurve}
+            onToneMapCurveChange={(c) => handleRef.current?.tonemap.setCurve(c)}
+            // Exposure slider — drag pushes the value through the engine
+            // handle, the engine clamps to [0.05, 16] and echoes the
+            // clamped result back via `onExposureChange`, which updates
+            // `exposure` state so the displayed number always matches
+            // the shader's effective value when the engine clamps.
+            //
+            // The optimistic local `setExposure(value)` IS needed for
+            // snappy slider thumb tracking — without it the slider visibly
+            // lags by one frame.  The engine echo lands shortly after and
+            // overwrites with the clamped value, which is what we want for
+            // out-of-range inputs.  Differs from the tone-curve / bias
+            // controls above: those are discrete dropdowns where a one-
+            // frame lag isn't perceptible, so they don't need the optimistic
+            // local update.
+            exposure={exposure}
+            onExposureChange={(value) => {
+              setExposure(value);
+              handleRef.current?.tonemap.setExposure(value);
+            }}
+            // ── Scalar-volume overlay ─────────────────────────────────────
+            //
+            // `volumesEnabled` is the master toggle — no engine echo, owned
+            // optimistically in React state (same pattern as filamentsEnabled).
+            // The change handler updates React state first, then forwards to
+            // the engine handle so the render pass knows to skip all fields.
+            //
+            // `volumeFields` is rebuilt by `_onVolumeFieldsChangedTarget` whenever
+            // the engine fires `onVolumeFieldsChanged` (add / remove).  Individual
+            // setters (`setVolumeFieldEnabled` / `setVolumeFieldIntensity`) do NOT
+            // fire `onVolumeFieldsChanged`; the SettingsPanel updates its per-field
+            // checkbox / slider through normal React onChange (optimistic — the
+            // engine mutates its internal settings bag but doesn't echo back).
+            // Volumes section is gated on `volumesUiEnabled` (dev build OR
+            // `?volumes=1` in the URL).  When the gate is closed, every volume
+            // prop is omitted; the SettingsPanel's `showVolumesSection`
+            // requires all five to be present, so the section disappears
+            // entirely — both the master toggle and the per-field rows.
+            {...(volumesUiEnabled
+              ? {
+                  volumesEnabled,
+                  onVolumesEnabledChange: (v: boolean) => {
+                    setVolumesEnabled(v);
+                    handleRef.current?.volumes.setMasterEnabled(v);
+                  },
+                  volumeFields: visibleVolumeFields,
+                  onVolumeFieldEnabledChange: (handle: string, enabled: boolean) => {
+                    // Optimistic React-state update — the engine setter does NOT
+                    // fire onVolumeFieldsChanged for tunable mutations (only for
+                    // add/remove), so the controlled-input value would otherwise
+                    // snap back on the next render.  We update local state first
+                    // so the UI stays responsive, then forward to the engine.
+                    setVolumeFields(
+                      volumeFields.map((f) => (f.handle === handle ? { ...f, enabled } : f)),
+                    );
+                    handleRef.current?.volumes.setEnabled(handle, enabled);
+                  },
+                  onVolumeFieldIntensityChange: (handle: string, intensity: number) => {
+                    setVolumeFields(
+                      volumeFields.map((f) => (f.handle === handle ? { ...f, intensity } : f)),
+                    );
+                    handleRef.current?.volumes.setIntensity(handle, intensity);
+                  },
+                  onVolumeFieldContrastChange: (handle: string, contrast: number) => {
+                    // Same optimistic-update pattern as intensity: local
+                    // React state for input responsiveness, then forward to
+                    // the engine.  The engine setter is the source of truth
+                    // for the shader uniform; React state mirrors what the
+                    // user just dragged.
+                    setVolumeFields(
+                      volumeFields.map((f) => (f.handle === handle ? { ...f, contrast } : f)),
+                    );
+                    handleRef.current?.volumes.setContrast(handle, contrast);
+                  },
+                  onVolumeFieldDensityScaleChange: (handle: string, densityScale: number) => {
+                    // Same shape as the intensity / contrast handlers.  The
+                    // engine's `setVolumeFieldDensityScale` also mirrors the
+                    // value into `state.settings.volumeFields[handle]` so
+                    // both layers agree.
+                    setVolumeFields(
+                      volumeFields.map((f) => (f.handle === handle ? { ...f, densityScale } : f)),
+                    );
+                    handleRef.current?.volumes.setDensityScale(handle, densityScale);
+                  },
+                  onVolumeFieldTrimChange: (handle: string, trim: number) => {
+                    // Same optimistic-update pattern as the contrast / density
+                    // handlers above: local React state first for input
+                    // responsiveness, then forward to the engine which mirrors
+                    // the value into state.settings.volumes.fields[handle].trim
+                    // and writes the per-cube uniform.
+                    setVolumeFields(
+                      volumeFields.map((f) => (f.handle === handle ? { ...f, trim } : f)),
+                    );
+                    handleRef.current?.volumes.setTrim(handle, trim);
+                  },
+                  onVolumeFieldExposureChange: (handle: string, exposure: number) => {
+                    // Same optimistic-update pattern as the trim handler
+                    // above: local React state first for input responsiveness,
+                    // then forward to the engine which mirrors the value into
+                    // state.settings.volumes.fields[handle].exposure and writes
+                    // the per-cube uniform.
+                    setVolumeFields(
+                      volumeFields.map((f) => (f.handle === handle ? { ...f, exposure } : f)),
+                    );
+                    handleRef.current?.volumes.setExposure(handle, exposure);
+                  },
+                  onVolumeFieldPaletteChange: (handle: string, paletteId: ScalarFieldPaletteId) => {
+                    setVolumeFields(
+                      volumeFields.map((f) => (f.handle === handle ? { ...f, paletteId } : f)),
+                    );
+                    handleRef.current?.volumes.setPalette(handle, paletteId);
+                  },
+                }
+              : {})}
+          />
+          {/*
           Stats panel — read-only telemetry: rolling FPS, per-survey loaded
           counts, optional filaments-loaded row.  All four props are values
           App.tsx already tracks for other reasons, so wiring them here is
           essentially free.
         */}
-        <StatsPanel
-          defaultOpen={initialPanelsOpen}
-          fps={fps}
-          sourceCounts={sourceCounts}
-          visibleSourceMask={visibleSourceMask}
-          filamentsEnabled={filamentsEnabled}
-          filamentCounts={filamentCounts}
-        />
-      </div>
-      {/*
+          <StatsPanel
+            defaultOpen={initialPanelsOpen}
+            fps={fps}
+            sourceCounts={sourceCounts}
+            visibleSourceMask={visibleSourceMask}
+            filamentsEnabled={filamentsEnabled}
+            filamentCounts={filamentCounts}
+          />
+        </div>
+        {/*
         Command palette — full-screen overlay for fuzzy-searching the
         famous-galaxy catalog.  Opened by Cmd+K / Ctrl+K / `/`; closed by
         Esc or clicking outside.  Selecting an entry calls
         `handle.selectFamous(id)`, which pins the galaxy and tweens the
         camera, exactly as if the user had clicked it directly on-screen.
       */}
-      {/*
+        {/*
         Search-trigger pill — anchored top-center.  Always visible (the
         Cmd+K shortcut still works on top of it for power users).  Fades
         out via the `hidden` prop while the palette is open so the two
         don't visually fight; the open transition feels like the pill
         expanding into the palette.
       */}
-      <SearchTrigger onClick={() => setPaletteOpen(true)} hidden={paletteOpen} />
-      <CommandPalette
-        entries={paletteEntries}
-        aliasIndex={aliasIndex ?? undefined}
-        open={paletteOpen}
-        onClose={() => setPaletteOpen(false)}
-        onSelect={(id) => {
-          // Sentinel id from the Milky Way pseudo-entry.  See
-          // `data/milkyWayEntry.ts` for why the Milky Way needs special
-          // routing (no per-galaxy localIdx because the impostor isn't a
-          // catalog object).  `focusOnMilkyWay` (not `focusOnHome`)
-          // tweens to a viewpoint inside the impostor's full-visibility
-          // band — home is at hundreds of Mpc, well past the impostor's
-          // 50 Mpc fade-out, so home doesn't actually show the Milky
-          // Way as the subject.
-          if (id === MILKY_WAY_ID) {
-            handleRef.current?.camera.focusOnMilkyWay();
-            return;
-          }
-          handleRef.current?.selection.selectFamous(id);
-        }}
-        onSelectAlias={(target) => handleRef.current?.selection.selectByAlias(target)}
-      />
-      {/*
+        <SearchTrigger onClick={() => setPaletteOpen(true)} hidden={paletteOpen} />
+        <CommandPalette
+          entries={paletteEntries}
+          aliasIndex={aliasIndex ?? undefined}
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          onSelect={(id) => {
+            // Sentinel id from the Milky Way pseudo-entry.  See
+            // `data/milkyWayEntry.ts` for why the Milky Way needs special
+            // routing (no per-galaxy localIdx because the impostor isn't a
+            // catalog object).  `focusOnMilkyWay` (not `focusOnHome`)
+            // tweens to a viewpoint inside the impostor's full-visibility
+            // band — home is at hundreds of Mpc, well past the impostor's
+            // 50 Mpc fade-out, so home doesn't actually show the Milky
+            // Way as the subject.
+            if (id === MILKY_WAY_ID) {
+              handleRef.current?.camera.focusOnMilkyWay();
+              return;
+            }
+            handleRef.current?.selection.selectFamous(id);
+          }}
+          onSelectAlias={(target) => handleRef.current?.selection.selectByAlias(target)}
+        />
+        {/*
         Debug panel.  Mounted only in dev builds or when `?debug` is
         present in the URL.  Gated on `status.kind !== 'initializing'`
         because the engine populates its asset-slot registry inside
@@ -743,15 +735,15 @@ export function App(): React.ReactElement {
         the constructed service once `?gpuTimings` and the adapter
         feature both line up).
       */}
-      {isDebugPanelAvailable() &&
-        loadingDevPanelOpen &&
-        status.kind !== 'initializing' &&
-        handleRef.current?.assetSlots && (
-          <DebugPanel
-            slots={handleRef.current.assetSlots}
-            timingService={handleRef.current.debug.timingService}
-          />
-        )}
+        {isDebugPanelAvailable() &&
+          loadingDevPanelOpen &&
+          status.kind !== 'initializing' &&
+          handleRef.current?.assetSlots && (
+            <DebugPanel
+              slots={handleRef.current.assetSlots}
+              timingService={handleRef.current.debug.timingService}
+            />
+          )}
       </div>
     </>
   );

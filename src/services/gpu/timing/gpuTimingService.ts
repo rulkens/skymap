@@ -160,13 +160,7 @@ export function createGpuTimingService(device: GPUDevice): GpuTimingService {
     if (inFlight[ctx.stagingSlot]) return;
 
     encoder.resolveQuerySet(querySet, 0, TIMING_QUERY_SET_SIZE, resolveBuffer, 0);
-    encoder.copyBufferToBuffer(
-      resolveBuffer,
-      0,
-      stagingBuffers[ctx.stagingSlot],
-      0,
-      BUFFER_BYTES,
-    );
+    encoder.copyBufferToBuffer(resolveBuffer, 0, stagingBuffers[ctx.stagingSlot], 0, BUFFER_BYTES);
 
     inFlight[ctx.stagingSlot] = true;
     const slot = ctx.stagingSlot;

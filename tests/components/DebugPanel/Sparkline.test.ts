@@ -36,23 +36,17 @@ describe('Sparkline', () => {
   });
 
   it('renders all `▁` for an all-zero samples array', () => {
-    const { container } = render(
-      createElement(Sparkline, { samples: [0, 0, 0, 0] }),
-    );
+    const { container } = render(createElement(Sparkline, { samples: [0, 0, 0, 0] }));
     expect(container.textContent).toBe('▁▁▁▁');
   });
 
   it('renders the canonical 8-level ramp when samples are 0..7', () => {
-    const { container } = render(
-      createElement(Sparkline, { samples: [0, 1, 2, 3, 4, 5, 6, 7] }),
-    );
+    const { container } = render(createElement(Sparkline, { samples: [0, 1, 2, 3, 4, 5, 6, 7] }));
     expect(container.textContent).toBe('▁▂▃▄▅▆▇█');
   });
 
   it('clamps to top character for the max sample(s)', () => {
-    const { container } = render(
-      createElement(Sparkline, { samples: [1, 2, 4] }),
-    );
+    const { container } = render(createElement(Sparkline, { samples: [1, 2, 4] }));
     // Mapping uses round((sample / max) * 7):
     //   1 / 4 * 7 = 1.75 → round → 2 → `▃`
     //   2 / 4 * 7 = 3.5  → round → 4 → `▅`
