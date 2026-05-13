@@ -22,6 +22,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
+import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
@@ -143,10 +144,8 @@ function makeDeps(opts: {
     texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer'],
     proceduralDiskRenderer: {} as unknown as RunFrameDeps['proceduralDiskRenderer'],
     milkyWayITimeEpochMs: 0,
-    // The timing service is plumbed but optional — every runFrame
-    // test predates the `?gpuTimings` URL gate, so the no-op-mode
-    // null is what production passes here in the common case.
-    timingService: null,
+    // Disabled stub matches production's "no `?gpuTimings`" path.
+    timingService: createDisabledGpuTimingService(),
   };
 }
 

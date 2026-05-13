@@ -21,14 +21,14 @@
  *
  * ### Two HDR-rendering shapes, one per timing-service state
  *
- * `timingService === null` → `hdrSinglePass`: one
+ * `!timingService.enabled` → `hdrSinglePass`: one
  * `beginRenderPass(loadOp: 'clear')` block, all enabled HDR passes
  * draw inside, one `pass.end`.  This is the default production
  * shape — keeps the HDR target tile-local for the full pass, which
  * the premultiplied-OVER overlay passes (marker-lines, labels)
  * require for correct blending on tile-based GPUs.
  *
- * `timingService !== null` → `hdrSplitPasses`: 1 clear pass +
+ * `timingService.enabled` → `hdrSplitPasses`: 1 clear pass +
  * one `beginRenderPass(loadOp: 'load')` per enabled HDR pass.  Each
  * sub-pass carries its own `timestampWrites` descriptor so the
  * timing service can record begin/end ticks per pass.  Required for
@@ -134,10 +134,10 @@ export function renderFrame(input: RenderFrameInput): void {
 
   // ── Encoder + HDR rendering ───────────────────────────────────────
   //
-  // Two HDR-rendering shapes, picked at frame start based on whether a
-  // timing service is attached:
+  // Two HDR-rendering shapes, picked at frame start based on whether
+  // timing is enabled:
   //
-  //   • `timingService === null` (production path, no `?gpuTimings`):
+  //   • `!timingService.enabled` (production path, no `?gpuTimings`):
   //     one mega-pass via `hdrSinglePass`.  All HDR draws run
   //     inside one `beginRenderPass(loadOp: 'clear')` block, keeping
   //     the target tile-local for the whole pass.  This is required
@@ -145,7 +145,7 @@ export function renderFrame(input: RenderFrameInput): void {
   //     (marker-lines, labels) on tile-based GPUs — see the helper's
   //     docstring for the coherency rationale.
   //
-  //   • `timingService !== null` (dev path, `?gpuTimings` active):
+  //   • `timingService.enabled` (dev path, `?gpuTimings` active):
   //     per-pass split via `hdrSplitPasses` — one
   //     `beginRenderPass` per enabled HDR_PASSES entry so each pass
   //     can carry its own `timestampWrites` descriptor.  WebGPU's
@@ -159,22 +159,22 @@ export function renderFrame(input: RenderFrameInput): void {
   // tile-based-GPU driver behaviour the single-pass path sidesteps.
   const encoder = device.createCommandEncoder();
 
-  // ── Per-frame timing window ───────────────────────────────────────
-  //
-  // When the timing service is non-null we open a frame-scoped context
-  // here so each pass's `descriptorFor(slot)` call writes into the
-  // same staging-buffer slot the service rotated to in `beginFrame`,
-  // and so the `endFrame(ctx, encoder)` call at the bottom of this
-  // function knows which staging buffer to resolve into.  Null when
-  // the service is null (the common path) — `endFrame` is then
-  // skipped entirely below.
-  const timingCtx = timingService?.beginFrame() ?? null;
-
-  if (timingService !== null) {
+  if (timingService.enabled) {
+    const timingCtx = timingService.beginFrame();
     hdrSplitPasses(encoder, ctx, state, settings, deps, timingService);
-  } else {
-    hdrSinglePass(encoder, ctx, state, settings, deps);
+    ctx.postProcess.draw(
+      encoder,
+      context.getCurrentTexture().createView(),
+      settings.exposure,
+      settings.toneMapCurve,
+      timingService.descriptorFor('tone-map'),
+    );
+    timingService.endFrame(timingCtx, encoder);
+    device.queue.submit([encoder.finish()]);
+    return;
   }
+
+  hdrSinglePass(encoder, ctx, state, settings, deps);
 
   // ── HDR → swap chain tone-map ──────────────────────────────────────
   //
@@ -200,18 +200,8 @@ export function renderFrame(input: RenderFrameInput): void {
     context.getCurrentTexture().createView(),
     settings.exposure,
     settings.toneMapCurve,
-    timingService?.descriptorFor('tone-map'),
+    undefined,
   );
-
-  // Record the `resolveQuerySet` + `copyBufferToBuffer` commands onto
-  // this same encoder so the timing readback rides along with the
-  // HDR + tone-map submits.  A single submit keeps the GPU's view of
-  // the frame deterministic: every pass's begin/end timestamp lands
-  // in the staging buffer before the next frame's `beginFrame`
-  // rotates the slot cursor.  A no-op when `timingCtx` is null
-  // (service was null or `beginFrame` returned null), which is the
-  // common path.
-  if (timingCtx && timingService) timingService.endFrame(timingCtx, encoder);
 
   // Seal the command buffer and send it to the GPU.
   device.queue.submit([encoder.finish()]);

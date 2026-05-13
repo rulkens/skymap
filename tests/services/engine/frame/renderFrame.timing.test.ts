@@ -38,6 +38,7 @@ import type { mat4 } from 'gl-matrix';
 import { Source } from '../../../../src/data/sources';
 import { BiasMode } from '../../../../src/data/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
+import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -64,7 +65,7 @@ function makeFakeTimingService() {
   const subscribe = vi.fn(() => () => {});
   const destroy = vi.fn();
   const svc: GpuTimingService = {
-    available: true,
+    enabled: true,
     beginFrame,
     descriptorFor,
     endFrame,
@@ -169,7 +170,7 @@ function makeCloud(count: number): PointCloud {
  * milky-way passes are enabled.  Every other optional renderer / slot
  * is null so its pass's `enabled()` gate reports false.
  */
-function makeMinimalInputWithTiming(timingService: GpuTimingService | null): {
+function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   input: RenderFrameInput;
   beginCalls: Beg[];
   encoder: GPUCommandEncoder;
@@ -324,8 +325,10 @@ describe('renderFrame — timing service hookup', () => {
     expect(endFrame.mock.calls[0]![1]).toBe(encoder);
   });
 
-  it('skips all timing calls when timingService is null', () => {
-    const { input, beginCalls, device } = makeMinimalInputWithTiming(null);
+  it('skips all timing calls when timingService is disabled', () => {
+    const { input, beginCalls, device } = makeMinimalInputWithTiming(
+      createDisabledGpuTimingService(),
+    );
 
     expect(() => renderFrame(input)).not.toThrow();
 
@@ -333,9 +336,8 @@ describe('renderFrame — timing service hookup', () => {
     expect(device.createCommandEncoder).toHaveBeenCalled();
 
     // Crucially: no beginRenderPass descriptor carries a
-    // `timestampWrites` field — the optional-spread `...(tw ? { tw } : {})`
-    // pattern must produce byte-identical descriptors to the
-    // pre-timing path.
+    // `timestampWrites` field — the disabled-mode path doesn't
+    // attach any.
     for (const b of beginCalls) {
       const desc = b.desc as GPURenderPassDescriptor & {
         timestampWrites?: GPURenderPassTimestampWrites;

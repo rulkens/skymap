@@ -63,6 +63,7 @@ import { createBiasCorrectionSubsystem } from '../../src/services/engine/subsyst
 import { createYouAreHereSubsystem } from '../../src/services/engine/subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from '../../src/services/engine/subsystems/labelDirectorSubsystem';
 import { createPoiSubsystem } from '../../src/services/engine/subsystems/poiSubsystem';
+import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import type { EngineCallbacks } from '../../src/@types/engine/EngineCallbacks';
 import { Source } from '../../src/data/sources';
 
@@ -145,7 +146,7 @@ describe('EngineState type', () => {
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
         scalarVolumeRenderer: null,
-        timingService: null,
+        timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
         galaxyAtlas: null,
@@ -291,7 +292,7 @@ describe('EngineState type', () => {
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
         scalarVolumeRenderer: null,
-        timingService: null,
+        timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
         galaxyAtlas: null,

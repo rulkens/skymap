@@ -135,10 +135,8 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     texturedDiskRenderer,
     proceduralDiskRenderer,
     milkyWayITimeEpochMs,
-    // Forward the timing service hung off `state.gpu` by initGpu.  Null
-    // unless the `?gpuTimings` URL gate was on AND the adapter offers
-    // the `timestamp-query` feature.  In the common case this is null
-    // and `renderFrame` short-circuits every timing call.
+    // Forward the timing service hung off `state.gpu` by initGpu.
+    // Always non-null; `renderFrame` gates work behind `.enabled`.
     timingService: state.gpu.timingService,
   };
 

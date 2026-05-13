@@ -148,24 +148,19 @@ export type EngineGpuHandles = {
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
   /**
-   * Per-pass GPU timing service.  Two-axis null/non-null lifecycle:
+   * Per-pass GPU timing service.  Always non-null — the engine state
+   * is initialized with a no-op stub (see `createDisabledGpuTimingService`)
+   * and `initGpu` replaces it with the device-aware service once the
+   * GPU device is available.  Consumers gate work behind one check:
+   * `if (state.gpu.timingService.enabled) { ... }`.
    *
-   *   1. **`?gpuTimings` URL gate off** (the common case) → `null`.
-   *      `initGpu` skips construction entirely, no GPU resources
-   *      allocated, the DebugPanel's GPU-timings section shows the
-   *      "add `?gpuTimings` to enable" hint.
-   *   2. **`?gpuTimings` on + adapter lacks `timestamp-query`** →
-   *      non-null but in **no-op mode** (`available: false`).  The
-   *      DebugPanel uses `available` to render the "unavailable on
-   *      this adapter" message; the orchestrator's
-   *      `descriptorFor(...)` always returns `undefined`, so passes
-   *      get no `timestampWrites` attached.
-   *   3. **`?gpuTimings` on + adapter has `timestamp-query`** →
-   *      non-null in **active mode** (`available: true`).  Full
-   *      query-set + resolve-buffer + double-buffered staging.
+   * `enabled` is true iff `?gpuTimings` is set AND the adapter
+   * supports `timestamp-query`.  False covers both "user opted out"
+   * and "feature missing"; the DebugPanel shows one combined
+   * "unavailable" message in either case.
    *
-   * Lifecycle, reachability, and `isEngineReady` exclusion match
-   * `texturedQuadRenderer` above — see that field's docstring.
+   * No GPU resources are allocated in the disabled path, so always-
+   * non-null carries no perf cost.
    */
-  timingService: GpuTimingService | null;
+  timingService: GpuTimingService;
 };

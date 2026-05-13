@@ -140,6 +140,7 @@ import { buildSettersFromTable } from './wiring/settingsTable';
 import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
+import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -393,11 +394,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // isEngineReady predicate — the scalarVolumePass optional-chains
       // hasActiveFields() so a null handle is a silent no-op.
       scalarVolumeRenderer: null,
-      // Per-pass GPU timing service.  Null unless `?gpuTimings` is set on
-      // the URL — see EngineGpuHandles.d.ts for the full lifecycle story.
-      // initGpu constructs it (gated on hasUrlGate('gpuTimings')); destroy
-      // below releases it symmetrically with scalarVolumeRenderer.
-      timingService: null,
+      // Per-pass GPU timing service.  Always non-null — initialized
+      // here with a no-op stub (no GPU resources), then replaced by
+      // initGpu with the device-aware service after the device is
+      // acquired.  Consumers gate work behind `.enabled`.  Destroy
+      // calls into the live slot symmetrically with the renderers.
+      timingService: createDisabledGpuTimingService(),
     },
     subsystems: {
       // ── LOD-1 / LOD-2 impostor planners + atlas ─────────────────
@@ -1199,8 +1201,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.milkyWayRenderer = null;
     state.gpu.scalarVolumeRenderer?.destroy();
     state.gpu.scalarVolumeRenderer = null;
-    state.gpu.timingService?.destroy();
-    state.gpu.timingService = null;
+    state.gpu.timingService.destroy();
+    state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
     state.gpu.renderer = null;
 

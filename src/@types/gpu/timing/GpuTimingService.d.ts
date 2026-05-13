@@ -1,34 +1,33 @@
 /**
  * GpuTimingService — the public handle returned by
- * `createGpuTimingService(device)`.
+ * `createGpuTimingService(device, wanted)`.
  *
  * Two-mode lifecycle:
  *
- *   - **Active mode** — feature is supported AND `?gpuTimings` is set.
- *     `descriptorFor` returns a `RenderPassTimestampWrites` referencing
- *     the shared query set; `endFrame` issues resolve + copy commands
- *     into the supplied encoder and queues a `mapAsync` on the rotated
- *     staging buffer.  Subscribers fire 1–2 frames after each
- *     `endFrame`.
+ *   - **Active mode** (`enabled === true`) — `?gpuTimings` is set AND
+ *     the adapter supports `timestamp-query`.  `descriptorFor` returns
+ *     a `RenderPassTimestampWrites` referencing the shared query set;
+ *     `endFrame` issues resolve + copy commands into the supplied
+ *     encoder and queues a `mapAsync` on the rotated staging buffer.
+ *     Subscribers fire 1–2 frames after each `endFrame`.
  *
- *   - **No-op mode** — feature is missing OR the gate is off (the gate
- *     is checked by the *caller* before constructing the service, so
- *     in practice the service only no-ops when the adapter lacks
- *     `timestamp-query`).  Every method short-circuits:
- *     `descriptorFor` returns `undefined`, `endFrame` does nothing,
- *     subscribers never fire.  Pass-orchestrator code reads the
- *     undefined return value and simply doesn't set
+ *   - **No-op mode** (`enabled === false`) — either the URL gate is
+ *     off OR the adapter lacks `timestamp-query`.  Every method
+ *     short-circuits: `descriptorFor` returns `undefined`, `endFrame`
+ *     does nothing, subscribers never fire.  Pass-orchestrator code
+ *     reads the undefined return value and simply doesn't set
  *     `timestampWrites` on its render-pass descriptor — WebGPU
  *     interprets the missing field as "no timing requested".
  *
- * ### Why a single object exposing both modes
+ * ### Why always-constructed with a single flag
  *
- * Wrapping the no-op path in the same shape as the active path means
- * `renderFrame.ts` doesn't branch on availability — it always calls
- * `descriptorFor(...)` and lets the optional return value flow into
- * the descriptor literal via `...maybe`.  The branching collapses to
- * one site (service construction) instead of being repeated at every
- * call site.
+ * The engine handle's `timingService` is non-nullable; the URL gate
+ * decision is folded into the factory's `wanted` argument.  Consumers
+ * gate work behind one check (`if (timingService.enabled) { ... }`)
+ * rather than juggling `service === null`, `service.available`, AND
+ * optional-chains at every call site.  In no-op mode no GPU resources
+ * are allocated — the constructor takes the same short-circuit path
+ * as it did when the URL gate was checked by the caller.
  *
  * ### Subscriber lifetime
  *
@@ -45,12 +44,13 @@ import type { GpuTimingFrame } from './GpuTimingFrame';
 
 export type GpuTimingService = {
   /**
-   * True when the underlying `timestamp-query` feature is available on
-   * `device.features`.  Consumers (the DebugPanel) read this to choose
-   * between the "unavailable on this adapter" message and the live
-   * readout.
+   * True when GPU timing is fully wired (the URL gate is on AND the
+   * adapter supports `timestamp-query`).  Consumers gate their work
+   * behind a single check: `if (timingService.enabled) { ... }`.
+   * False covers both "user didn't opt in" and "feature missing on
+   * this adapter"; the DebugPanel shows one combined message.
    */
-  readonly available: boolean;
+  readonly enabled: boolean;
   /**
    * Start a frame's timing window.  Rotates the staging-buffer cursor
    * and returns an opaque context the orchestrator threads back into

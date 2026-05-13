@@ -3,7 +3,7 @@
  *
  * Four scenarios:
  *   1. No-op mode when `device.features.has('timestamp-query')` is false:
- *      `available` is false, `descriptorFor` returns undefined, no GPU
+ *      `enabled` is false, `descriptorFor` returns undefined, no GPU
  *      resources allocated, subscribers never fire.
  *   2. Active mode descriptor shape: `descriptorFor('point-sprites')`
  *      returns `{querySet, beginningOfPassWriteIndex: 0, endOfPassWriteIndex: 1}`.
@@ -60,9 +60,9 @@ function makeDevice(opts: { supportsTimestamp: boolean; period?: number }): GPUD
 describe('gpuTimingService — no-op mode (feature missing)', () => {
   it('marks itself unavailable and short-circuits every method', () => {
     const device = makeDevice({ supportsTimestamp: false });
-    const svc = createGpuTimingService(device);
+    const svc = createGpuTimingService(device, true);
 
-    expect(svc.available).toBe(false);
+    expect(svc.enabled).toBe(false);
     expect(svc.descriptorFor('point-sprites')).toBeUndefined();
     const ctx = svc.beginFrame();
     expect(ctx.frameIndex).toBe(0);
@@ -78,7 +78,7 @@ describe('gpuTimingService — no-op mode (feature missing)', () => {
 
   it('does not allocate GPU resources', () => {
     const device = makeDevice({ supportsTimestamp: false });
-    createGpuTimingService(device);
+    createGpuTimingService(device, true);
 
     expect(device.createQuerySet as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
     expect(device.createBuffer as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
@@ -86,15 +86,15 @@ describe('gpuTimingService — no-op mode (feature missing)', () => {
 });
 
 describe('gpuTimingService — active mode', () => {
-  it('exposes `available: true` when feature is present', () => {
+  it('exposes `enabled: true` when feature is present', () => {
     const device = makeDevice({ supportsTimestamp: true });
-    const svc = createGpuTimingService(device);
-    expect(svc.available).toBe(true);
+    const svc = createGpuTimingService(device, true);
+    expect(svc.enabled).toBe(true);
   });
 
   it('allocates a query set + resolve buffer + two staging buffers', () => {
     const device = makeDevice({ supportsTimestamp: true });
-    createGpuTimingService(device);
+    createGpuTimingService(device, true);
 
     expect(device.createQuerySet).toHaveBeenCalledTimes(1);
     expect(device.createBuffer).toHaveBeenCalledTimes(3);
@@ -102,7 +102,7 @@ describe('gpuTimingService — active mode', () => {
 
   it('returns a descriptor with the correct slot indices', () => {
     const device = makeDevice({ supportsTimestamp: true });
-    const svc = createGpuTimingService(device);
+    const svc = createGpuTimingService(device, true);
 
     const desc = svc.descriptorFor('procedural-disks');
     expect(desc).toBeDefined();
@@ -113,7 +113,7 @@ describe('gpuTimingService — active mode', () => {
 
   it('endFrame records resolveQuerySet + copyBufferToBuffer', () => {
     const device = makeDevice({ supportsTimestamp: true });
-    const svc = createGpuTimingService(device);
+    const svc = createGpuTimingService(device, true);
     const encoder = {
       resolveQuerySet: vi.fn(),
       copyBufferToBuffer: vi.fn(),
@@ -128,7 +128,7 @@ describe('gpuTimingService — active mode', () => {
 
   it('rotates the staging-slot cursor each frame', () => {
     const device = makeDevice({ supportsTimestamp: true });
-    const svc = createGpuTimingService(device);
+    const svc = createGpuTimingService(device, true);
 
     expect(svc.beginFrame().stagingSlot).toBe(0);
     expect(svc.beginFrame().stagingSlot).toBe(1);
@@ -138,7 +138,7 @@ describe('gpuTimingService — active mode', () => {
 
   it('fires subscribers after a frame is encoded + its map resolves', async () => {
     const device = makeDevice({ supportsTimestamp: true, period: 1 });
-    const svc = createGpuTimingService(device);
+    const svc = createGpuTimingService(device, true);
     const listener = vi.fn();
     svc.subscribe(listener);
 
@@ -185,7 +185,7 @@ describe('gpuTimingService — active mode', () => {
     // would read it as live.  The service must filter to slots that
     // actually consumed a descriptor this frame.
     const device = makeDevice({ supportsTimestamp: true, period: 1 });
-    const svc = createGpuTimingService(device);
+    const svc = createGpuTimingService(device, true);
     const listener = vi.fn();
     svc.subscribe(listener);
 

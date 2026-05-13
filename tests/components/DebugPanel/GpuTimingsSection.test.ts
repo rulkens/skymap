@@ -1,17 +1,16 @@
 // @vitest-environment jsdom
 
 /**
- * GpuTimingsSection — verify the three render branches and the
- * subscriber update pipeline.
+ * GpuTimingsSection — verify both render branches and the subscriber
+ * update pipeline.
  *
- * Four scenarios:
- *   1. `service === null` — the gate-off hint should mention
- *      `?gpuTimings` so the user knows how to enable the panel.
- *   2. `service.available === false` — the adapter-doesn't-support
- *      branch should mention "unavailable".
- *   3. Live frames flow in via the subscribed listener — one row per
+ * Three scenarios:
+ *   1. `service.enabled === false` — the disabled branch should
+ *      mention `?gpuTimings` and `timestamp-query` so the user knows
+ *      both prerequisites.
+ *   2. Live frames flow in via the subscribed listener — one row per
  *      slot, formatted ms readout visible in the rendered text.
- *   4. Unmounting must invoke the unsubscribe function returned by
+ *   3. Unmounting must invoke the unsubscribe function returned by
  *      `subscribe`.  We assert via the spy that `subscribe` is only
  *      called once (no re-subscriptions, no second listener leaking).
  *
@@ -28,13 +27,13 @@ import { GpuTimingsSection } from '../../../src/components/DebugPanel/GpuTimings
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../../src/@types/gpu/timing/GpuTimingFrame';
 
-function makeStubService(opts: { available: boolean }): {
+function makeStubService(opts: { enabled: boolean }): {
   svc: GpuTimingService;
   emit: (frame: GpuTimingFrame) => void;
 } {
   let listener: ((f: GpuTimingFrame) => void) | null = null;
   const svc: GpuTimingService = {
-    available: opts.available,
+    enabled: opts.enabled,
     beginFrame: vi.fn(() => ({ frameIndex: 0, stagingSlot: 0 as const })),
     descriptorFor: vi.fn(() => undefined),
     endFrame: vi.fn(),
@@ -53,19 +52,15 @@ function makeStubService(opts: { available: boolean }): {
 }
 
 describe('GpuTimingsSection', () => {
-  it('renders the "add ?gpuTimings" message when service is null', () => {
-    const { container } = render(createElement(GpuTimingsSection, { service: null }));
-    expect(container.textContent).toContain('?gpuTimings');
-  });
-
-  it('renders the "unavailable on this adapter" message when available is false', () => {
-    const { svc } = makeStubService({ available: false });
+  it('renders the disabled message mentioning both prerequisites when service is disabled', () => {
+    const { svc } = makeStubService({ enabled: false });
     const { container } = render(createElement(GpuTimingsSection, { service: svc }));
-    expect(container.textContent).toContain('unavailable');
+    expect(container.textContent).toContain('?gpuTimings');
+    expect(container.textContent).toContain('timestamp-query');
   });
 
   it('renders one row per slot when frames flow in', () => {
-    const { svc, emit } = makeStubService({ available: true });
+    const { svc, emit } = makeStubService({ enabled: true });
     const { container } = render(createElement(GpuTimingsSection, { service: svc }));
 
     act(() => {
@@ -85,7 +80,7 @@ describe('GpuTimingsSection', () => {
   });
 
   it('unsubscribes on unmount', () => {
-    const { svc } = makeStubService({ available: true });
+    const { svc } = makeStubService({ enabled: true });
     const { unmount } = render(createElement(GpuTimingsSection, { service: svc }));
     unmount();
     // The subscribe spy was called once on mount; we expect the

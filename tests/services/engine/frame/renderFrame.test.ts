@@ -24,6 +24,7 @@ import { Source } from '../../../../src/data/sources';
 import { BiasMode } from '../../../../src/data/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 import type { mat4 } from 'gl-matrix';
@@ -331,11 +332,11 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       famousMeta: [],
       famousXrefs: {},
       clouds,
-      // Task 9 (GPU-timestamp-query plan): renderFrame consumes an
-      // optional GpuTimingService.  These legacy tests predate the
-      // service and never exercise its hooks, so null mirrors the
-      // common "no `?gpuTimings` URL gate" production path.
-      timingService: null,
+      // Disabled stub mirrors the production path (no `?gpuTimings`
+      // URL gate) — `service.enabled === false` so renderFrame takes
+      // the single-pass branch.  Active-mode behaviour is exercised
+      // in `renderFrame.timing.test.ts`.
+      timingService: createDisabledGpuTimingService(),
     },
   };
 }

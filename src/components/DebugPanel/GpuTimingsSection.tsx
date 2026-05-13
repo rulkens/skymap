@@ -81,7 +81,7 @@ type SlotStats = {
 };
 
 export type GpuTimingsSectionProps = {
-  service: GpuTimingService | null;
+  service: GpuTimingService;
 };
 
 export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactElement {
@@ -91,7 +91,7 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
   const statsRef = useRef<Map<TimingSlotName, SlotStats>>(new Map());
 
   useEffect(() => {
-    if (!service || !service.available) return undefined;
+    if (!service.enabled) return undefined;
 
     const unsub = service.subscribe((frame: GpuTimingFrame) => {
       const stats = statsRef.current;
@@ -121,24 +121,15 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
     };
   }, [service]);
 
-  // ── Branch 1: no service ──────────────────────────────────────────
-  if (service === null) {
+  // ── Disabled (URL gate off OR adapter lacks timestamp-query) ──────
+  if (!service.enabled) {
     return (
       <details open>
         <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>GPU Timings</summary>
         <div style={{ marginTop: 4, opacity: 0.7 }}>
-          Add <code>?gpuTimings</code> to the URL to enable.
+          GPU timings disabled. Add <code>?gpuTimings</code> to the URL and reload; requires the
+          adapter's <code>timestamp-query</code> feature.
         </div>
-      </details>
-    );
-  }
-
-  // ── Branch 2: feature missing ─────────────────────────────────────
-  if (!service.available) {
-    return (
-      <details open>
-        <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>GPU Timings</summary>
-        <div style={{ marginTop: 4, opacity: 0.7 }}>GPU timings unavailable on this adapter.</div>
       </details>
     );
   }

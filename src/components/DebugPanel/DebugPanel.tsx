@@ -26,7 +26,7 @@ import { GpuTimingsSection } from './GpuTimingsSection';
 
 export type DebugPanelProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
-  timingService: GpuTimingService | null;
+  timingService: GpuTimingService;
 };
 
 export function DebugPanel({ slots, timingService }: DebugPanelProps) {

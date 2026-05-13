@@ -405,22 +405,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // shared corner/index VBOs and every per-field GPU resource.
   state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(device, 'rgba16float');
 
-  // ── GPU timing service (gated on `?gpuTimings`) ──────────────────
+  // ── GPU timing service ────────────────────────────────────────────
   //
-  // The service is allocated only when the URL gate is open.  Even
-  // though `createGpuTimingService` has its own no-op short-circuit
-  // for missing-feature adapters, we still skip construction entirely
-  // when the gate is off — the user opted out, no point reserving GPU
-  // resources for a debug feature.  When the gate is on AND the
-  // adapter has the feature, `available` is true and renderFrame
-  // attaches `timestampWrites` to every pass descriptor.  When the
-  // gate is on but the adapter doesn't have the feature, the service
-  // is still constructed (so the DebugPanel can render the
-  // "unavailable on this adapter" message) but every method is a
-  // no-op.
-  if (hasUrlGate('gpuTimings')) {
-    state.gpu.timingService = createGpuTimingService(device);
-  }
+  // Always-constructed: the factory takes the URL-gate result and
+  // returns a no-op stub when the gate is off OR the adapter lacks
+  // `timestamp-query`.  Consumers gate work behind one check
+  // (`if (state.gpu.timingService.enabled)`) instead of juggling
+  // null + flag combinations.  The no-op path allocates no GPU
+  // resources, so always-constructing is free.
+  state.gpu.timingService = createGpuTimingService(device, hasUrlGate('gpuTimings'));
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

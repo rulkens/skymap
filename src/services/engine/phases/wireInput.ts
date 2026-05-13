@@ -309,7 +309,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // present, the descriptor binds the shared query set's 'pick'
       // slot pair; the resolve+copy rides on the NEXT main-frame
       // `endFrame`, so cross-frame latency is at most one main frame.
-      timingDescriptor: state.gpu.timingService?.descriptorFor('pick'),
+      timingDescriptor: state.gpu.timingService.descriptorFor('pick'),
     });
   };
 

@@ -54,41 +54,55 @@ import { decodeTimestampBuffer } from './decodeTimestampBuffer';
 /** 32 × u64 = 256 bytes. */
 const BUFFER_BYTES = TIMING_QUERY_SET_SIZE * 8;
 
-export function createGpuTimingService(device: GPUDevice): GpuTimingService {
-  const available = device.features.has('timestamp-query');
+/**
+ * Build a no-op timing service that allocates no GPU resources.
+ *
+ * Used in two situations:
+ *   1. Engine state's eager initial value — `state.gpu.timingService`
+ *      is non-nullable, but the GPU device isn't available until
+ *      `initGpu` runs.  Initializing with this stub gives the field
+ *      a valid no-op handle for the brief bootstrap window.
+ *   2. The `wanted: false` branch of `createGpuTimingService`, when
+ *      the URL gate is off or the adapter lacks `timestamp-query`.
+ *
+ * Subscribers are still recorded so `subscribe`/unsubscribe behave
+ * deterministically — they just never fire.
+ */
+export function createDisabledGpuTimingService(): GpuTimingService {
   const listeners = new Set<(frame: GpuTimingFrame) => void>();
+  return {
+    enabled: false,
+    beginFrame(): TimingFrameContext {
+      return { frameIndex: 0, stagingSlot: 0 };
+    },
+    descriptorFor(): GPURenderPassTimestampWrites | undefined {
+      return undefined;
+    },
+    endFrame(): void {
+      /* no-op */
+    },
+    subscribe(listener): () => void {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    destroy(): void {
+      listeners.clear();
+    },
+  };
+}
 
-  // ── No-op short-circuit ──────────────────────────────────────────
-  //
-  // When the adapter lacks the feature, every method is a stub.
-  // Returning these stubs from the same `createGpuTimingService` API
-  // collapses availability branching to one site (the constructor)
-  // rather than every consumer.  The renderFrame orchestrator can
-  // call `svc.descriptorFor(...)` unconditionally and rely on the
-  // optional-spread pattern.
-  if (!available) {
-    return {
-      available: false,
-      beginFrame(): TimingFrameContext {
-        return { frameIndex: 0, stagingSlot: 0 };
-      },
-      descriptorFor(): GPURenderPassTimestampWrites | undefined {
-        return undefined;
-      },
-      endFrame(): void {
-        /* no-op */
-      },
-      subscribe(listener): () => void {
-        listeners.add(listener);
-        return () => {
-          listeners.delete(listener);
-        };
-      },
-      destroy(): void {
-        listeners.clear();
-      },
-    };
+export function createGpuTimingService(device: GPUDevice, wanted: boolean): GpuTimingService {
+  // Disabled iff the caller didn't opt in OR the adapter lacks the
+  // feature.  Returning the disabled stub collapses availability
+  // branching to one site — consumers gate with a single
+  // `if (timingService.enabled)` instead of juggling null + flag
+  // checks at every call site.  No GPU resources are allocated.
+  if (!wanted || !device.features.has('timestamp-query')) {
+    return createDisabledGpuTimingService();
   }
+  const listeners = new Set<(frame: GpuTimingFrame) => void>();
 
   // ── Active mode: allocate GPU resources once ─────────────────────
   const querySet = device.createQuerySet({
@@ -267,7 +281,7 @@ export function createGpuTimingService(device: GPUDevice): GpuTimingService {
   }
 
   return {
-    available: true,
+    enabled: true,
     beginFrame,
     descriptorFor,
     endFrame,

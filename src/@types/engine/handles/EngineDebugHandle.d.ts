@@ -20,21 +20,23 @@
  *
  * ### Why a getter rather than a copied reference
  *
- * `state.gpu.timingService` is assigned by the async `initGpu`
- * IIFE that runs AFTER `createEngine` returns.  A copied reference
- * captured at handle construction would always be `null`.  The
- * getter reads the live slot every time the React shell asks for it.
+ * `state.gpu.timingService` is reassigned by the async `initGpu`
+ * IIFE that runs AFTER `createEngine` returns (an eager no-op stub
+ * is replaced with the device-aware service).  A copied reference
+ * captured at handle construction would point at the stub forever.
+ * The getter reads the live slot every time the React shell asks
+ * for it.
  */
 
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 
 export type EngineDebugHandle = {
   /**
-   * The optional GPU timing service.  `null` when the engine was
-   * constructed without the `?gpuTimings` URL gate OR the adapter
-   * lacks the `timestamp-query` feature.  The `DebugPanel`'s
-   * `GpuTimingsSection` reads this; when it's `null` the section
-   * renders a fallback message instead of subscribing.
+   * The GPU timing service (always non-null).  Check `.enabled`
+   * before subscribing — disabled means either the user didn't
+   * set `?gpuTimings` or the adapter lacks `timestamp-query`.
+   * The `DebugPanel`'s `GpuTimingsSection` shows a fallback message
+   * in either case.
    */
-  readonly timingService: GpuTimingService | null;
+  readonly timingService: GpuTimingService;
 };

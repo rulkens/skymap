@@ -53,9 +53,9 @@ export type RunFrameDeps = {
    */
   milkyWayITimeEpochMs: number;
   /**
-   * Optional per-pass GPU timing service.  Null unless `?gpuTimings`
-   * is set.  Forwarded straight through to `renderFrame` via
-   * `RenderFrameInput.timingService`.
+   * Per-pass GPU timing service.  Always non-null — check `.enabled`
+   * before doing timing work.  Forwarded straight through to
+   * `renderFrame` via `RenderFrameInput.timingService`.
    */
-  timingService: GpuTimingService | null;
+  timingService: GpuTimingService;
 };

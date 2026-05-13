@@ -414,7 +414,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         // Undefined unless `?gpuTimings` is set; the click path in
         // clickHandler.ts wires this the same way.  Slot (18, 19) is
         // resolved by the next main-frame `endFrame`.
-        state.gpu.timingService?.descriptorFor('pick'),
+        state.gpu.timingService.descriptorFor('pick'),
       )
       .then((sel) => {
         state.subsystems.selection.setHovered(sel);

@@ -99,11 +99,11 @@ export type RenderFrameInput = {
   clouds: Map<Source, PointCloud>;
 
   /**
-   * Optional per-pass GPU timing service.  Null when the engine was
-   * constructed without the `?gpuTimings` URL gate (the common case).
-   * When present, `renderFrame` attaches `timestampWrites` to each
-   * HDR sub-pass descriptor and calls `endFrame` after the tone-map
-   * call so the resolve + copy ride on the same encoder.
+   * Per-pass GPU timing service (always non-null; check `.enabled`
+   * before doing timing work).  When enabled, `renderFrame` takes
+   * the split-pass path so each HDR pass carries its own
+   * `timestampWrites` descriptor, then records the resolve + copy
+   * commands via `endFrame` on the same encoder.
    */
-  timingService: GpuTimingService | null;
+  timingService: GpuTimingService;
 };

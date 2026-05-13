@@ -53,6 +53,7 @@ import { Source } from '../../src/data/sources';
 import { BiasMode } from '../../src/data/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
+import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 import type { PointCloud } from '../../src/@types/data/PointCloud';
 import type { mat4 } from 'gl-matrix';
@@ -346,12 +347,9 @@ describe('renderFrame visual baseline', () => {
       famousMeta: [],
       famousXrefs: {},
       clouds,
-      // Visual-baseline test predates `?gpuTimings` and shouldn't be
-      // affected by the timing service — null forces the no-op path,
-      // which the optional-spread `...(tw ? { tw } : {})` pattern in
-      // renderFrame guarantees is byte-identical to the pre-timing
-      // shape (see this file's docstring for the byte-identity claim).
-      timingService: null,
+      // Disabled stub forces the single-pass path.  The split-pass
+      // (timing-on) shape is exercised in `renderFrame.timing.test.ts`.
+      timingService: createDisabledGpuTimingService(),
     });
 
     // The hash payload — only renderer-level draws, with the order they
