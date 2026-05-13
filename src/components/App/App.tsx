@@ -52,7 +52,7 @@
  * writes the handle in once, every other hook reads it out, no re-renders.
  */
 
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
 import { StatusBar } from '../StatusBar/StatusBar';
@@ -60,10 +60,10 @@ import { LoadingBar } from '../LoadingBar/LoadingBar';
 import { InfoCard } from '../InfoCard/InfoCard';
 import { ScaleBar } from '../ScaleBar/ScaleBar';
 import { SettingsPanel } from '../SettingsPanel/SettingsPanel';
-import { NavigationPanel } from '../NavigationPanel/NavigationPanel';
-import { StatsPanel } from '../StatsPanel/StatsPanel';
+import NavigationPanel from '../NavigationPanel/NavigationPanel';
+import StatsPanel from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
-import { SearchTrigger } from '../SearchTrigger/SearchTrigger';
+import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
 import appStyles from './App.module.css';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
@@ -285,6 +285,14 @@ export function App(): React.ReactElement {
   // (entries + xrefs) comes from `useFamousMeta` below — loaded once at
   // mount and shared with the deep-link drain via `useFocusUrlSync`.
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Stable handlers for the SearchTrigger pill.  The trigger is wrapped
+  // in `React.memo`, so handing it a new inline `() => setPaletteOpen(true)`
+  // each render would defeat the memo.  `setPaletteOpen` from React is
+  // already stable; wrapping in `useCallback([])` gives us a stable
+  // arrow that closes over the stable setter.
+  const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
 
   // ── "Hide UI" mode (Tab keyboard shortcut) ───────────────────────────────
   //
@@ -703,12 +711,12 @@ export function App(): React.ReactElement {
         don't visually fight; the open transition feels like the pill
         expanding into the palette.
       */}
-        <SearchTrigger onClick={() => setPaletteOpen(true)} hidden={paletteOpen} />
+        <SearchTrigger onClick={openPalette} hidden={paletteOpen} />
         <CommandPalette
           entries={paletteEntries}
           aliasIndex={aliasIndex ?? undefined}
           open={paletteOpen}
-          onClose={() => setPaletteOpen(false)}
+          onClose={closePalette}
           onSelect={(id) => {
             // Sentinel id from the Milky Way pseudo-entry.  See
             // `data/milkyWayEntry.ts` for why the Milky Way needs special

@@ -113,7 +113,17 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         canvasSize: { width: c.clientWidth, height: c.clientHeight },
         targetPx: SCALE_TARGET_PX,
       });
-      if (info !== null) setScale(info);
+      if (info === null) return;
+      // `computeScaleInfo` allocates a fresh object every call, so
+      // `setScale(info)` always passes React's `Object.is` dedup
+      // even when the visible values are unchanged.  During autorotate
+      // (or any animation that holds `distance`/`fovYRad` constant) the
+      // scale-bar legend is bit-stable frame to frame; reusing `prev`'s
+      // reference in that case stops App from re-rendering every frame
+      // and cascading through the rest of the HUD.
+      setScale((prev) =>
+        prev.label === info.label && prev.widthPx === info.widthPx ? prev : info,
+      );
     };
 
     // H5 Task 11: only nested sub-bags survive in `EngineCallbacks`.

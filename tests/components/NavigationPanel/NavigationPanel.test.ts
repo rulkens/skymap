@@ -19,8 +19,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
-import {
-  NavigationPanel,
+import NavigationPanel, {
   type NavigationPanelProps,
 } from '../../../src/components/NavigationPanel/NavigationPanel';
 

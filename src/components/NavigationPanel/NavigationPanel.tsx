@@ -27,7 +27,7 @@
  * rows; collapse state is session-only and lives inside Panel.
  */
 
-import { type ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import { Panel } from '../common/Panel/Panel';
 import styles from './NavigationPanel.module.css';
 
@@ -81,7 +81,7 @@ export type NavigationPanelProps = {
   isMobile?: boolean;
 };
 
-export function NavigationPanel(props: NavigationPanelProps): ReactNode {
+function NavigationPanel(props: NavigationPanelProps): ReactNode {
   // Non-optional `props` parameter (no `= {}` default) so React's
   // createElement TS overloads match the function-component signature
   // and thread `NavigationPanelProps` through.  With a defaulted
@@ -102,3 +102,10 @@ export function NavigationPanel(props: NavigationPanelProps): ReactNode {
     </Panel>
   );
 }
+
+// `React.memo` because every prop is a primitive — the panel content is
+// fully static after the first render, but App.tsx re-renders on every
+// camera/fps update during animation.  Without memo the cheatsheet
+// would re-run its row-mapping for nothing.  Shallow compare on two
+// booleans is essentially free.
+export default memo(NavigationPanel);

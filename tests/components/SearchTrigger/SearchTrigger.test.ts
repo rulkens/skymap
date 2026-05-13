@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
-import { SearchTrigger } from '../../../src/components/SearchTrigger/SearchTrigger';
+import SearchTrigger from '../../../src/components/SearchTrigger/SearchTrigger';
 
 describe('SearchTrigger', () => {
   it('renders a button advertising galaxy search', () => {
