@@ -48,7 +48,7 @@ export function AssetLoadingSection({ slots }: AssetLoadingSectionProps) {
   const snap = aggregateRegistry(slots);
 
   return (
-    <details open>
+    <details>
       <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>
         Asset Loading ({snap.inFlightCount} in flight)
       </summary>
