@@ -64,6 +64,7 @@
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
+import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 import { HDR_PASSES } from './passes';
 
 /**
@@ -96,6 +97,7 @@ export function renderFrame(input: RenderFrameInput): void {
     famousMeta,
     famousXrefs,
     clouds,
+    timingService,
   } = input;
 
   // Bundle the renderer references each pass might need into a single
@@ -145,6 +147,22 @@ export function renderFrame(input: RenderFrameInput): void {
   // clear pass instead of `clear` on pass 1".
   const encoder = device.createCommandEncoder();
 
+  // ── Per-frame timing window ───────────────────────────────────────
+  //
+  // When the timing service is non-null we open a frame-scoped context
+  // here so each pass's `descriptorFor(slot)` call writes into the
+  // same staging-buffer slot the service rotated to in `beginFrame`,
+  // and so the `endFrame(ctx, encoder)` call at the bottom of this
+  // function knows which staging buffer to resolve into.  Null when
+  // the service is null (the common, no-op-mode path) — every
+  // downstream timing call short-circuits via the optional-chain
+  // `timingService?.…` pattern, and the spread literal
+  // `...(timestampWrites ? { timestampWrites } : {})` keeps the
+  // beginRenderPass descriptors byte-identical to the pre-timing path.
+  // See `tests/visual/renderFrameSplitBaseline.test.ts` for the
+  // byte-identity proof.
+  const timingCtx = timingService?.beginFrame() ?? null;
+
   // ── Clear pass (no draws) ─────────────────────────────────────────
   const clearPass = encoder.beginRenderPass({
     colorAttachments: [
@@ -169,6 +187,18 @@ export function renderFrame(input: RenderFrameInput): void {
   for (const pass of HDR_PASSES) {
     if (!pass.enabled(state, ctx, settings)) continue;
 
+    // The pass-name → slot mapping is statically defined by
+    // TIMING_SLOT_NAMES.  `pass.name` is typed `string`, but the
+    // HDR_PASSES inhabitants' names are all keys of that table by
+    // construction — the cast is safe and documented.  If a future
+    // pass file forgets to add a slot, `descriptorFor` returns
+    // `undefined` (active-mode lookup miss) or the service is in
+    // no-op mode — either way the pass simply isn't measured and
+    // still draws.  The optional-spread merge below keeps the
+    // descriptor byte-identical to the pre-timing shape when the
+    // result is `undefined`.
+    const timestampWrites = timingService?.descriptorFor(pass.name as TimingSlotName);
+
     const passEncoder = encoder.beginRenderPass({
       colorAttachments: [
         {
@@ -177,6 +207,7 @@ export function renderFrame(input: RenderFrameInput): void {
           storeOp: 'store',
         },
       ],
+      ...(timestampWrites ? { timestampWrites } : {}),
     });
     pass.draw(passEncoder, ctx, state, settings, deps);
     passEncoder.end();
@@ -207,6 +238,16 @@ export function renderFrame(input: RenderFrameInput): void {
     settings.exposure,
     settings.toneMapCurve,
   );
+
+  // Record the `resolveQuerySet` + `copyBufferToBuffer` commands onto
+  // this same encoder so the timing readback rides along with the
+  // HDR + tone-map submits.  A single submit keeps the GPU's view of
+  // the frame deterministic: every pass's begin/end timestamp lands
+  // in the staging buffer before the next frame's `beginFrame`
+  // rotates the slot cursor.  A no-op when `timingCtx` is null
+  // (service was null or `beginFrame` returned null), which is the
+  // common path.
+  if (timingCtx && timingService) timingService.endFrame(timingCtx, encoder);
 
   // Seal the command buffer and send it to the GPU.
   device.queue.submit([encoder.finish()]);

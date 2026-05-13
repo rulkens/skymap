@@ -141,6 +141,10 @@ function makeDeps(opts: {
     texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer'],
     proceduralDiskRenderer: {} as unknown as RunFrameDeps['proceduralDiskRenderer'],
     milkyWayITimeEpochMs: 0,
+    // The timing service is plumbed but optional — every runFrame
+    // test predates the `?gpuTimings` URL gate, so the no-op-mode
+    // null is what production passes here in the common case.
+    timingService: null,
   };
 }
 

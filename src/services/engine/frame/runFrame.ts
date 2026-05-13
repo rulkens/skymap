@@ -340,6 +340,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     famousMeta: state.sources.famousMeta,
     famousXrefs: state.sources.famousXrefs,
     clouds: state.sources.clouds,
+    timingService: deps.timingService,
   });
 
   // ── Throttled hover pick ──────────────────────────────────────────

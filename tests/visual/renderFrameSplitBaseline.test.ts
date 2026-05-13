@@ -346,6 +346,12 @@ describe('renderFrame visual baseline', () => {
       famousMeta: [],
       famousXrefs: {},
       clouds,
+      // Visual-baseline test predates `?gpuTimings` and shouldn't be
+      // affected by the timing service — null forces the no-op path,
+      // which the optional-spread `...(tw ? { tw } : {})` pattern in
+      // renderFrame guarantees is byte-identical to the pre-timing
+      // shape (see this file's docstring for the byte-identity claim).
+      timingService: null,
     });
 
     // The hash payload — only renderer-level draws, with the order they

@@ -331,6 +331,11 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       famousMeta: [],
       famousXrefs: {},
       clouds,
+      // Task 9 (GPU-timestamp-query plan): renderFrame consumes an
+      // optional GpuTimingService.  These legacy tests predate the
+      // service and never exercise its hooks, so null mirrors the
+      // common "no `?gpuTimings` URL gate" production path.
+      timingService: null,
     },
   };
 }
