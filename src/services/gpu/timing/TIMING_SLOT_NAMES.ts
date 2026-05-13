@@ -15,9 +15,10 @@
  *   | tone-map              | 12        | 13      |
  *   | ui-overlay            | 14        | 15      |
  *   | pick                  | 16        | 17      |
- *   | _reserved_            | 18–31     |         |
+ *   | volume-upsample       | 18        | 19      |
+ *   | _reserved_            | 20–31     |         |
  *
- * 9 slots × 2 indices = 18.  The query set is sized 32 (see
+ * 10 slots × 2 indices = 20.  The query set is sized 32 (see
  * `TIMING_QUERY_SET_SIZE` below) for headroom.  `ui-overlay` is the
  * combined marker-lines + labels pass — they share one swap-chain
  * `beginRenderPass` for OVER-blend coherency, so they bill against a
@@ -65,4 +66,5 @@ export const TIMING_SLOT_NAMES: ReadonlyMap<TimingSlotName, readonly [number, nu
   ['tone-map', [12, 13]],
   ['ui-overlay', [14, 15]],
   ['pick', [16, 17]],
+  ['volume-upsample', [18, 19]],
 ]);
