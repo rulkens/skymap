@@ -124,8 +124,9 @@ export type EngineSettingsState = {
 
   /**
    * Scalar-volume overlay controls.  `masterEnabled` is the master gate
-   * (when false, `scalarVolumePass.enabled` short-circuits before
-   * consulting the renderer at zero GPU cost).  `fields` is the
+   * (when false, `volumeUpsamplePass.enabled` short-circuits before
+   * consulting the renderer at zero GPU cost, and `encodeVolumes`
+   * never opens its pre-HDR half-res render pass).  `fields` is the
    * per-handle settings record populated by `addVolumeField` and
    * emptied by `removeVolumeField` — empty `{}` at engine startup.
    */

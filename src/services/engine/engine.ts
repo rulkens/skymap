@@ -392,8 +392,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
       // Constructed during initGpu, null until then.  Excluded from the
-      // isEngineReady predicate — the scalarVolumePass optional-chains
-      // hasActiveFields() so a null handle is a silent no-op.
+      // isEngineReady predicate — the volumeUpsamplePass null-checks
+      // both handles before calling hasActiveFields(), so a null state
+      // is a silent no-op.
       scalarVolumeRenderer: null,
       // Constructed alongside scalarVolumeRenderer in initGpu; null until
       // then.  Excluded from the isEngineReady predicate — the
@@ -973,8 +974,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumesEnabled(enabled: boolean): void {
-    // Master toggle — mutate the settings bag so the per-frame gate in
-    // `scalarVolumePass` sees the new value on the next frame.  We do
+    // Master toggle — mutate the settings bag so the per-frame gates
+    // in `volumeUpsamplePass.enabled` (and `encodeVolumes` via the
+    // same `volumesEnabled` check threaded through) see the new value
+    // on the next frame.  We do
     // NOT fire an echo callback (no `cb.onVolumesEnabledChange`)
     // because the React layer owns this value optimistically.
     state.settings.volumes.masterEnabled = enabled;

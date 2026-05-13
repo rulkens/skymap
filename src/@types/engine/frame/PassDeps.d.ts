@@ -47,10 +47,10 @@ export type PassDeps = {
   filamentRenderer: FilamentRenderer | null;
   /**
    * Scalar 3D volume renderer (CF-4 DM cube, MCPM, synthetic
-   * fixtures, ...).  Null before GPU init completes; `scalarVolumePass`
-   * optional-chains the `hasActiveFields()` call so a null handle is
-   * silently a no-op — the pass returns `false` from `enabled` and
-   * `draw` is never invoked.
+   * fixtures, ...).  Null before GPU init completes; `encodeVolumes`
+   * (the pre-HDR half-res raymarch step) and `volumeUpsamplePass.enabled`
+   * both null-check this handle so a null state is silently a no-op
+   * (no render pass opened, no draw invoked).
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
   /** Procedural Milky Way impostor renderer. */

@@ -370,8 +370,9 @@ describe('renderFrame visual baseline', () => {
     // The hash payload — only renderer-level draws, with the order they
     // were emitted.  Render-pass boundaries (beginRenderPass / passEnd),
     // encoder.finish, and queue.submit are deliberately filtered out:
-    // Task 8 will increase the number of begin/end boundaries from 1 to 9,
-    // and we want THIS test to keep passing after that change.
+    // Future work (e.g. Task 9 wiring `encodeVolumes` before the HDR
+    // mega-pass) will add more begin/end boundaries; filtering them
+    // out here keeps THIS test stable across encoder-shape changes.
     const drawSequence = records
       .filter((r): r is Extract<DrawRecord, { kind: 'rendererDraw' }> => r.kind === 'rendererDraw')
       .map((r) => ({ renderer: r.renderer, argShape: r.argShape }));

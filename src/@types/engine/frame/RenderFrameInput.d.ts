@@ -69,9 +69,10 @@ export type RenderFrameInput = {
   /**
    * Optional 3D scalar-field volume renderer.  Null before `initGpu`
    * constructs it (same brief bootstrap window as the other optional
-   * renderers).  `scalarVolumePass` optional-chains `hasActiveFields()`
-   * so a null handle is silently a no-op — the pass's `enabled`
-   * predicate returns false and `draw` is never called.
+   * renderers).  Both `encodeVolumes` (pre-HDR half-res raymarch) and
+   * `volumeUpsamplePass.enabled` null-check this handle so a null
+   * state is silently a no-op — no render pass is opened and no draw
+   * is invoked.
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
   /**

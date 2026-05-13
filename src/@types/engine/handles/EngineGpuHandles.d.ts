@@ -152,8 +152,8 @@ export type EngineGpuHandles = {
    * Multi-field 3D scalar-field volume renderer.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — the renderer is
-   * optional at runtime; the `scalarVolumePass.enabled` gate checks the
-   * master `volumesEnabled` setting first and then consults
+   * optional at runtime; the `volumeUpsamplePass.enabled` gate checks
+   * the master `volumesEnabled` setting first and then consults
    * `hasActiveFields()`, so a null handle (pre-bootstrap or destroyed)
    * is silently a no-op.  Stored here so `destroy()` can release every
    * per-field GPU buffer (3D volume textures, palette LUTs, uniform
