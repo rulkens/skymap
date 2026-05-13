@@ -22,6 +22,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
+import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { RunFrameDeps } from '../../../../src/@types/engine/frame/RunFrameDeps';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
@@ -131,7 +132,9 @@ function makeDeps(opts: {
     // H5 task 11: runFrame fires the nested `lifecycle.onFpsChange`
     // address only.  The test fixture mirrors that shape.
     cb: { lifecycle: { onFpsChange: opts.onFpsChange } } as unknown as RunFrameDeps['cb'],
-    fpsCounter: { sample: vi.fn().mockReturnValue(opts.fpsValue) } as unknown as RunFrameDeps['fpsCounter'],
+    fpsCounter: {
+      sample: vi.fn().mockReturnValue(opts.fpsValue),
+    } as unknown as RunFrameDeps['fpsCounter'],
     lastReportedFps: opts.lastReportedFps,
     device: {} as unknown as GPUDevice,
     context: {} as unknown as GPUCanvasContext,
@@ -141,6 +144,8 @@ function makeDeps(opts: {
     texturedDiskRenderer: {} as unknown as RunFrameDeps['texturedDiskRenderer'],
     proceduralDiskRenderer: {} as unknown as RunFrameDeps['proceduralDiskRenderer'],
     milkyWayITimeEpochMs: 0,
+    // Disabled stub matches production's "no `?gpuTimings`" path.
+    timingService: createDisabledGpuTimingService(),
   };
 }
 

@@ -91,6 +91,46 @@ describe('labelDirectorSubsystem', () => {
     expect(requestRender).toHaveBeenCalledTimes(1);
   });
 
+  it('re-uploads when a label or line fadeAlpha changes (smooth fade transitions)', () => {
+    // Regression test for the youAreHere fade band: the marker line
+    // and label share the same id across the fade band while fadeAlpha
+    // smoothly transitions.  If the signature only watched id+count,
+    // the GPU instance buffer would stay stuck at the first-frame
+    // fadeAlpha and the marker would appear at the wrong opacity.
+    const dir = createLabelDirectorSubsystem();
+    const labelStub = makeLabelStub();
+    const lineStub = makeLineStub();
+    dir.attachRenderers(labelStub as never, lineStub as never);
+
+    // Producer whose output flips fadeAlpha between calls but keeps
+    // the same id (same scenario as youAreHere mid-fade).
+    let alpha = 0.3;
+    const producer: LabelProducer = {
+      id: 'p',
+      produceLabels: () => ({
+        labels: [{ ...SAMPLE_LABEL, fadeAlpha: alpha }],
+        lines: [{ ...SAMPLE_LINE, fadeAlpha: alpha }],
+        awake: alpha > 0 && alpha < 1,
+      }),
+    };
+    dir.registerProducer(producer);
+
+    dir.runFrame(makeState(), makeCtx());
+    expect(labelStub.setLabels).toHaveBeenCalledTimes(1);
+    expect(lineStub.setLines).toHaveBeenCalledTimes(1);
+
+    alpha = 0.7;
+    dir.runFrame(makeState(), makeCtx());
+    expect(labelStub.setLabels).toHaveBeenCalledTimes(2);
+    expect(lineStub.setLines).toHaveBeenCalledTimes(2);
+
+    // Settling at the same fadeAlpha should NOT re-upload — the
+    // signature optimization still skips identical frames.
+    dir.runFrame(makeState(), makeCtx());
+    expect(labelStub.setLabels).toHaveBeenCalledTimes(2);
+    expect(lineStub.setLines).toHaveBeenCalledTimes(2);
+  });
+
   it('flushes empty when no producers contribute, then skips subsequent empties', () => {
     const dir = createLabelDirectorSubsystem();
     const labelStub = makeLabelStub();

@@ -257,7 +257,7 @@ export function createPostProcess(
     resize(s: Size): void {
       allocateHdr(s);
     },
-    draw(encoder, swapView, exposure, curve): void {
+    draw(encoder, swapView, exposure, curve, timingDescriptor): void {
       uniformF32[0] = exposure;
       uniformF32[1] = DEFAULT_WHITEPOINT * DEFAULT_WHITEPOINT;
       uniformF32[2] = DEFAULT_ASINH_SOFTNESS;
@@ -287,6 +287,12 @@ export function createPostProcess(
             storeOp: 'store',
           },
         ],
+        // Per-pass GPU timing.  When `timingDescriptor` is undefined
+        // (no `?gpuTimings` gate active), the field is omitted and
+        // WebGPU treats it as "no timing requested".  The spread
+        // pattern preserves byte-identity for the timing-disabled
+        // path so the visual baseline snapshot is unchanged.
+        ...(timingDescriptor ? { timestampWrites: timingDescriptor } : {}),
       });
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, bindGroup);

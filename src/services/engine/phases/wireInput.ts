@@ -302,6 +302,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // Threaded through so the pick pass can boost its floor size
       // for easier click targets — see PICK_PADDING_PX in pickRenderer.ts.
       pointSizePx: state.settings.points.sizePx,
+      // Per-pass GPU timing.  Resolves to `undefined` when the
+      // timing service isn't active on this adapter (no
+      // `timestamp-query` feature) — in that case the pick render
+      // pass falls back to its pre-timing descriptor shape.  When
+      // present, the descriptor binds the shared query set's 'pick'
+      // slot pair; the resolve+copy rides on the NEXT main-frame
+      // `endFrame`, so cross-frame latency is at most one main frame.
+      timingDescriptor: state.gpu.timingService.descriptorFor('pick'),
     });
   };
 

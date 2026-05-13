@@ -55,6 +55,7 @@ import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer'
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -146,4 +147,20 @@ export type EngineGpuHandles = {
    * buffers, corner / index VBOs).
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  /**
+   * Per-pass GPU timing service.  Always non-null — the engine state
+   * is initialized with a no-op stub (see `createDisabledGpuTimingService`)
+   * and `initGpu` replaces it with the device-aware service once the
+   * GPU device is available.  Consumers gate work behind one check:
+   * `if (state.gpu.timingService.enabled) { ... }`.
+   *
+   * `enabled` is true iff `?gpuTimings` is set AND the adapter
+   * supports `timestamp-query`.  False covers both "user opted out"
+   * and "feature missing"; the DebugPanel shows one combined
+   * "unavailable" message in either case.
+   *
+   * No GPU resources are allocated in the disabled path, so always-
+   * non-null carries no perf cost.
+   */
+  timingService: GpuTimingService;
 };

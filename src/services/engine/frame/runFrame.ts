@@ -340,6 +340,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     famousMeta: state.sources.famousMeta,
     famousXrefs: state.sources.famousXrefs,
     clouds: state.sources.clouds,
+    timingService: deps.timingService,
   });
 
   // ── Throttled hover pick ──────────────────────────────────────────
@@ -409,6 +410,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         // Boost the picking floor for easier hover targets — see
         // PICK_PADDING_PX in pickRenderer.ts.
         state.settings.points.sizePx,
+        // Optional GPU-timing descriptor for the hover-pick pass.
+        // Undefined unless `?gpuTimings` is set; the click path in
+        // clickHandler.ts wires this the same way.  Slot (18, 19) is
+        // resolved by the next main-frame `endFrame`.
+        state.gpu.timingService.descriptorFor('pick'),
       )
       .then((sel) => {
         state.subsystems.selection.setHovered(sel);

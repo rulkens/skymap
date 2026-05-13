@@ -28,6 +28,7 @@ import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
+import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { RenderFrameSettings } from './RenderFrameSettings';
 
@@ -96,4 +97,13 @@ export type RenderFrameInput = {
   famousMeta: FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
   clouds: Map<Source, PointCloud>;
+
+  /**
+   * Per-pass GPU timing service (always non-null; check `.enabled`
+   * before doing timing work).  When enabled, `renderFrame` takes
+   * the split-pass path so each HDR pass carries its own
+   * `timestampWrites` descriptor, then records the resolve + copy
+   * commands via `endFrame` on the same encoder.
+   */
+  timingService: GpuTimingService;
 };

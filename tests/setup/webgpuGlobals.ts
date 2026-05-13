@@ -55,4 +55,9 @@
   RENDER_ATTACHMENT: 0x10,
 };
 
+(globalThis as unknown as { GPUMapMode: unknown }).GPUMapMode = {
+  READ: 0x0001,
+  WRITE: 0x0002,
+};
+
 export {};

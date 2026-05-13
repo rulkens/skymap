@@ -67,10 +67,7 @@ import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import {
-  SELECTION_NONE_SENTINEL,
-  unpackPick,
-} from '../../../data/selectionEncoding';
+import { SELECTION_NONE_SENTINEL, unpackPick } from '../../../data/selectionEncoding';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
@@ -136,10 +133,7 @@ import {
  */
 const PICK_PADDING_PX = 4;
 
-export function createPickRenderer(
-  device: GPUDevice,
-  pointRenderer: PointRenderer,
-): PickRenderer {
+export function createPickRenderer(device: GPUDevice, pointRenderer: PointRenderer): PickRenderer {
   // ── Shader modules ─────────────────────────────────────────────────────────
   //
   // The vertex stage source is textually shared with PointRenderer, but we
@@ -325,6 +319,7 @@ export function createPickRenderer(
     pickYPx: number,
     sources: Iterable<PickSourceDraw>,
     pointSizePx?: number,
+    timingDescriptor?: GPURenderPassTimestampWrites,
   ): Promise<{ source: Source; localIdx: number } | null> {
     // Resolve the shared uniform buffer from the bound PointRenderer at
     // call time rather than at construction.  Reading it lazily means we
@@ -446,6 +441,15 @@ export function createPickRenderer(
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
       },
+      // Per-pass GPU timing.  Undefined unless the caller passed a
+      // descriptor (which happens only when the engine's timing
+      // service is alive — see PickRenderer.pick's `timingDescriptor`
+      // JSDoc for the cross-frame resolution story).  Spread-omit
+      // when absent so the descriptor stays byte-identical to the
+      // pre-timing shape and we don't accidentally hand WebGPU an
+      // `undefined`-valued `timestampWrites` key (validation noise
+      // varies by implementation).
+      ...(timingDescriptor ? { timestampWrites: timingDescriptor } : {}),
     });
 
     // ── Bind group ─────────────────────────────────────────────────────────

@@ -133,21 +133,20 @@ const PASS_STUB = { setPipeline: vi.fn(), setVertexBuffer: vi.fn(), setBindGroup
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('HDR_PASSES registry', () => {
-  it('contains the eight HDR passes in canonical draw order', () => {
+  it('contains the six HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the encoder record;
-    // see passes/index.ts module header.  The legacy galaxy-thumbnails
-    // pass was split into procedural-disks + textured-impostors in the
-    // 2026-05-12 impostor-subsystem-split work.
-    expect(HDR_PASSES).toHaveLength(8);
+    // see passes/index.ts module header.  Marker-lines and labels
+    // moved out of HDR_PASSES to UI_PASSES (post-tone-map overlay) so
+    // they could escape the tone-map curve compression and avoid the
+    // OVER-blend coherency issue on tile-based GPUs.
+    expect(HDR_PASSES).toHaveLength(6);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
       'point-sprites',
       'procedural-disks',
       'textured-impostors',
+      'milky-way',
       'filaments',
       'scalar-volume',
-      'milky-way',
-      'marker-lines',
-      'labels',
     ]);
   });
 });

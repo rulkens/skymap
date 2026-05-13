@@ -1,54 +1,75 @@
 /**
- * passes/index — the HDR-pass registry.
+ * passes/index — the pass registries.
  *
- * Exports the ordered `HDR_PASSES` array that `renderFrame` iterates
- * over inside its open `beginRenderPass(...)` block.  Order matches
- * the pre-D.2 inline draw order in `renderFrame.ts`, extended with the
- * two new UI-overlay passes from Task R4:
+ * Two ordered arrays of `Pass` consts:
+ *
+ *   - `HDR_PASSES` — additively blended into the HDR `rgba16float`
+ *     target.  Iterated by `hdrSinglePass` / `hdrSplitPasses` inside
+ *     a render pass against the HDR view.
+ *   - `UI_PASSES` — premultiplied-OVER UI overlays, drawn after
+ *     tone-map directly onto the swap chain.  Iterated by
+ *     `uiOverlay` inside one render pass against the swap-chain view.
+ *
+ * The two registries share the `Pass` interface so a future overlay
+ * (e.g. POI labels, debug HUD elements) just adds itself to whichever
+ * registry matches its blend semantics.  The DebugPanel's
+ * `DISPLAY_SLOT_ORDER` derives from HDR_PASSES (timing-instrumented
+ * per-pass) plus three trailing slots: `tone-map`, `ui-overlay` (the
+ * combined UI_PASSES timing slot — all entries bill against one slot
+ * because they share one render pass), and `pick`.
+ *
+ * Reordering passes in either array is a one-line shuffle with a
+ * clear semantic.
+ *
+ * ### HDR_PASSES — additive content, in deterministic draw order
+ *
+ * All six entries are additively blended into the HDR `rgba16float`
+ * target:
  *
  *   1. point-sprites       — instanced billboards (always-on)
  *   2. procedural-disks    — LOD-1 procedural-disk impostors
  *   3. textured-impostors  — LOD-2 textured-disk + textured-quad impostors
- *   4. filaments           — cosmic-web skeleton overlay
- *   5. scalar-volume       — 3D raymarched scalar-field cubes (optional)
- *   6. milky-way           — procedural impostor at the world origin
- *   7. marker-lines        — thick-line UI overlay (you-are-here indicator)
- *   8. labels              — MSDF text UI overlay (you-are-here label)
+ *   4. milky-way           — procedural impostor at the world origin
+ *   5. filaments           — cosmic-web skeleton overlay
+ *   6. scalar-volume       — 3D raymarched scalar-field cubes (optional)
  *
- * The order is preserved exactly because the array entry IS the
- * canonical record now — pre-D.2 the order was folkloric (lines in
- * a function); post-D.2 reordering passes is a one-line array
- * shuffle with a clear semantic.
+ * Reordering passes is a one-line array shuffle with a clear
+ * semantic.  The DebugPanel `GpuTimingsSection` derives its row order
+ * from this same array (plus tone-map, ui-overlay, and pick
+ * appended), so a reorder here automatically propagates to the
+ * timing UI.
  *
- * ### Why scalar-volume AFTER filaments, BEFORE milky-way?
+ * ### Why no marker-lines / labels in HDR_PASSES anymore
  *
- * Filaments are the per-galaxy large-scale-structure skeleton threaded
- * between the galaxy points.  Volumes are the broader atmospheric
- * density fields (CF-4 DM cube, MCPM reionization, …).  The Milky Way
- * impostor is a bright near-field foreground feature.  Drawing the
- * volume cubes between filaments and the MW lets the MW's high-
- * intensity bulge composite over the volume halos rather than being
- * veiled by them.  All four are additively blended, so the order is a
- * deterministic-encoder choice rather than a correctness constraint —
- * but "catalogue → large-structure → field-atmospherics → bright-
- * foreground" maps cleanly to the intended visual hierarchy.
+ * Those two were premultiplied-OVER UI overlays mixed in among the
+ * additive content.  Two problems with that placement:
  *
- * ### Why marker-lines BEFORE labels?
+ *   1. Colour mismatch — LDR-sane label colours (`[1, 1, 1, 1]`) got
+ *      compressed by the tone-map curve to mid-grey; the
+ *      `youAreHereSubsystem` worked around it with an `[8, 8, 8, 1]`
+ *      overshoot hack.
+ *   2. OVER-blend coherency — when timing was enabled (per-pass
+ *      split for `timestampWrites`), every `pass.end` stored the HDR
+ *      target to DRAM and the next `pass.begin` reloaded it.  On M1
+ *      the OVER blends saw partially-coherent `dst.color` and
+ *      rendered the marker / label at wrong alpha.  The additive
+ *      passes tolerated the same coherency error invisibly because
+ *      their blend (`one, one`) doesn't read `dst.color`.
  *
- * Both pass types use premultiplied-OVER blend, so the later draw
- * composites ABOVE the earlier one at overlapping pixels.  The line
- * should never appear on top of its own label text — drawing the
- * line first (pass 5) and the label second (pass 6) means the label
- * composites over the line where they overlap, preserving readability.
+ * Both issues vanish once the OVER overlays live POST-tone-map on
+ * the swap chain.  See `services/engine/frame/uiOverlay.ts`.
  *
- * ### Why these two pass AFTER milky-way?
+ * ### Why milky-way BEFORE filaments / scalar-volume?
  *
- * Labels and marker lines are UI overlay: they should read above the
- * procedural Milky Way impostor.  Placing them later in the HDR
- * sequence means they composite over the fully-resolved 3D content
- * before tone-mapping.  The tone-map curve then operates on the
- * composited target, so white labels remain white under any exposure
- * setting (no over-brightening from the exposure curve).
+ * The Milky Way impostor is the densest, brightest near-field
+ * additive contributor.  Drawing it early lets the broader large-
+ * scale-structure overlays (filaments, scalar volumes) composite
+ * over its bulge rather than the other way round — the cosmic-web
+ * skeleton and density fields read clearly against a bright MW
+ * backdrop, and the bulge doesn't visually swallow the thin
+ * filament lines or wispy volume haloes.  All three are additively
+ * blended so this is a visual-hierarchy choice rather than a
+ * correctness constraint.
  *
  * ### Why a single-purpose `index.ts` despite the project's
  * "no barrel exports" convention
@@ -60,12 +81,6 @@
  * order).  Splitting "the array" out of any individual pass file
  * keeps each pass file a one-thing module and makes the registry's
  * single responsibility explicit at one site.
- *
- * Tone-map is NOT in this array.  It runs OUTSIDE the HDR render
- * pass (it samples the HDR target the seven entries above wrote
- * into) and so doesn't fit the `Pass` interface.  See `types.ts`'s
- * "tone-map special case" docstring for the rejected-alternative
- * analysis.
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';
@@ -78,17 +93,23 @@ import { milkyWayPass } from './milkyWayPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
 
-/** The eight HDR passes, in deterministic draw order. */
+/** The six HDR passes, in deterministic draw order. */
 export const HDR_PASSES: readonly Pass[] = [
   pointSpritesPass,
   proceduralDisksPass,
   texturedImpostorsPass,
+  milkyWayPass,
   filamentsPass,
   scalarVolumePass,
-  milkyWayPass,
-  markerLinesPass,
-  labelsPass,
 ];
+
+/**
+ * The UI overlay passes, in deterministic draw order.  Marker-lines
+ * before labels so the label text composites over the line where
+ * they overlap.  All entries share one swap-chain `beginRenderPass`
+ * (see `uiOverlay.ts`) and one timing slot (`ui-overlay`).
+ */
+export const UI_PASSES: readonly Pass[] = [markerLinesPass, labelsPass];
 
 export { pointSpritesPass } from './pointSpritesPass';
 export { proceduralDisksPass } from './proceduralDisksPass';

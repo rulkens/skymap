@@ -21,12 +21,21 @@ export type PostProcess = {
    * HDR view used as the input is the one the aggregate currently
    * owns — callers no longer pass it explicitly, which prevents a
    * stale-after-resize view from leaking back in.
+   *
+   * @param timingDescriptor  Optional `RenderPassTimestampWrites` for
+   *                          per-pass GPU profiling.  Pass `undefined`
+   *                          (the default) to skip timing — the
+   *                          internal render pass omits the field.
+   *                          When non-undefined the descriptor is
+   *                          spread into the internal
+   *                          `beginRenderPass` call.
    */
   draw(
     encoder: GPUCommandEncoder,
     swapView: GPUTextureView,
     exposure: number,
     curve: ToneMapCurve,
+    timingDescriptor?: GPURenderPassTimestampWrites,
   ): void;
   /** Tear down — releases both the HDR texture and the tone-map uniform buffer. */
   destroy(): void;

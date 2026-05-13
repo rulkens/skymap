@@ -87,6 +87,28 @@ export type PickRenderer = {
      * pass reads whatever the visual frame last wrote (no boost).
      */
     pointSizePx?: number,
+    /**
+     * Optional `RenderPassTimestampWrites` descriptor for per-pass GPU
+     * profiling.  When the engine's timing service is active, callers
+     * pass `timingService.descriptorFor('pick')` here and the pick
+     * render pass writes start/end timestamps into the shared query
+     * set's slot pair for the 'pick' slot (currently 18, 19).
+     *
+     * Because the pick pass runs on its own command encoder and its
+     * own `queue.submit`, the resolve+copy of those slots does NOT
+     * ride on the pick encoder — it rides on the next main-frame's
+     * `endFrame` (the timing service owns the singleton query set
+     * shared between the main frame and the pick pass).  Cross-frame
+     * latency is therefore at most one main frame.  When pick doesn't
+     * fire, the slots stay at their sentinel-zero values so the
+     * decoder treats them as "didn't run" and the UI shows `—`.
+     *
+     * Optional — omitting it (or passing `undefined`, e.g. when the
+     * timing service isn't initialised on the active GPU adapter)
+     * preserves byte-for-byte equivalence with the pre-timing pass
+     * descriptor.
+     */
+    timingDescriptor?: GPURenderPassTimestampWrites,
   ): Promise<{ source: Source; localIdx: number } | null>;
 
   /**

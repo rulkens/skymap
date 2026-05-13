@@ -16,6 +16,7 @@ import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRende
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { FpsCounter } from '../subsystems/FpsCounter';
+import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 
 export type RunFrameDeps = {
   /** createEngine arg — for resize + viewport reads. */
@@ -51,4 +52,10 @@ export type RunFrameDeps = {
    * each frame.
    */
   milkyWayITimeEpochMs: number;
+  /**
+   * Per-pass GPU timing service.  Always non-null — check `.enabled`
+   * before doing timing work.  Forwarded straight through to
+   * `renderFrame` via `RenderFrameInput.timingService`.
+   */
+  timingService: GpuTimingService;
 };

@@ -1,41 +1,37 @@
 /**
- * LoadingDevPanel — fixed-position dev panel listing every asset slot's
- * current state with per-slot reload/cancel buttons.
+ * AssetLoadingSection — the body of the legacy LoadingDevPanel,
+ * lifted into a section of the new DebugPanel umbrella.
  *
- * Mounted only when `import.meta.env.DEV` is true OR the URL contains
- * `?debug=loading` (escape hatch for diagnosing real production failures).
- * Tree-shaken from production builds when the dev branch is dead — the
- * mount site in `App.tsx` gates the import behind the same predicate so
- * Vite's static replacement of `import.meta.env.DEV` lets Rollup drop
- * this file from the production bundle entirely.
+ * Identical behaviour to the legacy panel:
  *
- * ### Why one big subscribe-and-force-rerender?
+ *   - Subscribes to every slot's state-change channel once on mount.
+ *   - Re-renders the whole section on any slot transition (debug
+ *     scaffolding; the cost is negligible at the project's slot
+ *     count).
+ *   - Renders one row per slot with state, summary, and reload /
+ *     cancel buttons.
  *
- * The panel needs to reflect every state transition of every slot.  We
- * could plumb each slot's state into separate `useState`s, but the panel
- * is debug scaffolding — code clarity beats the (negligible) cost of
- * re-rendering the entire panel on every slot tick.  A single counter
- * via `useState(0)` plus a `force(n => n + 1)` on each subscribe is the
- * simplest way to do this; React's batching collapses near-simultaneous
- * pushes from different slots into one render.
+ * What changed vs. LoadingDevPanel:
  *
- * ### Why call `aggregateRegistry` here rather than passing snapshots?
+ *   - No outer fixed-position wrapper.  DebugPanel owns the panel
+ *     chrome (`<details>` collapsible) so this section just renders
+ *     its rows.
  *
- * The panel and the loading-bar (see `loadProgressAggregator`) consume
- * the same projection function.  Calling it inline keeps the panel's
- * "in flight" definition in lock-step with the loading bar without an
- * extra prop dance — and the snapshot is cheap (~10 slot reads).
+ * The slot subscription pattern is taken verbatim from the legacy
+ * file's "one big useState + force re-render" approach — see that
+ * file's module header for the rationale.
  */
+
 import { useEffect, useState } from 'react';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { LoadState } from '../../@types/loading/LoadState';
 import { aggregateRegistry } from '../../services/loading/aggregateRegistry';
 
-export type LoadingDevPanelProps = {
+export type AssetLoadingSectionProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
 };
 
-export function LoadingDevPanel({ slots }: LoadingDevPanelProps) {
+export function AssetLoadingSection({ slots }: AssetLoadingSectionProps) {
   // The setState value itself is unused — only the setter matters as a
   // re-render trigger.  Naming the value `_tick` (and using the
   // `_`-prefix lint convention) would also work; destructuring out
@@ -52,34 +48,22 @@ export function LoadingDevPanel({ slots }: LoadingDevPanelProps) {
   const snap = aggregateRegistry(slots);
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 8,
-        right: 8,
-        background: 'rgba(0,0,0,0.85)',
-        color: '#cfc',
-        font: '11px/1.4 ui-monospace, monospace',
-        padding: '8px 10px',
-        borderRadius: 4,
-        zIndex: 99999,
-        maxWidth: 480,
-        pointerEvents: 'auto',
-      }}
-    >
-      <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
+    <details open>
+      <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>
         Asset Loading ({snap.inFlightCount} in flight)
+      </summary>
+      <div style={{ marginTop: 4 }}>
+        {snap.slots.map(({ name, state }) => {
+          // `slots.get(name)` cannot return undefined here because `snap.slots`
+          // is built directly from the same Map's iteration order, but the
+          // `noUncheckedIndexedAccess`-aware compiler can't prove that.
+          // Skipping the row when the slot is missing is the safe degradation.
+          const slot = slots.get(name);
+          if (!slot) return null;
+          return <SlotRow key={name} name={name} state={state} slot={slot} />;
+        })}
       </div>
-      {snap.slots.map(({ name, state }) => {
-        // `slots.get(name)` cannot return undefined here because `snap.slots`
-        // is built directly from the same Map's iteration order, but the
-        // `noUncheckedIndexedAccess`-aware compiler can't prove that.
-        // Skipping the row when the slot is missing is the safe degradation.
-        const slot = slots.get(name);
-        if (!slot) return null;
-        return <SlotRow key={name} name={name} state={state} slot={slot} />;
-      })}
-    </div>
+    </details>
   );
 }
 
@@ -114,10 +98,7 @@ function SlotRow({ name, state, slot }: SlotRowProps) {
           Reload
         </button>
         {state.kind === 'loading' && (
-          <button
-            onClick={() => slot.cancel()}
-            style={{ fontSize: 10, marginLeft: 4 }}
-          >
+          <button onClick={() => slot.cancel()} style={{ fontSize: 10, marginLeft: 4 }}>
             Cancel
           </button>
         )}

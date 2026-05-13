@@ -24,6 +24,7 @@ import { Source } from '../../../../src/data/sources';
 import { BiasMode } from '../../../../src/data/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { PointCloud } from '../../../../src/@types/data/PointCloud';
 import type { mat4 } from 'gl-matrix';
@@ -331,6 +332,11 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       famousMeta: [],
       famousXrefs: {},
       clouds,
+      // Disabled stub mirrors the production path (no `?gpuTimings`
+      // URL gate) — `service.enabled === false` so renderFrame takes
+      // the single-pass branch.  Active-mode behaviour is exercised
+      // in `renderFrame.timing.test.ts`.
+      timingService: createDisabledGpuTimingService(),
     },
   };
 }
@@ -361,14 +367,21 @@ describe('renderFrame', () => {
   });
 
   it("begins the HDR render pass with the postProcess aggregate's view as the colour attachment", () => {
+    // No-timing path (`timingService: null` in the fixture) → single
+    // mega-pass: one `beginRenderPass(loadOp: 'clear')` block, every
+    // enabled HDR pass draws inside it, one `pass.end`.  This is the
+    // production shape — required for correctness of the OVER-blended
+    // overlay passes on tile-based GPUs.  The split shape (one
+    // `beginRenderPass` per pass) only runs when `timingService` is
+    // non-null; that path is exercised in `recordHdrSplitPasses.test.ts`.
     renderFrame(fx.input);
-    expect(fx.env.beginRenderPass).toHaveBeenCalledTimes(1);
-    const desc = (fx.env.beginRenderPass as any).lastDescriptor as GPURenderPassDescriptor;
+    const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
+    expect(calls).toHaveLength(1);
+
+    const desc = calls[0]![0];
     const attachments = Array.from(desc.colorAttachments as any);
     expect(attachments).toHaveLength(1);
     const att = attachments[0] as any;
-    // postProcess.view is the HDR offscreen target — the points/quads/
-    // disks pipelines accumulate into it before the tone-map blit.
     expect(att.view).toBe(fx.hdrTargetView);
     expect(att.loadOp).toBe('clear');
     expect(att.storeOp).toBe('store');
@@ -448,13 +461,11 @@ describe('renderFrame', () => {
     expect(args[3]).toBe(fx.input.settings.toneMapCurve);
   });
 
-  it('records full frame in the canonical order: createEncoder → beginRenderPass → pointRenderer.draw → milkyWayRenderer.draw → pass.end → postProcess.draw → encoder.finish → submit', () => {
-    // Post-Task-11 split: the legacy `thumbnails.runFrame` is gone from
-    // this trace.  The two new passes (proceduralDisksPass and
-    // texturedImpostorsPass) gate `enabled()` on their subsystems'
-    // `lastOutput` being non-empty; the fixture's `state.subsystems`
-    // nulls both slots so the gates report false and the trace omits
-    // them.  Per-pass coverage lives in their own test files.
+  it('records full frame in the canonical order: createEncoder → HDR pass (begin + draws + end) → postProcess.draw → encoder.finish → submit', () => {
+    // No-timing path: one `beginRenderPass(loadOp: 'clear')` holds
+    // every enabled HDR draw, one `pass.end` closes it, then tone-map
+    // + finish + submit.  In this fixture only point-sprites +
+    // milky-way fire (the impostor subsystems are nulled out).
     renderFrame(fx.input);
     const interesting = [
       'device.createCommandEncoder',
@@ -467,16 +478,23 @@ describe('renderFrame', () => {
       'device.queue.submit',
     ];
     const filtered = fx.callLog.filter((e) => interesting.includes(e));
-    expect(filtered).toEqual(interesting);
+    expect(filtered).toEqual([
+      'device.createCommandEncoder',
+      'encoder.beginRenderPass',
+      'pointRenderer.draw',
+      'milkyWayRenderer.draw',
+      'pass.end',
+      'postProcess.draw',
+      'encoder.finish',
+      'device.queue.submit',
+    ]);
   });
 
   it('draws the Milky Way impostor after pointRenderer.draw for deterministic crossfade composition', () => {
-    // The legacy variant of this test asserted ordering against
-    // `thumbnails.runFrame`.  Post-Task-11 the impostor draws are in
-    // separate passes (proceduralDisks + texturedImpostors), and this
-    // fixture's nulled subsystems keep both passes disabled — so the
-    // residual order claim is points-before-milky-way-before-end, which
-    // is still a meaningful encoder-record invariant.
+    // No-timing path: a single HDR pass holds both draws and one
+    // `pass.end` closes it.  The semantic invariant we care about is
+    // "the HDR pass ends after the milky-way draw and milky-way
+    // draws after points" — order matters for the additive crossfade.
     renderFrame(fx.input);
     const log = fx.callLog;
     const idxPoint = log.indexOf('pointRenderer.draw');

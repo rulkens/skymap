@@ -123,14 +123,8 @@ import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
 import { TIER_TARGETS } from '../../data/tierTargets';
-import {
-  snapToCameraSnapshot,
-  tweenToCameraSnapshot,
-} from './camera/cameraSnapshot';
-import {
-  MILKY_WAY_CENTER_WORLD,
-  MILKY_WAY_VIEW_DISTANCE_MPC,
-} from '../../data/galacticCenter';
+import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
+import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
 import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
@@ -146,6 +140,7 @@ import { buildSettersFromTable } from './wiring/settingsTable';
 import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
+import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 
 /**
  * Start the WebGPU engine on `canvas`.
@@ -399,6 +394,12 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // isEngineReady predicate — the scalarVolumePass optional-chains
       // hasActiveFields() so a null handle is a silent no-op.
       scalarVolumeRenderer: null,
+      // Per-pass GPU timing service.  Always non-null — initialized
+      // here with a no-op stub (no GPU resources), then replaced by
+      // initGpu with the device-aware service after the device is
+      // acquired.  Consumers gate work behind `.enabled`.  Destroy
+      // calls into the live slot symmetrically with the renderers.
+      timingService: createDisabledGpuTimingService(),
     },
     subsystems: {
       // ── LOD-1 / LOD-2 impostor planners + atlas ─────────────────
@@ -828,11 +829,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     cb.camera?.onFocusChange?.(null);
 
     tweenToCameraSnapshot(state, {
-      target: [
-        MILKY_WAY_CENTER_WORLD[0],
-        MILKY_WAY_CENTER_WORLD[1],
-        MILKY_WAY_CENTER_WORLD[2],
-      ],
+      target: [MILKY_WAY_CENTER_WORLD[0], MILKY_WAY_CENTER_WORLD[1], MILKY_WAY_CENTER_WORLD[2]],
       distance: MILKY_WAY_VIEW_DISTANCE_MPC,
       yaw: cam.yaw,
       pitch: cam.pitch,
@@ -880,12 +877,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     famousXrefs?: FamousXrefMap;
   };
 
-  function selectByAlias({
-    source,
-    localIdx,
-    famousMeta,
-    famousXrefs,
-  }: SelectByAliasTarget): void {
+  function selectByAlias({ source, localIdx, famousMeta, famousXrefs }: SelectByAliasTarget): void {
     // Guard: source cloud may not be loaded yet (e.g. user opened
     // the palette before GLADE finished arriving), or the localIdx
     // could be stale across a tier swap.  Both are safe early-return
@@ -1075,10 +1067,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.scheduler.requestRender();
   }
 
-  function setVolumeFieldPalette(
-    fieldHandle: string,
-    id: ScalarFieldPaletteId,
-  ): void {
+  function setVolumeFieldPalette(fieldHandle: string, id: ScalarFieldPaletteId): void {
     if (state.settings.volumes.fields[fieldHandle]) {
       state.settings.volumes.fields[fieldHandle].paletteId = id;
     }
@@ -1212,6 +1201,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.milkyWayRenderer = null;
     state.gpu.scalarVolumeRenderer?.destroy();
     state.gpu.scalarVolumeRenderer = null;
+    state.gpu.timingService.destroy();
+    state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
     state.gpu.renderer = null;
 
@@ -1230,8 +1221,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setSize: (sizePx) => boringSetters.setPointSize(sizePx),
       setBrightness: (value) => boringSetters.setBrightness(value),
       setDepthFade: (enabled) => boringSetters.setDepthFadeEnabled(enabled),
-      setHighlightFallback: (enabled) =>
-        boringSetters.setHighlightFallback(enabled),
+      setHighlightFallback: (enabled) => boringSetters.setHighlightFallback(enabled),
       setRealOnly: (enabled) => boringSetters.setRealOnlyMode(enabled),
     },
     tonemap: {
@@ -1293,6 +1283,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         disconnect: disconnectSpaceMouse,
         isConnected: isSpaceMouseConnected,
         setSensitivity: setSpaceMouseSensitivity,
+      },
+    },
+    // ── Debug sub-handle (observability, not knobs) ──────────────────────
+    //
+    // Getter rather than a copied reference: `state.gpu.timingService` is
+    // assigned by the async `initGpu` IIFE AFTER this handle literal is
+    // constructed.  A copied value would be `null` forever; the getter
+    // reads the live slot whenever the React shell asks for it.  See
+    // `EngineDebugHandle.d.ts` for the H5-sub-handle rationale.
+    debug: {
+      get timingService() {
+        return state.gpu.timingService;
       },
     },
 
