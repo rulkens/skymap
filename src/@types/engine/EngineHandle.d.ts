@@ -30,6 +30,7 @@ import type { EngineMilkyWayHandle } from './handles/EngineMilkyWayHandle';
 import type { EngineFilamentsHandle } from './handles/EngineFilamentsHandle';
 import type { EngineVolumesHandle } from './handles/EngineVolumesHandle';
 import type { EngineInputHandle } from './handles/EngineInputHandle';
+import type { EngineDebugHandle } from './handles/EngineDebugHandle';
 
 /**
  * Handle returned by `createEngine`. Lets the React layer drive the
@@ -51,6 +52,7 @@ export type EngineHandle = {
   filaments: EngineFilamentsHandle;
   volumes: EngineVolumesHandle;
   input: EngineInputHandle;
+  debug: EngineDebugHandle;
 
   /**
    * Stop the render loop, release GPU resources, and detach all event

@@ -1302,6 +1302,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         setSensitivity: setSpaceMouseSensitivity,
       },
     },
+    // ── Debug sub-handle (observability, not knobs) ──────────────────────
+    //
+    // Getter rather than a copied reference: `state.gpu.timingService` is
+    // assigned by the async `initGpu` IIFE AFTER this handle literal is
+    // constructed.  A copied value would be `null` forever; the getter
+    // reads the live slot whenever the React shell asks for it.  See
+    // `EngineDebugHandle.d.ts` for the H5-sub-handle rationale.
+    debug: {
+      get timingService() {
+        return state.gpu.timingService;
+      },
+    },
 
     destroy,
 

@@ -71,7 +71,7 @@ import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
-import { LoadingDevPanel } from '../LoadingDevPanel/LoadingDevPanel';
+import { DebugPanel } from '../DebugPanel/DebugPanel';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import { hasUrlGate } from '../../utils/url/urlGate';
 
@@ -80,21 +80,19 @@ import { hasUrlGate } from '../../utils/url/urlGate';
 // Whether the `d` keyboard shortcut should be wired up at all.  In dev
 // builds we always wire it; in production it's only wired when
 // `?debug` is in the URL — same escape-hatch contract the panel had
-// before (when it was `?debug=loading`), just gated on actual key
-// presses now (default-hidden) so it doesn't clutter the UI for
-// everyone running a dev server.  The previous `=loading` value
-// distinction had no consumers — the bare-flag form is what every
-// other dev gate (`?volumes`, `?anchors`) uses.
+// before, just gated on actual key presses now (default-hidden) so it
+// doesn't clutter the UI for everyone running a dev server.  The bare-
+// flag form matches every other dev gate (`?volumes`, `?anchors`).
 //
 // `import.meta.env.DEV` is statically replaced by Vite at build time, so
 // the production bundle sees `false` here and Rollup tree-shakes the
-// `LoadingDevPanel` import + JSX away entirely whenever the URL flag
-// isn't present.
+// `DebugPanel` import + JSX away entirely whenever the URL flag isn't
+// present.
 //
 // SSR-safety lives inside `hasUrlGate` (see `utils/url/urlGate.ts`):
 // a `typeof window` guard plus a try/catch around `URLSearchParams`
 // so unit tests rendering `<App />` without a DOM don't blow up.
-function isLoadingDevPanelAvailable(): boolean {
+function isDebugPanelAvailable(): boolean {
   if (import.meta.env.DEV) return true;
   return hasUrlGate('debug');
 }
@@ -294,11 +292,11 @@ export function App(): React.ReactElement {
   // (in App.module.css) fades every overlay in lockstep.
   const [uiHidden, setUiHidden] = useState(false);
 
-  // ── Asset-loading dev panel visibility (`d` keyboard shortcut) ─────────────
+  // ── Debug panel visibility (`d` keyboard shortcut) ─────────────────────────
   //
   // Default false so the panel doesn't clutter the screen during normal
   // dev work.  `d` toggles it on/off (see useKeyboardShortcuts).  The
-  // panel itself is gated on `isLoadingDevPanelAvailable()` further down,
+  // panel itself is gated on `isDebugPanelAvailable()` further down,
   // so this state is harmless in production builds where the gate is
   // false and the panel JSX never renders.
   const [loadingDevPanelOpen, setLoadingDevPanelOpen] = useState(false);
@@ -732,19 +730,27 @@ export function App(): React.ReactElement {
         onSelectAlias={(target) => handleRef.current?.selection.selectByAlias(target)}
       />
       {/*
-        Loading dev panel (Task 13).  Mounted only in dev builds or when
-        `?debug=loading` is present in the URL.  Gated on
-        `status.kind !== 'initializing'` because the engine populates its
-        asset-slot registry inside the async GPU init IIFE — once the
-        engine has transitioned out of `initializing`, every slot exists
-        on `handleRef.current.assetSlots`, so the panel's first render is
-        guaranteed to see the full slot set and subscribe to each one.
+        Debug panel.  Mounted only in dev builds or when `?debug` is
+        present in the URL.  Gated on `status.kind !== 'initializing'`
+        because the engine populates its asset-slot registry inside
+        the async GPU init IIFE — once the engine has transitioned
+        out of `initializing`, every slot exists on
+        `handleRef.current.assetSlots`, so the panel's first render
+        is guaranteed to see the full slot set and subscribe to each
+        one.  The `timingService` prop reads through the engine's
+        `debug` sub-handle getter so it reflects the live value
+        assigned by the async GPU init IIFE (initially `null`, then
+        the constructed service once `?gpuTimings` and the adapter
+        feature both line up).
       */}
-      {isLoadingDevPanelAvailable() &&
+      {isDebugPanelAvailable() &&
         loadingDevPanelOpen &&
         status.kind !== 'initializing' &&
         handleRef.current?.assetSlots && (
-          <LoadingDevPanel slots={handleRef.current.assetSlots} />
+          <DebugPanel
+            slots={handleRef.current.assetSlots}
+            timingService={handleRef.current.debug.timingService}
+          />
         )}
       </div>
     </>
