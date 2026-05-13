@@ -148,17 +148,24 @@ export type EngineGpuHandles = {
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
   /**
-   * Per-pass GPU timing service.  Null when the engine is constructed
-   * without the `?gpuTimings` URL gate (the common case) OR when the
-   * adapter lacks the `timestamp-query` feature (the constructor's
-   * own no-op short-circuit would otherwise hand us a service with
-   * `available: false`, but we prefer null at this layer so the
-   * destroy chain doesn't call `.destroy()` on a never-allocated
-   * stub).
+   * Per-pass GPU timing service.  Two-axis null/non-null lifecycle:
    *
-   * Same lifecycle, same reachability rationale, and same
-   * `isEngineReady` exclusion as `texturedQuadRenderer` above — see
-   * that field's docstring for the full story.
+   *   1. **`?gpuTimings` URL gate off** (the common case) → `null`.
+   *      `initGpu` skips construction entirely, no GPU resources
+   *      allocated, the DebugPanel's GPU-timings section shows the
+   *      "add `?gpuTimings` to enable" hint.
+   *   2. **`?gpuTimings` on + adapter lacks `timestamp-query`** →
+   *      non-null but in **no-op mode** (`available: false`).  The
+   *      DebugPanel uses `available` to render the "unavailable on
+   *      this adapter" message; the orchestrator's
+   *      `descriptorFor(...)` always returns `undefined`, so passes
+   *      get no `timestampWrites` attached.
+   *   3. **`?gpuTimings` on + adapter has `timestamp-query`** →
+   *      non-null in **active mode** (`available: true`).  Full
+   *      query-set + resolve-buffer + double-buffered staging.
+   *
+   * Lifecycle, reachability, and `isEngineReady` exclusion match
+   * `texturedQuadRenderer` above — see that field's docstring.
    */
   timingService: GpuTimingService | null;
 };
