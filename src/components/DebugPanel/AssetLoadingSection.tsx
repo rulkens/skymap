@@ -32,6 +32,10 @@ export type AssetLoadingSectionProps = {
 };
 
 export function AssetLoadingSection({ slots }: AssetLoadingSectionProps) {
+  // The setState value itself is unused — only the setter matters as a
+  // re-render trigger.  Naming the value `_tick` (and using the
+  // `_`-prefix lint convention) would also work; destructuring out
+  // only the setter is the most concise spelling.
   const [, force] = useState(0);
   useEffect(() => {
     const unsubs: Array<() => void> = [];
@@ -50,6 +54,10 @@ export function AssetLoadingSection({ slots }: AssetLoadingSectionProps) {
       </summary>
       <div style={{ marginTop: 4 }}>
         {snap.slots.map(({ name, state }) => {
+          // `slots.get(name)` cannot return undefined here because `snap.slots`
+          // is built directly from the same Map's iteration order, but the
+          // `noUncheckedIndexedAccess`-aware compiler can't prove that.
+          // Skipping the row when the slot is missing is the safe degradation.
           const slot = slots.get(name);
           if (!slot) return null;
           return <SlotRow key={name} name={name} state={state} slot={slot} />;
@@ -67,6 +75,9 @@ type SlotRowProps = {
 
 function SlotRow({ name, state, slot }: SlotRowProps) {
   const summary = describe(state);
+  // The request payload (`req`) is `unknown` on every non-idle state; we
+  // stringify defensively and truncate so a fat request object can't blow
+  // out the panel width.
   const reqJson =
     state.kind === 'idle'
       ? '—'
