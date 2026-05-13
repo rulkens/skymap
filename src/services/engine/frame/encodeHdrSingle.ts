@@ -37,6 +37,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import { HDR_PASSES } from './passes';
+import { encodeVolumes } from './encodeVolumes';
 
 export function encodeHdrSingle(
   encoder: GPUCommandEncoder,
@@ -45,6 +46,33 @@ export function encodeHdrSingle(
   settings: RenderFrameSettings,
   deps: PassDeps,
 ): void {
+  // ── Half-resolution scalar-volume pre-pass ────────────────────────────
+  //
+  // Runs BEFORE the HDR mega-pass opens.  Encodes one render pass against
+  // the half-res offscreen target so every active scalar-field cube can
+  // raymarch into a quarter-fragment target.  The downstream
+  // `volumeUpsamplePass` (one of the HDR_PASSES entries) bilinearly samples
+  // the half-res target and additively blends into the HDR target.
+  //
+  // Gating: the helper itself is a no-op if `state.gpu.scalarVolumeRenderer`
+  // is null (pre-bootstrap), and the HDR-side `volumeUpsamplePass.enabled`
+  // gate checks the master toggle + `hasActiveFields()` — but we ALSO gate
+  // here to avoid opening an empty render pass when nothing's active.
+  // Pre-HDR work that doesn't draw anything is still a non-zero cost on
+  // tile-based GPUs (the GPU still loads / stores the target).
+  if (
+    settings.volumesEnabled &&
+    state.gpu.scalarVolumeRenderer !== null &&
+    state.gpu.scalarVolumeRenderer.hasActiveFields()
+  ) {
+    encodeVolumes({
+      encoder,
+      ctx,
+      scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+      timestampWrites: undefined,
+    });
+  }
+
   const hdrPass = encoder.beginRenderPass({
     colorAttachments: [
       {

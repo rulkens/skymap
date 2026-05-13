@@ -509,4 +509,51 @@ describe('renderFrame', () => {
     expect(idxMw).toBeGreaterThan(idxPoint);
     expect(idxEnd).toBeGreaterThan(idxMw);
   });
+
+  it('opens a pre-HDR render pass against the half-res view when volumes are active', () => {
+    // When `volumesEnabled` is true AND scalarVolumeRenderer has active
+    // fields, `encodeVolumes` must run BEFORE the HDR mega-pass.  The
+    // fixture's default settings has volumesEnabled=false → no pre-pass
+    // fires.  We force-enable it here and stub a renderer with an
+    // active field, then check that the FIRST beginRenderPass goes
+    // against the half-res view.
+    const fx2 = makeInput({ settings: { volumesEnabled: true } });
+    // Wire in a scalarVolumeRenderer with active fields.
+    const drawSpy = vi.fn();
+    (fx2.input as any).scalarVolumeRenderer = {
+      draw: drawSpy,
+      hasActiveFields: () => true,
+    };
+    (fx2.input.state as any).gpu.scalarVolumeRenderer = {
+      draw: drawSpy,
+      hasActiveFields: () => true,
+    };
+    // volumeUpsamplePass.enabled gates on volumeUpsample !== null —
+    // keep it null so the upsample pass is skipped; this test only
+    // cares that the half-res pre-pass fires before the HDR pass.
+    (fx2.input.state as any).gpu.volumeUpsample = null;
+    // The half-res view comes off ctx.volumeOffscreen.view.  The
+    // fixture's mock may not include volumeOffscreen — patch it on.
+    const halfResView = { __id: 'half-res' } as unknown as GPUTextureView;
+    (fx2.input.ctx as any).volumeOffscreen = { view: halfResView, resize: () => {}, destroy: () => {} };
+
+    renderFrame(fx2.input);
+
+    // The first beginRenderPass should be the half-res pre-pass.
+    const calls = (fx2.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+    const firstAtt = Array.from(calls[0]![0].colorAttachments as any)[0] as any;
+    expect(firstAtt.view).toBe(halfResView);
+    expect(firstAtt.loadOp).toBe('clear');
+
+    // The renderer was asked to draw inside that pass.
+    expect(drawSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips the pre-HDR half-res pass when volumes are disabled', () => {
+    // Default fixture has volumesEnabled=false → only one HDR pass.
+    renderFrame(fx.input);
+    const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
+    expect(calls).toHaveLength(1);
+  });
 });
