@@ -41,7 +41,7 @@
  * inside Panel; this module just supplies the FPS/galaxy/filament rows.
  */
 
-import { type ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import { ALL_SOURCES, Source, maskHas } from '../../data/sources';
 import { Panel } from '../common/Panel/Panel';
 import styles from './StatsPanel.module.css';
@@ -95,7 +95,7 @@ export type StatsPanelProps = {
   defaultOpen?: boolean;
 };
 
-export function StatsPanel({
+function StatsPanel({
   fps,
   sourceCounts,
   visibleSourceMask,
@@ -155,3 +155,10 @@ export function StatsPanel({
     </Panel>
   );
 }
+
+// `React.memo` because App.tsx re-renders on every camera/fps update
+// during animation, but our props only legitimately change at engine
+// events (`fps` integer flip, survey load, filaments toggle).  Shallow
+// compare on six props skips renders that would otherwise re-do the
+// `galaxyTotal` reduce and the row JSX for no visible change.
+export default memo(StatsPanel);

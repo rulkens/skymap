@@ -36,7 +36,7 @@
  * prop drives the display:none transition.
  */
 
-import type { ReactNode } from 'react';
+import { memo, type ReactNode } from 'react';
 import cx from 'classnames';
 import styles from './SearchTrigger.module.css';
 
@@ -81,7 +81,7 @@ function SearchIcon(): ReactNode {
   );
 }
 
-export function SearchTrigger({ onClick, hidden = false }: SearchTriggerProps): ReactNode {
+function SearchTrigger({ onClick, hidden = false }: SearchTriggerProps): ReactNode {
   return (
     <button
       type="button"
@@ -99,3 +99,9 @@ export function SearchTrigger({ onClick, hidden = false }: SearchTriggerProps): 
     </button>
   );
 }
+
+// `React.memo` because the trigger has no per-frame data: `onClick` is
+// (or should be) a stable reference, `hidden` flips only when the
+// command palette opens/closes.  Without memo App's animation re-
+// renders would re-render this button (and its inline SVG) every frame.
+export default memo(SearchTrigger);
