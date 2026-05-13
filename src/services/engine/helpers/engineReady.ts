@@ -56,12 +56,13 @@
  * ### Why `pickRenderer` IS included
  *
  * Unlike `filamentRenderer`, `pickRenderer`'s lifecycle matches the
- * other four handles: it's constructed in `phases/wireInput.ts`
+ * other gate-included handles: it's constructed in `phases/wireInput.ts`
  * during the bootstrap IIFE and torn down in `destroy()` alongside
- * `renderer`, `postProcess`, and `texturedImpostors`.  Either all five are
- * present or none are — there is no "engine ran but pickRenderer
- * isn't built" state by design.  Including it here lets the per-frame
- * pick branch drop its `state.gpu.pickRenderer!` non-null assertion.
+ * `renderer`, `postProcess`, `volumeOffscreen`, and `texturedImpostors`.
+ * Either all gate-included handles are present or none are — there is
+ * no "engine ran but pickRenderer isn't built" state by design.
+ * Including it here lets the per-frame pick branch drop its
+ * `state.gpu.pickRenderer!` non-null assertion.
  *
  * ### Why this is named `isEngineReady`
  *
