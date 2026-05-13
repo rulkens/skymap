@@ -47,6 +47,7 @@ import { useEffect, useState, useRef, type ReactElement } from 'react';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
+import { TIMING_SLOT_NAMES } from '../../services/gpu/timing/TIMING_SLOT_NAMES';
 import { Sparkline } from './Sparkline';
 
 const AVG_WINDOW = 60;
@@ -139,7 +140,17 @@ export function GpuTimingsSection({
         GPU Timings (last frame: {frameTotalMs.toFixed(1)} ms)
       </summary>
       <div style={{ marginTop: 4 }}>
-        {Array.from(stats).map(([slot, row]) => {
+        {/*
+          Iterate the static `TIMING_SLOT_NAMES` table rather than
+          `stats` directly so row order is stable regardless of which
+          slot emits first.  Slots that haven't sampled yet are simply
+          skipped (no row).  This matches the spec's "Layout sketch"
+          ordering and decouples the panel from `gpuTimingService`'s
+          internal iteration order.
+        */}
+        {Array.from(TIMING_SLOT_NAMES.keys()).map((slot) => {
+          const row = stats.get(slot);
+          if (!row) return null;
           const avg =
             row.recent.length === 0
               ? 0
