@@ -51,4 +51,30 @@ describe('AutoRotateToggle', () => {
     const btn = screen.getByRole('button', { name: /start camera auto-rotate/i });
     expect(btn).not.toHaveAttribute('aria-hidden');
   });
+
+  it('sets aria-pressed="false" when playing=false', () => {
+    render(createElement(AutoRotateToggle, { playing: false, onToggle: () => {} }));
+    const btn = screen.getByRole('button', { name: /start camera auto-rotate/i });
+    expect(btn).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('sets aria-pressed="true" when playing=true', () => {
+    render(createElement(AutoRotateToggle, { playing: true, onToggle: () => {} }));
+    const btn = screen.getByRole('button', { name: /pause camera auto-rotate/i });
+    expect(btn).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('uses the "Start" aria-label when not playing', () => {
+    render(createElement(AutoRotateToggle, { playing: false, onToggle: () => {} }));
+    expect(
+      screen.getByRole('button', { name: 'Start camera auto-rotate' }),
+    ).toBeInTheDocument();
+  });
+
+  it('uses the "Pause" aria-label when playing', () => {
+    render(createElement(AutoRotateToggle, { playing: true, onToggle: () => {} }));
+    expect(
+      screen.getByRole('button', { name: 'Pause camera auto-rotate' }),
+    ).toBeInTheDocument();
+  });
 });
