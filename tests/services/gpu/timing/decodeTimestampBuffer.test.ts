@@ -3,7 +3,9 @@
  *
  * Feeds synthetic BigUint64 arrays through the decoder and verifies:
  *   1. Slots with both timestamps non-zero produce (end-begin) * period / 1e6.
- *   2. Slots with begin === 0n are skipped (sentinel for "pass didn't run").
+ *   2. Slots with (begin, end) both 0n are skipped (sentinel for "pass
+ *      didn't run" — a fully-zeroed staging-buffer slot from
+ *      explicit zero-init).
  *   3. Negative deltas (end < begin) are clamped to 0 — defends against
  *      driver wrap-around on GPUs that reset their tick counter.
  *   4. `timestampPeriod` is correctly applied (1 ns/tick → 0.001 ms/tick;
@@ -33,7 +35,7 @@ describe('decodeTimestampBuffer', () => {
     expect(out.get('point-sprites')).toBeCloseTo(2.0, 6);
   });
 
-  it('skips slots whose begin tick is 0 (pass-did-not-run sentinel)', () => {
+  it('skips slots whose (begin, end) are both 0 (pass-did-not-run sentinel)', () => {
     const buf = buildBuffer([
       [0, 100n, 1_000_100n],
     ]);
