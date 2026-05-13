@@ -167,8 +167,23 @@ export function createGpuTimingService(device: GPUDevice): GpuTimingService {
     const capturedFrameIndex = ctx.frameIndex;
     const buf = stagingBuffers[slot];
 
-    void buf
-      .mapAsync(GPUMapMode.READ)
+    // Defer the `mapAsync` call to a microtask so it runs AFTER the
+    // caller's `device.queue.submit(...)` returns.  Calling `mapAsync`
+    // synchronously here would transition the buffer into PendingMap
+    // state, but the encoder we just recorded into still has a pending
+    // `copyBufferToBuffer` command targeting this same buffer — submit
+    // would then fail validation ("used in submit while mapped").
+    //
+    // The microtask runs after the current synchronous JS frame
+    // completes; renderFrame calls `queue.submit` immediately after
+    // `endFrame` returns, so by the time the microtask fires, the
+    // copy command is queued on the GPU timeline and `mapAsync` can
+    // safely transition the buffer.
+    void Promise.resolve()
+      .then(() => {
+        if (destroyed) return undefined;
+        return buf.mapAsync(GPUMapMode.READ);
+      })
       .then(() => {
         if (destroyed) return;
         const mapped = buf.getMappedRange();
