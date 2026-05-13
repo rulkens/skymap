@@ -1,17 +1,82 @@
 /*
- * AutoRotateToggle.module.css — minimal placeholder.
- * Full styling lands in Task 6 once the behavioural tests are in.
+ * AutoRotateToggle.module.css — circular play/pause pill at the top of
+ * the viewport, next to the SearchTrigger.
+ *
+ * Visual vocabulary deliberately matches SearchTrigger / InfoCard /
+ * SettingsPanel: frosted-glass dark blue surface, the cosmic-blue
+ * accent on hover/focus.  All atoms reference tokens from
+ * `src/styles/global.css`.
+ *
+ * Positioning is owned by the `.topBar` wrapper in App.module.css —
+ * this rule deliberately has no `position` / `top` / `left` because
+ * the wrapper is responsible for placing the row of pills.
  */
 
 .toggle {
+  /*
+   * 40 × 40 circular pill.  Padding keeps the icon centred without
+   * relying on `display: flex` semantics that vary cross-browser when
+   * mixed with SVG intrinsic sizing.
+   */
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0; /* don't get squashed by SearchTrigger's flex-grow on mobile */
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: var(--surface-card-soft);
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  backdrop-filter: blur(var(--blur-card));
+
+  border: 1px solid var(--border-card);
+  border-radius: 999px;
+  box-shadow: var(--shadow-card);
+
+  color: var(--color-fg-base);
   cursor: pointer;
+  padding: 0;
+
+  /*
+   * Same transition envelope as SearchTrigger so the two pills move in
+   * lockstep when the palette opens/closes.
+   */
+  transition:
+    opacity 0.18s ease-out,
+    transform 0.22s ease-out,
+    border-color 0.15s ease-out,
+    background-color 0.15s ease-out;
+  opacity: 1;
 }
 
-.hidden {
-  opacity: 0;
-  pointer-events: none;
+.toggle:hover,
+.toggle:focus-visible {
+  background: var(--surface-card-strong);
+  border-color: var(--border-hover);
+  outline: none;
 }
 
 .icon {
-  display: block;
+  flex-shrink: 0;
+  color: var(--color-fg-dim);
+  transition: color 0.15s ease-out;
+}
+
+.toggle:hover .icon,
+.toggle:focus-visible .icon {
+  color: var(--color-accent);
+}
+
+/*
+ * Hidden state — palette is open; the toggle fades and shrinks toward
+ * its centre.  Unlike SearchTrigger, there's no translateX(-50%) term
+ * to compose with because positioning lives in the wrapper.  Just
+ * `scale(0.92)`.  `pointer-events: none` makes the invisible pill
+ * non-clickable even during the fade.
+ */
+.hidden {
+  opacity: 0;
+  transform: scale(0.92);
+  pointer-events: none;
 }
