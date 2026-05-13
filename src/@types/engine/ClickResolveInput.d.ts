@@ -18,4 +18,16 @@ export type ClickResolveInput = {
    * through can still construct a ClickResolveInput.
    */
   pointSizePx?: number;
+  /**
+   * Optional `RenderPassTimestampWrites` descriptor for per-pass GPU
+   * profiling, forwarded verbatim to `pickRenderer.pick` as its 6th
+   * argument.  The caller is expected to pass
+   * `state.gpu.timingService?.descriptorFor('pick')` — when the
+   * timing service is absent (no `timestamp-query` feature on the
+   * active adapter, or the user toggled the overlay off), the value
+   * is `undefined` and the pick pass falls back to the pre-timing
+   * descriptor shape.  See `PickRenderer.pick` JSDoc for the cross-
+   * frame resolve story.
+   */
+  timingDescriptor?: GPURenderPassTimestampWrites;
 };

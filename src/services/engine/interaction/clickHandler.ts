@@ -86,6 +86,13 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
         args.pickYPx,
         args.visibleSources,
         args.pointSizePx,
+        // Per-pass GPU timing — undefined when the timing service is
+        // absent (no `timestamp-query` feature or overlay off).  The
+        // pick render pass writes start/end timestamps into the
+        // shared query set's 'pick' slot pair; the next main-frame
+        // `endFrame` resolves and copies those slots.  See
+        // PickRenderer.pick JSDoc.
+        args.timingDescriptor,
       );
       if (result === null) return { kind: 'clear' };
       // Try to build a PointInfo, but treat failure as "still select
