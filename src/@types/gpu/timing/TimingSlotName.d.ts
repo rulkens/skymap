@@ -8,12 +8,13 @@
  * adding a new pass means editing the union AND the table in one
  * commit — the type checker enforces both edits.
  *
- * The 9 inhabitants below cover the 6 HDR sub-passes (`HDR_PASSES`),
+ * The 10 inhabitants below cover the 6 HDR sub-passes (`HDR_PASSES`),
  * the tone-map post-process, the combined UI-overlay pass (marker-
  * lines + labels merged into one swap-chain render pass for blend
- * coherency), and the pick render pass.  Slots 16–31 of the
- * GPUQuerySet are reserved for future inhabitants without forcing a
- * query-set resize.
+ * coherency), the pick render pass, and the volume-upsample pass that
+ * composites the half-resolution scalar-volume render target back to
+ * full resolution.  Slots 20–31 of the GPUQuerySet are reserved for
+ * future inhabitants without forcing a query-set resize.
  *
  * The strings match the `name` fields on `Pass` objects (e.g.
  * `pointSpritesPass.name === 'point-sprites'`).  Tests in Task 9 lean
@@ -29,4 +30,5 @@ export type TimingSlotName =
   | 'milky-way'
   | 'tone-map'
   | 'ui-overlay'
-  | 'pick';
+  | 'pick'
+  | 'volume-upsample';

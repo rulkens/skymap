@@ -66,6 +66,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   const vp = new Float32Array(16) as unknown as mat4;
   const renderer = { draw: vi.fn() } as any;
   const postProcess = { view: {} as GPUTextureView, draw: vi.fn(), resize: vi.fn(), destroy: vi.fn() } as any;
+  const volumeOffscreen = { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any;
   const texturedImpostors = { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any;
   return {
     isReady: true,
@@ -76,6 +77,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     renderer,
     postProcess,
+    volumeOffscreen,
     texturedImpostors,
     ...overrides,
   };
@@ -146,7 +148,7 @@ describe('HDR_PASSES registry', () => {
       'textured-impostors',
       'milky-way',
       'filaments',
-      'scalar-volume',
+      'volume-upsample',
     ]);
   });
 });

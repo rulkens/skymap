@@ -71,6 +71,7 @@
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
 import { createPostProcess } from '../../gpu/passes/postProcess';
+import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
 import { createTexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
@@ -79,6 +80,7 @@ import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
 import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
+import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { loadFontAtlas } from '../../gpu/labels/loadFontAtlas';
 import { hasUrlGate } from '../../../utils/url/urlGate';
@@ -163,6 +165,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Mirror into the engine state so `destroy()` (defined on the
   // public handle, outside this IIFE) can release the GPU resources.
   state.gpu.postProcess = postProcess;
+
+  // Half-res offscreen target for the scalar-volume pass.  Sized in
+  // lockstep with the HDR target (canvas backing-store dimensions).
+  // Conceptually unrelated to postProcess (its only consumer is the
+  // volume upsample pass, never the tone-map), but the construction
+  // and resize call sites happen to live in the same places.
+  state.gpu.volumeOffscreen = createVolumeOffscreen(device, {
+    width: canvas.width,
+    height: canvas.height,
+  });
 
   // Build the GPU pipeline; cloud data is loaded below.
   // PointRenderer (and TexturedQuadRenderer/TexturedDiskRenderer further down) target
@@ -415,6 +427,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // mapping.  Stored on `state.gpu` so `destroy()` can release the
   // shared corner/index VBOs and every per-field GPU resource.
   state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(device, 'rgba16float');
+
+  // ── Half-res-to-HDR volume upsample pass ──────────────────────────
+  //
+  // Built unconditionally alongside the scalar-volume renderer; the
+  // pipeline is cheap (one sampler + one bind-group-layout + one render
+  // pipeline) and the half-res target lives on `postProcess` so we have
+  // nothing to allocate here that depends on viewport size.  Stored on
+  // `state.gpu` so `destroy()` can release the pipeline and so the new
+  // `volumeUpsamplePass` can read it via `state.gpu.volumeUpsample`.
+  state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
 
   // ── GPU timing service ────────────────────────────────────────────
   //

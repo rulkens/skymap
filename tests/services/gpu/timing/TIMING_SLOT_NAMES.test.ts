@@ -22,11 +22,12 @@ describe('TIMING_SLOT_NAMES', () => {
     expect(TIMING_SLOT_NAMES.get('tone-map')).toEqual([12, 13]);
     expect(TIMING_SLOT_NAMES.get('ui-overlay')).toEqual([14, 15]);
     expect(TIMING_SLOT_NAMES.get('pick')).toEqual([16, 17]);
+    expect(TIMING_SLOT_NAMES.get('volume-upsample')).toEqual([18, 19]);
   });
 
-  it('reserves slots 18-31 (query set sized 32, 9 in use)', () => {
+  it('reserves slots 20-31 (query set sized 32, 10 in use)', () => {
     expect(TIMING_QUERY_SET_SIZE).toBe(32);
-    expect(TIMING_SLOT_NAMES.size).toBe(9);
+    expect(TIMING_SLOT_NAMES.size).toBe(10);
   });
 
   it('never assigns the same index to two slots', () => {

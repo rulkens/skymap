@@ -171,6 +171,7 @@ function makeState(maxAbs: number): EngineState {
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
       scalarVolumeRenderer: null,
+      volumeUpsample: null,
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() },

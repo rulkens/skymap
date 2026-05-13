@@ -56,12 +56,13 @@
  * ### Why `pickRenderer` IS included
  *
  * Unlike `filamentRenderer`, `pickRenderer`'s lifecycle matches the
- * other four handles: it's constructed in `phases/wireInput.ts`
+ * other gate-included handles: it's constructed in `phases/wireInput.ts`
  * during the bootstrap IIFE and torn down in `destroy()` alongside
- * `renderer`, `postProcess`, and `texturedImpostors`.  Either all five are
- * present or none are — there is no "engine ran but pickRenderer
- * isn't built" state by design.  Including it here lets the per-frame
- * pick branch drop its `state.gpu.pickRenderer!` non-null assertion.
+ * `renderer`, `postProcess`, `volumeOffscreen`, and `texturedImpostors`.
+ * Either all gate-included handles are present or none are — there is
+ * no "engine ran but pickRenderer isn't built" state by design.
+ * Including it here lets the per-frame pick branch drop its
+ * `state.gpu.pickRenderer!` non-null assertion.
  *
  * ### Why this is named `isEngineReady`
  *
@@ -120,6 +121,15 @@ export function isEngineReady(state: EngineState): state is ReadyEngineState {
     state.gpu.renderer !== null &&
     state.gpu.pickRenderer !== null &&
     state.gpu.postProcess !== null &&
+    // `volumeOffscreen` shares the bootstrap lifecycle of `postProcess`:
+    // both are allocated in `initGpu` and torn down in `destroy()`.
+    // Adding it here ensures `encodeVolumes` and `volumeUpsamplePass`
+    // can read `state.gpu.volumeOffscreen.view` without `!` after this
+    // guard passes.  The "why not filamentRenderer?" rationale in the
+    // module header applies equally here in the *other* direction — we
+    // include it because it is never null when the engine is ready, not
+    // because it's an optional resource.
+    state.gpu.volumeOffscreen !== null &&
     state.subsystems.texturedImpostors !== null
   );
 }

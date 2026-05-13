@@ -13,7 +13,7 @@ import type { Size } from './Size';
 export type PostProcess = {
   /** Current HDR colour-attachment view, stable until the next `resize()` call. */
   readonly view: GPUTextureView;
-  /** Recreate the HDR texture at a new size.  Old view becomes invalid. */
+  /** Recreate the HDR texture at a new size.  The old view becomes invalid. */
   resize(size: Size): void;
   /**
    * Encode the fullscreen tone-map blit `hdrView → swapView` onto the
@@ -37,6 +37,6 @@ export type PostProcess = {
     curve: ToneMapCurve,
     timingDescriptor?: GPURenderPassTimestampWrites,
   ): void;
-  /** Tear down — releases both the HDR texture and the tone-map uniform buffer. */
+  /** Tear down — releases the HDR texture and the tone-map uniform buffer. */
   destroy(): void;
 };

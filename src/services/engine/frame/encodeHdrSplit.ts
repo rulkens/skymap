@@ -36,6 +36,7 @@ import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFra
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../@types/gpu/timing/TimingSlotName';
 import { HDR_PASSES } from './passes';
+import { encodeVolumes } from './encodeVolumes';
 
 export function encodeHdrSplit(
   encoder: GPUCommandEncoder,
@@ -57,6 +58,27 @@ export function encodeHdrSplit(
     ],
   });
   clearPass.end();
+
+  // ── Half-resolution scalar-volume pre-pass ────────────────────────
+  //
+  // Runs after the clear, before the HDR sub-passes.  Same gate as
+  // `encodeHdrSingle`: skip when no fields are active so we don't open
+  // an empty render pass.  Timestamp billing reuses the legacy
+  // `'scalar-volume'` slot — that's what the DebugPanel's GpuTimings
+  // row reads, and keeping the slot name stable means the row's label
+  // and historical samples line up.
+  if (
+    settings.volumesEnabled &&
+    state.gpu.scalarVolumeRenderer !== null &&
+    state.gpu.scalarVolumeRenderer.hasActiveFields()
+  ) {
+    encodeVolumes({
+      encoder,
+      ctx,
+      scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+      timestampWrites: timingService.descriptorFor('scalar-volume'),
+    });
+  }
 
   // ── HDR sub-passes — one beginRenderPass per enabled pass ─────────
   //

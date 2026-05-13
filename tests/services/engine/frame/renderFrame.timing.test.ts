@@ -351,4 +351,44 @@ describe('renderFrame — timing service hookup', () => {
       expect(desc.timestampWrites).toBeUndefined();
     }
   });
+
+  it('bills the half-res pre-pass against the scalar-volume slot when timings are active', () => {
+    const { svc, descriptorFor } = makeFakeTimingService();
+    const { input, beginCalls } = makeMinimalInputWithTiming(svc);
+
+    // Force volumes on with an active scalarVolumeRenderer.
+    (input.settings as any).volumesEnabled = true;
+    const drawSpy = vi.fn();
+    (input as any).scalarVolumeRenderer = {
+      draw: drawSpy,
+      hasActiveFields: () => true,
+    };
+    (input.state as any).gpu.scalarVolumeRenderer = {
+      draw: drawSpy,
+      hasActiveFields: () => true,
+    };
+    // Provide a half-res view on the volumeOffscreen mock — the split
+    // path reads ctx.volumeOffscreen.view for the pre-pass attachment.
+    const halfView = { __id: 'half' } as unknown as GPUTextureView;
+    (input.ctx as any).volumeOffscreen = { view: halfView, resize: vi.fn(), destroy: vi.fn() };
+    // The new volume-upsample pass also reads state.gpu.volumeUpsample —
+    // null-check it so the upsample pass is skipped (we only care about
+    // the pre-pass slot billing in this test).
+    (input.state as any).gpu.volumeUpsample = null;
+
+    renderFrame(input);
+
+    const slots = descriptorFor.mock.calls.map((c) => c[0]);
+    expect(slots).toContain('scalar-volume');
+    // The pre-pass beginRenderPass should carry the descriptor whose
+    // stub-tag is 'scalar-volume'.  In the split path the clear pass
+    // is first (index 0, no timestampWrites), so the pre-pass comes
+    // at index 1.
+    const preDesc = beginCalls[1]!.desc as GPURenderPassDescriptor & {
+      timestampWrites?: GPURenderPassTimestampWrites;
+    };
+    expect(preDesc.timestampWrites).toBeDefined();
+    const tag = (preDesc.timestampWrites!.querySet as unknown as { _stub: string })._stub;
+    expect(tag).toBe('scalar-volume');
+  });
 });

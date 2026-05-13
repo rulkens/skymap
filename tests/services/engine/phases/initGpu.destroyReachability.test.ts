@@ -90,6 +90,10 @@ vi.mock('../../../../src/services/gpu/passes/postProcess', () => ({
   createPostProcess: vi.fn(() => makeStub('postProcess')),
 }));
 
+vi.mock('../../../../src/services/gpu/passes/volumeOffscreen', () => ({
+  createVolumeOffscreen: vi.fn(() => makeStub('volumeOffscreen')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/texturedQuadRenderer', () => ({
   createTexturedQuadRenderer: vi.fn(() => makeStub('texturedQuadRenderer')),
 }));
@@ -120,6 +124,10 @@ vi.mock('../../../../src/services/gpu/renderers/markerLineRenderer', () => ({
 
 vi.mock('../../../../src/services/gpu/renderers/scalarVolumeRenderer', () => ({
   createScalarVolumeRenderer: vi.fn(() => makeStub('scalarVolumeRenderer')),
+}));
+
+vi.mock('../../../../src/services/gpu/passes/volumeUpsample', () => ({
+  createVolumeUpsample: vi.fn(() => makeStub('volumeUpsample')),
 }));
 
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlas', () => ({
@@ -162,6 +170,7 @@ function makeState(): EngineState {
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
       scalarVolumeRenderer: null,
+      volumeUpsample: null,
     },
     subsystems: {
       biasCorrection: {

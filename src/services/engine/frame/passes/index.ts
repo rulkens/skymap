@@ -31,7 +31,8 @@
  *   3. textured-impostors  — LOD-2 textured-disk + textured-quad impostors
  *   4. milky-way           — procedural impostor at the world origin
  *   5. filaments           — cosmic-web skeleton overlay
- *   6. scalar-volume       — 3D raymarched scalar-field cubes (optional)
+ *   6. volume-upsample     — upsamples the half-res volume offscreen target
+ *                            into the HDR target (when active fields exist)
  *
  * Reordering passes is a one-line array shuffle with a clear
  * semantic.  The DebugPanel `GpuTimingsSection` derives its row order
@@ -88,7 +89,7 @@ import { pointSpritesPass } from './pointSpritesPass';
 import { proceduralDisksPass } from './proceduralDisksPass';
 import { texturedImpostorsPass } from './texturedImpostorsPass';
 import { filamentsPass } from './filamentsPass';
-import { scalarVolumePass } from './scalarVolumePass';
+import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
@@ -100,7 +101,7 @@ export const HDR_PASSES: readonly Pass[] = [
   texturedImpostorsPass,
   milkyWayPass,
   filamentsPass,
-  scalarVolumePass,
+  volumeUpsamplePass,
 ];
 
 /**
@@ -115,7 +116,7 @@ export { pointSpritesPass } from './pointSpritesPass';
 export { proceduralDisksPass } from './proceduralDisksPass';
 export { texturedImpostorsPass } from './texturedImpostorsPass';
 export { filamentsPass } from './filamentsPass';
-export { scalarVolumePass } from './scalarVolumePass';
+export { volumeUpsamplePass } from './volumeUpsamplePass';
 export { milkyWayPass } from './milkyWayPass';
 export { markerLinesPass } from './markerLinesPass';
 export { labelsPass } from './labelsPass';

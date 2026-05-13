@@ -82,12 +82,14 @@ export type RenderFrameSettings = {
   filamentIntensity: number;
   /**
    * Master gate for the 3D scalar-field volume overlay.  When false,
-   * `scalarVolumePass.enabled` returns false before consulting the
-   * renderer, so no per-field checks or GPU work occurs.  When true,
-   * the pass also requires `scalarVolumeRenderer.hasActiveFields()` to
-   * be true (at least one registered field is enabled with intensity
-   * > 0).  See `scalarVolumePass.ts` and
-   * `EngineSettingsState.volumesEnabled` for the full gate rationale.
+   * `volumeUpsamplePass.enabled` returns false before consulting the
+   * renderer, so no per-field checks or GPU work occurs — and the
+   * pre-HDR `encodeVolumes` step is also a no-op (it never reaches its
+   * draw because no field is active).  When true, the pass also
+   * requires `scalarVolumeRenderer.hasActiveFields()` to be true (at
+   * least one registered field is enabled with intensity > 0).  See
+   * `volumeUpsamplePass.ts` and `EngineSettingsState.volumesEnabled`
+   * for the full gate rationale.
    */
   volumesEnabled: boolean;
 };

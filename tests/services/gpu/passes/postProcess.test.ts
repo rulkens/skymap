@@ -86,6 +86,7 @@ describe('createPostProcess', () => {
       (device.createBuffer as ReturnType<typeof vi.fn>).mock.results[0]!.value.destroy,
     ).toHaveBeenCalled();
   });
+
 });
 
 describe('postProcess JS-mirror tone-map curves', () => {

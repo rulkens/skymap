@@ -138,6 +138,7 @@ describe('EngineState type', () => {
         renderer: null,
         pickRenderer: null,
         postProcess: null,
+        volumeOffscreen: null,
         filamentRenderer: null,
         labelRenderer: null,
         markerLineRenderer: null,
@@ -146,6 +147,7 @@ describe('EngineState type', () => {
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
         scalarVolumeRenderer: null,
+        volumeUpsample: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
@@ -284,6 +286,7 @@ describe('EngineState type', () => {
         renderer: null,
         pickRenderer: null,
         postProcess: null,
+        volumeOffscreen: null,
         filamentRenderer: null,
         labelRenderer: null,
         markerLineRenderer: null,
@@ -292,6 +295,7 @@ describe('EngineState type', () => {
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
         scalarVolumeRenderer: null,
+        volumeUpsample: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {

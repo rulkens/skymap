@@ -364,6 +364,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       renderer: null,
       pickRenderer: null,
       postProcess: null,
+      volumeOffscreen: null,
       filamentRenderer: null,
       // labelRenderer + markerLineRenderer: null until initGpu completes
       // the loadFontAtlas() fetch and constructs both renderers.  They're
@@ -391,9 +392,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
       // Constructed during initGpu, null until then.  Excluded from the
-      // isEngineReady predicate — the scalarVolumePass optional-chains
-      // hasActiveFields() so a null handle is a silent no-op.
+      // isEngineReady predicate — the volumeUpsamplePass null-checks
+      // both handles before calling hasActiveFields(), so a null state
+      // is a silent no-op.
       scalarVolumeRenderer: null,
+      // Constructed alongside scalarVolumeRenderer in initGpu; null until
+      // then.  Excluded from the isEngineReady predicate — the
+      // volumeUpsamplePass null-checks this field at point of use.
+      volumeUpsample: null,
       // Per-pass GPU timing service.  Always non-null — initialized
       // here with a no-op stub (no GPU resources), then replaced by
       // initGpu with the device-aware service after the device is
@@ -968,8 +974,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function setVolumesEnabled(enabled: boolean): void {
-    // Master toggle — mutate the settings bag so the per-frame gate in
-    // `scalarVolumePass` sees the new value on the next frame.  We do
+    // Master toggle — mutate the settings bag so the per-frame gates
+    // in `volumeUpsamplePass.enabled` (and `encodeVolumes` via the
+    // same `volumesEnabled` check threaded through) see the new value
+    // on the next frame.  We do
     // NOT fire an echo callback (no `cb.onVolumesEnabledChange`)
     // because the React layer owns this value optimistically.
     state.settings.volumes.masterEnabled = enabled;
@@ -1185,6 +1193,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.pickRenderer = null;
     state.gpu.postProcess?.destroy();
     state.gpu.postProcess = null;
+    state.gpu.volumeOffscreen?.destroy();
+    state.gpu.volumeOffscreen = null;
     state.gpu.filamentRenderer?.destroy();
     state.gpu.filamentRenderer = null;
     state.gpu.labelRenderer?.destroy();
@@ -1201,6 +1211,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.milkyWayRenderer = null;
     state.gpu.scalarVolumeRenderer?.destroy();
     state.gpu.scalarVolumeRenderer = null;
+    state.gpu.volumeUpsample?.destroy();
+    state.gpu.volumeUpsample = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();

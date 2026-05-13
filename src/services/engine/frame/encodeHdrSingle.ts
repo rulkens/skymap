@@ -37,6 +37,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { PassDeps } from '../../../@types/engine/frame/PassDeps';
 import type { RenderFrameSettings } from '../../../@types/engine/frame/RenderFrameSettings';
 import { HDR_PASSES } from './passes';
+import { encodeVolumes } from './encodeVolumes';
 
 export function encodeHdrSingle(
   encoder: GPUCommandEncoder,
@@ -45,6 +46,35 @@ export function encodeHdrSingle(
   settings: RenderFrameSettings,
   deps: PassDeps,
 ): void {
+  // ── Half-resolution scalar-volume pre-pass ────────────────────────────
+  //
+  // Runs BEFORE the HDR mega-pass opens.  Encodes one render pass against
+  // the half-res offscreen target so every active scalar-field cube can
+  // raymarch into a quarter-fragment target.  The downstream
+  // `volumeUpsamplePass` (one of the HDR_PASSES entries) bilinearly samples
+  // the half-res target and additively blends into the HDR target.
+  //
+  // Gating: `encodeVolumes` carries its own null + hasActiveFields guard
+  // for direct callers, but the call-site gate below makes it unreachable
+  // here by construction.  The duplication is deliberate — gating at the
+  // call site avoids even the function-call overhead, and on tile-based
+  // GPUs an empty `beginRenderPass(loadOp: 'clear')` is still a non-zero
+  // cost (tile-RAM load+store) even when nothing draws inside.  The
+  // downstream `volumeUpsamplePass.enabled` checks the same conditions
+  // on the HDR side; the two layers stay in lockstep.
+  if (
+    settings.volumesEnabled &&
+    state.gpu.scalarVolumeRenderer !== null &&
+    state.gpu.scalarVolumeRenderer.hasActiveFields()
+  ) {
+    encodeVolumes({
+      encoder,
+      ctx,
+      scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+      timestampWrites: undefined,
+    });
+  }
+
   const hdrPass = encoder.beginRenderPass({
     colorAttachments: [
       {

@@ -246,8 +246,26 @@ describe('renderFrame visual baseline', () => {
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
     const filamentRenderer = makeLoggingRenderer(records, 'filaments');
     const scalarVolumeRenderer = {
-      ...makeLoggingRenderer(records, 'scalar-volume'),
       hasActiveFields: vi.fn(() => true),
+      draw: vi.fn((...args: unknown[]) => {
+        records.push({
+          kind: 'rendererDraw',
+          renderer: 'scalar-volume',
+          argShape: describeArgs(args),
+        });
+      }),
+    };
+    // volumeUpsample is the state.gpu handle that volumeUpsamplePass.draw
+    // calls directly (not via PassDeps).  Wire it with a logging draw so
+    // the snapshot captures the upsample step.
+    const volumeUpsample = {
+      draw: vi.fn((...args: unknown[]) => {
+        records.push({
+          kind: 'rendererDraw',
+          renderer: 'volume-upsample',
+          argShape: describeArgs(args),
+        });
+      }),
     };
     const labelRenderer = {
       glyphCount: vi.fn(() => 12),
@@ -292,6 +310,9 @@ describe('renderFrame visual baseline', () => {
       renderer: pointRenderer,
       postProcess,
       texturedImpostors: texturedImpostorsSubsystem,
+      // volumeUpsamplePass.draw reads ctx.volumeOffscreen.view to pass
+      // as the source texture to the upsample step.
+      volumeOffscreen: { view: {} as GPUTextureView },
     } as never;
 
     const settings = {
@@ -328,6 +349,7 @@ describe('renderFrame visual baseline', () => {
           labelRenderer,
           markerLineRenderer,
           scalarVolumeRenderer,
+          volumeUpsample,
         },
         subsystems: {
           proceduralDisks: proceduralDisksSubsystem,
@@ -355,14 +377,19 @@ describe('renderFrame visual baseline', () => {
     // The hash payload — only renderer-level draws, with the order they
     // were emitted.  Render-pass boundaries (beginRenderPass / passEnd),
     // encoder.finish, and queue.submit are deliberately filtered out:
-    // Task 8 will increase the number of begin/end boundaries from 1 to 9,
-    // and we want THIS test to keep passing after that change.
+    // Future work (e.g. Task 9 wiring `encodeVolumes` before the HDR
+    // mega-pass) will add more begin/end boundaries; filtering them
+    // out here keeps THIS test stable across encoder-shape changes.
     const drawSequence = records
       .filter((r): r is Extract<DrawRecord, { kind: 'rendererDraw' }> => r.kind === 'rendererDraw')
       .map((r) => ({ renderer: r.renderer, argShape: r.argShape }));
 
     expect(drawSequence).toMatchInlineSnapshot(`
       [
+        {
+          "argShape": "pass,Float32Array[16],Array[2],Array[3]",
+          "renderer": "scalar-volume",
+        },
         {
           "argShape": "pass,Float32Array[16],Array[2],object",
           "renderer": "point-sprites",
@@ -388,8 +415,8 @@ describe('renderFrame visual baseline', () => {
           "renderer": "filaments",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3]",
-          "renderer": "scalar-volume",
+          "argShape": "pass,object",
+          "renderer": "volume-upsample",
         },
         {
           "argShape": "object,object,number,number,undefined",
@@ -406,17 +433,18 @@ describe('renderFrame visual baseline', () => {
       ]
     `);
 
-    // Boundary-event count for the no-timing path: TWO begin/end
-    // pairs — one for the HDR mega-pass (`encodeHdrSingle`) and one
-    // for the post-tone-map UI overlay (`encodeUiOverlay`).  Tone-
-    // map's beginRenderPass is hidden inside postProcess.draw (the
-    // mock just records the call), so it doesn't appear here.
-    // Counts are asserted SEPARATELY from the inline snapshot above
-    // on purpose: drawSequence captures the renderer-dispatch
-    // invariant, these counts capture the pass-boundary structure.
+    // Boundary-event count for the no-timing path: THREE begin/end
+    // pairs — one for the half-res scalar-volume pre-pass
+    // (`encodeVolumes`, wired in Task 9), one for the HDR mega-pass
+    // (`encodeHdrSingle`), and one for the post-tone-map UI overlay
+    // (`encodeUiOverlay`).  Tone-map's beginRenderPass is hidden inside
+    // postProcess.draw (the mock just records the call), so it doesn't
+    // appear here.  Counts are asserted SEPARATELY from the inline
+    // snapshot above on purpose: drawSequence captures the renderer-
+    // dispatch invariant, these counts capture the pass-boundary structure.
     const beginCount = records.filter((r) => r.kind === 'beginRenderPass').length;
     const endCount = records.filter((r) => r.kind === 'passEnd').length;
-    expect(beginCount).toBe(2);
-    expect(endCount).toBe(2);
+    expect(beginCount).toBe(3);
+    expect(endCount).toBe(3);
   });
 });
