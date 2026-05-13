@@ -90,6 +90,7 @@ import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator'
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsystem';
 import { createTexturedImpostorSubsystem } from '../subsystems/texturedImpostorSubsystem';
+import { hasUrlGate } from '../../../utils/url/urlGate';
 // Cosmography POI anchors used by the `?anchors=1` overlay below.
 // Synthetic-volume imports that previously sat here
 // (DEFAULT_VOLUME_FIELD_INTENSITY, getVolumeFieldDefaults,
@@ -154,15 +155,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // — more importantly — the visual isn't ready for users yet.  Once
   // the rendering / colour-mapping is dialled in, drop both gates
   // (this one and `volumesUiEnabled` in App.tsx) in lockstep.
-  const volumesEnabledByUrl =
-    typeof window !== 'undefined' &&
-    (() => {
-      try {
-        return new URLSearchParams(window.location.search).has('volumes');
-      } catch {
-        return false;
-      }
-    })();
+  const volumesEnabledByUrl = hasUrlGate('volumes');
   const volumesGateOpen = import.meta.env.DEV || volumesEnabledByUrl;
 
   // ── Cosmography anchor POIs (dev tool, gated on ?anchors=1) ──────
@@ -173,9 +166,9 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // enabled by default — the labels would clutter the production view,
   // and most users won't need a star-chart overlay on a galaxy renderer.
   //
-  // Same window-guarded URL-flag idiom as `volumesEnabledByUrl` above;
-  // we deliberately don't fold the two into a single helper because the
-  // pattern is short and the duplication is readable.
+  // Same `hasUrlGate` helper as `volumesEnabledByUrl` above — the
+  // window-guarded `URLSearchParams.has` idiom now lives in
+  // `utils/url/urlGate.ts` once for all four gate sites.
   //
   // Why three lists merged here (rather than one combined export from
   // `clusterAnchors.ts`): each list serves a different purpose.
@@ -190,15 +183,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // 30-50 Mpc), voids get a still larger one (radii 30-50+ Mpc).
   // The per-category min floors prevent vanishing markers on the
   // closest anchors (e.g. Virgo, Local Void).
-  const showAnchors =
-    typeof window !== 'undefined' &&
-    (() => {
-      try {
-        return new URLSearchParams(window.location.search).has('anchors');
-      } catch {
-        return false;
-      }
-    })();
+  const showAnchors = hasUrlGate('anchors');
   if (showAnchors) {
     const slug = (name: string): string =>
       name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');

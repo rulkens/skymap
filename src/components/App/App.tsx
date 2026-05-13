@@ -73,27 +73,30 @@ import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
 import { LoadingDevPanel } from '../LoadingDevPanel/LoadingDevPanel';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
+import { hasUrlGate } from '../../utils/url/urlGate';
 
 // ── Dev-panel availability gate ────────────────────────────────────────────
 //
 // Whether the `d` keyboard shortcut should be wired up at all.  In dev
 // builds we always wire it; in production it's only wired when
-// `?debug=loading` is in the URL — same escape-hatch contract the panel
-// had before, just gated on actual key presses now (default-hidden) so
-// it doesn't clutter the UI for everyone running a dev server.
+// `?debug` is in the URL — same escape-hatch contract the panel had
+// before (when it was `?debug=loading`), just gated on actual key
+// presses now (default-hidden) so it doesn't clutter the UI for
+// everyone running a dev server.  The previous `=loading` value
+// distinction had no consumers — the bare-flag form is what every
+// other dev gate (`?volumes`, `?anchors`) uses.
 //
 // `import.meta.env.DEV` is statically replaced by Vite at build time, so
 // the production bundle sees `false` here and Rollup tree-shakes the
 // `LoadingDevPanel` import + JSX away entirely whenever the URL flag
 // isn't present.
 //
-// SSR-safe: `typeof window` guard so unit tests that render `<App />`
-// without a DOM (jsdom does have `window`, but be defensive) don't blow
-// up.  In a real browser the second branch always runs.
+// SSR-safety lives inside `hasUrlGate` (see `utils/url/urlGate.ts`):
+// a `typeof window` guard plus a try/catch around `URLSearchParams`
+// so unit tests rendering `<App />` without a DOM don't blow up.
 function isLoadingDevPanelAvailable(): boolean {
   if (import.meta.env.DEV) return true;
-  if (typeof window === 'undefined') return false;
-  return new URLSearchParams(window.location.search).get('debug') === 'loading';
+  return hasUrlGate('debug');
 }
 
 // ── App ────────────────────────────────────────────────────────────────────────
@@ -238,12 +241,7 @@ export function App(): React.ReactElement {
   // is the way to flip it.
   const volumesUiEnabled = useMemo<boolean>(() => {
     if (import.meta.env.DEV) return true;
-    if (typeof window === 'undefined') return false;
-    try {
-      return new URLSearchParams(window.location.search).has('volumes');
-    } catch {
-      return false;
-    }
+    return hasUrlGate('volumes');
   }, []);
 
   // ── Volume-fields UI filter ──────────────────────────────────────────────
