@@ -64,6 +64,7 @@ import NavigationPanel from '../NavigationPanel/NavigationPanel';
 import StatsPanel from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
+import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
 import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
 import appStyles from './App.module.css';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
@@ -711,7 +712,20 @@ export function App(): React.ReactElement {
         don't visually fight; the open transition feels like the pill
         expanding into the palette.
       */}
-        <SearchTrigger onClick={openPalette} hidden={paletteOpen} />
+        {/*
+        Top-center pill row.  SearchTrigger and AutoRotateToggle share
+        a single flex wrapper so they stay coordinated when the palette
+        opens (both fade together) and so the layout has a single
+        source of truth for placement.  See `.topBar` in App.module.css.
+      */}
+        <div className={appStyles.topBar}>
+          <SearchTrigger onClick={openPalette} hidden={paletteOpen} />
+          <AutoRotateToggle
+            playing={autoRotate}
+            onToggle={() => handleRef.current?.camera.setAutoRotate(!autoRotate)}
+            hidden={paletteOpen}
+          />
+        </div>
         <CommandPalette
           entries={paletteEntries}
           aliasIndex={aliasIndex ?? undefined}

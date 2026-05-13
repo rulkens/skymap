@@ -10,17 +10,10 @@
 
 .trigger {
   /*
-   * Fixed top-center.  We use `left: 50%` + `translateX(-50%)` rather
-   * than `inset-inline` because the latter doesn't center reliably
-   * inside the body's default flow once we reset margins.  The
-   * translateX is also the hook the open-transition piggybacks on to
-   * stay in lockstep with the palette's scale — see `.hidden` below.
+   * Positioning is owned by the parent `.topBar` wrapper in
+   * App.module.css — this rule only describes the pill's intrinsic
+   * appearance + sizing.
    */
-  position: fixed;
-  top: var(--corner-offset);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9; /* one notch below the palette's z=50 backdrop */
 
   /* Sizing — wide enough for the placeholder and the shortcut chip. */
   width: 280px;
@@ -72,15 +65,13 @@
 }
 
 /*
- * Hidden state — palette is open; the trigger fades out and shrinks
- * slightly toward the centre so it visually "expands" into the
- * palette beneath.  We keep `display` intact (instead of `display:
- * none`) so the transition is observable; `pointer-events: none`
- * ensures it isn't clickable while invisible.
+ * Hidden state — palette is open; the trigger fades out and shrinks.
+ * The wrapper owns horizontal centring now, so the transform only
+ * needs `scale(0.92)` (no `translateX(-50%)` term to compose with).
  */
 .hidden {
   opacity: 0;
-  transform: translateX(-50%) scale(0.92);
+  transform: scale(0.92);
   pointer-events: none;
 }
 
@@ -134,7 +125,17 @@
  */
 @media (max-width: 768px) {
   .trigger {
-    width: calc(100vw - 2 * var(--corner-offset));
+    /*
+     * Let the wrapper's flex layout drive the width: grow into
+     * available space, shrink without overflowing.  `min-width: 0`
+     * is the canonical "this flex child may shrink below its
+     * content-intrinsic size" escape hatch — without it the
+     * placeholder text's `text-overflow: ellipsis` doesn't kick in
+     * because the child refuses to shrink past its content.
+     */
+    flex: 1;
+    min-width: 0;
+    width: auto;
     max-width: 280px;
   }
 }
