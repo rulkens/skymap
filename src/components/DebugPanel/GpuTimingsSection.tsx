@@ -56,6 +56,13 @@ const SPARKLINE_WINDOW = 8;
 type SlotStats = {
   recent: number[]; // up to AVG_WINDOW entries; newest at the end.
   spark: number[]; // up to SPARKLINE_WINDOW entries; newest at the end.
+  // Number of frames since this slot last reported a sample.  Zero means
+  // the slot ran in the current frame; positive means the pass is gated
+  // off (e.g. user toggled the subsystem) and the row should render
+  // grayed out — the previous avg/sparkline are still informative ("this
+  // is what it cost when it was on") but the user shouldn't read them as
+  // a live cost.
+  staleFrames: number;
 };
 
 export type GpuTimingsSectionProps = {
@@ -73,16 +80,23 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
 
     const unsub = service.subscribe((frame: GpuTimingFrame) => {
       const stats = statsRef.current;
+      // Increment staleFrames for every existing row, then reset to 0
+      // for rows that the current frame reports samples for.  Slots
+      // that never ran stay absent from `stats` and won't render at all.
+      for (const [, row] of stats) {
+        row.staleFrames += 1;
+      }
       for (const [slot, ms] of frame.perPassMs) {
         let row = stats.get(slot);
         if (!row) {
-          row = { recent: [], spark: [] };
+          row = { recent: [], spark: [], staleFrames: 0 };
           stats.set(slot, row);
         }
         row.recent.push(ms);
         if (row.recent.length > AVG_WINDOW) row.recent.shift();
         row.spark.push(ms);
         if (row.spark.length > SPARKLINE_WINDOW) row.spark.shift();
+        row.staleFrames = 0;
       }
       setTick((n) => n + 1);
     });
@@ -116,12 +130,12 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
 
   // ── Branch 3: live data ───────────────────────────────────────────
   const stats = statsRef.current;
-  // Sum of last-frame timings for the header.  Use the last entry in
-  // each slot's `recent` array — that's "this most recent frame's"
-  // value.  Slots that haven't sampled yet contribute 0.
+  // Sum of CURRENT-FRAME timings for the header.  Only count slots that
+  // actually ran this frame (staleFrames === 0); idle slots' last
+  // value is no longer the live frame's cost.
   let frameTotalMs = 0;
   for (const [, row] of stats) {
-    if (row.recent.length > 0) {
+    if (row.staleFrames === 0 && row.recent.length > 0) {
       frameTotalMs += row.recent[row.recent.length - 1]!;
     }
   }
@@ -145,8 +159,13 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
           if (!row) return null;
           const avg =
             row.recent.length === 0 ? 0 : row.recent.reduce((a, b) => a + b, 0) / row.recent.length;
+          // Gate the row's opacity on staleness.  Anything beyond 0
+          // means the pass is currently gated off; keep the rolling
+          // avg + sparkline visible (so the user can see what it cost
+          // when it was on) but dimmed so they don't read it as live.
+          const isIdle = row.staleFrames > 0;
           return (
-            <div key={slot}>
+            <div key={slot} style={isIdle ? { opacity: 0.4 } : undefined}>
               <span style={{ display: 'inline-block', width: 130 }}>{slot}</span>
               <span
                 style={{
