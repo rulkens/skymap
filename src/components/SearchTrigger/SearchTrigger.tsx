@@ -29,11 +29,12 @@
  *
  * Same frosted-glass surface vocabulary as InfoCard / SettingsPanel:
  * `--surface-card-soft`, `--border-card`, `--blur-card`, the cosmic
- * blue accent.  ~280 px wide, anchored top-center of the viewport
- * (the InfoCard occupies top-right, so center keeps the two from
- * fighting on narrow viewports).  Hidden behind the palette when it's
- * open so the trigger doesn't peek out behind the modal — `hidden`
- * prop drives the display:none transition.
+ * blue accent.  ~280 px wide on desktop; on mobile it flex-grows
+ * inside the parent `.topBar` wrapper (App.module.css).  Positioning
+ * is owned by that wrapper — the trigger itself no longer carries
+ * `position: fixed`.  Hidden behind the palette when it's open so
+ * the trigger doesn't peek out behind the modal — `hidden` prop
+ * drives the opacity / scale transition.
  */
 
 import { memo, type ReactNode } from 'react';
