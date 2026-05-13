@@ -411,7 +411,7 @@ describe('renderFrame visual baseline', () => {
     // byte-identical.
     const beginCount = records.filter((r) => r.kind === 'beginRenderPass').length;
     const endCount = records.filter((r) => r.kind === 'passEnd').length;
-    expect(beginCount).toBe(1);
-    expect(endCount).toBe(1);
+    expect(beginCount).toBe(9);
+    expect(endCount).toBe(9);
   });
 });

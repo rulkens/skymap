@@ -361,18 +361,45 @@ describe('renderFrame', () => {
   });
 
   it("begins the HDR render pass with the postProcess aggregate's view as the colour attachment", () => {
+    // Post-pass-split (GPU-timestamp-query Task 8): renderFrame now opens
+    // one dedicated `loadOp: 'clear'` no-draw pass at the top, then one
+    // `loadOp: 'load'` pass per enabled HDR_PASSES entry.  In this
+    // fixture only point-sprites + milky-way fire, so total = 1 clear +
+    // 2 sub-passes = 3 `beginRenderPass` calls.
+    //
+    // The original visual invariant — "the HDR target is cleared to
+    // black at frame start and every accumulation pass targets the same
+    // view" — is now asserted across two shapes: the FIRST call is the
+    // clear pass; every subsequent call is a `load` against the same
+    // view.
     renderFrame(fx.input);
-    expect(fx.env.beginRenderPass).toHaveBeenCalledTimes(1);
-    const desc = (fx.env.beginRenderPass as any).lastDescriptor as GPURenderPassDescriptor;
-    const attachments = Array.from(desc.colorAttachments as any);
-    expect(attachments).toHaveLength(1);
-    const att = attachments[0] as any;
-    // postProcess.view is the HDR offscreen target — the points/quads/
-    // disks pipelines accumulate into it before the tone-map blit.
-    expect(att.view).toBe(fx.hdrTargetView);
-    expect(att.loadOp).toBe('clear');
-    expect(att.storeOp).toBe('store');
-    expect(att.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+    const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
+    expect(calls.length).toBeGreaterThanOrEqual(1);
+
+    // First call: the dedicated clear pass.  Owns the only `clearValue`
+    // and the only `loadOp: 'clear'` in the frame.
+    const clearDesc = calls[0]![0];
+    const clearAttachments = Array.from(clearDesc.colorAttachments as any);
+    expect(clearAttachments).toHaveLength(1);
+    const clearAtt = clearAttachments[0] as any;
+    expect(clearAtt.view).toBe(fx.hdrTargetView);
+    expect(clearAtt.loadOp).toBe('clear');
+    expect(clearAtt.storeOp).toBe('store');
+    expect(clearAtt.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+
+    // Every subsequent call: a `load`-mode sub-pass against the SAME
+    // HDR view.  This is the post-split invariant — additive
+    // accumulation keeps targeting the buffer the clear pass just
+    // wiped, so visual output is identical to the pre-split shape.
+    for (let i = 1; i < calls.length; i++) {
+      const subDesc = calls[i]![0];
+      const subAtts = Array.from(subDesc.colorAttachments as any);
+      expect(subAtts).toHaveLength(1);
+      const subAtt = subAtts[0] as any;
+      expect(subAtt.view).toBe(fx.hdrTargetView);
+      expect(subAtt.loadOp).toBe('load');
+      expect(subAtt.storeOp).toBe('store');
+    }
   });
 
   it('forwards every settings field to pointRenderer.draw in the canonical order', () => {
@@ -448,13 +475,22 @@ describe('renderFrame', () => {
     expect(args[3]).toBe(fx.input.settings.toneMapCurve);
   });
 
-  it('records full frame in the canonical order: createEncoder → beginRenderPass → pointRenderer.draw → milkyWayRenderer.draw → pass.end → postProcess.draw → encoder.finish → submit', () => {
+  it('records full frame in the canonical order: createEncoder → clear pass → pointRenderer.draw sub-pass → milkyWayRenderer.draw sub-pass → postProcess.draw → encoder.finish → submit', () => {
     // Post-Task-11 split: the legacy `thumbnails.runFrame` is gone from
     // this trace.  The two new passes (proceduralDisksPass and
     // texturedImpostorsPass) gate `enabled()` on their subsystems'
     // `lastOutput` being non-empty; the fixture's `state.subsystems`
     // nulls both slots so the gates report false and the trace omits
     // them.  Per-pass coverage lives in their own test files.
+    //
+    // Post-pass-split (GPU-timestamp-query Task 8): the single mega-
+    // pass is gone.  The encoder now opens a dedicated `loadOp: 'clear'`
+    // no-draw pass at the top, then one `loadOp: 'load'` sub-pass per
+    // enabled HDR_PASSES entry — each sub-pass brackets its single
+    // renderer draw with its own begin/end.  In this fixture only
+    // point-sprites + milky-way fire, so the canonical trace is:
+    // createEncoder, clear (begin+end), points sub-pass (begin+draw+end),
+    // milky-way sub-pass (begin+draw+end), tone-map, finish, submit.
     renderFrame(fx.input);
     const interesting = [
       'device.createCommandEncoder',
@@ -467,7 +503,24 @@ describe('renderFrame', () => {
       'device.queue.submit',
     ];
     const filtered = fx.callLog.filter((e) => interesting.includes(e));
-    expect(filtered).toEqual(interesting);
+    expect(filtered).toEqual([
+      'device.createCommandEncoder',
+      // Clear pass — no draws, just begin then immediate end.
+      'encoder.beginRenderPass',
+      'pass.end',
+      // Point-sprites sub-pass.
+      'encoder.beginRenderPass',
+      'pointRenderer.draw',
+      'pass.end',
+      // Milky-Way sub-pass.
+      'encoder.beginRenderPass',
+      'milkyWayRenderer.draw',
+      'pass.end',
+      // Tone-map post-process + submit.
+      'postProcess.draw',
+      'encoder.finish',
+      'device.queue.submit',
+    ]);
   });
 
   it('draws the Milky Way impostor after pointRenderer.draw for deterministic crossfade composition', () => {
@@ -477,13 +530,21 @@ describe('renderFrame', () => {
     // fixture's nulled subsystems keep both passes disabled — so the
     // residual order claim is points-before-milky-way-before-end, which
     // is still a meaningful encoder-record invariant.
+    //
+    // Post-pass-split (GPU-timestamp-query Task 8): every sub-pass has
+    // its own `pass.end`, so the trace contains multiple `pass.end`
+    // entries.  The semantic invariant we still care about is "the
+    // milky-way sub-pass ends after milkyWayRenderer.draw" — i.e. the
+    // LAST `pass.end` (the final HDR sub-pass close) comes after the
+    // milky-way draw.  Use `lastIndexOf` to land on that close
+    // unambiguously.
     renderFrame(fx.input);
     const log = fx.callLog;
     const idxPoint = log.indexOf('pointRenderer.draw');
     const idxMw = log.indexOf('milkyWayRenderer.draw');
-    const idxEnd = log.indexOf('pass.end');
+    const idxLastEnd = log.lastIndexOf('pass.end');
     expect(idxPoint).toBeGreaterThanOrEqual(0);
     expect(idxMw).toBeGreaterThan(idxPoint);
-    expect(idxEnd).toBeGreaterThan(idxMw);
+    expect(idxLastEnd).toBeGreaterThan(idxMw);
   });
 });

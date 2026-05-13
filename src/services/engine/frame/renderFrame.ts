@@ -27,18 +27,16 @@
  *
  * ### What the encoder records, in order
  *
- *   pass 1: HDR render pass (colour-only, additive blending)
- *     - clear postProcess.view to (0, 0, 0, 1)
- *     - HDR_PASSES[0..3] dispatched in array order; each gates
- *       itself via `enabled(...)`.  See `passes/index.ts` for the
- *       canonical order rationale.
- *     - pass.end()
+ *   1. Clear pass.  `loadOp: 'clear'`, no draws.  Wipes the HDR
+ *      target to black.  Empty pass; ended immediately.
  *
- *   pass 2: tone-map post-process
- *     - sample the HDR target, write to swap chain
- *     - applies the user's `toneMapCurve` and `exposure` uniforms
- *     - is called via `postProcess.draw`, which begins+ends its own
- *       internal render pass on the same encoder
+ *   2..9. HDR_PASSES sub-passes.  One `beginRenderPass` per enabled
+ *      pass, `loadOp: 'load'`, exactly one `pass.draw(...)`, end.
+ *      The for-loop body is the entire HDR draw work post-split.
+ *
+ *   10. Tone-map post-process.  Samples the HDR target, writes the
+ *       swap chain.  Begins+ends its own internal render pass on the
+ *       same encoder via `postProcess.draw`.
  *
  *   submit: device.queue.submit([encoder.finish()])
  *
@@ -120,27 +118,37 @@ export function renderFrame(input: RenderFrameInput): void {
     milkyWayITimeSec,
   };
 
-  // ── Encoder + HDR render pass ──────────────────────────────────────
+  // ── Encoder + per-pass HDR rendering ──────────────────────────────
+  //
+  // Pre-split (commits before this one): one `beginRenderPass` opened
+  // the HDR target with `loadOp: 'clear'`, every entry in HDR_PASSES
+  // drew into that single open encoder, and `renderPass.end()` closed
+  // it.
+  //
+  // Post-split: nine render passes per frame, all targeting the same
+  // HDR view.  The first is a dedicated `loadOp: 'clear'` no-draw pass
+  // — it wipes the target to black so subsequent passes can start
+  // their additive accumulation from zero.  The remaining eight are
+  // one per `HDR_PASSES` entry, each using `loadOp: 'load'`, calling
+  // exactly one `pass.draw(...)`, then closing.
+  //
+  // Visual output is identical: every additive draw still composites
+  // into the same float framebuffer in the same order.  See
+  // `tests/visual/renderFrameSplitBaseline.test.ts` for the hash-
+  // equivalence proof.
+  //
+  // Why a separate clear pass instead of `clear` on the first HDR_PASSES
+  // entry: if HDR_PASSES[0] were gated off (e.g. `pointSpritesPass.enabled
+  // = false` in some future configuration), the clear would silently
+  // vanish.  A no-draw clear pass at the top of renderFrame keeps the
+  // clear as a frame-lifecycle invariant — always runs, regardless of
+  // which subsequent passes are enabled.  Cost: ~µs on desktop GPUs,
+  // amortised by the subsequent draws.  See spec "Why a dedicated
+  // clear pass instead of `clear` on pass 1".
   const encoder = device.createCommandEncoder();
 
-  // Clear colour is pure black (0, 0, 0).
-  // Additive blending starting from black gives the maximum dynamic
-  // range — dense overlap regions bloom bright.
-  //
-  // The colour attachment is the HDR rgba16float offscreen target,
-  // NOT the swap chain.  Every visible pass below accumulates into
-  // this float buffer; the swap chain is written exactly once at the
-  // end of the frame by the tone-map pass.  Without HDR + tone-map,
-  // additive overlap >1.0 just clips and cluster cores blow out to
-  // flat white.
-  //
-  // No depth attachment: every pipeline drawing into this pass uses
-  // pure additive blending (`srcFactor: 'one', dstFactor: 'one'`) with
-  // `depthWriteEnabled: false`, so per-fragment colour is order-
-  // independent (A+B = B+A).  See `services/gpu/postProcess.ts` for
-  // the history (a depth attachment was tried in commit 716eb6b and
-  // superseded by 28aced5).
-  const renderPass = encoder.beginRenderPass({
+  // ── Clear pass (no draws) ─────────────────────────────────────────
+  const clearPass = encoder.beginRenderPass({
     colorAttachments: [
       {
         view: ctx.postProcess.view,
@@ -150,21 +158,31 @@ export function renderFrame(input: RenderFrameInput): void {
       },
     ],
   });
+  clearPass.end();
 
-  // ── HDR passes ─────────────────────────────────────────────────────
+  // ── HDR sub-passes — one beginRenderPass per enabled pass ─────────
   //
-  // Iterate the registry in declared order.  Each pass owns its own
-  // `enabled` gate — we don't re-implement gating logic here.  This
-  // is the entire HDR-pass body post-D.2; the four inline draw
-  // blocks pre-D.2 are now four one-file pass modules under
-  // `passes/`.
+  // Each pass owns its own enabled-gate.  Per-pass begin/end is
+  // necessary so a future `timestampWrites` descriptor can attach to
+  // each pass boundary individually (see Task 9 — wires the timing
+  // service in).  Today, with no timing service attached, this is
+  // pure structural prep: the GPU sees N "load + draw + store"
+  // passes where it previously saw "clear + N draws + store".
   for (const pass of HDR_PASSES) {
-    if (pass.enabled(state, ctx, settings)) {
-      pass.draw(renderPass, ctx, state, settings, deps);
-    }
-  }
+    if (!pass.enabled(state, ctx, settings)) continue;
 
-  renderPass.end();
+    const passEncoder = encoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: ctx.postProcess.view,
+          loadOp: 'load',
+          storeOp: 'store',
+        },
+      ],
+    });
+    pass.draw(passEncoder, ctx, state, settings, deps);
+    passEncoder.end();
+  }
 
   // ── HDR → swap chain tone-map ──────────────────────────────────────
   //
