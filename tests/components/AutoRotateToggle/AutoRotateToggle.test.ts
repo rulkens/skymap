@@ -19,4 +19,22 @@ describe('AutoRotateToggle', () => {
     expect(btn).toBeInTheDocument();
     expect(btn.querySelector('[data-testid="pause-icon"]')).not.toBeNull();
   });
+
+  it('fires onToggle when the user clicks', async () => {
+    const onToggle = vi.fn();
+    const user = userEvent.setup();
+    render(createElement(AutoRotateToggle, { playing: false, onToggle }));
+    await user.click(screen.getByRole('button', { name: /start camera auto-rotate/i }));
+    expect(onToggle).toHaveBeenCalledOnce();
+  });
+
+  it('fires onToggle on Enter when focused (keyboard accessibility)', async () => {
+    const onToggle = vi.fn();
+    const user = userEvent.setup();
+    render(createElement(AutoRotateToggle, { playing: false, onToggle }));
+    const btn = screen.getByRole('button', { name: /start camera auto-rotate/i });
+    btn.focus();
+    await user.keyboard('{Enter}');
+    expect(onToggle).toHaveBeenCalledOnce();
+  });
 });
