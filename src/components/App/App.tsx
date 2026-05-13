@@ -84,10 +84,15 @@ import { hasUrlGate } from '../../utils/url/urlGate';
 // doesn't clutter the UI for everyone running a dev server.  The bare-
 // flag form matches every other dev gate (`?volumes`, `?anchors`).
 //
-// `import.meta.env.DEV` is statically replaced by Vite at build time, so
-// the production bundle sees `false` here and Rollup tree-shakes the
-// `DebugPanel` import + JSX away entirely whenever the URL flag isn't
-// present.
+// `import.meta.env.DEV` is statically replaced by Vite at build time
+// (true in dev, false in prod).  Rollup CAN'T tree-shake the
+// DebugPanel because the second predicate (`hasUrlGate('debug')`)
+// is a runtime call — the DebugPanel module ships in the production
+// bundle, but the JSX simply never renders unless the user adds
+// `?debug` to the URL.  Runtime cost in production is one boolean
+// check per render and a single un-loaded React component reference,
+// which is acceptable for a debug-only feature with an explicit
+// activation gesture.
 //
 // SSR-safety lives inside `hasUrlGate` (see `utils/url/urlGate.ts`):
 // a `typeof window` guard plus a try/catch around `URLSearchParams`
