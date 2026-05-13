@@ -55,6 +55,6 @@ export type PostProcess = {
     curve: ToneMapCurve,
     timingDescriptor?: GPURenderPassTimestampWrites,
   ): void;
-  /** Tear down — releases both the HDR texture and the tone-map uniform buffer. */
+  /** Tear down — releases the HDR texture, the half-res texture, and the tone-map uniform buffer. */
   destroy(): void;
 };
