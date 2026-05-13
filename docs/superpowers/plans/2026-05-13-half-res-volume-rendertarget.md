@@ -4,9 +4,24 @@
 
 **Goal:** Render every scalar-volume raymarch into a half-resolution rgba16float offscreen target, then bilinearly upsample-and-additively-blend into the HDR target. Cuts the fragment count of the volume pass by 4x without visible quality loss on the bandlimited 3D textures.
 
-**Architecture:** Lift `scalarVolumePass` out of `HDR_PASSES`. Introduce two new frame-encoder helpers — `encodeVolumes` (raymarch into the half-res target) runs before the HDR mega-pass, and a new `volumeUpsamplePass` joins `HDR_PASSES` in the slot the old `scalarVolumePass` occupied. The half-res target lives on `PostProcess` alongside the HDR view; both targets resize in lockstep and tear down together.
+**Architecture:** Lift `scalarVolumePass` out of `HDR_PASSES`. Introduce two new frame-encoder helpers — `encodeVolumes` (raymarch into the half-res target) runs before the HDR mega-pass, and a new `volumeUpsamplePass` joins `HDR_PASSES` in the slot the old `scalarVolumePass` occupied. The half-res target lives on its own module `src/services/gpu/passes/volumeOffscreen.ts`, exposed at `state.gpu.volumeOffscreen`. It resizes in lockstep with the HDR target but is a separate module because conceptually it has nothing to do with the tone-map.
 
 **Tech Stack:** WebGPU, WESL/WGSL, TypeScript, gl-matrix, Vitest.
+
+---
+
+## REVISION NOTE (mid-execution refactor)
+
+Task 2 originally added the half-res target as a second field on `PostProcess` (`postProcess.halfResView`). During execution the user pointed out that this conflated two unrelated responsibilities — `postProcess` is the tone-map step, and its only input is the HDR view. The half-res target is the volume pass's *output*, not the tone-map's input. Putting both targets on one module made the role of `PostProcess` ambiguous.
+
+The target was therefore extracted into a dedicated module `src/services/gpu/passes/volumeOffscreen.ts` with its own type `VolumeOffscreen` (view + resize + destroy). It is now reachable via `state.gpu.volumeOffscreen.view` (and once Task 3 lands, `ctx.volumeOffscreen.view` inside a `ReadyFrameContext`).
+
+**When reading the rest of this plan, substitute:**
+- `postProcess.halfResView` → `volumeOffscreen.view`
+- `ctx.postProcess.halfResView` → `ctx.volumeOffscreen.view`
+- `state.gpu.postProcess.halfResView` → `state.gpu.volumeOffscreen.view`
+
+Task 2 below documents the original (pre-refactor) approach for the audit trail; do NOT re-execute it. The refactor commit replaced its outcome with the volumeOffscreen module.
 
 ---
 
@@ -296,55 +311,92 @@ git commit -m "feat(postProcess): add half-res offscreen target alongside HDR"
 
 ---
 
-### Task 3: Thread the half-res view through `ReadyFrameContext`
+### Task 3: Thread `volumeOffscreen` through `ReadyFrameContext`
 
-Pass implementations and `encodeVolumes` need access to the half-res view. The path of least surprise is to widen `ReadyFrameContext.postProcess` (already typed as `PostProcess`) to carry both fields — which it already does after Task 2. No type change is needed here, but `deriveFrameContext` doesn't need editing either (it just forwards the `postProcess` handle). The test below pins that the half-res view round-trips through `deriveFrameContext` unchanged.
+**REVISED.** Originally this task pinned `postProcess.halfResView` as a regression test only — but during execution the half-res target was lifted out of `PostProcess` into its own `volumeOffscreen` module (commit landed mid-plan). Consumers now read `state.gpu.volumeOffscreen.view` instead of `state.gpu.postProcess.halfResView`. This task adds `volumeOffscreen` to the `ReadyFrameContext` type so it is reachable from any consumer (the upsample pass, the `encodeVolumes` helper).
+
+The construction-time guarantee: `state.gpu.volumeOffscreen` is set by `initGpu` in the same phase as `state.gpu.postProcess`, so by the time `engineReady()` returns true the field is non-null. This is the same lifecycle invariant `postProcess` already enjoys.
 
 **Files:**
-- Test: `tests/services/engine/frame/frameContext.test.ts`
+- Modify: `src/@types/engine/frame/ReadyFrameContext.d.ts` — add `volumeOffscreen: VolumeOffscreen`.
+- Modify: `src/@types/engine/ReadyEngineState.d.ts` — narrow `state.gpu.volumeOffscreen` to non-null.
+- Modify: `src/services/engine/helpers/engineReady.ts` — include the non-null check.
+- Modify: `src/services/engine/frame/frameContext.ts` (`deriveFrameContext`) — forward the handle onto `ctx`.
+- Test: `tests/services/engine/frame/frameContext.test.ts` — regression for the round-trip.
 
-- [ ] **Step 1: Verify no source changes are needed**
+- [ ] **Step 1: Widen `ReadyEngineState` and `ReadyFrameContext`**
 
-Re-read `src/services/engine/frame/frameContext.ts` (`deriveFrameContext`). Confirm that `state.gpu.postProcess` is forwarded onto `ctx.postProcess` as-is; the half-res view is reachable via `ctx.postProcess.halfResView` already.
-
-- [ ] **Step 2: Add a regression test for the round-trip**
-
-Open `tests/services/engine/frame/frameContext.test.ts` and append a new `it` block inside the existing `describe('deriveFrameContext', ...)` (or whatever block exists; if the file is shaped differently, add a new `describe` and `it`):
+Add the new field to both types:
 
 ```typescript
-  it('forwards postProcess.halfResView through the ready context', () => {
-    // The half-res view is a per-PostProcess accessor; deriveFrameContext
-    // just forwards the postProcess handle, so any consumer can read
-    // ctx.postProcess.halfResView with no extra plumbing.
-    const halfView = {} as GPUTextureView;
-    const post = {
+// src/@types/engine/ReadyEngineState.d.ts
+import type { VolumeOffscreen } from '../rendering/VolumeOffscreen';
+
+export type ReadyEngineState = EngineState & {
+  cam: OrbitCamera;
+  gpu: EngineState['gpu'] & {
+    renderer: PointRenderer;
+    pickRenderer: PickRenderer;
+    postProcess: PostProcess;
+    volumeOffscreen: VolumeOffscreen;
+  };
+  ...
+};
+```
+
+```typescript
+// src/@types/engine/frame/ReadyFrameContext.d.ts
+import type { VolumeOffscreen } from '../../rendering/VolumeOffscreen';
+// inside the type literal, parallel to `postProcess: PostProcess;`:
+  volumeOffscreen: VolumeOffscreen;
+```
+
+- [ ] **Step 2: Tighten `isEngineReady`**
+
+In `src/services/engine/helpers/engineReady.ts`, add `state.gpu.volumeOffscreen !== null &&` alongside the existing `postProcess` check.
+
+- [ ] **Step 3: Forward the handle through `deriveFrameContext`**
+
+In `src/services/engine/frame/frameContext.ts`, add `volumeOffscreen: state.gpu.volumeOffscreen` (or whatever the existing forwarding pattern is — match the `postProcess` line exactly).
+
+- [ ] **Step 4: Add a regression test**
+
+```typescript
+  it('forwards state.gpu.volumeOffscreen onto the ready context', () => {
+    const offscreen = {
       view: {} as GPUTextureView,
-      halfResView: halfView,
       resize: () => {},
-      draw: () => {},
       destroy: () => {},
     };
-    const state = buildReadyState({ postProcess: post });
-    const ctx = deriveFrameContext(state, /* canvas */ { width: 1280, height: 720 } as HTMLCanvasElement);
+    const state = buildReadyState({ volumeOffscreen: offscreen });
+    const ctx = deriveFrameContext(state, { width: 1280, height: 720 } as HTMLCanvasElement);
     expect(ctx.isReady).toBe(true);
     if (ctx.isReady) {
-      expect(ctx.postProcess.halfResView).toBe(halfView);
+      expect(ctx.volumeOffscreen).toBe(offscreen);
     }
   });
 ```
 
-If `buildReadyState` does not exist in this file, write a minimal local builder by copying the existing test fixture shape — the prior tests in `frameContext.test.ts` already have one (use the same pattern there). Do **not** factor out a shared fixture in this task; YAGNI.
+Match the existing `buildReadyState` helper in the file. If it doesn't already accept a `volumeOffscreen` override, extend its signature with that one new optional field.
 
-- [ ] **Step 3: Run the test to verify it passes**
-
-Run: `npx vitest run tests/services/engine/frame/frameContext.test.ts`
-Expected: PASS (no source changes needed — Task 2 already made `halfResView` reachable).
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Run typecheck + the affected tests**
 
 ```bash
-git add tests/services/engine/frame/frameContext.test.ts
-git commit -m "test(frame): pin half-res view round-trip through ready context"
+npm run typecheck
+npx vitest run tests/services/engine/frame/frameContext.test.ts tests/services/engine/helpers/engineReady.test.ts
+```
+
+Expected: PASS.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/@types/engine/frame/ReadyFrameContext.d.ts \
+        src/@types/engine/ReadyEngineState.d.ts \
+        src/services/engine/helpers/engineReady.ts \
+        src/services/engine/frame/frameContext.ts \
+        tests/services/engine/frame/frameContext.test.ts
+git commit -m "feat(frame): thread volumeOffscreen through ReadyFrameContext"
 ```
 
 ---
@@ -929,7 +981,7 @@ describe('encodeVolumes', () => {
     expect(env.beginRenderPass).toHaveBeenCalledTimes(1);
     const desc = env.beginRenderPass.mock.calls[0]![0] as GPURenderPassDescriptor;
     const att = Array.from(desc.colorAttachments as any)[0] as any;
-    expect(att.view).toBe(ctx.postProcess.halfResView);
+    expect(att.view).toBe(ctx.volumeOffscreen.view);
     expect(att.loadOp).toBe('clear');
     expect(att.storeOp).toBe('store');
     expect(att.clearValue).toEqual({ r: 0, g: 0, b: 0, a: 0 });
@@ -1072,7 +1124,7 @@ Create `src/services/engine/frame/encodeVolumes.ts`:
  *
  * Runs BEFORE the HDR mega-pass (`encodeHdrSingle` / `encodeHdrSplit`).
  * Opens one render pass against the half-resolution offscreen target on
- * `ctx.postProcess.halfResView`, asks the scalar-volume renderer to
+ * `ctx.volumeOffscreen.view`, asks the scalar-volume renderer to
  * iterate every active field and draw it into that target with the
  * additive blend state baked into the pipeline, and closes the pass.  The
  * downstream `volumeUpsamplePass` (one of the entries in `HDR_PASSES`)
@@ -1141,7 +1193,7 @@ export function encodeVolumes(args: EncodeVolumesArgs): void {
   const pass = encoder.beginRenderPass({
     colorAttachments: [
       {
-        view: ctx.postProcess.halfResView,
+        view: ctx.volumeOffscreen.view,
         // Alpha=0 is the additive identity; see module header.
         clearValue: { r: 0, g: 0, b: 0, a: 0 },
         loadOp: 'clear',
@@ -1386,7 +1438,7 @@ export const volumeUpsamplePass: Pass = {
     // null-checking here too means future gate reorderings can't silently
     // skip the guard.  The cost is one reference read.
     if (state.gpu.volumeUpsample === null) return;
-    state.gpu.volumeUpsample.draw(pass, ctx.postProcess.halfResView);
+    state.gpu.volumeUpsample.draw(pass, ctx.volumeOffscreen.view);
   },
 };
 ```
@@ -1558,10 +1610,10 @@ Append a new `it` block at the end of `describe('renderFrame', ...)` in `tests/s
       draw: drawSpy,
       hasActiveFields: () => true,
     };
-    // The half-res view comes off ctx.postProcess.halfResView.  The
-    // fixture's postProcess mock didn't have this — patch it on.
+    // The half-res view comes off ctx.volumeOffscreen.view.  The
+    // fixture's mock may not include volumeOffscreen — patch it on.
     const halfResView = { __id: 'half-res' } as unknown as GPUTextureView;
-    (fx2.input.ctx as any).postProcess.halfResView = halfResView;
+    (fx2.input.ctx as any).volumeOffscreen = { view: halfResView, resize: () => {}, destroy: () => {} };
 
     renderFrame(fx2.input);
 
