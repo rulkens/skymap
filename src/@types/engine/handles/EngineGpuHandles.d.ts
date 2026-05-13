@@ -52,6 +52,7 @@ import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
+import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
 import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
@@ -159,6 +160,15 @@ export type EngineGpuHandles = {
    * buffers, corner / index VBOs).
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  /**
+   * Half-res-to-HDR volume upsample pass.  Null until `initGpu`
+   * constructs it (same phase as the other optional renderers).
+   * Excluded from the `isEngineReady` predicate — when null, the
+   * `volumeUpsamplePass` skips its draw (so a null handle is a silent
+   * no-op).  Stored here so `destroy()` can release the pipeline +
+   * sampler + bind-group-layout.
+   */
+  volumeUpsample: VolumeUpsample | null;
   /**
    * Per-pass GPU timing service.  Always non-null — the engine state
    * is initialized with a no-op stub (see `createDisabledGpuTimingService`)

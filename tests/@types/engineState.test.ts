@@ -147,6 +147,7 @@ describe('EngineState type', () => {
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
         scalarVolumeRenderer: null,
+        volumeUpsample: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {
@@ -294,6 +295,7 @@ describe('EngineState type', () => {
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
         scalarVolumeRenderer: null,
+        volumeUpsample: null,
         timingService: createDisabledGpuTimingService(),
       },
       subsystems: {

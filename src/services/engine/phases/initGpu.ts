@@ -80,6 +80,7 @@ import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
 import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
+import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { loadFontAtlas } from '../../gpu/labels/loadFontAtlas';
 import { hasUrlGate } from '../../../utils/url/urlGate';
@@ -426,6 +427,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // mapping.  Stored on `state.gpu` so `destroy()` can release the
   // shared corner/index VBOs and every per-field GPU resource.
   state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(device, 'rgba16float');
+
+  // ── Half-res-to-HDR volume upsample pass ──────────────────────────
+  //
+  // Built unconditionally alongside the scalar-volume renderer; the
+  // pipeline is cheap (one sampler + one bind-group-layout + one render
+  // pipeline) and the half-res target lives on `postProcess` so we have
+  // nothing to allocate here that depends on viewport size.  Stored on
+  // `state.gpu` so `destroy()` can release the pipeline and so the new
+  // `volumeUpsamplePass` can read it via `state.gpu.volumeUpsample`.
+  state.gpu.volumeUpsample = createVolumeUpsample(device, 'rgba16float');
 
   // ── GPU timing service ────────────────────────────────────────────
   //

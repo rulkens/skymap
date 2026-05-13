@@ -126,6 +126,10 @@ vi.mock('../../../../src/services/gpu/renderers/scalarVolumeRenderer', () => ({
   createScalarVolumeRenderer: vi.fn(() => makeStub('scalarVolumeRenderer')),
 }));
 
+vi.mock('../../../../src/services/gpu/passes/volumeUpsample', () => ({
+  createVolumeUpsample: vi.fn(() => makeStub('volumeUpsample')),
+}));
+
 vi.mock('../../../../src/services/gpu/labels/loadFontAtlas', () => ({
   loadFontAtlas: vi.fn(async () => ({
     metrics: { __mockMetrics: true },
@@ -166,6 +170,7 @@ function makeState(): EngineState {
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
       scalarVolumeRenderer: null,
+      volumeUpsample: null,
     },
     subsystems: {
       biasCorrection: {

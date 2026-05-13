@@ -395,6 +395,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // isEngineReady predicate — the scalarVolumePass optional-chains
       // hasActiveFields() so a null handle is a silent no-op.
       scalarVolumeRenderer: null,
+      // Constructed alongside scalarVolumeRenderer in initGpu; null until
+      // then.  Excluded from the isEngineReady predicate — the
+      // volumeUpsamplePass null-checks this field at point of use.
+      volumeUpsample: null,
       // Per-pass GPU timing service.  Always non-null — initialized
       // here with a no-op stub (no GPU resources), then replaced by
       // initGpu with the device-aware service after the device is
@@ -1204,6 +1208,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.milkyWayRenderer = null;
     state.gpu.scalarVolumeRenderer?.destroy();
     state.gpu.scalarVolumeRenderer = null;
+    state.gpu.volumeUpsample?.destroy();
+    state.gpu.volumeUpsample = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
     state.gpu.renderer?.destroy();
