@@ -280,13 +280,16 @@ describe('renderFrame — timing service hookup', () => {
     // beginFrame fires exactly once per frame.
     expect(beginFrame).toHaveBeenCalledTimes(1);
 
-    // descriptorFor fires once per enabled HDR pass.  In this fixture
-    // that's point-sprites + milky-way (two slots; the other six are
-    // gated off via null subsystems / null optional renderers).
+    // descriptorFor fires once per enabled HDR pass PLUS once for the
+    // tone-map pass.  In this fixture the HDR side is point-sprites +
+    // milky-way (the other six are gated off via null subsystems /
+    // null optional renderers); the tone-map slot is unconditional
+    // because postProcess.draw is always invoked once per frame.
     const slotsCalled = descriptorFor.mock.calls.map((c) => c[0]);
     expect(slotsCalled).toContain('point-sprites');
     expect(slotsCalled).toContain('milky-way');
-    expect(descriptorFor).toHaveBeenCalledTimes(2);
+    expect(slotsCalled).toContain('tone-map');
+    expect(descriptorFor).toHaveBeenCalledTimes(3);
 
     // The descriptors returned by the mock must land on the
     // beginRenderPass descriptors.  Each pass's beginRenderPass call

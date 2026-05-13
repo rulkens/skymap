@@ -237,6 +237,7 @@ export function renderFrame(input: RenderFrameInput): void {
     context.getCurrentTexture().createView(),
     settings.exposure,
     settings.toneMapCurve,
+    timingService?.descriptorFor('tone-map'),
   );
 
   // Record the `resolveQuerySet` + `copyBufferToBuffer` commands onto

@@ -402,7 +402,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "labels",
         },
         {
-          "argShape": "object,object,number,number",
+          "argShape": "object,object,number,number,undefined",
           "renderer": "postProcess",
         },
       ]
