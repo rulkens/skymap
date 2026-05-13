@@ -79,7 +79,9 @@ import { createFilamentRenderer } from '../../gpu/renderers/filamentRenderer';
 import { createLabelRenderer } from '../../gpu/renderers/labelRenderer';
 import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer';
 import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
+import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { loadFontAtlas } from '../../gpu/labels/loadFontAtlas';
+import { hasUrlGate } from '../../../utils/url/urlGate';
 import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -402,6 +404,23 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // mapping.  Stored on `state.gpu` so `destroy()` can release the
   // shared corner/index VBOs and every per-field GPU resource.
   state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(device, 'rgba16float');
+
+  // ── GPU timing service (gated on `?gpuTimings`) ──────────────────
+  //
+  // The service is allocated only when the URL gate is open.  Even
+  // though `createGpuTimingService` has its own no-op short-circuit
+  // for missing-feature adapters, we still skip construction entirely
+  // when the gate is off — the user opted out, no point reserving GPU
+  // resources for a debug feature.  When the gate is on AND the
+  // adapter has the feature, `available` is true and renderFrame
+  // attaches `timestampWrites` to every pass descriptor.  When the
+  // gate is on but the adapter doesn't have the feature, the service
+  // is still constructed (so the DebugPanel can render the
+  // "unavailable on this adapter" message) but every method is a
+  // no-op.
+  if (hasUrlGate('gpuTimings')) {
+    state.gpu.timingService = createGpuTimingService(device);
+  }
 
   // Stash phase-locals so subsequent phases (`wireSlots`, `wireInput`,
   // `startLoop`) can read the IIFE-scoped device/context handles.  The

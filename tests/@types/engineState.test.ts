@@ -145,6 +145,7 @@ describe('EngineState type', () => {
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
         scalarVolumeRenderer: null,
+        timingService: null,
       },
       subsystems: {
         galaxyAtlas: null,
@@ -283,6 +284,7 @@ describe('EngineState type', () => {
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
         scalarVolumeRenderer: null,
+        timingService: null,
       },
       subsystems: {
         galaxyAtlas: null,

@@ -62,12 +62,24 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<GpuContext> {
   const adapter = await navigator.gpu.requestAdapter();
   if (!adapter) throw new Error('No WebGPU adapter available.');
 
-  // Step 2 — Request a device.
-  // The device is the primary WebGPU object. We request with no descriptor,
-  // getting the adapter's default feature set and limits. Later tasks will
-  // request specific features (e.g. `timestamp-query`) here.
+  // Step 2 — Request a device, opting into `timestamp-query` when the
+  // adapter advertises it.  WebGPU treats features as opt-in: if we
+  // ask for a feature the adapter doesn't have, `requestDevice`
+  // throws; if we don't ask, the feature is unavailable on the
+  // device even when the adapter supports it.  So we mirror the
+  // adapter's advertised set for the one optional feature we care
+  // about and let the device's own `features` map drive every
+  // downstream service.
+  //
+  // The `gpuTimingService` constructor reads `device.features.has(
+  // 'timestamp-query')` to decide between active mode and no-op
+  // mode — so omitting the feature here propagates cleanly.
   // See: https://www.w3.org/TR/webgpu/#dom-gpuadapter-requestdevice
-  const device = await adapter.requestDevice();
+  const requiredFeatures: GPUFeatureName[] = [];
+  if (adapter.features.has('timestamp-query')) {
+    requiredFeatures.push('timestamp-query');
+  }
+  const device = await adapter.requestDevice({ requiredFeatures });
 
   // Step 3 — Get the canvas context.
   // `getContext('webgpu')` returns null if the canvas already has a different

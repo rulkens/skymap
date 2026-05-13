@@ -55,6 +55,7 @@ import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer'
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
+import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
@@ -146,4 +147,18 @@ export type EngineGpuHandles = {
    * buffers, corner / index VBOs).
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  /**
+   * Per-pass GPU timing service.  Null when the engine is constructed
+   * without the `?gpuTimings` URL gate (the common case) OR when the
+   * adapter lacks the `timestamp-query` feature (the constructor's
+   * own no-op short-circuit would otherwise hand us a service with
+   * `available: false`, but we prefer null at this layer so the
+   * destroy chain doesn't call `.destroy()` on a never-allocated
+   * stub).
+   *
+   * Same lifecycle, same reachability rationale, and same
+   * `isEngineReady` exclusion as `texturedQuadRenderer` above — see
+   * that field's docstring for the full story.
+   */
+  timingService: GpuTimingService | null;
 };

@@ -399,6 +399,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // isEngineReady predicate — the scalarVolumePass optional-chains
       // hasActiveFields() so a null handle is a silent no-op.
       scalarVolumeRenderer: null,
+      // Per-pass GPU timing service.  Null unless `?gpuTimings` is set on
+      // the URL — see EngineGpuHandles.d.ts for the full lifecycle story.
+      // initGpu constructs it (gated on hasUrlGate('gpuTimings')); destroy
+      // below releases it symmetrically with scalarVolumeRenderer.
+      timingService: null,
     },
     subsystems: {
       // ── LOD-1 / LOD-2 impostor planners + atlas ─────────────────
@@ -1212,6 +1217,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.milkyWayRenderer = null;
     state.gpu.scalarVolumeRenderer?.destroy();
     state.gpu.scalarVolumeRenderer = null;
+    state.gpu.timingService?.destroy();
+    state.gpu.timingService = null;
     state.gpu.renderer?.destroy();
     state.gpu.renderer = null;
 
