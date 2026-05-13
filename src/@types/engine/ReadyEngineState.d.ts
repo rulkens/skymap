@@ -17,6 +17,7 @@ import type { OrbitCamera } from '../camera/OrbitCamera';
 import type { PointRenderer } from '../rendering/PointRenderer';
 import type { PickRenderer } from '../rendering/PickRenderer';
 import type { PostProcess } from '../rendering/PostProcess';
+import type { VolumeOffscreen } from '../rendering/VolumeOffscreen';
 import type { TexturedImpostorSubsystem } from './subsystems/TexturedImpostorSubsystem';
 
 export type ReadyEngineState = EngineState & {
@@ -25,6 +26,14 @@ export type ReadyEngineState = EngineState & {
     renderer: PointRenderer;
     pickRenderer: PickRenderer;
     postProcess: PostProcess;
+    /**
+     * Non-null after bootstrap: `initGpu` allocates the half-res target
+     * in lockstep with `postProcess`, so both are non-null at the same
+     * moment.  The narrowing here lets `encodeVolumes` and
+     * `volumeUpsamplePass` read `state.gpu.volumeOffscreen.view` without
+     * a `!` assertion.
+     */
+    volumeOffscreen: VolumeOffscreen;
   };
   subsystems: EngineState['subsystems'] & {
     texturedImpostors: TexturedImpostorSubsystem;

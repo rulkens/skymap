@@ -134,6 +134,7 @@ export function deriveFrameContext(
   const cam = state.cam;
   const renderer = state.gpu.renderer;
   const postProcess = state.gpu.postProcess;
+  const volumeOffscreen = state.gpu.volumeOffscreen;
   const texturedImpostors = state.subsystems.texturedImpostors;
 
   // Snapshot-derive everything the caller would otherwise compute
@@ -159,6 +160,7 @@ export function deriveFrameContext(
     drawPxPerRad,
     renderer,
     postProcess,
+    volumeOffscreen,
     texturedImpostors,
   };
 }

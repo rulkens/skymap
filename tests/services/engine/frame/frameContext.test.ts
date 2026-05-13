@@ -50,26 +50,38 @@ function makeCam(overrides: Partial<OrbitCamera> = {}): OrbitCamera {
 }
 
 /**
- * Build an `EngineState`-shaped fixture with the four guard fields
- * (`cam`, `gpu.renderer`, `gpu.postProcess`, `subsystems.texturedImpostors`)
- * populated by default.  Each test override can null any one of them
- * to exercise the not-ready branch.
+ * Build an `EngineState`-shaped fixture with the guard fields
+ * (`cam`, `gpu.renderer`, `gpu.postProcess`, `gpu.pickRenderer`,
+ * `gpu.volumeOffscreen`, `subsystems.texturedImpostors`) populated by
+ * default.  Each test override can null any one of them to exercise the
+ * not-ready branch.
+ *
+ * `volumeOffscreen` was added in Task 3 of the half-res volume plan.
+ * It sits alongside `postProcess` in the bootstrap gate: both are
+ * allocated in `initGpu` and torn down together.  The fixture includes
+ * a non-null stub so the default path still produces `isReady: true`.
  */
 function makeState(overrides: {
   cam?: OrbitCamera | null;
   renderer?: unknown;
   postProcess?: unknown;
+  pickRenderer?: unknown;
+  volumeOffscreen?: unknown;
   texturedImpostors?: unknown;
 } = {}): EngineState {
   const cam = overrides.cam === undefined ? makeCam() : overrides.cam;
   const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
   const postProcess =
     overrides.postProcess === undefined ? ({} as unknown) : overrides.postProcess;
+  const pickRenderer =
+    overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
+  const volumeOffscreen =
+    overrides.volumeOffscreen === undefined ? ({} as unknown) : overrides.volumeOffscreen;
   const texturedImpostors =
     overrides.texturedImpostors === undefined ? ({} as unknown) : overrides.texturedImpostors;
   return {
     cam,
-    gpu: { renderer, postProcess },
+    gpu: { renderer, postProcess, pickRenderer, volumeOffscreen },
     subsystems: { texturedImpostors },
   } as unknown as EngineState;
 }
@@ -91,6 +103,13 @@ describe('deriveFrameContext — not-ready branch', () => {
 
   it('returns isReady:false when gpu.postProcess is null', () => {
     const ctx = deriveFrameContext(makeState({ postProcess: null }), makeCanvas());
+    expect(ctx.isReady).toBe(false);
+  });
+
+  it('returns isReady:false when gpu.volumeOffscreen is null', () => {
+    // volumeOffscreen is part of the bootstrap gate (Task 3): without the
+    // half-res target the volume pass would have nowhere to draw.
+    const ctx = deriveFrameContext(makeState({ volumeOffscreen: null }), makeCanvas());
     expect(ctx.isReady).toBe(false);
   });
 
@@ -143,6 +162,20 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.renderer).toBe(renderer);
     expect(ctx.postProcess).toBe(postProcess);
     expect(ctx.texturedImpostors).toBe(texturedImpostors);
+  });
+
+  it('forwards volumeOffscreen reference onto the ready context', () => {
+    // `deriveFrameContext` is a pure forwarder: once `isEngineReady`
+    // passes, it plucks the non-null handle off `state.gpu.volumeOffscreen`
+    // and copies the reference directly onto the ready context.
+    // This regression test pins that reference-identity — not a copy or
+    // wrapper — so that downstream passes can safely use `ctx.volumeOffscreen.view`
+    // to open a render pass against the half-res target.
+    const volumeOffscreen = { view: {} as GPUTextureView, resize: () => {}, destroy: () => {} };
+    const ctx = deriveFrameContext(makeState({ volumeOffscreen }), makeCanvas());
+    expect(ctx.isReady).toBe(true);
+    if (!ctx.isReady) return;
+    expect(ctx.volumeOffscreen).toBe(volumeOffscreen);
   });
 });
 

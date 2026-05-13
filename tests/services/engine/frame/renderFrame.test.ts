@@ -223,6 +223,10 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
   const pointRenderer = makeMockPointRenderer(callLog);
   const milkyWayRenderer = makeMockMilkyWayRenderer(callLog);
   const postProcess = makeMockPostProcess(callLog, hdrTargetView);
+  // Minimal VolumeOffscreen stub — renderFrame's existing tests don't
+  // exercise the volume pass (volumesEnabled is false by default in
+  // makeSettings), so a no-op view is sufficient for fixture satisfaction.
+  const volumeOffscreen = { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any;
   const thumbnails = makeMockThumbnails(callLog);
   const texturedQuadRenderer = makeMockTexturedQuadRenderer();
   const texturedDiskRenderer = makeMockTexturedDiskRenderer();
@@ -277,6 +281,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     renderer: pointRenderer,
     postProcess,
+    volumeOffscreen,
     texturedImpostors: thumbnails,
   };
 

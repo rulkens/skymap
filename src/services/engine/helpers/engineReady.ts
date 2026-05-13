@@ -120,6 +120,15 @@ export function isEngineReady(state: EngineState): state is ReadyEngineState {
     state.gpu.renderer !== null &&
     state.gpu.pickRenderer !== null &&
     state.gpu.postProcess !== null &&
+    // `volumeOffscreen` shares the bootstrap lifecycle of `postProcess`:
+    // both are allocated in `initGpu` and torn down in `destroy()`.
+    // Adding it here ensures `encodeVolumes` and `volumeUpsamplePass`
+    // can read `state.gpu.volumeOffscreen.view` without `!` after this
+    // guard passes.  The "why not filamentRenderer?" rationale in the
+    // module header applies equally here in the *other* direction — we
+    // include it because it is never null when the engine is ready, not
+    // because it's an optional resource.
+    state.gpu.volumeOffscreen !== null &&
     state.subsystems.texturedImpostors !== null
   );
 }
