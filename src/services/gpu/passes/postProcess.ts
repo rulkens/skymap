@@ -187,6 +187,32 @@ export function createPostProcess(
 
   allocateHdr(size);
 
+  // ── Half-resolution offscreen target for the scalar-volume pass ──────
+  //
+  // Sized at floor(canvas / 2) on each axis with a min of 1 px.  Why floor
+  // not round: the math works for either choice, but floor matches the
+  // upsample shader's "sample at uv" semantics — sampling a half-res target
+  // with linear filtering at full-res fragment UVs is equivalent to a 2x
+  // bilinear upscale.  Min 1 px protects against the degenerate
+  // `floor(1 / 2) = 0` case (legal canvas sizes, illegal texture sizes).
+  let halfResTexture: GPUTexture | null = null;
+  let halfResView: GPUTextureView | null = null;
+
+  function allocateHalfRes(s: Size): void {
+    if (halfResTexture) halfResTexture.destroy();
+    const w = Math.max(1, Math.floor(s.width / 2));
+    const h = Math.max(1, Math.floor(s.height / 2));
+    halfResTexture = device.createTexture({
+      label: 'volume-half-res-target',
+      format: 'rgba16float',
+      size: { width: w, height: h },
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    halfResView = halfResTexture.createView();
+  }
+
+  allocateHalfRes(size);
+
   // ── Tone-map pipeline (built once, lives until destroy) ───────────────
   //
   // `label` shows up in `getCompilationInfo` diagnostics and in
@@ -254,8 +280,13 @@ export function createPostProcess(
       if (!hdrView) throw new Error('postProcess: view accessed after destroy');
       return hdrView;
     },
+    get halfResView(): GPUTextureView {
+      if (!halfResView) throw new Error('postProcess: halfResView accessed after destroy');
+      return halfResView;
+    },
     resize(s: Size): void {
       allocateHdr(s);
+      allocateHalfRes(s);
     },
     draw(encoder, swapView, exposure, curve, timingDescriptor): void {
       uniformF32[0] = exposure;
@@ -304,6 +335,9 @@ export function createPostProcess(
       if (hdrTexture) hdrTexture.destroy();
       hdrTexture = null;
       hdrView = null;
+      if (halfResTexture) halfResTexture.destroy();
+      halfResTexture = null;
+      halfResView = null;
       uniformBuffer.destroy();
     },
   };

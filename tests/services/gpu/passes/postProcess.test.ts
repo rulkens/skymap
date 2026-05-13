@@ -86,6 +86,31 @@ describe('createPostProcess', () => {
       (device.createBuffer as ReturnType<typeof vi.fn>).mock.results[0]!.value.destroy,
     ).toHaveBeenCalled();
   });
+
+  it('exposes a halfResView sized at floor(canvas / 2) with min 1 px', () => {
+    const device = mockDevice();
+    const post = createPostProcess(device, 'bgra8unorm', { width: 800, height: 600 });
+    expect(post.halfResView).toBeDefined();
+    // Two textures should be allocated at construction: the HDR target
+    // plus the half-res offscreen target.
+    expect((device.createTexture as any).mock.calls).toHaveLength(2);
+    const halfResDesc = (device.createTexture as any).mock.calls[1][0];
+    expect(halfResDesc.size).toEqual({ width: 400, height: 300 });
+    expect(halfResDesc.format).toBe('rgba16float');
+  });
+
+  it('resizes both HDR and half-res views together, floored and min-1', () => {
+    const device = mockDevice();
+    const post = createPostProcess(device, 'bgra8unorm', { width: 800, height: 600 });
+    const hdrBefore = post.view;
+    const halfBefore = post.halfResView;
+    post.resize({ width: 1, height: 1 });
+    // floor(1 / 2) = 0 → clamped to 1.
+    const halfResDesc = (device.createTexture as any).mock.calls.at(-1)[0];
+    expect(halfResDesc.size).toEqual({ width: 1, height: 1 });
+    expect(post.view).not.toBe(hdrBefore);
+    expect(post.halfResView).not.toBe(halfBefore);
+  });
 });
 
 describe('postProcess JS-mirror tone-map curves', () => {
