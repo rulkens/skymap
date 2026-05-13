@@ -265,10 +265,9 @@ describe('filamentsPass.draw', () => {
 });
 
 describe('milkyWayPass.enabled', () => {
-  it('returns true when milkyWayEnabled is true (alpha-fade gate is internal to draw)', () => {
-    // The user toggle is the gate.  The camera-distance fade lives
-    // inside `draw` so a single fade-alpha read covers both gating
-    // and the actual draw — see the milkyWayPass module header.
+  it('returns true when milkyWayEnabled is true and camera is inside the fade band', () => {
+    // Default makeCtx() puts the camera at [0, 0, 5] — 5 Mpc, inside
+    // the full-alpha (≤10 Mpc) regime.  Both gates pass.
     expect(
       milkyWayPass.enabled(STATE_STUB, makeCtx(), makeSettings({ milkyWayEnabled: true })),
     ).toBe(true);
@@ -278,6 +277,18 @@ describe('milkyWayPass.enabled', () => {
     expect(
       milkyWayPass.enabled(STATE_STUB, makeCtx(), makeSettings({ milkyWayEnabled: false })),
     ).toBe(false);
+  });
+
+  it('returns false when camera is beyond the fade band (no empty render pass)', () => {
+    // 1000 Mpc — well past FADE_OUTER_MPC (50 Mpc).  Gating in
+    // `enabled` (not just `draw`) is what skips the empty
+    // beginRenderPass + timestamp-write on the split-encoder path.
+    const ctx = makeCtx({
+      drawCamPos: [1000, 0, 0] as Readonly<[number, number, number]>,
+    });
+    expect(milkyWayPass.enabled(STATE_STUB, ctx, makeSettings({ milkyWayEnabled: true }))).toBe(
+      false,
+    );
   });
 });
 
@@ -298,17 +309,6 @@ describe('milkyWayPass.draw', () => {
     expect(args[3]).toBe(1.0);
     expect(args[4]).toBe(1.5);
     expect(args[5]).toEqual([0, 0, 5]);
-  });
-
-  it('skips draw when camera is far beyond the fade band', () => {
-    const drawSpy = vi.fn();
-    const deps = makeDeps({ milkyWayRenderer: { draw: drawSpy } as any });
-    // 1000 Mpc — well past FADE_OUTER_MPC (50 Mpc).
-    const ctx = makeCtx({
-      drawCamPos: [1000, 0, 0] as Readonly<[number, number, number]>,
-    });
-    milkyWayPass.draw(PASS_STUB, ctx, STATE_STUB, makeSettings(), deps);
-    expect(drawSpy).not.toHaveBeenCalled();
   });
 });
 

@@ -12,24 +12,20 @@
  *
  * ### When it draws
  *
- * Gated on `settings.milkyWayEnabled` (user toggle).  Once enabled,
- * the pass also performs an *internal* alpha-fade gate inside
- * `draw`: when the camera sits beyond the outer edge of the fade
- * band defined in `utils/math/milkyWayFade.ts`, `fadeAlpha` is 0
- * and the draw call is skipped.  We keep the alpha-fade check
- * inside `draw` (rather than promoting it to `enabled`) for two
- * reasons:
+ * Two gates, both in `enabled`:
  *
- *   1. `milkyWayFadeAlpha` is a tiny pure function — calling it
- *      from `enabled` and `draw` would double the call cost and
- *      open a window for the camera to move between the gate read
- *      and the draw read.  Computing it once and acting on the
- *      result keeps the read coherent.
- *   2. The "user enabled but camera too far" case is a minor
- *      optimisation, not a semantic difference.  Keeping `enabled`
- *      tied to the user-facing toggle makes the gate read the same
- *      way every test and debug-print does ("did the user turn
- *      this on?").
+ *   1. `settings.milkyWayEnabled` — user toggle.
+ *   2. `milkyWayFadeAlpha(camDist) > 0` — camera-distance fade band
+ *      defined in `utils/math/milkyWayFade.ts` (full strength inside
+ *      10 Mpc, smoothstep out to 0 at 50 Mpc).
+ *
+ * Both gates live in `enabled` so that when the camera flies well
+ * beyond the local volume the whole pass is skipped — no
+ * `beginRenderPass`, no tile-RAM round-trip on M1, and no idle
+ * timestamp slot in the GPU-timings panel.  `milkyWayFadeAlpha` is
+ * called again inside `draw` to compute the actual alpha to send to
+ * the shader; both reads use the frame-frozen `ctx.drawCamPos`, so
+ * they return the same value (no race).
  *
  * ### What it reads
  *
@@ -55,20 +51,16 @@ import { MILKY_WAY_CENTER_WORLD } from '../../../../data/galacticCenter';
 export const milkyWayPass: Pass = {
   name: 'milky-way',
 
-  enabled(_state, _ctx, settings) {
-    return settings.milkyWayEnabled;
+  enabled(_state, ctx, settings) {
+    if (!settings.milkyWayEnabled) return false;
+    const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
+    return milkyWayFadeAlpha(camDistMpc) > 0;
   },
 
   draw(pass, ctx, _state, _settings, deps) {
     const { vp, canvasSize, drawCamPos } = ctx;
     const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
     const fadeAlpha = milkyWayFadeAlpha(camDistMpc);
-
-    // Internal fade-out: the user's toggle is on but the camera is
-    // beyond the fade band.  Skip the draw cleanly — see module
-    // header for why the alpha gate stays inside `draw` rather than
-    // moving up to `enabled`.
-    if (fadeAlpha <= 0) return;
 
     deps.milkyWayRenderer.draw(
       pass,
