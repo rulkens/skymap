@@ -148,7 +148,7 @@ describe('HDR_PASSES registry', () => {
       'textured-impostors',
       'milky-way',
       'filaments',
-      'scalar-volume',
+      'volume-upsample',
     ]);
   });
 });

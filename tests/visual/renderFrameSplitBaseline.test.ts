@@ -246,8 +246,19 @@ describe('renderFrame visual baseline', () => {
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
     const filamentRenderer = makeLoggingRenderer(records, 'filaments');
     const scalarVolumeRenderer = {
-      ...makeLoggingRenderer(records, 'scalar-volume'),
       hasActiveFields: vi.fn(() => true),
+    };
+    // volumeUpsample is the state.gpu handle that volumeUpsamplePass.draw
+    // calls directly (not via PassDeps).  Wire it with a logging draw so
+    // the snapshot captures the upsample step.
+    const volumeUpsample = {
+      draw: vi.fn((...args: unknown[]) => {
+        records.push({
+          kind: 'rendererDraw',
+          renderer: 'volume-upsample',
+          argShape: describeArgs(args),
+        });
+      }),
     };
     const labelRenderer = {
       glyphCount: vi.fn(() => 12),
@@ -292,6 +303,9 @@ describe('renderFrame visual baseline', () => {
       renderer: pointRenderer,
       postProcess,
       texturedImpostors: texturedImpostorsSubsystem,
+      // volumeUpsamplePass.draw reads ctx.volumeOffscreen.view to pass
+      // as the source texture to the upsample step.
+      volumeOffscreen: { view: {} as GPUTextureView },
     } as never;
 
     const settings = {
@@ -328,6 +342,7 @@ describe('renderFrame visual baseline', () => {
           labelRenderer,
           markerLineRenderer,
           scalarVolumeRenderer,
+          volumeUpsample,
         },
         subsystems: {
           proceduralDisks: proceduralDisksSubsystem,
@@ -388,8 +403,8 @@ describe('renderFrame visual baseline', () => {
           "renderer": "filaments",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3]",
-          "renderer": "scalar-volume",
+          "argShape": "pass,object",
+          "renderer": "volume-upsample",
         },
         {
           "argShape": "object,object,number,number,undefined",
