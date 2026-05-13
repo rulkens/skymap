@@ -156,4 +156,26 @@ describe('encodeVolumes', () => {
     });
     expect(env.beginRenderPass).not.toHaveBeenCalled();
   });
+
+  it('is a no-op when no fields are active (no empty render pass)', () => {
+    // Renderer present but `hasActiveFields()` returns false — e.g. all
+    // fields disabled or at zero intensity.  Without this guard we'd
+    // still open a `beginRenderPass(loadOp: 'clear')` for nothing, which
+    // on M1 costs a tile-RAM round-trip per frame for an unused target.
+    const env = makeFakeEncoder();
+    const ctx = makeCtx();
+    const drawSpy = vi.fn();
+    const scalarVolumeRenderer = {
+      draw: drawSpy,
+      hasActiveFields: () => false,
+    } as any;
+    encodeVolumes({
+      encoder: env.encoder,
+      ctx,
+      scalarVolumeRenderer,
+      timestampWrites: undefined,
+    });
+    expect(env.beginRenderPass).not.toHaveBeenCalled();
+    expect(drawSpy).not.toHaveBeenCalled();
+  });
 });
