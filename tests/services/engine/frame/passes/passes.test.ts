@@ -143,9 +143,9 @@ describe('HDR_PASSES registry', () => {
       'point-sprites',
       'procedural-disks',
       'textured-impostors',
+      'milky-way',
       'filaments',
       'scalar-volume',
-      'milky-way',
       'marker-lines',
       'labels',
     ]);

@@ -382,16 +382,16 @@ describe('renderFrame visual baseline', () => {
           "renderer": "textured-disks",
         },
         {
+          "argShape": "pass,Float32Array[16],Array[2],number,number,Array[3],Array[3]",
+          "renderer": "milky-way",
+        },
+        {
           "argShape": "pass,Float32Array[16],Array[2],number,number",
           "renderer": "filaments",
         },
         {
           "argShape": "pass,Float32Array[16],Array[2],Array[3]",
           "renderer": "scalar-volume",
-        },
-        {
-          "argShape": "pass,Float32Array[16],Array[2],number,number,Array[3],Array[3]",
-          "renderer": "milky-way",
         },
         {
           "argShape": "pass,Float32Array[16],Array[2]",
@@ -408,20 +408,17 @@ describe('renderFrame visual baseline', () => {
       ]
     `);
 
-    // Boundary-event count: 9 begin/end pairs per frame — 1 dedicated
-    // clear pass + 8 HDR sub-passes (one `beginRenderPass` per enabled
-    // entry in HDR_PASSES, with `loadOp: 'load'`).  These counts are
-    // asserted SEPARATELY from the inline snapshot above on purpose:
-    // the drawSequence captures the renderer-dispatch invariant (which
-    // is byte-identical pre- and post-split), while these two counts
-    // capture the pass-boundary structure (which changed in the
-    // refactor that landed alongside this fixture's update from 1→9).
-    // Keeping them separate means a future refactor that drifts the
-    // *structure* without affecting *what gets drawn* fails just these
-    // two lines, not the whole snapshot.
+    // Boundary-event count for the no-timing path: ONE begin/end pair
+    // for the HDR mega-pass.  Counts are asserted SEPARATELY from the
+    // inline snapshot above on purpose: the drawSequence captures the
+    // renderer-dispatch invariant (byte-identical regardless of how
+    // many begin/end pairs the orchestrator opens), while these counts
+    // capture the pass-boundary structure (which differs between the
+    // timing-on and timing-off paths).  The split-pass shape is
+    // exercised in `recordHdrSplitPasses.test.ts`.
     const beginCount = records.filter((r) => r.kind === 'beginRenderPass').length;
     const endCount = records.filter((r) => r.kind === 'passEnd').length;
-    expect(beginCount).toBe(9);
-    expect(endCount).toBe(9);
+    expect(beginCount).toBe(1);
+    expect(endCount).toBe(1);
   });
 });

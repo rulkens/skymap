@@ -9,46 +9,49 @@
  *   1. point-sprites       — instanced billboards (always-on)
  *   2. procedural-disks    — LOD-1 procedural-disk impostors
  *   3. textured-impostors  — LOD-2 textured-disk + textured-quad impostors
- *   4. filaments           — cosmic-web skeleton overlay
- *   5. scalar-volume       — 3D raymarched scalar-field cubes (optional)
- *   6. milky-way           — procedural impostor at the world origin
+ *   4. milky-way           — procedural impostor at the world origin
+ *   5. filaments           — cosmic-web skeleton overlay
+ *   6. scalar-volume       — 3D raymarched scalar-field cubes (optional)
  *   7. marker-lines        — thick-line UI overlay (you-are-here indicator)
  *   8. labels              — MSDF text UI overlay (you-are-here label)
  *
  * The order is preserved exactly because the array entry IS the
  * canonical record now — pre-D.2 the order was folkloric (lines in
  * a function); post-D.2 reordering passes is a one-line array
- * shuffle with a clear semantic.
+ * shuffle with a clear semantic.  The DebugPanel `GpuTimingsSection`
+ * derives its row order from this same array (plus the two trailing
+ * out-of-HDR passes, tone-map and pick), so a reorder here
+ * automatically propagates to the timing UI.
  *
- * ### Why scalar-volume AFTER filaments, BEFORE milky-way?
+ * ### Why milky-way BEFORE filaments / scalar-volume?
  *
- * Filaments are the per-galaxy large-scale-structure skeleton threaded
- * between the galaxy points.  Volumes are the broader atmospheric
- * density fields (CF-4 DM cube, MCPM reionization, …).  The Milky Way
- * impostor is a bright near-field foreground feature.  Drawing the
- * volume cubes between filaments and the MW lets the MW's high-
- * intensity bulge composite over the volume halos rather than being
- * veiled by them.  All four are additively blended, so the order is a
- * deterministic-encoder choice rather than a correctness constraint —
- * but "catalogue → large-structure → field-atmospherics → bright-
- * foreground" maps cleanly to the intended visual hierarchy.
+ * The Milky Way impostor is the densest, brightest near-field
+ * additive contributor.  Drawing it early lets the broader
+ * large-scale-structure overlays (filaments, scalar volumes)
+ * composite over its bulge rather than the other way round — the
+ * cosmic-web skeleton and density fields read clearly against a
+ * bright MW backdrop, and the bulge doesn't visually swallow the
+ * thin filament lines or wispy volume haloes.  All three are
+ * additively blended so this is a visual-hierarchy choice rather
+ * than a correctness constraint.
  *
  * ### Why marker-lines BEFORE labels?
  *
  * Both pass types use premultiplied-OVER blend, so the later draw
  * composites ABOVE the earlier one at overlapping pixels.  The line
  * should never appear on top of its own label text — drawing the
- * line first (pass 5) and the label second (pass 6) means the label
- * composites over the line where they overlap, preserving readability.
+ * line first and the label second means the label composites over
+ * the line where they overlap, preserving readability.
  *
- * ### Why these two pass AFTER milky-way?
+ * ### Why both UI overlays AFTER the additive content?
  *
  * Labels and marker lines are UI overlay: they should read above the
- * procedural Milky Way impostor.  Placing them later in the HDR
- * sequence means they composite over the fully-resolved 3D content
- * before tone-mapping.  The tone-map curve then operates on the
- * composited target, so white labels remain white under any exposure
- * setting (no over-brightening from the exposure curve).
+ * procedural Milky Way impostor and the filament / volume overlays.
+ * Placing them later in the HDR sequence means they composite over
+ * the fully-resolved 3D content before tone-mapping.  The tone-map
+ * curve then operates on the composited target, so white labels
+ * remain white under any exposure setting (no over-brightening from
+ * the exposure curve).
  *
  * ### Why a single-purpose `index.ts` despite the project's
  * "no barrel exports" convention
@@ -83,9 +86,9 @@ export const HDR_PASSES: readonly Pass[] = [
   pointSpritesPass,
   proceduralDisksPass,
   texturedImpostorsPass,
+  milkyWayPass,
   filamentsPass,
   scalarVolumePass,
-  milkyWayPass,
   markerLinesPass,
   labelsPass,
 ];

@@ -47,8 +47,23 @@ import { useEffect, useState, useRef, type ReactElement } from 'react';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { GpuTimingFrame } from '../../@types/gpu/timing/GpuTimingFrame';
 import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
-import { TIMING_SLOT_NAMES } from '../../services/gpu/timing/TIMING_SLOT_NAMES';
+import { HDR_PASSES } from '../../services/engine/frame/passes';
 import { Sparkline } from './Sparkline';
+
+// Row display order: the HDR_PASSES array (which is the source of
+// truth for HDR rendering order in `renderFrame`), with `tone-map`
+// and `pick` appended.  Those two passes live OUTSIDE HDR_PASSES
+// (tone-map runs after the HDR block; pick is its own encoder
+// submitted by the pick renderer) and so don't appear in
+// `HDR_PASSES.map(p => p.name)`.  Listing them explicitly here keeps
+// the panel's row order in lockstep with the renderer's draw
+// sequence, so reordering passes in `passes/index.ts` automatically
+// reorders the timing UI.
+const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = [
+  ...HDR_PASSES.map((p) => p.name as TimingSlotName),
+  'tone-map',
+  'pick',
+];
 
 const AVG_WINDOW = 60;
 const SPARKLINE_WINDOW = 8;
@@ -147,14 +162,15 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
       </summary>
       <div style={{ marginTop: 4 }}>
         {/*
-          Iterate the static `TIMING_SLOT_NAMES` table rather than
-          `stats` directly so row order is stable regardless of which
-          slot emits first.  Slots that haven't sampled yet are simply
-          skipped (no row).  This matches the spec's "Layout sketch"
-          ordering and decouples the panel from `gpuTimingService`'s
-          internal iteration order.
+          Iterate `DISPLAY_SLOT_ORDER` (derived from HDR_PASSES + the
+          two trailing passes) rather than `stats` directly so row
+          order is stable regardless of which slot emits first.  Slots
+          that haven't sampled yet are simply skipped (no row).  This
+          keeps the panel in lockstep with the actual renderer draw
+          order — reordering HDR_PASSES in `passes/index.ts`
+          automatically reorders the timing UI.
         */}
-        {Array.from(TIMING_SLOT_NAMES.keys()).map((slot) => {
+        {DISPLAY_SLOT_ORDER.map((slot) => {
           const row = stats.get(slot);
           if (!row) return null;
           const avg =
