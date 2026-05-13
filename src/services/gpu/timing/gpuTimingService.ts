@@ -138,6 +138,23 @@ export function createGpuTimingService(device: GPUDevice): GpuTimingService {
   let nextStagingSlot: 0 | 1 = 0;
   let destroyed = false;
 
+  // Tracks which slots actually had a `descriptorFor(slot)` call this
+  // frame.  Reset to a fresh Set at every `beginFrame`.  Captured by
+  // reference into each frame's `endFrame` closure so the async
+  // `mapAsync` chain can filter the decoded map against "passes that
+  // intended to be timed this frame".
+  //
+  // Why this is necessary: the GPUQuerySet retains stale tick values
+  // across frames.  When a pass is gated off (e.g. user toggles
+  // filaments), its slot pair in the query set keeps the LAST written
+  // values — the next frame's `resolveQuerySet` reads them as if the
+  // pass had just run.  Without this filter, idle rows in the
+  // DebugPanel would silently show the last-active rolling avg as if
+  // it were live.  Each frame's "did this pass attach `timestampWrites`"
+  // signal is exactly the set of `descriptorFor` calls between
+  // `beginFrame` and `endFrame`.
+  let consumedSlots = new Set<TimingSlotName>();
+
   function beginFrame(): TimingFrameContext {
     const ctx: TimingFrameContext = {
       frameIndex: nextFrameIndex,
@@ -145,11 +162,19 @@ export function createGpuTimingService(device: GPUDevice): GpuTimingService {
     };
     nextFrameIndex++;
     nextStagingSlot = nextStagingSlot === 0 ? 1 : 0;
+    // Allocate a fresh set per frame so `endFrame`'s `.then` closure
+    // can capture this frame's reference without worrying that later
+    // frames will mutate it.
+    consumedSlots = new Set<TimingSlotName>();
     return ctx;
   }
 
   function descriptorFor(slot: TimingSlotName): GPURenderPassTimestampWrites | undefined {
     if (destroyed) return undefined;
+    // Record the intent to time this pass.  The pass orchestrator only
+    // calls `descriptorFor` for passes whose `enabled()` returned true,
+    // so this set matches the live "this frame's measured passes" set.
+    consumedSlots.add(slot);
     return slotDescriptors.get(slot);
   }
 
@@ -166,6 +191,10 @@ export function createGpuTimingService(device: GPUDevice): GpuTimingService {
     const slot = ctx.stagingSlot;
     const capturedFrameIndex = ctx.frameIndex;
     const buf = stagingBuffers[slot];
+    // Capture the current frame's consumed-slots set by reference.
+    // `beginFrame` allocates a fresh Set per frame, so this captured
+    // reference is unaffected by subsequent frames.
+    const frameConsumed = consumedSlots;
 
     // Defer the `mapAsync` call to a microtask so it runs AFTER the
     // caller's `device.queue.submit(...)` returns.  Calling `mapAsync`
@@ -192,7 +221,16 @@ export function createGpuTimingService(device: GPUDevice): GpuTimingService {
         const copy = mapped.slice(0);
         buf.unmap();
 
-        const perPassMs = decodeTimestampBuffer(copy, timestampPeriod);
+        // Decode every slot the GPU wrote to (some of which are stale
+        // values from previous frames where the pass was still active),
+        // then filter to the slots this frame actually consumed via
+        // `descriptorFor`.  See `consumedSlots` declaration for why.
+        const decoded = decodeTimestampBuffer(copy, timestampPeriod);
+        const perPassMs = new Map<TimingSlotName, number>();
+        for (const [s, ms] of decoded) {
+          if (frameConsumed.has(s)) perPassMs.set(s, ms);
+        }
+
         // Materialise the listener set into an array before dispatch
         // so an unsubscribe inside a listener doesn't mutate the
         // iterator we're walking.

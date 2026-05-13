@@ -161,6 +161,11 @@ describe('gpuTimingService — active mode', () => {
     };
 
     const ctx = svc.beginFrame();
+    // Simulate renderFrame's pass loop: `descriptorFor(slot)` is the
+    // service's signal that this pass intends to be timed this frame.
+    // Without this call the service filters the slot out (its query-set
+    // values would be stale GPU ticks from previous frames).
+    svc.descriptorFor('point-sprites');
     svc.endFrame(ctx, encoder as unknown as GPUCommandEncoder);
 
     await new Promise((r) => setTimeout(r, 0));
@@ -170,5 +175,53 @@ describe('gpuTimingService — active mode', () => {
     const frame = listener.mock.calls[0]![0];
     expect(frame.frameIndex).toBe(0);
     expect(frame.perPassMs.get('point-sprites')).toBeCloseTo(1.5, 6);
+  });
+
+  it('filters out slots whose descriptorFor was never called this frame', async () => {
+    // Cross-frame staleness regression: the GPUQuerySet retains tick
+    // values across frames.  A pass that was active in frame N but
+    // gated off in frame N+1 will still have non-zero u64 values in
+    // its query-set slot at frame N+1's resolveQuerySet — the decoder
+    // would read it as live.  The service must filter to slots that
+    // actually consumed a descriptor this frame.
+    const device = makeDevice({ supportsTimestamp: true, period: 1 });
+    const svc = createGpuTimingService(device);
+    const listener = vi.fn();
+    svc.subscribe(listener);
+
+    const encoder = {
+      resolveQuerySet: vi.fn(),
+      copyBufferToBuffer: vi.fn(
+        (
+          _src: GPUBuffer,
+          _srcOff: number,
+          dst: GPUBuffer & { getMappedRange: () => ArrayBuffer },
+          _dstOff: number,
+          _size: number,
+        ) => {
+          // Simulate the cross-frame staleness: the GPU "writes" values
+          // for BOTH point-sprites AND filaments, even though only
+          // point-sprites consumed a descriptor this frame.
+          const backing = dst.getMappedRange();
+          const u64 = new BigUint64Array(backing);
+          u64[0] = 0n; // point-sprites begin
+          u64[1] = 1_500_000n; // point-sprites end → 1.5 ms (live)
+          u64[6] = 100n; // filaments begin — stale leftover
+          u64[7] = 2_500_100n; // filaments end — stale leftover
+        },
+      ),
+    };
+
+    const ctx = svc.beginFrame();
+    svc.descriptorFor('point-sprites'); // only this slot is consumed
+    svc.endFrame(ctx, encoder as unknown as GPUCommandEncoder);
+
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    const frame = listener.mock.calls[0]![0];
+    expect(frame.perPassMs.has('point-sprites')).toBe(true);
+    expect(frame.perPassMs.has('filaments')).toBe(false);
   });
 });
