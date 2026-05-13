@@ -12,4 +12,11 @@ describe('AutoRotateToggle', () => {
     expect(btn).toBeInTheDocument();
     expect(btn.querySelector('[data-testid="play-icon"]')).not.toBeNull();
   });
+
+  it('renders a pause icon when playing=true', () => {
+    render(createElement(AutoRotateToggle, { playing: true, onToggle: () => {} }));
+    const btn = screen.getByRole('button', { name: /pause camera auto-rotate/i });
+    expect(btn).toBeInTheDocument();
+    expect(btn.querySelector('[data-testid="pause-icon"]')).not.toBeNull();
+  });
 });

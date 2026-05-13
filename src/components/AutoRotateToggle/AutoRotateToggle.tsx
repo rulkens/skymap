@@ -52,6 +52,24 @@ function PlayIcon(): ReactNode {
   );
 }
 
+function PauseIcon(): ReactNode {
+  return (
+    <svg
+      className={styles.icon}
+      data-testid="pause-icon"
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {/* Two rounded vertical bars, evenly spaced about the centre. */}
+      <rect x="4" y="3" width="2.5" height="10" rx="1" fill="currentColor" />
+      <rect x="9.5" y="3" width="2.5" height="10" rx="1" fill="currentColor" />
+    </svg>
+  );
+}
+
 function AutoRotateToggle({ playing, onToggle, hidden = false }: AutoRotateToggleProps): ReactNode {
   const label = playing ? 'Pause camera auto-rotate' : 'Start camera auto-rotate';
   return (
@@ -63,7 +81,7 @@ function AutoRotateToggle({ playing, onToggle, hidden = false }: AutoRotateToggl
       aria-pressed={playing}
       aria-hidden={hidden || undefined}
     >
-      <PlayIcon />
+      {playing ? <PauseIcon /> : <PlayIcon />}
     </button>
   );
 }
