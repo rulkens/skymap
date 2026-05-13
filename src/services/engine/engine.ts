@@ -364,6 +364,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       renderer: null,
       pickRenderer: null,
       postProcess: null,
+      volumeOffscreen: null,
       filamentRenderer: null,
       // labelRenderer + markerLineRenderer: null until initGpu completes
       // the loadFontAtlas() fetch and constructs both renderers.  They're
@@ -1185,6 +1186,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.pickRenderer = null;
     state.gpu.postProcess?.destroy();
     state.gpu.postProcess = null;
+    state.gpu.volumeOffscreen?.destroy();
+    state.gpu.volumeOffscreen = null;
     state.gpu.filamentRenderer?.destroy();
     state.gpu.filamentRenderer = null;
     state.gpu.labelRenderer?.destroy();

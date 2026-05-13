@@ -46,6 +46,7 @@
 
 import type { PointRenderer } from '../../rendering/PointRenderer';
 import type { PostProcess } from '../../rendering/PostProcess';
+import type { VolumeOffscreen } from '../../rendering/VolumeOffscreen';
 import type { PickRenderer } from '../../rendering/PickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
@@ -68,6 +69,17 @@ export type EngineGpuHandles = {
    * See `services/gpu/postProcess.ts` for the rationale.
    */
   postProcess: PostProcess | null;
+  /**
+   * Half-resolution intermediate render target consumed by the scalar-
+   * volume pass.  Volume fields raymarch into this target at 1/4 the
+   * fragment count (floor(canvas/2) on each axis), then the upsample
+   * pass bilinearly samples it and additively blends into the HDR
+   * target.  Resized in lockstep with `postProcess`, but kept as a
+   * separate module because conceptually it has nothing to do with
+   * the tone-map (postProcess only ever reads the HDR view).  See
+   * `services/gpu/passes/volumeOffscreen.ts` for the full rationale.
+   */
+  volumeOffscreen: VolumeOffscreen | null;
   /**
    * Cosmic-web filament-skeleton renderer.  Constructed unconditionally
    * during GPU init (the pipeline is cheap), stays empty-segment until

@@ -90,6 +90,10 @@ vi.mock('../../../../src/services/gpu/passes/postProcess', () => ({
   createPostProcess: vi.fn(() => makeStub('postProcess')),
 }));
 
+vi.mock('../../../../src/services/gpu/passes/volumeOffscreen', () => ({
+  createVolumeOffscreen: vi.fn(() => makeStub('volumeOffscreen')),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/texturedQuadRenderer', () => ({
   createTexturedQuadRenderer: vi.fn(() => makeStub('texturedQuadRenderer')),
 }));

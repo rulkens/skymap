@@ -134,6 +134,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.cam.aspect = deps.canvas.width / deps.canvas.height;
     updatePosition(state.cam);
     state.gpu.postProcess?.resize({ width: deps.canvas.width, height: deps.canvas.height });
+    state.gpu.volumeOffscreen?.resize({
+      width: deps.canvas.width,
+      height: deps.canvas.height,
+    });
   }
 
   // Emit a per-frame camera snapshot for React-side derived state

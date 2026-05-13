@@ -71,6 +71,7 @@
 import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
 import { createPostProcess } from '../../gpu/passes/postProcess';
+import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
 import { createTexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
@@ -163,6 +164,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Mirror into the engine state so `destroy()` (defined on the
   // public handle, outside this IIFE) can release the GPU resources.
   state.gpu.postProcess = postProcess;
+
+  // Half-res offscreen target for the scalar-volume pass.  Sized in
+  // lockstep with the HDR target (canvas backing-store dimensions).
+  // Conceptually unrelated to postProcess (its only consumer is the
+  // volume upsample pass, never the tone-map), but the construction
+  // and resize call sites happen to live in the same places.
+  state.gpu.volumeOffscreen = createVolumeOffscreen(device, {
+    width: canvas.width,
+    height: canvas.height,
+  });
 
   // Build the GPU pipeline; cloud data is loaded below.
   // PointRenderer (and TexturedQuadRenderer/TexturedDiskRenderer further down) target
