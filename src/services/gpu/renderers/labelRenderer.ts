@@ -217,7 +217,15 @@ export function createLabelRenderer(
           // `var<storage, read>` and we don't need write access.
           buffer: { type: 'read-only-storage' },
         },
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.FRAGMENT,
+          // viewDimension '2d-array' matches the shader's
+          // `texture_2d_array<f32>` declaration in fragment.wesl.
+          // Mismatching this with the shader-side binding type
+          // triggers a pipeline-creation-time validation error.
+          texture: { sampleType: 'float', viewDimension: '2d-array' },
+        },
         { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       ],
     });
@@ -373,7 +381,15 @@ export function createLabelRenderer(
       entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
         { binding: 1, resource: { buffer: storageBuffer } },
-        { binding: 2, resource: atlasTexture.createView() },
+        {
+          binding: 2,
+          // Explicit '2d-array' view dimension matches the
+          // bind-group-layout entry and the shader binding.  Spelling
+          // it out (rather than letting the default pick) makes the
+          // intent visible at the bind site and survives any future
+          // FONTS shrink-to-one-entry edit.
+          resource: atlasTexture.createView({ dimension: '2d-array' }),
+        },
         { binding: 3, resource: sampler },
       ],
     });

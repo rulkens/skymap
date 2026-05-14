@@ -57,5 +57,11 @@ fn vs(input: VsIn) -> VsOut {
   );
 
   let outColor = vec4<f32>(label.color.rgb, label.color.a * fadeAlpha);
-  return VsOut(outPos, uv, outColor);
+  // fontIndex flows from the per-glyph instance attribute to a flat
+  // varying so the fragment shader samples the right atlas layer for
+  // this glyph's font.  All glyphs of one label carry the same
+  // fontIndex (resolved CPU-side from label.font), but the value is
+  // per-glyph because that's the only attribute channel the per-glyph
+  // instance buffer exposes.
+  return VsOut(outPos, uv, outColor, input.fontIndex);
 }

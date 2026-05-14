@@ -4,10 +4,19 @@
 // across R/G/B to recover the glyph edge, then anti-aliases the edge
 // with a screen-space-derivative width. Output is premultiplied — the
 // blend state on the renderer side expects (rgb*a, a).
+//
+// ## Multi-font sampling
+//
+// The atlas binding is a texture_2d_array<f32>: each registered font in
+// src/data/fonts.ts occupies one array layer.  The per-glyph
+// fontIndex varying (flat-interpolated from the vertex stage) selects
+// the layer at sample time, so a single draw call can render glyphs
+// from any mix of registered fonts — the GPU picks the right atlas
+// page per fragment.
 
 import package::labels::io::VsOut;
 
-@group(0) @binding(2) var atlas: texture_2d<f32>;
+@group(0) @binding(2) var atlas: texture_2d_array<f32>;
 @group(0) @binding(3) var atlasSampler: sampler;
 
 // Median of three scalars. The MSDF technique encodes one SDF per
@@ -20,7 +29,10 @@ fn median3(r: f32, g: f32, b: f32) -> f32 {
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
-  let s = textureSample(atlas, atlasSampler, input.uv).rgb;
+  // textureSample on a 2D-array takes the layer index as the third
+  // argument (after the UV).  i32 cast because WGSL's texture-array
+  // sample signature requires a signed integer layer.
+  let s = textureSample(atlas, atlasSampler, input.uv, i32(input.fontIndex)).rgb;
   // Distance from the glyph contour: positive inside, negative outside,
   // zero exactly on the edge.
   let d = median3(s.r, s.g, s.b) - 0.5;

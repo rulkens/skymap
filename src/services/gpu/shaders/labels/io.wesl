@@ -64,10 +64,20 @@ struct VsIn {
   // Index into the labels[] storage buffer; all glyphs of one label
   // share its world position, color, and fade.
   @location(4) labelIndex: u32,
+  // GPU texture-array layer for the glyph's font.  All glyphs of one
+  // label share the same font, but it's carried per-glyph because the
+  // instance buffer is the only path the vertex stage has to per-label
+  // data that's not already in labels[].  Equal to
+  // 'FONT_IDS.indexOf(label.font)' (the renderer pre-computes this).
+  @location(5) fontIndex: u32,
 };
 
 struct VsOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
   @location(1) color: vec4<f32>,
+  // Flat-interpolated so the fragment shader sees the same integer
+  // layer index for every fragment of one glyph quad.  Non-flat
+  // interpolation of an integer is a WGSL validation error.
+  @location(2) @interpolate(flat) fontIndex: u32,
 };
