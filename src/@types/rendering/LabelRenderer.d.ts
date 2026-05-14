@@ -23,7 +23,7 @@ export type LabelRenderer = {
    * For the "you are here" use-case there will typically be 1–3 labels
    * so the cost is negligible.
    */
-  setLabels(labels: Label[]): void;
+  setLabels(labels: readonly Label[]): void;
   /**
    * Issue the label draw call into an in-flight render pass.  Must be
    * called inside a `beginRenderPass` / `pass.end()` block by a `Pass`

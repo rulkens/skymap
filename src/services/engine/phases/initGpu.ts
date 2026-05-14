@@ -82,7 +82,7 @@ import { createMarkerLineRenderer } from '../../gpu/renderers/markerLineRenderer
 import { createScalarVolumeRenderer } from '../../gpu/renderers/scalarVolumeRenderer';
 import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
-import { loadFontAtlas } from '../../gpu/labels/loadFontAtlas';
+import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/urlGate';
 import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
 
@@ -233,8 +233,8 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // `youAreHereSubsystem` now emits).
   const uiCtx = { device, context, format, canvas };
 
-  const fontAtlas = await loadFontAtlas();
-  state.gpu.labelRenderer = createLabelRenderer(uiCtx, fontAtlas.metrics, fontAtlas.bitmap);
+  const fontAtlases = await loadFontAtlases();
+  state.gpu.labelRenderer = createLabelRenderer(uiCtx, fontAtlases);
   state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx);
 
   // Wire the freshly-constructed renderers into the label director.

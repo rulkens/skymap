@@ -134,6 +134,7 @@ export function createPoiSubsystem(): PoiSubsystem {
         id: p.id,
         worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
         text: p.name,
+        font: 'cormorant',
         pixelSize: style.pixelSize,
         color: [...style.labelColor],
         worldEmMpc: style.worldEmMpc,

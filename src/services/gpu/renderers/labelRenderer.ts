@@ -70,6 +70,9 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Label } from '../../../@types/rendering/Label';
 import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
 import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
+import type { LoadedFontAtlases } from '../../../@types/rendering/LoadedFontAtlases';
+import { FONT_IDS } from '../../../data/fonts';
+import type { FontId } from '../../../data/fonts';
 import { layoutLabel } from '../labels/labelLayout';
 import vsCode from '../shaders/labels/vertex.wesl?static';
 import fsCode from '../shaders/labels/fragment.wesl?static';
@@ -93,17 +96,19 @@ const UNIFORM_BYTES = 80;
 const LABEL_DATA_BYTES = 48;
 
 /**
- * Per-glyph instance buffer stride, matching `VsIn` attributes 1–4 in io.wesl:
+ * Per-glyph instance buffer stride, matching `VsIn` attributes 1–5 in io.wesl:
  *
  *   bytes  0..7   localOffset  vec2<f32>  — pen-relative top-left in atlas px
  *   bytes  8..15  localSize    vec2<f32>  — glyph width/height in atlas px
  *   bytes 16..31  uvRect       vec4<f32>  — (u0,v0,u1,v1) atlas UV
  *   bytes 32..35  labelIndex   u32        — index into labels[] storage buffer
+ *   bytes 36..39  fontIndex    u32        — texture_2d_array layer index
+ *                                            (= FONT_IDS.indexOf(label.font))
  *
  * Note: `corner` (location 0) comes from a separate 4-vertex unit-quad
  * buffer with `stepMode: 'vertex'`, not from this instance buffer.
  */
-const GLYPH_INSTANCE_BYTES = 36;
+const GLYPH_INSTANCE_BYTES = 40;
 
 // ─── corner buffer ────────────────────────────────────────────────────────
 
@@ -133,8 +138,7 @@ const CORNER_BYTES = CORNER_DATA.byteLength; // 32 bytes (4 × 2 × 4)
  */
 export function createLabelRenderer(
   ctx: GpuContext,
-  metrics: FontMetrics,
-  atlasBitmap: ImageBitmap | null,
+  atlases: LoadedFontAtlases,
   maxLabels = 64,
   maxGlyphsPerLabel = 64,
 ): LabelRenderer {
@@ -144,6 +148,30 @@ export function createLabelRenderer(
   const device = ctx.device as GPUDevice | null;
   const format = ctx.format;
   const maxGlyphs = maxLabels * maxGlyphsPerLabel;
+
+  // Per-font metrics record + pre-computed layer index lookup.  Built
+  // once at construction time so the per-glyph pack loop in setLabels
+  // never has to call FONT_IDS.indexOf — that would be O(N) per glyph,
+  // O(N²) per label.  The Record is keyed by FontId so callers do
+  // `metricsByFont[label.font]` without a string compare per glyph.
+  const metricsByFont = atlases.metricsByFont;
+  // Pre-computed FontId → layer index lookup. Built once at construction
+  // time so the per-glyph pack loop in setLabels never has to call
+  // FONT_IDS.indexOf — that would be O(N) per glyph, O(N²) per label.
+  const layerIndexOf: Readonly<Record<FontId, number>> = (() => {
+    const lookup: Partial<Record<FontId, number>> = {};
+    for (let i = 0; i < FONT_IDS.length; i++) {
+      lookup[FONT_IDS[i]!] = i;
+    }
+    return lookup as Readonly<Record<FontId, number>>;
+  })();
+
+  // First-font metrics serve as the canonical atlas-dimensions source
+  // (every layer is the same size — buildFontAtlas asserts this).  We
+  // also use it for layout when Label.font is missing, but post-Task
+  // 7 every Label carries `font` explicitly.
+  const firstFontId = FONT_IDS[0]!;
+  const firstMetrics: FontMetrics = metricsByFont[firstFontId];
 
   // ── CPU scratch buffers — always allocated, safe to use with null device ─
   //
@@ -189,7 +217,15 @@ export function createLabelRenderer(
           // `var<storage, read>` and we don't need write access.
           buffer: { type: 'read-only-storage' },
         },
-        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+        {
+          binding: 2,
+          visibility: GPUShaderStage.FRAGMENT,
+          // viewDimension '2d-array' matches the shader's
+          // `texture_2d_array<f32>` declaration in fragment.wesl.
+          // Mismatching this with the shader-side binding type
+          // triggers a pipeline-creation-time validation error.
+          texture: { sampleType: 'float', viewDimension: '2d-array' },
+        },
         { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       ],
     });
@@ -225,6 +261,7 @@ export function createLabelRenderer(
               { shaderLocation: 2, offset: 8, format: 'float32x2' },   // localSize
               { shaderLocation: 3, offset: 16, format: 'float32x4' },  // uvRect
               { shaderLocation: 4, offset: 32, format: 'uint32' },     // labelIndex
+              { shaderLocation: 5, offset: 36, format: 'uint32' },     // fontIndex
             ],
           },
         ],
@@ -293,21 +330,36 @@ export function createLabelRenderer(
     // on some platforms (Chrome requires it for non-power-of-two sources and
     // for certain pixel-format combinations).  Including it is safe and
     // harmless even when not strictly required.
+    // Single GPU texture, N layers — one per registered font.  Every
+    // layer must have identical dimensions (a WebGPU validation
+    // requirement); buildFontAtlas.assertAtlasDimensions enforces
+    // this at bake time, so every entry in atlases.bitmaps has the
+    // same width/height by construction.
     atlasTexture = device.createTexture({
       label: 'label-atlas',
-      size: [metrics.atlas.width, metrics.atlas.height, 1],
+      size: [firstMetrics.atlas.width, firstMetrics.atlas.height, FONT_IDS.length],
       format: 'rgba8unorm',
+      // dimension defaults to '2d' — combined with depthOrArrayLayers > 1
+      // this produces a 2D-array texture.  No explicit `dimension: '2d-array'`
+      // needed; the WebGPU spec routes through dimension '2d' for both single
+      // and array.
       usage:
         GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.COPY_DST |
         GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
-    if (atlasBitmap !== null) {
+    // Upload each font's bitmap to its FONT_IDS-indexed layer.  Some
+    // tests pass an empty bitmap list (CPU-only state exercise); skip
+    // the upload in that case — the layout test only inspects
+    // CPU-side glyph packing, not the atlas contents.
+    for (let i = 0; i < atlases.bitmaps.length; i++) {
+      const bitmap = atlases.bitmaps[i];
+      if (bitmap == null) continue;
       device.queue.copyExternalImageToTexture(
-        { source: atlasBitmap },
-        { texture: atlasTexture },
-        [metrics.atlas.width, metrics.atlas.height],
+        { source: bitmap },
+        { texture: atlasTexture, origin: { x: 0, y: 0, z: i } },
+        [firstMetrics.atlas.width, firstMetrics.atlas.height],
       );
     }
 
@@ -329,7 +381,15 @@ export function createLabelRenderer(
       entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
         { binding: 1, resource: { buffer: storageBuffer } },
-        { binding: 2, resource: atlasTexture.createView() },
+        {
+          binding: 2,
+          // Explicit '2d-array' view dimension matches the
+          // bind-group-layout entry and the shader binding.  Spelling
+          // it out (rather than letting the default pick) makes the
+          // intent visible at the bind site and survives any future
+          // FONTS shrink-to-one-entry edit.
+          resource: atlasTexture.createView({ dimension: '2d-array' }),
+        },
         { binding: 3, resource: sampler },
       ],
     });
@@ -337,14 +397,17 @@ export function createLabelRenderer(
 
   // ── public methods (closures over the locals above) ────────────────────
 
-  function setLabels(labels: Label[]): void {
+  function setLabels(labels: readonly Label[]): void {
     currentGlyphCount = 0;
     currentLabelCount = 0;
 
     const count = Math.min(labels.length, maxLabels);
     for (let li = 0; li < count; li++) {
       const label = labels[li]!;
-      const quads = layoutLabel(label.text, metrics, label.alignX ?? 'left');
+      // Each label specifies its own font; layout reads the font's
+      // metrics from the FontId-keyed record built at construction
+      // time.  No fallback — Label.font is required at the type level.
+      const quads = layoutLabel(label.text, metricsByFont[label.font], label.alignX ?? 'left');
 
       // Write per-label storage record (48 bytes, 12 floats) unconditionally
       // — even when `quads` is empty.  Keeping the per-label index stable
@@ -372,11 +435,17 @@ export function createLabelRenderer(
       labelBuf[labelBase + 10] = label.maxPixelSize ?? 64;
       labelBuf[labelBase + 11] = label.fadeAlpha ?? 1;
 
-      // Write per-glyph instance records (36 bytes = 9 × 4 = 8 × f32 + 1 × u32).
+      // Resolve the label's font to its GPU texture-array layer index
+      // ONCE per label, outside the inner glyph loop — every glyph in
+      // a label shares the same layer.
+      const fontIndex = layerIndexOf[label.font];
+
+      // Write per-glyph instance records (40 bytes = 10 × 4 = 8 × f32 + 2 × u32).
       for (const q of quads) {
         if (currentGlyphCount >= maxGlyphs) break;
-        // f32 base index inside the shared ArrayBuffer view.  9 slots/glyph
-        // (8 floats + 1 uint reinterpreted via the u32 view at the same offset).
+        // f32 base index inside the shared ArrayBuffer view.  10 slots/glyph
+        // (8 floats + 2 uints reinterpreted via the u32 view at the same
+        // offsets — slots 8 and 9).
         const f32Base = currentGlyphCount * (GLYPH_INSTANCE_BYTES / 4);
         glyphF32[f32Base + 0] = q.localOffsetX;
         glyphF32[f32Base + 1] = q.localOffsetY;
@@ -386,9 +455,12 @@ export function createLabelRenderer(
         glyphF32[f32Base + 5] = q.uvV0;
         glyphF32[f32Base + 6] = q.uvU1;
         glyphF32[f32Base + 7] = q.uvV1;
-        // labelIndex is a u32; write it through the Uint32Array view so the
-        // bit pattern is exact (Float32Array would reinterpret it).
+        // labelIndex + fontIndex are u32; write them through the
+        // Uint32Array view so the bit patterns are exact (the
+        // Float32Array view would reinterpret an int payload as
+        // garbage floating-point bits).
         glyphU32[f32Base + 8] = li;
+        glyphU32[f32Base + 9] = fontIndex;
         currentGlyphCount++;
       }
 

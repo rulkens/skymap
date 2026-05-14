@@ -55,6 +55,7 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
         id: 'you-are-here',
         worldPos: [0, LABEL_ANCHOR_MPC, 0],
         text: LABEL_TEXT,
+        font: 'cormorant',
         pixelSize: 18,
         color: [...LABEL_COLOR],
         worldEmMpc: 0.005,

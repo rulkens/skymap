@@ -36,7 +36,7 @@
  * ### Why mock the heavy modules
  *
  * `initGpu` calls `gpuInitGpu(canvas)` (real WebGPU device acquisition),
- * `loadFontAtlas()` (network fetch), and seven renderer constructors —
+ * `loadFontAtlases()` (network fetch), and seven renderer constructors —
  * none of which work in a JSDOM test environment.  We mock the lot so
  * the phase body runs to completion and we can observe the writes it
  * makes to `state.gpu.*`.  Each mock returns a spy-bearing stub whose
@@ -130,10 +130,10 @@ vi.mock('../../../../src/services/gpu/passes/volumeUpsample', () => ({
   createVolumeUpsample: vi.fn(() => makeStub('volumeUpsample')),
 }));
 
-vi.mock('../../../../src/services/gpu/labels/loadFontAtlas', () => ({
-  loadFontAtlas: vi.fn(async () => ({
-    metrics: { __mockMetrics: true },
-    bitmap: { __mockBitmap: true } as unknown as ImageBitmap,
+vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
+  loadFontAtlases: vi.fn(async () => ({
+    metricsByFont: { cormorant: { __mockMetrics: true } },
+    bitmaps: [{ __mockBitmap: true } as unknown as ImageBitmap],
   })),
 }));
 
