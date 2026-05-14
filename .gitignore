@@ -85,7 +85,6 @@ pnpm-debug.log*
 # Exception: font sources for the MSDF label atlas. Third-party OFL-licensed
 # assets, not rebuildable by our parsers — they're the upstream input to
 # `npm run build-fonts`, same conceptual role as the seed JSON above.
-!/data/raw/fonts/JetBrainsMono-Regular.ttf
 !/data/raw/fonts/CormorantGaramond-SemiBold.ttf
 
 # Exception: CF-4 raw-data README.  The directory holds gitignored
