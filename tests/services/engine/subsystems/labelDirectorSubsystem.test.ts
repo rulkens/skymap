@@ -29,6 +29,7 @@ const SAMPLE_LABEL: Label = {
   id: 'sample-label',
   worldPos: [0, 0, 0],
   text: 'x',
+  font: 'cormorant',
   pixelSize: 10,
 };
 const SAMPLE_LINE: MarkerLine = {

@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createLabelRenderer } from '../../../../src/services/gpu/renderers/labelRenderer';
 import { parseFontMetrics } from '../../../../src/services/gpu/labels/fontMetrics';
+import type { LoadedFontAtlases } from '../../../../src/@types/rendering/LoadedFontAtlases';
 
-// Minimal BMFont fixture: just the uppercase A (codepoint 65) so we can test
-// that the renderer counts known glyphs and silently drops unknown ones.
+// Minimal BMFont fixture: just the uppercase A (codepoint 65) so we can
+// test that the renderer counts known glyphs and silently drops
+// unknown ones.
 const FIXTURE_METRICS = parseFontMetrics({
   pages: ['x.png'],
   common: { lineHeight: 50, base: 38, scaleW: 512, scaleH: 512 },
@@ -14,9 +16,17 @@ const FIXTURE_METRICS = parseFontMetrics({
   ],
 });
 
+// LoadedFontAtlases shape: one entry per registered FontId; bitmaps
+// array stays empty so the renderer's GPU upload branch is skipped
+// (we pass a null device anyway).
+const FIXTURE_ATLASES: LoadedFontAtlases = {
+  metricsByFont: { cormorant: FIXTURE_METRICS },
+  bitmaps: [],
+};
+
 // Build a LabelRenderer with a null device — the factory guards all GPU
 // calls behind `if (device)`, so CPU state is safe to exercise in unit
-// tests without a real WebGPU context.  This mirrors `textureAtlas.test.ts`'s
+// tests without a real WebGPU context.  Mirrors `textureAtlas.test.ts`'s
 // null-device pattern.
 const newRenderer = () => {
   const ctx = {
@@ -25,7 +35,7 @@ const newRenderer = () => {
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
   };
-  return createLabelRenderer(ctx, FIXTURE_METRICS, null);
+  return createLabelRenderer(ctx, FIXTURE_ATLASES);
 };
 
 describe('LabelRenderer (CPU state)', () => {
@@ -37,8 +47,8 @@ describe('LabelRenderer (CPU state)', () => {
   it('counts glyphs across all labels after setLabels', () => {
     const r = newRenderer();
     r.setLabels([
-      { id: 'a', worldPos: [0, 0, 0], text: 'AAA', pixelSize: 24 },
-      { id: 'b', worldPos: [1, 0, 0], text: 'AA', pixelSize: 24 },
+      { id: 'a', worldPos: [0, 0, 0], text: 'AAA', pixelSize: 24, font: 'cormorant' },
+      { id: 'b', worldPos: [1, 0, 0], text: 'AA', pixelSize: 24, font: 'cormorant' },
     ]);
     expect(r.glyphCount()).toBe(5);
     expect(r.labelCount()).toBe(2);
@@ -46,17 +56,46 @@ describe('LabelRenderer (CPU state)', () => {
 
   it('drops glyphs not present in metrics', () => {
     const r = newRenderer();
-    // 'A中A' — 'A' is in metrics (id=65), '中' is not (id=20013).  We expect only the
-    // two 'A' glyphs to be counted; the unknown character is silently skipped.
-    r.setLabels([{ id: 'x', worldPos: [0, 0, 0], text: 'A中A', pixelSize: 24 }]);
+    // 'A中A' — 'A' is in metrics (id=65), '中' is not (id=20013).  We
+    // expect only the two 'A' glyphs to be counted; the unknown
+    // character is silently skipped.
+    r.setLabels([{ id: 'x', worldPos: [0, 0, 0], text: 'A中A', pixelSize: 24, font: 'cormorant' }]);
     expect(r.glyphCount()).toBe(2);
   });
 
   it('replaces (not appends) on subsequent setLabels', () => {
     const r = newRenderer();
-    r.setLabels([{ id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 24 }]);
-    r.setLabels([{ id: 'b', worldPos: [0, 0, 0], text: 'AAA', pixelSize: 24 }]);
+    r.setLabels([{ id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 24, font: 'cormorant' }]);
+    r.setLabels([{ id: 'b', worldPos: [0, 0, 0], text: 'AAA', pixelSize: 24, font: 'cormorant' }]);
     expect(r.labelCount()).toBe(1);
     expect(r.glyphCount()).toBe(3);
+  });
+});
+
+// ── fontIndex packing test ────────────────────────────────────────────────
+//
+// Reaching into the renderer's packed glyph buffer would require
+// exposing internals; instead we verify the layer-index lookup
+// indirectly by counting glyphs across mixed-font labels.  Since
+// FONTS has only `cormorant` at this point, every label resolves to
+// fontIndex 0 — the test asserts the lookup works without throwing.
+// A future second font would extend this test with a real index
+// assertion.
+
+describe('LabelRenderer fontIndex resolution', () => {
+  it('accepts labels with the cormorant font without throwing', () => {
+    const ctx = {
+      device: null as unknown as GPUDevice,
+      context: null as unknown as GPUCanvasContext,
+      format: 'rgba16float' as GPUTextureFormat,
+      canvas: null as unknown as HTMLCanvasElement,
+    };
+    const r = createLabelRenderer(ctx, FIXTURE_ATLASES);
+    expect(() =>
+      r.setLabels([
+        { id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 24, font: 'cormorant' },
+      ]),
+    ).not.toThrow();
+    expect(r.glyphCount()).toBe(1);
   });
 });
