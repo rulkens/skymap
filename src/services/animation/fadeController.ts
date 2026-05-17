@@ -48,6 +48,8 @@
  *      frame's rAF timestamp is sub-ms accurate.
  */
 
+import type { FadeController } from '../../@types/animation/FadeController';
+
 /**
  * Fade-in duration in milliseconds. 600 ms is sub-conscious — long
  * enough that the eye perceives "things flowing in" rather than a pop,
@@ -63,8 +65,6 @@ export const FADE_IN_DURATION_MS = 600;
  * fade-out (before a tier-swap upload) and every UI-toggle "off" path.
  */
 export const FADE_OUT_DURATION_MS = 100;
-
-import type { FadeController } from '../../@types/animation/FadeController';
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
@@ -85,6 +85,11 @@ export function createFadeController(
   let transitionStartMs = nowMs;
   let transitionDurationMs = 0;
   const pending: PendingResolve[] = [];
+  // No explicit cleanup path. The registry owns FadeController lifetimes
+  // and discards a controller (drops its reference) only when the layer
+  // is unregistered. If a controller is abandoned mid-ramp, its pending
+  // promises never resolve — that's by design; callers tear down the
+  // registry, not individual controllers.
 
   function currentOpacity(now: number = performance.now()): number {
     if (transitionDurationMs <= 0) return targetOpacity;

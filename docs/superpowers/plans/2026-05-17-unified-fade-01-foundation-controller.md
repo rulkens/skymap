@@ -549,6 +549,8 @@ EOF
  *      frame's rAF timestamp is sub-ms accurate.
  */
 
+import type { FadeController } from '../../@types/animation/FadeController';
+
 /**
  * Fade-in duration in milliseconds. 600 ms is sub-conscious — long
  * enough that the eye perceives "things flowing in" rather than a pop,
@@ -565,15 +567,13 @@ export const FADE_IN_DURATION_MS = 600;
  */
 export const FADE_OUT_DURATION_MS = 100;
 
-import type { FadeController } from '../../@types/animation/FadeController';
-
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
 }
 
 type PendingResolve = {
-  readonly resolveMs: number;
+  resolveMs: number;
   readonly resolve: () => void;
 };
 
@@ -586,6 +586,12 @@ export function createFadeController(
   let transitionStartMs = nowMs;
   let transitionDurationMs = 0;
   const pending: PendingResolve[] = [];
+
+  // No explicit cleanup path. The registry owns FadeController lifetimes
+  // and discards a controller (drops its reference) only when the layer
+  // is unregistered. If a controller is abandoned mid-ramp, its pending
+  // promises never resolve — that's by design; callers tear down the
+  // registry, not individual controllers.
 
   function currentOpacity(now: number = performance.now()): number {
     if (transitionDurationMs <= 0) return targetOpacity;
@@ -626,9 +632,15 @@ export function createFadeController(
     sourceOpacity = value;
     targetOpacity = value;
     transitionDurationMs = 0;
-    // Any pending promises are now satisfied — the next tick will
-    // resolve them. Don't resolve here directly to keep tick the
-    // single resolution site (matches the per-frame contract).
+    // Pull every pending promise's deadline to 0 so the next `tick`
+    // resolves them. Without this step a fadeTo() that was scheduled
+    // before setImmediate would hang — its resolveMs is still in the
+    // future even though the underlying fade is no longer animating.
+    // Don't resolve here directly: keep tick the single resolution
+    // site (matches the per-frame contract).
+    for (const p of pending) {
+      p.resolveMs = 0;
+    }
   }
 
   function tick(now: number = performance.now()): void {
