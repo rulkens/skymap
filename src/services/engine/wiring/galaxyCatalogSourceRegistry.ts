@@ -213,6 +213,13 @@ export function wireGalaxyCatalogSourceSlot(
   const { cb } = deps;
   const slotName = `${sourceName(source)}-points`;
 
+  // Register the survey's fade handle at opacity 0 — the slot commit
+  // (Task 4.1) drives the fadeTo lifecycle from there. Registering at
+  // wiring time (before any data has loaded) means the points draw
+  // loop's `fadeOpacityOf` lookup always finds the handle, even on
+  // the first frame before the first upload lands.
+  state.subsystems.fades.register({ kind: 'survey', source }, 0);
+
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
     fetch: fetcher,
