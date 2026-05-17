@@ -216,6 +216,19 @@ buffer is zero-initialized and stays that way.
 with `fade.opacity`. `vertex.wesl` in points replaces
 `cloud.sourceCode` with `source.sourceCode`.
 
+**Pick pipeline layout compatibility.** The pick renderer doesn't
+read `fade.opacity` — picking has no notion of partial visibility —
+but its pipeline layout **must include the canonical `fadeBgl` slot
+at `@group(1)`** to stay layout-compatible with the visual points
+pipeline. Both pipelines consume the same vertex buffer + the same
+per-source `sourceBindGroup` at `@group(2)`; if the pick pipeline
+omitted the fade BGL, WebGPU validation would reject the shared
+draw machinery. The pick fragment shader therefore declares
+`FadeUniforms` as a no-op binding (declared but unread), and the
+pick pass binds a small dedicated "always-1.0" fade uniform buffer
+at `@group(1)`. That buffer is written once at construction and
+never touched again.
+
 ### Renderer-side data model
 
 `pointRenderer` keeps `Map<Source, BufferEntry>` — **one entry per
@@ -241,10 +254,27 @@ type BufferEntry = {
 Filament `BufferEntry` (it's a single instance not a map) gains the
 same fade fields. No `SourceUniforms`.
 
-Label renderers (cluster POI labels, galaxy-name labels, you-are-here,
-scale bar) each gain a per-layer fade buffer at `@group(1)`. The
-exact label renderer surfaces vary; the mechanical pattern is
-identical.
+Labels are different from the other consumers: they're routed
+through a `LabelDirector` subsystem that aggregates `LabelProducer`s
+(`youAreHere`, cluster POIs, future galaxy names) and dispatches to
+a single `labelRenderer` pipeline plus a `markerLineRenderer`. There
+is **one label renderer pipeline, not four per-layer pipelines**.
+This design predates the unified fade work.
+
+For v1 the four label-layer handles are registered (so a tour can
+address each conceptually), but the renderer draws every label at a
+**single combined opacity** — typically `max(opacityOf(each layer
+handle))`, falling back to the youAreHere handle's opacity when no
+labels are routed through the director. Per-layer-aware draws
+(where cluster POIs fade independently of galaxy names) require
+restructuring the `setLabels` flush boundary in the director and
+are explicitly deferred to a follow-up plan.
+
+The mechanical pattern at the renderer is identical to the others:
+the combined label pipeline gains a `@group(1)` fade BGL, a per-pass
+fade uniform buffer, and a per-frame writeBuffer with the combined
+opacity. The label fragment shader multiplies its alpha by
+`fade.opacity` like every other consumer.
 
 Per-frame draw flow for any participating renderer:
 
@@ -386,7 +416,7 @@ with appropriate initial opacities:
 | Filaments | `{kind:'filaments'}` | 0 — fade in on first load. |
 | Scalar fields (CF4, rhizome-{small,medium,large}) | `{kind:'scalarField', field}` | 0 — fade in on first upload. |
 | Label layers (cluster POI, galaxy names, you-are-here, scale bar) | `{kind:'labelLayer', layer}` | 0 — fade in on first label-set arrival. |
-| Always-on overlays (Milky Way, procedural disks, textured impostors, HEALPix) | `{kind:'overlay', id}` | 1.0 via `setImmediate(1)` — available to tour, never auto-faded. |
+| Always-on overlays (Milky Way impostor, procedural disks, textured impostors) | `{kind:'overlay', id}` | 1.0 via `setImmediate(1)` — available to tour, never auto-faded. (Note: there is no HEALPix renderer in the codebase — `angularDensityWeight` is a per-galaxy attribute, not an overlay layer.) |
 
 Registration is co-located with each renderer/subsystem's
 construction so the engine bootstrap doesn't accumulate a registry-
@@ -454,17 +484,25 @@ src/services/gpu/shaders/points/colorFragment.wesl   # fade.opacity
 src/services/gpu/shaders/filaments/fragment.wesl     # fade.opacity
 src/services/gpu/shaders/scalarVolume/fragment.wesl  # multiply by fade.opacity
 src/services/gpu/shaders/labels/fragment.wesl        # multiply by fade.opacity
-src/services/loading/slots/galaxyCatalogSlot.ts  # sequential fade-out/upload/fade-in
+src/services/gpu/shaders/pick/pickFragment.wesl  # add no-op FadeUniforms decl for pipeline-layout compat
+src/services/gpu/renderers/pickRenderer.ts       # bind always-1.0 fade buffer at @group(1); rename cloudFadeBuffer → sourceBuffer on PickSourceDraw
+src/@types/rendering/PickSourceDraw.d.ts         # cloudFadeBuffer → sourceBuffer
+src/services/engine/wiring/galaxyCatalogSourceRegistry.ts  # wireGalaxyCatalogSourceSlot: sequential fade-out/upload/fade-in (NOT a separate slot file)
 src/services/loading/slots/filamentSlot.ts       # fade-in on commit
 src/services/loading/slots/scalarFieldSlot.ts    # sequential commit (new or modified)
 src/services/engine/frame/runFrame.ts            # collapse to fades.isAnyAnimating
 src/services/engine/state/EngineSubsystems.d.ts  # add fades
-src/services/engine/phases/initGpu.ts            # construct + register handles
+src/services/engine/phases/initGpu.ts            # construct + register handles; build canonical BGLs
 src/components/SettingsPanel.tsx (or wherever survey toggles live)  # async toggle
 src/services/engine/helpers/engineReady.ts       # any references to pointRenderer.isFading
 src/@types/rendering/PointRenderer.d.ts          # remove isFading from surface
-src/@types/rendering/FilamentRenderer.d.ts       # remove isFading from surface
+src/@types/rendering/FilamentRenderer.d.ts       # remove isFading; draw() gains fadeOpacity param (public-surface change)
+src/@types/rendering/ScalarVolumeRenderer.d.ts   # draw() gains fadeOpacityOf callback (public-surface change)
 ```
+
+**Note on `galaxyCatalogSlot`:** There is no standalone `galaxyCatalogSlot.ts` file in the codebase. The per-survey asset-slot wiring lives in `wireGalaxyCatalogSourceSlot()` inside `src/services/engine/wiring/galaxyCatalogSourceRegistry.ts`. The sequential fade-out → upload → fade-in orchestration is implemented inside that helper, not in a new slot file.
+
+**Note on renderer `draw()` signatures:** The migration is not pure plumbing — `FilamentRenderer.draw` and `ScalarVolumeRenderer.draw` gain new parameters (a fade opacity value or a fade-opacity callback). These are public-surface changes to the renderer interfaces. No behaviour change to picker output or selection halos.
 
 ## Testing
 
