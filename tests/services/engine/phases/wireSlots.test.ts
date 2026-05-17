@@ -66,6 +66,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
+import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //
@@ -226,9 +227,11 @@ const errorValue = (msg: string): LoadState<unknown> => ({
  * populates it per-case), and the settings bag has the slots wireSlots
  * inspects (`volumes.fields`).
  */
-function makeState(overrides: Partial<{
-  points: Map<Source, ReturnType<typeof makeFakeSlot>>;
-}> = {}): EngineState {
+function makeState(
+  overrides: Partial<{
+    points: Map<Source, ReturnType<typeof makeFakeSlot>>;
+  }> = {},
+): EngineState {
   const points = overrides.points ?? new Map();
   return {
     settings: {
@@ -290,6 +293,12 @@ function makeState(overrides: Partial<{
       proceduralDisks: null,
       texturedImpostors: null,
       loadProgress: null,
+      // Post-Task-7 (2026-05-17): static cluster/supercluster/void
+      // anchors are wired unconditionally — `wireSlots` now always
+      // invokes `state.subsystems.pois.setPois(...)`, so the mock has
+      // to provide a callable `setPois` even when the test isn't
+      // asserting on POI behaviour.
+      pois: { setPois: vi.fn() } as never,
     } as never,
     cam: null,
     initialCamSnapshot: null,
@@ -512,5 +521,25 @@ describe('wireSlots', () => {
     expect(names.has('filaments')).toBe(true);
     expect(names.has('famous-meta')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);
+  });
+
+  it('wires static cluster/supercluster/void anchors unconditionally (no URL gate)', async () => {
+    // No `?anchors=1` query param.  After wireSlots runs, the POI
+    // subsystem should still receive the static anchor list — the
+    // production default since the `?anchors=1` gate is removed.
+    delete (globalThis as { location?: unknown }).location;
+    (globalThis as { location: { search: string } }).location = { search: '' };
+
+    const state = makeState();
+    const deps = makeDeps();
+    let received: readonly PointOfInterest[] = [];
+    state.subsystems.pois.setPois = (pois) => {
+      received = pois;
+    };
+    await wireSlots(state, deps);
+    expect(received.length).toBeGreaterThan(0);
+    expect(received.some((p) => p.category === 'cluster')).toBe(true);
+    expect(received.some((p) => p.category === 'supercluster')).toBe(true);
+    expect(received.some((p) => p.category === 'void')).toBe(true);
   });
 });
