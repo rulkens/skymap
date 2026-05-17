@@ -42,11 +42,22 @@ export const volumeUpsamplePass: Pass = {
     // finished.  Same shape as the old scalarVolumePass gate.
     if (state.gpu.scalarVolumeRenderer === null) return false;
     if (state.gpu.volumeUpsample === null) return false;
-    // Skip the upsample when no fields are active — encodeVolumes
-    // already skipped the raymarch into the half-res target, so the
-    // target is at clear-value (0,0,0,0); adding zero to HDR is work
-    // for no visual change.
-    return state.gpu.scalarVolumeRenderer.hasActiveFields();
+    // Skip the upsample when no fields are active AND no field has
+    // a fade-out tail still in flight. encodeVolumes already skipped
+    // the raymarch into the half-res target when both conditions hold
+    // (target at clear-value); adding zero to HDR is work for no
+    // visual change. But while any field's fade-out tail is still
+    // ramping (opacity > 0 with e.enabled now false), encodeVolumes
+    // IS still drawing into the half-res target, so the upsample
+    // must run to blit those frames to HDR.
+    if (state.gpu.scalarVolumeRenderer.hasActiveFields()) return true;
+    const now = performance.now();
+    for (const handle of state.gpu.scalarVolumeRenderer.listHandles()) {
+      if (state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, now) > 0) {
+        return true;
+      }
+    }
+    return false;
   },
 
   draw(pass, ctx, state, _settings, _deps) {

@@ -38,6 +38,7 @@ import { syntheticVolumeFetcher } from '../fetchers/syntheticVolumeFetcher';
 import type { SyntheticVolumeReq } from '../../../@types/loading/SyntheticVolumeReq';
 import { DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -115,6 +116,15 @@ export function createSyntheticVolumeSlots(
         renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
         renderer.setExposure(handle, persisted.exposure);
         renderer.setTrim(handle, persisted.trim);
+        // Drive the FadeRegistry from the persisted enable bit. See
+        // mcpmSlot / cf4DensitySlot for the symmetric pattern.
+        if (persisted.enabled) {
+          void state.subsystems.fades.fadeTo(
+            { kind: 'scalarField', field: handle },
+            1,
+            FADE_IN_DURATION_MS,
+          );
+        }
         // Fire the same React-facing callback that engineHandle's
         // addVolumeField fires.  Without this, the SettingsPanel
         // never learns the new field exists — its mirror is rebuilt

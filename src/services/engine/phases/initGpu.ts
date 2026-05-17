@@ -87,7 +87,6 @@ import { hasUrlGate } from '../../../utils/url/urlGate';
 import { GALAXY_CATALOG_SOURCE_REGISTRY, wireGalaxyCatalogSourceSlot } from '../wiring/galaxyCatalogSourceRegistry';
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
-import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -451,13 +450,16 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     state.gpu.fadeBgl!,
     {
       onFieldAdded: (handle) => {
+        // Register at opacity 0 ONLY. Do NOT auto-fade-in here:
+        // addVolumeField (the engine.ts wrapper that calls into this
+        // factory) drives the fade-in itself, AFTER applying the
+        // persisted user enable/disable setting. Auto-fading here
+        // would ramp every field's opacity to 1 regardless of
+        // whether the user has it toggled off — combined with the
+        // draw-loop gate's "opacity > 0 keeps rendering through the
+        // fade-out tail", that would draw disabled debug fields by
+        // mistake.
         state.subsystems.fades.register({ kind: 'scalarField', field: handle }, 0);
-        // Fade in on first upload — fire and forget.
-        void state.subsystems.fades.fadeTo(
-          { kind: 'scalarField', field: handle },
-          1,
-          FADE_IN_DURATION_MS,
-        );
       },
       onFieldRemoved: (handle) => {
         state.subsystems.fades.unregister({ kind: 'scalarField', field: handle });

@@ -103,7 +103,18 @@ export type ScalarVolumeRenderer = {
   setFieldPalette(handle: ScalarFieldHandle, id: ScalarFieldPaletteId): void;
   /** Current palette id for a single field; `null` if the handle is unknown. */
   getFieldPalette(handle: ScalarFieldHandle): ScalarFieldPaletteId | null;
-  hasActiveFields(): boolean;
+  /**
+   * True iff any field is currently producing visible output. The
+   * optional `fadeOpacityOf` callback widens the predicate to also
+   * include fields whose `enabled` is false but whose fade-out tail
+   * (opacity > 0) is still in flight — that's the state the
+   * volume-upsample gate and the encodeHdr* pass-opener want, so
+   * they keep blitting / drawing through the ~100 ms ramp.
+   *
+   * Called without a callback for legacy / test paths, which retain
+   * the strict "enabled && intensity > 0" semantic.
+   */
+  hasActiveFields(fadeOpacityOf?: (handle: ScalarFieldHandle) => number): boolean;
   listHandles(): ScalarFieldHandle[];
   draw(
     pass: GPURenderPassEncoder,

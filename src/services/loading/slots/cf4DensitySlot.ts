@@ -28,6 +28,7 @@ import {
   DEFAULT_VOLUME_FIELD_INTENSITY,
 } from '../../../data/defaults';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
@@ -73,6 +74,15 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
       renderer.setContrastCenter(handle, defaults.contrastCenter);
       renderer.setExposure(handle, persisted.exposure);
       renderer.setTrim(handle, persisted.trim);
+      // Drive the FadeRegistry from the persisted enable bit. See
+      // mcpmSlot for the symmetric pattern.
+      if (persisted.enabled) {
+        void state.subsystems.fades.fadeTo(
+          { kind: 'scalarField', field: handle },
+          1,
+          FADE_IN_DURATION_MS,
+        );
+      }
       cb.volumes?.onFieldsChanged?.();
       state.subsystems.scheduler.requestRender();
     },

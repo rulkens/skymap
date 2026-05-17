@@ -507,9 +507,14 @@ export function createScalarVolumeRenderer(
     getFieldPalette(handle) {
       return fields.get(handle)?.paletteId ?? null;
     },
-    hasActiveFields() {
+    hasActiveFields(fadeOpacityOf) {
       for (const e of fields.values()) {
-        if (e.enabled && e.intensity > 0) return true;
+        if (e.intensity <= 0) continue;
+        if (e.enabled) return true;
+        // If a fade-out tail is in flight (enabled flipped false, but
+        // opacity hasn't reached 0 yet) the field is still producing
+        // visible pixels — keep upstream gates alive.
+        if (fadeOpacityOf && fadeOpacityOf(e.handle) > 0) return true;
       }
       return false;
     },

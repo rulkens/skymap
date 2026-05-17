@@ -64,7 +64,7 @@ export function encodeVolumes(args: EncodeVolumesArgs): void {
   //      we'd write here.  Skipping the pass when there's nothing to
   //      consume avoids one tile-RAM round-trip per frame on M1 for a
   //      cleared-but-unused half-res target.
-  if (scalarVolumeRenderer === null || !scalarVolumeRenderer.hasActiveFields()) return;
+  if (scalarVolumeRenderer === null || !scalarVolumeRenderer.hasActiveFields(fadeOpacityOf)) return;
 
   // Half-res viewport: floor(canvas / 2), min 1 px.  Matches the texture
   // dimensions allocated by `postProcess.resize()` (see

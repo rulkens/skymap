@@ -77,12 +77,19 @@ describe('volumeUpsamplePass.enabled', () => {
     expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings({ volumesEnabled: false }))).toBe(false);
   });
 
-  it('returns false when no fields are active', () => {
+  it('returns false when no fields are active and no fade-out tail is in flight', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => false },
+        scalarVolumeRenderer: {
+          hasActiveFields: () => false,
+          // The fade-tail check iterates listHandles and calls
+          // fades.opacityOf for each. Empty list → no tails → gate
+          // stays false.
+          listHandles: () => [],
+        },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
+      subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });

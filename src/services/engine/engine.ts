@@ -1103,6 +1103,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldHandle, persisted.paletteId);
     state.gpu.scalarVolumeRenderer?.setTrim(fieldHandle, persisted.trim);
     state.gpu.scalarVolumeRenderer?.setExposure(fieldHandle, persisted.exposure);
+    // Drive the FadeRegistry from the persisted enable bit:
+    //  - Field enabled → fade up to 1 over FADE_IN_DURATION_MS.
+    //  - Field disabled → leave the registry at the initial 0 set by
+    //    the onFieldAdded callback. The renderer's draw loop's
+    //    `(!enabled && opacity <= 0)` skip clause keeps the field
+    //    invisible until the user toggles it on (which fires the
+    //    fade-in via setVolumeFieldEnabled).
+    if (persisted.enabled) {
+      void state.subsystems.fades.fadeTo(
+        { kind: 'scalarField', field: fieldHandle },
+        1,
+        FADE_IN_DURATION_MS,
+      );
+    }
     cb.volumes?.onFieldsChanged?.();
     state.subsystems.scheduler.requestRender();
   }

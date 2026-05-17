@@ -62,20 +62,19 @@ export function encodeHdrSingle(
   // cost (tile-RAM load+store) even when nothing draws inside.  The
   // downstream `volumeUpsamplePass.enabled` checks the same conditions
   // on the HDR side; the two layers stay in lockstep.
-  if (
-    settings.volumesEnabled &&
-    state.gpu.scalarVolumeRenderer !== null &&
-    state.gpu.scalarVolumeRenderer.hasActiveFields()
-  ) {
+  if (settings.volumesEnabled && state.gpu.scalarVolumeRenderer !== null) {
     const nowMs = performance.now();
-    encodeVolumes({
-      encoder,
-      ctx,
-      scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
-      fadeOpacityOf: (handle) =>
-        state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs),
-      timestampWrites: undefined,
-    });
+    const fadeOpacityOf = (handle: string) =>
+      state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs);
+    if (state.gpu.scalarVolumeRenderer.hasActiveFields(fadeOpacityOf)) {
+      encodeVolumes({
+        encoder,
+        ctx,
+        scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+        fadeOpacityOf,
+        timestampWrites: undefined,
+      });
+    }
   }
 
   const hdrPass = encoder.beginRenderPass({
