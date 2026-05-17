@@ -71,17 +71,25 @@ const FAMOUS_LABEL_MIN_OFFSET_MPC = 0.05;
 const FAMOUS_LABEL_OFFSET_FACTOR = 1.5;
 
 /**
- * Label-size scaling parameters for famous-galaxy POIs.  Pixel size
- * is `BASE + LOG_GAIN * log10(diameterKpc / REFERENCE_DIAMETER_KPC)`,
- * clamped to `[MIN, MAX]`.  Anchored so a typical Milky-Way-class
- * galaxy (~40 kpc, like M31) sits at the reference 18 px — same as
- * "You are here".  LOG_GAIN of 7 is tuned so a dwarf one log-decade
- * below the reference (4 kpc, e.g. M110) reads at ~11 px (~60% of
- * Andromeda's label) and a dwarf 1.5 decades below (1.8 kpc, e.g.
- * M32) hits the 9 px floor (50% — the "about half" target).  Reading
- * floor 9 px is the minimum legible size for the Cormorant font at
- * typical viewer distances; ceiling 22 px keeps the largest spirals
- * from dominating the overlay.
+ * Label-size scaling for famous-galaxy POIs.
+ *
+ * Since the shader now treats `Label.pixelSize` as a direct target
+ * (the on-screen em height in pixels — see `shaders/labels/vertex.wesl`
+ * and `Label.d.ts`), this formula reads naturally: bigger galaxy →
+ * bigger label.
+ *
+ * ### Tuning
+ *
+ *   pixelSize = clamp(MIN, MAX, BASE + LOG_GAIN * log10(diameterKpc / REFERENCE))
+ *
+ * `BASE = 18` anchors M31 (~40 kpc, the visual reference) at the same
+ * `pixelSize` as the "You are here" pin.  `LOG_GAIN = 7` is tuned so a
+ * dwarf 1.35 decades below the reference (M32 at 1.8 kpc) lands at
+ * ~9 px — roughly half M31's size, the user-facing "about half" target.
+ *
+ * `MIN_PX = 9` is the smallest legible em height; `MAX_PX = 22` keeps
+ * the biggest galaxies a touch larger than the You-Are-Here pin
+ * without dominating the view.
  */
 const FAMOUS_LABEL_BASE_PX = 18;
 const FAMOUS_LABEL_REFERENCE_DIAMETER_KPC = 40;

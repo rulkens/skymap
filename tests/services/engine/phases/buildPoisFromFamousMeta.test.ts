@@ -46,7 +46,9 @@ describe('buildPoisFromFamousMeta', () => {
     expect(pois[0]!.crosshairSizeMpc).toBeUndefined();
     // labelAnchorOffsetMpc = max(0.05, 1.5 * 67 / 1000) = max(0.05, 0.1005) = 0.1005
     expect(pois[0]!.labelAnchorOffsetMpc).toBeCloseTo(0.1005, 6);
-    // labelPixelSize = clamp(9, 22, 18 + 7 * log10(67/40)) = 18 + 7 * log10(1.675) ≈ 19.566
+    // labelPixelSize = clamp(9, 22, 18 + 7 * log10(67/40))
+    //                = 18 + 7 * log10(1.675) ≈ 19.566
+    // (bigger galaxy → bigger label; shader now uses pixelSize directly)
     expect(pois[0]!.labelPixelSize).toBeCloseTo(19.566, 2);
     expect(pois[1]!.id).toBe('famous-m33');
     expect(pois[1]!.name).toBe('M33'); // no commonName → falls back to names[0]
@@ -61,8 +63,8 @@ describe('buildPoisFromFamousMeta', () => {
       { id: 'tiny', names: ['Tiny'], description: '', type: '' },
       { id: 'huge', names: ['Huge'], description: '', type: '' },
     ];
-    // 1 kpc → 18 + 7 * log10(0.025) = 18 - 11.2 ≈ 6.8 → clamped to 9
-    // 5000 kpc → 18 + 7 * log10(125) = 18 + 14.7 ≈ 32.7 → clamped to 22
+    // 1 kpc    → 18 + 7 * log10(1/40)    = 18 + 7 * -1.602 ≈  6.8 → clamped to 9
+    // 5000 kpc → 18 + 7 * log10(5000/40) = 18 + 7 *  2.097 ≈ 32.7 → clamped to 22
     const catalog = makeCatalog([1, 0, 0, 2, 0, 0], [1, 5000]);
     const pois = buildPoisFromFamousMeta(meta, catalog);
     expect(pois[0]!.labelPixelSize).toBe(9);

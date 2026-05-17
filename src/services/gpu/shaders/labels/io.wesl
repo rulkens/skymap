@@ -11,17 +11,20 @@
 // pixel-perfect text at any zoom level from a single static atlas — no
 // per-zoom re-rasterisation, no aliasing on near/far text.
 //
-// ## Why labels look the way they do — the hybrid sizing model
+// ## Why labels look the way they do — pixel-anchored sizing
 //
-// Each label has a 'world em size' (Mpc per em of the source font).
-// The vertex stage projects the anchor to clip space, computes how
-// many screen pixels one em occupies at that depth, then CLAMPS the
-// result to [minPixelSize, maxPixelSize] before scaling glyphs.
+// Each label declares a target em pixel height ('pixelSize').  The
+// vertex stage clamps that to [minPixelSize, maxPixelSize] and then
+// scales the atlas-baked glyph quad so one em renders at exactly the
+// clamped size in screen pixels.  Labels DO NOT grow with the camera
+// approaching — they stay at their declared pixel size regardless of
+// depth.  Proximity cues (e.g. the "You are here" pin) are driven by
+// 'fadeAlpha' instead.
 //
-// The clamp is what makes labels readable both up close and far away:
-// at a wide zoom, distant labels would shrink toward 0 px; the min
-// floor keeps them legible. At a close zoom, near labels would grow
-// to fill the screen; the max ceiling keeps them un-obnoxious.
+// 'worldEmMpc' (label.worldPos.w) is a vestigial channel from the
+// previous depth-perspective sizing model.  It's still written by
+// labelRenderer.ts to keep the binary layout stable, but the shader
+// ignores it.  May be repurposed for fade-distance logic later.
 //
 // ## Bind-group convention
 //
@@ -42,11 +45,12 @@ struct Uniforms {
 };
 
 struct LabelData {
-  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc (em-size in Mpc).
+  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc, deprecated
+  // (kept for layout stability — see module docblock).
   worldPos: vec4<f32>,
   // color.rgb premultiplied; color.a = base alpha (multiplied by fadeAlpha).
   color: vec4<f32>,
-  // x = pixelSize (target em pixel height at natural viewing distance)
+  // x = pixelSize (target on-screen em pixel height)
   // y = minPixelSize, z = maxPixelSize, w = fadeAlpha
   sizing: vec4<f32>,
 };

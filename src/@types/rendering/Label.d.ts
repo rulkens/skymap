@@ -27,7 +27,13 @@ export type Label = {
   readonly text: string;
   /** Registered FontId from `src/data/fonts.ts`.  Required — no default. */
   readonly font: FontId;
-  /** Target em pixel height at the label's natural viewing distance. */
+  /**
+   * Target on-screen em pixel height.  Subject to `minPixelSize` /
+   * `maxPixelSize` clamps.  A label with `pixelSize: 18` renders one
+   * em at ~18 screen pixels (modulo the clamps).  Labels DO NOT scale
+   * with camera distance — they stay at this pixel size regardless of
+   * how close or far the anchor is.
+   */
   readonly pixelSize: number;
   /** RGBA premultiplied, defaults to [1,1,1,1]. */
   readonly color?: Vec4;
@@ -36,9 +42,10 @@ export type Label = {
   /** Upper clamp on on-screen em height in pixels (default 64). */
   readonly maxPixelSize?: number;
   /**
-   * World em size in Mpc — controls the natural distance at which
-   * `pixelSize` is reached.  Default 0.01 Mpc/em (so a 24 px label
-   * with worldEmMpc=0.01 reads at 24 px when ~0.01 Mpc away).
+   * Deprecated since the shader switched to pixel-anchored sizing.
+   * Kept in the buffer (and in this type) for layout compatibility;
+   * the size math ignores it.  May be repurposed for fade-distance
+   * logic later.
    */
   readonly worldEmMpc?: number;
   /** Fade multiplier in [0,1] driven by youAreHereVisibility. Default 1. */
