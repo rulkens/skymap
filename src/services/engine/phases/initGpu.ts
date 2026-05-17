@@ -435,7 +435,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // raymarch accumulates into the same linear-light buffer before tone
   // mapping.  Stored on `state.gpu` so `destroy()` can release the
   // shared corner/index VBOs and every per-field GPU resource.
-  state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(device, 'rgba16float');
+  state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(device, 'rgba16float', state.gpu.fadeBgl!);
 
   // ── Half-res-to-HDR volume upsample pass ──────────────────────────
   //

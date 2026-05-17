@@ -398,7 +398,7 @@ describe('renderFrame visual baseline', () => {
     expect(drawSequence).toMatchInlineSnapshot(`
       [
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3]",
+          "argShape": "pass,Float32Array[16],Array[2],Array[3],function",
           "renderer": "scalar-volume",
         },
         {

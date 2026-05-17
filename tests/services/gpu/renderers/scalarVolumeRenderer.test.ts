@@ -55,6 +55,14 @@ function mockDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
+/** Stub callbacks for createScalarVolumeRenderer — avoids FadeRegistry dep in tests. */
+function stubCallbacks() {
+  return {
+    onFieldAdded: vi.fn(),
+    onFieldRemoved: vi.fn(),
+  };
+}
+
 describe('buildCubeModelMatrix', () => {
   it('maps unit-cube corner (0,0,0) to the cube origin in world space', () => {
     const m = buildCubeModelMatrix(fixture());
@@ -125,7 +133,7 @@ describe('createScalarVolumeRenderer setters', () => {
   // mutation contract IS the test surface.
 
   it('setDensityScale mutates the field entry for the given handle', () => {
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never);
     renderer.addField('h', fixture());
     renderer.setDensityScale('h', 7.5);
     expect(renderer.__getFieldEntryForTest('h')?.densityScale).toBeCloseTo(7.5, 6);
@@ -136,14 +144,14 @@ describe('createScalarVolumeRenderer setters', () => {
     // formula and would invert colour mapping.  The renderer collapses
     // it to 0 (a silent overlay) rather than throwing — same forgiving
     // pattern as setIntensity / setContrast.
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never);
     renderer.addField('h', fixture());
     renderer.setDensityScale('h', -3);
     expect(renderer.__getFieldEntryForTest('h')?.densityScale).toBe(0);
   });
 
   it('setDensityScale clamps NaN inputs to 0', () => {
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never);
     renderer.addField('h', fixture());
     renderer.setDensityScale('h', Number.NaN);
     expect(renderer.__getFieldEntryForTest('h')?.densityScale).toBe(0);
@@ -152,7 +160,7 @@ describe('createScalarVolumeRenderer setters', () => {
   it('setDensityScale on an unknown handle is a no-op', () => {
     // Mirrors the existing setContrast / setIntensity contract: a
     // late-firing settings callback for a removed field must not throw.
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never);
     expect(() => renderer.setDensityScale('nope', 1.0)).not.toThrow();
   });
 
@@ -162,7 +170,7 @@ describe('createScalarVolumeRenderer setters', () => {
     // addField (and any future production caller that bypasses
     // wireSlots) should get a visually-identity envelope by default,
     // not a silently-cropped cube.
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never);
     renderer.addField('h', fixture());
     const e = renderer.__getFieldEntryForTest('h');
     expect(e?.envelopeInner).toBeGreaterThanOrEqual(Math.sqrt(3));
@@ -170,7 +178,7 @@ describe('createScalarVolumeRenderer setters', () => {
   });
 
   it('setEnvelope writes both edges through to the field entry', () => {
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never);
     renderer.addField('h', fixture());
     renderer.setEnvelope('h', 0.9, 1.0);
     const e = renderer.__getFieldEntryForTest('h');
@@ -184,7 +192,7 @@ describe('createScalarVolumeRenderer setters', () => {
     // silently fall back to the visual identity (no envelope) than to
     // render garbage; matches the forgiving pattern of the sibling
     // setters.
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never);
     renderer.addField('h', fixture());
     renderer.setEnvelope('h', Number.NaN, Infinity);
     const e = renderer.__getFieldEntryForTest('h');
@@ -193,7 +201,7 @@ describe('createScalarVolumeRenderer setters', () => {
   });
 
   it('setEnvelope on an unknown handle is a no-op', () => {
-    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm');
+    const renderer = createScalarVolumeRenderer(mockDevice(), 'bgra8unorm', {} as never);
     expect(() => renderer.setEnvelope('nope', 0.9, 1.0)).not.toThrow();
   });
 });

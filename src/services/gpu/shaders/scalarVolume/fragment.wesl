@@ -27,6 +27,7 @@
 
 import package::lib::camera::CameraUniforms;
 import package::lib::util::hash21Hq;
+import package::lib::fadeUniforms::FadeUniforms;
 
 struct VolumeUniforms {
   cam: CameraUniforms,
@@ -101,6 +102,8 @@ struct VolumeUniforms {
 @group(0) @binding(2) var volumeSampler: sampler;
 @group(0) @binding(3) var palette: texture_1d<f32>;
 @group(0) @binding(4) var paletteSampler: sampler;
+
+@group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
 const STEP_COUNT: i32 = 192;
 const SATURATION_THRESHOLD: f32 = 0.99;
@@ -365,5 +368,11 @@ fn fs_main(in: FsIn, @builtin(position) fragCoord: vec4<f32>) -> @location(0) ve
     if (accum.a > SATURATION_THRESHOLD) { break; }
     t = t + stepLength;
   }
-  return accum;
+  // Apply the per-field fade opacity. Multiplying the entire vec4
+  // (rgb * a, a) by a scalar preserves the premultiplied-alpha
+  // invariant (output stays in the (rgb * faded_a, faded_a) shape
+  // the additive blend expects). The volume's per-step alpha
+  // composition is unchanged — we just dim the final integrated
+  // result.
+  return accum * fade.opacity;
 }

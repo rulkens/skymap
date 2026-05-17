@@ -105,7 +105,13 @@ export type ScalarVolumeRenderer = {
   getFieldPalette(handle: ScalarFieldHandle): ScalarFieldPaletteId | null;
   hasActiveFields(): boolean;
   listHandles(): ScalarFieldHandle[];
-  draw(pass: GPURenderPassEncoder, viewProj: mat4, viewportPx: Vec2, cameraPosWorld: Readonly<Vec3>): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    viewProj: mat4,
+    viewportPx: Vec2,
+    cameraPosWorld: Readonly<Vec3>,
+    fadeOpacityOf: (handle: ScalarFieldHandle) => number,
+  ): void;
   destroy(): void;
   /**
    * Test-only escape hatch: returns the live `FieldEntry` for the given

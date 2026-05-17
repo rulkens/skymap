@@ -5,7 +5,7 @@
  *
  * Public surface (factory shape, matching D.2 conventions):
  *
- *   - createScalarVolumeRenderer(device, format)
+ *   - createScalarVolumeRenderer(device, format, fadeBgl, callbacks)
  *   - addField(handle, cube)        → upload cube to a 3D r16float
  *                                       texture, register in the field map
  *   - removeField(handle)            → drop the texture, unregister
@@ -43,6 +43,7 @@ import type { ScalarVolumeRenderer } from '../../../@types/rendering/ScalarVolum
 import type { FieldEntry } from '../../../@types/rendering/FieldEntry';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPalettes';
 import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../../data/superGalacticTransform';
 import vsCode from '../shaders/scalarVolume/vertex.wesl?static';
@@ -170,6 +171,7 @@ export function buildCubeModelMatrix(cube: ScalarCube): mat4 {
 export function createScalarVolumeRenderer(
   device: GPUDevice,
   format: GPUTextureFormat,
+  fadeBgl: FadeUniformsBgl,
 ): ScalarVolumeRenderer {
   const cornerBuffer = device.createBuffer({
     size: CUBE_CORNERS.byteLength,
@@ -195,8 +197,28 @@ export function createScalarVolumeRenderer(
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'scalarVolume.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'scalarVolume.fragment');
 
+  // @group(0) layout — pipeline-specific (uniform + 3D texture + sampler
+  // + 1D texture + sampler). Built from a manual BindGroupLayout descriptor
+  // so the pipeline layout below can list it alongside the canonical fadeBgl.
+  const group0Bgl = device.createBindGroupLayout({
+    label: 'scalarVolume-bgl-group0',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '3d' } },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '1d' } },
+      { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    ],
+  });
+
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'scalarVolume-pipeline-layout',
+    bindGroupLayouts: [group0Bgl, fadeBgl],
+  });
+
   const pipeline = device.createRenderPipeline({
-    layout: 'auto',
+    label: 'scalarVolume-pipeline',
+    layout: pipelineLayout,
     vertex: {
       module: vsModule,
       entryPoint: 'vs_main',
@@ -225,7 +247,19 @@ export function createScalarVolumeRenderer(
       cullMode: 'front', // ← back faces only; see fragment.wesl module header
     },
   });
-  const bindGroupLayout = pipeline.getBindGroupLayout(0);
+  // The bind-group layout for @group(0). Derived from `group0Bgl` (the
+  // manually-created layout) rather than `pipeline.getBindGroupLayout(0)` so
+  // the layout identity is consistent: the same object used to build the
+  // pipeline is the one passed to `createBindGroup` in `addField`.
+  const bindGroupLayout = group0Bgl;
+
+  // Fade scratch buffer hoisted to factory scope to avoid per-frame
+  // ArrayBuffer allocation. One 16-byte buffer shared across all fields
+  // per draw call (values are written and consumed synchronously within
+  // one field's iteration step). Matches the closure-captured pattern
+  // in pointRenderer and filamentRenderer.
+  const fadeScratchBuffer = new ArrayBuffer(16);
+  const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   const fields = new Map<ScalarFieldHandle, FieldEntry>();
   // Per-draw frame counter — incremented every draw() and forwarded to
@@ -280,6 +314,7 @@ export function createScalarVolumeRenderer(
         existing.volumeTexture.destroy();
         existing.paletteTexture.destroy();
         existing.uniformBuffer.destroy();
+        existing.fadeBuffer.destroy();
         fields.delete(handle);
       }
       const modelMatrix = buildCubeModelMatrix(cube);
@@ -308,6 +343,16 @@ export function createScalarVolumeRenderer(
           { binding: 3, resource: paletteTexture.createView() },
           { binding: 4, resource: paletteSampler },
         ],
+      });
+      const fadeBuffer = device.createBuffer({
+        label: `scalarVolume-fade-uniform-${handle}`,
+        size: 16,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      const fadeBindGroup = device.createBindGroup({
+        label: `scalarVolume-fade-bg-${handle}`,
+        layout: fadeBgl,
+        entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
       });
       fields.set(handle, {
         handle,
@@ -359,6 +404,8 @@ export function createScalarVolumeRenderer(
         paletteTexture,
         uniformBuffer,
         bindGroup,
+        fadeBuffer,
+        fadeBindGroup,
       });
     },
     removeField(handle) {
@@ -367,6 +414,7 @@ export function createScalarVolumeRenderer(
       entry.volumeTexture.destroy();
       entry.paletteTexture.destroy();
       entry.uniformBuffer.destroy();
+      entry.fadeBuffer.destroy();
       fields.delete(handle);
     },
     setEnabled(handle, enabled) {
@@ -464,7 +512,7 @@ export function createScalarVolumeRenderer(
       // CPU state without round-tripping through a mocked GPU queue.
       return fields.get(handle);
     },
-    draw(pass, viewProj, viewportPx, cameraPosWorld) {
+    draw(pass, viewProj, viewportPx, cameraPosWorld, fadeOpacityOf) {
       pass.setPipeline(pipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.setIndexBuffer(indexBuffer, 'uint16');
@@ -510,7 +558,12 @@ export function createScalarVolumeRenderer(
         scratch[62] = e.trim;
         scratch[63] = frame;
         device.queue.writeBuffer(e.uniformBuffer, 0, scratch);
+        // Per-field fade.opacity write: read from the registry for this
+        // field's handle, write into the 16-byte fadeBuffer.
+        fadeScratchF32[0] = fadeOpacityOf(e.handle);
+        device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
         pass.setBindGroup(0, e.bindGroup);
+        pass.setBindGroup(1, e.fadeBindGroup);
         pass.drawIndexed(CUBE_INDICES.length);
       }
     },
@@ -519,6 +572,7 @@ export function createScalarVolumeRenderer(
         e.volumeTexture.destroy();
         e.paletteTexture.destroy();
         e.uniformBuffer.destroy();
+        e.fadeBuffer.destroy();
       }
       fields.clear();
       cornerBuffer.destroy();
