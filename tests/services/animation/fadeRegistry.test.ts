@@ -1,0 +1,116 @@
+import { describe, it, expect } from 'vitest';
+import { createFadeRegistry } from '../../../src/services/animation/fadeRegistry';
+import { Source } from '../../../src/data/sources';
+import type { FadeHandle } from '../../../src/@types/animation/FadeHandle';
+
+describe('createFadeRegistry', () => {
+  it('exposes the conventional label property', () => {
+    const r = createFadeRegistry();
+    expect(r.label).toBe('fadeRegistry');
+  });
+
+  it('opacityOf returns 1.0 for unregistered handles (fail-safe)', () => {
+    const r = createFadeRegistry();
+    const h: FadeHandle = { kind: 'survey', source: Source.SDSS };
+    expect(r.opacityOf(h, 1000)).toBe(1.0);
+  });
+
+  it('register defaults initial opacity to 0', () => {
+    const r = createFadeRegistry();
+    const h: FadeHandle = { kind: 'survey', source: Source.SDSS };
+    r.register(h);
+    expect(r.opacityOf(h, 1000)).toBe(0);
+  });
+
+  it('register honors a provided initial opacity', () => {
+    const r = createFadeRegistry();
+    const h: FadeHandle = { kind: 'overlay', id: 'milkyWay' };
+    r.register(h, 0.75);
+    expect(r.opacityOf(h, 1000)).toBe(0.75);
+  });
+
+  it('register is idempotent', () => {
+    const r = createFadeRegistry();
+    const h: FadeHandle = { kind: 'filaments' };
+    r.register(h, 0.5);
+    r.register(h, 0.0); // second call is a no-op; the existing controller is preserved.
+    expect(r.opacityOf(h, 1000)).toBe(0.5);
+  });
+
+  it('unregister drops the controller; opacityOf reverts to fail-safe 1.0', () => {
+    const r = createFadeRegistry();
+    const h: FadeHandle = { kind: 'filaments' };
+    r.register(h, 0);
+    r.unregister(h);
+    expect(r.opacityOf(h, 1000)).toBe(1.0);
+  });
+
+  it('serialization is stable across handle equality', () => {
+    const r = createFadeRegistry();
+    const h1: FadeHandle = { kind: 'survey', source: Source.SDSS };
+    const h2: FadeHandle = { kind: 'survey', source: Source.SDSS };
+    r.register(h1, 0.5);
+    // Two structurally-equal handles map to the same controller.
+    expect(r.opacityOf(h2, 1000)).toBe(0.5);
+  });
+
+  it('different discriminator values produce different keys', () => {
+    const r = createFadeRegistry();
+    const a: FadeHandle = { kind: 'survey', source: Source.SDSS };
+    const b: FadeHandle = { kind: 'survey', source: Source.Glade };
+    r.register(a, 0.25);
+    r.register(b, 0.75);
+    expect(r.opacityOf(a, 1000)).toBe(0.25);
+    expect(r.opacityOf(b, 1000)).toBe(0.75);
+  });
+
+  it('fadeTo throws when the handle is not registered', () => {
+    const r = createFadeRegistry();
+    const h: FadeHandle = { kind: 'filaments' };
+    expect(() => r.fadeTo(h, 1, 600)).toThrow();
+  });
+
+  it('fadeTo ramps opacity and resolves via tick', async () => {
+    const r = createFadeRegistry();
+    const h: FadeHandle = { kind: 'filaments' };
+    r.register(h, 0);
+    let done = false;
+    r.fadeTo(h, 1, 600).then(() => { done = true; });
+    expect(r.opacityOf(h, 0)).toBeCloseTo(0, 5);
+    expect(r.opacityOf(h, 300)).toBeCloseTo(0.5, 5);
+    expect(r.opacityOf(h, 600)).toBeCloseTo(1, 5);
+    r.tick(600);
+    await Promise.resolve();
+    expect(done).toBe(true);
+  });
+
+  it('setImmediate skips animation', () => {
+    const r = createFadeRegistry();
+    const h: FadeHandle = { kind: 'overlay', id: 'milkyWay' };
+    r.register(h, 0);
+    r.setImmediate(h, 1);
+    expect(r.opacityOf(h, 0)).toBe(1);
+    expect(r.isAnyAnimating(0)).toBe(false);
+  });
+
+  it('isAnyAnimating aggregates across multiple controllers', () => {
+    const r = createFadeRegistry();
+    const a: FadeHandle = { kind: 'survey', source: Source.SDSS };
+    const b: FadeHandle = { kind: 'filaments' };
+    r.register(a, 0);
+    r.register(b, 1);
+    expect(r.isAnyAnimating(0)).toBe(false);
+    r.fadeTo(a, 1, 600, /* nowMs */ undefined as never); // start fade-in (default now uses performance.now)
+    // Use a deterministic now via tick + isAnimating manually:
+    expect(r.isAnyAnimating(performance.now())).toBe(true);
+  });
+
+  it('destroy clears every controller', () => {
+    const r = createFadeRegistry();
+    const h: FadeHandle = { kind: 'filaments' };
+    r.register(h, 0.5);
+    r.destroy();
+    expect(r.opacityOf(h, 0)).toBe(1.0);
+    expect(r.isAnyAnimating(0)).toBe(false);
+  });
+});
