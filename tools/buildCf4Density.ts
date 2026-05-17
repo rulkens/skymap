@@ -35,7 +35,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { readNpy } from './parsers/npyReader';
-import { f32ToF16Bits } from './parsers/floatToHalf';
+import { f32ToF16Bits } from './utils/math/floatHalf';
 import { encodeScalarField } from '../src/data/scalarFieldFormat';
 import type { ScalarCube } from '../src/@types/data/ScalarCube';
 
@@ -83,7 +83,9 @@ export async function buildCf4Density(args: {
   // upcasting f32 → f64 here is a no-op for precision and lets the
   // packing loop stay a single code path.
   const npyBuf = readFileSync(npyPath);
-  const npy = readNpy(npyBuf.buffer.slice(npyBuf.byteOffset, npyBuf.byteOffset + npyBuf.byteLength));
+  const npy = readNpy(
+    npyBuf.buffer.slice(npyBuf.byteOffset, npyBuf.byteOffset + npyBuf.byteLength),
+  );
   if (npy.shape.length !== 3) {
     throw new Error(`buildCf4Density: expected 3D array, got shape ${npy.shape.join('x')}`);
   }

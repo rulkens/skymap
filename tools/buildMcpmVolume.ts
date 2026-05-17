@@ -5,7 +5,7 @@
  *
  * Pure Node/TS — no Python required. Mirrors the conventions of
  * `tools/buildCf4Density.ts`; the f16 packing helper is shared via
- * `tools/parsers/floatToHalf.ts`.
+ * `tools/utils/math/floatHalf.ts`.
  *
  * Output is gitignored and synced to R2 by `npm run sync-r2`.
  *
@@ -20,7 +20,7 @@
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { readNpy } from './parsers/npyReader';
-import { f32ToF16Bits } from './parsers/floatToHalf';
+import { f32ToF16Bits } from './utils/math/floatHalf';
 import { encodeScalarField } from '../src/data/scalarFieldFormat';
 import type { ScalarCube } from '../src/@types/data/ScalarCube';
 
