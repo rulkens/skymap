@@ -14,10 +14,10 @@
 //
 // WESL has no global state — '@group(N) @binding(M) var<uniform> X'
 // is a module-local declaration that cannot be exported across
-// modules. We re-declare 'u' and 'cloud' here using the structs
-// imported from 'points/io.wesl', so the layout numbers (and the
-// underlying byte layout via the imported 'Uniforms' / 'CloudUniforms'
-// structs) are guaranteed to match the colorFragment + pickFragment
+// modules. We re-declare 'u' here using the structs imported from
+// 'points/io.wesl', so the layout numbers (and the underlying byte
+// layout via the imported 'Uniforms' struct) are guaranteed to match
+// the colorFragment + pickFragment
 // counterparts. WGSL accepts the same '@group/@binding' pair appearing
 // in multiple compiled modules so long as the layout is identical;
 // importing a single authoritative struct definition makes drift
@@ -33,7 +33,7 @@ import package::points::io::VSOut;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
 import package::lib::billboard::expandBillboardScreen;
-import package::lib::cloudFade::CloudUniforms;
+import package::lib::sourceUniforms::SourceUniforms;
 import package::lib::colorIndex::ramp;
 import package::lib::astro::distanceModulus;
 import package::lib::selectionEncoding::packSelection;
@@ -47,16 +47,25 @@ import package::lib::selectionEncoding::packSelection;
 // the selection halo and boost the pick floor — see pickRenderer.ts).
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
-// ── @group(1) — per-source CloudFade uniforms ───────────────────────
+// ── @group(1) — FadeUniforms (declared but unused at vertex stage) ─
 //
-// Each loaded survey has its OWN @group(1) bind group whose buffer
-// carries CloudFade's 16-byte struct (opacity + sourceCode). Per-source
-// bind groups dodge the 'queue.writeBuffer' race entirely (different
-// uniform buffers per source means writes to one don't race against
-// draws against another). The vertex stage reads 'cloud.sourceCode'
-// to compose '(sourceCode << 27u) | instance_index' for the selection-
-// halo + pick-output paths.
-@group(1) @binding(0) var<uniform> cloud: CloudUniforms;
+// We don't re-declare FadeUniforms here because the vertex stage
+// never reads it — only the fragment stage multiplies fade.opacity
+// into alpha. The pipeline layout's @group(1) slot is still present
+// (the fragment module declares it), so the bind group built by the
+// renderer is valid; the vertex module simply doesn't reference the
+// binding.
+
+// ── @group(2) — per-source SourceUniforms ──────────────────────────
+//
+// Each loaded survey has its OWN @group(2) bind group whose buffer
+// carries SourceUniforms's 16-byte struct (sourceCode + 12 bytes pad).
+// Per-source bind groups dodge the 'queue.writeBuffer' race entirely
+// (different uniform buffers per source means writes to one don't
+// race against draws against another). The vertex stage reads
+// 'source.sourceCode' to compose '(sourceCode << 27u) | instance_index'
+// for the selection-halo + pick-output paths.
+@group(2) @binding(0) var<uniform> source: SourceUniforms;
 
 // ─── vertex stage ─────────────────────────────────────────────────────
 //
@@ -93,10 +102,10 @@ fn vs(
 
   // Recover the per-instance packed identity now so both the early-out
   // and the main path can share one source of truth. Bits 27..31 = the
-  // 5-bit 'cloud.sourceCode' (this draw's survey, set per-source via
-  // the @group(1) bind group); bits 0..26 = the GPU's
+  // 5-bit 'source.sourceCode' (this draw's survey, set per-source via
+  // the @group(2) bind group); bits 0..26 = the GPU's
   // '@builtin(instance_index)' (local 0..count-1).
-  let myPacked = packSelection(cloud.sourceCode, ii);
+  let myPacked = packSelection(source.sourceCode, ii);
 
   if (u.biasMode == 1u && absMag > u.absMagLimit) {
     var earlyOut: VSOut;
