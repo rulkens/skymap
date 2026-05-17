@@ -81,7 +81,7 @@ export function createFadeRegistry(): FadeRegistry {
     nowMs?: number,
   ): Promise<void> {
     const c = requireController(handle);
-    const now = nowMs ?? 0;
+    const now = nowMs ?? performance.now();
     const dur = durationMs ?? (
       target > c.currentOpacity(now) ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS
     );

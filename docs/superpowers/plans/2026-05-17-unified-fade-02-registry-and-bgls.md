@@ -212,7 +212,7 @@ describe('createFadeRegistry', () => {
     const h: FadeHandle = { kind: 'filaments' };
     r.register(h, 0);
     let done = false;
-    r.fadeTo(h, 1, 600).then(() => { done = true; });
+    r.fadeTo(h, 1, 600, 0).then(() => { done = true; });
     expect(r.opacityOf(h, 0)).toBeCloseTo(0, 5);
     expect(r.opacityOf(h, 300)).toBeCloseTo(0.5, 5);
     expect(r.opacityOf(h, 600)).toBeCloseTo(1, 5);
