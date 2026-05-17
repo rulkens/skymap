@@ -410,6 +410,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     toneMapCurve: state.settings.tonemap.curve,
     exposure: state.settings.tonemap.exposure,
     lodMode: state.sources.lodMode,
+    // Use drawMask (not pickMask) for the initial UI seed — at bootstrap
+    // time the two are identical (both initialised from DEFAULT_VISIBLE_SOURCE_MASK
+    // in engine.ts), but if a future toggle-then-immediate-reseed
+    // sequence ever materialises, drawMask is the better choice: it
+    // tracks what the user actually sees, matching the legacy
+    // visibleMask semantics the UI was built against.
     visibleSourceMask: state.sources.drawMask,
     labelCategoryVisibility: state.settings.labelCategoryVisibility,
   });

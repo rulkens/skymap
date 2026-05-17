@@ -174,7 +174,7 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 // The two parameters use intersection-typed picks so the function signature
 // remains narrow (only the fields it actually reads) while accepting the
 // full `EngineState` and `EngineCallbacks` types from production callers.
-export async function setSourceVisibleForTest(
+export async function setSourceVisibleImpl(
   state: Pick<import('../../@types/engine/state/EngineState').EngineState, 'sources' | 'subsystems'>,
   opts: { cb: Pick<EngineCallbacks, 'sources'> },
   source: Source,
@@ -203,6 +203,15 @@ export async function setSourceVisibleForTest(
     await state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
   } else {
     await state.subsystems.fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
+    // Re-read opacity rather than closing over `visible`, because a
+    // concurrent toggle may have reversed the fade by the time we
+    // resume here (off→on within the 100ms fade-out window). The
+    // last-issued fade wins: if a fade-in started while we were
+    // awaiting fade-out, opacityOf returns > 0 and we leave the
+    // drawMask bit set so the renderer keeps drawing through the
+    // ramp-up. The promise we awaited is the OLDER fade's settle —
+    // by the time it resolves, the registry's current target is
+    // whatever the newer call set, not 0.
     const finalOpacity = state.subsystems.fades.opacityOf(handle);
     if (finalOpacity === 0) {
       state.sources.drawMask = maskWithout(state.sources.drawMask, source);
@@ -212,6 +221,11 @@ export async function setSourceVisibleForTest(
   }
   state.subsystems.scheduler.requestRender();
 }
+
+// Test-only alias. The implementation lives at module scope as
+// `setSourceVisibleImpl` so it's directly testable; this re-export
+// matches the import name used in tests written before the rename.
+export { setSourceVisibleImpl as setSourceVisibleForTest };
 
 export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────
@@ -1010,7 +1024,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   async function setSourceVisible(source: Source, visible: boolean): Promise<void> {
     // Delegate to the module-scope helper so tests can drive the same
     // logic against a partial-state stub without a full GPU engine.
-    return setSourceVisibleForTest(state, { cb }, source, visible);
+    return setSourceVisibleImpl(state, { cb }, source, visible);
   }
 
   function setTier(tier: Tier): void {

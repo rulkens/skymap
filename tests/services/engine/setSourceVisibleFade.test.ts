@@ -59,8 +59,9 @@ function makeFixture(initialMask: number) {
 describe('setSourceVisible — fade orchestration', () => {
   it('toggle OFF flips pickMask immediately, awaits FADE_OUT_DURATION_MS, then clears drawMask', async () => {
     const fx = makeFixture(0b11111);
-    // After the fade-out resolves, opacityOf returns 0 — drawMask should clear.
-    fx.fades.opacityOf = vi.fn(() => 0);
+    // The fixture default opacityOf returns 0, matching the post-fade
+    // state — no reassignment needed for this case (the rapid-toggle
+    // case below DOES override to simulate the concurrent fade-in).
 
     await setSourceVisibleForTest(fx.state as never, { cb: {} } as never, Source.SDSS, false);
 
