@@ -117,10 +117,21 @@ passed.
 `setImmediate(value)` skips animation entirely — used at engine
 bootstrap to register always-on overlays at opacity 1.0.
 
-The smoothstep duration default is `CLOUD_FADE_DURATION_MS = 600`
-preserved as `FADE_DEFAULT_DURATION_MS`. Callers can pass any
-duration; tours will likely use larger values for dramatic
-transitions.
+Two default durations are exported, reflecting an asymmetric UX
+pattern: fade-out feels best when it's nearly instant (the user
+asked for something to disappear; show it disappearing), fade-in
+feels best when it's leisurely (the user wants the new thing to
+arrive smoothly, not pop).
+
+- `FADE_IN_DURATION_MS = 600` — replaces today's
+  `CLOUD_FADE_DURATION_MS`. The "things flowing in" feel.
+- `FADE_OUT_DURATION_MS = 100` — almost-instant smoothstep dim. Long
+  enough to avoid a hard cut, short enough that the user perceives
+  the response as immediate.
+
+Callers pass durations explicitly to `fadeTo`; the constants are
+defaults used by the loading slots and UI toggle handlers. Tours
+will typically use larger values for dramatic transitions.
 
 ### Registry: `FadeRegistry`
 
@@ -260,10 +271,10 @@ tier swaps or fade timing.
 async function commitGalaxyCatalog(source: Source, newCatalog: GalaxyCatalog) {
   const handle: FadeHandle = { kind: 'survey', source };
   if (renderer.hasData(source)) {
-    await state.subsystems.fades.fadeTo(handle, 0, FADE_DEFAULT_DURATION_MS);
+    await state.subsystems.fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
   }
   renderer.upload(source, newCatalog); // destroys old buffer, uploads new
-  state.subsystems.fades.fadeTo(handle, 1, FADE_DEFAULT_DURATION_MS);
+  state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
 }
 ```
 
@@ -274,18 +285,20 @@ registry's initial opacity for survey handles).
 For a **tier swap**, the sequence is:
 
 1. `t=0`: user clicks tier change, slot commit awakened.
-2. `t=0..600 ms`: `fades.fadeTo(handle, 0, 600)` smoothly ramps the
-   layer's opacity from its current value (typically 1.0) to 0. The
-   renderer keeps drawing the *old* buffer with the falling alpha.
-3. `t=600 ms`: fade-out resolves. `renderer.upload(source,
+2. `t=0..100 ms`: `fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS)`
+   quickly ramps the layer's opacity from its current value (typically
+   1.0) to 0. The renderer keeps drawing the *old* buffer with the
+   falling alpha. The fast fade-out makes the tier-change click feel
+   immediately responsive.
+3. `t=100 ms`: fade-out resolves. `renderer.upload(source,
    newCatalog)` destroys the old vertex buffer and writes the new
    one. The fade uniform is still at 0.
-4. `t=600 ms..onwards`: `fades.fadeTo(handle, 1, 600)` ramps the
-   layer back to full opacity over the next 600 ms. The renderer
-   draws the new buffer.
+4. `t=100 ms..onwards`: `fades.fadeTo(handle, 1, FADE_IN_DURATION_MS)`
+   ramps the layer back to full opacity over the next 600 ms. The
+   renderer draws the new buffer.
 
-Total: ~1.2 s for a tier swap, slower than today's near-instant
-swap but smooth on both sides of the transition.
+Total: ~700 ms for a tier swap when the upload itself is quick.
+Asymmetric durations: out is fast (responsive), in is slow (smooth).
 
 For the largest tier (`glade-large`, ~130 MB), the upload + decode +
 bake step in (3) may itself take 1-2 seconds. During this window the
@@ -317,7 +330,8 @@ function toggleSurvey(source: Source, on: boolean) {
   const handle: FadeHandle = { kind: 'survey', source };
   state.sources.pickMask ^= (1 << source);
   const target = on ? 1 : 0;
-  await state.subsystems.fades.fadeTo(handle, target, 400);
+  const duration = on ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS;
+  await state.subsystems.fades.fadeTo(handle, target, duration);
   if (!on) state.sources.drawMask &= ~(1 << source);
   else state.sources.drawMask |= (1 << source);
 }
@@ -468,9 +482,11 @@ src/@types/rendering/FilamentRenderer.d.ts       # remove isFading from surface
 ### Integration tests
 
 - **`galaxyCatalogSlotFade.test.ts`**: first commit triggers
-  `fadeTo(handle, 1, 600)`. Second commit (tier swap) awaits
-  `fadeTo(handle, 0, 600)` before calling `renderer.upload`, then
-  triggers `fadeTo(handle, 1, 600)`.
+  `fadeTo(handle, 1, FADE_IN_DURATION_MS)`. Second commit (tier swap)
+  awaits `fadeTo(handle, 0, FADE_OUT_DURATION_MS)` before calling
+  `renderer.upload`, then triggers
+  `fadeTo(handle, 1, FADE_IN_DURATION_MS)`. Assert the durations are
+  asymmetric (out faster than in).
 - **`pointRendererFade.test.ts`**: per-frame draw reads opacity from
   registry; written into the per-source `fadeBuffer`; `sourceBuffer`
   written only at upload time, not per frame.
@@ -479,8 +495,9 @@ src/@types/rendering/FilamentRenderer.d.ts       # remove isFading from surface
 - **`filamentRendererFade.test.ts`**: single fade uniform; fade-in on
   first upload.
 - **`toggleFade.test.ts`**: clicking a survey toggle off flips
-  `pickMask` immediately, awaits `fadeTo(handle, 0, 400)`, then
-  flips `drawMask`. Double-toggle within the fade retargets cleanly.
+  `pickMask` immediately, awaits `fadeTo(handle, 0, FADE_OUT_DURATION_MS)`,
+  then flips `drawMask`. Toggle on uses `FADE_IN_DURATION_MS`.
+  Double-toggle within the fade retargets cleanly.
 
 ### Visual baselines
 
