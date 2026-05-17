@@ -19,7 +19,6 @@
  */
 import { readFileSync } from 'node:fs';
 import { decodeScalarField } from '../src/data/scalarFieldFormat';
-import { SG_TO_EQ_MATRIX } from '../src/data/superGalacticTransform';
 import {
   CLUSTER_ANCHORS,
   SUPERCLUSTER_ANCHORS,
@@ -27,65 +26,17 @@ import {
   raDecDistToEqCart,
 } from '../src/data/clusterAnchors';
 import type { ClusterAnchor } from '../src/@types/data/ClusterAnchor';
-import type { Mat3 } from '../src/@types/math/Mat3';
 import type { Vec3 } from '../src/@types/math/Vec3';
+import {
+  eqToSg,
+  eqCartToRaDecDist,
+  voxelToEqCart,
+} from './utils/math/coordinates';
+import { f16BitsToFloat } from './utils/math/floatHalf';
+import { percentileOf } from './utils/math/percentile';
 
 /** Local alias for read-clarity in the per-list loops below. */
 type NamedAnchor = ClusterAnchor;
-
-/**
- * Transpose of a column-major Mat3.  For an orthonormal rotation this
- * is its inverse.  m[c*3 + r] → m'[r*3 + c].
- */
-function transpose3(m: Mat3): Mat3 {
-  return [
-    m[0]!, m[3]!, m[6]!,
-    m[1]!, m[4]!, m[7]!,
-    m[2]!, m[5]!, m[8]!,
-  ];
-}
-
-const EQ_TO_SG: Mat3 = transpose3(SG_TO_EQ_MATRIX);
-
-/** Apply a column-major Mat3 to a Vec3: result[r] = Σ_c m[c*3 + r] · v[c]. */
-function applyMat3(m: Mat3, v: Vec3): Vec3 {
-  return [
-    m[0]! * v[0] + m[3]! * v[1] + m[6]! * v[2],
-    m[1]! * v[0] + m[4]! * v[1] + m[7]! * v[2],
-    m[2]! * v[0] + m[5]! * v[1] + m[8]! * v[2],
-  ];
-}
-
-function eqToSg(eq: Vec3): Vec3 {
-  return applyMat3(EQ_TO_SG, eq);
-}
-
-function sgToEq(sg: Vec3): Vec3 {
-  return applyMat3(SG_TO_EQ_MATRIX, sg);
-}
-
-/** Equatorial Cartesian → (RA hours, Dec deg, distance Mpc). */
-function eqCartToRaDecDist(eq: Vec3): {
-  raHours: number;
-  decDeg: number;
-  distMpc: number;
-} {
-  const d = Math.hypot(eq[0], eq[1], eq[2]);
-  const decDeg = (Math.asin(eq[2] / d) * 180) / Math.PI;
-  let raDeg = (Math.atan2(eq[1], eq[0]) * 180) / Math.PI;
-  if (raDeg < 0) raDeg += 360;
-  return { raHours: raDeg / 15, decDeg, distMpc: d };
-}
-
-/** Decode a single f16 raw-bit value to a JS number. */
-function f16BitsToFloat(bits: number): number {
-  const sign = (bits & 0x8000) >> 15;
-  const exp = (bits & 0x7c00) >> 10;
-  const mant = bits & 0x03ff;
-  if (exp === 0) return (sign ? -1 : 1) * (mant / 1024) * Math.pow(2, -14);
-  if (exp === 31) return mant === 0 ? (sign ? -Infinity : Infinity) : NaN;
-  return (sign ? -1 : 1) * (1 + mant / 1024) * Math.pow(2, exp - 15);
-}
 
 function sampleAtAnchor(
   decoded: Float64Array,
@@ -108,34 +59,9 @@ function sampleAtAnchor(
   return { vox: [xi, yi, zi], value, pct };
 }
 
-function percentileOf(value: number, sortedAsc: Float64Array): number {
-  let lo = 0;
-  let hi = sortedAsc.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >>> 1;
-    if (sortedAsc[mid]! <= value) lo = mid;
-    else hi = mid - 1;
-  }
-  return (lo / (sortedAsc.length - 1)) * 100;
-}
-
-function voxelToEqCart(
-  vox: Vec3,
-  dims: Vec3,
-  voxelSize: number,
-): Vec3 {
-  // Voxel centre in SG Mpc: (vox - dims/2 + 0.5) * voxelSize.
-  const sgX = (vox[0] - dims[0] / 2 + 0.5) * voxelSize;
-  const sgY = (vox[1] - dims[1] / 2 + 0.5) * voxelSize;
-  const sgZ = (vox[2] - dims[2] / 2 + 0.5) * voxelSize;
-  return sgToEq([sgX, sgY, sgZ]);
-}
-
 function main(): void {
   const buf = readFileSync('public/data/cf4_density.scfd');
-  const cube = decodeScalarField(
-    buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
-  );
+  const cube = decodeScalarField(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
   const dims = cube.dims;
   const [Nx, Ny, Nz] = dims;
   const voxelSize = cube.voxelSize;
@@ -224,7 +150,11 @@ function main(): void {
     const xi = off % Nx;
     const eq = voxelToEqCart([xi, yi, zi], dims, voxelSize);
     const sky = eqCartToRaDecDist(eq);
-    const raStr = `${Math.floor(sky.raHours).toString().padStart(2, '0')}h${Math.floor((sky.raHours % 1) * 60).toString().padStart(2, '0')}m`;
+    const raStr = `${Math.floor(sky.raHours).toString().padStart(2, '0')}h${Math.floor(
+      (sky.raHours % 1) * 60,
+    )
+      .toString()
+      .padStart(2, '0')}m`;
     const decStr = `${sky.decDeg >= 0 ? '+' : ''}${sky.decDeg.toFixed(1)}°`;
     console.log(
       `  ${(n + 1).toString().padStart(2)}. δ=+${value.toFixed(3)}  vox(${xi.toString().padStart(3)},${yi.toString().padStart(3)},${zi.toString().padStart(3)})  RA=${raStr}  Dec=${decStr}  d=${sky.distMpc.toFixed(0)} Mpc`,
@@ -243,7 +173,11 @@ function main(): void {
     const xi = off % Nx;
     const eq = voxelToEqCart([xi, yi, zi], dims, voxelSize);
     const sky = eqCartToRaDecDist(eq);
-    const raStr = `${Math.floor(sky.raHours).toString().padStart(2, '0')}h${Math.floor((sky.raHours % 1) * 60).toString().padStart(2, '0')}m`;
+    const raStr = `${Math.floor(sky.raHours).toString().padStart(2, '0')}h${Math.floor(
+      (sky.raHours % 1) * 60,
+    )
+      .toString()
+      .padStart(2, '0')}m`;
     const decStr = `${sky.decDeg >= 0 ? '+' : ''}${sky.decDeg.toFixed(1)}°`;
     console.log(
       `  ${(n + 1).toString().padStart(2)}. δ=${value.toFixed(3)}  vox(${xi.toString().padStart(3)},${yi.toString().padStart(3)},${zi.toString().padStart(3)})  RA=${raStr}  Dec=${decStr}  d=${sky.distMpc.toFixed(0)} Mpc`,
