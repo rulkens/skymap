@@ -67,12 +67,15 @@ const DEPS_STUB = {} as PassDeps;
 // ---------------------------------------------------------------------------
 
 describe('volumeUpsamplePass.enabled', () => {
-  it('returns false when volumesEnabled is false', () => {
+  it('returns false when volumesEnabled is false and master fade is fully out', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true },
+        scalarVolumeRenderer: { hasActiveFields: () => true, listHandles: () => [] },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
+      // Master opacity 0 = no fade-out tail in flight. The gate
+      // short-circuits to false when both gates miss.
+      subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings({ volumesEnabled: false }))).toBe(false);
   });
@@ -117,9 +120,10 @@ describe('volumeUpsamplePass.enabled', () => {
   it('returns true when every gate passes', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true },
+        scalarVolumeRenderer: { hasActiveFields: () => true, listHandles: () => [] },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
+      subsystems: { fades: { opacityOf: () => 1 } },
     } as unknown as EngineState;
     expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });

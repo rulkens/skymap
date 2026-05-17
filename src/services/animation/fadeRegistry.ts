@@ -43,11 +43,12 @@ import { createFadeController, FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from 
 
 function serializeFadeHandle(h: FadeHandle): string {
   switch (h.kind) {
-    case 'survey':      return `survey:${h.source}`;
-    case 'filaments':   return 'filaments';
-    case 'scalarField': return `scalarField:${h.field}`;
-    case 'labelLayer':  return `labelLayer:${h.layer}`;
-    case 'overlay':     return `overlay:${h.id}`;
+    case 'survey':         return `survey:${h.source}`;
+    case 'filaments':      return 'filaments';
+    case 'scalarField':    return `scalarField:${h.field}`;
+    case 'labelLayer':     return `labelLayer:${h.layer}`;
+    case 'overlay':        return `overlay:${h.id}`;
+    case 'volumesMaster':  return 'volumesMaster';
   }
 }
 

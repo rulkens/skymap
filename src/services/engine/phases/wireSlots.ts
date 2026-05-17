@@ -396,6 +396,17 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   state.subsystems.fades.register({ kind: 'overlay', id: 'proceduralDisks' }, 1);
   state.subsystems.fades.register({ kind: 'overlay', id: 'texturedImpostors' }, 1);
 
+  // Scalar-volume master gate. Registered at the current settings
+  // value so a default-on session sees 1.0 from frame 1 (and the
+  // encodeHdr* multipliers don't accidentally suppress the per-field
+  // opacities); a default-off session sits at 0 until the user
+  // toggles master on, at which point setVolumesEnabled fires fadeTo
+  // up to 1 over FADE_IN_DURATION_MS.
+  state.subsystems.fades.register(
+    { kind: 'volumesMaster' },
+    state.settings.volumes.masterEnabled ? 1 : 0,
+  );
+
   // Register the four label-layer fade handles. youAreHere / poi /
   // galaxyNames start at 0 — their producers fire fadeTo(1) on first
   // non-empty emit (see youAreHereSubsystem + poiSubsystem). scaleBar

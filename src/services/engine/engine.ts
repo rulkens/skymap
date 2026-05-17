@@ -1068,6 +1068,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // NOT fire an echo callback (no `cb.onVolumesEnabledChange`)
     // because the React layer owns this value optimistically.
     state.settings.volumes.masterEnabled = enabled;
+    // Drive the FadeRegistry on the volumesMaster handle. The
+    // encodeHdr* sites multiply this master opacity into every
+    // per-field fade lookup, so the entire scalar-volume subsystem
+    // ramps in lockstep on master toggle. The pass-enabled gate
+    // accepts EITHER masterEnabled === true OR opacity > 0, so the
+    // pass keeps blitting through the ~100 ms fade-out tail.
+    void state.subsystems.fades.fadeTo(
+      { kind: 'volumesMaster' },
+      enabled ? 1 : 0,
+      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+    );
     state.subsystems.scheduler.requestRender();
   }
 

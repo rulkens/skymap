@@ -24,6 +24,13 @@
  *                    disks, textured impostors). Registered at
  *                    opacity 1.0 via setImmediate. Discriminator:
  *                    `id: OverlayId`.
+ *   - volumesMaster — the master enable gate for the whole scalar-
+ *                    volume subsystem. Used by setVolumesEnabled and
+ *                    the encodeVolumes / volumeUpsamplePass gates to
+ *                    smooth the master toggle. Multiplied into each
+ *                    scalarField's per-frame opacity at the call site,
+ *                    so a master fade-out drags every field down with
+ *                    it. No discriminator.
  *
  * Future kinds (e.g. `surveyChunk` for chunked galaxy loading) extend
  * the union without breaking existing consumers because every consumer
@@ -43,4 +50,5 @@ export type FadeHandle =
   | { readonly kind: 'filaments' }
   | { readonly kind: 'scalarField'; readonly field: ScalarFieldHandle }
   | { readonly kind: 'labelLayer'; readonly layer: LabelLayerId }
-  | { readonly kind: 'overlay'; readonly id: OverlayId };
+  | { readonly kind: 'overlay'; readonly id: OverlayId }
+  | { readonly kind: 'volumesMaster' };
