@@ -13,13 +13,16 @@
  *
  * ### Name resolution
  *
- *   displayName = commonName
- *              ?? names[names.length - 1]   // last name is often the readable one
- *              ?? names[0]
+ *   displayName = names[0]
  *              ?? id
  *
- * The fallback chain means existing entries (without `commonName`)
- * still produce readable labels — "NGC 6744" rather than "ngc-6744".
+ * Mirrors `galaxyInfoBuilder.ts`'s headline derivation for the famous
+ * case (`famous?.names[0] ?? …`) so the POI label and the InfoCard
+ * headline always show the same string.  The `commonName` field on the
+ * meta entry (e.g. "Andromeda Galaxy") is currently unused by the
+ * label producer — preferring it here would diverge from InfoCard.
+ * If/when the InfoCard learns to prefer commonName for famous rows,
+ * the helper below can mirror that change in lockstep.
  *
  * ### Pseudo entries
  *
@@ -74,13 +77,16 @@ const FAMOUS_LABEL_MIN_OFFSET_MPC = 0.05;
 const FAMOUS_LABEL_OFFSET_FACTOR = 1.5;
 
 function displayNameFor(e: FamousMetaEntry): string {
-  if (e.commonName !== undefined && e.commonName.length > 0) return e.commonName;
-  if (e.names.length > 0) {
-    const last = e.names[e.names.length - 1];
-    if (last !== undefined && last.length > 0) return last;
-    const first = e.names[0];
-    if (first !== undefined && first.length > 0) return first;
-  }
+  // Mirror of `galaxyInfoBuilder.ts`'s `displayName` derivation for the
+  // famous case (`famous?.names[0] ?? …`).  The InfoCard headline and
+  // the POI label use the same primary identifier so users see the
+  // same string whether they hover the dot or click it.  `commonName`
+  // (e.g. "Andromeda Galaxy") is intentionally NOT preferred here —
+  // doing so would diverge from the InfoCard derivation; if/when the
+  // InfoCard learns to prefer `commonName` for its headline, this
+  // helper can mirror that change in lockstep.
+  const first = e.names[0];
+  if (first !== undefined && first.length > 0) return first;
   return e.id;
 }
 

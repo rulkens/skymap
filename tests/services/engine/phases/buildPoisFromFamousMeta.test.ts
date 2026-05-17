@@ -33,7 +33,10 @@ describe('buildPoisFromFamousMeta', () => {
     const pois = buildPoisFromFamousMeta(meta, catalog);
     expect(pois).toHaveLength(2);
     expect(pois[0]!.id).toBe('famous-m31');
-    expect(pois[0]!.name).toBe('Andromeda Galaxy');
+    // Uses names[0] — matches galaxyInfoBuilder's headline derivation
+    // exactly.  The seed's `commonName` is currently NOT preferred (see
+    // buildPoisFromFamousMeta's name-resolution docstring).
+    expect(pois[0]!.name).toBe('M31');
     expect(pois[0]!.category).toBe('famousGalaxy');
     expect(pois[0]!.worldPos).toEqual([
       catalog.positions[0],
@@ -46,7 +49,7 @@ describe('buildPoisFromFamousMeta', () => {
     // labelAnchorOffsetMpc = max(0.05, 1.5 * 67 / 1000) = max(0.05, 0.1005) = 0.1005
     expect(pois[0]!.labelAnchorOffsetMpc).toBeCloseTo(0.1005, 6);
     expect(pois[1]!.id).toBe('famous-m33');
-    expect(pois[1]!.name).toBe('M33'); // falls back to last name in names[]
+    expect(pois[1]!.name).toBe('M33'); // names[0] — InfoCard parity
     // M33 diameter 30 kpc → 1.5 * 30/1000 = 0.045, below floor 0.05 → uses floor.
     expect(pois[1]!.labelAnchorOffsetMpc).toBeCloseTo(0.05, 6);
   });
@@ -68,8 +71,10 @@ describe('buildPoisFromFamousMeta', () => {
     expect(pois[0]!.id).toBe('famous-m31');
   });
 
-  it('uses commonName when present, then last name, then first name, then id', () => {
+  it('uses names[0] (mirroring galaxyInfoBuilder); falls back to id when names is empty', () => {
     const meta: FamousMetaEntry[] = [
+      // commonName deliberately set but expected to be IGNORED — the
+      // label producer mirrors galaxyInfoBuilder, which uses names[0].
       { id: 'a', names: ['A1', 'A2'], commonName: 'Curated A', description: '', type: '' },
       { id: 'b', names: ['B1', 'B2'], description: '', type: '' },
       { id: 'c', names: ['C1'], description: '', type: '' },
@@ -77,7 +82,7 @@ describe('buildPoisFromFamousMeta', () => {
     ];
     const catalog = makeCatalog([1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0], [10, 10, 10, 10]);
     const pois = buildPoisFromFamousMeta(meta, catalog);
-    expect(pois.map((p) => p.name)).toEqual(['Curated A', 'B2', 'C1', 'd']);
+    expect(pois.map((p) => p.name)).toEqual(['A1', 'B1', 'C1', 'd']);
   });
 
   it('returns empty array when meta is empty', () => {
