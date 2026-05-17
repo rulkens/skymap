@@ -7,7 +7,7 @@
     ],
     "description": "NGC 6744 is an intermediate spiral galaxy in the constellation Pavo (Peacock). Its velocity with respect to the cosmic microwave background is 802 ± 3 km/s, which corresponds to a Hubble distance of 38.6 ± 2.7 Mly (11.82 ± 0.83 Mpc). However, 21 non redshift measurements give a distance of 23.63 ± 1.68 Mly (7.244 ± 0.514 Mpc). It was discovered on 30 June 1826 by Scottish astronomer James Dunlop, observing from Parramatta, Australia. It has a mass of 5.92×1010 M☉.",
     "type": "Sbc",
-    "commonName": "NGC 6744"
+    "commonName": "Milky Way Twin"
   },
   {
     "id": "c12",
@@ -107,7 +107,7 @@
     ],
     "description": "",
     "type": "Sbc",
-    "commonName": "NGC 7331"
+    "commonName": "Deer Lick Galaxy"
   },
   {
     "id": "c32",
@@ -177,7 +177,7 @@
     ],
     "description": "NGC 7479 is a barred spiral galaxy about 105 million light-years away in the constellation Pegasus. William Herschel discovered it in 1784. NGC 7479 is also recognized as a Seyfert galaxy and a LINER undergoing starburst activity not only on the nucleus and the outer arms, but also across the bar of the galaxy, where most of the stars were formed in the last 100 million years. Polarization studies of this galaxy indicate that it recently underwent a minor merger and that it is unique in the radio continuum, with arms opening in a direction opposite to the optical arms. This feature, along with the asymmetrical arms of the galaxy and the intense star formation activity are attributed to a merger with a smaller galaxy. This galaxy is similar in both size and morphology to the barred spiral NGC 1300.",
     "type": "SBbc",
-    "commonName": "NGC 7479"
+    "commonName": "Superman Galaxy"
   },
   {
     "id": "c45",
@@ -277,7 +277,7 @@
     ],
     "description": "",
     "type": "SABc",
-    "commonName": "NGC 247"
+    "commonName": "Needle's Eye Galaxy"
   },
   {
     "id": "c65",
@@ -317,7 +317,7 @@
     ],
     "description": "",
     "type": "Scd",
-    "commonName": "NGC 300"
+    "commonName": "Sculptor Pinwheel Galaxy"
   },
   {
     "id": "c72",
@@ -327,7 +327,7 @@
     ],
     "description": "",
     "type": "SBm",
-    "commonName": "NGC 55"
+    "commonName": "String of Pearls Galaxy"
   },
   {
     "id": "c77",
@@ -376,8 +376,7 @@
       "NGC 5866"
     ],
     "description": "",
-    "type": "S0-a",
-    "commonName": "Spindle Galaxy"
+    "type": "S0-a"
   },
   {
     "id": "m104",

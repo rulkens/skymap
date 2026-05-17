@@ -5,7 +5,7 @@
       "C101",
       "NGC 6744"
     ],
-    "commonName": "NGC 6744",
+    "commonName": "Milky Way Twin",
     "ra": 287.4418785,
     "dec": -63.8574729,
     "distanceMpc": 9.1411324147025,
@@ -192,7 +192,7 @@
       "C30",
       "NGC 7331"
     ],
-    "commonName": "NGC 7331",
+    "commonName": "Deer Lick Galaxy",
     "ra": 339.267279,
     "dec": 34.4156195,
     "distanceMpc": 14.534496779183158,
@@ -323,7 +323,7 @@
       "C44",
       "NGC 7479"
     ],
-    "commonName": "NGC 7479",
+    "commonName": "Superman Galaxy",
     "ra": 346.236102,
     "dec": 12.3228077,
     "distanceMpc": 28.747142857142858,
@@ -503,7 +503,7 @@
       "C62",
       "NGC 247"
     ],
-    "commonName": "NGC 247",
+    "commonName": "Needle's Eye Galaxy",
     "ra": 11.7857175,
     "dec": -20.7604499,
     "distanceMpc": 3.71364170191956,
@@ -576,7 +576,7 @@
       "C70",
       "NGC 300"
     ],
-    "commonName": "NGC 300",
+    "commonName": "Sculptor Pinwheel Galaxy",
     "ra": 13.7230245,
     "dec": -37.6844766,
     "distanceMpc": 2.0267491520989647,
@@ -595,7 +595,7 @@
       "C72",
       "NGC 55"
     ],
-    "commonName": "NGC 55",
+    "commonName": "String of Pearls Galaxy",
     "ra": 3.7233674999999997,
     "dec": -39.1965824,
     "distanceMpc": 2.1125159662408515,
@@ -687,7 +687,6 @@
       "M102",
       "NGC 5866"
     ],
-    "commonName": "Spindle Galaxy",
     "ra": 226.6229835,
     "dec": 55.7632193,
     "distanceMpc": 14.421153515248696,
