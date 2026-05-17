@@ -57,16 +57,11 @@ export type OverlayId = 'milkyWay' | 'proceduralDisks' | 'texturedImpostors';
 ```ts
 function serializeFadeHandle(h: FadeHandle): string {
   switch (h.kind) {
-    case 'survey':
-      return `survey:${h.source}`;
-    case 'filaments':
-      return 'filaments';
-    case 'scalarField':
-      return `scalarField:${h.field}`;
-    case 'labelLayer':
-      return `labelLayer:${h.layer}`;
-    case 'overlay':
-      return `overlay:${h.id}`;
+    case 'survey':       return `survey:${h.source}`;
+    case 'filaments':    return 'filaments';
+    case 'scalarField':  return `scalarField:${h.field}`;
+    case 'labelLayer':   return `labelLayer:${h.layer}`;
+    case 'overlay':      return `overlay:${h.id}`;
   }
 }
 ```
@@ -106,7 +101,6 @@ struct SourceUniforms {
 ### Task 1.1: Define LabelLayerId and OverlayId types
 
 **Files:**
-
 - Create: `src/@types/animation/LabelLayerId.d.ts`
 - Create: `src/@types/animation/OverlayId.d.ts`
 
@@ -182,7 +176,6 @@ EOF
 ### Task 1.2: Define FadeHandle discriminated union
 
 **Files:**
-
 - Create: `src/@types/animation/FadeHandle.d.ts`
 
 - [ ] **Step 1: Create `FadeHandle.d.ts`**
@@ -262,7 +255,6 @@ EOF
 ### Task 1.3: Define FadeController public type
 
 **Files:**
-
 - Create: `src/@types/animation/FadeController.d.ts`
 
 - [ ] **Step 1: Create `FadeController.d.ts`**
@@ -353,7 +345,6 @@ EOF
 ### Task 1.4: Write FadeController failing tests
 
 **Files:**
-
 - Create: `tests/services/animation/fadeController.test.ts`
 
 - [ ] **Step 1: Write the failing tests**
@@ -433,9 +424,7 @@ describe('createFadeController', () => {
   it('fadeTo Promise resolves only after tick observes !isAnimating', async () => {
     const c = createFadeController(0, 1000);
     let resolved = false;
-    c.fadeTo(1, 600, 1000).then(() => {
-      resolved = true;
-    });
+    c.fadeTo(1, 600, 1000).then(() => { resolved = true; });
     // Tick before the ramp ends — should NOT resolve.
     c.tick(1300);
     await Promise.resolve();
@@ -449,9 +438,7 @@ describe('createFadeController', () => {
   it('Promise also resolves when fade target is reached via setImmediate', async () => {
     const c = createFadeController(0, 1000);
     let resolved = false;
-    c.fadeTo(1, 600, 1000).then(() => {
-      resolved = true;
-    });
+    c.fadeTo(1, 600, 1000).then(() => { resolved = true; });
     c.setImmediate(1);
     c.tick(1000);
     await Promise.resolve();
@@ -460,14 +447,9 @@ describe('createFadeController', () => {
 
   it('multiple concurrent fadeTo Promises each resolve at their own deadline', async () => {
     const c = createFadeController(0, 1000);
-    let a = false,
-      b = false;
-    c.fadeTo(1, 600, 1000).then(() => {
-      a = true;
-    });
-    c.fadeTo(0.5, 200, 1100).then(() => {
-      b = true;
-    });
+    let a = false, b = false;
+    c.fadeTo(1, 600, 1000).then(() => { a = true; });
+    c.fadeTo(0.5, 200, 1100).then(() => { b = true; });
     c.tick(1200);
     await Promise.resolve();
     expect(a).toBe(false);
@@ -508,7 +490,6 @@ EOF
 ### Task 1.5: Implement FadeController
 
 **Files:**
-
 - Create: `src/services/animation/fadeController.ts`
 
 - [ ] **Step 1: Create the implementation**
@@ -604,7 +585,11 @@ export function createFadeController(
 
   function currentOpacity(now: number = performance.now()): number {
     if (transitionDurationMs <= 0) return targetOpacity;
-    const t = smoothstep(transitionStartMs, transitionStartMs + transitionDurationMs, now);
+    const t = smoothstep(
+      transitionStartMs,
+      transitionStartMs + transitionDurationMs,
+      now,
+    );
     return sourceOpacity + (targetOpacity - sourceOpacity) * t;
   }
 
@@ -667,4 +652,21 @@ Expected: PASS — all 11 tests green.
 
 Run: `npm run typecheck`
 Expected: PASS.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/services/animation/fadeController.ts
+git commit -m "$(cat <<'EOF'
+feat(animation): implement FadeController
+
+Smoothstep ramp with mid-flight retargeting, setImmediate, and
+Promise-based fade completion driven by per-frame tick.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
 

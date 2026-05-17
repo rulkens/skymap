@@ -18,30 +18,6 @@
 
 ---
 
-
-- [ ] **Step 5: Run typecheck**
-
-Run: `npm run typecheck`
-Expected: PASS — the renderers don't consume these yet; the fields are additive.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add src/@types/engine/handles/EngineGpuHandles.d.ts src/services/engine/engine.ts src/services/engine/phases/initGpu.ts
-git commit -m "$(cat <<'EOF'
-feat(engine): construct canonical fade + source BGLs in initGpu
-
-Stored on state.gpu.fadeBgl / state.gpu.sourceBgl, available to every
-renderer factory below. No consumers yet — the renderer migrations
-land in Phases 3+.
-
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
-EOF
-)"
-```
-
----
-
 ## Phase 3: pointRenderer migration
 
 The points migration is the largest. It's split into five tasks: shaders, BufferEntry shape, factory wiring, draw-loop integration, and removing `isFading()`.
@@ -49,7 +25,6 @@ The points migration is the largest. It's split into five tasks: shaders, Buffer
 ### Task 3.1: Update points WESL shaders for split uniforms
 
 **Files:**
-
 - Modify: `src/services/gpu/shaders/points/vertex.wesl`
 - Modify: `src/services/gpu/shaders/points/colorFragment.wesl`
 
@@ -173,7 +148,6 @@ EOF
 ### Task 3.2: Update PointRenderer types — BufferEntry + remove cloudFadeBuffer
 
 **Files:**
-
 - Modify: `src/@types/rendering/PointRenderer.d.ts`
 - Modify: `src/@types/rendering/PickSourceDraw.d.ts`
 
@@ -209,15 +183,15 @@ Remove the `isFading(): boolean;` line entirely (line 88 currently). The render-
 Replace the `cloudFadeBuffer: GPUBuffer;` line with:
 
 ```ts
-/**
- * The per-source SourceUniforms GPU buffer (was `cloudFadeBuffer`
- * pre-unified-fade). PickRenderer builds its own bind group against
- * the canonical sourceUniformsBgl layout to bind this buffer at
- * @group(2). Per-source identity (the 5-bit sourceCode) flows from
- * here into the picker's packed (sourceCode << 27 | instanceIdx)
- * output.
- */
-sourceBuffer: GPUBuffer;
+  /**
+   * The per-source SourceUniforms GPU buffer (was `cloudFadeBuffer`
+   * pre-unified-fade). PickRenderer builds its own bind group against
+   * the canonical sourceUniformsBgl layout to bind this buffer at
+   * @group(2). Per-source identity (the 5-bit sourceCode) flows from
+   * here into the picker's packed (sourceCode << 27 | instanceIdx)
+   * output.
+   */
+  sourceBuffer: GPUBuffer;
 ```
 
 - [ ] **Step 3: Run typecheck — expect failures**
@@ -232,7 +206,6 @@ Note: do not commit yet. The next task fixes the renderer.
 ### Task 3.3: pointRenderer factory — replace CloudFade with per-source fade+source buffers
 
 **Files:**
-
 - Modify: `src/services/gpu/renderers/pointRenderer.ts`
 
 - [ ] **Step 1: Remove the `CloudFade` import**
@@ -268,34 +241,30 @@ export function createPointRenderer(
 In the `device.createRenderPipeline({ ... })` call (around line 608), replace `layout: 'auto'` with an explicit pipeline layout. The relevant section becomes:
 
 ```ts
-const pipelineLayout = device.createPipelineLayout({
-  label: 'points-pipeline-layout',
-  bindGroupLayouts: [
-    // @group(0) — per-frame uniforms (viewProj, viewport, …). Built
-    // from the pipeline's auto-derived layout via getBindGroupLayout(0)
-    // below since it's pipeline-specific to this renderer.
-    device.createBindGroupLayout({
-      label: 'points-bgl-group0',
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: { type: 'uniform' },
-        },
-      ],
-    }),
-    // @group(1) — FadeUniforms (canonical, shared with every fading renderer).
-    fadeBgl,
-    // @group(2) — SourceUniforms (canonical, shared with PickRenderer).
-    sourceBgl,
-  ],
-});
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'points-pipeline-layout',
+    bindGroupLayouts: [
+      // @group(0) — per-frame uniforms (viewProj, viewport, …). Built
+      // from the pipeline's auto-derived layout via getBindGroupLayout(0)
+      // below since it's pipeline-specific to this renderer.
+      device.createBindGroupLayout({
+        label: 'points-bgl-group0',
+        entries: [
+          { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        ],
+      }),
+      // @group(1) — FadeUniforms (canonical, shared with every fading renderer).
+      fadeBgl,
+      // @group(2) — SourceUniforms (canonical, shared with PickRenderer).
+      sourceBgl,
+    ],
+  });
 
-const pipeline = device.createRenderPipeline({
-  label: 'points-pipeline',
-  layout: pipelineLayout,
-  // ... (vertex, fragment, primitive unchanged from current — copy verbatim)
-});
+  const pipeline = device.createRenderPipeline({
+    label: 'points-pipeline',
+    layout: pipelineLayout,
+    // ... (vertex, fragment, primitive unchanged from current — copy verbatim)
+  });
 ```
 
 Important: keep the existing `vertex`, `fragment`, and `primitive` blocks of `createRenderPipeline` byte-identical (don't simplify them). Only the `layout` field changes from `'auto'` to `pipelineLayout`.
@@ -349,62 +318,62 @@ const clouds = new Map<Source, BufferEntry>();
 Find the `upload` function body (around line 750-869 currently). Replace the existing `CloudFade` block (lines 832-862, including `prev.fade.restart()`, the `new CloudFade(...)` call, and `fade.setSourceCode(source)`) with the explicit two-buffer allocation. The relevant section of `upload` becomes:
 
 ```ts
-// Destroy or recycle the previous-source state before replacing it.
-const prev = clouds.get(source);
-if (prev) {
-  prev.buffer.destroy();
-  prev.fadeBuffer.destroy();
-  prev.sourceBuffer.destroy();
-}
+    // Destroy or recycle the previous-source state before replacing it.
+    const prev = clouds.get(source);
+    if (prev) {
+      prev.buffer.destroy();
+      prev.fadeBuffer.destroy();
+      prev.sourceBuffer.destroy();
+    }
 
-const buffer = device.createBuffer({
-  label: `points-vertex-buffer-${source}`,
-  size: interleaved.byteLength,
-  usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-});
-device.queue.writeBuffer(buffer, 0, interleaved);
+    const buffer = device.createBuffer({
+      label: `points-vertex-buffer-${source}`,
+      size: interleaved.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(buffer, 0, interleaved);
 
-// FadeUniforms — 16 bytes, written per frame from the registry.
-const fadeBuffer = device.createBuffer({
-  label: `points-fade-uniform-${source}`,
-  size: 16,
-  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-});
-const fadeBindGroup = device.createBindGroup({
-  label: `points-fade-bg-${source}`,
-  layout: fadeBgl,
-  entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
-});
+    // FadeUniforms — 16 bytes, written per frame from the registry.
+    const fadeBuffer = device.createBuffer({
+      label: `points-fade-uniform-${source}`,
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const fadeBindGroup = device.createBindGroup({
+      label: `points-fade-bg-${source}`,
+      layout: fadeBgl,
+      entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
+    });
 
-// SourceUniforms — 16 bytes, written ONCE here at upload time. The
-// 5-bit Source enum value never changes for a given source, so a
-// per-frame write would be wasted bytes. Pack sourceCode into the
-// first 4 bytes and leave the rest zero.
-const sourceBuffer = device.createBuffer({
-  label: `points-source-uniform-${source}`,
-  size: 16,
-  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-});
-const sourceScratch = new ArrayBuffer(16);
-new Uint32Array(sourceScratch)[0] = source >>> 0;
-device.queue.writeBuffer(sourceBuffer, 0, sourceScratch);
-const sourceBindGroup = device.createBindGroup({
-  label: `points-source-bg-${source}`,
-  layout: sourceBgl,
-  entries: [{ binding: 0, resource: { buffer: sourceBuffer } }],
-});
+    // SourceUniforms — 16 bytes, written ONCE here at upload time. The
+    // 5-bit Source enum value never changes for a given source, so a
+    // per-frame write would be wasted bytes. Pack sourceCode into the
+    // first 4 bytes and leave the rest zero.
+    const sourceBuffer = device.createBuffer({
+      label: `points-source-uniform-${source}`,
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const sourceScratch = new ArrayBuffer(16);
+    new Uint32Array(sourceScratch)[0] = source >>> 0;
+    device.queue.writeBuffer(sourceBuffer, 0, sourceScratch);
+    const sourceBindGroup = device.createBindGroup({
+      label: `points-source-bg-${source}`,
+      layout: sourceBgl,
+      entries: [{ binding: 0, resource: { buffer: sourceBuffer } }],
+    });
 
-clouds.set(source, {
-  buffer,
-  count: cloud.count,
-  interleaved,
-  fadeBuffer,
-  fadeBindGroup,
-  sourceBuffer,
-  sourceBindGroup,
-});
+    clouds.set(source, {
+      buffer,
+      count: cloud.count,
+      interleaved,
+      fadeBuffer,
+      fadeBindGroup,
+      sourceBuffer,
+      sourceBindGroup,
+    });
 
-biasUploadCallback?.(source, cloud);
+    biasUploadCallback?.(source, cloud);
 ```
 
 - [ ] **Step 7: Update `unload(source)` to destroy the new buffers**
@@ -412,15 +381,15 @@ biasUploadCallback?.(source, cloud);
 Find the `unload` function (around line 877). Replace its body with:
 
 ```ts
-function unload(source: Source): void {
-  const entry = clouds.get(source);
-  if (!entry) return;
-  entry.buffer.destroy();
-  entry.fadeBuffer.destroy();
-  entry.sourceBuffer.destroy();
-  clouds.delete(source);
-  biasUnloadCallback?.(source);
-}
+  function unload(source: Source): void {
+    const entry = clouds.get(source);
+    if (!entry) return;
+    entry.buffer.destroy();
+    entry.fadeBuffer.destroy();
+    entry.sourceBuffer.destroy();
+    clouds.delete(source);
+    biasUnloadCallback?.(source);
+  }
 ```
 
 - [ ] **Step 8: Update `destroy()` to destroy the new buffers**
@@ -428,15 +397,15 @@ function unload(source: Source): void {
 Find the `destroy` function (around line 1319). Replace the per-entry teardown loop with:
 
 ```ts
-function destroy(): void {
-  for (const entry of clouds.values()) {
-    entry.buffer.destroy();
-    entry.fadeBuffer.destroy();
-    entry.sourceBuffer.destroy();
+  function destroy(): void {
+    for (const entry of clouds.values()) {
+      entry.buffer.destroy();
+      entry.fadeBuffer.destroy();
+      entry.sourceBuffer.destroy();
+    }
+    clouds.clear();
+    uniformBuffer.destroy();
   }
-  clouds.clear();
-  uniformBuffer.destroy();
-}
 ```
 
 - [ ] **Step 9: Update `loadedSources()` generator to emit `sourceBuffer`**
@@ -444,31 +413,31 @@ function destroy(): void {
 Find the `loadedSourcesGen` generator (around line 1034). Replace the yielded shape:
 
 ```ts
-function* loadedSourcesGen(): IterableIterator<{
-  source: Source;
-  vertexBuffer: GPUBuffer;
-  count: number;
-  sourceBuffer: GPUBuffer;
-}> {
-  for (const source of ALL_SOURCES) {
-    const entry = clouds.get(source);
-    if (!entry) continue;
-    yield {
-      source,
-      vertexBuffer: entry.buffer,
-      count: entry.count,
-      sourceBuffer: entry.sourceBuffer,
-    };
+  function* loadedSourcesGen(): IterableIterator<{
+    source: Source;
+    vertexBuffer: GPUBuffer;
+    count: number;
+    sourceBuffer: GPUBuffer;
+  }> {
+    for (const source of ALL_SOURCES) {
+      const entry = clouds.get(source);
+      if (!entry) continue;
+      yield {
+        source,
+        vertexBuffer: entry.buffer,
+        count: entry.count,
+        sourceBuffer: entry.sourceBuffer,
+      };
+    }
   }
-}
-function loadedSources(): IterableIterator<{
-  source: Source;
-  vertexBuffer: GPUBuffer;
-  count: number;
-  sourceBuffer: GPUBuffer;
-}> {
-  return loadedSourcesGen();
-}
+  function loadedSources(): IterableIterator<{
+    source: Source;
+    vertexBuffer: GPUBuffer;
+    count: number;
+    sourceBuffer: GPUBuffer;
+  }> {
+    return loadedSourcesGen();
+  }
 ```
 
 - [ ] **Step 10: Update the `draw` loop to bind @group(1) + @group(2) and write fade per frame**
@@ -476,48 +445,48 @@ function loadedSources(): IterableIterator<{
 Find the per-source draw loop (around lines 1214-1226). It currently reads:
 
 ```ts
-for (const source of ALL_SOURCES) {
-  const entry = clouds.get(source);
-  if (!entry) continue;
-  if (((visibleSourceMask >> source) & 1) === 0) continue;
-  entry.fade.writeFrame();
-  pass.setBindGroup(1, entry.fade.bindGroup);
-  pass.setVertexBuffer(0, entry.buffer);
-  pass.draw(6, entry.count);
-}
+    for (const source of ALL_SOURCES) {
+      const entry = clouds.get(source);
+      if (!entry) continue;
+      if (((visibleSourceMask >> source) & 1) === 0) continue;
+      entry.fade.writeFrame();
+      pass.setBindGroup(1, entry.fade.bindGroup);
+      pass.setVertexBuffer(0, entry.buffer);
+      pass.draw(6, entry.count);
+    }
 ```
 
 Replace with (the new `settings` object will carry a `fadeOpacity` lookup — see Task 3.4 for the signature change; for now use a closure-captured callback):
 
 ```ts
-for (const source of ALL_SOURCES) {
-  const entry = clouds.get(source);
-  if (!entry) continue;
-  if (((visibleSourceMask >> source) & 1) === 0) continue;
+    for (const source of ALL_SOURCES) {
+      const entry = clouds.get(source);
+      if (!entry) continue;
+      if (((visibleSourceMask >> source) & 1) === 0) continue;
 
-  // Read the registry-managed opacity for THIS source's handle and
-  // write it into the per-source fadeBuffer. One 16-byte writeBuffer
-  // per visible survey per frame — negligible.
-  const opacity = settings.fadeOpacityOf(source);
-  fadeScratchF32[0] = opacity;
-  // f32[1..3] (the three pad slots) stay zero.
-  device.queue.writeBuffer(entry.fadeBuffer, 0, fadeScratchBuffer);
+      // Read the registry-managed opacity for THIS source's handle and
+      // write it into the per-source fadeBuffer. One 16-byte writeBuffer
+      // per visible survey per frame — negligible.
+      const opacity = settings.fadeOpacityOf(source);
+      fadeScratchF32[0] = opacity;
+      // f32[1..3] (the three pad slots) stay zero.
+      device.queue.writeBuffer(entry.fadeBuffer, 0, fadeScratchBuffer);
 
-  pass.setBindGroup(1, entry.fadeBindGroup);
-  pass.setBindGroup(2, entry.sourceBindGroup);
-  pass.setVertexBuffer(0, entry.buffer);
-  pass.draw(6, entry.count);
-}
+      pass.setBindGroup(1, entry.fadeBindGroup);
+      pass.setBindGroup(2, entry.sourceBindGroup);
+      pass.setVertexBuffer(0, entry.buffer);
+      pass.draw(6, entry.count);
+    }
 ```
 
 At the top of the factory body (alongside other closure-captured const allocations like `uniformBuffer`), add the reusable scratch buffer:
 
 ```ts
-// Reusable scratch for the per-source per-frame fade writeBuffer call.
-// 16 bytes = opacity f32 + 12 bytes pad. The pad slots stay zero
-// (ArrayBuffer is zero-initialised; we never write them).
-const fadeScratchBuffer = new ArrayBuffer(16);
-const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
+  // Reusable scratch for the per-source per-frame fade writeBuffer call.
+  // 16 bytes = opacity f32 + 12 bytes pad. The pad slots stay zero
+  // (ArrayBuffer is zero-initialised; we never write them).
+  const fadeScratchBuffer = new ArrayBuffer(16);
+  const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 ```
 
 - [ ] **Step 11: Remove the `isFading` function**
@@ -535,7 +504,6 @@ These land in Task 3.4. For now we have a complete renderer that compiles given 
 ### Task 3.4: Update PointDrawSettings, runFrame, and PickRenderer for the new shape
 
 **Files:**
-
 - Modify: `src/@types/rendering/PointDrawSettings.d.ts`
 - Modify: `src/services/engine/frame/runFrame.ts`
 - Modify: `src/services/gpu/renderers/pickRenderer.ts`
@@ -604,23 +572,19 @@ import package::lib::fadeUniforms::FadeUniforms;
 Now in `pickRenderer.ts`, build the pipeline layout explicitly:
 
 ```ts
-const pipelineLayout = device.createPipelineLayout({
-  label: 'pick-pipeline-layout',
-  bindGroupLayouts: [
-    device.createBindGroupLayout({
-      label: 'pick-bgl-group0',
-      entries: [
-        {
-          binding: 0,
-          visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-          buffer: { type: 'uniform' },
-        },
-      ],
-    }),
-    fadeBgl, // @group(1) — passed in from caller; must match visual pipeline
-    sourceBgl, // @group(2) — passed in from caller; shared identity with visual
-  ],
-});
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'pick-pipeline-layout',
+    bindGroupLayouts: [
+      device.createBindGroupLayout({
+        label: 'pick-bgl-group0',
+        entries: [
+          { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        ],
+      }),
+      fadeBgl,   // @group(1) — passed in from caller; must match visual pipeline
+      sourceBgl, // @group(2) — passed in from caller; shared identity with visual
+    ],
+  });
 ```
 
 (Also extend the factory signature to accept `fadeBgl: FadeUniformsBgl` alongside `sourceBgl`.)
@@ -628,52 +592,52 @@ const pipelineLayout = device.createPipelineLayout({
 In the pick `pick()` body (around line 484), replace the per-source bind-group block:
 
 ```ts
-// Build per-source @group(2) bind groups against the SHARED
-// canonical sourceBgl layout — no longer pipeline-specific, so
-// the same bind group identity could be used for the visual pass
-// (but we still build a fresh per-pipeline group here because the
-// pick pipeline runs in its own pass with its own command encoder).
-for (const src of sourceList) {
-  const sourceBindGroup = device.createBindGroup({
-    label: `pick-bg-source-${src.source}`,
-    layout: sourceBgl,
-    entries: [{ binding: 0, resource: { buffer: src.sourceBuffer } }],
-  });
-  // Bind a zeroed @group(1) — the pick pass doesn't use fade.opacity
-  // but the pipeline layout requires the binding to be present.
-  // Reusing the same dummy buffer across draws is fine; no race
-  // because @group(1) is read-only at the pipeline level.
-  pass.setBindGroup(1, dummyFadeBindGroup);
-  pass.setBindGroup(2, sourceBindGroup);
-  pass.setVertexBuffer(0, src.vertexBuffer);
-  pass.draw(6, src.count);
-}
+    // Build per-source @group(2) bind groups against the SHARED
+    // canonical sourceBgl layout — no longer pipeline-specific, so
+    // the same bind group identity could be used for the visual pass
+    // (but we still build a fresh per-pipeline group here because the
+    // pick pipeline runs in its own pass with its own command encoder).
+    for (const src of sourceList) {
+      const sourceBindGroup = device.createBindGroup({
+        label: `pick-bg-source-${src.source}`,
+        layout: sourceBgl,
+        entries: [{ binding: 0, resource: { buffer: src.sourceBuffer } }],
+      });
+      // Bind a zeroed @group(1) — the pick pass doesn't use fade.opacity
+      // but the pipeline layout requires the binding to be present.
+      // Reusing the same dummy buffer across draws is fine; no race
+      // because @group(1) is read-only at the pipeline level.
+      pass.setBindGroup(1, dummyFadeBindGroup);
+      pass.setBindGroup(2, sourceBindGroup);
+      pass.setVertexBuffer(0, src.vertexBuffer);
+      pass.draw(6, src.count);
+    }
 ```
 
 At the top of the factory body, add the dummy fade buffer + bind group (these live for the pick renderer's lifetime; one allocation, never freed until `destroy()`):
 
 ```ts
-// Pick pipeline declares @group(1) (FadeUniforms) to match the
-// shared vertex shader's pipeline-layout shape, but the pick
-// fragment doesn't read fade.opacity. A zeroed buffer is fine —
-// the pick pipeline writes to the r32uint pick texture, not the
-// visual swap chain, so opacity has no observable effect.
-const dummyFadeBuffer = device.createBuffer({
-  label: 'pick-fade-uniform-dummy',
-  size: 16,
-  usage: GPUBufferUsage.UNIFORM,
-});
-const dummyFadeBindGroup = device.createBindGroup({
-  label: 'pick-fade-bg-dummy',
-  layout: fadeBgl,
-  entries: [{ binding: 0, resource: { buffer: dummyFadeBuffer } }],
-});
+  // Pick pipeline declares @group(1) (FadeUniforms) to match the
+  // shared vertex shader's pipeline-layout shape, but the pick
+  // fragment doesn't read fade.opacity. A zeroed buffer is fine —
+  // the pick pipeline writes to the r32uint pick texture, not the
+  // visual swap chain, so opacity has no observable effect.
+  const dummyFadeBuffer = device.createBuffer({
+    label: 'pick-fade-uniform-dummy',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM,
+  });
+  const dummyFadeBindGroup = device.createBindGroup({
+    label: 'pick-fade-bg-dummy',
+    layout: fadeBgl,
+    entries: [{ binding: 0, resource: { buffer: dummyFadeBuffer } }],
+  });
 ```
 
 In the pick `destroy()`, add:
 
 ```ts
-dummyFadeBuffer.destroy();
+    dummyFadeBuffer.destroy();
 ```
 
 - [ ] **Step 4: Update the `createPointRenderer` and `createPickRenderer` call sites in `initGpu.ts`**
@@ -722,7 +686,6 @@ EOF
 ### Task 3.5: Register survey handles in galaxyCatalogSourceRegistry
 
 **Files:**
-
 - Modify: `src/services/engine/wiring/galaxyCatalogSourceRegistry.ts`
 
 - [ ] **Step 1: Add the registration call**
@@ -808,7 +771,6 @@ EOF
 ### Task 4.1: Sequential fade-out → upload → fade-in in galaxyCatalogSourceRegistry commit
 
 **Files:**
-
 - Modify: `src/services/engine/wiring/galaxyCatalogSourceRegistry.ts`
 
 - [ ] **Step 1: Update the commit step**
@@ -879,10 +841,7 @@ Create `tests/services/engine/wiring/galaxyCatalogSourceRegistryFade.test.ts`:
 import { describe, it, expect, vi } from 'vitest';
 import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { Source } from '../../../../src/data/sources';
-import {
-  FADE_IN_DURATION_MS,
-  FADE_OUT_DURATION_MS,
-} from '../../../../src/services/animation/fadeController';
+import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../../../src/services/animation/fadeController';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 
 function makeFakeCatalog(count: number): GalaxyCatalog {
@@ -931,14 +890,55 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     );
     const slot = fx.state.assetSlots.points.get(Source.SDSS)!;
     // Drive the commit directly:
-    await (slot as never as { _commitForTest: (c: GalaxyCatalog) => Promise<void> })._commitForTest(
-      makeFakeCatalog(1),
-    );
+    await (slot as never as { _commitForTest: (c: GalaxyCatalog) => Promise<void> })
+      ._commitForTest(makeFakeCatalog(1));
     // ... or, more realistically, the slot has its own `load()` API; the
     // test harness here is illustrative. The assertion is what matters:
-    expect(fx.fadeCalls).toEqual([{ target: 1, duration: FADE_IN_DURATION_MS }]);
+    expect(fx.fadeCalls).toEqual([
+      { target: 1, duration: FADE_IN_DURATION_MS },
+    ]);
   });
 
   it('second load awaits fadeTo(0, FADE_OUT_DURATION_MS) before upload', async () => {
     const fx = makeFixture();
     // Pre-seed: pretend a catalog is already loaded.
+    fx.state.sources.catalogs.set(Source.SDSS, makeFakeCatalog(99));
+    wireGalaxyCatalogSourceSlot(
+      fx.state as never,
+      { source: Source.SDSS, fetcher: vi.fn() } as never,
+      { cb: {} } as never,
+    );
+    // Drive commit...
+    // Assert ordering: fadeTo(0) → upload → fadeTo(1).
+    expect(fx.fadeCalls[0]).toEqual({ target: 0, duration: FADE_OUT_DURATION_MS });
+    expect(fx.fadeCalls[1]).toEqual({ target: 1, duration: FADE_IN_DURATION_MS });
+    expect(fx.upload).toHaveBeenCalledTimes(1);
+  });
+});
+```
+
+NOTE for the implementer: the `_commitForTest` pseudo-method above is a stand-in for whatever the AssetSlot test harness exposes today. Before writing this test, read `src/services/loading/AssetSlot.ts` to find the actual API for synchronously driving a commit in a test, and adapt the test accordingly. If no such hook exists, expose one via `__commitForTest` on the slot (test-only) or drive the slot through its `load(req)` method with a synchronous fetcher that resolves to the fake catalog.
+
+- [ ] **Step 3: Run typecheck + tests**
+
+Run: `npm run typecheck && npm test -- tests/services/engine/wiring/`
+Expected: PASS.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/services/engine/wiring/galaxyCatalogSourceRegistry.ts tests/services/engine/wiring/galaxyCatalogSourceRegistryFade.test.ts
+git commit -m "$(cat <<'EOF'
+feat(engine): sequential fade-out/upload/fade-in for survey commits
+
+First load skips fade-out and just rams in from the initial-0 opacity;
+subsequent loads (tier swap) await a 100 ms fade-out before destroying
+the old buffer and starting the 600 ms fade-in.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+

@@ -22,25 +22,9 @@ See sub-plan 01 for the canonical `FadeHandle` union, `serializeFadeHandle`, and
 
 ---
 
-```bash
-git add src/services/animation/fadeController.ts
-git commit -m "$(cat <<'EOF'
-feat(animation): implement FadeController
-
-Smoothstep ramp with mid-flight retargeting, setImmediate, and
-Promise-based fade completion driven by per-frame tick.
-
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
-EOF
-)"
-```
-
----
-
 ### Task 1.6: Define FadeRegistry public type
 
 **Files:**
-
 - Create: `src/@types/animation/FadeRegistry.d.ts`
 
 - [ ] **Step 1: Create `FadeRegistry.d.ts`**
@@ -142,7 +126,6 @@ EOF
 ### Task 1.7: Write FadeRegistry failing tests
 
 **Files:**
-
 - Create: `tests/services/animation/fadeRegistry.test.ts`
 
 - [ ] **Step 1: Write the failing tests**
@@ -225,9 +208,7 @@ describe('createFadeRegistry', () => {
     const h: FadeHandle = { kind: 'filaments' };
     r.register(h, 0);
     let done = false;
-    r.fadeTo(h, 1, 600).then(() => {
-      done = true;
-    });
+    r.fadeTo(h, 1, 600).then(() => { done = true; });
     expect(r.opacityOf(h, 0)).toBeCloseTo(0, 5);
     expect(r.opacityOf(h, 300)).toBeCloseTo(0.5, 5);
     expect(r.opacityOf(h, 600)).toBeCloseTo(1, 5);
@@ -290,7 +271,6 @@ EOF
 ### Task 1.8: Implement FadeRegistry
 
 **Files:**
-
 - Create: `src/services/animation/fadeRegistry.ts`
 
 - [ ] **Step 1: Create the implementation**
@@ -341,16 +321,11 @@ import { createFadeController, FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from 
 
 function serializeFadeHandle(h: FadeHandle): string {
   switch (h.kind) {
-    case 'survey':
-      return `survey:${h.source}`;
-    case 'filaments':
-      return 'filaments';
-    case 'scalarField':
-      return `scalarField:${h.field}`;
-    case 'labelLayer':
-      return `labelLayer:${h.layer}`;
-    case 'overlay':
-      return `overlay:${h.id}`;
+    case 'survey':      return `survey:${h.source}`;
+    case 'filaments':   return 'filaments';
+    case 'scalarField': return `scalarField:${h.field}`;
+    case 'labelLayer':  return `labelLayer:${h.layer}`;
+    case 'overlay':     return `overlay:${h.id}`;
   }
 }
 
@@ -370,16 +345,23 @@ export function createFadeRegistry(): FadeRegistry {
   function requireController(handle: FadeHandle): FadeController {
     const c = controllers.get(serializeFadeHandle(handle));
     if (!c) {
-      throw new Error(`FadeRegistry: handle not registered: ${serializeFadeHandle(handle)}`);
+      throw new Error(
+        `FadeRegistry: handle not registered: ${serializeFadeHandle(handle)}`,
+      );
     }
     return c;
   }
 
-  function fadeTo(handle: FadeHandle, target: number, durationMs?: number): Promise<void> {
+  function fadeTo(
+    handle: FadeHandle,
+    target: number,
+    durationMs?: number,
+  ): Promise<void> {
     const c = requireController(handle);
     const now = performance.now();
-    const dur =
-      durationMs ?? (target > c.currentOpacity(now) ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS);
+    const dur = durationMs ?? (
+      target > c.currentOpacity(now) ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS
+    );
     return c.fadeTo(target, dur, now);
   }
 
@@ -452,7 +434,6 @@ EOF
 ### Task 1.9: Wire FadeRegistry into EngineSubsystemHandles
 
 **Files:**
-
 - Modify: `src/@types/engine/handles/EngineSubsystemHandles.d.ts`
 - Modify: `src/services/engine/engine.ts` (subsystem literal around line 410)
 
@@ -484,16 +465,16 @@ import type { FadeRegistry } from '../../animation/FadeRegistry';
 Inside `export type EngineSubsystemHandles = { ... }`, add the new field directly after `scheduler: RenderScheduler;` (line 64):
 
 ```ts
-/**
- * Unified fade registry — owns one FadeController per registered
- * FadeHandle. Constructed eagerly in the engine state literal
- * BEFORE any renderer, so renderer construction (in `initGpu`) can
- * call `state.subsystems.fades.register(...)` without a null-check.
- * Drives the render-on-demand predicate (replacing per-renderer
- * isFading() checks) and the slot orchestration's fade-out → upload
- * → fade-in sequence. See `src/services/animation/fadeRegistry.ts`.
- */
-fades: FadeRegistry;
+  /**
+   * Unified fade registry — owns one FadeController per registered
+   * FadeHandle. Constructed eagerly in the engine state literal
+   * BEFORE any renderer, so renderer construction (in `initGpu`) can
+   * call `state.subsystems.fades.register(...)` without a null-check.
+   * Drives the render-on-demand predicate (replacing per-renderer
+   * isFading() checks) and the slot orchestration's fade-out → upload
+   * → fade-in sequence. See `src/services/animation/fadeRegistry.ts`.
+   */
+  fades: FadeRegistry;
 ```
 
 - [ ] **Step 2: Construct the registry in `engine.ts`'s state literal**
@@ -553,7 +534,6 @@ EOF
 ### Task 2.1: WESL library — fadeUniforms
 
 **Files:**
-
 - Create: `src/services/gpu/shaders/lib/fadeUniforms.wesl`
 
 - [ ] **Step 1: Create the WESL lib**
@@ -635,7 +615,6 @@ EOF
 ### Task 2.2: WESL library — sourceUniforms (points only)
 
 **Files:**
-
 - Create: `src/services/gpu/shaders/lib/sourceUniforms.wesl`
 
 - [ ] **Step 1: Create the WESL lib**
@@ -710,7 +689,6 @@ EOF
 ### Task 2.3: Canonical bind-group layout — fadeUniformsBgl
 
 **Files:**
-
 - Create: `src/services/gpu/bindGroupLayouts/fadeUniforms.ts`
 - Create: `src/@types/rendering/FadeUniformsBgl.d.ts`
 
@@ -826,7 +804,6 @@ EOF
 ### Task 2.4: Canonical bind-group layout — sourceUniformsBgl
 
 **Files:**
-
 - Create: `src/services/gpu/bindGroupLayouts/sourceUniforms.ts`
 - Create: `src/@types/rendering/SourceUniformsBgl.d.ts`
 
@@ -934,7 +911,6 @@ EOF
 ### Task 2.5: Add fadeBgl / sourceBgl to EngineGpuHandles
 
 **Files:**
-
 - Modify: `src/@types/engine/handles/EngineGpuHandles.d.ts`
 - Modify: `src/services/engine/engine.ts` (state literal `gpu: { ... }` block)
 - Modify: `src/services/engine/phases/initGpu.ts`
@@ -954,20 +930,20 @@ import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 Add two new fields to the `export type EngineGpuHandles = { ... }` body, after the renderer fields:
 
 ```ts
-/**
- * Canonical FadeUniforms bind-group layout (@group(1)). Constructed
- * once in `initGpu` and shared by every renderer pipeline that fades.
- * Null until `initGpu` resolves; see EngineGpuHandles docblock on the
- * staged-construction pattern.
- */
-fadeBgl: FadeUniformsBgl | null;
-/**
- * Canonical SourceUniforms bind-group layout (@group(2), points
- * only). Constructed once in `initGpu` and shared between the
- * visual PointRenderer and the offscreen PickRenderer. Null until
- * `initGpu` resolves.
- */
-sourceBgl: SourceUniformsBgl | null;
+  /**
+   * Canonical FadeUniforms bind-group layout (@group(1)). Constructed
+   * once in `initGpu` and shared by every renderer pipeline that fades.
+   * Null until `initGpu` resolves; see EngineGpuHandles docblock on the
+   * staged-construction pattern.
+   */
+  fadeBgl: FadeUniformsBgl | null;
+  /**
+   * Canonical SourceUniforms bind-group layout (@group(2), points
+   * only). Constructed once in `initGpu` and shared between the
+   * visual PointRenderer and the offscreen PickRenderer. Null until
+   * `initGpu` resolves.
+   */
+  sourceBgl: SourceUniformsBgl | null;
 ```
 
 - [ ] **Step 3: Initialize them as `null` in the engine.ts state literal**
@@ -989,12 +965,36 @@ import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUnifor
 
 // ... then inside the phase function, after device acquisition:
 
-// Build the canonical fade + source bind-group layouts ONCE — every
-// renderer pipeline below threads these into createPipelineLayout so
-// each consumer's bind groups are valid across pipelines. See
-// src/services/gpu/bindGroupLayouts/fadeUniforms.ts for the rationale.
-state.gpu.fadeBgl = createFadeUniformsBgl(device);
-state.gpu.sourceBgl = createSourceUniformsBgl(device);
+  // Build the canonical fade + source bind-group layouts ONCE — every
+  // renderer pipeline below threads these into createPipelineLayout so
+  // each consumer's bind groups are valid across pipelines. See
+  // src/services/gpu/bindGroupLayouts/fadeUniforms.ts for the rationale.
+  state.gpu.fadeBgl = createFadeUniformsBgl(device);
+  state.gpu.sourceBgl = createSourceUniformsBgl(device);
 ```
 
 (The exact line number in `initGpu.ts` will vary; place the construction immediately after `device` is acquired and before any renderer factory is called.)
+
+- [ ] **Step 5: Run typecheck**
+
+Run: `npm run typecheck`
+Expected: PASS — the renderers don't consume these yet; the fields are additive.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/@types/engine/handles/EngineGpuHandles.d.ts src/services/engine/engine.ts src/services/engine/phases/initGpu.ts
+git commit -m "$(cat <<'EOF'
+feat(engine): construct canonical fade + source BGLs in initGpu
+
+Stored on state.gpu.fadeBgl / state.gpu.sourceBgl, available to every
+renderer factory below. No consumers yet — the renderer migrations
+land in Phases 3+.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+

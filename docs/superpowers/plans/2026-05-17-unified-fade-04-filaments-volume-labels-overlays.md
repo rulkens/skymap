@@ -18,52 +18,11 @@
 
 ---
 
-    fx.state.sources.catalogs.set(Source.SDSS, makeFakeCatalog(99));
-    wireGalaxyCatalogSourceSlot(
-      fx.state as never,
-      { source: Source.SDSS, fetcher: vi.fn() } as never,
-      { cb: {} } as never,
-    );
-    // Drive commit...
-    // Assert ordering: fadeTo(0) → upload → fadeTo(1).
-    expect(fx.fadeCalls[0]).toEqual({ target: 0, duration: FADE_OUT_DURATION_MS });
-    expect(fx.fadeCalls[1]).toEqual({ target: 1, duration: FADE_IN_DURATION_MS });
-    expect(fx.upload).toHaveBeenCalledTimes(1);
-  });
-});
-```
-
-NOTE for the implementer: the `_commitForTest` pseudo-method above is a stand-in for whatever the AssetSlot test harness exposes today. Before writing this test, read `src/services/loading/AssetSlot.ts` to find the actual API for synchronously driving a commit in a test, and adapt the test accordingly. If no such hook exists, expose one via `__commitForTest` on the slot (test-only) or drive the slot through its `load(req)` method with a synchronous fetcher that resolves to the fake catalog.
-
-- [ ] **Step 3: Run typecheck + tests**
-
-Run: `npm run typecheck && npm test -- tests/services/engine/wiring/`
-Expected: PASS.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add src/services/engine/wiring/galaxyCatalogSourceRegistry.ts tests/services/engine/wiring/galaxyCatalogSourceRegistryFade.test.ts
-git commit -m "$(cat <<'EOF'
-feat(engine): sequential fade-out/upload/fade-in for survey commits
-
-First load skips fade-out and just rams in from the initial-0 opacity;
-subsequent loads (tier swap) await a 100 ms fade-out before destroying
-the old buffer and starting the 600 ms fade-in.
-
-Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
-EOF
-)"
-```
-
----
-
 ## Phase 5: filamentRenderer migration
 
 ### Task 5.1: Update filament fragment WESL
 
 **Files:**
-
 - Modify: `src/services/gpu/shaders/filaments/fragment.wesl`
 
 - [ ] **Step 1: Replace imports + bindings**
@@ -106,7 +65,6 @@ with:
 ### Task 5.2: Update filamentRenderer factory
 
 **Files:**
-
 - Modify: `src/services/gpu/renderers/filamentRenderer.ts`
 - Modify: `src/@types/rendering/FilamentRenderer.d.ts`
 
@@ -168,69 +126,69 @@ In `createPipelineLayout` (line 184), replace `bindGroupLayouts: [bindGroupLayou
 In the closure state, replace `let fade: CloudFade | null = null;` with:
 
 ```ts
-// Per-handle FadeUniforms GPU buffer + bind group. Constructed lazily
-// on first upload (the filament cloud may never load in production
-// if the .bin file is absent), destroyed in destroy(). Subsequent
-// uploads reuse the buffer — only the per-frame opacity write changes.
-let fadeBuffer: GPUBuffer | null = null;
-let fadeBindGroup: GPUBindGroup | null = null;
-// Reusable scratch for the per-frame fade writeBuffer call.
-const fadeScratchBuffer = new ArrayBuffer(16);
-const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
+  // Per-handle FadeUniforms GPU buffer + bind group. Constructed lazily
+  // on first upload (the filament cloud may never load in production
+  // if the .bin file is absent), destroyed in destroy(). Subsequent
+  // uploads reuse the buffer — only the per-frame opacity write changes.
+  let fadeBuffer: GPUBuffer | null = null;
+  let fadeBindGroup: GPUBindGroup | null = null;
+  // Reusable scratch for the per-frame fade writeBuffer call.
+  const fadeScratchBuffer = new ArrayBuffer(16);
+  const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 ```
 
 In `upload`, replace the `CloudFade` block (lines 271-278) with:
 
 ```ts
-if (fadeBuffer === null) {
-  fadeBuffer = device.createBuffer({
-    label: 'filaments-fade-uniform',
-    size: 16,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  fadeBindGroup = device.createBindGroup({
-    label: 'filaments-fade-bg',
-    layout: fadeBgl,
-    entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
-  });
-}
+    if (fadeBuffer === null) {
+      fadeBuffer = device.createBuffer({
+        label: 'filaments-fade-uniform',
+        size: 16,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      fadeBindGroup = device.createBindGroup({
+        label: 'filaments-fade-bg',
+        layout: fadeBgl,
+        entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
+      });
+    }
 ```
 
 In `draw`, update the signature to accept `fadeOpacity` and replace the body's fade lines. The full new `draw`:
 
 ```ts
-function draw(
-  pass: GPURenderPassEncoder,
-  viewProj: mat4,
-  viewportPx: [number, number],
-  halfWidthPx: number,
-  intensityScale: number,
-  fadeOpacity: number,
-): void {
-  if (segmentCount === 0 || !instanceBuffer || !fadeBuffer || !fadeBindGroup) return;
+  function draw(
+    pass: GPURenderPassEncoder,
+    viewProj: mat4,
+    viewportPx: [number, number],
+    halfWidthPx: number,
+    intensityScale: number,
+    fadeOpacity: number,
+  ): void {
+    if (segmentCount === 0 || !instanceBuffer || !fadeBuffer || !fadeBindGroup) return;
 
-  // Pack uniforms (unchanged from current — see UNIFORM_BYTES comment).
-  const buf = new ArrayBuffer(UNIFORM_BYTES);
-  const f32 = new Float32Array(buf);
-  f32.set(viewProj as Float32Array, 0);
-  f32[16] = viewportPx[0];
-  f32[17] = viewportPx[1];
-  f32[20] = halfWidthPx;
-  f32[21] = intensityScale;
-  device.queue.writeBuffer(uniformBuffer, 0, buf);
+    // Pack uniforms (unchanged from current — see UNIFORM_BYTES comment).
+    const buf = new ArrayBuffer(UNIFORM_BYTES);
+    const f32 = new Float32Array(buf);
+    f32.set(viewProj as Float32Array, 0);
+    f32[16] = viewportPx[0];
+    f32[17] = viewportPx[1];
+    f32[20] = halfWidthPx;
+    f32[21] = intensityScale;
+    device.queue.writeBuffer(uniformBuffer, 0, buf);
 
-  // Write the per-frame fade.opacity from the registry-supplied value.
-  fadeScratchF32[0] = fadeOpacity;
-  device.queue.writeBuffer(fadeBuffer, 0, fadeScratchBuffer);
+    // Write the per-frame fade.opacity from the registry-supplied value.
+    fadeScratchF32[0] = fadeOpacity;
+    device.queue.writeBuffer(fadeBuffer, 0, fadeScratchBuffer);
 
-  pass.setPipeline(pipeline);
-  pass.setBindGroup(0, bindGroup);
-  pass.setBindGroup(1, fadeBindGroup);
-  pass.setIndexBuffer(indexBuffer, 'uint16');
-  pass.setVertexBuffer(0, quadVertexBuffer);
-  pass.setVertexBuffer(1, instanceBuffer);
-  pass.drawIndexed(6, segmentCount);
-}
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, bindGroup);
+    pass.setBindGroup(1, fadeBindGroup);
+    pass.setIndexBuffer(indexBuffer, 'uint16');
+    pass.setVertexBuffer(0, quadVertexBuffer);
+    pass.setVertexBuffer(1, instanceBuffer);
+    pass.drawIndexed(6, segmentCount);
+  }
 ```
 
 Remove the `function isFading(): boolean { ... }` block entirely (lines 330-332).
@@ -238,7 +196,7 @@ Remove the `function isFading(): boolean { ... }` block entirely (lines 330-332)
 In `destroy`, replace `fade?.destroy();` with:
 
 ```ts
-fadeBuffer?.destroy();
+    fadeBuffer?.destroy();
 ```
 
 In the returned `renderer` object literal, remove the `isFading,` entry.
@@ -298,7 +256,6 @@ EOF
 ### Task 5.3: Register filament handle + drive fadeTo from filamentSlot
 
 **Files:**
-
 - Modify: `src/services/loading/slots/filamentSlot.ts`
 
 - [ ] **Step 1: Register and fade in on commit**
@@ -331,7 +288,9 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
   });
   slot.subscribe((s) => {
     if (s.kind === 'ready') {
-      console.log(`[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`);
+      console.log(
+        `[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`,
+      );
       cb.filaments?.onReady?.(s.value.stripCount, s.value.vertexCount);
       state.subsystems.scheduler.requestRender();
     }
@@ -368,7 +327,6 @@ EOF
 ### Task 6.1: Update scalarVolume fragment WESL
 
 **Files:**
-
 - Modify: `src/services/gpu/shaders/scalarVolume/fragment.wesl`
 
 - [ ] **Step 1: Add FadeUniforms import + binding, multiply final color by fade.opacity**
@@ -404,7 +362,6 @@ At the bottom of `fs_main`, the existing `return accum;` (line 368) becomes:
 ### Task 6.2: Update scalarVolumeRenderer factory
 
 **Files:**
-
 - Modify: `src/services/gpu/renderers/scalarVolumeRenderer.ts`
 - Modify: `src/@types/rendering/FieldEntry.d.ts`
 - Modify: `src/@types/rendering/ScalarVolumeRenderer.d.ts` (find it via `find src/@types -name "ScalarVolumeRenderer*"`)
@@ -414,17 +371,17 @@ At the bottom of `fs_main`, the existing `return accum;` (line 368) becomes:
 Add two new fields to `FieldEntry`:
 
 ```ts
-/**
- * Per-field FadeUniforms GPU buffer (16 bytes — opacity f32 + 12
- * bytes pad). Written each frame in `draw` from the registry-read
- * opacity for this field's handle.
- */
-fadeBuffer: GPUBuffer;
-/**
- * Bind group binding `fadeBuffer` at @group(1) @binding(0) using
- * the canonical fadeBgl.
- */
-fadeBindGroup: GPUBindGroup;
+  /**
+   * Per-field FadeUniforms GPU buffer (16 bytes — opacity f32 + 12
+   * bytes pad). Written each frame in `draw` from the registry-read
+   * opacity for this field's handle.
+   */
+  fadeBuffer: GPUBuffer;
+  /**
+   * Bind group binding `fadeBuffer` at @group(1) @binding(0) using
+   * the canonical fadeBgl.
+   */
+  fadeBindGroup: GPUBindGroup;
 ```
 
 - [ ] **Step 2: Update `scalarVolumeRenderer.ts`**
@@ -444,43 +401,31 @@ export function createScalarVolumeRenderer(
 Replace the pipeline construction (line 198). Currently `layout: 'auto'`. Update to explicit:
 
 ```ts
-// @group(0) layout — pipeline-specific (uniform + 3D texture + sampler
-// + 1D texture + sampler). Built from a manual BindGroupLayout descriptor
-// so the pipeline layout below can list it alongside the canonical fadeBgl.
-const group0Bgl = device.createBindGroupLayout({
-  label: 'scalarVolume-bgl-group0',
-  entries: [
-    {
-      binding: 0,
-      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-      buffer: { type: 'uniform' },
-    },
-    {
-      binding: 1,
-      visibility: GPUShaderStage.FRAGMENT,
-      texture: { sampleType: 'float', viewDimension: '3d' },
-    },
-    { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-    {
-      binding: 3,
-      visibility: GPUShaderStage.FRAGMENT,
-      texture: { sampleType: 'float', viewDimension: '1d' },
-    },
-    { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-  ],
-});
+  // @group(0) layout — pipeline-specific (uniform + 3D texture + sampler
+  // + 1D texture + sampler). Built from a manual BindGroupLayout descriptor
+  // so the pipeline layout below can list it alongside the canonical fadeBgl.
+  const group0Bgl = device.createBindGroupLayout({
+    label: 'scalarVolume-bgl-group0',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '3d' } },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '1d' } },
+      { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    ],
+  });
 
-const pipelineLayout = device.createPipelineLayout({
-  label: 'scalarVolume-pipeline-layout',
-  bindGroupLayouts: [group0Bgl, fadeBgl],
-});
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'scalarVolume-pipeline-layout',
+    bindGroupLayouts: [group0Bgl, fadeBgl],
+  });
 
-const pipeline = device.createRenderPipeline({
-  label: 'scalarVolume-pipeline',
-  layout: pipelineLayout,
-  // ... (vertex, fragment, primitive blocks unchanged — copy verbatim)
-});
-const bindGroupLayout = group0Bgl;
+  const pipeline = device.createRenderPipeline({
+    label: 'scalarVolume-pipeline',
+    layout: pipelineLayout,
+    // ... (vertex, fragment, primitive blocks unchanged — copy verbatim)
+  });
+  const bindGroupLayout = group0Bgl;
 ```
 
 (The existing `pipeline.getBindGroupLayout(0)` reference becomes `group0Bgl` — same object identity.)
@@ -488,16 +433,16 @@ const bindGroupLayout = group0Bgl;
 In `addField(handle, cube)` (around line 277), after the existing `const bindGroup = device.createBindGroup({...})` block, add:
 
 ```ts
-const fadeBuffer = device.createBuffer({
-  label: `scalarVolume-fade-uniform-${handle}`,
-  size: 16,
-  usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-});
-const fadeBindGroup = device.createBindGroup({
-  label: `scalarVolume-fade-bg-${handle}`,
-  layout: fadeBgl,
-  entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
-});
+      const fadeBuffer = device.createBuffer({
+        label: `scalarVolume-fade-uniform-${handle}`,
+        size: 16,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      const fadeBindGroup = device.createBindGroup({
+        label: `scalarVolume-fade-bg-${handle}`,
+        layout: fadeBgl,
+        entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
+      });
 ```
 
 In the `fields.set(handle, { ... })` block, add the two fields to the spread:
@@ -510,13 +455,13 @@ In the `fields.set(handle, { ... })` block, add the two fields to the spread:
 In `removeField(handle)`, add:
 
 ```ts
-entry.fadeBuffer.destroy();
+      entry.fadeBuffer.destroy();
 ```
 
 In the existing destroy-old-entry branch at the top of `addField` (around line 279), add:
 
 ```ts
-existing.fadeBuffer.destroy();
+        existing.fadeBuffer.destroy();
 ```
 
 In the `draw(...)` method (around line 467), update the signature to accept the `fadeOpacityOf` callback:
@@ -530,15 +475,15 @@ In the `draw(...)` method (around line 467), update the signature to accept the 
 Inside the per-field loop (around line 491), after `device.queue.writeBuffer(e.uniformBuffer, 0, scratch);`, add:
 
 ```ts
-// Per-field fade.opacity write: read from the registry for this
-// field's handle, write into the 16-byte fadeBuffer.
-const fadeScratchBuffer = new ArrayBuffer(16);
-new Float32Array(fadeScratchBuffer)[0] = fadeOpacityOf(e.handle);
-device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
+        // Per-field fade.opacity write: read from the registry for this
+        // field's handle, write into the 16-byte fadeBuffer.
+        const fadeScratchBuffer = new ArrayBuffer(16);
+        new Float32Array(fadeScratchBuffer)[0] = fadeOpacityOf(e.handle);
+        device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
 
-pass.setBindGroup(0, e.bindGroup);
-pass.setBindGroup(1, e.fadeBindGroup);
-pass.drawIndexed(CUBE_INDICES.length);
+        pass.setBindGroup(0, e.bindGroup);
+        pass.setBindGroup(1, e.fadeBindGroup);
+        pass.drawIndexed(CUBE_INDICES.length);
 ```
 
 (Note: the existing `pass.setBindGroup(0, e.bindGroup);` line moves into the block above; remove the duplicate.)
@@ -546,21 +491,21 @@ pass.drawIndexed(CUBE_INDICES.length);
 To avoid the per-frame ArrayBuffer allocation, hoist it to the factory scope (alongside the existing scratch buffer):
 
 ```ts
-const fadeScratchBuffer = new ArrayBuffer(16);
-const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
+  const fadeScratchBuffer = new ArrayBuffer(16);
+  const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 ```
 
 And in the loop, use:
 
 ```ts
-fadeScratchF32[0] = fadeOpacityOf(e.handle);
-device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
+        fadeScratchF32[0] = fadeOpacityOf(e.handle);
+        device.queue.writeBuffer(e.fadeBuffer, 0, fadeScratchBuffer);
 ```
 
 In `destroy()` (line 517), add inside the loop:
 
 ```ts
-e.fadeBuffer.destroy();
+        e.fadeBuffer.destroy();
 ```
 
 - [ ] **Step 3: Update `ScalarVolumeRenderer.d.ts`**
@@ -590,8 +535,12 @@ const scalarVolumeRenderer = createScalarVolumeRenderer(device, format, state.gp
 In `runFrame.ts`, wherever `scalarVolumeRenderer.draw(...)` is called, add the fifth argument:
 
 ```ts
-state.gpu.scalarVolumeRenderer.draw(pass, viewProj, viewportPx, cameraPosWorld, (handle) =>
-  state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, now),
+state.gpu.scalarVolumeRenderer.draw(
+  pass,
+  viewProj,
+  viewportPx,
+  cameraPosWorld,
+  (handle) => state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, now),
 );
 ```
 
@@ -621,10 +570,9 @@ EOF
 ### Task 6.3: Register scalar-field handles on addField, unregister on removeField
 
 **Files:**
-
 - Modify: `src/services/gpu/renderers/scalarVolumeRenderer.ts`
 
-This is a small follow-up to Task 6.2 — the handle registration ideally happens at the _slot_ level (matching surveys), but `addField` is the canonical create-a-field call point and there are three different slot files (cf4DensitySlot, mcpmSlot, syntheticVolumeSlots) so registering inside `addField` is the DRY choice.
+This is a small follow-up to Task 6.2 — the handle registration ideally happens at the *slot* level (matching surveys), but `addField` is the canonical create-a-field call point and there are three different slot files (cf4DensitySlot, mcpmSlot, syntheticVolumeSlots) so registering inside `addField` is the DRY choice.
 
 The registry registration needs `state.subsystems.fades`, which the renderer doesn't have access to. The cleanest fix: pass a registration callback into the factory.
 
@@ -650,20 +598,25 @@ In `removeField`, before the early-return `if (!entry) return;`, no — call aft
 - [ ] **Step 2: Wire the callbacks in `initGpu.ts`**
 
 ```ts
-const scalarVolumeRenderer = createScalarVolumeRenderer(device, format, state.gpu.fadeBgl!, {
-  onFieldAdded: (handle) => {
-    state.subsystems.fades.register({ kind: 'scalarField', field: handle }, 0);
-    // Fade in on first upload — fire and forget.
-    void state.subsystems.fades.fadeTo(
-      { kind: 'scalarField', field: handle },
-      1,
-      FADE_IN_DURATION_MS,
-    );
+const scalarVolumeRenderer = createScalarVolumeRenderer(
+  device,
+  format,
+  state.gpu.fadeBgl!,
+  {
+    onFieldAdded: (handle) => {
+      state.subsystems.fades.register({ kind: 'scalarField', field: handle }, 0);
+      // Fade in on first upload — fire and forget.
+      void state.subsystems.fades.fadeTo(
+        { kind: 'scalarField', field: handle },
+        1,
+        FADE_IN_DURATION_MS,
+      );
+    },
+    onFieldRemoved: (handle) => {
+      state.subsystems.fades.unregister({ kind: 'scalarField', field: handle });
+    },
   },
-  onFieldRemoved: (handle) => {
-    state.subsystems.fades.unregister({ kind: 'scalarField', field: handle });
-  },
-});
+);
 ```
 
 Add the import:
@@ -712,7 +665,6 @@ The label subsystem in this codebase routes through `labelDirector` and `labelRe
 ### Task 7.1: Inspect the label-renderer surface and pick the right integration point
 
 **Files:**
-
 - Read: `src/services/gpu/renderers/labelRenderer.ts`
 - Read: `src/services/gpu/renderers/markerLineRenderer.ts`
 - Read: `src/services/engine/subsystems/labelDirectorSubsystem.ts`
@@ -720,13 +672,11 @@ The label subsystem in this codebase routes through `labelDirector` and `labelRe
 - [ ] **Step 1: Identify the actual per-frame draw entry point**
 
 Run:
-
 ```
 grep -n "draw\|@group\|setBindGroup" src/services/gpu/renderers/labelRenderer.ts | head -30
 ```
 
 And:
-
 ```
 grep -n "draw\|setBindGroup\|@group" src/services/gpu/renderers/markerLineRenderer.ts | head -20
 ```
@@ -740,17 +690,17 @@ Note: the spec mentions four label layers but the codebase has two label rendere
 In `src/services/engine/engine.ts`, right after the `state.subsystems` literal is fully constructed and the eager subsystems are reachable (find the point after the closing brace of the state literal), add:
 
 ```ts
-// Register the four label-layer fade handles at opacity 0. The
-// label producers (youAreHere, poi) and any future overlay (galaxy
-// names, scale bar) register at this point so a tour subsystem can
-// address them via state.subsystems.fades.fadeTo(...) without
-// additional plumbing. v1 of the label-fade integration drives the
-// label-renderer with a single combined opacity (see runFrame.ts);
-// per-layer aware draws are a follow-up plan.
-state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);
-state.subsystems.fades.register({ kind: 'labelLayer', layer: 'poi' }, 0);
-state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
-state.subsystems.fades.register({ kind: 'labelLayer', layer: 'scaleBar' }, 1);
+  // Register the four label-layer fade handles at opacity 0. The
+  // label producers (youAreHere, poi) and any future overlay (galaxy
+  // names, scale bar) register at this point so a tour subsystem can
+  // address them via state.subsystems.fades.fadeTo(...) without
+  // additional plumbing. v1 of the label-fade integration drives the
+  // label-renderer with a single combined opacity (see runFrame.ts);
+  // per-layer aware draws are a follow-up plan.
+  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);
+  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'poi' }, 0);
+  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
+  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'scaleBar' }, 1);
 ```
 
 (`scaleBar` is React-side; we register it at 1.0 so it's tour-addressable but never auto-faded.)
@@ -760,11 +710,7 @@ state.subsystems.fades.register({ kind: 'labelLayer', layer: 'scaleBar' }, 1);
 This belongs in the producer's first-emit hook. In `youAreHereSubsystem.ts` (find it in `src/services/engine/subsystems/`), at the first call site that produces a non-empty `Label[]` output, add:
 
 ```ts
-void state.subsystems.fades.fadeTo(
-  { kind: 'labelLayer', layer: 'youAreHere' },
-  1,
-  FADE_IN_DURATION_MS,
-);
+void state.subsystems.fades.fadeTo({ kind: 'labelLayer', layer: 'youAreHere' }, 1, FADE_IN_DURATION_MS);
 ```
 
 (Wrap in a `firstEmit` boolean guard so it only fires once per session.)
@@ -788,4 +734,58 @@ feat(engine): register label-layer fade handles
 Registers youAreHere/poi/galaxyNames/scaleBar handles in the registry.
 Producers fire fadeTo(1, FADE_IN_DURATION_MS) on first non-empty
 emit. The label-renderer's per-layer fade-aware draw is deferred.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
+
+## Phase 8: Always-on overlay registration
+
+### Task 8.1: Register milkyWay, proceduralDisks, texturedImpostors at setImmediate(1)
+
+**Files:**
+- Modify: `src/services/engine/phases/initGpu.ts`
+
+- [ ] **Step 1: Register the three overlays after their subsystems are constructed**
+
+In `initGpu.ts`, after `state.subsystems.galaxyAtlas`, `state.subsystems.proceduralDisks`, and `state.subsystems.texturedImpostors` are set (find the assignments), add:
+
+```ts
+  // Register always-on overlays at opacity 1.0 via setImmediate. The
+  // registry exposes these to future tour playback (fadeTo lets a
+  // tour dim a layer programmatically), but no automatic loading
+  // fade-in is desired — the overlays are procedural / bundled and
+  // appear immediately on first frame.
+  state.subsystems.fades.register({ kind: 'overlay', id: 'milkyWay' }, 1);
+  state.subsystems.fades.register({ kind: 'overlay', id: 'proceduralDisks' }, 1);
+  state.subsystems.fades.register({ kind: 'overlay', id: 'texturedImpostors' }, 1);
+```
+
+(`register` already initializes at the given opacity; `setImmediate(1)` would be a separate call but is unnecessary since `register(handle, 1)` does the same thing — see `FadeController` constructor.)
+
+- [ ] **Step 2: Run typecheck + tests**
+
+Run: `npm run typecheck && npm test`
+Expected: PASS.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/services/engine/phases/initGpu.ts
+git commit -m "$(cat <<'EOF'
+feat(engine): register always-on overlay fade handles at opacity 1.0
+
+milkyWay/proceduralDisks/texturedImpostors registered so a future tour
+subsystem can dim them via state.subsystems.fades.fadeTo(...). No
+automatic loading-fade behaviour for these — they appear immediately.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+EOF
+)"
+```
+
+---
 
