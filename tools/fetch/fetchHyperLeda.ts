@@ -51,7 +51,7 @@ import {
 import { resolve, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { readIdSet } from './utils/io/readIdSet';
+import { readIdSet } from '../utils/io/readIdSet';
 
 const CONCURRENCY = 4;
 

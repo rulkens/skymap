@@ -66,12 +66,7 @@
  * `2MASXJ12362058+2559155`.
  */
 
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -256,8 +251,7 @@ async function fetchChunk(chunkStart: number, force: boolean): Promise<string> {
     `design like 'UGCA%' or design like 'MESSIER%' or design like 'ARP%' or ` +
     `design like 'MRK%' or design like 'MCG%' or design like 'ESO%' or ` +
     `design like 'PGC%')`;
-  const url =
-    `http://atlas.obs-hp.fr/hyperleda/fG.cgi?n=a101&a=csv&c=o&sql=${encodeURIComponent(sql)}`;
+  const url = `http://atlas.obs-hp.fr/hyperleda/fG.cgi?n=a101&a=csv&c=o&sql=${encodeURIComponent(sql)}`;
 
   const res = await fetch(url);
   if (!res.ok) {

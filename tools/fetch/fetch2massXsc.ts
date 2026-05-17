@@ -35,7 +35,7 @@ import {
   mkdirSync,
   appendFileSync,
 } from 'node:fs';
-import { readIdSet } from './utils/io/readIdSet';
+import { readIdSet } from '../utils/io/readIdSet';
 import { resolve, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
