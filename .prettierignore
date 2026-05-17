@@ -5,3 +5,8 @@ public/data
 *.bin
 *.csv
 package-lock.json
+
+# Claude Code worktrees — running prettier across these dirty trees
+# can corrupt them (mass-format files outside the active worktree's
+# git index, then surface as huge cross-worktree diffs).
+.claude/worktrees

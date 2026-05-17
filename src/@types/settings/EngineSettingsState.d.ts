@@ -53,6 +53,7 @@
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
+import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 
 export type EngineSettingsState = {
   /**
@@ -134,4 +135,12 @@ export type EngineSettingsState = {
     masterEnabled: boolean;
     fields: Record<string, VolumeFieldSettings>;
   };
+
+  /**
+   * Per-category visibility for the POI label overlay.  Keyed by the
+   * canonical `PoiCategory` union from `poiSubsystem`.  Defaults to
+   * every category visible; the SettingsPanel surfaces these as four
+   * always-visible checkboxes under Overlays → Labels.
+   */
+  labelCategoryVisibility: Record<PoiCategory, boolean>;
 };

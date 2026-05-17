@@ -103,6 +103,12 @@ describe('EngineState type', () => {
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 1 },
       volumes: { masterEnabled: false, fields: {} },
+      labelCategoryVisibility: {
+        cluster: true,
+        supercluster: true,
+        famousGalaxy: true,
+        void: true,
+      },
     };
     const bias: EngineBiasState = {
       apparentMagLimit: 0,
@@ -222,6 +228,12 @@ describe('EngineState type', () => {
       milkyWay: { enabled: DEFAULT_MILKY_WAY_ENABLED },
       filaments: { enabled: DEFAULT_FILAMENTS_ENABLED, intensity: DEFAULT_FILAMENT_INTENSITY },
       volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
+      labelCategoryVisibility: {
+        cluster: true,
+        supercluster: true,
+        famousGalaxy: true,
+        void: true,
+      },
     };
     const bias: EngineBiasState = {
       apparentMagLimit: 0,
@@ -262,6 +274,12 @@ describe('EngineState type', () => {
         milkyWay: { enabled: true },
         filaments: { enabled: false, intensity: 1 },
         volumes: { masterEnabled: false, fields: {} },
+        labelCategoryVisibility: {
+          cluster: true,
+          supercluster: true,
+          famousGalaxy: true,
+          void: true,
+        },
       },
       bias: {
         apparentMagLimit: 0,

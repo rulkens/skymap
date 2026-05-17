@@ -13,6 +13,7 @@ import type { Source } from '../../data/sources';
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { LoadProgressState } from '../loading/LoadProgressState';
+import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -209,6 +210,17 @@ export type EngineCallbacks = {
    * skipped on fresh clones (before `npm run build-filaments`).
    */
   filaments?: { onReady?: (stripCount: number, vertexCount: number) => void };
+
+  /**
+   * Echoed when any per-category label-visibility toggle changes.
+   * The engine fires this once at init (with the default record) and
+   * once per `handle.labels.setCategoryVisible(cat, visible)` call.
+   */
+  labels?: {
+    onCategoryVisibilityChange?: (
+      visibility: Readonly<Record<PoiCategory, boolean>>,
+    ) => void;
+  };
 
   /**
    * Fired when a volume field is registered or unregistered (so the
