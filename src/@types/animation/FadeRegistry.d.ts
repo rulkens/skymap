@@ -44,8 +44,12 @@ export type FadeRegistry = Destroyable & {
    * `FADE_OUT_DURATION_MS` otherwise — but callers are expected to pass
    * the duration explicitly for clarity at the call site. The default
    * is a fallback for tests and edge cases.
+   *
+   * `nowMs` is passed through to the controller's `fadeTo` so tests
+   * can inject deterministic timestamps. Production callers omit it
+   * and let `performance.now()` flow through.
    */
-  fadeTo(handle: FadeHandle, target: number, durationMs?: number): Promise<void>;
+  fadeTo(handle: FadeHandle, target: number, durationMs?: number, nowMs?: number): Promise<void>;
 
   /** Forwards to the controller's `setImmediate`. Throws if unregistered. */
   setImmediate(handle: FadeHandle, value: number): void;

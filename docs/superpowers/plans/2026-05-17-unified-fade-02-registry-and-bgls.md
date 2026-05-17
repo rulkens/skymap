@@ -76,8 +76,12 @@ export type FadeRegistry = Destroyable & {
    * `FADE_OUT_DURATION_MS` otherwise — but callers are expected to pass
    * the duration explicitly for clarity at the call site. The default
    * is a fallback for tests and edge cases.
+   *
+   * `nowMs` is passed through to the controller's `fadeTo` so tests
+   * can inject deterministic timestamps. Production callers omit it
+   * and let `performance.now()` flow through.
    */
-  fadeTo(handle: FadeHandle, target: number, durationMs?: number): Promise<void>;
+  fadeTo(handle: FadeHandle, target: number, durationMs?: number, nowMs?: number): Promise<void>;
 
   /** Forwards to the controller's `setImmediate`. Throws if unregistered. */
   setImmediate(handle: FadeHandle, value: number): void;
@@ -233,9 +237,11 @@ describe('createFadeRegistry', () => {
     r.register(a, 0);
     r.register(b, 1);
     expect(r.isAnyAnimating(0)).toBe(false);
-    r.fadeTo(a, 1, 600, /* nowMs */ undefined as never); // start fade-in (default now uses performance.now)
-    // Use a deterministic now via tick + isAnimating manually:
-    expect(r.isAnyAnimating(performance.now())).toBe(true);
+    r.fadeTo(a, 1, 600, 1000); // start fade-in anchored at t=1000
+    // Mid-ramp at t=1300 — still animating.
+    expect(r.isAnyAnimating(1300)).toBe(true);
+    // After the ramp ends at t=1600 — no longer animating.
+    expect(r.isAnyAnimating(1700)).toBe(false);
   });
 
   it('destroy clears every controller', () => {

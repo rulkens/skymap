@@ -100,9 +100,11 @@ describe('createFadeRegistry', () => {
     r.register(a, 0);
     r.register(b, 1);
     expect(r.isAnyAnimating(0)).toBe(false);
-    r.fadeTo(a, 1, 600, /* nowMs */ undefined as never); // start fade-in (default now uses performance.now)
-    // Use a deterministic now via tick + isAnimating manually:
-    expect(r.isAnyAnimating(performance.now())).toBe(true);
+    r.fadeTo(a, 1, 600, 1000); // start fade-in anchored at t=1000
+    // Mid-ramp at t=1300 — still animating.
+    expect(r.isAnyAnimating(1300)).toBe(true);
+    // After the ramp ends at t=1600 — no longer animating.
+    expect(r.isAnyAnimating(1700)).toBe(false);
   });
 
   it('destroy clears every controller', () => {
