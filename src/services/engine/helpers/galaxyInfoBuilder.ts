@@ -22,6 +22,7 @@ import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { Source, sourceLabel, bandLabels } from '../../../data/sources';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
+import { famousDisplayName } from './famousDisplayName';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
 import {
   cartesianToRaDecZ,
@@ -325,6 +326,7 @@ export function buildGalaxyInfo(
     const xref = (famousXrefs && famousXrefs[meta.id]) ?? null;
     famous = {
       id: meta.id,
+      ...(meta.commonName !== undefined ? { commonName: meta.commonName } : {}),
       names: meta.names,
       description: meta.description,
       type: meta.type,
@@ -367,23 +369,30 @@ export function buildGalaxyInfo(
     galaxyType: galaxyType(source, { magU, magG, magR, magI, magZ }),
     iauName: iauName(source, ra, dec),
 
-    // Best human-readable headline for this row.  Priority ladder:
-    //   1. Famous → curated primary name (set in the famous block above)
+    // Best human-readable headline for this row.  Treats the choice
+    // as a priority-ordered list of candidates with a single "first
+    // non-empty wins" selection rule (matching `famousDisplayName`'s
+    // strategy, just with two extra survey-row candidates appended):
+    //
+    //   1. Famous → curated `commonName` then `names[0]`.  Routed
+    //      through the shared `famousDisplayName` helper so the
+    //      InfoCard headline and the POI label can't drift.
     //   2. Survey row with a real PGC in objID → `PGC <n>`.  Applies
     //      to BOTH 2MRS (PGC populated by the build-time GLADE→2MRS
     //      cross-match) and GLADE (PGC inherited directly from the
     //      source line).  PGC is widely indexed by NED / SIMBAD,
     //      shorter than a coord-based name, and especially valuable
     //      for GLADE rows where the iauName ("GLADE J…") is a
-    //      synthetic prefix we generate ourselves and isn't a real
-    //      catalogue identifier anywhere.
-    //   3. Otherwise → IAU coord-based name (`SDSS J…`, `2MASX J…`,
-    //      `GLADE J…`).
+    //      synthetic prefix we generate ourselves.
+    //   3. IAU coord-based name (`SDSS J…`, `2MASX J…`, `GLADE J…`).
     displayName:
-      famous?.names[0] ??
-      ((source === Source.TwoMRS || source === Source.Glade) && cloud.objIDs[idx]! > 0n
-        ? `PGC ${cloud.objIDs[idx]!}`
-        : iauName(source, ra, dec)),
+      [
+        famous ? famousDisplayName(famous) : undefined,
+        (source === Source.TwoMRS || source === Source.Glade) && cloud.objIDs[idx]! > 0n
+          ? `PGC ${cloud.objIDs[idx]!}`
+          : undefined,
+        iauName(source, ra, dec),
+      ].find((c) => c !== undefined && c.length > 0) ?? iauName(source, ra, dec),
 
     // Per-slot band names + pre-computed adjacent-slot colour pairs.
     bands,

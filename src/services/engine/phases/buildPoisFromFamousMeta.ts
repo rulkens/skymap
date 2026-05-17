@@ -13,16 +13,9 @@
  *
  * ### Name resolution
  *
- *   displayName = names[0]
- *              ?? id
- *
- * Mirrors `galaxyInfoBuilder.ts`'s headline derivation for the famous
- * case (`famous?.names[0] ?? …`) so the POI label and the InfoCard
- * headline always show the same string.  The `commonName` field on the
- * meta entry (e.g. "Andromeda Galaxy") is currently unused by the
- * label producer — preferring it here would diverge from InfoCard.
- * If/when the InfoCard learns to prefer commonName for famous rows,
- * the helper below can mirror that change in lockstep.
+ * Delegated to `famousDisplayName(entry)` — the same helper the
+ * InfoCard headline uses.  Single call site means the two surfaces
+ * can't drift.
  *
  * ### Pseudo entries
  *
@@ -56,6 +49,7 @@
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
+import { famousDisplayName } from '../helpers/famousDisplayName';
 
 const FAMOUS_MIN_APPARENT_PX = 6;
 
@@ -75,20 +69,6 @@ const FAMOUS_LABEL_MIN_OFFSET_MPC = 0.05;
  * Visually keeps the label clearly above the galaxy disk at any zoom.
  */
 const FAMOUS_LABEL_OFFSET_FACTOR = 1.5;
-
-function displayNameFor(e: FamousMetaEntry): string {
-  // Mirror of `galaxyInfoBuilder.ts`'s `displayName` derivation for the
-  // famous case (`famous?.names[0] ?? …`).  The InfoCard headline and
-  // the POI label use the same primary identifier so users see the
-  // same string whether they hover the dot or click it.  `commonName`
-  // (e.g. "Andromeda Galaxy") is intentionally NOT preferred here —
-  // doing so would diverge from the InfoCard derivation; if/when the
-  // InfoCard learns to prefer `commonName` for its headline, this
-  // helper can mirror that change in lockstep.
-  const first = e.names[0];
-  if (first !== undefined && first.length > 0) return first;
-  return e.id;
-}
 
 export function buildPoisFromFamousMeta(
   meta: readonly FamousMetaEntry[],
@@ -111,7 +91,7 @@ export function buildPoisFromFamousMeta(
     );
     out.push({
       id: `famous-${e.id}`,
-      name: displayNameFor(e),
+      name: famousDisplayName(e),
       category: 'famousGalaxy',
       worldPos: [x, y, z],
       minApparentSizePx: FAMOUS_MIN_APPARENT_PX,
