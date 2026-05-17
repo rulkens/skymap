@@ -22,12 +22,11 @@ export type PickSourceDraw = {
   vertexBuffer: GPUBuffer;
   count: number;
   /**
-   * The per-source SourceUniforms GPU buffer (was `cloudFadeBuffer`
-   * pre-unified-fade). PickRenderer builds its own bind group against
-   * the canonical sourceUniformsBgl layout to bind this buffer at
-   * @group(2). Per-source identity (the 5-bit sourceCode) flows from
-   * here into the picker's packed (sourceCode << 27 | instanceIdx)
-   * output.
+   * The per-source SourceUniforms GPU buffer. PickRenderer builds its
+   * own bind group against the canonical sourceUniformsBgl layout to
+   * bind this buffer at @group(2). Per-source identity (the 5-bit
+   * sourceCode) flows from here into the picker's packed
+   * (sourceCode << 27 | instanceIdx) output.
    */
   sourceBuffer: GPUBuffer;
 };

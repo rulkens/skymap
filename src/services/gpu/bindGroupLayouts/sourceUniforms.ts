@@ -5,10 +5,8 @@
  * Used by both the visual PointRenderer pipeline and the offscreen
  * PickRenderer pipeline. Sharing the layout identity means each
  * per-source SourceUniforms bind group built against this layout is
- * valid for either pipeline — exactly what the old `cloudFadeBuffer`
- * piggyback achieved less directly. See CLAUDE.md → "WebGPU
- * layout:'auto' bind groups don't cross pipelines" for the underlying
- * rationale.
+ * valid for either pipeline. See CLAUDE.md → "WebGPU layout:'auto'
+ * bind groups don't cross pipelines" for the underlying rationale.
  *
  * Vertex-stage visibility because the points vertex stage reads
  * `source.sourceCode` to compose '(sourceCode << 27u) | instance_index'.

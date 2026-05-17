@@ -25,9 +25,7 @@
 // imported from io.wesl, the @group/@binding declarations live here,
 // and the layout matches vertex.wesl's identical declaration.
 // 'FadeUniforms' lives in 'lib/fadeUniforms.wesl' — a 16-byte
-// struct with a single 'opacity' f32, identical layout to the old
-// 'CloudUniforms' binding so the GPU pipeline descriptor is
-// unchanged.
+// struct with a single 'opacity' f32 (plus 12 bytes pad).
 
 import package::filaments::io::Uniforms;
 import package::filaments::io::VSOut;
