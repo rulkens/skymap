@@ -37,6 +37,14 @@ export type FamousEntry = {
    * headline and the rest as "also known as".
    */
   names: string[];
+  /**
+   * Curated human-friendly display name (e.g. `"Andromeda Galaxy"`).
+   * Used as the label text in the POI overlay; falls back to the last
+   * name in `names` then `id` when absent.  Optional because most seed
+   * entries don't have a widely-recognised common name distinct from
+   * their catalog identifier.
+   */
+  commonName?: string;
   /** Right Ascension in degrees, [0, 360). */
   ra: number;
   /** Declination in degrees, [-90, 90]. */
@@ -116,6 +124,13 @@ export function validateFamousEntry(e: FamousEntry): FamousEntry {
   }
   if (typeof e.description !== 'string') {
     throw new Error(`famous seed: ${e.id} missing description`);
+  }
+  if (e.commonName !== undefined) {
+    if (typeof e.commonName !== 'string' || e.commonName.length === 0) {
+      throw new Error(
+        `famous seed: ${e.id} has invalid commonName ${JSON.stringify(e.commonName)} (expected non-empty string)`,
+      );
+    }
   }
   // Optional enrichment fields.  Each is independently validated:
   // present + finite + in-range, OR absent.  We deliberately do NOT
