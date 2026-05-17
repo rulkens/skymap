@@ -34,8 +34,8 @@ import {
   existsSync,
   mkdirSync,
   appendFileSync,
-  readFileSync,
 } from 'node:fs';
+import { readIdSet } from './utils/io/readIdSet';
 import { resolve, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -43,28 +43,6 @@ import { fileURLToPath } from 'node:url';
 const TAP_URL = 'https://tapvizier.cds.unistra.fr/TAPVizieR/tap/sync';
 const CHUNK_SIZE = 500;
 
-/**
- * Read an existing 2MASS XSC cache CSV (if it exists) and return the set of
- * 2MASS IDs already queried — regardless of whether the row carries a real
- * sup_phi/sup_ba or empty fields (queried-but-no-XSC-match). Both states are
- * "we've already asked Vizier; don't ask again".
- *
- * Returning an empty Set for a missing file is the right "first run" behaviour.
- */
-function readExistingIds(path: string): Set<string> {
-  const done = new Set<string>();
-  if (!existsSync(path)) return done;
-  const text = readFileSync(path, 'utf8');
-  const lines = text.split(/\r?\n/);
-  for (let i = 1; i < lines.length; i++) {
-    // Header is line 0; data lines have at least one comma.
-    const line = lines[i];
-    if (!line || !line.includes(',')) continue;
-    const id = line.slice(0, line.indexOf(',')).trim();
-    if (id.length > 0) done.add(id);
-  }
-  return done;
-}
 
 async function fetchChunk(
   ids: string[],
@@ -134,7 +112,7 @@ async function main(): Promise<void> {
   // Resume support: any ID already in the cache file is skipped, even if its
   // sup_phi/sup_ba columns are empty (we asked, XSC said "no match"). On a
   // fresh run, the file doesn't exist and the set is empty.
-  const done = readExistingIds(outPath);
+  const done = readIdSet(outPath);
   if (done.size === 0) {
     // Fresh run — write header line. Subsequent runs append.
     writeFileSync(outPath, '2massID,sup_phi,sup_ba\n');
