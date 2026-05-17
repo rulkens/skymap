@@ -34,8 +34,10 @@ struct FadeUniforms {
 
   // Pad to 16-byte WebGPU-minimum uniform-buffer alignment. Never
   // written from the CPU side; never read here. Named individually
-  // (rather than `_pad: vec3<f32>`) so a future field replacing one
-  // slot doesn't break alignment — each pad is a free 4-byte slot.
+  // (rather than `_pad: vec3<f32>`) so a future field can repurpose
+  // any one slot without alignment churn — each pad is a free 4-byte
+  // f32/u32 slot. (Wider types like vec2<f32> or vec4 need 8 / 16-byte
+  // alignment respectively and would require resizing the struct.)
   _pad0: f32,
   _pad1: f32,
   _pad2: f32,
