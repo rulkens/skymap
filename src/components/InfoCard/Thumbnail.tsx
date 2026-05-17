@@ -7,7 +7,7 @@
  *
  * This component is intentionally narrow in scope: it owns only the
  * local `errored` state that tracks image-load failure.  All other data
- * (the URL) is derived upstream in `buildPointInfo` inside the engine.
+ * (the URL) is derived upstream in `buildGalaxyInfo` inside the engine.
  */
 
 import { useState } from 'react';
@@ -31,7 +31,7 @@ export type ThumbnailProps = {
  * We use `loading="lazy"` so the browser fetches the JPEG only when the card
  * is actually in the viewport — prevents wasted bandwidth on points that are
  * hovered only briefly.  We do NOT pre-fetch: the URL is built lazily each
- * time `buildPointInfo` runs, and the browser's HTTP cache handles repeat
+ * time `buildGalaxyInfo` runs, and the browser's HTTP cache handles repeat
  * hovers over the same point for free.
  *
  * On error (network failure, coord outside SDSS footprint, etc.) we hide the

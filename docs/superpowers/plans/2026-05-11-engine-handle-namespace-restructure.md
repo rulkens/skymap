@@ -228,7 +228,7 @@ export type EngineTonemapHandle = {
 - [ ] **Step 3: Create `EngineCameraHandle.d.ts`**
 
 ```ts
-import type { PointInfo } from './PointInfo';
+import type { GalaxyInfo } from './GalaxyInfo';
 
 /**
  * EngineCameraHandle — viewpoint, tweens, and auto-rotate.
@@ -244,7 +244,7 @@ export type EngineCameraHandle = {
   /** Snap the camera back to the initial framing computed at startup. */
   reset: () => void;
   /** Smoothly tween the camera so the given galaxy becomes the new orbit target. */
-  focusOn: (info: PointInfo) => void;
+  focusOn: (info: GalaxyInfo) => void;
   /** Smoothly tween back to the initial bootstrap framing. */
   focusOnHome: () => void;
   /** Tween to a viewpoint where the procedural Milky Way is dominant. */
@@ -296,7 +296,7 @@ export type EngineSelectionHandle = {
 import type { LodMode } from './LodMode';
 import type { Source } from '../data/sources';
 import type { Tier } from './Tier';
-import type { PointCloud } from './PointCloud';
+import type { GalaxyCatalog } from './GalaxyCatalog';
 
 /**
  * EngineSourcesHandle — survey lifecycle: visibility, tier, raw cloud access.
@@ -305,7 +305,7 @@ import type { PointCloud } from './PointCloud';
  * distance) and manual (caller drives it).  `setVisible` toggles one survey
  * and implicitly switches to manual.  `setTier` hot-swaps the active data
  * tier across all surveys with per-source re-fetch.  `getCloud`/`getCloudObjIds`
- * expose the in-memory PointCloud for deep-link / alias-index consumers.
+ * expose the in-memory GalaxyCatalog for deep-link / alias-index consumers.
  */
 export type EngineSourcesHandle = {
   /** Switch between 'auto' and 'manual' LOD modes. */
@@ -314,8 +314,8 @@ export type EngineSourcesHandle = {
   setVisible: (source: Source, visible: boolean) => void;
   /** Hot-swap the active data tier (re-fetches per-source bins). */
   setTier: (tier: Tier) => void;
-  /** Return the full PointCloud for a source, or undefined if unloaded. */
-  getCloud: (source: Source) => PointCloud | undefined;
+  /** Return the full GalaxyCatalog for a source, or undefined if unloaded. */
+  getCloud: (source: Source) => GalaxyCatalog | undefined;
   /** Return just the objIDs array for a source (narrower contract). */
   getCloudObjIds: (source: Source) => BigUint64Array | undefined;
 };
@@ -774,12 +774,12 @@ At the bottom of the `EngineCallbacks` type body (before the closing `}`), inser
   };
   camera?: {
     onAutoRotateChange?: (enabled: boolean) => void;
-    onFocusChange?: (info: PointInfo | null) => void;
+    onFocusChange?: (info: GalaxyInfo | null) => void;
     onScaleChange?: (info: ScaleInfo) => void;
   };
   selection?: {
-    onSelectChange?: (info: PointInfo | null) => void;
-    onHoverChange?: (info: PointInfo | null) => void;
+    onSelectChange?: (info: GalaxyInfo | null) => void;
+    onHoverChange?: (info: GalaxyInfo | null) => void;
   };
   sources?: {
     onLodModeChange?: (mode: LodMode) => void;
@@ -1940,12 +1940,12 @@ export type EngineCallbacks = {
   tonemap?: { /* all optional */ };
   camera: {
     onAutoRotateChange?: (enabled: boolean) => void;
-    onFocusChange?: (info: PointInfo | null) => void;
+    onFocusChange?: (info: GalaxyInfo | null) => void;
     onScaleChange: (info: ScaleInfo) => void;
   };
   selection: {
-    onSelectChange: (info: PointInfo | null) => void;
-    onHoverChange: (info: PointInfo | null) => void;
+    onSelectChange: (info: GalaxyInfo | null) => void;
+    onHoverChange: (info: GalaxyInfo | null) => void;
   };
   sources?: { /* all optional */ };
   bias?: { /* all optional */ };

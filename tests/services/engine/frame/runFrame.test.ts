@@ -61,7 +61,7 @@ function makeState(): EngineState {
     sources: {
       visibleMask: 0,
       lodMode: 'manual',
-      clouds: new Map(),
+      catalogs: new Map(),
       famousMeta: [],
       famousXrefs: {},
       tier: 'medium',
@@ -91,7 +91,7 @@ function makeState(): EngineState {
         selected: () => null,
         setHovered: vi.fn(),
         setSelected: vi.fn(),
-        pointInfoFor: () => null,
+        galaxyInfoFor: () => null,
         destroy: vi.fn(),
       },
       galaxyAtlas: null,

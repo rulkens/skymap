@@ -1,5 +1,5 @@
 import type { BiasMode } from '../../data/BiasMode';
-import type { PointCloud } from '../../data/PointCloud';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Source } from '../../../data/sources';
 import type { SchechterRunner } from './SchechterRunner';
 import type { AngularRunner } from './AngularRunner';
@@ -13,12 +13,12 @@ export type BiasCorrectionDeps = {
   getMode: () => BiasMode;
 
   /**
-   * Currently-loaded source clouds, keyed by Source enum. Read
-   * lazily because the cloud map is mutated in place across tier
+   * Currently-loaded source catalogs, keyed by Source enum. Read
+   * lazily because the catalog map is mutated in place across tier
    * swaps and per-source uploads. Replaces the old
-   * `getState().sources.clouds` read.
+   * `getState().sources.catalogs` read.
    */
-  getLoadedClouds: () => Map<Source, PointCloud>;
+  getLoadedClouds: () => Map<Source, GalaxyCatalog>;
 
   /**
    * Wake the render loop. Called after every bake completes (the

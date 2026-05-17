@@ -69,7 +69,7 @@ export const INITIAL_DISTANCE_MPC = 644.72;
  * `tests/services/engine/cameraFraming.test.ts`.
  *
  * @param bbox     `maxAbsCoord(cloud)` — max absolute coordinate component
- *                 across all loaded clouds.  See `pointInfoBuilder.ts` for
+ *                 across all loaded clouds.  See `galaxyInfoBuilder.ts` for
  *                 the helper that produces it.
  * @param fovYRad  Vertical field-of-view in radians (e.g. 60° → π/3).
  */

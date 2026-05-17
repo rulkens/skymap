@@ -48,7 +48,7 @@
  * ### Why `InitialCam` rather than a narrowed structural type
  *
  * `tweenToGalaxy` declares its own minimum-surface `TweenTarget` type
- * because its only callers (`PointInfo`-bearing) are structurally
+ * because its only callers (`GalaxyInfo`-bearing) are structurally
  * compatible with a much narrower shape.  Here, every caller already
  * holds an `InitialCam` (built once during bootstrap, stored on
  * `state.initialCamSnapshot`); narrowing wouldn't document anything

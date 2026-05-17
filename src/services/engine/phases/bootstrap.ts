@@ -10,8 +10,8 @@
  *   1. *GPU init.*  Device acquisition, swap-chain format negotiation,
  *      every renderer constructor (point, pick, milky-way, filament,
  *      quad, disk, procedural-disk) and the HDR offscreen post-process.
- *   2. *Slot wiring.*  Per-source point-cloud slots (via the
- *      `POINT_SOURCE_REGISTRY` declarative table from Phase 4) plus three
+ *   2. *Slot wiring.*  Per-source galaxy-catalog slots (via the
+ *      `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table from Phase 4) plus three
  *      sidecar slots (filaments, famous-meta, pgc-aliases), the
  *      load-progress emitter, and the all-arrivals gate that the
  *      synthetic fallback is conditional on.
@@ -108,7 +108,7 @@ import { startLoop } from './startLoop';
  *      and starts the parallel fetches.  It awaits the all-arrivals
  *      gate before returning — the bbox loop in `wireInput` needs at
  *      least one cloud to size the camera.
- *   3. `wireInput` runs third; it reads `state.sources.clouds` (now
+ *   3. `wireInput` runs third; it reads `state.sources.catalogs` (now
  *      populated) to compute the bbox + initial camera, then attaches
  *      orbit controls + click handlers + input bindings.
  *   4. `startLoop` runs last; it builds the `RunFrameDeps` bag (which

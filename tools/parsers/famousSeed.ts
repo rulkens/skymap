@@ -14,7 +14,7 @@
  *
  * Why are duplicate IDs a hard error?  The id is the URL-safe key that
  * names the WebP file, the cross-ref entry, and the `famousId` lookup
- * key in `pointInfoBuilder.ts`.  A duplicate would silently overwrite
+ * key in `galaxyInfoBuilder.ts`.  A duplicate would silently overwrite
  * an entry's images at fetch time and confuse the cross-ref lookup at
  * runtime.
  */

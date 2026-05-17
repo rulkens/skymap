@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { findNearestPoint } from '../tools/buildFamous';
 
 /**
- * Build a tiny PointCloud-shaped fixture with three Cartesian points so
+ * Build a tiny GalaxyCatalog-shaped fixture with three Cartesian points so
  * we can exercise `findNearestPoint` without hitting disk.
  */
 function makeCloud(xyz: ReadonlyArray<readonly [number, number, number]>) {

@@ -15,7 +15,7 @@
 | 1   | Sibling renderer or replacement? | REPLACEMENT. Old `proceduralDiskRenderer` + `proceduralDisks.wgsl` get `git rm`-deleted. The new renderer is a strict superset.                                                               |
 | 2   | Per-instance attribute layout    | Same 3× `vec4<f32>` (48 bytes) ABI as `ProceduralDiskInstance`. New `hasDisc` boolean packed into `extras.z` (was zero-padding).                                                              |
 | 3   | Pipeline state                   | Pure additive blend (`srcFactor: 'one'`, `dstFactor: 'one'`). NO `depthStencil` block — the HDR pass has no depth attachment as of `d69ab75`.                                                 |
-| 4   | Where category is computed       | JS-side at frame time via `galaxyType(source, mags).category`. No `pointCloud.bin` format bump.                                                                                               |
+| 4   | Where category is computed       | JS-side at frame time via `galaxyType(source, mags).category`. No `galaxyCatalog.bin` format bump.                                                                                               |
 | 5   | Bulge fragment math source       | Copy-and-adapt from `milkyWayImpostor.wgsl`'s `renderGalaxy` (bulge raymarch + soft outer halo). `milkyWayImpostor.wgsl` itself stays unchanged.                                              |
 | 6   | Disc-halo fragment math source   | Copy-and-adapt from `milkyWayImpostor.wgsl`'s thin-disc-halo raymarch (anisotropic Gaussian). Conditional on per-instance `hasDisc > 0.5`.                                                    |
 | 7   | Spiral arms                      | NOT included. The Milky Way's noise/star-cell math is per-fragment trig and unsuitable for thousands of impostors.                                                                            |
@@ -24,7 +24,7 @@
 
 **Out of scope:**
 
-- Format-version bump for `pointCloud.bin` (decision 4).
+- Format-version bump for `galaxyCatalog.bin` (decision 4).
 - A user-facing toggle.
 - Texture-based / Sersic-from-texture ellipticals.
 - Modifying `milkyWayImpostor.wgsl`.
@@ -1250,7 +1250,7 @@ export function maybeEmitProceduralGalaxy(
   // matching the original inline check; tests pin this with `8.0001` vs.
   // `8.0` to catch a future flip to `>=`.
   if (px <= fadeStartPx) return null;
-  // Orientation guard.  PointCloud columns can carry NaN sentinels for
+  // Orientation guard.  GalaxyCatalog columns can carry NaN sentinels for
   // sources without orientation data (synthetic, partial 2MRS rows); we
   // can't render an oriented disc-halo without both, so skip rather
   // than emitting a shader-NaN.  Note: even bulge-only red galaxies
@@ -1441,7 +1441,7 @@ const minPxForLoopEntry = Math.min(APPARENT_SIZE_THRESHOLD_PX, PROCEDURAL_GALAXY
 // frame time via `galaxyType(source, mags)` and forwarded to
 // the helper, which packs `hasDisc` into the per-instance vec4.
 // Red galaxies get bulge-only and look like ellipticals; spirals
-// get the layered look.  No `pointCloud.bin` format bump
+// get the layered look.  No `galaxyCatalog.bin` format bump
 // required — the classification runs every frame, but the loop
 // already runs once per galaxy and `galaxyType` is a cheap
 // float-compare dispatch.

@@ -5,20 +5,20 @@
  *
  * Fixtures here use 3-row synthetic clouds with hand-set objIDs and
  * positions.  The resolver only reads `count`, `objIDs`, and `positions`,
- * so we cast partial cloud objects to `PointCloud` rather than filling
+ * so we cast partial cloud objects to `GalaxyCatalog` rather than filling
  * every field.  This keeps each test compact and the contract under
- * test obvious — anything else in `PointCloud` is irrelevant to the
+ * test obvious — anything else in `GalaxyCatalog` is irrelevant to the
  * resolver and a real cloud's bytes would only obscure that.
  */
 import { describe, it, expect } from 'vitest';
 import { resolveFocusTarget } from '../../../../src/services/engine/camera/resolveFocusTarget';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import { Source } from '../../../../src/data/sources';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import { raDecZToCartesian } from '../../../../src/utils/math/raDecZToCartesian';
 
 /**
- * Build a minimum-viable `PointCloud` for resolver tests.  The resolver
+ * Build a minimum-viable `GalaxyCatalog` for resolver tests.  The resolver
  * only reads `count`, `objIDs`, and `positions`; every other field is
  * unused, so we cast through `unknown` rather than filling them with
  * pointless zeros.
@@ -27,12 +27,12 @@ function makeCloud(
   count: number,
   objIDs: bigint[],
   positions: number[],
-): PointCloud {
+): GalaxyCatalog {
   return {
     count,
     objIDs: BigUint64Array.from(objIDs),
     positions: Float32Array.from(positions),
-  } as unknown as PointCloud;
+  } as unknown as GalaxyCatalog;
 }
 
 /**
@@ -60,7 +60,7 @@ describe('resolveFocusTarget — famous', () => {
     const famous = makeCloud(2, [0n, 0n], [0, 0, 0, 0, 0, 0]);
     const out = resolveFocusTarget({
       target: { kind: 'famous', id: 'ngc5128' },
-      clouds: [{ source: Source.Famous, cloud: famous }],
+      catalogs: [{ source: Source.Famous, catalog: famous }],
       famousMeta: meta,
       aliasMap: new Map(),
     });
@@ -71,7 +71,7 @@ describe('resolveFocusTarget — famous', () => {
     const famous = makeCloud(2, [0n, 0n], [0, 0, 0, 0, 0, 0]);
     const out = resolveFocusTarget({
       target: { kind: 'famous', id: 'nonsense' },
-      clouds: [{ source: Source.Famous, cloud: famous }],
+      catalogs: [{ source: Source.Famous, catalog: famous }],
       famousMeta: meta,
       aliasMap: new Map(),
     });
@@ -83,7 +83,7 @@ describe('resolveFocusTarget — famous', () => {
     // tier to advise the user about, so this is unknown, not tier.
     const out = resolveFocusTarget({
       target: { kind: 'famous', id: 'm31' },
-      clouds: [],
+      catalogs: [],
       famousMeta: meta,
       aliasMap: new Map(),
     });
@@ -96,7 +96,7 @@ describe('resolveFocusTarget — pgc', () => {
     const glade = makeCloud(3, [100n, 200n, 300n], new Array(9).fill(0));
     const out = resolveFocusTarget({
       target: { kind: 'pgc', pgc: 200n },
-      clouds: [{ source: Source.Glade, cloud: glade }],
+      catalogs: [{ source: Source.Glade, catalog: glade }],
       famousMeta: [],
       aliasMap: new Map(),
     });
@@ -108,9 +108,9 @@ describe('resolveFocusTarget — pgc', () => {
     const twoMrs = makeCloud(2, [555n, 999n], new Array(6).fill(0));
     const out = resolveFocusTarget({
       target: { kind: 'pgc', pgc: 999n },
-      clouds: [
-        { source: Source.Glade, cloud: glade },
-        { source: Source.TwoMRS, cloud: twoMrs },
+      catalogs: [
+        { source: Source.Glade, catalog: glade },
+        { source: Source.TwoMRS, catalog: twoMrs },
       ],
       famousMeta: [],
       aliasMap: new Map(),
@@ -123,7 +123,7 @@ describe('resolveFocusTarget — pgc', () => {
     const aliasMap = new Map<bigint, readonly string[]>([[42n, ['NGC 7']]]);
     const out = resolveFocusTarget({
       target: { kind: 'pgc', pgc: 42n },
-      clouds: [{ source: Source.Glade, cloud: glade }],
+      catalogs: [{ source: Source.Glade, catalog: glade }],
       famousMeta: [],
       aliasMap,
     });
@@ -134,7 +134,7 @@ describe('resolveFocusTarget — pgc', () => {
     const glade = makeCloud(2, [100n, 200n], new Array(6).fill(0));
     const out = resolveFocusTarget({
       target: { kind: 'pgc', pgc: 9999n },
-      clouds: [{ source: Source.Glade, cloud: glade }],
+      catalogs: [{ source: Source.Glade, catalog: glade }],
       famousMeta: [],
       aliasMap: new Map(),
     });
@@ -149,7 +149,7 @@ describe('resolveFocusTarget — pgc', () => {
     const aliasMap = new Map<bigint, readonly string[]>([[42n, ['x']]]);
     const out = resolveFocusTarget({
       target: { kind: 'pgc', pgc: 42n },
-      clouds: [{ source: Source.SDSS, cloud: sdss }],
+      catalogs: [{ source: Source.SDSS, catalog: sdss }],
       famousMeta: [],
       aliasMap,
     });
@@ -164,7 +164,7 @@ describe('resolveFocusTarget — sdss', () => {
     const sdss = makeCloud(2, [123n, objID], new Array(6).fill(0));
     const out = resolveFocusTarget({
       target: { kind: 'sdss', objID },
-      clouds: [{ source: Source.SDSS, cloud: sdss }],
+      catalogs: [{ source: Source.SDSS, catalog: sdss }],
       famousMeta: [],
       aliasMap: new Map(),
     });
@@ -178,7 +178,7 @@ describe('resolveFocusTarget — sdss', () => {
     const glade = makeCloud(1, [100n], [0, 0, 0]);
     const out = resolveFocusTarget({
       target: { kind: 'sdss', objID },
-      clouds: [{ source: Source.Glade, cloud: glade }],
+      catalogs: [{ source: Source.Glade, catalog: glade }],
       famousMeta: [],
       aliasMap: new Map(),
     });
@@ -193,7 +193,7 @@ describe('resolveFocusTarget — sdss', () => {
     const sdss = makeCloud(1, [111n], [0, 0, 0]);
     const out = resolveFocusTarget({
       target: { kind: 'sdss', objID },
-      clouds: [{ source: Source.SDSS, cloud: sdss }],
+      catalogs: [{ source: Source.SDSS, catalog: sdss }],
       famousMeta: [],
       aliasMap: new Map(),
     });
@@ -212,7 +212,7 @@ describe('resolveFocusTarget — pos', () => {
     const cloud = makeCloud(3, [0n, 0n, 0n], positionsFromSky(targets));
     const out = resolveFocusTarget({
       target: { kind: 'pos', raDeg: 100 + 5 / 3600, decDeg: 30 },
-      clouds: [{ source: Source.Glade, cloud }],
+      catalogs: [{ source: Source.Glade, catalog: cloud }],
       famousMeta: [],
       aliasMap: new Map(),
     });
@@ -224,7 +224,7 @@ describe('resolveFocusTarget — pos', () => {
     const cloud = makeCloud(1, [0n], positionsFromSky([{ raDeg: 100, decDeg: 30 }]));
     const out = resolveFocusTarget({
       target: { kind: 'pos', raDeg: 100 + 60 / 3600, decDeg: 30 },
-      clouds: [{ source: Source.Glade, cloud }],
+      catalogs: [{ source: Source.Glade, catalog: cloud }],
       famousMeta: [],
       aliasMap: new Map(),
     });
@@ -237,7 +237,7 @@ describe('resolveFocusTarget — pos', () => {
     const cloud = makeCloud(1, [0n], positionsFromSky([{ raDeg: 359.999, decDeg: 0 }]));
     const out = resolveFocusTarget({
       target: { kind: 'pos', raDeg: 0.001, decDeg: 0 },
-      clouds: [{ source: Source.Glade, cloud }],
+      catalogs: [{ source: Source.Glade, catalog: cloud }],
       famousMeta: [],
       aliasMap: new Map(),
     });
@@ -257,7 +257,7 @@ describe('resolveFocusTarget — pos', () => {
     );
     const out = resolveFocusTarget({
       target: { kind: 'pos', raDeg: 50, decDeg: 0 },
-      clouds: [{ source: Source.Glade, cloud }],
+      catalogs: [{ source: Source.Glade, catalog: cloud }],
       famousMeta: [],
       aliasMap: new Map(),
     });
@@ -277,9 +277,9 @@ describe('resolveFocusTarget — pos', () => {
     );
     const out = resolveFocusTarget({
       target: { kind: 'pos', raDeg: 50, decDeg: 0 },
-      clouds: [
-        { source: Source.Glade, cloud: glade },
-        { source: Source.TwoMRS, cloud: twoMrs },
+      catalogs: [
+        { source: Source.Glade, catalog: glade },
+        { source: Source.TwoMRS, catalog: twoMrs },
       ],
       famousMeta: [],
       aliasMap: new Map(),

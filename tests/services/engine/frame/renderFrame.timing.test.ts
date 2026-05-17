@@ -42,7 +42,7 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 
@@ -144,7 +144,7 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   const fill = (v: number): Float32Array => {
     const a = new Float32Array(count);
     a.fill(v);
@@ -188,7 +188,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const postProcess = makePostProcess();
 
   const cam = makeCam();
-  const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
+  const catalogs = new Map([[Source.SDSS, makeCloud(1)]]);
   const canvasWidth = 1280;
   const canvasHeight = 720;
   const viewProj = new Float32Array(16) as unknown as mat4;
@@ -258,7 +258,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     settings: settings as never,
     famousMeta: [],
     famousXrefs: {},
-    clouds,
+    catalogs,
     timingService,
   };
 

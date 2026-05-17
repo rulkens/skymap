@@ -1,15 +1,15 @@
-import type { PointCloud } from '../data/PointCloud';
+import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { Source } from '../../data/sources';
 
 export type ComputeAngularWeightsInput = {
-  /** Point cloud whose galaxies need per-row angular re-weight values. */
-  cloud: PointCloud;
+  /** Galaxy catalog whose galaxies need per-row angular re-weight values. */
+  cloud: GalaxyCatalog;
   /**
-   * Survey this cloud belongs to.  Currently unused by the algorithm — the
-   * binning is purely geometric on the cloud's positions — but threaded
+   * Survey this catalog belongs to.  Currently unused by the algorithm — the
+   * binning is purely geometric on the catalog's positions — but threaded
    * through the API for parity with `computeSchechterRatios` and to support
    * a future per-survey tuning (e.g., different `nside` for the smaller 2MRS
-   * cloud where 12 288 cells overresolve the data).
+   * catalog where 12 288 cells overresolve the data).
    */
   source: Source;
   /**

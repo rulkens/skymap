@@ -32,7 +32,7 @@ import { mulberry32 } from './mulberry32';
  * Fold a bigint and two doubles into a single 32-bit seed.
  *
  * Defensive coercion of `objID`: the function signature promises a
- * bigint, but in practice the caller is `pointInfoBuilder` reading
+ * bigint, but in practice the caller is `galaxyInfoBuilder` reading
  * `cloud.objIDs[idx]`.  In a brief window during a tier swap, the GPU
  * pick texture can hand back a global index that briefly out-runs the
  * just-uploaded cloud buffers — the index lands out of bounds, and

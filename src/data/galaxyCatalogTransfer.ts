@@ -1,10 +1,10 @@
 /**
- * pointCloudTransfer — slice-and-transfer ceremony for PointCloud
+ * galaxyCatalogTransfer — slice-and-transfer ceremony for GalaxyCatalog
  * worker payloads.
  *
  * ### Why this module exists
  *
- * Sending a PointCloud across a Worker boundary with structured-clone
+ * Sending a GalaxyCatalog across a Worker boundary with structured-clone
  * cost would be prohibitive at ~3.5M galaxies. The cheap alternative is
  * `postMessage(payload, transfer)` with a list of `ArrayBuffer`s to
  * transfer ownership of — but we can't transfer the engine's
@@ -17,14 +17,14 @@
  *      `objIDs`; Float32Array for everything else).
  *   3. Build a Transferable[] of the copy buffers.
  *   4. Hand both back to the caller; they call
- *      `worker.postMessage({ ...input, cloud: copy }, transfer)`.
+ *      `worker.postMessage({ ...input, catalog: copy }, transfer)`.
  *
  * Pre-extraction this ceremony was open-coded three times across two
- * files. Adding a new PointCloud field meant editing all three sites
+ * files. Adding a new GalaxyCatalog field meant editing all three sites
  * in lockstep; a missed edit silently sent `undefined` through the
  * worker boundary. This module is now the only place that knows
- * which fields PointCloud carries; future fields require one edit
- * here plus updating `tests/data/pointCloudTransfer.test.ts`'s field
+ * which fields GalaxyCatalog carries; future fields require one edit
+ * here plus updating `tests/data/galaxyCatalogTransfer.test.ts`'s field
  * count assertion.
  *
  * ### Note on BigUint64Array
@@ -36,27 +36,27 @@
  * (HTML spec §StructuredSerialize step "If value has [[ArrayBufferData]]…").
  */
 
-import type { PointCloud } from '../@types/data/PointCloud';
-import type { ClonedPointCloud } from '../@types/data/ClonedPointCloud';
+import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
+import type { ClonedGalaxyCatalog } from '../@types/data/ClonedGalaxyCatalog';
 
 /**
- * Slice every typed-array buffer in `cloud` to produce a structurally
+ * Slice every typed-array buffer in `catalog` to produce a structurally
  * identical copy whose buffers are detached-ownership-ready, plus the
  * matching Transferable[] for `postMessage`.
  */
-export function clonePointCloudForTransfer(cloud: PointCloud): ClonedPointCloud {
-  const copy: PointCloud = {
-    count: cloud.count,
-    objIDs: new BigUint64Array(cloud.objIDs.buffer.slice(0)),
-    positions: new Float32Array(cloud.positions.buffer.slice(0)),
-    magU: new Float32Array(cloud.magU.buffer.slice(0)),
-    magG: new Float32Array(cloud.magG.buffer.slice(0)),
-    magR: new Float32Array(cloud.magR.buffer.slice(0)),
-    magI: new Float32Array(cloud.magI.buffer.slice(0)),
-    magZ: new Float32Array(cloud.magZ.buffer.slice(0)),
-    axisRatio: new Float32Array(cloud.axisRatio.buffer.slice(0)),
-    positionAngleDeg: new Float32Array(cloud.positionAngleDeg.buffer.slice(0)),
-    diameterKpc: new Float32Array(cloud.diameterKpc.buffer.slice(0)),
+export function cloneGalaxyCatalogForTransfer(catalog: GalaxyCatalog): ClonedGalaxyCatalog {
+  const copy: GalaxyCatalog = {
+    count: catalog.count,
+    objIDs: new BigUint64Array(catalog.objIDs.buffer.slice(0)),
+    positions: new Float32Array(catalog.positions.buffer.slice(0)),
+    magU: new Float32Array(catalog.magU.buffer.slice(0)),
+    magG: new Float32Array(catalog.magG.buffer.slice(0)),
+    magR: new Float32Array(catalog.magR.buffer.slice(0)),
+    magI: new Float32Array(catalog.magI.buffer.slice(0)),
+    magZ: new Float32Array(catalog.magZ.buffer.slice(0)),
+    axisRatio: new Float32Array(catalog.axisRatio.buffer.slice(0)),
+    positionAngleDeg: new Float32Array(catalog.positionAngleDeg.buffer.slice(0)),
+    diameterKpc: new Float32Array(catalog.diameterKpc.buffer.slice(0)),
   };
   const transfer: Transferable[] = [
     copy.objIDs.buffer,

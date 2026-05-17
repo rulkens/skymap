@@ -249,7 +249,7 @@ function makeState(overrides: Partial<{
     },
     bias: {} as never,
     sources: {
-      clouds: new Map(),
+      catalogs: new Map(),
       visibleMask: 0xff,
       lodMode: 'auto',
       famousMeta: [],
@@ -313,7 +313,7 @@ function makeDeps(): BootstrapDeps {
     // including them lets the test inspect call counts if needed.
     filaments: { onReady: vi.fn() } as never,
     volumes: { onFieldsChanged: vi.fn() } as never,
-    sources: { onCloudReady: vi.fn(), onLoadProgress: vi.fn() } as never,
+    sources: { onCatalogReady: vi.fn(), onLoadProgress: vi.fn() } as never,
   } as unknown as EngineCallbacks;
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,

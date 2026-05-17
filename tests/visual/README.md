@@ -8,7 +8,7 @@ pixel-readback harness costs more than the refactor it would gate.
 Instead each `*.baseline.test.ts` file:
 
   1. Constructs a deterministic fixture (cameras at fixed positions,
-     synthetic PointClouds with hand-picked diameters and orientations).
+     synthetic GalaxyCatalogs with hand-picked diameters and orientations).
   2. Drives the engine subsystems through their `runFrame` step exactly
      as the production frame body would.
   3. Records `(rendererName, instanceCount, hashOfPackedInstances)` for

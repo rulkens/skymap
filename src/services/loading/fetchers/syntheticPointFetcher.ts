@@ -1,6 +1,6 @@
 /**
- * syntheticPointFetcher — `Fetcher<PointCloud, PointCloudReq>` that
- * resolves synchronously to a deterministic procedural cloud.
+ * syntheticPointFetcher — `Fetcher<GalaxyCatalog, GalaxyCatalogReq>` that
+ * resolves synchronously to a deterministic procedural catalog.
  *
  * ### Why this exists
  *
@@ -24,22 +24,22 @@
  *
  * ### Why this fetcher ignores `req.source` and `req.tier`
  *
- * The slot's typed `Req = PointCloudReq = { source, tier }` because the
+ * The slot's typed `Req = GalaxyCatalogReq = { source, tier }` because the
  * `state.assetSlots.points` Map is uniformly typed across every entry.
  * For the synthetic slot specifically, the request fields carry no
- * information — the cloud is pure procedural.  We accept the standard
+ * information — the catalog is pure procedural.  We accept the standard
  * shape so the slot wiring at the engine boot site is uniform with
  * every other source's `slot.load({ source, tier })` call.
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
-import type { PointCloud } from '../../../@types/data/PointCloud';
-import type { PointCloudReq } from '../../../@types/loading/PointCloudReq';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
+import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import { generateSyntheticCloud } from '../../../data/synthetic';
 
-/** Hard-coded synthetic cloud size — matches the legacy fallback. */
+/** Hard-coded synthetic catalog size — matches the legacy fallback. */
 export const SYNTHETIC_POINT_COUNT = 100_000;
 
-export const syntheticPointFetcher: Fetcher<PointCloud, PointCloudReq> = async () => {
+export const syntheticPointFetcher: Fetcher<GalaxyCatalog, GalaxyCatalogReq> = async () => {
   return generateSyntheticCloud(SYNTHETIC_POINT_COUNT);
 };

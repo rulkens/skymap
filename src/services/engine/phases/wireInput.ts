@@ -6,7 +6,7 @@
  *
  * ### What this phase does
  *
- *   - Computes the camera bbox from `state.sources.clouds` (must be
+ *   - Computes the camera bbox from `state.sources.catalogs` (must be
  *     non-empty by the time we reach here — `wireSlots` awaited the
  *     all-arrivals gate).
  *   - Constructs the orbit camera with the bbox-derived framing.
@@ -21,7 +21,7 @@
  *     visual renderer — no extra GPU memory).  Stored on
  *     `state.gpu.pickRenderer`.
  *   - Builds the click resolver (decodes pick readbacks into
- *     `(source, localIdx, cloud)` and hands back a PointInfo).  Stored
+ *     `(source, localIdx, cloud)` and hands back a GalaxyInfo).  Stored
  *     on `state.subsystems.clickResolver`.
  *   - Attaches `inputBindings` (pointer/keyboard/resize listener bag).
  *     Stored on `state.subsystems.inputBindings`.
@@ -38,7 +38,7 @@
  *
  * ### Why this runs third (after wireSlots, before startLoop)
  *
- * The bbox loop reads `state.sources.clouds` — populated by the
+ * The bbox loop reads `state.sources.catalogs` — populated by the
  * per-source slot commit subscribers wired in `initGpu` and triggered
  * by `wireSlots`.  Without `wireSlots` having awaited the all-arrivals
  * gate, the bbox would be 0 (no clouds yet) and the camera framing
@@ -68,7 +68,7 @@
  *
  * ### Early-return semantics
  *
- * If `state.sources.clouds.size === 0` (every load failed and the
+ * If `state.sources.catalogs.size === 0` (every load failed and the
  * synthetic fallback also produced nothing), this phase returns
  * early.  Same condition as the pre-Phase-5 IIFE's mid-IIFE `return`
  * at the corresponding line.  `startLoop` checks the same condition
@@ -83,13 +83,13 @@ import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
 import { createClickResolver } from '../interaction/clickHandler';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
-import { buildPointInfo, maxAbsCoord } from '../helpers/pointInfoBuilder';
+import { buildGalaxyInfo, maxAbsCoord } from '../helpers/galaxyInfoBuilder';
 import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
-import { cloudSourceFor } from '../../../data/cloudSource';
+import { catalogSourceFor } from '../../../data/catalogSource';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { PointInfo } from '../../../@types/engine/PointInfo';
+import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 /**
@@ -102,7 +102,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // Bail if no clouds reached the GPU (engine torn down mid-load,
   // or synthetic upload failed).  Without at least one cloud the
   // bbox computation below has nothing to size the camera against.
-  if (state.sources.clouds.size === 0) return;
+  if (state.sources.catalogs.size === 0) return;
 
   // Build the pick renderer. It shares the same vertex/uniform buffers as
   // the visual renderer — no extra GPU memory for point data.
@@ -119,17 +119,17 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // the matching cloud and bounds-check the localIdx against the
   // data-side map's count.  The bounds check defends the tier-swap
   // race (in-flight pick decoded against a now-shrunk cloud) — see
-  // `selectionSubsystem.pointInfoFor` for the same guard rationale.
+  // `selectionSubsystem.galaxyInfoFor` for the same guard rationale.
   state.subsystems.clickResolver = createClickResolver({
     pickRenderer,
     resolveSelection: (sel) => {
-      const cloud = state.sources.clouds.get(sel.source);
+      const cloud = state.sources.catalogs.get(sel.source);
       if (!cloud) return null;
       if (sel.localIdx < 0 || sel.localIdx >= cloud.count) return null;
       return { source: sel.source, localIdx: sel.localIdx, cloud };
     },
-    buildPointInfo: (cloud, localIdx, src) =>
-      buildPointInfo(cloud, localIdx, src, state.sources.famousMeta, state.sources.famousXrefs),
+    buildGalaxyInfo: (cloud, localIdx, src) =>
+      buildGalaxyInfo(cloud, localIdx, src, state.sources.famousMeta, state.sources.famousXrefs),
   });
 
   // ── Camera auto-framing ──────────────────────────────────────────────
@@ -140,7 +140,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // (cameraFraming.ts) turns it into target/distance/yaw/pitch
   // /near/far including the zoom-envelope clamp.
   let bbox = 0;
-  for (const c of state.sources.clouds.values()) {
+  for (const c of state.sources.catalogs.values()) {
     const b = maxAbsCoord(c);
     if (b > bbox) bbox = b;
   }
@@ -261,17 +261,17 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // second pick: two readbacks racing on shared GPU resources
   // produced flaky results (the dblclick readback would resolve
   // first and return `clear` while the click's resolved later
-  // with the real hit).  By reusing the click's PointInfo we
+  // with the real hit).  By reusing the click's GalaxyInfo we
   // also save one readback per double-click.
   //
-  // Stored as the full PointInfo so we can pull `x/y/z` and
+  // Stored as the full GalaxyInfo so we can pull `x/y/z` and
   // `diameterKpc` straight into `handle.focusOn` without a
   // second cloud-lookup.  Cleared on every empty-space click so
   // a dblclick on empty space doesn't trigger a stale focus.
-  let lastClickedInfo: PointInfo | null = null;
+  let lastClickedInfo: GalaxyInfo | null = null;
 
   // Shared pick body — used by single-click only now (dblclick
-  // reuses the cached PointInfo).  Returns the click resolver's
+  // reuses the cached GalaxyInfo).  Returns the click resolver's
   // result so the caller can decide what to do with it.  Inline
   // rather than module-level because it closes over `state` and
   // `canvas` from the surrounding scope.  `cssToTexPx` is a pure
@@ -283,7 +283,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   ): ReturnType<NonNullable<typeof state.subsystems.clickResolver>['resolveClick']> | null => {
     const r = state.gpu.renderer;
     const cr = state.subsystems.clickResolver;
-    if (!r || state.sources.clouds.size === 0 || !cr) return null;
+    if (!r || state.sources.catalogs.size === 0 || !cr) return null;
 
     // Snapshot the renderer's per-source draw records and filter
     // by the current visibility mask so the pick pass sees the
@@ -328,7 +328,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       if (!pick) return;
       pick.then((result) => {
         // Click on empty space → clear; click on point → pin it.
-        // The PointInfo on `result` is also cached for the
+        // The GalaxyInfo on `result` is also cached for the
         // dblclick handler — see `lastClickedInfo` above for the
         // race-condition rationale.
         if (result.kind === 'clear') {
@@ -347,7 +347,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // Native dblclick fires AFTER the two preceding click
       // events.  Both have already routed through `onClick` and
       // populated `lastClickedInfo` with the hit galaxy's
-      // PointInfo.  We deliberately do NOT run a second pick
+      // GalaxyInfo.  We deliberately do NOT run a second pick
       // here: two readbacks racing on the same pickRenderer
       // resources resolved out of order in practice — the
       // dblclick read returned `clear` while the click read
@@ -373,14 +373,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // `count` here is the total number of points across every loaded
   // survey at the moment we transition to "ready".  Surveys that finish
-  // loading after this point are reflected via `onCloudReady`, not via
+  // loading after this point are reflected via `onCatalogReady`, not via
   // an additional `onStatusChange` — the status bar's job is "we're up",
   // not "live counter".
   const firstReadySource = deps.firstReadySourceRef.current;
   const readyStatus = {
     kind: 'ready' as const,
     count: renderer.totalCount(),
-    source: cloudSourceFor(firstReadySource ?? Source.Synthetic),
+    source: catalogSourceFor(firstReadySource ?? Source.Synthetic),
   };
   cb.lifecycle?.onStatusChange?.(readyStatus);
 

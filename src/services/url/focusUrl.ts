@@ -37,7 +37,7 @@
  * hook) clear the hash gracefully instead of writing nonsense.
  */
 
-import type { PointInfo } from '../../@types/engine/PointInfo';
+import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { FocusTarget } from '../../@types/camera/FocusTarget';
 import { Source } from '../../data/sources';
 
@@ -50,13 +50,13 @@ import { Source } from '../../data/sources';
  * PGC numbers are smaller + cross-indexed by NED), and only true
  * orphans fall back to the pos@ form.
  */
-export function selectionToFocusId(info: PointInfo): string | null {
+export function selectionToFocusId(info: GalaxyInfo): string | null {
   // Synthetic rows have no durable identity across rebuilds.  Returning
   // null here lets the URL-sync hook clear the hash instead of writing
   // a nonsense identifier that will resolve to nothing on reload.
   if (info.source === Source.Synthetic) return null;
 
-  // Famous-row enrichment is populated by `pointInfoBuilder` from the
+  // Famous-row enrichment is populated by `galaxyInfoBuilder` from the
   // famous_meta.json sidecar.  When present, its `id` is the stable
   // seed id ("m31", "ngc5128") that we want to surface in the URL.
   if (info.famous) return info.famous.id;

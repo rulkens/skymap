@@ -59,16 +59,16 @@ Currently 590+ tests passing across 76 files. Keep it green.
 ## Data pipeline (mental model)
 
 ```
-data/raw/*.dat,*.csv  ──parsers──▶  ParsedRecord[]  ──crossMatch──▶  PointCloud  ──encode──▶  public/data/*.bin
-                                                                                                    │
-                                                                                                    ▼
-                                          browser fetch  ◀──decodePointCloud──  ArrayBuffer  ◀──load
+data/raw/*.dat,*.csv  ──parsers──▶  ParsedRecord[]  ──crossMatch──▶  GalaxyCatalog  ──encode──▶  public/data/*.bin
+                                                                                                       │
+                                                                                                       ▼
+                                            browser fetch  ◀──decodeGalaxyCatalog──  ArrayBuffer  ◀──load
                                               │
                                               ▼
                                           GPU vertex/index buffers  ──pointRenderer──▶  WGSL  ──▶  canvas
 ```
 
-Binary format is in `src/data/pointCloudFormat.ts` — currently v2, 48 bytes/point. Bumping the version means regenerating bins via `npm run build-all`. The format header stores `magic + version + count`, so old bins fail loudly with a clear regenerate message.
+Binary format is in `src/data/galaxyCatalogFormat.ts` — currently v4, 64 bytes/galaxy. Bumping the version means regenerating bins via `npm run build-all`. The format header stores `magic + version + count`, so old bins fail loudly with a clear regenerate message. (The 2026-05-17 PointCloud → GalaxyCatalog code rename did NOT bump the on-disk format.)
 
 ### Deploy workflow (Cloudflare Workers Assets + R2)
 
@@ -99,7 +99,7 @@ extract step requires Python + pyslime and only happens once per VAC
 release; contributors curl the pre-extracted `.npy` tiers from R2 and
 run `npm run build-mcpm` to emit the SCFDs locally. The runtime fetches
 `mcpm-<tier>.scfd` per the user's current tier dropdown — same path
-the point clouds use through `state.sources.tier`. See
+the galaxy catalogs use through `state.sources.tier`. See
 `docs/superpowers/specs/2026-05-11-mcpm-cosmic-web-volume-design.md`
 for the full pipeline + format details.
 

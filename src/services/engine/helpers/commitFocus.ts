@@ -21,7 +21,7 @@
  * `focusOn` documented the `onFocusChange`-before-tween ordering even
  * though all three rely on it.  This helper is the single place where
  * the protocol is defined; the call sites supply only the genuinely
- * per-method bits (input validation, building the PointInfo, deciding
+ * per-method bits (input validation, building the GalaxyInfo, deciding
  * whether a selection update is part of "focus" for that path).
  *
  * ### Why selection is optional
@@ -37,7 +37,7 @@
  *
  * ### Why selection.info is optional
  *
- * `setSelected`'s second parameter is a prebuilt PointInfo that the
+ * `setSelected`'s second parameter is a prebuilt GalaxyInfo that the
  * selection subsystem will hand to `cb.onSelectChange` immediately,
  * bypassing its usual "look up the live cloud + sidecars at fan-out
  * time" path.  Two call shapes use this differently:
@@ -80,7 +80,7 @@
  *   no callback fired keeps the URL hash from drifting away from the
  *   canvas state.
  *
- * - Building the `PointInfo`.  The lead-up varies meaningfully across
+ * - Building the `GalaxyInfo`.  The lead-up varies meaningfully across
  *   the three callers (`focusOn` receives one ready-made; `selectFamous`
  *   resolves an id → localIdx; `selectByAlias` accepts caller-supplied
  *   sidecars to defend against a separate race), so the dedup stops at
@@ -89,7 +89,7 @@
 
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { PointInfo } from '../../../@types/engine/PointInfo';
+import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { CommitFocusSelection } from '../../../@types/engine/CommitFocusSelection';
 import { tweenToGalaxy } from '../camera/tweenToGalaxy';
 
@@ -109,7 +109,7 @@ import { tweenToGalaxy } from '../camera/tweenToGalaxy';
 export function commitFocus(
   state: EngineState,
   cb: EngineCallbacks,
-  info: PointInfo,
+  info: GalaxyInfo,
   selection?: CommitFocusSelection,
 ): void {
   if (selection) {

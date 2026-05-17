@@ -97,11 +97,11 @@ For each move below, the format is `source:line → dest`. The dest is always `s
 - [ ] **Step 1.6 — `data/` core data shapes:**
   - `src/data/biasMode.ts:75 → @types/data/BiasMode.d.ts`
     - Note: the type uses `(typeof BiasMode)[keyof typeof BiasMode]` referencing the runtime const. Keep the type referencing the runtime const via `import type { BiasMode as BiasModeConst } from '../../data/biasMode'` — or, simpler: declare it as the literal union `'off' | 'schechter' | …` once you read the const out and inline it. **Decision DP-1a:** inline the literals to keep `.d.ts` free of value imports.
-  - `src/data/cloudSource.ts:28 → @types/data/CloudSource.d.ts`
+  - `src/data/catalogSource.ts:28 → @types/data/CatalogSource.d.ts`
   - `src/data/clusterAnchors.ts:39 → @types/data/SkyCoord.d.ts`
   - `src/data/clusterAnchors.ts:46 → @types/data/ClusterAnchor.d.ts` (imports `SkyCoord`, `Vec3`)
   - `src/data/colourIndex.ts:18 → @types/data/ColourIndexSpec.d.ts`
-  - `src/data/pointCloudTransfer.ts:41 → @types/data/ClonedPointCloud.d.ts`
+  - `src/data/galaxyCatalogTransfer.ts:41 → @types/data/ClonedGalaxyCatalog.d.ts`
   - `src/data/sources.ts:209 → @types/data/BandLabels.d.ts`
   - `src/data/surveyFluxLimits.ts:31 → @types/data/SchechterTriple.d.ts`
   - `src/data/syntheticScalarField.ts:32 → @types/data/SyntheticGaussianOptions.d.ts`
@@ -114,7 +114,7 @@ For each move below, the format is `source:line → dest`. The dest is always `s
     - `@types/data/ScalarFieldFrameKind.d.ts` (line 18)
     - `@types/data/ScalarFieldPaletteId.d.ts` (line 20)
     - `@types/data/ScalarCube.d.ts` (line 36)
-  - Move `src/@types/PointCloud.d.ts` → `@types/data/PointCloud.d.ts`.
+  - Move `src/@types/GalaxyCatalog.d.ts` → `@types/data/GalaxyCatalog.d.ts`.
   - Move `src/@types/FilamentCloud.d.ts` → `@types/data/FilamentCloud.d.ts`.
   - Move `src/@types/Tier.d.ts` → `@types/data/Tier.d.ts`.
   - Move `src/@types/LodMode.d.ts` → `@types/data/LodMode.d.ts`.
@@ -137,22 +137,22 @@ For each `source:line → dest`:
 
 ### Consumer-site rewrites to apply in this PR (specific files that import data/math types today)
 
-Run `grep -rE "from ['\"].*(@types|data/(biasMode|cloudSource|colourIndex|sources|toneMapCurve|volumeFieldDefaults|surveyFluxLimits|clusterAnchors|pointCloudTransfer|syntheticScalarField)|utils/math/(galaxyType|schechterDensity|vMaxWeight)|biasCorrection/surveyConstants)['\"]" src tests --include="*.ts" --include="*.tsx"` and update each line. Notable consumer files (non-exhaustive, but the ones grep flagged during planning):
+Run `grep -rE "from ['\"].*(@types|data/(biasMode|catalogSource|colourIndex|sources|toneMapCurve|volumeFieldDefaults|surveyFluxLimits|clusterAnchors|galaxyCatalogTransfer|syntheticScalarField)|utils/math/(galaxyType|schechterDensity|vMaxWeight)|biasCorrection/surveyConstants)['\"]" src tests --include="*.ts" --include="*.tsx"` and update each line. Notable consumer files (non-exhaustive, but the ones grep flagged during planning):
 
 - `src/data/sources.ts` re-imports `BandLabels` from `@types/data/BandLabels`.
-- `src/data/synthetic.ts` — `PointCloud` from `@types/data/PointCloud`.
-- `src/data/pointCloudFormat.ts` — `PointCloud` from `@types/data/PointCloud`.
-- `src/services/loading/fetchers/pointCloudFetcher.ts` — `PointCloud`, `Tier`.
-- `src/services/loading/fetchers/syntheticPointFetcher.ts` — `PointCloud`.
+- `src/data/synthetic.ts` — `GalaxyCatalog` from `@types/data/GalaxyCatalog`.
+- `src/data/galaxyCatalogFormat.ts` — `GalaxyCatalog` from `@types/data/GalaxyCatalog`.
+- `src/services/loading/fetchers/galaxyCatalogFetcher.ts` — `GalaxyCatalog`, `Tier`.
+- `src/services/loading/fetchers/syntheticPointFetcher.ts` — `GalaxyCatalog`.
 - `src/services/loading/fetchers/filamentFetcher.ts` — `Tier`.
 - `src/services/loading/fetchers/mcpmFetcher.ts` — `Tier`.
-- `src/services/engine/bake/buildPointInterleavedBuffer.ts`, `computeAngularWeights.ts`, `computeSchechterRatios.ts` — `PointCloud`.
-- `src/services/engine/camera/resolveFocusTarget.ts` — `PointCloud`.
-- `src/services/engine/wiring/pointSourceRegistry.ts` — `PointCloud`.
-- `src/services/engine/subsystems/{biasCorrectionSubsystem,selectionSubsystem,thumbnailSubsystem}.ts` — `PointCloud`.
-- `src/services/engine/frame/passes/types.ts` and `renderFrame.ts` — `PointCloud`.
-- `src/services/engine/interaction/clickHandler.ts` — `PointCloud`.
-- `src/services/engine/helpers/pointInfoBuilder.ts` — `PointCloud`.
+- `src/services/engine/bake/buildPointInterleavedBuffer.ts`, `computeAngularWeights.ts`, `computeSchechterRatios.ts` — `GalaxyCatalog`.
+- `src/services/engine/camera/resolveFocusTarget.ts` — `GalaxyCatalog`.
+- `src/services/engine/wiring/galaxyCatalogSourceRegistry.ts` — `GalaxyCatalog`.
+- `src/services/engine/subsystems/{biasCorrectionSubsystem,selectionSubsystem,thumbnailSubsystem}.ts` — `GalaxyCatalog`.
+- `src/services/engine/frame/passes/types.ts` and `renderFrame.ts` — `GalaxyCatalog`.
+- `src/services/engine/interaction/clickHandler.ts` — `GalaxyCatalog`.
+- `src/services/engine/helpers/galaxyInfoBuilder.ts` — `GalaxyCatalog`.
 - `src/components/SettingsPanel/SettingsPanel.tsx` — `ToneMapCurve`, `VolumeFieldDefaults` (used via runtime imports today; only the type half rewires).
 - `src/utils/math/galaxyTypeFrom{Color,JminusK,BminusJ}.ts` — `GalaxyTypeInfo`.
 - All `tests/` files in the import list at the top of this plan that name a moved type.
@@ -198,7 +198,7 @@ Run `grep -rE "from ['\"].*(@types|data/(biasMode|cloudSource|colourIndex|source
   - `fetchers/mcpmFetcher.ts:23 → @types/loading/MCPMReq.d.ts`
   - `fetchers/pgcAliasFetcher.ts:36 → @types/loading/PgcAliasJsonShape.d.ts`
   - `fetchers/pgcAliasFetcher.ts:39 → @types/loading/PgcAliasMap.d.ts`
-  - `fetchers/pointCloudFetcher.ts:50 → @types/loading/PointCloudReq.d.ts`
+  - `fetchers/galaxyCatalogFetcher.ts:50 → @types/loading/GalaxyCatalogReq.d.ts`
   - `fetchers/syntheticVolumeFetcher.ts:44 → @types/loading/SyntheticVolumeShape.d.ts`
   - `fetchers/syntheticVolumeFetcher.ts:56 → @types/loading/SyntheticVolumeReq.d.ts`
 - [ ] **Step 2.6 — `LoadProgressState` (DP-2):** currently inside `src/@types/EngineCallbacks.d.ts` at line 241. **Move it** to `@types/loading/LoadProgressState.d.ts` and have `EngineCallbacks.d.ts` import it.
@@ -361,8 +361,8 @@ Run `grep -rE "from ['\"].*(@types|data/(biasMode|cloudSource|colourIndex|source
 - `src/services/engine/frame/passes/types.ts` — `Renderer`, `Destroyable`, etc.
 - `src/services/engine/frame/renderFrame.ts` — likely `Renderer` and `PostProcess`.
 - `src/services/engine/subsystems/*.ts` — `Destroyable` (multiple files).
-- `src/services/engine/wiring/pointSourceRegistry.ts` — possibly `Destroyable`.
-- `tests/services/gpu/renderers/{pointRenderer,instancedQuadRenderer}.test.ts` — `PointCloud`, `GpuContext`, instance shapes.
+- `src/services/engine/wiring/galaxyCatalogSourceRegistry.ts` — possibly `Destroyable`.
+- `tests/services/gpu/renderers/{pointRenderer,instancedQuadRenderer}.test.ts` — `GalaxyCatalog`, `GpuContext`, instance shapes.
 
 ### Verification
 
@@ -446,8 +446,8 @@ Run `grep -rE "from ['\"].*(@types|data/(biasMode|cloudSource|colourIndex|source
   - `src/@types/EngineHandle.d.ts → @types/engine/EngineHandle.d.ts`
   - `src/@types/EngineStatus.d.ts → @types/engine/EngineStatus.d.ts`
   - `src/@types/EngineCallbacks.d.ts → @types/engine/EngineCallbacks.d.ts`
-- [ ] **Step 7.6 — Relocate `PointInfo` and `ScaleInfo`:**
-  - `src/@types/PointInfo.d.ts → @types/engine/PointInfo.d.ts` (consumer rule: it's the public selection shape, engine-output)
+- [ ] **Step 7.6 — Relocate `GalaxyInfo` and `ScaleInfo`:**
+  - `src/@types/GalaxyInfo.d.ts → @types/engine/GalaxyInfo.d.ts` (consumer rule: it's the public selection shape, engine-output)
   - `src/@types/ScaleInfo.d.ts → @types/engine/ScaleInfo.d.ts`
 - [ ] **Step 7.7 — Internal `@types/` cross-imports:** every relocated file references siblings via `./`. After moving, fix all such imports:
   - `EngineState.d.ts` imports `EngineSettingsState`, `EngineBiasState`, `EngineSourceState`, `EnginePickingState`, `EngineAssetSlots`, plus `OrbitCamera`, `InitialCam`, `EngineGpuHandles`, `EngineSubsystemHandles`. After move, the new paths are e.g. `./EngineBiasState`, `../handles/EngineGpuHandles`, `../../camera/OrbitCamera`.
@@ -460,7 +460,7 @@ Run `grep -rE "from ['\"].*(@types|data/(biasMode|cloudSource|colourIndex|source
 This is the broadest rewrite. Run for each relocated type:
 
 ```
-grep -rEn "from ['\"].*@types/(EngineHandle|EngineState|EngineCallbacks|EngineStatus|PointInfo|ScaleInfo|Engine[A-Z][A-Za-z]*Handle|Engine[A-Z][A-Za-z]*State|EngineGpuHandles|EngineSubsystemHandles)['\"]" src tests --include="*.ts" --include="*.tsx"
+grep -rEn "from ['\"].*@types/(EngineHandle|EngineState|EngineCallbacks|EngineStatus|GalaxyInfo|ScaleInfo|Engine[A-Z][A-Za-z]*Handle|Engine[A-Z][A-Za-z]*State|EngineGpuHandles|EngineSubsystemHandles)['\"]" src tests --include="*.ts" --include="*.tsx"
 ```
 
 For each hit, replace `@types/<TypeName>` with `@types/engine/<TypeName>` (or `@types/engine/state/<TypeName>` / `@types/engine/handles/<TypeName>` per the relocations above).
@@ -471,15 +471,15 @@ Hot import sites the survey caught (non-exhaustive):
 - `src/services/engine/phases/{bootstrap,initGpu,wireSlots,wireInput,startLoop}.ts`
 - `src/services/engine/frame/{frameContext,renderFrame,runFrame}.ts`
 - `src/services/engine/frame/passes/types.ts`
-- `src/services/engine/wiring/{pointSourceRegistry,seedSettingsCallbacks,settingsTable}.ts`
+- `src/services/engine/wiring/{galaxyCatalogSourceRegistry,seedSettingsCallbacks,settingsTable}.ts`
 - `src/services/engine/subsystems/*.ts` (all of them)
 - `src/services/engine/interaction/clickHandler.ts`
-- `src/services/engine/helpers/{commitFocus,engineReady,scaleBar,pointInfoBuilder}.ts`
+- `src/services/engine/helpers/{commitFocus,engineReady,scaleBar,galaxyInfoBuilder}.ts`
 - `src/services/engine/camera/{tweenManager,tweenToGalaxy,cameraSnapshot,resolveFocusTarget}.ts`
 - `src/services/loading/slots/types.ts`, `slots/syntheticVolumeSlots.ts`, etc. (`EngineState`, `EngineCallbacks`)
-- `src/services/url/focusUrl.ts` (`PointInfo`)
+- `src/services/url/focusUrl.ts` (`GalaxyInfo`)
 - `src/hooks/{useEngine,useFocusUrlSync,useAliasIndex,useKeyboardShortcuts,buildAliasIndex}.ts`
-- `src/components/InfoCard/{InfoCard,CompactCard,FullCard}.tsx` (`PointInfo`)
+- `src/components/InfoCard/{InfoCard,CompactCard,FullCard}.tsx` (`GalaxyInfo`)
 - `src/components/StatusBar/StatusBar.tsx` (`EngineStatus`)
 - `src/components/ScaleBar/ScaleBar.tsx` (`ScaleInfo`)
 - `src/components/LoadingBar/LoadingBar.tsx`, `LoadingDevPanel/LoadingDevPanel.tsx`
@@ -552,7 +552,7 @@ Hot import sites the survey caught (non-exhaustive):
 
 ### Moves into `engine/wiring/`
 
-- [ ] **Step 8.16 — `src/services/engine/wiring/pointSourceRegistry.ts`:**
+- [ ] **Step 8.16 — `src/services/engine/wiring/galaxyCatalogSourceRegistry.ts`:**
   - line 162 `PointSourceConfig` → `@types/engine/wiring/PointSourceConfig.d.ts`
   - line 213 `WirePointSourceDeps` → `@types/engine/wiring/WirePointSourceDeps.d.ts`
 - [ ] **Step 8.17 — `src/services/engine/wiring/seedSettingsCallbacks.ts:44`** `Snapshot` → `@types/engine/wiring/SettingsCallbackSeed.d.ts`
@@ -566,7 +566,7 @@ These are engine-internal but don't fit `frame/`, `subsystems/`, or `wiring/`. *
   - line 83 `PickSourceDraw` — **delete this duplicate**; clickHandler.ts re-imports from `@types/rendering/PickSourceDraw`.
   - line 90 `ClickResolveInput` → `@types/engine/ClickResolveInput.d.ts`
   - line 122 `ResolveSelection` → `@types/engine/ResolveSelection.d.ts`
-  - line 132 `BuildPointInfo` → `@types/engine/BuildPointInfo.d.ts`
+  - line 132 `BuildGalaxyInfo` → `@types/engine/BuildGalaxyInfo.d.ts`
   - line 147 `ClickResolution` → `@types/engine/ClickResolution.d.ts`
   - line 155 `ClickResolver` → `@types/engine/ClickResolver.d.ts`
   - line 170 `CreateClickResolverInput` → `@types/engine/CreateClickResolverInput.d.ts`

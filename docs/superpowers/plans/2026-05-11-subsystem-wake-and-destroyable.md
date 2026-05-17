@@ -556,7 +556,7 @@ export type BiasCorrectionDeps = {
    * swaps and per-source uploads. Replaces the old
    * `getState().sources.clouds` read.
    */
-  getLoadedClouds: () => Map<Source, PointCloud>;
+  getLoadedClouds: () => Map<Source, GalaxyCatalog>;
 
   /**
    * Wake the render loop. Called after every bake completes (the
@@ -574,7 +574,7 @@ export type BiasCorrectionDeps = {
 };
 ```
 
-(`BiasMode` is already imported in the file; `Map<Source, PointCloud>` matches the in-state shape — verify `Source` and `PointCloud` are imported, add imports if not.)
+(`BiasMode` is already imported in the file; `Map<Source, GalaxyCatalog>` matches the in-state shape — verify `Source` and `GalaxyCatalog` are imported, add imports if not.)
 
 - [ ] **Step 2: Replace the three usage sites**
 

@@ -23,7 +23,7 @@ import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
-import type { PointCloud } from '../../data/PointCloud';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Source } from '../../../data/sources';
 
 export type PassDeps = {
@@ -56,13 +56,13 @@ export type PassDeps = {
   /** Procedural Milky Way impostor renderer. */
   milkyWayRenderer: MilkyWayRenderer;
   /**
-   * Live source-cloud map.  Forwarded into `thumbnails.runFrame`
+   * Live source-catalog map.  Forwarded into `thumbnails.runFrame`
    * which iterates it back-to-front for the painter's-algorithm
    * sort.  Lives on `deps` (not `ctx`) because it isn't a derived
    * snapshot — it's a long-lived reference whose contents change
    * across frames.
    */
-  clouds: Map<Source, PointCloud>;
+  catalogs: Map<Source, GalaxyCatalog>;
   /** Famous-galaxy metadata — also forwarded into thumbnails. */
   famousMeta: FamousMetaEntry[];
   /** PGC/SDSS-objID → famous-galaxy index lookup. */

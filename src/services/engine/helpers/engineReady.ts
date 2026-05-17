@@ -14,7 +14,7 @@
  *   - `runFrame.ts`'s "still-animating" predicate at the end of the
  *     frame body re-spelled out three of the same fields with
  *     bespoke `!== null && …` clauses.
- *   - `wiring/pointSourceRegistry.ts` had a single-field
+ *   - `wiring/galaxyCatalogSourceRegistry.ts` had a single-field
  *     `if (!state.gpu.renderer) return;` skip in the slot-commit step
  *     — but that single field was a stand-in for "the engine bag is
  *     ready"; the destroy() path nulls all five together, so any

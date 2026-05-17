@@ -44,7 +44,7 @@ primary catalog identifier.
   generic, functional term and the subsystem doesn't care what
   category of thing it labels. If it ever grows substantially
   beyond "label + optional crosshair", revisit then.
-- **No changes to `famous.bin` or its v4 PointCloud encoding.** All
+- **No changes to `famous.bin` or its v4 GalaxyCatalog encoding.** All
   per-entry data the producer needs is already in the seed and
   meta sidecar.
 - **No labels for SDSS / 2MRS / GLADE points.** The other surveys
@@ -111,39 +111,63 @@ rather than "c101"). Filling in `commonName` for as many entries
 as makes sense is incremental, hand-curated work — not gated by
 this spec.
 
-### 2. Extending `poiSubsystem` to the Famous category
+### 2. Reshape `PoiCategory` into kind-based categories
 
-`PoiCategory` and the `STYLES` table become a single derived pair,
-mirroring the `FONTS` / `FontId` pattern from the multi-font work:
+Today's `PoiCategory = 'cluster' | 'galaxy' | 'void'` mixes two axes:
+the `'cluster'` slot bundles both galaxy clusters and superclusters
+(`wireSlots.ts:194-214` maps both to `category: 'cluster'`,
+differentiating only via `crosshairSizeMpc`), and the `'galaxy'`
+slot exists in the union but no current POI uses it.
+
+Reshape the union to be purely kind-based, with each entry naming a
+distinct astronomical object kind:
 
 ```ts
 // src/services/engine/subsystems/poiSubsystem.ts
 export const POI_STYLES = {
-  cluster: { labelColor: [1.0, 0.85, 0.4, 1], lineColor: [0.9, 0.75, 0.3, 1], pixelSize: 16, worldEmMpc: 0.5, pixelWidth: 2 },
-  galaxy:  { labelColor: [0.85, 0.9, 1.0, 1], lineColor: [0.7, 0.75, 0.85, 1], pixelSize: 14, worldEmMpc: 0.02, pixelWidth: 1.5 },
-  void:    { labelColor: [0.6, 0.85, 0.95, 1], lineColor: [0.45, 0.7, 0.85, 1], pixelSize: 16, worldEmMpc: 1.0, pixelWidth: 2 },
-  famous:  { labelColor: [1.0, 0.95, 0.8, 1], lineColor: [0.9, 0.85, 0.7, 1], pixelSize: 15, worldEmMpc: 0.05, pixelWidth: 1.5 },
+  cluster:      { labelColor: [1.0, 0.85, 0.4, 1],  lineColor: [0.9, 0.75, 0.3, 1],  pixelSize: 16, worldEmMpc: 0.5, pixelWidth: 2 },
+  supercluster: { labelColor: [1.0, 0.92, 0.6, 1],  lineColor: [0.92, 0.82, 0.5, 1], pixelSize: 17, worldEmMpc: 1.0, pixelWidth: 2 },
+  famousGalaxy: { labelColor: [1.0, 0.95, 0.8, 1],  lineColor: [0.9, 0.85, 0.7, 1],  pixelSize: 15, worldEmMpc: 0.05, pixelWidth: 1.5 },
+  void:         { labelColor: [0.6, 0.85, 0.95, 1], lineColor: [0.45, 0.7, 0.85, 1], pixelSize: 16, worldEmMpc: 1.0, pixelWidth: 2 },
 } as const satisfies Readonly<Record<string, CategoryStyle>>;
 
 export type PoiCategory = keyof typeof POI_STYLES;
+//        = 'cluster' | 'supercluster' | 'famousGalaxy' | 'void'
 ```
 
-`PoiCategory` lives alongside `POI_STYLES` in `poiSubsystem.ts` rather
-than in `src/@types/engine/subsystems/PoiCategory.d.ts` — this
-mirrors the `FONTS` / `FontId` pattern from PR #132 (the const and
-its derived union are co-located so they can't drift). The existing
-`PoiCategory.d.ts` file is deleted as part of the change; consumers
-import `PoiCategory` from `'../../engine/subsystems/poiSubsystem'`.
+`PoiCategory` lives alongside `POI_STYLES` in `poiSubsystem.ts`
+rather than in `src/@types/engine/subsystems/PoiCategory.d.ts` —
+this mirrors the `FONTS` / `FontId` pattern from PR #132 (the const
+and its derived union are co-located so they can't drift). The
+existing `PoiCategory.d.ts` file is deleted; consumers import
+`PoiCategory` from `'../../engine/subsystems/poiSubsystem'`.
 
-The `'famous'` style uses a warm off-white (slightly distinct from
-`'galaxy'`'s cool white, so users can tell curated highlights apart
-from generic galaxy POIs) and a smaller `worldEmMpc` than
-`'cluster'` / `'void'` (Famous entries span 0.7 → 78 Mpc and need a
-finer world-em to read at sub-Mpc zooms).
+**Naming rationale for `'famousGalaxy'`:** "famous" alone isn't an
+object kind, but `famousGalaxy` IS — it names the specific kind of
+POI fed by the curated Famous catalog, distinguishable from a
+hypothetical future `'galaxy'` slot that might come from a generic
+catalog source. Reads as self-documenting in the union, in
+`category: 'famousGalaxy'`, and in the settings checkbox label.
+camelCase is the only sensible casing for a multi-word literal here
+— the existing single-word categories stay lowercase.
 
-`PointOfInterest`, `setPois`, `setCategoryVisible`, and the per-frame
-`produceLabels` path are otherwise unchanged — Famous entries are
-just POIs with `category: 'famous'`.
+**Style differentiation:**
+
+- `cluster` (warm yellow): galaxy clusters — Coma, Virgo, etc. Same
+  numbers as today.
+- `supercluster` (slightly lighter yellow, larger `pixelSize`,
+  larger `worldEmMpc`): supercluster centres — Local, Hercules, etc.
+  Visually adjacent to `cluster` but readable as a different scale.
+- `famousGalaxy` (warm off-white): curated individual galaxies.
+  Smaller `worldEmMpc` (0.05) than the cluster categories because
+  Famous entries span 0.7 → 78 Mpc and need to read at sub-Mpc
+  zooms.
+- `void` (soft cyan): same as today.
+
+The dropped `'galaxy'` slot can be reintroduced later as a one-line
+config edit if a future generic-galaxy POI source appears.
+`PointOfInterest`, `setPois`, `setCategoryVisible`, and the
+per-frame `produceLabels` path are otherwise unchanged.
 
 ### 3. Apparent-size gating in `poiSubsystem`
 
@@ -185,22 +209,22 @@ Today `wireSlots.ts:188-228` builds the POI list from in-code
 constants once at engine boot. To pick up Famous entries, the wire
 must also fire after `famousMetaSlot` commits — at which point we
 have both the meta sidecar (for names + diameter) and the loaded
-`famous.bin` cloud (for `worldPos`).
+`famous.bin` catalog (for `worldPos`).
 
 The clean fit is a single `setPois` call site that runs:
 
 1. After both the engine state is ready AND `famousMetaSlot.commit`
-   has fired AND the Famous cloud has finished loading. (The slot
+   has fired AND the Famous catalog has finished loading. (The slot
    commit is the load signal — its callback fires after the data is
    in `state.assetSlots.famousMeta`.)
 2. Reads the static anchors (unchanged).
 3. Reads `state.assetSlots.famousMeta.value` + the loaded Famous
-   point cloud's `positions` buffer.
+   galaxy catalog's `positions` buffer.
 4. For each Famous entry, builds a `PointOfInterest` with:
    - `id`: `'famous-' + entry.id` (namespace-prefixed to avoid
      collision with `wireSlots.ts`'s `slug`-derived ids)
    - `name`: `displayNameFor(entry)` (the helper above)
-   - `category`: `'famous'`
+   - `category`: `'famousGalaxy'`
    - `worldPos`: `positions[i * 3 .. i * 3 + 3]`
    - `crosshairSizeMpc`: omitted — Famous galaxies are already
      rendered as point billboards and most have a thumbnail; a
@@ -211,6 +235,18 @@ The clean fit is a single `setPois` call site that runs:
 6. Combines static anchors + Famous POIs and calls
    `state.subsystems.pois.setPois(merged)`.
 
+The static-anchor wire in `wireSlots.ts` also updates:
+
+- `SUPERCLUSTER_ANCHORS.map(...)` now emits `category: 'supercluster'`
+  instead of `'cluster'`. Cluster and void anchors keep their
+  existing categories.
+- The `if (hasUrlGate('anchors'))` gate at `wireSlots.ts:187` is
+  **removed**. The cluster / supercluster / void anchors graduate
+  from debug-only diagnostic overlays into proper user-facing
+  features, controllable via the Settings → Overlays → Labels
+  toggles introduced in section 5. The `hasUrlGate` import is
+  dropped when no other use remains in the file.
+
 When `famousMetaSlot.commit` fires before the engine state is ready
 (possible on a cold load), the wire defers — `setPois` is called
 later, once both inputs are present.
@@ -219,25 +255,28 @@ The xref system **does not** participate in label emission. A
 Famous entry that's xref'd to 2MRS row 35 still emits one label (at
 the Famous worldPos); the xref'd survey row does not get its own
 label. The xref is a UI-side selection-unification mechanism and is
-already plumbed through `pointInfoBuilder` — labels piggyback on
+already plumbed through `galaxyInfoBuilder` — labels piggyback on
 the Famous entry's identity.
 
 ### 5. Settings panel: Overlays → Labels
 
 The settings panel already has an `Overlays` `CollapsibleSection`
-(per `src/components/SettingsPanel/CollapsibleSection.tsx`'s
-header docstring). Add a new sub-group inside it titled "Labels"
-with one toggle per POI category, plus the existing master
-"Overlays → Labels" enable, structured as:
+(per `src/components/SettingsPanel/CollapsibleSection.tsx`'s header
+docstring). Add a "Labels" sub-group inside it with one always-
+visible toggle per POI category:
 
 ```
 ▸ Overlays
     ▸ Labels
-        [✓] Cluster centres
-        [✓] Supercluster centres
+        [✓] Famous galaxies
+        [✓] Galaxy clusters
+        [✓] Superclusters
         [✓] Voids
-        [✓] Famous galaxies     ← new
 ```
+
+All four toggles are first-class user controls — none are gated on
+URL flags. (See section 4 for the removal of the
+`?anchors=1` debug gate that previously hid the lower three.)
 
 Each row is a checkbox that mirrors a boolean in
 `EngineSettingsState.labelCategoryVisibility: Record<PoiCategory, boolean>`.
@@ -246,9 +285,8 @@ The React control writes through a new
 `EngineSettingsCallbacks`, which the engine forwards to
 `state.subsystems.pois.setCategoryVisible(category, visible)`.
 
-Default state: all four toggles ON (matches current behaviour for
-the three existing categories; Famous is on by default because
-that's the new feature's pitch).
+Default state: every category ON. Users see all four label kinds
+out of the box; turning any off is a one-click adjust.
 
 State persistence: same convention as other settings — held in
 local component state inside `useEngineSettings`, not URL-synced.
@@ -256,8 +294,8 @@ local component state inside `useEngineSettings`, not URL-synced.
 ### 6. Loading guarantees
 
 The famous meta + xref sidecars load in `App.tsx` via the
-`useFamousMeta` hook; the famous point cloud loads via the
-`cloudLoader` pipeline. Both are eager — they fire during initial
+`useFamousMeta` hook; the famous galaxy catalog loads via the
+`galaxyCatalogFetcher` slot pipeline. Both are eager — they fire during initial
 bootstrap.
 
 The wire described in section 4 runs once when both inputs are
@@ -286,10 +324,10 @@ data/famous_galaxies.seed.json (build-time)
 public/data/famous_meta.json + famous.bin
                 │
                 ▼  runtime fetch
-state.assetSlots.famousMeta  +  state.sources[Source.Famous]
+state.assetSlots.famousMeta  +  state.sources.catalogs.get(Source.Famous)
                 │
-                ▼  wireSlots — buildPoisFromFamousMeta(meta, cloud)
-PointOfInterest[] with category: 'famous', minApparentSizePx: 6
+                ▼  wireSlots — buildPoisFromFamousMeta(meta, catalog)
+PointOfInterest[] with category: 'famousGalaxy', minApparentSizePx: 6
                 │
                 ▼  combined with static anchors → setPois(merged)
 poiSubsystem.produceLabels(state, ctx)
@@ -331,17 +369,17 @@ Cormorant Garamond serif labels at Famous galaxies
     below the threshold.
   - A test that an entry without `minApparentSizePx` is always
     emitted (existing behaviour, regression-proof).
-  - A test that `category: 'famous'` is accepted and styled with
-    the `POI_STYLES.famous` entry.
+  - A test that `category: 'famousGalaxy'` is accepted and styled with
+    the `POI_STYLES.famousGalaxy` entry.
 - **`tests/data/poiCategories.test.ts` (new)** — asserts that
   `PoiCategory` is the literal union of `POI_STYLES` keys (the
   type-level check encoded as a value-level expect, mirroring the
   fonts.test.ts pattern).
 - **`tests/services/engine/phases/wireSlots.famousPois.test.ts`
-  (new)** — feeds a stub meta + stub cloud through the wire and
+  (new)** — feeds a stub meta + stub catalog through the wire and
   asserts the resulting `setPois` payload includes one
   `'famous-<id>'` POI per non-pseudo entry, with `worldPos` taken
-  from the cloud's `positions` buffer and `category: 'famous'`.
+  from the catalog's `positions` buffer and `category: 'famousGalaxy'`.
 - **Manual visual verification** before merging:
   - Toggle the new "Famous galaxies" checkbox; labels appear /
     disappear without flicker.
@@ -375,7 +413,10 @@ non-load-bearing:
   gains an apparent-size gate.
 - **`wireSlots.ts`** — gains a `buildPoisFromFamousMeta` helper
   and a wire-once-both-ready trigger after `famousMetaSlot`
-  commits.
+  commits. The existing `if (hasUrlGate('anchors'))` gate is
+  removed so cluster / supercluster / void anchors wire
+  unconditionally. `SUPERCLUSTER_ANCHORS.map(...)` now emits
+  `category: 'supercluster'`.
 - **`SettingsPanel.tsx`** — gains an Overlays → Labels sub-group
   with four checkboxes.
 - **`EngineSettingsState`** — gains a

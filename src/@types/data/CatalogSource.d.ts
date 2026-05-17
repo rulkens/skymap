@@ -1,21 +1,20 @@
 /**
- * CloudSource — a string discriminator used by the engine to tag the
- * "what file did we load?" identity of a per-survey PointCloud.  Mirrors
+ * CatalogSource — a string discriminator used by the engine to tag the
+ * "what file did we load?" identity of a per-survey GalaxyCatalog.  Mirrors
  * the union accepted by `EngineStatus.source` (the user-facing status
  * the React layer renders), so the engine can plumb the same value
- * through both `firstCloud.cloudSource` and `onStatusChange({kind:
+ * through both `firstCatalog.catalogSource` and `onStatusChange({kind:
  * 'ready', source})` without an intermediate translation.
  *
  * ### Why a string union instead of reusing `Source`
  *
  * `Source` is the per-point enum (used for visibility masking, the
  * pickRenderer's per-source `cloud.sourceCode` packing, and the
- * renderer's per-source draw loop).  `CloudSource` is a strict subset
- * that
- * answers "which build artefact produced this cloud?" — its membership
- * mirrors the filenames in `public/data/`.  Keeping them separate lets
- * `EngineStatus.source` be a tight string literal that's safe to render
- * in UI without a translation table.
+ * renderer's per-source draw loop).  `CatalogSource` is a strict subset
+ * that answers "which build artefact produced this catalog?" — its
+ * membership mirrors the filenames in `public/data/`.  Keeping them
+ * separate lets `EngineStatus.source` be a tight string literal that's
+ * safe to render in UI without a translation table.
  *
  * ### Why a separate file
  *
@@ -25,4 +24,4 @@
  * runtime artefacts — same reason `sources.ts` and `tierTargets.ts`
  * live there.
  */
-export type CloudSource = 'sdss.bin' | '2mrs.bin' | 'glade.bin' | 'famous.bin' | 'synthetic';
+export type CatalogSource = 'sdss.bin' | '2mrs.bin' | 'glade.bin' | 'famous.bin' | 'synthetic';

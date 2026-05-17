@@ -1,10 +1,10 @@
-# `runDisposableWorker` + `clonePointCloudForTransfer` Implementation Plan
+# `runDisposableWorker` + `cloneGalaxyCatalogForTransfer` Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Extract the byte-for-byte-duplicated worker-runner ceremony from three sites (`defaultSchechterRunner`, `defaultAngularRunner`, `defaultWorkerRunner`) into one generic helper, and factor the PointCloud slice-and-transfer ceremony into a separate cloud-aware helper.
+**Goal:** Extract the byte-for-byte-duplicated worker-runner ceremony from three sites (`defaultSchechterRunner`, `defaultAngularRunner`, `defaultWorkerRunner`) into one generic helper, and factor the GalaxyCatalog slice-and-transfer ceremony into a separate cloud-aware helper.
 
-**Architecture:** Two small helpers, single-responsibility each. `runDisposableWorker<TIn, TOut>(WorkerCtor, input, transfer, label)` owns the worker lifecycle (spawn → onmessage/onerror → terminate). `clonePointCloudForTransfer(cloud)` owns the 10-field typed-array slice-then-transfer ceremony — the one place that needs to change when a new `PointCloud` field is added. The three runners collapse from ~40 lines each to ~8 lines.
+**Architecture:** Two small helpers, single-responsibility each. `runDisposableWorker<TIn, TOut>(WorkerCtor, input, transfer, label)` owns the worker lifecycle (spawn → onmessage/onerror → terminate). `cloneGalaxyCatalogForTransfer(cloud)` owns the 10-field typed-array slice-then-transfer ceremony — the one place that needs to change when a new `GalaxyCatalog` field is added. The three runners collapse from ~40 lines each to ~8 lines.
 
 **Tech Stack:** TypeScript, Vitest. No new runtime dependencies. No Worker support needed at test time — Vitest doesn't run `?worker` imports, and the helpers are designed to be testable with a fake Worker class.
 
@@ -19,44 +19,44 @@ skymap runs three compute-heavy "bakes" off the main thread:
 
 Each bake is implemented as a Web Worker chunk. The production runners spawn a fresh worker per call (no shared state, automatic OS-level concurrency), serialize the input cloud + transferable typed-array buffers, listen for the result, terminate the worker, and resolve.
 
-Before this plan: the spawn/listen/terminate/resolve ceremony is open-coded three times. The 10-field PointCloud slice-then-transfer ceremony is open-coded three times. Adding a new `PointCloud` field (e.g., a future `redshiftZ` array) requires editing all three sites in lockstep; a missed edit silently sends `undefined` into the worker.
+Before this plan: the spawn/listen/terminate/resolve ceremony is open-coded three times. The 10-field GalaxyCatalog slice-then-transfer ceremony is open-coded three times. Adding a new `GalaxyCatalog` field (e.g., a future `redshiftZ` array) requires editing all three sites in lockstep; a missed edit silently sends `undefined` into the worker.
 
 After this plan: the ceremony lives in one helper, the cloud transfer-list lives in another. The three runners stay separately exported (they remain DI-pluggable for tests) but their bodies become trivial wrappers.
 
 ## File Structure
 
 **Create:**
-- `src/data/pointCloudTransfer.ts` — `clonePointCloudForTransfer(cloud)` helper.
+- `src/data/galaxyCatalogTransfer.ts` — `cloneGalaxyCatalogForTransfer(cloud)` helper.
 - `src/utils/worker/runDisposableWorker.ts` — generic `runDisposableWorker` helper.
-- `tests/data/pointCloudTransfer.test.ts`
+- `tests/data/galaxyCatalogTransfer.test.ts`
 - `tests/utils/worker/runDisposableWorker.test.ts`
 
 **Modify:**
 - `src/services/engine/subsystems/biasCorrectionSubsystem.ts` (sites at ~lines 189 and ~245)
 - `src/services/gpu/renderers/pointRenderer.ts` (site at ~line 432)
 
-The PointCloud transfer helper lives under `src/data/` next to `pointCloudFormat.ts` because both are PointCloud-aware utilities (one for disk format, one for cross-thread transfer). The generic worker helper lives under `src/utils/worker/` — a new subdirectory — because it has zero domain knowledge and may grow to host other worker utilities (timeouts, pool, etc.) later.
+The GalaxyCatalog transfer helper lives under `src/data/` next to `galaxyCatalogFormat.ts` because both are GalaxyCatalog-aware utilities (one for disk format, one for cross-thread transfer). The generic worker helper lives under `src/utils/worker/` — a new subdirectory — because it has zero domain knowledge and may grow to host other worker utilities (timeouts, pool, etc.) later.
 
 ---
 
-## Task 1: `clonePointCloudForTransfer` helper + tests
+## Task 1: `cloneGalaxyCatalogForTransfer` helper + tests
 
 **Files:**
-- Create: `src/data/pointCloudTransfer.ts`
-- Create: `tests/data/pointCloudTransfer.test.ts`
+- Create: `src/data/galaxyCatalogTransfer.ts`
+- Create: `tests/data/galaxyCatalogTransfer.test.ts`
 
 - [ ] **Step 1: Write the failing test file**
 
 ```ts
-// tests/data/pointCloudTransfer.test.ts
+// tests/data/galaxyCatalogTransfer.test.ts
 /**
- * Tests for clonePointCloudForTransfer — the helper that slices every
- * PointCloud typed-array buffer into a fresh, detachable copy and
+ * Tests for cloneGalaxyCatalogForTransfer — the helper that slices every
+ * GalaxyCatalog typed-array buffer into a fresh, detachable copy and
  * returns the matching Transferable[] list.
  *
  * ### What we assert here
  *
- * 1. The copy is a structurally complete PointCloud (every field present
+ * 1. The copy is a structurally complete GalaxyCatalog (every field present
  *    with the right type and length).
  * 2. Every typed-array view has a NEW underlying ArrayBuffer — i.e. the
  *    .slice(0) actually allocated, didn't just alias. This is the
@@ -67,11 +67,11 @@ The PointCloud transfer helper lives under `src/data/` next to `pointCloudFormat
  *    — for the same reason: the original cloud must survive the call.
  * 4. The transfer list contains exactly one entry per typed-array field
  *    (10 entries) and they appear in a stable order — so the helper
- *    doesn't accidentally drop a field when PointCloud grows.
+ *    doesn't accidentally drop a field when GalaxyCatalog grows.
  *
  * ### Why a stable field order matters
  *
- * Adding a new typed-array field to PointCloud must require editing
+ * Adding a new typed-array field to GalaxyCatalog must require editing
  * exactly one place (this helper). A test that pins the order catches
  * "added the field to the copy but forgot to add it to the transfer
  * list" — a class of bug that would silently send `undefined` through
@@ -79,10 +79,10 @@ The PointCloud transfer helper lives under `src/data/` next to `pointCloudFormat
  */
 
 import { describe, it, expect } from 'vitest';
-import { clonePointCloudForTransfer } from '../../src/data/pointCloudTransfer';
-import type { PointCloud } from '../../src/@types/PointCloud';
+import { cloneGalaxyCatalogForTransfer } from '../../src/data/galaxyCatalogTransfer';
+import type { GalaxyCatalog } from '../../src/@types/GalaxyCatalog';
 
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   // Each field gets a distinct fill value so we can later assert which
   // index in the transfer list corresponds to which source field.
   return {
@@ -100,10 +100,10 @@ function makeCloud(count: number): PointCloud {
   };
 }
 
-describe('clonePointCloudForTransfer', () => {
+describe('cloneGalaxyCatalogForTransfer', () => {
   it('returns a copy whose typed-array fields have new underlying buffers', () => {
     const cloud = makeCloud(4);
-    const { copy } = clonePointCloudForTransfer(cloud);
+    const { copy } = cloneGalaxyCatalogForTransfer(cloud);
 
     expect(copy.objIDs.buffer).not.toBe(cloud.objIDs.buffer);
     expect(copy.positions.buffer).not.toBe(cloud.positions.buffer);
@@ -119,7 +119,7 @@ describe('clonePointCloudForTransfer', () => {
 
   it('preserves count and per-field values bit-for-bit', () => {
     const cloud = makeCloud(4);
-    const { copy } = clonePointCloudForTransfer(cloud);
+    const { copy } = cloneGalaxyCatalogForTransfer(cloud);
 
     expect(copy.count).toBe(4);
     expect(Array.from(copy.objIDs)).toEqual(Array.from(cloud.objIDs));
@@ -130,7 +130,7 @@ describe('clonePointCloudForTransfer', () => {
 
   it('returns transfer list pointing to the COPY buffers, not the originals', () => {
     const cloud = makeCloud(4);
-    const { copy, transfer } = clonePointCloudForTransfer(cloud);
+    const { copy, transfer } = cloneGalaxyCatalogForTransfer(cloud);
 
     // Every transfer entry must be one of the copy buffers — never the
     // original. Sending an original-buffer entry to postMessage would
@@ -154,13 +154,13 @@ describe('clonePointCloudForTransfer', () => {
 
   it('transfer list has one entry per typed-array field (10 total)', () => {
     const cloud = makeCloud(4);
-    const { transfer } = clonePointCloudForTransfer(cloud);
+    const { transfer } = cloneGalaxyCatalogForTransfer(cloud);
     expect(transfer.length).toBe(10);
   });
 
   it('handles count = 0 (empty cloud)', () => {
     const cloud = makeCloud(0);
-    const { copy, transfer } = clonePointCloudForTransfer(cloud);
+    const { copy, transfer } = cloneGalaxyCatalogForTransfer(cloud);
     expect(copy.count).toBe(0);
     expect(copy.objIDs.length).toBe(0);
     expect(copy.positions.length).toBe(0);
@@ -171,20 +171,20 @@ describe('clonePointCloudForTransfer', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npx vitest run tests/data/pointCloudTransfer.test.ts`
-Expected: FAIL — `Failed to resolve import "../../src/data/pointCloudTransfer"`.
+Run: `npx vitest run tests/data/galaxyCatalogTransfer.test.ts`
+Expected: FAIL — `Failed to resolve import "../../src/data/galaxyCatalogTransfer"`.
 
 - [ ] **Step 3: Create the helper**
 
 ```ts
-// src/data/pointCloudTransfer.ts
+// src/data/galaxyCatalogTransfer.ts
 /**
- * pointCloudTransfer — slice-and-transfer ceremony for PointCloud
+ * galaxyCatalogTransfer — slice-and-transfer ceremony for GalaxyCatalog
  * worker payloads.
  *
  * ### Why this module exists
  *
- * Sending a PointCloud across a Worker boundary with structured-clone
+ * Sending a GalaxyCatalog across a Worker boundary with structured-clone
  * cost would be prohibitive at ~3.5M galaxies. The cheap alternative is
  * `postMessage(payload, transfer)` with a list of `ArrayBuffer`s to
  * transfer ownership of — but we can't transfer the engine's
@@ -200,11 +200,11 @@ Expected: FAIL — `Failed to resolve import "../../src/data/pointCloudTransfer"
  *      `worker.postMessage({ ...input, cloud: copy }, transfer)`.
  *
  * Pre-extraction this ceremony was open-coded three times across two
- * files. Adding a new PointCloud field meant editing all three sites
+ * files. Adding a new GalaxyCatalog field meant editing all three sites
  * in lockstep; a missed edit silently sent `undefined` through the
  * worker boundary. This module is now the only place that knows
- * which fields PointCloud carries; future fields require one edit
- * here plus updating `tests/data/pointCloudTransfer.test.ts`'s field
+ * which fields GalaxyCatalog carries; future fields require one edit
+ * here plus updating `tests/data/galaxyCatalogTransfer.test.ts`'s field
  * count assertion.
  *
  * ### Note on BigUint64Array
@@ -216,11 +216,11 @@ Expected: FAIL — `Failed to resolve import "../../src/data/pointCloudTransfer"
  * (HTML spec §StructuredSerialize step "If value has [[ArrayBufferData]]…").
  */
 
-import type { PointCloud } from '../@types/PointCloud';
+import type { GalaxyCatalog } from '../@types/GalaxyCatalog';
 
-export type ClonedPointCloud = {
-  /** A structurally complete PointCloud whose typed-array buffers are fresh, transferable copies. */
-  copy: PointCloud;
+export type ClonedGalaxyCatalog = {
+  /** A structurally complete GalaxyCatalog whose typed-array buffers are fresh, transferable copies. */
+  copy: GalaxyCatalog;
   /**
    * Transfer list of the copy's buffers in a stable order. Pass this
    * directly as the second argument to `worker.postMessage(payload, transfer)`.
@@ -233,8 +233,8 @@ export type ClonedPointCloud = {
  * identical copy whose buffers are detached-ownership-ready, plus the
  * matching Transferable[] for `postMessage`.
  */
-export function clonePointCloudForTransfer(cloud: PointCloud): ClonedPointCloud {
-  const copy: PointCloud = {
+export function cloneGalaxyCatalogForTransfer(cloud: GalaxyCatalog): ClonedGalaxyCatalog {
+  const copy: GalaxyCatalog = {
     count: cloud.count,
     objIDs: new BigUint64Array(cloud.objIDs.buffer.slice(0)),
     positions: new Float32Array(cloud.positions.buffer.slice(0)),
@@ -265,7 +265,7 @@ export function clonePointCloudForTransfer(cloud: PointCloud): ClonedPointCloud 
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `npx vitest run tests/data/pointCloudTransfer.test.ts`
+Run: `npx vitest run tests/data/galaxyCatalogTransfer.test.ts`
 Expected: PASS — 5 passing.
 
 - [ ] **Step 5: Run the full suite to confirm no regressions**
@@ -276,14 +276,14 @@ Expected: pass; previous baseline + 5 new tests.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/data/pointCloudTransfer.ts tests/data/pointCloudTransfer.test.ts
+git add src/data/galaxyCatalogTransfer.ts tests/data/galaxyCatalogTransfer.test.ts
 git commit -m "$(cat <<'EOF'
-feat(data): clonePointCloudForTransfer helper
+feat(data): cloneGalaxyCatalogForTransfer helper
 
-Single source of truth for the PointCloud slice-and-transfer
+Single source of truth for the GalaxyCatalog slice-and-transfer
 ceremony used by every off-thread bake (Schechter, angular, point
 interleaved). Replaces three byte-for-byte-identical inline copies.
-Adding a new PointCloud field now requires one edit here plus the
+Adding a new GalaxyCatalog field now requires one edit here plus the
 field-count assertion in the test, instead of editing three runners
 in lockstep.
 
@@ -554,7 +554,7 @@ EOF
 Near the top of `src/services/engine/subsystems/biasCorrectionSubsystem.ts`, with the existing imports (look for the `import ComputeSchechterRatiosWorker` block around line 108), add:
 
 ```ts
-import { clonePointCloudForTransfer } from '../../../data/pointCloudTransfer';
+import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 ```
 
@@ -566,7 +566,7 @@ Locate `function defaultSchechterRunner(...)` around line 189. Replace the entir
 
 ```ts
 function defaultSchechterRunner(input: ComputeSchechterRatiosInput): Promise<Float32Array> {
-  const { copy, transfer } = clonePointCloudForTransfer(input.cloud);
+  const { copy, transfer } = cloneGalaxyCatalogForTransfer(input.cloud);
   return runDisposableWorker<ComputeSchechterRatiosInput, Float32Array>(
     ComputeSchechterRatiosWorker,
     { ...input, cloud: copy },
@@ -596,7 +596,7 @@ git commit -m "$(cat <<'EOF'
 refactor(bias): defaultSchechterRunner uses shared helpers
 
 Replace the inline 40-line slice-then-transfer + Promise-wraps-Worker
-ceremony with clonePointCloudForTransfer + runDisposableWorker.
+ceremony with cloneGalaxyCatalogForTransfer + runDisposableWorker.
 Behaviour identical — the DI seam stays intact for tests.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
@@ -619,7 +619,7 @@ Locate `function defaultAngularRunner(...)` around line 245. Replace the entire 
 
 ```ts
 function defaultAngularRunner(input: ComputeAngularWeightsInput): Promise<Float32Array> {
-  const { copy, transfer } = clonePointCloudForTransfer(input.cloud);
+  const { copy, transfer } = cloneGalaxyCatalogForTransfer(input.cloud);
   return runDisposableWorker<ComputeAngularWeightsInput, Float32Array>(
     ComputeAngularWeightsWorker,
     { ...input, cloud: copy },
@@ -649,7 +649,7 @@ git commit -m "$(cat <<'EOF'
 refactor(bias): defaultAngularRunner uses shared helpers
 
 Mirrors the Schechter migration in the same file — same shared
-clonePointCloudForTransfer + runDisposableWorker call shape with
+cloneGalaxyCatalogForTransfer + runDisposableWorker call shape with
 the angular-weights worker constructor and label.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
@@ -669,7 +669,7 @@ EOF
 Near the top of `src/services/gpu/renderers/pointRenderer.ts`, with the existing imports (look for the `import BuildPointBufferWorker` line around line 61), add:
 
 ```ts
-import { clonePointCloudForTransfer } from '../../../data/pointCloudTransfer';
+import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 ```
 
@@ -683,7 +683,7 @@ Locate `function defaultWorkerRunner(...)` around line 432. Replace the entire b
 function defaultWorkerRunner(
   input: BuildPointInterleavedBufferInput,
 ): Promise<BuildPointInterleavedBufferResult> {
-  const { copy, transfer } = clonePointCloudForTransfer(input.cloud);
+  const { copy, transfer } = cloneGalaxyCatalogForTransfer(input.cloud);
   return runDisposableWorker<BuildPointInterleavedBufferInput, BuildPointInterleavedBufferResult>(
     BuildPointBufferWorker,
     { ...input, cloud: copy },
@@ -728,7 +728,7 @@ git commit -m "$(cat <<'EOF'
 refactor(point): defaultWorkerRunner uses shared helpers
 
 Final migration — the point interleaved-buffer bake now uses the
-same clonePointCloudForTransfer + runDisposableWorker pair as the
+same cloneGalaxyCatalogForTransfer + runDisposableWorker pair as the
 Schechter and angular bakes. Three byte-for-byte-identical
 inline ceremonies are now zero.
 
@@ -764,8 +764,8 @@ Run: `git log --oneline main..HEAD`
 Expected: 5 implementation commits + 1 plan commit (the plan was committed in a separate step before the implementation began). Order from oldest to newest:
 
 ```
-<sha1>  docs(plans): runDisposableWorker + clonePointCloudForTransfer — audit #2 plan
-<sha2>  feat(data): clonePointCloudForTransfer helper
+<sha1>  docs(plans): runDisposableWorker + cloneGalaxyCatalogForTransfer — audit #2 plan
+<sha2>  feat(data): cloneGalaxyCatalogForTransfer helper
 <sha3>  feat(utils): runDisposableWorker helper for one-shot off-thread bakes
 <sha4>  refactor(bias): defaultSchechterRunner uses shared helpers
 <sha5>  refactor(bias): defaultAngularRunner uses shared helpers
@@ -782,21 +782,21 @@ Expected: branch pushed.
 Run:
 
 ```bash
-gh pr create --title "refactor: runDisposableWorker + clonePointCloudForTransfer" --body "$(cat <<'EOF'
+gh pr create --title "refactor: runDisposableWorker + cloneGalaxyCatalogForTransfer" --body "$(cat <<'EOF'
 ## Summary
 
 Addresses audit finding #2 from the second architectural audit
 (2026-05-11): three byte-for-byte-identical worker-runner Promise
 bodies (Schechter, angular, point-bake) plus three identical
-PointCloud slice-and-transfer ceremonies, with no shared symbol.
+GalaxyCatalog slice-and-transfer ceremonies, with no shared symbol.
 
-This PR introduces two helpers (one generic, one PointCloud-aware)
+This PR introduces two helpers (one generic, one GalaxyCatalog-aware)
 and collapses each runner from ~40 lines to ~8.
 
 ### Files added
-- \`src/data/pointCloudTransfer.ts\` — \`clonePointCloudForTransfer\`
+- \`src/data/galaxyCatalogTransfer.ts\` — \`cloneGalaxyCatalogForTransfer\`
 - \`src/utils/worker/runDisposableWorker.ts\` — generic worker lifecycle helper
-- \`tests/data/pointCloudTransfer.test.ts\` — 5 tests
+- \`tests/data/galaxyCatalogTransfer.test.ts\` — 5 tests
 - \`tests/utils/worker/runDisposableWorker.test.ts\` — 5 tests
 
 ### Migration
@@ -806,7 +806,7 @@ and collapses each runner from ~40 lines to ~8.
 
 ### Why this matters
 
-Before: adding a new \`PointCloud\` field required editing three runner
+Before: adding a new \`GalaxyCatalog\` field required editing three runner
 sites in lockstep; a missed edit silently sent \`undefined\` through
 the worker boundary. After: one helper owns the cloud transfer-list,
 one helper owns the worker ceremony. Future runners are 8 lines.
@@ -830,13 +830,13 @@ Expected: gh prints the PR URL.
 ## Self-Review
 
 **Spec coverage:**
-- Audit #2 listed three sites + the shared PointCloud transfer list. Plan covers all three (Tasks 3, 4, 5) plus the helpers (Tasks 1, 2). ✓
+- Audit #2 listed three sites + the shared GalaxyCatalog transfer list. Plan covers all three (Tasks 3, 4, 5) plus the helpers (Tasks 1, 2). ✓
 - The fallback error message format (`event.error ?? new Error(event.message ?? '<label> worker error')`) is preserved verbatim in the new helper, asserted by test, and supplied by each migrated runner with its own label. ✓
 
 **Placeholder scan:** No "TBD", "TODO", "implement later" in any task. Every step has concrete code + exact commands. ✓
 
 **Type consistency:**
-- `clonePointCloudForTransfer(cloud: PointCloud) → { copy: PointCloud; transfer: Transferable[] }` referenced identically in Tasks 1, 3, 4, 5.
+- `cloneGalaxyCatalogForTransfer(cloud: GalaxyCatalog) → { copy: GalaxyCatalog; transfer: Transferable[] }` referenced identically in Tasks 1, 3, 4, 5.
 - `runDisposableWorker<TIn, TOut>(WorkerCtor, input, transfer, label) → Promise<TOut>` referenced identically in Tasks 2, 3, 4, 5.
 - Worker constructor types `new () => Worker` are satisfied by Vite's `?worker` default exports (existing usage proves this).
 - Per-runner type instantiations (`ComputeSchechterRatiosInput → Float32Array`, etc.) are imported from existing modules and preserved.

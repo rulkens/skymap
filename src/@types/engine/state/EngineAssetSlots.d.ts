@@ -21,8 +21,8 @@
  */
 
 import type { AssetSlot } from '../../loading/AssetSlot';
-import type { PointCloud } from '../../data/PointCloud';
-import type { PointCloudReq } from '../../loading/PointCloudReq';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
+import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
 import type { FilamentCloud } from '../../data/FilamentCloud';
 import type { FilamentReq } from '../../loading/FilamentReq';
 import type { FamousPayload } from '../../loading/FamousPayload';
@@ -33,7 +33,7 @@ import type { MCPMReq } from '../../loading/MCPMReq';
 import type { Source } from '../../../data/sources';
 
 export type EngineAssetSlots = {
-  points: Map<Source, AssetSlot<PointCloud, PointCloudReq>>;
+  points: Map<Source, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
   /**
    * Null until the GPU init IIFE constructs the filament renderer and
    * mints this slot — same lifecycle pattern as `state.gpu.renderer`.

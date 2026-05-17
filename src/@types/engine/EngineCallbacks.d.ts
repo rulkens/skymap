@@ -5,7 +5,7 @@
  */
 
 import type { EngineStatus } from './EngineStatus';
-import type { PointInfo } from './PointInfo';
+import type { GalaxyInfo } from './GalaxyInfo';
 import type { LodMode } from '../data/LodMode';
 import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
@@ -84,9 +84,9 @@ export type EngineCallbacks = {
    */
   selection: {
     /** Fired when the pinned/selected point changes. */
-    onSelectChange: (info: PointInfo | null) => void;
+    onSelectChange: (info: GalaxyInfo | null) => void;
     /** Fired when the point under the cursor changes (null = empty sky). */
-    onHoverChange: (info: PointInfo | null) => void;
+    onHoverChange: (info: GalaxyInfo | null) => void;
   };
 
   /**
@@ -115,7 +115,7 @@ export type EngineCallbacks = {
      * casual click doesn't pollute browser history with `#focus=…`
      * entries — only deliberate focus actions do.
      */
-    onFocusChange?: (info: PointInfo | null) => void;
+    onFocusChange?: (info: GalaxyInfo | null) => void;
     /**
      * Reserved for the legacy engine-derived scale-bar emission.
      * Scale-bar derivation now happens React-side from
@@ -161,7 +161,7 @@ export type EngineCallbacks = {
    * Source-state callbacks — LOD mode, visibility mask, tier, per-
    * source readiness, and aggregated load progress.
    *
-   * `onCloudReady` is granular per-source because the three .bin
+   * `onCatalogReady` is granular per-source because the three .bin
    * files run as parallel fetches with very different sizes (2MRS
    * ~2 MB, SDSS ~23 MB, GLADE ~96 MB), so they land minutes apart on
    * slow connections.  Showing each as it arrives lets the user
@@ -176,7 +176,7 @@ export type EngineCallbacks = {
     onLodModeChange?: (mode: LodMode) => void;
     onMaskChange?: (mask: number) => void;
     onTierChange?: (tier: Tier) => void;
-    onCloudReady?: (source: Source, count: number) => void;
+    onCatalogReady?: (source: Source, count: number) => void;
     onLoadProgress?: (progress: LoadProgressState | null) => void;
   };
 

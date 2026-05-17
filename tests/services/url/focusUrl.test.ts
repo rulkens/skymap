@@ -14,16 +14,16 @@ import {
   parseFocusHash,
 } from '../../../src/services/url/focusUrl';
 import { Source } from '../../../src/data/sources';
-import type { PointInfo } from '../../../src/@types/engine/PointInfo';
+import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 
 /**
- * Build a minimal `PointInfo` for codec tests.  The codec only reads
+ * Build a minimal `GalaxyInfo` for codec tests.  The codec only reads
  * `source`, `objID`, `ra`, `dec`, and `famous`, so the rest is filler
  * that satisfies the type without claiming to be physically meaningful.
  * We cast through `unknown` because typing every field would obscure
  * what the test is actually exercising.
  */
-const baseInfo = (overrides: Partial<PointInfo>): PointInfo =>
+const baseInfo = (overrides: Partial<GalaxyInfo>): GalaxyInfo =>
   ({
     index: 0,
     objID: 0n,
@@ -47,7 +47,7 @@ const baseInfo = (overrides: Partial<PointInfo>): PointInfo =>
     bands: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
     colours: [],
     absoluteMagG: -20,
-    galaxyType: { category: 'unknown', description: '' } as PointInfo['galaxyType'],
+    galaxyType: { category: 'unknown', description: '' } as GalaxyInfo['galaxyType'],
     iauName: 'X',
     displayName: 'X',
     source: Source.Glade,
@@ -58,7 +58,7 @@ const baseInfo = (overrides: Partial<PointInfo>): PointInfo =>
     orientation: { axisRatio: 1, positionAngleDeg: 0, provenance: 'deterministic fallback' },
     thumbnailUrl: 'https://example.test/thumb.jpg',
     ...overrides,
-  }) as unknown as PointInfo;
+  }) as unknown as GalaxyInfo;
 
 describe('selectionToFocusId', () => {
   it('returns the famous seed id when info.famous is present', () => {

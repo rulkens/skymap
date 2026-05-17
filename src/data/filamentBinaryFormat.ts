@@ -20,8 +20,8 @@
  * `stripOffsets[i+1]` is one past its last vertex.  Lookups don't need
  * a bounds check.
  *
- * Why a separate format from PointCloud?  Filaments are variable-length
- * polylines, not fixed records.  Forcing them into the v4 PointCloud
+ * Why a separate format from GalaxyCatalog?  Filaments are variable-length
+ * polylines, not fixed records.  Forcing them into the v4 GalaxyCatalog
  * shape would either truncate strips or pad them — either way wasting
  * bytes.  A bespoke format with a strip-offset table is ~10% smaller
  * AND simpler to render with `pass.draw(6, instanceCount)`.

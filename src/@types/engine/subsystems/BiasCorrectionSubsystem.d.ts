@@ -1,5 +1,5 @@
 import type { BiasMode } from '../../data/BiasMode';
-import type { PointCloud } from '../../data/PointCloud';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Source } from '../../../data/sources';
 import type { PointRenderer } from '../../rendering/PointRenderer';
 
@@ -9,7 +9,7 @@ export type BiasCorrectionSubsystem = {
   /** Switch bias mode; fires bakes for every loaded source. */
   setMode(mode: BiasMode): Promise<void>;
   /** Called by the renderer when a source uploads or re-uploads. */
-  onSourceUploaded(source: Source, cloud: PointCloud): void;
+  onSourceUploaded(source: Source, cloud: GalaxyCatalog): void;
   /** Called by the renderer when a source unloads. */
   onSourceUnloaded(source: Source): void;
   /** Test-only: snapshot of internal state. */

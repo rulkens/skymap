@@ -112,7 +112,7 @@ describe('EngineState type', () => {
     const sources: EngineSourceState = {
       visibleMask: DEFAULT_VISIBLE_SOURCE_MASK,
       lodMode: DEFAULT_LOD_MODE,
-      clouds: new Map(),
+      catalogs: new Map(),
       famousMeta: [],
       famousXrefs: {},
       tier: 'medium',
@@ -169,7 +169,7 @@ describe('EngineState type', () => {
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
-          getLoadedClouds: () => stateRef.current!.sources.clouds,
+          getLoadedClouds: () => stateRef.current!.sources.catalogs,
           requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
         youAreHere: createYouAreHereSubsystem(),
@@ -271,7 +271,7 @@ describe('EngineState type', () => {
       sources: {
         visibleMask: 0,
         lodMode: DEFAULT_LOD_MODE,
-        clouds: new Map(),
+        catalogs: new Map(),
         famousMeta: [],
         famousXrefs: {},
         tier: 'medium',
@@ -317,7 +317,7 @@ describe('EngineState type', () => {
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
-          getLoadedClouds: () => stateRef.current!.sources.clouds,
+          getLoadedClouds: () => stateRef.current!.sources.catalogs,
           requestRender: () => stateRef.current!.subsystems.scheduler.requestRender(),
         }),
         youAreHere: createYouAreHereSubsystem(),

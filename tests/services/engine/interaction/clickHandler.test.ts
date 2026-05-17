@@ -2,15 +2,15 @@
  * clickHandler — unit tests for the click → selection resolver.
  *
  * The resolver is a small async wrapper around `pickRenderer.pick`
- * plus the engine's `resolveSelection` / `buildPointInfo` hooks.  We
+ * plus the engine's `resolveSelection` / `buildGalaxyInfo` hooks.  We
  * stub all three and verify:
  *
  *   1. A picker miss (`null`) returns `{ kind: 'clear' }`.
- *   2. A picker hit with successful PointInfo build returns the
+ *   2. A picker hit with successful GalaxyInfo build returns the
  *      `{ kind: 'select', selection, info }` shape.
  *   3. A picker hit but `resolveSelection` returns null still selects
  *      (info: null) — preserves pre-extraction behaviour.
- *   4. A picker hit but `buildPointInfo` returns null still selects
+ *   4. A picker hit but `buildGalaxyInfo` returns null still selects
  *      (info: null) — same parity rule.
  *   5. The picker is called with the exact (viewport, x, y, sources)
  *      values supplied by the engine — no transformation.
@@ -21,8 +21,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { createClickResolver } from '../../../../src/services/engine/interaction/clickHandler';
 import type { ClickResolveInput } from '../../../../src/@types/engine/ClickResolveInput';
 import { Source } from '../../../../src/data/sources';
-import type { PointInfo } from '../../../../src/@types/engine/PointInfo';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 
 type PickRenderer = ReturnType<typeof createPickRenderer>;
@@ -34,8 +34,8 @@ function makePicker(result: { source: Source; localIdx: number } | null): PickRe
   } as unknown as PickRenderer;
 }
 
-const dummyCloud: PointCloud = {} as PointCloud;
-const dummyInfo = { iauName: 'Galaxy 7' } as unknown as PointInfo;
+const dummyCloud: GalaxyCatalog = {} as GalaxyCatalog;
+const dummyInfo = { iauName: 'Galaxy 7' } as unknown as GalaxyInfo;
 
 const dummyArgs: ClickResolveInput = {
   pickXPx: 10,
@@ -49,7 +49,7 @@ describe('createClickResolver', () => {
     const r = createClickResolver({
       pickRenderer: makePicker(null),
       resolveSelection: () => ({ source: Source.SDSS, localIdx: 0, cloud: dummyCloud }),
-      buildPointInfo: () => dummyInfo,
+      buildGalaxyInfo: () => dummyInfo,
     });
     const result = await r.resolveClick(dummyArgs);
     expect(result).toEqual({ kind: 'clear' });
@@ -60,7 +60,7 @@ describe('createClickResolver', () => {
     const r = createClickResolver({
       pickRenderer: makePicker(sel),
       resolveSelection: () => ({ source: Source.SDSS, localIdx: 7, cloud: dummyCloud }),
-      buildPointInfo: () => dummyInfo,
+      buildGalaxyInfo: () => dummyInfo,
     });
     const result = await r.resolveClick(dummyArgs);
     expect(result).toEqual({ kind: 'select', selection: sel, info: dummyInfo });
@@ -71,18 +71,18 @@ describe('createClickResolver', () => {
     const r = createClickResolver({
       pickRenderer: makePicker(sel),
       resolveSelection: () => null,
-      buildPointInfo: () => dummyInfo,
+      buildGalaxyInfo: () => dummyInfo,
     });
     const result = await r.resolveClick(dummyArgs);
     expect(result).toEqual({ kind: 'select', selection: sel, info: null });
   });
 
-  it('returns kind="select" with info=null when buildPointInfo returns null', async () => {
+  it('returns kind="select" with info=null when buildGalaxyInfo returns null', async () => {
     const sel = { source: Source.SDSS, localIdx: 4 };
     const r = createClickResolver({
       pickRenderer: makePicker(sel),
       resolveSelection: () => ({ source: Source.SDSS, localIdx: 4, cloud: dummyCloud }),
-      buildPointInfo: () => null,
+      buildGalaxyInfo: () => null,
     });
     const result = await r.resolveClick(dummyArgs);
     expect(result).toEqual({ kind: 'select', selection: sel, info: null });
@@ -93,7 +93,7 @@ describe('createClickResolver', () => {
     const r = createClickResolver({
       pickRenderer: picker,
       resolveSelection: () => ({ source: Source.SDSS, localIdx: 0, cloud: dummyCloud }),
-      buildPointInfo: () => dummyInfo,
+      buildGalaxyInfo: () => dummyInfo,
     });
     const sources: ClickResolveInput['visibleSources'] = [];
     await r.resolveClick({
@@ -111,15 +111,15 @@ describe('createClickResolver', () => {
     expect(picker.pick).toHaveBeenCalledWith([1280, 720], 11, 22, sources, undefined, undefined);
   });
 
-  it('forwards the resolveSelection triple into buildPointInfo unchanged', async () => {
-    const buildPointInfo = vi.fn(() => dummyInfo);
+  it('forwards the resolveSelection triple into buildGalaxyInfo unchanged', async () => {
+    const buildGalaxyInfo = vi.fn(() => dummyInfo);
     const r = createClickResolver({
       pickRenderer: makePicker({ source: Source.TwoMRS, localIdx: 13 }),
       resolveSelection: () => ({ source: Source.TwoMRS, localIdx: 13, cloud: dummyCloud }),
-      buildPointInfo,
+      buildGalaxyInfo,
     });
     await r.resolveClick(dummyArgs);
-    expect(buildPointInfo).toHaveBeenCalledTimes(1);
-    expect(buildPointInfo).toHaveBeenCalledWith(dummyCloud, 13, Source.TwoMRS);
+    expect(buildGalaxyInfo).toHaveBeenCalledTimes(1);
+    expect(buildGalaxyInfo).toHaveBeenCalledWith(dummyCloud, 13, Source.TwoMRS);
   });
 });

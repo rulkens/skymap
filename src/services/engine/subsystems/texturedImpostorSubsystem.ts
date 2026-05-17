@@ -18,7 +18,7 @@
  */
 
 import { Source } from '../../../data/sources';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ThumbnailInstance } from '../../../@types/rendering/ThumbnailInstance';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -90,7 +90,7 @@ export function createTexturedImpostorSubsystem(
   function runFrame(input: TexturedImpostorFrameInput): TexturedImpostorFrameOutput {
     if (destroyed) return lastOutput;
 
-    const { cam, clouds, visibleSourceMask, pxPerRad, famousMeta } = input;
+    const { cam, catalogs, visibleSourceMask, pxPerRad, famousMeta } = input;
     frameCounter++;
 
     const dMpcMax = MAX_PLAUSIBLE_DIAMETER_KPC / 1000;
@@ -106,7 +106,7 @@ export function createTexturedImpostorSubsystem(
 
     const nowMs = performance.now();
 
-    for (const [cloudSource, cloud] of clouds.entries()) {
+    for (const [cloudSource, cloud] of catalogs.entries()) {
       let stickyQuads = stickyQuadsBySource.get(cloudSource);
       if (!stickyQuads) {
         stickyQuads = new Map();

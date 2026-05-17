@@ -3,7 +3,7 @@
  *
  * "Lookback time" is how long ago the light we see now left the source —
  * a more intuitive cosmological distance measure than Mpc for human audiences.
- * The engine uses this to populate the "earthEra" field in PointInfo, giving
+ * The engine uses this to populate the "earthEra" field in GalaxyInfo, giving
  * users a relatable Earth-history anchor like "during Earth's Mesoproterozoic".
  *
  * Approximation: t_L = (z / (1 + z)) × t_H  (coasting universe / low-z limit)

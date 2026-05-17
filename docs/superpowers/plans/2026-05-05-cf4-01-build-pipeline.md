@@ -43,7 +43,7 @@ work, but a sidecar lets us re-skin without rebuilding bins.
 - `tools/buildCf4.ts` — CLI orchestrator. Reads three CSVs, encodes the two
   bins, writes the palette JSON.
 - `src/data/cf4GalaxiesBinaryFormat.ts` — encode + decode for the `CF4G`
-  format (mirrors `pointCloudFormat.ts` style).
+  format (mirrors `galaxyCatalogFormat.ts` style).
 - `src/data/cf4StreamlinesBinaryFormat.ts` — encode + decode for the
   `CF4S` format (mirrors `filamentBinaryFormat.ts` style).
 - `src/@types/Cf4Cloud.d.ts` — runtime decoded shape for galaxies.
@@ -618,7 +618,7 @@ Write `src/data/cf4GalaxiesBinaryFormat.ts`:
  *   16 4  basinId    u32
  *   20 4  reserved   u32  0
  *
- * Why a separate format from PointCloud v4? CF4 has no per-galaxy
+ * Why a separate format from GalaxyCatalog v4? CF4 has no per-galaxy
  * magnitude, no colour index, no kpc-diameter. Reusing v4 would mean
  * 64 bytes/record where 24 suffice — 56k records × 40 wasted bytes ≈
  * 2.2 MB of zero padding shipped to every browser. A bespoke format
@@ -1172,7 +1172,7 @@ git commit -m "build(cf4): bake initial CF4 binaries from laniakea v1.0.0"
       (~1.3 MB / ~36 MB / ~1 KB respectively).
 - [ ] No CSVs are committed to `data/raw/cf4/` (gitignore working).
 - [ ] All didactic comments explain *why*, not just *what* — e.g. why a
-      bespoke binary format vs. extending PointCloud v4.
+      bespoke binary format vs. extending GalaxyCatalog v4.
 - [ ] All TS types are `type` aliases, never `interface`.
 
 After this plan ships: nothing renders yet, but the data pipeline is
