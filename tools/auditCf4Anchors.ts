@@ -24,62 +24,15 @@
  */
 import { readFileSync } from 'node:fs';
 import { readNpy } from './parsers/npyReader';
-import { SG_TO_EQ_MATRIX } from '../src/data/superGalacticTransform';
 import { CLUSTER_ANCHORS, raDecDistToEqCart } from '../src/data/clusterAnchors';
 import type { ClusterAnchor } from '../src/@types/data/ClusterAnchor';
-import type { Mat3 } from '../src/@types/math/Mat3';
 import type { Vec3 } from '../src/@types/math/Vec3';
+import { eqToSg, sgToVoxelIndex } from './utils/math/coordinates';
+import { percentileOf } from './utils/math/percentile';
 
-const VOXEL_SIZE_MPC = 1000 / 128; // CF4++ box size / N
+// CF-4 cube dimension — 128³ voxels covering ±500 Mpc.  Used only by
+// sampleVariant for bounds-checking and linear-index arithmetic.
 const DIMS = 128;
-const ORIGIN_MPC = -VOXEL_SIZE_MPC * (DIMS / 2); // -500 Mpc on each axis
-
-/**
- * Apply a column-major Mat3 to a Vec3.
- *   result[r] = Σ_c m[c*3 + r] · v[c]
- */
-function applyMat3(m: Mat3, v: Vec3): Vec3 {
-  return [
-    m[0]! * v[0] + m[3]! * v[1] + m[6]! * v[2],
-    m[1]! * v[0] + m[4]! * v[1] + m[7]! * v[2],
-    m[2]! * v[0] + m[5]! * v[1] + m[8]! * v[2],
-  ];
-}
-
-/**
- * Transpose of a column-major Mat3.  For an orthonormal rotation this
- * is its inverse.  Indexing reminder: m[c*3 + r] becomes m'[r*3 + c].
- */
-function transpose3(m: Mat3): Mat3 {
-  return [
-    m[0]!, m[3]!, m[6]!,
-    m[1]!, m[4]!, m[7]!,
-    m[2]!, m[5]!, m[8]!,
-  ];
-}
-
-const EQ_TO_SG_MATRIX: Mat3 = transpose3(SG_TO_EQ_MATRIX);
-
-/** Eq Cartesian → SG Cartesian (Mpc, length-preserving). */
-function eqToSg(eq: Vec3): Vec3 {
-  return applyMat3(EQ_TO_SG_MATRIX, eq);
-}
-
-/**
- * Convert SG Cartesian (Mpc) → continuous voxel indices (i, j, k) in
- * the cube's *native* numpy axis order.  i is the slowest-varying axis,
- * k the fastest.  Build pipeline's CURRENT assumption: i=SGX, j=SGY, k=SGZ.
- *
- * The conversion places voxel-corner 0 at -500 Mpc and voxel-corner 128
- * at +500 Mpc, matching the symmetric origin set by buildCf4Density.ts.
- */
-function sgToVoxelIndex(sg: [number, number, number]): [number, number, number] {
-  return [
-    (sg[0] - ORIGIN_MPC) / VOXEL_SIZE_MPC,
-    (sg[1] - ORIGIN_MPC) / VOXEL_SIZE_MPC,
-    (sg[2] - ORIGIN_MPC) / VOXEL_SIZE_MPC,
-  ];
-}
 
 /**
  * Sample the cube at integer voxel indices (i, j, k) under a permutation
@@ -110,27 +63,11 @@ function sampleVariant(
   return values[i * DIMS * DIMS + j * DIMS + k] ?? null;
 }
 
-/**
- * Given a list of sample values from the cube and the full distribution's
- * sorted percentile breakpoints, return the percentile rank of each sample.
- * Uses linear interpolation between adjacent breakpoints — good enough
- * for ranking comparisons.
- */
-function percentileOf(value: number, sortedAsc: Float64Array): number {
-  // Binary search for the largest index <= value.
-  let lo = 0;
-  let hi = sortedAsc.length - 1;
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >>> 1;
-    if (sortedAsc[mid]! <= value) lo = mid;
-    else hi = mid - 1;
-  }
-  return (lo / (sortedAsc.length - 1)) * 100;
-}
-
 function main(): void {
   const npyBuf = readFileSync('data/raw/cf4/d_mean_CF4pp.npy');
-  const npy = readNpy(npyBuf.buffer.slice(npyBuf.byteOffset, npyBuf.byteOffset + npyBuf.byteLength));
+  const npy = readNpy(
+    npyBuf.buffer.slice(npyBuf.byteOffset, npyBuf.byteOffset + npyBuf.byteLength),
+  );
   if (!(npy.values instanceof Float64Array)) {
     throw new Error(`expected f64 .npy, got ${npy.dtype}`);
   }
@@ -148,9 +85,9 @@ function main(): void {
   })();
   console.log(
     `Distribution: min=${sortedAsc[0]!.toFixed(4)}, ` +
-    `median=${sortedAsc[Math.floor(sortedAsc.length / 2)]!.toFixed(4)}, ` +
-    `mean=${meanValue.toFixed(4)}, ` +
-    `max=${sortedAsc[sortedAsc.length - 1]!.toFixed(4)}`,
+      `median=${sortedAsc[Math.floor(sortedAsc.length / 2)]!.toFixed(4)}, ` +
+      `mean=${meanValue.toFixed(4)}, ` +
+      `max=${sortedAsc[sortedAsc.length - 1]!.toFixed(4)}`,
   );
   console.log('');
 
@@ -184,12 +121,18 @@ function main(): void {
   // ── Sweep all 48 permutation × sign-flip variants ───────────────
   // Pick the variant that maximises the mean anchor percentile.
   const perms: [0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2][] = [
-    [0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0],
+    [0, 1, 2],
+    [0, 2, 1],
+    [1, 0, 2],
+    [1, 2, 0],
+    [2, 0, 1],
+    [2, 1, 0],
   ];
   const signs: [1 | -1, 1 | -1, 1 | -1][] = [];
-  for (const sx of [1, -1] as const) for (const sy of [1, -1] as const) for (const sz of [1, -1] as const) signs.push([sx, sy, sz]);
+  for (const sx of [1, -1] as const)
+    for (const sy of [1, -1] as const) for (const sz of [1, -1] as const) signs.push([sx, sy, sz]);
 
-  type Result = { perm: typeof perms[number]; signs: typeof signs[number]; meanPct: number };
+  type Result = { perm: (typeof perms)[number]; signs: (typeof signs)[number]; meanPct: number };
   const results: Result[] = [];
   for (const perm of perms) {
     for (const sign of signs) {
@@ -215,7 +158,9 @@ function main(): void {
     const r = results[i]!;
     const permLabel = labelPerm(r.perm);
     const signLabel = r.signs.map((s) => (s === 1 ? '+' : '-')).join('');
-    console.log(`  ${i + 1}. perm=${permLabel} signs=[${signLabel}] → mean pct ${r.meanPct.toFixed(1)}`);
+    console.log(
+      `  ${i + 1}. perm=${permLabel} signs=[${signLabel}] → mean pct ${r.meanPct.toFixed(1)}`,
+    );
   }
   console.log('');
   console.log('── BOTTOM 3 VARIANTS (worst alignment) ──');
@@ -223,7 +168,9 @@ function main(): void {
     const r = results[i]!;
     const permLabel = labelPerm(r.perm);
     const signLabel = r.signs.map((s) => (s === 1 ? '+' : '-')).join('');
-    console.log(`  ${i + 1}. perm=${permLabel} signs=[${signLabel}] → mean pct ${r.meanPct.toFixed(1)}`);
+    console.log(
+      `  ${i + 1}. perm=${permLabel} signs=[${signLabel}] → mean pct ${r.meanPct.toFixed(1)}`,
+    );
   }
 }
 
