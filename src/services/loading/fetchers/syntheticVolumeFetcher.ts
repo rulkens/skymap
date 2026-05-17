@@ -19,7 +19,7 @@
  * Mirrors the `syntheticPointFetcher` precedent — see that file's
  * docblock for the full rationale.  The only structural difference is
  * that the request shape is volume-specific (`SyntheticVolumeReq`)
- * rather than re-using `PointCloudReq`; this keeps both fetchers'
+ * rather than re-using `GalaxyCatalogReq`; this keeps both fetchers'
  * typed request shapes narrow.
  *
  * ### Why the fetcher is dev-only but the module is not

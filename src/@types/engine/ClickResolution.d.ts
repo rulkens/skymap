@@ -1,5 +1,5 @@
 import type { Source } from '../../data/sources';
-import type { PointInfo } from './PointInfo';
+import type { GalaxyInfo } from './GalaxyInfo';
 
 /**
  * Result of resolving a click.  See the module-level docstring of
@@ -16,5 +16,5 @@ export type ClickResolution =
   | {
       kind: 'select';
       selection: { source: Source; localIdx: number };
-      info: PointInfo | null;
+      info: GalaxyInfo | null;
     };

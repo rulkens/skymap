@@ -1,6 +1,6 @@
 /**
- * pointSourceRegistry — declarative wiring for the engine's per-source
- * point-cloud asset slots.
+ * galaxyCatalogSourceRegistry — declarative wiring for the engine's
+ * per-source galaxy-catalog asset slots.
  *
  * ### Why a registry?
  *
@@ -16,17 +16,17 @@
  *      retry policy) — declarative data;
  *   2. *Slot construction* (build the AssetSlot, attach the commit
  *      body, register subscribers) — uniform plumbing;
- *   3. *Engine-state side effects* (mutate `state.sources.clouds`,
- *      fire `cb.onCloudReady`, wake the scheduler) — shared lifecycle.
+ *   3. *Engine-state side effects* (mutate `state.sources.catalogs`,
+ *      fire `cb.onCatalogReady`, wake the scheduler) — shared lifecycle.
  *
- * Pulling (1) into a `POINT_SOURCE_REGISTRY` table and (2)+(3) into a
- * `wirePointSourceSlot` helper makes "what differs across sources"
- * legible at a glance — anyone adding a new survey edits one row of
- * the registry rather than tracing through a multi-arm conditional in
- * the middle of a 1100-line bootstrap IIFE.  And the engine.ts side
- * collapses to:
+ * Pulling (1) into a `GALAXY_CATALOG_SOURCE_REGISTRY` table and
+ * (2)+(3) into a `wireGalaxyCatalogSourceSlot` helper makes "what
+ * differs across sources" legible at a glance — anyone adding a new
+ * survey edits one row of the registry rather than tracing through a
+ * multi-arm conditional in the middle of a 1100-line bootstrap IIFE.
+ * And the engine.ts side collapses to:
  *
- *   for (const cfg of POINT_SOURCE_REGISTRY) wirePointSourceSlot(state, cfg, deps);
+ *   for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) wireGalaxyCatalogSourceSlot(state, cfg, deps);
  *
  * ### What the previous shape looked like (so the diff is auditable)
  *
@@ -34,9 +34,9 @@
  * `fetch` field via a ternary:
  *
  *   const fetch = source === Source.Synthetic ? syntheticPointFetcher
- *                                              : pointCloudFetcher;
+ *                                              : galaxyCatalogFetcher;
  *   const slot = createAssetSlot({ name, fetch, commit: ... });
- *   slot.subscribe((s) => { if (s.kind === 'ready') { cb.onCloudReady?.(...); requestRender(); } });
+ *   slot.subscribe((s) => { if (s.kind === 'ready') { cb.onCatalogReady?.(...); requestRender(); } });
  *   state.assetSlots.points.set(source, slot);
  *
  * The registry rephrases that ternary as data ("each row names its own
@@ -49,10 +49,10 @@
  * this registry:
  *
  *   - `filaments` — different fetcher (`filamentFetcher`), different
- *     payload shape (`FilamentCloud` not `PointCloud`), different
+ *     payload shape (`FilamentCloud` not `GalaxyCatalog`), different
  *     renderer target (`FilamentRenderer.upload`), one-shot lifecycle
  *     (never reloaded on tier change).  Forcing it through a
- *     "PointSourceConfig" would require parameterising the payload
+ *     "GalaxyCatalogSourceConfig" would require parameterising the payload
  *     type, the commit target, AND the lifecycle hook on every row of
  *     the registry — a generic abstraction whose only consumer is the
  *     odd-one-out, paid for by the four normal rows.
@@ -66,9 +66,10 @@
  *
  * Each sidecar has materially divergent shape and a single inline
  * construction site.  Absorbing them into the registry would expand the
- * config type to cover their differences and turn `wirePointSourceSlot`
- * into a coordinator that branches on slot kind — exactly the smell the
- * registry is meant to remove from engine.ts.  They stay inline.
+ * config type to cover their differences and turn
+ * `wireGalaxyCatalogSourceSlot` into a coordinator that branches on slot
+ * kind — exactly the smell the registry is meant to remove from
+ * engine.ts.  They stay inline.
  *
  * ### Why `initialTier` lives on the config but isn't read by the
  *     helper
@@ -80,7 +81,7 @@
  * `state.sources.tier`, seeded at engine init from `opts.initialTier`,
  * not from per-source config.
  *
- * The `initialTier` field nevertheless lives on `PointSourceConfig` for
+ * The `initialTier` field nevertheless lives on `GalaxyCatalogSourceConfig` for
  * two reasons:
  *
  *   1. The spec (`docs/superpowers/specs/2026-05-08-engine-internal-restructure-design.md#3`)
@@ -99,8 +100,8 @@
  * ### Consumer pattern (in `engine.ts`)
  *
  * ```ts
- * for (const cfg of POINT_SOURCE_REGISTRY) {
- *   wirePointSourceSlot(state, cfg, { cb });
+ * for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
+ *   wireGalaxyCatalogSourceSlot(state, cfg, { cb });
  * }
  * // ... sidecar slots constructed inline below ...
  * // ... the post-loop allSlots aggregation runs unchanged ...
@@ -114,13 +115,13 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { Source } from '../../../data/sources';
-import type { PointCloudReq } from '../../../@types/loading/PointCloudReq';
-import type { PointSourceConfig } from '../../../@types/engine/wiring/PointSourceConfig';
+import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
+import type { GalaxyCatalogSourceConfig } from '../../../@types/engine/wiring/GalaxyCatalogSourceConfig';
 import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePointSourceDeps';
 import { createAssetSlot } from '../../loading/AssetSlot';
-import { pointCloudFetcher } from '../../loading/fetchers/pointCloudFetcher';
+import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
 
 /**
@@ -150,7 +151,7 @@ function sourceName(source: Source): string {
   }
 }
 
-// PointSourceConfig type moved to @types/engine/wiring/PointSourceConfig.d.ts.
+// GalaxyCatalogSourceConfig type moved to @types/engine/wiring/GalaxyCatalogSourceConfig.d.ts.
 
 /**
  * The full registry, in Source enum order so the boot-time arrival
@@ -166,18 +167,18 @@ function sourceName(source: Source): string {
  * are documentation that travels with the registry.  See the module
  * header for why.
  */
-export const POINT_SOURCE_REGISTRY: readonly PointSourceConfig[] = [
-  { source: Source.SDSS, fetcher: pointCloudFetcher, initialTier: 'medium' },
-  { source: Source.TwoMRS, fetcher: pointCloudFetcher, initialTier: 'medium' },
-  { source: Source.Glade, fetcher: pointCloudFetcher, initialTier: 'small' },
-  { source: Source.Famous, fetcher: pointCloudFetcher, initialTier: 'medium' },
+export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[] = [
+  { source: Source.SDSS, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
+  { source: Source.TwoMRS, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
+  { source: Source.Glade, fetcher: galaxyCatalogFetcher, initialTier: 'small' },
+  { source: Source.Famous, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
   { source: Source.Synthetic, fetcher: syntheticPointFetcher, initialTier: 'small' },
 ];
 
 /**
  * Shared dependencies the helper needs that aren't on `EngineState`.
  *
- * `cb` is the engine's callback bag — used for the `onCloudReady` echo
+ * `cb` is the engine's callback bag — used for the `onCatalogReady` echo
  * that runs on the slot's `ready` transition.  Passing it as one
  * named field (rather than threading individual callbacks through)
  * keeps the call site at a single line and matches how the rest of
@@ -186,8 +187,8 @@ export const POINT_SOURCE_REGISTRY: readonly PointSourceConfig[] = [
 // WirePointSourceDeps type moved to @types/engine/wiring/WirePointSourceDeps.d.ts.
 
 /**
- * Build the asset slot for one point-source survey, attach its commit
- * body and ready-state subscriber, and register it in
+ * Build the asset slot for one galaxy-catalog source survey, attach its
+ * commit body and ready-state subscriber, and register it in
  * `state.assetSlots.points`.
  *
  * Idempotency / re-wire: not supported.  Calling this twice for the
@@ -203,16 +204,16 @@ export const POINT_SOURCE_REGISTRY: readonly PointSourceConfig[] = [
  * `state.gpu.renderer = renderer`.  See the bootstrap's "Why construct
  * here, after the renderer exists?" note for the why.
  */
-export function wirePointSourceSlot(
+export function wireGalaxyCatalogSourceSlot(
   state: EngineState,
-  cfg: PointSourceConfig,
+  cfg: GalaxyCatalogSourceConfig,
   deps: WirePointSourceDeps,
 ): void {
   const { source, fetcher } = cfg;
   const { cb } = deps;
   const slotName = `${sourceName(source)}-points`;
 
-  const slot = createAssetSlot<PointCloud, PointCloudReq>({
+  const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
     fetch: fetcher,
     commit: async (cloud) => {
@@ -250,7 +251,7 @@ export function wirePointSourceSlot(
         `[engine] upload start ${sourceName(source)} count=${cloud.count}`,
       );
       await state.gpu.renderer.upload(source, cloud);
-      state.sources.clouds.set(source, cloud);
+      state.sources.catalogs.set(source, cloud);
       const dtMs = Math.round(performance.now() - t0);
       // After upload, dump what the GPU actually has — the source of
       // truth the draw loop reads from.  If this disagrees with the
@@ -275,7 +276,7 @@ export function wirePointSourceSlot(
     // change, so this subscriber only needs to fire the app-visible
     // side effects (cb echo + render wake) on the `ready` transition.
     if (s.kind === 'ready') {
-      cb.sources?.onCloudReady?.(source, s.value.count);
+      cb.sources?.onCatalogReady?.(source, s.value.count);
       state.subsystems.scheduler.requestRender();
     }
   });

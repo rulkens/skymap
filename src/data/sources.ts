@@ -11,8 +11,8 @@
  * ---
  * ### Why a numeric enum (not a string union)?
  *
- * Each point in our binary `.bin` cloud format carries a 1-byte `source`
- * tag (see `pointCloudFormat.ts`). A string like `'SDSS'` would cost 4
+ * Each point in our binary `.bin` catalog format carries a 1-byte `source`
+ * tag (see `galaxyCatalogFormat.ts`). A string like `'SDSS'` would cost 4
  * bytes per point — for 10 million points that's 40 MB of redundant text.
  * A `u8` is one byte and lets the GPU compute shader test
  * `sourceMask & (1u << src)` to filter visibility per-frame at zero cost.
@@ -228,7 +228,7 @@ export function sourceMaxDistanceMpc(source: Source): number {
 
 /**
  * Photometric band labels for the five `magU/G/R/I/Z` slots on this source's
- * `PointCloud`.  Returns the actual band name carried in each slot (e.g.
+ * `GalaxyCatalog`.  Returns the actual band name carried in each slot (e.g.
  * `'B'` for GLADE's g-slot) so the InfoCard can label rows accurately
  * instead of always saying "(g)".  Slots without a measurement carry `'—'`.
  *

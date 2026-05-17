@@ -7,12 +7,12 @@
  *   - `public/data/2mrs.bin`, `public/data/glade.bin`  (for cross-match)
  *
  * Writes:
- *   - `public/data/famous.bin`         (v4 PointCloud, normal renderer input)
+ *   - `public/data/famous.bin`         (v4 GalaxyCatalog, normal renderer input)
  *   - `public/data/famous_xrefs.json`  (cross-match sidecar)
  *   - `public/data/famous_meta.json`   (per-localIdx → id + names + description)
  *
  * Why three artefacts instead of one fat .bin?  The .bin has to stay in
- * the v4 PointCloud format so the existing decoder + renderer code paths
+ * the v4 GalaxyCatalog format so the existing decoder + renderer code paths
  * work unchanged.  That format has no slot for human-readable strings.
  * Sidecar JSONs carry the curated metadata + cross-refs, loaded once at
  * startup and indexed by local-idx parallel to the .bin's count.
@@ -33,15 +33,15 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseFamousSeed, type FamousEntry } from './parsers/famousSeed.js';
-import { encodePointCloud, decodePointCloud } from '../src/data/pointCloudFormat.js';
+import { encodeGalaxyCatalog, decodeGalaxyCatalog } from '../src/data/galaxyCatalogFormat.js';
 import { Source } from '../src/data/sources.js';
 import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
-import type { PointCloud } from '../src/@types/data/PointCloud.js';
+import type { GalaxyCatalog } from '../src/@types/data/GalaxyCatalog.js';
 
 /** Threshold (arcsec) within which a 2MRS/GLADE point is treated as the same galaxy. */
 const MATCH_THRESHOLD_ARCSEC = 30;
 
-/** A subset of PointCloud sufficient for our nearest-neighbour search. */
+/** A subset of GalaxyCatalog sufficient for our nearest-neighbour search. */
 type CloudPositions = { count: number; positions: Float32Array };
 
 /**
@@ -137,13 +137,13 @@ async function main(): Promise<void> {
 
   // Decode the survey clouds for cross-match.  Both files load fully into
   // memory — fine at our scale (~2 + ~127 MB).
-  const twomrs = decodePointCloud(readFileSync(twomrsPath).buffer.slice(0));
-  const glade = decodePointCloud(readFileSync(gladePath).buffer.slice(0));
+  const twomrs = decodeGalaxyCatalog(readFileSync(twomrsPath).buffer.slice(0));
+  const glade = decodeGalaxyCatalog(readFileSync(gladePath).buffer.slice(0));
   process.stderr.write(`cross-match against ${twomrs.count} 2MRS + ${glade.count} GLADE\n`);
 
-  // ── Build the PointCloud + sidecar maps in lock-step ─────────────────
+  // ── Build the GalaxyCatalog + sidecar maps in lock-step ──────────────
   const count = entries.length;
-  const cloud: PointCloud = {
+  const cloud: GalaxyCatalog = {
     count,
     objIDs: new BigUint64Array(count),
     positions: new Float32Array(count * 3),
@@ -199,7 +199,7 @@ async function main(): Promise<void> {
       cloud.axisRatio[i] = fb.axisRatio;
       cloud.positionAngleDeg[i] = fb.positionAngleDeg;
     }
-    // Photometric mapping: HyperLEDA gives B/V/K, the PointCloud arrays
+    // Photometric mapping: HyperLEDA gives B/V/K, the GalaxyCatalog arrays
     // are SDSS-shaped (u/g/r/i/z).  Same shoehorn convention as GLADE:
     // map B→G, V→R, K→I.  magU/magZ stay NaN — HyperLEDA doesn't carry
     // them and we'd rather have honest "missing" than fabricated values.
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
   }
 
   // ── Write the artefacts ──────────────────────────────────────────────
-  const binBuf = encodePointCloud(cloud);
+  const binBuf = encodeGalaxyCatalog(cloud);
   writeFileSync(resolve(outDir, 'famous.bin'), Buffer.from(binBuf));
   process.stderr.write(`wrote ${count} points to famous.bin (${binBuf.byteLength} bytes)\n`);
   writeFileSync(resolve(outDir, 'famous_xrefs.json'), JSON.stringify(xrefs, null, 2));

@@ -1,11 +1,11 @@
 /**
- * pointInfoBuilder — pure helpers for turning raw cloud arrays into a
- * `PointInfo` value the React layer can render.
+ * galaxyInfoBuilder — pure helpers for turning raw catalog arrays into a
+ * `GalaxyInfo` value the React layer can render.
  *
  * Three things live here:
  *
- *   - `buildPointInfo(cloud, idx)` — the only place in the engine that knows
- *     how to turn a (cloud, index) pair into a fully-derived `PointInfo`.
+ *   - `buildGalaxyInfo(cloud, idx)` — the only place in the engine that knows
+ *     how to turn a (cloud, index) pair into a fully-derived `GalaxyInfo`.
  *     Concentrating the data → display path in one function makes the trig
  *     and physics math easy to trace and unit-test.
  *   - `maxAbsCoord(cloud)` — bounding-box heuristic used at startup to frame
@@ -17,8 +17,8 @@
  * to test in isolation and means they don't need engine state threaded in.
  */
 
-import type { PointInfo } from '../../../@types/engine/PointInfo';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { Source, sourceLabel, bandLabels } from '../../../data/sources';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
@@ -53,7 +53,7 @@ import {
  * The result is used to auto-frame the camera so any cloud (real SDSS or
  * synthetic sphere) is comfortably visible regardless of its spatial extent.
  */
-export function maxAbsCoord(cloud: PointCloud): number {
+export function maxAbsCoord(cloud: GalaxyCatalog): number {
   let m = 0;
   for (let i = 0; i < cloud.positions.length; i++) {
     const v = Math.abs(cloud.positions[i]!);
@@ -89,7 +89,7 @@ export function niceRound(x: number): number {
 }
 
 /**
- * Build a `PointInfo` value from raw cloud arrays for the given index.
+ * Build a `GalaxyInfo` value from raw cloud arrays for the given index.
  *
  * This is the only place in the engine that touches `cartesianToRaDecZ` and
  * the physics helpers — the React components receive the computed result and
@@ -114,13 +114,13 @@ export function niceRound(x: number): number {
  * be empty / undefined and we silently omit the `famous` block — the InfoCard
  * falls back to its generic layout until the next hover triggers a rebuild.
  */
-export function buildPointInfo(
-  cloud: PointCloud,
+export function buildGalaxyInfo(
+  cloud: GalaxyCatalog,
   idx: number,
   source: Source,
   famousMeta?: readonly FamousMetaEntry[],
   famousXrefs?: FamousXrefMap,
-): PointInfo {
+): GalaxyInfo {
   const px = cloud.positions[idx * 3 + 0]!;
   const py = cloud.positions[idx * 3 + 1]!;
   const pz = cloud.positions[idx * 3 + 2]!;
@@ -312,14 +312,14 @@ export function buildPointInfo(
   //
   // Look up the curated sidecar metadata only for Famous rows.  For every other
   // source this block is a no-op: we never index into `famousMeta` and the
-  // returned `PointInfo` carries no `famous` key, which is exactly what the
+  // returned `GalaxyInfo` carries no `famous` key, which is exactly what the
   // InfoCard expects for a plain survey row.
   //
   // Graceful degradation: if the sidecar fetch hasn't resolved yet (empty
   // arrays / undefined), `famousMeta[idx]` is undefined and we skip the block
   // entirely — the InfoCard renders the generic layout on that hover, and the
   // next hover (after sidecars land) will produce the full block.
-  let famous: PointInfo['famous'];
+  let famous: GalaxyInfo['famous'];
   if (source === Source.Famous && famousMeta && famousMeta[idx]) {
     const meta = famousMeta[idx]!;
     const xref = (famousXrefs && famousXrefs[meta.id]) ?? null;

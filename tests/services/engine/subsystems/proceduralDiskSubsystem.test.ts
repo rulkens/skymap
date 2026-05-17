@@ -15,10 +15,10 @@
 import { describe, it, expect } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
-function makeDenseCloud(count: number, ar = 0.7, pa = 45): PointCloud {
+function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     positions[i * 3 + 0] = 10;
@@ -59,11 +59,11 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeInput(clouds: Map<Source, PointCloud>, mask = 0xffffffff) {
+function makeInput(catalogs: Map<Source, GalaxyCatalog>, mask = 0xffffffff) {
   const cam = makeCam();
   return {
     cam,
-    clouds,
+    catalogs,
     visibleSourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
   };

@@ -1,7 +1,7 @@
 /**
  * FilamentCloud — the runtime decoded shape of `filaments.bin`.
  *
- * Mirrors the SoA layout of `PointCloud`: separate typed arrays for each
+ * Mirrors the SoA layout of `GalaxyCatalog`: separate typed arrays for each
  * field so we can `device.queue.writeBuffer` them straight to the GPU
  * without per-strip allocations.
  *

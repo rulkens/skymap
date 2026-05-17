@@ -35,7 +35,7 @@ pixel-readback harness costs more than the refactor it would gate.
 Instead each `*.baseline.test.ts` file:
 
   1. Constructs a deterministic fixture (cameras at fixed positions,
-     synthetic PointClouds with hand-picked diameters and orientations).
+     synthetic GalaxyCatalogs with hand-picked diameters and orientations).
   2. Drives the engine subsystems through their `runFrame` step exactly
      as the production frame body would.
   3. Records `(rendererName, instanceCount, hashOfPackedInstances)` for
@@ -72,7 +72,7 @@ import type { mat4 } from 'gl-matrix';
 
 import { Source } from '../../src/data/sources';
 import { createThumbnailSubsystem } from '../../src/services/engine/subsystems/thumbnailSubsystem';
-import type { PointCloud } from '../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 
 function makeFakeDevice(): GPUDevice {
@@ -86,7 +86,7 @@ function makeFakeDevice(): GPUDevice {
   return { createTexture: vi.fn(() => fakeTexture), queue } as unknown as GPUDevice;
 }
 
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     positions[i * 3 + 0] = 10;
@@ -1397,14 +1397,14 @@ Create `src/@types/engine/subsystems/ProceduralDiskSubsystem.d.ts`:
  */
 
 import type { Destroyable } from '../../rendering/Destroyable';
-import type { PointCloud } from '../../data/PointCloud';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { ProceduralDiskInstance } from '../../rendering/ProceduralDiskInstance';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { Source } from '../../../data/sources';
 
 export type ProceduralDiskFrameInput = {
   readonly cam: OrbitCamera;
-  readonly clouds: ReadonlyMap<Source, PointCloud>;
+  readonly clouds: ReadonlyMap<Source, GalaxyCatalog>;
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
 };
@@ -1487,10 +1487,10 @@ Create `tests/services/engine/subsystems/proceduralDiskSubsystem.test.ts`:
 import { describe, it, expect } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
-function makeDenseCloud(count: number, ar = 0.7, pa = 45): PointCloud {
+function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     positions[i * 3 + 0] = 10;
@@ -1531,7 +1531,7 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeInput(clouds: Map<Source, PointCloud>, mask = 0xffffffff) {
+function makeInput(clouds: Map<Source, GalaxyCatalog>, mask = 0xffffffff) {
   const cam = makeCam();
   return {
     cam,
@@ -1629,7 +1629,7 @@ Create `src/services/engine/subsystems/proceduralDiskSubsystem.ts`:
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
@@ -1887,7 +1887,7 @@ Create `src/@types/engine/subsystems/TexturedImpostorSubsystem.d.ts`:
  */
 
 import type { Destroyable } from '../../rendering/Destroyable';
-import type { PointCloud } from '../../data/PointCloud';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { ThumbnailInstance } from '../../rendering/ThumbnailInstance';
 import type { DiskInstance } from '../../rendering/DiskInstance';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
@@ -1897,7 +1897,7 @@ import type { GalaxyAtlasSubsystem } from './GalaxyAtlasSubsystem';
 
 export type TexturedImpostorFrameInput = {
   readonly cam: OrbitCamera;
-  readonly clouds: ReadonlyMap<Source, PointCloud>;
+  readonly clouds: ReadonlyMap<Source, GalaxyCatalog>;
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
   readonly famousMeta: readonly FamousMetaEntry[];
@@ -1996,7 +1996,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createTexturedImpostorSubsystem } from '../../../../src/services/engine/subsystems/texturedImpostorSubsystem';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 
 function makeFakeDevice(): GPUDevice {
@@ -2014,7 +2014,7 @@ function makeFakeBitmap(): ImageBitmap {
   return { width: 128, height: 128, close: () => {} } as unknown as ImageBitmap;
 }
 
-function makeDenseCloud(count: number, ar = 0.7, pa = 45): PointCloud {
+function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     positions[i * 3 + 0] = 10;
@@ -2055,7 +2055,7 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeInput(clouds: Map<Source, PointCloud>, mask = 0xffffffff) {
+function makeInput(clouds: Map<Source, GalaxyCatalog>, mask = 0xffffffff) {
   const cam = makeCam();
   return {
     cam,
@@ -2179,7 +2179,7 @@ Create `src/services/engine/subsystems/texturedImpostorSubsystem.ts`:
  */
 
 import { Source } from '../../../data/sources';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ThumbnailInstance } from '../../../@types/rendering/ThumbnailInstance';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -3425,7 +3425,7 @@ import { Source } from '../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../../src/services/engine/subsystems/proceduralDiskSubsystem';
 import { createTexturedImpostorSubsystem } from '../../src/services/engine/subsystems/texturedImpostorSubsystem';
-import type { PointCloud } from '../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 
 function makeFakeDevice(): GPUDevice {
@@ -3439,7 +3439,7 @@ function makeFakeDevice(): GPUDevice {
   return { createTexture: vi.fn(() => fakeTexture), queue } as unknown as GPUDevice;
 }
 
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     positions[i * 3 + 0] = 10;

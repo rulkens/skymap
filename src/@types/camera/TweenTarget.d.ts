@@ -3,11 +3,11 @@
  * consumes.
  *
  * The helper only reads four fields off the target: `x`, `y`, `z`, and
- * `diameterKpc`.  Declaring the parameter as `PointInfo` would imply
+ * `diameterKpc`.  Declaring the parameter as `GalaxyInfo` would imply
  * the helper might reach for ra/dec/redshift/etc., which it never does.
  * The minimum-surface type doubles as documentation: "this is exactly
  * the data the tween needs."  Production callers pass a full
- * `PointInfo` and TypeScript accepts it via structural compatibility.
+ * `GalaxyInfo` and TypeScript accepts it via structural compatibility.
  */
 
 export type TweenTarget = {

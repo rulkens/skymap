@@ -14,7 +14,7 @@
  */
 
 import type { Destroyable } from '../../rendering/Destroyable';
-import type { PointCloud } from '../../data/PointCloud';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { ThumbnailInstance } from '../../rendering/ThumbnailInstance';
 import type { DiskInstance } from '../../rendering/DiskInstance';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
@@ -23,7 +23,7 @@ import type { Source } from '../../../data/sources';
 
 export type TexturedImpostorFrameInput = {
   readonly cam: OrbitCamera;
-  readonly clouds: ReadonlyMap<Source, PointCloud>;
+  readonly catalogs: ReadonlyMap<Source, GalaxyCatalog>;
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
   readonly famousMeta: readonly FamousMetaEntry[];

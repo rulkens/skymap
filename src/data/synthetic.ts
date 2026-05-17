@@ -27,13 +27,13 @@
  * the cutout URL still works for synthetic data.
  */
 
-import type { PointCloud } from '../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
 import { mulberry32 } from '../utils/random/mulberry32';
 
 // ─── Cloud generator ─────────────────────────────────────────────────────────
 
 /**
- * Generate a synthetic `PointCloud` of `count` fictitious galaxies distributed
+ * Generate a synthetic `GalaxyCatalog` of `count` fictitious galaxies distributed
  * uniformly inside a sphere of radius 1000 Mpc.
  *
  * ---
@@ -99,7 +99,7 @@ import { mulberry32 } from '../utils/random/mulberry32';
  * @param seed   Integer seed for the mulberry32 PRNG. Changing this gives a
  *               different (but equally deterministic) cloud layout.
  */
-export function generateSyntheticCloud(count: number, seed = 42): PointCloud {
+export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog {
   const rand = mulberry32(seed);
 
   // Allocate all typed arrays up front. Typed arrays are cheap to allocate

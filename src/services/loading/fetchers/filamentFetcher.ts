@@ -12,13 +12,13 @@
  * desktop user starting on `small` (rare) sees the smaller skeleton until
  * a hard reload.
  *
- * ### Why a tiny fetcher rather than reusing pointCloudFetcher
+ * ### Why a tiny fetcher rather than reusing galaxyCatalogFetcher
  *
  * The decode step calls `decodeFilaments` (a different binary format —
  * segments instead of points) and the request shape only carries `tier`,
  * not `source`. Splitting them keeps each fetcher's typed request narrow
  * and avoids a "what does source mean for filaments?" branch in the
- * point-cloud fetcher.
+ * galaxy-catalog fetcher.
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { FilamentReq } from '../../../@types/loading/FilamentReq';

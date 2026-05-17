@@ -31,8 +31,8 @@
  *
  * Each call site has its own pre-tween bookkeeping that doesn't belong
  * in the helper:
- *   - `selectFamous` / `selectByAlias` resolve a `PointInfo` via
- *     `buildPointInfo`, then call `setSelected` and `cb.onFocusChange`
+ *   - `selectFamous` / `selectByAlias` resolve a `GalaxyInfo` via
+ *     `buildGalaxyInfo`, then call `setSelected` and `cb.onFocusChange`
  *     before tweening;
  *   - `focusOn` calls `cb.onFocusChange` first so the URL hash updates
  *     in lock-step with the user's commitment.
@@ -60,14 +60,14 @@
  * absorbs that check so future call sites get the safe behaviour for
  * free.  It is genuinely needed; do not remove on the grounds of YAGNI.
  *
- * ### Why `TweenTarget` is a structural minimum, not `PointInfo`
+ * ### Why `TweenTarget` is a structural minimum, not `GalaxyInfo`
  *
  * The helper only reads four fields off the target: `x`, `y`, `z`, and
- * `diameterKpc`.  Declaring the parameter as `PointInfo` would imply
+ * `diameterKpc`.  Declaring the parameter as `GalaxyInfo` would imply
  * the helper might reach for ra/dec/redshift/etc., which it never does.
  * The minimum-surface type doubles as documentation: "this is exactly
  * the data the tween needs."  Production callers pass a full
- * `PointInfo` and TypeScript accepts it via structural compatibility.
+ * `GalaxyInfo` and TypeScript accepts it via structural compatibility.
  */
 
 import { vec3 } from 'gl-matrix';

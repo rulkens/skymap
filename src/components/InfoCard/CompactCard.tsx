@@ -11,7 +11,7 @@
  */
 
 import type { ReactNode } from 'react';
-import type { PointInfo } from '../../@types/engine/PointInfo';
+import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import { formatDistance } from '../../utils/format/distance';
 import styles from './CompactCard.module.css';
 
@@ -19,7 +19,7 @@ import styles from './CompactCard.module.css';
 
 /** Props for CompactCard. */
 export type CompactCardProps = {
-  info: PointInfo;
+  info: GalaxyInfo;
 };
 
 // ── CompactCard ────────────────────────────────────────────────────────────────

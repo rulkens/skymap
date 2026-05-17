@@ -103,8 +103,8 @@ function resolveFamous(id: string, input: ResolverInput): ResolverOutput {
   for (let i = 0; i < input.famousMeta.length; i++) {
     if (input.famousMeta[i]!.id === id) {
       // Found in meta — confirm the cloud is actually loaded.
-      const hasCloud = input.clouds.some((c) => c.source === Source.Famous);
-      if (!hasCloud) return { resolved: false, reason: 'unknown' };
+      const hasCatalog = input.catalogs.some((c) => c.source === Source.Famous);
+      if (!hasCatalog) return { resolved: false, reason: 'unknown' };
       return { resolved: true, source: Source.Famous, localIdx: i };
     }
   }
@@ -125,9 +125,9 @@ function resolveFamous(id: string, input: ResolverInput): ResolverOutput {
  * still streaming.
  */
 function resolvePgc(pgc: bigint, input: ResolverInput): ResolverOutput {
-  for (const { source, cloud } of input.clouds) {
+  for (const { source, catalog } of input.catalogs) {
     if (source !== Source.Glade && source !== Source.TwoMRS) continue;
-    const idx = findObjId(cloud.objIDs, pgc);
+    const idx = findObjId(catalog.objIDs, pgc);
     if (idx >= 0) return { resolved: true, source, localIdx: idx };
   }
   // Not in any loaded PGC-bearing cloud.  Use the alias map as the
@@ -151,9 +151,9 @@ function resolvePgc(pgc: bigint, input: ResolverInput): ResolverOutput {
  * actionable nudge.
  */
 function resolveSdss(objID: bigint, input: ResolverInput): ResolverOutput {
-  for (const { source, cloud } of input.clouds) {
+  for (const { source, catalog } of input.catalogs) {
     if (source !== Source.SDSS) continue;
-    const idx = findObjId(cloud.objIDs, objID);
+    const idx = findObjId(catalog.objIDs, objID);
     if (idx >= 0) return { resolved: true, source, localIdx: idx };
   }
   // Whether or not an SDSS cloud was loaded, a miss collapses to
@@ -196,9 +196,9 @@ function resolvePos(
   let bestSource: Source | null = null;
   let bestIdx = -1;
 
-  for (const { source, cloud } of input.clouds) {
-    const positions = cloud.positions;
-    const n = cloud.count;
+  for (const { source, catalog } of input.catalogs) {
+    const positions = catalog.positions;
+    const n = catalog.count;
     for (let i = 0; i < n; i++) {
       const x = positions[i * 3 + 0]!;
       const y = positions[i * 3 + 1]!;

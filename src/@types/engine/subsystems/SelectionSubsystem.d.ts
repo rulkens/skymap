@@ -1,4 +1,4 @@
-import type { PointInfo } from '../PointInfo';
+import type { GalaxyInfo } from '../GalaxyInfo';
 import type { SelectionInput } from './SelectionInput';
 
 export type SelectionSubsystem = {
@@ -11,18 +11,18 @@ export type SelectionSubsystem = {
   /**
    * Update the selection state.  Fires `cb.onSelectChange` only on
    * actual change.  Optional `prebuiltInfo` lets callers (e.g.
-   * `selectByAlias`) pass the PointInfo directly when the GPU upload
-   * hasn't settled yet (the cloud is in `state.sources.clouds` but the
+   * `selectByAlias`) pass the GalaxyInfo directly when the GPU upload
+   * hasn't settled yet (the catalog is in `state.sources.catalogs` but the
    * renderer hasn't received it).
    */
-  setSelected(sel: SelectionInput | null, prebuiltInfo?: PointInfo | null): void;
+  setSelected(sel: SelectionInput | null, prebuiltInfo?: GalaxyInfo | null): void;
   /**
-   * Build the PointInfo for a (source, localIdx) tuple.  Returns null
+   * Build the GalaxyInfo for a (source, localIdx) tuple.  Returns null
    * if the cloud isn't loaded or the index is out-of-range.  Used both
    * internally (for the hover/select callback fan-out) and by callers
    * that want to look up a point without changing selection state.
    */
-  pointInfoFor(sel: SelectionInput): PointInfo | null;
+  galaxyInfoFor(sel: SelectionInput): GalaxyInfo | null;
   /** Release internal state (no GPU resources to release). */
   destroy(): void;
 };

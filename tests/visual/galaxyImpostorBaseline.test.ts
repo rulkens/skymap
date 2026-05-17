@@ -25,7 +25,7 @@ import { Source } from '../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../../src/services/engine/subsystems/proceduralDiskSubsystem';
 import { createTexturedImpostorSubsystem } from '../../src/services/engine/subsystems/texturedImpostorSubsystem';
-import type { PointCloud } from '../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 
 function makeFakeDevice(): GPUDevice {
@@ -39,7 +39,7 @@ function makeFakeDevice(): GPUDevice {
   return { createTexture: vi.fn(() => fakeTexture), queue } as unknown as GPUDevice;
 }
 
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     positions[i * 3 + 0] = 10;
@@ -120,12 +120,12 @@ describe('galaxy-impostor visual baseline (post-split)', () => {
       });
 
       const cam = makeCam();
-      const clouds = new Map([[Source.SDSS, makeCloud(8)]]);
+      const catalogs = new Map([[Source.SDSS, makeCloud(8)]]);
       const pxPerRad = 720 / (2 * Math.tan(cam.fovYRad / 2));
 
       // Frame 1: kick off fetches; bitmaps land via microtask drain.
-      procSys.runFrame({ cam, clouds, visibleSourceMask: 0xffffffff, pxPerRad });
-      texSys.runFrame({ cam, clouds, visibleSourceMask: 0xffffffff, pxPerRad, famousMeta: [] });
+      procSys.runFrame({ cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad });
+      texSys.runFrame({ cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad, famousMeta: [] });
       await new Promise((r) => setTimeout(r, 0));
 
       // Advance synthetic clock by 50 ms — bitmapReadyTime was recorded at
@@ -134,10 +134,10 @@ describe('galaxy-impostor visual baseline (post-split)', () => {
       nowFake += 50;
 
       // Frame 2: bitmaps ready; disk path fires.
-      const procOut = procSys.runFrame({ cam, clouds, visibleSourceMask: 0xffffffff, pxPerRad });
+      const procOut = procSys.runFrame({ cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad });
       const texOut = texSys.runFrame({
         cam,
-        clouds,
+        catalogs,
         visibleSourceMask: 0xffffffff,
         pxPerRad,
         famousMeta: [],

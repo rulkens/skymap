@@ -1,28 +1,28 @@
 import type { Source } from '../../../data/sources';
 import type { Tier } from '../../data/Tier';
 import type { Fetcher } from '../../loading/Fetcher';
-import type { PointCloud } from '../../data/PointCloud';
-import type { PointCloudReq } from '../../loading/PointCloudReq';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
+import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
 
 /**
  * One row of the registry.
  *
  * The fields capture exactly the dimensions that vary across the five
- * point-source slots; everything else (slot name shape, commit body,
- * subscriber side effects) is uniform and lives in
- * `wirePointSourceSlot`.
+ * galaxy-catalog-source slots; everything else (slot name shape, commit
+ * body, subscriber side effects) is uniform and lives in
+ * `wireGalaxyCatalogSourceSlot`.
  */
-export type PointSourceConfig = {
+export type GalaxyCatalogSourceConfig = {
   /** Which catalog this slot represents. */
   source: Source;
   /**
-   * Fetcher used to materialise the slot's request into a PointCloud.
-   * The four real surveys share `pointCloudFetcher` (which dispatches
+   * Fetcher used to materialise the slot's request into a GalaxyCatalog.
+   * The four real surveys share `galaxyCatalogFetcher` (which dispatches
    * on `req.source` to pick the right .bin URL); Synthetic uses
-   * `syntheticPointFetcher` (which procedurally generates a cloud and
+   * `syntheticPointFetcher` (which procedurally generates a catalog and
    * ignores `req.tier`).
    */
-  fetcher: Fetcher<PointCloud, PointCloudReq>;
+  fetcher: Fetcher<GalaxyCatalog, GalaxyCatalogReq>;
   /**
    * Declarative initial tier for the slot.  See the module-header
    * "Why initialTier lives on the config but isn't read by the helper"

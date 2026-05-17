@@ -1,5 +1,5 @@
 /**
- * PointInfo — display-ready data for a single galaxy, computed on-demand from
+ * GalaxyInfo — display-ready data for a single galaxy, computed on-demand from
  * raw cloud arrays when the user hovers or selects a point. Passed from the
  * engine to React components via the onHoverChange / onSelectChange callbacks.
  */
@@ -20,7 +20,7 @@ import type { BandLabels } from '../data/BandLabels';
  *
  * Fields are grouped into four logical sections below.
  */
-export type PointInfo = {
+export type GalaxyInfo = {
   /** 0-based point index in the loaded cloud. */
   index: number;
 
@@ -37,7 +37,7 @@ export type PointInfo = {
 
   /**
    * World-space X coordinate in Mpc. Same value as `cloud.positions[idx*3+0]`.
-   * Carried on `PointInfo` so consumers like the camera-focus button can pivot
+   * Carried on `GalaxyInfo` so consumers like the camera-focus button can pivot
    * the orbit camera onto this galaxy without re-deriving xyz from RA/Dec.
    */
   x: number;
@@ -111,7 +111,7 @@ export type PointInfo = {
    *
    * Pre-computing here keeps the React layer presentational — FullCard just
    * maps over the array — and means the band-pairing logic lives next to the
-   * other data-derivation code in `pointInfoBuilder.ts`.
+   * other data-derivation code in `galaxyInfoBuilder.ts`.
    */
   colours: Array<{ label: string; value: number }>;
 
@@ -229,7 +229,7 @@ export type PointInfo = {
   /**
    * Famous-galaxy enrichment block, present only when `source === Source.Famous`.
    *
-   * Populated by `pointInfoBuilder` from the `famous_meta.json` and
+   * Populated by `galaxyInfoBuilder` from the `famous_meta.json` and
    * `famous_xrefs.json` sidecars loaded at engine startup.  Absent (`undefined`)
    * for SDSS / 2MRS / GLADE / Synthetic rows — those never have curated metadata.
    *

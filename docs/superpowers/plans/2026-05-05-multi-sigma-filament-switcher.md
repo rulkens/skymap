@@ -1122,7 +1122,7 @@ import {
   buildSyntheticFallback,
   loadFilaments,
   loadFilamentManifest,
-  type CloudSource,
+  type CatalogSource,
 } from './cloudLoader';
 ```
 

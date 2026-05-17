@@ -87,7 +87,7 @@
  */
 
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { BiasMode } from '../../../data/biasMode';
 import type { BiasMode as BiasModeT } from '../../../@types/data/BiasMode';
 import { Source, ALL_SOURCES } from '../../../data/sources';
@@ -113,7 +113,7 @@ import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 // this module's defaults.
 import ComputeSchechterRatiosWorker from '../bake/computeSchechterRatios.worker?worker';
 import ComputeAngularWeightsWorker from '../bake/computeAngularWeights.worker?worker';
-import { clonePointCloudForTransfer } from '../../../data/pointCloudTransfer';
+import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 
 /**
@@ -136,7 +136,7 @@ import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
  *
  * ### Why slice-then-transfer
  *
- * The engine retains the original `PointCloud` for picker / InfoCard
+ * The engine retains the original `GalaxyCatalog` for picker / InfoCard
  * reads after the bake is kicked off — we cannot detach those buffers
  * in place via `Transferable[]`.  `slice(0)` mints owned copies whose
  * underlying ArrayBuffers we *can* transfer, leaving the engine's
@@ -145,7 +145,7 @@ import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
  * pre-Transferable revision paid).
  */
 function defaultSchechterRunner(input: ComputeSchechterRatiosInput): Promise<Float32Array> {
-  const { copy, transfer } = clonePointCloudForTransfer(input.cloud);
+  const { copy, transfer } = cloneGalaxyCatalogForTransfer(input.cloud);
   return runDisposableWorker<ComputeSchechterRatiosInput, Float32Array>(
     ComputeSchechterRatiosWorker,
     { ...input, cloud: copy },
@@ -167,7 +167,7 @@ function defaultSchechterRunner(input: ComputeSchechterRatiosInput): Promise<Flo
  * on mode toggle would feel sluggish.
  */
 function defaultAngularRunner(input: ComputeAngularWeightsInput): Promise<Float32Array> {
-  const { copy, transfer } = clonePointCloudForTransfer(input.cloud);
+  const { copy, transfer } = cloneGalaxyCatalogForTransfer(input.cloud);
   return runDisposableWorker<ComputeAngularWeightsInput, Float32Array>(
     ComputeAngularWeightsWorker,
     { ...input, cloud: copy },
@@ -210,14 +210,14 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     return mode;
   }
 
-  /** Snapshot every loaded `(source, cloud)` from the engine state. */
-  function loadedSourceCloudPairs(): { source: Source; cloud: PointCloud }[] {
-    const out: { source: Source; cloud: PointCloud }[] = [];
-    const clouds = getLoadedClouds();
+  /** Snapshot every loaded `(source, catalog)` from the engine state. */
+  function loadedSourceCatalogPairs(): { source: Source; catalog: GalaxyCatalog }[] {
+    const out: { source: Source; catalog: GalaxyCatalog }[] = [];
+    const catalogs = getLoadedClouds();
     for (const source of ALL_SOURCES) {
-      const cloud = clouds.get(source);
-      if (cloud && cloud.count > 0) {
-        out.push({ source, cloud });
+      const catalog = catalogs.get(source);
+      if (catalog && catalog.count > 0) {
+        out.push({ source, catalog });
       }
     }
     return out;
@@ -231,7 +231,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
    */
   async function bakeSchechterFor(
     source: Source,
-    cloud: PointCloud,
+    cloud: GalaxyCatalog,
     myGen: number,
   ): Promise<void> {
     const ratios = await schechterRunner({ cloud, source });
@@ -244,7 +244,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
 
   async function bakeAngularFor(
     source: Source,
-    cloud: PointCloud,
+    cloud: GalaxyCatalog,
     myGen: number,
   ): Promise<void> {
     const weights = await angularRunner({ cloud, source });
@@ -267,13 +267,13 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
       return;
     }
 
-    const pairs = loadedSourceCloudPairs();
+    const pairs = loadedSourceCatalogPairs();
 
     if (next === BiasMode.Schechter) {
       // Per-source independence: each bake is a separate Promise, splice
       // fires when each resolves.  Tests assert this ordering invariant
       // via the multi_source_completion_ordering case.
-      await Promise.all(pairs.map(({ source, cloud }) => bakeSchechterFor(source, cloud, myGen)));
+      await Promise.all(pairs.map(({ source, catalog }) => bakeSchechterFor(source, catalog, myGen)));
       // Wake the loop ONCE after every splice has landed.  If `myGen`
       // is stale (a newer setMode bumped it mid-Promise.all), skip the
       // wake — the newer setMode will fire its own.
@@ -284,7 +284,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     }
 
     if (next === BiasMode.AngularReweight) {
-      await Promise.all(pairs.map(({ source, cloud }) => bakeAngularFor(source, cloud, myGen)));
+      await Promise.all(pairs.map(({ source, catalog }) => bakeAngularFor(source, catalog, myGen)));
       if (myGen === generation) {
         requestRender();
       }
@@ -292,7 +292,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     }
   }
 
-  function onSourceUploaded(source: Source, cloud: PointCloud): void {
+  function onSourceUploaded(source: Source, cloud: GalaxyCatalog): void {
     // A re-upload invalidates any prior cache for this source.
     cachedSchechter.delete(source);
     cachedAngular.delete(source);

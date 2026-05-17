@@ -68,12 +68,12 @@ vi.mock('../../../../src/services/engine/camera/cameraFraming', () => ({
     computeInitialCameraSpy(...(args as Parameters<typeof computeInitialCameraSpy>)),
 }));
 
-// The maxAbsCoord helper — pure, but it pulls in pointInfoBuilder which
+// The maxAbsCoord helper — pure, but it pulls in galaxyInfoBuilder which
 // imports cloud-related types.  We stub it so we can drive the bbox
 // expectation deterministically from the test.
-vi.mock('../../../../src/services/engine/helpers/pointInfoBuilder', () => ({
+vi.mock('../../../../src/services/engine/helpers/galaxyInfoBuilder', () => ({
   maxAbsCoord: vi.fn((cloud: { _maxAbs: number }) => cloud._maxAbs),
-  buildPointInfo: vi.fn(),
+  buildGalaxyInfo: vi.fn(),
 }));
 
 // Camera / input / pick — stub factories that return inert objects.
@@ -127,8 +127,8 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
  */
 function makeState(maxAbs: number): EngineState {
   const cloud = { _maxAbs: maxAbs, count: 1 };
-  const clouds = new Map<Source, typeof cloud>();
-  clouds.set(Source.SDSS, cloud);
+  const catalogs = new Map<Source, typeof cloud>();
+  catalogs.set(Source.SDSS, cloud);
   return {
     settings: {
       points: {
@@ -148,7 +148,7 @@ function makeState(maxAbs: number): EngineState {
     },
     bias: {} as never,
     sources: {
-      clouds,
+      catalogs,
       visibleMask: 0xff,
       lodMode: 'auto',
       famousMeta: [],
@@ -214,7 +214,7 @@ function makeDeps(firstReadySource: Source | null): BootstrapDeps {
     // BootstrapDeps (rather than phaseLocals.firstReadySource).  The
     // framing flow reads `firstReadySourceRef.current` to populate the
     // `kind: 'ready'` status payload's `source` field — see wireInput's
-    // `cloudSourceFor(... ?? Source.Synthetic)` call.  The test sets it
+    // `catalogSourceFor(... ?? Source.Synthetic)` call.  The test sets it
     // to SDSS to mirror the wireSlots-resolved outcome.
     firstReadySourceRef: { current: firstReadySource },
   };

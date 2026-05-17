@@ -6,8 +6,8 @@
  * downstream (see `resolveFocusTarget`) is what turns this into a
  * concrete `(source, localIdx)` pair against the loaded clouds.
  *
- * Field naming: `raDeg`/`decDeg` (vs. `PointInfo`'s `ra`/`dec`) is
- * deliberate.  The codec is far from `PointInfo` and the unit suffix
+ * Field naming: `raDeg`/`decDeg` (vs. `GalaxyInfo`'s `ra`/`dec`) is
+ * deliberate.  The codec is far from `GalaxyInfo` and the unit suffix
  * makes the contract self-documenting at every callsite.
  *
  * The id formats mirror the priority ladder used elsewhere in the

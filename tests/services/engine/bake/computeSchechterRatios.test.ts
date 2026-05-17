@@ -15,9 +15,9 @@
 import { describe, it, expect } from 'vitest';
 import { computeSchechterRatios } from '../../../../src/services/engine/bake/computeSchechterRatios';
 import { Source } from '../../../../src/data/sources';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   return {
     count,
     objIDs: BigUint64Array.from({ length: count }, (_, i) => BigInt(i + 1)),

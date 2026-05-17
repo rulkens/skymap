@@ -41,12 +41,12 @@ import type { HyperLedaShapeMap } from './parsers/glade.js';
 import type { ParsedRecord } from './parsers/common.js';
 import { crossMatch } from './crossMatch.js';
 
-import { encodePointCloud } from '../src/data/pointCloudFormat.js';
+import { encodeGalaxyCatalog } from '../src/data/galaxyCatalogFormat.js';
 import { raDecZToCartesian } from '../src/utils/math/index.js';
 import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../src/utils/math/galaxyDiameterKpc.js';
 import { Source, sourceLabel } from '../src/data/sources.js';
-import type { PointCloud } from '../src/@types/data/PointCloud.js';
+import type { GalaxyCatalog } from '../src/@types/data/GalaxyCatalog.js';
 import { TIER_TARGETS, tierFilenameForSource } from '../src/data/tierTargets.js';
 import type { Tier } from '../src/@types/data/Tier.js';
 import { subsampleByAbsMag } from './subsampleByAbsMag.js';
@@ -56,19 +56,19 @@ import { subsampleByAbsMag } from './subsampleByAbsMag.js';
 export { crossMatch } from './crossMatch.js';
 export type { CrossMatchInputs } from './crossMatch.js';
 
-// ─── PointCloud assembly + write ─────────────────────────────────────────────
+// ─── GalaxyCatalog assembly + write ──────────────────────────────────────────
 
 /**
  * Materialise a survey-specific subset of merged records into the SoA
- * `PointCloud` shape the binary encoder expects.
+ * `GalaxyCatalog` shape the binary encoder expects.
  *
  * Allocating each typed array exactly once at the known final size keeps
  * the hot fill loop tight — no per-row push() overhead, no hidden
  * reallocations, and the resulting buffers are GPU-upload-ready.
  */
-function recordsToCloud(records: ParsedRecord[]): PointCloud {
+function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
   const count = records.length;
-  const cloud: PointCloud = {
+  const cloud: GalaxyCatalog = {
     count,
     objIDs: new BigUint64Array(count),
     positions: new Float32Array(count * 3),
@@ -487,7 +487,7 @@ async function runCli(): Promise<void> {
       const slice = target === undefined ? records : subsampleByAbsMag(records, target);
 
       const cloud = recordsToCloud(slice);
-      const buf = encodePointCloud(cloud);
+      const buf = encodeGalaxyCatalog(cloud);
       const outPath = resolve(outDir, filename);
       writeFileSync(outPath, Buffer.from(buf));
       process.stderr.write(

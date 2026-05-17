@@ -40,7 +40,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { PointInfo } from '../../../../src/@types/engine/PointInfo';
+import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 
@@ -69,7 +69,7 @@ function makeFixtures() {
   const cb = {
     camera: { onFocusChange },
   } as unknown as EngineCallbacks;
-  const info = { source: 0, localIdx: 7, diameterKpc: 30 } as unknown as PointInfo;
+  const info = { source: 0, localIdx: 7, diameterKpc: 30 } as unknown as GalaxyInfo;
   return { state, cb, info, setSelected, onFocusChange };
 }
 
@@ -87,7 +87,7 @@ describe('commitFocus', () => {
     // diverge on deep-link transitions.
     const { state, cb, info, setSelected, onFocusChange } = makeFixtures();
     const selectionKey = { source: Source.SDSS, localIdx: 42 };
-    const selectionInfo = { source: Source.SDSS, localIdx: 42 } as unknown as PointInfo;
+    const selectionInfo = { source: Source.SDSS, localIdx: 42 } as unknown as GalaxyInfo;
 
     commitFocus(state, cb, info, { key: selectionKey, info: selectionInfo });
 

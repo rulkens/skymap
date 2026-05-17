@@ -26,7 +26,7 @@
  * (HTML spec §StructuredSerialize step "If value has [[ArrayBufferData]]…").
  *
  * The structured-clone-without-transfer path froze the main thread for
- * ~5 s on a 100 MB SDSS+GLADE upload, blocking `onCloudReady` from
+ * ~5 s on a 100 MB SDSS+GLADE upload, blocking `onCatalogReady` from
  * firing.  The caller (`pointRenderer.defaultWorkerRunner`) now slices
  * each typed array's buffer to produce an owned copy and transfers
  * those slices via the `postMessage` transfer list — a one-shot ~50 ms

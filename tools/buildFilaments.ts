@@ -69,10 +69,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { decodePointCloud } from '../src/data/pointCloudFormat.js';
+import { decodeGalaxyCatalog } from '../src/data/galaxyCatalogFormat.js';
 import { parseNDskl, skeletonToFilamentCloud } from './parsers/ndskl.js';
 import { encodeFilaments } from '../src/data/filamentBinaryFormat.js';
-import type { PointCloud } from '../src/@types/data/PointCloud.js';
+import type { GalaxyCatalog } from '../src/@types/data/GalaxyCatalog.js';
 import { Source } from '../src/data/sources.js';
 import { surveyFluxLimit } from '../src/data/surveyFluxLimits.js';
 import { absoluteFromApparent, dMaxFromAbsolute } from '../src/utils/math/distanceModulus.js';
@@ -278,7 +278,7 @@ function checkDisperse(): void {
  *
  * Buffer→ArrayBuffer note: `readFileSync` returns a Node `Buffer`, whose
  * `.buffer` is the (possibly shared, possibly offset) underlying pool.
- * `decodePointCloud` constructs a `DataView` over the buffer starting at
+ * `decodeGalaxyCatalog` constructs a `DataView` over the buffer starting at
  * byte 0, so handing it the pool directly would mis-read every file.
  * We slice out a clean owned ArrayBuffer covering exactly this Buffer's
  * bytes before decoding.
@@ -557,7 +557,7 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
   // and render-time Malmquist treatments consistent.
   const sourceFiles = ALL_SOURCE_FILES.filter((s) => activeSources.has(s.key));
 
-  type LoadedCloud = { cloud: PointCloud; source: Source; angular: Float32Array };
+  type LoadedCloud = { cloud: GalaxyCatalog; source: Source; angular: Float32Array };
   const loaded: LoadedCloud[] = [];
   for (const { name, source } of sourceFiles) {
     const path = resolve('public/data', name);
@@ -570,7 +570,7 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
     // file length, sidestepping the pooled-Buffer offset gotcha noted
     // above.
     const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
-    const cloud = decodePointCloud(ab);
+    const cloud = decodeGalaxyCatalog(ab);
 
     // Compute the HEALPix angular re-weight on the FULL cloud BEFORE
     // distance-filtering.  Two reasons this has to happen here, not later:

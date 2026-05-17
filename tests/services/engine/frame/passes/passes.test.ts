@@ -118,7 +118,7 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
     filamentRenderer: null,
     scalarVolumeRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
-    clouds: new Map(),
+    catalogs: new Map(),
     famousMeta: [],
     famousXrefs: {} as any,
     milkyWayITimeSec: 0,

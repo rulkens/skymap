@@ -262,7 +262,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (state.subsystems.proceduralDisks !== null) {
     state.subsystems.proceduralDisks.runFrame({
       cam: ctx.cam,
-      clouds: state.sources.clouds,
+      catalogs: state.sources.catalogs,
       visibleSourceMask: state.sources.visibleMask,
       pxPerRad: ctx.drawPxPerRad,
     });
@@ -270,7 +270,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (state.subsystems.texturedImpostors !== null) {
     state.subsystems.texturedImpostors.runFrame({
       cam: ctx.cam,
-      clouds: state.sources.clouds,
+      catalogs: state.sources.catalogs,
       visibleSourceMask: state.sources.visibleMask,
       pxPerRad: ctx.drawPxPerRad,
       famousMeta: state.sources.famousMeta,
@@ -343,7 +343,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     },
     famousMeta: state.sources.famousMeta,
     famousXrefs: state.sources.famousXrefs,
-    clouds: state.sources.clouds,
+    catalogs: state.sources.catalogs,
     timingService: deps.timingService,
   });
 
@@ -367,7 +367,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // visual frame's uniform buffer has already been written with the latest
   // viewProj. The pick renderer reads the same uniform buffer.
   if (
-    state.sources.clouds.size > 0 &&
+    state.sources.catalogs.size > 0 &&
     state.picking.latestMouseCss !== null &&
     state.picking.latestMouseCss !== state.picking.lastPickedMouseCss &&
     !state.picking.pickInFlight &&

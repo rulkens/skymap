@@ -49,7 +49,7 @@ function makeDeps(): PassDeps {
     filamentRenderer: null,
     scalarVolumeRenderer: null,
     milkyWayRenderer: { draw: vi.fn() } as any,
-    clouds: new Map(),
+    catalogs: new Map(),
     famousMeta: [],
     famousXrefs: {},
     milkyWayITimeSec: 0,

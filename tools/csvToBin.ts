@@ -2,7 +2,7 @@
  * SDSS CSV → .bin conversion CLI.
  *
  * Thin wrapper around `parseSdssCsv` (in `tools/parsers/sdssCsv.ts`) plus the
- * binary point-cloud writer in `src/data/pointCloudFormat.ts`. Converts a CSV
+ * binary galaxy-catalog writer in `src/data/galaxyCatalogFormat.ts`. Converts a CSV
  * downloaded from the SDSS SkyServer
  * (https://skyserver.sdss.org/dr18/SearchTools/sql) into the project's binary
  * point-cloud format (`SKMP` v2).
@@ -29,9 +29,9 @@ import { resolve } from 'node:path';
 
 import { raDecZToCartesian } from '../src/utils/math/index.js';
 import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
-import { encodePointCloud } from '../src/data/pointCloudFormat.js';
+import { encodeGalaxyCatalog } from '../src/data/galaxyCatalogFormat.js';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../src/utils/math/galaxyDiameterKpc.js';
-import type { PointCloud } from '../src/@types/data/PointCloud.js';
+import type { GalaxyCatalog } from '../src/@types/data/GalaxyCatalog.js';
 import { parseSdssCsv } from './parsers/sdssCsv.js';
 
 // ─── CLI argument parsing ─────────────────────────────────────────────────────
@@ -84,7 +84,7 @@ if (records.length === 0) {
   process.exit(1);
 }
 
-// ─── PointCloud construction ──────────────────────────────────────────────────
+// ─── GalaxyCatalog construction ──────────────────────────────────────────────
 
 const count = records.length;
 
@@ -96,7 +96,7 @@ const count = records.length;
 // finite, and otherwise fall through to the deterministic
 // `fallbackOrientation` so every encoded point ships with finite, stable
 // orientation data — no NaN sentinels remain in the binary.
-const cloud: PointCloud = {
+const cloud: GalaxyCatalog = {
   count,
   objIDs: new BigUint64Array(count), // SDSS object identifiers
   positions: new Float32Array(count * 3), // (x, y, z) in Mpc per point
@@ -156,7 +156,7 @@ for (let i = 0; i < count; i++) {
 
 // ─── Encode & write ───────────────────────────────────────────────────────────
 
-const buffer = encodePointCloud(cloud);
+const buffer = encodeGalaxyCatalog(cloud);
 
 try {
   // Node's `writeFileSync` accepts an `ArrayBuffer` directly since Node 16.

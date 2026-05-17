@@ -137,13 +137,13 @@ vi.mock('../../../../src/services/gpu/labels/loadFontAtlases', () => ({
   })),
 }));
 
-// `wirePointSourceSlot` mints AssetSlots that the engine never `.load()`s
+// `wireGalaxyCatalogSourceSlot` mints AssetSlots that the engine never `.load()`s
 // in this test, so the production helper is fine — but its module also
 // imports several heavy fetcher modules.  Replace with a no-op so the
 // initGpu body's per-source loop is harmless.
-vi.mock('../../../../src/services/engine/wiring/pointSourceRegistry', () => ({
-  POINT_SOURCE_REGISTRY: [] as Array<unknown>,
-  wirePointSourceSlot: vi.fn(),
+vi.mock('../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry', () => ({
+  GALAXY_CATALOG_SOURCE_REGISTRY: [] as Array<unknown>,
+  wireGalaxyCatalogSourceSlot: vi.fn(),
 }));
 
 // Imported AFTER the mocks so initGpu picks up the mocked dependencies.
@@ -190,7 +190,7 @@ function makeState(): EngineState {
       },
     },
     sources: {
-      clouds: new Map(),
+      catalogs: new Map(),
       visibleMask: 0,
       lodMode: 'auto',
       famousMeta: [],
@@ -208,7 +208,7 @@ function makeDeps(state: EngineState): BootstrapDeps {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb: {
       onStatusChange: vi.fn(),
-      onCloudReady: vi.fn(),
+      onCatalogReady: vi.fn(),
     } as unknown as EngineCallbacks,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },

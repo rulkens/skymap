@@ -106,7 +106,7 @@ export function renderFrame(input: RenderFrameInput): void {
     settings,
     famousMeta,
     famousXrefs,
-    clouds,
+    catalogs,
     timingService,
   } = input;
 
@@ -122,7 +122,7 @@ export function renderFrame(input: RenderFrameInput): void {
     filamentRenderer,
     scalarVolumeRenderer,
     milkyWayRenderer,
-    clouds,
+    catalogs,
     famousMeta,
     famousXrefs,
     milkyWayITimeSec,

@@ -24,7 +24,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import cx from 'classnames';
-import type { PointInfo } from '../../@types/engine/PointInfo';
+import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import { Source } from '../../data/sources';
 import { formatDistance, formatDiameterKpc } from '../../utils/format/distance';
 import { Thumbnail } from './Thumbnail';
@@ -36,7 +36,7 @@ import styles from './FullCard.module.css';
 
 /** Props for FullCard. */
 export type FullCardProps = {
-  info: PointInfo;
+  info: GalaxyInfo;
   /** When true, show the PINNED badge and apply the pinned styling variant. */
   pinned?: boolean;
   /**
@@ -46,7 +46,7 @@ export type FullCardProps = {
    * persistent (selected) galaxy, not for the transient hover preview.  When
    * omitted, the button is not rendered.
    */
-  onFocus?: (info: PointInfo) => void;
+  onFocus?: (info: GalaxyInfo) => void;
   /**
    * Optional callback fired when the user clicks the Close (×) button.
    * Same effect as pressing Esc on desktop — clears the pinned selection.
@@ -131,7 +131,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
         <span className={styles.pinnedBadge}>Pinned</span>
         {/*
           Focus button — only rendered when the card is pinned AND a callback
-          was supplied.  We pass the full PointInfo so the parent can pull the
+          was supplied.  We pass the full GalaxyInfo so the parent can pull the
           world coordinates (for the camera tween) without re-doing the lookup.
         */}
         {pinned && onFocus && (
@@ -168,7 +168,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
         `info.displayName` carries the priority-resolved best human-readable
         name for the row: curated primary name for Famous, `PGC <n>` for
         2MRS rows with a real PGC, IAU coord designation otherwise.  See
-        `pointInfoBuilder.ts` for the ladder.
+        `galaxyInfoBuilder.ts` for the ladder.
       */}
       <div className={styles.cardHeadline}>{info.displayName}</div>
 
@@ -378,7 +378,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
           {/*
             Colour row uses the pre-computed `info.colours` array instead of
             hardcoding u−g/g−r/r−i. This is the only place the Card cares
-            about which bands a survey actually carries — pointInfoBuilder
+            about which bands a survey actually carries — galaxyInfoBuilder
             decides which adjacent-slot pairs to include based on which
             bands are present, so SDSS gets three colours, 2MRS two, GLADE
             three (B−J/J−H/H−K), Synthetic three.  If a row has no usable
@@ -467,7 +467,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
         Label varies by source: SDSS rows go to the SDSS Explorer page;
         everything else goes to NED (either via byname for rows where we
         retain a real catalogue ID, or via near-position search where we
-        only have coords).  See `pointInfoBuilder.ts` for the URL-picking
+        only have coords).  See `galaxyInfoBuilder.ts` for the URL-picking
         logic and `nedUrl.ts` for the URL builders themselves.
 
         Synthetic-cloud rows are the only case where we can't produce a
