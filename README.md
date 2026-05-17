@@ -548,7 +548,7 @@ Distance from redshift uses Hubble's law: `d = cz/H₀` with `H₀ = 70 km/s/Mpc
 npm test
 ```
 
-Currently **707 tests across 95 files**. Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary point-cloud format, the orbit camera, parsers, the derived-physics helpers, the data-tier subsampler, and the cloud-loader hot-swap path. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
+Currently **707 tests across 95 files**. Unit tests cover the pure modules: coordinate conversion (forward and inverse), the binary galaxy-catalog format, the orbit camera, parsers, the derived-physics helpers, the data-tier subsampler, and the catalog-loader hot-swap path. The rendering pipeline and React UI are not unit-tested — they're verified visually in the browser.
 
 ## Render pipeline
 
@@ -568,7 +568,7 @@ rationale and curve descriptions.
 
 ```
 src/
-  @types/             Top-level type declarations (PointCloud, EngineHandle,
+  @types/             Top-level type declarations (GalaxyCatalog, EngineHandle,
                       Tier, …)
   components/         React UI shell
     common/Panel/       Shared glass-card chrome reused by Navigation, Stats,
@@ -582,7 +582,7 @@ src/
     ScaleBar/           Bottom-right Mpc scale legend
     CommandPalette/     Cmd-K famous-galaxy search
   data/               Static data definitions: sources enum, colour-index spec,
-                      binary point-cloud format, tier-target table
+                      binary galaxy-catalog format, tier-target table
   services/
     camera/           OrbitCamera, OrbitControls, focus tweens
     engine/           Top-level engine orchestrator, autoLod, cloud loader

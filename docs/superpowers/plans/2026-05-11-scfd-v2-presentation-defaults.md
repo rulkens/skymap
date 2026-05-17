@@ -6,7 +6,7 @@
 
 **Architecture:** Bump SCFD to **v2** — header drops `palette_id` byte (offset 22) and `density_scale` float (offset 64); those bytes return to `reserved`. A new module `src/data/volumeFieldDefaults.ts` maps known field handles (`'cf4-density'`, `'debug-gaussian'`, …) to `{ paletteId, densityScale, label? }`. `wireSlots` reads the registry when seeding settings instead of reading from `cube.paletteId` / `cube.densityScale`. The renderer's `addField` no longer pulls those fields from the cube — callers explicitly pass them via new/existing setters (`setFieldPalette` already exists; we add `setDensityScale`).
 
-**No back-compat with v1.** The decoder rejects `version !== 2` with a "regenerate via `npm run build-cf4-density`" message — same precedent as the PointCloud / Filament binary decoders. Rolling out means regenerating `cf4_density.scfd` and re-syncing R2 in lockstep with the code deploy.
+**No back-compat with v1.** The decoder rejects `version !== 2` with a "regenerate via `npm run build-cf4-density`" message — same precedent as the GalaxyCatalog / Filament binary decoders. Rolling out means regenerating `cf4_density.scfd` and re-syncing R2 in lockstep with the code deploy.
 
 **Tech Stack:** TypeScript, Vitest. No new runtime deps.
 

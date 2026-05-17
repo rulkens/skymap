@@ -37,7 +37,7 @@
  *                              `info` is ALSO returned for callers that
  *                              want it (e.g. an "auto-focus on click"
  *                              future feature) without re-running
- *                              `pointInfoFromGlobal`.
+ *                              `galaxyInfoFromGlobal`.
  *
  *   - `{ kind: 'select', globalIdx, info: null }` — picker hit a point
  *                              but resolveGlobalIdx or buildGalaxyInfo
@@ -45,7 +45,7 @@
  *                              for parity with the pre-extraction
  *                              behaviour: the old code did
  *                              `setSelected(idx)` regardless of whether
- *                              `pointInfoFromGlobal` would later return
+ *                              `galaxyInfoFromGlobal` would later return
  *                              null at the hover/select callback edge.
  *
  * Collapsing those into a single shape keeps the engine call site to
@@ -98,7 +98,7 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
       // Try to build a GalaxyInfo, but treat failure as "still select
       // the (source, localIdx)" for parity with the pre-extraction
       // engine — the old code did `setSelected(idx)` regardless of
-      // whether `pointInfoFromGlobal` would later resolve null.
+      // whether `galaxyInfoFromGlobal` would later resolve null.
       const resolved = resolveSelection(result);
       const info = resolved
         ? buildGalaxyInfo(resolved.cloud, resolved.localIdx, resolved.source)

@@ -723,7 +723,7 @@ Modify `tools/buildFilaments.ts` — inside `main()`, AFTER the `writeFileSync(o
       fileBuf.byteOffset,
       fileBuf.byteOffset + fileBuf.byteLength,
     );
-    const c = decodePointCloud(ab);
+    const c = decodeGalaxyCatalog(ab);
     const stripIndex = computeFilamentMemberships(cloud, c.positions, c.count);
     let memberCount = 0;
     for (let i = 0; i < stripIndex.length; i++) if (stripIndex[i]! >= 0) memberCount++;
@@ -2490,7 +2490,7 @@ Add to `src/@types/EngineHandle.d.ts`:
   } | null;
 ```
 
-Implement it in `engine.ts` inside the EngineHandle return literal. Resolve each member through `state.sources.clouds.get(source)` + the existing `pointInfoFromGlobal` helper (or read fields directly from the cloud). Read the existing `buildPointInfo` import to see what's available; if `iauName` is the friendliest cheap-to-compute name, use it.
+Implement it in `engine.ts` inside the EngineHandle return literal. Resolve each member through `state.sources.catalogs.get(source)` + the existing `galaxyInfoFromGlobal` helper (or read fields directly from the cloud). Read the existing `buildGalaxyInfo` import to see what's available; if `iauName` is the friendliest cheap-to-compute name, use it.
 
 ```ts
     getFilamentCardSnapshot() {
@@ -2503,7 +2503,7 @@ Implement it in `engine.ts` inside the EngineHandle return literal. Resolve each
       // atlas; otherwise we fall back to a coordinate-based label that
       // matches the FullCard's headline path.
       const lookupGalaxy = (ref: GalaxyRef) => {
-        const c = state.sources.clouds.get(ref.source);
+        const c = state.sources.catalogs.get(ref.source);
         if (!c || ref.localIdx >= c.count) return null;
         const x = c.positions[ref.localIdx * 3 + 0]!;
         const y = c.positions[ref.localIdx * 3 + 1]!;
