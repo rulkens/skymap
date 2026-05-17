@@ -59,7 +59,8 @@ function makeState(): EngineState {
       schechterAlpha: 0,
     },
     sources: {
-      visibleMask: 0,
+      pickMask: 0,
+      drawMask: 0,
       lodMode: 'manual',
       catalogs: new Map(),
       famousMeta: [],

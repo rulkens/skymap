@@ -322,7 +322,14 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
         // off `state.subsystems` in their `enabled()` gate; nulling them
         // here makes the passes skip cleanly so the legacy renderFrame
         // assertions continue to focus on point + milky-way ordering.
-        subsystems: { proceduralDisks: null, texturedImpostors: null },
+        subsystems: {
+          proceduralDisks: null,
+          texturedImpostors: null,
+          // filamentsPass.enabled now consults the FadeRegistry to
+          // keep the pass alive through fade-out tails. Provide a
+          // minimal opacityOf stub so the gate doesn't crash.
+          fades: { opacityOf: () => 1 },
+        },
       } as never,
       milkyWayITimeSec: 0,
       device,

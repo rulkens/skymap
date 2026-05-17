@@ -63,8 +63,15 @@ export const filamentsPass: Pass = {
   // Update: the runtime `draw` short-circuits anyway via the
   // `filamentRenderer === null` early return; `enabled` returning
   // true with a null renderer is a self-correcting near-miss.
-  enabled(_state, _ctx, settings) {
-    return settings.filamentsEnabled;
+  enabled(state, _ctx, settings) {
+    // Settings boolean is the user's intent; opacityOf > 0 is the visual
+    // state. We render whenever EITHER is true so a fade-out continues
+    // drawing after the user toggles off (until opacity hits 0). The
+    // toggle handler in engine.ts flips the setting AND fires fadeTo
+    // synchronously; this gate is what keeps the pass alive through the
+    // ~100 ms ramp.
+    if (settings.filamentsEnabled) return true;
+    return state.subsystems.fades.opacityOf({ kind: 'filaments' }, performance.now()) > 0;
   },
 
   draw(pass, ctx, state, settings, deps) {

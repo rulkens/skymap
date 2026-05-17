@@ -585,8 +585,8 @@ describe('PointRenderer.clearBiasOverlays', () => {
 // ─── PointRenderer.destroy() ─────────────────────────────────────────────────
 //
 // PointRenderer owns the app's largest GPU allocations (per-source vertex
-// buffers ~14 MB each plus per-cloud CloudFade uniforms plus its own per-
-// frame uniform buffer).  WebGPU buffers don't release via JS GC alone —
+// buffers ~14 MB each plus per-source fade + source uniform buffers plus
+// its own per-frame uniform buffer).  WebGPU buffers don't release via JS GC alone —
 // `GPUBuffer.destroy()` is mandatory.  These tests assert that
 // `PointRenderer.destroy()` actually fires destroy on every owned buffer
 // and clears the per-source map, so the engine.ts teardown chain plateaus

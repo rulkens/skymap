@@ -111,6 +111,8 @@ import type { FamousXrefMap } from '../../@types/loading/FamousXrefMap';
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
+import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../animation/fadeController';
+import type { FadeHandle } from '../../@types/animation/FadeHandle';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
@@ -161,6 +163,70 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
  *
  * @throws Never — errors are reported via `onStatusChange({ kind: 'error' })`.
  */
+
+// ── Test-accessible setSourceVisible logic ──────────────────────────────────
+//
+// The business logic of `setSourceVisible` is extracted to a module-scope
+// async function so that tests can invoke it directly against a partial-state
+// stub without instantiating a full GPU engine. The closure inside
+// `createEngine` delegates straight here.
+//
+// The two parameters use intersection-typed picks so the function signature
+// remains narrow (only the fields it actually reads) while accepting the
+// full `EngineState` and `EngineCallbacks` types from production callers.
+export async function setSourceVisibleImpl(
+  state: Pick<import('../../@types/engine/state/EngineState').EngineState, 'sources' | 'subsystems'>,
+  opts: { cb: Pick<EngineCallbacks, 'sources'> },
+  source: Source,
+  visible: boolean,
+): Promise<void> {
+  const { cb } = opts;
+  if (state.sources.lodMode !== 'manual') {
+    state.sources.lodMode = 'manual';
+    cb.sources?.onLodModeChange?.('manual');
+  }
+
+  const handle: FadeHandle = { kind: 'survey', source };
+  const targetMask = visible
+    ? maskWith(state.sources.pickMask, source)
+    : maskWithout(state.sources.pickMask, source);
+  if (targetMask === state.sources.pickMask && targetMask === state.sources.drawMask) return;
+
+  // pickMask flips IMMEDIATELY — a fading-out layer must not be clickable.
+  state.sources.pickMask = targetMask;
+  // Notify the UI of the (immediate) state change so the checkbox reflects.
+  cb.sources?.onMaskChange?.(targetMask);
+  state.subsystems.scheduler.requestRender();
+
+  if (visible) {
+    state.sources.drawMask = targetMask;
+    await state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
+  } else {
+    await state.subsystems.fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
+    // Re-read opacity rather than closing over `visible`, because a
+    // concurrent toggle may have reversed the fade by the time we
+    // resume here (off→on within the 100ms fade-out window). The
+    // last-issued fade wins: if a fade-in started while we were
+    // awaiting fade-out, opacityOf returns > 0 and we leave the
+    // drawMask bit set so the renderer keeps drawing through the
+    // ramp-up. The promise we awaited is the OLDER fade's settle —
+    // by the time it resolves, the registry's current target is
+    // whatever the newer call set, not 0.
+    const finalOpacity = state.subsystems.fades.opacityOf(handle);
+    if (finalOpacity === 0) {
+      state.sources.drawMask = maskWithout(state.sources.drawMask, source);
+    } else {
+      state.sources.drawMask = maskWith(state.sources.drawMask, source);
+    }
+  }
+  state.subsystems.scheduler.requestRender();
+}
+
+// Test-only alias. The implementation lives at module scope as
+// `setSourceVisibleImpl` so it's directly testable; this re-export
+// matches the import name used in tests written before the rename.
+export { setSourceVisibleImpl as setSourceVisibleForTest };
+
 export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): EngineHandle {
   // ── Mutable engine state ─────────────────────────────────────────────────
   //
@@ -335,13 +401,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       schechterAlpha: 0,
     },
     sources: {
-      // 32-bit bitmask, one bit per `Source` enum value.  The
-      // renderer iterates `loadedSources()` and skips any whose bit
-      // is clear.  Default = ALL_VISIBLE_MASK so "draw everything
+      // Two 32-bit bitmasks, one bit per `Source` enum value.
+      //
+      // pickMask — flipped IMMEDIATELY when the user toggles a survey,
+      // so a fading-out layer is not clickable even while still visible.
+      //
+      // drawMask — flipped AFTER fade-out (or AT the start of fade-in).
+      // The renderer iterates `loadedSources()` and skips any whose bit
+      // is clear.  Both default to ALL_VISIBLE_MASK so "draw everything
       // that is loaded" holds until either the auto-LOD heuristic
-      // recomputes it from the camera distance, or the user toggles
+      // recomputes them from camera distance, or the user toggles
       // a single source in the settings panel.
-      visibleMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
       // 'auto'   → per-frame `autoLodMask(cam.distance)` rewrite.
       // 'manual' → user owns the mask; auto-LOD paused.
       lodMode: DEFAULT_LOD_MODE,
@@ -949,23 +1021,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.scheduler.requestRender();
   }
 
-  function setSourceVisible(source: Source, visible: boolean): void {
-    // A user explicitly toggling one survey is the strongest possible
-    // signal that they want manual control.  Auto-LOD would clobber the
-    // mask on the very next frame, so we proactively flip into manual
-    // mode here rather than making the caller orchestrate two calls.
-    if (state.sources.lodMode !== 'manual') {
-      state.sources.lodMode = 'manual';
-      cb.sources?.onLodModeChange?.('manual');
-    }
-
-    const next = visible
-      ? maskWith(state.sources.visibleMask, source)
-      : maskWithout(state.sources.visibleMask, source);
-    if (next === state.sources.visibleMask) return;
-    state.sources.visibleMask = next;
-    cb.sources?.onMaskChange?.(next);
-    state.subsystems.scheduler.requestRender();
+  async function setSourceVisible(source: Source, visible: boolean): Promise<void> {
+    // Delegate to the module-scope helper so tests can drive the same
+    // logic against a partial-state stub without a full GPU engine.
+    return setSourceVisibleImpl(state, { cb }, source, visible);
   }
 
   function setTier(tier: Tier): void {
@@ -1009,6 +1068,17 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // NOT fire an echo callback (no `cb.onVolumesEnabledChange`)
     // because the React layer owns this value optimistically.
     state.settings.volumes.masterEnabled = enabled;
+    // Drive the FadeRegistry on the volumesMaster handle. The
+    // encodeHdr* sites multiply this master opacity into every
+    // per-field fade lookup, so the entire scalar-volume subsystem
+    // ramps in lockstep on master toggle. The pass-enabled gate
+    // accepts EITHER masterEnabled === true OR opacity > 0, so the
+    // pass keeps blitting through the ~100 ms fade-out tail.
+    void state.subsystems.fades.fadeTo(
+      { kind: 'volumesMaster' },
+      enabled ? 1 : 0,
+      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+    );
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1044,6 +1114,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldHandle, persisted.paletteId);
     state.gpu.scalarVolumeRenderer?.setTrim(fieldHandle, persisted.trim);
     state.gpu.scalarVolumeRenderer?.setExposure(fieldHandle, persisted.exposure);
+    // Drive the FadeRegistry from the persisted enable bit:
+    //  - Field enabled → fade up to 1 over FADE_IN_DURATION_MS.
+    //  - Field disabled → leave the registry at the initial 0 set by
+    //    the onFieldAdded callback. The renderer's draw loop's
+    //    `(!enabled && opacity <= 0)` skip clause keeps the field
+    //    invisible until the user toggles it on (which fires the
+    //    fade-in via setVolumeFieldEnabled).
+    if (persisted.enabled) {
+      void state.subsystems.fades.fadeTo(
+        { kind: 'scalarField', field: fieldHandle },
+        1,
+        FADE_IN_DURATION_MS,
+      );
+    }
     cb.volumes?.onFieldsChanged?.();
     state.subsystems.scheduler.requestRender();
   }
@@ -1060,6 +1144,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.settings.volumes.fields[fieldHandle].enabled = enabled;
     }
     state.gpu.scalarVolumeRenderer?.setEnabled(fieldHandle, enabled);
+    // Drive the FadeRegistry alongside the renderer flip. The renderer's
+    // draw loop accepts (!enabled && opacity <= 0) as the skip condition,
+    // so the field keeps rendering through the ~100 ms fade-out tail.
+    void state.subsystems.fades.fadeTo(
+      { kind: 'scalarField', field: fieldHandle },
+      enabled ? 1 : 0,
+      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+    );
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1297,10 +1389,36 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setEnabled: (enabled) => boringSetters.setGalaxyTexturesEnabled(enabled),
     },
     milkyWay: {
-      setEnabled: (enabled) => boringSetters.setMilkyWayEnabled(enabled),
+      // Drive the FadeRegistry alongside the boolean flip so the user
+      // sees a smooth ramp on toggle. milkyWayPass.enabled accepts
+      // EITHER the boolean OR a non-zero overlay opacity, so we can
+      // flip the setting first and let the gate keep the pass alive
+      // through the ~100 ms fade-out tail.
+      setEnabled: (enabled) => {
+        boringSetters.setMilkyWayEnabled(enabled);
+        void state.subsystems.fades.fadeTo(
+          { kind: 'overlay', id: 'milkyWay' },
+          enabled ? 1 : 0,
+          enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+        );
+        state.subsystems.scheduler.requestRender();
+      },
     },
     filaments: {
-      setEnabled: (enabled) => boringSetters.setFilamentsEnabled(enabled),
+      // Drive the FadeRegistry alongside the boolean flip so the user
+      // sees a smooth ramp on toggle. The pass.enabled gate in
+      // filamentsPass.ts accepts EITHER the boolean OR a non-zero
+      // fade opacity, so we can flip the setting first and let the
+      // gate keep the pass alive through the ~100 ms fade-out tail.
+      setEnabled: (enabled) => {
+        boringSetters.setFilamentsEnabled(enabled);
+        void state.subsystems.fades.fadeTo(
+          { kind: 'filaments' },
+          enabled ? 1 : 0,
+          enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+        );
+        state.subsystems.scheduler.requestRender();
+      },
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
     labels: {

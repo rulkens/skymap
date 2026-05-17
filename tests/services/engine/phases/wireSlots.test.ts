@@ -253,7 +253,8 @@ function makeState(
     bias: {} as never,
     sources: {
       catalogs: new Map(),
-      visibleMask: 0xff,
+      pickMask: 0xff,
+      drawMask: 0xff,
       lodMode: 'auto',
       famousMeta: [],
       famousXrefs: {},

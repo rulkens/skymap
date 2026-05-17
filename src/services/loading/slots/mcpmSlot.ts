@@ -14,6 +14,7 @@ import { createAssetSlot } from '../AssetSlot';
 import { mcpmFetcher } from '../fetchers/mcpmFetcher';
 import type { MCPMReq } from '../../../@types/loading/MCPMReq';
 import { DEFAULT_MCPM_ENABLED, DEFAULT_VOLUME_FIELD_INTENSITY } from '../../../data/defaults';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
@@ -54,6 +55,17 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
       renderer.setContrastCenter(handle, defaults.contrastCenter);
       renderer.setExposure(handle, persisted.exposure);
       renderer.setTrim(handle, persisted.trim);
+      // Drive the FadeRegistry from the persisted enable bit. The
+      // onFieldAdded callback registered the handle at opacity 0;
+      // here we fade up to 1 only if the user has the field toggled
+      // on (matches the symmetric path in engine.ts addVolumeField).
+      if (persisted.enabled) {
+        void state.subsystems.fades.fadeTo(
+          { kind: 'scalarField', field: handle },
+          1,
+          FADE_IN_DURATION_MS,
+        );
+      }
       cb.volumes?.onFieldsChanged?.();
       state.subsystems.scheduler.requestRender();
     },

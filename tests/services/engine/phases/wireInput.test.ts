@@ -149,7 +149,8 @@ function makeState(maxAbs: number): EngineState {
     bias: {} as never,
     sources: {
       catalogs,
-      visibleMask: 0xff,
+      pickMask: 0xff,
+      drawMask: 0xff,
       lodMode: 'auto',
       famousMeta: [],
       famousXrefs: {},

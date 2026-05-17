@@ -4,11 +4,18 @@
  *
  * ### What this sub-bag owns
  *
- *   - `visibleMask` — 32-bit per-source bitmask; the renderer's per-source
- *                      draw loop skips buffers whose bit is clear.  Updated
- *                      by both `setSourceVisible` and the auto-LOD recompute
- *                      that fires when the camera distance crosses a band
- *                      threshold.
+ *   - `pickMask` — 32-bit per-source bitmask that the picker reads.  Flipped
+ *                   IMMEDIATELY when the user toggles a survey off — a fading-
+ *                   out layer must not be clickable even while it's still
+ *                   visually present.
+ *   - `drawMask` — 32-bit per-source bitmask that the renderer's per-frame
+ *                   draw loop reads.  Flipped AFTER fade-out completes (kept
+ *                   set during fade-out so the layer keeps drawing with
+ *                   falling opacity) or AT the START of fade-in (so the
+ *                   renderer begins drawing the layer even though opacity is
+ *                   currently 0).  Updated by both `setSourceVisible` and
+ *                   the auto-LOD recompute that fires when the camera distance
+ *                   crosses a band threshold.
  *   - `lodMode` — decides who owns the mask each frame.  In `'auto'` the
  *                  engine recomputes it via `autoLodMask(camera.distance)`;
  *                  in `'manual'` whatever was last assigned stays put.
@@ -38,7 +45,20 @@ import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 
 export type EngineSourceState = {
-  visibleMask: number;
+  /**
+   * pickMask — clicked layer is non-clickable IMMEDIATELY on toggle off.
+   * The picker reads this mask; a fading-out layer is excluded from
+   * the pick output even while it's still visually fading. Flipped
+   * synchronously in setSourceVisible.
+   */
+  pickMask: number;
+  /**
+   * drawMask — read by the renderer's per-source draw loop. Flipped
+   * AFTER the fade-out smoothstep completes (or AT the start of
+   * fade-in). A layer with its drawMask bit clear is skipped from
+   * the draw entirely — saves a writeBuffer + draw call.
+   */
+  drawMask: number;
   lodMode: LodMode;
   catalogs: Map<Source, GalaxyCatalog>;
   famousMeta: FamousMetaEntry[];

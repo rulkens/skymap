@@ -36,17 +36,25 @@ export const volumeUpsamplePass: Pass = {
   name: 'volume-upsample',
 
   enabled(state, _ctx, settings) {
-    // Master toggle first — short-circuits before any null check.
-    if (!settings.volumesEnabled) return false;
     // Pre-bootstrap window: either handle null means initGpu hasn't
     // finished.  Same shape as the old scalarVolumePass gate.
     if (state.gpu.scalarVolumeRenderer === null) return false;
     if (state.gpu.volumeUpsample === null) return false;
-    // Skip the upsample when no fields are active — encodeVolumes
-    // already skipped the raymarch into the half-res target, so the
-    // target is at clear-value (0,0,0,0); adding zero to HDR is work
-    // for no visual change.
-    return state.gpu.scalarVolumeRenderer.hasActiveFields();
+    // Master gate: settings boolean OR a non-zero master fade tail.
+    // While master is fading out, encodeHdr* is still drawing into
+    // the half-res target (each field's opacity multiplied by the
+    // master), so this blit must run to bring those pixels onto HDR.
+    const now = performance.now();
+    const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, now);
+    if (!settings.volumesEnabled && masterOpacity <= 0) return false;
+    // Per-field gate: active fields OR fade-out tails in flight.
+    if (state.gpu.scalarVolumeRenderer.hasActiveFields()) return true;
+    for (const handle of state.gpu.scalarVolumeRenderer.listHandles()) {
+      if (state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, now) > 0) {
+        return true;
+      }
+    }
+    return false;
   },
 
   draw(pass, ctx, state, _settings, _deps) {

@@ -67,22 +67,32 @@ const DEPS_STUB = {} as PassDeps;
 // ---------------------------------------------------------------------------
 
 describe('volumeUpsamplePass.enabled', () => {
-  it('returns false when volumesEnabled is false', () => {
+  it('returns false when volumesEnabled is false and master fade is fully out', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true },
+        scalarVolumeRenderer: { hasActiveFields: () => true, listHandles: () => [] },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
+      // Master opacity 0 = no fade-out tail in flight. The gate
+      // short-circuits to false when both gates miss.
+      subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings({ volumesEnabled: false }))).toBe(false);
   });
 
-  it('returns false when no fields are active', () => {
+  it('returns false when no fields are active and no fade-out tail is in flight', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => false },
+        scalarVolumeRenderer: {
+          hasActiveFields: () => false,
+          // The fade-tail check iterates listHandles and calls
+          // fades.opacityOf for each. Empty list → no tails → gate
+          // stays false.
+          listHandles: () => [],
+        },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
+      subsystems: { fades: { opacityOf: () => 0 } },
     } as unknown as EngineState;
     expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
@@ -110,9 +120,10 @@ describe('volumeUpsamplePass.enabled', () => {
   it('returns true when every gate passes', () => {
     const state = {
       gpu: {
-        scalarVolumeRenderer: { hasActiveFields: () => true },
+        scalarVolumeRenderer: { hasActiveFields: () => true, listHandles: () => [] },
         volumeUpsample: { draw: vi.fn(), destroy: vi.fn() },
       },
+      subsystems: { fades: { opacityOf: () => 1 } },
     } as unknown as EngineState;
     expect(volumeUpsamplePass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });

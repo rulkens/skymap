@@ -62,20 +62,27 @@ export function encodeHdrSingle(
   // cost (tile-RAM load+store) even when nothing draws inside.  The
   // downstream `volumeUpsamplePass.enabled` checks the same conditions
   // on the HDR side; the two layers stay in lockstep.
-  if (
-    settings.volumesEnabled &&
-    state.gpu.scalarVolumeRenderer !== null &&
-    state.gpu.scalarVolumeRenderer.hasActiveFields()
-  ) {
+  // Master gate: settings boolean OR a non-zero master fade tail.
+  // The fadeOpacityOf closure below multiplies the master opacity
+  // into every per-field lookup so a master fade-out smoothly drags
+  // every field down in lockstep.
+  if (state.gpu.scalarVolumeRenderer !== null) {
     const nowMs = performance.now();
-    encodeVolumes({
-      encoder,
-      ctx,
-      scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
-      fadeOpacityOf: (handle) =>
-        state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs),
-      timestampWrites: undefined,
-    });
+    const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
+    if (settings.volumesEnabled || masterOpacity > 0) {
+      const fadeOpacityOf = (handle: string) =>
+        state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs) *
+        masterOpacity;
+      if (state.gpu.scalarVolumeRenderer.hasActiveFields(fadeOpacityOf)) {
+        encodeVolumes({
+          encoder,
+          ctx,
+          scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+          fadeOpacityOf,
+          timestampWrites: undefined,
+        });
+      }
+    }
   }
 
   const hdrPass = encoder.beginRenderPass({

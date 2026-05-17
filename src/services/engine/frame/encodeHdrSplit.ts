@@ -67,20 +67,25 @@ export function encodeHdrSplit(
   // `'scalar-volume'` slot — that's what the DebugPanel's GpuTimings
   // row reads, and keeping the slot name stable means the row's label
   // and historical samples line up.
-  if (
-    settings.volumesEnabled &&
-    state.gpu.scalarVolumeRenderer !== null &&
-    state.gpu.scalarVolumeRenderer.hasActiveFields()
-  ) {
+  // Master gate: settings boolean OR a non-zero master fade tail.
+  // See encodeHdrSingle for the master-opacity multiplier rationale.
+  if (state.gpu.scalarVolumeRenderer !== null) {
     const nowMs = performance.now();
-    encodeVolumes({
-      encoder,
-      ctx,
-      scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
-      fadeOpacityOf: (handle) =>
-        state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs),
-      timestampWrites: timingService.descriptorFor('scalar-volume'),
-    });
+    const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
+    if (settings.volumesEnabled || masterOpacity > 0) {
+      const fadeOpacityOf = (handle: string) =>
+        state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs) *
+        masterOpacity;
+      if (state.gpu.scalarVolumeRenderer.hasActiveFields(fadeOpacityOf)) {
+        encodeVolumes({
+          encoder,
+          ctx,
+          scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+          fadeOpacityOf,
+          timestampWrites: timingService.descriptorFor('scalar-volume'),
+        });
+      }
+    }
   }
 
   // ── HDR sub-passes — one beginRenderPass per enabled pass ─────────

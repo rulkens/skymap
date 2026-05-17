@@ -286,11 +286,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     if (!r || state.sources.catalogs.size === 0 || !cr) return null;
 
     // Snapshot the renderer's per-source draw records and filter
-    // by the current visibility mask so the pick pass sees the
-    // same surveys the visual pass just rendered.  We materialise
-    // to an array so the iterator survives the async pick promise.
+    // by the pick mask — fading-out layers have their pickMask bit
+    // cleared immediately so they don't claim click events even
+    // while still visually fading.  We materialise to an array so
+    // the iterator survives the async pick promise.
     const visibleSources = Array.from(r.loadedSources()).filter(
-      (s) => ((state.sources.visibleMask >> s.source) & 1) !== 0,
+      (s) => ((state.sources.pickMask >> s.source) & 1) !== 0,
     );
     if (visibleSources.length === 0) return null;
 
@@ -409,7 +410,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     toneMapCurve: state.settings.tonemap.curve,
     exposure: state.settings.tonemap.exposure,
     lodMode: state.sources.lodMode,
-    visibleSourceMask: state.sources.visibleMask,
+    // Use drawMask (not pickMask) for the initial UI seed — at bootstrap
+    // time the two are identical (both initialised from DEFAULT_VISIBLE_SOURCE_MASK
+    // in engine.ts), but if a future toggle-then-immediate-reseed
+    // sequence ever materialises, drawMask is the better choice: it
+    // tracks what the user actually sees, matching the legacy
+    // visibleMask semantics the UI was built against.
+    visibleSourceMask: state.sources.drawMask,
     labelCategoryVisibility: state.settings.labelCategoryVisibility,
   });
 }
