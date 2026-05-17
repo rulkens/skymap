@@ -56,6 +56,23 @@ import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfI
 
 const FAMOUS_MIN_APPARENT_PX = 6;
 
+/**
+ * Minimum vertical lift, in Mpc, applied to a famous-galaxy label.
+ * Tiny galaxies (<~33 kpc, i.e. the floor / 1.5) get this fixed offset
+ * so the label clears the dot even when the galaxy itself is barely
+ * resolved.  See the section in `poiSubsystem.ts`'s module header on
+ * the static-offset rationale.
+ */
+const FAMOUS_LABEL_MIN_OFFSET_MPC = 0.05;
+/**
+ * Multiplier on the galaxy's physical diameter when computing the
+ * label lift.  1.5× means the label sits ~1.5 galaxy-diameters above
+ * the dot — so when the galaxy is N px on screen, the label is ~1.5N
+ * px above (because both scale identically with camera distance).
+ * Visually keeps the label clearly above the galaxy disk at any zoom.
+ */
+const FAMOUS_LABEL_OFFSET_FACTOR = 1.5;
+
 function displayNameFor(e: FamousMetaEntry): string {
   if (e.commonName !== undefined && e.commonName.length > 0) return e.commonName;
   if (e.names.length > 0) {
@@ -81,6 +98,11 @@ export function buildPoisFromFamousMeta(
     const y = catalog.positions[catalogIdx * 3 + 1]!;
     const z = catalog.positions[catalogIdx * 3 + 2]!;
     const diameterKpc = catalog.diameterKpc[catalogIdx]!;
+    const diameterMpc = diameterKpc / 1000;
+    const labelAnchorOffsetMpc = Math.max(
+      FAMOUS_LABEL_MIN_OFFSET_MPC,
+      FAMOUS_LABEL_OFFSET_FACTOR * diameterMpc,
+    );
     out.push({
       id: `famous-${e.id}`,
       name: displayNameFor(e),
@@ -88,6 +110,7 @@ export function buildPoisFromFamousMeta(
       worldPos: [x, y, z],
       minApparentSizePx: FAMOUS_MIN_APPARENT_PX,
       apparentDiameterKpc: diameterKpc,
+      labelAnchorOffsetMpc,
     });
     catalogIdx += 1;
   }

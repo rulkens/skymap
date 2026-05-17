@@ -82,22 +82,18 @@ type CategoryStyle = {
   readonly worldEmMpc: number;
   readonly pixelWidth: number;
   /**
-   * Pixel-space vertical lift above the POI's worldPos.  When set, the
-   * label sits this many pixels above the dot, a vertical marker line
-   * is drawn from the dot to 75% of the lift, and the label uses
-   * `alignX: 'center'`.  Undefined → label anchored at the dot, no
-   * marker line, `alignX: 'left'` (the cluster/supercluster/void
-   * default).  The pixel value is converted to world space per-frame
-   * using `(offsetPx / drawPxPerRad) * distanceMpc`.
-   */
-  readonly anchorOffsetPx?: number;
-  /**
    * Smoothstep fade-band width in pixels above `minApparentSizePx`.
    * When set, POIs whose apparent size lands inside the band
    * `[minApparentSizePx, minApparentSizePx + fadeBandPx]` fade in via
    * smoothstep instead of popping.  Below the lower bound: still
    * skipped.  Above the upper bound: full alpha.  Undefined → binary
    * gate (the current behaviour).
+   *
+   * The pixel-offset lift + vertical marker-line, by contrast, is
+   * driven per-POI via `PointOfInterest.labelAnchorOffsetMpc` rather
+   * than per-category.  See that field's docstring for why the offset
+   * is stored statically in world-space rather than computed each
+   * frame from the camera distance.
    */
   readonly fadeBandPx?: number;
 };
@@ -112,8 +108,10 @@ type CategoryStyle = {
  *   - supercluster — slightly dimmer yellow, larger world-em (tens of Mpc extent)
  *   - famousGalaxy — warm off-white, 18 px / 0.005 worldEmMpc (pixel-dominant,
  *                    barely scales with distance — matches the "You are here"
- *                    pin); anchorOffsetPx: 20 lifts the label above the dot;
- *                    fadeBandPx: 4 smooths the apparent-size threshold.
+ *                    pin); fadeBandPx: 4 smooths the apparent-size threshold.
+ *                    The per-POI `labelAnchorOffsetMpc` (set in
+ *                    `buildPoisFromFamousMeta`) drives the actual lift +
+ *                    vertical marker-line.
  *   - void         — soft cyan, largest world-em (voids span 30–50+ Mpc radii)
  */
 export const POI_STYLES = {
@@ -137,7 +135,6 @@ export const POI_STYLES = {
     pixelSize: 18,
     worldEmMpc: 0.005,
     pixelWidth: 1.5,
-    anchorOffsetPx: 20,
     fadeBandPx: 4,
   },
   void: {
@@ -213,7 +210,6 @@ export function createPoiSubsystem(): PoiSubsystem {
     // per-frame consumer reads from.
     const halfH = ctx.canvasSize.height * 0.5;
     const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
-    const pxPerRad = ctx.drawPxPerRad;
     const [cx, cy, cz] = ctx.drawCamPos;
     for (const p of pois) {
       if (!visibility[p.category]) continue;
@@ -253,20 +249,26 @@ export function createPoiSubsystem(): PoiSubsystem {
         }
       }
 
-      // Anchor-offset positioning + vertical marker line.  When
-      // `anchorOffsetPx` is set, the label sits N pixels above the dot
-      // (in world space, scaled by distance), and a vertical line runs
-      // from the dot to 75% of the offset.
+      // Anchor-offset positioning + vertical marker line.  When the POI
+      // sets `labelAnchorOffsetMpc`, the label is lifted by that amount
+      // in +Y (world space) and a short vertical marker line runs from
+      // the dot to 75% of the lift.  We deliberately use a STATIC
+      // world-space offset (rather than a per-frame camera-distance
+      // conversion of some pixel target) because the labelDirector's
+      // signature optimisation excludes worldPos — a per-frame-derived
+      // position would only get uploaded on the first frame the POI is
+      // visible and then stay frozen at that camera distance.  See the
+      // field docstring for the full rationale.
       let labelWorldPos: Vec3 = [p.worldPos[0], p.worldPos[1], p.worldPos[2]];
       let alignX: 'left' | 'center' | 'right' = 'left';
-      if (style.anchorOffsetPx !== undefined) {
-        const offsetWorld = (style.anchorOffsetPx / pxPerRad) * distanceMpc;
-        labelWorldPos = [p.worldPos[0], p.worldPos[1] + offsetWorld, p.worldPos[2]];
+      if (p.labelAnchorOffsetMpc !== undefined) {
+        const offset = p.labelAnchorOffsetMpc;
+        labelWorldPos = [p.worldPos[0], p.worldPos[1] + offset, p.worldPos[2]];
         alignX = 'center';
         lines.push({
           id: `${p.id}-anchor`,
           fromWorld: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
-          toWorld: [p.worldPos[0], p.worldPos[1] + offsetWorld * 0.75, p.worldPos[2]],
+          toWorld: [p.worldPos[0], p.worldPos[1] + offset * 0.75, p.worldPos[2]],
           pixelWidth: style.pixelWidth,
           color: [...style.lineColor],
           fadeAlpha,

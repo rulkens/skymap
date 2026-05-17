@@ -43,8 +43,12 @@ describe('buildPoisFromFamousMeta', () => {
     expect(pois[0]!.minApparentSizePx).toBe(6);
     expect(pois[0]!.apparentDiameterKpc).toBe(67);
     expect(pois[0]!.crosshairSizeMpc).toBeUndefined();
+    // labelAnchorOffsetMpc = max(0.05, 1.5 * 67 / 1000) = max(0.05, 0.1005) = 0.1005
+    expect(pois[0]!.labelAnchorOffsetMpc).toBeCloseTo(0.1005, 6);
     expect(pois[1]!.id).toBe('famous-m33');
     expect(pois[1]!.name).toBe('M33'); // falls back to last name in names[]
+    // M33 diameter 30 kpc → 1.5 * 30/1000 = 0.045, below floor 0.05 → uses floor.
+    expect(pois[1]!.labelAnchorOffsetMpc).toBeCloseTo(0.05, 6);
   });
 
   it('skips pseudo entries (the Milky Way placeholder)', () => {

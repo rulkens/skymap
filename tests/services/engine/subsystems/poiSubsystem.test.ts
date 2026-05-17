@@ -27,6 +27,7 @@ const M31: PointOfInterest = {
   name: 'Andromeda Galaxy',
   category: 'famousGalaxy',
   worldPos: [0.5, 0.1, 0.0],
+  labelAnchorOffsetMpc: 0.05,
 };
 const BOOTES_VOID: PointOfInterest = {
   id: 'bootes',
@@ -67,41 +68,60 @@ describe('poiSubsystem', () => {
     expect(out.lines).toHaveLength(3);
   });
 
-  it('emits a single vertical marker line for famousGalaxy POIs (no 3-line crosshair)', () => {
+  it('emits a single vertical marker line for POIs with labelAnchorOffsetMpc', () => {
     const sub = createPoiSubsystem();
     const m31: PointOfInterest = {
       id: 'm31',
       name: 'Andromeda Galaxy',
       category: 'famousGalaxy',
       worldPos: [0.5, 0.1, 0.0],
+      labelAnchorOffsetMpc: 0.1,
     };
     sub.setPois([m31]);
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.lines).toHaveLength(1);
     expect(out.lines[0]!.id).toBe('m31-anchor');
-    // Same x and z as the POI; toWorld[1] is strictly greater than fromWorld[1].
+    // Same x and z as the POI; toWorld[1] is exactly 0.75 * offset above.
     expect(out.lines[0]!.fromWorld[0]).toBe(0.5);
+    expect(out.lines[0]!.fromWorld[1]).toBe(0.1);
     expect(out.lines[0]!.fromWorld[2]).toBe(0.0);
     expect(out.lines[0]!.toWorld[0]).toBe(0.5);
+    expect(out.lines[0]!.toWorld[1]).toBeCloseTo(0.1 + 0.075, 6);
     expect(out.lines[0]!.toWorld[2]).toBe(0.0);
-    expect(out.lines[0]!.toWorld[1]).toBeGreaterThan(out.lines[0]!.fromWorld[1]);
   });
 
-  it('lifts the famousGalaxy label above the dot (alignX center, worldPos +Y)', () => {
+  it('lifts the label by exactly labelAnchorOffsetMpc and switches to alignX center', () => {
     const sub = createPoiSubsystem();
     const m31: PointOfInterest = {
       id: 'm31',
       name: 'Andromeda Galaxy',
       category: 'famousGalaxy',
       worldPos: [0.5, 0.1, 0.0],
+      labelAnchorOffsetMpc: 0.05,
     };
     sub.setPois([m31]);
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels).toHaveLength(1);
     expect(out.labels[0]!.worldPos[0]).toBe(0.5);
+    expect(out.labels[0]!.worldPos[1]).toBeCloseTo(0.15, 6);
     expect(out.labels[0]!.worldPos[2]).toBe(0.0);
-    expect(out.labels[0]!.worldPos[1]).toBeGreaterThan(0.1);
     expect(out.labels[0]!.alignX).toBe('center');
+  });
+
+  it('omits the anchor line and lift when labelAnchorOffsetMpc is absent', () => {
+    const sub = createPoiSubsystem();
+    const galaxy: PointOfInterest = {
+      id: 'no-anchor',
+      name: 'NoAnchor',
+      category: 'famousGalaxy',
+      worldPos: [0.5, 0.1, 0.0],
+      // labelAnchorOffsetMpc deliberately omitted
+    };
+    sub.setPois([galaxy]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels[0]!.worldPos[1]).toBe(0.1);
+    expect(out.labels[0]!.alignX).toBe('left');
+    expect(out.lines).toHaveLength(0);
   });
 
   it('cluster POIs keep alignX left and emit no anchor line (3-line crosshair only)', () => {
