@@ -16,6 +16,7 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
+import type { Source } from '../../data/sources';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -50,4 +51,12 @@ export type PointDrawSettings = {
   pxFadeStart: number;
   /** Procedural-disk crossfade band — pixel threshold above which points render zero-alpha (hand-off to disk pass). */
   pxFadeEnd: number;
+  /**
+   * Look up the registry-managed opacity for a given source. Called
+   * once per visible source per frame from the points draw loop;
+   * the renderer writes the returned value into the per-source
+   * fadeBuffer. Closure-captured by the pointSpritesPass around
+   * `state.subsystems.fades.opacityOf({ kind: 'survey', source }, now)`.
+   */
+  readonly fadeOpacityOf: (source: Source) => number;
 };

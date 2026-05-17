@@ -126,9 +126,19 @@ function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
   };
 }
 
-// `state` is forwarded through but unread by today's four passes.
-// An empty object cast satisfies the type.
-const STATE_STUB = {} as EngineState;
+// `state` is forwarded through — most passes don't read it, but
+// `pointSpritesPass` reads `state.subsystems.fades.opacityOf` to resolve
+// per-source fade opacity for the current frame.  Provide a minimal fades
+// stub that always returns full opacity (1.0) so the pass can run without
+// a live FadeRegistry.
+const STATE_STUB = {
+  subsystems: {
+    fades: {
+      opacityOf: () => 1,
+      isAnyAnimating: () => false,
+    },
+  },
+} as unknown as EngineState;
 
 const PASS_STUB = { setPipeline: vi.fn(), setVertexBuffer: vi.fn(), setBindGroup: vi.fn(), draw: vi.fn() } as unknown as GPURenderPassEncoder;
 

@@ -60,7 +60,19 @@ export type PointRenderer = {
     source: Source;
     vertexBuffer: GPUBuffer;
     count: number;
-    cloudFadeBuffer: GPUBuffer;
+    /**
+     * The per-source SourceUniforms GPU buffer (16 bytes — sourceCode
+     * u32 + 12 bytes pad). PickRenderer builds its OWN per-source
+     * @group(2) bind group around this buffer using the canonical
+     * sourceUniformsBgl layout (shared with the visual pipeline). The
+     * underlying GPUBuffer is shared; PickRenderer's bind group is
+     * just a per-pipeline view of the same bytes.
+     *
+     * The buffer is written ONCE at upload time (sourceCode never
+     * changes for a given source) and read by both the visual and
+     * pick pipelines on every draw.
+     */
+    sourceBuffer: GPUBuffer;
   }>;
   /**
    * @internal
@@ -84,8 +96,6 @@ export type PointRenderer = {
     viewportPx: [number, number],
     settings: PointDrawSettings,
   ): void;
-  /** Whether any loaded source is still ramping up its fade-in opacity. */
-  isFading(): boolean;
   /** Release every GPU resource this renderer owns. */
   destroy(): void;
 };

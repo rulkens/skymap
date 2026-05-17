@@ -65,6 +65,8 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../../../@types/rendering/PickSourceDraw';
 import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
+import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
+import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import { SELECTION_NONE_SENTINEL, unpackPick } from '../../../data/selectionEncoding';
@@ -133,7 +135,12 @@ import { SELECTION_NONE_SENTINEL, unpackPick } from '../../../data/selectionEnco
  */
 const PICK_PADDING_PX = 4;
 
-export function createPickRenderer(device: GPUDevice, pointRenderer: PointRenderer): PickRenderer {
+export function createPickRenderer(
+  device: GPUDevice,
+  pointRenderer: PointRenderer,
+  fadeBgl: FadeUniformsBgl,
+  sourceBgl: SourceUniformsBgl,
+): PickRenderer {
   // ── Shader modules ─────────────────────────────────────────────────────────
   //
   // The vertex stage source is textually shared with PointRenderer, but we
@@ -155,11 +162,44 @@ export function createPickRenderer(device: GPUDevice, pointRenderer: PointRender
   //     The front-most point wins per pixel, matching visual occlusion.
   //   - Fragment entry point is 'fsPick', not 'fs'.
   //
-  // `layout: 'auto'` reflects the bind group layout from the shader's @group/@binding
-  // declarations.  The single binding is @group(0) @binding(0) — the Uniforms buffer.
+  // The pipeline uses an EXPLICIT layout (not 'auto') with the same canonical
+  // BGLs used by the visual pipeline. This is the whole point of the
+  // unified-fade architecture: both pipelines share @group(1) (FadeUniforms)
+  // and @group(2) (SourceUniforms) identity so bind groups built against the
+  // canonical layouts are valid for either pipeline.
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'pick-pipeline-layout',
+    bindGroupLayouts: [
+      device.createBindGroupLayout({
+        label: 'pick-bgl-group0',
+        entries: [
+          { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        ],
+      }),
+      fadeBgl,   // @group(1) — FadeUniforms (canonical, matches visual pipeline)
+      sourceBgl, // @group(2) — SourceUniforms (canonical, shared identity with visual)
+    ],
+  });
+
+  // Pick pipeline declares @group(1) (FadeUniforms) to match the shared
+  // vertex shader's pipeline-layout shape, but the pick fragment doesn't
+  // read fade.opacity. A zeroed buffer is fine — the pick pipeline writes
+  // to the r32uint pick texture, not the visual swap chain, so opacity
+  // has no observable effect.
+  const dummyFadeBuffer = device.createBuffer({
+    label: 'pick-fade-uniform-dummy',
+    size: 16,
+    usage: GPUBufferUsage.UNIFORM,
+  });
+  const dummyFadeBindGroup = device.createBindGroup({
+    label: 'pick-fade-bg-dummy',
+    layout: fadeBgl,
+    entries: [{ binding: 0, resource: { buffer: dummyFadeBuffer } }],
+  });
+
   const pipeline = device.createRenderPipeline({
     label: 'pick-pipeline',
-    layout: 'auto',
+    layout: pipelineLayout,
 
     vertex: {
       module: vsModule,
@@ -417,8 +457,8 @@ export function createPickRenderer(device: GPUDevice, pointRenderer: PointRender
     //
     // One encoder, one render pass, multiple per-source draw calls — the
     // standard WebGPU pattern.  Cross-survey identification works because
-    // each source has its own `@group(1)` (CloudFade) bind group whose
-    // `cloud.sourceCode` slot is set at upload time; the shader composes
+    // each source has its own @group(2) SourceUniforms bind group whose
+    // `sourceCode` slot is set at upload time; the shader composes
     // each instance's packed identity from `(sourceCode << 27) | ii`
     // without any per-vertex bake.  Per-source bind groups dodge the
     // queue.writeBuffer race entirely (different uniform buffers per
@@ -454,8 +494,7 @@ export function createPickRenderer(device: GPUDevice, pointRenderer: PointRender
 
     // ── Bind group ─────────────────────────────────────────────────────────
     //
-    // `layout:'auto'` on the pipeline reflects the @group(0) @binding(0) entry
-    // from the shader.  We build the bind group with the lazily-resolved
+    // Build the @group(0) bind group with the lazily-resolved
     // `sharedUniformBuffer` (read from `pointRenderer.uniformBuffer` at the
     // top of this call) so the pick pass sees the same viewProj/viewport
     // values the visual pass wrote.
@@ -474,21 +513,24 @@ export function createPickRenderer(device: GPUDevice, pointRenderer: PointRender
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
 
-    // Build per-source @group(1) bind groups against THIS pipeline's
-    // layout.  Cannot reuse PointRenderer's bind groups because each
-    // `layout: 'auto'` pipeline has its own unique BindGroupLayout
-    // identity — sharing across pipelines fails the WebGPU
-    // "group-equivalent" compatibility check ("BindGroupLayout was
-    // not created by the pipeline").  The underlying GPUBuffer IS
-    // shared — only the layout objects differ.
-    const cloudLayout = pipeline.getBindGroupLayout(1);
+    // Build per-source @group(2) bind groups against the SHARED canonical
+    // sourceBgl layout. Because both pipelines declare the same explicit
+    // layout, these bind groups are valid for both visual and pick passes
+    // without the old "group-equivalent" cross-pipeline incompatibility.
+    // The underlying GPUBuffer (src.sourceBuffer) is the same one the
+    // visual pass already wrote at upload time.
     for (const src of sourceList) {
-      const cloudBindGroup = device.createBindGroup({
-        label: `pick-bg-cloudFade-${src.source}`,
-        layout: cloudLayout,
-        entries: [{ binding: 0, resource: { buffer: src.cloudFadeBuffer } }],
+      const sourceBindGroup = device.createBindGroup({
+        label: `pick-bg-source-${src.source}`,
+        layout: sourceBgl,
+        entries: [{ binding: 0, resource: { buffer: src.sourceBuffer } }],
       });
-      pass.setBindGroup(1, cloudBindGroup);
+      // Bind a zeroed @group(1) — the pick pass doesn't use fade.opacity
+      // but the pipeline layout requires the binding to be present.
+      // Reusing the same dummy buffer across draws is fine; no race
+      // because @group(1) is read-only at the pipeline level.
+      pass.setBindGroup(1, dummyFadeBindGroup);
+      pass.setBindGroup(2, sourceBindGroup);
       pass.setVertexBuffer(0, src.vertexBuffer);
       pass.draw(6, src.count);
     }
@@ -561,6 +603,7 @@ export function createPickRenderer(device: GPUDevice, pointRenderer: PointRender
     pickTexture?.destroy();
     depthTexture?.destroy();
     stagingBuffer.destroy();
+    dummyFadeBuffer.destroy();
   }
 
   const renderer: PickRenderer = { label: 'pickRenderer', pick, destroy };
