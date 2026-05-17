@@ -23,9 +23,11 @@
 // importing a single authoritative struct definition makes drift
 // structurally impossible.
 //
-// pickFragment.wesl declares no bindings of its own — the SHARED
-// vertex stage already references both '@group(0)' and '@group(1)',
-// so the pick pipeline's auto-derived layout still picks them up.
+// pickFragment.wesl declares no bindings of its own — this vertex
+// module references '@group(0)' (Uniforms) and '@group(2)' (per-source
+// SourceUniforms). The colorFragment module additionally declares
+// '@group(1)' (FadeUniforms). PickRenderer binds a no-op fade buffer
+// at '@group(1)' so its pipeline layout matches the visual pipeline.
 
 import package::points::io::Uniforms;
 import package::points::io::PerVertex;

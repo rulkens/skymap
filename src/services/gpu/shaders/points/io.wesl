@@ -111,7 +111,7 @@ struct Uniforms {
   selectedPacked: u32,
 
   // Slot at offset 84: intentionally unused at the @group(0) level.
-  // 'sourceCode' lives in the per-source @group(1) 'CloudUniforms'.
+  // 'sourceCode' lives in the per-source @group(2) 'SourceUniforms'.
   _pad0: u32,
 
   // Desired radius of each point sprite in pixels. Larger = bigger
