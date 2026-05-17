@@ -87,16 +87,16 @@ import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { parseFamousSeed, validateFamousEntry, type FamousEntry } from './parsers/famousSeed.js';
+import { parseFamousSeed, validateFamousEntry, type FamousEntry } from '../parsers/famousSeed.js';
 import {
   parseHyperLedaMeandata,
   hyperLedaMeandataUrl,
   type HyperLedaMeandataRow,
-} from './parsers/hyperledaMeandata.js';
-import { parseWikipediaSummary, wikipediaSummaryUrl } from './parsers/wikipediaSummary.js';
-import { loadJsonCache, saveJsonCache } from './utils/io/jsonCache.js';
-import { parseFlags } from './utils/cli/args.js';
-import { delay } from './utils/async/delay.js';
+} from '../parsers/hyperledaMeandata.js';
+import { parseWikipediaSummary, wikipediaSummaryUrl } from '../parsers/wikipediaSummary.js';
+import { loadJsonCache, saveJsonCache } from '../utils/io/jsonCache.js';
+import { parseFlags } from '../utils/cli/args.js';
+import { delay } from '../utils/async/delay.js';
 
 // ──────────────────────────────────────────────────────────────────────
 // Constants

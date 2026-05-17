@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findNearestPoint } from '../tools/buildFamous';
+import { findNearestPoint } from '../tools/famous/buildFamous';
 
 /**
  * Build a tiny GalaxyCatalog-shaped fixture with three Cartesian points so

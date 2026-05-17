@@ -32,11 +32,11 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { parseFamousSeed, type FamousEntry } from './parsers/famousSeed.js';
-import { encodeGalaxyCatalog, decodeGalaxyCatalog } from '../src/data/galaxyCatalogFormat.js';
-import { Source } from '../src/data/sources.js';
-import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
-import type { GalaxyCatalog } from '../src/@types/data/GalaxyCatalog.js';
+import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed.js';
+import { encodeGalaxyCatalog, decodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
+import { Source } from '../../src/data/sources.js';
+import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
+import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
 
 /** Threshold (arcsec) within which a 2MRS/GLADE point is treated as the same galaxy. */
 const MATCH_THRESHOLD_ARCSEC = 30;

@@ -106,14 +106,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
-import { parseFlags } from './utils/cli/args.js';
-import { loadJsonCache, saveJsonCache } from './utils/io/jsonCache.js';
-import { parseFamousSeed, type FamousEntry } from './parsers/famousSeed.js';
+import { parseFlags } from '../utils/cli/args.js';
+import { loadJsonCache, saveJsonCache } from '../utils/io/jsonCache.js';
+import { parseFamousSeed, type FamousEntry } from '../parsers/famousSeed.js';
 import {
   parseWikipediaSummary,
   wikipediaSummaryUrl,
   type WikipediaSummary,
-} from './parsers/wikipediaSummary.js';
+} from '../parsers/wikipediaSummary.js';
 import {
   applyRadialFade,
   applyTransparency,
