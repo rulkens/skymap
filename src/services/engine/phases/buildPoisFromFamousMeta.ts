@@ -70,6 +70,29 @@ const FAMOUS_LABEL_MIN_OFFSET_MPC = 0.05;
  */
 const FAMOUS_LABEL_OFFSET_FACTOR = 1.5;
 
+/**
+ * Label-size scaling parameters for famous-galaxy POIs.  Pixel size
+ * is `BASE + LOG_GAIN * log10(diameterKpc / REFERENCE_DIAMETER_KPC)`,
+ * clamped to `[MIN, MAX]`.  Anchored so a typical Milky-Way-class
+ * galaxy (~40 kpc, like M31) sits at the reference 18 px — same as
+ * "You are here" — and dwarfs / supergiants spread by ~±4 px across
+ * the diameter range typical of the curated catalog.  Reading floor
+ * 12 px keeps even the smallest dwarf legible; ceiling 22 px keeps
+ * the largest spirals from dominating the overlay.
+ */
+const FAMOUS_LABEL_BASE_PX = 18;
+const FAMOUS_LABEL_REFERENCE_DIAMETER_KPC = 40;
+const FAMOUS_LABEL_LOG_GAIN = 4;
+const FAMOUS_LABEL_MIN_PX = 12;
+const FAMOUS_LABEL_MAX_PX = 22;
+
+function famousLabelPixelSize(diameterKpc: number): number {
+  const raw =
+    FAMOUS_LABEL_BASE_PX +
+    FAMOUS_LABEL_LOG_GAIN * Math.log10(diameterKpc / FAMOUS_LABEL_REFERENCE_DIAMETER_KPC);
+  return Math.max(FAMOUS_LABEL_MIN_PX, Math.min(FAMOUS_LABEL_MAX_PX, raw));
+}
+
 export function buildPoisFromFamousMeta(
   meta: readonly FamousMetaEntry[],
   catalog: Pick<GalaxyCatalog, 'count' | 'positions' | 'diameterKpc'>,
@@ -97,6 +120,7 @@ export function buildPoisFromFamousMeta(
       minApparentSizePx: FAMOUS_MIN_APPARENT_PX,
       apparentDiameterKpc: diameterKpc,
       labelAnchorOffsetMpc,
+      labelPixelSize: famousLabelPixelSize(diameterKpc),
     });
     catalogIdx += 1;
   }

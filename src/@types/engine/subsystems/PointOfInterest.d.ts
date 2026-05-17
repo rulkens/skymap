@@ -46,4 +46,15 @@ export type PointOfInterest = {
    * omit it and the label anchors directly on the POI as before.
    */
   readonly labelAnchorOffsetMpc?: number;
+  /**
+   * Per-POI override for the label's screen pixel size.  When omitted,
+   * the producer uses the category's `POI_STYLES[category].pixelSize`.
+   * Famous-galaxy POIs populate this from a log-scaled function of the
+   * galaxy's physical diameter so a bigger galaxy's label is bigger
+   * than a dwarf's, but the spread stays bounded (12 ≤ px ≤ 22).
+   * Same per-POI-static rationale as `labelAnchorOffsetMpc`: stable
+   * across frames so the labelDirector's signature optimisation keeps
+   * working.
+   */
+  readonly labelPixelSize?: number;
 };

@@ -280,7 +280,7 @@ export function createPoiSubsystem(): PoiSubsystem {
         worldPos: labelWorldPos,
         text: p.name,
         font: 'cormorant',
-        pixelSize: style.pixelSize,
+        pixelSize: p.labelPixelSize ?? style.pixelSize,
         color: [...style.labelColor],
         worldEmMpc: style.worldEmMpc,
         fadeAlpha,
