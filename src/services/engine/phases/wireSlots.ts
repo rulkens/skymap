@@ -204,7 +204,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         (a): PointOfInterest => ({
           id: `supercluster-${slug(a.name)}`,
           name: a.name,
-          category: 'cluster',
+          category: 'supercluster',
           worldPos: raDecDistToEqCart(a),
           // ~10 % of distance, floor 10 Mpc — superclusters span
           // tens of Mpc so the marker should read at supercluster
