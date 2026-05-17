@@ -83,8 +83,8 @@
  * Wikipedia is the fallback for newly-added entries only.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { parseFamousSeed, validateFamousEntry, type FamousEntry } from './parsers/famousSeed.js';
@@ -94,6 +94,9 @@ import {
   type HyperLedaMeandataRow,
 } from './parsers/hyperledaMeandata.js';
 import { parseWikipediaSummary, wikipediaSummaryUrl } from './parsers/wikipediaSummary.js';
+import { loadJsonCache, saveJsonCache } from './utils/io/jsonCache.js';
+import { parseFlags } from './utils/cli/args.js';
+import { delay } from './utils/async/delay.js';
 
 // ──────────────────────────────────────────────────────────────────────
 // Constants
@@ -660,62 +663,12 @@ export function orderEntryFields(e: FamousEntry): Record<string, unknown> {
 // network fetch, on-disk caching.  The pure functions above are the
 // testable surface.
 
-type CliFlags = { noCache: boolean; dryRun: boolean };
-
-function parseFlags(argv: readonly string[]): CliFlags {
-  return {
-    noCache: argv.includes('--no-cache'),
-    dryRun: argv.includes('--dry-run'),
-  };
-}
-
-/**
- * On-disk HyperLEDA cache — one TSV blob per query, concatenated.
- * Key: query name.  We use a JSON map for simplicity (one file, one
- * read, one write) since the dataset is small (~200 entries max).
- */
-type HyperLedaCache = Record<string, string>;
-
-function loadHyperLedaCache(path: string): HyperLedaCache {
-  if (!existsSync(path)) return {};
-  const text = readFileSync(path, 'utf8');
-  try {
-    return JSON.parse(text) as HyperLedaCache;
-  } catch {
-    process.stderr.write(`warn: HyperLEDA cache at ${path} is malformed, starting fresh\n`);
-    return {};
-  }
-}
-
-function saveHyperLedaCache(path: string, cache: HyperLedaCache): void {
-  if (!existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, JSON.stringify(cache, null, 2));
-}
-
-type WikipediaCache = Record<string, string>;
-
-function loadWikipediaCache(path: string): WikipediaCache {
-  if (!existsSync(path)) return {};
-  const text = readFileSync(path, 'utf8');
-  try {
-    return JSON.parse(text) as WikipediaCache;
-  } catch {
-    process.stderr.write(`warn: Wikipedia cache at ${path} is malformed, starting fresh\n`);
-    return {};
-  }
-}
-
-function saveWikipediaCache(path: string, cache: WikipediaCache): void {
-  if (!existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, JSON.stringify(cache, null, 2));
-}
-
-async function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 async function main(): Promise<void> {
-  const flags = parseFlags(process.argv.slice(2));
+  const _flags = parseFlags(process.argv.slice(2), {
+    '--no-cache': 'bool',
+    '--dry-run': 'bool',
+  });
+  const flags = { noCache: _flags['--no-cache'], dryRun: _flags['--dry-run'] };
   const seedPath = resolve('data/famous_galaxies.seed.json');
   const hyperledaCachePath = resolve('data/raw/hyperleda_famous_cache.tsv');
   const wikipediaCachePath = resolve('data/raw/wikipedia_famous_cache.json');
@@ -728,8 +681,8 @@ async function main(): Promise<void> {
   process.stderr.write(`loaded ${existingEntries.length} existing seed entries\n`);
 
   // ── Load caches ───────────────────────────────────────────────────
-  const hyperledaCache = flags.noCache ? {} : loadHyperLedaCache(hyperledaCachePath);
-  const wikipediaCache = flags.noCache ? {} : loadWikipediaCache(wikipediaCachePath);
+  const hyperledaCache = flags.noCache ? {} : loadJsonCache<Record<string, string>>(hyperledaCachePath);
+  const wikipediaCache = flags.noCache ? {} : loadJsonCache<Record<string, string>>(wikipediaCachePath);
   process.stderr.write(
     `cache: ${Object.keys(hyperledaCache).length} HyperLEDA, ${Object.keys(wikipediaCache).length} Wikipedia\n`,
   );
@@ -746,7 +699,7 @@ async function main(): Promise<void> {
       body = await res.text();
       hyperledaCache[name] = body;
       // Persist after every successful fetch so a crash mid-run is recoverable.
-      saveHyperLedaCache(hyperledaCachePath, hyperledaCache);
+      saveJsonCache(hyperledaCachePath, hyperledaCache);
     }
     return parseHyperLedaMeandata(body);
   };
@@ -770,7 +723,7 @@ async function main(): Promise<void> {
     }
     const body = await res.text();
     wikipediaCache[title] = body;
-    saveWikipediaCache(wikipediaCachePath, wikipediaCache);
+    saveJsonCache(wikipediaCachePath, wikipediaCache);
     return parseWikipediaSummary(body).extract;
   };
 
