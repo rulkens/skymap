@@ -8,7 +8,11 @@ function makeState(): EngineState {
   return { subsystems: { scheduler: { requestRender: () => {} } } } as unknown as EngineState;
 }
 function makeCtx(): ReadyFrameContext {
-  return { drawCamPos: [0, 0, 0] } as unknown as ReadyFrameContext;
+  return {
+    drawCamPos: [0, 0, 0],
+    canvasSize: { width: 1920, height: 1080 },
+    drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
+  } as unknown as ReadyFrameContext;
 }
 
 const VIRGO: PointOfInterest = {
@@ -20,9 +24,10 @@ const VIRGO: PointOfInterest = {
 };
 const M31: PointOfInterest = {
   id: 'm31',
-  name: 'M31',
-  category: 'galaxy',
+  name: 'Andromeda Galaxy',
+  category: 'famousGalaxy',
   worldPos: [0.5, 0.1, 0.0],
+  labelAnchorOffsetMpc: 0.05,
 };
 const BOOTES_VOID: PointOfInterest = {
   id: 'bootes',
@@ -30,6 +35,13 @@ const BOOTES_VOID: PointOfInterest = {
   category: 'void',
   worldPos: [200, 100, 50],
   crosshairSizeMpc: 20,
+};
+const LANIAKEA: PointOfInterest = {
+  id: 'laniakea',
+  name: 'Laniakea',
+  category: 'supercluster',
+  worldPos: [-50, -20, 10],
+  crosshairSizeMpc: 25,
 };
 
 describe('poiSubsystem', () => {
@@ -46,7 +58,7 @@ describe('poiSubsystem', () => {
     sub.setPois([VIRGO, M31]);
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels).toHaveLength(2);
-    expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'M31']);
+    expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'Andromeda Galaxy']);
   });
 
   it('emits 3 perpendicular crosshair lines for POIs with crosshairSizeMpc', () => {
@@ -56,19 +68,92 @@ describe('poiSubsystem', () => {
     expect(out.lines).toHaveLength(3);
   });
 
-  it('omits crosshair lines for POIs without crosshairSizeMpc', () => {
+  it('emits a single vertical marker line for POIs with labelAnchorOffsetMpc', () => {
     const sub = createPoiSubsystem();
-    sub.setPois([M31]);
+    const m31: PointOfInterest = {
+      id: 'm31',
+      name: 'Andromeda Galaxy',
+      category: 'famousGalaxy',
+      worldPos: [0.5, 0.1, 0.0],
+      labelAnchorOffsetMpc: 0.1,
+    };
+    sub.setPois([m31]);
     const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.lines).toHaveLength(1);
+    expect(out.lines[0]!.id).toBe('m31-anchor');
+    // Same x and z as the POI; toWorld[1] is exactly 0.75 * offset above.
+    expect(out.lines[0]!.fromWorld[0]).toBe(0.5);
+    expect(out.lines[0]!.fromWorld[1]).toBe(0.1);
+    expect(out.lines[0]!.fromWorld[2]).toBe(0.0);
+    expect(out.lines[0]!.toWorld[0]).toBe(0.5);
+    expect(out.lines[0]!.toWorld[1]).toBeCloseTo(0.1 + 0.075, 6);
+    expect(out.lines[0]!.toWorld[2]).toBe(0.0);
+  });
+
+  it('lifts the label by exactly labelAnchorOffsetMpc and switches to alignX center', () => {
+    const sub = createPoiSubsystem();
+    const m31: PointOfInterest = {
+      id: 'm31',
+      name: 'Andromeda Galaxy',
+      category: 'famousGalaxy',
+      worldPos: [0.5, 0.1, 0.0],
+      labelAnchorOffsetMpc: 0.05,
+    };
+    sub.setPois([m31]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels).toHaveLength(1);
+    expect(out.labels[0]!.worldPos[0]).toBe(0.5);
+    expect(out.labels[0]!.worldPos[1]).toBeCloseTo(0.15, 6);
+    expect(out.labels[0]!.worldPos[2]).toBe(0.0);
+    expect(out.labels[0]!.alignX).toBe('center');
+  });
+
+  it('omits the anchor line and lift when labelAnchorOffsetMpc is absent', () => {
+    const sub = createPoiSubsystem();
+    const galaxy: PointOfInterest = {
+      id: 'no-anchor',
+      name: 'NoAnchor',
+      category: 'famousGalaxy',
+      worldPos: [0.5, 0.1, 0.0],
+      // labelAnchorOffsetMpc deliberately omitted
+    };
+    sub.setPois([galaxy]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels[0]!.worldPos[1]).toBe(0.1);
+    expect(out.labels[0]!.alignX).toBe('left');
     expect(out.lines).toHaveLength(0);
+  });
+
+  it('cluster POIs keep alignX left and emit no anchor line (3-line crosshair only)', () => {
+    const sub = createPoiSubsystem();
+    const virgo: PointOfInterest = {
+      id: 'virgo',
+      name: 'Virgo',
+      category: 'cluster',
+      worldPos: [-15.98, -2.13, 3.54],
+      crosshairSizeMpc: 5,
+    };
+    sub.setPois([virgo]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels[0]!.alignX).toBe('left');
+    expect(out.labels[0]!.worldPos[1]).toBe(-2.13); // not lifted
+    expect(out.lines).toHaveLength(3); // crosshair, no anchor line
   });
 
   it('filters by category visibility', () => {
     const sub = createPoiSubsystem();
-    sub.setPois([VIRGO, M31, BOOTES_VOID]);
-    sub.setCategoryVisible('galaxy', false);
+    sub.setPois([VIRGO, M31, BOOTES_VOID, LANIAKEA]);
+    sub.setCategoryVisible('famousGalaxy', false);
     const out = sub.produceLabels(makeState(), makeCtx());
-    expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'Boötes Void']);
+    expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'Boötes Void', 'Laniakea']);
+  });
+
+  it('accepts the supercluster category and styles it from POI_STYLES.supercluster', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([LANIAKEA]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels).toHaveLength(1);
+    expect(out.labels[0]!.text).toBe('Laniakea');
   });
 
   it('setPois replaces the list immutably (does not mutate input)', () => {
@@ -76,14 +161,128 @@ describe('poiSubsystem', () => {
     const initial = [VIRGO];
     sub.setPois(initial);
     sub.setPois([M31]);
-    // The caller's array is untouched.
     expect(initial).toEqual([VIRGO]);
-    // The subsystem now reports only M31.
     const out = sub.produceLabels(makeState(), makeCtx());
-    expect(out.labels.map((l) => l.text)).toEqual(['M31']);
+    expect(out.labels.map((l) => l.text)).toEqual(['Andromeda Galaxy']);
   });
 
   it('has stable id "pois"', () => {
     expect(createPoiSubsystem().id).toBe('pois');
+  });
+
+  // ── Apparent-size gating ─────────────────────────────────────────
+  //
+  // `minApparentSizePx` lets a POI suppress emission when its physical
+  // extent (passed via `apparentDiameterKpc`) projects to fewer screen
+  // pixels than the threshold.  Cluster/supercluster/void anchors
+  // omit the field and always emit; Famous galaxies set it so
+  // far-away tiny galaxies don't clutter the view.
+  it('emits a POI with minApparentSizePx when projected size meets the threshold', () => {
+    const sub = createPoiSubsystem();
+    // Galaxy 1 Mpc away with 50 kpc diameter under a 60° fovY at
+    // 1080 px viewport: angular = 50 / (1 * 1000) = 0.05 rad.  pxPerRad
+    // = 1080 / (2*tan(30°)) ≈ 935.  apparentSizePx ≈ 46.7 px — well above
+    // any reasonable threshold.
+    const close: PointOfInterest = {
+      id: 'close',
+      name: 'Close',
+      category: 'famousGalaxy',
+      worldPos: [1, 0, 0],
+      minApparentSizePx: 6,
+      apparentDiameterKpc: 50,
+    };
+    sub.setPois([close]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['close']);
+  });
+
+  it('suppresses a POI when projected size falls below minApparentSizePx', () => {
+    const sub = createPoiSubsystem();
+    // Galaxy 500 Mpc away with 30 kpc diameter under the same camera:
+    // angular = 30 / (500 * 1000) = 6e-5 rad.  apparentSizePx ≈ 0.056 px
+    // — way below the 6 px threshold.
+    const far: PointOfInterest = {
+      id: 'far',
+      name: 'Far',
+      category: 'famousGalaxy',
+      worldPos: [500, 0, 0],
+      minApparentSizePx: 6,
+      apparentDiameterKpc: 30,
+    };
+    sub.setPois([far]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels).toEqual([]);
+    expect(out.lines).toEqual([]);
+  });
+
+  it('emits a POI without minApparentSizePx unconditionally', () => {
+    const sub = createPoiSubsystem();
+    // 500 Mpc away — would be suppressed if a threshold were set,
+    // but the field is absent so the producer skips the gate.
+    const noGate: PointOfInterest = {
+      id: 'no-gate',
+      name: 'NoGate',
+      category: 'cluster',
+      worldPos: [500, 0, 0],
+    };
+    sub.setPois([noGate]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['no-gate']);
+  });
+
+  it('emits a POI with minApparentSizePx but no apparentDiameterKpc unconditionally', () => {
+    // Defensive default: if the consumer set a threshold but forgot to
+    // provide a diameter, fall through (better to over-emit than to
+    // silently hide a POI the consumer thought they configured).
+    const sub = createPoiSubsystem();
+    const partial: PointOfInterest = {
+      id: 'partial',
+      name: 'Partial',
+      category: 'famousGalaxy',
+      worldPos: [500, 0, 0],
+      minApparentSizePx: 6,
+    };
+    sub.setPois([partial]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['partial']);
+  });
+
+  it('smoothsteps fadeAlpha through the famousGalaxy fade band', () => {
+    // 30 kpc galaxy at 4 Mpc: angular = 30 / 4000 = 0.0075 rad.
+    // pxPerRad ≈ 935 → sizePx ≈ 7.02 → in the fade band
+    // [6, 10] (minApparentSizePx=6, fadeBandPx=4).  Smoothstep over
+    // t = (7.02 - 6) / 4 ≈ 0.255 gives ~0.162 — strictly inside (0,1).
+    const sub = createPoiSubsystem();
+    const m: PointOfInterest = {
+      id: 'mid-fade',
+      name: 'MidFade',
+      category: 'famousGalaxy',
+      worldPos: [4, 0, 0],
+      minApparentSizePx: 6,
+      apparentDiameterKpc: 30,
+    };
+    sub.setPois([m]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels).toHaveLength(1);
+    const fade = out.labels[0]!.fadeAlpha ?? 1;
+    expect(fade).toBeGreaterThan(0);
+    expect(fade).toBeLessThan(1);
+    expect(out.awake).toBe(true);
+  });
+
+  it('returns awake: false when no POI is mid-fade', () => {
+    const sub = createPoiSubsystem();
+    const big: PointOfInterest = {
+      id: 'big',
+      name: 'Big',
+      category: 'famousGalaxy',
+      worldPos: [1, 0, 0],
+      minApparentSizePx: 6,
+      apparentDiameterKpc: 50, // ~47 px — far above the fade band
+    };
+    sub.setPois([big]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.awake).toBe(false);
+    expect(out.labels[0]!.fadeAlpha).toBe(1);
   });
 });

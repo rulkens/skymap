@@ -44,6 +44,7 @@ import { BiasMode } from '../data/biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from '../data/toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
+import type { PoiCategory } from '../services/engine/subsystems/poiSubsystem';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -78,41 +79,27 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   const [galaxyTexturesEnabled, setGalaxyTexturesEnabled] = useState<boolean>(
     DEFAULT_GALAXY_TEXTURES_ENABLED,
   );
-  const [milkyWayEnabled, setMilkyWayEnabled] = useState<boolean>(
-    DEFAULT_MILKY_WAY_ENABLED,
-  );
-  const [highlightFallback, setHighlightFallback] = useState<boolean>(
-    DEFAULT_HIGHLIGHT_FALLBACK,
-  );
+  const [milkyWayEnabled, setMilkyWayEnabled] = useState<boolean>(DEFAULT_MILKY_WAY_ENABLED);
+  const [highlightFallback, setHighlightFallback] = useState<boolean>(DEFAULT_HIGHLIGHT_FALLBACK);
   const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
-  const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(
-    DEFAULT_DEPTH_FADE_ENABLED,
-  );
+  const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
   // `visibleSourceMask` is a 32-bit bitmask: bit `n` set means "draw points
   // from source n". Seeded with ALL_VISIBLE_MASK (every source on) via
   // DEFAULT_VISIBLE_SOURCE_MASK so the first paint matches the engine's
   // startup default.
-  const [visibleSourceMask, setVisibleSourceMask] = useState<number>(
-    DEFAULT_VISIBLE_SOURCE_MASK,
-  );
+  const [visibleSourceMask, setVisibleSourceMask] = useState<number>(DEFAULT_VISIBLE_SOURCE_MASK);
   const [lodMode, setLodMode] = useState<LodMode>(DEFAULT_LOD_MODE);
   const [biasMode, setBiasMode] = useState<BiasModeT>(DEFAULT_BIAS_MODE);
   const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
-  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurveT>(
-    DEFAULT_TONE_MAP_CURVE,
-  );
+  const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurveT>(DEFAULT_TONE_MAP_CURVE);
   const [exposure, setExposure] = useState<number>(DEFAULT_EXPOSURE);
 
   // ── App-owned optimistic values (no engine echo) ─────────────────────
   // The engine does NOT fire echo callbacks for filaments or volumes state,
   // so React owns these optimistically. The SettingsPanel onChange handler
   // updates these directly AND forwards to the engine handle.
-  const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(
-    DEFAULT_FILAMENTS_ENABLED,
-  );
-  const [filamentIntensity, setFilamentIntensity] = useState<number>(
-    DEFAULT_FILAMENT_INTENSITY,
-  );
+  const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(DEFAULT_FILAMENTS_ENABLED);
+  const [filamentIntensity, setFilamentIntensity] = useState<number>(DEFAULT_FILAMENT_INTENSITY);
 
   // Scalar-volume master toggle — no echo, same as filamentsEnabled above.
   // No persistence: every session starts from the compile-time default.
@@ -135,6 +122,22 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     vertexCount: number;
   } | null>(null);
 
+  // ── POI label per-category visibility ────────────────────────────────
+  // Engine echoes the full Record<PoiCategory, boolean> on every
+  // `handle.labels.setCategoryVisible(cat, visible)` call (plus once at
+  // init via seedSettingsCallbacks), so the React-side mirror is a
+  // single useState slot for the whole record — toggling one category
+  // re-emits all four.  Seed matches the engine default in
+  // `EngineSettingsState.labelCategoryVisibility` (every category on).
+  const [labelCategoryVisibility, setLabelCategoryVisibility] = useState<
+    Record<PoiCategory, boolean>
+  >({
+    cluster: true,
+    supercluster: true,
+    famousGalaxy: true,
+    void: true,
+  });
+
   return {
     settings: {
       pointSize,
@@ -156,6 +159,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       exposure,
       volumesEnabled,
       volumeFields,
+      labelCategoryVisibility,
     },
     engineCallbacks: {
       // ── Nested sub-bag subscriptions (H5 task 11) ────────────────
@@ -192,8 +196,14 @@ export function useEngineSettings(): UseEngineSettingsReturn {
         onEnabledChange: setMilkyWayEnabled,
       },
       filaments: {
-        onReady: (stripCount, vertexCount) =>
-          setFilamentCounts({ stripCount, vertexCount }),
+        onReady: (stripCount, vertexCount) => setFilamentCounts({ stripCount, vertexCount }),
+      },
+      labels: {
+        // Engine echoes the full record on every toggle; setting React
+        // state to the same shape keeps the four-checkbox UI in sync
+        // from a single subscription.  Spread to drop the readonly
+        // wrapper for React's mutable useState slot.
+        onCategoryVisibilityChange: (v) => setLabelCategoryVisibility({ ...v }),
       },
     },
     setFilamentsEnabled,

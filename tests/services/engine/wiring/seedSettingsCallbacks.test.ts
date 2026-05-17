@@ -36,6 +36,12 @@ function makeSnapshot(): SettingsCallbackSeed {
     exposure: 1.2,
     lodMode: 'auto',
     visibleSourceMask: 0b111,
+    labelCategoryVisibility: {
+      cluster: true,
+      supercluster: true,
+      famousGalaxy: true,
+      void: true,
+    },
   };
 }
 
@@ -78,6 +84,7 @@ describe('seedSettingsCallbacks', () => {
       onLodModeChange: vi.fn(),
       onMaskChange: vi.fn(),
     };
+    const labels = { onCategoryVisibilityChange: vi.fn() };
 
     const cb: EngineCallbacks = {
       ...makeRequiredCallbacks(),
@@ -87,6 +94,7 @@ describe('seedSettingsCallbacks', () => {
       thumbnails,
       bias,
       sources,
+      labels,
     };
 
     seedSettingsCallbacks(cb, snap);
@@ -108,6 +116,11 @@ describe('seedSettingsCallbacks', () => {
     expect(tonemap.onExposureChange).toHaveBeenCalledExactlyOnceWith(snap.exposure);
     expect(sources.onLodModeChange).toHaveBeenCalledExactlyOnceWith(snap.lodMode);
     expect(sources.onMaskChange).toHaveBeenCalledExactlyOnceWith(snap.visibleSourceMask);
+    // Echo carries a fresh copy of the record, not the literal reference
+    // — assert by value so the freshness contract stays load-bearing.
+    expect(labels.onCategoryVisibilityChange).toHaveBeenCalledExactlyOnceWith(
+      snap.labelCategoryVisibility,
+    );
   });
 
   it('does not fire required callbacks (status/hover/select) — those have separate lifecycles', () => {

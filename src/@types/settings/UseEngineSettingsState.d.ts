@@ -30,6 +30,7 @@ import type { LodMode } from '../data/LodMode';
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { VolumeFieldRowData } from './VolumeFieldRowData';
+import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 
 export type UseEngineSettingsState = {
   pointSize: number;
@@ -63,4 +64,13 @@ export type UseEngineSettingsState = {
    * inside each field's row in the SettingsPanel.
    */
   volumeFields: ReadonlyArray<VolumeFieldRowData>;
+  /**
+   * Per-category visibility for the POI label overlay.  Mirrors the
+   * engine-side `EngineSettingsState.labelCategoryVisibility`; the
+   * SettingsPanel reads from this record to render the four Overlays
+   * → Labels checkboxes.  Engine echoes the whole record on every
+   * `handle.labels.setCategoryVisible(cat, visible)` call so all four
+   * checkboxes stay in sync from a single subscription.
+   */
+  labelCategoryVisibility: Record<PoiCategory, boolean>;
 };

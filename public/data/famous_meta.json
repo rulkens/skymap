@@ -60,7 +60,8 @@
       "NGC 1275"
     ],
     "description": "NGC 1275 is a type 1.5 Seyfert galaxy located around 225 million light-years away from Earth in the direction of the constellation of Perseus. NGC 1275 is a member of the large Perseus Cluster of galaxies. It was discovered by German-British astronomer William Herschel on 17 October 1786.",
-    "type": "S0"
+    "type": "S0",
+    "commonName": "Perseus A"
   },
   {
     "id": "c26",
@@ -303,7 +304,8 @@
       "NGC 5128"
     ],
     "description": "",
-    "type": "S0"
+    "type": "S0",
+    "commonName": "Centaurus A"
   },
   {
     "id": "c83",
@@ -331,7 +333,8 @@
       "Pinwheel Galaxy"
     ],
     "description": "M101 is one of the largest and most luminous spirals in the local universe — a grand-design spiral nearly 70% larger than the Milky Way, with a famously asymmetric arm pattern from a past encounter with NGC 5474.",
-    "type": "SABc"
+    "type": "SABc",
+    "commonName": "Pinwheel Galaxy"
   },
   {
     "id": "m102",
@@ -350,7 +353,8 @@
       "Sombrero Galaxy"
     ],
     "description": "Famous for its bright nucleus and prominent dust lane, M104 is a near edge-on spiral with an unusually large central bulge.  Hosts a billion-solar-mass black hole.",
-    "type": "Sa"
+    "type": "Sa",
+    "commonName": "Sombrero Galaxy"
   },
   {
     "id": "m105",
@@ -405,7 +409,8 @@
       "Andromeda Galaxy"
     ],
     "description": "The nearest large spiral galaxy, M31 (Andromeda) sits 778 kpc away and spans about 220,000 light-years — roughly twice the Milky Way's diameter.  Visible to the naked eye as a faint smudge, it is on a collision course with our own galaxy.",
-    "type": "Sb"
+    "type": "Sb",
+    "commonName": "Andromeda Galaxy"
   },
   {
     "id": "m32",
@@ -424,7 +429,8 @@
       "Triangulum Galaxy"
     ],
     "description": "The third-largest member of the Local Group, M33 is a flocculent spiral about half the size of the Milky Way.  Its distance has been used as a key calibrator on the cosmic distance ladder.",
-    "type": "Sc"
+    "type": "Sc",
+    "commonName": "Triangulum Galaxy"
   },
   {
     "id": "m49",
@@ -443,7 +449,8 @@
       "Whirlpool Galaxy"
     ],
     "description": "M51 is the canonical face-on grand-design spiral, currently interacting with the dwarf companion NGC 5195.  Hubble's most-photographed galaxy after M31.",
-    "type": "SABb"
+    "type": "SABb",
+    "commonName": "Whirlpool Galaxy"
   },
   {
     "id": "m58",
@@ -545,7 +552,8 @@
       "Bode's Galaxy"
     ],
     "description": "A grand-design spiral 3.7 Mpc away, M81 is the largest member of its eponymous galaxy group and a popular target for amateur astronomers in the spring sky.",
-    "type": "Sab"
+    "type": "Sab",
+    "commonName": "Bode's Galaxy"
   },
   {
     "id": "m82",
@@ -602,7 +610,8 @@
       "Virgo A"
     ],
     "description": "The supergiant elliptical at the heart of the Virgo cluster, M87 hosts the first black hole ever directly imaged (Event Horizon Telescope, 2019).  Its relativistic jet is visible from optical to radio wavelengths.",
-    "type": "E"
+    "type": "E",
+    "commonName": "Virgo A"
   },
   {
     "id": "m88",

@@ -241,7 +241,16 @@ export type GalaxyInfo = {
   famous?: {
     /** Stable machine-readable id, e.g. `"m31"`. Matches the WebP filename. */
     id: string;
-    /** Human-readable aliases in order of preference, e.g. `["M31", "Andromeda Galaxy"]`. */
+    /**
+     * Curated human-friendly display name when one is set on the seed entry
+     * (e.g. `"Andromeda Galaxy"` for M31).  When present, both the InfoCard
+     * headline and the POI label prefer this over `names[0]`; the rest of
+     * `names` appears as "Also known as" aliases.  Absent for most entries —
+     * the seed only sets commonName for galaxies whose widely-recognised
+     * name differs meaningfully from the catalog identifier.
+     */
+    commonName?: string;
+    /** Catalog aliases in seed order, e.g. `["M31", "NGC 224"]`. */
     names: string[];
     /** One-paragraph descriptive text for the InfoCard. */
     description: string;

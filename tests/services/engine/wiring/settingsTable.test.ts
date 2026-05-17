@@ -60,6 +60,12 @@ function makeState(): Pick<EngineState, 'settings' | 'bias'> {
       milkyWay: { enabled: true },
       filaments: { enabled: false, intensity: 0.5 },
       volumes: { masterEnabled: false, fields: {} },
+      labelCategoryVisibility: {
+        cluster: true,
+        supercluster: true,
+        famousGalaxy: true,
+        void: true,
+      },
     },
     bias: {
       apparentMagLimit: 0,
