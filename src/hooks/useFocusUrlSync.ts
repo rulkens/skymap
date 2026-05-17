@@ -59,7 +59,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import type { PointCloud } from '../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
 import { ALL_SOURCES, Source } from '../data/sources';
 import { parseFocusHash, selectionToFocusId } from '../services/url/focusUrl';
 import type { FocusTarget } from '../@types/camera/FocusTarget';
@@ -248,7 +248,7 @@ export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
     // objIDs are sequential 0..N-1 and would collide spuriously with
     // low PGCs, and keeping it out of the input saves a pass over the
     // large `pos@` branch.
-    const clouds: { source: Source; cloud: PointCloud }[] = [];
+    const clouds: { source: Source; cloud: GalaxyCatalog }[] = [];
     for (const source of ALL_SOURCES) {
       if (source === Source.Synthetic) continue;
       const cloud = handle.sources.getCloud(source);

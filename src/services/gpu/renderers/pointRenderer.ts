@@ -33,7 +33,7 @@
  *
  * ### Relationship to other modules
  *
- *   PointCloud  →  upload(source, …)    →  GPU vertex buffer per source
+ *   GalaxyCatalog  →  upload(source, …)    →  GPU vertex buffer per source
  *   OrbitCamera →  computeViewProj()    →  draw()  →  uniform buffer  (every frame)
  *
  * @module
@@ -43,7 +43,7 @@ import { mat4 } from 'gl-matrix';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PointDrawSettings } from '../../../@types/rendering/PointDrawSettings';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { ALL_SOURCES, Source } from '../../../data/sources';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
@@ -61,7 +61,7 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
 // tests inject a synchronous fallback via `setBuildBufferFactory` instead
 // of importing this module.  See the `BuildBufferFactory` type below.
 import BuildPointBufferWorker from '../../engine/bake/buildPointInterleavedBuffer.worker?worker';
-import { clonePointCloudForTransfer } from '../../../data/pointCloudTransfer';
+import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 
 // Spec E phase E.4 moved the lazy-Schechter and lazy-angular-reweight
@@ -377,7 +377,7 @@ const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; //
 
 /**
  * Production path for the off-thread bake.  Spawns a fresh
- * `BuildPointBufferWorker`, ships a *copied* `PointCloud` via `postMessage`'s
+ * `BuildPointBufferWorker`, ships a *copied* `GalaxyCatalog` via `postMessage`'s
  * Transferable list, waits for the message back, and terminates the worker.
  *
  * Why one worker per call?  Parallel survey fetches resolve in unpredictable
@@ -423,7 +423,7 @@ const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; //
  * engine retains the cloud — see `cloudLoader.ts` and the picker's
  * `cloud.magG[i]` reads in `engine.ts`'s hover/click handlers.
  *
- * Alternative considered (and rejected for now): split `PointCloud`
+ * Alternative considered (and rejected for now): split `GalaxyCatalog`
  * into a "core" (positions, magG, axisRatio, PA, diameterKpc — what
  * the bake needs) and "pickerOnly" (objIDs + the other photometry
  * bands), keeping the picker-only arrays out of the worker entirely.
@@ -436,7 +436,7 @@ const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; //
 function defaultWorkerRunner(
   input: BuildPointInterleavedBufferInput,
 ): Promise<BuildPointInterleavedBufferResult> {
-  const { copy, transfer } = clonePointCloudForTransfer(input.cloud);
+  const { copy, transfer } = cloneGalaxyCatalogForTransfer(input.cloud);
   return runDisposableWorker<BuildPointInterleavedBufferInput, BuildPointInterleavedBufferResult>(
     BuildPointBufferWorker,
     { ...input, cloud: copy },
@@ -456,7 +456,7 @@ function defaultWorkerRunner(
 // ### Why the bias-correction runners moved to a subsystem but this one stayed
 //
 // `buildRunner` builds the *initial* `interleaved` Float32Array at
-// upload time from a `PointCloud`'s struct-of-arrays.  That's
+// upload time from a `GalaxyCatalog`'s struct-of-arrays.  That's
 // constitutive of "construct a renderable vertex buffer from a parsed
 // catalog" — the renderer's own job.  The `with-schechter` flag the
 // pre-Spec-E version of `upload()` used to pass through is gone; after
@@ -689,10 +689,10 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
   // when no subsystem is attached (e.g. tests, or the brief pre-
   // attach window during bootstrap); `?.` invocation makes that a
   // no-op.
-  let biasUploadCallback: ((source: Source, cloud: PointCloud) => void) | null = null;
+  let biasUploadCallback: ((source: Source, cloud: GalaxyCatalog) => void) | null = null;
   let biasUnloadCallback: ((source: Source) => void) | null = null;
 
-  function setBiasUploadCallback(cb: ((source: Source, cloud: PointCloud) => void) | null): void {
+  function setBiasUploadCallback(cb: ((source: Source, cloud: GalaxyCatalog) => void) | null): void {
     biasUploadCallback = cb;
   }
 
@@ -703,7 +703,7 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
   // ─── Data upload ────────────────────────────────────────────────────────────
 
   /**
-   * Pack a `PointCloud` into an interleaved GPU vertex buffer for the given
+   * Pack a `GalaxyCatalog` into an interleaved GPU vertex buffer for the given
    * source.  Replaces any previous buffer for that source.
    *
    * ### Why this is async
@@ -763,7 +763,7 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
    * machinery is gone with this refactor — there's no global running
    * sum anymore, so cross-source races can't exist.
    */
-  async function upload(source: Source, cloud: PointCloud): Promise<void> {
+  async function upload(source: Source, cloud: GalaxyCatalog): Promise<void> {
     // ── Empty-cloud unload path ─────────────────────────────────────────────
     //
     // `engine.setTier` reuses this method to clear a source when the new

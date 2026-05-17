@@ -49,7 +49,7 @@
  * this registry:
  *
  *   - `filaments` — different fetcher (`filamentFetcher`), different
- *     payload shape (`FilamentCloud` not `PointCloud`), different
+ *     payload shape (`FilamentCloud` not `GalaxyCatalog`), different
  *     renderer target (`FilamentRenderer.upload`), one-shot lifecycle
  *     (never reloaded on tier change).  Forcing it through a
  *     "PointSourceConfig" would require parameterising the payload
@@ -114,9 +114,9 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { Source } from '../../../data/sources';
-import type { PointCloudReq } from '../../../@types/loading/PointCloudReq';
+import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { PointSourceConfig } from '../../../@types/engine/wiring/PointSourceConfig';
 import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePointSourceDeps';
 import { createAssetSlot } from '../../loading/AssetSlot';
@@ -212,7 +212,7 @@ export function wirePointSourceSlot(
   const { cb } = deps;
   const slotName = `${sourceName(source)}-points`;
 
-  const slot = createAssetSlot<PointCloud, PointCloudReq>({
+  const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: slotName,
     fetch: fetcher,
     commit: async (cloud) => {

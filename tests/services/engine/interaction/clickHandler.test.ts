@@ -22,7 +22,7 @@ import { createClickResolver } from '../../../../src/services/engine/interaction
 import type { ClickResolveInput } from '../../../../src/@types/engine/ClickResolveInput';
 import { Source } from '../../../../src/data/sources';
 import type { PointInfo } from '../../../../src/@types/engine/PointInfo';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
 
 type PickRenderer = ReturnType<typeof createPickRenderer>;
@@ -34,7 +34,7 @@ function makePicker(result: { source: Source; localIdx: number } | null): PickRe
   } as unknown as PickRenderer;
 }
 
-const dummyCloud: PointCloud = {} as PointCloud;
+const dummyCloud: GalaxyCatalog = {} as GalaxyCatalog;
 const dummyInfo = { iauName: 'Galaxy 7' } as unknown as PointInfo;
 
 const dummyArgs: ClickResolveInput = {

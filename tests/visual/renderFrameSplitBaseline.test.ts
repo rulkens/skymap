@@ -55,7 +55,7 @@ import { ToneMapCurve } from '../../src/data/toneMapCurve';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
-import type { PointCloud } from '../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
 
 // ── Recording harness ──────────────────────────────────────────────────────
@@ -207,7 +207,7 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   const fill = (v: number): Float32Array => {
     const a = new Float32Array(count);
     a.fill(v);

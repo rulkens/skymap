@@ -17,7 +17,7 @@
  *     `requestRender()` on the `ready` transition, and is silent on
  *     the loading / committing / error transitions;
  *   - the commit step routes through the shared
- *     `commitPointCloudToRenderer` helper (uploads to the renderer,
+ *     `commitGalaxyCatalogToRenderer` helper (uploads to the renderer,
  *     mutates `state.sources.clouds`);
  *   - multiple sources wired in succession produce independent slots
  *     keyed correctly — no cross-talk between SDSS and GLADE;
@@ -41,7 +41,7 @@ import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/W
 import { Source } from '../../../../src/data/sources';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 
 /**
  * Minimal-shape fixture for the `EngineState` slices the helper reads
@@ -56,7 +56,7 @@ function makeState(opts: {
   rendererUpload: ReturnType<typeof vi.fn>;
   loadedSources?: Iterable<{ source: Source; count: number }>;
 }): EngineState {
-  const clouds = new Map<Source, PointCloud>();
+  const clouds = new Map<Source, GalaxyCatalog>();
   return {
     gpu: {
       renderer: {
@@ -78,11 +78,11 @@ function makeState(opts: {
 }
 
 /**
- * Build a tiny `PointCloud`-shaped fixture.  Only `count` is read by
+ * Build a tiny `GalaxyCatalog`-shaped fixture.  Only `count` is read by
  * the subscriber's `onCloudReady` echo and by the upload log line.
  */
-function fakeCloud(count: number): PointCloud {
-  return { count } as unknown as PointCloud;
+function fakeCloud(count: number): GalaxyCatalog {
+  return { count } as unknown as GalaxyCatalog;
 }
 
 describe('POINT_SOURCE_REGISTRY', () => {

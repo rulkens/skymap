@@ -18,7 +18,7 @@
  */
 
 import type { EngineState } from '../state/EngineState';
-import type { PointCloud } from '../../data/PointCloud';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Source } from '../../../data/sources';
 import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
@@ -97,7 +97,7 @@ export type RenderFrameInput = {
   // ── Forwarded to the thumbnail subsystem ──────────────────────────────
   famousMeta: FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
-  clouds: Map<Source, PointCloud>;
+  clouds: Map<Source, GalaxyCatalog>;
 
   /**
    * Per-pass GPU timing service (always non-null; check `.enabled`

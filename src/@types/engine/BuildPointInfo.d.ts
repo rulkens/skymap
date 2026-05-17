@@ -1,5 +1,5 @@
 import type { Source } from '../../data/sources';
-import type { PointCloud } from '../data/PointCloud';
+import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { PointInfo } from './PointInfo';
 
 /**
@@ -9,7 +9,7 @@ import type { PointInfo } from './PointInfo';
  * and `famousXrefs` sidecars in scope; tests pass a stub.
  */
 export type BuildPointInfo = (
-  cloud: PointCloud,
+  cloud: GalaxyCatalog,
   localIdx: number,
   source: Source,
 ) => PointInfo | null;

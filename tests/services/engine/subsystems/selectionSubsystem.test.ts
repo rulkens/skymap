@@ -23,7 +23,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createSelectionSubsystem } from '../../../../src/services/engine/subsystems/selectionSubsystem';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { PointInfo } from '../../../../src/@types/engine/PointInfo';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import { Source } from '../../../../src/data/sources';
 
 /**
@@ -50,14 +50,14 @@ function makeCallbacks(): EngineCallbacks & {
 }
 
 /**
- * Minimum-viable `PointCloud` for the subsystem's bounds-check + the
+ * Minimum-viable `GalaxyCatalog` for the subsystem's bounds-check + the
  * `buildPointInfo` call inside `pointInfoFor`.  We supply just enough
  * typed-array slots that buildPointInfo doesn't crash on undefined
  * reads; the resulting `PointInfo` is opaque to these tests — we
  * assert on identity (the prebuilt-info short-circuit) and existence
  * (non-null), not on field values.
  */
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   const f32 = (n: number) => new Float32Array(n);
   return {
     count,
@@ -72,7 +72,7 @@ function makeCloud(count: number): PointCloud {
     axisRatio: f32(count),
     positionAngleDeg: f32(count),
     sourceCode: 0,
-  } as unknown as PointCloud;
+  } as unknown as GalaxyCatalog;
 }
 
 describe('createSelectionSubsystem', () => {

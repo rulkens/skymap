@@ -97,7 +97,7 @@ import {
 } from '../../data/defaults';
 import type { PointInfo } from '../../@types/engine/PointInfo';
 import type { LodMode } from '../../@types/data/LodMode';
-import type { PointCloud } from '../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineState } from '../../@types/engine/state/EngineState';
@@ -184,7 +184,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   //                    `state.subsystems.biasCorrection.setMode`).  The
   //                    user-facing knobs (mode + absMagLimit) live on
   //                    `state.settings.bias`.
-  //   - `sources`    → loaded `PointCloud`s + visibility bitmask +
+  //   - `sources`    → loaded `GalaxyCatalog`s + visibility bitmask +
   //                    LOD mode + the optional famous-galaxy sidecars.
   //   - `picking`    → hover / click / drag mutables (latest CSS-pixel
   //                    mouse position, in-flight pick guard, drag flag).
@@ -335,7 +335,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // so picking can resolve `(source, localIdx)` into a PointInfo
       // without a GPU readback for every hover.  Empty until the
       // first parallel fetch resolves.
-      clouds: new Map<Source, PointCloud>(),
+      clouds: new Map<Source, GalaxyCatalog>(),
       // Optional sidecars — `pointInfoBuilder` null-checks both, so a
       // hover firing before they land just renders the generic
       // InfoCard layout.
@@ -965,7 +965,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.assetSlots.mcpm?.load({ tier });
   }
 
-  function getCloud(source: Source): PointCloud | undefined {
+  function getCloud(source: Source): GalaxyCatalog | undefined {
     return state.sources.clouds.get(source);
   }
 

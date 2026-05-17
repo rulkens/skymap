@@ -42,7 +42,7 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import type { RenderFrameInput } from '../../../../src/@types/engine/frame/RenderFrameInput';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
 
@@ -144,7 +144,7 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   const fill = (v: number): Float32Array => {
     const a = new Float32Array(count);
     a.fill(v);

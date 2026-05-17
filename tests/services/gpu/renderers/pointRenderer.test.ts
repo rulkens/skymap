@@ -30,7 +30,7 @@ import {
 import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source } from '../../../../src/data/sources';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
 
 // `GPUBufferUsage` and friends are populated by the shared
@@ -58,11 +58,11 @@ afterAll(() => {
 // ─── Test helpers ─────────────────────────────────────────────────────────────
 
 /**
- * Build a minimal `PointCloud` with `count` points. All photometry arrays are
+ * Build a minimal `GalaxyCatalog` with `count` points. All photometry arrays are
  * filled with safe defaults (zeros) — the renderer's bookkeeping path never
  * inspects their values, only their lengths.
  */
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   return {
     count,
     objIDs: new BigUint64Array(count),

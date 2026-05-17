@@ -18,7 +18,7 @@
  */
 
 import type { PointInfo } from '../../../@types/engine/PointInfo';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { Source, sourceLabel, bandLabels } from '../../../data/sources';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
@@ -53,7 +53,7 @@ import {
  * The result is used to auto-frame the camera so any cloud (real SDSS or
  * synthetic sphere) is comfortably visible regardless of its spatial extent.
  */
-export function maxAbsCoord(cloud: PointCloud): number {
+export function maxAbsCoord(cloud: GalaxyCatalog): number {
   let m = 0;
   for (let i = 0; i < cloud.positions.length; i++) {
     const v = Math.abs(cloud.positions[i]!);
@@ -115,7 +115,7 @@ export function niceRound(x: number): number {
  * falls back to its generic layout until the next hover triggers a rebuild.
  */
 export function buildPointInfo(
-  cloud: PointCloud,
+  cloud: GalaxyCatalog,
   idx: number,
   source: Source,
   famousMeta?: readonly FamousMetaEntry[],

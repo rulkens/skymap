@@ -22,7 +22,7 @@ import {
   niceRound,
 } from '../../../../src/services/engine/helpers/pointInfoBuilder';
 import { Source } from '../../../../src/data/sources';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import { cartesianToRaDecZ } from '../../../../src/utils/math/cartesianToRaDecZ';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
@@ -30,12 +30,12 @@ import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaE
 // ─── Test helpers ───────────────────────────────────────────────────────────
 
 /**
- * Build a synthetic `PointCloud` of `count` rows, all zeroed except objIDs
+ * Build a synthetic `GalaxyCatalog` of `count` rows, all zeroed except objIDs
  * (sequential 1..N so catalogUrl is well-defined for SDSS rows).  Mirrors
  * the helper in `tests/services/gpu/computeSchechterRatios.test.ts` so future
  * readers can copy-paste between test files without pattern-matching surprises.
  */
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   return {
     count,
     objIDs: BigUint64Array.from({ length: count }, (_, i) => BigInt(i + 1)),
@@ -129,7 +129,7 @@ describe('maxAbsCoord', () => {
  * each `it()` because most tests only care about the round-trip behaviour
  * (RA/Dec recovered from xyz), not the input → xyz conversion itself.
  */
-function setPosition(cloud: PointCloud, idx: number, x: number, y: number, z: number): void {
+function setPosition(cloud: GalaxyCatalog, idx: number, x: number, y: number, z: number): void {
   cloud.positions[idx * 3 + 0] = x;
   cloud.positions[idx * 3 + 1] = y;
   cloud.positions[idx * 3 + 2] = z;

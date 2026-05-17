@@ -32,7 +32,7 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';

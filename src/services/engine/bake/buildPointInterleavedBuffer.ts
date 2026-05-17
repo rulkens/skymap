@@ -22,7 +22,7 @@
  *
  * ### Why each upload spawns a fresh worker
  *
- * Structured-clone of a `PointCloud` with a `BigUint64Array` of object IDs
+ * Structured-clone of a `GalaxyCatalog` with a `BigUint64Array` of object IDs
  * *cannot* be transferred wholesale — the spec only allows ArrayBuffer +
  * ImageBitmap + a few others, and BigInt typed arrays are not on the list.
  * The caller (`pointRenderer.defaultWorkerRunner`) slices each typed
@@ -150,7 +150,7 @@ export function buildPointInterleavedBuffer(
   //
   // The shader's intensity formula `clamp((22 - mag) / 8, 0.05, 1.0)` is
   // tuned for SDSS-g where the typical apparent magnitude range is 14–22.
-  // But our PointCloud stores `magG` from whichever band the source parser
+  // But our GalaxyCatalog stores `magG` from whichever band the source parser
   // put there:
   //
   //   - SDSS  → real g-band  (range ~14–22)

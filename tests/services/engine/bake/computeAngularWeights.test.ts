@@ -16,9 +16,9 @@ import { describe, it, expect } from 'vitest';
 import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
 import { Source } from '../../../../src/data/sources';
 import { raDecZToCartesian } from '../../../../src/utils/math';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 
-function emptyCloud(count: number): PointCloud {
+function emptyCloud(count: number): GalaxyCatalog {
   return {
     count,
     objIDs: BigUint64Array.from({ length: count }, (_, i) => BigInt(i + 1)),
@@ -40,7 +40,7 @@ function emptyCloud(count: number): PointCloud {
  * lines up with whatever cosmology the renderer uses — matters because the
  * helper inverts the same transform via `cartesianToRaDecZ`.
  */
-function setPos(cloud: PointCloud, i: number, ra: number, dec: number, z: number): void {
+function setPos(cloud: GalaxyCatalog, i: number, ra: number, dec: number, z: number): void {
   const [x, y, zc] = raDecZToCartesian(ra, dec, z);
   cloud.positions[i * 3 + 0] = x;
   cloud.positions[i * 3 + 1] = y;

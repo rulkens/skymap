@@ -1,16 +1,16 @@
 /**
- * PointCloud — the single renderer-ready data shape shared by the synthetic
+ * GalaxyCatalog — the single renderer-ready data shape shared by the synthetic
  * generator, the .bin loader, and the GPU upload path. Uses a struct-of-arrays
  * layout so each typed array can be passed straight to `writeBuffer`.
  */
 
 /**
- * A point cloud in renderer-ready layout — a "struct of arrays" rather than
+ * A galaxy catalog in renderer-ready layout — a "struct of arrays" rather than
  * an array of objects.
  *
  * Why SoA? Two reasons:
  *   1. Float32Array (and BigUint64Array) map directly onto GPU buffers via
- *      `device.queue.writeBuffer`, no per-point object allocation or copy work.
+ *      `device.queue.writeBuffer`, no per-galaxy object allocation or copy work.
  *   2. CPUs and GPUs both prefer contiguous typed memory; a million `{x,y,z}`
  *      JS objects would blow up the heap and stall on garbage collection.
  *
@@ -23,8 +23,8 @@
  * All distance units are megaparsecs (Mpc) — the natural unit at SDSS scales.
  * 1 Mpc ≈ 3.26 million light-years.
  */
-export type PointCloud = {
-  /** Number of points. All typed arrays below derive their length from this. */
+export type GalaxyCatalog = {
+  /** Number of galaxies. All typed arrays below derive their length from this. */
   count: number;
 
   /**
@@ -49,7 +49,7 @@ export type PointCloud = {
   positions: Float32Array;
 
   /**
-   * SDSS u-band (ultraviolet) model magnitude per point — length === count.
+   * SDSS u-band (ultraviolet) model magnitude per galaxy — length === count.
    *
    * Astronomical magnitude is a logarithmic, *inverted* brightness scale:
    * smaller numbers = brighter objects. Combined with magG, the u−g color
@@ -59,7 +59,7 @@ export type PointCloud = {
   magU: Float32Array;
 
   /**
-   * SDSS g-band (green) model magnitude per point — length === count.
+   * SDSS g-band (green) model magnitude per galaxy — length === count.
    *
    * The g-band is the primary brightness indicator used by the renderer.
    * Range in the SDSS main sample is roughly 14 (brightest) to 22 (faintest).
@@ -67,7 +67,7 @@ export type PointCloud = {
   magG: Float32Array;
 
   /**
-   * SDSS r-band (red) model magnitude per point — length === count.
+   * SDSS r-band (red) model magnitude per galaxy — length === count.
    *
    * Typically ≈0.3–1.3 mag fainter than g (i.e. numerically smaller than g
    * since magnitudes are inverted). Used for future multi-band color analysis.
@@ -75,7 +75,7 @@ export type PointCloud = {
   magR: Float32Array;
 
   /**
-   * SDSS i-band (near-infrared) model magnitude per point — length === count.
+   * SDSS i-band (near-infrared) model magnitude per galaxy — length === count.
    *
    * Typically ≈0.0–0.6 mag fainter than r. Useful for stellar population
    * diagnostics at low redshift.
@@ -83,7 +83,7 @@ export type PointCloud = {
   magI: Float32Array;
 
   /**
-   * SDSS z-band (far near-infrared) model magnitude per point — length === count.
+   * SDSS z-band (far near-infrared) model magnitude per galaxy — length === count.
    *
    * Typically ≈0.0–0.4 mag fainter than i. The reddest of the five standard
    * SDSS photometric bands.
@@ -103,7 +103,7 @@ export type PointCloud = {
    * build pipeline normally fills every entry — either with a real
    * cross-matched value, or with a deterministic fallback — but the binary
    * format itself preserves NaN faithfully so the encoder/decoder remain
-   * pure and unit-testable independent of how the cloud was populated.
+   * pure and unit-testable independent of how the catalog was populated.
    */
   axisRatio: Float32Array;
 
@@ -131,7 +131,7 @@ export type PointCloud = {
    * decoded value here — the renderer multiplies and divides by this
    * field every frame and a NaN would turn the entire billboard black.
    * The encoder still preserves NaN bit-for-bit (it's a pure function
-   * of the input cloud), but the pipeline never produces a NaN entry.
+   * of the input catalog), but the pipeline never produces a NaN entry.
    */
   diameterKpc: Float32Array;
 };

@@ -12,7 +12,7 @@
  * field handle.
  *
  * v1 files are rejected outright with a "regenerate" hint — same precedent
- * as the PointCloud and Filament decoders.  Operators run `npm run
+ * as the GalaxyCatalog and Filament decoders.  Operators run `npm run
  * build-cf4-density` (or the relevant builder) and re-sync R2 in lockstep
  * with the code deploy.
  *
@@ -190,7 +190,7 @@ export function decodeScalarField(buf: ArrayBuffer): ScalarCube {
   }
   // Copy the voxels into a freshly-owned buffer so the caller can hold
   // it independent of the underlying ArrayBuffer's lifetime (matches the
-  // PointCloud decoder's contract).
+  // GalaxyCatalog decoder's contract).
   const voxels = new Uint16Array(expectedVoxels);
   voxels.set(new Uint16Array(buf, SCFD_HEADER_BYTES, expectedVoxels));
 

@@ -18,7 +18,7 @@
  */
 
 import { Source } from '../../../data/sources';
-import type { PointCloud } from '../../../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ThumbnailInstance } from '../../../@types/rendering/ThumbnailInstance';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';

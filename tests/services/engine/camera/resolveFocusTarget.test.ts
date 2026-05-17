@@ -5,20 +5,20 @@
  *
  * Fixtures here use 3-row synthetic clouds with hand-set objIDs and
  * positions.  The resolver only reads `count`, `objIDs`, and `positions`,
- * so we cast partial cloud objects to `PointCloud` rather than filling
+ * so we cast partial cloud objects to `GalaxyCatalog` rather than filling
  * every field.  This keeps each test compact and the contract under
- * test obvious — anything else in `PointCloud` is irrelevant to the
+ * test obvious — anything else in `GalaxyCatalog` is irrelevant to the
  * resolver and a real cloud's bytes would only obscure that.
  */
 import { describe, it, expect } from 'vitest';
 import { resolveFocusTarget } from '../../../../src/services/engine/camera/resolveFocusTarget';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import { Source } from '../../../../src/data/sources';
 import type { FamousMetaEntry } from '../../../../src/@types/loading/FamousMetaEntry';
 import { raDecZToCartesian } from '../../../../src/utils/math/raDecZToCartesian';
 
 /**
- * Build a minimum-viable `PointCloud` for resolver tests.  The resolver
+ * Build a minimum-viable `GalaxyCatalog` for resolver tests.  The resolver
  * only reads `count`, `objIDs`, and `positions`; every other field is
  * unused, so we cast through `unknown` rather than filling them with
  * pointless zeros.
@@ -27,12 +27,12 @@ function makeCloud(
   count: number,
   objIDs: bigint[],
   positions: number[],
-): PointCloud {
+): GalaxyCatalog {
   return {
     count,
     objIDs: BigUint64Array.from(objIDs),
     positions: Float32Array.from(positions),
-  } as unknown as PointCloud;
+  } as unknown as GalaxyCatalog;
 }
 
 /**

@@ -26,7 +26,7 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
@@ -191,7 +191,7 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeCloud(count = 1): PointCloud {
+function makeCloud(count = 1): GalaxyCatalog {
   const fill = (v: number) => {
     const a = new Float32Array(count);
     a.fill(v);

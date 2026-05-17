@@ -10,13 +10,13 @@
  */
 
 import type { FocusTarget } from './FocusTarget';
-import type { PointCloud } from '../data/PointCloud';
+import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { Source } from '../../data/sources';
 import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
 
 export type ResolverInput = {
   target: FocusTarget;
-  clouds: { source: Source; cloud: PointCloud }[];
+  clouds: { source: Source; cloud: GalaxyCatalog }[];
   famousMeta: readonly FamousMetaEntry[];
   aliasMap: ReadonlyMap<bigint, readonly string[]>;
 };

@@ -1,11 +1,11 @@
 /**
- * Binary on-disk format for a `PointCloud` — version 4.
+ * Binary on-disk format for a `GalaxyCatalog` — version 4.
  *
  * What changed in v4?  We added an `f32 diameterKpc` slot at offset 48 of
- * each per-point record, growing the per-point footprint from 56 bytes to
+ * each per-galaxy record, growing the per-galaxy footprint from 56 bytes to
  * 64 bytes.  The trailing padding shrinks from 8 bytes (v3) to 12 bytes
  * (v4) — wait, that grew, because we added 4 bytes of payload but bumped
- * the record size by a full 16-byte alignment quantum to keep the per-point
+ * the record size by a full 16-byte alignment quantum to keep the per-galaxy
  * record on a 16-byte boundary (so the buffer remains usable as a WebGPU
  * uniform/storage-buffer payload without restructuring).
  *
@@ -26,15 +26,19 @@
  * finite value upstream; if a corrupted .bin ever delivered NaN, that's a
  * logged warning, not a malformed format.
  *
+ * The on-disk magic ("SKMP") and version are unchanged by the
+ * PointCloud → GalaxyCatalog rename — this is purely a code rename, not
+ * a format bump. Existing .bin files continue to load.
+ *
  * Layout (little-endian):
  *
  *     ── HEADER (16 bytes) ──────────────────────────────────────────────────
  *     0       4     magic    = "SKMP" (0x504d4b53)
  *     4       4     version  = 4 (uint32)
- *     8       4     count    = number of points (uint32)
+ *     8       4     count    = number of galaxies (uint32)
  *     12      4     reserved = 0
  *
- *     ── PER-POINT RECORD (64 bytes) ────────────────────────────────────────
+ *     ── PER-GALAXY RECORD (64 bytes) ───────────────────────────────────────
  *     0       8     objID            (uint64)
  *     8       4     x                (float32, Mpc)
  *     12      4     y                (float32)
@@ -52,7 +56,7 @@
  * Total file size: 16 + count × 64.
  */
 
-import type { PointCloud } from '../@types/data/PointCloud';
+import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
 
 /**
  * "SKMP" as a little-endian uint32. Reading 4 bytes at offset 0 with
@@ -68,24 +72,24 @@ const VERSION = 4;
 const HEADER_BYTES = 16;
 
 /**
- * Per-point payload in bytes.
+ * Per-galaxy payload in bytes.
  *
  * Breakdown: 8 (objID) + 4×3 (xyz) + 4×5 (5 photometric bands)
  *          + 4×2 (axisRatio + positionAngleDeg) + 4 (diameterKpc)
  *          + 12 (tail padding) = 64.
  * 64 is a multiple of 16, satisfying the GPU-alignment note above.
  */
-const BYTES_PER_POINT = 64;
+const BYTES_PER_GALAXY = 64;
 
 /**
- * Encode a `PointCloud` to an `ArrayBuffer` ready to write to disk
+ * Encode a `GalaxyCatalog` to an `ArrayBuffer` ready to write to disk
  * (or send over `fetch`/the network). Pure — no I/O.
  *
- * Throws if any typed array in `cloud` isn't sized consistently with
- * `cloud.count`. That's a programming error in the caller, so we fail
+ * Throws if any typed array in `catalog` isn't sized consistently with
+ * `catalog.count`. That's a programming error in the caller, so we fail
  * loud rather than producing a corrupt file.
  */
-export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
+export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
   const {
     count,
     objIDs,
@@ -98,7 +102,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
     axisRatio,
     positionAngleDeg,
     diameterKpc,
-  } = cloud;
+  } = catalog;
   if (objIDs.length !== count) throw new Error('objIDs length mismatch');
   if (positions.length !== count * 3) throw new Error('positions length mismatch');
   if (magU.length !== count) throw new Error('magU length mismatch');
@@ -110,8 +114,8 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
   if (positionAngleDeg.length !== count) throw new Error('positionAngleDeg length mismatch');
   if (diameterKpc.length !== count) throw new Error('diameterKpc length mismatch');
 
-  // Allocate exactly the bytes we need: header + per-point records.
-  const buf = new ArrayBuffer(HEADER_BYTES + count * BYTES_PER_POINT);
+  // Allocate exactly the bytes we need: header + per-galaxy records.
+  const buf = new ArrayBuffer(HEADER_BYTES + count * BYTES_PER_GALAXY);
 
   // DataView gives us byte-precise control with explicit endianness.
   // The `true` flag on every setter means "write little-endian".
@@ -121,7 +125,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
   dv.setUint32(8, count, true);
   dv.setUint32(12, 0, true); // reserved
 
-  // Write each point's record. We use DataView.setBigUint64 for the 64-bit
+  // Write each galaxy's record. We use DataView.setBigUint64 for the 64-bit
   // objID (the only field that won't fit in a Float32), then a Float32Array
   // view for the bulk of the floats — cheaper than per-field setFloat32.
   //
@@ -135,14 +139,14 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
 
   for (let i = 0; i < count; i++) {
     // Byte offset of this record's start within the buffer.
-    const byteBase = HEADER_BYTES + i * BYTES_PER_POINT;
+    const byteBase = HEADER_BYTES + i * BYTES_PER_GALAXY;
 
     // objID: 64-bit unsigned integer — must use DataView, not Float32Array.
     dv.setBigUint64(byteBase + 0, objIDs[i]!, true);
 
     // Float fields: index into the Float32Array view using the byte offset
     // divided by 4 (Float32 = 4 bytes). byteBase is always a multiple of 8
-    // (HEADER_BYTES=16, BYTES_PER_POINT=64, both multiples of 8), so
+    // (HEADER_BYTES=16, BYTES_PER_GALAXY=64, both multiples of 8), so
     // (byteBase + 8) is always a multiple of 4 — the Float32Array is aligned.
     const f = (byteBase + 8) / 4; // float index for the first float field (x)
     floatView[f + 0] = positions[i * 3 + 0]!;
@@ -164,7 +168,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
 
 /**
  * Decode an `ArrayBuffer` (e.g. from `await fetch(...).arrayBuffer()`) back
- * into a `PointCloud`. Pure — no I/O.
+ * into a `GalaxyCatalog`. Pure — no I/O.
  *
  * Validates magic and version. Rejects v1, v2, and v3 files with a message
  * instructing the user to regenerate. Throws on other malformed input rather
@@ -174,7 +178,7 @@ export function encodePointCloud(cloud: PointCloud): ArrayBuffer {
  * Slight memory overhead, but lets the caller keep the result after the input
  * buffer is GC'd, and keeps the SoA layout clean for the GPU upload path.
  */
-export function decodePointCloud(buf: ArrayBuffer): PointCloud {
+export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
   const dv = new DataView(buf);
   if (dv.getUint32(0, true) !== MAGIC) throw new Error('bad magic — not a SKMP file');
 
@@ -207,7 +211,7 @@ export function decodePointCloud(buf: ArrayBuffer): PointCloud {
   const floatView = new Float32Array(buf);
 
   for (let i = 0; i < count; i++) {
-    const byteBase = HEADER_BYTES + i * BYTES_PER_POINT;
+    const byteBase = HEADER_BYTES + i * BYTES_PER_GALAXY;
 
     // objID: 64-bit unsigned — must read via DataView.
     objIDs[i] = dv.getBigUint64(byteBase + 0, true);
@@ -244,25 +248,25 @@ export function decodePointCloud(buf: ArrayBuffer): PointCloud {
 }
 
 /**
- * Build a zero-count `PointCloud` with all typed-array slots empty.
+ * Build a zero-count `GalaxyCatalog` with all typed-array slots empty.
  *
  * Used by the asset-loading subsystem's "excluded tier" path: when
  * `TIER_TARGETS[tier][source] === 0` (e.g. SDSS at `small`), the fetcher
  * short-circuits and returns this shape rather than attempting a fetch.
  *
  * Why an explicit helper rather than letting each caller hand-roll one?
- * The PointCloud type has eleven fields; two of them are uncommon typed
+ * The GalaxyCatalog type has eleven fields; two of them are uncommon typed
  * arrays (`BigUint64Array` for `objIDs`, `Float32Array * 3` for
  * `positions`). Centralising the construction here keeps every consumer
  * honest with the current field set — the moment a new field is added to
- * `PointCloud`, this helper fails to compile and the maintainer is forced
+ * `GalaxyCatalog`, this helper fails to compile and the maintainer is forced
  * to extend it, which is exactly the right place to make that decision.
  *
  * Downstream `pointRenderer.upload` already treats `count === 0` as
- * "free this source's VRAM", so the empty cloud composes cleanly with
+ * "free this source's VRAM", so the empty catalog composes cleanly with
  * that contract — no special-cased "skip" state is needed in the slot.
  */
-export function emptyPointCloud(): PointCloud {
+export function emptyGalaxyCatalog(): GalaxyCatalog {
   return {
     count: 0,
     objIDs: new BigUint64Array(0),

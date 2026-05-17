@@ -25,7 +25,7 @@
  * helper converts to equatorial Cartesian Mpc with the standard
  * right-handed convention: +X toward RA=0/Dec=0 (vernal equinox),
  * +Y toward RA=6h/Dec=0, +Z toward Dec=+90° (north celestial pole).
- * This matches the frame used by every PointCloud and the filament
+ * This matches the frame used by every GalaxyCatalog and the filament
  * binary, so anchor positions drop directly into world-space.
  *
  * Distances are best-effort consensus values from NED + simbad; small

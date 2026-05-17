@@ -1,6 +1,6 @@
 /**
  * CloudSource — a string discriminator used by the engine to tag the
- * "what file did we load?" identity of a per-survey PointCloud.  Mirrors
+ * "what file did we load?" identity of a per-survey GalaxyCatalog.  Mirrors
  * the union accepted by `EngineStatus.source` (the user-facing status
  * the React layer renders), so the engine can plumb the same value
  * through both `firstCloud.cloudSource` and `onStatusChange({kind:

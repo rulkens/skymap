@@ -4,12 +4,12 @@
  * Two scenarios are covered here:
  *
  *   1. Excluded-tier short-circuit: TIER_TARGETS[tier][source] === 0 must
- *      yield an empty PointCloud and MUST NOT touch the network.
+ *      yield an empty GalaxyCatalog and MUST NOT touch the network.
  *   2. Happy path: when target is non-zero (or absent — meaning "no cap")
  *      the fetcher must call fetch and decode the resulting buffer.
  *
  * Decode-correctness is exercised exhaustively in
- * `tests/data/pointCloudFormat.test.ts`; here we only assert that fetch is
+ * `tests/galaxyCatalogFormat.test.ts`; here we only assert that fetch is
  * actually invoked and that a header-only v4 .bin round-trips to a
  * count=0 cloud.
  */
@@ -42,7 +42,7 @@ describe('pointCloudFetcher', () => {
 
   it('fetches and decodes when target is non-zero', async () => {
     // Build a minimal valid v4 .bin: header only, count=0.
-    // Header layout (see src/data/pointCloudFormat.ts):
+    // Header layout (see src/data/galaxyCatalogFormat.ts):
     //   0..3  magic    = "SKMP" little-endian uint32 (0x504d4b53)
     //   4..7  version  = 4
     //   8..11 count    = 0

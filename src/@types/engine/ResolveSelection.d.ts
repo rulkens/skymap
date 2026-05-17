@@ -1,5 +1,5 @@
 import type { Source } from '../../data/sources';
-import type { PointCloud } from '../data/PointCloud';
+import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 
 /**
  * Hook the engine provides to the resolver: given a (source, localIdx)
@@ -15,4 +15,4 @@ import type { PointCloud } from '../data/PointCloud';
  */
 export type ResolveSelection = (
   selection: { source: Source; localIdx: number },
-) => { source: Source; localIdx: number; cloud: PointCloud } | null;
+) => { source: Source; localIdx: number; cloud: GalaxyCatalog } | null;

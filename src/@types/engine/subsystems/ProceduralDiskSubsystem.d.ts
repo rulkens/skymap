@@ -14,14 +14,14 @@
  */
 
 import type { Destroyable } from '../../rendering/Destroyable';
-import type { PointCloud } from '../../data/PointCloud';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { ProceduralDiskInstance } from '../../rendering/ProceduralDiskInstance';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { Source } from '../../../data/sources';
 
 export type ProceduralDiskFrameInput = {
   readonly cam: OrbitCamera;
-  readonly clouds: ReadonlyMap<Source, PointCloud>;
+  readonly clouds: ReadonlyMap<Source, GalaxyCatalog>;
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
 };

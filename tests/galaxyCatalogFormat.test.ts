@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { encodePointCloud, decodePointCloud } from '../src/data/pointCloudFormat';
-import type { PointCloud } from '../src/@types/data/PointCloud';
+import { encodeGalaxyCatalog, decodeGalaxyCatalog } from '../src/data/galaxyCatalogFormat';
+import type { GalaxyCatalog } from '../src/@types/data/GalaxyCatalog';
 
 /**
- * Build a minimal 2-point v4 PointCloud for use across multiple tests.
+ * Build a minimal 2-point v4 GalaxyCatalog for use across multiple tests.
  *
  * The two objIDs are chosen to exercise 64-bit precision: 1234567890123456789n
  * exceeds Number.MAX_SAFE_INTEGER (2^53 − 1 ≈ 9 × 10^15) so any accidental
  * conversion to `number` would silently lose the low-order bits.
  */
-function makeCloud(): PointCloud {
+function makeCloud(): GalaxyCatalog {
   return {
     count: 2,
     objIDs: new BigUint64Array([1234567890123456789n, 2n]),
@@ -25,11 +25,11 @@ function makeCloud(): PointCloud {
   };
 }
 
-describe('point cloud binary format', () => {
-  it('round-trips a small cloud with all v3 fields', () => {
+describe('galaxy catalog binary format', () => {
+  it('round-trips a small catalog with all v3 fields', () => {
     const original = makeCloud();
-    const buf = encodePointCloud(original);
-    const decoded = decodePointCloud(buf);
+    const buf = encodeGalaxyCatalog(original);
+    const decoded = decodeGalaxyCatalog(buf);
 
     expect(decoded.count).toBe(2);
 
@@ -56,24 +56,24 @@ describe('point cloud binary format', () => {
   it('rejects wrong magic', () => {
     // An all-zero ArrayBuffer will have magic = 0 ≠ MAGIC.
     const buf = new ArrayBuffer(16);
-    expect(() => decodePointCloud(buf)).toThrow(/magic/);
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/magic/);
   });
 
   it('rejects unsupported version with a helpful message', () => {
     const original = makeCloud();
-    const buf = encodePointCloud(original);
+    const buf = encodeGalaxyCatalog(original);
     // Overwrite the version field (offset 4) with an arbitrary bad value.
     new DataView(buf).setUint32(4, 99, true);
-    expect(() => decodePointCloud(buf)).toThrow(/version/);
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/version/);
     // The message must point users at the modern build pipeline so they know
     // exactly which command will produce a v3-compatible bin.
-    expect(() => decodePointCloud(buf)).toThrow(/regenerate/);
-    expect(() => decodePointCloud(buf)).toThrow(/build-all/);
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/build-all/);
   });
 
   it('encoded byte length matches 16 + count * 64', () => {
-    const buf = encodePointCloud(makeCloud());
-    // v4: HEADER_BYTES=16, BYTES_PER_POINT=64, count=2 → 16 + 2*64 = 144.
+    const buf = encodeGalaxyCatalog(makeCloud());
+    // v4: HEADER_BYTES=16, BYTES_PER_GALAXY=64, count=2 → 16 + 2*64 = 144.
     expect(buf.byteLength).toBe(16 + 2 * 64);
   });
 });
@@ -83,7 +83,7 @@ describe('point cloud binary format', () => {
  * cross-version rejection. Kept in a separate `describe` so the original
  * round-trip suite stays focused on the existing fields.
  */
-function makeOrientCloud(count: number, fillNaN = false): PointCloud {
+function makeOrientCloud(count: number, fillNaN = false): GalaxyCatalog {
   const ar = new Float32Array(count);
   const pa = new Float32Array(count);
   for (let i = 0; i < count; i++) {
@@ -108,10 +108,10 @@ function makeOrientCloud(count: number, fillNaN = false): PointCloud {
   };
 }
 
-describe('pointCloudFormat v4 (orientation round-trip)', () => {
+describe('galaxyCatalogFormat v4 (orientation round-trip)', () => {
   it('round-trips finite axisRatio and positionAngleDeg', () => {
     const cloud = makeOrientCloud(4, false);
-    const decoded = decodePointCloud(encodePointCloud(cloud));
+    const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cloud));
     expect(Array.from(decoded.axisRatio)).toEqual(Array.from(cloud.axisRatio));
     expect(Array.from(decoded.positionAngleDeg)).toEqual(Array.from(cloud.positionAngleDeg));
   });
@@ -121,7 +121,7 @@ describe('pointCloudFormat v4 (orientation round-trip)', () => {
     // it bit-for-bit through the Float32Array view; toEqual won't help us
     // here because NaN !== NaN, so we test via Number.isNaN on each slot.
     const cloud = makeOrientCloud(2, true);
-    const decoded = decodePointCloud(encodePointCloud(cloud));
+    const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cloud));
     expect(Number.isNaN(decoded.axisRatio[0])).toBe(true);
     expect(Number.isNaN(decoded.axisRatio[1])).toBe(true);
     expect(Number.isNaN(decoded.positionAngleDeg[0])).toBe(true);
@@ -136,7 +136,7 @@ describe('pointCloudFormat v4 (orientation round-trip)', () => {
     dv.setUint32(0, 0x504d4b53, true);
     dv.setUint32(4, 2, true);
     dv.setUint32(8, 0, true);
-    expect(() => decodePointCloud(buf)).toThrow(/regenerate/);
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
   });
 
   it('rejects v1 with regenerate message', () => {
@@ -146,7 +146,7 @@ describe('pointCloudFormat v4 (orientation round-trip)', () => {
     dv.setUint32(0, 0x504d4b53, true);
     dv.setUint32(4, 1, true);
     dv.setUint32(8, 0, true);
-    expect(() => decodePointCloud(buf)).toThrow(/regenerate/);
+    expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
   });
 });
 
@@ -155,9 +155,9 @@ describe('pointCloudFormat v4 (orientation round-trip)', () => {
  * byte-length verification, cross-version rejection (v1/v2/v3 all rejected),
  * and length-mismatch guard on encode.
  */
-describe('pointCloudFormat v4', () => {
+describe('galaxyCatalogFormat v4', () => {
   it('round-trips diameterKpc finite values', () => {
-    const cloud: PointCloud = {
+    const cloud: GalaxyCatalog = {
       count: 2,
       objIDs: new BigUint64Array([1n, 2n]),
       positions: new Float32Array([1, 2, 3, 4, 5, 6]),
@@ -170,12 +170,12 @@ describe('pointCloudFormat v4', () => {
       positionAngleDeg: new Float32Array([45, 90]),
       diameterKpc: new Float32Array([30, 12.5]),
     };
-    const decoded = decodePointCloud(encodePointCloud(cloud));
+    const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cloud));
     expect(Array.from(decoded.diameterKpc)).toEqual([30, 12.5]);
   });
 
   it('round-trips NaN sentinel in diameterKpc', () => {
-    const cloud: PointCloud = {
+    const cloud: GalaxyCatalog = {
       count: 1,
       objIDs: new BigUint64Array([1n]),
       positions: new Float32Array([1, 2, 3]),
@@ -188,12 +188,12 @@ describe('pointCloudFormat v4', () => {
       positionAngleDeg: new Float32Array([45]),
       diameterKpc: new Float32Array([NaN]),
     };
-    const decoded = decodePointCloud(encodePointCloud(cloud));
+    const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cloud));
     expect(Number.isNaN(decoded.diameterKpc[0])).toBe(true);
   });
 
-  it('produces a 64-byte-per-point file (header 16 + 1 point × 64 = 80)', () => {
-    const cloud: PointCloud = {
+  it('produces a 64-byte-per-galaxy file (header 16 + 1 galaxy × 64 = 80)', () => {
+    const cloud: GalaxyCatalog = {
       count: 1,
       objIDs: new BigUint64Array([1n]),
       positions: new Float32Array([1, 2, 3]),
@@ -206,7 +206,7 @@ describe('pointCloudFormat v4', () => {
       positionAngleDeg: new Float32Array([45]),
       diameterKpc: new Float32Array([30]),
     };
-    expect(encodePointCloud(cloud).byteLength).toBe(80);
+    expect(encodeGalaxyCatalog(cloud).byteLength).toBe(80);
   });
 
   it('rejects v1, v2, AND v3 with the same regenerate message', () => {
@@ -217,12 +217,12 @@ describe('pointCloudFormat v4', () => {
       dv.setUint32(4, version, true);
       dv.setUint32(8, 0, true);
       dv.setUint32(12, 0, true);
-      expect(() => decodePointCloud(buf)).toThrow(/regenerate/i);
+      expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/i);
     }
   });
 
   it('throws when diameterKpc length mismatches count', () => {
-    const cloud: PointCloud = {
+    const cloud: GalaxyCatalog = {
       count: 2,
       objIDs: new BigUint64Array([1n, 2n]),
       positions: new Float32Array([1, 2, 3, 4, 5, 6]),
@@ -235,6 +235,6 @@ describe('pointCloudFormat v4', () => {
       positionAngleDeg: new Float32Array([45, 90]),
       diameterKpc: new Float32Array([30]),
     };
-    expect(() => encodePointCloud(cloud)).toThrow(/diameterKpc length mismatch/);
+    expect(() => encodeGalaxyCatalog(cloud)).toThrow(/diameterKpc length mismatch/);
   });
 });

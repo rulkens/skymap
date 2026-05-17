@@ -20,9 +20,9 @@
 import { describe, expect, it } from 'vitest';
 import { computeAngularWeights } from '../../../../src/services/engine/bake/computeAngularWeights';
 import { Source } from '../../../../src/data/sources';
-import type { PointCloud } from '../../../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 
-function syntheticCloud(count: number, seedOffset: number): PointCloud {
+function syntheticCloud(count: number, seedOffset: number): GalaxyCatalog {
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     // Deterministic spread across the unit sphere at varying radii so the

@@ -134,7 +134,7 @@ export type ParsedRecord = {
    * near-position search.
    *
    * Marked optional + transient: it's not part of the runtime
-   * `PointCloud` binary format, and parsers that have no use for it
+   * `GalaxyCatalog` binary format, and parsers that have no use for it
    * (SDSS, GLADE) simply don't set the field.  The build pipeline reads
    * it once during the 2MRS post-processing pass, then drops it on the
    * floor when it materialises records into the SoA cloud.

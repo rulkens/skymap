@@ -15,7 +15,7 @@
 
 import type { mat4 } from 'gl-matrix';
 import type { Source } from '../../data/sources';
-import type { PointCloud } from '../data/PointCloud';
+import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { PointDrawSettings } from './PointDrawSettings';
 
 export type PointRenderer = {
@@ -25,11 +25,11 @@ export type PointRenderer = {
    */
   readonly label: string;
   /**
-   * Pack a `PointCloud` into an interleaved GPU vertex buffer for the
+   * Pack a `GalaxyCatalog` into an interleaved GPU vertex buffer for the
    * given source.  Replaces any previous buffer for that source.  See
    * the factory body for the off-thread bake / race-condition rationale.
    */
-  upload(source: Source, cloud: PointCloud): Promise<void>;
+  upload(source: Source, cloud: GalaxyCatalog): Promise<void>;
   /**
    * Remove a source's GPU vertex buffer and reclaim its VRAM.  No-op
    * if the source was never uploaded.
@@ -39,7 +39,7 @@ export type PointRenderer = {
    * Install the upload-tail callback used by the bias-correction
    * subsystem.  Pass `null` to detach.  Idempotent.
    */
-  setBiasUploadCallback(cb: ((source: Source, cloud: PointCloud) => void) | null): void;
+  setBiasUploadCallback(cb: ((source: Source, cloud: GalaxyCatalog) => void) | null): void;
   /** Install the unload-tail callback for the bias-correction subsystem. */
   setBiasUnloadCallback(cb: ((source: Source) => void) | null): void;
   /** Splice per-row Schechter ratios into slot 10 of the source's interleaved mirror. */

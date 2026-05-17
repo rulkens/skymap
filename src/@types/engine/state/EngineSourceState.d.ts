@@ -12,10 +12,10 @@
  *   - `lodMode` — decides who owns the mask each frame.  In `'auto'` the
  *                  engine recomputes it via `autoLodMask(camera.distance)`;
  *                  in `'manual'` whatever was last assigned stays put.
- *   - `clouds` — CPU-side mirror of every uploaded `PointCloud`, keyed by
+ *   - `clouds` — CPU-side mirror of every uploaded `GalaxyCatalog`, keyed by
  *                 `Source`.  Required for picking / hover (resolving a
  *                 GPU instance index back into PointInfo) and for the
- *                 cross-cloud framing snapshot.
+ *                 cross-catalog framing snapshot.
  *   - `famousMeta` / `famousXrefs` — optional sidecars that enrich the
  *                                     InfoCard text for the Famous catalog.
  *                                     Empty until the fetch resolves;
@@ -31,7 +31,7 @@
  */
 
 import type { LodMode } from '../../data/LodMode';
-import type { PointCloud } from '../../data/PointCloud';
+import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Tier } from '../../data/Tier';
 import type { Source } from '../../../data/sources';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
@@ -40,7 +40,7 @@ import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 export type EngineSourceState = {
   visibleMask: number;
   lodMode: LodMode;
-  clouds: Map<Source, PointCloud>;
+  clouds: Map<Source, GalaxyCatalog>;
   famousMeta: FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
   /**

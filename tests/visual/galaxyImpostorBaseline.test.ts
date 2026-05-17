@@ -25,7 +25,7 @@ import { Source } from '../../src/data/sources';
 import { createGalaxyAtlasSubsystem } from '../../src/services/engine/subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../../src/services/engine/subsystems/proceduralDiskSubsystem';
 import { createTexturedImpostorSubsystem } from '../../src/services/engine/subsystems/texturedImpostorSubsystem';
-import type { PointCloud } from '../../src/@types/data/PointCloud';
+import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 
 function makeFakeDevice(): GPUDevice {
@@ -39,7 +39,7 @@ function makeFakeDevice(): GPUDevice {
   return { createTexture: vi.fn(() => fakeTexture), queue } as unknown as GPUDevice;
 }
 
-function makeCloud(count: number): PointCloud {
+function makeCloud(count: number): GalaxyCatalog {
   const positions = new Float32Array(count * 3);
   for (let i = 0; i < count; i++) {
     positions[i * 3 + 0] = 10;

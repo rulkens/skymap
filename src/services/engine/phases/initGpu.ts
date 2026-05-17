@@ -261,7 +261,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // the two race-check points that fix the tier-swap stomping bug.
   //
   // Why construct here, after the renderer exists?
-  //   The commit step uploads the freshly-decoded PointCloud to
+  //   The commit step uploads the freshly-decoded GalaxyCatalog to
   //   `state.gpu.renderer`, so the renderer must be non-null at the
   //   moment commit runs.  Constructing the slots AFTER
   //   `state.gpu.renderer = renderer` in the same lexical scope
