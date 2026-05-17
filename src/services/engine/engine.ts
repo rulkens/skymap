@@ -364,6 +364,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // for the null-until-init lifecycle rationale.
       renderer: null,
       pickRenderer: null,
+      // Canonical fade + source bind-group layouts. Built once in
+      // initGpu and threaded into every renderer's createPipelineLayout
+      // so every consumer's bind groups share one layout identity. See
+      // services/gpu/bindGroupLayouts/fadeUniforms.ts for the rationale
+      // (layout:'auto' cross-pipeline trap).
+      fadeBgl: null,
+      sourceBgl: null,
       postProcess: null,
       volumeOffscreen: null,
       filamentRenderer: null,

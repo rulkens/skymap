@@ -85,6 +85,8 @@ import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/urlGate';
 import { GALAXY_CATALOG_SOURCE_REGISTRY, wireGalaxyCatalogSourceSlot } from '../wiring/galaxyCatalogSourceRegistry';
+import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
+import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -130,6 +132,13 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   resizeCanvasToDisplay(canvas);
 
   const { device, context, format } = await gpuInitGpu(canvas);
+
+  // Build the canonical fade + source bind-group layouts ONCE — every
+  // renderer pipeline below threads these into createPipelineLayout so
+  // each consumer's bind groups are valid across pipelines. See
+  // src/services/gpu/bindGroupLayouts/fadeUniforms.ts for the rationale.
+  state.gpu.fadeBgl = createFadeUniformsBgl(device);
+  state.gpu.sourceBgl = createSourceUniformsBgl(device);
 
   // ── HDR offscreen target + tone-map post-process ──────────────────
   //

@@ -138,6 +138,8 @@ describe('EngineState type', () => {
       gpu: {
         renderer: null,
         pickRenderer: null,
+        fadeBgl: null,
+        sourceBgl: null,
         postProcess: null,
         volumeOffscreen: null,
         filamentRenderer: null,
@@ -287,6 +289,8 @@ describe('EngineState type', () => {
       gpu: {
         renderer: null,
         pickRenderer: null,
+        fadeBgl: null,
+        sourceBgl: null,
         postProcess: null,
         volumeOffscreen: null,
         filamentRenderer: null,
