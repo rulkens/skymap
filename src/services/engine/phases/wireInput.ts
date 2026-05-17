@@ -410,5 +410,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     exposure: state.settings.tonemap.exposure,
     lodMode: state.sources.lodMode,
     visibleSourceMask: state.sources.visibleMask,
+    labelCategoryVisibility: state.settings.labelCategoryVisibility,
   });
 }
