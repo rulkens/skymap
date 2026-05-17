@@ -160,6 +160,7 @@ async function main(): Promise<void> {
   const metaByIdx: Array<{
     id: string;
     names: string[];
+    commonName?: string;
     description: string;
     type: string;
   }> = [];
@@ -220,7 +221,13 @@ async function main(): Promise<void> {
         : null;
     }
     xrefs[e.id] = xr;
-    metaByIdx.push({ id: e.id, names: e.names, description: e.description, type: e.type });
+    metaByIdx.push({
+      id: e.id,
+      names: e.names,
+      description: e.description,
+      type: e.type,
+      ...(e.commonName !== undefined ? { commonName: e.commonName } : {}),
+    });
     process.stderr.write(
       `  ${e.id.padEnd(12)} → ${xr ? `${xr.source}#${xr.localIdx} (${xr.distanceArcsec.toFixed(1)}\")` : 'no match'}\n`,
     );
