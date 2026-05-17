@@ -90,7 +90,7 @@ const FAMOUS_LABEL_OFFSET_FACTOR = 1.5;
  * per-POI min/max clamping here.
  */
 const FAMOUS_LABEL_REFERENCE_DIAMETER_KPC = 40;
-const FAMOUS_LABEL_REFERENCE_WORLD_EM_MPC = 0.005;
+const FAMOUS_LABEL_REFERENCE_WORLD_EM_MPC = 0.0125;
 const FAMOUS_LABEL_WORLD_EM_LOG_GAIN = 0.3; // 1 decade in diameter → ~2× in worldEm
 
 function famousLabelWorldEmMpc(diameterKpc: number): number {

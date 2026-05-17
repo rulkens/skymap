@@ -46,19 +46,19 @@ describe('buildPoisFromFamousMeta', () => {
     expect(pois[0]!.crosshairSizeMpc).toBeUndefined();
     // labelAnchorOffsetMpc = max(0.05, 1.5 * 67 / 1000) = max(0.05, 0.1005) = 0.1005
     expect(pois[0]!.labelAnchorOffsetMpc).toBeCloseTo(0.1005, 6);
-    // labelWorldEmMpc = 0.005 * 10^(0.3 * log10(67 / 40))
-    //                 = 0.005 * 10^(0.3 * log10(1.675))
-    //                 ≈ 0.005 * 1.1674 ≈ 0.005837
+    // labelWorldEmMpc = 0.0125 * 10^(0.3 * log10(67 / 40))
+    //                 = 0.0125 * 10^(0.3 * log10(1.675))
+    //                 ≈ 0.0125 * 1.1674 ≈ 0.014593
     // Use 4 decimal-place precision (±5e-5) to avoid floating-point drift.
-    expect(pois[0]!.labelWorldEmMpc).toBeCloseTo(0.005837, 4);
+    expect(pois[0]!.labelWorldEmMpc).toBeCloseTo(0.014593, 4);
     expect(pois[1]!.id).toBe('famous-m33');
     expect(pois[1]!.name).toBe('M33'); // no commonName → falls back to names[0]
     // M33 diameter 30 kpc → 1.5 * 30/1000 = 0.045, below floor 0.05 → uses floor.
     expect(pois[1]!.labelAnchorOffsetMpc).toBeCloseTo(0.05, 6);
-    // labelWorldEmMpc = 0.005 * 10^(0.3 * log10(30 / 40))
-    //                 = 0.005 * 10^(0.3 * log10(0.75))
-    //                 ≈ 0.005 * 0.9175 ≈ 0.004588
-    expect(pois[1]!.labelWorldEmMpc).toBeCloseTo(0.004588, 4);
+    // labelWorldEmMpc = 0.0125 * 10^(0.3 * log10(30 / 40))
+    //                 = 0.0125 * 10^(0.3 * log10(0.75))
+    //                 ≈ 0.0125 * 0.9175 ≈ 0.011469
+    expect(pois[1]!.labelWorldEmMpc).toBeCloseTo(0.011469, 4);
   });
 
   it('labelWorldEmMpc scales monotonically with diameter (1 kpc < 100 kpc < 5000 kpc)', () => {
