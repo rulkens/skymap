@@ -110,6 +110,7 @@ import type { FamousXrefMap } from '../../@types/loading/FamousXrefMap';
 
 import { createTweenManager } from './camera/tweenManager';
 import { createRenderScheduler } from './subsystems/renderScheduler';
+import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
@@ -516,6 +517,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // the Phase 2b "captured the shim by reference" regression that
       // broke hover-pick for one refactor cycle.
       scheduler: createRenderScheduler({ onFrame: () => frameRef.current() }),
+
+      // ── Fade registry ──────────────────────────────────────────
+      //
+      // Constructed eagerly so renderer construction in `initGpu`
+      // can register handles without a null-check. The registry is
+      // pure CPU — no GPU device needed at construction time.
+      fades: createFadeRegistry(),
 
       // The remaining subsystems land later in the IIFE once their
       // dependencies (GPU device, pickRenderer, scheduler) exist.
