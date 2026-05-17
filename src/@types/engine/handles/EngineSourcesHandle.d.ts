@@ -15,8 +15,13 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 export type EngineSourcesHandle = {
   /** Switch between 'auto' and 'manual' LOD modes. */
   setLodMode: (mode: LodMode) => void;
-  /** Toggle visibility of one survey; implicitly switches LOD to 'manual'. */
-  setVisible: (source: Source, visible: boolean) => void;
+  /**
+   * Toggle visibility of one survey; implicitly switches LOD to 'manual'.
+   * Returns a Promise that resolves when the fade animation completes.
+   * Callers that don't need to await the animation should fire-and-forget:
+   * `void handle.sources.setVisible(s, v)`.
+   */
+  setVisible: (source: Source, visible: boolean) => Promise<void>;
   /** Hot-swap the active data tier (re-fetches per-source bins). */
   setTier: (tier: Tier) => void;
   /** Return the full GalaxyCatalog for a source, or undefined if unloaded. */

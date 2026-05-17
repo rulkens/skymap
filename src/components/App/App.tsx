@@ -527,10 +527,12 @@ export function App(): React.ReactElement {
             sourceCounts={sourceCounts}
             onToggleSource={(s, visible) => {
               // No optimistic local update — the engine fires `onSourceMaskChange`
-              // synchronously inside `setSourceVisible`, which updates React state
-              // before this handler returns.  Optimistic updates would race against
-              // auto-LOD's mask, sometimes forcing the user to click twice.
-              handleRef.current?.sources.setVisible(s, visible);
+              // synchronously inside `setSourceVisible` (pickMask flip), which
+              // updates React state before this handler returns.  Optimistic
+              // updates would race against auto-LOD's mask, sometimes forcing the
+              // user to click twice.  setVisible is now async (drawMask flips
+              // after the fade settles), so fire-and-forget here.
+              void handleRef.current?.sources.setVisible(s, visible);
             }}
             // Auto-LOD UI is intentionally hidden — the toggle never improved
             // the user experience enough to justify the panel real estate, and

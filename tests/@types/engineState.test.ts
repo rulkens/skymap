@@ -117,7 +117,8 @@ describe('EngineState type', () => {
       schechterAlpha: 0,
     };
     const sources: EngineSourceState = {
-      visibleMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
       lodMode: DEFAULT_LOD_MODE,
       catalogs: new Map(),
       famousMeta: [],
@@ -204,7 +205,8 @@ describe('EngineState type', () => {
 
     expect(state.settings.points.sizePx).toBe(2.5);
     expect(state.settings.bias.mode).toBe(DEFAULT_BIAS_MODE);
-    expect(state.sources.visibleMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
+    expect(state.sources.pickMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
+    expect(state.sources.drawMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
     // hover/selection moved off `state.picking` and onto
     // `state.subsystems.selection` in Spec D.3.
     expect(state.subsystems.selection.hovered()).toBeNull();
@@ -244,8 +246,9 @@ describe('EngineState type', () => {
       schechterMStar: 0,
       schechterAlpha: 0,
     };
-    const sources: Pick<EngineSourceState, 'visibleMask' | 'lodMode'> = {
-      visibleMask: DEFAULT_VISIBLE_SOURCE_MASK,
+    const sources: Pick<EngineSourceState, 'pickMask' | 'drawMask' | 'lodMode'> = {
+      pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
       lodMode: DEFAULT_LOD_MODE,
     };
 
@@ -291,7 +294,8 @@ describe('EngineState type', () => {
         schechterAlpha: 0,
       },
       sources: {
-        visibleMask: 0,
+        pickMask: 0,
+        drawMask: 0,
         lodMode: DEFAULT_LOD_MODE,
         catalogs: new Map(),
         famousMeta: [],
@@ -367,7 +371,8 @@ describe('EngineState type', () => {
 
     state.settings.points.brightness = 2.5;
     state.settings.bias.absMagLimit = -20;
-    state.sources.visibleMask = 0xff;
+    state.sources.pickMask = 0xff;
+    state.sources.drawMask = 0xff;
     // hovered/selected aren't on `state.picking` anymore — exercise the
     // subsystem's setter instead.
     state.subsystems.selection.setHovered({ source: 1 as Source, localIdx: 42 });
@@ -375,7 +380,8 @@ describe('EngineState type', () => {
 
     expect(state.settings.points.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
-    expect(state.sources.visibleMask).toBe(0xff);
+    expect(state.sources.pickMask).toBe(0xff);
+    expect(state.sources.drawMask).toBe(0xff);
     expect(state.subsystems.selection.hovered()).toEqual({ source: 1, localIdx: 42 });
     expect(state.picking.pickInFlight).toBe(true);
   });

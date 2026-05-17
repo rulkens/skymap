@@ -203,7 +203,8 @@ function makeState(): EngineState {
     },
     sources: {
       catalogs: new Map(),
-      visibleMask: 0,
+      pickMask: 0,
+      drawMask: 0,
       lodMode: 'auto',
       famousMeta: [],
       famousXrefs: {},

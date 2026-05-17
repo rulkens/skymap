@@ -239,13 +239,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // we only fire `onSourceMaskChange` when the mask actually flips
   // bands so React's setState isn't called every frame.
   //
-  // In manual mode we leave `visibleMask` alone so a user toggle
+  // In manual mode we leave `pickMask`/`drawMask` alone so a user toggle
   // in the settings panel sticks until they explicitly re-enter
   // auto mode.
   if (state.sources.lodMode === 'auto') {
     const nextMask = autoLodMask(ctx.cam.distance);
-    if (nextMask !== state.sources.visibleMask) {
-      state.sources.visibleMask = nextMask;
+    if (nextMask !== state.sources.drawMask) {
+      // Auto-LOD changes are synchronous — no fade desired for tier-driven
+      // mask shifts, so both masks flip together.
+      state.sources.pickMask = nextMask;
+      state.sources.drawMask = nextMask;
       deps.cb.sources?.onMaskChange?.(nextMask);
     }
   }
@@ -263,7 +266,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.subsystems.proceduralDisks.runFrame({
       cam: ctx.cam,
       catalogs: state.sources.catalogs,
-      visibleSourceMask: state.sources.visibleMask,
+      visibleSourceMask: state.sources.drawMask,
       pxPerRad: ctx.drawPxPerRad,
     });
   }
@@ -271,7 +274,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.subsystems.texturedImpostors.runFrame({
       cam: ctx.cam,
       catalogs: state.sources.catalogs,
-      visibleSourceMask: state.sources.visibleMask,
+      visibleSourceMask: state.sources.drawMask,
       pxPerRad: ctx.drawPxPerRad,
       famousMeta: state.sources.famousMeta,
     });
@@ -317,7 +320,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       pointSizePx: state.settings.points.sizePx,
       brightness: state.settings.points.brightness,
       selected: state.subsystems.selection.selected(),
-      visibleSourceMask: state.sources.visibleMask,
+      visibleSourceMask: state.sources.drawMask,
       highlightFallback: state.settings.points.highlightFallback,
       realOnlyMode: state.settings.points.realOnly,
       biasMode: state.settings.bias.mode,
@@ -384,7 +387,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     // records.  Same filter rule as the click handler — only sources
     // whose visibility bit is set are eligible to claim hover.
     const visibleSources = Array.from(ctx.renderer.loadedSources()).filter(
-      (s) => ((state.sources.visibleMask >> s.source) & 1) !== 0,
+      (s) => ((state.sources.pickMask >> s.source) & 1) !== 0,
     );
     if (visibleSources.length === 0) {
       // No surveys are visible right now (user toggled them all
