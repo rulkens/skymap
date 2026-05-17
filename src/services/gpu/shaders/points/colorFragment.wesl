@@ -13,8 +13,8 @@
 //
 // They didn't — io.wesl declares only the STRUCT layouts. WESL has
 // no global state, so '@group/@binding' declarations are module-local.
-// This file re-declares 'u' and 'cloud' using the structs imported
-// from io.wesl, and the layout numbers match vertex.wesl's identical
+// This file re-declares 'u' and 'fade' using the structs imported
+// from io.wesl and fadeUniforms.wesl, and the layout numbers match vertex.wesl's
 // declarations because both files import the same authoritative struct
 // definitions. WGSL accepts the same '@group/@binding' pair appearing
 // in multiple compiled modules so long as the layouts agree.
@@ -22,11 +22,11 @@
 import package::points::io::Uniforms;
 import package::points::io::VSOut;
 import package::lib::math::saturate;
-import package::lib::cloudFade::CloudUniforms;
-import package::lib::cloudFade::applyCloudFade;
+import package::lib::fadeUniforms::FadeUniforms;
+import package::lib::fadeUniforms::applyFade;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
-@group(1) @binding(0) var<uniform> cloud: CloudUniforms;
+@group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
 // ─── visual fragment stage ─────────────────────────────────────────────
 //
@@ -56,7 +56,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
     sn * in.uv.x + cs * in.uv.y,
   );
   // axisRatio is guaranteed > 0 by the build pipeline, BUT the synthetic-
-  // fallback cloud (loaded when every real .bin file fails to decode)
+  // fallback source (loaded when every real .bin file fails to decode)
   // ships its axisRatio array filled with NaN. 'NaN > 0.0' is false in
   // WGSL, so this single comparison catches both NaN and zero/negative
   // — invalid → safeAB = 1.0 → circular r2 = original dot(uv, uv).
@@ -231,14 +231,14 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Scale the colour by the per-point intensity.
   let rgb = tintFinal * in.intensity;
 
-  // ── Cloud fade-in ──────────────────────────────────────────────────────────
+  // ── Source fade-in ─────────────────────────────────────────────────────────
   //
   // Multiply alpha by the per-source opacity uniform (set per-frame from
-  // the JS side based on time-since-upload). 'applyCloudFade' is the
+  // the JS side based on time-since-upload). 'applyFade' is the
   // documented place that says 'never multiply opacity into RGB' — it
   // takes the scalar alpha alongside opacity and returns the faded
   // scalar alpha, leaving 'rgb' untouched.
-  alpha = applyCloudFade(alpha, cloud.opacity);
+  alpha = applyFade(alpha, fade.opacity);
 
   // ── PREMULTIPLIED ALPHA ──────────────────────────────────────────────────
   //

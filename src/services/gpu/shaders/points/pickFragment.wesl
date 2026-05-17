@@ -63,7 +63,7 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   // 1, never 0.
   //
   // 'in.instanceIdx' was assembled in the vertex stage from
-  // '(cloud.sourceCode << 27u) | @builtin(instance_index)'. The
+  // '(source.sourceCode << 27u) | @builtin(instance_index)'. The
   // packing gives every survey a structurally-disjoint identity range
   // (top 5 bits = source code, bottom 27 = local index ≤ 134M), so
   // two galaxies in different surveys can never collide on the same
