@@ -362,9 +362,10 @@ export function createFadeRegistry(): FadeRegistry {
     handle: FadeHandle,
     target: number,
     durationMs?: number,
+    nowMs?: number,
   ): Promise<void> {
     const c = requireController(handle);
-    const now = performance.now();
+    const now = nowMs ?? performance.now();
     const dur = durationMs ?? (
       target > c.currentOpacity(now) ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS
     );
@@ -389,7 +390,8 @@ export function createFadeRegistry(): FadeRegistry {
   }
 
   function tick(nowMs?: number): void {
-    for (const c of controllers.values()) c.tick(nowMs);
+    const now = nowMs ?? 0;
+    for (const c of controllers.values()) c.tick(now);
   }
 
   function destroy(): void {
