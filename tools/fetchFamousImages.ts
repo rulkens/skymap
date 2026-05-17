@@ -103,9 +103,11 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
+import { parseFlags } from './utils/cli/args.js';
+import { loadJsonCache, saveJsonCache } from './utils/io/jsonCache.js';
 import { parseFamousSeed, type FamousEntry } from './parsers/famousSeed.js';
 import {
   parseWikipediaSummary,
@@ -147,16 +149,6 @@ const DESI_FADE_OUTER_FRACTION = 0.1;
 const DESI_MAX_PIXSCALE = 3.0;
 const DESI_BLANK_MEAN_ALPHA_THRESHOLD = 8;
 const DESI_LAYER_CHAIN: ReadonlyArray<string> = ['ls-dr10', 'sdss', 'unwise-neo7'];
-
-// ──────────────────────────────────────────────────────────────────────
-// Cache type — shared with expandFamousFromCatalogs
-
-/**
- * On-disk Wikipedia cache.  Key is the page title (e.g. `"Messier_31"`),
- * value is the raw response body (so we can re-parse if the schema we
- * extract changes).  Shared with `expandFamousFromCatalogs.ts`.
- */
-type WikipediaCache = Record<string, string>;
 
 // ──────────────────────────────────────────────────────────────────────
 // Pure helpers (testable surface)
@@ -504,8 +496,8 @@ type CliFlags = {
   sourcePreference: 'wikipedia' | 'desi';
 };
 
-function parseFlags(argv: readonly string[]): CliFlags {
-  const force = argv.includes('--force');
+function parseCliArgs(argv: readonly string[]): CliFlags {
+  const flags = parseFlags(argv, { '--force': 'bool' });
   let sourcePreference: 'wikipedia' | 'desi' = 'wikipedia';
   const idx = argv.indexOf('--source-preference');
   if (idx >= 0 && idx + 1 < argv.length) {
@@ -516,27 +508,11 @@ function parseFlags(argv: readonly string[]): CliFlags {
       throw new Error(`--source-preference must be "wikipedia" or "desi" (got "${v}")`);
     }
   }
-  return { force, sourcePreference };
-}
-
-function loadWikipediaCache(path: string): WikipediaCache {
-  if (!existsSync(path)) return {};
-  const text = readFileSync(path, 'utf8');
-  try {
-    return JSON.parse(text) as WikipediaCache;
-  } catch {
-    process.stderr.write(`warn: Wikipedia cache at ${path} malformed, ignoring\n`);
-    return {};
-  }
-}
-
-function saveWikipediaCache(path: string, cache: WikipediaCache): void {
-  if (!existsSync(dirname(path))) mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, JSON.stringify(cache, null, 2));
+  return { force: flags['--force'], sourcePreference };
 }
 
 async function main(): Promise<void> {
-  const flags = parseFlags(process.argv.slice(2));
+  const flags = parseCliArgs(process.argv.slice(2));
   const seedPath = resolve('data/famous_galaxies.seed.json');
   const wikipediaCachePath = resolve('data/raw/wikipedia_famous_cache.json');
   const outDir = resolve('public/images/famous');
@@ -548,7 +524,7 @@ async function main(): Promise<void> {
       `(source preference: ${flags.sourcePreference})…\n`,
   );
 
-  const wikipediaCache = loadWikipediaCache(wikipediaCachePath);
+  const wikipediaCache = loadJsonCache<Record<string, string>>(wikipediaCachePath);
   process.stderr.write(`Wikipedia cache: ${Object.keys(wikipediaCache).length} entries\n`);
 
   // Body fetcher with on-disk caching + 1 req/s sequential throttle.
@@ -578,7 +554,7 @@ async function main(): Promise<void> {
     }
     const body = await res.text();
     wikipediaCache[title] = body;
-    saveWikipediaCache(wikipediaCachePath, wikipediaCache);
+    saveJsonCache(wikipediaCachePath, wikipediaCache);
     return body;
   };
 
@@ -650,7 +626,7 @@ async function main(): Promise<void> {
 
   // Save cache once more at the end (we save after every fetch already,
   // but a final save covers any race where a write was queued mid-run).
-  saveWikipediaCache(wikipediaCachePath, wikipediaCache);
+  saveJsonCache(wikipediaCachePath, wikipediaCache);
 
   process.stderr.write(`done; ${ok} ok, ${fail} failed\n`);
   if (fail > 0) process.exitCode = 1;
