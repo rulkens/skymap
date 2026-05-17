@@ -22,14 +22,12 @@
 // ## Why this fragment declares NO bindings
 //
 // 'fsPick' only reads VSOut fields (in.uv + in.instanceIdx) — no
-// uniforms, no per-source CloudFade. The SHARED vertex stage in
-// 'vertex.wesl' DOES declare both '@group(0)' and '@group(1)'
-// bindings; WebGPU's pipeline-layout auto-derivation picks them up
-// from the vertex module so the pick pipeline still exposes both bind
-// groups to the JS side. PickRenderer builds its own per-source
-// '@group(1)' bind group at draw time (see pickRenderer.ts) — that
-// group's underlying buffer is shared with the visual pass, only the
-// auto-derived layout objects differ.
+// uniforms touched here. The SHARED vertex stage in 'vertex.wesl'
+// declares '@group(0)' (per-frame Uniforms) and '@group(2)' (per-
+// source SourceUniforms); the pick pipeline binds those plus a
+// no-op '@group(1)' FadeUniforms (opacity = 1) so its pipeline
+// layout matches the visual pipeline's exactly. See pickRenderer.ts
+// for the shared-fade-buffer wiring.
 
 import package::points::io::VSOut;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;

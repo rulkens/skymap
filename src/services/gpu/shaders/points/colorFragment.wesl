@@ -13,11 +13,12 @@
 //
 // They didn't — io.wesl declares only the STRUCT layouts. WESL has
 // no global state, so '@group/@binding' declarations are module-local.
-// This file re-declares 'u' and 'fade' using the structs imported
-// from io.wesl and fadeUniforms.wesl, and the layout numbers match vertex.wesl's
-// declarations because both files import the same authoritative struct
-// definitions. WGSL accepts the same '@group/@binding' pair appearing
-// in multiple compiled modules so long as the layouts agree.
+// This file re-declares 'u' (at @group(0), same as vertex.wesl) and
+// 'fade' (at @group(1), declared only here — the vertex stage doesn't
+// read opacity). The struct layouts come from io.wesl and
+// fadeUniforms.wesl respectively, so drift is structurally impossible.
+// WGSL accepts the same '@group/@binding' pair appearing in multiple
+// compiled modules so long as the layouts agree.
 
 import package::points::io::Uniforms;
 import package::points::io::VSOut;
