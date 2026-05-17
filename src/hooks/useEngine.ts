@@ -90,9 +90,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   // hosts.  Echoed by the engine via `onTierChange`, so this state
   // mirrors engine truth after the first user-driven swap too.
   const [currentTier, setCurrentTier] = useState<Tier>(() =>
-    typeof window !== 'undefined'
-      ? initialTierFromViewport(window.innerWidth)
-      : 'medium',
+    typeof window !== 'undefined' ? initialTierFromViewport(window.innerWidth) : 'medium',
   );
 
   useEffect(() => {
@@ -145,6 +143,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       thumbnails: extraThumbnails,
       milkyWay: extraMilkyWay,
       filaments: extraFilaments,
+      labels: extraLabels,
       volumes: extraVolumes,
       input: extraInput,
     } = extraCallbacks ?? {};
@@ -193,6 +192,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
       thumbnails: extraThumbnails,
       milkyWay: extraMilkyWay,
       filaments: extraFilaments,
+      labels: extraLabels,
       volumes: extraVolumes,
       input: extraInput,
     });
