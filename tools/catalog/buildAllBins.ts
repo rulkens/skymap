@@ -33,22 +33,22 @@ import { resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
-import { parseSdssCsv } from './parsers/sdssCsv.js';
-import { parseTwoMrs, parseXscShapeCsv } from './parsers/twoMrs.js';
-import type { XscShapeMap } from './parsers/twoMrs.js';
-import { parseGladeLine, parseGlade2masxPgcLine, parseHyperLedaCsv } from './parsers/glade.js';
-import type { HyperLedaShapeMap } from './parsers/glade.js';
-import type { ParsedRecord } from './parsers/common.js';
+import { parseSdssCsv } from '../parsers/sdssCsv.js';
+import { parseTwoMrs, parseXscShapeCsv } from '../parsers/twoMrs.js';
+import type { XscShapeMap } from '../parsers/twoMrs.js';
+import { parseGladeLine, parseGlade2masxPgcLine, parseHyperLedaCsv } from '../parsers/glade.js';
+import type { HyperLedaShapeMap } from '../parsers/glade.js';
+import type { ParsedRecord } from '../parsers/common.js';
 import { crossMatch } from './crossMatch.js';
 
-import { encodeGalaxyCatalog } from '../src/data/galaxyCatalogFormat.js';
-import { raDecZToCartesian } from '../src/utils/math/index.js';
-import { fallbackOrientation } from '../src/utils/random/fallbackOrientation.js';
-import { DEFAULT_GALAXY_DIAMETER_KPC } from '../src/utils/math/galaxyDiameterKpc.js';
-import { Source, sourceLabel } from '../src/data/sources.js';
-import type { GalaxyCatalog } from '../src/@types/data/GalaxyCatalog.js';
-import { TIER_TARGETS, tierFilenameForSource } from '../src/data/tierTargets.js';
-import type { Tier } from '../src/@types/data/Tier.js';
+import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
+import { raDecZToCartesian } from '../../src/utils/math/index.js';
+import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
+import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
+import { Source, sourceLabel } from '../../src/data/sources.js';
+import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
+import { TIER_TARGETS, tierFilenameForSource } from '../../src/data/tierTargets.js';
+import type { Tier } from '../../src/@types/data/Tier.js';
 import { subsampleByAbsMag } from './subsampleByAbsMag.js';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
@@ -481,7 +481,9 @@ async function runCli(): Promise<void> {
       // detect "no data for this tier" via 404 rather than an empty cloud).
       const target = TIER_TARGETS[tier][source];
       if (target === 0) {
-        process.stderr.write(`tier ${tier}: ${sourceLabel(source)} excluded — skipping ${filename}\n`);
+        process.stderr.write(
+          `tier ${tier}: ${sourceLabel(source)} excluded — skipping ${filename}\n`,
+        );
         continue;
       }
       const slice = target === undefined ? records : subsampleByAbsMag(records, target);
