@@ -62,4 +62,7 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   cb.tonemap?.onExposureChange?.(snapshot.exposure);
   cb.sources?.onLodModeChange?.(snapshot.lodMode);
   cb.sources?.onMaskChange?.(snapshot.visibleSourceMask);
+  // Fresh copy of the record so subscribers can treat each emission as
+  // an immutable snapshot — same idiom as the live setter echo.
+  cb.labels?.onCategoryVisibilityChange?.({ ...snapshot.labelCategoryVisibility });
 }

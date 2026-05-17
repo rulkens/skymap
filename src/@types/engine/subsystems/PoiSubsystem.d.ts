@@ -1,5 +1,5 @@
 import type { LabelProducer } from './LabelProducer';
-import type { PoiCategory } from './PoiCategory';
+import type { PoiCategory } from '../../../services/engine/subsystems/poiSubsystem';
 import type { PointOfInterest } from './PointOfInterest';
 
 export type PoiSubsystem = LabelProducer & {

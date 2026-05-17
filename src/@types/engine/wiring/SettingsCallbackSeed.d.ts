@@ -14,6 +14,7 @@
 import type { BiasMode } from '../../data/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
 import type { LodMode } from '../../data/LodMode';
+import type { PoiCategory } from '../../../services/engine/subsystems/poiSubsystem';
 
 export type SettingsCallbackSeed = {
   pointSize: number;
@@ -29,4 +30,10 @@ export type SettingsCallbackSeed = {
   exposure: number;
   lodMode: LodMode;
   visibleSourceMask: number;
+  /**
+   * Initial per-category POI label visibility — fired through
+   * `cb.labels?.onCategoryVisibilityChange?.(...)` so the React shell
+   * seeds its four checkboxes from engine truth on startup.
+   */
+  labelCategoryVisibility: Readonly<Record<PoiCategory, boolean>>;
 };

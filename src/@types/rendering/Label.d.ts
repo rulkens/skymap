@@ -27,18 +27,37 @@ export type Label = {
   readonly text: string;
   /** Registered FontId from `src/data/fonts.ts`.  Required — no default. */
   readonly font: FontId;
-  /** Target em pixel height at the label's natural viewing distance. */
+  /**
+   * @deprecated Legacy buffer slot — the shader no longer reads this.
+   * The em height is now driven by `worldEmMpc` projected through
+   * perspective (see `shaders/labels/vertex.wesl`).  Field is kept
+   * in the type so existing call sites compile; it is written to the
+   * GPU buffer but silently ignored by the sizing math.  Set to `0`
+   * on new call sites; will be removed in a future cleanup once all
+   * producers have migrated to `worldEmMpc`.
+   */
   readonly pixelSize: number;
   /** RGBA premultiplied, defaults to [1,1,1,1]. */
   readonly color?: Vec4;
-  /** Lower clamp on on-screen em height in pixels (default 8). */
+  /**
+   * Floor clamp on the projected em height in screen pixels (default 8).
+   * When the perspective projection of `worldEmMpc` falls below this
+   * value (label is very far away), the label renders at exactly this
+   * pixel height instead of shrinking further.
+   */
   readonly minPixelSize?: number;
-  /** Upper clamp on on-screen em height in pixels (default 64). */
+  /**
+   * Ceiling clamp on the projected em height in screen pixels (default 64).
+   * Prevents labels from becoming enormous when the camera is very close
+   * to the anchor.
+   */
   readonly maxPixelSize?: number;
   /**
-   * World em size in Mpc — controls the natural distance at which
-   * `pixelSize` is reached.  Default 0.01 Mpc/em (so a 24 px label
-   * with worldEmMpc=0.01 reads at 24 px when ~0.01 Mpc away).
+   * PRIMARY size driver.  Em height expressed in Mpc of world space.
+   * The vertex shader projects this through the anchor's clip.w to
+   * obtain a screen-pixel height, then clamps to [minPixelSize, maxPixelSize].
+   * Labels grow naturally as the camera approaches and shrink on zoom out,
+   * bounded by the clamps.  Defaults to 0.01 in the renderer if absent.
    */
   readonly worldEmMpc?: number;
   /** Fade multiplier in [0,1] driven by youAreHereVisibility. Default 1. */

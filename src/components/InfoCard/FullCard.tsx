@@ -122,6 +122,14 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
   // selecting a different galaxy starts fresh in the collapsed state.
   const [descExpanded, setDescExpanded] = useState(false);
 
+  // Aliases shown in "Also known as": every famous-catalog alias that
+  // isn't already the headline.  Computed once so the same predicate
+  // handles both cases — commonName-headline ("Andromeda Galaxy")
+  // surfaces ALL of `names` (M31, NGC 224); names[0]-headline ("M110")
+  // surfaces names[1..] effectively.
+  const famousAliases =
+    info.famous?.names.filter((n) => n !== info.displayName) ?? [];
+
   return (
     <div className={outerClass} role="status" aria-live="polite">
       {/* ── Title row ─────────────────────────────────────────────────────── */}
@@ -179,16 +187,16 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
       {info.famous && (
         <div className={styles.cardSection}>
           {/*
-            "Also known as" — every name beyond the headline, comma-
-            separated.  Many famous galaxies have an NGC number AND a
-            common name (e.g. M31 / NGC 224 / Andromeda Galaxy); listing
-            all aliases makes the InfoCard recognisable to users coming
+            "Also known as" — see `famousAliases` above.  Many famous
+            galaxies have an NGC number AND a common name (e.g. M31 /
+            NGC 224 / Andromeda Galaxy); listing the non-headline
+            aliases makes the InfoCard recognisable to users coming
             from any naming convention.
           */}
-          {info.famous.names.length > 1 && (
+          {famousAliases.length > 0 && (
             <div className={styles.cardRow}>
               <span className={styles.cardLabel}>Also known as</span>
-              <span className={styles.cardValue}>{info.famous.names.slice(1).join(' · ')}</span>
+              <span className={styles.cardValue}>{famousAliases.join(' · ')}</span>
             </div>
           )}
           {/*
@@ -293,15 +301,13 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
         <div className={styles.cardSummary}>
           {/* Friendly lookback line — the most memorable single fact about this galaxy. */}
           <div className={styles.cardLookbackLine}>
-            <InfoTip {...TIPS.lookback!}>Light left</InfoTip>{' '}
-            {info.lookbackGyr.toFixed(1)} Gyr ago
+            <InfoTip {...TIPS.lookback!}>Light left</InfoTip> {info.lookbackGyr.toFixed(1)} Gyr ago
           </div>
           <div className={styles.cardLookbackEra}>
             — <InfoTip {...TIPS.earthEra!}>{info.earthEra}</InfoTip>
           </div>
           <div className={styles.cardDistLine}>
-            <InfoTip {...TIPS.distance!}>{formatDistance(info.distanceMpc)}</InfoTip>{' '}
-            &middot;{' '}
+            <InfoTip {...TIPS.distance!}>{formatDistance(info.distanceMpc)}</InfoTip> &middot;{' '}
             <InfoTip {...TIPS.hubbleVelocity!}>
               {Math.round(info.hubbleVelocityKmS).toLocaleString()} km/s away
             </InfoTip>
@@ -339,9 +345,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
           galaxies where "(g)" would have been a quiet lie.
         */}
         <CardRow
-          label={
-            <InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>
-          }
+          label={<InfoTip {...TIPS.apparentMag!}>{`Apparent mag (${info.bands.g})`}</InfoTip>}
           value={Number.isFinite(info.magG) ? info.magG.toFixed(2) : 'N/A'}
         />
       </div>
@@ -370,9 +374,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
             g-slot, so the label has to follow.
           */}
           <CardRow
-            label={
-              <InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${info.bands.g})`}</InfoTip>
-            }
+            label={<InfoTip {...TIPS.absoluteMag!}>{`Absolute mag (${info.bands.g})`}</InfoTip>}
             value={Number.isFinite(info.absoluteMagG) ? info.absoluteMagG.toFixed(2) : 'N/A'}
           />
           {/*
@@ -476,9 +478,7 @@ export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardPro
       */}
       {info.catalogUrl ? (
         <a className={styles.externalLink} href={info.catalogUrl} target="_blank" rel="noopener">
-          {info.source === Source.SDSS
-            ? 'View in SDSS Explorer'
-            : 'View on NED'}
+          {info.source === Source.SDSS ? 'View in SDSS Explorer' : 'View on NED'}
           {' →'}
         </a>
       ) : (

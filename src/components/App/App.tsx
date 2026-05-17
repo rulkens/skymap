@@ -162,6 +162,7 @@ export function App(): React.ReactElement {
     brightness,
     autoRotate,
     galaxyTexturesEnabled,
+    labelCategoryVisibility,
     milkyWayEnabled,
     filamentsEnabled,
     filamentIntensity,
@@ -464,6 +465,10 @@ export function App(): React.ReactElement {
             milkyWayEnabled={milkyWayEnabled}
             onMilkyWayEnabledChange={(enabled) => {
               handleRef.current?.milkyWay.setEnabled(enabled);
+            }}
+            labelCategoryVisibility={labelCategoryVisibility}
+            onSetLabelCategoryVisibility={(category, visible) => {
+              handleRef.current?.labels.setCategoryVisible(category, visible);
             }}
             // Filaments toggle.  Unlike the milky-way / galaxy-thumbnails
             // toggles above, the engine does NOT fire an echo callback for
