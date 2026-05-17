@@ -52,7 +52,7 @@
 import type { EncodeVolumesArgs } from '../../../@types/engine/frame/EncodeVolumesArgs';
 
 export function encodeVolumes(args: EncodeVolumesArgs): void {
-  const { encoder, ctx, scalarVolumeRenderer, timestampWrites } = args;
+  const { encoder, ctx, scalarVolumeRenderer, fadeOpacityOf, timestampWrites } = args;
 
   // Two-part gate:
   //
@@ -96,6 +96,7 @@ export function encodeVolumes(args: EncodeVolumesArgs): void {
     ctx.vp,
     [halfW, halfH],
     [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
+    fadeOpacityOf,
   );
   pass.end();
 }

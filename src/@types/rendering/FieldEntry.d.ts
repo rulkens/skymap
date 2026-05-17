@@ -83,4 +83,15 @@ export type FieldEntry = {
   paletteTexture: GPUTexture;
   uniformBuffer: GPUBuffer;
   bindGroup: GPUBindGroup;
+  /**
+   * Per-field FadeUniforms GPU buffer (16 bytes — opacity f32 + 12
+   * bytes pad). Written each frame in `draw` from the registry-read
+   * opacity for this field's handle.
+   */
+  fadeBuffer: GPUBuffer;
+  /**
+   * Bind group binding `fadeBuffer` at @group(1) @binding(0) using
+   * the canonical fadeBgl.
+   */
+  fadeBindGroup: GPUBindGroup;
 };

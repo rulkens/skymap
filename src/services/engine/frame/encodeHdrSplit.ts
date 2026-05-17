@@ -72,10 +72,13 @@ export function encodeHdrSplit(
     state.gpu.scalarVolumeRenderer !== null &&
     state.gpu.scalarVolumeRenderer.hasActiveFields()
   ) {
+    const nowMs = performance.now();
     encodeVolumes({
       encoder,
       ctx,
       scalarVolumeRenderer: state.gpu.scalarVolumeRenderer,
+      fadeOpacityOf: (handle) =>
+        state.subsystems.fades.opacityOf({ kind: 'scalarField', field: handle }, nowMs),
       timestampWrites: timingService.descriptorFor('scalar-volume'),
     });
   }

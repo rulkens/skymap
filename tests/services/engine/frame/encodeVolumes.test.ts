@@ -63,6 +63,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
     expect(env.beginRenderPass).toHaveBeenCalledTimes(1);
@@ -84,6 +85,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
     expect(drawSpy).toHaveBeenCalledTimes(1);
@@ -103,6 +105,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
     expect(drawSpy.mock.calls[0]![2]).toEqual([1, 1]);
@@ -121,6 +124,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      fadeOpacityOf: () => 1,
       timestampWrites: tw,
     });
     const desc = (env.beginRenderPass as ReturnType<typeof vi.fn>).mock.calls[0]![0] as GPURenderPassDescriptor & {
@@ -137,6 +141,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
     const desc = (env.beginRenderPass as ReturnType<typeof vi.fn>).mock.calls[0]![0] as GPURenderPassDescriptor & {
@@ -152,6 +157,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer: null,
+      fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
     expect(env.beginRenderPass).not.toHaveBeenCalled();
@@ -173,6 +179,7 @@ describe('encodeVolumes', () => {
       encoder: env.encoder,
       ctx,
       scalarVolumeRenderer,
+      fadeOpacityOf: () => 1,
       timestampWrites: undefined,
     });
     expect(env.beginRenderPass).not.toHaveBeenCalled();

@@ -13,22 +13,26 @@
 //   - tint blend — cool-purple at low density to bright violet at
 //     high density. Adds a hue axis on top of the brightness ramp.
 //
-// Then 'applyCloudFade' folds in the per-cloud opacity uniform that
+// Then 'applyFade' folds in the per-cloud opacity uniform that
 // lets the renderer ramp the entire skeleton in/out smoothly when a
-// new tier loads.
+// new tier loads. The CPU side now drives this through the unified
+// FadeRegistry (state.subsystems.fades) — see filamentRenderer.ts
+// and filamentSlot.ts for the wiring.
 //
 // ## Why bindings are declared here, not in io.wesl
 //
 // Same WESL no-global-state argument as elsewhere: 'Uniforms' is
 // imported from io.wesl, the @group/@binding declarations live here,
 // and the layout matches vertex.wesl's identical declaration.
-// 'CloudUniforms' lives in 'lib/cloudFade.wesl' — see that file's
-// docblock for why the layout is shared with points/.
+// 'FadeUniforms' lives in 'lib/fadeUniforms.wesl' — a 16-byte
+// struct with a single 'opacity' f32, identical layout to the old
+// 'CloudUniforms' binding so the GPU pipeline descriptor is
+// unchanged.
 
 import package::filaments::io::Uniforms;
 import package::filaments::io::VSOut;
-import package::lib::cloudFade::CloudUniforms;
-import package::lib::cloudFade::applyCloudFade;
+import package::lib::fadeUniforms::FadeUniforms;
+import package::lib::fadeUniforms::applyFade;
 // Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
 // rationale (three smoothstep patterns recurred across four shaders,
 // naming the shapes makes the intent visible at the call site).
@@ -38,15 +42,7 @@ import package::lib::cloudFade::applyCloudFade;
 import package::lib::masks::edgeBandMask;
 
 @group(0) @binding(0) var<uniform> u : Uniforms;
-
-// Per-cloud fade-in (CloudFade — see src/services/gpu/resources/cloudFade.ts).
-// 'CloudUniforms' is imported from 'lib/cloudFade.wesl' (shared with
-// points.wesl). The CPU-side 'CloudFade' class produces the same
-// 16-byte layout for every consumer, so the shared shader struct is
-// honest: filaments doesn't read 'sourceCode' today, but the bytes
-// are written either way and a future filament feature can opt in
-// without renaming. See the lib's docblock for the full rationale.
-@group(1) @binding(0) var<uniform> cloud : CloudUniforms;
+@group(1) @binding(0) var<uniform> fade : FadeUniforms;
 
 @fragment
 fn fs(in : VSOut) -> @location(0) vec4<f32> {
@@ -100,12 +96,12 @@ fn fs(in : VSOut) -> @location(0) vec4<f32> {
   let tint = mix(baseTint, hotTint, in.density);
 
   // Per-cloud fade-in (opacity uniform written each frame from JS).
-  // 'applyCloudFade' (lib/cloudFade.wesl) is the documented place that
+  // 'applyFade' (lib/fadeUniforms.wesl) is the documented place that
   // says 'never multiply opacity into RGB' — it's a scalar helper that
   // folds opacity into 'alpha' alongside the other modulators here.
-  let alpha = applyCloudFade(
+  let alpha = applyFade(
     edgeFade * 0.6 * densityBoost * u.intensityScale,
-    cloud.opacity,
+    fade.opacity,
   );
   return vec4<f32>(tint * alpha, alpha);  // pre-multiplied alpha
 }

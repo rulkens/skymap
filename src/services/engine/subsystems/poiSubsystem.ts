@@ -74,6 +74,7 @@ import type { LabelProducerOutput } from '../../../@types/engine/subsystems/Labe
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 import type { PoiSubsystem } from '../../../@types/engine/subsystems/PoiSubsystem';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 
 type CategoryStyle = {
   readonly labelColor: Vec4;
@@ -169,6 +170,9 @@ const ALL_CATEGORIES_VISIBLE: Readonly<Record<PoiCategory, boolean>> = {
 };
 
 export function createPoiSubsystem(): PoiSubsystem {
+  // One-shot fade-in flag for the 'poi' label layer. Flips true on
+  // the first frame that emits a non-empty label set.
+  let didFireFadeIn = false;
   let pois: readonly PointOfInterest[] = [];
   let visibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
 
@@ -207,7 +211,7 @@ export function createPoiSubsystem(): PoiSubsystem {
     ];
   }
 
-  function produceLabels(_state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
+  function produceLabels(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
     const labels: Label[] = [];
     const lines: MarkerLine[] = [];
     let awake = false;
@@ -298,6 +302,19 @@ export function createPoiSubsystem(): PoiSubsystem {
         alignX,
       });
       for (const line of makeCrosshairLines(p, style)) lines.push(line);
+    }
+    // One-shot layer fade-in: first frame that emits a non-empty
+    // label set fires fadeTo(1) on the POI layer's FadeHandle. See
+    // youAreHereSubsystem for the symmetric pattern; the label
+    // renderer doesn't consume the opacity yet (v1) — registration
+    // is structural for future tour addressability.
+    if (!didFireFadeIn && labels.length > 0) {
+      didFireFadeIn = true;
+      void state.subsystems.fades.fadeTo(
+        { kind: 'labelLayer', layer: 'poi' },
+        1,
+        FADE_IN_DURATION_MS,
+      );
     }
     return { labels, lines, awake };
   }

@@ -385,6 +385,32 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   state.subsystems.texturedImpostors = texturedImpostors;
   state.subsystems.proceduralDisks = proceduralDisks;
 
+  // Register the always-on overlay fade handles at opacity 1.0. The
+  // registry surfaces these to a future tour subsystem (which can
+  // fadeTo them programmatically) without any per-renderer plumbing.
+  // No loading-time fade-in is needed — the three overlays are
+  // procedural or bundled and appear immediately on first frame.
+  // `register(handle, 1)` sets the steady-state opacity directly; no
+  // setImmediate(1) follow-up is required.
+  state.subsystems.fades.register({ kind: 'overlay', id: 'milkyWay' }, 1);
+  state.subsystems.fades.register({ kind: 'overlay', id: 'proceduralDisks' }, 1);
+  state.subsystems.fades.register({ kind: 'overlay', id: 'texturedImpostors' }, 1);
+
+  // Register the four label-layer fade handles. youAreHere / poi /
+  // galaxyNames start at 0 — their producers fire fadeTo(1) on first
+  // non-empty emit (see youAreHereSubsystem + poiSubsystem). scaleBar
+  // is React-side so we register it at 1 — present in the registry
+  // for tour addressability but never auto-faded by the engine.
+  //
+  // v1 only registers the handles; the label renderer doesn't plumb
+  // their opacity into draw yet. Tour playback can already address
+  // these via state.subsystems.fades.fadeTo(...); per-layer-aware
+  // label draws are a follow-up plan.
+  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'youAreHere' }, 0);
+  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'poi' }, 0);
+  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'galaxyNames' }, 0);
+  state.subsystems.fades.register({ kind: 'labelLayer', layer: 'scaleBar' }, 1);
+
   // Signal loading state immediately so the user knows something is
   // happening before the (potentially multi-second) fetch completes.
   cb.lifecycle?.onStatusChange?.({ kind: 'loading' });

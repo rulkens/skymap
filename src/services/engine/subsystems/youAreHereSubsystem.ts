@@ -32,6 +32,7 @@ import type { Vec4 } from '../../../@types/math/Vec4';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import type { YouAreHereSubsystem } from '../../../@types/engine/subsystems/YouAreHereSubsystem';
 import { youAreHereAlpha } from '../../gpu/labels/youAreHereVisibility';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 
 const LABEL_TEXT = 'You are here';
 const LABEL_ANCHOR_MPC = 0.05;
@@ -45,10 +46,27 @@ const LABEL_COLOR: Vec4 = [1, 1, 1, 1];
 const LINE_COLOR: Vec4 = [1, 1, 1, 1];
 
 export function createYouAreHereSubsystem(): YouAreHereSubsystem {
-  function produceLabels(_state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
+  // One-shot fade-in: the first frame where this producer emits a
+  // non-empty label set fires fadeTo(1) on the layer's FadeHandle.
+  // Subsequent frames skip the call (the handle already saturates at
+  // 1; even cheap idempotency is wasted work). The label renderer
+  // doesn't consume this opacity yet (v1) — the registration is
+  // structural so a future tour subsystem can dim the layer via
+  // state.subsystems.fades.fadeTo without us re-plumbing every
+  // producer.
+  let didFireFadeIn = false;
+  function produceLabels(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
     const camDist = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     const alpha = youAreHereAlpha(camDist);
     if (alpha <= 0) return { labels: [], lines: [], awake: false };
+    if (!didFireFadeIn) {
+      didFireFadeIn = true;
+      void state.subsystems.fades.fadeTo(
+        { kind: 'labelLayer', layer: 'youAreHere' },
+        1,
+        FADE_IN_DURATION_MS,
+      );
+    }
 
     const labels: readonly Label[] = [
       {

@@ -17,22 +17,28 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { filamentFetcher } from '../fetchers/filamentFetcher';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { FilamentReq } from '../../../@types/loading/FilamentReq';
 import type { FilamentCloud } from '../../../@types/data/FilamentCloud';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
 export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (state, cb) => {
-  // Why awaited `upload()` even though `FilamentRenderer.upload` is
-  // synchronous?  `await undefined` is harmless and keeps the slot's
-  // commit signature uniform with the per-source slots; if a future
-  // filament-renderer revision adds an async upload path (e.g. compute-
-  // shader rebuild), this site needs no change.
+  // Register the filament fade handle at opacity 0; the commit's
+  // fadeTo(1, FADE_IN_DURATION_MS) ramps it in once the upload lands.
+  // Filament is one-shot — never reloaded on tier change — so no
+  // fade-out branch is needed.
+  state.subsystems.fades.register({ kind: 'filaments' }, 0);
+
   const slot = createAssetSlot({
     name: 'filaments',
     fetch: filamentFetcher,
     commit: async (cloud) => {
       if (!state.gpu.filamentRenderer) return;
-      await state.gpu.filamentRenderer.upload(cloud);
+      // upload() is synchronous (returns void); no await needed today.
+      // Kept inside the async commit body for symmetry with the
+      // galaxyCatalogSourceRegistry slot, whose upload is async.
+      state.gpu.filamentRenderer.upload(cloud);
+      void state.subsystems.fades.fadeTo({ kind: 'filaments' }, 1, FADE_IN_DURATION_MS);
     },
   });
   slot.subscribe((s) => {

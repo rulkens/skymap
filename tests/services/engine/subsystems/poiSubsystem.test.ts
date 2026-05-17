@@ -5,7 +5,12 @@ import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/Read
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 function makeState(): EngineState {
-  return { subsystems: { scheduler: { requestRender: () => {} } } } as unknown as EngineState;
+  return {
+    subsystems: {
+      scheduler: { requestRender: () => {} },
+      fades: { fadeTo: () => Promise.resolve() },
+    },
+  } as unknown as EngineState;
 }
 function makeCtx(): ReadyFrameContext {
   return {

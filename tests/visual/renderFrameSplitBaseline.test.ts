@@ -354,6 +354,17 @@ describe('renderFrame visual baseline', () => {
         subsystems: {
           proceduralDisks: proceduralDisksSubsystem,
           texturedImpostors: texturedImpostorsSubsystem,
+          fades: {
+            register: vi.fn(),
+            unregister: vi.fn(),
+            fadeTo: vi.fn(() => Promise.resolve()),
+            setImmediate: vi.fn(),
+            opacityOf: vi.fn(() => 1),
+            isAnyAnimating: vi.fn(() => false),
+            tick: vi.fn(),
+            destroy: vi.fn(),
+            label: 'fadeRegistry',
+          },
         },
       } as never,
       milkyWayITimeSec: 0,
@@ -387,7 +398,7 @@ describe('renderFrame visual baseline', () => {
     expect(drawSequence).toMatchInlineSnapshot(`
       [
         {
-          "argShape": "pass,Float32Array[16],Array[2],Array[3]",
+          "argShape": "pass,Float32Array[16],Array[2],Array[3],function",
           "renderer": "scalar-volume",
         },
         {
@@ -411,7 +422,7 @@ describe('renderFrame visual baseline', () => {
           "renderer": "milky-way",
         },
         {
-          "argShape": "pass,Float32Array[16],Array[2],number,number",
+          "argShape": "pass,Float32Array[16],Array[2],number,number,number",
           "renderer": "filaments",
         },
         {

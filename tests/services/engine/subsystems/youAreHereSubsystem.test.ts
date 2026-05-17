@@ -10,6 +10,7 @@ function makeState(): EngineState {
   return {
     subsystems: {
       scheduler: { requestRender: () => {} },
+      fades: { fadeTo: () => Promise.resolve() },
     },
   } as unknown as EngineState;
 }

@@ -16,11 +16,10 @@
  *   uniformBuffer               :  96 bytes (CameraUniforms prefix + halfWidth + intensityScale + tail pad)
  *
  * Public API:
- *   - createFilamentRenderer(device, format)
+ *   - createFilamentRenderer(device, format, fadeBgl)
  *   - upload(cloud: FilamentCloud)  → builds the instance buffer
- *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensityScale)
+ *   - draw(pass, viewProj, viewportPx, halfWidthPx, intensityScale, fadeOpacity)
  *   - clear()                       → drops the instance buffer
- *   - isFading()                    → mirrors PointRenderer's fade signal
  *   - destroy()                     → releases all GPU resources
  *
  * ### Factory shape (Spec F.2)
@@ -31,7 +30,7 @@
  * Spec D extracted (`createSelectionSubsystem`, `createTweenManager`,
  * …).  The mechanically-distinguishing detail vs F.1 is that this
  * renderer holds *stateful* per-cloud data — the segment instance
- * buffer, the segment count, and the lazily-created `CloudFade` — so
+ * buffer, the segment count, and the lazily-created fade buffer — so
  * the closure carries `let` bindings that the upload state machine
  * mutates rather than the constants of the F.1 drawers.
  *
@@ -44,7 +43,7 @@ import type { FilamentCloud } from '../../../@types/data/FilamentCloud';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { FilamentRenderer } from '../../../@types/rendering/FilamentRenderer';
 import type { mat4 } from 'gl-matrix';
-import { CloudFade } from '../resources/cloudFade';
+import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 const FLOATS_PER_SEGMENT = 8; // startxyz + startD + endxyz + endD
@@ -118,6 +117,7 @@ export function createFilamentRenderer(
    * web scenes need to NOT do.
    */
   hdrFormat: GPUTextureFormat,
+  fadeBgl: FadeUniformsBgl,
 ): FilamentRenderer {
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'filaments.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'filaments.fragment');
@@ -157,22 +157,6 @@ export function createFilamentRenderer(
     ],
   });
 
-  // Per-cloud fade-in bind group at @group(1).  Layout matches what
-  // CloudFade expects (single binding 0, uniform, fragment-stage only —
-  // the WGSL only multiplies into fragment alpha, so the vertex stage
-  // never needs to see the opacity).  Held in closure-scope so the
-  // lazily-created CloudFade can reuse it.
-  const cloudFadeBindGroupLayout = device.createBindGroupLayout({
-    label: 'filaments-bgl-cloudFade',
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
-      },
-    ],
-  });
-
   const bindGroup = device.createBindGroup({
     label: 'filaments-bg-uniforms',
     layout: bindGroupLayout,
@@ -183,7 +167,7 @@ export function createFilamentRenderer(
     label: 'filaments-pipeline',
     layout: device.createPipelineLayout({
       label: 'filaments-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout, cloudFadeBindGroupLayout],
+      bindGroupLayouts: [bindGroupLayout, fadeBgl],
     }),
     vertex: {
       module: vsModule,
@@ -242,15 +226,18 @@ export function createFilamentRenderer(
   // cloud's GPU vertex buffer and its segment count.  Null/zero
   // means "no cloud uploaded yet" (or `clear()` has been called),
   // and `draw()` early-returns.
-  //
-  // `fade` is the lazily-created CloudFade controller.  It's null
-  // before the first upload — minted on first `upload()` call and
-  // restarted on subsequent uploads (fresh content → fresh fade-in
-  // ramp).  The `isFading()` check tolerates the null case so callers
-  // don't have to.
   let instanceBuffer: GPUBuffer | null = null;
   let segmentCount = 0;
-  let fade: CloudFade | null = null;
+
+  // Per-handle FadeUniforms GPU buffer + bind group. Constructed lazily
+  // on first upload (the filament cloud may never load in production
+  // if the .bin file is absent), destroyed in destroy(). Subsequent
+  // uploads reuse the buffer — only the per-frame opacity write changes.
+  let fadeBuffer: GPUBuffer | null = null;
+  let fadeBindGroup: GPUBindGroup | null = null;
+  // Reusable scratch for the per-frame fade writeBuffer call.
+  const fadeScratchBuffer = new ArrayBuffer(16);
+  const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   function upload(cloud: FilamentCloud): void {
     const built = buildSegmentInstances(cloud);
@@ -268,12 +255,17 @@ export function createFilamentRenderer(
     });
     device.queue.writeBuffer(instanceBuffer, 0, built.data);
 
-    // Trigger the fade-in.  First upload mints the controller; subsequent
-    // uploads (rare — usually just on tier swap) restart the existing one.
-    if (fade === null) {
-      fade = new CloudFade(device, cloudFadeBindGroupLayout);
-    } else {
-      fade.restart();
+    if (fadeBuffer === null) {
+      fadeBuffer = device.createBuffer({
+        label: 'filaments-fade-uniform',
+        size: 16,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      fadeBindGroup = device.createBindGroup({
+        label: 'filaments-fade-bg',
+        layout: fadeBgl,
+        entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
+      });
     }
   }
 
@@ -289,22 +281,15 @@ export function createFilamentRenderer(
     viewportPx: [number, number],
     halfWidthPx: number,
     intensityScale: number,
+    fadeOpacity: number,
   ): void {
-    if (segmentCount === 0 || !instanceBuffer || !fade) return;
+    if (segmentCount === 0 || !instanceBuffer || !fadeBuffer || !fadeBindGroup) return;
 
-    // Pack uniforms.  See UNIFORM_BYTES comment above for the byte layout.
-    //   f32[0..15]   viewProj (mat4)         — CameraUniforms.viewProj
-    //   f32[16..17]  viewportPx (vec2)       — CameraUniforms.viewportPx
-    //   f32[18..19]  CameraUniforms reserved pad (left zero)
-    //   f32[20]      halfWidthPx             — Uniforms.halfWidthPx (offset 80)
-    //   f32[21]      intensityScale          — Uniforms.intensityScale (offset 84)
-    //   f32[22..23]  Uniforms tail pad (left zero)
-    //
-    // Adoption of the shared 'CameraUniforms' prefix moved the two
-    // scalars from f32-indices 18/19 down to 20/21. The two reserved
-    // pad slots in CameraUniforms (f32[18..19]) MUST stay zero —
-    // overwriting them silently shifts the WGSL view of every later
-    // member.
+    // Pack the 96-byte Uniforms struct. Byte layout is documented on
+    // the UNIFORM_BYTES const at module top — keep slot indices here
+    // in sync with that table (mat4 occupies f32[0..15]; viewportPx at
+    // 16..17; the two reserved pads at 18..19; halfWidthPx at 20;
+    // intensityScale at 21; the two trailing pads at 22..23).
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
     f32.set(viewProj as Float32Array, 0);
@@ -314,21 +299,17 @@ export function createFilamentRenderer(
     f32[21] = intensityScale;
     device.queue.writeBuffer(uniformBuffer, 0, buf);
 
-    // Cloud-fade-in opacity for this frame.  Steady-state (after the
-    // ~600 ms ramp) writes 1.0 — a no-op on the shader's alpha multiply.
-    fade.writeFrame();
+    // Write the per-frame fade.opacity from the registry-supplied value.
+    fadeScratchF32[0] = fadeOpacity;
+    device.queue.writeBuffer(fadeBuffer, 0, fadeScratchBuffer);
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
-    pass.setBindGroup(1, fade.bindGroup);
+    pass.setBindGroup(1, fadeBindGroup);
     pass.setIndexBuffer(indexBuffer, 'uint16');
     pass.setVertexBuffer(0, quadVertexBuffer);
     pass.setVertexBuffer(1, instanceBuffer);
     pass.drawIndexed(6, segmentCount);
-  }
-
-  function isFading(): boolean {
-    return fade !== null && fade.isFading();
   }
 
   function destroy(): void {
@@ -336,7 +317,7 @@ export function createFilamentRenderer(
     indexBuffer.destroy();
     quadVertexBuffer.destroy();
     instanceBuffer?.destroy();
-    fade?.destroy();
+    fadeBuffer?.destroy();
   }
 
   const renderer: FilamentRenderer = {
@@ -344,7 +325,6 @@ export function createFilamentRenderer(
     upload,
     clear,
     draw,
-    isFading,
     destroy,
   };
   // `satisfies Renderer` confirms the shared label+destroy contract at

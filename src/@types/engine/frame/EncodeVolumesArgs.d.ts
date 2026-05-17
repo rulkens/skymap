@@ -10,6 +10,7 @@
 
 import type { ReadyFrameContext } from './ReadyFrameContext';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
+import type { ScalarFieldHandle } from '../../rendering/ScalarFieldHandle';
 
 export type EncodeVolumesArgs = {
   encoder: GPUCommandEncoder;
@@ -19,6 +20,12 @@ export type EncodeVolumesArgs = {
    * `initGpu` has wired it up; the helper is a no-op in that case.
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
+  /**
+   * Per-field fade opacity callback, threaded from `state.subsystems.fades`
+   * at the call site.  Returns the current animated opacity [0, 1] for the
+   * given scalar-field handle so each field fades independently.
+   */
+  fadeOpacityOf: (handle: ScalarFieldHandle) => number;
   /**
    * Optional `RenderPassTimestampWrites` for per-pass GPU timing.  When
    * `undefined` the helper omits the field from the `beginRenderPass`
