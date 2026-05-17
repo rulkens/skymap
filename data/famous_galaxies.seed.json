@@ -111,6 +111,7 @@
       "C24",
       "NGC 1275"
     ],
+    "commonName": "Perseus A",
     "ra": 49.9510875,
     "dec": 41.5115451,
     "distanceMpc": 77.83949326267273,
@@ -581,6 +582,7 @@
       "C77",
       "NGC 5128"
     ],
+    "commonName": "Centaurus A",
     "ra": 201.367185,
     "dec": -43.0181183,
     "distanceMpc": 3.677900704223862,
@@ -634,6 +636,7 @@
       "NGC 5457",
       "Pinwheel Galaxy"
     ],
+    "commonName": "Pinwheel Galaxy",
     "ra": 210.802368,
     "dec": 54.349023,
     "distanceMpc": 7.112135136533295,
@@ -669,6 +672,7 @@
       "NGC 4594",
       "Sombrero Galaxy"
     ],
+    "commonName": "Sombrero Galaxy",
     "ra": 189.997701,
     "dec": -11.6230104,
     "distanceMpc": 8.602011127130229,
@@ -777,6 +781,7 @@
       "NGC 224",
       "Andromeda Galaxy"
     ],
+    "commonName": "Andromeda Galaxy",
     "ra": 10.6846845,
     "dec": 41.2689778,
     "distanceMpc": 0.7805486914662376,
@@ -813,6 +818,7 @@
       "NGC 598",
       "Triangulum Galaxy"
     ],
+    "commonName": "Triangulum Galaxy",
     "ra": 23.462121,
     "dec": 30.6599252,
     "distanceMpc": 0.8765970403212787,
@@ -850,6 +856,7 @@
       "NGC 5194",
       "Whirlpool Galaxy"
     ],
+    "commonName": "Whirlpool Galaxy",
     "ra": 202.469547,
     "dec": 47.195151,
     "distanceMpc": 8.578275698828092,
@@ -1043,6 +1050,7 @@
       "NGC 3031",
       "Bode's Galaxy"
     ],
+    "commonName": "Bode's Galaxy",
     "ra": 148.88815649999998,
     "dec": 69.0652757,
     "distanceMpc": 3.600808291734827,
@@ -1151,6 +1159,7 @@
       "NGC 4486",
       "Virgo A"
     ],
+    "commonName": "Virgo A",
     "ra": 187.706364,
     "dec": 12.3905194,
     "distanceMpc": 16.780310782909552,
