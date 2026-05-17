@@ -197,6 +197,15 @@ export function createPickRenderer(
     entries: [{ binding: 0, resource: { buffer: dummyFadeBuffer } }],
   });
 
+  // Cache @group(2) bind groups keyed by the source's GPUBuffer
+  // identity. pick() is called on every mouse hover/click, and the
+  // loaded-source set is stable between picks; without this cache each
+  // pick would allocate one GPUBindGroup per loaded source. WeakMap
+  // keys mean a tier swap (which destroys the old sourceBuffer and
+  // creates a new one) transparently invalidates the cached bind group
+  // — no explicit cleanup needed when an upload replaces a source.
+  const sourceBindGroupCache = new WeakMap<GPUBuffer, GPUBindGroup>();
+
   const pipeline = device.createRenderPipeline({
     label: 'pick-pipeline',
     layout: pipelineLayout,
@@ -512,24 +521,29 @@ export function createPickRenderer(
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
+    // @group(1) is the same dummy buffer for every source in this pick —
+    // bind once outside the per-source loop.
+    pass.setBindGroup(1, dummyFadeBindGroup);
 
-    // Build per-source @group(2) bind groups against the SHARED canonical
-    // sourceBgl layout. Because both pipelines declare the same explicit
-    // layout, these bind groups are valid for both visual and pick passes
-    // without the old "group-equivalent" cross-pipeline incompatibility.
-    // The underlying GPUBuffer (src.sourceBuffer) is the same one the
-    // visual pass already wrote at upload time.
+    // Per-source @group(2) bind groups are cached by sourceBuffer
+    // identity. A pick() typically iterates over 3-5 loaded sources and
+    // fires on every mouse hover/click — without caching this would
+    // allocate one GPUBindGroup per source per pick. The WeakMap keys
+    // by the GPUBuffer reference, so a tier swap that destroys the old
+    // sourceBuffer and creates a new one transparently invalidates the
+    // cached bind group via GC. The underlying buffer was written by
+    // the visual pass at upload time; both pipelines share one canonical
+    // sourceBgl identity, so the same bind group is valid for either.
     for (const src of sourceList) {
-      const sourceBindGroup = device.createBindGroup({
-        label: `pick-bg-source-${src.source}`,
-        layout: sourceBgl,
-        entries: [{ binding: 0, resource: { buffer: src.sourceBuffer } }],
-      });
-      // Bind a zeroed @group(1) — the pick pass doesn't use fade.opacity
-      // but the pipeline layout requires the binding to be present.
-      // Reusing the same dummy buffer across draws is fine; no race
-      // because @group(1) is read-only at the pipeline level.
-      pass.setBindGroup(1, dummyFadeBindGroup);
+      let sourceBindGroup = sourceBindGroupCache.get(src.sourceBuffer);
+      if (!sourceBindGroup) {
+        sourceBindGroup = device.createBindGroup({
+          label: `pick-bg-source-${src.source}`,
+          layout: sourceBgl,
+          entries: [{ binding: 0, resource: { buffer: src.sourceBuffer } }],
+        });
+        sourceBindGroupCache.set(src.sourceBuffer, sourceBindGroup);
+      }
       pass.setBindGroup(2, sourceBindGroup);
       pass.setVertexBuffer(0, src.vertexBuffer);
       pass.draw(6, src.count);
