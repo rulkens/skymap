@@ -470,6 +470,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // four bootstrap-bag fields are simultaneously non-null, so we
   // dereference them without bespoke checks.
   const ready = isEngineReady(state);
+  // Tick the FadeRegistry BEFORE consulting isAnyAnimating: tick is
+  // the single resolution site for fadeTo promises, so without this
+  // call the awaited fade-out in setSourceVisible / tier-swap commit
+  // would hang forever in production. Sub-plan 04 of the unified-fade
+  // migration removed the per-renderer isFading() probes; the
+  // registry-driven equivalent (this tick + the isAnyAnimating OR
+  // term below) closes the loop.
+  state.subsystems.fades.tick(nowMs);
   const stillAnimating =
     state.settings.camera.autoRotate ||
     state.subsystems.tweens.isActive() ||
