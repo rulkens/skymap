@@ -4,7 +4,7 @@ import {
   sortAliasNames,
   parseDesignationsCsv,
   groupByPgc,
-} from '../../tools/buildPgcAliases';
+} from '../../tools/fetch/buildPgcAliases';
 
 describe('normalizeDesignation', () => {
   it('NGC0253 → "NGC 253" (strips leading zeros, inserts space)', () => {

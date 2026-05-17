@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
-// Note: we import from `tools/crossMatch` rather than the documented
-// `tools/buildAllBins` path because the latter pulls in `node:fs`/`node:url`,
+// Note: we import from `tools/catalog/crossMatch` rather than the documented
+// `tools/catalog/buildAllBins` path because the latter pulls in `node:fs`/`node:url`,
 // and the main `tsconfig.json` (which governs the test build) excludes
 // `tools/` and does not register `@types/node`. `buildAllBins.ts` re-exports
 // `crossMatch` from this same module, so the symbol is identical either way.
-import { crossMatch } from '../tools/crossMatch';
+import { crossMatch } from '../tools/catalog/crossMatch';
 import { Source } from '../src/data/sources';
 import type { ParsedRecord } from '../tools/parsers/common';
 

@@ -20,7 +20,7 @@ import {
   resolveWikipediaImage,
   processWikipediaImageBuffer,
   type WikipediaBodyFetcher,
-} from '../../tools/fetchFamousImages';
+} from '../../tools/famous/fetchFamousImages';
 import type { WikipediaSummary } from '../../tools/parsers/wikipediaSummary';
 import type { FamousEntry } from '../../tools/parsers/famousSeed';
 

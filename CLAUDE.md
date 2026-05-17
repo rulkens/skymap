@@ -23,9 +23,25 @@ src/
     input/            SpaceMouse + raw input → camera deltas
   utils/              Pure helpers (math, format, random) — heavily tested
 tools/
-  buildAllBins.ts     Pipeline: parse raw catalogs → cross-match → write .bin files
-  parsers/            SDSS CSV, 2MRS fixed-width, GLADE fixed-width parsers
-  crossMatch.ts       Dedup logic across surveys
+  catalog/            buildAllBins (pipeline entry point), crossMatch dedup,
+                      subsampleByAbsMag
+  famous/             famous-galaxy seed expansion + image fetcher cluster
+                      (buildFamous, expandFamousFromCatalogs, fetchFamousImages,
+                      famousImageProcessor)
+  filaments/          buildFilaments — DisPerSE wrapper
+  volumes/            scalar-field volume builders (CF-4, MCPM) + diagnostics
+                      (auditCf4Anchors, verifyCf4Scfd, buildScalarVolumeFixture,
+                      extractMcpmCube.py)
+  fonts/              buildFontAtlas — MSDF multi-font atlas generator
+  site/               makeFavicon, makeOgImage
+  deploy/             syncR2 + r2Cors.json + r2-static/ static assets
+  fetch/              fetch2massXsc, fetchHyperLeda, buildPgcAliases — long-running
+                      external-catalog fetchers with on-disk resume caches
+  parsers/            SDSS CSV, 2MRS fixed-width, GLADE fixed-width, NPY,
+                      ND-skeleton parsers
+  utils/              tools-only helpers (math, io, cli, async, random) —
+                      one file per function, deep imports
+  vendor-types/       ambient .d.ts shims for msdf-bmfont-xml and pngjs
 data/
   raw/                Catalog source files + their VizieR ReadMes (read these for byte layouts!)
 docs/superpowers/plans/   Active and historical implementation plans (TDD task lists)
@@ -87,9 +103,9 @@ A full data-refreshing deploy is therefore:
 
 If you only changed code and not catalog bytes, **step 4 alone is enough**. The most common loop is "edit, push, watch the Workers build", which finishes in ~30 s.
 
-The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitignored). They are pure build artefacts: deterministic outputs of `tools/buildAllBins.ts` against the raw catalog files in `data/raw/`. Checking them in would inflate every clone by ~150 MB for no informational gain — the same bytes can always be rebuilt from source on demand. Keeping them out also avoids accidental drift between `tools/buildAllBins.ts` settings (tier targets, abs-mag thresholds) and a stale committed binary; the R2 sync ships a fresh build on demand, so what's hosted is always in sync with the current pipeline code.
+The `.bin` files are intentionally **not** in git (`public/data/*.bin` is gitignored). They are pure build artefacts: deterministic outputs of `tools/catalog/buildAllBins.ts` against the raw catalog files in `data/raw/`. Checking them in would inflate every clone by ~150 MB for no informational gain — the same bytes can always be rebuilt from source on demand. Keeping them out also avoids accidental drift between `tools/catalog/buildAllBins.ts` settings (tier targets, abs-mag thresholds) and a stale committed binary; the R2 sync ships a fresh build on demand, so what's hosted is always in sync with the current pipeline code.
 
-The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, and `filaments.bin`. The `tools/syncR2.ts` ALLOW filter encodes that set.
+The runtime `cloudLoader` requests `<source>-<tier>.bin` per source as the user switches tiers; the `dataUrl()` helper prefixes each path with `VITE_DATA_BASE_URL`, which is set in the committed `.env.production` (the rest of `.env*` is gitignored — see the .gitignore docblock for the rationale). Vite inlines that value into the production bundle at build time. Dev runs with no `.env.development` present, so `dataUrl()` falls back to the empty string and Vite serves `public/data/*` at the relative `/data/` path. A complete R2 sync must include every variant the runtime might request: `sdss-medium.bin`, `sdss-large.bin`, `glade-small.bin`, `glade-medium.bin`, `glade-large.bin`, plus the tier-agnostic `2mrs.bin`, `famous.bin`, and `filaments.bin`. The `tools/deploy/syncR2.ts` ALLOW filter encodes that set.
 
 ### MCPM Cosmic Web volume
 
@@ -106,11 +122,11 @@ for the full pipeline + format details.
 #### Cache-Control
 
 - **Static shell:** `public/_headers` (Workers Assets reads it automatically). JS/CSS/WGSL/WASM get `max-age=31536000, immutable`; `images/famous/*.webp` get `max-age=86400`.
-- **R2 objects:** set per-object on upload by `tools/syncR2.ts` (`max-age=86400`).
+- **R2 objects:** set per-object on upload by `tools/deploy/syncR2.ts` (`max-age=86400`).
 
 #### CORS
 
-R2 has a single CORS rule allowing `GET`/`HEAD` from `https://skymap.rulkens.com`, `https://skymap.rulkens.workers.dev`, and `http://localhost:5173`. Re-apply with `npm run r2-cors` (config in `tools/r2Cors.json`).
+R2 has a single CORS rule allowing `GET`/`HEAD` from `https://skymap.rulkens.com`, `https://skymap.rulkens.workers.dev`, and `http://localhost:5173`. Re-apply with `npm run r2-cors` (config in `tools/deploy/r2Cors.json`).
 
 #### Why R2 instead of bundling .bin into the Workers deploy
 

@@ -12,7 +12,7 @@ import {
   MCPM_BASE_VOXEL_EDGE_MPC,
   MCPM_GRID_CENTER_MPC,
   mcpmTierAnchors,
-} from '../../tools/buildMcpmVolume';
+} from '../../tools/volumes/buildMcpmVolume';
 
 describe('MCPM anchors', () => {
   it('base dims match export_metadata.txt', () => {

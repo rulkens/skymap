@@ -7,7 +7,7 @@ import {
   resolveWikipediaDescription,
   buildTargetList,
   orderEntryFields,
-} from '../../tools/expandFamousFromCatalogs';
+} from '../../tools/famous/expandFamousFromCatalogs';
 import type { HyperLedaMeandataRow } from '../../tools/parsers/hyperledaMeandata';
 import type { FamousEntry } from '../../tools/parsers/famousSeed';
 

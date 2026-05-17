@@ -15,7 +15,7 @@ import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { buildCf4Density } from '../../tools/buildCf4Density';
+import { buildCf4Density } from '../../tools/volumes/buildCf4Density';
 import { decodeScalarField } from '../../src/data/scalarFieldFormat';
 
 /** Write a flat C-order f32 .npy with the given shape and values. */
@@ -63,7 +63,9 @@ describe('buildCf4Density (smoke)', () => {
     expect(existsSync(outPath)).toBe(true);
 
     const buf = readFileSync(outPath);
-    const cube = decodeScalarField(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+    const cube = decodeScalarField(
+      buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength),
+    );
 
     expect(cube.dims).toEqual([8, 8, 8]);
     expect(cube.frameKind).toBe('supergalactic-cartesian');

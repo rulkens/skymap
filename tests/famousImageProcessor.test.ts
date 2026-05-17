@@ -4,7 +4,7 @@ import {
   applyTransparency,
   applyRadialFade,
   type RGBA,
-} from '../tools/famousImageProcessor';
+} from '../tools/famous/famousImageProcessor';
 
 /**
  * Build a 4x4 RGBA buffer where the corners are dark (sky) and the

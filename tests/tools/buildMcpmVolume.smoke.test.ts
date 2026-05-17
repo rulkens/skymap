@@ -12,7 +12,7 @@ import { mkdtempSync, writeFileSync, readFileSync, rmSync, existsSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { buildMcpmVolume } from '../../tools/buildMcpmVolume';
+import { buildMcpmVolume } from '../../tools/volumes/buildMcpmVolume';
 import { decodeScalarField } from '../../src/data/scalarFieldFormat';
 
 function writeF32Npy(path: string, values: number[], shape: readonly number[]): void {

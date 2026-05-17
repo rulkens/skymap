@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
-import { parseArgs } from '../../tools/buildFilaments';
+import { parseArgs } from '../../tools/filaments/buildFilaments';
 
 /**
- * Tests for `parseArgs` in `tools/buildFilaments.ts`.
+ * Tests for `parseArgs` in `tools/filaments/buildFilaments.ts`.
  *
  * The DisPerSE pipeline itself shells out to native binaries (delaunay_3D,
  * mse, skelconv) which are NOT on CI — so we deliberately limit coverage
