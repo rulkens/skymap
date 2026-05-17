@@ -69,16 +69,16 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { decodeGalaxyCatalog } from '../src/data/galaxyCatalogFormat.js';
-import { parseNDskl, skeletonToFilamentCloud } from './parsers/ndskl.js';
-import { encodeFilaments } from '../src/data/filamentBinaryFormat.js';
-import type { GalaxyCatalog } from '../src/@types/data/GalaxyCatalog.js';
-import { Source } from '../src/data/sources.js';
-import { surveyFluxLimit } from '../src/data/surveyFluxLimits.js';
-import { absoluteFromApparent, dMaxFromAbsolute } from '../src/utils/math/distanceModulus.js';
-import { mulberry32 } from '../src/utils/random/mulberry32.js';
-import { computeAngularWeights } from '../src/services/engine/bake/computeAngularWeights.js';
-import { gaussian } from './utils/random/gaussian.js';
+import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
+import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl.js';
+import { encodeFilaments } from '../../src/data/filamentBinaryFormat.js';
+import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
+import { Source } from '../../src/data/sources.js';
+import { surveyFluxLimit } from '../../src/data/surveyFluxLimits.js';
+import { absoluteFromApparent, dMaxFromAbsolute } from '../../src/utils/math/distanceModulus.js';
+import { mulberry32 } from '../../src/utils/random/mulberry32.js';
+import { computeAngularWeights } from '../../src/services/engine/bake/computeAngularWeights.js';
+import { gaussian } from '../utils/random/gaussian.js';
 
 /**
  * Default persistence cut in σ.  Lower = more filaments accepted as
