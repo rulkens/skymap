@@ -3,7 +3,7 @@ import type { EngineCallbacks } from '../EngineCallbacks';
 /**
  * Shared dependencies the helper needs that aren't on `EngineState`.
  *
- * `cb` is the engine's callback bag — used for the `onCloudReady` echo
+ * `cb` is the engine's callback bag — used for the `onCatalogReady` echo
  * that runs on the slot's `ready` transition.  Passing it as one
  * named field (rather than threading individual callbacks through)
  * keeps the call site at a single line and matches how the rest of

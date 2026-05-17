@@ -23,7 +23,7 @@ import type { Source } from '../../../data/sources';
 
 export type TexturedImpostorFrameInput = {
   readonly cam: OrbitCamera;
-  readonly clouds: ReadonlyMap<Source, GalaxyCatalog>;
+  readonly catalogs: ReadonlyMap<Source, GalaxyCatalog>;
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
   readonly famousMeta: readonly FamousMetaEntry[];

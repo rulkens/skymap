@@ -232,7 +232,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
   const texturedDiskRenderer = makeMockTexturedDiskRenderer();
   const proceduralDiskRenderer = makeMockProceduralDiskRenderer();
   const cam = makeCam();
-  const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
+  const catalogs = new Map([[Source.SDSS, makeCloud(1)]]);
 
   const settings = {
     pointSizePx: 2.5,
@@ -300,7 +300,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
     texturedDiskRenderer,
     proceduralDiskRenderer,
     cam,
-    clouds,
+    catalogs,
     // Keep these on the fixture root so tests can read them directly
     // without reaching into `input.ctx.*` for every assertion — they
     // mirror the legacy `input.canvasWidth` / `input.viewProj` shape
@@ -336,7 +336,7 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       settings,
       famousMeta: [],
       famousXrefs: {},
-      clouds,
+      catalogs,
       // Disabled stub mirrors the production path (no `?gpuTimings`
       // URL gate) — `service.enabled === false` so renderFrame takes
       // the single-pass branch.  Active-mode behaviour is exercised

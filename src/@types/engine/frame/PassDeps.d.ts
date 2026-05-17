@@ -62,7 +62,7 @@ export type PassDeps = {
    * snapshot — it's a long-lived reference whose contents change
    * across frames.
    */
-  clouds: Map<Source, GalaxyCatalog>;
+  catalogs: Map<Source, GalaxyCatalog>;
   /** Famous-galaxy metadata — also forwarded into thumbnails. */
   famousMeta: FamousMetaEntry[];
   /** PGC/SDSS-objID → famous-galaxy index lookup. */

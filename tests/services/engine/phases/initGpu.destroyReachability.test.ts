@@ -190,7 +190,7 @@ function makeState(): EngineState {
       },
     },
     sources: {
-      clouds: new Map(),
+      catalogs: new Map(),
       visibleMask: 0,
       lodMode: 'auto',
       famousMeta: [],
@@ -208,7 +208,7 @@ function makeDeps(state: EngineState): BootstrapDeps {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb: {
       onStatusChange: vi.fn(),
-      onCloudReady: vi.fn(),
+      onCatalogReady: vi.fn(),
     } as unknown as EngineCallbacks,
     frameRef: { current: () => {} },
     detachControlsRef: { current: null },

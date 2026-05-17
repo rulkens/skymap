@@ -97,7 +97,7 @@ export type RenderFrameInput = {
   // ── Forwarded to the thumbnail subsystem ──────────────────────────────
   famousMeta: FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
-  clouds: Map<Source, GalaxyCatalog>;
+  catalogs: Map<Source, GalaxyCatalog>;
 
   /**
    * Per-pass GPU timing service (always non-null; check `.enabled`

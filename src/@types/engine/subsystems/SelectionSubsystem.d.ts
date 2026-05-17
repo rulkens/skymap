@@ -12,7 +12,7 @@ export type SelectionSubsystem = {
    * Update the selection state.  Fires `cb.onSelectChange` only on
    * actual change.  Optional `prebuiltInfo` lets callers (e.g.
    * `selectByAlias`) pass the GalaxyInfo directly when the GPU upload
-   * hasn't settled yet (the cloud is in `state.sources.clouds` but the
+   * hasn't settled yet (the catalog is in `state.sources.catalogs` but the
    * renderer hasn't received it).
    */
   setSelected(sel: SelectionInput | null, prebuiltInfo?: GalaxyInfo | null): void;

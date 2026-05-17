@@ -61,7 +61,7 @@
  * scope at engine construction.  This matters because:
  *
  *   - The cloud Map gets populated AFTER engine construction (the GPU
- *     init IIFE runs async and calls `state.sources.clouds.set(...)`),
+ *     init IIFE runs async and calls `state.sources.catalogs.set(...)`),
  *     so a snapshot taken at construction would be perpetually empty.
  *   - Famous-meta sidecars arrive even later — sometime during
  *     `wireSlots`.  A snapshot would freeze the empty array.
@@ -76,7 +76,7 @@
  * ### prebuiltInfo — why an extra parameter on setSelected
  *
  * `selectByAlias` (from a deep-link drain or palette pick) is called
- * the moment the data-side `state.sources.clouds` map gets populated,
+ * the moment the data-side `state.sources.catalogs` map gets populated,
  * BUT before the GPU upload completes — the renderer's `loadedSources()`
  * doesn't yet include the source.  In that window, `galaxyInfoFor` sees
  * the cloud and would build the right GalaxyInfo, but for symmetry with

@@ -59,11 +59,11 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeInput(clouds: Map<Source, GalaxyCatalog>, mask = 0xffffffff) {
+function makeInput(catalogs: Map<Source, GalaxyCatalog>, mask = 0xffffffff) {
   const cam = makeCam();
   return {
     cam,
-    clouds,
+    catalogs,
     visibleSourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
   };

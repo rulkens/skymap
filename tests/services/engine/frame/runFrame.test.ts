@@ -61,7 +61,7 @@ function makeState(): EngineState {
     sources: {
       visibleMask: 0,
       lodMode: 'manual',
-      clouds: new Map(),
+      catalogs: new Map(),
       famousMeta: [],
       famousXrefs: {},
       tier: 'medium',

@@ -278,7 +278,7 @@ describe('renderFrame visual baseline', () => {
     const postProcess = makePostProcess(records);
 
     const cam = makeCam();
-    const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
+    const catalogs = new Map([[Source.SDSS, makeCloud(1)]]);
     const canvasWidth = 1280;
     const canvasHeight = 720;
     const viewProj = new Float32Array(16) as unknown as mat4;
@@ -368,7 +368,7 @@ describe('renderFrame visual baseline', () => {
       settings: settings as never,
       famousMeta: [],
       famousXrefs: {},
-      clouds,
+      catalogs,
       // Disabled stub forces the single-pass path.  The split-pass
       // (timing-on) shape is exercised in `renderFrame.timing.test.ts`.
       timingService: createDisabledGpuTimingService(),

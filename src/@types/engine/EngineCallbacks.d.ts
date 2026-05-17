@@ -161,7 +161,7 @@ export type EngineCallbacks = {
    * Source-state callbacks — LOD mode, visibility mask, tier, per-
    * source readiness, and aggregated load progress.
    *
-   * `onCloudReady` is granular per-source because the three .bin
+   * `onCatalogReady` is granular per-source because the three .bin
    * files run as parallel fetches with very different sizes (2MRS
    * ~2 MB, SDSS ~23 MB, GLADE ~96 MB), so they land minutes apart on
    * slow connections.  Showing each as it arrives lets the user
@@ -176,7 +176,7 @@ export type EngineCallbacks = {
     onLodModeChange?: (mode: LodMode) => void;
     onMaskChange?: (mask: number) => void;
     onTierChange?: (tier: Tier) => void;
-    onCloudReady?: (source: Source, count: number) => void;
+    onCatalogReady?: (source: Source, count: number) => void;
     onLoadProgress?: (progress: LoadProgressState | null) => void;
   };
 

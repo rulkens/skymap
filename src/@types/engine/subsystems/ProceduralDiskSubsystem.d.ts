@@ -21,7 +21,7 @@ import type { Source } from '../../../data/sources';
 
 export type ProceduralDiskFrameInput = {
   readonly cam: OrbitCamera;
-  readonly clouds: ReadonlyMap<Source, GalaxyCatalog>;
+  readonly catalogs: ReadonlyMap<Source, GalaxyCatalog>;
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
 };

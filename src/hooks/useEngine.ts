@@ -103,7 +103,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     // entries below.  H5 task 11 deleted the flat callback shape from
     // `EngineCallbacks`; every subscriber now lives inside its cluster
     // (`lifecycle`, `selection`, `camera`, `sources`, …).
-    const onCloudReadyImpl = (source: Source, count: number) =>
+    const onCatalogReadyImpl = (source: Source, count: number) =>
       setSourceCounts((prev) => ({ ...prev, [source]: count }));
     const onCameraChangeImpl = (snapshot: { distance: number; fovYRad: number }) => {
       const c = canvasRef.current;
@@ -176,7 +176,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
         ...extraCamera,
       },
       sources: {
-        onCloudReady: onCloudReadyImpl,
+        onCatalogReady: onCatalogReadyImpl,
         onTierChange: setCurrentTier,
         onLoadProgress: setLoadProgress,
         ...extraSources,

@@ -243,22 +243,22 @@ export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
     const handle = engineHandleRef.current;
     if (!handle?.sources || !handle?.selection) return;
 
-    // Build the resolver's `clouds` input from currently-loaded sources.
+    // Build the resolver's `catalogs` input from currently-loaded sources.
     // Skip Synthetic — the resolver excludes it anyway because synthetic
     // objIDs are sequential 0..N-1 and would collide spuriously with
     // low PGCs, and keeping it out of the input saves a pass over the
     // large `pos@` branch.
-    const clouds: { source: Source; cloud: GalaxyCatalog }[] = [];
+    const catalogs: { source: Source; catalog: GalaxyCatalog }[] = [];
     for (const source of ALL_SOURCES) {
       if (source === Source.Synthetic) continue;
-      const cloud = handle.sources.getCloud(source);
-      if (cloud) clouds.push({ source, cloud });
+      const catalog = handle.sources.getCloud(source);
+      if (catalog) catalogs.push({ source, catalog });
     }
-    if (clouds.length === 0) return;
+    if (catalogs.length === 0) return;
 
     const result = resolveFocusTarget({
       target: pendingTarget,
-      clouds,
+      catalogs,
       famousMeta,
       aliasMap,
     });

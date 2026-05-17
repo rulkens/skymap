@@ -16,8 +16,8 @@
  *      retry policy) — declarative data;
  *   2. *Slot construction* (build the AssetSlot, attach the commit
  *      body, register subscribers) — uniform plumbing;
- *   3. *Engine-state side effects* (mutate `state.sources.clouds`,
- *      fire `cb.onCloudReady`, wake the scheduler) — shared lifecycle.
+ *   3. *Engine-state side effects* (mutate `state.sources.catalogs`,
+ *      fire `cb.onCatalogReady`, wake the scheduler) — shared lifecycle.
  *
  * Pulling (1) into a `GALAXY_CATALOG_SOURCE_REGISTRY` table and
  * (2)+(3) into a `wireGalaxyCatalogSourceSlot` helper makes "what
@@ -36,7 +36,7 @@
  *   const fetch = source === Source.Synthetic ? syntheticPointFetcher
  *                                              : galaxyCatalogFetcher;
  *   const slot = createAssetSlot({ name, fetch, commit: ... });
- *   slot.subscribe((s) => { if (s.kind === 'ready') { cb.onCloudReady?.(...); requestRender(); } });
+ *   slot.subscribe((s) => { if (s.kind === 'ready') { cb.onCatalogReady?.(...); requestRender(); } });
  *   state.assetSlots.points.set(source, slot);
  *
  * The registry rephrases that ternary as data ("each row names its own
@@ -178,7 +178,7 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
 /**
  * Shared dependencies the helper needs that aren't on `EngineState`.
  *
- * `cb` is the engine's callback bag — used for the `onCloudReady` echo
+ * `cb` is the engine's callback bag — used for the `onCatalogReady` echo
  * that runs on the slot's `ready` transition.  Passing it as one
  * named field (rather than threading individual callbacks through)
  * keeps the call site at a single line and matches how the rest of
@@ -251,7 +251,7 @@ export function wireGalaxyCatalogSourceSlot(
         `[engine] upload start ${sourceName(source)} count=${cloud.count}`,
       );
       await state.gpu.renderer.upload(source, cloud);
-      state.sources.clouds.set(source, cloud);
+      state.sources.catalogs.set(source, cloud);
       const dtMs = Math.round(performance.now() - t0);
       // After upload, dump what the GPU actually has — the source of
       // truth the draw loop reads from.  If this disagrees with the
@@ -276,7 +276,7 @@ export function wireGalaxyCatalogSourceSlot(
     // change, so this subscriber only needs to fire the app-visible
     // side effects (cb echo + render wake) on the `ready` transition.
     if (s.kind === 'ready') {
-      cb.sources?.onCloudReady?.(source, s.value.count);
+      cb.sources?.onCatalogReady?.(source, s.value.count);
       state.subsystems.scheduler.requestRender();
     }
   });

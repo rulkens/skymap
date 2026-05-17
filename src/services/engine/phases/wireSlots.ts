@@ -42,7 +42,7 @@
  * renderers from `state.gpu.*` (populated by `initGpu`).
  *
  * `wireInput` runs after this phase because the bbox computation that
- * sizes the camera (in `wireInput`) needs `state.sources.clouds` to be
+ * sizes the camera (in `wireInput`) needs `state.sources.catalogs` to be
  * populated by at least one survey's commit step.  We `await
  * allArrivalsPromise` here precisely so that constraint holds.
  *
@@ -52,7 +52,7 @@
  *     `state.assetSlots.pgcAlias` — sidecar slot construction.
  *   - `state.sources.famousMeta`, `state.sources.famousXrefs` — via
  *     famous-meta subscriber (on `ready`).
- *   - `state.sources.clouds` — populated by the per-source slot commit
+ *   - `state.sources.catalogs` — populated by the per-source slot commit
  *     subscribers (wired in `initGpu` via `wireGalaxyCatalogSourceSlot`).
  *   - `state.subsystems.loadProgress`, `state.subsystems.thumbnails`.
  *   - `cb.onStatusChange({ kind: 'loading' })`.
@@ -72,7 +72,7 @@
  * ### Early-return semantics
  *
  * If after the synthetic fallback no clouds reached the GPU
- * (`state.sources.clouds.size === 0`), this phase returns early.
+ * (`state.sources.catalogs.size === 0`), this phase returns early.
  * Subsequent phases (`wireInput`, `startLoop`) check the same
  * condition and bail too — the engine sits in 'loading' state with
  * nothing to render, identical to the pre-Phase-5 IIFE's `return`
@@ -365,13 +365,13 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   //
   // Each survey flows through its own `AssetSlot`.  The slot's
   // long-lived subscriber (wired at slot construction) handles
-  // upload + `clouds.set` + `onCloudReady` + `requestRender` on
+  // upload + `catalogs.set` + `onCatalogReady` + `requestRender` on
   // every transition to `ready` — so this block only has to fire
   // the loads and gate boot on "every slot has settled at least
   // once" before computing the camera bbox.
   //
   // **Why gate on all-settled rather than first-arrival?**  The
-  // bbox loop below iterates `state.sources.clouds` to size the
+  // bbox loop below iterates `state.sources.catalogs` to size the
   // camera's far plane.  If we framed on whichever survey arrived
   // first (typically 2MRS at ~2 MB / ~100 Mpc), GLADE's distant
   // galaxies (out to ~1.5 Gpc) would land outside the frustum and

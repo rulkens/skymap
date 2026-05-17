@@ -101,7 +101,7 @@ export function createProceduralDiskSubsystem(
   let lastOutput: ProceduralDiskFrameOutput = { instances: [] };
 
   function runFrame(input: ProceduralDiskFrameInput): ProceduralDiskFrameOutput {
-    const { cam, clouds, visibleSourceMask, pxPerRad } = input;
+    const { cam, catalogs, visibleSourceMask, pxPerRad } = input;
 
     const dMpcMax = MAX_PLAUSIBLE_DIAMETER_KPC / 1000;
     // Below PROCEDURAL_DISK_FADE_START_PX a galaxy doesn't enter the loop body
@@ -116,7 +116,7 @@ export function createProceduralDiskSubsystem(
 
     const proceduralDisks: ProceduralDiskInstance[] = [];
 
-    for (const [cloudSource, cloud] of clouds.entries()) {
+    for (const [cloudSource, cloud] of catalogs.entries()) {
       let stickyProcDisks = stickyProcDisksBySource.get(cloudSource);
       if (!stickyProcDisks) {
         stickyProcDisks = new Map();

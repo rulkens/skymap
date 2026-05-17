@@ -6,7 +6,7 @@
  *
  * ### What this phase does
  *
- *   - Computes the camera bbox from `state.sources.clouds` (must be
+ *   - Computes the camera bbox from `state.sources.catalogs` (must be
  *     non-empty by the time we reach here — `wireSlots` awaited the
  *     all-arrivals gate).
  *   - Constructs the orbit camera with the bbox-derived framing.
@@ -38,7 +38,7 @@
  *
  * ### Why this runs third (after wireSlots, before startLoop)
  *
- * The bbox loop reads `state.sources.clouds` — populated by the
+ * The bbox loop reads `state.sources.catalogs` — populated by the
  * per-source slot commit subscribers wired in `initGpu` and triggered
  * by `wireSlots`.  Without `wireSlots` having awaited the all-arrivals
  * gate, the bbox would be 0 (no clouds yet) and the camera framing
@@ -68,7 +68,7 @@
  *
  * ### Early-return semantics
  *
- * If `state.sources.clouds.size === 0` (every load failed and the
+ * If `state.sources.catalogs.size === 0` (every load failed and the
  * synthetic fallback also produced nothing), this phase returns
  * early.  Same condition as the pre-Phase-5 IIFE's mid-IIFE `return`
  * at the corresponding line.  `startLoop` checks the same condition
@@ -85,7 +85,7 @@ import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
 import { buildGalaxyInfo, maxAbsCoord } from '../helpers/galaxyInfoBuilder';
 import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
-import { cloudSourceFor } from '../../../data/cloudSource';
+import { catalogSourceFor } from '../../../data/catalogSource';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -102,7 +102,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // Bail if no clouds reached the GPU (engine torn down mid-load,
   // or synthetic upload failed).  Without at least one cloud the
   // bbox computation below has nothing to size the camera against.
-  if (state.sources.clouds.size === 0) return;
+  if (state.sources.catalogs.size === 0) return;
 
   // Build the pick renderer. It shares the same vertex/uniform buffers as
   // the visual renderer — no extra GPU memory for point data.
@@ -123,7 +123,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   state.subsystems.clickResolver = createClickResolver({
     pickRenderer,
     resolveSelection: (sel) => {
-      const cloud = state.sources.clouds.get(sel.source);
+      const cloud = state.sources.catalogs.get(sel.source);
       if (!cloud) return null;
       if (sel.localIdx < 0 || sel.localIdx >= cloud.count) return null;
       return { source: sel.source, localIdx: sel.localIdx, cloud };
@@ -140,7 +140,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // (cameraFraming.ts) turns it into target/distance/yaw/pitch
   // /near/far including the zoom-envelope clamp.
   let bbox = 0;
-  for (const c of state.sources.clouds.values()) {
+  for (const c of state.sources.catalogs.values()) {
     const b = maxAbsCoord(c);
     if (b > bbox) bbox = b;
   }
@@ -283,7 +283,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   ): ReturnType<NonNullable<typeof state.subsystems.clickResolver>['resolveClick']> | null => {
     const r = state.gpu.renderer;
     const cr = state.subsystems.clickResolver;
-    if (!r || state.sources.clouds.size === 0 || !cr) return null;
+    if (!r || state.sources.catalogs.size === 0 || !cr) return null;
 
     // Snapshot the renderer's per-source draw records and filter
     // by the current visibility mask so the pick pass sees the
@@ -373,14 +373,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // `count` here is the total number of points across every loaded
   // survey at the moment we transition to "ready".  Surveys that finish
-  // loading after this point are reflected via `onCloudReady`, not via
+  // loading after this point are reflected via `onCatalogReady`, not via
   // an additional `onStatusChange` — the status bar's job is "we're up",
   // not "live counter".
   const firstReadySource = deps.firstReadySourceRef.current;
   const readyStatus = {
     kind: 'ready' as const,
     count: renderer.totalCount(),
-    source: cloudSourceFor(firstReadySource ?? Source.Synthetic),
+    source: catalogSourceFor(firstReadySource ?? Source.Synthetic),
   };
   cb.lifecycle?.onStatusChange?.(readyStatus);
 

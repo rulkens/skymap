@@ -397,7 +397,7 @@ const UNIFORM_BYTES = 16 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4 + 8 * 4 + 4 * 4; //
  * For a fully-loaded SDSS + GLADE deck (~3.5 M galaxies, 100+ MB of typed-
  * array bytes) that synchronous structured clone froze the main thread for
  * **5–10 seconds** before `postMessage` returned, which delayed
- * `onCloudReady` from firing — the status bar showed only "75 points"
+ * `onCatalogReady` from firing — the status bar showed only "75 points"
  * (Famous catalog) for several seconds before the surveys appeared, even
  * though their `.bin` had already finished decoding.
  *

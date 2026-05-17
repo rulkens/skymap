@@ -210,14 +210,14 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     return mode;
   }
 
-  /** Snapshot every loaded `(source, cloud)` from the engine state. */
-  function loadedSourceCloudPairs(): { source: Source; cloud: GalaxyCatalog }[] {
-    const out: { source: Source; cloud: GalaxyCatalog }[] = [];
-    const clouds = getLoadedClouds();
+  /** Snapshot every loaded `(source, catalog)` from the engine state. */
+  function loadedSourceCatalogPairs(): { source: Source; catalog: GalaxyCatalog }[] {
+    const out: { source: Source; catalog: GalaxyCatalog }[] = [];
+    const catalogs = getLoadedClouds();
     for (const source of ALL_SOURCES) {
-      const cloud = clouds.get(source);
-      if (cloud && cloud.count > 0) {
-        out.push({ source, cloud });
+      const catalog = catalogs.get(source);
+      if (catalog && catalog.count > 0) {
+        out.push({ source, catalog });
       }
     }
     return out;
@@ -267,13 +267,13 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
       return;
     }
 
-    const pairs = loadedSourceCloudPairs();
+    const pairs = loadedSourceCatalogPairs();
 
     if (next === BiasMode.Schechter) {
       // Per-source independence: each bake is a separate Promise, splice
       // fires when each resolves.  Tests assert this ordering invariant
       // via the multi_source_completion_ordering case.
-      await Promise.all(pairs.map(({ source, cloud }) => bakeSchechterFor(source, cloud, myGen)));
+      await Promise.all(pairs.map(({ source, catalog }) => bakeSchechterFor(source, catalog, myGen)));
       // Wake the loop ONCE after every splice has landed.  If `myGen`
       // is stale (a newer setMode bumped it mid-Promise.all), skip the
       // wake — the newer setMode will fire its own.
@@ -284,7 +284,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     }
 
     if (next === BiasMode.AngularReweight) {
-      await Promise.all(pairs.map(({ source, cloud }) => bakeAngularFor(source, cloud, myGen)));
+      await Promise.all(pairs.map(({ source, catalog }) => bakeAngularFor(source, catalog, myGen)));
       if (myGen === generation) {
         requestRender();
       }

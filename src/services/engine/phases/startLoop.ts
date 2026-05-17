@@ -57,7 +57,7 @@
  *
  * ### Early-return semantics
  *
- * If `state.sources.clouds.size === 0` (every load failed and the
+ * If `state.sources.catalogs.size === 0` (every load failed and the
  * synthetic fallback also produced nothing), this phase returns
  * early — `wireInput` already bailed before constructing the camera,
  * so there's no point starting the loop.  Same condition as the
@@ -78,7 +78,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // Bail if no clouds reached the GPU — `wireInput` skipped camera
   // construction in that case, so there's nothing to render and the
   // pre-Phase-5 IIFE semantics were "exit silently, sit in 'loading'".
-  if (state.sources.clouds.size === 0) return;
+  if (state.sources.catalogs.size === 0) return;
 
   const phaseLocals = deps.phaseLocals!;
   // Renderers are owned by `state.gpu.*` (written by `initGpu`).  Pre-M1

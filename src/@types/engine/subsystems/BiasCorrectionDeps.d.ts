@@ -16,7 +16,7 @@ export type BiasCorrectionDeps = {
    * Currently-loaded source catalogs, keyed by Source enum. Read
    * lazily because the catalog map is mutated in place across tier
    * swaps and per-source uploads. Replaces the old
-   * `getState().sources.clouds` read.
+   * `getState().sources.catalogs` read.
    */
   getLoadedClouds: () => Map<Source, GalaxyCatalog>;
 

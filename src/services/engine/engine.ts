@@ -335,7 +335,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // so picking can resolve `(source, localIdx)` into a GalaxyInfo
       // without a GPU readback for every hover.  Empty until the
       // first parallel fetch resolves.
-      clouds: new Map<Source, GalaxyCatalog>(),
+      catalogs: new Map<Source, GalaxyCatalog>(),
       // Optional sidecars — `galaxyInfoBuilder` null-checks both, so a
       // hover firing before they land just renders the generic
       // InfoCard layout.
@@ -457,7 +457,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // pre-GPU-upload race window.
       selection: createSelectionSubsystem({
         cb,
-        getCloud: (s) => state.sources.clouds.get(s),
+        getCloud: (s) => state.sources.catalogs.get(s),
         getFamousMeta: () => state.sources.famousMeta,
         getFamousXrefs: () => state.sources.famousXrefs,
       }),
@@ -478,7 +478,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // synchronous stubs at the test factory call site.
       biasCorrection: createBiasCorrectionSubsystem({
         getMode: () => state.settings.bias.mode,
-        getLoadedClouds: () => state.sources.clouds,
+        getLoadedClouds: () => state.sources.catalogs,
         requestRender: () => state.subsystems.scheduler.requestRender(),
       }),
 
@@ -854,7 +854,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // slightly after the point cloud).  Early return is safe — the user
     // would have to invoke the palette in the ~500 ms window before the
     // sidecar fetch resolves, which is cosmetically acceptable.
-    const cloud = state.sources.clouds.get(Source.Famous);
+    const cloud = state.sources.catalogs.get(Source.Famous);
     if (!cloud) return;
     const localIdx = state.sources.famousMeta.findIndex((m) => m.id === id);
     if (localIdx < 0) return;
@@ -888,7 +888,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // the palette before GLADE finished arriving), or the localIdx
     // could be stale across a tier swap.  Both are safe early-return
     // conditions — palette stays open, no selection happens.
-    const cloud = state.sources.clouds.get(source);
+    const cloud = state.sources.catalogs.get(source);
     if (!cloud) return;
     if (localIdx < 0 || localIdx >= cloud.count) return;
 
@@ -966,11 +966,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   function getCloud(source: Source): GalaxyCatalog | undefined {
-    return state.sources.clouds.get(source);
+    return state.sources.catalogs.get(source);
   }
 
   function getCloudObjIds(source: Source): BigUint64Array | undefined {
-    return state.sources.clouds.get(source)?.objIDs;
+    return state.sources.catalogs.get(source)?.objIDs;
   }
 
   function setVolumesEnabled(enabled: boolean): void {
@@ -1219,7 +1219,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.renderer = null;
 
     // 5. Drop remaining strong references to aid GC.
-    state.sources.clouds.clear();
+    state.sources.catalogs.clear();
     state.cam = null;
   }
 

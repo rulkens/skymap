@@ -120,12 +120,12 @@ describe('galaxy-impostor visual baseline (post-split)', () => {
       });
 
       const cam = makeCam();
-      const clouds = new Map([[Source.SDSS, makeCloud(8)]]);
+      const catalogs = new Map([[Source.SDSS, makeCloud(8)]]);
       const pxPerRad = 720 / (2 * Math.tan(cam.fovYRad / 2));
 
       // Frame 1: kick off fetches; bitmaps land via microtask drain.
-      procSys.runFrame({ cam, clouds, visibleSourceMask: 0xffffffff, pxPerRad });
-      texSys.runFrame({ cam, clouds, visibleSourceMask: 0xffffffff, pxPerRad, famousMeta: [] });
+      procSys.runFrame({ cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad });
+      texSys.runFrame({ cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad, famousMeta: [] });
       await new Promise((r) => setTimeout(r, 0));
 
       // Advance synthetic clock by 50 ms — bitmapReadyTime was recorded at
@@ -134,10 +134,10 @@ describe('galaxy-impostor visual baseline (post-split)', () => {
       nowFake += 50;
 
       // Frame 2: bitmaps ready; disk path fires.
-      const procOut = procSys.runFrame({ cam, clouds, visibleSourceMask: 0xffffffff, pxPerRad });
+      const procOut = procSys.runFrame({ cam, catalogs, visibleSourceMask: 0xffffffff, pxPerRad });
       const texOut = texSys.runFrame({
         cam,
-        clouds,
+        catalogs,
         visibleSourceMask: 0xffffffff,
         pxPerRad,
         famousMeta: [],

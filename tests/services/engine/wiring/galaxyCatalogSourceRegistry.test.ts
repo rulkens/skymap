@@ -3,7 +3,7 @@
  *
  * The 5 galaxy-catalog source slots (SDSS, 2MRS, GLADE, Famous, Synthetic)
  * all share one slot construction shape: name = `${sourceName}-points`,
- * upload-on-commit, requestRender + `onCloudReady` echo on the `ready`
+ * upload-on-commit, requestRender + `onCatalogReady` echo on the `ready`
  * transition.  Pre-Phase-4 the body lived inline as a single 60-line
  * loop in `engine.ts`'s bootstrap IIFE.  Phase 4 lifts the per-source
  * variance into a declarative `GALAXY_CATALOG_SOURCE_REGISTRY` and reduces the
@@ -13,12 +13,12 @@
  * engine:
  *   - each `wireGalaxyCatalogSourceSlot` call mints a slot, subscribes to it,
  *     and stores it in `state.assetSlots.points` keyed by `Source`;
- *   - the subscriber fires `cb.onCloudReady(source, count)` and
+ *   - the subscriber fires `cb.onCatalogReady(source, count)` and
  *     `requestRender()` on the `ready` transition, and is silent on
  *     the loading / committing / error transitions;
  *   - the commit step routes through the shared
  *     `commitGalaxyCatalogToRenderer` helper (uploads to the renderer,
- *     mutates `state.sources.clouds`);
+ *     mutates `state.sources.catalogs`);
  *   - multiple sources wired in succession produce independent slots
  *     keyed correctly — no cross-talk between SDSS and GLADE;
  *   - `GALAXY_CATALOG_SOURCE_REGISTRY` declares exactly the 5 expected sources
@@ -45,7 +45,7 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 
 /**
  * Minimal-shape fixture for the `EngineState` slices the helper reads
- * and writes: `gpu.renderer` (the upload target), `sources.clouds`
+ * and writes: `gpu.renderer` (the upload target), `sources.catalogs`
  * (mutated on commit), `subsystems.scheduler.requestRender` (woken on
  * ready), and the `assetSlots.points` Map (where the helper stores the
  * minted slot).  Casting through `unknown` keeps the test honest — any
@@ -56,7 +56,7 @@ function makeState(opts: {
   rendererUpload: ReturnType<typeof vi.fn>;
   loadedSources?: Iterable<{ source: Source; count: number }>;
 }): EngineState {
-  const clouds = new Map<Source, GalaxyCatalog>();
+  const catalogs = new Map<Source, GalaxyCatalog>();
   return {
     gpu: {
       renderer: {
@@ -66,7 +66,7 @@ function makeState(opts: {
       },
     },
     sources: {
-      clouds,
+      catalogs,
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() },
@@ -79,7 +79,7 @@ function makeState(opts: {
 
 /**
  * Build a tiny `GalaxyCatalog`-shaped fixture.  Only `count` is read by
- * the subscriber's `onCloudReady` echo and by the upload log line.
+ * the subscriber's `onCatalogReady` echo and by the upload log line.
  */
 function fakeCloud(count: number): GalaxyCatalog {
   return { count } as unknown as GalaxyCatalog;
@@ -146,13 +146,13 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(gladeSlot!.name).toBe('glade-points');
   });
 
-  it('subscribes a handler that fires onCloudReady(source, count) and requestRender on the ready transition', async () => {
+  it('subscribes a handler that fires onCatalogReady(source, count) and requestRender on the ready transition', async () => {
     const upload = vi.fn().mockResolvedValue(undefined);
     const state = makeState({ rendererUpload: upload });
-    const onCloudReady = vi.fn();
+    const onCatalogReady = vi.fn();
     // Nested-only fire shape (H5 task 11): the registry fires
-    // `cb.sources?.onCloudReady?.(...)` on the ready transition.
-    const cb: Partial<EngineCallbacks> = { sources: { onCloudReady } };
+    // `cb.sources?.onCatalogReady?.(...)` on the ready transition.
+    const cb: Partial<EngineCallbacks> = { sources: { onCatalogReady } };
     // Use a stub fetcher so we control when the slot transitions to ready.
     const cfg: GalaxyCatalogSourceConfig = {
       source: Source.SDSS,
@@ -172,13 +172,13 @@ describe('wireGalaxyCatalogSourceSlot', () => {
       expect(slot.state().kind).toBe('ready');
     });
 
-    expect(onCloudReady).toHaveBeenCalledOnce();
-    expect(onCloudReady).toHaveBeenCalledWith(Source.SDSS, 42);
+    expect(onCatalogReady).toHaveBeenCalledOnce();
+    expect(onCatalogReady).toHaveBeenCalledWith(Source.SDSS, 42);
     // requestRender fires once on the ready transition.
     expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
   });
 
-  it("commit uploads the cloud to the renderer and writes it into state.sources.clouds", async () => {
+  it("commit uploads the cloud to the renderer and writes it into state.sources.catalogs", async () => {
     const upload = vi.fn().mockResolvedValue(undefined);
     const state = makeState({ rendererUpload: upload });
     const cloud = fakeCloud(7);
@@ -200,8 +200,8 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     // Upload was called with (source, cloud) — the renderer's contract.
     expect(upload).toHaveBeenCalledOnce();
     expect(upload).toHaveBeenCalledWith(Source.Glade, cloud);
-    // sources.clouds was populated post-upload.
-    expect(state.sources.clouds.get(Source.Glade)).toBe(cloud);
+    // sources.catalogs was populated post-upload.
+    expect(state.sources.catalogs.get(Source.Glade)).toBe(cloud);
   });
 
   it('skips the upload silently when state.gpu.renderer is null (post-destroy / pre-init race)', async () => {
@@ -228,7 +228,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
       expect(slot.state().kind).toBe('ready');
     });
 
-    // sources.clouds NOT populated — the upload was skipped.
-    expect(state.sources.clouds.has(Source.TwoMRS)).toBe(false);
+    // sources.catalogs NOT populated — the upload was skipped.
+    expect(state.sources.catalogs.has(Source.TwoMRS)).toBe(false);
   });
 });

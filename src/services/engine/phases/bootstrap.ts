@@ -108,7 +108,7 @@ import { startLoop } from './startLoop';
  *      and starts the parallel fetches.  It awaits the all-arrivals
  *      gate before returning — the bbox loop in `wireInput` needs at
  *      least one cloud to size the camera.
- *   3. `wireInput` runs third; it reads `state.sources.clouds` (now
+ *   3. `wireInput` runs third; it reads `state.sources.catalogs` (now
  *      populated) to compute the bbox + initial camera, then attaches
  *      orbit controls + click handlers + input bindings.
  *   4. `startLoop` runs last; it builds the `RunFrameDeps` bag (which

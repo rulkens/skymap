@@ -12,7 +12,7 @@
  *   - `lodMode` — decides who owns the mask each frame.  In `'auto'` the
  *                  engine recomputes it via `autoLodMask(camera.distance)`;
  *                  in `'manual'` whatever was last assigned stays put.
- *   - `clouds` — CPU-side mirror of every uploaded `GalaxyCatalog`, keyed by
+ *   - `catalogs` — CPU-side mirror of every uploaded `GalaxyCatalog`, keyed by
  *                 `Source`.  Required for picking / hover (resolving a
  *                 GPU instance index back into GalaxyInfo) and for the
  *                 cross-catalog framing snapshot.
@@ -40,7 +40,7 @@ import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 export type EngineSourceState = {
   visibleMask: number;
   lodMode: LodMode;
-  clouds: Map<Source, GalaxyCatalog>;
+  catalogs: Map<Source, GalaxyCatalog>;
   famousMeta: FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
   /**

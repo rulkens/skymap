@@ -67,12 +67,12 @@ import { startLoop } from '../../../../src/services/engine/phases/startLoop';
  * don't matter (only `.size` is read in this phase).
  */
 function makeState({ cloudCount = 1 } = {}): EngineState {
-  const clouds = new Map<unknown, unknown>();
+  const catalogs = new Map<unknown, unknown>();
   for (let i = 0; i < cloudCount; i++) {
-    clouds.set(i, {});
+    catalogs.set(i, {});
   }
   return {
-    sources: { clouds },
+    sources: { catalogs },
     gpu: {
       milkyWayRenderer: { label: 'milkyWay' } as never,
       texturedQuadRenderer: { label: 'thumbnail' } as never,

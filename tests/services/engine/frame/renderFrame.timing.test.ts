@@ -188,7 +188,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const postProcess = makePostProcess();
 
   const cam = makeCam();
-  const clouds = new Map([[Source.SDSS, makeCloud(1)]]);
+  const catalogs = new Map([[Source.SDSS, makeCloud(1)]]);
   const canvasWidth = 1280;
   const canvasHeight = 720;
   const viewProj = new Float32Array(16) as unknown as mat4;
@@ -258,7 +258,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     settings: settings as never,
     famousMeta: [],
     famousXrefs: {},
-    clouds,
+    catalogs,
     timingService,
   };
 
