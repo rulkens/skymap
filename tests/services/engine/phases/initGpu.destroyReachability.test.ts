@@ -213,7 +213,7 @@ function makeState(): EngineState {
   } as unknown as EngineState;
 }
 
-function makeDeps(state: EngineState): BootstrapDeps {
+function makeDeps(): BootstrapDeps {
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,
     cb: {
@@ -240,7 +240,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
 
   it('writes texturedQuadRenderer/texturedDiskRenderer/proceduralDiskRenderer/milkyWayRenderer onto state.gpu.*', async () => {
     const state = makeState();
-    const deps = makeDeps(state);
+    const deps = makeDeps();
     await initGpu(state, deps);
 
     // All four renderers must reach `state.gpu.*` — that's the
@@ -264,7 +264,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // "re-add phaseLocals mirror" doesn't silently regress us back to
     // the hidden phase channel.
     const state = makeState();
-    const deps = makeDeps(state);
+    const deps = makeDeps();
     await initGpu(state, deps);
 
     expect(deps.phaseLocals).toBeDefined();
@@ -282,7 +282,7 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
 
   it('replaying engine.ts.destroy() chain on state.gpu.* invokes each renderer.destroy()', async () => {
     const state = makeState();
-    const deps = makeDeps(state);
+    const deps = makeDeps();
     await initGpu(state, deps);
 
     // Reach into each handle the same way `engine.ts.destroy()` does —

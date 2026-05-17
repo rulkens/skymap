@@ -27,7 +27,6 @@ import {
   createPointRenderer,
   setBuildBufferRunner,
 } from '../../../../src/services/gpu/renderers/pointRenderer';
-import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
