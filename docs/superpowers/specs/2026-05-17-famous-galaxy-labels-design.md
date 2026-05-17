@@ -44,7 +44,7 @@ primary catalog identifier.
   generic, functional term and the subsystem doesn't care what
   category of thing it labels. If it ever grows substantially
   beyond "label + optional crosshair", revisit then.
-- **No changes to `famous.bin` or its v4 PointCloud encoding.** All
+- **No changes to `famous.bin` or its v4 GalaxyCatalog encoding.** All
   per-entry data the producer needs is already in the seed and
   meta sidecar.
 - **No labels for SDSS / 2MRS / GLADE points.** The other surveys
@@ -209,17 +209,17 @@ Today `wireSlots.ts:188-228` builds the POI list from in-code
 constants once at engine boot. To pick up Famous entries, the wire
 must also fire after `famousMetaSlot` commits — at which point we
 have both the meta sidecar (for names + diameter) and the loaded
-`famous.bin` cloud (for `worldPos`).
+`famous.bin` catalog (for `worldPos`).
 
 The clean fit is a single `setPois` call site that runs:
 
 1. After both the engine state is ready AND `famousMetaSlot.commit`
-   has fired AND the Famous cloud has finished loading. (The slot
+   has fired AND the Famous catalog has finished loading. (The slot
    commit is the load signal — its callback fires after the data is
    in `state.assetSlots.famousMeta`.)
 2. Reads the static anchors (unchanged).
 3. Reads `state.assetSlots.famousMeta.value` + the loaded Famous
-   point cloud's `positions` buffer.
+   galaxy catalog's `positions` buffer.
 4. For each Famous entry, builds a `PointOfInterest` with:
    - `id`: `'famous-' + entry.id` (namespace-prefixed to avoid
      collision with `wireSlots.ts`'s `slug`-derived ids)
@@ -255,7 +255,7 @@ The xref system **does not** participate in label emission. A
 Famous entry that's xref'd to 2MRS row 35 still emits one label (at
 the Famous worldPos); the xref'd survey row does not get its own
 label. The xref is a UI-side selection-unification mechanism and is
-already plumbed through `pointInfoBuilder` — labels piggyback on
+already plumbed through `galaxyInfoBuilder` — labels piggyback on
 the Famous entry's identity.
 
 ### 5. Settings panel: Overlays → Labels
@@ -294,8 +294,8 @@ local component state inside `useEngineSettings`, not URL-synced.
 ### 6. Loading guarantees
 
 The famous meta + xref sidecars load in `App.tsx` via the
-`useFamousMeta` hook; the famous point cloud loads via the
-`cloudLoader` pipeline. Both are eager — they fire during initial
+`useFamousMeta` hook; the famous galaxy catalog loads via the
+`galaxyCatalogFetcher` slot pipeline. Both are eager — they fire during initial
 bootstrap.
 
 The wire described in section 4 runs once when both inputs are
@@ -324,9 +324,9 @@ data/famous_galaxies.seed.json (build-time)
 public/data/famous_meta.json + famous.bin
                 │
                 ▼  runtime fetch
-state.assetSlots.famousMeta  +  state.sources[Source.Famous]
+state.assetSlots.famousMeta  +  state.sources.catalogs.get(Source.Famous)
                 │
-                ▼  wireSlots — buildPoisFromFamousMeta(meta, cloud)
+                ▼  wireSlots — buildPoisFromFamousMeta(meta, catalog)
 PointOfInterest[] with category: 'famousGalaxy', minApparentSizePx: 6
                 │
                 ▼  combined with static anchors → setPois(merged)
@@ -369,17 +369,17 @@ Cormorant Garamond serif labels at Famous galaxies
     below the threshold.
   - A test that an entry without `minApparentSizePx` is always
     emitted (existing behaviour, regression-proof).
-  - A test that `category: 'famous'` is accepted and styled with
-    the `POI_STYLES.famous` entry.
+  - A test that `category: 'famousGalaxy'` is accepted and styled with
+    the `POI_STYLES.famousGalaxy` entry.
 - **`tests/data/poiCategories.test.ts` (new)** — asserts that
   `PoiCategory` is the literal union of `POI_STYLES` keys (the
   type-level check encoded as a value-level expect, mirroring the
   fonts.test.ts pattern).
 - **`tests/services/engine/phases/wireSlots.famousPois.test.ts`
-  (new)** — feeds a stub meta + stub cloud through the wire and
+  (new)** — feeds a stub meta + stub catalog through the wire and
   asserts the resulting `setPois` payload includes one
   `'famous-<id>'` POI per non-pseudo entry, with `worldPos` taken
-  from the cloud's `positions` buffer and `category: 'famous'`.
+  from the catalog's `positions` buffer and `category: 'famousGalaxy'`.
 - **Manual visual verification** before merging:
   - Toggle the new "Famous galaxies" checkbox; labels appear /
     disappear without flicker.
