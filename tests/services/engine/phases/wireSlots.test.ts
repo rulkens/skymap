@@ -299,6 +299,20 @@ function makeState(
       // to provide a callable `setPois` even when the test isn't
       // asserting on POI behaviour.
       pois: { setPois: vi.fn() } as never,
+      // wireSlots now calls state.subsystems.fades.register on the
+      // filament + overlay + label-layer handles after the slot mints.
+      // Provide a stub registry so the calls don't crash.
+      fades: {
+        register: vi.fn(),
+        unregister: vi.fn(),
+        fadeTo: vi.fn(() => Promise.resolve()),
+        setImmediate: vi.fn(),
+        opacityOf: vi.fn(() => 1),
+        isAnyAnimating: vi.fn(() => false),
+        tick: vi.fn(),
+        destroy: vi.fn(),
+        label: 'fadeRegistry',
+      },
     } as never,
     cam: null,
     initialCamSnapshot: null,
