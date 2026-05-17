@@ -43,7 +43,6 @@
     "build-tiers": "tsx tools/buildAllBins.ts",
     "deploy": "git push origin main && echo 'Pushed.  Cloudflare Workers Assets is rebuilding — watch https://dash.cloudflare.com/?to=/:account/workers-and-pages'",
     "expand-famous": "tsx tools/expandFamousFromCatalogs.ts",
-    "csv-to-bin": "tsx tools/csvToBin.ts",
     "dev": "vite",
     "fetch-2mass-xsc": "tsx tools/fetch2massXsc.ts",
     "fetch-famous-images": "tsx tools/fetchFamousImages.ts",
