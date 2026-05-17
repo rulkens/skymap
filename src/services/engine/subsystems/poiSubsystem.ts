@@ -50,6 +50,7 @@ import type { Vec4 } from '../../../@types/math/Vec4';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 import type { PoiSubsystem } from '../../../@types/engine/subsystems/PoiSubsystem';
+import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 
 type CategoryStyle = {
   readonly labelColor: Vec4;
@@ -153,11 +154,36 @@ export function createPoiSubsystem(): PoiSubsystem {
     ];
   }
 
-  function produceLabels(_state: EngineState, _ctx: ReadyFrameContext): LabelProducerOutput {
+  function produceLabels(_state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
     const labels: Label[] = [];
     const lines: MarkerLine[] = [];
+    // Recover the vertical fov from the per-frame `drawPxPerRad`:
+    //   drawPxPerRad = canvasSize.height / (2 * tan(fovY/2))
+    // ⇒ fovY = 2 * atan(canvasSize.height / (2 * drawPxPerRad))
+    // We do this rather than carrying fovY directly on ReadyFrameContext
+    // because `drawPxPerRad` is the already-derived scalar every other
+    // per-frame consumer reads from.
+    const halfH = ctx.canvasSize.height * 0.5;
+    const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
+    const [cx, cy, cz] = ctx.drawCamPos;
     for (const p of pois) {
       if (!visibility[p.category]) continue;
+      // Apparent-size gate.  Only runs when both threshold AND diameter
+      // are set — see the type doc on `apparentDiameterKpc` for the
+      // permissive-default rationale.
+      if (p.minApparentSizePx !== undefined && p.apparentDiameterKpc !== undefined) {
+        const dx = p.worldPos[0] - cx;
+        const dy = p.worldPos[1] - cy;
+        const dz = p.worldPos[2] - cz;
+        const distanceMpc = Math.hypot(dx, dy, dz);
+        const sizePx = apparentSizePx({
+          diameterKpc: p.apparentDiameterKpc,
+          distanceMpc,
+          viewportHeightPx: ctx.canvasSize.height,
+          fovYRad,
+        });
+        if (sizePx < p.minApparentSizePx) continue;
+      }
       const style = POI_STYLES[p.category];
       labels.push({
         id: p.id,
@@ -172,8 +198,6 @@ export function createPoiSubsystem(): PoiSubsystem {
       });
       for (const line of makeCrosshairLines(p, style)) lines.push(line);
     }
-    // POIs are static unless setPois is called — the director never needs
-    // a continuation render frame on our behalf.
     return { labels, lines, awake: false };
   }
 

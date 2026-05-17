@@ -103,4 +103,81 @@ describe('poiSubsystem', () => {
   it('has stable id "pois"', () => {
     expect(createPoiSubsystem().id).toBe('pois');
   });
+
+  // ── Apparent-size gating ─────────────────────────────────────────
+  //
+  // `minApparentSizePx` lets a POI suppress emission when its physical
+  // extent (passed via `apparentDiameterKpc`) projects to fewer screen
+  // pixels than the threshold.  Cluster/supercluster/void anchors
+  // omit the field and always emit; Famous galaxies set it so
+  // far-away tiny galaxies don't clutter the view.
+  it('emits a POI with minApparentSizePx when projected size meets the threshold', () => {
+    const sub = createPoiSubsystem();
+    // Galaxy 1 Mpc away with 50 kpc diameter under a 60° fovY at
+    // 1080 px viewport: angular = 50 / (1 * 1000) = 0.05 rad.  pxPerRad
+    // = 1080 / (2*tan(30°)) ≈ 935.  apparentSizePx ≈ 46.7 px — well above
+    // any reasonable threshold.
+    const close: PointOfInterest = {
+      id: 'close',
+      name: 'Close',
+      category: 'famousGalaxy',
+      worldPos: [1, 0, 0],
+      minApparentSizePx: 6,
+      apparentDiameterKpc: 50,
+    };
+    sub.setPois([close]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['close']);
+  });
+
+  it('suppresses a POI when projected size falls below minApparentSizePx', () => {
+    const sub = createPoiSubsystem();
+    // Galaxy 500 Mpc away with 30 kpc diameter under the same camera:
+    // angular = 30 / (500 * 1000) = 6e-5 rad.  apparentSizePx ≈ 0.056 px
+    // — way below the 6 px threshold.
+    const far: PointOfInterest = {
+      id: 'far',
+      name: 'Far',
+      category: 'famousGalaxy',
+      worldPos: [500, 0, 0],
+      minApparentSizePx: 6,
+      apparentDiameterKpc: 30,
+    };
+    sub.setPois([far]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels).toEqual([]);
+    expect(out.lines).toEqual([]);
+  });
+
+  it('emits a POI without minApparentSizePx unconditionally', () => {
+    const sub = createPoiSubsystem();
+    // 500 Mpc away — would be suppressed if a threshold were set,
+    // but the field is absent so the producer skips the gate.
+    const noGate: PointOfInterest = {
+      id: 'no-gate',
+      name: 'NoGate',
+      category: 'cluster',
+      worldPos: [500, 0, 0],
+    };
+    sub.setPois([noGate]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['no-gate']);
+  });
+
+  it('emits a POI with minApparentSizePx but no apparentDiameterKpc unconditionally', () => {
+    // Defensive default: if the consumer set a threshold but forgot to
+    // provide a diameter, fall through (better to over-emit than to
+    // silently hide a POI the consumer thought they configured).
+    const sub = createPoiSubsystem();
+    const partial: PointOfInterest = {
+      id: 'partial',
+      name: 'Partial',
+      category: 'famousGalaxy',
+      worldPos: [500, 0, 0],
+      minApparentSizePx: 6,
+    };
+    sub.setPois([partial]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels.map((l) => l.id)).toEqual(['partial']);
+  });
 });
