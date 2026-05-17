@@ -6,7 +6,8 @@
       "NGC 6744"
     ],
     "description": "NGC 6744 is an intermediate spiral galaxy in the constellation Pavo (Peacock). Its velocity with respect to the cosmic microwave background is 802 ± 3 km/s, which corresponds to a Hubble distance of 38.6 ± 2.7 Mly (11.82 ± 0.83 Mpc). However, 21 non redshift measurements give a distance of 23.63 ± 1.68 Mly (7.244 ± 0.514 Mpc). It was discovered on 30 June 1826 by Scottish astronomer James Dunlop, observing from Parramatta, Australia. It has a mass of 5.92×1010 M☉.",
-    "type": "Sbc"
+    "type": "Sbc",
+    "commonName": "Milky Way Twin"
   },
   {
     "id": "c12",
@@ -15,7 +16,8 @@
       "NGC 6946"
     ],
     "description": "NGC 6946, sometimes referred to as the Fireworks Galaxy, is a grand design, face-on intermediate spiral galaxy with a small bright nucleus, whose location in the sky straddles the boundary between the northern constellations of Cepheus and Cygnus. Its distance from Earth is about 25.2 million light-years or 7.72 megaparsecs, similar to the distance of M101 in the constellation Ursa Major. Both were once considered to be part of the Local Group, but are now known to be among the dozen bright spiral galaxies near the Milky Way but beyond the confines of the Local Group. NGC 6946 lies within the Virgo Supercluster.",
-    "type": "SABc"
+    "type": "SABc",
+    "commonName": "Fireworks Galaxy"
   },
   {
     "id": "c17",
@@ -24,7 +26,8 @@
       "NGC 147"
     ],
     "description": "NGC 147 is a dwarf spheroidal galaxy about 2.58 Mly away in the constellation Cassiopeia. NGC 147 is a member of the Local Group of galaxies and a satellite galaxy of the Andromeda Galaxy (M31). It forms a physical pair with the nearby galaxy NGC 185,\nanother remote satellite of M31. It was discovered by John Herschel in September 1829. Visually it is both fainter and slightly larger than NGC 185. This means that NGC 147 is more difficult to see than NGC 185, which is visible in small telescopes. In the Webb Society Deep-Sky Observer's Handbook, the visual appearance of NGC 147 is described as follows:\nLarge, quite faint, irregularly round; it brightens in the middle to a stellar nucleus.\n",
-    "type": "E"
+    "type": "E",
+    "commonName": "NGC 147"
   },
   {
     "id": "c18",
@@ -33,7 +36,8 @@
       "NGC 185"
     ],
     "description": "NGC 185 is a dwarf spheroidal galaxy located 2.08 million light-years from Earth, appearing in the constellation Cassiopeia. It is a member of the Local Group, and is a satellite of the Andromeda Galaxy (M31). NGC 185 was discovered by William Herschel on November 30, 1787, and he cataloged it \"H II.707\". John Herschel observed the object again in 1833 when he cataloged it as \"h 35\", and then in 1864 when he cataloged it as \"GC 90\" within his General Catalogue of Nebulae and Clusters. NGC 185 was first photographed between 1898 and 1900 by James Edward Keeler with the Crossley Reflector of Lick Observatory. Unlike most dwarf elliptical galaxies, NGC 185 contains young stellar clusters, and star formation proceeded at a low rate until the recent past. NGC 185 has an active galactic nucleus (AGN) and is usually classified as a Type II Seyfert galaxy, though its status as a Seyfert is questioned. It is possibly the closest Seyfert galaxy to Earth, and is the only known Seyfert in the Local Group.",
-    "type": "E"
+    "type": "E",
+    "commonName": "NGC 185"
   },
   {
     "id": "c21",
@@ -42,7 +46,8 @@
       "NGC 4449"
     ],
     "description": "NGC 4449, also known as Caldwell 21, is an irregular Magellanic type galaxy in the constellation Canes Venatici, being located about 13 million light-years away. It was discovered by German-British astronomer William Herschel on 27 April 1788. It is part of the M94 Group or Canes Venatici I Group that is relatively close to the Local Group hosting our Milky Way galaxy.",
-    "type": "IB"
+    "type": "IB",
+    "commonName": "NGC 4449"
   },
   {
     "id": "c23",
@@ -51,7 +56,8 @@
       "NGC 891"
     ],
     "description": "NGC 891 is an edge-on unbarred spiral galaxy about 30 million light-years away in the constellation Andromeda. It was discovered by William Herschel on October 6, 1784. The galaxy is a member of the NGC 1023 group of galaxies in the Local Supercluster. It has an H II nucleus.",
-    "type": "Sb"
+    "type": "Sb",
+    "commonName": "Silver Sliver Galaxy"
   },
   {
     "id": "c24",
@@ -70,7 +76,8 @@
       "NGC 4244"
     ],
     "description": "NGC 4244, also known as Caldwell 26, is an edge-on loose spiral galaxy in the constellation Canes Venatici, and is part of the M94 Group or Canes Venatici I Group, a galaxy group relatively close to the Local Group containing the Milky Way. In the sky, it is located near the yellow naked-eye star, Beta Canum Venaticorum, but also near the barred spiral galaxy NGC 4151 and irregular galaxy NGC 4214.",
-    "type": "Sc"
+    "type": "Sc",
+    "commonName": "Silver Needle Galaxy"
   },
   {
     "id": "c29",
@@ -79,7 +86,8 @@
       "NGC 5005"
     ],
     "description": "NGC 5005, also known as Caldwell 29, is an inclined spiral galaxy in the constellation Canes Venatici. It was discovered by German-British astronomer William Herschel on 1 May 1785. The galaxy has a relatively bright nucleus and a bright disk that contains multiple dust lanes. The galaxy's high surface brightness makes it an object that is visible to amateur astronomers using large amateur telescopes.",
-    "type": "SABb"
+    "type": "SABb",
+    "commonName": "NGC 5005"
   },
   {
     "id": "c3",
@@ -88,7 +96,8 @@
       "NGC 4236"
     ],
     "description": "NGC 4236 is a barred Magellanic spiral galaxy located in the constellation Draco.",
-    "type": "SBd"
+    "type": "SBd",
+    "commonName": "NGC 4236"
   },
   {
     "id": "c30",
@@ -97,7 +106,8 @@
       "NGC 7331"
     ],
     "description": "",
-    "type": "Sbc"
+    "type": "Sbc",
+    "commonName": "Deer Lick Galaxy"
   },
   {
     "id": "c32",
@@ -106,7 +116,8 @@
       "NGC 4631"
     ],
     "description": "",
-    "type": "SBcd"
+    "type": "SBcd",
+    "commonName": "Whale Galaxy"
   },
   {
     "id": "c35",
@@ -115,7 +126,8 @@
       "NGC 4889"
     ],
     "description": "",
-    "type": "E"
+    "type": "E",
+    "commonName": "NGC 4889"
   },
   {
     "id": "c36",
@@ -124,7 +136,8 @@
       "NGC 4559"
     ],
     "description": "",
-    "type": "Sc"
+    "type": "Sc",
+    "commonName": "NGC 4559"
   },
   {
     "id": "c38",
@@ -133,7 +146,8 @@
       "NGC 4565"
     ],
     "description": "",
-    "type": "Sb"
+    "type": "Sb",
+    "commonName": "Needle Galaxy"
   },
   {
     "id": "c40",
@@ -142,7 +156,8 @@
       "NGC 3626"
     ],
     "description": "",
-    "type": "S0-a"
+    "type": "S0-a",
+    "commonName": "NGC 3626"
   },
   {
     "id": "c43",
@@ -151,7 +166,8 @@
       "NGC 7814"
     ],
     "description": "NGC 7814 is a spiral galaxy about 40 million light-years away in the constellation Pegasus. The galaxy is seen edge-on from Earth. It is sometimes referred to as \"the little sombrero\", a miniature version of Messier 104. The star field behind NGC 7814 is known for its density of faint, remote galaxies as can be seen in the image here, in the same vein as the Hubble Deep Field.",
-    "type": "Sab"
+    "type": "Sab",
+    "commonName": "Little Sombrero Galaxy"
   },
   {
     "id": "c44",
@@ -160,7 +176,8 @@
       "NGC 7479"
     ],
     "description": "NGC 7479 is a barred spiral galaxy about 105 million light-years away in the constellation Pegasus. William Herschel discovered it in 1784. NGC 7479 is also recognized as a Seyfert galaxy and a LINER undergoing starburst activity not only on the nucleus and the outer arms, but also across the bar of the galaxy, where most of the stars were formed in the last 100 million years. Polarization studies of this galaxy indicate that it recently underwent a minor merger and that it is unique in the radio continuum, with arms opening in a direction opposite to the optical arms. This feature, along with the asymmetrical arms of the galaxy and the intense star formation activity are attributed to a merger with a smaller galaxy. This galaxy is similar in both size and morphology to the barred spiral NGC 1300.",
-    "type": "SBbc"
+    "type": "SBbc",
+    "commonName": "Superman Galaxy"
   },
   {
     "id": "c45",
@@ -169,7 +186,8 @@
       "NGC 5248"
     ],
     "description": "NGC 5248 is a compact intermediate spiral galaxy in the constellation Boötes. Its velocity with respect to the cosmic microwave background is 1437 ± 20 km/s, which corresponds to a Hubble distance of 69.1 ± 4.9 Mly (21.19 ± 1.51 Mpc). However, 17 non redshift measurements give a much closer distance of 42.52 ± 3.16 Mly (13.038 ± 0.969 Mpc). It was discovered on 15 April 1784 by German-British astronomer William Herschel.",
-    "type": "SABb"
+    "type": "SABb",
+    "commonName": "NGC 5248"
   },
   {
     "id": "c48",
@@ -178,7 +196,8 @@
       "NGC 2775"
     ],
     "description": "NGC 2775, also known as Caldwell 48, is a spiral galaxy in the constellation Cancer. It is 67 million light-years away from the Milky Way. It was discovered by German-British astronomer William Herschel on 19 December 1783.",
-    "type": "Sab"
+    "type": "Sab",
+    "commonName": "NGC 2775"
   },
   {
     "id": "c5",
@@ -187,7 +206,8 @@
       "IC 342"
     ],
     "description": "IC 342 is an intermediate spiral galaxy in the constellation Camelopardalis, located relatively close to the Milky Way. Despite its size and actual brightness, its location behind dusty areas near the galactic equator makes it difficult to observe, leading to the nickname \"The Hidden Galaxy\", though it can readily be detected even with binoculars. If the galaxy were not obscured, it would be visible by naked eye. The dust makes it difficult to determine its precise distance; modern estimates range from about 7 million light-years (Mly) to about 11 Mly. The galaxy was discovered by William Frederick Denning in 1892. It is one of the brightest in the IC 342/Maffei Group, one of the closest galaxy groups to the Local Group. Edwin Hubble first thought it to be in the Local Group, but it was later determined not to be a member.",
-    "type": "SABc"
+    "type": "SABc",
+    "commonName": "Hidden Galaxy"
   },
   {
     "id": "c51",
@@ -196,7 +216,8 @@
       "IC 1613"
     ],
     "description": "IC 1613 is an irregular dwarf galaxy located on the outskirts of the Local group around 730 kiloparsecs from Earth in the constellation of Cetus near the star 26 Ceti. It has a low mass with its mass only being around 10^8 solar masses. It has played an important role in the calibration of the Cepheid variable period-luminosity relation for estimating distances. Other than the Magellanic Clouds, it is one of the few Local Group dwarf irregular galaxy where RR Lyrae-type variables have been observed; this factor, along with an unusually low abundance of interstellar dust both within IC 1613 and along the line of sight enable especially accurate distance estimates. IC 1613 was discovered in 1906 by Max Wolf, and is approaching Earth at 234 km/s.",
-    "type": "I"
+    "type": "I",
+    "commonName": "IC 1613"
   },
   {
     "id": "c52",
@@ -205,7 +226,8 @@
       "NGC 4697"
     ],
     "description": "NGC 4697 is an elliptical galaxy some 40 to 50 million light-years away in the constellation Virgo. It is a member of the NGC 4697 Group, a group of galaxies also containing NGC 4731 and several generally much smaller galaxies. This group is about 55 million light-years away; it is one of the many Virgo II Groups, which form a southern extension of the Virgo Supercluster of galaxies.",
-    "type": "E"
+    "type": "E",
+    "commonName": "NGC 4697"
   },
   {
     "id": "c53",
@@ -214,7 +236,8 @@
       "NGC 3115"
     ],
     "description": "NGC 3115 is a field lenticular (S0) galaxy in the constellation Sextans. The galaxy was discovered by William Herschel on February 22, 1787. At about 32 million light-years away from Earth, it is several times bigger than the Milky Way. It is a lenticular (S0) galaxy because it contains a disk and a central bulge of stars, but without a detectable spiral pattern. NGC 3115 is seen almost exactly edge-on, but was nevertheless mis-classified as elliptical. There is some speculation that NGC 3115, in its youth, was a quasar.",
-    "type": "E-S0"
+    "type": "E-S0",
+    "commonName": "Spindle Galaxy"
   },
   {
     "id": "c57",
@@ -223,7 +246,8 @@
       "NGC 6822"
     ],
     "description": "NGC 6822 is a barred irregular galaxy approximately 1.6 million light-years away in the constellation Sagittarius. Part of the Local Group of galaxies, it was discovered by E. E. Barnard in 1884, with a six-inch refractor telescope. It is the closest non-satellite galaxy to the Milky Way, but lies just outside its virial radius. It is similar in structure and composition to the Small Magellanic Cloud. It is about 7,000 light-years in diameter.",
-    "type": "IB"
+    "type": "IB",
+    "commonName": "Barnard's Galaxy"
   },
   {
     "id": "c60",
@@ -232,7 +256,8 @@
       "NGC 4038"
     ],
     "description": "The Antennae Galaxies are a pair of interacting galaxies in the constellation Corvus. They are currently going through a starburst phase, in which the collision of clouds of gas and dust, with entangled magnetic fields, causes rapid star formation. They were discovered by William Herschel in 1785.",
-    "type": "SBm"
+    "type": "SBm",
+    "commonName": "Antennae Galaxy"
   },
   {
     "id": "c61",
@@ -241,7 +266,8 @@
       "NGC 4039"
     ],
     "description": "",
-    "type": "SBm"
+    "type": "SBm",
+    "commonName": "Antennae Galaxy"
   },
   {
     "id": "c62",
@@ -250,7 +276,8 @@
       "NGC 247"
     ],
     "description": "",
-    "type": "SABc"
+    "type": "SABc",
+    "commonName": "Needle's Eye Galaxy"
   },
   {
     "id": "c65",
@@ -259,7 +286,8 @@
       "NGC 253"
     ],
     "description": "",
-    "type": "SABc"
+    "type": "SABc",
+    "commonName": "Sculptor Galaxy"
   },
   {
     "id": "c67",
@@ -268,7 +296,8 @@
       "NGC 1097"
     ],
     "description": "",
-    "type": "SBb"
+    "type": "SBb",
+    "commonName": "NGC 1097"
   },
   {
     "id": "c7",
@@ -277,7 +306,8 @@
       "NGC 2403"
     ],
     "description": "",
-    "type": "SABc"
+    "type": "SABc",
+    "commonName": "NGC 2403"
   },
   {
     "id": "c70",
@@ -286,7 +316,8 @@
       "NGC 300"
     ],
     "description": "",
-    "type": "Scd"
+    "type": "Scd",
+    "commonName": "Sculptor Pinwheel Galaxy"
   },
   {
     "id": "c72",
@@ -295,7 +326,8 @@
       "NGC 55"
     ],
     "description": "",
-    "type": "SBm"
+    "type": "SBm",
+    "commonName": "String of Pearls Galaxy"
   },
   {
     "id": "c77",
@@ -314,7 +346,8 @@
       "NGC 4945"
     ],
     "description": "",
-    "type": "SBc"
+    "type": "SBc",
+    "commonName": "NGC 4945"
   },
   {
     "id": "m100",
@@ -381,7 +414,8 @@
       "NGC 3556"
     ],
     "description": "",
-    "type": "Sc"
+    "type": "Sc",
+    "commonName": "Surfboard Galaxy"
   },
   {
     "id": "m109",
@@ -495,7 +529,8 @@
       "NGC 5055"
     ],
     "description": "",
-    "type": "Sbc"
+    "type": "Sbc",
+    "commonName": "Sunflower Galaxy"
   },
   {
     "id": "m64",
@@ -505,7 +540,8 @@
       "Black Eye Galaxy"
     ],
     "description": "Named for the prominent dust band absorbing light in front of its bright nucleus, M64's gas in the outer disk rotates in the opposite direction to the inner disk — evidence of a past minor merger.",
-    "type": "SABa"
+    "type": "SABa",
+    "commonName": "Black Eye Galaxy"
   },
   {
     "id": "m65",
@@ -532,7 +568,8 @@
       "NGC 628"
     ],
     "description": "Messier 74 is a large spiral galaxy in the equatorial constellation Pisces. It is about 32 million light-years away from Earth. The galaxy contains two clearly defined spiral arms and is therefore used as an archetypal example of a grand design spiral galaxy. The galaxy's low surface brightness makes it the most difficult Messier object for amateur astronomers to observe. Its relatively large angular size and the galaxy's face-on orientation make it an ideal object for professional astronomers who want to study spiral arm structure and spiral density waves. It is estimated that M74 hosts about 100 billion stars.",
-    "type": "Sc"
+    "type": "Sc",
+    "commonName": "Phantom Galaxy"
   },
   {
     "id": "m77",
@@ -542,7 +579,8 @@
       "Cetus A"
     ],
     "description": "M77 is the closest type-2 Seyfert galaxy and one of the brightest active galactic nuclei in the local universe — a textbook case of an obscured supermassive black hole.",
-    "type": "Sb"
+    "type": "Sb",
+    "commonName": "Cetus A"
   },
   {
     "id": "m81",
@@ -563,7 +601,8 @@
       "Cigar Galaxy"
     ],
     "description": "An edge-on starburst galaxy in the M81 group, M82 is being gravitationally disturbed by M81 — driving an enormous nuclear starburst with hot gas streaming kiloparsecs above the disk.",
-    "type": "S?"
+    "type": "S?",
+    "commonName": "Cigar Galaxy"
   },
   {
     "id": "m83",
@@ -573,7 +612,8 @@
       "Southern Pinwheel"
     ],
     "description": "A face-on barred spiral with a prominent star-forming bar, M83 has hosted six supernovae and is one of the closest barred spirals to us.",
-    "type": "Sc"
+    "type": "Sc",
+    "commonName": "Southern Pinwheel Galaxy"
   },
   {
     "id": "m84",
@@ -656,7 +696,8 @@
       "NGC 4736"
     ],
     "description": "Messier 94 is a spiral galaxy in the mid-northern constellation Canes Venatici. It was discovered by Pierre Méchain in 1781, and catalogued by Charles Messier two days later. Although some references describe M94 as a barred spiral galaxy, the \"bar\" structure appears to be more oval-shaped. The galaxy has two ring structures.",
-    "type": "SABa"
+    "type": "SABa",
+    "commonName": "Croc's Eye Galaxy"
   },
   {
     "id": "m95",
@@ -693,6 +734,7 @@
       "Virgo Cluster Pinwheel"
     ],
     "description": "An asymmetric grand-design spiral on the outskirts of the Virgo cluster.  Its lopsided structure is thought to result from a recent high-speed encounter with the cluster's hot gas.",
-    "type": "Sc"
+    "type": "Sc",
+    "commonName": "Coma Pinwheel"
   }
 ]

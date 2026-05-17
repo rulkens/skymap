@@ -5,6 +5,7 @@
       "C101",
       "NGC 6744"
     ],
+    "commonName": "Milky Way Twin",
     "ra": 287.4418785,
     "dec": -63.8574729,
     "distanceMpc": 9.1411324147025,
@@ -23,6 +24,7 @@
       "C12",
       "NGC 6946"
     ],
+    "commonName": "Fireworks Galaxy",
     "ra": 308.71916550000003,
     "dec": 60.1535166,
     "distanceMpc": 6.720475466282965,
@@ -40,6 +42,7 @@
       "C17",
       "NGC 147"
     ],
+    "commonName": "NGC 147",
     "ra": 8.3004165,
     "dec": 48.5088889,
     "distanceMpc": 0.7089245235633985,
@@ -58,6 +61,7 @@
       "C18",
       "NGC 185"
     ],
+    "commonName": "NGC 185",
     "ra": 9.7415835,
     "dec": 48.3374306,
     "distanceMpc": 0.6637430704019087,
@@ -75,6 +79,7 @@
       "C21",
       "NGC 4449"
     ],
+    "commonName": "NGC 4449",
     "ra": 187.04626050000002,
     "dec": 44.093628,
     "distanceMpc": 4.2657951880159235,
@@ -93,6 +98,7 @@
       "C23",
       "NGC 891"
     ],
+    "commonName": "Silver Sliver Galaxy",
     "ra": 35.639511,
     "dec": 42.3476344,
     "distanceMpc": 9.849178309808163,
@@ -130,6 +136,7 @@
       "C26",
       "NGC 4244"
     ],
+    "commonName": "Silver Needle Galaxy",
     "ra": 184.3727955,
     "dec": 37.8077928,
     "distanceMpc": 4.3491060723245365,
@@ -148,6 +155,7 @@
       "C29",
       "NGC 5005"
     ],
+    "commonName": "NGC 5005",
     "ra": 197.73447,
     "dec": 37.058994,
     "distanceMpc": 21.478304741305344,
@@ -165,6 +173,7 @@
       "C3",
       "NGC 4236"
     ],
+    "commonName": "NGC 4236",
     "ra": 184.1754435,
     "dec": 69.4626085,
     "distanceMpc": 4.407577932415364,
@@ -183,6 +192,7 @@
       "C30",
       "NGC 7331"
     ],
+    "commonName": "Deer Lick Galaxy",
     "ra": 339.267279,
     "dec": 34.4156195,
     "distanceMpc": 14.534496779183158,
@@ -201,6 +211,7 @@
       "C32",
       "NGC 4631"
     ],
+    "commonName": "Whale Galaxy",
     "ra": 190.5326625,
     "dec": 32.5425167,
     "distanceMpc": 7.348522021921091,
@@ -219,6 +230,7 @@
       "C35",
       "NGC 4889"
     ],
+    "commonName": "NGC 4889",
     "ra": 195.0338295,
     "dec": 27.9769491,
     "distanceMpc": 102.61243651933412,
@@ -236,6 +248,7 @@
       "C36",
       "NGC 4559"
     ],
+    "commonName": "NGC 4559",
     "ra": 188.9903415,
     "dec": 27.9596837,
     "distanceMpc": 7.148254395687636,
@@ -254,6 +267,7 @@
       "C38",
       "NGC 4565"
     ],
+    "commonName": "Needle Galaxy",
     "ra": 189.086598,
     "dec": 25.9875214,
     "distanceMpc": 12.067019095932762,
@@ -271,6 +285,7 @@
       "C40",
       "NGC 3626"
     ],
+    "commonName": "NGC 3626",
     "ra": 170.0158305,
     "dec": 18.3568119,
     "distanceMpc": 19.833529203679344,
@@ -289,6 +304,7 @@
       "C43",
       "NGC 7814"
     ],
+    "commonName": "Little Sombrero Galaxy",
     "ra": 0.812559,
     "dec": 16.1456194,
     "distanceMpc": 14.454397707459279,
@@ -307,6 +323,7 @@
       "C44",
       "NGC 7479"
     ],
+    "commonName": "Superman Galaxy",
     "ra": 346.236102,
     "dec": 12.3228077,
     "distanceMpc": 28.747142857142858,
@@ -324,6 +341,7 @@
       "C45",
       "NGC 5248"
     ],
+    "commonName": "NGC 5248",
     "ra": 204.3834195,
     "dec": 8.885176,
     "distanceMpc": 11.98395032077269,
@@ -342,6 +360,7 @@
       "C48",
       "NGC 2775"
     ],
+    "commonName": "NGC 2775",
     "ra": 137.5838355,
     "dec": 7.0379658,
     "distanceMpc": 23.76142857142857,
@@ -360,6 +379,7 @@
       "C5",
       "IC 342"
     ],
+    "commonName": "Hidden Galaxy",
     "ra": 56.7021255,
     "dec": 68.0960926,
     "distanceMpc": 3.4355794789987457,
@@ -375,6 +395,7 @@
       "C51",
       "IC 1613"
     ],
+    "commonName": "IC 1613",
     "ra": 16.199166,
     "dec": 2.1177314,
     "distanceMpc": 0.7568328950209743,
@@ -391,6 +412,7 @@
       "C52",
       "NGC 4697"
     ],
+    "commonName": "NGC 4697",
     "ra": 192.149694,
     "dec": -5.8007715,
     "distanceMpc": 12.229254976262439,
@@ -409,6 +431,7 @@
       "C53",
       "NGC 3115"
     ],
+    "commonName": "Spindle Galaxy",
     "ra": 151.308132,
     "dec": -7.7184976,
     "distanceMpc": 9.651615228750952,
@@ -427,6 +450,7 @@
       "C57",
       "NGC 6822"
     ],
+    "commonName": "Barnard's Galaxy",
     "ra": 296.237433,
     "dec": -14.8003417,
     "distanceMpc": 0.4606806808300932,
@@ -444,6 +468,7 @@
       "C60",
       "NGC 4038"
     ],
+    "commonName": "Antennae Galaxy",
     "ra": 180.470898,
     "dec": -18.8682165,
     "distanceMpc": 24.490632418447454,
@@ -461,6 +486,7 @@
       "C61",
       "NGC 4039"
     ],
+    "commonName": "Antennae Galaxy",
     "ra": 180.4734345,
     "dec": -18.886422,
     "distanceMpc": 13.304544179780914,
@@ -477,6 +503,7 @@
       "C62",
       "NGC 247"
     ],
+    "commonName": "Needle's Eye Galaxy",
     "ra": 11.7857175,
     "dec": -20.7604499,
     "distanceMpc": 3.71364170191956,
@@ -495,6 +522,7 @@
       "C65",
       "NGC 253"
     ],
+    "commonName": "Sculptor Galaxy",
     "ra": 11.887966500000001,
     "dec": -25.2884419,
     "distanceMpc": 3.6965790681932718,
@@ -511,6 +539,7 @@
       "C67",
       "NGC 1097"
     ],
+    "commonName": "NGC 1097",
     "ra": 41.5795935,
     "dec": -30.2750483,
     "distanceMpc": 14.709570767969778,
@@ -528,6 +557,7 @@
       "C7",
       "NGC 2403"
     ],
+    "commonName": "NGC 2403",
     "ra": 114.2142375,
     "dec": 65.6024203,
     "distanceMpc": 3.2047931228494013,
@@ -546,6 +576,7 @@
       "C70",
       "NGC 300"
     ],
+    "commonName": "Sculptor Pinwheel Galaxy",
     "ra": 13.7230245,
     "dec": -37.6844766,
     "distanceMpc": 2.0267491520989647,
@@ -564,6 +595,7 @@
       "C72",
       "NGC 55"
     ],
+    "commonName": "String of Pearls Galaxy",
     "ra": 3.7233674999999997,
     "dec": -39.1965824,
     "distanceMpc": 2.1125159662408515,
@@ -601,6 +633,7 @@
       "C83",
       "NGC 4945"
     ],
+    "commonName": "NGC 4945",
     "ra": 196.363761,
     "dec": -49.4679088,
     "distanceMpc": 3.4657720899354882,
@@ -726,6 +759,7 @@
       "M108",
       "NGC 3556"
     ],
+    "commonName": "Surfboard Galaxy",
     "ra": 167.8789005,
     "dec": 55.6742681,
     "distanceMpc": 9.831052152817696,
@@ -943,6 +977,7 @@
       "M63",
       "NGC 5055"
     ],
+    "commonName": "Sunflower Galaxy",
     "ra": 198.95539649999998,
     "dec": 42.0292782,
     "distanceMpc": 9.036494737223018,
@@ -962,6 +997,7 @@
       "NGC 4826",
       "Black Eye Galaxy"
     ],
+    "commonName": "Black Eye Galaxy",
     "ra": 194.18200950000002,
     "dec": 21.6821044,
     "distanceMpc": 4.407577932415364,
@@ -1014,6 +1050,7 @@
       "M74",
       "NGC 628"
     ],
+    "commonName": "Phantom Galaxy",
     "ra": 24.1741665,
     "dec": 15.7834583,
     "distanceMpc": 10.1391138573668,
@@ -1032,6 +1069,7 @@
       "NGC 1068",
       "Cetus A"
     ],
+    "commonName": "Cetus A",
     "ra": 40.669729499999995,
     "dec": -0.0132779,
     "distanceMpc": 13.128571428571428,
@@ -1070,6 +1108,7 @@
       "NGC 3034",
       "Cigar Galaxy"
     ],
+    "commonName": "Cigar Galaxy",
     "ra": 148.968012,
     "dec": 69.6797719,
     "distanceMpc": 3.617428867642184,
@@ -1089,6 +1128,7 @@
       "NGC 5236",
       "Southern Pinwheel"
     ],
+    "commonName": "Southern Pinwheel Galaxy",
     "ra": 204.25390050000001,
     "dec": -29.8656261,
     "distanceMpc": 4.89778819368446,
@@ -1244,6 +1284,7 @@
       "M94",
       "NGC 4736"
     ],
+    "commonName": "Croc's Eye Galaxy",
     "ra": 192.721248,
     "dec": 41.1203028,
     "distanceMpc": 4.385306977749858,
@@ -1315,6 +1356,7 @@
       "NGC 4254",
       "Virgo Cluster Pinwheel"
     ],
+    "commonName": "Coma Pinwheel",
     "ra": 184.7067315,
     "dec": 14.4167921,
     "distanceMpc": 12.882495516931343,
