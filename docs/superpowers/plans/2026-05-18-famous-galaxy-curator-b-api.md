@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Depends on:** Plan A merged. The `apiPlugin` route table, path helpers, recipe serialiser, and `applyLuminanceAsAlpha` helper from Plan A are prerequisites.
+**Depends on:** Plan A merged. The `apiPlugin` route table, path helpers, recipe serialiser, and `applyLuminanceAsAlpha` helper (at `tools/utils/image/applyLuminanceAsAlpha.ts`) from Plan A are prerequisites.
 
 **Goal:** Add the five real API routes (`/api/fetch`, `/api/process`, `/api/process/alpha-only`, `/api/export`, `/api/galaxies`) plus preview WebP serving (`/api/preview/:tmpId/:name`) to the curator's Vite plugin. Each route is fully exercisable via curl with `MOCK_STARNET=1`. By the end of this plan the back-end is feature-complete; Plan C drives it from the React UI.
 
@@ -733,7 +733,7 @@ import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { sessionPath, sessionFilePath } from '../tmpSession';
 import { runStarnet, type StarnetConfig } from '../starnet';
-import { applyLuminanceAsAlpha } from '../../../famous/famousImageProcessor.js';
+import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
 
 const PREVIEW_PX = 512;
 
@@ -930,7 +930,7 @@ import sharp from 'sharp';
 import { existsSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { sessionPath } from '../tmpSession';
-import { applyLuminanceAsAlpha } from '../../../famous/famousImageProcessor.js';
+import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
 
 const PREVIEW_PX = 512;
 
@@ -1341,7 +1341,7 @@ import {
 import { sessionPath } from '../tmpSession';
 import { serialiseRecipe, type Recipe } from '../recipe';
 import { upsertOverrideEntry } from '../overrideIndex';
-import { applyLuminanceAsAlpha } from '../../../famous/famousImageProcessor.js';
+import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
 
 const FULL_PX = 1024;
 const ATLAS_PX = 256;
