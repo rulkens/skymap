@@ -241,10 +241,25 @@ describe('filamentsPass.enabled', () => {
     ).toBe(true);
   });
 
-  it('returns false when filamentsEnabled is false', () => {
+  it('returns false when filamentsEnabled is false AND fade opacity is 0', () => {
+    // STATE_STUB.fades.opacityOf returns 1 by default — override to 0
+    // for this case so the gate doesn't keep the pass alive through a
+    // fade-out tail.
+    const stateZeroFade = {
+      subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
+    } as unknown as EngineState;
+    expect(
+      filamentsPass.enabled(stateZeroFade, makeCtx(), makeSettings({ filamentsEnabled: false })),
+    ).toBe(false);
+  });
+
+  it('returns true when filamentsEnabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
+    // The STATE_STUB default opacityOf = 1 simulates a fade-out in
+    // progress; the gate must keep the pass alive so the user sees
+    // the smooth ~100 ms ramp instead of an instant pop.
     expect(
       filamentsPass.enabled(STATE_STUB, makeCtx(), makeSettings({ filamentsEnabled: false })),
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 

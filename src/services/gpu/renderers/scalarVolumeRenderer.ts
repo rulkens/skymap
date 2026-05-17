@@ -547,7 +547,14 @@ export function createScalarVolumeRenderer(
       const scratch = new Float32Array(UNIFORM_BYTES / 4);
       frame = (frame + 1) % FRAME_WRAP;
       for (const e of fields.values()) {
-        if (!e.enabled || e.intensity <= 0) continue;
+        // Skip iff the field is fully off — meaning user toggled it
+        // disabled AND the fade-out tail has fully settled. While
+        // opacity > 0 we keep drawing so the ~100 ms fade-out is
+        // visible. e.intensity is the user's intensity slider; 0
+        // there means "fully transparent regardless of fade", so we
+        // skip the GPU work entirely.
+        const opacity = fadeOpacityOf(e.handle);
+        if ((!e.enabled && opacity <= 0) || e.intensity <= 0) continue;
         for (let i = 0; i < 16; i++) scratch[i] = viewProj[i] ?? 0;
         scratch[16] = viewportPx[0];
         scratch[17] = viewportPx[1];

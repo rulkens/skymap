@@ -1119,6 +1119,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.settings.volumes.fields[fieldHandle].enabled = enabled;
     }
     state.gpu.scalarVolumeRenderer?.setEnabled(fieldHandle, enabled);
+    // Drive the FadeRegistry alongside the renderer flip. The renderer's
+    // draw loop accepts (!enabled && opacity <= 0) as the skip condition,
+    // so the field keeps rendering through the ~100 ms fade-out tail.
+    void state.subsystems.fades.fadeTo(
+      { kind: 'scalarField', field: fieldHandle },
+      enabled ? 1 : 0,
+      enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+    );
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1359,7 +1367,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setEnabled: (enabled) => boringSetters.setMilkyWayEnabled(enabled),
     },
     filaments: {
-      setEnabled: (enabled) => boringSetters.setFilamentsEnabled(enabled),
+      // Drive the FadeRegistry alongside the boolean flip so the user
+      // sees a smooth ramp on toggle. The pass.enabled gate in
+      // filamentsPass.ts accepts EITHER the boolean OR a non-zero
+      // fade opacity, so we can flip the setting first and let the
+      // gate keep the pass alive through the ~100 ms fade-out tail.
+      setEnabled: (enabled) => {
+        boringSetters.setFilamentsEnabled(enabled);
+        void state.subsystems.fades.fadeTo(
+          { kind: 'filaments' },
+          enabled ? 1 : 0,
+          enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+        );
+        state.subsystems.scheduler.requestRender();
+      },
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
     labels: {

@@ -244,6 +244,11 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       subsystems: {
         proceduralDisks: null,
         texturedImpostors: null,
+        // filamentsPass.enabled consults the FadeRegistry to keep the
+        // pass alive through fade-out tails. This fixture wants the
+        // pass GATED OFF (the test asserts only point-sprites +
+        // milky-way fire), so opacityOf returns 0 — no fade-out tail.
+        fades: { opacityOf: () => 0 },
       },
     } as never,
     milkyWayITimeSec: 0,
