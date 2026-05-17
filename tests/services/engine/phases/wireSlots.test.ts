@@ -542,4 +542,42 @@ describe('wireSlots', () => {
     expect(received.some((p) => p.category === 'supercluster')).toBe(true);
     expect(received.some((p) => p.category === 'void')).toBe(true);
   });
+
+  it('wires famous POIs alongside static anchors once meta + catalog arrive', async () => {
+    // Pre-populate the famous-meta sidecar and the famous catalog so
+    // the synchronous initial-merge call inside wireSlots picks them
+    // up immediately — we don't have to wait for slot transitions.
+    delete (globalThis as { location?: unknown }).location;
+    (globalThis as { location: { search: string } }).location = { search: '' };
+
+    const state = makeState();
+    state.sources.famousMeta = [
+      { id: 'm31', names: ['M31'], commonName: 'Andromeda Galaxy', description: '', type: '' },
+      { id: 'm33', names: ['M33'], description: '', type: '' },
+    ];
+    state.sources.catalogs.set(Source.Famous, {
+      count: 2,
+      positions: new Float32Array([0.78, 0.1, 0.2, 0.85, 0.05, 0.15]),
+      diameterKpc: new Float32Array([67, 30]),
+    } as never);
+    const deps = makeDeps();
+    const received: Array<readonly PointOfInterest[]> = [];
+    state.subsystems.pois.setPois = (pois) => {
+      received.push(pois);
+    };
+    await wireSlots(state, deps);
+    // The wire calls setPois twice: once for static anchors only (the
+    // pre-Famous-merge call), then again with the merged list once
+    // rewireFamousPois sees both ingredients present.  Assert against
+    // the LAST call's payload.
+    const final = received[received.length - 1] ?? [];
+    const ids = final.map((p) => p.id);
+    expect(ids).toContain('famous-m31');
+    expect(ids).toContain('famous-m33');
+    expect(ids.some((id) => id.startsWith('cluster-'))).toBe(true);
+    const m31 = final.find((p) => p.id === 'famous-m31');
+    expect(m31?.name).toBe('Andromeda Galaxy');
+    expect(m31?.category).toBe('famousGalaxy');
+    expect(m31?.minApparentSizePx).toBe(6);
+  });
 });

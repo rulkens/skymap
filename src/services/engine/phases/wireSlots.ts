@@ -80,6 +80,7 @@
  */
 
 import { Source } from '../../../data/sources';
+import { buildPoisFromFamousMeta } from './buildPoisFromFamousMeta';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
@@ -240,6 +241,45 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // `loading/slots/famousMetaSlot.ts` for the dual-sidecar rationale and
   // the graceful-degradation policy on fetch error.
   const famousMetaSlot = createFamousMetaSlot(state, cb);
+
+  // ── Famous-galaxy label wire (deferred merge) ────────────────────
+  //
+  // Famous POIs need two ingredients: the meta sidecar (for names +
+  // diameter) and the Famous galaxy catalog (for worldPos).  Both arrive
+  // asynchronously — `famousMetaSlot.load()` fires later in this phase;
+  // the catalog arrives via the per-source slot commit that `initGpu`
+  // already wired.  We re-run the merge whenever either ingredient
+  // lands so the user sees labels appear as soon as the data is on
+  // hand.
+  //
+  // Re-merging static anchors + Famous POIs every time isn't a
+  // performance concern: setPois is O(N) over the merged list (~125
+  // POIs at most), and produceLabels only forwards changes downstream
+  // when the label set actually changes.  Simpler to recompute the
+  // merged list than to track partial state.
+  function rewireFamousPois(): void {
+    const meta = state.sources.famousMeta;
+    const catalog = state.sources.catalogs.get(Source.Famous);
+    if (meta.length === 0 || catalog === undefined || catalog.count === 0) return;
+    const famousPois = buildPoisFromFamousMeta(meta, catalog);
+    state.subsystems.pois.setPois([...staticAnchorPois, ...famousPois]);
+  }
+  // Try immediately (in case both ingredients are already present —
+  // possible when wireSlots is replayed in tests or after a hot reload).
+  rewireFamousPois();
+  // Subscribe to the famous-meta slot's transitions; the subscriber
+  // also fires once with the current state, so a slot already in
+  // `ready` state re-triggers the merge here.
+  famousMetaSlot.subscribe((s) => {
+    if (s.kind === 'ready') rewireFamousPois();
+  });
+  // Subscribe to the Famous catalog's slot for the symmetric trigger.
+  const famousCatalogSlot = state.assetSlots.points.get(Source.Famous);
+  if (famousCatalogSlot !== undefined) {
+    famousCatalogSlot.subscribe((s) => {
+      if (s.kind === 'ready') rewireFamousPois();
+    });
+  }
 
   // ── PGC-alias slot (Task 10) ─────────────────────────────────────
   // Lazy: only `load()`-ed on first Cmd+K palette open via the public
