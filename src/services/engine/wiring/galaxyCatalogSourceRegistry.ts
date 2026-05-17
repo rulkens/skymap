@@ -123,6 +123,8 @@ import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePoin
 import { createAssetSlot } from '../../loading/AssetSlot';
 import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
+import type { FadeHandle } from '../../../@types/animation/FadeHandle';
+import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 
 /**
  * Lowercase short name for a Source — `sdss`, `2mrs`, `glade`,
@@ -252,6 +254,20 @@ export function wireGalaxyCatalogSourceSlot(
       // entangling it with handles populated later in the bootstrap
       // chain.
       if (state.gpu.renderer === null) return;
+      const handle: FadeHandle = { kind: 'survey', source };
+      const fades = state.subsystems.fades;
+
+      // First load reuses the wire-time register(handle, 0); the
+      // fade-in below ramps it up. Subsequent loads (tier swap) fade
+      // OUT the old buffer first so the user sees the previous tier
+      // dissolve before the new one starts drawing. The renderer keeps
+      // drawing the OLD buffer with falling alpha until fade-out
+      // completes — only then does `upload()` destroy + recreate it.
+      const isFirstLoad = !state.sources.catalogs.has(source);
+      if (!isFirstLoad) {
+        await fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
+      }
+
       const t0 = performance.now();
       // eslint-disable-next-line no-console
       console.log(
@@ -259,6 +275,13 @@ export function wireGalaxyCatalogSourceSlot(
       );
       await state.gpu.renderer.upload(source, cloud);
       state.sources.catalogs.set(source, cloud);
+
+      // Fire-and-forget: don't `await` the fade-in. The slot's `ready`
+      // transition fires immediately, subscribers wake, the camera
+      // doesn't have to wait for the 600 ms smoothstep to saturate
+      // before the next user interaction can proceed.
+      void fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
+
       const dtMs = Math.round(performance.now() - t0);
       // After upload, dump what the GPU actually has — the source of
       // truth the draw loop reads from.  If this disagrees with the
