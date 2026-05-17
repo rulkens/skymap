@@ -1,4 +1,4 @@
-import type { PointInfo } from '../PointInfo';
+import type { GalaxyInfo } from '../GalaxyInfo';
 
 /**
  * EngineCameraHandle — viewpoint, tweens, and auto-rotate.
@@ -14,7 +14,7 @@ export type EngineCameraHandle = {
   /** Snap the camera back to the initial framing computed at startup. */
   reset: () => void;
   /** Smoothly tween the camera so the given galaxy becomes the new orbit target. */
-  focusOn: (info: PointInfo) => void;
+  focusOn: (info: GalaxyInfo) => void;
   /** Smoothly tween back to the initial bootstrap framing. */
   focusOnHome: () => void;
   /** Tween to a viewpoint where the procedural Milky Way is dominant. */

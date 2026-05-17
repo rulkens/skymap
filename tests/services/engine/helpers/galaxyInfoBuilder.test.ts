@@ -1,5 +1,5 @@
 /**
- * Unit tests for `pointInfoBuilder` — the pure data → display path that the
+ * Unit tests for `galaxyInfoBuilder` — the pure data → display path that the
  * engine uses on every hover/select event.
  *
  * Three exported helpers are exercised:
@@ -7,8 +7,8 @@
  *   - `niceRound`    — axis-ticker style {1,2,5}×10^k floor (used by the
  *                      scale-bar legend).
  *   - `maxAbsCoord`  — bounding-box heuristic used at startup framing.
- *   - `buildPointInfo` — turns a (cloud, idx) pair into a fully-derived
- *                      `PointInfo` value.  The bulk of these tests pin the
+ *   - `buildGalaxyInfo` — turns a (cloud, idx) pair into a fully-derived
+ *                      `GalaxyInfo` value.  The bulk of these tests pin the
  *                      per-source dispatch (SDSS / 2MRS / GLADE / Famous /
  *                      Synthetic) end-to-end so any cross-cut regression in
  *                      thumbnails, explorer URLs, IAU names, orientation
@@ -17,10 +17,10 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  buildPointInfo,
+  buildGalaxyInfo,
   maxAbsCoord,
   niceRound,
-} from '../../../../src/services/engine/helpers/pointInfoBuilder';
+} from '../../../../src/services/engine/helpers/galaxyInfoBuilder';
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
@@ -119,7 +119,7 @@ describe('maxAbsCoord', () => {
   });
 });
 
-// ─── buildPointInfo — common helpers ────────────────────────────────────────
+// ─── buildGalaxyInfo — common helpers ────────────────────────────────────────
 
 /**
  * Place a single point at a given (RA, Dec, z) by computing the matching
@@ -135,10 +135,10 @@ function setPosition(cloud: GalaxyCatalog, idx: number, x: number, y: number, z:
   cloud.positions[idx * 3 + 2] = z;
 }
 
-// ─── buildPointInfo — SDSS branch ───────────────────────────────────────────
+// ─── buildGalaxyInfo — SDSS branch ───────────────────────────────────────────
 
-describe('buildPointInfo — SDSS source', () => {
-  it('returns a PointInfo with sdss-specific fields populated', () => {
+describe('buildGalaxyInfo — SDSS source', () => {
+  it('returns a GalaxyInfo with sdss-specific fields populated', () => {
     // Place the point at a known (RA, Dec, z) so we can verify the round-trip.
     // Cartesian (100, 0, 0) Mpc lies on the +x axis at z = 100/HUBBLE_DISTANCE
     // ≈ 0.0233.  RA recovers to 0°, Dec to 0°.
@@ -152,7 +152,7 @@ describe('buildPointInfo — SDSS source', () => {
     // axisRatio / pa default to (0.7, 45) which is *not* the deterministic
     // fallback for objID=1, so provenance should resolve to "SDSS exp+deV blend".
 
-    const info = buildPointInfo(cloud, 0, Source.SDSS);
+    const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
 
     // Index + objID round-trip from the cloud arrays.
     expect(info.index).toBe(0);
@@ -214,7 +214,7 @@ describe('buildPointInfo — SDSS source', () => {
     const cloud = makeCloud(1);
     cloud.objIDs[0] = 0n;
     setPosition(cloud, 0, 100, 0, 0);
-    const info = buildPointInfo(cloud, 0, Source.SDSS);
+    const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
     expect(info.catalogUrl).not.toBeNull();
     expect(info.catalogUrl).toContain('ned.ipac.caltech.edu');
     expect(info.catalogUrl).toContain('Near+Position+Search');
@@ -231,14 +231,14 @@ describe('buildPointInfo — SDSS source', () => {
     const fb = fallbackOrientation(cloud.objIDs[0]!, ra, dec);
     cloud.axisRatio[0] = fb.axisRatio;
     cloud.positionAngleDeg[0] = fb.positionAngleDeg;
-    const info = buildPointInfo(cloud, 0, Source.SDSS);
+    const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
     expect(info.orientation.provenance).toBe('deterministic fallback');
   });
 });
 
-// ─── buildPointInfo — TwoMRS branch ─────────────────────────────────────────
+// ─── buildGalaxyInfo — TwoMRS branch ─────────────────────────────────────────
 
-describe('buildPointInfo — TwoMRS source', () => {
+describe('buildGalaxyInfo — TwoMRS source', () => {
   it('uses the 2MASX prefix and DSS thumbnail (not SDSS)', () => {
     // 2MRS rows live in J/H/K bands (g/r/i slots; u/z slots are '—').  The
     // function uses DSS for thumbnails because SDSS only covers 1/3 of the sky.
@@ -248,7 +248,7 @@ describe('buildPointInfo — TwoMRS source', () => {
     cloud.magR[0] = 11.5; // H
     cloud.magI[0] = 11.0; // K
 
-    const info = buildPointInfo(cloud, 0, Source.TwoMRS);
+    const info = buildGalaxyInfo(cloud, 0, Source.TwoMRS);
 
     expect(info.source).toBe(Source.TwoMRS);
     expect(info.sourceLabel).toBe('2MRS');
@@ -257,7 +257,7 @@ describe('buildPointInfo — TwoMRS source', () => {
     // 2MRS rows resolve via NED's near-position search rather than a
     // 2MASX byname lookup — NED's name index has coverage gaps for
     // 2MASX even when the underlying object is present in NED under a
-    // different catalogue name.  See pointInfoBuilder.ts for why.
+    // different catalogue name.  See galaxyInfoBuilder.ts for why.
     expect(info.catalogUrl).not.toBeNull();
     expect(info.catalogUrl).toContain('ned.ipac.caltech.edu');
     expect(info.catalogUrl).toContain('Near+Position+Search');
@@ -285,7 +285,7 @@ describe('buildPointInfo — TwoMRS source', () => {
     const cloud = makeCloud(1);
     cloud.objIDs[0] = 2789n; // NGC 253's PGC
     setPosition(cloud, 0, 50, 50, 0);
-    const info = buildPointInfo(cloud, 0, Source.TwoMRS);
+    const info = buildGalaxyInfo(cloud, 0, Source.TwoMRS);
     expect(info.displayName).toBe('PGC 2789');
     // The IAU name still comes through unchanged for callers that need
     // the coord-based form (it's not the headline anymore but other
@@ -297,15 +297,15 @@ describe('buildPointInfo — TwoMRS source', () => {
     const cloud = makeCloud(1);
     cloud.objIDs[0] = 0n;
     setPosition(cloud, 0, 50, 50, 0);
-    const info = buildPointInfo(cloud, 0, Source.TwoMRS);
+    const info = buildGalaxyInfo(cloud, 0, Source.TwoMRS);
     expect(info.displayName).toBe(info.iauName);
     expect(info.displayName.startsWith('2MASX J')).toBe(true);
   });
 });
 
-// ─── buildPointInfo — Glade branch ──────────────────────────────────────────
+// ─── buildGalaxyInfo — Glade branch ──────────────────────────────────────────
 
-describe('buildPointInfo — Glade source', () => {
+describe('buildGalaxyInfo — Glade source', () => {
   it('uses the GLADE prefix, DSS thumbnail, and HyperLEDA orientation tag', () => {
     // GLADE rows: B/J/H/K in g/r/i/z slots; u-slot is '—'.
     const cloud = makeCloud(1);
@@ -320,7 +320,7 @@ describe('buildPointInfo — Glade source', () => {
     cloud.magI[0] = 12.5; // H
     cloud.magZ[0] = 12.0; // K
 
-    const info = buildPointInfo(cloud, 0, Source.Glade);
+    const info = buildGalaxyInfo(cloud, 0, Source.Glade);
 
     expect(info.source).toBe(Source.Glade);
     expect(info.sourceLabel).toBe('GLADE');
@@ -348,15 +348,15 @@ describe('buildPointInfo — Glade source', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 0, 0, 200);
     cloud.objIDs[0] = 12345n;
-    const info = buildPointInfo(cloud, 0, Source.Glade);
+    const info = buildGalaxyInfo(cloud, 0, Source.Glade);
     expect(info.catalogUrl).toContain('ned.ipac.caltech.edu/byname');
     expect(info.catalogUrl).toContain('PGC+12345');
   });
 });
 
-// ─── buildPointInfo — Synthetic branch ──────────────────────────────────────
+// ─── buildGalaxyInfo — Synthetic branch ──────────────────────────────────────
 
-describe('buildPointInfo — Synthetic source', () => {
+describe('buildGalaxyInfo — Synthetic source', () => {
   it('uses the Synth prefix and DSS thumbnail; orientation falls back', () => {
     // Synthetic data carries SDSS-shaped band labels but the catalog link is
     // null (synthetic coords don't correspond to real objects).  Orientation
@@ -373,7 +373,7 @@ describe('buildPointInfo — Synthetic source', () => {
     cloud.axisRatio[0] = fb.axisRatio;
     cloud.positionAngleDeg[0] = fb.positionAngleDeg;
 
-    const info = buildPointInfo(cloud, 0, Source.Synthetic);
+    const info = buildGalaxyInfo(cloud, 0, Source.Synthetic);
 
     expect(info.source).toBe(Source.Synthetic);
     expect(info.sourceLabel).toBe('Synthetic');
@@ -384,12 +384,12 @@ describe('buildPointInfo — Synthetic source', () => {
   });
 });
 
-// ─── buildPointInfo — Famous branch ─────────────────────────────────────────
+// ─── buildGalaxyInfo — Famous branch ─────────────────────────────────────────
 
-describe('buildPointInfo — Famous source', () => {
+describe('buildGalaxyInfo — Famous source', () => {
   it('attaches the famous metadata block when sidecars supply an entry', () => {
     // Famous rows come from a curated catalogue.  When the sidecar has
-    // matching metadata for the local index, the returned PointInfo carries
+    // matching metadata for the local index, the returned GalaxyInfo carries
     // a `famous` block with id/names/description/xref pulled from the sidecar.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 1, 0, 0); // M31-like nearby position
@@ -405,7 +405,7 @@ describe('buildPointInfo — Famous source', () => {
       m31: { source: 'TwoMRS' as const, localIdx: 42, distanceArcsec: 3.1 },
     };
 
-    const info = buildPointInfo(cloud, 0, Source.Famous, meta, xrefs);
+    const info = buildGalaxyInfo(cloud, 0, Source.Famous, meta, xrefs);
 
     expect(info.source).toBe(Source.Famous);
     expect(info.iauName.startsWith('Famous J')).toBe(true);
@@ -424,32 +424,32 @@ describe('buildPointInfo — Famous source', () => {
   });
 
   it('omits the famous block when sidecars are undefined (graceful degradation)', () => {
-    // If the sidecar fetch hasn't resolved yet (or 404'd), buildPointInfo must
+    // If the sidecar fetch hasn't resolved yet (or 404'd), buildGalaxyInfo must
     // not crash — the InfoCard simply renders the generic layout for that hover.
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 1, 0, 0);
-    const info = buildPointInfo(cloud, 0, Source.Famous);
+    const info = buildGalaxyInfo(cloud, 0, Source.Famous);
     expect(info.famous).toBeUndefined();
   });
 
   it('sets famous.xref to null when the id has no entry in the xref map', () => {
     // The xref map can contain a `null` or simply omit a key (e.g. when no
     // 2MRS/GLADE row was within the match threshold).  In both cases the
-    // PointInfo must surface `xref: null` so the InfoCard can show "no match".
+    // GalaxyInfo must surface `xref: null` so the InfoCard can show "no match".
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 1, 0, 0);
     const meta: FamousMetaEntry[] = [
       { id: 'mystery', names: ['Mystery'], description: '?', type: '?' },
     ];
     // xrefs map omits 'mystery' entirely.
-    const info = buildPointInfo(cloud, 0, Source.Famous, meta, {});
+    const info = buildGalaxyInfo(cloud, 0, Source.Famous, meta, {});
     expect(info.famous!.xref).toBeNull();
   });
 });
 
-// ─── buildPointInfo — diameter provenance dispatch ──────────────────────────
+// ─── buildGalaxyInfo — diameter provenance dispatch ──────────────────────────
 
-describe('buildPointInfo — diameter provenance', () => {
+describe('buildGalaxyInfo — diameter provenance', () => {
   it('credits the SDSS petroR50_r parser when diameter ≠ default fallback', () => {
     // Any non-30-kpc diameter for an SDSS row is credited to the SDSS catalog
     // measurement — there's no per-row provenance flag in the bin format, so
@@ -457,7 +457,7 @@ describe('buildPointInfo — diameter provenance', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.diameterKpc[0] = 25; // not the 30 kpc fallback
-    const info = buildPointInfo(cloud, 0, Source.SDSS);
+    const info = buildGalaxyInfo(cloud, 0, Source.SDSS);
     expect(info.diameterProvenance).toBe('SDSS petroR50_r');
   });
 
@@ -465,7 +465,7 @@ describe('buildPointInfo — diameter provenance', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.diameterKpc[0] = 22;
-    const info = buildPointInfo(cloud, 0, Source.TwoMRS);
+    const info = buildGalaxyInfo(cloud, 0, Source.TwoMRS);
     expect(info.diameterProvenance).toBe('2MRS Riso');
   });
 
@@ -473,7 +473,7 @@ describe('buildPointInfo — diameter provenance', () => {
     const cloud = makeCloud(1);
     setPosition(cloud, 0, 100, 0, 0);
     cloud.diameterKpc[0] = 18;
-    const info = buildPointInfo(cloud, 0, Source.Glade);
+    const info = buildGalaxyInfo(cloud, 0, Source.Glade);
     expect(info.diameterProvenance).toBe('GLADE Tully');
   });
 });

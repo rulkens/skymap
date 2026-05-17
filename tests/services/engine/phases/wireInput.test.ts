@@ -68,12 +68,12 @@ vi.mock('../../../../src/services/engine/camera/cameraFraming', () => ({
     computeInitialCameraSpy(...(args as Parameters<typeof computeInitialCameraSpy>)),
 }));
 
-// The maxAbsCoord helper — pure, but it pulls in pointInfoBuilder which
+// The maxAbsCoord helper — pure, but it pulls in galaxyInfoBuilder which
 // imports cloud-related types.  We stub it so we can drive the bbox
 // expectation deterministically from the test.
-vi.mock('../../../../src/services/engine/helpers/pointInfoBuilder', () => ({
+vi.mock('../../../../src/services/engine/helpers/galaxyInfoBuilder', () => ({
   maxAbsCoord: vi.fn((cloud: { _maxAbs: number }) => cloud._maxAbs),
-  buildPointInfo: vi.fn(),
+  buildGalaxyInfo: vi.fn(),
 }));
 
 // Camera / input / pick — stub factories that return inert objects.

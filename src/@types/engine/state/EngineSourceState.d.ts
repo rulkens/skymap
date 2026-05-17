@@ -14,7 +14,7 @@
  *                  in `'manual'` whatever was last assigned stays put.
  *   - `clouds` — CPU-side mirror of every uploaded `GalaxyCatalog`, keyed by
  *                 `Source`.  Required for picking / hover (resolving a
- *                 GPU instance index back into PointInfo) and for the
+ *                 GPU instance index back into GalaxyInfo) and for the
  *                 cross-catalog framing snapshot.
  *   - `famousMeta` / `famousXrefs` — optional sidecars that enrich the
  *                                     InfoCard text for the Famous catalog.

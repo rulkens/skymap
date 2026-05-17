@@ -1,15 +1,15 @@
 import type { Source } from '../../data/sources';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
-import type { PointInfo } from './PointInfo';
+import type { GalaxyInfo } from './GalaxyInfo';
 
 /**
  * Hook the engine provides to the resolver: given a (cloud, localIdx,
- * source) triple, build a PointInfo.  Production wires this to
- * `pointInfoBuilder.buildPointInfo` with the engine's live `famousMeta`
+ * source) triple, build a GalaxyInfo.  Production wires this to
+ * `galaxyInfoBuilder.buildGalaxyInfo` with the engine's live `famousMeta`
  * and `famousXrefs` sidecars in scope; tests pass a stub.
  */
-export type BuildPointInfo = (
+export type BuildGalaxyInfo = (
   cloud: GalaxyCatalog,
   localIdx: number,
   source: Source,
-) => PointInfo | null;
+) => GalaxyInfo | null;

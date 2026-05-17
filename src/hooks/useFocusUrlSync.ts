@@ -264,7 +264,7 @@ export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
     });
 
     if (result.resolved) {
-      // Pass App's own famousMeta + xrefs so `buildPointInfo` inside
+      // Pass App's own famousMeta + xrefs so `buildGalaxyInfo` inside
       // `selectByAlias` doesn't read the engine's still-loading copy.
       // See the EngineHandle JSDoc on `selectByAlias` for the race
       // this avoids.

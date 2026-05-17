@@ -2,7 +2,7 @@ import type { RefObject } from 'react';
 import type { Source } from '../../data/sources';
 import type { EngineHandle } from './EngineHandle';
 import type { EngineStatus } from './EngineStatus';
-import type { PointInfo } from './PointInfo';
+import type { GalaxyInfo } from './GalaxyInfo';
 import type { FamousMetaEntry } from '../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../loading/FamousXrefMap';
 
@@ -13,7 +13,7 @@ import type { FamousXrefMap } from '../loading/FamousXrefMap';
  * during App mount and should not retrigger this hook on assignment.
  */
 export type UseFocusUrlInput = {
-  focused: PointInfo | null;
+  focused: GalaxyInfo | null;
   status: EngineStatus;
   sourceCounts: Partial<Record<Source, number>>;
   famousMeta: readonly FamousMetaEntry[];

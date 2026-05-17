@@ -1,7 +1,7 @@
 /**
  * selectionSubsystem — owns the engine's hover / select state cluster.
  *
- * Before this module existed, four sibling helpers (`pointInfoForSelection`,
+ * Before this module existed, four sibling helpers (`galaxyInfoForSelection`,
  * `selectionEq`, `setHovered`, `setSelected`) sat inline in `engine.ts`,
  * reading and writing `state.picking.hovered` / `state.picking.selected`
  * directly while folding in the React-callback fan-out
@@ -78,20 +78,20 @@
  * `selectByAlias` (from a deep-link drain or palette pick) is called
  * the moment the data-side `state.sources.clouds` map gets populated,
  * BUT before the GPU upload completes — the renderer's `loadedSources()`
- * doesn't yet include the source.  In that window, `pointInfoFor` sees
- * the cloud and would build the right PointInfo, but for symmetry with
+ * doesn't yet include the source.  In that window, `galaxyInfoFor` sees
+ * the cloud and would build the right GalaxyInfo, but for symmetry with
  * pre-extraction behaviour (and to defend against potential future
- * timing changes) the caller can pass a pre-built PointInfo to bypass
+ * timing changes) the caller can pass a pre-built GalaxyInfo to bypass
  * the lookup entirely.  The halo will still light up on the next
  * frame or two once the GPU upload settles.
  */
 
-import type { PointInfo } from '../../../@types/engine/PointInfo';
+import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { SelectionInput } from '../../../@types/engine/subsystems/SelectionInput';
 import type { SelectionSubsystem } from '../../../@types/engine/subsystems/SelectionSubsystem';
 import type { CreateSelectionSubsystemInput } from '../../../@types/engine/subsystems/CreateSelectionSubsystemInput';
-import { buildPointInfo } from '../helpers/pointInfoBuilder';
+import { buildGalaxyInfo } from '../helpers/galaxyInfoBuilder';
 
 /**
  * Are these two selections value-equal?  Both null → equal; both
@@ -121,37 +121,37 @@ export function createSelectionSubsystem(
   let selected: SelectionInput | null = null;
 
   /**
-   * Build a PointInfo for a `(source, localIdx)` selection, or null if
+   * Build a GalaxyInfo for a `(source, localIdx)` selection, or null if
    * the source's cloud isn't loaded or `localIdx >= cloud.count`.
    *
    * The bounds check defends the tier-swap-window race: a still-in-
    * flight pick from a previous frame can return a `(source, localIdx)`
    * decoded against an older, larger layout — without the guard,
-   * `buildPointInfo` would index past the end of the freshly-uploaded
+   * `buildGalaxyInfo` would index past the end of the freshly-uploaded
    * smaller cloud's typed arrays and crash downstream `.toFixed()`
    * calls in the InfoCard.  Returning null here is the right
    * semantics: "we don't have data for that pick; render no card,
    * the next frame's pick will succeed".
    */
-  function pointInfoFor(sel: SelectionInput): PointInfo | null {
+  function galaxyInfoFor(sel: SelectionInput): GalaxyInfo | null {
     const c = getCloud(sel.source);
     if (!c) return null;
     if (sel.localIdx < 0 || sel.localIdx >= c.count) return null;
-    return buildPointInfo(c, sel.localIdx, sel.source, getFamousMeta(), getFamousXrefs());
+    return buildGalaxyInfo(c, sel.localIdx, sel.source, getFamousMeta(), getFamousXrefs());
   }
 
   function setHovered(sel: SelectionInput | null): void {
     if (selectionEq(sel, hovered)) return;
     hovered = sel;
     // Hoist the info computation so both flat and nested fires receive
-    // the same value (and we don't pay for `pointInfoFor` twice).
-    const info = sel !== null ? pointInfoFor(sel) : null;
+    // the same value (and we don't pay for `galaxyInfoFor` twice).
+    const info = sel !== null ? galaxyInfoFor(sel) : null;
     cb.selection?.onHoverChange?.(info);
   }
 
   function setSelected(
     sel: SelectionInput | null,
-    prebuiltInfo?: PointInfo | null,
+    prebuiltInfo?: GalaxyInfo | null,
   ): void {
     if (selectionEq(sel, selected)) return;
     selected = sel;
@@ -162,7 +162,7 @@ export function createSelectionSubsystem(
     // an explicit null means "I have no info, fire the callback with
     // null", whereas `undefined` means "look it up yourself".
     const info =
-      prebuiltInfo !== undefined ? prebuiltInfo : sel !== null ? pointInfoFor(sel) : null;
+      prebuiltInfo !== undefined ? prebuiltInfo : sel !== null ? galaxyInfoFor(sel) : null;
     cb.selection?.onSelectChange?.(info);
   }
 
@@ -184,7 +184,7 @@ export function createSelectionSubsystem(
     selected: () => selected,
     setHovered,
     setSelected,
-    pointInfoFor,
+    galaxyInfoFor,
     destroy,
   };
   subsystem satisfies Destroyable;

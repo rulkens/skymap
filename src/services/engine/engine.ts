@@ -29,7 +29,7 @@
  *   Pure helpers:
  *   - `autoLod.ts`             — LOD heuristic (also re-exported as public API)
  *   - `focusTween.ts`          — focus camera tween constants + distance helper
- *   - `pointInfoBuilder.ts`    — buildPointInfo / maxAbsCoord / niceRound
+ *   - `galaxyInfoBuilder.ts`   — buildGalaxyInfo / maxAbsCoord / niceRound
  *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
  *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot
  *   - `seedSettingsCallbacks.ts` — fan-out of default settings to optional cb hooks
@@ -38,7 +38,7 @@
  *   Subsystems (closure-returning factories with internal state):
  *   - `tweenManager.ts`        — at-most-one in-flight CameraTween facade
  *   - `spaceMouseSubsystem.ts` — 6DOF puck device + per-frame camera mutation
- *   - `clickHandler.ts`        — pick → globalIdx → PointInfo resolver
+ *   - `clickHandler.ts`        — pick → globalIdx → GalaxyInfo resolver
  *   - `inputBindings.ts`       — pointer/keyboard/resize listener bag
  *   - `thumbnailSubsystem.ts`  — atlas + queue + per-frame thumbnail draw
  *
@@ -51,7 +51,7 @@
  *
  * Hover/select state lives in `state.subsystems.selection` (Spec D.3
  * extracted the four inline helpers — `setHovered` / `setSelected` /
- * `selectionEq` / `pointInfoForSelection` — into the closure-returning
+ * `selectionEq` / `galaxyInfoForSelection` — into the closure-returning
  * factory `selectionSubsystem.ts`).  The public handle and the
  * forward-declared `frameRef` / `detachControlsRef` / `handleRef` boxes
  * stay inline here because they're written by the bootstrap phases via
@@ -95,7 +95,7 @@ import {
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
-import type { PointInfo } from '../../@types/engine/PointInfo';
+import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { LodMode } from '../../@types/data/LodMode';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -116,7 +116,7 @@ import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { createPoiSubsystem } from './subsystems/poiSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
-import { buildPointInfo } from './helpers/pointInfoBuilder';
+import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -332,11 +332,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // 'manual' → user owns the mask; auto-LOD paused.
       lodMode: DEFAULT_LOD_MODE,
       // Mirrors the renderer's per-source GPU buffers in CPU memory
-      // so picking can resolve `(source, localIdx)` into a PointInfo
+      // so picking can resolve `(source, localIdx)` into a GalaxyInfo
       // without a GPU readback for every hover.  Empty until the
       // first parallel fetch resolves.
       clouds: new Map<Source, GalaxyCatalog>(),
-      // Optional sidecars — `pointInfoBuilder` null-checks both, so a
+      // Optional sidecars — `galaxyInfoBuilder` null-checks both, so a
       // hover firing before they land just renders the generic
       // InfoCard layout.
       famousMeta: [],
@@ -788,7 +788,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     snapToCameraSnapshot(state, state.initialCamSnapshot);
   }
 
-  function focusOn(info: PointInfo): void {
+  function focusOn(info: GalaxyInfo): void {
     // Camera may not be ready yet (cloud still loading); drop the
     // call.  This guard is *separate* from `tweenToGalaxy`'s own
     // cam-null guard — we need it here to gate the `onFocusChange`
@@ -859,9 +859,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     const localIdx = state.sources.famousMeta.findIndex((m) => m.id === id);
     if (localIdx < 0) return;
 
-    // Build the same PointInfo the picker would, using the live sidecars
+    // Build the same GalaxyInfo the picker would, using the live sidecars
     // so the famous block (name, description, thumbnail) populates.
-    const info = buildPointInfo(
+    const info = buildGalaxyInfo(
       cloud,
       localIdx,
       Source.Famous,
@@ -892,11 +892,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     if (!cloud) return;
     if (localIdx < 0 || localIdx >= cloud.count) return;
 
-    // Build a PointInfo so the InfoCard populates correctly.
+    // Build a GalaxyInfo so the InfoCard populates correctly.
     // Caller-supplied `famousMeta`/`famousXrefs` win over the
     // engine's internal copies — see the EngineHandle JSDoc for the
     // race this defends against.
-    const info = buildPointInfo(
+    const info = buildGalaxyInfo(
       cloud,
       localIdx,
       source,

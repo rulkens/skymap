@@ -1,10 +1,10 @@
 import type { Dispatch, RefObject, SetStateAction } from 'react';
 import type { EngineHandle } from './EngineHandle';
-import type { PointInfo } from './PointInfo';
+import type { GalaxyInfo } from './GalaxyInfo';
 
 export type UseKeyboardShortcutsInput = {
   /** The currently-pinned galaxy.  `f` is a no-op when null. */
-  selected: PointInfo | null;
+  selected: GalaxyInfo | null;
   /** Used to gate the `/` shortcut so the palette doesn't reopen on top of itself. */
   paletteOpen: boolean;
   /** Engine driver for selection.clear, camera.focusOn, camera.focusOnHome, camera.logState. */

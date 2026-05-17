@@ -1,4 +1,4 @@
-import type { PointInfo } from './PointInfo';
+import type { GalaxyInfo } from './GalaxyInfo';
 
 /**
  * Inputs to the pure desired-hash decision.  The caller passes in the
@@ -11,9 +11,9 @@ export type DesiredHashInput = {
    * The galaxy whose id should appear in the URL.  Named `selected` for
    * historical reasons (predates the selected/focused split) — callers
    * should pass whichever state they're encoding.  The hook below
-   * passes `focused`; tests pass synthetic PointInfo fixtures.
+   * passes `focused`; tests pass synthetic GalaxyInfo fixtures.
    */
-  selected: PointInfo | null;
+  selected: GalaxyInfo | null;
   /** Raw hash, e.g. `"#focus=m31"` or `""`.  Leading `#` optional. */
   currentHash: string;
 };

@@ -1001,7 +1001,7 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
   /**
    * Look up the per-source point count, or 0 when the source isn't
    * loaded.  Used by the engine to bounds-check a (source, localIdx)
-   * pair before calling `setSelected` or building a PointInfo.
+   * pair before calling `setSelected` or building a GalaxyInfo.
    *
    * Replaces the prior `fromGlobalIdx` decoder: the picker now hands
    * back a structured `{source, localIdx}` directly, so no decoding is

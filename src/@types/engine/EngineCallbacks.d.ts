@@ -5,7 +5,7 @@
  */
 
 import type { EngineStatus } from './EngineStatus';
-import type { PointInfo } from './PointInfo';
+import type { GalaxyInfo } from './GalaxyInfo';
 import type { LodMode } from '../data/LodMode';
 import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
@@ -84,9 +84,9 @@ export type EngineCallbacks = {
    */
   selection: {
     /** Fired when the pinned/selected point changes. */
-    onSelectChange: (info: PointInfo | null) => void;
+    onSelectChange: (info: GalaxyInfo | null) => void;
     /** Fired when the point under the cursor changes (null = empty sky). */
-    onHoverChange: (info: PointInfo | null) => void;
+    onHoverChange: (info: GalaxyInfo | null) => void;
   };
 
   /**
@@ -115,7 +115,7 @@ export type EngineCallbacks = {
      * casual click doesn't pollute browser history with `#focus=…`
      * entries — only deliberate focus actions do.
      */
-    onFocusChange?: (info: PointInfo | null) => void;
+    onFocusChange?: (info: GalaxyInfo | null) => void;
     /**
      * Reserved for the legacy engine-derived scale-bar emission.
      * Scale-bar derivation now happens React-side from

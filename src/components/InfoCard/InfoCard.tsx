@@ -39,7 +39,7 @@
 
 import type { ReactNode } from 'react';
 import cx from 'classnames';
-import type { PointInfo } from '../../@types/engine/PointInfo';
+import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import { FullCard } from './FullCard';
 import { CompactCard } from './CompactCard';
 import styles from './InfoCard.module.css';
@@ -53,14 +53,14 @@ import styles from './InfoCard.module.css';
  */
 export type InfoCardProps = {
   /** The point currently under the cursor, or null when the cursor is on empty sky. */
-  hovered: PointInfo | null;
+  hovered: GalaxyInfo | null;
   /** The pinned/selected point, or null when nothing is pinned. */
-  selected: PointInfo | null;
+  selected: GalaxyInfo | null;
   /**
    * Optional callback fired when the user clicks "Focus" on the pinned card.
    * Forwarded to FullCard; ignored on the compact hover card.
    */
-  onFocus?: (info: PointInfo) => void;
+  onFocus?: (info: GalaxyInfo) => void;
   /**
    * Optional callback fired when the user clicks the Close (×) button on the
    * pinned card.  Same effect as pressing Esc — clears the selection.

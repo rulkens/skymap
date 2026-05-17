@@ -17,7 +17,7 @@
  *      and the GPU ("here's a pick texture readback").  Future work
  *      (e.g. hover halos) can reuse the resolver without inheriting
  *      the click-specific call site.
- *   3. The pick → resolveGlobalIdx walk + the optional PointInfo
+ *   3. The pick → resolveGlobalIdx walk + the optional GalaxyInfo
  *      build live in one place, where they're easy to keep consistent
  *      with the per-frame hover pick gate further up in engine.ts.
  *
@@ -32,7 +32,7 @@
  *                              Engine should call `setSelected(null)`.
  *
  *   - `{ kind: 'select', globalIdx, info }` — the picker hit a point
- *                              and we successfully built a PointInfo.
+ *                              and we successfully built a GalaxyInfo.
  *                              Engine should call `setSelected(globalIdx)`.
  *                              `info` is ALSO returned for callers that
  *                              want it (e.g. an "auto-focus on click"
@@ -40,7 +40,7 @@
  *                              `pointInfoFromGlobal`.
  *
  *   - `{ kind: 'select', globalIdx, info: null }` — picker hit a point
- *                              but resolveGlobalIdx or buildPointInfo
+ *                              but resolveGlobalIdx or buildGalaxyInfo
  *                              failed.  Engine still selects globalIdx
  *                              for parity with the pre-extraction
  *                              behaviour: the old code did
@@ -72,7 +72,7 @@ import type { ClickResolver } from '../../../@types/engine/ClickResolver';
 import type { CreateClickResolverInput } from '../../../@types/engine/CreateClickResolverInput';
 
 export function createClickResolver(input: CreateClickResolverInput): ClickResolver {
-  const { pickRenderer, resolveSelection, buildPointInfo } = input;
+  const { pickRenderer, resolveSelection, buildGalaxyInfo } = input;
 
   // Built as a `const` (rather than returned inline) so we can attach
   // the `satisfies Destroyable` latch — the click resolver is one of
@@ -95,13 +95,13 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
         args.timingDescriptor,
       );
       if (result === null) return { kind: 'clear' };
-      // Try to build a PointInfo, but treat failure as "still select
+      // Try to build a GalaxyInfo, but treat failure as "still select
       // the (source, localIdx)" for parity with the pre-extraction
       // engine — the old code did `setSelected(idx)` regardless of
       // whether `pointInfoFromGlobal` would later resolve null.
       const resolved = resolveSelection(result);
       const info = resolved
-        ? buildPointInfo(resolved.cloud, resolved.localIdx, resolved.source)
+        ? buildGalaxyInfo(resolved.cloud, resolved.localIdx, resolved.source)
         : null;
       return { kind: 'select', selection: result, info };
     },
