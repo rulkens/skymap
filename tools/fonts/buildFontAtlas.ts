@@ -43,14 +43,8 @@ import generateBMFont from 'msdf-bmfont-xml';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { PNG } from 'pngjs';
-import {
-  ATLAS_PX,
-  ATLAS_FONT_SIZE,
-  DISTANCE_RANGE_PX,
-  FONTS,
-  FONT_IDS,
-} from '../src/data/fonts';
-import type { FontId } from '../src/data/fonts';
+import { ATLAS_PX, ATLAS_FONT_SIZE, DISTANCE_RANGE_PX, FONTS, FONT_IDS } from '../../src/data/fonts';
+import type { FontId } from '../../src/data/fonts';
 
 const RAW_FONTS_DIR = 'data/raw/fonts';
 const OUTPUT_DIR = 'public/fonts';
@@ -184,8 +178,8 @@ async function main(): Promise<void> {
 // trigger the bake.  `import.meta.url` ends with this file's path
 // when tsx/node invokes it directly; under vitest the entrypoint is
 // the test file, so the comparison is false.
-const invokedAsScript = process.argv[1] !== undefined
-  && import.meta.url === `file://${path.resolve(process.argv[1])}`;
+const invokedAsScript =
+  process.argv[1] !== undefined && import.meta.url === `file://${path.resolve(process.argv[1])}`;
 
 if (invokedAsScript) {
   main().catch((err) => {
