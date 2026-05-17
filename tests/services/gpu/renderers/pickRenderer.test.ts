@@ -22,6 +22,10 @@ function makeStubDevice(): GPUDevice {
     createShaderModule: vi.fn(() => ({
       getCompilationInfo: () => Promise.resolve({ messages: [] }),
     })),
+    // Explicit pipelineLayout construction requires these two methods on the
+    // device.  Both return sentinel objects that satisfy the structural types.
+    createPipelineLayout: vi.fn(() => ({})),
+    createBindGroupLayout: vi.fn(() => ({})),
     createRenderPipeline: vi.fn(() => ({
       getBindGroupLayout: () => ({}),
     })),
@@ -48,11 +52,20 @@ function makeStubDevice(): GPUDevice {
   } as unknown as GPUDevice;
 }
 
+// Stub BGLs for the unified-fade architecture — both renderers now require
+// fadeBgl + sourceBgl as canonical shared layouts.
+function makeStubFadeBgl() {
+  return {} as import('../../../../src/@types/rendering/FadeUniformsBgl').FadeUniformsBgl;
+}
+function makeStubSourceBgl() {
+  return {} as import('../../../../src/@types/rendering/SourceUniformsBgl').SourceUniformsBgl;
+}
+
 describe('createPickRenderer', () => {
   it('takes a PointRenderer at construction (no per-call uniformBuffer arg)', () => {
     const device = makeStubDevice();
-    const pointRenderer = createPointRenderer(device, 'rgba16float');
-    const pickRenderer = createPickRenderer(device, pointRenderer);
+    const pointRenderer = createPointRenderer(device, 'rgba16float', makeStubFadeBgl(), makeStubSourceBgl());
+    const pickRenderer = createPickRenderer(device, pointRenderer, makeStubFadeBgl(), makeStubSourceBgl());
 
     // The compile-time test is the strongest one: this file would fail
     // to typecheck if `createPickRenderer` still required only a device
@@ -64,35 +77,34 @@ describe('createPickRenderer', () => {
     expect(typeof pickRenderer.destroy).toBe('function');
   });
 
-  it('builds @group(1) bind groups against its OWN pipeline layout (regression: cross-pipeline auto-layout incompatibility)', async () => {
+  it('builds @group(2) source bind groups against the CANONICAL sourceBgl layout (regression: cross-pipeline auto-layout incompatibility)', async () => {
     // ── Why this test exists ──────────────────────────────────────────
     //
-    // The (source, localIdx) packing refactor moved `cloud.sourceCode`
-    // into a `@group(1)` uniform that the SHARED vertex stage reads.
-    // Both PointRenderer and PickRenderer compile from the same WGSL
-    // and use `layout: 'auto'`.  WebGPU's auto-derived bind-group
-    // layouts are pipeline-specific identities — sharing one bind
-    // group across two `auto` pipelines fails the "group-equivalent"
-    // compatibility check at draw time:
+    // The unified-fade architecture replaces `layout: 'auto'` with an
+    // explicit pipelineLayout that uses shared canonical BGLs for
+    // @group(1) (FadeUniforms) and @group(2) (SourceUniforms).  Both
+    // PointRenderer and PickRenderer declare the SAME canonical layout,
+    // so bind groups built against it are valid for either pipeline
+    // without the old "group-equivalent" cross-pipeline incompatibility.
     //
-    //   "BindGroup uses a BindGroupLayout that was not created by the
-    //    pipeline.  Either use the bind group layout returned by
-    //    getBindGroupLayout(1) on the pipeline when creating the bind
-    //    group, or provide an explicit pipeline layout when creating
-    //    the pipeline."
-    //
-    // The fix: PickRenderer must build its OWN per-source `@group(1)`
-    // bind groups against its OWN `pipeline.getBindGroupLayout(1)`,
-    // sharing only the underlying `GPUBuffer` with PointRenderer.
+    // In the old architecture (@group(1) / auto layout), the test had to
+    // verify that PickRenderer built its OWN bind groups against its OWN
+    // auto-derived layout.  In the new architecture, the caller passes a
+    // single canonical sourceBgl, and createPickRenderer builds per-source
+    // @group(2) bind groups against it — the same object both pipelines
+    // declared.
     //
     // This test asserts the contract by:
-    //   1. Tagging each pipeline's auto-derived layouts with its index.
-    //      PointRenderer creates pipeline 0, PickRenderer creates 1.
-    //   2. Calling `pick()` with two distinct cloudFadeBuffers.
-    //   3. Asserting every `createBindGroup` for group(1) uses
-    //      pipeline-1's g1 layout — never pipeline-0's.
+    //   1. Passing a single canonical sourceBgl instance to both renderers.
+    //   2. Calling `pick()` with two distinct sourceBuffers.
+    //   3. Asserting every @group(2) `createBindGroup` call uses the
+    //      canonical sourceBgl — never the per-pipeline auto-derived layout.
 
-    const layoutsByPipeline: Array<{ g0: object; g1: object }> = [];
+    // The canonical sourceBgl is a shared object — the same identity
+    // passed to both createPointRenderer and createPickRenderer.
+    const canonicalSourceBgl = makeStubSourceBgl();
+    const canonicalFadeBgl = makeStubFadeBgl();
+
     const createBindGroupCalls: Array<{ layout: unknown; buffer: unknown }> = [];
 
     const device = {
@@ -105,17 +117,12 @@ describe('createPickRenderer', () => {
       createShaderModule: vi.fn(() => ({
         getCompilationInfo: () => Promise.resolve({ messages: [] }),
       })),
-      createRenderPipeline: vi.fn(() => {
-        const idx = layoutsByPipeline.length;
-        const layouts = {
-          g0: { __pipeline: idx, __group: 0 },
-          g1: { __pipeline: idx, __group: 1 },
-        };
-        layoutsByPipeline.push(layouts);
-        return {
-          getBindGroupLayout: (i: number) => (i === 0 ? layouts.g0 : layouts.g1),
-        };
-      }),
+      // Explicit pipelineLayout methods — return sentinels.
+      createPipelineLayout: vi.fn(() => ({})),
+      createBindGroupLayout: vi.fn(() => ({})),
+      createRenderPipeline: vi.fn(() => ({
+        getBindGroupLayout: (_i: number) => ({}),
+      })),
       createBuffer: vi.fn(() => ({
         // Staging buffer needs mapAsync / getMappedRange / unmap to drive
         // pick() to completion; we return raw=0 so the result is a clean
@@ -152,39 +159,31 @@ describe('createPickRenderer', () => {
       ),
     } as unknown as GPUDevice;
 
-    // PointRenderer first → pipeline index 0; PickRenderer → index 1.
-    const pointRenderer = createPointRenderer(device, 'rgba16float');
-    const pickRenderer = createPickRenderer(device, pointRenderer);
+    // Both renderers share the same canonical fadeBgl + sourceBgl.
+    const pointRenderer = createPointRenderer(device, 'rgba16float', canonicalFadeBgl, canonicalSourceBgl);
+    const pickRenderer = createPickRenderer(device, pointRenderer, canonicalFadeBgl, canonicalSourceBgl);
 
-    expect(layoutsByPipeline).toHaveLength(2);
-    const pickG1 = layoutsByPipeline[1]!.g1;
-    const pointG1 = layoutsByPipeline[0]!.g1;
-
-    // Two distinct cloudFadeBuffers — the production case is N visible
-    // surveys and we want both bind groups to be built.
-    const fadeBufA = { __fade: 'A' } as unknown as GPUBuffer;
-    const fadeBufB = { __fade: 'B' } as unknown as GPUBuffer;
+    // Two distinct sourceBuffers — the production case is N visible
+    // surveys and we want one bind group per source.
+    const sourceBufA = { __source: 'A' } as unknown as GPUBuffer;
+    const sourceBufB = { __source: 'B' } as unknown as GPUBuffer;
     const vbA = { __vb: 'A' } as unknown as GPUBuffer;
     const vbB = { __vb: 'B' } as unknown as GPUBuffer;
 
+    // Reset call capture after construction (constructors build their own bind groups).
+    createBindGroupCalls.length = 0;
+
     await pickRenderer.pick([100, 100], 50, 50, [
-      { source: Source.SDSS, vertexBuffer: vbA, count: 10, cloudFadeBuffer: fadeBufA },
-      { source: Source.TwoMRS, vertexBuffer: vbB, count: 20, cloudFadeBuffer: fadeBufB },
+      { source: Source.SDSS, vertexBuffer: vbA, count: 10, sourceBuffer: sourceBufA },
+      { source: Source.TwoMRS, vertexBuffer: vbB, count: 20, sourceBuffer: sourceBufB },
     ]);
 
-    // Every `createBindGroup` call for group(1) must use PickRenderer's
-    // own layout (pickG1).  If a future change forwards PointRenderer's
-    // bindGroup directly (the bug this test guards against), no
-    // `createBindGroup` call would carry pickG1 and the assertion fails.
-    const group1Calls = createBindGroupCalls.filter((c) => c.layout === pickG1);
-    expect(group1Calls).toHaveLength(2);
-    expect(group1Calls.map((c) => c.buffer)).toEqual([fadeBufA, fadeBufB]);
-
-    // Negative assertion: NO group(1) bind group was built against
-    // PointRenderer's layout.  This is the structural complement —
-    // ensures the test isn't trivially passing because both layouts
-    // happened to compare equal.
-    const wrongLayoutCalls = createBindGroupCalls.filter((c) => c.layout === pointG1);
-    expect(wrongLayoutCalls).toHaveLength(0);
+    // Every `createBindGroup` call against the canonical sourceBgl must
+    // use the two sourceBuffers.  The layout identity is the canonical
+    // sourceBgl object passed at construction — not an auto-derived
+    // per-pipeline layout.
+    const sourceGroup2Calls = createBindGroupCalls.filter((c) => c.layout === canonicalSourceBgl);
+    expect(sourceGroup2Calls).toHaveLength(2);
+    expect(sourceGroup2Calls.map((c) => c.buffer)).toEqual([sourceBufA, sourceBufB]);
   });
 });

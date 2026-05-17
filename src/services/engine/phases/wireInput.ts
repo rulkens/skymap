@@ -112,7 +112,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // here directly — pickRenderer sources its device from the
   // PointRenderer's bound device — but we still bail if it's
   // somehow unset (defensive).
-  const pickRenderer = createPickRenderer(deps.phaseLocals!.device, renderer);
+  const pickRenderer = createPickRenderer(deps.phaseLocals!.device, renderer, state.gpu.fadeBgl!, state.gpu.sourceBgl!);
   state.gpu.pickRenderer = pickRenderer;
   // The resolver hands back the freshly-decoded `(source, localIdx)`
   // straight from the picker; the engine's only job is to look up

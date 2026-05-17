@@ -26,10 +26,11 @@
  * draw call for any source whose bit is clear.
  *
  * Per-source draw calls also feed the picker its (sourceCode, localIdx)
- * packing: each source's `@group(1)` CloudFade bind group carries a 5-bit
- * `sourceCode` that the vertex stage composes with `@builtin(instance_index)`
- * into each fragment's packed identity, written into the r32uint pick
- * texture by `fsPick`.  No more cross-source running-sum bake.
+ * packing: each source's `@group(2)` SourceUniforms bind group carries a
+ * 5-bit `sourceCode` that the vertex stage composes with
+ * `@builtin(instance_index)` into each fragment's packed identity, written
+ * into the r32uint pick texture by `fsPick`.  No more cross-source
+ * running-sum bake.
  *
  * ### Relationship to other modules
  *
@@ -44,7 +45,6 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PointDrawSettings } from '../../../@types/rendering/PointDrawSettings';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import type { Vec3 } from '../../../@types/math/Vec3';
 import { ALL_SOURCES, Source } from '../../../data/sources';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
@@ -89,8 +89,9 @@ import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 // two pipelines with diverging fragment paths.
 import vsCode from '../shaders/points/vertex.wesl?static';
 import colorFsCode from '../shaders/points/colorFragment.wesl?static';
-import { CloudFade } from '../resources/cloudFade';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
+import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
+import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 
 // ─── Layout constants ─────────────────────────────────────────────────────────
 
@@ -551,18 +552,34 @@ type LoadedSource = {
    * survey constants to `services/biasCorrection/surveyConstants.ts`;
    * phase E.4 moved the bake state machine + per-source caches to
    * `biasCorrectionSubsystem.ts`.  The renderer's `LoadedSource` is now
-   * a clean rendering-only record: buffer + count + CPU mirror + fade.
+   * a clean rendering-only record: buffer + count + CPU mirror + fade
+   * buffers.
    */
   interleaved: Float32Array;
   /**
-   * Per-cloud fade-in controller.  Owns its own 16-byte uniform buffer +
-   * bind group at `@group(1) @binding(0)`, plus the fade-start timestamp.
-   * Reset (`fade.restart()`) on every upload so tier-swap re-uploads
-   * trigger a fresh fade-in.  Written via `fade.writeFrame()` and bound
-   * via `pass.setBindGroup(1, fade.bindGroup)` from the render loop.
-   * See `cloudFade.ts` for the full design.
+   * 16-byte GPU buffer holding the per-source FadeUniforms struct
+   * (opacity f32 + 12 bytes pad). Written once per frame in `draw`
+   * from the registry-read opacity value.
    */
-  fade: CloudFade;
+  fadeBuffer: GPUBuffer;
+  /**
+   * Bind group binding `fadeBuffer` at @group(1) @binding(0) using
+   * the canonical `fadeBgl` layout (so the same bind group works for
+   * both the visual and pick pipelines).
+   */
+  fadeBindGroup: GPUBindGroup;
+  /**
+   * 16-byte GPU buffer holding the per-source SourceUniforms struct
+   * (sourceCode u32 + 12 bytes pad). Written ONCE at upload time
+   * (sourceCode never changes for a given source) and read by both
+   * the visual and pick pipelines.
+   */
+  sourceBuffer: GPUBuffer;
+  /**
+   * Bind group binding `sourceBuffer` at @group(2) @binding(0) using
+   * the canonical `sourceBgl` layout.
+   */
+  sourceBindGroup: GPUBindGroup;
 };
 
 // ─── PointRenderer ────────────────────────────────────────────────────────────
@@ -587,7 +604,12 @@ type LoadedSource = {
  * @param device  The WebGPU logical device. Owned by the caller.
  * @param format  The swap-chain texture format (e.g. `'bgra8unorm'`).
  */
-export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat): PointRenderer {
+export function createPointRenderer(
+  device: GPUDevice,
+  format: GPUTextureFormat,
+  fadeBgl: FadeUniformsBgl,
+  sourceBgl: SourceUniformsBgl,
+): PointRenderer {
   // ── Pipeline + uniform buffer + global bind group ─────────────────
   //
   // Built once in this prologue and held in closure scope.  The
@@ -605,9 +627,28 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'points.vertex');
   const fsModule = createShaderModuleWithDevLog(device, colorFsCode, 'points.colorFragment');
 
+  const pipelineLayout = device.createPipelineLayout({
+    label: 'points-pipeline-layout',
+    bindGroupLayouts: [
+      // @group(0) — per-frame uniforms (viewProj, viewport, …). This is
+      // a pipeline-specific layout since it carries the Uniforms struct
+      // unique to the points pipeline.
+      device.createBindGroupLayout({
+        label: 'points-bgl-group0',
+        entries: [
+          { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        ],
+      }),
+      // @group(1) — FadeUniforms (canonical, shared with every fading renderer).
+      fadeBgl,
+      // @group(2) — SourceUniforms (canonical, shared with PickRenderer).
+      sourceBgl,
+    ],
+  });
+
   const pipeline = device.createRenderPipeline({
     label: 'points-pipeline',
-    layout: 'auto',
+    layout: pipelineLayout,
 
     vertex: {
       module: vsModule,
@@ -659,13 +700,19 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
     entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
   });
 
+  // Reusable scratch for the per-source per-frame fade writeBuffer call.
+  // 16 bytes = opacity f32 + 12 bytes pad. The pad slots stay zero
+  // (ArrayBuffer is zero-initialised; we never write them).
+  const fadeScratchBuffer = new ArrayBuffer(16);
+  const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
+
   // ── Per-source bookkeeping ────────────────────────────────────────
   //
   // Closure-captured Map of loaded survey buffers, keyed by `Source`
   // (numeric enum).  `upload` adds or replaces an entry; `unload`
   // removes one.  No global running-sum bookkeeping anymore — each
-  // source's pick identity comes from its CloudFade's per-source
-  // sourceCode uniform, set once at upload.
+  // source's pick identity comes from its per-source SourceUniforms
+  // buffer, written once at upload time.
   //
   // Why a `Map` (not a plain object)? `Map` preserves insertion
   // order, has a straightforward `delete`/`has` API, and avoids the
@@ -779,7 +826,8 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
       const stale = clouds.get(source);
       if (stale) {
         stale.buffer.destroy();
-        stale.fade.destroy();
+        stale.fadeBuffer.destroy();
+        stale.sourceBuffer.destroy();
       }
       clouds.delete(source);
       // The empty-cloud path is semantically an unload — fire the
@@ -824,15 +872,14 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
 
     // ── Write to GPU ────────────────────────────────────────────────────────
     //
-    // Destroy or restart the previous-source state before replacing it (GPU
-    // buffers can't be realloc'd; allocating a fresh one of the new size and
-    // letting the old one's VRAM go is the only path).  The fade controller
-    // is recycled on a re-upload — its `restart()` resets the timestamp so
-    // a tier swap re-triggers the fade-in.
+    // Destroy the previous-source state before replacing it (GPU buffers
+    // can't be realloc'd; allocating fresh ones of the new size and letting
+    // the old ones' VRAM go is the only path).
     const prev = clouds.get(source);
     if (prev) {
       prev.buffer.destroy();
-      prev.fade.restart();
+      prev.fadeBuffer.destroy();
+      prev.sourceBuffer.destroy();
     }
 
     const buffer = device.createBuffer({
@@ -842,23 +889,44 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
     });
     device.queue.writeBuffer(buffer, 0, interleaved);
 
-    // Reuse the previous fade controller if this is a re-upload; otherwise
-    // mint a fresh one.  Either way, the fadeStartMs is "now" so the next
-    // few frames render at low opacity and ramp up.
-    const fade = prev?.fade ?? new CloudFade(device, pipeline.getBindGroupLayout(1));
-    // Stamp the per-source 5-bit Source enum value into the cloud's
-    // bind group.  The shader's vertex stage reads `cloud.sourceCode`
-    // and composes each instance's packed identity from it; doing this
-    // once at upload (rather than per-frame in `draw()`) is correct
-    // because the source code never changes for a given cloud — only
-    // the opacity does.
-    fade.setSourceCode(source);
+    // FadeUniforms — 16 bytes, written per frame from the registry.
+    const fadeBuffer = device.createBuffer({
+      label: `points-fade-uniform-${source}`,
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const fadeBindGroup = device.createBindGroup({
+      label: `points-fade-bg-${source}`,
+      layout: fadeBgl,
+      entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
+    });
+
+    // SourceUniforms — 16 bytes, written ONCE here at upload time. The
+    // 5-bit Source enum value never changes for a given source, so a
+    // per-frame write would be wasted bytes. Pack sourceCode into the
+    // first 4 bytes and leave the rest zero.
+    const sourceBuffer = device.createBuffer({
+      label: `points-source-uniform-${source}`,
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const sourceScratch = new ArrayBuffer(16);
+    new Uint32Array(sourceScratch)[0] = source >>> 0;
+    device.queue.writeBuffer(sourceBuffer, 0, sourceScratch);
+    const sourceBindGroup = device.createBindGroup({
+      label: `points-source-bg-${source}`,
+      layout: sourceBgl,
+      entries: [{ binding: 0, resource: { buffer: sourceBuffer } }],
+    });
 
     clouds.set(source, {
       buffer,
       count: cloud.count,
       interleaved,
-      fade,
+      fadeBuffer,
+      fadeBindGroup,
+      sourceBuffer,
+      sourceBindGroup,
     });
 
     // Notify the bias-correction subsystem (Spec E phase E.3) that a
@@ -878,7 +946,8 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
     const entry = clouds.get(source);
     if (!entry) return;
     entry.buffer.destroy();
-    entry.fade.destroy();
+    entry.fadeBuffer.destroy();
+    entry.sourceBuffer.destroy();
     clouds.delete(source);
     // Notify the bias-correction subsystem (Spec E phase E.3) so it
     // can drop any cached ratios/weights for the gone source.
@@ -1035,27 +1104,7 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
     source: Source;
     vertexBuffer: GPUBuffer;
     count: number;
-    /**
-     * Underlying CloudFade `GPUBuffer` for this source (containing
-     * opacity + 5-bit `sourceCode`).  PickRenderer builds its OWN
-     * per-source `@group(1)` bind group around this buffer using its
-     * own pipeline's auto-derived layout.
-     *
-     * Why expose the buffer rather than the bind group?  WebGPU's
-     * `layout: 'auto'` produces a UNIQUE bind-group layout per
-     * pipeline.  Sharing one bind group across two auto-layout
-     * pipelines fails the "group-equivalent" compatibility check at
-     * draw time ("BindGroupLayout was not created by the pipeline").
-     * Each pipeline must build its own bind groups against its own
-     * `getBindGroupLayout(1)`.  The underlying buffer is shared
-     * fine — it's just the layout objects that differ.
-     *
-     * The visual `draw()` calls `fade.writeFrame()` once per frame,
-     * so by the time the pick pass runs (always after the visual
-     * frame for that mouse event) the buffer is up to date.  No
-     * extra writes from the picker.
-     */
-    cloudFadeBuffer: GPUBuffer;
+    sourceBuffer: GPUBuffer;
   }> {
     for (const source of ALL_SOURCES) {
       const entry = clouds.get(source);
@@ -1064,7 +1113,7 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
         source,
         vertexBuffer: entry.buffer,
         count: entry.count,
-        cloudFadeBuffer: entry.fade.buffer,
+        sourceBuffer: entry.sourceBuffer,
       };
     }
   }
@@ -1072,7 +1121,7 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
     source: Source;
     vertexBuffer: GPUBuffer;
     count: number;
-    cloudFadeBuffer: GPUBuffer;
+    sourceBuffer: GPUBuffer;
   }> {
     return loadedSourcesGen();
   }
@@ -1195,19 +1244,18 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
     // Bind the pipeline + global bind group once (these don't change between
     // draws) and then for each loaded source:
     //   1. Skip it if its visibility bit is not set in the mask.
-    //   2. Bind the source's `entry.fade.bindGroup` (CloudFade) on @group(1)
-    //      — carries this source's `opacity` AND its 5-bit `sourceCode`
-    //      that the shader composes into each instance's packed identity.
-    //   3. Set this source's vertex buffer and issue a 6-vertex × N-instance
+    //   2. Write the registry-read opacity into the per-source fadeBuffer
+    //      at @group(1) — each source has its OWN buffer, so writes don't
+    //      race against draws against another source.
+    //   3. Bind @group(1) (FadeUniforms) and @group(2) (SourceUniforms).
+    //   4. Set this source's vertex buffer and issue a 6-vertex × N-instance
     //      draw call.
     //
-    // The CloudFade's per-source bind group is exactly what dodges the
-    // queue.writeBuffer race: each source has its OWN uniform buffer, so
-    // writing this source's sourceCode + opacity doesn't race against
-    // writes to any other source's uniform between draws within one
-    // submit.  See CLAUDE.md → "WebGPU `queue.writeBuffer` race" and the
-    // `cloudFade.ts` "per-instance buffers" docblock for the full
-    // rationale.
+    // Per-source buffers are exactly what dodges the queue.writeBuffer race:
+    // each source has its OWN uniform buffers, so writing this source's
+    // fade opacity doesn't race against writes to any other source's
+    // uniform between draws within one submit.  See CLAUDE.md →
+    // "WebGPU `queue.writeBuffer` race" for the full rationale.
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
 
@@ -1219,25 +1267,19 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
       // `data/sources.ts`, inlined here because this is the per-frame hot path.
       if (((visibleSourceMask >> source) & 1) === 0) continue;
 
-      entry.fade.writeFrame();
-      pass.setBindGroup(1, entry.fade.bindGroup);
+      // Read the registry-managed opacity for THIS source's handle and
+      // write it into the per-source fadeBuffer. One 16-byte writeBuffer
+      // per visible survey per frame — negligible.
+      const opacity = settings.fadeOpacityOf(source);
+      fadeScratchF32[0] = opacity;
+      // f32[1..3] (the three pad slots) stay zero.
+      device.queue.writeBuffer(entry.fadeBuffer, 0, fadeScratchBuffer);
+
+      pass.setBindGroup(1, entry.fadeBindGroup);
+      pass.setBindGroup(2, entry.sourceBindGroup);
       pass.setVertexBuffer(0, entry.buffer);
       pass.draw(6, entry.count);
     }
-  }
-
-  /**
-   * Whether any loaded source is still ramping up its fade-in opacity.
-   * The engine's render scheduler consults this on every frame tail —
-   * while it returns true, `requestRender()` keeps firing so the smoothstep
-   * keeps advancing.  Returns false once every cloud has saturated at
-   * opacity 1.0, after which the loop can pause as usual.
-   */
-  function isFading(): boolean {
-    for (const entry of clouds.values()) {
-      if (entry.fade.isFading()) return true;
-    }
-    return false;
   }
 
   /**
@@ -1280,19 +1322,18 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
    * Each cycle leaks one full set of per-source vertex buffers
    * (`LoadedSource.buffer` — ~14 MB GPU + ~14 MB CPU mirror per SDSS
    * deck, growing across SDSS + GLADE-large + 2MRS + Famous), each
-   * source's `CloudFade` 16-byte uniform, plus the renderer's own
-   * 176-byte uniform buffer.  After ten saves, browser GPU
-   * process memory has climbed past a gigabyte; on a constrained
-   * laptop GPU that's enough to wedge the tab.  Wiring this method
-   * into `engine.ts`'s `destroy()` chain plateaus the curve.
+   * source's per-source fade + source uniform buffers (16 bytes each),
+   * plus the renderer's own 176-byte uniform buffer.  After ten saves,
+   * browser GPU process memory has climbed past a gigabyte; on a
+   * constrained laptop GPU that's enough to wedge the tab.  Wiring
+   * this method into `engine.ts`'s `destroy()` chain plateaus the curve.
    *
    * ### Order rationale
    *
-   * Per-source buffers go first because each `LoadedSource` carries a
-   * `CloudFade` whose own `destroy()` releases its 16-byte uniform; we
-   * must finish destroying everything *inside* an entry before
-   * dropping the entry's reference from the map.  The renderer's own
-   * uniform buffer is destroyed next (independent — no fan-out).  The
+   * Per-source buffers go first (vertex, fade, source) — we must finish
+   * destroying everything *inside* an entry before dropping the entry's
+   * reference from the map.  The renderer's own uniform buffer is
+   * destroyed next (independent — no fan-out).  The
    * `clouds.clear()` call goes last so any debug tooling that
    * snapshots the map mid-teardown sees the per-entry buffers already
    * released before the entries themselves vanish — diagnosing a
@@ -1317,11 +1358,12 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
    * still in its remount cycle).
    */
   function destroy(): void {
-    // Per-source teardown.  Each entry owns a vertex buffer and a
-    // CloudFade; the fade's own destroy() handles its 16-byte uniform.
+    // Per-source teardown.  Each entry owns a vertex buffer, a fade
+    // buffer, and a source buffer.
     for (const entry of clouds.values()) {
       entry.buffer.destroy();
-      entry.fade.destroy();
+      entry.fadeBuffer.destroy();
+      entry.sourceBuffer.destroy();
     }
     // Drop JS references to every LoadedSource so GC can collect the
     // ~14 MB CPU mirror (`interleaved` Float32Array) per SDSS deck.
@@ -1355,7 +1397,6 @@ export function createPointRenderer(device: GPUDevice, format: GPUTextureFormat)
     loadedSources,
     uniformBuffer,
     draw,
-    isFading,
     destroy,
   };
   // `satisfies Renderer` confirms the shared label+destroy contract at

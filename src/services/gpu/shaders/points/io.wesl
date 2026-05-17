@@ -70,7 +70,7 @@ import package::lib::camera::CameraUniforms;
 //
 //   offset 0   : cam: CameraUniforms (80 B; viewProj + viewportPx + 2 pads)
 //   offset 80  : selectedPacked      (u32)
-//   offset 84  : _pad0               (u32; sourceCode lives in @group(1) cloud)
+//   offset 84  : _pad0               (u32; sourceCode lives in @group(2) source)
 //   offset 88  : pointSizePx         (f32)
 //   offset 92  : brightness          (f32)
 //   offset 96  : camPosWorld         (vec3<f32>)
@@ -97,7 +97,7 @@ struct Uniforms {
 
   // The currently-selected point packed as '(sourceCode << 27) | localIdx',
   // or '0xFFFFFFFFu' when nothing is selected. The vertex shader recovers
-  // its own packed identity as '(cloud.sourceCode << 27u) | u32(instance_index)'
+  // its own packed identity as '(source.sourceCode << 27u) | u32(instance_index)'
   // and compares against this slot to decide whether to enlarge for the
   // selection ring.
   //
@@ -111,7 +111,7 @@ struct Uniforms {
   selectedPacked: u32,
 
   // Slot at offset 84: intentionally unused at the @group(0) level.
-  // 'sourceCode' lives in the per-source @group(1) 'CloudUniforms'.
+  // 'sourceCode' lives in the per-source @group(2) 'SourceUniforms'.
   _pad0: u32,
 
   // Desired radius of each point sprite in pixels. Larger = bigger
@@ -221,9 +221,9 @@ struct PerVertex {
   //   - 'abs(axisRatio)' for the elliptical mask shape
   //   - 'axisRatio < 0.0' for the fallback flag
   //
-  // ## NaN handling (synthetic-fallback cloud)
+  // ## NaN handling (synthetic-fallback source)
   //
-  // The synthetic-fallback cloud ships its axisRatio array filled with
+  // The synthetic-fallback source ships its axisRatio array filled with
   // NaN. WGSL's 'abs(NaN)' returns NaN and 'NaN < 0.0' is false, so
   // the vertex stage routes synthetic rows through the existing
   // 'axisRatio > 0 is false' round-mask path with 'isFallback = 0u'.

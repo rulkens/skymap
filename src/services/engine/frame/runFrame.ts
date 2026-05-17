@@ -453,13 +453,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //     When it lands, the onResult uploads to the atlas and
   //     calls requestRender() — but we keep one frame queued
   //     anyway so the load-fade lerp ramps smoothly.
-  //   - pointRenderer.isFading() / filamentRenderer.isFading():
+  //   - fades.isAnyAnimating() / filamentRenderer.isFading():
   //     one or more clouds (point surveys or the filament skeleton)
-  //     are still ramping up their per-source opacity from a recent
-  //     upload (initial load or tier-swap).  The fade lasts
-  //     CLOUD_FADE_DURATION_MS (~600 ms) total; we keep ticking the
-  //     loop so the smoothstep advances on every frame, then go
-  //     silent again.  See `cloudFade.ts` for the shared mechanism.
+  //     are still ramping up/down their per-source opacity from a
+  //     recent upload (initial load or tier-swap).  The FadeRegistry
+  //     owns the survey controllers; filamentRenderer.isFading()
+  //     covers the filament skeleton until plan-04 migrates it too.
+  //     We keep ticking the loop so the opacity lerp advances every
+  //     frame, then go silent again when all controllers settle.
   // The bootstrap-bag fields (thumbnails, point-renderer) might still
   // be null on the very first few frames after engine construction —
   // before initGpu / wireSlots have written their handles.  Pre-D.4
@@ -476,7 +477,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.subsystems.tweens.isActive() ||
     state.subsystems.spaceMouse.hasAxes() ||
     (ready && state.subsystems.texturedImpostors.hasInFlightWork()) ||
-    (ready && state.gpu.renderer.isFading()) ||
+    // Survey fade-in / fade-out: consult the FadeRegistry instead of the
+    // removed pointRenderer.isFading() — the registry owns every survey
+    // controller's animation clock after the unified-fade migration.
+    state.subsystems.fades.isAnyAnimating(nowMs) ||
     (state.gpu.filamentRenderer !== null && state.gpu.filamentRenderer.isFading());
   if (stillAnimating) state.subsystems.scheduler.requestRender();
 }
