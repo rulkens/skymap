@@ -18,22 +18,22 @@
  *   npx tsx tools/verifyCf4Scfd.ts
  */
 import { readFileSync } from 'node:fs';
-import { decodeScalarField } from '../src/data/scalarFieldFormat';
+import { decodeScalarField } from '../../src/data/scalarFieldFormat';
 import {
   CLUSTER_ANCHORS,
   SUPERCLUSTER_ANCHORS,
   VOID_ANCHORS,
   raDecDistToEqCart,
-} from '../src/data/clusterAnchors';
-import type { ClusterAnchor } from '../src/@types/data/ClusterAnchor';
-import type { Vec3 } from '../src/@types/math/Vec3';
+} from '../../src/data/clusterAnchors';
+import type { ClusterAnchor } from '../../src/@types/data/ClusterAnchor';
+import type { Vec3 } from '../../src/@types/math/Vec3';
 import {
   eqToSg,
   eqCartToRaDecDist,
   voxelToEqCart,
-} from './utils/math/coordinates';
-import { f16BitsToFloat } from './utils/math/floatHalf';
-import { percentileOf } from './utils/math/percentile';
+} from '../utils/math/coordinates';
+import { f16BitsToFloat } from '../utils/math/floatHalf';
+import { percentileOf } from '../utils/math/percentile';
 
 /** Local alias for read-clarity in the per-list loops below. */
 type NamedAnchor = ClusterAnchor;

@@ -23,12 +23,12 @@
  *   npx tsx tools/auditCf4Anchors.ts
  */
 import { readFileSync } from 'node:fs';
-import { readNpy } from './parsers/npyReader';
-import { CLUSTER_ANCHORS, raDecDistToEqCart } from '../src/data/clusterAnchors';
-import type { ClusterAnchor } from '../src/@types/data/ClusterAnchor';
-import type { Vec3 } from '../src/@types/math/Vec3';
-import { eqToSg, sgToVoxelIndex } from './utils/math/coordinates';
-import { percentileOf } from './utils/math/percentile';
+import { readNpy } from '../parsers/npyReader';
+import { CLUSTER_ANCHORS, raDecDistToEqCart } from '../../src/data/clusterAnchors';
+import type { ClusterAnchor } from '../../src/@types/data/ClusterAnchor';
+import type { Vec3 } from '../../src/@types/math/Vec3';
+import { eqToSg, sgToVoxelIndex } from '../utils/math/coordinates';
+import { percentileOf } from '../utils/math/percentile';
 
 // CF-4 cube dimension — 128³ voxels covering ±500 Mpc.  Used only by
 // sampleVariant for bounds-checking and linear-index arithmetic.

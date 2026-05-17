@@ -34,10 +34,10 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { readNpy } from './parsers/npyReader';
-import { f32ToF16Bits } from './utils/math/floatHalf';
-import { encodeScalarField } from '../src/data/scalarFieldFormat';
-import type { ScalarCube } from '../src/@types/data/ScalarCube';
+import { readNpy } from '../parsers/npyReader';
+import { f32ToF16Bits } from '../utils/math/floatHalf';
+import { encodeScalarField } from '../../src/data/scalarFieldFormat';
+import type { ScalarCube } from '../../src/@types/data/ScalarCube';
 
 /**
  * Physical voxel edge length in Mpc.  CF4++ ships a 1000 Mpc box on a

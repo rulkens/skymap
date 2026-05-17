@@ -19,10 +19,10 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { readNpy } from './parsers/npyReader';
-import { f32ToF16Bits } from './utils/math/floatHalf';
-import { encodeScalarField } from '../src/data/scalarFieldFormat';
-import type { ScalarCube } from '../src/@types/data/ScalarCube';
+import { readNpy } from '../parsers/npyReader';
+import { f32ToF16Bits } from '../utils/math/floatHalf';
+import { encodeScalarField } from '../../src/data/scalarFieldFormat';
+import type { ScalarCube } from '../../src/@types/data/ScalarCube';
 
 /** Native MCPM cube dims per export_metadata.txt (X, Y, Z). */
 export const MCPM_BASE_DIMS: readonly [number, number, number] = [712, 1200, 728];
