@@ -44,6 +44,7 @@ import { BiasMode } from '../../data/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
 import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
+import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 import { VolumeFieldRow } from './VolumeFieldRow';
@@ -115,6 +116,12 @@ type Props = {
   milkyWayEnabled?: boolean;
   /** Fired when the user toggles the "Show Milky Way" checkbox. */
   onMilkyWayEnabledChange?: (enabled: boolean) => void;
+  /**
+   * Per-category POI label visibility.  Surfaced as four always-visible
+   * checkboxes inside the Overlays sub-group.  All four default to true.
+   */
+  labelCategoryVisibility: Readonly<Record<PoiCategory, boolean>>;
+  onSetLabelCategoryVisibility: (category: PoiCategory, visible: boolean) => void;
   /**
    * Whether the cosmic-web filament-skeleton overlay is rendered.  The
    * underlying `filaments.bin` is an *optional* asset built by the
@@ -375,6 +382,8 @@ export function SettingsPanel({
   onGalaxyTexturesChange,
   milkyWayEnabled,
   onMilkyWayEnabledChange,
+  labelCategoryVisibility,
+  onSetLabelCategoryVisibility,
   filamentsEnabled,
   onFilamentsChange,
   filamentIntensity,
@@ -995,6 +1004,50 @@ export function SettingsPanel({
                 />
               </div>
             )}
+
+            {/*
+              Per-category label-visibility toggles.  Four checkboxes matching
+              the PoiCategory union — always visible, no feature gate, because
+              famous-galaxy labels especially are first-class user-facing
+              overlays.  Not wrapped in its own CollapsibleSection — four rows
+              isn't enough to justify the click cost of expanding a sub-section.
+            */}
+            <div className={styles.panelRow}>
+              <label htmlFor="toggle-label-cluster">Cluster labels</label>
+              <input
+                id="toggle-label-cluster"
+                type="checkbox"
+                checked={labelCategoryVisibility.cluster}
+                onChange={(e) => onSetLabelCategoryVisibility('cluster', e.target.checked)}
+              />
+            </div>
+            <div className={styles.panelRow}>
+              <label htmlFor="toggle-label-supercluster">Supercluster labels</label>
+              <input
+                id="toggle-label-supercluster"
+                type="checkbox"
+                checked={labelCategoryVisibility.supercluster}
+                onChange={(e) => onSetLabelCategoryVisibility('supercluster', e.target.checked)}
+              />
+            </div>
+            <div className={styles.panelRow}>
+              <label htmlFor="toggle-label-famous-galaxy">Famous galaxy labels</label>
+              <input
+                id="toggle-label-famous-galaxy"
+                type="checkbox"
+                checked={labelCategoryVisibility.famousGalaxy}
+                onChange={(e) => onSetLabelCategoryVisibility('famousGalaxy', e.target.checked)}
+              />
+            </div>
+            <div className={styles.panelRow}>
+              <label htmlFor="toggle-label-void">Void labels</label>
+              <input
+                id="toggle-label-void"
+                type="checkbox"
+                checked={labelCategoryVisibility.void}
+                onChange={(e) => onSetLabelCategoryVisibility('void', e.target.checked)}
+              />
+            </div>
           </CollapsibleSection>
 
           {/* ── Orientation visibility (Task 15) ─────────────────────────────── */}
