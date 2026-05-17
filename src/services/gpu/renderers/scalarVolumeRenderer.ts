@@ -41,8 +41,6 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { ScalarFieldHandle } from '../../../@types/rendering/ScalarFieldHandle';
 import type { ScalarVolumeRenderer } from '../../../@types/rendering/ScalarVolumeRenderer';
 import type { FieldEntry } from '../../../@types/rendering/FieldEntry';
-import type { Vec2 } from '../../../@types/math/Vec2';
-import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { buildPaletteLut, PALETTE_LUT_SIZE } from '../../../data/scalarFieldPalettes';
 import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../../data/superGalacticTransform';
@@ -416,11 +414,17 @@ export function createScalarVolumeRenderer(
     removeField(handle) {
       const entry = fields.get(handle);
       if (!entry) return;
+      // Fire the callback BEFORE destroying GPU resources so any
+      // future callback body that needs to read the entry (debug log,
+      // pre-destroy fade-out path, etc.) operates on a still-valid
+      // entry. Today onFieldRemoved only calls fades.unregister, which
+      // doesn't touch the renderer, but the order is the more
+      // defensible default.
+      callbacks.onFieldRemoved(handle);
       entry.volumeTexture.destroy();
       entry.paletteTexture.destroy();
       entry.uniformBuffer.destroy();
       entry.fadeBuffer.destroy();
-      callbacks.onFieldRemoved(handle);
       fields.delete(handle);
     },
     setEnabled(handle, enabled) {

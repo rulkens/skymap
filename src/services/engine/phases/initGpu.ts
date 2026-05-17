@@ -436,6 +436,15 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // raymarch accumulates into the same linear-light buffer before tone
   // mapping.  Stored on `state.gpu` so `destroy()` can release the
   // shared corner/index VBOs and every per-field GPU resource.
+  //
+  // Why callbacks rather than a direct `fades` reference: scalarVolume
+  // is GPU-only (no EngineState dependency), so the renderer doesn't
+  // need to know about state.subsystems.fades at all. Threading the
+  // registry interactions through onFieldAdded/onFieldRemoved
+  // callbacks keeps the factory pure (testable without a FadeRegistry
+  // stub) and puts the registry-side wiring at the bootstrap layer
+  // alongside every other subsystem registration. Same shape as the
+  // `commit` callback on AssetSlot factories.
   state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(
     device,
     'rgba16float',
