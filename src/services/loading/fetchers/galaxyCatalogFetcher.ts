@@ -1,5 +1,5 @@
 /**
- * pointCloudFetcher — `Fetcher<GalaxyCatalog, GalaxyCatalogReq>`.
+ * galaxyCatalogFetcher — `Fetcher<GalaxyCatalog, GalaxyCatalogReq>`.
  *
  * The first concrete fetcher for the asset-loading subsystem.  Encodes
  * one piece of policy that previously lived in `cloudLoader.ts`:
@@ -40,7 +40,7 @@ import { decodeGalaxyCatalog, emptyGalaxyCatalog } from '../../../data/galaxyCat
 import { TIER_TARGETS, tierFilenameForSource } from '../../../data/tierTargets';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
-export const pointCloudFetcher: Fetcher<GalaxyCatalog, GalaxyCatalogReq> = async (
+export const galaxyCatalogFetcher: Fetcher<GalaxyCatalog, GalaxyCatalogReq> = async (
   req,
   signal,
   onProgress,

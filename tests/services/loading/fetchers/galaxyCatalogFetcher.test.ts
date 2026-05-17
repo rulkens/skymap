@@ -1,5 +1,5 @@
 /**
- * Tests for pointCloudFetcher.
+ * Tests for galaxyCatalogFetcher.
  *
  * Two scenarios are covered here:
  *
@@ -11,21 +11,21 @@
  * Decode-correctness is exercised exhaustively in
  * `tests/galaxyCatalogFormat.test.ts`; here we only assert that fetch is
  * actually invoked and that a header-only v4 .bin round-trips to a
- * count=0 cloud.
+ * count=0 catalog.
  */
 import { describe, expect, it } from 'vitest';
-import { pointCloudFetcher } from '../../../../src/services/loading/fetchers/pointCloudFetcher';
+import { galaxyCatalogFetcher } from '../../../../src/services/loading/fetchers/galaxyCatalogFetcher';
 import { Source } from '../../../../src/data/sources';
 import { useFetchMock } from '../../../setup/fetchMock';
 
-describe('pointCloudFetcher', () => {
+describe('galaxyCatalogFetcher', () => {
   const fetch = useFetchMock();
 
-  it('returns empty cloud and skips fetch when target is 0 for the tier', async () => {
+  it('returns empty catalog and skips fetch when target is 0 for the tier', async () => {
     // SDSS at `small` tier has target=0 in TIER_TARGETS — verified against
     // src/data/tierTargets.ts at the time this test was written.  If the
     // table changes, pick another (source, tier) pair where the target IS 0.
-    const cloud = await pointCloudFetcher(
+    const cloud = await galaxyCatalogFetcher(
       { source: Source.SDSS, tier: 'small' },
       new AbortController().signal,
       () => {},
@@ -62,7 +62,7 @@ describe('pointCloudFetcher', () => {
 
     // 2MRS has no entry in TIER_TARGETS.medium → target is undefined
     // (i.e. "no cap"), which is NOT 0, so the fetch path runs.
-    const cloud = await pointCloudFetcher(
+    const cloud = await galaxyCatalogFetcher(
       { source: Source.TwoMRS, tier: 'medium' },
       new AbortController().signal,
       () => {},

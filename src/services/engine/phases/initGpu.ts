@@ -26,11 +26,11 @@
  *     renderer is stored on `state.gpu.filamentRenderer` because the
  *     `destroy()` path needs to release it.
  *
- * The 5 point-source asset slots are also wired here via the
- * `POINT_SOURCE_REGISTRY` declarative table — `wirePointSourceSlot`'s
- * commit step uploads to `state.gpu.renderer`, so the slots must be
- * minted AFTER renderer construction in the same phase to keep that
- * lifecycle obvious.
+ * The 5 galaxy-catalog source asset slots are also wired here via the
+ * `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table —
+ * `wireGalaxyCatalogSourceSlot`'s commit step uploads to
+ * `state.gpu.renderer`, so the slots must be minted AFTER renderer
+ * construction in the same phase to keep that lifecycle obvious.
  *
  * ### Why this runs first
  *
@@ -49,7 +49,7 @@
  *   - `state.gpu.renderer` (PointRenderer)
  *   - `state.gpu.postProcess` (PostProcess)
  *   - `state.gpu.filamentRenderer` (FilamentRenderer)
- *   - `state.assetSlots.points` (each row of POINT_SOURCE_REGISTRY)
+ *   - `state.assetSlots.points` (each row of GALAXY_CATALOG_SOURCE_REGISTRY)
  *
  * ### Async work
  *
@@ -84,7 +84,7 @@ import { createVolumeUpsample } from '../../gpu/passes/volumeUpsample';
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { loadFontAtlases } from '../../gpu/labels/loadFontAtlases';
 import { hasUrlGate } from '../../../utils/url/urlGate';
-import { POINT_SOURCE_REGISTRY, wirePointSourceSlot } from '../wiring/pointSourceRegistry';
+import { GALAXY_CATALOG_SOURCE_REGISTRY, wireGalaxyCatalogSourceSlot } from '../wiring/galaxyCatalogSourceRegistry';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -201,7 +201,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   //
   // Load the font atlas (BMFont JSON + MSDF PNG) and construct both overlay
   // renderers in one block.  Sequenced here — after the PointRenderer but
-  // before the POINT_SOURCE_REGISTRY loop — for two reasons:
+  // before the GALAXY_CATALOG_SOURCE_REGISTRY loop — for two reasons:
   //
   //   1. The atlas fetch is short (~120 KB on fast localhost; served from
   //      Cloudflare Workers Assets CDN edge in production).  Awaiting it
@@ -293,17 +293,17 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // filaments.  The progress aggregator keys on these strings, so
   // they double as the load-progress identifier.
   //
-  // The 5 point-source slots are now constructed via the
-  // `POINT_SOURCE_REGISTRY` declarative table — see
-  // `pointSourceRegistry.ts` for the registry schema, the per-row
+  // The 5 galaxy-catalog source slots are now constructed via the
+  // `GALAXY_CATALOG_SOURCE_REGISTRY` declarative table — see
+  // `galaxyCatalogSourceRegistry.ts` for the registry schema, the per-row
   // fetcher choice, and the rationale for keeping sidecar slots
   // (filaments, famous-meta, pgc-aliases) inline below rather than
   // absorbing them into the registry.  Each call mints the slot,
   // attaches the upload-on-commit body + ready-state subscriber,
   // and stores the slot in `state.assetSlots.points` keyed by
   // `Source` — exactly what the pre-registry inline loop did.
-  for (const cfg of POINT_SOURCE_REGISTRY) {
-    wirePointSourceSlot(state, cfg, { cb });
+  for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
+    wireGalaxyCatalogSourceSlot(state, cfg, { cb });
   }
 
   // ── Galaxy thumbnail subsystem ─────────────────────────────────────

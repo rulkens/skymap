@@ -8,11 +8,11 @@ import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
  * One row of the registry.
  *
  * The fields capture exactly the dimensions that vary across the five
- * point-source slots; everything else (slot name shape, commit body,
- * subscriber side effects) is uniform and lives in
- * `wirePointSourceSlot`.
+ * galaxy-catalog-source slots; everything else (slot name shape, commit
+ * body, subscriber side effects) is uniform and lives in
+ * `wireGalaxyCatalogSourceSlot`.
  */
-export type PointSourceConfig = {
+export type GalaxyCatalogSourceConfig = {
   /** Which catalog this slot represents. */
   source: Source;
   /**

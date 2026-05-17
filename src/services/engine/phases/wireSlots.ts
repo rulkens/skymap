@@ -53,7 +53,7 @@
  *   - `state.sources.famousMeta`, `state.sources.famousXrefs` — via
  *     famous-meta subscriber (on `ready`).
  *   - `state.sources.clouds` — populated by the per-source slot commit
- *     subscribers (wired in `initGpu` via `wirePointSourceSlot`).
+ *     subscribers (wired in `initGpu` via `wireGalaxyCatalogSourceSlot`).
  *   - `state.subsystems.loadProgress`, `state.subsystems.thumbnails`.
  *   - `cb.onStatusChange({ kind: 'loading' })`.
  *
