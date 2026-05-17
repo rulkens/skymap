@@ -61,7 +61,7 @@ export const pointSpritesPass: Pass = {
     return true;
   },
 
-  draw(pass, ctx, _state, settings, _deps) {
+  draw(pass, ctx, state, settings, _deps) {
     const { renderer, vp, canvasSize, drawCamPos, drawPxPerRad } = ctx;
     const { width, height } = canvasSize;
 
@@ -72,6 +72,11 @@ export const pointSpritesPass: Pass = {
       settings.selected !== null
         ? packSelection(settings.selected.source, settings.selected.localIdx)
         : SELECTION_NONE_SENTINEL;
+
+    // Capture the fade registry + timestamp once for this frame so the
+    // per-source closure below doesn't call performance.now() per source.
+    const nowMs = performance.now();
+    const fades = state.subsystems.fades;
 
     renderer.draw(pass, vp, [width, height], {
       pointSizePx: settings.pointSizePx,
@@ -97,6 +102,11 @@ export const pointSpritesPass: Pass = {
       // donut artefact.
       pxFadeStart: settings.pxFadeStartPoints,
       pxFadeEnd: settings.pxFadeEndPoints,
+      // Look up the FadeRegistry opacity for each source at this frame's
+      // timestamp. The registry returns 1.0 for unregistered handles —
+      // a safe fallback so a source that hasn't registered yet renders
+      // at full opacity rather than disappearing.
+      fadeOpacityOf: (source) => fades.opacityOf({ kind: 'survey', source }, nowMs),
     });
   },
 };

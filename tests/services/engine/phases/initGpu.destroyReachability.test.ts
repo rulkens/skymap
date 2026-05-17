@@ -82,6 +82,18 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: vi.fn(),
 }));
 
+// The canonical BGLs are constructed in initGpu by calling
+// createFadeUniformsBgl / createSourceUniformsBgl, both of which call
+// device.createBindGroupLayout.  The mock device returned by the gpuInitGpu
+// mock is a plain object without WebGPU methods, so we mock the BGL
+// factories directly instead of stubbing the device.
+vi.mock('../../../../src/services/gpu/bindGroupLayouts/fadeUniforms', () => ({
+  createFadeUniformsBgl: vi.fn(() => ({ __mockFadeBgl: true })),
+}));
+vi.mock('../../../../src/services/gpu/bindGroupLayouts/sourceUniforms', () => ({
+  createSourceUniformsBgl: vi.fn(() => ({ __mockSourceBgl: true })),
+}));
+
 vi.mock('../../../../src/services/gpu/renderers/pointRenderer', () => ({
   createPointRenderer: vi.fn(() => makeStub('pointRenderer')),
 }));
