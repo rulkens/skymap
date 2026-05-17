@@ -119,8 +119,8 @@ const EXTRA_FILES: ExtraFile[] = [
     // no human-readable content — so indexing it wastes crawler budget
     // and bucket requests for zero SEO value.  Lives at the root key
     // (no `data/` prefix) because robots.txt is only honoured when fetched
-    // from the host root.  Source file is checked in at tools/r2-static/.
-    localPath: 'tools/r2-static/robots.txt',
+    // from the host root.  Source file is checked in at tools/deploy/r2-static/.
+    localPath: 'tools/deploy/r2-static/robots.txt',
     r2Key: 'robots.txt',
   },
   {
