@@ -286,9 +286,11 @@ export type FadeController = {
    * fade-in.
    *
    * Calling `fadeTo` while a previous Promise is unresolved leaves the
-   * earlier promise pending until its resolveMs deadline elapses. If a
-   * caller wants strict cancel-on-retarget semantics, they should await
-   * the previous fadeTo before issuing a new one.
+   * earlier promise pending; it resolves at its original resolveMs
+   * deadline (even though the controller has retargeted to a new
+   * destination in the meantime). If a caller wants strict
+   * cancel-on-retarget semantics, they should await the previous
+   * fadeTo before issuing a new one.
    */
   fadeTo(target: number, durationMs: number, nowMs?: number): Promise<void>;
 
@@ -317,9 +319,11 @@ export type FadeController = {
 
   /**
    * Resolve any pending fadeTo promises whose resolveMs has elapsed.
-   * Called once per frame from the registry's tick.
+   * Called once per frame from the registry's tick. The registry
+   * passes a single `nowMs` to every controller in the same tick so
+   * `currentOpacity` and `tick` observe the same timestamp.
    */
-  tick(nowMs?: number): void;
+  tick(nowMs: number): void;
 };
 ```
 
