@@ -143,8 +143,8 @@ ReadMes for the upstream catalogs live in `data/raw/` (`J_ApJS_199_26_ReadMe`, `
 
 ## Renderer quick map
 
-- **`pointRenderer.ts` + `shaders/points.wgsl`**: instanced billboards. Vertex stride is currently 28 bytes / 7 slots (xyz, magnitude, colorIndex, globalInstanceIdx u32, kPerZ).
-- **`pickRenderer.ts`**: r32uint pick texture; selection encoded as per-vertex `globalInstanceIdx`. Read it with `copyTextureToBuffer` for hover/click.
+- **`pointRenderer.ts` + `shaders/points.wesl`**: instanced billboards. Vertex stride is 48 bytes / 12 slots (xyz, magnitude, colorIndex, kPerZ, axisRatio + sign-bit fallback flag, positionAngleDeg, diameterKpc, vMaxWeight, schechterRatio, angularDensityWeight). Identity is composed on the GPU from a per-draw `SourceUniforms.sourceCode` + `@builtin(instance_index)`, NOT baked per-vertex.
+- **`pickRenderer.ts`**: r32uint pick texture. The fragment writes `(sourceCode << 27) | (localIdx + PICK_SENTINEL_OFFSET)`; see `src/data/selectionEncoding.ts` for the encoding (5 bits source, 27 bits localIdx, code 31 reserved as the all-ones sentinel). Source codes are append-only (the rule lives in `sources.ts`'s docstring) — same hygiene as enum values that get persisted to .bin, applied to POI-only codes too. Read the texture with `copyTextureToBuffer` for hover/click.
 - **`textureAtlas.ts` + `quadRenderer.ts` + `shaders/quads.wgsl`**: 2048×2048 atlas of 128×128 slots for galaxy thumbnails. LRU eviction.
 - **`galaxyImageQueue.ts`**: priority queue + concurrency limiter (max 4) for thumbnail fetches. Idempotent enqueue (don't re-add in-flight keys — see the long comment for the bug history).
 - **`galaxyImageFetcher.ts`**: SDSS DR18 ImgCutout (CORS-safe) for SDSS galaxies; CDS hips2fits (CORS-safe DSS proxy) for 2MRS/GLADE.
