@@ -50,6 +50,7 @@ import type { TweenManager } from '../../camera/TweenManager';
 import type { ClickResolver } from '../ClickResolver';
 import type { InputBindings } from '../../input/InputBindings';
 import type { RenderScheduler } from '../subsystems/RenderScheduler';
+import type { FadeRegistry } from '../../animation/FadeRegistry';
 import type { LoadProgressEmitter } from '../../loading/LoadProgressEmitter';
 import type { Destroyable } from '../../rendering/Destroyable';
 
@@ -62,6 +63,16 @@ export type EngineSubsystemHandles = {
   clickResolver: ClickResolver | null;
   inputBindings: InputBindings | null;
   scheduler: RenderScheduler;
+  /**
+   * Unified fade registry — owns one FadeController per registered
+   * FadeHandle. Constructed eagerly in the engine state literal
+   * BEFORE any renderer, so renderer construction (in `initGpu`) can
+   * call `state.subsystems.fades.register(...)` without a null-check.
+   * Drives the render-on-demand predicate (replacing per-renderer
+   * isFading() checks) and the slot orchestration's fade-out → upload
+   * → fade-in sequence. See `src/services/animation/fadeRegistry.ts`.
+   */
+  fades: FadeRegistry;
   /**
    * Hover/select state façade — owns the user-facing `(source, localIdx)`
    * selection pair and fans out `cb.onHoverChange` /

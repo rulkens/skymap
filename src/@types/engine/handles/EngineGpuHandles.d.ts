@@ -58,10 +58,26 @@ import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer'
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
+import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
+import type { SourceUniformsBgl } from '../../rendering/SourceUniformsBgl';
 
 export type EngineGpuHandles = {
   renderer: PointRenderer | null;
   pickRenderer: PickRenderer | null;
+  /**
+   * Canonical FadeUniforms bind-group layout (@group(1)). Constructed
+   * once in `initGpu` and shared by every renderer pipeline that fades.
+   * Null until `initGpu` resolves; see EngineGpuHandles docblock on the
+   * staged-construction pattern.
+   */
+  fadeBgl: FadeUniformsBgl | null;
+  /**
+   * Canonical SourceUniforms bind-group layout (@group(2), points
+   * only). Constructed once in `initGpu` and shared between the
+   * visual PointRenderer and the offscreen PickRenderer. Null until
+   * `initGpu` resolves.
+   */
+  sourceBgl: SourceUniformsBgl | null;
   /**
    * Combined HDR offscreen target + tone-map post-process.  Pre-Phase-4
    * this was two fields (`hdrTarget` + `toneMapPass`); they merged into
