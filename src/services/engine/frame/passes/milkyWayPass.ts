@@ -51,16 +51,32 @@ import { MILKY_WAY_CENTER_WORLD } from '../../../../data/galacticCenter';
 export const milkyWayPass: Pass = {
   name: 'milky-way',
 
-  enabled(_state, ctx, settings) {
-    if (!settings.milkyWayEnabled) return false;
+  enabled(state, ctx, settings) {
+    // Settings boolean is the user's intent; opacityOf > 0 keeps the
+    // pass alive through the ~100 ms toggle fade-out tail. The
+    // distance-based milkyWayFadeAlpha still gates separately — if
+    // the camera is too far away from the Milky Way to render it,
+    // skip even when the toggle is on.
+    const togglePart =
+      settings.milkyWayEnabled ||
+      state.subsystems.fades.opacityOf({ kind: 'overlay', id: 'milkyWay' }, performance.now()) > 0;
+    if (!togglePart) return false;
     const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
     return milkyWayFadeAlpha(camDistMpc) > 0;
   },
 
-  draw(pass, ctx, _state, _settings, deps) {
+  draw(pass, ctx, state, _settings, deps) {
     const { vp, canvasSize, drawCamPos } = ctx;
     const camDistMpc = Math.hypot(drawCamPos[0], drawCamPos[1], drawCamPos[2]);
-    const fadeAlpha = milkyWayFadeAlpha(camDistMpc);
+    // Composite the distance-based fade with the registry-supplied
+    // toggle opacity. The renderer already accepts a scalar fadeAlpha
+    // CPU-side param, so multiplying two opacities here is the
+    // minimal-change path — no shader edits, no FadeUniforms binding.
+    const toggleOpacity = state.subsystems.fades.opacityOf(
+      { kind: 'overlay', id: 'milkyWay' },
+      performance.now(),
+    );
+    const fadeAlpha = milkyWayFadeAlpha(camDistMpc) * toggleOpacity;
 
     deps.milkyWayRenderer.draw(
       pass,

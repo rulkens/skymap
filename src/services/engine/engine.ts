@@ -1389,7 +1389,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setEnabled: (enabled) => boringSetters.setGalaxyTexturesEnabled(enabled),
     },
     milkyWay: {
-      setEnabled: (enabled) => boringSetters.setMilkyWayEnabled(enabled),
+      // Drive the FadeRegistry alongside the boolean flip so the user
+      // sees a smooth ramp on toggle. milkyWayPass.enabled accepts
+      // EITHER the boolean OR a non-zero overlay opacity, so we can
+      // flip the setting first and let the gate keep the pass alive
+      // through the ~100 ms fade-out tail.
+      setEnabled: (enabled) => {
+        boringSetters.setMilkyWayEnabled(enabled);
+        void state.subsystems.fades.fadeTo(
+          { kind: 'overlay', id: 'milkyWay' },
+          enabled ? 1 : 0,
+          enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
+        );
+        state.subsystems.scheduler.requestRender();
+      },
     },
     filaments: {
       // Drive the FadeRegistry alongside the boolean flip so the user

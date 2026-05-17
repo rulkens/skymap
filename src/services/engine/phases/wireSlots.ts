@@ -392,7 +392,16 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // procedural or bundled and appear immediately on first frame.
   // `register(handle, 1)` sets the steady-state opacity directly; no
   // setImmediate(1) follow-up is required.
-  state.subsystems.fades.register({ kind: 'overlay', id: 'milkyWay' }, 1);
+  // Milky Way registers at its current settings value (not blanket 1.0)
+  // because the toggle path multiplies this opacity into the renderer's
+  // distance-based fadeAlpha. If we always registered at 1 regardless
+  // of settings, a default-off session would still draw the Milky Way
+  // on the first frame after wireSlots completes — the settings.gate
+  // check used to be the only thing keeping it off. Now both must agree.
+  state.subsystems.fades.register(
+    { kind: 'overlay', id: 'milkyWay' },
+    state.settings.milkyWay.enabled ? 1 : 0,
+  );
   state.subsystems.fades.register({ kind: 'overlay', id: 'proceduralDisks' }, 1);
   state.subsystems.fades.register({ kind: 'overlay', id: 'texturedImpostors' }, 1);
 

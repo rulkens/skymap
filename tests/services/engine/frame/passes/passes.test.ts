@@ -300,10 +300,26 @@ describe('milkyWayPass.enabled', () => {
     ).toBe(true);
   });
 
-  it('returns false when milkyWayEnabled is false', () => {
+  it('returns false when milkyWayEnabled is false AND fade opacity is 0', () => {
+    // STATE_STUB's fades.opacityOf returns 1 by default — override
+    // to 0 here so the gate doesn't keep the pass alive through a
+    // fade-out tail.
+    const stateZeroFade = {
+      subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
+    } as unknown as EngineState;
+    expect(
+      milkyWayPass.enabled(stateZeroFade, makeCtx(), makeSettings({ milkyWayEnabled: false })),
+    ).toBe(false);
+  });
+
+  it('returns true when milkyWayEnabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
+    // STATE_STUB.fades.opacityOf returns 1 by default — simulates a
+    // toggle fade-out still in flight. The distance-based fadeAlpha
+    // also passes (camera at origin), so the gate's second condition
+    // is non-zero. Pass renders.
     expect(
       milkyWayPass.enabled(STATE_STUB, makeCtx(), makeSettings({ milkyWayEnabled: false })),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('returns false when camera is beyond the fade band (no empty render pass)', () => {
