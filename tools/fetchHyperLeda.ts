@@ -51,30 +51,9 @@ import {
 import { resolve, dirname } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { readIdSet } from './utils/io/readIdSet';
 
 const CONCURRENCY = 4;
-
-/**
- * Read the existing HyperLEDA cache (if present) and return the set of PGCs
- * already queried — including those rows where `pa`/`logr25` are empty
- * (HyperLEDA returned no match, but we DID ask). Both states mean "skip on
- * resume". Returns an empty Set on first run.
- *
- * Single-pass scan, no parsing of the numeric fields — we only need the PGC.
- */
-function readExistingPgcs(path: string): Set<string> {
-  const done = new Set<string>();
-  if (!existsSync(path)) return done;
-  const text = readFileSync(path, 'utf8');
-  const lines = text.split(/\r?\n/);
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line || !line.includes(',')) continue;
-    const pgc = line.slice(0, line.indexOf(',')).trim();
-    if (pgc.length > 0) done.add(pgc);
-  }
-  return done;
-}
 
 type HyperLedaRow = {
   pa: number;
@@ -178,7 +157,7 @@ async function main(): Promise<void> {
     }
   }
 
-  const alreadyDone = readExistingPgcs(outPath);
+  const alreadyDone = readIdSet(outPath);
   if (alreadyDone.size === 0) {
     writeFileSync(outPath, expectedHeader + '\n');
   } else {
