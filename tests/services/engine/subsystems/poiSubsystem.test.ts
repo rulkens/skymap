@@ -8,7 +8,11 @@ function makeState(): EngineState {
   return { subsystems: { scheduler: { requestRender: () => {} } } } as unknown as EngineState;
 }
 function makeCtx(): ReadyFrameContext {
-  return { drawCamPos: [0, 0, 0] } as unknown as ReadyFrameContext;
+  return {
+    drawCamPos: [0, 0, 0],
+    canvasSize: { width: 1920, height: 1080 },
+    drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
+  } as unknown as ReadyFrameContext;
 }
 
 const VIRGO: PointOfInterest = {
@@ -20,8 +24,8 @@ const VIRGO: PointOfInterest = {
 };
 const M31: PointOfInterest = {
   id: 'm31',
-  name: 'M31',
-  category: 'galaxy',
+  name: 'Andromeda Galaxy',
+  category: 'famousGalaxy',
   worldPos: [0.5, 0.1, 0.0],
 };
 const BOOTES_VOID: PointOfInterest = {
@@ -30,6 +34,13 @@ const BOOTES_VOID: PointOfInterest = {
   category: 'void',
   worldPos: [200, 100, 50],
   crosshairSizeMpc: 20,
+};
+const LANIAKEA: PointOfInterest = {
+  id: 'laniakea',
+  name: 'Laniakea',
+  category: 'supercluster',
+  worldPos: [-50, -20, 10],
+  crosshairSizeMpc: 25,
 };
 
 describe('poiSubsystem', () => {
@@ -46,7 +57,7 @@ describe('poiSubsystem', () => {
     sub.setPois([VIRGO, M31]);
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels).toHaveLength(2);
-    expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'M31']);
+    expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'Andromeda Galaxy']);
   });
 
   it('emits 3 perpendicular crosshair lines for POIs with crosshairSizeMpc', () => {
@@ -65,10 +76,18 @@ describe('poiSubsystem', () => {
 
   it('filters by category visibility', () => {
     const sub = createPoiSubsystem();
-    sub.setPois([VIRGO, M31, BOOTES_VOID]);
-    sub.setCategoryVisible('galaxy', false);
+    sub.setPois([VIRGO, M31, BOOTES_VOID, LANIAKEA]);
+    sub.setCategoryVisible('famousGalaxy', false);
     const out = sub.produceLabels(makeState(), makeCtx());
-    expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'Boötes Void']);
+    expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'Boötes Void', 'Laniakea']);
+  });
+
+  it('accepts the supercluster category and styles it from POI_STYLES.supercluster', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([LANIAKEA]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    expect(out.labels).toHaveLength(1);
+    expect(out.labels[0]!.text).toBe('Laniakea');
   });
 
   it('setPois replaces the list immutably (does not mutate input)', () => {
@@ -76,11 +95,9 @@ describe('poiSubsystem', () => {
     const initial = [VIRGO];
     sub.setPois(initial);
     sub.setPois([M31]);
-    // The caller's array is untouched.
     expect(initial).toEqual([VIRGO]);
-    // The subsystem now reports only M31.
     const out = sub.produceLabels(makeState(), makeCtx());
-    expect(out.labels.map((l) => l.text)).toEqual(['M31']);
+    expect(out.labels.map((l) => l.text)).toEqual(['Andromeda Galaxy']);
   });
 
   it('has stable id "pois"', () => {

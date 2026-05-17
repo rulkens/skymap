@@ -1,5 +1,5 @@
 import type { Vec3 } from '../../math/Vec3';
-import type { PoiCategory } from './PoiCategory';
+import type { PoiCategory } from '../../../services/engine/subsystems/poiSubsystem';
 
 export type PointOfInterest = {
   readonly id: string;
