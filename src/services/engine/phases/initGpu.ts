@@ -87,6 +87,7 @@ import { hasUrlGate } from '../../../utils/url/urlGate';
 import { GALAXY_CATALOG_SOURCE_REGISTRY, wireGalaxyCatalogSourceSlot } from '../wiring/galaxyCatalogSourceRegistry';
 import { createFadeUniformsBgl } from '../../gpu/bindGroupLayouts/fadeUniforms';
 import { createSourceUniformsBgl } from '../../gpu/bindGroupLayouts/sourceUniforms';
+import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -435,7 +436,25 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // raymarch accumulates into the same linear-light buffer before tone
   // mapping.  Stored on `state.gpu` so `destroy()` can release the
   // shared corner/index VBOs and every per-field GPU resource.
-  state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(device, 'rgba16float', state.gpu.fadeBgl!);
+  state.gpu.scalarVolumeRenderer = createScalarVolumeRenderer(
+    device,
+    'rgba16float',
+    state.gpu.fadeBgl!,
+    {
+      onFieldAdded: (handle) => {
+        state.subsystems.fades.register({ kind: 'scalarField', field: handle }, 0);
+        // Fade in on first upload — fire and forget.
+        void state.subsystems.fades.fadeTo(
+          { kind: 'scalarField', field: handle },
+          1,
+          FADE_IN_DURATION_MS,
+        );
+      },
+      onFieldRemoved: (handle) => {
+        state.subsystems.fades.unregister({ kind: 'scalarField', field: handle });
+      },
+    },
+  );
 
   // ── Half-res-to-HDR volume upsample pass ──────────────────────────
   //

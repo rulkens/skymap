@@ -172,6 +172,10 @@ export function createScalarVolumeRenderer(
   device: GPUDevice,
   format: GPUTextureFormat,
   fadeBgl: FadeUniformsBgl,
+  callbacks: {
+    onFieldAdded: (handle: ScalarFieldHandle) => void;
+    onFieldRemoved: (handle: ScalarFieldHandle) => void;
+  },
 ): ScalarVolumeRenderer {
   const cornerBuffer = device.createBuffer({
     size: CUBE_CORNERS.byteLength,
@@ -407,6 +411,7 @@ export function createScalarVolumeRenderer(
         fadeBuffer,
         fadeBindGroup,
       });
+      callbacks.onFieldAdded(handle);
     },
     removeField(handle) {
       const entry = fields.get(handle);
@@ -415,6 +420,7 @@ export function createScalarVolumeRenderer(
       entry.paletteTexture.destroy();
       entry.uniformBuffer.destroy();
       entry.fadeBuffer.destroy();
+      callbacks.onFieldRemoved(handle);
       fields.delete(handle);
     },
     setEnabled(handle, enabled) {
