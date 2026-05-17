@@ -76,7 +76,9 @@ import type { GalaxyCatalog } from '../src/@types/data/GalaxyCatalog.js';
 import { Source } from '../src/data/sources.js';
 import { surveyFluxLimit } from '../src/data/surveyFluxLimits.js';
 import { absoluteFromApparent, dMaxFromAbsolute } from '../src/utils/math/distanceModulus.js';
+import { mulberry32 } from '../src/utils/random/mulberry32.js';
 import { computeAngularWeights } from '../src/services/engine/bake/computeAngularWeights.js';
+import { gaussian } from './utils/random/gaussian.js';
 
 /**
  * Default persistence cut in σ.  Lower = more filaments accepted as
@@ -166,9 +168,7 @@ export type ParsedBuildFilamentsArgs = {
  * quoting mistake and silently falling back to the default merge would
  * mask that.
  */
-export function parseArgs(
-  argv: string[] = process.argv.slice(2),
-): ParsedBuildFilamentsArgs {
+export function parseArgs(argv: string[] = process.argv.slice(2)): ParsedBuildFilamentsArgs {
   let cut = DEFAULT_PERSISTENCE_CUT;
   let smooth = DEFAULT_SMOOTHING_PASSES;
   // `undefined` lets us distinguish "user did not pass --sources" (use
@@ -401,56 +401,15 @@ const JITTER_SIGMA_MPC = 0.5;
 
 /**
  * Seed for the duplication+jitter PRNG.  We use a seeded generator
- * (Mulberry32, see `makeMulberry32` below) so two runs over the same
- * input produce byte-identical output — important for reproducibility
- * (caching the Delaunay tessellation across `--cut` sweeps assumes the
- * same TSV) and for debugging (a flaky filament can be re-investigated
- * deterministically).  Seeding from `Math.random()` or `Date.now()`
- * would make every build a fresh dataset and break those invariants.
+ * (`mulberry32` from `src/utils/random/mulberry32`) so two runs over
+ * the same input produce byte-identical output — important for
+ * reproducibility (caching the Delaunay tessellation across `--cut`
+ * sweeps assumes the same TSV) and for debugging (a flaky filament can
+ * be re-investigated deterministically).  Seeding from `Math.random()`
+ * or `Date.now()` would make every build a fresh dataset and break
+ * those invariants.
  */
 const JITTER_SEED = 1234;
-
-/**
- * Mulberry32 — a tiny single-state PRNG with period 2^32 and decent
- * statistical properties for a build-time tool.  We don't need
- * cryptographic-grade randomness; we need (a) seedability and
- * (b) cheap per-call cost so the duplication loop doesn't dominate
- * the build wall-clock.  Mulberry32 is ~2× faster than splitmix32
- * here and well-documented in the JS PRNG community (see Tommy
- * Ettinger's gist).
- *
- * Returns a function that yields the next uniform-[0,1) double on
- * each call.  Closure-captured state means the caller doesn't need
- * to thread an int through every site.
- */
-function makeMulberry32(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/**
- * Draw one Gaussian sample (mean 0, stddev 1) using the Box-Muller
- * transform.  We discard the second sample Box-Muller produces "for
- * free" rather than caching it across calls — the per-galaxy duplicate
- * count is variable, so a cached sample would cross galaxy boundaries
- * and tangle the seeded determinism.  At ~3M points × ≤15 copies × 3
- * axes the wasted call is negligible compared to the file I/O and
- * Delaunay stages downstream.
- */
-function gaussian(rng: () => number): number {
-  // Avoid Math.log(0) by floor-clamping u₁ to the smallest positive
-  // double Mulberry32 can emit (≈ 2^-32).  rng() returns [0, 1) so
-  // the zero case is theoretically reachable.
-  const u1 = Math.max(rng(), Number.MIN_VALUE);
-  const u2 = rng();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
 
 /**
  * Source-tagged positions: one entry per surviving input galaxy after
@@ -705,7 +664,7 @@ function readMergedPositions(activeSources: ReadonlySet<SourceKey>): TaggedPosit
  *     above it that V_max amplifies).
  */
 function applyMalmquistDuplication(input: TaggedPositions): Float32Array {
-  const rng = makeMulberry32(JITTER_SEED);
+  const rng = mulberry32(JITTER_SEED);
 
   // Two-pass approach.  Pass 1 computes per-galaxy weights and
   // accumulates the integer + stochastic copy count, sizing the output
@@ -1146,9 +1105,7 @@ async function main(): Promise<void> {
   const outPath = resolve(outputPath);
   const buf = encodeFilaments(cloud);
   writeFileSync(outPath, Buffer.from(buf));
-  process.stderr.write(
-    `wrote ${outputPath} (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB)\n`,
-  );
+  process.stderr.write(`wrote ${outputPath} (${(buf.byteLength / 1024 / 1024).toFixed(1)} MB)\n`);
 }
 
 // Only run when this file is invoked directly (e.g. via `tsx`).  This
