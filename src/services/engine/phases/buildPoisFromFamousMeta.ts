@@ -75,15 +75,18 @@ const FAMOUS_LABEL_OFFSET_FACTOR = 1.5;
  * is `BASE + LOG_GAIN * log10(diameterKpc / REFERENCE_DIAMETER_KPC)`,
  * clamped to `[MIN, MAX]`.  Anchored so a typical Milky-Way-class
  * galaxy (~40 kpc, like M31) sits at the reference 18 px — same as
- * "You are here" — and dwarfs / supergiants spread by ~±4 px across
- * the diameter range typical of the curated catalog.  Reading floor
- * 12 px keeps even the smallest dwarf legible; ceiling 22 px keeps
- * the largest spirals from dominating the overlay.
+ * "You are here".  LOG_GAIN of 7 is tuned so a dwarf one log-decade
+ * below the reference (4 kpc, e.g. M110) reads at ~11 px (~60% of
+ * Andromeda's label) and a dwarf 1.5 decades below (1.8 kpc, e.g.
+ * M32) hits the 9 px floor (50% — the "about half" target).  Reading
+ * floor 9 px is the minimum legible size for the Cormorant font at
+ * typical viewer distances; ceiling 22 px keeps the largest spirals
+ * from dominating the overlay.
  */
 const FAMOUS_LABEL_BASE_PX = 18;
 const FAMOUS_LABEL_REFERENCE_DIAMETER_KPC = 40;
-const FAMOUS_LABEL_LOG_GAIN = 4;
-const FAMOUS_LABEL_MIN_PX = 12;
+const FAMOUS_LABEL_LOG_GAIN = 7;
+const FAMOUS_LABEL_MIN_PX = 9;
 const FAMOUS_LABEL_MAX_PX = 22;
 
 function famousLabelPixelSize(diameterKpc: number): number {

@@ -46,26 +46,26 @@ describe('buildPoisFromFamousMeta', () => {
     expect(pois[0]!.crosshairSizeMpc).toBeUndefined();
     // labelAnchorOffsetMpc = max(0.05, 1.5 * 67 / 1000) = max(0.05, 0.1005) = 0.1005
     expect(pois[0]!.labelAnchorOffsetMpc).toBeCloseTo(0.1005, 6);
-    // labelPixelSize = clamp(12, 22, 18 + 4 * log10(67/40)) = 18 + 4 * log10(1.675) ≈ 18.895
-    expect(pois[0]!.labelPixelSize).toBeCloseTo(18.895, 2);
+    // labelPixelSize = clamp(9, 22, 18 + 7 * log10(67/40)) = 18 + 7 * log10(1.675) ≈ 19.566
+    expect(pois[0]!.labelPixelSize).toBeCloseTo(19.566, 2);
     expect(pois[1]!.id).toBe('famous-m33');
     expect(pois[1]!.name).toBe('M33'); // no commonName → falls back to names[0]
     // M33 diameter 30 kpc → 1.5 * 30/1000 = 0.045, below floor 0.05 → uses floor.
     expect(pois[1]!.labelAnchorOffsetMpc).toBeCloseTo(0.05, 6);
-    // labelPixelSize = 18 + 4 * log10(30/40) = 18 + 4 * log10(0.75) ≈ 17.500
-    expect(pois[1]!.labelPixelSize).toBeCloseTo(17.5, 2);
+    // labelPixelSize = 18 + 7 * log10(30/40) = 18 + 7 * log10(0.75) ≈ 17.125
+    expect(pois[1]!.labelPixelSize).toBeCloseTo(17.125, 2);
   });
 
-  it('clamps labelPixelSize to [12, 22] for extreme diameters', () => {
+  it('clamps labelPixelSize to [9, 22] for extreme diameters', () => {
     const meta: FamousMetaEntry[] = [
       { id: 'tiny', names: ['Tiny'], description: '', type: '' },
       { id: 'huge', names: ['Huge'], description: '', type: '' },
     ];
-    // 1 kpc → 18 + 4 * log10(0.025) = 18 - 6.4 ≈ 11.6 → clamped to 12
-    // 5000 kpc → 18 + 4 * log10(125) = 18 + 8.4 ≈ 26.4 → clamped to 22
+    // 1 kpc → 18 + 7 * log10(0.025) = 18 - 11.2 ≈ 6.8 → clamped to 9
+    // 5000 kpc → 18 + 7 * log10(125) = 18 + 14.7 ≈ 32.7 → clamped to 22
     const catalog = makeCatalog([1, 0, 0, 2, 0, 0], [1, 5000]);
     const pois = buildPoisFromFamousMeta(meta, catalog);
-    expect(pois[0]!.labelPixelSize).toBe(12);
+    expect(pois[0]!.labelPixelSize).toBe(9);
     expect(pois[1]!.labelPixelSize).toBe(22);
   });
 
