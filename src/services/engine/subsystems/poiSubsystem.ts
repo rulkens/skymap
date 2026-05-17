@@ -134,7 +134,7 @@ export const POI_STYLES = {
     lineColor: [0.9, 0.85, 0.7, 1] as Vec4,
     pixelSize: 18,
     worldEmMpc: 0.005,
-    pixelWidth: 1.5,
+    pixelWidth: 2.5,
     fadeBandPx: 4,
   },
   void: {
