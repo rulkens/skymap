@@ -67,7 +67,7 @@ export const filamentsPass: Pass = {
     return settings.filamentsEnabled;
   },
 
-  draw(pass, ctx, _state, settings, deps) {
+  draw(pass, ctx, state, settings, deps) {
     // Renderer-null check lives here rather than in `enabled` because
     // `enabled` doesn't receive `deps`.  Keeping this as a defensive
     // early-return makes the `enabled === true → draw runs` invariant
@@ -82,6 +82,7 @@ export const filamentsPass: Pass = {
       [canvasSize.width, canvasSize.height],
       FILAMENT_LINE_HALFWIDTH_PX,
       settings.filamentIntensity,
+      state.subsystems.fades.opacityOf({ kind: 'filaments' }, performance.now()),
     );
   },
 };

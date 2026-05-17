@@ -394,7 +394,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   //
   // Same HDR target as every other overlay so the additive
   // contribution accumulates in float-precision before tone mapping.
-  const filamentRenderer = createFilamentRenderer(device, 'rgba16float');
+  const filamentRenderer = createFilamentRenderer(device, 'rgba16float', state.gpu.fadeBgl!);
   state.gpu.filamentRenderer = filamentRenderer;
 
   // Store the four thumbnail-related renderers on `state.gpu.*` so

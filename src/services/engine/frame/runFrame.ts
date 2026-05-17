@@ -453,34 +453,31 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //     When it lands, the onResult uploads to the atlas and
   //     calls requestRender() — but we keep one frame queued
   //     anyway so the load-fade lerp ramps smoothly.
-  //   - fades.isAnyAnimating() / filamentRenderer.isFading():
-  //     one or more clouds (point surveys or the filament skeleton)
-  //     are still ramping up/down their per-source opacity from a
-  //     recent upload (initial load or tier-swap).  The FadeRegistry
-  //     owns the survey controllers; filamentRenderer.isFading()
-  //     covers the filament skeleton until plan-04 migrates it too.
-  //     We keep ticking the loop so the opacity lerp advances every
-  //     frame, then go silent again when all controllers settle.
+  //   - fades.isAnyAnimating(): one or more handles (point surveys or
+  //     the filament skeleton) are still ramping up/down their
+  //     per-source opacity from a recent upload (initial load or
+  //     tier-swap).  The FadeRegistry owns every controller's animation
+  //     clock after the unified-fade migration — filaments register
+  //     { kind: 'filaments' } in filamentSlot, so no separate
+  //     isFading() probe is needed.  We keep ticking the loop so the
+  //     opacity lerp advances every frame, then go silent again when
+  //     all controllers settle.
   // The bootstrap-bag fields (thumbnails, point-renderer) might still
   // be null on the very first few frames after engine construction —
   // before initGpu / wireSlots have written their handles.  Pre-D.4
   // the predicate carried bespoke `=== null` guards inline.  Post-D.4,
   // `isEngineReady` consolidates them: when the engine is ready, all
   // four bootstrap-bag fields are simultaneously non-null, so we
-  // dereference them without bespoke checks.  filamentRenderer is
-  // checked separately because it's intentionally outside the
-  // bootstrap-complete bag (the no-filaments deployment path keeps
-  // it nullable; see `helpers/engineReady.ts`).
+  // dereference them without bespoke checks.
   const ready = isEngineReady(state);
   const stillAnimating =
     state.settings.camera.autoRotate ||
     state.subsystems.tweens.isActive() ||
     state.subsystems.spaceMouse.hasAxes() ||
     (ready && state.subsystems.texturedImpostors.hasInFlightWork()) ||
-    // Survey fade-in / fade-out: consult the FadeRegistry instead of the
-    // removed pointRenderer.isFading() — the registry owns every survey
-    // controller's animation clock after the unified-fade migration.
-    state.subsystems.fades.isAnyAnimating(nowMs) ||
-    (state.gpu.filamentRenderer !== null && state.gpu.filamentRenderer.isFading());
+    // Survey + filament fade-in / fade-out: consult the FadeRegistry
+    // — the registry owns every handle's animation clock after the
+    // unified-fade migration (plan-03 for surveys, plan-04 for filaments).
+    state.subsystems.fades.isAnyAnimating(nowMs);
   if (stillAnimating) state.subsystems.scheduler.requestRender();
 }
