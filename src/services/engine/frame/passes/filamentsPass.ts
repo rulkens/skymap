@@ -75,6 +75,10 @@ export const filamentsPass: Pass = {
     // to a cached snapshot the gate could read.
     if (deps.filamentRenderer === null) return;
 
+    // Hoist nowMs to a single call per draw — only one consumer here
+    // (filaments is single-instance, not per-source), but the pattern
+    // matches pointSpritesPass.ts so future readers can copy-paste.
+    const nowMs = performance.now();
     const { vp, canvasSize } = ctx;
     deps.filamentRenderer.draw(
       pass,
@@ -82,7 +86,7 @@ export const filamentsPass: Pass = {
       [canvasSize.width, canvasSize.height],
       FILAMENT_LINE_HALFWIDTH_PX,
       settings.filamentIntensity,
-      state.subsystems.fades.opacityOf({ kind: 'filaments' }, performance.now()),
+      state.subsystems.fades.opacityOf({ kind: 'filaments' }, nowMs),
     );
   },
 };

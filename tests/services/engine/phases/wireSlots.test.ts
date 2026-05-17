@@ -150,7 +150,7 @@ vi.mock('../../../../src/services/engine/subsystems/texturedImpostorSubsystem', 
 // moment wireSlots hands the registry off.
 const emitterSpy = vi.fn();
 vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () => ({
-  createLoadProgressEmitter: vi.fn((emit: unknown, slots: ReadonlyMap<string, unknown>) => {
+  createLoadProgressEmitter: vi.fn((_emit: unknown, slots: ReadonlyMap<string, unknown>) => {
     emitterSpy(slots);
     return {
       emit: vi.fn(),

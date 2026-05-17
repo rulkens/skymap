@@ -34,7 +34,10 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
     fetch: filamentFetcher,
     commit: async (cloud) => {
       if (!state.gpu.filamentRenderer) return;
-      await state.gpu.filamentRenderer.upload(cloud);
+      // upload() is synchronous (returns void); no await needed today.
+      // Kept inside the async commit body for symmetry with the
+      // galaxyCatalogSourceRegistry slot, whose upload is async.
+      state.gpu.filamentRenderer.upload(cloud);
       void state.subsystems.fades.fadeTo({ kind: 'filaments' }, 1, FADE_IN_DURATION_MS);
     },
   });

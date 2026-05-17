@@ -285,7 +285,11 @@ export function createFilamentRenderer(
   ): void {
     if (segmentCount === 0 || !instanceBuffer || !fadeBuffer || !fadeBindGroup) return;
 
-    // Pack uniforms (unchanged from current — see UNIFORM_BYTES comment).
+    // Pack the 96-byte Uniforms struct. Byte layout is documented on
+    // the UNIFORM_BYTES const at module top — keep slot indices here
+    // in sync with that table (mat4 occupies f32[0..15]; viewportPx at
+    // 16..17; the two reserved pads at 18..19; halfWidthPx at 20;
+    // intensityScale at 21; the two trailing pads at 22..23).
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
     f32.set(viewProj as Float32Array, 0);
