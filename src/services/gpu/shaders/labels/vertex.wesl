@@ -1,10 +1,13 @@
 // labels/vertex.wesl — MSDF labels vertex stage.
 //
 // Expands the unit-corner attribute into a glyph quad in clip space,
-// applying pixel-anchored sizing.  'pixelSize' on each label is the
-// target screen-pixel height of one em; the shader clamps to
-// [minPx, maxPx] and scales the atlas-baked glyph quad to match.
-// See labels/io.wesl's docblock for the broader rationale.
+// applying perspective-driven sizing.  'worldEmMpc' (label.worldPos.w)
+// is the em height expressed in Mpc of world space; the vertex stage
+// projects it through the camera's clip.w to obtain a screen-pixel
+// height, clamps to [minPx, maxPx] for legibility, and scales the
+// atlas-baked glyph quad to match.  Labels therefore grow as the
+// camera approaches (natural perspective), bounded below and above.
+// See labels/io.wesl's docblock for the full sizing model.
 
 import package::labels::io::Uniforms;
 import package::labels::io::LabelData;
@@ -26,11 +29,9 @@ const ATLAS_EM_PX: f32 = 42.0;
 fn vs(input: VsIn) -> VsOut {
   let label = labels[input.labelIndex];
   let worldPos   = label.worldPos.xyz;
-  // label.worldPos.w (worldEmMpc) is deprecated since the shader
-  // switched to pixel-anchored sizing.  Still written by
-  // labelRenderer.ts for buffer-layout stability; intentionally not
-  // read here.
-  let pixelSize  = label.sizing.x;
+  let worldEmMpc = label.worldPos.w;   // primary size driver — world-space em height in Mpc
+  // sizing.x (pixelSize) is a legacy buffer slot, kept for layout stability.
+  // The new model reads worldEmMpc instead; sizing.x is intentionally ignored.
   let minPx      = label.sizing.y;
   let maxPx      = label.sizing.z;
   let fadeAlpha  = label.sizing.w;
@@ -38,12 +39,16 @@ fn vs(input: VsIn) -> VsOut {
   // Project anchor to clip space.
   let clip = worldToClip(u.cam, worldPos);
 
-  // Pixel-anchored size: 'pixelSize' IS the screen-pixel height of one
-  // em, clamped to the per-label legibility floor / ceiling.  The
-  // scale factor maps atlas-baked em pixels to the target on-screen
-  // height so 'glyph_px = atlas_glyph_px * pxScale'.  An em-tall glyph
-  // (atlas_glyph_px == ATLAS_EM_PX) ends up at exactly displayEmPx px.
-  let displayEmPx = clamp(pixelSize, minPx, maxPx);
+  // Perspective-driven size: project 'worldEmMpc' (an em height in Mpc
+  // of world space) into screen pixels at the anchor's depth.
+  //   clip.w ≈ camera distance in Mpc (NDC derivation)
+  //   viewportPx.y * 0.5 converts the vertical half-extent from NDC to px
+  // This mirrors the standard NDC→screen projection: a world-space length
+  // L at depth w maps to (L / w) * (viewport.y / 2) pixels.  Clamping to
+  // [minPx, maxPx] bounds the result for legibility at extreme distances
+  // and very close approach.
+  let pxPerEm = (worldEmMpc / clip.w) * (u.cam.viewportPx.y * 0.5);
+  let displayEmPx = clamp(pxPerEm, minPx, maxPx);
   let pxScale = displayEmPx / ATLAS_EM_PX;
 
   // Glyph corner in atlas px, relative to label anchor. Atlas Y is

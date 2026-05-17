@@ -11,20 +11,25 @@
 // pixel-perfect text at any zoom level from a single static atlas — no
 // per-zoom re-rasterisation, no aliasing on near/far text.
 //
-// ## Why labels look the way they do — pixel-anchored sizing
+// ## Why labels look the way they do — worldEm perspective sizing
 //
-// Each label declares a target em pixel height ('pixelSize').  The
-// vertex stage clamps that to [minPixelSize, maxPixelSize] and then
-// scales the atlas-baked glyph quad so one em renders at exactly the
-// clamped size in screen pixels.  Labels DO NOT grow with the camera
-// approaching — they stay at their declared pixel size regardless of
-// depth.  Proximity cues (e.g. the "You are here" pin) are driven by
-// 'fadeAlpha' instead.
+// Each label sets 'worldEmMpc' (label.worldPos.w): the em height
+// expressed in Mpc of world space.  The vertex stage projects this
+// through the anchor's clip.w to recover a screen-pixel height:
 //
-// 'worldEmMpc' (label.worldPos.w) is a vestigial channel from the
-// previous depth-perspective sizing model.  It's still written by
-// labelRenderer.ts to keep the binary layout stable, but the shader
-// ignores it.  May be repurposed for fade-distance logic later.
+//   pxPerEm = (worldEmMpc / clip.w) * (viewportPx.y * 0.5)
+//
+// That value is clamped to [minPixelSize, maxPixelSize], keeping labels
+// legible at extreme distances (floor) and very close approach (ceiling).
+// The net effect is natural perspective growth: zoom in → labels grow;
+// zoom out → labels shrink, but never vanish below the floor.
+//
+// 'pixelSize' (sizing.x) is a LEGACY buffer slot from the previous
+// pixel-anchored model.  The field still exists in LabelData (and in
+// the CPU-side Label type) for layout stability and because existing
+// call sites still set it, but the shader no longer reads it.  It may
+// be repurposed or removed in a future cleanup once all call sites are
+// migrated.
 //
 // ## Bind-group convention
 //
@@ -45,13 +50,15 @@ struct Uniforms {
 };
 
 struct LabelData {
-  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc, deprecated
-  // (kept for layout stability — see module docblock).
+  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc (PRIMARY size driver —
+  // em height in world-space Mpc, projected to pixels by the vertex stage).
   worldPos: vec4<f32>,
   // color.rgb premultiplied; color.a = base alpha (multiplied by fadeAlpha).
   color: vec4<f32>,
-  // x = pixelSize (target on-screen em pixel height)
-  // y = minPixelSize, z = maxPixelSize, w = fadeAlpha
+  // x = pixelSize (LEGACY — ignored by shader; kept for layout stability)
+  // y = minPixelSize  (floor clamp on projected em height, in screen px)
+  // z = maxPixelSize  (ceiling clamp on projected em height, in screen px)
+  // w = fadeAlpha
   sizing: vec4<f32>,
 };
 

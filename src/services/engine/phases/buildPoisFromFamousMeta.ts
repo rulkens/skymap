@@ -73,35 +73,29 @@ const FAMOUS_LABEL_OFFSET_FACTOR = 1.5;
 /**
  * Label-size scaling for famous-galaxy POIs.
  *
- * Since the shader now treats `Label.pixelSize` as a direct target
- * (the on-screen em height in pixels — see `shaders/labels/vertex.wesl`
- * and `Label.d.ts`), this formula reads naturally: bigger galaxy →
- * bigger label.
+ * The shader projects `Label.worldEmMpc` through perspective to obtain a
+ * screen-pixel height, clamped to `[minPixelSize, maxPixelSize]` from the
+ * `POI_STYLES.famousGalaxy` category (see `poiSubsystem.ts`).  A bigger
+ * galaxy therefore gets a bigger worldEmMpc and thus a naturally larger
+ * label at any zoom, while the pixel clamps keep legibility bounded.
  *
  * ### Tuning
  *
- *   pixelSize = clamp(MIN, MAX, BASE + LOG_GAIN * log10(diameterKpc / REFERENCE))
+ *   worldEmMpc = REFERENCE_WORLD_EM * 10^(LOG_GAIN * log10(diameterKpc / REFERENCE_KPC))
  *
- * `BASE = 18` anchors M31 (~40 kpc, the visual reference) at the same
- * `pixelSize` as the "You are here" pin.  `LOG_GAIN = 7` is tuned so a
- * dwarf 1.35 decades below the reference (M32 at 1.8 kpc) lands at
- * ~9 px — roughly half M31's size, the user-facing "about half" target.
- *
- * `MIN_PX = 9` is the smallest legible em height; `MAX_PX = 22` keeps
- * the biggest galaxies a touch larger than the You-Are-Here pin
- * without dominating the view.
+ * `REFERENCE_KPC = 40` anchors M31 (~40 kpc) at `REFERENCE_WORLD_EM = 0.005` Mpc,
+ * matching the `famousGalaxy` category default.  `LOG_GAIN = 0.3` is tuned so
+ * one decade in diameter (e.g. 4 kpc → 40 kpc) yields roughly 2× in worldEmMpc.
+ * The per-category pixel clamps handle extreme cases — there is no explicit
+ * per-POI min/max clamping here.
  */
-const FAMOUS_LABEL_BASE_PX = 18;
 const FAMOUS_LABEL_REFERENCE_DIAMETER_KPC = 40;
-const FAMOUS_LABEL_LOG_GAIN = 7;
-const FAMOUS_LABEL_MIN_PX = 9;
-const FAMOUS_LABEL_MAX_PX = 22;
+const FAMOUS_LABEL_REFERENCE_WORLD_EM_MPC = 0.005;
+const FAMOUS_LABEL_WORLD_EM_LOG_GAIN = 0.3; // 1 decade in diameter → ~2× in worldEm
 
-function famousLabelPixelSize(diameterKpc: number): number {
-  const raw =
-    FAMOUS_LABEL_BASE_PX +
-    FAMOUS_LABEL_LOG_GAIN * Math.log10(diameterKpc / FAMOUS_LABEL_REFERENCE_DIAMETER_KPC);
-  return Math.max(FAMOUS_LABEL_MIN_PX, Math.min(FAMOUS_LABEL_MAX_PX, raw));
+function famousLabelWorldEmMpc(diameterKpc: number): number {
+  const log = Math.log10(diameterKpc / FAMOUS_LABEL_REFERENCE_DIAMETER_KPC);
+  return FAMOUS_LABEL_REFERENCE_WORLD_EM_MPC * Math.pow(10, FAMOUS_LABEL_WORLD_EM_LOG_GAIN * log);
 }
 
 export function buildPoisFromFamousMeta(
@@ -131,7 +125,7 @@ export function buildPoisFromFamousMeta(
       minApparentSizePx: FAMOUS_MIN_APPARENT_PX,
       apparentDiameterKpc: diameterKpc,
       labelAnchorOffsetMpc,
-      labelPixelSize: famousLabelPixelSize(diameterKpc),
+      labelWorldEmMpc: famousLabelWorldEmMpc(diameterKpc),
     });
     catalogIdx += 1;
   }

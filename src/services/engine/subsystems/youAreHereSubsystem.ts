@@ -56,9 +56,11 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
         worldPos: [0, LABEL_ANCHOR_MPC, 0],
         text: LABEL_TEXT,
         font: 'cormorant',
-        pixelSize: 18,
+        pixelSize: 0, // legacy field — ignored by the new worldEm sizing model
         color: [...LABEL_COLOR],
         worldEmMpc: 0.005,
+        minPixelSize: 18,
+        maxPixelSize: 60,
         fadeAlpha: alpha,
         alignX: 'center',
       },

@@ -78,7 +78,10 @@ import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 type CategoryStyle = {
   readonly labelColor: Vec4;
   readonly lineColor: Vec4;
-  readonly pixelSize: number;
+  /** Floor clamp on projected em height in screen pixels. */
+  readonly minPixelSize: number;
+  /** Ceiling clamp on projected em height in screen pixels. */
+  readonly maxPixelSize: number;
   readonly worldEmMpc: number;
   readonly pixelWidth: number;
   /**
@@ -104,35 +107,40 @@ type CategoryStyle = {
  * keys so the type and the data cannot drift.
  *
  * Style choices:
- *   - cluster      — warm yellow, mid pixel size, sub-Mpc world-em
- *   - supercluster — slightly dimmer yellow, larger world-em (tens of Mpc extent)
- *   - famousGalaxy — warm off-white, 18 px / 0.005 worldEmMpc (pixel-dominant,
- *                    barely scales with distance — matches the "You are here"
- *                    pin); fadeBandPx: 4 smooths the apparent-size threshold.
- *                    The per-POI `labelAnchorOffsetMpc` (set in
- *                    `buildPoisFromFamousMeta`) drives the actual lift +
- *                    vertical marker-line.
- *   - void         — soft cyan, largest world-em (voids span 30–50+ Mpc radii)
+ *   - cluster      — warm yellow, sub-Mpc world-em; min 14 px / max 60 px clamps
+ *   - supercluster — slightly dimmer yellow, larger world-em (tens of Mpc extent);
+ *                    min 14 px / max 60 px clamps
+ *   - famousGalaxy — warm off-white, 0.005 Mpc world-em (set so M31 at ~0.78 Mpc
+ *                    renders at roughly legible size); min 12 px / max 60 px clamps;
+ *                    fadeBandPx: 4 smooths the apparent-size threshold.  Per-POI
+ *                    `worldEmMpc` (set via `labelWorldEmMpc` from
+ *                    `buildPoisFromFamousMeta`) overrides this default so larger
+ *                    galaxies are naturally bigger labels.
+ *   - void         — soft cyan, largest world-em (voids span 30–50+ Mpc radii);
+ *                    min 14 px / max 60 px clamps
  */
 export const POI_STYLES = {
   cluster: {
     labelColor: [1.0, 0.85, 0.4, 1] as Vec4,
     lineColor: [0.9, 0.75, 0.3, 1] as Vec4,
-    pixelSize: 16,
+    minPixelSize: 14,
+    maxPixelSize: 60,
     worldEmMpc: 0.5,
     pixelWidth: 2,
   },
   supercluster: {
     labelColor: [1.0, 0.8, 0.5, 1] as Vec4,
     lineColor: [0.9, 0.7, 0.45, 1] as Vec4,
-    pixelSize: 16,
+    minPixelSize: 14,
+    maxPixelSize: 60,
     worldEmMpc: 2.0,
     pixelWidth: 2,
   },
   famousGalaxy: {
     labelColor: [1.0, 0.95, 0.8, 1] as Vec4,
     lineColor: [0.9, 0.85, 0.7, 1] as Vec4,
-    pixelSize: 18,
+    minPixelSize: 12,
+    maxPixelSize: 60,
     worldEmMpc: 0.005,
     pixelWidth: 2.5,
     fadeBandPx: 4,
@@ -140,7 +148,8 @@ export const POI_STYLES = {
   void: {
     labelColor: [0.6, 0.85, 0.95, 1] as Vec4,
     lineColor: [0.45, 0.7, 0.85, 1] as Vec4,
-    pixelSize: 16,
+    minPixelSize: 14,
+    maxPixelSize: 60,
     worldEmMpc: 1.0,
     pixelWidth: 2,
   },
@@ -280,9 +289,11 @@ export function createPoiSubsystem(): PoiSubsystem {
         worldPos: labelWorldPos,
         text: p.name,
         font: 'cormorant',
-        pixelSize: p.labelPixelSize ?? style.pixelSize,
+        pixelSize: 0, // legacy field — ignored by the new worldEm sizing model
         color: [...style.labelColor],
-        worldEmMpc: style.worldEmMpc,
+        worldEmMpc: p.labelWorldEmMpc ?? style.worldEmMpc,
+        minPixelSize: style.minPixelSize,
+        maxPixelSize: style.maxPixelSize,
         fadeAlpha,
         alignX,
       });

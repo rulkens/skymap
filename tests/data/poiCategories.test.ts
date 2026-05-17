@@ -13,7 +13,8 @@ describe('POI category registry', () => {
     for (const [key, style] of Object.entries(POI_STYLES)) {
       expect(style.labelColor, `${key}.labelColor`).toHaveLength(4);
       expect(style.lineColor, `${key}.lineColor`).toHaveLength(4);
-      expect(style.pixelSize, `${key}.pixelSize`).toBeGreaterThan(0);
+      expect(style.minPixelSize, `${key}.minPixelSize`).toBeGreaterThan(0);
+      expect(style.maxPixelSize, `${key}.maxPixelSize`).toBeGreaterThan(style.minPixelSize);
       expect(style.worldEmMpc, `${key}.worldEmMpc`).toBeGreaterThan(0);
       expect(style.pixelWidth, `${key}.pixelWidth`).toBeGreaterThan(0);
     }

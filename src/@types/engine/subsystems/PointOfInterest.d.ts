@@ -47,14 +47,14 @@ export type PointOfInterest = {
    */
   readonly labelAnchorOffsetMpc?: number;
   /**
-   * Per-POI override for the label's screen pixel size.  When omitted,
-   * the producer uses the category's `POI_STYLES[category].pixelSize`.
+   * Per-POI override for the label's world-space em size.  When omitted,
+   * the producer uses the category's `POI_STYLES[category].worldEmMpc`.
    * Famous-galaxy POIs populate this from a log-scaled function of the
-   * galaxy's physical diameter so a bigger galaxy's label is bigger
-   * than a dwarf's, but the spread stays bounded (12 ≤ px ≤ 22).
-   * Same per-POI-static rationale as `labelAnchorOffsetMpc`: stable
-   * across frames so the labelDirector's signature optimisation keeps
-   * working.
+   * galaxy's physical diameter so a bigger galaxy's label is naturally
+   * larger at any zoom; the per-category `minPixelSize`/`maxPixelSize`
+   * clamps keep the visible result bounded.  Same per-POI-static rationale
+   * as `labelAnchorOffsetMpc`: stable across frames so the labelDirector's
+   * signature optimisation keeps working.
    */
-  readonly labelPixelSize?: number;
+  readonly labelWorldEmMpc?: number;
 };
