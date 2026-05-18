@@ -348,7 +348,12 @@ export function FullCard(props: FullCardProps): ReactNode {
   // <details>) survives the transition without us lifting it into React
   // state.
   if (mode.kind === 'poi') {
-    return renderPoiBody(mode.poi, outerClass, pinned, onClose, onPoiFocus);
+    // Append the .poi modifier so the card's min-width matches the
+    // galaxy card's typical filled width (see FullCard.module.css).
+    // Same className composition pattern as the pinned variant; React
+    // reconciles by tag+key, so changing className is a style update
+    // — the underlying div fiber is unchanged across galaxy↔POI swaps.
+    return renderPoiBody(mode.poi, `${outerClass} ${styles.poi}`, pinned, onClose, onPoiFocus);
   }
 
   // ── Galaxy branch ────────────────────────────────────────────────────────

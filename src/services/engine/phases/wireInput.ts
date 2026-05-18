@@ -404,11 +404,16 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
             break;
           case 'select':
             state.subsystems.selection.setSelected(result.selection);
+            // Galaxy click also drops any prior POI focus — the InfoCard
+            // can only show one body at a time, the dblclick handler must
+            // NOT prefer a stale POI over the galaxy the user just
+            // clicked, AND the React-side InfoCard mirror needs to learn
+            // that the POI selection has cleared (otherwise focusedPoiId
+            // stays set and the POI body keeps rendering on top).  Symmetric
+            // to the 'poi' branch below, which clears the galaxy selection.
+            state.subsystems.pois.setSelectedPoi(null);
+            cb.camera?.onPoiFocusChange?.(null);
             lastClickedInfo = result.info;
-            // Galaxy click also drops any prior POI focus — the
-            // InfoCard can only show one body at a time, and the
-            // dblclick handler must NOT prefer a stale POI over the
-            // galaxy the user just clicked.
             lastClickedPoi = null;
             break;
           case 'poi':
