@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c38",
+  "crop": {
+    "x": 349.114727393617,
+    "y": 399.36449468085107,
+    "width": 1995.4062167553193,
+    "height": 1995.4062167553193
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4565#/media/File:NGC_4565.png",
+    "license": "CC BY-SA 4.0",
+    "author": "Shark13016"
+  },
+  "processedAt": "2026-05-18T10:12:23.532Z"
+}

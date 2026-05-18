@@ -213,7 +213,9 @@ function makeCloud(count = 1): GalaxyCatalog {
 }
 
 /** Build a complete RenderFrameInput fixture with sensible defaults. */
-function makeInput(overrides: { settings?: Partial<any> } = {}) {
+function makeInput(
+  overrides: { settings?: Partial<any>; disabledPasses?: ReadonlySet<string> } = {},
+) {
   const callLog: CallLog = [];
   const env = makeEncoderEnv(callLog);
   const device = makeFakeDevice(callLog, env.encoder);
@@ -317,10 +319,11 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
       // pre-atlas-load behaviour and keeps existing renderFrame tests green.
       state: {
         gpu: { labelRenderer: null, markerLineRenderer: null, scalarVolumeRenderer: null, clusterMarkerRenderer: null },
-        // Task 11 split the legacy thumbnails subsystem into three.  The new
-        // proceduralDisksPass / texturedImpostorsPass each read their slot
-        // off `state.subsystems` in their `enabled()` gate; nulling them
-        // here makes the passes skip cleanly so the legacy renderFrame
+        // Task 11 split the legacy thumbnails subsystem into three.  The
+        // proceduralDisksPass / texturedDisksPass entries each read their
+        // slot off `state.subsystems` in their `enabled()` gate; nulling
+        // the two subsystem references here makes both passes skip
+        // cleanly so the legacy renderFrame
         // assertions continue to focus on point + milky-way ordering.
         subsystems: {
           proceduralDisks: null,
@@ -330,6 +333,11 @@ function makeInput(overrides: { settings?: Partial<any> } = {}) {
           // minimal opacityOf stub so the gate doesn't crash.
           fades: { opacityOf: () => 1 },
         },
+        // DebugPanel renderer-toggle override bag.  Most tests don't
+        // pass any overrides so the default is an empty Set — matches
+        // the production default.  Tests that need to assert the
+        // skip-on-toggle behaviour pass `overrides.disabledPasses`.
+        debug: { disabledPasses: new Set<string>(overrides.disabledPasses ?? []) },
       } as never,
       milkyWayITimeSec: 0,
       device,
@@ -449,9 +457,12 @@ describe('renderFrame', () => {
   // that lived inside the legacy galaxyThumbnailsPass is gone — the LOD-1
   // and LOD-2 plans are now produced by `proceduralDiskSubsystem.runFrame`
   // and `texturedImpostorSubsystem.runFrame` upstream in `runFrame.ts`,
-  // and the two new passes (`proceduralDisksPass`, `texturedImpostorsPass`)
-  // just issue the renderer draws.  Per-pass coverage lives in
-  // `passes/proceduralDisksPass.test.ts` and `passes/texturedImpostorsPass.test.ts`.
+  // and the three downstream passes (`proceduralDisksPass`,
+  // `texturedQuadsPass`, `texturedDisksPass`) just issue the renderer
+  // draws.  The textured halves were split out of the former
+  // `texturedImpostorsPass` on 2026-05-18 so the debug panel can
+  // toggle them independently.  Per-pass coverage lives in the
+  // matching `passes/<name>Pass.test.ts` files.
 
   it('calls postProcess.draw after pass.end with exposure, curve, and the swap-chain view', () => {
     renderFrame(fx.input);
@@ -562,5 +573,19 @@ describe('renderFrame', () => {
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
     expect(calls).toHaveLength(1);
+  });
+
+  it('skips a pass whose name appears in state.debug.disabledPasses', () => {
+    // The DebugPanel's `RenderTogglesSection` flips entries in/out of
+    // `state.debug.disabledPasses` via the `passOverrides` handle.  The
+    // encoder loop in `encodeHdrSingle` checks the set after the pass's
+    // own `enabled()` gate — toggling `point-sprites` off should stop
+    // `pointRenderer.draw` from firing even though every other input
+    // (settings, source mask, …) would normally cause it to run.
+    const fx2 = makeInput({ disabledPasses: new Set(['point-sprites']) });
+    renderFrame(fx2.input);
+    expect(fx2.pointRenderer.draw).not.toHaveBeenCalled();
+    // Milky-way still draws — the override is per-pass, not global.
+    expect(fx2.milkyWayRenderer.draw).toHaveBeenCalledTimes(1);
   });
 });

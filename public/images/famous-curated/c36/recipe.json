@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c36",
+  "crop": {
+    "x": 65.4296875,
+    "y": 65.4296875,
+    "width": 1934.5703125,
+    "height": 1934.5703125
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4559#/media/File:NGC4559_-_SDSS_DR14_(panorama).jpg",
+    "license": "CC BY 4.0",
+    "author": "Sloan Digital Sky Survey"
+  },
+  "processedAt": "2026-05-18T10:11:42.983Z"
+}

@@ -102,6 +102,12 @@ export function encodeHdrSplit(
   // result is `undefined`.
   for (const pass of HDR_PASSES) {
     if (!pass.enabled(state, ctx, settings)) continue;
+    // DebugPanel renderer-toggle override — same one-way semantics as
+    // the single-pass branch in `encodeHdrSingle`.  Skip BEFORE
+    // opening the render pass so a disabled pass costs nothing beyond
+    // the `Set.has` check (no empty `beginRenderPass` round-trip, no
+    // timestamp slot written).
+    if (state.debug.disabledPasses.has(pass.name)) continue;
 
     const timestampWrites = timingService.descriptorFor(pass.name as TimingSlotName);
 

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c60",
+  "crop": {
+    "x": 14,
+    "y": 0,
+    "width": 4211,
+    "height": 4211
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4038#/media/File:Antennae_Galaxies_reloaded.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESA/Hubble &amp; NASA"
+  },
+  "processedAt": "2026-05-18T11:00:41.012Z"
+}

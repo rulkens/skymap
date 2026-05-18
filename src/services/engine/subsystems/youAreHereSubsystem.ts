@@ -93,7 +93,12 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
         fadeAlpha: alpha,
       },
     ];
-    return { labels, lines, awake: alpha > 0 && alpha < 1 };
+    // No `awake` signal: alpha is a pure function of camera distance,
+    // so any change to it is driven by camera motion, which already
+    // wakes the loop via tweens / spaceMouse / pointer events. Returning
+    // `awake: alpha < 1` would pin the loop whenever the camera parks
+    // inside the 0.6–2.0 Mpc fade band.
+    return { labels, lines, awake: false };
   }
 
   // Built as a `const` (rather than returned inline) so we can attach

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m82",
+  "crop": {
+    "x": 424,
+    "y": 0,
+    "width": 2991,
+    "height": 2991
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3034#/media/File:M82_HST_ACS_2006-14-a-large_web.jpg",
+    "license": "Public domain",
+    "author": "NASA, ESA, and The Hubble Heritage Team (STScI/AURA)"
+  },
+  "processedAt": "2026-05-18T11:46:20.016Z"
+}

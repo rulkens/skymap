@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m81",
+  "crop": {
+    "x": 340.72511291503906,
+    "y": 0,
+    "width": 3674.274887084961,
+    "height": 3674.274887084961
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3031#/media/File:M81.jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "Ken Crawford"
+  },
+  "processedAt": "2026-05-18T11:01:39.095Z"
+}

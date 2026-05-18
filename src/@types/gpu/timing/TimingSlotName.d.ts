@@ -19,12 +19,16 @@
  * The strings match the `name` fields on `Pass` objects (e.g.
  * `pointSpritesPass.name === 'point-sprites'`).  Tests in Task 9 lean
  * on that equality to assert each pass plumbs its timing descriptor.
+ *
+ * The `textured-disks` slot replaces the legacy `textured-impostors`
+ * slot (2026-05-18 split + 2026-05-18 quad-removal).  Same slot
+ * indices (4, 5) so historical samples stay comparable.
  */
 
 export type TimingSlotName =
   | 'point-sprites'
   | 'procedural-disks'
-  | 'textured-impostors'
+  | 'textured-disks'
   | 'filaments'
   | 'scalar-volume'
   | 'milky-way'

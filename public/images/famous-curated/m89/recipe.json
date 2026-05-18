@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m89",
+  "crop": {
+    "x": 267.2564010620117,
+    "y": 159.25640106201172,
+    "width": 1290.6838684082031,
+    "height": 1290.6838684082031
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4552#/media/File:M89_Galaxy.png",
+    "license": "CC0",
+    "author": "Chuck Ayoub"
+  },
+  "processedAt": "2026-05-18T10:25:21.256Z"
+}

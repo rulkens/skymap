@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m95",
+  "crop": {
+    "x": 0,
+    "y": 0,
+    "width": 2043,
+    "height": 2043
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3351#/media/File:The_VLT_goes_lion_hunting.jpg",
+    "license": "CC BY 3.0",
+    "author": "ESO"
+  },
+  "processedAt": "2026-05-18T10:29:10.095Z"
+}

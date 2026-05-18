@@ -72,7 +72,6 @@ import { initGpu as gpuInitGpu, resizeCanvasToDisplay } from '../../gpu/device';
 import { createPointRenderer } from '../../gpu/renderers/pointRenderer';
 import { createPostProcess } from '../../gpu/passes/postProcess';
 import { createVolumeOffscreen } from '../../gpu/passes/volumeOffscreen';
-import { createTexturedQuadRenderer } from '../../gpu/renderers/texturedQuadRenderer';
 import { createTexturedDiskRenderer } from '../../gpu/renderers/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from '../../gpu/renderers/proceduralDiskRenderer';
 import { createMilkyWayRenderer } from '../../gpu/renderers/milkyWayRenderer';
@@ -348,20 +347,11 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // we build them with the four constituents in scope rather than
   // restructuring initGpu's return signature.
 
-  // TexturedQuadRenderer targets the HDR offscreen texture (see the rationale
-  // at PointRenderer construction above) — it composites galaxy
-  // thumbnails into the same accumulated linear-light buffer the
-  // points pass writes into.
-  const texturedQuadRenderer = createTexturedQuadRenderer({
-    device,
-    context,
-    format: 'rgba16float',
-    canvas,
-  });
-  // TexturedDiskRenderer shares the same atlas as TexturedQuadRenderer — both pull from
-  // the same 2048×2048 thumbnail texture.  The engine routes each
-  // galaxy to one renderer or the other per frame based on apparent
-  // size and orientation-data availability (see the per-frame loop).
+  // TexturedDiskRenderer targets the HDR offscreen texture (see the
+  // rationale at PointRenderer construction above) — it composites
+  // galaxy thumbnails into the same accumulated linear-light buffer
+  // the points pass writes into.  Atlas-bound, 3D-oriented quads sized
+  // by per-galaxy diameter (matched by the LOD-2 `texturedDisksPass`).
   const texturedDiskRenderer = createTexturedDiskRenderer({
     device,
     context,
@@ -405,18 +395,18 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const filamentRenderer = createFilamentRenderer(device, 'rgba16float', state.gpu.fadeBgl!);
   state.gpu.filamentRenderer = filamentRenderer;
 
-  // Store the four thumbnail-related renderers on `state.gpu.*` so
+  // Store the thumbnail-related renderers on `state.gpu.*` so
   // `engine.ts.destroy()` has a reachable reference path for teardown,
   // AND so the later bootstrap phases (`wireSlots`, `startLoop`) can
   // consume them by reading `state.gpu.X` directly.  Pre-2026-05-08
-  // these four renderers lived only on `phaseLocals` — PR #66 flagged
-  // that `destroy()` couldn't reach them.  The initial fix mirrored
-  // them onto `state.gpu.*` for destroy reachability while leaving the
+  // these renderers lived only on `phaseLocals` — PR #66 flagged that
+  // `destroy()` couldn't reach them.  The initial fix mirrored them
+  // onto `state.gpu.*` for destroy reachability while leaving the
   // phase-side reads pointing at `phaseLocals`; M1 of the 2026-05-11
   // audit collapsed that mirror, so `state.gpu.*` is now the single
   // home for these references.
   //
-  // **Lifecycle note for future contributors.**  Do NOT add these four
+  // **Lifecycle note for future contributors.**  Do NOT add these
   // fields to `isEngineReady` (in `helpers/engineReady.ts`).  They're
   // populated during `initGpu` (the first phase), but the predicate
   // intentionally tracks only the five bootstrap-complete fields whose
@@ -424,7 +414,6 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // 2026-05-08 black-screen incident is the cautionary tale: bootstrap
   // progression isn't the inverse of teardown, and over-eager predicate
   // growth re-creates that bug class.
-  state.gpu.texturedQuadRenderer = texturedQuadRenderer;
   state.gpu.texturedDiskRenderer = texturedDiskRenderer;
   state.gpu.proceduralDiskRenderer = proceduralDiskRenderer;
   state.gpu.milkyWayRenderer = milkyWayRenderer;

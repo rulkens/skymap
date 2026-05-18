@@ -124,14 +124,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // through there with a `!` bang — the bang was folklore that assumed
   // phase ordering.  The explicit null-checks below turn that assumption
   // into a typed runtime error if `initGpu` is ever skipped/reordered.
-  const { texturedQuadRenderer, texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
-  if (
-    texturedQuadRenderer === null ||
-    texturedDiskRenderer === null ||
-    proceduralDiskRenderer === null
-  ) {
+  const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
+  if (texturedDiskRenderer === null || proceduralDiskRenderer === null) {
     throw new Error(
-      'wireSlots: thumbnail/disk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
+      'wireSlots: texturedDisk/proceduralDisk renderers must be initialised by initGpu before this phase runs',
     );
   }
 
@@ -339,12 +335,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   });
   const proceduralDisks = createProceduralDiskSubsystem();
 
-  // Bind the atlas's texture view into the two LOD-2 renderers.  The
+  // Bind the atlas's texture view into the LOD-2 disk renderer.  The
   // pre-split code did this through thumbnailSubsystem.bindToRenderers;
-  // post-split the atlas owns the view and the binding is two direct
-  // calls.  proceduralDiskRenderer doesn't sample the atlas, so it
+  // post-split the atlas owns the view and the binding is one direct
+  // call.  proceduralDiskRenderer doesn't sample the atlas, so it
   // doesn't get a bindAtlas call.
-  texturedQuadRenderer.bindAtlas(galaxyAtlas.getTextureView());
   texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
 
   state.subsystems.galaxyAtlas = galaxyAtlas;

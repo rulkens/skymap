@@ -44,10 +44,12 @@ describe('decodeTimestampBuffer', () => {
   });
 
   it('clamps negative deltas (end < begin) to 0', () => {
+    // Pair index 2 = textured-disks (u64 slots 4/5), inherited from
+    // the legacy `textured-impostors` slot.
     const buf = buildBuffer([[2, 5_000_000n, 1_000_000n]]);
     const out = decodeTimestampBuffer(buf, 1);
 
-    expect(out.get('textured-impostors')).toBe(0);
+    expect(out.get('textured-disks')).toBe(0);
   });
 
   it('applies a non-unit timestampPeriod correctly', () => {
@@ -62,7 +64,7 @@ describe('decodeTimestampBuffer', () => {
     const buf = buildBuffer([
       [0, 0n, 1_000_000n], // point-sprites
       [1, 0n, 2_000_000n], // procedural-disks
-      [2, 0n, 3_000_000n], // textured-impostors
+      [2, 0n, 3_000_000n], // textured-disks
       [3, 0n, 500_000n], //   filaments
       [4, 0n, 4_000_000n], // scalar-volume
       [5, 0n, 600_000n], //   milky-way
@@ -74,7 +76,7 @@ describe('decodeTimestampBuffer', () => {
 
     expect(out.get('point-sprites')).toBeCloseTo(1.0, 6);
     expect(out.get('procedural-disks')).toBeCloseTo(2.0, 6);
-    expect(out.get('textured-impostors')).toBeCloseTo(3.0, 6);
+    expect(out.get('textured-disks')).toBeCloseTo(3.0, 6);
     expect(out.get('filaments')).toBeCloseTo(0.5, 6);
     expect(out.get('scalar-volume')).toBeCloseTo(4.0, 6);
     expect(out.get('milky-way')).toBeCloseTo(0.6, 6);

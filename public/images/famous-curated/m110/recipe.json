@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m110",
+  "crop": {
+    "x": 2647.2421875,
+    "y": 1879.2421875,
+    "width": 534.7734375,
+    "height": 534.7734375
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_205#/media/File:M31_09-01-2011.jpg",
+    "license": "CC BY 2.0",
+    "author": "Torben Hansen"
+  },
+  "processedAt": "2026-05-18T11:16:59.407Z"
+}

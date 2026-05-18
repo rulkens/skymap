@@ -82,6 +82,14 @@ pnpm-debug.log*
 # Exception: hand-curated catalog seed files (small, hand-authored, tracked).
 !/data/famous_galaxies.seed.json
 
+# Exception: hand-curated override index produced by the famous-galaxy
+# curator (tools/famous-curator).  Small JSON (~75 entries × ~150 B) that
+# overrides the auto-fetched Wikipedia/DESI thumbnails per-galaxy; must
+# ship in git so a fresh clone + `npm run fetch-famous-images` honours
+# the curated picks.  See docs/superpowers/specs/2026-05-18-famous-galaxy-
+# curator-design.md "Override index" for the schema.
+!/data/famous_curated_overrides.json
+
 # Exception: font sources for the MSDF label atlas. Third-party OFL-licensed
 # assets, not rebuildable by our parsers — they're the upstream input to
 # `npm run build-fonts`, same conceptual role as the seed JSON above.

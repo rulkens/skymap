@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m32",
+  "crop": {
+    "x": 693.29296875,
+    "y": 0,
+    "width": 3072,
+    "height": 3072
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_221#/media/File:M31_09-01-2011.jpg",
+    "license": "CC BY 2.0",
+    "author": "Torben Hansen"
+  },
+  "processedAt": "2026-05-18T11:16:10.999Z"
+}

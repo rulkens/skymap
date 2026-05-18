@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m33",
+  "crop": {
+    "x": 0,
+    "y": 0,
+    "width": 2904,
+    "height": 2904
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_598#/media/File:M33.jpg",
+    "license": "Public domain",
+    "author": "NASA/JPL-Caltech"
+  },
+  "processedAt": "2026-05-18T11:15:35.349Z"
+}

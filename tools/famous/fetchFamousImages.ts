@@ -102,9 +102,10 @@
  * sequential model — versus the original 2 for DESI.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadCuratedOverrides, type CuratedOverrideIndex } from './famousCuratedOverrides.js';
 import sharp from 'sharp';
 import { parseFlags } from '../utils/cli/args.js';
 import { loadJsonCache, saveJsonCache } from '../utils/io/jsonCache.js';
@@ -225,6 +226,28 @@ export function chooseWikipediaImageUrl(s: WikipediaSummary): string | undefined
   if (s.originalImageUrl !== undefined) return s.originalImageUrl;
   if (s.thumbnailUrl !== undefined) return s.thumbnailUrl;
   return undefined;
+}
+
+/**
+ * Copy the curator's `atlas.webp` for `id` into the runtime atlas slot
+ * path (`public/images/famous/<id>.webp`).  Called from `main()` when
+ * an override exists for an entry; lets the maintainer's hand-curated
+ * thumbnail replace whatever Wikipedia/DESI would have produced.
+ *
+ * Public for unit testing — see fetchFamousImages.curated.test.ts.
+ *
+ * Throws when the source atlas.webp is missing.  That should only
+ * happen if `data/famous_curated_overrides.json` has an entry but the
+ * corresponding `public/images/famous-curated/<id>/` directory was
+ * deleted manually — surfacing it loud is correct.
+ */
+export function copyCuratedAtlas(repoRoot: string, id: string): void {
+  const src = resolve(repoRoot, `public/images/famous-curated/${id}/atlas.webp`);
+  const dst = resolve(repoRoot, `public/images/famous/${id}.webp`);
+  if (!existsSync(src)) {
+    throw new Error(`curated atlas missing: ${id}/atlas.webp (expected at ${src})`);
+  }
+  copyFileSync(src, dst);
 }
 
 // ──────────────────────────────────────────────────────────────────────
@@ -524,6 +547,10 @@ async function main(): Promise<void> {
       `(source preference: ${flags.sourcePreference})…\n`,
   );
 
+  const curatedPath = resolve('data/famous_curated_overrides.json');
+  const curated: CuratedOverrideIndex = loadCuratedOverrides(curatedPath);
+  process.stderr.write(`curator overrides: ${Object.keys(curated.entries).length} entries\n`);
+
   const wikipediaCache = loadJsonCache<Record<string, string>>(wikipediaCachePath);
   process.stderr.write(`Wikipedia cache: ${Object.keys(wikipediaCache).length} entries\n`);
 
@@ -574,6 +601,38 @@ async function main(): Promise<void> {
   // entries).
   for (const e of entries) {
     const outPath = resolve(outDir, `${e.id}.webp`);
+
+    // Curator override short-circuit: if the maintainer has curated
+    // this entry via tools/famous-curator, copy the hand-curated atlas
+    // into the runtime slot and skip the Wikipedia/DESI chain entirely.
+    // Honour --force by always overwriting.  We also treat the runtime
+    // slot as stale whenever the curated source is newer — re-curating
+    // a galaxy should land in the runtime without needing --force, or
+    // the operator would silently ship the previous (pre-curation)
+    // auto-fetched WebP after every re-export.
+    if (curated.entries[e.id] !== undefined) {
+      const curatedSrc = resolve('.', `public/images/famous-curated/${e.id}/atlas.webp`);
+      const runtimeStale =
+        existsSync(outPath) &&
+        existsSync(curatedSrc) &&
+        statSync(curatedSrc).mtimeMs > statSync(outPath).mtimeMs;
+      if (existsSync(outPath) && !flags.force && !runtimeStale) {
+        process.stderr.write(`  skip ${e.id} (curated, cached)\n`);
+        ok++;
+        continue;
+      }
+      try {
+        copyCuratedAtlas(resolve('.'), e.id);
+        const size = statSync(outPath).size;
+        const tag = runtimeStale ? 'curated, refreshed' : 'curated';
+        process.stderr.write(`  ok   ${e.id}  ${tag}  ${(size / 1024).toFixed(1)} KB\n`);
+        ok++;
+        continue;
+      } catch (err) {
+        process.stderr.write(`  warn ${e.id}: curated copy failed (${(err as Error).message}); falling back\n`);
+      }
+    }
+
     if (existsSync(outPath) && !flags.force) {
       process.stderr.write(`  skip ${e.id} (cached)\n`);
       ok++;

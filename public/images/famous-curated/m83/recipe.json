@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m83",
+  "crop": {
+    "x": 689.9180297851562,
+    "y": 158.74282836914062,
+    "width": 5682.444900512695,
+    "height": 5682.444900512695
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/Messier_83#/media/File:The_Outskirts_of_the_Southern_Pinwheel_Galaxy_(noirlab2429a).jpg",
+    "license": "CC BY 4.0",
+    "author": "CTIO/NOIRLab/DOE/NSF/AURA Image processing: T.A. Rector (University of Alaska Anchorage/NSF NOIRLab), D. de Martin (NSF NOIRLab) &amp; M. Zamani (NSF NOIRLab)"
+  },
+  "processedAt": "2026-05-18T09:42:01.410Z"
+}

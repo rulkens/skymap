@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m63",
+  "crop": {
+    "x": 554.1345520019531,
+    "y": 566.4544067382812,
+    "width": 1633.7939758300781,
+    "height": 1633.7939758300781
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_5055#/media/File:M63_Sunflower_Galaxy.png",
+    "license": "CC BY-SA 4.0",
+    "author": "Shark13016"
+  },
+  "processedAt": "2026-05-18T11:03:31.104Z"
+}

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m61",
+  "crop": {
+    "x": 721.4991760253906,
+    "y": 385.92926025390625,
+    "width": 1424.0707397460938,
+    "height": 1424.0707397460938
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4303#/media/File:Portion_of_Virgo_Cluster_(without_asteroids)_(noirlab2521ak).jpg",
+    "license": "CC BY 4.0",
+    "author": "RubinObs/NOIRLab/SLAC/NSF/DOE/AURA"
+  },
+  "processedAt": "2026-05-18T11:04:10.687Z"
+}

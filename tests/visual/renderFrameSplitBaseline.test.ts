@@ -37,11 +37,10 @@
  * ### Why this fixture lights up every HDR pass
  *
  * To keep the snapshot a meaningful regression target we wire each of
- * the eight HDR passes' `enabled` gates to return true (subsystems
- * with non-empty lastOutput, optional renderers non-null with
- * positive glyph/line counts, settings toggles on, camera inside the
- * Milky-Way fade band).  Result: 9 renderer-draw entries (textured
- * impostors fires twice — quads then disks) + 1 postProcess.draw.
+ * the six HDR passes' `enabled` gates to return true (subsystems with
+ * non-empty lastOutput, optional renderers non-null with positive
+ * glyph/line counts, settings toggles on, camera inside the Milky-Way
+ * fade band).  Result: 8 renderer-draw entries + 1 postProcess.draw.
  *
  * If the post-split renderFrame skips a pass, drops a draw, or
  * reorders the renderers, this snapshot fails.  That's the gate
@@ -242,7 +241,6 @@ describe('renderFrame visual baseline', () => {
     const pointRenderer = makeLoggingRenderer(records, 'point-sprites');
     const milkyWayRenderer = makeLoggingRenderer(records, 'milky-way');
     const proceduralDiskRenderer = makeLoggingRenderer(records, 'procedural-disks');
-    const texturedQuadRenderer = makeLoggingRenderer(records, 'textured-quads');
     const texturedDiskRenderer = makeLoggingRenderer(records, 'textured-disks');
     const filamentRenderer = makeLoggingRenderer(records, 'filaments');
     const scalarVolumeRenderer = {
@@ -294,7 +292,6 @@ describe('renderFrame visual baseline', () => {
     const texturedImpostorsSubsystem = {
       lastOutput: {
         disks: [{ stub: true }] as unknown[],
-        quads: [{ stub: true }] as unknown[],
       },
     };
 
@@ -367,6 +364,9 @@ describe('renderFrame visual baseline', () => {
             label: 'fadeRegistry',
           },
         },
+        // DebugPanel renderer-toggle override bag — empty so every
+        // pass fires (the visual baseline asserts the full lineup).
+        debug: { disabledPasses: new Set<string>() },
       } as never,
       milkyWayITimeSec: 0,
       device,
@@ -374,7 +374,6 @@ describe('renderFrame visual baseline', () => {
       milkyWayRenderer: milkyWayRenderer as never,
       filamentRenderer: filamentRenderer as never,
       scalarVolumeRenderer: scalarVolumeRenderer as never,
-      texturedQuadRenderer: texturedQuadRenderer as never,
       texturedDiskRenderer: texturedDiskRenderer as never,
       proceduralDiskRenderer: proceduralDiskRenderer as never,
       settings: settings as never,
@@ -409,10 +408,6 @@ describe('renderFrame visual baseline', () => {
         {
           "argShape": "pass,Float32Array[16],Array[2],Array[3],number,Array[1]",
           "renderer": "procedural-disks",
-        },
-        {
-          "argShape": "pass,Float32Array[16],Array[2],Array[1],Array[3],number",
-          "renderer": "textured-quads",
         },
         {
           "argShape": "pass,Float32Array[16],Array[2],Array[3],Array[1]",

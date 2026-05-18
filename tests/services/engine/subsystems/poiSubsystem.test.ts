@@ -273,10 +273,12 @@ describe('poiSubsystem', () => {
     const fade = out.labels[0]!.fadeAlpha ?? 1;
     expect(fade).toBeGreaterThan(0);
     expect(fade).toBeLessThan(1);
-    expect(out.awake).toBe(true);
+    // awake stays false even mid-fade: fadeAlpha is camera-distance-driven,
+    // so any change is already covered by the camera-motion wake sources.
+    expect(out.awake).toBe(false);
   });
 
-  it('returns awake: false when no POI is mid-fade', () => {
+  it('reports awake: false above the fade band (fadeAlpha == 1)', () => {
     const sub = createPoiSubsystem();
     const big: PointOfInterest = {
       id: 'big',
@@ -380,25 +382,10 @@ describe('poiSubsystem — produceMarkers', () => {
   });
 });
 
-describe('poiSubsystem — produceLabels awake propagation', () => {
-  it('produceLabels sets awake=true when a marker is mid-fade-out', () => {
-    const sub = createPoiSubsystem();
-    // Put the camera so close to a small-radius cluster that the projected
-    // ring lands inside the markerMaxApparentFadeBandPx fade band.  At
-    // distance d the apparent radius is (r / d) * pxPerRad; we want it
-    // between 800 and 1000 (markerMaxApparentRadiusPx=800,
-    // markerMaxApparentFadeBandPx=200) given pxPerRad=500 and r=2:
-    //   target = 850 → d = (2 / 850) * 500 = ~1.18
-    sub.setPois([
-      { id: 'virgo', name: 'Virgo', category: 'cluster',
-        worldPos: [1.18, 0, 0], physicalRadiusMpc: 2 },
-    ]);
-    const ctx = {
-      drawCamPos: [0, 0, 0],
-      canvasSize: { width: 1024, height: 768 },
-      drawPxPerRad: 500,
-    } as unknown as ReadyFrameContext;
-    const out = sub.produceLabels(makeState(), ctx);
-    expect(out.awake).toBe(true);
-  });
-});
+// Note: a former "produceLabels awake propagation" block asserted that
+// the marker close-approach fade-out set awake=true while mid-band.
+// That contract was reversed by main's #146 ("drop spurious 'awake'
+// flag from label producers") — the fade is a pure function of camera
+// distance, and camera motion already wakes the loop via tweens /
+// spaceMouse / pointer events.  Setting awake mid-band would pin the
+// render loop on while a POI happens to be mid-fade.
