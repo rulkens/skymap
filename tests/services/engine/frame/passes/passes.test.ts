@@ -111,7 +111,6 @@ function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrame
 
 function makeDeps(overrides: Partial<PassDeps> = {}): PassDeps {
   return {
-    texturedQuadRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     texturedDiskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     proceduralDiskRenderer: { draw: vi.fn() } as any,
     filamentRenderer: null,
@@ -144,21 +143,21 @@ const PASS_STUB = { setPipeline: vi.fn(), setVertexBuffer: vi.fn(), setBindGroup
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('HDR_PASSES registry', () => {
-  it('contains the seven HDR passes in canonical draw order', () => {
+  it('contains the six HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the encoder record;
     // see passes/index.ts module header.  Marker-lines and labels
     // moved out of HDR_PASSES to UI_PASSES (post-tone-map overlay) so
     // they could escape the tone-map curve compression and avoid the
     // OVER-blend coherency issue on tile-based GPUs.  The former
-    // `textured-impostors` slot split into two (`textured-quads`,
-    // `textured-disks`) on 2026-05-18 to let the debug panel toggle
-    // them independently — quads first to preserve the legacy
-    // thumbnail dispatch order.
-    expect(HDR_PASSES).toHaveLength(7);
+    // `textured-impostors` slot was briefly split into
+    // (`textured-quads`, `textured-disks`) on 2026-05-18 — the quad
+    // half was deleted the same day along with its renderer because
+    // the build-pipeline orientation fallback meant the quad branch
+    // never fired in practice.
+    expect(HDR_PASSES).toHaveLength(6);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
       'point-sprites',
       'procedural-disks',
-      'textured-quads',
       'textured-disks',
       'milky-way',
       'filaments',

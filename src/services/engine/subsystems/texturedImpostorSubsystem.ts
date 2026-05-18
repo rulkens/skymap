@@ -4,9 +4,20 @@
  * Extracted from `thumbnailSubsystem.ts` lines 487-993 as part of the
  * 2026-05-12 impostor-subsystem split.  Walks the catalog, applies the
  * px ≥ 24 gate, allocates atlas slots via the injected atlas subsystem,
- * schedules fetches, branches disk-vs-quad on `Number.isFinite(ar) &&
- * Number.isFinite(pa)`, computes load-fade + distance-fade, sorts
- * back-to-front, emits two sorted arrays.
+ * schedules fetches, computes load-fade + distance-fade, sorts back-to-
+ * front, emits the sorted disk array.
+ *
+ * ### Why disks-only (no screen-aligned quad fallback)
+ *
+ * The pre-2026-05-18 design also emitted a `quads` array for galaxies
+ * whose orientation was missing (`Number.isFinite(ar) && Number.isFinite(pa)`
+ * returned false).  In practice every encoded galaxy has finite
+ * orientation — `tools/catalog/buildAllBins.ts` applies a deterministic
+ * hash-based fallback when the parser emits null — so the quad branch
+ * never fired for non-Famous galaxies and only fired for famous ones at
+ * <4 px apparent size, where the point sprite was already at full
+ * strength.  Dropping the quad path simplified the renderer (one fewer
+ * pipeline, BGL, atlas bind, timing slot) with no visual change.
  *
  * ### What this owns (vs. galaxyAtlasSubsystem)
  *
@@ -20,7 +31,6 @@
 import { Source } from '../../../data/sources';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
-import type { ThumbnailInstance } from '../../../@types/rendering/ThumbnailInstance';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
@@ -78,14 +88,13 @@ export function createTexturedImpostorSubsystem(
     bitmapReadyTime.delete(key);
   });
 
-  const stickyQuadsBySource = new Map<Source, Map<number, ThumbnailInstance>>();
   const stickyDisksBySource = new Map<Source, Map<number, DiskInstance>>();
   const strideStartBySource = new Map<Source, number>();
 
   let frameCounter = 0;
   let destroyed = false;
 
-  let lastOutput: TexturedImpostorFrameOutput = { disks: [], quads: [] };
+  let lastOutput: TexturedImpostorFrameOutput = { disks: [] };
 
   function runFrame(input: TexturedImpostorFrameInput): TexturedImpostorFrameOutput {
     if (destroyed) return lastOutput;
@@ -101,17 +110,11 @@ export function createTexturedImpostorSubsystem(
     const cy = cam.position[1];
     const cz = cam.position[2];
 
-    const quads: ThumbnailInstance[] = [];
     const disks: DiskInstance[] = [];
 
     const nowMs = performance.now();
 
     for (const [cloudSource, cloud] of catalogs.entries()) {
-      let stickyQuads = stickyQuadsBySource.get(cloudSource);
-      if (!stickyQuads) {
-        stickyQuads = new Map();
-        stickyQuadsBySource.set(cloudSource, stickyQuads);
-      }
       let stickyDisks = stickyDisksBySource.get(cloudSource);
       if (!stickyDisks) {
         stickyDisks = new Map();
@@ -119,7 +122,6 @@ export function createTexturedImpostorSubsystem(
       }
 
       if (((visibleSourceMask >> cloudSource) & 1) === 0) {
-        stickyQuads.clear();
         stickyDisks.clear();
         continue;
       }
@@ -138,7 +140,6 @@ export function createTexturedImpostorSubsystem(
         }
         for (const k of drop) m.delete(k);
       };
-      purgeStride(stickyQuads);
       purgeStride(stickyDisks);
 
       for (let i = safeStart; i < end; i++) {
@@ -208,6 +209,12 @@ export function createTexturedImpostorSubsystem(
         const loadFade = tReady === undefined ? 0 : Math.min(1, (nowMs - tReady) / LOAD_FADE_MS);
         const fadeAlpha = distFade * loadFade;
 
+        // Disks-only post-2026-05-18.  See module header: every encoded
+        // galaxy has finite orientation (build-pipeline fallback), so
+        // the legacy `else → quads` branch never fired in practice.
+        // The `Number.isFinite` checks remain as a defensive guard
+        // against corrupted .bin files — same role they played in the
+        // pre-split code.
         if (px > DISK_THRESHOLD_PX && Number.isFinite(ar) && Number.isFinite(pa)) {
           stickyDisks.set(i, {
             x,
@@ -222,24 +229,11 @@ export function createTexturedImpostorSubsystem(
             positionAngleDeg: pa,
             fadeAlpha,
           });
-        } else {
-          stickyQuads.set(i, {
-            x,
-            y,
-            z,
-            sizeWorld: sizeWorldMpc,
-            u0,
-            v0,
-            u1,
-            v1,
-            fadeAlpha,
-          });
         }
       }
 
       strideStartBySource.set(cloudSource, end >= count ? 0 : end);
 
-      for (const q of stickyQuads.values()) quads.push(q);
       for (const d of stickyDisks.values()) disks.push(d);
     }
 
@@ -255,10 +249,9 @@ export function createTexturedImpostorSubsystem(
       const dbz = b.z - camPosZ;
       return dbx * dbx + dby * dby + dbz * dbz - (dax * dax + day * day + daz * daz);
     };
-    quads.sort(cmpFar);
     disks.sort(cmpFar);
 
-    lastOutput = { disks, quads };
+    lastOutput = { disks };
     return lastOutput;
   }
 
@@ -276,10 +269,9 @@ export function createTexturedImpostorSubsystem(
     destroyed = true;
     atlas.setEvictHandler(undefined);
     bitmapReadyTime.clear();
-    stickyQuadsBySource.clear();
     stickyDisksBySource.clear();
     strideStartBySource.clear();
-    lastOutput = { disks: [], quads: [] };
+    lastOutput = { disks: [] };
   }
 
   const subsystem: TexturedImpostorSubsystemWithTestSeam = {

@@ -183,7 +183,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const pointRenderer = makeLoggingRenderer();
   const milkyWayRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
-  const texturedQuadRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
   const postProcess = makePostProcess();
 
@@ -260,7 +259,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     milkyWayRenderer: milkyWayRenderer as never,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
-    texturedQuadRenderer: texturedQuadRenderer as never,
     texturedDiskRenderer: texturedDiskRenderer as never,
     proceduralDiskRenderer: proceduralDiskRenderer as never,
     settings: settings as never,

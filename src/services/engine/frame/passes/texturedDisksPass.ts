@@ -1,18 +1,15 @@
 /**
  * texturedDisksPass — LOD-2 textured galaxy thumbnails (3D-oriented disks).
  *
- * Half of the former `texturedImpostorsPass` split (2026-05-18) so the
- * debug panel can toggle the 3D-oriented disk impostors independently
- * from the screen-aligned thumbnail quads.  Both halves read the same
- * upstream subsystem output
- * (`state.subsystems.texturedImpostors.lastOutput`) — only the renderer
- * dispatch differs.
- *
- * Draw order is preserved: this pass runs AFTER `texturedQuadsPass`
- * inside `HDR_PASSES`, matching the legacy
- * `thumbnailSubsystem.runFrame` dispatch order (quads first, disks
- * second).  Additive blending makes the cosmetic order irrelevant for
- * correctness, but the visual baseline test still pins it.
+ * What's left of the former `texturedImpostorsPass` after the
+ * 2026-05-18 quad-removal.  Reads from
+ * `state.subsystems.texturedImpostors.lastOutput.disks` (populated
+ * upstream in `runFrame.ts`) and dispatches one draw call to
+ * `texturedDiskRenderer`.  The legacy screen-aligned quad fallback
+ * was deleted because the build pipeline's deterministic orientation
+ * fallback (`buildAllBins.ts`) ensures every encoded galaxy has finite
+ * (axisRatio, PA) — see `texturedImpostorSubsystem.ts` for the full
+ * rationale.
  */
 
 import type { Pass } from '../../../../@types/engine/frame/Pass';

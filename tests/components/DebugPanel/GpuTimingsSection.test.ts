@@ -68,14 +68,14 @@ describe('GpuTimingsSection', () => {
         frameIndex: 0,
         perPassMs: new Map([
           ['point-sprites', 1.2],
-          ['textured-quads', 4.8],
+          ['textured-disks', 4.8],
         ]),
       });
     });
 
     expect(container.textContent).toContain('point-sprites');
     expect(container.textContent).toContain('1.2');
-    expect(container.textContent).toContain('textured-quads');
+    expect(container.textContent).toContain('textured-disks');
     expect(container.textContent).toContain('4.8');
   });
 

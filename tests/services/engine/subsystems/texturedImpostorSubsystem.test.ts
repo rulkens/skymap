@@ -107,10 +107,16 @@ describe('createTexturedImpostorSubsystem', () => {
     await new Promise((r) => setTimeout(r, 0));
     const out = sys.runFrame(makeInput(clouds));
     expect(out.disks.length).toBe(2);
-    expect(out.quads.length).toBe(0);
   });
 
-  it('emits a ThumbnailInstance per NaN-orientation galaxy', async () => {
+  it('emits no disks for NaN-orientation galaxies (post-2026-05-18 quad removal)', async () => {
+    // Pre-2026-05-18 the subsystem branched on `Number.isFinite(ar) &&
+    // Number.isFinite(pa)` to emit a screen-aligned quad fallback for
+    // galaxies with missing orientation.  The quad pipeline was removed
+    // because the build pipeline's deterministic orientation fallback
+    // means production bins never have NaN orientation, and the
+    // synthetic NaN here exercises only the defensive guard left in
+    // the disks-only branch.
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
     const sys = createTexturedImpostorSubsystem({
@@ -125,7 +131,6 @@ describe('createTexturedImpostorSubsystem', () => {
     await new Promise((r) => setTimeout(r, 0));
     const out = sys.runFrame(makeInput(clouds));
     expect(out.disks.length).toBe(0);
-    expect(out.quads.length).toBe(2);
   });
 
   it('hasInFlightWork is true during fetch and false after it settles', async () => {

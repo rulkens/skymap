@@ -23,25 +23,25 @@
  *
  * ### HDR_PASSES — additive content, in deterministic draw order
  *
- * All seven entries are additively blended into the HDR `rgba16float`
+ * All six entries are additively blended into the HDR `rgba16float`
  * target:
  *
  *   1. point-sprites       — instanced billboards (always-on)
  *   2. procedural-disks    — LOD-1 procedural-disk impostors
- *   3. textured-quads      — LOD-2 screen-aligned textured-quad impostors
- *   4. textured-disks      — LOD-2 3D-oriented textured-disk impostors
- *   5. milky-way           — procedural impostor at the world origin
- *   6. filaments           — cosmic-web skeleton overlay
- *   7. volume-upsample     — upsamples the half-res volume offscreen target
+ *   3. textured-disks      — LOD-2 3D-oriented textured-disk impostors
+ *   4. milky-way           — procedural impostor at the world origin
+ *   5. filaments           — cosmic-web skeleton overlay
+ *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
  *
- * `textured-quads` and `textured-disks` are split halves of the former
- * `textured-impostors` pass so the debug panel can toggle them
- * independently to visually distinguish the two impostor styles.  Both
- * read the same upstream subsystem (`state.subsystems.texturedImpostors`)
- * — only the renderer dispatch differs.  Quads run first to preserve
- * the legacy `thumbnailSubsystem.runFrame` dispatch order pinned by the
- * visual baseline test.
+ * `textured-disks` is what remains of the briefly-split (and never-shipped)
+ * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
+ * half was deleted along with its renderer because the build-pipeline's
+ * deterministic orientation fallback (`buildAllBins.ts`) means every
+ * encoded galaxy has finite (axisRatio, PA) — the quad branch in the
+ * impostor subsystem only ever fired for famous galaxies at <4 px,
+ * where the point sprite handled them.  See
+ * `texturedImpostorSubsystem.ts` for the full rationale.
  *
  * Reordering passes is a one-line array shuffle with a clear
  * semantic.  The DebugPanel `GpuTimingsSection` derives its row order
@@ -96,7 +96,6 @@
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { pointSpritesPass } from './pointSpritesPass';
 import { proceduralDisksPass } from './proceduralDisksPass';
-import { texturedQuadsPass } from './texturedQuadsPass';
 import { texturedDisksPass } from './texturedDisksPass';
 import { filamentsPass } from './filamentsPass';
 import { volumeUpsamplePass } from './volumeUpsamplePass';
@@ -104,11 +103,10 @@ import { milkyWayPass } from './milkyWayPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
 
-/** The seven HDR passes, in deterministic draw order. */
+/** The six HDR passes, in deterministic draw order. */
 export const HDR_PASSES: readonly Pass[] = [
   pointSpritesPass,
   proceduralDisksPass,
-  texturedQuadsPass,
   texturedDisksPass,
   milkyWayPass,
   filamentsPass,
@@ -125,7 +123,6 @@ export const UI_PASSES: readonly Pass[] = [markerLinesPass, labelsPass];
 
 export { pointSpritesPass } from './pointSpritesPass';
 export { proceduralDisksPass } from './proceduralDisksPass';
-export { texturedQuadsPass } from './texturedQuadsPass';
 export { texturedDisksPass } from './texturedDisksPass';
 export { filamentsPass } from './filamentsPass';
 export { volumeUpsamplePass } from './volumeUpsamplePass';

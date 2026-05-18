@@ -40,7 +40,7 @@ function makeCtx(): ReadyFrameContext {
     volumeOffscreen: { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any,
     texturedImpostors: {
       runFrame: vi.fn(),
-      lastOutput: { quads: [], disks: [] },
+      lastOutput: { disks: [] },
       hasInFlightWork: () => false,
     } as any,
   };
@@ -52,7 +52,6 @@ function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrame
 
 function makeDeps(): PassDeps {
   return {
-    texturedQuadRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     texturedDiskRenderer: { draw: vi.fn(), bindAtlas: vi.fn() } as any,
     proceduralDiskRenderer: { draw: vi.fn() } as any,
     filamentRenderer: null,
@@ -84,34 +83,33 @@ describe('texturedDisksPass', () => {
     expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
 
-  it('enabled() returns false when disks array is empty (even if quads has entries)', () => {
+  it('enabled() returns false when disks array is empty', () => {
     const state = {
-      subsystems: { texturedImpostors: { lastOutput: { disks: [], quads: [{}] } } },
+      subsystems: { texturedImpostors: { lastOutput: { disks: [] } } },
     } as unknown as EngineState;
     expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
 
   it('enabled() returns true when disks array is non-empty', () => {
     const state = {
-      subsystems: { texturedImpostors: { lastOutput: { disks: [{}], quads: [] } } },
+      subsystems: { texturedImpostors: { lastOutput: { disks: [{}] } } },
     } as unknown as EngineState;
     expect(texturedDisksPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });
 
-  it('draw() invokes texturedDiskRenderer.draw and never texturedQuadRenderer.draw', () => {
+  it('draw() invokes texturedDiskRenderer.draw', () => {
     const disks = [{ x: 1 }];
     const state = {
-      subsystems: { texturedImpostors: { lastOutput: { disks, quads: [{}] } } },
+      subsystems: { texturedImpostors: { lastOutput: { disks } } },
     } as unknown as EngineState;
     const deps = makeDeps();
     texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
     expect(deps.texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
-    expect(deps.texturedQuadRenderer.draw).not.toHaveBeenCalled();
   });
 
   it('draw() is a no-op when disks array is empty', () => {
     const state = {
-      subsystems: { texturedImpostors: { lastOutput: { disks: [], quads: [{}] } } },
+      subsystems: { texturedImpostors: { lastOutput: { disks: [] } } },
     } as unknown as EngineState;
     const deps = makeDeps();
     texturedDisksPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);

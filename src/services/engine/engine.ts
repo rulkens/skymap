@@ -481,7 +481,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // clean them up; M1 of the 2026-05-11 audit then collapsed
       // the redundant `phaseLocals` mirror.  See
       // `EngineGpuHandles.d.ts` for the full reachability story.
-      texturedQuadRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
@@ -1330,8 +1329,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
-    state.gpu.texturedQuadRenderer?.destroy();
-    state.gpu.texturedQuadRenderer = null;
     state.gpu.texturedDiskRenderer?.destroy();
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();

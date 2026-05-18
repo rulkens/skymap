@@ -3,25 +3,25 @@
  *
  * ### What this protects
  *
- * Four renderers (`texturedQuadRenderer`, `texturedDiskRenderer`,
- * `proceduralDiskRenderer`, `milkyWayRenderer`) each own GPU resources
- * — uniform buffer + per-instance buffer + per-renderer specifics — and
- * each expose a `.destroy()` method.  Pre-2026-05-08 they lived only on
- * the bootstrap-local `phaseLocals` carrier, which `engine.ts.destroy()`
+ * Three renderers (`texturedDiskRenderer`, `proceduralDiskRenderer`,
+ * `milkyWayRenderer`) each own GPU resources — uniform buffer + per-
+ * instance buffer + per-renderer specifics — and each expose a
+ * `.destroy()` method.  Pre-2026-05-08 they lived only on the
+ * bootstrap-local `phaseLocals` carrier, which `engine.ts.destroy()`
  * had no reference path to: `phaseLocals` is intentionally short-lived
  * (it goes away once `startLoop` finishes), and the frame loop captured
  * the renderers via `RunFrameDeps` closures.  PR #66 flagged this as
- * destroy reachability gap — every HMR / StrictMode remount leaked the
- * four renderers' GPU buffers.
+ * a destroy reachability gap — every HMR / StrictMode remount leaked
+ * the renderers' GPU buffers.
  *
- * The fix promoted the four renderers to `state.gpu.*` (mirroring the
+ * The fix promoted the renderers to `state.gpu.*` (mirroring the
  * existing pattern shared by `renderer`, `pickRenderer`, `postProcess`,
  * `filamentRenderer`, `labelRenderer`, `markerLineRenderer`) so the
  * `destroy()` chain has a reachable reference to each.
  *
  * ### What this test asserts
  *
- *   1. After `initGpu(state, deps)` runs, each of the four renderer
+ *   1. After `initGpu(state, deps)` runs, each of the three renderer
  *      fields on `state.gpu.*` is populated with the constructed
  *      renderer (not null, not undefined).
  *   2. Replaying the `engine.ts.destroy()` chain — the same
@@ -106,10 +106,6 @@ vi.mock('../../../../src/services/gpu/passes/volumeOffscreen', () => ({
   createVolumeOffscreen: vi.fn(() => makeStub('volumeOffscreen')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/texturedQuadRenderer', () => ({
-  createTexturedQuadRenderer: vi.fn(() => makeStub('texturedQuadRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/renderers/texturedDiskRenderer', () => ({
   createTexturedDiskRenderer: vi.fn(() => makeStub('texturedDiskRenderer')),
 }));
@@ -177,7 +173,6 @@ function makeState(): EngineState {
       filamentRenderer: null,
       labelRenderer: null,
       markerLineRenderer: null,
-      texturedQuadRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
@@ -241,23 +236,22 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     for (const k of Object.keys(stubs)) delete stubs[k];
   });
 
-  it('writes texturedQuadRenderer/texturedDiskRenderer/proceduralDiskRenderer/milkyWayRenderer onto state.gpu.*', async () => {
+  it('writes texturedDiskRenderer/proceduralDiskRenderer/milkyWayRenderer onto state.gpu.*', async () => {
     const state = makeState();
     const deps = makeDeps();
     await initGpu(state, deps);
 
-    // All four renderers must reach `state.gpu.*` — that's the
+    // All three renderers must reach `state.gpu.*` — that's the
     // reachability claim PR #66's follow-up makes.  Pre-fix these were
     // stashed only on `deps.phaseLocals`.
-    expect(state.gpu.texturedQuadRenderer).toBe(stubs.texturedQuadRenderer);
     expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
     expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
     expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
   });
 
-  it('phaseLocals no longer carries the four thumbnail/milky-way renderers — they live solely on state.gpu.*', async () => {
+  it('phaseLocals no longer carries the thumbnail/milky-way renderers — they live solely on state.gpu.*', async () => {
     // M1 of the 2026-05-11 architectural audit collapsed the
-    // phaseLocals renderer mirror.  Previously initGpu wrote the four
+    // phaseLocals renderer mirror.  Previously initGpu wrote the
     // renderers onto BOTH `state.gpu.*` (for destroy reachability) and
     // `deps.phaseLocals` (for later phases to consume).  That mirror
     // was redundant: `state.gpu.*` is set before any later phase reads,
@@ -272,12 +266,10 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
 
     expect(deps.phaseLocals).toBeDefined();
     // PhaseLocals is now exactly { device, context } — no renderer fields.
-    expect(deps.phaseLocals!).not.toHaveProperty('texturedQuadRenderer');
     expect(deps.phaseLocals!).not.toHaveProperty('texturedDiskRenderer');
     expect(deps.phaseLocals!).not.toHaveProperty('proceduralDiskRenderer');
     expect(deps.phaseLocals!).not.toHaveProperty('milkyWayRenderer');
     // The renderers are still reachable for destroy + consumption via state.gpu.*.
-    expect(state.gpu.texturedQuadRenderer).toBe(stubs.texturedQuadRenderer);
     expect(state.gpu.texturedDiskRenderer).toBe(stubs.texturedDiskRenderer);
     expect(state.gpu.proceduralDiskRenderer).toBe(stubs.proceduralDiskRenderer);
     expect(state.gpu.milkyWayRenderer).toBe(stubs.milkyWayRenderer);
@@ -293,8 +285,6 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // the load-bearing assertion: if `initGpu` wrote the renderer to
     // `state.gpu.*` AND `engine.ts.destroy()` walks `state.gpu.*?.destroy()`,
     // then the renderer's destroy spy MUST fire.
-    state.gpu.texturedQuadRenderer?.destroy();
-    state.gpu.texturedQuadRenderer = null;
     state.gpu.texturedDiskRenderer?.destroy();
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
@@ -302,14 +292,12 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     state.gpu.milkyWayRenderer?.destroy();
     state.gpu.milkyWayRenderer = null;
 
-    expect(stubs.texturedQuadRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.texturedDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.proceduralDiskRenderer!.destroy).toHaveBeenCalledTimes(1);
     expect(stubs.milkyWayRenderer!.destroy).toHaveBeenCalledTimes(1);
 
     // Symmetric null-out matches the rest of the bag — see
     // `EngineGpuHandles.d.ts`'s lifecycle docstring.
-    expect(state.gpu.texturedQuadRenderer).toBeNull();
     expect(state.gpu.texturedDiskRenderer).toBeNull();
     expect(state.gpu.proceduralDiskRenderer).toBeNull();
     expect(state.gpu.milkyWayRenderer).toBeNull();
@@ -322,8 +310,6 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
     // against the zero-state and assert it doesn't throw.
     const state = makeState();
     expect(() => {
-      state.gpu.texturedQuadRenderer?.destroy();
-      state.gpu.texturedQuadRenderer = null;
       state.gpu.texturedDiskRenderer?.destroy();
       state.gpu.texturedDiskRenderer = null;
       state.gpu.proceduralDiskRenderer?.destroy();

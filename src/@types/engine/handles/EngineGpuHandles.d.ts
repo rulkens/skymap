@@ -28,13 +28,13 @@
  * **Every field on this bag shares the same lifecycle rule** — null
  * before bootstrap, non-null after `initGpu` resolves, released and
  * re-nulled by `destroy()`.  That symmetry is load-bearing: the
- * `texturedQuadRenderer` / `texturedDiskRenderer` / `proceduralDiskRenderer` /
- * `milkyWayRenderer` fields exist on this bag specifically so the
- * `destroy()` chain has a reachable reference to call `.destroy()` on
- * — they are not consumed via this bag at runtime (the frame loop
- * receives them through `RunFrameDeps` for historical reasons).  When
- * adding a new GPU-resource-owning renderer, add it here so the
- * teardown path stays complete.
+ * `texturedDiskRenderer` / `proceduralDiskRenderer` / `milkyWayRenderer`
+ * fields exist on this bag specifically so the `destroy()` chain has a
+ * reachable reference to call `.destroy()` on — they are not consumed
+ * via this bag at runtime (the frame loop receives them through
+ * `RunFrameDeps` for historical reasons).  When adding a new GPU-
+ * resource-owning renderer, add it here so the teardown path stays
+ * complete.
  *
  * ### Why grouped vs. flat?
  *
@@ -53,7 +53,6 @@ import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
-import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
@@ -126,15 +125,16 @@ export type EngineGpuHandles = {
    */
   markerLineRenderer: MarkerLineRenderer | null;
   /**
-   * Textured-quad renderer for galaxy thumbnails.  Null until `initGpu`
-   * constructs it from a `GpuContext` snapshot.  Stored here purely so
-   * `destroy()` can release the renderer's GPU buffers (uniform + per-
-   * instance + corner) — pre-2026-05-08 this lived on the bootstrap-
-   * local `phaseLocals` carrier, which `engine.ts.destroy()` had no
-   * reachable reference to (PR #66 follow-up: phaseLocals goes away
-   * once `startLoop` finishes, by design).  Promoting to `state.gpu.*`
-   * fixes the destroy-reachability gap without rewiring any of the
-   * frame-loop's existing references through `phaseLocals`.
+   * Atlas-bound 3D-oriented disk renderer for large galaxy thumbnails
+   * (close-approach view).  Null until `initGpu` constructs it from a
+   * `GpuContext` snapshot.  Stored here purely so `destroy()` can
+   * release the renderer's GPU buffers (uniform + per-instance + corner)
+   * — pre-2026-05-08 this lived on the bootstrap-local `phaseLocals`
+   * carrier, which `engine.ts.destroy()` had no reachable reference to
+   * (PR #66 follow-up: phaseLocals goes away once `startLoop` finishes,
+   * by design).  Promoting to `state.gpu.*` fixes the destroy-
+   * reachability gap without rewiring the frame-loop's existing
+   * references through `phaseLocals`.
    *
    * Excluded from `isEngineReady` — it's set during `initGpu` (the
    * first bootstrap phase, well before `wireSlots`/`wireInput`), and
@@ -143,25 +143,18 @@ export type EngineGpuHandles = {
    * isn't the inverse of teardown).  Read sites that run during
    * bootstrap null-check this field individually.
    */
-  texturedQuadRenderer: TexturedQuadRenderer | null;
-  /**
-   * 3D-oriented disk renderer for large galaxies (close-approach view).
-   * Same lifecycle, same reachability rationale, and same isEngineReady
-   * exclusion as `texturedQuadRenderer` above — see that field's docstring
-   * for the full story.
-   */
   texturedDiskRenderer: TexturedDiskRenderer | null;
   /**
    * Procedural-disk renderer that bridges the visibility band between
    * point glow (~8 px) and textured disks (~24 px).  Same lifecycle,
    * same reachability rationale, and same isEngineReady exclusion as
-   * `texturedQuadRenderer` above.
+   * `texturedDiskRenderer` above.
    */
   proceduralDiskRenderer: ProceduralDiskRenderer | null;
   /**
    * Procedural Milky-Way impostor renderer at world origin.  Same
    * lifecycle, same reachability rationale, and same isEngineReady
-   * exclusion as `texturedQuadRenderer` above.
+   * exclusion as `texturedDiskRenderer` above.
    */
   milkyWayRenderer: MilkyWayRenderer | null;
   /**
