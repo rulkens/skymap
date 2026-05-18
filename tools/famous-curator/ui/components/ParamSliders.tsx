@@ -1,5 +1,5 @@
 /**
- * ParamSliders — StarNet + Alpha controls + Process/Export buttons.
+ * ParamSliders — StarNet + Alpha controls + a single Commit button.
  *
  * Slider ranges per spec:
  *   stride       16..512  (snap to power-of-2 — UI snaps, server accepts any int)
@@ -8,18 +8,29 @@
  *   whitePoint   180..255
  *   gamma        0.3..2.0 (log-scaled track via input[type=range] step=0.05)
  *
- * Process button marks data-dirty=true when crop OR starnet is dirty
- * — Plan D's stylist will show the orange-dot affordance.
- * Export is disabled unless canExport.
+ * Commit runs the full save: re-process if crop/starnet dirty, export
+ * the four-WebP trio + recipe, then rebuild famous.bin.  The button's
+ * label tracks the current step so the maintainer can see which phase
+ * is taking time.  data-dirty=true when crop OR starnet is dirty
+ * (drives the orange-dot affordance in the stylist's CSS).
  *
  * Why two separate fieldsets?  StarNet and Alpha represent different
  * server round-trips: /api/process (full starnet + alpha) vs
  * /api/process/alpha-only (cheap, ~1 s vs ~30 s).  Grouping them
- * separately visually signals this cost difference to the operator and
- * makes it easier for Plan D to add per-group affordances (e.g. a
- * spinner that only animates on the Alpha group during alpha-only runs).
+ * separately visually signals this cost difference to the operator.
  */
 import type { StarnetParams, AlphaParams, DirtyFlags } from '../state';
+
+export type CommitPhase = 'idle' | 'processing' | 'exporting' | 'building';
+
+function commitLabel(phase: CommitPhase): string {
+  switch (phase) {
+    case 'processing': return 'Processing…';
+    case 'exporting': return 'Exporting…';
+    case 'building': return 'Rebuilding famous.bin…';
+    case 'idle': return 'Commit';
+  }
+}
 
 // Stride must be a power of 2 in [16..512].  The user drags a continuous
 // slider; we snap the raw value to the nearest legal stride.  This avoids
@@ -43,14 +54,13 @@ export type ParamSlidersProps = {
   starnet: StarnetParams;
   alpha: AlphaParams;
   dirty: DirtyFlags;
-  processedOnce: boolean;
-  canExport: boolean;
-  processBusy?: boolean;
-  exportBusy?: boolean;
+  /** True when the maintainer has filled in the required metadata + a source is loaded. */
+  canCommit: boolean;
+  /** Current step of an in-flight Commit, or 'idle' when nothing is running. */
+  commitPhase: CommitPhase;
   onStarnet: (p: StarnetParams) => void;
   onAlpha: (p: AlphaParams) => void;
-  onProcess: () => void;
-  onExport: () => void;
+  onCommit: () => void;
 };
 
 export function ParamSliders(props: ParamSlidersProps) {
@@ -135,23 +145,18 @@ export function ParamSliders(props: ParamSlidersProps) {
         </label>
       </fieldset>
       <div className="curator-param-actions">
-        {/* data-dirty drives the orange-dot affordance in Plan D's stylesheet.
-            The value is always "true" or "false" (never omitted) so CSS
+        {/* data-dirty drives the orange-dot affordance in the stylesheet.
+            Always "true" or "false" (never omitted) so CSS
             [data-dirty="true"] selectors work unconditionally. */}
         <button
-          onClick={props.onProcess}
+          onClick={props.onCommit}
           data-dirty={String(processDirty)}
-          disabled={props.processBusy}
+          disabled={!props.canCommit || props.commitPhase !== 'idle'}
         >
-          {props.processBusy ? <span className="curator-spinner" aria-hidden="true" /> : null}
-          Process
-        </button>
-        <button
-          onClick={props.onExport}
-          disabled={!props.canExport || props.exportBusy}
-        >
-          {props.exportBusy ? <span className="curator-spinner" aria-hidden="true" /> : null}
-          Export
+          {props.commitPhase !== 'idle'
+            ? <span className="curator-spinner" aria-hidden="true" />
+            : null}
+          {commitLabel(props.commitPhase)}
         </button>
       </div>
     </section>

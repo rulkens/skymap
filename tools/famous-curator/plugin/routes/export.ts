@@ -29,7 +29,7 @@
  *   atlas.webp    lossy WebP q82, 256² with soft alpha
  */
 import sharp from 'sharp';
-import { existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   curatedGalaxyDir,
@@ -167,8 +167,22 @@ export async function handleExport(opts: {
   if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
   renameSync(siblingStaging, outDir);
 
-  // 9. Update the override index so the build pipeline picks this
-  //    galaxy up without a manual JSON edit.
+  // 9. Copy atlas.webp into the runtime atlas slot so the main app
+  //    picks up the new thumbnail without an extra fetch-famous-images
+  //    run.  The runtime fetcher loads `/images/famous/<id>.webp`
+  //    directly (see src/utils/network/galaxyImageFetcher.ts); leaving
+  //    this step out means a Commit "succeeds" but the main app still
+  //    shows the previous thumbnail until a manual copy.
+  const atlasSrc = resolve(outDir, 'atlas.webp');
+  const atlasRuntimeDir = resolve(repoRoot, 'public/images/famous');
+  // mkdir -p in case the runtime slot dir doesn't exist yet (fresh
+  // clones + test fixtures both hit this — production checkouts already
+  // have it populated by fetch-famous-images).
+  mkdirSync(atlasRuntimeDir, { recursive: true });
+  copyFileSync(atlasSrc, resolve(atlasRuntimeDir, `${body.id}.webp`));
+
+  // 10. Update the override index so the build pipeline picks this
+  //     galaxy up without a manual JSON edit.
   const idx = upsertOverrideEntry(overrideIndexPath(repoRoot), body.id, {
     dir: `famous-curated/${body.id}`,
     sourceUrl: body.metadata.sourceUrl,

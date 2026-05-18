@@ -168,24 +168,19 @@ export function reducer(s: State, a: Action): State {
 }
 
 /**
- * Derived: can the user click Export right now?  Requires all three
- * pre-conditions:
- *  - at least one Process has succeeded with the current crop+starnet
- *  - crop is not dirty (would require re-Process)
- *  - starnet is not dirty (would require re-Process)
+ * Derived: can the user click Commit right now?  Requires:
+ *  - a source image is loaded (tmpId present)
  *  - all three metadata fields are non-empty
  *
- * Alpha being dirty is fine — the alpha-only path keeps the cached
- * starless valid; export re-runs alpha at full resolution.
+ * The Commit action runs process (if dirty) → export → rebuild famous.bin
+ * in sequence, so "processedOnce" and "nothing dirty" aren't pre-conditions
+ * — the commit handler re-processes when it needs to.
  *
  * Why a standalone function instead of inlining in the component?
- * Testability: the reducer test can call canExport(state) without
- * mounting React, keeping the coverage of the gate logic purely in
- * the unit-test layer.
+ * Testability: the reducer test can call canCommit(state) without
+ * mounting React.
  */
-export function canExport(s: State): boolean {
-  if (!s.processedOnce) return false;
-  if (s.dirty.crop || s.dirty.starnet) return false;
+export function canCommit(s: State): boolean {
   if (s.metadata.sourceUrl.length === 0) return false;
   if (s.metadata.license.length === 0) return false;
   if (s.metadata.author.length === 0) return false;

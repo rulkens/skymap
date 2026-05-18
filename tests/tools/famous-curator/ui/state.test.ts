@@ -19,7 +19,7 @@
  * spec's "Process flow + preview behaviour" section.
  */
 import { describe, expect, it } from 'vitest';
-import { reducer, initialState, canExport, type Action } from '../../../../tools/famous-curator/ui/state';
+import { reducer, initialState, canCommit, type Action } from '../../../../tools/famous-curator/ui/state';
 
 function apply(actions: Action[]) {
   return actions.reduce(reducer, initialState);
@@ -104,26 +104,25 @@ describe('state reducer', () => {
     expect(s.processedOnce).toBe(true);
   });
 
-  it('canExport requires processedOnce + valid metadata + crop not dirty + starnet not dirty', () => {
-    // canExport is a derived selector exported from the same module —
-    // imported statically above (require() doesn't work in ESM/Vitest).
+  it('canCommit requires source loaded + valid metadata (no processedOnce / dirty checks)', () => {
+    // The unified Commit handles process/export/build in one click and
+    // will re-process when dirty, so the gate is just "source + meta".
     const ok = apply([
       { type: 'setSource', tmpId: 't', width: 100, height: 100, previewUrl: '/p' },
-      { type: 'markProcessed' },
       { type: 'setMetadata', metadata: { sourceUrl: 'https://a', license: 'CC-BY', author: 'A' } },
     ]);
-    expect(canExport(ok)).toBe(true);
+    expect(canCommit(ok)).toBe(true);
     const noMeta = apply([
       { type: 'setSource', tmpId: 't', width: 100, height: 100, previewUrl: '/p' },
-      { type: 'markProcessed' },
     ]);
-    expect(canExport(noMeta)).toBe(false);
+    expect(canCommit(noMeta)).toBe(false);
+    // Crop being dirty (or starnet, or not-yet-processed) no longer
+    // blocks Commit — the handler re-processes when needed.
     const cropDirty = apply([
       { type: 'setSource', tmpId: 't', width: 100, height: 100, previewUrl: '/p' },
-      { type: 'markProcessed' },
       { type: 'setMetadata', metadata: { sourceUrl: 'https://a', license: 'CC-BY', author: 'A' } },
       { type: 'setCrop', crop: { x: 0, y: 0, width: 50, height: 50, rotationDeg: 0 } },
     ]);
-    expect(canExport(cropDirty)).toBe(false);
+    expect(canCommit(cropDirty)).toBe(true);
   });
 });
