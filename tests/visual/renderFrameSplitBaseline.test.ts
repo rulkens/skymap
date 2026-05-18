@@ -350,6 +350,7 @@ describe('renderFrame visual baseline', () => {
           markerLineRenderer,
           scalarVolumeRenderer,
           volumeUpsample,
+          clusterMarkerRenderer: null,
         },
         subsystems: {
           proceduralDisks: proceduralDisksSubsystem,

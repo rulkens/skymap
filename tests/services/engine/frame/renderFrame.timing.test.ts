@@ -240,6 +240,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         labelRenderer: null,
         markerLineRenderer: null,
         scalarVolumeRenderer: null,
+        clusterMarkerRenderer: null,
       },
       subsystems: {
         proceduralDisks: null,

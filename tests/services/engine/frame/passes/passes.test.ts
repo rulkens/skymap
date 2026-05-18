@@ -145,13 +145,15 @@ const PASS_STUB = { setPipeline: vi.fn(), setVertexBuffer: vi.fn(), setBindGroup
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('HDR_PASSES registry', () => {
-  it('contains the six HDR passes in canonical draw order', () => {
+  it('contains the seven HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the encoder record;
     // see passes/index.ts module header.  Marker-lines and labels
     // moved out of HDR_PASSES to UI_PASSES (post-tone-map overlay) so
     // they could escape the tone-map curve compression and avoid the
-    // OVER-blend coherency issue on tile-based GPUs.
-    expect(HDR_PASSES).toHaveLength(6);
+    // OVER-blend coherency issue on tile-based GPUs.  Cluster-markers
+    // (sub-plan 2 task 14) is the seventh additive entry, drawn last
+    // so the halo/ring overlay composites over the cosmic-web volume.
+    expect(HDR_PASSES).toHaveLength(7);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
       'point-sprites',
       'procedural-disks',
@@ -159,6 +161,7 @@ describe('HDR_PASSES registry', () => {
       'milky-way',
       'filaments',
       'volume-upsample',
+      'cluster-markers',
     ]);
   });
 });
