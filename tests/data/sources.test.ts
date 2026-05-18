@@ -8,6 +8,8 @@ import {
   sourceMaxDistanceMpc,
   bandLabels,
   maskHas,
+  maskWith,
+  maskWithout,
 } from '../../src/data/sources';
 
 describe('Source.Famous', () => {
@@ -43,5 +45,40 @@ describe('Source.Famous', () => {
     // existing FullCard markup renders cleanly without a new branch.
     const bands = bandLabels(Source.Famous);
     expect(bands.g).toBeTruthy();
+  });
+});
+
+describe('Source enum — POI codes (cluster/supercluster/void)', () => {
+  it('appends Cluster=5, Supercluster=6, Void=7 to the enum', () => {
+    expect(Source.Cluster).toBe(5);
+    expect(Source.Supercluster).toBe(6);
+    expect(Source.Void).toBe(7);
+  });
+
+  it('keeps POI codes OUT of ALL_SOURCES (POIs are not survey sources)', () => {
+    // The points-pipeline visibility bitmask iterates ALL_SOURCES. POIs
+    // render through their own renderer (future clusterMarkerRenderer)
+    // with its own per-category visibility logic, so listing them here
+    // would muddy the meaning of "this bitmask filters survey galaxies."
+    expect(ALL_SOURCES).not.toContain(Source.Cluster);
+    expect(ALL_SOURCES).not.toContain(Source.Supercluster);
+    expect(ALL_SOURCES).not.toContain(Source.Void);
+  });
+
+  it('ALL_VISIBLE_MASK still covers only survey sources (no POI bits)', () => {
+    // Pre-POI mask = bits 0..4 set = 0b11111 = 31. POI codes (5/6/7)
+    // must remain unset so the survey draw loop doesn't accidentally
+    // gate on them.
+    expect(ALL_VISIBLE_MASK).toBe(0b11111);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Cluster)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Supercluster)).toBe(false);
+    expect(maskHas(ALL_VISIBLE_MASK, Source.Void)).toBe(false);
+  });
+
+  it('bitmask helpers still operate correctly on survey-source bits', () => {
+    // Sanity: the bitmask infrastructure isn't disturbed by appending
+    // new enum members that don't participate in the mask.
+    expect(maskHas(maskWith(0, Source.SDSS), Source.SDSS)).toBe(true);
+    expect(maskHas(maskWithout(ALL_VISIBLE_MASK, Source.Glade), Source.Glade)).toBe(false);
   });
 });
