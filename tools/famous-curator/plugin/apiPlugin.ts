@@ -34,6 +34,7 @@ import { handleProcessAlphaOnly } from './routes/processAlphaOnly';
 import { handleExport } from './routes/export';
 import { handleGalaxies } from './routes/galaxies';
 import { handleRecipe } from './routes/recipe';
+import { handleBuildFamous } from './routes/buildFamous';
 import { sessionPath, createSession } from './tmpSession';
 import { curatedGalaxyDir } from './paths';
 import { resolveStarnetConfig, type StarnetConfig } from './starnet';
@@ -263,6 +264,15 @@ export function apiPlugin(): Plugin {
             const body = await readJsonBody(req) as Parameters<typeof handleExport>[0]['body'];
             const out = await handleExport({ body, repoRoot });
             sendJson(res, 200, out);
+            return;
+          }
+
+          if (method === 'POST' && path === '/api/build-famous') {
+            // No request body — the script reads from the on-disk
+            // curated/ directory.  Synchronous: the script runs while
+            // the request hangs, then returns stdout/stderr + status.
+            const out = await handleBuildFamous({ repoRoot });
+            sendJson(res, out.ok ? 200 : 500, out);
             return;
           }
 

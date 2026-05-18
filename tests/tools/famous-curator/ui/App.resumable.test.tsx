@@ -35,6 +35,7 @@ describe('App resumable', () => {
       postProcess: vi.fn(),
       postAlphaOnly: vi.fn(),
       postExport: vi.fn(),
+      postBuildFamous: vi.fn(),
     } as Api & { getRecipe: ReturnType<typeof vi.fn> };
 
     render(<ApiProvider value={api}><App /></ApiProvider>);

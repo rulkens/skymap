@@ -27,6 +27,7 @@ import { ParamSliders } from './components/ParamSliders';
 import { PreviewPane } from './components/PreviewPane';
 import { MetadataForm } from './components/MetadataForm';
 import { WikipediaImagePicker } from './components/WikipediaImagePicker';
+import { BuildFamousButton } from './components/BuildFamousButton';
 import { resolveWikipediaMedia } from './wikipediaMedia';
 
 /**
@@ -288,6 +289,7 @@ function AppInner() {
           crop={state.crop}
           onCropChange={(c) => dispatch({ type: 'setCrop', crop: c })}
           onFileDrop={onFileDrop}
+          downloadOriginalUrl={state.tmpId ? `/api/preview/${state.tmpId}/source.png` : undefined}
         />
         <div className="curator-meta-row">
           <MetadataForm
@@ -325,6 +327,7 @@ function AppInner() {
         />
         <PreviewPane previews={state.previews} />
       </aside>
+      <BuildFamousButton />
     </div>
   );
 }

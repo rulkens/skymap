@@ -49,6 +49,13 @@ export type CropCanvasProps = {
   crop: Crop | undefined;
   onCropChange: (c: Crop) => void;
   onFileDrop: (file: File) => void;
+  /**
+   * When set, enables the "Download original" button.  The URL is
+   * expected to serve the full-resolution source bytes (PNG); we hint
+   * the browser to download rather than navigate via the `download`
+   * attribute.
+   */
+  downloadOriginalUrl?: string;
 };
 
 type DragState = {
@@ -245,6 +252,31 @@ export function CropCanvas(props: CropCanvasProps) {
         >
           Reset rotation
         </button>
+        {props.downloadOriginalUrl && (
+          <a
+            className="curator-crop-download"
+            href={props.downloadOriginalUrl}
+            download="source.png"
+            title="Download the full-resolution source image"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M8 2v9" />
+              <path d="M4 7l4 4 4-4" />
+              <path d="M3 14h10" />
+            </svg>
+            Download original
+          </a>
+        )}
         <span className="curator-crop-readout">
           crop {Math.round(props.crop.width)} × {Math.round(props.crop.height)} of{' '}
           {props.source.width} × {props.source.height} source ·{' '}

@@ -31,6 +31,9 @@ function makeFakeApi(): Api {
     postExport: vi.fn().mockResolvedValue({
       paths: { source: '', starless: '', full: '', atlas: '', recipe: '' },
     }),
+    postBuildFamous: vi.fn().mockResolvedValue({
+      ok: true, exitCode: 0, stdout: '', stderr: '', durationMs: 0,
+    }),
   };
 }
 

@@ -62,6 +62,14 @@ export type ExportResult = {
   };
 };
 
+export type BuildFamousResult = {
+  ok: boolean;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  durationMs: number;
+};
+
 export type Api = {
   getGalaxies: () => Promise<{ galaxies: GalaxyListEntry[] }>;
   /**
@@ -75,6 +83,13 @@ export type Api = {
   postProcess: (params: ProcessParams) => Promise<ProcessResult>;
   postAlphaOnly: (params: AlphaOnlyParams) => Promise<AlphaOnlyResult>;
   postExport: (params: ExportParams) => Promise<ExportResult>;
+  /**
+   * Run `npm run build-famous` server-side so the main app picks up the
+   * latest curated images.  Resolves with stdout/stderr + exit code;
+   * rejects only on transport errors.  A failed build (non-zero exit)
+   * still resolves so the UI can show the stderr to the user.
+   */
+  postBuildFamous: () => Promise<BuildFamousResult>;
 };
 
 async function readOrThrow<T>(res: Response): Promise<T> {
@@ -134,6 +149,15 @@ export function makeApi(deps: { fetch: typeof fetch }): Api {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
       }));
+    },
+    async postBuildFamous() {
+      // The /api/build-famous route returns 200 on success and 500 on
+      // non-zero exit, but in BOTH cases the JSON body is the
+      // BuildFamousResult.  readOrThrow would discard the body on 500
+      // so we read manually and surface the full result to the caller.
+      const res = await f('/api/build-famous', { method: 'POST' });
+      const body = (await res.json()) as BuildFamousResult;
+      return body;
     },
   };
 }
