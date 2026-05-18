@@ -118,6 +118,19 @@ export type EngineCallbacks = {
      */
     onFocusChange?: (info: GalaxyInfo | null) => void;
     /**
+     * Fired when the POI focus target changes — i.e. the user clicked
+     * a cluster / supercluster / void ring (or a deep-link drain
+     * resolved a `#poi=…` hash).  Passes the POI id on focus, `null`
+     * when focus clears (empty-space click, InfoCard close button).
+     *
+     * Parallel to `onFocusChange` (the galaxy version).  The two
+     * callbacks never both fire on the same gesture — clicking a POI
+     * clears the galaxy selection, and vice versa — so React's URL-
+     * hash hook can route each into its respective hash segment
+     * (`#focus=` vs `#poi=`) without cross-talk.
+     */
+    onPoiFocusChange?: (poiId: string | null) => void;
+    /**
      * Reserved for the legacy engine-derived scale-bar emission.
      * Scale-bar derivation now happens React-side from
      * `onCameraChange` snapshots; the slot stays for future overlays
