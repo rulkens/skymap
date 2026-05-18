@@ -88,6 +88,7 @@ import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
 import { catalogSourceFor } from '../../../data/catalogSource';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { commitPoiFocus } from '../helpers/commitPoiFocus';
+import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
@@ -147,33 +148,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     },
     buildGalaxyInfo: (cloud, localIdx, src) =>
       buildGalaxyInfo(cloud, localIdx, src, state.sources.famousMeta, state.sources.famousXrefs),
-    // Map a POI pick hit `(category, poiIndex)` back to its PointOfInterest
-    // record by indexing into the POI subsystem's per-category table.
-    //
-    // Contract: `clusterMarkerRenderer.pickRing` issues one instanced
-    // draw per category (cluster / supercluster / void) with
-    // firstInstance set to that category's bucket offset; the fragment
-    // packs `@builtin(instance_index) - bucketOffset` worth of slot
-    // info into the pick texture as `poiIndex`.  `unpackPick` already
-    // returns the per-category-local 0-based index (see
-    // `selectionEncoding.ts` and the dispatch comment in
-    // `clusterMarkerRenderer.pickRing`), so the array
-    // `getPoisForCategory(cat)` returned by the POI subsystem is the
-    // canonical lookup.
-    //
-    // Why the array lookup is safe: `produceMarkers` iterates `pois`
-    // in stored array order and packs descriptors in that order, then
-    // `setMarkers` re-groups by category preserving within-group
-    // order.  As long as every POI of a marker-bearing category sets
-    // `physicalRadiusMpc` (current truth for cluster/supercluster/void),
-    // `pois.filter(p => p.category === cat)[i]` is byte-identical to
-    // the renderer's i-th uploaded instance of that category.  If a
-    // future POI of a marker category omits the radius, the indexing
-    // contract breaks — see `getPoisForCategory`'s docstring.
-    resolvePoi: ({ category, poiIndex }) => {
-      const pois = state.subsystems.pois.getPoisForCategory(category);
-      return pois[poiIndex] ?? null;
-    },
+    // POI pick hit `(category, poiIndex)` → `PointOfInterest`.  The full
+    // contract (per-category-local indexing, why the array lookup is
+    // safe, why the helper is shared) lives in the module header of
+    // `resolvePoiFromPick`.  The same helper is called from the hover
+    // throttler in `runFrame.ts` so the click and hover paths can't
+    // drift on the lookup logic.
+    resolvePoi: (input) => resolvePoiFromPick(state.subsystems.pois, input),
   });
 
   // ── Camera auto-framing ──────────────────────────────────────────────
