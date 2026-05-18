@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m85",
+  "crop": {
+    "x": 175.15496134020617,
+    "y": 0,
+    "width": 3446.5484858247423,
+    "height": 3446.5484858247423
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4382#/media/File:Messier85_-_HST_-_Potw1905a.jpg",
+    "license": "CC BY 4.0",
+    "author": "Credit: ESA/Hubble &amp; NASA, R. O'Connell"
+  },
+  "processedAt": "2026-05-18T10:21:46.191Z"
+}

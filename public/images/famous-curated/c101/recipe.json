@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c101",
+  "crop": {
+    "x": 290.66064453125,
+    "y": 0,
+    "width": 4472,
+    "height": 4472
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_6744#/media/File:Wide_Field_Imager_view_of_a_Milky_Way_look-alike_NGC_6744.jpg",
+    "license": "CC BY 3.0",
+    "author": "ESO"
+  },
+  "processedAt": "2026-05-18T09:21:20.234Z"
+}

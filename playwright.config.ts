@@ -14,6 +14,11 @@
  * Tests assume http://localhost:5173 is already up and fail loudly if
  * it isn't — running them is an explicit visual-check step, not part of
  * the default CI flow.
+ *
+ * Famous-curator smoke tests live separately under `tests/playwright/` and
+ * are driven by `playwright.curator.config.ts`, which boots the curator
+ * dev server on :5200 with MOCK_STARNET=1.  That config is the correct
+ * entry point for `npx playwright test --config playwright.curator.config.ts`.
  */
 import { defineConfig, devices } from '@playwright/test';
 

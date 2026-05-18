@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m86",
+  "crop": {
+    "x": 209,
+    "y": 0,
+    "width": 3464,
+    "height": 3464
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4406#/media/File:Beacon_of_Light_Messier_86.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESA/Hubble &amp; NASA, P. Cote et al."
+  },
+  "processedAt": "2026-05-18T10:22:14.140Z"
+}
