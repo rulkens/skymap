@@ -121,6 +121,7 @@ import { createPoiSubsystem } from './subsystems/poiSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
+import { clearAll } from './helpers/clearAll';
 import { commitFocus } from './helpers/commitFocus';
 import { commitPoiFocus } from './helpers/commitPoiFocus';
 import { dispatchFocusOn } from './helpers/dispatchFocusOn';
@@ -858,15 +859,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // no `handle.X!` forward references, no `!` non-null assertions.
 
   function clearSelection(): void {
-    // Only fire the callback when something was actually selected.
-    // This lets the Esc handler in App.tsx call this unconditionally.
-    if (state.subsystems.selection.selected() !== null) {
-      state.subsystems.selection.setSelected(null);
-      // Clearing the pin also clears the camera-focus target — Esc /
-      // close ✕ are explicit "I'm done with this galaxy" signals.
-      cb.camera?.onFocusChange?.(null);
-      state.subsystems.scheduler.requestRender();
-    }
+    // Unified teardown — clears galaxy AND POI selection in one call.
+    // The branching + render-scheduling lives in `clearAll` so the
+    // engine.ts closure stays a thin wrapper.  See clearAll.ts for the
+    // "close the card" rationale and the order-of-firing guarantee.
+    clearAll(state, cb);
   }
 
   function setBiasMode(mode: BiasMode): void {
