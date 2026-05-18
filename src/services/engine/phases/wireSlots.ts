@@ -176,11 +176,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // the audit script in `tools/` can consume CLUSTER_ANCHORS without
   // pulling in interpretive supercluster/void POIs.
   //
-  // Per-category crosshair scaling: clusters get a small marker
-  // (cores are ~1 Mpc), superclusters get a larger one (extent
-  // 30-50 Mpc), voids get a still larger one (radii 30-50+ Mpc).
-  // The per-category min floors prevent vanishing markers on the
-  // closest anchors (e.g. Virgo, Local Void).
+  // physicalRadiusMpc per anchor comes from clusterAnchors.ts —
+  // literature-grounded values (R_200 / virial radii for clusters,
+  // characteristic structural extent for superclusters and voids).
+  // See the per-anchor citation comments in clusterAnchors.ts.
   const slug = (name: string): string =>
     name
       .toLowerCase()
@@ -193,7 +192,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         name: a.name,
         category: 'cluster',
         worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: Math.max(2, a.distMpc * 0.05),
+        // physicalRadiusMpc comes from clusterAnchors.ts (literature-
+        // grounded per-anchor value); we no longer derive it from
+        // distMpc here. See spec sub-plan-1 §7.2 + Task 3.2 for the
+        // citations.
+        physicalRadiusMpc: a.physicalRadiusMpc,
       }),
     ),
     ...SUPERCLUSTER_ANCHORS.map(
@@ -202,7 +205,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         name: a.name,
         category: 'supercluster',
         worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: Math.max(10, a.distMpc * 0.1),
+        physicalRadiusMpc: a.physicalRadiusMpc,
       }),
     ),
     ...VOID_ANCHORS.map(
@@ -211,7 +214,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         name: a.name,
         category: 'void',
         worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: Math.max(15, a.distMpc * 0.15),
+        physicalRadiusMpc: a.physicalRadiusMpc,
       }),
     ),
   ];
