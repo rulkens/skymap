@@ -43,6 +43,7 @@ import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
 import { FullCard } from './FullCard';
 import { CompactCard } from './CompactCard';
+import { CompactPoiCard } from './CompactPoiCard';
 import styles from './InfoCard.module.css';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -70,6 +71,23 @@ export type InfoCardProps = {
    * here is the belt-and-braces guarantee.
    */
   selectedPoi?: PointOfInterest | null;
+  /**
+   * The POI currently under the cursor, or null when no POI is hovered.
+   *
+   * Rendered as a slim `CompactPoiCard` panel below the pinned card
+   * (or standalone, when nothing is pinned) UNLESS it's the SAME POI as
+   * `selectedPoi` — in which case the pinned full card already shows
+   * the user everything the preview would, and the preview is
+   * suppressed to avoid a redundant DOM panel.  Mirrors the galaxy
+   * hover etiquette (`isStacked` checks `hovered.index !== selected.index`).
+   *
+   * Coexists with galaxy `hovered`: a single pick resolves to EITHER a
+   * galaxy OR a POI (see runFrame.ts's hover-throttler dispatch), so
+   * the two `hovered*` slots are mutually exclusive in practice.  In
+   * the rare frame where both are non-null (e.g. a hand-off mid-frame),
+   * both compact panels render; visual stacking handles the rest.
+   */
+  hoveredPoi?: PointOfInterest | null;
   /**
    * Optional callback fired when the user clicks "Focus" on the pinned card.
    * Forwarded to FullCard; ignored on the compact hover card.
@@ -111,15 +129,29 @@ export function InfoCard({
   hovered,
   selected,
   selectedPoi,
+  hoveredPoi,
   onFocus,
   onPoiFocus,
   onClose,
   onPoiClose,
 }: InfoCardProps): ReactNode {
-  // Nothing to show — stay entirely out of the DOM.  All three selection
-  // slots must be null; a POI selection alone is enough to keep the
-  // card on screen.
-  if (!hovered && !selected && !selectedPoi) return null;
+  // Nothing to show — stay entirely out of the DOM.  All four selection
+  // slots must be null; any one of them is enough to keep the card on
+  // screen.  Hovered-POI alone (no pinned card, no galaxy) is the
+  // common case for "cursor parked over a ring with no active pin".
+  if (!hovered && !selected && !selectedPoi && !hoveredPoi) return null;
+
+  // Suppression rule for the POI hover preview: hide when the SAME POI
+  // is already pinned.  The pinned FullCard already shows the user
+  // every field the preview would, so a second compact panel below it
+  // is pure noise.  Mirrors the galaxy `isStacked` rule
+  // (`hovered.index !== selected.index`).
+  //
+  // Defensive: `selectedPoi?.id` is undefined when `selectedPoi` is
+  // null/undefined, which never equals a real POI id — so a hovered POI
+  // with no pinned POI flows through correctly.
+  const showPoiHover =
+    hoveredPoi != null && hoveredPoi.id !== selectedPoi?.id;
 
   // ── Routing: which info goes into the FullCard, and is there a CompactCard? ──
   //
@@ -158,23 +190,33 @@ export function InfoCard({
           onClose={onPoiClose}
         />
         {hovered && <CompactCard info={hovered} />}
+        {showPoiHover && <CompactPoiCard poi={hoveredPoi!} />}
       </div>
     );
   }
 
+  // Galaxy / hover-only branch.  `fullCardInfo` may now be null when
+  // the ONLY active slot is `hoveredPoi` (no galaxy hover, no galaxy
+  // pin, no POI pin) — guard the FullCard render so we don't pass null
+  // into FullCard's required `info` prop.
   const isStacked = hovered != null && selected != null && hovered.index !== selected.index;
-  const fullCardInfo = isStacked ? selected! : (hovered ?? selected!);
+  const fullCardInfo: GalaxyInfo | null = isStacked
+    ? selected
+    : (hovered ?? selected ?? null);
   const fullCardPinned = isStacked ? true : !hovered;
 
   return (
     <div className={cx(styles.infoCardStack, 'infoCardStack')}>
-      <FullCard
-        info={fullCardInfo}
-        pinned={fullCardPinned}
-        onFocus={fullCardPinned ? onFocus : undefined}
-        onClose={fullCardPinned ? onClose : undefined}
-      />
+      {fullCardInfo && (
+        <FullCard
+          info={fullCardInfo}
+          pinned={fullCardPinned}
+          onFocus={fullCardPinned ? onFocus : undefined}
+          onClose={fullCardPinned ? onClose : undefined}
+        />
+      )}
       {isStacked && <CompactCard info={hovered!} />}
+      {showPoiHover && <CompactPoiCard poi={hoveredPoi!} />}
     </div>
   );
 }

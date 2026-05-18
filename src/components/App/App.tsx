@@ -177,6 +177,19 @@ export function App(): React.ReactElement {
   // useEngine extraction, and adding another engine-owned slice would
   // bloat that hook for a single feature.
   const [focusedPoiId, setFocusedPoiId] = useState<string | null>(null);
+
+  // ── Hovered-POI React mirror (drives the InfoCard hover preview) ──────
+  //
+  // Parallel to `focusedPoiId` above, but for the hover surface rather
+  // than the pinned-focus surface.  The engine fires
+  // `onPoiHoverChange(poiId | null)` whenever the cursor moves on / off
+  // a cluster / supercluster / void ring.  We mirror that into local
+  // state so `<InfoCard>` can render the slim `CompactPoiCard` preview.
+  //
+  // No URL sync (unlike focusedPoi) — hover state is ephemeral and
+  // syncing it to the hash would pollute browser history with one
+  // entry per ring the user mouses over.
+  const [hoveredPoiId, setHoveredPoiId] = useState<string | null>(null);
   const {
     pointSize,
     brightness,
@@ -239,6 +252,18 @@ export function App(): React.ReactElement {
       // holds.
       camera: {
         onPoiFocusChange: setFocusedPoiId,
+      },
+      // POI hover echo — engine fires this on cursor enter/leave for
+      // any cluster / supercluster / void ring.  Mirrors into
+      // `hoveredPoiId` so `<InfoCard>` can render the hover preview.
+      // Sister wiring to `camera.onPoiFocusChange` above; sits in the
+      // `selection` bag because hover is a selection-class concept
+      // (mirrors the existing `selection.onHoverChange` for galaxies).
+      // `setHoveredPoiId` is a stable React setter — useEngine's
+      // "capture once" contract holds the same way as for the focus
+      // pair.
+      selection: {
+        onPoiHoverChange: setHoveredPoiId,
       },
     },
   });
@@ -451,6 +476,25 @@ export function App(): React.ReactElement {
     [focusedPoiId, staticPois],
   );
 
+  // ── Resolved hovered POI (drives the InfoCard hover preview) ──────────
+  //
+  // Same shape as `focusedPoi` above — id-from-engine + lookup into
+  // `staticPois` — but for the hover surface.  Same memoization
+  // rationale: InfoCard's prop identity feeds React's reconciliation,
+  // and a fresh PointOfInterest reference per render would defeat
+  // shallow-equality checks downstream.  Cost is one O(~50) array
+  // scan whenever `hoveredPoiId` changes; `staticPois` is built once
+  // at mount so it doesn't drive re-runs.
+  //
+  // Tier-swap defence: if the static POI table is rebuilt mid-hover
+  // and the hovered id is no longer present, `find` returns undefined
+  // → `?? null` → the preview disappears.  Same belt-and-braces story
+  // as the focused-POI resolver above.
+  const hoveredPoi = useMemo(
+    () => (hoveredPoiId ? (staticPois.find((p) => p.id === hoveredPoiId) ?? null) : null),
+    [hoveredPoiId, staticPois],
+  );
+
   // ── Global keyboard shortcuts (Cmd+K, Esc, f, h, l) ─────────────────────
   useKeyboardShortcuts({
     selected,
@@ -506,6 +550,7 @@ export function App(): React.ReactElement {
           hovered={hovered}
           selected={selected}
           selectedPoi={focusedPoi}
+          hoveredPoi={hoveredPoi}
           onFocus={(info) => handleRef.current?.camera.focusOn(info)}
           onPoiFocus={(poi) => handleRef.current?.camera.focusOnPoi(poi)}
           onClose={() => handleRef.current?.selection.clear()}
