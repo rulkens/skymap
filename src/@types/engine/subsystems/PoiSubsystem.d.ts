@@ -37,6 +37,26 @@ export type PoiSubsystem = LabelProducer & {
   /** Returns the currently-selected POI id, or `null` if none. */
   getSelectedPoiId(): string | null;
   /**
+   * Mark a POI as hovered (for the InfoCard hover preview).  Unlike
+   * `setSelectedPoi`, the hovered POI has NO visual side effect: the
+   * marker descriptor's `ringAlpha` is unchanged.  The id is captured
+   * purely so the engine callback fan-out can drive the React-side
+   * preview card; the ring itself never changes appearance on hover.
+   *
+   * The "no visual side effect" rule is the load-bearing contract of
+   * the cluster-viz hover-preview plan (plan 5).  `produceMarkers`
+   * never reads `hoveredPoiId`; the test
+   * `poiSubsystem.hover.test.ts` "does NOT bump ringAlpha when only
+   * hovered" is the regression guard.
+   *
+   * No-op when `poiId` doesn't match any POI currently in the
+   * subsystem's table — same defensive contract as `setSelectedPoi`,
+   * with the same tier-swap-race motivation.
+   */
+  setHoveredPoi(poiId: string | null): void;
+  /** Returns the currently-hovered POI id, or `null` if none. */
+  getHoveredPoiId(): string | null;
+  /**
    * Return the POIs of the given category in the subsystem's current
    * iteration order — i.e. the same order `produceMarkers` walks them
    * when it builds the per-frame descriptor list.

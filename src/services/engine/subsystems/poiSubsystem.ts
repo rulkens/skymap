@@ -242,6 +242,15 @@ export function createPoiSubsystem(): PoiSubsystem {
   // marker-side concern (it only affects ringAlpha), so it does NOT
   // need to live in EngineState.
   let selectedPoiId: string | null = null;
+  // Mirror of `selectedPoiId` for the hover path.  Kept as a SEPARATE
+  // field (rather than collapsed into a `{ hovered, selected }` tuple)
+  // because that separation is structurally what enforces the plan-5
+  // hard constraint: produceMarkers reads `selectedPoiId` only, and
+  // never references `hoveredPoiId` — so a hover can't accidentally
+  // bump ringAlpha.  Collapsing the two would invite a future edit
+  // that reads the tuple in produceMarkers and silently breaks the
+  // visual contract.
+  let hoveredPoiId: string | null = null;
 
   function setPois(next: readonly PointOfInterest[]): void {
     // Defensive copy — caller can mutate their array freely without
@@ -278,6 +287,25 @@ export function createPoiSubsystem(): PoiSubsystem {
 
   function getSelectedPoiId(): string | null {
     return selectedPoiId;
+  }
+
+  function setHoveredPoi(poiId: string | null): void {
+    if (poiId === null) {
+      hoveredPoiId = null;
+      return;
+    }
+    // Defensive: silently ignore unknown ids — same rationale as
+    // setSelectedPoi.  A hover pick from the previous frame can resolve
+    // against a now-replaced POI table after a tier swap; clearing
+    // rather than retaining a stale id avoids leaking a phantom hover
+    // through to the React preview card.
+    const exists = pois.some((p) => p.id === poiId);
+    if (!exists) return;
+    hoveredPoiId = poiId;
+  }
+
+  function getHoveredPoiId(): string | null {
+    return hoveredPoiId;
   }
 
   function getPoisForCategory(category: PoiCategory): readonly PointOfInterest[] {
@@ -521,6 +549,8 @@ export function createPoiSubsystem(): PoiSubsystem {
     setCategoryVisible,
     setSelectedPoi,
     getSelectedPoiId,
+    setHoveredPoi,
+    getHoveredPoiId,
     getPoisForCategory,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.
