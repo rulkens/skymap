@@ -20,7 +20,6 @@
 import type { EngineState } from '../state/EngineState';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Source } from '../../../data/sources';
-import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
@@ -76,18 +75,17 @@ export type RenderFrameInput = {
    */
   scalarVolumeRenderer: ScalarVolumeRenderer | null;
   /**
-   * TexturedQuadRenderer + TexturedDiskRenderer references forwarded straight to the
-   * thumbnail subsystem.  The subsystem already `bindAtlas`-bound them
-   * at engine-startup; the per-frame `runFrame` input still takes them
-   * as explicit fields (legacy of the pre-extraction inline body) so
-   * we forward them unchanged.  See thumbnailSubsystem.runFrame.
+   * TexturedDiskRenderer reference forwarded straight to the thumbnail
+   * subsystem.  The subsystem already `bindAtlas`-bound it at
+   * engine-startup; the per-frame `runFrame` input still takes it as
+   * an explicit field (legacy of the pre-extraction inline body) so we
+   * forward it unchanged.  See thumbnailSubsystem.runFrame.
    */
-  texturedQuadRenderer: TexturedQuadRenderer;
   texturedDiskRenderer: TexturedDiskRenderer;
   /**
    * Procedural-disk renderer reference forwarded through to the
-   * `PassDeps` bag for the new LOD-1 pass.  Same forward-it-as-an-
-   * explicit-field pattern as its quad/disk siblings above.
+   * `PassDeps` bag for the LOD-1 pass.  Same forward-it-as-an-explicit-
+   * field pattern as its disk sibling above.
    */
   proceduralDiskRenderer: ProceduralDiskRenderer;
 

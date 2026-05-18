@@ -146,7 +146,6 @@ describe('galaxy-impostor visual baseline (post-split)', () => {
       const summary = {
         procDisks: { count: procOut.instances.length, hash: hashInstances(procOut.instances) },
         texDisks: { count: texOut.disks.length, hash: hashInstances(texOut.disks) },
-        texQuads: { count: texOut.quads.length, hash: hashInstances(texOut.quads) },
       };
 
       expect(summary).toMatchInlineSnapshot(`
@@ -158,10 +157,6 @@ describe('galaxy-impostor visual baseline (post-split)', () => {
           "texDisks": {
             "count": 8,
             "hash": "axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.4375|u1=0.5|v0=0|v1=0.0625|x=10|y=0.007|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.375|u1=0.4375|v0=0|v1=0.0625|x=10|y=0.006|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.3125|u1=0.375|v0=0|v1=0.0625|x=10|y=0.005|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.25|u1=0.3125|v0=0|v1=0.0625|x=10|y=0.004|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.1875|u1=0.25|v0=0|v1=0.0625|x=10|y=0.003|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.125|u1=0.1875|v0=0|v1=0.0625|x=10|y=0.002|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0.0625|u1=0.125|v0=0|v1=0.0625|x=10|y=0.001|z=0;axisRatio=0.7|fadeAlpha=0.125|positionAngleDeg=45|sizeWorld=0.2|u0=0|u1=0.0625|v0=0|v1=0.0625|x=10|y=0|z=0",
-          },
-          "texQuads": {
-            "count": 0,
-            "hash": "",
           },
         }
       `);

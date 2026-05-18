@@ -15,7 +15,6 @@
  * single canonical site.
  */
 
-import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
@@ -27,9 +26,7 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Source } from '../../../data/sources';
 
 export type PassDeps = {
-  /** Atlas-bound textured-billboard renderer for galaxy thumbnails. */
-  texturedQuadRenderer: TexturedQuadRenderer;
-  /** 3D-oriented procedural-disk renderer for large galaxies. */
+  /** Atlas-bound 3D-oriented disk renderer for large galaxy thumbnails. */
   texturedDiskRenderer: TexturedDiskRenderer;
   /**
    * Procedural-disk renderer for the LOD-1 pass.  Reads its instance

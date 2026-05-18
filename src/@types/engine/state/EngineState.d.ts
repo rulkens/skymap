@@ -75,6 +75,7 @@
 
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EngineBiasState } from './EngineBiasState';
+import type { EngineDebugState } from './EngineDebugState';
 import type { EngineSourceState } from './EngineSourceState';
 import type { EnginePickingState } from './EnginePickingState';
 import type { EngineAssetSlots } from './EngineAssetSlots';
@@ -93,4 +94,10 @@ export type EngineState = {
   cam: ReturnType<typeof createOrbitCamera> | null;
   initialCamSnapshot: InitialCam | null;
   assetSlots: EngineAssetSlots;
+  /**
+   * Debug-only per-frame skip flags.  Populated only by the React-
+   * side DebugPanel; empty in production.  See `EngineDebugState`
+   * for the rationale on living here vs the engine closure.
+   */
+  debug: EngineDebugState;
 };

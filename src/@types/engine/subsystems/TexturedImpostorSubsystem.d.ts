@@ -3,10 +3,15 @@
  *
  * Walks the catalog, applies the px ≥ 24 fetch gate, allocates atlas
  * slots through the injected `GalaxyAtlasSubsystem`, schedules fetches,
- * applies the metadata-based disk-vs-quad branch (per-galaxy choice
- * driven by `Number.isFinite(axisRatio) && Number.isFinite(positionAngleDeg)`
- * — see the legacy thumbnailSubsystem.ts:820), computes load-fade +
- * distance-fade multipliers, sorts back-to-front, emits two arrays.
+ * computes load-fade + distance-fade multipliers, sorts back-to-front,
+ * emits the disk array.
+ *
+ * The legacy screen-aligned quad fallback (for galaxies with missing
+ * orientation) was removed on 2026-05-18 — `tools/catalog/buildAllBins.ts`
+ * applies a deterministic hash-based orientation fallback so every
+ * encoded galaxy has finite (axisRatio, PA), meaning the quad branch
+ * never fired for non-Famous galaxies and only fired for famous ones at
+ * <4 px apparent size (where the point sprite handled them already).
  *
  * Owns the per-key `bitmapReadyTime` map (the load-fade window state).
  * Subscribes to the atlas's eviction handler to clear that map when
@@ -15,7 +20,6 @@
 
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { ThumbnailInstance } from '../../rendering/ThumbnailInstance';
 import type { DiskInstance } from '../../rendering/DiskInstance';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
@@ -30,10 +34,8 @@ export type TexturedImpostorFrameInput = {
 };
 
 export type TexturedImpostorFrameOutput = {
-  /** LOD-2 primary pipeline — galaxies with finite orientation. */
+  /** LOD-2 — galaxies with finite orientation, sorted back-to-front. */
   readonly disks: readonly DiskInstance[];
-  /** LOD-2 fallback pipeline — galaxies missing orientation. */
-  readonly quads: readonly ThumbnailInstance[];
 };
 
 export type TexturedImpostorSubsystem = Destroyable & {

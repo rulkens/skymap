@@ -97,9 +97,14 @@ export function encodeHdrSingle(
   });
 
   for (const pass of HDR_PASSES) {
-    if (pass.enabled(state, ctx, settings)) {
-      pass.draw(hdrPass, ctx, state, settings, deps);
-    }
+    // `state.debug.disabledPasses` is the DebugPanel's renderer-toggle
+    // surface — checked AFTER the pass's own `enabled()` gate so the
+    // override is one-way (hides a pass that would otherwise run; can
+    // never force-enable a pass whose gate returned false).  Set is
+    // empty in production, so the membership check is in the noise.
+    if (!pass.enabled(state, ctx, settings)) continue;
+    if (state.debug.disabledPasses.has(pass.name)) continue;
+    pass.draw(hdrPass, ctx, state, settings, deps);
   }
 
   hdrPass.end();

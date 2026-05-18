@@ -15,7 +15,10 @@ describe('TIMING_SLOT_NAMES', () => {
   it('maps every spec-defined slot to the correct begin/end indices', () => {
     expect(TIMING_SLOT_NAMES.get('point-sprites')).toEqual([0, 1]);
     expect(TIMING_SLOT_NAMES.get('procedural-disks')).toEqual([2, 3]);
-    expect(TIMING_SLOT_NAMES.get('textured-impostors')).toEqual([4, 5]);
+    // `textured-disks` inherits the legacy `textured-impostors` indices
+    // (4, 5) so historical samples stay comparable across the
+    // 2026-05-18 quad-removal rename.
+    expect(TIMING_SLOT_NAMES.get('textured-disks')).toEqual([4, 5]);
     expect(TIMING_SLOT_NAMES.get('filaments')).toEqual([6, 7]);
     expect(TIMING_SLOT_NAMES.get('scalar-volume')).toEqual([8, 9]);
     expect(TIMING_SLOT_NAMES.get('milky-way')).toEqual([10, 11]);
