@@ -87,6 +87,9 @@ type CategoryStyle = {
   readonly pixelWidth: number;
   /**
    * Smoothstep fade-band width in pixels above `minApparentSizePx`.
+   * (Unchanged from the pre-cluster-viz revision; see the existing
+   *  docblock — kept verbatim above this comment block.)
+   *
    * When set, POIs whose apparent size lands inside the band
    * `[minApparentSizePx, minApparentSizePx + fadeBandPx]` fade in via
    * smoothstep instead of popping.  Below the lower bound: still
@@ -100,6 +103,29 @@ type CategoryStyle = {
    * frame from the camera distance.
    */
   readonly fadeBandPx?: number;
+  /**
+   * RGB halo tint for the marker pass.  `null` opts the category OUT
+   * of halo rendering — voids are 'absence', not 'presence'; emitting
+   * an additive glow there would contradict the spec's semantics.
+   * Cluster + supercluster use the same warm tint family as labelColor.
+   */
+  readonly haloColor: Vec3 | null;
+  /**
+   * RGB ring tint for the marker pass.  Always present — every
+   * marker-bearing category gets a visible ring at its physicalRadiusMpc.
+   * Mirrors labelColor.rgb (alpha is computed per-frame).
+   */
+  readonly ringColor: Vec3;
+  /**
+   * Apparent on-screen radius (pixels) above which the marker fades
+   * OUT.  Above this threshold the ring is so big it fills the viewport
+   * and obscures the galaxies it's meant to contain; the fade hands
+   * the view back to the surrounding membership.  Reuses the smoothstep
+   * shape of the existing `fadeBandPx` fade-IN ramp for symmetry.
+   */
+  readonly markerMaxApparentRadiusPx: number;
+  /** Smoothstep band width for the marker fade-out. */
+  readonly markerMaxApparentFadeBandPx: number;
 };
 
 /**
@@ -128,6 +154,10 @@ export const POI_STYLES = {
     maxPixelSize: 150,
     worldEmMpc: 1.25,
     pixelWidth: 2,
+    haloColor: [1.0, 0.85, 0.4] as Vec3, // Warm yellow (matches labelColor.rgb).
+    ringColor: [1.0, 0.85, 0.4] as Vec3, // Warm yellow (matches labelColor.rgb).
+    markerMaxApparentRadiusPx: 800,
+    markerMaxApparentFadeBandPx: 200,
   },
   supercluster: {
     labelColor: [1.0, 0.8, 0.5, 1] as Vec4,
@@ -136,6 +166,10 @@ export const POI_STYLES = {
     maxPixelSize: 150,
     worldEmMpc: 5.0,
     pixelWidth: 2,
+    haloColor: [1.0, 0.8, 0.5] as Vec3, // Warm orange (matches labelColor.rgb).
+    ringColor: [1.0, 0.8, 0.5] as Vec3, // Warm orange (matches labelColor.rgb).
+    markerMaxApparentRadiusPx: 800,
+    markerMaxApparentFadeBandPx: 200,
   },
   famousGalaxy: {
     labelColor: [1.0, 0.95, 0.8, 1] as Vec4,
@@ -145,6 +179,13 @@ export const POI_STYLES = {
     worldEmMpc: 0.0125,
     pixelWidth: 2.5,
     fadeBandPx: 4,
+    // Famous galaxies don't get the halo/ring treatment — they have
+    // curated thumbnails on close approach instead.  null tints mean
+    // produceMarkers skips them entirely.
+    haloColor: null,
+    ringColor: [0, 0, 0] as Vec3,
+    markerMaxApparentRadiusPx: 800,
+    markerMaxApparentFadeBandPx: 200,
   },
   void: {
     labelColor: [0.6, 0.85, 0.95, 1] as Vec4,
@@ -153,6 +194,13 @@ export const POI_STYLES = {
     maxPixelSize: 150,
     worldEmMpc: 2.5,
     pixelWidth: 2,
+    // Voids: ring only.  Cyan tint per spec §2.1.  Halo opted out —
+    // voids are absence, not presence; an additive glow would
+    // contradict the semantics.
+    haloColor: null,
+    ringColor: [0.45, 0.7, 0.85] as Vec3,
+    markerMaxApparentRadiusPx: 800,
+    markerMaxApparentFadeBandPx: 200,
   },
 } as const satisfies Readonly<Record<string, CategoryStyle>>;
 
