@@ -69,6 +69,14 @@ type CommonsResponse = {
     pages?: Record<string, {
       imageinfo?: Array<{
         url?: string;
+        /**
+         * Scaled thumbnail URL — present when the API call requests
+         * `iiurlwidth=N`.  Commons regenerates it server-side at most N
+         * pixels wide; we use it to dodge the 50 MB upload-limit on the
+         * curator's /api/fetch route, since some Wikipedia galaxy
+         * originals are 8000+ pixels wide and well over 100 MB.
+         */
+        thumburl?: string;
         extmetadata?: {
           Artist?: { value?: string };
           LicenseShortName?: { value?: string };
@@ -77,6 +85,15 @@ type CommonsResponse = {
     }>;
   };
 };
+
+/**
+ * Max width for the curator's source image.  The curator exports at
+ * 1024² so anything wider than ~2× that is wasted bytes that just slow
+ * the fetch + decode.  2400 px gives generous headroom for cropping
+ * into the centre of a wider source while staying under the 50 MB
+ * limit for essentially any JPEG/PNG Wikipedia hosts.
+ */
+const CURATOR_MAX_WIDTH = 2400;
 
 /**
  * Resolve a Wikipedia/Commons URL to its direct file URL + extracted
@@ -96,6 +113,11 @@ export async function resolveWikipediaMedia(
   api.searchParams.set('format', 'json');
   api.searchParams.set('prop', 'imageinfo');
   api.searchParams.set('iiprop', 'url|extmetadata');
+  // iiurlwidth makes Commons emit a `thumburl` field at the requested
+  // pixel width.  Without it, very large Wikipedia originals (some
+  // galaxy uploads are 8000+ px / 100+ MB) blow through the curator's
+  // 50 MB /api/fetch cap.  See CURATOR_MAX_WIDTH above.
+  api.searchParams.set('iiurlwidth', String(CURATOR_MAX_WIDTH));
   api.searchParams.set('titles', title);
   // origin=* requests anonymous CORS — required when calling from a
   // non-Wikimedia origin without credentials.
@@ -109,7 +131,11 @@ export async function resolveWikipediaMedia(
   const info = page?.imageinfo?.[0];
   if (!info?.url) return null;
   return {
-    directUrl: info.url,
+    // Prefer the scaled thumbnail when Commons generated one (it only
+    // does so for originals wider than CURATOR_MAX_WIDTH).  For
+    // already-small originals `thumburl` is omitted and we fall back
+    // to the original URL, which is already within size budget.
+    directUrl: info.thumburl ?? info.url,
     author: stripHtml(info.extmetadata?.Artist?.value ?? ''),
     license: info.extmetadata?.LicenseShortName?.value ?? '',
   };
