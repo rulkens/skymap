@@ -152,7 +152,6 @@ describe('EngineState type', () => {
         filamentRenderer: null,
         labelRenderer: null,
         markerLineRenderer: null,
-        texturedQuadRenderer: null,
         texturedDiskRenderer: null,
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
@@ -200,6 +199,7 @@ describe('EngineState type', () => {
         cf4Density: null,
         mcpm: null,
       },
+      debug: { disabledPasses: new Set<string>() },
     };
     stateRef.current = state;
 
@@ -318,7 +318,6 @@ describe('EngineState type', () => {
         filamentRenderer: null,
         labelRenderer: null,
         markerLineRenderer: null,
-        texturedQuadRenderer: null,
         texturedDiskRenderer: null,
         proceduralDiskRenderer: null,
         milkyWayRenderer: null,
@@ -366,6 +365,7 @@ describe('EngineState type', () => {
         cf4Density: null,
         mcpm: null,
       },
+      debug: { disabledPasses: new Set<string>() },
     };
     stateRef.current = state;
 

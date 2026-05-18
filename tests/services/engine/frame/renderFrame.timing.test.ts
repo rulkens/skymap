@@ -183,7 +183,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   const pointRenderer = makeLoggingRenderer();
   const milkyWayRenderer = makeLoggingRenderer();
   const proceduralDiskRenderer = makeLoggingRenderer();
-  const texturedQuadRenderer = makeLoggingRenderer();
   const texturedDiskRenderer = makeLoggingRenderer();
   const postProcess = makePostProcess();
 
@@ -250,6 +249,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // milky-way fire), so opacityOf returns 0 — no fade-out tail.
         fades: { opacityOf: () => 0 },
       },
+      // DebugPanel renderer-toggle override bag — empty by default so
+      // the encoder loop skips no passes.
+      debug: { disabledPasses: new Set<string>() },
     } as never,
     milkyWayITimeSec: 0,
     device,
@@ -257,7 +259,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     milkyWayRenderer: milkyWayRenderer as never,
     filamentRenderer: null,
     scalarVolumeRenderer: null,
-    texturedQuadRenderer: texturedQuadRenderer as never,
     texturedDiskRenderer: texturedDiskRenderer as never,
     proceduralDiskRenderer: proceduralDiskRenderer as never,
     settings: settings as never,

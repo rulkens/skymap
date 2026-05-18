@@ -28,11 +28,20 @@
  *
  *   1. point-sprites       — instanced billboards (always-on)
  *   2. procedural-disks    — LOD-1 procedural-disk impostors
- *   3. textured-impostors  — LOD-2 textured-disk + textured-quad impostors
+ *   3. textured-disks      — LOD-2 3D-oriented textured-disk impostors
  *   4. milky-way           — procedural impostor at the world origin
  *   5. filaments           — cosmic-web skeleton overlay
  *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
+ *
+ * `textured-disks` is what remains of the briefly-split (and never-shipped)
+ * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
+ * half was deleted along with its renderer because the build-pipeline's
+ * deterministic orientation fallback (`buildAllBins.ts`) means every
+ * encoded galaxy has finite (axisRatio, PA) — the quad branch in the
+ * impostor subsystem only ever fired for famous galaxies at <4 px,
+ * where the point sprite handled them.  See
+ * `texturedImpostorSubsystem.ts` for the full rationale.
  *
  * Reordering passes is a one-line array shuffle with a clear
  * semantic.  The DebugPanel `GpuTimingsSection` derives its row order
@@ -87,7 +96,7 @@
 import type { Pass } from '../../../../@types/engine/frame/Pass';
 import { pointSpritesPass } from './pointSpritesPass';
 import { proceduralDisksPass } from './proceduralDisksPass';
-import { texturedImpostorsPass } from './texturedImpostorsPass';
+import { texturedDisksPass } from './texturedDisksPass';
 import { filamentsPass } from './filamentsPass';
 import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
@@ -98,7 +107,7 @@ import { labelsPass } from './labelsPass';
 export const HDR_PASSES: readonly Pass[] = [
   pointSpritesPass,
   proceduralDisksPass,
-  texturedImpostorsPass,
+  texturedDisksPass,
   milkyWayPass,
   filamentsPass,
   volumeUpsamplePass,
@@ -114,7 +123,7 @@ export const UI_PASSES: readonly Pass[] = [markerLinesPass, labelsPass];
 
 export { pointSpritesPass } from './pointSpritesPass';
 export { proceduralDisksPass } from './proceduralDisksPass';
-export { texturedImpostorsPass } from './texturedImpostorsPass';
+export { texturedDisksPass } from './texturedDisksPass';
 export { filamentsPass } from './filamentsPass';
 export { volumeUpsamplePass } from './volumeUpsamplePass';
 export { milkyWayPass } from './milkyWayPass';

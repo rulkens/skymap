@@ -119,6 +119,7 @@ import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
 import { createPoiSubsystem } from './subsystems/poiSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
+import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
 import { logCameraState } from './helpers/logCameraState';
@@ -480,7 +481,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // clean them up; M1 of the 2026-05-11 audit then collapsed
       // the redundant `phaseLocals` mirror.  See
       // `EngineGpuHandles.d.ts` for the full reachability story.
-      texturedQuadRenderer: null,
       texturedDiskRenderer: null,
       proceduralDiskRenderer: null,
       milkyWayRenderer: null,
@@ -666,6 +666,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // Tier-aware: setTier reloads on tier change.  See loading/slots/mcpmSlot.ts.
       mcpm: null,
     },
+    // ── Debug-only per-frame skip flags ─────────────────────────────────
+    //
+    // The DebugPanel's `RenderTogglesSection` mutates this set via the
+    // `passOverrides` sub-handle so a developer can flip individual
+    // renderer passes off to visually distinguish overlapping draws.
+    // Empty in production — every encoder helper pays one `Set.has` per
+    // pass per frame, which is in the noise next to the GPU dispatch.
+    debug: { disabledPasses: new Set<string>() },
   };
 
   // ── Register label producers with the director (Task 6) ───────────────
@@ -1321,8 +1329,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
-    state.gpu.texturedQuadRenderer?.destroy();
-    state.gpu.texturedQuadRenderer = null;
     state.gpu.texturedDiskRenderer?.destroy();
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
@@ -1463,16 +1469,33 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         setSensitivity: setSpaceMouseSensitivity,
       },
     },
-    // ── Debug sub-handle (observability, not knobs) ──────────────────────
+    // ── Debug sub-handle (observability + dev toggles, not knobs) ────────
     //
-    // Getter rather than a copied reference: `state.gpu.timingService` is
-    // assigned by the async `initGpu` IIFE AFTER this handle literal is
-    // constructed.  A copied value would be `null` forever; the getter
-    // reads the live slot whenever the React shell asks for it.  See
-    // `EngineDebugHandle.d.ts` for the H5-sub-handle rationale.
+    // `timingService`: getter rather than a copied reference because
+    // `state.gpu.timingService` is assigned by the async `initGpu` IIFE
+    // AFTER this handle literal is constructed.  A copied value would
+    // be `null` forever; the getter reads the live slot whenever the
+    // React shell asks for it.  See `EngineDebugHandle.d.ts` for the
+    // H5-sub-handle rationale.
+    //
+    // `passOverrides`: DebugPanel hook that mutates
+    // `state.debug.disabledPasses`.  `allNames` is materialised once
+    // from `HDR_PASSES` + `UI_PASSES` (both immutable registries) so
+    // the React rows stay in lockstep with the encoder's pass loop.
+    // Every `setDisabled` wakes the scheduler so the toggle is visible
+    // even when the render-on-demand loop is idle.
     debug: {
       get timingService() {
         return state.gpu.timingService;
+      },
+      passOverrides: {
+        allNames: [...HDR_PASSES.map((p) => p.name), ...UI_PASSES.map((p) => p.name)],
+        isDisabled: (name: string) => state.debug.disabledPasses.has(name),
+        setDisabled: (name: string, disabled: boolean) => {
+          if (disabled) state.debug.disabledPasses.add(name);
+          else state.debug.disabledPasses.delete(name);
+          state.subsystems.scheduler.requestRender();
+        },
       },
     },
 
