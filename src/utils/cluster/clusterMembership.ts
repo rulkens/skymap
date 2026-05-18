@@ -89,8 +89,13 @@ export function clusterMembership(
   const packedIds: number[] = [];
   for (const { source, catalog } of catalogs) {
     const { positions, count } = catalog;
-    // Hoist the source-shift into a local — packSelection is small but
-    // calling it 3.5M times still costs more than inlining.
+    // We could inline `(source << 27) | i` here to skip the
+    // packSelection call on each member, but the call only fires for
+    // galaxies INSIDE the sphere (typically a few hundred per cluster
+    // out of millions scanned), so the call overhead is in the noise
+    // compared to the inner-loop subtract/dot. Calling packSelection
+    // keeps the encoding centralised — if the (shift, mask, offset)
+    // layout ever changes, this hot loop doesn't need a parallel update.
     for (let i = 0; i < count; i++) {
       const base = i * 3;
       const dx = positions[base + 0]! - cx;
