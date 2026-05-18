@@ -41,6 +41,7 @@
     "build-filaments-small": "tsx tools/filaments/buildFilaments.ts --cut 7 --output public/data/filaments-small.bin",
     "build-fonts": "tsx tools/fonts/buildFontAtlas.ts",
     "build-tiers": "tsx tools/catalog/buildAllBins.ts",
+    "curate-famous": "vite --config tools/famous-curator/vite.config.ts",
     "deploy": "git push origin main && echo 'Pushed.  Cloudflare Workers Assets is rebuilding — watch https://dash.cloudflare.com/?to=/:account/workers-and-pages'",
     "expand-famous": "tsx tools/famous/expandFamousFromCatalogs.ts",
     "dev": "vite",
