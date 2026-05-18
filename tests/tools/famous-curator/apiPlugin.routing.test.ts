@@ -32,7 +32,10 @@ async function dispatch(req: FakeReq): Promise<FakeRes> {
   const server = { middlewares: { use(h: typeof mws[number]) { mws.push(h); } } };
   const cfg = plugin.configureServer;
   if (typeof cfg !== 'function') throw new Error('cfg fn');
-  await cfg(server as never);
+  // configureServer is typed with `this: MinimalPluginContextWithoutEnvironment`
+  // but our implementation never references `this` — use call() to satisfy
+  // the type-checker without importing the heavyweight Vite context shape.
+  await (cfg as (server: unknown) => unknown)(server);
   const res = fakeRes();
   for (const mw of mws) {
     await mw(req, res, () => {});
