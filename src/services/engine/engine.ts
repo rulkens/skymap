@@ -95,7 +95,6 @@ import {
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
-import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { LodMode } from '../../@types/data/LodMode';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
