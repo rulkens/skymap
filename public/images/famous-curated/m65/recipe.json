@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m65",
+  "crop": {
+    "x": 160,
+    "y": 0,
+    "width": 880,
+    "height": 880
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3623#/media/File:M65_Galaxy_from_the_Mount_Lemmon_SkyCenter_Schulman_Telescope_courtesy_Adam_Block.jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "Ngc1535"
+  },
+  "processedAt": "2026-05-18T11:02:11.343Z"
+}

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c24",
+  "crop": {
+    "x": 521,
+    "y": 0,
+    "width": 3590,
+    "height": 3590
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_1275#/media/File:NGC_1275_Hubble.jpg",
+    "license": "Public domain",
+    "author": "NASA, ESA, and the Hubble Heritage (STScI/AURA)-ESA/Hubble Collaboration"
+  },
+  "processedAt": "2026-05-18T10:53:10.557Z"
+}

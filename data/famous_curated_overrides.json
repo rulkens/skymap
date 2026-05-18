@@ -119,6 +119,132 @@
       "license": "CC BY 3.0",
       "author": "ESO",
       "processedAt": "2026-05-18T10:29:10.095Z"
+    },
+    "c12": {
+      "dir": "famous-curated/c12",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_6946#/media/File:Fireworks_Galaxy.jpg",
+      "license": "CC0",
+      "author": "Andreigusan",
+      "processedAt": "2026-05-18T10:51:57.784Z"
+    },
+    "c24": {
+      "dir": "famous-curated/c24",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_1275#/media/File:NGC_1275_Hubble.jpg",
+      "license": "Public domain",
+      "author": "NASA, ESA, and the Hubble Heritage (STScI/AURA)-ESA/Hubble Collaboration",
+      "processedAt": "2026-05-18T10:53:10.557Z"
+    },
+    "c26": {
+      "dir": "famous-curated/c26",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4244#/media/File:NGC_4244_Silver_Needle_Galaxu.png",
+      "license": "CC0",
+      "author": "Chuck Ayoub",
+      "processedAt": "2026-05-18T10:53:43.342Z"
+    },
+    "c5": {
+      "dir": "famous-curated/c5",
+      "sourceUrl": "https://en.wikipedia.org/wiki/IC_342#/media/File:Euclid%E2%80%99s_view_of_spiral_galaxy_IC_342_ESA25170723.jpg",
+      "license": "CC BY-SA 3.0 igo",
+      "author": "ESA/Euclid/Euclid Consortium/NASA image processing by J.-C. Cuillandre (CEA Paris-Saclay) G. Anselmi",
+      "processedAt": "2026-05-18T10:57:33.524Z"
+    },
+    "c57": {
+      "dir": "famous-curated/c57",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_6822#/media/File:Barnard's_Galaxy.jpg",
+      "license": "CC BY 4.0",
+      "author": "ESO",
+      "processedAt": "2026-05-18T10:59:28.872Z"
+    },
+    "c60": {
+      "dir": "famous-curated/c60",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4038#/media/File:Antennae_Galaxies_reloaded.jpg",
+      "license": "CC BY 4.0",
+      "author": "ESA/Hubble &amp; NASA",
+      "processedAt": "2026-05-18T11:00:41.012Z"
+    },
+    "m81": {
+      "dir": "famous-curated/m81",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3031#/media/File:M81.jpg",
+      "license": "CC BY-SA 4.0",
+      "author": "Ken Crawford",
+      "processedAt": "2026-05-18T11:01:39.095Z"
+    },
+    "m65": {
+      "dir": "famous-curated/m65",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3623#/media/File:M65_Galaxy_from_the_Mount_Lemmon_SkyCenter_Schulman_Telescope_courtesy_Adam_Block.jpg",
+      "license": "CC BY-SA 4.0",
+      "author": "Ngc1535",
+      "processedAt": "2026-05-18T11:02:11.343Z"
+    },
+    "m63": {
+      "dir": "famous-curated/m63",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_5055#/media/File:M63_Sunflower_Galaxy.png",
+      "license": "CC BY-SA 4.0",
+      "author": "Shark13016",
+      "processedAt": "2026-05-18T11:03:31.104Z"
+    },
+    "m61": {
+      "dir": "famous-curated/m61",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4303#/media/File:Portion_of_Virgo_Cluster_(without_asteroids)_(noirlab2521ak).jpg",
+      "license": "CC BY 4.0",
+      "author": "RubinObs/NOIRLab/SLAC/NSF/DOE/AURA",
+      "processedAt": "2026-05-18T11:04:10.687Z"
+    },
+    "m77": {
+      "dir": "famous-curated/m77",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_1068#/media/File:The_squid_and_the_whale_(potw2515a).jpg",
+      "license": "CC BY 4.0",
+      "author": "ESA/Hubble &amp; NASA, L. C. Ho, D. Thilker",
+      "processedAt": "2026-05-18T11:06:46.148Z"
+    },
+    "m49": {
+      "dir": "famous-curated/m49",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4472#/media/File:Messier_49-Rubin_Observatory.png",
+      "license": "CC BY 4.0",
+      "author": "RubinObs/NOIRLab/SLAC/NSF/DOE/AURA",
+      "processedAt": "2026-05-18T11:07:40.893Z"
+    },
+    "m33": {
+      "dir": "famous-curated/m33",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_598#/media/File:M33.jpg",
+      "license": "Public domain",
+      "author": "NASA/JPL-Caltech",
+      "processedAt": "2026-05-18T11:15:35.349Z"
+    },
+    "m32": {
+      "dir": "famous-curated/m32",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_221#/media/File:M31_09-01-2011.jpg",
+      "license": "CC BY 2.0",
+      "author": "Torben Hansen",
+      "processedAt": "2026-05-18T11:16:10.999Z"
+    },
+    "m110": {
+      "dir": "famous-curated/m110",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_205#/media/File:M31_09-01-2011.jpg",
+      "license": "CC BY 2.0",
+      "author": "Torben Hansen",
+      "processedAt": "2026-05-18T11:16:59.407Z"
+    },
+    "m109": {
+      "dir": "famous-curated/m109",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3992#/media/File:M109_NGC_3992.png",
+      "license": "CC BY 4.0",
+      "author": "Juan lacruz",
+      "processedAt": "2026-05-18T11:17:27.616Z"
+    },
+    "m58": {
+      "dir": "famous-curated/m58",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4579#/media/File:M58s_(visible).jpg",
+      "license": "CC BY-SA 3.0 us",
+      "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona",
+      "processedAt": "2026-05-18T11:26:40.374Z"
+    },
+    "m59": {
+      "dir": "famous-curated/m59",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4621#/media/File:Messier59_-_HST_-_Potw1921a.jpg",
+      "license": "CC BY 4.0",
+      "author": "Credit: ESA/Hubble &amp; NASA, L. Ho et al.",
+      "processedAt": "2026-05-18T11:27:04.241Z"
     }
   }
 }

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c57",
+  "crop": {
+    "x": 306,
+    "y": 0,
+    "width": 5868,
+    "height": 5868
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_6822#/media/File:Barnard's_Galaxy.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO"
+  },
+  "processedAt": "2026-05-18T10:59:28.872Z"
+}

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m49",
+  "crop": {
+    "x": 339.1740188598633,
+    "y": 339.1740188598633,
+    "width": 1329.308120727539,
+    "height": 1329.308120727539
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4472#/media/File:Messier_49-Rubin_Observatory.png",
+    "license": "CC BY 4.0",
+    "author": "RubinObs/NOIRLab/SLAC/NSF/DOE/AURA"
+  },
+  "processedAt": "2026-05-18T11:07:40.893Z"
+}

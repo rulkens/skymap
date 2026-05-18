@@ -102,7 +102,7 @@
  * sequential model — versus the original 2 for DESI.
  */
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadCuratedOverrides, type CuratedOverrideIndex } from './famousCuratedOverrides.js';
@@ -605,17 +605,27 @@ async function main(): Promise<void> {
     // Curator override short-circuit: if the maintainer has curated
     // this entry via tools/famous-curator, copy the hand-curated atlas
     // into the runtime slot and skip the Wikipedia/DESI chain entirely.
-    // Honour --force by always overwriting.
+    // Honour --force by always overwriting.  We also treat the runtime
+    // slot as stale whenever the curated source is newer — re-curating
+    // a galaxy should land in the runtime without needing --force, or
+    // the operator would silently ship the previous (pre-curation)
+    // auto-fetched WebP after every re-export.
     if (curated.entries[e.id] !== undefined) {
-      if (existsSync(outPath) && !flags.force) {
+      const curatedSrc = resolve('.', `public/images/famous-curated/${e.id}/atlas.webp`);
+      const runtimeStale =
+        existsSync(outPath) &&
+        existsSync(curatedSrc) &&
+        statSync(curatedSrc).mtimeMs > statSync(outPath).mtimeMs;
+      if (existsSync(outPath) && !flags.force && !runtimeStale) {
         process.stderr.write(`  skip ${e.id} (curated, cached)\n`);
         ok++;
         continue;
       }
       try {
         copyCuratedAtlas(resolve('.'), e.id);
-        const size = (await import('node:fs')).statSync(outPath).size;
-        process.stderr.write(`  ok   ${e.id}  curated  ${(size / 1024).toFixed(1)} KB\n`);
+        const size = statSync(outPath).size;
+        const tag = runtimeStale ? 'curated, refreshed' : 'curated';
+        process.stderr.write(`  ok   ${e.id}  ${tag}  ${(size / 1024).toFixed(1)} KB\n`);
         ok++;
         continue;
       } catch (err) {

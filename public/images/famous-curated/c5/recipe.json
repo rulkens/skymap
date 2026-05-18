@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c5",
+  "crop": {
+    "x": 0,
+    "y": 0,
+    "width": 8200,
+    "height": 8200
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 2,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/IC_342#/media/File:Euclid%E2%80%99s_view_of_spiral_galaxy_IC_342_ESA25170723.jpg",
+    "license": "CC BY-SA 3.0 igo",
+    "author": "ESA/Euclid/Euclid Consortium/NASA image processing by J.-C. Cuillandre (CEA Paris-Saclay) G. Anselmi"
+  },
+  "processedAt": "2026-05-18T10:57:33.524Z"
+}

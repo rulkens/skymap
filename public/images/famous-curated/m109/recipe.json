@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m109",
+  "crop": {
+    "x": 1139.8390197753906,
+    "y": 209.21864318847656,
+    "width": 1468.9491424560547,
+    "height": 1468.9491424560547
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3992#/media/File:M109_NGC_3992.png",
+    "license": "CC BY 4.0",
+    "author": "Juan lacruz"
+  },
+  "processedAt": "2026-05-18T11:17:27.616Z"
+}
