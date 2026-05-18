@@ -7,7 +7,7 @@
  * via `useApi()` rather than importing `defaultApi` directly — that
  * keeps the test surface clean.
  */
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode, type JSX } from 'react';
 import { defaultApi, type Api } from './api';
 
 const ApiContext = createContext<Api>(defaultApi);

@@ -27,7 +27,10 @@ import type { StarnetParams, AlphaParams, DirtyFlags } from '../state';
 // still enforcing the StarNet tile-size constraint.
 const SNAP_STRIDES = [16, 32, 64, 128, 256, 512] as const;
 function snapStride(v: number): number {
-  let best = SNAP_STRIDES[0]!;
+  // Explicit `number` annotation avoids the const-tuple literal union narrowing
+  // `best` to `16` on init, which TypeScript would reject when we later assign
+  // other elements of the tuple (each a distinct literal type).
+  let best: number = SNAP_STRIDES[0]!;
   let bestDist = Math.abs(v - best);
   for (const s of SNAP_STRIDES) {
     const d = Math.abs(v - s);
