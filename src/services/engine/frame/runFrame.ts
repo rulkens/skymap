@@ -294,6 +294,20 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // signature hash, and flushes once.
   state.subsystems.labelDirector.runFrame(state, ctx);
 
+  // ── Per-frame marker upload ───────────────────────────────────────
+  //
+  // Mirrors the label-director flush right above: produceMarkers walks
+  // the POI list, applies fade math, and hands typed descriptors to
+  // the renderer.  Must run BEFORE the GPU dispatch so the instance
+  // buffer is uploaded before clusterMarkersPass's draw reads it.
+  //
+  // Gated on the renderer being non-null so a null GPU device (test
+  // fixtures, the brief pre-initGpu window) is safe.
+  if (state.gpu.clusterMarkerRenderer !== null) {
+    const markers = state.subsystems.pois.produceMarkers(state, ctx);
+    state.gpu.clusterMarkerRenderer.setMarkers(markers);
+  }
+
   // ── GPU dispatch ──────────────────────────────────────────────────
   //
   // The whole encoder lifecycle (createCommandEncoder, beginRenderPass
