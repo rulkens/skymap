@@ -44,7 +44,7 @@ describe('handleProcess', () => {
     const result = await handleProcess({
       body: {
         tmpId: sess.tmpId,
-        crop: { x: 16, y: 16, width: 96, height: 96 },
+        crop: { x: 16, y: 16, width: 96, height: 96, rotationDeg: 0 },
         starnet: { stride: 256, upsample: false },
         alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
       },
@@ -66,7 +66,7 @@ describe('handleProcess', () => {
     await handleProcess({
       body: {
         tmpId: sess.tmpId,
-        crop: { x: 0, y: 0, width: 128, height: 128 },
+        crop: { x: 0, y: 0, width: 128, height: 128, rotationDeg: 0 },
         starnet: { stride: 256, upsample: false },
         alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
       },

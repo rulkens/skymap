@@ -16,6 +16,12 @@ export type RecipeCrop = {
   y: number;
   width: number;
   height: number;
+  /**
+   * Rotation in degrees (clockwise in y-down screen coords, matching CSS
+   * `transform: rotate(...)`).  Added after v1 launched, parsed as
+   * optional with default 0 so pre-rotation recipes round-trip unchanged.
+   */
+  rotationDeg: number;
 };
 
 export type RecipeStarnet = {
@@ -78,6 +84,13 @@ export function parseRecipe(json: string): Recipe {
       throw new Error(`recipe: crop.${k} must be a finite number`);
     }
   }
+  // rotationDeg is optional — older recipes (pre-rotation) omit it.
+  // Validate when present; default to 0 when absent.
+  if (crop.rotationDeg !== undefined) {
+    if (typeof crop.rotationDeg !== 'number' || !Number.isFinite(crop.rotationDeg)) {
+      throw new Error('recipe: crop.rotationDeg must be a finite number when set');
+    }
+  }
   const starnet = raw.starnet as Record<string, unknown> | undefined;
   if (!starnet) throw new Error('recipe: missing starnet block');
   if (typeof starnet.stride !== 'number' || !Number.isFinite(starnet.stride)) {
@@ -111,6 +124,7 @@ export function parseRecipe(json: string): Recipe {
       y: crop.y as number,
       width: crop.width as number,
       height: crop.height as number,
+      rotationDeg: (crop.rotationDeg as number | undefined) ?? 0,
     },
     starnet: {
       stride: starnet.stride,

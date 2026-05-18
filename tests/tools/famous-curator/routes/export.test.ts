@@ -43,7 +43,7 @@ describe('handleExport', () => {
       body: {
         id: 'm31',
         tmpId: sess.tmpId,
-        crop: { x: 0, y: 0, width: 256, height: 256 },
+        crop: { x: 0, y: 0, width: 256, height: 256, rotationDeg: 0 },
         starnet: { stride: 256, upsample: false },
         alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
         metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
@@ -65,7 +65,7 @@ describe('handleExport', () => {
     await handleExport({
       body: {
         id: 'm31', tmpId: sess.tmpId,
-        crop: { x: 0, y: 0, width: 256, height: 256 },
+        crop: { x: 0, y: 0, width: 256, height: 256, rotationDeg: 0 },
         starnet: { stride: 256, upsample: false },
         alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
         metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
@@ -85,7 +85,7 @@ describe('handleExport', () => {
     await handleExport({
       body: {
         id: 'm31', tmpId: sess.tmpId,
-        crop: { x: 0, y: 0, width: 256, height: 256 },
+        crop: { x: 0, y: 0, width: 256, height: 256, rotationDeg: 0 },
         starnet: { stride: 256, upsample: false },
         alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
         metadata: { sourceUrl: 'https://a', license: 'CC-BY', author: 'Alice' },
@@ -100,7 +100,7 @@ describe('handleExport', () => {
     await handleExport({
       body: {
         id: 'm31', tmpId: sess.tmpId,
-        crop: { x: 0, y: 0, width: 256, height: 256 },
+        crop: { x: 0, y: 0, width: 256, height: 256, rotationDeg: 0 },
         starnet: { stride: 256, upsample: false },
         alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
         metadata: { sourceUrl: 'https://b', license: 'CC-BY', author: 'Bob' },

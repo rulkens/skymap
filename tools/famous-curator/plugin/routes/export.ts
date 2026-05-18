@@ -40,6 +40,7 @@ import { sessionPath } from '../tmpSession.js';
 import { serialiseRecipe, type Recipe } from '../recipe.js';
 import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
+import { rotatedExtract } from '../cropExtract.js';
 
 const FULL_PX = 1024;
 const ATLAS_PX = 256;
@@ -47,7 +48,7 @@ const ATLAS_PX = 256;
 export type ExportBody = {
   id: string;
   tmpId: string;
-  crop: { x: number; y: number; width: number; height: number };
+  crop: { x: number; y: number; width: number; height: number; rotationDeg: number };
   starnet: { stride: number; upsample: boolean };
   alpha: { blackPoint: number; whitePoint: number; gamma: number };
   metadata: { sourceUrl: string; license: string; author: string };
@@ -89,14 +90,10 @@ export async function handleExport(opts: {
 
   // 2. source.webp — full-resolution crop, lossless.
   //    Resize to at most FULL_PX on the longest edge (`fit: 'inside'`)
-  //    so non-square crops aren't distorted.
-  const sourceCropped = await sharp(sourcePath)
-    .extract({
-      left: Math.round(body.crop.x),
-      top: Math.round(body.crop.y),
-      width: Math.round(body.crop.width),
-      height: Math.round(body.crop.height),
-    })
+  //    so non-square crops aren't distorted.  rotatedExtract handles
+  //    rotation + out-of-image padding (transparent fill).
+  const sourcePipeline = await rotatedExtract(sourcePath, body.crop);
+  const sourceCropped = await sourcePipeline
     .resize(FULL_PX, FULL_PX, { fit: 'inside' })
     .webp({ lossless: true })
     .toBuffer();

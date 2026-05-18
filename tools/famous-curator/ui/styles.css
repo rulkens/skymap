@@ -459,6 +459,33 @@ html, body, #root {
   cursor: ew-resize;
 }
 
+/* Rotation knob: short stem extending above the N edge with a circular
+   grab target at the top.  Rotates with the rect via the parent's transform. */
+.curator-crop-rotate-stem {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 22px;
+  background: var(--c-accent);
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+}
+.curator-crop-handle--rotate {
+  /* Round target above the stem so it's visually distinct from the
+     square edge/corner handles.  Same accent fill for cohesion. */
+  border-radius: 50%;
+  left: 50%;
+  top: 0;
+  /* Stem is 22px tall + half this handle's height (~6px) for a 28px
+     visual offset from the N edge. */
+  transform: translate(-50%, calc(-22px - 50%));
+  cursor: grab;
+}
+.curator-crop-handle--rotate:active {
+  cursor: grabbing;
+}
+
 /* ─────────────────────────────────────────────
    Metadata + Wikipedia picker row
    ───────────────────────────────────────────── */

@@ -67,7 +67,7 @@ describe('state reducer', () => {
     const s = apply([
       { type: 'setSource', tmpId: 't', width: 1000, height: 800, previewUrl: '/p' },
       { type: 'markProcessed' },
-      { type: 'setCrop', crop: { x: 0, y: 0, width: 100, height: 100 } },
+      { type: 'setCrop', crop: { x: 0, y: 0, width: 100, height: 100, rotationDeg: 0 } },
     ]);
     expect(s.dirty.crop).toBe(true);
     expect(s.processedOnce).toBe(true); // crop dirty does NOT reset processedOnce
@@ -122,7 +122,7 @@ describe('state reducer', () => {
       { type: 'setSource', tmpId: 't', width: 100, height: 100, previewUrl: '/p' },
       { type: 'markProcessed' },
       { type: 'setMetadata', metadata: { sourceUrl: 'https://a', license: 'CC-BY', author: 'A' } },
-      { type: 'setCrop', crop: { x: 0, y: 0, width: 50, height: 50 } },
+      { type: 'setCrop', crop: { x: 0, y: 0, width: 50, height: 50, rotationDeg: 0 } },
     ]);
     expect(canExport(cropDirty)).toBe(false);
   });

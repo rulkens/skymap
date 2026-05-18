@@ -28,7 +28,7 @@ export type FetchResult = {
 
 export type ProcessParams = {
   tmpId: string;
-  crop: { x: number; y: number; width: number; height: number };
+  crop: { x: number; y: number; width: number; height: number; rotationDeg: number };
   starnet: { stride: number; upsample: boolean };
   alpha: { blackPoint: number; whitePoint: number; gamma: number };
 };

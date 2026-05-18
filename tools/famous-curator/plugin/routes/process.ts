@@ -20,12 +20,13 @@ import { resolve } from 'node:path';
 import { sessionPath } from '../tmpSession.js';
 import { runStarnet, type StarnetConfig } from '../starnet.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
+import { rotatedExtract } from '../cropExtract.js';
 
 const PREVIEW_PX = 512;
 
 export type ProcessBody = {
   tmpId: string;
-  crop: { x: number; y: number; width: number; height: number };
+  crop: { x: number; y: number; width: number; height: number; rotationDeg: number };
   starnet: { stride: number; upsample: boolean };
   alpha: { blackPoint: number; whitePoint: number; gamma: number };
 };
@@ -53,20 +54,11 @@ export async function handleProcess(opts: {
   const croppedPath = resolve(dir, 'cropped.png');
   const starlessPath = resolve(dir, 'starless.png');
 
-  // 1. Crop the full-resolution source to the requested rectangle.
-  //    We round all coordinates to integers: sharp's extract() operates
-  //    on discrete pixels and throws if given floats.  The UI sends
-  //    floats because it derives crop bounds from CSS layout coordinates
-  //    that can be fractional.
-  const cropped = await sharp(sourcePath)
-    .extract({
-      left: Math.round(body.crop.x),
-      top: Math.round(body.crop.y),
-      width: Math.round(body.crop.width),
-      height: Math.round(body.crop.height),
-    })
-    .png()
-    .toBuffer();
+  // 1. Crop the full-resolution source.  `rotatedExtract` handles the
+  //    happy path (rotation=0, in-bounds rect) and the relaxed cases:
+  //    rotated rect, out-of-image rect (transparent fill).
+  const pipeline = await rotatedExtract(sourcePath, body.crop);
+  const cropped = await pipeline.png().toBuffer();
   writeFileSync(croppedPath, cropped);
 
   // 2. StarNet (or mock copy).  The mock copies input → output verbatim,
