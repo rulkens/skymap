@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "c17",
+  "crop": {
+    "x": 109.9365234375,
+    "y": 100.96531791731843,
+    "width": 584.1237934108066,
+    "height": 584.1237934108066,
+    "rotationDeg": 65.96359203557176
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://theskylive.com/sky/deepsky/ngc147-object",
+    "license": "unknown",
+    "author": "Digital Sky Survey"
+  },
+  "processedAt": "2026-05-18T23:21:54.450Z"
+}

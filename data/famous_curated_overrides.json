@@ -265,7 +265,7 @@
       "sourceUrl": "https://en.wikipedia.org/wiki/NGC_253#/media/File:NGC_253_-_Sculptor.png",
       "license": "CC0",
       "author": "Chuck Ayoub",
-      "processedAt": "2026-05-18T12:15:03.695Z"
+      "processedAt": "2026-05-18T23:23:06.025Z"
     },
     "m64": {
       "dir": "famous-curated/m64",
@@ -308,6 +308,27 @@
       "license": "CC BY-SA 3.0 us",
       "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona",
       "processedAt": "2026-05-18T23:00:56.258Z"
+    },
+    "c18": {
+      "dir": "famous-curated/c18",
+      "sourceUrl": "https://theskylive.com/sky/deepsky/ngc185-object",
+      "license": "unknown",
+      "author": "Digitized Sky Survey 2",
+      "processedAt": "2026-05-18T23:19:56.134Z"
+    },
+    "c17": {
+      "dir": "famous-curated/c17",
+      "sourceUrl": "https://theskylive.com/sky/deepsky/ngc147-object",
+      "license": "unknown",
+      "author": "Digital Sky Survey",
+      "processedAt": "2026-05-18T23:21:54.450Z"
+    },
+    "c72": {
+      "dir": "famous-curated/c72",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_55#/media/File:Irregular_Galaxy_NGC_55_(ESO_0914a).jpg",
+      "license": "CC BY 4.0",
+      "author": "ESO",
+      "processedAt": "2026-05-18T23:25:11.597Z"
     }
   }
 }
