@@ -499,7 +499,6 @@ export function createClusterMarkerRenderer(
 
     pass.setBindGroup(0, cameraBindGroup);
     pass.setBindGroup(1, fadeBindGroup);
-    pass.setVertexBuffer(0, instanceBuffer);
 
     // Halo passes first (additive) — voids skip; see spec §2.1.  We
     // could check bucket-level halo presence by inspecting each
@@ -508,7 +507,17 @@ export function createClusterMarkerRenderer(
     // multiplied by 0 → no observable contribution.  For voids the
     // descriptor sets haloAlpha = 0 (set by produceMarkers), so the
     // draw is a no-op visually.  Keep the per-category dispatch
-    // explicit anyway — plan 3 will branch on category for pick.
+    // explicit anyway — plan 3 branches on category for pick.
+    //
+    // Per-category instance_index: rather than draw with
+    // firstInstance=bucketOffset (which would make the GPU's
+    // @builtin(instance_index) a GLOBAL slot across all categories),
+    // slide setVertexBuffer's byte-offset to the bucket start and
+    // draw with firstInstance=0.  That way instance_index runs 0..count-1
+    // per category — the index the CPU-side pick resolver expects when
+    // it does `categoryPois[poiIndex]`.  Functionally identical for
+    // the visible draws (their shaders don't read instance_index for
+    // visual output); load-bearing for the pick path.
     pass.setPipeline(haloPipeline);
     for (const cat of POI_CATEGORIES_WITH_MARKERS) {
       if (cat === 'void') continue; // explicit skip per spec
@@ -516,7 +525,8 @@ export function createClusterMarkerRenderer(
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
       pass.setBindGroup(2, bg);
-      pass.draw(6, bucketCounts[cat], 0, bucketOffsets[cat]);
+      pass.setVertexBuffer(0, instanceBuffer, bucketOffsets[cat] * MARKER_INSTANCE_BYTES);
+      pass.draw(6, bucketCounts[cat], 0, 0);
     }
 
     // Ring passes second (premultiplied OVER — composites over halo).
@@ -526,7 +536,8 @@ export function createClusterMarkerRenderer(
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
       pass.setBindGroup(2, bg);
-      pass.draw(6, bucketCounts[cat], 0, bucketOffsets[cat]);
+      pass.setVertexBuffer(0, instanceBuffer, bucketOffsets[cat] * MARKER_INSTANCE_BYTES);
+      pass.draw(6, bucketCounts[cat], 0, 0);
     }
   }
 
@@ -556,25 +567,17 @@ export function createClusterMarkerRenderer(
     if (currentMarkerCount === 0) return;
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(1, pickDummyFadeBindGroup);
-    passEncoder.setVertexBuffer(0, instanceBuffer);
     for (const cat of POI_CATEGORIES_WITH_MARKERS) {
       if (bucketCounts[cat] === 0) continue;
       const bg = sourceBindGroups[cat];
       if (!bg) continue;
       passEncoder.setBindGroup(2, bg);
-      // 6 verts per padded billboard quad; bucketCounts[cat] instances.
-      //
-      // firstInstance = bucketOffsets[cat] makes the vertex stage read
-      // its instance-step attributes from the correct slice of the
-      // shared instance buffer.  Per the WebGPU spec
-      // @builtin(instance_index) == firstInstance + i, so the
-      // poiIndex the fragment packs into the pick texture is the
-      // GLOBAL slot in the instance buffer (across all categories),
-      // NOT a per-category-local index.  This matches the visible-
-      // ring draw above and is the format the CPU-side selection
-      // decoder will reverse-lookup against the descriptor list
-      // (plan 3 task 4 wires that decoder).
-      passEncoder.draw(6, bucketCounts[cat], 0, bucketOffsets[cat]);
+      // Per-category instance_index via vertex-buffer offset (NOT
+      // firstInstance).  See the visible-draw block above for the
+      // rationale — keeps poiIndex 0..count-1 per category so the
+      // CPU-side resolver can do `categoryPois[poiIndex]` directly.
+      passEncoder.setVertexBuffer(0, instanceBuffer, bucketOffsets[cat] * MARKER_INSTANCE_BYTES);
+      passEncoder.draw(6, bucketCounts[cat], 0, 0);
     }
   }
 
