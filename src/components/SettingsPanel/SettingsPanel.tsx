@@ -553,8 +553,10 @@ export function SettingsPanel({
           {/* ── Surveys ──────────────────────────────────────────────────────── */}
           {/*
         Survey toggles are the highest-level decision the user makes — what
-        catalogues are even on screen.  Default open so a first-time visitor
-        immediately sees the four toggles and the per-survey object counts.
+        catalogues are even on screen.  Default closed to keep the Settings
+        panel scannable on first open; the section header still surfaces the
+        master tri-state checkbox so the all-on/mixed/all-off state is
+        visible without expanding the section.
 
         Master toggle in the section header is a *derived tri-state* over the
         per-source booleans:
@@ -599,7 +601,6 @@ export function SettingsPanel({
               return (
                 <CollapsibleSection
                   title="Surveys"
-                  defaultOpen
                   headerToggle={allOn}
                   headerToggleIndeterminate={indeterminate}
                   onHeaderToggleChange={onMasterToggle}
