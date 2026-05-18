@@ -34,12 +34,45 @@
  * allocation is guarded by `if (device)` so `setMarkers` packs the
  * CPU scratch buffer + bumps the counter without touching the GPU.
  * Mirrors `markerLineRenderer.ts`'s null-device pattern.
+ *
+ * ### Pipeline shape (Task 7)
+ *
+ * Two pipelines built from one module each (never share GPUShaderModule
+ * across pipelines — WebGPU layout: 'auto' bites otherwise; see the
+ * MEMORY note `feedback_webgpu_auto_layout_trap.md`):
+ *
+ *   - Halo:  additive blend (one, one), vertex 'vs' + fragment 'fs'
+ *            from halo.wesl
+ *   - Ring:  premultiplied-OVER blend, vertex 'vs' + fragment 'fs'
+ *            from ring.wesl
+ *
+ * Both pipelines share an EXPLICIT pipeline layout — not 'auto' —
+ * built from one CameraUniforms BGL (`@group(0)`) and one
+ * SourceUniforms BGL (`@group(2)`).  An explicit shared layout means
+ * one `device.createBindGroup(...)` is valid against both pipelines
+ * (which `layout: 'auto'` does NOT guarantee).
+ *
+ * ### Per-category source uniforms (pre-architects pick path)
+ *
+ * Three pre-built SourceUniforms buffers (one each for cluster=5,
+ * supercluster=6, void=7).  The `render` method partitions descriptors
+ * by category, binds the matching SourceUniforms, and issues one
+ * instanced draw per non-empty bucket.  Plan 3's pick pipeline will
+ * reuse this same per-category dispatch — its ringPick fragment reads
+ * `source.sourceCode` to compose `(sourceCode << 27) | poiIndex + 1`.
  */
 
 import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
+import type { PoiCategory } from '../../engine/subsystems/poiSubsystem';
+import { Source } from '../../../data/sources';
+import haloVsCode from '../shaders/clusterMarker/halo.wesl?static';
+import haloFsCode from '../shaders/clusterMarker/halo.wesl?static';
+import ringVsCode from '../shaders/clusterMarker/ring.wesl?static';
+import ringFsCode from '../shaders/clusterMarker/ring.wesl?static';
+import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
  * 9 floats per instance × 4 bytes = 36 bytes/instance.
@@ -58,27 +91,232 @@ import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterM
  * stride to 12 floats (48 bytes) and add `ringColor.rgb`.
  */
 const MARKER_INSTANCE_FLOATS = 9;
-// Referenced in task 7 when the GPU instance buffer is allocated; declared
-// here so the byte-layout comment block above stays adjacent to the constant.
 const MARKER_INSTANCE_BYTES = MARKER_INSTANCE_FLOATS * 4;
+
+/** Shared CameraUniforms prefix size — same 80 bytes as markerLineRenderer. */
+const UNIFORM_BYTES = 80;
+
+/** SourceUniforms = u32 sourceCode + 12 bytes pad = 16 bytes. */
+const SOURCE_UNIFORM_BYTES = 16;
+
+/** Maps each pick-able POI category to its 5-bit source code (allocated by plan 1). */
+const SOURCE_CODE_BY_CATEGORY: Readonly<Record<'cluster' | 'supercluster' | 'void', number>> = {
+  cluster: Source.Cluster,
+  supercluster: Source.Supercluster,
+  void: Source.Void,
+};
+
+const POI_CATEGORIES_WITH_MARKERS: readonly ('cluster' | 'supercluster' | 'void')[] = [
+  'cluster',
+  'supercluster',
+  'void',
+];
 
 export function createClusterMarkerRenderer(
   ctx: GpuContext,
   maxMarkers = 64,
 ): ClusterMarkerRenderer {
-  // CPU scratch buffer — always allocated, safe with null device.
+  const device = ctx.device as GPUDevice | null;
+  const format = ctx.format;
+
+  // CPU scratch buffer — always allocated.
   const instanceBuf = new Float32Array(maxMarkers * MARKER_INSTANCE_FLOATS);
   let currentMarkerCount = 0;
 
-  // Phase A — CPU state only.  GPU resources land in Task 7.
-  // const device = ctx.device as GPUDevice | null;
+  // Per-category bucket bookkeeping: where each category's run begins
+  // in the instance buffer + how many descriptors it owns.  Reset at
+  // the start of every setMarkers call.
+  const bucketOffsets: Record<'cluster' | 'supercluster' | 'void', number> = {
+    cluster: 0,
+    supercluster: 0,
+    void: 0,
+  };
+  const bucketCounts: Record<'cluster' | 'supercluster' | 'void', number> = {
+    cluster: 0,
+    supercluster: 0,
+    void: 0,
+  };
+
+  // GPU resources — null when device is null.
+  let haloPipeline: GPURenderPipeline | null = null;
+  let ringPipeline: GPURenderPipeline | null = null;
+  let uniformBuffer: GPUBuffer | null = null;
+  let instanceBuffer: GPUBuffer | null = null;
+  const sourceBuffers: Record<'cluster' | 'supercluster' | 'void', GPUBuffer | null> = {
+    cluster: null,
+    supercluster: null,
+    void: null,
+  };
+  let cameraBindGroup: GPUBindGroup | null = null;
+  const sourceBindGroups: Record<'cluster' | 'supercluster' | 'void', GPUBindGroup | null> = {
+    cluster: null,
+    supercluster: null,
+    void: null,
+  };
+
+  if (device) {
+    const cameraBgl = device.createBindGroupLayout({
+      label: 'cluster-marker-camera-bgl',
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      ],
+    });
+    const sourceBgl = device.createBindGroupLayout({
+      label: 'cluster-marker-source-bgl',
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      ],
+    });
+    // @group(1) FadeUniforms slot is intentionally OMITTED at v1.  The
+    // renderer's per-frame fade rides on the descriptor's alpha fields
+    // (computed CPU-side by poiSubsystem).  Plan 4 may add a unified
+    // FadeUniforms here once the fade architecture asks for it.
+    //
+    // WebGPU requires every group up to the highest bound to appear in
+    // bindGroupLayouts.  We bind @group(0) and @group(2), so @group(1)
+    // needs a placeholder BGL — we hand sourceBgl as the placeholder
+    // (the validation only checks shape, not content; the shader never
+    // references @group(1)).  If a future WebGPU version's validator
+    // rejects this, swap in a minimal empty BGL:
+    //   device.createBindGroupLayout({ entries: [] }).
+    const pipelineLayout = device.createPipelineLayout({
+      label: 'cluster-marker-pipeline-layout',
+      bindGroupLayouts: [cameraBgl, sourceBgl, sourceBgl],
+    });
+
+    const haloVs = createShaderModuleWithDevLog(device, haloVsCode, 'clusterMarker.halo.vs');
+    const haloFs = createShaderModuleWithDevLog(device, haloFsCode, 'clusterMarker.halo.fs');
+    const ringVs = createShaderModuleWithDevLog(device, ringVsCode, 'clusterMarker.ring.vs');
+    const ringFs = createShaderModuleWithDevLog(device, ringFsCode, 'clusterMarker.ring.fs');
+
+    const vertexBuffers: GPUVertexBufferLayout[] = [
+      {
+        arrayStride: MARKER_INSTANCE_BYTES,
+        stepMode: 'instance',
+        attributes: [
+          { shaderLocation: 0, offset: 0,  format: 'float32x4' }, // positionAndRadius
+          { shaderLocation: 1, offset: 16, format: 'float32x4' }, // haloColorAndAlpha
+          { shaderLocation: 2, offset: 32, format: 'float32'   }, // ringAlpha
+        ],
+      },
+    ];
+
+    haloPipeline = device.createRenderPipeline({
+      label: 'cluster-marker-halo-pipeline',
+      layout: pipelineLayout,
+      vertex: { module: haloVs, entryPoint: 'vs', buffers: vertexBuffers },
+      fragment: {
+        module: haloFs,
+        entryPoint: 'fs',
+        targets: [
+          {
+            format,
+            // Additive — halo is emissive glow, not occluding overlay.
+            blend: {
+              color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+              alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
+            },
+          },
+        ],
+      },
+      primitive: { topology: 'triangle-list' },
+      // No depthStencil — markers are UI overlay.
+    });
+
+    ringPipeline = device.createRenderPipeline({
+      label: 'cluster-marker-ring-pipeline',
+      layout: pipelineLayout,
+      vertex: { module: ringVs, entryPoint: 'vs', buffers: vertexBuffers },
+      fragment: {
+        module: ringFs,
+        entryPoint: 'fs',
+        targets: [
+          {
+            format,
+            // Premultiplied-alpha OVER — ring is an opaque indicator
+            // edge, must occlude rather than accumulate.
+            blend: {
+              color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+              alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
+            },
+          },
+        ],
+      },
+      primitive: { topology: 'triangle-list' },
+    });
+
+    uniformBuffer = device.createBuffer({
+      label: 'cluster-marker-uniforms',
+      size: UNIFORM_BYTES,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    instanceBuffer = device.createBuffer({
+      label: 'cluster-marker-instances',
+      size: maxMarkers * MARKER_INSTANCE_BYTES,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+
+    cameraBindGroup = device.createBindGroup({
+      label: 'cluster-marker-camera-bg',
+      layout: cameraBgl,
+      entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    });
+
+    // Per-category SourceUniforms — written once at construction.
+    for (const cat of POI_CATEGORIES_WITH_MARKERS) {
+      const buf = device.createBuffer({
+        label: `cluster-marker-source-${cat}`,
+        size: SOURCE_UNIFORM_BYTES,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      // Write the 5-bit source code at offset 0; rest stays zero.
+      const u32 = new Uint32Array(SOURCE_UNIFORM_BYTES / 4);
+      u32[0] = SOURCE_CODE_BY_CATEGORY[cat];
+      device.queue.writeBuffer(buf, 0, u32);
+      sourceBuffers[cat] = buf;
+      sourceBindGroups[cat] = device.createBindGroup({
+        label: `cluster-marker-source-bg-${cat}`,
+        layout: sourceBgl,
+        entries: [{ binding: 0, resource: { buffer: buf } }],
+      });
+    }
+  }
 
   function setMarkers(descriptors: readonly ClusterMarkerDescriptor[]): void {
+    // Partition descriptors by category — preserves order within each
+    // category and keeps the instance buffer cache-friendly.  Three
+    // categories means three passes over the input is fine.
     currentMarkerCount = 0;
+    bucketCounts.cluster = 0;
+    bucketCounts.supercluster = 0;
+    bucketCounts.void = 0;
+
+    // First pass: count per category to compute offsets.
     const count = Math.min(descriptors.length, maxMarkers);
     for (let i = 0; i < count; i++) {
       const d = descriptors[i]!;
-      const base = i * MARKER_INSTANCE_FLOATS;
+      if (d.category === 'cluster') bucketCounts.cluster++;
+      else if (d.category === 'supercluster') bucketCounts.supercluster++;
+      else if (d.category === 'void') bucketCounts.void++;
+      // famousGalaxy and any future label-only category have no markers; skip.
+    }
+    bucketOffsets.cluster = 0;
+    bucketOffsets.supercluster = bucketOffsets.cluster + bucketCounts.cluster;
+    bucketOffsets.void = bucketOffsets.supercluster + bucketCounts.supercluster;
+
+    // Second pass: pack into the instance buffer in category-ordered runs.
+    const writeCursor: Record<'cluster' | 'supercluster' | 'void', number> = {
+      cluster: bucketOffsets.cluster,
+      supercluster: bucketOffsets.supercluster,
+      void: bucketOffsets.void,
+    };
+    for (let i = 0; i < count; i++) {
+      const d = descriptors[i]!;
+      if (d.category !== 'cluster' && d.category !== 'supercluster' && d.category !== 'void') continue;
+      const slot = writeCursor[d.category];
+      writeCursor[d.category]++;
+      const base = slot * MARKER_INSTANCE_FLOATS;
       instanceBuf[base + 0] = d.worldPos[0];
       instanceBuf[base + 1] = d.worldPos[1];
       instanceBuf[base + 2] = d.worldPos[2];
@@ -90,15 +328,66 @@ export function createClusterMarkerRenderer(
       instanceBuf[base + 8] = d.ringAlpha;
       currentMarkerCount++;
     }
-    // GPU upload lands in Task 7.
+
+    if (!device || !instanceBuffer || currentMarkerCount === 0) return;
+    device.queue.writeBuffer(
+      instanceBuffer,
+      0,
+      instanceBuf,
+      0,
+      currentMarkerCount * MARKER_INSTANCE_FLOATS,
+    );
   }
 
   function render(
-    _pass: GPURenderPassEncoder,
-    _viewProj: Float32Array,
-    _viewportSize: [number, number],
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportSize: [number, number],
   ): void {
-    // GPU draw lands in Task 7.
+    if (
+      !device || !haloPipeline || !ringPipeline || !uniformBuffer ||
+      !instanceBuffer || !cameraBindGroup
+    ) return;
+    if (currentMarkerCount === 0) return;
+
+    // Write the 80-byte CameraUniforms prefix.  Same shape as markerLineRenderer.
+    const uni = new Float32Array(UNIFORM_BYTES / 4);
+    uni.set(viewProj, 0);
+    uni[16] = viewportSize[0];
+    uni[17] = viewportSize[1];
+    // uni[18], uni[19] stay zero (the two reserved pads).
+    device.queue.writeBuffer(uniformBuffer, 0, uni);
+
+    pass.setBindGroup(0, cameraBindGroup);
+    pass.setVertexBuffer(0, instanceBuffer);
+
+    // Halo passes first (additive) — voids skip; see spec §2.1.  We
+    // could check bucket-level halo presence by inspecting each
+    // descriptor's haloAlpha, but issuing the draw with haloAlpha == 0
+    // on every instance is cheap and the per-fragment math is
+    // multiplied by 0 → no observable contribution.  For voids the
+    // descriptor sets haloAlpha = 0 (set by produceMarkers), so the
+    // draw is a no-op visually.  Keep the per-category dispatch
+    // explicit anyway — plan 3 will branch on category for pick.
+    pass.setPipeline(haloPipeline);
+    for (const cat of POI_CATEGORIES_WITH_MARKERS) {
+      if (cat === 'void') continue; // explicit skip per spec
+      if (bucketCounts[cat] === 0) continue;
+      const bg = sourceBindGroups[cat];
+      if (!bg) continue;
+      pass.setBindGroup(2, bg);
+      pass.draw(6, bucketCounts[cat], 0, bucketOffsets[cat]);
+    }
+
+    // Ring passes second (premultiplied OVER — composites over halo).
+    pass.setPipeline(ringPipeline);
+    for (const cat of POI_CATEGORIES_WITH_MARKERS) {
+      if (bucketCounts[cat] === 0) continue;
+      const bg = sourceBindGroups[cat];
+      if (!bg) continue;
+      pass.setBindGroup(2, bg);
+      pass.draw(6, bucketCounts[cat], 0, bucketOffsets[cat]);
+    }
   }
 
   function markerCount(): number {
@@ -106,7 +395,11 @@ export function createClusterMarkerRenderer(
   }
 
   function destroy(): void {
-    // GPU teardown lands in Task 7.
+    uniformBuffer?.destroy();
+    instanceBuffer?.destroy();
+    for (const cat of POI_CATEGORIES_WITH_MARKERS) {
+      sourceBuffers[cat]?.destroy();
+    }
   }
 
   const renderer: ClusterMarkerRenderer = {
