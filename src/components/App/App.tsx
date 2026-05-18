@@ -425,6 +425,32 @@ export function App(): React.ReactElement {
     engineHandleRef: handleRef,
   });
 
+  // ── Resolved focused POI (drives the InfoCard POI body) ──────────────────
+  //
+  // The engine emits the focused POI as an id (string).  The InfoCard
+  // needs the full `PointOfInterest` to render name / category / radius /
+  // distance.  We resolve the id → POI here (rather than tracking a
+  // parallel `focusedPoi` state) so the static-anchor table remains the
+  // single source of truth: a tier swap that replaces the table would
+  // automatically invalidate a stranded focus by `find` returning
+  // undefined.
+  //
+  // useMemo because InfoCard is wrapped in React.memo (via its prop
+  // identity) and we don't want a fresh PointOfInterest reference each
+  // render to defeat that.  Cost is one O(~50) array scan when either
+  // dependency changes; both change very rarely (focusedPoiId only on
+  // user POI click or deep-link, staticPois exactly once at mount).
+  //
+  // Famous-galaxy POIs (`focusedPoiId` starting with `famous-…`) won't
+  // resolve here — they're not in `staticPois`.  The fallback is null,
+  // which renders no POI body; the famous-galaxy InfoCard flow goes
+  // through the galaxy-selection path instead, so this isn't a
+  // regression.
+  const focusedPoi = useMemo(
+    () => (focusedPoiId ? (staticPois.find((p) => p.id === focusedPoiId) ?? null) : null),
+    [focusedPoiId, staticPois],
+  );
+
   // ── Global keyboard shortcuts (Cmd+K, Esc, f, h, l) ─────────────────────
   useKeyboardShortcuts({
     selected,
@@ -479,8 +505,11 @@ export function App(): React.ReactElement {
         <InfoCard
           hovered={hovered}
           selected={selected}
+          selectedPoi={focusedPoi}
           onFocus={(info) => handleRef.current?.camera.focusOn(info)}
+          onPoiFocus={(poi) => handleRef.current?.camera.focusOnPoi(poi)}
           onClose={() => handleRef.current?.selection.clear()}
+          onPoiClose={() => handleRef.current?.camera.clearPoiFocus()}
         />
         <ScaleBar scale={scale} />
         {/*

@@ -919,6 +919,29 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     commitPoiFocus(state, cb, poi, { tween: true });
   }
 
+  function clearPoiFocus(): void {
+    // Counterpart to focusOnPoi: drop the subsystem's selection flag
+    // AND fire the React-side callback so the URL hash + InfoCard POI
+    // body deselect in lock-step.  Order mirrors commitPoiFocus
+    // (subsystem first, callback second) so the very next frame
+    // already paints with the bumped-alpha marker gone before React
+    // observes the change.
+    //
+    // We deliberately do NOT build this as a separate helper file:
+    // unlike commitPoiFocus, there's no tween branch, no cam-null
+    // gating, no per-category framing distance — just two synchronous
+    // notifications.  A standalone helper would be more file-shuffling
+    // than abstraction value.
+    //
+    // Camera viewpoint is intentionally untouched: closing the POI
+    // card is a "dismiss the overlay" gesture, not a "reset
+    // viewpoint" one.  Users who want to fly back out invoke the
+    // home / reset actions explicitly.
+    state.subsystems.pois.setSelectedPoi(null);
+    cb.camera?.onPoiFocusChange?.(null);
+    state.subsystems.scheduler.requestRender();
+  }
+
   function focusOnHome(): void {
     // Snapshot null-check; cam-null is absorbed inside the helper.
     if (!state.initialCamSnapshot) return;
@@ -1386,6 +1409,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       reset: resetCamera,
       focusOn,
       focusOnPoi,
+      clearPoiFocus,
       focusOnHome,
       focusOnMilkyWay,
       logState: logCameraStateFn,

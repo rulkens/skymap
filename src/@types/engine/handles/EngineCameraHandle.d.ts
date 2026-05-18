@@ -28,6 +28,17 @@ export type EngineCameraHandle = {
    * live; only the camera tween itself is gated on cam availability.
    */
   focusOnPoi: (poi: PointOfInterest) => void;
+  /**
+   * Clear the POI focus: drop the selected-POI flag on the engine's POI
+   * subsystem AND fire `onPoiFocusChange(null)` so React-side mirrors
+   * (e.g. `focusedPoiId` driving `#poi=…` and the InfoCard POI body)
+   * deselect in lock-step.  Camera does NOT move — clearing a POI
+   * selection is a "close the card" gesture, not a "reset viewpoint"
+   * one (the user explicitly invokes `reset` / `focusOnHome` for that).
+   *
+   * Idempotent: calling with no POI selected is a no-op.
+   */
+  clearPoiFocus: () => void;
   /** Smoothly tween back to the initial bootstrap framing. */
   focusOnHome: () => void;
   /** Tween to a viewpoint where the procedural Milky Way is dominant. */
