@@ -10,7 +10,7 @@ const newRenderer = (maxMarkers?: number) => {
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
   };
-  return createClusterMarkerRenderer(ctx, maxMarkers);
+  return createClusterMarkerRenderer(ctx, 'rgba16float', maxMarkers);
 };
 
 const cluster = (id: number): ClusterMarkerDescriptor => ({

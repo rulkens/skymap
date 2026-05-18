@@ -246,7 +246,10 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const fontAtlases = await loadFontAtlases();
   state.gpu.labelRenderer = createLabelRenderer(uiCtx, fontAtlases);
   state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx);
-  state.gpu.clusterMarkerRenderer = createClusterMarkerRenderer(uiCtx);
+  // HDR pass — must write into the rgba16float offscreen target the
+  // tone-map pass reads from, NOT the canvas swap-chain.  Mirrors the
+  // explicit hdrFormat arg on createFilamentRenderer.
+  state.gpu.clusterMarkerRenderer = createClusterMarkerRenderer(uiCtx, 'rgba16float');
 
   // Wire the freshly-constructed renderers into the label director.
   // The director was built eagerly in the engine state literal (alongside

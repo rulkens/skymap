@@ -40,7 +40,7 @@ describe('poiSubsystem.produceMarkers → clusterMarkerRenderer.setMarkers', () 
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
-    });
+    }, 'rgba16float');
     sub.setPois([
       { id: 'virgo', name: 'Virgo', category: 'cluster',
         worldPos: [10, 0, 0], physicalRadiusMpc: 2 },

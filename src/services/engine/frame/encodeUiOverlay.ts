@@ -73,6 +73,7 @@ export function encodeUiOverlay(
   if (enabled.length === 0 && !timestampWrites) return;
 
   const pass = encoder.beginRenderPass({
+    label: 'ui-overlay',
     colorAttachments: [
       {
         view: swapView,

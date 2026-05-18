@@ -48,6 +48,7 @@ export function encodeHdrSplit(
 ): void {
   // ── Clear pass (no draws) ─────────────────────────────────────────
   const clearPass = encoder.beginRenderPass({
+    label: 'hdr-clear',
     colorAttachments: [
       {
         view: ctx.postProcess.view,
@@ -105,6 +106,7 @@ export function encodeHdrSplit(
     const timestampWrites = timingService.descriptorFor(pass.name as TimingSlotName);
 
     const passEncoder = encoder.beginRenderPass({
+      label: `hdr-${pass.name}`,
       colorAttachments: [
         {
           view: ctx.postProcess.view,

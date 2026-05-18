@@ -114,10 +114,22 @@ const POI_CATEGORIES_WITH_MARKERS: readonly ('cluster' | 'supercluster' | 'void'
 
 export function createClusterMarkerRenderer(
   ctx: GpuContext,
+  /**
+   * The colour-attachment format the halo + ring pipelines write into.
+   * This renderer is part of `HDR_PASSES`, so the format is the offscreen
+   * HDR target (`rgba16float`) — NOT `ctx.format`, which is the canvas
+   * swap-chain (`bgra8unorm`).  Halos accumulate additively into the same
+   * float buffer the points / quads / disks / filaments write, then the
+   * tone-map pass compresses everything onto the swap chain.  Passing
+   * `ctx.format` here would trip a WebGPU validation error at draw time
+   * (`attachment state … is not compatible with [RenderPassEncoder]`).
+   * Mirrors the `hdrFormat` parameter on `createFilamentRenderer`.
+   */
+  hdrFormat: GPUTextureFormat,
   maxMarkers = 64,
 ): ClusterMarkerRenderer {
   const device = ctx.device as GPUDevice | null;
-  const format = ctx.format;
+  const format = hdrFormat;
 
   // CPU scratch buffer — always allocated.
   const instanceBuf = new Float32Array(maxMarkers * MARKER_INSTANCE_FLOATS);
