@@ -105,3 +105,36 @@ describe('VOID_ANCHORS', () => {
     expect(bootes!.distMpc).toBeLessThan(500);
   });
 });
+
+describe('clusterAnchors — physicalRadiusMpc population', () => {
+  it('every cluster anchor has a finite, positive physicalRadiusMpc', () => {
+    for (const a of CLUSTER_ANCHORS) {
+      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
+      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
+    }
+  });
+
+  it('every supercluster anchor has a finite, positive physicalRadiusMpc', () => {
+    for (const a of SUPERCLUSTER_ANCHORS) {
+      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
+      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
+    }
+  });
+
+  it('every void anchor has a finite, positive physicalRadiusMpc', () => {
+    for (const a of VOID_ANCHORS) {
+      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
+      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
+    }
+  });
+
+  it('uses the literature-grounded radii from the spec', () => {
+    const byName = (list: readonly { name: string; physicalRadiusMpc: number }[], n: string) =>
+      list.find((a) => a.name.startsWith(n));
+
+    expect(byName(CLUSTER_ANCHORS, 'Virgo')?.physicalRadiusMpc).toBe(2.2);
+    expect(byName(CLUSTER_ANCHORS, 'Coma')?.physicalRadiusMpc).toBe(3.0);
+    expect(byName(SUPERCLUSTER_ANCHORS, 'Hercules SC')?.physicalRadiusMpc).toBe(60);
+    expect(byName(VOID_ANCHORS, 'Boötes')?.physicalRadiusMpc).toBe(50);
+  });
+});

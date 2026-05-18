@@ -66,12 +66,26 @@ export function raDecDistToEqCart(c: SkyCoord): Vec3 {
  * 180–220) don't materially shift the audit's percentile ranking.
  */
 export const CLUSTER_ANCHORS: readonly ClusterAnchor[] = [
-  { name: 'Virgo (M87)',              raHours: 12 + 30 / 60 + 49 / 3600, decDeg:  12 + 23 / 60,    distMpc:  16.5 },
-  { name: 'Norma / Great Attractor',  raHours: 16 + 15 / 60,             decDeg: -(60 + 54 / 60),  distMpc:  70   },
-  { name: 'Perseus (A426)',           raHours:  3 + 19 / 60 + 48 / 3600, decDeg:  41 + 31 / 60,    distMpc:  75   },
-  { name: 'Coma (A1656)',             raHours: 12 + 59 / 60 + 49 / 3600, decDeg:  27 + 59 / 60,    distMpc: 100   },
-  { name: 'Hercules (A2151)',         raHours: 16 +  5 / 60 + 15 / 3600, decDeg:  17 + 45 / 60,    distMpc: 158   },
-  { name: 'Shapley (A3558)',          raHours: 13 + 27 / 60 + 57 / 3600, decDeg: -(31 + 30 / 60),  distMpc: 200   },
+  // Virgo: ~2.2 Mpc characteristic radius (R_200 / virial radius).
+  // Distance from Mei et al. 2007 (SBF survey); extent from
+  // Strauss & Willick 1995, ARA&A 33, 247.
+  { name: 'Virgo (M87)',              raHours: 12 + 30 / 60 + 49 / 3600, decDeg:  12 + 23 / 60,    distMpc:  16.5, physicalRadiusMpc: 2.2 },
+  // Norma / Great Attractor (Abell 3627): ~1.5 Mpc core. Behind the
+  // Zone of Avoidance; Kraan-Korteweg et al. 1996, Nature 379, 519.
+  { name: 'Norma / Great Attractor',  raHours: 16 + 15 / 60,             decDeg: -(60 + 54 / 60),  distMpc:  70,   physicalRadiusMpc: 1.5 },
+  // Perseus (A426): ~2.0 Mpc virial radius. Simionescu et al. 2011,
+  // Science 331, 1576.
+  { name: 'Perseus (A426)',           raHours:  3 + 19 / 60 + 48 / 3600, decDeg:  41 + 31 / 60,    distMpc:  75,   physicalRadiusMpc: 2.0 },
+  // Coma (A1656): ~3.0 Mpc R_200. The Kubo et al. 2007 weak-lensing
+  // value (R_200 ≈ 2.9 Mpc) rounded for round-number anchoring.
+  { name: 'Coma (A1656)',             raHours: 12 + 59 / 60 + 49 / 3600, decDeg:  27 + 59 / 60,    distMpc: 100,   physicalRadiusMpc: 3.0 },
+  // Hercules (A2151): ~1.8 Mpc. Smaller, less relaxed than Coma —
+  // Bird, Davis & Beers 1995, AJ 109, 920.
+  { name: 'Hercules (A2151)',         raHours: 16 +  5 / 60 + 15 / 3600, decDeg:  17 + 45 / 60,    distMpc: 158,   physicalRadiusMpc: 1.8 },
+  // Shapley (A3558): ~2.5 Mpc R_200 of the central cluster member;
+  // the wider Shapley Concentration is much larger (see the
+  // supercluster table). Reiprich & Böhringer 2002, ApJ 567, 716.
+  { name: 'Shapley (A3558)',          raHours: 13 + 27 / 60 + 57 / 3600, decDeg: -(31 + 30 / 60),  distMpc: 200,   physicalRadiusMpc: 2.5 },
 ];
 
 /**
@@ -95,12 +109,18 @@ export const SUPERCLUSTER_ANCHORS: readonly ClusterAnchor[] = [
   // shows a sustained 99.5th+ percentile blob at this location; the
   // closest named structure in the literature is the Hydra Wall, an
   // extension of the Hydra-Centaurus complex toward higher redshift.
-  { name: 'Hydra Wall',               raHours: 13 + 17 / 60,             decDeg: -15,              distMpc: 152 },
+  // ~50 Mpc structural extent across the wall — CF-4 density peak is
+  // broad, consistent with the wall's filamentary ~50 Mpc transverse
+  // scale.
+  { name: 'Hydra Wall',               raHours: 13 + 17 / 60,             decDeg: -15,              distMpc: 152, physicalRadiusMpc: 50 },
   // Foreground core of the Hercules Supercluster (which extends from
   // ~110 to 200 Mpc and includes A2147 / A2151 / A2152).  The CF-4
   // peak sits in the supercluster's nearer wall, ~40 Mpc in front of
-  // the named Hercules (A2151) cluster anchor.
-  { name: 'Hercules SC',              raHours: 15 + 40 / 60,             decDeg:  16,              distMpc: 120 },
+  // the named Hercules (A2151) cluster anchor.  ~60 Mpc full-extent
+  // radius spanning A2147 / A2151 / A2152.  Einasto et al. 2001,
+  // AJ 122, 2222 puts the supercluster's characteristic scale at
+  // 50-70 Mpc.
+  { name: 'Hercules SC',              raHours: 15 + 40 / 60,             decDeg:  16,              distMpc: 120, physicalRadiusMpc: 60 },
 ];
 
 /**
@@ -119,14 +139,21 @@ export const SUPERCLUSTER_ANCHORS: readonly ClusterAnchor[] = [
  */
 export const VOID_ANCHORS: readonly ClusterAnchor[] = [
   // Sculptor Void — local, just south of the celestial equator.
-  { name: 'Sculptor Void',            raHours:  0,                       decDeg: -30,              distMpc:  35 },
+  // ~25 Mpc characteristic radius.  Sharp 1986, MNRAS 221, 137;
+  // size approximate due to void-finding method sensitivity.
+  { name: 'Sculptor Void',            raHours:  0,                       decDeg: -30,              distMpc:  35, physicalRadiusMpc: 25 },
   // Local Void — adjacent to the Local Group, mostly above the
   // galactic plane.  Tully 2008 places its centre near galactic
   // (l=37°, b=15°) → eq (RA≈18h 38m, Dec≈+18°) at ~25 Mpc.
-  { name: 'Local Void',               raHours: 18 + 38 / 60,             decDeg:  18,              distMpc:  25 },
+  // ~30 Mpc radius. Tully et al. 2008, ApJ 676, 184; the void
+  // extends asymmetrically, so this is the effective radius of the
+  // equivalent sphere.
+  { name: 'Local Void',               raHours: 18 + 38 / 60,             decDeg:  18,              distMpc:  25, physicalRadiusMpc: 30 },
   // Boötes Void — the famous "Great Void" of Kirshner 1981; ~50 Mpc
   // radius centred at roughly (RA=14h 50m, Dec=+46°) at ~245 Mpc.
   // Near the edge of CF-4's reliable volume — don't over-interpret a
-  // mismatch here.
-  { name: 'Boötes Void',              raHours: 14 + 50 / 60,             decDeg:  46,              distMpc: 245 },
+  // mismatch here.  Kirshner et al. 1987, ApJ 314, 493 ("the Great
+  // Void"). At ~245 Mpc distance the 50 Mpc radius subtends ~12° on
+  // the sky.
+  { name: 'Boötes Void',              raHours: 14 + 50 / 60,             decDeg:  46,              distMpc: 245, physicalRadiusMpc: 50 },
 ];
