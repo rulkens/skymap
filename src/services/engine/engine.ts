@@ -121,6 +121,8 @@ import { createPoiSubsystem } from './subsystems/poiSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
+import { commitPoiFocus } from './helpers/commitPoiFocus';
+import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
@@ -905,6 +907,18 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     commitFocus(state, cb, info);
   }
 
+  function focusOnPoi(poi: PointOfInterest): void {
+    // Mirror of focusOn (galaxy version), but deliberately WITHOUT
+    // the top-level cam-null guard: commitPoiFocus absorbs the cam
+    // check internally for the tween path only, while still firing
+    // `setSelectedPoi` + `onPoiFocusChange` even when the camera
+    // isn't live yet.  This is what lets a deep-link drain that races
+    // bootstrap (e.g. `#poi=virgo-m87` parsed before the first cloud
+    // arrives) establish the selected state immediately; the camera
+    // catches up once it comes online via a fresh user action.
+    commitPoiFocus(state, cb, poi, { tween: true });
+  }
+
   function focusOnHome(): void {
     // Snapshot null-check; cam-null is absorbed inside the helper.
     if (!state.initialCamSnapshot) return;
@@ -1371,6 +1385,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setAutoRotate: (enabled) => boringSetters.setAutoRotate(enabled),
       reset: resetCamera,
       focusOn,
+      focusOnPoi,
       focusOnHome,
       focusOnMilkyWay,
       logState: logCameraStateFn,
