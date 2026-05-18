@@ -72,6 +72,8 @@ import haloVsCode from '../shaders/clusterMarker/halo.wesl?static';
 import haloFsCode from '../shaders/clusterMarker/halo.wesl?static';
 import ringVsCode from '../shaders/clusterMarker/ring.wesl?static';
 import ringFsCode from '../shaders/clusterMarker/ring.wesl?static';
+import ringPickVsCode from '../shaders/clusterMarker/ring.wesl?static';
+import ringPickFsCode from '../shaders/clusterMarker/ringPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
@@ -165,10 +167,26 @@ export function createClusterMarkerRenderer(
   // GPU resources — null when device is null.
   let haloPipeline: GPURenderPipeline | null = null;
   let ringPipeline: GPURenderPipeline | null = null;
+  // Ring-pick pipeline — same vertex source as ringPipeline, fragment
+  // swapped to ringPick.wesl's fsRingPick + colour target swapped to
+  // r32uint + depth24plus added.  See the pick pipeline build below for
+  // the full rationale; in short, this is the POI sibling of the
+  // galaxy pick path in pickRenderer.ts.  The engine's pick pass will
+  // call `pickRing(pass)` immediately after the per-source galaxy
+  // draws, reusing the caller's @group(0) (CameraUniforms) binding.
+  let ringPickPipeline: GPURenderPipeline | null = null;
   let uniformBuffer: GPUBuffer | null = null;
   let instanceBuffer: GPUBuffer | null = null;
   let fadeBuffer: GPUBuffer | null = null;
   let fadeBindGroup: GPUBindGroup | null = null;
+  // Dummy zeroed FadeUniforms for the pick pipeline.  Pattern lifted
+  // verbatim from pickRenderer.ts lines 197-206: the pick fragment
+  // doesn't read fade.opacity (the pick texture is integer + has no
+  // observable alpha), but the pipeline layout still declares the
+  // canonical fadeBgl at @group(1) so other passes' bound fade
+  // groups remain layout-compatible across the encoder boundary.
+  let pickDummyFadeBuffer: GPUBuffer | null = null;
+  let pickDummyFadeBindGroup: GPUBindGroup | null = null;
   const sourceBuffers: Record<'cluster' | 'supercluster' | 'void', GPUBuffer | null> = {
     cluster: null,
     supercluster: null,
@@ -278,6 +296,68 @@ export function createClusterMarkerRenderer(
         ],
       },
       primitive: { topology: 'triangle-list' },
+    });
+
+    // ── Ring-pick pipeline (plan 3 task 2) ────────────────────────────
+    //
+    // Compiles a SEPARATE GPUShaderModule pair from the same vertex
+    // source as the visible-ring pipeline + the new ringPick fragment.
+    // We deliberately do NOT reuse the visible-ring modules — sharing
+    // a GPUShaderModule across pipelines silently breaks `layout:'auto'`
+    // bind-group reuse (see feedback_webgpu_auto_layout_trap.md).  Our
+    // layout is explicit so we'd survive that trap, but the convention
+    // is one module per pipeline so any future contributor who adds an
+    // `auto` pipeline doesn't accidentally inherit a poisoned module.
+    //
+    // The pipeline layout is the same shared `pipelineLayout` the
+    // visible pipelines use ([cameraBgl, fadeBgl, sourceBgl]) — caller-
+    // bound @group(0) flows in from the engine's pick pass, our dummy
+    // fade group lands at @group(1), per-category SourceUniforms at
+    // @group(2).
+    //
+    // Differences vs. the visible-ring pipeline:
+    //   - Fragment target is `r32uint` (integer pick texture).
+    //   - No blend descriptor — integer formats don't support blending.
+    //   - depthStencil enabled with `depth24plus` + `less`+writeEnabled
+    //     so a closer galaxy pick fragment (running just before us in
+    //     the same pass) wins the pixel over an occluded POI ring.
+    //     The depth attachment is the same texture the galaxy pick
+    //     draws used; we are intentionally a second batch INSIDE the
+    //     same pass, not a separate pass.
+    const ringPickVs = createShaderModuleWithDevLog(device, ringPickVsCode, 'clusterMarker.pick.vs');
+    const ringPickFs = createShaderModuleWithDevLog(device, ringPickFsCode, 'clusterMarker.pick.fs');
+    ringPickPipeline = device.createRenderPipeline({
+      label: 'cluster-marker-ring-pick-pipeline',
+      layout: pipelineLayout,
+      vertex: { module: ringPickVs, entryPoint: 'vs', buffers: vertexBuffers },
+      fragment: {
+        module: ringPickFs,
+        entryPoint: 'fsRingPick',
+        targets: [{ format: 'r32uint' }],
+      },
+      primitive: { topology: 'triangle-list' },
+      depthStencil: {
+        format: 'depth24plus',
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+      },
+    });
+
+    // 16-byte zeroed FadeUniforms buffer — the pick fragment ignores
+    // fade.opacity, but the pipeline layout still lists fadeBgl at
+    // @group(1) for symmetry with the visible pipelines, so we MUST
+    // bind a layout-compatible group there.  Allocated GPUBufferUsage.
+    // UNIFORM only (no COPY_DST): we never write to it, the default-
+    // zero contents are what we want.
+    pickDummyFadeBuffer = device.createBuffer({
+      label: 'cluster-marker-pick-fade-dummy',
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM,
+    });
+    pickDummyFadeBindGroup = device.createBindGroup({
+      label: 'cluster-marker-pick-fade-bg-dummy',
+      layout: fadeBgl,
+      entries: [{ binding: 0, resource: { buffer: pickDummyFadeBuffer } }],
     });
 
     uniformBuffer = device.createBuffer({
@@ -454,10 +534,55 @@ export function createClusterMarkerRenderer(
     return currentMarkerCount;
   }
 
+  /**
+   * Issue per-category POI ring pick draws into the caller-supplied
+   * render pass.  See the docstring on ClusterMarkerRenderer.pickRing
+   * for the binding contract — short version: caller bound @group(0),
+   * we bind @group(1) (dummy fade) + @group(2) (per-category source)
+   * and emit one `draw(6, count)` per non-empty bucket.
+   *
+   * We reuse the same per-category bucketing the visible draw path
+   * already produced in `setMarkers` (bucketOffsets + bucketCounts +
+   * sourceBindGroups + instanceBuffer).  The instanceBuffer's per-
+   * instance layout matches what ring.wesl's vertex stage expects —
+   * which is the same source the pick pipeline's vertex stage compiles
+   * from — so no separate vertex data is needed.
+   *
+   * Voids ARE included in the pick path (unlike the halo draw, which
+   * skips them) — a user should still be able to click a void's ring.
+   */
+  function pickRing(passEncoder: GPURenderPassEncoder): void {
+    if (!device || !ringPickPipeline || !instanceBuffer || !pickDummyFadeBindGroup) return;
+    if (currentMarkerCount === 0) return;
+    passEncoder.setPipeline(ringPickPipeline);
+    passEncoder.setBindGroup(1, pickDummyFadeBindGroup);
+    passEncoder.setVertexBuffer(0, instanceBuffer);
+    for (const cat of POI_CATEGORIES_WITH_MARKERS) {
+      if (bucketCounts[cat] === 0) continue;
+      const bg = sourceBindGroups[cat];
+      if (!bg) continue;
+      passEncoder.setBindGroup(2, bg);
+      // 6 verts per padded billboard quad; bucketCounts[cat] instances.
+      //
+      // firstInstance = bucketOffsets[cat] makes the vertex stage read
+      // its instance-step attributes from the correct slice of the
+      // shared instance buffer.  Per the WebGPU spec
+      // @builtin(instance_index) == firstInstance + i, so the
+      // poiIndex the fragment packs into the pick texture is the
+      // GLOBAL slot in the instance buffer (across all categories),
+      // NOT a per-category-local index.  This matches the visible-
+      // ring draw above and is the format the CPU-side selection
+      // decoder will reverse-lookup against the descriptor list
+      // (plan 3 task 4 wires that decoder).
+      passEncoder.draw(6, bucketCounts[cat], 0, bucketOffsets[cat]);
+    }
+  }
+
   function destroy(): void {
     uniformBuffer?.destroy();
     instanceBuffer?.destroy();
     fadeBuffer?.destroy();
+    pickDummyFadeBuffer?.destroy();
     for (const cat of POI_CATEGORIES_WITH_MARKERS) {
       sourceBuffers[cat]?.destroy();
     }
@@ -468,6 +593,7 @@ export function createClusterMarkerRenderer(
     setMarkers,
     render,
     markerCount,
+    pickRing,
     destroy,
   };
   renderer satisfies Renderer;
