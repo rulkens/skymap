@@ -33,12 +33,21 @@ describe('raDecDistToEqCart', () => {
 });
 
 describe('CLUSTER_ANCHORS', () => {
-  it('exposes exactly the 6 well-known clusters', () => {
-    expect(CLUSTER_ANCHORS).toHaveLength(6);
+  it('includes the well-known clusters', () => {
+    // Length is asserted as a lower bound rather than exact so future
+    // additions don't require a test edit — but the named-membership
+    // asserts below still catch accidental removal of any canonical
+    // entry.
+    expect(CLUSTER_ANCHORS.length).toBeGreaterThanOrEqual(10);
     const names = CLUSTER_ANCHORS.map((a) => a.name);
     expect(names).toContain('Virgo (M87)');
+    expect(names).toContain('Fornax (NGC 1399)');
+    expect(names).toContain('Hydra I (A1060)');
+    expect(names).toContain('Centaurus (A3526)');
     expect(names).toContain('Coma (A1656)');
     expect(names).toContain('Perseus (A426)');
+    expect(names).toContain('A2199 (NGC 6166)');
+    expect(names).toContain('Ophiuchus');
     expect(names).toContain('Norma / Great Attractor');
     expect(names).toContain('Hercules (A2151)');
     expect(names).toContain('Shapley (A3558)');
@@ -58,10 +67,14 @@ describe('CLUSTER_ANCHORS', () => {
 });
 
 describe('SUPERCLUSTER_ANCHORS', () => {
-  it('exposes the two CF-4 supercluster peaks (Hydra Wall + Hercules SC)', () => {
+  it('exposes the canonical local-volume superclusters', () => {
     const names = SUPERCLUSTER_ANCHORS.map((a) => a.name);
+    expect(names).toContain('Laniakea SC');
+    expect(names).toContain('Perseus-Pisces SC');
+    expect(names).toContain('Coma SC');
     expect(names).toContain('Hydra Wall');
     expect(names).toContain('Hercules SC');
+    expect(names).toContain('Shapley SC');
   });
 
   it('every supercluster has a positive distance', () => {

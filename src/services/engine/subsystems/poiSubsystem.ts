@@ -170,8 +170,13 @@ export const POI_STYLES = {
     maxPixelSize: 150,
     worldEmMpc: 5.0,
     pixelWidth: 2,
-    haloColor: [1.0, 0.8, 0.5] as Vec3, // Warm orange (matches labelColor.rgb).
-    ringColor: [1.0, 0.8, 0.5] as Vec3, // Warm orange (matches labelColor.rgb).
+    // Dimmer + more saturated than the labelColor on purpose: SC halos
+    // span ~50 Mpc (vs clusters' ~2 Mpc), so an additive halo at the
+    // label's RGB reads as overpowering.  Pulling max channel to 0.85
+    // and dropping G/B saturates toward orange, distinguishing SC from
+    // cluster yellow without competing for visual weight.
+    haloColor: [0.85, 0.6, 0.3] as Vec3,
+    ringColor: [0.85, 0.6, 0.3] as Vec3,
     markerMaxApparentRadiusPx: 800,
     markerMaxApparentFadeBandPx: 200,
   },
@@ -371,7 +376,7 @@ export function createPoiSubsystem(): PoiSubsystem {
     return { labels, lines, awake };
   }
 
-  function produceMarkers(state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[] {
+  function produceMarkers(_state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[] {
     const out: ClusterMarkerDescriptor[] = [];
     // The same vertical-fov recovery produceLabels does — kept local
     // so the two producers don't share mutable state.

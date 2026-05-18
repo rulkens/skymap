@@ -49,6 +49,13 @@ import package::lib::fadeUniforms::applyFade;
 const RING_PX_WIDTH: f32 = 1.5;
 // AA falloff width, in CSS pixels.
 const RING_AA_WIDTH: f32 = 1.0;
+// Quad margin past the ring's |uv| == 1 line.  The ring is the unit
+// circle inscribed in the [-1, 1]² quad; at the cardinal points
+// (uv = (±1, 0), (0, ±1)) the band's outer edge would fall outside
+// the quad and get clipped.  10% margin gives the AA band breathing
+// room at every angle.  Bumps quad area by ~21%, negligible at the
+// dozens-of-instances scale this renderer runs at.
+const RING_QUAD_MARGIN: f32 = 1.1;
 
 @vertex
 fn vs(
@@ -58,10 +65,15 @@ fn vs(
   let worldPos = input.positionAndRadius.xyz;
   let radiusMpc = input.positionAndRadius.w;
 
-  // Same world-sized, screen-aligned billboard expansion as halo.wesl.
+  // Same world-sized, screen-aligned billboard expansion as halo.wesl,
+  // but the quad is widened by RING_QUAD_MARGIN so the AA band at
+  // |uv| == 1 doesn't clip at the cardinal points (see constant above).
+  // The 'uv' varying scales to match (corner * MARGIN), so the ring's
+  // d == 1 line still lands at world radius 'radiusMpc' — the MARGIN
+  // scale on both the geometry and the varying cancels.
   let centerClip = worldToClip(u.cam, worldPos);
   let corner = quadCorner(vi);
-  let offset = expandBillboardWorld(u.cam, centerClip, radiusMpc, corner);
+  let offset = expandBillboardWorld(u.cam, centerClip, radiusMpc * RING_QUAD_MARGIN, corner);
 
   // Pixel half-extent of the billboard — the fragment needs this to
   // convert RING_PX_WIDTH / RING_AA_WIDTH into UV-space band widths.
@@ -74,7 +86,12 @@ fn vs(
 
   var out: VsOut;
   out.pos = vec4<f32>(centerClip.xy + offset, centerClip.zw);
-  out.uv = corner;
+  // uv scales with MARGIN so the ring's d == 1 line lands at world
+  // radius 'radiusMpc' (not MARGIN * radiusMpc): at uv = (1, 0) we're
+  // at corner = (1/MARGIN, 0), pixel offset (1/MARGIN) * MARGIN *
+  // sizePx = sizePx = radiusMpc.  The quad's actual cardinal edges
+  // are at uv = ±MARGIN, giving the AA band room outside the ring.
+  out.uv = corner * RING_QUAD_MARGIN;
   // For the ring we use the same colour slot as the halo (see io.wesl
   // module header — voids skip the halo draw entirely, and clusters /
   // SCs use the same warm tint for both passes; ringColor split is a
