@@ -7,20 +7,8 @@
 import type { ReactNode } from 'react';
 import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
 import { formatDistance } from '../../utils/format/distance';
+import { POI_CATEGORY_INFO } from '../../data/poiCategoryInfo';
 import styles from './CompactPoiCard.module.css';
-
-function poiCategoryLabel(category: PointOfInterest['category']): string {
-  switch (category) {
-    case 'cluster':
-      return 'Cluster';
-    case 'supercluster':
-      return 'Supercluster';
-    case 'void':
-      return 'Void';
-    case 'famousGalaxy':
-      return 'Galaxy';
-  }
-}
 
 export type CompactPoiCardProps = {
   poi: PointOfInterest;
@@ -35,7 +23,7 @@ export function CompactPoiCard({ poi }: CompactPoiCardProps): ReactNode {
         <span>Hover</span>
       </div>
       <div className={styles.cardHeadline}>{poi.name}</div>
-      <div className={styles.sourceBadge}>{poiCategoryLabel(poi.category)}</div>
+      <div className={styles.sourceBadge}>{POI_CATEGORY_INFO[poi.category].shortLabel}</div>
       <div className={styles.cardDistLine}>
         {formatDistance(distanceMpc)}
         {poi.physicalRadiusMpc !== undefined && (

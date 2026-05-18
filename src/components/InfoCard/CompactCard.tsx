@@ -1,7 +1,7 @@
 /**
  * CompactCard — slim hover-preview for a galaxy, rendered below the pinned
- * FullCard when a second galaxy is hovered.  No thumbnail, no expandable
- * section, no actions.
+ * GalaxyDetailCard when a second galaxy is hovered.  No thumbnail, no
+ * expandable section, no actions.
  */
 
 import type { ReactNode } from 'react';

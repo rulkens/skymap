@@ -1,8 +1,8 @@
 /**
- * Thumbnail — 80×80 px SDSS image cutout shown in the FullCard.  `loading="lazy"`
- * defers fetch until the card is in the viewport.  On any error (404, CORS,
- * network) we swap to a same-size placeholder so the surrounding layout
- * doesn't reflow.
+ * Thumbnail — 80×80 px SDSS image cutout shown in GalaxyDetailCard.
+ * `loading="lazy"` defers fetch until the card is in the viewport.  On any
+ * error (404, CORS, network) we swap to a same-size placeholder so the
+ * surrounding layout doesn't reflow.
  */
 
 import { useState } from 'react';
