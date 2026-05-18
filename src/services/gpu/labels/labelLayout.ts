@@ -33,12 +33,14 @@
 import type { FontMetrics } from '../../../@types/rendering/FontMetrics';
 import type { GlyphQuad } from '../../../@types/rendering/GlyphQuad';
 import type { LabelAlignX } from '../../../@types/rendering/LabelAlignX';
+import type { LabelAlignY } from '../../../@types/rendering/LabelAlignY';
 import { lookupGlyph } from './fontMetrics';
 
 export function layoutLabel(
   text: string,
   metrics: FontMetrics,
   alignX: LabelAlignX = 'left',
+  alignY: LabelAlignY = 'baseline',
 ): GlyphQuad[] {
   const quads: GlyphQuad[] = [];
   let penX = 0;
@@ -79,6 +81,36 @@ export function layoutLabel(
     const shift = alignX === 'center' ? penX * 0.5 : penX;
     for (const q of quads) {
       q.localOffsetX -= shift;
+    }
+  }
+
+  // Vertical alignment: same post-pass shape as alignX, but the
+  // reference span is the bounding box of the laid-out glyphs (not
+  // a font-default line-box) so labels containing only uppercase /
+  // only digits / mixed punctuation each centre on the visible ink.
+  //
+  // Atlas Y convention: positive localOffsetY puts the glyph BELOW
+  // the baseline anchor (the vertex shader negates Y before mixing
+  // into world space — see labels/vertex.wesl).  So minY here is the
+  // smallest Y (top of the highest glyph) and maxY is the largest
+  // (bottom of the lowest glyph).
+  if (alignY !== 'baseline' && quads.length > 0) {
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const q of quads) {
+      if (q.localOffsetY < minY) minY = q.localOffsetY;
+      const bottom = q.localOffsetY + q.localSizeH;
+      if (bottom > maxY) maxY = bottom;
+    }
+    // shift = where the chosen anchor currently sits in atlas-Y; we
+    // subtract it from every glyph so the anchor lands at Y=0.
+    //   center  → midpoint of bbox
+    //   top     → top of highest glyph
+    //   bottom  → bottom of lowest glyph
+    const shiftY =
+      alignY === 'center' ? (minY + maxY) * 0.5 : alignY === 'top' ? minY : maxY;
+    for (const q of quads) {
+      q.localOffsetY -= shiftY;
     }
   }
 

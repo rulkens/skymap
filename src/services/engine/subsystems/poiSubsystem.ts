@@ -158,8 +158,12 @@ export const POI_STYLES = {
     maxPixelSize: 150,
     worldEmMpc: 1.25,
     pixelWidth: 2,
-    haloColor: [1.0, 0.85, 0.4] as Vec3, // Warm yellow (matches labelColor.rgb).
-    ringColor: [1.0, 0.85, 0.4] as Vec3, // Warm yellow (matches labelColor.rgb).
+    // Fill colour (additive halo + ring tint) is dimmer than the
+    // labelColor on purpose: at full-bright RGB the halo dominated the
+    // background galaxy field.  Max channel pulled to ~0.7 so clusters
+    // read as warm yellow accents rather than spotlights.
+    haloColor: [0.7, 0.6, 0.28] as Vec3,
+    ringColor: [0.7, 0.6, 0.28] as Vec3,
     markerMaxApparentRadiusPx: 800,
     markerMaxApparentFadeBandPx: 200,
   },
@@ -170,13 +174,12 @@ export const POI_STYLES = {
     maxPixelSize: 150,
     worldEmMpc: 5.0,
     pixelWidth: 2,
-    // Dimmer + more saturated than the labelColor on purpose: SC halos
-    // span ~50 Mpc (vs clusters' ~2 Mpc), so an additive halo at the
-    // label's RGB reads as overpowering.  Pulling max channel to 0.85
-    // and dropping G/B saturates toward orange, distinguishing SC from
-    // cluster yellow without competing for visual weight.
-    haloColor: [0.85, 0.6, 0.3] as Vec3,
-    ringColor: [0.85, 0.6, 0.3] as Vec3,
+    // Same dim+saturate treatment as cluster, pushed slightly further
+    // toward orange to distinguish from cluster yellow.  SC halos span
+    // ~50 Mpc (vs clusters' ~2 Mpc) so even at lower RGB the larger
+    // additive footprint still reads clearly.
+    haloColor: [0.6, 0.42, 0.21] as Vec3,
+    ringColor: [0.6, 0.42, 0.21] as Vec3,
     markerMaxApparentRadiusPx: 800,
     markerMaxApparentFadeBandPx: 200,
   },
@@ -331,11 +334,18 @@ export function createPoiSubsystem(): PoiSubsystem {
       // visible and then stay frozen at that camera distance.  See the
       // field docstring for the full rationale.
       let labelWorldPos: Vec3 = [p.worldPos[0], p.worldPos[1], p.worldPos[2]];
-      let alignX: 'left' | 'center' | 'right' = 'left';
+      // POI labels without an explicit lift (clusters / superclusters /
+      // voids) anchor at the ring centre and centre on both axes so
+      // the text sits symmetrically over the marker.  Famous galaxies
+      // override below by setting labelAnchorOffsetMpc — they shift
+      // up in world-Y and use horizontal centring around the line.
+      let alignX: 'left' | 'center' | 'right' = 'center';
+      let alignY: 'baseline' | 'center' | 'top' | 'bottom' = 'center';
       if (p.labelAnchorOffsetMpc !== undefined) {
         const offset = p.labelAnchorOffsetMpc;
         labelWorldPos = [p.worldPos[0], p.worldPos[1] + offset, p.worldPos[2]];
         alignX = 'center';
+        alignY = 'baseline';
         lines.push({
           id: `${p.id}-anchor`,
           fromWorld: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
@@ -358,6 +368,7 @@ export function createPoiSubsystem(): PoiSubsystem {
         maxPixelSize: style.maxPixelSize,
         fadeAlpha,
         alignX,
+        alignY,
       });
     }
     // One-shot layer fade-in: first frame that emits a non-empty

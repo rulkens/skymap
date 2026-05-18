@@ -19,6 +19,7 @@
 import type { Vec3 } from '../math/Vec3';
 import type { Vec4 } from '../math/Vec4';
 import type { LabelAlignX } from './LabelAlignX';
+import type { LabelAlignY } from './LabelAlignY';
 import type { FontId } from '../../data/fonts';
 
 export type Label = {
@@ -70,4 +71,11 @@ export type Label = {
    * through the middle of the text.
    */
   readonly alignX?: LabelAlignX;
+  /**
+   * Vertical alignment of the text relative to `worldPos`.
+   * Default 'baseline' (anchor sits on the text baseline; descenders
+   * hang below).  POI rings use 'center' so the label visually
+   * straddles the ring centre rather than hanging beneath it.
+   */
+  readonly alignY?: LabelAlignY;
 };

@@ -78,6 +78,7 @@ import {
   // survey-galaxy hits to the caller's `{source, localIdx}` contract;
   // plan 3 swaps this for a real switch on `result.kind`.
   unpackPickGalaxyOnly,
+  unpackPick,
 } from '../../../data/selectionEncoding';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
@@ -664,6 +665,15 @@ export function createPickRenderer(
       // and the future pick-dispatch sub-plan will swap the shim for a
       // real `switch (result.kind)` that routes POI hits to the focus
       // subsystem.  See `selectionEncoding.ts` for the encoding details.
+      // TEMP DEBUG (Plan 3 checkpoint) — log every non-zero pick so the
+      // user can verify POI ring clicks land in the texture before
+      // tasks 10-14 wire them through to the click handler / InfoCard.
+      // Remove this block once Task 10 lands (PickResult routing).
+      if (raw !== 0) {
+        const result = unpackPick(raw);
+        // eslint-disable-next-line no-console
+        console.log('[pick]', result?.kind ?? 'null', { raw: raw.toString(16), result });
+      }
       const decoded = unpackPickGalaxyOnly(raw);
       if (decoded === null) return null;
       return { source: decoded.source as Source, localIdx: decoded.localIdx };

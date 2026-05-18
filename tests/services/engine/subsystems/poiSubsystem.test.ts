@@ -106,7 +106,7 @@ describe('poiSubsystem', () => {
     expect(out.labels[0]!.alignX).toBe('center');
   });
 
-  it('omits the anchor line and lift when labelAnchorOffsetMpc is absent', () => {
+  it('omits the anchor line and lift when labelAnchorOffsetMpc is absent (centres both axes)', () => {
     const sub = createPoiSubsystem();
     const galaxy: PointOfInterest = {
       id: 'no-anchor',
@@ -118,11 +118,14 @@ describe('poiSubsystem', () => {
     sub.setPois([galaxy]);
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels[0]!.worldPos[1]).toBe(0.1);
-    expect(out.labels[0]!.alignX).toBe('left');
+    // Labels without a lift offset centre on both axes so the text
+    // sits symmetrically over the world anchor.
+    expect(out.labels[0]!.alignX).toBe('center');
+    expect(out.labels[0]!.alignY).toBe('center');
     expect(out.lines).toHaveLength(0);
   });
 
-  it('cluster POIs keep alignX left and emit no marker lines (crosshair removed)', () => {
+  it('cluster POIs centre both axes and emit no marker lines (crosshair removed)', () => {
     const sub = createPoiSubsystem();
     const virgo: PointOfInterest = {
       id: 'virgo',
@@ -133,7 +136,9 @@ describe('poiSubsystem', () => {
     };
     sub.setPois([virgo]);
     const out = sub.produceLabels(makeState(), makeCtx());
-    expect(out.labels[0]!.alignX).toBe('left');
+    // Cluster/SC/void labels straddle the ring centre on both axes.
+    expect(out.labels[0]!.alignX).toBe('center');
+    expect(out.labels[0]!.alignY).toBe('center');
     expect(out.labels[0]!.worldPos[1]).toBe(-2.13); // not lifted
     // Pre-cluster-viz this would have been 3 (perpendicular crosshair).
     // Now: 0 — crosshair removed in plan 2/4 task 9; clusters render
