@@ -66,7 +66,6 @@ import type { GpuContext } from '../../../@types/rendering/GpuContext';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
-import type { PoiCategory } from '../../engine/subsystems/poiSubsystem';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { Source } from '../../../data/sources';
 import haloVsCode from '../shaders/clusterMarker/halo.wesl?static';
@@ -76,22 +75,23 @@ import ringFsCode from '../shaders/clusterMarker/ring.wesl?static';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 
 /**
- * 9 floats per instance × 4 bytes = 36 bytes/instance.
+ * 12 floats per instance × 4 bytes = 48 bytes/instance.
  *
  * Layout (matches VsIn in clusterMarker/io.wesl):
- *   [0..2]  position.xyz       — world-space centre
- *   [3]     physicalRadiusMpc  — world-space half-extent
- *   [4..6]  haloColor.rgb      — additive halo tint
- *   [7]     haloAlpha          — premultiplied later
- *   [8]     ringAlpha          — premultiplied later
+ *   [0..2]   position.xyz       — world-space centre
+ *   [3]      physicalRadiusMpc  — world-space half-extent
+ *   [4..6]   haloColor.rgb      — additive halo tint
+ *   [7]      haloAlpha          — premultiplied later
+ *   [8..10]  ringColor.rgb      — ring tint (independent of halo)
+ *   [11]     ringAlpha          — premultiplied later
  *
- * Ring color piggybacks on halo color via a per-pipeline uniform
- * override at draw time (the spec lets ring + halo share the warm
- * tint per category; only the void diverges and voids skip halo).
- * If a future category needs distinct halo/ring tints we'd grow the
- * stride to 12 floats (48 bytes) and add `ringColor.rgb`.
+ * Halo and ring carry independent RGB tints so voids — which opt out
+ * of the additive halo entirely (haloAlpha = 0) — can still display
+ * their cyan ring without falling back to halo's (0, 0, 0).  v1
+ * shared halo's RGB across both pipelines as a stride-saving
+ * approximation; the void colour mismatch forced the split.
  */
-const MARKER_INSTANCE_FLOATS = 9;
+const MARKER_INSTANCE_FLOATS = 12;
 const MARKER_INSTANCE_BYTES = MARKER_INSTANCE_FLOATS * 4;
 
 /** Shared CameraUniforms prefix size — same 80 bytes as markerLineRenderer. */
@@ -231,7 +231,7 @@ export function createClusterMarkerRenderer(
         attributes: [
           { shaderLocation: 0, offset: 0,  format: 'float32x4' }, // positionAndRadius
           { shaderLocation: 1, offset: 16, format: 'float32x4' }, // haloColorAndAlpha
-          { shaderLocation: 2, offset: 32, format: 'float32'   }, // ringAlpha
+          { shaderLocation: 2, offset: 32, format: 'float32x4' }, // ringColorAndAlpha
         ],
       },
     ];
@@ -374,7 +374,10 @@ export function createClusterMarkerRenderer(
       instanceBuf[base + 5] = d.haloColor[1];
       instanceBuf[base + 6] = d.haloColor[2];
       instanceBuf[base + 7] = d.haloAlpha;
-      instanceBuf[base + 8] = d.ringAlpha;
+      instanceBuf[base + 8] = d.ringColor[0];
+      instanceBuf[base + 9] = d.ringColor[1];
+      instanceBuf[base + 10] = d.ringColor[2];
+      instanceBuf[base + 11] = d.ringAlpha;
       currentMarkerCount++;
     }
 

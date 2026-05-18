@@ -41,17 +41,22 @@ struct Uniforms {
 // ── per-instance attributes ───────────────────────────────────────
 //
 // One instance per cluster marker.  The CPU writer in
-// clusterMarkerRenderer.ts packs each instance into 36 bytes
-// (9 f32 slots) laid out as:
+// clusterMarkerRenderer.ts packs each instance into 48 bytes
+// (12 f32 slots) laid out as:
 //
 //   [0..15]  positionAndRadius   vec4<f32>  (centreWorld.xyz, physicalRadiusMpc)
 //   [16..31] haloColorAndAlpha   vec4<f32>  (haloRgb, haloAlpha)
-//   [32..35] ringAlpha           f32
+//   [32..47] ringColorAndAlpha   vec4<f32>  (ringRgb, ringAlpha)
 //
 // Packing the radius into the trailing slot of the world-position
 // vec4 saves a vertex-attribute slot — same trick as markerLines'
-// fromAndWidth.  haloAlpha rides in the trailing slot of
-// haloColorAndAlpha for the same reason.
+// fromAndWidth.  haloAlpha / ringAlpha ride in the trailing slot of
+// their respective colour vec4s for the same reason.
+//
+// History: at v1 ring colour was sourced from halo colour (rendering
+// voids as black because they opt out of the halo).  v2 split them
+// into a dedicated ringColorAndAlpha slot — same packing pattern as
+// haloColorAndAlpha, so the fragment is symmetric across the two.
 
 struct VsIn {
   // shaderLocation 0: world-space centre (xyz) + physicalRadiusMpc (w).
@@ -59,11 +64,10 @@ struct VsIn {
   @location(0) positionAndRadius: vec4<f32>,
   // shaderLocation 1: halo RGB (xyz) + haloAlpha (w).
   @location(1) haloColorAndAlpha: vec4<f32>,
-  // shaderLocation 2: ringAlpha alone.  At v1 ring colour comes from
-  // halo colour (per-category — see the renderer); a future split adds
-  // ringColor.rgb to the trailing slots of haloColorAndAlpha or a new
-  // @location(3).
-  @location(2) ringAlpha: f32,
+  // shaderLocation 2: ring RGB (xyz) + ringAlpha (w).  Mirrors
+  // haloColorAndAlpha's layout exactly so halo and ring vertex stages
+  // pull from symmetric slots.
+  @location(2) ringColorAndAlpha: vec4<f32>,
 };
 
 // ── vertex-to-fragment interface ──────────────────────────────────

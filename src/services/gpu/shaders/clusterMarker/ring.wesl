@@ -92,12 +92,11 @@ fn vs(
   // sizePx = sizePx = radiusMpc.  The quad's actual cardinal edges
   // are at uv = ±MARGIN, giving the AA band room outside the ring.
   out.uv = corner * RING_QUAD_MARGIN;
-  // For the ring we use the same colour slot as the halo (see io.wesl
-  // module header — voids skip the halo draw entirely, and clusters /
-  // SCs use the same warm tint for both passes; ringColor split is a
-  // follow-up).
-  out.color = input.haloColorAndAlpha.xyz;
-  out.alpha = input.ringAlpha;
+  // Ring uses its own dedicated colour slot (separate from the halo)
+  // so voids — which opt out of the additive halo — still get the
+  // right cyan ring tint instead of falling back to halo's (0, 0, 0).
+  out.color = input.ringColorAndAlpha.xyz;
+  out.alpha = input.ringColorAndAlpha.w;
   out.radiusMpc = radiusMpc;
   // Smuggle 'sizePx' through the camDistMpc slot — repurposing it as
   // the per-instance pixel half-extent the fragment needs to convert
