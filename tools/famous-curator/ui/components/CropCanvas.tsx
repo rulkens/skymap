@@ -246,8 +246,9 @@ export function CropCanvas(props: CropCanvasProps) {
           Reset rotation
         </button>
         <span className="curator-crop-readout">
-          crop {props.crop.width} × {props.crop.height} of {props.source.width} ×{' '}
-          {props.source.height} source · {props.crop.rotationDeg.toFixed(1)}°
+          crop {Math.round(props.crop.width)} × {Math.round(props.crop.height)} of{' '}
+          {props.source.width} × {props.source.height} source ·{' '}
+          {props.crop.rotationDeg.toFixed(1)}°
         </span>
       </div>
 
