@@ -76,6 +76,7 @@ import type { Vec4 } from '../../../@types/math/Vec4';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 import type { PoiSubsystem } from '../../../@types/engine/subsystems/PoiSubsystem';
+import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 
@@ -350,6 +351,78 @@ export function createPoiSubsystem(): PoiSubsystem {
     return { labels, lines, awake };
   }
 
+  function produceMarkers(state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[] {
+    const out: ClusterMarkerDescriptor[] = [];
+    // The same vertical-fov recovery produceLabels does — kept local
+    // so the two producers don't share mutable state.
+    const halfH = ctx.canvasSize.height * 0.5;
+    const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
+    // pxPerRad along the screen-Y axis at the current canvas size.
+    // (Same form youAreHereSubsystem and the labels use.)
+    const pxPerRad = ctx.canvasSize.height * 0.5 / Math.tan(fovYRad * 0.5);
+    const [cx, cy, cz] = ctx.drawCamPos;
+
+    for (const p of pois) {
+      if (!visibility[p.category]) continue;
+      // POIs without a physicalRadiusMpc have no ring to draw — skip.
+      if (p.physicalRadiusMpc === undefined) continue;
+      const style: CategoryStyle = POI_STYLES[p.category];
+      // ringColor === null guards a never-happens path; we use
+      // haloColor === null to mean "label-only category".  Famous
+      // galaxies always hit this branch.
+      if (style.haloColor === null && p.category === 'famousGalaxy') continue;
+
+      const dx = p.worldPos[0] - cx;
+      const dy = p.worldPos[1] - cy;
+      const dz = p.worldPos[2] - cz;
+      const distanceMpc = Math.hypot(dx, dy, dz);
+      if (distanceMpc < 0.001) continue; // camera on top of POI — skip rather than NaN
+
+      // Apparent on-screen radius in pixels.
+      const apparentRadiusPx = (p.physicalRadiusMpc / distanceMpc) * pxPerRad;
+
+      // Max-apparent-radius fade-out: smoothstep alpha from 1 → 0 as
+      // the projected ring grows past markerMaxApparentRadiusPx into
+      // the fade band.  Above the band: alpha = 0 (skip).
+      let maxFadeAlpha = 1;
+      if (apparentRadiusPx > style.markerMaxApparentRadiusPx) {
+        const t = Math.min(
+          1,
+          (apparentRadiusPx - style.markerMaxApparentRadiusPx) / style.markerMaxApparentFadeBandPx,
+        );
+        // Smoothstep, then invert so we fade 1 → 0.
+        maxFadeAlpha = 1 - t * t * (3 - 2 * t);
+      }
+      if (maxFadeAlpha <= 0) continue; // fully faded
+
+      // Apparent-size fade-IN band reuses produceLabels' logic — only
+      // applies when both minApparentSizePx AND apparentDiameterKpc are
+      // set.  For cluster / SC / void anchors neither is set, so the
+      // fade-in alpha defaults to 1 (always visible above 0 distance).
+      // Implementer note: if a future POI wants a min-size fade-in for
+      // markers, mirror the produceLabels logic here.
+      const minFadeAlpha = 1;
+
+      const fadeAlpha = Math.min(maxFadeAlpha, minFadeAlpha);
+
+      // Halo: voids opt out (style.haloColor === null).  Cluster + SC
+      // emit the warm tint with alpha = fadeAlpha; voids emit 0.
+      const haloAlpha = style.haloColor === null ? 0 : fadeAlpha;
+      const haloColor: Vec3 = style.haloColor ?? [0, 0, 0];
+
+      out.push({
+        category: p.category,
+        worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
+        physicalRadiusMpc: p.physicalRadiusMpc,
+        haloColor,
+        ringColor: style.ringColor,
+        haloAlpha,
+        ringAlpha: fadeAlpha,
+      });
+    }
+    return out;
+  }
+
   // Built as a `const` (rather than returned inline) so we can attach
   // the `satisfies Destroyable` latch — the POI subsystem is one of
   // the engine's ~13 teardown targets, and the shared shape lets
@@ -357,6 +430,7 @@ export function createPoiSubsystem(): PoiSubsystem {
   const subsystem: PoiSubsystem = {
     id: 'pois',
     produceLabels,
+    produceMarkers,
     setPois,
     clearPois,
     setCategoryVisible,

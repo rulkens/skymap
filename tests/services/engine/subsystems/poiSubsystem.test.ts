@@ -308,3 +308,67 @@ describe('poiSubsystem — crosshair removal', () => {
     expect(out.labels).toHaveLength(1);
   });
 });
+
+describe('poiSubsystem — produceMarkers', () => {
+  it('returns one descriptor per visible cluster + supercluster + void POI', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'virgo', name: 'Virgo', category: 'cluster',
+        worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
+      { id: 'hercules', name: 'Hercules SC', category: 'supercluster',
+        worldPos: [0, 100, 0], physicalRadiusMpc: 50 },
+      { id: 'bootes', name: 'Boötes Void', category: 'void',
+        worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(3);
+  });
+
+  it('excludes famous-galaxy POIs from markers', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'm31', name: 'M31', category: 'famousGalaxy',
+        worldPos: [0.78, 0, 0], physicalRadiusMpc: 0.05 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(0);
+  });
+
+  it('voids have haloAlpha === 0 (ring-only per spec)', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'bootes', name: 'Boötes Void', category: 'void',
+        worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers[0]?.haloAlpha).toBe(0);
+    // Ring is the only visible primitive for voids.
+    expect(markers[0]?.ringAlpha).toBeGreaterThan(0);
+  });
+
+  it('respects setCategoryVisible', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'virgo', name: 'Virgo', category: 'cluster',
+        worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
+      { id: 'bootes', name: 'Boötes Void', category: 'void',
+        worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
+    ]);
+    sub.setCategoryVisible('void', false);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.category).toBe('cluster');
+  });
+
+  it('skips POIs without physicalRadiusMpc', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      // No physicalRadiusMpc — should not appear in markers (no
+      // radius to draw to).
+      { id: 'unsized', name: 'Unsized', category: 'cluster',
+        worldPos: [10, 0, 0] },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(0);
+  });
+});
