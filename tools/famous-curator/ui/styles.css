@@ -1,0 +1,633 @@
+/**
+ * Famous Galaxy Curator — visual stylesheet
+ *
+ * Dark astro aesthetic tailored for a local-only astronomy maintainer tool.
+ * All selectors hook into the semantic class names and data attributes emitted
+ * by Plan C components — no markup changes are required.
+ *
+ * Design decisions:
+ *   - Three-column CSS Grid (240px list / 1fr canvas / 320px controls) mirrors
+ *     the mental model: browse left, edit centre, tune right.
+ *   - Spacing scale uses CSS custom properties (--space-2 … --space-5) so
+ *     adjustments ripple through the whole layout from one place.
+ *   - Monospace stack on numeric readouts prevents layout jitter as digits
+ *     change width (proportional fonts have non-uniform digit widths).
+ *   - Data-attribute selectors ([data-dirty], [data-curated], [aria-current])
+ *     keep styling logic out of the components entirely — they emit structured
+ *     HTML; the sheet decides what it looks like.
+ *   - The crop-rect overlay uses pointer-events:none on the tinted fill so
+ *     clicks pass through to the image; only the handles and the body-drag
+ *     region re-enable events.
+ */
+
+/* ─────────────────────────────────────────────
+   Custom properties — palette + spacing scale
+   ───────────────────────────────────────────── */
+:root {
+  /* Palette */
+  --c-bg:       #0c0e14;   /* page background */
+  --c-surface:  #11141d;   /* panel / card surface */
+  --c-surface2: #161a26;   /* slightly lifted surface (fieldsets, inputs) */
+  --c-border:   #252c3d;   /* subtle border */
+  --c-text:     #d8dde8;   /* body text */
+  --c-muted:    #7c8597;   /* secondary / placeholder text */
+  --c-accent:   #5eb1ff;   /* interactive accent (blue) */
+  --c-accent-bg:#0f2240;   /* accent at very low opacity for fills */
+  --c-success:  #4ade80;   /* curated / done state (green) */
+  --c-success-bg:#0d2a1a;  /* success fill */
+  --c-warning:  #fb923c;   /* dirty / needs-action state (orange) */
+
+  /* Spacing scale */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Typography */
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", "Fira Code", "Consolas", monospace;
+
+  /* Crop handles */
+  --handle-size: 12px;
+}
+
+/* ─────────────────────────────────────────────
+   Reset + base
+   ───────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─────────────────────────────────────────────
+   App shell — three-column grid
+   ───────────────────────────────────────────── */
+.curator-app {
+  display: grid;
+  grid-template-columns: 240px 1fr 320px;
+  grid-template-rows: 100vh;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* The two aside panels scroll independently */
+.curator-app > aside {
+  background: var(--c-surface);
+  border-right: 1px solid var(--c-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.curator-app > aside:last-child {
+  border-right: none;
+  border-left: 1px solid var(--c-border);
+}
+
+/* Centre column scrolls vertically */
+.curator-app > main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--c-bg);
+}
+
+/* ─────────────────────────────────────────────
+   Galaxy list — left panel
+   ───────────────────────────────────────────── */
+.curator-galaxy-list {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+  padding: var(--space-2) 0;
+}
+
+.curator-galaxy-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 80ms ease, border-color 80ms ease;
+  user-select: none;
+  color: var(--c-text);
+}
+
+.curator-galaxy-list > li:hover {
+  background: var(--c-surface2);
+}
+
+/* Active galaxy — accent highlight */
+.curator-galaxy-list > li[aria-current="true"] {
+  background: #1e2433;
+  border-left-color: var(--c-accent);
+  color: var(--c-text);
+}
+
+/* Curated galaxy — green tick accent */
+.curator-galaxy-list > li[data-curated="true"] {
+  border-left-color: var(--c-success);
+}
+
+.curator-galaxy-list > li[data-curated="true"]:not([aria-current="true"]) {
+  background: var(--c-success-bg);
+}
+
+/* Name spans fill available width */
+.curator-galaxy-list__name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* Curated check glyph */
+.curator-galaxy-list__check {
+  font-size: 11px;
+  color: var(--c-success);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* ─────────────────────────────────────────────
+   Source bar — URL input strip
+   ───────────────────────────────────────────── */
+.curator-source-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.curator-source-bar label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.curator-source-bar input[type="url"] {
+  flex: 1;
+  background: var(--c-surface2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: var(--space-2) var(--space-3);
+  color: var(--c-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.curator-source-bar input[type="url"]:focus {
+  border-color: var(--c-accent);
+}
+
+.curator-source-bar input[type="url"]:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─────────────────────────────────────────────
+   Crop canvas — image + overlay
+   ───────────────────────────────────────────── */
+.curator-crop-canvas {
+  position: relative;
+  background: #070910;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+  overflow: hidden;
+  flex: 1;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Empty / drop-zone state */
+.curator-crop-canvas--empty {
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-muted);
+  font-size: 13px;
+  cursor: default;
+}
+
+.curator-crop-canvas--empty p {
+  pointer-events: none;
+}
+
+/* Controls strip above the image */
+.curator-crop-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.curator-crop-controls label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.curator-crop-controls input[type="range"] {
+  accent-color: var(--c-accent);
+  width: 80px;
+}
+
+/* Monospace crop dimensions readout */
+.curator-crop-readout {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--c-muted);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+/* Zoom stage — CSS scale keeps crop percentages correct */
+.curator-crop-stage {
+  position: relative;
+  flex: 1;
+  transform-origin: top left;
+  /* overflow hidden so zoom doesn't cause scrollbars in the stage */
+  overflow: hidden;
+}
+
+/* Source image fills the stage */
+.curator-crop-source {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ─────────────────────────────────────────────
+   Crop rectangle + handles
+   ───────────────────────────────────────────── */
+
+/*
+ * The rect div is positioned absolutely (in % of image) by React.
+ * We give it a semi-transparent accent fill + 2px solid accent outline.
+ * pointer-events:auto here lets the body drag through the fill.
+ */
+.curator-crop-rect {
+  background: rgba(94, 177, 255, 0.08);
+  border: 2px solid var(--c-accent);
+  /* Allow body-drag via pointer events on the rect itself */
+  pointer-events: auto;
+  cursor: move;
+  /* Required for absolute-positioned child handles */
+  position: absolute;
+}
+
+/* All handles: 12px squares, absolute, centred on their edge/corner */
+.curator-crop-handle {
+  position: absolute;
+  width:  var(--handle-size);
+  height: var(--handle-size);
+  background: var(--c-accent);
+  border: 1px solid var(--c-bg);
+  border-radius: 2px;
+  /* stopPropagation in JSX prevents body-drag from firing; handle drag takes over */
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* Corner handles — position at the literal corners */
+.curator-crop-handle--nw {
+  top: 0; left: 0;
+  transform: translate(-50%, -50%);
+  cursor: nwse-resize;
+}
+.curator-crop-handle--ne {
+  top: 0; right: 0;
+  transform: translate(50%, -50%);
+  cursor: nesw-resize;
+}
+.curator-crop-handle--se {
+  bottom: 0; right: 0;
+  transform: translate(50%, 50%);
+  cursor: nwse-resize;
+}
+.curator-crop-handle--sw {
+  bottom: 0; left: 0;
+  transform: translate(-50%, 50%);
+  cursor: nesw-resize;
+}
+
+/* Edge midpoint handles */
+.curator-crop-handle--n {
+  top: 0; left: 50%;
+  transform: translate(-50%, -50%);
+  cursor: ns-resize;
+}
+.curator-crop-handle--s {
+  bottom: 0; left: 50%;
+  transform: translate(-50%, 50%);
+  cursor: ns-resize;
+}
+.curator-crop-handle--e {
+  right: 0; top: 50%;
+  transform: translate(50%, -50%);
+  cursor: ew-resize;
+}
+.curator-crop-handle--w {
+  left: 0; top: 50%;
+  transform: translate(-50%, -50%);
+  cursor: ew-resize;
+}
+
+/* ─────────────────────────────────────────────
+   Metadata form — Attribution fieldset
+   ───────────────────────────────────────────── */
+.curator-metadata-form {
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--c-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.curator-metadata-form legend {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  padding: 0 var(--space-2);
+}
+
+.curator-metadata-form label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 12px;
+  color: var(--c-muted);
+}
+
+.curator-metadata-form input {
+  background: var(--c-surface2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: var(--space-2) var(--space-3);
+  color: var(--c-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 120ms ease;
+}
+
+.curator-metadata-form input:focus {
+  border-color: var(--c-accent);
+}
+
+/* ─────────────────────────────────────────────
+   Param sliders — right panel top half
+   ───────────────────────────────────────────── */
+.curator-param-sliders {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+  flex: 1;
+}
+
+.curator-param-sliders fieldset {
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--c-surface2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.curator-param-sliders legend {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  padding: 0 var(--space-2);
+}
+
+/* Each slider row: label text + readout + range input */
+.curator-param-sliders label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--c-muted);
+  cursor: default;
+}
+
+/* Checkbox labels differ — use flex-row naturally */
+.curator-param-sliders label:has(input[type="checkbox"]) {
+  flex-direction: row;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* Numeric readout — monospace so digit changes don't jitter the layout */
+.curator-param-sliders label > span {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--c-text);
+  min-width: 3.5ch;        /* wide enough for "2.00" without overflow */
+  display: inline-block;
+  text-align: right;
+}
+
+/* Range inputs */
+.curator-param-sliders input[type="range"] {
+  flex: 1;
+  accent-color: var(--c-accent);
+  cursor: pointer;
+}
+
+/* Checkbox */
+.curator-param-sliders input[type="checkbox"] {
+  accent-color: var(--c-accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ─────────────────────────────────────────────
+   Process / Export action buttons
+   ───────────────────────────────────────────── */
+.curator-param-actions {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) 0 0;
+}
+
+/* Shared button base */
+.curator-param-actions button {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 5px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface2);
+  color: var(--c-text);
+  transition: background 100ms ease, opacity 100ms ease;
+  position: relative;   /* needed for the ::before orange-dot pseudo-element */
+}
+
+.curator-param-actions button:hover:not(:disabled) {
+  background: #1f2840;
+}
+
+.curator-param-actions button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* Process button — primary accent style */
+.curator-param-actions button:first-child {
+  background: var(--c-accent-bg);
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+
+.curator-param-actions button:first-child:hover:not(:disabled) {
+  background: #15305c;
+}
+
+/*
+ * Orange-dot affordance when crop or starnet params are dirty.
+ * The dot appears in the top-right corner of the Process button so it
+ * reads as "needs attention" without obscuring the label text.
+ * We use a ::before pseudo rather than a real DOM node to keep the
+ * component markup clean.
+ */
+.curator-param-actions button[data-dirty="true"]::before {
+  content: '';
+  position: absolute;
+  top:   6px;
+  right: 6px;
+  width:  8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c-warning);
+  box-shadow: 0 0 0 2px var(--c-surface2);
+}
+
+/* ─────────────────────────────────────────────
+   Preview pane — starless + alpha thumbnails
+   ───────────────────────────────────────────── */
+.curator-preview-pane {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  border-top: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
+.curator-preview-pane figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.curator-preview-pane figcaption {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+
+.curator-preview-pane img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  border: 1px solid var(--c-border);
+  background: #070910;
+}
+
+.curator-preview-pane p {
+  font-size: 12px;
+  color: var(--c-muted);
+  font-style: italic;
+}
+
+/* ─────────────────────────────────────────────
+   Shared form controls (used across all panels)
+   ───────────────────────────────────────────── */
+
+/* Generic button — for controls outside the action strip */
+button {
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: 4px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface2);
+  color: var(--c-text);
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+button:hover:not(:disabled) {
+  background: #1f2840;
+}
+
+button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+/* Scrollbar styling for dark panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--c-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--c-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--c-muted);
+}

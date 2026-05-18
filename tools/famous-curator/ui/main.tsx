@@ -3,6 +3,7 @@
  * (real-fetch) API.  Tests render <ApiProvider value={fakeApi}><App />
  * </ApiProvider> directly without touching this file.
  */
+import './styles.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
