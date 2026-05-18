@@ -6,8 +6,29 @@ export type PointOfInterest = {
   readonly name: string;
   readonly category: PoiCategory;
   readonly worldPos: Vec3;
-  /** Crosshair half-length in Mpc.  Omit to draw label only. */
-  readonly crosshairSizeMpc?: number;
+  /**
+   * Physical radius of the structure in Mpc (or a sensible proxy — e.g.
+   * the half-extent for an asymmetric cluster).
+   *
+   * This single field drives two downstream consumers that the
+   * cluster-viz redesign introduces in the later sub-plans:
+   *
+   *   1. **At-rest visualization** (sub-plan 2): the radius of the
+   *      screen-aligned ring rendered at the POI's worldPos, and the
+   *      world-space extent of the soft additive halo billboard.
+   *
+   *   2. **Member cone-search** (sub-plan 4, focus mode): the radius
+   *      used by `clusterMembership(catalogs, center, radiusMpc)` to
+   *      classify nearby galaxies as members vs non-members.
+   *
+   * Omit on POIs that have no extent (e.g. famous-galaxy entries that
+   * route through the existing thumbnail/label path instead).
+   *
+   * Renamed from `crosshairSizeMpc` on 2026-05-18 — see
+   * docs/superpowers/specs/2026-05-18-cluster-supercluster-viz-design.md
+   * §7.2 for the migration rationale.
+   */
+  readonly physicalRadiusMpc?: number;
   /**
    * Minimum on-screen pixel size at which this POI emits a label.  When
    * present together with `apparentDiameterKpc`, the producer projects

@@ -23,10 +23,10 @@
  *
  * ### Crosshair shape
  *
- * Three perpendicular line segments, each `crosshairSizeMpc` long,
+ * Three perpendicular line segments, each `physicalRadiusMpc` long,
  * centred on `worldPos`.  Cheap to render (3 lines per POI), reads
  * clearly at any zoom, and indicates the precise centre regardless
- * of the label's text bounds.  POIs without `crosshairSizeMpc` (e.g.
+ * of the label's text bounds.  POIs without `physicalRadiusMpc` (e.g.
  * individual galaxies the user clicked on once) get a label only.
  *
  * ### Anchor-offset labels
@@ -193,8 +193,8 @@ export function createPoiSubsystem(): PoiSubsystem {
   }
 
   function makeCrosshairLines(p: PointOfInterest, style: CategoryStyle): readonly MarkerLine[] {
-    if (p.crosshairSizeMpc === undefined) return [];
-    const half = p.crosshairSizeMpc;
+    if (p.physicalRadiusMpc === undefined) return [];
+    const half = p.physicalRadiusMpc;
     const [cx, cy, cz] = p.worldPos;
     const mk = (id: string, from: Vec3, to: Vec3): MarkerLine => ({
       id,

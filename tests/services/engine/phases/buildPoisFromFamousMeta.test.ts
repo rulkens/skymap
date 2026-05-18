@@ -43,7 +43,7 @@ describe('buildPoisFromFamousMeta', () => {
     ]);
     expect(pois[0]!.minApparentSizePx).toBe(6);
     expect(pois[0]!.apparentDiameterKpc).toBe(67);
-    expect(pois[0]!.crosshairSizeMpc).toBeUndefined();
+    expect(pois[0]!.physicalRadiusMpc).toBeUndefined();
     // labelAnchorOffsetMpc = max(0.05, 1.5 * 67 / 1000) = max(0.05, 0.1005) = 0.1005
     expect(pois[0]!.labelAnchorOffsetMpc).toBeCloseTo(0.1005, 6);
     // labelWorldEmMpc = 0.0125 * 10^(0.3 * log10(67 / 40))

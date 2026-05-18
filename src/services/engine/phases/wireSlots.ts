@@ -193,7 +193,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         name: a.name,
         category: 'cluster',
         worldPos: raDecDistToEqCart(a),
-        crosshairSizeMpc: Math.max(2, a.distMpc * 0.05),
+        physicalRadiusMpc: Math.max(2, a.distMpc * 0.05),
       }),
     ),
     ...SUPERCLUSTER_ANCHORS.map(
@@ -202,7 +202,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         name: a.name,
         category: 'supercluster',
         worldPos: raDecDistToEqCart(a),
-        crosshairSizeMpc: Math.max(10, a.distMpc * 0.1),
+        physicalRadiusMpc: Math.max(10, a.distMpc * 0.1),
       }),
     ),
     ...VOID_ANCHORS.map(
@@ -211,7 +211,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         name: a.name,
         category: 'void',
         worldPos: raDecDistToEqCart(a),
-        crosshairSizeMpc: Math.max(15, a.distMpc * 0.15),
+        physicalRadiusMpc: Math.max(15, a.distMpc * 0.15),
       }),
     ),
   ];

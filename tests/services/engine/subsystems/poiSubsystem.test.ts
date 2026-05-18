@@ -25,7 +25,7 @@ const VIRGO: PointOfInterest = {
   name: 'Virgo',
   category: 'cluster',
   worldPos: [-15.98, -2.13, 3.54],
-  crosshairSizeMpc: 5,
+  physicalRadiusMpc: 5,
 };
 const M31: PointOfInterest = {
   id: 'm31',
@@ -39,14 +39,14 @@ const BOOTES_VOID: PointOfInterest = {
   name: 'Boötes Void',
   category: 'void',
   worldPos: [200, 100, 50],
-  crosshairSizeMpc: 20,
+  physicalRadiusMpc: 20,
 };
 const LANIAKEA: PointOfInterest = {
   id: 'laniakea',
   name: 'Laniakea',
   category: 'supercluster',
   worldPos: [-50, -20, 10],
-  crosshairSizeMpc: 25,
+  physicalRadiusMpc: 25,
 };
 
 describe('poiSubsystem', () => {
@@ -66,7 +66,7 @@ describe('poiSubsystem', () => {
     expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'Andromeda Galaxy']);
   });
 
-  it('emits 3 perpendicular crosshair lines for POIs with crosshairSizeMpc', () => {
+  it('emits 3 perpendicular crosshair lines for POIs with physicalRadiusMpc', () => {
     const sub = createPoiSubsystem();
     sub.setPois([VIRGO]);
     const out = sub.produceLabels(makeState(), makeCtx());
@@ -136,7 +136,7 @@ describe('poiSubsystem', () => {
       name: 'Virgo',
       category: 'cluster',
       worldPos: [-15.98, -2.13, 3.54],
-      crosshairSizeMpc: 5,
+      physicalRadiusMpc: 5,
     };
     sub.setPois([virgo]);
     const out = sub.produceLabels(makeState(), makeCtx());
