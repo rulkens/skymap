@@ -51,6 +51,7 @@ import type { PickRenderer } from '../../rendering/PickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
+import type { ClusterMarkerRenderer } from '../../rendering/ClusterMarkerRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
 import type { TexturedQuadRenderer } from '../../rendering/TexturedQuadRenderer';
@@ -125,6 +126,18 @@ export type EngineGpuHandles = {
    * buffers (uniform + instance + corner).
    */
   markerLineRenderer: MarkerLineRenderer | null;
+  /**
+   * Cluster-marker renderer — draws halo + ring overlays for POI clusters
+   * (one renderer for all POI source categories; per-source bind groups
+   * live inside the renderer).  Null until `initGpu` constructs it
+   * (task 13 of cluster-viz sub-plan 2).  Excluded from the
+   * `isEngineReady` predicate for the same reason as `markerLineRenderer`
+   * — null-checked at point of use by the cluster-marker frame pass
+   * (task 14).  Stored here so `destroy()` can release the renderer's
+   * GPU buffers (per-category bind groups + per-instance buffer +
+   * corner VBO).
+   */
+  clusterMarkerRenderer: ClusterMarkerRenderer | null;
   /**
    * Textured-quad renderer for galaxy thumbnails.  Null until `initGpu`
    * constructs it from a `GpuContext` snapshot.  Stored here purely so

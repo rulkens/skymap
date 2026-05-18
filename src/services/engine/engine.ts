@@ -466,6 +466,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // point of use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
+      // clusterMarkerRenderer: null until initGpu constructs it
+      // (cluster-viz sub-plan 2 task 13).  Excluded from
+      // isEngineReady — null-checked at point of use by the
+      // cluster-marker frame pass (task 14).
+      clusterMarkerRenderer: null,
       // texturedQuadRenderer / texturedDiskRenderer / proceduralDiskRenderer /
       // milkyWayRenderer: null until initGpu constructs them.  These
       // four don't gate any frame-loop logic via state.gpu — the frame
