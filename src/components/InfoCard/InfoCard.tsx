@@ -141,17 +141,25 @@ export function InfoCard({
   // common case for "cursor parked over a ring with no active pin".
   if (!hovered && !selected && !selectedPoi && !hoveredPoi) return null;
 
-  // Suppression rule for the POI hover preview: hide when the SAME POI
-  // is already pinned.  The pinned FullCard already shows the user
-  // every field the preview would, so a second compact panel below it
-  // is pure noise.  Mirrors the galaxy `isStacked` rule
-  // (`hovered.index !== selected.index`).
+  // Suppression rules for the hover previews — the cursor can hover
+  // exactly ONE thing at a time, so at most one compact card renders.
   //
-  // Defensive: `selectedPoi?.id` is undefined when `selectedPoi` is
-  // null/undefined, which never equals a real POI id — so a hovered POI
-  // with no pinned POI flows through correctly.
+  // POI hover takes precedence over galaxy hover when both React state
+  // slots happen to be non-null in the same render.  The engine's
+  // hover throttler (runFrame.ts) already clears the "other" hover
+  // sink on every pick (galaxy hit → setHoveredPoi(null); POI hit →
+  // setHovered(null)), so both being set is a transient cross-render
+  // race we don't observe in practice — but enforcing precedence here
+  // is the belt-and-braces guarantee, and matches the user-facing
+  // mental model "I'm hovering one thing".
+  //
+  // POI hover is additionally suppressed when the SAME POI is already
+  // pinned (showing the preview's content twice is pure noise).
+  // Mirrors the galaxy `isStacked` rule (`hovered.index !== selected.index`).
   const showPoiHover =
     hoveredPoi != null && hoveredPoi.id !== selectedPoi?.id;
+  // Galaxy hover hides when POI hover would render — POI wins.
+  const showGalaxyHover = hovered != null && !showPoiHover;
 
   // ── Routing: which info goes into the FullCard, and is there a CompactCard? ──
   //
@@ -189,7 +197,7 @@ export function InfoCard({
           onPoiFocus={onPoiFocus}
           onClose={onPoiClose}
         />
-        {hovered && <CompactCard info={hovered} />}
+        {showGalaxyHover && <CompactCard info={hovered!} />}
         {showPoiHover && <CompactPoiCard poi={hoveredPoi!} />}
       </div>
     );
@@ -199,11 +207,15 @@ export function InfoCard({
   // the ONLY active slot is `hoveredPoi` (no galaxy hover, no galaxy
   // pin, no POI pin) — guard the FullCard render so we don't pass null
   // into FullCard's required `info` prop.
-  const isStacked = hovered != null && selected != null && hovered.index !== selected.index;
+  // Stacked galaxy pair only counts when POI hover isn't suppressing it
+  // — if showPoiHover is true, the galaxy hover hides entirely and the
+  // FullCard falls back to the pinned selection alone (or nothing).
+  const isStacked =
+    showGalaxyHover && selected != null && hovered!.index !== selected.index;
   const fullCardInfo: GalaxyInfo | null = isStacked
     ? selected
-    : (hovered ?? selected ?? null);
-  const fullCardPinned = isStacked ? true : !hovered;
+    : (showGalaxyHover ? hovered : selected ?? null);
+  const fullCardPinned = isStacked ? true : !showGalaxyHover;
 
   return (
     <div className={cx(styles.infoCardStack, 'infoCardStack')}>
