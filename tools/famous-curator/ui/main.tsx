@@ -1,16 +1,19 @@
 /**
- * Curator React entry.  Mirrors the main app's `src/main.tsx` shape
- * (createRoot + StrictMode) so any contributor familiar with the
- * skymap shell can navigate the curator without surprises.
+ * Curator React entry.  Wraps App in <ApiProvider> with the default
+ * (real-fetch) API.  Tests render <ApiProvider value={fakeApi}><App />
+ * </ApiProvider> directly without touching this file.
  */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { ApiProvider } from './apiContext';
 
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('root element missing');
 createRoot(rootEl).render(
   <StrictMode>
-    <App />
+    <ApiProvider>
+      <App />
+    </ApiProvider>
   </StrictMode>,
 );
