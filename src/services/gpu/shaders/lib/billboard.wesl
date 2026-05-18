@@ -13,13 +13,13 @@
 // renderer-agnostic expansion helper ('expandBillboardScreen') for the
 // screen-pixel-sized billboard pattern that points uses.
 //
-// ## Why these three exports and no more
+// ## Why these four exports and no more
 //
-// The plan's Task 5 draft proposed a fourth helper, 'expandBillboardWorld',
-// that would view-align a world-sized quad (camera-right + camera-up basis
-// extracted from a 'view' matrix). Reading the actual call sites revealed
-// that NONE of the four candidate renderers want a generic view-aligned
-// world basis:
+// The plan's Task 5 draft proposed a helper, 'expandBillboardWorld',
+// that would VIEW-align a world-sized quad (camera-right + camera-up
+// basis extracted from a 'view' matrix). Reading the actual call
+// sites revealed that NONE of the four candidate renderers want a
+// generic view-aligned world basis:
 //
 //   - 'quads' builds its basis from the projected celestial-north
 //     direction at each galaxy's screen position (so the texture's
@@ -34,14 +34,34 @@
 //     which 'expandBillboardScreen' below covers.
 //
 // And the canonical CameraUniforms struct in 'lib/camera.wesl' carries
-// only 'viewProj' + 'viewportPx' — there is no separate 'view' matrix to
-// extract a camera-right / camera-up basis from. Adding one purely to
-// satisfy a generic helper that no real renderer would call would bloat
-// the shared 80-byte prefix for every renderer's UBO upload, with no
-// functional benefit. We therefore omit 'expandBillboardWorld'; if a
-// future renderer ever wants the view-aligned pattern, it can re-derive
-// the basis from columns of the inverse-viewProj or accept a basis pair
-// as parameters.
+// only 'viewProj' + 'viewportPx' — there is no separate 'view' matrix
+// to extract a camera-right / camera-up basis from. Adding one purely
+// to satisfy a generic view-aligned helper that no real renderer would
+// call would bloat the shared 80-byte prefix for every renderer's UBO
+// upload, with no functional benefit. We therefore omit the
+// view-aligned flavour entirely; if a future renderer ever wants it,
+// it can re-derive the basis from columns of the inverse-viewProj or
+// accept a basis pair as parameters.
+//
+// ## Screen-aligned vs view-aligned world-sized billboards
+//
+// The reasoning above rules out a VIEW-aligned world-sized helper.
+// It does NOT rule out a SCREEN-aligned world-sized helper, which is
+// a different beast: instead of building a basis in world space and
+// projecting it, it projects the centre once and expands the corners
+// along the SCREEN axes by a pixel size computed from the world
+// radius and the centre's clip-space depth (clip.w ≈ camera distance
+// for a standard perspective matrix). The output is always camera-
+// facing (no shear under orbit) and always sized so the world radius
+// reads correctly at the centre's depth, with zero extra uniforms —
+// just 'CameraUniforms.viewportPx' that every renderer already has.
+//
+// 'expandBillboardWorld' below is the screen-aligned variant. It
+// composes 'worldLenToPx' + 'pxToClipOffset' (the two primitives
+// already used inline by 'labels/vertex.wesl' — the original instance
+// of this pattern in the codebase). Halo / ring use it directly;
+// labels keep their clamp logic but express the pixel arithmetic in
+// terms of the same primitives.
 //
 // ## What about the corner-ordering mismatch
 //
@@ -164,4 +184,77 @@ fn expandBillboardScreen(
 ) -> vec2<f32> {
   let pxToClip = vec2<f32>(2.0 / cam.viewportPx.x, 2.0 / cam.viewportPx.y);
   return corner * sizePx * pxToClip * centerClip.w;
+}
+
+// ── worldLenToPx ─────────────────────────────────────────────────────
+//
+// Convert a world-space length at a given depth into screen pixels.
+// 'clipW' comes from a prior 'worldToClip' result's .w component
+// (≈ camera distance for a standard perspective matrix — the
+// projection matrix divides world-space Z by camera distance, and the
+// shared CameraUniforms.viewProj has no separate view/proj split, so
+// clip.w is the cleanest depth proxy available without extra uniforms).
+//
+// Derivation: at depth w, world-length L maps to (L / w) NDC units
+// along the Y axis; multiplying by (viewportPx.y / 2) converts NDC to
+// pixels. Mirrors the standard perspective NDC→screen projection. The
+// Y axis is the canonical one because 'fovY' is the fixed reference
+// for perspective projection; X tracks Y by the viewport aspect ratio
+// automatically once we're back in pixel space.
+//
+// This is one of the two primitives the original instance of the
+// pattern in 'labels/vertex.wesl' computed inline; extracting it lets
+// halo / ring / labels all share the same canonical derivation.
+
+fn worldLenToPx(cam: CameraUniforms, worldLen: f32, clipW: f32) -> f32 {
+  return (worldLen / clipW) * (cam.viewportPx.y * 0.5);
+}
+
+// ── pxToClipOffset ───────────────────────────────────────────────────
+//
+// Convert a 2D screen-pixel offset into a clip-space XY delta at the
+// given depth. Add the result to a centre's clip XY before the GPU's
+// perspective divide:
+//
+//   let offset = pxToClipOffset(cam, offsetPx, centerClip.w);
+//   out.pos = vec4<f32>(centerClip.xy + offset, centerClip.z, centerClip.w);
+//
+// The 'clipW' multiplier cancels the perspective divide so the offset
+// reads as 'offsetPx' actual pixels on screen regardless of depth.
+// Same cancellation as 'expandBillboardScreen' above, but accepts an
+// arbitrary 2D pixel offset rather than a unit corner × size — useful
+// for labels' per-glyph atlas-px offsets and as a building block for
+// 'expandBillboardWorld' below.
+
+fn pxToClipOffset(cam: CameraUniforms, offsetPx: vec2<f32>, clipW: f32) -> vec2<f32> {
+  return offsetPx * (2.0 / cam.viewportPx) * clipW;
+}
+
+// ── expandBillboardWorld ─────────────────────────────────────────────
+//
+// Camera-facing square billboard sized in world-space Mpc. Composes
+// 'worldLenToPx' + 'pxToClipOffset' for the common round / square
+// halo case. The result is always screen-axis-aligned (no shear
+// under orbit) and grows naturally with proximity (because the pixel
+// size is computed from worldRadius / clipW).
+//
+// See the module header's "Screen-aligned vs view-aligned" subsection
+// for why this is SCREEN-aligned and NOT view-aligned (no
+// 'camera_right' / 'camera_up' needed — clip.w is the depth proxy).
+//
+// Caller pattern:
+//
+//   let centerClip = worldToClip(u.cam, worldPos);
+//   let corner     = quadCorner(vi);
+//   let offset     = expandBillboardWorld(u.cam, centerClip, radiusMpc, corner);
+//   out.pos = vec4<f32>(centerClip.xy + offset, centerClip.zw);
+
+fn expandBillboardWorld(
+  cam: CameraUniforms,
+  centerClip: vec4<f32>,
+  worldRadius: f32,
+  corner: vec2<f32>,
+) -> vec2<f32> {
+  let sizePx = worldLenToPx(cam, worldRadius, centerClip.w);
+  return pxToClipOffset(cam, corner * sizePx, centerClip.w);
 }

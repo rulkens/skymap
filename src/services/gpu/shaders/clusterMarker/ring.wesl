@@ -1,11 +1,13 @@
 // clusterMarker/ring.wesl — screen-anti-aliased ring at world radius.
 //
 // One instance per POI.  Vertex stage: identical to halo.wesl's
-// world-sized billboard expansion (same axis-aligned basis dodge —
-// see that file's module header).  The quad's half-extent is the same
-// radiusMpc so the ring (drawn at exactly 'uv == 1.0' in the
-// fragment, i.e. the unit circle on the quad) lands at world radius
-// 'radiusMpc' from the centre.
+// world-sized billboard expansion — same shared 'expandBillboardWorld'
+// helper from lib/billboard.wesl (screen-aligned, no shear under
+// orbit, see that file's "Screen-aligned vs view-aligned" subsection
+// for the derivation).  The quad's half-extent is the same radiusMpc
+// so the ring (drawn at exactly 'uv == 1.0' in the fragment, i.e. the
+// unit circle on the quad) lands at world radius 'radiusMpc' from the
+// centre.
 //
 // Fragment: compute the distance from the billboard centre in UV
 // space.  At |uv| == 1 we're exactly at the world-space radiusMpc
@@ -18,22 +20,23 @@
 // The visible ring should be ~1-2 px wide regardless of how big the
 // halo is on screen.  Convert pixel width → UV width:
 //
-//   ringPxWidth (constant, e.g. 1.5)
-//   halfQuadPx  = halfNdcExtent * viewportPx.y * 0.5   (per axis)
-//   uvWidth     = ringPxWidth / halfQuadPx             (so 1 UV unit
-//                                                       maps to one
-//                                                       half-extent
-//                                                       of the quad)
+//   sizePx  = worldLenToPx(cam, radiusMpc, centerClip.w)  — the
+//             screen-pixel half-extent of the billboard, exactly the
+//             same value 'expandBillboardWorld' uses internally to
+//             expand the corners.
+//   uvWidth = pxWidth / sizePx                            — 1 UV unit
+//             spans sizePx pixels on screen.
 //
-// We approximate halfQuadPx using a single axis (Y) — close enough
-// because the quad is roughly square in screen space at typical
-// orientations, and the AA band is symmetric anyway.
+// We smuggle 'sizePx' through the VsOut.camDistMpc slot rather than
+// adding a dedicated varying — see the slot comment below.
 
 import package::clusterMarker::io::Uniforms;
 import package::clusterMarker::io::VsIn;
 import package::clusterMarker::io::VsOut;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
+import package::lib::billboard::expandBillboardWorld;
+import package::lib::billboard::worldLenToPx;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::fadeUniforms::applyFade;
 
@@ -55,24 +58,22 @@ fn vs(
   let worldPos = input.positionAndRadius.xyz;
   let radiusMpc = input.positionAndRadius.w;
 
-  // Same world-sized billboard expansion as halo.wesl.
+  // Same world-sized, screen-aligned billboard expansion as halo.wesl.
   let centerClip = worldToClip(u.cam, worldPos);
-  let rightClip = worldToClip(u.cam, worldPos + vec3<f32>(radiusMpc, 0.0, 0.0));
-  let upClip    = worldToClip(u.cam, worldPos + vec3<f32>(0.0, radiusMpc, 0.0));
-  let centerNdc = centerClip.xy / centerClip.w;
-  let rightNdc  = rightClip.xy  / rightClip.w;
-  let upNdc     = upClip.xy     / upClip.w;
-  let halfX = max(abs(rightNdc.x - centerNdc.x), abs(upNdc.x - centerNdc.x));
-  let halfY = max(abs(rightNdc.y - centerNdc.y), abs(upNdc.y - centerNdc.y));
-
   let corner = quadCorner(vi);
-  let offsetNdc = vec2<f32>(corner.x * halfX, corner.y * halfY);
+  let offset = expandBillboardWorld(u.cam, centerClip, radiusMpc, corner);
+
+  // Pixel half-extent of the billboard — the fragment needs this to
+  // convert RING_PX_WIDTH / RING_AA_WIDTH into UV-space band widths.
+  // Recomputed (not extracted from 'expandBillboardWorld') because
+  // returning a tuple from the helper would force every caller to
+  // accept a pair.  Identical cost to the work the helper does
+  // internally; the WGSL compiler is free to CSE the duplicate
+  // multiply.
+  let sizePx = worldLenToPx(u.cam, radiusMpc, centerClip.w);
 
   var out: VsOut;
-  out.pos = vec4<f32>(
-    centerClip.xy + offsetNdc * centerClip.w,
-    centerClip.zw,
-  );
+  out.pos = vec4<f32>(centerClip.xy + offset, centerClip.zw);
   out.uv = corner;
   // For the ring we use the same colour slot as the halo (see io.wesl
   // module header — voids skip the halo draw entirely, and clusters /
@@ -81,11 +82,11 @@ fn vs(
   out.color = input.haloColorAndAlpha.xyz;
   out.alpha = input.ringAlpha;
   out.radiusMpc = radiusMpc;
-  // Pass halfY through camDistMpc — repurposing the slot as the
-  // per-instance NDC half-extent the fragment needs to convert
-  // pixels → UV.  Cheaper than adding another VsOut slot for one
-  // scalar.  We rename when we add a second use.
-  out.camDistMpc = halfY;
+  // Smuggle 'sizePx' through the camDistMpc slot — repurposing it as
+  // the per-instance pixel half-extent the fragment needs to convert
+  // pixel widths to UV widths.  Cheaper than adding another VsOut
+  // slot for one scalar.  Rename when a second use appears.
+  out.camDistMpc = sizePx;
   return out;
 }
 
@@ -93,11 +94,11 @@ fn vs(
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let d = length(input.uv);
 
-  // halfY (smuggled in camDistMpc) is the quad's NDC half-extent in Y.
-  // Convert to pixels: halfPx = halfY * viewportPx.y * 0.5.
-  let halfPx = input.camDistMpc * u.cam.viewportPx.y * 0.5;
-  // UV per pixel = 1.0 / halfPx (1 uv unit spans halfPx pixels).
-  let uvPerPx = 1.0 / max(halfPx, 1.0);
+  // sizePx (smuggled in camDistMpc) is the quad's pixel half-extent.
+  // 1 UV unit spans sizePx pixels on screen, so 1 pixel == 1 / sizePx
+  // UV units.  max(_, 1.0) guards against the sub-pixel limit where
+  // the ring would otherwise alias to a single fragment.
+  let uvPerPx = 1.0 / max(input.camDistMpc, 1.0);
   let bandHalfUv = RING_PX_WIDTH * 0.5 * uvPerPx;
   let aaUv = RING_AA_WIDTH * uvPerPx;
 
