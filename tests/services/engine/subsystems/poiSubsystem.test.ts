@@ -272,10 +272,12 @@ describe('poiSubsystem', () => {
     const fade = out.labels[0]!.fadeAlpha ?? 1;
     expect(fade).toBeGreaterThan(0);
     expect(fade).toBeLessThan(1);
-    expect(out.awake).toBe(true);
+    // awake stays false even mid-fade: fadeAlpha is camera-distance-driven,
+    // so any change is already covered by the camera-motion wake sources.
+    expect(out.awake).toBe(false);
   });
 
-  it('returns awake: false when no POI is mid-fade', () => {
+  it('reports awake: false above the fade band (fadeAlpha == 1)', () => {
     const sub = createPoiSubsystem();
     const big: PointOfInterest = {
       id: 'big',

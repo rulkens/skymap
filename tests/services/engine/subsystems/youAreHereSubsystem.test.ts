@@ -36,22 +36,17 @@ describe('youAreHereSubsystem (producer form)', () => {
     expect(out.labels[0]!.text).toBe('You are here');
   });
 
-  it('exposes an "awake" flag during the alpha mid-transition', () => {
+  it('reports awake: false even inside the alpha fade band', () => {
+    // youAreHereAlpha is a pure function of camera distance — any change
+    // is already driven by camera motion, which wakes the loop through
+    // the tween/spaceMouse/pointer-event paths. Reporting `awake: true`
+    // when alpha sits mid-band would pin the render-on-demand loop on
+    // forever whenever the camera parks inside the fade window.
     const sub = createYouAreHereSubsystem();
-    // A position inside the fade band — `youAreHereAlpha` should return
-    // a value in (0, 1).  Exact distance depends on the fade band's
-    // tuning; this test only asserts that SOME mid-transition position
-    // exists.  If the helper returns only 0 or 1 across the band,
-    // refine the input.
-    let sawAwake = false;
     for (const r of [0.1, 0.3, 0.5, 0.8, 1.1, 1.5, 2.0]) {
       const out = sub.produceLabels(makeState(), makeCtx(r, 0, 0));
-      if (out.awake) {
-        sawAwake = true;
-        break;
-      }
+      expect(out.awake).toBe(false);
     }
-    expect(sawAwake).toBe(true);
   });
 
   it('has stable id "you-are-here"', () => {

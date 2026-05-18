@@ -214,7 +214,6 @@ export function createPoiSubsystem(): PoiSubsystem {
   function produceLabels(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
     const labels: Label[] = [];
     const lines: MarkerLine[] = [];
-    let awake = false;
     // Recover the vertical fov from the per-frame `drawPxPerRad`:
     //   drawPxPerRad = canvasSize.height / (2 * tan(fovY/2))
     // ⇒ fovY = 2 * atan(canvasSize.height / (2 * drawPxPerRad))
@@ -258,7 +257,11 @@ export function createPoiSubsystem(): PoiSubsystem {
           const t = Math.min(1, (sizePx - p.minApparentSizePx) / style.fadeBandPx);
           // smoothstep — same shape as youAreHereAlpha's transition.
           fadeAlpha = t * t * (3 - 2 * t);
-          if (fadeAlpha > 0 && fadeAlpha < 1) awake = true;
+          // No `awake` signal here: fadeAlpha is a pure function of camera
+          // distance, so any change to it is caused by camera motion, which
+          // already wakes the loop via tweens / spaceMouse / pointer events.
+          // Setting awake whenever fadeAlpha sits in the partial band would
+          // pin the render loop on whenever a POI happens to be mid-fade.
         }
       }
 
@@ -316,7 +319,7 @@ export function createPoiSubsystem(): PoiSubsystem {
         FADE_IN_DURATION_MS,
       );
     }
-    return { labels, lines, awake };
+    return { labels, lines, awake: false };
   }
 
   // Built as a `const` (rather than returned inline) so we can attach
