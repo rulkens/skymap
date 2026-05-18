@@ -547,14 +547,10 @@ export function App(): React.ReactElement {
       */}
         <StatusBar status={status} />
         <InfoCard
-          hovered={hovered}
-          selected={selected}
-          selectedPoi={focusedPoi}
-          hoveredPoi={hoveredPoi}
-          onFocus={(info) => handleRef.current?.camera.focusOn(info)}
-          onPoiFocus={(poi) => handleRef.current?.camera.focusOnPoi(poi)}
+          hovered={hoveredPoi ?? hovered}
+          selected={focusedPoi ?? selected}
+          onFocus={(target) => handleRef.current?.camera.focusOn(target)}
           onClose={() => handleRef.current?.selection.clear()}
-          onPoiClose={() => handleRef.current?.camera.clearPoiFocus()}
         />
         <ScaleBar scale={scale} />
         {/*

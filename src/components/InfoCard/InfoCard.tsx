@@ -41,6 +41,8 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
+import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
+import { isPoi } from '../../services/engine/isPoi';
 import { FullCard } from './FullCard';
 import { CompactCard } from './CompactCard';
 import { CompactPoiCard } from './CompactPoiCard';
@@ -52,114 +54,93 @@ import styles from './InfoCard.module.css';
  * Props for InfoCard.
  *
  * Both fields are nullable: when neither is set the component renders nothing.
+ *
+ * As of Task 5 of the unify-focus-clear refactor (2026-05-19), both slots
+ * accept the full `FocusableTarget` union (`GalaxyInfo | PointOfInterest`).
+ * The caller (App.tsx) merges POI and galaxy state before handing them here:
+ *
+ *   - `selected` receives `focusedPoi ?? selected` — POI wins when both are set.
+ *   - `hovered` receives `hoveredPoi ?? hovered` — same precedence.
+ *
+ * InfoCard then dispatches via `isPoi` into typed sub-slots at the top of the
+ * function body, preserving the three-case render logic unchanged.
  */
 export type InfoCardProps = {
-  /** The point currently under the cursor, or null when the cursor is on empty sky. */
-  hovered: GalaxyInfo | null;
-  /** The pinned/selected point, or null when nothing is pinned. */
-  selected: GalaxyInfo | null;
   /**
-   * The currently-focused POI (cluster / supercluster / void), or null
-   * when no POI is selected.
-   *
-   * When non-null, the FullCard renders a POI-flavoured body instead of
-   * the galaxy body.  POI selection coexists with galaxy hover (so a
-   * user with a Virgo POI card open who hovers a galaxy still sees the
-   * hover preview stack below).  POI selection takes priority over a
-   * pinned-galaxy selection — the POI click flow clears the galaxy
-   * selection at the engine level anyway, but the priority ordering
-   * here is the belt-and-braces guarantee.
+   * The point currently under the cursor, or null when the cursor is on empty
+   * sky.  Can be either a galaxy or a POI — InfoCard dispatches via `isPoi`
+   * to render the appropriate hover variant.
    */
-  selectedPoi?: PointOfInterest | null;
+  hovered: FocusableTarget | null;
   /**
-   * The POI currently under the cursor, or null when no POI is hovered.
-   *
-   * Rendered as a slim `CompactPoiCard` panel below the pinned card
-   * (or standalone, when nothing is pinned) UNLESS it's the SAME POI as
-   * `selectedPoi` — in which case the pinned full card already shows
-   * the user everything the preview would, and the preview is
-   * suppressed to avoid a redundant DOM panel.  Mirrors the galaxy
-   * hover etiquette (`isStacked` checks `hovered.index !== selected.index`).
-   *
-   * Coexists with galaxy `hovered`: a single pick resolves to EITHER a
-   * galaxy OR a POI (see runFrame.ts's hover-throttler dispatch), so
-   * the two `hovered*` slots are mutually exclusive in practice.  In
-   * the rare frame where both are non-null (e.g. a hand-off mid-frame),
-   * both compact panels render; visual stacking handles the rest.
+   * The pinned/selected target, or null when nothing is pinned.  Same dispatch
+   * as `hovered`.  When both `hovered` and `selected` are non-null and of the
+   * same kind (galaxy/galaxy or poi/poi), the stacked-pair layout applies;
+   * when they're different kinds (e.g. galaxy pinned, POI hovered), both render
+   * in their respective slots.
    */
-  hoveredPoi?: PointOfInterest | null;
+  selected: FocusableTarget | null;
   /**
-   * Optional callback fired when the user clicks "Focus" on the pinned card.
-   * Forwarded to FullCard; ignored on the compact hover card.
+   * Optional callback fired when the user clicks "Focus" (galaxy) or "Fly here"
+   * (POI) on the pinned card.  Forwarded to FullCard; ignored on the compact
+   * hover card.  Caller routes to the unified handle method
+   * (`handle.camera.focusOn(target)`).
    */
-  onFocus?: (info: GalaxyInfo) => void;
-  /**
-   * Optional callback fired when the user clicks "Fly here" on a POI card.
-   * Forwarded to FullCard's POI variant.
-   */
-  onPoiFocus?: (poi: PointOfInterest) => void;
+  onFocus?: (target: FocusableTarget) => void;
   /**
    * Optional callback fired when the user clicks the Close (×) button on the
-   * pinned card.  Same effect as pressing Esc — clears the selection.
-   * Forwarded to FullCard; ignored on the compact hover card.
+   * pinned card.  Same effect as pressing Esc — clears the selection.  Caller
+   * routes to `handle.selection.clear()` which (since 2026-05-19) tears down
+   * both galaxy AND POI selection in one call.
    */
   onClose?: () => void;
-  /**
-   * Optional callback fired when the user clicks the Close (×) button on a
-   * POI card.  Parallel to `onClose` but for the POI variant — separate so
-   * the parent can target the engine's `clearPoiFocus` instead of the
-   * galaxy `selection.clear`.
-   */
-  onPoiClose?: () => void;
 };
 
 // ── InfoCard ───────────────────────────────────────────────────────────────────
 
 /**
- * Galaxy info card rendered as a fixed top-right overlay.
+ * Galaxy/POI info card rendered as a fixed top-right overlay.
  *
  * Returns `null` (nothing in the DOM) when both props are null — keeps the
  * accessibility tree clean and avoids an empty glass-panel flashing at startup.
  *
  * @example
  * // In App.tsx:
- * <InfoCard hovered={hovered} selected={selected} />
+ * <InfoCard hovered={hoveredPoi ?? hovered} selected={focusedPoi ?? selected} />
  */
-export function InfoCard({
-  hovered,
-  selected,
-  selectedPoi,
-  hoveredPoi,
-  onFocus,
-  onPoiFocus,
-  onClose,
-  onPoiClose,
-}: InfoCardProps): ReactNode {
-  // Nothing to show — stay entirely out of the DOM.  All four selection
-  // slots must be null; any one of them is enough to keep the card on
-  // screen.  Hovered-POI alone (no pinned card, no galaxy) is the
-  // common case for "cursor parked over a ring with no active pin".
-  if (!hovered && !selected && !selectedPoi && !hoveredPoi) return null;
+export function InfoCard({ hovered, selected, onFocus, onClose }: InfoCardProps): ReactNode {
+  // Nothing to show — stay entirely out of the DOM.
+  if (!hovered && !selected) return null;
 
-  // Suppression rules for the hover previews — the cursor can hover
-  // exactly ONE thing at a time, so at most one compact card renders.
+  // Dispatch via isPoi into typed sub-slots.  The engine-side mutex means a
+  // hover or selection is exactly one kind at a time, but the InfoCard is total
+  // over the union: a galaxy in one slot + POI in the other is a legal
+  // configuration (e.g. galaxy pinned + POI hovered), and both render.
   //
-  // POI hover takes precedence over galaxy hover when both React state
-  // slots happen to be non-null in the same render.  The engine's
-  // hover throttler (runFrame.ts) already clears the "other" hover
-  // sink on every pick (galaxy hit → setHoveredPoi(null); POI hit →
-  // setHovered(null)), so both being set is a transient cross-render
-  // race we don't observe in practice — but enforcing precedence here
-  // is the belt-and-braces guarantee, and matches the user-facing
-  // mental model "I'm hovering one thing".
+  // PointOfInterest is identified by a top-level `category` field; GalaxyInfo
+  // carries category only at `galaxyType.category`.  See isPoi.ts for the
+  // full rationale of the `'category' in target` discriminant.
+  const selectedPoi = selected && isPoi(selected) ? selected : null;
+  const selectedGalaxy = selected && !isPoi(selected) ? (selected as GalaxyInfo) : null;
+  const hoveredPoi = hovered && isPoi(hovered) ? hovered : null;
+  const hoveredGalaxy = hovered && !isPoi(hovered) ? (hovered as GalaxyInfo) : null;
+
+  // Suppression rules for the hover previews — the cursor can hover exactly
+  // ONE thing at a time, so at most one compact card renders.
   //
-  // POI hover is additionally suppressed when the SAME POI is already
-  // pinned (showing the preview's content twice is pure noise).
-  // Mirrors the galaxy `isStacked` rule (`hovered.index !== selected.index`).
-  const showPoiHover =
-    hoveredPoi != null && hoveredPoi.id !== selectedPoi?.id;
+  // POI hover takes precedence over galaxy hover when both slots happen to be
+  // non-null in the same render.  The engine's hover throttler (runFrame.ts)
+  // already clears the "other" hover sink on every pick (galaxy hit →
+  // hoveredPoi = null; POI hit → hoveredGalaxy = null), so both being set is a
+  // transient cross-render race we don't observe in practice — but enforcing
+  // precedence here is the belt-and-braces guarantee.
+  //
+  // POI hover is additionally suppressed when the SAME POI is already pinned
+  // (showing the preview's content twice is pure noise).  Mirrors the galaxy
+  // `isStacked` rule (`hovered.index !== selected.index`).
+  const showPoiHover = hoveredPoi != null && hoveredPoi.id !== selectedPoi?.id;
   // Galaxy hover hides when POI hover would render — POI wins.
-  const showGalaxyHover = hovered != null && !showPoiHover;
+  const showGalaxyHover = hoveredGalaxy != null && !showPoiHover;
 
   // ── Routing: which info goes into the FullCard, and is there a CompactCard? ──
   //
@@ -194,27 +175,30 @@ export function InfoCard({
         <FullCard
           mode={{ kind: 'poi', poi: selectedPoi }}
           pinned
-          onPoiFocus={onPoiFocus}
-          onClose={onPoiClose}
+          onPoiFocus={onFocus}
+          onClose={onClose}
         />
-        {showGalaxyHover && <CompactCard info={hovered!} />}
+        {showGalaxyHover && <CompactCard info={hoveredGalaxy!} />}
         {showPoiHover && <CompactPoiCard poi={hoveredPoi!} />}
       </div>
     );
   }
 
-  // Galaxy / hover-only branch.  `fullCardInfo` may now be null when
-  // the ONLY active slot is `hoveredPoi` (no galaxy hover, no galaxy
-  // pin, no POI pin) — guard the FullCard render so we don't pass null
-  // into FullCard's required `info` prop.
-  // Stacked galaxy pair only counts when POI hover isn't suppressing it
-  // — if showPoiHover is true, the galaxy hover hides entirely and the
-  // FullCard falls back to the pinned selection alone (or nothing).
+  // Galaxy / hover-only branch.  `fullCardInfo` may be null when the ONLY
+  // active slot is a hovered POI (no galaxy hover, no galaxy pin, no POI pin)
+  // — guard the FullCard render so we don't pass null into FullCard's required
+  // `info` prop.
+  //
+  // Stacked galaxy pair only counts when POI hover isn't suppressing it — if
+  // showPoiHover is true, the galaxy hover hides entirely and the FullCard
+  // falls back to the pinned selection alone (or nothing).
   const isStacked =
-    showGalaxyHover && selected != null && hovered!.index !== selected.index;
+    showGalaxyHover && selectedGalaxy != null && hoveredGalaxy!.index !== selectedGalaxy.index;
   const fullCardInfo: GalaxyInfo | null = isStacked
-    ? selected
-    : (showGalaxyHover ? hovered : selected ?? null);
+    ? selectedGalaxy
+    : showGalaxyHover
+      ? hoveredGalaxy
+      : (selectedGalaxy ?? null);
   const fullCardPinned = isStacked ? true : !showGalaxyHover;
 
   return (
@@ -223,11 +207,11 @@ export function InfoCard({
         <FullCard
           info={fullCardInfo}
           pinned={fullCardPinned}
-          onFocus={fullCardPinned ? onFocus : undefined}
+          onFocus={fullCardPinned && onFocus ? (info) => onFocus(info) : undefined}
           onClose={fullCardPinned ? onClose : undefined}
         />
       )}
-      {isStacked && <CompactCard info={hovered!} />}
+      {isStacked && <CompactCard info={hoveredGalaxy!} />}
       {showPoiHover && <CompactPoiCard poi={hoveredPoi!} />}
     </div>
   );
