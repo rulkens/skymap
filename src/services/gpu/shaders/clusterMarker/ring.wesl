@@ -60,6 +60,13 @@ const RING_QUAD_MARGIN: f32 = 1.1;
 @vertex
 fn vs(
   @builtin(vertex_index) vi: u32,
+  // ii (instance_index) is forwarded into VsOut.poiIndex so the
+  // companion ringPick.wesl pick fragment can pack it into the pick
+  // texture identity.  The visual ring fragment ignores the field;
+  // it costs one flat-interpolated u32 per vertex output and lets
+  // both pipelines share one VsOut struct (see io.wesl's docstring
+  // on the poiIndex slot).
+  @builtin(instance_index) ii: u32,
   input: VsIn,
 ) -> VsOut {
   let worldPos = input.positionAndRadius.xyz;
@@ -103,6 +110,10 @@ fn vs(
   // pixel widths to UV widths.  Cheaper than adding another VsOut
   // slot for one scalar.  Rename when a second use appears.
   out.camDistMpc = sizePx;
+  // Per-instance POI index forwarded for the ringPick fragment.  The
+  // visual fragment doesn't read it; the cost is one flat-interpolated
+  // u32 per vertex output.
+  out.poiIndex = ii;
   return out;
 }
 

@@ -95,4 +95,17 @@ struct VsOut {
   // uniform.  Halo fragment ignores these.
   @location(3) radiusMpc: f32,
   @location(4) camDistMpc: f32,
+  // Per-instance POI index — assembled in the vertex stage from
+  // @builtin(instance_index).  Consumed only by the ringPick fragment
+  // (offscreen r32uint picking pass), which packs it together with
+  // SourceUniforms.sourceCode into the canonical
+  // (sourceCode << 27) | (poiIndex + PICK_SENTINEL_OFFSET) identity.
+  //
+  // The visual halo + ring fragments ignore it; it costs one extra
+  // flat-interpolated u32 per vertex output and lets both pipelines
+  // (visual + pick) share the same VsOut struct.  @interpolate(flat)
+  // because integers can't be linearly interpolated and all six
+  // vertices of one instance share the same value — same idiom as
+  // points/io.wesl's `instanceIdx`.
+  @location(5) @interpolate(flat) poiIndex: u32,
 };

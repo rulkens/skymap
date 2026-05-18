@@ -62,6 +62,11 @@ fn vs(
   // computes its own distance because halo and ring share the VsOut
   // struct.
   out.camDistMpc = 0.0;
+  // poiIndex is consumed only by the ringPick fragment.  Halo doesn't
+  // need it but WGSL requires every field of a returned struct to be
+  // initialised, so we pass 0u.  All six vertices of one instance share
+  // the same value (flat-interpolated in io.wesl); never read here.
+  out.poiIndex = 0u;
   return out;
 }
 
