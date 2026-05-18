@@ -69,7 +69,15 @@ import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl'
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { SELECTION_NONE_SENTINEL, unpackPick } from '../../../data/selectionEncoding';
+import {
+  SELECTION_NONE_SENTINEL,
+  // Interim shim while the foundations sub-plan lands the
+  // discriminated-union `PickResult` ahead of the plan-3 consumer
+  // migration. The pickRenderer here only knows how to surface
+  // survey-galaxy hits to the caller's `{source, localIdx}` contract;
+  // plan 3 swaps this for a real switch on `result.kind`.
+  unpackPickGalaxyOnly,
+} from '../../../data/selectionEncoding';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
@@ -603,7 +611,7 @@ export function createPickRenderer(
       // localIdx; `>>> 27` recovers the source code.  Both are pure
       // bitwise ops, so the decode is one shift + one mask + one
       // subtract.
-      const decoded = unpackPick(raw);
+      const decoded = unpackPickGalaxyOnly(raw);
       if (decoded === null) return null;
       return { source: decoded.source as Source, localIdx: decoded.localIdx };
     } finally {

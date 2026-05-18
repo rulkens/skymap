@@ -6,7 +6,7 @@
  * parity test lives at the bottom and is added in a later task.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   SELECTION_SOURCE_SHIFT,
   SELECTION_LOCAL_IDX_MASK,
@@ -15,6 +15,8 @@ import {
   packSelection,
   unpackPick,
 } from '../../src/data/selectionEncoding';
+import type { PickResult } from '../../src/data/selectionEncoding';
+import { Source } from '../../src/data/sources';
 
 describe('selectionEncoding', () => {
   it('exposes the canonical encoding constants', () => {
@@ -40,25 +42,38 @@ describe('selectionEncoding', () => {
   it('unpacks a real pick value back to (source, localIdx)', () => {
     // Picker writes `packed + 1`. So a real hit of source=3, localIdx=42
     // arrives as 0x1800002b. unpackPick subtracts 1 from the bottom 27 bits.
-    expect(unpackPick(0x1800002b)).toEqual({ source: 3, localIdx: 42 });
+    // Source code 3 is Source.Glade (a survey source ≤ 4), so the decoded
+    // result is the `kind: 'galaxy'` variant of the discriminated union.
+    expect(unpackPick(0x1800002b)).toEqual({
+      kind: 'galaxy',
+      source: Source.Glade,
+      localIdx: 42,
+    });
   });
 
   it('unpacks raw == 0 to null (cleared pick texture)', () => {
     expect(unpackPick(0)).toBeNull();
   });
 
-  it('round-trips pack → +1 → unpackPick for a variety of identities', () => {
+  it('round-trips pack → +1 → unpackPick for survey-source identities', () => {
+    // Survey sources only — codes 0..4. POI codes (5/6/7) round-trip
+    // through their own variant tests below; code 31 deliberately
+    // returns null per the sentinel rule.
     const cases: Array<[number, number]> = [
       [0, 1],
-      [0, 0x07fffffe],     // max localIdx that survives the +1 offset
+      [0, 0x07fffffe],
       [1, 0],
-      [31, 0],
-      [31, 0x07fffffe],
+      [4, 42],
+      [4, 0x07fffffe],
     ];
     for (const [source, localIdx] of cases) {
       const packed = packSelection(source, localIdx);
       const rawPick = (packed + PICK_SENTINEL_OFFSET) >>> 0;
-      expect(unpackPick(rawPick)).toEqual({ source, localIdx });
+      expect(unpackPick(rawPick)).toEqual({
+        kind: 'galaxy',
+        source: source as Source,
+        localIdx,
+      });
     }
   });
 
@@ -133,6 +148,69 @@ describe('selectionEncoding TS↔WESL parity', () => {
         weslValue,
         `WESL ${name} (${weslValue}) does not match TS ${name} (${tsValue})`,
       ).toBe(tsValue);
+    }
+  });
+});
+
+describe('unpackPick — discriminated union for POI categories', () => {
+  // Helper: produce the raw pick texture value the picker would write
+  // for a given (sourceCode, localIdx) pair. The picker offsets by
+  // PICK_SENTINEL_OFFSET (+1); unpackPick reverses that.
+  function rawFor(sourceCode: number, localIdx: number): number {
+    return ((packSelection(sourceCode, localIdx) + PICK_SENTINEL_OFFSET) >>> 0);
+  }
+
+  it('returns kind:galaxy for codes 0..4 (survey sources)', () => {
+    const cases: Array<[number, Source]> = [
+      [0, Source.Synthetic],
+      [1, Source.SDSS],
+      [2, Source.TwoMRS],
+      [3, Source.Glade],
+      [4, Source.Famous],
+    ];
+    for (const [code, sourceEnum] of cases) {
+      const result = unpackPick(rawFor(code, 42));
+      expect(result).toEqual<PickResult>({
+        kind: 'galaxy',
+        source: sourceEnum,
+        localIdx: 42,
+      });
+    }
+  });
+
+  it('returns kind:cluster for code 5', () => {
+    const result = unpackPick(rawFor(5, 7));
+    expect(result).toEqual<PickResult>({ kind: 'cluster', poiIndex: 7 });
+  });
+
+  it('returns kind:supercluster for code 6', () => {
+    const result = unpackPick(rawFor(6, 0));
+    expect(result).toEqual<PickResult>({ kind: 'supercluster', poiIndex: 0 });
+  });
+
+  it('returns kind:void for code 7', () => {
+    const result = unpackPick(rawFor(7, 2));
+    expect(result).toEqual<PickResult>({ kind: 'void', poiIndex: 2 });
+  });
+
+  it('returns null for raw==0 (cleared pick texture)', () => {
+    expect(unpackPick(0)).toBeNull();
+  });
+
+  it('returns null for source code 31 (the all-ones sentinel band)', () => {
+    expect(unpackPick(0xffffffff)).toBeNull();
+  });
+
+  it('logs a warning and returns null for unallocated codes 8..30', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      for (const code of [8, 15, 30]) {
+        const result = unpackPick(rawFor(code, 0));
+        expect(result).toBeNull();
+      }
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
     }
   });
 });

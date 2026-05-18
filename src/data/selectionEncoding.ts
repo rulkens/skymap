@@ -66,17 +66,87 @@ export function packSelection(sourceCode: number, localIdx: number): number {
   return ((sourceCode << SELECTION_SOURCE_SHIFT) | localIdx) >>> 0;
 }
 
+import { Source } from './sources';
+
 /**
- * Decode a raw value sampled from the pick texture into either a real
- * `(source, localIdx)` hit or `null` for the cleared-background case.
+ * Decoded pick-buffer result. Discriminator `kind` says which of the
+ * five categories the hit was, and the payload shape differs per kind:
  *
- * Callers pass the unmodified texel value (still including the
- * `+ PICK_SENTINEL_OFFSET`); this function reverses both the offset
- * and the shift/mask layout.
+ *   - 'galaxy'     — a survey-galaxy hit. Carries the Source enum +
+ *                    the per-source local index.
+ *   - 'cluster'    — a cluster POI hit. Carries the POI index into
+ *                    the cluster anchor table.
+ *   - 'supercluster' — same as cluster, but for supercluster anchors.
+ *   - 'void'       — same as cluster, but for void anchors.
+ *
+ * The discriminated-union shape forces callers to switch on `kind`
+ * (rather than read a magic source-code number) — the type system
+ * surfaces every new POI variant at every call site the moment a
+ * category is added. See spec §6.2 for the per-category allocation
+ * rationale and §7.2 for the call-site impact (`wireInput.ts`).
  */
-export function unpackPick(rawPickValue: number): { source: number; localIdx: number } | null {
+export type PickResult =
+  | { readonly kind: 'galaxy'; readonly source: Source; readonly localIdx: number }
+  | { readonly kind: 'cluster'; readonly poiIndex: number }
+  | { readonly kind: 'supercluster'; readonly poiIndex: number }
+  | { readonly kind: 'void'; readonly poiIndex: number };
+
+/**
+ * Decode a raw r32uint pick-buffer value into the canonical
+ * {@link PickResult} discriminated union, or `null` for "no hit".
+ *
+ * The raw value carries the picker's `+ PICK_SENTINEL_OFFSET` (so the
+ * cleared-zero background remains distinguishable from a legitimate
+ * source=0/localIdx=0 hit); this function reverses both that offset
+ * and the (sourceCode << 27) | localIdx layout, then dispatches on
+ * the 5-bit source code:
+ *
+ *   - 0..4  → galaxy hit (Synthetic, SDSS, TwoMRS, Glade, Famous)
+ *   - 5     → cluster POI
+ *   - 6     → supercluster POI
+ *   - 7     → void POI
+ *   - 8..30 → unallocated; log a defensive warning and return null
+ *   - 31    → reserved (all-ones sentinel); return null
+ *
+ * The 8..30 branch should never fire at runtime (we don't render any
+ * pickable surface with those codes), but a stray frame from an old
+ * shader or a misconfigured renderer would otherwise propagate a
+ * "ghost" pick result into the focus subsystem. Logging + null keeps
+ * the caller's switch exhaustive without crashing.
+ */
+export function unpackPick(rawPickValue: number): PickResult | null {
   if (rawPickValue === 0) return null;
-  const source = rawPickValue >>> SELECTION_SOURCE_SHIFT;
+  const sourceCode = rawPickValue >>> SELECTION_SOURCE_SHIFT;
+  // Reserved sentinel band — never a real hit.
+  if (sourceCode === 31) return null;
   const localIdx = (rawPickValue & SELECTION_LOCAL_IDX_MASK) - PICK_SENTINEL_OFFSET;
-  return { source, localIdx };
+  if (sourceCode <= 4) {
+    // Survey-galaxy hit. The numeric source code matches the Source
+    // enum value 1:1 (Synthetic=0, SDSS=1, TwoMRS=2, Glade=3, Famous=4).
+    return { kind: 'galaxy', source: sourceCode as Source, localIdx };
+  }
+  if (sourceCode === 5) return { kind: 'cluster', poiIndex: localIdx };
+  if (sourceCode === 6) return { kind: 'supercluster', poiIndex: localIdx };
+  if (sourceCode === 7) return { kind: 'void', poiIndex: localIdx };
+  console.warn(
+    `unpackPick: unexpected source code ${sourceCode} ` +
+      `(raw=0x${rawPickValue.toString(16).padStart(8, '0')}); returning null`,
+  );
+  return null;
+}
+
+/**
+ * @deprecated Use `unpackPick` directly; this shim exists for the
+ * brief window between the foundations sub-plan (which lands the
+ * discriminated-union return) and the pick-dispatch sub-plan (which
+ * rewrites consumers to switch on `kind`). Remove when the last
+ * caller is migrated.
+ */
+export function unpackPickGalaxyOnly(
+  rawPickValue: number,
+): { source: number; localIdx: number } | null {
+  const result = unpackPick(rawPickValue);
+  if (result === null) return null;
+  if (result.kind !== 'galaxy') return null;
+  return { source: result.source, localIdx: result.localIdx };
 }
