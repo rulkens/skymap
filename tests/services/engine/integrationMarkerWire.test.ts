@@ -31,6 +31,7 @@ import { createClusterMarkerRenderer } from '../../../src/services/gpu/renderers
 import type { PointOfInterest } from '../../../src/@types/engine/subsystems/PointOfInterest';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FadeUniformsBgl } from '../../../src/@types/rendering/FadeUniformsBgl';
 
 describe('poiSubsystem.produceMarkers → clusterMarkerRenderer.setMarkers', () => {
   it('the renderer reports the same marker count produceMarkers emitted', () => {
@@ -40,7 +41,7 @@ describe('poiSubsystem.produceMarkers → clusterMarkerRenderer.setMarkers', () 
       context: null as unknown as GPUCanvasContext,
       format: 'rgba16float' as GPUTextureFormat,
       canvas: null as unknown as HTMLCanvasElement,
-    }, 'rgba16float');
+    }, 'rgba16float', null as unknown as FadeUniformsBgl);
     sub.setPois([
       { id: 'virgo', name: 'Virgo', category: 'cluster',
         worldPos: [10, 0, 0], physicalRadiusMpc: 2 },

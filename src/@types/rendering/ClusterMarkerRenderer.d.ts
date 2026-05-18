@@ -24,11 +24,22 @@ export type ClusterMarkerRenderer = {
    * output of `state.subsystems.pois.produceMarkers(state, ctx)`.
    */
   setMarkers(descriptors: readonly ClusterMarkerDescriptor[]): void;
-  /** Issue the draws inside an in-flight render pass against the HDR target. */
+  /**
+   * Issue the draws inside an in-flight render pass against the HDR target.
+   *
+   * `fadeOpacity` is the per-frame opacity scalar for the entire marker
+   * layer.  Folded into the alpha output via the shared
+   * `lib::fadeUniforms::applyFade` helper — same contract as
+   * `filamentRenderer.draw(... fadeOpacity)`.  At v1 the pass file
+   * passes a constant 1.0; a future FadeRegistry handle for cluster
+   * markers (e.g. for layer-toggle animations) can substitute its
+   * per-frame value here.
+   */
   render(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: [number, number],
+    fadeOpacity: number,
   ): void;
   /** Number of markers last passed to setMarkers.  Used by the pass `enabled()` check. */
   markerCount(): number;

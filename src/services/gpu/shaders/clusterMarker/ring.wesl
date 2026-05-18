@@ -34,8 +34,12 @@ import package::clusterMarker::io::VsIn;
 import package::clusterMarker::io::VsOut;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
+import package::lib::fadeUniforms::FadeUniforms;
+import package::lib::fadeUniforms::applyFade;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
+// @group(1) FadeUniforms — see halo.wesl for the contract.
+@group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
 // Ring width in CSS pixels (full visible band, halved for the AA
 // smoothstep on each side).
@@ -105,7 +109,9 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let bandOuter = bandHalfUv + aaUv;
   let bandAlpha = 1.0 - smoothstep(bandInner, bandOuter, distFromRing);
 
-  let a = bandAlpha * input.alpha;
+  // applyFade folds in the per-renderer FadeUniforms.opacity
+  // (alpha-only; never attenuates RGB).  Mirrors filaments/fragment.wesl.
+  let a = applyFade(bandAlpha * input.alpha, fade.opacity);
   // Premultiplied alpha — pipeline blend state is OVER:
   //   (src.color * 1, dst.color * (1 - src.alpha)).
   return vec4<f32>(input.color * a, a);

@@ -67,6 +67,7 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import type { PoiCategory } from '../../engine/subsystems/poiSubsystem';
+import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import { Source } from '../../../data/sources';
 import haloVsCode from '../shaders/clusterMarker/halo.wesl?static';
 import haloFsCode from '../shaders/clusterMarker/halo.wesl?static';
@@ -126,6 +127,18 @@ export function createClusterMarkerRenderer(
    * Mirrors the `hdrFormat` parameter on `createFilamentRenderer`.
    */
   hdrFormat: GPUTextureFormat,
+  /**
+   * The shared `FadeUniformsBgl` other HDR renderers (filaments, etc.)
+   * use at `@group(1)`.  This renderer's shaders DO NOT reference
+   * `@group(1)`, but the slot must still appear in the pipeline layout
+   * AND match the BindGroupLayout of any BindGroup other passes have
+   * already bound at slot 1 in the same `RenderPassEncoder`.  Without
+   * passing the canonical fadeBgl here, the previous pass's bound
+   * `filaments-fade-bg` would mismatch our placeholder layout and the
+   * validator would reject our SetPipeline.  Mirrors the fadeBgl arg
+   * on `createFilamentRenderer`.
+   */
+  fadeBgl: FadeUniformsBgl,
   maxMarkers = 64,
 ): ClusterMarkerRenderer {
   const device = ctx.device as GPUDevice | null;
@@ -154,6 +167,8 @@ export function createClusterMarkerRenderer(
   let ringPipeline: GPURenderPipeline | null = null;
   let uniformBuffer: GPUBuffer | null = null;
   let instanceBuffer: GPUBuffer | null = null;
+  let fadeBuffer: GPUBuffer | null = null;
+  let fadeBindGroup: GPUBindGroup | null = null;
   const sourceBuffers: Record<'cluster' | 'supercluster' | 'void', GPUBuffer | null> = {
     cluster: null,
     supercluster: null,
@@ -165,6 +180,11 @@ export function createClusterMarkerRenderer(
     supercluster: null,
     void: null,
   };
+  // Scratch arrays for the per-frame fade.opacity write.  Same shape
+  // as filamentRenderer's fadeScratchF32: a single f32 sliced into the
+  // 16-byte fade uniform buffer at offset 0.
+  const fadeScratchBuffer = new ArrayBuffer(4);
+  const fadeScratchF32 = new Float32Array(fadeScratchBuffer);
 
   if (device) {
     const cameraBgl = device.createBindGroupLayout({
@@ -179,21 +199,24 @@ export function createClusterMarkerRenderer(
         { binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
       ],
     });
-    // @group(1) FadeUniforms slot is intentionally OMITTED at v1.  The
-    // renderer's per-frame fade rides on the descriptor's alpha fields
-    // (computed CPU-side by poiSubsystem).  Plan 4 may add a unified
-    // FadeUniforms here once the fade architecture asks for it.
+    // @group(1) FadeUniforms slot — the cluster-marker shaders DO NOT
+    // reference this slot (alpha rides on the per-descriptor fields the
+    // CPU bakes in produceMarkers), but we MUST list the canonical
+    // shared fadeBgl in the layout at slot 1.
     //
-    // WebGPU requires every group up to the highest bound to appear in
-    // bindGroupLayouts.  We bind @group(0) and @group(2), so @group(1)
-    // needs a placeholder BGL — we hand sourceBgl as the placeholder
-    // (the validation only checks shape, not content; the shader never
-    // references @group(1)).  If a future WebGPU version's validator
-    // rejects this, swap in a minimal empty BGL:
-    //   device.createBindGroupLayout({ entries: [] }).
+    // Why: WebGPU's draw-time validator compares the pipeline layout's
+    // BGL at each slot against the BindGroupLayout of whatever
+    // BindGroup is currently bound at that slot on the encoder.  Other
+    // HDR_PASSES (filaments, etc.) bind their filaments-fade-bg at
+    // @group(1) before our pass runs; the encoder still has that bind
+    // group set when our SetPipeline fires.  A placeholder BGL that
+    // didn't match the fadeBgl would trip "BindGroupLayout … does not
+    // match layout … set at group index 1".  Listing fadeBgl here keeps
+    // the pipeline layout-compatible with whatever the prior pass
+    // bound.  We never create a BindGroup against it ourselves.
     const pipelineLayout = device.createPipelineLayout({
       label: 'cluster-marker-pipeline-layout',
-      bindGroupLayouts: [cameraBgl, sourceBgl, sourceBgl],
+      bindGroupLayouts: [cameraBgl, fadeBgl, sourceBgl],
     });
 
     const haloVs = createShaderModuleWithDevLog(device, haloVsCode, 'clusterMarker.halo.vs');
@@ -273,6 +296,20 @@ export function createClusterMarkerRenderer(
       label: 'cluster-marker-camera-bg',
       layout: cameraBgl,
       entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    });
+
+    // @group(1) FadeUniforms — 16-byte buffer; we write the per-frame
+    // fade.opacity scalar into the first 4 bytes each frame.  Bind
+    // group lives forever; only the buffer contents change.
+    fadeBuffer = device.createBuffer({
+      label: 'cluster-marker-fade-uniform',
+      size: 16,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    fadeBindGroup = device.createBindGroup({
+      label: 'cluster-marker-fade-bg',
+      layout: fadeBgl,
+      entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
 
     // Per-category SourceUniforms — written once at construction.
@@ -355,10 +392,11 @@ export function createClusterMarkerRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: [number, number],
+    fadeOpacity: number,
   ): void {
     if (
       !device || !haloPipeline || !ringPipeline || !uniformBuffer ||
-      !instanceBuffer || !cameraBindGroup
+      !instanceBuffer || !cameraBindGroup || !fadeBuffer || !fadeBindGroup
     ) return;
     if (currentMarkerCount === 0) return;
 
@@ -370,7 +408,14 @@ export function createClusterMarkerRenderer(
     // uni[18], uni[19] stay zero (the two reserved pads).
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
+    // Per-frame fade.opacity write — same pattern as filamentRenderer.
+    // Only the first 4 bytes carry data; the trailing 12 bytes of the
+    // 16-byte uniform are pad and stay zero.
+    fadeScratchF32[0] = fadeOpacity;
+    device.queue.writeBuffer(fadeBuffer, 0, fadeScratchBuffer);
+
     pass.setBindGroup(0, cameraBindGroup);
+    pass.setBindGroup(1, fadeBindGroup);
     pass.setVertexBuffer(0, instanceBuffer);
 
     // Halo passes first (additive) — voids skip; see spec §2.1.  We
@@ -409,6 +454,7 @@ export function createClusterMarkerRenderer(
   function destroy(): void {
     uniformBuffer?.destroy();
     instanceBuffer?.destroy();
+    fadeBuffer?.destroy();
     for (const cat of POI_CATEGORIES_WITH_MARKERS) {
       sourceBuffers[cat]?.destroy();
     }

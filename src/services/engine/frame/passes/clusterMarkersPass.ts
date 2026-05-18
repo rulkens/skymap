@@ -32,10 +32,18 @@ export const clusterMarkersPass: Pass = {
   },
 
   draw(pass, ctx, state, _settings, _deps) {
+    // fadeOpacity = 1 at v1 — the cluster-markers layer has no
+    // FadeRegistry handle yet.  The renderer still binds a real fade
+    // group at @group(1) so the BGL matches what filaments (and other
+    // HDR passes) bind at the same slot on the shared encoder.  A
+    // future opacityOf({kind:'clusterMarkers'}, nowMs) substitution
+    // would let the layer animate in/out via the unified fade
+    // architecture (see lib/fadeUniforms.wesl module header).
     state.gpu.clusterMarkerRenderer!.render(
       pass,
       ctx.vp as Float32Array,
       [ctx.canvasSize.width, ctx.canvasSize.height],
+      1,
     );
   },
 };

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createClusterMarkerRenderer } from '../../../../src/services/gpu/renderers/clusterMarkerRenderer';
 import type { ClusterMarkerDescriptor } from '../../../../src/@types/rendering/ClusterMarkerDescriptor';
+import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
 
 // Null-device pattern, mirrors markerLineRenderer.test.ts.
 const newRenderer = (maxMarkers?: number) => {
@@ -10,7 +11,7 @@ const newRenderer = (maxMarkers?: number) => {
     format: 'rgba16float' as GPUTextureFormat,
     canvas: null as unknown as HTMLCanvasElement,
   };
-  return createClusterMarkerRenderer(ctx, 'rgba16float', maxMarkers);
+  return createClusterMarkerRenderer(ctx, 'rgba16float', null as unknown as FadeUniformsBgl, maxMarkers);
 };
 
 const cluster = (id: number): ClusterMarkerDescriptor => ({

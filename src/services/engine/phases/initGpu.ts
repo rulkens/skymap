@@ -248,8 +248,11 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   state.gpu.markerLineRenderer = createMarkerLineRenderer(uiCtx);
   // HDR pass — must write into the rgba16float offscreen target the
   // tone-map pass reads from, NOT the canvas swap-chain.  Mirrors the
-  // explicit hdrFormat arg on createFilamentRenderer.
-  state.gpu.clusterMarkerRenderer = createClusterMarkerRenderer(uiCtx, 'rgba16float');
+  // explicit hdrFormat arg on createFilamentRenderer.  The fadeBgl
+  // placeholder at @group(1) must match what the other HDR passes
+  // (filaments) bind at the same slot on the shared RenderPassEncoder;
+  // see the renderer's pipeline-layout comment for why.
+  state.gpu.clusterMarkerRenderer = createClusterMarkerRenderer(uiCtx, 'rgba16float', state.gpu.fadeBgl!);
 
   // Wire the freshly-constructed renderers into the label director.
   // The director was built eagerly in the engine state literal (alongside

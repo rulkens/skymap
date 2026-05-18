@@ -88,8 +88,14 @@ import package::clusterMarker::io::VsIn;
 import package::clusterMarker::io::VsOut;
 import package::lib::camera::worldToClip;
 import package::lib::billboard::quadCorner;
+import package::lib::fadeUniforms::FadeUniforms;
+import package::lib::fadeUniforms::applyFade;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
+// @group(1) FadeUniforms — the shared per-renderer opacity uniform
+// every HDR pass uses.  See lib/fadeUniforms.wesl for the contract
+// and filaments/fragment.wesl for the canonical consumer pattern.
+@group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
 @vertex
 fn vs(
@@ -157,6 +163,10 @@ fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // 1, doesn't matter for additive) both work.  We emit alpha = g *
   // input.alpha so a future blend-state change (e.g. additive-with-
   // alpha-cap) sees a coherent vec4.
-  let a = g * input.alpha;
+  //
+  // applyFade folds in the per-renderer FadeUniforms.opacity (always
+  // alpha-only — never let opacity attenuate RGB).  Mirror of the
+  // filaments-fragment pattern.
+  let a = applyFade(g * input.alpha, fade.opacity);
   return vec4<f32>(input.color * a, a);
 }
