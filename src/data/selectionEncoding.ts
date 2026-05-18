@@ -33,6 +33,8 @@
  * decode in `unpackPick` reverses the offset.
  */
 
+import { Source } from './sources';
+
 /** Bit shift for the source code in the packed identity. */
 export const SELECTION_SOURCE_SHIFT = 27;
 
@@ -65,8 +67,6 @@ export const PICK_SENTINEL_OFFSET = 1;
 export function packSelection(sourceCode: number, localIdx: number): number {
   return ((sourceCode << SELECTION_SOURCE_SHIFT) | localIdx) >>> 0;
 }
-
-import { Source } from './sources';
 
 /**
  * Decoded pick-buffer result. Discriminator `kind` says which of the

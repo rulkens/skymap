@@ -602,15 +602,17 @@ export function createPickRenderer(
       const raw = mapped[0]!;
       stagingBuffer.unmap();
 
-      // Decode the (sourceCode << 27 | localIdx + 1) pick value.
-      //
-      //   raw == 0           → cleared sentinel (no hit) → null
-      //   raw >= 1           → top 5 bits = sourceCode, bottom 27 = (localIdx + 1)
-      //
-      // We subtract 1 from the bottom 27 bits to recover the 0-based
-      // localIdx; `>>> 27` recovers the source code.  Both are pure
-      // bitwise ops, so the decode is one shift + one mask + one
-      // subtract.
+      // Decode the (sourceCode << 27 | localIdx + 1) pick value via the
+      // shared `selectionEncoding.unpackPick` helper.  We call the
+      // `unpackPickGalaxyOnly` shim rather than `unpackPick` itself
+      // during the multi-plan cluster-viz migration: `unpackPick` now
+      // returns a discriminated union (galaxy | cluster | supercluster |
+      // void), but this consumer only knows the galaxy shape today.
+      // Cluster/supercluster/void POI hits round-trip to `null` here —
+      // a click on a cluster ring currently no-ops at this call site
+      // and the future pick-dispatch sub-plan will swap the shim for a
+      // real `switch (result.kind)` that routes POI hits to the focus
+      // subsystem.  See `selectionEncoding.ts` for the encoding details.
       const decoded = unpackPickGalaxyOnly(raw);
       if (decoded === null) return null;
       return { source: decoded.source as Source, localIdx: decoded.localIdx };
