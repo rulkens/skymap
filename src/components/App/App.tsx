@@ -776,6 +776,7 @@ export function App(): React.ReactElement {
             <DebugPanel
               slots={handleRef.current.assetSlots}
               timingService={handleRef.current.debug.timingService}
+              passOverrides={handleRef.current.debug.passOverrides}
             />
           )}
       </div>

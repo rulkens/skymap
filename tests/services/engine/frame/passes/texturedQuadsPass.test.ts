@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { mat4 } from 'gl-matrix';
-import { texturedImpostorsPass } from '../../../../../src/services/engine/frame/passes/texturedImpostorsPass';
+import { texturedQuadsPass } from '../../../../../src/services/engine/frame/passes/texturedQuadsPass';
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame/RenderFrameSettings';
@@ -31,14 +31,23 @@ function makeCtx(): ReadyFrameContext {
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     renderer: { draw: vi.fn() } as any,
-    postProcess: { view: {} as GPUTextureView, draw: vi.fn(), resize: vi.fn(), destroy: vi.fn() } as any,
+    postProcess: {
+      view: {} as GPUTextureView,
+      draw: vi.fn(),
+      resize: vi.fn(),
+      destroy: vi.fn(),
+    } as any,
     volumeOffscreen: { view: {} as GPUTextureView, resize: vi.fn(), destroy: vi.fn() } as any,
-    texturedImpostors: { runFrame: vi.fn(), lastOutput: { quads: [], disks: [] }, hasInFlightWork: () => false } as any,
+    texturedImpostors: {
+      runFrame: vi.fn(),
+      lastOutput: { quads: [], disks: [] },
+      hasInFlightWork: () => false,
+    } as any,
   };
 }
 
-function makeSettings(): RenderFrameSettings {
-  return { galaxyTexturesEnabled: true } as RenderFrameSettings;
+function makeSettings(overrides: Partial<RenderFrameSettings> = {}): RenderFrameSettings {
+  return { galaxyTexturesEnabled: true, ...overrides } as RenderFrameSettings;
 }
 
 function makeDeps(): PassDeps {
@@ -56,49 +65,56 @@ function makeDeps(): PassDeps {
   } as PassDeps;
 }
 
-describe('texturedImpostorsPass', () => {
-  it('is named "textured-impostors"', () => {
-    expect(texturedImpostorsPass.name).toBe('textured-impostors');
+describe('texturedQuadsPass', () => {
+  it('is named "textured-quads"', () => {
+    expect(texturedQuadsPass.name).toBe('textured-quads');
   });
 
-  it('enabled() returns false when both lastOutput arrays are empty', () => {
+  it('enabled() returns false when galaxyTexturesEnabled is false', () => {
     const state = {
-      subsystems: { texturedImpostors: { lastOutput: { disks: [], quads: [] } } },
+      subsystems: { texturedImpostors: { lastOutput: { disks: [], quads: [{}] } } },
     } as unknown as EngineState;
-    expect(texturedImpostorsPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+    expect(
+      texturedQuadsPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: false })),
+    ).toBe(false);
   });
 
-  it('enabled() returns true with a non-empty disks array', () => {
+  it('enabled() returns false when subsystem is null', () => {
+    const state = { subsystems: { texturedImpostors: null } } as unknown as EngineState;
+    expect(texturedQuadsPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
+  });
+
+  it('enabled() returns false when quads array is empty (even if disks has entries)', () => {
     const state = {
       subsystems: { texturedImpostors: { lastOutput: { disks: [{}], quads: [] } } },
     } as unknown as EngineState;
-    expect(texturedImpostorsPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+    expect(texturedQuadsPass.enabled(state, makeCtx(), makeSettings())).toBe(false);
   });
 
-  it('draw() invokes texturedQuadRenderer first then texturedDiskRenderer', () => {
-    const disks = [{ x: 1 }];
+  it('enabled() returns true when quads array is non-empty', () => {
+    const state = {
+      subsystems: { texturedImpostors: { lastOutput: { disks: [], quads: [{}] } } },
+    } as unknown as EngineState;
+    expect(texturedQuadsPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
+  });
+
+  it('draw() invokes texturedQuadRenderer.draw and never texturedDiskRenderer.draw', () => {
     const quads = [{ x: 2 }];
     const state = {
-      subsystems: { texturedImpostors: { lastOutput: { disks, quads } } },
+      subsystems: { texturedImpostors: { lastOutput: { disks: [{}], quads } } },
     } as unknown as EngineState;
     const deps = makeDeps();
-    texturedImpostorsPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
+    texturedQuadsPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
     expect(deps.texturedQuadRenderer.draw).toHaveBeenCalledTimes(1);
-    expect(deps.texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
-    // Order: quads first, then disks (matches the legacy thumbnailSubsystem
-    // dispatch order at lines 955-967).
-    const quadOrder = (deps.texturedQuadRenderer.draw as any).mock.invocationCallOrder[0];
-    const diskOrder = (deps.texturedDiskRenderer.draw as any).mock.invocationCallOrder[0];
-    expect(quadOrder).toBeLessThan(diskOrder);
+    expect(deps.texturedDiskRenderer.draw).not.toHaveBeenCalled();
   });
 
-  it('draw() skips quad call when quads array is empty', () => {
+  it('draw() is a no-op when quads array is empty', () => {
     const state = {
       subsystems: { texturedImpostors: { lastOutput: { disks: [{}], quads: [] } } },
     } as unknown as EngineState;
     const deps = makeDeps();
-    texturedImpostorsPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
+    texturedQuadsPass.draw({} as GPURenderPassEncoder, makeCtx(), state, makeSettings(), deps);
     expect(deps.texturedQuadRenderer.draw).not.toHaveBeenCalled();
-    expect(deps.texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
   });
 });

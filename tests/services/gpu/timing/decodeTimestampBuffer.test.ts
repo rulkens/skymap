@@ -44,10 +44,11 @@ describe('decodeTimestampBuffer', () => {
   });
 
   it('clamps negative deltas (end < begin) to 0', () => {
+    // Pair index 2 = textured-quads (u64 slots 4/5) post-split.
     const buf = buildBuffer([[2, 5_000_000n, 1_000_000n]]);
     const out = decodeTimestampBuffer(buf, 1);
 
-    expect(out.get('textured-impostors')).toBe(0);
+    expect(out.get('textured-quads')).toBe(0);
   });
 
   it('applies a non-unit timestampPeriod correctly', () => {
@@ -58,28 +59,34 @@ describe('decodeTimestampBuffer', () => {
     expect(out.get('filaments')).toBeCloseTo(3.85, 6);
   });
 
-  it('decodes all 9 slots independently', () => {
+  it('decodes all 10 slots independently', () => {
+    // Pair index = u64 slot / 2.  Slot assignments come from
+    // TIMING_SLOT_NAMES; `textured-disks` uses the out-of-order pair
+    // 10 (u64 slots 20/21) because it claimed the first free pair
+    // when split out of the legacy `textured-impostors` slot.
     const buf = buildBuffer([
       [0, 0n, 1_000_000n], // point-sprites
       [1, 0n, 2_000_000n], // procedural-disks
-      [2, 0n, 3_000_000n], // textured-impostors
+      [2, 0n, 3_000_000n], // textured-quads
       [3, 0n, 500_000n], //   filaments
       [4, 0n, 4_000_000n], // scalar-volume
       [5, 0n, 600_000n], //   milky-way
       [6, 0n, 100_000n], //   tone-map
       [7, 0n, 100_000n], //   ui-overlay
       [8, 0n, 200_000n], //   pick
+      [10, 0n, 700_000n], //  textured-disks
     ]);
     const out = decodeTimestampBuffer(buf, 1);
 
     expect(out.get('point-sprites')).toBeCloseTo(1.0, 6);
     expect(out.get('procedural-disks')).toBeCloseTo(2.0, 6);
-    expect(out.get('textured-impostors')).toBeCloseTo(3.0, 6);
+    expect(out.get('textured-quads')).toBeCloseTo(3.0, 6);
     expect(out.get('filaments')).toBeCloseTo(0.5, 6);
     expect(out.get('scalar-volume')).toBeCloseTo(4.0, 6);
     expect(out.get('milky-way')).toBeCloseTo(0.6, 6);
     expect(out.get('tone-map')).toBeCloseTo(0.1, 6);
     expect(out.get('ui-overlay')).toBeCloseTo(0.1, 6);
     expect(out.get('pick')).toBeCloseTo(0.2, 6);
+    expect(out.get('textured-disks')).toBeCloseTo(0.7, 6);
   });
 });

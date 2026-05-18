@@ -2,10 +2,11 @@
  * EngineDebugHandle — the engine's observability sub-handle.
  *
  * Hosts handles to debug/inspection surfaces the React shell reads
- * but never drives.  Today the only inhabitant is `timingService`;
- * future debug surfaces (CPU-timing breakdowns, render-stat
- * counters, frame-timeline exports) cluster here rather than
- * sprawling across the top-level handle.
+ * but never drives.  Today's inhabitants are `timingService` (read)
+ * and `passOverrides` (read/write toggle bag); future debug surfaces
+ * (CPU-timing breakdowns, render-stat counters, frame-timeline
+ * exports) cluster here rather than sprawling across the top-level
+ * handle.
  *
  * ### Why a sub-handle for one field
  *
@@ -30,6 +31,32 @@
 
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 
+/**
+ * `passOverrides` — DebugPanel hook for toggling individual renderer
+ * passes off (HDR + UI overlay).  Backed by `state.debug.disabledPasses`.
+ *
+ * The override is **one-way**: it can hide a pass that would otherwise
+ * run, but can never force-enable a pass whose own `enabled()` gate
+ * returned false.  Toggling triggers a one-frame re-render so the
+ * change shows up while the render-on-demand loop is idle.
+ *
+ * `allNames` lists every pass name across HDR + UI registries in
+ * deterministic draw order.  Callers iterate it to render a UI row per
+ * pass without enumerating the kebab-case names themselves.
+ */
+export type PassOverridesHandle = {
+  /** Every pass name across HDR + UI registries, in draw order. */
+  readonly allNames: readonly string[];
+  /** True if `name` is currently in the disabled set. */
+  isDisabled(name: string): boolean;
+  /**
+   * Add (`disabled === true`) or remove (`disabled === false`) `name`
+   * from the disabled set.  Wakes the render-on-demand loop so the
+   * change shows up on the next frame even when the camera is idle.
+   */
+  setDisabled(name: string, disabled: boolean): void;
+};
+
 export type EngineDebugHandle = {
   /**
    * The GPU timing service (always non-null).  Check `.enabled`
@@ -39,4 +66,10 @@ export type EngineDebugHandle = {
    * in either case.
    */
   readonly timingService: GpuTimingService;
+  /**
+   * Per-pass on/off overrides for the DebugPanel's renderer-toggle
+   * section.  See `PassOverridesHandle` for the one-way override
+   * semantics.
+   */
+  readonly passOverrides: PassOverridesHandle;
 };

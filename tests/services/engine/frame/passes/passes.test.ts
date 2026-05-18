@@ -29,7 +29,6 @@ import {
   HDR_PASSES,
   pointSpritesPass,
   proceduralDisksPass,
-  texturedImpostorsPass,
   filamentsPass,
   milkyWayPass,
 } from '../../../../../src/services/engine/frame/passes';
@@ -145,17 +144,22 @@ const PASS_STUB = { setPipeline: vi.fn(), setVertexBuffer: vi.fn(), setBindGroup
 // ── Tests ───────────────────────────────────────────────────────────────────
 
 describe('HDR_PASSES registry', () => {
-  it('contains the six HDR passes in canonical draw order', () => {
+  it('contains the seven HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the encoder record;
     // see passes/index.ts module header.  Marker-lines and labels
     // moved out of HDR_PASSES to UI_PASSES (post-tone-map overlay) so
     // they could escape the tone-map curve compression and avoid the
-    // OVER-blend coherency issue on tile-based GPUs.
-    expect(HDR_PASSES).toHaveLength(6);
+    // OVER-blend coherency issue on tile-based GPUs.  The former
+    // `textured-impostors` slot split into two (`textured-quads`,
+    // `textured-disks`) on 2026-05-18 to let the debug panel toggle
+    // them independently — quads first to preserve the legacy
+    // thumbnail dispatch order.
+    expect(HDR_PASSES).toHaveLength(7);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
       'point-sprites',
       'procedural-disks',
-      'textured-impostors',
+      'textured-quads',
+      'textured-disks',
       'milky-way',
       'filaments',
       'volume-upsample',
@@ -214,25 +218,11 @@ describe('proceduralDisksPass.enabled', () => {
   });
 });
 
-describe('texturedImpostorsPass.enabled', () => {
-  it('returns false when galaxyTexturesEnabled is false', () => {
-    const state = {
-      subsystems: {
-        texturedImpostors: { lastOutput: { disks: [{}], quads: [] } },
-      },
-    } as unknown as EngineState;
-    expect(
-      texturedImpostorsPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: false })),
-    ).toBe(false);
-  });
-
-  it('returns false when subsystem is null', () => {
-    const state = { subsystems: { texturedImpostors: null } } as unknown as EngineState;
-    expect(
-      texturedImpostorsPass.enabled(state, makeCtx(), makeSettings({ galaxyTexturesEnabled: true })),
-    ).toBe(false);
-  });
-});
+// Coverage for the split halves of the former `textured-impostors`
+// pass lives in `texturedQuadsPass.test.ts` and
+// `texturedDisksPass.test.ts` (one test file per Pass module, matching
+// the convention used by every other entry in `passes/`).  The
+// HDR_PASSES registry check above pins both names in canonical order.
 
 describe('filamentsPass.enabled', () => {
   it('returns true when filamentsEnabled is true (renderer presence checked in draw)', () => {

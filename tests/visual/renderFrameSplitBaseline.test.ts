@@ -366,6 +366,9 @@ describe('renderFrame visual baseline', () => {
             label: 'fadeRegistry',
           },
         },
+        // DebugPanel renderer-toggle override bag — empty so every
+        // pass fires (the visual baseline asserts the full lineup).
+        debug: { disabledPasses: new Set<string>() },
       } as never,
       milkyWayITimeSec: 0,
       device,

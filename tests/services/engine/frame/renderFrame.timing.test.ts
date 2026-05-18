@@ -250,6 +250,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // milky-way fire), so opacityOf returns 0 — no fade-out tail.
         fades: { opacityOf: () => 0 },
       },
+      // DebugPanel renderer-toggle override bag — empty by default so
+      // the encoder loop skips no passes.
+      debug: { disabledPasses: new Set<string>() },
     } as never,
     milkyWayITimeSec: 0,
     device,

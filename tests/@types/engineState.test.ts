@@ -200,6 +200,7 @@ describe('EngineState type', () => {
         cf4Density: null,
         mcpm: null,
       },
+      debug: { disabledPasses: new Set<string>() },
     };
     stateRef.current = state;
 
@@ -366,6 +367,7 @@ describe('EngineState type', () => {
         cf4Density: null,
         mcpm: null,
       },
+      debug: { disabledPasses: new Set<string>() },
     };
     stateRef.current = state;
 

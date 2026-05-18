@@ -69,7 +69,12 @@ export function encodeUiOverlay(
   deps: PassDeps,
   timestampWrites: GPURenderPassTimestampWrites | undefined,
 ): void {
-  const enabled = UI_PASSES.filter((p) => p.enabled(state, ctx, settings));
+  // Apply the DebugPanel renderer-toggle override AFTER each pass's
+  // own gate — same one-way semantics as the HDR encoders.  Set is
+  // empty in production, so the membership check is in the noise.
+  const enabled = UI_PASSES.filter(
+    (p) => p.enabled(state, ctx, settings) && !state.debug.disabledPasses.has(p.name),
+  );
   if (enabled.length === 0 && !timestampWrites) return;
 
   const pass = encoder.beginRenderPass({
