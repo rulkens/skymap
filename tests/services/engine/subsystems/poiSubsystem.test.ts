@@ -66,13 +66,6 @@ describe('poiSubsystem', () => {
     expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'Andromeda Galaxy']);
   });
 
-  it('emits 3 perpendicular crosshair lines for POIs with physicalRadiusMpc', () => {
-    const sub = createPoiSubsystem();
-    sub.setPois([VIRGO]);
-    const out = sub.produceLabels(makeState(), makeCtx());
-    expect(out.lines).toHaveLength(3);
-  });
-
   it('emits a single vertical marker line for POIs with labelAnchorOffsetMpc', () => {
     const sub = createPoiSubsystem();
     const m31: PointOfInterest = {
@@ -129,7 +122,7 @@ describe('poiSubsystem', () => {
     expect(out.lines).toHaveLength(0);
   });
 
-  it('cluster POIs keep alignX left and emit no anchor line (3-line crosshair only)', () => {
+  it('cluster POIs keep alignX left and emit no marker lines (crosshair removed)', () => {
     const sub = createPoiSubsystem();
     const virgo: PointOfInterest = {
       id: 'virgo',
@@ -142,7 +135,10 @@ describe('poiSubsystem', () => {
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels[0]!.alignX).toBe('left');
     expect(out.labels[0]!.worldPos[1]).toBe(-2.13); // not lifted
-    expect(out.lines).toHaveLength(3); // crosshair, no anchor line
+    // Pre-cluster-viz this would have been 3 (perpendicular crosshair).
+    // Now: 0 — crosshair removed in plan 2/4 task 9; clusters render
+    // as halo + ring via clusterMarkerRenderer instead.
+    expect(out.lines).toHaveLength(0);
   });
 
   it('filters by category visibility', () => {
@@ -289,5 +285,26 @@ describe('poiSubsystem', () => {
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.awake).toBe(false);
     expect(out.labels[0]!.fadeAlpha).toBe(1);
+  });
+});
+
+describe('poiSubsystem — crosshair removal', () => {
+  it('produces zero marker-lines for a cluster POI with no labelAnchorOffsetMpc', () => {
+    const sub = createPoiSubsystem();
+    const poi: PointOfInterest = {
+      id: 'virgo',
+      name: 'Virgo',
+      category: 'cluster',
+      worldPos: [10, 0, 0],
+      physicalRadiusMpc: 2,
+    };
+    sub.setPois([poi]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    // Pre-cluster-viz this would have been 3 (three perpendicular
+    // crosshair lines).  Now: 0, because the cluster has no
+    // labelAnchorOffsetMpc and the crosshair is gone.
+    expect(out.lines).toHaveLength(0);
+    // Label is still produced.
+    expect(out.labels).toHaveLength(1);
   });
 });

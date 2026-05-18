@@ -21,13 +21,16 @@
  * cannot drift.  Adding a fifth category is a single edit (add a row
  * to POI_STYLES) that automatically widens `PoiCategory`.
  *
- * ### Crosshair shape
+ * ### Marker pass (clusters / superclusters / voids)
  *
- * Three perpendicular line segments, each `physicalRadiusMpc` long,
- * centred on `worldPos`.  Cheap to render (3 lines per POI), reads
- * clearly at any zoom, and indicates the precise centre regardless
- * of the label's text bounds.  POIs without `physicalRadiusMpc` (e.g.
- * individual galaxies the user clicked on once) get a label only.
+ * Cluster, supercluster, and void POIs now render through the
+ * separate `clusterMarkerRenderer` as soft additive halos + screen-AA
+ * rings at their `physicalRadiusMpc` — see `produceMarkers` below.
+ * The previous three-perpendicular-line crosshair gizmo was removed
+ * in 2026-05-18 (cluster-viz plan 2/4); see the spec
+ * `docs/superpowers/specs/2026-05-18-cluster-supercluster-viz-design.md`
+ * §2 for the rationale.  POIs without `physicalRadiusMpc` get a
+ * label only.
  *
  * ### Anchor-offset labels
  *
@@ -240,25 +243,6 @@ export function createPoiSubsystem(): PoiSubsystem {
     visibility = { ...visibility, [category]: visible };
   }
 
-  function makeCrosshairLines(p: PointOfInterest, style: CategoryStyle): readonly MarkerLine[] {
-    if (p.physicalRadiusMpc === undefined) return [];
-    const half = p.physicalRadiusMpc;
-    const [cx, cy, cz] = p.worldPos;
-    const mk = (id: string, from: Vec3, to: Vec3): MarkerLine => ({
-      id,
-      fromWorld: from,
-      toWorld: to,
-      pixelWidth: style.pixelWidth,
-      // Fresh tuple per line — the renderer types these as mutable [n,n,n,n].
-      color: [...style.lineColor],
-    });
-    return [
-      mk(`${p.id}-x`, [cx - half, cy, cz], [cx + half, cy, cz]),
-      mk(`${p.id}-y`, [cx, cy - half, cz], [cx, cy + half, cz]),
-      mk(`${p.id}-z`, [cx, cy, cz - half], [cx, cy, cz + half]),
-    ];
-  }
-
   function produceLabels(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
     const labels: Label[] = [];
     const lines: MarkerLine[] = [];
@@ -349,7 +333,6 @@ export function createPoiSubsystem(): PoiSubsystem {
         fadeAlpha,
         alignX,
       });
-      for (const line of makeCrosshairLines(p, style)) lines.push(line);
     }
     // One-shot layer fade-in: first frame that emits a non-empty
     // label set fires fadeTo(1) on the POI layer's FadeHandle. See
