@@ -100,12 +100,7 @@ import { hasUrlGate } from '../../../utils/url/urlGate';
 // (DEFAULT_VOLUME_FIELD_INTENSITY, getVolumeFieldDefaults,
 // syntheticVolumeFetcher) were moved into `syntheticVolumeSlots.ts`
 // by H4 and intentionally stay out.
-import {
-  CLUSTER_ANCHORS,
-  SUPERCLUSTER_ANCHORS,
-  VOID_ANCHORS,
-  raDecDistToEqCart,
-} from '../../../data/clusterAnchors';
+import { buildStaticAnchorPois } from '../../../data/buildStaticAnchorPois';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
@@ -180,44 +175,12 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // literature-grounded values (R_200 / virial radii for clusters,
   // characteristic structural extent for superclusters and voids).
   // See the per-anchor citation comments in clusterAnchors.ts.
-  const slug = (name: string): string =>
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  const staticAnchorPois: PointOfInterest[] = [
-    ...CLUSTER_ANCHORS.map(
-      (a): PointOfInterest => ({
-        id: `cluster-${slug(a.name)}`,
-        name: a.name,
-        category: 'cluster',
-        worldPos: raDecDistToEqCart(a),
-        // physicalRadiusMpc comes from clusterAnchors.ts (literature-
-        // grounded per-anchor value); we no longer derive it from
-        // distMpc here. See spec sub-plan-1 §7.2 + Task 3.2 for the
-        // citations.
-        physicalRadiusMpc: a.physicalRadiusMpc,
-      }),
-    ),
-    ...SUPERCLUSTER_ANCHORS.map(
-      (a): PointOfInterest => ({
-        id: `supercluster-${slug(a.name)}`,
-        name: a.name,
-        category: 'supercluster',
-        worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: a.physicalRadiusMpc,
-      }),
-    ),
-    ...VOID_ANCHORS.map(
-      (a): PointOfInterest => ({
-        id: `void-${slug(a.name)}`,
-        name: a.name,
-        category: 'void',
-        worldPos: raDecDistToEqCart(a),
-        physicalRadiusMpc: a.physicalRadiusMpc,
-      }),
-    ),
-  ];
+  //
+  // The id-slug + worldPos build is factored into
+  // `data/buildStaticAnchorPois.ts` so the React-side `usePoiUrlSync`
+  // deep-link drain can construct the same `PointOfInterest` records
+  // by id without drifting on slug-rule changes.
+  const staticAnchorPois: PointOfInterest[] = buildStaticAnchorPois();
   state.subsystems.pois.setPois(staticAnchorPois);
 
   // ── CF-4 DM density volume slot ──────────────────────────────────
