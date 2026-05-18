@@ -15,6 +15,10 @@ const newRenderer = (maxMarkers?: number) => {
 };
 
 const cluster = (id: number): ClusterMarkerDescriptor => ({
+  // `id` is CPU-side metadata used by the selection / pick paths;
+  // the renderer ignores it when packing the instance buffer, but
+  // the type requires it.  Synthesize a stable per-fixture id.
+  id: `test-cluster-${id}`,
   category: 'cluster',
   worldPos: [id, 0, 0],
   physicalRadiusMpc: 2,

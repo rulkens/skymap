@@ -235,6 +235,13 @@ export function createPoiSubsystem(): PoiSubsystem {
   let didFireFadeIn = false;
   let pois: readonly PointOfInterest[] = [];
   let visibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
+  // The currently-focused POI id, or null when nothing is selected.
+  // Kept as module-scoped factory state alongside `pois` / `visibility`
+  // so produceMarkers can read it without an extra arg — same idiom
+  // the rest of the subsystem already uses.  Selection is a pure
+  // marker-side concern (it only affects ringAlpha), so it does NOT
+  // need to live in EngineState.
+  let selectedPoiId: string | null = null;
 
   function setPois(next: readonly PointOfInterest[]): void {
     // Defensive copy — caller can mutate their array freely without
@@ -250,6 +257,27 @@ export function createPoiSubsystem(): PoiSubsystem {
     // Replace the record wholesale rather than mutating in place so
     // any holder of the previous reference sees a stable snapshot.
     visibility = { ...visibility, [category]: visible };
+  }
+
+  function setSelectedPoi(poiId: string | null): void {
+    if (poiId === null) {
+      selectedPoiId = null;
+      return;
+    }
+    // Defensive: only accept ids that actually appear in the current
+    // POI table.  A deep-link drain firing before the POI table is
+    // populated, or after a tier swap that replaced the table, would
+    // otherwise leave a stale id stranded on this subsystem with no
+    // matching POI to highlight.  Silently ignoring the unknown id
+    // (rather than throwing) keeps URL handlers simple: they can
+    // forward whatever the user pasted without pre-validating.
+    const exists = pois.some((p) => p.id === poiId);
+    if (!exists) return;
+    selectedPoiId = poiId;
+  }
+
+  function getSelectedPoiId(): string | null {
+    return selectedPoiId;
   }
 
   function produceLabels(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
@@ -446,14 +474,26 @@ export function createPoiSubsystem(): PoiSubsystem {
       const haloAlpha = style.haloColor === null ? 0 : fadeAlpha;
       const haloColor: Vec3 = style.haloColor ?? [0, 0, 0];
 
+      // Selection bump: the focused POI's ring is rendered at 1.5×
+      // alpha (capped at 1.0) so it visually pops out of its
+      // neighbours.  1.5× was chosen empirically as "noticeable but
+      // not jarring"; the cap keeps already-full-opacity rings from
+      // overflowing.  Wrapped in a fresh object below (rather than
+      // mutated in place) to preserve descriptor immutability — the
+      // selection path stays a pure transform on the per-frame
+      // output, no shared references between frames.
+      const isSelected = p.id === selectedPoiId;
+      const ringAlpha = isSelected ? Math.min(1, fadeAlpha * 1.5) : fadeAlpha;
+
       out.push({
+        id: p.id,
         category: p.category,
         worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
         physicalRadiusMpc: p.physicalRadiusMpc,
         haloColor,
         ringColor: style.ringColor,
         haloAlpha,
-        ringAlpha: fadeAlpha,
+        ringAlpha,
       });
     }
     return out;
@@ -470,6 +510,8 @@ export function createPoiSubsystem(): PoiSubsystem {
     setPois,
     clearPois,
     setCategoryVisible,
+    setSelectedPoi,
+    getSelectedPoiId,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.
     },

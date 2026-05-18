@@ -22,6 +22,21 @@ export type PoiSubsystem = LabelProducer & {
    */
   produceMarkers(state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[];
   /**
+   * Mark a POI as selected (for focus mode).  The selected POI's
+   * marker descriptor returns with its `ringAlpha` multiplied by 1.5
+   * (capped at 1.0) so the user can visually distinguish the focused
+   * POI from its neighbours; other POIs are unchanged.  Passing
+   * `null` clears the selection.
+   *
+   * No-op when `poiId` doesn't match any POI currently in the
+   * subsystem's table — defensive against deep-link drains that race
+   * a tier swap, where a stale id would otherwise sit stranded with
+   * no matching POI to highlight.
+   */
+  setSelectedPoi(poiId: string | null): void;
+  /** Returns the currently-selected POI id, or `null` if none. */
+  getSelectedPoiId(): string | null;
+  /**
    * Tear down the subsystem.  No-op — the subsystem owns only
    * plain-data state (pois list, visibility record); there are no
    * listeners, timers, or workers to release.  Method exists so the
