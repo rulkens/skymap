@@ -123,7 +123,10 @@ import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
 import { commitPoiFocus } from './helpers/commitPoiFocus';
+import { dispatchFocusOn } from './helpers/dispatchFocusOn';
 import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
+import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
+import { isPoi } from './isPoi';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
@@ -903,16 +906,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     snapToCameraSnapshot(state, state.initialCamSnapshot);
   }
 
-  function focusOn(info: GalaxyInfo): void {
-    // Camera may not be ready yet (cloud still loading); drop the
-    // call.  This guard is *separate* from `tweenToGalaxy`'s own
-    // cam-null guard — we need it here to gate the `onFocusChange`
-    // callback fan-out inside `commitFocus`.  Without the early
-    // return, a focus call against a still-bootstrapping engine
-    // would update `#focus=…` in the URL while the camera silently
-    // refused to move.
-    if (!state.cam) return;
-    commitFocus(state, cb, info);
+  function focusOn(target: FocusableTarget): void {
+    // Dispatch by type — public surface is one method, but the two
+    // commit paths stay separate (different tween shapes, different
+    // cam-null gating, different callback surface).  See dispatchFocusOn
+    // for the predicate-based routing.
+    //
+    // The galaxy branch retains the cam-null guard from the original
+    // focusOn(info: GalaxyInfo): without it, a focus call during
+    // bootstrap would update `#focus=…` in the URL while the camera
+    // silently refused to move.  The POI branch intentionally skips the
+    // guard (see focusOnPoi / commitPoiFocus module headers for why
+    // deep-link drains need POI state to land pre-camera).
+    if (!isPoi(target) && !state.cam) return;
+    dispatchFocusOn(state, cb, target);
   }
 
   function focusOnPoi(poi: PointOfInterest): void {

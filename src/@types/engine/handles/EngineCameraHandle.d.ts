@@ -1,5 +1,5 @@
-import type { GalaxyInfo } from '../GalaxyInfo';
 import type { PointOfInterest } from '../subsystems/PointOfInterest';
+import type { FocusableTarget } from '../FocusableTarget';
 
 /**
  * EngineCameraHandle — viewpoint, tweens, and auto-rotate.
@@ -15,8 +15,21 @@ export type EngineCameraHandle = {
   setAutoRotate: (enabled: boolean) => void;
   /** Snap the camera back to the initial framing computed at startup. */
   reset: () => void;
-  /** Smoothly tween the camera so the given galaxy becomes the new orbit target. */
-  focusOn: (info: GalaxyInfo) => void;
+  /**
+   * Smoothly tween the camera so the given target becomes the new orbit
+   * focus.  Dispatches by type:
+   *   - GalaxyInfo → the galaxy focus path (commitFocus + onFocusChange).
+   *   - PointOfInterest → the POI focus path (commitPoiFocus, framing
+   *     distance derived from the POI category + onPoiFocusChange).
+   *
+   * Discrimination uses the `isPoi` predicate from `services/engine/isPoi.ts`.
+   * See `services/engine/helpers/dispatchFocusOn.ts` for the dispatcher
+   * implementation.  Pre-bootstrap behaviour mirrors the per-kind paths:
+   * galaxy focus is a no-op when `state.cam` is null; POI focus still
+   * fires the subsystem flag + React-side callback even with no camera
+   * (deep-link drains that race bootstrap rely on that).
+   */
+  focusOn: (target: FocusableTarget) => void;
   /**
    * Smoothly tween the camera so the given POI is centred at a per-
    * category framing distance (see `poiFocusDistanceMpc` for the
