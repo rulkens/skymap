@@ -394,23 +394,32 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
         }
       }
 
-      // Marker fade-out awake propagation.  produceMarkers runs the same
-      // math each frame; mirror its mid-transition detection here so the
-      // render-on-demand loop stays awake through the fade.  Skipping the
-      // detection (e.g. by only running it in produceMarkers) is broken:
-      // produceMarkers' return value is consumed AFTER the awake decision
-      // has already been baked into the frame.
-      if (p.physicalRadiusMpc !== undefined) {
-        const dxM = p.worldPos[0] - cx;
-        const dyM = p.worldPos[1] - cy;
-        const dzM = p.worldPos[2] - cz;
-        const distMpc = Math.hypot(dxM, dyM, dzM);
-        if (distMpc > 0.001) {
-          const apRadPx = (p.physicalRadiusMpc / distMpc) * (ctx.canvasSize.height * 0.5 / Math.tan(fovYRad * 0.5));
-          if (apRadPx > style.markerMaxApparentRadiusPx &&
-              apRadPx < style.markerMaxApparentRadiusPx + style.markerMaxApparentFadeBandPx) {
-            awake = true;
-          }
+      // Marker close-approach fade-out applied to the LABEL as well.
+      // When the ring/halo has grown past markerMaxApparentRadiusPx and
+      // is fading out (the cluster fills the viewport, user has zoomed
+      // in to inspect member galaxies), the floating label is just
+      // chrome at that point — fading it with the ring hands the view
+      // back to the surrounding galaxies.  Mirrors the exact smoothstep
+      // produceMarkers uses (lines further down) so the label and ring
+      // disappear together rather than the label lingering after the
+      // ring is gone.  Skips the whole label when fully faded — same
+      // `continue` semantics as the min-apparent-size gate above.
+      //
+      // Uses the apparent (wider) radius because that's what drives the
+      // ring's actual on-screen size; the core radius is irrelevant to
+      // when the user "fills the viewport" with the cluster.
+      const markerRadiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
+      if (markerRadiusMpc !== undefined && distanceMpc > 0.001) {
+        const apRadPx = (markerRadiusMpc / distanceMpc) * (halfH / Math.tan(fovYRad * 0.5));
+        if (apRadPx > style.markerMaxApparentRadiusPx) {
+          const t = Math.min(
+            1,
+            (apRadPx - style.markerMaxApparentRadiusPx) / style.markerMaxApparentFadeBandPx,
+          );
+          const markerFadeOut = 1 - t * t * (3 - 2 * t);
+          if (markerFadeOut <= 0) continue;
+          if (markerFadeOut < 1) awake = true;
+          fadeAlpha = Math.min(fadeAlpha, markerFadeOut);
         }
       }
 
@@ -491,8 +500,13 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
 
     for (const p of pois) {
       if (!visibility[p.category]) continue;
-      // POIs without a physicalRadiusMpc have no ring to draw — skip.
-      if (p.physicalRadiusMpc === undefined) continue;
+      // The marker pass renders at the WIDER apparent extent (named
+      // cluster extent, not the virial core).  Fall back to the core
+      // for POIs that only set physicalRadiusMpc — none today, but
+      // matches the optional-shape of both fields on PointOfInterest.
+      // No radius at all → no ring → skip (famous galaxies).
+      const radiusMpc = p.apparentRadiusMpc ?? p.physicalRadiusMpc;
+      if (radiusMpc === undefined) continue;
       const style: CategoryStyle = POI_STYLES[p.category];
       // ringColor === null guards a never-happens path; we use
       // haloColor === null to mean "label-only category".  Famous
@@ -506,7 +520,7 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
       if (distanceMpc < 0.001) continue; // camera on top of POI — skip rather than NaN
 
       // Apparent on-screen radius in pixels.
-      const apparentRadiusPx = (p.physicalRadiusMpc / distanceMpc) * pxPerRad;
+      const apparentRadiusPx = (radiusMpc / distanceMpc) * pxPerRad;
 
       // Max-apparent-radius fade-out: smoothstep alpha from 1 → 0 as
       // the projected ring grows past markerMaxApparentRadiusPx into
@@ -552,7 +566,7 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
         id: p.id,
         category: p.category,
         worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
-        physicalRadiusMpc: p.physicalRadiusMpc,
+        radiusMpc,
         haloColor,
         ringColor: style.ringColor,
         haloAlpha,

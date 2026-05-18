@@ -30,8 +30,15 @@ export type ClusterMarkerDescriptor = {
   readonly category: PoiCategory;
   /** World-space centre. */
   readonly worldPos: Vec3;
-  /** Ring radius AND halo half-extent in Mpc. */
-  readonly physicalRadiusMpc: number;
+  /**
+   * Ring radius AND halo half-extent in Mpc.  Semantic-free at the
+   * renderer layer — the producer (poiSubsystem.produceMarkers) feeds
+   * the POI's `apparentRadiusMpc` here (the wider "named" extent
+   * rather than the virial core), so the ring frames the cluster as
+   * the user thinks of it, not the gravitationally-bound core.  The
+   * core is used elsewhere (camera focus tween, InfoCard "r" line).
+   */
+  readonly radiusMpc: number;
   /** RGB tint for the halo (premultiplied alpha applied via haloAlpha). */
   readonly haloColor: Vec3;
   /** RGB tint for the ring. */

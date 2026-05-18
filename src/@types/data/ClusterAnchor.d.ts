@@ -12,21 +12,37 @@
 import type { SkyCoord } from './SkyCoord';
 
 /**
- * A named cluster anchor — sky coord + display label + a literature-
- * grounded physical radius.
+ * A named cluster anchor — sky coord + display label + two literature-
+ * grounded radii.
  *
- * `physicalRadiusMpc` is the structure's characteristic extent in Mpc,
- * sourced from the per-anchor citation comment in
- * `src/data/clusterAnchors.ts`. Consumers use it for two purposes
- * (introduced in the cluster-viz sub-plans 2–4):
+ * Two radii, two purposes:
  *
- *   1. The on-screen ring radius (sub-plan 2 — at-rest viz)
- *   2. The member cone-search radius (sub-plan 4 — focus mode)
+ *   `physicalRadiusMpc` — the structure's CORE extent in Mpc (virial
+ *   radius / R_200 for clusters; characteristic scale for superclusters
+ *   and voids).  Drives:
+ *     - Camera-focus tween distance (how close `f` / Focus button parks)
+ *     - InfoCard's "r {value}" line (the citable literature number)
  *
- * Required (not optional) so every anchor has a value at table-edit
- * time rather than at consumer-edit time.
+ *   `apparentRadiusMpc` — the NAMED/VISUAL extent in Mpc.  For clusters
+ *   this is typically 2-3× the core radius and encloses the wider
+ *   membership the casual reader associates with the name (Virgo's
+ *   ~6 Mpc envelope including the M84/M86 subgroup; Coma's outer
+ *   ~5-6 Mpc reach to NGC 4839).  For superclusters and voids the
+ *   distinction collapses — those structures have no "virial core" —
+ *   so apparent == physical and the existing literature value already
+ *   IS the apparent extent.  Drives:
+ *     - The on-screen ring + halo half-extent (cluster marker render)
+ *     - Future galaxy-membership cone search (sub-plan 4) — gates
+ *       which galaxies count as "part of this cluster" for visual
+ *       hide/show
+ *
+ * Both required (not optional) so every anchor has both values at
+ * table-edit time rather than at consumer-edit time.  See the per-
+ * anchor comments in `src/data/clusterAnchors.ts` for the citation
+ * each value is sourced from.
  */
 export type ClusterAnchor = SkyCoord & {
   readonly name: string;
   readonly physicalRadiusMpc: number;
+  readonly apparentRadiusMpc: number;
 };

@@ -21,7 +21,7 @@ const cluster = (id: number): ClusterMarkerDescriptor => ({
   id: `test-cluster-${id}`,
   category: 'cluster',
   worldPos: [id, 0, 0],
-  physicalRadiusMpc: 2,
+  radiusMpc: 2,
   haloColor: [1, 0.85, 0.4],
   ringColor: [1, 0.85, 0.4],
   haloAlpha: 1,

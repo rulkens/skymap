@@ -81,7 +81,7 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
  *
  * Layout (matches VsIn in clusterMarker/io.wesl):
  *   [0..2]   position.xyz       — world-space centre
- *   [3]      physicalRadiusMpc  — world-space half-extent
+ *   [3]      radiusMpc          — world-space half-extent (ring + halo)
  *   [4..6]   haloColor.rgb      — additive halo tint
  *   [7]      haloAlpha          — premultiplied later
  *   [8..10]  ringColor.rgb      — ring tint (independent of halo)
@@ -449,7 +449,7 @@ export function createClusterMarkerRenderer(
       instanceBuf[base + 0] = d.worldPos[0];
       instanceBuf[base + 1] = d.worldPos[1];
       instanceBuf[base + 2] = d.worldPos[2];
-      instanceBuf[base + 3] = d.physicalRadiusMpc;
+      instanceBuf[base + 3] = d.radiusMpc;
       instanceBuf[base + 4] = d.haloColor[0];
       instanceBuf[base + 5] = d.haloColor[1];
       instanceBuf[base + 6] = d.haloColor[2];

@@ -7,28 +7,44 @@ export type PointOfInterest = {
   readonly category: PoiCategory;
   readonly worldPos: Vec3;
   /**
-   * Physical radius of the structure in Mpc (or a sensible proxy — e.g.
-   * the half-extent for an asymmetric cluster).
+   * Physical CORE radius of the structure in Mpc — virial / R_200 for
+   * clusters, characteristic scale for superclusters and voids.
    *
-   * This single field drives two downstream consumers that the
-   * cluster-viz redesign introduces in the later sub-plans:
-   *
-   *   1. **At-rest visualization** (sub-plan 2): the radius of the
-   *      screen-aligned ring rendered at the POI's worldPos, and the
-   *      world-space extent of the soft additive halo billboard.
-   *
-   *   2. **Member cone-search** (sub-plan 4, focus mode): the radius
-   *      used by `clusterMembership(catalogs, center, radiusMpc)` to
-   *      classify nearby galaxies as members vs non-members.
+   * Drives:
+   *   - Camera-focus tween distance (how close `f` / Focus parks)
+   *   - InfoCard's "r {value}" line (citable literature number)
    *
    * Omit on POIs that have no extent (e.g. famous-galaxy entries that
    * route through the existing thumbnail/label path instead).
    *
-   * Renamed from `crosshairSizeMpc` on 2026-05-18 — see
-   * docs/superpowers/specs/2026-05-18-cluster-supercluster-viz-design.md
-   * §7.2 for the migration rationale.
+   * Renamed from `crosshairSizeMpc` on 2026-05-18; split from a single-
+   * field design into core+apparent shortly after (see
+   * `apparentRadiusMpc` below for the wider visual/membership extent).
+   * See docs/superpowers/specs/2026-05-18-cluster-supercluster-viz-design.md
+   * §7.2 for the original rename rationale.
    */
   readonly physicalRadiusMpc?: number;
+  /**
+   * Apparent / named-extent radius of the structure in Mpc — the wider
+   * "what the user sees as the cluster" boundary.  Typically 2-3× the
+   * `physicalRadiusMpc` for clusters; equal to it for superclusters and
+   * voids (those structures have no virial core, so the literature value
+   * IS the apparent extent).
+   *
+   * Drives:
+   *   - The on-screen ring + halo half-extent (cluster marker render)
+   *   - The label's close-approach fade-out, so the label disappears
+   *     together with the disc it labels
+   *   - Future galaxy-membership cone search (sub-plan 4): which
+   *     galaxies count as "part of this cluster" for visual hide/show
+   *
+   * Optional to mirror `physicalRadiusMpc`'s shape — POIs that opt out
+   * of the marker pass (famous galaxies) leave both fields undefined.
+   * When set on a POI without `physicalRadiusMpc`, the producer falls
+   * back to apparent for the marker pass.  The static anchor builder
+   * always populates both from `ClusterAnchor` (which requires both).
+   */
+  readonly apparentRadiusMpc?: number;
   /**
    * Minimum on-screen pixel size at which this POI emits a label.  When
    * present together with `apparentDiameterKpc`, the producer projects

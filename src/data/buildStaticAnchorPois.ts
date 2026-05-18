@@ -85,6 +85,7 @@ export function buildStaticAnchorPois(): PointOfInterest[] {
         category: 'cluster',
         worldPos: raDecDistToEqCart(a),
         physicalRadiusMpc: a.physicalRadiusMpc,
+        apparentRadiusMpc: a.apparentRadiusMpc,
       }),
     ),
     ...SUPERCLUSTER_ANCHORS.map(
@@ -94,6 +95,7 @@ export function buildStaticAnchorPois(): PointOfInterest[] {
         category: 'supercluster',
         worldPos: raDecDistToEqCart(a),
         physicalRadiusMpc: a.physicalRadiusMpc,
+        apparentRadiusMpc: a.apparentRadiusMpc,
       }),
     ),
     ...VOID_ANCHORS.map(
@@ -103,6 +105,7 @@ export function buildStaticAnchorPois(): PointOfInterest[] {
         category: 'void',
         worldPos: raDecDistToEqCart(a),
         physicalRadiusMpc: a.physicalRadiusMpc,
+        apparentRadiusMpc: a.apparentRadiusMpc,
       }),
     ),
   ];
