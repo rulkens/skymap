@@ -19,7 +19,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { createPoiSubsystem } from '../../../../src/services/engine/subsystems/poiSubsystem';
+import { createPoiSubsystem, POI_STYLES } from '../../../../src/services/engine/subsystems/poiSubsystem';
 import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -101,6 +101,13 @@ describe('poiSubsystem selection', () => {
     expect(s.getSelectedPoiId()).toBeNull();
   });
 
+  // At-rest ring alpha comes from POI_STYLES[category].ringColor[3]
+  // since the move to baked Vec4 colours.  Tests compute their
+  // expected values off these so style retuning (e.g. dropping
+  // supercluster ringAlpha to 0.4) doesn't make them brittle.
+  const CLUSTER_AT_REST_ALPHA = POI_STYLES.cluster.ringColor[3];
+  const SC_AT_REST_ALPHA = POI_STYLES.supercluster.ringColor[3];
+
   it('does not change ringAlpha when no POI is selected', () => {
     const s = createPoiSubsystem();
     s.setPois([VIRGO, HERCULES]);
@@ -109,21 +116,21 @@ describe('poiSubsystem selection', () => {
     const hercules = markers.find((m) => m.id === 'hercules-sc');
     expect(virgo).toBeDefined();
     expect(hercules).toBeDefined();
-    expect(virgo!.ringAlpha).toBeCloseTo(1, 6);
-    expect(hercules!.ringAlpha).toBeCloseTo(1, 6);
+    expect(virgo!.ringColor[3]).toBeCloseTo(CLUSTER_AT_REST_ALPHA, 6);
+    expect(hercules!.ringColor[3]).toBeCloseTo(SC_AT_REST_ALPHA, 6);
   });
 
-  it('caps the selected POI ringAlpha at 1.0 when the baseline is already 1.0', () => {
+  it('caps the selected POI ringAlpha at 1.0 when the bump exceeds 1', () => {
     const s = createPoiSubsystem();
     s.setPois([VIRGO, HERCULES]);
     s.setSelectedPoi('virgo-m87');
     const markers = s.produceMarkers(makeState(), makeCtx());
     const virgo = markers.find((m) => m.id === 'virgo-m87');
     const hercules = markers.find((m) => m.id === 'hercules-sc');
-    // Selected: 1.0 * 1.5 = 1.5, capped at 1.0.
-    expect(virgo!.ringAlpha).toBeCloseTo(1, 6);
-    // Not selected: unchanged.
-    expect(hercules!.ringAlpha).toBeCloseTo(1, 6);
+    // Selected: at-rest × 1.5, capped at 1.0.
+    expect(virgo!.ringColor[3]).toBeCloseTo(Math.min(1, CLUSTER_AT_REST_ALPHA * 1.5), 6);
+    // Not selected: at-rest, unchanged.
+    expect(hercules!.ringColor[3]).toBeCloseTo(SC_AT_REST_ALPHA, 6);
   });
 
   it('multiplies the selected POI ringAlpha by 1.5x when not saturated, leaves neighbours alone', () => {
@@ -138,8 +145,8 @@ describe('poiSubsystem selection', () => {
     // ringAlpha is strictly less than 1.  If this fails the test
     // distance needs re-tuning (POI_STYLES band moved, or pxPerRad
     // changed).
-    expect(baselineComa!.ringAlpha).toBeGreaterThan(0);
-    expect(baselineComa!.ringAlpha).toBeLessThan(1 / 1.5);
+    expect(baselineComa!.ringColor[3]).toBeGreaterThan(0);
+    expect(baselineComa!.ringColor[3]).toBeLessThan(1 / 1.5);
 
     s.setSelectedPoi('coma');
     const markers = s.produceMarkers(makeState(), makeCtx());
@@ -147,7 +154,7 @@ describe('poiSubsystem selection', () => {
     const virgo = markers.find((m) => m.id === 'virgo-m87');
     expect(coma).toBeDefined();
     expect(virgo).toBeDefined();
-    expect(coma!.ringAlpha).toBeCloseTo(Math.min(1, baselineComa!.ringAlpha * 1.5), 6);
-    expect(virgo!.ringAlpha).toBeCloseTo(1, 6);
+    expect(coma!.ringColor[3]).toBeCloseTo(Math.min(1, baselineComa!.ringColor[3] * 1.5), 6);
+    expect(virgo!.ringColor[3]).toBeCloseTo(1, 6);
   });
 });

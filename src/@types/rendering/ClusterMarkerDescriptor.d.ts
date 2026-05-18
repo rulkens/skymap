@@ -11,6 +11,7 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
+import type { Vec4 } from '../math/Vec4';
 import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 
 export type ClusterMarkerDescriptor = {
@@ -39,12 +40,17 @@ export type ClusterMarkerDescriptor = {
    * core is used elsewhere (camera focus tween, InfoCard "r" line).
    */
   readonly radiusMpc: number;
-  /** RGB tint for the halo (premultiplied alpha applied via haloAlpha). */
-  readonly haloColor: Vec3;
-  /** RGB tint for the ring. */
-  readonly ringColor: Vec3;
-  /** [0..1] halo alpha after fade math.  0 → halo pass should skip this descriptor entirely (voids, fully-faded). */
-  readonly haloAlpha: number;
-  /** [0..1] ring alpha after fade math.  0 → ring also skipped. */
-  readonly ringAlpha: number;
+  /**
+   * RGBA tint for the halo.  Alpha is the FINAL value the renderer
+   * uploads — it already bakes the style's at-rest opacity AND the
+   * per-frame fade math.  0 → halo pass should skip this descriptor
+   * entirely (voids, fully-faded).
+   */
+  readonly haloColor: Vec4;
+  /**
+   * RGBA tint for the ring.  Same final-alpha semantics as
+   * `haloColor` — style opacity × fade × selection bump, all baked.
+   * 0 → ring is skipped.
+   */
+  readonly ringColor: Vec4;
 };

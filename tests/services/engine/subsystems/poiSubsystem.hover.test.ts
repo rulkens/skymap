@@ -149,7 +149,7 @@ describe('poiSubsystem.setHoveredPoi', () => {
     expect(baseline).toHaveLength(1);
     const baselineMarker = baseline[0];
     expect(baselineMarker).toBeDefined();
-    const baselineAlpha = baselineMarker!.ringAlpha;
+    const baselineAlpha = baselineMarker!.ringColor[3];
 
     // Hover Virgo — ringAlpha must be identical to the baseline.
     s.setHoveredPoi('virgo-m87');
@@ -157,6 +157,6 @@ describe('poiSubsystem.setHoveredPoi', () => {
     expect(hovered).toHaveLength(1);
     const hoveredMarker = hovered[0];
     expect(hoveredMarker).toBeDefined();
-    expect(hoveredMarker!.ringAlpha).toBeCloseTo(baselineAlpha, 6);
+    expect(hoveredMarker!.ringColor[3]).toBeCloseTo(baselineAlpha, 6);
   });
 });

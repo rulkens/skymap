@@ -9,14 +9,30 @@ describe('POI category registry', () => {
     );
   });
 
-  it('every style entry has the four required fields', () => {
+  it('every style entry has the required fields', () => {
     for (const [key, style] of Object.entries(POI_STYLES)) {
       expect(style.labelColor, `${key}.labelColor`).toHaveLength(4);
-      expect(style.lineColor, `${key}.lineColor`).toHaveLength(4);
       expect(style.minPixelSize, `${key}.minPixelSize`).toBeGreaterThan(0);
       expect(style.maxPixelSize, `${key}.maxPixelSize`).toBeGreaterThan(style.minPixelSize);
       expect(style.worldEmMpc, `${key}.worldEmMpc`).toBeGreaterThan(0);
       expect(style.pixelWidth, `${key}.pixelWidth`).toBeGreaterThan(0);
+    }
+  });
+
+  it('famousGalaxy is the only category with lineColor (label anchor-line)', () => {
+    // lineColor is consumed only inside the `labelAnchorOffsetMpc`
+    // branch in produceLabels; only famous-galaxy POIs set that field.
+    // Cluster / SC / void omit lineColor to make the dead surface
+    // structurally absent rather than silently no-op.  The union-typed
+    // Object.entries view loses per-key narrowing, so we cast each
+    // value to a structural shape to read the optional slot.
+    for (const [key, style] of Object.entries(POI_STYLES)) {
+      const lineColor = (style as { lineColor?: readonly number[] }).lineColor;
+      if (key === 'famousGalaxy') {
+        expect(lineColor, `${key}.lineColor`).toHaveLength(4);
+      } else {
+        expect(lineColor, `${key}.lineColor`).toBeUndefined();
+      }
     }
   });
 

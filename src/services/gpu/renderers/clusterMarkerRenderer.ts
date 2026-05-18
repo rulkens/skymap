@@ -82,10 +82,8 @@ import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
  * Layout (matches VsIn in clusterMarker/io.wesl):
  *   [0..2]   position.xyz       — world-space centre
  *   [3]      radiusMpc          — world-space half-extent (ring + halo)
- *   [4..6]   haloColor.rgb      — additive halo tint
- *   [7]      haloAlpha          — premultiplied later
- *   [8..10]  ringColor.rgb      — ring tint (independent of halo)
- *   [11]     ringAlpha          — premultiplied later
+ *   [4..7]   haloColor.rgba     — additive halo tint + final alpha
+ *   [8..11]  ringColor.rgba     — ring tint + final alpha
  *
  * Halo and ring carry independent RGB tints so voids — which opt out
  * of the additive halo entirely (haloAlpha = 0) — can still display
@@ -453,11 +451,11 @@ export function createClusterMarkerRenderer(
       instanceBuf[base + 4] = d.haloColor[0];
       instanceBuf[base + 5] = d.haloColor[1];
       instanceBuf[base + 6] = d.haloColor[2];
-      instanceBuf[base + 7] = d.haloAlpha;
+      instanceBuf[base + 7] = d.haloColor[3];
       instanceBuf[base + 8] = d.ringColor[0];
       instanceBuf[base + 9] = d.ringColor[1];
       instanceBuf[base + 10] = d.ringColor[2];
-      instanceBuf[base + 11] = d.ringAlpha;
+      instanceBuf[base + 11] = d.ringColor[3];
       currentMarkerCount++;
     }
 

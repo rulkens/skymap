@@ -22,10 +22,8 @@ const cluster = (id: number): ClusterMarkerDescriptor => ({
   category: 'cluster',
   worldPos: [id, 0, 0],
   radiusMpc: 2,
-  haloColor: [1, 0.85, 0.4],
-  ringColor: [1, 0.85, 0.4],
-  haloAlpha: 1,
-  ringAlpha: 1,
+  haloColor: [1, 0.85, 0.4, 1],
+  ringColor: [1, 0.85, 0.4, 1],
 });
 
 describe('ClusterMarkerRenderer (CPU state)', () => {

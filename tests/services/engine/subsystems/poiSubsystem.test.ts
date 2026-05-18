@@ -339,16 +339,18 @@ describe('poiSubsystem — produceMarkers', () => {
     expect(markers).toHaveLength(0);
   });
 
-  it('voids have haloAlpha === 0 (ring-only per spec)', () => {
+  it('voids emit both halo and ring (halo at the dimmer at-rest alpha from the style)', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
       { id: 'bootes', name: 'Boötes Void', category: 'void',
         worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
     ]);
     const markers = sub.produceMarkers(makeState(), makeCtx());
-    expect(markers[0]?.haloAlpha).toBe(0);
-    // Ring is the only visible primitive for voids.
-    expect(markers[0]?.ringAlpha).toBeGreaterThan(0);
+    expect(markers[0]?.haloColor[3]).toBeGreaterThan(0);
+    expect(markers[0]?.ringColor[3]).toBeGreaterThan(0);
+    // Void halo is intentionally quieter than the ring — at-rest
+    // style alpha ≈ 0.65 vs ring's 1.0.
+    expect(markers[0]?.haloColor[3]).toBeLessThan(markers[0]!.ringColor[3]);
   });
 
   it('respects setCategoryVisible', () => {

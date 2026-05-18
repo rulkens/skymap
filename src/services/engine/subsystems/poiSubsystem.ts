@@ -79,11 +79,20 @@ import type { PoiSubsystem } from '../../../@types/engine/subsystems/PoiSubsyste
 import type { CreatePoiSubsystemInput } from '../../../@types/engine/subsystems/CreatePoiSubsystemInput';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { hexToGl } from '../../../utils/color/hexToGl';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 
 type CategoryStyle = {
   readonly labelColor: Vec4;
-  readonly lineColor: Vec4;
+  /**
+   * Colour of the vertical anchor-line that connects a lifted label
+   * back to its POI's true world position.  Only consumed when the POI
+   * sets `labelAnchorOffsetMpc` (today: famous galaxies).  Categories
+   * whose POIs never set that field (cluster, supercluster, void)
+   * should omit `lineColor` entirely — leaving a stale value here is a
+   * footgun, since edits to it have no visible effect.
+   */
+  readonly lineColor?: Vec4;
   /** Floor clamp on projected em height in screen pixels. */
   readonly minPixelSize: number;
   /** Ceiling clamp on projected em height in screen pixels. */
@@ -109,18 +118,23 @@ type CategoryStyle = {
    */
   readonly fadeBandPx?: number;
   /**
-   * RGB halo tint for the marker pass.  `null` opts the category OUT
-   * of halo rendering — voids are 'absence', not 'presence'; emitting
-   * an additive glow there would contradict the spec's semantics.
-   * Cluster + supercluster use the same warm tint family as labelColor.
+   * RGBA halo tint for the marker pass.  Alpha is the AT-REST opacity
+   * — the per-frame fade math multiplies into it, so a style alpha of
+   * 0.5 means "halo never exceeds 50% even before fade".  `null` opts
+   * the category OUT of halo rendering — voids are 'absence', not
+   * 'presence'; emitting an additive glow there would contradict the
+   * spec's semantics.  Cluster + supercluster use the same warm tint
+   * family as labelColor.
    */
-  readonly haloColor: Vec3 | null;
+  readonly haloColor: Vec4 | null;
   /**
-   * RGB ring tint for the marker pass.  Always present — every
-   * marker-bearing category gets a visible ring at its physicalRadiusMpc.
-   * Mirrors labelColor.rgb (alpha is computed per-frame).
+   * RGBA ring tint for the marker pass.  Same at-rest-alpha semantics
+   * as haloColor.  Always present — every marker-bearing category gets
+   * a visible ring at its apparent radius.  Mirrors labelColor.rgb;
+   * the final alpha the renderer sees is `ringColor[3] × fadeAlpha ×
+   * selectionBump`.
    */
-  readonly ringColor: Vec3;
+  readonly ringColor: Vec4;
   /**
    * Apparent on-screen radius (pixels) above which the marker fades
    * OUT.  Above this threshold the ring is so big it fills the viewport
@@ -153,8 +167,7 @@ type CategoryStyle = {
  */
 export const POI_STYLES = {
   cluster: {
-    labelColor: [1.0, 0.85, 0.4, 1] as Vec4,
-    lineColor: [0.9, 0.75, 0.3, 1] as Vec4,
+    labelColor: hexToGl('#FFD966'),
     minPixelSize: 35,
     maxPixelSize: 150,
     worldEmMpc: 1.25,
@@ -163,14 +176,13 @@ export const POI_STYLES = {
     // labelColor on purpose: at full-bright RGB the halo dominated the
     // background galaxy field.  Max channel pulled to ~0.7 so clusters
     // read as warm yellow accents rather than spotlights.
-    haloColor: [0.7, 0.6, 0.28] as Vec3,
-    ringColor: [0.7, 0.6, 0.28] as Vec3,
-    markerMaxApparentRadiusPx: 800,
-    markerMaxApparentFadeBandPx: 200,
+    haloColor: hexToGl('#B39947'),
+    ringColor: hexToGl('#B39947'),
+    markerMaxApparentRadiusPx: 700,
+    markerMaxApparentFadeBandPx: 400,
   },
   supercluster: {
-    labelColor: [1.0, 0.8, 0.5, 1] as Vec4,
-    lineColor: [0.9, 0.7, 0.45, 1] as Vec4,
+    labelColor: hexToGl('#FFCC80'),
     minPixelSize: 35,
     maxPixelSize: 150,
     worldEmMpc: 5.0,
@@ -179,14 +191,14 @@ export const POI_STYLES = {
     // toward orange to distinguish from cluster yellow.  SC halos span
     // ~50 Mpc (vs clusters' ~2 Mpc) so even at lower RGB the larger
     // additive footprint still reads clearly.
-    haloColor: [0.6, 0.42, 0.21] as Vec3,
-    ringColor: [0.6, 0.42, 0.21] as Vec3,
-    markerMaxApparentRadiusPx: 800,
-    markerMaxApparentFadeBandPx: 200,
+    haloColor: hexToGl('#996B3666'),
+    ringColor: hexToGl('#996B3666'),
+    markerMaxApparentRadiusPx: 700,
+    markerMaxApparentFadeBandPx: 400,
   },
   famousGalaxy: {
-    labelColor: [1.0, 0.95, 0.8, 1] as Vec4,
-    lineColor: [0.9, 0.85, 0.7, 1] as Vec4,
+    labelColor: hexToGl('#FFF2CC'),
+    lineColor: hexToGl('#E6D9B3'),
     minPixelSize: 30,
     maxPixelSize: 150,
     worldEmMpc: 0.0125,
@@ -196,24 +208,26 @@ export const POI_STYLES = {
     // curated thumbnails on close approach instead.  null tints mean
     // produceMarkers skips them entirely.
     haloColor: null,
-    ringColor: [0, 0, 0] as Vec3,
-    markerMaxApparentRadiusPx: 800,
-    markerMaxApparentFadeBandPx: 200,
+    ringColor: hexToGl('#000000'),
+    markerMaxApparentRadiusPx: 700,
+    markerMaxApparentFadeBandPx: 400,
   },
   void: {
-    labelColor: [0.6, 0.85, 0.95, 1] as Vec4,
-    lineColor: [0.45, 0.7, 0.85, 1] as Vec4,
+    labelColor: hexToGl('#99D9F2'),
     minPixelSize: 35,
     maxPixelSize: 150,
     worldEmMpc: 2.5,
     pixelWidth: 2,
-    // Voids: ring only.  Cyan tint per spec §2.1.  Halo opted out —
-    // voids are absence, not presence; an additive glow would
-    // contradict the semantics.
-    haloColor: null,
-    ringColor: [0.45, 0.7, 0.85] as Vec3,
-    markerMaxApparentRadiusPx: 800,
-    markerMaxApparentFadeBandPx: 200,
+    // Voids: cyan tint per spec §2.1.  Halo carries a reduced at-rest
+    // alpha (~0.65) so voids read as 'subtle presence' rather than the
+    // 'pure absence' the original spec called for — the dim glow
+    // distinguishes void anchors from clusters at-a-glance while still
+    // staying quieter than the fully-opaque cluster halos.  null here
+    // would opt out of the halo pass entirely.
+    haloColor: hexToGl('#73B3D9A5'),
+    ringColor: hexToGl('#73B3D9'),
+    markerMaxApparentRadiusPx: 700,
+    markerMaxApparentFadeBandPx: 400,
   },
 } as const satisfies Readonly<Record<string, CategoryStyle>>;
 
@@ -446,14 +460,22 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
         labelWorldPos = [p.worldPos[0], p.worldPos[1] + offset, p.worldPos[2]];
         alignX = 'center';
         alignY = 'baseline';
-        lines.push({
-          id: `${p.id}-anchor`,
-          fromWorld: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
-          toWorld: [p.worldPos[0], p.worldPos[1] + offset * 0.75, p.worldPos[2]],
-          pixelWidth: style.pixelWidth,
-          color: [...style.lineColor],
-          fadeAlpha,
-        });
+        // lineColor is optional on CategoryStyle — only categories whose
+        // POIs ever set `labelAnchorOffsetMpc` need to declare it (today:
+        // famousGalaxy).  If a category opts into the offset-label idiom
+        // without specifying a lineColor, we skip the connecting line
+        // rather than crashing — the label still renders at the lifted
+        // position; just without the visual anchor.
+        if (style.lineColor !== undefined) {
+          lines.push({
+            id: `${p.id}-anchor`,
+            fromWorld: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
+            toWorld: [p.worldPos[0], p.worldPos[1] + offset * 0.75, p.worldPos[2]],
+            pixelWidth: style.pixelWidth,
+            color: [...style.lineColor],
+            fadeAlpha,
+          });
+        }
       }
 
       labels.push({
@@ -546,21 +568,37 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
 
       const fadeAlpha = Math.min(maxFadeAlpha, minFadeAlpha);
 
-      // Halo: voids opt out (style.haloColor === null).  Cluster + SC
-      // emit the warm tint with alpha = fadeAlpha; voids emit 0.
-      const haloAlpha = style.haloColor === null ? 0 : fadeAlpha;
-      const haloColor: Vec3 = style.haloColor ?? [0, 0, 0];
+      // Halo Vec4: bake style at-rest alpha × per-frame fade into the
+      // descriptor's alpha channel.  Voids opt out via null haloColor
+      // and emit a fully-transparent [0,0,0,0] (the renderer's halo
+      // pass skips alpha==0 instances entirely).
+      const haloColor: Vec4 = style.haloColor !== null
+        ? [
+            style.haloColor[0],
+            style.haloColor[1],
+            style.haloColor[2],
+            style.haloColor[3] * fadeAlpha,
+          ]
+        : [0, 0, 0, 0];
 
-      // Selection bump: the focused POI's ring is rendered at 1.5×
-      // alpha (capped at 1.0) so it visually pops out of its
-      // neighbours.  1.5× was chosen empirically as "noticeable but
-      // not jarring"; the cap keeps already-full-opacity rings from
-      // overflowing.  Wrapped in a fresh object below (rather than
-      // mutated in place) to preserve descriptor immutability — the
-      // selection path stays a pure transform on the per-frame
-      // output, no shared references between frames.
+      // Ring Vec4: same fade bake as halo, plus the selection bump.
+      // The focused POI's ring alpha is multiplied by 1.5 (capped at
+      // 1.0) so it visually pops out of its neighbours.  1.5× was
+      // chosen empirically as "noticeable but not jarring"; the cap
+      // keeps already-full-opacity rings from overflowing.  Wrapped
+      // in a fresh tuple (rather than mutated in place) to preserve
+      // descriptor immutability — the selection path stays a pure
+      // transform on the per-frame output, no shared references
+      // between frames.
       const isSelected = p.id === selectedPoiId;
-      const ringAlpha = isSelected ? Math.min(1, fadeAlpha * 1.5) : fadeAlpha;
+      const ringAlphaBase = style.ringColor[3] * fadeAlpha;
+      const ringAlpha = isSelected ? Math.min(1, ringAlphaBase * 1.5) : ringAlphaBase;
+      const ringColor: Vec4 = [
+        style.ringColor[0],
+        style.ringColor[1],
+        style.ringColor[2],
+        ringAlpha,
+      ];
 
       out.push({
         id: p.id,
@@ -568,9 +606,7 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
         worldPos: [p.worldPos[0], p.worldPos[1], p.worldPos[2]],
         radiusMpc,
         haloColor,
-        ringColor: style.ringColor,
-        haloAlpha,
-        ringAlpha,
+        ringColor,
       });
     }
     return out;
