@@ -93,6 +93,49 @@ describe('poiSubsystem.setHoveredPoi', () => {
     expect(s.getHoveredPoiId()).toBe('coma');
   });
 
+  // Callback fan-out (plan 5 / task 4): setHoveredPoi fires the
+  // optional `cb.selection.onPoiHoverChange` exactly when the id
+  // changes — mirror of selectionSubsystem.setHovered's equality
+  // short-circuit.  React consumers (App.tsx) rely on this dedupe so
+  // they don't re-render on every throttled pick that resolves to the
+  // same POI the cursor was already over.
+  it('fires onPoiHoverChange when the hovered id changes', () => {
+    const calls: (string | null)[] = [];
+    const s = createPoiSubsystem({
+      cb: {
+        lifecycle: { onStatusChange: () => {} },
+        selection: {
+          onSelectChange: () => {},
+          onHoverChange: () => {},
+          onPoiHoverChange: (id) => calls.push(id),
+        },
+      },
+    });
+    s.setPois([VIRGO, COMA]);
+    s.setHoveredPoi('virgo-m87');
+    s.setHoveredPoi('coma');
+    s.setHoveredPoi(null);
+    expect(calls).toEqual(['virgo-m87', 'coma', null]);
+  });
+
+  it('does NOT fire onPoiHoverChange on a repeat-same-id call', () => {
+    const calls: (string | null)[] = [];
+    const s = createPoiSubsystem({
+      cb: {
+        lifecycle: { onStatusChange: () => {} },
+        selection: {
+          onSelectChange: () => {},
+          onHoverChange: () => {},
+          onPoiHoverChange: (id) => calls.push(id),
+        },
+      },
+    });
+    s.setPois([VIRGO]);
+    s.setHoveredPoi('virgo-m87');
+    s.setHoveredPoi('virgo-m87');
+    expect(calls).toEqual(['virgo-m87']);
+  });
+
   // LOAD-BEARING regression: hover MUST NOT bump ringAlpha.  This is
   // the visual contract that separates hover from selection in plan 5.
   // If a future implementer adds a hover branch to produceMarkers,

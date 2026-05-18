@@ -600,7 +600,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // happens right after this state literal (see below) so the
       // director sees both producers before the first frame fires.
       labelDirector: createLabelDirectorSubsystem(),
-      pois: createPoiSubsystem(),
+      pois: createPoiSubsystem({ cb }),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       //

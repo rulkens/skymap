@@ -76,6 +76,7 @@ import type { Vec4 } from '../../../@types/math/Vec4';
 import type { LabelProducerOutput } from '../../../@types/engine/subsystems/LabelProducerOutput';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 import type { PoiSubsystem } from '../../../@types/engine/subsystems/PoiSubsystem';
+import type { CreatePoiSubsystemInput } from '../../../@types/engine/subsystems/CreatePoiSubsystemInput';
 import type { ClusterMarkerDescriptor } from '../../../@types/rendering/ClusterMarkerDescriptor';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
@@ -229,7 +230,15 @@ const ALL_CATEGORIES_VISIBLE: Readonly<Record<PoiCategory, boolean>> = {
   void: true,
 };
 
-export function createPoiSubsystem(): PoiSubsystem {
+export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubsystem {
+  // Construction-time callback bag.  Optional so the existing test
+  // suite (which only exercises the marker / selection / produceLabels
+  // paths) can keep constructing the subsystem with zero args.  The
+  // runtime engine always passes `cb`; see `engine.ts` createPoiSubsystem
+  // call site for the production wire-up.  Only `selection.onPoiHoverChange`
+  // is read today — mirrors the selectionSubsystem pattern of "subsystem
+  // owns its own callback fires from the same site that does the dedupe".
+  const { cb } = input;
   // One-shot fade-in flag for the 'poi' label layer. Flips true on
   // the first frame that emits a non-empty label set.
   let didFireFadeIn = false;
@@ -290,18 +299,35 @@ export function createPoiSubsystem(): PoiSubsystem {
   }
 
   function setHoveredPoi(poiId: string | null): void {
-    if (poiId === null) {
-      hoveredPoiId = null;
-      return;
+    // Resolve the *effective* next id first so the equality short-
+    // circuit and the callback fan-out both run against the same value.
+    //   - null  → clear, no defensive existence check needed.
+    //   - non-null but unknown id → defensively ignored.  The field
+    //     stays at its prior value AND the callback does NOT fire
+    //     (matching the pre-callback contract that an unknown id
+    //     produces no observable change).  Same rationale as
+    //     setSelectedPoi: a hover pick from the previous frame can
+    //     resolve against a now-replaced POI table after a tier swap;
+    //     silently dropping rather than retaining a stale id avoids
+    //     leaking a phantom hover through to the React preview card.
+    if (poiId !== null) {
+      const exists = pois.some((p) => p.id === poiId);
+      if (!exists) return;
     }
-    // Defensive: silently ignore unknown ids — same rationale as
-    // setSelectedPoi.  A hover pick from the previous frame can resolve
-    // against a now-replaced POI table after a tier swap; clearing
-    // rather than retaining a stale id avoids leaking a phantom hover
-    // through to the React preview card.
-    const exists = pois.some((p) => p.id === poiId);
-    if (!exists) return;
+    // Equality short-circuit on the prior id — mirror of
+    // selectionSubsystem.setHovered's selectionEq guard.  React
+    // consumers rely on this dedupe so they don't re-render every
+    // throttled pick that resolves to the same POI the cursor was
+    // already over.
+    if (poiId === hoveredPoiId) return;
     hoveredPoiId = poiId;
+    // Callback fires AFTER the field update so any synchronous reader
+    // (e.g. a getHoveredPoiId call from inside the callback itself)
+    // sees the freshly-committed value.  The callback chain reads as
+    // selection.onPoiHoverChange — sits next to onHoverChange (galaxy)
+    // because hover is a selection-class concept (see
+    // EngineCallbacks.d.ts).
+    cb?.selection?.onPoiHoverChange?.(poiId);
   }
 
   function getHoveredPoiId(): string | null {
