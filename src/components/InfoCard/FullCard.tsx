@@ -25,6 +25,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import cx from 'classnames';
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
+import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
 import { Source } from '../../data/sources';
 import { formatDistance, formatDiameterKpc } from '../../utils/format/distance';
 import { Thumbnail } from './Thumbnail';
@@ -34,9 +35,57 @@ import styles from './FullCard.module.css';
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
-/** Props for FullCard. */
+/**
+ * Discriminated mode prop for FullCard.
+ *
+ * The card has two display variants: the rich galaxy layout (driven by a
+ * `GalaxyInfo` from the picker / palette / deep-link) and a compact
+ * point-of-interest layout (cluster / supercluster / void anchors —
+ * structures with a name, a category, a distance, and a physical radius
+ * but no per-galaxy photometry).
+ *
+ * A discriminated union keeps each branch's prop shape narrow: the galaxy
+ * branch never has to worry about a missing `info`, and the POI branch
+ * never has to worry about photometry that doesn't exist for a structure
+ * the size of Virgo.  The chrome (outer wrapper, title row, source badge
+ * placement) is shared at the JSX level inside the component, so the
+ * outer-wrapper identity stays stable across the galaxy↔POI transition —
+ * critical for the `<details>` open-state preservation rule documented
+ * in InfoCard.tsx.
+ *
+ * Why not a separate `PoiCard.tsx`?  The chrome (outer wrapper, title row
+ * with PINNED badge + close button affordance) is non-trivial and easy to
+ * drift if duplicated.  The body branches are small enough (POI body is
+ * three rows + a "Fly here" button) that branching inside FullCard wins.
+ */
+export type FullCardMode =
+  | { readonly kind: 'galaxy'; readonly info: GalaxyInfo }
+  | { readonly kind: 'poi'; readonly poi: PointOfInterest };
+
+/**
+ * Props for FullCard.
+ *
+ * The component accepts either:
+ *   - `mode` — the explicit discriminated form ({kind: 'galaxy' | 'poi'}).
+ *   - `info` — legacy shorthand equivalent to `{kind: 'galaxy', info}`.
+ *
+ * `mode` takes priority when both are present.  The two shapes coexist so
+ * existing call sites that pass `info` directly (InfoCard's galaxy branch)
+ * stay terse — they don't need to wrap every render in a discriminator
+ * object literal.
+ */
 export type FullCardProps = {
-  info: GalaxyInfo;
+  /**
+   * The discriminated display mode.  When provided, takes priority over
+   * the legacy `info` shorthand.  Omitted callers must pass `info`.
+   */
+  mode?: FullCardMode;
+  /**
+   * Galaxy-mode shorthand: equivalent to `mode={{kind: 'galaxy', info}}`.
+   * Ignored when `mode` is also provided.  Kept for the common galaxy
+   * call site in InfoCard so the JSX stays one prop instead of two.
+   */
+  info?: GalaxyInfo;
   /** When true, show the PINNED badge and apply the pinned styling variant. */
   pinned?: boolean;
   /**
@@ -44,15 +93,25 @@ export type FullCardProps = {
    *
    * Only rendered when `pinned` is true — the button only makes sense for the
    * persistent (selected) galaxy, not for the transient hover preview.  When
-   * omitted, the button is not rendered.
+   * omitted, the button is not rendered.  Ignored in POI mode (the POI body
+   * uses `onPoiFocus` instead so the parent gets a typed `PointOfInterest`).
    */
   onFocus?: (info: GalaxyInfo) => void;
+  /**
+   * Optional callback fired when the user clicks the "Fly here" button in
+   * the POI body.  The parent receives the full `PointOfInterest` so it can
+   * call `engine.camera.focusOnPoi(poi)` without re-resolving the id.
+   * Ignored in galaxy mode.
+   */
+  onPoiFocus?: (poi: PointOfInterest) => void;
   /**
    * Optional callback fired when the user clicks the Close (×) button.
    * Same effect as pressing Esc on desktop — clears the pinned selection.
    * Only rendered when `pinned` is true (clearing the transient hover preview
    * makes no sense; it'll clear itself the moment the cursor moves).  When
-   * omitted, the button is not rendered.
+   * omitted, the button is not rendered.  Applies to both galaxy AND POI
+   * modes — the parent chooses which engine method to call based on which
+   * selection is active.
    */
   onClose?: () => void;
 };
@@ -86,6 +145,136 @@ function CardRow({ label, value }: CardRowProps): ReactNode {
   );
 }
 
+// ── POI body ───────────────────────────────────────────────────────────────────
+
+/**
+ * Human-readable category label for the POI info card.
+ *
+ * Mirrors the underlying `PoiCategory` union (cluster / supercluster /
+ * void / famousGalaxy).  Famous galaxies don't normally route through
+ * the POI body (they have a full GalaxyInfo from the picker), but we
+ * include a label for completeness so an unexpected `famousGalaxy`-
+ * category POI focus doesn't render a blank "Type" row.
+ */
+function poiCategoryLabel(category: PointOfInterest['category']): string {
+  switch (category) {
+    case 'cluster':
+      return 'Galaxy Cluster';
+    case 'supercluster':
+      return 'Supercluster';
+    case 'void':
+      return 'Cosmic Void';
+    case 'famousGalaxy':
+      return 'Famous Galaxy';
+  }
+}
+
+/**
+ * Render the POI variant of FullCard.
+ *
+ * Extracted as a plain function (not a sub-component) so it doesn't
+ * introduce its own React fiber — the JSX it returns sits directly under
+ * the same `<div className={outerClass}>` shape that the galaxy branch
+ * uses.  That identity is what preserves any DOM-owned state across a
+ * galaxy↔POI swap (see the InfoCard module header).
+ *
+ * Why a function and not inline JSX?  The mode branch in `FullCard`
+ * would otherwise dwarf the galaxy body's ~150 lines of JSX with its
+ * own 40-line block, making the function structure hard to scan.  A
+ * named helper at module scope keeps each branch readable.
+ */
+function renderPoiBody(
+  poi: PointOfInterest,
+  outerClass: string,
+  pinned: boolean,
+  onClose: (() => void) | undefined,
+  onPoiFocus: ((poi: PointOfInterest) => void) | undefined,
+): ReactNode {
+  // Distance from the observer (origin) — POIs live in heliocentric
+  // world space, so the Euclidean magnitude of `worldPos` is the
+  // observer-to-POI distance.  `Math.hypot` over three components is
+  // the canonical way; gl-matrix would also work but pulling it in
+  // here for a single magnitude calc is overkill.
+  const distanceMpc = Math.hypot(poi.worldPos[0], poi.worldPos[1], poi.worldPos[2]);
+  const categoryLabel = poiCategoryLabel(poi.category);
+
+  return (
+    <div className={outerClass} role="status" aria-live="polite">
+      {/* ── Title row ─────────────────────────────────────────────────────── */}
+      {/*
+        Same shape as the galaxy branch's title row so the visual chrome
+        matches: "Object" eyebrow + PINNED badge (CSS-toggled) + optional
+        close button.  We omit the per-galaxy "Focus" button — the POI
+        equivalent ("Fly here") lives in the body where it has room to
+        breathe and isn't competing with the close affordance.
+      */}
+      <div className={styles.cardTitle}>
+        <span>POI</span>
+        <span className={styles.pinnedBadge}>Pinned</span>
+        {pinned && onClose && (
+          <button
+            type="button"
+            className={styles.closeButton}
+            onClick={onClose}
+            aria-label="Clear selection"
+            title="Clear selection (Esc)"
+          >
+            ×
+          </button>
+        )}
+      </div>
+
+      {/* ── Headline ──────────────────────────────────────────────────────── */}
+      <div className={styles.cardHeadline}>{poi.name}</div>
+
+      {/* ── Category badge ────────────────────────────────────────────────── */}
+      {/*
+        Reuses the sourceBadge styling for visual consistency with the
+        galaxy variant's "SDSS DR17" / "2MRS" attribution row.  Different
+        semantic content (category vs catalog source) but same purpose:
+        a small pill identifying what kind of thing the card describes.
+      */}
+      <div className={styles.sourceBadge}>{categoryLabel}</div>
+
+      {/* ── Distance + radius rows ────────────────────────────────────────── */}
+      <div className={styles.cardSection}>
+        <div className={styles.cardRow}>
+          <span className={styles.cardLabel}>Distance</span>
+          <span className={styles.cardValue}>{formatDistance(distanceMpc)}</span>
+        </div>
+        {poi.physicalRadiusMpc !== undefined && (
+          <div className={styles.cardRow}>
+            <span className={styles.cardLabel}>Radius</span>
+            <span className={styles.cardValue}>
+              {formatDistance(poi.physicalRadiusMpc)}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Fly-here action ───────────────────────────────────────────────── */}
+      {/*
+        Rendered only when the parent supplied `onPoiFocus`.  The button
+        lives at the bottom of the card (mirroring where the galaxy
+        variant's external "View on NED" link sits) so the user's eye
+        ends on the primary call-to-action.  We reuse `focusButton`
+        styling so the affordance reads the same as the galaxy variant's
+        "Focus" button — same shape, same colour, same hover state.
+      */}
+      {onPoiFocus && (
+        <button
+          type="button"
+          className={styles.focusButton}
+          onClick={() => onPoiFocus(poi)}
+          aria-label={`Fly camera to ${poi.name}`}
+        >
+          Fly here
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── FullCard ───────────────────────────────────────────────────────────────────
 
 /**
@@ -110,17 +299,72 @@ function CardRow({ label, value }: CardRowProps): ReactNode {
  *     ObjID  1237651738291...
  *   View in SDSS Explorer →
  */
-export function FullCard({ info, pinned = false, onFocus, onClose }: FullCardProps): ReactNode {
+export function FullCard(props: FullCardProps): ReactNode {
+  const { pinned = false, onFocus, onPoiFocus, onClose } = props;
+
+  // ── Resolve the discriminated mode ───────────────────────────────────────
+  //
+  // Two prop shapes coexist (see FullCardProps docstring): explicit
+  // `mode={{kind, ...}}` takes priority; legacy `info=…` becomes the
+  // galaxy form.  Resolving here keeps the rest of the function body
+  // free of the (mode ?? info-fallback) noise.
+  //
+  // If neither is provided (programmer error — InfoCard always passes
+  // one), we render nothing rather than crash on a property access of
+  // undefined.  The early return is safer than throwing for a UI
+  // component that runs every render.
+  const mode: FullCardMode | null =
+    props.mode ?? (props.info ? { kind: 'galaxy' as const, info: props.info } : null);
+  if (!mode) return null;
+
   // Compose the outer class: always infoCardFull, plus pinned variant when needed.
   // CSS modules scope both classes so we just combine them with a space.
-  const outerClass = pinned ? `${styles.infoCardFull} ${styles.pinned}` : styles.infoCardFull;
+  // Used by both the galaxy and POI branches — shared chrome means the
+  // outer wrapper's tag + className stay stable across galaxy↔POI
+  // transitions, preserving any `<details>` open state inside per the
+  // InfoCard module header.
+  const outerClass = pinned
+    ? `${styles.infoCardFull} ${styles.pinned}`
+    : `${styles.infoCardFull}`;
+
+  // Hook must be called unconditionally (React rules-of-hooks), even
+  // though the POI branch ignores it.  Cheap — a no-op `useState` is
+  // a single slot in the fiber.  Kept BEFORE the mode-branch return so
+  // hook order is identical across galaxy↔POI transitions.
+  const [descExpanded, setDescExpanded] = useState(false);
+
+  // ── POI branch ───────────────────────────────────────────────────────────
+  //
+  // Cluster / supercluster / void anchors render a compact body: name
+  // (headline), category label, distance from observer, physical radius,
+  // and a "Fly here" button when the parent supplied `onPoiFocus`.  No
+  // photometry, no thumbnail, no <details> — those concepts don't apply
+  // to a structure the size of Virgo.
+  //
+  // We deliberately reuse the same outer wrapper as the galaxy branch
+  // (className, role, aria-live).  React reconciles by tag + className,
+  // so flipping the card from showing a galaxy to showing a POI keeps
+  // the same DOM node and any preserved DOM state (focus, scroll, native
+  // <details>) survives the transition without us lifting it into React
+  // state.
+  if (mode.kind === 'poi') {
+    // Append the .poi modifier so the card's min-width matches the
+    // galaxy card's typical filled width (see FullCard.module.css).
+    // Same className composition pattern as the pinned variant; React
+    // reconciles by tag+key, so changing className is a style update
+    // — the underlying div fiber is unchanged across galaxy↔POI swaps.
+    return renderPoiBody(mode.poi, `${outerClass} ${styles.poi}`, pinned, onClose, onPoiFocus);
+  }
+
+  // ── Galaxy branch ────────────────────────────────────────────────────────
+  const { info } = mode;
 
   // Curated descriptions can run multiple paragraphs (especially for nearby
   // famous galaxies whose Wikipedia summaries are long).  Default to a 5-line
   // clamp + "show more" toggle so the card's structured-data rows stay
-  // visible without scrolling.  State resets per component instance, so
-  // selecting a different galaxy starts fresh in the collapsed state.
-  const [descExpanded, setDescExpanded] = useState(false);
+  // visible without scrolling.  `descExpanded` state resets per component
+  // instance, so selecting a different galaxy starts fresh in the collapsed
+  // state.
 
   // Aliases shown in "Also known as": every famous-catalog alias that
   // isn't already the headline.  Computed once so the same predicate

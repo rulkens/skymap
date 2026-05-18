@@ -14,12 +14,14 @@ import { describe, it, expect } from 'vitest';
 import { surveyConstants } from '../../../src/services/biasCorrection/surveyConstants';
 import { surveyFluxLimit, surveySchechter } from '../../../src/data/surveyFluxLimits';
 import { expectedNumberDensity } from '../../../src/utils/math/schechterDensity';
-import { Source } from '../../../src/data/sources';
+import { Source, type SurveySource } from '../../../src/data/sources';
 
 // Reverse-lookup name from a Source value.  TS's old numeric enum
 // auto-generated this map; the `as const` replacement does not, so we
-// derive it locally for the test labels below.
-const SOURCE_NAME: Record<Source, string> = {
+// derive it locally for the test labels below. Keyed by `SurveySource`
+// — POI codes (Cluster/Supercluster/Void) have no flux limit or
+// Schechter triple, so this test never iterates them.
+const SOURCE_NAME: Record<SurveySource, string> = {
   [Source.Synthetic]: 'Synthetic',
   [Source.SDSS]: 'SDSS',
   [Source.TwoMRS]: 'TwoMRS',

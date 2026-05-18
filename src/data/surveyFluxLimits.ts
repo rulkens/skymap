@@ -26,10 +26,13 @@
  * so hard-coding them here is appropriate.
  */
 
-import { Source } from './sources';
+import { Source, type SurveySource } from './sources';
 import type { SchechterTriple } from '../@types/data/SchechterTriple';
 
-const M_LIM: Record<Source, number> = {
+// Keyed by `SurveySource` (excludes POI codes) because flux limits and
+// Schechter parameters only make sense for actual surveys with a
+// selection function. POIs are pick-encoding-only markers.
+const M_LIM: Record<SurveySource, number> = {
   [Source.SDSS]: 17.77,
   [Source.TwoMRS]: 11.75,
   [Source.Glade]: 18.0,
@@ -37,7 +40,7 @@ const M_LIM: Record<Source, number> = {
   [Source.Famous]: 17.77,
 };
 
-const SCHECHTER: Record<Source, SchechterTriple> = {
+const SCHECHTER: Record<SurveySource, SchechterTriple> = {
   [Source.SDSS]: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
   [Source.TwoMRS]: { mStar: -24.13, alpha: -1.1, phiStar: 0.0116 },
   [Source.Glade]: { mStar: -20.83, alpha: -1.08, phiStar: 0.0093 },
@@ -47,10 +50,16 @@ const SCHECHTER: Record<Source, SchechterTriple> = {
 
 /** Per-survey apparent-magnitude flux limit (band varies — see SCHECHTER). */
 export function surveyFluxLimit(source: Source): number {
-  return M_LIM[source];
+  if (source === Source.Cluster || source === Source.Supercluster || source === Source.Void) {
+    throw new Error(`surveyFluxLimit: POI source ${source} has no flux limit`);
+  }
+  return M_LIM[source as SurveySource];
 }
 
 /** Per-survey Schechter triple for the band that defines the flux limit. */
 export function surveySchechter(source: Source): SchechterTriple {
-  return SCHECHTER[source];
+  if (source === Source.Cluster || source === Source.Supercluster || source === Source.Void) {
+    throw new Error(`surveySchechter: POI source ${source} has no Schechter triple`);
+  }
+  return SCHECHTER[source as SurveySource];
 }

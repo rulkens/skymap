@@ -6,8 +6,8 @@
  * which point is under the cursor.
  */
 
-import type { Source } from '../../data/sources';
 import type { PickSourceDraw } from './PickSourceDraw';
+import type { PickResult } from '../../data/selectionEncoding';
 
 export type PickRenderer = {
   /**
@@ -66,10 +66,14 @@ export type PickRenderer = {
    *                         the same enum order as `PointRenderer.loadedSources()`.
    *                         The caller is responsible for filtering by visibility
    *                         mask — the picker draws every record it receives.
-   * @returns `{ source, localIdx }` decoded from the front-most point's
-   *          packed pick value, or `null` if the cursor is over background
-   *          or a pick is already in flight.  See PointRenderer's class
-   *          docstring for the (sourceCode << 27 | localIdx + 1) packing.
+   * @returns A discriminated {@link PickResult} carrying the front-most
+   *          fragment's identity — `'galaxy'` (with `source` + `localIdx`)
+   *          for a survey hit, or `'cluster'` / `'supercluster'` / `'void'`
+   *          (with `poiIndex`) for one of the three POI ring categories.
+   *          Returns `null` if the cursor is over background or a pick
+   *          is already in flight.  See `selectionEncoding.ts` for the
+   *          (sourceCode << 27 | localIdx + 1) packing and the per-
+   *          category source-code allocation (5/6/7 for the POI rings).
    */
   pick(
     viewportPx: [number, number],
@@ -109,7 +113,7 @@ export type PickRenderer = {
      * descriptor.
      */
     timingDescriptor?: GPURenderPassTimestampWrites,
-  ): Promise<{ source: Source; localIdx: number } | null>;
+  ): Promise<PickResult | null>;
 
   /**
    * Release all GPU resources owned by this renderer.

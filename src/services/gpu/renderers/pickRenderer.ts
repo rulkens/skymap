@@ -60,16 +60,26 @@
 // layout trap noted in pointRenderer.ts).
 import vsCode from '../shaders/points/vertex.wesl?static';
 import pickFsCode from '../shaders/points/pickFragment.wesl?static';
-import type { Source } from '../../../data/sources';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../../../@types/rendering/PickSourceDraw';
 import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
+import type { ClusterMarkerRenderer } from '../../../@types/rendering/ClusterMarkerRenderer';
 import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
-import { SELECTION_NONE_SENTINEL, unpackPick } from '../../../data/selectionEncoding';
+import {
+  SELECTION_NONE_SENTINEL,
+  // Plan-3 Task 10 swap: the pickRenderer now surfaces the FULL
+  // discriminated `PickResult` union (galaxy | cluster | supercluster |
+  // void) to its caller so the click resolver can switch on `result.kind`
+  // and route POI hits through `resolvePoi`.  The `unpackPickGalaxyOnly`
+  // shim still exists in `selectionEncoding.ts` (any straggler caller
+  // can adopt it), but this renderer no longer uses it.
+  unpackPick,
+} from '../../../data/selectionEncoding';
+import type { PickResult } from '../../../data/selectionEncoding';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
@@ -140,6 +150,29 @@ export function createPickRenderer(
   pointRenderer: PointRenderer,
   fadeBgl: FadeUniformsBgl,
   sourceBgl: SourceUniformsBgl,
+  // Optional POI-ring pick provider.  When present, the pick pass
+  // invokes `clusterMarkerRenderer.pickRing(pass)` AFTER the per-source
+  // galaxy draw loop and BEFORE `pass.end()` so cluster / supercluster
+  // / void ring hits land in the same r32uint texture.  The pick
+  // pipeline shares `depth24plus` + `depthCompare:'less'` with the
+  // galaxy draws, so a foreground galaxy still claims the pixel — a
+  // click through a ring at a galaxy selects the galaxy, not the ring
+  // behind it (intended UX).
+  //
+  // Why optional rather than required?  Bootstrap order: pickRenderer
+  // is constructed in `wireInput`, which runs after `initGpu`
+  // populates `state.gpu.clusterMarkerRenderer`.  Today the marker
+  // renderer is always non-null by that point so the caller passes
+  // it through, but keeping the param optional means:
+  //   - Tests that construct pickRenderer in isolation don't have to
+  //     stand up a full cluster-marker pipeline.
+  //   - A future device-loss recovery path that recreates pickRenderer
+  //     before clusterMarkerRenderer is ready can pass `undefined`
+  //     and still get a working galaxy-only pick pass.
+  // When undefined, the POI pick pass is skipped — galaxy picks still
+  // work; only `PickResult.kind === 'galaxy'` or null is observable
+  // from the caller's side.
+  clusterMarkerRenderer?: ClusterMarkerRenderer,
 ): PickRenderer {
   // ── Shader modules ─────────────────────────────────────────────────────────
   //
@@ -369,7 +402,7 @@ export function createPickRenderer(
     sources: Iterable<PickSourceDraw>,
     pointSizePx?: number,
     timingDescriptor?: GPURenderPassTimestampWrites,
-  ): Promise<{ source: Source; localIdx: number } | null> {
+  ): Promise<PickResult | null> {
     // Resolve the shared uniform buffer from the bound PointRenderer at
     // call time rather than at construction.  Reading it lazily means we
     // pick up any future buffer recreation (e.g. device-loss recovery
@@ -548,6 +581,33 @@ export function createPickRenderer(
       pass.setVertexBuffer(0, src.vertexBuffer);
       pass.draw(6, src.count);
     }
+
+    // ── POI ring pick draws (optional) ─────────────────────────────────
+    //
+    // After every galaxy survey has drawn into the r32uint pick texture,
+    // the cluster marker renderer issues one ring-pick draw per POI
+    // category (cluster / supercluster / void) into the same render
+    // pass.  The ring pipeline reuses our `@group(0)` (CameraUniforms)
+    // — we just bound it above — and binds its own `@group(1)` dummy
+    // FadeUniforms + per-category `@group(2)` SourceUniforms so the
+    // packed identity `(sourceCode << 27) | poiIndex` lands in the
+    // pick texel.
+    //
+    // Depth ordering matters: the ring pipeline shares
+    // `depthCompare:'less'` + `depthWriteEnabled:true` with the galaxy
+    // pass, so a foreground galaxy fragment that already wrote a
+    // nearer depth value will REJECT the ring fragment at the same
+    // pixel.  That matches the user's natural expectation — clicking
+    // a galaxy that happens to sit inside a cluster ring selects the
+    // galaxy, not the ring behind it.
+    //
+    // Skipped entirely when the caller didn't pass a marker renderer
+    // (see the constructor docstring for why this is an optional
+    // bootstrap dependency rather than a hard requirement).
+    if (clusterMarkerRenderer) {
+      clusterMarkerRenderer.pickRing(pass);
+    }
+
     pass.end();
 
     // ── Texture → staging buffer copy ─────────────────────────────────────
@@ -594,18 +654,14 @@ export function createPickRenderer(
       const raw = mapped[0]!;
       stagingBuffer.unmap();
 
-      // Decode the (sourceCode << 27 | localIdx + 1) pick value.
-      //
-      //   raw == 0           → cleared sentinel (no hit) → null
-      //   raw >= 1           → top 5 bits = sourceCode, bottom 27 = (localIdx + 1)
-      //
-      // We subtract 1 from the bottom 27 bits to recover the 0-based
-      // localIdx; `>>> 27` recovers the source code.  Both are pure
-      // bitwise ops, so the decode is one shift + one mask + one
-      // subtract.
-      const decoded = unpackPick(raw);
-      if (decoded === null) return null;
-      return { source: decoded.source as Source, localIdx: decoded.localIdx };
+      // Decode the (sourceCode << 27 | localIdx + 1) pick value via the
+      // shared `selectionEncoding.unpackPick` helper.  Returns the full
+      // discriminated `PickResult` union — galaxy hits carry `source +
+      // localIdx`, POI ring hits (cluster / supercluster / void) carry
+      // `poiIndex`.  Caller (`clickHandler.createClickResolver`) switches
+      // on `result.kind` to route each variant.  See `selectionEncoding.ts`
+      // for the encoding details and the per-category source-code allocation.
+      return unpackPick(raw);
     } finally {
       // Always clear inFlight, even if an exception is thrown.
       inFlight = false;

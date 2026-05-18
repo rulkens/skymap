@@ -56,5 +56,13 @@ export function galaxyType(source: Source, mags: GalaxyTypeMags): GalaxyTypeInfo
       const ur = mags.magU - mags.magR;
       return Number.isFinite(ur) ? galaxyTypeFromColor(ur) : UNKNOWN;
     }
+    case Source.Cluster:
+    case Source.Supercluster:
+    case Source.Void:
+      // POI markers are not galaxies — they have no photometry and no
+      // galaxy type. Reaching this branch indicates the InfoCard is
+      // rendering a galaxy row for a POI pick result; route POI picks
+      // through their own info panel instead.
+      throw new Error(`galaxyType: POI source ${source} has no galaxy classification`);
   }
 }

@@ -221,6 +221,18 @@ export function useFocusUrlSync(input: UseFocusUrlInput): FocusSyncReturn {
       currentHash: window.location.hash,
     });
     if (matches) return;
+    // Don't fight a coexisting `#poi=…` set by the sister
+    // `usePoiUrlSync` hook — that segment is its territory.  Without
+    // this guard, a fresh tab loaded with a `#poi=cluster-virgo-m87`
+    // deep link would have its hash clobbered to `''` on mount because
+    // `focused` is null and `desiredHashBody === ''`.  Symmetric to the
+    // `hashIsPoiOrEmpty` check in usePoiUrlSync — each hook only ever
+    // writes to its own segment.
+    const currentBody = window.location.hash.startsWith('#')
+      ? window.location.hash.slice(1)
+      : window.location.hash;
+    const hashIsFocusOrEmpty = currentBody === '' || currentBody.startsWith('focus=');
+    if (!hashIsFocusOrEmpty) return;
     const base = window.location.pathname + window.location.search;
     const next = desiredHashBody ? `${base}#${desiredHashBody}` : base;
     window.history.pushState(null, '', next);

@@ -115,24 +115,27 @@ export const DEFAULT_DEPTH_FADE_ENABLED = true;
 export const DEFAULT_MILKY_WAY_ENABLED = true;
 
 /**
- * Cosmic-web filament-skeleton overlay defaults ON.  The deployed build
- * always ships a `filaments.bin` (~24 MB on the canonical 2MRS+GLADE
- * merged skeleton), so the file is reliably present and the overlay is
- * one of the most striking visual features of the explorer — keeping
- * it gated behind a "discover this toggle to see the cosmic web" UX
- * was costing first-time visitors most of the wow factor.
+ * Cosmic-web filament-skeleton overlay defaults OFF during the
+ * cluster-viz work-in-progress.  The halos + rings introduced for
+ * clusters / superclusters / voids visually compete with the
+ * filament skeleton at the same scale, and we want a clean baseline
+ * for the new layer's smoke tests.  Flip back to `true` once the
+ * cluster-viz feature settles and the two layers are tuned to
+ * coexist (likely a per-source intensity rebalance + revisit).
  *
- * The toggle still exists for users who want a cleaner point-only view
- * (or for screenshots of raw catalog density), but the affordance is
- * now "switch off if you don't want it" rather than "find the toggle
- * and turn it on".
+ * Historical note: this defaulted to `true` because filaments are one
+ * of the most striking visual features of the explorer and the
+ * "discover this toggle to see the cosmic web" UX was costing
+ * first-time visitors the wow factor.  That argument still holds —
+ * the OFF default is a temporary clarity choice for cluster-viz
+ * iteration, not a permanent reassessment.
  *
  * For local-dev clones without the offline DisPerSE pipeline run, the
  * file is missing → `loadFilaments` returns null silently → the
  * renderer skips the overlay regardless of this default.  No regression
  * for that path.  See `services/gpu/renderers/filamentRenderer.ts`.
  */
-export const DEFAULT_FILAMENTS_ENABLED = true;
+export const DEFAULT_FILAMENTS_ENABLED = false;
 
 /**
  * Default filament-overlay intensity scale, in [0, 1].  1.0 = full strength

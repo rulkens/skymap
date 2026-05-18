@@ -407,7 +407,12 @@ export function createLabelRenderer(
       // Each label specifies its own font; layout reads the font's
       // metrics from the FontId-keyed record built at construction
       // time.  No fallback — Label.font is required at the type level.
-      const quads = layoutLabel(label.text, metricsByFont[label.font], label.alignX ?? 'left');
+      const quads = layoutLabel(
+        label.text,
+        metricsByFont[label.font],
+        label.alignX ?? 'left',
+        label.alignY ?? 'baseline',
+      );
 
       // Write per-label storage record (48 bytes, 12 floats) unconditionally
       // — even when `quads` is empty.  Keeping the per-label index stable

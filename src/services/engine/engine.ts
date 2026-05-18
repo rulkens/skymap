@@ -122,6 +122,8 @@ import { createFpsCounter } from './subsystems/fpsCounter';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
 import { commitFocus } from './helpers/commitFocus';
+import { commitPoiFocus } from './helpers/commitPoiFocus';
+import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
@@ -467,6 +469,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // point of use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
+      // clusterMarkerRenderer: null until initGpu constructs it
+      // (cluster-viz sub-plan 2 task 13).  Excluded from
+      // isEngineReady — null-checked at point of use by the
+      // cluster-marker frame pass (task 14).
+      clusterMarkerRenderer: null,
       // texturedQuadRenderer / texturedDiskRenderer / proceduralDiskRenderer /
       // milkyWayRenderer: null until initGpu constructs them.  These
       // four don't gate any frame-loop logic via state.gpu — the frame
@@ -593,7 +600,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // happens right after this state literal (see below) so the
       // director sees both producers before the first frame fires.
       labelDirector: createLabelDirectorSubsystem(),
-      pois: createPoiSubsystem(),
+      pois: createPoiSubsystem({ cb }),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       //
@@ -906,6 +913,41 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // refused to move.
     if (!state.cam) return;
     commitFocus(state, cb, info);
+  }
+
+  function focusOnPoi(poi: PointOfInterest): void {
+    // Mirror of focusOn (galaxy version), but deliberately WITHOUT
+    // the top-level cam-null guard: commitPoiFocus absorbs the cam
+    // check internally for the tween path only, while still firing
+    // `setSelectedPoi` + `onPoiFocusChange` even when the camera
+    // isn't live yet.  This is what lets a deep-link drain that races
+    // bootstrap (e.g. `#poi=virgo-m87` parsed before the first cloud
+    // arrives) establish the selected state immediately; the camera
+    // catches up once it comes online via a fresh user action.
+    commitPoiFocus(state, cb, poi, { tween: true });
+  }
+
+  function clearPoiFocus(): void {
+    // Counterpart to focusOnPoi: drop the subsystem's selection flag
+    // AND fire the React-side callback so the URL hash + InfoCard POI
+    // body deselect in lock-step.  Order mirrors commitPoiFocus
+    // (subsystem first, callback second) so the very next frame
+    // already paints with the bumped-alpha marker gone before React
+    // observes the change.
+    //
+    // We deliberately do NOT build this as a separate helper file:
+    // unlike commitPoiFocus, there's no tween branch, no cam-null
+    // gating, no per-category framing distance — just two synchronous
+    // notifications.  A standalone helper would be more file-shuffling
+    // than abstraction value.
+    //
+    // Camera viewpoint is intentionally untouched: closing the POI
+    // card is a "dismiss the overlay" gesture, not a "reset
+    // viewpoint" one.  Users who want to fly back out invoke the
+    // home / reset actions explicitly.
+    state.subsystems.pois.setSelectedPoi(null);
+    cb.camera?.onPoiFocusChange?.(null);
+    state.subsystems.scheduler.requestRender();
   }
 
   function focusOnHome(): void {
@@ -1329,6 +1371,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
+    state.gpu.clusterMarkerRenderer?.destroy();
+    state.gpu.clusterMarkerRenderer = null;
     state.gpu.texturedDiskRenderer?.destroy();
     state.gpu.texturedDiskRenderer = null;
     state.gpu.proceduralDiskRenderer?.destroy();
@@ -1370,6 +1414,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setAutoRotate: (enabled) => boringSetters.setAutoRotate(enabled),
       reset: resetCamera,
       focusOn,
+      focusOnPoi,
+      clearPoiFocus,
       focusOnHome,
       focusOnMilkyWay,
       logState: logCameraStateFn,

@@ -150,6 +150,13 @@ function sourceName(source: Source): string {
       return 'famous';
     case Source.Synthetic:
       return 'synthetic';
+    case Source.Cluster:
+    case Source.Supercluster:
+    case Source.Void:
+      // POI sources don't have `.bin` slots and aren't part of the
+      // galaxy-catalog registry — the slot-name lookup should never
+      // be called with one. Fail loudly if it is.
+      throw new Error(`sourceName: POI source ${source} has no galaxy-catalog slot`);
   }
 }
 

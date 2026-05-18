@@ -23,7 +23,7 @@
  *
  * ### HDR_PASSES — additive content, in deterministic draw order
  *
- * All six entries are additively blended into the HDR `rgba16float`
+ * All seven entries are additively blended into the HDR `rgba16float`
  * target:
  *
  *   1. point-sprites       — instanced billboards (always-on)
@@ -33,6 +33,7 @@
  *   5. filaments           — cosmic-web skeleton overlay
  *   6. volume-upsample     — upsamples the half-res volume offscreen target
  *                            into the HDR target (when active fields exist)
+ *   7. cluster-markers     — at-rest halo + ring for cluster / SC / void POIs
  *
  * `textured-disks` is what remains of the briefly-split (and never-shipped)
  * `textured-quads` + `textured-disks` pair from 2026-05-18.  The quad
@@ -102,8 +103,9 @@ import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
+import { clusterMarkersPass } from './clusterMarkersPass';
 
-/** The six HDR passes, in deterministic draw order. */
+/** The seven HDR passes, in deterministic draw order. */
 export const HDR_PASSES: readonly Pass[] = [
   pointSpritesPass,
   proceduralDisksPass,
@@ -111,6 +113,7 @@ export const HDR_PASSES: readonly Pass[] = [
   milkyWayPass,
   filamentsPass,
   volumeUpsamplePass,
+  clusterMarkersPass,
 ];
 
 /**
@@ -129,3 +132,4 @@ export { volumeUpsamplePass } from './volumeUpsamplePass';
 export { milkyWayPass } from './milkyWayPass';
 export { markerLinesPass } from './markerLinesPass';
 export { labelsPass } from './labelsPass';
+export { clusterMarkersPass } from './clusterMarkersPass';

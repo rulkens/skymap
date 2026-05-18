@@ -86,6 +86,7 @@ export function encodeHdrSingle(
   }
 
   const hdrPass = encoder.beginRenderPass({
+    label: 'hdr-pass',
     colorAttachments: [
       {
         view: ctx.postProcess.view,

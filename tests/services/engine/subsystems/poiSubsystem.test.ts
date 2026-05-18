@@ -25,7 +25,7 @@ const VIRGO: PointOfInterest = {
   name: 'Virgo',
   category: 'cluster',
   worldPos: [-15.98, -2.13, 3.54],
-  crosshairSizeMpc: 5,
+  physicalRadiusMpc: 5,
 };
 const M31: PointOfInterest = {
   id: 'm31',
@@ -39,14 +39,14 @@ const BOOTES_VOID: PointOfInterest = {
   name: 'Boötes Void',
   category: 'void',
   worldPos: [200, 100, 50],
-  crosshairSizeMpc: 20,
+  physicalRadiusMpc: 20,
 };
 const LANIAKEA: PointOfInterest = {
   id: 'laniakea',
   name: 'Laniakea',
   category: 'supercluster',
   worldPos: [-50, -20, 10],
-  crosshairSizeMpc: 25,
+  physicalRadiusMpc: 25,
 };
 
 describe('poiSubsystem', () => {
@@ -64,13 +64,6 @@ describe('poiSubsystem', () => {
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels).toHaveLength(2);
     expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'Andromeda Galaxy']);
-  });
-
-  it('emits 3 perpendicular crosshair lines for POIs with crosshairSizeMpc', () => {
-    const sub = createPoiSubsystem();
-    sub.setPois([VIRGO]);
-    const out = sub.produceLabels(makeState(), makeCtx());
-    expect(out.lines).toHaveLength(3);
   });
 
   it('emits a single vertical marker line for POIs with labelAnchorOffsetMpc', () => {
@@ -113,7 +106,7 @@ describe('poiSubsystem', () => {
     expect(out.labels[0]!.alignX).toBe('center');
   });
 
-  it('omits the anchor line and lift when labelAnchorOffsetMpc is absent', () => {
+  it('omits the anchor line and lift when labelAnchorOffsetMpc is absent (centres both axes)', () => {
     const sub = createPoiSubsystem();
     const galaxy: PointOfInterest = {
       id: 'no-anchor',
@@ -125,24 +118,32 @@ describe('poiSubsystem', () => {
     sub.setPois([galaxy]);
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels[0]!.worldPos[1]).toBe(0.1);
-    expect(out.labels[0]!.alignX).toBe('left');
+    // Labels without a lift offset centre on both axes so the text
+    // sits symmetrically over the world anchor.
+    expect(out.labels[0]!.alignX).toBe('center');
+    expect(out.labels[0]!.alignY).toBe('center');
     expect(out.lines).toHaveLength(0);
   });
 
-  it('cluster POIs keep alignX left and emit no anchor line (3-line crosshair only)', () => {
+  it('cluster POIs centre both axes and emit no marker lines (crosshair removed)', () => {
     const sub = createPoiSubsystem();
     const virgo: PointOfInterest = {
       id: 'virgo',
       name: 'Virgo',
       category: 'cluster',
       worldPos: [-15.98, -2.13, 3.54],
-      crosshairSizeMpc: 5,
+      physicalRadiusMpc: 5,
     };
     sub.setPois([virgo]);
     const out = sub.produceLabels(makeState(), makeCtx());
-    expect(out.labels[0]!.alignX).toBe('left');
+    // Cluster/SC/void labels straddle the ring centre on both axes.
+    expect(out.labels[0]!.alignX).toBe('center');
+    expect(out.labels[0]!.alignY).toBe('center');
     expect(out.labels[0]!.worldPos[1]).toBe(-2.13); // not lifted
-    expect(out.lines).toHaveLength(3); // crosshair, no anchor line
+    // Pre-cluster-viz this would have been 3 (perpendicular crosshair).
+    // Now: 0 — crosshair removed in plan 2/4 task 9; clusters render
+    // as halo + ring via clusterMarkerRenderer instead.
+    expect(out.lines).toHaveLength(0);
   });
 
   it('filters by category visibility', () => {
@@ -293,3 +294,98 @@ describe('poiSubsystem', () => {
     expect(out.labels[0]!.fadeAlpha).toBe(1);
   });
 });
+
+describe('poiSubsystem — crosshair removal', () => {
+  it('produces zero marker-lines for a cluster POI with no labelAnchorOffsetMpc', () => {
+    const sub = createPoiSubsystem();
+    const poi: PointOfInterest = {
+      id: 'virgo',
+      name: 'Virgo',
+      category: 'cluster',
+      worldPos: [10, 0, 0],
+      physicalRadiusMpc: 2,
+    };
+    sub.setPois([poi]);
+    const out = sub.produceLabels(makeState(), makeCtx());
+    // Pre-cluster-viz this would have been 3 (three perpendicular
+    // crosshair lines).  Now: 0, because the cluster has no
+    // labelAnchorOffsetMpc and the crosshair is gone.
+    expect(out.lines).toHaveLength(0);
+    // Label is still produced.
+    expect(out.labels).toHaveLength(1);
+  });
+});
+
+describe('poiSubsystem — produceMarkers', () => {
+  it('returns one descriptor per visible cluster + supercluster + void POI', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'virgo', name: 'Virgo', category: 'cluster',
+        worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
+      { id: 'hercules', name: 'Hercules SC', category: 'supercluster',
+        worldPos: [0, 100, 0], physicalRadiusMpc: 50 },
+      { id: 'bootes', name: 'Boötes Void', category: 'void',
+        worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(3);
+  });
+
+  it('excludes famous-galaxy POIs from markers', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'm31', name: 'M31', category: 'famousGalaxy',
+        worldPos: [0.78, 0, 0], physicalRadiusMpc: 0.05 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(0);
+  });
+
+  it('voids emit both halo and ring (halo at the dimmer at-rest alpha from the style)', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'bootes', name: 'Boötes Void', category: 'void',
+        worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers[0]?.haloColor[3]).toBeGreaterThan(0);
+    expect(markers[0]?.ringColor[3]).toBeGreaterThan(0);
+    // Void halo is intentionally quieter than the ring — at-rest
+    // style alpha ≈ 0.65 vs ring's 1.0.
+    expect(markers[0]?.haloColor[3]).toBeLessThan(markers[0]!.ringColor[3]);
+  });
+
+  it('respects setCategoryVisible', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      { id: 'virgo', name: 'Virgo', category: 'cluster',
+        worldPos: [10, 0, 0], physicalRadiusMpc: 2 },
+      { id: 'bootes', name: 'Boötes Void', category: 'void',
+        worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
+    ]);
+    sub.setCategoryVisible('void', false);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.category).toBe('cluster');
+  });
+
+  it('skips POIs without physicalRadiusMpc', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([
+      // No physicalRadiusMpc — should not appear in markers (no
+      // radius to draw to).
+      { id: 'unsized', name: 'Unsized', category: 'cluster',
+        worldPos: [10, 0, 0] },
+    ]);
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+    expect(markers).toHaveLength(0);
+  });
+});
+
+// Note: a former "produceLabels awake propagation" block asserted that
+// the marker close-approach fade-out set awake=true while mid-band.
+// That contract was reversed by main's #146 ("drop spurious 'awake'
+// flag from label producers") — the fade is a pure function of camera
+// distance, and camera motion already wakes the loop via tweens /
+// spaceMouse / pointer events.  Setting awake mid-band would pin the
+// render loop on while a POI happens to be mid-fade.

@@ -68,10 +68,12 @@ import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
 import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
 import appStyles from './App.module.css';
 import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
+import { usePoiUrlSync } from '../../hooks/usePoiUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
+import { buildStaticAnchorPois } from '../../data/buildStaticAnchorPois';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import { hasUrlGate } from '../../utils/url/urlGate';
@@ -157,6 +159,37 @@ export function App(): React.ReactElement {
   const _onVolumeFieldsChangedTarget = useRef<() => void>(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const _onVolumeFieldsChangedStable = useRef(() => _onVolumeFieldsChangedTarget.current()).current;
+
+  // ── Focused-POI React mirror (drives the #poi=… URL hash) ─────────────
+  //
+  // The engine fires `onPoiFocusChange(poiId | null)` whenever the user
+  // clicks a POI ring (or commits via a deep-link drain).  We mirror
+  // that into React state so `usePoiUrlSync` can write the hash, and
+  // future presentation chrome (POI InfoCard body in Task 14) can
+  // branch on it.  React's `useState` setter is stable, so it's safe
+  // to pass through `extraCallbacks` — which useEngine captures once
+  // at first render and never re-binds.
+  //
+  // Declared BEFORE the useEngine call so the setter is in scope for
+  // the callbacks block below.  Parallel to the existing `focused`
+  // (galaxy) state useEngine itself owns; we keep the POI mirror
+  // App-side because the cluster-viz feature work landed after the
+  // useEngine extraction, and adding another engine-owned slice would
+  // bloat that hook for a single feature.
+  const [focusedPoiId, setFocusedPoiId] = useState<string | null>(null);
+
+  // ── Hovered-POI React mirror (drives the InfoCard hover preview) ──────
+  //
+  // Parallel to `focusedPoiId` above, but for the hover surface rather
+  // than the pinned-focus surface.  The engine fires
+  // `onPoiHoverChange(poiId | null)` whenever the cursor moves on / off
+  // a cluster / supercluster / void ring.  We mirror that into local
+  // state so `<InfoCard>` can render the slim `CompactPoiCard` preview.
+  //
+  // No URL sync (unlike focusedPoi) — hover state is ephemeral and
+  // syncing it to the hash would pollute browser history with one
+  // entry per ring the user mouses over.
+  const [hoveredPoiId, setHoveredPoiId] = useState<string | null>(null);
   const {
     pointSize,
     brightness,
@@ -209,6 +242,28 @@ export function App(): React.ReactElement {
       // alias; only the nested `volumes.onFieldsChanged` address remains.
       volumes: {
         onFieldsChanged: _onVolumeFieldsChangedStable,
+      },
+      // POI focus echo — engine fires this on POI-ring click / palette
+      // pick / deep-link drain.  Mirrors into `focusedPoiId` so
+      // `usePoiUrlSync` can keep `#poi=<id>` in lock-step with the
+      // selection.  Settings callbacks don't define `camera.*`, so
+      // there's no conflict with the spread above.  `setFocusedPoiId`
+      // is a stable React setter so useEngine's "capture once" contract
+      // holds.
+      camera: {
+        onPoiFocusChange: setFocusedPoiId,
+      },
+      // POI hover echo — engine fires this on cursor enter/leave for
+      // any cluster / supercluster / void ring.  Mirrors into
+      // `hoveredPoiId` so `<InfoCard>` can render the hover preview.
+      // Sister wiring to `camera.onPoiFocusChange` above; sits in the
+      // `selection` bag because hover is a selection-class concept
+      // (mirrors the existing `selection.onHoverChange` for galaxies).
+      // `setHoveredPoiId` is a stable React setter — useEngine's
+      // "capture once" contract holds the same way as for the focus
+      // pair.
+      selection: {
+        onPoiHoverChange: setHoveredPoiId,
       },
     },
   });
@@ -360,6 +415,86 @@ export function App(): React.ReactElement {
     engineHandleRef: handleRef,
   });
 
+  // ── Deep-link POI URL sync (#poi=<id>) ───────────────────────────────────
+  //
+  // Sister hook to `useFocusUrlSync` — owns the entire `#poi=<id>`
+  // lifecycle for cluster / supercluster / void anchors.  The two
+  // hash schemes (`#focus=` and `#poi=`) coexist without cross-talk:
+  // each hook only writes its own segment and leaves the other one
+  // alone.
+  //
+  // Why a hard-coded static POI table instead of reading from the
+  // engine?  The engine's POI subsystem owns the merged list (static
+  // anchors + asynchronously-loaded famous-galaxy POIs), but exposing
+  // it as a reactive React slice would mean threading another
+  // callback through EngineCallbacks and re-rendering App on every
+  // famous-meta load.  For deep-link arrivals the static subset is
+  // sufficient — `#poi=cluster-…` / `#poi=supercluster-…` /
+  // `#poi=void-…` all live in this table.  Famous-galaxy POIs
+  // (`#poi=famous-…`) are a future extension; the drain holds the
+  // pending id and a future "famous POIs ready" subscriber can
+  // resolve it.
+  //
+  // `buildStaticAnchorPois` is the same helper the engine's wireSlots
+  // phase calls when seeding `state.subsystems.pois.setPois(...)`, so
+  // the id-slug + worldPos this hook hands `focusOnPoi` is guaranteed
+  // to match what the renderer is drawing at.  `useMemo([])` because
+  // the helper output is referentially-stable per call and we don't
+  // want to rebuild a fresh array on every render — that would re-fire
+  // the drain effect needlessly.
+  const staticPois = useMemo(() => buildStaticAnchorPois(), []);
+  usePoiUrlSync({
+    focusedPoiId,
+    ready: status.kind === 'ready',
+    pois: staticPois,
+    engineHandleRef: handleRef,
+  });
+
+  // ── Resolved focused POI (drives the InfoCard POI body) ──────────────────
+  //
+  // The engine emits the focused POI as an id (string).  The InfoCard
+  // needs the full `PointOfInterest` to render name / category / radius /
+  // distance.  We resolve the id → POI here (rather than tracking a
+  // parallel `focusedPoi` state) so the static-anchor table remains the
+  // single source of truth: a tier swap that replaces the table would
+  // automatically invalidate a stranded focus by `find` returning
+  // undefined.
+  //
+  // useMemo because InfoCard is wrapped in React.memo (via its prop
+  // identity) and we don't want a fresh PointOfInterest reference each
+  // render to defeat that.  Cost is one O(~50) array scan when either
+  // dependency changes; both change very rarely (focusedPoiId only on
+  // user POI click or deep-link, staticPois exactly once at mount).
+  //
+  // Famous-galaxy POIs (`focusedPoiId` starting with `famous-…`) won't
+  // resolve here — they're not in `staticPois`.  The fallback is null,
+  // which renders no POI body; the famous-galaxy InfoCard flow goes
+  // through the galaxy-selection path instead, so this isn't a
+  // regression.
+  const focusedPoi = useMemo(
+    () => (focusedPoiId ? (staticPois.find((p) => p.id === focusedPoiId) ?? null) : null),
+    [focusedPoiId, staticPois],
+  );
+
+  // ── Resolved hovered POI (drives the InfoCard hover preview) ──────────
+  //
+  // Same shape as `focusedPoi` above — id-from-engine + lookup into
+  // `staticPois` — but for the hover surface.  Same memoization
+  // rationale: InfoCard's prop identity feeds React's reconciliation,
+  // and a fresh PointOfInterest reference per render would defeat
+  // shallow-equality checks downstream.  Cost is one O(~50) array
+  // scan whenever `hoveredPoiId` changes; `staticPois` is built once
+  // at mount so it doesn't drive re-runs.
+  //
+  // Tier-swap defence: if the static POI table is rebuilt mid-hover
+  // and the hovered id is no longer present, `find` returns undefined
+  // → `?? null` → the preview disappears.  Same belt-and-braces story
+  // as the focused-POI resolver above.
+  const hoveredPoi = useMemo(
+    () => (hoveredPoiId ? (staticPois.find((p) => p.id === hoveredPoiId) ?? null) : null),
+    [hoveredPoiId, staticPois],
+  );
+
   // ── Global keyboard shortcuts (Cmd+K, Esc, f, h, l) ─────────────────────
   useKeyboardShortcuts({
     selected,
@@ -414,8 +549,12 @@ export function App(): React.ReactElement {
         <InfoCard
           hovered={hovered}
           selected={selected}
+          selectedPoi={focusedPoi}
+          hoveredPoi={hoveredPoi}
           onFocus={(info) => handleRef.current?.camera.focusOn(info)}
+          onPoiFocus={(poi) => handleRef.current?.camera.focusOnPoi(poi)}
           onClose={() => handleRef.current?.selection.clear()}
+          onPoiClose={() => handleRef.current?.camera.clearPoiFocus()}
         />
         <ScaleBar scale={scale} />
         {/*

@@ -75,6 +75,7 @@ import { resizeCanvasToDisplay } from '../../gpu/device';
 import { autoLodMask } from '../helpers/autoLod';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
+import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
 import { deriveFrameContext } from './frameContext';
 import { renderFrame } from './renderFrame';
 import {
@@ -294,6 +295,20 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // signature hash, and flushes once.
   state.subsystems.labelDirector.runFrame(state, ctx);
 
+  // ── Per-frame marker upload ───────────────────────────────────────
+  //
+  // Mirrors the label-director flush right above: produceMarkers walks
+  // the POI list, applies fade math, and hands typed descriptors to
+  // the renderer.  Must run BEFORE the GPU dispatch so the instance
+  // buffer is uploaded before clusterMarkersPass's draw reads it.
+  //
+  // Gated on the renderer being non-null so a null GPU device (test
+  // fixtures, the brief pre-initGpu window) is safe.
+  if (state.gpu.clusterMarkerRenderer !== null) {
+    const markers = state.subsystems.pois.produceMarkers(state, ctx);
+    state.gpu.clusterMarkerRenderer.setMarkers(markers);
+  }
+
   // ── GPU dispatch ──────────────────────────────────────────────────
   //
   // The whole encoder lifecycle (createCommandEncoder, beginRenderPass
@@ -422,8 +437,47 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         // resolved by the next main-frame `endFrame`.
         state.gpu.timingService.descriptorFor('pick'),
       )
-      .then((sel) => {
-        state.subsystems.selection.setHovered(sel);
+      .then((pick) => {
+        // Post-Plan-5 the picker's discriminated `PickResult` union is
+        // dispatched to the right hover sink:
+        //   - null               → clear BOTH galaxy and POI hovers.
+        //   - kind:'galaxy'      → galaxy hover (selection subsystem);
+        //                          POI hover cleared.
+        //   - kind:'cluster' / 'supercluster' / 'void' → POI hover
+        //                          (poi subsystem, which fires
+        //                          onPoiHoverChange internally);
+        //                          galaxy hover cleared.
+        //
+        // The two sinks are mutually exclusive on every pick: a single
+        // pick resolves to one fragment, so we can't hit two POIs or a
+        // POI+galaxy at the same time.  Clearing the OTHER sink on
+        // every dispatch keeps the InfoCard from showing stale hover
+        // text when the cursor drags from a galaxy onto a ring (or
+        // vice versa).  Each subsystem's setter does its own equality
+        // short-circuit, so the repeated "clear the other sink" calls
+        // on consecutive same-kind picks are O(1) no-ops.
+        if (pick === null) {
+          state.subsystems.selection.setHovered(null);
+          state.subsystems.pois.setHoveredPoi(null);
+        } else if (pick.kind === 'galaxy') {
+          state.subsystems.selection.setHovered({
+            source: pick.source,
+            localIdx: pick.localIdx,
+          });
+          state.subsystems.pois.setHoveredPoi(null);
+        } else {
+          // POI variants (cluster / supercluster / void) — resolve via
+          // the shared helper introduced in plan-5 task 3 so the click
+          // and hover paths agree byte-for-byte on the lookup.  An
+          // out-of-bounds index or a missing POI table produces null;
+          // treat the same as "no POI hovered".
+          const poi = resolvePoiFromPick(state.subsystems.pois, {
+            category: pick.kind,
+            poiIndex: pick.poiIndex,
+          });
+          state.subsystems.selection.setHovered(null);
+          state.subsystems.pois.setHoveredPoi(poi?.id ?? null);
+        }
         // No scheduler.requestRender() here intentionally.
         // The hover state only feeds the React InfoCard text —
         // there is no hover halo in the rendered scene today,

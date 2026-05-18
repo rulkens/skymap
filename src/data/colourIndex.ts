@@ -12,10 +12,15 @@
  * for the band choices and the rationale behind the K-correction coefficients.
  */
 
-import { Source } from './sources';
+import { Source, type SurveySource } from './sources';
 import type { ColourIndexSpec } from '../@types/data/ColourIndexSpec';
 
-const SPEC: Record<Source, ColourIndexSpec> = {
+// POI source codes (Cluster, Supercluster, Void) have no photometry —
+// they're pick-encoding-only markers, not survey rows. The colour-index
+// spec is therefore keyed by `SurveySource` (excludes POIs), and the
+// accessors below treat a POI input as a programming error: the points
+// pipeline that computes colour indices should never see a POI source.
+const SPEC: Record<SurveySource, ColourIndexSpec> = {
   [Source.SDSS]: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
   [Source.TwoMRS]: { slotA: 'g', slotB: 'i', rangeMin: 0.7, rangeMax: 1.1, kPerZ: 0.0 },
   [Source.Glade]: { slotA: 'g', slotB: 'r', rangeMin: 0.5, rangeMax: 3.5, kPerZ: 1.0 },
@@ -40,7 +45,10 @@ export function pickColourIndex(
   magI: number,
   magZ: number,
 ): { colourIndex: number; kPerZ: number } | null {
-  const spec = SPEC[source];
+  if (source === Source.Cluster || source === Source.Supercluster || source === Source.Void) {
+    throw new Error(`pickColourIndex: POI source ${source} has no colour index`);
+  }
+  const spec = SPEC[source as SurveySource];
   const slotMap = { u: magU, g: magG, r: magR, i: magI, z: magZ };
   const a = slotMap[spec.slotA];
   const b = slotMap[spec.slotB];
@@ -65,5 +73,8 @@ export function pickColourIndex(
 
 /** Public read of the spec table — used by `galaxyType.ts` and tests. */
 export function colourIndexSpec(source: Source): ColourIndexSpec {
-  return SPEC[source];
+  if (source === Source.Cluster || source === Source.Supercluster || source === Source.Void) {
+    throw new Error(`colourIndexSpec: POI source ${source} has no colour-index spec`);
+  }
+  return SPEC[source as SurveySource];
 }

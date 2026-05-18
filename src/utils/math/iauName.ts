@@ -98,5 +98,13 @@ export function iauName(source: Source, raDeg: number, decDeg: number): string {
       // when no curated name is available (e.g. for a new entry pending
       // metadata enrichment).  "Famous" matches the Source label.
       return `Famous ${coords}`;
+    case Source.Cluster:
+    case Source.Supercluster:
+    case Source.Void:
+      // POI markers carry curated names (e.g. "Virgo Cluster") and are
+      // not assigned IAU coordinate designations. Reaching here means
+      // a POI pick result is being formatted by galaxy-headline code;
+      // route POI picks through their dedicated info path instead.
+      throw new Error(`iauName: POI source ${source} has no IAU designation`);
   }
 }

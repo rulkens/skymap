@@ -14,6 +14,8 @@ import package::labels::io::LabelData;
 import package::labels::io::VsIn;
 import package::labels::io::VsOut;
 import package::lib::camera::worldToClip;
+import package::lib::billboard::worldLenToPx;
+import package::lib::billboard::pxToClipOffset;
 
 // Atlas em pixel size — must match 'ATLAS_FONT_SIZE' in src/data/fonts.ts.
 // Hardcoded rather than passed as a uniform because it's a build-time
@@ -40,14 +42,14 @@ fn vs(input: VsIn) -> VsOut {
   let clip = worldToClip(u.cam, worldPos);
 
   // Perspective-driven size: project 'worldEmMpc' (an em height in Mpc
-  // of world space) into screen pixels at the anchor's depth.
-  //   clip.w ≈ camera distance in Mpc (NDC derivation)
-  //   viewportPx.y * 0.5 converts the vertical half-extent from NDC to px
-  // This mirrors the standard NDC→screen projection: a world-space length
-  // L at depth w maps to (L / w) * (viewport.y / 2) pixels.  Clamping to
-  // [minPx, maxPx] bounds the result for legibility at extreme distances
-  // and very close approach.
-  let pxPerEm = (worldEmMpc / clip.w) * (u.cam.viewportPx.y * 0.5);
+  // of world space) into screen pixels at the anchor's depth.  The
+  // shared 'worldLenToPx' helper encapsulates the standard
+  // perspective NDC→screen projection ((L / clip.w) * viewport.y / 2);
+  // see lib/billboard.wesl for the canonical derivation.  Clamping to
+  // [minPx, maxPx] is label-specific — bounds the result for
+  // legibility at extreme distances and very close approach — so it
+  // stays inline here.
+  let pxPerEm = worldLenToPx(u.cam, worldEmMpc, clip.w);
   let displayEmPx = clamp(pxPerEm, minPx, maxPx);
   let pxScale = displayEmPx / ATLAS_EM_PX;
 
@@ -59,12 +61,11 @@ fn vs(input: VsIn) -> VsOut {
     -(input.localOffset.y + input.corner.y * input.localSize.y),
   );
 
-  // Convert atlas px to clip space at depth clip.w:
-  //   ndc_per_px = 2 / viewport.xy
-  // Then scale by clip.w so the offset is in clip-space (perspective
-  // correct — vertex output is divided by w during rasterisation,
-  // which would otherwise shrink our offsets).
-  let ndcOffset = cornerAtlasPx * pxScale * (2.0 / u.cam.viewportPx) * clip.w;
+  // Convert atlas px to clip space at depth clip.w using the shared
+  // 'pxToClipOffset' helper — it applies the (2 / viewport) NDC step
+  // and multiplies by clip.w so the GPU's perspective divide recovers
+  // the right pixel size.  See lib/billboard.wesl for the derivation.
+  let ndcOffset = pxToClipOffset(u.cam, cornerAtlasPx * pxScale, clip.w);
 
   let outPos = vec4<f32>(clip.x + ndcOffset.x, clip.y + ndcOffset.y, clip.z, clip.w);
 

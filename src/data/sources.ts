@@ -90,8 +90,53 @@ export const Source = {
    * positions rather than just tagging existing rows.
    */
   Famous: 4,
+  /**
+   * POI-only — used for pick encoding, no .bin file representation,
+   * deliberately excluded from `ALL_SOURCES`.
+   *
+   * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
+   * cluster's marker ring return source code 5 in the upper 5 bits of
+   * the packed identity; the 27-bit `localIdx` carries the POI's index
+   * into the cluster table. See `selectionEncoding.ts` for the layout
+   * and `docs/superpowers/specs/2026-05-18-cluster-supercluster-viz-design.md`
+   * §6.2 for the per-category allocation rationale.
+   */
+  Cluster: 5,
+  /**
+   * POI-only — used for pick encoding, no .bin file representation,
+   * deliberately excluded from `ALL_SOURCES`.
+   *
+   * Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding
+   * scheme as Cluster, distinct source code so the pick result is
+   * self-describing without an extra category lookup.
+   */
+  Supercluster: 6,
+  /**
+   * POI-only — used for pick encoding, no .bin file representation,
+   * deliberately excluded from `ALL_SOURCES`.
+   *
+   * Void anchors (Sculptor Void, Local Void, Boötes Void). Same
+   * encoding scheme as Cluster / Supercluster.
+   */
+  Void: 7,
 } as const;
 export type Source = (typeof Source)[keyof typeof Source];
+
+/**
+ * Narrowed source type covering only the *survey* sources — the ones
+ * that have `.bin` file representations and participate in the points
+ * pipeline. Excludes the POI codes (`Cluster`, `Supercluster`, `Void`)
+ * which are pick-encoding-only and have no per-survey metadata
+ * (label, all-sky flag, max distance, band layout) to look up.
+ *
+ * Used as the key type for `Record<SurveySource, T>` tables below so
+ * those records remain exhaustive over the survey sources without
+ * forcing semantically-empty entries for the POI codes.
+ */
+export type SurveySource = Exclude<
+  Source,
+  typeof Source.Cluster | typeof Source.Supercluster | typeof Source.Void
+>;
 
 // ─── Per-survey metadata tables ─────────────────────────────────────────────
 //
@@ -113,7 +158,7 @@ export type Source = (typeof Source)[keyof typeof Source];
  * `GLADE` (uppercase, matching the published catalog name), etc. — match
  * these conventions in any new UI strings.
  */
-const LABELS: Record<Source, string> = {
+const LABELS: Record<SurveySource, string> = {
   [Source.Synthetic]: 'Synthetic',
   [Source.SDSS]: 'SDSS',
   [Source.TwoMRS]: '2MRS',
@@ -137,7 +182,7 @@ const LABELS: Record<Source, string> = {
  * The renderer uses this flag to decide whether to draw a coverage mask
  * overlay or skip it.
  */
-const ALL_SKY: Record<Source, boolean> = {
+const ALL_SKY: Record<SurveySource, boolean> = {
   [Source.Synthetic]: true, // synthetic cloud is uniform-in-sphere by construction
   [Source.SDSS]: false,
   [Source.TwoMRS]: true,
@@ -165,7 +210,7 @@ const ALL_SKY: Record<Source, boolean> = {
  * - **Synthetic** = 1000 Mpc — matches the radius hard-coded in
  *                              `synthetic.ts`.
  */
-const MAX_DIST_MPC: Record<Source, number> = {
+const MAX_DIST_MPC: Record<SurveySource, number> = {
   [Source.Synthetic]: 1000,
   [Source.SDSS]: 3000,
   [Source.TwoMRS]: 250,
@@ -191,7 +236,7 @@ const MAX_DIST_MPC: Record<Source, number> = {
  * bands without resorting to special string values like 'N/A' or empty
  * strings — and so the display falls back gracefully if accidentally rendered.
  */
-const BAND_LABELS: Record<Source, BandLabels> = {
+const BAND_LABELS: Record<SurveySource, BandLabels> = {
   [Source.Synthetic]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
   [Source.SDSS]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
   [Source.TwoMRS]: { u: '—', g: 'J', r: 'H', i: 'K', z: '—' },
@@ -211,19 +256,49 @@ const BAND_LABELS: Record<Source, BandLabels> = {
 // metadata from a config file or compute it dynamically, we can change the
 // implementation without breaking imports.
 
-/** Display name (e.g. `'2MRS'`, `'GLADE'`) for a given source. */
+// ── POI fallthroughs ────────────────────────────────────────────────────────
+//
+// The per-survey metadata tables above are keyed by `SurveySource` (exclude
+// POI codes) because labels like "all-sky" or a max-distance number don't
+// have a meaningful value for a cluster anchor. Each accessor still accepts
+// the wider `Source` type — callers pass whatever the pick decoder hands
+// them — so we handle the POI codes explicitly here. A short readable
+// fallback for `sourceLabel` (the only one a POI is likely to legitimately
+// hit), and a hard throw for the rest where reaching the call with a POI
+// indicates a logic bug in the survey-galaxy pipeline.
+
+function poiLabel(source: Source): string | null {
+  if (source === Source.Cluster) return 'Cluster';
+  if (source === Source.Supercluster) return 'Supercluster';
+  if (source === Source.Void) return 'Void';
+  return null;
+}
+
+/** Display name (e.g. `'2MRS'`, `'GLADE'`, `'Cluster'`) for a given source. */
 export function sourceLabel(source: Source): string {
-  return LABELS[source];
+  const poi = poiLabel(source);
+  if (poi !== null) return poi;
+  return LABELS[source as SurveySource];
 }
 
 /** True if the survey covers (approximately) the full celestial sphere. */
 export function sourceIsAllSky(source: Source): boolean {
-  return ALL_SKY[source];
+  // POI anchors are full-sky in the trivial sense (they're individual
+  // points, not survey footprints). Returning `true` here keeps any
+  // coverage-mask code path well-behaved if a POI somehow reaches it.
+  if (poiLabel(source) !== null) return true;
+  return ALL_SKY[source as SurveySource];
 }
 
 /** Approximate effective max distance in megaparsecs. See `MAX_DIST_MPC`. */
 export function sourceMaxDistanceMpc(source: Source): number {
-  return MAX_DIST_MPC[source];
+  // POIs are not surveys and don't define an effective sample depth.
+  // If this is being called with a POI, the camera-framing code is
+  // routing the wrong thing — fail loudly instead of inventing a value.
+  if (poiLabel(source) !== null) {
+    throw new Error(`sourceMaxDistanceMpc: POI source ${source} has no survey depth`);
+  }
+  return MAX_DIST_MPC[source as SurveySource];
 }
 
 /**
@@ -235,7 +310,12 @@ export function sourceMaxDistanceMpc(source: Source): number {
  * See the `BAND_LABELS` table above for the per-source mapping rationale.
  */
 export function bandLabels(source: Source): BandLabels {
-  return BAND_LABELS[source];
+  // POI markers have no photometry. Reaching here with a POI means the
+  // InfoCard is rendering a galaxy row for a non-galaxy entity.
+  if (poiLabel(source) !== null) {
+    throw new Error(`bandLabels: POI source ${source} has no photometric bands`);
+  }
+  return BAND_LABELS[source as SurveySource];
 }
 
 // ─── Visibility bitmask ─────────────────────────────────────────────────────
