@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m66",
+  "crop": {
+    "x": 0,
+    "y": 1,
+    "width": 3840,
+    "height": 3840
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3627#/media/File:Phot-33c-03-fullres.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO"
+  },
+  "processedAt": "2026-05-18T11:50:14.372Z"
+}

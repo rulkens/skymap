@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c65",
+  "crop": {
+    "x": 618.1908493041992,
+    "y": 487.1908493041992,
+    "width": 1800.6157760620117,
+    "height": 1800.6157760620117
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_253#/media/File:NGC_253_-_Sculptor.png",
+    "license": "CC0",
+    "author": "Chuck Ayoub"
+  },
+  "processedAt": "2026-05-18T12:15:03.695Z"
+}
