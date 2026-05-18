@@ -295,6 +295,26 @@ export function createPoiSubsystem(): PoiSubsystem {
         }
       }
 
+      // Marker fade-out awake propagation.  produceMarkers runs the same
+      // math each frame; mirror its mid-transition detection here so the
+      // render-on-demand loop stays awake through the fade.  Skipping the
+      // detection (e.g. by only running it in produceMarkers) is broken:
+      // produceMarkers' return value is consumed AFTER the awake decision
+      // has already been baked into the frame.
+      if (p.physicalRadiusMpc !== undefined) {
+        const dxM = p.worldPos[0] - cx;
+        const dyM = p.worldPos[1] - cy;
+        const dzM = p.worldPos[2] - cz;
+        const distMpc = Math.hypot(dxM, dyM, dzM);
+        if (distMpc > 0.001) {
+          const apRadPx = (p.physicalRadiusMpc / distMpc) * (ctx.canvasSize.height * 0.5 / Math.tan(fovYRad * 0.5));
+          if (apRadPx > style.markerMaxApparentRadiusPx &&
+              apRadPx < style.markerMaxApparentRadiusPx + style.markerMaxApparentFadeBandPx) {
+            awake = true;
+          }
+        }
+      }
+
       // Anchor-offset positioning + vertical marker line.  When the POI
       // sets `labelAnchorOffsetMpc`, the label is lifted by that amount
       // in +Y (world space) and a short vertical marker line runs from

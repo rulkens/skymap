@@ -372,3 +372,26 @@ describe('poiSubsystem — produceMarkers', () => {
     expect(markers).toHaveLength(0);
   });
 });
+
+describe('poiSubsystem — produceLabels awake propagation', () => {
+  it('produceLabels sets awake=true when a marker is mid-fade-out', () => {
+    const sub = createPoiSubsystem();
+    // Put the camera so close to a small-radius cluster that the projected
+    // ring lands inside the markerMaxApparentFadeBandPx fade band.  At
+    // distance d the apparent radius is (r / d) * pxPerRad; we want it
+    // between 800 and 1000 (markerMaxApparentRadiusPx=800,
+    // markerMaxApparentFadeBandPx=200) given pxPerRad=500 and r=2:
+    //   target = 850 → d = (2 / 850) * 500 = ~1.18
+    sub.setPois([
+      { id: 'virgo', name: 'Virgo', category: 'cluster',
+        worldPos: [1.18, 0, 0], physicalRadiusMpc: 2 },
+    ]);
+    const ctx = {
+      drawCamPos: [0, 0, 0],
+      canvasSize: { width: 1024, height: 768 },
+      drawPxPerRad: 500,
+    } as unknown as ReadyFrameContext;
+    const out = sub.produceLabels(makeState(), ctx);
+    expect(out.awake).toBe(true);
+  });
+});
