@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m64",
+  "crop": {
+    "x": 154.22821044921875,
+    "y": 147.88818359375,
+    "width": 665.6723022460938,
+    "height": 665.6723022460938
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4826#/media/File:M64_Blackeye_Galaxy_from_the_Mount_Lemmon_SkyCenter_Schulman_Telescope_courtesy_Adam_Block.jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "Ngc1535"
+  },
+  "processedAt": "2026-05-18T12:15:27.706Z"
+}

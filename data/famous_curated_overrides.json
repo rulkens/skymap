@@ -245,6 +245,48 @@
       "license": "CC BY 4.0",
       "author": "Credit: ESA/Hubble &amp; NASA, L. Ho et al.",
       "processedAt": "2026-05-18T11:27:04.241Z"
+    },
+    "m82": {
+      "dir": "famous-curated/m82",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3034#/media/File:M82_HST_ACS_2006-14-a-large_web.jpg",
+      "license": "Public domain",
+      "author": "NASA, ESA, and The Hubble Heritage Team (STScI/AURA)",
+      "processedAt": "2026-05-18T11:46:20.016Z"
+    },
+    "m66": {
+      "dir": "famous-curated/m66",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3627#/media/File:Phot-33c-03-fullres.jpg",
+      "license": "CC BY 4.0",
+      "author": "ESO",
+      "processedAt": "2026-05-18T11:50:14.372Z"
+    },
+    "c65": {
+      "dir": "famous-curated/c65",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_253#/media/File:NGC_253_-_Sculptor.png",
+      "license": "CC0",
+      "author": "Chuck Ayoub",
+      "processedAt": "2026-05-18T12:15:03.695Z"
+    },
+    "m64": {
+      "dir": "famous-curated/m64",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4826#/media/File:M64_Blackeye_Galaxy_from_the_Mount_Lemmon_SkyCenter_Schulman_Telescope_courtesy_Adam_Block.jpg",
+      "license": "CC BY-SA 4.0",
+      "author": "Ngc1535",
+      "processedAt": "2026-05-18T12:15:27.706Z"
+    },
+    "m99": {
+      "dir": "famous-curated/m99",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4254#/media/File:M99s_crop.jpg",
+      "license": "CC BY-SA 3.0",
+      "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona",
+      "processedAt": "2026-05-18T12:16:03.741Z"
+    },
+    "m101": {
+      "dir": "famous-curated/m101",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_5457#/media/File:SN2023ixf_in_Messier_101.png",
+      "license": "CC BY-SA 4.0",
+      "author": "Florian Rünger",
+      "processedAt": "2026-05-18T12:53:13.456Z"
     }
   }
 }

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m99",
+  "crop": {
+    "x": 111,
+    "y": 0,
+    "width": 654,
+    "height": 654
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4254#/media/File:M99s_crop.jpg",
+    "license": "CC BY-SA 3.0",
+    "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona"
+  },
+  "processedAt": "2026-05-18T12:16:03.741Z"
+}
