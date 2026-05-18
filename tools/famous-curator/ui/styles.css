@@ -344,6 +344,66 @@ html, body, #root {
   width: 80px;
 }
 
+/* Fixed-position trigger that runs `npm run build-famous` server-side.
+   Sits bottom-right of the viewport so it doesn't compete with any
+   panel scrolling.  Status-flavoured background colours communicate
+   running / ok / failed without taking up extra space for a status
+   line. */
+.curator-build-famous {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  color: var(--c-fg);
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.curator-build-famous:hover:not(:disabled) {
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+.curator-build-famous:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+.curator-build-famous--running {
+  border-color: var(--c-accent);
+}
+.curator-build-famous--ok {
+  border-color: #4caf50;
+  color: #4caf50;
+}
+.curator-build-famous--failed,
+.curator-build-famous--error {
+  border-color: #e57373;
+  color: #e57373;
+}
+
+/* Download-original link, styled as a button to sit alongside Reset crop
+   / Reset rotation.  Inherits the platform button look via the controls
+   strip; only the icon-alignment + text-decoration reset is bespoke. */
+.curator-crop-download {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--c-border);
+  border-radius: 3px;
+  background: var(--c-surface);
+  font-size: 12px;
+}
+.curator-crop-download:hover {
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+
 /* Monospace crop dimensions readout */
 .curator-crop-readout {
   font-family: var(--font-mono);
@@ -457,6 +517,33 @@ html, body, #root {
   left: 0; top: 50%;
   transform: translate(-50%, -50%);
   cursor: ew-resize;
+}
+
+/* Rotation knob: short stem extending above the N edge with a circular
+   grab target at the top.  Rotates with the rect via the parent's transform. */
+.curator-crop-rotate-stem {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 22px;
+  background: var(--c-accent);
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+}
+.curator-crop-handle--rotate {
+  /* Round target above the stem so it's visually distinct from the
+     square edge/corner handles.  Same accent fill for cohesion. */
+  border-radius: 50%;
+  left: 50%;
+  top: 0;
+  /* Stem is 22px tall + half this handle's height (~6px) for a 28px
+     visual offset from the N edge. */
+  transform: translate(-50%, calc(-22px - 50%));
+  cursor: grab;
+}
+.curator-crop-handle--rotate:active {
+  cursor: grabbing;
 }
 
 /* ─────────────────────────────────────────────

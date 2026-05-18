@@ -1,61 +1,100 @@
 /**
  * cropMath — pure helpers for the 1:1-locked crop rectangle.
  *
- * Everything in source-image pixel space.  The React component
- * translates mouse events to pixel deltas via the canvas↔image
- * transform and calls these helpers.
+ * Coordinates are source-image pixels.  The React component handles the
+ * canvas↔image transform.
  *
- * The "stay square" invariant is enforced by every operation:
- *   - Reset: width = height = 0.8 * min(bounds).
- *   - Translate: preserves width/height; clamps x,y.
- *   - Corner resize: snaps to max(|dx|, |dy|) so dragging diagonally
- *     follows the dominant axis; the opposite corner is the anchor.
- *   - Edge resize: drags one edge; the perpendicular axis grows in
- *     sync and is recentred so the rect stays square.
+ * Square invariant: every resize op snaps width === height.
  *
- * All helpers clamp the output to `bounds`.
+ * Bounds: the rect may extend OUTSIDE the image (corners can be negative
+ * or exceed `bounds`).  The only invariant is that the crop's CENTER
+ * stays inside the image, so the user can always grab the rect to drag
+ * it back.  Out-of-image regions land as transparent pixels in the
+ * server-side rotate-then-extract step.
+ *
+ * Rotation: `rotationDeg` rotates the rect around its center.  All
+ * resize/translate helpers operate in the rect's LOCAL frame — the
+ * caller is responsible for rotating screen-space deltas by
+ * `-rotationDeg` (via `rotateDelta`) before passing them in.
  */
 
-export type Crop = { x: number; y: number; width: number; height: number };
+export type Crop = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotationDeg: number;
+};
 export type Bounds = { width: number; height: number };
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
 }
 
+/**
+ * Clamp the crop's center to inside `bounds`, preserving width/height
+ * and rotation.  The rect's corners may end up outside the image.
+ */
+function clampCenter(c: Crop, b: Bounds): Crop {
+  const cx = clamp(c.x + c.width / 2, 0, b.width);
+  const cy = clamp(c.y + c.height / 2, 0, b.height);
+  return {
+    x: cx - c.width / 2,
+    y: cy - c.height / 2,
+    width: c.width,
+    height: c.height,
+    rotationDeg: c.rotationDeg,
+  };
+}
+
+/**
+ * Rotate a 2D delta by `angleDeg` (positive = counter-clockwise in math
+ * convention; for screen-space drags use the negative of the crop's
+ * rotation to go from screen-frame to local-frame).
+ */
+export function rotateDelta(dx: number, dy: number, angleDeg: number): { dx: number; dy: number } {
+  const a = (angleDeg * Math.PI) / 180;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  return { dx: dx * cos - dy * sin, dy: dx * sin + dy * cos };
+}
+
 export function resetCrop(b: Bounds): Crop {
   // Biggest possible square = the shorter axis of the image, centred on
-  // the longer axis.  Maintainers can always shrink the crop afterwards;
-  // having the default *touch* the image edges signals "edit me" more
-  // clearly than starting with arbitrary padding.
+  // the longer axis.  Defaulting to the image edges signals "edit me".
   const size = Math.floor(Math.min(b.width, b.height));
   return {
     x: Math.floor((b.width - size) / 2),
     y: Math.floor((b.height - size) / 2),
     width: size,
     height: size,
+    rotationDeg: 0,
   };
 }
 
 export function translateCrop(c: Crop, dx: number, dy: number, b: Bounds): Crop {
-  return {
-    x: clamp(c.x + dx, 0, b.width - c.width),
-    y: clamp(c.y + dy, 0, b.height - c.height),
-    width: c.width,
-    height: c.height,
-  };
+  return clampCenter(
+    { x: c.x + dx, y: c.y + dy, width: c.width, height: c.height, rotationDeg: c.rotationDeg },
+    b,
+  );
+}
+
+/**
+ * Set the crop's rotation in degrees.  Wrapped into [-180, 180) for a
+ * stable round-trip across drag sessions.
+ */
+export function setRotation(c: Crop, rotationDeg: number): Crop {
+  // Normalise to (-180, 180].  Avoids unbounded growth across repeated drags.
+  const wrapped = ((rotationDeg + 180) % 360 + 360) % 360 - 180;
+  return { ...c, rotationDeg: wrapped };
 }
 
 /**
  * Snap (dx, dy) → a single magnitude that keeps the rect square.
- * The sign comes from `sign` (the direction the side actually moves
+ * The sign comes from the caller (the direction the side actually moves
  * outward in this corner's frame of reference).
  */
 function squareDelta(dx: number, dy: number): number {
-  // Take the dominant (larger) axis so the rect snaps to a square that
-  // keeps up with the faster-moving finger/pointer.  Averaging would
-  // lag behind the dominant axis, making the UX feel sticky.
-  // Magnitude only; sign decided by caller.
   return Math.max(Math.abs(dx), Math.abs(dy));
 }
 
@@ -63,11 +102,8 @@ export function resizeCornerSE(c: Crop, dx: number, dy: number, b: Bounds): Crop
   // Anchor NW = (c.x, c.y).  Side grows when dx > 0 OR dy > 0.
   const sign = dx + dy >= 0 ? 1 : -1;
   const mag = squareDelta(dx, dy);
-  const desired = c.width + sign * mag;
-  // Clamp size by the remaining room from NW anchor to far edges.
-  const maxSize = Math.min(b.width - c.x, b.height - c.y);
-  const size = clamp(desired, 1, maxSize);
-  return { x: c.x, y: c.y, width: size, height: size };
+  const size = Math.max(1, c.width + sign * mag);
+  return clampCenter({ x: c.x, y: c.y, width: size, height: size, rotationDeg: c.rotationDeg }, b);
 }
 
 export function resizeCornerNW(c: Crop, dx: number, dy: number, b: Bounds): Crop {
@@ -76,10 +112,8 @@ export function resizeCornerNW(c: Crop, dx: number, dy: number, b: Bounds): Crop
   const seY = c.y + c.height;
   const sign = dx + dy <= 0 ? 1 : -1;
   const mag = squareDelta(dx, dy);
-  const desired = c.width + sign * mag;
-  const maxSize = Math.min(seX, seY);
-  const size = clamp(desired, 1, maxSize);
-  return { x: seX - size, y: seY - size, width: size, height: size };
+  const size = Math.max(1, c.width + sign * mag);
+  return clampCenter({ x: seX - size, y: seY - size, width: size, height: size, rotationDeg: c.rotationDeg }, b);
 }
 
 export function resizeCornerNE(c: Crop, dx: number, dy: number, b: Bounds): Crop {
@@ -88,10 +122,8 @@ export function resizeCornerNE(c: Crop, dx: number, dy: number, b: Bounds): Crop
   const swY = c.y + c.height;
   const sign = dx - dy >= 0 ? 1 : -1;
   const mag = squareDelta(dx, dy);
-  const desired = c.width + sign * mag;
-  const maxSize = Math.min(b.width - swX, swY);
-  const size = clamp(desired, 1, maxSize);
-  return { x: swX, y: swY - size, width: size, height: size };
+  const size = Math.max(1, c.width + sign * mag);
+  return clampCenter({ x: swX, y: swY - size, width: size, height: size, rotationDeg: c.rotationDeg }, b);
 }
 
 export function resizeCornerSW(c: Crop, dx: number, dy: number, b: Bounds): Crop {
@@ -100,66 +132,58 @@ export function resizeCornerSW(c: Crop, dx: number, dy: number, b: Bounds): Crop
   const neY = c.y;
   const sign = -dx + dy >= 0 ? 1 : -1;
   const mag = squareDelta(dx, dy);
-  const desired = c.width + sign * mag;
-  const maxSize = Math.min(neX, b.height - neY);
-  const size = clamp(desired, 1, maxSize);
-  return { x: neX - size, y: neY, width: size, height: size };
+  const size = Math.max(1, c.width + sign * mag);
+  return clampCenter({ x: neX - size, y: neY, width: size, height: size, rotationDeg: c.rotationDeg }, b);
 }
 
 /**
  * Edge resize: the dragged edge moves by the delta; the perpendicular
  * axis grows by the same amount but is recentred (split half above /
  * half below the original mid-axis) so the rect stays square.
- *
- * Helper that takes (newSize, anchorX, anchorY of the edge that DID NOT
- * move) and recentres the perpendicular axis on the original midpoint.
  */
 function edgeResult(
   newSize: number,
   fixedEdgeAxis: 'x' | 'y',
   fixedEdgeStart: number,
   originalMidPerp: number,
+  rotationDeg: number,
   b: Bounds,
 ): Crop {
-  const size = clamp(newSize, 1, fixedEdgeAxis === 'x' ? b.width : b.height);
+  const size = Math.max(1, newSize);
   if (fixedEdgeAxis === 'x') {
-    // Fixed edge is at x = fixedEdgeStart; width grows along x; height
-    // also = size, recentred on originalMidPerp (the original mid-Y).
-    const x = clamp(fixedEdgeStart, 0, b.width - size);
-    const y = clamp(originalMidPerp - size / 2, 0, b.height - size);
-    return { x, y, width: size, height: size };
+    const x = fixedEdgeStart;
+    const y = originalMidPerp - size / 2;
+    return clampCenter({ x, y, width: size, height: size, rotationDeg }, b);
   }
-  const y = clamp(fixedEdgeStart, 0, b.height - size);
-  const x = clamp(originalMidPerp - size / 2, 0, b.width - size);
-  return { x, y, width: size, height: size };
+  const y = fixedEdgeStart;
+  const x = originalMidPerp - size / 2;
+  return clampCenter({ x, y, width: size, height: size, rotationDeg }, b);
 }
 
 export function resizeEdgeE(c: Crop, dx: number, b: Bounds): Crop {
   const newSize = c.width + dx;
-  const fixedEdgeX = c.x; // W edge stays put
+  const fixedEdgeX = c.x;
   const midY = c.y + c.height / 2;
-  return edgeResult(newSize, 'x', fixedEdgeX, midY, b);
+  return edgeResult(newSize, 'x', fixedEdgeX, midY, c.rotationDeg, b);
 }
 
 export function resizeEdgeW(c: Crop, dx: number, b: Bounds): Crop {
-  // dx < 0 widens.  W edge moves; E edge stays put.
   const newSize = c.width - dx;
-  const fixedEdgeX = (c.x + c.width) - clamp(newSize, 1, b.width);
+  const fixedEdgeX = c.x + c.width - Math.max(1, newSize);
   const midY = c.y + c.height / 2;
-  return edgeResult(newSize, 'x', fixedEdgeX, midY, b);
+  return edgeResult(newSize, 'x', fixedEdgeX, midY, c.rotationDeg, b);
 }
 
 export function resizeEdgeN(c: Crop, dy: number, b: Bounds): Crop {
-  // dy < 0 widens.  N edge moves; S edge stays put.
   const newSize = c.height - dy;
-  const fixedEdgeY = (c.y + c.height) - clamp(newSize, 1, b.height);
+  const fixedEdgeY = c.y + c.height - Math.max(1, newSize);
   const midX = c.x + c.width / 2;
-  return edgeResult(newSize, 'y', fixedEdgeY, midX, b);
+  return edgeResult(newSize, 'y', fixedEdgeY, midX, c.rotationDeg, b);
 }
 
 export function resizeEdgeS(c: Crop, dy: number, b: Bounds): Crop {
   const newSize = c.height + dy;
   const fixedEdgeY = c.y;
   const midX = c.x + c.width / 2;
-  return edgeResult(newSize, 'y', fixedEdgeY, midX, b);
+  return edgeResult(newSize, 'y', fixedEdgeY, midX, c.rotationDeg, b);
 }

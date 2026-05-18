@@ -41,7 +41,7 @@
       "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4565#/media/File:NGC_4565.png",
       "license": "CC BY-SA 4.0",
       "author": "Shark13016",
-      "processedAt": "2026-05-18T10:12:23.532Z"
+      "processedAt": "2026-05-18T22:28:11.862Z"
     },
     "c40": {
       "dir": "famous-curated/c40",
@@ -118,7 +118,7 @@
       "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3351#/media/File:The_VLT_goes_lion_hunting.jpg",
       "license": "CC BY 3.0",
       "author": "ESO",
-      "processedAt": "2026-05-18T10:29:10.095Z"
+      "processedAt": "2026-05-18T22:30:00.716Z"
     },
     "c12": {
       "dir": "famous-curated/c12",
@@ -237,7 +237,7 @@
       "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4579#/media/File:M58s_(visible).jpg",
       "license": "CC BY-SA 3.0 us",
       "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona",
-      "processedAt": "2026-05-18T11:26:40.374Z"
+      "processedAt": "2026-05-18T22:29:09.746Z"
     },
     "m59": {
       "dir": "famous-curated/m59",
@@ -287,6 +287,27 @@
       "license": "CC BY-SA 4.0",
       "author": "Florian Rünger",
       "processedAt": "2026-05-18T12:53:13.456Z"
+    },
+    "m31": {
+      "dir": "famous-curated/m31",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_224#/media/File:Andromeda_Galaxy_2025.png",
+      "license": "CC0",
+      "author": "Brody Wesner",
+      "processedAt": "2026-05-18T23:13:00.005Z"
+    },
+    "c3": {
+      "dir": "famous-curated/c3",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4236#/media/File:NGC_4236_by_Matt_Smith.jpg",
+      "license": "CC BY 4.0",
+      "author": "Mattrsmith77",
+      "processedAt": "2026-05-18T22:59:37.616Z"
+    },
+    "c48": {
+      "dir": "famous-curated/c48",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_2775#/media/File:N2775ss.jpg",
+      "license": "CC BY-SA 3.0 us",
+      "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona",
+      "processedAt": "2026-05-18T23:00:56.258Z"
     }
   }
 }

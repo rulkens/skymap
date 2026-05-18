@@ -2,10 +2,11 @@
   "version": 1,
   "id": "m58",
   "crop": {
-    "x": 110.56297302246094,
-    "y": 80.56297302246094,
+    "x": 140.6670900710443,
+    "y": 106.9921949238078,
     "width": 722.9364776611328,
-    "height": 722.9364776611328
+    "height": 722.9364776611328,
+    "rotationDeg": 27.86133309463844
   },
   "starnet": {
     "stride": 256,
@@ -21,5 +22,5 @@
     "license": "CC BY-SA 3.0 us",
     "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona"
   },
-  "processedAt": "2026-05-18T11:26:40.374Z"
+  "processedAt": "2026-05-18T22:29:09.746Z"
 }

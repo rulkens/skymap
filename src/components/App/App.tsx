@@ -246,11 +246,14 @@ export function App(): React.ReactElement {
       // POI focus echo — engine fires this on POI-ring click / palette
       // pick / deep-link drain.  Mirrors into `focusedPoiId` so
       // `usePoiUrlSync` can keep `#poi=<id>` in lock-step with the
-      // selection.  Settings callbacks don't define `camera.*`, so
-      // there's no conflict with the spread above.  `setFocusedPoiId`
-      // is a stable React setter so useEngine's "capture once" contract
-      // holds.
+      // selection.  Merge with `settingsCallbacks.camera` so the
+      // settings-hook's `onAutoRotateChange` echo survives — a bare
+      // `camera: { ... }` here would overwrite the whole sub-bag and
+      // silently drop sibling echoes from the spread above.
+      // `setFocusedPoiId` is a stable React setter so useEngine's
+      // "capture once" contract holds.
       camera: {
+        ...settingsCallbacks.camera,
         onPoiFocusChange: setFocusedPoiId,
       },
       // POI hover echo — engine fires this on cursor enter/leave for
@@ -836,7 +839,7 @@ export function App(): React.ReactElement {
           essentially free.
         */}
           <StatsPanel
-            defaultOpen={initialPanelsOpen}
+            defaultOpen={false}
             fps={fps}
             sourceCounts={sourceCounts}
             visibleSourceMask={visibleSourceMask}

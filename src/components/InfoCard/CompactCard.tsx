@@ -1,13 +1,7 @@
 /**
- * CompactCard — a slimmer info card shown below the pinned FullCard when the
- * user hovers over a second point while a selection is active.
- *
- * Contains only: SDSS name, lookback / era, galaxy type, and distance.
- * No thumbnail, no expandable section, no external link — visual weight is
- * deliberately lower than the FullCard above it.
- *
- * All layout comes from CompactCard.module.css; the class names map
- * directly to the former global CSS classes in index.html.
+ * CompactCard — slim hover-preview for a galaxy, rendered below the pinned
+ * GalaxyDetailCard when a second galaxy is hovered.  No thumbnail, no
+ * expandable section, no actions.
  */
 
 import type { ReactNode } from 'react';
@@ -15,23 +9,10 @@ import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import { formatDistance } from '../../utils/format/distance';
 import styles from './CompactCard.module.css';
 
-// ── Props ──────────────────────────────────────────────────────────────────────
-
-/** Props for CompactCard. */
 export type CompactCardProps = {
   info: GalaxyInfo;
 };
 
-// ── CompactCard ────────────────────────────────────────────────────────────────
-
-/**
- * The slim hover-preview card rendered below the pinned FullCard when both
- * a selected and a hovered point are active simultaneously.
- *
- * @example
- * // Inside InfoCard (when hovered ≠ selected):
- * <CompactCard info={hovered} />
- */
 export function CompactCard({ info }: CompactCardProps): ReactNode {
   return (
     <div className={styles.infoCardCompact} role="status" aria-live="polite">
@@ -39,11 +20,6 @@ export function CompactCard({ info }: CompactCardProps): ReactNode {
         <span>Hover</span>
       </div>
       <div className={styles.cardHeadline}>{info.displayName}</div>
-      {/*
-        Smaller variant of the FullCard source badge so the user knows where
-        the hovered row's data came from without taking up much room in the
-        already-compact preview.
-      */}
       <div className={styles.sourceBadge}>{info.sourceLabel}</div>
       <div className={styles.cardLookbackLine}>
         Light left {info.lookbackGyr.toFixed(1)} Gyr ago

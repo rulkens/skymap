@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "c3",
+  "crop": {
+    "x": 524.407958984375,
+    "y": 19.795166015625,
+    "width": 2455,
+    "height": 2455,
+    "rotationDeg": -73.14557101693174
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4236#/media/File:NGC_4236_by_Matt_Smith.jpg",
+    "license": "CC BY 4.0",
+    "author": "Mattrsmith77"
+  },
+  "processedAt": "2026-05-18T22:59:37.616Z"
+}

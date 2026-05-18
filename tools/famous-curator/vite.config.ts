@@ -16,6 +16,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
 import { apiPlugin } from './plugin/apiPlugin';
+import { restartOnPluginChange } from './plugin/restartOnPluginChange';
 
 export default defineConfig({
   root: resolve(__dirname, 'ui'),
@@ -24,5 +25,7 @@ export default defineConfig({
   // want the runtime atlas + bins served from the curator).
   publicDir: false,
   server: { port: 5200 },
-  plugins: [react(), apiPlugin()],
+  // restartOnPluginChange must come BEFORE apiPlugin so it has a chance
+  // to register its watcher before any apiPlugin file is imported.
+  plugins: [restartOnPluginChange(), react(), apiPlugin()],
 });
