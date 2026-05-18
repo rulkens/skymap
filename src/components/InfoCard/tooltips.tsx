@@ -1,26 +1,6 @@
 /**
- * tooltips.tsx — glossary content for InfoCard rows.
- *
- * Each entry is `{ title, body }` paired to an InfoTip.  Bodies are
- * JSX (not just strings) so we can use line breaks, italics, and
- * `<code>` for unit symbols without escaping into HTML strings at the
- * call site.
- *
- * The glossary is intentionally co-located with InfoCard rather than
- * promoted to `src/data/`.  Two reasons:
- *
- *   - The wording is tuned for the InfoCard's surface: terse, written
- *     in the second person, assuming the reader is *looking at* the
- *     value the tip explains.  Lifting it into a generic glossary
- *     would require rewriting most entries to be context-free.
- *   - Tooltip copy churns more often than the values themselves.
- *     Keeping it next to the rendering site means PRs that reword a
- *     tip touch one file, not two.
- *
- * If a future component (e.g. SettingsPanel) ends up wanting the same
- * definitions, lift the affected entries into a shared module at
- * that point — premature centralisation here would just create a
- * dependency edge between unrelated UI areas.
+ * tooltips.tsx — glossary content for InfoCard's InfoTip icons.
+ * Bodies are JSX so they can carry line breaks, italics, and `<code>`.
  */
 
 import type { ReactNode } from 'react';
