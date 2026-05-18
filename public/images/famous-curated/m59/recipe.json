@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "m59",
+  "crop": {
+    "x": 381,
+    "y": 0,
+    "width": 3000,
+    "height": 3000
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4621#/media/File:Messier59_-_HST_-_Potw1921a.jpg",
+    "license": "CC BY 4.0",
+    "author": "Credit: ESA/Hubble &amp; NASA, L. Ho et al."
+  },
+  "processedAt": "2026-05-18T11:27:04.241Z"
+}

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c12",
+  "crop": {
+    "x": 0,
+    "y": 0,
+    "width": 1080,
+    "height": 1080
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_6946#/media/File:Fireworks_Galaxy.jpg",
+    "license": "CC0",
+    "author": "Andreigusan"
+  },
+  "processedAt": "2026-05-18T10:51:57.784Z"
+}
