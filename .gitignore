@@ -118,6 +118,14 @@ pnpm-debug.log*
 data/raw/2mass_xsc_pa.csv
 data/raw/hyperleda_pa.csv
 
+# StarNet++ model weights used by the famous-galaxy curator (tools/famous-
+# curator).  Hundreds of MB of binary weights, license-restricted by
+# upstream — too large and too restricted for git.  Curator users install
+# them locally and point STARNET_WEIGHTS at the directory.  Already
+# covered by `/data/` above; listed explicitly so future readers don't
+# accidentally check them in.
+data/starnet/
+
 # ── Claude Code per-developer state ───────────────────────────────────────────
 # `settings.local.json` accumulates this developer's locally-granted tool
 # permissions; the shared `settings.json` (when it exists) stays tracked.

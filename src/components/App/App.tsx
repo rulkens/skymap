@@ -839,7 +839,7 @@ export function App(): React.ReactElement {
           essentially free.
         */}
           <StatsPanel
-            defaultOpen={initialPanelsOpen}
+            defaultOpen={false}
             fps={fps}
             sourceCounts={sourceCounts}
             visibleSourceMask={visibleSourceMask}
