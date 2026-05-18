@@ -171,38 +171,15 @@ export function usePoiUrlSync(input: UsePoiUrlSyncInput): PoiSyncReturn {
   // up.  Clearing only on a successful resolve preserves the
   // "deep-link arrival waits as long as it takes" contract.
   useEffect(() => {
-    // TEMP DEBUG (Plan 3 deep-link diagnosis) — surface which guard the
-    // drain is bailing on so we can fix the step-5 smoke-test failure.
-    // Remove once the deep-link path is verified working.
-    // eslint-disable-next-line no-console
-    console.log('[poiDrain]', {
-      pendingPoiId,
-      ready,
-      poisCount: pois.length,
-      handle: engineHandleRef.current ? 'set' : 'null',
-    });
     if (!pendingPoiId) return;
     if (!ready) return;
     if (pois.length === 0) return;
     const handle = engineHandleRef.current;
-    if (!handle) {
-      // eslint-disable-next-line no-console
-      console.log('[poiDrain] bail: handle null at ready transition');
-      return;
-    }
+    if (!handle) return;
 
     const poi = pois.find((p) => p.id === pendingPoiId);
-    if (!poi) {
-      // eslint-disable-next-line no-console
-      console.log('[poiDrain] bail: id not in pois table', {
-        pendingPoiId,
-        availableIds: pois.map((p) => p.id),
-      });
-      return;
-    }
+    if (!poi) return;
 
-    // eslint-disable-next-line no-console
-    console.log('[poiDrain] firing focusOnPoi', poi);
     handle.camera.focusOnPoi(poi);
     setPendingPoiId(null);
   }, [pendingPoiId, ready, pois, engineHandleRef]);
