@@ -72,7 +72,7 @@ import type { ClickResolver } from '../../../@types/engine/ClickResolver';
 import type { CreateClickResolverInput } from '../../../@types/engine/CreateClickResolverInput';
 
 export function createClickResolver(input: CreateClickResolverInput): ClickResolver {
-  const { pickRenderer, resolveSelection, buildGalaxyInfo } = input;
+  const { pickRenderer, resolveSelection, buildGalaxyInfo, resolvePoi } = input;
 
   // Built as a `const` (rather than returned inline) so we can attach
   // the `satisfies Destroyable` latch — the click resolver is one of
@@ -95,15 +95,32 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
         args.timingDescriptor,
       );
       if (result === null) return { kind: 'clear' };
-      // Try to build a GalaxyInfo, but treat failure as "still select
-      // the (source, localIdx)" for parity with the pre-extraction
+
+      // POI variants from the discriminated `PickResult` (plan 1):
+      // a cluster / supercluster / void ring claimed the pixel.  We
+      // hand the (category, poiIndex) pair to `resolvePoi` to recover
+      // the matching record — if the caller didn't pass a resolver,
+      // or the resolver returns null (e.g. an unallocated index from
+      // an old shader frame), fall through to `'clear'` so the
+      // InfoCard never displays a phantom POI card.
+      if (result.kind === 'cluster' || result.kind === 'supercluster' || result.kind === 'void') {
+        if (!resolvePoi) return { kind: 'clear' };
+        const poi = resolvePoi({ category: result.kind, poiIndex: result.poiIndex });
+        if (!poi) return { kind: 'clear' };
+        return { kind: 'poi', poi };
+      }
+
+      // Galaxy variant — the only remaining `kind` after the POI cases
+      // above.  Try to build a GalaxyInfo, but treat failure as "still
+      // select the (source, localIdx)" for parity with the pre-extraction
       // engine — the old code did `setSelected(idx)` regardless of
       // whether `galaxyInfoFromGlobal` would later resolve null.
-      const resolved = resolveSelection(result);
+      const selection = { source: result.source, localIdx: result.localIdx };
+      const resolved = resolveSelection(selection);
       const info = resolved
         ? buildGalaxyInfo(resolved.cloud, resolved.localIdx, resolved.source)
         : null;
-      return { kind: 'select', selection: result, info };
+      return { kind: 'select', selection, info };
     },
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.

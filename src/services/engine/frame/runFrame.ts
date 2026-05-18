@@ -437,7 +437,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         // resolved by the next main-frame `endFrame`.
         state.gpu.timingService.descriptorFor('pick'),
       )
-      .then((sel) => {
+      .then((pick) => {
+        // Post-Plan-3 the picker returns the full discriminated
+        // `PickResult` union (galaxy | cluster | supercluster | void).
+        // Hover currently only updates the galaxy InfoCard — POI ring
+        // hovers don't feed any UI today, so we collapse POI variants
+        // to `null` here and forward only galaxy hits to setHovered.
+        // (A future "POI hover preview" feature would branch here on
+        // `pick.kind` and call a setHoveredPoi sibling.)
+        const sel =
+          pick !== null && pick.kind === 'galaxy'
+            ? { source: pick.source, localIdx: pick.localIdx }
+            : null;
         state.subsystems.selection.setHovered(sel);
         // No scheduler.requestRender() here intentionally.
         // The hover state only feeds the React InfoCard text —

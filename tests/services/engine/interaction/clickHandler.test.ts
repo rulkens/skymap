@@ -24,12 +24,19 @@ import { Source } from '../../../../src/data/sources';
 import type { GalaxyInfo } from '../../../../src/@types/engine/GalaxyInfo';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { createPickRenderer } from '../../../../src/services/gpu/renderers/pickRenderer';
+import type { PickResult } from '../../../../src/data/selectionEncoding';
 
 type PickRenderer = ReturnType<typeof createPickRenderer>;
 
+// `pickRenderer.pick` now returns the full discriminated `PickResult`
+// union (galaxy | cluster | supercluster | void) post-Plan-3 Task 10.
+// Helper accepts a galaxy-shaped selection for ergonomic test setup
+// and wraps it into the canonical `{ kind: 'galaxy', ... }` shape.
 function makePicker(result: { source: Source; localIdx: number } | null): PickRenderer {
+  const wrapped: PickResult | null =
+    result === null ? null : { kind: 'galaxy', source: result.source, localIdx: result.localIdx };
   return {
-    pick: vi.fn(async () => result),
+    pick: vi.fn(async () => wrapped),
     destroy: vi.fn(),
   } as unknown as PickRenderer;
 }

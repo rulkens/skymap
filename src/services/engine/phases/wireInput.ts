@@ -343,16 +343,31 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       const pick = runPickAtCss(xCss, yCss);
       if (!pick) return;
       pick.then((result) => {
-        // Click on empty space → clear; click on point → pin it.
-        // The GalaxyInfo on `result` is also cached for the
+        // Click on empty space → clear; click on galaxy → pin it;
+        // click on POI ring → drop galaxy selection, leave POI focus
+        // wiring for Task 11 (commitPoiFocus dispatch).  The
+        // `GalaxyInfo` on a 'select' result is also cached for the
         // dblclick handler — see `lastClickedInfo` above for the
         // race-condition rationale.
-        if (result.kind === 'clear') {
-          state.subsystems.selection.setSelected(null);
-          lastClickedInfo = null;
-        } else {
-          state.subsystems.selection.setSelected(result.selection);
-          lastClickedInfo = result.info;
+        switch (result.kind) {
+          case 'clear':
+            state.subsystems.selection.setSelected(null);
+            lastClickedInfo = null;
+            break;
+          case 'select':
+            state.subsystems.selection.setSelected(result.selection);
+            lastClickedInfo = result.info;
+            break;
+          case 'poi':
+            // Plan-3 Task 11 will dispatch this to commitPoiFocus.
+            // For now, just clear any galaxy selection so the
+            // InfoCard doesn't keep showing a stale pinned galaxy
+            // when the user clicked a ring.  lastClickedInfo is
+            // cleared too — the dblclick handler must NOT focus a
+            // galaxy the user didn't actually click.
+            state.subsystems.selection.setSelected(null);
+            lastClickedInfo = null;
+            break;
         }
         // Selection changed — render so the highlight halo
         // updates on the next frame.

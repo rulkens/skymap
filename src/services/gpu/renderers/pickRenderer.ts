@@ -60,7 +60,6 @@
 // layout trap noted in pointRenderer.ts).
 import vsCode from '../shaders/points/vertex.wesl?static';
 import pickFsCode from '../shaders/points/pickFragment.wesl?static';
-import type { Source } from '../../../data/sources';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PickSourceDraw } from '../../../@types/rendering/PickSourceDraw';
 import type { PickRenderer } from '../../../@types/rendering/PickRenderer';
@@ -72,14 +71,15 @@ import { POINT_STRIDE, POINT_VERTEX_ATTRIBUTES } from './pointRenderer';
 import { createShaderModuleWithDevLog } from '../shaderCompileLogger';
 import {
   SELECTION_NONE_SENTINEL,
-  // Interim shim while the foundations sub-plan lands the
-  // discriminated-union `PickResult` ahead of the plan-3 consumer
-  // migration. The pickRenderer here only knows how to surface
-  // survey-galaxy hits to the caller's `{source, localIdx}` contract;
-  // plan 3 swaps this for a real switch on `result.kind`.
-  unpackPickGalaxyOnly,
+  // Plan-3 Task 10 swap: the pickRenderer now surfaces the FULL
+  // discriminated `PickResult` union (galaxy | cluster | supercluster |
+  // void) to its caller so the click resolver can switch on `result.kind`
+  // and route POI hits through `resolvePoi`.  The `unpackPickGalaxyOnly`
+  // shim still exists in `selectionEncoding.ts` (any straggler caller
+  // can adopt it), but this renderer no longer uses it.
   unpackPick,
 } from '../../../data/selectionEncoding';
+import type { PickResult } from '../../../data/selectionEncoding';
 
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
@@ -402,7 +402,7 @@ export function createPickRenderer(
     sources: Iterable<PickSourceDraw>,
     pointSizePx?: number,
     timingDescriptor?: GPURenderPassTimestampWrites,
-  ): Promise<{ source: Source; localIdx: number } | null> {
+  ): Promise<PickResult | null> {
     // Resolve the shared uniform buffer from the bound PointRenderer at
     // call time rather than at construction.  Reading it lazily means we
     // pick up any future buffer recreation (e.g. device-loss recovery
@@ -655,28 +655,13 @@ export function createPickRenderer(
       stagingBuffer.unmap();
 
       // Decode the (sourceCode << 27 | localIdx + 1) pick value via the
-      // shared `selectionEncoding.unpackPick` helper.  We call the
-      // `unpackPickGalaxyOnly` shim rather than `unpackPick` itself
-      // during the multi-plan cluster-viz migration: `unpackPick` now
-      // returns a discriminated union (galaxy | cluster | supercluster |
-      // void), but this consumer only knows the galaxy shape today.
-      // Cluster/supercluster/void POI hits round-trip to `null` here —
-      // a click on a cluster ring currently no-ops at this call site
-      // and the future pick-dispatch sub-plan will swap the shim for a
-      // real `switch (result.kind)` that routes POI hits to the focus
-      // subsystem.  See `selectionEncoding.ts` for the encoding details.
-      // TEMP DEBUG (Plan 3 checkpoint) — log every non-zero pick so the
-      // user can verify POI ring clicks land in the texture before
-      // tasks 10-14 wire them through to the click handler / InfoCard.
-      // Remove this block once Task 10 lands (PickResult routing).
-      if (raw !== 0) {
-        const result = unpackPick(raw);
-        // eslint-disable-next-line no-console
-        console.log('[pick]', result?.kind ?? 'null', { raw: raw.toString(16), result });
-      }
-      const decoded = unpackPickGalaxyOnly(raw);
-      if (decoded === null) return null;
-      return { source: decoded.source as Source, localIdx: decoded.localIdx };
+      // shared `selectionEncoding.unpackPick` helper.  Returns the full
+      // discriminated `PickResult` union — galaxy hits carry `source +
+      // localIdx`, POI ring hits (cluster / supercluster / void) carry
+      // `poiIndex`.  Caller (`clickHandler.createClickResolver`) switches
+      // on `result.kind` to route each variant.  See `selectionEncoding.ts`
+      // for the encoding details and the per-category source-code allocation.
+      return unpackPick(raw);
     } finally {
       // Always clear inFlight, even if an exception is thrown.
       inFlight = false;
