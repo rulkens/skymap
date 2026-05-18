@@ -88,6 +88,17 @@ export type EngineCallbacks = {
     onSelectChange: (info: GalaxyInfo | null) => void;
     /** Fired when the point under the cursor changes (null = empty sky). */
     onHoverChange: (info: GalaxyInfo | null) => void;
+    /**
+     * Fired when the POI under the cursor changes — cluster /
+     * supercluster / void ring entered or left.  Passes the POI id on
+     * enter, `null` when the cursor leaves the ring (or moves to empty
+     * sky, or to a galaxy).  Parallel to `onHoverChange` (galaxy);
+     * the two never both fire non-null on the same pick — a single
+     * pick resolves to galaxy OR POI, not both.  See runFrame.ts's
+     * hover-throttler dispatch.  Optional; the InfoCard hover preview
+     * is the only subscriber today.
+     */
+    onPoiHoverChange?: (poiId: string | null) => void;
   };
 
   /**
