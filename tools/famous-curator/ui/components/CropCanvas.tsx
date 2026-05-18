@@ -78,11 +78,14 @@ export function CropCanvas(props: CropCanvasProps) {
         'img.curator-crop-source',
       ) as HTMLImageElement | null;
       if (!img) return;
-      // canvasScale = on-screen-px-per-source-px.
-      // The <img> renders at its CSS box size; the source dimensions are the
-      // true source size (e.g. 4000×4000).  Divide drag delta by this ratio
-      // to convert from screen px to source px.
-      const canvasScale = img.clientWidth / props.source.width;
+      // canvasScale = on-screen-px-per-source-px.  Use getBoundingClientRect
+      // (not clientWidth) so the value reflects the parent stage's CSS
+      // `transform: scale(zoom)` as well as any browser page-zoom — both
+      // contribute to how far the cursor travels per source pixel.
+      // clientWidth ignores CSS transforms and is also interpreted
+      // inconsistently across browsers (e.g. Brave with fingerprint
+      // protection), which previously made drags run at 2× speed there.
+      const canvasScale = img.getBoundingClientRect().width / props.source.width;
       dragRef.current = {
         handle,
         startX: e.clientX,
@@ -198,46 +201,47 @@ export function CropCanvas(props: CropCanvasProps) {
         </span>
       </div>
 
-      {/* The zoom stage: CSS scale keeps source coords and overlay
-          percentages consistent — only the viewport size changes. */}
-      <div
-        className="curator-crop-stage"
-        style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
-      >
-        <img className="curator-crop-source" src={props.source.previewUrl} alt="source" />
-
-        {/* Crop overlay: positioned in percent so it tracks the image
-            regardless of the stage scale.  The inner handles are rendered
-            as inline <span>s so they don't affect flow layout. */}
+      {/* Stage centres the frame; frame shrink-wraps the image so the
+          absolutely-positioned crop rect's containing block IS the image.
+          Without that, percentage-positioned rects drift off the image
+          whenever the stage's aspect ratio differs from the image's. */}
+      <div className="curator-crop-stage">
         <div
-          className="curator-crop-rect"
-          style={{
-            position: 'absolute',
-            left: `${cropPctX}%`,
-            top: `${cropPctY}%`,
-            width: `${cropPctW}%`,
-            height: `${cropPctH}%`,
-          }}
-          onPointerDown={startDrag('body')}
-          onPointerMove={moveDrag}
-          onPointerUp={endDrag}
+          className="curator-crop-frame"
+          style={{ transform: `scale(${zoom})` }}
         >
-          {/* 8 resize handles: corners (nw/ne/se/sw) + edge midpoints (n/e/s/w).
-              Each captures pointer events independently via startDrag(handle).
-              stopPropagation prevents the body drag from firing simultaneously. */}
-          {(['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const).map((h) => (
-            <span
-              key={h}
-              className={`curator-crop-handle curator-crop-handle--${h}`}
-              data-handle={h}
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                startDrag(h)(e as PointerEvent<HTMLElement>);
-              }}
-              onPointerMove={moveDrag as (e: React.PointerEvent<HTMLSpanElement>) => void}
-              onPointerUp={endDrag as (e: React.PointerEvent<HTMLSpanElement>) => void}
-            />
-          ))}
+          <img className="curator-crop-source" src={props.source.previewUrl} alt="source" />
+
+          {/* Crop overlay: percentages of the frame === percentages of the
+              image, so a square crop in source-px renders as a square
+              overlay and matches exactly what /api/process extracts. */}
+          <div
+            className="curator-crop-rect"
+            style={{
+              position: 'absolute',
+              left: `${cropPctX}%`,
+              top: `${cropPctY}%`,
+              width: `${cropPctW}%`,
+              height: `${cropPctH}%`,
+            }}
+            onPointerDown={startDrag('body')}
+            onPointerMove={moveDrag}
+            onPointerUp={endDrag}
+          >
+            {(['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'] as const).map((h) => (
+              <span
+                key={h}
+                className={`curator-crop-handle curator-crop-handle--${h}`}
+                data-handle={h}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  startDrag(h)(e as PointerEvent<HTMLElement>);
+                }}
+                onPointerMove={moveDrag as (e: React.PointerEvent<HTMLSpanElement>) => void}
+                onPointerUp={endDrag as (e: React.PointerEvent<HTMLSpanElement>) => void}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>

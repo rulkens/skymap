@@ -112,8 +112,12 @@ export async function handleProcess(opts: {
     .toBuffer();
   writeFileSync(resolve(dir, 'alpha.webp'), alphaPreview);
 
+  // ?v=<ms> cache-busts the previews — re-Processing rewrites the same
+  // URL with different bytes, and the browser would otherwise serve the
+  // stale image from cache.
+  const v = Date.now();
   return {
-    starlessPreviewUrl: `/api/preview/${body.tmpId}/starless.webp`,
-    alphaPreviewUrl: `/api/preview/${body.tmpId}/alpha.webp`,
+    starlessPreviewUrl: `/api/preview/${body.tmpId}/starless.webp?v=${v}`,
+    alphaPreviewUrl: `/api/preview/${body.tmpId}/alpha.webp?v=${v}`,
   };
 }

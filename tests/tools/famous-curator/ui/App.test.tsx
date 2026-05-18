@@ -55,7 +55,9 @@ describe('App', () => {
     await waitFor(() => expect(api.postFetchUrl).toHaveBeenCalledWith('https://e.com/img.jpg'));
 
     // 3. Wait for crop to initialise + click Process.
-    await waitFor(() => expect(screen.getByText(/640 × 640 of 1000 × 800/)).toBeInTheDocument());
+    // resetCrop returns min(w, h) — for 1000×800 that's an 800² square
+    // centred at x=(1000-800)/2=100, y=0.
+    await waitFor(() => expect(screen.getByText(/800 × 800 of 1000 × 800/)).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /^process$/i }));
     await waitFor(() => expect(api.postProcess).toHaveBeenCalled());
 

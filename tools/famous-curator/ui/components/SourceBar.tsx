@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 export type SourceBarProps = {
   disabled?: boolean;
+  busy?: boolean;
   onFetch: (url: string) => void;
 };
 
@@ -23,7 +24,13 @@ export function SourceBar(props: SourceBarProps) {
           disabled={props.disabled}
         />
       </label>
-      <button onClick={() => props.onFetch(url)} disabled={props.disabled || url.length === 0}>Fetch</button>
+      <button
+        onClick={() => props.onFetch(url)}
+        disabled={props.disabled || props.busy || url.length === 0}
+      >
+        {props.busy ? <span className="curator-spinner" aria-hidden="true" /> : null}
+        Fetch
+      </button>
     </div>
   );
 }

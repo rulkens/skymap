@@ -58,7 +58,8 @@ describe('state reducer', () => {
 
   it('setSource initialises crop via resetCrop and marks crop dirty', () => {
     const s = reducer(initialState, { type: 'setSource', tmpId: 't', width: 1000, height: 800, previewUrl: '/p' });
-    expect(s.crop?.width).toBe(640);
+    // resetCrop returns the largest centred square = min(width, height).
+    expect(s.crop?.width).toBe(800);
     expect(s.dirty.crop).toBe(true);
   });
 

@@ -24,7 +24,11 @@ function clamp(v: number, lo: number, hi: number): number {
 }
 
 export function resetCrop(b: Bounds): Crop {
-  const size = Math.floor(Math.min(b.width, b.height) * 0.8);
+  // Biggest possible square = the shorter axis of the image, centred on
+  // the longer axis.  Maintainers can always shrink the crop afterwards;
+  // having the default *touch* the image edges signals "edit me" more
+  // clearly than starting with arbitrary padding.
+  const size = Math.floor(Math.min(b.width, b.height));
   return {
     x: Math.floor((b.width - size) / 2),
     y: Math.floor((b.height - size) / 2),

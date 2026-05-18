@@ -25,33 +25,34 @@ export function MetadataForm(props: MetadataFormProps) {
   // particular onChange didn't touch — avoids losing sourceUrl when the
   // user edits author, for example.
   const set = (patch: Partial<MetadataParams>) => props.onChange({ ...props.metadata, ...patch });
+  // Labels are collapsed into placeholders to make the Attribution
+  // block compact (it lives below the crop canvas where vertical
+  // room is at a premium).  aria-label keeps the accessible name
+  // present for screen readers without rendering a visible <label>.
   return (
     <fieldset className="curator-metadata-form">
       <legend>Attribution</legend>
-      <label>
-        source url
-        <input
-          type="url"
-          value={props.metadata.sourceUrl}
-          onChange={(e) => set({ sourceUrl: e.target.value })}
-        />
-      </label>
-      <label>
-        license
-        <input
-          type="text"
-          value={props.metadata.license}
-          onChange={(e) => set({ license: e.target.value })}
-        />
-      </label>
-      <label>
-        author
-        <input
-          type="text"
-          value={props.metadata.author}
-          onChange={(e) => set({ author: e.target.value })}
-        />
-      </label>
+      <input
+        type="url"
+        placeholder="source url"
+        aria-label="source url"
+        value={props.metadata.sourceUrl}
+        onChange={(e) => set({ sourceUrl: e.target.value })}
+      />
+      <input
+        type="text"
+        placeholder="license"
+        aria-label="license"
+        value={props.metadata.license}
+        onChange={(e) => set({ license: e.target.value })}
+      />
+      <input
+        type="text"
+        placeholder="author"
+        aria-label="author"
+        value={props.metadata.author}
+        onChange={(e) => set({ author: e.target.value })}
+      />
     </fieldset>
   );
 }

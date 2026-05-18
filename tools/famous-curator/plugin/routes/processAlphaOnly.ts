@@ -70,5 +70,9 @@ export async function handleProcessAlphaOnly(opts: {
     .toBuffer();
   writeFileSync(resolve(dir, 'alpha.webp'), alphaPreview);
 
-  return { alphaPreviewUrl: `/api/preview/${body.tmpId}/alpha.webp` };
+  // ?v=<ms> is a defence-in-depth cache-buster — the preview route
+  // already sends `Cache-Control: no-store`, but adding a unique query
+  // string guarantees a re-fetch even through aggressive intermediate
+  // caches or service workers a future setup might introduce.
+  return { alphaPreviewUrl: `/api/preview/${body.tmpId}/alpha.webp?v=${Date.now()}` };
 }

@@ -45,6 +45,8 @@ export type ParamSlidersProps = {
   dirty: DirtyFlags;
   processedOnce: boolean;
   canExport: boolean;
+  processBusy?: boolean;
+  exportBusy?: boolean;
   onStarnet: (p: StarnetParams) => void;
   onAlpha: (p: AlphaParams) => void;
   onProcess: () => void;
@@ -136,10 +138,19 @@ export function ParamSliders(props: ParamSlidersProps) {
         {/* data-dirty drives the orange-dot affordance in Plan D's stylesheet.
             The value is always "true" or "false" (never omitted) so CSS
             [data-dirty="true"] selectors work unconditionally. */}
-        <button onClick={props.onProcess} data-dirty={String(processDirty)}>
+        <button
+          onClick={props.onProcess}
+          data-dirty={String(processDirty)}
+          disabled={props.processBusy}
+        >
+          {props.processBusy ? <span className="curator-spinner" aria-hidden="true" /> : null}
           Process
         </button>
-        <button onClick={props.onExport} disabled={!props.canExport}>
+        <button
+          onClick={props.onExport}
+          disabled={!props.canExport || props.exportBusy}
+        >
+          {props.exportBusy ? <span className="curator-spinner" aria-hidden="true" /> : null}
           Export
         </button>
       </div>

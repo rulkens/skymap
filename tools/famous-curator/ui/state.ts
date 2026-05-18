@@ -75,9 +75,11 @@ export function reducer(s: State, a: Action): State {
       return { ...s, galaxies: a.galaxies };
 
     case 'selectGalaxy':
-      // Switching galaxies wipes the entire session: no tmpId, no source
-      // image, no crop, no previews, and processedOnce resets so the
-      // Export button goes dark until the new galaxy is processed.
+      // Switching galaxies wipes the entire session — including sliders
+      // and the attribution form — so a fresh click on an uncurated
+      // galaxy presents an empty editor.  The resume flow (in App.tsx)
+      // re-applies the recipe values for curated galaxies AFTER this
+      // reset, so curated entries still hydrate correctly.
       return {
         ...s,
         activeId: a.id,
@@ -87,6 +89,9 @@ export function reducer(s: State, a: Action): State {
         previews: {},
         processedOnce: false,
         dirty: { crop: false, starnet: false, alpha: false },
+        starnet: initialState.starnet,
+        alpha: initialState.alpha,
+        metadata: initialState.metadata,
       };
 
     case 'setSource': {

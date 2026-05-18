@@ -32,12 +32,12 @@ import {
 const bounds: Bounds = { width: 1000, height: 800 };
 
 describe('resetCrop', () => {
-  it('returns a centred square at 80% of min dimension', () => {
+  it('returns the biggest centred square that fits inside the bounds', () => {
     const c = resetCrop(bounds);
-    expect(c.width).toBe(640);  // 800 * 0.8
-    expect(c.height).toBe(640);
-    expect(c.x).toBe((1000 - 640) / 2);
-    expect(c.y).toBe((800 - 640) / 2);
+    expect(c.width).toBe(800);   // min(1000, 800)
+    expect(c.height).toBe(800);
+    expect(c.x).toBe((1000 - 800) / 2);
+    expect(c.y).toBe(0);
   });
 });
 

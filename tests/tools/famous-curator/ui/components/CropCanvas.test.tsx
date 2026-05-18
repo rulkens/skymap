@@ -38,7 +38,7 @@ describe('CropCanvas', () => {
     expect(screen.getByText(/400 × 400 of 1000 × 800/)).toBeInTheDocument();
   });
 
-  it('Reset crop button calls onCropChange with a centred 80% square', () => {
+  it('Reset crop button calls onCropChange with the biggest centred square', () => {
     const onCropChange = vi.fn();
     render(
       <CropCanvas
@@ -49,7 +49,8 @@ describe('CropCanvas', () => {
       />,
     );
     fireEvent.click(screen.getByText('Reset crop'));
-    expect(onCropChange).toHaveBeenCalledWith({ x: 180, y: 80, width: 640, height: 640 });
+    // 800 = min(1000, 800); centred at x=100, y=0.
+    expect(onCropChange).toHaveBeenCalledWith({ x: 100, y: 0, width: 800, height: 800 });
   });
 
   it('drop event with a File calls onFileDrop with the file', () => {

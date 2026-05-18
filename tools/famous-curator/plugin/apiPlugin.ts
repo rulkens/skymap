@@ -35,6 +35,7 @@ import { handleExport } from './routes/export';
 import { handleGalaxies } from './routes/galaxies';
 import { handleRecipe } from './routes/recipe';
 import { sessionPath, createSession } from './tmpSession';
+import { curatedGalaxyDir } from './paths';
 import { resolveStarnetConfig, type StarnetConfig } from './starnet';
 
 // Resolve the repo root relative to this file's location.
@@ -84,6 +85,13 @@ function readBinaryBody(req: IncomingMessage): Promise<Buffer> {
 // Matches /api/preview/<8-hex-chars>/<filename-with-extensions>
 // e.g. /api/preview/a1b2c3d4/source.webp
 const PREVIEW_RE = /^\/api\/preview\/([a-f0-9]+)\/([\w.-]+)$/;
+
+// Matches /api/curated/<galaxy-id>/<filename> — serves the on-disk
+// export artefacts (source/starless/full/atlas.webp) so the UI can
+// display the previously-exported previews when the maintainer
+// re-opens a curated galaxy.  The curator's Vite has publicDir:false,
+// so we can't rely on Vite's static handler — this route fills that gap.
+const CURATED_RE = /^\/api\/curated\/([\w-]+)\/([\w.-]+)$/;
 
 // MIME type map for preview-served files.  Only image types we produce;
 // anything else gets the generic octet-stream fallback.
@@ -141,6 +149,41 @@ export function apiPlugin(): Plugin {
             }
             res.statusCode = 200;
             res.setHeader('Content-Type', MIME[extname(name)] ?? 'application/octet-stream');
+            // Previews are rewritten in place on every /api/process and
+            // /api/process/alpha-only call — same URL, different bytes.
+            // `no-store` forbids any caching layer (browser, proxy) from
+            // serving a stale version when the maintainer drags the
+            // alpha sliders.
+            res.setHeader('Cache-Control', 'no-store');
+            createReadStream(filePath).pipe(res);
+            return;
+          }
+
+          // Curated artefact serving — exports from
+          // `public/images/famous-curated/<id>/`.  Path traversal is
+          // prevented by the `[\w-]+` / `[\w.-]+` patterns in CURATED_RE
+          // (no slashes, no `..`) and the resolve()-then-startsWith check
+          // below as a belt-and-braces guard.
+          const curatedMatch = CURATED_RE.exec(path);
+          if (method === 'GET' && curatedMatch) {
+            const id = curatedMatch[1]!;
+            const name = curatedMatch[2]!;
+            const galaxyDir = curatedGalaxyDir(repoRoot, id);
+            const filePath = resolve(galaxyDir, name);
+            if (!filePath.startsWith(galaxyDir + '/') && filePath !== galaxyDir) {
+              sendJson(res, 400, { error: 'invalid curated path' });
+              return;
+            }
+            if (!existsSync(filePath)) {
+              sendJson(res, 404, { error: 'curated file not found' });
+              return;
+            }
+            res.statusCode = 200;
+            res.setHeader('Content-Type', MIME[extname(name)] ?? 'application/octet-stream');
+            // No long cache header — the maintainer may re-export and
+            // expect to see the new bytes on next click.  The UI appends
+            // a ?v=<processedAt> cache-buster anyway.
+            res.setHeader('Cache-Control', 'no-cache');
             createReadStream(filePath).pipe(res);
             return;
           }

@@ -1,4 +1,82 @@
 {
   "version": 1,
-  "entries": {}
+  "entries": {
+    "c101": {
+      "dir": "famous-curated/c101",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_6744#/media/File:Wide_Field_Imager_view_of_a_Milky_Way_look-alike_NGC_6744.jpg",
+      "license": "CC BY 3.0",
+      "author": "ESO",
+      "processedAt": "2026-05-18T09:21:20.234Z"
+    },
+    "m83": {
+      "dir": "famous-curated/m83",
+      "sourceUrl": "https://en.wikipedia.org/wiki/Messier_83#/media/File:The_Outskirts_of_the_Southern_Pinwheel_Galaxy_(noirlab2429a).jpg",
+      "license": "CC BY 4.0",
+      "author": "CTIO/NOIRLab/DOE/NSF/AURA Image processing: T.A. Rector (University of Alaska Anchorage/NSF NOIRLab), D. de Martin (NSF NOIRLab) &amp; M. Zamani (NSF NOIRLab)",
+      "processedAt": "2026-05-18T09:42:01.410Z"
+    },
+    "c30": {
+      "dir": "famous-curated/c30",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_7331#/media/File:NGC_7331_Acquired_with_the_Schulman_Telescope_at_the_Mount_Lemmon_SkyCenter.jpg",
+      "license": "CC BY 3.0",
+      "author": "Ngc1535",
+      "processedAt": "2026-05-18T10:09:38.391Z"
+    },
+    "c32": {
+      "dir": "famous-curated/c32",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4631#/media/File:Whale-Galaxy-2026.png",
+      "license": "CC0",
+      "author": "Chuck Ayoub",
+      "processedAt": "2026-05-18T10:10:13.670Z"
+    },
+    "c36": {
+      "dir": "famous-curated/c36",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4559#/media/File:NGC4559_-_SDSS_DR14_(panorama).jpg",
+      "license": "CC BY 4.0",
+      "author": "Sloan Digital Sky Survey",
+      "processedAt": "2026-05-18T10:11:42.983Z"
+    },
+    "c38": {
+      "dir": "famous-curated/c38",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4565#/media/File:NGC_4565.png",
+      "license": "CC BY-SA 4.0",
+      "author": "Shark13016",
+      "processedAt": "2026-05-18T10:12:23.532Z"
+    },
+    "c40": {
+      "dir": "famous-curated/c40",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3626#/media/File:NGC3626_-_SDSS_DR14.jpg",
+      "license": "CC BY 4.0",
+      "author": "Sloan Digital Sky Survey",
+      "processedAt": "2026-05-18T10:12:36.238Z"
+    },
+    "c43": {
+      "dir": "famous-curated/c43",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_7814#/media/File:N7814s.jpg",
+      "license": "CC BY-SA 3.0 us",
+      "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona",
+      "processedAt": "2026-05-18T10:12:57.248Z"
+    },
+    "c44": {
+      "dir": "famous-curated/c44",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_7479#/media/File:Caldwell_44.jpg",
+      "license": "CC BY 2.0",
+      "author": "NASA Hubble",
+      "processedAt": "2026-05-18T10:15:30.854Z"
+    },
+    "c45": {
+      "dir": "famous-curated/c45",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_5248#/media/File:N5248s.jpg",
+      "license": "CC BY-SA 3.0 us",
+      "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona",
+      "processedAt": "2026-05-18T10:15:55.339Z"
+    },
+    "m84": {
+      "dir": "famous-curated/m84",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4374#/media/File:A_fascinating_core.jpg",
+      "license": "CC BY 4.0",
+      "author": "ESA/Hubble &amp; NASA",
+      "processedAt": "2026-05-18T10:20:50.718Z"
+    }
+  }
 }

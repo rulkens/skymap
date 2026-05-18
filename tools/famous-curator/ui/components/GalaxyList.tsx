@@ -13,6 +13,7 @@
  * marks the currently selected item in a list.  Assistive technologies
  * announce it as "current" to screen-reader users.
  */
+import { useMemo, useState } from 'react';
 import type { GalaxyListEntry } from '../api';
 
 export type GalaxyListProps = {
@@ -22,12 +23,35 @@ export type GalaxyListProps = {
 };
 
 export function GalaxyList(props: GalaxyListProps) {
+  // Local search state — doesn't need to live in App's reducer since it's
+  // pure UI filtering (no side-effects on selection or API calls).
+  const [query, setQuery] = useState('');
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (q.length === 0) return props.galaxies;
+    // Match against any of the galaxy's names (common, NGC, Messier, etc).
+    // Substring + case-insensitive — no fancy fuzzy match needed for a
+    // 75-entry list.
+    return props.galaxies.filter((g) =>
+      g.names.some((n) => n.toLowerCase().includes(q)),
+    );
+  }, [props.galaxies, query]);
   return (
-    <ul className="curator-galaxy-list" role="list">
-      {props.galaxies.map((g) => {
+    <div className="curator-galaxy-list-wrap">
+      <input
+        className="curator-galaxy-list__search"
+        type="search"
+        placeholder="Search…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        aria-label="Search galaxies"
+      />
+      <ul className="curator-galaxy-list" role="list">
+        {filtered.map((g) => {
         // Fall back to raw id if names array is empty — should never happen
         // with valid API data, but guards against malformed seeds.
-        const primary = g.names[0] ?? g.id;
+        const allNames = g.names.length > 0 ? g.names : [g.id];
+        const [primary, ...aliases] = allNames;
         const isActive = g.id === props.activeId;
         return (
           <li
@@ -37,7 +61,17 @@ export function GalaxyList(props: GalaxyListProps) {
             aria-current={isActive ? 'true' : undefined}
             onClick={() => props.onSelect(g.id)}
           >
-            <span className="curator-galaxy-list__name">{primary}</span>
+            <span className="curator-galaxy-list__name">
+              {primary}
+              {aliases.map((n) => (
+                // Middle dot (·) separator — same glyph used elsewhere for
+                // attribution chips.  Render each alias in its own muted
+                // span so CSS can style the divider + text uniformly.
+                <span key={n} className="curator-galaxy-list__alias">
+                  {' · '}{n}
+                </span>
+              ))}
+            </span>
             {g.curated && (
               <span className="curator-galaxy-list__check" aria-label="curated">
                 ✓
@@ -46,6 +80,7 @@ export function GalaxyList(props: GalaxyListProps) {
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </div>
   );
 }

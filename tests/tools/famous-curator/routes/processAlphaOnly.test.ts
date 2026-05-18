@@ -35,7 +35,9 @@ describe('handleProcessAlphaOnly', () => {
       },
       sessionDirOverride: sess.dir,
     });
-    expect(result.alphaPreviewUrl).toBe('/api/preview/sess/alpha.webp');
+    // URL includes a ?v=<timestamp> cache-buster so each alpha re-render
+    // bypasses the browser cache for the rewritten alpha.webp.
+    expect(result.alphaPreviewUrl).toMatch(/^\/api\/preview\/sess\/alpha\.webp\?v=\d+$/);
     expect(existsSync(join(sess.dir, 'alpha.webp'))).toBe(true);
     expect(statSync(join(sess.dir, 'starless.png')).mtimeMs).toBe(before);
   });

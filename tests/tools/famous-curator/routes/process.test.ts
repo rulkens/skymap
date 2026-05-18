@@ -51,8 +51,11 @@ describe('handleProcess', () => {
       starnetConfig: { mock: true },
       sessionDirOverride: sess.dir,
     });
-    expect(result.starlessPreviewUrl).toBe('/api/preview/sess/starless.webp');
-    expect(result.alphaPreviewUrl).toBe('/api/preview/sess/alpha.webp');
+    // URLs include a ?v=<timestamp> cache-buster so re-Processing the
+    // same session re-fetches the rewritten previews instead of serving
+    // a stale cached image.
+    expect(result.starlessPreviewUrl).toMatch(/^\/api\/preview\/sess\/starless\.webp\?v=\d+$/);
+    expect(result.alphaPreviewUrl).toMatch(/^\/api\/preview\/sess\/alpha\.webp\?v=\d+$/);
     expect(existsSync(join(sess.dir, 'starless.png'))).toBe(true);
     expect(existsSync(join(sess.dir, 'starless.webp'))).toBe(true);
     expect(existsSync(join(sess.dir, 'alpha.webp'))).toBe(true);

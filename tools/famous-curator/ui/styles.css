@@ -77,10 +77,28 @@ html, body, #root {
    ───────────────────────────────────────────── */
 .curator-app {
   display: grid;
-  grid-template-columns: 240px 1fr 320px;
+  /* grid-template-columns is set inline by App.tsx so the user-resizable
+     left/right widths can be driven by React state.  Default fallback
+     here matches the initial values in useColumnWidth(). */
+  grid-template-columns: 220px 5px 1fr 5px 260px;
   grid-template-rows: 100vh;
   height: 100vh;
   overflow: hidden;
+}
+
+/* Vertical splitter handle between grid columns.  touch-action:none
+   prevents the browser from interpreting drags as scroll gestures on
+   touch-capable trackpads. */
+.curator-splitter {
+  cursor: col-resize;
+  background: var(--c-border);
+  user-select: none;
+  touch-action: none;
+  transition: background 100ms ease;
+}
+.curator-splitter:hover,
+.curator-splitter:active {
+  background: var(--c-accent);
 }
 
 /* The two aside panels scroll independently */
@@ -110,11 +128,41 @@ html, body, #root {
 /* ─────────────────────────────────────────────
    Galaxy list — left panel
    ───────────────────────────────────────────── */
+/* Wrap holds the search input at top (fixed) and the scrolling list
+   below.  flex column lets the list claim the remaining height. */
+.curator-galaxy-list-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.curator-galaxy-list__search {
+  margin: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--c-surface2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  color: var(--c-text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  outline: none;
+  flex-shrink: 0;
+  transition: border-color 120ms ease;
+}
+.curator-galaxy-list__search::placeholder {
+  color: var(--c-muted);
+}
+.curator-galaxy-list__search:focus {
+  border-color: var(--c-accent);
+}
+
 .curator-galaxy-list {
   list-style: none;
   overflow-y: auto;
   flex: 1;
   padding: var(--space-2) 0;
+  min-height: 0;
 }
 
 .curator-galaxy-list > li {
@@ -157,6 +205,15 @@ html, body, #root {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
+}
+
+/* Aliases (NGC / Messier / catalog numbers) rendered alongside the
+   primary common name, muted so the eye still locks onto the main
+   identifier first. */
+.curator-galaxy-list__alias {
+  color: var(--c-muted);
+  font-size: 12px;
+  font-family: var(--font-mono);
 }
 
 /* Curated check glyph */
@@ -205,6 +262,32 @@ html, body, #root {
 .curator-source-bar input[type="url"]:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Fetch button — match the param-actions buttons visually so the busy
+   state (spinner + cursor) is consistent across the app. */
+.curator-source-bar button {
+  padding: var(--space-2) var(--space-3);
+  border-radius: 5px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface2);
+  color: var(--c-text);
+  transition: background 100ms ease, opacity 100ms ease;
+}
+.curator-source-bar button:hover:not(:disabled) {
+  background: #1f2840;
+}
+.curator-source-bar button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+.curator-source-bar button:disabled:has(.curator-spinner) {
+  opacity: 1;
+  cursor: progress;
 }
 
 /* ─────────────────────────────────────────────
@@ -270,20 +353,34 @@ html, body, #root {
   margin-left: auto;
 }
 
-/* Zoom stage — CSS scale keeps crop percentages correct */
+/* Stage = viewport that centers the frame.  No transforms here; the
+   frame owns the zoom transform so centering stays correct at any zoom. */
 .curator-crop-stage {
   position: relative;
   flex: 1;
-  transform-origin: top left;
-  /* overflow hidden so zoom doesn't cause scrollbars in the stage */
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
 }
 
-/* Source image fills the stage */
+/* Frame shrink-wraps the image (inline-block) so the absolutely-
+   positioned crop rect uses the IMAGE as its containing block, not the
+   stage.  That is what keeps a square crop rendering as a square overlay,
+   keeps the image perfectly centred, and keeps the rendered rect aligned
+   with the bytes the /api/process route actually extracts.  No max-*
+   constraints — the preview is already capped at 512² server-side, so it
+   always fits a reasonable stage. */
+.curator-crop-frame {
+  position: relative;
+  display: inline-block;
+  transform-origin: center center;
+}
+
+/* Source image renders at its natural (preview) size. */
 .curator-crop-source {
   display: block;
-  max-width: 100%;
-  height: auto;
 }
 
 /* ─────────────────────────────────────────────
@@ -363,16 +460,102 @@ html, body, #root {
 }
 
 /* ─────────────────────────────────────────────
+   Metadata + Wikipedia picker row
+   ───────────────────────────────────────────── */
+.curator-meta-row {
+  display: flex;
+  gap: var(--space-4);
+  align-items: stretch;
+}
+.curator-meta-row > .curator-metadata-form {
+  /* Fixed-ish width: 3 short inputs, no need to flex */
+  flex: 0 0 280px;
+}
+.curator-meta-row > .curator-wiki-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─────────────────────────────────────────────
+   Wikipedia image picker
+   ───────────────────────────────────────────── */
+.curator-wiki-picker {
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--c-surface);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+}
+.curator-wiki-picker legend {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  padding: 0 var(--space-2);
+}
+.curator-wiki-picker__article-link {
+  color: var(--c-accent);
+  text-decoration: none;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.curator-wiki-picker__article-link:hover {
+  text-decoration: underline;
+}
+.curator-wiki-picker__hint {
+  font-size: 12px;
+  color: var(--c-muted);
+  font-style: italic;
+  margin: 0;
+  padding: var(--space-2) 0;
+}
+.curator-wiki-picker__grid {
+  display: grid;
+  /* auto-fill packs as many ~100px cards as the row holds, then wraps.
+     max-height prevents the grid from pushing the rest of the layout
+     off-screen on Wikipedia pages with many images. */
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: var(--space-2);
+  max-height: 240px;
+  overflow-y: auto;
+}
+.curator-wiki-picker__card {
+  background: var(--c-surface2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 100ms ease, transform 100ms ease;
+}
+.curator-wiki-picker__card:hover {
+  border-color: var(--c-accent);
+  transform: translateY(-1px);
+}
+.curator-wiki-picker__card img {
+  display: block;
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  background: #070910;
+}
+
+/* ─────────────────────────────────────────────
    Metadata form — Attribution fieldset
    ───────────────────────────────────────────── */
 .curator-metadata-form {
   border: 1px solid var(--c-border);
   border-radius: 6px;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-3);
   background: var(--c-surface);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .curator-metadata-form legend {
@@ -384,24 +567,21 @@ html, body, #root {
   padding: 0 var(--space-2);
 }
 
-.curator-metadata-form label {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  font-size: 12px;
-  color: var(--c-muted);
-}
-
 .curator-metadata-form input {
   background: var(--c-surface2);
   border: 1px solid var(--c-border);
   border-radius: 4px;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   color: var(--c-text);
   font-family: var(--font-mono);
   font-size: 12px;
   outline: none;
   transition: border-color 120ms ease;
+}
+.curator-metadata-form input::placeholder {
+  color: var(--c-muted);
+  /* slightly lighter weight reads as a hint, not user-typed text */
+  opacity: 0.7;
 }
 
 .curator-metadata-form input:focus {
@@ -483,12 +663,41 @@ html, body, #root {
 }
 
 /* ─────────────────────────────────────────────
+   Spinner — inline busy indicator inside buttons
+   ───────────────────────────────────────────── */
+@keyframes curator-spin {
+  to { transform: rotate(360deg); }
+}
+.curator-spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: curator-spin 0.8s linear infinite;
+  margin-right: 6px;
+  vertical-align: -1px;
+  /* When the button is disabled, the spinner inherits the opacity drop;
+     no extra rule needed.  currentColor keeps it in step with button text. */
+}
+
+/* ─────────────────────────────────────────────
    Process / Export action buttons
    ───────────────────────────────────────────── */
 .curator-param-actions {
   display: flex;
   gap: var(--space-3);
-  padding: var(--space-3) 0 0;
+  padding: var(--space-3) 0;
+  /* Stick to the bottom of the scrollable param panel so the buttons
+     stay visible when the preview pane grows large enough to compress
+     this section.  margin-top: auto pushes them to the bottom when there
+     is extra space; sticky pins them when the inner content overflows. */
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  background: var(--c-surface);
+  z-index: 1;
 }
 
 /* Shared button base */
@@ -514,6 +723,14 @@ html, body, #root {
 .curator-param-actions button:disabled {
   opacity: 0.38;
   cursor: not-allowed;
+}
+
+/* Busy state: keep the button fully visible so the spinner reads.
+   :has() lets us target buttons that contain a spinner without piping
+   another data attribute through React. */
+.curator-param-actions button:disabled:has(.curator-spinner) {
+  opacity: 1;
+  cursor: progress;
 }
 
 /* Process button — primary accent style */
@@ -578,7 +795,15 @@ html, body, #root {
   height: auto;
   border-radius: 4px;
   border: 1px solid var(--c-border);
-  background: #070910;
+  /* Checkerboard background so the Alpha image's transparent regions read
+     as transparent (showing the checker) rather than blending into a solid
+     dark background.  Starless is fully opaque so it covers the checker
+     entirely — but using the same background on both keeps the two
+     previews visually comparable at the frame level. */
+  background-color: #0f131c;
+  background-image:
+    conic-gradient(#1a2030 0 25%, #0f131c 0 50%, #1a2030 0 75%, #0f131c 0);
+  background-size: 16px 16px;
 }
 
 .curator-preview-pane p {
