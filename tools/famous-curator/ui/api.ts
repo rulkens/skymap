@@ -64,6 +64,12 @@ export type ExportResult = {
 
 export type Api = {
   getGalaxies: () => Promise<{ galaxies: GalaxyListEntry[] }>;
+  /**
+   * Fetch the recipe.json for an already-curated galaxy.  Used by the
+   * "resumable" flow: when the user re-clicks a curated entry the UI calls
+   * this, then re-fetches the source URL to reconstruct sliders + crop.
+   */
+  getRecipe: (id: string) => Promise<{ recipe: import('../plugin/recipe').Recipe }>;
   postFetchUrl: (url: string) => Promise<FetchResult>;
   postFetchBytes: (bytes: BodyInit, mediaType: string) => Promise<FetchResult>;
   postProcess: (params: ProcessParams) => Promise<ProcessResult>;
@@ -90,6 +96,9 @@ export function makeApi(deps: { fetch: typeof fetch }): Api {
   return {
     async getGalaxies() {
       return readOrThrow(await f('/api/galaxies'));
+    },
+    async getRecipe(id) {
+      return readOrThrow(await f(`/api/recipe/${id}`));
     },
     async postFetchUrl(url) {
       return readOrThrow(await f('/api/fetch', {

@@ -5,6 +5,7 @@
  *
  *   GET  /health                       — liveness
  *   GET  /galaxies                     — seed + curated flags
+ *   GET  /recipe/:id                   — load recipe.json for a curated galaxy (resume)
  *   POST /fetch                        — URL or multipart source upload
  *   POST /process                      — crop + StarNet + alpha
  *   POST /process/alpha-only           — alpha pass only (cached starless)
@@ -32,6 +33,7 @@ import { handleProcess } from './routes/process';
 import { handleProcessAlphaOnly } from './routes/processAlphaOnly';
 import { handleExport } from './routes/export';
 import { handleGalaxies } from './routes/galaxies';
+import { handleRecipe } from './routes/recipe';
 import { sessionPath, createSession } from './tmpSession';
 import { resolveStarnetConfig, type StarnetConfig } from './starnet';
 
@@ -206,6 +208,17 @@ export function apiPlugin(): Plugin {
           if (method === 'POST' && path === '/api/export') {
             const body = await readJsonBody(req) as Parameters<typeof handleExport>[0]['body'];
             const out = await handleExport({ body, repoRoot });
+            sendJson(res, 200, out);
+            return;
+          }
+
+          // Resume route: GET /api/recipe/:id returns the recipe.json for a
+          // curated galaxy so the UI can reconstruct sliders + crop on
+          // re-click.  The id is validated to word-chars + hyphens to avoid
+          // path-traversal; the handler does its own existsSync check.
+          const recipeMatch = /^\/api\/recipe\/([\w-]+)$/.exec(path);
+          if (method === 'GET' && recipeMatch) {
+            const out = await handleRecipe({ repoRoot, id: recipeMatch[1]! });
             sendJson(res, 200, out);
             return;
           }

@@ -20,6 +20,8 @@ function makeFakeApi(): Api {
         { id: 'm33', names: ['M33'], ra: 0, dec: 0, distanceMpc: 0, diameterKpc: 0, type: '', description: '', curated: false },
       ],
     }),
+    // Not called in this test — all galaxies are curated: false.
+    getRecipe: vi.fn(),
     postFetchUrl: vi.fn().mockResolvedValue({
       tmpId: 't1', width: 1000, height: 800, previewUrl: '/preview.webp', mediaType: 'image/jpeg',
     }),

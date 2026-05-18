@@ -7,6 +7,9 @@
  *
  * Process-flow wiring:
  *   - Selecting a galaxy resets the workspace.
+ *   - Selecting an already-curated galaxy also fetches its recipe.json and
+ *     re-fetches the source image, so sliders + crop box reconstruct the
+ *     prior session automatically (resumable flow).
  *   - Fetch → setSource (resets crop + clears previews).
  *   - Crop / StarNet changes mark dirty → Process gets an orange dot.
  *   - Process → /api/process → previews + markProcessed.
@@ -107,7 +110,27 @@ function AppInner() {
         <GalaxyList
           galaxies={state.galaxies}
           activeId={state.activeId}
-          onSelect={(id) => dispatch({ type: 'selectGalaxy', id })}
+          onSelect={async (id) => {
+            dispatch({ type: 'selectGalaxy', id });
+            const entry = state.galaxies.find((g) => g.id === id);
+            // Resumable flow: if the galaxy has already been curated, load
+            // its recipe.json and re-fetch the source so sliders + crop box
+            // reconstruct the prior session.  The source bytes themselves
+            // are not cached between sessions per spec — only the recipe is
+            // persisted, so we must re-download from the original URL.
+            if (!entry?.curated) return;
+            try {
+              const r = await api.getRecipe(id);
+              const fetched = await api.postFetchUrl(r.recipe.metadata.sourceUrl);
+              dispatch({ type: 'setSource', tmpId: fetched.tmpId, width: fetched.width, height: fetched.height, previewUrl: fetched.previewUrl });
+              dispatch({ type: 'setCrop', crop: r.recipe.crop });
+              dispatch({ type: 'setStarnet', starnet: r.recipe.starnet });
+              dispatch({ type: 'setAlpha', alpha: r.recipe.alpha });
+              dispatch({ type: 'setMetadata', metadata: r.recipe.metadata });
+            } catch (err) {
+              console.error('resume failed', err);
+            }
+          }}
         />
       </aside>
       <main>
