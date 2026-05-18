@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c30",
+  "crop": {
+    "x": 307.88134765625,
+    "y": 0,
+    "width": 1332,
+    "height": 1332
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 5,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_7331#/media/File:NGC_7331_Acquired_with_the_Schulman_Telescope_at_the_Mount_Lemmon_SkyCenter.jpg",
+    "license": "CC BY 3.0",
+    "author": "Ngc1535"
+  },
+  "processedAt": "2026-05-18T10:09:38.391Z"
+}

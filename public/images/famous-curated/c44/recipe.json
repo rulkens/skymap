@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c44",
+  "crop": {
+    "x": 0,
+    "y": 39,
+    "width": 3182,
+    "height": 3182
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_7479#/media/File:Caldwell_44.jpg",
+    "license": "CC BY 2.0",
+    "author": "NASA Hubble"
+  },
+  "processedAt": "2026-05-18T10:15:30.854Z"
+}

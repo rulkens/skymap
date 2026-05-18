@@ -77,6 +77,48 @@
       "license": "CC BY 4.0",
       "author": "ESA/Hubble &amp; NASA",
       "processedAt": "2026-05-18T10:20:50.718Z"
+    },
+    "m85": {
+      "dir": "famous-curated/m85",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4382#/media/File:Messier85_-_HST_-_Potw1905a.jpg",
+      "license": "CC BY 4.0",
+      "author": "Credit: ESA/Hubble &amp; NASA, R. O'Connell",
+      "processedAt": "2026-05-18T10:21:46.191Z"
+    },
+    "m86": {
+      "dir": "famous-curated/m86",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4406#/media/File:Beacon_of_Light_Messier_86.jpg",
+      "license": "CC BY 4.0",
+      "author": "ESA/Hubble &amp; NASA, P. Cote et al.",
+      "processedAt": "2026-05-18T10:22:14.140Z"
+    },
+    "m87": {
+      "dir": "famous-curated/m87",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4486#/media/File:Messier_87_Hubble_WikiSky.jpg",
+      "license": "Public domain",
+      "author": "en:NASA, en:STScI, en:WikiSky",
+      "processedAt": "2026-05-18T10:24:44.702Z"
+    },
+    "m89": {
+      "dir": "famous-curated/m89",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4552#/media/File:M89_Galaxy.png",
+      "license": "CC0",
+      "author": "Chuck Ayoub",
+      "processedAt": "2026-05-18T10:25:21.256Z"
+    },
+    "m90": {
+      "dir": "famous-curated/m90",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4569#/media/File:Messier90_-_SDSS_DR14_(panorama).jpg",
+      "license": "CC BY 4.0",
+      "author": "Sloan Digital Sky Survey",
+      "processedAt": "2026-05-18T10:25:42.301Z"
+    },
+    "m95": {
+      "dir": "famous-curated/m95",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3351#/media/File:The_VLT_goes_lion_hunting.jpg",
+      "license": "CC BY 3.0",
+      "author": "ESO",
+      "processedAt": "2026-05-18T10:29:10.095Z"
     }
   }
 }

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c43",
+  "crop": {
+    "x": 65,
+    "y": 0,
+    "width": 1069,
+    "height": 1069
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_7814#/media/File:N7814s.jpg",
+    "license": "CC BY-SA 3.0 us",
+    "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona"
+  },
+  "processedAt": "2026-05-18T10:12:57.248Z"
+}

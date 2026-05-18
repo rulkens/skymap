@@ -218,7 +218,18 @@ export function apiPlugin(): Plugin {
             const out = await handleFetch({
               body,
               imageFetcher: async (u) => {
-                const r = await fetch(u);
+                // Wikimedia's CDN returns 429 to requests with Node's
+                // default User-Agent (which looks like a bot to them).
+                // Their User-Agent policy requires a descriptive UA with
+                // contact info — see https://meta.wikimedia.org/wiki/User-Agent_policy.
+                // Sending a meaningful UA fixes 429s on upload.wikimedia.org
+                // and is good citizenship for any other origin we hit.
+                const r = await fetch(u, {
+                  headers: {
+                    'User-Agent':
+                      'skymap-curator/0.3 (https://github.com/rulkens/skymap; rulkens@gmail.com)',
+                  },
+                });
                 if (!r.ok) throw new Error(`HTTP ${r.status} for ${u}`);
                 return {
                   bytes: Buffer.from(await r.arrayBuffer()),

@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c40",
+  "crop": {
+    "x": 0,
+    "y": 0,
+    "width": 800,
+    "height": 800
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_3626#/media/File:NGC3626_-_SDSS_DR14.jpg",
+    "license": "CC BY 4.0",
+    "author": "Sloan Digital Sky Survey"
+  },
+  "processedAt": "2026-05-18T10:12:36.238Z"
+}

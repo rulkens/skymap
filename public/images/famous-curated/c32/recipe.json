@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "c32",
+  "crop": {
+    "x": 287.3641815185547,
+    "y": 14.7540283203125,
+    "width": 1152.3622741699219,
+    "height": 1152.3622741699219
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4631#/media/File:Whale-Galaxy-2026.png",
+    "license": "CC0",
+    "author": "Chuck Ayoub"
+  },
+  "processedAt": "2026-05-18T10:10:13.670Z"
+}
