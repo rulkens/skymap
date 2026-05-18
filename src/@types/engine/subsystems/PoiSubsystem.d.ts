@@ -37,6 +37,29 @@ export type PoiSubsystem = LabelProducer & {
   /** Returns the currently-selected POI id, or `null` if none. */
   getSelectedPoiId(): string | null;
   /**
+   * Return the POIs of the given category in the subsystem's current
+   * iteration order — i.e. the same order `produceMarkers` walks them
+   * when it builds the per-frame descriptor list.
+   *
+   * Why this accessor exists: the pick fragment writes a per-instance
+   * `poiIndex` that decodes (via `selectionEncoding.unpackPick`) to
+   * the GLOBAL slot in the per-frame instance buffer.  But once a
+   * single category's bucket is isolated, that slot becomes a 0-based
+   * index into "the Nth POI of this category that produceMarkers
+   * uploaded".  Because `produceMarkers` iterates `pois` in array
+   * order and packs descriptors in that order (then `setMarkers`
+   * groups by category preserving within-group order), the array
+   * `pois.filter(p => p.category === cat)` is the correct lookup
+   * provided every POI of that category has a marker (current truth:
+   * all clusters / superclusters / voids set physicalRadiusMpc).
+   *
+   * The contract is verified by the indexing comment in
+   * `wireInput.ts`'s `resolvePoi` and is structurally guarded by the
+   * fact that the renderer's per-category dispatch reads the same
+   * bucket-ordered instance buffer the producer wrote.
+   */
+  getPoisForCategory(category: PoiCategory): readonly PointOfInterest[];
+  /**
    * Tear down the subsystem.  No-op — the subsystem owns only
    * plain-data state (pois list, visibility record); there are no
    * listeners, timers, or workers to release.  Method exists so the

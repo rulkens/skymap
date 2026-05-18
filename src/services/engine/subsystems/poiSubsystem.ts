@@ -280,6 +280,15 @@ export function createPoiSubsystem(): PoiSubsystem {
     return selectedPoiId;
   }
 
+  function getPoisForCategory(category: PoiCategory): readonly PointOfInterest[] {
+    // O(n) filter over the POI table.  n is ≤ ~50 (clusters + SCs +
+    // voids + famous galaxies combined) and this is only called from
+    // the click resolver, so cost is invisible at the budget level
+    // even on slow phones.  See the PoiSubsystem type docstring for
+    // why this is the canonical accessor for pick-index → POI lookup.
+    return pois.filter((p) => p.category === category);
+  }
+
   function produceLabels(state: EngineState, ctx: ReadyFrameContext): LabelProducerOutput {
     const labels: Label[] = [];
     const lines: MarkerLine[] = [];
@@ -512,6 +521,7 @@ export function createPoiSubsystem(): PoiSubsystem {
     setCategoryVisible,
     setSelectedPoi,
     getSelectedPoiId,
+    getPoisForCategory,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.
     },

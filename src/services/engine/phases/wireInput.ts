@@ -87,10 +87,12 @@ import { buildGalaxyInfo, maxAbsCoord } from '../helpers/galaxyInfoBuilder';
 import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
 import { catalogSourceFor } from '../../../data/catalogSource';
 import { cssToTexPx } from '../helpers/cssToTexPx';
+import { commitPoiFocus } from '../helpers/commitPoiFocus';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
+import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 
 /**
  * Bootstrap phase 3: pick renderer + camera + orbit controls + click
@@ -145,6 +147,33 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     },
     buildGalaxyInfo: (cloud, localIdx, src) =>
       buildGalaxyInfo(cloud, localIdx, src, state.sources.famousMeta, state.sources.famousXrefs),
+    // Map a POI pick hit `(category, poiIndex)` back to its PointOfInterest
+    // record by indexing into the POI subsystem's per-category table.
+    //
+    // Contract: `clusterMarkerRenderer.pickRing` issues one instanced
+    // draw per category (cluster / supercluster / void) with
+    // firstInstance set to that category's bucket offset; the fragment
+    // packs `@builtin(instance_index) - bucketOffset` worth of slot
+    // info into the pick texture as `poiIndex`.  `unpackPick` already
+    // returns the per-category-local 0-based index (see
+    // `selectionEncoding.ts` and the dispatch comment in
+    // `clusterMarkerRenderer.pickRing`), so the array
+    // `getPoisForCategory(cat)` returned by the POI subsystem is the
+    // canonical lookup.
+    //
+    // Why the array lookup is safe: `produceMarkers` iterates `pois`
+    // in stored array order and packs descriptors in that order, then
+    // `setMarkers` re-groups by category preserving within-group
+    // order.  As long as every POI of a marker-bearing category sets
+    // `physicalRadiusMpc` (current truth for cluster/supercluster/void),
+    // `pois.filter(p => p.category === cat)[i]` is byte-identical to
+    // the renderer's i-th uploaded instance of that category.  If a
+    // future POI of a marker category omits the radius, the indexing
+    // contract breaks — see `getPoisForCategory`'s docstring.
+    resolvePoi: ({ category, poiIndex }) => {
+      const pois = state.subsystems.pois.getPoisForCategory(category);
+      return pois[poiIndex] ?? null;
+    },
   });
 
   // ── Camera auto-framing ──────────────────────────────────────────────
@@ -285,6 +314,17 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // a dblclick on empty space doesn't trigger a stale focus.
   let lastClickedInfo: GalaxyInfo | null = null;
 
+  // Sister cache to `lastClickedInfo`, for the POI variant of the
+  // dblclick flow.  Same race rationale: the dblclick handler must
+  // not re-run a pick (two readbacks against the same pickRenderer
+  // resolve out of order); reuse the single-click's resolved POI.
+  //
+  // Cleared on every empty-space click AND on every galaxy click so
+  // a dblclick path can unambiguously prefer POI over galaxy when the
+  // most-recent single-click was a ring hit.  (POI takes priority
+  // when both are non-null — see onDoubleClick below.)
+  let lastClickedPoi: PointOfInterest | null = null;
+
   // Shared pick body — used by single-click only now (dblclick
   // reuses the cached GalaxyInfo).  Returns the click resolver's
   // result so the caller can decide what to do with it.  Inline
@@ -344,29 +384,43 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       if (!pick) return;
       pick.then((result) => {
         // Click on empty space → clear; click on galaxy → pin it;
-        // click on POI ring → drop galaxy selection, leave POI focus
-        // wiring for Task 11 (commitPoiFocus dispatch).  The
-        // `GalaxyInfo` on a 'select' result is also cached for the
-        // dblclick handler — see `lastClickedInfo` above for the
+        // click on POI ring → open the InfoCard via commitPoiFocus
+        // WITHOUT a camera tween (single-click is "show me what this
+        // is", double-click is "take me there").  The `GalaxyInfo` /
+        // `PointOfInterest` payload is cached for the dblclick handler
+        // — see `lastClickedInfo` / `lastClickedPoi` above for the
         // race-condition rationale.
         switch (result.kind) {
           case 'clear':
             state.subsystems.selection.setSelected(null);
+            // Mirror the galaxy-side clear: drop POI focus AND fire
+            // `onPoiFocusChange(null)` so the React-side URL hash
+            // clears in lock-step.  Without the React notification
+            // the `#poi=…` would linger after the user clicked away.
+            state.subsystems.pois.setSelectedPoi(null);
+            cb.camera?.onPoiFocusChange?.(null);
             lastClickedInfo = null;
+            lastClickedPoi = null;
             break;
           case 'select':
             state.subsystems.selection.setSelected(result.selection);
             lastClickedInfo = result.info;
+            // Galaxy click also drops any prior POI focus — the
+            // InfoCard can only show one body at a time, and the
+            // dblclick handler must NOT prefer a stale POI over the
+            // galaxy the user just clicked.
+            lastClickedPoi = null;
             break;
           case 'poi':
-            // Plan-3 Task 11 will dispatch this to commitPoiFocus.
-            // For now, just clear any galaxy selection so the
-            // InfoCard doesn't keep showing a stale pinned galaxy
-            // when the user clicked a ring.  lastClickedInfo is
-            // cleared too — the dblclick handler must NOT focus a
-            // galaxy the user didn't actually click.
+            // Clear any pinned galaxy so the InfoCard renders the POI
+            // body (not a stale galaxy card).  Then commitPoiFocus
+            // updates the POI subsystem's selection state + fires
+            // onPoiFocusChange for the URL-hash mirror; `tween: false`
+            // keeps the camera still on single-click.
             state.subsystems.selection.setSelected(null);
+            commitPoiFocus(state, cb, result.poi, { tween: false });
             lastClickedInfo = null;
+            lastClickedPoi = result.poi;
             break;
         }
         // Selection changed — render so the highlight halo
@@ -377,16 +431,28 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     onDoubleClick: () => {
       // Native dblclick fires AFTER the two preceding click
       // events.  Both have already routed through `onClick` and
-      // populated `lastClickedInfo` with the hit galaxy's
-      // GalaxyInfo.  We deliberately do NOT run a second pick
-      // here: two readbacks racing on the same pickRenderer
-      // resources resolved out of order in practice — the
-      // dblclick read returned `clear` while the click read
-      // resolved later with the real hit.  Reusing the cached
-      // info is correct (same coordinates + camera state, since
-      // dblclick fires before any frame can shift the scene)
-      // and saves a redundant readback.
+      // populated either `lastClickedInfo` (galaxy) or
+      // `lastClickedPoi` (POI) with the resolved record.  We
+      // deliberately do NOT run a second pick here: two readbacks
+      // racing on the same pickRenderer resources resolved out of
+      // order in practice — the dblclick read returned `clear`
+      // while the click read resolved later with the real hit.
+      // Reusing the cached payload is correct (same coordinates +
+      // camera state, since dblclick fires before any frame can
+      // shift the scene) and saves a redundant readback.
       //
+      // POI takes priority over galaxy: the single-click handler
+      // clears `lastClickedPoi` on every galaxy / empty-space
+      // resolution, so when `lastClickedPoi` is non-null the
+      // most-recent click was unambiguously a ring hit.  Without
+      // the priority, a galaxy that happens to sit behind a ring
+      // would steal the dblclick from the ring (which is what the
+      // user almost certainly aimed at).
+      const handle = deps.handleRef.current;
+      if (lastClickedPoi) {
+        handle?.camera.focusOnPoi(lastClickedPoi);
+        return;
+      }
       // No-op when the user double-clicked empty space —
       // `lastClickedInfo` would have been cleared by the
       // single-click handler in that case, and we don't want a
@@ -396,7 +462,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // engine.ts; threaded through `deps.handleRef` so this
       // callback resolves it lazily — by the time a user can
       // physically double-click, the handle has been assigned.
-      deps.handleRef.current?.camera.focusOn(lastClickedInfo);
+      handle?.camera.focusOn(lastClickedInfo);
     },
   });
 
