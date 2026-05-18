@@ -139,6 +139,13 @@ describe('selectionEncoding TS↔WESL parity', () => {
       ['SELECTION_LOCAL_IDX_MASK', SELECTION_LOCAL_IDX_MASK],
       ['SELECTION_NONE_SENTINEL', SELECTION_NONE_SENTINEL],
       ['PICK_SENTINEL_OFFSET', PICK_SENTINEL_OFFSET],
+      // POI category source codes — mirror of TS Source.Cluster /
+      // Source.Supercluster / Source.Void. These appear at the WESL side
+      // so the future cluster-marker pick fragment can refer to them by
+      // name instead of inlining a magic 5u/6u/7u literal.
+      ['SOURCE_CODE_CLUSTER', Source.Cluster],
+      ['SOURCE_CODE_SUPERCLUSTER', Source.Supercluster],
+      ['SOURCE_CODE_VOID', Source.Void],
     ];
 
     for (const [name, tsValue] of cases) {

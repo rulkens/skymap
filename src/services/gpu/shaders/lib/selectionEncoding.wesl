@@ -32,6 +32,15 @@ const SELECTION_NONE_SENTINEL: u32 = 0xffffffffu;
 /** Offset the pick fragment adds before writing into the r32uint texture. */
 const PICK_SENTINEL_OFFSET: u32 = 1u;
 
+/** Source code for cluster POIs — see TS Source.Cluster. */
+const SOURCE_CODE_CLUSTER: u32 = 5u;
+
+/** Source code for supercluster POIs — see TS Source.Supercluster. */
+const SOURCE_CODE_SUPERCLUSTER: u32 = 6u;
+
+/** Source code for void POIs — see TS Source.Void. */
+const SOURCE_CODE_VOID: u32 = 7u;
+
 /** Pack a (sourceCode, localIdx) pair into the canonical u32 layout. */
 fn packSelection(sourceCode: u32, localIdx: u32) -> u32 {
   return (sourceCode << SELECTION_SOURCE_SHIFT) | localIdx;
