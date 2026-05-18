@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "id": "m58",
+  "id": "c48",
   "crop": {
-    "x": 140.6670900710443,
-    "y": 106.9921949238078,
-    "width": 722.9364776611328,
-    "height": 722.9364776611328,
-    "rotationDeg": 27.86133309463844
+    "x": 260.3314208984375,
+    "y": 125.921630859375,
+    "width": 682.035888671875,
+    "height": 682.035888671875,
+    "rotationDeg": 0
   },
   "starnet": {
     "stride": 256,
@@ -18,9 +18,9 @@
     "gamma": 0.7
   },
   "metadata": {
-    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4579#/media/File:M58s_(visible).jpg",
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_2775#/media/File:N2775ss.jpg",
     "license": "CC BY-SA 3.0 us",
     "author": "Credit Line and Copyright Adam Block/Mount Lemmon SkyCenter/University of Arizona"
   },
-  "processedAt": "2026-05-18T22:29:09.746Z"
+  "processedAt": "2026-05-18T23:00:56.258Z"
 }
