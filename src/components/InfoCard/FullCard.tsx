@@ -100,7 +100,7 @@ export type FullCardProps = {
   /**
    * Optional callback fired when the user clicks the "Fly here" button in
    * the POI body.  The parent receives the full `PointOfInterest` so it can
-   * call `engine.camera.focusOnPoi(poi)` without re-resolving the id.
+   * call `engine.camera.focusOn(poi)` without re-resolving the id.
    * Ignored in galaxy mode.
    */
   onPoiFocus?: (poi: PointOfInterest) => void;
@@ -245,9 +245,7 @@ function renderPoiBody(
         {poi.physicalRadiusMpc !== undefined && (
           <div className={styles.cardRow}>
             <span className={styles.cardLabel}>Radius</span>
-            <span className={styles.cardValue}>
-              {formatDistance(poi.physicalRadiusMpc)}
-            </span>
+            <span className={styles.cardValue}>{formatDistance(poi.physicalRadiusMpc)}</span>
           </div>
         )}
       </div>
@@ -323,9 +321,7 @@ export function FullCard(props: FullCardProps): ReactNode {
   // outer wrapper's tag + className stay stable across galaxy↔POI
   // transitions, preserving any `<details>` open state inside per the
   // InfoCard module header.
-  const outerClass = pinned
-    ? `${styles.infoCardFull} ${styles.pinned}`
-    : `${styles.infoCardFull}`;
+  const outerClass = pinned ? `${styles.infoCardFull} ${styles.pinned}` : `${styles.infoCardFull}`;
 
   // Hook must be called unconditionally (React rules-of-hooks), even
   // though the POI branch ignores it.  Cheap — a no-op `useState` is
@@ -371,8 +367,7 @@ export function FullCard(props: FullCardProps): ReactNode {
   // handles both cases — commonName-headline ("Andromeda Galaxy")
   // surfaces ALL of `names` (M31, NGC 224); names[0]-headline ("M110")
   // surfaces names[1..] effectively.
-  const famousAliases =
-    info.famous?.names.filter((n) => n !== info.displayName) ?? [];
+  const famousAliases = info.famous?.names.filter((n) => n !== info.displayName) ?? [];
 
   return (
     <div className={outerClass} role="status" aria-live="polite">

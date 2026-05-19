@@ -410,7 +410,7 @@ export function App(): React.ReactElement {
   //
   // `buildStaticAnchorPois` is the same helper the engine's wireSlots
   // phase calls when seeding `state.subsystems.pois.setPois(...)`, so
-  // the id-slug + worldPos this hook hands `focusOnPoi` is guaranteed to
+  // the id-slug + worldPos this hook hands `focusOn` is guaranteed to
   // match what the renderer is drawing.  `useMemo([])` because the helper
   // output is referentially-stable per call and we don't want to rebuild
   // a fresh array on every render — that would re-fire the drain effect

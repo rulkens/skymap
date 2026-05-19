@@ -64,7 +64,10 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
         return;
       }
 
-      // ── Esc clears the pin ─────────────────────────────────────
+      // ── Esc — universal "close the card" gesture ──────────────
+      // `selection.clear()` tears down both galaxy selection AND POI
+      // focus in one call (unified 2026-05-19), so this single line
+      // collapses whichever card variant is on screen.
       if (e.key === 'Escape') {
         engineHandleRef.current?.selection.clear();
         return;
@@ -116,14 +119,7 @@ export function useKeyboardShortcuts(input: UseKeyboardShortcutsInput): void {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [
-    selected,
-    paletteOpen,
-    engineHandleRef,
-    setPaletteOpen,
-    setUiHidden,
-    setLoadingDevPanelOpen,
-  ]);
+  }, [selected, paletteOpen, engineHandleRef, setPaletteOpen, setUiHidden, setLoadingDevPanelOpen]);
   // engineHandleRef (ref object), setPaletteOpen and setUiHidden (React setters)
   // are stable references — listed for exhaustive-deps; never trigger re-binds.
 }

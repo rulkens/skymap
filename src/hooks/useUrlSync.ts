@@ -300,10 +300,8 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
   // up.  Clearing only on a successful resolve preserves the
   // "deep-link arrival waits as long as it takes" contract.
   //
-  // `camera.focusOn` is the unified Task 2 method that accepts both
-  // GalaxyInfo and PointOfInterest; using it here (rather than
-  // `focusOnPoi`) keeps the hook consistent with other callers that
-  // already migrated to the unified API.
+  // `camera.focusOn` is the unified method that accepts both GalaxyInfo
+  // and PointOfInterest, routing each to its own commit path internally.
   useEffect(() => {
     if (!pendingPoiId) return;
     if (!ready) return;
