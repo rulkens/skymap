@@ -21,7 +21,7 @@ describe('App resumable', () => {
       getRecipe: vi.fn().mockResolvedValue({
         recipe: {
           version: 1, id: 'm31',
-          crop: { x: 50, y: 60, width: 700, height: 700 },
+          crop: { x: 50, y: 60, width: 700, height: 700, rotationDeg: 0 },
           starnet: { stride: 512, upsample: true },
           alpha: { blackPoint: 12, whitePoint: 240, gamma: 0.55 },
           metadata: { sourceUrl: 'https://a', license: 'CC-BY', author: 'Alice' },
@@ -35,6 +35,7 @@ describe('App resumable', () => {
       postProcess: vi.fn(),
       postAlphaOnly: vi.fn(),
       postExport: vi.fn(),
+      postBuildFamous: vi.fn(),
     } as Api & { getRecipe: ReturnType<typeof vi.fn> };
 
     render(<ApiProvider value={api}><App /></ApiProvider>);

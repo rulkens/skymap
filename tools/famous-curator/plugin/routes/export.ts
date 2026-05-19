@@ -29,7 +29,7 @@
  *   atlas.webp    lossy WebP q82, 256² with soft alpha
  */
 import sharp from 'sharp';
-import { existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, rmSync, renameSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   curatedGalaxyDir,
@@ -40,6 +40,7 @@ import { sessionPath } from '../tmpSession.js';
 import { serialiseRecipe, type Recipe } from '../recipe.js';
 import { upsertOverrideEntry, type OverrideIndex } from '../overrideIndex.js';
 import { applyLuminanceAsAlpha } from '../../../utils/image/applyLuminanceAsAlpha.js';
+import { rotatedExtract } from '../cropExtract.js';
 
 const FULL_PX = 1024;
 const ATLAS_PX = 256;
@@ -47,7 +48,7 @@ const ATLAS_PX = 256;
 export type ExportBody = {
   id: string;
   tmpId: string;
-  crop: { x: number; y: number; width: number; height: number };
+  crop: { x: number; y: number; width: number; height: number; rotationDeg: number };
   starnet: { stride: number; upsample: boolean };
   alpha: { blackPoint: number; whitePoint: number; gamma: number };
   metadata: { sourceUrl: string; license: string; author: string };
@@ -89,14 +90,10 @@ export async function handleExport(opts: {
 
   // 2. source.webp — full-resolution crop, lossless.
   //    Resize to at most FULL_PX on the longest edge (`fit: 'inside'`)
-  //    so non-square crops aren't distorted.
-  const sourceCropped = await sharp(sourcePath)
-    .extract({
-      left: Math.round(body.crop.x),
-      top: Math.round(body.crop.y),
-      width: Math.round(body.crop.width),
-      height: Math.round(body.crop.height),
-    })
+  //    so non-square crops aren't distorted.  rotatedExtract handles
+  //    rotation + out-of-image padding (transparent fill).
+  const sourcePipeline = await rotatedExtract(sourcePath, body.crop);
+  const sourceCropped = await sourcePipeline
     .resize(FULL_PX, FULL_PX, { fit: 'inside' })
     .webp({ lossless: true })
     .toBuffer();
@@ -170,8 +167,22 @@ export async function handleExport(opts: {
   if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
   renameSync(siblingStaging, outDir);
 
-  // 9. Update the override index so the build pipeline picks this
-  //    galaxy up without a manual JSON edit.
+  // 9. Copy atlas.webp into the runtime atlas slot so the main app
+  //    picks up the new thumbnail without an extra fetch-famous-images
+  //    run.  The runtime fetcher loads `/images/famous/<id>.webp`
+  //    directly (see src/utils/network/galaxyImageFetcher.ts); leaving
+  //    this step out means a Commit "succeeds" but the main app still
+  //    shows the previous thumbnail until a manual copy.
+  const atlasSrc = resolve(outDir, 'atlas.webp');
+  const atlasRuntimeDir = resolve(repoRoot, 'public/images/famous');
+  // mkdir -p in case the runtime slot dir doesn't exist yet (fresh
+  // clones + test fixtures both hit this — production checkouts already
+  // have it populated by fetch-famous-images).
+  mkdirSync(atlasRuntimeDir, { recursive: true });
+  copyFileSync(atlasSrc, resolve(atlasRuntimeDir, `${body.id}.webp`));
+
+  // 10. Update the override index so the build pipeline picks this
+  //     galaxy up without a manual JSON edit.
   const idx = upsertOverrideEntry(overrideIndexPath(repoRoot), body.id, {
     dir: `famous-curated/${body.id}`,
     sourceUrl: body.metadata.sourceUrl,

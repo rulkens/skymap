@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "c72",
+  "crop": {
+    "x": -64.61328125,
+    "y": -364.365234375,
+    "width": 4152.549087877716,
+    "height": 4152.549087877716,
+    "rotationDeg": -15.091850240236795
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_55#/media/File:Irregular_Galaxy_NGC_55_(ESO_0914a).jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO"
+  },
+  "processedAt": "2026-05-18T23:25:11.597Z"
+}

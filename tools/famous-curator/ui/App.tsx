@@ -19,7 +19,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
 import type { PointerEvent } from 'react';
 import { useApi } from './apiContext';
-import { reducer, initialState, canExport } from './state';
+import { reducer, initialState, canCommit } from './state';
 import { GalaxyList } from './components/GalaxyList';
 import { SourceBar } from './components/SourceBar';
 import { CropCanvas } from './components/CropCanvas';
@@ -28,6 +28,7 @@ import { PreviewPane } from './components/PreviewPane';
 import { MetadataForm } from './components/MetadataForm';
 import { WikipediaImagePicker } from './components/WikipediaImagePicker';
 import { resolveWikipediaMedia } from './wikipediaMedia';
+import type { CommitPhase } from './components/ParamSliders';
 
 /**
  * useColumnWidth — sidebar width state with localStorage persistence.
@@ -98,7 +99,8 @@ function AppInner() {
   // In-flight flags for the three blocking server round-trips.  Local
   // useState (not reducer state) — these are pure UI feedback and don't
   // need to participate in action-based transitions.
-  const [busy, setBusy] = useState({ fetch: false, process: false, export: false });
+  const [fetchBusy, setFetchBusy] = useState(false);
+  const [commitPhase, setCommitPhase] = useState<CommitPhase>('idle');
   // Resizable sidebars — widths persisted to localStorage so the layout
   // survives a page reload.  Min/max are conservative: too-narrow asides
   // hide controls; too-wide steals room from the crop canvas.
@@ -131,7 +133,7 @@ function AppInner() {
   }, [api, state.alpha, state.dirty.alpha, state.processedOnce, state.tmpId]);
 
   async function onFetch(url: string): Promise<void> {
-    setBusy((b) => ({ ...b, fetch: true }));
+    setFetchBusy(true);
     try {
       // If the pasted URL is a Wikipedia / Wikimedia Commons URL (typically
       // a mediaviewer link like `…/wiki/NGC_6744#/media/File:foo.jpg`),
@@ -158,7 +160,7 @@ function AppInner() {
     } catch (err) {
       console.error('fetch failed', err);
     } finally {
-      setBusy((b) => ({ ...b, fetch: false }));
+      setFetchBusy(false);
     }
   }
   async function onFileDrop(file: File): Promise<void> {
@@ -170,28 +172,32 @@ function AppInner() {
       console.error('file drop failed', err);
     }
   }
-  async function onProcess(): Promise<void> {
-    if (!state.tmpId || !state.crop) return;
-    setBusy((b) => ({ ...b, process: true }));
-    try {
-      const r = await api.postProcess({
-        tmpId: state.tmpId,
-        crop: state.crop,
-        starnet: state.starnet,
-        alpha: state.alpha,
-      });
-      dispatch({ type: 'setPreviews', starless: r.starlessPreviewUrl, alpha: r.alphaPreviewUrl });
-      dispatch({ type: 'markProcessed' });
-    } catch (err) {
-      console.error('process failed', err);
-    } finally {
-      setBusy((b) => ({ ...b, process: false }));
-    }
-  }
-  async function onExport(): Promise<void> {
+  /**
+   * Unified commit: re-process if needed, export, then rebuild famous.bin.
+   *
+   * Skips the slow /api/process step when nothing crop- or starnet-relevant
+   * has changed since the last successful process — the cached starless.png
+   * still applies, and /api/export re-derives the alpha pass from it.
+   * Alpha-only changes are picked up by the export step's alpha re-derive
+   * (the standalone /api/process/alpha-only call is for the live preview;
+   * it doesn't write to disk).
+   */
+  async function onCommit(): Promise<void> {
     if (!state.activeId || !state.tmpId || !state.crop) return;
-    setBusy((b) => ({ ...b, export: true }));
+    const needsProcess = state.dirty.crop || state.dirty.starnet || !state.processedOnce;
     try {
+      if (needsProcess) {
+        setCommitPhase('processing');
+        const r = await api.postProcess({
+          tmpId: state.tmpId,
+          crop: state.crop,
+          starnet: state.starnet,
+          alpha: state.alpha,
+        });
+        dispatch({ type: 'setPreviews', starless: r.starlessPreviewUrl, alpha: r.alphaPreviewUrl });
+        dispatch({ type: 'markProcessed' });
+      }
+      setCommitPhase('exporting');
       await api.postExport({
         id: state.activeId,
         tmpId: state.tmpId,
@@ -201,10 +207,17 @@ function AppInner() {
         metadata: state.metadata,
       });
       dispatch({ type: 'markCuratedById', id: state.activeId });
+      setCommitPhase('building');
+      // Best-effort rebuild — surface failures to the console but don't
+      // tear down the workspace state (the export already landed on disk).
+      const build = await api.postBuildFamous();
+      if (!build.ok) {
+        console.error('build-famous failed', build);
+      }
     } catch (err) {
-      console.error('export failed', err);
+      console.error('commit failed', err);
     } finally {
-      setBusy((b) => ({ ...b, export: false }));
+      setCommitPhase('idle');
     }
   }
 
@@ -280,7 +293,7 @@ function AppInner() {
           // sit in the input after switching to galaxy B.
           key={state.activeId ?? '__none__'}
           disabled={state.activeId === undefined}
-          busy={busy.fetch}
+          busy={fetchBusy}
           onFetch={onFetch}
         />
         <CropCanvas
@@ -288,6 +301,7 @@ function AppInner() {
           crop={state.crop}
           onCropChange={(c) => dispatch({ type: 'setCrop', crop: c })}
           onFileDrop={onFileDrop}
+          downloadOriginalUrl={state.tmpId ? `/api/preview/${state.tmpId}/source.png` : undefined}
         />
         <div className="curator-meta-row">
           <MetadataForm
@@ -314,14 +328,11 @@ function AppInner() {
           starnet={state.starnet}
           alpha={state.alpha}
           dirty={state.dirty}
-          processedOnce={state.processedOnce}
-          canExport={canExport(state)}
-          processBusy={busy.process}
-          exportBusy={busy.export}
+          canCommit={canCommit(state)}
+          commitPhase={commitPhase}
           onStarnet={(p) => dispatch({ type: 'setStarnet', starnet: p })}
           onAlpha={(p) => dispatch({ type: 'setAlpha', alpha: p })}
-          onProcess={onProcess}
-          onExport={onExport}
+          onCommit={onCommit}
         />
         <PreviewPane previews={state.previews} />
       </aside>

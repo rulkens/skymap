@@ -16,6 +16,7 @@
  * installed in CI.
  */
 import { copyFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { spawn } from 'node:child_process';
 
 export type StarnetConfig =
@@ -25,16 +26,24 @@ export type StarnetConfig =
 export type Spawner = (
   bin: string,
   args: readonly string[],
+  opts?: { cwd?: string },
 ) => Promise<{ code: number; stdout: string; stderr: string }>;
 
 /**
  * Default spawner: shells out via node:child_process.spawn, collecting
  * stdout/stderr to strings and resolving with the exit code.  Tests
  * inject their own to avoid touching the real process tree.
+ *
+ * `cwd` is forwarded so callers can keep the binary's working-directory
+ * side effects (e.g. starnet2 writes a `mask.jpg` next to its cwd) out
+ * of unrelated trees like the project root.
  */
-const defaultSpawner: Spawner = (bin, args) =>
+const defaultSpawner: Spawner = (bin, args, opts) =>
   new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn(bin, [...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(bin, [...args], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      cwd: opts?.cwd,
+    });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (chunk: Buffer) => {
@@ -90,7 +99,11 @@ export async function runStarnet(opts: {
     '-e',
   ];
   if (opts.upsample) args.push('-u');
-  const { code, stderr } = await spawner(opts.config.bin, args);
+  // Run starnet2 from the input's directory so its incidental write of
+  // mask.jpg lands in the session tmpdir, not the project root.
+  // (Discovered when mask.jpg kept reappearing as an untracked file in
+  // git status.)
+  const { code, stderr } = await spawner(opts.config.bin, args, { cwd: dirname(opts.input) });
   if (code !== 0) {
     throw new Error(`starnet2 exited ${code}: ${stderr.trim()}`);
   }

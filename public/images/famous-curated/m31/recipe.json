@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "m31",
+  "crop": {
+    "x": 146.978515625,
+    "y": -190.63748899157645,
+    "width": 1636.4714733665764,
+    "height": 1636.4714733665764,
+    "rotationDeg": 36.230436499834354
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_224#/media/File:Andromeda_Galaxy_2025.png",
+    "license": "CC0",
+    "author": "Brody Wesner"
+  },
+  "processedAt": "2026-05-18T23:13:00.005Z"
+}

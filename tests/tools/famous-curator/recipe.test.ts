@@ -17,7 +17,7 @@ function sample(): Recipe {
   return {
     version: 1,
     id: 'm31',
-    crop: { x: 100, y: 200, width: 1820, height: 1820 },
+    crop: { x: 100, y: 200, width: 1820, height: 1820, rotationDeg: 0 },
     starnet: { stride: 256, upsample: false },
     alpha: { blackPoint: 8, whitePoint: 230, gamma: 0.7 },
     metadata: {

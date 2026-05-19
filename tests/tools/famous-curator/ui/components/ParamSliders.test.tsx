@@ -8,18 +8,17 @@ describe('ParamSliders', () => {
     starnet: { stride: 256, upsample: false },
     alpha: { blackPoint: 8, whitePoint: 255, gamma: 0.7 },
     dirty: { crop: false, starnet: false, alpha: false },
-    processedOnce: false,
-    canExport: false,
+    canCommit: false,
+    commitPhase: 'idle' as const,
   };
 
-  it('renders all 5 controls + 2 action buttons', () => {
+  it('renders all 5 controls + the Commit button', () => {
     render(
       <ParamSliders
         {...defaults}
         onStarnet={vi.fn()}
         onAlpha={vi.fn()}
-        onProcess={vi.fn()}
-        onExport={vi.fn()}
+        onCommit={vi.fn()}
       />,
     );
     expect(screen.getByLabelText(/stride/i)).toBeInTheDocument();
@@ -27,40 +26,50 @@ describe('ParamSliders', () => {
     expect(screen.getByLabelText(/black point/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/white point/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/gamma/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /process/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /commit/i })).toBeInTheDocument();
   });
 
-  it('marks Process with data-dirty=true when crop or starnet is dirty', () => {
+  it('marks Commit with data-dirty=true when crop or starnet is dirty', () => {
     render(
       <ParamSliders
         {...defaults}
         dirty={{ crop: true, starnet: false, alpha: false }}
-        onStarnet={vi.fn()} onAlpha={vi.fn()} onProcess={vi.fn()} onExport={vi.fn()}
+        onStarnet={vi.fn()} onAlpha={vi.fn()} onCommit={vi.fn()}
       />,
     );
-    const btn = screen.getByRole('button', { name: /process/i });
+    const btn = screen.getByRole('button', { name: /commit/i });
     expect(btn.getAttribute('data-dirty')).toBe('true');
   });
 
-  it('disables Export when canExport=false', () => {
+  it('disables Commit when canCommit=false', () => {
     render(
       <ParamSliders
         {...defaults}
-        onStarnet={vi.fn()} onAlpha={vi.fn()} onProcess={vi.fn()} onExport={vi.fn()}
+        onStarnet={vi.fn()} onAlpha={vi.fn()} onCommit={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /export/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /commit/i })).toBeDisabled();
   });
 
-  it('enables Export when canExport=true', () => {
+  it('enables Commit when canCommit=true', () => {
     render(
       <ParamSliders
-        {...defaults} canExport
-        onStarnet={vi.fn()} onAlpha={vi.fn()} onProcess={vi.fn()} onExport={vi.fn()}
+        {...defaults} canCommit
+        onStarnet={vi.fn()} onAlpha={vi.fn()} onCommit={vi.fn()}
       />,
     );
-    expect(screen.getByRole('button', { name: /export/i })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: /commit/i })).not.toBeDisabled();
+  });
+
+  it('shows phase label and disables Commit while busy', () => {
+    render(
+      <ParamSliders
+        {...defaults} canCommit commitPhase="exporting"
+        onStarnet={vi.fn()} onAlpha={vi.fn()} onCommit={vi.fn()}
+      />,
+    );
+    const btn = screen.getByRole('button', { name: /exporting/i });
+    expect(btn).toBeDisabled();
   });
 
   it('changing the gamma slider calls onAlpha with the new value', () => {
@@ -68,7 +77,7 @@ describe('ParamSliders', () => {
     render(
       <ParamSliders
         {...defaults}
-        onStarnet={vi.fn()} onAlpha={onAlpha} onProcess={vi.fn()} onExport={vi.fn()}
+        onStarnet={vi.fn()} onAlpha={onAlpha} onCommit={vi.fn()}
       />,
     );
     fireEvent.change(screen.getByLabelText(/gamma/i), { target: { value: '1.2' } });

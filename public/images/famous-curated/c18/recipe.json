@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "c18",
+  "crop": {
+    "x": 125.701904296875,
+    "y": 87.51220703125,
+    "width": 586.395263671875,
+    "height": 586.395263671875,
+    "rotationDeg": 48.37800900265222
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://theskylive.com/sky/deepsky/ngc185-object",
+    "license": "unknown",
+    "author": "Digitized Sky Survey 2"
+  },
+  "processedAt": "2026-05-18T23:19:56.134Z"
+}

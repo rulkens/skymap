@@ -17,7 +17,7 @@ describe('CropCanvas', () => {
     render(
       <CropCanvas
         source={{ width: 1000, height: 800, previewUrl: '/p.webp' }}
-        crop={{ x: 100, y: 100, width: 400, height: 400 }}
+        crop={{ x: 100, y: 100, width: 400, height: 400, rotationDeg: 0 }}
         onCropChange={vi.fn()}
         onFileDrop={vi.fn()}
       />,
@@ -30,7 +30,7 @@ describe('CropCanvas', () => {
     render(
       <CropCanvas
         source={{ width: 1000, height: 800, previewUrl: '/p.webp' }}
-        crop={{ x: 100, y: 100, width: 400, height: 400 }}
+        crop={{ x: 100, y: 100, width: 400, height: 400, rotationDeg: 0 }}
         onCropChange={vi.fn()}
         onFileDrop={vi.fn()}
       />,
@@ -43,14 +43,16 @@ describe('CropCanvas', () => {
     render(
       <CropCanvas
         source={{ width: 1000, height: 800, previewUrl: '/p.webp' }}
-        crop={{ x: 0, y: 0, width: 100, height: 100 }}
+        crop={{ x: 0, y: 0, width: 100, height: 100, rotationDeg: 0 }}
         onCropChange={onCropChange}
         onFileDrop={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByText('Reset crop'));
     // 800 = min(1000, 800); centred at x=100, y=0.
-    expect(onCropChange).toHaveBeenCalledWith({ x: 100, y: 0, width: 800, height: 800 });
+    expect(onCropChange).toHaveBeenCalledWith({
+      x: 100, y: 0, width: 800, height: 800, rotationDeg: 0,
+    });
   });
 
   it('drop event with a File calls onFileDrop with the file', () => {
