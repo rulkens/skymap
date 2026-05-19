@@ -391,15 +391,18 @@ describe('poiSubsystem — produceMarkers', () => {
 // render loop on while a POI happens to be mid-fade.
 
 // ─────────────────────────────────────────────────────────────────────
-// Marker vs label visibility independence (audit Q11, 2026-05-19)
+// Marker vs label visibility records (audit Q11, 2026-05-19) +
+// anchor gate (2026-05-19 follow-up)
 //
-// Prior to the split a single `visibility` record was consulted by
-// BOTH `produceLabels` and `produceMarkers`, so toggling "labels for
-// clusters" secretly also hid the cluster ring + halo.  These tests
-// guard the new two-record contract: flipping one axis never affects
-// the other.
+// Two underlying records (`markerVisibility`, `labelVisibility`) gate
+// the two outputs independently in the data model — flipping a label
+// record never mutates the marker record, and vice versa.  At RENDER
+// time, however, a structure label (cluster / supercluster / void) is
+// also gated on its marker being visible: a floating label with no
+// ring anchor reads as orphan text in space.  `famousGalaxy` labels
+// are exempt — their anchor is the galaxy point itself, not a ring.
 // ─────────────────────────────────────────────────────────────────────
-describe('poiSubsystem · marker/label visibility independence', () => {
+describe('poiSubsystem · marker/label visibility', () => {
   // Cluster with a ring (physicalRadiusMpc set → marker is emitted)
   // and a name (label is emitted).  Both axes default to visible.
   const VIRGO_WITH_RING: PointOfInterest = {
@@ -410,7 +413,7 @@ describe('poiSubsystem · marker/label visibility independence', () => {
     physicalRadiusMpc: 2,
   };
 
-  it('setCategoryMarkerVisible(false) hides only the marker, not the label', () => {
+  it('setCategoryMarkerVisible(false) hides the marker AND the structure-category label (anchor gate)', () => {
     const sub = createPoiSubsystem();
     sub.setPois([VIRGO_WITH_RING]);
     sub.setCategoryMarkerVisible('cluster', false);
@@ -418,8 +421,28 @@ describe('poiSubsystem · marker/label visibility independence', () => {
     const labels = sub.produceLabels(makeState(), makeCtx()).labels;
     const markers = sub.produceMarkers(makeState(), makeCtx());
 
-    expect(labels.map((l) => l.text)).toEqual(['Virgo']);
+    // Anchor gate: a cluster label without its ring would float with
+    // no visual reference, so the render path drops it too.
+    expect(labels).toHaveLength(0);
     expect(markers).toHaveLength(0);
+  });
+
+  it('famousGalaxy labels are exempt from the anchor gate', () => {
+    const sub = createPoiSubsystem();
+    const m31: PointOfInterest = {
+      id: 'm31',
+      name: 'Andromeda Galaxy',
+      category: 'famousGalaxy',
+      worldPos: [0, 0, 5],
+    };
+    sub.setPois([m31]);
+    sub.setCategoryMarkerVisible('famousGalaxy', false);
+
+    const labels = sub.produceLabels(makeState(), makeCtx()).labels;
+
+    // famousGalaxy has no ring marker — its anchor is the galaxy point
+    // itself, so the marker-axis flip doesn't gate its label.
+    expect(labels.map((l) => l.text)).toEqual(['Andromeda Galaxy']);
   });
 
   it('setCategoryLabelVisible(false) hides only the label, not the marker', () => {
@@ -448,7 +471,7 @@ describe('poiSubsystem · marker/label visibility independence', () => {
     expect(markers).toHaveLength(0);
   });
 
-  it('axes are per-category — flipping one category does not affect another', () => {
+  it('label axis remains per-category — flipping one category does not affect another', () => {
     const sub = createPoiSubsystem();
     const laniakea: PointOfInterest = {
       id: 'laniakea',
@@ -459,17 +482,16 @@ describe('poiSubsystem · marker/label visibility independence', () => {
     };
     sub.setPois([VIRGO_WITH_RING, laniakea]);
 
-    // Hide cluster markers + supercluster labels.  Cluster labels and
-    // supercluster markers must both still emit — the two axes and
-    // four categories combine into 4×2 independent gates.
-    sub.setCategoryMarkerVisible('cluster', false);
+    // Hide ONLY supercluster labels.  Cluster labels + both markers
+    // remain (cluster marker is still on, so the anchor gate doesn't
+    // fire on the cluster label).
     sub.setCategoryLabelVisible('supercluster', false);
 
     const labels = sub.produceLabels(makeState(), makeCtx()).labels;
     const markers = sub.produceMarkers(makeState(), makeCtx());
 
     expect(labels.map((l) => l.text)).toEqual(['Virgo']);
-    expect(markers.map((m) => m.category)).toEqual(['supercluster']);
+    expect(markers.map((m) => m.category).sort()).toEqual(['cluster', 'supercluster']);
   });
 
   it('toggling marker visibility on/off preserves the label record', () => {

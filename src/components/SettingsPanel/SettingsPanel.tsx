@@ -11,12 +11,15 @@
  * and re-organised around four thematic groups that mirror the explorer's
  * mental model of the scene:
  *
- *   1. **Galaxies** — the points themselves.  Master toggle + Advanced.
+ *   1. **Galaxies** — the points themselves.  Master toggle + a
+ *      default-open "Surveys" sub-disclosure (per-catalog toggles) +
+ *      Advanced (render tunables).
  *   2. **Cosmic web** — the diffuse stuff *between* galaxies (volume
  *      density fields + DisPerSE filaments).  Master toggle + a Style
  *      picker (Smooth / Filaments / Both) + Advanced.
  *   3. **Structures** — clusters / superclusters / voids as marker rings.
- *      Master toggle + per-category Advanced.
+ *      Master toggle + per-category checkboxes inline (no Advanced
+ *      sub-disclosure — there are no other knobs to hide).
  *   4. **Labels** — every text annotation in the scene (cluster names,
  *      "you are here", famous galaxies, …).  Master toggle + per-category
  *      Advanced.
@@ -126,11 +129,15 @@ const STRUCTURE_CATEGORIES: readonly PoiCategory[] = ['cluster', 'supercluster',
  * The label categories the "Labels" master toggle batches over.  All four
  * PoiCategory values — labels are independent of marker visibility (axis
  * separation landed in PR #160 / audit Q11).
+ *
+ * `famousGalaxy` is listed first — it's the label set the explorer is
+ * most likely to recognise + most likely to toggle (named galaxies vs.
+ * astronomer-jargon structure labels), so it gets the top row.
  */
 const LABEL_CATEGORIES: readonly PoiCategory[] = [
+  'famousGalaxy',
   'cluster',
   'supercluster',
-  'famousGalaxy',
   'void',
 ];
 
@@ -520,11 +527,12 @@ export function SettingsPanel({
           headerToggleIndeterminate={galaxiesMaster.indeterminate}
           onHeaderToggleChange={galaxiesMaster.onToggle}
         >
-          <CollapsibleSection title="Advanced">
-            {/* Per-survey toggles — kept first inside Advanced so the
-                "which catalog am I looking at" question stays at the top
-                of the disclosure, mirroring how Surveys used to sit at
-                the top of the panel body. */}
+          {/* Surveys — per-survey toggles get their own subsection that
+              opens by default with the Galaxies group.  "Which catalog am
+              I looking at" is the most common reason to drill into
+              Galaxies, so it sits in front and is one fewer click away
+              than the power-user knobs below. */}
+          <CollapsibleSection title="Surveys" defaultOpen>
             {TOGGLEABLE_SOURCES.map((s) => {
               const count = sourceCounts?.[s];
               return (
@@ -551,7 +559,9 @@ export function SettingsPanel({
                 </div>
               );
             })}
+          </CollapsibleSection>
 
+          <CollapsibleSection title="Advanced">
             {/* Point size — galaxy-only tunable, lives here per Q16b. */}
             <div className={styles.panelRow}>
               <label htmlFor="slider-point-size">Point size</label>
@@ -757,30 +767,29 @@ export function SettingsPanel({
           headerToggleIndeterminate={structuresMaster.indeterminate}
           onHeaderToggleChange={structuresMaster.onToggle}
         >
-          <CollapsibleSection title="Advanced">
-            {STRUCTURE_CATEGORIES.map((cat) => (
-              <div className={styles.panelRow} key={`marker-${cat}`}>
-                <label htmlFor={`toggle-marker-${cat}`}>
-                  {cat === 'supercluster'
-                    ? 'Supercluster markers'
-                    : cat === 'void'
-                      ? 'Void markers'
-                      : 'Cluster markers'}
-                </label>
-                <input
-                  id={`toggle-marker-${cat}`}
-                  type="checkbox"
-                  // Same IIFE-gate-doesn't-narrow story as the survey
-                  // toggles above: `structuresMaster` truthiness already
-                  // guarantees both props are defined.
-                  checked={markerCategoryVisibility![cat]}
-                  onChange={(e) =>
-                    onSetMarkerCategoryVisibility!(cat, e.target.checked)
-                  }
-                />
-              </div>
-            ))}
-          </CollapsibleSection>
+          {/* Per-category marker checkboxes live directly in the section
+              body — no Advanced wrapper, since there are no other knobs
+              to hide behind one.  Same `!` rationale as the Surveys
+              block: `structuresMaster` truthiness already guarantees
+              both props are defined, TS can't trace that through the
+              IIFE. */}
+          {STRUCTURE_CATEGORIES.map((cat) => (
+            <div className={styles.panelRow} key={`marker-${cat}`}>
+              <label htmlFor={`toggle-marker-${cat}`}>
+                {cat === 'supercluster'
+                  ? 'Superclusters'
+                  : cat === 'void'
+                    ? 'Voids'
+                    : 'Clusters'}
+              </label>
+              <input
+                id={`toggle-marker-${cat}`}
+                type="checkbox"
+                checked={markerCategoryVisibility![cat]}
+                onChange={(e) => onSetMarkerCategoryVisibility!(cat, e.target.checked)}
+              />
+            </div>
+          ))}
         </CollapsibleSection>
       )}
 
@@ -799,27 +808,29 @@ export function SettingsPanel({
         headerToggleIndeterminate={labelsMaster.indeterminate}
         onHeaderToggleChange={labelsMaster.onToggle}
       >
-        <CollapsibleSection title="Advanced">
-          {LABEL_CATEGORIES.map((cat) => (
-            <div className={styles.panelRow} key={`label-${cat}`}>
-              <label htmlFor={`toggle-label-${cat}`}>
-                {cat === 'supercluster'
-                  ? 'Supercluster labels'
-                  : cat === 'famousGalaxy'
-                    ? 'Famous galaxy labels'
-                    : cat === 'void'
-                      ? 'Void labels'
-                      : 'Cluster labels'}
-              </label>
-              <input
-                id={`toggle-label-${cat}`}
-                type="checkbox"
-                checked={labelCategoryVisibility[cat]}
-                onChange={(e) => onSetLabelCategoryVisibility(cat, e.target.checked)}
-              />
-            </div>
-          ))}
-        </CollapsibleSection>
+        {/* Per-category label checkboxes inline — same flattening as the
+            Structures section above (nothing else lives here, so an
+            Advanced wrapper would add a click without hiding anything
+            useful). */}
+        {LABEL_CATEGORIES.map((cat) => (
+          <div className={styles.panelRow} key={`label-${cat}`}>
+            <label htmlFor={`toggle-label-${cat}`}>
+              {cat === 'supercluster'
+                ? 'Superclusters'
+                : cat === 'famousGalaxy'
+                  ? 'Famous galaxies'
+                  : cat === 'void'
+                    ? 'Voids'
+                    : 'Clusters'}
+            </label>
+            <input
+              id={`toggle-label-${cat}`}
+              type="checkbox"
+              checked={labelCategoryVisibility[cat]}
+              onChange={(e) => onSetLabelCategoryVisibility(cat, e.target.checked)}
+            />
+          </div>
+        ))}
       </CollapsibleSection>
 
       {/* ── Display (power-user disclosure, default closed) ─────────────── */}

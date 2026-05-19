@@ -408,11 +408,18 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
     const [cx, cy, cz] = ctx.drawCamPos;
     for (const p of pois) {
-      // Label-axis gate only.  Markers consult their own
-      // `markerVisibility` record in `produceMarkers` below — flipping
-      // a category's label visibility off here leaves its ring + halo
-      // marker intact, and vice versa.
+      // Label-axis gate.  Markers consult their own `markerVisibility`
+      // record in `produceMarkers` below — flipping a category's label
+      // visibility off here leaves its ring + halo marker intact, and
+      // vice versa.
       if (!labelVisibility[p.category]) continue;
+      // Anchor gate.  A structure label (cluster / supercluster / void)
+      // needs its ring marker as a visual anchor — a floating label
+      // with no ring reads as orphaned text in space.  `famousGalaxy`
+      // is exempt because its anchor is the galaxy point itself, not a
+      // ring marker (and famous galaxies don't appear in
+      // `markerVisibility`'s STRUCTURE_CATEGORIES batch at all).
+      if (p.category !== 'famousGalaxy' && !markerVisibility[p.category]) continue;
       // Widen the `as const`-narrowed POI_STYLES entry back to the
       // declared shape so the optional `anchorOffsetPx` / `fadeBandPx`
       // fields are visible regardless of which category we're on.
