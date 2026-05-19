@@ -1,14 +1,17 @@
 /**
  * DebugPanel — the umbrella for the renamed dev panel.
  *
- * Replaces the legacy `LoadingDevPanel` with a three-section panel:
+ * Replaces the legacy `LoadingDevPanel` with a four-section panel:
  * `AssetLoadingSection` (the legacy slot-progress rows),
- * `GpuTimingsSection` (per-pass GPU timing live readout), and
+ * `GpuTimingsSection` (per-pass GPU timing live readout),
  * `RenderTogglesSection` (per-pass on/off checkboxes for visual
- * debugging).  The mount predicate is owned by `App.tsx` (DEV ||
- * `hasUrlGate('debug')`); when this component renders, all sections
- * always render — section-level visibility (e.g. "GPU timings
- * unavailable") is each section's own concern.
+ * debugging), and `DataQualitySection` (catalog-audit diagnostics
+ * such as the orientation-fallback toggles — see Q16g of the
+ * 2026-05-19 SettingsPanel UX audit for why these graduated out
+ * of the user-facing Settings panel).  The mount predicate is owned
+ * by `App.tsx` (DEV || `hasUrlGate('debug')`); when this component
+ * renders, all sections always render — section-level visibility
+ * (e.g. "GPU timings unavailable") is each section's own concern.
  *
  * ### Why collapsible sections
  *
@@ -17,9 +20,10 @@
  * is `ready` — a collapsed `<details>` keeps the panel compact
  * during steady-state runs.  GPU timings is the opposite (always
  * live), but the user might want to focus on one or the other.
- * `RenderTogglesSection` defaults to closed (most sessions won't
- * need to flip a renderer off); the other two default to open
- * because their data is the primary reason for opening the panel.
+ * `RenderTogglesSection` and `DataQualitySection` both default to
+ * closed (most sessions won't need to flip a renderer off or audit
+ * data quality); the other two default to open because their data
+ * is the primary reason for opening the panel.
  */
 
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
@@ -28,14 +32,27 @@ import type { PassOverridesHandle } from '../../@types/engine/handles/EngineDebu
 import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
+import { DataQualitySection } from './DataQualitySection';
 
 export type DebugPanelProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
   timingService: GpuTimingService;
   passOverrides: PassOverridesHandle;
+  highlightFallback: boolean;
+  realOnlyMode: boolean;
+  onHighlightFallbackChange: (enabled: boolean) => void;
+  onRealOnlyModeChange: (enabled: boolean) => void;
 };
 
-export function DebugPanel({ slots, timingService, passOverrides }: DebugPanelProps) {
+export function DebugPanel({
+  slots,
+  timingService,
+  passOverrides,
+  highlightFallback,
+  realOnlyMode,
+  onHighlightFallbackChange,
+  onRealOnlyModeChange,
+}: DebugPanelProps) {
   return (
     <div
       style={{
@@ -58,6 +75,13 @@ export function DebugPanel({ slots, timingService, passOverrides }: DebugPanelPr
       <GpuTimingsSection service={timingService} />
       <div style={{ marginTop: 6 }} />
       <RenderTogglesSection passOverrides={passOverrides} />
+      <div style={{ marginTop: 6 }} />
+      <DataQualitySection
+        highlightFallback={highlightFallback}
+        realOnlyMode={realOnlyMode}
+        onHighlightFallbackChange={onHighlightFallbackChange}
+        onRealOnlyModeChange={onRealOnlyModeChange}
+      />
     </div>
   );
 }
