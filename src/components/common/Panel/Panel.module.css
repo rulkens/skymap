@@ -38,29 +38,64 @@
 }
 
 /*
- * Title row — full-width <button> wrapping the chevron + uppercase title.
+ * Title strip — a flex row carrying the collapse-affordance button and,
+ * optionally, an extra inline slot (used by SettingsPanel for the Tier
+ * chip).  The bottom border that used to live on `.titleButton` moved
+ * up here so it spans the full width regardless of whether an extra
+ * slot is rendered.
+ */
+.titleRow {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-default);
+  /* Match the panel's rounded top corners so the header doesn't square
+   * off the top edge of the glassmorphic container. */
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+/*
+ * Title row — the <button> that wraps the chevron + uppercase title.
  * We strip every default <button> chrome rule so the row reads as a plain
  * heading; only the cursor and focus ring announce its interactivity.
  *
  * Why a real <button> rather than a styled <div>: keyboard focus +
  * Enter/Space activation + `aria-expanded` come for free, no custom
  * onKeyDown handler.
+ *
+ * `flex: 1` lets the button absorb whatever horizontal space the
+ * `.headerExtra` slot leaves on the right (or all of it when no extra
+ * is rendered).
  */
 .titleButton {
   display: flex;
   align-items: baseline;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: var(--space-5) var(--space-7);
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--border-default);
-  /* Match the panel's rounded top corners so the header doesn't square
-   * off the top edge of the glassmorphic container. */
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   font: inherit;
   text-align: left;
   cursor: pointer;
   user-select: none;
+}
+
+/*
+ * Inline slot rendered to the right of the title.  Currently used by
+ * SettingsPanel for the Tier chip — a compact dropdown that's the
+ * most consequential always-visible control on the panel but doesn't
+ * deserve a full body row of its own (UX-audit Q13 / converged
+ * structure).  Padding mirrors the title button's right edge so the
+ * chip sits visually inside the same header strip rather than tacked
+ * on.
+ */
+.headerExtra {
+  display: flex;
+  align-items: center;
+  padding-right: var(--space-7);
+  /* Don't let a long chip label crowd the title text — the chip
+   * shrinks before the title does. */
+  flex-shrink: 0;
 }
 
 .titleButton:focus-visible {
@@ -70,7 +105,7 @@
 }
 
 /*
- * When the panel is collapsed, drop the title button's bottom border so
+ * When the panel is collapsed, drop the title strip's bottom border so
  * the card reads as a single rounded chip rather than a header with an
  * empty rule underneath it.  Pre-animation we used `:only-child` (the
  * body was unmounted on collapse), but the body now stays mounted with
@@ -78,8 +113,12 @@
  * sibling check for the absence of the `.bodyWrapperOpen` modifier
  * class (toggled from Panel.tsx via `cx`).  Baseline 2023, supported
  * across every browser the project targets.
+ *
+ * Selector applies to `.titleRow` (the flex container holding the
+ * button + optional extra slot) so the rounded corners cover the full
+ * header strip rather than just the button's edge.
  */
-.titleButton:has(+ .bodyWrapper:not(.bodyWrapperOpen)) {
+.titleRow:has(+ .bodyWrapper:not(.bodyWrapperOpen)) {
   border-bottom: 0;
   border-radius: var(--radius-xl);
 }
