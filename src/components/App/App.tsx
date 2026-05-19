@@ -20,7 +20,8 @@
  *      at mount; consumed by the CommandPalette and the deep-link drain.
  *   4. `useAliasIndex` — lazy two-phase pipeline that builds the PGC alias
  *      index on the first palette open, returning `{ aliasIndex, aliasMap }`.
- *   5. `useFocusUrlSync` — owns the entire `#focus=…` URL lifecycle.
+ *   5. `useUrlSync` — owns the entire `window.location.hash` lifecycle for
+ *      both `#focus=<galaxyId>` and `#poi=<poiId>` schemes in one place.
  *   6. `useKeyboardShortcuts` — global keydown listener for Cmd+K / Esc /
  *      f / h / l, plus the form-field guard.
  *
@@ -67,8 +68,7 @@ import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
 import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
 import appStyles from './App.module.css';
-import { useFocusUrlSync } from '../../hooks/useFocusUrlSync';
-import { usePoiUrlSync } from '../../hooks/usePoiUrlSync';
+import { useUrlSync } from '../../hooks/useUrlSync';
 import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
@@ -164,7 +164,7 @@ export function App(): React.ReactElement {
   //
   // The engine fires `onPoiFocusChange(poiId | null)` whenever the user
   // clicks a POI ring (or commits via a deep-link drain).  We mirror
-  // that into React state so `usePoiUrlSync` can write the hash, and
+  // that into React state so `useUrlSync` can write the hash, and
   // future presentation chrome (POI InfoCard body in Task 14) can
   // branch on it.  React's `useState` setter is stable, so it's safe
   // to pass through `extraCallbacks` — which useEngine captures once
@@ -245,7 +245,7 @@ export function App(): React.ReactElement {
       },
       // POI focus echo — engine fires this on POI-ring click / palette
       // pick / deep-link drain.  Mirrors into `focusedPoiId` so
-      // `usePoiUrlSync` can keep `#poi=<id>` in lock-step with the
+      // `useUrlSync` can keep `#poi=<id>` in lock-step with the
       // selection.  Settings callbacks don't define `camera.*`, so
       // there's no conflict with the spread above.  `setFocusedPoiId`
       // is a stable React setter so useEngine's "capture once" contract
@@ -340,7 +340,7 @@ export function App(): React.ReactElement {
   //
   // `paletteOpen` controls the overlay visibility.  The famous-galaxy meta
   // (entries + xrefs) comes from `useFamousMeta` below — loaded once at
-  // mount and shared with the deep-link drain via `useFocusUrlSync`.
+  // mount and shared with the deep-link drain via `useUrlSync`.
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Stable handlers for the SearchTrigger pill.  The trigger is wrapped
@@ -392,58 +392,39 @@ export function App(): React.ReactElement {
     engineHandleRef: handleRef,
   });
 
-  // ── Deep-link focus URL sync ──────────────────────────────────────────────
+  // ── Unified deep-link URL sync ────────────────────────────────────────────
   //
-  // Single hook owning the entire `#focus=…` lifecycle: mount-time hash
-  // parse + scrub, selection-driven URL writes, drain of pending deep
-  // links once the engine is `'ready'` (which guarantees `state.cam`),
-  // and the supersede-on-selection cleanup.  See the hook's module
-  // header for the full rationale of each effect.
+  // One owner of `window.location.hash` handles both `#focus=<galaxyId>`
+  // and `#poi=<poiId>` schemes.  The merge eliminates the segment-prefix
+  // coordination that two independent hooks needed (each guarded against
+  // clobbering the other's hash body).  See `useUrlSync.ts` for the full
+  // rationale and the five-effect breakdown.
   //
-  // Void return: the hook does also expose `pendingTarget` for a future
-  // tier-mismatch banner, but no consumer uses it today.  Destructuring
-  // it here would imply a downstream prop chain that doesn't exist;
-  // skipping the destructure makes the dead binding non-misleading and
-  // keeps the lint clean.
-  useFocusUrlSync({
+  // Why a hard-coded static POI table instead of reading from the engine?
+  // The engine's POI subsystem owns the merged list (static anchors +
+  // asynchronously-loaded famous-galaxy POIs), but exposing it as a
+  // reactive React slice would mean threading another callback through
+  // EngineCallbacks and re-rendering App on every famous-meta load.  For
+  // deep-link arrivals the static subset is sufficient — `#poi=cluster-…`
+  // / `#poi=supercluster-…` / `#poi=void-…` all live in this table.
+  //
+  // `buildStaticAnchorPois` is the same helper the engine's wireSlots
+  // phase calls when seeding `state.subsystems.pois.setPois(...)`, so
+  // the id-slug + worldPos this hook hands `focusOnPoi` is guaranteed to
+  // match what the renderer is drawing.  `useMemo([])` because the helper
+  // output is referentially-stable per call and we don't want to rebuild
+  // a fresh array on every render — that would re-fire the drain effect
+  // needlessly.  Famous-galaxy POIs (`#poi=famous-…`) are a future
+  // extension; the drain holds the pending id until a future "famous POIs
+  // ready" subscriber resolves it.
+  const staticPois = useMemo(() => buildStaticAnchorPois(), []);
+  useUrlSync({
     focused,
     status,
     sourceCounts,
     famousMeta,
     famousXrefs,
     aliasMap,
-    engineHandleRef: handleRef,
-  });
-
-  // ── Deep-link POI URL sync (#poi=<id>) ───────────────────────────────────
-  //
-  // Sister hook to `useFocusUrlSync` — owns the entire `#poi=<id>`
-  // lifecycle for cluster / supercluster / void anchors.  The two
-  // hash schemes (`#focus=` and `#poi=`) coexist without cross-talk:
-  // each hook only writes its own segment and leaves the other one
-  // alone.
-  //
-  // Why a hard-coded static POI table instead of reading from the
-  // engine?  The engine's POI subsystem owns the merged list (static
-  // anchors + asynchronously-loaded famous-galaxy POIs), but exposing
-  // it as a reactive React slice would mean threading another
-  // callback through EngineCallbacks and re-rendering App on every
-  // famous-meta load.  For deep-link arrivals the static subset is
-  // sufficient — `#poi=cluster-…` / `#poi=supercluster-…` /
-  // `#poi=void-…` all live in this table.  Famous-galaxy POIs
-  // (`#poi=famous-…`) are a future extension; the drain holds the
-  // pending id and a future "famous POIs ready" subscriber can
-  // resolve it.
-  //
-  // `buildStaticAnchorPois` is the same helper the engine's wireSlots
-  // phase calls when seeding `state.subsystems.pois.setPois(...)`, so
-  // the id-slug + worldPos this hook hands `focusOnPoi` is guaranteed
-  // to match what the renderer is drawing at.  `useMemo([])` because
-  // the helper output is referentially-stable per call and we don't
-  // want to rebuild a fresh array on every render — that would re-fire
-  // the drain effect needlessly.
-  const staticPois = useMemo(() => buildStaticAnchorPois(), []);
-  usePoiUrlSync({
     focusedPoiId,
     ready: status.kind === 'ready',
     pois: staticPois,
