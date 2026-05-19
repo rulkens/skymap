@@ -122,7 +122,6 @@ import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
 import { clearAll } from './helpers/clearAll';
 import { commitFocus } from './helpers/commitFocus';
-import { commitPoiFocus } from './helpers/commitPoiFocus';
 import { dispatchFocusOn } from './helpers/dispatchFocusOn';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { isPoi } from './isPoi';
