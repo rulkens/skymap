@@ -105,7 +105,7 @@ struct VolumeUniforms {
 
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
-const STEP_COUNT: i32 = 192;
+const STEP_COUNT: i32 = 128;
 const SATURATION_THRESHOLD: f32 = 0.99;
 
 struct FsIn {

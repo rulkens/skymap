@@ -121,11 +121,6 @@ fn vs(
     earlyOut.paCs = 1.0;
     earlyOut.paSn = 0.0;
     earlyOut.isFallback = 0u;
-    earlyOut.dMpc = dMpc;
-    earlyOut.schechterRatio = 0.0;
-    earlyOut.angularDensityWeight = 1.0;
-    earlyOut.camDistMpc = 0.0;
-    earlyOut.depthFade = 1.0;
     earlyOut.sizePx = 0.0;
     return earlyOut;
   }
@@ -207,29 +202,49 @@ fn vs(
   // Look up the colour for this point's *rest-frame* colour index.
   out.tint = ramp(restColorIndex);
 
-  // ── MAGNITUDE → INTENSITY ────────────────────────────────────────────────
+  // ── MAGNITUDE → INTENSITY, with every per-instance modulator folded in ──
   //
-  //   intensity = (22 - magnitude) / 8
+  //   intensity = clamp((22 - magnitude) / 8, 0.05, 1.0)   // mag 14 → 1.0,
+  //                                                          mag 22 → 0.05
+  //               × u.brightness                            // global slider
+  //               × vMaxWeight   (mode 2: 1/V_max)
+  //               × schechterRatio  (mode 3: Schechter LF)
+  //               × angularReweight (mode 4: HEALPix)
+  //               × depthFade   (camera-distance falloff)
   //
-  //   magnitude 14 → 1.0   (brightest)
-  //   magnitude 22 → 0.0   (faint limit)
-  //
-  // We clamp to [0.05, 1.0] rather than [0, 1] so that even the faintest
-  // objects remain *barely* visible — a hard zero would create gaps in
-  // the distribution.
-  //
-  // ── 1/V_max alpha modulation ─────────────────────────────────────────────
-  //
-  // When 'u.biasMode == 2u' (BiasMode.VMax), multiply the intensity by
-  // 'p.vMaxWeight'. This dims intrinsically-bright galaxies whose
-  // detectability volume V_max exceeds the reference volume V_ref — they
-  // visible across a much larger slice of space than their faint
-  // companions, so without the down-weighting they'd over-represent
-  // themselves visually. The 'select(1.0, p.vMaxWeight, …)' keeps the
-  // OTHER three modes (None, VolumeLimited, Schechter, AngularReweight)
-  // unchanged.
+  // Folding the four mode/distance multipliers in here means the fragment
+  // multiplies only per-pixel terms (Gaussian + crossfade + source fade).
+  // Mathematically identical to applying them per-pixel because all five
+  // factors are per-instance constants.
   let vMaxAlpha = select(1.0, p.vMaxWeight, u.biasMode == 2u);
-  out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0) * u.brightness * vMaxAlpha;
+  let schechterMult = select(1.0, p.schechterRatio, u.biasMode == 3u);
+  let angularMult = select(1.0, p.angularDensityWeight, u.biasMode == 4u);
+
+  // Depth-fade: 1 / (1 + (camDist/FALLOFF_HALF)²), gated by depthFadeEnabled.
+  let FALLOFF_HALF_MPC = 1000.0;
+  let camDistRel = distanceMpc / FALLOFF_HALF_MPC;
+  let depthFadeRaw = 1.0 / (1.0 + camDistRel * camDistRel);
+  let depthFadeMult = select(1.0, depthFadeRaw, u.depthFadeEnabled == 1u);
+
+  out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0)
+    * u.brightness
+    * vMaxAlpha
+    * schechterMult
+    * angularMult
+    * depthFadeMult;
+
+  // Invisibility cull: galaxies whose folded intensity falls below this
+  // threshold contribute imperceptibly to the additive HDR target, so
+  // we emit a degenerate clip position (outside the [-1, 1] NDC cube)
+  // and let the rasteriser drop the primitive before any fragment work.
+  // Selected galaxies bypass the cull so the selection halo never
+  // vanishes on a faint pick. Pick fragment shares this vertex stage,
+  // so culled galaxies also become non-pickable — acceptable since
+  // they were never visible.
+  let INVISIBILITY_THRESHOLD = 0.005;
+  if (out.intensity < INVISIBILITY_THRESHOLD && !isSelected) {
+    out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
+  }
 
   // Forward the per-instance packed identity to 'fsPick'.
   // The visual 'fs' ignores this field.
@@ -255,32 +270,6 @@ fn vs(
   let paRad = -p.positionAngleDeg * 3.14159265 / 180.0;
   out.paCs = cos(paRad);
   out.paSn = sin(paRad);
-
-  // Forward origin-relative distance for future distance-dependent
-  // fragment effects (currently unused in 'fs').
-  out.dMpc = dMpc;
-
-  // Forward the per-galaxy Schechter density ratio. The intensity above
-  // already folded it into 'out.intensity' for mode 3 — forwarding it
-  // through VSOut keeps the attribute available to the fragment in case
-  // future tweaks (e.g. tint modulation) want to read it. With
-  // @interpolate(flat) the GPU writes the value once per primitive.
-  out.schechterRatio = p.schechterRatio;
-
-  // Forward the per-galaxy HEALPix angular re-weight (default 1.0).
-  out.angularDensityWeight = p.angularDensityWeight;
-
-  // Forward camera-relative distance for fragment-stage depth effects.
-  out.camDistMpc = distanceMpc;
-
-  // Pre-compute the depth-fade multiplier here so the fragment doesn't
-  // re-derive it per pixel. Curve: '1 / (1 + (camDist / FALLOFF_HALF)²)'.
-  // The 1000 Mpc half-distance + the 'u.depthFadeEnabled' gate are
-  // resolved here so the fragment stage gets a single multiplier.
-  let FALLOFF_HALF_MPC = 1000.0;
-  let camDistRel = distanceMpc / FALLOFF_HALF_MPC;
-  let depthFadeRaw = 1.0 / (1.0 + camDistRel * camDistRel);
-  out.depthFade = select(1.0, depthFadeRaw, u.depthFadeEnabled == 1u);
 
   // Forward the per-instance billboard radius in screen-pixels so the
   // fragment stage can fade points-pass alpha across the procedural-

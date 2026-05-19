@@ -55,11 +55,15 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<GpuContext> {
   if (!navigator.gpu) throw new Error('WebGPU not supported in this browser.');
 
   // Step 1 — Request an adapter.
+  // `powerPreference: 'high-performance'` asks the browser to pick the
+  // discrete GPU on multi-GPU systems (dual-GPU MacBook Pros, desktops
+  // with both integrated and dedicated GPUs). It's a no-op on single-GPU
+  // machines (Apple Silicon, most laptops without a discrete card).
   // `requestAdapter()` returns null when the browser has no usable GPU
   // (e.g. headless test environments, or a machine whose GPU is blocked by
   // a corporate driver policy). We treat that as a hard stop.
   // See: https://www.w3.org/TR/webgpu/#dom-gpu-requestadapter
-  const adapter = await navigator.gpu.requestAdapter();
+  const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) throw new Error('No WebGPU adapter available.');
 
   // Step 2 — Request a device, opting into `timestamp-query` when the

@@ -50,14 +50,12 @@ import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
 import { HDR_PASSES } from '../../services/engine/frame/passes';
 import { Sparkline } from './Sparkline';
 
-// Row display order: HDR_PASSES (one timing slot per pass), then the
-// three out-of-HDR passes in render order — `tone-map` (HDR→swap-
-// chain blit), `ui-overlay` (marker-lines + labels combined; see
-// `services/engine/frame/uiOverlay.ts` for why they share one slot),
-// and `pick` (its own encoder, submitted by the pick renderer).
-// Reordering passes in `passes/index.ts` automatically reorders the
-// timing UI for the HDR portion.
+// Row order matches encoder draw order. `scalar-volume` runs in
+// `encodeVolumes` before the HDR loop, so it's listed explicitly; the
+// HDR_PASSES spread covers the loop interior. Reorders in
+// `passes/index.ts` propagate here automatically.
 const DISPLAY_SLOT_ORDER: readonly TimingSlotName[] = [
+  'scalar-volume',
   ...HDR_PASSES.map((p) => p.name as TimingSlotName),
   'tone-map',
   'ui-overlay',
@@ -135,20 +133,20 @@ export function GpuTimingsSection({ service }: GpuTimingsSectionProps): ReactEle
 
   // ── Branch 3: live data ───────────────────────────────────────────
   const stats = statsRef.current;
-  // Sum of CURRENT-FRAME timings for the header.  Only count slots that
-  // actually ran this frame (staleFrames === 0); idle slots' last
-  // value is no longer the live frame's cost.
+  // Header sums per-slot AVG_WINDOW averages, matching the visible
+  // row values. Stale slots excluded so the total reflects current
+  // GPU work, not a gated-off subsystem's last cost.
   let frameTotalMs = 0;
   for (const [, row] of stats) {
     if (row.staleFrames === 0 && row.recent.length > 0) {
-      frameTotalMs += row.recent[row.recent.length - 1]!;
+      frameTotalMs += row.recent.reduce((a, b) => a + b, 0) / row.recent.length;
     }
   }
 
   return (
     <details open>
       <summary style={{ fontWeight: 'bold', cursor: 'pointer' }}>
-        GPU Timings (last frame: {frameTotalMs.toFixed(1)} ms)
+        GPU Timings (avg {AVG_WINDOW}f: {frameTotalMs.toFixed(1)} ms)
       </summary>
       <div style={{ marginTop: 4 }}>
         {/*
