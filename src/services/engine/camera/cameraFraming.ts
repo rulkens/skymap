@@ -12,7 +12,7 @@
  *     a real cloud — synthetic bbox values + a stub FOV is enough.
  *   - Keep the engine's async startup IIFE focused on imperative wiring
  *     (GPU init, listeners, render loop).  Pure math now lives next to
- *     `autoLod.ts`, `niceRound`, and the other leaf helpers.
+ *     `niceRound` and the other leaf helpers.
  *
  * ### Why a scalar bbox (rather than an `{ min/max XYZ }` struct)?
  *

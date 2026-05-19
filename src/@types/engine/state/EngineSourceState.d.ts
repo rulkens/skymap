@@ -13,12 +13,7 @@
  *                   set during fade-out so the layer keeps drawing with
  *                   falling opacity) or AT the START of fade-in (so the
  *                   renderer begins drawing the layer even though opacity is
- *                   currently 0).  Updated by both `setSourceVisible` and
- *                   the auto-LOD recompute that fires when the camera distance
- *                   crosses a band threshold.
- *   - `lodMode` — decides who owns the mask each frame.  In `'auto'` the
- *                  engine recomputes it via `autoLodMask(camera.distance)`;
- *                  in `'manual'` whatever was last assigned stays put.
+ *                   currently 0).  Updated by `setSourceVisible`.
  *   - `catalogs` — CPU-side mirror of every uploaded `GalaxyCatalog`, keyed by
  *                 `Source`.  Required for picking / hover (resolving a
  *                 GPU instance index back into GalaxyInfo) and for the
@@ -37,7 +32,6 @@
  * is otherwise a recipe for callers reaching into unrelated bags.
  */
 
-import type { LodMode } from '../../data/LodMode';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Tier } from '../../data/Tier';
 import type { Source } from '../../../data/sources';
@@ -59,7 +53,6 @@ export type EngineSourceState = {
    * the draw entirely — saves a writeBuffer + draw call.
    */
   drawMask: number;
-  lodMode: LodMode;
   catalogs: Map<Source, GalaxyCatalog>;
   famousMeta: FamousMetaEntry[];
   famousXrefs: FamousXrefMap;

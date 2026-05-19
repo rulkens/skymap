@@ -44,7 +44,6 @@ function makeFixture(initialMask: number) {
     sources: {
       pickMask: initialMask,
       drawMask: initialMask,
-      lodMode: 'manual' as const,
     },
     subsystems: {
       fades,

@@ -353,8 +353,8 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   deps.detachControlsRef.current = attachOrbitControls(canvas, cam, {
     onCameraChange: () => {
       // Camera moved — wake the render loop for one frame.
-      // Auto-LOD recompute, scale-bar refresh, and pick gate all
-      // run inside the next frame body.
+      // Scale-bar refresh and the pick gate run inside the next
+      // frame body.
       state.subsystems.scheduler.requestRender();
     },
     onClick: (xCss, yCss) => {
@@ -491,7 +491,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     absMagLimit: state.settings.bias.absMagLimit,
     toneMapCurve: state.settings.tonemap.curve,
     exposure: state.settings.tonemap.exposure,
-    lodMode: state.sources.lodMode,
     // Use drawMask (not pickMask) for the initial UI seed — at bootstrap
     // time the two are identical (both initialised from DEFAULT_VISIBLE_SOURCE_MASK
     // in engine.ts), but if a future toggle-then-immediate-reseed

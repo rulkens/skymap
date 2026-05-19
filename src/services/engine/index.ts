@@ -8,11 +8,9 @@
  *
  * Public surface:
  *   - `createEngine` — factory that boots the WebGPU engine on a canvas
- *   - `autoLodMask`  — the LOD heuristic (also used directly in tests)
  *
  * Type re-exports (`EngineHandle`, etc.) are intentionally NOT here — the
  * project keeps types in `src/@types`, and consumers import them from there.
  */
 
 export { createEngine } from './engine';
-export { autoLodMask } from './helpers/autoLod';

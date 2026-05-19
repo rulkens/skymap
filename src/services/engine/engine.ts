@@ -27,7 +27,6 @@
  * modules so this file can stay focused on the imperative orchestration:
  *
  *   Pure helpers:
- *   - `autoLod.ts`             — LOD heuristic (also re-exported as public API)
  *   - `focusTween.ts`          — focus camera tween constants + distance helper
  *   - `galaxyInfoBuilder.ts`   — buildGalaxyInfo / maxAbsCoord / niceRound
  *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
@@ -86,7 +85,6 @@ import {
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
-  DEFAULT_LOD_MODE,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
@@ -95,7 +93,6 @@ import {
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
-import type { LodMode } from '../../@types/data/LodMode';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
@@ -188,10 +185,6 @@ export async function setSourceVisibleImpl(
   visible: boolean,
 ): Promise<void> {
   const { cb } = opts;
-  if (state.sources.lodMode !== 'manual') {
-    state.sources.lodMode = 'manual';
-    cb.sources?.onLodModeChange?.('manual');
-  }
 
   const handle: FadeHandle = { kind: 'survey', source };
   const targetMask = visible
@@ -416,14 +409,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // drawMask — flipped AFTER fade-out (or AT the start of fade-in).
       // The renderer iterates `loadedSources()` and skips any whose bit
       // is clear.  Both default to ALL_VISIBLE_MASK so "draw everything
-      // that is loaded" holds until either the auto-LOD heuristic
-      // recomputes them from camera distance, or the user toggles
-      // a single source in the settings panel.
+      // that is loaded" holds until the user toggles a single source
+      // in the settings panel.
       pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
       drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
-      // 'auto'   → per-frame `autoLodMask(cam.distance)` rewrite.
-      // 'manual' → user owns the mask; auto-LOD paused.
-      lodMode: DEFAULT_LOD_MODE,
       // Mirrors the renderer's per-source GPU buffers in CPU memory
       // so picking can resolve `(source, localIdx)` into a GalaxyInfo
       // without a GPU readback for every hover.  Empty until the
@@ -1033,13 +1022,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return awaitSlotReady(slot, new Map() as PgcAliasMap);
   }
 
-  function setLodMode(mode: LodMode): void {
-    if (mode === state.sources.lodMode) return;
-    state.sources.lodMode = mode;
-    cb.sources?.onLodModeChange?.(mode);
-    state.subsystems.scheduler.requestRender();
-  }
-
   async function setSourceVisible(source: Source, visible: boolean): Promise<void> {
     // Delegate to the module-scope helper so tests can drive the same
     // logic against a partial-state stub without a full GPU engine.
@@ -1394,7 +1376,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       loadAliases: loadPgcAliasesFn,
     },
     sources: {
-      setLodMode,
       setVisible: setSourceVisible,
       setTier,
       getCloud,

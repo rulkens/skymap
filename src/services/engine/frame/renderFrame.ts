@@ -63,7 +63,6 @@
  *
  * ### What stays in `runFrame()` (NOT here)
  *
- *   - Auto-LOD mask refresh (mutates engine state + fires a callback).
  *   - Hover pick readback (mutates `hoveredIndex` + queues another GPU
  *     submit on its own — the pick renderer encodes its own commands).
  *   - The render-on-demand scheduler decision.

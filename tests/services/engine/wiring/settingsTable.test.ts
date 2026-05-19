@@ -79,7 +79,7 @@ describe('settingsTable', () => {
   describe('SETTINGS_TABLE', () => {
     it('declares the 13 table-candidate setters', () => {
       // The plan freezes this list at 13 — bespoke setters
-      // (`setBiasMode`, `setTier`, `setLodMode`, `setSourceVisible`,
+      // (`setBiasMode`, `setTier`, `setSourceVisible`,
       // `setSpaceMouseSensitivity`) MUST stay inline in engine.ts.
       // If this number drifts, either a new boring setter snuck in
       // (good — extend the table) or a bespoke one was accidentally

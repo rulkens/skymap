@@ -26,7 +26,6 @@
  * canonical name unchanged.
  */
 
-import type { LodMode } from '../data/LodMode';
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { VolumeFieldRowData } from './VolumeFieldRowData';
@@ -45,7 +44,6 @@ export type UseEngineSettingsState = {
   realOnlyMode: boolean;
   depthFadeEnabled: boolean;
   visibleSourceMask: number;
-  lodMode: LodMode;
   biasMode: BiasMode;
   absMagLimit: number;
   toneMapCurve: ToneMapCurve;

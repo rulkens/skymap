@@ -51,10 +51,8 @@
  *   - `BiasMode` as a *type* is the union `0 | 1 | 2 | 3`, so any function
  *     parameter typed `BiasMode` only accepts the four legal values.
  *
- * (Same pattern is used for `LodMode` further up in the @types tree, except
- * that one is a string-literal union — a numeric union makes more sense
- * here because the values are sent verbatim to the GPU and string→number
- * conversion would be wasted work.)
+ * (A numeric union makes sense here because the values are sent verbatim
+ * to the GPU and string→number conversion would be wasted work.)
  *
  * ---
  * ### Why the values must match the WGSL shader
