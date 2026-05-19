@@ -1,91 +1,35 @@
 /**
  * wireInput — bootstrap phase that wires the pick renderer, the orbit
  * camera, click + double-click handlers, the input-bindings listener
- * bag, the initial settings-callback fan-out, and the ready-state
- * status callback.
+ * bag, and the initial settings-callback fan-out.
  *
- * ### What this phase does
- *
- *   - Computes the camera bbox from `state.sources.catalogs` (must be
- *     non-empty by the time we reach here — `wireSlots` awaited the
- *     all-arrivals gate).
- *   - Constructs the orbit camera with the bbox-derived framing.
- *     Stored on `state.cam`.
- *   - Captures an immutable copy of the framing as
- *     `state.initialCamSnapshot` for `resetCamera()` to restore later.
- *     The `target` tuple is deliberately cloned because
- *     `createOrbitCamera`'s shallow spread aliases it with the live
- *     `cam.target` — see the inline comment for the reset-camera bug
- *     this avoided.
- *   - Builds the pick renderer (shares vertex/uniform buffers with the
- *     visual renderer — no extra GPU memory).  Stored on
- *     `state.gpu.pickRenderer`.
- *   - Builds the click resolver (decodes pick readbacks into
- *     `(source, localIdx, cloud)` and hands back a GalaxyInfo).  Stored
- *     on `state.subsystems.clickResolver`.
- *   - Attaches `inputBindings` (pointer/keyboard/resize listener bag).
- *     Stored on `state.subsystems.inputBindings`.
- *   - Attaches orbit controls with click + double-click handlers; the
- *     dblclick handler reuses a closure-local `lastClickedInfo` cache
- *     instead of running a second pick (race history in the inline
- *     comment).  The detach function is written to
- *     `deps.detachControlsRef` so `engine.ts`'s `destroy()` can release
- *     the listeners.
- *   - Fires `cb.onStatusChange({ kind: 'ready', ... })` with the count
- *     across every loaded survey at this moment.
- *   - Seeds React with the engine's default values for every echoed
- *     setting via `seedSettingsCallbacks`.
- *
- * ### Why this runs third (after wireSlots, before startLoop)
- *
- * The bbox loop reads `state.sources.catalogs` — populated by the
- * per-source slot commit subscribers wired in `initGpu` and triggered
- * by `wireSlots`.  Without `wireSlots` having awaited the all-arrivals
- * gate, the bbox would be 0 (no clouds yet) and the camera framing
- * would be nonsense.
- *
- * `startLoop` runs after this phase because the `RunFrameDeps` bag it
- * builds includes `cb`, `device`, `context`, the renderers, plus the
- * helpers that close over `state.cam` (which we constructed here).
+ * Runs without waiting on any survey load: the camera framing uses pure
+ * constants from `cameraFraming.ts`, so the orbit camera and the loop
+ * can come up immediately and surveys can fade in as they arrive. The
+ * `ready` status emission lives in `wireSlots` as a per-arrival
+ * subscriber.
  *
  * ### State writes
  *
  *   - `state.cam`, `state.initialCamSnapshot`.
  *   - `state.gpu.pickRenderer`.
  *   - `state.subsystems.clickResolver`, `state.subsystems.inputBindings`.
- *   - `cb.onStatusChange({ kind: 'ready', ... })`.
  *   - Fans out via `seedSettingsCallbacks` to every echoed `cb.on*Change`.
  *
  * ### Side effects on `deps`
  *
  *   - Mutates `deps.detachControlsRef.current` — written with the
  *     orbit-controls detach function.
- *
- * ### Async work
- *
- * None — every call here is synchronous.  The phase is `async` only
- * to match the orchestrator's `Phase` signature.
- *
- * ### Early-return semantics
- *
- * If `state.sources.catalogs.size === 0` (every load failed and the
- * synthetic fallback also produced nothing), this phase returns
- * early.  Same condition as the pre-Phase-5 IIFE's mid-IIFE `return`
- * at the corresponding line.  `startLoop` checks the same condition
- * and bails too — the engine sits in 'loading' state with nothing to
- * render and no input wired.
  */
 
-import { Source } from '../../../data/sources';
 import { createOrbitCamera } from '../../camera/orbitCamera';
 import { attachOrbitControls } from '../../camera/orbitControls';
 import { createPickRenderer } from '../../gpu/renderers/pickRenderer';
 import { createClickResolver } from '../interaction/clickHandler';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera } from '../camera/cameraFraming';
-import { buildGalaxyInfo, maxAbsCoord } from '../helpers/galaxyInfoBuilder';
+import { buildGalaxyInfo } from '../helpers/galaxyInfoBuilder';
 import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
-import { catalogSourceFor } from '../../../data/catalogSource';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { commitPoiFocus } from '../helpers/commitPoiFocus';
 import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
@@ -101,11 +45,6 @@ import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfI
  */
 export async function wireInput(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas, cb } = deps;
-
-  // Bail if no clouds reached the GPU (engine torn down mid-load,
-  // or synthetic upload failed).  Without at least one cloud the
-  // bbox computation below has nothing to size the camera against.
-  if (state.sources.catalogs.size === 0) return;
 
   // Build the pick renderer. It shares the same vertex/uniform buffers as
   // the visual renderer — no extra GPU memory for point data.
@@ -159,18 +98,10 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
 
   // ── Camera auto-framing ──────────────────────────────────────────────
   //
-  // bbox = max abs coordinate across every loaded cloud.  Drives
-  // the camera's far plane — must cover the deepest survey
-  // (typically GLADE at ~1.5 Gpc).  `computeInitialCamera`
-  // (cameraFraming.ts) turns it into target/distance/yaw/pitch
-  // /near/far including the zoom-envelope clamp.
-  let bbox = 0;
-  for (const c of state.sources.catalogs.values()) {
-    const b = maxAbsCoord(c);
-    if (b > bbox) bbox = b;
-  }
+  // Pure constants — see `cameraFraming.ts`. No dependency on loaded
+  // catalogs, so the camera is built before any survey has arrived.
   const fovYRad = (Math.PI / 180) * 60;
-  const initialCam = computeInitialCamera({ bbox, fovYRad });
+  const initialCam = computeInitialCamera({ fovYRad });
 
   const cam = createOrbitCamera({
     target: initialCam.target,
@@ -451,21 +382,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       handle?.camera.focusOn(lastClickedInfo);
     },
   });
-
-  // ── Status: ready ────────────────────────────────────────────────────
-
-  // `count` here is the total number of points across every loaded
-  // survey at the moment we transition to "ready".  Surveys that finish
-  // loading after this point are reflected via `onCatalogReady`, not via
-  // an additional `onStatusChange` — the status bar's job is "we're up",
-  // not "live counter".
-  const firstReadySource = deps.firstReadySourceRef.current;
-  const readyStatus = {
-    kind: 'ready' as const,
-    count: renderer.totalCount(),
-    source: catalogSourceFor(firstReadySource ?? Source.Synthetic),
-  };
-  cb.lifecycle?.onStatusChange?.(readyStatus);
 
   // ── Seed settings callbacks ───────────────────────────────────────────
   //

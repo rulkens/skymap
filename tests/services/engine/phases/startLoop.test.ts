@@ -105,7 +105,6 @@ function makeDeps(): BootstrapDeps {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
     },
-    firstReadySourceRef: { current: null },
   };
 }
 
@@ -153,19 +152,17 @@ describe('startLoop', () => {
     expect(typeof callArgs[2]).toBe('number'); // performance.now() snapshot
   });
 
-  it('returns early without touching frameRef or requestRender when no clouds reached the GPU', async () => {
-    // Pre-Phase-5 IIFE semantics: zero clouds means `wireInput`
-    // bailed before constructing the camera, so starting the loop
-    // would crash on the first frame trying to read `state.cam`.
-    // The early return silently leaves the engine in 'loading'.
+  it('starts the loop unconditionally even with no catalogs loaded', async () => {
+    // Progressive disclosure: the loop must start so the Milky Way is
+    // visible on first frame; surveys fade in as they arrive.
     const state = makeState({ cloudCount: 0 });
     const deps = makeDeps();
     const originalFrameBody = deps.frameRef.current;
 
     await startLoop(state, deps);
 
-    expect(state.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
-    expect(deps.frameRef.current).toBe(originalFrameBody);
+    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalledTimes(1);
+    expect(deps.frameRef.current).not.toBe(originalFrameBody);
   });
 
   it('throws a clear error when a required GPU renderer is null', async () => {

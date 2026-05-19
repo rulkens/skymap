@@ -744,15 +744,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // a few lines past the IIFE is in scope by the time a user can
   // physically double-click the canvas.
   const handleRef: { current: EngineHandle | null } = { current: null };
-  // `firstReadySourceRef` carries the first survey whose cloud arrived
-  // on the GPU (or `Source.Synthetic` for the fallback) from `wireSlots`
-  // forward into `wireInput`, where it shapes the `kind: 'ready'`
-  // status payload.  Pre-M1 (2026-05-11 audit) this lived on
-  // `phaseLocals.firstReadySource`, which hid the mutation site by
-  // shaping it like an `initGpu` output.  The ref makes the contract
-  // explicit: a `{current}` box written by one phase and read by a
-  // later one, same pattern as `frameRef` / `detachControlsRef`.
-  const firstReadySourceRef: { current: Source | null } = { current: null };
   const bootstrapDeps: BootstrapDeps = {
     canvas,
     cb,
@@ -762,7 +753,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     allSlots,
     fpsCounter,
     lastReportedFps,
-    firstReadySourceRef,
   };
   // The main async IIFE runs the bootstrap phases.  All errors are
   // caught here and reported via `onStatusChange` — same single

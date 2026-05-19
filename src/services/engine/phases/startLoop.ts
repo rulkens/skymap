@@ -55,13 +55,8 @@
  * None — every call here is synchronous.  The phase is `async` only
  * to match the orchestrator's `Phase` signature.
  *
- * ### Early-return semantics
- *
- * If `state.sources.catalogs.size === 0` (every load failed and the
- * synthetic fallback also produced nothing), this phase returns
- * early — `wireInput` already bailed before constructing the camera,
- * so there's no point starting the loop.  Same condition as the
- * pre-Phase-5 IIFE's mid-IIFE early-return semantics.
+ * The loop starts unconditionally — empty catalogs are fine, runFrame
+ * draws the Milky Way + overlays and skips per-source point draws.
  */
 
 import { runFrame } from '../frame/runFrame';
@@ -75,11 +70,6 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
  * `frame` binding, fire the first render request.
  */
 export async function startLoop(state: EngineState, deps: BootstrapDeps): Promise<void> {
-  // Bail if no clouds reached the GPU — `wireInput` skipped camera
-  // construction in that case, so there's nothing to render and the
-  // pre-Phase-5 IIFE semantics were "exit silently, sit in 'loading'".
-  if (state.sources.catalogs.size === 0) return;
-
   const phaseLocals = deps.phaseLocals!;
   // Renderers are owned by `state.gpu.*` (written by `initGpu`).  Pre-M1
   // (2026-05-11 audit) we read them off `phaseLocals` with a `!` bang

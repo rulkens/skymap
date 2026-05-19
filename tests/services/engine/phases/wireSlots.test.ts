@@ -351,10 +351,6 @@ function makeDeps(): BootstrapDeps {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
     },
-    // Post-M1 (PR #93): firstReadySource lives as a typed ref on
-    // BootstrapDeps, not on phaseLocals.  wireSlots mutates this on
-    // first-source-ready; wireInput reads it for framing.
-    firstReadySourceRef: { current: null },
   };
 }
 
@@ -365,13 +361,10 @@ describe('wireSlots', () => {
     emitterSpy.mockClear();
   });
 
-  it('all-arrivals gate resolves once every survey slot fires `ready` — wireSlots resolves AND fires `loading` status', async () => {
-    // The all-arrivals gate is the single hardest-to-test invariant in
-    // wireSlots: it constructs a `Promise<void>` that resolves only
-    // when each of SDSS, 2MRS, GLADE, Famous transitions to `ready` or
-    // `error`.  If a future refactor swaps the gate for a different
-    // counting scheme that miscounts, the symptom would be "wireSlots
-    // hangs forever" — exactly what a vitest timeout exposes here.
+  it('returns synchronously (does not wait on survey arrivals) and fires `loading` status', async () => {
+    // Progressive disclosure: wireSlots mints + kicks off loads then
+    // returns. Per-arrival `ready` emissions happen later via the
+    // subscribers it registered, not by awaiting in this body.
     const sdssSlot = makeFakeSlot('sdss-points');
     const twoMrsSlot = makeFakeSlot('2mrs-points');
     const gladeSlot = makeFakeSlot('glade-points');
@@ -385,50 +378,56 @@ describe('wireSlots', () => {
     const state = makeState({ points });
     const deps = makeDeps();
 
-    // `wireSlots` returns a promise that resolves only after every
-    // per-source slot has transitioned.  We kick off the body, then
-    // drive each slot through its terminal state, then await.
-    const done = wireSlots(state, deps);
+    // No slots fired yet — wireSlots must still resolve.
+    await wireSlots(state, deps);
 
-    // Synchronously fire `ready` on each slot — the all-arrivals gate's
-    // subscriber bumps a counter to 4 and resolves.  Doing it after the
-    // wireSlots call (rather than before) is essential: the
-    // `slot.subscribe(...)` line in the gate has to have run.
-    //
-    // Microtask flush: subscribe wiring happens inside the
-    // `new Promise(...)` executor, which itself runs synchronously
-    // when wireSlots is invoked — so by the time control returns to
-    // us, the subscribers are attached.  `fire()` then synchronously
-    // dispatches to them.
-    sdssSlot.fire(readyValue(1));
-    twoMrsSlot.fire(readyValue(1));
-    gladeSlot.fire(readyValue(1));
-    famousSlot.fire(readyValue(1));
-
-    await done;
-
-    // Loading status fires synchronously, before the gate; we still
-    // assert it as evidence that wireSlots reached the lifecycle
-    // notify-loading line (it's the only `lifecycle.onStatusChange`
-    // call wireSlots itself makes — the `ready` follow-up lives in
-    // wireInput).
     expect(deps.cb.lifecycle?.onStatusChange).toHaveBeenCalledWith({ kind: 'loading' });
+    expect(sdssSlot.load).toHaveBeenCalled();
+    expect(twoMrsSlot.load).toHaveBeenCalled();
+    expect(gladeSlot.load).toHaveBeenCalled();
+    expect(famousSlot.load).toHaveBeenCalled();
+  });
 
-    // SDSS fired first with count > 0, so wireSlots records it on the
-    // firstReadySourceRef as the framing seed for wireInput (post-M1
-    // ref-based shape; pre-M1 this lived on phaseLocals).
-    expect(deps.firstReadySourceRef.current).toBe(Source.SDSS);
+  it('fires `ready` status with a running total each time a survey arrives', async () => {
+    // Semantic (b): on each per-source `ready` with count > 0, emit
+    // `kind: 'ready'` with the running total from renderer.totalCount().
+    // The status bar's job here is "the data is appearing" — not "boot
+    // is done" — so emissions repeat.
+    const sdssSlot = makeFakeSlot('sdss-points');
+    const gladeSlot = makeFakeSlot('glade-points');
+    const points = new Map<Source, ReturnType<typeof makeFakeSlot>>([
+      [Source.SDSS, sdssSlot],
+      [Source.Glade, gladeSlot],
+    ]);
+    const state = makeState({ points });
+    let total = 0;
+    // Drive the renderer.totalCount() through the fake slot ready firings.
+    state.gpu.renderer = {
+      totalCount: () => total,
+      loadedSources: () => [] as unknown[],
+    } as never;
+    const deps = makeDeps();
+    await wireSlots(state, deps);
+
+    total = 10000;
+    sdssSlot.fire(readyValue(10000));
+    total = 30000;
+    gladeSlot.fire(readyValue(20000));
+
+    const calls = (deps.cb.lifecycle?.onStatusChange as ReturnType<typeof vi.fn>).mock.calls;
+    const readyCalls = calls.filter((c) => (c[0] as { kind: string }).kind === 'ready');
+    expect(readyCalls.length).toBe(2);
+    expect(readyCalls[0]![0]).toMatchObject({ kind: 'ready', count: 10000 });
+    expect(readyCalls[1]![0]).toMatchObject({ kind: 'ready', count: 30000 });
   });
 
   it('synthetic-fallback path fires `load(...)` on the synthetic slot when every real survey errors', async () => {
-    // The fallback condition is `!pointsAnyReady`, where
-    // `pointsAnyReady` is set only by Source.SDSS / TwoMRS / Glade
-    // transitioning to `ready` with `count > 0`.  Famous-only ready
-    // does NOT count (Famous is curated; an all-Famous "success" still
-    // leaves the user with no main scene — see wireSlots's inline
-    // comment for the rationale).  This test drives every REAL survey
-    // through `error`, lets Famous error too, and asserts that the
-    // synthetic slot's `.load(...)` was invoked.
+    // The fallback condition: SDSS, 2MRS, Glade all settle with no
+    // `ready` + `count > 0`. Famous is curated and doesn't count
+    // either way. With the progressive-disclosure refactor the
+    // fallback is a background subscriber registered before loads
+    // fire, so we just need to drive each real slot through `error`
+    // and assert `synthSlot.load` happened.
     const sdssSlot = makeFakeSlot('sdss-points');
     const twoMrsSlot = makeFakeSlot('2mrs-points');
     const gladeSlot = makeFakeSlot('glade-points');
@@ -444,33 +443,13 @@ describe('wireSlots', () => {
     const state = makeState({ points });
     const deps = makeDeps();
 
-    const done = wireSlots(state, deps);
+    await wireSlots(state, deps);
 
-    // Every real survey errors; Famous errors too.  At this point the
-    // all-arrivals gate resolves, `pointsAnyReady` is still false, so
-    // wireSlots reaches the synthetic-fallback branch.
     sdssSlot.fire(errorValue('sdss boom'));
     twoMrsSlot.fire(errorValue('2mrs boom'));
     gladeSlot.fire(errorValue('glade boom'));
     famousSlot.fire(errorValue('famous boom'));
 
-    // The fallback branch awaits a fresh subscription on the synthetic
-    // slot AND fires `synthSlot.load(...)`.  We must drive the synth
-    // slot through its terminal state too, or wireSlots will hang.
-    //
-    // Microtask gap: the `await allArrivalsPromise` resolves on the
-    // next microtask, then the fallback branch attaches its
-    // subscriber and calls `load`.  We yield to the microtask queue
-    // before firing the synthetic terminal so the subscriber is
-    // actually attached.
-    await Promise.resolve();
-    await Promise.resolve();
-    synthSlot.fire(errorValue('synthetic boom'));
-
-    await done;
-
-    // The load-fallback contract: synthetic.load was called, with a
-    // request carrying Source.Synthetic + the engine's current tier.
     expect(synthSlot.load).toHaveBeenCalledTimes(1);
     expect(synthSlot.load).toHaveBeenCalledWith({
       source: Source.Synthetic,
@@ -498,19 +477,7 @@ describe('wireSlots', () => {
     const state = makeState({ points });
     const deps = makeDeps();
 
-    const done = wireSlots(state, deps);
-
-    // Drive the gate so wireSlots returns; we want to read the
-    // registry the emitter spy captured during the `createLoadProgressEmitter`
-    // call, which happens AFTER the slot mints but BEFORE the
-    // all-arrivals gate `await`.  Either way is fine — emitterSpy
-    // already captured the Map reference; we just need wireSlots to
-    // resolve so we can inspect deps.allSlots after the call too.
-    sdssSlot.fire(readyValue(1));
-    twoMrsSlot.fire(readyValue(1));
-    gladeSlot.fire(readyValue(1));
-    famousSlot.fire(readyValue(1));
-    await done;
+    await wireSlots(state, deps);
 
     // The emitter was constructed exactly once and the registry it
     // received is the same Map instance as `deps.allSlots`.  This is

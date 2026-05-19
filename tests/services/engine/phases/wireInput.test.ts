@@ -2,91 +2,46 @@
  * wireInput — focused test for the highest-leverage invariant of the
  * third bootstrap phase: the initial camera framing call.
  *
- * ### Why this file exists
- *
- * Pre-M7 the only coverage `wireInput.ts` had was `bootstrap.test.ts`,
- * which mocks the phase at module scope.  That left ~400 lines of
- * camera, pick-renderer, click-handler, and settings-seed wiring with
- * zero direct asserts.
- *
- * The single highest-leverage invariant — and the one that most
- * clearly maps to a user-visible failure — is the *initial camera
- * framing*: if wireInput stops computing the camera frame from the
- * loaded clouds' bbox, the user lands on a black screen or a
- * pathologically zoomed view on first paint.  This was a real
- * symptom of the 2026-05-08 black-screen incident.
- *
- * ### What this test asserts
- *
- * `computeInitialCamera` is called with the bbox computed from
- * `state.sources.clouds` and a vertical FOV in radians.  The bbox
- * derivation is `max(|maxAbsCoord(cloud)|)` across every loaded
- * cloud — by populating `state.sources.clouds` with a single
- * synthetic cloud whose absolute coordinate is known, we can
- * predict the bbox exactly and assert against it.
- *
- * ### Why mock `computeInitialCamera`
- *
- * The function is pure and itself tested elsewhere
- * (`tests/services/engine/cameraFraming.test.ts`).  Here we only
- * care that wireInput *calls it with the right inputs* — that's the
- * load-bearing contract between the phase and the framing helper.
- * Mocking lets us assert call args without re-deriving the framing
- * math in the test.
- *
- * ### Why mock the rest
- *
- * Every other call in wireInput (`createPickRenderer`,
- * `attachOrbitControls`, `attachEngineInputs`, `createOrbitCamera`,
- * `createClickResolver`, `seedSettingsCallbacks`) touches a real GPU
- * device, real DOM listeners, or a sibling subsystem with its own
- * dependencies.  Stubbing each one keeps wireInput's body running to
- * completion without dragging in WebGPU or jsdom event surface.
+ * `computeInitialCamera` is called with a 60° FOV and the result drives
+ * `state.cam` + `state.initialCamSnapshot`. No bbox input — framing
+ * uses pure constants so the phase can run before any survey arrives.
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { Source } from '../../../../src/data/sources';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 
-// The framing helper — the load-bearing assertion target.  Returns a
-// shape that satisfies `createOrbitCamera`'s `init` arg.
 const computeInitialCameraSpy = vi.fn(() => ({
   target: [0, 0, 0] as [number, number, number],
-  distance: 644.72,
-  yaw: 0,
-  pitch: 0.3,
+  distance: 0.43,
+  yaw: 3.0045,
+  pitch: 0.0609,
   fovYRad: Math.PI / 3,
   near: 0.01,
-  far: 4000,
+  far: 6000,
 }));
 vi.mock('../../../../src/services/engine/camera/cameraFraming', () => ({
   computeInitialCamera: (...args: unknown[]) =>
     computeInitialCameraSpy(...(args as Parameters<typeof computeInitialCameraSpy>)),
 }));
 
-// The maxAbsCoord helper — pure, but it pulls in galaxyInfoBuilder which
-// imports cloud-related types.  We stub it so we can drive the bbox
-// expectation deterministically from the test.
 vi.mock('../../../../src/services/engine/helpers/galaxyInfoBuilder', () => ({
-  maxAbsCoord: vi.fn((cloud: { _maxAbs: number }) => cloud._maxAbs),
   buildGalaxyInfo: vi.fn(),
 }));
 
-// Camera / input / pick — stub factories that return inert objects.
 vi.mock('../../../../src/services/camera/orbitCamera', () => ({
   createOrbitCamera: vi.fn(() => ({
     target: [0, 0, 0],
-    distance: 644.72,
-    yaw: 0,
-    pitch: 0.3,
+    distance: 0.43,
+    yaw: 3.0045,
+    pitch: 0.0609,
     fovYRad: Math.PI / 3,
     aspect: 1,
     near: 0.01,
-    far: 4000,
+    far: 6000,
   })),
 }));
 
@@ -115,20 +70,7 @@ import { wireInput } from '../../../../src/services/engine/phases/wireInput';
 
 // ── Fixtures ─────────────────────────────────────────────────────────
 
-/**
- * Minimal `EngineState` shaped for wireInput's body.  Sets up:
- *   - one fake cloud in `state.sources.clouds` (so the bbox loop has
- *     something to iterate);
- *   - a stub `gpu.renderer` whose `totalCount()` is read for the
- *     `kind: 'ready'` status payload;
- *   - the subsystem bag wireInput writes to (`clickResolver`,
- *     `inputBindings`) and reads from (`scheduler`, `selection`,
- *     `tweens`).
- */
-function makeState(maxAbs: number): EngineState {
-  const cloud = { _maxAbs: maxAbs, count: 1 };
-  const catalogs = new Map<Source, typeof cloud>();
-  catalogs.set(Source.SDSS, cloud);
+function makeState(): EngineState {
   return {
     settings: {
       points: {
@@ -148,7 +90,7 @@ function makeState(maxAbs: number): EngineState {
     },
     bias: {} as never,
     sources: {
-      catalogs,
+      catalogs: new Map(),
       pickMask: 0xff,
       drawMask: 0xff,
       famousMeta: [],
@@ -158,7 +100,7 @@ function makeState(maxAbs: number): EngineState {
     picking: { latestMouseCss: null, pointerDown: false } as never,
     gpu: {
       renderer: {
-        totalCount: () => 1,
+        totalCount: () => 0,
         loadedSources: () => [],
       } as never,
       pickRenderer: null,
@@ -192,7 +134,7 @@ function makeState(maxAbs: number): EngineState {
   } as unknown as EngineState;
 }
 
-function makeDeps(firstReadySource: Source | null): BootstrapDeps {
+function makeDeps(): BootstrapDeps {
   const cb: EngineCallbacks = {
     lifecycle: { onStatusChange: vi.fn() },
     selection: { onSelectionChange: vi.fn() } as never,
@@ -210,51 +152,34 @@ function makeDeps(firstReadySource: Source | null): BootstrapDeps {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
     },
-    // Post-M1 (PR #93): firstReadySource flows through a typed ref on
-    // BootstrapDeps (rather than phaseLocals.firstReadySource).  The
-    // framing flow reads `firstReadySourceRef.current` to populate the
-    // `kind: 'ready'` status payload's `source` field — see wireInput's
-    // `catalogSourceFor(... ?? Source.Synthetic)` call.  The test sets it
-    // to SDSS to mirror the wireSlots-resolved outcome.
-    firstReadySourceRef: { current: firstReadySource },
   };
 }
 
 // ── Tests ────────────────────────────────────────────────────────────
 
 describe('wireInput', () => {
-  it('initial camera framing fires with the bbox derived from state.sources.clouds and a 60° FOV', async () => {
-    // The bbox loop iterates `state.sources.clouds.values()` and
-    // tracks the max `maxAbsCoord(cloud)`.  Our fake cloud reports
-    // `_maxAbs = 1500` (typical GLADE-scale Mpc value); the framing
-    // helper should receive exactly that bbox plus the canonical
-    // 60° vertical FOV in radians.
-    const state = makeState(1500);
-    const deps = makeDeps(Source.SDSS);
+  it('calls computeInitialCamera with the canonical 60° vertical FOV', async () => {
+    const state = makeState();
+    const deps = makeDeps();
 
     await wireInput(state, deps);
 
     expect(computeInitialCameraSpy).toHaveBeenCalledTimes(1);
     expect(computeInitialCameraSpy).toHaveBeenCalledWith({
-      bbox: 1500,
       fovYRad: (Math.PI / 180) * 60,
     });
-
-    // The camera framing call having happened is the load-bearing
-    // assertion, but we also expect `state.cam` to be populated
-    // afterwards — the visible side-effect that drives the rest of
-    // the engine (camera matrices, frame loop, orbit controls
-    // attach).  Without this side-effect, a future refactor that
-    // accidentally drops the assignment would leave `state.cam = null`
-    // and break the first frame.
     expect(state.cam).not.toBeNull();
-
-    // And `state.initialCamSnapshot` was captured for resetCamera() —
-    // wireInput's docblock calls this out as load-bearing because
-    // the snapshot's `target` array MUST be a cloned tuple (the bug
-    // wireInput.ts's inline comment describes).  Asserting it exists
-    // pins the contract; the clone correctness itself is implicit in
-    // the framing helper's mock returning a fresh array each call.
     expect(state.initialCamSnapshot).not.toBeNull();
+  });
+
+  it('runs to completion even with no catalogs loaded', async () => {
+    // Progressive disclosure: wireInput must not require any survey to
+    // have arrived. Empty catalogs is the normal case at boot.
+    const state = makeState();
+    const deps = makeDeps();
+
+    await wireInput(state, deps);
+
+    expect(state.cam).not.toBeNull();
   });
 });
