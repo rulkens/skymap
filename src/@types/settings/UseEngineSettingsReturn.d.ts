@@ -40,4 +40,11 @@ export type UseEngineSettingsReturn = {
    * avoids giving the hook itself a reference to the engine handle.
    */
   setVolumeFields: (fields: ReadonlyArray<VolumeFieldRowData>) => void;
+  /**
+   * Optimistic setter for the SpaceMouse sensitivity slider.  No engine
+   * echo (the subsystem's `setSensitivity` is fire-and-forget), so
+   * App.tsx must call this alongside `handle.input.spaceMouse.setSensitivity`
+   * to keep the React state and the engine state in lock-step.
+   */
+  setSpaceMouseSensitivity: (v: number) => void;
 };

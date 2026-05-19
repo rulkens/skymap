@@ -82,4 +82,18 @@ export type UseEngineSettingsState = {
    * stable mirror to subscribe to.
    */
   markerCategoryVisibility: Record<PoiCategory, boolean>;
+  /**
+   * Whether a 3Dconnexion SpaceMouse is currently paired and feeding
+   * input reports.  Engine echoes this through
+   * `EngineCallbacks.input.spaceMouse.onConnectedChange` on every
+   * connect / disconnect transition (including unsolicited unplugs).
+   */
+  spaceMouseConnected: boolean;
+  /**
+   * Current SpaceMouse global sensitivity multiplier (applied AFTER the
+   * cube response curve).  App-owned optimistic state — the engine has
+   * no echo callback for sensitivity, so React is the source of truth
+   * (same pattern as `filamentsEnabled` / `volumesEnabled`).
+   */
+  spaceMouseSensitivity: number;
 };

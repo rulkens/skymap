@@ -25,4 +25,5 @@ export type EngineSettingsCallbacks = Pick<
   | 'milkyWay'
   | 'filaments'
   | 'labels'
+  | 'input'
 >;
