@@ -276,14 +276,16 @@ struct VSOut {
   @location(0) uv: vec2<f32>,
 
   // Pre-computed colour for this point (from the colourIndex ramp).
-  // Interpolated across the quad by the rasteriser — but since all 6
-  // vertices of one instance share the same tint, there is no visible
-  // interpolation.
-  @location(1) tint: vec3<f32>,
+  // Flat-interpolated — all 6 vertices of an instance share the value,
+  // so smooth interpolation would do work for an identical result.
+  @location(1) @interpolate(flat) tint: vec3<f32>,
 
-  // Combined brightness: magnitude-based intensity × global brightness
-  // knob × per-instance bias-mode alpha (1/V_max).
-  @location(2) intensity: f32,
+  // Per-instance brightness with every per-instance modulator folded in:
+  // magnitude-based intensity × brightness slider × vMax (mode 2) ×
+  // Schechter (mode 3) × angular reweight (mode 4) × depth-fade
+  // (camera-distance falloff). Fragment multiplies in only per-pixel
+  // terms (Gaussian falloff, procedural-disk fade, source fade).
+  @location(2) @interpolate(flat) intensity: f32,
 
   // Packed (source, localIdx) identity used by 'fsPick' to write the
   // pick texture. Flat-interpolated because integers can't be linearly
@@ -296,8 +298,8 @@ struct VSOut {
 
   // Forwarded 'abs(axisRatio)' so the fragment stage's elliptical mask
   // uses the unsigned magnitude. Sign bit was the fallback flag (now
-  // extracted into 'isFallback').
-  @location(5) axisRatio: f32,
+  // extracted into 'isFallback'). Per-instance constant.
+  @location(5) @interpolate(flat) axisRatio: f32,
 
   // Pre-computed cos/sin of the position-angle rotation. Computed once
   // per primitive in 'vs' instead of per fragment, saving millions of
@@ -309,29 +311,6 @@ struct VSOut {
   // (sign bit of axisRatio was set at upload time); 0u for real
   // measurements.
   @location(7) @interpolate(flat) isFallback: u32,
-
-  // Origin-relative distance in Mpc, forwarded for future distance-
-  // dependent fragment effects. Currently unused in the fragment stage
-  // but kept as plumbed.
-  @location(8) @interpolate(flat) dMpc: f32,
-
-  // Per-galaxy Schechter density-correction ratio. Read in 'fs' only
-  // when 'u.biasMode == 3u'.
-  @location(9) @interpolate(flat) schechterRatio: f32,
-
-  // Per-galaxy HEALPix angular re-weight. Read in 'fs' only when
-  // 'u.biasMode == 4u'.
-  @location(10) @interpolate(flat) angularDensityWeight: f32,
-
-  // Distance from the camera to this galaxy in Mpc. Forwarded for
-  // potential per-fragment depth-driven effects.
-  @location(11) @interpolate(flat) camDistMpc: f32,
-
-  // Pre-computed depth-fade multiplier '1 / (1 + (camDist/FALLOFF_HALF)²)',
-  // gated by 'u.depthFadeEnabled' (passes through 1.0 when off).
-  // Per-instance constant — flat-interpolated for one mul per primitive
-  // instead of per fragment.
-  @location(12) @interpolate(flat) depthFade: f32,
 
   // Per-instance billboard radius in screen-space pixels. Used by the
   // fragment stage to fade points-pass alpha across the procedural-

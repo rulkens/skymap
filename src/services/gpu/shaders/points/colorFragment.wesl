@@ -184,36 +184,10 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   if (r2 > 1.0) { discard; }
 
   // Gaussian-like falloff: bright at centre (r²=0 → e⁰=1), fading to
-  // e⁻⁴ ≈ 0.018 at the edge (r²=1).
+  // e⁻⁴ ≈ 0.018 at the edge (r²=1). The per-instance modulators
+  // (Schechter, angular reweight, depth fade) are folded into
+  // 'in.intensity' by the vertex stage — see vertex.wesl.
   var alpha = exp(-r2 * 4.0);
-
-  // ── Schechter density correction (mode 3) ────────────────────────────
-  //
-  // Modulate alpha by the per-galaxy ratio 'clamp(N_ref / n(d), 0, 10)'
-  // baked at upload time into 'in.schechterRatio'. Originally a 200-step
-  // trapezoidal integral evaluated PER FRAGMENT; now a single multiply.
-  let schechterAlpha_ = select(1.0, in.schechterRatio, u.biasMode == 3u);
-  alpha = alpha * schechterAlpha_;
-
-  // ── HEALPix angular re-weight (mode 4) ────────────────────────────
-  //
-  // Modulate alpha by the per-galaxy ratio
-  // 'clamp(medianCellCount / localCellCount, 0.1, 10)' baked at toggle
-  // time into 'in.angularDensityWeight'. Down-weights galaxies in
-  // over-dense angular cells and up-weights galaxies in sparse cells,
-  // flattening radial pencil-beam-jet artefacts.
-  let angWeight = select(1.0, in.angularDensityWeight, u.biasMode == 4u);
-  alpha = alpha * angWeight;
-
-  // ── Camera-distance depth fade ───────────────────────────────────────────
-  //
-  // Every line through the catalog origin under additive billboards
-  // accumulates hundreds of overlapping galaxies in a single screen
-  // pixel. The depth-fade multiplier is pre-computed in the vertex
-  // stage and flat-interpolated as 'in.depthFade' (the vertex stage
-  // already handles the 'u.depthFadeEnabled' gate, so this is
-  // unconditionally a multiply).
-  alpha = alpha * in.depthFade;
 
   // ── Procedural-disk crossfade-OUT ────────────────────────────────────────
   //
