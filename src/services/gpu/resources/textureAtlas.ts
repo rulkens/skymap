@@ -97,7 +97,7 @@ export class TextureAtlas {
     this.texture = this.device.createTexture({
       label: 'galaxy-atlas',
       size: [ATLAS_SIDE, ATLAS_SIDE, 1],
-      format: 'rgba8unorm',
+      format: 'rgba8unorm-srgb',
       // TEXTURE_BINDING — the quad pass samples this texture in fs.
       // COPY_DST       — uploadBitmap writes new slots in.
       // RENDER_ATTACHMENT — lets us clear / re-render the atlas if we ever

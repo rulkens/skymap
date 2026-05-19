@@ -5,7 +5,8 @@
     "x": 0,
     "y": 176.49019705414014,
     "width": 3774,
-    "height": 3774
+    "height": 3774,
+    "rotationDeg": 0
   },
   "starnet": {
     "stride": 256,
@@ -17,9 +18,9 @@
     "gamma": 0.7
   },
   "metadata": {
-    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_1068#/media/File:The_squid_and_the_whale_(potw2515a).jpg",
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_1068#/media/File:Dazzling_galaxy_Messier_77.jpg",
     "license": "CC BY 4.0",
-    "author": "ESA/Hubble &amp; NASA, L. C. Ho, D. Thilker"
+    "author": "ESO"
   },
-  "processedAt": "2026-05-18T11:06:46.148Z"
+  "processedAt": "2026-05-19T07:18:58.689Z"
 }
