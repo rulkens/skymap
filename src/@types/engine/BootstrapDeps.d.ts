@@ -1,7 +1,6 @@
 import type { EngineCallbacks } from './EngineCallbacks';
 import type { EngineHandle } from './EngineHandle';
 import type { AssetSlot } from '../loading/AssetSlot';
-import type { Source } from '../../data/sources';
 import type { FpsCounter } from './subsystems/FpsCounter';
 import type { PhaseLocals } from './PhaseLocals';
 
@@ -74,22 +73,6 @@ export type BootstrapDeps = {
    * reads + writes it).  Boxed as `{current}` — see Phase 3.
    */
   lastReportedFps: { current: number | null };
-
-  /**
-   * Mutable ref carrying the first source whose `.bin` arrived with
-   * `count > 0`, OR `Source.Synthetic` if the synthetic fallback fired,
-   * OR `null` before any arrival.  Written by `wireSlots` once the
-   * all-arrivals gate resolves; read by `wireInput` to populate the
-   * `cb.onStatusChange({ kind: 'ready', source })` payload.
-   *
-   * Lives as a ref on `BootstrapDeps` (rather than as a field on the
-   * `phaseLocals` carrier) so the type is honest about the mutation
-   * site: the previous "stash on phaseLocals" pattern made this look
-   * like a write-once `initGpu` output when it was actually a
-   * `wireSlots` mutation read by a later phase.  M1 of the 2026-05-11
-   * audit teased that apart.
-   */
-  firstReadySourceRef: { current: Source | null };
 
   /**
    * Phase-local carrier for IIFE-scoped device/context handles that

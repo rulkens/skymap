@@ -104,16 +104,15 @@ import { startLoop } from './startLoop';
  * Phase order is fixed by data dependencies:
  *   1. `initGpu` runs first because every later phase needs the
  *      device, the renderer, and the post-process.
- *   2. `wireSlots` runs second; it commits clouds into the renderer
- *      and starts the parallel fetches.  It awaits the all-arrivals
- *      gate before returning — the bbox loop in `wireInput` needs at
- *      least one cloud to size the camera.
- *   3. `wireInput` runs third; it reads `state.sources.catalogs` (now
- *      populated) to compute the bbox + initial camera, then attaches
- *      orbit controls + click handlers + input bindings.
- *   4. `startLoop` runs last; it builds the `RunFrameDeps` bag (which
- *      needs every renderer + helper from the prior phases) and
- *      assigns the forward-declared `frame` binding.
+ *   2. `wireSlots` runs second; it mints sidecar slots and kicks off
+ *      the parallel fetches. It does NOT wait on arrivals — survey
+ *      commits land asynchronously via per-slot subscribers.
+ *   3. `wireInput` runs third; it builds the orbit camera from pure
+ *      constants (no bbox dependency) and attaches controls + click
+ *      handlers + input bindings.
+ *   4. `startLoop` runs last; it builds the `RunFrameDeps` bag and
+ *      fires the first rAF. The Milky Way is visible from the first
+ *      frame; surveys fade in as their fetches resolve.
  *
  * State writes propagate via `state.*` mutation — each phase reads
  * from the freshly-written state of its predecessors.  Mutable

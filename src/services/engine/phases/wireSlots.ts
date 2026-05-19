@@ -1,85 +1,49 @@
 /**
  * wireSlots — bootstrap phase that wires sidecar asset slots, the
- * load-progress emitter, the thumbnail subsystem, and runs the
- * parallel multi-survey load (with synthetic fallback).
- *
- * ### What this phase does
+ * load-progress emitter, the thumbnail subsystem, and kicks off the
+ * parallel multi-survey load.
  *
  * The 5 point-source slots are minted earlier (in `initGpu`, immediately
- * after the renderer that they commit into).  This phase covers
- * everything else slot-shaped:
+ * after the renderer that they commit into). This phase covers the rest:
  *
- *   - **Filament slot.**  One-shot lifecycle, commits to
- *     `state.gpu.filamentRenderer`, fires `cb.onFilamentsReady` on the
- *     `ready` transition.  Stored on `state.assetSlots.filaments`.
- *   - **Famous-meta slot.**  No commit step (pure metadata); writes
- *     `state.sources.famousMeta` + `state.sources.famousXrefs` on
- *     `ready`, gracefully degrades on `error` by writing empties.
- *     Stored on `state.assetSlots.famousMeta`.
- *   - **PGC-alias slot.**  Lazy — minted here but only `load()`-ed
- *     when the public handle's `loadPgcAliases()` shim fires (Cmd+K
- *     palette open).  Stored on `state.assetSlots.pgcAlias`.
+ *   - Filament, CF-4 DM density, MCPM Cosmic Web volume slots.
+ *   - Famous-meta + PGC-alias sidecar slots.
+ *   - Synthetic-volume DEV fixtures.
+ *   - The `allSlots` registry + load-progress emitter.
+ *   - The galaxy-atlas / textured-impostor / procedural-disk subsystems.
  *
- * After every slot exists this phase populates the flat `allSlots`
- * registry (carried in `BootstrapDeps` because the public handle
- * exposes the same Map as `assetSlots`), constructs the load-progress
- * emitter, and triggers the famous-meta load.  It then constructs the
- * thumbnail subsystem (the renderers it binds to come from `initGpu`
- * via `state.gpu.*`) and fires `cb.onStatusChange({ kind: 'loading' })`.
+ * After mint, this phase fires `cb.onStatusChange({ kind: 'loading' })`
+ * and kicks off the parallel survey loads. It does NOT block on arrivals
+ * — `wireInput` and `startLoop` run immediately afterwards so the camera
+ * and the rAF loop come up with whatever has landed (often nothing yet),
+ * letting the Milky Way appear on the first frame and surveys fade in
+ * progressively. Two background subscribers handle the rest:
  *
- * Finally it runs the parallel multi-survey load: triggers each real
- * survey + Famous + filaments in parallel, awaits the all-arrivals
- * gate, and runs the synthetic fallback if every real survey came back
- * empty/errored.  The first survey whose cloud arrived with `count > 0`
- * is recorded on `deps.firstReadySourceRef.current` so `wireInput` can
- * fire the right `cb.onStatusChange({ kind: 'ready', source })` payload.
- *
- * ### Why this runs second (after initGpu, before wireInput)
- *
- * Slot commits upload to `state.gpu.renderer` / `state.gpu.filamentRenderer`,
- * so the renderers must exist first — that's `initGpu`'s job.  The
- * thumbnail subsystem's `bindToRenderers` wants the quad/disk/procedural
- * renderers from `state.gpu.*` (populated by `initGpu`).
- *
- * `wireInput` runs after this phase because the bbox computation that
- * sizes the camera (in `wireInput`) needs `state.sources.catalogs` to be
- * populated by at least one survey's commit step.  We `await
- * allArrivalsPromise` here precisely so that constraint holds.
+ *   1. Per-arrival `ready` status emission with running totals.
+ *   2. Synthetic fallback when every real survey settles without a
+ *      successful ready+count>0.
  *
  * ### State writes
  *
  *   - `state.assetSlots.filaments`, `state.assetSlots.famousMeta`,
- *     `state.assetSlots.pgcAlias` — sidecar slot construction.
+ *     `state.assetSlots.pgcAlias`, `state.assetSlots.cf4Density`,
+ *     `state.assetSlots.mcpm`, `state.assetSlots.syntheticVolumes`.
  *   - `state.sources.famousMeta`, `state.sources.famousXrefs` — via
  *     famous-meta subscriber (on `ready`).
  *   - `state.sources.catalogs` — populated by the per-source slot commit
- *     subscribers (wired in `initGpu` via `wireGalaxyCatalogSourceSlot`).
- *   - `state.subsystems.loadProgress`, `state.subsystems.thumbnails`.
- *   - `cb.onStatusChange({ kind: 'loading' })`.
+ *     subscribers (wired in `initGpu`).
+ *   - `state.subsystems.loadProgress`, `state.subsystems.galaxyAtlas`,
+ *     `state.subsystems.texturedImpostors`, `state.subsystems.proceduralDisks`.
+ *   - `cb.onStatusChange({ kind: 'loading' })` synchronously; `kind:
+ *     'ready'` fires from the per-arrival subscriber, not from this body.
  *
  * ### Side effects on `deps`
  *
  *   - Mutates `deps.allSlots` — populates with every minted slot.
- *   - Mutates `deps.firstReadySourceRef.current` — hand-off to wireInput.
- *
- * ### Async work
- *
- *   - `await allArrivalsPromise` — gate on every real survey + Famous
- *     having settled at least once.
- *   - `await synthSlot.load(...)` — only when every real survey came
- *     back empty/errored.
- *
- * ### Early-return semantics
- *
- * If after the synthetic fallback no clouds reached the GPU
- * (`state.sources.catalogs.size === 0`), this phase returns early.
- * Subsequent phases (`wireInput`, `startLoop`) check the same
- * condition and bail too — the engine sits in 'loading' state with
- * nothing to render, identical to the pre-Phase-5 IIFE's `return`
- * statement at the corresponding line.
  */
 
 import { Source } from '../../../data/sources';
+import { catalogSourceFor } from '../../../data/catalogSource';
 import { buildPoisFromFamousMeta } from './buildPoisFromFamousMeta';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
@@ -372,55 +336,74 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // happening before the (potentially multi-second) fetch completes.
   cb.lifecycle?.onStatusChange?.({ kind: 'loading' });
 
-  // ── Parallel multi-survey load via asset slots ────────────────────
+  // ── Progressive survey loading ────────────────────────────────────
   //
-  // Each survey flows through its own `AssetSlot`.  The slot's
-  // long-lived subscriber (wired at slot construction) handles
-  // upload + `catalogs.set` + `onCatalogReady` + `requestRender` on
-  // every transition to `ready` — so this block only has to fire
-  // the loads and gate boot on "every slot has settled at least
-  // once" before computing the camera bbox.
+  // Each survey flows through its own `AssetSlot`. The slot's long-lived
+  // commit subscriber (wired at slot construction) handles upload +
+  // `catalogs.set` + `onCatalogReady` + `requestRender` on every
+  // transition to `ready`. This block kicks off loads and registers two
+  // background subscribers; it does NOT block bootstrap on data arrival.
   //
-  // **Why gate on all-settled rather than first-arrival?**  The
-  // bbox loop below iterates `state.sources.catalogs` to size the
-  // camera's far plane.  If we framed on whichever survey arrived
-  // first (typically 2MRS at ~2 MB / ~100 Mpc), GLADE's distant
-  // galaxies (out to ~1.5 Gpc) would land outside the frustum and
-  // never render — perceptually "the far plane has come closer".
-  //
-  // **Why track `pointsAnyReady` separately?**  The synthetic
-  // fallback fires only when every *real* survey is empty/errored.
-  // Famous is curated (~150 entries) and excluded from the
-  // success/failure check both ways: a Famous-only success
-  // shouldn't suppress synthetic, and a Famous-only failure
-  // shouldn't trigger it.
+  //   1. Per-arrival status emission: each time a slot reaches `ready`
+  //      with `count > 0`, fire `cb.onStatusChange({ kind: 'ready',
+  //      count: <running total>, source })` so the status bar reflects
+  //      progressive disclosure as surveys land.
+  //   2. Synthetic fallback: when every real survey (SDSS, 2MRS, GLADE)
+  //      has settled with no successful ready+count>0, fire the
+  //      synthetic slot's load. Famous is curated (~150 entries) and
+  //      doesn't count: a Famous-only success shouldn't suppress
+  //      synthetic, a Famous-only failure shouldn't trigger it.
   const REAL_POINT_SOURCES: Source[] = [Source.SDSS, Source.TwoMRS, Source.Glade];
   const ALL_POINT_SOURCES: Source[] = [...REAL_POINT_SOURCES, Source.Famous];
-  let pointsAnyReady = false;
-  let firstReadySource: Source | null = null;
-  const allArrivalsPromise = new Promise<void>((resolve) => {
-    let arrived = 0;
-    for (const source of ALL_POINT_SOURCES) {
-      const slot = state.assetSlots.points.get(source);
-      if (!slot) {
-        if (++arrived === ALL_POINT_SOURCES.length) resolve();
-        continue;
+
+  let realSettled = 0;
+  let anyRealReady = false;
+  for (const source of ALL_POINT_SOURCES) {
+    const slot = state.assetSlots.points.get(source);
+    if (!slot) {
+      if (REAL_POINT_SOURCES.includes(source)) {
+        realSettled++;
+        maybeFireSyntheticFallback();
       }
-      let counted = false;
-      const unsub = slot.subscribe((s) => {
-        if (counted) return;
-        if (s.kind === 'ready' && s.value.count > 0) {
-          if (firstReadySource === null) firstReadySource = source;
-          if (REAL_POINT_SOURCES.includes(source)) pointsAnyReady = true;
-        }
-        if (s.kind === 'ready' || s.kind === 'error') {
-          counted = true;
-          if (++arrived === ALL_POINT_SOURCES.length) resolve();
-          unsub();
-        }
-      });
+      continue;
     }
-  });
+    let counted = false;
+    const unsub = slot.subscribe((s) => {
+      if (s.kind === 'ready' && s.value.count > 0) {
+        cb.lifecycle?.onStatusChange?.({
+          kind: 'ready',
+          count: state.gpu.renderer?.totalCount() ?? 0,
+          source: catalogSourceFor(source),
+        });
+        if (REAL_POINT_SOURCES.includes(source)) anyRealReady = true;
+      }
+      if (counted) return;
+      if (s.kind === 'ready' || s.kind === 'error') {
+        counted = true;
+        unsub();
+        if (REAL_POINT_SOURCES.includes(source)) {
+          realSettled++;
+          maybeFireSyntheticFallback();
+        }
+      }
+    });
+  }
+
+  function maybeFireSyntheticFallback(): void {
+    if (realSettled < REAL_POINT_SOURCES.length || anyRealReady) return;
+    const synthSlot = state.assetSlots.points.get(Source.Synthetic);
+    if (!synthSlot) return;
+    synthSlot.subscribe((s) => {
+      if (s.kind === 'ready' && s.value.count > 0) {
+        cb.lifecycle?.onStatusChange?.({
+          kind: 'ready',
+          count: state.gpu.renderer?.totalCount() ?? 0,
+          source: catalogSourceFor(Source.Synthetic),
+        });
+      }
+    });
+    synthSlot.load({ source: Source.Synthetic, tier: state.sources.tier });
+  }
 
   for (const source of ALL_POINT_SOURCES) {
     state.assetSlots.points.get(source)?.load({ source, tier: state.sources.tier });
@@ -428,51 +411,14 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Filaments load exactly once at boot — never on tier change.
   // See `filamentFetcher.ts` for the rationale.
   state.assetSlots.filaments?.load({ tier: state.sources.tier });
-  // CF-4 DM density.  Loads at boot ONLY when the per-field default is
-  // ON; the audit (2026-05-19 Q9) flipped CF-4 to default-off because
-  // its information density is too low to justify ~30 MB of always-on
-  // download.  When default-off, the slot stays in `idle` state and
-  // `engine.setVolumeFieldEnabled('cf4-density', true)` triggers a
-  // deferred load (see the lazy-load shim there).  No tier dependency.
-  // Failure (404, decode error) leaves the field unregistered; Volumes
-  // panel simply omits it.
+  // CF-4 DM density loads at boot only when its default is ON;
+  // otherwise the slot stays idle and `engine.setVolumeFieldEnabled`
+  // triggers a lazy load on toggle. No tier dependency.
   if (DEFAULT_CF4_DENSITY_ENABLED) {
     state.assetSlots.cf4Density?.load();
   }
   // MCPM Cosmic Web loads at the boot tier; `engine.setTier` reloads
-  // on tier change.  Same failure posture as cf4Density above —
-  // missing/404 .scfd silently omits the field from the Volumes panel.
+  // on tier change. Missing/404 .scfd silently omits the field from
+  // the Volumes panel.
   state.assetSlots.mcpm?.load({ tier: state.sources.tier });
-
-  await allArrivalsPromise;
-
-  // Synthetic fallback — every real survey is empty/errored.  Drive
-  // through the synthetic slot so the same fetch → commit → upload path
-  // runs (fade-in, dev-panel row, race-checked commit).  See
-  // `syntheticPointFetcher.ts` for why this lives behind a slot.
-  if (!pointsAnyReady) {
-    const synthSlot = state.assetSlots.points.get(Source.Synthetic);
-    if (synthSlot) {
-      await new Promise<void>((resolve) => {
-        const unsub = synthSlot.subscribe((s) => {
-          if (s.kind === 'ready' || s.kind === 'error') {
-            unsub();
-            resolve();
-          }
-        });
-        synthSlot.load({ source: Source.Synthetic, tier: state.sources.tier });
-      });
-      if (synthSlot.state().kind === 'ready') {
-        firstReadySource = Source.Synthetic;
-      }
-    }
-  }
-
-  // Hand the resolved first-ready source to `wireInput` via the
-  // mutable ref on `BootstrapDeps`.  Pre-M1 (2026-05-11 audit) this
-  // wrote to `phaseLocals.firstReadySource`, which shaped a `wireSlots`
-  // mutation like an `initGpu` output.  See
-  // `BootstrapDeps.firstReadySourceRef` for the rationale on the
-  // explicit ref shape.
-  deps.firstReadySourceRef.current = firstReadySource;
 }

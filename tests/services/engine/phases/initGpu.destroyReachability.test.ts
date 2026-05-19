@@ -44,7 +44,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Source } from '../../../../src/data/sources';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -228,7 +227,6 @@ function makeDeps(): BootstrapDeps {
     allSlots: new Map(),
     fpsCounter: { sample: () => null } as unknown as BootstrapDeps['fpsCounter'],
     lastReportedFps: { current: null },
-    firstReadySourceRef: { current: null },
   };
 }
 
@@ -324,8 +322,3 @@ describe('initGpu — destroy reachability for thumbnail/disk/procedural-disk/mi
   });
 });
 
-// Suppress unused-var warning — `Source` import keeps `initGpu`'s
-// `Source`-typed `firstReadySource` test fixture honest if a future
-// test checks the slot wiring.  Today none of the active tests use
-// it directly; the import keeps the type-only namespace available.
-void Source;
