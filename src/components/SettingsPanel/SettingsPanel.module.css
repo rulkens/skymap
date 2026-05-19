@@ -88,6 +88,55 @@
   flex-shrink: 0;
 }
 
+/*
+ * Cosmic web Style picker — three-button segmented control sitting at the
+ * top of the Cosmic web section body, before its Advanced disclosure.
+ * Visually a sibling of the section header's master toggle: same
+ * glassmorphic chip family as the rest of the panel's controls, but
+ * laid out as a row of three equal-width segments so the explorer can
+ * see all three options at once without opening a dropdown.
+ *
+ * Aria-pressed semantics rather than radio — clicking a style is a
+ * deliberate "switch to this view" act, same cost model as the old
+ * TierSelector's segmented control (and an arrow-key fly-by shouldn't
+ * silently flip the rendering).
+ */
+.stylePicker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.stylePickerButton,
+.stylePickerButtonActive {
+  appearance: none;
+  border: 1px solid var(--border-control);
+  background: var(--surface-control);
+  color: var(--color-fg-muted);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  letter-spacing: var(--letter-spacing-mid);
+  text-transform: uppercase;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.stylePickerButton:hover {
+  background: var(--surface-control-hover);
+  color: var(--color-fg);
+}
+
+.stylePickerButtonActive {
+  background: var(--surface-control-active);
+  color: var(--color-fg);
+}
+
 /* Horizontal rule between the sliders and the reset button */
 .panelDivider {
   margin: var(--space-4) 0 var(--space-3);

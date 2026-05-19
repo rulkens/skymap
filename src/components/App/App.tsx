@@ -132,7 +132,6 @@ export function App(): React.ReactElement {
     engineCallbacks: settingsCallbacks,
     setFilamentsEnabled,
     setFilamentIntensity,
-    setExposure,
     setVolumesEnabled,
     setVolumeFields,
     setSpaceMouseSensitivity,
@@ -195,11 +194,9 @@ export function App(): React.ReactElement {
   const [hoveredPoiId, setHoveredPoiId] = useState<string | null>(null);
   const {
     pointSize,
-    brightness,
     autoRotate,
-    galaxyTexturesEnabled,
     labelCategoryVisibility,
-    milkyWayEnabled,
+    markerCategoryVisibility,
     filamentsEnabled,
     filamentIntensity,
     filamentCounts,
@@ -210,7 +207,6 @@ export function App(): React.ReactElement {
     biasMode,
     absMagLimit,
     toneMapCurve,
-    exposure,
     volumesEnabled,
     volumeFields,
     spaceMouseConnected,
@@ -586,26 +582,21 @@ export function App(): React.ReactElement {
           <SettingsPanel
             defaultOpen={initialPanelsOpen}
             pointSize={pointSize}
-            brightness={brightness}
-            autoRotate={autoRotate}
             onPointSizeChange={(v) => handleRef.current?.points.setSize(v)}
-            onBrightnessChange={(v) => handleRef.current?.points.setBrightness(v)}
-            onAutoRotateChange={(v) => handleRef.current?.camera.setAutoRotate(v)}
-            // Galaxy-thumbnail toggle: forward straight to the engine handle. The
-            // engine fires `onGalaxyTexturesEnabledChange` synchronously, which
-            // updates `galaxyTexturesEnabled` — so we don't need an optimistic
-            // local `setGalaxyTexturesEnabled(v)` here. The `?.` on the setter
-            // covers the (unlikely) case where the handle is missing the method;
-            // the EngineHandle type marks `setGalaxyTexturesEnabled` as optional.
-            galaxyTexturesEnabled={galaxyTexturesEnabled}
-            onGalaxyTexturesChange={(enabled) => {
-              handleRef.current?.thumbnails.setEnabled(enabled);
-            }}
-            milkyWayEnabled={milkyWayEnabled}
-            onMilkyWayEnabledChange={(enabled) => {
-              handleRef.current?.milkyWay.setEnabled(enabled);
-            }}
+            // Brightness, auto-rotate, galaxy thumbnails, and Milky Way
+            // toggles were all evicted from the panel by the 2026-05-19
+            // UX audit (Q6 / Q12 / Q11 / Q16d).  Their engine plumbing
+            // remains (callable via handleRef in the console), only the
+            // user-facing surface is gone.  Auto-rotate still has a
+            // dedicated top-bar Play button (AutoRotateToggle below).
             labelCategoryVisibility={labelCategoryVisibility}
+            markerCategoryVisibility={markerCategoryVisibility}
+            onSetMarkerCategoryVisibility={(category, visible) => {
+              // Marker-axis ONLY — the label for the same category stays
+              // untouched.  Routes to the marker-specific setter added in
+              // PR #160 / audit Q11 alongside the label-axis split.
+              handleRef.current?.labels.setCategoryMarkerVisible(category, visible);
+            }}
             onSetLabelCategoryVisibility={(category, visible) => {
               // Label-axis ONLY — the marker (ring + halo) for the same
               // category stays untouched.  Pre-2026-05-19 this prop
@@ -723,25 +714,12 @@ export function App(): React.ReactElement {
             // needed.
             toneMapCurve={toneMapCurve}
             onToneMapCurveChange={(c) => handleRef.current?.tonemap.setCurve(c)}
-            // Exposure slider — drag pushes the value through the engine
-            // handle, the engine clamps to [0.05, 16] and echoes the
-            // clamped result back via `onExposureChange`, which updates
-            // `exposure` state so the displayed number always matches
-            // the shader's effective value when the engine clamps.
-            //
-            // The optimistic local `setExposure(value)` IS needed for
-            // snappy slider thumb tracking — without it the slider visibly
-            // lags by one frame.  The engine echo lands shortly after and
-            // overwrites with the clamped value, which is what we want for
-            // out-of-range inputs.  Differs from the tone-curve / bias
-            // controls above: those are discrete dropdowns where a one-
-            // frame lag isn't perceptible, so they don't need the optimistic
-            // local update.
-            exposure={exposure}
-            onExposureChange={(value) => {
-              setExposure(value);
-              handleRef.current?.tonemap.setExposure(value);
-            }}
+            // Exposure slider was evicted with brightness (audit Q6 —
+            // explorer surface has zero luminance knobs; the tone-map
+            // curve handles HDR shaping).  The engine method
+            // `handleRef.current?.tonemap.setExposure(...)` is still
+            // callable via the dev console if a power-user wants to
+            // override.
             // ── Scalar-volume overlay ─────────────────────────────────────
             //
             // `volumesEnabled` is the master toggle — no engine echo, owned

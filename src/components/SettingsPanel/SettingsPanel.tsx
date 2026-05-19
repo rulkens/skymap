@@ -1,39 +1,79 @@
 /**
- * SettingsPanel — bottom-left overlay for real-time rendering controls.
+ * SettingsPanel — explorer-facing controls for the renderer.
  *
- * ### What it does
+ * ### What this panel is for (post-2026-05-19 UX audit)
  *
- * Renders four controls that let the user tune the galaxy renderer without
- * reloading the page:
+ * Re-derived from first principles in the SettingsPanel UX audit (see
+ * `docs/grill-sessions/settings-panel-audit-2026-05-19.md`).  The
+ * pre-audit panel had grown organically to ~10 sections and ~20 always-
+ * visible controls, optimised for "everyone at once".  The audit picked
+ * the **curious explorer / amateur astronomer** as the primary audience
+ * and re-organised around four thematic groups that mirror the explorer's
+ * mental model of the scene:
  *
- *   1. Point size slider  — adjusts the billboard pixel radius (1 – 8 px).
- *   2. Brightness slider  — global star intensity multiplier (0.2 – 3.0).
- *   3. Auto-rotate toggle — enables slow camera yaw (~3°/sec).
- *   4. Reset camera button — snaps the camera back to the initial framing.
+ *   1. **Galaxies** — the points themselves.  Master toggle + Advanced.
+ *   2. **Cosmic web** — the diffuse stuff *between* galaxies (volume
+ *      density fields + DisPerSE filaments).  Master toggle + a Style
+ *      picker (Smooth / Filaments / Both) + Advanced.
+ *   3. **Structures** — clusters / superclusters / voids as marker rings.
+ *      Master toggle + per-category Advanced.
+ *   4. **Labels** — every text annotation in the scene (cluster names,
+ *      "you are here", famous galaxies, …).  Master toggle + per-category
+ *      Advanced.
  *
- * ### Why it lives here
+ * Each master toggle reflects the OR-tristate of its per-axis sub-toggles;
+ * the per-axis controls move into a default-closed Advanced disclosure so
+ * the explorer surface stays scannable.  Power users open Advanced when
+ * they want fine-grained control; the explorer never has to.
  *
- * This file sits alongside the other purely-presentational components
- * (InfoCard, ScaleBar, StatusBar). Like them, it has no knowledge of WebGPU,
- * the engine, or async data loading — it only receives typed props and emits
- * events up to App.tsx.
+ * ### What got evicted
  *
- * ### Props-driven flow (no internal state)
+ * Per audit Q6 / Q12 / Q11 / Q16d: brightness, exposure, auto-rotate, the
+ * galaxy-thumbnails toggle, and the Milky Way toggle are gone from the
+ * panel.  Defaults handle the explorer case; the engine plumbing for each
+ * remains intact (callable from the dev console or future re-introduction)
+ * but no UI surface.  Auto-LOD (audit Q15 / PR #156) was dead code, removed
+ * entirely.
  *
- * App.tsx owns all four pieces of state (pointSize, brightness, autoRotate,
- * and the "reset" trigger). The panel renders the current values and fires
- * callback props when the user changes a control:
+ * ### Tier as a header chip
  *
- *   User drags slider → onChange prop fires → App.tsx calls handle.points.setSize
- *   → engine updates closure variable → next frame uses new value.
+ * Tier moves from a full-width segmented row at the top of the body into
+ * a compact `TierChip` dropdown in the panel header strip (slotted via
+ * the new `Panel.headerExtra` prop).  The chip still surfaces the current
+ * tier always-visible — the most consequential decision shouldn't be
+ * hidden — but reclaims one panel-body row that the four thematic groups
+ * benefit from.
  *
- * This one-way data flow keeps the panel a pure function of its inputs, which
- * makes it easy to test and reason about.
+ * ### Cosmic web Style picker semantics
  *
- * ### CSS
+ * The picker (Smooth / Filaments / Both) is a *high-level* shortcut that
+ * batches mutations to the volumes master + filaments master toggles in
+ * one click:
  *
- * Layout rules live in SettingsPanel.module.css alongside this file, replacing
- * the former #settings-panel block in index.html.
+ *   - **Smooth**     → volumes ON,  filaments OFF
+ *   - **Filaments**  → volumes OFF, filaments ON
+ *   - **Both**       → volumes ON,  filaments ON
+ *
+ * Per-source toggles inside Advanced (per-cube enable, per-cube intensity,
+ * filament intensity) operate independently of the picker.  The picker
+ * label is *derived* from the current master states — if a power user is
+ * in "Smooth" and manually enables CF-4 via Advanced, the picker still
+ * says "Smooth".  That's intentional: the picker is a UI shortcut, not a
+ * separate state slot.  When neither master is on (Cosmic web group's own
+ * master is OFF), the picker is hidden because there's nothing to style.
+ *
+ * ### Props-driven, no internal state
+ *
+ * App.tsx still owns every settings value; this component renders the
+ * current values and emits callbacks.  Section open/closed state lives
+ * inside CollapsibleSection (session-only).  See the wrapping App.tsx for
+ * how each callback wires into the engine handle.
+ *
+ * ### Layout CSS
+ *
+ * Row/slider/dropdown styling lives in `SettingsPanel.module.css`; the
+ * outer panel chrome (glass card, title strip with the Tier chip slot)
+ * lives in the shared `Panel` / `Panel.module.css`.
  */
 
 import { type ReactNode } from 'react';
@@ -49,7 +89,7 @@ import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowDat
 import { VolumeFieldRow } from './VolumeFieldRow';
 import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
-import { TierSelector } from './TierSelector';
+import { TierChip } from './TierChip';
 import styles from './SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
@@ -57,17 +97,15 @@ import styles from './SettingsPanel.module.css';
 /**
  * The set of survey sources we expose as user-controllable toggles.
  *
- * Note that `Source.Synthetic` is **intentionally omitted** — the synthetic
- * cloud is a procedurally-generated *fallback* used when no real survey data
- * has loaded yet (e.g. on first paint before binaries arrive, or in offline
- * dev runs). Letting users toggle it would invite confusing states like
- * "no real surveys + synthetic off = empty sky" with no clear way back.
- * Keeping it always-on but invisible-in-the-UI means the renderer always has
- * *something* to draw while the user freely toggles the real catalogs.
+ * `Source.Synthetic` is intentionally omitted — the synthetic cloud is a
+ * procedurally-generated fallback used while real survey data is loading.
+ * Letting users toggle it would invite confusing "no real surveys +
+ * synthetic off = empty sky" states with no clear way back.
+ *
+ * Ordered smallest-catalogue → largest (Famous ~20 → 2MRS ~38 k → SDSS
+ * ~500 k → GLADE ~2 M) so the user sees the "iceberg tip" first and can
+ * reason about what each toggle adds in size.
  */
-// Ordered smallest-catalogue → largest (Famous ~20 → 2MRS ~38 k → SDSS
-// ~500 k → GLADE ~2 M) so the user sees the "iceberg tip" first and can
-// reason about what each toggle adds in size.
 const TOGGLEABLE_SOURCES: readonly Source[] = [
   Source.Famous,
   Source.TwoMRS,
@@ -75,325 +113,189 @@ const TOGGLEABLE_SOURCES: readonly Source[] = [
   Source.Glade,
 ];
 
+/**
+ * The marker categories the "Structures" master toggle batches over.
+ * `famousGalaxy` is intentionally absent — famous galaxies don't have
+ * a marker ring (their visualisation is the galaxy point + thumbnail),
+ * only a label.  Cluster / supercluster / void are the three POI-marker
+ * categories that share the structures master.
+ */
+const STRUCTURE_CATEGORIES: readonly PoiCategory[] = ['cluster', 'supercluster', 'void'];
+
+/**
+ * The label categories the "Labels" master toggle batches over.  All four
+ * PoiCategory values — labels are independent of marker visibility (axis
+ * separation landed in PR #160 / audit Q11).
+ */
+const LABEL_CATEGORIES: readonly PoiCategory[] = [
+  'cluster',
+  'supercluster',
+  'famousGalaxy',
+  'void',
+];
+
+/**
+ * High-level Style picker options for the Cosmic web group.  Derived from
+ * (volumes master, filaments master) at render time — see the picker's
+ * docblock inside the JSX below.
+ */
+type CosmicWebStyle = 'smooth' | 'filaments' | 'both';
+
 // ── Props ──────────────────────────────────────────────────────────────────────
 
 /**
  * Props for SettingsPanel.
  *
- * The original four controls (point size / brightness / auto-rotate / reset
- * camera) are all required — App.tsx always wires them to the engine handle.
- *
- * The newer rev-2 controls (survey toggles) are **optional**.
- * That's deliberate: this component is being updated ahead of the App.tsx
- * wiring (task #37 in the multi-survey plan). Keeping the new props optional
- * lets the existing call site in App.tsx keep typechecking unchanged, and
- * the new sections render only when the parent opts-in by passing them.
+ * Several props are optional so older test fixtures and partial wirings
+ * continue to typecheck.  Each conditional section gates on its full set
+ * of props being present (value + callback) — same opt-in idiom every
+ * section uses, prevents half-rendered UIs where a control exists but
+ * can't echo state changes (or vice versa).
  */
 type Props = {
-  /** Current point size in pixels. */
-  pointSize: number;
-  /** Current global brightness multiplier. */
-  brightness: number;
-  /** Whether the camera is currently auto-rotating. */
-  autoRotate: boolean;
-  /** Called when the user changes the point-size slider. */
-  onPointSizeChange: (v: number) => void;
-  /** Called when the user changes the brightness slider. */
-  onBrightnessChange: (v: number) => void;
-  /** Called when the user toggles auto-rotate. */
-  onAutoRotateChange: (v: boolean) => void;
-  /** Whether galaxy texture thumbnails are rendered close-up on visible galaxies. */
-  galaxyTexturesEnabled: boolean;
-  /** Fired when the user toggles the galaxy-thumbnails checkbox. */
-  onGalaxyTexturesChange: (enabled: boolean) => void;
-  /**
-   * Whether the procedural Milky Way impostor at world origin is
-   * rendered.  Optional — older call sites without this prop see no
-   * Milky Way row in the panel.  See
-   * `services/gpu/milkyWayRenderer.ts` for what the impostor is.
-   */
-  milkyWayEnabled?: boolean;
-  /** Fired when the user toggles the "Show Milky Way" checkbox. */
-  onMilkyWayEnabledChange?: (enabled: boolean) => void;
-  /**
-   * Per-category POI label visibility.  Surfaced as four always-visible
-   * checkboxes inside the Overlays sub-group.  All four default to true.
-   */
-  labelCategoryVisibility: Readonly<Record<PoiCategory, boolean>>;
-  onSetLabelCategoryVisibility: (category: PoiCategory, visible: boolean) => void;
-  /**
-   * Whether the cosmic-web filament-skeleton overlay is rendered.  The
-   * underlying `filaments.bin` is an *optional* asset built by the
-   * DisPerSE pipeline (`npm run build-filaments`); on a fresh clone
-   * without it, toggling this on is a silent no-op.  Optional in the
-   * panel — older callers without the prop pair see no Filaments row.
-   */
-  filamentsEnabled?: boolean;
-  /** Fired when the user toggles the "Filaments" checkbox. */
-  onFilamentsChange?: (enabled: boolean) => void;
-  /**
-   * Filament-overlay intensity scale, [0, 1].  Optional like the
-   * toggle pair — the slider only renders when both `filamentIntensity`
-   * and `onFilamentIntensityChange` are provided AND the toggle is on.
-   * Hidden when the overlay is disabled because the slider has no
-   * visible effect there.
-   */
-  filamentIntensity?: number;
-  onFilamentIntensityChange?: (value: number) => void;
-  /**
-   * Whether the camera-distance depth fade is on (multiplies per-galaxy
-   * alpha by `1 / (1 + (camDist / 1000Mpc)²)`).  Fights the cumulative-
-   * overlap glow at the centre of the catalog volume.  Default ON.
-   */
-  depthFadeEnabled?: boolean;
-  /** Fired when the user toggles the "Depth fade" checkbox. */
-  onDepthFadeEnabledChange?: (enabled: boolean) => void;
-  /** Called when the user clicks "Reset camera". */
-  onResetCamera: () => void;
-  /**
-   * Currently-active data tier ('small' | 'medium' | 'large').  Drives
-   * which segmented-control button renders as `aria-pressed=true`.
-   * Optional like every other rev-2+ control on this panel — call sites
-   * that don't wire `tier` + `onTierChange` simply see no TierSelector
-   * row at the top of the body.
-   */
+  // ── Tier ───────────────────────────────────────────────────────────────
+  /** Currently-active data tier.  Drives the TierChip in the panel header. */
   tier?: Tier;
-  /** Called with the new tier when the user clicks a tier button. */
+  /** Called with the new tier when the user picks from the TierChip dropdown. */
   onTierChange?: (tier: Tier) => void;
-  /**
-   * Bitmask of currently-visible sources (see `data/sources.ts`).
-   * Optional until App.tsx is wired to the multi-survey engine.
-   */
+
+  // ── Galaxies group ─────────────────────────────────────────────────────
+  /** Bitmask of currently-visible sources.  See `data/sources.ts`. */
   visibleSourceMask?: number;
-  /** Called when the user toggles a single survey on/off. */
+  /** Called when the user toggles a single survey on/off in Advanced. */
   onToggleSource?: (source: Source, visible: boolean) => void;
   /**
    * Per-source point counts indexed by Source enum value.  Surveys whose
-   * .bin hasn't loaded yet are simply absent from the map — the row in the
-   * UI then renders the toggle without a count rather than a misleading "0".
+   * .bin hasn't loaded yet are absent from the map — the row in the UI
+   * then renders the toggle without a count rather than a misleading "0".
    */
   sourceCounts?: Partial<Record<Source, number>>;
 
-  // ── Density correction (Malmquist bias) ───────────────────────────────────
-  //
-  // Both props are optional so older call sites (and the Vitest snapshot
-  // suite) continue to typecheck unchanged.  The whole section is gated on
-  // *both* the value and the callback being present — the same idiom the
-  // surveys + LOD sections use.
+  /** Current point size in pixels.  Lives under Galaxies → Advanced. */
+  pointSize: number;
+  /** Called when the user changes the point-size slider. */
+  onPointSizeChange: (v: number) => void;
 
-  /**
-   * Currently-selected density-correction mode.  See `data/biasMode.ts` for
-   * the full astronomy explanation; in short, `None` shows the raw catalog,
-   * `VolumeLimited` discards faint galaxies in the back of the volume so
-   * what's left is a "complete" sub-sample, and the two future modes
-   * (`VMax`, `Schechter`) reweight by inverse-V_max or by the predicted
-   * Schechter luminosity function.  Tasks 3 + 4 in the bias-correction plan
-   * implement those — for now they appear as disabled options so the UI
-   * shape doesn't shift when they land.
-   */
+  /** Whether the camera-distance depth fade is on (galaxy alpha attenuation). */
+  depthFadeEnabled?: boolean;
+  /** Called when the user toggles the Depth fade checkbox. */
+  onDepthFadeEnabledChange?: (enabled: boolean) => void;
+
+  /** Currently-selected density-correction (Malmquist bias) mode. */
   biasMode?: BiasModeT;
   /** Called when the user picks a different density-correction mode. */
   onBiasModeChange?: (mode: BiasModeT) => void;
-  /**
-   * Faintest absolute magnitude (M_lim) kept under `BiasMode.VolumeLimited`.
-   * Larger / more-positive numbers mean a fainter cut-off (more galaxies
-   * survive); −24 mag is roughly the brightest cD-galaxy regime, −15 mag
-   * dips well into dwarf territory.  Default −19 mag is a sensible threshold
-   * for SDSS spec samples (~M*+1).  Only displayed when `biasMode` is
-   * `VolumeLimited` because the future modes don't use a hard threshold —
-   * 1/V_max weights every galaxy individually, and Schechter reweights by
-   * an analytic luminosity function (see plan Task 3 + 4 sketches).
-   */
+  /** Faintest absolute magnitude kept under `BiasMode.VolumeLimited`. */
   absMagLimit?: number;
   /** Called when the user drags the M_lim slider. */
   onAbsMagLimitChange?: (absMag: number) => void;
 
-  // ── HDR tone-map curve selector ─────────────────────────────────────────
-  //
-  // Both props optional so older call sites continue to typecheck.  The
-  // section is gated on both being present — same idiom as the bias-mode
-  // section above.  The dropdown switches between five curves at runtime
-  // via a single 4-byte uniform write, no pipeline rebuild.
-
-  /** Currently-selected tone-mapping curve.  See `data/toneMapCurve.ts`. */
-  toneMapCurve?: ToneMapCurveT;
-  /** Called when the user picks a different tone-map curve. */
-  onToneMapCurveChange?: (curve: ToneMapCurveT) => void;
-  /**
-   * Current HDR exposure multiplier — applied to the HDR signal *before*
-   * the tone-map curve runs, so a low exposure (~0.3) brings cluster
-   * cores out of saturation while a high one (~2.5) lifts the cosmic
-   * web in dim regions.  Optional so call sites that don't care about
-   * exposure (e.g. older fixtures) keep typechecking unchanged; the
-   * slider section is gated on both this and the change callback being
-   * present.
-   */
-  exposure?: number;
-  /** Called when the user drags the exposure slider. */
-  onExposureChange?: (value: number) => void;
-
-  // ── SpaceMouse 6DOF input (optional, WebHID-only) ─────────────────────────
-  //
-  // All four props are optional so the original call sites continue to
-  // typecheck unchanged. The section is rendered only when `spaceMouseSupported`
-  // is true — App.tsx passes `isWebHIDSupported() && <device-present>` (audit
-  // Q16f in `docs/grill-sessions/settings-panel-audit-2026-05-19.md`) so:
-  //   - Firefox / Safari users (no WebHID): section hidden.
-  //   - Chromium users with no previously-paired SpaceMouse: section hidden.
-  //   - Chromium users with a paired puck currently attached: section visible.
-  // The auto-detection means SpaceMouse owners find the controls right where
-  // they expect, and the other ~99 % see no clutter.
-
-  /** Feature gate — only render the SpaceMouse section when true. */
-  spaceMouseSupported?: boolean;
-  /** Whether a SpaceMouse is currently paired and feeding input. */
-  spaceMouseConnected?: boolean;
-  /** Called when the user clicks the "Connect SpaceMouse" button. */
-  onConnectSpaceMouse?: () => void;
-  /** Current SpaceMouse global sensitivity multiplier. */
-  spaceMouseSensitivity?: number;
-  /** Called when the user moves the sensitivity slider. */
-  onSpaceMouseSensitivityChange?: (value: number) => void;
-
-  /**
-   * Forwarded to the shared `Panel` chrome.  App.tsx passes `false` on
-   * mobile viewports so the long Settings panel doesn't dominate the
-   * first-paint screen on a phone; desktop keeps the previous always-
-   * open behaviour.  Users can still tap the title row to expand.
-   */
-  defaultOpen?: boolean;
-
-  // ── Scalar-volume overlay ───────────────────────────────────────────────
-  //
-  // All four props are optional so older call sites (and the Vitest snapshot
-  // suite) continue to typecheck unchanged.  The whole section is gated on
-  // all of them being present — same idiom as the filaments section above.
-  //
-  // `volumeFields` drives a list-driven layout: one row per registered field,
-  // each with an enable checkbox and an intensity slider.  The list is rebuilt
-  // whenever the engine fires `onVolumeFieldsChanged`, so adding a cube at
-  // runtime appears immediately in the panel.
-  //
-  // `volumesEnabled` is the master toggle in the section header — same shape
-  // as `filamentsEnabled` / the survey master checkbox.  Turning it off
-  // silences every registered field without destroying their per-field
-  // tunable state.
-
-  /** Master on/off for all registered volume fields.  Optional — omitting hides the section. */
+  // ── Cosmic web group ───────────────────────────────────────────────────
+  /** Whether the DisPerSE filament-skeleton overlay is rendered. */
+  filamentsEnabled?: boolean;
+  /** Fired when the picker / Advanced flips the Filaments master. */
+  onFilamentsChange?: (enabled: boolean) => void;
+  /** Filament-overlay intensity scale, [0, 1].  Shown in Advanced. */
+  filamentIntensity?: number;
+  onFilamentIntensityChange?: (value: number) => void;
+  /** Master on/off for all registered scalar-volume fields. */
   volumesEnabled?: boolean;
-  /** Fired when the user toggles the master "Volumes" checkbox. */
+  /** Fired when the picker / Advanced flips the Volumes master. */
   onVolumesEnabledChange?: (enabled: boolean) => void;
   /**
-   * Snapshot of every registered field's UI state — one entry per field.
-   * Built by `engineHandle.volumes.getState()` on each
-   * `onVolumeFieldsChanged` callback.  Optional — when absent the
-   * Volumes section is hidden.
+   * Snapshot of every registered field's UI state — one entry per cube.
+   * Drives the per-cube rows inside Cosmic web → Advanced.
    */
   volumeFields?: ReadonlyArray<VolumeFieldRowData>;
-  /** Fired when the user toggles an individual field's enable checkbox. */
   onVolumeFieldEnabledChange?: (handle: string, enabled: boolean) => void;
-  /** Fired when the user moves an individual field's intensity slider. */
   onVolumeFieldIntensityChange?: (handle: string, intensity: number) => void;
-  /**
-   * Fired when the user moves an individual field's contrast slider.
-   * Contrast widens a deadband around the value midpoint (suppressing
-   * near-mean noise) while stretching the surviving range across the
-   * full palette — visually distinct from intensity, which is an
-   * overall opacity multiplier.
-   */
   onVolumeFieldContrastChange?: (handle: string, contrast: number) => void;
-  /**
-   * Fired when the user moves an individual field's density slider.
-   * `densityScale` is a per-cube opacity multiplier inside the alpha
-   * integral; useful for compensating after windowing has hidden too
-   * much of the value range, or for shaping a very thin / very dense
-   * field to look "right".  Range is conventionally [0, 30], with
-   * registry defaults sitting around 5 for the CF-4 cube.
-   */
   onVolumeFieldDensityScaleChange?: (handle: string, value: number) => void;
-  /**
-   * Fired when the user moves an individual field's trim slider.
-   * `trim` is a low-end cutoff in normalised LUT-coord space [0, 0.95]
-   * that hard-suppresses voxels below the threshold — Polyphorm-style
-   * `trim_density` exposed as a per-cube user knob.
-   */
   onVolumeFieldTrimChange?: (handle: string, trim: number) => void;
-  /**
-   * Fired when the user moves an individual field's exposure slider.
-   * `exposure` is a per-cube HDR multiplier on the rgb contribution
-   * per ray-march step, range [1, 32].  Combined with the shader's
-   * bright-end-weighted formula so peaks brighten (white blow-out)
-   * while mid-tones stay LDR-bounded.
-   */
   onVolumeFieldExposureChange?: (handle: string, exposure: number) => void;
-  /**
-   * Fired when the user picks a different palette from a field's dropdown.
-   * Optional — when absent the per-field palette dropdown is hidden but
-   * the rest of the row (enable checkbox + intensity slider) still
-   * renders, so older call sites are unaffected.
-   */
   onVolumeFieldPaletteChange?: (handle: string, id: ScalarFieldPaletteId) => void;
+
+  // ── Structures group (cluster / supercluster / void MARKER rings) ──────
+  /**
+   * Per-category MARKER visibility — drives the per-category checkboxes
+   * inside Structures → Advanced and the derived tri-state of the master
+   * toggle.  Wires to `handle.labels.setCategoryMarkerVisible` (added by
+   * PR #160).
+   */
+  markerCategoryVisibility?: Readonly<Record<PoiCategory, boolean>>;
+  onSetMarkerCategoryVisibility?: (category: PoiCategory, visible: boolean) => void;
+
+  // ── Labels group (ALL text annotations) ────────────────────────────────
+  /** Per-category LABEL visibility — independent of marker visibility. */
+  labelCategoryVisibility: Readonly<Record<PoiCategory, boolean>>;
+  onSetLabelCategoryVisibility: (category: PoiCategory, visible: boolean) => void;
+
+  // ── Display group (power-user disclosure) ──────────────────────────────
+  /** Currently-selected tone-mapping curve. */
+  toneMapCurve?: ToneMapCurveT;
+  onToneMapCurveChange?: (curve: ToneMapCurveT) => void;
+
+  // ── SpaceMouse 6DOF input (conditional, WebHID-only) ───────────────────
+  /** Feature gate — only render the SpaceMouse section when true. */
+  spaceMouseSupported?: boolean;
+  spaceMouseConnected?: boolean;
+  onConnectSpaceMouse?: () => void;
+  spaceMouseSensitivity?: number;
+  onSpaceMouseSensitivityChange?: (value: number) => void;
+
+  // ── Footer ─────────────────────────────────────────────────────────────
+  /** Called when the user clicks Reset camera. */
+  onResetCamera: () => void;
+
+  /** Forwarded to Panel — App.tsx passes `false` on mobile viewports. */
+  defaultOpen?: boolean;
 };
+
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+/**
+ * Derive the current Cosmic web style from the two underlying master
+ * toggles.  Returns `null` when neither is on — caller then hides the
+ * picker (the group's own master being OFF means there's nothing to
+ * style).
+ */
+function deriveCosmicWebStyle(
+  volumesOn: boolean,
+  filamentsOn: boolean,
+): CosmicWebStyle | null {
+  if (volumesOn && filamentsOn) return 'both';
+  if (volumesOn) return 'smooth';
+  if (filamentsOn) return 'filaments';
+  return null;
+}
 
 // ── SettingsPanel ──────────────────────────────────────────────────────────────
 
 /**
- * Glassmorphic settings panel fixed to the bottom-left corner.
+ * Glassmorphic settings panel fixed in the bottom-left HUD stack.
  *
- * The panel is always present in the DOM (unlike InfoCard, which is absent
- * when nothing is hovered). Its CSS lives in `index.html` under `#settings-panel`.
- *
- * @example
- * // In App.tsx:
- * <SettingsPanel
- *   pointSize={pointSize}
- *   brightness={brightness}
- *   autoRotate={autoRotate}
- *   onPointSizeChange={(v) => handleRef.current?.points.setSize(v)}
- *   onBrightnessChange={(v) => handleRef.current?.points.setBrightness(v)}
- *   onAutoRotateChange={(v) => handleRef.current?.camera.setAutoRotate(v)}
- *   onResetCamera={() => handleRef.current?.camera.reset()}
- * />
+ * Stateless re: settings values — everything flows down through props
+ * and back up through callbacks.  Section open/closed state lives in
+ * the nested `CollapsibleSection`s (session-only, no persistence).
  */
 export function SettingsPanel({
-  pointSize,
-  brightness,
-  autoRotate,
-  onPointSizeChange,
-  onBrightnessChange,
-  onAutoRotateChange,
-  galaxyTexturesEnabled,
-  onGalaxyTexturesChange,
-  milkyWayEnabled,
-  onMilkyWayEnabledChange,
-  labelCategoryVisibility,
-  onSetLabelCategoryVisibility,
-  filamentsEnabled,
-  onFilamentsChange,
-  filamentIntensity,
-  onFilamentIntensityChange,
-  depthFadeEnabled,
-  onDepthFadeEnabledChange,
-  onResetCamera,
   tier,
   onTierChange,
   visibleSourceMask,
   onToggleSource,
   sourceCounts,
-  spaceMouseSupported,
-  spaceMouseConnected,
-  onConnectSpaceMouse,
-  spaceMouseSensitivity,
-  onSpaceMouseSensitivityChange,
+  pointSize,
+  onPointSizeChange,
+  depthFadeEnabled,
+  onDepthFadeEnabledChange,
   biasMode,
   onBiasModeChange,
   absMagLimit,
   onAbsMagLimitChange,
-  toneMapCurve,
-  onToneMapCurveChange,
-  exposure,
-  onExposureChange,
-  defaultOpen,
+  filamentsEnabled,
+  onFilamentsChange,
+  filamentIntensity,
+  onFilamentIntensityChange,
   volumesEnabled,
   onVolumesEnabledChange,
   volumeFields,
@@ -404,387 +306,253 @@ export function SettingsPanel({
   onVolumeFieldTrimChange,
   onVolumeFieldExposureChange,
   onVolumeFieldPaletteChange,
+  markerCategoryVisibility,
+  onSetMarkerCategoryVisibility,
+  labelCategoryVisibility,
+  onSetLabelCategoryVisibility,
+  toneMapCurve,
+  onToneMapCurveChange,
+  spaceMouseSupported,
+  spaceMouseConnected,
+  onConnectSpaceMouse,
+  spaceMouseSensitivity,
+  onSpaceMouseSensitivityChange,
+  onResetCamera,
+  defaultOpen,
 }: Props): ReactNode {
-  // Tier selector: rendered only when both pieces wired by the parent.  Same
-  // opt-in idiom as every other optional section in this panel.  The selector
-  // sits at the top of the body (before any CollapsibleSection) because the
-  // tier choice has the highest blast radius — it triggers a network re-fetch
-  // and full GPU re-upload of every tiered source.
-  const showTierSelector = tier !== undefined && onTierChange !== undefined;
-
-  // Guard: only render the survey-toggle section when the parent has wired
-  // *both* the current mask and the toggle callback. Either alone would be
-  // a half-broken UI (toggles that don't reflect state, or state with no
-  // way to change it), so we treat them as a single feature flag.
+  // ── Per-section opt-in gates ─────────────────────────────────────────────
+  // Each conditional section requires its full prop set; either-or wirings
+  // would produce half-broken UIs (controls without echoes, or echoes
+  // without controls).
+  const showTierChip = tier !== undefined && onTierChange !== undefined;
   const showSurveyToggles = visibleSourceMask !== undefined && onToggleSource !== undefined;
-
-  // Milky Way checkbox: rendered only when both the value and the
-  // change-callback are wired by the parent.  Same opt-in idiom as
-  // every other optional section in this panel.
-  const showMilkyWayToggle = milkyWayEnabled !== undefined && onMilkyWayEnabledChange !== undefined;
-
-  // Filaments checkbox: same opt-in idiom — both pieces or neither.
-  // On a fresh clone the underlying `filaments.bin` won't exist; the
-  // panel still renders the row (so the user can discover the
-  // feature), but toggling it on is a silent no-op until they run
-  // `npm run build-filaments`.  We deliberately do NOT gate visibility
-  // on whether the binary loaded — discoverability of the feature
-  // beats hiding rows whose backing data may show up later.
   const showFilamentsToggle = filamentsEnabled !== undefined && onFilamentsChange !== undefined;
-  // Intensity slider only shows when both prop pieces are provided AND the
-  // overlay is currently enabled.  Hiding it when the toggle is off keeps
-  // the slider from looking dead — moving it would have no visible effect.
   const showFilamentIntensitySlider =
     showFilamentsToggle &&
     filamentsEnabled === true &&
     filamentIntensity !== undefined &&
     onFilamentIntensityChange !== undefined;
-
-  // Volumes section: all five props must be wired or we hide the section.
-  // Requiring all five (master toggle + master callback + field list + field
-  // callbacks) prevents a half-rendered UI where the master checkbox exists
-  // but per-field rows can't respond, or vice versa.  Older call sites that
-  // pass none of them still see no Volumes section at all.
   const showVolumesSection =
     volumesEnabled !== undefined &&
     onVolumesEnabledChange !== undefined &&
     volumeFields !== undefined &&
     onVolumeFieldEnabledChange !== undefined &&
-    onVolumeFieldIntensityChange !== undefined;
-
-
-  // Density-correction section: rendered only when both the current mode and
-  // both change-callbacks are wired by the parent.  We require all four
-  // density props (mode + mode-callback + magnitude + magnitude-callback)
-  // so that, when the user flips into VolumeLimited mode, the slider works
-  // immediately rather than half-rendering.  Older call sites that pass
-  // none of them still see no Density-correction section at all.
+    onVolumeFieldIntensityChange !== undefined &&
+    onVolumeFieldContrastChange !== undefined;
   const showBiasControls =
     biasMode !== undefined &&
     onBiasModeChange !== undefined &&
     absMagLimit !== undefined &&
     onAbsMagLimitChange !== undefined;
-
-  // Tone-curve selector: same opt-in idiom — both props must be wired or
-  // we hide the whole row.  No `disabled` fallback because every curve
-  // option ships functional today (no future placeholders to gray out,
-  // unlike the biasMode dropdown's roadmap entries).
   const showToneCurveControls = toneMapCurve !== undefined && onToneMapCurveChange !== undefined;
+  const showStructuresGroup =
+    markerCategoryVisibility !== undefined && onSetMarkerCategoryVisibility !== undefined;
 
-  // Exposure slider gate — independent of the tone-curve dropdown so a
-  // caller can wire one without the other (mostly defensive: in practice
-  // App.tsx wires both together).  Same idiom as every other optional
-  // section in this panel.
-  const showExposureControl = exposure !== undefined && onExposureChange !== undefined;
+  // ── Galaxies master (derived tri-state over per-survey toggles) ─────────
+  // Same shape the pre-restructure panel used (it was the Surveys section
+  // master); the audit promoted that pattern to the explorer surface and
+  // moved per-survey toggles into Advanced.
+  const galaxiesMaster = showSurveyToggles
+    ? (() => {
+        const enabledCount = TOGGLEABLE_SOURCES.reduce<number>(
+          (n, s) => (maskHas(visibleSourceMask, s) ? n + 1 : n),
+          0,
+        );
+        const allOn = enabledCount === TOGGLEABLE_SOURCES.length;
+        const noneOn = enabledCount === 0;
+        return {
+          allOn,
+          indeterminate: !allOn && !noneOn,
+          // Tri-state click behaviour (Windows Explorer / Finder / GitHub
+          // file-tree convention): from "none" → set all on; from "all" or
+          // "mixed" → clear everything.  Maps the tri-state cycle to a
+          // single boolean target the engine consumes per source.
+          onToggle: () => {
+            const targetEnabled = noneOn;
+            for (const s of TOGGLEABLE_SOURCES) {
+              onToggleSource(s, targetEnabled);
+            }
+          },
+        };
+      })()
+    : null;
 
-  // The glassmorphic card chrome + clickable uppercase title row + body
-  // collapse affordance live in the shared `Panel` component (see
-  // `components/common/Panel`).  Collapse state is session-only, defaulting
-  // open so first-time visitors see the panel as the primary interaction
-  // surface.  This module just supplies the section content.
+  // ── Cosmic web master + Style picker derivation ─────────────────────────
+  // Master is derived from (volumes OR filaments) — at least one of the two
+  // is on means the group's "anything cosmic-web" is showing.  Per audit
+  // Q9(β) the master + style picker replace the pre-audit panel's two
+  // independent Volumes / Filaments master toggles.
+  const cosmicWebVolumesOn = volumesEnabled ?? false;
+  const cosmicWebFilamentsOn = filamentsEnabled ?? false;
+  const cosmicWebMasterOn = cosmicWebVolumesOn || cosmicWebFilamentsOn;
+  // Mixed state isn't surfaced — master is "any on" vs "all off"; the
+  // Style picker handles the on-state granularity below.
+  const cosmicWebCurrentStyle = deriveCosmicWebStyle(cosmicWebVolumesOn, cosmicWebFilamentsOn);
+
+  /**
+   * Master Cosmic-web toggle handler.  When turning OFF, batch-disable both
+   * underlying masters.  When turning ON, restore to "Smooth" as a sensible
+   * default (the audit's pick for the default first-impression style — less
+   * visually noisy than Filaments).  Same rationale as the explorer never
+   * needing to think about per-source: a single click should produce a
+   * coherent picture.
+   */
+  const onCosmicWebMasterToggle = (enabled: boolean) => {
+    if (!enabled) {
+      onVolumesEnabledChange?.(false);
+      onFilamentsChange?.(false);
+      return;
+    }
+    // Restore to Smooth (volumes on, filaments off).  Don't disturb any
+    // per-cube enable bits inside Advanced — those persist across master
+    // flips by design (the user's prior tuning shouldn't evaporate).
+    onVolumesEnabledChange?.(true);
+    onFilamentsChange?.(false);
+  };
+
+  /**
+   * Style picker handler — batches the master mutations per the mapping
+   * documented in the module header.  Per-cube and per-filament
+   * sub-toggles in Advanced are intentionally NOT touched; the picker is
+   * a high-level shortcut, not a "reset cube state" button.
+   */
+  const onSetCosmicWebStyle = (style: CosmicWebStyle) => {
+    switch (style) {
+      case 'smooth':
+        onVolumesEnabledChange?.(true);
+        onFilamentsChange?.(false);
+        break;
+      case 'filaments':
+        onVolumesEnabledChange?.(false);
+        onFilamentsChange?.(true);
+        break;
+      case 'both':
+        onVolumesEnabledChange?.(true);
+        onFilamentsChange?.(true);
+        break;
+    }
+  };
+
+  // ── Structures master (over cluster / SC / void MARKER axis) ────────────
+  const structuresMaster = showStructuresGroup
+    ? (() => {
+        const enabledCount = STRUCTURE_CATEGORIES.reduce<number>(
+          (n, cat) => (markerCategoryVisibility[cat] ? n + 1 : n),
+          0,
+        );
+        const allOn = enabledCount === STRUCTURE_CATEGORIES.length;
+        const noneOn = enabledCount === 0;
+        return {
+          allOn,
+          indeterminate: !allOn && !noneOn,
+          onToggle: () => {
+            const targetEnabled = noneOn;
+            for (const cat of STRUCTURE_CATEGORIES) {
+              onSetMarkerCategoryVisibility(cat, targetEnabled);
+            }
+          },
+        };
+      })()
+    : null;
+
+  // ── Labels master (over all four PoiCategory entries) ───────────────────
+  const labelsMaster = (() => {
+    const enabledCount = LABEL_CATEGORIES.reduce<number>(
+      (n, cat) => (labelCategoryVisibility[cat] ? n + 1 : n),
+      0,
+    );
+    const allOn = enabledCount === LABEL_CATEGORIES.length;
+    const noneOn = enabledCount === 0;
+    return {
+      allOn,
+      indeterminate: !allOn && !noneOn,
+      onToggle: () => {
+        const targetEnabled = noneOn;
+        for (const cat of LABEL_CATEGORIES) {
+          onSetLabelCategoryVisibility(cat, targetEnabled);
+        }
+      },
+    };
+  })();
+
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <Panel title="Settings" ariaLabel="Renderer settings" defaultOpen={defaultOpen}>
+    <Panel
+      title="Settings"
+      ariaLabel="Renderer settings"
+      defaultOpen={defaultOpen}
+      headerExtra={
+        // The Tier chip sits in the panel's title strip rather than as a
+        // body row — see the module header for the audit rationale.  Only
+        // rendered when the parent wires both `tier` and `onTierChange`;
+        // older / test call sites without those props see no chip and the
+        // header strip falls back to title-only.
+        showTierChip ? <TierChip tier={tier} onTierChange={onTierChange} /> : undefined
+      }
+    >
       {/*
-        ── Section grouping ──────────────────────────────────────────────
-        The panel grew to ~80 controls in seven loose categories.  Wrapping
-        each category in a CollapsibleSection turns "scroll a wall of rows"
-        into "open the section you care about".  Each section persists its
-        open/closed state to localStorage under a unique key so the user's
-        layout choices survive reloads.
+        ── Section structure ────────────────────────────────────────────
+        Four thematic sections (Galaxies, Cosmic web, Structures, Labels)
+        each with a master toggle on the header and an "Advanced"
+        disclosure for power-user knobs.  Then Display (its own Advanced
+        disclosure) and the conditional SpaceMouse section.  Reset camera
+        sits outside any section as a footer action.
 
-        Section order is intentional: catalog choices first (what to look
-        at), then bias correction (which sub-sample), then visual + tone
-        (how the pixels are shaped), then overlays (decorations on top),
-        then input (rare).  Camera reset stays outside any section as a
-        footer.  (Catalog-audit diagnostics — e.g. the orientation-
-        fallback toggles — live in the DebugPanel's DataQualitySection
-        per the 2026-05-19 SettingsPanel UX audit.)
+        Section ORDER mirrors the explorer's mental model from "things"
+        (Galaxies) → "the stuff between things" (Cosmic web) → "named
+        landmarks" (Structures) → "annotations" (Labels), then global
+        Display, then optional Input, then the footer action.
       */}
 
-          {/* ── Data tier (small / medium / large) ──────────────────────────── */}
-          {/*
-        Top-of-body placement (before any CollapsibleSection) is intentional:
-        the tier choice is the highest-blast-radius control on the panel —
-        each click triggers a network re-fetch + GPU re-upload of every
-        tiered source.  Putting it at the top makes it both discoverable
-        and unambiguous which decision came first.
-
-        Always visible (no CollapsibleSection wrapper) for the same reason:
-        the user should never have to "find" the tier control before
-        understanding why their device is hot.
+      {/* ── Galaxies ──────────────────────────────────────────────────── */}
+      {/*
+        Master = tri-state over per-survey toggles.  Default-on (every
+        survey on at first paint).  The Advanced disclosure holds the
+        per-survey toggles AND the galaxy-only render tunables (point
+        size, depth fade, density correction) — all of which are
+        meaningless when the master is off, so co-locating them keeps
+        the explorer surface tight.
       */}
-          {showTierSelector && (
-            <TierSelector tier={tier!} onTierChange={onTierChange!} />
-          )}
-
-          {/* ── Surveys ──────────────────────────────────────────────────────── */}
-          {/*
-        Survey toggles are the highest-level decision the user makes — what
-        catalogues are even on screen.  Default closed to keep the Settings
-        panel scannable on first open; the section header still surfaces the
-        master tri-state checkbox so the all-on/mixed/all-off state is
-        visible without expanding the section.
-
-        Master toggle in the section header is a *derived tri-state* over the
-        per-source booleans:
-          - all four on → checked, NOT indeterminate
-          - all four off → unchecked, NOT indeterminate
-          - mixed → unchecked + indeterminate (visual dash)
-        Click semantics follow the standard tri-state convention: from the
-        "none" state, set everything on; from any other state (all or
-        partial), set everything off.  This mirrors how OS file-managers
-        treat tri-state group checkboxes.
-
-        Note we deliberately do NOT use a single bitmask write — the
-        callback contract is `onToggleSource(Source, boolean)` per source,
-        so we loop and emit one call per source.  The parent handles each
-        update through its existing reducer.
-      */}
-          {showSurveyToggles &&
-            (() => {
-              // Derived tri-state.  Counted once per render rather than
-              // peppering `maskHas(...)` into the boolean expressions
-              // below — keeps the intent legible and avoids three bitwise
-              // reads when one suffices.
-              const enabledCount = TOGGLEABLE_SOURCES.reduce<number>(
-                (n, s) => (maskHas(visibleSourceMask, s) ? n + 1 : n),
-                0,
-              );
-              const allOn = enabledCount === TOGGLEABLE_SOURCES.length;
-              const noneOn = enabledCount === 0;
-              const indeterminate = !allOn && !noneOn;
-
-              // Master click handler: from "none" → set all on; from
-              // "all" or "mixed" → clear everything.  This is the
-              // conventional tri-state-checkbox UX (Windows Explorer,
-              // macOS Finder list-view, GitHub PR file-tree, etc.).
-              const onMasterToggle = () => {
-                const targetEnabled = noneOn; // true if currently all off
-                for (const s of TOGGLEABLE_SOURCES) {
-                  onToggleSource(s, targetEnabled);
-                }
-              };
-
+      {galaxiesMaster && (
+        <CollapsibleSection
+          title="Galaxies"
+          headerToggle={galaxiesMaster.allOn}
+          headerToggleIndeterminate={galaxiesMaster.indeterminate}
+          onHeaderToggleChange={galaxiesMaster.onToggle}
+        >
+          <CollapsibleSection title="Advanced">
+            {/* Per-survey toggles — kept first inside Advanced so the
+                "which catalog am I looking at" question stays at the top
+                of the disclosure, mirroring how Surveys used to sit at
+                the top of the panel body. */}
+            {TOGGLEABLE_SOURCES.map((s) => {
+              const count = sourceCounts?.[s];
               return (
-                <CollapsibleSection
-                  title="Surveys"
-                  headerToggle={allOn}
-                  headerToggleIndeterminate={indeterminate}
-                  onHeaderToggleChange={onMasterToggle}
-                >
-                  {TOGGLEABLE_SOURCES.map((s) => {
-                    // `count` is undefined until the .bin lands; we render an empty
-                    // string in that case rather than "0" (which would imply the
-                    // survey is empty rather than still loading).
-                    const count = sourceCounts?.[s];
-                    return (
-                      <div className={styles.panelRow} key={s}>
-                        <label htmlFor={`toggle-source-${s}`}>
-                          {sourceLabel(s)}
-                          {count !== undefined && (
-                            <span className={styles.sourceCount}>
-                              {count.toLocaleString()}
-                            </span>
-                          )}
-                        </label>
-                        <input
-                          id={`toggle-source-${s}`}
-                          type="checkbox"
-                          // `maskHas` keeps us from leaking the bitmask shape into the JSX —
-                          // we ask "is bit s set?" and trust `data/sources.ts` to know how.
-                          checked={maskHas(visibleSourceMask, s)}
-                          onChange={(e) => onToggleSource(s, e.target.checked)}
-                        />
-                      </div>
-                    );
-                  })}
-                </CollapsibleSection>
-              );
-            })()}
-
-          {/* ── Filaments (cosmic web) ───────────────────────────────────────── */}
-          {/*
-        Dedicated section, sitting immediately below Surveys because both
-        sections answer the same kind of question — "which large-scale
-        structure am I rendering?".  The master toggle in the header
-        mirrors the previous "Filaments" checkbox row that lived inside
-        Overlays; the intensity slider that used to sit alongside it
-        moves into this section's body and only renders when the
-        overlay is enabled (matches the previous gating).
-
-        On a fresh clone, `filaments.bin` doesn't exist yet — the engine
-        treats the missing file as a silent no-op, so toggling this on
-        is a discoverable affordance even before the user runs
-        `npm run build-filaments`.
-
-        Default-closed (`defaultOpen={false}`) because most first-time
-        visitors aren't yet familiar with the cosmic-web overlay; folding
-        it away keeps the panel compact while still discoverable via the
-        master checkbox visible in the collapsed-section header.
-      */}
-          {showFilamentsToggle && (
-            <CollapsibleSection
-              title="Filaments (cosmic web)"
-              headerToggle={filamentsEnabled}
-              onHeaderToggleChange={(v) => onFilamentsChange(v)}
-            >
-              {showFilamentIntensitySlider ? (
-                <>
-                  <div className={styles.panelRow}>
-                    <label htmlFor="filament-intensity">Intensity</label>
-                    <span className={styles.panelValue}>
-                      {filamentIntensity.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className={styles.panelRow}>
-                    <input
-                      id="filament-intensity"
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      value={filamentIntensity}
-                      onChange={(e) => onFilamentIntensityChange(Number(e.target.value))}
-                    />
-                  </div>
-                </>
-              ) : (
-                // When the overlay is OFF, the slider is hidden (it
-                // would have no visible effect on the canvas) — but
-                // we still render a subtle hint inside the body so a
-                // user who expanded the section sees *why* there's
-                // nothing to drag.  This matches the pattern used by
-                // the SpaceMouse section's "not connected" hint.
-                <div className={styles.panelMode}>enable to adjust intensity</div>
-              )}
-            </CollapsibleSection>
-          )}
-
-          {/* ── Scalar-volume overlay ───────────────────────────────────────── */}
-          {/*
-        List-driven section: one row per registered field, each with an
-        enable checkbox and an intensity slider.  The field list is rebuilt
-        whenever the engine fires `onVolumeFieldsChanged` (add/remove), so
-        registering a cube at runtime causes this section to grow a new row
-        without any manual refresh.
-
-        The master checkbox in the section header follows the same pattern
-        as the Filaments toggle: clicking it does NOT expand/collapse — the
-        collapse chevron handles that.  The checkbox acts as a coarse "hide
-        all volumes" emergency off while preserving per-field tunable state.
-
-        Empty-state hint: when no fields are registered yet, the body shows
-        a faint italic line rather than an empty white box — same idiom the
-        SpaceMouse section uses for its "not connected" hint.
-
-        Default-closed (`defaultOpen` omitted, so it falls back to
-        `false`) because no fields are registered on first paint; the
-        user only needs this section when they've explicitly loaded a cube.
-      */}
-          {showVolumesSection && (
-            <CollapsibleSection
-              title="Volumes"
-              headerToggle={volumesEnabled}
-              onHeaderToggleChange={(v) => onVolumesEnabledChange!(v)}
-            >
-              {volumeFields!.length === 0 ? (
-                // Empty state — no cubes registered yet.  The hint mirrors the
-                // SpaceMouse "not connected" line in style (panelMode) so the
-                // visual vocabulary stays consistent.  The user discovers the
-                // feature exists here and knows to call `addVolumeField` to
-                // populate it.
-                <div className={styles.panelMode}>No volume fields registered.</div>
-              ) : (
-                volumeFields!.map((field) => (
-                  <VolumeFieldRow
-                    key={field.handle}
-                    handle={field.handle}
-                    label={field.label}
-                    enabled={field.enabled}
-                    intensity={field.intensity}
-                    contrast={field.contrast}
-                    densityScale={field.densityScale}
-                    trim={field.trim}
-                    exposure={field.exposure}
-                    paletteId={field.paletteId}
-                    onEnabledChange={onVolumeFieldEnabledChange!}
-                    onIntensityChange={onVolumeFieldIntensityChange!}
-                    onContrastChange={onVolumeFieldContrastChange!}
-                    onTrimChange={onVolumeFieldTrimChange}
-                    onExposureChange={onVolumeFieldExposureChange}
-                    onDensityScaleChange={onVolumeFieldDensityScaleChange}
-                    onPaletteChange={onVolumeFieldPaletteChange}
+                <div className={styles.panelRow} key={s}>
+                  <label htmlFor={`toggle-source-${s}`}>
+                    {sourceLabel(s)}
+                    {count !== undefined && (
+                      <span className={styles.sourceCount}>
+                        {count.toLocaleString()}
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    id={`toggle-source-${s}`}
+                    type="checkbox"
+                    // `!` here is safe: this row only renders when
+                    // `galaxiesMaster` is truthy, which itself gates on
+                    // `showSurveyToggles`.  TS can't trace the narrow
+                    // through the IIFE-derived `galaxiesMaster` value, so
+                    // assert what we already know.
+                    checked={maskHas(visibleSourceMask!, s)}
+                    onChange={(e) => onToggleSource!(s, e.target.checked)}
                   />
-                ))
-              )}
-            </CollapsibleSection>
-          )}
+                </div>
+              );
+            })}
 
-          {/* ── Density correction (Malmquist bias) ──────────────────────────── */}
-          {/*
-        Sits just below Surveys because density correction is a high-level
-        decision about *what sub-sample of the catalog to render* — closer in
-        spirit to a survey toggle than to a per-pixel slider.  Only the first
-        two modes do anything visible today (Tasks 3 + 4 add the 1/V_max and
-        Schechter implementations); the future modes are kept in the dropdown
-        but `disabled`, both as a roadmap signal and so the menu's vertical
-        layout doesn't shift when those tasks land.
-
-        The M_lim slider is conditionally rendered only in VolumeLimited mode
-        because the other modes don't use a hard absolute-magnitude threshold:
-        1/V_max weights every galaxy individually, and Schechter reweights by
-        the analytic luminosity function (see plan Task 3 + 4 sketches).
-        Hiding the control rather than disabling it keeps the panel compact
-        and removes a UI element that would just look broken.
-      */}
-          {showBiasControls && (
-            <CollapsibleSection title="Density correction">
-              <div className={styles.panelRow}>
-                <label htmlFor="bias-mode">Mode</label>
-                <select
-                  id="bias-mode"
-                  className={styles.modeSelect}
-                  value={biasMode}
-                  onChange={(e) => onBiasModeChange(Number(e.target.value) as BiasModeT)}
-                >
-                  <option value={BiasMode.None}>None — raw catalogue</option>
-                  <option value={BiasMode.VolumeLimited}>Volume-limited</option>
-                  <option value={BiasMode.VMax}>1/V_max</option>
-                  <option value={BiasMode.Schechter}>Schechter LF</option>
-                  <option value={BiasMode.AngularReweight}>Angular re-weight (HEALPix)</option>
-                </select>
-              </div>
-              {biasMode === BiasMode.VolumeLimited && (
-                <>
-                  <div className={styles.panelRow}>
-                    <label htmlFor="abs-mag-limit">M_lim</label>
-                    <span className={styles.panelValue}>{absMagLimit.toFixed(1)}</span>
-                  </div>
-                  <div className={styles.panelRow}>
-                    <input
-                      id="abs-mag-limit"
-                      type="range"
-                      min={-24}
-                      max={-15}
-                      step={0.1}
-                      value={absMagLimit}
-                      onChange={(e) => onAbsMagLimitChange(parseFloat(e.target.value))}
-                    />
-                  </div>
-                </>
-              )}
-            </CollapsibleSection>
-          )}
-
-          {/* ── Visual (per-pixel sliders + camera behaviour) ───────────────── */}
-          {/*
-        Bundles the four "how the pixels are drawn" controls together:
-        point size, brightness, depth fade, and auto-rotate.  These are
-        the controls a user reaches for *after* they've decided what
-        surveys to view.
-      */}
-          <CollapsibleSection title="Visual">
-            {/* Point size — stacked label/value on top, slider full-width below. */}
+            {/* Point size — galaxy-only tunable, lives here per Q16b. */}
             <div className={styles.panelRow}>
               <label htmlFor="slider-point-size">Point size</label>
               <span className={styles.panelValue}>{pointSize.toFixed(1)} px</span>
@@ -801,29 +569,7 @@ export function SettingsPanel({
               />
             </div>
 
-            {/* Brightness */}
-            <div className={styles.panelRow}>
-              <label htmlFor="slider-brightness">Brightness</label>
-              <span className={styles.panelValue}>{brightness.toFixed(2)}×</span>
-            </div>
-            <div className={styles.panelRow}>
-              <input
-                id="slider-brightness"
-                type="range"
-                min={0.2}
-                max={3.0}
-                step={0.05}
-                value={brightness}
-                onChange={(e) => onBrightnessChange(parseFloat(e.target.value))}
-              />
-            </div>
-
-            {/*
-          Depth-fade toggle.  Camera-distance attenuation that gates centre-
-          of-volume saturation glow.  Belongs here in Visual because it's a
-          per-pixel modulation, even though it gets gated on its own pair of
-          props (the parent may not wire it).
-        */}
+            {/* Depth fade — galaxy-only tunable, lives here per Q16c. */}
             {depthFadeEnabled !== undefined && onDepthFadeEnabledChange !== undefined && (
               <div className={styles.panelRow}>
                 <label htmlFor="toggle-depth-fade">Depth fade</label>
@@ -836,233 +582,329 @@ export function SettingsPanel({
               </div>
             )}
 
-            {/* Auto-rotate */}
-            <div className={styles.panelRow}>
-              <label htmlFor="toggle-auto-rotate">Auto-rotate</label>
-              <input
-                id="toggle-auto-rotate"
-                type="checkbox"
-                checked={autoRotate}
-                // `e.target.checked` is a boolean — pass it directly to the callback.
-                onChange={(e) => onAutoRotateChange(e.target.checked)}
-              />
-            </div>
-          </CollapsibleSection>
-
-          {/* ── Tone mapping ─────────────────────────────────────────────────── */}
-          {/*
-        Curve dropdown + exposure slider.  The two work together: curve
-        choice sets the shape (Linear / Reinhard / Asinh / Gamma 2 / ACES),
-        exposure sets where on that shape the per-pixel signal lands.  See
-        `data/toneMapCurve.ts` for the full curve descriptions.
-      */}
-          {(showToneCurveControls || showExposureControl) && (
-            <CollapsibleSection title="Tone mapping">
-              {showToneCurveControls && (
+            {/* Density correction (Malmquist bias) — astronomer-jargon-heavy
+                but flat (single dropdown + conditional slider) per Q16e.
+                Future modes (1/V_max, Schechter) ship as disabled options
+                so the layout doesn't shift when they land. */}
+            {showBiasControls && (
+              <>
                 <div className={styles.panelRow}>
-                  <label htmlFor="tonemap-curve">Curve</label>
+                  <label htmlFor="bias-mode">Density correction</label>
                   <select
-                    id="tonemap-curve"
+                    id="bias-mode"
                     className={styles.modeSelect}
-                    value={toneMapCurve}
-                    onChange={(e) =>
-                      onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurveT)
-                    }
+                    value={biasMode}
+                    onChange={(e) => onBiasModeChange(Number(e.target.value) as BiasModeT)}
                   >
-                    {ALL_TONE_MAP_CURVES.map((c) => (
-                      <option key={c} value={c}>
-                        {toneMapCurveLabel(c)}
-                      </option>
-                    ))}
+                    <option value={BiasMode.None}>None — raw catalogue</option>
+                    <option value={BiasMode.VolumeLimited}>Volume-limited</option>
+                    <option value={BiasMode.VMax}>1/V_max</option>
+                    <option value={BiasMode.Schechter}>Schechter LF</option>
+                    <option value={BiasMode.AngularReweight}>
+                      Angular re-weight (HEALPix)
+                    </option>
                   </select>
                 </div>
-              )}
-              {/*
-            Exposure multiplies the HDR signal *before* the tone-map curve
-            runs, so dragging it left dims cluster cores back below
-            saturation and dragging it right lifts the cosmic web out of
-            the noise floor.  The engine clamps to [0.05, 16]; we cap the
-            slider at 4.0 because anything past ~3 already over-bakes the
-            brightest cores under Reinhard / ACES.
-          */}
-              {showExposureControl && (
-                <>
-                  <div className={styles.panelRow}>
-                    <label htmlFor="slider-exposure">Exposure</label>
-                    <span className={styles.panelValue}>{exposure.toFixed(2)}×</span>
-                  </div>
-                  <div className={styles.panelRow}>
-                    <input
-                      id="slider-exposure"
-                      type="range"
-                      min={0.1}
-                      max={4.0}
-                      step={0.05}
-                      value={exposure}
-                      onChange={(e) => onExposureChange(parseFloat(e.target.value))}
-                    />
-                  </div>
-                </>
-              )}
-            </CollapsibleSection>
-          )}
-
-          {/* ── Overlays ─────────────────────────────────────────────────────── */}
-          {/*
-        Decorative passes that draw *on top of* the main galaxy point cloud:
-        the close-up galaxy thumbnails and the procedural Milky Way impostor
-        at world origin.  Both are independent toggles — turning one off
-        doesn't affect the other.
-
-        The Filaments overlay used to live here too, but graduated into its
-        own dedicated CollapsibleSection (immediately below Surveys) once
-        its master toggle moved to the section header and the intensity
-        slider needed a stable home.  See the "Filaments (cosmic web)"
-        section above for the new layout.
-      */}
-          <CollapsibleSection title="Overlays">
-            {/*
-          Galaxy thumbnails — gates the entire close-up galaxy-texture quad
-          pass.  Default-on (the engine seeds `true` at init), so first-time
-          visitors see the feature without having to opt in.
-        */}
-            <div className={styles.panelRow}>
-              <label htmlFor="toggle-galaxy-textures">Galaxy thumbnails</label>
-              <input
-                id="toggle-galaxy-textures"
-                type="checkbox"
-                checked={galaxyTexturesEnabled}
-                onChange={(e) => onGalaxyTexturesChange(e.target.checked)}
-              />
-            </div>
-
-            {showMilkyWayToggle && (
-              <div className={styles.panelRow}>
-                <label htmlFor="toggle-milky-way">Show Milky Way</label>
-                <input
-                  id="toggle-milky-way"
-                  type="checkbox"
-                  checked={milkyWayEnabled}
-                  onChange={(e) => onMilkyWayEnabledChange(e.target.checked)}
-                />
-              </div>
-            )}
-
-            {/*
-              Per-category label-visibility toggles.  Four checkboxes matching
-              the PoiCategory union — always visible, no feature gate, because
-              famous-galaxy labels especially are first-class user-facing
-              overlays.  Not wrapped in its own CollapsibleSection — four rows
-              isn't enough to justify the click cost of expanding a sub-section.
-            */}
-            <div className={styles.panelRow}>
-              <label htmlFor="toggle-label-cluster">Cluster labels</label>
-              <input
-                id="toggle-label-cluster"
-                type="checkbox"
-                checked={labelCategoryVisibility.cluster}
-                onChange={(e) => onSetLabelCategoryVisibility('cluster', e.target.checked)}
-              />
-            </div>
-            <div className={styles.panelRow}>
-              <label htmlFor="toggle-label-supercluster">Supercluster labels</label>
-              <input
-                id="toggle-label-supercluster"
-                type="checkbox"
-                checked={labelCategoryVisibility.supercluster}
-                onChange={(e) => onSetLabelCategoryVisibility('supercluster', e.target.checked)}
-              />
-            </div>
-            <div className={styles.panelRow}>
-              <label htmlFor="toggle-label-famous-galaxy">Famous galaxy labels</label>
-              <input
-                id="toggle-label-famous-galaxy"
-                type="checkbox"
-                checked={labelCategoryVisibility.famousGalaxy}
-                onChange={(e) => onSetLabelCategoryVisibility('famousGalaxy', e.target.checked)}
-              />
-            </div>
-            <div className={styles.panelRow}>
-              <label htmlFor="toggle-label-void">Void labels</label>
-              <input
-                id="toggle-label-void"
-                type="checkbox"
-                checked={labelCategoryVisibility.void}
-                onChange={(e) => onSetLabelCategoryVisibility('void', e.target.checked)}
-              />
-            </div>
-          </CollapsibleSection>
-
-          {/*
-        Orientation-fallback diagnostic toggles ("Highlight fallback" /
-        "Show only real") used to live here.  They graduated to the
-        DebugPanel's `DataQualitySection` per the 2026-05-19 SettingsPanel
-        UX audit (Q16g) — they're catalog-audit diagnostics, not
-        user-facing settings, so they belong with the rest of the
-        developer-only debug surface.
-      */}
-
-          {/* ── SpaceMouse (rev-3 6DOF input) ────────────────────────────────── */}
-          {/*
-        Rendered only when `spaceMouseSupported` is true.  App.tsx
-        composes that flag from WebHID feature detection AND actual
-        device presence (`navigator.hid.getDevices()` + the `hid.connect`
-        event) — so Firefox / Safari users see nothing, Chromium users
-        without a paired puck see nothing, and SpaceMouse owners find
-        the controls automatically.  See the audit transcript at
-        `docs/grill-sessions/settings-panel-audit-2026-05-19.md` (Q16f)
-        for the design rationale.
-
-        Within the section, the Connect button shows up only when no
-        device is paired (covers the "previously paired, now unplugged"
-        edge case), and the sensitivity slider only after pairing.
-      */}
-          {spaceMouseSupported && (
-            <CollapsibleSection title="SpaceMouse">
-              <div className={styles.panelMode}>
-                {spaceMouseConnected ? 'connected' : 'not connected'}
-              </div>
-              {!spaceMouseConnected && onConnectSpaceMouse && (
-                <div className={styles.panelRow}>
-                  <button
-                    type="button"
-                    className={styles.button}
-                    onClick={onConnectSpaceMouse}
-                  >
-                    Connect SpaceMouse
-                  </button>
-                </div>
-              )}
-              {spaceMouseConnected &&
-                spaceMouseSensitivity !== undefined &&
-                onSpaceMouseSensitivityChange && (
+                {biasMode === BiasMode.VolumeLimited && (
                   <>
                     <div className={styles.panelRow}>
-                      <label htmlFor="slider-spacemouse-sensitivity">Sensitivity</label>
-                      <span className={styles.panelValue}>{spaceMouseSensitivity.toFixed(2)}×</span>
+                      <label htmlFor="abs-mag-limit">M_lim</label>
+                      <span className={styles.panelValue}>{absMagLimit.toFixed(1)}</span>
                     </div>
                     <div className={styles.panelRow}>
                       <input
-                        id="slider-spacemouse-sensitivity"
+                        id="abs-mag-limit"
                         type="range"
-                        min={0.1}
-                        max={3.0}
-                        step={0.05}
-                        value={spaceMouseSensitivity}
-                        onChange={(e) => onSpaceMouseSensitivityChange(parseFloat(e.target.value))}
+                        min={-24}
+                        max={-15}
+                        step={0.1}
+                        value={absMagLimit}
+                        onChange={(e) => onAbsMagLimitChange(parseFloat(e.target.value))}
                       />
                     </div>
                   </>
                 )}
-            </CollapsibleSection>
+              </>
+            )}
+          </CollapsibleSection>
+        </CollapsibleSection>
+      )}
+
+      {/* ── Cosmic web ──────────────────────────────────────────────────── */}
+      {/*
+        Master = volumes OR filaments.  When master flips on from off, we
+        default to "Smooth" (per audit Q9(β) — less visually noisy).
+        Style picker (Smooth / Filaments / Both) batches the underlying
+        master mutations; the per-source toggles inside Advanced override
+        the style choice WITHOUT changing the picker label — the picker
+        is a UI shortcut, not a separate state slot.  See the module
+        header for the picker semantics in full.
+      */}
+      {(showFilamentsToggle || showVolumesSection) && (
+        <CollapsibleSection
+          title="Cosmic web"
+          headerToggle={cosmicWebMasterOn}
+          onHeaderToggleChange={onCosmicWebMasterToggle}
+        >
+          {/*
+            Style picker — only meaningful when the group's master is on.
+            Three-button segmented control (parallel to how the old
+            TierSelector worked); aria-pressed semantics rather than
+            radio so screen readers announce a toggled state per option.
+          */}
+          {cosmicWebCurrentStyle !== null && (
+            <div className={styles.stylePicker} role="group" aria-label="Cosmic web style">
+              {(['smooth', 'filaments', 'both'] as const).map((style) => {
+                const pressed = cosmicWebCurrentStyle === style;
+                const label =
+                  style === 'smooth' ? 'Smooth' : style === 'filaments' ? 'Filaments' : 'Both';
+                return (
+                  <button
+                    key={style}
+                    type="button"
+                    aria-pressed={pressed}
+                    className={pressed ? styles.stylePickerButtonActive : styles.stylePickerButton}
+                    onClick={() => {
+                      // No re-fire guard — picking the active style is a
+                      // no-op anyway (the underlying masters wouldn't
+                      // change), and a click is cheap relative to the
+                      // tier switcher's full re-fetch.
+                      onSetCosmicWebStyle(style);
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           )}
 
-          {/* ── Footer: divider + reset camera ──────────────────────────────── */}
-          {/*
-        Reset camera lives outside any section because it's an action, not
-        a setting — it doesn't belong in any of the configuration buckets
-        above, and folding it away would hide the panel's primary "I'm
-        lost, take me home" affordance.
+          <CollapsibleSection title="Advanced">
+            {/* Filament intensity — sits at the top of Advanced because it
+                pairs with the Style picker's "Filaments" / "Both" choices.
+                Only shown when the underlying filament overlay is on
+                (slider would have no visible effect otherwise). */}
+            {showFilamentIntensitySlider && (
+              <>
+                <div className={styles.panelRow}>
+                  <label htmlFor="filament-intensity">Filament intensity</label>
+                  <span className={styles.panelValue}>{filamentIntensity.toFixed(2)}</span>
+                </div>
+                <div className={styles.panelRow}>
+                  <input
+                    id="filament-intensity"
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={filamentIntensity}
+                    onChange={(e) => onFilamentIntensityChange(Number(e.target.value))}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Per-cube knobs — one VolumeFieldRow per registered field.
+                Same component as the pre-restructure Volumes section; only
+                its location changed (now under Cosmic web → Advanced).
+                Empty-state hint when no cubes are registered yet — same
+                idiom the SpaceMouse section uses for its "not connected"
+                line. */}
+            {showVolumesSection &&
+              (volumeFields.length === 0 ? (
+                <div className={styles.panelMode}>No volume fields registered.</div>
+              ) : (
+                volumeFields.map((field) => (
+                  <VolumeFieldRow
+                    key={field.handle}
+                    handle={field.handle}
+                    label={field.label}
+                    enabled={field.enabled}
+                    intensity={field.intensity}
+                    contrast={field.contrast}
+                    densityScale={field.densityScale}
+                    trim={field.trim}
+                    exposure={field.exposure}
+                    paletteId={field.paletteId}
+                    onEnabledChange={onVolumeFieldEnabledChange}
+                    onIntensityChange={onVolumeFieldIntensityChange}
+                    onContrastChange={onVolumeFieldContrastChange}
+                    onTrimChange={onVolumeFieldTrimChange}
+                    onExposureChange={onVolumeFieldExposureChange}
+                    onDensityScaleChange={onVolumeFieldDensityScaleChange}
+                    onPaletteChange={onVolumeFieldPaletteChange}
+                  />
+                ))
+              ))}
+          </CollapsibleSection>
+        </CollapsibleSection>
+      )}
+
+      {/* ── Structures ──────────────────────────────────────────────────── */}
+      {/*
+        Master = tri-state over cluster / supercluster / void MARKER
+        visibility.  Per-category checkboxes live in Advanced.  Per audit
+        Q11, marker visibility is a separate axis from label visibility —
+        flipping a structure marker off keeps its label visible (and vice
+        versa via the Labels group below).  `famousGalaxy` is intentionally
+        absent from the marker batch — famous galaxies don't have ring
+        markers (their visualisation is the galaxy point + thumbnail).
+      */}
+      {structuresMaster && (
+        <CollapsibleSection
+          title="Structures"
+          headerToggle={structuresMaster.allOn}
+          headerToggleIndeterminate={structuresMaster.indeterminate}
+          onHeaderToggleChange={structuresMaster.onToggle}
+        >
+          <CollapsibleSection title="Advanced">
+            {STRUCTURE_CATEGORIES.map((cat) => (
+              <div className={styles.panelRow} key={`marker-${cat}`}>
+                <label htmlFor={`toggle-marker-${cat}`}>
+                  {cat === 'supercluster'
+                    ? 'Supercluster markers'
+                    : cat === 'void'
+                      ? 'Void markers'
+                      : 'Cluster markers'}
+                </label>
+                <input
+                  id={`toggle-marker-${cat}`}
+                  type="checkbox"
+                  // Same IIFE-gate-doesn't-narrow story as the survey
+                  // toggles above: `structuresMaster` truthiness already
+                  // guarantees both props are defined.
+                  checked={markerCategoryVisibility![cat]}
+                  onChange={(e) =>
+                    onSetMarkerCategoryVisibility!(cat, e.target.checked)
+                  }
+                />
+              </div>
+            ))}
+          </CollapsibleSection>
+        </CollapsibleSection>
+      )}
+
+      {/* ── Labels ──────────────────────────────────────────────────────── */}
+      {/*
+        Master = tri-state over all four label categories.  The Labels
+        group is a sibling of Structures (and not nested inside it)
+        because per audit Q11 labels are an independent axis from entity
+        visibility.  Per-category checkboxes (including the "you are here"
+        label, expressed via the famousGalaxy category for the Milky Way
+        pseudo-entry) live in Advanced.
+      */}
+      <CollapsibleSection
+        title="Labels"
+        headerToggle={labelsMaster.allOn}
+        headerToggleIndeterminate={labelsMaster.indeterminate}
+        onHeaderToggleChange={labelsMaster.onToggle}
+      >
+        <CollapsibleSection title="Advanced">
+          {LABEL_CATEGORIES.map((cat) => (
+            <div className={styles.panelRow} key={`label-${cat}`}>
+              <label htmlFor={`toggle-label-${cat}`}>
+                {cat === 'supercluster'
+                  ? 'Supercluster labels'
+                  : cat === 'famousGalaxy'
+                    ? 'Famous galaxy labels'
+                    : cat === 'void'
+                      ? 'Void labels'
+                      : 'Cluster labels'}
+              </label>
+              <input
+                id={`toggle-label-${cat}`}
+                type="checkbox"
+                checked={labelCategoryVisibility[cat]}
+                onChange={(e) => onSetLabelCategoryVisibility(cat, e.target.checked)}
+              />
+            </div>
+          ))}
+        </CollapsibleSection>
+      </CollapsibleSection>
+
+      {/* ── Display (power-user disclosure, default closed) ─────────────── */}
+      {/*
+        Per audit Q14 + Q16a: with brightness / exposure / auto-rotate
+        evicted, Display reduces to just the tone-curve dropdown.  The
+        section IS its own Advanced disclosure (no master toggle, default
+        closed) — explorer never sees the tone-curve jargon, tweaker
+        opens one disclosure to find it.
+      */}
+      {showToneCurveControls && (
+        <CollapsibleSection title="Display">
+          <div className={styles.panelRow}>
+            <label htmlFor="tonemap-curve">Tone curve</label>
+            <select
+              id="tonemap-curve"
+              className={styles.modeSelect}
+              value={toneMapCurve}
+              onChange={(e) =>
+                onToneMapCurveChange(parseInt(e.target.value, 10) as ToneMapCurveT)
+              }
+            >
+              {ALL_TONE_MAP_CURVES.map((c) => (
+                <option key={c} value={c}>
+                  {toneMapCurveLabel(c)}
+                </option>
+              ))}
+            </select>
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {/* ── SpaceMouse (auto-detected, conditional) ─────────────────────── */}
+      {/*
+        Visible only when the parent's WebHID feature-detect + device-
+        presence check both pass (App.tsx composes the predicate; see
+        `spaceMouseSectionVisible`).  Per audit Q16f: invisible to the
+        ~99 % of users without a 3Dconnexion device, automatically
+        present for the 1 % who plug one in.
+      */}
+      {spaceMouseSupported && (
+        <CollapsibleSection title="SpaceMouse">
+          <div className={styles.panelMode}>
+            {spaceMouseConnected ? 'connected' : 'not connected'}
+          </div>
+          {!spaceMouseConnected && onConnectSpaceMouse && (
+            <div className={styles.panelRow}>
+              <button type="button" className={styles.button} onClick={onConnectSpaceMouse}>
+                Connect SpaceMouse
+              </button>
+            </div>
+          )}
+          {spaceMouseConnected &&
+            spaceMouseSensitivity !== undefined &&
+            onSpaceMouseSensitivityChange && (
+              <>
+                <div className={styles.panelRow}>
+                  <label htmlFor="slider-spacemouse-sensitivity">Sensitivity</label>
+                  <span className={styles.panelValue}>
+                    {spaceMouseSensitivity.toFixed(2)}×
+                  </span>
+                </div>
+                <div className={styles.panelRow}>
+                  <input
+                    id="slider-spacemouse-sensitivity"
+                    type="range"
+                    min={0.1}
+                    max={3.0}
+                    step={0.05}
+                    value={spaceMouseSensitivity}
+                    onChange={(e) =>
+                      onSpaceMouseSensitivityChange(parseFloat(e.target.value))
+                    }
+                  />
+                </div>
+              </>
+            )}
+        </CollapsibleSection>
+      )}
+
+      {/* ── Footer: Reset camera ────────────────────────────────────────── */}
+      {/*
+        Reset camera lives outside any section because it's an action,
+        not a setting — folding it behind a disclosure would hide the
+        panel's primary "I'm lost, take me home" affordance.
       */}
       <div className={styles.panelDivider} role="separator" />
       <button type="button" className={styles.button} onClick={onResetCamera}>

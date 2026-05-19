@@ -84,10 +84,29 @@ export type PanelProps = {
    * Pass `false` for panels that should start tucked away.
    */
   defaultOpen?: boolean;
+  /**
+   * Optional inline element rendered in the title row, after the title
+   * text.  Originally added so SettingsPanel could host a compact "Tier:
+   * medium ▾" chip inline with the panel's name (per the 2026-05-19 UX
+   * audit, Q13/the converged structure) — letting the most consequential
+   * always-visible decision share the header strip rather than eat a
+   * full panel-body row.
+   *
+   * Click events on the extra slot are stopped from bubbling so they
+   * don't toggle the panel's collapse state.  That's done by the
+   * consumer; this prop is purely a placement slot.
+   */
+  headerExtra?: ReactNode;
   children: ReactNode;
 };
 
-export function Panel({ title, ariaLabel, defaultOpen = true, children }: PanelProps): ReactNode {
+export function Panel({
+  title,
+  ariaLabel,
+  defaultOpen = true,
+  headerExtra,
+  children,
+}: PanelProps): ReactNode {
   // Local UI state — no engine implications, no echo callback needed.
   // Session-only by design (see module header for the rationale behind
   // dropping localStorage persistence).
@@ -102,34 +121,59 @@ export function Panel({ title, ariaLabel, defaultOpen = true, children }: PanelP
   return (
     <div className={styles.panel} aria-label={ariaLabel}>
       {/*
-        Title row doubles as the click target for collapse/expand.  Real
-        <button> rather than a styled <div> so keyboard focus + Enter/Space
-        activation + aria-expanded come for free.  CSS strips default
-        button chrome so the row still reads as a plain heading until the
-        cursor lands on it.
+        Title strip — a flex row holding the collapse-affordance <button>
+        (chevron + title) and, optionally, a `headerExtra` slot for
+        peer-level controls like the Settings panel's Tier chip.
+
+        Why the extra slot sits OUTSIDE the <button>: nesting interactive
+        elements inside a <button> is invalid HTML (no `button-in-button`,
+        no `select` inside a button click target) and would either swallow
+        the inner control's clicks or make screen-reader semantics
+        ambiguous.  The flex container puts the title button and the
+        extra slot side-by-side so each one owns its own click target.
+        The title button still spans most of the row's width via
+        `flex: 1`, so a click anywhere except the explicit extra-slot
+        region still toggles the collapse.
       */}
-      <button
-        type="button"
-        className={styles.titleButton}
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls={bodyId}
-      >
+      <div className={styles.titleRow}>
         {/*
-          Chevron is a single ▸ glyph rotated 90° via CSS transform when
-          open.  Animating transform is smooth; swapping text characters
-          can't be animated.  Same affordance as the inner
-          CollapsibleSection sub-sections, so the open/close gesture
-          reads as one consistent "fold" at every nesting level.
+          Title row doubles as the click target for collapse/expand.  Real
+          <button> rather than a styled <div> so keyboard focus + Enter/Space
+          activation + aria-expanded come for free.  CSS strips default
+          button chrome so the row still reads as a plain heading until the
+          cursor lands on it.
         */}
-        <span
-          className={cx(styles.chevron, open && styles.chevronOpen)}
-          aria-hidden
+        <button
+          type="button"
+          className={styles.titleButton}
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls={bodyId}
         >
-          ▸
-        </span>
-        <span className={styles.title}>{title}</span>
-      </button>
+          {/*
+            Chevron is a single ▸ glyph rotated 90° via CSS transform when
+            open.  Animating transform is smooth; swapping text characters
+            can't be animated.  Same affordance as the inner
+            CollapsibleSection sub-sections, so the open/close gesture
+            reads as one consistent "fold" at every nesting level.
+          */}
+          <span
+            className={cx(styles.chevron, open && styles.chevronOpen)}
+            aria-hidden
+          >
+            ▸
+          </span>
+          <span className={styles.title}>{title}</span>
+        </button>
+        {/*
+          Optional inline slot (currently used by SettingsPanel for the
+          Tier chip).  Rendered only when the consumer passes a node so
+          panels without an extra control don't pay any layout cost.
+        */}
+        {headerExtra !== undefined && (
+          <div className={styles.headerExtra}>{headerExtra}</div>
+        )}
+      </div>
 
       {/*
         Always-mounted body wrapper.  See the module header for the

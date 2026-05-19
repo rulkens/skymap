@@ -1,0 +1,78 @@
+/*
+ * TierChip layout — a compact pill that sits in the Settings panel's
+ * title strip via Panel.headerExtra.  Wraps a static "Tier" caption
+ * + a native <select>, both inside a single <label> for screen-reader
+ * association.
+ *
+ * Sizing is deliberately small — the chip shares its row with the
+ * "Settings" title, so it has to feel like a peer of the title text
+ * rather than a body-sized control intruding into the header strip.
+ */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  /* Compact padding — the chip sits in the panel header which already
+   * has its own horizontal padding; another row of body-sized padding
+   * here would steal vertical space from the title strip. */
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-control);
+  background: var(--surface-control);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.chip:hover {
+  background: var(--surface-control-hover);
+  color: var(--color-fg);
+}
+
+.chip:focus-within {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.caption {
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-mid);
+  font-weight: 500;
+  /* Subtler than the value so the eye reaches the tier name first. */
+  opacity: 0.75;
+  /* Don't let the caption become the chip's clickable footprint —
+   * the <select> behind it is the real interactive surface. */
+  pointer-events: none;
+}
+
+/*
+ * Strip the native <select> chrome so it visually merges with the
+ * chip's border + background.  Keeping the element itself (native
+ * dropdown behaviour) but blanking its presentation lets the chip
+ * read as a single pill rather than "label + boxed dropdown".
+ */
+.select {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--color-fg);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  /* Leave room for the caret glyph rendered via background-image. */
+  padding-right: var(--space-5);
+  cursor: pointer;
+  outline: none;
+  /* Caret glyph — a single SVG arrow in --color-fg-muted positioned
+   * at the right edge.  Inline data URL avoids an extra HTTP request
+   * and keeps the chip self-contained. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath fill='%23808080' d='M0 0l4 5 4-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0 center;
+}
