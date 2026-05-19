@@ -36,8 +36,8 @@
  *     the 0.01 : (bbox × 4) ratio at scale.
  *   - `far = bbox × 4` — comfortable margin so the most distant points
  *     never clip out.
- *   - `yaw = 0`, `pitch = 0.3` — gentle downward look that shows the
- *     z-axis depth without being so steep it hides the equatorial plane.
+ *   - `yaw ≈ 3.00`, `pitch ≈ 0.06` — nearly looking down the −Z axis with
+ *     a near-flat pitch, framing the Local Group at first paint.
  *
  * The returned `distance` is clamped to the global zoom envelope so an
  * oversized SDSS bbox can't start the user above MAX_DISTANCE_MPC (which
@@ -48,17 +48,13 @@ import { clampDistance } from '../../camera/orbitCamera';
 import type { InitialCam } from '../../../@types/camera/InitialCam';
 
 /**
- * Initial camera distance in Mpc.  Empirically tuned against the canonical
- * catalogue (SDSS+2MRS+GLADE merged) so the cosmic-web wedge fills the
- * viewport without spilling past the corners — see the module header.
- *
- * Decoupled from `bbox` (the previous `INITIAL_FRAME_FACTOR * bbox` form)
- * because the perceived framing on first paint should be invariant across
- * survey combinations: a synthetic-only fallback or a 2MRS-only build
- * shouldn't suddenly zoom way out just because the catalog volume's
- * bbox shrank.  `bbox` still drives the far-clip plane below.
+ * Initial camera distance in Mpc. Sits the viewer inside the Local Group
+ * so first paint opens on a recognisable neighbourhood rather than the
+ * full cosmic-web wedge. Decoupled from `bbox` so the framing is
+ * invariant across survey combinations; `bbox` still drives the far-clip
+ * plane below.
  */
-export const INITIAL_DISTANCE_MPC = 644.72;
+export const INITIAL_DISTANCE_MPC = 0.43;
 
 /**
  * Compute the initial camera snapshot from a bbox scalar and FOV.
@@ -85,8 +81,8 @@ export function computeInitialCamera({
   return {
     target: [0, 0, 0],
     distance,
-    yaw: 0,
-    pitch: 0.3,
+    yaw: 3.0045,
+    pitch: 0.0609,
     fovYRad,
     near: 0.01,
     far,
