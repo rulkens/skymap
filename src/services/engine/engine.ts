@@ -797,33 +797,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // a compile-time constant that evaluates to `false` outside
       // `vite dev`.
       //
-      // We trigger all three fixtures' loads with the same dims +
-      // box size so they overlay coherently when the user toggles
-      // them on.  Per-fixture default-enabled state is set inside the
-      // slot's commit (Gaussian on; grids off).  The shape
-      // discriminator on each request picks which generator the
-      // fetcher dispatches to.
-      if (import.meta.env.DEV && state.assetSlots.syntheticVolumes) {
-        const slots = state.assetSlots.syntheticVolumes;
-        slots['debug-gaussian']?.load({
-          handle: 'debug-gaussian',
-          shape: 'gaussian',
-          dims: 64,
-          boxSizeMpc: 400,
-        });
-        slots['debug-cartesian']?.load({
-          handle: 'debug-cartesian',
-          shape: 'cartesian',
-          dims: 64,
-          boxSizeMpc: 400,
-        });
-        slots['debug-spherical']?.load({
-          handle: 'debug-spherical',
-          shape: 'spherical',
-          dims: 64,
-          boxSizeMpc: 400,
-        });
-      }
+      // All three synthetic fixtures default to enabled=false (see
+      // `syntheticVolumeSlots.ts`); per the same default-off-means-
+      // don't-fetch policy as CF-4 (see `wireSlots.ts`), we skip the
+      // boot load.  When a dev toggles one on via the volumes panel
+      // or dev console, `setVolumeFieldEnabled` lazy-loads the
+      // corresponding slot (see the `maybeLazyLoadVolumeSlot` shim).
+      // Common dims + box size kept centralised in the same shim so
+      // all three fixtures still overlay coherently.
     } catch (err) {
       // Surface initialisation failures via the status callback so the UI
       // shows a readable message rather than a blank canvas.
@@ -1148,7 +1129,58 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.scheduler.requestRender();
   }
 
+  /**
+   * Lazy-load the asset slot that backs a volume-field handle, if the
+   * slot exists in `idle` state.  Used by `setVolumeFieldEnabled` so
+   * default-off fields (CF-4, the three synthetic debug fixtures) don't
+   * waste bandwidth at boot but still respond when toggled on later.
+   *
+   * Idempotent — calling on a `loading` / `ready` / `error` slot is a
+   * no-op, so flipping a field off-then-on doesn't re-fetch.  Caller
+   * doesn't need to know which slot backs which handle; the routing
+   * (and per-slot request payload) is encapsulated here.
+   */
+  function maybeLazyLoadVolumeSlot(fieldHandle: string): void {
+    switch (fieldHandle) {
+      case 'cf4-density': {
+        const slot = state.assetSlots.cf4Density;
+        if (slot && slot.state().kind === 'idle') slot.load();
+        return;
+      }
+      case 'mcpm': {
+        const slot = state.assetSlots.mcpm;
+        if (slot && slot.state().kind === 'idle') {
+          slot.load({ tier: state.sources.tier });
+        }
+        return;
+      }
+      case 'debug-gaussian':
+      case 'debug-cartesian':
+      case 'debug-spherical': {
+        const slot = state.assetSlots.syntheticVolumes?.[fieldHandle];
+        if (!slot || slot.state().kind !== 'idle') return;
+        // Same dims + box-size triple all three fixtures used in the
+        // pre-2026-05-19 boot-load block, so they still overlay
+        // coherently when more than one is enabled at once.
+        const shape =
+          fieldHandle === 'debug-gaussian'
+            ? 'gaussian'
+            : fieldHandle === 'debug-cartesian'
+              ? 'cartesian'
+              : 'spherical';
+        slot.load({ handle: fieldHandle, shape, dims: 64, boxSizeMpc: 400 });
+        return;
+      }
+    }
+  }
+
   function setVolumeFieldEnabled(fieldHandle: string, enabled: boolean): void {
+    // Lazy-load gate — fires the slot's deferred boot fetch when a
+    // default-off field is first turned on.  No-op when the slot is
+    // already loading / ready, or when the handle has no associated
+    // slot (every settings-table field has an entry but only the
+    // bootstrapped slot-backed ones need the trigger).
+    if (enabled) maybeLazyLoadVolumeSlot(fieldHandle);
     if (state.settings.volumes.fields[fieldHandle]) {
       state.settings.volumes.fields[fieldHandle].enabled = enabled;
     }

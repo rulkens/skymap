@@ -101,6 +101,7 @@ import { hasUrlGate } from '../../../utils/url/urlGate';
 // syntheticVolumeFetcher) were moved into `syntheticVolumeSlots.ts`
 // by H4 and intentionally stay out.
 import { buildStaticAnchorPois } from '../../../data/buildStaticAnchorPois';
+import { DEFAULT_CF4_DENSITY_ENABLED } from '../../../data/defaults';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
@@ -452,10 +453,17 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Filaments load exactly once at boot — never on tier change.
   // See `filamentFetcher.ts` for the rationale.
   state.assetSlots.filaments?.load({ tier: state.sources.tier });
-  // CF-4 DM density loads exactly once at boot — no tier dependency.
+  // CF-4 DM density.  Loads at boot ONLY when the per-field default is
+  // ON; the audit (2026-05-19 Q9) flipped CF-4 to default-off because
+  // its information density is too low to justify ~30 MB of always-on
+  // download.  When default-off, the slot stays in `idle` state and
+  // `engine.setVolumeFieldEnabled('cf4-density', true)` triggers a
+  // deferred load (see the lazy-load shim there).  No tier dependency.
   // Failure (404, decode error) leaves the field unregistered; Volumes
   // panel simply omits it.
-  state.assetSlots.cf4Density?.load();
+  if (DEFAULT_CF4_DENSITY_ENABLED) {
+    state.assetSlots.cf4Density?.load();
+  }
   // MCPM Cosmic Web loads at the boot tier; `engine.setTier` reloads
   // on tier change.  Same failure posture as cf4Density above —
   // missing/404 .scfd silently omits the field from the Volumes panel.
