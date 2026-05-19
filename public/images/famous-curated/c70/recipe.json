@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "c70",
+  "crop": {
+    "x": -175.869140625,
+    "y": -42.5390625,
+    "width": 3840,
+    "height": 3840,
+    "rotationDeg": -32.867298544025914
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_300#/media/File:View_of_the_southern_spiral_NGC_300.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO"
+  },
+  "processedAt": "2026-05-19T09:45:23.818Z"
+}

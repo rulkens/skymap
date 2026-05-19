@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "c77",
+  "crop": {
+    "x": -30.829861111111313,
+    "y": 43.17013888888869,
+    "width": 2838.8298611111113,
+    "height": 2838.8298611111113,
+    "rotationDeg": -32.41241100160073
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_5128#/media/File:ESO_Centaurus_A_LABOCA.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO/WFI (Optical); MPIfR/ESO/APEX/A.Weiss et al. (Submillimetre); NASA/CXC/CfA/R.Kraft et al. (X-ray)"
+  },
+  "processedAt": "2026-05-19T09:45:55.156Z"
+}

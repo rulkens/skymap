@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "c83",
+  "crop": {
+    "x": 0,
+    "y": 0,
+    "width": 3840,
+    "height": 3840,
+    "rotationDeg": 46.79442789318591
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4945#/media/File:Spiral_Galaxy_NGC_4945.jpg",
+    "license": "CC BY 4.0",
+    "author": "ESO"
+  },
+  "processedAt": "2026-05-19T09:46:28.654Z"
+}
