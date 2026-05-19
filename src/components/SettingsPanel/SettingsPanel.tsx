@@ -81,7 +81,7 @@ import type { Tier } from '../../@types/data/Tier';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
-import { ToneMapCurve, ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
+import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCurve';
 import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';

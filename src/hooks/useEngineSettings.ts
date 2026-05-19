@@ -39,9 +39,7 @@
  */
 
 import { useState } from 'react';
-import { BiasMode } from '../data/biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
-import { ToneMapCurve } from '../data/toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import type { PoiCategory } from '../services/engine/subsystems/poiSubsystem';
 import {
