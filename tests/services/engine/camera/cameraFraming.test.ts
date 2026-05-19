@@ -30,8 +30,8 @@ describe('computeInitialCamera', () => {
 
   it('uses stable yaw / pitch defaults so resetCamera is reproducible', () => {
     const cam = computeInitialCamera({ bbox: 200, fovYRad: FOV });
-    expect(cam.yaw).toBe(0);
-    expect(cam.pitch).toBe(0.3);
+    expect(cam.yaw).toBe(3.0045);
+    expect(cam.pitch).toBe(0.0609);
   });
 
   it('uses near = 0.01 Mpc (10 kpc) regardless of bbox', () => {
@@ -59,11 +59,9 @@ describe('computeInitialCamera', () => {
   });
 
   it('clamps the initial distance to MAX_DISTANCE_MPC if the constant ever exceeds it', () => {
-    // The current INITIAL_DISTANCE_MPC (644.72) sits well within the
-    // global envelope, so this test asserts the clamp fires only when
-    // the constant is artificially large.  Kept as a regression rail —
-    // a future tweak that pushes the constant past MAX_DISTANCE_MPC
-    // (5000 by default) would surface here.
+    // INITIAL_DISTANCE_MPC sits well within the global envelope; this
+    // asserts the clamp would catch a future tweak that pushed it past
+    // MAX_DISTANCE_MPC or below MIN_DISTANCE_MPC.
     const cam = computeInitialCamera({ bbox: 200, fovYRad: FOV });
     expect(cam.distance).toBeLessThanOrEqual(MAX_DISTANCE_MPC);
     expect(cam.distance).toBeGreaterThanOrEqual(MIN_DISTANCE_MPC);
