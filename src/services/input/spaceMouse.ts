@@ -89,6 +89,57 @@ export function isWebHIDSupported(): boolean {
   return typeof navigator !== 'undefined' && 'hid' in navigator;
 }
 
+/**
+ * Return `true` if the user has previously granted permission for at
+ * least one 3Dconnexion SpaceMouse on this browser profile.
+ *
+ * Calls `navigator.hid.getDevices()`, which returns the list of HID
+ * devices the user has *already authorised* in this profile — it does
+ * NOT trigger a permission prompt or surface devices that have never
+ * been paired with this origin.  Used by the SettingsPanel as a passive
+ * "is the SpaceMouse section worth showing?" predicate: when the user
+ * has previously paired a puck, the section appears automatically on
+ * every subsequent visit; when they haven't, the section stays hidden
+ * (no Connect button cluttering the UI for the 99 % of users without a
+ * 3Dconnexion device).
+ *
+ * Returns `false` on Firefox/Safari (no WebHID), on a permission
+ * lookup error, and (importantly) for first-time SpaceMouse owners
+ * until they've completed the one-time pairing flow.  The first-time
+ * pairing path is currently surfaced via the engine handle's
+ * `input.spaceMouse.connect()` method — for example, a dev opening
+ * Settings with `?spacemouse=1` in the URL.  See the audit transcript
+ * at `docs/grill-sessions/settings-panel-audit-2026-05-19.md` (Q16f)
+ * for the design rationale.
+ */
+export async function hasGrantedSpaceMouseDevice(): Promise<boolean> {
+  if (!isWebHIDSupported()) return false;
+  try {
+    const devices = await navigator.hid.getDevices();
+    return devices.some(
+      (d) => d.vendorId === VENDOR_LOGITECH || d.vendorId === VENDOR_3DCONNEXION,
+    );
+  } catch (err) {
+    // `getDevices()` shouldn't throw in practice, but if the browser's
+    // HID implementation rejects (e.g. iframe permission policy
+    // denies HID), treat that the same as "no device": hide the UI.
+    console.warn('[SpaceMouse] hasGrantedSpaceMouseDevice failed:', err);
+    return false;
+  }
+}
+
+/**
+ * Vendor IDs we care about for the device-presence predicate.  Exposed
+ * for the React hook that listens to `navigator.hid` `connect` events
+ * — it filters incoming events by vendor ID before flipping its
+ * "device detected" flag, so we don't react to unrelated HID devices
+ * (gaming mice, keyboards, USB-C audio dongles, …) being plugged in.
+ */
+export const SPACE_MOUSE_VENDOR_IDS: ReadonlyArray<number> = [
+  VENDOR_LOGITECH,
+  VENDOR_3DCONNEXION,
+];
+
 // ─── SpaceMouseInput class ────────────────────────────────────────────────────
 
 /**

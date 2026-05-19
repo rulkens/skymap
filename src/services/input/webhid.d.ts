@@ -68,13 +68,36 @@ interface HIDInputReportEvent extends Event {
 }
 
 /**
- * The `navigator.hid` entry point. Only the two methods we actually call
- * are declared — `requestDevice` (user gesture required) and `getDevices`
- * (silent re-acquire of previously-paired devices).
+ * Connection lifecycle event fired on `navigator.hid` whenever a
+ * previously-authorised device transitions in or out of the connected
+ * state (USB plug-in / unplug, browser permission re-grant / revoke).
+ *
+ * Used by the React SettingsPanel gate (`useSpaceMouseDevicePresence`)
+ * so the SpaceMouse section appears reactively when the user plugs in
+ * their puck mid-session.
+ */
+interface HIDConnectionEvent extends Event {
+  readonly device: HIDDevice;
+}
+
+/**
+ * The `navigator.hid` entry point. Only the methods we actually call
+ * are declared — `requestDevice` (user gesture required), `getDevices`
+ * (silent re-acquire of previously-paired devices), and the
+ * `connect` / `disconnect` event listeners that drive the
+ * SettingsPanel's reactive presence gate.
  */
 interface HID extends EventTarget {
   requestDevice(options: HIDDeviceRequestOptions): Promise<HIDDevice[]>;
   getDevices(): Promise<HIDDevice[]>;
+  addEventListener(
+    type: 'connect' | 'disconnect',
+    listener: (ev: HIDConnectionEvent) => void,
+  ): void;
+  removeEventListener(
+    type: 'connect' | 'disconnect',
+    listener: (ev: HIDConnectionEvent) => void,
+  ): void;
 }
 
 interface Navigator {

@@ -73,10 +73,12 @@ import { useFamousMeta } from '../../hooks/useFamousMeta';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
 import { useKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 import { useEngineSettings } from '../../hooks/useEngineSettings';
+import { useSpaceMouseDevicePresence } from '../../hooks/useSpaceMouseDevicePresence';
 import { buildStaticAnchorPois } from '../../data/buildStaticAnchorPois';
 import { DebugPanel } from '../DebugPanel/DebugPanel';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import { hasUrlGate } from '../../utils/url/urlGate';
+import { isWebHIDSupported } from '../../services/input/spaceMouse';
 
 // ── Dev-panel availability gate ────────────────────────────────────────────
 //
@@ -133,6 +135,7 @@ export function App(): React.ReactElement {
     setExposure,
     setVolumesEnabled,
     setVolumeFields,
+    setSpaceMouseSensitivity,
   } = useEngineSettings();
 
   // ── Stable volume-fields refresh callback ─────────────────────────────
@@ -210,7 +213,24 @@ export function App(): React.ReactElement {
     exposure,
     volumesEnabled,
     volumeFields,
+    spaceMouseConnected,
+    spaceMouseSensitivity,
   } = settings;
+
+  // ── SpaceMouse device-presence gate (audit Q16f) ────────────────────────
+  //
+  // Reactive predicate that flips to true when the user has previously
+  // authorised a 3Dconnexion SpaceMouse on this origin AND the device
+  // is currently attached.  The SettingsPanel's SpaceMouse section is
+  // gated on this so the section is invisible to the 99 % of users
+  // without a puck, but appears automatically (no reload) for the 1 %
+  // who own one and have paired once.  See
+  // `docs/grill-sessions/settings-panel-audit-2026-05-19.md` (Q16f)
+  // for the rationale.  First-time pairing currently happens via the
+  // engine handle's `connect()` method (e.g. from a dev console) — see
+  // the `useSpaceMouseDevicePresence` module header for the trade-off.
+  const spaceMouseDevicePresent = useSpaceMouseDevicePresence();
+  const spaceMouseSectionVisible = isWebHIDSupported() && spaceMouseDevicePresent;
 
   // ── Engine lifecycle + engine-driven session state ────────────────────────
   //
@@ -647,17 +667,40 @@ export function App(): React.ReactElement {
               // fire-and-forget here.
               void handleRef.current?.sources.setVisible(s, visible);
             }}
-            // ── SpaceMouse 6DOF input wiring (hidden) ────────────────────────
+            // ── SpaceMouse 6DOF input wiring (audit Q16f) ────────────────────
             //
-            // The SpaceMouse panel is intentionally suppressed for now — the
-            // feature still works at the engine layer (the WebHID glue lives
-            // in services/input/ and stays callable), but the UI control was
-            // confusing for the ~99 % of users without a 3DConnexion device.
-            // SettingsPanel gates the whole section on `spaceMouseSupported`,
-            // so passing `false` (regardless of the actual feature check) hides
-            // it cleanly.  Re-expose by replacing this with `isWebHIDSupported()`
-            // and re-adding the connected/sensitivity props alongside.
-            spaceMouseSupported={false}
+            // Section visibility is gated on `isWebHIDSupported() && device
+            // present` (see `spaceMouseSectionVisible` near the top of this
+            // component for the predicate).  Firefox / Safari users never see
+            // the section (no WebHID), and Chromium users without a paired
+            // 3Dconnexion device also see nothing — auto-detection means the
+            // SpaceMouse-owning ~1 % find the controls right where they
+            // expect, and the other 99 % see no clutter.  See
+            // `docs/grill-sessions/settings-panel-audit-2026-05-19.md` (Q16f)
+            // for the design rationale.  First-time pairing happens through
+            // `handleRef.current.input.spaceMouse.connect()` (currently
+            // surfaced only via the dev console — a future iteration can add
+            // a URL-gated first-time pair affordance).
+            spaceMouseSupported={spaceMouseSectionVisible}
+            spaceMouseConnected={spaceMouseConnected}
+            onConnectSpaceMouse={() => {
+              // `connect()` returns a promise but the SettingsPanel callback
+              // is sync — fire-and-forget.  The engine fires
+              // `onConnectedChange` from inside the subsystem on success,
+              // which lands as `setSpaceMouseConnected(true)` in
+              // useEngineSettings; the React state flip is the source of
+              // truth for the "connected" indicator.
+              void handleRef.current?.input.spaceMouse.connect();
+            }}
+            spaceMouseSensitivity={spaceMouseSensitivity}
+            onSpaceMouseSensitivityChange={(value) => {
+              // No engine echo for sensitivity, so update React state
+              // optimistically AND forward to the engine in the same
+              // handler.  Same pattern as filaments / volumes master
+              // toggles where React owns the truth.
+              setSpaceMouseSensitivity(value);
+              handleRef.current?.input.spaceMouse.setSensitivity(value);
+            }}
             // ── Density correction (Malmquist bias) ──────────────────────────
             //
             // Forward straight to the engine handle.  The engine fires its echo

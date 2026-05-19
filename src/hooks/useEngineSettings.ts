@@ -58,6 +58,7 @@ import {
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
+  DEFAULT_SPACE_MOUSE_SENSITIVITY,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
@@ -119,6 +120,27 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     vertexCount: number;
   } | null>(null);
 
+  // ── SpaceMouse 6DOF input state ──────────────────────────────────────
+  // `spaceMouseConnected` mirrors the engine's puck state.  The engine
+  // fires `input.spaceMouse.onConnectedChange(connected)` from a single
+  // site (`spaceMouseSubsystem`'s onConnectionChange callback), covering
+  // explicit connect, explicit disconnect, AND unsolicited unplugs /
+  // permission revocations — so a single subscription keeps the
+  // SettingsPanel's "connected / not connected" indicator authoritative.
+  // Seeded with `false` (no puck at startup); the subsystem's silent
+  // re-acquire pass will fire the echo asynchronously if a
+  // previously-paired device is still attached.
+  const [spaceMouseConnected, setSpaceMouseConnected] = useState<boolean>(false);
+
+  // Sensitivity is App-owned optimistic state: the engine has no echo
+  // callback for it (the subsystem's setSensitivity is fire-and-forget),
+  // matching the filaments / volumes pattern.  Seeded from
+  // `DEFAULT_SPACE_MOUSE_SENSITIVITY` so the slider thumb has a sensible
+  // position before the user touches it.
+  const [spaceMouseSensitivity, setSpaceMouseSensitivity] = useState<number>(
+    DEFAULT_SPACE_MOUSE_SENSITIVITY,
+  );
+
   // ── POI per-category visibility (two independent axes) ──────────────
   // Engine echoes the full Record<PoiCategory, boolean> per axis on
   // every matching setter call (plus once at init via
@@ -166,6 +188,8 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       volumeFields,
       labelCategoryVisibility,
       markerCategoryVisibility,
+      spaceMouseConnected,
+      spaceMouseSensitivity,
     },
     engineCallbacks: {
       // ── Nested sub-bag subscriptions (H5 task 11) ────────────────
@@ -213,11 +237,20 @@ export function useEngineSettings(): UseEngineSettingsReturn {
         onLabelCategoryVisibilityChange: (v) => setLabelCategoryVisibility({ ...v }),
         onMarkerCategoryVisibilityChange: (v) => setMarkerCategoryVisibility({ ...v }),
       },
+      input: {
+        // SpaceMouse connection echo — fires for pair / explicit
+        // disconnect / unsolicited HID disconnect.  Without this the
+        // "connected" indicator can persist after the puck is gone.
+        spaceMouse: {
+          onConnectedChange: setSpaceMouseConnected,
+        },
+      },
     },
     setFilamentsEnabled,
     setFilamentIntensity,
     setExposure,
     setVolumesEnabled,
     setVolumeFields,
+    setSpaceMouseSensitivity,
   };
 }

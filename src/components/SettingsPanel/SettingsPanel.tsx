@@ -236,8 +236,13 @@ type Props = {
   //
   // All four props are optional so the original call sites continue to
   // typecheck unchanged. The section is rendered only when `spaceMouseSupported`
-  // is true — App.tsx passes the result of `isWebHIDSupported()` so users on
-  // Firefox/Safari see no UI for an inaccessible feature.
+  // is true — App.tsx passes `isWebHIDSupported() && <device-present>` (audit
+  // Q16f in `docs/grill-sessions/settings-panel-audit-2026-05-19.md`) so:
+  //   - Firefox / Safari users (no WebHID): section hidden.
+  //   - Chromium users with no previously-paired SpaceMouse: section hidden.
+  //   - Chromium users with a paired puck currently attached: section visible.
+  // The auto-detection means SpaceMouse owners find the controls right where
+  // they expect, and the other ~99 % see no clutter.
 
   /** Feature gate — only render the SpaceMouse section when true. */
   spaceMouseSupported?: boolean;
@@ -999,14 +1004,18 @@ export function SettingsPanel({
 
           {/* ── SpaceMouse (rev-3 6DOF input) ────────────────────────────────── */}
           {/*
-        Rendered only when WebHID is available (Chromium-only). On Firefox
-        and Safari the parent passes `spaceMouseSupported={false}` and this
-        whole section is hidden — users see no broken UI for an inaccessible
-        feature. Within the section, the Connect button shows up only when
-        no device is paired, and the sensitivity slider only after pairing.
+        Rendered only when `spaceMouseSupported` is true.  App.tsx
+        composes that flag from WebHID feature detection AND actual
+        device presence (`navigator.hid.getDevices()` + the `hid.connect`
+        event) — so Firefox / Safari users see nothing, Chromium users
+        without a paired puck see nothing, and SpaceMouse owners find
+        the controls automatically.  See the audit transcript at
+        `docs/grill-sessions/settings-panel-audit-2026-05-19.md` (Q16f)
+        for the design rationale.
 
-        Default-closed because most users don't have a SpaceMouse plugged
-        in even on supported browsers.
+        Within the section, the Connect button shows up only when no
+        device is paired (covers the "previously paired, now unplugged"
+        edge case), and the sensitivity slider only after pairing.
       */}
           {spaceMouseSupported && (
             <CollapsibleSection title="SpaceMouse">
