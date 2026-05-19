@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 //
-// InfoCard hoveredPoi prop — routing tests covering the new POI hover
-// preview branch and its suppression rule.
+// InfoCard unified hovered/selected props — routing tests covering the POI
+// hover preview branch and its suppression rule.
+//
+// Since Task 5 of the unify-focus-clear refactor, InfoCard accepts a single
+// `hovered` and a single `selected` prop — each typed as
+// `GalaxyInfo | PointOfInterest | null` (the `FocusableTarget` union).
+// The component dispatches via `isPoi` internally.  The old `hoveredPoi` /
+// `selectedPoi` separate slots are gone.
 //
 // We assert on user-visible text rather than CSS-modules class fragments
 // because the CSS-modules-mangled class names aren't stable across
@@ -14,7 +20,7 @@
 // rule should keep that count at zero.
 
 import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { InfoCard } from '../../../src/components/InfoCard/InfoCard';
 import type { PointOfInterest } from '../../../src/@types/engine/subsystems/PointOfInterest';
@@ -81,9 +87,8 @@ describe('InfoCard hoveredPoi prop', () => {
   it('renders the POI hover preview when only hoveredPoi is set', () => {
     render(
       createElement(InfoCard, {
-        hovered: null,
+        hovered: virgo,
         selected: null,
-        hoveredPoi: virgo,
       }),
     );
     // Virgo's name appears in the compact preview headline.
@@ -96,10 +101,8 @@ describe('InfoCard hoveredPoi prop', () => {
   it('suppresses the POI hover preview when the SAME POI is already pinned', () => {
     render(
       createElement(InfoCard, {
-        hovered: null,
-        selected: null,
-        selectedPoi: virgo,
-        hoveredPoi: virgo,
+        hovered: virgo,
+        selected: virgo,
       }),
     );
     // Pinned full card shows "Virgo Cluster" once.  The compact preview
@@ -115,10 +118,8 @@ describe('InfoCard hoveredPoi prop', () => {
   it('shows the POI hover preview alongside a pinned DIFFERENT POI', () => {
     render(
       createElement(InfoCard, {
-        hovered: null,
-        selected: null,
-        selectedPoi: coma,
-        hoveredPoi: virgo,
+        hovered: virgo,
+        selected: coma,
       }),
     );
     // Both names appear: Coma in the pinned full card, Virgo in the
@@ -130,9 +131,8 @@ describe('InfoCard hoveredPoi prop', () => {
   it('shows the POI hover preview alongside a pinned galaxy', () => {
     render(
       createElement(InfoCard, {
-        hovered: null,
+        hovered: virgo,
         selected: galaxyStub,
-        hoveredPoi: virgo,
       }),
     );
     // Virgo's name appears in the compact POI preview, stacked below the

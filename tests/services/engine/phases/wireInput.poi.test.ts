@@ -26,10 +26,7 @@ import { dirname, resolve } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const wireInputPath = resolve(
-  __dirname,
-  '../../../../src/services/engine/phases/wireInput.ts',
-);
+const wireInputPath = resolve(__dirname, '../../../../src/services/engine/phases/wireInput.ts');
 
 describe('wireInput POI wiring', () => {
   const src = readFileSync(wireInputPath, 'utf8');
@@ -46,7 +43,11 @@ describe('wireInput POI wiring', () => {
     expect(src).toContain('lastClickedPoi');
   });
 
-  it('routes double-click on a cached POI through camera.focusOnPoi', () => {
-    expect(src).toContain('focusOnPoi');
+  it('routes double-click on a cached POI through camera.focusOn', () => {
+    // The unified focusOn (since 2026-05-19) takes either a GalaxyInfo or
+    // a PointOfInterest and dispatches internally.  The dblclick handler
+    // passes `lastClickedPoi` — a PointOfInterest — through the same
+    // method the single-click galaxy path uses.
+    expect(src).toContain('focusOn(lastClickedPoi)');
   });
 });

@@ -30,7 +30,7 @@
  * `state.cam` is null pre-bootstrap and post-destroy.  Skipping the
  * subsystem update + React callback in those windows would strand a
  * deep-link drain (`usePoiUrlSync` parses `#poi=…` and calls
- * `engine.camera.focusOnPoi(poi)` the moment data is ready, BEFORE
+ * `engine.camera.focusOn(poi)` the moment data is ready, BEFORE
  * the camera is necessarily live).  The subsystem update needs to
  * happen so the selected POI's marker descriptor renders with bumped
  * alpha as soon as the renderer comes up; the React callback needs

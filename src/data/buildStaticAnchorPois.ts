@@ -12,7 +12,7 @@
  *       label/ring overlays know where to draw.
  *
  *   2.  `hooks/usePoiUrlSync.ts` — the React-side `#poi=<id>` deep-link
- *       drain needs a `PointOfInterest` to feed `camera.focusOnPoi`, but
+ *       drain needs a `PointOfInterest` to feed `camera.focusOn`, but
  *       App.tsx has no public read-side accessor for the engine's POI
  *       table (the subsystem owns the list).
  *

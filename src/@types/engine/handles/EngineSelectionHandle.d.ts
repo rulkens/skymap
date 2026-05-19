@@ -13,7 +13,24 @@ import type { PgcAliasMap } from '../../loading/PgcAliasMap';
  * loader next to its data consumer.
  */
 export type EngineSelectionHandle = {
-  /** Programmatically clear the current selection. */
+  /**
+   * Programmatically clear the current selection — galaxy AND POI in one
+   * call.  "Close the card" semantic: anywhere a user dismisses the
+   * InfoCard (Esc, the × button, URL drift back to empty hash), both
+   * sides collapse together in a single render frame.
+   *
+   * Order is deterministic: galaxy selection clears first
+   * (`onSelectChange` / `onFocusChange` fire), then POI selection
+   * (`onPoiFocusChange` fires).  Idempotent: calling with neither
+   * selected fires only the POI teardown's no-op callback chain
+   * (preserves the pre-2026-05-19 `clearPoiFocus` semantic — no
+   * presence gate).
+   *
+   * For code paths that need to clear ONLY the POI without disturbing
+   * a pinned galaxy, drop down to the engine internals.  There's no
+   * public narrow-clear method (no real consumer existed when this
+   * was unified on 2026-05-19; revisit if a use case appears).
+   */
   clear: () => void;
   /** Select (pin) the famous-atlas galaxy with the given id, then focus-tween. */
   selectFamous: (id: string) => void;

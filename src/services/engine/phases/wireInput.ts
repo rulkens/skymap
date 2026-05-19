@@ -436,7 +436,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // user almost certainly aimed at).
       const handle = deps.handleRef.current;
       if (lastClickedPoi) {
-        handle?.camera.focusOnPoi(lastClickedPoi);
+        handle?.camera.focusOn(lastClickedPoi);
         return;
       }
       // No-op when the user double-clicked empty space —

@@ -43,7 +43,10 @@ export type BootstrapDeps = {
    * Mutable: the public `EngineHandle`.  The handle literal is
    * evaluated AFTER the bootstrap IIFE in `engine.ts` (it captures
    * helpers that close over `state`), but `wireInput`'s onDoubleClick
-   * handler calls `handle.focusOn(lastClickedInfo)`.  We thread the
+   * handler calls `handle.focusOn(lastClickedInfo)` for galaxies and
+   * `handle.focusOn(lastClickedPoi)` for POIs (the unified `focusOn`
+   * method, introduced 2026-05-19, accepts both `GalaxyInfo` and
+   * `PointOfInterest`).  We thread the
    * reference through a `{current}` ref so engine.ts can assign it
    * after the handle literal evaluates — by the time the user can
    * actually double-click, the handle is fully wired.  Null until

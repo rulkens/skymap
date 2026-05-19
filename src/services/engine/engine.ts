@@ -95,7 +95,6 @@ import {
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
-import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
 import type { LodMode } from '../../@types/data/LodMode';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -121,9 +120,11 @@ import { createPoiSubsystem } from './subsystems/poiSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
+import { clearAll } from './helpers/clearAll';
 import { commitFocus } from './helpers/commitFocus';
-import { commitPoiFocus } from './helpers/commitPoiFocus';
-import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
+import { dispatchFocusOn } from './helpers/dispatchFocusOn';
+import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
+import { isPoi } from './isPoi';
 import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
@@ -178,7 +179,10 @@ import { createDisabledGpuTimingService } from '../gpu/timing/gpuTimingService';
 // remains narrow (only the fields it actually reads) while accepting the
 // full `EngineState` and `EngineCallbacks` types from production callers.
 export async function setSourceVisibleImpl(
-  state: Pick<import('../../@types/engine/state/EngineState').EngineState, 'sources' | 'subsystems'>,
+  state: Pick<
+    import('../../@types/engine/state/EngineState').EngineState,
+    'sources' | 'subsystems'
+  >,
   opts: { cb: Pick<EngineCallbacks, 'sources'> },
   source: Source,
   visible: boolean,
@@ -855,15 +859,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // no `handle.X!` forward references, no `!` non-null assertions.
 
   function clearSelection(): void {
-    // Only fire the callback when something was actually selected.
-    // This lets the Esc handler in App.tsx call this unconditionally.
-    if (state.subsystems.selection.selected() !== null) {
-      state.subsystems.selection.setSelected(null);
-      // Clearing the pin also clears the camera-focus target — Esc /
-      // close ✕ are explicit "I'm done with this galaxy" signals.
-      cb.camera?.onFocusChange?.(null);
-      state.subsystems.scheduler.requestRender();
-    }
+    // Unified teardown — clears galaxy AND POI selection in one call.
+    // The branching + render-scheduling lives in `clearAll` so the
+    // engine.ts closure stays a thin wrapper.  See clearAll.ts for the
+    // "close the card" rationale and the order-of-firing guarantee.
+    clearAll(state, cb);
   }
 
   function setBiasMode(mode: BiasMode): void {
@@ -903,51 +903,20 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     snapToCameraSnapshot(state, state.initialCamSnapshot);
   }
 
-  function focusOn(info: GalaxyInfo): void {
-    // Camera may not be ready yet (cloud still loading); drop the
-    // call.  This guard is *separate* from `tweenToGalaxy`'s own
-    // cam-null guard — we need it here to gate the `onFocusChange`
-    // callback fan-out inside `commitFocus`.  Without the early
-    // return, a focus call against a still-bootstrapping engine
-    // would update `#focus=…` in the URL while the camera silently
-    // refused to move.
-    if (!state.cam) return;
-    commitFocus(state, cb, info);
-  }
-
-  function focusOnPoi(poi: PointOfInterest): void {
-    // Mirror of focusOn (galaxy version), but deliberately WITHOUT
-    // the top-level cam-null guard: commitPoiFocus absorbs the cam
-    // check internally for the tween path only, while still firing
-    // `setSelectedPoi` + `onPoiFocusChange` even when the camera
-    // isn't live yet.  This is what lets a deep-link drain that races
-    // bootstrap (e.g. `#poi=virgo-m87` parsed before the first cloud
-    // arrives) establish the selected state immediately; the camera
-    // catches up once it comes online via a fresh user action.
-    commitPoiFocus(state, cb, poi, { tween: true });
-  }
-
-  function clearPoiFocus(): void {
-    // Counterpart to focusOnPoi: drop the subsystem's selection flag
-    // AND fire the React-side callback so the URL hash + InfoCard POI
-    // body deselect in lock-step.  Order mirrors commitPoiFocus
-    // (subsystem first, callback second) so the very next frame
-    // already paints with the bumped-alpha marker gone before React
-    // observes the change.
+  function focusOn(target: FocusableTarget): void {
+    // Dispatch by type — public surface is one method, but the two
+    // commit paths stay separate (different tween shapes, different
+    // cam-null gating, different callback surface).  See dispatchFocusOn
+    // for the predicate-based routing.
     //
-    // We deliberately do NOT build this as a separate helper file:
-    // unlike commitPoiFocus, there's no tween branch, no cam-null
-    // gating, no per-category framing distance — just two synchronous
-    // notifications.  A standalone helper would be more file-shuffling
-    // than abstraction value.
-    //
-    // Camera viewpoint is intentionally untouched: closing the POI
-    // card is a "dismiss the overlay" gesture, not a "reset
-    // viewpoint" one.  Users who want to fly back out invoke the
-    // home / reset actions explicitly.
-    state.subsystems.pois.setSelectedPoi(null);
-    cb.camera?.onPoiFocusChange?.(null);
-    state.subsystems.scheduler.requestRender();
+    // The galaxy branch retains the cam-null guard from the original
+    // focusOn(info: GalaxyInfo): without it, a focus call during
+    // bootstrap would update `#focus=…` in the URL while the camera
+    // silently refused to move.  The POI branch intentionally skips the
+    // guard (see commitPoiFocus module header for why deep-link drains
+    // need POI state to land pre-camera).
+    if (!isPoi(target) && !state.cam) return;
+    dispatchFocusOn(state, cb, target);
   }
 
   function focusOnHome(): void {
@@ -1414,8 +1383,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setAutoRotate: (enabled) => boringSetters.setAutoRotate(enabled),
       reset: resetCamera,
       focusOn,
-      focusOnPoi,
-      clearPoiFocus,
       focusOnHome,
       focusOnMilkyWay,
       logState: logCameraStateFn,
