@@ -521,12 +521,11 @@ describe('wireSlots', () => {
     expect(capturedRegistry).toBe(deps.allSlots);
 
     // The registry includes the per-source point slots (by their
-    // `.name`) plus the three sidecar slots wireSlots itself mints
-    // (filaments, famous-meta, pgc-aliases).  The CF-4 and synthetic
-    // entries are gated on `volumesGateOpen` — true in vitest's
-    // dev-build context, so we expect them too.  We assert "superset"
-    // rather than exact equality so an additive change (a new slot)
-    // doesn't break the test for the wrong reason.
+    // `.name`) plus the sidecar slots wireSlots itself mints
+    // (filaments, famous-meta, pgc-aliases, CF-4, MCPM) plus the
+    // synthetic fixtures (DEV-only — vitest runs as DEV).  Asserted
+    // as a superset so an additive change doesn't break the test for
+    // the wrong reason.
     const names = new Set(capturedRegistry.keys());
     expect(names.has('sdss-points')).toBe(true);
     expect(names.has('2mrs-points')).toBe(true);

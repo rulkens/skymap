@@ -298,29 +298,6 @@ export function App(): React.ReactElement {
     setVolumeFields(handle.volumes.getState());
   };
 
-  // ── Volumes-section visibility gate ──────────────────────────────────────
-  //
-  // The Volumes UI (master toggle + per-field rows + palette dropdown) is
-  // a developer / power-user surface — currently it's only useful in
-  // combination with the synthetic test fixtures auto-loaded under
-  // `import.meta.env.DEV`.  In production builds the section would be
-  // empty (no fixtures load) but still take up panel space; gating it
-  // keeps the production UI focused on shipped features.
-  //
-  // Two ways to opt in:
-  //   - Dev builds (`npm run dev`) → always visible, no opt-in needed.
-  //   - Production builds → append `?volumes=1` to the URL to enable
-  //     both the UI section AND (when wired in `wireSlots`) the
-  //     synthetic-fixture bootstrap.
-  //
-  // The flag is computed once at component construction.  Toggling
-  // mid-session via History API is a future extension; for now a reload
-  // is the way to flip it.
-  const volumesUiEnabled = useMemo<boolean>(() => {
-    if (import.meta.env.DEV) return true;
-    return hasUrlGate('volumes');
-  }, []);
-
   // ── Volume-fields UI filter ──────────────────────────────────────────────
   //
   // The engine registers synthetic-fixture fields (handles prefixed
@@ -733,87 +710,81 @@ export function App(): React.ReactElement {
             // fire `onVolumeFieldsChanged`; the SettingsPanel updates its per-field
             // checkbox / slider through normal React onChange (optimistic — the
             // engine mutates its internal settings bag but doesn't echo back).
-            // Volumes section is gated on `volumesUiEnabled` (dev build OR
-            // `?volumes=1` in the URL).  When the gate is closed, every volume
-            // prop is omitted; the SettingsPanel's `showVolumesSection`
-            // requires all five to be present, so the section disappears
-            // entirely — both the master toggle and the per-field rows.
-            {...(volumesUiEnabled
-              ? {
-                  volumesEnabled,
-                  onVolumesEnabledChange: (v: boolean) => {
-                    setVolumesEnabled(v);
-                    handleRef.current?.volumes.setMasterEnabled(v);
-                  },
-                  volumeFields: visibleVolumeFields,
-                  onVolumeFieldEnabledChange: (handle: string, enabled: boolean) => {
-                    // Optimistic React-state update — the engine setter does NOT
-                    // fire onVolumeFieldsChanged for tunable mutations (only for
-                    // add/remove), so the controlled-input value would otherwise
-                    // snap back on the next render.  We update local state first
-                    // so the UI stays responsive, then forward to the engine.
-                    setVolumeFields(
-                      volumeFields.map((f) => (f.handle === handle ? { ...f, enabled } : f)),
-                    );
-                    handleRef.current?.volumes.setEnabled(handle, enabled);
-                  },
-                  onVolumeFieldIntensityChange: (handle: string, intensity: number) => {
-                    setVolumeFields(
-                      volumeFields.map((f) => (f.handle === handle ? { ...f, intensity } : f)),
-                    );
-                    handleRef.current?.volumes.setIntensity(handle, intensity);
-                  },
-                  onVolumeFieldContrastChange: (handle: string, contrast: number) => {
-                    // Same optimistic-update pattern as intensity: local
-                    // React state for input responsiveness, then forward to
-                    // the engine.  The engine setter is the source of truth
-                    // for the shader uniform; React state mirrors what the
-                    // user just dragged.
-                    setVolumeFields(
-                      volumeFields.map((f) => (f.handle === handle ? { ...f, contrast } : f)),
-                    );
-                    handleRef.current?.volumes.setContrast(handle, contrast);
-                  },
-                  onVolumeFieldDensityScaleChange: (handle: string, densityScale: number) => {
-                    // Same shape as the intensity / contrast handlers.  The
-                    // engine's `setVolumeFieldDensityScale` also mirrors the
-                    // value into `state.settings.volumeFields[handle]` so
-                    // both layers agree.
-                    setVolumeFields(
-                      volumeFields.map((f) => (f.handle === handle ? { ...f, densityScale } : f)),
-                    );
-                    handleRef.current?.volumes.setDensityScale(handle, densityScale);
-                  },
-                  onVolumeFieldTrimChange: (handle: string, trim: number) => {
-                    // Same optimistic-update pattern as the contrast / density
-                    // handlers above: local React state first for input
-                    // responsiveness, then forward to the engine which mirrors
-                    // the value into state.settings.volumes.fields[handle].trim
-                    // and writes the per-cube uniform.
-                    setVolumeFields(
-                      volumeFields.map((f) => (f.handle === handle ? { ...f, trim } : f)),
-                    );
-                    handleRef.current?.volumes.setTrim(handle, trim);
-                  },
-                  onVolumeFieldExposureChange: (handle: string, exposure: number) => {
-                    // Same optimistic-update pattern as the trim handler
-                    // above: local React state first for input responsiveness,
-                    // then forward to the engine which mirrors the value into
-                    // state.settings.volumes.fields[handle].exposure and writes
-                    // the per-cube uniform.
-                    setVolumeFields(
-                      volumeFields.map((f) => (f.handle === handle ? { ...f, exposure } : f)),
-                    );
-                    handleRef.current?.volumes.setExposure(handle, exposure);
-                  },
-                  onVolumeFieldPaletteChange: (handle: string, paletteId: ScalarFieldPaletteId) => {
-                    setVolumeFields(
-                      volumeFields.map((f) => (f.handle === handle ? { ...f, paletteId } : f)),
-                    );
-                    handleRef.current?.volumes.setPalette(handle, paletteId);
-                  },
-                }
-              : {})}
+            // Volumes — always wired.  Per-field defaults (CF-4 off,
+            // MCPM on, synthetic fixtures off + DEV-only) decide what
+            // the user sees on first paint.
+            volumesEnabled={volumesEnabled}
+            onVolumesEnabledChange={(v: boolean) => {
+              setVolumesEnabled(v);
+              handleRef.current?.volumes.setMasterEnabled(v);
+            }}
+            volumeFields={visibleVolumeFields}
+            onVolumeFieldEnabledChange={(handle: string, enabled: boolean) => {
+              // Optimistic React-state update — the engine setter does NOT
+              // fire onVolumeFieldsChanged for tunable mutations (only for
+              // add/remove), so the controlled-input value would otherwise
+              // snap back on the next render.  We update local state first
+              // so the UI stays responsive, then forward to the engine.
+              setVolumeFields(
+                volumeFields.map((f) => (f.handle === handle ? { ...f, enabled } : f)),
+              );
+              handleRef.current?.volumes.setEnabled(handle, enabled);
+            }}
+            onVolumeFieldIntensityChange={(handle: string, intensity: number) => {
+              setVolumeFields(
+                volumeFields.map((f) => (f.handle === handle ? { ...f, intensity } : f)),
+              );
+              handleRef.current?.volumes.setIntensity(handle, intensity);
+            }}
+            onVolumeFieldContrastChange={(handle: string, contrast: number) => {
+              // Same optimistic-update pattern as intensity: local
+              // React state for input responsiveness, then forward to
+              // the engine.  The engine setter is the source of truth
+              // for the shader uniform; React state mirrors what the
+              // user just dragged.
+              setVolumeFields(
+                volumeFields.map((f) => (f.handle === handle ? { ...f, contrast } : f)),
+              );
+              handleRef.current?.volumes.setContrast(handle, contrast);
+            }}
+            onVolumeFieldDensityScaleChange={(handle: string, densityScale: number) => {
+              // Same shape as the intensity / contrast handlers.  The
+              // engine's `setVolumeFieldDensityScale` also mirrors the
+              // value into `state.settings.volumeFields[handle]` so
+              // both layers agree.
+              setVolumeFields(
+                volumeFields.map((f) => (f.handle === handle ? { ...f, densityScale } : f)),
+              );
+              handleRef.current?.volumes.setDensityScale(handle, densityScale);
+            }}
+            onVolumeFieldTrimChange={(handle: string, trim: number) => {
+              // Same optimistic-update pattern as the contrast / density
+              // handlers above: local React state first for input
+              // responsiveness, then forward to the engine which mirrors
+              // the value into state.settings.volumes.fields[handle].trim
+              // and writes the per-cube uniform.
+              setVolumeFields(
+                volumeFields.map((f) => (f.handle === handle ? { ...f, trim } : f)),
+              );
+              handleRef.current?.volumes.setTrim(handle, trim);
+            }}
+            onVolumeFieldExposureChange={(handle: string, exposure: number) => {
+              // Same optimistic-update pattern as the trim handler
+              // above: local React state first for input responsiveness,
+              // then forward to the engine which mirrors the value into
+              // state.settings.volumes.fields[handle].exposure and writes
+              // the per-cube uniform.
+              setVolumeFields(
+                volumeFields.map((f) => (f.handle === handle ? { ...f, exposure } : f)),
+              );
+              handleRef.current?.volumes.setExposure(handle, exposure);
+            }}
+            onVolumeFieldPaletteChange={(handle: string, paletteId: ScalarFieldPaletteId) => {
+              setVolumeFields(
+                volumeFields.map((f) => (f.handle === handle ? { ...f, paletteId } : f)),
+              );
+              handleRef.current?.volumes.setPalette(handle, paletteId);
+            }}
           />
           {/*
           Stats panel — read-only telemetry: rolling FPS, per-survey loaded

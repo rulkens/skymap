@@ -363,11 +363,6 @@ filaments would be.
 
 ## Cosmic-web volumes (CF-4 + MCPM)
 
-> **Opt-in feature** — append `?volumes=1` to the URL in production
-> (or run `npm run dev`, where the gate is open by default). The
-> overlays are still being tuned, so they're hidden behind the URL
-> flag for production users.
-
 Two scalar-field reconstructions of the local cosmic-web density,
 ray-marched as semi-transparent volumes underneath the point cloud:
 
