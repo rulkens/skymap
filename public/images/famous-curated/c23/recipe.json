@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "c23",
+  "crop": {
+    "x": 632.3163452148438,
+    "y": 287.45269775390625,
+    "width": 1763.801513671875,
+    "height": 1763.801513671875,
+    "rotationDeg": 35.722823690936366
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_891#/media/File:NGC891HunterWilson.jpg",
+    "license": "CC BY-SA 3.0",
+    "author": "Hewholooks"
+  },
+  "processedAt": "2026-05-19T09:44:23.729Z"
+}

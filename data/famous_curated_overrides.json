@@ -329,6 +329,41 @@
       "license": "CC BY 4.0",
       "author": "ESO",
       "processedAt": "2026-05-18T23:25:11.597Z"
+    },
+    "c23": {
+      "dir": "famous-curated/c23",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_891#/media/File:NGC891HunterWilson.jpg",
+      "license": "CC BY-SA 3.0",
+      "author": "Hewholooks",
+      "processedAt": "2026-05-19T09:44:23.729Z"
+    },
+    "c70": {
+      "dir": "famous-curated/c70",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_300#/media/File:View_of_the_southern_spiral_NGC_300.jpg",
+      "license": "CC BY 4.0",
+      "author": "ESO",
+      "processedAt": "2026-05-19T09:45:23.818Z"
+    },
+    "c77": {
+      "dir": "famous-curated/c77",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_5128#/media/File:ESO_Centaurus_A_LABOCA.jpg",
+      "license": "CC BY 4.0",
+      "author": "ESO/WFI (Optical); MPIfR/ESO/APEX/A.Weiss et al. (Submillimetre); NASA/CXC/CfA/R.Kraft et al. (X-ray)",
+      "processedAt": "2026-05-19T09:45:55.156Z"
+    },
+    "c83": {
+      "dir": "famous-curated/c83",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4945#/media/File:Spiral_Galaxy_NGC_4945.jpg",
+      "license": "CC BY 4.0",
+      "author": "ESO",
+      "processedAt": "2026-05-19T09:46:28.654Z"
+    },
+    "m104": {
+      "dir": "famous-curated/m104",
+      "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4594#/media/File:Sombrero_Galaxy_(NIRCam)_(2025-127).png",
+      "license": "Public domain",
+      "author": "Image: NASA, ESA, CSA, STScI",
+      "processedAt": "2026-05-19T09:47:25.245Z"
     }
   }
 }

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "m104",
+  "crop": {
+    "x": -190.662109375,
+    "y": -394.8411526775717,
+    "width": 4336.116543302572,
+    "height": 4336.116543302572,
+    "rotationDeg": 18.16617599321728
+  },
+  "starnet": {
+    "stride": 256,
+    "upsample": false
+  },
+  "alpha": {
+    "blackPoint": 8,
+    "whitePoint": 255,
+    "gamma": 0.7
+  },
+  "metadata": {
+    "sourceUrl": "https://en.wikipedia.org/wiki/NGC_4594#/media/File:Sombrero_Galaxy_(NIRCam)_(2025-127).png",
+    "license": "Public domain",
+    "author": "Image: NASA, ESA, CSA, STScI"
+  },
+  "processedAt": "2026-05-19T09:47:25.245Z"
+}
