@@ -20,7 +20,7 @@
 // rule should keep that count at zero.
 
 import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { InfoCard } from '../../../src/components/InfoCard/InfoCard';
 import type { PointOfInterest } from '../../../src/@types/engine/subsystems/PointOfInterest';

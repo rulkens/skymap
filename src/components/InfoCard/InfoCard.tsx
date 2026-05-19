@@ -40,7 +40,6 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { GalaxyInfo } from '../../@types/engine/GalaxyInfo';
-import type { PointOfInterest } from '../../@types/engine/subsystems/PointOfInterest';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { isPoi } from '../../services/engine/isPoi';
 import { FullCard } from './FullCard';
