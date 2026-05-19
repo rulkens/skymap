@@ -587,7 +587,12 @@ export function App(): React.ReactElement {
             }}
             labelCategoryVisibility={labelCategoryVisibility}
             onSetLabelCategoryVisibility={(category, visible) => {
-              handleRef.current?.labels.setCategoryVisible(category, visible);
+              // Label-axis ONLY — the marker (ring + halo) for the same
+              // category stays untouched.  Pre-2026-05-19 this prop
+              // accidentally hid both via the single `setCategoryVisible`
+              // setter; the audit (Q11) split the axis so this checkbox
+              // now does what its name says.
+              handleRef.current?.labels.setCategoryLabelVisible(category, visible);
             }}
             // Filaments toggle.  Unlike the milky-way / galaxy-thumbnails
             // toggles above, the engine does NOT fire an echo callback for

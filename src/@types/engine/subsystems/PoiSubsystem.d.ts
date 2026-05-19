@@ -8,7 +8,24 @@ import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
 export type PoiSubsystem = LabelProducer & {
   setPois(pois: readonly PointOfInterest[]): void;
   clearPois(): void;
-  setCategoryVisible(category: PoiCategory, visible: boolean): void;
+  /**
+   * Flip the MARKER (ring + halo) visibility for the given category.
+   * Only consulted by `produceMarkers` — the text label for the same
+   * category is unaffected and continues to render until
+   * `setCategoryLabelVisible(cat, false)` is called.
+   *
+   * The two-axis split landed with the 2026-05-19 settings-panel audit
+   * (Q11) — see the module header on `poiSubsystem.ts` for the
+   * conflation bug this fix addresses.
+   */
+  setCategoryMarkerVisible(category: PoiCategory, visible: boolean): void;
+  /**
+   * Flip the LABEL (text annotation) visibility for the given
+   * category.  Only consulted by `produceLabels` — the ring + halo
+   * marker for the same category is unaffected.  See
+   * `setCategoryMarkerVisible` for the symmetric setter.
+   */
+  setCategoryLabelVisible(category: PoiCategory, visible: boolean): void;
   /**
    * Per-frame producer for the at-rest cluster / supercluster / void
    * markers (halo + ring).  Returns one descriptor per visible POI

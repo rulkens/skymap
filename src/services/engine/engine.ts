@@ -377,14 +377,22 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         // handle.
         fields: {},
       },
-      // Per-category POI label visibility.  Defaults to every category
-      // visible so the labelDirector emits every cluster / supercluster
-      // / famous galaxy / void on first paint; the React shell's four
-      // Overlays → Labels checkboxes toggle individual categories.
-      // The literal record is the single source of truth — adding a
-      // fifth POI category means widening `POI_STYLES` in
-      // `poiSubsystem` AND adding the row here.
+      // Per-category POI visibility — TWO independent axes since the
+      // 2026-05-19 settings-panel audit (Q11) split label-text from
+      // marker-glyph.  Both default to every category visible so the
+      // labelDirector emits every cluster / supercluster / famous
+      // galaxy / void on first paint AND `clusterMarkerRenderer` draws
+      // every ring + halo.  Each literal record is the single source
+      // of truth for its axis — adding a fifth POI category means
+      // widening `POI_STYLES` in `poiSubsystem` AND adding the row to
+      // BOTH records here.
       labelCategoryVisibility: {
+        cluster: true,
+        supercluster: true,
+        famousGalaxy: true,
+        void: true,
+      },
+      markerCategoryVisibility: {
         cluster: true,
         supercluster: true,
         famousGalaxy: true,
@@ -1422,21 +1430,36 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       setIntensity: (value) => boringSetters.setFilamentIntensity(value),
     },
     labels: {
-      // Forward the per-category toggle into the POI subsystem (which
-      // owns the canonical visibility record used by `produceLabels`)
-      // AND mirror the same change into `state.settings` so the
-      // engine-side settings bag stays the source of truth for
-      // serialisation / debugging.  The echo carries a fresh copy of
-      // the full record so subscribers can treat each emission as an
-      // immutable snapshot — same idiom as the camera-snapshot echo.
-      setCategoryVisible: (category, visible) => {
-        state.subsystems.pois.setCategoryVisible(category, visible);
+      // Two parallel setters — one per axis — since the 2026-05-19
+      // settings-panel audit (Q11) split label-text from marker-glyph.
+      // Both follow the same shape: forward into the POI subsystem
+      // (which owns the canonical record consulted by its respective
+      // producer), mirror the change into `state.settings` so the
+      // engine-side bag stays source-of-truth, then echo a fresh copy
+      // of the affected record so subscribers can treat each emission
+      // as an immutable snapshot.  Crucially the OTHER axis is never
+      // touched — flipping label visibility off does NOT hide the
+      // marker, and vice versa.  That orthogonality is the whole point
+      // of the split (see `poiSubsystem.ts` module docblock).
+      setCategoryLabelVisible: (category, visible) => {
+        state.subsystems.pois.setCategoryLabelVisible(category, visible);
         state.settings.labelCategoryVisibility = {
           ...state.settings.labelCategoryVisibility,
           [category]: visible,
         };
-        cb.labels?.onCategoryVisibilityChange?.({
+        cb.labels?.onLabelCategoryVisibilityChange?.({
           ...state.settings.labelCategoryVisibility,
+        });
+        state.subsystems.scheduler.requestRender();
+      },
+      setCategoryMarkerVisible: (category, visible) => {
+        state.subsystems.pois.setCategoryMarkerVisible(category, visible);
+        state.settings.markerCategoryVisibility = {
+          ...state.settings.markerCategoryVisibility,
+          [category]: visible,
+        };
+        cb.labels?.onMarkerCategoryVisibilityChange?.({
+          ...state.settings.markerCategoryVisibility,
         });
         state.subsystems.scheduler.requestRender();
       },

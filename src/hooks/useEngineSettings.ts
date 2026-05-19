@@ -119,14 +119,23 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     vertexCount: number;
   } | null>(null);
 
-  // ── POI label per-category visibility ────────────────────────────────
-  // Engine echoes the full Record<PoiCategory, boolean> on every
-  // `handle.labels.setCategoryVisible(cat, visible)` call (plus once at
-  // init via seedSettingsCallbacks), so the React-side mirror is a
-  // single useState slot for the whole record — toggling one category
-  // re-emits all four.  Seed matches the engine default in
-  // `EngineSettingsState.labelCategoryVisibility` (every category on).
+  // ── POI per-category visibility (two independent axes) ──────────────
+  // Engine echoes the full Record<PoiCategory, boolean> per axis on
+  // every matching setter call (plus once at init via
+  // seedSettingsCallbacks).  The two records were split by the
+  // 2026-05-19 settings-panel audit (Q11) — see
+  // `poiSubsystem.ts` for the conflation bug that motivated the
+  // split.  Both seed to "all categories on" so first paint matches
+  // the engine default.
   const [labelCategoryVisibility, setLabelCategoryVisibility] = useState<
+    Record<PoiCategory, boolean>
+  >({
+    cluster: true,
+    supercluster: true,
+    famousGalaxy: true,
+    void: true,
+  });
+  const [markerCategoryVisibility, setMarkerCategoryVisibility] = useState<
     Record<PoiCategory, boolean>
   >({
     cluster: true,
@@ -156,6 +165,7 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       volumesEnabled,
       volumeFields,
       labelCategoryVisibility,
+      markerCategoryVisibility,
     },
     engineCallbacks: {
       // ── Nested sub-bag subscriptions (H5 task 11) ────────────────
@@ -195,10 +205,13 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       },
       labels: {
         // Engine echoes the full record on every toggle; setting React
-        // state to the same shape keeps the four-checkbox UI in sync
-        // from a single subscription.  Spread to drop the readonly
-        // wrapper for React's mutable useState slot.
-        onCategoryVisibilityChange: (v) => setLabelCategoryVisibility({ ...v }),
+        // state to the same shape keeps the checkboxes in sync from a
+        // single subscription.  Spread to drop the readonly wrapper
+        // for React's mutable useState slot.  Two echoes for the two
+        // independent axes (split by the 2026-05-19 settings-panel
+        // audit, Q11) — flipping one does NOT re-emit the other.
+        onLabelCategoryVisibilityChange: (v) => setLabelCategoryVisibility({ ...v }),
+        onMarkerCategoryVisibilityChange: (v) => setMarkerCategoryVisibility({ ...v }),
       },
     },
     setFilamentsEnabled,

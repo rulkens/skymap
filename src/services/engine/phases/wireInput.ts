@@ -499,5 +499,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     // visibleMask semantics the UI was built against.
     visibleSourceMask: state.sources.drawMask,
     labelCategoryVisibility: state.settings.labelCategoryVisibility,
+    markerCategoryVisibility: state.settings.markerCategoryVisibility,
   });
 }

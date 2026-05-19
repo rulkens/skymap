@@ -58,12 +58,33 @@
  * ### Immutability
  *
  * `setPois` takes a readonly array and stores a defensive copy via
- * spread so external mutation can't bleed in.  `setCategoryVisible`
- * replaces the per-category visibility record wholesale.  Each call
- * to `produceLabels` returns a fresh output object — no caching, no
- * shared references between frames.  Per-frame label/line accumulators
- * are locally-mutable for perf, but the returned arrays are typed
- * readonly so callers can't mutate them in place.
+ * spread so external mutation can't bleed in.  The two visibility
+ * setters (`setCategoryMarkerVisible` and `setCategoryLabelVisible`)
+ * each replace their per-category visibility record wholesale.  Each
+ * call to `produceLabels` returns a fresh output object — no caching,
+ * no shared references between frames.  Per-frame label/line
+ * accumulators are locally-mutable for perf, but the returned arrays
+ * are typed readonly so callers can't mutate them in place.
+ *
+ * ### Why marker vs label visibility are separate axes
+ *
+ * Prior to the 2026-05-19 settings-panel audit (Q11) a single
+ * `visibility` record was consulted by BOTH `produceLabels` and
+ * `produceMarkers`.  That conflation meant a UI toggle labelled "show
+ * cluster labels" secretly also suppressed the cluster ring/halo
+ * marker — the kind of "the checkbox does two things" bug the audit
+ * was looking for.  The fix splits the record into two independent
+ * axes:
+ *
+ *   - `markerVisibility[category]` — gates the cluster/SC/void ring +
+ *     halo (the visible dot/glyph) drawn by `produceMarkers`.
+ *   - `labelVisibility[category]`  — gates the text label drawn by
+ *     `produceLabels`.
+ *
+ * Each loop now reads ONLY its own record.  The two are seeded from
+ * the same `ALL_CATEGORIES_VISIBLE` default so day-one behaviour is
+ * unchanged (everything visible); the SettingsPanel restructure
+ * (Task #6 of the audit) wires them to different master toggles.
  */
 
 import type { Label } from '../../../@types/rendering/Label';
@@ -257,7 +278,14 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
   // the first frame that emits a non-empty label set.
   let didFireFadeIn = false;
   let pois: readonly PointOfInterest[] = [];
-  let visibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
+  // Two independent visibility axes — see the module header for the
+  // history.  `markerVisibility` gates the ring + halo descriptors in
+  // `produceMarkers`; `labelVisibility` gates the text labels in
+  // `produceLabels`.  Both default to "every category on" so the
+  // pre-split behaviour (everything visible) is preserved; the
+  // SettingsPanel can now flip one without affecting the other.
+  let markerVisibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
+  let labelVisibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
   // The currently-focused POI id, or null when nothing is selected.
   // Kept as module-scoped factory state alongside `pois` / `visibility`
   // so produceMarkers can read it without an extra arg — same idiom
@@ -285,10 +313,20 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     pois = [];
   }
 
-  function setCategoryVisible(category: PoiCategory, visible: boolean): void {
+  function setCategoryMarkerVisible(category: PoiCategory, visible: boolean): void {
     // Replace the record wholesale rather than mutating in place so
     // any holder of the previous reference sees a stable snapshot.
-    visibility = { ...visibility, [category]: visible };
+    // Only the marker pass (ring + halo descriptors) reads this axis.
+    markerVisibility = { ...markerVisibility, [category]: visible };
+  }
+
+  function setCategoryLabelVisible(category: PoiCategory, visible: boolean): void {
+    // Symmetric counterpart to `setCategoryMarkerVisible`.  Only the
+    // label pass (`produceLabels`) reads this axis — the marker pass
+    // is unaffected, which is the bug-fix the 2026-05-19 settings-panel
+    // audit (Q11) called out: hiding labels for clusters used to also
+    // hide their rings.
+    labelVisibility = { ...labelVisibility, [category]: visible };
   }
 
   function setSelectedPoi(poiId: string | null): void {
@@ -370,7 +408,11 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
     const [cx, cy, cz] = ctx.drawCamPos;
     for (const p of pois) {
-      if (!visibility[p.category]) continue;
+      // Label-axis gate only.  Markers consult their own
+      // `markerVisibility` record in `produceMarkers` below — flipping
+      // a category's label visibility off here leaves its ring + halo
+      // marker intact, and vice versa.
+      if (!labelVisibility[p.category]) continue;
       // Widen the `as const`-narrowed POI_STYLES entry back to the
       // declared shape so the optional `anchorOffsetPx` / `fadeBandPx`
       // fields are visible regardless of which category we're on.
@@ -529,7 +571,11 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     const [cx, cy, cz] = ctx.drawCamPos;
 
     for (const p of pois) {
-      if (!visibility[p.category]) continue;
+      // Marker-axis gate only.  See the symmetric comment in
+      // `produceLabels` — these two records are deliberately
+      // independent so the SettingsPanel can offer separate "show
+      // markers" vs "show labels" master toggles.
+      if (!markerVisibility[p.category]) continue;
       // The marker pass renders at the WIDER apparent extent (named
       // cluster extent, not the virial core).  Fall back to the core
       // for POIs that only set physicalRadiusMpc — none today, but
@@ -630,7 +676,8 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     produceMarkers,
     setPois,
     clearPois,
-    setCategoryVisible,
+    setCategoryMarkerVisible,
+    setCategoryLabelVisible,
     setSelectedPoi,
     getSelectedPoiId,
     setHoveredPoi,

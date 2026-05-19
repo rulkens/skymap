@@ -41,6 +41,12 @@ function makeSnapshot(): SettingsCallbackSeed {
       famousGalaxy: true,
       void: true,
     },
+    markerCategoryVisibility: {
+      cluster: true,
+      supercluster: true,
+      famousGalaxy: true,
+      void: true,
+    },
   };
 }
 
@@ -82,7 +88,10 @@ describe('seedSettingsCallbacks', () => {
     const sources = {
       onMaskChange: vi.fn(),
     };
-    const labels = { onCategoryVisibilityChange: vi.fn() };
+    const labels = {
+      onLabelCategoryVisibilityChange: vi.fn(),
+      onMarkerCategoryVisibilityChange: vi.fn(),
+    };
 
     const cb: EngineCallbacks = {
       ...makeRequiredCallbacks(),
@@ -113,10 +122,15 @@ describe('seedSettingsCallbacks', () => {
     expect(tonemap.onCurveChange).toHaveBeenCalledExactlyOnceWith(snap.toneMapCurve);
     expect(tonemap.onExposureChange).toHaveBeenCalledExactlyOnceWith(snap.exposure);
     expect(sources.onMaskChange).toHaveBeenCalledExactlyOnceWith(snap.visibleSourceMask);
-    // Echo carries a fresh copy of the record, not the literal reference
-    // — assert by value so the freshness contract stays load-bearing.
-    expect(labels.onCategoryVisibilityChange).toHaveBeenCalledExactlyOnceWith(
+    // Each echo carries a fresh copy of the record, not the literal
+    // reference — assert by value so the freshness contract stays
+    // load-bearing.  Label and marker visibility are two independent
+    // axes (split 2026-05-19, audit Q11); both fire at seed.
+    expect(labels.onLabelCategoryVisibilityChange).toHaveBeenCalledExactlyOnceWith(
       snap.labelCategoryVisibility,
+    );
+    expect(labels.onMarkerCategoryVisibilityChange).toHaveBeenCalledExactlyOnceWith(
+      snap.markerCategoryVisibility,
     );
   });
 

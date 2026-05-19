@@ -109,6 +109,12 @@ describe('EngineState type', () => {
         famousGalaxy: true,
         void: true,
       },
+      markerCategoryVisibility: {
+        cluster: true,
+        supercluster: true,
+        famousGalaxy: true,
+        void: true,
+      },
     };
     const bias: EngineBiasState = {
       apparentMagLimit: 0,
@@ -239,6 +245,12 @@ describe('EngineState type', () => {
         famousGalaxy: true,
         void: true,
       },
+      markerCategoryVisibility: {
+        cluster: true,
+        supercluster: true,
+        famousGalaxy: true,
+        void: true,
+      },
     };
     const bias: EngineBiasState = {
       apparentMagLimit: 0,
@@ -280,6 +292,12 @@ describe('EngineState type', () => {
         filaments: { enabled: false, intensity: 1 },
         volumes: { masterEnabled: false, fields: {} },
         labelCategoryVisibility: {
+          cluster: true,
+          supercluster: true,
+          famousGalaxy: true,
+          void: true,
+        },
+        markerCategoryVisibility: {
           cluster: true,
           supercluster: true,
           famousGalaxy: true,

@@ -234,12 +234,22 @@ export type EngineCallbacks = {
   filaments?: { onReady?: (stripCount: number, vertexCount: number) => void };
 
   /**
-   * Echoed when any per-category label-visibility toggle changes.
-   * The engine fires this once at init (with the default record) and
-   * once per `handle.labels.setCategoryVisible(cat, visible)` call.
+   * Echoes for the two independent POI visibility axes
+   * (label-text vs marker-glyph).  The two records are deliberately
+   * separate — flipping one does NOT fire the other.  See the
+   * docblock on `poiSubsystem.ts` (and the 2026-05-19 settings-panel
+   * audit, Q11) for why the axes were split.
+   *
+   * The engine fires each callback once at init (with the default
+   * record — all categories visible) and once per matching
+   * `handle.labels.setCategoryLabelVisible(...)` /
+   * `setCategoryMarkerVisible(...)` call.
    */
   labels?: {
-    onCategoryVisibilityChange?: (
+    onLabelCategoryVisibilityChange?: (
+      visibility: Readonly<Record<PoiCategory, boolean>>,
+    ) => void;
+    onMarkerCategoryVisibilityChange?: (
       visibility: Readonly<Record<PoiCategory, boolean>>,
     ) => void;
   };

@@ -63,12 +63,23 @@ export type UseEngineSettingsState = {
    */
   volumeFields: ReadonlyArray<VolumeFieldRowData>;
   /**
-   * Per-category visibility for the POI label overlay.  Mirrors the
-   * engine-side `EngineSettingsState.labelCategoryVisibility`; the
-   * SettingsPanel reads from this record to render the four Overlays
-   * → Labels checkboxes.  Engine echoes the whole record on every
-   * `handle.labels.setCategoryVisible(cat, visible)` call so all four
-   * checkboxes stay in sync from a single subscription.
+   * Per-category visibility for the POI TEXT LABEL overlay.  Mirrors
+   * the engine-side `EngineSettingsState.labelCategoryVisibility`; the
+   * SettingsPanel reads from this record to render the per-category
+   * label checkboxes.  Engine echoes the whole record on every
+   * `handle.labels.setCategoryLabelVisible(cat, visible)` call so the
+   * UI stays in sync from a single subscription.
    */
   labelCategoryVisibility: Record<PoiCategory, boolean>;
+  /**
+   * Per-category visibility for the POI MARKER overlay (ring + halo).
+   * Mirrors the engine-side
+   * `EngineSettingsState.markerCategoryVisibility`.  Today there is no
+   * per-category marker UI — every entry stays `true` unless the
+   * Structures master toggle (Task #6 of the 2026-05-19 audit) flips
+   * them as a batch.  Kept in state regardless so the React shell can
+   * present a snapshot and so the upcoming Structures toggle has a
+   * stable mirror to subscribe to.
+   */
+  markerCategoryVisibility: Record<PoiCategory, boolean>;
 };

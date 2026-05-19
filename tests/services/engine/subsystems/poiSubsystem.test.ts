@@ -146,10 +146,10 @@ describe('poiSubsystem', () => {
     expect(out.lines).toHaveLength(0);
   });
 
-  it('filters by category visibility', () => {
+  it('filters by label-axis category visibility', () => {
     const sub = createPoiSubsystem();
     sub.setPois([VIRGO, M31, BOOTES_VOID, LANIAKEA]);
-    sub.setCategoryVisible('famousGalaxy', false);
+    sub.setCategoryLabelVisible('famousGalaxy', false);
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels.map((l) => l.text)).toEqual(['Virgo', 'Boötes Void', 'Laniakea']);
   });
@@ -355,7 +355,7 @@ describe('poiSubsystem — produceMarkers', () => {
     expect(markers[0]?.haloColor[3]).toBeLessThan(markers[0]!.ringColor[3]);
   });
 
-  it('respects setCategoryVisible', () => {
+  it('respects setCategoryMarkerVisible', () => {
     const sub = createPoiSubsystem();
     sub.setPois([
       { id: 'virgo', name: 'Virgo', category: 'cluster',
@@ -363,7 +363,7 @@ describe('poiSubsystem — produceMarkers', () => {
       { id: 'bootes', name: 'Boötes Void', category: 'void',
         worldPos: [0, 0, 200], physicalRadiusMpc: 50 },
     ]);
-    sub.setCategoryVisible('void', false);
+    sub.setCategoryMarkerVisible('void', false);
     const markers = sub.produceMarkers(makeState(), makeCtx());
     expect(markers).toHaveLength(1);
     expect(markers[0]?.category).toBe('cluster');
@@ -389,3 +389,104 @@ describe('poiSubsystem — produceMarkers', () => {
 // distance, and camera motion already wakes the loop via tweens /
 // spaceMouse / pointer events.  Setting awake mid-band would pin the
 // render loop on while a POI happens to be mid-fade.
+
+// ─────────────────────────────────────────────────────────────────────
+// Marker vs label visibility independence (audit Q11, 2026-05-19)
+//
+// Prior to the split a single `visibility` record was consulted by
+// BOTH `produceLabels` and `produceMarkers`, so toggling "labels for
+// clusters" secretly also hid the cluster ring + halo.  These tests
+// guard the new two-record contract: flipping one axis never affects
+// the other.
+// ─────────────────────────────────────────────────────────────────────
+describe('poiSubsystem · marker/label visibility independence', () => {
+  // Cluster with a ring (physicalRadiusMpc set → marker is emitted)
+  // and a name (label is emitted).  Both axes default to visible.
+  const VIRGO_WITH_RING: PointOfInterest = {
+    id: 'virgo',
+    name: 'Virgo',
+    category: 'cluster',
+    worldPos: [10, 0, 0],
+    physicalRadiusMpc: 2,
+  };
+
+  it('setCategoryMarkerVisible(false) hides only the marker, not the label', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([VIRGO_WITH_RING]);
+    sub.setCategoryMarkerVisible('cluster', false);
+
+    const labels = sub.produceLabels(makeState(), makeCtx()).labels;
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+
+    expect(labels.map((l) => l.text)).toEqual(['Virgo']);
+    expect(markers).toHaveLength(0);
+  });
+
+  it('setCategoryLabelVisible(false) hides only the label, not the marker', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([VIRGO_WITH_RING]);
+    sub.setCategoryLabelVisible('cluster', false);
+
+    const labels = sub.produceLabels(makeState(), makeCtx()).labels;
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+
+    expect(labels).toHaveLength(0);
+    expect(markers).toHaveLength(1);
+    expect(markers[0]?.category).toBe('cluster');
+  });
+
+  it('setting both axes to false hides both the marker and the label', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([VIRGO_WITH_RING]);
+    sub.setCategoryMarkerVisible('cluster', false);
+    sub.setCategoryLabelVisible('cluster', false);
+
+    const labels = sub.produceLabels(makeState(), makeCtx()).labels;
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+
+    expect(labels).toHaveLength(0);
+    expect(markers).toHaveLength(0);
+  });
+
+  it('axes are per-category — flipping one category does not affect another', () => {
+    const sub = createPoiSubsystem();
+    const laniakea: PointOfInterest = {
+      id: 'laniakea',
+      name: 'Laniakea',
+      category: 'supercluster',
+      worldPos: [-50, -20, 10],
+      physicalRadiusMpc: 25,
+    };
+    sub.setPois([VIRGO_WITH_RING, laniakea]);
+
+    // Hide cluster markers + supercluster labels.  Cluster labels and
+    // supercluster markers must both still emit — the two axes and
+    // four categories combine into 4×2 independent gates.
+    sub.setCategoryMarkerVisible('cluster', false);
+    sub.setCategoryLabelVisible('supercluster', false);
+
+    const labels = sub.produceLabels(makeState(), makeCtx()).labels;
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+
+    expect(labels.map((l) => l.text)).toEqual(['Virgo']);
+    expect(markers.map((m) => m.category)).toEqual(['supercluster']);
+  });
+
+  it('toggling marker visibility on/off preserves the label record', () => {
+    const sub = createPoiSubsystem();
+    sub.setPois([VIRGO_WITH_RING]);
+    // Start by hiding the label.  Marker should still emit (default).
+    sub.setCategoryLabelVisible('cluster', false);
+    // Now flip marker visibility off then back on.  Each flip must
+    // leave the label record's `cluster: false` untouched — i.e. the
+    // label remains hidden across the marker-axis churn.
+    sub.setCategoryMarkerVisible('cluster', false);
+    sub.setCategoryMarkerVisible('cluster', true);
+
+    const labels = sub.produceLabels(makeState(), makeCtx()).labels;
+    const markers = sub.produceMarkers(makeState(), makeCtx());
+
+    expect(labels).toHaveLength(0);
+    expect(markers).toHaveLength(1);
+  });
+});
