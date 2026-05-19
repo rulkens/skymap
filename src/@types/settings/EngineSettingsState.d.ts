@@ -137,10 +137,23 @@ export type EngineSettingsState = {
   };
 
   /**
-   * Per-category visibility for the POI label overlay.  Keyed by the
-   * canonical `PoiCategory` union from `poiSubsystem`.  Defaults to
-   * every category visible; the SettingsPanel surfaces these as four
-   * always-visible checkboxes under Overlays → Labels.
+   * Per-category visibility for the POI TEXT LABEL overlay.  Keyed by
+   * the canonical `PoiCategory` union from `poiSubsystem`.  Defaults
+   * to every category visible.
+   *
+   * The 2026-05-19 settings-panel audit (Q11) split this into two
+   * orthogonal records — see `markerCategoryVisibility` for the
+   * marker (ring + halo) counterpart, and `poiSubsystem.ts`'s module
+   * docblock for the conflation bug the split fixed.
    */
   labelCategoryVisibility: Record<PoiCategory, boolean>;
+  /**
+   * Per-category visibility for the POI MARKER overlay — the ring +
+   * halo glyph drawn at the POI's world anchor by
+   * `clusterMarkerRenderer`.  Symmetric to `labelCategoryVisibility`;
+   * the two records are deliberately independent so the SettingsPanel
+   * can offer separate master toggles for "Labels" (text) and
+   * "Structures" (markers).  Defaults to every category visible.
+   */
+  markerCategoryVisibility: Record<PoiCategory, boolean>;
 };

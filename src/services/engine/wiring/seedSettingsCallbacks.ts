@@ -60,7 +60,10 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   cb.tonemap?.onCurveChange?.(snapshot.toneMapCurve);
   cb.tonemap?.onExposureChange?.(snapshot.exposure);
   cb.sources?.onMaskChange?.(snapshot.visibleSourceMask);
-  // Fresh copy of the record so subscribers can treat each emission as
-  // an immutable snapshot — same idiom as the live setter echo.
-  cb.labels?.onCategoryVisibilityChange?.({ ...snapshot.labelCategoryVisibility });
+  // Fresh copies of each record so subscribers can treat every
+  // emission as an immutable snapshot — same idiom as the live setter
+  // echoes.  Label and marker visibility are independent axes (split
+  // by the 2026-05-19 settings-panel audit, Q11); both seed at init.
+  cb.labels?.onLabelCategoryVisibilityChange?.({ ...snapshot.labelCategoryVisibility });
+  cb.labels?.onMarkerCategoryVisibilityChange?.({ ...snapshot.markerCategoryVisibility });
 }
