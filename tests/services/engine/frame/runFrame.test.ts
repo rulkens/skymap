@@ -61,7 +61,6 @@ function makeState(): EngineState {
     sources: {
       pickMask: 0,
       drawMask: 0,
-      lodMode: 'manual',
       catalogs: new Map(),
       famousMeta: [],
       famousXrefs: {},

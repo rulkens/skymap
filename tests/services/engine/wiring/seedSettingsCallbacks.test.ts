@@ -34,7 +34,6 @@ function makeSnapshot(): SettingsCallbackSeed {
     absMagLimit: -19.5,
     toneMapCurve: ToneMapCurve.Reinhard,
     exposure: 1.2,
-    lodMode: 'auto',
     visibleSourceMask: 0b111,
     labelCategoryVisibility: {
       cluster: true,
@@ -81,7 +80,6 @@ describe('seedSettingsCallbacks', () => {
       onAbsMagLimitChange: vi.fn(),
     };
     const sources = {
-      onLodModeChange: vi.fn(),
       onMaskChange: vi.fn(),
     };
     const labels = { onCategoryVisibilityChange: vi.fn() };
@@ -114,7 +112,6 @@ describe('seedSettingsCallbacks', () => {
     expect(bias.onAbsMagLimitChange).toHaveBeenCalledExactlyOnceWith(snap.absMagLimit);
     expect(tonemap.onCurveChange).toHaveBeenCalledExactlyOnceWith(snap.toneMapCurve);
     expect(tonemap.onExposureChange).toHaveBeenCalledExactlyOnceWith(snap.exposure);
-    expect(sources.onLodModeChange).toHaveBeenCalledExactlyOnceWith(snap.lodMode);
     expect(sources.onMaskChange).toHaveBeenCalledExactlyOnceWith(snap.visibleSourceMask);
     // Echo carries a fresh copy of the record, not the literal reference
     // — assert by value so the freshness contract stays load-bearing.

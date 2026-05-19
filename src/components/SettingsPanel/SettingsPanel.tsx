@@ -37,7 +37,6 @@
  */
 
 import { type ReactNode } from 'react';
-import type { LodMode } from '../../@types/data/LodMode';
 import type { Tier } from '../../@types/data/Tier';
 import { Source, sourceLabel, maskHas } from '../../data/sources';
 import { BiasMode } from '../../data/biasMode';
@@ -84,7 +83,7 @@ const TOGGLEABLE_SOURCES: readonly Source[] = [
  * The original four controls (point size / brightness / auto-rotate / reset
  * camera) are all required — App.tsx always wires them to the engine handle.
  *
- * The newer rev-2 controls (survey toggles + Auto-LOD) are **optional**.
+ * The newer rev-2 controls (survey toggles) are **optional**.
  * That's deliberate: this component is being updated ahead of the App.tsx
  * wiring (task #37 in the multi-survey plan). Keeping the new props optional
  * lets the existing call site in App.tsx keep typechecking unchanged, and
@@ -190,10 +189,6 @@ type Props = {
    * UI then renders the toggle without a count rather than a misleading "0".
    */
   sourceCounts?: Partial<Record<Source, number>>;
-  /** Current LOD mode — `'auto'` (by zoom) or `'manual'` (user override). */
-  lodMode?: LodMode;
-  /** Called when the user toggles the Auto-LOD checkbox. */
-  onSetLodMode?: (mode: LodMode) => void;
 
   // ── Density correction (Malmquist bias) ───────────────────────────────────
   //
@@ -400,8 +395,6 @@ export function SettingsPanel({
   visibleSourceMask,
   onToggleSource,
   sourceCounts,
-  lodMode,
-  onSetLodMode,
   spaceMouseSupported,
   spaceMouseConnected,
   onConnectSpaceMouse,
@@ -439,11 +432,6 @@ export function SettingsPanel({
   // a half-broken UI (toggles that don't reflect state, or state with no
   // way to change it), so we treat them as a single feature flag.
   const showSurveyToggles = visibleSourceMask !== undefined && onToggleSource !== undefined;
-
-  // Same pattern for the LOD section: rendered only when both pieces are
-  // present. `lodMode` may legitimately be the string `'auto'`, so compare
-  // against `undefined` explicitly rather than relying on truthiness.
-  const showLodControls = lodMode !== undefined && onSetLodMode !== undefined;
 
   // Orientation-visibility section: rendered only when both toggle pieces are
   // wired by the parent.  Same gating pattern as the survey + LOD sections.
@@ -812,10 +800,9 @@ export function SettingsPanel({
           {/* ── Visual (per-pixel sliders + camera behaviour) ───────────────── */}
           {/*
         Bundles the four "how the pixels are drawn" controls together:
-        point size, brightness, depth fade, and auto-rotate, plus the
-        Auto-LOD master switch (which is camera-distance gating, same
-        family of "rendering behaviour" knobs).  These are the controls
-        a user reaches for *after* they've decided what surveys to view.
+        point size, brightness, depth fade, and auto-rotate.  These are
+        the controls a user reaches for *after* they've decided what
+        surveys to view.
       */}
           <CollapsibleSection title="Visual">
             {/* Point size — stacked label/value on top, slider full-width below. */}
@@ -881,30 +868,6 @@ export function SettingsPanel({
                 onChange={(e) => onAutoRotateChange(e.target.checked)}
               />
             </div>
-
-            {/* ── Auto-LOD master switch ──────────────────────────────────────
-          A single boolean checkbox is enough because the engine itself has
-          only two modes: pick LOD from camera distance, or honour an
-          explicit caller override. The mode-indicator line below the
-          checkbox echoes the current state so the wording stays
-          unambiguous even when the user isn't sure what "Auto LOD off"
-          implies. */}
-            {showLodControls && (
-              <>
-                <div className={styles.panelRow}>
-                  <label htmlFor="toggle-auto-lod">Auto LOD</label>
-                  <input
-                    id="toggle-auto-lod"
-                    type="checkbox"
-                    checked={lodMode === 'auto'}
-                    onChange={(e) => onSetLodMode(e.target.checked ? 'auto' : 'manual')}
-                  />
-                </div>
-                <div className={styles.panelMode}>
-                  mode: {lodMode === 'auto' ? 'auto (by zoom)' : 'manual override'}
-                </div>
-              </>
-            )}
           </CollapsibleSection>
 
           {/* ── Tone mapping ─────────────────────────────────────────────────── */}

@@ -56,7 +56,6 @@ import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
 import { ALL_VISIBLE_MASK } from './sources';
-import type { LodMode } from '../@types/data/LodMode';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
 
@@ -215,15 +214,6 @@ export const DEFAULT_ABS_MAG_LIMIT = -19;
  * `data/sources.ts` for the bit layout.
  */
 export const DEFAULT_VISIBLE_SOURCE_MASK = ALL_VISIBLE_MASK;
-
-/**
- * Default LOD mode — `'manual'` so a user with multiple surveys loaded
- * sees them all on first paint, regardless of camera distance.  Auto
- * mode (`'auto'`) gates surveys by zoom: at far distances, only the
- * deepest catalogue is drawn; close-in, all of them are.  Useful but
- * surprising on the first frame.
- */
-export const DEFAULT_LOD_MODE: LodMode = 'manual';
 
 // ── Scalar-volume overlay ────────────────────────────────────────────────────
 

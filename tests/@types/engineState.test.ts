@@ -47,7 +47,6 @@ import {
   DEFAULT_FILAMENT_INTENSITY,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
-  DEFAULT_LOD_MODE,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
@@ -119,7 +118,6 @@ describe('EngineState type', () => {
     const sources: EngineSourceState = {
       pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
       drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
-      lodMode: DEFAULT_LOD_MODE,
       catalogs: new Map(),
       famousMeta: [],
       famousXrefs: {},
@@ -247,16 +245,15 @@ describe('EngineState type', () => {
       schechterMStar: 0,
       schechterAlpha: 0,
     };
-    const sources: Pick<EngineSourceState, 'pickMask' | 'drawMask' | 'lodMode'> = {
+    const sources: Pick<EngineSourceState, 'pickMask' | 'drawMask'> = {
       pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
       drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
-      lodMode: DEFAULT_LOD_MODE,
     };
 
     expect(settings.points.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(settings.bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
     expect(bias.apparentMagLimit).toBe(0);
-    expect(sources.lodMode).toBe(DEFAULT_LOD_MODE);
+    expect(sources.pickMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
   });
 
   it('allows in-place mutation of every sub-bag field', () => {
@@ -297,7 +294,6 @@ describe('EngineState type', () => {
       sources: {
         pickMask: 0,
         drawMask: 0,
-        lodMode: DEFAULT_LOD_MODE,
         catalogs: new Map(),
         famousMeta: [],
         famousXrefs: {},

@@ -151,7 +151,6 @@ function makeState(maxAbs: number): EngineState {
       catalogs,
       pickMask: 0xff,
       drawMask: 0xff,
-      lodMode: 'auto',
       famousMeta: [],
       famousXrefs: {},
       tier: 'medium',

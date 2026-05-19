@@ -72,7 +72,6 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 
 import { updatePosition } from '../../camera/orbitCamera';
 import { resizeCanvasToDisplay } from '../../gpu/device';
-import { autoLodMask } from '../helpers/autoLod';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { isEngineReady } from '../helpers/engineReady';
 import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
@@ -230,28 +229,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (!ctx.isReady) {
     state.subsystems.scheduler.requestRender();
     return;
-  }
-
-  // ── Auto-LOD mask refresh ────────────────────────────────────────
-  //
-  // In auto mode, recompute which surveys are visible from the
-  // camera's current distance every frame.  The work is essentially
-  // free — `autoLodMask` is a few branches against constants — and
-  // we only fire `onSourceMaskChange` when the mask actually flips
-  // bands so React's setState isn't called every frame.
-  //
-  // In manual mode we leave `pickMask`/`drawMask` alone so a user toggle
-  // in the settings panel sticks until they explicitly re-enter
-  // auto mode.
-  if (state.sources.lodMode === 'auto') {
-    const nextMask = autoLodMask(ctx.cam.distance);
-    if (nextMask !== state.sources.drawMask) {
-      // Auto-LOD changes are synchronous — no fade desired for tier-driven
-      // mask shifts, so both masks flip together.
-      state.sources.pickMask = nextMask;
-      state.sources.drawMask = nextMask;
-      deps.cb.sources?.onMaskChange?.(nextMask);
-    }
   }
 
   // ── Per-frame impostor planners ───────────────────────────────────

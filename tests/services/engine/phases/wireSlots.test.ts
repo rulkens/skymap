@@ -255,7 +255,6 @@ function makeState(
       catalogs: new Map(),
       pickMask: 0xff,
       drawMask: 0xff,
-      lodMode: 'auto',
       famousMeta: [],
       famousXrefs: {},
       tier: 'medium',

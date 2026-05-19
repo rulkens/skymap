@@ -6,7 +6,6 @@
 
 import type { EngineStatus } from './EngineStatus';
 import type { GalaxyInfo } from './GalaxyInfo';
-import type { LodMode } from '../data/LodMode';
 import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
 import type { Source } from '../../data/sources';
@@ -183,8 +182,8 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Source-state callbacks — LOD mode, visibility mask, tier, per-
-   * source readiness, and aggregated load progress.
+   * Source-state callbacks — visibility mask, tier, per-source
+   * readiness, and aggregated load progress.
    *
    * `onCatalogReady` is granular per-source because the three .bin
    * files run as parallel fetches with very different sizes (2MRS
@@ -198,7 +197,6 @@ export type EngineCallbacks = {
    * `null` means "no fetches in flight" (the UI fades the bar out).
    */
   sources?: {
-    onLodModeChange?: (mode: LodMode) => void;
     onMaskChange?: (mask: number) => void;
     onTierChange?: (tier: Tier) => void;
     onCatalogReady?: (source: Source, count: number) => void;

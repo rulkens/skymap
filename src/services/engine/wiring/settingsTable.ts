@@ -36,10 +36,8 @@
  *     shape can't express that.
  *   - `setTier` — orchestrates per-source asset-slot reloads via
  *     `cloudLoader.reloadSource`, with abort-controller plumbing.
- *   - `setLodMode` — flips the auto-LOD predicate AND fires an echo
- *     that observers (App.tsx) react to by re-driving source masks.
- *   - `setSourceVisible` — implicitly switches LOD mode to manual and
- *     touches the visible-source mask, not just one boolean.
+ *   - `setSourceVisible` — touches the visible-source mask with a
+ *     fade animation, not just one boolean.
  *   - `setSpaceMouseSensitivity` — forwards into the SpaceMouse
  *     subsystem rather than mutating engine state directly.
  *

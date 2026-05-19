@@ -13,7 +13,6 @@
 
 import type { BiasMode } from '../../data/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
-import type { LodMode } from '../../data/LodMode';
 import type { PoiCategory } from '../../../services/engine/subsystems/poiSubsystem';
 
 export type SettingsCallbackSeed = {
@@ -28,7 +27,6 @@ export type SettingsCallbackSeed = {
   absMagLimit: number;
   toneMapCurve: ToneMapCurve;
   exposure: number;
-  lodMode: LodMode;
   visibleSourceMask: number;
   /**
    * Initial per-category POI label visibility — fired through

@@ -39,7 +39,6 @@
  */
 
 import { useState } from 'react';
-import type { LodMode } from '../@types/data/LodMode';
 import { BiasMode } from '../data/biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from '../data/toneMapCurve';
@@ -56,7 +55,6 @@ import {
   DEFAULT_FILAMENTS_ENABLED,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
-  DEFAULT_LOD_MODE,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
@@ -88,7 +86,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // DEFAULT_VISIBLE_SOURCE_MASK so the first paint matches the engine's
   // startup default.
   const [visibleSourceMask, setVisibleSourceMask] = useState<number>(DEFAULT_VISIBLE_SOURCE_MASK);
-  const [lodMode, setLodMode] = useState<LodMode>(DEFAULT_LOD_MODE);
   const [biasMode, setBiasMode] = useState<BiasModeT>(DEFAULT_BIAS_MODE);
   const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
   const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurveT>(DEFAULT_TONE_MAP_CURVE);
@@ -152,7 +149,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       realOnlyMode,
       depthFadeEnabled,
       visibleSourceMask,
-      lodMode,
       biasMode,
       absMagLimit,
       toneMapCurve,
@@ -182,7 +178,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
         onAutoRotateChange: setAutoRotate,
       },
       sources: {
-        onLodModeChange: setLodMode,
         onMaskChange: setVisibleSourceMask,
       },
       bias: {

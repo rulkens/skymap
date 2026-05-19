@@ -205,7 +205,6 @@ function makeState(): EngineState {
       catalogs: new Map(),
       pickMask: 0,
       drawMask: 0,
-      lodMode: 'auto',
       famousMeta: [],
       famousXrefs: {},
       tier: 'medium',

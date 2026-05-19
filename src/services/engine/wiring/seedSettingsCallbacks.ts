@@ -5,13 +5,12 @@
  * ### Why this exists
  *
  * The engine maintains the *truth* for every setting React mirrors
- * (point size, brightness, auto-rotate, tone-map curve, exposure, LOD
- * mode, source visibility mask, …).  React's components initialise their
+ * (point size, brightness, auto-rotate, tone-map curve, exposure,
+ * source visibility mask, …).  React's components initialise their
  * own state from hard-coded defaults, but the engine is allowed to
- * clamp/override those values on startup (e.g. the visible-source mask
- * is recomputed by auto-LOD almost immediately).  To prevent silent
- * drift, the engine fires each `onXChange` callback *once* at init with
- * its actual default.
+ * clamp/override those values on startup.  To prevent silent drift,
+ * the engine fires each `onXChange` callback *once* at init with its
+ * actual default.
  *
  * That used to be ~14 hand-rolled `cb.onPointSizeChange?.(pointSizePx)`
  * lines at the bottom of the async IIFE.  Pulling them into one helper:
@@ -60,7 +59,6 @@ export function seedSettingsCallbacks(cb: EngineCallbacks, snapshot: SettingsCal
   cb.bias?.onAbsMagLimitChange?.(snapshot.absMagLimit);
   cb.tonemap?.onCurveChange?.(snapshot.toneMapCurve);
   cb.tonemap?.onExposureChange?.(snapshot.exposure);
-  cb.sources?.onLodModeChange?.(snapshot.lodMode);
   cb.sources?.onMaskChange?.(snapshot.visibleSourceMask);
   // Fresh copy of the record so subscribers can treat each emission as
   // an immutable snapshot — same idiom as the live setter echo.

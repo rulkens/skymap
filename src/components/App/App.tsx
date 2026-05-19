@@ -633,35 +633,23 @@ export function App(): React.ReactElement {
             // fires the echo once `state.sources.tier` has mutated.
             tier={currentTier}
             onTierChange={(t) => handleRef.current?.sources.setTier(t)}
-            // ── Multi-survey toggles + Auto-LOD master (rev-2) ──────────────
+            // ── Multi-survey toggles (rev-2) ─────────────────────────────────
             //
             // These mirror what the engine knows. The engine accepts a single
-            // `setSourceVisible(s, visible)` call which both flips the bit and
-            // (per its spec) switches LOD into 'manual' mode automatically — so
-            // we don't need a separate `setLodMode('manual')` from the toggle
-            // handler. We *do* mirror that flip in React state immediately so
-            // the checkbox row stays consistent on the very next render, even
-            // though the engine echoes it back via `onLodModeChange` shortly.
+            // `setSourceVisible(s, visible)` call which flips the survey bit
+            // (with a fade animation). React state is updated by the engine's
+            // synchronous `onMaskChange` echo, so we don't need an optimistic
+            // local update here.
             visibleSourceMask={visibleSourceMask}
             sourceCounts={sourceCounts}
             onToggleSource={(s, visible) => {
-              // No optimistic local update — the engine fires `onSourceMaskChange`
+              // No optimistic local update — the engine fires `onMaskChange`
               // synchronously inside `setSourceVisible` (pickMask flip), which
-              // updates React state before this handler returns.  Optimistic
-              // updates would race against auto-LOD's mask, sometimes forcing the
-              // user to click twice.  setVisible is now async (drawMask flips
-              // after the fade settles), so fire-and-forget here.
+              // updates React state before this handler returns.  setVisible
+              // is async (drawMask flips after the fade settles), so
+              // fire-and-forget here.
               void handleRef.current?.sources.setVisible(s, visible);
             }}
-            // Auto-LOD UI is intentionally hidden — the toggle never improved
-            // the user experience enough to justify the panel real estate, and
-            // explaining "manual override" to anyone who clicks it costs more
-            // than the feature is worth.  The engine itself still runs auto-LOD
-            // internally (it drives the survey-mask gating at low zoom), so we
-            // simply omit the `lodMode` / `onSetLodMode` props — SettingsPanel
-            // gates the whole section on both being defined and elides it
-            // automatically.  Re-expose by re-adding the two props here if the
-            // user override is ever needed again.
             // ── SpaceMouse 6DOF input wiring (hidden) ────────────────────────
             //
             // The SpaceMouse panel is intentionally suppressed for now — the
