@@ -296,10 +296,9 @@ export const DEFAULT_CF4_DENSITY_ENABLED = false;
 
 /**
  * Per-field default for the MCPM Cosmic Web volume.  Enabled by
- * default — paired with the volumes URL gate (`?volumes=1` or DEV
- * mode) this gives a default-on inferno cosmic-web overlay that's
- * the headline scientific story for the volume rendering pipeline.
- * See DEFAULT_CF4_DENSITY_ENABLED for the CF-4-side rationale.
+ * default — it's the headline scientific overlay for the volume
+ * pipeline.  See DEFAULT_CF4_DENSITY_ENABLED for the CF-4-side
+ * rationale.
  */
 export const DEFAULT_MCPM_ENABLED = true;
 

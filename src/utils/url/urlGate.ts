@@ -1,9 +1,9 @@
 /**
  * hasUrlGate — unified read of a boolean URL query-string flag.
  *
- * The skymap project uses URL-gated dev features (e.g. `?volumes`,
- * `?anchors`, `?debug`, `?gpuTimings`).  Before this helper landed,
- * each call site spelled the predicate out:
+ * The skymap project uses URL-gated dev features (e.g. `?debug`,
+ * `?gpuTimings`).  Before this helper landed, each call site spelled
+ * the predicate out:
  *
  *   typeof window !== 'undefined' &&
  *     (() => { try { return new URLSearchParams(window.location.search).has('foo'); }

@@ -6,9 +6,8 @@
  * handle 'mcpm', then seeds per-field settings if not already present
  * (preserving any user-tuned intensity/palette across tier reloads).
  *
- * Gate ownership matches cf4DensitySlot: the factory itself is
- * unconditional; `wireSlots` is responsible for the volumesGateOpen
- * check before invoking it.
+ * Default-on cosmic-web baseline — `wireSlots` `.load()`s it
+ * unconditionally at boot.
  */
 import { createAssetSlot } from '../AssetSlot';
 import { mcpmFetcher } from '../fetchers/mcpmFetcher';

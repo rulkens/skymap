@@ -91,7 +91,6 @@ import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator'
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
 import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsystem';
 import { createTexturedImpostorSubsystem } from '../subsystems/texturedImpostorSubsystem';
-import { hasUrlGate } from '../../../utils/url/urlGate';
 // Cosmography POI anchors wired unconditionally into the POI subsystem
 // below — the user-facing toggle is the SettingsPanel per-category
 // checkbox, not a URL gate.  (Pre-2026-05-17 this was gated on
@@ -137,23 +136,6 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // `loading/slots/filamentSlot.ts` for the lifecycle rationale.
   const filamentSlot = createFilamentSlot(state, cb);
 
-  // ── Volumes URL gate ─────────────────────────────────────────────
-  //
-  // Mirror of App.tsx's `volumesUiEnabled` gate.  Used to decide
-  // whether ANY volume slot is registered at all — both the CF-4 DM
-  // density (real science data, still in visual-tuning phase) and the
-  // synthetic debug fixtures.  Without `?volumes=1` (or a dev build)
-  // we skip slot creation entirely, so the .scfd is never fetched and
-  // the renderer never sees a field — no bandwidth spent, no half-
-  // baked overlay rendered in production.
-  //
-  // Why gate the data path (not just the UI): the cube is ~4 MB and
-  // — more importantly — the visual isn't ready for users yet.  Once
-  // the rendering / colour-mapping is dialled in, drop both gates
-  // (this one and `volumesUiEnabled` in App.tsx) in lockstep.
-  const volumesEnabledByUrl = hasUrlGate('volumes');
-  const volumesGateOpen = import.meta.env.DEV || volumesEnabledByUrl;
-
   // ── Cosmography anchor POIs (always wired) ───────────────────────
   //
   // Pre-2026-05-17 this block was gated behind `?anchors=1`, intended
@@ -181,23 +163,20 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   state.subsystems.pois.setPois(staticAnchorPois);
 
   // ── CF-4 DM density volume slot ──────────────────────────────────
-  // Gated behind `volumesGateOpen` so production users don't see the
-  // still-tuning overlay unless they opt in with `?volumes=1`.  When the
-  // gate is closed, `state.assetSlots.cf4Density` stays null and the
-  // loader's `.load()` call below is a `?.` no-op so nothing else has to
-  // change.  Factory owns the mint + commit + state write — see
-  // `loading/slots/cf4DensitySlot.ts`.
-  if (volumesGateOpen) {
-    createCf4DensitySlot(state, cb);
-    // MCPM Cosmic Web slot — minted here, but `.load()` deferred to the
-    // central coordination point below alongside filaments / CF-4 /
-    // point-source loads.  Loading inline at mint time fires too early
-    // in bootstrap (renderer not yet wired, no loading-bar registry),
-    // so the slot's commit is a silent no-op.  Same pattern as
-    // cf4DensitySlot: factory writes `state.assetSlots.mcpm`, the
-    // central `.load()` below picks it up and triggers the actual fetch.
-    createMcpmSlot(state, cb);
-  }
+  // Slot minted unconditionally; the boot-time `.load()` below is
+  // gated on `DEFAULT_CF4_DENSITY_ENABLED` so a default-off CF-4
+  // doesn't waste bandwidth.  Toggling on later lazy-loads via
+  // `engine.setVolumeFieldEnabled`.  Factory owns mint + commit + state
+  // write — see `loading/slots/cf4DensitySlot.ts`.
+  createCf4DensitySlot(state, cb);
+  // MCPM Cosmic Web slot — minted here, but `.load()` deferred to the
+  // central coordination point below alongside filaments / CF-4 /
+  // point-source loads.  Loading inline at mint time fires too early
+  // in bootstrap (renderer not yet wired, no loading-bar registry),
+  // so the slot's commit is a silent no-op.  Same pattern as
+  // cf4DensitySlot: factory writes `state.assetSlots.mcpm`, the
+  // central `.load()` below picks it up and triggers the actual fetch.
+  createMcpmSlot(state, cb);
 
   // ── Famous-galaxy sidecar slot (Task 10) ─────────────────────────
   // Factory owns the mint + subscribe + state write.  See
@@ -250,15 +229,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // write; see `loading/slots/pgcAliasSlot.ts`.
   const pgcAliasSlot = createPgcAliasSlot(state, cb);
 
-  // ── Synthetic volume slots (DEV-only or `?volumes=1`) ────────────
-  // Three debug fixtures (Gaussian blob + Cartesian/spherical grids).
-  // Same `volumesGateOpen` flag as the CF-4 slot above so the
-  // SettingsPanel Volumes section is never empty-in-dev or visible-
-  // but-empty-in-prod.  Vite tree-shakes the synthetic factory's
-  // imports out of production bundles when neither flag is reachable.
-  // Factory owns the mint + state write; see
-  // `loading/slots/syntheticVolumeSlots.ts` for the commit rationale.
-  if (volumesGateOpen) {
+  // ── Synthetic volume slots (DEV-only) ────────────────────────────
+  // Axis-verification debug fixtures — gated on DEV so production
+  // users don't see synthetic noise.  Vite tree-shakes the factory
+  // out of production bundles.
+  if (import.meta.env.DEV) {
     createSyntheticVolumeSlots(state, cb);
   }
 

@@ -7,12 +7,11 @@
  * already present (preserving any user-tuned intensity/palette across
  * sessions).
  *
- * **Gate ownership.**  Pre-H4 the URL/DEV gate (`volumesGateOpen`) lived
- * inline in `wireSlots.ts` and skipped the entire mint block.  H4 keeps
- * the gate in wireSlots (it's a per-call orchestration concern — the
- * same flag decides whether the synthetic-volume fixtures mint too) and
- * makes this factory unconditional.  Callers should only invoke it when
- * the gate is open.
+ * **Lazy fetch.**  This factory mints the slot unconditionally; the
+ * boot-time `.load()` in `wireSlots` is gated on
+ * `DEFAULT_CF4_DENSITY_ENABLED` so a default-off CF-4 doesn't waste
+ * bandwidth at startup.  Toggling the field on later lazy-loads via
+ * `engine.setVolumeFieldEnabled`.
  *
  * **Seed-and-forward shape.**  The commit duplicates the same seed
  * pattern the synthetic-volume factory uses (and that

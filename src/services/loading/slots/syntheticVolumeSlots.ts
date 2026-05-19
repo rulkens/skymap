@@ -10,9 +10,10 @@
  * semantics as every real volume fetch — without any branching in
  * the render loop.
  *
- * **DEV-only:** callers gate on `import.meta.env.DEV || ?volumes=1`
- * before invoking this factory.  Vite tree-shakes the synthetic block
- * from production bundles when neither flag is reachable.
+ * **DEV-only:** callers gate on `import.meta.env.DEV`.  These are
+ * axis-verification fixtures, not science data — production users
+ * would just see noise.  Vite tree-shakes the block from production
+ * bundles because `import.meta.env.DEV` is a compile-time constant.
  *
  * **Commit pattern.**  The commit replicates the same operations
  * `engineHandle.addVolumeField(handle, cube)` performs, but directly

@@ -797,14 +797,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // a compile-time constant that evaluates to `false` outside
       // `vite dev`.
       //
-      // All three synthetic fixtures default to enabled=false (see
-      // `syntheticVolumeSlots.ts`); per the same default-off-means-
-      // don't-fetch policy as CF-4 (see `wireSlots.ts`), we skip the
-      // boot load.  When a dev toggles one on via the volumes panel
-      // or dev console, `setVolumeFieldEnabled` lazy-loads the
-      // corresponding slot (see the `maybeLazyLoadVolumeSlot` shim).
-      // Common dims + box size kept centralised in the same shim so
-      // all three fixtures still overlay coherently.
+      // Synthetic fixtures default-off; the lazy-load shim in
+      // `setVolumeFieldEnabled` fetches the cube on first toggle-on.
     } catch (err) {
       // Surface initialisation failures via the status callback so the UI
       // shows a readable message rather than a blank canvas.

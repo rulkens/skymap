@@ -62,9 +62,8 @@ is © Alexander Rulkens, MIT-licensed. See [LICENSE](LICENSE).
 ## Volume reconstructions
 
 The two scalar-field overlays drawn underneath the point cloud (CF-4 DM
-density and MCPM Cosmic Web; opt-in via `?volumes=1` in production) are
-derived from third-party scientific reconstructions that carry their own
-citation requirements.
+density and MCPM Cosmic Web) are derived from third-party scientific
+reconstructions that carry their own citation requirements.
 
 ### CF-4 / CF4++ — Cosmicflows-4 dark-matter density reconstruction
 
