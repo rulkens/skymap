@@ -116,7 +116,7 @@ fn vs(@builtin(vertex_index) vid: u32, instance: InstanceIn) -> VsOut {
   // the texture isn't upside down — matches the atlas's top-down
   // 'flipY: false' upload convention used by 'quads.wesl'.
   let cornerUv = quadUv(vid);
-  let uvLocal = vec2<f32>(cornerUv.x, 1.0 - cornerUv.y);
+  let uvLocal = vec2<f32>(cornerUv.x, cornerUv.y);
   out.atlasUv = mix(instance.uvRect.xy, instance.uvRect.zw, uvLocal);
   out.cornerUv = cornerUv;
   out.fadeAlpha = instance.orient.z;
