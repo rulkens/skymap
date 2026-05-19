@@ -141,22 +141,6 @@ type Props = {
   filamentIntensity?: number;
   onFilamentIntensityChange?: (value: number) => void;
   /**
-   * Whether fallback-orientation galaxies should be tinted magenta in the
-   * fragment shader.  Lets the user scan which surveys have real
-   * photometric orientation coverage.  Optional — older call-sites without
-   * this prop see no orientation toggle in the panel.
-   */
-  highlightFallback?: boolean;
-  /** Fired when the user toggles the "Highlight fallback" checkbox. */
-  onHighlightFallbackChange?: (enabled: boolean) => void;
-  /**
-   * Whether to discard fallback-orientation galaxies entirely (showing only
-   * galaxies with measured b/a + PA).
-   */
-  realOnlyMode?: boolean;
-  /** Fired when the user toggles the "Show only real" checkbox. */
-  onRealOnlyModeChange?: (enabled: boolean) => void;
-  /**
    * Whether the camera-distance depth fade is on (multiplies per-galaxy
    * alpha by `1 / (1 + (camDist / 1000Mpc)²)`).  Fights the cumulative-
    * overlap glow at the centre of the catalog volume.  Default ON.
@@ -383,10 +367,6 @@ export function SettingsPanel({
   onFilamentsChange,
   filamentIntensity,
   onFilamentIntensityChange,
-  highlightFallback,
-  onHighlightFallbackChange,
-  realOnlyMode,
-  onRealOnlyModeChange,
   depthFadeEnabled,
   onDepthFadeEnabledChange,
   onResetCamera,
@@ -432,14 +412,6 @@ export function SettingsPanel({
   // a half-broken UI (toggles that don't reflect state, or state with no
   // way to change it), so we treat them as a single feature flag.
   const showSurveyToggles = visibleSourceMask !== undefined && onToggleSource !== undefined;
-
-  // Orientation-visibility section: rendered only when both toggle pieces are
-  // wired by the parent.  Same gating pattern as the survey + LOD sections.
-  const showOrientationToggles =
-    highlightFallback !== undefined &&
-    onHighlightFallbackChange !== undefined &&
-    realOnlyMode !== undefined &&
-    onRealOnlyModeChange !== undefined;
 
   // Milky Way checkbox: rendered only when both the value and the
   // change-callback are wired by the parent.  Same opt-in idiom as
@@ -518,8 +490,10 @@ export function SettingsPanel({
         Section order is intentional: catalog choices first (what to look
         at), then bias correction (which sub-sample), then visual + tone
         (how the pixels are shaped), then overlays (decorations on top),
-        then orientation visibility (debug-ish), then input (rare).
-        Camera reset stays outside any section as a footer.
+        then input (rare).  Camera reset stays outside any section as a
+        footer.  (Catalog-audit diagnostics — e.g. the orientation-
+        fallback toggles — live in the DebugPanel's DataQualitySection
+        per the 2026-05-19 SettingsPanel UX audit.)
       */}
 
           {/* ── Data tier (small / medium / large) ──────────────────────────── */}
@@ -1014,39 +988,14 @@ export function SettingsPanel({
             </div>
           </CollapsibleSection>
 
-          {/* ── Orientation visibility (Task 15) ─────────────────────────────── */}
           {/*
-        Two toggles that share the same per-galaxy fallback flag (sign bit of
-        axisRatio, baked at upload time).  "Highlight" tints fallback
-        rows magenta in the fragment shader; "Show only real" discards
-        fallback fragments entirely.  Both default off so existing visual
-        behaviour is unchanged until the user opts in.
-
-        Default-closed because these are debug-ish: most users never touch
-        them, but fallback-orientation diagnostic work needs them.
+        Orientation-fallback diagnostic toggles ("Highlight fallback" /
+        "Show only real") used to live here.  They graduated to the
+        DebugPanel's `DataQualitySection` per the 2026-05-19 SettingsPanel
+        UX audit (Q16g) — they're catalog-audit diagnostics, not
+        user-facing settings, so they belong with the rest of the
+        developer-only debug surface.
       */}
-          {showOrientationToggles && (
-            <CollapsibleSection title="Orientation">
-              <div className={styles.panelRow}>
-                <label htmlFor="toggle-highlight-fallback">Highlight fallback</label>
-                <input
-                  id="toggle-highlight-fallback"
-                  type="checkbox"
-                  checked={highlightFallback}
-                  onChange={(e) => onHighlightFallbackChange(e.target.checked)}
-                />
-              </div>
-              <div className={styles.panelRow}>
-                <label htmlFor="toggle-real-only">Show only real</label>
-                <input
-                  id="toggle-real-only"
-                  type="checkbox"
-                  checked={realOnlyMode}
-                  onChange={(e) => onRealOnlyModeChange(e.target.checked)}
-                />
-              </div>
-            </CollapsibleSection>
-          )}
 
           {/* ── SpaceMouse (rev-3 6DOF input) ────────────────────────────────── */}
           {/*

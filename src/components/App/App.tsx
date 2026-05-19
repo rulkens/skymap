@@ -606,18 +606,10 @@ export function App(): React.ReactElement {
               setFilamentIntensity(value);
               handleRef.current?.filaments.setIntensity(value);
             }}
-            // Task 15 — orientation-visibility toggles. Same forward-only flow
-            // as galaxyTexturesEnabled: engine fires the echo callback
-            // synchronously inside the setter, so React state mirrors engine
-            // truth without an optimistic local update here.
-            highlightFallback={highlightFallback}
-            onHighlightFallbackChange={(enabled) => {
-              handleRef.current?.points.setHighlightFallback(enabled);
-            }}
-            realOnlyMode={realOnlyMode}
-            onRealOnlyModeChange={(enabled) => {
-              handleRef.current?.points.setRealOnly(enabled);
-            }}
+            // (Orientation-fallback toggles moved to the DebugPanel's
+            // DataQualitySection per the 2026-05-19 SettingsPanel UX audit
+            // — see Q16g.  They're catalog-audit diagnostics, not user-
+            // facing settings.)
             depthFadeEnabled={depthFadeEnabled}
             onDepthFadeEnabledChange={(enabled) => {
               handleRef.current?.points.setDepthFade(enabled);
@@ -884,6 +876,20 @@ export function App(): React.ReactElement {
               slots={handleRef.current.assetSlots}
               timingService={handleRef.current.debug.timingService}
               passOverrides={handleRef.current.debug.passOverrides}
+              // Orientation-fallback diagnostic toggles — moved out of
+              // SettingsPanel per the 2026-05-19 UX audit (Q16g).  Same
+              // forward-only flow as the engine handle's other points
+              // setters: the setter fires its echo callback synchronously,
+              // so React state mirrors engine truth without an optimistic
+              // local update here.
+              highlightFallback={highlightFallback}
+              realOnlyMode={realOnlyMode}
+              onHighlightFallbackChange={(enabled) => {
+                handleRef.current?.points.setHighlightFallback(enabled);
+              }}
+              onRealOnlyModeChange={(enabled) => {
+                handleRef.current?.points.setRealOnly(enabled);
+              }}
             />
           )}
       </div>
