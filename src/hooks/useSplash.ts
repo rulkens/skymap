@@ -63,6 +63,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { hasDeepLink } from '../utils/url/hasDeepLink';
 import type { UseSplashInput } from '../@types/splash/UseSplashInput';
 import type { UseSplashReturn } from '../@types/splash/UseSplashReturn';
+import type { SplashError } from '../@types/splash/SplashError';
 
 /** Persisted storage key — never rename without a migration. */
 export const SPLASH_STORAGE_KEY = 'skymap.splash.seenVersion';
@@ -114,7 +115,7 @@ function readUrlAtMount(): { hash: string; search: string } {
 }
 
 export function useSplash(input: UseSplashInput): UseSplashReturn {
-  const { status, loadProgress, famousMetaReady } = input;
+  const { status, loadProgress, famousMetaReady, famousMetaFailed = false } = input;
 
   // ── Initial visibility (snapshot at mount) ───────────────────────────────
   //
@@ -187,11 +188,36 @@ export function useSplash(input: UseSplashInput): UseSplashReturn {
     setSplashVisible(true);
   }, []);
 
+  // ── Error mapping ────────────────────────────────────────────────────────
+  //
+  // Engine errors (status.kind === 'error') take precedence over famous-meta
+  // failures because an engine error blocks the whole app — the famous-meta
+  // tooltip would be misleading next to a "catalog failed to load" headline.
+  // We discriminate engine errors by inspecting the message: anything
+  // mentioning "WebGPU" is reported as a webgpu-init failure (since the
+  // synchronous "no navigator.gpu at all" case is handled in main.tsx, the
+  // only thing left to surface here is the requestAdapter-returned-null
+  // path).  Everything else is bucketed as a catalog fetch failure, which
+  // is the dominant non-WebGPU error mode (a network blip on sdss.bin /
+  // glade.bin / 2mrs.bin).
+  const error = useMemo<SplashError | null>(() => {
+    if (status.kind === 'error') {
+      if (/webgpu/i.test(status.message)) {
+        return { kind: 'webgpu-init-failed', message: status.message };
+      }
+      return { kind: 'catalog-fetch-failed', message: status.message };
+    }
+    if (famousMetaFailed) {
+      return { kind: 'famous-meta-failed' };
+    }
+    return null;
+  }, [status, famousMetaFailed]);
+
   return {
     splashVisible,
     blocked,
     canContinueAnyway,
-    error: null, // populated in Task 6
+    error,
     dismissExplore,
     dismissTour,
     reopen,

@@ -122,3 +122,77 @@ describe('useSplash', () => {
     expect(result.current.canContinueAnyway).toBe(false);
   });
 });
+
+describe('useSplash error mapping', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('returns error.kind=webgpu-init-failed when status.kind=error with a webgpu message', () => {
+    const { result } = renderHook(() =>
+      useSplash(
+        makeInput({
+          status: { kind: 'error', message: 'WebGPU: requestAdapter returned null' },
+        }),
+      ),
+    );
+    expect(result.current.error).toEqual({
+      kind: 'webgpu-init-failed',
+      message: 'WebGPU: requestAdapter returned null',
+    });
+  });
+
+  it('returns error.kind=catalog-fetch-failed for non-webgpu engine errors', () => {
+    const { result } = renderHook(() =>
+      useSplash(
+        makeInput({
+          status: { kind: 'error', message: 'Failed to fetch sdss.bin' },
+        }),
+      ),
+    );
+    expect(result.current.error).toEqual({
+      kind: 'catalog-fetch-failed',
+      message: 'Failed to fetch sdss.bin',
+    });
+  });
+
+  it('returns error.kind=famous-meta-failed when famousMetaFailed=true and no engine error', () => {
+    const { result } = renderHook(() =>
+      useSplash(
+        makeInput({
+          status: { kind: 'ready', count: 100, source: 'sdss.bin' },
+          loadProgress: null,
+          famousMetaReady: true,
+          famousMetaFailed: true,
+        }),
+      ),
+    );
+    expect(result.current.error).toEqual({ kind: 'famous-meta-failed' });
+  });
+
+  it('prefers engine error over famous-meta-failed (engine error blocks the whole app)', () => {
+    const { result } = renderHook(() =>
+      useSplash(
+        makeInput({
+          status: { kind: 'error', message: 'Failed to fetch sdss.bin' },
+          famousMetaFailed: true,
+        }),
+      ),
+    );
+    expect(result.current.error?.kind).toBe('catalog-fetch-failed');
+  });
+
+  it('returns null on the happy path', () => {
+    const { result } = renderHook(() =>
+      useSplash(
+        makeInput({
+          status: { kind: 'ready', count: 100, source: 'sdss.bin' },
+          loadProgress: null,
+          famousMetaReady: true,
+        }),
+      ),
+    );
+    expect(result.current.error).toBeNull();
+  });
+});
