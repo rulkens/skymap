@@ -48,4 +48,11 @@ export type SurveySourceEntry = SourceEntryBase & {
    * pathway of the bias correction.
    */
   readonly schechter: SchechterTriple;
+  /**
+   * Short-name prefix for IAU-style coordinate designations
+   * (`<prefix> J<RA><Dec>`), e.g. `'SDSS'`, `'2MASX'`, `'GLADE'`. Each
+   * survey uses the upstream catalogue's own short-name convention; see
+   * `utils/math/iauName.ts` for the consumer.
+   */
+  readonly iauPrefix: string;
 };

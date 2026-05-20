@@ -109,6 +109,7 @@ export const SOURCE_REGISTRY = {
     // `Record<Source, ...>` shape without inventing values.
     mLim: 17.77,
     schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
+    iauPrefix: 'Synth',
   },
   [Source.SDSS]: {
     type: 'survey',
@@ -126,6 +127,7 @@ export const SOURCE_REGISTRY = {
     mLim: 17.77,
     // Blanton et al. 2003, r-band LF for the spec sample.
     schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
+    iauPrefix: 'SDSS',
   },
   [Source.TwoMRS]: {
     type: 'survey',
@@ -145,6 +147,8 @@ export const SOURCE_REGISTRY = {
     mLim: 11.75,
     // Kochanek et al. 2001, K-band Schechter from 2MASS.
     schechter: { mStar: -24.13, alpha: -1.1, phiStar: 0.0116 },
+    // 2MRS rows carry 2MASS XSC IDs — use the XSC short-name convention.
+    iauPrefix: '2MASX',
   },
   [Source.Glade]: {
     type: 'survey',
@@ -165,6 +169,7 @@ export const SOURCE_REGISTRY = {
     // Norberg et al. 2002 b_J Schechter as a stand-in for B (close
     // enough for visualisation purposes).
     schechter: { mStar: -20.83, alpha: -1.08, phiStar: 0.0093 },
+    iauPrefix: 'GLADE',
   },
   [Source.Famous]: {
     type: 'survey',
@@ -187,6 +192,7 @@ export const SOURCE_REGISTRY = {
     // these. Mirror the SDSS calibration to keep the registry total.
     mLim: 17.77,
     schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
+    iauPrefix: 'Famous',
   },
   [Source.Cluster]: { type: 'poi', code: Source.Cluster, label: 'Cluster', allSky: true, visible: true },
   [Source.Supercluster]: { type: 'poi', code: Source.Supercluster, label: 'Supercluster', allSky: true, visible: true },
@@ -230,6 +236,8 @@ export const SOURCE_REGISTRY = {
     // shape; vMaxWeight short-circuits to zero for NaN-photometry rows
     // so this rarely fires in practice.
     schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
+    // Matches the upstream catalogue's own short-name convention.
+    iauPrefix: 'MQ',
   },
 } as const satisfies Readonly<Record<Source, SourceEntry>>;
 
