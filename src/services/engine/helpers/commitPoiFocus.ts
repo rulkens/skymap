@@ -73,16 +73,23 @@ export type CommitPoiFocusOptions = {
  */
 export function commitPoiFocus(
   state: EngineState,
-  _cb: EngineCallbacks,
+  cb: EngineCallbacks,
   poi: PointOfInterest,
   options: CommitPoiFocusOptions,
 ): void {
   // 1. Update the unified selection slot — selectionSubsystem fires
-  //    `onPoiFocusChange(poi.id)` (and clears any prior galaxy via
-  //    `onSelectChange(null)`) from inside the setter.  Happens
-  //    regardless of cam-null state so deep-link drains still drive
-  //    the marker bump + URL hash before the camera comes up.
+  //    `onSelectChange(poi)` (resolved through getPoi) and clears any
+  //    prior selection.  Happens regardless of cam-null state so
+  //    deep-link drains still drive the marker bump before the camera
+  //    comes up.
   state.subsystems.selection.setSelected({ kind: 'poi', id: poi.id });
+
+  // 2. Fire the focus callback so the URL hash updates.  Same
+  //    rationale as the galaxy commitFocus: focus and selection are
+  //    separate concepts — onSelectChange fired from setSelected
+  //    above; onFocusChange is the deliberate-commitment signal that
+  //    deep-link writers subscribe to.
+  cb.camera?.onFocusChange?.(poi);
 
   // 2. Optional tween, gated on cam availability.  POIs without a
   //    physicalRadiusMpc are treated as zero radius by

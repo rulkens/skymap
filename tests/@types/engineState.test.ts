@@ -183,6 +183,7 @@ describe('EngineState type', () => {
           getFamousMeta: () => [],
           getFamousXrefs: () => ({}),
           getMilliquasNames: () => [],
+          getPoi: () => null,
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
@@ -368,6 +369,7 @@ describe('EngineState type', () => {
           getFamousMeta: () => [],
           getFamousXrefs: () => ({}),
           getMilliquasNames: () => [],
+          getPoi: () => null,
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,

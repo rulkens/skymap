@@ -75,9 +75,10 @@
 import { useEffect, useRef, useState } from 'react';
 import type { UseUrlSyncInput } from '../@types/engine/UseUrlSyncInput';
 import type { UrlSyncReturn } from '../@types/engine/UrlSyncReturn';
-import type { GalaxyInfo } from '../@types/engine/GalaxyInfo';
+import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
 import type { FocusTarget } from '../@types/camera/FocusTarget';
+import { isPoi } from '../services/engine/isPoi';
 import { parseFocusHash, selectionToFocusId } from '../services/url/focusUrl';
 import { parsePoiHash, poiIdToHash } from '../services/url/poiUrl';
 import { resolveFocusTarget } from '../services/engine/camera/resolveFocusTarget';
@@ -87,8 +88,7 @@ import type { SourceType } from '../@types/data/SourceType';
 // ── Pure helpers (re-exported for unit tests) ──────────────────────────────
 
 export type DesiredHashInput = {
-  focused: GalaxyInfo | null;
-  focusedPoiId: string | null;
+  focused: FocusableTarget | null;
   currentHash: string;
 };
 
@@ -98,26 +98,27 @@ export type DesiredHashOutput = {
 };
 
 /**
- * Pure decision: given the current galaxy + POI selections and the URL's
- * current hash, what should the URL's hash *body* be, and does it already
- * agree?
+ * Pure decision: given the current focus target and the URL's current
+ * hash, what should the URL's hash *body* be, and does it already agree?
  *
- * Body precedence (tiebreak: galaxy wins):
- *   1. focused set → `focus=<id>` (or `''` if the galaxy is non-encodable,
+ * Body shape:
+ *   1. focused is a galaxy → `focus=<id>` (or `''` if non-encodable,
  *      e.g. Synthetic source).
- *   2. else focusedPoiId set → `poi=<id>`.
- *   3. neither → `''`.
+ *   2. focused is a POI    → `poi=<id>`.
+ *   3. focused is null     → `''`.
  *
  * `matches` is the strip-leading-#-and-compare result, used by the write
  * effect to skip no-op `pushState` calls.
  */
 export function computeDesiredHash(input: DesiredHashInput): DesiredHashOutput {
   let desiredHashBody = '';
-  if (input.focused) {
-    const id = selectionToFocusId(input.focused);
-    if (id) desiredHashBody = `focus=${id}`;
-  } else if (input.focusedPoiId) {
-    desiredHashBody = poiIdToHash(input.focusedPoiId);
+  if (input.focused !== null) {
+    if (isPoi(input.focused)) {
+      desiredHashBody = poiIdToHash(input.focused.id);
+    } else {
+      const id = selectionToFocusId(input.focused);
+      if (id) desiredHashBody = `focus=${id}`;
+    }
   }
   const currentBody = input.currentHash.startsWith('#')
     ? input.currentHash.slice(1)
@@ -154,7 +155,6 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
     famousMeta,
     famousXrefs,
     aliasMap,
-    focusedPoiId,
     ready,
     pois,
     engineHandleRef,
@@ -231,14 +231,13 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
     if (pendingTarget !== null || pendingPoiId !== null) return;
     const { desiredHashBody, matches } = computeDesiredHash({
       focused,
-      focusedPoiId,
       currentHash: window.location.hash,
     });
     if (matches) return;
     const base = window.location.pathname + window.location.search;
     const next = desiredHashBody ? `${base}#${desiredHashBody}` : base;
     window.history.pushState(null, '', next);
-  }, [focused, focusedPoiId, pendingTarget, pendingPoiId]);
+  }, [focused, pendingTarget, pendingPoiId]);
 
   // ── Effect 3: galaxy drain ────────────────────────────────────────────
   // Resolve pendingTarget against the engine's currently loaded data

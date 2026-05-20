@@ -87,6 +87,7 @@
  */
 
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
+import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { GalaxySelection, Selection } from '../../../@types/engine/subsystems/Selection';
 import type { SelectionSubsystem } from '../../../@types/engine/subsystems/SelectionSubsystem';
@@ -115,7 +116,7 @@ function selectionEq(a: Selection | null, b: Selection | null): boolean {
 export function createSelectionSubsystem(
   input: CreateSelectionSubsystemInput,
 ): SelectionSubsystem {
-  const { cb, getCloud, getFamousMeta, getFamousXrefs, getMilliquasNames } = input;
+  const { cb, getCloud, getFamousMeta, getFamousXrefs, getMilliquasNames, getPoi } = input;
 
   // Closure-captured `let`s — genuinely inaccessible from outside.
   // Both start null; populated by the first hover pick / click resolve.
@@ -149,19 +150,23 @@ export function createSelectionSubsystem(
     );
   }
 
+  /**
+   * Resolve a Selection to its expanded `FocusableTarget` (GalaxyInfo
+   * | PointOfInterest), or null.  Galaxy variant uses the cloud
+   * lookup; POI variant resolves through `getPoi` (which the engine
+   * wires to `poiSubsystem.findPoi`).  Unknown POI ids resolve to
+   * null — fire-the-callback-with-null is the right semantics for a
+   * stale id pick.
+   */
+  function resolveTarget(sel: Selection | null): FocusableTarget | null {
+    if (sel === null) return null;
+    return sel.kind === 'galaxy' ? galaxyInfoFor(sel) : getPoi(sel.id);
+  }
+
   function setHovered(sel: Selection | null): void {
     if (selectionEq(sel, hovered)) return;
     hovered = sel;
-    if (sel === null) {
-      cb.selection?.onHoverChange?.(null);
-      cb.selection?.onPoiHoverChange?.(null);
-    } else if (sel.kind === 'galaxy') {
-      cb.selection?.onHoverChange?.(galaxyInfoFor(sel));
-      cb.selection?.onPoiHoverChange?.(null);
-    } else {
-      cb.selection?.onHoverChange?.(null);
-      cb.selection?.onPoiHoverChange?.(sel.id);
-    }
+    cb.selection?.onHoverChange?.(resolveTarget(sel));
   }
 
   function setSelected(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null): void {
@@ -169,19 +174,13 @@ export function createSelectionSubsystem(
     selected = sel;
     // `prebuiltInfo` short-circuits the cloud lookup for the
     // `selectByAlias` race window — see the module header for the
-    // pre-GPU-upload story.  Only applies to galaxy selections; POI
-    // ids resolve directly through the POI table at the consumer.
-    if (sel === null) {
-      cb.selection?.onSelectChange?.(null);
-      cb.camera?.onPoiFocusChange?.(null);
-    } else if (sel.kind === 'galaxy') {
-      const info = prebuiltInfo !== undefined ? prebuiltInfo : galaxyInfoFor(sel);
-      cb.selection?.onSelectChange?.(info);
-      cb.camera?.onPoiFocusChange?.(null);
-    } else {
-      cb.selection?.onSelectChange?.(null);
-      cb.camera?.onPoiFocusChange?.(sel.id);
-    }
+    // pre-GPU-upload story.  Galaxy-only escape hatch; POI ids
+    // resolve directly through the POI table.
+    const target =
+      sel !== null && sel.kind === 'galaxy' && prebuiltInfo !== undefined
+        ? prebuiltInfo
+        : resolveTarget(sel);
+    cb.selection?.onSelectChange?.(target);
   }
 
   function destroy(): void {

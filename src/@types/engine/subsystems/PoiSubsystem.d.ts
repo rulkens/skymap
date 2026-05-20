@@ -39,6 +39,13 @@ export type PoiSubsystem = LabelProducer & {
    */
   produceMarkers(state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[];
   /**
+   * Look up a POI by id, or null if it doesn't appear in the current
+   * table.  Used by selectionSubsystem to expand a `{kind:'poi', id}`
+   * Selection to the full PointOfInterest before firing
+   * onHoverChange / onSelectChange.
+   */
+  findPoi(id: string): PointOfInterest | null;
+  /**
    * Return the POIs of the given category in the subsystem's current
    * iteration order — i.e. the same order `produceMarkers` walks them
    * when it builds the per-frame descriptor list.

@@ -590,6 +590,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         getFamousMeta: () => state.sources.famousMeta,
         getFamousXrefs: () => state.sources.famousXrefs,
         getMilliquasNames: () => state.sources.milliquasNames,
+        // Forward-reference: `state.subsystems.pois` is bound later in
+        // this same literal but the closure resolves at call time,
+        // long after the literal completes.  Mirrors the cloud/famous
+        // accessors above.
+        getPoi: (id) => state.subsystems.pois.findPoi(id),
       }),
 
       // ── Bias-correction subsystem (Spec E phase E.3 + E.4) ────────

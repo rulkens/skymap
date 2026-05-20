@@ -2,27 +2,19 @@
  * useUrlSync — pure-helper coverage.
  *
  * The hook itself is DOM glue over `location.hash` and `history.pushState`,
- * and the project's vitest config runs in node env (no DOM).  Following
- * the same pattern as the legacy `useFocusUrlSync.test.ts`, we test the
- * pure decision functions directly — `computeDesiredHash` and
- * `initialPendingFromHash` — and rely on manual smoke testing for the
- * effect plumbing.
+ * vitest runs in node env (no DOM).  We test the pure decision functions
+ * directly — `computeDesiredHash` and `initialPendingFromHash` — and rely
+ * on manual smoke testing for the effect plumbing.
  *
- * Interesting branches:
- *   1. computeDesiredHash with neither set → empty body.
- *   2. computeDesiredHash with only focused (galaxy) → `focus=<id>` body.
- *   3. computeDesiredHash with only focusedPoiId → `poi=<id>` body.
- *   4. computeDesiredHash with BOTH set → galaxy wins (mutex tiebreak).
- *   5. computeDesiredHash short-circuits when currentHash matches.
- *   6. initialPendingFromHash disambiguates #focus= vs #poi= vs empty.
+ * `focused` is a FocusableTarget union (galaxy | POI | null); the body
+ * shape is decided by isPoi() inside the helper.
  */
 import { describe, it, expect } from 'vitest';
 import { computeDesiredHash, initialPendingFromHash } from '../../src/hooks/useUrlSync';
 import type { GalaxyInfo } from '../../src/@types/engine/GalaxyInfo';
+import type { PointOfInterest } from '../../src/@types/engine/subsystems/PointOfInterest';
 import { Source } from '../../src/data/sources';
 
-// Minimal galaxy fixture — selectionToFocusId only needs `source` +
-// identity fields.  Mirror the shape the legacy test uses.
 function makeGalaxy(): GalaxyInfo {
   return {
     source: Source.SDSS,
@@ -30,49 +22,42 @@ function makeGalaxy(): GalaxyInfo {
   } as unknown as GalaxyInfo;
 }
 
+function makePoi(id: string): PointOfInterest {
+  return { id, name: id, category: 'cluster', worldPos: [0, 0, 0] };
+}
+
 describe('computeDesiredHash (unified)', () => {
-  it('returns empty body when neither selection is set', () => {
-    const out = computeDesiredHash({ focused: null, focusedPoiId: null, currentHash: '' });
+  it('returns empty body when focus is null', () => {
+    const out = computeDesiredHash({ focused: null, currentHash: '' });
     expect(out.desiredHashBody).toBe('');
     expect(out.matches).toBe(true);
   });
 
-  it('returns focus=<id> when only a galaxy is focused', () => {
-    const out = computeDesiredHash({ focused: makeGalaxy(), focusedPoiId: null, currentHash: '' });
+  it('returns focus=<id> when focused is a galaxy', () => {
+    const out = computeDesiredHash({ focused: makeGalaxy(), currentHash: '' });
     expect(out.desiredHashBody).toMatch(/^focus=/);
     expect(out.matches).toBe(false);
   });
 
-  it('returns poi=<id> when only a POI is focused', () => {
+  it('returns poi=<id> when focused is a POI', () => {
     const out = computeDesiredHash({
-      focused: null,
-      focusedPoiId: 'virgo-cluster',
+      focused: makePoi('virgo-cluster'),
       currentHash: '',
     });
     expect(out.desiredHashBody).toBe('poi=virgo-cluster');
     expect(out.matches).toBe(false);
   });
 
-  it('prefers galaxy when both are set (engine mutex tiebreak)', () => {
-    const out = computeDesiredHash({
-      focused: makeGalaxy(),
-      focusedPoiId: 'virgo-cluster',
-      currentHash: '',
-    });
-    expect(out.desiredHashBody).toMatch(/^focus=/);
-  });
-
   it('short-circuits when currentHash already matches a poi body', () => {
     const out = computeDesiredHash({
-      focused: null,
-      focusedPoiId: 'virgo-cluster',
+      focused: makePoi('virgo-cluster'),
       currentHash: '#poi=virgo-cluster',
     });
     expect(out.matches).toBe(true);
   });
 
   it('short-circuits when currentHash already matches the empty body', () => {
-    const out = computeDesiredHash({ focused: null, focusedPoiId: null, currentHash: '' });
+    const out = computeDesiredHash({ focused: null, currentHash: '' });
     expect(out.matches).toBe(true);
   });
 });

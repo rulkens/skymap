@@ -46,7 +46,7 @@ import { createEngine } from '../services/engine';
 import { computeScaleInfo } from '../services/engine/helpers/scaleBar';
 import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { EngineStatus } from '../@types/engine/EngineStatus';
-import type { GalaxyInfo } from '../@types/engine/GalaxyInfo';
+import type { FocusableTarget } from '../@types/engine/FocusableTarget';
 import type { ScaleInfo } from '../@types/engine/ScaleInfo';
 import type { EngineCallbacks } from '../@types/engine/EngineCallbacks';
 import type { LoadProgressState } from '../@types/loading/LoadProgressState';
@@ -79,9 +79,9 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const handleRef = useRef<EngineHandle | null>(null);
 
   const [status, setStatus] = useState<EngineStatus>({ kind: 'initializing' });
-  const [hovered, setHovered] = useState<GalaxyInfo | null>(null);
-  const [selected, setSelected] = useState<GalaxyInfo | null>(null);
-  const [focused, setFocused] = useState<GalaxyInfo | null>(null);
+  const [hovered, setHovered] = useState<FocusableTarget | null>(null);
+  const [selected, setSelected] = useState<FocusableTarget | null>(null);
+  const [focused, setFocused] = useState<FocusableTarget | null>(null);
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
   const [fps, setFps] = useState<number>(0);
   const [sourceCounts, setSourceCounts] = useState<Partial<Record<SourceType, number>>>({});

@@ -84,6 +84,7 @@ describe('createSelectionSubsystem', () => {
       getFamousMeta: () => [],
       getFamousXrefs: () => ({}),
       getMilliquasNames: () => [],
+          getPoi: () => null,
     });
 
     // First call from null → null is itself a no-op (selectionEq treats
@@ -111,6 +112,7 @@ describe('createSelectionSubsystem', () => {
       getFamousMeta: () => [],
       getFamousXrefs: () => ({}),
       getMilliquasNames: () => [],
+          getPoi: () => null,
     });
 
     sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 });
@@ -129,6 +131,7 @@ describe('createSelectionSubsystem', () => {
       getFamousMeta: () => [],
       getFamousXrefs: () => ({}),
       getMilliquasNames: () => [],
+          getPoi: () => null,
     });
 
     // Sentinel object — we don't care what's inside, only that the
@@ -149,6 +152,7 @@ describe('createSelectionSubsystem', () => {
       getFamousMeta: () => [],
       getFamousXrefs: () => ({}),
       getMilliquasNames: () => [],
+          getPoi: () => null,
     });
 
     expect(sub.galaxyInfoFor({ kind: 'galaxy', source: Source.SDSS, localIdx: 0 })).toBeNull();
@@ -163,6 +167,7 @@ describe('createSelectionSubsystem', () => {
       getFamousMeta: () => [],
       getFamousXrefs: () => ({}),
       getMilliquasNames: () => [],
+          getPoi: () => null,
     });
 
     // Negative — invalid.
@@ -180,6 +185,7 @@ describe('createSelectionSubsystem', () => {
       getFamousMeta: () => [],
       getFamousXrefs: () => ({}),
       getMilliquasNames: () => [],
+          getPoi: () => null,
     });
 
     sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 });

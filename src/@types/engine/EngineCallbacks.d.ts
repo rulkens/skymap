@@ -6,6 +6,7 @@
 
 import type { EngineStatus } from './EngineStatus';
 import type { GalaxyInfo } from './GalaxyInfo';
+import type { FocusableTarget } from './FocusableTarget';
 import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
 import type { SourceType } from '../data/SourceType';
@@ -78,26 +79,17 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Selection-state callbacks.  Both required because every engine
-   * consumer needs hover/select fan-out — the InfoCard text + halo
-   * highlight depend on them.
+   * Selection-state callbacks.  Carry the resolved `FocusableTarget`
+   * (galaxy or POI) so consumers don't need to branch on a separate
+   * id callback — they receive the full GalaxyInfo / PointOfInterest
+   * directly.  Both required: every engine consumer needs hover /
+   * select fan-out (InfoCard text, halo, hover preview).
    */
   selection: {
-    /** Fired when the pinned/selected point changes. */
-    onSelectChange: (info: GalaxyInfo | null) => void;
-    /** Fired when the point under the cursor changes (null = empty sky). */
-    onHoverChange: (info: GalaxyInfo | null) => void;
-    /**
-     * Fired when the POI under the cursor changes — cluster /
-     * supercluster / void ring entered or left.  Passes the POI id on
-     * enter, `null` when the cursor leaves the ring (or moves to empty
-     * sky, or to a galaxy).  Parallel to `onHoverChange` (galaxy);
-     * the two never both fire non-null on the same pick — a single
-     * pick resolves to galaxy OR POI, not both.  See runFrame.ts's
-     * hover-throttler dispatch.  Optional; the InfoCard hover preview
-     * is the only subscriber today.
-     */
-    onPoiHoverChange?: (poiId: string | null) => void;
+    /** Fired when the pinned/selected entity changes. */
+    onSelectChange: (target: FocusableTarget | null) => void;
+    /** Fired when the entity under the cursor changes (null = empty sky). */
+    onHoverChange: (target: FocusableTarget | null) => void;
   };
 
   /**
@@ -112,7 +104,7 @@ export type EngineCallbacks = {
     onAutoRotateChange?: (enabled: boolean) => void;
     /**
      * Fired when the camera-focus target changes — i.e. the engine has
-     * started a tween toward (or away from) a specific galaxy.
+     * started a tween toward (or away from) a specific galaxy or POI.
      *
      * Selection (`onSelectChange`) and focus are separate concepts:
      *   - Selection is the pin state — InfoCard, halo highlight.  A bare
@@ -123,23 +115,12 @@ export type EngineCallbacks = {
      *     addition to* `onSelectChange`.
      *
      * The deep-link URL hook subscribes to focus, not selection, so a
-     * casual click doesn't pollute browser history with `#focus=…`
-     * entries — only deliberate focus actions do.
+     * casual click doesn't pollute browser history with hash entries —
+     * only deliberate focus actions do.  The `FocusableTarget` union
+     * means one callback covers both galaxy and POI focus; consumers
+     * branch on the discriminant (use `isPoi`).
      */
-    onFocusChange?: (info: GalaxyInfo | null) => void;
-    /**
-     * Fired when the POI focus target changes — i.e. the user clicked
-     * a cluster / supercluster / void ring (or a deep-link drain
-     * resolved a `#poi=…` hash).  Passes the POI id on focus, `null`
-     * when focus clears (empty-space click, InfoCard close button).
-     *
-     * Parallel to `onFocusChange` (the galaxy version).  The two
-     * callbacks never both fire on the same gesture — clicking a POI
-     * clears the galaxy selection, and vice versa — so React's URL-
-     * hash hook can route each into its respective hash segment
-     * (`#focus=` vs `#poi=`) without cross-talk.
-     */
-    onPoiFocusChange?: (poiId: string | null) => void;
+    onFocusChange?: (target: FocusableTarget | null) => void;
     /**
      * Reserved for the legacy engine-derived scale-bar emission.
      * Scale-bar derivation now happens React-side from

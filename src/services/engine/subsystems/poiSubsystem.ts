@@ -317,6 +317,13 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     labelVisibility = { ...labelVisibility, [category]: visible };
   }
 
+  function findPoi(id: string): PointOfInterest | null {
+    // O(n) walk; n ≤ ~50 (clusters + SCs + voids + famous galaxies),
+    // so this is invisible at the budget level even when the
+    // selectionSubsystem looks up POI hovers per pick frame.
+    return pois.find((p) => p.id === id) ?? null;
+  }
+
   function getPoisForCategory(category: PoiCategory): readonly PointOfInterest[] {
     // O(n) filter over the POI table.  n is ≤ ~50 (clusters + SCs +
     // voids + famous galaxies combined) and this is only called from
@@ -638,6 +645,7 @@ export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSub
     clearPois,
     setCategoryMarkerVisible,
     setCategoryLabelVisible,
+    findPoi,
     getPoisForCategory,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.
