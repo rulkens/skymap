@@ -108,6 +108,6 @@ describe('Splash', () => {
 
   it('shows the WebGPU-init error message when error.kind=webgpu-init-failed', () => {
     render(createElement(Splash, makeProps({ error: { kind: 'webgpu-init-failed', message: 'adapter null' } })));
-    expect(screen.getByText(/webgpu/i)).toBeInTheDocument();
+    expect(screen.getByText(/webgpu failed/i)).toBeInTheDocument();
   });
 });

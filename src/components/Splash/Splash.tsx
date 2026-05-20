@@ -111,7 +111,7 @@ export function Splash(props: SplashProps): ReactNode {
           Explore millions of galaxies in 3D
         </h1>
         <p id={BODY_ID} className={styles.body}>
-          A real-time 3D map of the universe, rendered in your browser. Built from real cosmic data — the{' '}
+          Drawn in your browser with WebGPU. Built from real cosmic data — the{' '}
           <a href="https://www.sdss.org/" target="_blank" rel="noopener noreferrer">
             SDSS
           </a>
