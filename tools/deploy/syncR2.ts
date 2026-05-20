@@ -73,13 +73,10 @@ const CACHE_CONTROL = 'public, max-age=86400';
 
 const ALLOW = (name: string): boolean =>
   /^(sdss|glade)-(small|medium|large)\.bin$/.test(name) ||
-  // Milliquas v8 (Flesch 2023): same tier-suffixed pattern as SDSS/GLADE,
-  // with a per-tier `_names.json` sidecar that carries the Name + class
-  // strings InfoCard renders on a quasar pick.  `small` is currently a
-  // 0-target tier (no bin produced) but the regex stays permissive in
-  // case a future tier reshuffle revives it.
+  // Milliquas v8 (Flesch 2023): same tier-suffixed pattern as
+  // SDSS/GLADE.  Class + parent-survey metadata rides on the bin
+  // itself in v5 — no JSON sidecar to upload.
   /^milliquas-(small|medium|large)\.bin$/.test(name) ||
-  /^milliquas-(small|medium|large)_names\.json$/.test(name) ||
   name === '2mrs.bin' ||
   name === 'famous.bin' ||
   name === 'filaments.bin' ||
@@ -185,6 +182,38 @@ function uploadFile(localPath: string, key: string): void {
   );
 }
 
+/**
+ * Remove leftover Milliquas names-JSON sidecar keys from R2.
+ *
+ * The v5 .bin format folds Milliquas class + parent-survey metadata
+ * into the binary, so `milliquas-{small,medium,large}_names.json`
+ * are no longer produced or fetched.  Wrangler's `r2 object delete`
+ * is idempotent (no error on a missing key), so this runs cleanly
+ * on every sync — including the first sync after a fresh bucket
+ * provision, where no leftover keys exist.
+ *
+ * Why delete rather than just stop uploading?  R2 keeps every object
+ * that was ever PUT, so without explicit deletion the stale 34 MB of
+ * `_names.json` would sit there indefinitely, paid for and served
+ * for any old client that hard-coded the URL.
+ */
+function deleteOrphanedMilliquasNamesSidecars(): void {
+  const orphans = [
+    'data/milliquas-small_names.json',
+    'data/milliquas-medium_names.json',
+    'data/milliquas-large_names.json',
+  ];
+  for (const key of orphans) {
+    console.log(`▶ delete r2://${BUCKET}/${key} (orphaned v4 sidecar)`);
+    // `--remote` forces the deletion against the actual Cloudflare-
+    // hosted bucket (not the local-dev simulator).  Missing keys are
+    // a no-op in wrangler, so we don't even need a 404 swallow here.
+    execSync(`npx wrangler r2 object delete ${BUCKET}/${key} --remote`, {
+      stdio: 'inherit',
+    });
+  }
+}
+
 function main(): void {
   const files = readdirSync(DATA_DIR).filter(ALLOW);
   if (files.length === 0) {
@@ -227,6 +256,9 @@ function main(): void {
 
   const total = files.length + presentExtras.length;
   console.log(`\n✓ Synced ${total} file(s) to r2://${BUCKET}/data/`);
+
+  console.log('\n--- Orphaned sidecar cleanup ---\n');
+  deleteOrphanedMilliquasNamesSidecars();
 }
 
 main();
