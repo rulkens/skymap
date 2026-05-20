@@ -27,7 +27,7 @@
  * modules so this file can stay focused on the imperative orchestration:
  *
  *   Pure helpers:
- *   - `focusTween.ts`          — focus camera tween constants + distance helper
+ *   - `galaxyFocusDistance.ts` / `poiFocusDistance.ts` — framing-distance helpers
  *   - `galaxyInfoBuilder.ts`   — buildGalaxyInfo / maxAbsCoord / niceRound
  *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
  *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot

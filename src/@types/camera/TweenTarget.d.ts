@@ -19,7 +19,7 @@ export type TweenTarget = {
   z: number;
   /**
    * Physical galaxy diameter in kpc — drives the focus distance via
-   * `focusDistanceMpc`.  Callers that genuinely lack a diameter (none
+   * `galaxyFocusDistance`.  Callers that genuinely lack a diameter (none
    * today) should pass the project-wide fallback explicitly rather
    * than letting NaN through.
    */

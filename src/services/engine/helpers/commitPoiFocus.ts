@@ -1,57 +1,26 @@
 /**
  * commitPoiFocus — the shared "we have decided to focus on this POI"
- * protocol.  Parallel to `commitFocus` (galaxy version).
+ * protocol.  Parallel to `commitGalaxyFocus`.
  *
- * ### Why a separate helper from `commitFocus`
+ * Three steps: update the unified selection slot (which fans out
+ * onSelectChange + onPoiFocusChange via selectionSubsystem); fire
+ * onFocusChange for the URL-hash mirror; optionally start the camera
+ * tween via `tweenToPoi`.
  *
- * Galaxy focus and POI focus share the same shape (update subsystem,
- * fire React callback, optional camera tween) but diverge on every
- * concrete: which subsystem, which callback, which distance helper.
- * One helper that branched on a `kind` flag would couple the two
- * concerns; two parallel helpers keep each call surface narrow and the
- * per-domain comments local.
- *
- * ### Tween: built inline, not via `tweenToGalaxy`
- *
- * `tweenToGalaxy` derives its target distance from
- * `focusDistanceMpc(diameterKpc)` — a galaxy-shaped helper that takes
- * a kpc diameter and uses a flat 8× multiplier.  POIs don't have a kpc
- * diameter (they have a Mpc radius), and the per-category framing
- * multipliers (`poiFocusDistanceMpc`) differ across cluster /
- * supercluster / void.  Calling `tweenToGalaxy` with a fudged
- * `diameterKpc` would silently produce the wrong framing.
- *
- * Instead we build the `state.subsystems.tweens.start({...})` payload
- * here, mirroring `tweenToGalaxy`'s shape but plugging in
- * `poiFocusDistanceMpc(category, physicalRadiusMpc)` for `toDistance`.
- *
- * ### Why `setSelectedPoi` + `onPoiFocusChange` fire even when cam is null
+ * ### Why the selection + onFocusChange fire even when cam is null
  *
  * `state.cam` is null pre-bootstrap and post-destroy.  Skipping the
  * subsystem update + React callback in those windows would strand a
- * deep-link drain (`usePoiUrlSync` parses `#poi=…` and calls
- * `engine.camera.focusOn(poi)` the moment data is ready, BEFORE
- * the camera is necessarily live).  The subsystem update needs to
- * happen so the selected POI's marker descriptor renders with bumped
- * alpha as soon as the renderer comes up; the React callback needs
- * to fire so the URL hash mirrors the intent.
- *
- * Only the camera tween is gated on `state.cam !== null`.  This
- * deliberately diverges from `focusOn` (galaxy), which gates its
- * `onFocusChange` callback on cam availability too — focus on a
- * catalog galaxy without a live camera produces no observable result
- * because the selection halo subsystem also needs the camera to draw,
- * but the POI marker subsystem renders the bumped-alpha highlight from
- * its own per-frame producer regardless.
+ * deep-link drain that resolves `#poi=…` before the camera is live.
+ * Only the camera tween is gated on cam — `tweenToPoi` absorbs that
+ * check internally.  This deliberately diverges from `focusOn`
+ * (galaxy), which gates onFocusChange on cam availability too.
  */
-
-import { vec3 } from 'gl-matrix';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
 import type { PointOfInterest } from '../../../@types/engine/subsystems/PointOfInterest';
-import { FOCUS_TWEEN_MS } from '../camera/focusTween';
-import { poiFocusDistanceMpc } from '../camera/poiFocusTween';
+import { tweenToPoi } from '../camera/tweenToPoi';
 
 export type CommitPoiFocusOptions = {
   /** True for double-click (tween + open InfoCard); false for single-click (open only). */
@@ -59,17 +28,15 @@ export type CommitPoiFocusOptions = {
 };
 
 /**
- * Run the shared POI focus-commit dance: update the POI subsystem's
- * selection state, fire `onPoiFocusChange`, then optionally start the
- * camera tween.
+ * Run the shared POI focus-commit dance: update the unified selection
+ * slot, fire `onFocusChange`, then optionally start the camera tween.
  *
- * Order matters: `setSelectedPoi` first so the marker descriptor for the
- * selected POI gets its alpha bump on the very next frame (before React
- * has even observed the callback), `onPoiFocusChange` second so the
- * URL hash + InfoCard echo the new focus, tween last so the camera
- * animation begins on a frame where every other state is consistent.
- *
- * `state.cam` null gates ONLY the tween — see module header.
+ * Order matters: selection first so the marker descriptor gets its
+ * alpha bump on the next frame (before React has observed the
+ * callback); `onFocusChange` second so the URL hash echoes the new
+ * focus; tween last so the camera animation begins on a frame where
+ * every other state is consistent.  `tweenToPoi` absorbs cam-null
+ * internally — see module header.
  */
 export function commitPoiFocus(
   state: EngineState,
@@ -91,30 +58,8 @@ export function commitPoiFocus(
   //    deep-link writers subscribe to.
   cb.camera?.onFocusChange?.(poi);
 
-  // 2. Optional tween, gated on cam availability.  POIs without a
-  //    physicalRadiusMpc are treated as zero radius by
-  //    `poiFocusDistanceMpc`, which then clamps to the 1 Mpc minimum.
-  //    In practice every cluster / SC / void POI sets the field, so
-  //    this is belt-and-braces.
-  if (!options.tween) return;
-  const cam = state.cam;
-  if (!cam) return;
-  const radius = poi.physicalRadiusMpc ?? 0;
-  state.subsystems.tweens.start({
-    startMs: performance.now(),
-    durationMs: FOCUS_TWEEN_MS,
-    // vec3.clone copies the target tuple so later mutation of
-    // cam.target doesn't corrupt the from-snapshot.
-    fromTarget: vec3.clone(cam.target as vec3),
-    toTarget: vec3.fromValues(poi.worldPos[0], poi.worldPos[1], poi.worldPos[2]),
-    fromDistance: cam.distance,
-    toDistance: poiFocusDistanceMpc(poi.category, radius),
-    fromYaw: cam.yaw,
-    toYaw: cam.yaw,
-    fromPitch: cam.pitch,
-    toPitch: cam.pitch,
-  });
-  // Wake the render loop — the tween's per-frame advance keeps it
-  // ticking until completion.
-  state.subsystems.scheduler.requestRender();
+  // 3. Optional tween — `tweenToPoi` absorbs the cam-null guard
+  //    internally, so the deep-link drain pre-bootstrap path still
+  //    works: selection lands above, tween is silently skipped.
+  if (options.tween) tweenToPoi(state, poi);
 }

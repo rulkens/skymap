@@ -5,8 +5,8 @@
  * Parallel to `commitFocus.test.ts` but tailored to the POI shape:
  *   - Selection update goes through `state.subsystems.pois.setSelectedPoi`.
  *   - React fan-out goes through `cb.camera?.onPoiFocusChange`.
- *   - Tween distance comes from `poiFocusDistanceMpc(category, radiusMpc)`,
- *     NOT the galaxy `focusDistanceMpc(diameterKpc)`.
+ *   - Tween distance comes from `poiFocusDistance(category, radiusMpc)`,
+ *     NOT the galaxy `galaxyFocusDistance(diameterKpc)`.
  *
  * Why a separate suite: the helper has its own cam-null contract (only
  * the tween is gated; subsystem + callback still fire) which differs
@@ -68,7 +68,7 @@ describe('commitPoiFocus', () => {
     expect(state.subsystems.tweens.start).not.toHaveBeenCalled();
   });
 
-  it('starts a tween with poiFocusDistanceMpc when tween is true', () => {
+  it('starts a tween with poiFocusDistance when tween is true', () => {
     const state = makeMockState();
     const cb = makeMockCb();
     commitPoiFocus(state, cb, virgo, { tween: true });

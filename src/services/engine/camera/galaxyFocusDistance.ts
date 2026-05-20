@@ -1,27 +1,11 @@
 /**
- * focusTween — constants and helpers for the focus-on-galaxy camera tween.
+ * galaxyFocusDistance — camera framing-distance derivation for galaxy
+ * focus tweens.  Companion to `poiFocusDistance.ts`; tween duration
+ * lives in `focusTweenDuration.ts`.
  *
- * The engine offers two camera tweens — `focusOn(worldXYZ)` and
- * `focusOnHome()` — both sharing a 600 ms duration and, for `focusOn`,
- * a target distance derived from the galaxy's physical diameter.
- *
- * Why expose the diameter as an argument now?  Earlier versions used a
- * project-wide 30 kpc placeholder, which framed dwarfs too far away (the
- * camera looked like it had stopped short) and giants too close (the
- * camera ended up inside the disk).  v4 binary format gives every galaxy
- * its real diameter; this helper now accepts it so the framing matches
- * each galaxy's actual size.
+ * The galaxy's physical diameter drives the framing.  v4 binary format
+ * carries per-galaxy diameters, so we derive the distance per-target.
  */
-
-/**
- * Tween duration for focus / home camera moves, in milliseconds.
- *
- * 600 ms is the sweet spot the UI explored: long enough that the user reads
- * it as motion (not a teleport) and gets oriented in the new frame, short
- * enough that it never feels sluggish during rapid clicking through the
- * InfoCard list.
- */
-export const FOCUS_TWEEN_MS = 600;
 
 /** Convert kpc → Mpc (1 Mpc = 1000 kpc). */
 const KPC_PER_MPC = 1000;
@@ -65,7 +49,7 @@ const MIN_FOCUS_DISTANCE_MPC = 0.15;
  * galaxies don't end up with the camera inside their disk.  Callers
  * without a diameter on hand can simply omit the argument.
  */
-export function focusDistanceMpc(diameterKpc?: number): number {
+export function galaxyFocusDistance(diameterKpc?: number): number {
   const d =
     diameterKpc !== undefined && Number.isFinite(diameterKpc) && diameterKpc > 0
       ? diameterKpc

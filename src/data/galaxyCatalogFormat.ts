@@ -18,7 +18,7 @@
  *   - point-billboard apparent radius (points.wgsl GALAXY_RADIUS_MPC)
  *   - thumbnail quad world-space size (engine.ts sizeWorldMpc)
  *   - 3D disk plane world-space size
- *   - focusDistanceMpc tween destination
+ *   - galaxyFocusDistance tween destination
  *
  * Why preserve NaN round-trip if the renderer can't tolerate NaN?  The
  * encoder/decoder remain pure functions (easy to unit-test in isolation

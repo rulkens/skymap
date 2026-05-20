@@ -15,7 +15,7 @@ import { commitPoiFocus } from './commitPoiFocus';
  *     `onFocusChange` fan-out, optional selection update.  Cam-null
  *     gating happens at the calling `focusOn` wrapper in `engine.ts`.
  *   - POI    → `commitPoiFocus`: framing-distance derivation via
- *     `poiFocusDistanceMpc`, `onFocusChange` fan-out, selection update.
+ *     `poiFocusDistance`, `onFocusChange` fan-out, selection update.
  *     Absorbs cam-null internally so deep-link drains establish
  *     selected state pre-bootstrap.
  *
