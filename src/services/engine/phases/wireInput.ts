@@ -31,7 +31,6 @@ import { computeInitialCamera } from '../camera/cameraFraming';
 import { buildGalaxyInfo } from '../helpers/galaxyInfoBuilder';
 import { seedSettingsCallbacks } from '../wiring/seedSettingsCallbacks';
 import { cssToTexPx } from '../helpers/cssToTexPx';
-import { commitPoiFocus } from '../helpers/commitPoiFocus';
 import { resolvePoiFromPick } from '../helpers/resolvePoiFromPick';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -302,13 +301,13 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       const pick = runPickAtCss(xCss, yCss);
       if (!pick) return;
       pick.then((result) => {
-        // Click on empty space → clear; click on galaxy → pin it;
-        // click on POI ring → open the InfoCard via commitPoiFocus
-        // WITHOUT a camera tween (single-click is "show me what this
-        // is", double-click is "take me there").  The `GalaxyInfo` /
-        // `PointOfInterest` payload is cached for the dblclick handler
-        // — see `lastClickedInfo` / `lastClickedPoi` above for the
-        // race-condition rationale.
+        // Single-click semantics for both kinds: clear / select.
+        // Double-click upgrades to focus (tween + URL hash); that path
+        // runs via `handle.camera.focusOn` in the dblclick handler.
+        // The resolved `GalaxyInfo` / `PointOfInterest` payload is
+        // cached on `lastClickedInfo` / `lastClickedPoi` so the
+        // dblclick handler can reuse it without a second pick — see
+        // those slots above for the race-condition rationale.
         switch (result.kind) {
           case 'clear':
             // Unified slot: setSelected(null) clears whatever was
@@ -329,11 +328,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
             lastClickedPoi = null;
             break;
           case 'poi':
-            // POI variant — commitPoiFocus calls setSelected({kind:'poi',...}),
-            // which fires onPoiFocusChange(id) and clears any prior
-            // galaxy via onSelectChange(null).  `tween: false` keeps
-            // the camera still on single-click.
-            commitPoiFocus(state, cb, result.poi, { tween: false });
+            // POI variant — single-click is pure selection (parallel
+            // to the galaxy single-click above): just update the
+            // unified selection slot.  The dblclick handler will run
+            // commitPoiFocus via `focusOn` if the user upgrades the
+            // gesture, which is where onFocusChange + tween fire.
+            state.subsystems.selection.setSelected({ kind: 'poi', id: result.poi.id });
             lastClickedInfo = null;
             lastClickedPoi = result.poi;
             break;

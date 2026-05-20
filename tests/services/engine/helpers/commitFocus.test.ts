@@ -53,11 +53,11 @@ describe('commitFocus', () => {
     expect(commitPoiFocusSpy).not.toHaveBeenCalled();
   });
 
-  it('routes a PointOfInterest through commitPoiFocus with tween: true', () => {
+  it('routes a PointOfInterest through commitPoiFocus', () => {
     const { state, cb, poi } = makeFixtures();
     commitFocus(state, cb, poi);
     expect(commitPoiFocusSpy).toHaveBeenCalledTimes(1);
-    expect(commitPoiFocusSpy).toHaveBeenCalledWith(state, cb, poi, { tween: true });
+    expect(commitPoiFocusSpy).toHaveBeenCalledWith(state, cb, poi);
     expect(commitGalaxyFocusSpy).not.toHaveBeenCalled();
   });
 });

@@ -28,7 +28,7 @@ export function commitFocus(
   target: FocusableTarget,
 ): void {
   if (isPoi(target)) {
-    commitPoiFocus(state, cb, target, { tween: true });
+    commitPoiFocus(state, cb, target);
   } else {
     commitGalaxyFocus(state, cb, target);
   }
