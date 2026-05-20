@@ -4,8 +4,9 @@
  * Exercises the override path through the real producer: when the
  * DebugPanel's LabelEffectsSection picks 'youAreHere' as the target
  * category, the produced label adopts the override's outline + glow
- * fields; when it picks any other category, the label's effect fields
- * stay undefined (producer defaults).
+ * fields; when it picks any other category, the label falls back to
+ * the producer's baked-in drop-shadow outline (`OUTLINE_COLOR` +
+ * `OUTLINE_EM_FRAC` in `youAreHereSubsystem.ts`) and no glow.
  *
  * State stub: the producer only touches state.subsystems.fades.fadeTo
  * (one-shot layer fade-in).  A no-op stub suffices.
@@ -60,7 +61,7 @@ describe('youAreHereSubsystem · labelStyleOverride', () => {
     expect(label.glowEmFrac).toBe(0.2);
   });
 
-  it('ignores the override when targetCategory is a different category', () => {
+  it('falls back to the baked drop-shadow outline when override targets another category', () => {
     setLabelStyleOverride({
       targetCategory: 'cluster',
       outlineColor: [1, 0, 0, 1],
@@ -72,8 +73,9 @@ describe('youAreHereSubsystem · labelStyleOverride', () => {
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels).toHaveLength(1);
     const label = out.labels[0]!;
-    expect(label.outlineColor).toBeUndefined();
-    expect(label.outlineEmFrac).toBeUndefined();
+    // Producer defaults: a soft black drop-shadow outline, glow unset.
+    expect(label.outlineColor).toEqual([0, 0, 0, 0.1]);
+    expect(label.outlineEmFrac).toBe(0.16);
     expect(label.glowColor).toBeUndefined();
     expect(label.glowEmFrac).toBeUndefined();
   });

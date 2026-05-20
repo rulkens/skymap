@@ -73,7 +73,7 @@ describe('poiSubsystem · labelStyleOverride', () => {
     expect(label.glowEmFrac).toBe(0.2);
   });
 
-  it('leaves labels untouched when override targets a different category', () => {
+  it('falls back to the category baked-in outline when override targets another category', () => {
     setLabelStyleOverride({
       targetCategory: 'void',
       outlineColor: [1, 0, 0, 1],
@@ -86,8 +86,8 @@ describe('poiSubsystem · labelStyleOverride', () => {
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels).toHaveLength(1);
     const label = out.labels[0]!;
-    expect(label.outlineColor).toBeUndefined();
-    expect(label.outlineEmFrac).toBeUndefined();
+    expect(label.outlineColor).toEqual([0, 0, 0, 0.1]);
+    expect(label.outlineEmFrac).toBe(0.16);
     expect(label.glowColor).toBeUndefined();
     expect(label.glowEmFrac).toBeUndefined();
   });

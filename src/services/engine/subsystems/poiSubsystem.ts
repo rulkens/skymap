@@ -167,6 +167,10 @@ type CategoryStyle = {
   readonly markerMaxApparentRadiusPx: number;
   /** Smoothstep band width for the marker fade-out. */
   readonly markerMaxApparentFadeBandPx: number;
+  /** Drop-shadow outline (straight RGBA — renderer premultiplies). */
+  readonly outlineColor: Vec4;
+  /** Outline width as em-fraction. Capped at ~0.28 by atlas padding. */
+  readonly outlineEmFrac: number;
 };
 
 /**
@@ -202,6 +206,8 @@ export const POI_STYLES = {
     ringColor: hexToGl('#B39947'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
   },
   supercluster: {
     labelColor: hexToGl('#FFCC80'),
@@ -217,6 +223,8 @@ export const POI_STYLES = {
     ringColor: hexToGl('#996B3666'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
   },
   famousGalaxy: {
     labelColor: hexToGl('#FFF2CC'),
@@ -233,6 +241,8 @@ export const POI_STYLES = {
     ringColor: hexToGl('#000000'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
   },
   void: {
     labelColor: hexToGl('#99D9F2'),
@@ -250,6 +260,8 @@ export const POI_STYLES = {
     ringColor: hexToGl('#73B3D9'),
     markerMaxApparentRadiusPx: 700,
     markerMaxApparentFadeBandPx: 400,
+    outlineColor: [0, 0, 0, 0.1],
+    outlineEmFrac: 0.16,
   },
 } as const satisfies Readonly<Record<string, CategoryStyle>>;
 
@@ -569,6 +581,8 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
         fadeAlpha,
         alignX,
         alignY,
+        outlineColor: [...style.outlineColor],
+        outlineEmFrac: style.outlineEmFrac,
         ...overrideFields,
       });
     }

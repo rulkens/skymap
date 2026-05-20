@@ -45,6 +45,10 @@ const LINE_TOP_MPC = LABEL_ANCHOR_MPC * 0.75;
 // `[1, 1, 1, 1]` is display white at any tone-map setting.
 const LABEL_COLOR: Vec4 = [1, 1, 1, 1];
 const LINE_COLOR: Vec4 = [1, 1, 1, 1];
+// Soft black drop-shadow for legibility against the starfield.
+// Re-tune via DebugPanel `LabelEffectsSection`.
+const OUTLINE_COLOR: Vec4 = [0, 0, 0, 0.1];
+const OUTLINE_EM_FRAC = 0.16;
 
 export function createYouAreHereSubsystem(): YouAreHereSubsystem {
   // One-shot fade-in: the first frame where this producer emits a
@@ -98,6 +102,8 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
         maxPixelSize: 150,
         fadeAlpha: alpha,
         alignX: 'center',
+        outlineColor: [...OUTLINE_COLOR],
+        outlineEmFrac: OUTLINE_EM_FRAC,
         ...effectFields,
       },
     ];
