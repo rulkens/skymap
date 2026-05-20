@@ -45,8 +45,8 @@ import package::lib::selectionEncoding::packSelection;
 // Same binding numbers as colorFragment.wesl. Both renderers' uniform
 // buffers carry the layout described in 'points/io.wesl::Uniforms';
 // the visual pass writes the full struct each frame, and the pick pass
-// re-uses the same buffer (with a few in-place mutations to suppress
-// the selection halo and boost the pick floor — see pickRenderer.ts).
+// re-uses the same buffer (with a small in-place mutation to boost the
+// pick floor — see pickRenderer.ts).
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
 // ── @group(1) — FadeUniforms (declared but unused at vertex stage) ─
@@ -66,7 +66,7 @@ import package::lib::selectionEncoding::packSelection;
 // (different uniform buffers per source means writes to one don't
 // race against draws against another). The vertex stage reads
 // 'source.sourceCode' to compose '(sourceCode << 27u) | instance_index'
-// for the selection-halo + pick-output paths.
+// for the pick-output path.
 @group(2) @binding(0) var<uniform> source: SourceUniforms;
 
 // ─── vertex stage ─────────────────────────────────────────────────────
@@ -102,10 +102,9 @@ fn vs(
   let dMpc = length(p.position);
   let absMag = distanceModulus(p.magnitude, dMpc);
 
-  // Recover the per-instance packed identity now so both the early-out
-  // and the main path can share one source of truth. Bits 27..31 = the
-  // 5-bit 'source.sourceCode' (this draw's survey, set per-source via
-  // the @group(2) bind group); bits 0..26 = the GPU's
+  // Recover the per-instance packed identity for the pick path. Bits
+  // 27..31 = 5-bit 'source.sourceCode' (this draw's survey, set per-
+  // source via the @group(2) bind group); bits 0..26 = the GPU's
   // '@builtin(instance_index)' (local 0..count-1).
   let myPacked = packSelection(source.sourceCode, ii);
 
@@ -116,7 +115,6 @@ fn vs(
     earlyOut.tint = vec3<f32>(0.0);
     earlyOut.intensity = 0.0;
     earlyOut.instanceIdx = myPacked;
-    earlyOut.selected = 0u;
     earlyOut.axisRatio = 1.0;
     earlyOut.paCs = 1.0;
     earlyOut.paSn = 0.0;
@@ -125,18 +123,7 @@ fn vs(
     return earlyOut;
   }
 
-  // ── SELECTION CHECK ───────────────────────────────────────────────────────
-  //
-  // Compare the per-instance packed identity against 'u.selectedPacked'
-  // ('0xFFFFFFFFu' when nothing is selected). Each source's identity
-  // range is structurally disjoint by construction (top 5 bits = source
-  // code), so the comparison is a straight u32 equality.
   let isFallbackFlag = select(0u, 1u, p.axisRatio < 0.0);
-  let isSelected = (myPacked == u.selectedPacked);
-
-  // Scale the billboard 8× for the selected point so the selection ring
-  // is unmistakable — even a faint, magnitude-22 galaxy gets a visible halo.
-  let sizeScale = select(1.0, 8.0, isSelected);
 
   // ── APPARENT-SIZE BILLBOARD RADIUS ───────────────────────────────────────
   //
@@ -164,12 +151,9 @@ fn vs(
   // ── PIXEL-SIZE-IN-CLIP-SPACE CONVERSION ──────────────────────────────────
   //
   // 'expandBillboardScreen' computes the clip-space delta for a 'sizePx'-
-  // pixel-radius screen-aligned billboard corner; we then post-multiply
-  // by 'sizeScale' so the per-instance 8× halo expansion (selection
-  // ring) keeps stacking on top of the base pixel size. See
-  // 'lib/billboard.wesl' for the centerClip.w / viewportPx
-  // cancellation derivation.
-  let offset = expandBillboardScreen(u.cam, center, sizePx, corner) * sizeScale;
+  // pixel-radius screen-aligned billboard corner. See 'lib/billboard.wesl'
+  // for the centerClip.w / viewportPx cancellation derivation.
+  let offset = expandBillboardScreen(u.cam, center, sizePx, corner);
 
   var out: VSOut;
 
@@ -237,21 +221,18 @@ fn vs(
   // threshold contribute imperceptibly to the additive HDR target, so
   // we emit a degenerate clip position (outside the [-1, 1] NDC cube)
   // and let the rasteriser drop the primitive before any fragment work.
-  // Selected galaxies bypass the cull so the selection halo never
-  // vanishes on a faint pick. Pick fragment shares this vertex stage,
-  // so culled galaxies also become non-pickable — acceptable since
-  // they were never visible.
+  // Pick fragment shares this vertex stage, so culled galaxies also
+  // become non-pickable — acceptable since they were never visible. A
+  // selected-but-culled galaxy still gets its UI ring from the dedicated
+  // selectionRingPass, which runs independently of this pipeline.
   let INVISIBILITY_THRESHOLD = 0.005;
-  if (out.intensity < INVISIBILITY_THRESHOLD && !isSelected) {
+  if (out.intensity < INVISIBILITY_THRESHOLD) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 
   // Forward the per-instance packed identity to 'fsPick'.
   // The visual 'fs' ignores this field.
   out.instanceIdx = myPacked;
-
-  // Propagate the selection flag for 'fs'.
-  out.selected = select(0u, 1u, isSelected);
 
   // Forward the fallback flag for the highlight + hide toggles in 'fs'.
   out.isFallback = isFallbackFlag;

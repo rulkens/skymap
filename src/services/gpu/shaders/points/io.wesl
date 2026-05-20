@@ -96,18 +96,11 @@ struct Uniforms {
   cam: CameraUniforms,
 
   // The currently-selected point packed as '(sourceCode << 27) | localIdx',
-  // or '0xFFFFFFFFu' when nothing is selected. The vertex shader recovers
-  // its own packed identity as '(source.sourceCode << 27u) | u32(instance_index)'
-  // and compares against this slot to decide whether to enlarge for the
-  // selection ring.
-  //
-  // Bits 27..31 carry the 5-bit sourceCode (0..31, plenty for our 5
-  // sources). Bits 0..26 carry the 27-bit local instance index (~134M,
-  // plenty for any survey we ship). The two ranges are disjoint by
-  // construction.
-  //
-  // '0xFFFFFFFFu' is 'no selection'. Picker writes this sentinel into
-  // byte offset 80 directly — see 'pickRenderer.ts' SELECTED_PACKED_OFFSET.
+  // or '0xFFFFFFFFu' when nothing is selected. The points pipeline does
+  // not read this field — the selection ring is drawn by the dedicated
+  // selectionRingPass — but the picker mutates the slot in place to
+  // suppress its own self-hit, so the byte layout must stay. See
+  // 'pickRenderer.ts' SELECTED_PACKED_OFFSET.
   selectedPacked: u32,
 
   // Slot at offset 84: intentionally unused at the @group(0) level.
@@ -291,10 +284,6 @@ struct VSOut {
   // pick texture. Flat-interpolated because integers can't be linearly
   // interpolated, and all 6 vertices of one instance share the same value.
   @location(3) @interpolate(flat) instanceIdx: u32,
-
-  // 1u when this instance is the selected point; 0u otherwise. Used by
-  // the visual 'fs' to apply the selection ring/halo.
-  @location(4) @interpolate(flat) selected: u32,
 
   // Forwarded 'abs(axisRatio)' so the fragment stage's elliptical mask
   // uses the unsigned magnitude. Sign bit was the fallback flag (now
