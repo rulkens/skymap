@@ -69,6 +69,11 @@ export function LabelEffectsSection(): ReactElement {
   const [glowAlpha, setGlowAlpha] = useState(0.4);
   const [glowEmFrac, setGlowEmFrac] = useState(0.2);
 
+  // The cleanup clears the override on unmount so toggling the
+  // DebugPanel off restores production label styling even if the
+  // dropdown was still pointing at a category.  Without it, closing
+  // the panel mid-tune would leave the engine applying outline/glow
+  // forever — surprising asymmetry with the dropdown's own "(off)".
   useEffect(() => {
     if (target === '') {
       clearLabelStyleOverride();
@@ -85,6 +90,7 @@ export function LabelEffectsSection(): ReactElement {
       glowColor,
       glowEmFrac,
     });
+    return () => clearLabelStyleOverride();
   }, [target, outlineHex, outlineAlpha, outlineEmFrac, glowHex, glowAlpha, glowEmFrac]);
 
   const labelStyle = { display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' } as const;
