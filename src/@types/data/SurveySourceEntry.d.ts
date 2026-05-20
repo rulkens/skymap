@@ -1,4 +1,5 @@
 import type { BandLabels } from './BandLabels';
+import type { ColourIndexSpec } from './ColourIndexSpec';
 import type { SourceEntryBase } from './SourceEntryBase';
 
 /**
@@ -9,7 +10,7 @@ import type { SourceEntryBase } from './SourceEntryBase';
  * `binBaseName` is `null` for sources without an on-disk file (e.g. the
  * Synthetic procedurally-generated cloud); every other field is required.
  */
-export type SurveyEntry = SourceEntryBase & {
+export type SurveySourceEntry = SourceEntryBase & {
   readonly type: 'survey';
   /** Stable numeric tag, matching the `.bin` file format byte. */
   readonly code: number;
@@ -26,4 +27,11 @@ export type SurveyEntry = SourceEntryBase & {
   readonly maxDistMpc: number;
   /** Band each `magU/G/R/I/Z` slot actually carries on this source. */
   readonly bandLabels: BandLabels;
+  /**
+   * Recipe for computing this source's colour index — which two band slots
+   * to subtract, the natural range that gets remapped to the 0..2 WGSL
+   * ramp, and the per-redshift K-correction coefficient. See `pickColourIndex`
+   * in `data/colourIndex.ts` for the consumer.
+   */
+  readonly colourSpec: ColourIndexSpec;
 };

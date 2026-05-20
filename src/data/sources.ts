@@ -102,6 +102,7 @@ export const SOURCE_REGISTRY = {
     allSky: true, // uniform-in-sphere by construction
     maxDistMpc: 1000, // matches the radius in synthetic.ts
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
+    colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
   },
   [Source.SDSS]: {
     type: 'survey',
@@ -113,6 +114,7 @@ export const SOURCE_REGISTRY = {
     // rounded up generously.
     maxDistMpc: 3000,
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
+    colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
   },
   [Source.TwoMRS]: {
     type: 'survey',
@@ -123,6 +125,10 @@ export const SOURCE_REGISTRY = {
     // Flux-limited at K_s ≈ 11.75; effective z ≲ 0.06.
     maxDistMpc: 250,
     bandLabels: { u: '—', g: 'J', r: 'H', i: 'K', z: '—' },
+    // 2MRS has no u/z slots — fall back to J−K (the widest NIR colour
+    // pair) for galaxy-type information. K-correction is negligible at
+    // the survey's effective z ≲ 0.06.
+    colourSpec: { slotA: 'g', slotB: 'i', rangeMin: 0.7, rangeMax: 1.1, kPerZ: 0.0 },
   },
   [Source.Glade]: {
     type: 'survey',
@@ -134,6 +140,9 @@ export const SOURCE_REGISTRY = {
     // sparse tail past 1 Gpc that the default framing deliberately clips.
     maxDistMpc: 1500,
     bandLabels: { u: '—', g: 'B', r: 'J', i: 'H', z: 'K' },
+    // GLADE's g/r slots hold B and J: B−J is a long optical-to-NIR
+    // baseline that separates early- from late-type galaxies cleanly.
+    colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.5, rangeMax: 3.5, kPerZ: 1.0 },
   },
   [Source.Famous]: {
     type: 'survey',
@@ -147,6 +156,9 @@ export const SOURCE_REGISTRY = {
     // InfoCard renders generic "(g)" tags without a new branch; the
     // stored mag values are NaN, which FullCard renders as "N/A".
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
+    // Mirror SDSS so the colour ramp maps g−r cleanly; kPerZ = 0 since
+    // these entries are all very nearby (z < 0.05).
+    colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 0.0 },
   },
   [Source.Cluster]: { type: 'poi', code: Source.Cluster, label: 'Cluster', allSky: true },
   [Source.Supercluster]: { type: 'poi', code: Source.Supercluster, label: 'Supercluster', allSky: true },
@@ -167,6 +179,11 @@ export const SOURCE_REGISTRY = {
     // and Bmag (blue, ~B). Bmag goes into the magG slot (closest
     // wavelength to SDSS g among the empty slots) and Rmag into magR.
     bandLabels: { u: '—', g: 'B', r: 'R', i: '—', z: '—' },
+    // B−R is the natural quasar colour: blue quasars sit near 0; red /
+    // dust-obscured AGN extend to ≳ 2. kPerZ is non-zero because the
+    // observed-frame band sweeps through the Lyα forest at high z, but
+    // kept modest until the bias-correction subsystem wires Milliquas in.
+    colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.5 },
   },
 } as const satisfies Readonly<Record<Source, SourceEntry>>;
 
