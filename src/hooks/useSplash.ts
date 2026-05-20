@@ -1,0 +1,199 @@
+/**
+ * useSplash — orchestrates the splash visibility, the readiness gate, the
+ * "Continue anyway" escape, dismiss + reopen, and version-busted re-show.
+ *
+ * ### Why a separate hook
+ *
+ * App.tsx already wires six hooks.  The splash has its own state shape
+ * (visibility, blocked, error, canContinueAnyway), its own derived
+ * predicates (deep-link detection, readiness signal), and its own side
+ * effects (localStorage persistence, 8 s timer).  Bolting all of that
+ * onto App.tsx would push the file past its already-substantial size
+ * and would scatter "splash logic" across the file.  A dedicated hook
+ * gives the splash a single home with a clean public contract.
+ *
+ * ### Readiness signal
+ *
+ * The grill (Q4) resolved to "medium gating": the CTAs activate when
+ *   1.  the engine is in `ready` state (WebGPU init done + first frame),
+ *   2.  no catalog fetch is currently in flight (`loadProgress === null`),
+ *   3.  famous-meta has settled (`famousMetaReady`).
+ * The hook does NOT differentiate between Explore and Tour readiness —
+ * both buttons activate together so the user never sees "Tour disabled,
+ * Explore enabled" intermediate UI.  Famous-meta failure is treated as
+ * "ready" downstream (the hook's input plumbing receives `ready=true`
+ * from useFamousMeta in both success and error cases), but the splash
+ * does render a disabled Tour tooltip — that's wired in Task 6's error
+ * mapping plus the Splash component's disabled-state CSS.
+ *
+ * ### localStorage versioning
+ *
+ * Key: `skymap.splash.seenVersion` — an integer.  Hook reads on first
+ * mount; if missing or lower than `CURRENT_SPLASH_VERSION`, splash is
+ * shown.  Dismiss (either CTA) writes the current version; bumping
+ * `CURRENT_SPLASH_VERSION` re-shows the splash to all returning users.
+ * `reopen()` (called by the AboutPill) shows the splash WITHOUT touching
+ * storage — informational reopens shouldn't reset the version stamp.
+ *
+ * ### Deep-link bypass
+ *
+ * A URL with `#focus=`, `#poi=`, or `?tour=` (see `hasDeepLink`) skips
+ * the splash on first arrival and never auto-shows it.  About pill
+ * `reopen()` still works.  Power-user gates (`?debug`, etc.) do NOT
+ * count as deep links.
+ *
+ * ### 8 s "Continue anyway" timer
+ *
+ * Starts when the splash becomes visible AND blocked.  Fires once,
+ * flipping `canContinueAnyway` to true so the splash can show the
+ * escape link.  Cleared on unmount and re-armed if the splash is
+ * reopened.  Does NOT fire when the splash isn't visible (deep-link
+ * path) — the timer is a UX affordance for slow loads, not a global
+ * timeout.
+ *
+ * ### SSR-safety
+ *
+ * `typeof window` guards wrap localStorage and location reads so unit
+ * tests that render `useSplash` without a jsdom env don't blow up.
+ * The deep-link helper itself takes plain strings — no `window`
+ * dependency.
+ */
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { hasDeepLink } from '../utils/url/hasDeepLink';
+import type { UseSplashInput } from '../@types/splash/UseSplashInput';
+import type { UseSplashReturn } from '../@types/splash/UseSplashReturn';
+
+/** Persisted storage key — never rename without a migration. */
+export const SPLASH_STORAGE_KEY = 'skymap.splash.seenVersion';
+
+/**
+ * Version stamp written to localStorage on dismiss.  Bump when meaningful
+ * splash content changes — increments re-show the splash to returning
+ * users on their next visit.
+ */
+export const CURRENT_SPLASH_VERSION = 1;
+
+/** Milliseconds before the "Continue anyway" escape appears. */
+export const CONTINUE_ANYWAY_DELAY_MS = 8_000;
+
+/**
+ * Read seenVersion from localStorage.  SSR-safe and try/catch-guarded
+ * against private-browsing modes that throw on storage access.
+ */
+function readSeenVersion(): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const raw = window.localStorage.getItem(SPLASH_STORAGE_KEY);
+    if (raw === null) return 0;
+    const parsed = Number.parseInt(raw, 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Write seenVersion to localStorage.  Swallows storage errors silently. */
+function writeSeenVersion(version: number): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(SPLASH_STORAGE_KEY, String(version));
+  } catch {
+    // Private browsing or storage quota — best-effort; the splash will
+    // re-show next time, which is acceptable degraded behaviour.
+  }
+}
+
+/**
+ * Read the current URL hash + search, returning empty strings under SSR.
+ * Captured lazily inside the hook's initializer so it runs once at mount.
+ */
+function readUrlAtMount(): { hash: string; search: string } {
+  if (typeof window === 'undefined') return { hash: '', search: '' };
+  return { hash: window.location.hash, search: window.location.search };
+}
+
+export function useSplash(input: UseSplashInput): UseSplashReturn {
+  const { status, loadProgress, famousMetaReady } = input;
+
+  // ── Initial visibility (snapshot at mount) ───────────────────────────────
+  //
+  // Three gates compose:
+  //   1. Deep link present → never auto-show.
+  //   2. Stored seenVersion >= CURRENT_SPLASH_VERSION → don't re-show.
+  //   3. Otherwise → show.
+  //
+  // We capture once via a lazy initializer so the splash decision doesn't
+  // flip mid-session if the user manually edits the URL.  `reopen()`
+  // overrides this snapshot via the `userOpened` slot below.
+  const [splashVisible, setSplashVisible] = useState<boolean>(() => {
+    const { hash, search } = readUrlAtMount();
+    if (hasDeepLink({ hash, search })) return false;
+    if (readSeenVersion() >= CURRENT_SPLASH_VERSION) return false;
+    return true;
+  });
+
+  // ── Readiness signal ─────────────────────────────────────────────────────
+  //
+  // The CTAs activate when the engine reports `ready`, no catalog fetches
+  // are in flight, and famous-meta has settled.  `blocked` is the
+  // negation — true while we're still waiting.
+  const ready = useMemo(
+    () => status.kind === 'ready' && loadProgress === null && famousMetaReady,
+    [status, loadProgress, famousMetaReady],
+  );
+  const blocked = !ready;
+
+  // ── 8 s "Continue anyway" timer ──────────────────────────────────────────
+  //
+  // Starts when the splash is visible AND blocked.  Cleared on unmount and
+  // re-armed if the splash is reopened.  Does not fire if the splash is
+  // not visible (deep-link path).
+  const [canContinueAnyway, setCanContinueAnyway] = useState(false);
+  useEffect(() => {
+    if (!splashVisible || !blocked) {
+      // Re-arm when the splash becomes visible again (reopen flow).
+      // We don't reset `canContinueAnyway` on the unblocked path because
+      // the splash hides itself on dismiss anyway; whether the link was
+      // ever visible doesn't matter after that.
+      return;
+    }
+    const t = setTimeout(() => setCanContinueAnyway(true), CONTINUE_ANYWAY_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [splashVisible, blocked]);
+
+  // Reset canContinueAnyway when the splash is reopened so the link
+  // appears again only after another 8 s if loading is somehow slow
+  // again (rare — content is cached — but cheap to handle).
+  useEffect(() => {
+    if (!splashVisible) setCanContinueAnyway(false);
+  }, [splashVisible]);
+
+  // ── Dismiss + reopen ─────────────────────────────────────────────────────
+
+  const dismissExplore = useCallback(() => {
+    writeSeenVersion(CURRENT_SPLASH_VERSION);
+    setSplashVisible(false);
+  }, []);
+
+  const dismissTour = useCallback(() => {
+    writeSeenVersion(CURRENT_SPLASH_VERSION);
+    setSplashVisible(false);
+  }, []);
+
+  const reopen = useCallback(() => {
+    // Intentionally does NOT write seenVersion — reopening from the About
+    // pill is informational, not a "first-time dismissal" event.
+    setSplashVisible(true);
+  }, []);
+
+  return {
+    splashVisible,
+    blocked,
+    canContinueAnyway,
+    error: null, // populated in Task 6
+    dismissExplore,
+    dismissTour,
+    reopen,
+  };
+}
