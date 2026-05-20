@@ -362,13 +362,21 @@ export const ALL_SOURCES: readonly Source[] = [
   Source.TwoMRS,
   Source.SDSS,
   Source.Glade,
+  Source.Milliquas,
 ];
 
 /**
  * Bitmask with a `1` in every defined source's bit position — i.e. "show
- * everything". This is the renderer's default visibility mask on startup.
+ * everything". This is the union of all survey-source bits.
  *
- * Computed as `(1<<0) | (1<<1) | (1<<2) | (1<<3) | (1<<4) = 0b11111 = 31`.
+ * Computed as `(1<<0) | (1<<1) | (1<<2) | (1<<3) | (1<<4) | (1<<8) =
+ * 0b100011111 = 287` (Milliquas owns bit 8; bits 5/6/7 stay clear because
+ * those slots are reserved for POI codes that don't participate in the
+ * survey-mask).
+ *
+ * The runtime's *startup* visibility mask is a separate constant in
+ * `defaults.ts` — Milliquas defaults OFF there because the tier-aware
+ * rendering pipeline for quasars is still in flight.
  *
  * Note we use `<<` (not `**`) because it's an integer operation and runs
  * the same way in JS, WGSL, and TS. JS bitwise ops coerce to 32-bit

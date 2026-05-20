@@ -55,7 +55,7 @@ import { BiasMode } from './biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
-import { ALL_VISIBLE_MASK } from './sources';
+import { ALL_VISIBLE_MASK, Source, maskWithout } from './sources';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
 
@@ -210,10 +210,20 @@ export const DEFAULT_ABS_MAG_LIMIT = -19;
 // ── Survey visibility / LOD ──────────────────────────────────────────────────
 
 /**
- * Default visible-source bitmask — every survey enabled.  See
- * `data/sources.ts` for the bit layout.
+ * Default visible-source bitmask on startup.
+ *
+ * Every survey is on except Milliquas, which is hidden by default until
+ * the quasar-specific render path lands.  Milliquas's `.bin` is still
+ * fetched (it lives in `ALL_SOURCES` so the cloudLoader requests it),
+ * but its bit stays clear in the visibility mask so the existing
+ * galaxy-style billboards don't represent unresolved AGN until the
+ * dedicated quasar visuals exist.  See `data/sources.ts` for the bit
+ * layout.
  */
-export const DEFAULT_VISIBLE_SOURCE_MASK = ALL_VISIBLE_MASK;
+export const DEFAULT_VISIBLE_SOURCE_MASK = maskWithout(
+  ALL_VISIBLE_MASK,
+  Source.Milliquas,
+);
 
 // ── Scalar-volume overlay ────────────────────────────────────────────────────
 

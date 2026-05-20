@@ -43,6 +43,35 @@ import { redshiftToDistanceMpc } from '../../src/utils/math/redshiftToDistanceMp
 import type { ParsedRecord } from '../parsers/common.js';
 
 export function subsampleByAbsMag(records: ParsedRecord[], target: number): ParsedRecord[] {
+  const kept = subsampleIndicesByAbsMag(records, target);
+  return kept.map((i) => records[i]!);
+}
+
+/**
+ * Variant of {@link subsampleByAbsMag} that returns the *indices* of the
+ * kept records instead of the records themselves.  The output is sorted
+ * in the same input order the regular variant preserves.
+ *
+ * ### Why a second entry point?
+ *
+ * Most sources flow straight from `ParsedRecord[]` into the binary
+ * encoder, so the value-returning variant is all they need.  Milliquas
+ * is different: alongside its records the parser emits parallel
+ * `names[]` and `classes[]` arrays for a JSON sidecar.  Without access
+ * to the kept indices, the only way to re-zip those arrays after a
+ * subsample would be to duplicate the absolute-magnitude ranking logic
+ * inline — which would silently drift if anyone tweaked the kept-set
+ * heuristic.  Returning indices once and letting the caller re-zip every
+ * sidecar shape it owns is the cheap, drift-proof factoring.
+ *
+ * Internally we delegate to the same ranking pass the value-returning
+ * variant uses, so the two functions are guaranteed to agree on which
+ * records survive a given (records, target) pair.
+ */
+export function subsampleIndicesByAbsMag(
+  records: ParsedRecord[],
+  target: number,
+): number[] {
   if (target <= 0) return [];
 
   // Build (originalIdx, M_abs) tuples for records that have a finite M_abs.
@@ -62,9 +91,7 @@ export function subsampleByAbsMag(records: ParsedRecord[], target: number): Pars
 
   // No cut needed if every survivor would be kept anyway.
   if (target >= ranked.length) {
-    // Still must return only the survivors (we may have dropped non-finite
-    // rows above), in original order.  ranked is already in original order.
-    return ranked.map((e) => records[e.idx]!);
+    return ranked.map((e) => e.idx);
   }
 
   // Sort by brightness (smaller / more-negative M = brighter).  V8's
@@ -75,5 +102,5 @@ export function subsampleByAbsMag(records: ParsedRecord[], target: number): Pars
   // survivors in input order (not brightness order).
   const kept = ranked.slice(0, target);
   kept.sort((a, b) => a.idx - b.idx);
-  return kept.map((e) => records[e.idx]!);
+  return kept.map((e) => e.idx);
 }
