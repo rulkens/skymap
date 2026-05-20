@@ -30,8 +30,8 @@ import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 import type { ScalarCube } from '../../data/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
+import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
 import type { MilliquasNamesPayload } from '../../loading/MilliquasNamesPayload';
-import type { MilliquasNamesReq } from '../../loading/MilliquasNamesReq';
 import type { Source } from '../../../data/sources';
 
 export type EngineAssetSlots = {
@@ -56,7 +56,7 @@ export type EngineAssetSlots = {
    * state mutation done by the subscriber.  Null until the IIFE mints it
    * (matches `filaments` for the same lifecycle reason).
    */
-  famousMeta: AssetSlot<FamousPayload, void> | null;
+  famousMeta: AssetSlot<FamousPayload, CompanionAssetReq> | null;
   /**
    * PGC → human-name alias map (`pgc_aliases.json`, ~1.7 MB).  Lazy:
    * the engine never auto-loads it; the public-handle's
@@ -117,7 +117,7 @@ export type EngineAssetSlots = {
    * surfaces as a never-fires-`ready`; the InfoCard falls back to the
    * auto-generated `MQ J<RA><Dec>` IAU name.
    */
-  milliquasNames: AssetSlot<MilliquasNamesPayload, MilliquasNamesReq> | null;
+  milliquasNames: AssetSlot<MilliquasNamesPayload, CompanionAssetReq> | null;
   /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being

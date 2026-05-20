@@ -34,7 +34,7 @@ describe('famousMetaFetcher', () => {
       .mockResolvedValueOnce(new Response('[]', { status: 200 }))
       .mockResolvedValueOnce(new Response('{}', { status: 200 }));
     const payload = await famousMetaFetcher(
-      undefined as void,
+      { tier: "medium" },
       new AbortController().signal,
       () => {},
     );
@@ -44,7 +44,7 @@ describe('famousMetaFetcher', () => {
   it('rejects on a non-2xx HTTP status', async () => {
     fetch.mock.mockResolvedValue(new Response('boom', { status: 500 }));
     await expect(
-      famousMetaFetcher(undefined as void, new AbortController().signal, () => {}),
+      famousMetaFetcher({ tier: "medium" }, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
@@ -53,7 +53,7 @@ describe('famousMetaFetcher', () => {
       .mockResolvedValueOnce(new Response('not-json', { status: 200 }))
       .mockResolvedValueOnce(new Response('{}', { status: 200 }));
     await expect(
-      famousMetaFetcher(undefined as void, new AbortController().signal, () => {}),
+      famousMetaFetcher({ tier: "medium" }, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
@@ -76,7 +76,7 @@ describe('famousMetaFetcher', () => {
       return Promise.resolve(new Response('[]', { status: 200 }));
     });
     await expect(
-      famousMetaFetcher(undefined as void, controller.signal, () => {}),
+      famousMetaFetcher({ tier: "medium" }, controller.signal, () => {}),
     ).rejects.toThrow();
   });
 });

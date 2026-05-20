@@ -34,10 +34,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { Source } from '../../../data/sources';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
-import type {
-  GalaxyCatalogSourceConfig,
-  GalaxyCatalogCompanionRef,
-} from '../../../@types/engine/wiring/GalaxyCatalogSourceConfig';
+import type { GalaxyCatalogSourceConfig } from '../../../@types/engine/wiring/GalaxyCatalogSourceConfig';
 import type { Tier } from '../../../@types/data/Tier';
 import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePointSourceDeps';
 import { createAssetSlot } from '../../loading/AssetSlot';
@@ -126,28 +123,13 @@ export const TIER_FETCHED_POINT_SOURCES: readonly Source[] =
   GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.category !== 'synthetic').map((c) => c.source);
 
 /**
- * Fire `.load()` on one companion slot, dispatching to the right
- * `.load()` signature (some take `{ tier }`, others take no args).
- * Idempotent at the AssetSlot layer.
- */
-function loadCompanionAsset(
-  state: EngineState,
-  ref: GalaxyCatalogCompanionRef,
-  tier: Tier,
-): void {
-  switch (ref) {
-    case 'famousMeta':
-      state.assetSlots.famousMeta?.load();
-      return;
-    case 'milliquasNames':
-      state.assetSlots.milliquasNames?.load({ tier });
-      return;
-  }
-}
-
-/**
  * Fire every companion declared on the given registry row.  Called
  * from the boot loop, `setSourceVisible`, and the tier-change loop.
+ *
+ * Every companion slot accepts the same `CompanionAssetReq` (`{ tier }`)
+ * — tier-aware fetchers use it, tier-agnostic ones ignore it — so
+ * dispatch is a plain index into `state.assetSlots` with no per-key
+ * switch.  Idempotent at the AssetSlot layer.
  */
 export function loadCompanionAssets(
   state: EngineState,
@@ -155,7 +137,7 @@ export function loadCompanionAssets(
   tier: Tier,
 ): void {
   if (!cfg.companions) return;
-  for (const ref of cfg.companions) loadCompanionAsset(state, ref, tier);
+  for (const ref of cfg.companions) state.assetSlots[ref]?.load({ tier });
 }
 
 /**

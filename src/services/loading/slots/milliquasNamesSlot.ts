@@ -34,10 +34,11 @@
 import { createAssetSlot } from '../AssetSlot';
 import { milliquasNamesFetcher } from '../fetchers/milliquasNamesFetcher';
 import type { MilliquasNamesPayload } from '../../../@types/loading/MilliquasNamesPayload';
-import type { MilliquasNamesReq } from '../../../@types/loading/MilliquasNamesReq';
+import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
+
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
-export const createMilliquasNamesSlot: SlotFactory<MilliquasNamesPayload, MilliquasNamesReq> = (
+export const createMilliquasNamesSlot: SlotFactory<MilliquasNamesPayload, CompanionAssetReq> = (
   state,
   _cb,
 ) => {

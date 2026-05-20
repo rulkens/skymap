@@ -1,5 +1,5 @@
 /**
- * milliquasNamesFetcher — Fetcher<MilliquasNamesPayload, MilliquasNamesReq>.
+ * milliquasNamesFetcher — Fetcher<MilliquasNamesPayload, CompanionAssetReq>.
  *
  * Tier-aware filename: `milliquas-{medium,large}_names.json`.  The small
  * tier has no Milliquas bin (`TIER_TARGETS.small[Milliquas] === 0` —
@@ -27,7 +27,7 @@
  */
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { MilliquasNamesPayload } from '../../../@types/loading/MilliquasNamesPayload';
-import type { MilliquasNamesReq } from '../../../@types/loading/MilliquasNamesReq';
+import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
 import type { Tier } from '../../../@types/data/Tier';
 import { HttpError, dataUrl } from '../fetchWithProgress';
 
@@ -75,7 +75,7 @@ export function parseMilliquasNames(rawJson: string): MilliquasNamesPayload {
   };
 }
 
-export const milliquasNamesFetcher: Fetcher<MilliquasNamesPayload, MilliquasNamesReq> = async (
+export const milliquasNamesFetcher: Fetcher<MilliquasNamesPayload, CompanionAssetReq> = async (
   req,
   signal,
 ) => {

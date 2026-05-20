@@ -43,7 +43,11 @@ export function useFamousMeta(): UseFamousMetaReturn {
 
   useEffect(() => {
     const ac = new AbortController();
-    famousMetaFetcher(undefined as void, ac.signal, () => {})
+    // tier is ignored by famousMetaFetcher; pass a placeholder so the
+    // shared CompanionAssetReq shape stays uniform across companion
+    // fetchers.  The hook predates the engine's slot-based wiring and
+    // calls the fetcher directly for App.tsx — same payload either way.
+    famousMetaFetcher({ tier: 'medium' }, ac.signal, () => {})
       .then((sc) => {
         setFamousMeta(sc.meta);
         setFamousXrefs(sc.xrefs);
