@@ -32,7 +32,7 @@ import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
 import type { FamousMetaEntry } from '../../@types/loading/FamousMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
-import { Source, sourceLabel } from '../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { InfoTip } from '../InfoTip/InfoTip';
 import styles from './CommandPalette.module.css';
 
@@ -418,7 +418,7 @@ export function CommandPalette({
                     {remaining.length > 0 && (
                       <span className={styles.secondary}>{remaining.join(' · ')}</span>
                     )}
-                    <span className={styles.aliasSource}>{sourceLabel(aliasEntry.source)}</span>
+                    <span className={styles.aliasSource}>{SOURCE_REGISTRY[aliasEntry.source].label}</span>
                   </span>
                 </li>
               );

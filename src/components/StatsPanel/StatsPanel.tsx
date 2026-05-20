@@ -42,7 +42,8 @@
  */
 
 import { memo, type ReactNode } from 'react';
-import { ALL_SOURCES, Source, maskHas } from '../../data/sources';
+import { ALL_SOURCES, Source } from '../../data/sources';
+import { maskHas } from '../../utils/sourceMask';
 import { Panel } from '../common/Panel/Panel';
 import styles from './StatsPanel.module.css';
 

@@ -12,7 +12,8 @@
  * for the band choices and the rationale behind the K-correction coefficients.
  */
 
-import { Source, type SurveySource } from './sources';
+import { Source } from './sources';
+import type { SurveySource } from '../@types/data/SurveySource';
 import type { ColourIndexSpec } from '../@types/data/ColourIndexSpec';
 
 /**

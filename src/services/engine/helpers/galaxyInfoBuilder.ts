@@ -19,7 +19,7 @@
 
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { Source, sourceLabel, bandLabels } from '../../../data/sources';
+import { Source, SOURCE_REGISTRY, bandLabels } from '../../../data/sources';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import { famousDisplayName } from './famousDisplayName';
@@ -410,7 +410,7 @@ export function buildGalaxyInfo(
 
     // Source attribution — fed through to the InfoCard's badge + link logic.
     source,
-    sourceLabel: sourceLabel(source),
+    sourceLabel: SOURCE_REGISTRY[source].label,
 
     // External URLs — chosen above based on `source` (and PGC for GLADE).
     catalogUrl,

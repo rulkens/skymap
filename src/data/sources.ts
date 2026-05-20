@@ -1,54 +1,16 @@
 /**
- * Source enum + per-survey registry + bitmask helpers.
+ * `Source` enum + `SOURCE_REGISTRY`.
  *
- * The single source of truth for "which astronomical survey does this point
- * come from?" The renderer, the binary loader, and the UI controls all import
- * from here, so changing a value in this file ripples through every layer of
- * the pipeline. That's deliberate — funnelling survey identity through one
- * tiny module gives a compile-time check that everyone agrees on the integer
- * codes used on disk.
- *
- * ---
- * ### Why a numeric enum (not a string union)?
- *
- * Each point in the binary `.bin` catalog format carries a 1-byte `source`
- * tag (see `galaxyCatalogFormat.ts`). A string like `'SDSS'` would cost 4
- * bytes per point — for 10 million points that's 40 MB of redundant text.
- * A `u8` is one byte and lets the GPU compute shader test
- * `sourceMask & (1u << src)` to filter visibility per-frame at zero cost.
- *
- * The numeric values below are part of the *on-disk file format*. Renaming
- * a member is fine; *renumbering* it would silently break every `.bin` file
- * ever written. To deprecate a source, mark it obsolete and append a new
- * one — never recycle the integer.
- *
- * ---
- * ### Why a bitmask (not a `Set<Source>`)?
- *
- * The renderer asks "is source X currently visible?" for every point, every
- * frame. At ~10 million points × 60 fps that's 600 M lookups per second.
- * A 32-bit integer mask answers that in one `AND` and one compare; a JS
- * `Set` would allocate and dereference, which is unthinkable inside a render
- * loop and impossible inside a WGSL shader. 32 bits gives 32 possible
- * sources — vastly more than the four currently tracked, with headroom for
- * future catalogs (DESI, Euclid, LSST...).
- *
- * ---
- * ### Why one registry?
- *
- * `SOURCE_REGISTRY` colocates per-source metadata so adding a new source
- * means editing one entry rather than several parallel tables that have to
- * stay in lock-step. Survey- and POI-shaped rows differ (POIs lack a
- * `.bin` file, photometric bands, and a survey depth) so each entry is
- * discriminated by `type: 'survey' | 'poi'`. A discriminated union keeps
- * every field required on the variants it applies to — no optionals — and
- * survey-only accessors narrow on `entry.type === 'poi'` and throw.
+ * Source identity: the numeric source codes baked into the `.bin` catalog
+ * format and the per-source metadata used by the loader / UI / camera
+ * (discriminated `'survey' | 'poi'` rows). The visibility-bitmask helpers
+ * live in `utils/sourceMask`.
  */
 
 import type { BandLabels } from '../@types/data/BandLabels';
-import type { SurveyEntry } from '../@types/data/SurveyEntry';
-import type { PoiEntry } from '../@types/data/PoiEntry';
 import type { SourceEntry } from '../@types/data/SourceEntry';
+import type { SurveySource } from '../@types/data/SurveySource';
+import type { PoiSource } from '../@types/data/PoiSource';
 
 // ─── The enum itself ────────────────────────────────────────────────────────
 
@@ -57,7 +19,7 @@ import type { SourceEntry } from '../@types/data/SourceEntry';
  *
  * IMPORTANT: these integer values are persisted in the `.bin` point-cloud
  * file format. Treat them like API version numbers — append, never
- * renumber. See module docstring for the full rationale.
+ * renumber. Recycling a code silently breaks every `.bin` ever written.
  */
 export const Source = {
   /** Procedurally-generated stand-in cloud (no real photometry). */
@@ -106,19 +68,7 @@ export const Source = {
 } as const;
 export type Source = (typeof Source)[keyof typeof Source];
 
-/** Sources that participate in the points pipeline (have `.bin` data). */
-export type SurveySource = Exclude<
-  Source,
-  typeof Source.Cluster | typeof Source.Supercluster | typeof Source.Void
->;
-
-/** Pick-encoding-only codes for cluster/supercluster/void markers. */
-export type PoiSource =
-  | typeof Source.Cluster
-  | typeof Source.Supercluster
-  | typeof Source.Void;
-
-export type { SurveyEntry, PoiEntry, SourceEntry };
+export type { SurveySource, PoiSource };
 
 // ─── Registry ───────────────────────────────────────────────────────────────
 
@@ -223,16 +173,6 @@ export const SOURCE_REGISTRY = {
 
 // ─── Public lookup functions ────────────────────────────────────────────────
 
-/** Display name (e.g. `'2MRS'`, `'GLADE'`, `'Cluster'`) for a given source. */
-export function sourceLabel(source: Source): string {
-  return SOURCE_REGISTRY[source].label;
-}
-
-/** True if the source covers (approximately) the full celestial sphere. */
-export function sourceIsAllSky(source: Source): boolean {
-  return SOURCE_REGISTRY[source].allSky;
-}
-
 /**
  * Photometric band labels for the five `magU/G/R/I/Z` slots on this source's
  * `GalaxyCatalog`. Returns the actual band carried in each slot (e.g. `'B'`
@@ -249,7 +189,7 @@ export function bandLabels(source: Source): BandLabels {
   return entry.bandLabels;
 }
 
-// ─── Visibility bitmask ─────────────────────────────────────────────────────
+// ─── Iteration order ────────────────────────────────────────────────────────
 
 /**
  * Survey sources in UI presentation order — smallest catalogue → largest
@@ -268,30 +208,3 @@ export const ALL_SOURCES: readonly Source[] = [
   Source.Glade,
   Source.Milliquas,
 ];
-
-/**
- * "Show every survey" mask — `1` in every `ALL_SOURCES` bit position.
- * Equals `0b100011111` (bits 5/6/7 stay clear; those are POI codes).
- * The *startup* visibility mask is a separate constant in `defaults.ts`.
- */
-export const ALL_VISIBLE_MASK: number = ALL_SOURCES.reduce<number>(
-  (mask, src) => mask | (1 << src),
-  0,
-);
-
-/** True if `mask` has the bit for `source` set. */
-export function maskHas(mask: number, source: Source): boolean {
-  return (mask & (1 << source)) !== 0;
-}
-
-/** Returns a new mask with the bit for `source` set (idempotent). */
-export function maskWith(mask: number, source: Source): number {
-  return mask | (1 << source);
-}
-
-/** Returns a new mask with the bit for `source` cleared (idempotent). */
-export function maskWithout(mask: number, source: Source): number {
-  // `~(1 << source)` flips every bit *except* the one we want to clear,
-  // so AND-ing leaves all other bits untouched while zeroing this one.
-  return mask & ~(1 << source);
-}

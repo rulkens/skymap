@@ -1,14 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  Source,
-  SOURCE_REGISTRY,
-  sourceLabel,
-  sourceIsAllSky,
-  ALL_VISIBLE_MASK,
-  maskHas,
-  maskWith,
-  maskWithout,
-} from '../src/data/sources';
+import { Source, SOURCE_REGISTRY } from '../src/data/sources';
+import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../src/utils/sourceMask';
 
 describe('Source enum', () => {
   it('has stable numeric values used in the binary format', () => {
@@ -22,23 +14,23 @@ describe('Source enum', () => {
   });
 });
 
-describe('sourceLabel', () => {
+describe('SOURCE_REGISTRY label', () => {
   it('returns human-readable names', () => {
-    expect(sourceLabel(Source.SDSS)).toBe('SDSS');
-    expect(sourceLabel(Source.TwoMRS)).toBe('2MRS');
+    expect(SOURCE_REGISTRY[Source.SDSS].label).toBe('SDSS');
+    expect(SOURCE_REGISTRY[Source.TwoMRS].label).toBe('2MRS');
     // GLADE is uppercase to match how the catalog team publishes it.
-    expect(sourceLabel(Source.Glade)).toBe('GLADE');
-    expect(sourceLabel(Source.Synthetic)).toBe('Synthetic');
+    expect(SOURCE_REGISTRY[Source.Glade].label).toBe('GLADE');
+    expect(SOURCE_REGISTRY[Source.Synthetic].label).toBe('Synthetic');
   });
 });
 
 describe('source coverage metadata', () => {
   it('flags all-sky sources', () => {
-    expect(sourceIsAllSky(Source.TwoMRS)).toBe(true);
+    expect(SOURCE_REGISTRY[Source.TwoMRS].allSky).toBe(true);
     // GLADE is full-sky by design — it merges multiple all-sky parent
     // catalogs (HyperLEDA, 2MASS XSC, GWGC, 2MPZ, 6dFGS, SDSS-DR12Q).
-    expect(sourceIsAllSky(Source.Glade)).toBe(true);
-    expect(sourceIsAllSky(Source.SDSS)).toBe(false);
+    expect(SOURCE_REGISTRY[Source.Glade].allSky).toBe(true);
+    expect(SOURCE_REGISTRY[Source.SDSS].allSky).toBe(false);
   });
   it('reports approximate maximum distance per survey in Mpc', () => {
     expect(SOURCE_REGISTRY[Source.TwoMRS].maxDistMpc).toBeLessThan(300);

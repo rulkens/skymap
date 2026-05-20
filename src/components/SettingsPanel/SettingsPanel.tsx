@@ -81,7 +81,8 @@
 
 import { type ReactNode } from 'react';
 import type { Tier } from '../../@types/data/Tier';
-import { Source, sourceLabel, maskHas } from '../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../data/sources';
+import { maskHas } from '../../utils/sourceMask';
 import { BiasMode } from '../../data/biasMode';
 import type { BiasMode as BiasModeT } from '../../@types/data/BiasMode';
 import { ALL_TONE_MAP_CURVES, toneMapCurveLabel } from '../../data/toneMapCurve';
@@ -539,7 +540,7 @@ export function SettingsPanel({
               return (
                 <div className={styles.panelRow} key={s}>
                   <label htmlFor={`toggle-source-${s}`}>
-                    {sourceLabel(s)}
+                    {SOURCE_REGISTRY[s].label}
                     {count !== undefined && (
                       <span className={styles.sourceCount}>
                         {count.toLocaleString()}

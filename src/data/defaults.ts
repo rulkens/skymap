@@ -55,7 +55,8 @@ import { BiasMode } from './biasMode';
 import type { BiasMode as BiasModeT } from '../@types/data/BiasMode';
 import { ToneMapCurve } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
-import { ALL_VISIBLE_MASK, Source, maskWithout } from './sources';
+import { Source } from './sources';
+import { ALL_VISIBLE_MASK, maskWithout } from '../utils/sourceMask';
 
 // ── Rendering knobs ─────────────────────────────────────────────────────────
 

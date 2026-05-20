@@ -72,7 +72,8 @@
  * ```
  */
 
-import { Source, maskWith, maskWithout, maskHas } from '../../data/sources';
+import { Source } from '../../data/sources';
+import { maskHas, maskWith, maskWithout } from '../../utils/sourceMask';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,

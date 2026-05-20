@@ -26,7 +26,8 @@
  * so hard-coding them here is appropriate.
  */
 
-import { Source, type SurveySource } from './sources';
+import { Source } from './sources';
+import type { SurveySource } from '../@types/data/SurveySource';
 import type { SchechterTriple } from '../@types/data/SchechterTriple';
 
 // Keyed by `SurveySource` (excludes POI codes) because flux limits and

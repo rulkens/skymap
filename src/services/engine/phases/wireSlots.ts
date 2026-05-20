@@ -42,7 +42,8 @@
  *   - Mutates `deps.allSlots` — populates with every minted slot.
  */
 
-import { Source, maskHas } from '../../../data/sources';
+import { Source } from '../../../data/sources';
+import { maskHas } from '../../../utils/sourceMask';
 import { catalogSourceFor } from '../../../data/catalogSource';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,

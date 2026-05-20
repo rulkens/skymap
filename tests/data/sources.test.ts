@@ -1,16 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  Source,
-  SOURCE_REGISTRY,
-  ALL_SOURCES,
-  ALL_VISIBLE_MASK,
-  sourceLabel,
-  sourceIsAllSky,
-  bandLabels,
-  maskHas,
-  maskWith,
-  maskWithout,
-} from '../../src/data/sources';
+import { Source, SOURCE_REGISTRY, ALL_SOURCES, bandLabels } from '../../src/data/sources';
+import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../src/utils/sourceMask';
 
 describe('Source.Famous', () => {
   it('has integer value 4 (next free slot after Glade=3)', () => {
@@ -26,11 +16,11 @@ describe('Source.Famous', () => {
   });
 
   it('has a non-empty display label', () => {
-    expect(sourceLabel(Source.Famous).length).toBeGreaterThan(0);
+    expect(SOURCE_REGISTRY[Source.Famous].label.length).toBeGreaterThan(0);
   });
 
   it('is treated as all-sky (cherry-picked entries from anywhere)', () => {
-    expect(sourceIsAllSky(Source.Famous)).toBe(true);
+    expect(SOURCE_REGISTRY[Source.Famous].allSky).toBe(true);
   });
 
   it('has a sensible default max-distance for camera framing', () => {
