@@ -1,46 +1,90 @@
-// labels/fragment.wesl — MSDF labels fragment stage.
+// labels/fragment.wesl — MSDF labels fragment stage with three-band
+// composite: glow (soft outside halo) → outline (hard outside stroke)
+// → fill (glyph body).  All composited OVER in premultiplied space.
 //
-// Samples the multi-channel signed-distance atlas, takes the median
-// across R/G/B to recover the glyph edge, then anti-aliases the edge
-// with a screen-space-derivative width. Output is premultiplied — the
-// blend state on the renderer side expects (rgb*a, a).
+// ## Bands
 //
-// ## Multi-font sampling
+// The MSDF distance 'd' is positive inside the glyph and negative
+// outside; the glyph contour sits at 'd = 0'.  The three bands are:
 //
-// The atlas binding is a texture_2d_array<f32>: each registered font in
-// src/data/fonts.ts occupies one array layer.  The per-glyph
-// fontIndex varying (flat-interpolated from the vertex stage) selects
-// the layer at sample time, so a single draw call can render glyphs
-// from any mix of registered fonts — the GPU picks the right atlas
-// page per fragment.
+//   fill   : smoothstep(-aa, +aa, d)
+//             — existing one-pixel AA band straddling the contour.
+//   outline: smoothstep(-aa - outlineSdf, -aa, d) * (1 - fill)
+//             — covers d ∈ [-outlineSdf, 0]; the (1 - fill) factor
+//               masks the inside half so the outline doesn't bleed
+//               into the glyph body.
+//   glow   : smoothstep(-glowSdf, 0, d)
+//             — soft falloff from the contour outward by glowSdf,
+//               with default smoothstep cubic ease.  Overlaps the
+//               outline band; the OVER composite below resolves
+//               which colour wins.
+//
+// 'outlineSdf' and 'glowSdf' are in SDF units (the same units 'd'
+// lives in); the vertex stage converts from em-fraction inputs via
+// 'widthInSdfUnits = (emFrac * ATLAS_EM_PX) / DISTANCE_RANGE_PX'.
+//
+// ## Composite
+//
+//   out = over(glow, over(outline, fill))
+//
+// All three band colours arrive pre-multiplied (and pre-faded by
+// fadeAlpha — the vertex stage bakes fadeAlpha into the rgba),
+// so the OVER step is the canonical:
+//
+//   over(A, B) = A + B * (1 - A.a)
+//
+// ## Why overlap, not stack
+//
+// "Glow radius" matches the mental model "visible halo extent", not
+// "extra halo past the outline".  Overlap also keeps the label
+// silhouette stable when the outline is toggled on/off.
 
 import package::labels::io::VsOut;
 
 @group(0) @binding(2) var atlas: texture_2d_array<f32>;
 @group(0) @binding(3) var atlasSampler: sampler;
 
-// Median of three scalars. The MSDF technique encodes one SDF per
-// colour channel, each shifted by a sub-pixel; taking the median of
-// the three recovers the glyph contour even where one channel
-// disagrees (sharp corners, near-zero strokes). It's the 'M' in MSDF.
 fn median3(r: f32, g: f32, b: f32) -> f32 {
   return max(min(r, g), min(max(r, g), b));
 }
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
-  // textureSample on a 2D-array takes the layer index as the third
-  // argument (after the UV).  i32 cast because WGSL's texture-array
-  // sample signature requires a signed integer layer.
   let s = textureSample(atlas, atlasSampler, input.uv, i32(input.fontIndex)).rgb;
-  // Distance from the glyph contour: positive inside, negative outside,
-  // zero exactly on the edge.
   let d = median3(s.r, s.g, s.b) - 0.5;
-  // 'fwidth' gives roughly one pixel's worth of distance at this
-  // fragment's scale, so the smoothstep band is exactly one pixel
-  // wide regardless of zoom — that's what keeps MSDF text crisp at
-  // any size.
   let aa = fwidth(d);
-  let alpha = smoothstep(-aa, aa, d) * input.color.a;
-  return vec4<f32>(input.color.rgb * alpha, alpha);
+
+  let outlineSdf = input.widths.x;
+  let glowSdf    = input.widths.y;
+
+  // Fill mask (1 inside the glyph, 0 outside, smoothed at the edge).
+  let fillMask = smoothstep(-aa, aa, d);
+
+  // Outline mask covers d ∈ [-outlineSdf, 0] but is masked OUT inside
+  // the glyph.  When outlineSdf == 0 the smoothstep collapses to a
+  // single-point step at d=0 — the mask is then identically zero
+  // outside the glyph (no contribution) and identically 'fillMask'
+  // inside (cancelled by '1 - fillMask').  So a zero outline width
+  // correctly contributes nothing.
+  let outlineBand = smoothstep(-aa - outlineSdf, -aa, d);
+  let outlineMask = outlineBand * (1.0 - fillMask);
+
+  // Glow band: smooth ramp from d = -glowSdf (alpha 0) to d = 0
+  // (alpha 1).  When glowSdf == 0 the ramp degenerates to a step at
+  // d=0 — multiplied by glowColor.a (which is 0 when the producer
+  // doesn't set glowColor), the band's contribution stays zero.
+  let glowMask = smoothstep(-glowSdf, 0.0, d);
+
+  // Per-band premultiplied colours.  The masks scale the already-
+  // premultiplied colour by the band's coverage.
+  let fillPM    = input.color        * fillMask;
+  let outlinePM = input.outlineColor * outlineMask;
+  let glowPM    = input.glowColor    * glowMask;
+
+  // Composite over(glow, over(outline, fill)).  Each 'over' step
+  // does:  result = top + bottom * (1 - top.a)
+  let layer1 = outlinePM + fillPM    * (1.0 - outlinePM.a);
+  let layer2 = glowPM    + layer1    * (1.0 - glowPM.a);
+
+  return layer2;
 }
