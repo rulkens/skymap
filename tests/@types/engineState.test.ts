@@ -43,8 +43,6 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
-  DEFAULT_FILAMENTS_ENABLED,
-  DEFAULT_FILAMENT_INTENSITY,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -65,7 +63,7 @@ import { createPoiSubsystem } from '../../src/services/engine/subsystems/poiSubs
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import type { EngineCallbacks } from '../../src/@types/engine/EngineCallbacks';
-import { Source } from '../../src/data/sources';
+import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
 
 // A no-op callback bag suitable for the selection subsystem fixture.
 // `onHoverChange` / `onSelectChange` are the only fields the subsystem
@@ -242,7 +240,10 @@ describe('EngineState type', () => {
       bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: DEFAULT_ABS_MAG_LIMIT },
       thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
       milkyWay: { enabled: DEFAULT_MILKY_WAY_ENABLED },
-      filaments: { enabled: DEFAULT_FILAMENTS_ENABLED, intensity: DEFAULT_FILAMENT_INTENSITY },
+      filaments: {
+        enabled: SOURCE_REGISTRY[Source.Filaments].visible,
+        intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
+      },
       volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
       labelCategoryVisibility: {
         cluster: true,

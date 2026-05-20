@@ -49,8 +49,6 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
-  DEFAULT_FILAMENT_INTENSITY,
-  DEFAULT_FILAMENTS_ENABLED,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_MILKY_WAY_ENABLED,
@@ -60,6 +58,7 @@ import {
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../data/defaults';
+import { Source, SOURCE_REGISTRY } from '../data/sources';
 import { ALL_VISIBLE_MASK } from '../utils/sourceMask';
 import type { VolumeFieldRowData } from '../@types/settings/VolumeFieldRowData';
 import type { UseEngineSettingsReturn } from '../@types/settings/UseEngineSettingsReturn';
@@ -93,8 +92,12 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // The engine does NOT fire echo callbacks for filaments or volumes state,
   // so React owns these optimistically. The SettingsPanel onChange handler
   // updates these directly AND forwards to the engine handle.
-  const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(DEFAULT_FILAMENTS_ENABLED);
-  const [filamentIntensity, setFilamentIntensity] = useState<number>(DEFAULT_FILAMENT_INTENSITY);
+  const [filamentsEnabled, setFilamentsEnabled] = useState<boolean>(
+    SOURCE_REGISTRY[Source.Filaments].visible,
+  );
+  const [filamentIntensity, setFilamentIntensity] = useState<number>(
+    SOURCE_REGISTRY[Source.Filaments].intensity,
+  );
 
   // Scalar-volume master toggle — no echo, same as filamentsEnabled above.
   // No persistence: every session starts from the compile-time default.

@@ -72,7 +72,7 @@
  * ```
  */
 
-import { Source } from '../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../utils/sourceMask';
 import {
   DEFAULT_ABS_MAG_LIMIT,
@@ -81,8 +81,6 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
-  DEFAULT_FILAMENT_INTENSITY,
-  DEFAULT_FILAMENTS_ENABLED,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
@@ -385,8 +383,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         enabled: DEFAULT_MILKY_WAY_ENABLED,
       },
       filaments: {
-        enabled: DEFAULT_FILAMENTS_ENABLED,
-        intensity: DEFAULT_FILAMENT_INTENSITY,
+        enabled: SOURCE_REGISTRY[Source.Filaments].visible,
+        intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
       },
       volumes: {
         masterEnabled: DEFAULT_VOLUMES_ENABLED,

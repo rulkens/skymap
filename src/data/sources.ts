@@ -341,6 +341,9 @@ export const SOURCE_REGISTRY = {
     envelope: { inner: 0.9, outer: 1.0 },
     exposure: 1.0,
     trim: 0.0,
+    // CF-4's calibrated coolwarm sits comfortably at the global default
+    // — kept explicit so every volume entry carries the field.
+    intensity: 0.5,
   },
   [Source.Mcpm]: {
     type: 'volume',
