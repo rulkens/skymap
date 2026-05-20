@@ -35,6 +35,7 @@
 import type { ReactNode } from 'react';
 import cx from 'classnames';
 import type { EngineStatus } from '../../@types/engine/EngineStatus';
+import { Source } from '../../data/sources';
 import styles from './StatusBar.module.css';
 
 /** Props for StatusBar. */
@@ -54,7 +55,7 @@ export function StatusBar({ status }: StatusBarProps): ReactNode {
   if (status.kind === 'initializing' || status.kind === 'loading') {
     return null;
   }
-  if (status.kind === 'ready' && status.source !== 'synthetic') {
+  if (status.kind === 'ready' && status.source !== Source.Synthetic) {
     return null;
   }
 
@@ -68,7 +69,7 @@ export function StatusBar({ status }: StatusBarProps): ReactNode {
     );
   }
 
-  // status.kind === 'ready' && status.source === 'synthetic'
+  // status.kind === 'ready' && status.source === Source.Synthetic
   return (
     <div className={cx(styles.status, styles.warning)} role="status">
       synthetic fallback — no real data files loaded

@@ -44,7 +44,6 @@
 
 import { Source } from '../../../data/sources';
 import { maskHas } from '../../../utils/sourceMask';
-import { catalogSourceFor } from '../../../data/catalogSource';
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   SURVEY_POINT_SOURCES,
@@ -400,7 +399,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         cb.lifecycle?.onStatusChange?.({
           kind: 'ready',
           count: state.gpu.renderer?.totalCount() ?? 0,
-          source: catalogSourceFor(source),
+          source,
         });
         if (realSet.has(source)) anyRealReady = true;
       }
@@ -425,7 +424,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
         cb.lifecycle?.onStatusChange?.({
           kind: 'ready',
           count: state.gpu.renderer?.totalCount() ?? 0,
-          source: catalogSourceFor(Source.Synthetic),
+          source: Source.Synthetic,
         });
       }
     });
