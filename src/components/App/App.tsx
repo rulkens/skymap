@@ -56,6 +56,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import cx from 'classnames';
 import { useEngine } from '../../hooks/useEngine';
+import { useSplash } from '../../hooks/useSplash';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { LoadingBar } from '../LoadingBar/LoadingBar';
 import { InfoCard } from '../InfoCard/InfoCard';
@@ -66,6 +67,8 @@ import StatsPanel from '../StatsPanel/StatsPanel';
 import { CommandPalette } from '../CommandPalette/CommandPalette';
 import SearchTrigger from '../SearchTrigger/SearchTrigger';
 import AutoRotateToggle from '../AutoRotateToggle/AutoRotateToggle';
+import { Splash } from '../Splash/Splash';
+import AboutPill from '../Splash/AboutPill';
 import { MILKY_WAY_ENTRY, MILKY_WAY_ID } from '../../data/milkyWayEntry';
 import appStyles from './App.module.css';
 import { useUrlSync } from '../../hooks/useUrlSync';
@@ -366,7 +369,27 @@ export function App(): React.ReactElement {
   const [loadingDevPanelOpen, setLoadingDevPanelOpen] = useState(false);
 
   // ── Famous-galaxy sidecars (CommandPalette + deep-link drain) ────────────
-  const { famousMeta, famousXrefs } = useFamousMeta();
+  const { famousMeta, famousXrefs, ready: famousMetaReady } = useFamousMeta();
+
+  // ── Splash dialog state ─────────────────────────────────────────────────
+  //
+  // The splash hook gates on engine readiness (status=ready + no fetches
+  // in flight) + famous-meta loaded.  It owns localStorage versioning,
+  // deep-link bypass, the 8 s Continue-anyway timer, and dismiss/reopen.
+  // See `useSplash.ts` for the full design rationale.
+  //
+  // Placed after `useFamousMeta` so `famousMetaReady` is in scope.  React
+  // hook ordering rules require hooks to run unconditionally — we satisfy
+  // that; the dependency on `famousMetaReady` is purely a JS scoping
+  // concern, not a conditional hook.
+  const splash = useSplash({
+    status,
+    loadProgress,
+    famousMetaReady,
+    // `famousMetaFailed` is not currently wired — useFamousMeta swallows
+    // errors silently per the fail-soft contract.  A future iteration
+    // could promote the catch-branch into a flag exposed alongside `ready`.
+  });
 
   // ── Palette entries — famous catalog + Milky Way pseudo-entry ────────────
   //
@@ -493,7 +516,7 @@ export function App(): React.ReactElement {
 
         `id="c"` matches the CSS rule in index.html: `#c { display: block; ... }`.
       */}
-      <canvas ref={canvasRef} id="c" />
+      <canvas ref={canvasRef} id="c" aria-hidden={splash.splashVisible || undefined} />
 
       {/*
         UI overlay wrapper.  All HUD chrome (loading bar, status,
@@ -508,7 +531,7 @@ export function App(): React.ReactElement {
         class so the fade animates in BOTH directions (opacity 1 → 0
         on hide, 0 → 1 on show).
       */}
-      <div className={cx(appStyles.uiStack, uiHidden && appStyles.uiStackHidden)}>
+      <div className={cx(appStyles.uiStack, (uiHidden || splash.splashVisible) && appStyles.uiStackHidden)}>
         {/*
         Loading bar — pinned to top of viewport above every other overlay.
         Fades itself out when `loadProgress` becomes null (no fetches in
@@ -822,12 +845,13 @@ export function App(): React.ReactElement {
         source of truth for placement.  See `.topBar` in App.module.css.
       */}
         <div className={appStyles.topBar}>
-          <SearchTrigger onClick={openPalette} hidden={paletteOpen} />
+          <SearchTrigger onClick={openPalette} hidden={paletteOpen || splash.splashVisible} />
           <AutoRotateToggle
             playing={autoRotate}
             onToggle={() => handleRef.current?.camera.setAutoRotate(!autoRotate)}
-            hidden={paletteOpen}
+            hidden={paletteOpen || splash.splashVisible}
           />
+          <AboutPill onClick={splash.reopen} hidden={paletteOpen || splash.splashVisible} />
         </div>
         <CommandPalette
           entries={paletteEntries}
@@ -890,6 +914,21 @@ export function App(): React.ReactElement {
             />
           )}
       </div>
+      {splash.splashVisible && (
+        <Splash
+          blocked={splash.blocked}
+          canContinueAnyway={splash.canContinueAnyway}
+          loadProgress={loadProgress}
+          error={splash.error}
+          onExplore={splash.dismissExplore}
+          // Plan 2 (stub tour) replaces this with the real tour wiring.
+          // For now Tour just dismisses like Explore — the splash work
+          // ships independently of the tour itinerary.
+          onTour={splash.dismissTour}
+          onContinueAnyway={splash.dismissExplore}
+          onReload={() => window.location.reload()}
+        />
+      )}
     </>
   );
 }
