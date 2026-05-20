@@ -1,10 +1,24 @@
 /**
  * `Source` enum + `SOURCE_REGISTRY`.
  *
- * Source identity: the numeric source codes baked into the `.bin` catalog
- * format and the per-source metadata used by the loader / UI / camera
- * (discriminated `'survey' | 'poi'` rows). The visibility-bitmask helpers
- * live in `utils/sourceMask`.
+ * The single registry of every data source skymap loads. Four kinds,
+ * discriminated by `type`:
+ *
+ *   'survey'   — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
+ *                Milliquas, Synthetic).  Codes are baked into the `.bin`
+ *                point-cloud format and packed into the pick texture.
+ *   'poi'      — galaxy-cluster / supercluster / void marker rings.
+ *                Codes are also packed into the pick texture (upper 5 bits).
+ *   'filament' — derived line-strip geometry (DisPerSE skeleton).
+ *                Single global asset; no per-record identity.
+ *   'volume'   — scalar-field cubes (CF-4 DM density, MCPM cosmic web).
+ *                Each volume carries its own presentation defaults
+ *                (palette, contrast, exposure, …).
+ *
+ * Only `'survey'` and `'poi'` codes are persisted to disk / packed into
+ * GPU buffers; `'filament'` and `'volume'` codes exist solely so every
+ * data source has one place to look. The visibility-bitmask helpers in
+ * `utils/sourceMask` operate on survey codes only.
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
@@ -14,11 +28,18 @@ import type { PoiSource } from '../@types/data/PoiSource';
 // ─── The enum itself ────────────────────────────────────────────────────────
 
 /**
- * Stable numeric tag identifying which survey a galaxy was observed by.
+ * Stable numeric tag for every data source. Used as a `.bin` byte for
+ * survey rows, packed into the pick texture for survey + POI hits, and
+ * as a registry key for filament + volume assets.
  *
- * IMPORTANT: these integer values are persisted in the `.bin` point-cloud
- * file format. Treat them like API version numbers — append, never
- * renumber. Recycling a code silently breaks every `.bin` ever written.
+ * IMPORTANT: integer values 0..8 are persisted in the `.bin` point-cloud
+ * file format AND packed into the pick texture's upper 5 bits. Treat
+ * them like API version numbers — append, never renumber. Recycling a
+ * code silently breaks every `.bin` ever written and every saved
+ * selection URL.
+ *
+ * Codes ≥ 9 (filaments, volumes) are not persisted anywhere, but the
+ * same "append, never renumber" discipline applies for consistency.
  */
 export const Source = {
   /** Procedurally-generated stand-in cloud (no real photometry). */
@@ -64,6 +85,24 @@ export const Source = {
    * codes above, so the next survey integer is 8.
    */
   Milliquas: 8,
+  /**
+   * Cosmic-web filament skeleton (DisPerSE on a 2MRS + GLADE density
+   * field). Single global asset, not per-record; the registry entry
+   * carries the default-enabled flag + intensity multiplier.
+   */
+  Filaments: 9,
+  /**
+   * Cosmicflows-4 dark-matter density volume (Valade 2024 HAMLET cube,
+   * 256³). Default-off scalar field; the registry entry carries its
+   * presentation defaults (palette, contrast, exposure, …).
+   */
+  Cf4Density: 10,
+  /**
+   * MCPM ("Cosmic Slime" / rhizome) cosmic-web density volume — SDSS DR17
+   * VAC, tier-aware. Default-on scalar field; the registry entry carries
+   * its presentation defaults.
+   */
+  Mcpm: 11,
 } as const;
 export type Source = (typeof Source)[keyof typeof Source];
 
@@ -263,6 +302,65 @@ export const SOURCE_REGISTRY = {
     // small drops Milliquas entirely (mobile GPU budget); medium caps at
     // ~200k brightest; large is uncapped.
     tierTargets: { small: 0, medium: 200_000 },
+  },
+  [Source.Filaments]: {
+    type: 'filament',
+    code: Source.Filaments,
+    label: 'Filaments',
+    allSky: true, // full-sky DisPerSE skeleton
+    // Off by default — the line geometry overlays the cosmic-web wedge
+    // and most users want the points-only view first. They can flip it
+    // on in the SettingsPanel.
+    visible: false,
+    binBaseName: 'filaments',
+    // 1.0 is the unit baseline; user scales it down for a subtler overlay
+    // or up for emphasis via the (future) Filaments slider.
+    intensity: 1.0,
+  },
+  [Source.Cf4Density]: {
+    type: 'volume',
+    code: Source.Cf4Density,
+    label: 'CF-4 DM density',
+    allSky: true, // Valade 2024 reconstruction covers the full 256³ box
+    // Default-off: ~32 MB voxel payload fetched eagerly at boot so the
+    // toggle in the Volumes panel feels instant, but the field doesn't
+    // render until the user opts in.
+    visible: false,
+    handle: 'cf4-density',
+    // Underscore in the filename for legacy reasons; `handle` mirrors it
+    // in kebab-case for UI / settings keys.
+    binBaseName: 'cf4_density',
+    tiered: false, // single 256³ cube; no per-tier variants
+    // Presentation defaults — see VolumeFieldDefaults docstrings for the
+    // semantics of each knob, and the prior `volumeFieldDefaults.ts`
+    // module header for the rationale behind these specific numbers.
+    paletteId: 'coolwarm',
+    contrast: 1.2,
+    contrastCenter: 0.5,
+    densityScale: 20.0,
+    envelope: { inner: 0.9, outer: 1.0 },
+    exposure: 1.0,
+    trim: 0.0,
+  },
+  [Source.Mcpm]: {
+    type: 'volume',
+    code: Source.Mcpm,
+    label: 'MCPM Cosmic Web',
+    allSky: true, // SDSS DR17 VAC, full SDSS volume
+    // Default-on: this is the headline cosmic-web overlay; the global
+    // intensity of 1.0 (set on this entry) gives it presence on first paint.
+    visible: true,
+    handle: 'mcpm',
+    binBaseName: 'mcpm',
+    tiered: true, // small / medium / large `.scfd` variants
+    paletteId: 'inferno',
+    contrast: 1.7,
+    contrastCenter: 0.0,
+    densityScale: 18.0,
+    envelope: { inner: 0.85, outer: 1.05 },
+    exposure: 18.0,
+    trim: 0.3,
+    intensity: 1.0,
   },
 } as const satisfies Readonly<Record<Source, SourceEntry>>;
 

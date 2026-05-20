@@ -161,11 +161,12 @@ export function buildGalaxyInfo(
   // The `colours` array is what the InfoCard renders in its "Colour" row;
   // pre-computing it here keeps the React layer presentational and avoids
   // sprinkling per-source band-pair logic throughout the components.
-  // POI markers have no photometry. The picker only routes survey sources
-  // into the points pipeline, so reaching here with a POI is a bug upstream.
+  // Only survey rows carry photometry. The picker only routes survey
+  // sources into the points pipeline, so any other kind (POI, filament,
+  // volume) reaching here is a bug upstream.
   const entry = SOURCE_REGISTRY[source];
-  if (entry.type === 'poi') {
-    throw new Error(`buildGalaxyInfo: POI source ${source} has no photometric bands`);
+  if (entry.type !== 'survey') {
+    throw new Error(`buildGalaxyInfo: non-survey source ${source} has no photometric bands`);
   }
   const bands = entry.bandLabels;
 
