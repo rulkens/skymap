@@ -111,7 +111,7 @@ function selectionEq(
 export function createSelectionSubsystem(
   input: CreateSelectionSubsystemInput,
 ): SelectionSubsystem {
-  const { cb, getCloud, getFamousMeta, getFamousXrefs, getMilliquasNames } = input;
+  const { cb, getCloud, getFamousMeta, getFamousXrefs } = input;
 
   // Internal mutable state.  Closure-captured `let`s so they're
   // genuinely inaccessible from outside (no `this.hovered` for a
@@ -143,7 +143,6 @@ export function createSelectionSubsystem(
       sel.source,
       getFamousMeta(),
       getFamousXrefs(),
-      getMilliquasNames(),
     );
   }
 

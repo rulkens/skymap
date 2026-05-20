@@ -450,12 +450,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // InfoCard layout.
       famousMeta: [],
       famousXrefs: {},
-      // Milliquas display-name sidecar — per-tier, populated by the
-      // milliquasNames slot's `ready` subscriber.  Empty default mirrors
-      // the famous-meta pattern: a hover firing before names land falls
-      // back to the auto-generated IAU "MQ J<RA><Dec>" headline.
-      milliquasNames: [],
-      milliquasClasses: [],
       // Currently-loaded data tier.  Seeded from `cb.initialTier` (Task 5
       // of the data-tiers plan); the default of 'medium' matches the
       // pre-tier ~600k-galaxy desktop budget.  `setTier` mutates this in
@@ -590,7 +584,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         getCloud: (s) => state.sources.catalogs.get(s),
         getFamousMeta: () => state.sources.famousMeta,
         getFamousXrefs: () => state.sources.famousXrefs,
-        getMilliquasNames: () => state.sources.milliquasNames,
       }),
 
       // ── Bias-correction subsystem (Spec E phase E.3 + E.4) ────────
@@ -703,10 +696,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // MCPM Cosmic Web slot — same null-then-set lifecycle as cf4Density.
       // Tier-aware: setTier reloads on tier change.  See loading/slots/mcpmSlot.ts.
       mcpm: null,
-      // Milliquas names sidecar — same null-then-set lifecycle as famousMeta.
-      // Tier-aware: setTier reloads on tier change so `state.sources.milliquasNames`
-      // stays in lockstep with the active milliquas-<tier>.bin's localIdx.
-      milliquasNames: null,
     },
     // ── Debug-only per-frame skip flags ─────────────────────────────────
     //
@@ -992,7 +981,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       Source.Famous,
       state.sources.famousMeta,
       state.sources.famousXrefs,
-      state.sources.milliquasNames,
     );
     if (!info) return;
 
@@ -1028,7 +1016,6 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       source,
       famousMeta ?? state.sources.famousMeta,
       famousXrefs ?? state.sources.famousXrefs,
-      state.sources.milliquasNames,
     );
     if (!info) return;
 

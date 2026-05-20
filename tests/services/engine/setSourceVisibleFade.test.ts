@@ -55,7 +55,6 @@ function makeFixture(initialMask: number) {
     // fine — the `?.` short-circuits when no slot is registered.
     assetSlots: {
       points: new Map(),
-      milliquasNames: null,
     },
   };
   return { state, fades, fadeCalls };
