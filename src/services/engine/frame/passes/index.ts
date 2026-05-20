@@ -104,6 +104,7 @@ import { milkyWayPass } from './milkyWayPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
 import { clusterMarkersPass } from './clusterMarkersPass';
+import { selectionRingPass } from './selectionRingPass';
 
 /** The seven HDR passes, in deterministic draw order. */
 export const HDR_PASSES: readonly Pass[] = [
@@ -117,12 +118,13 @@ export const HDR_PASSES: readonly Pass[] = [
 ];
 
 /**
- * The UI overlay passes, in deterministic draw order.  Marker-lines
- * before labels so the label text composites over the line where
- * they overlap.  All entries share one swap-chain `beginRenderPass`
- * (see `uiOverlay.ts`) and one timing slot (`ui-overlay`).
+ * The UI overlay passes, in deterministic draw order.  The selection
+ * ring leads so marker-lines and labels composite over its stroke —
+ * labels carry information that must stay legible.  All entries share
+ * one swap-chain `beginRenderPass` (see `uiOverlay.ts`) and one timing
+ * slot (`ui-overlay`).
  */
-export const UI_PASSES: readonly Pass[] = [markerLinesPass, labelsPass];
+export const UI_PASSES: readonly Pass[] = [selectionRingPass, markerLinesPass, labelsPass];
 
 export { pointSpritesPass } from './pointSpritesPass';
 export { proceduralDisksPass } from './proceduralDisksPass';
@@ -133,3 +135,4 @@ export { milkyWayPass } from './milkyWayPass';
 export { markerLinesPass } from './markerLinesPass';
 export { labelsPass } from './labelsPass';
 export { clusterMarkersPass } from './clusterMarkersPass';
+export { selectionRingPass } from './selectionRingPass';

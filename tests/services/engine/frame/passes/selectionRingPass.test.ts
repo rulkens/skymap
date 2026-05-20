@@ -54,7 +54,7 @@ function makeStateWithSelection(selection: { source: Source; localIdx: number } 
   const diameterKpc = new Float32Array([60]);       // 60 kpc galaxy
   const catalog = { positions, diameterKpc } as unknown as Parameters<EngineState['sources']['catalogs']['set']>[1];
   const catalogs = new Map();
-  catalogs.set(Source.GLADE, catalog);
+  catalogs.set(Source.Glade, catalog);
 
   return {
     gpu: { selectionRingRenderer: makeRendererSpy() },
@@ -85,7 +85,7 @@ describe('selectionRingPass.enabled', () => {
   });
 
   it('returns true when renderer is non-null and a selection exists', () => {
-    const state = makeStateWithSelection({ source: Source.GLADE, localIdx: 0 });
+    const state = makeStateWithSelection({ source: Source.Glade, localIdx: 0 });
     expect(selectionRingPass.enabled(state, makeCtx(), makeSettings())).toBe(true);
   });
 });
@@ -94,7 +94,7 @@ describe('selectionRingPass.enabled', () => {
 
 describe('selectionRingPass.draw', () => {
   it('computes ringRadiusPx from catalog data and forwards to renderer', () => {
-    const state = makeStateWithSelection({ source: Source.GLADE, localIdx: 0 });
+    const state = makeStateWithSelection({ source: Source.Glade, localIdx: 0 });
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings({ pointSizePx: 4 }), DEPS_STUB);
 
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<typeof makeRendererSpy>;
@@ -111,10 +111,10 @@ describe('selectionRingPass.draw', () => {
   });
 
   it('uses apparentPxRadius when galaxy is closer and larger on screen', () => {
-    const state = makeStateWithSelection({ source: Source.GLADE, localIdx: 0 });
+    const state = makeStateWithSelection({ source: Source.Glade, localIdx: 0 });
     // Override the catalog position to put galaxy at 10 Mpc so the
     // apparent radius dominates.
-    const cat = state.sources.catalogs.get(Source.GLADE)!;
+    const cat = state.sources.catalogs.get(Source.Glade)!;
     (cat as unknown as { positions: Float32Array }).positions = new Float32Array([0, 0, 10]);
 
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings({ pointSizePx: 4 }), DEPS_STUB);
@@ -126,7 +126,7 @@ describe('selectionRingPass.draw', () => {
   });
 
   it('calls renderer.render() exactly once with viewProj + viewport', () => {
-    const state = makeStateWithSelection({ source: Source.GLADE, localIdx: 0 });
+    const state = makeStateWithSelection({ source: Source.Glade, localIdx: 0 });
     selectionRingPass.draw(PASS_STUB, makeCtx(), state, makeSettings(), DEPS_STUB);
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<typeof makeRendererSpy>;
     expect(rendererSpy.render).toHaveBeenCalledOnce();

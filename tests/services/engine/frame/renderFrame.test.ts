@@ -318,7 +318,7 @@ function makeInput(
       // the passes correctly skip (enabled returns false), which matches the
       // pre-atlas-load behaviour and keeps existing renderFrame tests green.
       state: {
-        gpu: { labelRenderer: null, markerLineRenderer: null, scalarVolumeRenderer: null, clusterMarkerRenderer: null },
+        gpu: { labelRenderer: null, markerLineRenderer: null, selectionRingRenderer: null, scalarVolumeRenderer: null, clusterMarkerRenderer: null },
         // Task 11 split the legacy thumbnails subsystem into three.  The
         // proceduralDisksPass / texturedDisksPass entries each read their
         // slot off `state.subsystems` in their `enabled()` gate; nulling

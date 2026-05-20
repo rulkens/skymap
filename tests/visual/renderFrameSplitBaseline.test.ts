@@ -345,6 +345,7 @@ describe('renderFrame visual baseline', () => {
         gpu: {
           labelRenderer,
           markerLineRenderer,
+          selectionRingRenderer: null,
           scalarVolumeRenderer,
           volumeUpsample,
           clusterMarkerRenderer: null,
