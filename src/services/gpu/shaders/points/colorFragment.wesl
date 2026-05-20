@@ -1,13 +1,11 @@
 // points/colorFragment.wesl — visual additive-blend fragment for points.
 //
-// Sister file to 'pickFragment.wesl'. Both consume the same VSOut
-// produced by 'vertex.wesl'; this one writes RGBA to the swap-chain
-// (additive-blended), the other writes a u32 instance ID to an
-// r32uint pick texture. Splitting the two fragments into separate
-// modules lets each renderer's pipeline build a strictly-smaller
-// shader from disjoint sources, and structurally prevents the
-// 'selection on wrong galaxy' class of bugs that came from a single
-// shared module servicing two pipelines with diverging fragment paths.
+// Renders the normal galaxy disk: elliptical mask, Gaussian falloff,
+// procedural-disk crossfade-out, source fade, premultiplied output to
+// the swap chain. Sister file to 'pickFragment.wesl', which consumes
+// the same VSOut and writes packed instance IDs to an r32uint pick
+// texture. The selection ring is drawn by a dedicated pass and is not
+// this file's concern.
 //
 // ## Why bindings appear here even though io.wesl already declared them
 //
@@ -72,113 +70,18 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // photometric orientation.
   if (u.realOnlyMode == 1u && in.isFallback == 1u) { discard; }
 
-  // ── Procedural-disk crossfade-OUT (applies to BOTH selected & normal) ────
+  // ── Procedural-disk crossfade-OUT ────────────────────────────────────────
   //
-  // Hoisted out of the normal-point branch below so the selection-ring
-  // path also fades. Without this, selecting a galaxy and then zooming
-  // through the [pxFadeStart, pxFadeEnd] band leaves the selection's
-  // 8× billboard rendered on top of the procedural-disk impostor.
-  //
-  // The fade trigger is the UNSCALED 'in.sizePx' (vertex stage forwards
-  // 'sizePx' BEFORE applying the 8× sizeScale), so the fade band aligns
-  // with the procedural-disk emission band on the underlying galaxy
-  // footprint — not the inflated halo radius.
+  // The thumbnail subsystem's procedural-disk pass fades IN across
+  // [u.pxFadeStart, u.pxFadeEnd]; we fade the points-pass OUT with the
+  // complementary curve. Sum of the two curves is 1.0 across the band,
+  // so the additive HDR contribution stays constant per galaxy through
+  // the transition.
   let apparentDiameterPx = in.sizePx * 0.5;
   let fadeT = saturate(
     (apparentDiameterPx - u.pxFadeStart) / (u.pxFadeEnd - u.pxFadeStart),
   );
   let pointAlphaMult = 1.0 - fadeT * fadeT * (3.0 - 2.0 * fadeT);
-
-  // ── SELECTION RING vs NORMAL DISK ─────────────────────────────────────────
-  //
-  // For the selected point we rendered a 8× larger billboard in 'vs', so
-  // the UV space still spans [-1,+1]² but represents a physically bigger
-  // area. We draw a hollow ring by:
-  //   1. Discarding the outer region (r² > 1.0) → circular boundary.
-  //   2. Discarding the inner region (r² < 0.4) → hollow centre.
-  //   3. Applying a brighter colour on the ring band.
-  if (in.selected == 1u) {
-    // Selection halo stays circular for a clean ring regardless of disk
-    // orientation. Recompute r2 with the round dot(uv, uv) so an edge-on
-    // ellipse doesn't disappear into a discarded slot when selected.
-    let r2_circ = dot(in.uv, in.uv);
-
-    // Outside the outer edge of the scaled billboard — discard.
-    if (r2_circ > 1.0) { discard; }
-
-    // ── Inner disk (the point itself) ──────────────────────────────────────
-    //
-    // We scaled the billboard 8× in 'vs', so the original point's footprint
-    // occupies the inner 1/8 in linear distance — i.e. r² ≤ (1/8)² = 1/64
-    // ≈ 0.0156 in this scaled UV space. Inside that radius we render the
-    // *normal* point disk so the user can still see the selected galaxy's
-    // own brightness.
-    //
-    // CRITICAL: use the ELLIPTICAL 'r2' (computed above from the rotated +
-    // squashed UV) here, NOT 'r2_circ'. With the round mask the selected
-    // galaxy's inner shape would suddenly become a perfect circle, making
-    // it look like the orientation collapsed on click.
-    //
-    // The alpha factor 'exp(-r2 * 256)' is the original 'exp(-r2 * 4)'
-    // remapped: at r² = 1/64, we want the same 'exp(-4)' falloff the
-    // unscaled point would have, so we multiply r² by 64 (= 8²) before
-    // applying the original ×4 coefficient → 256.
-    if (r2 < 0.0156) {
-      let alpha = exp(-r2 * 256.0) * pointAlphaMult;
-      let rgb   = in.tint * in.intensity;
-      return vec4<f32>(rgb * alpha, alpha);
-    }
-
-    // ── Selection ring annulus ─────────────────────────────────────────────
-    //
-    // The ring is a UI element marking the user's selection: it must
-    // stay visible at every zoom level (NOT fade through the
-    // procedural-disk crossfade band) AND keep a roughly constant on-
-    // screen stroke width so the band doesn't bloat into a wide bright
-    // disc when zoomed in close.
-    //
-    // We pick a target stroke width in pixels and convert that into a
-    // fraction of the billboard radius using 'in.sizePx * 8.0' (the
-    // actual on-screen halo radius). 'min(0.15, …)' caps the band
-    // fraction at the original 15 % so faint/far galaxies don't end up
-    // with a stroke wider than the billboard itself.
-    let HALO_RADIUS_PX = in.sizePx * 8.0;
-    let TARGET_STROKE_PX = 4.0;
-    let bandFraction = min(0.15, TARGET_STROKE_PX / max(HALO_RADIUS_PX, 1.0));
-
-    let r_circ = sqrt(r2_circ);
-    let innerR = 1.0 - bandFraction;
-    if (r_circ > innerR) {
-      // Soft-edge anti-aliasing on both sides of the band. The fade
-      // window is a tenth of the band width on each side so we keep
-      // most of the stroke at full intensity but avoid hard pixelation.
-      //
-      // We deliberately do NOT multiply by 'pointAlphaMult' here — the
-      // ring is UI and stays at full intensity through the procedural-
-      // disk crossfade band. The inner-disk case above DOES fade
-      // because the procedural disk takes over rendering the galaxy
-      // itself in that band; the ring has no equivalent replacement.
-      let edgeFade = bandFraction * 0.1;
-      let inEdge   = smoothstep(innerR, innerR + edgeFade, r_circ);
-      let outEdge  = 1.0 - smoothstep(1.0 - edgeFade, 1.0, r_circ);
-      let alpha    = inEdge * outEdge;
-
-      // Brighten the ring relative to the natural point colour. 2.5×
-      // plus a constant white floor (0.7) keeps it salient even when
-      // the underlying galaxy is dim. Additive blending saturates
-      // naturally toward white.
-      let rgb = in.tint * (in.intensity * 2.5 + 0.7);
-
-      return vec4<f32>(rgb * alpha, alpha);
-    }
-
-    // Gap between the inner point and the ring — fully transparent so
-    // the selection is visually a 'point + halo' pair rather than a
-    // giant disk.
-    discard;
-  }
-
-  // ── NORMAL POINT — solid disk with Gaussian falloff (now ELLIPTICAL) ──────
 
   // Discard fragments outside the oriented ellipse.
   if (r2 > 1.0) { discard; }
@@ -187,16 +90,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // e⁻⁴ ≈ 0.018 at the edge (r²=1). The per-instance modulators
   // (Schechter, angular reweight, depth fade) are folded into
   // 'in.intensity' by the vertex stage — see vertex.wesl.
-  var alpha = exp(-r2 * 4.0);
-
-  // ── Procedural-disk crossfade-OUT ────────────────────────────────────────
-  //
-  // The thumbnail subsystem's procedural-disk pass fades IN across
-  // [u.pxFadeStart, u.pxFadeEnd]; we fade the points-pass OUT with the
-  // complementary curve. Sum of the two curves is 1.0 across the band,
-  // so the additive HDR contribution stays constant per galaxy through
-  // the transition.
-  alpha = alpha * pointAlphaMult;
+  var alpha = exp(-r2 * 4.0) * pointAlphaMult;
 
   // Highlight fallback rows in magenta when the toggle is on. The 0.3
   // green keeps fallback galaxies recognisable as 'data-y' rather than

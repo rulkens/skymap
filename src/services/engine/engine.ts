@@ -470,6 +470,10 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // point of use by labelsPass / markerLinesPass).
       labelRenderer: null,
       markerLineRenderer: null,
+      // selectionRingRenderer: null until initGpu constructs it.
+      // Excluded from isEngineReady — null-checked at point of use by
+      // selectionRingPass.
+      selectionRingRenderer: null,
       // clusterMarkerRenderer: null until initGpu constructs it
       // (cluster-viz sub-plan 2 task 13).  Excluded from
       // isEngineReady — null-checked at point of use by the
@@ -1346,6 +1350,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
+    state.gpu.selectionRingRenderer?.destroy();
+    state.gpu.selectionRingRenderer = null;
     state.gpu.clusterMarkerRenderer?.destroy();
     state.gpu.clusterMarkerRenderer = null;
     state.gpu.texturedDiskRenderer?.destroy();
