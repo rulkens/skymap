@@ -34,6 +34,8 @@ import { describe, it, expect, vi } from 'vitest';
 
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
+  SURVEY_POINT_SOURCES,
+  TIER_FETCHED_POINT_SOURCES,
   wireGalaxyCatalogSourceSlot,
 } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import type { GalaxyCatalogSourceConfig } from '../../../../src/@types/engine/wiring/GalaxyCatalogSourceConfig';
@@ -121,6 +123,31 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
     expect(realFetchers.size).toBe(1); // all four real surveys share one fetcher
     expect(synthetic!.fetcher).not.toBe(real[0]!.fetcher);
   });
+
+  it('derives SURVEY_POINT_SOURCES from rows with category="survey"', () => {
+    // Pin the consolidation invariant: anything that the boot-time
+    // synthetic-fallback gate consults must come from the registry,
+    // never from a hardcoded enum literal scattered elsewhere.
+    expect([...SURVEY_POINT_SOURCES]).toEqual([
+      Source.SDSS,
+      Source.TwoMRS,
+      Source.Glade,
+      Source.Milliquas,
+    ]);
+  });
+
+  it('derives TIER_FETCHED_POINT_SOURCES as every non-synthetic row in enum order', () => {
+    // The boot-time slot-load loop + the tier-change reload loop both
+    // iterate this list.  Adding a new survey via one registry row
+    // should automatically wire it through both loops.
+    expect([...TIER_FETCHED_POINT_SOURCES]).toEqual([
+      Source.SDSS,
+      Source.TwoMRS,
+      Source.Glade,
+      Source.Famous,
+      Source.Milliquas,
+    ]);
+  });
 });
 
 describe('wireGalaxyCatalogSourceSlot', () => {
@@ -171,6 +198,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
       source: Source.SDSS,
       fetcher: async () => fakeCloud(42),
       initialTier: 'medium',
+      category: 'survey',
     };
 
     wireGalaxyCatalogSourceSlot(state, cfg, makeDeps(cb));
@@ -199,6 +227,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
       source: Source.Glade,
       fetcher: async () => cloud,
       initialTier: 'small',
+      category: 'survey',
     };
 
     wireGalaxyCatalogSourceSlot(state, cfg, makeDeps());
@@ -226,6 +255,7 @@ describe('wireGalaxyCatalogSourceSlot', () => {
       source: Source.TwoMRS,
       fetcher: async () => fakeCloud(3),
       initialTier: 'medium',
+      category: 'survey',
     };
 
     wireGalaxyCatalogSourceSlot(state, cfg, makeDeps());

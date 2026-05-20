@@ -44,6 +44,10 @@
 
 import { Source } from '../../../data/sources';
 import { catalogSourceFor } from '../../../data/catalogSource';
+import {
+  SURVEY_POINT_SOURCES,
+  TIER_FETCHED_POINT_SOURCES,
+} from '../wiring/galaxyCatalogSourceRegistry';
 import { buildPoisFromFamousMeta } from './buildPoisFromFamousMeta';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
@@ -361,20 +365,23 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   //      with `count > 0`, fire `cb.onStatusChange({ kind: 'ready',
   //      count: <running total>, source })` so the status bar reflects
   //      progressive disclosure as surveys land.
-  //   2. Synthetic fallback: when every real survey (SDSS, 2MRS, GLADE)
-  //      has settled with no successful ready+count>0, fire the
-  //      synthetic slot's load. Famous is curated (~150 entries) and
-  //      doesn't count: a Famous-only success shouldn't suppress
-  //      synthetic, a Famous-only failure shouldn't trigger it.
-  const REAL_POINT_SOURCES: Source[] = [Source.SDSS, Source.TwoMRS, Source.Glade];
-  const ALL_POINT_SOURCES: Source[] = [...REAL_POINT_SOURCES, Source.Famous, Source.Milliquas];
+  //   2. Synthetic fallback: when every `survey`-category source has
+  //      settled with no successful ready+count>0, fire the synthetic
+  //      slot's load.  `curated` sources (Famous) are excluded — a
+  //      Famous-only success shouldn't suppress synthetic, a
+  //      Famous-only failure shouldn't trigger it.
+  //
+  // Both lists are derived from `GALAXY_CATALOG_SOURCE_REGISTRY` so
+  // adding a new tier-fetched survey is one registry-row edit, not
+  // three scattered enum literals.
+  const realSet = new Set(SURVEY_POINT_SOURCES);
 
   let realSettled = 0;
   let anyRealReady = false;
-  for (const source of ALL_POINT_SOURCES) {
+  for (const source of TIER_FETCHED_POINT_SOURCES) {
     const slot = state.assetSlots.points.get(source);
     if (!slot) {
-      if (REAL_POINT_SOURCES.includes(source)) {
+      if (realSet.has(source)) {
         realSettled++;
         maybeFireSyntheticFallback();
       }
@@ -388,13 +395,13 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
           count: state.gpu.renderer?.totalCount() ?? 0,
           source: catalogSourceFor(source),
         });
-        if (REAL_POINT_SOURCES.includes(source)) anyRealReady = true;
+        if (realSet.has(source)) anyRealReady = true;
       }
       if (counted) return;
       if (s.kind === 'ready' || s.kind === 'error') {
         counted = true;
         unsub();
-        if (REAL_POINT_SOURCES.includes(source)) {
+        if (realSet.has(source)) {
           realSettled++;
           maybeFireSyntheticFallback();
         }
@@ -403,7 +410,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   }
 
   function maybeFireSyntheticFallback(): void {
-    if (realSettled < REAL_POINT_SOURCES.length || anyRealReady) return;
+    if (realSettled < realSet.size || anyRealReady) return;
     const synthSlot = state.assetSlots.points.get(Source.Synthetic);
     if (!synthSlot) return;
     synthSlot.subscribe((s) => {
@@ -418,7 +425,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     synthSlot.load({ source: Source.Synthetic, tier: state.sources.tier });
   }
 
-  for (const source of ALL_POINT_SOURCES) {
+  for (const source of TIER_FETCHED_POINT_SOURCES) {
     state.assetSlots.points.get(source)?.load({ source, tier: state.sources.tier });
   }
   // Filaments load exactly once at boot — never on tier change.

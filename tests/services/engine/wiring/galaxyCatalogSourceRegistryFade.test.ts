@@ -82,6 +82,7 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
       source: Source.SDSS,
       fetcher: async () => cloud,
       initialTier: 'medium',
+      category: 'survey',
     };
 
     wireGalaxyCatalogSourceSlot(fx.state, cfg, makeDeps());
@@ -108,6 +109,7 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
       source: Source.SDSS,
       fetcher: async () => cloud,
       initialTier: 'large',
+      category: 'survey',
     };
 
     wireGalaxyCatalogSourceSlot(fx.state, cfg, makeDeps());

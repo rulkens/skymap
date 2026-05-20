@@ -179,13 +179,31 @@ function sourceName(source: Source): string {
  * header for why.
  */
 export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[] = [
-  { source: Source.SDSS, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
-  { source: Source.TwoMRS, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
-  { source: Source.Glade, fetcher: galaxyCatalogFetcher, initialTier: 'small' },
-  { source: Source.Famous, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
-  { source: Source.Milliquas, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
-  { source: Source.Synthetic, fetcher: syntheticPointFetcher, initialTier: 'small' },
+  { source: Source.SDSS, fetcher: galaxyCatalogFetcher, initialTier: 'medium', category: 'survey' },
+  { source: Source.TwoMRS, fetcher: galaxyCatalogFetcher, initialTier: 'medium', category: 'survey' },
+  { source: Source.Glade, fetcher: galaxyCatalogFetcher, initialTier: 'small', category: 'survey' },
+  { source: Source.Famous, fetcher: galaxyCatalogFetcher, initialTier: 'medium', category: 'curated' },
+  { source: Source.Milliquas, fetcher: galaxyCatalogFetcher, initialTier: 'medium', category: 'survey' },
+  { source: Source.Synthetic, fetcher: syntheticPointFetcher, initialTier: 'small', category: 'synthetic' },
 ];
+
+/**
+ * Sources whose absence at boot triggers the synthetic-data fallback —
+ * "real" survey catalogs in the `survey` category.  Derived from the
+ * registry so adding a new survey is one row edit, not three.
+ */
+export const SURVEY_POINT_SOURCES: readonly Source[] = GALAXY_CATALOG_SOURCE_REGISTRY.filter(
+  (c) => c.category === 'survey',
+).map((c) => c.source);
+
+/**
+ * Every tier-fetched catalog source (surveys + curated, but NOT
+ * Synthetic — that one is loaded only as a fallback).  This is what
+ * the boot-time slot-load loop and the tier-change reload loop both
+ * want to iterate.
+ */
+export const TIER_FETCHED_POINT_SOURCES: readonly Source[] =
+  GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.category !== 'synthetic').map((c) => c.source);
 
 /**
  * Shared dependencies the helper needs that aren't on `EngineState`.
