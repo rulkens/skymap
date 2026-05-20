@@ -183,6 +183,7 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
   { source: Source.TwoMRS, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
   { source: Source.Glade, fetcher: galaxyCatalogFetcher, initialTier: 'small' },
   { source: Source.Famous, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
+  { source: Source.Milliquas, fetcher: galaxyCatalogFetcher, initialTier: 'medium' },
   { source: Source.Synthetic, fetcher: syntheticPointFetcher, initialTier: 'small' },
 ];
 

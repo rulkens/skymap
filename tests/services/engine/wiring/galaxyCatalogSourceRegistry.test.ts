@@ -98,18 +98,19 @@ function fakeCloud(count: number): GalaxyCatalog {
 }
 
 describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
-  it('declares exactly the 5 expected sources in Source enum order', () => {
+  it('declares exactly the 6 expected sources in Source enum order', () => {
     const sources = GALAXY_CATALOG_SOURCE_REGISTRY.map((c) => c.source);
     expect(sources).toEqual([
       Source.SDSS,
       Source.TwoMRS,
       Source.Glade,
       Source.Famous,
+      Source.Milliquas,
       Source.Synthetic,
     ]);
   });
 
-  it('uses the shared galaxyCatalogFetcher for the four real surveys and the dedicated synthetic fetcher for Synthetic', () => {
+  it('uses the shared galaxyCatalogFetcher for the five real surveys and the dedicated synthetic fetcher for Synthetic', () => {
     // We don't import the fetchers here to avoid coupling to their
     // implementation — but we can verify the structural invariant
     // "Synthetic's fetcher is not the same reference as the other four".
