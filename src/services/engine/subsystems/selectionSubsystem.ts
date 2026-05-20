@@ -117,10 +117,8 @@ export function createSelectionSubsystem(
 ): SelectionSubsystem {
   const { cb, getCloud, getFamousMeta, getFamousXrefs, getMilliquasNames } = input;
 
-  // Internal mutable state.  Closure-captured `let`s so they're
-  // genuinely inaccessible from outside (no `this.hovered` for a
-  // future caller to reach in and poke).  Both start null — no
-  // selection until the first hover pick / click resolves.
+  // Closure-captured `let`s — genuinely inaccessible from outside.
+  // Both start null; populated by the first hover pick / click resolve.
   let hovered: Selection | null = null;
   let selected: Selection | null = null;
 
@@ -151,22 +149,19 @@ export function createSelectionSubsystem(
     );
   }
 
-  /**
-   * Resolve a Selection to the GalaxyInfo the legacy onHoverChange /
-   * onSelectChange callbacks expect, or null for POI / empty
-   * selections.  Galaxy variant uses the cloud lookup; POI variant
-   * returns null because the legacy callback shape can't carry it.
-   */
-  function infoForLegacyCallback(sel: Selection | null): GalaxyInfo | null {
-    if (sel === null) return null;
-    if (sel.kind !== 'galaxy') return null;
-    return galaxyInfoFor(sel);
-  }
-
   function setHovered(sel: Selection | null): void {
     if (selectionEq(sel, hovered)) return;
     hovered = sel;
-    cb.selection?.onHoverChange?.(infoForLegacyCallback(sel));
+    if (sel === null) {
+      cb.selection?.onHoverChange?.(null);
+      cb.selection?.onPoiHoverChange?.(null);
+    } else if (sel.kind === 'galaxy') {
+      cb.selection?.onHoverChange?.(galaxyInfoFor(sel));
+      cb.selection?.onPoiHoverChange?.(null);
+    } else {
+      cb.selection?.onHoverChange?.(null);
+      cb.selection?.onPoiHoverChange?.(sel.id);
+    }
   }
 
   function setSelected(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null): void {
@@ -174,12 +169,19 @@ export function createSelectionSubsystem(
     selected = sel;
     // `prebuiltInfo` short-circuits the cloud lookup for the
     // `selectByAlias` race window — see the module header for the
-    // pre-GPU-upload story.  The `!== undefined` check distinguishes
-    // "caller passed null on purpose" from "caller didn't pass it":
-    // an explicit null means "I have no info, fire the callback with
-    // null", whereas `undefined` means "look it up yourself".
-    const info = prebuiltInfo !== undefined ? prebuiltInfo : infoForLegacyCallback(sel);
-    cb.selection?.onSelectChange?.(info);
+    // pre-GPU-upload story.  Only applies to galaxy selections; POI
+    // ids resolve directly through the POI table at the consumer.
+    if (sel === null) {
+      cb.selection?.onSelectChange?.(null);
+      cb.camera?.onPoiFocusChange?.(null);
+    } else if (sel.kind === 'galaxy') {
+      const info = prebuiltInfo !== undefined ? prebuiltInfo : galaxyInfoFor(sel);
+      cb.selection?.onSelectChange?.(info);
+      cb.camera?.onPoiFocusChange?.(null);
+    } else {
+      cb.selection?.onSelectChange?.(null);
+      cb.camera?.onPoiFocusChange?.(sel.id);
+    }
   }
 
   function destroy(): void {

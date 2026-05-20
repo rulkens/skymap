@@ -39,7 +39,7 @@ function makeMockState(): EngineState {
       pitch: 0,
     },
     subsystems: {
-      pois: { setSelectedPoi: vi.fn(), getSelectedPoiId: () => null },
+      selection: { setSelected: vi.fn(), selected: () => null },
       tweens: { start: vi.fn(), cancel: vi.fn() },
       scheduler: { requestRender: vi.fn() },
     },
@@ -55,23 +55,17 @@ function makeMockCb(): EngineCallbacks {
 }
 
 describe('commitPoiFocus', () => {
-  it('calls setSelectedPoi then onPoiFocusChange when tween is false', () => {
+  it('calls selection.setSelected with a poi-variant Selection when tween is false', () => {
     const state = makeMockState();
     const cb = makeMockCb();
-    const order: string[] = [];
-    (state.subsystems.pois.setSelectedPoi as ReturnType<typeof vi.fn>).mockImplementation(
-      () => order.push('setSelectedPoi'),
-    );
-    (cb.camera!.onPoiFocusChange as ReturnType<typeof vi.fn>).mockImplementation(
-      () => order.push('onPoiFocusChange'),
-    );
 
     commitPoiFocus(state, cb, virgo, { tween: false });
 
-    expect(state.subsystems.pois.setSelectedPoi).toHaveBeenCalledWith('virgo-m87');
-    expect(cb.camera!.onPoiFocusChange).toHaveBeenCalledWith('virgo-m87');
+    expect(state.subsystems.selection.setSelected).toHaveBeenCalledWith({
+      kind: 'poi',
+      id: 'virgo-m87',
+    });
     expect(state.subsystems.tweens.start).not.toHaveBeenCalled();
-    expect(order).toEqual(['setSelectedPoi', 'onPoiFocusChange']);
   });
 
   it('starts a tween with poiFocusDistanceMpc when tween is true', () => {
@@ -89,17 +83,18 @@ describe('commitPoiFocus', () => {
     expect(Array.from(payload.toTarget)).toEqual([10, 0, 0]);
   });
 
-  it('is a no-op for the tween branch when state.cam is null, but still fires subsystem + callback', () => {
+  it('is a no-op for the tween branch when state.cam is null, but still updates selection', () => {
     const state = makeMockState();
     (state as unknown as { cam: unknown }).cam = null;
     const cb = makeMockCb();
     commitPoiFocus(state, cb, virgo, { tween: true });
-    // Tween is skipped because cam is null, but the subsystem update
-    // and the React callback still fire — selection state can update
-    // before the camera is ready, and the deep-link drain depends
-    // on that ordering.
-    expect(state.subsystems.pois.setSelectedPoi).toHaveBeenCalledWith('virgo-m87');
-    expect(cb.camera!.onPoiFocusChange).toHaveBeenCalledWith('virgo-m87');
+    // Tween is skipped because cam is null, but the selection update
+    // still fires — selection state can update before the camera is
+    // ready, and the deep-link drain depends on that ordering.
+    expect(state.subsystems.selection.setSelected).toHaveBeenCalledWith({
+      kind: 'poi',
+      id: 'virgo-m87',
+    });
     expect(state.subsystems.tweens.start).not.toHaveBeenCalled();
   });
 });

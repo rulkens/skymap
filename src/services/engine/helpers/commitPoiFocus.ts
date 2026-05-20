@@ -73,20 +73,18 @@ export type CommitPoiFocusOptions = {
  */
 export function commitPoiFocus(
   state: EngineState,
-  cb: EngineCallbacks,
+  _cb: EngineCallbacks,
   poi: PointOfInterest,
   options: CommitPoiFocusOptions,
 ): void {
-  // 1. Update the subsystem first so the selected POI's marker
-  //    descriptor reflects the new selection on the very next frame
-  //    (before the React side has even processed the callback below).
-  state.subsystems.pois.setSelectedPoi(poi.id);
+  // 1. Update the unified selection slot — selectionSubsystem fires
+  //    `onPoiFocusChange(poi.id)` (and clears any prior galaxy via
+  //    `onSelectChange(null)`) from inside the setter.  Happens
+  //    regardless of cam-null state so deep-link drains still drive
+  //    the marker bump + URL hash before the camera comes up.
+  state.subsystems.selection.setSelected({ kind: 'poi', id: poi.id });
 
-  // 2. Fire the React-side callback so the URL hash + InfoCard update.
-  //    Happens regardless of cam-null state — see module header.
-  cb.camera?.onPoiFocusChange?.(poi.id);
-
-  // 3. Optional tween, gated on cam availability.  POIs without a
+  // 2. Optional tween, gated on cam availability.  POIs without a
   //    physicalRadiusMpc are treated as zero radius by
   //    `poiFocusDistanceMpc`, which then clamps to the 1 Mpc minimum.
   //    In practice every cluster / SC / void POI sets the field, so
