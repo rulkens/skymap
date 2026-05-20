@@ -53,11 +53,8 @@ export function iauName(source: Source, raDeg: number, decDeg: number): string {
       // metadata enrichment).  "Famous" matches the Source label.
       return `Famous ${coords}`;
     case Source.Milliquas:
-      // Milliquas's own short-name convention.  Used when the row's
-      // `parentSurveyByte` is the OTHER sentinel — i.e. neither a known
-      // parent-survey prefix nor a curated literature name.  The
-      // parentSurveyByte-aware reconstruction in `galaxyInfoBuilder`
-      // takes precedence when set.
+      // Milliquas's own short-name convention, matching the catalogue's
+      // upstream usage (Flesch 2023).
       return `MQ ${coords}`;
     case Source.Cluster:
     case Source.Supercluster:
