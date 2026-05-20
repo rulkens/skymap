@@ -430,11 +430,19 @@ export function createLabelRenderer(
       labelBuf[labelBase + 1] = label.worldPos[1];
       labelBuf[labelBase + 2] = label.worldPos[2];
       labelBuf[labelBase + 3] = label.worldEmMpc ?? 0.01;
+      // Public API surface is STRAIGHT RGBA — producers spell colours the
+      // natural way (e.g. `[1, 0, 0, 0.5]` for "half-transparent red").
+      // The fragment shader composites in premultiplied space (see
+      // fragment.wesl's blend-state docstring), so we multiply r/g/b by a
+      // HERE and write the result through to the GPU.  The previous public
+      // API was premultiplied — see the Label.color docstring for the
+      // migration note.
       const color = label.color ?? [1, 1, 1, 1];
-      labelBuf[labelBase + 4] = color[0]!;
-      labelBuf[labelBase + 5] = color[1]!;
-      labelBuf[labelBase + 6] = color[2]!;
-      labelBuf[labelBase + 7] = color[3]!;
+      const a = color[3]!;
+      labelBuf[labelBase + 4] = color[0]! * a;
+      labelBuf[labelBase + 5] = color[1]! * a;
+      labelBuf[labelBase + 6] = color[2]! * a;
+      labelBuf[labelBase + 7] = a;
       labelBuf[labelBase + 8] = label.pixelSize;
       labelBuf[labelBase + 9] = label.minPixelSize ?? 8;
       labelBuf[labelBase + 10] = label.maxPixelSize ?? 64;
@@ -556,5 +564,10 @@ export function createLabelRenderer(
   // `satisfies Renderer` confirms the shared label+destroy contract at
   // compile time without widening the static type seen by consumers.
   renderer satisfies Renderer;
+  // Expose the CPU-side label storage scratch buffer for unit tests
+  // that need to assert pack-loop output.  The accessor is prefixed
+  // with `__debug` to flag it as test-only — production code should
+  // never read this; the GPU has the authoritative copy.
+  (renderer as unknown as { __debugLabelBuf: () => Float32Array }).__debugLabelBuf = () => labelBuf;
   return renderer;
 }
