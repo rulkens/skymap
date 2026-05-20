@@ -5,7 +5,7 @@
  * ### Why this module exists
  *
  * Sending a GalaxyCatalog across a Worker boundary with structured-clone
- * cost would be prohibitive at ~3.5M galaxies. The cheap alternative is
+ * cost would be prohibitive at ~2.5M galaxies. The cheap alternative is
  * `postMessage(payload, transfer)` with a list of `ArrayBuffer`s to
  * transfer ownership of — but we can't transfer the engine's
  * authoritative buffers (the picker and InfoCard read them after the

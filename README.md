@@ -24,7 +24,7 @@ _The full overlay surface — left stack (Navigation cheatsheet, Settings panel,
 
 ![Data-tier selector](docs/screenshots/tier-selector.png)
 
-_Segmented control at the top of the Settings panel hot-swaps the loaded dataset between three sizes: **Small** (~300k galaxies — mobile-friendly), **Medium** (~600k — default for laptops), and **Large** (~3.5M — full catalog). Tier choice on first paint is driven by viewport width; clicking a button re-fetches the relevant `.bin` files and re-uploads the GPU vertex buffers in place — no page reload._
+_Segmented control at the top of the Settings panel hot-swaps the loaded dataset between three sizes: **Small** (~300k galaxies — mobile-friendly), **Medium** (~600k — default for laptops), and **Large** (~2.5M — full catalog). Tier choice on first paint is driven by viewport width; clicking a button re-fetches the relevant `.bin` files and re-uploads the GPU vertex buffers in place — no page reload._
 
 ![Pinned InfoCard for a 2MRS galaxy](docs/screenshots/infocard-detail.png)
 

@@ -8,7 +8,7 @@
  * ### Why a pure function (no caching here)?
  *
  * The expensive bit is the cone search itself (one vec3 subtract + one
- * dot product per galaxy, ~3.5M ops for the full loaded catalog).
+ * dot product per galaxy, ~2.5M ops for the full loaded catalog).
  * Memoising against `(poiId, dataRev)` belongs to the subsystem that
  * owns the focus state — see spec §4.3 — because cache invalidation
  * needs to know when a tier swap has bumped `dataRev`, which this pure
@@ -66,7 +66,7 @@ export type ClusterMembershipResult = {
  * `radiusMpc` of `centerMpc` across the supplied catalogs.
  *
  * Time complexity: O(total galaxy count). For the typical loaded
- * footprint (~3.5M galaxies across SDSS + 2MRS + GLADE), one call
+ * footprint (~2.5M galaxies across SDSS + 2MRS + GLADE), one call
  * runs in single-digit milliseconds on the target hardware — see
  * spec §4.2 for the rationale on runtime-vs-build-time computation.
  *
@@ -83,7 +83,7 @@ export function clusterMembership(
   const cx = centerMpc[0];
   const cy = centerMpc[1];
   const cz = centerMpc[2];
-  // Compare against squared distance to avoid 3.5M Math.sqrt calls.
+  // Compare against squared distance to avoid 2.5M Math.sqrt calls.
   const r2 = radiusMpc * radiusMpc;
 
   const packedIds: number[] = [];

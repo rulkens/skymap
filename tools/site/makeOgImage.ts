@@ -55,7 +55,7 @@ const overlay = Buffer.from(
           font-size="34" font-weight="400" fill="#a8d0ff" opacity="0.95">Interactive WebGPU 3D galaxy explorer</text>
     <text x="60" y="${H - 12}"
           font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Helvetica, sans-serif"
-          font-size="22" font-weight="400" fill="#ffffff" opacity="0.65">SDSS · GLADE · 2MRS · ~3.5M galaxies · skymap.rulkens.com</text>
+          font-size="22" font-weight="400" fill="#ffffff" opacity="0.65">SDSS · GLADE · 2MRS · ~2.5M galaxies · skymap.rulkens.com</text>
   </svg>`,
 );
 
