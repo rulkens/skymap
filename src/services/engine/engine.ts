@@ -1350,6 +1350,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.gpu.labelRenderer = null;
     state.gpu.markerLineRenderer?.destroy();
     state.gpu.markerLineRenderer = null;
+    state.gpu.selectionRingRenderer?.destroy();
+    state.gpu.selectionRingRenderer = null;
     state.gpu.clusterMarkerRenderer?.destroy();
     state.gpu.clusterMarkerRenderer = null;
     state.gpu.texturedDiskRenderer?.destroy();
