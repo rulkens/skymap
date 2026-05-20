@@ -11,7 +11,7 @@
  * enough that users intuitively expect "tablet and up" to behave like a
  * desktop.
  *
- * 'large' is intentionally never auto-selected: the full 3.5M-point catalog
+ * 'large' is intentionally never auto-selected: the full 2.5M-point catalog
  * stresses integrated GPUs and the user should opt-in.
  *
  * ### Defensive edge cases
