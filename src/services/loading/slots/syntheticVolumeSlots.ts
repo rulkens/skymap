@@ -44,6 +44,7 @@ import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+import { buildVolumeFieldsSnapshot } from '../../engine/helpers/buildVolumeFieldsSnapshot';
 
 type SyntheticVolumeHandle = 'debug-gaussian' | 'debug-cartesian' | 'debug-spherical';
 
@@ -131,7 +132,7 @@ export function createSyntheticVolumeSlots(
         // never learns the new field exists — its mirror is rebuilt
         // only on this callback.  We're bypassing the public handle
         // (per the docblock above) so we have to fire it ourselves.
-        cb.volumes?.onFieldsChanged?.();
+        cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
         state.subsystems.scheduler.requestRender();
       },
     });

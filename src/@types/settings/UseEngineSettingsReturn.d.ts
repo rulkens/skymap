@@ -7,19 +7,14 @@
  * App.tsx into the `createEngine` options block.
  *
  * The four optimistic setters (`setFilamentsEnabled`,
- * `setFilamentIntensity`, `setExposure`, `setVolumesEnabled`) are the
- * no-echo / partial-echo exceptions — see the doc comments inside
- * `useEngineSettings.ts` for the rationale per setter.
- *
- * `setVolumeFields` is App.tsx's way of mirroring the engine's volume
- * field registry into React state on `onVolumeFieldsChanged`.  The
- * indirect wiring keeps the hook itself free of a reference to the
- * engine handle.
+ * `setFilamentIntensity`, `setExposure`, `setVolumesEnabled`,
+ * `setSpaceMouseSensitivity`) are the no-echo / partial-echo
+ * exceptions — see the doc comments inside `useEngineSettings.ts`
+ * for the rationale per setter.
  */
 
 import type { UseEngineSettingsState } from './UseEngineSettingsState';
 import type { EngineSettingsCallbacks } from './EngineSettingsCallbacks';
-import type { VolumeFieldRowData } from './VolumeFieldRowData';
 
 export type UseEngineSettingsReturn = {
   settings: UseEngineSettingsState;
@@ -33,13 +28,6 @@ export type UseEngineSettingsReturn = {
    * owns it optimistically, same as `setFilamentsEnabled`.
    */
   setVolumesEnabled: (v: boolean) => void;
-  /**
-   * Rebuilds the per-field row data.  Called by App.tsx whenever the
-   * engine fires `onVolumeFieldsChanged` (add/remove), reading the new
-   * snapshot from `handle.getVolumeFieldsState()`.  This indirect wiring
-   * avoids giving the hook itself a reference to the engine handle.
-   */
-  setVolumeFields: (fields: ReadonlyArray<VolumeFieldRowData>) => void;
   /**
    * Optimistic setter for the SpaceMouse sensitivity slider.  No engine
    * echo (the subsystem's `setSensitivity` is fire-and-forget), so

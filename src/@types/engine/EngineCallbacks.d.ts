@@ -14,6 +14,7 @@ import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
+import type { VolumeFieldRowData } from '../settings/VolumeFieldRowData';
 
 /**
  * Callbacks the engine uses to push state changes into the UI layer.
@@ -236,13 +237,15 @@ export type EngineCallbacks = {
   };
 
   /**
-   * Fired when a volume field is registered or unregistered (so the
-   * SettingsPanel can refresh its mirrored field list).  Does NOT
-   * fire for in-place mutations (`setVolumeFieldEnabled` /
-   * `setVolumeFieldIntensity`); React keeps those in optimistic
-   * local state.
+   * Fired after every volume-field mutation — add, remove, or in-place
+   * tunable change (enabled / intensity / contrast / densityScale /
+   * trim / exposure / palette).  The fresh snapshot is passed as the
+   * argument so consumers don't need to call back into the engine
+   * handle to learn what changed.
    */
-  volumes?: { onFieldsChanged?: () => void };
+  volumes?: {
+    onFieldsChanged?: (fields: ReadonlyArray<VolumeFieldRowData>) => void;
+  };
 
   /**
    * SpaceMouse connection-state echo.  Fires for both successful

@@ -103,10 +103,11 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   // No persistence: every session starts from the compile-time default.
   const [volumesEnabled, setVolumesEnabled] = useState<boolean>(DEFAULT_VOLUMES_ENABLED);
 
-  // Per-field row data.  Starts empty (no cubes at startup).  Rebuilt by
-  // App.tsx whenever the engine fires onVolumeFieldsChanged by calling
-  // handle.getVolumeFieldsState() — this indirect approach keeps the hook
-  // free of any reference to the engine handle.
+  // Per-field row data.  Starts empty (no cubes at startup).  The engine
+  // pushes a fresh snapshot through `volumes.onFieldsChanged(fields)`
+  // after every add / remove / tunable mutation; the callback is wired
+  // a few lines down and drops `debug-*` fixture handles on the way in
+  // so the panel only sees real science volumes.
   const [volumeFields, setVolumeFields] = useState<ReadonlyArray<VolumeFieldRowData>>([]);
 
   // ── One-shot from engine: filament strip + vertex counts ─────────────
@@ -227,6 +228,15 @@ export function useEngineSettings(): UseEngineSettingsReturn {
       filaments: {
         onReady: (stripCount, vertexCount) => setFilamentCounts({ stripCount, vertexCount }),
       },
+      volumes: {
+        // Engine pushes the fresh snapshot in its argument, so the
+        // mirror is a one-line setter.  Synthetic-fixture handles
+        // (`debug-*`) are dropped here — the SettingsPanel only shows
+        // real science volumes, but the engine's registry still holds
+        // them for dev-console toggling.
+        onFieldsChanged: (fields) =>
+          setVolumeFields(fields.filter((f) => !f.handle.startsWith('debug-'))),
+      },
       labels: {
         // Engine echoes the full record on every toggle; setting React
         // state to the same shape keeps the checkboxes in sync from a
@@ -250,7 +260,6 @@ export function useEngineSettings(): UseEngineSettingsReturn {
     setFilamentIntensity,
     setExposure,
     setVolumesEnabled,
-    setVolumeFields,
     setSpaceMouseSensitivity,
   };
 }
