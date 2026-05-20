@@ -1,5 +1,6 @@
 import type { BandLabels } from './BandLabels';
 import type { ColourIndexSpec } from './ColourIndexSpec';
+import type { SchechterTriple } from './SchechterTriple';
 import type { SourceEntryBase } from './SourceEntryBase';
 
 /**
@@ -34,4 +35,17 @@ export type SurveySourceEntry = SourceEntryBase & {
    * in `data/colourIndex.ts` for the consumer.
    */
   readonly colourSpec: ColourIndexSpec;
+  /**
+   * Apparent-magnitude flux limit for the survey, in the band that defines
+   * its selection (SDSS r, 2MRS K_s, GLADE B, …). Used by the Malmquist-
+   * bias correction; the band is recorded in {@link bandLabels} / {@link
+   * colourSpec}, so call sites that need the value look it up here.
+   */
+  readonly mLim: number;
+  /**
+   * Schechter luminosity-function triple `(M*, α, φ*)` for the band that
+   * defines the survey's flux limit. Used by the Schechter-density
+   * pathway of the bias correction.
+   */
+  readonly schechter: SchechterTriple;
 };

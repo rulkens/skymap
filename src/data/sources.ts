@@ -104,6 +104,11 @@ export const SOURCE_REGISTRY = {
     maxDistMpc: 1000, // matches the radius in synthetic.ts
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
     colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
+    // Synthetic has no real survey selection function; fall back to the
+    // SDSS calibration so the bias-correction pathway has a total
+    // `Record<Source, ...>` shape without inventing values.
+    mLim: 17.77,
+    schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
   },
   [Source.SDSS]: {
     type: 'survey',
@@ -117,6 +122,10 @@ export const SOURCE_REGISTRY = {
     maxDistMpc: 3000,
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
     colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
+    // r-band spec completeness limit (SDSS DR1+).
+    mLim: 17.77,
+    // Blanton et al. 2003, r-band LF for the spec sample.
+    schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
   },
   [Source.TwoMRS]: {
     type: 'survey',
@@ -132,6 +141,10 @@ export const SOURCE_REGISTRY = {
     // pair) for galaxy-type information. K-correction is negligible at
     // the survey's effective z ≲ 0.06.
     colourSpec: { slotA: 'g', slotB: 'i', rangeMin: 0.7, rangeMax: 1.1, kPerZ: 0.0 },
+    // Huchra et al. 2012 — K_s ≤ 11.75.
+    mLim: 11.75,
+    // Kochanek et al. 2001, K-band Schechter from 2MASS.
+    schechter: { mStar: -24.13, alpha: -1.1, phiStar: 0.0116 },
   },
   [Source.Glade]: {
     type: 'survey',
@@ -147,6 +160,11 @@ export const SOURCE_REGISTRY = {
     // GLADE's g/r slots hold B and J: B−J is a long optical-to-NIR
     // baseline that separates early- from late-type galaxies cleanly.
     colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.5, rangeMax: 3.5, kPerZ: 1.0 },
+    // B-band parent samples (HyperLEDA, GWGC) — effective limit ≈ 18.
+    mLim: 18.0,
+    // Norberg et al. 2002 b_J Schechter as a stand-in for B (close
+    // enough for visualisation purposes).
+    schechter: { mStar: -20.83, alpha: -1.08, phiStar: 0.0093 },
   },
   [Source.Famous]: {
     type: 'survey',
@@ -164,6 +182,11 @@ export const SOURCE_REGISTRY = {
     // Mirror SDSS so the colour ramp maps g−r cleanly; kPerZ = 0 since
     // these entries are all very nearby (z < 0.05).
     colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 0.0 },
+    // Famous entries have NaN photometry (vMaxWeight short-circuits to 0
+    // for those rows), so the bias-pipeline never actually consumes
+    // these. Mirror the SDSS calibration to keep the registry total.
+    mLim: 17.77,
+    schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
   },
   [Source.Cluster]: { type: 'poi', code: Source.Cluster, label: 'Cluster', allSky: true, visible: true },
   [Source.Supercluster]: { type: 'poi', code: Source.Supercluster, label: 'Supercluster', allSky: true, visible: true },
@@ -195,6 +218,18 @@ export const SOURCE_REGISTRY = {
     // observed-frame band sweeps through the Lyα forest at high z, but
     // kept modest until the bias-correction subsystem wires Milliquas in.
     colourSpec: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.5 },
+    // Milliquas's quasar-completeness limit varies wildly by parent
+    // survey (SDSS DR16Q reaches r ~ 22, DESI EDR ~ 23, bright optical/
+    // X-ray-selected subsamples cut at ~18). We use a permissive limit
+    // so vMaxWeight short-circuits rather than upweighting an unphysical
+    // volume — a per-parent-survey breakdown would belong in its own pass.
+    mLim: 22.0,
+    // Quasars don't follow the galaxy Schechter LF — they have their
+    // own QLF (Croom et al. 2009, Ross et al. 2013) with very different
+    // parameters. The SDSS galaxy values are a placeholder for the
+    // shape; vMaxWeight short-circuits to zero for NaN-photometry rows
+    // so this rarely fires in practice.
+    schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
   },
 } as const satisfies Readonly<Record<Source, SourceEntry>>;
 
