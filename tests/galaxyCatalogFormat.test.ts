@@ -81,9 +81,9 @@ describe('galaxy catalog binary format', () => {
 });
 
 /**
- * v3-specific tests: orientation round-trip (finite + NaN sentinel) and
- * cross-version rejection. Kept in a separate `describe` so the original
- * round-trip suite stays focused on the existing fields.
+ * Orientation round-trip coverage (finite + NaN sentinel) and
+ * cross-version rejection.  Kept in a separate `describe` so the
+ * primary round-trip suite stays focused on the scalar fields.
  */
 function makeOrientCloud(count: number, fillNaN = false): GalaxyCatalog {
   const ar = new Float32Array(count);
@@ -112,7 +112,7 @@ function makeOrientCloud(count: number, fillNaN = false): GalaxyCatalog {
   };
 }
 
-describe('galaxyCatalogFormat v4 (orientation round-trip)', () => {
+describe('galaxyCatalogFormat — orientation round-trip', () => {
   it('round-trips finite axisRatio and positionAngleDeg', () => {
     const cloud = makeOrientCloud(4, false);
     const decoded = decodeGalaxyCatalog(encodeGalaxyCatalog(cloud));
@@ -155,11 +155,11 @@ describe('galaxyCatalogFormat v4 (orientation round-trip)', () => {
 });
 
 /**
- * v4-specific tests: diameterKpc field — finite values, NaN sentinel,
- * byte-length verification, cross-version rejection (v1/v2/v3 all rejected),
- * and length-mismatch guard on encode.
+ * diameterKpc field coverage — finite values, NaN sentinel, byte-length
+ * verification, cross-version rejection, and length-mismatch guard on
+ * encode.
  */
-describe('galaxyCatalogFormat v4', () => {
+describe('galaxyCatalogFormat — diameterKpc + stride + rejection', () => {
   it('round-trips diameterKpc finite values', () => {
     const cloud: GalaxyCatalog = {
       count: 2,
