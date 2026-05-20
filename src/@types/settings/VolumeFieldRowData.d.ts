@@ -2,10 +2,11 @@
  * VolumeFieldRowData — the data the SettingsPanel needs to render a
  * single volume-field row.
  *
- * Produced by `engineHandle.volumes.getState()` and held in App.tsx
- * React state; rebuilt on every `onVolumeFieldsChanged` callback so the
- * panel always reflects the live field registry without a full re-render
- * of the engine.
+ * Pushed in the `volumes.onFieldsChanged(fields)` callback whenever a
+ * field is added, removed, or mutated; `useEngineSettings` mirrors the
+ * snapshot into React state so the panel always reflects the live field
+ * registry.  Also returned by `engineHandle.volumes.getState()` for
+ * one-shot reads (dev console, tests).
  *
  * The `label` field defaults to the `handle` string when the field was
  * registered without an explicit human-readable name.  A future

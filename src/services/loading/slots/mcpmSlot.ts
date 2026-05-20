@@ -16,6 +16,7 @@ import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
+import { buildVolumeFieldsSnapshot } from '../../engine/helpers/buildVolumeFieldsSnapshot';
 
 export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
   const slot = createAssetSlot({
@@ -64,7 +65,7 @@ export const createMcpmSlot: SlotFactory<ScalarCube, MCPMReq> = (state, cb) => {
           FADE_IN_DURATION_MS,
         );
       }
-      cb.volumes?.onFieldsChanged?.();
+      cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
       state.subsystems.scheduler.requestRender();
     },
   });

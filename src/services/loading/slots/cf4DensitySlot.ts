@@ -26,6 +26,7 @@ import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
+import { buildVolumeFieldsSnapshot } from '../../engine/helpers/buildVolumeFieldsSnapshot';
 
 export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) => {
   const slot = createAssetSlot({
@@ -77,7 +78,7 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
           FADE_IN_DURATION_MS,
         );
       }
-      cb.volumes?.onFieldsChanged?.();
+      cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
       state.subsystems.scheduler.requestRender();
     },
   });

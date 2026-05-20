@@ -90,7 +90,6 @@ import {
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_VOLUME_FIELD_INTENSITY,
-  DEFAULT_VOLUME_PALETTE_ID,
 } from '../../data/defaults';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -130,6 +129,8 @@ import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
 import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
+import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
+import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -1162,14 +1163,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         FADE_IN_DURATION_MS,
       );
     }
-    cb.volumes?.onFieldsChanged?.();
+    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
   function removeVolumeField(fieldHandle: string): void {
     state.gpu.scalarVolumeRenderer?.removeField(fieldHandle);
     delete state.settings.volumes.fields[fieldHandle];
-    cb.volumes?.onFieldsChanged?.();
+    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1237,6 +1238,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       enabled ? 1 : 0,
       enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
+    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1245,6 +1247,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.settings.volumes.fields[fieldHandle].intensity = intensity;
     }
     state.gpu.scalarVolumeRenderer?.setIntensity(fieldHandle, intensity);
+    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1253,6 +1256,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.settings.volumes.fields[fieldHandle].contrast = contrast;
     }
     state.gpu.scalarVolumeRenderer?.setContrast(fieldHandle, contrast);
+    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1261,6 +1265,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.settings.volumes.fields[fieldHandle].densityScale = value;
     }
     state.gpu.scalarVolumeRenderer?.setDensityScale(fieldHandle, value);
+    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1269,6 +1274,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.settings.volumes.fields[fieldHandle].trim = trim;
     }
     state.gpu.scalarVolumeRenderer?.setTrim(fieldHandle, trim);
+    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1277,6 +1283,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.settings.volumes.fields[fieldHandle].exposure = exposure;
     }
     state.gpu.scalarVolumeRenderer?.setExposure(fieldHandle, exposure);
+    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1285,6 +1292,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       state.settings.volumes.fields[fieldHandle].paletteId = id;
     }
     state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldHandle, id);
+    cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
@@ -1292,33 +1300,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
   }
 
-  function getVolumeFieldsState(): ReadonlyArray<{
-    handle: string;
-    label: string;
-    enabled: boolean;
-    intensity: number;
-    contrast: number;
-    densityScale: number;
-    paletteId: ScalarFieldPaletteId;
-    trim: number;
-    exposure: number;
-  }> {
-    const handles = state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
-    return handles.map((h) => {
-      const field = state.settings.volumes.fields[h];
-      const defaults = getVolumeFieldDefaults(h);
-      return {
-        handle: h,
-        label: defaults.label ?? h,
-        enabled: field?.enabled ?? true,
-        intensity: field?.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
-        contrast: field?.contrast ?? defaults.contrast,
-        densityScale: field?.densityScale ?? defaults.densityScale,
-        paletteId: field?.paletteId ?? DEFAULT_VOLUME_PALETTE_ID,
-        trim: field?.trim ?? defaults.trim,
-        exposure: field?.exposure ?? defaults.exposure,
-      };
-    });
+  function getVolumeFieldsState(): ReadonlyArray<VolumeFieldRowData> {
+    return buildVolumeFieldsSnapshot(state);
   }
 
   async function connectSpaceMouse(): Promise<boolean> {
