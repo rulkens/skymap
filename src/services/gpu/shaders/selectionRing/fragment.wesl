@@ -13,19 +13,19 @@
 //
 // ## Output colour
 //
-// Pure white, premultiplied alpha (`vec4(alpha, alpha, alpha, alpha)`).
+// Pure white, premultiplied alpha ('vec4(alpha, alpha, alpha, alpha)').
 // Post-tone-map UI overlay, so HDR boost isn't available — and isn't
 // needed.  No tint, no per-galaxy colour.
 //
-// Bindings: this stage reads only the `VsOut` varyings (no uniform
-// access), so no `@group/@binding` declarations are needed.
+// Bindings: this stage reads only the 'VsOut' varyings (no uniform
+// access), so no '@group/@binding' declarations are needed.
 
 import package::selectionRing::io::VsOut;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   // Radial distance² from the quad centre.  UV is in [-1, +1]², so
-  // `dot(uv, uv)` is r² in unit-quad space.
+  // 'dot(uv, uv)' is r² in unit-quad space.
   let r2 = dot(input.uv, input.uv);
 
   // Outside the outer disc — discard before the smoothstep can leak

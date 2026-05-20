@@ -1,8 +1,8 @@
 // selectionRing/vertex.wesl — project the selected galaxy's world
-// position and expand a screen-aligned `ringRadiusPx`-radius quad.
+// position and expand a screen-aligned 'ringRadiusPx'-radius quad.
 //
 // Bindings live here, not in io.wesl — WESL has no global state, so
-// `@group/@binding` declarations are module-local.  We re-declare both
+// '@group/@binding' declarations are module-local.  We re-declare both
 // uniforms using the structs imported from io.wesl.
 
 import package::selectionRing::io::SelectionRingUniforms;
@@ -26,8 +26,8 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   // billboard helper.  Six vertices per quad (non-indexed triangle-list).
   let corner = quadCorner(vi);
 
-  // Expand the centre by `ringRadiusPx` pixels.  The CPU already baked
-  // the 8× halo factor into `ringRadiusPx`, so the helper returns the
+  // Expand the centre by 'ringRadiusPx' pixels.  The CPU already baked
+  // the 8× halo factor into 'ringRadiusPx', so the helper returns the
   // final clip-space delta with no per-instance sizeScale.
   let offset = expandBillboardScreen(cam, center, sel.ringRadiusPx, corner);
 
