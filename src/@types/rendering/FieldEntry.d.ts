@@ -38,14 +38,12 @@ export type FieldEntry = {
    * pushes mid-density values toward the bright end.  Per-cube
    * static — set once at registration time from the per-handle
    * registry, not user-tunable.  See `applyContrastWindow` in
-   * `fragment.wesl` for the math; `VOLUME_FIELD_DEFAULTS[handle]`
-   * for the per-field values.
+   * `fragment.wesl` for the math.
    */
   contrastCenter: number;
   paletteId: ScalarFieldPaletteId;
-  /** Per-cube opacity multiplier; seeded to 1.0 in `addField` and overwritten
-   *  via `setDensityScale` (called from wireSlots with the value from
-   *  `VOLUME_FIELD_DEFAULTS[handle]`). */
+  /** Per-cube opacity multiplier; seeded in `addField` and overwritten
+   *  via `setDensityScale` from the field's SOURCE_REGISTRY entry. */
   densityScale: number;
   /**
    * Spatial envelope (smoothstep edges in normalised local-space
@@ -53,9 +51,8 @@ export type FieldEntry = {
    * Voxels at distance < `envelopeInner` get full alpha; voxels past
    * `envelopeOuter` are fully suppressed; values in between cross-fade.
    * Setting both to a value ≥ √3 (the cube-corner distance) disables
-   * the envelope — `NO_SPATIAL_ENVELOPE` from `volumeFieldDefaults.ts`
-   * is the canonical sentinel.  Seeded to no-envelope in `addField`
-   * and overwritten via `setEnvelope` from `wireSlots`.
+   * the envelope.  Seeded to no-envelope in `addField` and overwritten
+   * via `setEnvelope` from `wireSlots`.
    */
   envelopeInner: number;
   envelopeOuter: number;

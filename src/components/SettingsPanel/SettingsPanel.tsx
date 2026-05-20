@@ -90,6 +90,7 @@ import type { ToneMapCurve as ToneMapCurveT } from '../../@types/data/ToneMapCur
 import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 import type { ScalarFieldPaletteId } from '../../@types/data/ScalarFieldPaletteId';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
+import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 import { VolumeFieldRow } from './VolumeFieldRow';
 import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
@@ -217,13 +218,13 @@ type Props = {
    * Drives the per-cube rows inside Cosmic web → Advanced.
    */
   volumeFields?: ReadonlyArray<VolumeFieldRowData>;
-  onVolumeFieldEnabledChange?: (handle: string, enabled: boolean) => void;
-  onVolumeFieldIntensityChange?: (handle: string, intensity: number) => void;
-  onVolumeFieldContrastChange?: (handle: string, contrast: number) => void;
-  onVolumeFieldDensityScaleChange?: (handle: string, value: number) => void;
-  onVolumeFieldTrimChange?: (handle: string, trim: number) => void;
-  onVolumeFieldExposureChange?: (handle: string, exposure: number) => void;
-  onVolumeFieldPaletteChange?: (handle: string, id: ScalarFieldPaletteId) => void;
+  onVolumeFieldEnabledChange?: (id: VolumeFieldId, enabled: boolean) => void;
+  onVolumeFieldIntensityChange?: (id: VolumeFieldId, intensity: number) => void;
+  onVolumeFieldContrastChange?: (id: VolumeFieldId, contrast: number) => void;
+  onVolumeFieldDensityScaleChange?: (id: VolumeFieldId, value: number) => void;
+  onVolumeFieldTrimChange?: (id: VolumeFieldId, trim: number) => void;
+  onVolumeFieldExposureChange?: (id: VolumeFieldId, exposure: number) => void;
+  onVolumeFieldPaletteChange?: (id: VolumeFieldId, paletteId: ScalarFieldPaletteId) => void;
 
   // ── Structures group (cluster / supercluster / void MARKER rings) ──────
   /**

@@ -270,26 +270,26 @@ export function App(): React.ReactElement {
               handleRef.current?.volumes.setMasterEnabled(enabled);
             }}
             volumeFields={volumeFields}
-            onVolumeFieldEnabledChange={(fieldHandle, enabled) =>
-              handleRef.current?.volumes.setEnabled(fieldHandle, enabled)
+            onVolumeFieldEnabledChange={(fieldId, enabled) =>
+              handleRef.current?.volumes.setEnabled(fieldId, enabled)
             }
-            onVolumeFieldIntensityChange={(fieldHandle, intensity) =>
-              handleRef.current?.volumes.setIntensity(fieldHandle, intensity)
+            onVolumeFieldIntensityChange={(fieldId, intensity) =>
+              handleRef.current?.volumes.setIntensity(fieldId, intensity)
             }
-            onVolumeFieldContrastChange={(fieldHandle, contrast) =>
-              handleRef.current?.volumes.setContrast(fieldHandle, contrast)
+            onVolumeFieldContrastChange={(fieldId, contrast) =>
+              handleRef.current?.volumes.setContrast(fieldId, contrast)
             }
-            onVolumeFieldDensityScaleChange={(fieldHandle, densityScale) =>
-              handleRef.current?.volumes.setDensityScale(fieldHandle, densityScale)
+            onVolumeFieldDensityScaleChange={(fieldId, densityScale) =>
+              handleRef.current?.volumes.setDensityScale(fieldId, densityScale)
             }
-            onVolumeFieldTrimChange={(fieldHandle, trim) =>
-              handleRef.current?.volumes.setTrim(fieldHandle, trim)
+            onVolumeFieldTrimChange={(fieldId, trim) =>
+              handleRef.current?.volumes.setTrim(fieldId, trim)
             }
-            onVolumeFieldExposureChange={(fieldHandle, exposure) =>
-              handleRef.current?.volumes.setExposure(fieldHandle, exposure)
+            onVolumeFieldExposureChange={(fieldId, exposure) =>
+              handleRef.current?.volumes.setExposure(fieldId, exposure)
             }
-            onVolumeFieldPaletteChange={(fieldHandle, paletteId) =>
-              handleRef.current?.volumes.setPalette(fieldHandle, paletteId)
+            onVolumeFieldPaletteChange={(fieldId, paletteId) =>
+              handleRef.current?.volumes.setPalette(fieldId, paletteId)
             }
           />
           <StatsPanel

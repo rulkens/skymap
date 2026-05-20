@@ -18,6 +18,7 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { VolumeFieldRowData } from '../../../@types/settings/VolumeFieldRowData';
+import type { VolumeFieldId } from '../../../@types/data/VolumeFieldId';
 import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
 import {
   DEFAULT_VOLUME_FIELD_INTENSITY,
@@ -27,13 +28,16 @@ import {
 export function buildVolumeFieldsSnapshot(
   state: EngineState,
 ): ReadonlyArray<VolumeFieldRowData> {
-  const handles = state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
-  return handles.map((h) => {
-    const field = state.settings.volumes.fields[h];
-    const defaults = getVolumeFieldDefaults(h);
+  // The renderer's handle list is typed as `string[]` (GPU layer is
+  // type-agnostic); narrow to `VolumeFieldId` here because only
+  // registry-listed handles can have been registered upstream.
+  const ids = (state.gpu.scalarVolumeRenderer?.listHandles() ?? []) as VolumeFieldId[];
+  return ids.map((id) => {
+    const field = state.settings.volumes.fields[id];
+    const defaults = getVolumeFieldDefaults(id);
     return {
-      handle: h,
-      label: defaults.label ?? h,
+      handle: id,
+      label: defaults.label ?? id,
       enabled: field?.enabled ?? true,
       intensity: field?.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
       contrast: field?.contrast ?? defaults.contrast,

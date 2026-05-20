@@ -324,13 +324,11 @@ export function createScalarVolumeRenderer(
       mat4.invert(invModelMatrix, modelMatrix);
       const volumeTexture = uploadCube(cube);
       const paletteTexture = createPaletteTexture();
-      // Seed with the neutral fallback palette.  Callers (wireSlots /
-      // engine.addVolumeField) immediately overwrite this via
-      // `setFieldPalette` using the per-handle entry from
-      // `VOLUME_FIELD_DEFAULTS`.  Hard-coding 'viridis' here keeps the
-      // renderer self-contained and free of the volumeFieldDefaults
-      // import — the renderer doesn't know field handles, only GPU
-      // resources.
+      // Seed with the neutral fallback palette.  Callers immediately
+      // overwrite via `setFieldPalette` using the per-handle entry
+      // from the registry.  Hard-coding 'viridis' here keeps the
+      // renderer self-contained — it doesn't know field ids, only
+      // GPU resources.
       writePaletteLut(paletteTexture, 'viridis');
       const uniformBuffer = device.createBuffer({
         size: UNIFORM_BYTES,
@@ -376,20 +374,16 @@ export function createScalarVolumeRenderer(
         // pair just has to agree until that happens.
         paletteId: 'viridis',
         // SCFD v2 cubes are data-only — `densityScale` is no longer a
-        // cube property.  Seed to identity (1.0); the wireSlots commit
-        // calls `setDensityScale(handle, defaults.densityScale)` using
-        // the per-handle value from `VOLUME_FIELD_DEFAULTS` right
-        // after `addField` returns, so this default only matters for
-        // the brief window before that — and for direct test calls
-        // that don't go through wireSlots.
+        // cube property.  Seed to identity (1.0); the slot commit
+        // calls `setDensityScale` with the per-handle registry value
+        // right after `addField` returns, so this default only matters
+        // for the brief window before that — and for direct test calls
+        // that don't go through slot wiring.
         densityScale: 1.0,
-        // No envelope by default; the wireSlots commit calls
-        // `setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer)`
-        // immediately afterwards.  Sentinel 2.0/2.0 (both ≥ √3) keeps
-        // the smoothstep pinned at 1.0 — visually identical to "no
-        // envelope" until the real values land.  See
-        // `volumeFieldDefaults.NO_SPATIAL_ENVELOPE` for the canonical
-        // version of this sentinel.
+        // No envelope by default; the slot commit calls `setEnvelope`
+        // immediately afterwards.  Sentinel `inner === outer >= √3`
+        // pins the smoothstep at 1.0 — visually identical to "no
+        // envelope" until the real values land.
         envelopeInner: 2.0,
         envelopeOuter: 2.0,
         // 1.0 = pre-HDR behaviour exactly preserved.  Slot commit
