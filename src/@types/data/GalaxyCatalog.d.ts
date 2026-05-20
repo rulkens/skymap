@@ -134,4 +134,43 @@ export type GalaxyCatalog = {
    * of the input catalog), but the pipeline never produces a NaN entry.
    */
   diameterKpc: Float32Array;
+
+  /**
+   * Per-record source-interpreted classification byte — length === count.
+   *
+   * The byte's meaning depends on which `Source` this catalog belongs
+   * to: for `Source.Milliquas` it encodes the AGN class letter
+   * (1=Q, 2=A, 3=B, 4=K, 5=N, 6=S), for every other source it is
+   * always 0 ("unclassified") today.  Future morphology work on
+   * SDSS or GLADE can re-use the same slot with a different lookup
+   * table — the lookup helper `sourceClassLabel(source, byte)` in
+   * `src/data/sourceClass.ts` is the single dispatch site.
+   *
+   * Stored as `Uint8Array` because the on-disk format gives each
+   * record exactly one byte for this field (see
+   * `galaxyCatalogFormat.ts` v5 layout).  Zero is a legal "no class
+   * known" value for every source, so the typed array's default
+   * zero-fill is the correct empty state.
+   */
+  classByte: Uint8Array;
+
+  /**
+   * Per-record parent-survey enum byte — length === count.
+   *
+   * Only meaningful for `Source.Milliquas` rows: Milliquas Names are
+   * almost always shaped `"<PARENT_SURVEY> J<RA><Dec>"`, where
+   * PARENT_SURVEY is one of a small fixed set (SDSS, 2MASX, GAIA,
+   * WISEA, NVSS, FIRST, 6dFGS).  At parse time we detect the prefix
+   * and write the matching enum value here so the InfoCard can
+   * reconstruct the historical display name at hover time by
+   * combining the prefix lookup with `iauRaDecSuffix(ra, dec)`.
+   *
+   * `0` means "no recognised parent-survey prefix" (literature
+   * designation like `3C 273` or `M 87`); the InfoCard falls back to
+   * the generic `MQ J<RA><Dec>` IAU name in that case.
+   *
+   * For every non-Milliquas source the build pipeline writes `0` and
+   * `milliquasParentSurveyPrefix(byte)` returns `null`.
+   */
+  parentSurveyByte: Uint8Array;
 };
