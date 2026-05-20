@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/SourceType';
 import type { EngineHandle } from './EngineHandle';
 import type { EngineStatus } from './EngineStatus';
 import type { GalaxyInfo } from './GalaxyInfo';
@@ -22,7 +22,7 @@ export type UseUrlSyncInput = {
   // Galaxy side
   focused: GalaxyInfo | null;
   status: EngineStatus;
-  sourceCounts: Partial<Record<Source, number>>;
+  sourceCounts: Partial<Record<SourceType, number>>;
   famousMeta: readonly FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
   aliasMap: ReadonlyMap<bigint, readonly string[]>;

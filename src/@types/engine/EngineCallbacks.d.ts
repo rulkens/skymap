@@ -8,7 +8,7 @@ import type { EngineStatus } from './EngineStatus';
 import type { GalaxyInfo } from './GalaxyInfo';
 import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/SourceType';
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { LoadProgressState } from '../loading/LoadProgressState';
@@ -199,7 +199,7 @@ export type EngineCallbacks = {
   sources?: {
     onMaskChange?: (mask: number) => void;
     onTierChange?: (tier: Tier) => void;
-    onCatalogReady?: (source: Source, count: number) => void;
+    onCatalogReady?: (source: SourceType, count: number) => void;
     onLoadProgress?: (progress: LoadProgressState | null) => void;
   };
 

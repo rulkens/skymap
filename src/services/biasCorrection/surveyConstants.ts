@@ -44,12 +44,13 @@
  * @module
  */
 
-import { Source, ALL_SOURCES } from '../../data/sources';
+import { Source, SURVEY_SOURCES } from '../../data/sources';
 import { surveyFluxLimit, surveySchechter } from '../../data/surveyFluxLimits';
 import { expectedNumberDensity } from '../../utils/math/schechterDensity';
 import type { SurveyConstants } from '../../@types/math/SurveyConstants';
+import type { SourceType } from '../../@types/data/SourceType';
 
-function buildOne(source: Source): SurveyConstants {
+function buildOne(source: SourceType): SurveyConstants {
   const schechter = surveySchechter(source);
   const mLim = surveyFluxLimit(source);
   const nRef = expectedNumberDensity({
@@ -64,18 +65,18 @@ function buildOne(source: Source): SurveyConstants {
 // makes the misuse "subsystem mutates a constants record" impossible —
 // the entries are shared across the subsystem, the renderer (post-E.2
 // reads), and any future consumer.
-const TABLE: Record<Source, SurveyConstants> = ALL_SOURCES.reduce(
+const TABLE: Record<SourceType, SurveyConstants> = SURVEY_SOURCES.reduce(
   (acc, src) => {
     acc[src] = Object.freeze(buildOne(src));
     return acc;
   },
-  {} as Record<Source, SurveyConstants>,
+  {} as Record<SourceType, SurveyConstants>,
 );
 
 /**
  * Look up the cached `SurveyConstants` for a source.  Identity-stable
  * across calls; safe to use as a Map key.
  */
-export function surveyConstants(source: Source): SurveyConstants {
+export function surveyConstants(source: SourceType): SurveyConstants {
   return TABLE[source];
 }

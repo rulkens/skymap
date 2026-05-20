@@ -35,7 +35,7 @@
 
 import { packSelection } from '../../data/selectionEncoding';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../../@types/data/SourceType';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**
@@ -46,7 +46,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * `state.sources.catalogs` map.
  */
 export type CatalogWithSource = {
-  readonly source: Source;
+  readonly source: SourceType;
   readonly catalog: GalaxyCatalog;
 };
 

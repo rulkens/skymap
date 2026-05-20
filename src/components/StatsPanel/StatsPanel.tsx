@@ -42,9 +42,11 @@
  */
 
 import { memo, type ReactNode } from 'react';
-import { ALL_SOURCES, Source, maskHas } from '../../data/sources';
+import { SURVEY_SOURCES, Source } from '../../data/sources';
+import { maskHas } from '../../utils/sourceMask';
 import { Panel } from '../common/Panel/Panel';
 import styles from './StatsPanel.module.css';
+import type { SourceType } from '../../@types/data/SourceType';
 
 /** Props for StatsPanel.  See module header for design rationale. */
 export type StatsPanelProps = {
@@ -63,7 +65,7 @@ export type StatsPanelProps = {
    * sum, so the displayed number reflects what's currently rendered
    * rather than what's loaded.
    */
-  sourceCounts: Partial<Record<Source, number>>;
+  sourceCounts: Partial<Record<SourceType, number>>;
   /**
    * Bitmask of currently-visible sources.  Bits are tested with
    * `maskHas(mask, source)` from `data/sources.ts`.  A survey that's
@@ -110,10 +112,10 @@ function StatsPanel({
   // Sum only the visible, real surveys — Synthetic is excluded because its
   // count would only appear in the rare all-fetch-failed fallback, where
   // labelling its synthetic-cloud points as "Galaxies" would be misleading
-  // (the StatusBar already tags that condition).  ALL_SOURCES gives us a
+  // (the StatusBar already tags that condition).  SURVEY_SOURCES gives us a
   // stable enumeration order; the order doesn't matter for a sum but it
   // keeps this loop trivially predictable.
-  const galaxyTotal = ALL_SOURCES.filter((s) => s !== Source.Synthetic).reduce((sum, source) => {
+  const galaxyTotal = SURVEY_SOURCES.filter((s) => s !== Source.Synthetic).reduce((sum, source) => {
     if (!maskHas(visibleSourceMask, source)) return sum;
     return sum + (sourceCounts[source] ?? 0);
   }, 0);

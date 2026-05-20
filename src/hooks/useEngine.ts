@@ -54,7 +54,7 @@ import type { Tier } from '../@types/data/Tier';
 import type { UseEngineInput } from '../@types/engine/UseEngineInput';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { initialTierFromViewport } from '../utils/initialTierFromViewport';
-import type { Source } from '../data/sources';
+import type { SourceType } from '../@types/data/SourceType';
 
 /**
  * Initial scale-bar value that renders something sensible before the
@@ -84,7 +84,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
   const [focused, setFocused] = useState<GalaxyInfo | null>(null);
   const [scale, setScale] = useState<ScaleInfo>(INITIAL_SCALE);
   const [fps, setFps] = useState<number>(0);
-  const [sourceCounts, setSourceCounts] = useState<Partial<Record<Source, number>>>({});
+  const [sourceCounts, setSourceCounts] = useState<Partial<Record<SourceType, number>>>({});
   const [loadProgress, setLoadProgress] = useState<LoadProgressState | null>(null);
   // Lazy-init from viewport — `window` is guarded for SSR / unit-test
   // hosts.  Echoed by the engine via `onTierChange`, so this state
@@ -101,7 +101,7 @@ export function useEngine(input: UseEngineInput = {}): UseEngineReturn {
     // entries below.  H5 task 11 deleted the flat callback shape from
     // `EngineCallbacks`; every subscriber now lives inside its cluster
     // (`lifecycle`, `selection`, `camera`, `sources`, …).
-    const onCatalogReadyImpl = (source: Source, count: number) =>
+    const onCatalogReadyImpl = (source: SourceType, count: number) =>
       setSourceCounts((prev) => ({ ...prev, [source]: count }));
     const onCameraChangeImpl = (snapshot: { distance: number; fovYRad: number }) => {
       const c = canvasRef.current;

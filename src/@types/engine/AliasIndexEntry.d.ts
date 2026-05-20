@@ -1,4 +1,4 @@
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/SourceType';
 
 /**
  * Joined per-cloud alias index entry.  Built lazily on first palette open
@@ -12,6 +12,6 @@ import type { Source } from '../../data/sources';
 export type AliasIndexEntry = {
   pgc: bigint;
   names: readonly string[];
-  source: Source;
+  source: SourceType;
   localIdx: number;
 };

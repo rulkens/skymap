@@ -1,6 +1,6 @@
 import type { EngineCallbacks } from '../EngineCallbacks';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 
@@ -14,7 +14,7 @@ export type CreateSelectionSubsystemInput = {
   /** UI-callback sink — only `onHoverChange` / `onSelectChange` are read. */
   cb: EngineCallbacks;
   /** Live read of source catalogs; closure rather than snapshot so tier swaps land. */
-  getCloud: (source: Source) => GalaxyCatalog | undefined;
+  getCloud: (source: SourceType) => GalaxyCatalog | undefined;
   /** Live read of the famous-galaxy meta sidecar (curated names + thumbnail IDs). */
   getFamousMeta: () => readonly FamousMetaEntry[];
   /** Live read of the famous-galaxy xref sidecar (cross-survey ID joins). */

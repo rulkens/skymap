@@ -8,9 +8,7 @@ import {
 
 describe('volumeFieldDefaults', () => {
   it('exposes cf4-density with coolwarm + tuned contrast / densityScale', () => {
-    const d = VOLUME_FIELD_DEFAULTS['cf4-density'];
-    expect(d).toBeDefined();
-    expect(d!.paletteId).toBe('coolwarm');
+    const d = getVolumeFieldDefaults('cf4-density');
     // Values tuned visually against d_mean_CF4pp.npy — contrast 1.2
     // (a light ~17% deadband) suppresses near-mean noise without
     // cropping real structure; densityScale 20 compensates for the
@@ -18,8 +16,9 @@ describe('volumeFieldDefaults', () => {
     // cropping so the cloud reads at a useful saturation through
     // intensity=0.5.  Don't bump either without an A/B against the
     // CF-4 cube.
-    expect(d!.contrast).toBeCloseTo(1.2, 6);
-    expect(d!.densityScale).toBeCloseTo(20.0, 6);
+    expect(d.paletteId).toBe('coolwarm');
+    expect(d.contrast).toBeCloseTo(1.2, 6);
+    expect(d.densityScale).toBeCloseTo(20.0, 6);
   });
 
   it('debug fixtures default to identity contrast (no deadband)', () => {
@@ -45,9 +44,9 @@ describe('volumeFieldDefaults', () => {
   });
 
   it('fallback paletteId is one of the registered palettes', () => {
-    expect([
-      'viridis', 'magma', 'blue-purple', 'yellow-green', 'coolwarm',
-    ]).toContain(FALLBACK_VOLUME_DEFAULTS.paletteId);
+    expect(['viridis', 'magma', 'blue-purple', 'yellow-green', 'coolwarm']).toContain(
+      FALLBACK_VOLUME_DEFAULTS.paletteId,
+    );
   });
 
   it('cf4-density carries a spatial envelope that fades the cube corners', () => {
@@ -55,7 +54,7 @@ describe('volumeFieldDefaults', () => {
     // inward to hide the axis-aligned silhouette.  Inner < outer
     // means the shader will smoothstep between them; both finite and
     // <= √3 (the corner distance in normalised local space).
-    const env = VOLUME_FIELD_DEFAULTS['cf4-density']!.envelope;
+    const env = getVolumeFieldDefaults('cf4-density').envelope;
     expect(env.inner).toBeLessThan(env.outer);
     expect(env.outer).toBeLessThanOrEqual(Math.sqrt(3));
   });
@@ -80,12 +79,12 @@ describe('volumeFieldDefaults', () => {
   it('contrastCenter splits divergent (0.5) vs sequential (0.0) palettes', () => {
     // Divergent palettes (coolwarm) want the deadband centred on the
     // midpoint where the cosmic mean lives.
-    expect(VOLUME_FIELD_DEFAULTS['cf4-density']!.contrastCenter).toBeCloseTo(0.5, 6);
+    expect(getVolumeFieldDefaults('cf4-density').contrastCenter).toBeCloseTo(0.5, 6);
     // Sequential palettes (inferno + log normalisation) want the
     // deadband centred on the void floor at LUT t=0 — otherwise the
     // contrast slider becomes a knife-edge and mid-density filaments
     // either disappear or wash out as solid colour.
-    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.contrastCenter).toBeCloseTo(0.0, 6);
+    expect(getVolumeFieldDefaults('mcpm').contrastCenter).toBeCloseTo(0.0, 6);
     // Debug fixtures + fallback inherit the divergent default so the
     // pre-generalisation contrast behaviour is exactly preserved.
     expect(FALLBACK_VOLUME_DEFAULTS.contrastCenter).toBeCloseTo(0.5, 6);
@@ -95,43 +94,43 @@ describe('volumeFieldDefaults', () => {
   });
 
   it('exposes mcpm with inferno + windowed contrast for heavy-tailed trace density', () => {
-    const d = VOLUME_FIELD_DEFAULTS['mcpm'];
-    expect(d).toBeDefined();
+    const d = getVolumeFieldDefaults('mcpm');
     // Inferno (matplotlib perceptually-uniform) is the canonical
     // aesthetic for slime-mould / cosmic-web fire-on-black
     // visualisations (Polyphorm, MCPM tradition). Visually distinct
     // from CF-4's coolwarm (divergent cool/warm) so both overlays
     // can be enabled simultaneously and read as separate layers.
-    expect(d!.paletteId).toBe('inferno');
+    expect(d.paletteId).toBe('inferno');
     // MCPM trace densities are heavy-tailed (slime-mould agent density
     // spans decades); modest windowing brings filament structure forward
     // without crushing low-density voids.
-    expect(d!.contrast).toBeCloseTo(1.7, 6);
-    expect(d!.densityScale).toBeCloseTo(18.0, 6);
-    expect(d!.label).toBe('MCPM Cosmic Web');
+    expect(d.contrast).toBeCloseTo(1.7, 6);
+    expect(d.densityScale).toBeCloseTo(18.0, 6);
+    expect(d.label).toBe('MCPM Cosmic Web');
   });
 
   it('mcpm carries a soft spatial envelope', () => {
-    const env = VOLUME_FIELD_DEFAULTS['mcpm']!.envelope;
+    const env = getVolumeFieldDefaults('mcpm').envelope;
     expect(env.inner).toBeLessThan(env.outer);
     expect(env.outer).toBeLessThanOrEqual(Math.sqrt(3));
   });
 
   it('mcpm gets a moderate trim default; CF-4 + debug fixtures get none', () => {
-    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.trim).toBeCloseTo(0.3, 6);
-    expect(VOLUME_FIELD_DEFAULTS['cf4-density']!.trim).toBeCloseTo(0.0, 6);
+    expect(getVolumeFieldDefaults('mcpm').trim).toBeCloseTo(0.3, 6);
+    expect(getVolumeFieldDefaults('cf4-density').trim).toBeCloseTo(0.0, 6);
     for (const handle of ['debug-gaussian', 'debug-cartesian', 'debug-spherical']) {
       expect(VOLUME_FIELD_DEFAULTS[handle]!.trim).toBeCloseTo(0.0, 6);
     }
     expect(FALLBACK_VOLUME_DEFAULTS.trim).toBeCloseTo(0.0, 6);
   });
 
-  it('per-cube intensity override: MCPM = 1.0 (full saturation); others omit (slot falls back to global)', () => {
+  it('per-cube intensity override: every production volume carries an explicit intensity; debug fixtures omit', () => {
     // MCPM is the headline cosmic-web overlay and wants full saturation
-    // by default; other cubes leave intensity unset so the slot uses
-    // the global DEFAULT_VOLUME_FIELD_INTENSITY.
-    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.intensity).toBeCloseTo(1.0, 6);
-    expect(VOLUME_FIELD_DEFAULTS['cf4-density']!.intensity).toBeUndefined();
+    // by default; CF-4 sits at the global 0.5 starting point.  Debug
+    // fixtures leave intensity unset so the slot uses
+    // DEFAULT_VOLUME_FIELD_INTENSITY.
+    expect(getVolumeFieldDefaults('mcpm').intensity).toBeCloseTo(1.0, 6);
+    expect(getVolumeFieldDefaults('cf4-density').intensity).toBeCloseTo(0.5, 6);
     for (const handle of ['debug-gaussian', 'debug-cartesian', 'debug-spherical']) {
       expect(VOLUME_FIELD_DEFAULTS[handle]!.intensity).toBeUndefined();
     }
@@ -139,8 +138,8 @@ describe('volumeFieldDefaults', () => {
   });
 
   it('exposure boost: MCPM = 18 (peaks blow to white), others = 1 (no change)', () => {
-    expect(VOLUME_FIELD_DEFAULTS['mcpm']!.exposure).toBeCloseTo(18.0, 6);
-    expect(VOLUME_FIELD_DEFAULTS['cf4-density']!.exposure).toBeCloseTo(1.0, 6);
+    expect(getVolumeFieldDefaults('mcpm').exposure).toBeCloseTo(18.0, 6);
+    expect(getVolumeFieldDefaults('cf4-density').exposure).toBeCloseTo(1.0, 6);
     for (const handle of ['debug-gaussian', 'debug-cartesian', 'debug-spherical']) {
       expect(VOLUME_FIELD_DEFAULTS[handle]!.exposure).toBeCloseTo(1.0, 6);
     }

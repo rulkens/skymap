@@ -29,6 +29,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import type { SourceType } from '../../src/@types/data/SourceType';
 
 import type { EngineState } from '../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
@@ -43,17 +44,15 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
-  DEFAULT_FILAMENTS_ENABLED,
-  DEFAULT_FILAMENT_INTENSITY,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../src/data/defaults';
+import { ALL_VISIBLE_MASK } from '../../src/utils/sourceMask';
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
 import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/spaceMouseSubsystem';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
@@ -65,7 +64,7 @@ import { createPoiSubsystem } from '../../src/services/engine/subsystems/poiSubs
 import { createFadeRegistry } from '../../src/services/animation/fadeRegistry';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import type { EngineCallbacks } from '../../src/@types/engine/EngineCallbacks';
-import { Source } from '../../src/data/sources';
+import { Source, SOURCE_REGISTRY } from '../../src/data/sources';
 
 // A no-op callback bag suitable for the selection subsystem fixture.
 // `onHoverChange` / `onSelectChange` are the only fields the subsystem
@@ -122,8 +121,8 @@ describe('EngineState type', () => {
       schechterAlpha: 0,
     };
     const sources: EngineSourceState = {
-      pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
-      drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      pickMask: ALL_VISIBLE_MASK,
+      drawMask: ALL_VISIBLE_MASK,
       catalogs: new Map(),
       famousMeta: [],
       famousXrefs: {},
@@ -215,8 +214,8 @@ describe('EngineState type', () => {
 
     expect(state.settings.points.sizePx).toBe(2.5);
     expect(state.settings.bias.mode).toBe(DEFAULT_BIAS_MODE);
-    expect(state.sources.pickMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
-    expect(state.sources.drawMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
+    expect(state.sources.pickMask).toBe(ALL_VISIBLE_MASK);
+    expect(state.sources.drawMask).toBe(ALL_VISIBLE_MASK);
     // hover/selection moved off `state.picking` and onto
     // `state.subsystems.selection` in Spec D.3.
     expect(state.subsystems.selection.hovered()).toBeNull();
@@ -242,7 +241,10 @@ describe('EngineState type', () => {
       bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: DEFAULT_ABS_MAG_LIMIT },
       thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
       milkyWay: { enabled: DEFAULT_MILKY_WAY_ENABLED },
-      filaments: { enabled: DEFAULT_FILAMENTS_ENABLED, intensity: DEFAULT_FILAMENT_INTENSITY },
+      filaments: {
+        enabled: SOURCE_REGISTRY[Source.Filaments].visible,
+        intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
+      },
       volumes: { masterEnabled: DEFAULT_VOLUMES_ENABLED, fields: {} },
       labelCategoryVisibility: {
         cluster: true,
@@ -263,14 +265,14 @@ describe('EngineState type', () => {
       schechterAlpha: 0,
     };
     const sources: Pick<EngineSourceState, 'pickMask' | 'drawMask'> = {
-      pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
-      drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      pickMask: ALL_VISIBLE_MASK,
+      drawMask: ALL_VISIBLE_MASK,
     };
 
     expect(settings.points.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(settings.bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
     expect(bias.apparentMagLimit).toBe(0);
-    expect(sources.pickMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
+    expect(sources.pickMask).toBe(ALL_VISIBLE_MASK);
   });
 
   it('allows in-place mutation of every sub-bag field', () => {
@@ -401,7 +403,7 @@ describe('EngineState type', () => {
     state.sources.drawMask = 0xff;
     // hovered/selected aren't on `state.picking` anymore — exercise the
     // subsystem's setter instead.
-    state.subsystems.selection.setHovered({ source: 1 as Source, localIdx: 42 });
+    state.subsystems.selection.setHovered({ source: 1 as SourceType, localIdx: 42 });
     state.picking.pickInFlight = true;
 
     expect(state.settings.points.brightness).toBe(2.5);

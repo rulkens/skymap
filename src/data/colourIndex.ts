@@ -1,19 +1,19 @@
 /**
- * Per-source colour-index specs.
+ * Per-source colour-index computation.
  *
  * Each survey carries different photometric bands in its five `magU/G/R/I/Z`
  * slots. Forcing every survey through SDSS-style u−g would clamp non-SDSS
- * colours to the unknown-colour sentinel (since they don't measure u-band)
- * and lose all galaxy-type information. Instead, this module picks the most
- * informative colour pair available *for each source* and normalises it onto
- * the 0..2 range the WGSL ramp expects.
+ * colours to the unknown-colour sentinel and lose all galaxy-type
+ * information. The per-source recipe lives on each entry's `colourSpec`
+ * field in `SOURCE_REGISTRY`; this module normalises the result onto the
+ * 0..2 range the WGSL ramp expects.
  *
- * See the per-source table in docs/superpowers/plans/2026-05-03-per-source-colour-index.md
- * for the band choices and the rationale behind the K-correction coefficients.
+ * See `docs/superpowers/plans/2026-05-03-per-source-colour-index.md` for
+ * the band choices and the K-correction-coefficient rationale.
  */
 
-import { Source, type SurveySource } from './sources';
-import type { ColourIndexSpec } from '../@types/data/ColourIndexSpec';
+import { Source, SOURCE_REGISTRY } from './sources';
+import type { SourceType } from '../@types/data/SourceType';
 
 /**
  * Hubble distance in Mpc — c / H₀ for H₀ = 70 km/s/Mpc. Converts
@@ -33,37 +33,11 @@ const HUBBLE_DISTANCE_MPC = 4282.749;
  */
 export const UNKNOWN_COLOUR_RAMP_POSITION = 1.05;
 
-// POI source codes (Cluster, Supercluster, Void) have no photometry —
-// they're pick-encoding-only markers, not survey rows. The colour-index
-// spec is therefore keyed by `SurveySource` (excludes POIs), and the
-// accessors below treat a POI input as a programming error: the points
-// pipeline that computes colour indices should never see a POI source.
-const SPEC: Record<SurveySource, ColourIndexSpec> = {
-  [Source.SDSS]: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
-  [Source.TwoMRS]: { slotA: 'g', slotB: 'i', rangeMin: 0.7, rangeMax: 1.1, kPerZ: 0.0 },
-  [Source.Glade]: { slotA: 'g', slotB: 'r', rangeMin: 0.5, rangeMax: 3.5, kPerZ: 1.0 },
-  [Source.Synthetic]: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
-  // Famous entries carry curated optical photometry in SDSS-style slots
-  // (see BAND_LABELS in sources.ts).  Mirror the SDSS spec so the colour
-  // ramp maps g−r cleanly; kPerZ = 0 since these are all very nearby
-  // (z < 0.05) and need no K-correction.
-  [Source.Famous]: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 0.0 },
-  // Milliquas carries B (in the g slot) and R (in the r slot). B−R is
-  // the natural quasar colour: blue quasars (continuum-dominated, low z)
-  // sit near B−R ≈ 0, while red quasars / dust-obscured AGN extend to
-  // B−R ≳ 2. kPerZ is non-zero because quasar spectra are emission-line
-  // dominated and high-z observed-frame B−R sweeps the Lyα forest, but
-  // we keep the value modest until the full bias-correction subsystem
-  // wires Milliquas in.
-  [Source.Milliquas]: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.5 },
-};
-
 /**
- * Look up which slot maps to which mag value, compute the source-
- * appropriate colour index, K-correct it to rest-frame using the row's
- * distance, and normalise to the 0..2 ramp range. Returns
- * {@link UNKNOWN_COLOUR_RAMP_POSITION} when either constituent band is
- * NaN, so callers never need a null-check or fallback constant.
+ * Look up the source's colour-index recipe, compute the observed colour,
+ * K-correct it to rest-frame using the row's distance, and normalise to
+ * the 0..2 ramp range. Returns {@link UNKNOWN_COLOUR_RAMP_POSITION} when
+ * either constituent band is NaN.
  *
  * The K-correction is applied here (CPU side) so both consumers
  * (`buildPointInterleavedBuffer` and `proceduralDiskSubsystem`) get the
@@ -71,7 +45,7 @@ const SPEC: Record<SurveySource, ColourIndexSpec> = {
  * points pass and the procedural-disk impostor for the same galaxy.
  */
 export function pickColourIndex(
-  source: Source,
+  source: SourceType,
   magU: number,
   magG: number,
   magR: number,
@@ -79,10 +53,14 @@ export function pickColourIndex(
   magZ: number,
   dMpcFromOrigin: number,
 ): number {
-  if (source === Source.Cluster || source === Source.Supercluster || source === Source.Void) {
-    throw new Error(`pickColourIndex: POI source ${source} has no colour index`);
+  const entry = SOURCE_REGISTRY[source];
+  // The points pipeline only routes survey sources here; any other
+  // kind (POI, filament, volume) hitting this path means a
+  // picker/dispatch bug upstream.
+  if (entry.type !== 'survey') {
+    throw new Error(`pickColourIndex: non-survey source ${source} has no colour index`);
   }
-  const spec = SPEC[source as SurveySource];
+  const spec = entry.colourSpec;
   const slotMap = { u: magU, g: magG, r: magR, i: magI, z: magZ };
   const a = slotMap[spec.slotA];
   const b = slotMap[spec.slotB];
@@ -101,12 +79,4 @@ export function pickColourIndex(
   const z = dMpcFromOrigin / HUBBLE_DISTANCE_MPC;
   const restCI = observedCI - spec.kPerZ * z;
   return Math.max(0, Math.min(2, restCI));
-}
-
-/** Public read of the spec table — used by `galaxyType.ts` and tests. */
-export function colourIndexSpec(source: Source): ColourIndexSpec {
-  if (source === Source.Cluster || source === Source.Supercluster || source === Source.Void) {
-    throw new Error(`colourIndexSpec: POI source ${source} has no colour-index spec`);
-  }
-  return SPEC[source as SurveySource];
 }

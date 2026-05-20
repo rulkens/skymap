@@ -28,6 +28,7 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
 
@@ -239,7 +240,7 @@ function makeInput(
   const settings = {
     pointSizePx: 2.5,
     brightness: 1.0,
-    selected: null as { source: Source; localIdx: number } | null,
+    selected: null as { source: SourceType; localIdx: number } | null,
     visibleSourceMask: 0xffffffff,
     highlightFallback: true,
     realOnlyMode: false,

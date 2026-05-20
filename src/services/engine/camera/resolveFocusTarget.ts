@@ -55,6 +55,7 @@ import type { ResolverInput } from '../../../@types/camera/ResolverInput';
 import type { ResolverOutput } from '../../../@types/camera/ResolverOutput';
 import { Source } from '../../../data/sources';
 import { cartesianToRaDecZ } from '../../../utils/math/cartesianToRaDecZ';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
  * The 30-arcsec threshold pulled from `tools/buildFamous.ts` —
@@ -193,7 +194,7 @@ function resolvePos(
 ): ResolverOutput {
   const cosDecT = Math.cos((decDegT * Math.PI) / 180);
   let bestSqArcsec = Infinity;
-  let bestSource: Source | null = null;
+  let bestSource: SourceType | null = null;
   let bestIdx = -1;
 
   for (const { source, catalog } of input.catalogs) {

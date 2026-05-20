@@ -72,7 +72,9 @@
  * ```
  */
 
-import { Source, maskWith, maskWithout, maskHas } from '../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../data/sources';
+import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../utils/sourceMask';
+import type { SourceType } from '../../@types/data/SourceType';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -80,15 +82,12 @@ import {
   DEFAULT_BRIGHTNESS,
   DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
-  DEFAULT_FILAMENT_INTENSITY,
-  DEFAULT_FILAMENTS_ENABLED,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_HIGHLIGHT_FALLBACK,
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
@@ -127,7 +126,7 @@ import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
-import { TIER_TARGETS } from '../../data/tierTargets';
+import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
 import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
@@ -186,7 +185,7 @@ export async function setSourceVisibleImpl(
     'sources' | 'subsystems' | 'assetSlots'
   >,
   opts: { cb: Pick<EngineCallbacks, 'sources'> },
-  source: Source,
+  source: SourceType,
   visible: boolean,
 ): Promise<void> {
   const { cb } = opts;
@@ -385,8 +384,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         enabled: DEFAULT_MILKY_WAY_ENABLED,
       },
       filaments: {
-        enabled: DEFAULT_FILAMENTS_ENABLED,
-        intensity: DEFAULT_FILAMENT_INTENSITY,
+        enabled: SOURCE_REGISTRY[Source.Filaments].visible,
+        intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
       },
       volumes: {
         masterEnabled: DEFAULT_VOLUMES_ENABLED,
@@ -438,13 +437,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // is clear.  Both default to ALL_VISIBLE_MASK so "draw everything
       // that is loaded" holds until the user toggles a single source
       // in the settings panel.
-      pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
-      drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      pickMask: ALL_VISIBLE_MASK,
+      drawMask: ALL_VISIBLE_MASK,
       // Mirrors the renderer's per-source GPU buffers in CPU memory
       // so picking can resolve `(source, localIdx)` into a GalaxyInfo
       // without a GPU readback for every hover.  Empty until the
       // first parallel fetch resolves.
-      catalogs: new Map<Source, GalaxyCatalog>(),
+      catalogs: new Map<SourceType, GalaxyCatalog>(),
       // Optional sidecars — `galaxyInfoBuilder` null-checks both, so a
       // hover firing before they land just renders the generic
       // InfoCard layout.
@@ -1003,7 +1002,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   type SelectByAliasTarget = {
-    source: Source;
+    source: SourceType;
     localIdx: number;
     famousMeta?: readonly FamousMetaEntry[];
     famousXrefs?: FamousXrefMap;
@@ -1041,7 +1040,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return awaitSlotReady(slot, new Map() as PgcAliasMap);
   }
 
-  async function setSourceVisible(source: Source, visible: boolean): Promise<void> {
+  async function setSourceVisible(source: SourceType, visible: boolean): Promise<void> {
     // Delegate to the module-scope helper so tests can drive the same
     // logic against a partial-state stub without a full GPU engine.
     return setSourceVisibleImpl(state, { cb }, source, visible);
@@ -1068,7 +1067,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
       const src = cfg.source;
       if (cfg.category === 'synthetic') continue;
-      if (TIER_TARGETS[prevTier][src] === TIER_TARGETS[tier][src]) continue;
+      if (tierTarget(src, prevTier) === tierTarget(src, tier)) continue;
       if (!maskHas(state.sources.drawMask, src)) continue;
       state.assetSlots.points.get(src)?.load({ source: src, tier });
       // Companion sidecars reload in lockstep with the bin so
@@ -1083,11 +1082,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.assetSlots.mcpm?.load({ tier });
   }
 
-  function getCloud(source: Source): GalaxyCatalog | undefined {
+  function getCloud(source: SourceType): GalaxyCatalog | undefined {
     return state.sources.catalogs.get(source);
   }
 
-  function getCloudObjIds(source: Source): BigUint64Array | undefined {
+  function getCloudObjIds(source: SourceType): BigUint64Array | undefined {
     return state.sources.catalogs.get(source)?.objIDs;
   }
 

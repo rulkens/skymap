@@ -1,4 +1,4 @@
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/SourceType';
 import type { EngineHandle } from './EngineHandle';
 import type { EngineStatus } from './EngineStatus';
 import type { GalaxyInfo } from './GalaxyInfo';
@@ -15,7 +15,7 @@ export type UseEngineReturn = {
   focused: GalaxyInfo | null;
   scale: ScaleInfo;
   fps: number;
-  sourceCounts: Partial<Record<Source, number>>;
+  sourceCounts: Partial<Record<SourceType, number>>;
   loadProgress: LoadProgressState | null;
   currentTier: Tier;
 };

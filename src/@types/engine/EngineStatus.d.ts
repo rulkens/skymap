@@ -4,6 +4,8 @@
  * the correct status text or error message.
  */
 
+import type { SourceType } from '../data/SourceType';
+
 /**
  * Status reported during engine startup and steady-state.
  *
@@ -14,6 +16,10 @@
  *   loading       → fetch /data/sdss.bin in progress
  *   ready         → rendering is live; `count` and `source` are set
  *   error         → GPU or fatal load error; `message` carries the detail
+ *
+ * `source` is the `Source` enum value of the catalog that just became
+ * ready — the only consumer (the StatusBar) compares it against
+ * `Source.Synthetic` to flag the no-real-data fallback path.
  */
 export type EngineStatus =
   | { kind: 'initializing' }
@@ -21,6 +27,6 @@ export type EngineStatus =
   | {
       kind: 'ready';
       count: number;
-      source: 'sdss.bin' | '2mrs.bin' | 'glade.bin' | 'famous.bin' | 'synthetic';
+      source: SourceType;
     }
   | { kind: 'error'; message: string };

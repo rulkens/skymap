@@ -17,11 +17,11 @@ import type { Destroyable } from '../../rendering/Destroyable';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { ProceduralDiskInstance } from '../../rendering/ProceduralDiskInstance';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/SourceType';
 
 export type ProceduralDiskFrameInput = {
   readonly cam: OrbitCamera;
-  readonly catalogs: ReadonlyMap<Source, GalaxyCatalog>;
+  readonly catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
 };

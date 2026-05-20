@@ -1,4 +1,4 @@
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/SourceType';
 import type { GalaxyInfo } from './GalaxyInfo';
 import type { PointOfInterest } from './subsystems/PointOfInterest';
 
@@ -42,7 +42,7 @@ export type ClickResolution =
   | { kind: 'clear' }
   | {
       kind: 'select';
-      selection: { source: Source; localIdx: number };
+      selection: { source: SourceType; localIdx: number };
       info: GalaxyInfo | null;
     }
   | { kind: 'poi'; poi: PointOfInterest };

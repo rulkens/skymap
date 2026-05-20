@@ -1,4 +1,4 @@
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/SourceType';
 import type { Fetcher } from '../../loading/Fetcher';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
@@ -42,7 +42,7 @@ export type GalaxyCatalogSourceCategory = 'survey' | 'curated' | 'synthetic';
  */
 export type GalaxyCatalogSourceConfig = {
   /** Which catalog this slot represents. */
-  source: Source;
+  source: SourceType;
   /**
    * Lowercase short name used as the slot-name prefix
    * (`sdss-points`, `glade-points`, …) and in upload-log lines.

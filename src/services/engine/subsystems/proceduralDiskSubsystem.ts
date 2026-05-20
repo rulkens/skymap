@@ -37,6 +37,7 @@ import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
+import type { SourceType } from '../../../@types/data/SourceType';
 import type {
   ProceduralDiskFrameInput,
   ProceduralDiskFrameOutput,
@@ -94,8 +95,8 @@ export function createProceduralDiskSubsystem(
 ): ProceduralDiskSubsystem {
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
 
-  const stickyProcDisksBySource = new Map<Source, Map<number, ProceduralDiskInstance>>();
-  const strideStartBySource = new Map<Source, number>();
+  const stickyProcDisksBySource = new Map<SourceType, Map<number, ProceduralDiskInstance>>();
+  const strideStartBySource = new Map<SourceType, number>();
 
   // Initialised to a frozen empty output so consumers that read
   // `lastOutput` before the first runFrame see valid data.

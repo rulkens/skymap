@@ -9,9 +9,9 @@
  *
  * **Lazy fetch.**  This factory mints the slot unconditionally; the
  * boot-time `.load()` in `wireSlots` is gated on
- * `DEFAULT_CF4_DENSITY_ENABLED` so a default-off CF-4 doesn't waste
- * bandwidth at startup.  Toggling the field on later lazy-loads via
- * `engine.setVolumeFieldEnabled`.
+ * `SOURCE_REGISTRY[Source.Cf4Density].visible` so a default-off CF-4
+ * doesn't waste bandwidth at startup.  Toggling the field on later
+ * lazy-loads via `engine.setVolumeFieldEnabled`.
  *
  * **Seed-and-forward shape.**  The commit duplicates the same seed
  * pattern the synthetic-volume factory uses (and that
@@ -22,11 +22,7 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { cf4DensityFetcher } from '../fetchers/cf4DensityFetcher';
-import {
-  DEFAULT_CF4_DENSITY_ENABLED,
-  DEFAULT_VOLUME_FIELD_INTENSITY,
-} from '../../../data/defaults';
-import { getVolumeFieldDefaults } from '../../../data/volumeFieldDefaults';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { FADE_IN_DURATION_MS } from '../../animation/fadeController';
 import type { ScalarCube } from '../../../@types/data/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
@@ -38,20 +34,19 @@ export const createCf4DensitySlot: SlotFactory<ScalarCube, void> = (state, cb) =
     commit: async (cube) => {
       const renderer = state.gpu.scalarVolumeRenderer;
       if (!renderer) return;
-      const handle = 'cf4-density';
-      // Seed defaults from the per-handle registry rather than the
-      // cube; SCFD v2 is a data-only format (dims + frame + voxels
-      // + dynamic range) so palette + densityScale don't ride along
-      // in the binary anymore.  See `src/data/volumeFieldDefaults.ts`
-      // for the why-not-binary discussion.  The renderer setters
-      // below read from `persisted`, so once an entry exists the
-      // user-tuned values (future persistence) override the seed.
-      const defaults = getVolumeFieldDefaults(handle);
+      // Seed defaults from SOURCE_REGISTRY rather than the cube; SCFD
+      // v2 is a data-only format (dims + frame + voxels + dynamic
+      // range) so palette + densityScale don't ride along in the
+      // binary anymore. The renderer setters below read from
+      // `persisted`, so once an entry exists the user-tuned values
+      // (future persistence) override the seed.
+      const defaults = SOURCE_REGISTRY[Source.Cf4Density];
+      const handle = defaults.handle;
       renderer.addField(handle, cube);
       if (!state.settings.volumes.fields[handle]) {
         state.settings.volumes.fields[handle] = {
-          enabled: DEFAULT_CF4_DENSITY_ENABLED,
-          intensity: defaults.intensity ?? DEFAULT_VOLUME_FIELD_INTENSITY,
+          enabled: defaults.visible,
+          intensity: defaults.intensity,
           contrast: defaults.contrast,
           densityScale: defaults.densityScale,
           paletteId: defaults.paletteId,

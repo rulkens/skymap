@@ -5,8 +5,8 @@
  * pathway and by `surveyConstants(...)` to pre-compute the central-
  * density normaliser `nRef`.
  *
- * See `src/data/surveyFluxLimits.ts` for the literature-sourced values
- * and the per-survey rationale.
+ * See the per-survey entries in `src/data/sources.ts` for the
+ * literature-sourced values and the rationale per source.
  */
 export type SchechterTriple = {
   /** Characteristic absolute magnitude M*. */

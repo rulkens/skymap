@@ -20,6 +20,7 @@ import type { GalaxyTypeMags } from '../../@types/data/GalaxyTypeMags';
 import { galaxyTypeFromColor } from './galaxyTypeFromColor';
 import { galaxyTypeFromBminusJ } from './galaxyTypeFromBminusJ';
 import { galaxyTypeFromJminusK } from './galaxyTypeFromJminusK';
+import type { SourceType } from '../../@types/data/SourceType';
 
 /**
  * Fallback when the source's required bands are missing or non-finite.
@@ -28,7 +29,7 @@ import { galaxyTypeFromJminusK } from './galaxyTypeFromJminusK';
  */
 const UNKNOWN: GalaxyTypeInfo = { category: 'green', description: 'Unknown galaxy type' };
 
-export function galaxyType(source: Source, mags: GalaxyTypeMags): GalaxyTypeInfo {
+export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyTypeInfo {
   switch (source) {
     case Source.SDSS:
     case Source.Synthetic: {
@@ -68,10 +69,14 @@ export function galaxyType(source: Source, mags: GalaxyTypeMags): GalaxyTypeInfo
     case Source.Cluster:
     case Source.Supercluster:
     case Source.Void:
-      // POI markers are not galaxies — they have no photometry and no
-      // galaxy type. Reaching this branch indicates the InfoCard is
-      // rendering a galaxy row for a POI pick result; route POI picks
-      // through their own info panel instead.
-      throw new Error(`galaxyType: POI source ${source} has no galaxy classification`);
+    case Source.Filaments:
+    case Source.Cf4Density:
+    case Source.Mcpm:
+      // Non-survey sources (POI markers, filaments, volumes) have no
+      // per-record photometry and no galaxy type. Reaching this branch
+      // indicates the InfoCard is rendering a galaxy row for a
+      // non-survey pick / handle; route those through their own info
+      // panel instead.
+      throw new Error(`galaxyType: non-survey source ${source} has no galaxy classification`);
   }
 }

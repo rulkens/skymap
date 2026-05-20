@@ -19,11 +19,12 @@
 
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { Source, sourceLabel, bandLabels } from '../../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import { famousDisplayName } from './famousDisplayName';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
+import type { SourceType } from '../../../@types/data/SourceType';
 import {
   cartesianToRaDecZ,
   formatRaSexagesimal,
@@ -118,7 +119,7 @@ export function niceRound(x: number): number {
 export function buildGalaxyInfo(
   cloud: GalaxyCatalog,
   idx: number,
-  source: Source,
+  source: SourceType,
   famousMeta?: readonly FamousMetaEntry[],
   famousXrefs?: FamousXrefMap,
   milliquasNames?: readonly string[],
@@ -161,7 +162,14 @@ export function buildGalaxyInfo(
   // The `colours` array is what the InfoCard renders in its "Colour" row;
   // pre-computing it here keeps the React layer presentational and avoids
   // sprinkling per-source band-pair logic throughout the components.
-  const bands = bandLabels(source);
+  // Only survey rows carry photometry. The picker only routes survey
+  // sources into the points pipeline, so any other kind (POI, filament,
+  // volume) reaching here is a bug upstream.
+  const entry = SOURCE_REGISTRY[source];
+  if (entry.type !== 'survey') {
+    throw new Error(`buildGalaxyInfo: non-survey source ${source} has no photometric bands`);
+  }
+  const bands = entry.bandLabels;
 
   // Available pairs in adjacent-slot order: each entry pairs the label and
   // value only if BOTH constituent bands are real (not '—') AND the
@@ -410,7 +418,7 @@ export function buildGalaxyInfo(
 
     // Source attribution — fed through to the InfoCard's badge + link logic.
     source,
-    sourceLabel: sourceLabel(source),
+    sourceLabel: SOURCE_REGISTRY[source].label,
 
     // External URLs — chosen above based on `source` (and PGC for GLADE).
     catalogUrl,

@@ -1,4 +1,4 @@
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/SourceType';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { GalaxyInfo } from './GalaxyInfo';
 
@@ -11,5 +11,5 @@ import type { GalaxyInfo } from './GalaxyInfo';
 export type BuildGalaxyInfo = (
   cloud: GalaxyCatalog,
   localIdx: number,
-  source: Source,
+  source: SourceType,
 ) => GalaxyInfo | null;

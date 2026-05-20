@@ -32,6 +32,7 @@ import { createReadStream, existsSync, readFileSync, readdirSync, statSync, writ
 import { resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import type { SourceType } from '../../src/@types/data/SourceType';
 
 import { parseSdssCsv } from '../parsers/sdssCsv.js';
 import { parseTwoMrs, parseXscShapeCsv } from '../parsers/twoMrs.js';
@@ -47,9 +48,9 @@ import { encodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
 import { raDecZToCartesian } from '../../src/utils/math/index.js';
 import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.js';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
-import { Source, sourceLabel } from '../../src/data/sources.js';
+import { Source, SOURCE_REGISTRY } from '../../src/data/sources.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
-import { TIER_TARGETS, tierFilenameForSource } from '../../src/data/tierTargets.js';
+import { tierTarget, tierFilenameForSource } from '../../src/data/tierTargets.js';
 import type { Tier } from '../../src/@types/data/Tier.js';
 import { subsampleByAbsMag, subsampleIndicesByAbsMag } from './subsampleByAbsMag.js';
 
@@ -495,7 +496,7 @@ async function runCli(): Promise<void> {
   // Bucket the merged stream back out per source so we can write one
   // file per survey. Using a Map preserves insertion order, which keeps
   // the log output tidy.
-  const bySource = new Map<Source, ParsedRecord[]>();
+  const bySource = new Map<SourceType, ParsedRecord[]>();
   for (const r of merged) {
     let arr = bySource.get(r.source);
     if (!arr) {
@@ -530,7 +531,7 @@ async function runCli(): Promise<void> {
     const input = inputCounts[source] ?? 0;
     const dropped = input - kept;
     process.stderr.write(
-      `  ${sourceLabel(source)}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
+      `  ${SOURCE_REGISTRY[source].label}: ${input.toLocaleString()} in → ${kept.toLocaleString()} kept, ${dropped.toLocaleString()} dropped as duplicate\n`,
     );
   }
 
@@ -552,10 +553,10 @@ async function runCli(): Promise<void> {
       // Apply the tier's per-source target, if any.  Missing key = no cap.
       // 0 = exclude (skip writing this file entirely so the runtime can
       // detect "no data for this tier" via 404 rather than an empty cloud).
-      const target = TIER_TARGETS[tier][source];
+      const target = tierTarget(source, tier);
       if (target === 0) {
         process.stderr.write(
-          `tier ${tier}: ${sourceLabel(source)} excluded — skipping ${filename}\n`,
+          `tier ${tier}: ${SOURCE_REGISTRY[source].label} excluded — skipping ${filename}\n`,
         );
         continue;
       }
