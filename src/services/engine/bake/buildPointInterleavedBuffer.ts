@@ -48,6 +48,7 @@
  */
 
 import { pickColourIndex } from '../../../data/colourIndex';
+import { paddedRadiusMpc } from '../../../utils/galaxySize';
 import { Source } from '../../../data/sources';
 import { surveyFluxLimit, surveySchechter } from '../../../data/surveyFluxLimits';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
@@ -76,7 +77,7 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  *   slot 4     — colorIndex (f32)
  *   slot 5     — axisRatio (f32) — sign bit carries isFallback
  *   slot 6     — positionAngleDeg (f32)
- *   slot 7     — diameterKpc (f32)
+ *   slot 7     — radiusMpc (f32) — padded billboard half-extent
  *   slot 8     — vMaxWeight (f32)
  *   slot 9     — schechterRatio (f32)
  *   slot 10    — angularDensityWeight (f32)
@@ -272,11 +273,15 @@ export function buildPointInterleavedBuffer(
     const ab = cloud.axisRatio[i]!;
     interleaved[o + 5] = isFallbackArr[i] === 1 ? -Math.abs(ab) : ab;
 
-    // Slots 6..7 — positionAngleDeg + diameterKpc copied through.  Build
-    // pipeline guarantees finite values for diameterKpc; positionAngleDeg
-    // is real-or-fallback (also finite).
+    // Slot 6 — positionAngleDeg copied through.
     interleaved[o + 6] = cloud.positionAngleDeg[i]!;
-    interleaved[o + 7] = cloud.diameterKpc[i]!;
+
+    // Slot 7 — padded billboard radius in Mpc, half-extent (the shader
+    // uses it directly as the world-space radius for the billboard
+    // quad). Shares the helper with the procedural-disk + textured-
+    // thumbnail pipelines so the load-fade handoff occupies an
+    // identical world-space footprint across all three.
+    interleaved[o + 7] = paddedRadiusMpc(cloud.diameterKpc[i]!);
 
     // Slot 8 — per-galaxy 1/V_max weight.  Computed from the *raw*
     // apparent magnitude (NOT `g + magOffset` — the per-survey

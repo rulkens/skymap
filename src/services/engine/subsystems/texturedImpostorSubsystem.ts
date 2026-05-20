@@ -29,6 +29,7 @@
  */
 
 import { Source } from '../../../data/sources';
+import { paddedRadiusMpc } from '../../../utils/galaxySize';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -161,7 +162,9 @@ export function createTexturedImpostorSubsystem(
 
         if (cloudSource !== Source.Famous && px < APPARENT_SIZE_THRESHOLD_PX) continue;
 
-        const sizeWorldMpc = (dKpcRow / 1000) * 4;
+        // posSize.w stores the FULL quad extent (vertex stage halves it
+        // at corner expansion), so double the shared radius helper.
+        const sizeWorldMpc = paddedRadiusMpc(dKpcRow) * 2;
         const ar = cloud.axisRatio[i]!;
         const pa = cloud.positionAngleDeg[i]!;
 

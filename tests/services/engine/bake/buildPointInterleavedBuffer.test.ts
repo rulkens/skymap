@@ -19,7 +19,7 @@
  *   slot 4     — colorIndex
  *   slot 5     — axisRatio (sign bit = isFallback)
  *   slot 6     — positionAngleDeg
- *   slot 7     — diameterKpc
+ *   slot 7     — radiusMpc (padded half-extent)
  *   slot 8     — vMaxWeight
  *   slot 9     — schechterRatio
  *   slot 10    — angularDensityWeight

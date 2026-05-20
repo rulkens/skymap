@@ -32,6 +32,7 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
+import { paddedRadiusMpc } from '../../../utils/galaxySize';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -162,7 +163,9 @@ export function createProceduralDiskSubsystem(
 
         if (px <= PROCEDURAL_DISK_FADE_START_PX) continue;
 
-        const sizeWorldMpc = (dKpcRow / 1000) * 4;
+        // posSize.w stores the FULL quad extent (vertex stage halves it
+        // at corner expansion), so double the shared radius helper.
+        const sizeWorldMpc = paddedRadiusMpc(dKpcRow) * 2;
         const ar = cloud.axisRatio[i]!;
         const pa = cloud.positionAngleDeg[i]!;
 

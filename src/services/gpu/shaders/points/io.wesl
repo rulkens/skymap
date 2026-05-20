@@ -219,10 +219,12 @@ struct PerVertex {
   // negate before applying because UV-space y points down on screen.
   @location(4) positionAngleDeg: f32,
 
-  // Per-galaxy physical diameter in kiloparsecs. Drives the apparent-
-  // size billboard radius. v4 binary format guarantees a finite
-  // positive value (real measurement or 30-kpc fallback).
-  @location(5) diameterKpc: f32,
+  // Per-galaxy padded billboard radius in Mpc — equals
+  // 'max(diameterKpc, 30) * 2 / 1000' baked at upload time. The 4×
+  // thumbnail-footprint padding and the synthetic-fallback floor are
+  // already applied; the shader reads the value directly as the
+  // half-extent of the world-space quad.
+  @location(5) radiusMpc: f32,
 
   // Per-galaxy 1/V_max weight for Malmquist-bias correction. Baked at
   // upload time as 'clamp((dRef / dMax(M, m_lim))³, 0, 1)'. Read by the

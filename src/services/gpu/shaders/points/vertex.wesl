@@ -129,25 +129,18 @@ fn vs(
 
   // ── APPARENT-SIZE BILLBOARD RADIUS ───────────────────────────────────────
   //
-  // We want each galaxy's billboard to occupy its real angular footprint on
-  // screen but never to vanish below 'u.pointSizePx' (the far-field 'still
-  // detectable as a glowing dot' floor).
-  //
-  //   radius_Mpc = (diameterKpc / 2) * 4 / 1000 = diameterKpc * 2 / 1000
-  //
-  // The 4× padding factor matches ThumbnailRenderer's
-  // 'sizeWorld = (diameterKpc / 1000) * 4', so the soft glowing dot and
-  // the textured thumbnail occupy the same world-space footprint and
-  // the load-fade transition is seamless. The 'select' clamps zero/NaN
-  // diameters back to the project-wide 30-kpc default.
-  let safeDiameterKpc = select(30.0, p.diameterKpc, p.diameterKpc > 0.0);
-  let GALAXY_RADIUS_MPC = safeDiameterKpc * 2.0 / 1000.0;
+  // Each galaxy's billboard occupies its real angular footprint on
+  // screen but never vanishes below 'u.pointSizePx' (the far-field
+  // 'still detectable as a glowing dot' floor). The per-instance
+  // 'p.radiusMpc' carries the already-padded world-space half-extent —
+  // bake site applied the 4× thumbnail-footprint padding and the
+  // synthetic-fallback floor, so the shader reads it directly.
   let toGalaxy = p.position - u.camPosWorld;
   let distanceMpc = length(toGalaxy);
   // Guard distanceMpc against 0 so we don't divide-by-zero when the camera
   // is parked exactly on a galaxy (test fixture path; not a real scenario).
   let safeDist = max(distanceMpc, 0.001);
-  let apparentPxRadius = (GALAXY_RADIUS_MPC / safeDist) * u.pxPerRad;
+  let apparentPxRadius = (p.radiusMpc / safeDist) * u.pxPerRad;
   let sizePx = max(u.pointSizePx, apparentPxRadius);
 
   // ── PIXEL-SIZE-IN-CLIP-SPACE CONVERSION ──────────────────────────────────

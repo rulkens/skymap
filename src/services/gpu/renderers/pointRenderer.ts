@@ -103,7 +103,7 @@ import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniforms
  *    magnitude f32, colorIndex f32,
  *    kPerZ f32,
  *    axisRatio f32 (sign bit = isFallback flag),
- *    positionAngleDeg f32, diameterKpc f32,
+ *    positionAngleDeg f32, radiusMpc f32,
  *    vMaxWeight f32, schechterRatio f32, angularDensityWeight f32]
  *
  * Every slot is f32 from the GPU's perspective; the single bit of "is
@@ -163,14 +163,15 @@ const AXIS_RATIO_BYTE_OFFSET = 20;
 const POSITION_ANGLE_BYTE_OFFSET = 24;
 
 /**
- * Byte offset of the `diameterKpc` slot — the per-galaxy physical disk
- * diameter in kiloparsecs.
+ * Byte offset of the `radiusMpc` slot — the per-galaxy padded billboard
+ * radius in Mpc.
  *
- * Sits at slot index 7 (offset 28).  The vertex shader uses it to
- * compute each billboard's apparent angular radius from
- * `(diameterKpc / 1000 / 2) / distance_Mpc`.
+ * Sits at slot index 7 (offset 28).  Pre-baked at upload time as
+ * `max(diameterKpc, 30) * 2 / 1000`, which folds in the 4×
+ * thumbnail-footprint padding and the synthetic-fallback floor.  The
+ * vertex shader divides directly by distance_Mpc to get angular radius.
  */
-const DIAMETER_KPC_BYTE_OFFSET = 28;
+const RADIUS_MPC_BYTE_OFFSET = 28;
 
 /**
  * Byte offset of the `vMaxWeight` slot — the per-galaxy 1/V_max alpha
@@ -246,7 +247,7 @@ const ANGULAR_WEIGHT_BYTE_OFFSET = 40;
  *   2  colorIndex (f32)
  *   3  axisRatio (f32) — b/a; SIGN BIT = isFallback flag
  *   4  positionAngleDeg (f32) — east-of-north major-axis angle, [0, 180)
- *   5  diameterKpc (f32) — per-galaxy physical disk diameter
+ *   5  radiusMpc (f32) — padded billboard half-extent in Mpc (pre-baked)
  *   6  vMaxWeight (f32) — Malmquist mode 2 (1/V_max) multiplier
  *   7  schechterRatio (f32) — Malmquist mode 3 (Schechter) ratio
  *   8  angularDensityWeight (f32) — Malmquist mode 4 (HEALPix) re-weight
@@ -265,7 +266,7 @@ export const POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 2, offset: 16, format: 'float32' },
   { shaderLocation: 3, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
   { shaderLocation: 4, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 5, offset: DIAMETER_KPC_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 5, offset: RADIUS_MPC_BYTE_OFFSET, format: 'float32' },
   { shaderLocation: 6, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
   { shaderLocation: 7, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
   { shaderLocation: 8, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
