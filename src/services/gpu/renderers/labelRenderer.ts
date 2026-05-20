@@ -88,12 +88,23 @@ const UNIFORM_BYTES = 80;
 
 /**
  * Per-label storage buffer stride, matching `struct LabelData` in io.wesl:
- *   worldPos  vec4<f32>  — xyz = world Mpc, w = worldEmMpc
- *   color     vec4<f32>  — premultiplied rgb, a
- *   sizing    vec4<f32>  — pixelSize, minPixelSize, maxPixelSize, fadeAlpha
- * 3 × 16 bytes = 48 bytes/label.
+ *
+ *   bytes  0..15  worldPos      vec4<f32>  — xyz = world Mpc, w = worldEmMpc
+ *   bytes 16..31  color         vec4<f32>  — premultiplied rgba (fill)
+ *   bytes 32..47  sizing        vec4<f32>  — outlineEmFrac, minPx, maxPx, fadeAlpha
+ *   bytes 48..63  outlineColor  vec4<f32>  — premultiplied rgba (outline stroke)
+ *   bytes 64..79  glowColor     vec4<f32>  — premultiplied rgba (glow halo)
+ *   bytes 80..95  effects       vec4<f32>  — glowEmFrac, _r, _r, _r (yzw reserved)
+ *
+ * 6 × 16 bytes = 96 bytes/label.  Grew from 48 to host the outline + glow
+ * effect fields; the legacy `pixelSize` slot (formerly sizing.x — never
+ * read by the shader after the worldEmMpc migration) is repurposed for
+ * `outlineEmFrac` rather than left zero, on the principle that wasting a
+ * `vec4` for a single new scalar squanders alignment.  Reserved scalars
+ * in `effects.yzw` are kept at zero by the CPU writer so a future
+ * fifth/sixth effect can land without another stride bump.
  */
-const LABEL_DATA_BYTES = 48;
+const LABEL_DATA_BYTES = 96;
 
 /**
  * Per-glyph instance buffer stride, matching `VsIn` attributes 1–5 in io.wesl:
@@ -414,7 +425,7 @@ export function createLabelRenderer(
         label.alignY ?? 'baseline',
       );
 
-      // Write per-label storage record (48 bytes, 12 floats) unconditionally
+      // Write per-label storage record (96 bytes, 24 floats) unconditionally
       // — even when `quads` is empty.  Keeping the per-label index stable
       // across the outer loop matters because each glyph carries its
       // labelIndex by position; if we skipped a label whose text produced
@@ -422,31 +433,63 @@ export function createLabelRenderer(
       // label entry.  An unused storage slot is harmless (no glyph
       // references it, the GPU never reads it).
       //
-      //   [0..3]  worldPos (x,y,z, worldEmMpc)
-      //   [4..7]  color    (r,g,b,a premultiplied)
-      //   [8..11] sizing   (pixelSize, minPx, maxPx, fadeAlpha)
+      //   [0..3]   worldPos     (x, y, z, worldEmMpc)
+      //   [4..7]   color        (r*a, g*a, b*a, a — premultiplied)
+      //   [8..11]  sizing       (outlineEmFrac, minPx, maxPx, fadeAlpha)
+      //   [12..15] outlineColor (r*a, g*a, b*a, a)
+      //   [16..19] glowColor    (r*a, g*a, b*a, a)
+      //   [20..23] effects      (glowEmFrac, 0, 0, 0)
       const labelBase = li * (LABEL_DATA_BYTES / 4);
       labelBuf[labelBase + 0] = label.worldPos[0];
       labelBuf[labelBase + 1] = label.worldPos[1];
       labelBuf[labelBase + 2] = label.worldPos[2];
       labelBuf[labelBase + 3] = label.worldEmMpc ?? 0.01;
-      // Public API surface is STRAIGHT RGBA — producers spell colours the
-      // natural way (e.g. `[1, 0, 0, 0.5]` for "half-transparent red").
-      // The fragment shader composites in premultiplied space (see
-      // fragment.wesl's blend-state docstring), so we multiply r/g/b by a
-      // HERE and write the result through to the GPU.  The previous public
-      // API was premultiplied — see the Label.color docstring for the
-      // migration note.
+
+      // fill colour — straight RGBA → premultiplied on write.  Public API
+      // surface is STRAIGHT RGBA — producers spell colours the natural way
+      // (e.g. `[1, 0, 0, 0.5]` for "half-transparent red").  The fragment
+      // shader composites in premultiplied space (see fragment.wesl's
+      // blend-state docstring), so we multiply r/g/b by a HERE and write
+      // the result through to the GPU.
       const color = label.color ?? [1, 1, 1, 1];
-      const a = color[3]!;
-      labelBuf[labelBase + 4] = color[0]! * a;
-      labelBuf[labelBase + 5] = color[1]! * a;
-      labelBuf[labelBase + 6] = color[2]! * a;
-      labelBuf[labelBase + 7] = a;
-      labelBuf[labelBase + 8] = label.pixelSize;
+      const ca = color[3]!;
+      labelBuf[labelBase + 4] = color[0]! * ca;
+      labelBuf[labelBase + 5] = color[1]! * ca;
+      labelBuf[labelBase + 6] = color[2]! * ca;
+      labelBuf[labelBase + 7] = ca;
+
+      // sizing.x repurposes the legacy pixelSize slot to carry
+      // outlineEmFrac.  See LABEL_DATA_BYTES docstring above for the
+      // rationale.  Default 0 means "no outline contribution".
+      labelBuf[labelBase + 8] = label.outlineEmFrac ?? 0;
       labelBuf[labelBase + 9] = label.minPixelSize ?? 8;
       labelBuf[labelBase + 10] = label.maxPixelSize ?? 64;
       labelBuf[labelBase + 11] = label.fadeAlpha ?? 1;
+
+      // outline colour — same straight → premultiplied conversion as fill.
+      // Default [0,0,0,0] makes outlineEmFrac irrelevant (the band's alpha
+      // pre-multiplies to zero).
+      const outlineColor = label.outlineColor ?? [0, 0, 0, 0];
+      const oa = outlineColor[3]!;
+      labelBuf[labelBase + 12] = outlineColor[0]! * oa;
+      labelBuf[labelBase + 13] = outlineColor[1]! * oa;
+      labelBuf[labelBase + 14] = outlineColor[2]! * oa;
+      labelBuf[labelBase + 15] = oa;
+
+      // glow colour — same conversion.
+      const glowColor = label.glowColor ?? [0, 0, 0, 0];
+      const ga = glowColor[3]!;
+      labelBuf[labelBase + 16] = glowColor[0]! * ga;
+      labelBuf[labelBase + 17] = glowColor[1]! * ga;
+      labelBuf[labelBase + 18] = glowColor[2]! * ga;
+      labelBuf[labelBase + 19] = ga;
+
+      // effects.x = glowEmFrac; .yzw stay zero (initialised by the
+      // labelBuf TypedArray constructor — reasserted here for clarity).
+      labelBuf[labelBase + 20] = label.glowEmFrac ?? 0;
+      labelBuf[labelBase + 21] = 0;
+      labelBuf[labelBase + 22] = 0;
+      labelBuf[labelBase + 23] = 0;
 
       // Resolve the label's font to its GPU texture-array layer index
       // ONCE per label, outside the inner glyph loop — every glyph in
