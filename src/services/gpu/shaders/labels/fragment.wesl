@@ -41,9 +41,18 @@
 
 import package::labels::io::VsOut;
 
+// The atlas binding is a texture_2d_array<f32>: each registered font in
+// src/data/fonts.ts occupies one array layer.  The per-glyph fontIndex
+// varying (flat-interpolated from the vertex stage) selects the layer
+// at sample time, so a single draw call can render glyphs from any mix
+// of registered fonts — the GPU picks the right atlas page per fragment.
 @group(0) @binding(2) var atlas: texture_2d_array<f32>;
 @group(0) @binding(3) var atlasSampler: sampler;
 
+// Median of three scalars.  The MSDF technique encodes one SDF per
+// colour channel, each shifted by a sub-pixel; taking the median of
+// the three recovers the glyph contour even where one channel
+// disagrees (sharp corners, near-zero strokes).  It's the 'M' in MSDF.
 fn median3(r: f32, g: f32, b: f32) -> f32 {
   return max(min(r, g), min(max(r, g), b));
 }
