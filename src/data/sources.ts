@@ -103,6 +103,15 @@ export const Source = {
    */
   Cluster: 5,
   /**
+   * Milliquas v8 (Flesch 2023) — the Million Quasars compilation. AGN
+   * point sources (QSOs, BL Lacs, type-1 Seyferts, Seyfert-1 cores,
+   * candidate quasars) that the merger needs alongside the galaxy
+   * surveys to render the optically-bright AGN sky. Slot 8 is appended
+   * (skipping 5/6/7 which are POI codes) so survey-code integers stay
+   * unique across the on-disk format.
+   */
+  Milliquas: 8,
+  /**
    * POI-only — used for pick encoding, no .bin file representation,
    * deliberately excluded from `ALL_SOURCES`.
    *
@@ -164,6 +173,7 @@ const LABELS: Record<SurveySource, string> = {
   [Source.TwoMRS]: '2MRS',
   [Source.Glade]: 'GLADE',
   [Source.Famous]: 'Famous',
+  [Source.Milliquas]: 'Milliquas',
 };
 
 /**
@@ -188,6 +198,7 @@ const ALL_SKY: Record<SurveySource, boolean> = {
   [Source.TwoMRS]: true,
   [Source.Glade]: true,
   [Source.Famous]: true, // hand-picked entries from across the sky
+  [Source.Milliquas]: true, // Milliquas is an all-sky compilation
 };
 
 /**
@@ -216,6 +227,12 @@ const MAX_DIST_MPC: Record<SurveySource, number> = {
   [Source.TwoMRS]: 250,
   [Source.Glade]: 1500,
   [Source.Famous]: 200, // covers the curated set: M31 → NGC 4889
+  // Milliquas reaches z ~ 7 (quasars at the edge of the observable
+  // universe). Hubble's law with z = 7 ⇒ ~25 Gpc — but the bulk of
+  // Milliquas is at z < 3 (~12 Gpc). Until the renderer migrates off
+  // the linear-Hubble approximation, this is a *display* limit and is
+  // generous enough to keep the bright low-z tail framed comfortably.
+  [Source.Milliquas]: 4000,
 };
 
 /**
@@ -247,6 +264,11 @@ const BAND_LABELS: Record<SurveySource, BandLabels> = {
   // branch — the actual mag values stored on the cloud are NaN, which
   // FullCard already gracefully renders as "N/A".
   [Source.Famous]: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
+  // Milliquas carries two optical-band magnitudes only: Rmag (red, ~R)
+  // and Bmag (blue, ~B). The Bmag value is shoehorned into the magG
+  // slot (closest wavelength to SDSS g among the empty slots) and the
+  // Rmag into the magR slot. The remaining u/i/z slots stay '—'.
+  [Source.Milliquas]: { u: '—', g: 'B', r: 'R', i: '—', z: '—' },
 };
 
 // ─── Public lookup functions ────────────────────────────────────────────────

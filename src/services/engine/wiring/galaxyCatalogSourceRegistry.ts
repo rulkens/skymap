@@ -150,6 +150,8 @@ function sourceName(source: Source): string {
       return 'famous';
     case Source.Synthetic:
       return 'synthetic';
+    case Source.Milliquas:
+      return 'milliquas';
     case Source.Cluster:
     case Source.Supercluster:
     case Source.Void:

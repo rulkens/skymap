@@ -48,6 +48,14 @@ const SPEC: Record<SurveySource, ColourIndexSpec> = {
   // ramp maps g−r cleanly; kPerZ = 0 since these are all very nearby
   // (z < 0.05) and need no K-correction.
   [Source.Famous]: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 0.0 },
+  // Milliquas carries B (in the g slot) and R (in the r slot). B−R is
+  // the natural quasar colour: blue quasars (continuum-dominated, low z)
+  // sit near B−R ≈ 0, while red quasars / dust-obscured AGN extend to
+  // B−R ≳ 2. kPerZ is non-zero because quasar spectra are emission-line
+  // dominated and high-z observed-frame B−R sweeps the Lyα forest, but
+  // we keep the value modest until the full bias-correction subsystem
+  // wires Milliquas in.
+  [Source.Milliquas]: { slotA: 'g', slotB: 'r', rangeMin: 0.0, rangeMax: 2.0, kPerZ: 0.5 },
 };
 
 /**

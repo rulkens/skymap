@@ -56,6 +56,15 @@ export function galaxyType(source: Source, mags: GalaxyTypeMags): GalaxyTypeInfo
       const ur = mags.magU - mags.magR;
       return Number.isFinite(ur) ? galaxyTypeFromColor(ur) : UNKNOWN;
     }
+    case Source.Milliquas: {
+      // Milliquas: B in g-slot, R in r-slot. B−R is the standard quasar
+      // colour discriminator (blue continuum vs reddened/dust-obscured).
+      // We reuse the B−J classifier — its threshold semantics aren't a
+      // perfect match for the quasar locus, but the InfoCard's tag is a
+      // coarse "red vs blue" hint, not a science classification.
+      const br = mags.magG - mags.magR;
+      return Number.isFinite(br) ? galaxyTypeFromBminusJ(br) : UNKNOWN;
+    }
     case Source.Cluster:
     case Source.Supercluster:
     case Source.Void:
