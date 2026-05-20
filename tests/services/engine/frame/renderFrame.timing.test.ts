@@ -203,9 +203,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     renderer: pointRenderer,
     postProcess,
-    // texturedImpostors slot is referenced from frameContext shape;
+    // texturedDisks slot is referenced from frameContext shape;
     // we'll null the matching subsystem on `state` so the pass skips.
-    texturedImpostors: null,
+    texturedDisks: null,
   } as never;
 
   const settings = {
@@ -244,7 +244,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       },
       subsystems: {
         proceduralDisks: null,
-        texturedImpostors: null,
+        texturedDisks: null,
         // filamentsPass.enabled consults the FadeRegistry to keep the
         // pass alive through fade-out tails. This fixture wants the
         // pass GATED OFF (the test asserts only point-sprites +

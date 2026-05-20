@@ -289,7 +289,7 @@ describe('renderFrame visual baseline', () => {
     const proceduralDisksSubsystem = {
       lastOutput: { instances: [{ stub: true }] as unknown[] },
     };
-    const texturedImpostorsSubsystem = {
+    const texturedDisksSubsystem = {
       lastOutput: {
         disks: [{ stub: true }] as unknown[],
       },
@@ -306,7 +306,7 @@ describe('renderFrame visual baseline', () => {
       drawPxPerRad,
       renderer: pointRenderer,
       postProcess,
-      texturedImpostors: texturedImpostorsSubsystem,
+      texturedDisks: texturedDisksSubsystem,
       // volumeUpsamplePass.draw reads ctx.volumeOffscreen.view to pass
       // as the source texture to the upsample step.
       volumeOffscreen: { view: {} as GPUTextureView },
@@ -352,7 +352,7 @@ describe('renderFrame visual baseline', () => {
         },
         subsystems: {
           proceduralDisks: proceduralDisksSubsystem,
-          texturedImpostors: texturedImpostorsSubsystem,
+          texturedDisks: texturedDisksSubsystem,
           fades: {
             register: vi.fn(),
             unregister: vi.fn(),

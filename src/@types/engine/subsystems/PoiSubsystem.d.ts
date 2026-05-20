@@ -31,7 +31,7 @@ export type PoiSubsystem = LabelProducer & {
    * markers (halo + ring).  Returns one descriptor per visible POI
    * after applying the apparent-size fade-in band AND the
    * max-apparent-radius fade-out.  Famous-galaxy POIs always return
-   * empty (they render through the textured-impostor + label paths).
+   * empty (they render through the textured-disk + label paths).
    *
    * The producer never mutates engine state directly — the returned
    * array is fed to `state.gpu.clusterMarkerRenderer.setMarkers(...)`

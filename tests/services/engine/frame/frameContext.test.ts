@@ -52,7 +52,7 @@ function makeCam(overrides: Partial<OrbitCamera> = {}): OrbitCamera {
 /**
  * Build an `EngineState`-shaped fixture with the guard fields
  * (`cam`, `gpu.renderer`, `gpu.postProcess`, `gpu.pickRenderer`,
- * `gpu.volumeOffscreen`, `subsystems.texturedImpostors`) populated by
+ * `gpu.volumeOffscreen`, `subsystems.texturedDisks`) populated by
  * default.  Each test override can null any one of them to exercise the
  * not-ready branch.
  *
@@ -67,7 +67,7 @@ function makeState(overrides: {
   postProcess?: unknown;
   pickRenderer?: unknown;
   volumeOffscreen?: unknown;
-  texturedImpostors?: unknown;
+  texturedDisks?: unknown;
 } = {}): EngineState {
   const cam = overrides.cam === undefined ? makeCam() : overrides.cam;
   const renderer = overrides.renderer === undefined ? ({} as unknown) : overrides.renderer;
@@ -77,12 +77,12 @@ function makeState(overrides: {
     overrides.pickRenderer === undefined ? ({} as unknown) : overrides.pickRenderer;
   const volumeOffscreen =
     overrides.volumeOffscreen === undefined ? ({} as unknown) : overrides.volumeOffscreen;
-  const texturedImpostors =
-    overrides.texturedImpostors === undefined ? ({} as unknown) : overrides.texturedImpostors;
+  const texturedDisks =
+    overrides.texturedDisks === undefined ? ({} as unknown) : overrides.texturedDisks;
   return {
     cam,
     gpu: { renderer, postProcess, pickRenderer, volumeOffscreen },
-    subsystems: { texturedImpostors },
+    subsystems: { texturedDisks },
   } as unknown as EngineState;
 }
 
@@ -113,8 +113,8 @@ describe('deriveFrameContext — not-ready branch', () => {
     expect(ctx.isReady).toBe(false);
   });
 
-  it('returns isReady:false when subsystems.texturedImpostors is null', () => {
-    const ctx = deriveFrameContext(makeState({ texturedImpostors: null }), makeCanvas());
+  it('returns isReady:false when subsystems.texturedDisks is null', () => {
+    const ctx = deriveFrameContext(makeState({ texturedDisks: null }), makeCanvas());
     expect(ctx.isReady).toBe(false);
   });
 });
@@ -149,19 +149,19 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.vp.length).toBe(16);
   });
 
-  it('forwards renderer, postProcess, texturedImpostors references onto the ready context', () => {
+  it('forwards renderer, postProcess, texturedDisks references onto the ready context', () => {
     const renderer = { tag: 'renderer' };
     const postProcess = { tag: 'postProcess' };
-    const texturedImpostors = { tag: 'texturedImpostors' };
+    const texturedDisks = { tag: 'texturedDisks' };
     const ctx = deriveFrameContext(
-      makeState({ renderer, postProcess, texturedImpostors }),
+      makeState({ renderer, postProcess, texturedDisks }),
       makeCanvas(),
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
     expect(ctx.renderer).toBe(renderer);
     expect(ctx.postProcess).toBe(postProcess);
-    expect(ctx.texturedImpostors).toBe(texturedImpostors);
+    expect(ctx.texturedDisks).toBe(texturedDisks);
   });
 
   it('forwards volumeOffscreen reference onto the ready context', () => {

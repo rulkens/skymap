@@ -1,8 +1,12 @@
-// disks/io.wesl — shared structs for the oriented galaxy-disk pipeline.
+// texturedDisks/io.wesl — shared structs for the textured galaxy-disk
+// (impostor-quad) pipeline. Sibling pipeline to 'proceduralDisks/'
+// (procedural impostor for galaxies that don't yet have a thumbnail
+// loaded) and 'points/' (screen-aligned billboards). This pipeline
+// renders galaxies whose apparent pixel size exceeds the
+// procedural-disk fade-in band as a 3D-oriented quad textured with the
+// per-galaxy thumbnail atlas slot.
 //
-// This file is the 'interface' module of the disks renderer family. It
-// declares the structs that BOTH the vertex and fragment entry points
-// need to agree on byte-for-byte:
+// Declares the three structs every entry point needs to agree on:
 //
 //   - 'Uniforms'   — the @group(0) @binding(0) uniform buffer layout.
 //   - 'InstanceIn' — the per-instance vertex attributes.
@@ -10,12 +14,10 @@
 //
 // ## Why a separate io module
 //
-// Originally everything lived in a single 'disks.wesl'. Splitting it
-// into io + vertex + fragment mirrors the points/ and milkyWay/
-// splits (tasks 13 and 14) so each stage compiles a strictly-smaller
-// shader module from disjoint source. The vertex stage doesn't read
-// the atlas texture; the fragment stage doesn't run the orientation
-// math.
+// io + vertex + fragment mirrors the points/ and milkyWay/ splits so
+// each stage compiles a strictly-smaller shader module from disjoint
+// source. The vertex stage doesn't read the atlas texture; the
+// fragment stage doesn't run the orientation math.
 //
 // ## Why bindings live in the consuming files, not here
 //

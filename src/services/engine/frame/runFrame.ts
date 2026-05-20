@@ -235,10 +235,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // CPU-side step that populates the two LOD-aligned subsystems'
   // `lastOutput` arrays.  The HDR_PASSES loop reads those arrays via
-  // the new proceduralDisksPass / texturedImpostorsPass entries; this
-  // call site is the one place both walks happen each frame.  The
-  // atlas subsystem is mutated transitively by the textured-impostor
-  // run (slot allocations + fetch enqueues); we don't call into it
+  // the proceduralDisksPass / texturedDisksPass entries; this call
+  // site is the one place both walks happen each frame.  The atlas
+  // subsystem is mutated transitively by the textured-disk run
+  // (slot allocations + fetch enqueues); we don't call into it
   // directly here.
   if (state.subsystems.proceduralDisks !== null) {
     state.subsystems.proceduralDisks.runFrame({
@@ -248,8 +248,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       pxPerRad: ctx.drawPxPerRad,
     });
   }
-  if (state.subsystems.texturedImpostors !== null) {
-    state.subsystems.texturedImpostors.runFrame({
+  if (state.subsystems.texturedDisks !== null) {
+    state.subsystems.texturedDisks.runFrame({
       cam: ctx.cam,
       catalogs: state.sources.catalogs,
       visibleSourceMask: state.sources.drawMask,
@@ -320,11 +320,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       schechterMStar: state.bias.schechterMStar,
       schechterAlpha: state.bias.schechterAlpha,
       depthFadeEnabled: state.settings.points.depthFade,
-      // Task 8 of procedural-disk-impostor: feed the points-pass
-      // fragment shader the same crossfade band the procedural-
-      // disk pass fades IN over, so the two passes blend cleanly
-      // without a double-bright donut.  Constants live in
-      // `thumbnailSubsystem.ts` as a single source of truth.
+      // Feed the points-pass vertex shader the same crossfade band
+      // the procedural-disk pass fades IN over, so the two passes
+      // blend cleanly without a double-bright donut.  Constants live
+      // in `proceduralDiskSubsystem.ts` as a single source of truth.
       pxFadeStartPoints: PROCEDURAL_DISK_FADE_START_PX,
       pxFadeEndPoints: PROCEDURAL_DISK_FADE_END_PX,
       exposure: state.settings.tonemap.exposure,
@@ -515,7 +514,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     state.settings.camera.autoRotate ||
     state.subsystems.tweens.isActive() ||
     state.subsystems.spaceMouse.hasAxes() ||
-    (ready && state.subsystems.texturedImpostors.hasInFlightWork()) ||
+    (ready && state.subsystems.texturedDisks.hasInFlightWork()) ||
     // Survey + filament fade-in / fade-out: consult the FadeRegistry
     // — the registry owns every handle's animation clock after the
     // unified-fade migration (plan-03 for surveys, plan-04 for filaments).

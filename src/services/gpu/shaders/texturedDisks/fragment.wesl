@@ -1,4 +1,4 @@
-// disks/fragment.wesl — galaxy-disk fragment stage.
+// texturedDisks/fragment.wesl — textured galaxy-disk fragment stage.
 //
 // Samples the texture atlas, applies a soft circular mask to round
 // the corners of the (square) UV rectangle, and gates alpha by
@@ -29,7 +29,7 @@
 // fragment module here intentionally doesn't declare the uniform,
 // keeping the binding's visibility VERTEX-only as it was before.)
 
-import package::disks::io::VsOut;
+import package::texturedDisks::io::VsOut;
 // Shared fragment-stage mask shapes — see 'lib/masks.wesl' for the
 // rationale (three smoothstep patterns recurred across four shaders,
 // naming the shapes makes the intent visible at the call site).

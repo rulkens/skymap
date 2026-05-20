@@ -36,12 +36,10 @@ struct SourceUniforms {
   // anyway.
   sourceCode: u32,
 
-  // Pad to 16-byte WebGPU-minimum uniform-buffer alignment. Never
-  // written from the CPU side; never read here. Named individually
-  // (rather than `_pad: vec3<u32>`) so a future field can repurpose
-  // any one slot without alignment churn — each pad is a free 4-byte
-  // u32 slot. (Wider types like vec2<u32> or vec4 need 8 / 16-byte
-  // alignment respectively and would require resizing the struct.)
+  // Pad to 16-byte WebGPU-minimum uniform-buffer alignment. Named
+  // individually (rather than '_pad: vec3<u32>') so a future field can
+  // repurpose any one slot without alignment churn — each pad is a
+  // free 4-byte slot.
   _pad0: u32,
   _pad1: u32,
   _pad2: u32,

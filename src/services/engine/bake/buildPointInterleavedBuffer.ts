@@ -48,6 +48,7 @@
  */
 
 import { pickColourIndex } from '../../../data/colourIndex';
+import { paddedRadiusMpc } from '../../../utils/galaxySize';
 import { Source } from '../../../data/sources';
 import { surveyFluxLimit, surveySchechter } from '../../../data/surveyFluxLimits';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
@@ -74,19 +75,18 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  *   slot 0,1,2 — position xyz (f32)
  *   slot 3     — magnitude (f32)
  *   slot 4     — colorIndex (f32)
- *   slot 5     — kPerZ (f32)
- *   slot 6     — axisRatio (f32) — sign bit carries isFallback
- *   slot 7     — positionAngleDeg (f32)
- *   slot 8     — diameterKpc (f32)
- *   slot 9     — vMaxWeight (f32)
- *   slot 10    — schechterRatio (f32)
- *   slot 11    — angularDensityWeight (f32)
+ *   slot 5     — axisRatio (f32) — sign bit carries isFallback
+ *   slot 6     — positionAngleDeg (f32)
+ *   slot 7     — radiusMpc (f32) — padded billboard half-extent
+ *   slot 8     — vMaxWeight (f32)
+ *   slot 9     — schechterRatio (f32)
+ *   slot 10    — angularDensityWeight (f32)
  *
- * Total: 12 × 4 = 48 bytes per point (down from 52).  The previous
- * `globalInstanceIdx u32` slot is gone — the picker now writes
- * `(sourceCode << 27) | localIdx + 1` directly via a per-draw uniform
- * carrying the source code and the GPU's `@builtin(instance_index)` for
- * the local index.  No more priorCount running-sum bake.
+ * Total: 11 × 4 = 44 bytes per point.  The previous kPerZ slot moved
+ * to the per-survey `SourceUniforms` uniform (k is constant per
+ * survey, so paying for it per-row was waste).  Earlier still, a
+ * 4-byte `globalInstanceIdx u32` slot was also dropped when the picker
+ * switched to per-draw `(sourceCode << 27) | localIdx + 1` packing.
  *
  * The fallback-orientation flag (formerly the high bit of
  * `globalInstanceIdx`) now rides on the sign bit of `axisRatio`.  Real
@@ -95,7 +95,7 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * mask shape (`abs(axisRatio)`) and the flag (`axisRatio < 0`) in one
  * read.  See the slot 6 comment in the writer loop below.
  *
- * Slot 11 (`angularDensityWeight`) is left at 1.0 (multiplicative identity)
+ * Slot 10 (`angularDensityWeight`) is left at 1.0 (multiplicative identity)
  * by every default upload.  Mode 4 of the Malmquist-bias correction —
  * HEALPix angular re-weighting — replaces these defaults via the lazy
  * `setBiasMode(BiasMode.AngularReweight)` flow (mirror of Schechter).  Skipping the
@@ -103,19 +103,13 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
  * HEALPix pass costs ~100 ms even at full deck, and the user only pays it
  * if they actually pick mode 4.
  */
-const SLOTS_PER_POINT = 12;
+const SLOTS_PER_POINT = 11;
 
 /** Reference distance used to normalise the per-galaxy 1/V_max weight. */
 const D_REF_MPC = 750;
 
 /** Target post-shift mean magnitude for the per-survey magG normalisation. */
 const SDSS_TARGET_MEAN_MAG = 18;
-
-/**
- * Sentinel value the WGSL fragment shader recognises as "no measured colour
- * for this row".  Mirrors the one in `pointRenderer.ts`.
- */
-const NO_COLOUR_SENTINEL = 999;
 
 // Type declarations moved to @types/engine/BuildPointInterleavedBuffer*.d.ts.
 
@@ -201,7 +195,7 @@ export function buildPointInterleavedBuffer(
   // ── Lazy Schechter ratios (mode = 'with-schechter' only) ────────────────
   //
   // When the upload happens while bias mode is already 3, we compute the
-  // ratios up-front via the shared helper and splice them into slot 11 of
+  // ratios up-front via the shared helper and splice them into slot 9 of
   // each row below.  Otherwise (the common case) every row gets 1.0.
   //
   // Calling the helper here — rather than open-coding the integral — keeps
@@ -242,24 +236,28 @@ export function buildPointInterleavedBuffer(
 
     const g = cloud.magG[i]!;
 
-    const colour = pickColourIndex(
+    // Distance from origin in Mpc — needed by both the K-correction
+    // baked into the colour-index lookup and by the vMaxWeight block
+    // below. Hoist once here to avoid a second hypot.
+    const dx = cloud.positions[i * 3 + 0]!;
+    const dy = cloud.positions[i * 3 + 1]!;
+    const dz = cloud.positions[i * 3 + 2]!;
+    const dMpc = Math.hypot(dx, dy, dz);
+
+    // Apply the per-survey mag offset.  NaN-G galaxies snap to the post-
+    // shift target so they render at average intensity instead of vanishing.
+    interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
+    interleaved[o + 4] = pickColourIndex(
       source,
       cloud.magU[i]!,
       cloud.magG[i]!,
       cloud.magR[i]!,
       cloud.magI[i]!,
       cloud.magZ[i]!,
+      dMpc,
     );
 
-    // Apply the per-survey mag offset.  NaN-G galaxies snap to the post-
-    // shift target so they render at average intensity instead of vanishing.
-    interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
-    interleaved[o + 4] = colour ? colour.colourIndex : NO_COLOUR_SENTINEL;
-
-    // Slot 5 — per-row K-correction coefficient.  See pickColourIndex.
-    interleaved[o + 5] = colour ? colour.kPerZ : 0;
-
-    // Slot 6 — axisRatio (galaxy disk b/a in (0, 1]) with the SIGN BIT
+    // Slot 5 — axisRatio (galaxy disk b/a in (0, 1]) with the SIGN BIT
     // carrying the fallback-orientation flag.  Real measurements from
     // catalogs are always > 0; we negate the value when the row was
     // classified as fallback so the shader can recover both:
@@ -267,61 +265,53 @@ export function buildPointInterleavedBuffer(
     //   - the elliptical mask shape via `abs(axisRatio)`
     //   - the fallback flag via `axisRatio < 0.0`
     //
-    // in a single per-instance attribute read.  This replaces the prior
-    // high-bit-of-globalInstanceIdx encoding — that piggyback went away
-    // with the (source, localIdx) packing refactor that deleted the
-    // globalInstanceIdx slot entirely.  Float sign-bit packing is well-
-    // defined for finite non-zero values and survives NaN (synthetic
-    // clouds use NaN axisRatio; the shader's existing `axisRatio > 0`
-    // mask correctly treats NaN as "no orientation" → circle, no
-    // fallback flag).
+    // in a single per-instance attribute read.  Float sign-bit packing
+    // is well-defined for finite non-zero values and survives NaN
+    // (synthetic clouds use NaN axisRatio; the shader's existing
+    // `axisRatio > 0` mask correctly treats NaN as "no orientation" →
+    // circle, no fallback flag).
     const ab = cloud.axisRatio[i]!;
-    interleaved[o + 6] = isFallbackArr[i] === 1 ? -Math.abs(ab) : ab;
+    interleaved[o + 5] = isFallbackArr[i] === 1 ? -Math.abs(ab) : ab;
 
-    // Slots 7..8 — positionAngleDeg + diameterKpc copied through.  Build
-    // pipeline guarantees finite values for diameterKpc; positionAngleDeg
-    // is real-or-fallback (also finite).
-    interleaved[o + 7] = cloud.positionAngleDeg[i]!;
-    interleaved[o + 8] = cloud.diameterKpc[i]!;
+    // Slot 6 — positionAngleDeg copied through.
+    interleaved[o + 6] = cloud.positionAngleDeg[i]!;
 
-    // Slot 9 — per-galaxy 1/V_max weight.  Computed from the *raw*
+    // Slot 7 — padded billboard radius in Mpc, half-extent (the shader
+    // uses it directly as the world-space radius for the billboard
+    // quad). Shares the helper with the procedural-disk + textured-
+    // thumbnail pipelines so the load-fade handoff occupies an
+    // identical world-space footprint across all three.
+    interleaved[o + 7] = paddedRadiusMpc(cloud.diameterKpc[i]!);
+
+    // Slot 8 — per-galaxy 1/V_max weight.  Computed from the *raw*
     // apparent magnitude (NOT `g + magOffset` — the per-survey
     // normalisation is a visualisation cosmetic, not a physical change to
-    // the photometry) plus Cartesian distance.  vMaxWeight handles NaN
-    // inputs by returning 0.
-    const dx = cloud.positions[i * 3 + 0]!;
-    const dy = cloud.positions[i * 3 + 1]!;
-    const dz = cloud.positions[i * 3 + 2]!;
-    const dMpc = Math.hypot(dx, dy, dz);
+    // the photometry) plus Cartesian distance (already hoisted above).
+    // vMaxWeight handles NaN inputs by returning 0.
     const absMag = absoluteFromApparent(g, dMpc);
-    interleaved[o + 9] = vMaxWeight({
+    interleaved[o + 8] = vMaxWeight({
       absMag,
       mLim: surveyMLim,
       dRefMpc: D_REF_MPC,
     });
 
-    // Slot 10 — per-galaxy Schechter density-correction ratio.  In fast
+    // Slot 9 — per-galaxy Schechter density-correction ratio.  In fast
     // mode we leave it at the multiplicative identity (1.0); the shader's
     // `select(1.0, schechterRatio, biasMode == 3u)` ignores the slot for
     // modes 0/1/2 anyway, so this matches the rendered output bit-for-bit
-    // unless the user actually picks Schechter LF.
-    //
-    // When mode === 'with-schechter' the ratios were computed up-front by
-    // `computeSchechterRatios` (above); we just splice each row in here.
-    interleaved[o + 10] = schechterRatios !== null ? schechterRatios[i]! : 1.0;
+    // unless the user actually picks Schechter LF.  When mode ===
+    // 'with-schechter' the ratios were computed up-front by
+    // `computeSchechterRatios`; we just splice each row in here.
+    interleaved[o + 9] = schechterRatios !== null ? schechterRatios[i]! : 1.0;
 
-    // Slot 11 — per-galaxy HEALPix angular re-weight (BiasMode.AngularReweight,
-    // mode 4 of the Malmquist-bias correction).  Default-write 1.0 (the
-    // multiplicative identity) so the shader's
-    // `select(1.0, angularDensityWeight, biasMode == 4u)` produces no change
-    // in the other four modes.  The lazy bake path
-    // (`pointRenderer.setBiasMode(BiasMode.AngularReweight)`) splices real
-    // per-galaxy weights into this slot and re-uploads when the user toggles
-    // into mode 4.  We don't add an eager `'with-angular'` mode here because
-    // the toggle isn't expected to be the default; if a survey arrives
-    // mid-mode-4 the renderer's `setBiasMode` re-runs the worker bake for
-    // the new source, picking up the now-stale 1.0s.
-    interleaved[o + 11] = 1.0;
+    // Slot 10 — per-galaxy HEALPix angular re-weight (BiasMode.AngularReweight,
+    // mode 4).  Default-write 1.0 (multiplicative identity) so the
+    // shader's `select(1.0, angularDensityWeight, biasMode == 4u)`
+    // produces no change in the other modes.  The lazy bake path
+    // (`pointRenderer.setBiasMode(BiasMode.AngularReweight)`) splices
+    // real per-galaxy weights in and re-uploads when the user toggles
+    // into mode 4.
+    interleaved[o + 10] = 1.0;
   }
 
   return {

@@ -42,11 +42,11 @@ export type PointRenderer = {
   setBiasUploadCallback(cb: ((source: Source, cloud: GalaxyCatalog) => void) | null): void;
   /** Install the unload-tail callback for the bias-correction subsystem. */
   setBiasUnloadCallback(cb: ((source: Source) => void) | null): void;
-  /** Splice per-row Schechter ratios into slot 10 of the source's interleaved mirror. */
+  /** Splice per-row Schechter ratios into slot 9 of the source's interleaved mirror. */
   spliceSchechterRatios(source: Source, ratios: Float32Array): void;
-  /** Splice per-row HEALPix angular weights into slot 11. */
+  /** Splice per-row HEALPix angular weights into slot 10. */
   spliceAngularWeights(source: Source, weights: Float32Array): void;
-  /** Zero slots 10 + 11 for one source or every loaded source. */
+  /** Zero slots 9 + 10 for one source or every loaded source. */
   clearBiasOverlays(source?: Source): void;
   /** Total number of points across every loaded source. */
   totalCount(): number;

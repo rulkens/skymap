@@ -1,5 +1,5 @@
 /**
- * TexturedImpostorSubsystem — LOD-2 per-frame planner.
+ * TexturedDiskSubsystem — LOD-2 per-frame planner.
  *
  * Walks the catalog, applies the px ≥ 24 fetch gate, allocates atlas
  * slots through the injected `GalaxyAtlasSubsystem`, schedules fetches,
@@ -25,7 +25,7 @@ import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { Source } from '../../../data/sources';
 
-export type TexturedImpostorFrameInput = {
+export type TexturedDiskFrameInput = {
   readonly cam: OrbitCamera;
   readonly catalogs: ReadonlyMap<Source, GalaxyCatalog>;
   readonly visibleSourceMask: number;
@@ -33,15 +33,15 @@ export type TexturedImpostorFrameInput = {
   readonly famousMeta: readonly FamousMetaEntry[];
 };
 
-export type TexturedImpostorFrameOutput = {
+export type TexturedDiskFrameOutput = {
   /** LOD-2 — galaxies with finite orientation, sorted back-to-front. */
   readonly disks: readonly DiskInstance[];
 };
 
-export type TexturedImpostorSubsystem = Destroyable & {
-  runFrame(input: TexturedImpostorFrameInput): TexturedImpostorFrameOutput;
+export type TexturedDiskSubsystem = Destroyable & {
+  runFrame(input: TexturedDiskFrameInput): TexturedDiskFrameOutput;
 
-  readonly lastOutput: TexturedImpostorFrameOutput;
+  readonly lastOutput: TexturedDiskFrameOutput;
 
   /**
    * OR'd into the engine's render-on-demand predicate.  True while any
@@ -56,10 +56,10 @@ export type TexturedImpostorSubsystem = Destroyable & {
  * shape the legacy thumbnailSubsystem did, so the split-out tests can
  * inspect the post-extraction subsystem's bookkeeping the same way.
  */
-export type TexturedImpostorTestState = {
+export type TexturedDiskTestState = {
   readonly bitmapReadyTime: ReadonlyMap<string, number>;
 };
 
-export type TexturedImpostorSubsystemWithTestSeam = TexturedImpostorSubsystem & {
-  __testGetState(): TexturedImpostorTestState;
+export type TexturedDiskSubsystemWithTestSeam = TexturedDiskSubsystem & {
+  __testGetState(): TexturedDiskTestState;
 };

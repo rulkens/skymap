@@ -284,7 +284,7 @@ function makeInput(
     renderer: pointRenderer,
     postProcess,
     volumeOffscreen,
-    texturedImpostors: thumbnails,
+    texturedDisks: thumbnails,
   };
 
   return {
@@ -327,7 +327,7 @@ function makeInput(
         // assertions continue to focus on point + milky-way ordering.
         subsystems: {
           proceduralDisks: null,
-          texturedImpostors: null,
+          texturedDisks: null,
           // filamentsPass.enabled now consults the FadeRegistry to
           // keep the pass alive through fade-out tails. Provide a
           // minimal opacityOf stub so the gate doesn't crash.
@@ -456,11 +456,11 @@ describe('renderFrame', () => {
   // impostor-subsystem-split (Tasks 11/12).  The combined `runFrame` call
   // that lived inside the legacy galaxyThumbnailsPass is gone — the LOD-1
   // and LOD-2 plans are now produced by `proceduralDiskSubsystem.runFrame`
-  // and `texturedImpostorSubsystem.runFrame` upstream in `runFrame.ts`,
+  // and `texturedDiskSubsystem.runFrame` upstream in `runFrame.ts`,
   // and the three downstream passes (`proceduralDisksPass`,
   // `texturedQuadsPass`, `texturedDisksPass`) just issue the renderer
   // draws.  The textured halves were split out of the former
-  // `texturedImpostorsPass` on 2026-05-18 so the debug panel can
+  // `texturedDisksPass` on 2026-05-18 so the debug panel can
   // toggle them independently.  Per-pass coverage lives in the
   // matching `passes/<name>Pass.test.ts` files.
 

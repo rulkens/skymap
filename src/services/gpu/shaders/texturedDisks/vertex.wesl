@@ -1,5 +1,5 @@
-// disks/vertex.wesl — oriented galaxy-disk vertex stage (astronomically
-// correct).
+// texturedDisks/vertex.wesl — oriented textured galaxy-disk vertex
+// stage (astronomically correct).
 //
 // Each instance is a 3D disk fixed in WORLD space. The galaxy's true
 // orientation is derived from its on-sky position angle (PA, east of
@@ -44,9 +44,9 @@
 // identical uniform declaration. Atlas-texture / sampler bindings
 // are fragment-only and stay in fragment.wesl.
 
-import package::disks::io::Uniforms;
-import package::disks::io::InstanceIn;
-import package::disks::io::VsOut;
+import package::texturedDisks::io::Uniforms;
+import package::texturedDisks::io::InstanceIn;
+import package::texturedDisks::io::VsOut;
 import package::lib::camera::worldToClip;
 // Shared unit-quad helpers from 'lib/billboard.wesl' — replace the
 // inline 'CORNERS' const + '(corner + 1) * 0.5' UV remap that used to

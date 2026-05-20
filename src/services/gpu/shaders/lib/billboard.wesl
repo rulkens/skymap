@@ -26,7 +26,7 @@
 //     north-up orientation tracks sky-north, not the camera). That's
 //     fundamentally renderer-specific math — see the long doc-block
 //     around 'NORTH_WORLD' / 'upClip' in 'quads.wesl'.
-//   - 'disks' and 'proceduralDisks' build their bases from the galaxy's
+//   - 'texturedDisks' and 'proceduralDisks' build their bases from the galaxy's
 //     intrinsic position-angle and inclination (camera-INDEPENDENT — the
 //     disk plane is a property of the galaxy in 3D space). That math
 //     belongs in 'lib/orientation.wesl' (Task 6), not here.
@@ -69,7 +69,7 @@
 // orderings of the same unit square (both render an identical filled
 // quad under WebGPU's default 'cullMode: none'):
 //
-//   - 'quads' / 'disks' / 'proceduralDisks':
+//   - 'quads' / 'texturedDisks' / 'proceduralDisks':
 //       BL, BR, TR,  BL, TR, TL
 //   - 'points':
 //       BL, BR, TL,  TL, BR, TR

@@ -44,8 +44,7 @@ describe('decodeTimestampBuffer', () => {
   });
 
   it('clamps negative deltas (end < begin) to 0', () => {
-    // Pair index 2 = textured-disks (u64 slots 4/5), inherited from
-    // the legacy `textured-impostors` slot.
+    // Pair index 2 = textured-disks (u64 slots 4/5).
     const buf = buildBuffer([[2, 5_000_000n, 1_000_000n]]);
     const out = decodeTimestampBuffer(buf, 1);
 

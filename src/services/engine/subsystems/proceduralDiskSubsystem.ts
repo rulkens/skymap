@@ -32,6 +32,7 @@
 
 import { Source } from '../../../data/sources';
 import { pickColourIndex } from '../../../data/colourIndex';
+import { paddedRadiusMpc } from '../../../utils/galaxySize';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -162,19 +163,25 @@ export function createProceduralDiskSubsystem(
 
         if (px <= PROCEDURAL_DISK_FADE_START_PX) continue;
 
-        const sizeWorldMpc = (dKpcRow / 1000) * 4;
+        // posSize.w stores the FULL quad extent (vertex stage halves it
+        // at corner expansion), so double the shared radius helper.
+        const sizeWorldMpc = paddedRadiusMpc(dKpcRow) * 2;
         const ar = cloud.axisRatio[i]!;
         const pa = cloud.positionAngleDeg[i]!;
 
-        const ci = pickColourIndex(
+        // Distance from origin (NOT from camera) — K-correction uses
+        // cosmological redshift z = d / Hubble distance, which is a
+        // function of the row's position, not the viewer's location.
+        const dMpcFromOrigin = Math.hypot(x, y, z);
+        const colourIndex = pickColourIndex(
           cloudSource,
-          cloud.magU[i] ?? NaN,
-          cloud.magG[i] ?? NaN,
-          cloud.magR[i] ?? NaN,
-          cloud.magI[i] ?? NaN,
-          cloud.magZ[i] ?? NaN,
+          cloud.magU[i]!,
+          cloud.magG[i]!,
+          cloud.magR[i]!,
+          cloud.magI[i]!,
+          cloud.magZ[i]!,
+          dMpcFromOrigin,
         );
-        const colourIndex = ci !== null ? ci.colourIndex : 1.0;
 
         const emitted = maybeEmitProceduralDisk(
           px,

@@ -12,21 +12,20 @@
  * checklist for the manual verification step that catches the worker
  * bundle's transitive imports.
  *
- * ### Slot layout (post (source, localIdx) packing refactor)
+ * ### Slot layout
  *
  *   slot 0,1,2 — position xyz
  *   slot 3     — magnitude
  *   slot 4     — colorIndex
- *   slot 5     — kPerZ
- *   slot 6     — axisRatio (sign bit = isFallback)
- *   slot 7     — positionAngleDeg
- *   slot 8     — diameterKpc
- *   slot 9     — vMaxWeight
- *   slot 10    — schechterRatio
- *   slot 11    — angularDensityWeight
+ *   slot 5     — axisRatio (sign bit = isFallback)
+ *   slot 6     — positionAngleDeg
+ *   slot 7     — radiusMpc (padded half-extent)
+ *   slot 8     — vMaxWeight
+ *   slot 9     — schechterRatio
+ *   slot 10    — angularDensityWeight
  *
- * 12 slots × 4 bytes = 48 bytes per point.  No more globalInstanceIdx
- * slot — the picker now derives its packed identity from a per-source
+ * 11 slots × 4 bytes = 44 bytes per point.  kPerZ moved to per-survey
+ * `SourceUniforms`; the picker reads instance identity from a per-source
  * uniform + the GPU's `@builtin(instance_index)`.
  */
 
@@ -52,10 +51,10 @@ function makeCloud(count: number): GalaxyCatalog {
   };
 }
 
-const SLOTS = 12;
+const SLOTS = 11;
 
 describe('buildPointInterleavedBuffer', () => {
-  it('produces an interleaved Float32Array of the expected length (12 slots × 4 bytes)', () => {
+  it('produces an interleaved Float32Array of the expected length (11 slots × 4 bytes)', () => {
     const cloud = makeCloud(3);
     const result = buildPointInterleavedBuffer({
       cloud,
@@ -82,7 +81,7 @@ describe('buildPointInterleavedBuffer', () => {
     expect(interleaved[1 * SLOTS + 2]).toBeCloseTo(-15);
   });
 
-  it('writes axisRatio at slot 6 with positive sign for non-fallback rows', () => {
+  it('writes axisRatio at slot 5 with positive sign for non-fallback rows', () => {
     // axisRatio = 0.7 is unlikely to match the deterministic
     // fallbackOrientation for these specific (objIDs, ra, dec) — so
     // the bake should keep the value positive (no sign-bit flip).
@@ -93,7 +92,7 @@ describe('buildPointInterleavedBuffer', () => {
       source: Source.SDSS,
     });
     for (let i = 0; i < 3; i++) {
-      const ab = interleaved[i * SLOTS + 6]!;
+      const ab = interleaved[i * SLOTS + 5]!;
       // Either positive (real measurement) or negative (fallback).  These
       // particular rows shouldn't be classified as fallback (their
       // (b/a, PA) doesn't match the deterministic hash output for the
@@ -130,7 +129,7 @@ describe('buildPointInterleavedBuffer', () => {
     expect(result.nRef).toBeGreaterThan(0);
   });
 
-  it('writes vMaxWeight in slot 9; default fast mode leaves slot 10 at 1.0', () => {
+  it('writes vMaxWeight in slot 8; default fast mode leaves slot 9 at 1.0', () => {
     const cloud = makeCloud(1);
     // Place the galaxy at d = 100 Mpc with a typical SDSS-like apparent
     // magnitude.  The exact weight value depends on vMaxWeight()'s formula
@@ -141,20 +140,20 @@ describe('buildPointInterleavedBuffer', () => {
       cloud,
       source: Source.SDSS,
     });
-    const vMax = interleaved[9]!;
-    const sch = interleaved[10]!;
+    const vMax = interleaved[8]!;
+    const sch = interleaved[9]!;
     expect(Number.isFinite(vMax)).toBe(true);
     expect(vMax).toBeGreaterThanOrEqual(0);
     expect(vMax).toBeLessThanOrEqual(1);
-    // Default mode is 'fast' → slot 10 is the multiplicative identity.
+    // Default mode is 'fast' → slot 9 is the multiplicative identity.
     // The shader's `select(1.0, schechterRatio, biasMode == 3u)` ignores
     // this slot in modes 0/1/2, so the visual is unchanged.
     expect(sch).toBe(1);
   });
 
-  it('mode: fast writes 1.0 to schechterRatio (slot 10) for every row', () => {
+  it('mode: fast writes 1.0 to schechterRatio (slot 9) for every row', () => {
     // Build a multi-row cloud spread across distances and assert every
-    // row's slot 10 is exactly 1.0 — the multiplicative identity that
+    // row's slot 9 is exactly 1.0 — the multiplicative identity that
     // makes the shader's mode-3 multiplication a no-op.
     const cloud = makeCloud(5);
     for (let i = 0; i < 5; i++) {
@@ -167,16 +166,16 @@ describe('buildPointInterleavedBuffer', () => {
       mode: 'fast',
     });
     for (let i = 0; i < 5; i++) {
-      expect(interleaved[i * SLOTS + 10]).toBe(1);
+      expect(interleaved[i * SLOTS + 9]).toBe(1);
     }
   });
 
-  it('mode: with-schechter writes the per-row symmetric-rebalance ratios in slot 10', () => {
+  it('mode: with-schechter writes the per-row symmetric-rebalance ratios in slot 9', () => {
     // Symmetric rebalance centers ratios on 1.0 (median pivot): far-field
     // boosts modestly (capped at 1.2×), near-field dims more aggressively
     // (down to 0.3×).  We assert at least one row off 1.0 — this catches
     // a regression where the bake silently degrades to fast-mode (which
-    // writes 1.0 into slot 10 unconditionally).
+    // writes 1.0 into slot 9 unconditionally).
     const cloud = makeCloud(5);
     cloud.positions.set([20, 0, 0, 50, 0, 0, 100, 0, 0, 200, 0, 0, 500, 0, 0]);
     cloud.magG.set([16, 17, 18, 19, 20]);
@@ -187,7 +186,7 @@ describe('buildPointInterleavedBuffer', () => {
     });
     let sawNonUnity = false;
     for (let i = 0; i < 5; i++) {
-      const r = interleaved[i * SLOTS + 10]!;
+      const r = interleaved[i * SLOTS + 9]!;
       expect(Number.isFinite(r)).toBe(true);
       expect(r).toBeGreaterThanOrEqual(0.3 - 1e-6);
       expect(r).toBeLessThanOrEqual(1.2 + 1e-6);
@@ -196,14 +195,14 @@ describe('buildPointInterleavedBuffer', () => {
     expect(sawNonUnity).toBe(true);
   });
 
-  it('writes 1.0 into the angularDensityWeight slot (slot 11) by default', () => {
+  it('writes 1.0 into the angularDensityWeight slot (slot 10) by default', () => {
     const cloud = makeCloud(3);
     const { interleaved } = buildPointInterleavedBuffer({
       cloud,
       source: Source.SDSS,
     });
     for (let i = 0; i < 3; i++) {
-      expect(interleaved[i * SLOTS + 11]).toBe(1);
+      expect(interleaved[i * SLOTS + 10]).toBe(1);
     }
   });
 
@@ -225,10 +224,11 @@ describe('buildPointInterleavedBuffer', () => {
     expect(meanOut).toBeCloseTo(18, 5);
   });
 
-  it('writes the colour-index sentinel (999) when the row lacks usable bands', () => {
+  it('writes the unknown-colour fallback (1.05) when the row lacks usable bands', () => {
     const cloud = makeCloud(1);
-    // SDSS picks u−g.  Setting both bands to NaN forces pickColourIndex to
-    // return null, which the bake maps to the 999 sentinel.
+    // SDSS picks u−g.  Setting both bands to NaN forces pickColourIndex
+    // to return null, which the bake maps to UNKNOWN_COLOUR_RAMP_POSITION
+    // (1.05) — the shared neutral-ramp value both renderers substitute.
     cloud.magU.set([NaN]);
     cloud.magG.set([NaN]);
     cloud.magR.set([NaN]);
@@ -238,8 +238,6 @@ describe('buildPointInterleavedBuffer', () => {
       cloud,
       source: Source.SDSS,
     });
-    expect(interleaved[4]).toBe(999);
-    // K-correction defaults to 0 when the colour is absent.
-    expect(interleaved[5]).toBe(0);
+    expect(interleaved[4]).toBeCloseTo(1.05, 5);
   });
 });

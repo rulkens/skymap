@@ -18,7 +18,7 @@ import type { PointRenderer } from '../rendering/PointRenderer';
 import type { PickRenderer } from '../rendering/PickRenderer';
 import type { PostProcess } from '../rendering/PostProcess';
 import type { VolumeOffscreen } from '../rendering/VolumeOffscreen';
-import type { TexturedImpostorSubsystem } from './subsystems/TexturedImpostorSubsystem';
+import type { TexturedDiskSubsystem } from './subsystems/TexturedDiskSubsystem';
 
 export type ReadyEngineState = EngineState & {
   cam: OrbitCamera;
@@ -36,6 +36,6 @@ export type ReadyEngineState = EngineState & {
     volumeOffscreen: VolumeOffscreen;
   };
   subsystems: EngineState['subsystems'] & {
-    texturedImpostors: TexturedImpostorSubsystem;
+    texturedDisks: TexturedDiskSubsystem;
   };
 };

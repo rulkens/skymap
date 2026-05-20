@@ -1,5 +1,5 @@
 /**
- * texturedImpostorSubsystem — LOD-2 per-frame planner.
+ * texturedDiskSubsystem — LOD-2 per-frame planner.
  *
  * Extracted from `thumbnailSubsystem.ts` lines 487-993 as part of the
  * 2026-05-12 impostor-subsystem split.  Walks the catalog, applies the
@@ -29,16 +29,17 @@
  */
 
 import { Source } from '../../../data/sources';
+import { paddedRadiusMpc } from '../../../utils/galaxySize';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
 import type {
-  TexturedImpostorFrameInput,
-  TexturedImpostorFrameOutput,
-  TexturedImpostorSubsystemWithTestSeam,
-} from '../../../@types/engine/subsystems/TexturedImpostorSubsystem';
+  TexturedDiskFrameInput,
+  TexturedDiskFrameOutput,
+  TexturedDiskSubsystemWithTestSeam,
+} from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import { fetchGalaxyBitmap } from '../../../utils/network/galaxyImageFetcher';
 import { cartesianToRaDecZ } from '../../../utils/math';
@@ -59,7 +60,7 @@ export function galaxyCacheKey(ra: number, dec: number): string {
   return `${ra.toFixed(5)}_${dec.toFixed(5)}`;
 }
 
-export type TexturedImpostorDeps = {
+export type TexturedDiskDeps = {
   readonly device: GPUDevice;
   readonly atlas: GalaxyAtlasSubsystem;
   readonly requestRender: () => void;
@@ -72,9 +73,9 @@ export type TexturedImpostorDeps = {
   readonly decimationFactor?: number;
 };
 
-export function createTexturedImpostorSubsystem(
-  deps: TexturedImpostorDeps,
-): TexturedImpostorSubsystemWithTestSeam {
+export function createTexturedDiskSubsystem(
+  deps: TexturedDiskDeps,
+): TexturedDiskSubsystemWithTestSeam {
   const { atlas, requestRender } = deps;
   const fetcher = deps.fetcher ?? fetchGalaxyBitmap;
   const decimationFactor = Math.max(1, Math.floor(deps.decimationFactor ?? 8));
@@ -94,9 +95,9 @@ export function createTexturedImpostorSubsystem(
   let frameCounter = 0;
   let destroyed = false;
 
-  let lastOutput: TexturedImpostorFrameOutput = { disks: [] };
+  let lastOutput: TexturedDiskFrameOutput = { disks: [] };
 
-  function runFrame(input: TexturedImpostorFrameInput): TexturedImpostorFrameOutput {
+  function runFrame(input: TexturedDiskFrameInput): TexturedDiskFrameOutput {
     if (destroyed) return lastOutput;
 
     const { cam, catalogs, visibleSourceMask, pxPerRad, famousMeta } = input;
@@ -161,7 +162,9 @@ export function createTexturedImpostorSubsystem(
 
         if (cloudSource !== Source.Famous && px < APPARENT_SIZE_THRESHOLD_PX) continue;
 
-        const sizeWorldMpc = (dKpcRow / 1000) * 4;
+        // posSize.w stores the FULL quad extent (vertex stage halves it
+        // at corner expansion), so double the shared radius helper.
+        const sizeWorldMpc = paddedRadiusMpc(dKpcRow) * 2;
         const ar = cloud.axisRatio[i]!;
         const pa = cloud.positionAngleDeg[i]!;
 
@@ -274,7 +277,7 @@ export function createTexturedImpostorSubsystem(
     lastOutput = { disks: [] };
   }
 
-  const subsystem: TexturedImpostorSubsystemWithTestSeam = {
+  const subsystem: TexturedDiskSubsystemWithTestSeam = {
     runFrame,
     get lastOutput() {
       return lastOutput;

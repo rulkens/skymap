@@ -56,7 +56,7 @@ fn circularMask(r: f32, inner: f32, outer: f32) -> f32 {
 // ── lumAlpha ─────────────────────────────────────────────────────────
 //
 // Luminance gate for sky-subtraction-lite. Used by texture-sampling
-// fragment stages (disks, quads) to drop near-black sky pixels in
+// fragment stages (texturedDisks, quads) to drop near-black sky pixels in
 // SDSS / DSS thumbnail JPEGs that ship with no alpha channel: passing
 // 'max(rgba.r, max(rgba.g, rgba.b))' through this gate maps near-zero
 // luminance to fully transparent and bright galaxy pixels to fully

@@ -53,7 +53,7 @@ import type { Vec3 } from '../../math/Vec3';
 import type { PointRenderer } from '../../rendering/PointRenderer';
 import type { PostProcess } from '../../rendering/PostProcess';
 import type { VolumeOffscreen } from '../../rendering/VolumeOffscreen';
-import type { TexturedImpostorSubsystem } from '../subsystems/TexturedImpostorSubsystem';
+import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -85,5 +85,5 @@ export type ReadyFrameContext = {
    * `ctx.volumeOffscreen.view` without reaching back into `state`.
    */
   volumeOffscreen: VolumeOffscreen;
-  texturedImpostors: TexturedImpostorSubsystem;
+  texturedDisks: TexturedDiskSubsystem;
 };

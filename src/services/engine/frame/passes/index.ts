@@ -42,7 +42,7 @@
  * encoded galaxy has finite (axisRatio, PA) — the quad branch in the
  * impostor subsystem only ever fired for famous galaxies at <4 px,
  * where the point sprite handled them.  See
- * `texturedImpostorSubsystem.ts` for the full rationale.
+ * `texturedDiskSubsystem.ts` for the full rationale.
  *
  * Reordering passes is a one-line array shuffle with a clear
  * semantic.  The DebugPanel `GpuTimingsSection` derives its row order

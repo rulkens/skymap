@@ -1,5 +1,5 @@
 // lib/orientation.wesl — disk-plane axis math from on-sky position angle
-// + inclination, shared between 'disks.wesl' (textured thumbnails) and
+// + inclination, shared between 'texturedDisks' (textured thumbnails) and
 // 'proceduralDisks.wesl' (impostor brightness profile).
 //
 // Both renderers draw a galaxy as a 3D-oriented quad whose in-plane
@@ -14,12 +14,12 @@
 //
 // CRITICAL: this math is camera-INDEPENDENT. The disk's orientation is
 // a property of the galaxy in 3D space, NOT of where the camera
-// currently sits. An earlier revision of disks.wesl (now its long
+// currently sits. An earlier revision of texturedDisks (now its long
 // header comment) built the basis from 'camPos - center', which made
 // orbiting the camera visibly rotate the disk plane — exactly the bug
 // world-space orientation was rewritten to fix. Do NOT add a
 // 'cameraPos' parameter to anything in this file; if you find yourself
-// reaching for one, re-read disks.wesl's header. The plan for this
+// reaching for one, re-read texturedDisks's header. The plan for this
 // task initially proposed 'diskAxes(posWS, cameraPos, ...)'; the
 // 'cameraPos' was dropped after grepping the call sites confirmed
 // neither consumer reads it.
@@ -43,7 +43,7 @@
 // 'axisRatio' and computing them inside? The 'sinI = sqrt(max(0.0,
 // 1.0 - cosI*cosI))' line is one statement and the consumers already
 // have the convention of clamping 'axisRatio' to a 0.05 floor before
-// the trig (see disks.wesl line 120 + proceduralDisks.wesl line 119).
+// the trig (see texturedDisks line 120 + proceduralDisks.wesl line 119).
 // Doing the clamp inside this lib would either silently re-clamp a
 // value the caller already clamped, or it would require a second
 // "raw vs clamped" parameter — both are noisier than just letting the
@@ -83,7 +83,7 @@
 // downstream normalize() amplifies floating-point noise. Two slightly
 // different threshold conventions existed pre-extraction:
 //
-//   - disks.wesl: 'abs(dot(northPole, losDir)) > 0.99' (~8° from pole),
+//   - texturedDisks: 'abs(dot(northPole, losDir)) > 0.99' (~8° from pole),
 //     swap seed BEFORE the projection — wide, conservative.
 //   - proceduralDisks.wesl: 'length(northTangentRaw) < 1e-4' (~exactly
 //     at pole), swap result AFTER the projection — tight, only fires

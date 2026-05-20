@@ -168,7 +168,7 @@ describe('EngineState type', () => {
       subsystems: {
         galaxyAtlas: null,
         proceduralDisks: null,
-        texturedImpostors: null,
+        texturedDisks: null,
         loadProgress: null,
         spaceMouse: createSpaceMouseSubsystem({
           cancelTween: () => {},
@@ -346,7 +346,7 @@ describe('EngineState type', () => {
       subsystems: {
         galaxyAtlas: null,
         proceduralDisks: null,
-        texturedImpostors: null,
+        texturedDisks: null,
         loadProgress: null,
         spaceMouse: createSpaceMouseSubsystem({
           cancelTween: () => {},

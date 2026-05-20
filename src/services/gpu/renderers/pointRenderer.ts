@@ -103,7 +103,7 @@ import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniforms
  *    magnitude f32, colorIndex f32,
  *    kPerZ f32,
  *    axisRatio f32 (sign bit = isFallback flag),
- *    positionAngleDeg f32, diameterKpc f32,
+ *    positionAngleDeg f32, radiusMpc f32,
  *    vMaxWeight f32, schechterRatio f32, angularDensityWeight f32]
  *
  * Every slot is f32 from the GPU's perspective; the single bit of "is
@@ -130,81 +130,73 @@ import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniforms
  * parallel-upload race that the old global-ID baking suffered from is
  * structurally impossible.
  */
-const SLOTS_PER_POINT = 12;
+const SLOTS_PER_POINT = 11;
 
 /**
  * Byte stride between consecutive per-instance records in the vertex buffer.
  *
- * 12 slots × 4 bytes = 48 bytes. The pipeline's `arrayStride` must match
+ * 11 slots × 4 bytes = 44 bytes. The pipeline's `arrayStride` must match
  * this exactly; if it disagrees WebGPU will either validate-error or
  * silently read garbage.  PickRenderer's pipeline declares the same
- * 48-byte stride and the same attribute table, so the two pipelines stay
+ * 44-byte stride and the same attribute table, so the two pipelines stay
  * compatible with this single vertex buffer layout.
  */
-export const POINT_STRIDE = SLOTS_PER_POINT * 4; // 48 bytes
-
-/**
- * Byte offset of the `kPerZ` slot inside one per-instance record.
- *
- * Sits at slot index 5 (offset 20).  Per-row K-correction coefficient
- * (see colourIndex.ts).  The shader multiplies it by redshift `z` to
- * obtain the per-point K shift.
- */
-const K_PER_Z_BYTE_OFFSET = 20;
+export const POINT_STRIDE = SLOTS_PER_POINT * 4; // 44 bytes
 
 /**
  * Byte offset of the `axisRatio` slot — the b/a ratio of the galaxy disk.
  *
- * Sits at slot index 6 (offset 24).  The fragment shader uses
+ * Sits at slot index 5 (offset 20).  The fragment shader uses
  * `abs(axisRatio)` to squash the unit-circle UV mask into an ellipse;
  * the sign bit doubles as the fallback-orientation flag (real
  * measurements are positive; a negative value flags a fallback row).
  */
-const AXIS_RATIO_BYTE_OFFSET = 24;
+const AXIS_RATIO_BYTE_OFFSET = 20;
 
 /**
  * Byte offset of the `positionAngleDeg` slot — the east-of-north position
  * angle of the galaxy disk's major axis, in degrees [0, 180).
  *
- * Sits at slot index 7 (offset 28).  The fragment shader rotates the
+ * Sits at slot index 6 (offset 24).  The fragment shader rotates the
  * squashed ellipse around the billboard centre by this angle.
  */
-const POSITION_ANGLE_BYTE_OFFSET = 28;
+const POSITION_ANGLE_BYTE_OFFSET = 24;
 
 /**
- * Byte offset of the `diameterKpc` slot — the per-galaxy physical disk
- * diameter in kiloparsecs.
+ * Byte offset of the `radiusMpc` slot — the per-galaxy padded billboard
+ * radius in Mpc.
  *
- * Sits at slot index 8 (offset 32).  The vertex shader uses it to
- * compute each billboard's apparent angular radius from
- * `(diameterKpc / 1000 / 2) / distance_Mpc`.
+ * Sits at slot index 7 (offset 28).  Pre-baked at upload time as
+ * `max(diameterKpc, 30) * 2 / 1000`, which folds in the 4×
+ * thumbnail-footprint padding and the synthetic-fallback floor.  The
+ * vertex shader divides directly by distance_Mpc to get angular radius.
  */
-const DIAMETER_KPC_BYTE_OFFSET = 32;
+const RADIUS_MPC_BYTE_OFFSET = 28;
 
 /**
  * Byte offset of the `vMaxWeight` slot — the per-galaxy 1/V_max alpha
  * multiplier used by the Malmquist-bias correction's mode 2.
  *
- * Sits at slot index 9 (offset 36).  Baked at upload time from each
+ * Sits at slot index 8 (offset 32).  Baked at upload time from each
  * galaxy's apparent magnitude, Cartesian distance and the survey's flux
  * limit.
  */
-const VMAX_WEIGHT_BYTE_OFFSET = 36;
+const VMAX_WEIGHT_BYTE_OFFSET = 32;
 
 /**
  * Byte offset of the `schechterRatio` slot — the per-galaxy Schechter
  * density-correction ratio used by the Malmquist-bias correction's mode 3.
  *
- * Sits at slot index 10 (offset 40).  Default 1.0 in fast mode; real
+ * Sits at slot index 9 (offset 36).  Default 1.0 in fast mode; real
  * ratios spliced in lazily when the user picks mode 3.
  */
-const SCHECHTER_RATIO_BYTE_OFFSET = 40;
+const SCHECHTER_RATIO_BYTE_OFFSET = 36;
 
 /**
  * Byte offset of the `angularDensityWeight` slot — the per-galaxy HEALPix
  * angular re-weight used by the Malmquist-bias correction's mode 4.
  *
- * Sits at slot index 11 (offset 44).  Default-baked to 1.0
+ * Sits at slot index 10 (offset 40).  Default-baked to 1.0
  * (multiplicative identity) at upload time so modes 0/1/2/3 see no
  * change.  Real per-galaxy values are spliced in lazily by the
  * bias-correction subsystem (`biasCorrectionSubsystem.ts`) the first
@@ -234,7 +226,7 @@ const SCHECHTER_RATIO_BYTE_OFFSET = 40;
  * per-source bake for the new source and splices in real weights when
  * it resolves — same lazy semantics as Schechter.
  */
-const ANGULAR_WEIGHT_BYTE_OFFSET = 44;
+const ANGULAR_WEIGHT_BYTE_OFFSET = 40;
 
 /**
  * Vertex buffer attribute table — single source of truth shared with
@@ -253,32 +245,31 @@ const ANGULAR_WEIGHT_BYTE_OFFSET = 44;
  *   0  position (vec3<f32>)
  *   1  magnitude (f32)
  *   2  colorIndex (f32)
- *   3  kPerZ (f32) — per-row K-correction; vertex shader × redshift z
- *   4  axisRatio (f32) — b/a; SIGN BIT = isFallback flag
- *   5  positionAngleDeg (f32) — east-of-north major-axis angle, [0, 180)
- *   6  diameterKpc (f32) — per-galaxy physical disk diameter
- *   7  vMaxWeight (f32) — Malmquist mode 2 (1/V_max) multiplier
- *   8  schechterRatio (f32) — Malmquist mode 3 (Schechter) ratio
- *   9  angularDensityWeight (f32) — Malmquist mode 4 (HEALPix) re-weight
+ *   3  axisRatio (f32) — b/a; SIGN BIT = isFallback flag
+ *   4  positionAngleDeg (f32) — east-of-north major-axis angle, [0, 180)
+ *   5  radiusMpc (f32) — padded billboard half-extent in Mpc (pre-baked)
+ *   6  vMaxWeight (f32) — Malmquist mode 2 (1/V_max) multiplier
+ *   7  schechterRatio (f32) — Malmquist mode 3 (Schechter) ratio
+ *   8  angularDensityWeight (f32) — Malmquist mode 4 (HEALPix) re-weight
  *
  * The right-hand sides reference the named byte-offset constants above
  * so the JSDoc on each constant stays the canonical documentation for
  * its slot.  Position / magnitude / colorIndex use literal offsets
  * (0 / 12 / 16) because they're never read by name elsewhere — only
  * the offsets that the bake or shader-side code needs to address by
- * name get named constants.
+ * name get named constants.  kPerZ was previously slot 3; it now lives
+ * in the per-survey SourceUniforms uniform (set once at upload time).
  */
 export const POINT_VERTEX_ATTRIBUTES: readonly GPUVertexAttribute[] = [
   { shaderLocation: 0, offset: 0, format: 'float32x3' },
   { shaderLocation: 1, offset: 12, format: 'float32' },
   { shaderLocation: 2, offset: 16, format: 'float32' },
-  { shaderLocation: 3, offset: K_PER_Z_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 4, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 5, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 6, offset: DIAMETER_KPC_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 7, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 8, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
-  { shaderLocation: 9, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 3, offset: AXIS_RATIO_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 4, offset: POSITION_ANGLE_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 5, offset: RADIUS_MPC_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 6, offset: VMAX_WEIGHT_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 7, offset: SCHECHTER_RATIO_BYTE_OFFSET, format: 'float32' },
+  { shaderLocation: 8, offset: ANGULAR_WEIGHT_BYTE_OFFSET, format: 'float32' },
 ];
 
 // ─── Uniform buffer byte offsets (per-pass partial writes) ──────────────────
@@ -530,7 +521,7 @@ type LoadedSource = {
    * Mirror of the interleaved Float32Array baked into `buffer` at upload
    * time.  Held on the JS side so the bias-correction subsystem's splice
    * methods (`spliceSchechterRatios` / `spliceAngularWeights` /
-   * `clearBiasOverlays` below) can rewrite slot 10 / 11 of every row and
+   * `clearBiasOverlays` below) can rewrite slot 9 / 10 of every row and
    * re-upload the whole buffer with one `device.queue.writeBuffer` call.
    *
    * Why a single full re-upload rather than N sparse writes?  WebGPU has
@@ -854,7 +845,7 @@ export function createPointRenderer(
     // is active.  If a bias mode is active when this upload finishes,
     // the subsystem fires a per-source bake via the
     // `biasUploadCallback` at the bottom of this method and splices the
-    // result into slot 10/11 once it resolves — same observable
+    // result into slot 9/10 once it resolves — same observable
     // behaviour as the pre-E.4 inline path, but the rendering and
     // bias-correction concerns are now cleanly separated.
     const result = await buildRunner({
@@ -904,7 +895,7 @@ export function createPointRenderer(
     // SourceUniforms — 16 bytes, written ONCE here at upload time. The
     // 5-bit Source enum value never changes for a given source, so a
     // per-frame write would be wasted bytes. Pack sourceCode into the
-    // first 4 bytes and leave the rest zero.
+    // first 4 bytes; the remaining 12 bytes are reserved padding.
     const sourceBuffer = device.createBuffer({
       label: `points-source-uniform-${source}`,
       size: 16,
@@ -986,7 +977,7 @@ export function createPointRenderer(
 
   /**
    * Splice a tightly-packed Float32Array of per-row Schechter ratios
-   * (length must equal the source's `count`) into slot 10 of every row of
+   * (length must equal the source's `count`) into slot 9 of every row of
    * the entry's interleaved mirror, then re-upload the whole vertex
    * buffer.  No mode tracking; the caller (subsystem) decides when to
    * call this.
@@ -1000,14 +991,14 @@ export function createPointRenderer(
       );
     }
     for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_POINT + 10] = ratios[i]!;
+      entry.interleaved[i * SLOTS_PER_POINT + 9] = ratios[i]!;
     }
     device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
   }
 
   /**
    * Splice a tightly-packed Float32Array of per-row HEALPix angular
-   * weights (length must equal the source's `count`) into slot 11 of
+   * weights (length must equal the source's `count`) into slot 10 of
    * every row of the entry's interleaved mirror, then re-upload.
    */
   function spliceAngularWeights(source: Source, weights: Float32Array): void {
@@ -1019,7 +1010,7 @@ export function createPointRenderer(
       );
     }
     for (let i = 0; i < entry.count; i++) {
-      entry.interleaved[i * SLOTS_PER_POINT + 11] = weights[i]!;
+      entry.interleaved[i * SLOTS_PER_POINT + 10] = weights[i]!;
     }
     device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
   }
@@ -1048,8 +1039,8 @@ export function createPointRenderer(
         : Array.from(clouds.values());
     for (const entry of targets) {
       for (let i = 0; i < entry.count; i++) {
+        entry.interleaved[i * SLOTS_PER_POINT + 9] = 0;
         entry.interleaved[i * SLOTS_PER_POINT + 10] = 0;
-        entry.interleaved[i * SLOTS_PER_POINT + 11] = 0;
       }
       device.queue.writeBuffer(entry.buffer, 0, entry.interleaved);
     }
