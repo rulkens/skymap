@@ -74,8 +74,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // straight from the picker; the engine's only job is to look up
   // the matching cloud and bounds-check the localIdx against the
   // data-side map's count.  The bounds check defends the tier-swap
-  // race (in-flight pick decoded against a now-shrunk cloud) — see
-  // `selectionSubsystem.galaxyInfoFor` for the same guard rationale.
+  // race (in-flight pick decoded against a now-shrunk cloud) — same
+  // guard the selection subsystem applies before building a
+  // GalaxyInfo for a callback fan-out.
   state.subsystems.clickResolver = createClickResolver({
     pickRenderer,
     resolveSelection: (sel) => {

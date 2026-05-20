@@ -91,7 +91,6 @@ function makeState(): EngineState {
         selected: () => null,
         setHovered: vi.fn(),
         setSelected: vi.fn(),
-        galaxyInfoFor: () => null,
         destroy: vi.fn(),
       },
       galaxyAtlas: null,
