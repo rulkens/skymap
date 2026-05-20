@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   Source,
+  SOURCE_REGISTRY,
   ALL_SOURCES,
   ALL_VISIBLE_MASK,
   sourceLabel,
   sourceIsAllSky,
-  sourceMaxDistanceMpc,
   bandLabels,
   maskHas,
   maskWith,
@@ -36,7 +36,7 @@ describe('Source.Famous', () => {
   it('has a sensible default max-distance for camera framing', () => {
     // Famous nearby galaxies span M31 (0.78 Mpc) to NGC 4889 (~94 Mpc);
     // pad to 200 Mpc so the camera frames the whole catalog comfortably.
-    expect(sourceMaxDistanceMpc(Source.Famous)).toBeGreaterThanOrEqual(200);
+    expect(SOURCE_REGISTRY[Source.Famous].maxDistMpc).toBeGreaterThanOrEqual(200);
   });
 
   it('exposes the SDSS-like band layout (curated metadata uses optical bands)', () => {

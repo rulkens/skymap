@@ -34,18 +34,15 @@
  * future catalogs (DESI, Euclid, LSST...).
  *
  * ---
- * ### Why one registry discriminated by `type`?
+ * ### Why one registry?
  *
- * Per-source metadata (display label, sky coverage, camera depth, band
- * layout, on-disk filename) lives in `SOURCE_REGISTRY` so adding a new
- * source means editing one entry rather than several parallel tables that
- * have to stay in lock-step. Surveys and POI codes (Cluster, Supercluster,
- * Void) carry different field sets — POIs have no `.bin` file, no
- * photometric bands, no survey depth — so each entry is discriminated by a
- * `type: 'survey' | 'poi'` field. A discriminated union keeps every field
- * on a survey entry required (no optionals scattered across the type) while
- * still letting one registry hold both kinds. Accessors that only make
- * sense for surveys narrow on `entry.type === 'poi'` and throw.
+ * `SOURCE_REGISTRY` colocates per-source metadata so adding a new source
+ * means editing one entry rather than several parallel tables that have to
+ * stay in lock-step. Survey- and POI-shaped rows differ (POIs lack a
+ * `.bin` file, photometric bands, and a survey depth) so each entry is
+ * discriminated by `type: 'survey' | 'poi'`. A discriminated union keeps
+ * every field required on the variants it applies to — no optionals — and
+ * survey-only accessors narrow on `entry.type === 'poi'` and throw.
  */
 
 import type { BandLabels } from '../@types/data/BandLabels';
@@ -86,9 +83,6 @@ export const Source = {
    */
   Famous: 4,
   /**
-   * POI-only — used for pick encoding, no `.bin` representation, excluded
-   * from `ALL_SOURCES`.
-   *
    * Galaxy-cluster anchors (Virgo, Coma, Norma, ...). Picks against a
    * cluster's marker ring return source code 5 in the upper 5 bits of
    * the packed identity; the 27-bit `localIdx` carries the POI's index
@@ -97,22 +91,9 @@ export const Source = {
    * §6.2 for the per-category allocation rationale.
    */
   Cluster: 5,
-  /**
-   * POI-only — used for pick encoding, no `.bin` representation, excluded
-   * from `ALL_SOURCES`.
-   *
-   * Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding
-   * scheme as Cluster, distinct source code so the pick result is
-   * self-describing without an extra category lookup.
-   */
+  /** Supercluster anchors (Hydra Wall, Hercules SC, ...). Same encoding as Cluster. */
   Supercluster: 6,
-  /**
-   * POI-only — used for pick encoding, no `.bin` representation, excluded
-   * from `ALL_SOURCES`.
-   *
-   * Void anchors (Sculptor Void, Local Void, Boötes Void). Same encoding
-   * scheme as Cluster / Supercluster.
-   */
+  /** Void anchors (Sculptor Void, Local Void, Boötes Void). Same encoding as Cluster. */
   Void: 7,
   /**
    * Milliquas v8 (Flesch 2023) — the Million Quasars compilation. AGN
@@ -125,17 +106,13 @@ export const Source = {
 } as const;
 export type Source = (typeof Source)[keyof typeof Source];
 
-/**
- * Survey sources — the ones with `.bin` representations that participate in
- * the points pipeline. Excludes the POI codes which have no per-survey
- * metadata to look up.
- */
+/** Sources that participate in the points pipeline (have `.bin` data). */
 export type SurveySource = Exclude<
   Source,
   typeof Source.Cluster | typeof Source.Supercluster | typeof Source.Void
 >;
 
-/** POI sources — pick-encoding-only codes for cluster/supercluster/void markers. */
+/** Pick-encoding-only codes for cluster/supercluster/void markers. */
 export type PoiSource =
   | typeof Source.Cluster
   | typeof Source.Supercluster
@@ -146,51 +123,26 @@ export type { SurveyEntry, PoiEntry, SourceEntry };
 // ─── Registry ───────────────────────────────────────────────────────────────
 
 /**
- * Per-source metadata, keyed by every `Source` (surveys + POIs). Each entry
- * is discriminated by `type`:
- *
- *   - `'survey'` entries carry the full per-survey kit: filename stem,
- *     sky-coverage flag, camera depth, band layout. `binBaseName` is `null`
- *     for the synthetic cloud (generated at runtime, no `.bin` file);
- *     every other survey field is required.
- *   - `'poi'` entries carry just code + label. POIs don't have a `.bin`
- *     file, photometric bands, or a survey depth, so the entry is tiny.
+ * Per-source metadata, keyed by every `Source`. Discriminated by `type`;
+ * see the `SurveyEntry` / `PoiEntry` definitions for the field shapes.
  *
  * `as const satisfies Readonly<Record<Source, SourceEntry>>` preserves each
  * entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]` narrows to
  * `SurveyEntry` at use sites without manual casts.
  *
- * ### Survey field reference
+ * Convention notes that aren't expressed by the types:
  *
- * - **`label`** — UI display name. Follows survey-team conventions: `'2MRS'`
- *   no space, `'GLADE'` uppercase, etc. Match these in any new UI strings.
- *
- * - **`binBaseName`** — filename stem under `public/data/`. Tier-aware
- *   sources (SDSS, GLADE, Milliquas) get `-<tier>` appended by
- *   `tierFilenameForSource` in `tierTargets.ts`; tier-agnostic sources
- *   (2MRS, Famous) load the bare `<base>.bin`. Synthetic is `null`.
- *
- * - **`allSky`** — drives whether the renderer draws a coverage-mask
- *   overlay. 2MRS, GLADE, Famous, and Milliquas are all-sky by
- *   construction; SDSS covers ~⅓ of the sky (NGC + three southern stripes)
- *   and would be misrepresented by an all-sky badge.
- *
- * - **`maxDistMpc`** — *display* limit for camera framing, in megaparsecs,
- *   redshift → distance via `H₀ ≈ 70 km/s/Mpc`. Not a strict cut. Rounded
- *   up to keep the edge of the cloud comfortably inside the view frustum.
- *
- * - **`bandLabels`** — the actual photometric band carried in each
- *   `magU/G/R/I/Z` slot. Catalog parsers shoehorn whichever bands the
- *   source provides into the SDSS-shaped 5-slot layout, so the data is
- *   *not* always SDSS u/g/r/i/z — labelling rows "(g)" for non-SDSS
- *   sources would be misleading. `'—'` (em-dash) marks an empty slot.
- *
- *       SDSS:       u → u, g → g,  r → r, i → i, z → z   (real SDSS bands)
- *       2MRS:       u → —, g → J,  r → H, i → K, z → —   (2MASS NIR triplet)
- *       GLADE:      u → —, g → B,  r → J, i → H, z → K   (B + 2MASS JHK)
- *       Synthetic:  u → u, g → g,  r → r, i → i, z → z   (modelled on SDSS)
- *       Famous:     u → u, g → g,  r → r, i → i, z → z   (no per-row photometry; cosmetic)
- *       Milliquas:  u → —, g → B,  r → R, i → —, z → —   (Bmag, Rmag only)
+ * - **`label`** follows survey-team capitalisation (`'2MRS'` no space,
+ *   `'GLADE'` uppercase). Match these in any new UI strings.
+ * - **`binBaseName`** is `null` only for runtime-generated sources
+ *   (currently just Synthetic). Tier-aware filenames are assembled in
+ *   `tierFilenameForSource`.
+ * - **`maxDistMpc`** is a *display* limit (camera framing), not a strict
+ *   cut. Conversion uses `H₀ ≈ 70 km/s/Mpc`; outliers may sit beyond.
+ * - **`bandLabels`** records the actual band each `magU/G/R/I/Z` slot
+ *   carries. Catalog parsers shoehorn non-SDSS bands into the 5-slot
+ *   layout, so labelling rows "(g)" for a 2MRS galaxy would be misleading.
+ *   `'—'` (em-dash) marks an empty slot.
  */
 export const SOURCE_REGISTRY = {
   [Source.Synthetic]: {
@@ -247,9 +199,6 @@ export const SOURCE_REGISTRY = {
     // stored mag values are NaN, which FullCard renders as "N/A".
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
   },
-  // POI anchors are full-sky in the trivial sense — individual points, not
-  // survey patches — so `allSky: true` keeps the renderer's coverage-mask
-  // logic well-behaved across both entry kinds.
   [Source.Cluster]: { type: 'poi', code: Source.Cluster, label: 'Cluster', allSky: true },
   [Source.Supercluster]: { type: 'poi', code: Source.Supercluster, label: 'Supercluster', allSky: true },
   [Source.Void]: { type: 'poi', code: Source.Void, label: 'Void', allSky: true },
@@ -273,10 +222,6 @@ export const SOURCE_REGISTRY = {
 } as const satisfies Readonly<Record<Source, SourceEntry>>;
 
 // ─── Public lookup functions ────────────────────────────────────────────────
-//
-// Thin wrappers around the registry so callers depend on a function
-// signature rather than storage shape. Each accessor accepts the wider
-// `Source` type and narrows or throws via the discriminator.
 
 /** Display name (e.g. `'2MRS'`, `'GLADE'`, `'Cluster'`) for a given source. */
 export function sourceLabel(source: Source): string {
@@ -286,18 +231,6 @@ export function sourceLabel(source: Source): string {
 /** True if the source covers (approximately) the full celestial sphere. */
 export function sourceIsAllSky(source: Source): boolean {
   return SOURCE_REGISTRY[source].allSky;
-}
-
-/** Approximate effective max distance in megaparsecs. See `SOURCE_REGISTRY`. */
-export function sourceMaxDistanceMpc(source: Source): number {
-  const entry = SOURCE_REGISTRY[source];
-  // POIs are not surveys and don't define a sample depth. Reaching here
-  // with a POI means camera-framing code routed the wrong thing — fail
-  // loudly instead of inventing a value.
-  if (entry.type === 'poi') {
-    throw new Error(`sourceMaxDistanceMpc: POI source ${source} has no survey depth`);
-  }
-  return entry.maxDistMpc;
 }
 
 /**
@@ -319,16 +252,13 @@ export function bandLabels(source: Source): BandLabels {
 // ─── Visibility bitmask ─────────────────────────────────────────────────────
 
 /**
- * All currently-defined survey sources, used to build `ALL_VISIBLE_MASK` and
- * to iterate over surveys when rendering UI controls.
+ * Survey sources in UI presentation order — smallest catalogue → largest
+ * (Famous → 2MRS → SDSS → GLADE, ~20 → 38 k → 500 k → 2 M rows). Synthetic
+ * leads as the procedural-fallback cloud, hidden from user-facing lists.
  *
- * Listed explicitly rather than `Object.values(Source)` to control the
- * iteration order — surveys are ordered smallest catalogue → largest, so
- * the UI presents them in an intuitive "tip-of-the-iceberg first" order
- * (Famous → 2MRS → SDSS → GLADE, roughly 20 → 38 k → 500 k → 2 M rows).
- * Synthetic stays first as the procedural-fallback cloud (not a real
- * survey, hidden from user-facing lists). Hard-coding the list also makes
- * any file-format-affecting change visible in code review.
+ * Listed explicitly rather than `Object.values(Source)` so adding a source
+ * to the file-format enum doesn't silently promote it into the UI and the
+ * visibility bitmask.
  */
 export const ALL_SOURCES: readonly Source[] = [
   Source.Synthetic,
@@ -340,15 +270,9 @@ export const ALL_SOURCES: readonly Source[] = [
 ];
 
 /**
- * Bitmask with a `1` in every defined survey source's bit position — i.e.
- * "show everything". Computed as the union of all `1 << source` bits.
- *
- * Value: `(1<<0) | (1<<1) | (1<<2) | (1<<3) | (1<<4) | (1<<8) = 0b100011111
- * = 287`. Bits 5/6/7 stay clear because those slots are reserved for POI
- * codes that don't participate in the survey mask.
- *
- * The runtime's *startup* visibility mask is a separate constant in
- * `defaults.ts`.
+ * "Show every survey" mask — `1` in every `ALL_SOURCES` bit position.
+ * Equals `0b100011111` (bits 5/6/7 stay clear; those are POI codes).
+ * The *startup* visibility mask is a separate constant in `defaults.ts`.
  */
 export const ALL_VISIBLE_MASK: number = ALL_SOURCES.reduce<number>(
   (mask, src) => mask | (1 << src),

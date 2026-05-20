@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   Source,
+  SOURCE_REGISTRY,
   sourceLabel,
   sourceIsAllSky,
-  sourceMaxDistanceMpc,
   ALL_VISIBLE_MASK,
   maskHas,
   maskWith,
@@ -41,12 +41,12 @@ describe('source coverage metadata', () => {
     expect(sourceIsAllSky(Source.SDSS)).toBe(false);
   });
   it('reports approximate maximum distance per survey in Mpc', () => {
-    expect(sourceMaxDistanceMpc(Source.TwoMRS)).toBeLessThan(300);
+    expect(SOURCE_REGISTRY[Source.TwoMRS].maxDistMpc).toBeLessThan(300);
     // GLADE's distance distribution has a long tail past 1 Gpc; we choose
     // a generous band-edge here so the auto-LOD heuristic includes it in
     // the mid-range view.
-    expect(sourceMaxDistanceMpc(Source.Glade)).toBeGreaterThan(800);
-    expect(sourceMaxDistanceMpc(Source.SDSS)).toBeGreaterThan(2000);
+    expect(SOURCE_REGISTRY[Source.Glade].maxDistMpc).toBeGreaterThan(800);
+    expect(SOURCE_REGISTRY[Source.SDSS].maxDistMpc).toBeGreaterThan(2000);
   });
 });
 
