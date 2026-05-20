@@ -169,9 +169,10 @@ struct Uniforms {
   // The thumbnail subsystem's procedural-disk pass fades IN across an
   // apparent-pixel-size band [pxFadeStart, pxFadeEnd]. Without a
   // complementary fade-OUT on the points pass, both passes would be
-  // fully present inside the band — a 'double-bright donut'. We feed
-  // the same two thresholds in here and multiply the per-fragment alpha
-  // by '1 - smoothstep(start, end, sizePx)' before output.
+  // fully present inside the band — a 'double-bright donut'. The
+  // vertex stage folds '1 - smoothstep(start, end, apparentDiameterPx)'
+  // into 'out.intensity', so the fragment reads no per-pixel state for
+  // the crossfade.
   pxFadeStart: f32,
   pxFadeEnd: f32,
   _padFade0: f32,
@@ -219,7 +220,7 @@ struct PerVertex {
   // The synthetic-fallback source ships its axisRatio array filled with
   // NaN. WGSL's 'abs(NaN)' returns NaN and 'NaN < 0.0' is false, so
   // the vertex stage routes synthetic rows through the existing
-  // 'axisRatio > 0 is false' round-mask path with 'isFallback = 0u'.
+  // 'axisRatio > 0 is false' round-mask path with the fallback flag clear.
   @location(4) axisRatio: f32,
 
   // Position angle in degrees, [0, 180). East-of-north convention; we
@@ -286,23 +287,13 @@ struct VSOut {
   @location(3) @interpolate(flat) instanceIdx: u32,
 
   // Forwarded 'abs(axisRatio)' so the fragment stage's elliptical mask
-  // uses the unsigned magnitude. Sign bit was the fallback flag (now
-  // extracted into 'isFallback'). Per-instance constant.
+  // uses the unsigned magnitude. Sign bit (fallback flag) is consumed
+  // by the vertex stage; only the magnitude reaches here. Per-instance.
   @location(5) @interpolate(flat) axisRatio: f32,
 
-  // Pre-computed cos/sin of the position-angle rotation. Computed once
-  // per primitive in 'vs' instead of per fragment, saving millions of
-  // trig calls per frame.
-  @location(6) @interpolate(flat) paCs: f32,
-  @location(15) @interpolate(flat) paSn: f32,
+  // Pre-computed (cos, sin) of the position-angle rotation. Computed
+  // once per primitive in 'vs' instead of per fragment, saving millions
+  // of trig calls per frame. Packed into a vec2 at one location.
+  @location(6) @interpolate(flat) paRotation: vec2<f32>,
 
-  // 1u when this row's orientation came from the deterministic fallback
-  // (sign bit of axisRatio was set at upload time); 0u for real
-  // measurements.
-  @location(7) @interpolate(flat) isFallback: u32,
-
-  // Per-instance billboard radius in screen-space pixels. Used by the
-  // fragment stage to fade points-pass alpha across the procedural-
-  // disk crossfade band. All 6 vertices share the same value.
-  @location(13) @interpolate(flat) sizePx: f32,
 };

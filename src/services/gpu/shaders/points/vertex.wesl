@@ -108,7 +108,16 @@ fn vs(
   // '@builtin(instance_index)' (local 0..count-1).
   let myPacked = packSelection(source.sourceCode, ii);
 
-  if (u.biasMode == 1u && absMag > u.absMagLimit) {
+  let isFallbackFlag = select(0u, 1u, p.axisRatio < 0.0);
+
+  // Vertex-side cull: galaxies gated out by Malmquist mode 1 (volume-
+  // limited) or by realOnlyMode (hide fallback orientations) emit a
+  // degenerate clip position so all 6 vertices of the quad land outside
+  // the NDC cube and the rasteriser drops the primitive — no fragment
+  // work, no pick-texture write.
+  let malmquistGated = u.biasMode == 1u && absMag > u.absMagLimit;
+  let realOnlyGated = u.realOnlyMode == 1u && isFallbackFlag == 1u;
+  if (malmquistGated || realOnlyGated) {
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
@@ -116,14 +125,9 @@ fn vs(
     earlyOut.intensity = 0.0;
     earlyOut.instanceIdx = myPacked;
     earlyOut.axisRatio = 1.0;
-    earlyOut.paCs = 1.0;
-    earlyOut.paSn = 0.0;
-    earlyOut.isFallback = 0u;
-    earlyOut.sizePx = 0.0;
+    earlyOut.paRotation = vec2<f32>(1.0, 0.0);
     return earlyOut;
   }
-
-  let isFallbackFlag = select(0u, 1u, p.axisRatio < 0.0);
 
   // ── APPARENT-SIZE BILLBOARD RADIUS ───────────────────────────────────────
   //
@@ -183,23 +187,27 @@ fn vs(
   let isUnknownColour = p.colorIndex > 100.0;
   let restColorIndex = select(p.colorIndex - p.kPerZ * zRedshift, 1.05, isUnknownColour);
 
-  // Look up the colour for this point's *rest-frame* colour index.
-  out.tint = ramp(restColorIndex);
+  // Look up the colour for this point's *rest-frame* colour index, and
+  // bake the magenta highlight in when both u.highlightFallback and the
+  // fallback flag are set. Folding the tint multiplier here means the
+  // fragment reads in.tint directly with no per-pixel branch.
+  let highlightActive = u.highlightFallback == 1u && isFallbackFlag == 1u;
+  let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
+  out.tint = ramp(restColorIndex) * highlightTint;
 
   // ── MAGNITUDE → INTENSITY, with every per-instance modulator folded in ──
   //
   //   intensity = clamp((22 - magnitude) / 8, 0.05, 1.0)   // mag 14 → 1.0,
   //                                                          mag 22 → 0.05
   //               × u.brightness                            // global slider
-  //               × vMaxWeight   (mode 2: 1/V_max)
-  //               × schechterRatio  (mode 3: Schechter LF)
+  //               × vMaxWeight     (mode 2: 1/V_max)
+  //               × schechterRatio (mode 3: Schechter LF)
   //               × angularReweight (mode 4: HEALPix)
-  //               × depthFade   (camera-distance falloff)
+  //               × depthFade      (camera-distance falloff)
+  //               × crossfadeOut   (procedural-disk handoff band)
   //
-  // Folding the four mode/distance multipliers in here means the fragment
-  // multiplies only per-pixel terms (Gaussian + crossfade + source fade).
-  // Mathematically identical to applying them per-pixel because all five
-  // factors are per-instance constants.
+  // All six factors are per-instance constants, so the fragment only
+  // multiplies per-pixel terms (Gaussian falloff + source fade).
   let vMaxAlpha = select(1.0, p.vMaxWeight, u.biasMode == 2u);
   let schechterMult = select(1.0, p.schechterRatio, u.biasMode == 3u);
   let angularMult = select(1.0, p.angularDensityWeight, u.biasMode == 4u);
@@ -210,12 +218,20 @@ fn vs(
   let depthFadeRaw = 1.0 / (1.0 + camDistRel * camDistRel);
   let depthFadeMult = select(1.0, depthFadeRaw, u.depthFadeEnabled == 1u);
 
+  // Crossfade-out against the procedural-disk pass. ThumbnailRenderer
+  // fades IN across [pxFadeStart, pxFadeEnd] (apparent-pixel diameter);
+  // we fade OUT with the complementary smoothstep so the additive HDR
+  // contribution stays constant per galaxy through the band.
+  let apparentDiameterPx = sizePx * 0.5;
+  let crossfadeOut = 1.0 - smoothstep(u.pxFadeStart, u.pxFadeEnd, apparentDiameterPx);
+
   out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0)
     * u.brightness
     * vMaxAlpha
     * schechterMult
     * angularMult
-    * depthFadeMult;
+    * depthFadeMult
+    * crossfadeOut;
 
   // Invisibility cull: galaxies whose folded intensity falls below this
   // threshold contribute imperceptibly to the additive HDR target, so
@@ -234,9 +250,6 @@ fn vs(
   // The visual 'fs' ignores this field.
   out.instanceIdx = myPacked;
 
-  // Forward the fallback flag for the highlight + hide toggles in 'fs'.
-  out.isFallback = isFallbackFlag;
-
   // Forward 'abs(axisRatio)' so the fragment stage's elliptical mask
   // uses the unsigned magnitude. Negative values would make the
   // existing 'axisRatio > 0.0' validity check trip on every fallback
@@ -249,13 +262,7 @@ fn vs(
   // (CCW on sky) but our UV-y points down on screen, AND because
   // rotating the UV is the inverse of rotating the ellipse.
   let paRad = -p.positionAngleDeg * 3.14159265 / 180.0;
-  out.paCs = cos(paRad);
-  out.paSn = sin(paRad);
-
-  // Forward the per-instance billboard radius in screen-pixels so the
-  // fragment stage can fade points-pass alpha across the procedural-
-  // disk crossfade band.
-  out.sizePx = sizePx;
+  out.paRotation = vec2<f32>(cos(paRad), sin(paRad));
 
   return out;
 }

@@ -48,8 +48,8 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   //
   // The cs/sn pair is pre-computed in the vertex stage and flat-
   // interpolated, saving millions of trig calls per frame.
-  let cs = in.paCs;
-  let sn = in.paSn;
+  let cs = in.paRotation.x;
+  let sn = in.paRotation.y;
   let rotated = vec2<f32>(
     cs * in.uv.x - sn * in.uv.y,
     sn * in.uv.x + cs * in.uv.y,
@@ -65,40 +65,18 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let r2 = dot(elliptic, elliptic);
   // ────────────────────────────────────────────────────────────────────────
 
-  // Real-only mode: discard fallback fragments entirely. The user
-  // enabled this to see ONLY galaxies for which we have measured
-  // photometric orientation.
-  if (u.realOnlyMode == 1u && in.isFallback == 1u) { discard; }
-
-  // ── Procedural-disk crossfade-OUT ────────────────────────────────────────
-  //
-  // The thumbnail subsystem's procedural-disk pass fades IN across
-  // [u.pxFadeStart, u.pxFadeEnd]; we fade the points-pass OUT with the
-  // complementary curve. Sum of the two curves is 1.0 across the band,
-  // so the additive HDR contribution stays constant per galaxy through
-  // the transition.
-  let apparentDiameterPx = in.sizePx * 0.5;
-  let fadeT = saturate(
-    (apparentDiameterPx - u.pxFadeStart) / (u.pxFadeEnd - u.pxFadeStart),
-  );
-  let pointAlphaMult = 1.0 - fadeT * fadeT * (3.0 - 2.0 * fadeT);
-
   // Discard fragments outside the oriented ellipse.
   if (r2 > 1.0) { discard; }
 
   // Gaussian-like falloff: bright at centre (r²=0 → e⁰=1), fading to
-  // e⁻⁴ ≈ 0.018 at the edge (r²=1). The per-instance modulators
-  // (Schechter, angular reweight, depth fade) are folded into
-  // 'in.intensity' by the vertex stage — see vertex.wesl.
-  var alpha = exp(-r2 * 4.0) * pointAlphaMult;
-
-  // Highlight fallback rows in magenta when the toggle is on. The 0.3
-  // green keeps fallback galaxies recognisable as 'data-y' rather than
-  // turning them into pure UI accents.
-  let highlightActive = (u.highlightFallback == 1u) && (in.isFallback == 1u);
-  let tintFinal = select(in.tint, in.tint * vec3<f32>(1.0, 0.3, 1.0), highlightActive);
-  // Scale the colour by the per-point intensity.
-  let rgb = tintFinal * in.intensity;
+  // e⁻⁴ ≈ 0.018 at the edge (r²=1). All per-instance modulators
+  // (Schechter, angular reweight, depth fade, procedural-disk
+  // crossfade-out, magenta highlight) are folded into 'in.tint' and
+  // 'in.intensity' by the vertex stage — see vertex.wesl. Galaxies
+  // gated by realOnlyMode are culled at the vertex stage too, so this
+  // fragment never sees them.
+  var alpha = exp(-r2 * 4.0);
+  let rgb = in.tint * in.intensity;
 
   // ── Source fade-in ─────────────────────────────────────────────────────────
   //
