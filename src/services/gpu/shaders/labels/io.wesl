@@ -50,16 +50,33 @@ struct Uniforms {
 };
 
 struct LabelData {
-  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc (PRIMARY size driver —
-  // em height in world-space Mpc, projected to pixels by the vertex stage).
+  // worldPos.xyz = anchor in Mpc; worldPos.w = worldEmMpc (PRIMARY size
+  // driver — em height in world-space Mpc, projected to pixels by the
+  // vertex stage).
   worldPos: vec4<f32>,
-  // color.rgb premultiplied; color.a = base alpha (multiplied by fadeAlpha).
+  // Fill colour — premultiplied rgba.  The renderer pack loop multiplies
+  // r/g/b by a before upload, so the shader can treat (rgb, a) as the
+  // OVER-composite input directly.
   color: vec4<f32>,
-  // x = pixelSize (LEGACY — ignored by shader; kept for layout stability)
+  // x = outlineEmFrac (REPURPOSED — formerly the legacy pixelSize slot,
+  //                    which the shader stopped reading at the worldEmMpc
+  //                    migration; see labelRenderer.ts LABEL_DATA_BYTES
+  //                    docstring for the rationale)
   // y = minPixelSize  (floor clamp on projected em height, in screen px)
   // z = maxPixelSize  (ceiling clamp on projected em height, in screen px)
-  // w = fadeAlpha
+  // w = fadeAlpha     (multiplied into every effect band uniformly)
   sizing: vec4<f32>,
+  // Outside-stroke outline colour — premultiplied rgba.  When alpha is
+  // zero (the default for labels that don't opt in), the outline band
+  // contributes nothing regardless of outlineEmFrac.
+  outlineColor: vec4<f32>,
+  // Soft outside glow colour — premultiplied rgba.  Same opt-in semantics
+  // as outlineColor: zero alpha → band collapses.
+  glowColor: vec4<f32>,
+  // x = glowEmFrac (band radius as a fraction of projected em height)
+  // y/z/w = reserved (CPU writer keeps these zero so a future fifth/sixth
+  //                   effect parameter can land without bumping the stride)
+  effects: vec4<f32>,
 };
 
 struct VsIn {
@@ -86,9 +103,22 @@ struct VsIn {
 struct VsOut {
   @builtin(position) pos: vec4<f32>,
   @location(0) uv: vec2<f32>,
+  // Fill colour pre-multiplied by fadeAlpha so the fragment stage can
+  // alpha-blend without re-reading fadeAlpha.
   @location(1) color: vec4<f32>,
   // Flat-interpolated so the fragment shader sees the same integer
   // layer index for every fragment of one glyph quad.  Non-flat
   // interpolation of an integer is a WGSL validation error.
   @location(2) @interpolate(flat) fontIndex: u32,
+  // Outline colour pre-multiplied by fadeAlpha (same pre-fade bake as
+  // the fill colour — keeps the fragment stage simple).
+  @location(3) outlineColor: vec4<f32>,
+  // Glow colour pre-multiplied by fadeAlpha.
+  @location(4) glowColor: vec4<f32>,
+  // x = outline width in SDF units (atlas px ÷ DISTANCE_RANGE_PX);
+  // y = glow radius in SDF units;
+  // converted CPU-side from the em-fraction inputs at the vertex
+  // stage, so the fragment shader has the values it needs without
+  // re-deriving from per-label data.
+  @location(5) widths: vec2<f32>,
 };
