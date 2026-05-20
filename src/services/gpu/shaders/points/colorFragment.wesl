@@ -47,21 +47,16 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // cutoff.
   //
   // The cs/sn pair is pre-computed in the vertex stage and flat-
-  // interpolated, saving millions of trig calls per frame.
+  // interpolated, saving millions of trig calls per frame. safeAB
+  // (the validated ellipse minor-axis ratio) rides in the alpha channel
+  // of in.tint, so the fragment does zero per-pixel axis-ratio work.
   let cs = in.paRotation.x;
   let sn = in.paRotation.y;
   let rotated = vec2<f32>(
     cs * in.uv.x - sn * in.uv.y,
     sn * in.uv.x + cs * in.uv.y,
   );
-  // axisRatio is guaranteed > 0 by the build pipeline, BUT the synthetic-
-  // fallback source (loaded when every real .bin file fails to decode)
-  // ships its axisRatio array filled with NaN. 'NaN > 0.0' is false in
-  // WGSL, so this single comparison catches both NaN and zero/negative
-  // — invalid → safeAB = 1.0 → circular r2 = original dot(uv, uv).
-  let abIsValid = in.axisRatio > 0.0;
-  let safeAB = select(1.0, max(in.axisRatio, 0.05), abIsValid);
-  let elliptic = vec2<f32>(rotated.x, rotated.y / safeAB);
+  let elliptic = vec2<f32>(rotated.x, rotated.y / in.tint.w);
   let r2 = dot(elliptic, elliptic);
   // ────────────────────────────────────────────────────────────────────────
 
@@ -76,7 +71,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // gated by realOnlyMode are culled at the vertex stage too, so this
   // fragment never sees them.
   var alpha = exp(-r2 * 4.0);
-  let rgb = in.tint * in.intensity;
+  let rgb = in.tint.rgb * in.intensity;
 
   // ── Source fade-in ─────────────────────────────────────────────────────────
   //

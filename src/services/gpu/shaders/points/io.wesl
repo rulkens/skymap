@@ -261,10 +261,15 @@ struct VSOut {
   // circle/ellipse falloff.
   @location(0) uv: vec2<f32>,
 
-  // Pre-computed colour for this point (from the colourIndex ramp).
-  // Flat-interpolated — all 6 vertices of an instance share the value,
-  // so smooth interpolation would do work for an identical result.
-  @location(1) @interpolate(flat) tint: vec3<f32>,
+  // Per-instance colour + ellipse-mask coefficient packed together.
+  // .rgb = colourIndex-ramp lookup with magenta highlight folded in.
+  // .w   = pre-computed safeAB (axis ratio clamped to [0.05, 1.0],
+  //        defaulted to 1.0 for invalid/NaN inputs). Fragment uses .w
+  //        directly to squash the elliptical mask. Packing the scalar
+  //        into the unused alpha channel of the tint slot frees the
+  //        location axisRatio used to occupy.
+  // Flat-interpolated — all 6 vertices of an instance share the value.
+  @location(1) @interpolate(flat) tint: vec4<f32>,
 
   // Per-instance brightness with every per-instance modulator folded in:
   // magnitude-based intensity × brightness slider × vMax (mode 2) ×
@@ -278,14 +283,9 @@ struct VSOut {
   // interpolated, and all 6 vertices of one instance share the same value.
   @location(3) @interpolate(flat) instanceIdx: u32,
 
-  // Forwarded 'abs(axisRatio)' so the fragment stage's elliptical mask
-  // uses the unsigned magnitude. Sign bit (fallback flag) is consumed
-  // by the vertex stage; only the magnitude reaches here. Per-instance.
-  @location(5) @interpolate(flat) axisRatio: f32,
-
   // Pre-computed (cos, sin) of the position-angle rotation. Computed
   // once per primitive in 'vs' instead of per fragment, saving millions
   // of trig calls per frame. Packed into a vec2 at one location.
-  @location(6) @interpolate(flat) paRotation: vec2<f32>,
+  @location(4) @interpolate(flat) paRotation: vec2<f32>,
 
 };

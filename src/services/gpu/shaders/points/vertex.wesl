@@ -121,10 +121,9 @@ fn vs(
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
-    earlyOut.tint = vec3<f32>(0.0);
+    earlyOut.tint = vec4<f32>(0.0, 0.0, 0.0, 1.0);
     earlyOut.intensity = 0.0;
     earlyOut.instanceIdx = myPacked;
-    earlyOut.axisRatio = 1.0;
     earlyOut.paRotation = vec2<f32>(1.0, 0.0);
     return earlyOut;
   }
@@ -187,13 +186,17 @@ fn vs(
   let isUnknownColour = p.colorIndex > 100.0;
   let restColorIndex = select(p.colorIndex - source.kPerZ * zRedshift, 1.05, isUnknownColour);
 
-  // Look up the colour for this point's *rest-frame* colour index, and
-  // bake the magenta highlight in when both u.highlightFallback and the
-  // fallback flag are set. Folding the tint multiplier here means the
-  // fragment reads in.tint directly with no per-pixel branch.
+  // Look up the colour for this point's *rest-frame* colour index, fold
+  // the magenta highlight in when both u.highlightFallback and the
+  // fallback flag are set, and pack the pre-computed safeAB ellipse
+  // coefficient into the alpha channel. safeAB defaults to 1.0 (circle)
+  // when axisRatio is invalid or NaN — 'abs(NaN) > 0.0' is false, so
+  // the select branch is the correct gate for synthetic-fallback rows.
   let highlightActive = u.highlightFallback == 1u && isFallbackFlag == 1u;
   let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
-  out.tint = ramp(restColorIndex) * highlightTint;
+  let absAR = abs(p.axisRatio);
+  let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
+  out.tint = vec4<f32>(ramp(restColorIndex) * highlightTint, safeAB);
 
   // ── MAGNITUDE → INTENSITY, with every per-instance modulator folded in ──
   //
@@ -249,12 +252,6 @@ fn vs(
   // Forward the per-instance packed identity to 'fsPick'.
   // The visual 'fs' ignores this field.
   out.instanceIdx = myPacked;
-
-  // Forward 'abs(axisRatio)' so the fragment stage's elliptical mask
-  // uses the unsigned magnitude. Negative values would make the
-  // existing 'axisRatio > 0.0' validity check trip on every fallback
-  // row and collapse the ellipse mask to a circle.
-  out.axisRatio = abs(p.axisRatio);
 
   // Pre-compute cos/sin of the position-angle rotation so the fragment
   // stage skips the trig and just reads these flat-interpolated values.
