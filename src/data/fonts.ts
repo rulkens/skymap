@@ -53,14 +53,29 @@ export const ATLAS_PX = 512;
 
 /**
  * MSDF distance range in pixels.  Controls how wide the signed-distance
- * field around each glyph edge extends.  The fragment shader's
- * `fwidth`-based smoothstep band is exactly one pixel wide for any
- * scale, regardless of this value — but a too-small range produces
- * visible banding at extreme upscales and a too-large range wastes
- * atlas pixels.  4 is the msdf-bmfont-xml default and reads cleanly
- * from 12 px (`Label.minPixelSize`) up to 64 px (`maxPixelSize`).
+ * field around each glyph edge extends, i.e. the maximum off-edge
+ * distance the atlas can faithfully encode.  The body-fill fragment
+ * shader's `fwidth`-based smoothstep band is exactly one pixel wide
+ * for any scale regardless of this value — but outline and glow
+ * effects sample the SDF *past* the glyph contour, and any distance
+ * beyond `±DISTANCE_RANGE_PX / 2` clamps at the texel boundary,
+ * cutting off the falloff tail.
+ *
+ * 16 is sized for the per-label outline + glow pass.  Glow extents
+ * scale with `maxPixelSize` (60 px) and reach ~12 px past the glyph
+ * edge in the worst case; add ~2 px of outline and we need at least
+ * 14 px of encoded headroom on either side.  Choosing 16 (so ±8 px
+ * on each side) keeps ~25% margin past the worst-case effect extent
+ * while still fitting the 95-glyph charset into the 512² atlas.
+ *
+ * The previous value 4 (msdf-bmfont-xml's default) was sized only
+ * for the smoothstep body-fill band and clamped the soft glow tail
+ * to a hard step a couple of pixels past the contour.  Shader-side
+ * SDF-units math (e.g. `widthInSdfUnits = (emFrac * ATLAS_EM_PX) /
+ * DISTANCE_RANGE_PX`) bakes this constant in too, so changing it
+ * requires regenerating the atlas via `npm run build-fonts`.
  */
-export const DISTANCE_RANGE_PX = 4;
+export const DISTANCE_RANGE_PX = 16;
 
 /**
  * Em-size of glyphs in atlas pixels at the source SDF resolution.

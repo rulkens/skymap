@@ -38,8 +38,35 @@ export type Label = {
    * producers have migrated to `worldEmMpc`.
    */
   readonly pixelSize: number;
-  /** RGBA premultiplied, defaults to [1,1,1,1]. */
+  /**
+   * Straight (non-premultiplied) RGBA fill colour, default `[1, 1, 1, 1]`.
+   *
+   * ## Convention
+   *
+   * Spell the colour the natural way — `[1, 0, 0, 0.5]` is
+   * "half-transparent red".  The renderer's pack loop multiplies
+   * `rgb * a` on write before uploading to the GPU storage buffer; the
+   * fragment shader composites in premultiplied space.  Producers
+   * therefore never have to think about premultiplication.
+   *
+   * The outline/glow colour fields below follow the same straight-RGBA
+   * convention — uniformity across the colour API surface is the whole
+   * point of carrying out this migration alongside the effects work.
+   */
   readonly color?: Vec4;
+  /**
+   * Outside-stroke outline colour (straight RGBA — renderer
+   * premultiplies on write).  Default `[0, 0, 0, 0]`, which combined
+   * with `outlineEmFrac = 0` collapses the outline band to zero
+   * contribution.  Composited OVER the fill in premultiplied space.
+   */
+  readonly outlineColor?: Vec4;
+  /**
+   * Outline width as a fraction of the projected em height.  Default
+   * `0`.  Em-fraction so the outline scales naturally with the label's
+   * perspective-driven sizing clamp.
+   */
+  readonly outlineEmFrac?: number;
   /**
    * Floor clamp on the projected em height in screen pixels (default 8).
    * When the perspective projection of `worldEmMpc` falls below this

@@ -113,6 +113,7 @@ import { createSelectionSubsystem } from './subsystems/selectionSubsystem';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { createYouAreHereSubsystem } from './subsystems/youAreHereSubsystem';
 import { createLabelDirectorSubsystem } from './subsystems/labelDirectorSubsystem';
+import { registerLabelStyleOverrideWake } from './labelStyleOverride';
 import { createPoiSubsystem } from './subsystems/poiSubsystem';
 import { createFpsCounter } from './subsystems/fpsCounter';
 import { HDR_PASSES, UI_PASSES } from './frame/passes';
@@ -701,6 +702,16 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   // an alias for `LabelProducer`, and `PoiSubsystem` extends it.
   state.subsystems.labelDirector.registerProducer(state.subsystems.youAreHere);
   state.subsystems.labelDirector.registerProducer(state.subsystems.pois);
+
+  // ── Wake on label-style override edits ────────────────────────────────
+  //
+  // The DebugPanel's LabelEffectsSection writes to `labelStyleOverride`,
+  // which bumps a version counter that the label director reads from its
+  // signature hash.  But render-on-demand only consults that hash inside
+  // an active frame — slider edits at idle would sit invisible until the
+  // user nudged the camera.  Registering scheduler.requestRender here
+  // closes the loop: every set/clear wakes the loop on the next tick.
+  registerLabelStyleOverrideWake(() => state.subsystems.scheduler.requestRender());
 
   // ── Cleanup function returned by `attachOrbitControls` ─────────────────
   // Orbit-controls attachment lives outside `inputBindings` because it

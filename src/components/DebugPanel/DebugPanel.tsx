@@ -33,6 +33,7 @@ import { AssetLoadingSection } from './AssetLoadingSection';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import { RenderTogglesSection } from './RenderTogglesSection';
 import { DataQualitySection } from './DataQualitySection';
+import { LabelEffectsSection } from './LabelEffectsSection';
 
 export type DebugPanelProps = {
   slots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
@@ -82,6 +83,8 @@ export function DebugPanel({
         onHighlightFallbackChange={onHighlightFallbackChange}
         onRealOnlyModeChange={onRealOnlyModeChange}
       />
+      <div style={{ marginTop: 6 }} />
+      <LabelEffectsSection />
     </div>
   );
 }
