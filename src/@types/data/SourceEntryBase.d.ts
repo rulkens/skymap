@@ -14,4 +14,11 @@ export type SourceEntryBase = {
    * coverage-mask logic stays well-behaved across both kinds.
    */
   readonly allSky: boolean;
+  /**
+   * Whether the source is rendered by default. Drives `ALL_VISIBLE_MASK`
+   * (bitwise-OR of every `type: 'survey'` entry whose `visible` is true)
+   * and the engine's startup `drawMask`. Users can toggle a survey on or
+   * off at runtime — this is purely the default.
+   */
+  readonly visible: boolean;
 };

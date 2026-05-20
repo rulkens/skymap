@@ -51,9 +51,9 @@ import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../src/data/defaults';
+import { ALL_VISIBLE_MASK } from '../../src/utils/sourceMask';
 import { createTweenManager } from '../../src/services/engine/camera/tweenManager';
 import { createSpaceMouseSubsystem } from '../../src/services/engine/subsystems/spaceMouseSubsystem';
 import { createRenderScheduler } from '../../src/services/engine/subsystems/renderScheduler';
@@ -122,8 +122,8 @@ describe('EngineState type', () => {
       schechterAlpha: 0,
     };
     const sources: EngineSourceState = {
-      pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
-      drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      pickMask: ALL_VISIBLE_MASK,
+      drawMask: ALL_VISIBLE_MASK,
       catalogs: new Map(),
       famousMeta: [],
       famousXrefs: {},
@@ -215,8 +215,8 @@ describe('EngineState type', () => {
 
     expect(state.settings.points.sizePx).toBe(2.5);
     expect(state.settings.bias.mode).toBe(DEFAULT_BIAS_MODE);
-    expect(state.sources.pickMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
-    expect(state.sources.drawMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
+    expect(state.sources.pickMask).toBe(ALL_VISIBLE_MASK);
+    expect(state.sources.drawMask).toBe(ALL_VISIBLE_MASK);
     // hover/selection moved off `state.picking` and onto
     // `state.subsystems.selection` in Spec D.3.
     expect(state.subsystems.selection.hovered()).toBeNull();
@@ -263,14 +263,14 @@ describe('EngineState type', () => {
       schechterAlpha: 0,
     };
     const sources: Pick<EngineSourceState, 'pickMask' | 'drawMask'> = {
-      pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
-      drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      pickMask: ALL_VISIBLE_MASK,
+      drawMask: ALL_VISIBLE_MASK,
     };
 
     expect(settings.points.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(settings.bias.absMagLimit).toBe(DEFAULT_ABS_MAG_LIMIT);
     expect(bias.apparentMagLimit).toBe(0);
-    expect(sources.pickMask).toBe(DEFAULT_VISIBLE_SOURCE_MASK);
+    expect(sources.pickMask).toBe(ALL_VISIBLE_MASK);
   });
 
   it('allows in-place mutation of every sub-bag field', () => {

@@ -100,6 +100,7 @@ export const SOURCE_REGISTRY = {
     label: 'Synthetic',
     binBaseName: null, // generated at runtime; no file
     allSky: true, // uniform-in-sphere by construction
+    visible: true,
     maxDistMpc: 1000, // matches the radius in synthetic.ts
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
     colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 3.0 },
@@ -110,6 +111,7 @@ export const SOURCE_REGISTRY = {
     label: 'SDSS',
     binBaseName: 'sdss',
     allSky: false,
+    visible: true,
     // Main galaxy sample reaches z ~ 0.7+ for luminous red galaxies;
     // rounded up generously.
     maxDistMpc: 3000,
@@ -122,6 +124,7 @@ export const SOURCE_REGISTRY = {
     label: '2MRS',
     binBaseName: '2mrs',
     allSky: true,
+    visible: true,
     // Flux-limited at K_s ≈ 11.75; effective z ≲ 0.06.
     maxDistMpc: 250,
     bandLabels: { u: '—', g: 'J', r: 'H', i: 'K', z: '—' },
@@ -136,6 +139,7 @@ export const SOURCE_REGISTRY = {
     label: 'GLADE',
     binBaseName: 'glade',
     allSky: true,
+    visible: true,
     // Covers most of the GLADE distance distribution. GLADE has a long
     // sparse tail past 1 Gpc that the default framing deliberately clips.
     maxDistMpc: 1500,
@@ -150,6 +154,7 @@ export const SOURCE_REGISTRY = {
     label: 'Famous',
     binBaseName: 'famous',
     allSky: true, // hand-picked entries from across the sky
+    visible: true,
     maxDistMpc: 200, // covers the curated set: M31 → NGC 4889
     // Famous entries don't carry per-row photometry — the source survey
     // already measured it. The SDSS-mirroring labels are cosmetic so the
@@ -160,15 +165,21 @@ export const SOURCE_REGISTRY = {
     // these entries are all very nearby (z < 0.05).
     colourSpec: { slotA: 'u', slotB: 'g', rangeMin: 0.5, rangeMax: 2.0, kPerZ: 0.0 },
   },
-  [Source.Cluster]: { type: 'poi', code: Source.Cluster, label: 'Cluster', allSky: true },
-  [Source.Supercluster]: { type: 'poi', code: Source.Supercluster, label: 'Supercluster', allSky: true },
-  [Source.Void]: { type: 'poi', code: Source.Void, label: 'Void', allSky: true },
+  [Source.Cluster]: { type: 'poi', code: Source.Cluster, label: 'Cluster', allSky: true, visible: true },
+  [Source.Supercluster]: { type: 'poi', code: Source.Supercluster, label: 'Supercluster', allSky: true, visible: true },
+  [Source.Void]: { type: 'poi', code: Source.Void, label: 'Void', allSky: true, visible: true },
   [Source.Milliquas]: {
     type: 'survey',
     code: Source.Milliquas,
     label: 'Milliquas',
     binBaseName: 'milliquas',
     allSky: true,
+    // Hidden by default until the quasar-specific render path lands.
+    // The `.bin` is still fetched (Milliquas is in SURVEY_SOURCES so
+    // cloudLoader requests it); the bit just stays clear in the visible
+    // mask so the existing galaxy billboards don't represent unresolved
+    // AGN until dedicated quasar visuals exist.
+    visible: false,
     // Milliquas reaches z ~ 7 (quasars at the edge of the observable
     // universe). Hubble's law with z = 7 ⇒ ~25 Gpc, but the bulk of
     // Milliquas is at z < 3 (~12 Gpc). While the renderer uses the

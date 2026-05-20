@@ -9,15 +9,15 @@
  * far more than the four currently tracked.
  */
 
-import { SURVEY_SOURCES, Source } from '../data/sources';
+import { SOURCE_REGISTRY, SURVEY_SOURCES, Source } from '../data/sources';
 
 /**
- * "Show every survey" mask — `1` in every `SURVEY_SOURCES` bit position.
- * Equals `0b100011111` (bits 5/6/7 stay clear; those are POI codes).
- * The *startup* visibility mask is a separate constant in `defaults.ts`.
+ * Startup visibility mask — `1` for every survey source whose registry
+ * entry has `visible: true`. POI codes never participate (their bits
+ * stay clear). Drives the engine's initial `drawMask`/`pickMask`.
  */
 export const ALL_VISIBLE_MASK: number = SURVEY_SOURCES.reduce<number>(
-  (mask, src) => mask | (1 << src),
+  (mask, src) => (SOURCE_REGISTRY[src].visible ? mask | (1 << src) : mask),
   0,
 );
 

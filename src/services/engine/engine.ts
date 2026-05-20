@@ -73,7 +73,7 @@
  */
 
 import { Source } from '../../data/sources';
-import { maskHas, maskWith, maskWithout } from '../../utils/sourceMask';
+import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../utils/sourceMask';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -89,7 +89,6 @@ import {
   DEFAULT_POINT_SIZE_PX,
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
   DEFAULT_VOLUME_FIELD_INTENSITY,
   DEFAULT_VOLUME_PALETTE_ID,
@@ -439,8 +438,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // is clear.  Both default to ALL_VISIBLE_MASK so "draw everything
       // that is loaded" holds until the user toggles a single source
       // in the settings panel.
-      pickMask: DEFAULT_VISIBLE_SOURCE_MASK,
-      drawMask: DEFAULT_VISIBLE_SOURCE_MASK,
+      pickMask: ALL_VISIBLE_MASK,
+      drawMask: ALL_VISIBLE_MASK,
       // Mirrors the renderer's per-source GPU buffers in CPU memory
       // so picking can resolve `(source, localIdx)` into a GalaxyInfo
       // without a GPU readback for every hover.  Empty until the

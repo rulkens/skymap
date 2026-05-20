@@ -58,9 +58,9 @@ import {
   DEFAULT_REAL_ONLY_MODE,
   DEFAULT_SPACE_MOUSE_SENSITIVITY,
   DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_VISIBLE_SOURCE_MASK,
   DEFAULT_VOLUMES_ENABLED,
 } from '../data/defaults';
+import { ALL_VISIBLE_MASK } from '../utils/sourceMask';
 import type { VolumeFieldRowData } from '../@types/settings/VolumeFieldRowData';
 import type { UseEngineSettingsReturn } from '../@types/settings/UseEngineSettingsReturn';
 
@@ -81,10 +81,9 @@ export function useEngineSettings(): UseEngineSettingsReturn {
   const [realOnlyMode, setRealOnlyMode] = useState<boolean>(DEFAULT_REAL_ONLY_MODE);
   const [depthFadeEnabled, setDepthFadeEnabled] = useState<boolean>(DEFAULT_DEPTH_FADE_ENABLED);
   // `visibleSourceMask` is a 32-bit bitmask: bit `n` set means "draw points
-  // from source n". Seeded with ALL_VISIBLE_MASK (every source on) via
-  // DEFAULT_VISIBLE_SOURCE_MASK so the first paint matches the engine's
-  // startup default.
-  const [visibleSourceMask, setVisibleSourceMask] = useState<number>(DEFAULT_VISIBLE_SOURCE_MASK);
+  // from source n". Seeded with ALL_VISIBLE_MASK so the first paint matches
+  // the engine's startup default.
+  const [visibleSourceMask, setVisibleSourceMask] = useState<number>(ALL_VISIBLE_MASK);
   const [biasMode, setBiasMode] = useState<BiasModeT>(DEFAULT_BIAS_MODE);
   const [absMagLimit, setAbsMagLimit] = useState<number>(DEFAULT_ABS_MAG_LIMIT);
   const [toneMapCurve, setToneMapCurve] = useState<ToneMapCurveT>(DEFAULT_TONE_MAP_CURVE);
