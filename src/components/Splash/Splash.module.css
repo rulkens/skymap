@@ -1,0 +1,221 @@
+/* src/components/Splash/Splash.module.css */
+/*
+ * Splash — first-paint loading curtain + onboarding card.
+ *
+ * Translucent rounded-rect card centered over a full-viewport dim
+ * overlay.  Live canvas underneath stays visible through the card's
+ * backdrop-filter blur so galaxies materialize softly behind the
+ * splash as load progresses (per the 2026-05-20 grill, Q5).  Mobile
+ * (≤768 px) drops the blur for a higher-opacity solid backdrop
+ * because backdrop-filter is fragile on iOS Safari.
+ */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  /* Fade-in on mount.  Skipped under prefers-reduced-motion (rule below). */
+  animation: splashFadeIn 0.25s ease-out;
+}
+
+@keyframes splashFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.card {
+  background: rgba(8, 12, 28, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  color: var(--color-fg);
+  max-width: 520px;
+  width: 100%;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.body {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-fg);
+}
+
+.body a {
+  color: var(--color-accent);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--color-accent);
+}
+
+.body a:hover,
+.body a:focus-visible {
+  text-decoration: underline;
+}
+
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--color-fg-muted, #9aa3b3);
+}
+
+.progressTrack {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 0.2s ease-out;
+}
+
+.progressIndeterminate {
+  height: 100%;
+  width: 30%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-accent),
+    transparent
+  );
+  animation: splashIndeterminate 1.4s ease-in-out infinite;
+}
+
+@keyframes splashIndeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.ctas {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.cta {
+  flex: 1;
+  min-height: 44px;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease-out, border-color 0.15s ease-out, opacity 0.15s;
+}
+
+.cta:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ctaPrimary {
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  color: #05070d;
+}
+.ctaPrimary:hover:not(:disabled),
+.ctaPrimary:focus-visible:not(:disabled) {
+  background: #a3c9ff;
+  border-color: #a3c9ff;
+}
+
+.ctaSecondary {
+  background: transparent;
+  border: 1px solid var(--border-card);
+  color: var(--color-fg);
+}
+.ctaSecondary:hover:not(:disabled),
+.ctaSecondary:focus-visible:not(:disabled) {
+  background: var(--surface-card-soft);
+  border-color: var(--border-hover);
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.continueAnyway {
+  margin-top: 4px;
+  background: none;
+  border: none;
+  color: var(--color-fg-muted, #9aa3b3);
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 8px;
+  align-self: center;
+}
+.continueAnyway:hover,
+.continueAnyway:focus-visible {
+  color: var(--color-fg);
+}
+
+.footer {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--color-fg-muted, #9aa3b3);
+  text-align: center;
+}
+
+.footer a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.errorBox {
+  background: rgba(255, 80, 80, 0.08);
+  border: 1px solid rgba(255, 120, 120, 0.4);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  color: #ffb3b3;
+  font-size: 14px;
+}
+
+/* ── Mobile — stacked CTAs, smaller type, solid backdrop ────────────── */
+@media (max-width: 480px) {
+  .title { font-size: 22px; }
+  .body  { font-size: 14px; }
+  .ctas  { flex-direction: column; }
+  .cta   { min-height: 48px; }
+}
+
+@media (max-width: 768px) {
+  .backdrop {
+    /* Skip the heavy blur on mobile — backdrop-filter is fragile on
+     * iOS Safari and most phones have a darker viewing context anyway. */
+    background: rgba(0, 0, 0, 0.82);
+  }
+  .card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: rgba(8, 12, 28, 0.92);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop { animation: none; }
+  .progressIndeterminate { animation: none; }
+}
