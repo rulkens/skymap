@@ -23,10 +23,11 @@
  */
 
 import type { ScalarFieldPaletteId } from '../data/ScalarFieldPaletteId';
+import type { VolumeFieldId } from '../data/VolumeFieldId';
 
 export type VolumeFieldRowData = {
-  /** Stable key matching the handle passed to `addVolumeField`. */
-  handle: string;
+  /** Stable id matching the field registered via `addVolumeField`. */
+  handle: VolumeFieldId;
   /** Human-readable display name; defaults to the handle if not provided. */
   label: string;
   /** Whether this field is currently included in the render pass. */

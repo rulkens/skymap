@@ -75,7 +75,7 @@ export function createSyntheticVolumeSlots(
   // sibling slots share this helper; refactoring to a Map of three
   // would lose the per-handle commit closure that's the whole point.
   const mintSyntheticVolumeSlot = (
-    handle: string,
+    handle: SyntheticVolumeHandle,
     defaultEnabled: boolean,
   ): AssetSlot<ScalarCube, SyntheticVolumeReq> =>
     createAssetSlot({
@@ -112,9 +112,9 @@ export function createSyntheticVolumeSlots(
         renderer.setFieldPalette(handle, persisted.paletteId);
         renderer.setDensityScale(handle, persisted.densityScale);
         // Same per-cube envelope plumbing as the cf4Density commit.
-        // Debug fixtures register `NO_SPATIAL_ENVELOPE` in the
-        // registry so the envelope is visually a no-op here —
-        // grid corners stay visible for axis verification.
+        // Debug fixtures register `{ inner: 2.0, outer: 2.0 }` so the
+        // envelope is visually a no-op — grid corners stay visible for
+        // axis verification.
         renderer.setEnvelope(handle, defaults.envelope.inner, defaults.envelope.outer);
         renderer.setExposure(handle, persisted.exposure);
         renderer.setTrim(handle, persisted.trim);

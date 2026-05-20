@@ -102,6 +102,17 @@ export const Source = {
    * its presentation defaults.
    */
   Mcpm: 11,
+  /**
+   * DEV-only synthetic Gaussian-blob volume — verifies "is anything
+   * visible at the cube origin?". Procedurally generated; no on-disk
+   * payload. Bundled out of production builds via `import.meta.env.DEV`
+   * gating at the slot-registration site.
+   */
+  DebugGaussian: 12,
+  /** DEV-only Cartesian-grid volume for axis-alignment verification. */
+  DebugCartesian: 13,
+  /** DEV-only spherical-shell-and-spoke volume for radial-symmetry verification. */
+  DebugSpherical: 14,
 } as const;
 
 // ─── Registry ───────────────────────────────────────────────────────────────
@@ -360,6 +371,71 @@ export const SOURCE_REGISTRY = {
     exposure: 18.0,
     trim: 0.3,
     intensity: 1.0,
+  },
+  // ── DEV-only synthetic volume fixtures ────────────────────────────
+  // Procedural cubes used to verify axis alignment, scale, and origin.
+  // `binBaseName: null` because they have no on-disk payload; the slot
+  // factory generates them in `import.meta.env.DEV` builds.
+  // `envelope: { inner: 2.0, outer: 2.0 }` (both >= √3) keeps the cube
+  // corners visible — the whole point of these fixtures.
+  [Source.DebugGaussian]: {
+    type: 'volume',
+    code: Source.DebugGaussian,
+    label: 'Gaussian (debug)',
+    allSky: true,
+    visible: false,
+    handle: 'debug-gaussian',
+    binBaseName: null,
+    tiered: false,
+    paletteId: 'blue-purple',
+    contrast: 1.0,
+    contrastCenter: 0.5,
+    // A single Gaussian peak integrates to roughly √(2π)·σ along its
+    // central axis; 10× lifts the peak into saturation while leaving
+    // the intensity slider plenty of low-end headroom.
+    densityScale: 10.0,
+    envelope: { inner: 2.0, outer: 2.0 },
+    exposure: 1.0,
+    trim: 0.0,
+  },
+  [Source.DebugCartesian]: {
+    type: 'volume',
+    code: Source.DebugCartesian,
+    label: 'Cartesian grid (debug)',
+    allSky: true,
+    visible: false,
+    handle: 'debug-cartesian',
+    binBaseName: null,
+    tiered: false,
+    paletteId: 'viridis',
+    contrast: 1.0,
+    contrastCenter: 0.5,
+    // A ray crosses ~8 grid planes per axis at default settings, so
+    // integrated density is much higher than the Gaussian — 4× is
+    // enough to saturate near intensity=1.0.
+    densityScale: 4.0,
+    envelope: { inner: 2.0, outer: 2.0 },
+    exposure: 1.0,
+    trim: 0.0,
+  },
+  [Source.DebugSpherical]: {
+    type: 'volume',
+    code: Source.DebugSpherical,
+    label: 'Spherical grid (debug)',
+    allSky: true,
+    visible: false,
+    handle: 'debug-spherical',
+    binBaseName: null,
+    tiered: false,
+    paletteId: 'magma',
+    contrast: 1.0,
+    contrastCenter: 0.5,
+    // A ray typically crosses one or two shells plus a spoke — sits
+    // between Gaussian (sparse) and Cartesian (dense) integrated density.
+    densityScale: 6.0,
+    envelope: { inner: 2.0, outer: 2.0 },
+    exposure: 1.0,
+    trim: 0.0,
   },
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 

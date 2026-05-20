@@ -29,9 +29,8 @@ export type UseKeyboardShortcutsInput = {
    */
   setUiHidden: Dispatch<SetStateAction<boolean>>;
   /**
-   * The React setter for the asset-loading dev panel's visibility (`d`
-   * shortcut).  Same stable-reference rationale as the others — the
-   * dev panel defaults to hidden and `d` toggles it.
+   * The React setter for the debug panel's visibility (`d` shortcut).
+   * Same stable-reference rationale as the others.
    */
-  setLoadingDevPanelOpen: Dispatch<SetStateAction<boolean>>;
+  setDebugPanelOpen: Dispatch<SetStateAction<boolean>>;
 };

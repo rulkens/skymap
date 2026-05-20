@@ -53,6 +53,7 @@
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { VolumeFieldSettings } from './VolumeFieldSettings';
+import type { VolumeFieldId } from '../data/VolumeFieldId';
 import type { PoiCategory } from '../../services/engine/subsystems/poiSubsystem';
 
 export type EngineSettingsState = {
@@ -133,7 +134,7 @@ export type EngineSettingsState = {
    */
   volumes: {
     masterEnabled: boolean;
-    fields: Record<string, VolumeFieldSettings>;
+    fields: Partial<Record<VolumeFieldId, VolumeFieldSettings>>;
   };
 
   /**

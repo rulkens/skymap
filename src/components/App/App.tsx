@@ -117,7 +117,7 @@ export function App(): React.ReactElement {
   const [uiHidden, setUiHidden] = useState(false);
 
   // `d` toggles the debug panel.
-  const [loadingDevPanelOpen, setLoadingDevPanelOpen] = useState(false);
+  const [debugPanelOpen, setDebugPanelOpen] = useState(false);
 
   const { famousMeta, famousXrefs } = useFamousMeta();
 
@@ -159,7 +159,7 @@ export function App(): React.ReactElement {
     engineHandleRef: handleRef,
     setPaletteOpen,
     setUiHidden,
-    setLoadingDevPanelOpen,
+    setDebugPanelOpen,
   });
 
   return (
@@ -193,7 +193,7 @@ export function App(): React.ReactElement {
           <SettingsPanel
             defaultOpen={initialPanelsOpen}
             pointSize={pointSize}
-            onPointSizeChange={(v) => handleRef.current?.points.setSize(v)}
+            onPointSizeChange={(size) => handleRef.current?.points.setSize(size)}
             labelCategoryVisibility={labelCategoryVisibility}
             markerCategoryVisibility={markerCategoryVisibility}
             onSetMarkerCategoryVisibility={(category, visible) => {
@@ -223,15 +223,15 @@ export function App(): React.ReactElement {
             // in-flight loads, re-fetches tier-suffixed bins, re-uploads,
             // then echoes the new tier back through `onTierChange`.
             tier={currentTier}
-            onTierChange={(t) => handleRef.current?.sources.setTier(t)}
+            onTierChange={(tier) => handleRef.current?.sources.setTier(tier)}
             // `setSourceVisible` fires `onMaskChange` synchronously so
             // React state lands before this handler returns; no
             // optimistic update needed.  `setVisible` is async (drawMask
             // flips after the fade), hence fire-and-forget.
             visibleSourceMask={visibleSourceMask}
             sourceCounts={sourceCounts}
-            onToggleSource={(s, visible) => {
-              void handleRef.current?.sources.setVisible(s, visible);
+            onToggleSource={(source, visible) => {
+              void handleRef.current?.sources.setVisible(source, visible);
             }}
             spaceMouseSupported={spaceMouseSectionVisible}
             spaceMouseConnected={spaceMouseConnected}
@@ -252,11 +252,12 @@ export function App(): React.ReactElement {
             // / `setAbsMagLimit` / `setToneMapCurve` all fire their echo
             // callback inside the call, so no optimistic update needed.
             biasMode={biasMode}
-            onBiasModeChange={(m) => handleRef.current?.bias.setMode(m)}
+            onBiasModeChange={(mode) => handleRef.current?.bias.setMode(mode)}
             absMagLimit={absMagLimit}
+            // `M` is the conventional astronomy symbol for absolute magnitude.
             onAbsMagLimitChange={(M) => handleRef.current?.bias.setAbsMagLimit(M)}
             toneMapCurve={toneMapCurve}
-            onToneMapCurveChange={(c) => handleRef.current?.tonemap.setCurve(c)}
+            onToneMapCurveChange={(curve) => handleRef.current?.tonemap.setCurve(curve)}
             // `volumesEnabled` is the master toggle — no engine echo,
             // owned in React state (same pattern as filamentsEnabled).
             // The per-field setters forward straight to the engine; the
@@ -264,31 +265,31 @@ export function App(): React.ReactElement {
             // every mutation, and `useEngineSettings` mirrors the
             // snapshot back into React.
             volumesEnabled={volumesEnabled}
-            onVolumesEnabledChange={(v: boolean) => {
-              setVolumesEnabled(v);
-              handleRef.current?.volumes.setMasterEnabled(v);
+            onVolumesEnabledChange={(enabled) => {
+              setVolumesEnabled(enabled);
+              handleRef.current?.volumes.setMasterEnabled(enabled);
             }}
             volumeFields={volumeFields}
-            onVolumeFieldEnabledChange={(handle, enabled) =>
-              handleRef.current?.volumes.setEnabled(handle, enabled)
+            onVolumeFieldEnabledChange={(fieldId, enabled) =>
+              handleRef.current?.volumes.setEnabled(fieldId, enabled)
             }
-            onVolumeFieldIntensityChange={(handle, intensity) =>
-              handleRef.current?.volumes.setIntensity(handle, intensity)
+            onVolumeFieldIntensityChange={(fieldId, intensity) =>
+              handleRef.current?.volumes.setIntensity(fieldId, intensity)
             }
-            onVolumeFieldContrastChange={(handle, contrast) =>
-              handleRef.current?.volumes.setContrast(handle, contrast)
+            onVolumeFieldContrastChange={(fieldId, contrast) =>
+              handleRef.current?.volumes.setContrast(fieldId, contrast)
             }
-            onVolumeFieldDensityScaleChange={(handle, densityScale) =>
-              handleRef.current?.volumes.setDensityScale(handle, densityScale)
+            onVolumeFieldDensityScaleChange={(fieldId, densityScale) =>
+              handleRef.current?.volumes.setDensityScale(fieldId, densityScale)
             }
-            onVolumeFieldTrimChange={(handle, trim) =>
-              handleRef.current?.volumes.setTrim(handle, trim)
+            onVolumeFieldTrimChange={(fieldId, trim) =>
+              handleRef.current?.volumes.setTrim(fieldId, trim)
             }
-            onVolumeFieldExposureChange={(handle, exposure) =>
-              handleRef.current?.volumes.setExposure(handle, exposure)
+            onVolumeFieldExposureChange={(fieldId, exposure) =>
+              handleRef.current?.volumes.setExposure(fieldId, exposure)
             }
-            onVolumeFieldPaletteChange={(handle, paletteId) =>
-              handleRef.current?.volumes.setPalette(handle, paletteId)
+            onVolumeFieldPaletteChange={(fieldId, paletteId) =>
+              handleRef.current?.volumes.setPalette(fieldId, paletteId)
             }
           />
           <StatsPanel
@@ -328,14 +329,9 @@ export function App(): React.ReactElement {
           }}
           onSelectAlias={(target) => handleRef.current?.selection.selectByAlias(target)}
         />
-        {/* `assetSlots` is populated once `status.kind !== 'initializing'`;
-            gating here keeps the panel's slot subscriptions from racing
-            engine construction.  `timingService` is read through the
-            `debug` sub-handle so the live value lands when `?gpuTimings`
-            + adapter feature line up. */}
-        {loadingDevPanelOpen &&
-          status.kind !== 'initializing' &&
-          handleRef.current?.assetSlots && (
+        {/* `handleRef.current` set means the engine finished constructing,
+            so the panel can subscribe to slots without racing. */}
+        {debugPanelOpen && handleRef.current && (
             <DebugPanel
               slots={handleRef.current.assetSlots}
               timingService={handleRef.current.debug.timingService}

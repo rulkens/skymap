@@ -131,6 +131,7 @@ import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/
 import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
 import { buildVolumeFieldsSnapshot } from './helpers/buildVolumeFieldsSnapshot';
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';
+import type { VolumeFieldId } from '../../@types/data/VolumeFieldId';
 
 // ── SpaceMouse 6DOF input (optional, WebHID-only) ────────────────────────────
 //
@@ -1117,19 +1118,19 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.scheduler.requestRender();
   }
 
-  function addVolumeField(fieldHandle: string, cube: ScalarCube): void {
+  function addVolumeField(fieldId: VolumeFieldId, cube: ScalarCube): void {
     // Upload the cube to the renderer.  If the renderer isn't ready
     // yet, the call is a silent no-op — the field can be re-added
     // once the engine boots.
-    state.gpu.scalarVolumeRenderer?.addField(fieldHandle, cube);
+    state.gpu.scalarVolumeRenderer?.addField(fieldId, cube);
     // Seed the per-field settings entry with defaults if not already
     // present — re-registering the same handle preserves any
     // previously-tuned values.  Presentation defaults (palette +
     // densityScale) come from the per-handle registry in
     // `src/data/volumeFieldDefaults.ts`.
-    if (!state.settings.volumes.fields[fieldHandle]) {
-      const defaults = getVolumeFieldDefaults(fieldHandle);
-      state.settings.volumes.fields[fieldHandle] = {
+    if (!state.settings.volumes.fields[fieldId]) {
+      const defaults = getVolumeFieldDefaults(fieldId);
+      state.settings.volumes.fields[fieldId] = {
         enabled: true,
         intensity: DEFAULT_VOLUME_FIELD_INTENSITY,
         contrast: defaults.contrast,
@@ -1141,14 +1142,14 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     }
     // Forward the current per-field tunables into the renderer so the
     // new upload inherits whatever the user set before re-registering.
-    const persisted = state.settings.volumes.fields[fieldHandle]!;
-    state.gpu.scalarVolumeRenderer?.setIntensity(fieldHandle, persisted.intensity);
-    state.gpu.scalarVolumeRenderer?.setEnabled(fieldHandle, persisted.enabled);
-    state.gpu.scalarVolumeRenderer?.setContrast(fieldHandle, persisted.contrast);
-    state.gpu.scalarVolumeRenderer?.setDensityScale(fieldHandle, persisted.densityScale);
-    state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldHandle, persisted.paletteId);
-    state.gpu.scalarVolumeRenderer?.setTrim(fieldHandle, persisted.trim);
-    state.gpu.scalarVolumeRenderer?.setExposure(fieldHandle, persisted.exposure);
+    const persisted = state.settings.volumes.fields[fieldId]!;
+    state.gpu.scalarVolumeRenderer?.setIntensity(fieldId, persisted.intensity);
+    state.gpu.scalarVolumeRenderer?.setEnabled(fieldId, persisted.enabled);
+    state.gpu.scalarVolumeRenderer?.setContrast(fieldId, persisted.contrast);
+    state.gpu.scalarVolumeRenderer?.setDensityScale(fieldId, persisted.densityScale);
+    state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldId, persisted.paletteId);
+    state.gpu.scalarVolumeRenderer?.setTrim(fieldId, persisted.trim);
+    state.gpu.scalarVolumeRenderer?.setExposure(fieldId, persisted.exposure);
     // Drive the FadeRegistry from the persisted enable bit:
     //  - Field enabled → fade up to 1 over FADE_IN_DURATION_MS.
     //  - Field disabled → leave the registry at the initial 0 set by
@@ -1158,7 +1159,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     //    fade-in via setVolumeFieldEnabled).
     if (persisted.enabled) {
       void state.subsystems.fades.fadeTo(
-        { kind: 'scalarField', field: fieldHandle },
+        { kind: 'scalarField', field: fieldId },
         1,
         FADE_IN_DURATION_MS,
       );
@@ -1167,9 +1168,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.scheduler.requestRender();
   }
 
-  function removeVolumeField(fieldHandle: string): void {
-    state.gpu.scalarVolumeRenderer?.removeField(fieldHandle);
-    delete state.settings.volumes.fields[fieldHandle];
+  function removeVolumeField(fieldId: VolumeFieldId): void {
+    state.gpu.scalarVolumeRenderer?.removeField(fieldId);
+    delete state.settings.volumes.fields[fieldId];
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
@@ -1185,8 +1186,8 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
    * doesn't need to know which slot backs which handle; the routing
    * (and per-slot request payload) is encapsulated here.
    */
-  function maybeLazyLoadVolumeSlot(fieldHandle: string): void {
-    switch (fieldHandle) {
+  function maybeLazyLoadVolumeSlot(fieldId: VolumeFieldId): void {
+    switch (fieldId) {
       case 'cf4-density': {
         const slot = state.assetSlots.cf4Density;
         if (slot && slot.state().kind === 'idle') slot.load();
@@ -1202,39 +1203,39 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       case 'debug-gaussian':
       case 'debug-cartesian':
       case 'debug-spherical': {
-        const slot = state.assetSlots.syntheticVolumes?.[fieldHandle];
+        const slot = state.assetSlots.syntheticVolumes?.[fieldId];
         if (!slot || slot.state().kind !== 'idle') return;
         // Same dims + box-size triple all three fixtures used in the
         // pre-2026-05-19 boot-load block, so they still overlay
         // coherently when more than one is enabled at once.
         const shape =
-          fieldHandle === 'debug-gaussian'
+          fieldId === 'debug-gaussian'
             ? 'gaussian'
-            : fieldHandle === 'debug-cartesian'
+            : fieldId === 'debug-cartesian'
               ? 'cartesian'
               : 'spherical';
-        slot.load({ handle: fieldHandle, shape, dims: 64, boxSizeMpc: 400 });
+        slot.load({ handle: fieldId, shape, dims: 64, boxSizeMpc: 400 });
         return;
       }
     }
   }
 
-  function setVolumeFieldEnabled(fieldHandle: string, enabled: boolean): void {
+  function setVolumeFieldEnabled(fieldId: VolumeFieldId, enabled: boolean): void {
     // Lazy-load gate — fires the slot's deferred boot fetch when a
     // default-off field is first turned on.  No-op when the slot is
     // already loading / ready, or when the handle has no associated
     // slot (every settings-table field has an entry but only the
     // bootstrapped slot-backed ones need the trigger).
-    if (enabled) maybeLazyLoadVolumeSlot(fieldHandle);
-    if (state.settings.volumes.fields[fieldHandle]) {
-      state.settings.volumes.fields[fieldHandle].enabled = enabled;
+    if (enabled) maybeLazyLoadVolumeSlot(fieldId);
+    if (state.settings.volumes.fields[fieldId]) {
+      state.settings.volumes.fields[fieldId].enabled = enabled;
     }
-    state.gpu.scalarVolumeRenderer?.setEnabled(fieldHandle, enabled);
+    state.gpu.scalarVolumeRenderer?.setEnabled(fieldId, enabled);
     // Drive the FadeRegistry alongside the renderer flip. The renderer's
     // draw loop accepts (!enabled && opacity <= 0) as the skip condition,
     // so the field keeps rendering through the ~100 ms fade-out tail.
     void state.subsystems.fades.fadeTo(
-      { kind: 'scalarField', field: fieldHandle },
+      { kind: 'scalarField', field: fieldId },
       enabled ? 1 : 0,
       enabled ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
     );
@@ -1242,62 +1243,62 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.subsystems.scheduler.requestRender();
   }
 
-  function setVolumeFieldIntensity(fieldHandle: string, intensity: number): void {
-    if (state.settings.volumes.fields[fieldHandle]) {
-      state.settings.volumes.fields[fieldHandle].intensity = intensity;
+  function setVolumeFieldIntensity(fieldId: VolumeFieldId, intensity: number): void {
+    if (state.settings.volumes.fields[fieldId]) {
+      state.settings.volumes.fields[fieldId].intensity = intensity;
     }
-    state.gpu.scalarVolumeRenderer?.setIntensity(fieldHandle, intensity);
+    state.gpu.scalarVolumeRenderer?.setIntensity(fieldId, intensity);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
-  function setVolumeFieldContrast(fieldHandle: string, contrast: number): void {
-    if (state.settings.volumes.fields[fieldHandle]) {
-      state.settings.volumes.fields[fieldHandle].contrast = contrast;
+  function setVolumeFieldContrast(fieldId: VolumeFieldId, contrast: number): void {
+    if (state.settings.volumes.fields[fieldId]) {
+      state.settings.volumes.fields[fieldId].contrast = contrast;
     }
-    state.gpu.scalarVolumeRenderer?.setContrast(fieldHandle, contrast);
+    state.gpu.scalarVolumeRenderer?.setContrast(fieldId, contrast);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
-  function setVolumeFieldDensityScale(fieldHandle: string, value: number): void {
-    if (state.settings.volumes.fields[fieldHandle]) {
-      state.settings.volumes.fields[fieldHandle].densityScale = value;
+  function setVolumeFieldDensityScale(fieldId: VolumeFieldId, value: number): void {
+    if (state.settings.volumes.fields[fieldId]) {
+      state.settings.volumes.fields[fieldId].densityScale = value;
     }
-    state.gpu.scalarVolumeRenderer?.setDensityScale(fieldHandle, value);
+    state.gpu.scalarVolumeRenderer?.setDensityScale(fieldId, value);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
-  function setVolumeFieldTrim(fieldHandle: string, trim: number): void {
-    if (state.settings.volumes.fields[fieldHandle]) {
-      state.settings.volumes.fields[fieldHandle].trim = trim;
+  function setVolumeFieldTrim(fieldId: VolumeFieldId, trim: number): void {
+    if (state.settings.volumes.fields[fieldId]) {
+      state.settings.volumes.fields[fieldId].trim = trim;
     }
-    state.gpu.scalarVolumeRenderer?.setTrim(fieldHandle, trim);
+    state.gpu.scalarVolumeRenderer?.setTrim(fieldId, trim);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
-  function setVolumeFieldExposure(fieldHandle: string, exposure: number): void {
-    if (state.settings.volumes.fields[fieldHandle]) {
-      state.settings.volumes.fields[fieldHandle].exposure = exposure;
+  function setVolumeFieldExposure(fieldId: VolumeFieldId, exposure: number): void {
+    if (state.settings.volumes.fields[fieldId]) {
+      state.settings.volumes.fields[fieldId].exposure = exposure;
     }
-    state.gpu.scalarVolumeRenderer?.setExposure(fieldHandle, exposure);
+    state.gpu.scalarVolumeRenderer?.setExposure(fieldId, exposure);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
-  function setVolumeFieldPalette(fieldHandle: string, id: ScalarFieldPaletteId): void {
-    if (state.settings.volumes.fields[fieldHandle]) {
-      state.settings.volumes.fields[fieldHandle].paletteId = id;
+  function setVolumeFieldPalette(fieldId: VolumeFieldId, id: ScalarFieldPaletteId): void {
+    if (state.settings.volumes.fields[fieldId]) {
+      state.settings.volumes.fields[fieldId].paletteId = id;
     }
-    state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldHandle, id);
+    state.gpu.scalarVolumeRenderer?.setFieldPalette(fieldId, id);
     cb.volumes?.onFieldsChanged?.(buildVolumeFieldsSnapshot(state));
     state.subsystems.scheduler.requestRender();
   }
 
-  function listVolumeFields(): string[] {
-    return state.gpu.scalarVolumeRenderer?.listHandles() ?? [];
+  function listVolumeFields(): VolumeFieldId[] {
+    return (state.gpu.scalarVolumeRenderer?.listHandles() ?? []) as VolumeFieldId[];
   }
 
   function getVolumeFieldsState(): ReadonlyArray<VolumeFieldRowData> {
