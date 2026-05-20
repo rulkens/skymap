@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Source, SOURCE_REGISTRY, SURVEY_SOURCES, bandLabels } from '../../src/data/sources';
+import { Source, SOURCE_REGISTRY, SURVEY_SOURCES } from '../../src/data/sources';
 import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../src/utils/sourceMask';
 
 describe('Source.Famous', () => {
@@ -33,8 +33,9 @@ describe('Source.Famous', () => {
     // Curated entries don't carry photometry; the band layout is cosmetic
     // — InfoCard uses it to label colour rows. We mirror SDSS so the
     // existing FullCard markup renders cleanly without a new branch.
-    const bands = bandLabels(Source.Famous);
-    expect(bands.g).toBeTruthy();
+    const entry = SOURCE_REGISTRY[Source.Famous];
+    expect(entry.type).toBe('survey');
+    if (entry.type === 'survey') expect(entry.bandLabels.g).toBeTruthy();
   });
 });
 

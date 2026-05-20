@@ -19,7 +19,7 @@
 
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { Source, SOURCE_REGISTRY, bandLabels } from '../../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import { famousDisplayName } from './famousDisplayName';
@@ -161,7 +161,13 @@ export function buildGalaxyInfo(
   // The `colours` array is what the InfoCard renders in its "Colour" row;
   // pre-computing it here keeps the React layer presentational and avoids
   // sprinkling per-source band-pair logic throughout the components.
-  const bands = bandLabels(source);
+  // POI markers have no photometry. The picker only routes survey sources
+  // into the points pipeline, so reaching here with a POI is a bug upstream.
+  const entry = SOURCE_REGISTRY[source];
+  if (entry.type === 'poi') {
+    throw new Error(`buildGalaxyInfo: POI source ${source} has no photometric bands`);
+  }
+  const bands = entry.bandLabels;
 
   // Available pairs in adjacent-slot order: each entry pairs the label and
   // value only if BOTH constituent bands are real (not '—') AND the

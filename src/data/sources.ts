@@ -7,7 +7,6 @@
  * live in `utils/sourceMask`.
  */
 
-import type { BandLabels } from '../@types/data/BandLabels';
 import type { SourceEntry } from '../@types/data/SourceEntry';
 import type { SurveySource } from '../@types/data/SurveySource';
 import type { PoiSource } from '../@types/data/PoiSource';
@@ -170,24 +169,6 @@ export const SOURCE_REGISTRY = {
     bandLabels: { u: '—', g: 'B', r: 'R', i: '—', z: '—' },
   },
 } as const satisfies Readonly<Record<Source, SourceEntry>>;
-
-// ─── Public lookup functions ────────────────────────────────────────────────
-
-/**
- * Photometric band labels for the five `magU/G/R/I/Z` slots on this source's
- * `GalaxyCatalog`. Returns the actual band carried in each slot (e.g. `'B'`
- * for GLADE's g-slot) so the InfoCard can label rows accurately instead of
- * always saying "(g)". Empty slots carry `'—'`.
- */
-export function bandLabels(source: Source): BandLabels {
-  const entry = SOURCE_REGISTRY[source];
-  // POI markers have no photometry. Reaching here with a POI means the
-  // InfoCard is rendering a galaxy row for a non-galaxy entity.
-  if (entry.type === 'poi') {
-    throw new Error(`bandLabels: POI source ${source} has no photometric bands`);
-  }
-  return entry.bandLabels;
-}
 
 // ─── Iteration order ────────────────────────────────────────────────────────
 
