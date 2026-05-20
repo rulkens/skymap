@@ -13,13 +13,13 @@
  *
  *   apparentPxRadius = (max(diameterKpc, 30) * 2 / 1000 / max(camDist, 0.001))
  *                      * pxPerRad
- *   ringRadiusPx    = max(pointSizePx, apparentPxRadius) * 8
+ *   ringRadiusPx    = max(pointSizePx, apparentPxRadius * 0.5) * 8
  *
- * Mirrors the main-points vertex shader's selection sizing (8× halo
- * factor + apparent-pixel-radius floor) so the visible ring matches
- * the in-shader version at every zoom level.  The `max(diameterKpc,
- * 30)` floor handles the synthetic-fallback source (NaN diameter) and
- * any pre-v4-format galaxy without a measured size.
+ * The `* 0.5` on `apparentPxRadius` cancels half of the 4× padding the
+ * points pipeline bakes into its billboard footprint (to share size with
+ * the textured thumbnail) — without it, the halo balloons on zoomed-in
+ * galaxies.  The `max(diameterKpc, 30)` floor handles the synthetic-
+ * fallback source and any pre-v4-format galaxy without a measured size.
  *
  * Decoupling the formula from the renderer leaves room for a POI
  * fold-in: `else if (selectedPoi !== null) { ... }` here picks up the
@@ -73,7 +73,11 @@ export const selectionRingPass: Pass = {
     const safeDist = Math.max(camDist, 0.001);
     const galaxyRadiusMpc = (safeDiameterKpc * 2) / 1000;
     const apparentPxRadius = (galaxyRadiusMpc / safeDist) * ctx.drawPxPerRad;
-    const sizePx = Math.max(settings.pointSizePx, apparentPxRadius);
+    // Halve the apparent-radius contribution: the points shader bakes a 4×
+    // padding into the billboard footprint to share size with the textured
+    // thumbnail, which makes a straight `* 8` halo balloon when zoomed in.
+    // The pointSizePx floor keeps faint, sub-pixel galaxies visibly ringed.
+    const sizePx = Math.max(settings.pointSizePx, apparentPxRadius * 0.5);
     const ringRadiusPx = sizePx * 8;
 
     state.gpu.selectionRingRenderer!.setSelection({ worldPos, ringRadiusPx });

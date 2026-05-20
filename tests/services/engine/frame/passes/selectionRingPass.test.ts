@@ -104,9 +104,9 @@ describe('selectionRingPass.draw', () => {
     expect(arg.worldPos[0]).toBeCloseTo(0);
     expect(arg.worldPos[1]).toBeCloseTo(0);
     expect(arg.worldPos[2]).toBeCloseTo(100);
-    // ringRadiusPx = max(pointSizePx, apparentPxRadius) * 8
+    // ringRadiusPx = max(pointSizePx, apparentPxRadius * 0.5) * 8
     // apparentPxRadius = (60 * 2 / 1000 / 100) * 720 = 0.864
-    // pointSizePx (4) wins; * 8 = 32
+    // apparentPxRadius * 0.5 = 0.432; pointSizePx (4) wins; * 8 = 32
     expect(arg.ringRadiusPx).toBeCloseTo(32, 5);
   });
 
@@ -121,8 +121,8 @@ describe('selectionRingPass.draw', () => {
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<typeof makeRendererSpy>;
     const arg = rendererSpy.setSelection.mock.calls[0]![0]!;
     // apparentPxRadius = (60 * 2 / 1000 / 10) * 720 = 8.64
-    // pointSizePx = 4; apparent wins; * 8 = 69.12
-    expect(arg.ringRadiusPx).toBeCloseTo(69.12, 4);
+    // apparentPxRadius * 0.5 = 4.32; > pointSizePx (4); * 8 = 34.56
+    expect(arg.ringRadiusPx).toBeCloseTo(34.56, 4);
   });
 
   it('calls renderer.render() exactly once with viewProj + viewport', () => {
