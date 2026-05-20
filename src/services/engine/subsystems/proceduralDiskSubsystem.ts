@@ -166,15 +166,19 @@ export function createProceduralDiskSubsystem(
         const ar = cloud.axisRatio[i]!;
         const pa = cloud.positionAngleDeg[i]!;
 
-        const ci = pickColourIndex(
+        // Distance from origin (NOT from camera) — K-correction uses
+        // cosmological redshift z = d / Hubble distance, which is a
+        // function of the row's position, not the viewer's location.
+        const dMpcFromOrigin = Math.hypot(x, y, z);
+        const colourIndex = pickColourIndex(
           cloudSource,
-          cloud.magU[i] ?? NaN,
-          cloud.magG[i] ?? NaN,
-          cloud.magR[i] ?? NaN,
-          cloud.magI[i] ?? NaN,
-          cloud.magZ[i] ?? NaN,
+          cloud.magU[i]!,
+          cloud.magG[i]!,
+          cloud.magR[i]!,
+          cloud.magI[i]!,
+          cloud.magZ[i]!,
+          dMpcFromOrigin,
         );
-        const colourIndex = ci !== null ? ci.colourIndex : 1.0;
 
         const emitted = maybeEmitProceduralDisk(
           px,

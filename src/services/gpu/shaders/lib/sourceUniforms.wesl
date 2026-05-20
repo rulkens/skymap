@@ -36,18 +36,11 @@ struct SourceUniforms {
   // anyway.
   sourceCode: u32,
 
-  // Per-survey K-correction coefficient (ramp-position units per unit
-  // redshift z). Read by the points vertex stage as
-  // 'colorIndex - kPerZ * z' to convert observed colour to rest-frame.
-  // Values live in 'data/colourIndex.ts' SPEC table and never change
-  // for a given survey, so this stays a one-shot upload-time write.
-  // Other consumers of SourceUniforms (cluster markers, etc.) leave
-  // this slot zero — their shaders don't read kPerZ.
-  kPerZ: f32,
-
-  // Pad to 16-byte WebGPU-minimum uniform-buffer alignment. Each pad
-  // is a free 4-byte slot for a future field (sourceCode and kPerZ
-  // already claimed the first two).
+  // Pad to 16-byte WebGPU-minimum uniform-buffer alignment. Named
+  // individually (rather than '_pad: vec3<u32>') so a future field can
+  // repurpose any one slot without alignment churn — each pad is a
+  // free 4-byte slot.
+  _pad0: u32,
   _pad1: u32,
   _pad2: u32,
 };

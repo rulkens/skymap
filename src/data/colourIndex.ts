@@ -15,6 +15,24 @@
 import { Source, type SurveySource } from './sources';
 import type { ColourIndexSpec } from '../@types/data/ColourIndexSpec';
 
+/**
+ * Hubble distance in Mpc — c / H₀ for H₀ = 70 km/s/Mpc. Converts
+ * Cartesian distance from origin to cosmological redshift via
+ * z = d / HUBBLE_DISTANCE_MPC, matching the small-z Hubble approximation
+ * the project's raDecZToCartesian uses to produce these positions.
+ */
+const HUBBLE_DISTANCE_MPC = 4282.749;
+
+/**
+ * Ramp-position fallback for rows whose colour cannot be computed (one
+ * or both bands missing). 1.05 is a deliberately pale, neutral position
+ * on the 0..2 ramp — close enough to the middle that sentinel rows
+ * don't draw the eye away from real colour gradients. Both the points
+ * bake and the procedural-disk subsystem substitute this value, so a
+ * galaxy without bands renders the same hue in both renderers.
+ */
+export const UNKNOWN_COLOUR_RAMP_POSITION = 1.05;
+
 // POI source codes (Cluster, Supercluster, Void) have no photometry —
 // they're pick-encoding-only markers, not survey rows. The colour-index
 // spec is therefore keyed by `SurveySource` (excludes POIs), and the
@@ -33,9 +51,16 @@ const SPEC: Record<SurveySource, ColourIndexSpec> = {
 };
 
 /**
- * Look up which slot maps to which mag value, then compute the source-
- * appropriate colour index and K coefficient. Returns null when either
- * constituent band is NaN (so the caller knows to use the sentinel path).
+ * Look up which slot maps to which mag value, compute the source-
+ * appropriate colour index, K-correct it to rest-frame using the row's
+ * distance, and normalise to the 0..2 ramp range. Returns
+ * {@link UNKNOWN_COLOUR_RAMP_POSITION} when either constituent band is
+ * NaN, so callers never need a null-check or fallback constant.
+ *
+ * The K-correction is applied here (CPU side) so both consumers
+ * (`buildPointInterleavedBuffer` and `proceduralDiskSubsystem`) get the
+ * same rest-frame value, removing a visible hue mismatch between the
+ * points pass and the procedural-disk impostor for the same galaxy.
  */
 export function pickColourIndex(
   source: Source,
@@ -44,7 +69,8 @@ export function pickColourIndex(
   magR: number,
   magI: number,
   magZ: number,
-): { colourIndex: number; kPerZ: number } | null {
+  dMpcFromOrigin: number,
+): number {
   if (source === Source.Cluster || source === Source.Supercluster || source === Source.Void) {
     throw new Error(`pickColourIndex: POI source ${source} has no colour index`);
   }
@@ -52,23 +78,21 @@ export function pickColourIndex(
   const slotMap = { u: magU, g: magG, r: magR, i: magI, z: magZ };
   const a = slotMap[spec.slotA];
   const b = slotMap[spec.slotB];
-  if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return UNKNOWN_COLOUR_RAMP_POSITION;
 
-  // ── Normalise raw colour to the 0..2 ramp range ─────────────────────────
-  //
-  // The WGSL ramp expects its input in [0, 2].  We pre-bake the linear
-  // remap here so the shader doesn't need to know any per-source range
-  // numbers — it just reads a single f32 and indexes the ramp.
-  //
-  // kPerZ is passed through unchanged: it's already specified in
-  // normalised ramp-position units (see the SPEC type's docstring for
-  // why the literature mag/z values aren't used directly).
+  // Normalise raw observed colour to the 0..2 ramp range. The WGSL ramp
+  // expects its input there; pre-baking the linear remap means the
+  // shader reads a single f32 and indexes the ramp.
   const raw = a - b;
-  const colourIndex = Math.max(
-    0,
-    Math.min(2, ((raw - spec.rangeMin) / (spec.rangeMax - spec.rangeMin)) * 2.0),
-  );
-  return { colourIndex, kPerZ: spec.kPerZ };
+  const observedCI = ((raw - spec.rangeMin) / (spec.rangeMax - spec.rangeMin)) * 2.0;
+
+  // K-correction: colour_rest ≈ colour_obs − k · z. kPerZ is already in
+  // normalised ramp-position units, so the subtraction happens directly
+  // on the ramp coordinate. Re-clamp because the correction can push
+  // the value outside [0, 2].
+  const z = dMpcFromOrigin / HUBBLE_DISTANCE_MPC;
+  const restCI = observedCI - spec.kPerZ * z;
+  return Math.max(0, Math.min(2, restCI));
 }
 
 /** Public read of the spec table — used by `galaxyType.ts` and tests. */

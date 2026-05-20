@@ -167,23 +167,9 @@ fn vs(
   // compute distance from the billboard centre.
   out.uv = corner;
 
-  // ── K-CORRECTION (observed → rest-frame colour) ──────────────────────────
-  //
-  //   colour_rest ≈ colour_obs − k · z
-  //
-  // 'k' is the per-survey 'source.kPerZ' uniform (set once at upload
-  // time from data/colourIndex.ts). We derive z from the position
-  // vector via Hubble's law: |xyz| = c·z/H₀, so z = |xyz| /
-  // HUBBLE_DISTANCE_MPC. Matches the CPU-side raDecZToCartesian.
-  let HUBBLE_DISTANCE_MPC = 4282.749;  // c / H₀ for H₀ = 70 km/s/Mpc
-  let zRedshift = length(p.position) / HUBBLE_DISTANCE_MPC;
-
-  // Sentinel detection: colorIndex >= 100 marks 'no observed colour for
-  // this survey's preferred band pair'. We skip K-correction for those
-  // and substitute a fixed mid-ramp colour (1.05 ≈ pale orange-white)
-  // so sentinel galaxies have a stable visually-neutral tint.
-  let isUnknownColour = p.colorIndex > 100.0;
-  let restColorIndex = select(p.colorIndex - source.kPerZ * zRedshift, 1.05, isUnknownColour);
+  // p.colorIndex is the rest-frame, sentinel-substituted ramp position
+  // — K-correction and the unknown-colour fallback already happened
+  // CPU-side in pickColourIndex. The shader just looks the value up.
 
   // ── MAGNITUDE → INTENSITY, with every per-instance modulator folded in ──
   //
@@ -232,7 +218,7 @@ fn vs(
   let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
   let absAR = abs(p.axisRatio);
   let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
-  out.shaded = vec4<f32>(ramp(restColorIndex) * highlightTint * intensity, safeAB);
+  out.shaded = vec4<f32>(ramp(p.colorIndex) * highlightTint * intensity, safeAB);
 
   // Invisibility cull: galaxies whose folded intensity falls below this
   // threshold contribute imperceptibly to the additive HDR target, so

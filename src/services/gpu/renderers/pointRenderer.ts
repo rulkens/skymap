@@ -46,7 +46,6 @@ import type { PointDrawSettings } from '../../../@types/rendering/PointDrawSetti
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { ALL_SOURCES, Source } from '../../../data/sources';
-import { colourIndexSpec } from '../../../data/colourIndex';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 
@@ -892,11 +891,10 @@ export function createPointRenderer(
       entries: [{ binding: 0, resource: { buffer: fadeBuffer } }],
     });
 
-    // SourceUniforms — 16 bytes, written ONCE here at upload time. Both
-    // fields are per-survey constants (sourceCode and kPerZ never change
-    // for a given source), so a per-frame write would be wasted bytes.
-    // Layout: sourceCode (u32) at offset 0, kPerZ (f32) at offset 4,
-    // remaining 8 bytes are reserved padding.
+    // SourceUniforms — 16 bytes, written ONCE here at upload time. The
+    // 5-bit Source enum value never changes for a given source, so a
+    // per-frame write would be wasted bytes. Pack sourceCode into the
+    // first 4 bytes; the remaining 12 bytes are reserved padding.
     const sourceBuffer = device.createBuffer({
       label: `points-source-uniform-${source}`,
       size: 16,
@@ -904,7 +902,6 @@ export function createPointRenderer(
     });
     const sourceScratch = new ArrayBuffer(16);
     new Uint32Array(sourceScratch)[0] = source >>> 0;
-    new Float32Array(sourceScratch)[1] = colourIndexSpec(source).kPerZ;
     device.queue.writeBuffer(sourceBuffer, 0, sourceScratch);
     const sourceBindGroup = device.createBindGroup({
       label: `points-source-bg-${source}`,

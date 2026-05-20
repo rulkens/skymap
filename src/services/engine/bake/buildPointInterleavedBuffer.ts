@@ -110,12 +110,6 @@ const D_REF_MPC = 750;
 /** Target post-shift mean magnitude for the per-survey magG normalisation. */
 const SDSS_TARGET_MEAN_MAG = 18;
 
-/**
- * Sentinel value the WGSL fragment shader recognises as "no measured colour
- * for this row".  Mirrors the one in `pointRenderer.ts`.
- */
-const NO_COLOUR_SENTINEL = 999;
-
 // Type declarations moved to @types/engine/BuildPointInterleavedBuffer*.d.ts.
 
 /**
@@ -241,19 +235,26 @@ export function buildPointInterleavedBuffer(
 
     const g = cloud.magG[i]!;
 
-    const colour = pickColourIndex(
+    // Distance from origin in Mpc — needed by both the K-correction
+    // baked into the colour-index lookup and by the vMaxWeight block
+    // below. Hoist once here to avoid a second hypot.
+    const dx = cloud.positions[i * 3 + 0]!;
+    const dy = cloud.positions[i * 3 + 1]!;
+    const dz = cloud.positions[i * 3 + 2]!;
+    const dMpc = Math.hypot(dx, dy, dz);
+
+    // Apply the per-survey mag offset.  NaN-G galaxies snap to the post-
+    // shift target so they render at average intensity instead of vanishing.
+    interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
+    interleaved[o + 4] = pickColourIndex(
       source,
       cloud.magU[i]!,
       cloud.magG[i]!,
       cloud.magR[i]!,
       cloud.magI[i]!,
       cloud.magZ[i]!,
+      dMpc,
     );
-
-    // Apply the per-survey mag offset.  NaN-G galaxies snap to the post-
-    // shift target so they render at average intensity instead of vanishing.
-    interleaved[o + 3] = Number.isFinite(g) ? g + magOffset : SDSS_TARGET_MEAN_MAG;
-    interleaved[o + 4] = colour ? colour.colourIndex : NO_COLOUR_SENTINEL;
 
     // Slot 5 — axisRatio (galaxy disk b/a in (0, 1]) with the SIGN BIT
     // carrying the fallback-orientation flag.  Real measurements from
@@ -280,12 +281,8 @@ export function buildPointInterleavedBuffer(
     // Slot 8 — per-galaxy 1/V_max weight.  Computed from the *raw*
     // apparent magnitude (NOT `g + magOffset` — the per-survey
     // normalisation is a visualisation cosmetic, not a physical change to
-    // the photometry) plus Cartesian distance.  vMaxWeight handles NaN
-    // inputs by returning 0.
-    const dx = cloud.positions[i * 3 + 0]!;
-    const dy = cloud.positions[i * 3 + 1]!;
-    const dz = cloud.positions[i * 3 + 2]!;
-    const dMpc = Math.hypot(dx, dy, dz);
+    // the photometry) plus Cartesian distance (already hoisted above).
+    // vMaxWeight handles NaN inputs by returning 0.
     const absMag = absoluteFromApparent(g, dMpc);
     interleaved[o + 8] = vMaxWeight({
       absMag,

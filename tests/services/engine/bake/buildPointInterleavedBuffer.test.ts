@@ -224,10 +224,11 @@ describe('buildPointInterleavedBuffer', () => {
     expect(meanOut).toBeCloseTo(18, 5);
   });
 
-  it('writes the colour-index sentinel (999) when the row lacks usable bands', () => {
+  it('writes the unknown-colour fallback (1.05) when the row lacks usable bands', () => {
     const cloud = makeCloud(1);
-    // SDSS picks u−g.  Setting both bands to NaN forces pickColourIndex to
-    // return null, which the bake maps to the 999 sentinel.
+    // SDSS picks u−g.  Setting both bands to NaN forces pickColourIndex
+    // to return null, which the bake maps to UNKNOWN_COLOUR_RAMP_POSITION
+    // (1.05) — the shared neutral-ramp value both renderers substitute.
     cloud.magU.set([NaN]);
     cloud.magG.set([NaN]);
     cloud.magR.set([NaN]);
@@ -237,6 +238,6 @@ describe('buildPointInterleavedBuffer', () => {
       cloud,
       source: Source.SDSS,
     });
-    expect(interleaved[4]).toBe(999);
+    expect(interleaved[4]).toBeCloseTo(1.05, 5);
   });
 });

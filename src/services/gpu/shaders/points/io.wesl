@@ -195,9 +195,9 @@ struct PerVertex {
   // scale runs backwards).
   @location(1) magnitude: f32,
 
-  // Survey-specific colour index (e.g. SDSS g−r, GLADE B−J, 2MRS J−K).
-  // Negative → blue, positive → red. Sentinel value '>= 100' marks
-  // 'no observed colour for this survey'.
+  // Rest-frame colour-ramp position in [0, 2]. K-correction and the
+  // unknown-colour fallback (1.05 substitution) are already applied at
+  // bake time by 'pickColourIndex'; the shader just calls 'ramp(...)'.
   @location(2) colorIndex: f32,
 
   // Galaxy minor/major axis ratio b/a in (0, 1] — with the SIGN BIT

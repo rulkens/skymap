@@ -7,24 +7,18 @@
 // texture. The selection ring is drawn by a dedicated pass and is not
 // this file's concern.
 //
-// ## Why bindings appear here even though io.wesl already declared them
+// ## Bindings
 //
-// They didn't — io.wesl declares only the STRUCT layouts. WESL has
-// no global state, so '@group/@binding' declarations are module-local.
-// This file re-declares 'u' (at @group(0), same as vertex.wesl) and
-// 'fade' (at @group(1), declared only here — the vertex stage doesn't
-// read opacity). The struct layouts come from io.wesl and
-// fadeUniforms.wesl respectively, so drift is structurally impossible.
-// WGSL accepts the same '@group/@binding' pair appearing in multiple
-// compiled modules so long as the layouts agree.
+// Only 'fade' at @group(1) is bound here — every per-instance and
+// per-frame value the fragment needs is already folded into the VSOut
+// varyings by the vertex stage (see 'shaded' in io.wesl). The vertex
+// stage still binds @group(0) Uniforms for its own use; the pipeline
+// layout's @group(0) entry stays VERTEX-visibility-only.
 
-import package::points::io::Uniforms;
 import package::points::io::VSOut;
-import package::lib::math::saturate;
 import package::lib::fadeUniforms::FadeUniforms;
 import package::lib::fadeUniforms::applyFade;
 
-@group(0) @binding(0) var<uniform> u: Uniforms;
 @group(1) @binding(0) var<uniform> fade: FadeUniforms;
 
 // ─── visual fragment stage ─────────────────────────────────────────────
