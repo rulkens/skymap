@@ -34,7 +34,7 @@
  * React mounts; the splash never sees that case.
  */
 
-import { type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import cx from 'classnames';
 import type { SplashError } from '../../@types/splash/SplashError';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
@@ -98,8 +98,68 @@ export function Splash(props: SplashProps): ReactNode {
       ? 'Tour is unavailable — failed to load the famous-galaxy index.'
       : undefined;
 
+  // ── Focus trap + initial focus + Esc dismiss ─────────────────────────────
+  //
+  // Rationale: standard a11y-dialog pattern.  Modal dialogs must:
+  //   1. Move focus into themselves on mount.
+  //   2. Trap focus inside while open (Tab from last → first, Shift+Tab from
+  //      first → last).
+  //   3. Dismiss on Esc, restoring focus on the way out (handled implicitly
+  //      because the splash unmounts; the next interactive element receives
+  //      focus naturally).
+  //
+  // We implement focus trap with a Tab keydown listener that queries the
+  // dialog's focusable descendants and bounces the focused element back when
+  // it would otherwise escape.  Smaller than pulling in `focus-trap-react`
+  // and the splash has a tiny number of focusables (≤5).
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = dialogRef.current;
+    if (!root) return;
+
+    // Initial focus — find the autofocused Explore button (or the first
+    // focusable if Explore is disabled / replaced by Reload).
+    const FOCUSABLE_SELECTOR =
+      'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+    const focusables = () =>
+      Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+
+    const initial =
+      root.querySelector<HTMLElement>(`.${styles.ctaPrimary}:not([disabled])`) ??
+      focusables()[0] ??
+      null;
+    initial?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        // Esc is treated identically to Explore (per the 2026-05-20 grill, Q13b).
+        onExplore();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const first = items[0]!;
+      const last = items[items.length - 1]!;
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && (active === first || !root.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !root.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onExplore]);
+
   return (
     <div
+      ref={dialogRef}
       className={styles.backdrop}
       role="dialog"
       aria-modal="true"
@@ -153,7 +213,6 @@ export function Splash(props: SplashProps): ReactNode {
               className={cx(styles.cta, styles.ctaPrimary)}
               onClick={onExplore}
               disabled={blocked}
-              autoFocus
             >
               Explore
             </button>

@@ -111,3 +111,33 @@ describe('Splash', () => {
     expect(screen.getByText(/webgpu failed/i)).toBeInTheDocument();
   });
 });
+
+describe('Splash focus trap + Esc', () => {
+  it('fires onExplore when Esc is pressed', async () => {
+    const onExplore = vi.fn();
+    const user = userEvent.setup();
+    render(createElement(Splash, makeProps({ onExplore })));
+    await user.keyboard('{Escape}');
+    expect(onExplore).toHaveBeenCalledOnce();
+  });
+
+  it('focuses Explore on mount (initial focus)', () => {
+    render(createElement(Splash, makeProps()));
+    const explore = screen.getByRole('button', { name: /^explore$/i });
+    expect(document.activeElement).toBe(explore);
+  });
+
+  it('traps Tab: pressing Tab from Tour cycles back to the first focusable element', async () => {
+    const user = userEvent.setup();
+    render(createElement(Splash, makeProps()));
+    const tour = screen.getByRole('button', { name: /^tour$/i });
+    tour.focus();
+    await user.tab();
+    // The focused element after wrap should be inside the dialog — at minimum,
+    // it should NOT be `document.body`.
+    expect(document.activeElement).not.toBe(document.body);
+    // And it should be one of the dialog's focusable items.
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
+});
