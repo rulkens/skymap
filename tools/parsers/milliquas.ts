@@ -214,16 +214,6 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
   const classes: string[] = [];
   const skipped = { zZero: 0, photoZRounded: 0, qsocRounded: 0 };
 
-  // Count of rows we kept despite a missing Rmag. Rmag is the primary
-  // band; a blank one almost never happens in practice (NGC 5128 is
-  // the canonical example — its photometry is published in JHK
-  // only). We don't reject these rows, but we do count them so a
-  // future build-time sanity check can detect an upstream change in
-  // the population of Rmag-blank rows. The counter is intentionally
-  // local rather than exposed on the result — surfacing it would
-  // imply downstream code can act on it, which it can't.
-  let rmagBlankKept = 0;
-
   for (const line of lines) {
     if (line.length < MIN_LINE_LEN) {
       // A short line can't carry the Zcite column at bytes 91-96
@@ -256,10 +246,11 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
 
     if (!Number.isFinite(ra) || !Number.isFinite(dec) || !Number.isFinite(z)) {
       // RA/Dec/Z are mandatory: without all three we can't place the
-      // row in 3D space. This branch covers truncated/corrupted
-      // lines; the spec-z subset rules below cover the much larger
-      // population of "well-formed but estimated" rows.
-      skipped.zZero++; // count under the closest semantic bucket
+      // row in 3D space. This branch covers truncated/corrupted lines
+      // — the upstream catalogue ships every row complete, so a hit
+      // here means the file in `data/raw/milliquas/` is damaged. Don't
+      // count under any spec-z-subset bucket; let the silent skip
+      // surface as a record-count mismatch at build time.
       continue;
     }
 
@@ -311,13 +302,6 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
     // ramp position for NaN bands.
     const magR = rmagStr === '' ? NaN : parseFloat(rmagStr);
     const magG = bmagStr === '' ? NaN : parseFloat(bmagStr);
-    if (rmagStr === '' || !Number.isFinite(magR)) {
-      // See `rmagBlankKept` declaration for why we count but don't
-      // reject. (Rmag is the primary band; a non-finite parse from a
-      // non-blank field — e.g. a literal `9.99e` typo — gets bucketed
-      // here too, since the downstream effect is the same.)
-      rmagBlankKept++;
-    }
 
     // The classification letter is the first non-space character of
     // the Type column (one of Q/A/B/K/N/S in practice). The
@@ -362,12 +346,6 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
     names.push(nameRaw.trimEnd());
     classes.push(cls);
   }
-
-  // `rmagBlankKept` is intentionally not surfaced on the return value
-  // — see its declaration for why. The variable still exists so the
-  // build pipeline can eyeball it in a debugger if a future upstream
-  // change spikes the rate.
-  void rmagBlankKept;
 
   return { records, names, classes, skipped };
 }
