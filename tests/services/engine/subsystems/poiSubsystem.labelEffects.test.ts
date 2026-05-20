@@ -3,9 +3,8 @@
  *
  * Exercises the override path through the real producer: when the
  * DebugPanel's LabelEffectsSection picks a POI category as the target,
- * any POI whose own category matches adopts the override's outline +
- * glow fields; non-matching POIs (and the case where the target is a
- * different category) emit labels with effect fields undefined.
+ * any POI whose own category matches adopts the override's outline
+ * fields; non-matching POIs keep their category-default outline.
  *
  * State stub: the producer only touches state.subsystems.fades.fadeTo
  * (one-shot layer fade-in).  Context stub mirrors poiSubsystem.test.ts
@@ -57,29 +56,23 @@ describe('poiSubsystem · labelStyleOverride', () => {
   it('applies the override only to labels whose category matches', () => {
     setLabelStyleOverride({
       targetCategory: 'cluster',
-      outlineColor: [1, 0, 0, 1],
-      outlineEmFrac: 0.08,
-      glowColor: [0, 1, 0, 0.5],
-      glowEmFrac: 0.2,
+      outlineColor: [1, 1, 0, 1],
+      outlineEmFrac: 0.06,
     });
     const sub = createPoiSubsystem();
     sub.setPois([VIRGO]);
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels).toHaveLength(1);
     const label = out.labels[0]!;
-    expect(label.outlineColor).toEqual([1, 0, 0, 1]);
-    expect(label.outlineEmFrac).toBe(0.08);
-    expect(label.glowColor).toEqual([0, 1, 0, 0.5]);
-    expect(label.glowEmFrac).toBe(0.2);
+    expect(label.outlineColor).toEqual([1, 1, 0, 1]);
+    expect(label.outlineEmFrac).toBe(0.06);
   });
 
   it('falls back to the category baked-in outline when override targets another category', () => {
     setLabelStyleOverride({
       targetCategory: 'void',
-      outlineColor: [1, 0, 0, 1],
-      outlineEmFrac: 0.08,
-      glowColor: [0, 1, 0, 0.5],
-      glowEmFrac: 0.2,
+      outlineColor: [1, 1, 0, 1],
+      outlineEmFrac: 0.06,
     });
     const sub = createPoiSubsystem();
     sub.setPois([VIRGO]);
@@ -88,7 +81,5 @@ describe('poiSubsystem · labelStyleOverride', () => {
     const label = out.labels[0]!;
     expect(label.outlineColor).toEqual([0, 0, 0, 0.1]);
     expect(label.outlineEmFrac).toBe(0.16);
-    expect(label.glowColor).toBeUndefined();
-    expect(label.glowEmFrac).toBeUndefined();
   });
 });

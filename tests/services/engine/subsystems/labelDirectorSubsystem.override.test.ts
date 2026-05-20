@@ -75,8 +75,6 @@ describe('labelDirectorSubsystem — labelStyleOverride wake', () => {
       targetCategory: 'youAreHere',
       outlineColor: [0, 0, 0, 1],
       outlineEmFrac: 0.1,
-      glowColor: [0, 0, 0, 1],
-      glowEmFrac: 0.2,
     });
 
     dir.runFrame(makeState(), makeCtx());
@@ -96,8 +94,6 @@ describe('labelDirectorSubsystem — labelStyleOverride wake', () => {
       targetCategory: 'youAreHere',
       outlineColor: [0, 0, 0, 1],
       outlineEmFrac: 0.1,
-      glowColor: [0, 0, 0, 1],
-      glowEmFrac: 0.2,
     });
     dir.runFrame(makeState(), makeCtx());
     dir.runFrame(makeState(), makeCtx());

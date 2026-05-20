@@ -3,10 +3,10 @@
  *
  * Exercises the override path through the real producer: when the
  * DebugPanel's LabelEffectsSection picks 'youAreHere' as the target
- * category, the produced label adopts the override's outline + glow
- * fields; when it picks any other category, the label falls back to
- * the producer's baked-in drop-shadow outline (`OUTLINE_COLOR` +
- * `OUTLINE_EM_FRAC` in `youAreHereSubsystem.ts`) and no glow.
+ * category, the produced label adopts the override's outline fields;
+ * when it picks another category, the label falls back to the
+ * producer's baked drop-shadow outline (OUTLINE_COLOR + OUTLINE_EM_FRAC
+ * in `youAreHereSubsystem.ts`).
  *
  * State stub: the producer only touches state.subsystems.fades.fadeTo
  * (one-shot layer fade-in).  A no-op stub suffices.
@@ -48,8 +48,6 @@ describe('youAreHereSubsystem · labelStyleOverride', () => {
       targetCategory: 'youAreHere',
       outlineColor: [1, 0, 0, 1],
       outlineEmFrac: 0.08,
-      glowColor: [0, 1, 0, 0.5],
-      glowEmFrac: 0.2,
     });
     const sub = createYouAreHereSubsystem();
     const out = sub.produceLabels(makeState(), makeCtx());
@@ -57,8 +55,6 @@ describe('youAreHereSubsystem · labelStyleOverride', () => {
     const label = out.labels[0]!;
     expect(label.outlineColor).toEqual([1, 0, 0, 1]);
     expect(label.outlineEmFrac).toBe(0.08);
-    expect(label.glowColor).toEqual([0, 1, 0, 0.5]);
-    expect(label.glowEmFrac).toBe(0.2);
   });
 
   it('falls back to the baked drop-shadow outline when override targets another category', () => {
@@ -66,17 +62,13 @@ describe('youAreHereSubsystem · labelStyleOverride', () => {
       targetCategory: 'cluster',
       outlineColor: [1, 0, 0, 1],
       outlineEmFrac: 0.08,
-      glowColor: [0, 1, 0, 0.5],
-      glowEmFrac: 0.2,
     });
     const sub = createYouAreHereSubsystem();
     const out = sub.produceLabels(makeState(), makeCtx());
     expect(out.labels).toHaveLength(1);
     const label = out.labels[0]!;
-    // Producer defaults: a soft black drop-shadow outline, glow unset.
+    // Producer defaults: a soft black drop-shadow outline.
     expect(label.outlineColor).toEqual([0, 0, 0, 0.1]);
     expect(label.outlineEmFrac).toBe(0.16);
-    expect(label.glowColor).toBeUndefined();
-    expect(label.glowEmFrac).toBeUndefined();
   });
 });

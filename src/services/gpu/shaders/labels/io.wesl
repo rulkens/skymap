@@ -58,25 +58,12 @@ struct LabelData {
   // r/g/b by a before upload, so the shader can treat (rgb, a) as the
   // OVER-composite input directly.
   color: vec4<f32>,
-  // x = outlineEmFrac (REPURPOSED — formerly the legacy pixelSize slot,
-  //                    which the shader stopped reading at the worldEmMpc
-  //                    migration; see labelRenderer.ts LABEL_DATA_BYTES
-  //                    docstring for the rationale)
-  // y = minPixelSize  (floor clamp on projected em height, in screen px)
-  // z = maxPixelSize  (ceiling clamp on projected em height, in screen px)
-  // w = fadeAlpha     (multiplied into every effect band uniformly)
+  // x = outlineEmFrac (repurposed legacy pixelSize slot)
+  // y = minPixelSize, z = maxPixelSize, w = fadeAlpha
   sizing: vec4<f32>,
-  // Outside-stroke outline colour — premultiplied rgba.  When alpha is
-  // zero (the default for labels that don't opt in), the outline band
-  // contributes nothing regardless of outlineEmFrac.
+  // Outside-stroke outline colour — premultiplied rgba.  Zero alpha
+  // collapses the outline band regardless of outlineEmFrac.
   outlineColor: vec4<f32>,
-  // Soft outside glow colour — premultiplied rgba.  Same opt-in semantics
-  // as outlineColor: zero alpha → band collapses.
-  glowColor: vec4<f32>,
-  // x = glowEmFrac (band radius as a fraction of projected em height)
-  // y/z/w = reserved (CPU writer keeps these zero so a future fifth/sixth
-  //                   effect parameter can land without bumping the stride)
-  effects: vec4<f32>,
 };
 
 struct VsIn {
@@ -113,12 +100,8 @@ struct VsOut {
   // Outline colour pre-multiplied by fadeAlpha (same pre-fade bake as
   // the fill colour — keeps the fragment stage simple).
   @location(3) outlineColor: vec4<f32>,
-  // Glow colour pre-multiplied by fadeAlpha.
-  @location(4) glowColor: vec4<f32>,
-  // x = outline width in SDF units (atlas px ÷ DISTANCE_RANGE_PX);
-  // y = glow radius in SDF units;
-  // converted CPU-side from the em-fraction inputs at the vertex
-  // stage, so the fragment shader has the values it needs without
-  // re-deriving from per-label data.
-  @location(5) widths: vec2<f32>,
+  // Outline width in SDF units (atlas px / DISTANCE_RANGE_PX).
+  // Converted CPU-side at the vertex stage so the fragment shader has
+  // the value ready without re-deriving from per-label data.
+  @location(4) outlineSdf: f32,
 };

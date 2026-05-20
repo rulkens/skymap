@@ -47,8 +47,6 @@ export type LabelStyleOverride = {
   readonly targetCategory: LabelStyleOverrideTarget | null;
   readonly outlineColor: Vec4;
   readonly outlineEmFrac: number;
-  readonly glowColor: Vec4;
-  readonly glowEmFrac: number;
 };
 
 // The single mutable slot.  Reassigned (not mutated in place) by
@@ -58,8 +56,6 @@ let current: LabelStyleOverride = {
   targetCategory: null,
   outlineColor: [0, 0, 0, 0],
   outlineEmFrac: 0,
-  glowColor: [0, 0, 0, 0],
-  glowEmFrac: 0,
 };
 
 // Monotonic version counter — incremented on every set/clear.  The
@@ -95,8 +91,6 @@ export function clearLabelStyleOverride(): void {
     targetCategory: null,
     outlineColor: [0, 0, 0, 0],
     outlineEmFrac: 0,
-    glowColor: [0, 0, 0, 0],
-    glowEmFrac: 0,
   };
   version++;
   wake?.();

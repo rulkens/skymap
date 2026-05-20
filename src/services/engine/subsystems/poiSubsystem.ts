@@ -555,16 +555,13 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
       }
 
       // Per-POI override fields: only POIs whose own category matches
-      // the override's target adopt the outline + glow values.  All
-      // other categories keep their producer-default effect fields
-      // (today: unset → renderer's transparent-zero defaults).
+      // the override's target adopt the outline values; other
+      // categories keep their category-default outline.
       const overrideFields =
         override.targetCategory === p.category
           ? {
               outlineColor: override.outlineColor,
               outlineEmFrac: override.outlineEmFrac,
-              glowColor: override.glowColor,
-              glowEmFrac: override.glowEmFrac,
             }
           : {};
 

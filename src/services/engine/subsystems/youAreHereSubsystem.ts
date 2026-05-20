@@ -74,18 +74,15 @@ export function createYouAreHereSubsystem(): YouAreHereSubsystem {
     }
 
     // Live-tuning override: when the DebugPanel selects 'youAreHere'
-    // as the target category, substitute the override's outline + glow
-    // fields for the producer defaults (today simply "off").  The
-    // override is module-scoped + read fresh each frame so changes from
-    // the panel apply on the next render without a producer reseed.
+    // as the target category, substitute the override's outline fields
+    // for the producer defaults.  Read fresh each frame so panel
+    // changes apply on the next render.
     const override = getLabelStyleOverride();
     const effectFields =
       override.targetCategory === 'youAreHere'
         ? {
             outlineColor: override.outlineColor,
             outlineEmFrac: override.outlineEmFrac,
-            glowColor: override.glowColor,
-            glowEmFrac: override.glowEmFrac,
           }
         : {};
 

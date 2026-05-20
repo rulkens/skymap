@@ -7,19 +7,14 @@
 // height, clamps to [minPx, maxPx] for legibility, and scales the
 // atlas-baked glyph quad to match.
 //
-// ## Quad expansion for outline + glow
+// ## Quad expansion for the outline fringe
 //
-// When a label sets outlineEmFrac and/or glowEmFrac, the on-screen
-// footprint of the glyph extends past its atlas rect by
-// 'max(outlineEmFrac, glowEmFrac) * displayEmPx' screen pixels.  If
-// the quad stays sized to the atlas rect, the effect bands get
-// clipped at the glyph's bounding box and look like a chopped halo.
-// We pre-compute the fringe extent in atlas px and grow each corner
-// outward by that amount.  The fragment shader's UV mix still uses
-// the unit corner [0,1] range, so UVs at the fringe extrapolate
-// outside the atlas rect — that's deliberate: those samples land in
-// the SDF's distance-only region (well past the glyph contour), which
-// is exactly what the glow falloff math wants.
+// When a label sets 'outlineEmFrac', the on-screen footprint extends
+// past the atlas rect by 'outlineEmFrac * displayEmPx' screen pixels.
+// If the quad stays sized to the atlas rect, the outline clips at the
+// glyph's bounding box.  We grow each corner outward by the fringe
+// expressed in atlas px; the UV expansion below extrapolates past the
+// glyph's atlas rect so the fragment shader can sample the SDF tail.
 
 import package::labels::io::Uniforms;
 import package::labels::io::LabelData;
@@ -32,9 +27,8 @@ import package::lib::billboard::pxToClipOffset;
 // Atlas em pixel size — must match 'ATLAS_FONT_SIZE' in src/data/fonts.ts.
 const ATLAS_EM_PX: f32 = 42.0;
 // MSDF distance range in pixels — must match 'DISTANCE_RANGE_PX' in
-// src/data/fonts.ts.  The SDF must carry headroom past the glyph
-// contour for the glow falloff tail; tighter ranges clamp the tail
-// and produce a banded halo edge.
+// src/data/fonts.ts.  Sets the SDF's encoded headroom past the glyph
+// contour; tighter ranges clamp the tail and produce banded edges.
 const DISTANCE_RANGE_PX: f32 = 16.0;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -49,21 +43,20 @@ fn vs(input: VsIn) -> VsOut {
   let minPx          = label.sizing.y;
   let maxPx          = label.sizing.z;
   let fadeAlpha      = label.sizing.w;
-  let glowEmFrac     = label.effects.x;
 
   // Project anchor to clip space.
   let clip = worldToClip(u.cam, worldPos);
 
-  // Perspective-driven size (existing math, unchanged).
+  // Perspective-driven size.
   let pxPerEm = worldLenToPx(u.cam, worldEmMpc, clip.w);
   let displayEmPx = clamp(pxPerEm, minPx, maxPx);
   let pxScale = displayEmPx / ATLAS_EM_PX;
 
-  // Effect fringe in atlas px.  The on-screen fringe is
-  // 'max(outline, glow) * displayEmPx' screen pixels, which divides
-  // by pxScale to recover atlas-px (because the same pxScale gets
-  // applied to the corner offset below).
-  let fringeAtlasPx = max(outlineEmFrac, glowEmFrac) * ATLAS_EM_PX;
+  // Outline fringe in atlas px.  The on-screen fringe is
+  // 'outlineEmFrac * displayEmPx' screen pixels, which divides by
+  // pxScale to recover atlas-px (because the same pxScale is applied
+  // to the corner offset below).
+  let fringeAtlasPx = outlineEmFrac * ATLAS_EM_PX;
 
   // Expand each corner outward by the fringe.  The unit-corner attribute
   // sits in {(0,0),(1,0),(0,1),(1,1)}; remap to {-1,+1} via (corner*2-1)
@@ -81,8 +74,8 @@ fn vs(input: VsIn) -> VsOut {
   // UV expansion to match the corner expansion.  The UV rect coordinates
   // are already normalised; the fringe in atlas px maps to UV space via
   // '(uvSpan / localSize)'.  The result samples outside the glyph's
-  // atlas rect at the fringe, which is what the SDF falloff math wants
-  // (the distance-only region past the glyph contour).
+  // atlas rect at the fringe — the distance-only region past the glyph
+  // contour, which is where the outline band lives.
   let uvSpanX = input.uvRect.z - input.uvRect.x;
   let uvSpanY = input.uvRect.w - input.uvRect.y;
   let uvBase = vec2<f32>(
@@ -97,18 +90,14 @@ fn vs(input: VsIn) -> VsOut {
 
   // Pre-bake fadeAlpha into every colour channel that flows to the
   // fragment stage.  The fragment stage then just multiplies by the
-  // per-band SDF coverage, so fadeAlpha applies uniformly to fill,
-  // outline, and glow without an extra fragment-side multiply.
+  // per-band SDF coverage, so fadeAlpha applies uniformly to fill and
+  // outline without an extra fragment-side multiply.
   let outColor        = vec4<f32>(label.color.rgb        * fadeAlpha, label.color.a        * fadeAlpha);
   let outOutlineColor = vec4<f32>(label.outlineColor.rgb * fadeAlpha, label.outlineColor.a * fadeAlpha);
-  let outGlowColor    = vec4<f32>(label.glowColor.rgb    * fadeAlpha, label.glowColor.a    * fadeAlpha);
 
-  // Convert em-fraction widths to SDF units.  See io.wesl docstring
-  // for the derivation:
+  // Convert em-fraction outline width to SDF units:
   //   widthInSdfUnits = (frac * ATLAS_EM_PX) / DISTANCE_RANGE_PX
   let outlineSdf = outlineEmFrac * ATLAS_EM_PX / DISTANCE_RANGE_PX;
-  let glowSdf    = glowEmFrac    * ATLAS_EM_PX / DISTANCE_RANGE_PX;
-  let widths = vec2<f32>(outlineSdf, glowSdf);
 
-  return VsOut(outPos, uv, outColor, input.fontIndex, outOutlineColor, outGlowColor, widths);
+  return VsOut(outPos, uv, outColor, input.fontIndex, outOutlineColor, outlineSdf);
 }

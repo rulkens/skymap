@@ -5,11 +5,6 @@
  * values into `POI_STYLES.<cat>` or `youAreHereSubsystem.ts`.  The
  * override is a temporary hook, not a storage location.
  *
- * Glow controls are intentionally absent: the MSDF-based composite
- * artefacts at wider radii, so the glow path is deferred until a
- * proper bloom approach lands.  The override + shader still carry
- * glow fields so that work can plug in without re-wiring.
- *
  * `setLabelStyleOverride` runs in `useEffect`, not during render —
  * side effects during render trigger strict-mode double-fires.
  */
@@ -29,10 +24,6 @@ const CATEGORIES: readonly LabelStyleOverrideTarget[] = [
   'famousGalaxy',
   'void',
 ];
-
-// Glow is deferred — write transparent zero so the override carries
-// the full shape but the shader's glow band contributes nothing.
-const GLOW_OFF: Vec4 = [0, 0, 0, 0];
 
 function hexToRgb(hex: string): [number, number, number] {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex);
@@ -56,13 +47,7 @@ export function LabelEffectsSection(): ReactElement {
     }
     const [or, og, ob] = hexToRgb(outlineHex);
     const outlineColor: Vec4 = [or, og, ob, outlineAlpha];
-    setLabelStyleOverride({
-      targetCategory: target,
-      outlineColor,
-      outlineEmFrac,
-      glowColor: GLOW_OFF,
-      glowEmFrac: 0,
-    });
+    setLabelStyleOverride({ targetCategory: target, outlineColor, outlineEmFrac });
     return () => clearLabelStyleOverride();
   }, [target, outlineHex, outlineAlpha, outlineEmFrac]);
 
