@@ -1,124 +1,71 @@
 /**
- * selectionSubsystem — owns the engine's hover / select state cluster.
+ * selectionSubsystem — owns the engine's hover + select state.
  *
- * Before this module existed, four sibling helpers (`galaxyInfoForSelection`,
- * `selectionEq`, `setHovered`, `setSelected`) sat inline in `engine.ts`,
- * reading and writing `state.picking.hovered` / `state.picking.selected`
- * directly while folding in the React-callback fan-out
- * (`cb.onHoverChange`, `cb.onSelectChange`).  That ad-hoc cluster grew
- * during the engine's early days for a good reason — every site was
- * concretely close to the React seam — but with `tweenManager` and
- * `thumbnailSubsystem` having proven the closure-returning factory
- * pattern in Spec B, the selection cluster is the next obvious member.
+ * Two slots, each holding a `Selection` discriminated union
+ * (`{kind:'galaxy', source, localIdx}` or `{kind:'poi', id}`) or
+ * null.  Setters dedupe via `selectionEq` and fan out to
+ * `cb.selection.onHoverChange` / `onSelectChange` with the resolved
+ * `FocusableTarget` (GalaxyInfo for galaxy variants, PointOfInterest
+ * for POIs) — callers never have to remember to fire the callback
+ * themselves.
  *
- * ### Why a closure-returning factory rather than a class?
+ * ### Deps are closures, not snapshots
  *
- * Same rationale the engine uses everywhere else: the codebase's
- * convention is "factories return typed handles, not class instances",
- * the internal `let hovered`/`let selected` are genuinely inaccessible
- * from outside (no `this.hovered` to reach in and poke), and the
- * one-allocation-per-engine cost is irrelevant — there's exactly one
- * engine per page.  Sibling subsystems (`tweenManager.ts`,
- * `thumbnailSubsystem.ts`, `spaceMouseSubsystem.ts`) all return closure
- * objects too, so adding an outlier here would diverge for no reason.
+ * `getCloud` / `getFamousMeta` / `getFamousXrefs` / `getMilliquasNames`
+ * / `getPoi` are accessor functions so the subsystem reads the LIVE
+ * source maps at call time.  Catalogs arrive after engine
+ * construction (async GPU init), sidecars even later, and tier swaps
+ * replace whole sources mid-session — a value snapshot taken at
+ * construction would be perpetually stale.
  *
- * ### Why state moves OUT of `state.picking`
+ * ### prebuiltInfo escape hatch on setSelected
  *
- * Spec D.3's option-A ("internal-only") wins over option-B
- * ("subsystem owns writes, `state.picking` mirrors them") because:
- *
- *   - Single source of truth.  Mirroring means two write sites — the
- *     subsystem AND any future code that forgets the subsystem exists.
- *     A typed accessor (`selection.hovered()`) catches the
- *     "I forgot to go through the subsystem" mistake at compile time.
- *   - The 5-ish external read sites are mechanical to update.  Most of
- *     them already lived inside `engine.ts` itself; the only
- *     cross-module reader is `renderFrame`'s `selected` halo uniform,
- *     which reads through the subsystem accessor cleanly.
- *   - `EnginePickingState` survives — it still owns the per-frame
- *     pick-throttle state (`latestMouseCss`, `lastPickedMouseCss`,
- *     `pickInFlight`, `pointerDown`).  Only the user-facing selection
- *     pair moves out, so the picking-state bag's responsibility narrows
- *     to "the throttle for the GPU pick pipeline" — a cleaner concept
- *     than the prior catch-all "anything pick-adjacent".
- *
- * ### Why callbacks fan-out from inside the subsystem
- *
- * Pre-extraction, callers had to remember to fire `cb.onHoverChange` /
- * `cb.onSelectChange` at every state-change site.  Six call sites for
- * `setSelected` (across engine.ts, wireInput, runFrame, public-handle
- * methods) and one for `setHovered` ALL relied on the inline helper
- * doing the deduplication + callback fan-out.  Move that knowledge
- * into the subsystem and the contract is: callers say "the user picked
- * X", the subsystem decides whether anything actually changed, and the
- * callback fires (or doesn't) by exactly one rule in one place.
- *
- * ### Deps shape — why closures, not snapshots
- *
- * `getCloud` / `getFamousMeta` / `getFamousXrefs` are passed as
- * accessor functions (not as values) so the subsystem reads the LIVE
- * cloud store + sidecar metadata at call time, not whatever was in
- * scope at engine construction.  This matters because:
- *
- *   - The cloud Map gets populated AFTER engine construction (the GPU
- *     init IIFE runs async and calls `state.sources.catalogs.set(...)`),
- *     so a snapshot taken at construction would be perpetually empty.
- *   - Famous-meta sidecars arrive even later — sometime during
- *     `wireSlots`.  A snapshot would freeze the empty array.
- *   - Tier swaps replace the whole cloud per source; the accessor
- *     re-reads on each call, so post-swap selections see the new cloud
- *     without any re-binding.
- *
- * The same closure-deps pattern is what `state.subsystems.spaceMouse`
- * uses for its `cancelTween` callback, and what the `clickResolver`
- * uses for its visibility-mask read.
- *
- * ### prebuiltInfo — why an extra parameter on setSelected
- *
- * `selectByAlias` (from a deep-link drain or palette pick) is called
- * the moment the data-side `state.sources.catalogs` map gets populated,
- * BUT before the GPU upload completes — the renderer's `loadedSources()`
- * doesn't yet include the source.  In that window, `galaxyInfoFor` sees
- * the cloud and would build the right GalaxyInfo, but for symmetry with
- * pre-extraction behaviour (and to defend against potential future
- * timing changes) the caller can pass a pre-built GalaxyInfo to bypass
- * the lookup entirely.  The halo will still light up on the next
- * frame or two once the GPU upload settles.
+ * `selectByAlias` can fire from a deep-link drain the moment the
+ * data-side catalog arrives but BEFORE the GPU upload completes.  In
+ * that window the cloud-lookup would briefly return null and the
+ * InfoCard would render blank.  The optional second arg to
+ * `setSelected` hands a pre-built GalaxyInfo straight to the
+ * callback, bypassing the lookup until the GPU upload settles.
+ * `commitGalaxyFocus` always forwards `info`, so every focus path
+ * gets the defense for free.
  */
 
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
+import type { FocusableTarget } from '../../../@types/engine/FocusableTarget';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { SelectionInput } from '../../../@types/engine/subsystems/SelectionInput';
+import type { GalaxySelection, Selection } from '../../../@types/engine/subsystems/Selection';
 import type { SelectionSubsystem } from '../../../@types/engine/subsystems/SelectionSubsystem';
 import type { CreateSelectionSubsystemInput } from '../../../@types/engine/subsystems/CreateSelectionSubsystemInput';
 import { buildGalaxyInfo } from '../helpers/galaxyInfoBuilder';
 
 /**
  * Are these two selections value-equal?  Both null → equal; both
- * non-null with matching `(source, localIdx)` → equal; otherwise
+ * non-null with matching discriminant + payload → equal; otherwise
  * different.  Lifted out of the closure so it doesn't get re-allocated
  * per engine instance (purely cosmetic; engine is a singleton anyway).
  */
-function selectionEq(
-  a: SelectionInput | null,
-  b: SelectionInput | null,
-): boolean {
+function selectionEq(a: Selection | null, b: Selection | null): boolean {
   if (a === null && b === null) return true;
   if (a === null || b === null) return false;
-  return a.source === b.source && a.localIdx === b.localIdx;
+  if (a.kind !== b.kind) return false;
+  if (a.kind === 'galaxy' && b.kind === 'galaxy') {
+    return a.source === b.source && a.localIdx === b.localIdx;
+  }
+  if (a.kind === 'poi' && b.kind === 'poi') {
+    return a.id === b.id;
+  }
+  return false;
 }
 
 export function createSelectionSubsystem(
   input: CreateSelectionSubsystemInput,
 ): SelectionSubsystem {
-  const { cb, getCloud, getFamousMeta, getFamousXrefs, getMilliquasNames } = input;
+  const { cb, getCloud, getFamousMeta, getFamousXrefs, getMilliquasNames, getPoi } = input;
 
-  // Internal mutable state.  Closure-captured `let`s so they're
-  // genuinely inaccessible from outside (no `this.hovered` for a
-  // future caller to reach in and poke).  Both start null — no
-  // selection until the first hover pick / click resolves.
-  let hovered: SelectionInput | null = null;
-  let selected: SelectionInput | null = null;
+  // Closure-captured `let`s — genuinely inaccessible from outside.
+  // Both start null; populated by the first hover pick / click resolve.
+  let hovered: Selection | null = null;
+  let selected: Selection | null = null;
 
   /**
    * Build a GalaxyInfo for a `(source, localIdx)` selection, or null if
@@ -133,7 +80,7 @@ export function createSelectionSubsystem(
    * semantics: "we don't have data for that pick; render no card,
    * the next frame's pick will succeed".
    */
-  function galaxyInfoFor(sel: SelectionInput): GalaxyInfo | null {
+  function galaxyInfoFor(sel: GalaxySelection): GalaxyInfo | null {
     const c = getCloud(sel.source);
     if (!c) return null;
     if (sel.localIdx < 0 || sel.localIdx >= c.count) return null;
@@ -147,30 +94,37 @@ export function createSelectionSubsystem(
     );
   }
 
-  function setHovered(sel: SelectionInput | null): void {
-    if (selectionEq(sel, hovered)) return;
-    hovered = sel;
-    // Hoist the info computation so both flat and nested fires receive
-    // the same value (and we don't pay for `galaxyInfoFor` twice).
-    const info = sel !== null ? galaxyInfoFor(sel) : null;
-    cb.selection?.onHoverChange?.(info);
+  /**
+   * Resolve a Selection to its expanded `FocusableTarget` (GalaxyInfo
+   * | PointOfInterest), or null.  Galaxy variant uses the cloud
+   * lookup; POI variant resolves through `getPoi` (which the engine
+   * wires to `poiSubsystem.findPoi`).  Unknown POI ids resolve to
+   * null — fire-the-callback-with-null is the right semantics for a
+   * stale id pick.
+   */
+  function resolveTarget(sel: Selection | null): FocusableTarget | null {
+    if (sel === null) return null;
+    return sel.kind === 'galaxy' ? galaxyInfoFor(sel) : getPoi(sel.id);
   }
 
-  function setSelected(
-    sel: SelectionInput | null,
-    prebuiltInfo?: GalaxyInfo | null,
-  ): void {
+  function setHovered(sel: Selection | null): void {
+    if (selectionEq(sel, hovered)) return;
+    hovered = sel;
+    cb.selection?.onHoverChange?.(resolveTarget(sel));
+  }
+
+  function setSelected(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null): void {
     if (selectionEq(sel, selected)) return;
     selected = sel;
     // `prebuiltInfo` short-circuits the cloud lookup for the
     // `selectByAlias` race window — see the module header for the
-    // pre-GPU-upload story.  The `!== undefined` check distinguishes
-    // "caller passed null on purpose" from "caller didn't pass it":
-    // an explicit null means "I have no info, fire the callback with
-    // null", whereas `undefined` means "look it up yourself".
-    const info =
-      prebuiltInfo !== undefined ? prebuiltInfo : sel !== null ? galaxyInfoFor(sel) : null;
-    cb.selection?.onSelectChange?.(info);
+    // pre-GPU-upload story.  Galaxy-only escape hatch; POI ids
+    // resolve directly through the POI table.
+    const target =
+      sel !== null && sel.kind === 'galaxy' && prebuiltInfo !== undefined
+        ? prebuiltInfo
+        : resolveTarget(sel);
+    cb.selection?.onSelectChange?.(target);
   }
 
   function destroy(): void {
@@ -191,7 +145,6 @@ export function createSelectionSubsystem(
     selected: () => selected,
     setHovered,
     setSelected,
-    galaxyInfoFor,
     destroy,
   };
   subsystem satisfies Destroyable;

@@ -278,43 +278,18 @@ const ALL_CATEGORIES_VISIBLE: Readonly<Record<PoiCategory, boolean>> = {
   void: true,
 };
 
-export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubsystem {
-  // Construction-time callback bag.  Optional so the existing test
-  // suite (which only exercises the marker / selection / produceLabels
-  // paths) can keep constructing the subsystem with zero args.  The
-  // runtime engine always passes `cb`; see `engine.ts` createPoiSubsystem
-  // call site for the production wire-up.  Only `selection.onPoiHoverChange`
-  // is read today — mirrors the selectionSubsystem pattern of "subsystem
-  // owns its own callback fires from the same site that does the dedupe".
-  const { cb } = input;
+export function createPoiSubsystem(_input: CreatePoiSubsystemInput = {}): PoiSubsystem {
   // One-shot fade-in flag for the 'poi' label layer. Flips true on
   // the first frame that emits a non-empty label set.
   let didFireFadeIn = false;
   let pois: readonly PointOfInterest[] = [];
-  // Two independent visibility axes — see the module header for the
-  // history.  `markerVisibility` gates the ring + halo descriptors in
-  // `produceMarkers`; `labelVisibility` gates the text labels in
-  // `produceLabels`.  Both default to "every category on" so the
-  // pre-split behaviour (everything visible) is preserved; the
-  // SettingsPanel can now flip one without affecting the other.
+  // Two independent visibility axes.  `markerVisibility` gates the
+  // ring + halo descriptors in `produceMarkers`; `labelVisibility`
+  // gates the text labels in `produceLabels`.  Both default to "every
+  // category on"; the SettingsPanel flips one without affecting the
+  // other.
   let markerVisibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
   let labelVisibility: Readonly<Record<PoiCategory, boolean>> = ALL_CATEGORIES_VISIBLE;
-  // The currently-focused POI id, or null when nothing is selected.
-  // Kept as module-scoped factory state alongside `pois` / `visibility`
-  // so produceMarkers can read it without an extra arg — same idiom
-  // the rest of the subsystem already uses.  Selection is a pure
-  // marker-side concern (it only affects ringAlpha), so it does NOT
-  // need to live in EngineState.
-  let selectedPoiId: string | null = null;
-  // Mirror of `selectedPoiId` for the hover path.  Kept as a SEPARATE
-  // field (rather than collapsed into a `{ hovered, selected }` tuple)
-  // because that separation is structurally what enforces the plan-5
-  // hard constraint: produceMarkers reads `selectedPoiId` only, and
-  // never references `hoveredPoiId` — so a hover can't accidentally
-  // bump ringAlpha.  Collapsing the two would invite a future edit
-  // that reads the tuple in produceMarkers and silently breaks the
-  // visual contract.
-  let hoveredPoiId: string | null = null;
 
   function setPois(next: readonly PointOfInterest[]): void {
     // Defensive copy — caller can mutate their array freely without
@@ -342,61 +317,11 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     labelVisibility = { ...labelVisibility, [category]: visible };
   }
 
-  function setSelectedPoi(poiId: string | null): void {
-    if (poiId === null) {
-      selectedPoiId = null;
-      return;
-    }
-    // Defensive: only accept ids that actually appear in the current
-    // POI table.  A deep-link drain firing before the POI table is
-    // populated, or after a tier swap that replaced the table, would
-    // otherwise leave a stale id stranded on this subsystem with no
-    // matching POI to highlight.  Silently ignoring the unknown id
-    // (rather than throwing) keeps URL handlers simple: they can
-    // forward whatever the user pasted without pre-validating.
-    const exists = pois.some((p) => p.id === poiId);
-    if (!exists) return;
-    selectedPoiId = poiId;
-  }
-
-  function getSelectedPoiId(): string | null {
-    return selectedPoiId;
-  }
-
-  function setHoveredPoi(poiId: string | null): void {
-    // Resolve the *effective* next id first so the equality short-
-    // circuit and the callback fan-out both run against the same value.
-    //   - null  → clear, no defensive existence check needed.
-    //   - non-null but unknown id → defensively ignored.  The field
-    //     stays at its prior value AND the callback does NOT fire
-    //     (matching the pre-callback contract that an unknown id
-    //     produces no observable change).  Same rationale as
-    //     setSelectedPoi: a hover pick from the previous frame can
-    //     resolve against a now-replaced POI table after a tier swap;
-    //     silently dropping rather than retaining a stale id avoids
-    //     leaking a phantom hover through to the React preview card.
-    if (poiId !== null) {
-      const exists = pois.some((p) => p.id === poiId);
-      if (!exists) return;
-    }
-    // Equality short-circuit on the prior id — mirror of
-    // selectionSubsystem.setHovered's selectionEq guard.  React
-    // consumers rely on this dedupe so they don't re-render every
-    // throttled pick that resolves to the same POI the cursor was
-    // already over.
-    if (poiId === hoveredPoiId) return;
-    hoveredPoiId = poiId;
-    // Callback fires AFTER the field update so any synchronous reader
-    // (e.g. a getHoveredPoiId call from inside the callback itself)
-    // sees the freshly-committed value.  The callback chain reads as
-    // selection.onPoiHoverChange — sits next to onHoverChange (galaxy)
-    // because hover is a selection-class concept (see
-    // EngineCallbacks.d.ts).
-    cb?.selection?.onPoiHoverChange?.(poiId);
-  }
-
-  function getHoveredPoiId(): string | null {
-    return hoveredPoiId;
+  function findPoi(id: string): PointOfInterest | null {
+    // O(n) walk; n ≤ ~50 (clusters + SCs + voids + famous galaxies),
+    // so this is invisible at the budget level even when the
+    // selectionSubsystem looks up POI hovers per pick frame.
+    return pois.find((p) => p.id === id) ?? null;
   }
 
   function getPoisForCategory(category: PoiCategory): readonly PointOfInterest[] {
@@ -599,16 +524,18 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     return { labels, lines, awake: false };
   }
 
-  function produceMarkers(_state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[] {
+  function produceMarkers(state: EngineState, ctx: ReadyFrameContext): readonly ClusterMarkerDescriptor[] {
     const out: ClusterMarkerDescriptor[] = [];
-    // The same vertical-fov recovery produceLabels does — kept local
-    // so the two producers don't share mutable state.
     const halfH = ctx.canvasSize.height * 0.5;
     const fovYRad = 2 * Math.atan(halfH / ctx.drawPxPerRad);
-    // pxPerRad along the screen-Y axis at the current canvas size.
-    // (Same form youAreHereSubsystem and the labels use.)
     const pxPerRad = ctx.canvasSize.height * 0.5 / Math.tan(fovYRad * 0.5);
     const [cx, cy, cz] = ctx.drawCamPos;
+    // Selected POI id (if any) — read straight off the selection
+    // subsystem each frame so produceMarkers stays a pure function of
+    // engine state.  Galaxy selections leave this null, which means
+    // no ring gets the selection-bump alpha.
+    const sel = state.subsystems.selection.selected();
+    const selectedPoiId = sel !== null && sel.kind === 'poi' ? sel.id : null;
 
     for (const p of pois) {
       // Marker-axis gate only.  See the symmetric comment in
@@ -718,10 +645,7 @@ export function createPoiSubsystem(input: CreatePoiSubsystemInput = {}): PoiSubs
     clearPois,
     setCategoryMarkerVisible,
     setCategoryLabelVisible,
-    setSelectedPoi,
-    getSelectedPoiId,
-    setHoveredPoi,
-    getHoveredPoiId,
+    findPoi,
     getPoisForCategory,
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.

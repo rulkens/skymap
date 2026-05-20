@@ -57,7 +57,10 @@ describe('poiSubsystem.produceMarkers → clusterMarkerRenderer.setMarkers', () 
     ] as PointOfInterest[]);
 
     const state = {
-      subsystems: { fades: { fadeTo: () => Promise.resolve() } },
+      subsystems: {
+        fades: { fadeTo: () => Promise.resolve() },
+        selection: { selected: () => null },
+      },
     } as unknown as EngineState;
     const ctx = {
       drawCamPos: [0, 0, 1000],

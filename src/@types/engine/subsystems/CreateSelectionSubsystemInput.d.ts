@@ -3,6 +3,7 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
+import type { PointOfInterest } from './PointOfInterest';
 
 /**
  * Hooks the subsystem needs from the outside world.  All passed once
@@ -27,4 +28,12 @@ export type CreateSelectionSubsystemInput = {
    * IAU "MQ J<RA><Dec>" headline in that window.
    */
   getMilliquasNames: () => readonly string[];
+  /**
+   * Live read of the POI table.  Closure (not snapshot) so a tier
+   * swap that replaces the POI list lands in subsequent lookups
+   * without re-binding.  Returns null for unknown ids — the
+   * subsystem treats that as "no POI to expand" and fires the
+   * callback with null.
+   */
+  getPoi: (id: string) => PointOfInterest | null;
 };

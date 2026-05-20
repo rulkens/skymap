@@ -434,25 +434,24 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         // on consecutive same-kind picks are O(1) no-ops.
         if (pick === null) {
           state.subsystems.selection.setHovered(null);
-          state.subsystems.pois.setHoveredPoi(null);
         } else if (pick.kind === 'galaxy') {
           state.subsystems.selection.setHovered({
+            kind: 'galaxy',
             source: pick.source,
             localIdx: pick.localIdx,
           });
-          state.subsystems.pois.setHoveredPoi(null);
         } else {
           // POI variants (cluster / supercluster / void) — resolve via
-          // the shared helper introduced in plan-5 task 3 so the click
-          // and hover paths agree byte-for-byte on the lookup.  An
-          // out-of-bounds index or a missing POI table produces null;
-          // treat the same as "no POI hovered".
+          // the shared helper so the click and hover paths agree
+          // byte-for-byte on the lookup.  An out-of-bounds index or
+          // missing POI produces null; same as "no hover".
           const poi = resolvePoiFromPick(state.subsystems.pois, {
             category: pick.kind,
             poiIndex: pick.poiIndex,
           });
-          state.subsystems.selection.setHovered(null);
-          state.subsystems.pois.setHoveredPoi(poi?.id ?? null);
+          state.subsystems.selection.setHovered(
+            poi !== null ? { kind: 'poi', id: poi.id } : null,
+          );
         }
         // No scheduler.requestRender() here intentionally.
         // The hover state only feeds the React InfoCard text —

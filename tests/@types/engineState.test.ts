@@ -183,6 +183,7 @@ describe('EngineState type', () => {
           getFamousMeta: () => [],
           getFamousXrefs: () => ({}),
           getMilliquasNames: () => [],
+          getPoi: () => null,
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
@@ -368,6 +369,7 @@ describe('EngineState type', () => {
           getFamousMeta: () => [],
           getFamousXrefs: () => ({}),
           getMilliquasNames: () => [],
+          getPoi: () => null,
         }),
         biasCorrection: createBiasCorrectionSubsystem({
           getMode: () => stateRef.current!.settings.bias.mode,
@@ -403,14 +405,14 @@ describe('EngineState type', () => {
     state.sources.drawMask = 0xff;
     // hovered/selected aren't on `state.picking` anymore — exercise the
     // subsystem's setter instead.
-    state.subsystems.selection.setHovered({ source: 1 as SourceType, localIdx: 42 });
+    state.subsystems.selection.setHovered({ kind: 'galaxy', source: 1 as SourceType, localIdx: 42 });
     state.picking.pickInFlight = true;
 
     expect(state.settings.points.brightness).toBe(2.5);
     expect(state.settings.bias.absMagLimit).toBe(-20);
     expect(state.sources.pickMask).toBe(0xff);
     expect(state.sources.drawMask).toBe(0xff);
-    expect(state.subsystems.selection.hovered()).toEqual({ source: 1, localIdx: 42 });
+    expect(state.subsystems.selection.hovered()).toEqual({ kind: 'galaxy', source: 1, localIdx: 42 });
     expect(state.picking.pickInFlight).toBe(true);
   });
 });

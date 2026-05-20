@@ -2,16 +2,14 @@
 /**
  * clearAll — unified selection teardown helper.
  *
- * Mirrors the testing style of commitFocus.test.ts.  Asserts:
- *   1. Galaxy selection cleared (when present) + onFocusChange(null) fired.
- *   2. POI selection cleared + onPoiFocusChange(null) fired.
- *   3. requestRender called at least once for the combined teardown
- *      (both teardowns paint in the same frame).
- *   4. Idempotent: with neither selected, still fires the POI teardown
- *      (mirrors the existing clearPoiFocus semantic — it doesn't gate
- *      on presence), but skips the galaxy callback (current
- *      clearSelection only fires onFocusChange when something was set).
- *   5. Order: galaxy teardown first, POI teardown second.
+ * Asserts:
+ *   1. setSelected(null) is called when something was selected
+ *      (selectionSubsystem itself fans out onSelectChange(null) +
+ *      onPoiFocusChange(null), so this helper just kicks the slot
+ *      and adds the focus-callback layer on top).
+ *   2. onFocusChange(null) fires alongside the slot clear.
+ *   3. Idempotent: skips both branches when nothing was selected.
+ *   4. requestRender is called so the cleared frame paints.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -19,67 +17,43 @@ import { clearAll } from '../../../../src/services/engine/helpers/clearAll';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 
-function makeFixtures(opts: { hasGalaxySelection: boolean }) {
+function makeFixtures(opts: { hasSelection: boolean }) {
   const setSelected = vi.fn();
-  const setSelectedPoi = vi.fn();
   const selected = vi.fn(() =>
-    opts.hasGalaxySelection ? { source: 0, localIdx: 1 } : null,
+    opts.hasSelection ? ({ kind: 'galaxy', source: 0, localIdx: 1 } as const) : null,
   );
   const requestRender = vi.fn();
   const onFocusChange = vi.fn();
-  const onPoiFocusChange = vi.fn();
   const state = {
     subsystems: {
       selection: { selected, setSelected },
-      pois: { setSelectedPoi },
       scheduler: { requestRender },
     },
   } as unknown as EngineState;
   const cb = {
-    camera: { onFocusChange, onPoiFocusChange },
+    camera: { onFocusChange },
   } as unknown as EngineCallbacks;
-  return {
-    state,
-    cb,
-    setSelected,
-    setSelectedPoi,
-    requestRender,
-    onFocusChange,
-    onPoiFocusChange,
-  };
+  return { state, cb, setSelected, requestRender, onFocusChange };
 }
 
 describe('clearAll', () => {
-  it('clears galaxy + POI when galaxy is selected', () => {
-    const f = makeFixtures({ hasGalaxySelection: true });
+  it('clears the selection slot + fires onFocusChange when something was selected', () => {
+    const f = makeFixtures({ hasSelection: true });
     clearAll(f.state, f.cb);
     expect(f.setSelected).toHaveBeenCalledWith(null);
     expect(f.onFocusChange).toHaveBeenCalledWith(null);
-    expect(f.setSelectedPoi).toHaveBeenCalledWith(null);
-    expect(f.onPoiFocusChange).toHaveBeenCalledWith(null);
   });
 
-  it('skips galaxy-clear branch when nothing is selected, still fires POI clear', () => {
-    const f = makeFixtures({ hasGalaxySelection: false });
+  it('skips both branches when nothing was selected', () => {
+    const f = makeFixtures({ hasSelection: false });
     clearAll(f.state, f.cb);
     expect(f.setSelected).not.toHaveBeenCalled();
     expect(f.onFocusChange).not.toHaveBeenCalled();
-    expect(f.setSelectedPoi).toHaveBeenCalledWith(null);
-    expect(f.onPoiFocusChange).toHaveBeenCalledWith(null);
   });
 
-  it('calls requestRender at least once (combined teardown is one render)', () => {
-    const f = makeFixtures({ hasGalaxySelection: true });
+  it('calls requestRender so the cleared frame paints', () => {
+    const f = makeFixtures({ hasSelection: true });
     clearAll(f.state, f.cb);
     expect(f.requestRender).toHaveBeenCalled();
-  });
-
-  it('fires galaxy teardown BEFORE POI teardown (observer sees clean collapse)', () => {
-    const f = makeFixtures({ hasGalaxySelection: true });
-    const order: string[] = [];
-    f.setSelected.mockImplementation(() => order.push('galaxy'));
-    f.setSelectedPoi.mockImplementation(() => order.push('poi'));
-    clearAll(f.state, f.cb);
-    expect(order).toEqual(['galaxy', 'poi']);
   });
 });

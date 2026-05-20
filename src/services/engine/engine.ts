@@ -27,7 +27,7 @@
  * modules so this file can stay focused on the imperative orchestration:
  *
  *   Pure helpers:
- *   - `focusTween.ts`          — focus camera tween constants + distance helper
+ *   - `galaxyFocusDistance.ts` / `poiFocusDistance.ts` — framing-distance helpers
  *   - `galaxyInfoBuilder.ts`   — buildGalaxyInfo / maxAbsCoord / niceRound
  *   - `cloudLoader.ts`         — parallel /data/{sdss,2mrs,glade}.bin fetch + synthetic fallback
  *   - `cameraFraming.ts`       — bbox + FOV → initial camera snapshot
@@ -119,7 +119,7 @@ import { HDR_PASSES, UI_PASSES } from './frame/passes';
 import { buildGalaxyInfo } from './helpers/galaxyInfoBuilder';
 import { clearAll } from './helpers/clearAll';
 import { commitFocus } from './helpers/commitFocus';
-import { dispatchFocusOn } from './helpers/dispatchFocusOn';
+import { commitGalaxyFocus } from './helpers/commitGalaxyFocus';
 import type { FocusableTarget } from '../../@types/engine/FocusableTarget';
 import { isPoi } from './isPoi';
 import { logCameraState } from './helpers/logCameraState';
@@ -590,6 +590,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
         getFamousMeta: () => state.sources.famousMeta,
         getFamousXrefs: () => state.sources.famousXrefs,
         getMilliquasNames: () => state.sources.milliquasNames,
+        // Forward-reference: `state.subsystems.pois` is bound later in
+        // this same literal but the closure resolves at call time,
+        // long after the literal completes.  Mirrors the cloud/famous
+        // accessors above.
+        getPoi: (id) => state.subsystems.pois.findPoi(id),
       }),
 
       // ── Bias-correction subsystem (Spec E phase E.3 + E.4) ────────
@@ -630,7 +635,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // happens right after this state literal (see below) so the
       // director sees both producers before the first frame fires.
       labelDirector: createLabelDirectorSubsystem(),
-      pois: createPoiSubsystem({ cb }),
+      pois: createPoiSubsystem({}),
 
       // ── Render scheduler — eager, capture-safe ────────────────────
       //
@@ -911,7 +916,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   function focusOn(target: FocusableTarget): void {
     // Dispatch by type — public surface is one method, but the two
     // commit paths stay separate (different tween shapes, different
-    // cam-null gating, different callback surface).  See dispatchFocusOn
+    // cam-null gating, different callback surface).  See commitFocus
     // for the predicate-based routing.
     //
     // The galaxy branch retains the cam-null guard from the original
@@ -921,7 +926,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // guard (see commitPoiFocus module header for why deep-link drains
     // need POI state to land pre-camera).
     if (!isPoi(target) && !state.cam) return;
-    dispatchFocusOn(state, cb, target);
+    commitFocus(state, cb, target);
   }
 
   function focusOnHome(): void {
@@ -997,8 +1002,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
 
     // selectFamous is a deliberate user focus action (palette pick),
     // so the camera-focus target moves to this galaxy too — hence
-    // bundling the selection key into `commitFocus`.
-    commitFocus(state, cb, info, { key: { source: Source.Famous, localIdx } });
+    commitGalaxyFocus(state, cb, info);
   }
 
   type SelectByAliasTarget = {
@@ -1031,7 +1035,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     );
     if (!info) return;
 
-    commitFocus(state, cb, info, { key: { source, localIdx }, info });
+    commitGalaxyFocus(state, cb, info);
   }
 
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {

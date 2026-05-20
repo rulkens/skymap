@@ -13,7 +13,7 @@
  *   fromTarget: vec3.clone(cam.target as vec3),
  *   toTarget: vec3.fromValues(info.x, info.y, info.z),
  *   fromDistance: cam.distance,
- *   toDistance: focusDistanceMpc(info.diameterKpc),
+ *   toDistance: galaxyFocusDistance(info.diameterKpc),
  *   fromYaw: cam.yaw,
  *   toYaw: cam.yaw,
  *   fromPitch: cam.pitch,
@@ -74,7 +74,8 @@ import { vec3 } from 'gl-matrix';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { TweenTarget } from '../../../@types/camera/TweenTarget';
-import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
+import { FOCUS_TWEEN_MS } from './focusTweenDuration';
+import { galaxyFocusDistance } from './galaxyFocusDistance';
 
 /**
  * Start a focus tween toward `target`, snapshotting the current camera
@@ -83,7 +84,7 @@ import { FOCUS_TWEEN_MS, focusDistanceMpc } from './focusTween';
  * Yaw and pitch are preserved — the user keeps their orientation; only
  * the orbit target and distance change.  The duration is the
  * project-wide `FOCUS_TWEEN_MS`; the destination distance is derived
- * from `target.diameterKpc` via `focusDistanceMpc` (which clamps to a
+ * from `target.diameterKpc` via `galaxyFocusDistance` (which clamps to a
  * sensible minimum so dwarfs don't end up framing the camera inside
  * the disk).
  *
@@ -103,7 +104,7 @@ export function tweenToGalaxy(state: EngineState, target: TweenTarget): void {
     fromTarget: vec3.clone(cam.target as vec3),
     toTarget: vec3.fromValues(target.x, target.y, target.z),
     fromDistance: cam.distance,
-    toDistance: focusDistanceMpc(target.diameterKpc),
+    toDistance: galaxyFocusDistance(target.diameterKpc),
     fromYaw: cam.yaw,
     toYaw: cam.yaw,
     fromPitch: cam.pitch,
