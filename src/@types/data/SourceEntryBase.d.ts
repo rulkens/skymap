@@ -1,12 +1,10 @@
 /**
- * Fields shared by every row of the SOURCE_REGISTRY, regardless of whether
- * it's a survey or a POI. Survey- and POI-specific fields live in
- * `SurveySourceEntry` and `PoiSourceEntry` respectively, which intersect
- * with this base.
+ * Fields shared by every row of the SOURCE_REGISTRY, regardless of kind.
+ * Each variant (`SurveySourceEntry`, `PoiSourceEntry`, ...) intersects with
+ * this base and adds its own discriminator (`type: '<kind>'`) plus
+ * kind-specific fields.
  */
 export type SourceEntryBase = {
-  /** Discriminator — `'survey'` for SurveySourceEntry, `'poi'` for PoiSourceEntry. */
-  readonly type: 'survey' | 'poi';
   /** Display name shown in the UI (e.g. `'SDSS'`, `'GLADE'`, `'Cluster'`). */
   readonly label: string;
   /**

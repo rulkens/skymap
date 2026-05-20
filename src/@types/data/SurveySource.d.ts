@@ -1,11 +1,13 @@
-import { Source } from '../../data/sources';
+import { SOURCE_REGISTRY } from '../../data/sources';
 
 /**
- * Sources that participate in the points pipeline (have `.bin` data).
- * Excludes the POI codes (Cluster, Supercluster, Void), which are
- * pick-encoding-only and have no per-survey metadata.
+ * Source codes whose `SOURCE_REGISTRY` entry has `type: 'survey'` —
+ * derived from the registry rather than listed explicitly, so adding
+ * a survey is a single-place edit (the new registry entry) and no
+ * exclusion list needs updating when a new kind is added.
  */
-export type SurveySource = Exclude<
-  Source,
-  typeof Source.Cluster | typeof Source.Supercluster | typeof Source.Void
->;
+export type SurveySource = {
+  [K in keyof typeof SOURCE_REGISTRY]: (typeof SOURCE_REGISTRY)[K] extends { type: 'survey' }
+    ? (typeof SOURCE_REGISTRY)[K]['code']
+    : never;
+}[keyof typeof SOURCE_REGISTRY];

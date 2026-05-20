@@ -1,7 +1,12 @@
-import { Source } from '../../data/sources';
+import { SOURCE_REGISTRY } from '../../data/sources';
 
-/** Pick-encoding-only codes for cluster/supercluster/void markers. */
-export type PoiSource =
-  | typeof Source.Cluster
-  | typeof Source.Supercluster
-  | typeof Source.Void;
+/**
+ * Source codes whose `SOURCE_REGISTRY` entry has `type: 'poi'` — markers
+ * used by the pick encoding (cluster / supercluster / void anchors).
+ * Derived from the registry rather than listed explicitly.
+ */
+export type PoiSource = {
+  [K in keyof typeof SOURCE_REGISTRY]: (typeof SOURCE_REGISTRY)[K] extends { type: 'poi' }
+    ? (typeof SOURCE_REGISTRY)[K]['code']
+    : never;
+}[keyof typeof SOURCE_REGISTRY];
