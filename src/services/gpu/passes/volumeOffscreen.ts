@@ -1,62 +1,61 @@
 /**
- * volumeOffscreen — owns the half-resolution rgba16float render target
- * that the scalar-volume raymarch draws into.
+ * volumeOffscreen — downsampled rgba16float render target for the
+ * scalar-volume raymarch.  Allocated at
+ * `floor(canvas / VOLUME_RENDER_SCALE_DIVISOR)` per axis; the upsample
+ * pass bilinearly samples it back into the HDR target.
  *
- * ### Why it exists
+ * ### Why downsample
  *
- * The scalar-volume fragment shader is the most expensive per-pixel
- * pass in the renderer (192 raymarch steps × N active fields × every
- * back-facing cube fragment).  On a 4K canvas with two fields enabled
- * that's tens of millions of texture samples per frame.  The 3D volume
- * texture is bandlimited and the per-fragment dither already covers
- * sub-pixel aliasing, so rendering at full backing-store resolution
- * wastes work.
+ * The scalar-volume fragment shader is the heaviest per-pixel pass
+ * (192 raymarch steps × N active fields × every back-facing cube
+ * fragment).  The 3D volume texture is bandlimited and the per-fragment
+ * dither already covers sub-pixel aliasing, so full-res raymarching is
+ * wasted work.  Bilinear interpolation on the way back up is invisible
+ * for low-frequency volumetric data.
  *
- * The fix: every volume field raymarches into THIS target at half each
- * axis (1/4 the fragment count), then a fullscreen upsample pass
- * bilinearly samples it and additively blends the result into the HDR
- * target.  The math is identical up to bilinear interpolation, which
- * is fine for low-frequency volumetric data.
+ * ### Why separate from PostProcess
  *
- * ### Why a separate module from PostProcess
- *
- * `PostProcess` owns the HDR target because that target is the
- * tone-map's *input*.  The half-res target is the volume pass's
- * *output* — it's an intermediate buffer that never reaches the
- * tone-map.  Co-locating both targets on one module conflated two
- * responsibilities and made the role of `PostProcess` ambiguous.
- * Splitting keeps each module focused on one render target with one
- * downstream consumer.
+ * `PostProcess` owns the HDR target — the tone-map's *input*.  This
+ * offscreen is the volume pass's *output* — an intermediate buffer
+ * that never reaches the tone-map.  One module per render target keeps
+ * each consumer relationship explicit.
  *
  * ### Why on `state.gpu.volumeOffscreen` instead of inside the renderer
  *
- * The volume *renderer* (`scalarVolumeRenderer`) is a draw-only
- * helper — it does not own its colour attachment.  The attachment is
- * provided by whoever opens the render pass.  Keeping the target
- * here, parallel to `state.gpu.postProcess`, matches the existing
- * pattern where render-target lifetimes are owned by the engine state
- * and renderers are pure draw producers.
+ * `scalarVolumeRenderer` is a draw-only helper — its colour attachment
+ * is provided by whoever opens the render pass.  Render-target
+ * lifetimes live on engine state, parallel to `state.gpu.postProcess`;
+ * renderers are pure draw producers.
  *
  * ### Why `floor` not `round`
  *
- * `floor(canvas / 2)` matches the upsample shader's "sample at uv"
- * semantics — sampling a half-res target with linear filtering at
- * full-res fragment UVs is equivalent to a 2x bilinear upscale.  Min
- * 1 px protects against the degenerate `floor(1 / 2) = 0` case (legal
- * canvas sizes, illegal texture sizes).
+ * `floor(canvas / N)` matches the upsample shader's "sample at uv"
+ * semantics — bilinear sampling of a downsampled target at full-res
+ * fragment UVs is equivalent to an Nx upscale.  Min 1 px guards small
+ * canvas sizes where `floor(...)` would otherwise yield 0 (illegal
+ * texture dimension).
  *
- * ### Lifetime
+ * ### Keep the divisor in sync with `encodeVolumes.ts`
  *
- * The half-res target's lifetime mirrors the HDR target's: both are
- * sized to the canvas backing store, both recreated on resize, both
- * released on destroy.  But that's coincidence, not coupling — the
- * resize call site simply invokes both `postProcess.resize(...)` and
- * `volumeOffscreen.resize(...)`.  Either module can change shape
- * without touching the other.
+ * Both files import `VOLUME_RENDER_SCALE_DIVISOR` from here to compute
+ * the same `floor(canvas / N)` size.  The two must stay equal —
+ * drift would either tile the offscreen target (viewport > texture)
+ * or waste texels (viewport < texture).
  */
 
 import type { VolumeOffscreen } from '../../../@types/rendering/VolumeOffscreen';
 import type { Size } from '../../../@types/rendering/Size';
+
+/**
+ * Per-axis downsample factor for the volume offscreen target.
+ *
+ * Total fragment-count reduction is the square of this value (e.g. 4 →
+ * 1/16 the fragments).  `encodeVolumes.ts` imports the SAME constant
+ * when computing the viewport passed to `scalarVolumeRenderer.draw`, so
+ * "viewport == texture size" is enforced by construction.  Tune this
+ * dial here and both sites move together.
+ */
+export const VOLUME_RENDER_SCALE_DIVISOR = 3;
 
 export function createVolumeOffscreen(device: GPUDevice, size: Size): VolumeOffscreen {
   let texture: GPUTexture | null = null;
@@ -64,10 +63,10 @@ export function createVolumeOffscreen(device: GPUDevice, size: Size): VolumeOffs
 
   function allocate(s: Size): void {
     if (texture) texture.destroy();
-    const w = Math.max(1, Math.floor(s.width / 2));
-    const h = Math.max(1, Math.floor(s.height / 2));
+    const w = Math.max(1, Math.floor(s.width / VOLUME_RENDER_SCALE_DIVISOR));
+    const h = Math.max(1, Math.floor(s.height / VOLUME_RENDER_SCALE_DIVISOR));
     texture = device.createTexture({
-      label: 'volume-half-res-target',
+      label: 'volume-quarter-res-target',
       format: 'rgba16float',
       size: { width: w, height: h },
       usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
