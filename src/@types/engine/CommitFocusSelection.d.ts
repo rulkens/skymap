@@ -1,16 +1,16 @@
 import type { GalaxyInfo } from './GalaxyInfo';
-import type { SelectionInput } from './subsystems/SelectionInput';
+import type { GalaxySelection } from './subsystems/Selection';
 
 /**
  * Optional selection update bundled into a `commitFocus` call.
  *
- * `key` is the `(source, localIdx)` pair the selection subsystem
- * stores; `info` is an optional prebuilt GalaxyInfo that becomes the
- * `prebuiltInfo` argument to `setSelected` — see the module header for
- * why each caller does or doesn't supply it.
+ * `key` identifies the galaxy the selection subsystem stores; `info`
+ * is an optional prebuilt GalaxyInfo that becomes the `prebuiltInfo`
+ * argument to `setSelected` — see the module header for why each
+ * caller does or doesn't supply it.
  */
 export type CommitFocusSelection = {
-  key: SelectionInput;
+  key: GalaxySelection;
   /**
    * Optional prebuilt GalaxyInfo to hand into `setSelected`'s second
    * arg.  `selectByAlias` passes this so the InfoCard updates

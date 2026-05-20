@@ -71,7 +71,7 @@ describe('createClickResolver', () => {
       buildGalaxyInfo: () => dummyInfo,
     });
     const result = await r.resolveClick(dummyArgs);
-    expect(result).toEqual({ kind: 'select', selection: sel, info: dummyInfo });
+    expect(result).toEqual({ kind: 'select', selection: { kind: 'galaxy', ...sel }, info: dummyInfo });
   });
 
   it('returns kind="select" with info=null when resolveSelection returns null', async () => {
@@ -82,7 +82,7 @@ describe('createClickResolver', () => {
       buildGalaxyInfo: () => dummyInfo,
     });
     const result = await r.resolveClick(dummyArgs);
-    expect(result).toEqual({ kind: 'select', selection: sel, info: null });
+    expect(result).toEqual({ kind: 'select', selection: { kind: 'galaxy', ...sel }, info: null });
   });
 
   it('returns kind="select" with info=null when buildGalaxyInfo returns null', async () => {
@@ -93,7 +93,7 @@ describe('createClickResolver', () => {
       buildGalaxyInfo: () => null,
     });
     const result = await r.resolveClick(dummyArgs);
-    expect(result).toEqual({ kind: 'select', selection: sel, info: null });
+    expect(result).toEqual({ kind: 'select', selection: { kind: 'galaxy', ...sel }, info: null });
   });
 
   it('forwards the click args to pickRenderer.pick verbatim', async () => {

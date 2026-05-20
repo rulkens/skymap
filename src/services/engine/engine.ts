@@ -998,7 +998,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     // selectFamous is a deliberate user focus action (palette pick),
     // so the camera-focus target moves to this galaxy too — hence
     // bundling the selection key into `commitFocus`.
-    commitFocus(state, cb, info, { key: { source: Source.Famous, localIdx } });
+    commitFocus(state, cb, info, { key: { kind: 'galaxy', source: Source.Famous, localIdx } });
   }
 
   type SelectByAliasTarget = {
@@ -1031,7 +1031,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     );
     if (!info) return;
 
-    commitFocus(state, cb, info, { key: { source, localIdx }, info });
+    commitFocus(state, cb, info, { key: { kind: 'galaxy', source, localIdx }, info });
   }
 
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {

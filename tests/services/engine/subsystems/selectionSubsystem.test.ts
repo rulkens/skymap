@@ -90,7 +90,7 @@ describe('createSelectionSubsystem', () => {
     // both-null as equal), so the callback never fires at all.  Drive
     // a real change first to bring `hovered` to non-null, then back to
     // null twice — the second null is the dedup target.
-    sub.setHovered({ source: Source.SDSS, localIdx: 1 });
+    sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 });
     expect(cb.selection.onHoverChange).toHaveBeenCalledTimes(1);
 
     sub.setHovered(null);
@@ -113,8 +113,8 @@ describe('createSelectionSubsystem', () => {
       getMilliquasNames: () => [],
     });
 
-    sub.setHovered({ source: Source.SDSS, localIdx: 1 });
-    sub.setHovered({ source: Source.SDSS, localIdx: 2 });
+    sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 });
+    sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 2 });
 
     expect(cb.selection.onHoverChange).toHaveBeenCalledTimes(2);
   });
@@ -135,7 +135,7 @@ describe('createSelectionSubsystem', () => {
     // exact reference reaches the callback.
     const prebuilt = { sentinel: true } as unknown as GalaxyInfo;
 
-    sub.setSelected({ source: Source.SDSS, localIdx: 5 }, prebuilt);
+    sub.setSelected({ kind: 'galaxy', source: Source.SDSS, localIdx: 5 }, prebuilt);
 
     expect(cb.selection.onSelectChange).toHaveBeenCalledTimes(1);
     expect(cb.selection.onSelectChange).toHaveBeenCalledWith(prebuilt);
@@ -151,7 +151,7 @@ describe('createSelectionSubsystem', () => {
       getMilliquasNames: () => [],
     });
 
-    expect(sub.galaxyInfoFor({ source: Source.SDSS, localIdx: 0 })).toBeNull();
+    expect(sub.galaxyInfoFor({ kind: 'galaxy', source: Source.SDSS, localIdx: 0 })).toBeNull();
   });
 
   it('galaxyInfoFor returns null when localIdx is out of range', () => {
@@ -166,9 +166,9 @@ describe('createSelectionSubsystem', () => {
     });
 
     // Negative — invalid.
-    expect(sub.galaxyInfoFor({ source: Source.SDSS, localIdx: -1 })).toBeNull();
+    expect(sub.galaxyInfoFor({ kind: 'galaxy', source: Source.SDSS, localIdx: -1 })).toBeNull();
     // >= count — out of range.
-    expect(sub.galaxyInfoFor({ source: Source.SDSS, localIdx: 3 })).toBeNull();
+    expect(sub.galaxyInfoFor({ kind: 'galaxy', source: Source.SDSS, localIdx: 3 })).toBeNull();
   });
 
   it('destroy() clears internal state — subsequent reads return null', () => {
@@ -182,8 +182,8 @@ describe('createSelectionSubsystem', () => {
       getMilliquasNames: () => [],
     });
 
-    sub.setHovered({ source: Source.SDSS, localIdx: 1 });
-    sub.setSelected({ source: Source.SDSS, localIdx: 2 });
+    sub.setHovered({ kind: 'galaxy', source: Source.SDSS, localIdx: 1 });
+    sub.setSelected({ kind: 'galaxy', source: Source.SDSS, localIdx: 2 });
     expect(sub.hovered()).not.toBeNull();
     expect(sub.selected()).not.toBeNull();
 

@@ -437,6 +437,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
           state.subsystems.pois.setHoveredPoi(null);
         } else if (pick.kind === 'galaxy') {
           state.subsystems.selection.setHovered({
+            kind: 'galaxy',
             source: pick.source,
             localIdx: pick.localIdx,
           });

@@ -86,7 +86,7 @@ describe('commitFocus', () => {
     // animate before the URL flipped, causing the hash and canvas to
     // diverge on deep-link transitions.
     const { state, cb, info, setSelected, onFocusChange } = makeFixtures();
-    const selectionKey = { source: Source.SDSS, localIdx: 42 };
+    const selectionKey = { kind: 'galaxy' as const, source: Source.SDSS, localIdx: 42 };
     const selectionInfo = { source: Source.SDSS, localIdx: 42 } as unknown as GalaxyInfo;
 
     commitFocus(state, cb, info, { key: selectionKey, info: selectionInfo });
@@ -148,7 +148,7 @@ describe('commitFocus', () => {
     // The selection subsystem must receive `undefined` (NOT skip the
     // call) so its own live-lookup path runs.
     const { state, cb, info, setSelected } = makeFixtures();
-    const selectionKey = { source: Source.SDSS, localIdx: 42 };
+    const selectionKey = { kind: 'galaxy' as const, source: Source.SDSS, localIdx: 42 };
 
     commitFocus(state, cb, info, { key: selectionKey });
 

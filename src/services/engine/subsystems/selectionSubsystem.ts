@@ -88,24 +88,28 @@
 
 import type { GalaxyInfo } from '../../../@types/engine/GalaxyInfo';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { SelectionInput } from '../../../@types/engine/subsystems/SelectionInput';
+import type { GalaxySelection, Selection } from '../../../@types/engine/subsystems/Selection';
 import type { SelectionSubsystem } from '../../../@types/engine/subsystems/SelectionSubsystem';
 import type { CreateSelectionSubsystemInput } from '../../../@types/engine/subsystems/CreateSelectionSubsystemInput';
 import { buildGalaxyInfo } from '../helpers/galaxyInfoBuilder';
 
 /**
  * Are these two selections value-equal?  Both null → equal; both
- * non-null with matching `(source, localIdx)` → equal; otherwise
+ * non-null with matching discriminant + payload → equal; otherwise
  * different.  Lifted out of the closure so it doesn't get re-allocated
  * per engine instance (purely cosmetic; engine is a singleton anyway).
  */
-function selectionEq(
-  a: SelectionInput | null,
-  b: SelectionInput | null,
-): boolean {
+function selectionEq(a: Selection | null, b: Selection | null): boolean {
   if (a === null && b === null) return true;
   if (a === null || b === null) return false;
-  return a.source === b.source && a.localIdx === b.localIdx;
+  if (a.kind !== b.kind) return false;
+  if (a.kind === 'galaxy' && b.kind === 'galaxy') {
+    return a.source === b.source && a.localIdx === b.localIdx;
+  }
+  if (a.kind === 'poi' && b.kind === 'poi') {
+    return a.id === b.id;
+  }
+  return false;
 }
 
 export function createSelectionSubsystem(
@@ -117,8 +121,8 @@ export function createSelectionSubsystem(
   // genuinely inaccessible from outside (no `this.hovered` for a
   // future caller to reach in and poke).  Both start null — no
   // selection until the first hover pick / click resolves.
-  let hovered: SelectionInput | null = null;
-  let selected: SelectionInput | null = null;
+  let hovered: Selection | null = null;
+  let selected: Selection | null = null;
 
   /**
    * Build a GalaxyInfo for a `(source, localIdx)` selection, or null if
@@ -133,7 +137,7 @@ export function createSelectionSubsystem(
    * semantics: "we don't have data for that pick; render no card,
    * the next frame's pick will succeed".
    */
-  function galaxyInfoFor(sel: SelectionInput): GalaxyInfo | null {
+  function galaxyInfoFor(sel: GalaxySelection): GalaxyInfo | null {
     const c = getCloud(sel.source);
     if (!c) return null;
     if (sel.localIdx < 0 || sel.localIdx >= c.count) return null;
@@ -147,19 +151,25 @@ export function createSelectionSubsystem(
     );
   }
 
-  function setHovered(sel: SelectionInput | null): void {
-    if (selectionEq(sel, hovered)) return;
-    hovered = sel;
-    // Hoist the info computation so both flat and nested fires receive
-    // the same value (and we don't pay for `galaxyInfoFor` twice).
-    const info = sel !== null ? galaxyInfoFor(sel) : null;
-    cb.selection?.onHoverChange?.(info);
+  /**
+   * Resolve a Selection to the GalaxyInfo the legacy onHoverChange /
+   * onSelectChange callbacks expect, or null for POI / empty
+   * selections.  Galaxy variant uses the cloud lookup; POI variant
+   * returns null because the legacy callback shape can't carry it.
+   */
+  function infoForLegacyCallback(sel: Selection | null): GalaxyInfo | null {
+    if (sel === null) return null;
+    if (sel.kind !== 'galaxy') return null;
+    return galaxyInfoFor(sel);
   }
 
-  function setSelected(
-    sel: SelectionInput | null,
-    prebuiltInfo?: GalaxyInfo | null,
-  ): void {
+  function setHovered(sel: Selection | null): void {
+    if (selectionEq(sel, hovered)) return;
+    hovered = sel;
+    cb.selection?.onHoverChange?.(infoForLegacyCallback(sel));
+  }
+
+  function setSelected(sel: Selection | null, prebuiltInfo?: GalaxyInfo | null): void {
     if (selectionEq(sel, selected)) return;
     selected = sel;
     // `prebuiltInfo` short-circuits the cloud lookup for the
@@ -168,8 +178,7 @@ export function createSelectionSubsystem(
     // "caller passed null on purpose" from "caller didn't pass it":
     // an explicit null means "I have no info, fire the callback with
     // null", whereas `undefined` means "look it up yourself".
-    const info =
-      prebuiltInfo !== undefined ? prebuiltInfo : sel !== null ? galaxyInfoFor(sel) : null;
+    const info = prebuiltInfo !== undefined ? prebuiltInfo : infoForLegacyCallback(sel);
     cb.selection?.onSelectChange?.(info);
   }
 
