@@ -230,7 +230,7 @@ function loadMilliquas(path: string | undefined): MilliquasParseResult {
     records: [],
     names: [],
     classes: [],
-    skipped: { zZero: 0, photoZRounded: 0, qsocRounded: 0 },
+    skipped: { zMissing: 0, zZero: 0, photoZRounded: 0, qsocRounded: 0 },
   };
   if (!path) return empty;
   const full = resolve(path);
@@ -241,10 +241,12 @@ function loadMilliquas(path: string | undefined): MilliquasParseResult {
   const text = readFileSync(full, 'utf8');
   const result = parseMilliquas(text);
   const { records, skipped } = result;
-  const skippedTotal = skipped.zZero + skipped.photoZRounded + skipped.qsocRounded;
+  const skippedTotal =
+    skipped.zMissing + skipped.zZero + skipped.photoZRounded + skipped.qsocRounded;
   process.stderr.write(
     `  loaded ${records.length.toLocaleString()} records ` +
       `(skipped ${skippedTotal.toLocaleString()}: ` +
+      `z=blank ${skipped.zMissing.toLocaleString()}, ` +
       `z=0 ${skipped.zZero.toLocaleString()}, ` +
       `photo-z ${skipped.photoZRounded.toLocaleString()}, ` +
       `GAIA3 QSOC ${skipped.qsocRounded.toLocaleString()})\n`,

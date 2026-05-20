@@ -63,13 +63,18 @@
  * string* (before parseFloat normalises away the trailing zeros that
  * give estimated values away):
  *
- *  1. **z = 0 sentinel.** Milliquas v8 contains 9,185 rows whose Z
- *     column is literally `" 0.000"`. The catalogue uses this as the
- *     "no redshift measured" placeholder. Distance is `z * c / H0`,
- *     so z = 0 would collapse RA/Dec to the origin — exactly the same
- *     bug we already squashed in 2MRS. We use exact `=== 0` rather
- *     than `Math.abs(z) < ε` because spec-z values can legitimately be
- *     very small but positive, and rejecting them would over-fire.
+ *  1. **z = 0 sentinel.** A small fraction of v8 rows (~20) carry the
+ *     literal `" 0.000"` value. Distance is `z * c / H0`, so z = 0
+ *     would collapse RA/Dec to the origin — exactly the same bug we
+ *     already squashed in 2MRS. We use exact `=== 0` rather than
+ *     `Math.abs(z) < ε` because spec-z values can legitimately be very
+ *     small but positive, and rejecting them would over-fire.
+ *
+ *     Separately, ~9k rows have a *blank* Z field (no redshift on file
+ *     at all). Those are caught by the up-front `Number.isFinite(z)`
+ *     check below and counted under `skipped.zMissing`. Both are
+ *     genuinely un-renderable; they just have different upstream
+ *     provenance.
  *
  *  2. **`.X00` photo-z candidates.** ~52k rows have Z ending in two
  *     zeros (e.g. `1.700`, `2.300`). These are photo-z estimates
@@ -171,9 +176,9 @@ const PHOTO_Z_ROUNDED_TO_HUNDREDTH = /\.\d\d0\s*$/;
  * Result of a Milliquas parse. The three arrays are parallel — the
  * row at `records[i]` is described by `names[i]` and `classes[i]`.
  *
- * The `skipped` triple lets the build CLI print per-rule rejection
+ * The `skipped` quad lets the build CLI print per-rule rejection
  * counts as a sanity check: against the real v8 file we expect
- * roughly 9 k z=0 sentinels, 52 k photo-z candidates, and 17 k
+ * roughly 9 k zMissing, 20 zZero, 52 k photo-z candidates, and 17 k
  * GAIA3-QSOC rows. A much smaller number means a rule is silently
  * over-firing; a much larger one means a rule is silently under-
  * firing. Either way it's a build-time signal worth surfacing.
@@ -185,8 +190,13 @@ export type MilliquasParseResult = {
   /** First character of the Type column (`Q`/`A`/`B`/`K`/`N`/`S`). */
   classes: string[];
   skipped: {
+    /** Z field blank or non-numeric (no redshift on file). */
+    zMissing: number;
+    /** Z field is literal `0.000` — the catalogue's zero-distance sentinel. */
     zZero: number;
+    /** Z rounded to 0.1 (`.X00` pattern) — generic photo-z candidate. */
     photoZRounded: number;
+    /** Z rounded to 0.01 with Zcite=GAIA3 — Gaia DR3 QSOC photo-z. */
     qsocRounded: number;
   };
 };
@@ -212,7 +222,7 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
   const records: ParsedRecord[] = [];
   const names: string[] = [];
   const classes: string[] = [];
-  const skipped = { zZero: 0, photoZRounded: 0, qsocRounded: 0 };
+  const skipped = { zMissing: 0, zZero: 0, photoZRounded: 0, qsocRounded: 0 };
 
   for (const line of lines) {
     if (line.length < MIN_LINE_LEN) {
@@ -246,11 +256,12 @@ export function parseMilliquas(rawText: string): MilliquasParseResult {
 
     if (!Number.isFinite(ra) || !Number.isFinite(dec) || !Number.isFinite(z)) {
       // RA/Dec/Z are mandatory: without all three we can't place the
-      // row in 3D space. This branch covers truncated/corrupted lines
-      // — the upstream catalogue ships every row complete, so a hit
-      // here means the file in `data/raw/milliquas/` is damaged. Don't
-      // count under any spec-z-subset bucket; let the silent skip
-      // surface as a record-count mismatch at build time.
+      // row in 3D space. In practice the only common cause is a blank
+      // Z field — ~9 k rows in v8 carry valid coordinates but no
+      // redshift on file. Truncated/corrupted lines would land here
+      // too, but the catalogue ships every row complete, so the
+      // overwhelming majority of hits are the no-redshift case.
+      skipped.zMissing++;
       continue;
     }
 
