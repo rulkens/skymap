@@ -111,7 +111,7 @@ function selectionEq(
 export function createSelectionSubsystem(
   input: CreateSelectionSubsystemInput,
 ): SelectionSubsystem {
-  const { cb, getCloud, getFamousMeta, getFamousXrefs } = input;
+  const { cb, getCloud, getFamousMeta, getFamousXrefs, getMilliquasNames } = input;
 
   // Internal mutable state.  Closure-captured `let`s so they're
   // genuinely inaccessible from outside (no `this.hovered` for a
@@ -137,7 +137,14 @@ export function createSelectionSubsystem(
     const c = getCloud(sel.source);
     if (!c) return null;
     if (sel.localIdx < 0 || sel.localIdx >= c.count) return null;
-    return buildGalaxyInfo(c, sel.localIdx, sel.source, getFamousMeta(), getFamousXrefs());
+    return buildGalaxyInfo(
+      c,
+      sel.localIdx,
+      sel.source,
+      getFamousMeta(),
+      getFamousXrefs(),
+      getMilliquasNames(),
+    );
   }
 
   function setHovered(sel: SelectionInput | null): void {

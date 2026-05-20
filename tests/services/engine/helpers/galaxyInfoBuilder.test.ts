@@ -477,3 +477,41 @@ describe('buildGalaxyInfo — diameter provenance', () => {
     expect(info.diameterProvenance).toBe('GLADE Tully');
   });
 });
+
+// ─── buildGalaxyInfo — Milliquas branch ──────────────────────────────────────
+
+describe('buildGalaxyInfo — Milliquas source', () => {
+  it('uses the per-tier names sidecar for displayName when present', () => {
+    // The milliquas-<tier>_names.json sidecar lines up with the bin by
+    // localIdx; passing it through here mirrors the production wiring
+    // (state.sources.milliquasNames threaded through buildGalaxyInfo).
+    const cloud = makeCloud(2);
+    setPosition(cloud, 0, 100, 0, 0);
+    setPosition(cloud, 1, 0, 100, 0);
+    const names = ['3C 273', 'PKS 0405-12'];
+    const info = buildGalaxyInfo(cloud, 0, Source.Milliquas, undefined, undefined, names);
+    expect(info.displayName).toBe('3C 273');
+    // iauName remains the coord-based fallback ("MQ J..."), available
+    // for any consumer that wants the IAU form.
+    expect(info.iauName.startsWith('MQ J')).toBe(true);
+  });
+
+  it('falls back to the IAU "MQ J<RA><Dec>" headline when the sidecar is empty', () => {
+    // Loading window: sidecar hasn't resolved yet (or this is the small
+    // tier with no names file).  Headline must still be useful.
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 100, 0, 0);
+    const info = buildGalaxyInfo(cloud, 0, Source.Milliquas, undefined, undefined, []);
+    expect(info.displayName).toBe(info.iauName);
+    expect(info.displayName.startsWith('MQ J')).toBe(true);
+  });
+
+  it('falls back to IAU when names[idx] is an empty string', () => {
+    // Defensive: a sidecar row with no literature name (rare upstream)
+    // shouldn't render an empty headline.
+    const cloud = makeCloud(1);
+    setPosition(cloud, 0, 100, 0, 0);
+    const info = buildGalaxyInfo(cloud, 0, Source.Milliquas, undefined, undefined, ['']);
+    expect(info.displayName).toBe(info.iauName);
+  });
+});

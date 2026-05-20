@@ -30,6 +30,8 @@ import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 import type { ScalarCube } from '../../data/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
+import type { MilliquasNamesPayload } from '../../loading/MilliquasNamesPayload';
+import type { MilliquasNamesReq } from '../../loading/MilliquasNamesReq';
 import type { Source } from '../../../data/sources';
 
 export type EngineAssetSlots = {
@@ -96,6 +98,26 @@ export type EngineAssetSlots = {
    * lifecycle reason — the renderer must exist before commit).
    */
   mcpm: AssetSlot<ScalarCube, MCPMReq> | null;
+  /**
+   * Milliquas v8 quasar names sidecar (`milliquas-<tier>_names.json`).
+   *
+   * Per-tier (request shape carries `tier`) because each tier's bin
+   * subsamples a different set of rows — `names[localIdx]` only lines
+   * up with the bin currently loaded for the active tier.  Reloaded on
+   * tier change by `engine.setTier` (same coordination point as the
+   * Milliquas catalog bin and the MCPM cube).
+   *
+   * Null until `wireSlots` mints the slot (same null-then-set
+   * lifecycle as `famousMeta` — no GPU handle to wait for, but minted
+   * in the same IIFE for uniformity).
+   *
+   * No `commit` step — the subscriber writes the payload straight into
+   * `state.sources.milliquasNames` / `.milliquasClasses` for
+   * `buildGalaxyInfo` to consume on hover/click.  Missing/404 sidecar
+   * surfaces as a never-fires-`ready`; the InfoCard falls back to the
+   * auto-generated `MQ J<RA><Dec>` IAU name.
+   */
+  milliquasNames: AssetSlot<MilliquasNamesPayload, MilliquasNamesReq> | null;
   /**
    * Dev-only slots for the synthetic test cubes (Gaussian blob,
    * Cartesian grid, spherical grid).  `undefined` (not the slots being
