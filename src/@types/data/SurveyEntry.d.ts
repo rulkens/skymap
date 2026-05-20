@@ -1,14 +1,15 @@
 import type { BandLabels } from './BandLabels';
 
 /**
- * One row of the SURVEY_REGISTRY — all the per-survey metadata needed by the
- * UI, the loader, and the camera, colocated so adding a new survey means
- * editing one place.
+ * Survey-typed row of the SOURCE_REGISTRY — all the per-survey metadata
+ * needed by the UI, the loader, and the camera, colocated so adding a new
+ * survey means editing one place.
  *
  * `binBaseName` is `null` for sources without an on-disk file (e.g. the
  * Synthetic procedurally-generated cloud); every other field is required.
  */
 export type SurveyEntry = {
+  readonly type: 'survey';
   /** Stable numeric tag, matching the `.bin` file format byte. */
   readonly code: number;
   /** Display name shown in the UI legend (e.g. `'SDSS'`, `'GLADE'`). */

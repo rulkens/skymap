@@ -34,21 +34,24 @@
  * future catalogs (DESI, Euclid, LSST...).
  *
  * ---
- * ### Why one registry split into survey + POI?
+ * ### Why one registry discriminated by `type`?
  *
  * Per-source metadata (display label, sky coverage, camera depth, band
- * layout, on-disk filename) is colocated in `SURVEY_REGISTRY` so adding a
- * new survey means editing one entry rather than four parallel tables that
- * have to stay in lock-step. POI codes (Cluster, Supercluster, Void) are
- * pick-encoding-only — they have no `.bin` file, no photometric bands, and
- * no survey depth — so they live in a separate, tinier `POI_REGISTRY`.
- * Two maps with all-required fields beats one map with optionals and a
- * `kind` discriminator at every call site.
+ * layout, on-disk filename) lives in `SOURCE_REGISTRY` so adding a new
+ * source means editing one entry rather than several parallel tables that
+ * have to stay in lock-step. Surveys and POI codes (Cluster, Supercluster,
+ * Void) carry different field sets — POIs have no `.bin` file, no
+ * photometric bands, no survey depth — so each entry is discriminated by a
+ * `type: 'survey' | 'poi'` field. A discriminated union keeps every field
+ * on a survey entry required (no optionals scattered across the type) while
+ * still letting one registry hold both kinds. Accessors that only make
+ * sense for surveys narrow on `entry.type === 'poi'` and throw.
  */
 
 import type { BandLabels } from '../@types/data/BandLabels';
 import type { SurveyEntry } from '../@types/data/SurveyEntry';
 import type { PoiEntry } from '../@types/data/PoiEntry';
+import type { SourceEntry } from '../@types/data/SourceEntry';
 
 // ─── The enum itself ────────────────────────────────────────────────────────
 
@@ -138,16 +141,26 @@ export type PoiSource =
   | typeof Source.Supercluster
   | typeof Source.Void;
 
-export type { SurveyEntry, PoiEntry };
+export type { SurveyEntry, PoiEntry, SourceEntry };
 
-// ─── Registries ─────────────────────────────────────────────────────────────
+// ─── Registry ───────────────────────────────────────────────────────────────
 
 /**
- * Per-survey metadata, keyed by `SurveySource`. One entry per survey, all
- * fields required (except `binBaseName` which is `null` for the synthetic
- * cloud that has no on-disk representation).
+ * Per-source metadata, keyed by every `Source` (surveys + POIs). Each entry
+ * is discriminated by `type`:
  *
- * ### Field reference
+ *   - `'survey'` entries carry the full per-survey kit: filename stem,
+ *     sky-coverage flag, camera depth, band layout. `binBaseName` is `null`
+ *     for the synthetic cloud (generated at runtime, no `.bin` file);
+ *     every other survey field is required.
+ *   - `'poi'` entries carry just code + label. POIs don't have a `.bin`
+ *     file, photometric bands, or a survey depth, so the entry is tiny.
+ *
+ * `as const satisfies Readonly<Record<Source, SourceEntry>>` preserves each
+ * entry's literal `type`, so `SOURCE_REGISTRY[Source.SDSS]` narrows to
+ * `SurveyEntry` at use sites without manual casts.
+ *
+ * ### Survey field reference
  *
  * - **`label`** — UI display name. Follows survey-team conventions: `'2MRS'`
  *   no space, `'GLADE'` uppercase, etc. Match these in any new UI strings.
@@ -155,8 +168,7 @@ export type { SurveyEntry, PoiEntry };
  * - **`binBaseName`** — filename stem under `public/data/`. Tier-aware
  *   sources (SDSS, GLADE, Milliquas) get `-<tier>` appended by
  *   `tierFilenameForSource` in `tierTargets.ts`; tier-agnostic sources
- *   (2MRS, Famous) load the bare `<base>.bin`. Synthetic is `null` — it
- *   has no file.
+ *   (2MRS, Famous) load the bare `<base>.bin`. Synthetic is `null`.
  *
  * - **`allSky`** — drives whether the renderer draws a coverage-mask
  *   overlay. 2MRS, GLADE, Famous, and Milliquas are all-sky by
@@ -180,8 +192,9 @@ export type { SurveyEntry, PoiEntry };
  *       Famous:     u → u, g → g,  r → r, i → i, z → z   (no per-row photometry; cosmetic)
  *       Milliquas:  u → —, g → B,  r → R, i → —, z → —   (Bmag, Rmag only)
  */
-export const SURVEY_REGISTRY = {
+export const SOURCE_REGISTRY = {
   [Source.Synthetic]: {
+    type: 'survey',
     code: Source.Synthetic,
     label: 'Synthetic',
     binBaseName: null, // generated at runtime; no file
@@ -190,6 +203,7 @@ export const SURVEY_REGISTRY = {
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
   },
   [Source.SDSS]: {
+    type: 'survey',
     code: Source.SDSS,
     label: 'SDSS',
     binBaseName: 'sdss',
@@ -200,6 +214,7 @@ export const SURVEY_REGISTRY = {
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
   },
   [Source.TwoMRS]: {
+    type: 'survey',
     code: Source.TwoMRS,
     label: '2MRS',
     binBaseName: '2mrs',
@@ -209,6 +224,7 @@ export const SURVEY_REGISTRY = {
     bandLabels: { u: '—', g: 'J', r: 'H', i: 'K', z: '—' },
   },
   [Source.Glade]: {
+    type: 'survey',
     code: Source.Glade,
     label: 'GLADE',
     binBaseName: 'glade',
@@ -219,6 +235,7 @@ export const SURVEY_REGISTRY = {
     bandLabels: { u: '—', g: 'B', r: 'J', i: 'H', z: 'K' },
   },
   [Source.Famous]: {
+    type: 'survey',
     code: Source.Famous,
     label: 'Famous',
     binBaseName: 'famous',
@@ -230,7 +247,11 @@ export const SURVEY_REGISTRY = {
     // stored mag values are NaN, which FullCard renders as "N/A".
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
   },
+  [Source.Cluster]: { type: 'poi', code: Source.Cluster, label: 'Cluster' },
+  [Source.Supercluster]: { type: 'poi', code: Source.Supercluster, label: 'Supercluster' },
+  [Source.Void]: { type: 'poi', code: Source.Void, label: 'Void' },
   [Source.Milliquas]: {
+    type: 'survey',
     code: Source.Milliquas,
     label: 'Milliquas',
     binBaseName: 'milliquas',
@@ -246,53 +267,39 @@ export const SURVEY_REGISTRY = {
     // wavelength to SDSS g among the empty slots) and Rmag into magR.
     bandLabels: { u: '—', g: 'B', r: 'R', i: '—', z: '—' },
   },
-} as const satisfies Readonly<Record<SurveySource, SurveyEntry>>;
-
-/**
- * POI metadata, keyed by `PoiSource`. Pick decoders use this to render the
- * InfoCard for a cluster / supercluster / void marker hit.
- */
-export const POI_REGISTRY = {
-  [Source.Cluster]: { code: Source.Cluster, label: 'Cluster' },
-  [Source.Supercluster]: { code: Source.Supercluster, label: 'Supercluster' },
-  [Source.Void]: { code: Source.Void, label: 'Void' },
-} as const satisfies Readonly<Record<PoiSource, PoiEntry>>;
+} as const satisfies Readonly<Record<Source, SourceEntry>>;
 
 // ─── Public lookup functions ────────────────────────────────────────────────
 //
-// Thin wrappers around the registries so callers depend on a function
-// signature rather than the shape of the storage. Each accessor accepts the
-// wider `Source` type — callers pass whatever the pick decoder hands them —
-// and the function narrows or throws as appropriate.
-
-function isPoi(source: Source): source is PoiSource {
-  return source === Source.Cluster || source === Source.Supercluster || source === Source.Void;
-}
+// Thin wrappers around the registry so callers depend on a function
+// signature rather than storage shape. Each accessor accepts the wider
+// `Source` type and narrows or throws via the discriminator.
 
 /** Display name (e.g. `'2MRS'`, `'GLADE'`, `'Cluster'`) for a given source. */
 export function sourceLabel(source: Source): string {
-  if (isPoi(source)) return POI_REGISTRY[source].label;
-  return SURVEY_REGISTRY[source].label;
+  return SOURCE_REGISTRY[source].label;
 }
 
 /** True if the survey covers (approximately) the full celestial sphere. */
 export function sourceIsAllSky(source: Source): boolean {
+  const entry = SOURCE_REGISTRY[source];
   // POI anchors are full-sky in the trivial sense (individual points, not
   // survey footprints). Returning `true` keeps coverage-mask code paths
   // well-behaved if a POI somehow reaches them.
-  if (isPoi(source)) return true;
-  return SURVEY_REGISTRY[source].allSky;
+  if (entry.type === 'poi') return true;
+  return entry.allSky;
 }
 
-/** Approximate effective max distance in megaparsecs. See `SURVEY_REGISTRY`. */
+/** Approximate effective max distance in megaparsecs. See `SOURCE_REGISTRY`. */
 export function sourceMaxDistanceMpc(source: Source): number {
+  const entry = SOURCE_REGISTRY[source];
   // POIs are not surveys and don't define a sample depth. Reaching here
   // with a POI means camera-framing code routed the wrong thing — fail
   // loudly instead of inventing a value.
-  if (isPoi(source)) {
+  if (entry.type === 'poi') {
     throw new Error(`sourceMaxDistanceMpc: POI source ${source} has no survey depth`);
   }
-  return SURVEY_REGISTRY[source].maxDistMpc;
+  return entry.maxDistMpc;
 }
 
 /**
@@ -302,12 +309,13 @@ export function sourceMaxDistanceMpc(source: Source): number {
  * always saying "(g)". Empty slots carry `'—'`.
  */
 export function bandLabels(source: Source): BandLabels {
+  const entry = SOURCE_REGISTRY[source];
   // POI markers have no photometry. Reaching here with a POI means the
   // InfoCard is rendering a galaxy row for a non-galaxy entity.
-  if (isPoi(source)) {
+  if (entry.type === 'poi') {
     throw new Error(`bandLabels: POI source ${source} has no photometric bands`);
   }
-  return SURVEY_REGISTRY[source].bandLabels;
+  return entry.bandLabels;
 }
 
 // ─── Visibility bitmask ─────────────────────────────────────────────────────

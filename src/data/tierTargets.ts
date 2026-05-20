@@ -33,7 +33,7 @@
  * `-medium`, `-large` suffix because each tier's cut is a different file.
  */
 
-import { Source, SURVEY_REGISTRY, type SurveySource } from './sources';
+import { Source, SOURCE_REGISTRY } from './sources';
 import type { Tier } from '../@types/data/Tier';
 
 /**
@@ -88,8 +88,10 @@ const TIERED_SOURCES: ReadonlySet<Source> = new Set([
  * a buggy caller loud instead of silently 404-ing.
  */
 export function tierFilenameForSource(source: Source, tier: Tier): string {
-  const base = SURVEY_REGISTRY[source as SurveySource]?.binBaseName;
-  if (!base) throw new Error(`tierFilenameForSource: no base filename for source ${source}`);
-  if (TIERED_SOURCES.has(source)) return `${base}-${tier}.bin`;
-  return `${base}.bin`;
+  const entry = SOURCE_REGISTRY[source];
+  if (entry.type !== 'survey' || entry.binBaseName === null) {
+    throw new Error(`tierFilenameForSource: no base filename for source ${source}`);
+  }
+  if (TIERED_SOURCES.has(source)) return `${entry.binBaseName}-${tier}.bin`;
+  return `${entry.binBaseName}.bin`;
 }
