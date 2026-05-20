@@ -1,40 +1,40 @@
 /**
- * Binary on-disk format for a `GalaxyCatalog` — version 4.
+ * Binary on-disk format for a `GalaxyCatalog` — version 5.
  *
- * What changed in v4?  We added an `f32 diameterKpc` slot at offset 48 of
- * each per-galaxy record, growing the per-galaxy footprint from 56 bytes to
- * 64 bytes.  The trailing padding shrinks from 8 bytes (v3) to 12 bytes
- * (v4) — wait, that grew, because we added 4 bytes of payload but bumped
- * the record size by a full 16-byte alignment quantum to keep the per-galaxy
- * record on a 16-byte boundary (so the buffer remains usable as a WebGPU
- * uniform/storage-buffer payload without restructuring).
+ * v5 reuses the v4 64-byte record stride but consumes two of the
+ * trailing-padding bytes for new per-record metadata:
  *
- * Why a per-galaxy diameter at all?  Earlier versions used a project-wide
- * 30 kpc constant for every renderer footprint computation.  That made
- * dwarf galaxies look implausibly large and giants look implausibly small;
- * worse, it dragged the apparent-size threshold for thumbnail loading away
- * from the actual galaxy boundary, so the visible disk and the JPEG
- * texture were misaligned.  The diameter now drives:
- *   - point-billboard apparent radius (points.wgsl GALAXY_RADIUS_MPC)
- *   - thumbnail quad world-space size (engine.ts sizeWorldMpc)
- *   - 3D disk plane world-space size
- *   - focusDistanceMpc tween destination
+ *   - `classByte` (offset 52, uint8): source-interpreted
+ *     classification.  For `Source.Milliquas` rows it carries the
+ *     AGN class letter via a per-source enum
+ *     (1=Q, 2=A, 3=B, 4=K, 5=N, 6=S; 0 = unknown).  For every other
+ *     source the build pipeline writes 0 and the lookup helper
+ *     `sourceClassLabel(source, byte)` returns null.  Future
+ *     morphology work on SDSS / GLADE can reuse the same slot with
+ *     a different lookup table — the byte is opaque to the format.
  *
- * Why preserve NaN round-trip if the renderer can't tolerate NaN?  The
- * encoder/decoder remain pure functions (easy to unit-test in isolation
- * and independent of the build pipeline).  The pipeline guarantees a
- * finite value upstream; if a corrupted .bin ever delivered NaN, that's a
- * logged warning, not a malformed format.
+ *   - `parentSurveyByte` (offset 53, uint8): Milliquas-only enum
+ *     that records which parent survey the row's Milliquas Name
+ *     came from (1=SDSS, 2=2MASX, 3=GAIA, 4=WISEA, 5=NVSS, 6=FIRST,
+ *     7=6dFGS).  The InfoCard uses it to reconstruct the historical
+ *     "<PARENT> J<RA><Dec>" display name at hover time without the
+ *     dedicated names sidecar that v4 required.  0 = literature
+ *     designation or unrecognised prefix, in which case the IAU
+ *     fallback `MQ J<RA><Dec>` is used.
  *
- * The on-disk magic ("SKMP") and version are unchanged by the
- * PointCloud → GalaxyCatalog rename — this is purely a code rename, not
- * a format bump. Existing .bin files continue to load.
+ * Other than the two new bytes, the per-record layout is identical
+ * to v4.  The remaining 10 bytes of tail padding stay reserved for
+ * future per-record metadata that fits in the existing stride.
+ *
+ * v4 files are rejected with the documented "regenerate via
+ * `npm run build-tiers`" error — the magic + version header is the
+ * single source of truth for "do I understand this file?".
  *
  * Layout (little-endian):
  *
  *     ── HEADER (16 bytes) ──────────────────────────────────────────────────
  *     0       4     magic    = "SKMP" (0x504d4b53)
- *     4       4     version  = 4 (uint32)
+ *     4       4     version  = 5 (uint32)
  *     8       4     count    = number of galaxies (uint32)
  *     12      4     reserved = 0
  *
@@ -50,45 +50,21 @@
  *     36      4     magZ             (float32)
  *     40      4     axisRatio        (float32) — b/a in [0,1] or NaN
  *     44      4     positionAngleDeg (float32) — PA in [0,180) or NaN
- *     48      4     diameterKpc      (float32) — physical diameter in kpc (NEW in v4)
- *     52      12    padding          (zeroed)
+ *     48      4     diameterKpc      (float32) — physical diameter in kpc
+ *     52      1     classByte        (uint8)  — per-source enum (NEW in v5)
+ *     53      1     parentSurveyByte (uint8)  — Milliquas-only (NEW in v5)
+ *     54      10    padding          (zeroed)
  *
  * Total file size: 16 + count × 64.
  */
 
 import type { GalaxyCatalog } from '../@types/data/GalaxyCatalog';
 
-/**
- * "SKMP" as a little-endian uint32. Reading 4 bytes at offset 0 with
- * `getUint32(0, true)` recovers this constant; any other value means the
- * file isn't ours.
- */
 const MAGIC = 0x504d4b53;
-
-/** Bump this when the layout changes incompatibly. */
-const VERSION = 4;
-
-/** Header size in bytes (4 × uint32). Body starts here. */
+const VERSION = 5;
 const HEADER_BYTES = 16;
-
-/**
- * Per-galaxy payload in bytes.
- *
- * Breakdown: 8 (objID) + 4×3 (xyz) + 4×5 (5 photometric bands)
- *          + 4×2 (axisRatio + positionAngleDeg) + 4 (diameterKpc)
- *          + 12 (tail padding) = 64.
- * 64 is a multiple of 16, satisfying the GPU-alignment note above.
- */
 const BYTES_PER_GALAXY = 64;
 
-/**
- * Encode a `GalaxyCatalog` to an `ArrayBuffer` ready to write to disk
- * (or send over `fetch`/the network). Pure — no I/O.
- *
- * Throws if any typed array in `catalog` isn't sized consistently with
- * `catalog.count`. That's a programming error in the caller, so we fail
- * loud rather than producing a corrupt file.
- */
 export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
   const {
     count,
@@ -102,6 +78,8 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
     axisRatio,
     positionAngleDeg,
     diameterKpc,
+    classByte,
+    parentSurveyByte,
   } = catalog;
   if (objIDs.length !== count) throw new Error('objIDs length mismatch');
   if (positions.length !== count * 3) throw new Error('positions length mismatch');
@@ -113,42 +91,25 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
   if (axisRatio.length !== count) throw new Error('axisRatio length mismatch');
   if (positionAngleDeg.length !== count) throw new Error('positionAngleDeg length mismatch');
   if (diameterKpc.length !== count) throw new Error('diameterKpc length mismatch');
+  if (classByte.length !== count) throw new Error('classByte length mismatch');
+  if (parentSurveyByte.length !== count) throw new Error('parentSurveyByte length mismatch');
 
-  // Allocate exactly the bytes we need: header + per-galaxy records.
   const buf = new ArrayBuffer(HEADER_BYTES + count * BYTES_PER_GALAXY);
-
-  // DataView gives us byte-precise control with explicit endianness.
-  // The `true` flag on every setter means "write little-endian".
   const dv = new DataView(buf);
   dv.setUint32(0, MAGIC, true);
   dv.setUint32(4, VERSION, true);
   dv.setUint32(8, count, true);
-  dv.setUint32(12, 0, true); // reserved
+  dv.setUint32(12, 0, true);
 
-  // Write each galaxy's record. We use DataView.setBigUint64 for the 64-bit
-  // objID (the only field that won't fit in a Float32), then a Float32Array
-  // view for the bulk of the floats — cheaper than per-field setFloat32.
-  //
-  // The Float32Array view is created once over the entire buffer; we index
-  // into it by converting the per-record byte offset to a float element index.
-  // Note: HEADER_BYTES (16) is a multiple of 4, so the view is correctly aligned.
-  //
-  // Writing NaN through a Float32Array preserves the IEEE-754 NaN bit pattern
-  // losslessly, so NaN sentinels (used for "no measurement") round-trip cleanly.
   const floatView = new Float32Array(buf);
+  const byteView = new Uint8Array(buf);
 
   for (let i = 0; i < count; i++) {
-    // Byte offset of this record's start within the buffer.
     const byteBase = HEADER_BYTES + i * BYTES_PER_GALAXY;
 
-    // objID: 64-bit unsigned integer — must use DataView, not Float32Array.
     dv.setBigUint64(byteBase + 0, objIDs[i]!, true);
 
-    // Float fields: index into the Float32Array view using the byte offset
-    // divided by 4 (Float32 = 4 bytes). byteBase is always a multiple of 8
-    // (HEADER_BYTES=16, BYTES_PER_GALAXY=64, both multiples of 8), so
-    // (byteBase + 8) is always a multiple of 4 — the Float32Array is aligned.
-    const f = (byteBase + 8) / 4; // float index for the first float field (x)
+    const f = (byteBase + 8) / 4;
     floatView[f + 0] = positions[i * 3 + 0]!;
     floatView[f + 1] = positions[i * 3 + 1]!;
     floatView[f + 2] = positions[i * 3 + 2]!;
@@ -160,41 +121,32 @@ export function encodeGalaxyCatalog(catalog: GalaxyCatalog): ArrayBuffer {
     floatView[f + 8] = axisRatio[i]!;
     floatView[f + 9] = positionAngleDeg[i]!;
     floatView[f + 10] = diameterKpc[i]!;
-    // The 12 bytes of tail padding (floatView[f+11], [f+12], [f+13]) remain
-    // zero because `new ArrayBuffer` zero-initialises its memory. No write needed.
+
+    // Two new uint8 slots at byteBase + 52 / + 53.  We index the
+    // shared Uint8Array view directly rather than going through
+    // DataView.setUint8 — one fewer call per byte and the alignment
+    // is trivially 1.
+    byteView[byteBase + 52] = classByte[i]!;
+    byteView[byteBase + 53] = parentSurveyByte[i]!;
+    // Tail padding (byteBase+54 … byteBase+63) stays zero because
+    // `new ArrayBuffer` zero-inits.  No write needed.
   }
   return buf;
 }
 
-/**
- * Decode an `ArrayBuffer` (e.g. from `await fetch(...).arrayBuffer()`) back
- * into a `GalaxyCatalog`. Pure — no I/O.
- *
- * Validates magic and version. Rejects v1, v2, and v3 files with a message
- * instructing the user to regenerate. Throws on other malformed input rather
- * than silently returning garbage.
- *
- * Note: allocates fresh typed arrays rather than viewing into the input buffer.
- * Slight memory overhead, but lets the caller keep the result after the input
- * buffer is GC'd, and keeps the SoA layout clean for the GPU upload path.
- */
 export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
   const dv = new DataView(buf);
   if (dv.getUint32(0, true) !== MAGIC) throw new Error('bad magic — not a SKMP file');
 
   const version = dv.getUint32(4, true);
   if (version !== VERSION) {
-    // Single error path covers v1, v2, v3, and any other foreign version. The
-    // regenerate hint points at the modern build entrypoint (`build-all`),
-    // which now also writes the v4 diameterKpc field.
     throw new Error(
-      `unsupported version: ${version} — please regenerate the .bin via "npm run build-all"`,
+      `unsupported version: ${version} — please regenerate the .bin via "npm run build-tiers"`,
     );
   }
 
   const count = dv.getUint32(8, true);
 
-  // Allocate destination typed arrays once, fill them in the loop, return.
   const objIDs = new BigUint64Array(count);
   const positions = new Float32Array(count * 3);
   const magU = new Float32Array(count);
@@ -205,18 +157,17 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
   const axisRatio = new Float32Array(count);
   const positionAngleDeg = new Float32Array(count);
   const diameterKpc = new Float32Array(count);
+  const classByte = new Uint8Array(count);
+  const parentSurveyByte = new Uint8Array(count);
 
-  // Same Float32Array-view trick as the encoder: read floats cheaply by index.
-  // NaN bit patterns survive this view-read just like they do on write.
   const floatView = new Float32Array(buf);
+  const byteView = new Uint8Array(buf);
 
   for (let i = 0; i < count; i++) {
     const byteBase = HEADER_BYTES + i * BYTES_PER_GALAXY;
 
-    // objID: 64-bit unsigned — must read via DataView.
     objIDs[i] = dv.getBigUint64(byteBase + 0, true);
 
-    // Floats start 8 bytes into the record (after the uint64 objID).
     const f = (byteBase + 8) / 4;
     positions[i * 3 + 0] = floatView[f + 0]!;
     positions[i * 3 + 1] = floatView[f + 1]!;
@@ -229,7 +180,10 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
     axisRatio[i] = floatView[f + 8]!;
     positionAngleDeg[i] = floatView[f + 9]!;
     diameterKpc[i] = floatView[f + 10]!;
-    // Padding bytes (f+11, f+12, f+13) are ignored on decode.
+
+    classByte[i] = byteView[byteBase + 52]!;
+    parentSurveyByte[i] = byteView[byteBase + 53]!;
+    // The remaining 10 padding bytes are ignored on decode.
   }
 
   return {
@@ -244,28 +198,11 @@ export function decodeGalaxyCatalog(buf: ArrayBuffer): GalaxyCatalog {
     axisRatio,
     positionAngleDeg,
     diameterKpc,
+    classByte,
+    parentSurveyByte,
   };
 }
 
-/**
- * Build a zero-count `GalaxyCatalog` with all typed-array slots empty.
- *
- * Used by the asset-loading subsystem's "excluded tier" path: when
- * `TIER_TARGETS[tier][source] === 0` (e.g. SDSS at `small`), the fetcher
- * short-circuits and returns this shape rather than attempting a fetch.
- *
- * Why an explicit helper rather than letting each caller hand-roll one?
- * The GalaxyCatalog type has eleven fields; two of them are uncommon typed
- * arrays (`BigUint64Array` for `objIDs`, `Float32Array * 3` for
- * `positions`). Centralising the construction here keeps every consumer
- * honest with the current field set — the moment a new field is added to
- * `GalaxyCatalog`, this helper fails to compile and the maintainer is forced
- * to extend it, which is exactly the right place to make that decision.
- *
- * Downstream `pointRenderer.upload` already treats `count === 0` as
- * "free this source's VRAM", so the empty catalog composes cleanly with
- * that contract — no special-cased "skip" state is needed in the slot.
- */
 export function emptyGalaxyCatalog(): GalaxyCatalog {
   return {
     count: 0,
@@ -279,5 +216,7 @@ export function emptyGalaxyCatalog(): GalaxyCatalog {
     axisRatio: new Float32Array(0),
     positionAngleDeg: new Float32Array(0),
     diameterKpc: new Float32Array(0),
+    classByte: new Uint8Array(0),
+    parentSurveyByte: new Uint8Array(0),
   };
 }
