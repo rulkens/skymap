@@ -51,7 +51,7 @@ import { Source, sourceLabel } from '../../src/data/sources.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
 import { TIER_TARGETS, tierFilenameForSource } from '../../src/data/tierTargets.js';
 import type { Tier } from '../../src/@types/data/Tier.js';
-import { subsampleByAbsMag, subsampleIndicesByAbsMag } from './subsampleByAbsMag.js';
+import { subsampleByAbsMag } from './subsampleByAbsMag.js';
 
 // Re-export so `tests/crossMatch.test.ts` and any other consumer can keep
 // using the documented `tools/buildAllBins` import path.
@@ -217,17 +217,16 @@ function loadOrEmpty(path: string | undefined, parser: ParserFn): ParsedRecord[]
 }
 
 /**
- * Load + parse the Milliquas v8 fixed-width file, preserving the
- * parser's parallel `names`/`classes` sidecars.
+ * Load + parse the Milliquas v8 fixed-width file.
  *
  * Why a Milliquas-specific loader rather than another `loadOrEmpty`
- * call? `loadOrEmpty` returns just `ParsedRecord[]` — fine for SDSS /
- * 2MRS / GLADE where the parser's output is fully captured by the
- * record shape, but lossy for Milliquas where the Name + Type[0]
- * columns travel alongside in parallel arrays for the JSON sidecar
- * the InfoCard reads at runtime.  Wrapping the parser here keeps the
- * three sources in lockstep without forcing `ParserFn` to grow a
- * sidecar return shape every parser would have to honour.
+ * call? `loadOrEmpty` returns just `ParsedRecord[]` and reports a flat
+ * `skipped` count, but the Milliquas parser surfaces a structured
+ * skip breakdown (z=blank vs z=0 vs photo-z vs GAIA3 QSOC) that's
+ * worth printing as the operator's eyes-on signal during a build.
+ * Wrapping the parser here keeps that reporting close to the load
+ * site without forcing `ParserFn` to grow a richer return shape every
+ * parser would have to honour.
  *
  * Missing-file tolerance mirrors `loadOrEmpty`: the raw 194 MB
  * upstream file is gitignored, so a fresh checkout won't have it.
@@ -238,8 +237,6 @@ function loadOrEmpty(path: string | undefined, parser: ParserFn): ParsedRecord[]
 function loadMilliquas(path: string | undefined): MilliquasParseResult {
   const empty: MilliquasParseResult = {
     records: [],
-    names: [],
-    classes: [],
     skipped: { zMissing: 0, zZero: 0, photoZRounded: 0, qsocRounded: 0 },
   };
   if (!path) return empty;
@@ -569,25 +566,12 @@ async function runCli(): Promise<void> {
         );
         continue;
       }
-      // Milliquas owns parallel `names`/`classes` sidecars that must
-      // reorder/subset in lockstep with the encoded records so the
-      // runtime can look up `names[i]` by the same `localIdx` the
-      // renderer uses.  We thread the kept-indices through
-      // `subsampleIndicesByAbsMag` and re-zip; every other source
-      // skips this branch and uses the value-returning variant.
-      const isMilliquas = source === Source.Milliquas;
-      const keptIndices =
-        target === undefined
-          ? null
-          : isMilliquas
-            ? subsampleIndicesByAbsMag(records, target)
-            : null;
+      // Milliquas needs no special-cased subsample path now that the
+      // class + parent-survey bytes ride on the records themselves —
+      // `subsampleByAbsMag` already preserves per-record fields when
+      // it picks the brightest-N slice.
       const slice =
-        target === undefined
-          ? records
-          : isMilliquas
-            ? keptIndices!.map((i) => records[i]!)
-            : subsampleByAbsMag(records, target);
+        target === undefined ? records : subsampleByAbsMag(records, target);
 
       const cloud = recordsToCloud(slice);
       const buf = encodeGalaxyCatalog(cloud);
@@ -596,27 +580,6 @@ async function runCli(): Promise<void> {
       process.stderr.write(
         `wrote ${cloud.count.toLocaleString()} points to ${outPath} (${buf.byteLength.toLocaleString()} bytes)\n`,
       );
-
-      // Milliquas sidecar: parallel-arrayed Name + class letter per
-      // encoded record, written exactly once.  The sidecar is
-      // tier-agnostic in shape (just JSON) but tier-specific in
-      // content because each tier's subsample keeps a different
-      // brightest-N slice — so we keep the file independent per tier
-      // by suffixing it with the same tier the bin uses.  The
-      // runtime fetcher pairs them by `<source>-<tier>.bin` and
-      // `<source>-<tier>_names.json`.
-      if (isMilliquas) {
-        const indices =
-          keptIndices ?? milliquasResult.records.map((_, i) => i);
-        const names = indices.map((i) => milliquasResult.names[i]!);
-        const classes = indices.map((i) => milliquasResult.classes[i]!);
-        const sidecarName = filename.replace(/\.bin$/, '_names.json');
-        const sidecarPath = resolve(outDir, sidecarName);
-        writeFileSync(sidecarPath, JSON.stringify({ names, classes }));
-        process.stderr.write(
-          `wrote ${names.length.toLocaleString()} names+classes to ${sidecarPath}\n`,
-        );
-      }
     }
   }
 }
