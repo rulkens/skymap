@@ -2,6 +2,7 @@ import type { BandLabels } from './BandLabels';
 import type { ColourIndexSpec } from './ColourIndexSpec';
 import type { SchechterTriple } from './SchechterTriple';
 import type { SourceEntryBase } from './SourceEntryBase';
+import type { Tier } from './Tier';
 
 /**
  * Survey-typed row of the SOURCE_REGISTRY — all the per-survey metadata
@@ -56,10 +57,15 @@ export type SurveySourceEntry = SourceEntryBase & {
    */
   readonly iauPrefix: string;
   /**
-   * Whether this source ships per-tier `.bin` variants
-   * (`<binBaseName>-<tier>.bin`). False for sources whose single file is
-   * reused across every tier (2MRS, Famous) and for runtime-generated
-   * sources with no on-disk file (Synthetic). See `tierFilenameForSource`.
+   * Per-tier point-count caps applied at build time. Three encodings:
+   *
+   *   missing key  → no cap; ship the source unchanged.
+   *   0            → exclude this source from this tier entirely (the
+   *                  build skips writing the file; runtime gets a 404).
+   *   positive N   → keep the brightest N galaxies by absolute magnitude.
+   *
+   * Tier-agnostic surveys (2MRS, Famous, Synthetic) carry `{}` — no caps
+   * anywhere, one file shared across tiers.
    */
-  readonly tiered: boolean;
+  readonly tierTargets: Partial<Record<Tier, number>>;
 };

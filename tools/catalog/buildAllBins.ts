@@ -49,7 +49,7 @@ import { fallbackOrientation } from '../../src/utils/random/fallbackOrientation.
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../src/utils/math/galaxyDiameterKpc.js';
 import { Source, SOURCE_REGISTRY } from '../../src/data/sources.js';
 import type { GalaxyCatalog } from '../../src/@types/data/GalaxyCatalog.js';
-import { TIER_TARGETS, tierFilenameForSource } from '../../src/data/tierTargets.js';
+import { tierTarget, tierFilenameForSource } from '../../src/data/tierTargets.js';
 import type { Tier } from '../../src/@types/data/Tier.js';
 import { subsampleByAbsMag, subsampleIndicesByAbsMag } from './subsampleByAbsMag.js';
 
@@ -552,7 +552,7 @@ async function runCli(): Promise<void> {
       // Apply the tier's per-source target, if any.  Missing key = no cap.
       // 0 = exclude (skip writing this file entirely so the runtime can
       // detect "no data for this tier" via 404 rather than an empty cloud).
-      const target = TIER_TARGETS[tier][source];
+      const target = tierTarget(source, tier);
       if (target === 0) {
         process.stderr.write(
           `tier ${tier}: ${SOURCE_REGISTRY[source].label} excluded — skipping ${filename}\n`,

@@ -127,7 +127,7 @@ import { logCameraState } from './helpers/logCameraState';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import { awaitSlotReady } from '../loading/awaitSlotReady';
-import { TIER_TARGETS } from '../../data/tierTargets';
+import { tierTarget } from '../../data/tierTargets';
 import { snapToCameraSnapshot, tweenToCameraSnapshot } from './camera/cameraSnapshot';
 import { MILKY_WAY_CENTER_WORLD, MILKY_WAY_VIEW_DISTANCE_MPC } from '../../data/galacticCenter';
 import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
@@ -1068,7 +1068,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
       const src = cfg.source;
       if (cfg.category === 'synthetic') continue;
-      if (TIER_TARGETS[prevTier][src] === TIER_TARGETS[tier][src]) continue;
+      if (tierTarget(src, prevTier) === tierTarget(src, tier)) continue;
       if (!maskHas(state.sources.drawMask, src)) continue;
       state.assetSlots.points.get(src)?.load({ source: src, tier });
       // Companion sidecars reload in lockstep with the bin so
