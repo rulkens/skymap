@@ -48,6 +48,7 @@ import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
   SURVEY_POINT_SOURCES,
   TIER_FETCHED_POINT_SOURCES,
+  loadCompanionAssets,
 } from '../wiring/galaxyCatalogSourceRegistry';
 import { buildPoisFromFamousMeta } from './buildPoisFromFamousMeta';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
@@ -271,13 +272,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   for (const [, slot] of allSlots) progressEmitter.attachSlot(slot);
   state.subsystems.loadProgress = progressEmitter;
 
-  // Trigger the famous-meta load as soon as the slot is wired —
-  // sidecars are tiny and only feed InfoCard text, so kicking them
-  // off here (rather than awaiting the much larger point fetches)
-  // means the very first hover already has enriched text on a typical
-  // connection.  PGC-aliases stay lazy; see `loadPgcAliases()` on the
+  // famous-meta + xrefs are declared as Famous's `companions` in the
+  // registry; they fire from the boot loop below alongside the
+  // Famous bin. PGC-aliases stay lazy; see `loadPgcAliases()` on the
   // handle for the on-demand trigger.
-  famousMetaSlot.load();
 
   // Construct the three impostor subsystems in dependency order.  The
   // textured-disk planner depends on the atlas (slot allocation +
@@ -433,22 +431,18 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
     synthSlot.load({ source: Source.Synthetic, tier: state.sources.tier });
   }
 
-  // Boot load only for sources whose visibility bit is set in the
-  // default mask — same lazy-load discipline CF-4 / MCPM use for
-  // default-off volume fields.  Default-off surveys (Milliquas today)
-  // skip their multi-MB .bin fetch at startup; toggling them on later
-  // triggers `setSourceVisible`, which fires the slot's `.load()`
-  // idempotently.  Default-on surveys are unaffected.
-  //
-  // Companion sidecars (e.g. milliquas_names) ride alongside via the
-  // registry's `loadCompanions` hook — same generic pattern that the
-  // tier-change loop and `setSourceVisible` use.
+  // Boot-load only visible sources. Off-by-default surveys skip their
+  // multi-MB fetch until the user toggles them on (where
+  // `setSourceVisible` fires the slot's idempotent `.load()`).
+  // Companion sidecars ride alongside via the registry's `companions`
+  // list — see `loadCompanionAssets`.
   for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
-    const source = cfg.source;
     if (cfg.category === 'synthetic') continue;
-    if (!maskHas(state.sources.drawMask, source)) continue;
-    state.assetSlots.points.get(source)?.load({ source, tier: state.sources.tier });
-    cfg.loadCompanions?.(state, state.sources.tier);
+    if (!maskHas(state.sources.drawMask, cfg.source)) continue;
+    state.assetSlots.points
+      .get(cfg.source)
+      ?.load({ source: cfg.source, tier: state.sources.tier });
+    loadCompanionAssets(state, cfg, state.sources.tier);
   }
   // Filaments load exactly once at boot — never on tier change.
   // See `filamentFetcher.ts` for the rationale.

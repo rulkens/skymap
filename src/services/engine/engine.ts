@@ -141,7 +141,10 @@ import { getVolumeFieldDefaults } from '../../data/volumeFieldDefaults';
 // connect/disconnect/sensitivity setters forward straight through.
 import { createSpaceMouseSubsystem } from './subsystems/spaceMouseSubsystem';
 import { buildSettersFromTable } from './wiring/settingsTable';
-import { GALAXY_CATALOG_SOURCE_REGISTRY } from './wiring/galaxyCatalogSourceRegistry';
+import {
+  GALAXY_CATALOG_SOURCE_REGISTRY,
+  loadCompanionAssets,
+} from './wiring/galaxyCatalogSourceRegistry';
 import type { SettingsTableKey } from '../../@types/settings/SettingsTableKey';
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
@@ -208,15 +211,12 @@ export async function setSourceVisibleImpl(
     state.assetSlots.points
       .get(source)
       ?.load({ source, tier: state.sources.tier });
-    // Companion assets (e.g. Milliquas's per-tier name sidecar) fire
-    // alongside the main `.bin` so InfoCard / search / picking have
-    // their parallel data ready by the time the user interacts.  The
-    // registry's `loadCompanions` hook is the single extension point;
-    // sources without companions simply omit it.
-    GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === source)?.loadCompanions?.(
-      state as EngineState,
-      state.sources.tier,
-    );
+    // Companion assets fire alongside the main `.bin` so InfoCard /
+    // search / picking have their parallel data ready by the time the
+    // user interacts. Each registry row's `companions: [...]` array
+    // names which slots to fire; `loadCompanionAssets` dispatches.
+    const cfg = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === source);
+    if (cfg) loadCompanionAssets(state as EngineState, cfg, state.sources.tier);
     state.sources.drawMask = targetMask;
     await state.subsystems.fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
   } else {
@@ -1060,9 +1060,9 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       if (TIER_TARGETS[prevTier][src] === TIER_TARGETS[tier][src]) continue;
       if (!maskHas(state.sources.drawMask, src)) continue;
       state.assetSlots.points.get(src)?.load({ source: src, tier });
-      // Companion sidecars (e.g. milliquas_names) reload in lockstep
-      // with the bin so localIdx lookups stay valid after a tier flip.
-      cfg.loadCompanions?.(state, tier);
+      // Companion sidecars reload in lockstep with the bin so
+      // localIdx lookups stay valid after a tier flip.
+      loadCompanionAssets(state, cfg, tier);
     }
 
     // MCPM volume: tier-aware (unlike CF-4). Same per-tier reload semantics
