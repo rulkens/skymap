@@ -142,12 +142,13 @@ export type GalaxyInfo = {
    * Today only `Source.Milliquas` populates this — values come from
    * `sourceClassLabel(source, classByte)` (e.g. `"Quasar"`,
    * `"BL Lac"`, `"Seyfert-1 broad"`).  For SDSS / 2MRS / GLADE /
-   * Famous / Synthetic rows the field is `undefined` and the
-   * InfoCard hides the row entirely.
+   * Famous / Synthetic rows the field is `undefined` and InfoCard
+   * consumers are expected to hide the row entirely.
    *
-   * The field is optional rather than `string | null` because the
-   * InfoCard already conditionally renders rows with `info.agnClass
-   * && (…)`; an explicit `undefined` keeps the absent-row markup
+   * The field is optional rather than `string | null` to match the
+   * React-idiomatic absent-row pattern used elsewhere in the type
+   * (e.g. `famous?`): consumers gate with `info.agnClass && (…)`
+   * and an explicit `undefined` keeps the absent-row markup
    * identical to every other "this row doesn't apply" field.
    */
   agnClass?: string;

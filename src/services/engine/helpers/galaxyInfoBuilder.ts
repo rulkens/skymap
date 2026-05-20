@@ -322,11 +322,16 @@ export function buildGalaxyInfo(
   const parentSurveyPrefix = milliquasParentSurveyPrefix(parentSurveyByte);
 
   // Milliquas "<PARENT> J<RA><Dec>" reconstruction.  When the bin
-  // carries a recognised parent-survey byte (~98% of Milliquas
-  // rows), produce the historical display name without the JSON
-  // sidecar that v4 needed; otherwise leave the field undefined and
-  // let the displayName ladder fall through to the IAU "MQ J…"
-  // fallback.
+  // carries a recognised parent-survey byte (the vast majority of
+  // Milliquas rows), produce the historical display name without a
+  // JSON sidecar; otherwise leave the field undefined and let the
+  // displayName ladder fall through to the IAU "MQ J…" fallback.
+  //
+  // The J-suffix here is recomputed from the row's stored RA/Dec
+  // floats via the shared `iauRaDecSuffix` emitter, so it may differ
+  // in the least-significant digits from the upstream catalogue's
+  // original Name column (different rounding/truncation of slightly
+  // different coord measurements).  The prefix half always matches.
   const milliquasDisplayName =
     source === Source.Milliquas && parentSurveyPrefix !== null
       ? `${parentSurveyPrefix} ${iauRaDecSuffix(ra, dec)}`
