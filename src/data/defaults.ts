@@ -215,7 +215,7 @@ export const DEFAULT_ABS_MAG_LIMIT = -19;
  *
  * Every survey is on except Milliquas, which is hidden by default until
  * the quasar-specific render path lands.  Milliquas's `.bin` is still
- * fetched (it lives in `ALL_SOURCES` so the cloudLoader requests it),
+ * fetched (it lives in `SURVEY_SOURCES` so the cloudLoader requests it),
  * but its bit stays clear in the visibility mask so the existing
  * galaxy-style billboards don't represent unresolved AGN until the
  * dedicated quasar visuals exist.  See `data/sources.ts` for the bit

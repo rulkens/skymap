@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Source, SOURCE_REGISTRY, ALL_SOURCES, bandLabels } from '../../src/data/sources';
+import { Source, SOURCE_REGISTRY, SURVEY_SOURCES, bandLabels } from '../../src/data/sources';
 import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../src/utils/sourceMask';
 
 describe('Source.Famous', () => {
@@ -7,8 +7,8 @@ describe('Source.Famous', () => {
     expect(Source.Famous).toBe(4);
   });
 
-  it('appears in ALL_SOURCES', () => {
-    expect(ALL_SOURCES).toContain(Source.Famous);
+  it('appears in SURVEY_SOURCES', () => {
+    expect(SURVEY_SOURCES).toContain(Source.Famous);
   });
 
   it('is included in ALL_VISIBLE_MASK', () => {
@@ -45,14 +45,14 @@ describe('Source enum — POI codes (cluster/supercluster/void)', () => {
     expect(Source.Void).toBe(7);
   });
 
-  it('keeps POI codes OUT of ALL_SOURCES (POIs are not survey sources)', () => {
-    // The points-pipeline visibility bitmask iterates ALL_SOURCES. POIs
+  it('keeps POI codes OUT of SURVEY_SOURCES (POIs are not survey sources)', () => {
+    // The points-pipeline visibility bitmask iterates SURVEY_SOURCES. POIs
     // render through their own renderer (future clusterMarkerRenderer)
     // with its own per-category visibility logic, so listing them here
     // would muddy the meaning of "this bitmask filters survey galaxies."
-    expect(ALL_SOURCES).not.toContain(Source.Cluster);
-    expect(ALL_SOURCES).not.toContain(Source.Supercluster);
-    expect(ALL_SOURCES).not.toContain(Source.Void);
+    expect(SURVEY_SOURCES).not.toContain(Source.Cluster);
+    expect(SURVEY_SOURCES).not.toContain(Source.Supercluster);
+    expect(SURVEY_SOURCES).not.toContain(Source.Void);
   });
 
   it('ALL_VISIBLE_MASK still covers only survey sources (no POI bits)', () => {

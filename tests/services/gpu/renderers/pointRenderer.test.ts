@@ -165,10 +165,10 @@ describe('PointRenderer.totalCount', () => {
 });
 
 describe('PointRenderer.loadedSources', () => {
-  it('iterates clouds in `ALL_SOURCES` order regardless of upload order', async () => {
+  it('iterates clouds in `SURVEY_SOURCES` order regardless of upload order', async () => {
     const renderer = createPointRenderer(makeStubDevice(), 'bgra8unorm', makeStubFadeBgl(), makeStubSourceBgl());
     // Upload in non-iteration order on purpose — the renderer must re-sort.
-    // ALL_SOURCES is ordered smallest-catalogue → largest:
+    // SURVEY_SOURCES is ordered smallest-catalogue → largest:
     //   [Synthetic, Famous, TwoMRS, SDSS, Glade]
     // so TwoMRS comes before SDSS.
     await renderer.upload(Source.SDSS, makeCloud(100));

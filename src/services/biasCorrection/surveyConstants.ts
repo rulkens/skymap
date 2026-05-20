@@ -44,7 +44,7 @@
  * @module
  */
 
-import { Source, ALL_SOURCES } from '../../data/sources';
+import { Source, SURVEY_SOURCES } from '../../data/sources';
 import { surveyFluxLimit, surveySchechter } from '../../data/surveyFluxLimits';
 import { expectedNumberDensity } from '../../utils/math/schechterDensity';
 import type { SurveyConstants } from '../../@types/math/SurveyConstants';
@@ -64,7 +64,7 @@ function buildOne(source: Source): SurveyConstants {
 // makes the misuse "subsystem mutates a constants record" impossible —
 // the entries are shared across the subsystem, the renderer (post-E.2
 // reads), and any future consumer.
-const TABLE: Record<Source, SurveyConstants> = ALL_SOURCES.reduce(
+const TABLE: Record<Source, SurveyConstants> = SURVEY_SOURCES.reduce(
   (acc, src) => {
     acc[src] = Object.freeze(buildOne(src));
     return acc;

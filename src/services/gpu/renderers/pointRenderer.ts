@@ -45,7 +45,7 @@ import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { PointDrawSettings } from '../../../@types/rendering/PointDrawSettings';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
-import { ALL_SOURCES, Source } from '../../../data/sources';
+import { SURVEY_SOURCES, Source } from '../../../data/sources';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 
@@ -1097,7 +1097,7 @@ export function createPointRenderer(
     count: number;
     sourceBuffer: GPUBuffer;
   }> {
-    for (const source of ALL_SOURCES) {
+    for (const source of SURVEY_SOURCES) {
       const entry = clouds.get(source);
       if (!entry) continue;
       yield {
@@ -1250,7 +1250,7 @@ export function createPointRenderer(
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
 
-    for (const source of ALL_SOURCES) {
+    for (const source of SURVEY_SOURCES) {
       const entry = clouds.get(source);
       if (!entry) continue;
 

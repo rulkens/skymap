@@ -200,7 +200,7 @@ export function bandLabels(source: Source): BandLabels {
  * to the file-format enum doesn't silently promote it into the UI and the
  * visibility bitmask.
  */
-export const ALL_SOURCES: readonly Source[] = [
+export const SURVEY_SOURCES: readonly Source[] = [
   Source.Synthetic,
   Source.Famous,
   Source.TwoMRS,

@@ -90,7 +90,7 @@ import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { BiasMode } from '../../../data/biasMode';
 import type { BiasMode as BiasModeT } from '../../../@types/data/BiasMode';
-import { Source, ALL_SOURCES } from '../../../data/sources';
+import { Source, SURVEY_SOURCES } from '../../../data/sources';
 import type { ComputeSchechterRatiosInput } from '../../../@types/engine/ComputeSchechterRatiosInput';
 import type { ComputeAngularWeightsInput } from '../../../@types/engine/ComputeAngularWeightsInput';
 import type { SchechterRunner } from '../../../@types/engine/subsystems/SchechterRunner';
@@ -214,7 +214,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   function loadedSourceCatalogPairs(): { source: Source; catalog: GalaxyCatalog }[] {
     const out: { source: Source; catalog: GalaxyCatalog }[] = [];
     const catalogs = getLoadedClouds();
-    for (const source of ALL_SOURCES) {
+    for (const source of SURVEY_SOURCES) {
       const catalog = catalogs.get(source);
       if (catalog && catalog.count > 0) {
         out.push({ source, catalog });

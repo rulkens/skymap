@@ -9,14 +9,14 @@
  * far more than the four currently tracked.
  */
 
-import { ALL_SOURCES, Source } from '../data/sources';
+import { SURVEY_SOURCES, Source } from '../data/sources';
 
 /**
- * "Show every survey" mask — `1` in every `ALL_SOURCES` bit position.
+ * "Show every survey" mask — `1` in every `SURVEY_SOURCES` bit position.
  * Equals `0b100011111` (bits 5/6/7 stay clear; those are POI codes).
  * The *startup* visibility mask is a separate constant in `defaults.ts`.
  */
-export const ALL_VISIBLE_MASK: number = ALL_SOURCES.reduce<number>(
+export const ALL_VISIBLE_MASK: number = SURVEY_SOURCES.reduce<number>(
   (mask, src) => mask | (1 << src),
   0,
 );
