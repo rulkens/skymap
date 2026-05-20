@@ -55,6 +55,65 @@ export type Label = {
    */
   readonly color?: Vec4;
   /**
+   * Straight (non-premultiplied) RGBA colour of the outside outline
+   * stroke.  Default `[0, 0, 0, 0]` — fully transparent, which combined
+   * with `outlineEmFrac = 0` collapses the outline band to zero
+   * contribution in the fragment shader.  The renderer premultiplies on
+   * write (same convention as `color`).
+   *
+   * The outline is composited OVER the fill in premultiplied space, so a
+   * 50%-alpha outline correctly half-blends with whatever sits behind
+   * the label.
+   */
+  readonly outlineColor?: Vec4;
+  /**
+   * Outline width as a fraction of the projected em height.  Default
+   * `0`.  Example: `0.05` on a 40-px-tall label gives a 2-px-wide
+   * outline; on a 60-px label the same fraction grows to 3 px.
+   *
+   * ## Why em-fraction instead of pixels
+   *
+   * The label sizing pipeline clamps the projected em height to
+   * `[minPixelSize, maxPixelSize]`; an em-fraction outline naturally
+   * inherits that clamp.  A pixel-absolute outline would visually
+   * dominate at the `minPixelSize` floor (where the glyph itself is
+   * tiny) and vanish at the `maxPixelSize` ceiling.
+   *
+   * Outside stroke — the outline grows outward from the glyph contour;
+   * the glyph body stays its natural size.
+   */
+  readonly outlineEmFrac?: number;
+  /**
+   * Straight RGBA colour of the soft outside glow halo.  Default
+   * `[0, 0, 0, 0]`.  Same renderer-premultiplies-on-write convention as
+   * `color`.
+   *
+   * The glow is composited OVER (not additive) — alpha-blended onto the
+   * background like a translucent plate.  Additive would have vanished
+   * against bright backgrounds (the Milky Way, dense cluster fields),
+   * which is exactly where labels need to stand out most.
+   */
+  readonly glowColor?: Vec4;
+  /**
+   * Glow radius as a fraction of the projected em height.  Default `0`.
+   * The glow extends from the glyph contour (`d = 0`) outward by this
+   * amount with a smoothstep falloff; the visible halo's outer edge sits
+   * at `glowEmFrac * displayEmPx` screen pixels past the glyph edge.
+   *
+   * ## Why em-fraction
+   *
+   * Same rationale as `outlineEmFrac` — the halo naturally inherits the
+   * projected-em-height clamp.
+   *
+   * ## Band overlap with outline
+   *
+   * The glow extends from `d = 0` regardless of `outlineEmFrac`; the
+   * outline overlays the inner portion when both are active.  Visible
+   * total halo extent is `max(outlineEmFrac, glowEmFrac)`.  Toggling the
+   * outline off does not change the overall label silhouette.
+   */
+  readonly glowEmFrac?: number;
+  /**
    * Floor clamp on the projected em height in screen pixels (default 8).
    * When the perspective projection of `worldEmMpc` falls below this
    * value (label is very far away), the label renders at exactly this
