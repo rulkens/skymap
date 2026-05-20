@@ -17,6 +17,7 @@ export * from './formatRaSexagesimal';
 export * from './formatDecSexagesimal';
 export * from './sdssName';
 export * from './iauName';
+export * from './iauRaDecSuffix';
 export * from './lookbackTimeGyr';
 export * from './hubbleVelocityKmS';
 export * from './absoluteMagnitude';
