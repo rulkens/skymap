@@ -1,13 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   getLabelStyleOverride,
   setLabelStyleOverride,
   clearLabelStyleOverride,
+  registerLabelStyleOverrideWake,
   type LabelStyleOverrideTarget,
 } from '../../../src/services/engine/labelStyleOverride';
 
 describe('labelStyleOverride', () => {
   beforeEach(() => clearLabelStyleOverride());
+  // Always reinstall a no-op wake at teardown so a test that registered
+  // a counter doesn't leak its closure into the next file's runs.
+  afterEach(() => registerLabelStyleOverrideWake(() => {}));
 
   it('returns null target when no override is set', () => {
     expect(getLabelStyleOverride().targetCategory).toBeNull();
@@ -39,5 +43,22 @@ describe('labelStyleOverride', () => {
     });
     clearLabelStyleOverride();
     expect(getLabelStyleOverride().targetCategory).toBeNull();
+  });
+
+  it('fires the registered wake callback on set and clear', () => {
+    let wakes = 0;
+    registerLabelStyleOverrideWake(() => {
+      wakes++;
+    });
+    setLabelStyleOverride({
+      targetCategory: 'cluster',
+      outlineColor: [1, 0, 0, 1],
+      outlineEmFrac: 0.05,
+      glowColor: [0, 0, 1, 0.5],
+      glowEmFrac: 0.2,
+    });
+    expect(wakes).toBe(1);
+    clearLabelStyleOverride();
+    expect(wakes).toBe(2);
   });
 });

@@ -69,6 +69,13 @@ let current: LabelStyleOverride = {
 // to leak (no subscribers to forget to dispose).
 let version = 0;
 
+// Wake callback — the engine bootstrap registers a closure that calls
+// `scheduler.requestRender()`.  Without this, the version bump only
+// causes a re-flush IF a frame happens to run; render-on-demand sits
+// idle until the user nudges the mouse.  Registration is module-scoped
+// because the override has no constructor seam to receive deps.
+let wake: (() => void) | null = null;
+
 export function getLabelStyleOverride(): LabelStyleOverride {
   return current;
 }
@@ -80,6 +87,7 @@ export function getLabelStyleOverrideVersion(): number {
 export function setLabelStyleOverride(next: LabelStyleOverride): void {
   current = next;
   version++;
+  wake?.();
 }
 
 export function clearLabelStyleOverride(): void {
@@ -91,4 +99,16 @@ export function clearLabelStyleOverride(): void {
     glowEmFrac: 0,
   };
   version++;
+  wake?.();
+}
+
+/**
+ * Register a wake callback fired on every override set/clear.  The
+ * engine's bootstrap wires this to `scheduler.requestRender()` so a
+ * DebugPanel slider edit wakes the render-on-demand loop in addition
+ * to bumping the director's signature hash.  Tests can leave this
+ * unregistered — the version counter still works.
+ */
+export function registerLabelStyleOverrideWake(fn: () => void): void {
+  wake = fn;
 }
