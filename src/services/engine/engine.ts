@@ -1031,7 +1031,13 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     //
     // Filaments are NOT swapped on tier change — see
     // `filamentFetcher.ts`'s docblock for the rationale.
-    for (const src of [Source.SDSS, Source.TwoMRS, Source.Glade, Source.Famous]) {
+    for (const src of [
+      Source.SDSS,
+      Source.TwoMRS,
+      Source.Glade,
+      Source.Famous,
+      Source.Milliquas,
+    ]) {
       if (TIER_TARGETS[prevTier][src] === TIER_TARGETS[tier][src]) continue;
       state.assetSlots.points.get(src)?.load({ source: src, tier });
     }
