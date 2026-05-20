@@ -155,6 +155,10 @@ async function main(): Promise<void> {
     axisRatio: new Float32Array(count).fill(NaN),
     positionAngleDeg: new Float32Array(count).fill(NaN),
     diameterKpc: new Float32Array(count),
+    // Famous entries have no AGN class signal and no Milliquas
+    // parent-survey prefix; both bytes stay 0.
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
   const xrefs: Record<string, Xref | null> = {};
   const metaByIdx: Array<{

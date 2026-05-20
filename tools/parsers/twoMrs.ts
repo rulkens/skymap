@@ -330,6 +330,10 @@ export function parseTwoMrs(rawText: string, xsc: XscShapeMap = new Map()): TwoM
       axisRatio: xscEntry ? xscEntry.sup_ba : null,
       positionAngleDeg: xscEntry ? xscEntry.sup_phi : null,
       diameterKpc,
+      // 2MRS rows have no AGN class signal and no Milliquas
+      // parent-survey prefix; both bytes stay 0.
+      classByte: 0,
+      parentSurveyByte: 0,
     });
   }
 

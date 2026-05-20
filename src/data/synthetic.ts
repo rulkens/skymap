@@ -205,5 +205,9 @@ export function generateSyntheticCloud(count: number, seed = 42): GalaxyCatalog 
     axisRatio,
     positionAngleDeg,
     diameterKpc,
+    // Synthetic galaxies have no AGN class and no Milliquas parent
+    // survey; both bytes stay 0 (`Uint8Array` default-fills with 0).
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
 }

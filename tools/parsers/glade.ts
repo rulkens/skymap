@@ -412,6 +412,10 @@ export function parseGladeLine(
     axisRatio: ledaEntry ? ledaEntry.axisRatio : null,
     positionAngleDeg: ledaEntry ? ledaEntry.pa : null,
     diameterKpc,
+    // GLADE rows have no AGN class signal and no Milliquas
+    // parent-survey prefix; both bytes stay 0.
+    classByte: 0,
+    parentSurveyByte: 0,
   };
 }
 
