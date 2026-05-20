@@ -113,8 +113,8 @@ const TOGGLEABLE_SOURCES: readonly Source[] = [
   Source.Famous,
   Source.TwoMRS,
   Source.SDSS,
-  Source.Milliquas,
   Source.Glade,
+  Source.Milliquas,
 ];
 
 /**
