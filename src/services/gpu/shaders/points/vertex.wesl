@@ -173,10 +173,10 @@ fn vs(
   //
   //   colour_rest ≈ colour_obs − k · z
   //
-  // 'k' is the per-row 'p.kPerZ' attribute (baked at upload time per
-  // source). We derive z from the position vector via Hubble's law:
-  // |xyz| = c·z/H₀, so z = |xyz| / HUBBLE_DISTANCE_MPC. This matches
-  // how the CPU-side raDecZToCartesian generated these positions.
+  // 'k' is the per-survey 'source.kPerZ' uniform (set once at upload
+  // time from data/colourIndex.ts). We derive z from the position
+  // vector via Hubble's law: |xyz| = c·z/H₀, so z = |xyz| /
+  // HUBBLE_DISTANCE_MPC. Matches the CPU-side raDecZToCartesian.
   let HUBBLE_DISTANCE_MPC = 4282.749;  // c / H₀ for H₀ = 70 km/s/Mpc
   let zRedshift = length(p.position) / HUBBLE_DISTANCE_MPC;
 
@@ -185,7 +185,7 @@ fn vs(
   // and substitute a fixed mid-ramp colour (1.05 ≈ pale orange-white)
   // so sentinel galaxies have a stable visually-neutral tint.
   let isUnknownColour = p.colorIndex > 100.0;
-  let restColorIndex = select(p.colorIndex - p.kPerZ * zRedshift, 1.05, isUnknownColour);
+  let restColorIndex = select(p.colorIndex - source.kPerZ * zRedshift, 1.05, isUnknownColour);
 
   // Look up the colour for this point's *rest-frame* colour index, and
   // bake the magenta highlight in when both u.highlightFallback and the

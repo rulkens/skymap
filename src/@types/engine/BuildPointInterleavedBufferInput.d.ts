@@ -9,7 +9,7 @@ export type BuildPointInterleavedBufferInput = {
   source: Source;
   /**
    * Whether to compute the per-galaxy Schechter ratios as part of this bake.
-   * Defaults to `'fast'` (slot 10 = 1.0).  See `BuildPointInterleavedBufferMode`
+   * Defaults to `'fast'` (slot 9 = 1.0).  See `BuildPointInterleavedBufferMode`
    * for the trade-off.  Optional so existing callers (and the worker
    * structured-clone roundtrip) keep working without recompilation.
    */

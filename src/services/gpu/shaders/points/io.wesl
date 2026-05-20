@@ -200,14 +200,6 @@ struct PerVertex {
   // 'no observed colour for this survey'.
   @location(2) colorIndex: f32,
 
-  // Per-row K-correction coefficient (units: per unit redshift z).
-  // Each survey has a different colour pair with different sensitivity
-  // to bandpass shift, so 'k' lives per-instance:
-  //   - SDSS u−g    →  k ≈ 3.0
-  //   - GLADE B−J   →  k ≈ 1.0
-  //   - 2MRS  J−K   →  k ≈ 0.0
-  @location(3) kPerZ: f32,
-
   // Galaxy minor/major axis ratio b/a in (0, 1] — with the SIGN BIT
   // carrying the fallback-orientation flag. Real measurements are
   // always positive; the JS-side bake negates the value for fallback
@@ -221,33 +213,33 @@ struct PerVertex {
   // NaN. WGSL's 'abs(NaN)' returns NaN and 'NaN < 0.0' is false, so
   // the vertex stage routes synthetic rows through the existing
   // 'axisRatio > 0 is false' round-mask path with the fallback flag clear.
-  @location(4) axisRatio: f32,
+  @location(3) axisRatio: f32,
 
   // Position angle in degrees, [0, 180). East-of-north convention; we
   // negate before applying because UV-space y points down on screen.
-  @location(5) positionAngleDeg: f32,
+  @location(4) positionAngleDeg: f32,
 
   // Per-galaxy physical diameter in kiloparsecs. Drives the apparent-
   // size billboard radius. v4 binary format guarantees a finite
   // positive value (real measurement or 30-kpc fallback).
-  @location(6) diameterKpc: f32,
+  @location(5) diameterKpc: f32,
 
   // Per-galaxy 1/V_max weight for Malmquist-bias correction. Baked at
   // upload time as 'clamp((dRef / dMax(M, m_lim))³, 0, 1)'. Read by the
   // vertex shader's intensity computation, but ONLY when
   // 'u.biasMode == 2u'.
-  @location(7) vMaxWeight: f32,
+  @location(6) vMaxWeight: f32,
 
   // Per-galaxy Schechter density-correction ratio. Baked at upload time
   // as 'clamp(N_ref / n(d), 0, 10)' (originally a 200-step trapezoidal
   // integral evaluated per-fragment; now a single multiply). Read in
   // 'fs' only when 'u.biasMode == 3u'.
-  @location(8) schechterRatio: f32,
+  @location(7) schechterRatio: f32,
 
   // Per-galaxy HEALPix angular re-weight. Baked at mode-toggle time as
   // 'clamp(medianCount / localCount, 0.1, 10)' (default 1.0). Read in
   // 'fs' only when 'u.biasMode == 4u'.
-  @location(9) angularDensityWeight: f32,
+  @location(8) angularDensityWeight: f32,
 };
 
 // ─── vertex-to-fragment interface ───────────────────────────────────
