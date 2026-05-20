@@ -24,11 +24,6 @@
  * `beginRenderPass` for OVER-blend coherency, so they bill against a
  * single timing slot.
  *
- * `textured-disks` inherits the legacy `textured-impostors` indices
- * (4, 5) so historical samples stay comparable across the
- * 2026-05-18 quad-removal rename.  See `texturedDiskSubsystem.ts`
- * for why the screen-aligned quad fallback was removed.
- *
  * ### Why a `Map` rather than a plain object
  *
  * Iteration order matters: the decode loop in `gpuTimingService`

@@ -146,16 +146,11 @@ describe('HDR_PASSES registry', () => {
   it('contains the seven HDR passes in canonical draw order', () => {
     // Order is load-bearing for HMR-stability of the encoder record;
     // see passes/index.ts module header.  Marker-lines and labels
-    // moved out of HDR_PASSES to UI_PASSES (post-tone-map overlay) so
-    // they could escape the tone-map curve compression and avoid the
-    // OVER-blend coherency issue on tile-based GPUs.  The former
-    // `textured-impostors` slot was briefly split into
-    // (`textured-quads`, `textured-disks`) on 2026-05-18 — the quad
-    // half was deleted the same day along with its renderer because
-    // the build-pipeline orientation fallback meant the quad branch
-    // never fired in practice.  Cluster-markers (cluster-viz sub-plan
-    // 2 task 14) is the seventh additive entry, drawn last so the
-    // halo/ring overlay composites over the cosmic-web volume.
+    // live in UI_PASSES (post-tone-map overlay), not HDR_PASSES, so
+    // they escape the tone-map curve compression and dodge the
+    // OVER-blend coherency issue on tile-based GPUs.  Cluster-markers
+    // is the seventh additive entry, drawn last so the halo/ring
+    // overlay composites over the cosmic-web volume.
     expect(HDR_PASSES).toHaveLength(7);
     expect(HDR_PASSES.map((p) => p.name)).toEqual([
       'point-sprites',
@@ -220,11 +215,10 @@ describe('proceduralDisksPass.enabled', () => {
   });
 });
 
-// Coverage for the split halves of the former `textured-impostors`
-// pass lives in `texturedQuadsPass.test.ts` and
+// Coverage for the `textured-disks` pass lives in
 // `texturedDisksPass.test.ts` (one test file per Pass module, matching
 // the convention used by every other entry in `passes/`).  The
-// HDR_PASSES registry check above pins both names in canonical order.
+// HDR_PASSES registry check above pins the name in canonical order.
 
 describe('filamentsPass.enabled', () => {
   it('returns true when filamentsEnabled is true (renderer presence checked in draw)', () => {

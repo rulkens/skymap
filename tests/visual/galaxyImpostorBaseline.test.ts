@@ -1,23 +1,21 @@
 /**
- * Visual baseline — post-split galaxy-impostor draw-call sequence.
+ * Visual baseline — galaxy-impostor draw-call sequence.
  *
- * Drives the three new subsystems (galaxyAtlas + proceduralDisk +
- * texturedDisk) through one runFrame each, then asserts the
- * resulting `lastOutput` arrays hash to the same baseline the pre-split
- * snapshot recorded in Task 1.
+ * Drives the three impostor-side subsystems (galaxyAtlas +
+ * proceduralDisk + texturedDisk) through one runFrame each, then
+ * asserts the resulting `lastOutput` arrays hash to a recorded baseline.
+ * Guards the per-galaxy emission order, the fade-alpha math, and the
+ * atlas-slot bookkeeping against silent regressions.
  *
- * If this test fails after Task 11/12 cut over production: a planner's
- * extraction diverged from the legacy semantics.  Investigate before
- * proceeding.
+ * ## NOTE on `performance.now()` mocking
  *
- * NOTE on `performance.now()` mocking:  the textured-impostor planner
- * derives a per-galaxy `fadeAlpha` from `(now - bitmapReadyTime) / 400ms`.
- * Without a fixed clock the elapsed wall time between bitmap-landing
- * (inside the microtask drain after Frame 1) and `nowMs` read in Frame 2
- * varies across runs, perturbing the rounded hash.  We mock `performance.now`
- * with a synthetic clock advanced by exactly 50 ms between frames so the
- * load-fade lerp lands deterministically on 50/400 = 0.125 — matching the
- * pre-split baseline's recorded value byte-for-byte.
+ * The textured-disk planner derives a per-galaxy `fadeAlpha` from
+ * `(now - bitmapReadyTime) / 400ms`. Without a fixed clock, the elapsed
+ * wall time between bitmap-landing (inside the microtask drain after
+ * Frame 1) and `nowMs` read in Frame 2 varies across runs and perturbs
+ * the rounded hash. We mock `performance.now` with a synthetic clock
+ * advanced by exactly 50 ms between frames so the load-fade lerp lands
+ * deterministically on 50/400 = 0.125.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -99,7 +97,7 @@ function hashInstances(instances: ReadonlyArray<object>): string {
   return parts.join(';');
 }
 
-describe('galaxy-impostor visual baseline (post-split)', () => {
+describe('galaxy-impostor visual baseline', () => {
   it('emits the same lastOutput sequence given a fixed fixture', async () => {
     // Synthetic clock — see module docstring for why this is required for
     // deterministic load-fade.  Restored in `finally`.

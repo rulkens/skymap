@@ -10,7 +10,7 @@
  *   - Famous-meta + PGC-alias sidecar slots.
  *   - Synthetic-volume DEV fixtures.
  *   - The `allSlots` registry + load-progress emitter.
- *   - The galaxy-atlas / textured-impostor / procedural-disk subsystems.
+ *   - The galaxy-atlas / textured-disk / procedural-disk subsystems.
  *
  * After mint, this phase fires `cb.onStatusChange({ kind: 'loading' })`
  * and kicks off the parallel survey loads. It does NOT block on arrivals
@@ -262,7 +262,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   famousMetaSlot.load();
 
   // Construct the three impostor subsystems in dependency order.  The
-  // textured-impostor planner depends on the atlas (slot allocation +
+  // textured-disk planner depends on the atlas (slot allocation +
   // eviction subscription); the procedural-disk planner is independent.
   const galaxyAtlas = createGalaxyAtlasSubsystem({
     device,

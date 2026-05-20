@@ -1,6 +1,6 @@
 /**
  * GalaxyAtlasSubsystem — shared GPU texture atlas + bitmap-fetch queue
- * for the LOD-2 (textured-impostor) galaxy path.
+ * for the LOD-2 (textured-disk) galaxy path.
  *
  * ### What this owns
  *
@@ -68,7 +68,7 @@ export type GalaxyAtlasSubsystem = Destroyable & {
   isFailed(key: string): boolean;
 
   /**
-   * Number of in-flight fetches.  Read by the textured-impostor
+   * Number of in-flight fetches.  Read by the textured-disk
    * subsystem's `hasInFlightWork()` (which the engine's render-on-demand
    * predicate ORs in).
    */

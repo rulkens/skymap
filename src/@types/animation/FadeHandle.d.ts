@@ -21,7 +21,7 @@
  *                    galaxy names, scale bar). Discriminator:
  *                    `layer: LabelLayerId`.
  *   - overlay      — always-on GPU overlay (Milky Way, procedural
- *                    disks, textured impostors). Registered at
+ *                    disks, textured disks). Registered at
  *                    opacity 1.0 via setImmediate. Discriminator:
  *                    `id: OverlayId`.
  *   - volumesMaster — the master enable gate for the whole scalar-
