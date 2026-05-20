@@ -51,6 +51,7 @@ import type { PickRenderer } from '../../rendering/PickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
+import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { ClusterMarkerRenderer } from '../../rendering/ClusterMarkerRenderer';
 import type { ScalarVolumeRenderer } from '../../rendering/ScalarVolumeRenderer';
 import type { VolumeUpsample } from '../../rendering/VolumeUpsample';
@@ -125,6 +126,14 @@ export type EngineGpuHandles = {
    * buffers (uniform + instance + corner).
    */
   markerLineRenderer: MarkerLineRenderer | null;
+  /**
+   * Selection-ring overlay renderer — draws a white annulus around the
+   * currently-selected galaxy on the swap-chain UI overlay. Null until
+   * `initGpu` constructs it; `selectionRingPass` null-checks at point
+   * of use. Stored here so `destroy()` can release the renderer's
+   * two uniform buffers and bind group.
+   */
+  selectionRingRenderer: SelectionRingRenderer | null;
   /**
    * Cluster-marker renderer — draws halo + ring overlays for POI clusters
    * (one renderer for all POI source categories; per-source bind groups
