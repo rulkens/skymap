@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createPoiSubsystem } from '../../../../src/services/engine/subsystems/poiSubsystem';
+import {
+  createPoiSubsystem,
+  POI_STYLES,
+} from '../../../../src/services/engine/subsystems/poiSubsystem';
 import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
@@ -510,5 +513,20 @@ describe('poiSubsystem · marker/label visibility', () => {
 
     expect(labels).toHaveLength(0);
     expect(markers).toHaveLength(1);
+  });
+});
+
+describe('POI_STYLES labelColor alpha', () => {
+  it('every labelColor has alpha=1 so the straight->premultiplied migration is a no-op', () => {
+    // Migration safety: the label pack loop now multiplies rgb * a on
+    // write (straight RGBA -> premultiplied at the GPU boundary).  If a
+    // future POI_STYLES edit lowers a labelColor's alpha below 1, the
+    // new pack-loop premultiplication will silently dim its RGB
+    // channels relative to the pre-migration behaviour.  This test
+    // fails loudly so the implementer can either re-balance the RGB
+    // intent or confirm the dimming was deliberate.
+    for (const [category, style] of Object.entries(POI_STYLES)) {
+      expect(style.labelColor[3], `${category}.labelColor alpha`).toBe(1);
+    }
   });
 });
