@@ -24,9 +24,11 @@
  * - `outlineEmFrac` slider: 0 to 0.2.  Beyond 0.2 the outline starts
  *   eating into adjacent labels at typical em sizes; 0.05–0.1 is the
  *   readable sweet spot.
- * - `glowEmFrac` slider: 0 to 0.5.  Glow can extend further than the
- *   outline before becoming visually noisy; 0.15–0.3 is the typical
- *   "soft halo behind the text" range.
+ * - `glowEmFrac` slider: 0 to 0.28.  The upper bound is set by the
+ *   atlas's inter-glyph padding (12 px at ATLAS_FONT_SIZE=42 ⇒ 0.286
+ *   em-fraction); sampling past it bleeds into the neighbouring
+ *   glyph's pixels.  0.15–0.25 is the typical "soft halo behind the
+ *   text" range, comfortably inside the cap.
  *
  * ## Why `useEffect` and not a render-time setter call
  *
@@ -124,7 +126,7 @@ export function LabelEffectsSection(): ReactElement {
         </label>
         <label style={labelStyle}>
           <span style={{ width: 70 }}>Glow rad</span>
-          <input type="range" min={0} max={0.5} step={0.005} value={glowEmFrac} onChange={(e) => setGlowEmFrac(parseFloat(e.target.value))} />
+          <input type="range" min={0} max={0.28} step={0.005} value={glowEmFrac} onChange={(e) => setGlowEmFrac(parseFloat(e.target.value))} />
           <span style={{ width: 40 }}>{glowEmFrac.toFixed(3)}</span>
         </label>
       </div>
