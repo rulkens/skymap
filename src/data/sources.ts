@@ -247,9 +247,12 @@ export const SOURCE_REGISTRY = {
     // stored mag values are NaN, which FullCard renders as "N/A".
     bandLabels: { u: 'u', g: 'g', r: 'r', i: 'i', z: 'z' },
   },
-  [Source.Cluster]: { type: 'poi', code: Source.Cluster, label: 'Cluster' },
-  [Source.Supercluster]: { type: 'poi', code: Source.Supercluster, label: 'Supercluster' },
-  [Source.Void]: { type: 'poi', code: Source.Void, label: 'Void' },
+  // POI anchors are full-sky in the trivial sense — individual points, not
+  // survey patches — so `allSky: true` keeps the renderer's coverage-mask
+  // logic well-behaved across both entry kinds.
+  [Source.Cluster]: { type: 'poi', code: Source.Cluster, label: 'Cluster', allSky: true },
+  [Source.Supercluster]: { type: 'poi', code: Source.Supercluster, label: 'Supercluster', allSky: true },
+  [Source.Void]: { type: 'poi', code: Source.Void, label: 'Void', allSky: true },
   [Source.Milliquas]: {
     type: 'survey',
     code: Source.Milliquas,
@@ -280,14 +283,9 @@ export function sourceLabel(source: Source): string {
   return SOURCE_REGISTRY[source].label;
 }
 
-/** True if the survey covers (approximately) the full celestial sphere. */
+/** True if the source covers (approximately) the full celestial sphere. */
 export function sourceIsAllSky(source: Source): boolean {
-  const entry = SOURCE_REGISTRY[source];
-  // POI anchors are full-sky in the trivial sense (individual points, not
-  // survey footprints). Returning `true` keeps coverage-mask code paths
-  // well-behaved if a POI somehow reaches them.
-  if (entry.type === 'poi') return true;
-  return entry.allSky;
+  return SOURCE_REGISTRY[source].allSky;
 }
 
 /** Approximate effective max distance in megaparsecs. See `SOURCE_REGISTRY`. */

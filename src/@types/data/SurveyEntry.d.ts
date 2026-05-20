@@ -1,4 +1,5 @@
 import type { BandLabels } from './BandLabels';
+import type { SourceEntryBase } from './SourceEntryBase';
 
 /**
  * Survey-typed row of the SOURCE_REGISTRY — all the per-survey metadata
@@ -8,20 +9,16 @@ import type { BandLabels } from './BandLabels';
  * `binBaseName` is `null` for sources without an on-disk file (e.g. the
  * Synthetic procedurally-generated cloud); every other field is required.
  */
-export type SurveyEntry = {
+export type SurveyEntry = SourceEntryBase & {
   readonly type: 'survey';
   /** Stable numeric tag, matching the `.bin` file format byte. */
   readonly code: number;
-  /** Display name shown in the UI legend (e.g. `'SDSS'`, `'GLADE'`). */
-  readonly label: string;
   /**
    * Filename stem under `public/data/` (and on R2). `null` for sources with
    * no on-disk representation. Tier-aware sources get `-<tier>` appended by
    * `tierFilenameForSource`.
    */
   readonly binBaseName: string | null;
-  /** True if the survey footprint covers (approximately) the full sphere. */
-  readonly allSky: boolean;
   /**
    * Approximate effective depth used to frame the camera, in megaparsecs.
    * Not a strict cut — outliers may sit beyond.
