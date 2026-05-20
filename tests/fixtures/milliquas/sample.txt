@@ -4,7 +4,7 @@
  40.6696200  -0.0132800  NGC 1068                  NX    9.61 10.83 G   1 1  0.003 NED    NED    4XMM J024240.7-000048                                                                      
 166.1138100  38.2088300  Mrk 421                   BRX  13.30 13.50 G   - -  0.030 NED    NED    4XMM J110427.3+381231  VLA J110427.3+381231                                                
  50.6738000  41.5114700  3C 84                     Q2R  11.85 12.50 G   1 1  0.018 NED    NED                           NVSS J031948.2+413042  NVSS J031950.0+413100  NVSS J031946.4+413024 
-200.0000000  15.0000000  FAKE_SPECZ_PLUS_QSOC      Q    18.55 18.90 G   - -  1.234 FAKE   FAKE                                                                                              
+200.0000000  15.0000000  FAKE_PLAIN_SPECZ          Q    18.55 18.90 G   - -  1.234 FAKE   FAKE                                                                                              
 210.0000000 -25.0000000  FAKE_RMAG_ONLY            Q    19.40           - x  2.150 FAKE   FAKE                                                                                              
 220.0000000   5.0000000  FAKE_ZERO_REDSHIFT        Q    20.10 20.55     - -  0.000 FAKE   FAKE                                                                                              
 230.0000000 -10.0000000  FAKE_PHOTOZ_CANDIDATE     Q    21.20 21.80 n   - -  1.700 FAKE   FAKE                                                                                              
