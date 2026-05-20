@@ -37,17 +37,22 @@ describe('buildAllBins — Milliquas smoke', () => {
   );
 
   it('records-to-cloud + encode/decode preserves Milliquas-specific shape', () => {
-    const { records, names } = parseMilliquas(raw);
+    const { records } = parseMilliquas(raw);
     expect(records.length).toBeGreaterThan(0);
 
     const cloud = recordsToCloud(records);
 
-    // Sidecar invariant: the parser's parallel arrays match the cloud
-    // record count one-for-one before any tier subsampling.  This is
-    // the property `buildAllBins.ts` relies on when threading
-    // names/classes through the kept-indices permutation.
+    // Cloud-build invariant: every parsed record produces exactly one
+    // GalaxyCatalog slot before any tier subsampling kicks in.
     expect(cloud.count).toBe(records.length);
-    expect(names.length).toBe(records.length);
+
+    // The new per-record bytes ride straight through recordsToCloud
+    // — pick a Q-class row from the fixture and verify the byte
+    // landed on the Uint8Array slot.
+    const qIdx = records.findIndex((r) => r.classByte === 1);
+    expect(qIdx).toBeGreaterThanOrEqual(0);
+    expect(cloud.classByte[qIdx]).toBe(1);
+    expect(cloud.parentSurveyByte[qIdx]).toBe(records[qIdx]!.parentSurveyByte);
 
     // Photometry: Rmag survives through the Bmag→magG / Rmag→magR
     // mapping defined in the parser.  We don't pin a value because
@@ -82,5 +87,8 @@ describe('buildAllBins — Milliquas smoke', () => {
       5,
     );
     expect(decoded.diameterKpc[0]).toBe(DEFAULT_GALAXY_DIAMETER_KPC);
+    // classByte + parentSurveyByte must round-trip too.
+    expect(decoded.classByte[qIdx]).toBe(1);
+    expect(decoded.parentSurveyByte[qIdx]).toBe(cloud.parentSurveyByte[qIdx]);
   });
 });
