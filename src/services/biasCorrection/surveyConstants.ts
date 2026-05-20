@@ -48,7 +48,7 @@ import { Source, SURVEY_SOURCES } from '../../data/sources';
 import { surveyFluxLimit, surveySchechter } from '../../data/surveyFluxLimits';
 import { expectedNumberDensity } from '../../utils/math/schechterDensity';
 import type { SurveyConstants } from '../../@types/math/SurveyConstants';
-import type { SourceType } from '../../@types/data/Source';
+import type { SourceType } from '../../@types/data/SourceType';
 
 function buildOne(source: SourceType): SurveyConstants {
   const schechter = surveySchechter(source);

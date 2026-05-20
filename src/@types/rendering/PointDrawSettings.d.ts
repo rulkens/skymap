@@ -16,7 +16,7 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */

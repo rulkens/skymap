@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { SourceType } from '../src/@types/data/Source';
+import type { SourceType } from '../src/@types/data/SourceType';
 
 // Note: we import from `tools/catalog/crossMatch` rather than the documented
 // `tools/catalog/buildAllBins` path because the latter pulls in `node:fs`/`node:url`,

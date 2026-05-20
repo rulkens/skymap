@@ -46,7 +46,7 @@ import { SURVEY_SOURCES, Source } from '../../data/sources';
 import { maskHas } from '../../utils/sourceMask';
 import { Panel } from '../common/Panel/Panel';
 import styles from './StatsPanel.module.css';
-import type { SourceType } from '../../@types/data/Source';
+import type { SourceType } from '../../@types/data/SourceType';
 
 /** Props for StatsPanel.  See module header for design rationale. */
 export type StatsPanelProps = {

@@ -1,4 +1,4 @@
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 
 /**
  * Joined per-cloud alias index entry.  Built lazily on first palette open

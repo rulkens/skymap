@@ -32,7 +32,7 @@ import type { BiasMode as BiasModeT } from '../../../../src/@types/data/BiasMode
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
-import type { SourceType } from '../../../../src/@types/data/Source';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 type SpliceCall =
   | { kind: 'schechter'; source: SourceType; data: Float32Array }

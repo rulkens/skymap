@@ -1,5 +1,5 @@
 import type { RefObject } from 'react';
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 import type { EngineHandle } from './EngineHandle';
 import type { EngineStatus } from './EngineStatus';
 import type { GalaxyInfo } from './GalaxyInfo';

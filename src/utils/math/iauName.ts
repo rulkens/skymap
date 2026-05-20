@@ -22,7 +22,7 @@
 
 import { pad } from './_sexagesimal';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import type { SourceType } from '../../@types/data/Source';
+import type { SourceType } from '../../@types/data/SourceType';
 
 /**
  * Compute the coordinate part of an IAU designation: "J<RA><Dec>".

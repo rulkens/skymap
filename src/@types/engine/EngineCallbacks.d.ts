@@ -8,7 +8,7 @@ import type { EngineStatus } from './EngineStatus';
 import type { GalaxyInfo } from './GalaxyInfo';
 import type { Tier } from '../data/Tier';
 import type { ScaleInfo } from './ScaleInfo';
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 import type { BiasMode } from '../data/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { LoadProgressState } from '../loading/LoadProgressState';

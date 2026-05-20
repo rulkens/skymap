@@ -98,7 +98,7 @@ import type { AngularRunner } from '../../../@types/engine/subsystems/AngularRun
 import type { BiasCorrectionSubsystem } from '../../../@types/engine/subsystems/BiasCorrectionSubsystem';
 import type { BiasCorrectionDeps } from '../../../@types/engine/subsystems/BiasCorrectionDeps';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
-import type { SourceType } from '../../../@types/data/Source';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler
 // to emit each `.worker.ts` file as its own worker chunk and hand back a

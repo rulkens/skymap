@@ -19,7 +19,7 @@
 
 import type { EngineState } from '../state/EngineState';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';

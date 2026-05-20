@@ -23,7 +23,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import type { SourceType } from '../../../../src/@types/data/Source';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 import {
   createPointRenderer,
   setBuildBufferRunner,

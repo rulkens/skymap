@@ -37,7 +37,7 @@ import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
-import type { SourceType } from '../../../@types/data/Source';
+import type { SourceType } from '../../../@types/data/SourceType';
 import type {
   ProceduralDiskFrameInput,
   ProceduralDiskFrameOutput,

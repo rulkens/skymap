@@ -14,7 +14,7 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { PointDrawSettings } from './PointDrawSettings';
 

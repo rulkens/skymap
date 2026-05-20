@@ -17,7 +17,7 @@ import { Source } from '../../../../src/data/sources';
 import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
-import type { SourceType } from '../../../../src/@types/data/Source';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 function makeDenseCloud(count: number, ar = 0.7, pa = 45): GalaxyCatalog {
   const positions = new Float32Array(count * 3);

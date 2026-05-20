@@ -13,7 +13,7 @@
  */
 
 import { Source, SOURCE_REGISTRY } from './sources';
-import type { SourceType } from '../@types/data/Source';
+import type { SourceType } from '../@types/data/SourceType';
 
 /**
  * Hubble distance in Mpc — c / H₀ for H₀ = 70 km/s/Mpc. Converts

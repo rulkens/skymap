@@ -29,7 +29,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { SourceType } from '../../src/@types/data/Source';
+import type { SourceType } from '../../src/@types/data/SourceType';
 
 import type { EngineState } from '../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';

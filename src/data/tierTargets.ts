@@ -33,7 +33,7 @@
 
 import { Source, SOURCE_REGISTRY } from './sources';
 import type { Tier } from '../@types/data/Tier';
-import type { SourceType } from '../@types/data/Source';
+import type { SourceType } from '../@types/data/SourceType';
 
 /**
  * Returns the per-tier point-count cap for a source, or `undefined` for

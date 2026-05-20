@@ -67,7 +67,7 @@ import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps'
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { PointOfInterest } from '../../../../src/@types/engine/subsystems/PointOfInterest';
-import type { SourceType } from '../../../../src/@types/data/Source';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 // ── Module mocks ──────────────────────────────────────────────────────
 //

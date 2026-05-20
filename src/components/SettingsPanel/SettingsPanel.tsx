@@ -95,7 +95,7 @@ import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
 import { TierChip } from './TierChip';
 import styles from './SettingsPanel.module.css';
-import type { SourceType } from '../../@types/data/Source';
+import type { SourceType } from '../../@types/data/SourceType';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
 

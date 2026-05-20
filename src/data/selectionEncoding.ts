@@ -34,7 +34,7 @@
  */
 
 import { Source } from './sources';
-import type { SourceType } from '../@types/data/Source';
+import type { SourceType } from '../@types/data/SourceType';
 
 /** Bit shift for the source code in the packed identity. */
 export const SELECTION_SOURCE_SHIFT = 27;

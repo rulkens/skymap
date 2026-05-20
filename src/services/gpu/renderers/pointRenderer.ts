@@ -48,7 +48,7 @@ import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { SURVEY_SOURCES, Source } from '../../../data/sources';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
-import type { SourceType } from '../../../@types/data/Source';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler to
 // emit `buildPointInterleavedBuffer.worker.ts` as a separate worker chunk

@@ -8,7 +8,7 @@
  * affecting setting is a one-line addition here.
  */
 
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 import type { BiasMode } from '../../data/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
 

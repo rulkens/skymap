@@ -45,7 +45,7 @@ import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
-import type { SourceType } from '../../../../src/@types/data/Source';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 // ── Mock timing service ────────────────────────────────────────────────────
 //

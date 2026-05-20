@@ -53,7 +53,7 @@
  */
 
 import { Source } from '../../src/data/sources.js';
-import type { SourceType } from '../../src/@types/data/Source';
+import type { SourceType } from '../../src/@types/data/SourceType';
 
 export type ParsedRecord = {
   source: SourceType;

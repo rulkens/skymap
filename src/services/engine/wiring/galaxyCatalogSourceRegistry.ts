@@ -42,7 +42,7 @@ import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetche
 import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
 import type { FadeHandle } from '../../../@types/animation/FadeHandle';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
-import type { SourceType } from '../../../@types/data/Source';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
  * Registry rows, in Source enum order.  Order matters: the boot loop,

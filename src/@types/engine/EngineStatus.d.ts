@@ -4,7 +4,7 @@
  * the correct status text or error message.
  */
 
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 
 /**
  * Status reported during engine startup and steady-state.

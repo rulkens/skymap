@@ -1,6 +1,6 @@
 import type { BiasMode } from '../../data/BiasMode';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 import type { PointRenderer } from '../../rendering/PointRenderer';
 
 export type BiasCorrectionSubsystem = {

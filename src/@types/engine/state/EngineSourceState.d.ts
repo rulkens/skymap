@@ -34,7 +34,7 @@
 
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Tier } from '../../data/Tier';
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 

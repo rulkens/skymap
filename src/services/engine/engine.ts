@@ -74,7 +74,7 @@
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../utils/sourceMask';
-import type { SourceType } from '../../@types/data/Source';
+import type { SourceType } from '../../@types/data/SourceType';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,

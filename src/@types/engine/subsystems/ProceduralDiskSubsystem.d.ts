@@ -17,7 +17,7 @@ import type { Destroyable } from '../../rendering/Destroyable';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { ProceduralDiskInstance } from '../../rendering/ProceduralDiskInstance';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 
 export type ProceduralDiskFrameInput = {
   readonly cam: OrbitCamera;

@@ -8,7 +8,7 @@
 
 import { Source, SOURCE_REGISTRY } from './sources';
 import type { SchechterTriple } from '../@types/data/SchechterTriple';
-import type { SourceType } from '../@types/data/Source';
+import type { SourceType } from '../@types/data/SourceType';
 
 /** Per-survey apparent-magnitude flux limit (band varies — see `bandLabels`). */
 export function surveyFluxLimit(source: SourceType): number {

@@ -35,7 +35,7 @@ import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { InfoTip } from '../InfoTip/InfoTip';
 import styles from './CommandPalette.module.css';
-import type { SourceType } from '../../@types/data/Source';
+import type { SourceType } from '../../@types/data/SourceType';
 
 /**
  * Catalogue-id pattern: ANYTHING that matches is treated as a

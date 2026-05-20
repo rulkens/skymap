@@ -11,6 +11,6 @@
  * `selectionSubsystem.ts`, which is structurally identical.
  */
 
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 
 export type Selection = { source: SourceType; localIdx: number };

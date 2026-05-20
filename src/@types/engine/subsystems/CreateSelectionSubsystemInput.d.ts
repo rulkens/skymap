@@ -1,6 +1,6 @@
 import type { EngineCallbacks } from '../EngineCallbacks';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 

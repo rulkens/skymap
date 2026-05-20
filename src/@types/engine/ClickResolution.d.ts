@@ -1,4 +1,4 @@
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 import type { GalaxyInfo } from './GalaxyInfo';
 import type { PointOfInterest } from './subsystems/PointOfInterest';
 

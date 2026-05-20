@@ -68,7 +68,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { SourceType } from '../../src/@types/data/Source';
+import type { SourceType } from '../../src/@types/data/SourceType';
 
 import { decodeGalaxyCatalog } from '../../src/data/galaxyCatalogFormat.js';
 import { parseNDskl, skeletonToFilamentCloud } from '../parsers/ndskl.js';

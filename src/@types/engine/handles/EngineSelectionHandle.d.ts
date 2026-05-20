@@ -1,4 +1,4 @@
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 import type { PgcAliasMap } from '../../loading/PgcAliasMap';

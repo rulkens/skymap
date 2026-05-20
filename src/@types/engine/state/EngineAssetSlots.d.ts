@@ -32,7 +32,7 @@ import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
 import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
 import type { MilliquasNamesPayload } from '../../loading/MilliquasNamesPayload';
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 
 export type EngineAssetSlots = {
   points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;

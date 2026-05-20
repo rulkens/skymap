@@ -17,7 +17,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import type { SourceType } from '../../../../src/@types/data/Source';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 import { createClickResolver } from '../../../../src/services/engine/interaction/clickHandler';
 import type { ClickResolveInput } from '../../../../src/@types/engine/ClickResolveInput';

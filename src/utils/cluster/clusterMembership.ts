@@ -35,7 +35,7 @@
 
 import { packSelection } from '../../data/selectionEncoding';
 import type { GalaxyCatalog } from '../../@types/data/GalaxyCatalog';
-import type { SourceType } from '../../@types/data/Source';
+import type { SourceType } from '../../@types/data/SourceType';
 import type { Vec3 } from '../../@types/math/Vec3';
 
 /**

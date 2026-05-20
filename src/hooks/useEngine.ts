@@ -54,7 +54,7 @@ import type { Tier } from '../@types/data/Tier';
 import type { UseEngineInput } from '../@types/engine/UseEngineInput';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { initialTierFromViewport } from '../utils/initialTierFromViewport';
-import type { SourceType } from '../@types/data/Source';
+import type { SourceType } from '../@types/data/SourceType';
 
 /**
  * Initial scale-bar value that renders something sensible before the

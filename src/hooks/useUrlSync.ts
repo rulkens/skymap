@@ -82,7 +82,7 @@ import { parseFocusHash, selectionToFocusId } from '../services/url/focusUrl';
 import { parsePoiHash, poiIdToHash } from '../services/url/poiUrl';
 import { resolveFocusTarget } from '../services/engine/camera/resolveFocusTarget';
 import { SURVEY_SOURCES, Source } from '../data/sources';
-import type { SourceType } from '../@types/data/Source';
+import type { SourceType } from '../@types/data/SourceType';
 
 // ── Pure helpers (re-exported for unit tests) ──────────────────────────────
 

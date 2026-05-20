@@ -40,7 +40,7 @@
  * and must not be mutated after construction.
  */
 
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 import type { ScalarFieldHandle } from '../rendering/ScalarFieldHandle';
 import type { LabelLayerId } from './LabelLayerId';
 import type { OverlayId } from './OverlayId';

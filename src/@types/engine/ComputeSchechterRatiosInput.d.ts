@@ -1,5 +1,5 @@
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 
 /** Inputs for a Schechter-ratio bake. */
 export type ComputeSchechterRatiosInput = {

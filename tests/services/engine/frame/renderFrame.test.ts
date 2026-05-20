@@ -28,7 +28,7 @@ import { createDisabledGpuTimingService } from '../../../../src/services/gpu/tim
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { mat4 } from 'gl-matrix';
-import type { SourceType } from '../../../../src/@types/data/Source';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 // ── Test fixtures ───────────────────────────────────────────────────────────
 

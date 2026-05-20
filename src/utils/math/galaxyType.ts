@@ -20,7 +20,7 @@ import type { GalaxyTypeMags } from '../../@types/data/GalaxyTypeMags';
 import { galaxyTypeFromColor } from './galaxyTypeFromColor';
 import { galaxyTypeFromBminusJ } from './galaxyTypeFromBminusJ';
 import { galaxyTypeFromJminusK } from './galaxyTypeFromJminusK';
-import type { SourceType } from '../../@types/data/Source';
+import type { SourceType } from '../../@types/data/SourceType';
 
 /**
  * Fallback when the source's required bands are missing or non-finite.

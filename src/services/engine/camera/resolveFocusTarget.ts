@@ -55,7 +55,7 @@ import type { ResolverInput } from '../../../@types/camera/ResolverInput';
 import type { ResolverOutput } from '../../../@types/camera/ResolverOutput';
 import { Source } from '../../../data/sources';
 import { cartesianToRaDecZ } from '../../../utils/math/cartesianToRaDecZ';
-import type { SourceType } from '../../../@types/data/Source';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 /**
  * The 30-arcsec threshold pulled from `tools/buildFamous.ts` —

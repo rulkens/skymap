@@ -15,7 +15,7 @@
  * `pick()`.
  */
 
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 
 export type PickSourceDraw = {
   source: SourceType;

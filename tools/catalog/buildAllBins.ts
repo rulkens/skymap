@@ -32,7 +32,7 @@ import { createReadStream, existsSync, readFileSync, readdirSync, statSync, writ
 import { resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import type { SourceType } from '../../src/@types/data/Source';
+import type { SourceType } from '../../src/@types/data/SourceType';
 
 import { parseSdssCsv } from '../parsers/sdssCsv.js';
 import { parseTwoMrs, parseXscShapeCsv } from '../parsers/twoMrs.js';

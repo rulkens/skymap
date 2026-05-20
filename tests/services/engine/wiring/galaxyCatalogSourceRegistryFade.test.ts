@@ -16,7 +16,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { Source } from '../../../../src/data/sources';
-import type { SourceType } from '../../../../src/@types/data/Source';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,

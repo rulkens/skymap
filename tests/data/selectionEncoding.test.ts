@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import type { SourceType } from '../../src/@types/data/Source';
+import type { SourceType } from '../../src/@types/data/SourceType';
 import {
   SELECTION_SOURCE_SHIFT,
   SELECTION_LOCAL_IDX_MASK,

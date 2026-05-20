@@ -10,7 +10,7 @@
  */
 
 import { SOURCE_REGISTRY, SURVEY_SOURCES, Source } from '../data/sources';
-import type { SourceType } from '../@types/data/Source';
+import type { SourceType } from '../@types/data/SourceType';
 
 /**
  * Startup visibility mask — `1` for every survey source whose registry

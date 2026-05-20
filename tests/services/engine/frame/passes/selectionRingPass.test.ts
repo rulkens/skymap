@@ -6,7 +6,7 @@ import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { mat4 } from 'gl-matrix';
 import { Source } from '../../../../../src/data/sources';
-import type { SourceType } from '../../../../../src/@types/data/Source';
+import type { SourceType } from '../../../../../src/@types/data/SourceType';
 
 // ── fixtures ──────────────────────────────────────────────────────
 

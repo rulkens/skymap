@@ -22,7 +22,7 @@
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
-import type { SourceType } from '../@types/data/Source';
+import type { SourceType } from '../@types/data/SourceType';
 
 // ─── The enum itself ────────────────────────────────────────────────────────
 

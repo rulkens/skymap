@@ -1,4 +1,4 @@
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 import type { Fetcher } from '../../loading/Fetcher';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';

@@ -1,4 +1,4 @@
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 import type { EngineHandle } from './EngineHandle';
 
 export type BuildAliasIndexInput = {

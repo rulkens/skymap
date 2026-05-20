@@ -1,5 +1,5 @@
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 
 export type ComputeAngularWeightsInput = {
   /** Galaxy catalog whose galaxies need per-row angular re-weight values. */

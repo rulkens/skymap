@@ -23,7 +23,7 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { DiskInstance } from '../../rendering/DiskInstance';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 
 export type TexturedDiskFrameInput = {
   readonly cam: OrbitCamera;

@@ -1,4 +1,4 @@
-import type { SourceType } from '../../data/Source';
+import type { SourceType } from '../../data/SourceType';
 
 /**
  * A `(source, localIdx)` selection — what the picker decodes from its

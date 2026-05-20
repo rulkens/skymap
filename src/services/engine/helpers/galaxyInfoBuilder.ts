@@ -24,7 +24,7 @@ import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import { famousDisplayName } from './famousDisplayName';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
-import type { SourceType } from '../../../@types/data/Source';
+import type { SourceType } from '../../../@types/data/SourceType';
 import {
   cartesianToRaDecZ,
   formatRaSexagesimal,

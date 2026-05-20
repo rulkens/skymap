@@ -7,7 +7,7 @@
 import type { GalaxyTypeInfo } from '../data/GalaxyTypeInfo';
 import { Source } from '../../data/sources';
 import type { BandLabels } from '../data/BandLabels';
-import type { SourceType } from '../data/Source';
+import type { SourceType } from '../data/SourceType';
 
 /**
  * Display data for a single galaxy point, computed on-demand from the raw
