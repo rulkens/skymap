@@ -14,7 +14,7 @@ describe('font registry', () => {
     // and the runtime (loadFontAtlases.ts).  Hard-coding them in two
     // places was the original sin the registry eliminates.
     expect(ATLAS_PX).toBe(512);
-    expect(DISTANCE_RANGE_PX).toBe(4);
+    expect(DISTANCE_RANGE_PX).toBe(16);
     expect(ATLAS_FONT_SIZE).toBe(42);
   });
 
