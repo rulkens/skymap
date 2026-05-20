@@ -33,7 +33,7 @@
  * `-medium`, `-large` suffix because each tier's cut is a different file.
  */
 
-import { Source } from './sources';
+import { Source, SURVEY_REGISTRY, type SurveySource } from './sources';
 import type { Tier } from '../@types/data/Tier';
 
 /**
@@ -75,28 +75,20 @@ const TIERED_SOURCES: ReadonlySet<Source> = new Set([
   Source.Milliquas,
 ]);
 
-/** Base (tier-agnostic) filename per source.  Used unchanged for non-tiered sources. */
-const BASE_FILENAMES: Partial<Record<Source, string>> = {
-  [Source.SDSS]: 'sdss',
-  [Source.TwoMRS]: '2mrs',
-  [Source.Glade]: 'glade',
-  [Source.Famous]: 'famous',
-  [Source.Milliquas]: 'milliquas',
-};
-
 /**
  * Returns the on-disk filename for a (source, tier) pair.
  *
- * For tiered sources (SDSS, GLADE) we append `-<tier>` before `.bin` so the
- * three variants coexist on the static host.  For non-tiered sources (2MRS,
- * Famous) we return the bare filename — every tier loads the same file.
+ * For tiered sources (SDSS, GLADE, Milliquas) we append `-<tier>` before
+ * `.bin` so the three variants coexist on the static host. For non-tiered
+ * sources (2MRS, Famous) we return the bare filename — every tier loads
+ * the same file.
  *
  * Throws on `Source.Synthetic` because synthetic data is generated at runtime
- * and never has a filename.  Throwing rather than returning a sentinel string
- * keeps a buggy caller loud instead of silently 404-ing.
+ * and has no filename. Throwing rather than returning a sentinel string keeps
+ * a buggy caller loud instead of silently 404-ing.
  */
 export function tierFilenameForSource(source: Source, tier: Tier): string {
-  const base = BASE_FILENAMES[source];
+  const base = SURVEY_REGISTRY[source as SurveySource]?.binBaseName;
   if (!base) throw new Error(`tierFilenameForSource: no base filename for source ${source}`);
   if (TIERED_SOURCES.has(source)) return `${base}-${tier}.bin`;
   return `${base}.bin`;
