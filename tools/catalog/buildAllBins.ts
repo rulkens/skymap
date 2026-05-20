@@ -82,6 +82,8 @@ export function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
     axisRatio: new Float32Array(count),
     positionAngleDeg: new Float32Array(count),
     diameterKpc: new Float32Array(count),
+    classByte: new Uint8Array(count),
+    parentSurveyByte: new Uint8Array(count),
   };
   for (let i = 0; i < count; i++) {
     // `records[i]` is `ParsedRecord | undefined` under noUncheckedIndexedAccess.
@@ -126,6 +128,14 @@ export function recordsToCloud(records: ParsedRecord[]): GalaxyCatalog {
     // chip in Task 14.
     cloud.diameterKpc[i] =
       r.diameterKpc !== null && r.diameterKpc > 0 ? r.diameterKpc : DEFAULT_GALAXY_DIAMETER_KPC;
+    // Per-source classification byte (e.g. Milliquas AGN class
+    // letter → 1..6).  Every parser that doesn't carry a class
+    // signal leaves r.classByte at 0, so we copy unconditionally.
+    cloud.classByte[i] = r.classByte;
+    // Milliquas-only parent-survey enum (1=SDSS, 2=2MASX, …).
+    // Zero for every non-Milliquas parser.  See sourceClass.ts for
+    // the full enum.
+    cloud.parentSurveyByte[i] = r.parentSurveyByte;
   }
   return cloud;
 }
