@@ -32,9 +32,9 @@ import package::lib::billboard::pxToClipOffset;
 // Atlas em pixel size — must match 'ATLAS_FONT_SIZE' in src/data/fonts.ts.
 const ATLAS_EM_PX: f32 = 42.0;
 // MSDF distance range in pixels — must match 'DISTANCE_RANGE_PX' in
-// src/data/fonts.ts.  Bumped from 4 to 16 in 2026-05-19 alongside the
-// outline+glow feature so the SDF carries headroom past the glyph
-// contour for the glow falloff tail.
+// src/data/fonts.ts.  The SDF must carry headroom past the glyph
+// contour for the glow falloff tail; tighter ranges clamp the tail
+// and produce a banded halo edge.
 const DISTANCE_RANGE_PX: f32 = 16.0;
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
