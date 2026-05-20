@@ -17,8 +17,8 @@
  * to see "expand your data" rather than "this galaxy doesn't exist".
  */
 
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/Source';
 
 export type ResolverOutput =
-  | { resolved: true; source: Source; localIdx: number }
+  | { resolved: true; source: SourceType; localIdx: number }
   | { resolved: false; reason: 'tier' | 'unknown' };

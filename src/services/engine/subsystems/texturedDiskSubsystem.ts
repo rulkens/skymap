@@ -35,6 +35,7 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { GalaxyAtlasSubsystem } from '../../../@types/engine/subsystems/GalaxyAtlasSubsystem';
+import type { SourceType } from '../../../@types/data/Source';
 import type {
   TexturedDiskFrameInput,
   TexturedDiskFrameOutput,
@@ -89,8 +90,8 @@ export function createTexturedDiskSubsystem(
     bitmapReadyTime.delete(key);
   });
 
-  const stickyDisksBySource = new Map<Source, Map<number, DiskInstance>>();
-  const strideStartBySource = new Map<Source, number>();
+  const stickyDisksBySource = new Map<SourceType, Map<number, DiskInstance>>();
+  const strideStartBySource = new Map<SourceType, number>();
 
   let frameCounter = 0;
   let destroyed = false;

@@ -4,7 +4,7 @@
  * the correct status text or error message.
  */
 
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/Source';
 
 /**
  * Status reported during engine startup and steady-state.
@@ -27,6 +27,6 @@ export type EngineStatus =
   | {
       kind: 'ready';
       count: number;
-      source: Source;
+      source: SourceType;
     }
   | { kind: 'error'; message: string };

@@ -95,6 +95,7 @@ import { Panel } from '../common/Panel/Panel';
 import { CollapsibleSection } from './CollapsibleSection';
 import { TierChip } from './TierChip';
 import styles from './SettingsPanel.module.css';
+import type { SourceType } from '../../@types/data/Source';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
 
@@ -110,7 +111,7 @@ import styles from './SettingsPanel.module.css';
  * ~500 k → GLADE ~2 M) so the user sees the "iceberg tip" first and can
  * reason about what each toggle adds in size.
  */
-const TOGGLEABLE_SOURCES: readonly Source[] = [
+const TOGGLEABLE_SOURCES: readonly SourceType[] = [
   Source.Famous,
   Source.TwoMRS,
   Source.SDSS,
@@ -172,13 +173,13 @@ type Props = {
   /** Bitmask of currently-visible sources.  See `data/sources.ts`. */
   visibleSourceMask?: number;
   /** Called when the user toggles a single survey on/off in Advanced. */
-  onToggleSource?: (source: Source, visible: boolean) => void;
+  onToggleSource?: (source: SourceType, visible: boolean) => void;
   /**
    * Per-source point counts indexed by Source enum value.  Surveys whose
    * .bin hasn't loaded yet are absent from the map — the row in the UI
    * then renders the toggle without a count rather than a misleading "0".
    */
-  sourceCounts?: Partial<Record<Source, number>>;
+  sourceCounts?: Partial<Record<SourceType, number>>;
 
   /** Current point size in pixels.  Lives under Galaxies → Advanced. */
   pointSize: number;

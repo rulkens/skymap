@@ -19,7 +19,7 @@
 
 import type { EngineState } from '../state/EngineState';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/Source';
 import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayRenderer } from '../../rendering/MilkyWayRenderer';
@@ -95,7 +95,7 @@ export type RenderFrameInput = {
   // ── Forwarded to the thumbnail subsystem ──────────────────────────────
   famousMeta: FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
-  catalogs: Map<Source, GalaxyCatalog>;
+  catalogs: Map<SourceType, GalaxyCatalog>;
 
   /**
    * Per-pass GPU timing service (always non-null; check `.enabled`

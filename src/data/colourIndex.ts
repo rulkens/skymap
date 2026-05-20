@@ -13,6 +13,7 @@
  */
 
 import { Source, SOURCE_REGISTRY } from './sources';
+import type { SourceType } from '../@types/data/Source';
 
 /**
  * Hubble distance in Mpc — c / H₀ for H₀ = 70 km/s/Mpc. Converts
@@ -44,7 +45,7 @@ export const UNKNOWN_COLOUR_RAMP_POSITION = 1.05;
  * points pass and the procedural-disk impostor for the same galaxy.
  */
 export function pickColourIndex(
-  source: Source,
+  source: SourceType,
   magU: number,
   magG: number,
   magR: number,

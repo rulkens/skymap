@@ -46,6 +46,7 @@ import { SURVEY_SOURCES, Source } from '../../data/sources';
 import { maskHas } from '../../utils/sourceMask';
 import { Panel } from '../common/Panel/Panel';
 import styles from './StatsPanel.module.css';
+import type { SourceType } from '../../@types/data/Source';
 
 /** Props for StatsPanel.  See module header for design rationale. */
 export type StatsPanelProps = {
@@ -64,7 +65,7 @@ export type StatsPanelProps = {
    * sum, so the displayed number reflects what's currently rendered
    * rather than what's loaded.
    */
-  sourceCounts: Partial<Record<Source, number>>;
+  sourceCounts: Partial<Record<SourceType, number>>;
   /**
    * Bitmask of currently-visible sources.  Bits are tested with
    * `maskHas(mask, source)` from `data/sources.ts`.  A survey that's

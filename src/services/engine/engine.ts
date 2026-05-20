@@ -74,6 +74,7 @@
 
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { ALL_VISIBLE_MASK, maskHas, maskWith, maskWithout } from '../../utils/sourceMask';
+import type { SourceType } from '../../@types/data/Source';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_AUTO_ROTATE,
@@ -184,7 +185,7 @@ export async function setSourceVisibleImpl(
     'sources' | 'subsystems' | 'assetSlots'
   >,
   opts: { cb: Pick<EngineCallbacks, 'sources'> },
-  source: Source,
+  source: SourceType,
   visible: boolean,
 ): Promise<void> {
   const { cb } = opts;
@@ -442,7 +443,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
       // so picking can resolve `(source, localIdx)` into a GalaxyInfo
       // without a GPU readback for every hover.  Empty until the
       // first parallel fetch resolves.
-      catalogs: new Map<Source, GalaxyCatalog>(),
+      catalogs: new Map<SourceType, GalaxyCatalog>(),
       // Optional sidecars — `galaxyInfoBuilder` null-checks both, so a
       // hover firing before they land just renders the generic
       // InfoCard layout.
@@ -1001,7 +1002,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
   }
 
   type SelectByAliasTarget = {
-    source: Source;
+    source: SourceType;
     localIdx: number;
     famousMeta?: readonly FamousMetaEntry[];
     famousXrefs?: FamousXrefMap;
@@ -1039,7 +1040,7 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     return awaitSlotReady(slot, new Map() as PgcAliasMap);
   }
 
-  async function setSourceVisible(source: Source, visible: boolean): Promise<void> {
+  async function setSourceVisible(source: SourceType, visible: boolean): Promise<void> {
     // Delegate to the module-scope helper so tests can drive the same
     // logic against a partial-state stub without a full GPU engine.
     return setSourceVisibleImpl(state, { cb }, source, visible);
@@ -1081,11 +1082,11 @@ export function createEngine(canvas: HTMLCanvasElement, cb: EngineCallbacks): En
     state.assetSlots.mcpm?.load({ tier });
   }
 
-  function getCloud(source: Source): GalaxyCatalog | undefined {
+  function getCloud(source: SourceType): GalaxyCatalog | undefined {
     return state.sources.catalogs.get(source);
   }
 
-  function getCloudObjIds(source: Source): BigUint64Array | undefined {
+  function getCloudObjIds(source: SourceType): BigUint64Array | undefined {
     return state.sources.catalogs.get(source)?.objIDs;
   }
 

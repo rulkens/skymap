@@ -82,6 +82,7 @@ import { parseFocusHash, selectionToFocusId } from '../services/url/focusUrl';
 import { parsePoiHash, poiIdToHash } from '../services/url/poiUrl';
 import { resolveFocusTarget } from '../services/engine/camera/resolveFocusTarget';
 import { SURVEY_SOURCES, Source } from '../data/sources';
+import type { SourceType } from '../@types/data/Source';
 
 // ── Pure helpers (re-exported for unit tests) ──────────────────────────────
 
@@ -261,7 +262,7 @@ export function useUrlSync(input: UseUrlSyncInput): UrlSyncReturn {
     // objIDs are sequential 0..N-1 and would collide spuriously with
     // low PGCs, and keeping it out of the input saves a pass over the
     // large `pos@` branch.
-    const catalogs: { source: Source; catalog: GalaxyCatalog }[] = [];
+    const catalogs: { source: SourceType; catalog: GalaxyCatalog }[] = [];
     for (const source of SURVEY_SOURCES) {
       if (source === Source.Synthetic) continue;
       const catalog = handle.sources.getCloud(source);

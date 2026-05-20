@@ -24,6 +24,7 @@ import type { FamousMetaEntry } from '../../../@types/loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../../@types/loading/FamousXrefMap';
 import { famousDisplayName } from './famousDisplayName';
 import { fallbackOrientation } from '../../../utils/random/fallbackOrientation';
+import type { SourceType } from '../../../@types/data/Source';
 import {
   cartesianToRaDecZ,
   formatRaSexagesimal,
@@ -118,7 +119,7 @@ export function niceRound(x: number): number {
 export function buildGalaxyInfo(
   cloud: GalaxyCatalog,
   idx: number,
-  source: Source,
+  source: SourceType,
   famousMeta?: readonly FamousMetaEntry[],
   famousXrefs?: FamousXrefMap,
   milliquasNames?: readonly string[],

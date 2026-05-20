@@ -33,6 +33,7 @@
 
 import { Source, SOURCE_REGISTRY } from './sources';
 import type { Tier } from '../@types/data/Tier';
+import type { SourceType } from '../@types/data/Source';
 
 /**
  * Returns the per-tier point-count cap for a source, or `undefined` for
@@ -43,7 +44,7 @@ import type { Tier } from '../@types/data/Tier';
  *   0          → exclude this source from this tier.
  *   positive N → keep the brightest N.
  */
-export function tierTarget(source: Source, tier: Tier): number | undefined {
+export function tierTarget(source: SourceType, tier: Tier): number | undefined {
   const entry = SOURCE_REGISTRY[source];
   if (entry.type !== 'survey') return undefined;
   // The `as const` on SOURCE_REGISTRY narrows each entry's `tierTargets`
@@ -65,7 +66,7 @@ export function tierTarget(source: Source, tier: Tier): number | undefined {
  * and has no filename. Throwing rather than returning a sentinel string keeps
  * a buggy caller loud instead of silently 404-ing.
  */
-export function tierFilenameForSource(source: Source, tier: Tier): string {
+export function tierFilenameForSource(source: SourceType, tier: Tier): string {
   const entry = SOURCE_REGISTRY[source];
   if (entry.type !== 'survey' || entry.binBaseName === null) {
     throw new Error(`tierFilenameForSource: no base filename for source ${source}`);

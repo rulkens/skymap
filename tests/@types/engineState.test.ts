@@ -29,6 +29,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import type { SourceType } from '../../src/@types/data/Source';
 
 import type { EngineState } from '../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../src/@types/settings/EngineSettingsState';
@@ -402,7 +403,7 @@ describe('EngineState type', () => {
     state.sources.drawMask = 0xff;
     // hovered/selected aren't on `state.picking` anymore — exercise the
     // subsystem's setter instead.
-    state.subsystems.selection.setHovered({ source: 1 as Source, localIdx: 42 });
+    state.subsystems.selection.setHovered({ source: 1 as SourceType, localIdx: 42 });
     state.picking.pickInFlight = true;
 
     expect(state.settings.points.brightness).toBe(2.5);

@@ -16,7 +16,7 @@
  */
 
 import type { Vec3 } from '../math/Vec3';
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/Source';
 
 export type PointDrawSettings = {
   /** Far-field billboard floor radius in pixels.  Galaxies smaller than this stay rendered at this size; nearby galaxies grow past it to their real disc size. */
@@ -58,5 +58,5 @@ export type PointDrawSettings = {
    * fadeBuffer. Closure-captured by the pointSpritesPass around
    * `state.subsystems.fades.opacityOf({ kind: 'survey', source }, now)`.
    */
-  readonly fadeOpacityOf: (source: Source) => number;
+  readonly fadeOpacityOf: (source: SourceType) => number;
 };

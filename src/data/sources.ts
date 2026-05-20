@@ -22,6 +22,7 @@
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
+import type { SourceType } from '../@types/data/Source';
 
 // ─── The enum itself ────────────────────────────────────────────────────────
 
@@ -102,7 +103,6 @@ export const Source = {
    */
   Mcpm: 11,
 } as const;
-export type Source = (typeof Source)[keyof typeof Source];
 
 // ─── Registry ───────────────────────────────────────────────────────────────
 
@@ -361,7 +361,7 @@ export const SOURCE_REGISTRY = {
     trim: 0.3,
     intensity: 1.0,
   },
-} as const satisfies Readonly<Record<Source, SourceEntry>>;
+} as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 
 // ─── Iteration order ────────────────────────────────────────────────────────
 
@@ -374,7 +374,7 @@ export const SOURCE_REGISTRY = {
  * to the file-format enum doesn't silently promote it into the UI and the
  * visibility bitmask.
  */
-export const SURVEY_SOURCES: readonly Source[] = [
+export const SURVEY_SOURCES: readonly SourceType[] = [
   Source.Synthetic,
   Source.Famous,
   Source.TwoMRS,

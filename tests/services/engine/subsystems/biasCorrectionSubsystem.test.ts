@@ -32,19 +32,20 @@ import type { BiasMode as BiasModeT } from '../../../../src/@types/data/BiasMode
 import { Source } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { PointRenderer } from '../../../../src/@types/rendering/PointRenderer';
+import type { SourceType } from '../../../../src/@types/data/Source';
 
 type SpliceCall =
-  | { kind: 'schechter'; source: Source; data: Float32Array }
-  | { kind: 'angular'; source: Source; data: Float32Array }
-  | { kind: 'clear'; source: Source | undefined };
+  | { kind: 'schechter'; source: SourceType; data: Float32Array }
+  | { kind: 'angular'; source: SourceType; data: Float32Array }
+  | { kind: 'clear'; source: SourceType | undefined };
 
 type StubRenderer = {
   renderer: PointRenderer;
   calls: SpliceCall[];
   /** Read the most-recently-installed upload callback (post-attachRenderer). */
-  getUploadCb(): ((source: Source, cloud: GalaxyCatalog) => void) | null;
+  getUploadCb(): ((source: SourceType, cloud: GalaxyCatalog) => void) | null;
   /** Read the most-recently-installed unload callback (post-attachRenderer). */
-  getUnloadCb(): ((source: Source) => void) | null;
+  getUnloadCb(): ((source: SourceType) => void) | null;
 };
 
 /**
@@ -54,22 +55,22 @@ type StubRenderer = {
  */
 function makeStubRenderer(): StubRenderer {
   const calls: SpliceCall[] = [];
-  let uploadCb: ((source: Source, cloud: GalaxyCatalog) => void) | null = null;
-  let unloadCb: ((source: Source) => void) | null = null;
+  let uploadCb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null = null;
+  let unloadCb: ((source: SourceType) => void) | null = null;
   const stub = {
-    spliceSchechterRatios: (source: Source, data: Float32Array) => {
+    spliceSchechterRatios: (source: SourceType, data: Float32Array) => {
       calls.push({ kind: 'schechter', source, data });
     },
-    spliceAngularWeights: (source: Source, data: Float32Array) => {
+    spliceAngularWeights: (source: SourceType, data: Float32Array) => {
       calls.push({ kind: 'angular', source, data });
     },
-    clearBiasOverlays: (source?: Source) => {
+    clearBiasOverlays: (source?: SourceType) => {
       calls.push({ kind: 'clear', source });
     },
-    setBiasUploadCallback: (cb: ((source: Source, cloud: GalaxyCatalog) => void) | null) => {
+    setBiasUploadCallback: (cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null) => {
       uploadCb = cb;
     },
-    setBiasUnloadCallback: (cb: ((source: Source) => void) | null) => {
+    setBiasUnloadCallback: (cb: ((source: SourceType) => void) | null) => {
       unloadCb = cb;
     },
   };
@@ -116,7 +117,7 @@ function makeCloud(count: number): GalaxyCatalog {
  * each test (the `requestRender` spy and a `setMode` setter on the
  * mode mirror).
  */
-function makeDeps(clouds: Map<Source, GalaxyCatalog>) {
+function makeDeps(clouds: Map<SourceType, GalaxyCatalog>) {
   let currentMode: BiasModeT = BiasMode.None;
   const requestRender = vi.fn();
   return {
@@ -145,13 +146,13 @@ describe('createBiasCorrectionSubsystem', () => {
 
   it('setMode(Schechter) fires per-source bake for every loaded source and splices ratios', async () => {
     const stub = makeStubRenderer();
-    const clouds = new Map<Source, GalaxyCatalog>([
+    const clouds = new Map<SourceType, GalaxyCatalog>([
       [Source.SDSS, makeCloud(3)],
       [Source.Glade, makeCloud(5)],
     ]);
     const { deps } = makeDeps(clouds);
-    const callsLog: { source: Source }[] = [];
-    const schechterRunner = vi.fn(async (input: { source: Source; cloud: GalaxyCatalog }) => {
+    const callsLog: { source: SourceType }[] = [];
+    const schechterRunner = vi.fn(async (input: { source: SourceType; cloud: GalaxyCatalog }) => {
       callsLog.push({ source: input.source });
       return new Float32Array(input.cloud.count);
     });
@@ -167,7 +168,7 @@ describe('createBiasCorrectionSubsystem', () => {
 
   it('fast_toggle_race — None → Schechter → None drops the stale Schechter splice', async () => {
     const stub = makeStubRenderer();
-    const clouds = new Map<Source, GalaxyCatalog>([[Source.SDSS, makeCloud(3)]]);
+    const clouds = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCloud(3)]]);
     const { deps } = makeDeps(clouds);
     // Hold the Schechter bake open via an external resolver.
     let resolveBake: (v: Float32Array) => void = () => {};
@@ -198,13 +199,13 @@ describe('createBiasCorrectionSubsystem', () => {
 
   it('mid_bake_upload_race — onSourceUploaded mid-bake fires a per-source bake', async () => {
     const stub = makeStubRenderer();
-    const clouds = new Map<Source, GalaxyCatalog>([
+    const clouds = new Map<SourceType, GalaxyCatalog>([
       [Source.SDSS, makeCloud(3)],
       [Source.Famous, makeCloud(2)],
     ]);
     const { deps } = makeDeps(clouds);
-    const bakedSources: Source[] = [];
-    const schechterRunner = vi.fn(async (input: { source: Source; cloud: GalaxyCatalog }) => {
+    const bakedSources: SourceType[] = [];
+    const schechterRunner = vi.fn(async (input: { source: SourceType; cloud: GalaxyCatalog }) => {
       bakedSources.push(input.source);
       // Yield once so the test can fire onSourceUploaded mid-bake.
       await Promise.resolve();
@@ -235,16 +236,16 @@ describe('createBiasCorrectionSubsystem', () => {
 
   it('multi_source_completion_ordering — splice fires in resolution order; one requestRender at end', async () => {
     const stub = makeStubRenderer();
-    const clouds = new Map<Source, GalaxyCatalog>([
+    const clouds = new Map<SourceType, GalaxyCatalog>([
       [Source.SDSS, makeCloud(3)],
       [Source.TwoMRS, makeCloud(2)],
       [Source.Glade, makeCloud(5)],
     ]);
     const { deps, requestRender } = makeDeps(clouds);
     // Per-source resolvers so we control completion order.
-    const resolvers = new Map<Source, (v: Float32Array) => void>();
+    const resolvers = new Map<SourceType, (v: Float32Array) => void>();
     const schechterRunner = vi.fn(
-      (input: { source: Source; cloud: GalaxyCatalog }) =>
+      (input: { source: SourceType; cloud: GalaxyCatalog }) =>
         new Promise<Float32Array>((res) => {
           resolvers.set(input.source, (v) => res(v));
         }),
@@ -274,10 +275,10 @@ describe('createBiasCorrectionSubsystem', () => {
 
   it('attach_before_setMode — setMode without attachRenderer; splice fires at attach time', async () => {
     const stub = makeStubRenderer();
-    const clouds = new Map<Source, GalaxyCatalog>([[Source.SDSS, makeCloud(3)]]);
+    const clouds = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCloud(3)]]);
     const { deps } = makeDeps(clouds);
     const schechterRunner = vi.fn(
-      async (input: { source: Source; cloud: GalaxyCatalog }) => new Float32Array(input.cloud.count),
+      async (input: { source: SourceType; cloud: GalaxyCatalog }) => new Float32Array(input.cloud.count),
     );
 
     const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
@@ -300,13 +301,13 @@ describe('createBiasCorrectionSubsystem', () => {
     // making the assertion explicit guards against future refactors
     // that might short-circuit the cache when no renderer is wired.)
     const stub = makeStubRenderer();
-    const clouds = new Map<Source, GalaxyCatalog>([
+    const clouds = new Map<SourceType, GalaxyCatalog>([
       [Source.SDSS, makeCloud(2)],
       [Source.Glade, makeCloud(3)],
     ]);
     const { deps } = makeDeps(clouds);
     const schechterRunner = vi.fn(
-      async (input: { source: Source; cloud: GalaxyCatalog }) => new Float32Array(input.cloud.count),
+      async (input: { source: SourceType; cloud: GalaxyCatalog }) => new Float32Array(input.cloud.count),
     );
 
     const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
@@ -323,10 +324,10 @@ describe('createBiasCorrectionSubsystem', () => {
 
   it('onSourceUnloaded — drops cached ratios + weights for that source', async () => {
     const stub = makeStubRenderer();
-    const clouds = new Map<Source, GalaxyCatalog>([[Source.SDSS, makeCloud(3)]]);
+    const clouds = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCloud(3)]]);
     const { deps } = makeDeps(clouds);
     const schechterRunner = vi.fn(
-      async (input: { source: Source; cloud: GalaxyCatalog }) => new Float32Array(input.cloud.count),
+      async (input: { source: SourceType; cloud: GalaxyCatalog }) => new Float32Array(input.cloud.count),
     );
 
     const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });

@@ -10,6 +10,7 @@
  */
 
 import { SOURCE_REGISTRY, SURVEY_SOURCES, Source } from '../data/sources';
+import type { SourceType } from '../@types/data/Source';
 
 /**
  * Startup visibility mask — `1` for every survey source whose registry
@@ -22,17 +23,17 @@ export const ALL_VISIBLE_MASK: number = SURVEY_SOURCES.reduce<number>(
 );
 
 /** True if `mask` has the bit for `source` set. */
-export function maskHas(mask: number, source: Source): boolean {
+export function maskHas(mask: number, source: SourceType): boolean {
   return (mask & (1 << source)) !== 0;
 }
 
 /** Returns a new mask with the bit for `source` set (idempotent). */
-export function maskWith(mask: number, source: Source): number {
+export function maskWith(mask: number, source: SourceType): number {
   return mask | (1 << source);
 }
 
 /** Returns a new mask with the bit for `source` cleared (idempotent). */
-export function maskWithout(mask: number, source: Source): number {
+export function maskWithout(mask: number, source: SourceType): number {
   // `~(1 << source)` flips every bit *except* the one we want to clear,
   // so AND-ing leaves all other bits untouched while zeroing this one.
   return mask & ~(1 << source);

@@ -1,5 +1,5 @@
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/Source';
 
 export type ComputeAngularWeightsInput = {
   /** Galaxy catalog whose galaxies need per-row angular re-weight values. */
@@ -11,7 +11,7 @@ export type ComputeAngularWeightsInput = {
    * a future per-survey tuning (e.g., different `nside` for the smaller 2MRS
    * catalog where 12 288 cells overresolve the data).
    */
-  source: Source;
+  source: SourceType;
   /**
    * Lower clamp for the per-galaxy weight.
    *

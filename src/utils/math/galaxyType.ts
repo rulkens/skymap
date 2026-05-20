@@ -20,6 +20,7 @@ import type { GalaxyTypeMags } from '../../@types/data/GalaxyTypeMags';
 import { galaxyTypeFromColor } from './galaxyTypeFromColor';
 import { galaxyTypeFromBminusJ } from './galaxyTypeFromBminusJ';
 import { galaxyTypeFromJminusK } from './galaxyTypeFromJminusK';
+import type { SourceType } from '../../@types/data/Source';
 
 /**
  * Fallback when the source's required bands are missing or non-finite.
@@ -28,7 +29,7 @@ import { galaxyTypeFromJminusK } from './galaxyTypeFromJminusK';
  */
 const UNKNOWN: GalaxyTypeInfo = { category: 'green', description: 'Unknown galaxy type' };
 
-export function galaxyType(source: Source, mags: GalaxyTypeMags): GalaxyTypeInfo {
+export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyTypeInfo {
   switch (source) {
     case Source.SDSS:
     case Source.Synthetic: {

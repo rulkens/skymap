@@ -22,6 +22,7 @@
 
 import { pad } from './_sexagesimal';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
+import type { SourceType } from '../../@types/data/Source';
 
 /**
  * Compute the coordinate part of an IAU designation: "J<RA><Dec>".
@@ -80,7 +81,7 @@ function iauCoordPart(raDeg: number, decDeg: number): string {
  * designation. Reaching the throw means a POI pick is being formatted by
  * galaxy-headline code; route POI picks through their dedicated info path.
  */
-export function iauName(source: Source, raDeg: number, decDeg: number): string {
+export function iauName(source: SourceType, raDeg: number, decDeg: number): string {
   const entry = SOURCE_REGISTRY[source];
   if (entry.type !== 'survey') {
     throw new Error(`iauName: POI source ${source} has no IAU designation`);

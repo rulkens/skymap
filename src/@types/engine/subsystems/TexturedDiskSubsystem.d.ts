@@ -23,11 +23,11 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { DiskInstance } from '../../rendering/DiskInstance';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/Source';
 
 export type TexturedDiskFrameInput = {
   readonly cam: OrbitCamera;
-  readonly catalogs: ReadonlyMap<Source, GalaxyCatalog>;
+  readonly catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
   readonly famousMeta: readonly FamousMetaEntry[];

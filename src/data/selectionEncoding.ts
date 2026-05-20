@@ -34,6 +34,7 @@
  */
 
 import { Source } from './sources';
+import type { SourceType } from '../@types/data/Source';
 
 /** Bit shift for the source code in the packed identity. */
 export const SELECTION_SOURCE_SHIFT = 27;
@@ -86,7 +87,7 @@ export function packSelection(sourceCode: number, localIdx: number): number {
  * rationale and §7.2 for the call-site impact (`wireInput.ts`).
  */
 export type PickResult =
-  | { readonly kind: 'galaxy'; readonly source: Source; readonly localIdx: number }
+  | { readonly kind: 'galaxy'; readonly source: SourceType; readonly localIdx: number }
   | { readonly kind: 'cluster'; readonly poiIndex: number }
   | { readonly kind: 'supercluster'; readonly poiIndex: number }
   | { readonly kind: 'void'; readonly poiIndex: number };
@@ -126,7 +127,7 @@ export function unpackPick(rawPickValue: number): PickResult | null {
     // surveys (Synthetic, SDSS, TwoMRS, Glade, Famous); code 8 was
     // appended for Milliquas after the POI codes (5/6/7) were already
     // allocated, so the test is "low band OR exact match".
-    return { kind: 'galaxy', source: sourceCode as Source, localIdx };
+    return { kind: 'galaxy', source: sourceCode as SourceType, localIdx };
   }
   if (sourceCode === 5) return { kind: 'cluster', poiIndex: localIdx };
   if (sourceCode === 6) return { kind: 'supercluster', poiIndex: localIdx };

@@ -34,7 +34,7 @@
 
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 import type { Tier } from '../../data/Tier';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/Source';
 import type { FamousMetaEntry } from '../../loading/FamousMetaEntry';
 import type { FamousXrefMap } from '../../loading/FamousXrefMap';
 
@@ -53,7 +53,7 @@ export type EngineSourceState = {
    * the draw entirely — saves a writeBuffer + draw call.
    */
   drawMask: number;
-  catalogs: Map<Source, GalaxyCatalog>;
+  catalogs: Map<SourceType, GalaxyCatalog>;
   famousMeta: FamousMetaEntry[];
   famousXrefs: FamousXrefMap;
   /**

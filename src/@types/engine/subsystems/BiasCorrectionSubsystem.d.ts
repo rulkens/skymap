@@ -1,6 +1,6 @@
 import type { BiasMode } from '../../data/BiasMode';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/Source';
 import type { PointRenderer } from '../../rendering/PointRenderer';
 
 export type BiasCorrectionSubsystem = {
@@ -9,14 +9,14 @@ export type BiasCorrectionSubsystem = {
   /** Switch bias mode; fires bakes for every loaded source. */
   setMode(mode: BiasMode): Promise<void>;
   /** Called by the renderer when a source uploads or re-uploads. */
-  onSourceUploaded(source: Source, cloud: GalaxyCatalog): void;
+  onSourceUploaded(source: SourceType, cloud: GalaxyCatalog): void;
   /** Called by the renderer when a source unloads. */
-  onSourceUnloaded(source: Source): void;
+  onSourceUnloaded(source: SourceType): void;
   /** Test-only: snapshot of internal state. */
   state(): {
     mode: BiasMode;
-    sourcesWithSchechter: Source[];
-    sourcesWithAngular: Source[];
+    sourcesWithSchechter: SourceType[];
+    sourcesWithAngular: SourceType[];
   };
   /**
    * Tear down the subsystem.  Currently a no-op — bias bakes spawn

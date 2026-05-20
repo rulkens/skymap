@@ -35,6 +35,7 @@ import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import { Source, SOURCE_REGISTRY } from '../../data/sources';
 import { InfoTip } from '../InfoTip/InfoTip';
 import styles from './CommandPalette.module.css';
+import type { SourceType } from '../../@types/data/Source';
 
 /**
  * Catalogue-id pattern: ANYTHING that matches is treated as a
@@ -159,7 +160,7 @@ export type CommandPaletteProps = {
   /** Selection handler for famous rows — receives the picked entry's id. */
   onSelect: (id: string) => void;
   /** Selection handler for alias rows — receives the picked entry's source + localIdx. */
-  onSelectAlias?: (target: { source: Source; localIdx: number }) => void;
+  onSelectAlias?: (target: { source: SourceType; localIdx: number }) => void;
 };
 
 /**

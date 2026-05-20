@@ -32,6 +32,7 @@ import { createReadStream, existsSync, readFileSync, readdirSync, statSync, writ
 import { resolve, join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import type { SourceType } from '../../src/@types/data/Source';
 
 import { parseSdssCsv } from '../parsers/sdssCsv.js';
 import { parseTwoMrs, parseXscShapeCsv } from '../parsers/twoMrs.js';
@@ -495,7 +496,7 @@ async function runCli(): Promise<void> {
   // Bucket the merged stream back out per source so we can write one
   // file per survey. Using a Map preserves insertion order, which keeps
   // the log output tidy.
-  const bySource = new Map<Source, ParsedRecord[]>();
+  const bySource = new Map<SourceType, ParsedRecord[]>();
   for (const r of merged) {
     let arr = bySource.get(r.source);
     if (!arr) {

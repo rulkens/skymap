@@ -15,10 +15,10 @@
  * `pick()`.
  */
 
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/Source';
 
 export type PickSourceDraw = {
-  source: Source;
+  source: SourceType;
   vertexBuffer: GPUBuffer;
   count: number;
   /**

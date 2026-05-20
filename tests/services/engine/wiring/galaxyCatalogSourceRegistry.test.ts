@@ -30,6 +30,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import type { SourceType } from '../../../../src/@types/data/Source';
 
 import {
   GALAXY_CATALOG_SOURCE_REGISTRY,
@@ -55,10 +56,10 @@ import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
  */
 function makeState(opts: {
   rendererUpload: ReturnType<typeof vi.fn>;
-  loadedSources?: Iterable<{ source: Source; count: number }>;
+  loadedSources?: Iterable<{ source: SourceType; count: number }>;
   fadesStub?: Record<string, unknown>;
 }): EngineState {
-  const catalogs = new Map<Source, GalaxyCatalog>();
+  const catalogs = new Map<SourceType, GalaxyCatalog>();
   return {
     gpu: {
       renderer: {

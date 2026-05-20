@@ -6,6 +6,7 @@ import type { RenderFrameSettings } from '../../../../../src/@types/engine/frame
 import type { PassDeps } from '../../../../../src/@types/engine/frame/PassDeps';
 import type { mat4 } from 'gl-matrix';
 import { Source } from '../../../../../src/data/sources';
+import type { SourceType } from '../../../../../src/@types/data/Source';
 
 // ── fixtures ──────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ function makeRendererSpy() {
 
 // A catalog stub with one galaxy at known world position + diameter.
 // Position is the flat Float32Array `positions[localIdx*3 .. +3]`.
-function makeStateWithSelection(selection: { source: Source; localIdx: number } | null): EngineState {
+function makeStateWithSelection(selection: { source: SourceType; localIdx: number } | null): EngineState {
   const positions = new Float32Array([0, 0, 100]); // 100 Mpc away on +z
   const diameterKpc = new Float32Array([60]);       // 60 kpc galaxy
   const catalog = { positions, diameterKpc } as unknown as Parameters<EngineState['sources']['catalogs']['set']>[1];

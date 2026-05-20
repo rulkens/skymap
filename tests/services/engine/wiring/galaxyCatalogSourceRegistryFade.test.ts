@@ -16,6 +16,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { Source } from '../../../../src/data/sources';
+import type { SourceType } from '../../../../src/@types/data/Source';
 import {
   FADE_IN_DURATION_MS,
   FADE_OUT_DURATION_MS,
@@ -34,7 +35,7 @@ type FadeCall = { target: number; duration: number; at: 'pre-upload' | 'post-upl
 function makeFixture() {
   const fadeCalls: FadeCall[] = [];
   let uploadResolved = false;
-  const upload = vi.fn(async (_source: Source, _cloud: GalaxyCatalog) => {
+  const upload = vi.fn(async (_source: SourceType, _cloud: GalaxyCatalog) => {
     uploadResolved = true;
   });
   const fadeTo = vi.fn(async (_handle: unknown, target: number, duration: number) => {
@@ -63,7 +64,7 @@ function makeFixture() {
         totalCount: () => 0,
       },
     },
-    sources: { catalogs: new Map<Source, GalaxyCatalog>() },
+    sources: { catalogs: new Map<SourceType, GalaxyCatalog>() },
     subsystems: { fades, scheduler: { requestRender: vi.fn() } },
     assetSlots: { points: new Map() },
   } as unknown as EngineState;

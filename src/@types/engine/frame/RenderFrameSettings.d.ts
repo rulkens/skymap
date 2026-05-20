@@ -8,7 +8,7 @@
  * affecting setting is a one-line addition here.
  */
 
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/Source';
 import type { BiasMode } from '../../data/BiasMode';
 import type { ToneMapCurve } from '../../data/ToneMapCurve';
 
@@ -22,7 +22,7 @@ export type RenderFrameSettings = {
    * sentinel) the shader's halo path expects, so the caller doesn't
    * have to remember the encoding.
    */
-  selected: { source: Source; localIdx: number } | null;
+  selected: { source: SourceType; localIdx: number } | null;
   visibleSourceMask: number;
   highlightFallback: boolean;
   realOnlyMode: boolean;

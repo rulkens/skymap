@@ -98,6 +98,7 @@ import type { AngularRunner } from '../../../@types/engine/subsystems/AngularRun
 import type { BiasCorrectionSubsystem } from '../../../@types/engine/subsystems/BiasCorrectionSubsystem';
 import type { BiasCorrectionDeps } from '../../../@types/engine/subsystems/BiasCorrectionDeps';
 import type { PointRenderer } from '../../../@types/rendering/PointRenderer';
+import type { SourceType } from '../../../@types/data/Source';
 
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler
 // to emit each `.worker.ts` file as its own worker chunk and hand back a
@@ -191,8 +192,8 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   // it).  Lazy init also doubles as a trivial sync between
   // `state.settings.bias.mode` and our internal `mode` mirror at startup.
   let mode: BiasModeT | null = null;
-  const cachedSchechter = new Map<Source, Float32Array>();
-  const cachedAngular = new Map<Source, Float32Array>();
+  const cachedSchechter = new Map<SourceType, Float32Array>();
+  const cachedAngular = new Map<SourceType, Float32Array>();
   /**
    * Generation counter — incremented on every `setMode`.  Each per-source
    * bake captures the generation at start and drops its result if the
@@ -211,8 +212,8 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   }
 
   /** Snapshot every loaded `(source, catalog)` from the engine state. */
-  function loadedSourceCatalogPairs(): { source: Source; catalog: GalaxyCatalog }[] {
-    const out: { source: Source; catalog: GalaxyCatalog }[] = [];
+  function loadedSourceCatalogPairs(): { source: SourceType; catalog: GalaxyCatalog }[] {
+    const out: { source: SourceType; catalog: GalaxyCatalog }[] = [];
     const catalogs = getLoadedClouds();
     for (const source of SURVEY_SOURCES) {
       const catalog = catalogs.get(source);
@@ -230,7 +231,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
    * renderer attached) splices them immediately.
    */
   async function bakeSchechterFor(
-    source: Source,
+    source: SourceType,
     cloud: GalaxyCatalog,
     myGen: number,
   ): Promise<void> {
@@ -243,7 +244,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   }
 
   async function bakeAngularFor(
-    source: Source,
+    source: SourceType,
     cloud: GalaxyCatalog,
     myGen: number,
   ): Promise<void> {
@@ -292,7 +293,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     }
   }
 
-  function onSourceUploaded(source: Source, cloud: GalaxyCatalog): void {
+  function onSourceUploaded(source: SourceType, cloud: GalaxyCatalog): void {
     // A re-upload invalidates any prior cache for this source.
     cachedSchechter.delete(source);
     cachedAngular.delete(source);
@@ -311,7 +312,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     }
   }
 
-  function onSourceUnloaded(source: Source): void {
+  function onSourceUnloaded(source: SourceType): void {
     cachedSchechter.delete(source);
     cachedAngular.delete(source);
   }

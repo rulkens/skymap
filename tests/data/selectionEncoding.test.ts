@@ -7,6 +7,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import type { SourceType } from '../../src/@types/data/Source';
 import {
   SELECTION_SOURCE_SHIFT,
   SELECTION_LOCAL_IDX_MASK,
@@ -71,7 +72,7 @@ describe('selectionEncoding', () => {
       const rawPick = (packed + PICK_SENTINEL_OFFSET) >>> 0;
       expect(unpackPick(rawPick)).toEqual({
         kind: 'galaxy',
-        source: source as Source,
+        source: source as SourceType,
         localIdx,
       });
     }
@@ -168,7 +169,7 @@ describe('unpackPick — discriminated union for POI categories', () => {
   }
 
   it('returns kind:galaxy for codes 0..4 (survey sources)', () => {
-    const cases: Array<[number, Source]> = [
+    const cases: Array<[number, SourceType]> = [
       [0, Source.Synthetic],
       [1, Source.SDSS],
       [2, Source.TwoMRS],

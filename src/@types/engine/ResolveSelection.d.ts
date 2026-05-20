@@ -1,4 +1,4 @@
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/Source';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 
 /**
@@ -14,5 +14,5 @@ import type { GalaxyCatalog } from '../data/GalaxyCatalog';
  * `fromGlobalIdx` decoder did).
  */
 export type ResolveSelection = (
-  selection: { source: Source; localIdx: number },
-) => { source: Source; localIdx: number; cloud: GalaxyCatalog } | null;
+  selection: { source: SourceType; localIdx: number },
+) => { source: SourceType; localIdx: number; cloud: GalaxyCatalog } | null;

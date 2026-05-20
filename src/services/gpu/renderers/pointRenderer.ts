@@ -48,6 +48,7 @@ import type { GalaxyCatalog } from '../../../@types/data/GalaxyCatalog';
 import { SURVEY_SOURCES, Source } from '../../../data/sources';
 import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/BuildPointInterleavedBufferInput';
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
+import type { SourceType } from '../../../@types/data/Source';
 
 // `?worker` is a Vite-specific import suffix.  It instructs the bundler to
 // emit `buildPointInterleavedBuffer.worker.ts` as a separate worker chunk
@@ -709,7 +710,7 @@ export function createPointRenderer(
   // order, has a straightforward `delete`/`has` API, and avoids the
   // prototype-chain ambiguity of indexing a numeric-keyed object
   // literal.
-  const clouds = new Map<Source, LoadedSource>();
+  const clouds = new Map<SourceType, LoadedSource>();
 
   // ── Bias-correction subsystem callbacks ───────────────────────────
   //
@@ -727,14 +728,14 @@ export function createPointRenderer(
   // when no subsystem is attached (e.g. tests, or the brief pre-
   // attach window during bootstrap); `?.` invocation makes that a
   // no-op.
-  let biasUploadCallback: ((source: Source, cloud: GalaxyCatalog) => void) | null = null;
-  let biasUnloadCallback: ((source: Source) => void) | null = null;
+  let biasUploadCallback: ((source: SourceType, cloud: GalaxyCatalog) => void) | null = null;
+  let biasUnloadCallback: ((source: SourceType) => void) | null = null;
 
-  function setBiasUploadCallback(cb: ((source: Source, cloud: GalaxyCatalog) => void) | null): void {
+  function setBiasUploadCallback(cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null): void {
     biasUploadCallback = cb;
   }
 
-  function setBiasUnloadCallback(cb: ((source: Source) => void) | null): void {
+  function setBiasUnloadCallback(cb: ((source: SourceType) => void) | null): void {
     biasUnloadCallback = cb;
   }
 
@@ -801,7 +802,7 @@ export function createPointRenderer(
    * machinery is gone with this refactor — there's no global running
    * sum anymore, so cross-source races can't exist.
    */
-  async function upload(source: Source, cloud: GalaxyCatalog): Promise<void> {
+  async function upload(source: SourceType, cloud: GalaxyCatalog): Promise<void> {
     // ── Empty-cloud unload path ─────────────────────────────────────────────
     //
     // `engine.setTier` reuses this method to clear a source when the new
@@ -933,7 +934,7 @@ export function createPointRenderer(
    * No-op if the source was never uploaded — callers shouldn't have to track
    * which surveys are currently loaded.
    */
-  function unload(source: Source): void {
+  function unload(source: SourceType): void {
     const entry = clouds.get(source);
     if (!entry) return;
     entry.buffer.destroy();
@@ -982,7 +983,7 @@ export function createPointRenderer(
    * buffer.  No mode tracking; the caller (subsystem) decides when to
    * call this.
    */
-  function spliceSchechterRatios(source: Source, ratios: Float32Array): void {
+  function spliceSchechterRatios(source: SourceType, ratios: Float32Array): void {
     const entry = clouds.get(source);
     if (!entry) return;
     if (ratios.length !== entry.count) {
@@ -1001,7 +1002,7 @@ export function createPointRenderer(
    * weights (length must equal the source's `count`) into slot 10 of
    * every row of the entry's interleaved mirror, then re-upload.
    */
-  function spliceAngularWeights(source: Source, weights: Float32Array): void {
+  function spliceAngularWeights(source: SourceType, weights: Float32Array): void {
     const entry = clouds.get(source);
     if (!entry) return;
     if (weights.length !== entry.count) {
@@ -1029,7 +1030,7 @@ export function createPointRenderer(
    * is the only caller and it explicitly transitions to None /
    * VolumeLimited after a clear (where the slot is dead anyway).
    */
-  function clearBiasOverlays(source?: Source): void {
+  function clearBiasOverlays(source?: SourceType): void {
     const targets: LoadedSource[] =
       source !== undefined
         ? (() => {
@@ -1070,7 +1071,7 @@ export function createPointRenderer(
    * source's count in flight.  This getter is the smallest possible
    * answer.
    */
-  function countOf(source: Source): number {
+  function countOf(source: SourceType): number {
     return clouds.get(source)?.count ?? 0;
   }
 
@@ -1092,7 +1093,7 @@ export function createPointRenderer(
   // snapshot").  Callers see exactly the same call shape:
   // `for (const e of r.loadedSources()) { ... }` works unchanged.
   function* loadedSourcesGen(): IterableIterator<{
-    source: Source;
+    source: SourceType;
     vertexBuffer: GPUBuffer;
     count: number;
     sourceBuffer: GPUBuffer;
@@ -1109,7 +1110,7 @@ export function createPointRenderer(
     }
   }
   function loadedSources(): IterableIterator<{
-    source: Source;
+    source: SourceType;
     vertexBuffer: GPUBuffer;
     count: number;
     sourceBuffer: GPUBuffer;

@@ -1,4 +1,4 @@
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/Source';
 import type { Tier } from '../../data/Tier';
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
 
@@ -17,11 +17,11 @@ export type EngineSourcesHandle = {
    * animation should fire-and-forget:
    * `void handle.sources.setVisible(s, v)`.
    */
-  setVisible: (source: Source, visible: boolean) => Promise<void>;
+  setVisible: (source: SourceType, visible: boolean) => Promise<void>;
   /** Hot-swap the active data tier (re-fetches per-source bins). */
   setTier: (tier: Tier) => void;
   /** Return the full GalaxyCatalog for a source, or undefined if unloaded. */
-  getCloud: (source: Source) => GalaxyCatalog | undefined;
+  getCloud: (source: SourceType) => GalaxyCatalog | undefined;
   /** Return just the objIDs array for a source (narrower contract). */
-  getCloudObjIds: (source: Source) => BigUint64Array | undefined;
+  getCloudObjIds: (source: SourceType) => BigUint64Array | undefined;
 };

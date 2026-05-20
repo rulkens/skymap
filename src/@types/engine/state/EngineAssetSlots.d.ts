@@ -32,10 +32,10 @@ import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
 import type { CompanionAssetReq } from '../../loading/CompanionAssetReq';
 import type { MilliquasNamesPayload } from '../../loading/MilliquasNamesPayload';
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/Source';
 
 export type EngineAssetSlots = {
-  points: Map<Source, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
+  points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
   /**
    * Null until the GPU init IIFE constructs the filament renderer and
    * mints this slot — same lifecycle pattern as `state.gpu.renderer`.

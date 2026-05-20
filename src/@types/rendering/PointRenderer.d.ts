@@ -14,7 +14,7 @@
  */
 
 import type { mat4 } from 'gl-matrix';
-import type { Source } from '../../data/sources';
+import type { SourceType } from '../data/Source';
 import type { GalaxyCatalog } from '../data/GalaxyCatalog';
 import type { PointDrawSettings } from './PointDrawSettings';
 
@@ -29,35 +29,35 @@ export type PointRenderer = {
    * given source.  Replaces any previous buffer for that source.  See
    * the factory body for the off-thread bake / race-condition rationale.
    */
-  upload(source: Source, cloud: GalaxyCatalog): Promise<void>;
+  upload(source: SourceType, cloud: GalaxyCatalog): Promise<void>;
   /**
    * Remove a source's GPU vertex buffer and reclaim its VRAM.  No-op
    * if the source was never uploaded.
    */
-  unload(source: Source): void;
+  unload(source: SourceType): void;
   /**
    * Install the upload-tail callback used by the bias-correction
    * subsystem.  Pass `null` to detach.  Idempotent.
    */
-  setBiasUploadCallback(cb: ((source: Source, cloud: GalaxyCatalog) => void) | null): void;
+  setBiasUploadCallback(cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null): void;
   /** Install the unload-tail callback for the bias-correction subsystem. */
-  setBiasUnloadCallback(cb: ((source: Source) => void) | null): void;
+  setBiasUnloadCallback(cb: ((source: SourceType) => void) | null): void;
   /** Splice per-row Schechter ratios into slot 9 of the source's interleaved mirror. */
-  spliceSchechterRatios(source: Source, ratios: Float32Array): void;
+  spliceSchechterRatios(source: SourceType, ratios: Float32Array): void;
   /** Splice per-row HEALPix angular weights into slot 10. */
-  spliceAngularWeights(source: Source, weights: Float32Array): void;
+  spliceAngularWeights(source: SourceType, weights: Float32Array): void;
   /** Zero slots 9 + 10 for one source or every loaded source. */
-  clearBiasOverlays(source?: Source): void;
+  clearBiasOverlays(source?: SourceType): void;
   /** Total number of points across every loaded source. */
   totalCount(): number;
   /** Per-source point count, or 0 when the source isn't loaded. */
-  countOf(source: Source): number;
+  countOf(source: SourceType): number;
   /**
    * Iterate over every loaded source's GPU buffer in `Source` enum order.
    * The iterable is generated fresh on each call.
    */
   loadedSources(): IterableIterator<{
-    source: Source;
+    source: SourceType;
     vertexBuffer: GPUBuffer;
     count: number;
     /**

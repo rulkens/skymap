@@ -23,6 +23,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import type { SourceType } from '../../../../src/@types/data/Source';
 import {
   createPointRenderer,
   setBuildBufferRunner,
@@ -328,7 +329,7 @@ describe('PointRenderer.upload — regression: parallel-upload rebake race', () 
     // (200 ms).  SDSS's post-bake rebake fires while GLADE's worker is still
     // running.  Without the fix, SDSS's rebake re-bakes GLADE using the OLD
     // (1.9M) cloud reference and stomps the in-flight GLADE-medium upload.
-    const delaysMs = new Map<Source, number>([
+    const delaysMs = new Map<SourceType, number>([
       [Source.SDSS, 50],
       [Source.Glade, 200],
     ]);
@@ -384,7 +385,7 @@ describe('PointRenderer pick-identity packing — cross-source disjointness', ()
     // this by computing a pair of fixed-size identity sets for two
     // sources with different IDs and large counts, and checking the
     // intersection is empty.
-    function packedIdentitiesFor(source: Source, count: number): Set<number> {
+    function packedIdentitiesFor(source: SourceType, count: number): Set<number> {
       const out = new Set<number>();
       for (let i = 0; i < count; i++) {
         out.add(((source << 27) | i) >>> 0);
@@ -412,7 +413,7 @@ describe('PointRenderer pick-identity packing — cross-source disjointness', ()
     // 0 = "no hit") is what we're encoding here.  The renderer's
     // selection-halo path uses the same top-5-bit / bottom-27-bit
     // split sans the +1, so we test both.
-    const cases: Array<{ source: Source; localIdx: number }> = [
+    const cases: Array<{ source: SourceType; localIdx: number }> = [
       { source: Source.Synthetic, localIdx: 0 },
       { source: Source.Famous, localIdx: 17 },
       { source: Source.TwoMRS, localIdx: 38_000 },
@@ -422,7 +423,7 @@ describe('PointRenderer pick-identity packing — cross-source disjointness', ()
     for (const c of cases) {
       // Selection-halo packing (no +1).
       const packed = ((c.source << 27) | c.localIdx) >>> 0;
-      const decodedSource = (packed >>> 27) as Source;
+      const decodedSource = (packed >>> 27) as SourceType;
       const decodedLocalIdx = packed & 0x07ffffff;
       expect(decodedSource).toBe(c.source);
       expect(decodedLocalIdx).toBe(c.localIdx);
@@ -430,7 +431,7 @@ describe('PointRenderer pick-identity packing — cross-source disjointness', ()
       // Pick-output packing (with +1).
       const pickPacked = (packed + 1) >>> 0;
       // Decoded the pick way: source from top 5, localIdx = (bottom 27) - 1.
-      const pickDecodedSource = (pickPacked >>> 27) as Source;
+      const pickDecodedSource = (pickPacked >>> 27) as SourceType;
       const pickDecodedLocalIdx = (pickPacked & 0x07ffffff) - 1;
       expect(pickDecodedSource).toBe(c.source);
       expect(pickDecodedLocalIdx).toBe(c.localIdx);

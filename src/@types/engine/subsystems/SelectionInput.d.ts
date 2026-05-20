@@ -1,4 +1,4 @@
-import type { Source } from '../../../data/sources';
+import type { SourceType } from '../../data/Source';
 
 /**
  * A `(source, localIdx)` selection — what the picker decodes from its
@@ -8,6 +8,6 @@ import type { Source } from '../../../data/sources';
  * another stays pinned (CLAUDE.md captures the same invariant).
  */
 export type SelectionInput = {
-  source: Source;
+  source: SourceType;
   localIdx: number;
 };

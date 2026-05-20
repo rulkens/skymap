@@ -17,6 +17,7 @@ import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subs
 import { createTexturedDiskSubsystem } from '../../../../src/services/engine/subsystems/texturedDiskSubsystem';
 import type { GalaxyCatalog } from '../../../../src/@types/data/GalaxyCatalog';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { SourceType } from '../../../../src/@types/data/Source';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };
@@ -74,7 +75,7 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeInput(catalogs: Map<Source, GalaxyCatalog>, mask = 0xffffffff) {
+function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) {
   const cam = makeCam();
   return {
     cam,
