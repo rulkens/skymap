@@ -110,6 +110,7 @@ export const SOURCE_REGISTRY = {
     mLim: 17.77,
     schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
     iauPrefix: 'Synth',
+    tiered: false, // generated at runtime; no on-disk variants
   },
   [Source.SDSS]: {
     type: 'survey',
@@ -128,6 +129,7 @@ export const SOURCE_REGISTRY = {
     // Blanton et al. 2003, r-band LF for the spec sample.
     schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
     iauPrefix: 'SDSS',
+    tiered: true,
   },
   [Source.TwoMRS]: {
     type: 'survey',
@@ -149,6 +151,7 @@ export const SOURCE_REGISTRY = {
     schechter: { mStar: -24.13, alpha: -1.1, phiStar: 0.0116 },
     // 2MRS rows carry 2MASS XSC IDs — use the XSC short-name convention.
     iauPrefix: '2MASX',
+    tiered: false, // ~44k rows; the same `.bin` works at every tier
   },
   [Source.Glade]: {
     type: 'survey',
@@ -170,6 +173,7 @@ export const SOURCE_REGISTRY = {
     // enough for visualisation purposes).
     schechter: { mStar: -20.83, alpha: -1.08, phiStar: 0.0093 },
     iauPrefix: 'GLADE',
+    tiered: true,
   },
   [Source.Famous]: {
     type: 'survey',
@@ -193,6 +197,7 @@ export const SOURCE_REGISTRY = {
     mLim: 17.77,
     schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
     iauPrefix: 'Famous',
+    tiered: false, // ~150 rows; one file shared across tiers
   },
   [Source.Cluster]: { type: 'poi', code: Source.Cluster, label: 'Cluster', allSky: true, visible: true },
   [Source.Supercluster]: { type: 'poi', code: Source.Supercluster, label: 'Supercluster', allSky: true, visible: true },
@@ -238,6 +243,7 @@ export const SOURCE_REGISTRY = {
     schechter: { mStar: -21.18, alpha: -1.16, phiStar: 0.0093 },
     // Matches the upstream catalogue's own short-name convention.
     iauPrefix: 'MQ',
+    tiered: true,
   },
 } as const satisfies Readonly<Record<Source, SourceEntry>>;
 

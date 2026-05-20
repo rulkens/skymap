@@ -55,4 +55,11 @@ export type SurveySourceEntry = SourceEntryBase & {
    * `utils/math/iauName.ts` for the consumer.
    */
   readonly iauPrefix: string;
+  /**
+   * Whether this source ships per-tier `.bin` variants
+   * (`<binBaseName>-<tier>.bin`). False for sources whose single file is
+   * reused across every tier (2MRS, Famous) and for runtime-generated
+   * sources with no on-disk file (Synthetic). See `tierFilenameForSource`.
+   */
+  readonly tiered: boolean;
 };

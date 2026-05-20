@@ -66,19 +66,9 @@ export const TIER_TARGETS: Record<Tier, Partial<Record<Source, number>>> = {
 };
 
 /**
- * The set of sources that get per-tier filename suffixes.  Everything not in
- * this set keeps a single file shared across tiers.
- */
-const TIERED_SOURCES: ReadonlySet<Source> = new Set([
-  Source.SDSS,
-  Source.Glade,
-  Source.Milliquas,
-]);
-
-/**
  * Returns the on-disk filename for a (source, tier) pair.
  *
- * For tiered sources (SDSS, GLADE, Milliquas) we append `-<tier>` before
+ * For tiered sources (`entry.tiered === true`) we append `-<tier>` before
  * `.bin` so the three variants coexist on the static host. For non-tiered
  * sources (2MRS, Famous) we return the bare filename — every tier loads
  * the same file.
@@ -92,6 +82,6 @@ export function tierFilenameForSource(source: Source, tier: Tier): string {
   if (entry.type !== 'survey' || entry.binBaseName === null) {
     throw new Error(`tierFilenameForSource: no base filename for source ${source}`);
   }
-  if (TIERED_SOURCES.has(source)) return `${entry.binBaseName}-${tier}.bin`;
+  if (entry.tiered) return `${entry.binBaseName}-${tier}.bin`;
   return `${entry.binBaseName}.bin`;
 }
