@@ -80,8 +80,8 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     const cloud = fakeCloud(5);
     const cfg: GalaxyCatalogSourceConfig = {
       source: Source.SDSS,
+      shortName: 'sdss',
       fetcher: async () => cloud,
-      initialTier: 'medium',
       category: 'survey',
     };
 
@@ -107,8 +107,8 @@ describe('wireGalaxyCatalogSourceSlot — fade orchestration', () => {
     const cloud = fakeCloud(7);
     const cfg: GalaxyCatalogSourceConfig = {
       source: Source.SDSS,
+      shortName: 'sdss',
       fetcher: async () => cloud,
-      initialTier: 'large',
       category: 'survey',
     };
 

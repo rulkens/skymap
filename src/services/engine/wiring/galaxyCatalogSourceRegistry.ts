@@ -4,18 +4,17 @@
  *
  * ## What lives here
  *
- *   - `GALAXY_CATALOG_SOURCE_REGISTRY` — one row per source declaring
- *     its fetcher, initial tier, category (`survey` | `curated` |
- *     `synthetic`), and optional companion sidecars. Pure data.
+ *   - `GALAXY_CATALOG_SOURCE_REGISTRY` — one row per source: short
+ *     name, fetcher, category (`survey` | `curated` | `synthetic`),
+ *     optional companion sidecars.  Pure data.
  *   - `SURVEY_POINT_SOURCES` / `TIER_FETCHED_POINT_SOURCES` — derived
  *     iteration lists for the boot loop, the tier-change loop, and
  *     the synthetic-fallback gate.
  *   - `wireGalaxyCatalogSourceSlot` — uniform slot-construction
  *     helper that turns a row into an AssetSlot in
  *     `state.assetSlots.points`.
- *   - `loadCompanionAssets` — resolver that fires `.load()` on the
- *     companion slots a row declares, dispatching per-companion-type
- *     `.load()` signatures.
+ *   - `loadCompanionAssets` — fires `.load()` on the companion slots
+ *     a row declares, dispatching a uniform `CompanionAssetReq`.
  *
  * ## What does NOT live here
  *
@@ -26,8 +25,9 @@
  *     one-shot at boot.
  *   - `pgc-aliases` — lazy load via the public handle.
  *
- * A new survey adds one row; a new sidecar type adds one entry to
- * `GalaxyCatalogCompanionRef` and one case in `loadCompanionAssets`.
+ * A new survey adds one row.  A new companion type adds one entry to
+ * `GalaxyCatalogCompanionRef` and one slot minted on `state.assetSlots`
+ * with the same key.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -44,49 +44,18 @@ import type { FadeHandle } from '../../../@types/animation/FadeHandle';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
 
 /**
- * Lowercase short name for a Source — used as the slot-name prefix
- * (`sdss-points`, `glade-points`, …) and in the upload-log line.
- * Promote to `data/sources.ts` if a third unrelated caller appears.
- */
-function sourceName(source: Source): string {
-  switch (source) {
-    case Source.SDSS:
-      return 'sdss';
-    case Source.TwoMRS:
-      return '2mrs';
-    case Source.Glade:
-      return 'glade';
-    case Source.Famous:
-      return 'famous';
-    case Source.Synthetic:
-      return 'synthetic';
-    case Source.Milliquas:
-      return 'milliquas';
-    case Source.Cluster:
-    case Source.Supercluster:
-    case Source.Void:
-      // POI sources have no `.bin` slot — fail loudly if reached.
-      throw new Error(`sourceName: POI source ${source} has no galaxy-catalog slot`);
-  }
-}
-
-/**
  * Registry rows, in Source enum order.  Order matters: the boot loop,
- * the tier-change loop, and the synthetic-fallback gate all iterate
- * this list and rely on a stable ordering for their per-source logs.
- *
- * `initialTier` is declarative documentation today; first-load tier
- * comes from `state.sources.tier`.  The field stays on the row for
- * forward-compatibility with per-source tier overrides.
+ * the tier-change loop, and the synthetic-fallback gate iterate this
+ * list and rely on a stable ordering for their per-source logs.
  */
 export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[] = [
-  { source: Source.SDSS, fetcher: galaxyCatalogFetcher, initialTier: 'medium', category: 'survey' },
-  { source: Source.TwoMRS, fetcher: galaxyCatalogFetcher, initialTier: 'medium', category: 'survey' },
-  { source: Source.Glade, fetcher: galaxyCatalogFetcher, initialTier: 'small', category: 'survey' },
+  { source: Source.SDSS, shortName: 'sdss', fetcher: galaxyCatalogFetcher, category: 'survey' },
+  { source: Source.TwoMRS, shortName: '2mrs', fetcher: galaxyCatalogFetcher, category: 'survey' },
+  { source: Source.Glade, shortName: 'glade', fetcher: galaxyCatalogFetcher, category: 'survey' },
   {
     source: Source.Famous,
+    shortName: 'famous',
     fetcher: galaxyCatalogFetcher,
-    initialTier: 'medium',
     category: 'curated',
     // famous_meta.json + famous_xrefs.json carry the InfoCard text,
     // CommandPalette entries, and URL-focus resolution for hand-picked
@@ -95,16 +64,29 @@ export const GALAXY_CATALOG_SOURCE_REGISTRY: readonly GalaxyCatalogSourceConfig[
   },
   {
     source: Source.Milliquas,
+    shortName: 'milliquas',
     fetcher: galaxyCatalogFetcher,
-    initialTier: 'medium',
     category: 'survey',
     // milliquas-<tier>_names.json carries the verbatim Name + class
     // column, parallel-indexed by localIdx to the per-tier bin.
     // Tier-aware — reloads in lockstep with the bin on tier change.
     companions: ['milliquasNames'],
   },
-  { source: Source.Synthetic, fetcher: syntheticPointFetcher, initialTier: 'small', category: 'synthetic' },
+  {
+    source: Source.Synthetic,
+    shortName: 'synthetic',
+    fetcher: syntheticPointFetcher,
+    category: 'synthetic',
+  },
 ];
+
+/**
+ * Source → shortName lookup for log lines that iterate the renderer's
+ * `loadedSources()` (where we don't have a registry row in hand).
+ */
+const SHORT_NAME_BY_SOURCE: ReadonlyMap<Source, string> = new Map(
+  GALAXY_CATALOG_SOURCE_REGISTRY.map((c) => [c.source, c.shortName]),
+);
 
 /**
  * Sources in the `survey` category — counted toward the
@@ -153,14 +135,14 @@ export function wireGalaxyCatalogSourceSlot(
   cfg: GalaxyCatalogSourceConfig,
   deps: WirePointSourceDeps,
 ): void {
-  const { source, fetcher } = cfg;
+  const { source, shortName, fetcher } = cfg;
   const { cb } = deps;
-  const slotName = `${sourceName(source)}-points`;
+  const slotName = `${shortName}-points`;
 
   // Register the fade handle at opacity 0 so the draw loop's
   // `fadeOpacityOf` lookup always finds it, even on the first frame
-  // before any upload lands. The commit below drives the fadeTo
-  // lifecycle from there.
+  // before any upload lands.  The commit drives the fadeTo lifecycle
+  // from there.
   state.subsystems.fades.register({ kind: 'survey', source }, 0);
 
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
@@ -169,8 +151,8 @@ export function wireGalaxyCatalogSourceSlot(
     commit: async (cloud) => {
       // The renderer can be null mid-bootstrap (commit fires during
       // wireSlots, which runs before wireInput) or after teardown
-      // (StrictMode unmount, hot-reload). Either way, drop the upload
-      // silently — the slot still transitions to `ready`.
+      // (StrictMode unmount, hot-reload).  Drop the upload silently
+      // — the slot still transitions to `ready`.
       //
       // We check `state.gpu.renderer` directly rather than going
       // through `isEngineReady`: the latter also waits for handles
@@ -181,10 +163,10 @@ export function wireGalaxyCatalogSourceSlot(
       const fades = state.subsystems.fades;
 
       // Tier swap: fade the old buffer out before the new one lands so
-      // the user sees the previous tier dissolve. First load skips
-      // straight to fade-in. The renderer keeps drawing the OLD buffer
-      // with falling alpha until fade-out completes — only then does
-      // `upload()` destroy + recreate it.
+      // the user sees the previous tier dissolve.  First load skips
+      // straight to fade-in.  The renderer keeps drawing the OLD
+      // buffer with falling alpha until fade-out completes — only
+      // then does `upload()` destroy + recreate it.
       const isFirstLoad = !state.sources.catalogs.has(source);
       if (!isFirstLoad) {
         await fades.fadeTo(handle, 0, FADE_OUT_DURATION_MS);
@@ -192,9 +174,7 @@ export function wireGalaxyCatalogSourceSlot(
 
       const t0 = performance.now();
       // eslint-disable-next-line no-console
-      console.log(
-        `[engine] upload start ${sourceName(source)} count=${cloud.count}`,
-      );
+      console.log(`[engine] upload start ${shortName} count=${cloud.count}`);
       await state.gpu.renderer.upload(source, cloud);
       state.sources.catalogs.set(source, cloud);
 
@@ -204,15 +184,15 @@ export function wireGalaxyCatalogSourceSlot(
       void fades.fadeTo(handle, 1, FADE_IN_DURATION_MS);
 
       const dtMs = Math.round(performance.now() - t0);
-      // Dump what the GPU actually holds after upload. If this
-      // disagrees with `cloud.count` a concurrent upload overwrote.
+      // Dump what the GPU actually holds after upload.  If this
+      // disagrees with `cloud.count`, a concurrent upload overwrote.
       const onGpu = Array.from(state.gpu.renderer.loadedSources())
-        .map((e) => `${sourceName(e.source)}=${e.count}`)
+        .map((e) => `${SHORT_NAME_BY_SOURCE.get(e.source) ?? e.source}=${e.count}`)
         .join(', ');
       const total = state.gpu.renderer.totalCount();
       // eslint-disable-next-line no-console
       console.log(
-        `[engine] upload done  ${sourceName(source)} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
+        `[engine] upload done  ${shortName} count=${cloud.count} (${dtMs} ms) | on-GPU: ${onGpu} | total=${total}`,
       );
     },
   });

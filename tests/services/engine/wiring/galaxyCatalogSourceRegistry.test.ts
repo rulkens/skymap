@@ -1,33 +1,32 @@
 /**
- * galaxyCatalogSourceRegistry — unit tests for the galaxy-catalog source slot wiring helper.
+ * galaxyCatalogSourceRegistry — unit tests for the galaxy-catalog
+ * source slot wiring helper.
  *
- * The 5 galaxy-catalog source slots (SDSS, 2MRS, GLADE, Famous, Synthetic)
- * all share one slot construction shape: name = `${sourceName}-points`,
- * upload-on-commit, requestRender + `onCatalogReady` echo on the `ready`
- * transition.  Pre-Phase-4 the body lived inline as a single 60-line
- * loop in `engine.ts`'s bootstrap IIFE.  Phase 4 lifts the per-source
- * variance into a declarative `GALAXY_CATALOG_SOURCE_REGISTRY` and reduces the
- * loop to one helper call per source.
+ * The galaxy-catalog source slots (SDSS, 2MRS, GLADE, Famous,
+ * Milliquas, Synthetic) all share one slot construction shape:
+ * name = `${shortName}-points`, upload-on-commit, requestRender +
+ * `onCatalogReady` echo on the `ready` transition.  The per-source
+ * variance lives in a declarative `GALAXY_CATALOG_SOURCE_REGISTRY`;
+ * `wireGalaxyCatalogSourceSlot` is called once per row.
  *
- * These tests verify the helper's contract without spinning up the full
- * engine:
- *   - each `wireGalaxyCatalogSourceSlot` call mints a slot, subscribes to it,
- *     and stores it in `state.assetSlots.points` keyed by `Source`;
+ * These tests verify the helper's contract without spinning up the
+ * full engine:
+ *   - each `wireGalaxyCatalogSourceSlot` call mints a slot, subscribes
+ *     to it, and stores it in `state.assetSlots.points` keyed by
+ *     `Source`;
  *   - the subscriber fires `cb.onCatalogReady(source, count)` and
  *     `requestRender()` on the `ready` transition, and is silent on
  *     the loading / committing / error transitions;
- *   - the commit step routes through the shared
- *     `commitGalaxyCatalogToRenderer` helper (uploads to the renderer,
- *     mutates `state.sources.catalogs`);
+ *   - the commit step uploads to the renderer and mutates
+ *     `state.sources.catalogs`;
  *   - multiple sources wired in succession produce independent slots
  *     keyed correctly — no cross-talk between SDSS and GLADE;
- *   - `GALAXY_CATALOG_SOURCE_REGISTRY` declares exactly the 5 expected sources
- *     in the same Source enum order the engine has used since Spec A.
+ *   - `GALAXY_CATALOG_SOURCE_REGISTRY` declares the expected sources
+ *     in Source enum order.
  *
- * We intentionally do NOT exercise the AssetSlot's full retry-policy or
- * race-checking — `AssetSlot.test.ts` and the slot's own suite cover
- * that.  This suite is about the *plumbing* between the registry, the
- * helper, and `state.assetSlots.points`.
+ * AssetSlot retry-policy / race-checking is covered by
+ * `AssetSlot.test.ts`.  This suite is about the *plumbing* between
+ * the registry, the helper, and `state.assetSlots.points`.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -196,8 +195,8 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     // Use a stub fetcher so we control when the slot transitions to ready.
     const cfg: GalaxyCatalogSourceConfig = {
       source: Source.SDSS,
+      shortName: 'sdss',
       fetcher: async () => fakeCloud(42),
-      initialTier: 'medium',
       category: 'survey',
     };
 
@@ -225,8 +224,8 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     const cloud = fakeCloud(7);
     const cfg: GalaxyCatalogSourceConfig = {
       source: Source.Glade,
+      shortName: 'glade',
       fetcher: async () => cloud,
-      initialTier: 'small',
       category: 'survey',
     };
 
@@ -253,8 +252,8 @@ describe('wireGalaxyCatalogSourceSlot', () => {
 
     const cfg: GalaxyCatalogSourceConfig = {
       source: Source.TwoMRS,
+      shortName: '2mrs',
       fetcher: async () => fakeCloud(3),
-      initialTier: 'medium',
       category: 'survey',
     };
 
