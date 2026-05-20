@@ -171,7 +171,7 @@ struct Uniforms {
   // complementary fade-OUT on the points pass, both passes would be
   // fully present inside the band — a 'double-bright donut'. The
   // vertex stage folds '1 - smoothstep(start, end, apparentDiameterPx)'
-  // into 'out.intensity', so the fragment reads no per-pixel state for
+  // into 'out.shaded.rgb', so the fragment reads no per-pixel state for
   // the crossfade.
   pxFadeStart: f32,
   pxFadeEnd: f32,
@@ -261,31 +261,26 @@ struct VSOut {
   // circle/ellipse falloff.
   @location(0) uv: vec2<f32>,
 
-  // Per-instance colour + ellipse-mask coefficient packed together.
-  // .rgb = colourIndex-ramp lookup with magenta highlight folded in.
+  // Fully-shaded per-instance appearance packed into one vec4.
+  // .rgb = ramp(restColorIndex) × magenta highlight × intensity, where
+  //        intensity already folds in the magnitude clamp, brightness
+  //        slider, Malmquist mode-2/3/4 weights, depth fade, and the
+  //        procedural-disk crossfade-out. Fragment writes
+  //        '(rgb * alpha, alpha)' directly with no further scaling.
   // .w   = pre-computed safeAB (axis ratio clamped to [0.05, 1.0],
   //        defaulted to 1.0 for invalid/NaN inputs). Fragment uses .w
-  //        directly to squash the elliptical mask. Packing the scalar
-  //        into the unused alpha channel of the tint slot frees the
-  //        location axisRatio used to occupy.
+  //        directly to squash the elliptical mask.
   // Flat-interpolated — all 6 vertices of an instance share the value.
-  @location(1) @interpolate(flat) tint: vec4<f32>,
-
-  // Per-instance brightness with every per-instance modulator folded in:
-  // magnitude-based intensity × brightness slider × vMax (mode 2) ×
-  // Schechter (mode 3) × angular reweight (mode 4) × depth-fade
-  // (camera-distance falloff). Fragment multiplies in only per-pixel
-  // terms (Gaussian falloff, procedural-disk fade, source fade).
-  @location(2) @interpolate(flat) intensity: f32,
+  @location(1) @interpolate(flat) shaded: vec4<f32>,
 
   // Packed (source, localIdx) identity used by 'fsPick' to write the
   // pick texture. Flat-interpolated because integers can't be linearly
   // interpolated, and all 6 vertices of one instance share the same value.
-  @location(3) @interpolate(flat) instanceIdx: u32,
+  @location(2) @interpolate(flat) instanceIdx: u32,
 
   // Pre-computed (cos, sin) of the position-angle rotation. Computed
   // once per primitive in 'vs' instead of per fragment, saving millions
   // of trig calls per frame. Packed into a vec2 at one location.
-  @location(4) @interpolate(flat) paRotation: vec2<f32>,
+  @location(3) @interpolate(flat) paRotation: vec2<f32>,
 
 };

@@ -49,14 +49,14 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // The cs/sn pair is pre-computed in the vertex stage and flat-
   // interpolated, saving millions of trig calls per frame. safeAB
   // (the validated ellipse minor-axis ratio) rides in the alpha channel
-  // of in.tint, so the fragment does zero per-pixel axis-ratio work.
+  // of in.shaded, so the fragment does zero per-pixel axis-ratio work.
   let cs = in.paRotation.x;
   let sn = in.paRotation.y;
   let rotated = vec2<f32>(
     cs * in.uv.x - sn * in.uv.y,
     sn * in.uv.x + cs * in.uv.y,
   );
-  let elliptic = vec2<f32>(rotated.x, rotated.y / in.tint.w);
+  let elliptic = vec2<f32>(rotated.x, rotated.y / in.shaded.w);
   let r2 = dot(elliptic, elliptic);
   // ────────────────────────────────────────────────────────────────────────
 
@@ -65,13 +65,13 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
 
   // Gaussian-like falloff: bright at centre (r²=0 → e⁰=1), fading to
   // e⁻⁴ ≈ 0.018 at the edge (r²=1). All per-instance modulators
-  // (Schechter, angular reweight, depth fade, procedural-disk
-  // crossfade-out, magenta highlight) are folded into 'in.tint' and
-  // 'in.intensity' by the vertex stage — see vertex.wesl. Galaxies
+  // (intensity scalar, Schechter, angular reweight, depth fade,
+  // procedural-disk crossfade-out, magenta highlight) are folded into
+  // 'in.shaded.rgb' by the vertex stage — see vertex.wesl. Galaxies
   // gated by realOnlyMode are culled at the vertex stage too, so this
   // fragment never sees them.
   var alpha = exp(-r2 * 4.0);
-  let rgb = in.tint.rgb * in.intensity;
+  let rgb = in.shaded.rgb;
 
   // ── Source fade-in ─────────────────────────────────────────────────────────
   //

@@ -121,8 +121,7 @@ fn vs(
     var earlyOut: VSOut;
     earlyOut.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
     earlyOut.uv = corner;
-    earlyOut.tint = vec4<f32>(0.0, 0.0, 0.0, 1.0);
-    earlyOut.intensity = 0.0;
+    earlyOut.shaded = vec4<f32>(0.0, 0.0, 0.0, 1.0);
     earlyOut.instanceIdx = myPacked;
     earlyOut.paRotation = vec2<f32>(1.0, 0.0);
     return earlyOut;
@@ -186,18 +185,6 @@ fn vs(
   let isUnknownColour = p.colorIndex > 100.0;
   let restColorIndex = select(p.colorIndex - source.kPerZ * zRedshift, 1.05, isUnknownColour);
 
-  // Look up the colour for this point's *rest-frame* colour index, fold
-  // the magenta highlight in when both u.highlightFallback and the
-  // fallback flag are set, and pack the pre-computed safeAB ellipse
-  // coefficient into the alpha channel. safeAB defaults to 1.0 (circle)
-  // when axisRatio is invalid or NaN — 'abs(NaN) > 0.0' is false, so
-  // the select branch is the correct gate for synthetic-fallback rows.
-  let highlightActive = u.highlightFallback == 1u && isFallbackFlag == 1u;
-  let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
-  let absAR = abs(p.axisRatio);
-  let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
-  out.tint = vec4<f32>(ramp(restColorIndex) * highlightTint, safeAB);
-
   // ── MAGNITUDE → INTENSITY, with every per-instance modulator folded in ──
   //
   //   intensity = clamp((22 - magnitude) / 8, 0.05, 1.0)   // mag 14 → 1.0,
@@ -209,8 +196,8 @@ fn vs(
   //               × depthFade      (camera-distance falloff)
   //               × crossfadeOut   (procedural-disk handoff band)
   //
-  // All six factors are per-instance constants, so the fragment only
-  // multiplies per-pixel terms (Gaussian falloff + source fade).
+  // All six factors are per-instance constants, so the fragment reads
+  // out.shaded.rgb directly — no per-pixel multiply.
   let vMaxAlpha = select(1.0, p.vMaxWeight, u.biasMode == 2u);
   let schechterMult = select(1.0, p.schechterRatio, u.biasMode == 3u);
   let angularMult = select(1.0, p.angularDensityWeight, u.biasMode == 4u);
@@ -228,13 +215,24 @@ fn vs(
   let apparentDiameterPx = sizePx * 0.5;
   let crossfadeOut = 1.0 - smoothstep(u.pxFadeStart, u.pxFadeEnd, apparentDiameterPx);
 
-  out.intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0)
+  let intensity = clamp((22.0 - p.magnitude) / 8.0, 0.05, 1.0)
     * u.brightness
     * vMaxAlpha
     * schechterMult
     * angularMult
     * depthFadeMult
     * crossfadeOut;
+
+  // Bake the K-corrected ramp colour, the magenta highlight, and the
+  // intensity scalar straight into out.shaded.rgb. .w carries safeAB —
+  // pre-computed ellipse-mask coefficient, defaulted to 1.0 (circle)
+  // for invalid/NaN axisRatio (synthetic-fallback rows). 'abs(NaN) >
+  // 0.0' is false, so the select branch is the correct gate.
+  let highlightActive = u.highlightFallback == 1u && isFallbackFlag == 1u;
+  let highlightTint = select(vec3<f32>(1.0), vec3<f32>(1.0, 0.3, 1.0), highlightActive);
+  let absAR = abs(p.axisRatio);
+  let safeAB = select(1.0, max(absAR, 0.05), absAR > 0.0);
+  out.shaded = vec4<f32>(ramp(restColorIndex) * highlightTint * intensity, safeAB);
 
   // Invisibility cull: galaxies whose folded intensity falls below this
   // threshold contribute imperceptibly to the additive HDR target, so
@@ -245,7 +243,7 @@ fn vs(
   // selected-but-culled galaxy still gets its UI ring from the dedicated
   // selectionRingPass, which runs independently of this pipeline.
   let INVISIBILITY_THRESHOLD = 0.005;
-  if (out.intensity < INVISIBILITY_THRESHOLD) {
+  if (intensity < INVISIBILITY_THRESHOLD) {
     out.clip = vec4<f32>(2.0, 2.0, 2.0, 1.0);
   }
 
